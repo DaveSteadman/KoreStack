@@ -1,0 +1,306 @@
+/*
+ * tabs.css — Compatibility stylesheet for the shared top bar.
+ *
+ * New code should include '/static/shared/css/topbar.css'.
+ * This file retains the existing rules so older references keep working.
+ */
+
+/* ── Tab bar container ─────────────────────────────────────── */
+#tab-bar {
+  display: flex;
+  align-items: center;
+  height: var(--tab-h, 38px);
+  background: var(--bg, #0e0e1a);
+  border-bottom: 1px solid var(--border, #35355a);
+  user-select: none;
+  overflow: hidden;
+  flex-shrink: 0;
+  gap: 0;
+}
+
+/* ── KoreDocs brand — static logo, no interaction ──────────── */
+#kd-brand {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  height: 100%;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: -.01em;
+  color: var(--accent-2, #9d8ff8);
+  border-right: 1px solid var(--border, #35355a);
+  flex-shrink: 0;
+  order: 1;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* ── KoreFile explorer link ────────────────────────────────── */
+.kd-kf-link {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 11px;
+  height: 100%;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-dim);
+  text-decoration: none;
+  border-right: 1px solid var(--border);
+  flex-shrink: 0;
+  order: 2;
+  transition: background 120ms, color 120ms;
+  user-select: none;
+}
+.kd-kf-link:hover { background: var(--surface); color: var(--text-2); }
+.kd-kf-link.kd-kf-active {
+  color: var(--accent-2);
+  background: var(--surface);
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+.kd-kf-link svg {
+  width: 1em;
+  height: 1em;
+  flex-shrink: 0;
+  color: var(--accent-2);
+}
+
+/* ── Tab strip ─────────────────────────────────────────────── */
+.kd-tabs {
+  display: flex;
+  align-items: stretch;
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;       /* hide scrollbar — tabs scroll invisibly */
+  height: 100%;
+  order: 3;
+}
+.kd-tabs::-webkit-scrollbar { display: none; }
+
+.kd-no-tabs {
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  font-size: 12px;
+  color: var(--text-dim, #585b70);
+  font-style: italic;
+}
+
+/* ── Individual tab ────────────────────────────────────────── */
+.kd-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px 0 11px;
+  height: 100%;
+  min-width: 90px;
+  max-width: 200px;
+  cursor: default;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-dim, #585b70);
+  border-right: 1px solid var(--border, #35355a);
+  transition: background 120ms, color 120ms;
+  position: relative;
+  flex-shrink: 0;
+}
+.kd-tab:hover { background: var(--surface, #20203a); color: var(--text-2, #a6adc8); }
+.kd-tab.active {
+  background: var(--surface, #20203a);
+  color: var(--text, #cdd6f4);
+  /* Accent underline on active tab */
+  box-shadow: inset 0 -2px 0 var(--accent, #7c6af7);
+}
+/* Keep accent line on hover of active tab too */
+.kd-tab.active:hover { color: var(--text, #cdd6f4); }
+
+.kd-tab-icon {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  opacity: 1;
+  color: var(--accent-2, #9d8ff8);
+}
+.kd-tab-icon svg {
+  width: 1em;
+  height: 1em;
+}
+.kd-tab.active .kd-tab-icon { color: var(--accent-2, #9d8ff8); }
+
+.kd-tab-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Tab close button ──────────────────────────────────────── */
+.kd-tab-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1em;
+  height: 1em;
+  border-radius: 3px;
+  border: none;
+  background: transparent;
+  color: var(--accent-2, #9d8ff8);
+  font-size: 1em;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+  opacity: .78;
+  transition: opacity 120ms, background 100ms, color 100ms;
+  padding: 0;
+}
+.kd-tab:hover      .kd-tab-close { opacity: .92; }
+.kd-tab.active     .kd-tab-close { opacity: 1; }
+.kd-tab-close:hover               { opacity: 1 !important; background: var(--surface-2, #27274a); color: var(--text, #cdd6f4); }
+
+/* ── Add ( + ) button ──────────────────────────────────────── */
+.kd-add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 100%;
+  border: none;
+  background: transparent;
+  color: var(--text-dim, #585b70);
+  cursor: pointer;
+  flex-shrink: 0;
+  order: 4;
+  transition: color 120ms, background 120ms;
+  border-left: 1px solid var(--border, #35355a);
+}
+.kd-add:hover { color: var(--text-2, #a6adc8); background: var(--surface, #20203a); }
+.kd-add svg {
+  width: 1em;
+  height: 1em;
+  color: var(--accent-2, #9d8ff8);
+}
+
+/* ── New / Open dropdown (positioned below + button) ───────── */
+.kd-dropdown {
+  position: fixed;
+  background: var(--surface, #20203a);
+  border: 1px solid var(--border, #35355a);
+  border-radius: 10px;
+  color: var(--text, #cdd6f4);
+  min-width: 260px;
+  max-width: 360px;
+  z-index: 1000;
+  box-shadow: 0 12px 40px rgba(0,0,0,.65);
+  overflow: hidden;
+}
+
+/* Picker list inside the dropdown ─────────────────────────── */
+.kd-dropdown .picker-list {
+  list-style: none;
+  max-height: 240px;
+  overflow-y: auto;
+  padding: 6px;
+  margin: 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border, #35355a) transparent;
+}
+.kd-dropdown .picker-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 10px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: var(--text-2, #a6adc8);
+  text-align: left;
+  cursor: pointer;
+  font-size: 12.5px;
+  font-family: var(--font-code, monospace);
+  line-height: 1.4;
+  transition: background 100ms, color 100ms;
+}
+.kd-dropdown .picker-item:hover { background: var(--accent, #7c6af7); color: #fff; }
+.kd-dropdown .picker-item-icon  {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  opacity: 1;
+  color: var(--accent-2, #9d8ff8);
+}
+.kd-dropdown .picker-item-icon svg {
+  width: 1em;
+  height: 1em;
+}
+.kd-dropdown .picker-item:hover .picker-item-icon { opacity: 1; }
+
+/* ── New file buttons ──────────────────────────────────────── */
+.kd-new-btns {
+  display: flex;
+  gap: 8px;
+  padding: 8px 16px 14px;
+}
+
+.kd-new-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  padding: 12px 8px;
+  background: var(--bg-2, #1a1a2e);
+  border: 1px solid var(--border, #35355a);
+  border-radius: 8px;
+  color: var(--text-2, #a6adc8);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  transition: background 120ms, color 120ms, border-color 120ms;
+}
+.kd-new-btn svg {
+  width: 1.1em;
+  height: 1.1em;
+  opacity: 1;
+  color: var(--accent-2, #9d8ff8);
+}
+.kd-new-btn:hover {
+  background: var(--accent, #7c6af7);
+  color: #fff;
+  border-color: var(--accent, #7c6af7);
+}
+.kd-new-btn:hover svg { opacity: 1; }
+
+/* ── Dialog section dividers / labels ─────────────────────── */
+.kd-dialog-sep {
+  height: 1px;
+  background: var(--border, #35355a);
+  margin: 0 16px;
+}
+
+.kd-dialog-section-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: var(--text-dim, #585b70);
+  padding: 10px 16px 4px;
+}
+
+.kd-loading {
+  padding: 8px 16px;
+  font-size: 12px;
+  color: var(--text-dim, #585b70);
+  font-style: italic;
+  list-style: none;
+}
+
+/* ── Untitled tab label ────────────────────────────────────── */
+.kd-untitled-label {
+  font-style: italic;
+  opacity: .65;
+}

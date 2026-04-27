@@ -1,0 +1,44 @@
+/*
+ * tokens.css — UIElements design tokens.
+ *
+ * Shared source of truth for typography, colors, spacing, and outer shell chrome.
+ */
+
+:root {
+  --kcui-tab-h: 38px;
+  --kcui-appbar-h: 42px;
+  --kcui-menu-h: 40px;
+  --kcui-radius-sm: 0;
+  --kcui-radius-md: 2px;
+  --kcui-radius-lg: 2px;
+  --kcui-shadow-overlay: 0 12px 32px rgba(0, 0, 0, .45);
+
+  --tab-h: var(--kcui-tab-h);
+  --appbar-h: var(--kcui-appbar-h);
+  --menu-h: var(--kcui-menu-h);
+  --header-h: 42px;
+
+  --bg: #0b0c10;
+  --bg-2: #0f1117;
+  --panel: #0f1117;
+  --surface: #0f1117;
+  --surface-2: #141823;
+  --border: #1e2233;
+  --border-2: #2b3148;
+
+  --text: #c5c8d0;
+  --text-2: #949aa7;
+  --text-dim: #4e5466;
+
+  --accent: #4af77a;
+  --accent-2: #86f6a3;
+  --success: #4af77a;
+  --warning: #f0c060;
+  --danger: #ff5f5f;
+  --info: #6eb5ff;
+
+  --font-ui: 'Cascadia Code', 'Fira Code', 'Courier New', monospace;
+  --font-code: 'Cascadia Code', 'Fira Code', 'Courier New', monospace;
+
+  color-scheme: dark;
+}

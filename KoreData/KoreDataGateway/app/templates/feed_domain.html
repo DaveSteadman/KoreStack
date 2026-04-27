@@ -1,0 +1,462 @@
+{% extends "base.html" %}
+{% block title %}{{ domain }} – KoreData{% endblock %}
+
+{% block content %}
+<div class="breadcrumb">
+  <a href="/feeds">feeds</a><span class="sep">›</span>{{ domain }}
+</div>
+
+<!-- ── Feed management ─────────────────────────────────────── -->
+<div class="two-col" style="margin-bottom:1.25rem;">
+
+  <!-- Left column: feeds table + domain age settings -->
+  <div>
+    <div class="panel" style="margin-bottom:1.25rem;">
+      <div class="panel-header">
+        <span class="ph-diamond">◆</span> FEEDS
+        <span class="badge badge-dim" style="margin-left:0.5rem;">{{ feeds|length }}</span>
+      </div>
+      <div class="panel-body" style="padding:0;">
+        {% if feeds %}
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th style="width:60px;">Rate</th>
+              <th style="width:130px;">Content</th>
+              <th style="width:70px; text-align:center;">Entries</th>
+              <th style="width:70px; text-align:right;">Next</th>
+              <th style="width:40px;"></th>
+              <th style="width:40px;"></th>
+            </tr>
+          </thead>
+          <tbody id="feeds-tbody">
+            {% for f in feeds %}
+            <tr style="cursor:pointer;" onclick="editFeed('{{ f.id }}','{{ f.name | replace("'","\\'") }}','{{ f.url }}','{{ f.get("type","rss") }}',{{ f.update_rate }})">
+              <td>
+                {{ f.name }}
+                {% if f.get('type') == 'web' %}<span class="meta" style="font-size:10px; margin-left:0.4rem; border:1px solid var(--border); border-radius:3px; padding:0 3px;">WEB</span>{% endif %}
+              </td>
+              <td>
+                <div class="num-stepper rate-stepper">
+                  <input class="rate-input" type="number" min="1" value="{{ f.update_rate }}"
+                    data-id="{{ f.id }}"
+                    onblur="saveRate(this)" onkeydown="if(event.key==='Enter'){this.blur()}">
+                  <div class="stepper-btns">
+                    <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,1)">&#9650;</button>
+                    <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,-1)">&#9660;</button>
+                  </div>
+                </div>
+              </td>
+              <td class="meta" style="font-size:11px;">
+                {% set cs = f.get('content_status', 'good') %}
+                {% if cs == 'poor' %}<span style="color:var(--amber);">Poor Content</span>
+                {% elif cs == 'none' %}<span style="color:var(--red);">No Content Found</span>
+                {% else %}<span>Good Feed</span>
+                {% endif %}
+              </td>
+              <td style="text-align:center;">
+                {% set cnt = feed_counts.get(f.name, 0) %}
+                {% if cnt > 0 %}<span class="badge badge-dim">{{ cnt }}</span>
+                {% else %}<span class="meta" style="font-size:11px;">—</span>
+                {% endif %}
+              </td>
+              <td class="meta" data-col="next" style="text-align:right; white-space:nowrap;">
+                {% set mins = feed_refresh_mins.get(f.id) %}
+                {% if mins is none or mins <= 0 %}<span style="color:var(--amber);">now</span>
+                {% else %}{{ mins }}m
+                {% endif %}
+              </td>
+              <td>
+                <button class="btn-sm" title="Refresh now"
+                  style="color:var(--green); border-color:var(--green);"
+                  onclick="triggerRefresh(this, '/feeds/{{ domain }}/feeds/{{ f.id }}/refresh')">&#x21bb;</button>
+              </td>
+              <td>
+                <form method="post" action="/feeds/{{ domain }}/feeds/{{ f.id }}/delete" style="flex-direction:row;">
+                  <button class="btn-danger btn-sm" type="submit"
+                    onclick="return confirm('Remove {{ f.name }}?')">&#x2715;</button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <p class="meta" style="padding:1rem;">no feeds — add one →</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Domain age settings -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="ph-diamond">◆</span> DOMAIN AGE SETTINGS
+      </div>
+      <div class="panel-body">
+        <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.75rem;">
+          <select id="age-mode-select" onchange="showAgeRow(this.value)" style="width:auto;">
+            <option value="none"            {% if age_settings.mode == 'none'            %}selected{% endif %}>No limit</option>
+            <option value="days_previous"   {% if age_settings.mode == 'days_previous'   %}selected{% endif %}>Days Previous</option>
+            <option value="calendar_period" {% if age_settings.mode == 'calendar_period' %}selected{% endif %}>Calendar Period</option>
+          </select>
+          <span id="age-row-days" style="display:none; align-items:center; gap:0.4rem;">
+            <div class="num-stepper">
+              <input id="age-days-input" type="number" min="1"
+                     value="{{ age_settings.days or 30 }}" style="width:52px;">
+              <div class="stepper-btns">
+                <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,1)">&#9650;</button>
+                <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,-1)">&#9660;</button>
+              </div>
+            </div>
+            <span class="meta" style="font-size:12px; white-space:nowrap;">Days</span>
+          </span>
+          <span id="age-row-cal" style="display:none; align-items:center; gap:0.4rem;">
+            <label style="font-size:11px; color:var(--dim); white-space:nowrap;">From</label>
+            <input id="age-start-input" type="date"
+                   value="{{ age_settings.start_date or '' }}"
+                   style="width:120px; padding:2px 4px; font-size:12px; color-scheme:dark;">
+            <label style="font-size:11px; color:var(--dim); white-space:nowrap;">To</label>
+            <input id="age-end-input" type="date"
+                   value="{{ age_settings.end_date or '' }}"
+                   style="width:120px; padding:2px 4px; font-size:12px; color-scheme:dark;">
+          </span>
+        </div>
+        <div style="display:flex; gap:0.5rem;">
+          <button type="button" onclick="saveAgeGate()">SAVE CHANGES</button>
+          <button type="button" class="btn-secondary" onclick="cancelAgeGate()">CANCEL</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right column: add/edit feed + manage entries -->
+  <div>
+    <div class="panel" style="margin-bottom:1.25rem;">
+      <div class="panel-header">
+        <span class="ph-diamond">◆</span> <span id="panel-mode-label">ADD FEED</span>
+      </div>
+      <div class="panel-body">
+        <!-- Add form -->
+        <form id="form-add" method="post" action="/feeds/{{ domain }}/feeds/add">
+          <div>
+            <label for="add-name">Feed name</label>
+            <input id="add-name" name="name" type="text" placeholder="TechCrunch" required>
+          </div>
+          <div>
+            <label for="add-feed_type">Type</label>
+            <select id="add-feed_type" name="feed_type" onchange="syncTypeLabel('add')">
+              <option value="rss">RSS Feed</option>
+              <option value="web">Web Page</option>
+            </select>
+          </div>
+          <div>
+            <label id="add-url_label" for="add-url">RSS URL</label>
+            <input id="add-url" name="url" type="url" placeholder="https://…/feed" required>
+          </div>
+          <div>
+            <label for="add-update_rate">Update rate (minutes)</label>
+            <div class="num-stepper">
+              <input id="add-update_rate" name="update_rate" type="number" value="60" min="1" style="width:64px;" required>
+              <div class="stepper-btns">
+                <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,1)">&#9650;</button>
+                <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,-1)">&#9660;</button>
+              </div>
+            </div>
+          </div>
+        </form>
+
+        <!-- Edit form (hidden until a row is clicked) -->
+        <form id="form-edit" method="post" action="" style="display:none;">
+          <div>
+            <label for="edit-name">Feed name</label>
+            <input id="edit-name" name="name" type="text" required>
+          </div>
+          <div>
+            <label for="edit-feed_type">Type</label>
+            <select id="edit-feed_type" name="feed_type" onchange="syncTypeLabel('edit')">
+              <option value="rss">RSS Feed</option>
+              <option value="web">Web Page</option>
+            </select>
+          </div>
+          <div>
+            <label id="edit-url_label" for="edit-url">RSS URL</label>
+            <input id="edit-url" name="url" type="url" required>
+          </div>
+          <div>
+            <label for="edit-update_rate">Update rate (minutes)</label>
+            <div class="num-stepper">
+              <input id="edit-update_rate" name="update_rate" type="number" min="1" style="width:64px;" required>
+              <div class="stepper-btns">
+                <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,1)">&#9650;</button>
+                <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,-1)">&#9660;</button>
+              </div>
+            </div>
+          </div>
+        </form>
+
+        <!-- Action row -->
+        <div style="margin-top:0.75rem; padding-top:0.75rem; border-top:1px solid var(--border); display:flex; gap:0.5rem; align-items:center;">
+          <button id="btn-submit-add"  type="button" onclick="document.getElementById('form-add').submit()">ADD FEED</button>
+          <button id="btn-submit-edit" type="button" onclick="document.getElementById('form-edit').submit()" style="display:none;">SAVE CHANGES</button>
+          <button id="btn-cancel-edit" type="button" class="btn-secondary" onclick="cancelEdit()" style="display:none;">CANCEL</button>
+        </div>
+      </div>
+    </div>
+
+    {% if feeds %}
+    <div class="panel">
+      <div class="panel-header">
+        <span class="ph-diamond">◆</span> MANAGE ENTRIES
+      </div>
+      <div class="panel-body">
+        <form method="post" action="/feeds/{{ domain }}/entries/delete-by-feed" id="form-del-feed">
+          <label for="del_feed" style="display:block; margin-bottom:0.4rem; font-size:12px; letter-spacing:.04em; font-weight:600; text-transform:uppercase;">Delete by Feed</label>
+          <div style="display:flex; gap:0;">
+            <select id="del_feed" name="feed_name" style="flex:1;">
+              {% for f in feeds %}
+              <option value="{{ f.name }}">{{ f.name }}</option>
+              {% endfor %}
+            </select>
+            <button class="btn-danger" type="button"
+              onclick="var n=document.getElementById('del_feed').options[document.getElementById('del_feed').selectedIndex].text; if(confirm('Delete ALL entries from '+n+'?')) document.getElementById('form-del-feed').submit()">
+              DELETE FEED ENTRIES
+            </button>
+          </div>
+        </form>
+        <form id="form-purge-days" method="post" action="/feeds/{{ domain }}/entries/delete-older-than" style="display:none;">
+          <input type="hidden" name="days" id="purge-days-val" value="{{ age_settings.days or 30 }}">
+        </form>
+        <form id="form-purge-calendar" method="post" action="/feeds/{{ domain }}/entries/delete-outside-calendar" style="display:none;">
+          <input type="hidden" name="start_date" id="purge-start-val" value="{{ age_settings.start_date or '' }}">
+          <input type="hidden" name="end_date"   id="purge-end-val"   value="{{ age_settings.end_date or '' }}">
+        </form>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+
+
+<!-- ── Entry list ──────────────────────────────────────────── -->
+<div class="panel">
+  <div class="panel-header">
+    <span class="ph-diamond">◆</span> ENTRIES
+    <span class="badge" id="entry-count" style="margin-left:0.75rem;">{{ total }}</span>
+    <form action="/feeds/search" method="get" style="flex-direction:row; display:flex; gap:0; margin-left:auto;">
+      <input type="search" name="q" placeholder="search {{ domain }}…" style="width:200px;">
+      <input type="hidden" name="domain" value="{{ domain }}">
+      <button type="submit">SEARCH</button>
+    </form>
+  </div>
+  <div class="panel-body" style="padding:0;">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:50px;">#</th>
+          <th>Headline</th>
+          <th>Feed</th>
+          <th style="width:160px; white-space:nowrap;">Published</th>
+          <th style="width:40px;"></th>
+        </tr>
+      </thead>
+      <tbody id="entries-tbody">
+        {% for e in entries %}
+        <tr>
+          <td class="meta">{{ e.id }}</td>
+          <td><a href="/feeds/{{ domain }}/{{ e.id }}">{{ e.headline or "(no title)" }}</a></td>
+          <td class="meta">{{ e.feed_name }}</td>
+          <td class="meta" style="white-space:nowrap;">{{ e.published[:16] if e.published else "—" }}</td>
+          <td>
+            <button class="btn-danger btn-sm" title="Delete entry"
+              onclick="deleteEntry(this, '/feeds/{{ domain }}/entries/{{ e.id }}/delete')">&#x2715;</button>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" class="meta" style="padding:1rem;">no entries yet</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="pagination">
+  {% if offset > 0 %}
+  <a href="/feeds/{{ domain }}?limit={{ limit }}&offset={{ offset - limit }}">← PREV</a>
+  {% endif %}
+  <span class="pg-info">{{ offset + 1 }}–{{ offset + entries|length }} of {{ total }}</span>
+  {% if offset + limit < total %}
+  <a href="/feeds/{{ domain }}?limit={{ limit }}&offset={{ offset + limit }}">NEXT →</a>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function syncTypeLabel(prefix) {
+  const isWeb = document.getElementById(prefix + '-feed_type').value === 'web';
+  document.getElementById(prefix + '-url_label').textContent = isWeb ? 'Starting URL' : 'RSS URL';
+  const urlInput = document.getElementById(prefix + '-url');
+  if (urlInput) urlInput.placeholder = isWeb ? 'https://example.com/news/' : 'https://…/feed';
+}
+
+function editFeed(id, name, url, type, rate) {
+  document.getElementById('form-add').style.display = 'none';
+  const form = document.getElementById('form-edit');
+  form.action = `/feeds/{{ domain }}/feeds/${id}/update`;
+  form.style.display = '';
+  document.getElementById('edit-name').value = name;
+  document.getElementById('edit-url').value = url;
+  document.getElementById('edit-update_rate').value = rate;
+  const typeSelect = document.getElementById('edit-feed_type');
+  typeSelect.value = type || 'rss';
+  syncTypeLabel('edit');
+  document.getElementById('panel-mode-label').textContent = 'EDIT FEED';
+  document.getElementById('btn-submit-add').style.display  = 'none';
+  document.getElementById('btn-submit-edit').style.display = '';
+  document.getElementById('btn-cancel-edit').style.display = '';
+  // highlight selected row
+  document.querySelectorAll('#feeds-tbody tr').forEach(r => r.style.background = '');
+  event.currentTarget.style.background = 'rgba(74,247,122,0.06)';
+}
+
+function cancelEdit() {
+  document.getElementById('form-edit').style.display = 'none';
+  document.getElementById('form-add').style.display = '';
+  document.getElementById('panel-mode-label').textContent = 'ADD FEED';
+  document.getElementById('btn-submit-add').style.display  = '';
+  document.getElementById('btn-submit-edit').style.display = 'none';
+  document.getElementById('btn-cancel-edit').style.display = 'none';
+  document.querySelectorAll('#feeds-tbody tr').forEach(r => r.style.background = '');
+}
+
+function submitActiveForm() {
+  const addForm  = document.getElementById('form-add');
+  const editForm = document.getElementById('form-edit');
+  const active   = (addForm.style.display !== 'none') ? addForm : editForm;
+  active.submit();
+}
+
+function stepNum(btn, delta) {
+  const input = btn.closest('.num-stepper').querySelector('input[type=number]');
+  const min  = input.min !== '' ? parseInt(input.min, 10)  : -Infinity;
+  const max  = input.max !== '' ? parseInt(input.max, 10)  :  Infinity;
+  const step = input.step !== '' ? parseInt(input.step, 10) : 1;
+  let val = parseInt(input.value, 10);
+  if (isNaN(val)) val = parseInt(input.min, 10) || 1;
+  input.value = Math.min(max, Math.max(min, val + delta * step));
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+  if (input.classList.contains('rate-input')) saveRate(input);
+}
+
+async function triggerRefresh(btn, url) {
+  btn.disabled = true; btn.style.opacity = '0.5';
+  try {
+    await fetch(url, { method: 'POST' });
+    btn.textContent = '\u2713';
+    btn.style.color = 'var(--green)';
+    const row = btn.closest('tr');
+    const rateInput = row.querySelector('.rate-input');
+    const nextCell  = row.querySelector('td[data-col="next"]');
+    if (nextCell && rateInput) nextCell.innerHTML = `<span style="color:var(--dim)">${rateInput.value}m</span>`;
+    setTimeout(() => { btn.innerHTML = '&#x21bb;'; btn.disabled = false; btn.style.opacity = ''; }, 1500);
+  } catch (_) { btn.disabled = false; btn.style.opacity = ''; }
+}
+
+async function saveRate(input) {
+  const val = parseInt(input.value, 10);
+  if (!val || val < 1) { input.value = input.dataset.prev || 60; return; }
+  if (val === parseInt(input.dataset.prev || input.dataset.orig || val, 10)) return;
+  try {
+    const resp = await fetch(`/api/feeds/${input.dataset.id}/rate?minutes=${val}`, { method: 'PATCH' });
+    if (resp.ok) {
+      input.dataset.prev = val;
+      input.style.borderColor = 'var(--green)';
+      setTimeout(() => input.style.borderColor = '', 800);
+    } else { input.value = input.dataset.prev || 60; }
+  } catch (_) { input.value = input.dataset.prev || 60; }
+}
+document.querySelectorAll('.rate-input').forEach(i => i.dataset.prev = i.value);
+
+async function deleteEntry(btn, url) {
+  const row = btn.closest('tr');
+  btn.disabled = true;
+  try {
+    const resp = await fetch(url, { method: 'POST' });
+    if (resp.ok || resp.redirected) {
+      row.style.transition = 'opacity 0.15s'; row.style.opacity = '0';
+      setTimeout(() => {
+        row.remove();
+        const badge = document.getElementById('entry-count');
+        if (badge) badge.textContent = Math.max(0, parseInt(badge.textContent, 10) - 1);
+      }, 150);
+    } else { btn.disabled = false; }
+  } catch (e) { btn.disabled = false; }
+}
+
+
+function cancelAgeGate() {
+  document.getElementById('age-mode-select').value = '{{ age_settings.mode }}';
+  document.getElementById('age-days-input').value  = '{{ age_settings.days or 30 }}';
+  document.getElementById('age-start-input').value = '{{ age_settings.start_date or "" }}';
+  document.getElementById('age-end-input').value   = '{{ age_settings.end_date or "" }}';
+  showAgeRow('{{ age_settings.mode }}');
+}
+
+(function () {
+  function showAgeRow(mode) {
+    const daysRow = document.getElementById('age-row-days');
+    const calRow  = document.getElementById('age-row-cal');
+    if (daysRow) daysRow.style.display = mode === 'days_previous'   ? 'inline-flex' : 'none';
+    if (calRow)  calRow.style.display  = mode === 'calendar_period' ? 'inline-flex' : 'none';
+  }
+
+  async function saveAgeGate() {
+    const mode = document.getElementById('age-mode-select').value;
+    const body = new URLSearchParams({ mode });
+    if (mode === 'days_previous') {
+      const days = document.getElementById('age-days-input').value;
+      if (!days) return;
+      body.set('days', days);
+    } else if (mode === 'calendar_period') {
+      body.set('start_date', document.getElementById('age-start-input').value || '');
+      body.set('end_date',   document.getElementById('age-end-input').value   || '');
+    }
+    await fetch('/feeds/{{ domain }}/settings/age-mode', { method: 'POST', body });
+  }
+
+  window.showAgeRow  = showAgeRow;
+  window.saveAgeGate = saveAgeGate;
+  const sel = document.getElementById('age-mode-select');
+  if (sel) showAgeRow(sel.value);
+
+  window.purgeDaysPrevious = function () {
+    document.getElementById('purge-days-val').value = document.getElementById('age-days-input').value;
+    document.getElementById('form-purge-days').submit();
+  };
+  window.purgeOutsideCalendar = function () {
+    document.getElementById('purge-start-val').value = document.getElementById('age-start-input').value;
+    document.getElementById('purge-end-val').value   = document.getElementById('age-end-input').value;
+    document.getElementById('form-purge-calendar').submit();
+  };
+})();
+
+(function () {
+  var DELAY = 5000;
+  var timer;
+  function schedule() {
+    clearTimeout(timer);
+    timer = setTimeout(function () { location.reload(); }, DELAY);
+  }
+  ['mousedown', 'keydown', 'touchstart'].forEach(function (evt) {
+    document.addEventListener(evt, schedule, { passive: true });
+  });
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'visible') schedule();
+    else clearTimeout(timer);
+  });
+  schedule();
+}());
+</script>
+{% endblock %}

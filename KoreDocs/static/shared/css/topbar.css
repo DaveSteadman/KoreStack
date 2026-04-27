@@ -1,0 +1,9 @@
+/*
+ * topbar.css — Shared top bar styles for the KoreDocs suite.
+ *
+ * Canonical stylesheet for the UI that renders the KoreDocs brand,
+ * open tabs, and the + button used across all applications.
+ */
+
+@import url('./variables.css');
+@import url('./tabs.css');

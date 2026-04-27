@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KoreSheet</title>
+  <link rel="stylesheet" href="/static/sheet/style.css" />
+  <link rel="stylesheet" href="/static/commonui/css/chrome.css" />
+</head>
+<body>
+
+  <div id="suite-topbar"></div>
+
+  <!-- ── Top Bar ───────────────────────────────────────────── -->
+  <div id="tab-bar"></div>
+
+  <!-- ── Application Menu Bar ──────────────────────────────── -->
+  <div id="app-menu-host"></div>
+
+  <!-- ── Formula Bar ───────────────────────────────────────── -->
+  <div id="formula-bar">
+    <span id="cell-addr">A1</span>
+    <div class="fb-sep"></div>
+    <input id="formula-input" type="text" spellcheck="false"
+           autocomplete="off" placeholder="Value or =SUM(A1:B10)" />
+  </div>
+
+  <!-- ── Aggregate Toolbar ─────────────────────────────────── -->
+  <div id="toolbar">
+    <span class="tb-label">Insert into next cell:</span>
+    <button class="tb-btn" data-formula="SUM">SUM</button>
+    <button class="tb-btn" data-formula="AVERAGE">AVG</button>
+    <button class="tb-btn" data-formula="COUNT">COUNT</button>
+    <button class="tb-btn" data-formula="MIN">MIN</button>
+    <button class="tb-btn" data-formula="MAX">MAX</button>
+    <span class="tb-sep"></span>
+    <span class="tb-label">Decimals:</span>
+    <button class="tb-btn" data-decimal-action="decrease" title="Decrease decimal places">.0-</button>
+    <button class="tb-btn" data-decimal-action="increase" title="Increase decimal places">.0+</button>
+    <button class="tb-btn" data-decimal-action="clear" title="Use automatic decimal display">Auto</button>
+    <span class="tb-sep"></span>
+    <span id="range-preview" class="tb-label"></span>
+  </div>
+
+  <!-- ── Main ─────────────────────────────────────────────────── -->
+  <div id="main">
+
+    <div id="canvas-container">
+      <canvas id="grid"></canvas>
+      <input id="cell-editor" type="text" autocomplete="off" spellcheck="false" />
+    </div>
+
+    <aside id="right-sidebar">
+      <section id="properties-panel">
+        <h3>Properties</h3>
+        <div id="props-content"><span class="hint">No cell selected.</span></div>
+      </section>
+    </aside>
+
+  </div>
+
+  <!-- ── Status Bar ─────────────────────────────────────────── -->
+  <div id="status-bar">
+    <span id="status-file">Untitled.koresheet</span>
+    <span id="status-sel"></span>
+  </div>
+
+  <script type="module" src="/static/sheet/js/main.js"></script>
+</body>
+</html>

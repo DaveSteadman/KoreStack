@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}KoreComms{% endblock %}</title>
+  <link rel="stylesheet" href="/ui-elements/assets/css/chrome.css">
+  <style>
+    :root {
+      --dim:     var(--text-dim);
+      --green:   var(--success);
+      --amber:   var(--warning);
+      --blue:    var(--info);
+      --red:     var(--danger);
+      --header-h: 42px;
+      --service-accent: var(--amber);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      font-family: var(--font-code);
+      background: var(--bg); color: var(--text);
+      font-size: 13px; line-height: 1.55;
+    }
+
+    /* ─── header bar ─────────────────────────────── */
+    header {
+      height: var(--header-h);
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center;
+      padding: 0 1.5rem; gap: 1.5rem;
+      position: sticky; top: var(--suite-topbar-h, 38px); z-index: 100;
+    }
+    .logo { font-size: 1rem; font-weight: 700; letter-spacing: 0.06em;
+      text-decoration: none; flex-shrink: 0; color: var(--text); }
+    .logo .l-kore { color: var(--text); }
+    .logo .l-comms { color: var(--service-accent); }
+    .dot-live {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--red); box-shadow: 0 0 6px var(--red);
+      display: inline-block; flex-shrink: 0;
+      transition: background .4s, box-shadow .4s;
+    }
+    .dot-live.live {
+      background: var(--green); box-shadow: 0 0 6px var(--green);
+    }
+    nav { margin-left: auto; display: flex; gap: 1.25rem; }
+    nav a { color: var(--dim); text-decoration: none; font-size: 12px; letter-spacing: 0.04em; }
+    nav a:hover { color: var(--text); }
+    nav a.active { color: var(--service-accent); }
+
+    .tag {
+      font-size: 11px; letter-spacing: 0.04em;
+      padding: 1px 6px; border: 1px solid var(--border); color: var(--dim);
+    }
+
+    /* ─── layout ─────────────────────────────────── */
+    main { padding: 1.5rem 2rem; max-width: 1320px; margin: 0 auto; }
+
+    /* ─── panel / card ───────────────────────────── */
+    .panel { border: 1px solid var(--border); background: var(--panel); margin-bottom: 1.25rem; }
+    .panel-header {
+      display: flex; align-items: center; gap: 0.6rem;
+      padding: 0.4rem 0.85rem; border-bottom: 1px solid var(--border);
+      color: var(--dim); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+    }
+    .panel-header .ph-diamond { color: var(--service-accent); }
+    .panel-body { padding: 1rem 1.1rem; }
+
+    /* ─── table ──────────────────────────────────── */
+    table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+    th, td { text-align: left; padding: 0.4rem 0.75rem; border-bottom: 1px solid var(--border); }
+    th { color: var(--dim); font-weight: 400; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; }
+    tr:last-child td { border-bottom: none; }
+    tbody tr:hover td { background: rgba(255,255,255,.025); }
+
+    /* ─── forms ──────────────────────────────────── */
+    form { display: flex; flex-direction: column; gap: 0.6rem; }
+    label { font-size: 11px; color: var(--dim); letter-spacing: 0.05em; text-transform: uppercase; }
+    input[type=text], input[type=email], input[type=number], input[type=password],
+    textarea, select {
+      padding: 0.35rem 0.6rem;
+      background: var(--bg); color: var(--text);
+      border: 1px solid var(--border);
+      font-family: inherit; font-size: 12.5px; width: 100%; outline: none;
+    }
+    input:focus, select:focus, textarea:focus { border-color: var(--service-accent); }
+    input::placeholder, textarea::placeholder { color: var(--dim); }
+    textarea { resize: vertical; min-height: 100px; }
+
+    /* ─── buttons ────────────────────────────────── */
+    .btn {
+      display: inline-block; padding: 0.3rem 0.9rem;
+      font-family: inherit; font-size: 12px; letter-spacing: 0.06em;
+      cursor: pointer; border: 1px solid var(--border); background: transparent;
+      color: var(--text); text-decoration: none; text-transform: uppercase;
+      transition: border-color .12s, color .12s;
+    }
+    .btn:hover { border-color: var(--amber); color: var(--amber); }
+    .btn:hover { border-color: var(--service-accent); color: var(--service-accent); }
+    .btn-primary { border-color: var(--service-accent); color: var(--service-accent); }
+    .btn-primary:hover { background: rgba(240,192,96,.15); }
+    .btn-danger { border-color: var(--red); color: var(--red); }
+    .btn-danger:hover { background: rgba(255,95,95,.12); }
+    .btn-sm { padding: 0.15rem 0.55rem; font-size: 11px; }
+
+    /* ─── status badges ──────────────────────────── */
+    .badge {
+      display: inline-block; font-size: 10px; letter-spacing: 0.07em;
+      padding: 1px 6px; border: 1px solid; text-transform: uppercase;
+    }
+    .badge-queued    { border-color: var(--blue);  color: var(--blue); }
+    .badge-processing{ border-color: var(--amber); color: var(--amber); }
+    .badge-replied   { border-color: var(--green); color: var(--green); }
+    .badge-ignored   { border-color: var(--dim);   color: var(--dim); }
+    .badge-inbound   { border-color: var(--blue);  color: var(--blue); }
+    .badge-outbound  { border-color: var(--green); color: var(--green); }
+
+    /* ─── flash / info banner ────────────────────── */
+    .flash {
+      padding: 0.5rem 1rem; margin-bottom: 1rem;
+      border: 1px solid var(--amber); color: var(--amber); font-size: 12px;
+    }
+
+    /* ─── misc utility ───────────────────────────── */
+    .dim { color: var(--dim); }
+    .mono { font-family: inherit; }
+    p.meta { font-size: 11.5px; color: var(--dim); margin-bottom: 0.5rem; }
+    .gap-row { display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; }
+    .section-title {
+      font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--dim); margin-bottom: 0.75rem; border-bottom: 1px solid var(--border);
+      padding-bottom: 0.3rem;
+    }
+  </style>
+  {% block head %}{% endblock %}
+</head>
+<body>
+<div id="suite-topbar"></div>
+<div id="app-bar"></div>
+<main>
+  {% block content %}{% endblock %}
+</main>
+<script>
+  // ─── live status dot ─────────────────────────────
+  (function () {
+    function boot() {
+      const dot = document.getElementById('status-dot');
+      if (!dot) {
+        requestAnimationFrame(boot);
+        return;
+      }
+      // Restore last-known state immediately to avoid red flash on navigation.
+      if (sessionStorage.getItem('kc-live') === '1') {
+        dot.classList.add('live');
+        dot.title = 'Connected';
+      }
+      function ping() {
+        fetch('/status', { method: 'GET', cache: 'no-store' })
+          .then(r => {
+            if (r.ok) {
+              dot.classList.add('live');
+              dot.title = 'Connected';
+              sessionStorage.setItem('kc-live', '1');
+            } else {
+              dot.classList.remove('live');
+              dot.title = 'Error ' + r.status;
+              sessionStorage.removeItem('kc-live');
+            }
+          })
+          .catch(() => {
+            dot.classList.remove('live');
+            dot.title = 'Disconnected';
+            sessionStorage.removeItem('kc-live');
+          });
+      }
+      ping();
+      setInterval(ping, 5000);
+    }
+    boot();
+  })();
+
+  // ─── stepper controls ────────────────────────────
+  document.querySelectorAll('.num-stepper').forEach(w => {
+    const inp = w.querySelector('input[type=number]');
+    w.querySelector('.step-up')?.addEventListener('click', () => { inp.value = +inp.value + 1; });
+    w.querySelector('.step-dn')?.addEventListener('click', () => { inp.value = Math.max(+inp.min||0, +inp.value - 1); });
+  });
+</script>
+<script type="module">
+  import { initAppBar, initSuiteTopbar } from '/ui-elements/assets/js/topbar.js';
+  initSuiteTopbar({ currentService: 'korecomms' });
+  initAppBar({
+    currentService: 'korecomms',
+    overline: 'Messaging Service',
+    brandLabel: 'KoreComms',
+    brandIcon: 'korecomms',
+    statusDot: { id: 'status-dot', className: 'dot-live', title: 'Connecting...' },
+    chips: [
+      { label: 'Version', value: '{{ version }}', tone: 'accent' },
+    ],
+    tabs: [
+      { label: 'Conversations', href: '/', active: {{ 'true' if request.url.path == '/' else 'false' }} },
+      { label: 'Compose', href: '/compose', active: {{ 'true' if request.url.path == '/compose' else 'false' }} },
+      { label: 'Connections', href: '/connections', active: {{ 'true' if request.url.path.startswith('/connections') else 'false' }} },
+      { label: 'Activity', href: '/activity', active: {{ 'true' if request.url.path == '/activity' else 'false' }} },
+    ],
+  });
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

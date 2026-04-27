@@ -1,0 +1,1004 @@
+[2026-04-20T22:57:57]   Skipping Hacker News — next fetch in ~59m
+[2026-04-20T23:00:31]   Skipping MIT Technology Review — next fetch in ~59m
+[2026-04-20T23:03:38]   Skipping IEEE Spectrum — next fetch in ~59m
+[2026-04-20T23:04:11] Ingesting: latimes
+[2026-04-20T23:04:12]   latimes: +0 entries in 1.3s [good]
+[2026-04-20T23:04:46] Ingesting: Australia ABC
+[2026-04-20T23:05:00]   Australia ABC: +15 entries in 14.0s [good]
+[2026-04-20T23:10:26]   Skipping Mail / Guardian (SA) — next fetch in ~0m
+[2026-04-20T23:13:19]   Skipping indianexpress — next fetch in ~0m
+[2026-04-20T23:16:53]   Skipping DW — next fetch in ~0m
+[2026-04-20T23:19:35]   Skipping BBCi — next fetch in ~0m
+[2026-04-20T23:31:10]   Skipping lemonde — next fetch in ~0m
+[2026-04-21T00:02:11]   Skipping latimes — next fetch in ~0m
+[2026-04-21T00:02:46]   Skipping Australia ABC — next fetch in ~0m
+[2026-04-21T00:10:26] Ingesting: Mail / Guardian (SA)
+[2026-04-21T00:10:34]   Mail / Guardian (SA): +0 entries in 8.4s [good]
+[2026-04-21T00:14:19] Ingesting: indianexpress
+[2026-04-21T00:14:27]   indianexpress: +1 entries in 8.2s [good]
+[2026-04-21T00:18:53] Ingesting: DW
+[2026-04-21T00:19:02]   DW: +3 entries in 9.9s [good]
+[2026-04-21T00:22:35] Ingesting: BBCi
+[2026-04-21T00:22:43]   BBCi: +5 entries in 8.9s [good]
+[2026-04-21T00:38:10] Ingesting: lemonde
+[2026-04-21T00:38:18]   lemonde: +2 entries in 8.3s [good]
+[2026-04-21T01:00:11] Ingesting: latimes
+[2026-04-21T01:00:13]   latimes: +1 entries in 2.0s [good]
+[2026-04-21T01:00:34] Daily prune: WorldToday — 138 entries removed
+[2026-04-21T01:00:46] Ingesting: Australia ABC
+[2026-04-21T01:01:00]   Australia ABC: +5 entries in 14.9s [good]
+[2026-04-21T01:10:26]   Skipping Mail / Guardian (SA) — next fetch in ~0m
+[2026-04-21T01:15:19]   Skipping indianexpress — next fetch in ~0m
+[2026-04-21T01:20:53]   Skipping DW — next fetch in ~0m
+[2026-04-21T01:25:35]   Skipping BBCi — next fetch in ~0m
+[2026-04-21T01:45:10]   Skipping lemonde — next fetch in ~0m
+[2026-04-21T01:58:11]   Skipping latimes — next fetch in ~0m
+[2026-04-21T01:58:46]   Skipping Australia ABC — next fetch in ~0m
+[2026-04-21T02:10:26] Ingesting: Mail / Guardian (SA)
+[2026-04-21T02:10:35]   Mail / Guardian (SA): +0 entries in 9.3s [good]
+[2026-04-21T02:16:19] Ingesting: indianexpress
+[2026-04-21T02:16:28]   indianexpress: +0 entries in 9.0s [good]
+[2026-04-21T02:22:53] Ingesting: DW
+[2026-04-21T02:23:04]   DW: +0 entries in 11.2s [good]
+[2026-04-21T02:28:35] Ingesting: BBCi
+[2026-04-21T02:28:47]   BBCi: +4 entries in 12.2s [good]
+[2026-04-21T02:52:10] Ingesting: lemonde
+[2026-04-21T02:52:22]   lemonde: +1 entries in 12.4s [good]
+[2026-04-21T02:56:11] Ingesting: latimes
+[2026-04-21T02:56:12]   latimes: +1 entries in 2.0s [good]
+[2026-04-21T02:56:46] Ingesting: Australia ABC
+[2026-04-21T02:57:01]   Australia ABC: +10 entries in 15.7s [good]
+[2026-04-21T03:10:26]   Skipping Mail / Guardian (SA) — next fetch in ~0m
+[2026-04-21T03:17:19]   Skipping indianexpress — next fetch in ~0m
+[2026-04-21T03:24:53]   Skipping DW — next fetch in ~0m
+[2026-04-21T17:38:59] Ingesting: DW
+[2026-04-21T17:39:11]   DW: +19 entries in 11.1s [good]
+[2026-04-21T17:39:11] Ingesting: lemonde
+[2026-04-21T17:39:19]   lemonde: +13 entries in 8.6s [good]
+[2026-04-21T17:39:19] Ingesting: TechCrunch
+[2026-04-21T17:39:25]   TechCrunch: +20 entries in 5.7s [good]
+[2026-04-21T17:39:25] Ingesting: latimes
+[2026-04-21T17:39:27]   latimes: +2 entries in 2.3s [good]
+[2026-04-21T17:39:27] Ingesting: The Verge
+[2026-04-21T17:39:30]   The Verge: +10 entries in 3.1s [good]
+[2026-04-21T17:39:30] Ingesting: indianexpress
+[2026-04-21T17:39:37]   indianexpress: +15 entries in 6.3s [good]
+[2026-04-21T17:39:37] Ingesting: Mail / Guardian (SA)
+[2026-04-21T17:39:43]   Mail / Guardian (SA): +7 entries in 6.9s [good]
+[2026-04-21T17:39:43] Ingesting: Tom's Hardware
+[2026-04-21T17:40:01]   Tom's Hardware: +16 entries in 17.8s [good]
+[2026-04-21T17:40:01] Ingesting: Australia ABC
+[2026-04-21T17:40:20]   Australia ABC: +25 entries in 18.8s [good]
+[2026-04-21T17:40:20] Ingesting: BBCi
+[2026-04-21T17:40:28]   BBCi: +27 entries in 8.4s [good]
+[2026-04-21T17:40:28] Ingesting: Hacker News
+[2026-04-21T17:40:40]   Hacker News: +19 entries in 11.5s [good]
+[2026-04-21T17:40:40] Ingesting: IEEE Spectrum
+[2026-04-21T17:40:52]   IEEE Spectrum: +2 entries in 12.1s [good]
+[2026-04-21T17:40:52] Ingesting: MIT Technology Review
+[2026-04-21T17:40:55]   MIT Technology Review: +2 entries in 3.1s [good]
+[2026-04-21T17:40:55] Ingesting: Wired
+[2026-04-21T17:41:15]   Wired: +16 entries in 20.2s [good]
+[2026-04-21T17:41:15] Ingesting: Ars Technica
+[2026-04-21T17:41:32]   Ars Technica: +14 entries in 16.4s [good]
+[2026-04-21T17:52:53]   Skipping DW — next fetch in ~48m
+[2026-04-21T18:10:26]   Skipping Mail / Guardian (SA) — next fetch in ~29m
+[2026-04-21T18:13:35]   Skipping BBCi — next fetch in ~29m
+[2026-04-21T18:24:11]   Skipping latimes — next fetch in ~13m
+[2026-04-21T18:24:46]   Skipping Australia ABC — next fetch in ~13m
+[2026-04-21T18:30:10]   Skipping lemonde — next fetch in ~16m
+[2026-04-21T18:32:19]   Skipping indianexpress — next fetch in ~8m
+[2026-04-21T18:54:53] Ingesting: DW
+[2026-04-21T18:55:02]   DW: +1 entries in 9.6s [good]
+[2026-04-21T19:10:26] Ingesting: Mail / Guardian (SA)
+[2026-04-21T19:10:32]   Mail / Guardian (SA): +0 entries in 6.0s [good]
+[2026-04-21T19:16:35] Ingesting: BBCi
+[2026-04-21T19:16:43]   BBCi: +7 entries in 8.4s [good]
+[2026-04-21T19:22:11] Ingesting: latimes
+[2026-04-21T19:22:13]   latimes: +0 entries in 2.8s [good]
+[2026-04-21T19:22:46] Ingesting: Australia ABC
+[2026-04-21T19:23:01]   Australia ABC: +1 entries in 15.2s [good]
+[2026-04-21T19:33:19] Ingesting: indianexpress
+[2026-04-21T19:33:25]   indianexpress: +0 entries in 6.2s [good]
+[2026-04-21T19:37:10] Ingesting: lemonde
+[2026-04-21T19:37:19]   lemonde: +2 entries in 9.6s [good]
+[2026-04-21T19:56:53]   Skipping DW — next fetch in ~0m
+[2026-04-21T20:10:26]   Skipping Mail / Guardian (SA) — next fetch in ~0m
+[2026-04-21T20:19:35]   Skipping BBCi — next fetch in ~0m
+[2026-04-21T20:20:11]   Skipping latimes — next fetch in ~0m
+[2026-04-21T20:20:46]   Skipping Australia ABC — next fetch in ~0m
+[2026-04-21T20:34:19]   Skipping indianexpress — next fetch in ~0m
+[2026-04-21T20:44:10]   Skipping lemonde — next fetch in ~0m
+[2026-04-21T20:58:53] Ingesting: DW
+[2026-04-21T20:59:02]   DW: +1 entries in 9.2s [good]
+[2026-04-21T21:10:26] Ingesting: Mail / Guardian (SA)
+[2026-04-21T21:10:35]   Mail / Guardian (SA): +0 entries in 9.2s [good]
+[2026-04-21T21:18:11] Ingesting: latimes
+[2026-04-21T21:18:12]   latimes: +0 entries in 1.6s [good]
+[2026-04-21T21:18:46] Ingesting: Australia ABC
+[2026-04-21T21:19:01]   Australia ABC: +12 entries in 15.3s [good]
+[2026-04-21T21:22:35] Ingesting: BBCi
+[2026-04-21T21:22:42]   BBCi: +3 entries in 7.3s [good]
+[2026-04-21T21:35:19] Ingesting: indianexpress
+[2026-04-21T21:35:26]   indianexpress: +5 entries in 7.0s [good]
+[2026-04-21T21:51:10] Ingesting: lemonde
+[2026-04-21T21:51:18]   lemonde: +2 entries in 8.5s [good]
+[2026-04-21T22:00:53]   Skipping DW — next fetch in ~0m
+[2026-04-21T22:10:26]   Skipping Mail / Guardian (SA) — next fetch in ~0m
+[2026-04-21T22:16:11]   Skipping latimes — next fetch in ~0m
+[2026-04-21T22:16:46]   Skipping Australia ABC — next fetch in ~0m
+[2026-04-21T22:25:35]   Skipping BBCi — next fetch in ~0m
+[2026-04-21T22:36:19]   Skipping indianexpress — next fetch in ~0m
+[2026-04-21T22:40:37]   Skipping Tom's Hardware — next fetch in ~57m
+[2026-04-21T22:47:31]   Skipping The Verge — next fetch in ~50m
+[2026-04-21T22:54:39]   Skipping TechCrunch — next fetch in ~44m
+[2026-04-21T22:54:49]   Skipping Wired — next fetch in ~46m
+[2026-04-21T22:55:01]   Skipping Ars Technica — next fetch in ~46m
+[2026-04-21T22:58:10]   Skipping lemonde — next fetch in ~0m
+[2026-04-21T23:01:57]   Skipping Hacker News — next fetch in ~39m
+[2026-04-26T16:35:21] Ingesting: HuggingFace Blog
+[2026-04-26T16:35:21] Daily prune: AiNews — 9 entries removed
+[2026-04-26T16:35:21] Daily prune: TechNews — 10 entries removed
+[2026-04-26T16:35:21] Daily prune: WorldToday — 401 entries removed
+[2026-04-26T16:35:30]   HuggingFace Blog: +5 entries in 8.8s [good]
+[2026-04-26T16:35:30] Ingesting: Understanding AI
+[2026-04-26T16:35:33]   Understanding AI: +1 entries in 2.7s [good]
+[2026-04-26T16:35:33] Ingesting: Ollama Blog
+[2026-04-26T16:35:33]   Ollama Blog: +0 entries in 0.6s [good]
+[2026-04-26T16:35:33] Web crawl: Artificial Intelligence - News (https://www.artificialintelligence-news.com/)
+[2026-04-26T16:35:34]   Artificial Intelligence - News: 50 level-1 candidates
+[2026-04-26T16:35:50]   Artificial Intelligence - News: +0 articles from 50 pages in 16.8s [good]
+[2026-04-26T16:35:50] Web crawl: aiweekly news-today (https://aiweekly.co/ai-news-today)
+[2026-04-26T16:35:51]   aiweekly news-today: 50 level-1 candidates
+[2026-04-26T16:36:15]   aiweekly news-today: +4 articles from 50 pages in 25.0s [good]
+[2026-04-26T16:36:15] Ingesting: Defense News
+[2026-04-26T16:36:29]   Defense News: +25 entries in 13.3s [good]
+[2026-04-26T16:36:29] Ingesting: Breaking Defense
+[2026-04-26T16:36:36]   Breaking Defense: +15 entries in 7.0s [good]
+[2026-04-26T16:36:36] Ingesting: airforce-technology
+[2026-04-26T16:36:36]   airforce-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.airforce-technology.com/feed/'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+[2026-04-26T16:36:36] Ingesting: army-technology
+[2026-04-26T16:36:36]   army-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.army-technology.com/feed/'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+[2026-04-26T16:36:36] Ingesting: defenseone
+[2026-04-26T16:36:57]   defenseone: +17 entries in 20.9s [good]
+[2026-04-26T16:36:57] Ingesting: ukdefencejournal
+[2026-04-26T16:37:00]   ukdefencejournal: +10 entries in 3.1s [good]
+[2026-04-26T16:37:00] Ingesting: defenceiq - defence-technology
+[2026-04-26T16:37:18]   defenceiq - defence-technology: +0 entries in 18.3s [good]
+[2026-04-26T16:37:18] Ingesting: defenceiq - air-forces-military-aircraft
+[2026-04-26T16:37:39]   defenceiq - air-forces-military-aircraft: +0 entries in 20.8s [good]
+[2026-04-26T16:37:39] Web crawl: defense-aerospace WEB (https://www.defense-aerospace.com/)
+[2026-04-26T16:37:40]   defense-aerospace WEB: 50 level-1 candidates
+[2026-04-26T16:38:06]   defense-aerospace WEB: +0 articles from 50 pages in 26.8s [good]
+[2026-04-26T16:38:06] Web crawl: janes Insights (https://www.janes.com/osint-insights/defence-news)
+[2026-04-26T16:38:07]   janes Insights: 50 level-1 candidates
+[2026-04-26T16:38:25]   janes Insights: +10 articles from 41 pages in 18.6s [good]
+[2026-04-26T16:38:25] Ingesting: TechCrunch
+[2026-04-26T16:38:30]   TechCrunch: +20 entries in 4.8s [good]
+[2026-04-26T16:38:30] Ingesting: Ars Technica
+[2026-04-26T16:38:45]   Ars Technica: +20 entries in 15.4s [good]
+[2026-04-26T16:38:45] Ingesting: Hacker News
+[2026-04-26T16:38:57]   Hacker News: +20 entries in 12.3s [good]
+[2026-04-26T16:38:57] Ingesting: The Verge
+[2026-04-26T16:39:00]   The Verge: +10 entries in 2.8s [good]
+[2026-04-26T16:39:00] Ingesting: Wired
+[2026-04-26T16:39:18]   Wired: +48 entries in 17.7s [good]
+[2026-04-26T16:39:18] Ingesting: MIT Technology Review
+[2026-04-26T16:39:20]   MIT Technology Review: +10 entries in 2.7s [good]
+[2026-04-26T16:39:20] Ingesting: IEEE Spectrum
+[2026-04-26T16:39:32]   IEEE Spectrum: +6 entries in 11.4s [good]
+[2026-04-26T16:39:32] Ingesting: Tom's Hardware
+[2026-04-26T16:39:47]   Tom's Hardware: +50 entries in 14.7s [good]
+[2026-04-26T16:39:47] Ingesting: BBC World
+[2026-04-26T16:40:20]   BBC World: +33 entries in 33.2s [good]
+[2026-04-26T16:40:20] Ingesting: DW World
+[2026-04-26T16:40:25]   DW World: +12 entries in 5.5s [good]
+[2026-04-26T16:40:25] Ingesting: France24
+[2026-04-26T16:40:34]   France24: +22 entries in 8.6s [good]
+[2026-04-26T16:40:34] Ingesting: Aljazeera All
+[2026-04-26T16:40:41]   Aljazeera All: +25 entries in 6.7s [good]
+[2026-04-26T16:40:41] Ingesting: The Guardian World
+[2026-04-26T16:40:56]   The Guardian World: +44 entries in 15.3s [good]
+[2026-04-26T16:40:56] Ingesting: NPR World
+[2026-04-26T16:41:00]   NPR World: +10 entries in 3.7s [good]
+[2026-04-26T16:41:00] Ingesting: lemonde
+[2026-04-26T16:41:08]   lemonde: +20 entries in 8.2s [good]
+[2026-04-26T16:41:08] Ingesting: BBCi
+[2026-04-26T16:41:19]   BBCi: +21 entries in 10.8s [good]
+[2026-04-26T16:41:19] Ingesting: Australia ABC
+[2026-04-26T16:41:33]   Australia ABC: +25 entries in 14.6s [good]
+[2026-04-26T16:41:33] Ingesting: indianexpress
+[2026-04-26T16:41:38]   indianexpress: +15 entries in 5.0s [good]
+[2026-04-26T16:41:38] Ingesting: DW
+[2026-04-26T16:41:48]   DW: +15 entries in 9.6s [good]
+[2026-04-26T16:41:48] Ingesting: Mail / Guardian (SA)
+[2026-04-26T16:41:50]   Mail / Guardian (SA): +2 entries in 2.2s [good]
+[2026-04-26T16:41:50] Ingesting: latimes
+[2026-04-26T16:41:52]   latimes: +5 entries in 2.3s [good]
+[2026-04-26T16:41:52] Ingesting: TechCrunch
+[2026-04-26T16:41:57]   TechCrunch: +0 entries in 4.6s [good]
+[2026-04-26T16:41:57] Ingesting: Aljazeera All
+[2026-04-26T16:42:05]   Aljazeera All: +0 entries in 7.6s [good]
+[2026-04-26T16:42:05] Ingesting: indianexpress
+[2026-04-26T16:42:09]   indianexpress: +0 entries in 4.3s [good]
+[2026-04-26T16:42:09] Ingesting: lemonde
+[2026-04-26T16:42:15]   lemonde: +0 entries in 5.7s [good]
+[2026-04-26T16:42:15] Web crawl: aiweekly news-today (https://aiweekly.co/ai-news-today)
+[2026-04-26T16:42:15]   aiweekly news-today: 50 level-1 candidates
+[2026-04-26T16:42:21]   Skipping lemonde — next fetch in ~66m
+[2026-04-26T16:42:40]   aiweekly news-today: +0 articles from 50 pages in 24.8s [good]
+[2026-04-26T16:42:40] Ingesting: ukdefencejournal
+[2026-04-26T16:42:43]   ukdefencejournal: +0 entries in 2.9s [good]
+[2026-04-26T16:42:43] Ingesting: defenceiq - defence-technology
+[2026-04-26T16:43:00]   defenceiq - defence-technology: +0 entries in 17.8s [good]
+[2026-04-26T16:43:00] Ingesting: Ars Technica
+[2026-04-26T16:43:18]   Ars Technica: +0 entries in 17.6s [good]
+[2026-04-26T16:43:18] Ingesting: Understanding AI
+[2026-04-26T16:43:20]   Understanding AI: +0 entries in 1.7s [good]
+[2026-04-26T16:43:20] Ingesting: Ollama Blog
+[2026-04-26T16:43:20]   Ollama Blog: +0 entries in 0.7s [good]
+[2026-04-26T16:43:20] Web crawl: Artificial Intelligence - News (https://www.artificialintelligence-news.com/)
+[2026-04-26T16:43:21]   Artificial Intelligence - News: 50 level-1 candidates
+[2026-04-26T16:43:44]   Artificial Intelligence - News: +0 articles from 50 pages in 23.4s [good]
+[2026-04-26T16:43:44] Ingesting: latimes
+[2026-04-26T16:43:46]   latimes: +0 entries in 2.3s [good]
+[2026-04-26T16:43:46] Ingesting: Hacker News
+[2026-04-26T16:43:58]   Hacker News: +0 entries in 11.8s [good]
+[2026-04-26T16:43:58] Ingesting: HuggingFace Blog
+[2026-04-26T16:44:06]   HuggingFace Blog: +0 entries in 8.0s [good]
+[2026-04-26T16:44:06] Ingesting: airforce-technology
+[2026-04-26T16:44:06]   airforce-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.airforce-technology.com/feed/'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+[2026-04-26T16:44:06] Ingesting: BBC World
+[2026-04-26T16:44:27]   BBC World: +0 entries in 20.6s [good]
+[2026-04-26T16:44:27] Ingesting: Mail / Guardian (SA)
+[2026-04-26T16:44:29]   Mail / Guardian (SA): +0 entries in 2.0s [good]
+[2026-04-26T16:44:29] Ingesting: Breaking Defense
+[2026-04-26T16:44:35]   Breaking Defense: +0 entries in 6.1s [good]
+[2026-04-26T16:44:35] Ingesting: France24
+[2026-04-26T16:44:44]   France24: +0 entries in 8.6s [good]
+[2026-04-26T16:44:44] Ingesting: The Verge
+[2026-04-26T16:44:46]   The Verge: +0 entries in 2.7s [good]
+[2026-04-26T16:44:46] Ingesting: Wired
+[2026-04-26T16:45:04]   Wired: +0 entries in 17.8s [good]
+[2026-04-26T16:45:04] Ingesting: MIT Technology Review
+[2026-04-26T16:45:07]   MIT Technology Review: +0 entries in 2.5s [good]
+[2026-04-26T16:45:07] Ingesting: Tom's Hardware
+[2026-04-26T16:45:21]   Tom's Hardware: +0 entries in 14.7s [good]
+[2026-04-26T16:45:21] Web crawl: janes Insights (https://www.janes.com/osint-insights/defence-news)
+[2026-04-26T16:45:22]   janes Insights: 50 level-1 candidates
+[2026-04-26T16:45:39]   janes Insights: +0 articles from 41 pages in 17.7s [good]
+[2026-04-26T16:45:39] Ingesting: IEEE Spectrum
+[2026-04-26T16:45:50]   IEEE Spectrum: +0 entries in 10.8s [good]
+[2026-04-26T16:45:50] Ingesting: Defense News
+[2026-04-26T16:46:06]   Defense News: +0 entries in 15.6s [good]
+[2026-04-26T16:46:06] Ingesting: defenseone
+[2026-04-26T16:46:25]   defenseone: +0 entries in 19.6s [good]
+[2026-04-26T16:46:25] Web crawl: defense-aerospace WEB (https://www.defense-aerospace.com/)
+[2026-04-26T16:46:25]   defense-aerospace WEB: 50 level-1 candidates
+[2026-04-26T16:46:37]   defense-aerospace WEB: +0 articles from 50 pages in 12.2s [good]
+[2026-04-26T16:46:37] Ingesting: army-technology
+[2026-04-26T16:46:38]   army-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.army-technology.com/feed/'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+[2026-04-26T16:46:38] Ingesting: NPR World
+[2026-04-26T16:46:41]   NPR World: +0 entries in 3.7s [good]
+[2026-04-26T16:46:41] Ingesting: The Guardian World
+[2026-04-26T16:46:56]   The Guardian World: +0 entries in 15.0s [good]
+[2026-04-26T16:46:56] Ingesting: BBCi
+[2026-04-26T16:47:05]   BBCi: +1 entries in 8.6s [good]
+[2026-04-26T16:47:05] Ingesting: DW World
+[2026-04-26T16:47:10]   DW World: +0 entries in 5.1s [good]
+[2026-04-26T16:47:10] Ingesting: defenceiq - air-forces-military-aircraft
+[2026-04-26T16:47:29]   defenceiq - air-forces-military-aircraft: +0 entries in 18.9s [good]
+[2026-04-26T16:47:29] Ingesting: Australia ABC
+[2026-04-26T16:47:48]   Australia ABC: +0 entries in 19.1s [good]
+[2026-04-26T16:47:48] Ingesting: DW
+[2026-04-26T16:47:53]   DW: +0 entries in 5.0s [good]
+[2026-04-26T16:47:53] Ingesting: indianexpress
+[2026-04-26T16:47:57]   indianexpress: +0 entries in 4.5s [good]
+[2026-04-26T16:47:57] Ingesting: DW
+[2026-04-26T16:48:02]   DW: +0 entries in 4.1s [good]
+[2026-04-26T16:48:02] Ingesting: BBCi
+[2026-04-26T16:48:14]   BBCi: +0 entries in 12.8s [good]
+[2026-04-26T17:31:21]   Skipping latimes — next fetch in ~10m
+[2026-04-26T17:31:21]   Skipping Australia ABC — next fetch in ~14m
+[2026-04-26T17:35:21]   Skipping Mail / Guardian (SA) — next fetch in ~9m
+[2026-04-26T17:37:21]   Skipping indianexpress — next fetch in ~11m
+[2026-04-26T17:39:21]   Skipping DW — next fetch in ~10m
+[2026-04-26T17:41:21]   Skipping BBCi — next fetch in ~9m
+[2026-04-26T17:49:21] Ingesting: lemonde
+[2026-04-26T17:49:29]   lemonde: +0 entries in 7.7s [good]
+[2026-04-26T18:08:07]   Skipping HuggingFace Blog — next fetch in ~3515m
+[2026-04-26T18:08:07]   Skipping Understanding AI — next fetch in ~5225m
+[2026-04-26T18:08:07]   Skipping Ollama Blog — next fetch in ~5216m
+[2026-04-26T18:08:07]   Skipping Artificial Intelligence - News — next fetch in ~5923m
+[2026-04-26T18:08:07]   Skipping aiweekly news-today — next fetch in ~5919m
+[2026-04-26T18:08:07]   Skipping Defense News — next fetch in ~2915m
+[2026-04-26T18:08:07]   Skipping Breaking Defense — next fetch in ~2923m
+[2026-04-26T18:08:07] Ingesting: airforce-technology
+[2026-04-26T18:08:07]   Skipping defenseone — next fetch in ~2921m
+[2026-04-26T18:08:07]   Skipping ukdefencejournal — next fetch in ~2913m
+[2026-04-26T18:08:07]   Skipping defenceiq - defence-technology — next fetch in ~2915m
+[2026-04-26T18:08:07]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~2916m
+[2026-04-26T18:08:07]   Skipping defense-aerospace WEB — next fetch in ~2921m
+[2026-04-26T18:08:07]   Skipping janes Insights — next fetch in ~2913m
+[2026-04-26T18:08:07]   Skipping TechCrunch — next fetch in ~273m
+[2026-04-26T18:08:07]   Skipping Ars Technica — next fetch in ~275m
+[2026-04-26T18:08:07]   Skipping Hacker News — next fetch in ~276m
+[2026-04-26T18:08:07]   Skipping The Verge — next fetch in ~275m
+[2026-04-26T18:08:07]   Skipping Wired — next fetch in ~276m
+[2026-04-26T18:08:07]   Skipping MIT Technology Review — next fetch in ~278m
+[2026-04-26T18:08:07]   Skipping IEEE Spectrum — next fetch in ~280m
+[2026-04-26T18:08:07]   Skipping Tom's Hardware — next fetch in ~275m
+[2026-04-26T18:08:07]   Skipping BBC World — next fetch in ~5920m
+[2026-04-26T18:08:07]   Skipping DW World — next fetch in ~5920m
+[2026-04-26T18:08:07]   Skipping France24 — next fetch in ~5921m
+[2026-04-26T18:08:07]   Skipping Aljazeera All — next fetch in ~5916m
+[2026-04-26T18:08:07]   Skipping The Guardian World — next fetch in ~5920m
+[2026-04-26T18:08:07]   Skipping NPR World — next fetch in ~5917m
+[2026-04-26T18:08:07]   Skipping lemonde — next fetch in ~48m
+[2026-04-26T18:08:07]   Skipping lemonde — next fetch in ~48m
+[2026-04-26T18:08:07]   airforce-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.airforce-technology.com/feed/'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+[2026-04-26T18:08:07] Ingesting: army-technology
+[2026-04-26T18:08:07]   army-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.army-technology.com/feed/'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+[2026-04-26T18:08:07] Ingesting: BBCi
+[2026-04-26T18:08:25]   BBCi: +0 entries in 18.5s [good]
+[2026-04-26T18:08:25] Ingesting: Australia ABC
+[2026-04-26T18:08:44]   Australia ABC: +0 entries in 19.0s [good]
+[2026-04-26T18:08:44] Ingesting: indianexpress
+[2026-04-26T18:08:50]   indianexpress: +2 entries in 5.2s [good]
+[2026-04-26T18:08:50] Ingesting: DW
+[2026-04-26T18:08:57]   DW: +2 entries in 7.0s [good]
+[2026-04-26T18:08:57] Ingesting: Mail / Guardian (SA)
+[2026-04-26T18:08:59]   Mail / Guardian (SA): +0 entries in 2.1s [good]
+[2026-04-26T18:08:59] Ingesting: latimes
+[2026-04-26T18:09:01]   latimes: +1 entries in 2.0s [good]
+[2026-04-26T18:09:01] Ingesting: indianexpress
+[2026-04-26T18:09:05]   indianexpress: +0 entries in 4.6s [good]
+[2026-04-26T18:09:05] Ingesting: airforce-technology
+[2026-04-26T18:09:06]   airforce-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.airforce-technology.com/feed/'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+[2026-04-26T18:09:06] Ingesting: army-technology
+[2026-04-26T18:09:06]   army-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.army-technology.com/feed/'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+[2026-04-26T18:09:06] Ingesting: Mail / Guardian (SA)
+[2026-04-26T18:09:07]   Skipping indianexpress — next fetch in ~60m
+[2026-04-26T18:09:08]   Mail / Guardian (SA): +0 entries in 2.0s [good]
+[2026-04-26T18:09:08] Ingesting: BBCi
+[2026-04-26T18:09:17]   BBCi: +0 entries in 8.7s [good]
+[2026-04-26T18:09:17] Ingesting: latimes
+[2026-04-26T18:09:18]   latimes: +0 entries in 1.8s [good]
+[2026-04-26T18:09:18] Ingesting: Australia ABC
+[2026-04-26T18:09:26]   Australia ABC: +0 entries in 7.5s [good]
+[2026-04-26T18:09:26] Ingesting: DW
+[2026-04-26T18:09:31]   DW: +0 entries in 4.7s [good]
+[2026-04-26T18:10:07]   Skipping DW — next fetch in ~61m
+[2026-04-26T18:11:07]   Skipping BBCi — next fetch in ~61m
+[2026-04-26T19:03:29] Ingesting: lemonde
+[2026-04-26T19:03:36]   lemonde: +1 entries in 7.9s [good]
+[2026-04-26T19:04:07]   Skipping Australia ABC — next fetch in ~3m
+[2026-04-26T19:04:07]   Skipping latimes — next fetch in ~3m
+[2026-04-26T19:08:07]   Skipping Mail / Guardian (SA) — next fetch in ~1m
+[2026-04-26T19:10:07] Ingesting: indianexpress
+[2026-04-26T19:10:11]   indianexpress: +0 entries in 4.8s [good]
+[2026-04-26T19:12:07] Ingesting: DW
+[2026-04-26T19:12:16]   DW: +1 entries in 9.5s [good]
+[2026-04-26T19:14:07] Ingesting: BBCi
+[2026-04-26T19:14:23]   BBCi: +1 entries in 16.4s [good]
+[2026-04-26T20:02:07] Ingesting: Australia ABC
+[2026-04-26T20:02:24]   Australia ABC: +12 entries in 17.4s [good]
+[2026-04-26T20:02:24] Ingesting: latimes
+[2026-04-26T20:02:26]   latimes: +1 entries in 2.6s [good]
+[2026-04-26T20:08:07] Ingesting: Mail / Guardian (SA)
+[2026-04-26T20:08:09]   Mail / Guardian (SA): +0 entries in 2.5s [good]
+[2026-04-26T20:10:29]   Skipping lemonde — next fetch in ~0m
+[2026-04-26T20:11:07]   Skipping indianexpress — next fetch in ~0m
+[2026-04-26T20:14:07]   Skipping DW — next fetch in ~0m
+[2026-04-26T20:17:07]   Skipping BBCi — next fetch in ~0m
+[2026-04-26T21:00:07]   Skipping latimes — next fetch in ~0m
+[2026-04-26T21:00:07]   Skipping Australia ABC — next fetch in ~0m
+[2026-04-26T21:08:07]   Skipping Mail / Guardian (SA) — next fetch in ~0m
+[2026-04-26T21:12:07] Ingesting: indianexpress
+[2026-04-26T21:12:11]   indianexpress: +0 entries in 4.7s [good]
+[2026-04-26T21:16:07] Ingesting: DW
+[2026-04-26T21:16:13]   DW: +1 entries in 6.3s [good]
+[2026-04-26T21:17:29] Ingesting: lemonde
+[2026-04-26T21:17:37]   lemonde: +0 entries in 8.7s [good]
+[2026-04-26T21:20:07] Ingesting: BBCi
+[2026-04-26T21:20:17]   BBCi: +4 entries in 10.3s [good]
+[2026-04-26T21:41:57]   Skipping TechCrunch — next fetch in ~59m
+[2026-04-26T21:43:18]   Skipping Ars Technica — next fetch in ~59m
+[2026-04-26T21:43:21]   Skipping Tom's Hardware — next fetch in ~59m
+[2026-04-26T21:43:46]   Skipping The Verge — next fetch in ~59m
+[2026-04-26T21:44:58]   Skipping Hacker News — next fetch in ~59m
+[2026-04-26T21:45:04]   Skipping Wired — next fetch in ~59m
+[2026-04-26T21:47:07]   Skipping MIT Technology Review — next fetch in ~59m
+[2026-04-26T21:48:50]   Skipping IEEE Spectrum — next fetch in ~59m
+[2026-04-26T21:58:07] Ingesting: latimes
+[2026-04-26T21:58:09]   latimes: +0 entries in 3.0s [good]
+[2026-04-26T21:58:09] Ingesting: Australia ABC
+[2026-04-26T21:58:23]   Australia ABC: +15 entries in 13.9s [good]
+[2026-04-26T22:07:05]   Skipping HuggingFace Blog — next fetch in ~3277m
+[2026-04-26T22:07:05]   Skipping Understanding AI — next fetch in ~4986m
+[2026-04-26T22:07:05]   Skipping Ollama Blog — next fetch in ~4977m
+[2026-04-26T22:07:05]   Skipping Artificial Intelligence - News — next fetch in ~5684m
+[2026-04-26T22:07:05]   Skipping aiweekly news-today — next fetch in ~5680m
+[2026-04-26T22:07:05]   Skipping Defense News — next fetch in ~2676m
+[2026-04-26T22:07:05]   Skipping Breaking Defense — next fetch in ~2684m
+[2026-04-26T22:07:05] Ingesting: airforce-technology
+[2026-04-26T22:07:05]   Skipping defenseone — next fetch in ~2682m
+[2026-04-26T22:07:05]   Skipping ukdefencejournal — next fetch in ~2674m
+[2026-04-26T22:07:05]   Skipping defenceiq - defence-technology — next fetch in ~2676m
+[2026-04-26T22:07:05]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~2677m
+[2026-04-26T22:07:05]   Skipping defense-aerospace WEB — next fetch in ~2682m
+[2026-04-26T22:07:05]   Skipping janes Insights — next fetch in ~2674m
+[2026-04-26T22:07:05]   Skipping TechCrunch — next fetch in ~34m
+[2026-04-26T22:07:05]   Skipping Ars Technica — next fetch in ~36m
+[2026-04-26T22:07:05]   Skipping Hacker News — next fetch in ~37m
+[2026-04-26T22:07:05]   Skipping The Verge — next fetch in ~36m
+[2026-04-26T22:07:05]   Skipping Wired — next fetch in ~37m
+[2026-04-26T22:07:05]   Skipping MIT Technology Review — next fetch in ~40m
+[2026-04-26T22:07:05]   Skipping IEEE Spectrum — next fetch in ~41m
+[2026-04-26T22:07:05]   Skipping Tom's Hardware — next fetch in ~36m
+[2026-04-26T22:07:05]   Skipping BBC World — next fetch in ~5681m
+[2026-04-26T22:07:05]   Skipping DW World — next fetch in ~5681m
+[2026-04-26T22:07:05]   Skipping France24 — next fetch in ~5682m
+[2026-04-26T22:07:05]   Skipping Aljazeera All — next fetch in ~5677m
+[2026-04-26T22:07:05]   Skipping The Guardian World — next fetch in ~5681m
+[2026-04-26T22:07:05]   Skipping NPR World — next fetch in ~5678m
+[2026-04-26T22:07:05]   Skipping lemonde — next fetch in ~17m
+[2026-04-26T22:07:05]   Skipping BBCi — next fetch in ~16m
+[2026-04-26T22:07:05]   Skipping Australia ABC — next fetch in ~49m
+[2026-04-26T22:07:05]   Skipping indianexpress — next fetch in ~6m
+[2026-04-26T22:07:05]   Skipping DW — next fetch in ~11m
+[2026-04-26T22:07:05]   Skipping latimes — next fetch in ~49m
+[2026-04-26T22:07:05]   Skipping indianexpress — next fetch in ~6m
+[2026-04-26T22:07:05]   Skipping DW — next fetch in ~11m
+[2026-04-26T22:07:05]   Skipping lemonde — next fetch in ~17m
+[2026-04-26T22:07:05]   Skipping TechCrunch — next fetch in ~34m
+[2026-04-26T22:07:05]   Skipping BBCi — next fetch in ~16m
+[2026-04-26T22:07:05]   Skipping Ars Technica — next fetch in ~36m
+[2026-04-26T22:07:05]   Skipping The Verge — next fetch in ~36m
+[2026-04-26T22:07:05]   Skipping Tom's Hardware — next fetch in ~36m
+[2026-04-26T22:07:05]   Skipping Hacker News — next fetch in ~37m
+[2026-04-26T22:07:05]   Skipping Wired — next fetch in ~37m
+[2026-04-26T22:07:05]   Skipping IEEE Spectrum — next fetch in ~41m
+[2026-04-26T22:07:05]   Skipping MIT Technology Review — next fetch in ~40m
+[2026-04-26T22:07:05]   Skipping latimes — next fetch in ~49m
+[2026-04-26T22:07:05]   Skipping Australia ABC — next fetch in ~49m
+[2026-04-26T22:07:06]   airforce-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.airforce-technology.com/feed/'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+[2026-04-26T22:07:06] Ingesting: army-technology
+[2026-04-26T22:07:06]   army-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.army-technology.com/feed/'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+[2026-04-26T22:07:06] Ingesting: Mail / Guardian (SA)
+[2026-04-26T22:07:09]   Mail / Guardian (SA): +0 entries in 2.7s [good]
+[2026-04-26T22:07:09] Ingesting: airforce-technology
+[2026-04-26T22:07:09]   airforce-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.airforce-technology.com/feed/'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+[2026-04-26T22:07:09] Ingesting: army-technology
+[2026-04-26T22:07:09]   army-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.army-technology.com/feed/'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+[2026-04-26T22:07:09] Ingesting: Mail / Guardian (SA)
+[2026-04-26T22:07:12]   Mail / Guardian (SA): +0 entries in 2.6s [good]
+[2026-04-26T22:14:11] Ingesting: indianexpress
+[2026-04-26T22:14:16]   indianexpress: +0 entries in 5.7s [good]
+[2026-04-26T22:20:13] Ingesting: DW
+[2026-04-26T22:20:18]   DW: +0 entries in 5.6s [good]
+[2026-04-26T22:26:17] Ingesting: BBCi
+[2026-04-26T22:26:29]   BBCi: +6 entries in 12.6s [good]
+[2026-04-26T22:31:37] Ingesting: lemonde
+[2026-04-26T22:31:44]   lemonde: +0 entries in 7.3s [good]
+[2026-04-26T22:54:09]   Skipping latimes — next fetch in ~1m
+[2026-04-26T22:54:23]   Skipping Australia ABC — next fetch in ~1m
+[2026-04-26T23:07:05]   Skipping Mail / Guardian (SA) — next fetch in ~0m
+[2026-04-26T23:15:11]   Skipping indianexpress — next fetch in ~0m
+[2026-04-26T23:22:13]   Skipping DW — next fetch in ~0m
+[2026-04-26T23:29:17]   Skipping BBCi — next fetch in ~0m
+[2026-04-26T23:38:37]   Skipping lemonde — next fetch in ~0m
+[2026-04-27T21:15:12]   Skipping HuggingFace Blog — next fetch in ~1888m
+[2026-04-27T21:15:12]   Skipping Understanding AI — next fetch in ~3598m
+[2026-04-27T21:15:12]   Skipping Ollama Blog — next fetch in ~3589m
+[2026-04-27T21:15:12]   Skipping Artificial Intelligence - News — next fetch in ~4296m
+[2026-04-27T21:15:12]   Skipping aiweekly news-today — next fetch in ~4292m
+[2026-04-27T21:15:12]   Skipping Defense News — next fetch in ~1288m
+[2026-04-27T21:15:12]   Skipping Breaking Defense — next fetch in ~1296m
+[2026-04-27T21:15:12] Ingesting: airforce-technology
+[2026-04-27T21:15:12]   Skipping defenseone — next fetch in ~1294m
+[2026-04-27T21:15:12]   Skipping ukdefencejournal — next fetch in ~1286m
+[2026-04-27T21:15:12]   Skipping defenceiq - defence-technology — next fetch in ~1288m
+[2026-04-27T21:15:12]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~1289m
+[2026-04-27T21:15:12]   Skipping defense-aerospace WEB — next fetch in ~1294m
+[2026-04-27T21:15:12]   Skipping janes Insights — next fetch in ~1286m
+[2026-04-27T21:15:12] Daily prune: AiNews — 1 entries removed
+[2026-04-27T21:15:12]   Skipping BBC World — next fetch in ~4293m
+[2026-04-27T21:15:12]   Skipping DW World — next fetch in ~4292m
+[2026-04-27T21:15:12]   Skipping France24 — next fetch in ~4294m
+[2026-04-27T21:15:12]   Skipping Aljazeera All — next fetch in ~4289m
+[2026-04-27T21:15:12]   Skipping The Guardian World — next fetch in ~4293m
+[2026-04-27T21:15:12]   Skipping NPR World — next fetch in ~4290m
+[2026-04-27T21:15:12] Daily prune: TechNews — 3 entries removed
+[2026-04-27T21:15:12] Daily prune: WorldToday — 143 entries removed
+[2026-04-27T21:15:13]   airforce-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.airforce-technology.com/feed/'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+[2026-04-27T21:15:13] Ingesting: army-technology
+[2026-04-27T21:15:13]   army-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.army-technology.com/feed/'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+[2026-04-27T21:15:13] Ingesting: TechCrunch
+[2026-04-27T21:15:18]   TechCrunch: +17 entries in 4.8s [good]
+[2026-04-27T21:15:18] Ingesting: Ars Technica
+[2026-04-27T21:15:33]   Ars Technica: +9 entries in 15.6s [good]
+[2026-04-27T21:15:33] Ingesting: Hacker News
+[2026-04-27T21:15:43]   Hacker News: +20 entries in 9.9s [good]
+[2026-04-27T21:15:43] Ingesting: The Verge
+[2026-04-27T21:15:46]   The Verge: +10 entries in 2.8s [good]
+[2026-04-27T21:15:46] Ingesting: Wired
+[2026-04-27T21:16:04]   Wired: +13 entries in 18.5s [good]
+[2026-04-27T21:16:04] Ingesting: MIT Technology Review
+[2026-04-27T21:16:07]   MIT Technology Review: +3 entries in 2.8s [good]
+[2026-04-27T21:16:07] Ingesting: IEEE Spectrum
+[2026-04-27T21:16:20]   IEEE Spectrum: +3 entries in 12.8s [good]
+[2026-04-27T21:16:20] Ingesting: Tom's Hardware
+[2026-04-27T21:16:41]   Tom's Hardware: +17 entries in 20.9s [good]
+[2026-04-27T21:16:41] Ingesting: lemonde
+[2026-04-27T21:16:49]   lemonde: +20 entries in 8.5s [good]
+[2026-04-27T21:16:49] Ingesting: BBCi
+[2026-04-27T21:17:30]   BBCi: +29 entries in 40.8s [good]
+[2026-04-27T21:17:30] Ingesting: Australia ABC
+[2026-04-27T21:17:43]   Australia ABC: +25 entries in 12.4s [good]
+[2026-04-27T21:17:43] Ingesting: indianexpress
+[2026-04-27T21:17:51]   indianexpress: +27 entries in 8.4s [good]
+[2026-04-27T21:17:51] Ingesting: DW
+[2026-04-27T21:17:59]   DW: +17 entries in 7.6s [good]
+[2026-04-27T21:17:59] Ingesting: Mail / Guardian (SA)
+[2026-04-27T21:18:06]   Mail / Guardian (SA): +10 entries in 7.6s [good]
+[2026-04-27T21:18:06] Ingesting: latimes
+[2026-04-27T21:18:09]   latimes: +7 entries in 2.7s [good]
+[2026-04-27T21:18:09] Ingesting: lemonde
+[2026-04-27T21:18:12]   Skipping BBCi — next fetch in ~62m
+[2026-04-27T21:18:15]   lemonde: +0 entries in 5.9s [good]
+[2026-04-27T21:18:15] Ingesting: indianexpress
+[2026-04-27T21:18:23]   indianexpress: +0 entries in 8.5s [good]
+[2026-04-27T21:18:23] Ingesting: TechCrunch
+[2026-04-27T21:18:28]   TechCrunch: +0 entries in 4.8s [good]
+[2026-04-27T21:18:28] Ingesting: Ars Technica
+[2026-04-27T21:18:43]   Ars Technica: +0 entries in 15.1s [good]
+[2026-04-27T21:18:43] Ingesting: airforce-technology
+[2026-04-27T21:18:44]   airforce-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.airforce-technology.com/feed/'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+[2026-04-27T21:18:44] Ingesting: latimes
+[2026-04-27T21:18:46]   latimes: +0 entries in 2.1s [good]
+[2026-04-27T21:18:46] Ingesting: Wired
+[2026-04-27T21:19:04]   Wired: +0 entries in 18.5s [good]
+[2026-04-27T21:19:04] Ingesting: Hacker News
+[2026-04-27T21:19:19]   Hacker News: feed fetch timed out (>15s)
+[2026-04-27T21:19:19] Ingesting: The Verge
+[2026-04-27T21:19:22]   The Verge: +0 entries in 3.0s [good]
+[2026-04-27T21:19:22] Ingesting: Mail / Guardian (SA)
+[2026-04-27T21:19:29]   Mail / Guardian (SA): +0 entries in 7.1s [good]
+[2026-04-27T21:19:29] Ingesting: MIT Technology Review
+[2026-04-27T21:19:32]   MIT Technology Review: +0 entries in 2.8s [good]
+[2026-04-27T21:19:32] Ingesting: IEEE Spectrum
+[2026-04-27T21:19:45]   IEEE Spectrum: +0 entries in 12.7s [good]
+[2026-04-27T21:19:45] Ingesting: army-technology
+[2026-04-27T21:19:45]   army-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.army-technology.com/feed/'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+[2026-04-27T21:19:45] Ingesting: Tom's Hardware
+[2026-04-27T21:20:00]   Tom's Hardware: +0 entries in 14.5s [good]
+[2026-04-27T21:20:00] Ingesting: DW
+[2026-04-27T21:20:09]   DW: +0 entries in 9.0s [good]
+[2026-04-27T21:20:09] Ingesting: BBCi
+[2026-04-27T21:20:25]   BBCi: +0 entries in 16.6s [good]
+[2026-04-27T21:20:25] Ingesting: Australia ABC
+[2026-04-27T21:20:37]   Australia ABC: +1 entries in 11.8s [good]
+[2026-04-27T21:20:37] Ingesting: indianexpress
+[2026-04-27T21:20:45]   indianexpress: +0 entries in 8.5s [good]
+[2026-04-27T21:20:45] Ingesting: DW
+[2026-04-27T21:20:53]   DW: +0 entries in 7.3s [good]
+[2026-04-27T21:22:12]   Skipping lemonde — next fetch in ~63m
+[2026-04-27T21:36:32]   Skipping HuggingFace Blog — next fetch in ~1867m
+[2026-04-27T21:36:32]   Skipping Understanding AI — next fetch in ~3576m
+[2026-04-27T21:36:32]   Skipping Ollama Blog — next fetch in ~3567m
+[2026-04-27T21:36:32]   Skipping Artificial Intelligence - News — next fetch in ~4275m
+[2026-04-27T21:36:32]   Skipping aiweekly news-today — next fetch in ~4271m
+[2026-04-27T21:36:32]   Skipping Defense News — next fetch in ~1267m
+[2026-04-27T21:36:32]   Skipping Breaking Defense — next fetch in ~1275m
+[2026-04-27T21:36:32] Ingesting: airforce-technology
+[2026-04-27T21:36:32]   Skipping defenseone — next fetch in ~1272m
+[2026-04-27T21:36:32]   Skipping ukdefencejournal — next fetch in ~1265m
+[2026-04-27T21:36:32]   Skipping defenceiq - defence-technology — next fetch in ~1267m
+[2026-04-27T21:36:32]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~1267m
+[2026-04-27T21:36:32]   Skipping defense-aerospace WEB — next fetch in ~1273m
+[2026-04-27T21:36:32]   Skipping janes Insights — next fetch in ~1265m
+[2026-04-27T21:36:32]   Skipping TechCrunch — next fetch in ~341m
+[2026-04-27T21:36:32]   Skipping Ars Technica — next fetch in ~342m
+[2026-04-27T21:36:32]   Skipping Hacker News — next fetch in ~340m
+[2026-04-27T21:36:32]   Skipping The Verge — next fetch in ~341m
+[2026-04-27T21:36:32]   Skipping Wired — next fetch in ~342m
+[2026-04-27T21:36:32]   Skipping MIT Technology Review — next fetch in ~344m
+[2026-04-27T21:36:32]   Skipping IEEE Spectrum — next fetch in ~346m
+[2026-04-27T21:36:32]   Skipping Tom's Hardware — next fetch in ~341m
+[2026-04-27T21:36:32]   Skipping BBC World — next fetch in ~4271m
+[2026-04-27T21:36:32]   Skipping DW World — next fetch in ~4271m
+[2026-04-27T21:36:32]   Skipping France24 — next fetch in ~4273m
+[2026-04-27T21:36:32]   Skipping Aljazeera All — next fetch in ~4268m
+[2026-04-27T21:36:32]   Skipping The Guardian World — next fetch in ~4272m
+[2026-04-27T21:36:32]   Skipping NPR World — next fetch in ~4269m
+[2026-04-27T21:36:32]   Skipping lemonde — next fetch in ~48m
+[2026-04-27T21:36:32]   Skipping BBCi — next fetch in ~46m
+[2026-04-27T21:36:32]   Skipping Australia ABC — next fetch in ~42m
+[2026-04-27T21:36:32]   Skipping indianexpress — next fetch in ~45m
+[2026-04-27T21:36:32]   Skipping DW — next fetch in ~46m
+[2026-04-27T21:36:32]   Skipping Mail / Guardian (SA) — next fetch in ~42m
+[2026-04-27T21:36:32]   Skipping latimes — next fetch in ~40m
+[2026-04-27T21:36:32]   Skipping Mail / Guardian (SA) — next fetch in ~42m
+[2026-04-27T21:36:32]   Skipping indianexpress — next fetch in ~45m
+[2026-04-27T21:36:32]   Skipping latimes — next fetch in ~40m
+[2026-04-27T21:36:32]   Skipping Australia ABC — next fetch in ~42m
+[2026-04-27T21:36:32]   Skipping lemonde — next fetch in ~48m
+[2026-04-27T21:36:32]   Skipping DW — next fetch in ~46m
+[2026-04-27T21:36:32]   Skipping BBCi — next fetch in ~46m
+[2026-04-27T21:36:32]   airforce-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.airforce-technology.com/feed/'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+[2026-04-27T21:36:32] Ingesting: army-technology
+[2026-04-27T21:36:33]   army-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.army-technology.com/feed/'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+[2026-04-27T21:36:33] Ingesting: airforce-technology
+[2026-04-27T21:36:33]   airforce-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.airforce-technology.com/feed/'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+[2026-04-27T21:36:33] Ingesting: army-technology
+[2026-04-27T21:36:33]   army-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.army-technology.com/feed/'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+[2026-04-27T21:48:56]   Skipping HuggingFace Blog — next fetch in ~1855m
+[2026-04-27T21:48:56]   Skipping Understanding AI — next fetch in ~3564m
+[2026-04-27T21:48:56]   Skipping Ollama Blog — next fetch in ~3555m
+[2026-04-27T21:48:56]   Skipping Artificial Intelligence - News — next fetch in ~4262m
+[2026-04-27T21:48:56]   Skipping aiweekly news-today — next fetch in ~4258m
+[2026-04-27T21:48:56]   Skipping Defense News — next fetch in ~1255m
+[2026-04-27T21:48:56]   Skipping Breaking Defense — next fetch in ~1262m
+[2026-04-27T21:48:56] Ingesting: airforce-technology
+[2026-04-27T21:48:56]   Skipping defenseone — next fetch in ~1260m
+[2026-04-27T21:48:56]   Skipping ukdefencejournal — next fetch in ~1252m
+[2026-04-27T21:48:56]   Skipping defenceiq - defence-technology — next fetch in ~1255m
+[2026-04-27T21:48:56]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~1255m
+[2026-04-27T21:48:56]   Skipping defense-aerospace WEB — next fetch in ~1260m
+[2026-04-27T21:48:56]   Skipping janes Insights — next fetch in ~1252m
+[2026-04-27T21:48:56]   Skipping TechCrunch — next fetch in ~329m
+[2026-04-27T21:48:56]   Skipping Ars Technica — next fetch in ~329m
+[2026-04-27T21:48:56]   Skipping Hacker News — next fetch in ~327m
+[2026-04-27T21:48:56]   Skipping The Verge — next fetch in ~329m
+[2026-04-27T21:48:56]   Skipping Wired — next fetch in ~330m
+[2026-04-27T21:48:56]   Skipping MIT Technology Review — next fetch in ~332m
+[2026-04-27T21:48:56]   Skipping IEEE Spectrum — next fetch in ~333m
+[2026-04-27T21:48:56]   Skipping Tom's Hardware — next fetch in ~329m
+[2026-04-27T21:48:56]   Skipping BBC World — next fetch in ~4259m
+[2026-04-27T21:48:56]   Skipping DW World — next fetch in ~4259m
+[2026-04-27T21:48:56]   Skipping France24 — next fetch in ~4260m
+[2026-04-27T21:48:56]   Skipping Aljazeera All — next fetch in ~4256m
+[2026-04-27T21:48:56]   Skipping The Guardian World — next fetch in ~4259m
+[2026-04-27T21:48:56]   Skipping NPR World — next fetch in ~4256m
+[2026-04-27T21:48:56]   Skipping lemonde — next fetch in ~36m
+[2026-04-27T21:48:56]   Skipping BBCi — next fetch in ~34m
+[2026-04-27T21:48:56]   Skipping Australia ABC — next fetch in ~29m
+[2026-04-27T21:48:56]   Skipping indianexpress — next fetch in ~32m
+[2026-04-27T21:48:56]   Skipping DW — next fetch in ~33m
+[2026-04-27T21:48:56]   Skipping Mail / Guardian (SA) — next fetch in ~30m
+[2026-04-27T21:48:56]   Skipping latimes — next fetch in ~27m
+[2026-04-27T21:48:56]   Skipping latimes — next fetch in ~27m
+[2026-04-27T21:48:56]   Skipping Australia ABC — next fetch in ~29m
+[2026-04-27T21:48:56]   Skipping BBCi — next fetch in ~34m
+[2026-04-27T21:48:56]   Skipping DW — next fetch in ~33m
+[2026-04-27T21:48:56]   Skipping Mail / Guardian (SA) — next fetch in ~30m
+[2026-04-27T21:48:56]   Skipping indianexpress — next fetch in ~32m
+[2026-04-27T21:48:56]   Skipping lemonde — next fetch in ~36m
+[2026-04-27T21:48:57]   airforce-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.airforce-technology.com/feed/'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+[2026-04-27T21:48:57] Ingesting: army-technology
+[2026-04-27T21:48:57]   army-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.army-technology.com/feed/'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+[2026-04-27T21:48:57] Ingesting: airforce-technology
+[2026-04-27T21:48:57]   airforce-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.airforce-technology.com/feed/'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+[2026-04-27T21:48:57] Ingesting: army-technology
+[2026-04-27T21:48:57]   army-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.army-technology.com/feed/'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+[2026-04-27T21:58:42]   Skipping HuggingFace Blog — next fetch in ~1845m
+[2026-04-27T21:58:42]   Skipping Understanding AI — next fetch in ~3554m
+[2026-04-27T21:58:42]   Skipping Ollama Blog — next fetch in ~3545m
+[2026-04-27T21:58:42]   Skipping Artificial Intelligence - News — next fetch in ~4253m
+[2026-04-27T21:58:42]   Skipping aiweekly news-today — next fetch in ~4248m
+[2026-04-27T21:58:42]   Skipping Defense News — next fetch in ~1245m
+[2026-04-27T21:58:42]   Skipping Breaking Defense — next fetch in ~1252m
+[2026-04-27T21:58:42] Ingesting: airforce-technology
+[2026-04-27T21:58:42]   Skipping defenseone — next fetch in ~1250m
+[2026-04-27T21:58:42]   Skipping ukdefencejournal — next fetch in ~1243m
+[2026-04-27T21:58:42]   Skipping defenceiq - defence-technology — next fetch in ~1245m
+[2026-04-27T21:58:42]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~1245m
+[2026-04-27T21:58:42]   Skipping defense-aerospace WEB — next fetch in ~1250m
+[2026-04-27T21:58:42]   Skipping janes Insights — next fetch in ~1242m
+[2026-04-27T21:58:42]   Skipping TechCrunch — next fetch in ~319m
+[2026-04-27T21:58:42]   Skipping Ars Technica — next fetch in ~320m
+[2026-04-27T21:58:42]   Skipping Hacker News — next fetch in ~318m
+[2026-04-27T21:58:42]   Skipping The Verge — next fetch in ~319m
+[2026-04-27T21:58:42]   Skipping Wired — next fetch in ~320m
+[2026-04-27T21:58:42]   Skipping MIT Technology Review — next fetch in ~322m
+[2026-04-27T21:58:42]   Skipping IEEE Spectrum — next fetch in ~324m
+[2026-04-27T21:58:42]   Skipping Tom's Hardware — next fetch in ~319m
+[2026-04-27T21:58:42]   Skipping BBC World — next fetch in ~4249m
+[2026-04-27T21:58:42]   Skipping DW World — next fetch in ~4249m
+[2026-04-27T21:58:42]   Skipping France24 — next fetch in ~4251m
+[2026-04-27T21:58:42]   Skipping Aljazeera All — next fetch in ~4246m
+[2026-04-27T21:58:42]   Skipping The Guardian World — next fetch in ~4250m
+[2026-04-27T21:58:42]   Skipping NPR World — next fetch in ~4246m
+[2026-04-27T21:58:42]   Skipping lemonde — next fetch in ~26m
+[2026-04-27T21:58:42]   Skipping BBCi — next fetch in ~24m
+[2026-04-27T21:58:42]   Skipping Australia ABC — next fetch in ~19m
+[2026-04-27T21:58:42]   Skipping indianexpress — next fetch in ~23m
+[2026-04-27T21:58:42]   Skipping DW — next fetch in ~24m
+[2026-04-27T21:58:42]   Skipping Mail / Guardian (SA) — next fetch in ~20m
+[2026-04-27T21:58:42]   Skipping latimes — next fetch in ~18m
+[2026-04-27T21:58:42]   Skipping Australia ABC — next fetch in ~19m
+[2026-04-27T21:58:42]   Skipping latimes — next fetch in ~18m
+[2026-04-27T21:58:42]   Skipping Mail / Guardian (SA) — next fetch in ~20m
+[2026-04-27T21:58:42]   Skipping indianexpress — next fetch in ~23m
+[2026-04-27T21:58:42]   Skipping DW — next fetch in ~24m
+[2026-04-27T21:58:42]   Skipping BBCi — next fetch in ~24m
+[2026-04-27T21:58:42]   Skipping lemonde — next fetch in ~26m
+[2026-04-27T21:58:42]   airforce-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.airforce-technology.com/feed/'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+[2026-04-27T21:58:42] Ingesting: army-technology
+[2026-04-27T21:58:43]   army-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.army-technology.com/feed/'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+[2026-04-27T21:58:43] Ingesting: army-technology
+[2026-04-27T21:58:43]   army-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.army-technology.com/feed/'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+[2026-04-27T21:58:43] Ingesting: airforce-technology
+[2026-04-27T21:58:43]   airforce-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.airforce-technology.com/feed/'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+[2026-04-27T22:01:21]   Skipping HuggingFace Blog — next fetch in ~1842m
+[2026-04-27T22:01:21]   Skipping Understanding AI — next fetch in ~3551m
+[2026-04-27T22:01:21]   Skipping Ollama Blog — next fetch in ~3542m
+[2026-04-27T22:01:21]   Skipping Artificial Intelligence - News — next fetch in ~4250m
+[2026-04-27T22:01:21]   Skipping aiweekly news-today — next fetch in ~4246m
+[2026-04-27T22:01:21]   Skipping Defense News — next fetch in ~1242m
+[2026-04-27T22:01:21]   Skipping Breaking Defense — next fetch in ~1250m
+[2026-04-27T22:01:21] Ingesting: airforce-technology
+[2026-04-27T22:01:21]   Skipping defenseone — next fetch in ~1248m
+[2026-04-27T22:01:21]   Skipping ukdefencejournal — next fetch in ~1240m
+[2026-04-27T22:01:21]   Skipping defenceiq - defence-technology — next fetch in ~1242m
+[2026-04-27T22:01:21]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~1243m
+[2026-04-27T22:01:21]   Skipping defense-aerospace WEB — next fetch in ~1248m
+[2026-04-27T22:01:21]   Skipping janes Insights — next fetch in ~1240m
+[2026-04-27T22:01:21]   Skipping TechCrunch — next fetch in ~317m
+[2026-04-27T22:01:21]   Skipping Ars Technica — next fetch in ~317m
+[2026-04-27T22:01:21]   Skipping Hacker News — next fetch in ~315m
+[2026-04-27T22:01:21]   Skipping The Verge — next fetch in ~317m
+[2026-04-27T22:01:21]   Skipping Wired — next fetch in ~317m
+[2026-04-27T22:01:21]   Skipping MIT Technology Review — next fetch in ~320m
+[2026-04-27T22:01:21]   Skipping IEEE Spectrum — next fetch in ~321m
+[2026-04-27T22:01:21]   Skipping Tom's Hardware — next fetch in ~316m
+[2026-04-27T22:01:21]   Skipping BBC World — next fetch in ~4247m
+[2026-04-27T22:01:21]   Skipping DW World — next fetch in ~4246m
+[2026-04-27T22:01:21]   Skipping France24 — next fetch in ~4248m
+[2026-04-27T22:01:21]   Skipping Aljazeera All — next fetch in ~4243m
+[2026-04-27T22:01:21]   Skipping The Guardian World — next fetch in ~4247m
+[2026-04-27T22:01:21]   Skipping NPR World — next fetch in ~4244m
+[2026-04-27T22:01:21]   Skipping lemonde — next fetch in ~23m
+[2026-04-27T22:01:21]   Skipping BBCi — next fetch in ~22m
+[2026-04-27T22:01:21]   Skipping Australia ABC — next fetch in ~17m
+[2026-04-27T22:01:21]   Skipping indianexpress — next fetch in ~20m
+[2026-04-27T22:01:21]   Skipping DW — next fetch in ~21m
+[2026-04-27T22:01:21]   Skipping Mail / Guardian (SA) — next fetch in ~18m
+[2026-04-27T22:01:21]   Skipping latimes — next fetch in ~15m
+[2026-04-27T22:01:21]   Skipping indianexpress — next fetch in ~20m
+[2026-04-27T22:01:21]   Skipping Australia ABC — next fetch in ~17m
+[2026-04-27T22:01:21]   Skipping Mail / Guardian (SA) — next fetch in ~18m
+[2026-04-27T22:01:21]   Skipping latimes — next fetch in ~15m
+[2026-04-27T22:01:21]   Skipping BBCi — next fetch in ~22m
+[2026-04-27T22:01:21]   Skipping lemonde — next fetch in ~23m
+[2026-04-27T22:01:21]   Skipping DW — next fetch in ~21m
+[2026-04-27T22:01:21]   airforce-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.airforce-technology.com/feed/'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+[2026-04-27T22:01:21] Ingesting: army-technology
+[2026-04-27T22:01:21]   army-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.army-technology.com/feed/'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+[2026-04-27T22:01:21] Ingesting: army-technology
+[2026-04-27T22:01:21]   army-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.army-technology.com/feed/'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+[2026-04-27T22:01:21] Ingesting: airforce-technology
+[2026-04-27T22:01:22]   airforce-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.airforce-technology.com/feed/'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+[2026-04-27T22:01:48]   Skipping HuggingFace Blog — next fetch in ~1842m
+[2026-04-27T22:01:48]   Skipping Understanding AI — next fetch in ~3551m
+[2026-04-27T22:01:48]   Skipping Ollama Blog — next fetch in ~3542m
+[2026-04-27T22:01:48]   Skipping Artificial Intelligence - News — next fetch in ~4249m
+[2026-04-27T22:01:48]   Skipping aiweekly news-today — next fetch in ~4245m
+[2026-04-27T22:01:48]   Skipping Defense News — next fetch in ~1242m
+[2026-04-27T22:01:48]   Skipping Breaking Defense — next fetch in ~1249m
+[2026-04-27T22:01:48] Ingesting: airforce-technology
+[2026-04-27T22:01:48]   Skipping defenseone — next fetch in ~1247m
+[2026-04-27T22:01:48]   Skipping ukdefencejournal — next fetch in ~1239m
+[2026-04-27T22:01:48]   Skipping defenceiq - defence-technology — next fetch in ~1242m
+[2026-04-27T22:01:48]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~1242m
+[2026-04-27T22:01:48]   Skipping defense-aerospace WEB — next fetch in ~1247m
+[2026-04-27T22:01:48]   Skipping janes Insights — next fetch in ~1239m
+[2026-04-27T22:01:48]   Skipping TechCrunch — next fetch in ~316m
+[2026-04-27T22:01:48]   Skipping Ars Technica — next fetch in ~316m
+[2026-04-27T22:01:48]   Skipping Hacker News — next fetch in ~314m
+[2026-04-27T22:01:48]   Skipping The Verge — next fetch in ~316m
+[2026-04-27T22:01:48]   Skipping Wired — next fetch in ~317m
+[2026-04-27T22:01:48]   Skipping MIT Technology Review — next fetch in ~319m
+[2026-04-27T22:01:48]   Skipping IEEE Spectrum — next fetch in ~320m
+[2026-04-27T22:01:48]   Skipping Tom's Hardware — next fetch in ~316m
+[2026-04-27T22:01:48]   Skipping BBC World — next fetch in ~4246m
+[2026-04-27T22:01:48]   Skipping DW World — next fetch in ~4246m
+[2026-04-27T22:01:48]   Skipping France24 — next fetch in ~4247m
+[2026-04-27T22:01:48]   Skipping Aljazeera All — next fetch in ~4243m
+[2026-04-27T22:01:48]   Skipping The Guardian World — next fetch in ~4247m
+[2026-04-27T22:01:48]   Skipping NPR World — next fetch in ~4243m
+[2026-04-27T22:01:48]   Skipping lemonde — next fetch in ~23m
+[2026-04-27T22:01:48]   Skipping BBCi — next fetch in ~21m
+[2026-04-27T22:01:48]   Skipping Australia ABC — next fetch in ~16m
+[2026-04-27T22:01:48]   Skipping indianexpress — next fetch in ~19m
+[2026-04-27T22:01:48]   Skipping DW — next fetch in ~21m
+[2026-04-27T22:01:48]   Skipping Mail / Guardian (SA) — next fetch in ~17m
+[2026-04-27T22:01:48]   Skipping latimes — next fetch in ~14m
+[2026-04-27T22:01:48]   Skipping Mail / Guardian (SA) — next fetch in ~17m
+[2026-04-27T22:01:48]   Skipping latimes — next fetch in ~14m
+[2026-04-27T22:01:48]   Skipping Australia ABC — next fetch in ~16m
+[2026-04-27T22:01:48]   Skipping BBCi — next fetch in ~21m
+[2026-04-27T22:01:48]   Skipping indianexpress — next fetch in ~19m
+[2026-04-27T22:01:48]   Skipping DW — next fetch in ~21m
+[2026-04-27T22:01:48]   Skipping lemonde — next fetch in ~23m
+[2026-04-27T22:01:48]   airforce-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.airforce-technology.com/feed/'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+[2026-04-27T22:01:48] Ingesting: army-technology
+[2026-04-27T22:01:48]   army-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.army-technology.com/feed/'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+[2026-04-27T22:01:48] Ingesting: airforce-technology
+[2026-04-27T22:01:49]   airforce-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.airforce-technology.com/feed/'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+[2026-04-27T22:01:49] Ingesting: army-technology
+[2026-04-27T22:01:49]   army-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.army-technology.com/feed/'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+[2026-04-27T22:12:24]   Skipping HuggingFace Blog — next fetch in ~1831m
+[2026-04-27T22:12:24]   Skipping Understanding AI — next fetch in ~3540m
+[2026-04-27T22:12:24]   Skipping Ollama Blog — next fetch in ~3531m
+[2026-04-27T22:12:24]   Skipping Artificial Intelligence - News — next fetch in ~4239m
+[2026-04-27T22:12:24]   Skipping aiweekly news-today — next fetch in ~4235m
+[2026-04-27T22:12:24]   Skipping Defense News — next fetch in ~1231m
+[2026-04-27T22:12:24]   Skipping Breaking Defense — next fetch in ~1239m
+[2026-04-27T22:12:24] Ingesting: airforce-technology
+[2026-04-27T22:12:24]   Skipping defenseone — next fetch in ~1237m
+[2026-04-27T22:12:24]   Skipping ukdefencejournal — next fetch in ~1229m
+[2026-04-27T22:12:24]   Skipping defenceiq - defence-technology — next fetch in ~1231m
+[2026-04-27T22:12:24]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~1232m
+[2026-04-27T22:12:24]   Skipping defense-aerospace WEB — next fetch in ~1237m
+[2026-04-27T22:12:24]   Skipping janes Insights — next fetch in ~1229m
+[2026-04-27T22:12:24]   Skipping TechCrunch — next fetch in ~306m
+[2026-04-27T22:12:24]   Skipping Ars Technica — next fetch in ~306m
+[2026-04-27T22:12:24]   Skipping Hacker News — next fetch in ~304m
+[2026-04-27T22:12:24]   Skipping The Verge — next fetch in ~305m
+[2026-04-27T22:12:24]   Skipping Wired — next fetch in ~306m
+[2026-04-27T22:12:24]   Skipping MIT Technology Review — next fetch in ~309m
+[2026-04-27T22:12:24]   Skipping IEEE Spectrum — next fetch in ~310m
+[2026-04-27T22:12:24]   Skipping Tom's Hardware — next fetch in ~305m
+[2026-04-27T22:12:24]   Skipping BBC World — next fetch in ~4236m
+[2026-04-27T22:12:24]   Skipping DW World — next fetch in ~4235m
+[2026-04-27T22:12:24]   Skipping France24 — next fetch in ~4237m
+[2026-04-27T22:12:24]   Skipping Aljazeera All — next fetch in ~4232m
+[2026-04-27T22:12:24]   Skipping The Guardian World — next fetch in ~4236m
+[2026-04-27T22:12:24]   Skipping NPR World — next fetch in ~4233m
+[2026-04-27T22:12:24]   Skipping lemonde — next fetch in ~12m
+[2026-04-27T22:12:24]   Skipping BBCi — next fetch in ~11m
+[2026-04-27T22:12:24]   Skipping Australia ABC — next fetch in ~6m
+[2026-04-27T22:12:24]   Skipping indianexpress — next fetch in ~9m
+[2026-04-27T22:12:24]   Skipping DW — next fetch in ~10m
+[2026-04-27T22:12:24]   Skipping Mail / Guardian (SA) — next fetch in ~7m
+[2026-04-27T22:12:24]   Skipping latimes — next fetch in ~4m
+[2026-04-27T22:12:24]   Skipping latimes — next fetch in ~4m
+[2026-04-27T22:12:24]   Skipping Australia ABC — next fetch in ~6m
+[2026-04-27T22:12:24]   Skipping Mail / Guardian (SA) — next fetch in ~7m
+[2026-04-27T22:12:24]   Skipping indianexpress — next fetch in ~9m
+[2026-04-27T22:12:24]   Skipping lemonde — next fetch in ~12m
+[2026-04-27T22:12:24]   Skipping BBCi — next fetch in ~11m
+[2026-04-27T22:12:24]   Skipping DW — next fetch in ~10m
+[2026-04-27T22:12:25]   airforce-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.airforce-technology.com/feed/'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+[2026-04-27T22:12:25] Ingesting: army-technology
+[2026-04-27T22:12:25]   army-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.army-technology.com/feed/'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+[2026-04-27T22:12:25] Ingesting: airforce-technology
+[2026-04-27T22:12:25]   airforce-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.airforce-technology.com/feed/'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+[2026-04-27T22:12:25] Ingesting: army-technology
+[2026-04-27T22:12:25]   army-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.army-technology.com/feed/'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+[2026-04-27T22:14:46]   Skipping latimes — next fetch in ~1m
+[2026-04-27T22:16:37]   Skipping Australia ABC — next fetch in ~1m
+[2026-04-27T22:19:29] Ingesting: Mail / Guardian (SA)
+[2026-04-27T22:19:37]   Mail / Guardian (SA): +0 entries in 8.4s [good]
+[2026-04-27T22:22:45] Ingesting: indianexpress
+[2026-04-27T22:22:56]   indianexpress: +1 entries in 11.8s [good]
+[2026-04-27T22:24:53] Ingesting: DW
+[2026-04-27T22:25:02]   DW: +0 entries in 9.3s [good]
+[2026-04-27T22:26:25] Ingesting: BBCi
+[2026-04-27T22:26:40]   BBCi: +2 entries in 15.9s [good]
+[2026-04-27T22:32:15] Ingesting: lemonde
+[2026-04-27T22:32:22]   lemonde: +0 entries in 7.9s [good]
+[2026-04-27T23:12:46] Ingesting: latimes
+[2026-04-27T23:12:48]   latimes: +3 entries in 2.4s [good]
+[2026-04-27T23:14:37] Ingesting: Australia ABC
+[2026-04-27T23:14:50]   Australia ABC: +11 entries in 13.6s [good]
+[2026-04-27T23:19:29]   Skipping Mail / Guardian (SA) — next fetch in ~0m
+[2026-04-27T23:23:45]   Skipping indianexpress — next fetch in ~0m
+[2026-04-27T23:30:59]   Skipping HuggingFace Blog — next fetch in ~1753m
+[2026-04-27T23:30:59]   Skipping Understanding AI — next fetch in ~3462m
+[2026-04-27T23:30:59]   Skipping Ollama Blog — next fetch in ~3453m
+[2026-04-27T23:30:59]   Skipping Artificial Intelligence - News — next fetch in ~4160m
+[2026-04-27T23:30:59]   Skipping aiweekly news-today — next fetch in ~4156m
+[2026-04-27T23:30:59]   Skipping Defense News — next fetch in ~1153m
+[2026-04-27T23:30:59]   Skipping Breaking Defense — next fetch in ~1160m
+[2026-04-27T23:30:59] Ingesting: airforce-technology
+[2026-04-27T23:30:59]   Skipping defenseone — next fetch in ~1158m
+[2026-04-27T23:30:59]   Skipping ukdefencejournal — next fetch in ~1150m
+[2026-04-27T23:30:59]   Skipping defenceiq - defence-technology — next fetch in ~1153m
+[2026-04-27T23:30:59]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~1153m
+[2026-04-27T23:30:59]   Skipping defense-aerospace WEB — next fetch in ~1158m
+[2026-04-27T23:30:59]   Skipping janes Insights — next fetch in ~1150m
+[2026-04-27T23:30:59]   Skipping TechCrunch — next fetch in ~227m
+[2026-04-27T23:30:59]   Skipping Ars Technica — next fetch in ~227m
+[2026-04-27T23:30:59]   Skipping Hacker News — next fetch in ~225m
+[2026-04-27T23:30:59]   Skipping The Verge — next fetch in ~227m
+[2026-04-27T23:30:59]   Skipping Wired — next fetch in ~228m
+[2026-04-27T23:30:59]   Skipping MIT Technology Review — next fetch in ~230m
+[2026-04-27T23:30:59]   Skipping IEEE Spectrum — next fetch in ~231m
+[2026-04-27T23:30:59]   Skipping Tom's Hardware — next fetch in ~227m
+[2026-04-27T23:30:59]   Skipping BBC World — next fetch in ~4157m
+[2026-04-27T23:30:59]   Skipping DW World — next fetch in ~4157m
+[2026-04-27T23:30:59]   Skipping France24 — next fetch in ~4158m
+[2026-04-27T23:30:59]   Skipping Aljazeera All — next fetch in ~4154m
+[2026-04-27T23:30:59]   Skipping The Guardian World — next fetch in ~4157m
+[2026-04-27T23:30:59]   Skipping NPR World — next fetch in ~4154m
+[2026-04-27T23:30:59]   Skipping lemonde — next fetch in ~8m
+[2026-04-27T23:30:59]   Skipping Australia ABC — next fetch in ~41m
+[2026-04-27T23:30:59]   Skipping latimes — next fetch in ~39m
+[2026-04-27T23:30:59]   Skipping lemonde — next fetch in ~8m
+[2026-04-27T23:30:59]   Skipping Australia ABC — next fetch in ~41m
+[2026-04-27T23:30:59]   Skipping latimes — next fetch in ~39m
+[2026-04-27T23:31:00]   airforce-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.airforce-technology.com/feed/'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+[2026-04-27T23:31:00] Ingesting: army-technology
+[2026-04-27T23:31:00]   army-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.army-technology.com/feed/'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+[2026-04-27T23:31:00] Ingesting: BBCi
+[2026-04-27T23:31:22]   BBCi: +1 entries in 22.2s [good]
+[2026-04-27T23:31:22] Ingesting: indianexpress
+[2026-04-27T23:31:31]   indianexpress: +1 entries in 8.7s [good]
+[2026-04-27T23:31:31] Ingesting: DW
+[2026-04-27T23:31:37]   DW: +0 entries in 6.4s [good]
+[2026-04-27T23:31:37] Ingesting: Mail / Guardian (SA)
+[2026-04-27T23:31:45]   Mail / Guardian (SA): +0 entries in 8.1s [good]
+[2026-04-27T23:31:45] Ingesting: Mail / Guardian (SA)
+[2026-04-27T23:31:52]   Mail / Guardian (SA): +0 entries in 6.9s [good]
+[2026-04-27T23:31:52] Ingesting: airforce-technology
+[2026-04-27T23:31:52]   airforce-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.airforce-technology.com/feed/'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+[2026-04-27T23:31:52] Ingesting: indianexpress
+[2026-04-27T23:31:59]   Skipping indianexpress — next fetch in ~60m
+[2026-04-27T23:32:01]   indianexpress: +0 entries in 8.1s [good]
+[2026-04-27T23:32:01] Ingesting: army-technology
+[2026-04-27T23:32:01]   army-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.army-technology.com/feed/'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+[2026-04-27T23:32:01] Ingesting: BBCi
+[2026-04-27T23:32:13]   BBCi: +0 entries in 12.4s [good]
+[2026-04-27T23:32:13] Ingesting: DW
+[2026-04-27T23:32:19]   DW: +0 entries in 6.4s [good]
+[2026-04-27T23:32:59]   Skipping DW — next fetch in ~61m
+[2026-04-27T23:33:59]   Skipping BBCi — next fetch in ~61m
+[2026-04-27T23:46:22] Ingesting: lemonde
+[2026-04-27T23:46:30]   lemonde: +0 entries in 8.5s [good]

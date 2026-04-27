@@ -1,0 +1,184 @@
+/*
+ * tabs.css — shared suite tab shell.
+ */
+
+#tab-bar {
+  display: flex;
+  align-items: center;
+  min-height: var(--appbar-h, 42px);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0) 55%),
+    var(--panel, #0f1117);
+  border-bottom: 1px solid var(--border, #1e2233);
+  user-select: none;
+  overflow: hidden;
+  flex-shrink: 0;
+  gap: 0;
+}
+
+#kd-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px 0 10px;
+  height: 100%;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--accent-2, #86f6a3);
+  border-right: 1px solid var(--border, #2a3f5a);
+  flex-shrink: 0;
+  order: 1;
+  pointer-events: none;
+  user-select: none;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--accent, #4af77a) 12%, transparent), transparent 78%);
+}
+
+#kd-brand svg {
+  width: 18px;
+  height: 18px;
+  padding: 5px;
+  box-sizing: content-box;
+  border: 1px solid color-mix(in srgb, var(--accent, #4af77a) 48%, var(--border, #1e2233));
+  background: color-mix(in srgb, var(--accent, #4af77a) 10%, rgba(255,255,255,0.01));
+}
+
+.kd-kf-link {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 13px;
+  height: 100%;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-dim);
+  text-decoration: none;
+  border-right: 1px solid var(--border);
+  flex-shrink: 0;
+  order: 2;
+  transition: background 120ms, color 120ms;
+  user-select: none;
+}
+.kd-kf-link:hover { background: var(--bg); color: var(--text); }
+.kd-kf-link.kd-kf-active {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+.kd-kf-link svg {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+  color: var(--accent-2);
+}
+
+.kd-tabs {
+  display: flex;
+  align-items: stretch;
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  height: 100%;
+  order: 3;
+}
+.kd-tabs::-webkit-scrollbar { display: none; }
+
+.kd-no-tabs {
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  font-size: 11px;
+  color: var(--text-dim);
+  font-style: italic;
+}
+
+.kd-tab {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 13px;
+  height: 100%;
+  min-width: 90px;
+  max-width: 200px;
+  cursor: default;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-dim);
+  border-right: 1px solid var(--border);
+  transition: background 120ms, color 120ms;
+  position: relative;
+  flex-shrink: 0;
+}
+.kd-tab:hover { background: color-mix(in srgb, var(--accent) 10%, transparent); color: var(--text); }
+.kd-tab.active {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+.kd-tab.active:hover { color: var(--accent); }
+
+.kd-tab-icon {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  opacity: 1;
+  color: var(--accent-2);
+}
+.kd-tab-icon svg {
+  width: 13px;
+  height: 13px;
+}
+
+.kd-tab-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kd-tab-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1em;
+  height: 1em;
+  border-radius: 3px;
+  border: none;
+  background: transparent;
+  color: var(--accent-2);
+  font-size: 1em;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+  opacity: .78;
+  transition: opacity 120ms, background 100ms, color 100ms;
+  padding: 0;
+}
+.kd-tab:hover .kd-tab-close { opacity: .92; }
+.kd-tab.active .kd-tab-close { opacity: 1; }
+.kd-tab-close:hover { opacity: 1 !important; background: var(--surface-2); color: var(--text); }
+
+.kd-add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 100%;
+  border: none;
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  flex-shrink: 0;
+  order: 4;
+  transition: color 120ms, background 120ms;
+  border-left: 1px solid var(--border);
+}
+.kd-add:hover { color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.kd-add svg {
+  width: 1em;
+  height: 1em;
+  color: var(--accent);
+}

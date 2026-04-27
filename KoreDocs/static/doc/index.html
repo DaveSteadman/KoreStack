@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KoreDoc</title>
+  <link rel="stylesheet" href="/static/doc/style.css" />
+  <link rel="stylesheet" href="/static/commonui/css/chrome.css" />
+</head>
+<body>
+
+  <div id="suite-topbar"></div>
+
+  <!-- ── Top Bar ───────────────────────────────────────────── -->
+  <div id="tab-bar"></div>
+
+  <!-- ── Application Menu Bar ──────────────────────────────── -->
+  <div id="app-menu-host"></div>
+
+  <!-- ── Formatting Toolbar ──────────────────────────────────── -->
+  <div id="toolbar">
+    <button class="tb-btn" data-insert="h1" title="Heading 1">H1</button>
+    <button class="tb-btn" data-insert="h2" title="Heading 2">H2</button>
+    <button class="tb-btn" data-insert="h3" title="Heading 3">H3</button>
+    <span class="tb-sep"></span>
+    <button class="tb-btn" data-insert="bold"   title="Bold (Ctrl+B)"><b>B</b></button>
+    <button class="tb-btn" data-insert="italic" title="Italic (Ctrl+I)"><i>I</i></button>
+    <button class="tb-btn" data-insert="code"   title="Inline Code"><code>`c`</code></button>
+    <span class="tb-sep"></span>
+    <button class="tb-btn" data-insert="indent"  title="Indent (Tab)">⇥</button>
+    <button class="tb-btn" data-insert="outdent" title="Outdent (Shift+Tab)">⇤</button>
+    <button class="tb-btn tb-sep" data-insert="ul" title="Bullet List">• –</button>
+    <button class="tb-btn" data-insert="ol" title="Numbered List">1.</button>
+    <button class="tb-btn" data-insert="code-block" title="Code Block">```</button>
+    <button class="tb-btn" data-insert="hr" title="Horizontal Rule">—</button>
+  </div>
+
+  <!-- ── Main ─────────────────────────────────────────────────── -->
+  <div id="main">
+
+    <div id="editor-area">
+      <div id="editor-host"></div>
+    </div>
+
+    <aside id="right-sidebar">
+      <section id="properties-panel">
+        <h3>Properties</h3>
+        <div id="props-content"><span class="hint">No document open.</span></div>
+      </section>
+      <section id="map-panel">
+        <h3>Document Map</h3>
+        <div id="map-content"><span class="map-empty">No headings yet.</span></div>
+      </section>
+    </aside>
+
+  </div>
+
+  <!-- ── Status Bar ─────────────────────────────────────────── -->
+  <div id="status-bar">
+    <span id="status-file">Untitled.koredoc</span>
+    <span id="status-pos"></span>
+    <span id="status-counts"></span>
+  </div>
+
+  <script type="module">
+    import { initChrome } from '/static/doc/js/chrome.js';
+    initChrome();
+  </script>
+  <script type="module" src="/static/doc/js/main.js"></script>
+</body>
+</html>

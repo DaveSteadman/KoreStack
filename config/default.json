@@ -1,0 +1,60 @@
+{
+  "paths": {
+    "datacontrol": "datacontrol",
+    "datauser": "datauser",
+    "conversation_data": "datacontrol/conversations",
+    "comms_data": "datacontrol/korecomms",
+    "docs_data": "datauser/KoreFiles",
+    "docs_db": "datauser/KoreFiles/korefile.db"
+  },
+  "network": {
+    "host": "127.0.0.1"
+  },
+  "services": {
+    "agent": {
+      "port": 8000,
+      "url": "http://127.0.0.1:8000"
+    },
+    "conversation": {
+      "port": 8700,
+      "url": "http://127.0.0.1:8700"
+    },
+    "data": {
+      "port": 8800,
+      "url": "http://127.0.0.1:8800"
+    },
+    "comms": {
+      "port": 8900,
+      "url": "http://127.0.0.1:8900"
+    },
+    "docs": {
+      "port": 5500,
+      "url": "http://127.0.0.1:5500"
+    },
+    "korestack": {
+      "port": 8600,
+      "url": "http://127.0.0.1:8600"
+    }
+  },
+  "connections": {
+    "korecomms": "http://127.0.0.1:8900",
+    "koreconversation": "http://127.0.0.1:8700"
+  },
+  "mcp": {
+    "connections": [
+      {
+        "name": "KoreData",
+        "url": "http://127.0.0.1:8800/mcp",
+        "enabled": true,
+        "expected_prefix": "koredata_"
+      },
+      {
+        "name": "KoreDocs",
+        "url": "http://127.0.0.1:5500/mcp/sse",
+        "enabled": true,
+        "transport": "sse",
+        "expected_prefix": "koredocs_"
+      }
+    ]
+  }
+}

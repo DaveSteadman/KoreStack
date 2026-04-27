@@ -1,0 +1,35 @@
+# MiniAgentFramework - Python dependencies
+#
+# Install into a virtual environment:
+#   python -m venv .venv
+#   .venv\Scripts\Activate.ps1          # PowerShell
+#   pip install -r requirements.txt
+#
+# All other imports (urllib, json, re, threading, etc.) are Python stdlib.
+
+# HTML extraction for WebExtract and WebResearch skills.
+# Both skills fall back to stdlib html.parser if this is absent,
+# but bs4 gives significantly cleaner text from real-world web pages.
+beautifulsoup4>=4.12
+
+# System metrics (RAM, disk, CPU) used by system_check.py.
+psutil>=5.9
+
+# Markdown-to-HTML conversion used by WebResearchOutput skill.
+# Both send_daily_summary and preview_email fall back to a minimal inline converter
+# if this is absent, but the markdown package handles tables and fenced code correctly.
+markdown>=3.6
+
+# Updated Mozilla CA certificate bundle used by fetch_html() for SSL verification.
+# Ensures sites like arxiv.org whose cert chain is missing from Python's bundled CAs work
+# correctly on Windows without disabling SSL verification.
+certifi>=2024.0
+
+# REST API + web UI (--api mode only).
+# fastapi pulls in starlette and pydantic automatically.
+fastapi>=0.110
+uvicorn>=0.29
+
+# MCP client for connecting to external MCP servers (optional - omit if not using MCP).
+# When absent, mcp_client.py degrades gracefully and MCP integration is disabled.
+mcp>=1.6.0

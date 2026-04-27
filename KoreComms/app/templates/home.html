@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}KoreComms — Conversations{% endblock %}
+
+{% block content %}
+<style>
+  .kc-tag {
+    font-size: 10px; color: var(--dim);
+    border: 1px solid var(--border); padding: 1px 5px; letter-spacing: 0.03em;
+  }
+</style>
+
+<div class="section-title">Conversations</div>
+
+{% if not conversations %}
+  <p class="meta">No conversations yet. <a href="/compose" style="color:var(--amber)">Inject a message</a> to get started.</p>
+{% else %}
+<div class="panel">
+  <table>
+    <thead>
+      <tr>
+        <th>Subject</th>
+        <th>Interface</th>
+        <th>Name</th>
+        <th>Started</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for conv in conversations %}
+      <tr>
+        <td>
+          <a href="/conversation/{{ conv.id }}" style="color:var(--text); text-decoration:none;">
+            {{ conv.subject or conv.external_thread_id or "(no subject)" }}
+          </a>
+        </td>
+        <td>
+          <span class="badge badge-{{ conv.interface_type }}">{{ conv.interface_name }}</span>
+        </td>
+        <td class="dim">
+          <span class="kc-tag">{{ conv.conversation_name or ("kccomms:" ~ conv.id) }}</span>
+          {% if conv.kc_conversation_id %}
+            <span class="kc-tag">kc:{{ conv.kc_conversation_id }}</span>
+          {% endif %}
+        </td>
+        <td class="dim" style="font-size:11px; white-space:nowrap;">{{ conv.created_at[:16] }}</td>
+        <td>
+          <a href="/conversation/{{ conv.id }}" class="btn btn-sm">Open →</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{% if conversations|length == 50 %}
+<div class="gap-row" style="margin-top:0.75rem;">
+  <a class="btn btn-sm" href="/?offset={{ offset + 50 }}">Next page →</a>
+  {% if offset > 0 %}<a class="btn btn-sm" href="/?offset={{ offset - 50 }}">← Previous</a>{% endif %}
+</div>
+{% endif %}
+{% endblock %}
