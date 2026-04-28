@@ -10,7 +10,7 @@
 # data_dir defaults to <repo_root>/datacontrol/conversations so that all persisted data
 # (database, log) lands in the shared datacontrol folder alongside MiniAgentFramework data.
 # The repo root is inferred from this file's location:
-#   code/KoreConversation/app/config.py  ->  parents[3]  ->  repo root
+#   KoreConversation/app/config.py  ->  parents[2]  ->  repo root
 # This is resilient to the working directory at launch time.
 # ====================================================================================================
 
@@ -20,8 +20,8 @@ from pathlib import Path
 
 _CONFIG_FILE = Path("config/default.json")
 
-# Repo root is three levels above this file (code/KoreConversation/app/config.py)
-_REPO_ROOT = Path(os.environ.get("KORE_SUITE_ROOT", str(Path(__file__).resolve().parents[3]))).resolve()
+# Repo root is two levels above this file (KoreConversation/app/config.py)
+_REPO_ROOT = Path(os.environ.get("KORE_SUITE_ROOT", str(Path(__file__).resolve().parents[2]))).resolve()
 
 _DEFAULTS: dict = {
     "host":      os.environ.get("KORECONVERSATION_HOST", "0.0.0.0"),

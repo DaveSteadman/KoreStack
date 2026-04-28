@@ -1,13 +1,9 @@
 {% extends "base.html" %}
 {% block title %}{{ entry.headline or "Entry" }} – KoreData{% endblock %}
+{% block main_class %}kcui-main{% endblock %}
 
 {% block content %}
-<div class="breadcrumb">
-  <a href="/feeds">feeds</a><span class="sep">›</span>
-  <a href="/feeds/{{ domain }}">{{ domain }}</a><span class="sep">›</span>
-  #{{ entry.id }}
-</div>
-
+<div class="kcui-page kcui-page--narrow kcui-stack">
 <div class="panel" style="margin-bottom:1rem;">
   <div class="panel-header">
     <span class="ph-diamond">◆</span> ENTRY #{{ entry.id }}
@@ -70,5 +66,6 @@
     <p class="meta" style="padding:1rem;">no page content extracted</p>
     {% endif %}
   </div>
+</div>
 </div>
 {% endblock %}

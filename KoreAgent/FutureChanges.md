@@ -342,7 +342,7 @@ The CSV schema is already stable. Candidate implementation: extend `FileAccess` 
 
 ### KC - thread summary bounding
 
-**File:** `code/KoreConversation/...` (conversation summary logic)
+**File:** `../KoreConversation/...` (conversation summary logic)
 
 Each compression cycle appends the new summary to the existing `thread_summary` with no
 max length. After many rounds the summary itself becomes a significant fraction of the
@@ -357,7 +357,7 @@ Options:
 
 ### KC - SSE subscriber cleanup
 
-**File:** `code/KoreConversation/app/api.py`
+**File:** `../KoreConversation/app/api.py`
 
 Dead SSE clients are only removed from `_kc_subscribers` when their queue fills to
 capacity. Subscribers with slow proxies or closed browser tabs sit in the list

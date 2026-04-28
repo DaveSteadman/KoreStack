@@ -57,6 +57,7 @@
 
     /* ─── layout ─────────────────────────────────── */
     main { padding: 1.5rem 2rem; max-width: 1320px; margin: 0 auto; }
+    main.kcui-main { padding: 0; max-width: none; }
 
     /* ─── panel / card ───────────────────────────── */
     .panel { border: 1px solid var(--border); background: var(--panel); margin-bottom: 1.25rem; }
@@ -128,18 +129,13 @@
     .mono { font-family: inherit; }
     p.meta { font-size: 11.5px; color: var(--dim); margin-bottom: 0.5rem; }
     .gap-row { display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; }
-    .section-title {
-      font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;
-      color: var(--dim); margin-bottom: 0.75rem; border-bottom: 1px solid var(--border);
-      padding-bottom: 0.3rem;
-    }
   </style>
   {% block head %}{% endblock %}
 </head>
 <body>
 <div id="suite-topbar"></div>
 <div id="app-bar"></div>
-<main>
+<main class="{% block main_class %}{% endblock %}">
   {% block content %}{% endblock %}
 </main>
 <script>
@@ -197,9 +193,7 @@
     brandLabel: 'KoreComms',
     brandIcon: 'korecomms',
     statusDot: { id: 'status-dot', className: 'dot-live', title: 'Connecting...' },
-    chips: [
-      { label: 'Version', value: '{{ version }}', tone: 'accent' },
-    ],
+    chips: [],
     tabs: [
       { label: 'Conversations', href: '/', active: {{ 'true' if request.url.path == '/' else 'false' }} },
       { label: 'Compose', href: '/compose', active: {{ 'true' if request.url.path == '/compose' else 'false' }} },

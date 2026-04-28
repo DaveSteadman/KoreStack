@@ -1,8 +1,9 @@
 {% extends "base.html" %}
 {% block title %}KoreComms — Activity Log{% endblock %}
+{% block main_class %}kcui-main{% endblock %}
 
 {% block content %}
-<div class="section-title">Agent Activity Log</div>
+<div class="kcui-page kcui-page--narrow kcui-stack">
 <p class="meta" style="margin-bottom:1rem;">Most recent 200 actions (newest first).</p>
 
 <div class="panel">
@@ -47,5 +48,6 @@
       {% endif %}
     </tbody>
   </table>
+</div>
 </div>
 {% endblock %}

@@ -1,11 +1,9 @@
 {% extends "base.html" %}
 {% block title %}Import — KoreReference{% endblock %}
+{% block main_class %}kcui-main{% endblock %}
 
 {% block content %}
-<div class="breadcrumb">
-  <a href="/reference">reference</a><span class="sep">›</span>import
-</div>
-
+<div class="kcui-page kcui-page--narrow kcui-stack">
 <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; align-items:start;">
 
   <!-- ─── Crawl form ──────────────────────────────── -->
@@ -165,6 +163,7 @@
   </div>
 </div>
 
+</div>
 {% endblock %}
 
 {% block scripts %}

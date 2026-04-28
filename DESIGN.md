@@ -1,420 +1,326 @@
-# KoreStack - Top-Level Design
+# KoreStack Suite Design
 
-## 1. Purpose
+## 1. System Definition
 
-Kore is no longer a set of loosely related repos started independently. It is becoming a
-single local-first application suite with one root entrypoint, one shared UI language,
-and one clear system layout, while still preserving useful service boundaries.
+KoreStack is the local control plane for the Kore suite.
 
-The merged workspace should behave as a cohesive system with these properties:
+The suite is a set of cooperating local services presented as one operator-facing system:
 
-- one top-level launch path for the operator
-- one suite-level navigation surface for moving between products
-- one shared UI shell and interaction language across products
-- one top-level configuration area for network and path settings
-- one top-level location for operator data and control-state folders
-- clear service boundaries where those boundaries are still valuable
+- one root workspace
+- one suite launcher
+- one shared shell language
+- one set of shared operator data roots
+- one control-plane landing page
+- clear service boundaries where they remain useful
 
-This document defines the intended shape of the consolidated system.
+The suite is deliberately not a monolith. KoreData, KoreDocs, KoreComms, KoreConversation, and KoreAgent remain separate runtimes because they solve different problems and evolve at different rates. KoreStack makes them feel coherent to the operator.
 
 ---
 
-## 2. System Positioning
+## 2. Top-Level Components
 
-Kore is a suite of cooperating local services rather than a single monolith.
+### KoreStack
 
-That distinction matters. The goal is not to collapse everything into one process. 
-The goal is to make the system feel unified to the user while preserving
-the architectural separations that are already useful.
+KoreStack is the entrypoint and control surface.
 
-In particular:
+It is responsible for:
 
-- **KoreData** remains a distinct knowledge system and MCP server.
-- **KoreDocs** remains a distinct document system and MCP server.
-- **KoreAgent** is the main orchestration and agent runtime.
-- **KoreComms** remains the communications hub.
-- **KoreConversation** is an always-on suite service and part of the normal suite startup contract.
-- **UIElements** is the shared suite shell layer used across all user-facing apps.
+- launching selected services from the workspace root
+- applying suite-level environment settings to child processes
+- showing live health and reachability on the landing page
+- exposing suite paths and operator controls in one place
 
-The top-level suite provides orchestration, navigation, config, and operator-facing
-cohesion. It does not erase the subsystem boundaries.
+### KoreAgent
 
----
+KoreAgent is the orchestration and agent runtime.
 
-## 3. Core Design Principles
+It is responsible for:
 
-### 3.1 One Suite, Several Services
+- the main agent web UI
+- prompt execution and run streaming
+- slash commands and operator interactions
+- scheduling, orchestration, and MCP consumption
+- exposing the suite version when version information is explicitly requested
 
-The operator starts Kore from the workspace root. KoreStack is responsible for bringing
-up the selected services and exposing the system landing page.
+KoreAgent is the only subsystem that still carries an explicit product version identity. Other services expose health and role, not independent product-version surfaces.
 
-The operator should not need to remember four different startup commands just to use the
-system. Internally, however, those services may still run as separate processes.
+### KoreConversation
 
-For naming consistency in the consolidated repo:
+KoreConversation is the canonical shared conversation-state service.
 
-- `KoreX` names identify runnable process-level services
-- non-process shared libraries and support areas should not use the `Kore` prefix
+It owns:
 
-### 3.2 Same Shell, Different Work Surfaces
+- conversation metadata
+- message history
+- event coordination between agent and comms flows
+- the browser debug UI for conversation inspection
 
-All user-facing surfaces should share the same outer shell language:
+KoreConversation lives in its own top-level folder. The legacy KoreAgent-side path is only a compatibility shim for older launch references.
 
-- brand framing
-- tabs and global navigation
-- top bar
-- application menu bar
-- panel primitives
-- token palette, typography, spacing, and icon rules
+### KoreComms
 
-Product-specific work surfaces remain local to each subsystem. KoreDocs editors,
-conversation panes, data-search layouts, and agent panels should not be forced into a
-fake shared component model when their internals are domain-specific.
+KoreComms is the communications hub.
 
-This is the responsibility of **UIElements**.
+It is responsible for:
 
-### 3.3 Shared Configuration at the Right Level
+- channel and interface configuration
+- inbound polling and outbound delivery
+- queue management for communication work
+- the operator UI for conversations, composition, activity, and state management
 
-Configuration that describes the overall suite should live at the suite level.
+KoreComms depends on KoreConversation for shared thread state rather than owning separate conversation records.
 
-Examples:
+### KoreData
 
-- host/IP bindings
-- public service URLs
-- default ports
-- root data paths
-- storage locations
-- cross-service connection addresses
-- MCP endpoint registration used by the agent runtime
+KoreData is the knowledge domain of the suite.
 
-Configuration that only matters inside one subsystem should remain local to that
-subsystem.
+It is presented through KoreDataGateway and includes:
 
-Examples:
+- KoreFeed
+- KoreLibrary
+- KoreReference
+- KoreRAG
 
-- KoreFeed ingest settings
-- KoreDocs editor-specific defaults
-- service-internal import options
-- subsystem-specific maintenance settings
+KoreData is both a user-facing application and an integration boundary for agent access.
 
-This is the responsibility of a new top-level **config** area.
+### KoreDocs
 
-### 3.4 Top-Level Data Ownership
+KoreDocs is the document and file workspace.
 
-The suite-level operator data folders should be visible at the suite root, not buried
-inside one subsystem that happens to have owned them first.
+It provides:
 
-`datacontrol` and `datauser` are now suite assets, not KoreAgent-only assets.
+- KoreFile file management
+- KoreDoc editing
+- KoreSheet editing
+- KoreDiag editing
+- related document APIs and MCP-facing behavior where needed
 
-### 3.5 MCP as a First-Class Integration Boundary
+### UIElements
 
-KoreData and KoreDocs should be treated as first-class MCP providers, not merely internal
-implementation details.
+UIElements is the shared shell asset library for all user-facing applications.
 
-That gives the suite a clean boundary:
+It owns:
 
-- the main agent can consume them through MCP
-- they remain separately useful and separately testable
-- future tools or external agent runtimes can consume them too
-- their internal evolution is decoupled from the main agent UI/runtime
+- shared design tokens
+- top bar and application bar assets
+- shared tab and menu behavior
+- panel, page, and card layout primitives
+- cross-application accent themes
+- shared icon and shell JavaScript utilities
+
+UIElements is not a service. It is a suite-level shared asset dependency.
 
 ---
 
-## 4. Intended Top-Level Structure
+## 3. Operator Model
 
-The suite root should become the primary place from which a developer or operator
-understands the system.
+The operator works with Kore as one local suite.
 
-Target structure:
+The normal flow is:
 
-```text
-Kore74/
-  main.py                 # root wrapper into KoreStack
-  README.md               # suite-level operator guide
-  DESIGN.md               # suite-level architecture and design
-  KoreStack/              # coordinating service, landing page, and control plane
-  config/                 # suite-level path + network + service connection config
-  UIElements/             # shared shell assets and UI conventions
-  KoreAgent/              # agent runtime and suite orchestration entrypoint
-  KoreConversation/       # shared conversation-state service
-  KoreComms/              # communications hub
-  KoreData/               # knowledge system + MCP server
-  KoreDocs/               # docs system + MCP server
-  datacontrol/            # suite control/state data - Can be configured to be elsewhere in production
-  datauser/               # suite user-owned content and working data - Can be configured to be elsewhere in production
-  progress/               # suite-wide progress and screenshots where useful - disposable
-```
+1. start from the workspace root
+2. launch via KoreStack
+3. use the KoreStack landing page to inspect service state
+4. move between applications using the shared shell
+5. rely on shared suite paths for user and operational data
 
-### 4.1 Promoted Top-Level Folders
+The operator does not need to treat each application as a separate product with separate visual rules, separate version surfaces, or separate root-level operating conventions.
 
-The following folders should be treated as suite-owned root folders:
+---
 
-- `datacontrol`
-- `datauser`
+## 4. Runtime Architecture
 
-These currently live under KoreAgent's current implementation area and already act like cross-cutting system
-stores. They should be documented and eventually referenced as top-level suite paths.
+### Control Plane
 
-Expected ownership:
+KoreStack starts and monitors the selected services as separate child processes.
 
-- `datacontrol/` holds logs, schedules, queue state, test prompts/results, conversation
-  snapshots, and other operational control data.
-- `datauser/` holds user-facing content, notes, spreadsheets, working files, prompt
-  material, imported text, and other operator-managed data.
+It loads suite configuration from:
 
-### 4.2 config Area
+- `config/default.json`
+- `config/local.json` when present
 
-The suite needs a dedicated configuration area rather than relying on one subsystem's
-root `default.json` as the de facto global truth.
+It then passes the resolved suite paths and shared environment settings into the child runtimes.
 
-`config/` should become the suite-level home for:
+### Service Relationships
 
-- root path definitions
-- host and IP bindings
-- port allocations
+The primary runtime relationships are:
+
+- KoreAgent consumes KoreData capabilities
+- KoreAgent interacts with KoreDocs capabilities
+- KoreAgent uses KoreConversation for shared conversation state
+- KoreComms uses KoreConversation for thread state and event coordination
+- KoreStack monitors all user-facing services and presents the shared landing page
+
+### Boundary Rules
+
+The suite preserves these boundaries intentionally:
+
+- KoreData remains a domain service, not a library inside KoreAgent
+- KoreDocs remains a domain service, not a widget set inside KoreAgent
+- KoreConversation remains a standalone suite service
+- KoreComms owns transport and interface behavior, not canonical conversation history
+- UIElements owns shell behavior, not domain-specific application internals
+
+---
+
+## 5. Shared Data and Configuration
+
+### Suite Data Roots
+
+The suite-level data roots are:
+
+- `datacontrol/` for operational state
+- `datauser/` for operator-owned content and working files
+
+These are suite assets, not KoreAgent-private folders.
+
+Typical usage includes:
+
+- logs
+- task queues
+- schedules
+- test prompts and results
+- conversation storage
+- user notes and imported files
+- document and file data
+
+### Suite Configuration
+
+The canonical suite configuration lives in `config/`.
+
+The shared configuration model covers:
+
+- suite paths
+- host bindings
+- service ports
 - cross-service URLs
-- MCP endpoint definitions
-- environment-specific overrides if needed later
+- shared connection points
 
-Initial design intent:
+KoreStack is the source of truth for suite-level configuration injection. Subsystems may still keep local settings for domain-specific behavior, but suite topology belongs at the root.
+
+---
+
+## 6. UI Architecture
+
+### Shared Shell
+
+All user-facing applications use the same shell model:
+
+- suite top bar
+- application bar directly beneath it
+- shared accent theme per application
+- shared page-width and panel-spacing rules
+- shared tab-height and chrome behavior
+
+The top bar communicates suite context.
+
+The application bar communicates application-level navigation and status.
+
+Legacy breadcrumb or title rows that repeat the same context are not part of the current design language.
+
+### Application Identity
+
+Each application has a distinct accent color defined in UIElements and applied through shared theme utilities.
+
+Current suite identities are:
+
+- KoreStack
+- KoreAgent
+- KoreConversation
+- KoreData
+- KoreDocs
+- KoreComms
+
+Accent ownership lives in shared UIElements code rather than being redefined independently inside each app.
+
+### Layout Primitives
+
+UIElements provides the baseline page and panel primitives used across the suite, including:
+
+- page wrappers
+- stack and grid spacing
+- panel headers and bodies
+- shared card layouts
+
+Applications remain free to build domain-specific internals, but their outer shell and spacing system are shared.
+
+---
+
+## 7. Landing Page Design
+
+The KoreStack landing page is the suite dashboard.
+
+It presents:
+
+- system paths
+- live service rows
+- inline service controls
+- status and reachability information
+
+The landing page intentionally avoids repeating information already carried by the shared shell. Its job is operational control, not duplicated branding.
+
+---
+
+## 8. Version Policy
+
+The suite no longer presents independent product-version chips across the subsystems.
+
+The version policy is:
+
+- KoreAgent retains the suite-visible version identity
+- other services expose health, role, and state without separate version surfaces
+- documentation should not describe deprecated per-service version banners as active behavior
+
+This keeps the operator-facing system identity singular instead of fragmented.
+
+---
+
+## 9. Repository Structure
+
+The suite is organized around top-level service folders and shared roots:
 
 ```text
-config/
-  default.json           # canonical suite defaults
-  local.json             # optional machine-local overrides, ignored by git if needed
-  README.md              # config conventions and precedence
+KoreStack/
+  main.py
+  DESIGN.md
+  README.md
+  config/
+  datacontrol/
+  datauser/
+  UIElements/
+  KoreStack/
+  KoreAgent/
+  KoreConversation/
+  KoreComms/
+  KoreData/
+  KoreDocs/
+  progress/
 ```
 
-The canonical suite config should be a single `config/default.json` file. If a
-machine-specific override layer is needed, it should live in `config/local.json`.
+Key interpretation rules:
 
-Possible logical sections inside `default.json`:
-
-```json
-{
-  "paths": {
-    "datacontrol": "datacontrol",
-    "datauser": "datauser",
-    "conversation_data": "datacontrol/conversations",
-    "comms_data": "datacontrol/korecomms",
-    "docs_data": "datauser/KoreFiles",
-    "docs_db": "datauser/KoreFiles/korefile.db"
-  },
-  "network": {
-    "host": "127.0.0.1"
-  },
-  "services": {
-    "agent": { "port": 8000 },
-    "koreconversation": { "port": 8700 },
-    "data": { "port": 8800 },
-    "comms": { "port": 8900 },
-    "docs": { "port": 5500 },
-    "korestack": { "port": 8600 }
-  },
-  "connections": {
-    "korecomms": "http://127.0.0.1:8900",
-    "koreconversation": "http://127.0.0.1:8700"
-  },
-  "mcp": {
-    "connections": []
-  }
-}
-```
-
-This does **not** mean every setting in the system belongs here. It means suite-level
-settings belong here, and subsystems should consume them from here when they need a
-shared address or shared path.
+- top-level `KoreX/` folders are runnable service areas
+- `UIElements/` is the shared shell layer
+- `config/` is the suite configuration root
+- `datacontrol/` and `datauser/` are suite-owned state roots
+- `progress/` is disposable working material, not production state
 
 ---
 
-## 5. Runtime Architecture
+## 10. Completed-System View
 
-### 5.1 Top-Level Runtime Roles
+Kore is now defined as a completed multi-service local suite with a shared control plane, shared UI shell, shared data roots, and explicit service boundaries.
 
-The consolidated system currently has these suite-level roles:
+The design is not a migration plan. It is the current operating model:
 
-| Area | Role |
-|---|---|
-| **KoreStack** | Starts, stops, monitors, and presents the landing page for the selected services |
-| **KoreAgent** | Main agent runtime, orchestration UI, scheduler, MCP consumer |
-| **KoreConversation** | Shared conversation state and event coordination |
-| **KoreComms** | External communication interfaces and queueing |
-| **KoreData** | Knowledge service family and MCP provider |
-| **KoreDocs** | Document suite and MCP provider |
-| **UIElements** | Shared shell assets for all user-facing apps |
-| **config** | Shared suite-level configuration source |
+- KoreConversation is top-level and standalone
+- KoreStack is the suite launcher and dashboard
+- UIElements is the shared shell system
+- suite data lives in shared root folders
+- suite configuration is rooted at the top level
+- only KoreAgent retains explicit version identity
 
-### 5.2 Relationship Diagram
-
-```text
-Operator
-   |
-   v
-KoreStack
-   |
-  +--> KoreAgent ---------------------------+
-   |        |                                |
-   |        +--> consumes MCP from KoreData -+
-   |        +--> consumes MCP from KoreDocs -+
-   |        +--> calls KoreComms via REST ---+
-   |        +--> calls KoreConversation -----+
-   |
-   +--> KoreComms ---------------------------> external channels
-   |
-   +--> KoreConversation --------------------> shared conversation state
-   |
-   +--> KoreData ----------------------------> knowledge services + MCP
-   |
-   +--> KoreDocs ----------------------------> document services + MCP
-   |
-  +--> UIElements --------------------------> shared shell assets
-   |
-  +--> config ------------------------------> shared path/IP/URL settings
-```
-
-### 5.3 Service Boundaries to Preserve
-
-The following boundaries are intentional and should remain unless there is a concrete
-reason to collapse them:
-
-- **KoreData** is a domain service, not a library inside the agent.
-- **KoreDocs** is a domain service, not a panel inside the agent.
-- **KoreConversation** is a suite service, not just an internal helper hidden inside the agent runtime.
-- **MCP** is a stable boundary between the agent runtime and those systems.
-- **UIElements** shares shell and chrome, not internal domain widgets.
-- **config** supplies shared settings, not every internal subsystem option.
-
----
-
-## 6. UI Consolidation Model
-
-### 6.1 Suite-Level UI Goal
-
-From the operator's point of view, Kore should feel like one application suite with
-multiple work areas, not four unrelated localhost pages.
-
-That means:
-
-- a KoreStack landing page
-- consistent visual framing
-- consistent navigation labels
-- consistent app-switching behavior
-- predictable panel and menu behavior
-- shared terminology for shell elements
-
-### 6.2 UIElements Responsibilities
-
-UIElements is the system-wide UI shell layer.
-
-It is **not** a standalone runtime service. It is a shared library of assets, templates,
-functions, and UI primitives that each service uses to present a unified shell.
-
-It should own:
-
-- top bar
-- tabs
-- app menu bar shell
-- tokens and typography
-- panel/frame primitives
-- shared icon registry
-- shared shell behavior for cross-app navigation
-
-It should not own:
-
-- document editors
-- sheet grid behavior
-- diagram canvas logic
-- agent orchestration panels
-- conversation rendering details
-- data result semantics
-
-### 6.3 Visual Direction
-
-The common UI direction for Kore should follow a deliberately technical, operator-first
-visual language, closer to a local systems console than a generic SaaS dashboard.
-
-`KoreData` should be treated as the current best visual reference for that direction.
-Its live UI already captures the tone the suite should converge toward: dark matte
-surfaces, thin border framing, restrained use of color, tight monospace typography,
-compact information density, and utility-first panels instead of decorative cards.
-
-The reference direction for `UIElements` and the other service UIs is therefore:
-
-- dark-mode-first shell surfaces
-- nerdy, technical typography with a monospace-forward voice
-- dense but readable operator information layout
-- topology and systems-view presentation for service relationships
-- restrained chrome with strong contrast and precise spacing, minimal rounded corners
-- signature accent colors per service so each system is identifiable at a glance
-
-That means the shared shell should prefer:
-
-- dark neutral backgrounds
-- mono or mono-paired typography for navigation, metrics, labels, and diagnostics
-- thin-line borders and panel separators rather than soft, inflated container treatments
-- compact headers, status strips, and operator controls with minimal ornamental spacing
-- service-colored highlights applied consistently to cards, pills, outlines, icons, and topology nodes
-- dashboards that feel like a local control room rather than a marketing page
-
-The intended accent-color behavior is service-specific rather than random:
-
-- `KoreAgent` should have its own identifying accent
-- `KoreData` and its child services should share a related data-family accent system
-- `KoreDocs`, `KoreComms`, and `KoreConversation` should each have their own signature
-  color identity
-- `KoreStack` should use a neutral control-plane identity that frames the whole system
-  without visually overpowering the service accents
-
-This visual direction belongs in `UIElements`, so the same dark-mode shell, typography
-rules, and accent-color language appear across the landing page and all service UIs.
-
-In practical terms, `UIElements` should gradually extract and standardize the parts of
-the `KoreData` aesthetic that are shell-level concerns:
-
-- typography stack
-- dark surface and border tokens
-- panel/header treatment
-- button, tab, and status-badge language
-- spacing rhythm for dense operator pages
-
-### 6.4 Adoption Direction
-
-Adoption should proceed from outer shell inward:
-
-1. use `KoreData` as the immediate visual benchmark for shell tone and density
-2. move shared shell tokens and chrome patterns into `UIElements`
-3. update `KoreStack` to align more closely with the `KoreData` look and feel
-4. progressively align `KoreDocs`, `KoreComms`, `KoreConversation`, and `KoreAgent`
-  to the same shell language without flattening their domain-specific workflows
-5. only then decide whether any buttons, forms, tables, or dialogs deserve to become
-   shared suite components
-
-This keeps the consolidation disciplined and avoids over-sharing the wrong UI layers.
-
-### 6.5 Mounting Model
-
-Each user-facing service should consume UIElements as a shared library layer rather than
-treating it as a separately running service.
-
-That means:
-
-- the service owns its own UI runtime
-- the service imports or mounts shared UIElements assets/templates as needed
-- the suite does not add a separate "UIElements server" process
-
-The result should be one visual language without inventing another deployable runtime.
-
----
-
-## 7. Configuration Model
-
-### 7.1 Config Layers
-
-The system should use a layered config model.
-
-1. **Suite defaults** from `config/default.json`
-2. **Machine-local overrides** from `config/local.json` if present
-3. **KoreStack resolution** that passes shared settings into launched services
+That is the baseline architecture all further work should preserve.
 4. **Subsystem-local config** from the subsystem's own config area
 5. **Explicit CLI/runtime overrides** from the current process launch
 

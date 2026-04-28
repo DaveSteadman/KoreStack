@@ -67,10 +67,3 @@
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
-
-.ksuite-tab[data-service='korestack'] { --suite-accent: #6eb5ff; }
-.ksuite-tab[data-service='koreagent'] { --suite-accent: #66f0c9; }
-.ksuite-tab[data-service='koreconversation'] { --suite-accent: #59d7ff; }
-.ksuite-tab[data-service='koredata'] { --suite-accent: #a78bfa; }
-.ksuite-tab[data-service='koredocs'] { --suite-accent: #ffd166; }
-.ksuite-tab[data-service='korecomms'] { --suite-accent: #ff8fab; }

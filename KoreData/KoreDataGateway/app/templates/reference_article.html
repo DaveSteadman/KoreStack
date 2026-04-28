@@ -1,19 +1,9 @@
 {% extends "base.html" %}
 {% block title %}{{ article.title }} — KoreReference{% endblock %}
+{% block main_class %}kcui-main{% endblock %}
 
 {% block content %}
-<div class="breadcrumb">
-  <a href="/reference">reference</a>
-  {% if article.redirected_from %}
-  <span class="sep">›</span>
-  <span class="meta" title="redirected from {{ article.redirected_from }}">{{ article.redirected_from }}</span>
-  <span class="sep">→</span>
-  {% else %}
-  <span class="sep">›</span>
-  {% endif %}
-  {{ article.title }}
-</div>
-
+<div class="kcui-page kcui-page--narrow kcui-stack">
 <div style="display:grid; grid-template-columns:1fr 300px; gap:1rem; align-items:start;">
 
   <!-- Main article panel -->
@@ -130,6 +120,7 @@
     </div>
   </div>
 
+</div>
 </div>
 {% endblock %}
 

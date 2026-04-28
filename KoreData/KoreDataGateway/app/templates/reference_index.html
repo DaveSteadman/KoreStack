@@ -1,11 +1,9 @@
 {% extends "base.html" %}
 {% block title %}KoreReference{% endblock %}
+{% block main_class %}kcui-main{% endblock %}
 
 {% block content %}
-<div class="breadcrumb">
-  <a href="/reference">reference</a>
-</div>
-
+<div class="kcui-page kcui-page--narrow kcui-stack">
 <div class="panel" style="margin-bottom:1.25rem;">
   <div class="panel-header">
     <span class="ph-diamond">◆</span> ARTICLES
@@ -64,6 +62,7 @@
   <a href="/reference?limit={{ limit }}&offset={{ offset + limit }}">NEXT →</a>
 </div>
 {% endif %}
+</div>
 {% endblock %}
 
 

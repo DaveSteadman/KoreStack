@@ -18,7 +18,6 @@ from pydantic import BaseModel
 from app import crypto, database as db, kc_client, poller, queue_manager
 from app.config import cfg
 from app.interfaces.common.registry import REGISTRY, build_adapter
-from app.version import __version__
 
 logger = logging.getLogger(__name__)
 
@@ -62,7 +61,7 @@ async def lifespan(app: FastAPI):
     yield
     poller.stop()
 
-app = FastAPI(title="KoreComms", version=__version__, lifespan=lifespan)
+app = FastAPI(title="KoreComms", lifespan=lifespan)
 
 
 # ---------------------------------------------------------------------------
@@ -70,7 +69,7 @@ app = FastAPI(title="KoreComms", version=__version__, lifespan=lifespan)
 # ---------------------------------------------------------------------------
 
 def _ctx(**extra) -> dict:
-    return {"version": __version__, **extra}
+    return dict(extra)
 
 
 # ---------------------------------------------------------------------------
@@ -80,7 +79,7 @@ def _ctx(**extra) -> dict:
 
 @app.get("/status")
 def status():
-    return {"status": "ok", "version": __version__}
+    return {"status": "ok"}
 
 
 @app.get("/ui-elements/assets/{asset_path:path}", include_in_schema=False)

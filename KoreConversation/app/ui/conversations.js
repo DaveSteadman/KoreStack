@@ -89,7 +89,6 @@ async function loadStatus() {
 
         document.getElementById("status-dot").className   = "kappbar-presence on";
         document.getElementById("status-label").textContent = "connected";
-        document.getElementById("version-chip").textContent = d.version || "";
     } catch {
         document.getElementById("status-dot").className   = "kappbar-presence off";
         document.getElementById("status-label").textContent = "offline";

@@ -1,11 +1,9 @@
 {% extends "base.html" %}
 {% block title %}{{ domain }} – KoreData{% endblock %}
+{% block main_class %}kcui-main{% endblock %}
 
 {% block content %}
-<div class="breadcrumb">
-  <a href="/feeds">feeds</a><span class="sep">›</span>{{ domain }}
-</div>
-
+<div class="kcui-page kcui-page--narrow kcui-stack">
 <!-- ── Feed management ─────────────────────────────────────── -->
 <div class="two-col" style="margin-bottom:1.25rem;">
 
@@ -289,6 +287,7 @@
   {% if offset + limit < total %}
   <a href="/feeds/{{ domain }}?limit={{ limit }}&offset={{ offset + limit }}">NEXT →</a>
   {% endif %}
+</div>
 </div>
 {% endblock %}
 

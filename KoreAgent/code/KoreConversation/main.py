@@ -1,62 +1,19 @@
-# ====================================================================================================
-# MARK: OVERVIEW
-# ====================================================================================================
-# KoreConversation entry point.
-#
-# Run with:
-#   python main.py
-#
-# Or via uvicorn directly:
-#   uvicorn app.api:app --host 0.0.0.0 --port 8700
-# ====================================================================================================
+"""Legacy launcher for KoreConversation.
 
-from datetime import datetime
+This shim preserves older paths while the live service implementation now resides
+at the suite-level KoreConversation/ folder.
+"""
+
+from __future__ import annotations
+
+import os
+import runpy
+import sys
 from pathlib import Path
 
-import uvicorn
 
-from app.config import cfg
-from app.logutil import make_log_config
-from app.version import __version__
-
-_W = 72
-
-
-# ----------------------------------------------------------------------------------------------------
-def _print_banner() -> None:
-    now = datetime.now().strftime("%H:%M:%S")
-    sep = "=" * _W
-
-    def row(label: str, value: str) -> str:
-        return f"  {label:<22} {value}"
-
-    lines = [
-        "",
-        sep,
-        f"  KORECONVERSATION {__version__}  [{now}]",
-        sep,
-        "",
-        row("API:",       f"http://localhost:{cfg['port']}/"),
-        row("Debug UI:",  f"http://localhost:{cfg['port']}/ui"),
-        row("Events:",    f"http://localhost:{cfg['port']}/events/next"),
-        row("Data dir:",  cfg["data_dir"]),
-        row("Log level:", cfg["log_level"].upper()),
-        "",
-        sep,
-        "",
-    ]
-    print("\n".join(lines))
-
-
-# ----------------------------------------------------------------------------------------------------
 if __name__ == "__main__":
-    _log_path = Path(cfg["data_dir"]) / "koreconversation.log"
-    _log_path.parent.mkdir(parents=True, exist_ok=True)
-    _print_banner()
-    uvicorn.run(
-        "app.api:app",
-        host       = cfg["host"],
-        port       = int(cfg["port"]),
-        log_level  = cfg["log_level"],
-        log_config = make_log_config(_log_path),
-    )
+    service_dir = Path(__file__).resolve().parents[3] / "KoreConversation"
+    os.chdir(service_dir)
+    sys.path.insert(0, str(service_dir))
+    runpy.run_path(str(service_dir / "main.py"), run_name="__main__")

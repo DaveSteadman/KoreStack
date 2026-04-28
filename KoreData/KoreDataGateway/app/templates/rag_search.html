@@ -1,12 +1,9 @@
 {% extends "base.html" %}
 {% block title %}RAG Search{% endblock %}
+{% block main_class %}kcui-main{% endblock %}
 
 {% block content %}
-<div class="breadcrumb">
-  <a href="/">home</a><span class="sep">›</span>
-  <a href="/rag">rag</a><span class="sep">›</span>search
-</div>
-
+<div class="kcui-page kcui-page--narrow kcui-stack">
 <div class="panel" style="margin-bottom:1.25rem;">
   <div class="panel-header">
     <span class="ph-diamond">◆</span> SEARCH CHUNKS
@@ -75,4 +72,5 @@
   </div>
 </div>
 {% endif %}
+</div>
 {% endblock %}

@@ -6,7 +6,6 @@ import logutil
 import uvicorn
 from datetime import datetime
 from app.config import cfg
-from app.version import __version__
 
 _W = 80
 
@@ -21,7 +20,7 @@ def _print_banner() -> None:
     lines = [
         "",
         sep,
-        f"  KOREDATAGATEWAY {__version__}  [{now}]",
+        f"  KOREDATAGATEWAY  [{now}]",
         sep,
         "",
         row("Gateway:", f"http://localhost:{cfg['port']}/"),

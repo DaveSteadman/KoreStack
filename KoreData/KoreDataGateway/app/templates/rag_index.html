@@ -1,11 +1,9 @@
 {% extends "base.html" %}
 {% block title %}KoreRAG{% endblock %}
+{% block main_class %}kcui-main{% endblock %}
 
 {% block content %}
-<div class="breadcrumb">
-  <a href="/">home</a><span class="sep">›</span>rag
-</div>
-
+<div class="kcui-page kcui-page--narrow kcui-stack">
 <div class="panel">
   <div class="panel-header">
     <span class="ph-diamond">◆</span> RAG CHUNKS
@@ -60,4 +58,5 @@
   {% endif %}
 </div>
 {% endif %}
+</div>
 {% endblock %}

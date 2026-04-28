@@ -1,21 +1,22 @@
 {% extends "base.html" %}
 {% block title %}KoreData — Home{% endblock %}
+{% block main_class %}kcui-main{% endblock %}
 
 {% block content %}
 <style>
+  .kd-home .panel {
+    margin-bottom: 0;
+  }
+
   /* ─── service health grid ─────────────────────── */
   .svc-grid {
-    display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 0.75rem;
   }
   @media (max-width: 900px) { .svc-grid { grid-template-columns: repeat(2, 1fr); } }
   @media (max-width: 500px)  { .svc-grid { grid-template-columns: 1fr; } }
 
   .svc-card {
-    border: 1px solid var(--border);
-    background: var(--bg);
-    padding: 0.65rem 0.85rem;
+    padding: 12px;
   }
   .svc-card.online  { border-left: 3px solid var(--green); }
   .svc-card.offline { border-left: 3px solid var(--red); }
@@ -72,7 +73,7 @@
     border: 1px solid var(--border);
     background: var(--bg);
     padding: 0.75rem 1rem;
-    margin-bottom: 0.65rem;
+    margin-bottom: 12px;
   }
   .result-card:last-child { margin-bottom: 0; }
   .rc-type {
@@ -104,17 +105,18 @@
   .jt-null   { color: var(--dim); }
 </style>
 
+<div class="kcui-page kcui-page--narrow kcui-stack kd-home">
 <!-- ═══════════════════════════════════ HEALTH PANEL ═══════════════════ -->
-<div class="panel">
-  <div class="panel-header">
+<div class="panel kcui-panel">
+  <div class="panel-header kcui-panel-header">
     <span class="ph-diamond">◆</span> SERVICES
     <button class="btn btn-sm" style="margin-left:auto" onclick="refreshHealth()">↺ REFRESH</button>
   </div>
-  <div class="panel-body">
-    <div class="svc-grid" id="svc-grid">
+  <div class="panel-body kcui-panel-body">
+    <div class="svc-grid kcui-card-grid" id="svc-grid">
       {% for svc in services %}
       {% set cls = "online" if svc.healthy else "offline" %}
-      <div class="svc-card {{ cls }}" id="svc-{{ svc.slug }}">
+      <div class="svc-card kcui-card {{ cls }}" id="svc-{{ svc.slug }}">
         <div class="svc-name">{{ svc.label }}</div>
         <div class="svc-desc">
           {%- if svc.slug == "feeds" %}RSS feed &amp; website data
@@ -169,12 +171,12 @@
 </div>
 
 <!-- ═══════════════════════════════════════ SEARCH PANEL ══════ -->
-<div class="panel">
-  <div class="panel-header">
+<div class="panel kcui-panel">
+  <div class="panel-header kcui-panel-header">
     <span class="ph-diamond">◆</span> SEARCH
     <span class="meta" style="margin-left:0.5rem;font-size:11px">— agent API  ·  POST /search</span>
   </div>
-  <div class="panel-body">
+  <div class="panel-body kcui-panel-body">
     <p class="meta" style="margin-bottom:0.4rem;">Space or comma separated terms are AND-matched across all selected services.</p>
     <div style="display:flex; flex-direction:row; gap:0; margin-bottom:0.75rem;">
       <input id="sq-query" type="search" placeholder="e.g. climate change arctic ice" autocomplete="off"
@@ -244,14 +246,14 @@
 </div>
 
 <!-- ─── Search guide ─────────────────────────────────── -->
-<div class="panel" style="margin-top:0.5rem;">
-  <div class="panel-header" style="font-size:11px; cursor:pointer;"
+<div class="panel kcui-panel">
+  <div class="panel-header kcui-panel-header" style="font-size:11px; cursor:pointer;"
        onclick="const b=this.nextElementSibling; const arrow=this.querySelector('.sg-arrow'); const open=b.style.display!=='none'; b.style.display=open?'none':''; arrow.textContent=open?'▶ show':'▼ hide';">
     <span class="ph-diamond">◆</span> SEARCH GUIDE
     <span class="sg-arrow" style="margin-left:auto; color:var(--dim);">▶ show</span>
   </div>
   <div style="display:none;">
-    <div class="panel-body" style="font-size:12px;">
+    <div class="panel-body kcui-panel-body" style="font-size:12px;">
       <table>
         <thead><tr><th>You type</th><th>Matches</th><th>Example</th></tr></thead>
         <tbody>
@@ -301,6 +303,7 @@
     <div id="sq-cards-view"></div>
     <div id="sq-json-view"><pre class="json" id="sq-json-pre"></pre></div>
   </div>
+</div>
 </div>
 {% endblock %}
 

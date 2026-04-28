@@ -1,12 +1,9 @@
 {% extends "base.html" %}
 {% block title %}{{ book.title }} – KoreLibrary{% endblock %}
+{% block main_class %}kcui-main{% endblock %}
 
 {% block content %}
-<div class="breadcrumb">
-  <a href="/library">library</a><span class="sep">›</span>
-  #{{ book.id }}
-</div>
-
+<div class="kcui-page kcui-page--narrow kcui-stack">
 <div class="panel" style="margin-bottom:1rem;">
   <div class="panel-header">
     <span class="ph-diamond">◆</span> BOOK #{{ book.id }}
@@ -101,4 +98,5 @@
   });
 </script>
 {% endif %}
+</div>
 {% endblock %}

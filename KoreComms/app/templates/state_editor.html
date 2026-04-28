@@ -1,8 +1,9 @@
 {% extends "base.html" %}
 {% block title %}KoreComms — State Editor{% endblock %}
+{% block main_class %}kcui-main{% endblock %}
 
 {% block content %}
-<div class="section-title">Message State Editor</div>
+<div class="kcui-page kcui-page--narrow kcui-stack">
 <p class="meta" style="margin-bottom:1rem;">
   Manually override message status. Re-queuing a message puts it back on the agent queue.
 </p>
@@ -57,4 +58,5 @@
   {% if offset > 0 %}<a class="btn btn-sm" href="/state?offset={{ offset - 100 }}">← Previous</a>{% endif %}
 </div>
 {% endif %}
+</div>
 {% endblock %}

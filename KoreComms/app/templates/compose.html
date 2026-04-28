@@ -1,8 +1,9 @@
 {% extends "base.html" %}
 {% block title %}KoreComms — Compose{% endblock %}
+{% block main_class %}kcui-main{% endblock %}
 
 {% block content %}
-<div class="section-title">Inject Manual Message</div>
+<div class="kcui-page kcui-page--narrow kcui-stack">
 <p class="meta" style="margin-bottom:1rem;">
   Creates a synthetic inbound message via the Manual interface and places it on the agent queue.
 </p>
@@ -26,5 +27,6 @@
       </div>
     </form>
   </div>
+</div>
 </div>
 {% endblock %}

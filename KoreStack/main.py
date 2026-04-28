@@ -471,7 +471,12 @@ def html_page(manager: StackManager, dashboard_url: str) -> str:
 
     ui_note = "available" if get_ui_assets_dir().exists() else "missing"
     data_rows = "".join(
-        f'<div><dt>{key}</dt><dd><code>{value}</code></dd></div>'
+        f'''
+            <div class="path-row">
+                <dt>{key}</dt>
+                <dd><code>{value}</code></dd>
+            </div>
+        '''
         for key, value in stack["paths"].items()
     )
     services_json = json.dumps(snapshot)
@@ -512,35 +517,27 @@ def html_page(manager: StackManager, dashboard_url: str) -> str:
         }}
         a {{ color: inherit; }}
         .shell {{
-            max-width: 1440px;
-            margin: 0 auto;
-            padding: 10px;
             min-height: 100vh;
             display: grid;
             grid-template-rows: auto auto 1fr auto;
-            gap: 10px;
+            gap: 12px;
     }}
         .panel {{ background: var(--stack-panel); border: 1px solid var(--stack-line); border-radius: 2px; }}
-        .summary {{ display: grid; grid-template-columns: 1.1fr repeat(4, minmax(0, 0.5fr)); gap: 10px; align-items: stretch; }}
-        .summary-main {{ padding: 12px 14px; display: grid; gap: 6px; }}
-        .summary-head {{ display: flex; align-items: center; gap: 12px; min-width: 0; }}
-        .summary-icon {{ width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; color: var(--stack-accent); border: 1px solid color-mix(in srgb, var(--stack-accent) 35%, transparent); background: color-mix(in srgb, var(--stack-accent) 10%, transparent); flex-shrink: 0; }}
-        .summary-copy {{ min-width: 0; display: grid; gap: 6px; }}
-        .summary-main h1 {{ margin: 0; font-size: 1rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--stack-accent); }}
-        .summary-main p {{ margin: 0; color: var(--stack-muted); font-size: 12px; line-height: 1.45; }}
         .eyebrow {{ margin: 0; color: var(--stack-accent); font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; }}
-        .stat {{ padding: 12px 14px; display: grid; align-content: center; gap: 4px; background: var(--stack-panel); border: 1px solid var(--stack-line); }}
-        .stat strong {{ display: block; font-size: 1.15rem; overflow-wrap: anywhere; }}
-        .stat span {{ color: var(--stack-muted); font-size: 11px; line-height: 1.35; }}
-        .paths {{ padding: 10px 12px; }}
-        .paths-grid {{ display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }}
-        .paths-grid div {{ padding: 8px 10px; border-radius: 2px; background: var(--stack-bg); border: 1px solid var(--stack-line); min-width: 0; }}
-    .paths-grid dt {{ color: var(--stack-muted); margin-bottom: 8px; }}
-    .paths-grid dd {{ margin: 0; overflow-wrap: anywhere; }}
-        .services-panel {{ padding: 8px; overflow: hidden; }}
-        .services-header {{ display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 4px 6px 10px; }}
+        .paths-panel {{ overflow: hidden; }}
+        .paths-header {{ display: flex; justify-content: space-between; align-items: center; gap: 12px; }}
+        .paths-header p:last-child {{ margin: 0; color: var(--stack-muted); font-size: 11px; }}
+        .paths-list {{ display: grid; gap: 0; margin: 0; }}
+        .path-row {{ display: grid; grid-template-columns: minmax(120px, 180px) minmax(0, 1fr); gap: 12px; align-items: start; padding: 8px 0; min-width: 0; border-top: 1px solid var(--stack-line); }}
+        .path-row:first-child {{ border-top: 0; padding-top: 0; }}
+        .path-row:last-child {{ padding-bottom: 0; }}
+        .path-row dt {{ color: var(--stack-muted); margin: 0; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; }}
+        .path-row dd {{ margin: 0; min-width: 0; }}
+        .path-row code {{ display: block; color: var(--stack-accent); font-size: 0.9rem; overflow-wrap: anywhere; }}
+        .services-panel {{ overflow: hidden; }}
+        .services-header {{ display: flex; justify-content: space-between; align-items: center; gap: 12px; }}
         .services-header p:last-child {{ margin: 0; color: var(--stack-muted); font-size: 11px; }}
-        .services-grid {{ display: grid; gap: 6px; }}
+        .services-grid {{ display: grid; gap: 12px; }}
         .service-row {{ display: grid; grid-template-columns: 60px minmax(180px, 1.45fr) auto minmax(74px, 0.52fr) minmax(62px, 0.42fr) minmax(220px, 1.4fr) auto; gap: 8px; align-items: stretch; padding: 0 10px 0 0; position: relative; background: var(--stack-panel-strong); border: 1px solid var(--stack-line); border-radius: 2px; min-width: 0; }}
         .service-row::before {{ content: ""; position: absolute; inset: 0 auto 0 0; width: 3px; background: var(--service-accent, var(--stack-accent)); }}
         .service-cell {{ min-width: 0; }}
@@ -562,8 +559,8 @@ def html_page(manager: StackManager, dashboard_url: str) -> str:
         .actions button {{ width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid color-mix(in srgb, var(--service-accent, var(--stack-accent)) 42%, transparent); border-radius: 2px; padding: 0; background: var(--stack-bg); color: var(--stack-ink); cursor: pointer; font: inherit; font-size: 10px; }}
     .actions button:hover {{ background: color-mix(in srgb, var(--service-accent, var(--stack-accent)) 14%, var(--stack-bg)); }}
         .actions button svg {{ width: 13px; height: 13px; display: block; }}
-        .footer {{ padding: 8px 12px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }}
-        .footer p {{ margin: 0; color: var(--stack-muted); font-size: 11px; }}
+        .footer-body {{ display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }}
+        .footer-body p {{ margin: 0; color: var(--stack-muted); font-size: 11px; }}
         code {{ font-family: inherit; font-size: 0.92rem; color: var(--stack-accent); }}
         .service-agent {{ --service-accent: var(--service-agent); }}
         .service-conversation {{ --service-accent: var(--service-conversation); }}
@@ -572,50 +569,37 @@ def html_page(manager: StackManager, dashboard_url: str) -> str:
         .service-comms {{ --service-accent: var(--service-comms); }}
     @media (max-width: 860px) {{
             .shell {{ grid-template-rows: auto auto auto auto; }}
-            .summary {{ grid-template-columns: 1fr 1fr; }}
-            .summary-main {{ grid-column: 1 / -1; }}
-            .paths-grid {{ grid-template-columns: repeat(2, minmax(0, 1fr)); }}
+            .path-row {{ grid-template-columns: 1fr; gap: 6px; }}
                 .service-row {{ grid-template-columns: 1fr; align-items: start; }}
                 .service-actions {{ justify-self: start; }}
     }}
   </style>
 </head>
-<body>
+<body class="kcui-shell-bg">
     <div id="suite-topbar"></div>
     <div id="app-bar"></div>
-  <main class="shell">
-        <section class="summary">
-            <div class="panel summary-main">
-                <div class="summary-head">
-                    <span class="summary-icon" aria-hidden="true">{suite_icon_svg("korestack", 30)}</span>
-                    <div class="summary-copy">
-                        <p class="eyebrow">Local Control Plane</p>
-                        <h1>KoreStack</h1>
-                        <p>Compact live status for the selected services, shared paths, and control actions.</p>
-                    </div>
-                </div>
+    <main class="shell kcui-page kcui-page--narrow kcui-stack">
+        <section class="panel kcui-panel paths-panel">
+            <div class="paths-header kcui-panel-header">
+                <p class="eyebrow">System Paths</p>
+                <p>Shared suite storage and document locations.</p>
             </div>
-            <div class="stat" data-stack-field="running"><strong>{metrics['running']} / {metrics['selected']}</strong><span>Running</span></div>
-            <div class="stat" data-stack-field="reachable"><strong>{metrics['reachable']}</strong><span>Reachable</span></div>
-            <div class="stat" data-stack-field="dashboard"><strong>{dashboard_url}</strong><span>Dashboard</span></div>
-            <div class="stat" data-stack-field="ui"><strong>{ui_note}</strong><span>UIElements</span></div>
+            <div class="kcui-panel-body"><dl class="paths-list">{data_rows}</dl></div>
     </section>
 
-        <section class="panel paths">
-      <dl class="paths-grid">{data_rows}</dl>
-    </section>
-
-        <section class="panel services-panel">
-            <div class="services-header">
+        <section class="panel kcui-panel services-panel">
+            <div class="services-header kcui-panel-header">
                 <p class="eyebrow">Services</p>
                 <p>Compact live rows with inline controls.</p>
             </div>
-            <section class="services-grid">{''.join(rows)}</section>
+            <div class="kcui-panel-body"><section class="services-grid">{''.join(rows)}</section></div>
         </section>
 
-    <section class="panel footer">
+    <section class="panel kcui-panel footer">
+            <div class="kcui-panel-body footer-body">
             <p>Updates every 2 seconds without reloading the page.</p>
             <p>Root command: <code>python .\\main.py --services {','.join(stack['services'])}</code></p>
+            </div>
     </section>
   </main>
   <script type="module">

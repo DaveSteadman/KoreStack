@@ -1,18 +1,9 @@
 {% extends "base.html" %}
 {% block title %}{% if article %}Edit {{ article.title }}{% else %}New Article{% endif %} — KoreReference{% endblock %}
+{% block main_class %}kcui-main{% endblock %}
 
 {% block content %}
-<div class="breadcrumb">
-  <a href="/reference">reference</a>
-  {% if article %}
-  <span class="sep">›</span>
-  <a href="/reference/{{ article.title | urlencode }}">{{ article.title }}</a>
-  <span class="sep">›</span>edit
-  {% else %}
-  <span class="sep">›</span>new
-  {% endif %}
-</div>
-
+<div class="kcui-page kcui-page--narrow kcui-stack">
 {% if error %}
 <div style="background:rgba(255,95,95,0.1); border:1px solid var(--red); color:var(--red); padding:0.6rem 1rem; margin-bottom:1rem; font-size:12px;">
   ✗ {{ error }}
@@ -138,6 +129,7 @@ An alias: [[Python|Python language]].</pre>
       </div>
     </div>
   </div>
+</div>
 </div>
 {% endblock %}
 

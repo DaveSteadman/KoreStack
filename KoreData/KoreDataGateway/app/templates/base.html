@@ -68,6 +68,7 @@
 
     /* ─── layout ─────────────────────────────────── */
     main { padding: 1.5rem 2rem; max-width: 1320px; margin: 0 auto; }
+    main.kcui-main { padding: 0; max-width: none; }
 
     /* ─── panel / card ───────────────────────────── */
     .panel {
@@ -268,12 +269,6 @@
     ::-webkit-scrollbar-thumb:hover { background: #3a3d52; }
     * { scrollbar-width: thin; scrollbar-color: #2a2d3e var(--bg); }
 
-    /* breadcrumb */
-    .breadcrumb { color: var(--dim); font-size: 12px; margin-bottom: 1rem; }
-    .breadcrumb a { color: var(--dim); }
-    .breadcrumb a:hover { color: var(--text); text-decoration: none; }
-    .breadcrumb .sep { margin: 0 0.4rem; }
-
     /* missing field badge */
     .missing { color: var(--amber); border-color: var(--amber); }
   </style>
@@ -281,7 +276,7 @@
 <body>
   <div id="suite-topbar"></div>
   <div id="app-bar"></div>
-  <main>
+  <main class="{% block main_class %}{% endblock %}">
     {% block content %}{% endblock %}
   </main>
   <script>
@@ -340,7 +335,6 @@
       statusDot: { id: 'hdr-dot', className: 'dot-live', title: 'checking...' },
       chips: [
         { label: 'Role', value: 'Gateway' },
-        { label: 'Version', value: '{{ app_version }}', tone: 'accent' },
       ],
       tabs: [
         { label: 'Home', href: '/', active: {{ 'true' if request.url.path == '/' else 'false' }} },

@@ -30,7 +30,7 @@ The agent never sees email addresses, phone numbers, OAuth tokens, or any channe
 ## Code Layout
 
 ```
-code/KoreConversation/
+../KoreConversation/
   main.py              Entry point - launches uvicorn
   requirements.txt
   DESIGN.md            Original design document
@@ -358,6 +358,19 @@ The old directory can remain on disk as historical data. Active runtime flows no
 
 ## Running KC Standalone
 
+Prefer the suite-level launcher from the repository root:
+
+```
+cd ..
+cd KoreConversation
+python main.py
+```
+
+That folder now contains the live implementation. The legacy
+`KoreAgent/code/KoreConversation/` location is retained only as a compatibility shim.
+
+The legacy embedded launcher still works if you need it during transition:
+
 ```
 cd code/KoreConversation
 python main.py
@@ -369,7 +382,7 @@ Or directly via uvicorn:
 uvicorn app.api:app --host 0.0.0.0 --port 8700
 ```
 
-Config overrides go in `code/KoreConversation/config/default.json`. All keys are optional.
+Config overrides go in `../KoreConversation/config/default.json`. All keys are optional.
 
 ```json
 {
@@ -386,8 +399,8 @@ A relative `data_dir` is resolved against the repo root.
 
 ## Suggested Reading Order
 
-1. [DESIGN.md](code/KoreConversation/DESIGN.md) - original design intent and principles
-2. [app/database.py](code/KoreConversation/app/database.py) - schema, claim mechanics, all queries
-3. [app/api.py](code/KoreConversation/app/api.py) - routes, SSE broadcaster, reaper thread
-4. [app/config.py](code/KoreConversation/app/config.py) - config loading
+1. [DESIGN.md](../KoreConversation/DESIGN.md) - original design intent and principles
+2. [app/database.py](../KoreConversation/app/database.py) - schema, claim mechanics, all queries
+3. [app/api.py](../KoreConversation/app/api.py) - routes, SSE broadcaster, reaper thread
+4. [app/config.py](../KoreConversation/app/config.py) - config loading
 5. [code/KoreAgent/input_layer/koreconv_input.py](code/KoreAgent/input_layer/koreconv_input.py) - MAF polling loop, event handler, prompt builder

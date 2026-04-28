@@ -1,13 +1,5 @@
 import { SUITE_ICONS, resolveIcon } from './icons.js';
-
-const DEFAULT_ACCENTS = {
-  korestack: 'var(--info)',
-  koreagent: 'var(--info)',
-  koreconversation: 'var(--info)',
-  koredata: 'var(--success)',
-  koredocs: 'var(--accent-2)',
-  korecomms: 'var(--warning)',
-};
+import { applyTheme, themeFor } from './theme.js';
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -63,7 +55,11 @@ export function initAppBar(options = {}) {
 
   host.classList.add('kappbar-host');
 
-  const accentValue = accent || DEFAULT_ACCENTS[currentService] || 'var(--accent)';
+  const theme = themeFor(currentService);
+  const accentValue = accent || theme?.accent || 'var(--accent)';
+  if (currentService) {
+    applyTheme(document.documentElement, currentService);
+  }
   host.style.setProperty('--kappbar-accent', accentValue);
 
   const brand = brandLabel

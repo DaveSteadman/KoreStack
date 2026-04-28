@@ -1,12 +1,9 @@
 {% extends "base.html" %}
 {% block title %}RAG Chunk #{{ chunk.id }}{% endblock %}
+{% block main_class %}kcui-main{% endblock %}
 
 {% block content %}
-<div class="breadcrumb">
-  <a href="/">home</a><span class="sep">›</span>
-  <a href="/rag">rag</a><span class="sep">›</span>#{{ chunk.id }}
-</div>
-
+<div class="kcui-page kcui-page--narrow kcui-stack">
 <div class="panel">
   <div class="panel-header">
     <span class="ph-diamond">◆</span> CHUNK #{{ chunk.id }}
@@ -46,5 +43,6 @@
   <div class="panel-body" style="padding:0;">
     <div class="scrollable-body" style="max-height:70vh; overflow-y:auto;">{{ chunk.content or "" }}</div>
   </div>
+</div>
 </div>
 {% endblock %}

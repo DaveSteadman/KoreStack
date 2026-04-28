@@ -1,12 +1,9 @@
 {% extends "base.html" %}
 {% block title %}Insert Chunk{% endblock %}
+{% block main_class %}kcui-main{% endblock %}
 
 {% block content %}
-<div class="breadcrumb">
-  <a href="/">home</a><span class="sep">›</span>
-  <a href="/rag">rag</a><span class="sep">›</span>insert
-</div>
-
+<div class="kcui-page kcui-page--narrow kcui-stack">
 <div class="panel">
   <div class="panel-header">
     <span class="ph-diamond">◆</span> INSERT CHUNK
@@ -57,5 +54,6 @@ Content-Type: application/json
   "tags":    "tag1,tag2"
 }</pre>
   </div>
+</div>
 </div>
 {% endblock %}

@@ -7,6 +7,7 @@
  */
 
 import { SUITE_ICONS, resolveIcon } from './icons.js';
+import { applyTheme, themeFor } from './theme.js';
 
 const DEFAULT_TYPE_URL = {
   koredoc: '/doc',
@@ -28,6 +29,7 @@ const DEFAULT_HOME_ICON = `<svg viewBox="0 0 20 20" fill="none" width="13" heigh
 
 const DEFAULT_CONFIG = {
   storeKey: 'koredocs:tabs',
+  serviceKey: 'koredocs',
   typeUrl: DEFAULT_TYPE_URL,
   brandLabel: 'KoreDocs',
   brandIcon: DEFAULT_BRAND_ICON,
@@ -134,6 +136,8 @@ function _autoRegisterNew() {
 export function init(currentType, config = {}) {
   _currentType = currentType;
   _config = _mergeConfig(config);
+  const themeKey = _config.serviceKey || currentType;
+  applyTheme(document.documentElement, themeKey);
   _autoRegisterNew();
   _render();
   window.addEventListener('storage', event => {
@@ -193,6 +197,12 @@ function _closeTab(name) {
 function _render() {
   const bar = document.getElementById('tab-bar');
   if (!bar) return;
+
+  const theme = themeFor(_config.serviceKey || _currentType);
+  if (theme) {
+    bar.style.setProperty('--tabs-accent', theme.accent);
+    bar.style.setProperty('--tabs-accent-2', theme.accent2);
+  }
 
   const tabs = _loadTabs();
   const currentId = _currentId();

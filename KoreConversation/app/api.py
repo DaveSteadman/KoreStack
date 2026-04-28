@@ -31,7 +31,6 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from app import database as db
-from app.version import __version__
 
 logger = logging.getLogger(__name__)
 
@@ -106,13 +105,13 @@ async def lifespan(app: FastAPI):
 # MARK: APP
 # ====================================================================================================
 
-app = FastAPI(title="KoreConversation", version=__version__, lifespan=lifespan)
+app = FastAPI(title="KoreConversation", lifespan=lifespan)
 
 _UI_DIR = Path(__file__).resolve().parent / "ui"
 _UI_ELEMENTS_ASSETS = Path(
     os.environ.get(
         "KORE_UIELEMENTS_ASSETS_DIR",
-        str(Path(__file__).resolve().parents[4] / "UIElements" / "assets"),
+        str(Path(__file__).resolve().parents[2] / "UIElements" / "assets"),
     )
 ).resolve()
 
@@ -132,7 +131,6 @@ def root():
 def status():
     return {
         "status":        "ok",
-        "version":        __version__,
         "conversations":  db.conversation_counts(),
         "events":         db.event_counts(),
     }

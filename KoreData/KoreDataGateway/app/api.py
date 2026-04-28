@@ -19,7 +19,6 @@ from mcp.server.fastmcp import FastMCP
 from pydantic import BaseModel, Field
 
 from app.config import cfg
-from app.version import __version__
 
 # ---------------------------------------------------------------------------
 # Child process management
@@ -125,7 +124,6 @@ async def _lifespan(app: FastAPI):
 app = FastAPI(
     title="KoreDataGateway",
     description="Central web UI for KoreData services",
-    version=__version__,
     lifespan=_lifespan,
 )
 
@@ -159,7 +157,6 @@ _mcp = FastMCP(
 
 TEMPLATES_DIR = Path(__file__).parent / "templates"
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
-templates.env.globals["app_version"] = __version__
 _UI_ELEMENTS_ASSETS = Path(
     os.environ.get(
         "KORE_UIELEMENTS_ASSETS_DIR",
@@ -1385,7 +1382,6 @@ async def gateway_status():
     )
     return {
         "service": "KoreDataGateway",
-        "version": __version__,
         "children": {
             "korefeed":      _svc_status(kf_r,   cfg["korefeed_url"]),
             "korelibrary":   _svc_status(kl_r,   cfg["korelibrary_url"]),

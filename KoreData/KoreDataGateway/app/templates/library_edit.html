@@ -1,17 +1,14 @@
 {% extends "base.html" %}
 {% block title %}Edit #{{ book.id }} — KoreLibrary{% endblock %}
+{% block main_class %}kcui-main{% endblock %}
 
 {% block content %}
+<div class="kcui-page kcui-page--narrow kcui-stack">
 <style>
   #e_year_abs::-webkit-inner-spin-button,
   #e_year_abs::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
   #e_year_abs { -moz-appearance: textfield; appearance: textfield; }
 </style>
-<div class="breadcrumb">
-  <a href="/library">library</a><span class="sep">›</span>
-  <a href="/library/{{ book.id }}">#{{ book.id }}</a><span class="sep">›</span>edit
-</div>
-
 {% if error %}
 <div style="background:rgba(255,95,95,0.1); border:1px solid var(--red); color:var(--red); padding:0.6rem 1rem; margin-bottom:1rem; font-size:12px;">
   ✗ {{ error }}
@@ -102,6 +99,7 @@
     </div>
   </div>
 
+</div>
 </div>
 {% endblock %}
 

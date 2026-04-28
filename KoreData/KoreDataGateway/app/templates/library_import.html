@@ -1,11 +1,9 @@
 {% extends "base.html" %}
 {% block title %}Import — KoreLibrary{% endblock %}
+{% block main_class %}kcui-main{% endblock %}
 
 {% block content %}
-<div class="breadcrumb">
-  <a href="/library">library</a><span class="sep">›</span>import
-</div>
-
+<div class="kcui-page kcui-page--narrow kcui-stack">
 {% if error %}
 <div style="background:rgba(255,95,95,0.1); border:1px solid var(--red); color:var(--red); padding:0.6rem 1rem; margin-bottom:1rem; font-size:12px;">
   ✗ {{ error }}
@@ -239,6 +237,7 @@
     </div>
 
   </div>
+</div>
 </div>
 {% endblock %}
 

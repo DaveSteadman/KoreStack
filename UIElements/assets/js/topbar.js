@@ -7,3 +7,4 @@ export * from './appbar.js';
 export * from './appMenu.js';
 export * from './icons.js';
 export * from './suitebar.js';
+export * from './theme.js';

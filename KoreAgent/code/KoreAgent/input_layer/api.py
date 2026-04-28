@@ -231,7 +231,7 @@ def finish_run_event_queue(run_id: str) -> None:
 # ====================================================================================================
 # MARK: FASTAPI APP
 # ====================================================================================================
-app = FastAPI(title="KoreAgent API", version="1.0")
+app = FastAPI(title="KoreAgent API", version=__version__)
 
 # Restrict CORS to localhost only. External pages cannot trigger prompt or history endpoints.
 app.add_middleware(

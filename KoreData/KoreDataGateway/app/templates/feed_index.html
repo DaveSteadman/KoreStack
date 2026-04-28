@@ -1,7 +1,9 @@
 {% extends "base.html" %}
 {% block title %}KoreData — Feeds{% endblock %}
+{% block main_class %}kcui-main{% endblock %}
 
 {% block content %}
+<div class="kcui-page kcui-page--narrow kcui-stack">
 <div class="panel" style="margin-bottom:1.25rem;">
   <div class="panel-header">
     <span class="ph-diamond">◆</span> SEARCH
@@ -241,4 +243,5 @@ function cancelEditDomain() {
   schedule();
 }());
 </script>
+</div>
 {% endblock %}

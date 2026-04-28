@@ -2,6 +2,13 @@
 
 KoreConversation is the suite conversation-state service.
 
-The executable entrypoint is exposed here, while the current implementation lives at
-`../KoreAgent/code/KoreConversation/` until it is extracted into a fully separate
-top-level service folder.
+The live implementation now lives directly in this folder.
+
+Run it with:
+
+```python
+python main.py
+```
+
+The legacy `KoreAgent/code/KoreConversation/` location is now only a compatibility
+shim for older launch paths.

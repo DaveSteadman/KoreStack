@@ -3,6 +3,7 @@
  */
 
 import { SUITE_ICONS, resolveIcon } from './icons.js';
+import { applyTheme, themeFor } from './theme.js';
 
 const DEFAULT_HOST = '127.0.0.1';
 
@@ -30,8 +31,9 @@ function serviceIcon(service, iconSize) {
 function serviceTabHtml(service, currentService, urls, iconSize) {
   const url = serviceUrl(service, currentService, urls);
   const active = service.key === currentService ? ' is-active' : '';
+  const accent = themeFor(service.key)?.accent || 'var(--accent)';
   return `
-    <a class="ksuite-tab${active}" data-service="${service.key}" href="${url}" title="${service.label}">
+    <a class="ksuite-tab${active}" data-service="${service.key}" href="${url}" title="${service.label}" style="--suite-accent:${accent}">
       <span class="ksuite-icon" aria-hidden="true">${serviceIcon(service, iconSize)}</span>
       <span class="ksuite-label">${service.label}</span>
     </a>`;
@@ -49,6 +51,10 @@ export function initSuiteTopbar(options = {}) {
 
   const host = document.getElementById(mountId);
   if (!host) return null;
+
+  if (currentService) {
+    applyTheme(document.documentElement, currentService);
+  }
 
   host.style.setProperty('--suite-topbar-pad-x', padX);
 

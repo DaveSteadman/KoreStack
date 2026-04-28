@@ -3,8 +3,10 @@
 # ====================================================================================================
 # Sidecar lifecycle manager for KoreConversation.
 #
-# start() launches code/KoreConversation/main.py as a subprocess using the same Python
-# interpreter as the parent process (guaranteed to be the project venv after
+# start() prefers the suite-level KoreConversation/main.py entrypoint and falls back
+# to the legacy embedded code/KoreConversation/main.py shim when the top-level
+# launcher is not present. The subprocess uses the same Python interpreter as the
+# parent process (guaranteed to be the project venv after
 # _maybe_reexec_into_project_venv() runs in main.py).
 #
 # Stop/start semantics:
@@ -19,7 +21,7 @@
 #
 # Related modules:
 #   - main.py            -- calls start() before run_api_mode, stop() in finally
-#   - workspace_utils.py -- get_workspace_root() for locating KoreConversation/main.py
+#   - workspace_utils.py -- get_workspace_root() / get_suite_root() for locating the entrypoint
 # ====================================================================================================
 
 import subprocess
@@ -70,7 +72,8 @@ def start(defaults_path: Path) -> None:
     Reads koreconvurl from defaults_path. If absent, falls back to the built-in
     default service URL.
     If the service is already reachable, records the URL but skips launching.
-    Otherwise launches code/KoreConversation/main.py and waits up to
+    Otherwise launches the suite KoreConversation entrypoint (or the legacy
+    embedded shim) and waits up to
     STARTUP_TIMEOUT seconds for it to respond at /status.
     """
     global _proc, _base_url

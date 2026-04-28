@@ -1,15 +1,15 @@
 {% extends "base.html" %}
 {% block title %}KoreComms — Conversations{% endblock %}
+{% block main_class %}kcui-main{% endblock %}
 
 {% block content %}
+<div class="kcui-page kcui-page--narrow kcui-stack">
 <style>
   .kc-tag {
     font-size: 10px; color: var(--dim);
     border: 1px solid var(--border); padding: 1px 5px; letter-spacing: 0.03em;
   }
 </style>
-
-<div class="section-title">Conversations</div>
 
 {% if not conversations %}
   <p class="meta">No conversations yet. <a href="/compose" style="color:var(--amber)">Inject a message</a> to get started.</p>
@@ -59,4 +59,5 @@
   {% if offset > 0 %}<a class="btn btn-sm" href="/?offset={{ offset - 50 }}">← Previous</a>{% endif %}
 </div>
 {% endif %}
+</div>
 {% endblock %}

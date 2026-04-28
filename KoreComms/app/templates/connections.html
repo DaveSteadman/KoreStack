@@ -1,8 +1,9 @@
 {% extends "base.html" %}
 {% block title %}KoreComms — Connections{% endblock %}
+{% block main_class %}kcui-main{% endblock %}
 
 {% block content %}
-<div class="section-title">Interface Connections</div>
+<div class="kcui-page kcui-page--narrow kcui-stack">
 
 {% if flash %}
 <div class="flash">{{ flash }}</div>
@@ -48,5 +49,6 @@
   <a class="btn btn-sm btn-primary" href="/connections/new?type={{ t }}">+ {{ t }}</a>
   {% endfor %}
 </div>
+  </div>
 {% endif %}
 {% endblock %}

@@ -15,7 +15,6 @@ import uvicorn
 
 from app.config import cfg
 from app.logutil import make_log_config
-from app.version import __version__
 
 _W = 72
 
@@ -30,7 +29,7 @@ def _print_banner() -> None:
     lines = [
         "",
         sep,
-        f"  KORECOMMS {__version__}  [{now}]",
+        f"  KORECOMMS  [{now}]",
         sep,
         "",
         row("WebUI:", f"http://localhost:{cfg['port']}/"),
