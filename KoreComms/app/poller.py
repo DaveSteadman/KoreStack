@@ -55,7 +55,7 @@ def _resolve_kc_conversation(local_conv: dict) -> dict | None:
         kc_conv = kc_client.create_conversation(
             external_id=conversation_name,
             channel_type=local_conv.get("interface_type", "manual"),
-            subject=local_conv.get("subject"),
+            subject=local_conv.get("koreconversation_id"),
         )
         logger.info(
             "Recreated KC conversation %d for local conv %d via name %s",
@@ -87,7 +87,7 @@ def _forward_message(iface_row: dict, msg: dict) -> None:
         local_conv_id = db.conversation_create(
             interface_id=iface_row["id"],
             external_thread_id=ext_thread_id,
-            subject=msg.get("subject"),
+            koreconversation_id=msg.get("subject"),
         )
         local_conv = db.conversation_get(local_conv_id)
         assert local_conv is not None

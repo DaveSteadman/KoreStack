@@ -1,24 +1,35 @@
 {% extends "base.html" %}
-{% block title %}{{ conv.subject or "(no subject)" }} — KoreComms{% endblock %}
+{% block title %}{{ conv.koreconversation_id or "(no KoreConversation ID)" }} — KoreComms{% endblock %}
 
 {% block head %}
 <style>
-  /* Override main for full-height chat layout */
+  /* Use a real flex column so the composer tracks the viewport bottom under suite chrome. */
+  body {
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+  }
+
   main {
-    padding: 0 !important; max-width: none !important; margin: 0 !important;
-    height: calc(100vh - var(--header-h));
-    display: flex; flex-direction: column; overflow: hidden;
+    padding: 0 !important;
+    max-width: none !important;
+    margin: 0 !important;
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
   }
 </style>
 {% endblock %}
 
 {% block content %}
-<div style="display:flex; flex-direction:column; height:100%; overflow:hidden;">
+<div style="display:flex; flex-direction:column; flex:1 1 auto; min-height:0; overflow:hidden;">
 
   <!-- ── chat sub-header ──────────────────────────── -->
   <div class="chat-header">
     <a href="/" class="chat-back">← Messages</a>
-    <span class="chat-subj">{{ conv.subject or "(no subject)" }}</span>
+    <span class="chat-subj">{{ conv.koreconversation_id or "(no KoreConversation ID)" }}</span>
     <span class="badge badge-{{ iface.type }}">{{ iface.name }}</span>
     <span class="tag" style="font-size:10px; color:var(--dim);">{{ conv.conversation_name or ("kccomms:" ~ conv.id) }}</span>
     <span class="tag" style="margin-left:auto; font-size:10px; color:var(--dim);">conv #{{ conv.id }}</span>

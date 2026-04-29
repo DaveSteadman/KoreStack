@@ -2,8 +2,9 @@ import json
 import os
 from pathlib import Path
 
-_CONFIG_FILE = Path("config/default.json")
-_SUITE_ROOT = Path(os.environ.get("KORE_SUITE_ROOT", str(Path(__file__).resolve().parents[2].parent))).resolve()
+_SERVICE_ROOT = Path(__file__).resolve().parents[1]
+_CONFIG_FILE = _SERVICE_ROOT / "config" / "default.json"
+_SUITE_ROOT = Path(os.environ.get("KORE_SUITE_ROOT", str(Path(__file__).resolve().parents[2]))).resolve()
 _DEFAULT_DATA_DIR = _SUITE_ROOT / "datacontrol" / "korecomms"
 
 _DEFAULTS: dict = {
@@ -25,6 +26,8 @@ def _load() -> dict:
         return result
     with open(_CONFIG_FILE, encoding="utf-8") as f:
         raw = json.load(f)
+    if "data_dir" in raw:
+        raw["data_dir"] = str((_SERVICE_ROOT / raw["data_dir"]).resolve())
     result.update(raw)
     result["data_dir"] = str(Path(result["data_dir"]).resolve())
     return result

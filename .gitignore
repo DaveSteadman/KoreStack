@@ -43,3 +43,5 @@ Thumbs.db
 **/schedules/
 **/test_results/
 KoreDocs/koredocs.log
+*.log
+datacontrol/task_queue.json

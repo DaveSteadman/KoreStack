@@ -39,6 +39,7 @@ def get_db() -> Generator[sqlite3.Connection, None, None]:
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
+    _ensure_schema(conn)
     try:
         yield conn
         conn.commit()
@@ -74,7 +75,7 @@ CREATE TABLE IF NOT EXISTS conversations (
     conversation_name  TEXT,
     kc_conversation_id INTEGER,
     external_thread_id TEXT,
-    subject            TEXT,
+    koreconversation_id TEXT,
     created_at         TEXT NOT NULL
 );
 
@@ -103,31 +104,36 @@ CREATE INDEX IF NOT EXISTS idx_ext_msg_conv       ON external_messages(conversat
 """
 
 
+def _ensure_schema(conn: sqlite3.Connection) -> None:
+    conn.executescript(_SCHEMA)
+    conv_cols = {r[1] for r in conn.execute("PRAGMA table_info(conversations)")}
+    if conv_cols and "conversation_name" not in conv_cols:
+        conn.execute("ALTER TABLE conversations ADD COLUMN conversation_name TEXT")
+    if conv_cols and "kc_conversation_id" not in conv_cols:
+        conn.execute("ALTER TABLE conversations ADD COLUMN kc_conversation_id INTEGER")
+    if conv_cols and "subject" in conv_cols and "koreconversation_id" not in conv_cols:
+        conn.execute("ALTER TABLE conversations RENAME COLUMN subject TO koreconversation_id")
+        conv_cols = {r[1] for r in conn.execute("PRAGMA table_info(conversations)")}
+    if conv_cols and "koreconversation_id" not in conv_cols:
+        conn.execute("ALTER TABLE conversations ADD COLUMN koreconversation_id TEXT")
+    conn.execute(
+        "UPDATE conversations "
+        "SET conversation_name = COALESCE(NULLIF(external_thread_id, ''), 'kccomms:' || id) "
+        "WHERE conversation_name IS NULL OR conversation_name = ''"
+    )
+    row = conn.execute("SELECT id FROM interfaces WHERE type='manual' LIMIT 1").fetchone()
+    if row is None:
+        conn.execute(
+            "INSERT INTO interfaces (type, name, config_json, enabled, created_at) "
+            "VALUES ('manual', 'Manual', '{}', 1, ?)",
+            (_now(),),
+        )
+
+
 def init_db() -> None:
     """Create tables, run migrations, and seed the permanent Manual interface."""
-    with get_db() as conn:
-        # Migration: add kc_conversation_id to conversations if this is an existing DB.
-        conv_cols = {r[1] for r in conn.execute("PRAGMA table_info(conversations)")}
-        if conv_cols and "conversation_name" not in conv_cols:
-            conn.execute("ALTER TABLE conversations ADD COLUMN conversation_name TEXT")
-        if conv_cols and "kc_conversation_id" not in conv_cols:
-            conn.execute("ALTER TABLE conversations ADD COLUMN kc_conversation_id INTEGER")
-        if conv_cols and "subject" not in conv_cols:
-            conn.execute("ALTER TABLE conversations ADD COLUMN subject TEXT")
-        conn.executescript(_SCHEMA)
-        conn.execute(
-            "UPDATE conversations "
-            "SET conversation_name = COALESCE(NULLIF(external_thread_id, ''), 'kccomms:' || id) "
-            "WHERE conversation_name IS NULL OR conversation_name = ''"
-        )
-        # Ensure the Manual interface always exists.
-        row = conn.execute("SELECT id FROM interfaces WHERE type='manual' LIMIT 1").fetchone()
-        if row is None:
-            conn.execute(
-                "INSERT INTO interfaces (type, name, config_json, enabled, created_at) "
-                "VALUES ('manual', 'Manual', '{}', 1, ?)",
-                (_now(),),
-            )
+    with get_db():
+        return
 
 
 # ---------------------------------------------------------------------------
@@ -226,15 +232,15 @@ def conversation_create(
     interface_id:       int,
     kc_conversation_id: int | None = None,
     external_thread_id: str | None = None,
-    subject:            str | None = None,
+    koreconversation_id: str | None = None,
     conversation_name:  str | None = None,
 ) -> int:
     with get_db() as conn:
         cur = conn.execute(
             "INSERT INTO conversations "
-            "(interface_id, conversation_name, kc_conversation_id, external_thread_id, subject, created_at) "
+            "(interface_id, conversation_name, kc_conversation_id, external_thread_id, koreconversation_id, created_at) "
             "VALUES (?,?,?,?,?,?)",
-            (interface_id, conversation_name, kc_conversation_id, external_thread_id, subject, _now()),
+            (interface_id, conversation_name, kc_conversation_id, external_thread_id, koreconversation_id, _now()),
         )
         if not conversation_name:
             conversation_name = f"kccomms:{cur.lastrowid}"

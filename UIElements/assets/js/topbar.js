@@ -51,7 +51,8 @@ export function initTopbar(options = {}) {
 		versionText = SUITE_VERSION,
 	} = options;
 
-	const host = document.getElementById(mountId);
+	const host = document.getElementById(mountId)
+		|| (mountId === 'topbar' ? document.getElementById('suite-topbar') : null);
 	if (!host) return null;
 
 	if (currentService) {

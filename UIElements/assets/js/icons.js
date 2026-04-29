@@ -11,6 +11,38 @@ function koreDocsIcon(size = 12) {
     </svg>`;
 }
 
+function koreDocFileIcon(size = 12) {
+  const s = `width="${size}" height="${size}"`;
+  return `<svg ${s} viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <rect x="3" y="2" width="14" height="16" rx="2" stroke="currentColor" stroke-width="1.5"/>
+      <line x1="6" y1="7" x2="14" y2="7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+      <line x1="6" y1="10" x2="14" y2="10" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+      <line x1="6" y1="13" x2="11" y2="13" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+    </svg>`;
+}
+
+function koreSheetFileIcon(size = 12) {
+  const s = `width="${size}" height="${size}"`;
+  return `<svg ${s} viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <rect x="2" y="2" width="16" height="16" rx="2" stroke="currentColor" stroke-width="1.5"/>
+      <line x1="2" y1="8" x2="18" y2="8" stroke="currentColor" stroke-width="1.2"/>
+      <line x1="2" y1="13" x2="18" y2="13" stroke="currentColor" stroke-width="1.2"/>
+      <line x1="8" y1="2" x2="8" y2="18" stroke="currentColor" stroke-width="1.2"/>
+      <line x1="13" y1="2" x2="13" y2="18" stroke="currentColor" stroke-width="1.2"/>
+    </svg>`;
+}
+
+function koreDiagFileIcon(size = 12) {
+  const s = `width="${size}" height="${size}"`;
+  return `<svg ${s} viewBox="0 0 20 20" fill="none" aria-hidden="true">
+    <circle cx="4" cy="10" r="2.5" stroke="currentColor" stroke-width="1.5"/>
+    <circle cx="16" cy="4" r="2.5" stroke="currentColor" stroke-width="1.5"/>
+    <circle cx="16" cy="16" r="2.5" stroke="currentColor" stroke-width="1.5"/>
+    <line x1="6.2" y1="9" x2="13.8" y2="5" stroke="currentColor" stroke-width="1.3"/>
+    <line x1="6.2" y1="11" x2="13.8" y2="15" stroke="currentColor" stroke-width="1.3"/>
+  </svg>`;
+}
+
 export const SUITE_ICONS = {
   korestack(size = 12) {
     const s = `width="${size}" height="${size}"`;
@@ -44,9 +76,9 @@ export const SUITE_ICONS = {
       <path d="M3.8 6 10 10.5 16.2 6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>`;
   },
-  koredoc: koreDocsIcon,
-  koresheet: koreDocsIcon,
-  kodiag: koreDocsIcon,
+  koredoc: koreDocFileIcon,
+  koresheet: koreSheetFileIcon,
+  kodiag: koreDiagFileIcon,
   korefile: koreDocsIcon,
   koreconversation(size = 12) {
     const s = `width="${size}" height="${size}"`;

@@ -103,31 +103,12 @@ export async function loadSearch(q) {
 
 // ── Rendering ───────────────────────────────────────────────────
 
+import { resolveIcon, SUITE_ICONS } from '/static/commonui/js/icons.js';
+
 const TYPE_URL = { koredoc: '/doc', koresheet: '/sheet', kodiag: '/diag' };
 
 function _fileIcon(ext) {
-  if (ext === 'koredoc')
-    return `<svg viewBox="0 0 20 20" fill="none" width="15" height="15">
-      <rect x="3" y="2" width="14" height="16" rx="2" stroke="currentColor" stroke-width="1.5"/>
-      <line x1="6" y1="7"  x2="14" y2="7"  stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
-      <line x1="6" y1="10" x2="14" y2="10" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
-      <line x1="6" y1="13" x2="11" y2="13" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
-    </svg>`;
-  if (ext === 'koresheet')
-    return `<svg viewBox="0 0 20 20" fill="none" width="15" height="15">
-      <rect x="2" y="2" width="16" height="16" rx="2" stroke="currentColor" stroke-width="1.5"/>
-      <line x1="2" y1="8"  x2="18" y2="8"  stroke="currentColor" stroke-width="1.2"/>
-      <line x1="2" y1="13" x2="18" y2="13" stroke="currentColor" stroke-width="1.2"/>
-      <line x1="8" y1="2"  x2="8"  y2="18" stroke="currentColor" stroke-width="1.2"/>
-      <line x1="13" y1="2" x2="13" y2="18" stroke="currentColor" stroke-width="1.2"/>
-    </svg>`;
-  return `<svg viewBox="0 0 20 20" fill="none" width="15" height="15">
-    <circle cx="4"  cy="10" r="2.5" stroke="currentColor" stroke-width="1.5"/>
-    <circle cx="16" cy="4"  r="2.5" stroke="currentColor" stroke-width="1.5"/>
-    <circle cx="16" cy="16" r="2.5" stroke="currentColor" stroke-width="1.5"/>
-    <line x1="6.2"  y1="9"  x2="13.8" y2="5"  stroke="currentColor" stroke-width="1.3"/>
-    <line x1="6.2"  y1="11" x2="13.8" y2="15" stroke="currentColor" stroke-width="1.3"/>
-  </svg>`;
+  return resolveIcon(SUITE_ICONS, ext, 15);
 }
 
 function _sortedFiles() {

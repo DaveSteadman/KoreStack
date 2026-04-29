@@ -18,7 +18,7 @@
   <table>
     <thead>
       <tr>
-        <th>Subject</th>
+        <th>KoreConversation ID</th>
         <th>Interface</th>
         <th>Name</th>
         <th>Started</th>
@@ -30,7 +30,7 @@
       <tr>
         <td>
           <a href="/conversation/{{ conv.id }}" style="color:var(--text); text-decoration:none;">
-            {{ conv.subject or conv.external_thread_id or "(no subject)" }}
+            {{ conv.koreconversation_id or conv.external_thread_id or "(no KoreConversation ID)" }}
           </a>
         </td>
         <td>

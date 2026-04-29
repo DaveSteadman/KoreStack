@@ -120,7 +120,7 @@ def api_send(req: SendRequest):
     local_conv_id = db.conversation_create(
         interface_id=req.interface_id,
         external_thread_id=ext_thread_id,
-        subject=req.subject,
+        koreconversation_id=req.subject,
     )
     local_conv = db.conversation_get(local_conv_id)
     assert local_conv is not None
@@ -170,7 +170,7 @@ def ui_compose_form(request: Request):
 def ui_compose_submit(
     request: Request,
     sender:  str = Form(...),
-    subject: str = Form(...),
+    koreconversation_id: str = Form(...),
     content: str = Form(...),
 ):
     manual = db.interface_get_manual()
@@ -179,7 +179,7 @@ def ui_compose_submit(
     local_conv_id = db.conversation_create(
         interface_id=manual["id"],
         external_thread_id=ext_thread_id,
-        subject=subject,
+        koreconversation_id=koreconversation_id,
     )
     local_conv = db.conversation_get(local_conv_id)
     assert local_conv is not None
@@ -425,7 +425,7 @@ def _missing_kc_policy(policy: str | None = None) -> str:
 def _resolve_kc_conversation(conv: dict, *, if_missing: str | None = None) -> dict:
     conversation_name = _conversation_name_for(conv)
     channel_type = conv.get("interface_type", "manual")
-    subject = conv.get("subject") or ""
+    koreconversation_id = conv.get("koreconversation_id") or ""
 
     kc_conv = kc_client.find_conversation_by_external_id(conversation_name)
     if kc_conv is None:
@@ -439,7 +439,7 @@ def _resolve_kc_conversation(conv: dict, *, if_missing: str | None = None) -> di
         kc_conv = kc_client.create_conversation(
             external_id=conversation_name,
             channel_type=channel_type,
-            subject=subject,
+            subject=koreconversation_id,
         )
         logger.info(
             "Created KC conversation %d for local conv %d via name %s",
