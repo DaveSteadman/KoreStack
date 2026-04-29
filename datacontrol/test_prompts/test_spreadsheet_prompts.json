@@ -1,0 +1,40 @@
+[
+    { "exchange": "csv_create_simple",        "turns": [{ "user": "create a CSV file at datauser/test_spreadsheet/people.csv with columns Name, Age, City. Add 5 rows of made-up data.", "assert": "not_empty" }] },
+    { "exchange": "csv_create_sales",         "turns": [{ "user": "create a CSV file at datauser/test_spreadsheet/sales.csv with columns Month, Region, Units, Revenue. Add 12 rows covering Jan-Dec for two regions (North and South) with plausible figures.", "assert": "not_empty" }] },
+    { "exchange": "csv_create_temperatures",  "turns": [{ "user": "create a CSV file at datauser/test_spreadsheet/temperatures.csv with columns City, Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec. Add average monthly temperatures in Celsius for London, Paris, and Cairo.", "assert": "not_empty" }] },
+
+    { "exchange": "csv_find_missing_comma",   "turns": [{ "user": "here is a CSV fragment - find the formatting errors:\nName,Age,City\nAlice,30,London\nBob 25,Manchester\nCarol,28,Bristol\nDave,31\nEve,27,Leeds", "assert": "not_empty" }] },
+    { "exchange": "csv_find_extra_column",    "turns": [{ "user": "here is a CSV - identify any rows that have a different number of columns than the header:\nProduct,Price,Stock\nApple,1.20,50\nBanana,0.80\nCherry,2.50,120,Organic\nDate,3.00,30", "assert": "not_empty" }] },
+    { "exchange": "csv_find_empty_fields",    "turns": [{ "user": "given this CSV data, find all rows with empty or missing fields and report which row and column each problem is in:\nID,Name,Email,Phone\n1,Alice,alice@example.com,555-1234\n2,Bob,,555-5678\n3,,carol@example.com,\n4,Dave,dave@example.com,555-9999", "assert": "not_empty" }] },
+    { "exchange": "csv_find_mixed_errors",    "turns": [{ "user": "audit this CSV for formatting problems - wrong column count, blank fields, or non-numeric values in numeric columns:\nItem,Qty,Price\nWidget,10,4.99\nGadget,,12.50\nDoohickey,5,free\nThingamajig 3 7.00\nWhatsit,2,1.25", "assert": "not_empty" }] },
+
+    { "exchange": "csv_transpose_small",      "turns": [{ "user": "transpose this CSV so rows become columns and columns become rows, and show the result:\nName,Jan,Feb,Mar\nAlice,100,110,120\nBob,90,95,105\nCarol,80,85,88", "assert": "not_empty" }] },
+    { "exchange": "csv_transpose_file",       "turns": [{ "user": "create a CSV at datauser/test_spreadsheet/temps_source.csv with columns City, Jan, Feb, Mar containing temperature data for London, Paris, and Cairo. Then transpose it so months become rows and cities become columns, and save the result to datauser/test_spreadsheet/temps_transposed.csv", "assert": "not_empty" }] },
+
+    { "exchange": "csv_sum_column",           "turns": [{ "user": "read datauser/test_spreadsheet/sales.csv, add a new column called CumulativeRevenue that is a running total of the Revenue column, and save the result back to the same file", "assert": "not_empty" }] },
+    { "exchange": "csv_row_total",            "turns": [{ "user": "take this CSV and add a Total column that sums Jan through Dec for each row:\nCity,Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec\nLondon,8,9,11,14,17,20,22,22,19,15,11,8\nParis,5,7,10,14,18,22,25,24,21,15,10,6\nCairo,13,15,18,22,27,30,32,31,29,25,19,14", "assert": "contains|Total" }] },
+    { "exchange": "csv_average_column",       "turns": [{ "user": "read datauser/test_spreadsheet/sales.csv, add an AverageMonthlyRevenue column (Revenue divided by Units, rounded to 2 decimal places), and show the updated table", "assert": "not_empty" }] },
+    { "exchange": "csv_percentage_column",    "turns": [{ "user": "given this CSV, add a column called SharePct showing each row's Revenue as a percentage of the total Revenue across all rows, rounded to 1 decimal place:\nRegion,Revenue\nNorth,45000\nSouth,30000\nEast,15000\nWest,10000", "assert": "contains|SharePct" }] },
+
+    { "exchange": "csv_sort_by_column",       "turns": [{ "user": "sort the following CSV by Revenue descending and show the result:\nMonth,Region,Revenue\nJan,North,12000\nJan,South,8000\nFeb,North,13500\nFeb,South,9200\nMar,North,11000\nMar,South,10400", "assert": "not_empty" }] },
+    { "exchange": "csv_filter_rows",          "turns": [{ "user": "filter the following CSV to show only rows where Units is greater than 100:\nProduct,Units,Price\nApple,150,1.20\nBanana,80,0.80\nCherry,200,2.50\nDate,30,3.00\nElder,110,1.80", "assert": "not_empty" }] },
+    { "exchange": "csv_dedup",                "turns": [{ "user": "find and remove duplicate rows from this CSV, keeping only the first occurrence, and show the deduplicated result:\nName,Score\nAlice,85\nBob,90\nAlice,85\nCarol,78\nBob,90\nDave,92", "assert": "not_empty" }] },
+
+    { "exchange": "csv_sin_cos_table",        "turns": [{ "user": "use Python to generate a CSV table of sin and cos values for angles 0 to 360 degrees in steps of 15 degrees. Columns: Degrees, Radians, Sin, Cos. Round Sin and Cos to 4 decimal places. Save to datauser/test_spreadsheet/sin_cos.csv and show the first 10 rows.", "assert": "contains|Sin" }] },
+    { "exchange": "csv_compound_interest",    "turns": [{ "user": "use Python to generate a CSV showing compound interest growth. Columns: Year, Balance. Starting balance 1000, annual rate 5%, for 20 years. Round Balance to 2 decimal places. Show the result.", "assert": "contains|Balance" }] },
+    { "exchange": "csv_fibonacci",            "turns": [{ "user": "use Python to generate a CSV of the first 20 Fibonacci numbers. Columns: N, Fibonacci, LogFibonacci (log base 10, rounded to 4 decimal places). Show the result.", "assert": "contains|Fibonacci" }] },
+    { "exchange": "csv_prime_sieve",          "turns": [{ "user": "use Python to generate a CSV of all prime numbers up to 200. Columns: Index, Prime. Save to datauser/test_spreadsheet/primes.csv and report how many primes there are.", "assert": "not_empty" }] },
+
+    { "exchange": "csv_multiturn_create_then_fix", "turns": [
+        { "user": "create a CSV with columns Product, Q1, Q2, Q3, Q4 and 4 rows of made-up quarterly sales figures. Save to datauser/test_spreadsheet/quarterly.csv", "assert": "not_empty" },
+        { "user": "now read that file and add a YearTotal column that sums Q1 through Q4 for each row, then save it back", "assert": "contains|YearTotal" }
+    ]},
+    { "exchange": "csv_multiturn_create_then_transpose", "turns": [
+        { "user": "create a CSV at datauser/test_spreadsheet/scores.csv with columns Student, Maths, Science, English, History - 5 students with scores out of 100", "assert": "not_empty" },
+        { "user": "now transpose that file so subjects are rows and students are columns, save as datauser/test_spreadsheet/scores_transposed.csv", "assert": "not_empty" }
+    ]},
+    { "exchange": "csv_multiturn_generate_then_analyse", "turns": [
+        { "user": "use Python to create a CSV at datauser/test_spreadsheet/random_data.csv with 20 rows and columns ID, X, Y where X is random floats between 0 and 10 and Y = 2*X + noise (random noise between -1 and 1). Round to 2 decimal places.", "assert": "not_empty" },
+        { "user": "now read that file and calculate the mean and standard deviation of X and Y columns, then report them", "assert": "not_empty" }
+    ]}
+]

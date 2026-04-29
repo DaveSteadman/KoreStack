@@ -4,6 +4,38 @@
  * Shared source of truth for typography, colors, spacing, and outer shell chrome.
  */
 
+@font-face {
+  font-family: 'Roboto Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/ui-elements/assets/fonts/RobotoMono-Regular.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Roboto Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/ui-elements/assets/fonts/RobotoMono-Medium.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Roboto Mono';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/ui-elements/assets/fonts/RobotoMono-SemiBold.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Roboto Mono';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/ui-elements/assets/fonts/RobotoMono-Bold.ttf') format('truetype');
+}
+
 :root {
   --kcui-tab-h: 38px;
   --kcui-appbar-h: 42px;
@@ -37,8 +69,36 @@
   --danger: #ff5f5f;
   --info: #6eb5ff;
 
-  --font-ui: 'Cascadia Code', 'Fira Code', 'Courier New', monospace;
-  --font-code: 'Cascadia Code', 'Fira Code', 'Courier New', monospace;
+  --kcui-font-ui: 'Roboto Mono', 'Cascadia Code', 'Fira Code', 'Courier New', monospace;
+  --kcui-font-code: 'Roboto Mono', 'Cascadia Code', 'Fira Code', 'Courier New', monospace;
+  --kcui-font-doc: 'Georgia', 'Times New Roman', serif;
+  --kcui-font-topbar: 'Roboto Mono', 'Cascadia Code', 'Fira Code', 'Courier New', monospace;
+
+  --kcui-text-body: 13px;
+  --kcui-text-body-sm: 12px;
+  --kcui-text-label: 11px;
+  --kcui-text-caption: 10px;
+  --kcui-text-micro: 9px;
+  --kcui-text-title: 16px;
+  --kcui-text-title-sm: 12px;
+  --kcui-text-data: 12.5px;
+  --kcui-text-topbar: 11px;
+  --kcui-text-topbar-title: 12px;
+
+  --kcui-leading-body: 1.55;
+  --kcui-leading-copy: 1.45;
+  --kcui-leading-dense: 1.35;
+
+  --kcui-tracking-label: 0.08em;
+  --kcui-tracking-eyebrow: 0.18em;
+  --kcui-tracking-tight: 0.04em;
+  --kcui-tracking-topbar: 0.12em;
+  --kcui-tracking-topbar-tight: 0.08em;
+
+  --font-ui: var(--kcui-font-ui);
+  --font-code: var(--kcui-font-code);
+  --font-doc: var(--kcui-font-doc);
+  --font-topbar: var(--kcui-font-topbar);
 
   color-scheme: dark;
 }

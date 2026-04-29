@@ -56,11 +56,11 @@ html, body {
 #layout {
     display: grid;
     height: 100vh;
-    grid-template-rows: var(--suite-topbar-h, 38px) var(--header-h) 1fr;
+    grid-template-rows: var(--topbar-h, var(--tab-h, 38px)) var(--header-h) 1fr;
     grid-template-columns: 1fr;
 }
 
-#suite-topbar {
+#topbar {
     grid-column: 1;
     grid-row: 1;
 }
@@ -621,17 +621,6 @@ body.splitter-drag-h { user-select: none; cursor: row-resize; }
 #send-btn:hover,
 #send-btn:focus-visible { background: var(--accent-dim); color: var(--text-hi); outline: 1px solid var(--border-hi); outline-offset: 2px; }
 #send-btn:disabled      { opacity: 0.35; cursor: default; }
-
-/* ============================================================
-   VERSION CHIP in header
-   ============================================================ */
-
-#version-chip {
-    font-size:   10px;
-    font-family: var(--font-mono);
-    color:       var(--text-dim);
-    white-space: nowrap;
-}
 
 /* ============================================================
    RESPONSIVE COLLAPSE: narrow screens drop timeline

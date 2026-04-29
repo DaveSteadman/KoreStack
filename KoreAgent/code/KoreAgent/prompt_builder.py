@@ -111,7 +111,7 @@ _TOOL_ROUTING_FUDGE: list[str] = [
     # -- search_web / search_web_text: article vs hub-page discrimination --------------------
     # Long-term fix: expose page_kind filtering in search_web so the tool itself filters
     # hub pages before returning results.
-    "- When the user asks for article URLs, treat only concrete article/detail pages as valid results. Do not count homepages, category pages, topic pages, or search-result pages.",
+    "- When the user asks for article URLs, treat only concrete article/detail pages as valid results. Do not count homepages, category pages, topic pages, search-result pages, or section fronts.",
     "- If search results are hub/listing pages, use get_page_links or get_page_links_text to extract concrete article URLs before calling fetch_page_text.",
     "- For article-harvest tasks, use prefer_article_urls=true on search_web when available, and inspect each result's page_kind field before treating it as an article.",
 
@@ -127,13 +127,13 @@ _TOOL_ROUTING_FUDGE: list[str] = [
     # so they appear inline in the tool schema the model sees.
     "- If fetch_page_text returns HTTP 401/403, or only a bare title from a topic page, treat the URL as blocked and move on to a better candidate.",
     "- When using fetch_page_text for a narrow fact lookup, set the query parameter to your specific question.",
-    "- For tasks requiring a complete list or many-year table scan, use fetch_page_text with a generous max_words value (2000-4000). Large fetches are auto-saved to the scratchpad - use scratch_query or scratch_peek on the saved key instead of repeating shallow fetches.",
+    "- For tasks requiring a complete list, full history, many-year table scan, or similar exhaustive fetch, use fetch_page_text with a generous max_words value (2000-4000). Large fetches are auto-saved to the scratchpad - use scratch_query or scratch_peek on the saved key instead of repeating shallow fetches.",
 
     # -- research_traverse: invocation routing -----------------------------------------------
     # Long-term fix: add 'research', 'investigate', 'deep dive' to research_traverse
     # trigger list so the skill selection guidance handles dispatch without this override.
     "- When a prompt says 'research', 'investigate', 'look into', 'find evidence', or 'deep dive into', you MUST call research_traverse. Never answer these prompts from training data.",
-    "- After research_traverse, prefer page scratch keys from best_pages/page_manifest. Use scratch_query or scratch_peek on specific research_page_* entries instead of scratch_load on the full bundle.",
+    "- After research_traverse, prefer page scratch keys from best_pages/page_manifest. Use scratch_query or scratch_peek on specific research_page_* entries instead of scratch_load on the entire combined research bundle.",
 
     # -- KoreData MCP tools: grounding -------------------------------------------------------
     # Long-term fix: this should be enforced structurally - e.g. requiring source URL citations

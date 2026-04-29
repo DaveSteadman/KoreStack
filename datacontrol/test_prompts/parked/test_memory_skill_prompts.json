@@ -1,0 +1,16 @@
+[
+    "my name is Dave",
+    "this project is called MiniAgentFramework and is an LLM orchestration framework",
+    "our repository root path is c:/Util/GithubRepos/MiniAgentFramework",
+    "the preferred local model for this project is gpt-oss:20b",
+    "we are running on Windows with Python 3.14.2",
+    "the test output directory for this project is controldata/test_results",
+    "I prefer concise answers without filler phrases",
+    "what is my name",
+    "what is the preferred model for this project",
+    "what do you know about our repository path",
+    "what project are we working on",
+    "show me everything stored in memory",
+    "what details about our environment are stored in memory",
+    "recall what you know about my preferences"
+]

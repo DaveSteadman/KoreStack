@@ -35,14 +35,11 @@ Thumbs.db
 **/data/
 **/Data/
 **/datauser/
-**/datacontrol/
-**/progress/
 **/Progress/
 
 # Common runtime output that may exist outside the data roots
 **/logs/
 **/conversations/
 **/schedules/
-**/test_prompts/
 **/test_results/
 KoreDocs/koredocs.log

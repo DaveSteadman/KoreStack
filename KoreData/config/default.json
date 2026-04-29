@@ -9,15 +9,15 @@
         "korereference": 8804
     },
     "korefeed": {
-        "data_dir": "../Data/Feeds"
+        "data_dir": "../../datauser/KoreData/Feeds"
     },
     "korelibrary": {
-        "data_dir": "../Data/Library"
+        "data_dir": "../../datauser/KoreData/Library"
     },
     "korerag": {
-        "data_dir": "../Data/RAG"
+        "data_dir": "../../datauser/KoreData/RAG"
     },
     "korereference": {
-        "data_dir": "../Data/Reference"
+        "data_dir": "../../datauser/KoreData/Reference"
     }
 }

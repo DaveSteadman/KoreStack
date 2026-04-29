@@ -85,53 +85,17 @@ SERVICE_META: dict[str, dict[str, object]] = {
     },
 }
 
+SERVICE_ICON_KEYS: dict[str, str] = {
+    "agent": "koreagent",
+    "conversation": "koreconversation",
+    "data": "koredata",
+    "docs": "koredocs",
+    "comms": "korecomms",
+}
+
 
 def get_ui_assets_dir() -> Path:
     return UI_ELEMENTS_ASSETS
-
-
-def suite_icon_svg(key: str, size: int = 24) -> str:
-        icon_key = key.lower()
-        s = f'width="{size}" height="{size}"'
-        icons = {
-                "korestack": f"""<svg {s} viewBox="0 0 20 20" fill="none" aria-hidden="true">
-    <path d="M3 6.5h14M3 10h14M3 13.5h14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-    <rect x="4" y="3" width="4" height="4" rx="1" fill="currentColor" opacity=".95"/>
-    <rect x="12" y="8" width="4" height="4" rx="1" fill="currentColor" opacity=".75"/>
-    <rect x="7" y="13" width="4" height="4" rx="1" fill="currentColor" opacity=".55"/>
-</svg>""",
-                "agent": f"""<svg {s} viewBox="0 0 20 20" fill="none" aria-hidden="true">
-    <rect x="5" y="5" width="10" height="10" rx="2" stroke="currentColor" stroke-width="1.6"/>
-    <path d="M8 2.8 10 5l2-2.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
-    <circle cx="8" cy="10" r="1" fill="currentColor"/>
-    <circle cx="12" cy="10" r="1" fill="currentColor"/>
-    <path d="M8 12.8h4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
-</svg>""",
-                "conversation": f"""<svg {s} viewBox="0 0 20 20" fill="none" aria-hidden="true">
-    <rect x="2.5" y="3" width="15" height="11" rx="2" stroke="currentColor" stroke-width="1.6"/>
-    <path d="M6 14v3l3.3-3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-    <circle cx="7" cy="8.5" r=".9" fill="currentColor"/>
-    <circle cx="10" cy="8.5" r=".9" fill="currentColor"/>
-    <circle cx="13" cy="8.5" r=".9" fill="currentColor"/>
-</svg>""",
-                "data": f"""<svg {s} viewBox="0 0 20 20" fill="none" aria-hidden="true">
-    <ellipse cx="10" cy="5" rx="5.5" ry="2.5" stroke="currentColor" stroke-width="1.4"/>
-    <path d="M4.5 5v7c0 1.4 2.46 2.5 5.5 2.5s5.5-1.1 5.5-2.5V5" stroke="currentColor" stroke-width="1.4"/>
-    <path d="M4.5 8.5c0 1.4 2.46 2.5 5.5 2.5s5.5-1.1 5.5-2.5" stroke="currentColor" stroke-width="1.4"/>
-</svg>""",
-                "docs": f"""<svg {s} viewBox="0 0 20 20" fill="none" aria-hidden="true">
-    <path d="M5 3.5h8l2 2v10.5a1.5 1.5 0 0 1-1.5 1.5h-8A1.5 1.5 0 0 1 4 16V5a1.5 1.5 0 0 1 1-1.5Z" stroke="currentColor" stroke-width="1.5"/>
-    <path d="M13 3.5V6h2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M7 9h6M7 12h6M7 15h4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
-</svg>""",
-                "comms": f"""<svg {s} viewBox="0 0 20 20" fill="none" aria-hidden="true">
-    <path d="M4 6.5h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-    <path d="M4 10h7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-    <path d="M4 13.5h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-    <path d="M13.5 8.5 16.5 10l-3 1.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-</svg>""",
-        }
-        return icons.get(icon_key, icons["korestack"])
 
 
 def _merge_dict(base: dict, override: dict) -> dict:
@@ -370,6 +334,7 @@ class StackManager:
                 {
                     "slug": spec.slug,
                     "label": spec.label,
+                    "iconKey": SERVICE_ICON_KEYS.get(spec.slug, "korestack"),
                     "description": spec.description,
                     "url": spec.url,
                     "healthUrl": spec.health_url,
@@ -440,11 +405,10 @@ def html_page(manager: StackManager, dashboard_url: str) -> str:
         suite_urls[service["slug"]] = service["url"]
         css_state = "up" if service["reachable"] else ("starting" if service["running"] else "down")
         state_label = "Reachable" if service["reachable"] else "Starting" if service["running"] else "Stopped"
-        service_icon = suite_icon_svg(service["slug"], 34)
         rows.append(
             f"""
                         <article class="service-row service-{service['slug']} {css_state}" data-service-card="{service['slug']}">
-                            <div class="service-cell service-glyph" aria-hidden="true">{service_icon}</div>
+                            <div class="service-cell service-glyph" aria-hidden="true" data-suite-icon="{service['iconKey']}"></div>
                             <div class="service-cell service-core">
                                 <p class="eyebrow">{service['slug'].upper()}</p>
                                 <h2>{service['label']}</h2>
@@ -576,7 +540,7 @@ def html_page(manager: StackManager, dashboard_url: str) -> str:
   </style>
 </head>
 <body class="kcui-shell-bg">
-    <div id="suite-topbar"></div>
+    <div id="topbar"></div>
     <div id="app-bar"></div>
     <main class="shell kcui-page kcui-page--narrow kcui-stack">
         <section class="panel kcui-panel paths-panel">
@@ -603,8 +567,29 @@ def html_page(manager: StackManager, dashboard_url: str) -> str:
     </section>
   </main>
   <script type="module">
-      import {{ initAppBar, initSuiteTopbar }} from '/ui-elements/assets/js/topbar.js';
-      initSuiteTopbar({{ currentService: 'korestack', urls: {suite_urls_json} }});
+    import {{ initAppBar, initTopbar }} from '/ui-elements/assets/js/chrome.js';
+        function topbarIconFor(serviceKey) {{
+            return document.querySelector(`.ktopbar-item[data-service="${{serviceKey}}"] .ktopbar-icon`)?.innerHTML || '';
+        }}
+
+        function initServicePanelIcons() {{
+            const serviceKeyBySlug = {{
+                agent: 'koreagent',
+                conversation: 'koreconversation',
+                data: 'koredata',
+                docs: 'koredocs',
+                comms: 'korecomms',
+            }};
+            for (const row of document.querySelectorAll('[data-service-card]')) {{
+                const serviceKey = serviceKeyBySlug[row.dataset.serviceCard];
+                const glyph = row.querySelector('.service-glyph');
+                if (!serviceKey || !glyph) continue;
+                const iconHtml = topbarIconFor(serviceKey);
+                if (iconHtml) glyph.innerHTML = iconHtml;
+            }}
+        }}
+
+    initTopbar({{ currentService: 'korestack', urls: {suite_urls_json} }});
       initAppBar({{
           currentService: 'korestack',
           overline: 'Local Control Plane',
@@ -617,6 +602,7 @@ def html_page(manager: StackManager, dashboard_url: str) -> str:
               {{ label: 'UIElements', value: '{ui_note}' }},
           ],
       }});
+    initServicePanelIcons();
   </script>
   <script>
         let current = {services_json};

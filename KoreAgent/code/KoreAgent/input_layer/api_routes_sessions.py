@@ -46,6 +46,7 @@ def register_session_routes(
     delete_session_state,
     kc_save_turn,
     get_session_turns,
+    get_session_conversation,
     kc_set_session_name=None,
 ) -> None:
     @app.post("/sessions/{session_id}/prompt")
@@ -167,7 +168,13 @@ def register_session_routes(
     def get_session_history(session_id: str):
         validate_session_id(session_id)
         turns = get_session_turns(session_id)
-        return {"session_id": session_id, "turns": turns}
+        conv = get_session_conversation(session_id)
+        title = ""
+        if isinstance(conv, dict):
+            subject = str(conv.get("subject") or "").strip()
+            external_id = str(conv.get("external_id") or "")
+            title = subject or external_id.removeprefix("webchat_") or session_id
+        return {"session_id": session_id, "title": title, "turns": turns}
 
     @app.delete("/sessions/{session_id}")
     def delete_session(session_id: str):

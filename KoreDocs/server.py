@@ -53,15 +53,19 @@ except ImportError:
 
 BASE_DIR = Path(__file__).parent
 STATIC   = BASE_DIR / 'static'
+SUITE_ROOT = Path(os.environ.get('KORE_SUITE_ROOT', str(BASE_DIR.parent))).resolve()
+SUITE_DATACONTROL = Path(os.environ.get('KORE_SUITE_DATACONTROL', str(SUITE_ROOT / 'datacontrol'))).resolve()
+SUITE_DATAUSER = Path(os.environ.get('KORE_SUITE_DATAUSER', str(SUITE_ROOT / 'datauser'))).resolve()
 COMMONUI_ASSETS = Path(os.environ.get('KORE_UIELEMENTS_ASSETS_DIR', str(BASE_DIR.parent / 'UIElements' / 'assets')))
 if not COMMONUI_ASSETS.exists():
     COMMONUI_ASSETS = STATIC / 'shared'
-DATA_DIR = Path(os.environ.get('KOREDOCS_DATA_DIR', str(BASE_DIR / 'data')))
+DATA_DIR = Path(os.environ.get('KOREDOCS_DATA_DIR', str(SUITE_DATAUSER / 'KoreFiles')))
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 DB_PATH  = Path(os.environ.get('KOREDOCS_DB_PATH',
                                 str(DATA_DIR / 'korefile.db')))
-LOG_PATH = BASE_DIR / 'koredocs.log'
+LOG_PATH = SUITE_DATACONTROL / 'logs' / 'koredocs' / 'koredocs.log'
+LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 korefile.configure(DB_PATH)
 
@@ -171,6 +175,7 @@ app.mount('/static/doc',    StaticFiles(directory=STATIC / 'doc'),    name='doc'
 app.mount('/static/sheet',  StaticFiles(directory=STATIC / 'sheet'),  name='sheet')
 app.mount('/static/diag',   StaticFiles(directory=STATIC / 'diag'),   name='diag')
 app.mount('/static/kf',     StaticFiles(directory=STATIC / 'kf'),     name='kf')
+app.mount('/ui-elements/assets', StaticFiles(directory=COMMONUI_ASSETS), name='ui-elements-assets')
 app.mount('/static/commonui', StaticFiles(directory=COMMONUI_ASSETS), name='commonui')
 app.mount('/static/shared', StaticFiles(directory=STATIC / 'shared'), name='shared')
 app.mount('/mcp', mcp.http_app(path='/sse', transport='sse'), name='mcp')

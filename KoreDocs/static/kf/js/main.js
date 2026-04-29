@@ -6,6 +6,7 @@
  */
 
 import * as topbar   from '/static/commonui/js/topbar.js';
+import * as appbar   from '/static/commonui/js/appbar.js';
 import { renderAppMenu, initAppMenuEvents } from '/static/commonui/js/appMenu.js';
 import * as tree     from './tree.js';
 import * as filelist from './filelist.js';
@@ -14,7 +15,7 @@ import * as api      from './api.js';
 // ── App menu ────────────────────────────────────────────────────
 
 renderAppMenu({
-  app: 'koredoc',   // reuse doc icon for now (generic doc)
+  app: 'korefile',
   appLabel: 'KoreFile',
   titleId: 'kf-title',
   dirtyId: 'kf-dirty',
@@ -41,8 +42,8 @@ initAppMenuEvents(action => {
 
 // ── Tab bar ─────────────────────────────────────────────────────
 
-topbar.initSuiteTopbar({ currentService: 'koredocs' });
-topbar.init('koredoc');
+topbar.initTopbar({ currentService: 'koredocs' });
+appbar.initAppTabs('korefile');
 
 // ── State ───────────────────────────────────────────────────────
 

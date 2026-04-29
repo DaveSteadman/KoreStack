@@ -218,6 +218,16 @@ The application bar communicates application-level navigation and status.
 
 Legacy breadcrumb or title rows that repeat the same context are not part of the current design language.
 
+Canonical shell ownership lives in UIElements:
+
+- `UIElements/assets/js/topbar.js` owns the suite top bar
+- `UIElements/assets/js/appbar.js` owns the application bar and tabbed application variant
+- `UIElements/assets/js/icons.js` owns shared service and app-family icons
+
+Legacy names such as `tabs.js`, `tabs.css`, and older `suitebar` references are compatibility wrappers only. They are not the design source of truth and should not be used to introduce new shell behavior.
+
+KoreDocs may still expose compatibility static mounts such as `/static/commonui` and `/static/shared`, but those mounts are adapters over the same shared shell assets rather than a separate shell implementation.
+
 ### Application Identity
 
 Each application has a distinct accent color defined in UIElements and applied through shared theme utilities.
@@ -396,15 +406,17 @@ It should hold things like:
 
 ### 8.3 Data Boundary Rule
 
-When deciding whether something belongs in a subsystem-local `Data/` folder or in a
-top-level suite folder:
+All mutable runtime and operator-managed data belongs under the suite root. Historical
+service-local `Data/`, `data/`, `datacontrol/`, and `datauser/` folders are retired.
 
-- put it in the subsystem's local `Data/` folder if it is private to that subsystem's
-  internal storage engine or domain model
-- put it in `datacontrol/` if it is suite operational state
-- put it in `datauser/` if it is operator-managed suite content
+- put it in `datacontrol/` if it is suite operational state, runtime persistence, queues,
+  logs, schedules, service databases, or other system-owned files
+- put it in `datauser/` if it is operator-managed content, working files, imported source
+  material, KoreDocs documents, or user-curated knowledge
+- do not create new mutable subsystem-local data roots under service folders
 
-This keeps private service stores separate from shared operator-facing suite data.
+This keeps one authoritative operational root and one authoritative user-data root for
+the whole suite.
 
 ---
 

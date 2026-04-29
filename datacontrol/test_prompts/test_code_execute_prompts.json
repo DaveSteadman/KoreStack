@@ -1,0 +1,17 @@
+[
+    "calculate the first 10 fibonacci numbers",
+    "print the multiplication table for 7 up to 12",
+    "generate a list of the first 20 prime numbers",
+    "calculate 2 to the power of 32",
+    "print the squares and cubes of numbers 1 through 8 as a table",
+    "what is the sum of all integers from 1 to 100",
+    "calculate the factorial of 12",
+    "count how many times the letter e appears in the word 'accelerate'",
+    "print the first 15 terms of the collatz sequence starting at 27",
+    "generate the first 8 rows of pascals triangle",
+    "calculate the mean median and mode of the numbers 4 7 2 9 7 1 7 3 5",
+    "convert 255 decimal to binary hex and octal",
+    "print a 5x5 identity matrix",
+    "calculate compound interest on 10000 at 5 percent per year for 10 years",
+    "print all two-digit numbers that are palindromes"
+]

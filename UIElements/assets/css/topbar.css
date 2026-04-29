@@ -1,7 +1,97 @@
 /*
- * topbar.css — UIElements shell entry stylesheet.
+ * topbar.css — shared top bar styles for the Kore suite.
  */
 
 @import url('./tokens.css');
-@import url('./suitebar.css');
-@import url('./tabs.css');
+
+#topbar {
+	position: sticky;
+	top: 0;
+	z-index: 120;
+	min-height: var(--topbar-h, var(--tab-h, 38px));
+	background: var(--panel, #0f1117);
+}
+
+.ktopbar-nav {
+	display: flex;
+	align-items: stretch;
+	justify-content: flex-start;
+	min-height: var(--topbar-h, var(--tab-h, 38px));
+	background: var(--panel, #0f1117);
+	border-bottom: 1px solid var(--border, #1e2233);
+	font-family: var(--font-topbar, var(--font-ui, monospace));
+	overflow-x: auto;
+	overflow-y: hidden;
+	scrollbar-width: none;
+	padding: 0 var(--topbar-pad-x, 16px);
+	margin-left: 0;
+	gap: 0;
+}
+
+.ktopbar-main {
+	display: flex;
+	align-items: stretch;
+	min-width: 0;
+	flex: 1 1 auto;
+}
+
+.ktopbar-nav::-webkit-scrollbar {
+	display: none;
+}
+
+.ktopbar-item {
+	--topbar-accent: var(--accent, #6eb5ff);
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	min-height: var(--topbar-h, var(--tab-h, 38px));
+	padding: 0 14px;
+	color: var(--text-dim, #4e5466);
+	text-decoration: none;
+	border-right: 1px solid var(--border, #1e2233);
+	white-space: nowrap;
+	transition: background 120ms, color 120ms, box-shadow 120ms;
+	flex-shrink: 0;
+}
+
+.ktopbar-item:hover {
+	color: var(--text, #c5c8d0);
+	background: var(--bg, #0b0c10);
+}
+
+.ktopbar-item.is-active {
+	color: var(--text, #eef2f8);
+	background: var(--bg, #0b0c10);
+	box-shadow: inset 0 -2px 0 var(--topbar-accent);
+}
+
+.ktopbar-icon {
+	display: inline-flex;
+	align-items: center;
+	color: var(--topbar-accent);
+}
+
+.ktopbar-label {
+	font-family: var(--font-topbar, var(--font-ui, monospace));
+	font-size: var(--kcui-text-topbar, 11px);
+	font-weight: 600;
+	line-height: 1.15;
+	letter-spacing: var(--kcui-tracking-topbar, 0.12em);
+	text-transform: uppercase;
+}
+
+.ktopbar-trailing {
+	display: inline-flex;
+	align-items: center;
+	margin-left: auto;
+	padding: 0 2px 0 14px;
+	color: var(--text-2, #949aa7);
+	white-space: nowrap;
+	flex-shrink: 0;
+}
+
+.ktopbar-trailing .kcui-text-topbar,
+.ktopbar-trailing .kcui-text-topbar-title,
+.ktopbar-trailing .kcui-text-caption {
+	color: inherit;
+}

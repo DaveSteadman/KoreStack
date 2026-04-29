@@ -3,8 +3,8 @@
   "ctx": 128000,
   "llmhost": "http://MONTBLANC:11434",
   "agentport": 8000,
-  "ControlDataFolder": "datacontrol",
-  "UserDataFolder": "datauser",
+  "ControlDataFolder": "../datacontrol",
+  "UserDataFolder": "../datauser",
   "korecommsurl": "http://localhost:8900",
   "korecomms_poll_secs": 15,
   "mcp_connections": [

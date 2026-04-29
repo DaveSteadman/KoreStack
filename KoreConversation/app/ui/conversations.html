@@ -8,7 +8,7 @@
 </head>
 <body>
 <div id="layout">
-    <div id="suite-topbar"></div>
+    <div id="topbar"></div>
     <div id="app-bar"></div>
 
     <!-- ================================================
@@ -131,8 +131,8 @@
 </div><!-- #layout -->
 
 <script type="module">
-    import { initAppBar, initSuiteTopbar } from '/ui-elements/assets/js/topbar.js';
-    initSuiteTopbar({ currentService: 'koreconversation' });
+    import { initAppBar, initTopbar } from '/ui-elements/assets/js/chrome.js';
+    initTopbar({ currentService: 'koreconversation' });
     initAppBar({
         currentService: 'koreconversation',
         overline: 'Debug Console',

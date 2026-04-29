@@ -21,6 +21,7 @@ import json
 from pathlib import Path
 
 from KoreAgent.utils.workspace_utils import get_user_data_dir
+from KoreAgent.utils.workspace_utils import get_suite_root
 from KoreAgent.utils.workspace_utils import get_workspace_root
 
 
@@ -37,6 +38,15 @@ DEFAULT_DATA_DIR = get_user_data_dir()
 # ====================================================================================================
 def _ensure_data_dir() -> None:
     DEFAULT_DATA_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def _display_path(target_path: Path) -> str:
+    for root in (WORKSPACE_ROOT, get_suite_root()):
+        try:
+            return target_path.relative_to(root).as_posix()
+        except ValueError:
+            continue
+    return target_path.as_posix()
 
 
 # ----------------------------------------------------------------------------------------------------
@@ -110,7 +120,7 @@ def file_write(path: str, content: str) -> str:
     if not text_to_write.endswith("\n"):
         text_to_write += "\n"
     target_path.write_text(text_to_write, encoding="utf-8")
-    return f"Wrote {target_path.relative_to(WORKSPACE_ROOT).as_posix()}"
+    return f"Wrote {_display_path(target_path)}"
 
 
 # ----------------------------------------------------------------------------------------------------
@@ -125,7 +135,7 @@ def file_append(path: str, content: str) -> str:
         text_to_write += "\n"
     with target_path.open("a", encoding="utf-8") as output_file:
         output_file.write(text_to_write)
-    return f"Appended {target_path.relative_to(WORKSPACE_ROOT).as_posix()}"
+    return f"Appended {_display_path(target_path)}"
 
 
 # ----------------------------------------------------------------------------------------------------
@@ -135,7 +145,7 @@ def file_read(path: str, max_chars: int = 8000) -> str:
     except ValueError as err:
         return f"Error: {err}"
     if not target_path.exists():
-        return f"File not found: {target_path.relative_to(WORKSPACE_ROOT).as_posix()}"
+        return f"File not found: {_display_path(target_path)}"
 
     try:
         max_chars = int(max_chars)
@@ -186,7 +196,7 @@ def file_find(keywords: list[str], search_root: str = "") -> str:
         base = DEFAULT_DATA_DIR
 
     matches = [
-        p.relative_to(WORKSPACE_ROOT).as_posix()
+        _display_path(p)
         for p in sorted(base.rglob("*"))
         if p.is_file()
         and (not keywords_clean or all(k in p.name.lower() for k in keywords_clean))
@@ -223,7 +233,7 @@ def folder_find(keywords: list[str], search_root: str = "") -> str:
         base = DEFAULT_DATA_DIR
 
     matches = [
-        p.relative_to(WORKSPACE_ROOT).as_posix()
+        _display_path(p)
         for p in sorted(base.rglob("*"))
         if p.is_dir()
         and (not keywords_clean or all(k in p.name.lower() for k in keywords_clean))
@@ -252,7 +262,7 @@ def folder_create(path: str) -> str:
         return f"Error: {err}"
     existed = folder.exists()
     folder.mkdir(parents=True, exist_ok=True)
-    rel = folder.relative_to(WORKSPACE_ROOT).as_posix()
+    rel = _display_path(folder)
     return f"Folder already exists: {rel}" if existed else f"Created folder: {rel}"
 
 
@@ -292,4 +302,4 @@ def file_write_from_scratch(scratch_key: str, path: str) -> str:
         return f"Error: {err}"
     target_path.parent.mkdir(parents=True, exist_ok=True)
     target_path.write_text(content, encoding="utf-8")
-    return f"Wrote {target_path.relative_to(WORKSPACE_ROOT).as_posix()} ({len(content):,} chars from scratch key {scratch_key!r})"
+    return f"Wrote {_display_path(target_path)} ({len(content):,} chars from scratch key {scratch_key!r})"

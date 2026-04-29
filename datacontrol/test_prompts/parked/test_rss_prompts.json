@@ -1,0 +1,32 @@
+[
+    { "exchange": "rss_list_domains",        "turns": [{ "user": "what news domains does MiniFeed have data for",                                                          "assert": "not_contains|not configured" }] },
+    { "exchange": "rss_list_feeds",          "turns": [{ "user": "what RSS feeds are configured in MiniFeed",                                                              "assert": "not_contains|not configured" }] },
+
+    { "exchange": "rss_recent_all",          "turns": [{ "user": "what news has MiniFeed ingested in the last 24 hours",                                                   "assert": "not_contains|not configured" }] },
+    { "exchange": "rss_recent_6h",           "turns": [{ "user": "show me news ingested by MiniFeed in the last 6 hours",                                                  "assert": "not_contains|not configured" }] },
+    { "exchange": "rss_recent_48h",          "turns": [{ "user": "what stories have come in over the last two days from MiniFeed",                                         "assert": "not_contains|not configured" }] },
+
+    { "exchange": "rss_search_ai",           "turns": [{ "user": "search MiniFeed for AI news and summarise the top five headlines",                                       "assert": "not_contains|No results" }] },
+    { "exchange": "rss_search_defense",      "turns": [{ "user": "search MiniFeed for defense news and list the headlines",                                                "assert": "not_contains|No results" }] },
+    { "exchange": "rss_search_llm",          "turns": [{ "user": "search MiniFeed for news about large language models",                                                   "assert": "not_contains|No results" }] },
+    { "exchange": "rss_search_military",     "turns": [{ "user": "search MiniFeed for military news and give me a brief summary",                                          "assert": "not_contains|No results" }] },
+    { "exchange": "rss_search_drone",        "turns": [{ "user": "search MiniFeed for drone news and list any results you find",                                           "assert": "not_contains|not configured" }] },
+    { "exchange": "rss_search_nvidia",       "turns": [{ "user": "search MiniFeed for Nvidia news",                                                                        "assert": "not_contains|not configured" }] },
+    { "exchange": "rss_search_openai",       "turns": [{ "user": "search MiniFeed for OpenAI news and summarise what you find",                                            "assert": "not_contains|not configured" }] },
+
+    { "exchange": "rss_recent_ai_domain",    "turns": [{ "user": "what is the latest AI news from MiniFeed in the last 12 hours",                                         "assert": "not_contains|not configured" }] },
+    { "exchange": "rss_recent_defense_domain","turns": [{ "user": "show me defense news from MiniFeed from the last 24 hours",                                             "assert": "not_contains|not configured" }] },
+
+    { "exchange": "rss_briefing_ai",         "turns": [{ "user": "give me a morning briefing on AI news from MiniFeed - summarise the top stories from the last 24 hours", "assert": "not_contains|not configured" }] },
+    { "exchange": "rss_briefing_defense",    "turns": [{ "user": "give me a briefing on defense and military news from MiniFeed for today",                                "assert": "not_contains|not configured" }] },
+    { "exchange": "rss_briefing_combined",   "turns": [{ "user": "give me a combined briefing: top AI news and top defense news from MiniFeed today",                      "assert": "not_contains|not configured" }] },
+
+    { "exchange": "rss_full_article_ai",     "turns": [{ "user": "search MiniFeed for AI news and fetch the full body text of the most recent result",                    "assert": "not_contains|not configured" }] },
+    { "exchange": "rss_full_article_defense","turns": [{ "user": "search MiniFeed for defense news and read the first full article",                                       "assert": "not_contains|not configured" }] },
+
+    { "exchange": "rss_multihop_ai",         "turns": [{ "user": "find the latest AI stories in MiniFeed from the last 6 hours, pick the most interesting one, and give me a detailed summary of that article", "assert": "not_contains|not configured" }] },
+    { "exchange": "rss_multihop_defense",    "turns": [{ "user": "search MiniFeed for defense news, find the most recent result, and fetch its full article text, then summarise it in three bullet points", "assert": "not_contains|not configured" }] },
+
+    { "exchange": "rss_no_results",          "turns": [{ "user": "search MiniFeed for xyzqqqabcdefnomatch99 and tell me what you get",                                    "assert": "not_contains|not configured" }] },
+    { "exchange": "rss_server_missing",      "turns": [{ "user": "list all domains in MiniFeed",                                                                           "assert": "not_empty" }] }
+]

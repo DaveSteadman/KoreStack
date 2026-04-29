@@ -7,6 +7,7 @@ import uvicorn
 from datetime import datetime
 from app.config import cfg
 from app.feed_manager import load_feeds
+from config import get_suite_datacontrol_dir
 
 _W = 100  # banner width
 
@@ -46,12 +47,14 @@ def _print_status() -> None:
 if __name__ == "__main__":
     _DATA_DIR = Path(cfg["data_dir"])
     _DATA_DIR.mkdir(parents=True, exist_ok=True)
+    _LOG_PATH = get_suite_datacontrol_dir() / "logs" / "koredata" / "feed.log"
+    _LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
     _print_status()
     uvicorn.run(
         "app.api:app",
         host=cfg["host"],
         port=cfg["port"],
         log_level=cfg["log_level"],
-        log_config=logutil.make_log_config(_DATA_DIR / "service.log"),
+        log_config=logutil.make_log_config(_LOG_PATH),
         reload=False,
     )

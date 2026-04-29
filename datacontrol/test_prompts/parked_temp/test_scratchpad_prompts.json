@@ -1,0 +1,8 @@
+[
+  "save the string HELLO_SCRATCHPAD to scratchpad key testkey",
+  "save the string VALUE_ONE to scratchpad key alpha then save the string VALUE_TWO to scratchpad key beta then list the scratchpad",
+  "save the number 42 to scratchpad key mynum then load scratchpad key mynum",
+  "save a short poem about spring to scratchpad key poem then load scratchpad key poem",
+  "save the value NEEDLE_VALUE to scratchpad key haystack then search the scratchpad for values containing NEEDLE",
+  "load scratchpad key doesnotexist"
+]

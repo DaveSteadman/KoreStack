@@ -5,5 +5,5 @@
     "poll_interval": 60,
     "event_poll_interval": 1.0,
     "missing_kc_conversation_policy": "recreate",
-    "data_dir": "Data"
+    "data_dir": "../datacontrol/korecomms"
 }

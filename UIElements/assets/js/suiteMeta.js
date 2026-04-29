@@ -1,0 +1,1 @@
+export const SUITE_VERSION = '[0024 / 0.4+dev]';

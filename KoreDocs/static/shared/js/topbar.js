@@ -1,8 +1,7 @@
 /**
- * topbar.js — Shared top bar for the KoreDocs suite.
+ * topbar.js — compatibility wrapper for the shared top bar.
  *
- * Canonical entry point for the UI that renders the KoreDocs brand,
- * open tabs, and the + button used across all applications.
+ * Canonical ownership lives in /static/commonui/js/topbar.js.
  */
 
-export * from './tabs.js';
+export * from '/static/commonui/js/topbar.js';

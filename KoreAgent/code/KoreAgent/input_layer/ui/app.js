@@ -111,10 +111,15 @@ function _restoreSessionUiState() {
         if (!raw) return;
         const saved = JSON.parse(raw);
         if (saved && typeof saved.title === "string") {
-            _sessionTitle = saved.title;
-            dom.chatTitle().textContent = _sessionTitle;
+            _setChatPanelTitle(saved.title, { persist: false });
         }
     } catch (_) { /* ignore */ }
+}
+
+function _setChatPanelTitle(title, { persist = true } = {}) {
+    _sessionTitle = String(title || "").trim();
+    dom.chatTitle().textContent = _sessionTitle;
+    if (persist) _persistActiveSession();
 }
 
 // ====================================================================================================
@@ -976,7 +981,11 @@ function listenRun(runId) {
                 appendChatMessage("agent", ev.response, meta);
                 // Refresh the history cache silently so the next page load is instant.
                 apiFetch("/sessions/" + encodeURIComponent(_sessionId) + "/history").then(d => {
-                    if (d && Array.isArray(d.turns)) {
+                    if (!d) return;
+                    if (typeof d.title === "string") {
+                        _setChatPanelTitle(d.title);
+                    }
+                    if (Array.isArray(d.turns)) {
                         try { localStorage.setItem("maf_history_" + _sessionId, JSON.stringify(d.turns)); } catch (_) {}
                     }
                 });
@@ -986,16 +995,12 @@ function listenRun(runId) {
             } else if (ev.type === "rename_session") {
                 // Same chat, file renamed - update routing ID and title in-place; no history replay.
                 _sessionId = ev.session_id;
-                _sessionTitle = ev.name || "";
-                dom.chatTitle().textContent = _sessionTitle;
-                _persistActiveSession();
+                _setChatPanelTitle(ev.name || "");
                 _loadCompletions();
             } else if (ev.type === "switch_session") {
                 _sessionId = ev.session_id;
                 const label = ev.name || "";
-                _sessionTitle = label;
-                dom.chatTitle().textContent = label;
-                _persistActiveSession();
+                _setChatPanelTitle(label);
                 clearChatPanel();
                 if (label) {
                     appendChatMessage("agent", "\u2500\u2500\u2500 Session: " + label + " \u2500\u2500\u2500");
@@ -1035,7 +1040,11 @@ async function _loadSessionHistory(sessionId) {
     }
     // Fetch fresh data and update the panel.
     const data = await apiFetch("/sessions/" + encodeURIComponent(sessionId) + "/history");
-    if (!data || !Array.isArray(data.turns)) return;
+    if (!data) return;
+    if (typeof data.title === "string") {
+        _setChatPanelTitle(data.title);
+    }
+    if (!Array.isArray(data.turns)) return;
     const turns = data.turns;
     try { localStorage.setItem(cacheKey, JSON.stringify(turns)); } catch (_) {}
     // Only re-render if the content differs from what was already shown from cache.

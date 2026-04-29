@@ -1,0 +1,13 @@
+[
+    "fetch the page at https://en.wikipedia.org/wiki/Formula_One and summarize the key points",
+    "fetch the ferrari race winners and years from https://www.formulaonehistory.com/every-monaco-grand-prix-f1-winner/",
+    "read the content of https://docs.python.org/3/library/urllib.request.html and tell me what urllib.request does",
+    "fetch https://news.ycombinator.com and list the top 5 story titles you can see",
+    "search the web for Monaco Grand Prix Ferrari winners then fetch the most relevant URL and list the years and drivers",
+    "fetch the page at https://en.wikipedia.org/wiki/Monaco_Grand_Prix and extract all the years Ferrari won, then write the results to ./data/ferrari_monaco_wins.csv with columns year and driver",
+    "read this URL https://www.python.org/downloads/ and tell me the latest Python release",
+    "fetch https://github.com/trending and list the top trending repositories",
+    "fetch the page at not-a-real-url and tell me what happened",
+    "fetch ftp://example.com/file.txt and tell me what happened"
+]
+

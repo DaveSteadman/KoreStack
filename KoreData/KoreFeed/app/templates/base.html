@@ -33,7 +33,7 @@
       border-bottom: 1px solid var(--border);
       display: flex; align-items: center;
       padding: 0 1.5rem; gap: 1.5rem;
-      position: sticky; top: var(--suite-topbar-h, 38px); z-index: 100;
+      position: sticky; top: var(--topbar-h, var(--tab-h, 38px)); z-index: 100;
     }
     .logo {
       font-size: 1rem; font-weight: 700; letter-spacing: 0.06em;
@@ -231,7 +231,7 @@
   </style>
 </head>
 <body>
-  <div id="suite-topbar"></div>
+  <div id="topbar"></div>
   <div id="app-bar"></div>
   <main>
     {% block content %}{% endblock %}
@@ -263,8 +263,8 @@
   })();
   </script>
   <script type="module">
-    import { initAppBar, initSuiteTopbar } from '/ui-elements/assets/js/topbar.js';
-    initSuiteTopbar({ currentService: 'koredata' });
+    import { initAppBar, initTopbar } from '/ui-elements/assets/js/chrome.js';
+    initTopbar({ currentService: 'koredata' });
     initAppBar({
       currentService: 'koredata',
       overline: 'Feed Worker',

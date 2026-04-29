@@ -9,7 +9,7 @@
 </head>
 <body>
 <div id="layout">
-    <div id="suite-topbar"></div>
+    <div id="topbar"></div>
     <div id="app-bar"></div>
 
     <!-- ================================================
@@ -80,8 +80,8 @@
 <div id="slash-suggest" hidden></div>
 
 <script type="module">
-    import { initAppBar, initSuiteTopbar } from '/ui-elements/assets/js/topbar.js';
-    initSuiteTopbar({ currentService: 'koreagent' });
+    import { initAppBar, initTopbar } from '/ui-elements/assets/js/chrome.js';
+    initTopbar({ currentService: 'koreagent' });
     initAppBar({
         currentService: 'koreagent',
         overline: 'Agent Control',
@@ -92,7 +92,6 @@
             { label: 'Host', value: '', valueId: 'ollama-host' },
             { label: 'Model', value: '', valueId: 'ollama-model' },
             { label: 'Context', value: '', valueId: 'ollama-ctx' },
-            { label: 'Version', value: '', valueId: 'version-chip', tone: 'accent' },
         ],
         actionsHtml: `
             <button class="kappbar-button" id="btn-reset-layout" onclick="resetLayout()">Default Layout</button>

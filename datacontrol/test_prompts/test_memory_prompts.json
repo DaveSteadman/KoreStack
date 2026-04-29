@@ -1,0 +1,69 @@
+[
+    {
+        "exchange": "memory_store_and_recall",
+        "turns": [
+            {
+                "user": "My name is Alex and I am a software developer. Our project is called NovaStar and it uses a Python backend.",
+                "assert": "not_empty"
+            },
+            {
+                "user": "I prefer dark mode in all my tools. The default model I use is llama3.",
+                "assert": "not_empty"
+            },
+            {
+                "user": "What do you know about my project?",
+                "assert": "contains|NovaStar"
+            },
+            {
+                "user": "What is my name and what is my preferred model?",
+                "assert": "contains|Alex"
+            }
+        ]
+    },
+
+    {
+        "exchange": "memory_cross_turn_persistence",
+        "turns": [
+            {
+                "user": "Our workspace folder is at C:\\Dev\\NovaStar. We are using Python 3.12.",
+                "assert": "not_empty"
+            },
+            {
+                "user": "What Python version are we using and where is the workspace?",
+                "assert": "contains|3.12"
+            }
+        ]
+    },
+
+    {
+        "exchange": "memory_supersede",
+        "turns": [
+            {
+                "user": "My preferred editor is VS Code.",
+                "assert": "not_empty"
+            },
+            {
+                "user": "Actually, my preferred editor is now Neovim.",
+                "assert": "not_empty"
+            },
+            {
+                "user": "What editor do I prefer?",
+                "assert": "contains|Neovim"
+            }
+        ]
+    },
+
+    {
+        "exchange": "memory_no_store_questions",
+        "turns": [
+            {
+                "user": "What is the capital of France?",
+                "assert": "contains|Paris"
+            },
+            {
+                "user": "What is 2 + 2?",
+                "assert": "contains|4"
+            }
+        ]
+    }
+]

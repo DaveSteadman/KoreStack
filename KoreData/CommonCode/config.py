@@ -1,7 +1,29 @@
+import os
 import json
 from pathlib import Path
 
 _CONFIG_FILE = Path("../config/default.json")
+
+
+def get_suite_root() -> Path:
+    env_root = os.environ.get("KORE_SUITE_ROOT", "").strip()
+    if env_root:
+        return Path(env_root).resolve()
+    return Path(__file__).resolve().parents[2].parent
+
+
+def get_suite_datacontrol_dir() -> Path:
+    env_path = os.environ.get("KORE_SUITE_DATACONTROL", "").strip()
+    if env_path:
+        return Path(env_path).resolve()
+    return get_suite_root() / "datacontrol"
+
+
+def get_suite_datauser_dir() -> Path:
+    env_path = os.environ.get("KORE_SUITE_DATAUSER", "").strip()
+    if env_path:
+        return Path(env_path).resolve()
+    return get_suite_root() / "datauser"
 
 
 def load_config(section: str, defaults: dict) -> dict:

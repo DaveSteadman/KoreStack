@@ -1,12 +1,15 @@
-from config import load_config
+from pathlib import Path
+
+from config import get_suite_datauser_dir, load_config
 
 _SECTION = "korereference"
 
 _DEFAULTS = {
     "port": 8804,
     "host": "0.0.0.0",
-    "data_dir": "../Data/Reference",
+    "data_dir": str(get_suite_datauser_dir() / "KoreData" / "Reference"),
     "log_level": "info",
 }
 
 cfg = load_config(_SECTION, _DEFAULTS)
+cfg["data_dir"] = str(Path(cfg["data_dir"]).resolve())

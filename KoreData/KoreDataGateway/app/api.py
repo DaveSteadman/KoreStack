@@ -19,13 +19,14 @@ from mcp.server.fastmcp import FastMCP
 from pydantic import BaseModel, Field
 
 from app.config import cfg
+from config import get_suite_datauser_dir
 
 # ---------------------------------------------------------------------------
 # Child process management
 # ---------------------------------------------------------------------------
 
 _BASE = Path(__file__).parent.parent.parent  # KoreData/ root
-_DATA = _BASE / "Data"
+_DATA = get_suite_datauser_dir() / "KoreData"
 
 _SERVICES = [
     (_BASE / "KoreFeed",      "KoreFeed",      _DATA / "Feeds"),
@@ -35,6 +36,13 @@ _SERVICES = [
 ]
 
 _children: list[tuple[subprocess.Popen, str, object]] = []
+
+
+def _display_path(path: Path) -> Path:
+    try:
+        return path.relative_to(_BASE.parent)
+    except ValueError:
+        return path
 
 
 def _start_children() -> None:
@@ -49,7 +57,7 @@ def _start_children() -> None:
             stderr=log_file,
         )
         _children.append((proc, label, log_file))
-        print(f"  ► {label} starting  (pid {proc.pid})  log → {log_path.relative_to(_BASE)}")
+        print(f"  > {label} starting  (pid {proc.pid})  log -> {_display_path(log_path)}")
 
 
 def _stop_children() -> None:

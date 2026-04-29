@@ -9,6 +9,7 @@ import * as interaction from './interaction.js';
 import * as ui          from './ui.js';
 import * as fileio      from './fileio.js';
 import * as topbar      from '/static/commonui/js/topbar.js';
+import * as appbar      from '/static/commonui/js/appbar.js';
 import * as draft       from '/static/shared/js/draft.js';
 import { renderAppMenu } from '/static/commonui/js/appMenu.js';
 
@@ -100,8 +101,8 @@ interaction.init(canvas);
 ui.initMenus();
 ui.initToolbar();
 ui.initHierarchy();
-topbar.initSuiteTopbar({ currentService: 'koredocs' });
-topbar.init('kodiag');
+topbar.initTopbar({ currentService: 'koredocs' });
+appbar.initAppTabs('kodiag');
 
 const autoOpened = await fileio.autoOpenFromUrl(diagram => {
   store.loadDiagram(diagram);
@@ -111,7 +112,7 @@ if (!autoOpened) {
 }
 
 if (fileio.currentName()) {
-  topbar.track(fileio.currentName(), 'kodiag', fileio.currentId());
+  appbar.trackAppTab(fileio.currentName(), 'kodiag', fileio.currentId());
 }
 
 // Set initial tool + cursor

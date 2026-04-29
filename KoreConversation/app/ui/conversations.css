@@ -47,10 +47,10 @@ html, body {
 #layout {
     display: grid;
     height: 100vh;
-    grid-template-rows: var(--suite-topbar-h, 38px) var(--header-h) 1fr;
+    grid-template-rows: var(--topbar-h, var(--tab-h, 38px)) var(--header-h) 1fr;
 }
 
-#suite-topbar {
+#topbar {
     grid-row: 1;
 }
 

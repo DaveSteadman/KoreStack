@@ -1,0 +1,27 @@
+[
+    { "exchange": "kd_status",               "turns": [{ "user": "check the KoreData status and tell me which services are available",                                                        "assert": "not_contains|not configured" }] },
+
+    { "exchange": "kd_search_all",           "turns": [{ "user": "search KoreData for artificial intelligence and summarise the top results across all services",                             "assert": "not_contains|not configured" }] },
+    { "exchange": "kd_search_ai_news",       "turns": [{ "user": "search KoreData feeds for AI news and summarise the top five headlines",                                                   "assert": "not_contains|not configured" }] },
+    { "exchange": "kd_search_llm",           "turns": [{ "user": "search KoreData for large language models and list what you find",                                                          "assert": "not_contains|not configured" }] },
+    { "exchange": "kd_search_defence",       "turns": [{ "user": "search KoreData feeds for defence news and list the headlines",                                                             "assert": "not_contains|not configured" }] },
+    { "exchange": "kd_search_nvidia",        "turns": [{ "user": "search KoreData for Nvidia and summarise what you find",                                                                   "assert": "not_contains|not configured" }] },
+
+    { "exchange": "kd_search_reference",     "turns": [{ "user": "search KoreData reference for machine learning and tell me what articles are available",                                   "assert": "not_contains|not configured" }] },
+    { "exchange": "kd_search_library",       "turns": [{ "user": "search KoreData library for Python programming and list any books found",                                                  "assert": "not_contains|not configured" }] },
+    { "exchange": "kd_search_rag",           "turns": [{ "user": "search KoreData internal documents for any project notes or process documents and summarise what you find",               "assert": "not_contains|not configured" }] },
+
+    { "exchange": "kd_search_time_24h",      "turns": [{ "user": "search KoreData feeds for AI news from the last 24 hours and list the headlines",                                         "assert": "not_contains|not configured" }] },
+    { "exchange": "kd_search_time_48h",      "turns": [{ "user": "search KoreData feeds for technology news from the last 48 hours",                                                        "assert": "not_contains|not configured" }] },
+
+    { "exchange": "kd_get_article",          "turns": [{ "user": "search KoreData reference for transformer architecture and fetch the full article text for the top result",               "assert": "not_contains|not configured" }] },
+    { "exchange": "kd_get_entry",            "turns": [{ "user": "search KoreData feeds for OpenAI news, then read the full text of the most recent result",                               "assert": "not_contains|not configured" }] },
+
+    { "exchange": "kd_briefing_ai",          "turns": [{ "user": "give me a morning briefing on AI news from KoreData - summarise the top stories from the last 24 hours",                 "assert": "not_contains|not configured" }] },
+    { "exchange": "kd_briefing_combined",    "turns": [{ "user": "give me a combined briefing from KoreData: top AI news and top defence news from today",                                  "assert": "not_contains|not configured" }] },
+
+    { "exchange": "kd_multihop_ai",          "turns": [{ "user": "find the latest AI stories in KoreData from the last 6 hours, pick the most interesting one, and give me a detailed summary of that article", "assert": "not_contains|not configured" }] },
+    { "exchange": "kd_multihop_defence",     "turns": [{ "user": "search KoreData for defence news, find the most recent result, fetch its full text, then summarise it in three bullet points", "assert": "not_contains|not configured" }] },
+
+    { "exchange": "kd_no_results",           "turns": [{ "user": "search KoreData for xyzqqqabcnomatch99 and tell me what you get",                                                         "assert": "not_contains|not configured" }] }
+]

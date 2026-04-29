@@ -1,0 +1,37 @@
+[
+  {
+    "exchange": "number memory",
+    "turns": [
+      { "user": "my favourite number is 7, remember that" },
+      { "user": "what is my favourite number?", "assert": "contains|7" }
+    ]
+  },
+  {
+    "exchange": "math follow-up",
+    "turns": [
+      { "user": "calculate 17 multiplied by 13 and give just the numeric result" },
+      { "user": "multiply that result by 2 and give just the numeric answer", "assert": "contains|442" }
+    ]
+  },
+  {
+    "exchange": "OS then Python version",
+    "turns": [
+      { "user": "what operating system is this agent running on?", "assert": "not_empty" },
+      { "user": "what Python version is installed on this machine?", "assert": "not_empty" }
+    ]
+  },
+  {
+    "exchange": "file write then read",
+    "turns": [
+      { "user": "write the single word HELLOEXCHANGE to the file ./data/exchange_test.txt", "assert": "not_empty" },
+      { "user": "read the file ./data/exchange_test.txt and show its contents", "assert": "contains|HELLOEXCHANGE" }
+    ]
+  },
+  {
+    "exchange": "RAM then summarise",
+    "turns": [
+      { "user": "how much RAM is currently available on this machine?", "assert": "not_empty" },
+      { "user": "summarise that RAM figure in a single short sentence", "assert": "not_empty" }
+    ]
+  }
+]

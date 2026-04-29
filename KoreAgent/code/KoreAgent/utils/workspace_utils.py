@@ -151,8 +151,7 @@ def load_runtime_config() -> dict:
 
 @lru_cache(maxsize=1)
 def _load_path_overrides() -> dict:
-    """Load ControlDataFolder/UserDataFolder overrides from merged runtime config and env."""
-    raw = load_runtime_config()
+    """Load ControlDataFolder/UserDataFolder overrides from env, bootstrap defaults, then suite config."""
 
     overrides: dict[str, Path] = {}
     env_cd = os.environ.get("KORE_SUITE_DATACONTROL", "").strip()
@@ -162,6 +161,18 @@ def _load_path_overrides() -> dict:
     if env_ud:
         overrides["UserDataFolder"] = Path(env_ud).resolve()
 
+    bootstrap_root = get_bootstrap_defaults_file().parent.resolve()
+    bootstrap_raw = _read_json_file(get_bootstrap_defaults_file())
+    for key in ("ControlDataFolder", "UserDataFolder"):
+        if key in overrides:
+            continue
+        value = bootstrap_raw.get(key)
+        if not isinstance(value, str) or not value.strip():
+            continue
+        path_value = Path(value.strip())
+        overrides[key] = path_value if path_value.is_absolute() else (bootstrap_root / path_value).resolve()
+
+    raw = load_runtime_config()
     for key in ("ControlDataFolder", "UserDataFolder"):
         if key in overrides:
             continue

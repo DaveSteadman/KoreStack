@@ -18,9 +18,9 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { height: 100%; }
     body {
-      font-family: var(--font-code);
+      font-family: var(--font-ui);
       background: var(--bg); color: var(--text);
-      font-size: 13px; line-height: 1.55;
+      font-size: var(--kcui-text-body); line-height: var(--kcui-leading-body);
     }
 
     /* ─── header bar ─────────────────────────────── */
@@ -30,7 +30,7 @@
       border-bottom: 1px solid var(--border);
       display: flex; align-items: center;
       padding: 0 1.5rem; gap: 1.5rem;
-      position: sticky; top: var(--suite-topbar-h, 38px); z-index: 100;
+      position: sticky; top: var(--topbar-h, var(--tab-h, 38px)); z-index: 100;
     }
     .logo { font-size: 1rem; font-weight: 700; letter-spacing: 0.06em;
       text-decoration: none; flex-shrink: 0; color: var(--text); }
@@ -46,12 +46,12 @@
       background: var(--green); box-shadow: 0 0 6px var(--green);
     }
     nav { margin-left: auto; display: flex; gap: 1.25rem; }
-    nav a { color: var(--dim); text-decoration: none; font-size: 12px; letter-spacing: 0.04em; }
+    nav a { color: var(--dim); text-decoration: none; font-size: var(--kcui-text-body-sm); letter-spacing: var(--kcui-tracking-tight); }
     nav a:hover { color: var(--text); }
     nav a.active { color: var(--service-accent); }
 
     .tag {
-      font-size: 11px; letter-spacing: 0.04em;
+      font-size: var(--kcui-text-label); letter-spacing: var(--kcui-tracking-tight);
       padding: 1px 6px; border: 1px solid var(--border); color: var(--dim);
     }
 
@@ -64,27 +64,27 @@
     .panel-header {
       display: flex; align-items: center; gap: 0.6rem;
       padding: 0.4rem 0.85rem; border-bottom: 1px solid var(--border);
-      color: var(--dim); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--dim); font-size: var(--kcui-text-label); letter-spacing: var(--kcui-tracking-label); text-transform: uppercase;
     }
     .panel-header .ph-diamond { color: var(--service-accent); }
     .panel-body { padding: 1rem 1.1rem; }
 
     /* ─── table ──────────────────────────────────── */
-    table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+    table { width: 100%; border-collapse: collapse; font-size: var(--kcui-text-data); }
     th, td { text-align: left; padding: 0.4rem 0.75rem; border-bottom: 1px solid var(--border); }
-    th { color: var(--dim); font-weight: 400; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; }
+    th { color: var(--dim); font-weight: 400; font-size: var(--kcui-text-label); letter-spacing: var(--kcui-tracking-label); text-transform: uppercase; }
     tr:last-child td { border-bottom: none; }
     tbody tr:hover td { background: rgba(255,255,255,.025); }
 
     /* ─── forms ──────────────────────────────────── */
     form { display: flex; flex-direction: column; gap: 0.6rem; }
-    label { font-size: 11px; color: var(--dim); letter-spacing: 0.05em; text-transform: uppercase; }
+    label { font-size: var(--kcui-text-label); color: var(--dim); letter-spacing: var(--kcui-tracking-tight); text-transform: uppercase; }
     input[type=text], input[type=email], input[type=number], input[type=password],
     textarea, select {
       padding: 0.35rem 0.6rem;
       background: var(--bg); color: var(--text);
       border: 1px solid var(--border);
-      font-family: inherit; font-size: 12.5px; width: 100%; outline: none;
+      font-family: inherit; font-size: var(--kcui-text-data); width: 100%; outline: none;
     }
     input:focus, select:focus, textarea:focus { border-color: var(--service-accent); }
     input::placeholder, textarea::placeholder { color: var(--dim); }
@@ -93,7 +93,7 @@
     /* ─── buttons ────────────────────────────────── */
     .btn {
       display: inline-block; padding: 0.3rem 0.9rem;
-      font-family: inherit; font-size: 12px; letter-spacing: 0.06em;
+      font-family: inherit; font-size: var(--kcui-text-body-sm); letter-spacing: var(--kcui-tracking-label);
       cursor: pointer; border: 1px solid var(--border); background: transparent;
       color: var(--text); text-decoration: none; text-transform: uppercase;
       transition: border-color .12s, color .12s;
@@ -108,7 +108,7 @@
 
     /* ─── status badges ──────────────────────────── */
     .badge {
-      display: inline-block; font-size: 10px; letter-spacing: 0.07em;
+      display: inline-block; font-size: var(--kcui-text-caption); letter-spacing: var(--kcui-tracking-label);
       padding: 1px 6px; border: 1px solid; text-transform: uppercase;
     }
     .badge-queued    { border-color: var(--blue);  color: var(--blue); }
@@ -121,19 +121,19 @@
     /* ─── flash / info banner ────────────────────── */
     .flash {
       padding: 0.5rem 1rem; margin-bottom: 1rem;
-      border: 1px solid var(--amber); color: var(--amber); font-size: 12px;
+      border: 1px solid var(--amber); color: var(--amber); font-size: var(--kcui-text-body-sm);
     }
 
     /* ─── misc utility ───────────────────────────── */
     .dim { color: var(--dim); }
     .mono { font-family: inherit; }
-    p.meta { font-size: 11.5px; color: var(--dim); margin-bottom: 0.5rem; }
+    p.meta { font-size: var(--kcui-text-label); color: var(--dim); margin-bottom: 0.5rem; }
     .gap-row { display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; }
   </style>
   {% block head %}{% endblock %}
 </head>
 <body>
-<div id="suite-topbar"></div>
+<div id="topbar"></div>
 <div id="app-bar"></div>
 <main class="{% block main_class %}{% endblock %}">
   {% block content %}{% endblock %}
@@ -185,8 +185,8 @@
   });
 </script>
 <script type="module">
-  import { initAppBar, initSuiteTopbar } from '/ui-elements/assets/js/topbar.js';
-  initSuiteTopbar({ currentService: 'korecomms' });
+  import { initAppBar, initTopbar } from '/ui-elements/assets/js/chrome.js';
+  initTopbar({ currentService: 'korecomms' });
   initAppBar({
     currentService: 'korecomms',
     overline: 'Messaging Service',

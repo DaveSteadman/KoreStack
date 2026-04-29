@@ -1,0 +1,37 @@
+[
+  {
+    "exchange": "scratchpad save then load",
+    "turns": [
+      { "user": "save the string SCRATCHPAD_EXCHANGE_VALUE to scratchpad key exchangetest", "assert": "contains|exchangetest" },
+      { "user": "load scratchpad key exchangetest", "assert": "contains|SCRATCHPAD_EXCHANGE_VALUE" }
+    ]
+  },
+  {
+    "exchange": "scratchpad save then list",
+    "turns": [
+      { "user": "save the value LISTTEST to scratchpad key listcheck", "assert": "not_empty" },
+      { "user": "list the scratchpad", "assert": "contains|listcheck" }
+    ]
+  },
+  {
+    "exchange": "scratchpad save then delete then list",
+    "turns": [
+      { "user": "save the value DELETEME to scratchpad key tempkey", "assert": "not_empty" },
+      { "user": "delete scratchpad key tempkey", "assert": "contains|tempkey" },
+      { "user": "list the scratchpad", "assert": "not_contains|tempkey" }
+    ]
+  },
+  {
+    "exchange": "scratchpad then file write via token",
+    "turns": [
+      { "user": "save the string TOKEN_WRITE_TEST to scratchpad key tokentest", "assert": "not_empty" },
+      { "user": "write the content of scratchpad key tokentest to the file ./data/scratchpad_token_test.txt then read it back", "assert": "contains|TOKEN_WRITE_TEST" }
+    ]
+  },
+  {
+    "exchange": "scratchpad miss returns error",
+    "turns": [
+      { "user": "load scratchpad key nosuchkey_xyz", "assert": "contains|not found" }
+    ]
+  }
+]

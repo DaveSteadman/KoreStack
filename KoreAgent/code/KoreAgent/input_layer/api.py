@@ -875,6 +875,7 @@ register_session_routes(
     delete_session_state=_delete_session_state,
     kc_save_turn=_kc_save_turn,
     get_session_turns=_get_session_turns,
+    get_session_conversation=_kc_get_conversation_for_session,
     kc_set_session_name=_kc_set_session_name,
 )
 

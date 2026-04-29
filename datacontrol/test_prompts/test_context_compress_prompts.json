@@ -1,0 +1,30 @@
+[
+    {
+        "exchange": "compression flow - ctx set plus all conversation turns",
+        "turns": [
+            { "user": "/ctx size 512", "assert": "contains|512" },
+            {
+                "user": "Remember this: my favourite colour is cobalt blue. Acknowledge it and give me one sentence about the history of cobalt blue as a pigment.",
+                "assert": "contains|cobalt"
+            },
+            {
+                "user": "Also remember: my lucky number is 73. Give me one interesting mathematical fact about 73.",
+                "assert": "contains|73"
+            },
+            {
+                "user": "And note: I always prefer metric units. Confirm all three things you are keeping track of for me.",
+                "assert": "contains|cobalt"
+            },
+            { "user": "/kccompress", "assert": "contains|compress" },
+            {
+                "user": "What is the capital of France and what is it known for?",
+                "assert": "contains|Paris"
+            },
+            {
+                "user": "Recall: what are the three preferences I told you at the start of our conversation?",
+                "assert": "contains|cobalt"
+            },
+            { "user": "/ctx size 128000", "assert": "contains|128,000" }
+        ]
+    }
+]

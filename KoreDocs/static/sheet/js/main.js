@@ -8,6 +8,7 @@ import * as properties from './properties.js';
 import * as fileio     from './fileio.js';
 import { colLetter, addrOf, evaluate } from './formula.js';
 import * as topbar     from '/static/commonui/js/topbar.js';
+import * as appbar     from '/static/commonui/js/appbar.js';
 import * as draft      from '/static/shared/js/draft.js';
 import { renderAppMenu, initAppMenuEvents } from '/static/commonui/js/appMenu.js';
 
@@ -60,8 +61,8 @@ renderAppMenu({
 
 grid.init(canvas, container, cellEditor, _onCommit, _onSelect, _beginFormulaReferenceEdit);
 fileio.init(_onStateChange);
-topbar.initSuiteTopbar({ currentService: 'koredocs' });
-topbar.init('koresheet');
+topbar.initTopbar({ currentService: 'koredocs' });
+appbar.initAppTabs('koresheet');
 
 // Auto-open from ?file= URL param, else start with a blank sheet
 const autoOpened = await fileio.autoOpenFromUrl(_refresh);
@@ -80,7 +81,7 @@ if (_savedDraft !== null) {
 }
 
 // Flush draft before any tab navigation.
-// 'kd:before-navigate' is dispatched synchronously by tabs.js before setting
+// 'kd:before-navigate' is dispatched synchronously by appbar.js before setting
 // location.href, so the localStorage write completes before the page unloads.
 // We also call grid.commitEdit() to capture any mid-edit cell value (the tab
 // click uses mousedown+e.preventDefault() so the cell editor never gets blur).
@@ -369,7 +370,7 @@ function _onStateChange(name, dirty) {
   document.getElementById('sheet-dirty').classList.toggle('hidden', !dirty);
   document.title = (dirty ? '● ' : '') + (name ?? 'Untitled') + ' — KoreSheet';
   document.getElementById('status-file').textContent = name ?? 'Untitled.koresheet';
-  if (name) topbar.track(name, 'koresheet', fileio.currentId());
+  if (name) appbar.trackAppTab(name, 'koresheet', fileio.currentId());
 }
 
 function _refresh() {

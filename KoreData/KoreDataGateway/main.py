@@ -6,6 +6,7 @@ import logutil
 import uvicorn
 from datetime import datetime
 from app.config import cfg
+from config import get_suite_datacontrol_dir
 
 _W = 80
 
@@ -37,7 +38,7 @@ def _print_banner() -> None:
 
 
 if __name__ == "__main__":
-    _LOG_PATH = Path(__file__).resolve().parent.parent / "Data" / "gateway.log"
+    _LOG_PATH = get_suite_datacontrol_dir() / "logs" / "koredata" / "gateway.log"
     _LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
     _print_banner()
     uvicorn.run(
