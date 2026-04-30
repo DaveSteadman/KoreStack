@@ -10,12 +10,12 @@ Shared:
 - tabs and top bar
 - app menu bar
 - frame and panel primitives
+- shared workspace layouts and divider behavior
 - button, input, and dialog accents where adopted
 
 Not shared:
 - editor surfaces
 - grid and canvas widgets
-- product-specific workflow layouts
 - domain-specific result rendering
 
 ## Rollout Strategy
@@ -35,10 +35,23 @@ Not shared:
 ## Design Rule
 
 Same shell, same tokens, same panel language.
-Different work surface per product.
+Shared workspace mechanics, different product internals.
+
+## Workspace Layout Rule
+
+UIElements should provide one common workspace layout system with variants rather than separate page models.
+
+The core variants are:
+
+- dashboard workspace for panel-and-card pages
+- split workspace for maximized panels separated by dividers
+- hybrid workspace for pages that combine summary panels with a persistent split work area
+
+The shell, spacing tokens, panel chrome, divider styling, and resize behavior belong in UIElements.
+Apps provide their own workflow content inside those shared regions.
 
 ## KoreAgent Implication
 
 KoreConversation under the KoreAgent implementation tree is an early adopter for the shared outer shell.
 Its detailed conversation surface should remain local, but the top-level shell, menu framing,
-and neutral panel primitives should come from UIElements.
+neutral panel primitives, and split-workspace mechanics should come from UIElements.

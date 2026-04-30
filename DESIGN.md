@@ -200,74 +200,23 @@ KoreStack is the source of truth for suite-level configuration injection. Subsys
 
 ---
 
-## 6. UI Architecture
+## 6. UI Design Reference
 
-### Shared Shell
+Detailed UI guidance now lives in [DESIGN_UI.md](DESIGN_UI.md).
 
-All user-facing applications use the same shell model:
+That document owns:
 
-- suite top bar
-- application bar directly beneath it
-- shared accent theme per application
-- shared page-width and panel-spacing rules
-- shared tab-height and chrome behavior
-
-The top bar communicates suite context.
-
-The application bar communicates application-level navigation and status.
-
-Legacy breadcrumb or title rows that repeat the same context are not part of the current design language.
-
-Canonical shell ownership lives in UIElements:
-
-- `UIElements/assets/js/topbar.js` owns the suite top bar
-- `UIElements/assets/js/appbar.js` owns the application bar and tabbed application variant
-- `UIElements/assets/js/icons.js` owns shared service and app-family icons
-
-Legacy names such as `tabs.js`, `tabs.css`, and older `suitebar` references are compatibility wrappers only. They are not the design source of truth and should not be used to introduce new shell behavior.
-
-KoreDocs may still expose compatibility static mounts such as `/static/commonui` and `/static/shared`, but those mounts are adapters over the same shared shell assets rather than a separate shell implementation.
-
-### Application Identity
-
-Each application has a distinct accent color defined in UIElements and applied through shared theme utilities.
-
-Current suite identities are:
-
-- KoreStack
-- KoreAgent
-- KoreConversation
-- KoreData
-- KoreDocs
-- KoreComms
-
-Accent ownership lives in shared UIElements code rather than being redefined independently inside each app.
-
-### Layout Primitives
-
-UIElements provides the baseline page and panel primitives used across the suite, including:
-
-- page wrappers
-- stack and grid spacing
-- panel headers and bodies
-- shared card layouts
-
-Applications remain free to build domain-specific internals, but their outer shell and spacing system are shared.
+- shared shell behavior
+- application identity and accent rules
+- shared layout primitives
+- KoreStack landing page design
+- operator-facing version surfaces and UI adoption direction
 
 ---
 
-## 7. Landing Page Design
+## 7. Landing Page Reference
 
-The KoreStack landing page is the suite dashboard.
-
-It presents:
-
-- system paths
-- live service rows
-- inline service controls
-- status and reachability information
-
-The landing page intentionally avoids repeating information already carried by the shared shell. Its job is operational control, not duplicated branding.
+The KoreStack landing page UX and navigation behavior are defined in [DESIGN_UI.md](DESIGN_UI.md).
 
 ---
 
@@ -293,6 +242,7 @@ The suite is organized around top-level service folders and shared roots:
 KoreStack/
   main.py
   DESIGN.md
+  DESIGN_UI.md
   README.md
   config/
   datacontrol/
@@ -443,20 +393,7 @@ The suite should still support selective startup for development and testing:
 
 ### 9.3 KoreStack Landing Page
 
-The KoreStack landing page should become the first navigation surface, not just a process list.
-
-Over time it should provide:
-
-- service health and reachability
-- a topology diagram of the active services
-- configured IP and port assignments for each service
-- direct links into each product area
-- suite-level status summary
-- key runtime metrics from the active services
-- the configured shared data-folder layout from top-level config
-- possibly recent activity and operator shortcuts
-
-The KoreStack landing page should not replace subsystem UIs. It should connect them.
+Landing page behavior and navigation rules are defined in [DESIGN_UI.md](DESIGN_UI.md).
 
 ---
 
@@ -471,8 +408,7 @@ The next consolidation steps implied by this design are:
   avoid reintroducing service-local ownership for shared runtime state.
 4. Update shared path utilities and config readers to prefer `config/` and top-level
    suite paths, with launcher-provided overrides during migration.
-5. Expand the KoreStack landing page into a richer control and navigation hub.
-6. Move each user-facing app toward UIElements shell adoption.
+5. Continue the landing-page and shell work defined in [DESIGN_UI.md](DESIGN_UI.md).
 7. Continue extracting service-specific code, such as KoreConversation internals, into
   their own top-level homes where that improves clarity.
 
@@ -496,8 +432,7 @@ The following decisions have been made for the current design direction.
 ### 11.3 UI Consolidation
 
 - UIElements is a shared library layer, not a service.
-- The near-term KoreStack landing page should stay a launcher and health dashboard rather than become a
-  full portal immediately.
+- Detailed UI consolidation rules live in [DESIGN_UI.md](DESIGN_UI.md).
 
 ### 11.4 Data Ownership
 
@@ -523,8 +458,7 @@ answers during implementation planning.
 4. Which current files inside the historical agent-local data snapshot under `KoreAgent/datauser`
    should remain suite-wide, and
    which should be split into more explicit subfolders inside the top-level umbrella?
-5. How much suite-level cross-navigation should appear inside each subsystem beyond basic app
-   switching?
+5. The remaining suite-level navigation question is tracked in [DESIGN_UI.md](DESIGN_UI.md).
 
 ---
 

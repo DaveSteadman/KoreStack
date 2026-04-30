@@ -452,6 +452,7 @@ def html_page(manager: StackManager, dashboard_url: str) -> str:
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>KoreStack</title>
   <link rel="stylesheet" href="/ui-elements/assets/css/chrome.css">
+    <link rel="stylesheet" href="/ui-elements/assets/css/workspace.css">
   <style>
     :root {{
             color-scheme: dark;
@@ -477,17 +478,27 @@ def html_page(manager: StackManager, dashboard_url: str) -> str:
             font-family: "Cascadia Code", "Fira Code", Consolas, "Courier New", monospace;
             color: var(--stack-ink);
             background: var(--stack-bg);
-      min-height: 100vh;
+            min-height: 100vh;
+            display: grid;
+            grid-template-rows: auto auto auto;
+            overflow-x: hidden;
+            overflow-y: auto;
         }}
         a {{ color: inherit; }}
         .shell {{
-            min-height: 100vh;
             display: grid;
-            grid-template-rows: auto auto 1fr auto;
+            grid-template-rows: auto auto;
             gap: 12px;
+            padding: 12px 0;
     }}
         .panel {{ background: var(--stack-panel); border: 1px solid var(--stack-line); border-radius: 2px; }}
         .eyebrow {{ margin: 0; color: var(--stack-accent); font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; }}
+        .stack-workspace {{
+            grid-template-columns: minmax(0, 1fr);
+            grid-template-rows: auto auto;
+            gap: 12px;
+        }}
+        .stack-region {{ min-width: 0; }}
         .paths-panel {{ overflow: hidden; }}
         .paths-header {{ display: flex; justify-content: space-between; align-items: center; gap: 12px; }}
         .paths-header p:last-child {{ margin: 0; color: var(--stack-muted); font-size: 11px; }}
@@ -532,7 +543,6 @@ def html_page(manager: StackManager, dashboard_url: str) -> str:
         .service-docs {{ --service-accent: var(--service-docs); }}
         .service-comms {{ --service-accent: var(--service-comms); }}
     @media (max-width: 860px) {{
-            .shell {{ grid-template-rows: auto auto auto auto; }}
             .path-row {{ grid-template-columns: 1fr; gap: 6px; }}
                 .service-row {{ grid-template-columns: 1fr; align-items: start; }}
                 .service-actions {{ justify-self: start; }}
@@ -542,29 +552,37 @@ def html_page(manager: StackManager, dashboard_url: str) -> str:
 <body class="kcui-shell-bg">
     <div id="topbar"></div>
     <div id="app-bar"></div>
-    <main class="shell kcui-page kcui-page--narrow kcui-stack">
-        <section class="panel kcui-panel paths-panel">
-            <div class="paths-header kcui-panel-header">
-                <p class="eyebrow">System Paths</p>
-                <p>Shared suite storage and document locations.</p>
+    <main class="shell kcui-page kcui-page--narrow">
+        <section
+            class="kcui-workspace kcui-workspace--dashboard kcui-workspace--stack-sm stack-workspace"
+        >
+            <div class="kcui-workspace__region stack-region">
+                <section class="panel kcui-panel paths-panel">
+                    <div class="paths-header kcui-panel-header">
+                        <p class="eyebrow">System Paths</p>
+                        <p>Shared suite storage and document locations.</p>
+                    </div>
+                    <div class="kcui-panel-body"><dl class="paths-list">{data_rows}</dl></div>
+                </section>
             </div>
-            <div class="kcui-panel-body"><dl class="paths-list">{data_rows}</dl></div>
-    </section>
 
-        <section class="panel kcui-panel services-panel">
-            <div class="services-header kcui-panel-header">
-                <p class="eyebrow">Services</p>
-                <p>Compact live rows with inline controls.</p>
+            <div class="kcui-workspace__region stack-region">
+                <section class="panel kcui-panel services-panel">
+                    <div class="services-header kcui-panel-header">
+                        <p class="eyebrow">Services</p>
+                        <p>Compact live rows with inline controls.</p>
+                    </div>
+                    <div class="kcui-panel-body"><section class="services-grid">{''.join(rows)}</section></div>
+                </section>
             </div>
-            <div class="kcui-panel-body"><section class="services-grid">{''.join(rows)}</section></div>
         </section>
 
-    <section class="panel kcui-panel footer">
+        <section class="panel kcui-panel footer">
             <div class="kcui-panel-body footer-body">
             <p>Updates every 2 seconds without reloading the page.</p>
             <p>Root command: <code>python .\\main.py --services {','.join(stack['services'])}</code></p>
             </div>
-    </section>
+        </section>
   </main>
   <script type="module">
     import {{ initAppBar, initTopbar }} from '/ui-elements/assets/js/chrome.js';
