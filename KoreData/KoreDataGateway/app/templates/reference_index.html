@@ -4,28 +4,28 @@
 
 {% block content %}
 <div class="kcui-page kcui-page--narrow kcui-stack">
-<div class="panel" style="margin-bottom:1.25rem;">
-  <div class="panel-header">
-    <span class="ph-diamond">◆</span> ARTICLES
+<div class="panel kcui-panel" style="margin-bottom:1.25rem;">
+  <div class="panel-header kcui-panel-header">
+    ARTICLES
     <span class="badge badge-dim" style="margin-left:0.5rem;">{{ total }}</span>
     <span style="margin-left:auto; display:flex; gap:0.75rem; align-items:center;">
-      <a href="/reference/search"     style="font-size:11px; color:var(--dim);">SEARCH ↗</a>
-      <a href="/reference/import"     style="font-size:11px; color:var(--dim);">IMPORT ↗</a>
-      <a href="/reference/new"><button type="button" style="font-size:11px; padding:3px 10px;">✚ NEW ARTICLE</button></a>
+      <a href="/reference/search"     style="font-size:11px; color:var(--dim);">SEARCH -></a>
+      <a href="/reference/import"     style="font-size:11px; color:var(--dim);">IMPORT -></a>
+      <a href="/reference/new"><button type="button" style="font-size:11px; padding:3px 10px;"> NEW ARTICLE</button></a>
     </span>
   </div>
 
-  <div class="panel-body" style="padding:0.5rem 1rem; border-bottom:1px solid var(--border);">
+  <div class="panel-body kcui-panel-body" style="padding:0.5rem 1rem; border-bottom:1px solid var(--border);">
     <form action="/reference/search" method="get">
-      <p class="meta" style="margin-bottom:0.4rem;">Space or comma separated terms are AND-matched — each word must appear anywhere in the article title or body.</p>
+      <p class="meta" style="margin-bottom:0.4rem;">Space or comma separated terms are AND-matched - each word must appear anywhere in the article title or body.</p>
       <div style="display:flex; flex-direction:row; gap:0;">
-        <input type="search" name="q" placeholder="search articles…" style="flex:1;">
+        <input type="search" name="q" placeholder="search articles..." style="flex:1;">
         <button type="submit">SEARCH</button>
       </div>
     </form>
   </div>
 
-  <div class="panel-body" style="padding:0; overflow-x:auto;">
+  <div class="panel-body kcui-panel-body" style="padding:0; overflow-x:auto;">
     {% if articles %}
     <table>
       <thead>
@@ -41,7 +41,7 @@
           <td class="meta">{{ a.id }}</td>
           <td><a href="/reference/{{ a.title | urlencode }}">{{ a.title }}</a></td>
           <td class="meta" style="text-align:right;">
-            {% if a.word_count %}{{ "{:,}".format(a.word_count) }}{% else %}—{% endif %}
+            {% if a.word_count %}{{ "{:,}".format(a.word_count) }}{% else %}-{% endif %}
           </td>
         </tr>
         {% endfor %}
@@ -56,13 +56,12 @@
 {% if offset + limit < total %}
 <div class="pagination">
   {% if offset > 0 %}
-  <a href="/reference?limit={{ limit }}&offset={{ offset - limit }}">← PREV</a>
+  <a href="/reference?limit={{ limit }}&offset={{ offset - limit }}"><- PREV</a>
   {% endif %}
-  <span class="pg-info">{{ offset + 1 }}–{{ [offset + limit, total]|min }} of {{ total }}</span>
-  <a href="/reference?limit={{ limit }}&offset={{ offset + limit }}">NEXT →</a>
+  <span class="pg-info">{{ offset + 1 }}-{{ [offset + limit, total]|min }} of {{ total }}</span>
+  <a href="/reference?limit={{ limit }}&offset={{ offset + limit }}">NEXT -></a>
 </div>
 {% endif %}
 </div>
 {% endblock %}
-
 

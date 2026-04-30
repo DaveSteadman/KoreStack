@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}KoreComms — Compose{% endblock %}
+{% block title %}KoreComms â€” Compose{% endblock %}
 {% block main_class %}kcui-main{% endblock %}
 
 {% block content %}
@@ -10,7 +10,7 @@
 </p>
 
 <div class="panel" style="max-width:680px;">
-  <div class="panel-header"><span class="ph-diamond">◆</span> New Message</div>
+  <div class="panel-header">New Message</div>
   <div class="panel-body">
     <form method="POST" action="/compose">
       <label for="sender">Sender</label>
@@ -20,10 +20,10 @@
       <input type="text" id="koreconversation_id" name="koreconversation_id" placeholder="CommsChat_001" required>
 
       <label for="content" style="margin-top:0.4rem;">Message</label>
-      <textarea id="content" name="content" rows="8" placeholder="Type your message here…" required></textarea>
+      <textarea id="content" name="content" rows="8" placeholder="Type your message hereâ€¦" required></textarea>
 
       <div class="gap-row" style="margin-top:0.5rem;">
-        <button class="btn btn-primary" type="submit">→ Inject to Queue</button>
+        <button class="btn btn-primary" type="submit">â†’ Inject to Queue</button>
         <a class="btn" href="/">Cancel</a>
       </div>
     </form>

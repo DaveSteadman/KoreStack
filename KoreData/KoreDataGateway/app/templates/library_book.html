@@ -1,33 +1,33 @@
 {% extends "base.html" %}
-{% block title %}{{ book.title }} – KoreLibrary{% endblock %}
+{% block title %}{{ book.title }} - KoreLibrary{% endblock %}
 {% block main_class %}kcui-main{% endblock %}
 
 {% block content %}
 <div class="kcui-page kcui-page--narrow kcui-stack">
-<div class="panel" style="margin-bottom:1rem;">
-  <div class="panel-header">
-    <span class="ph-diamond">◆</span> BOOK #{{ book.id }}
-    <a href="/library/{{ book.id }}/edit" style="margin-left:auto; font-size:11px; color:var(--dim);">✎ EDIT</a>
+<div class="panel kcui-panel" style="margin-bottom:1rem;">
+  <div class="panel-header kcui-panel-header">
+    BOOK #{{ book.id }}
+    <a href="/library/{{ book.id }}/edit" style="margin-left:auto; font-size:11px; color:var(--dim);">EDIT</a>
   </div>
-  <div class="panel-body">
+  <div class="panel-body kcui-panel-body">
     <p style="font-size:1.1rem; color:var(--text); margin-bottom:1rem; line-height:1.4; font-weight:600;">{{ book.title }}</p>
 
     <div style="display:flex; flex-direction:column; gap:0.35rem;">
       <div class="kv">
         <span class="kv-key">author</span>
-        <span class="kv-val {% if not book.author %}meta{% endif %}">{{ book.author or "—" }}</span>
+        <span class="kv-val {% if not book.author %}meta{% endif %}">{{ book.author or "-" }}</span>
       </div>
       <div class="kv">
         <span class="kv-key">year</span>
-        <span class="kv-val {% if not book.year %}meta{% endif %}">{{ book.year or "—" }}</span>
+        <span class="kv-val {% if not book.year %}meta{% endif %}">{{ book.year or "-" }}</span>
       </div>
       <div class="kv">
         <span class="kv-key">language</span>
-        <span class="kv-val {% if not book.language %}meta{% endif %}">{{ book.language or "—" }}</span>
+        <span class="kv-val {% if not book.language %}meta{% endif %}">{{ book.language or "-" }}</span>
       </div>
       <div class="kv">
         <span class="kv-key">genre</span>
-        <span class="kv-val {% if not book.genre %}meta{% endif %}">{{ book.genre or "—" }}</span>
+        <span class="kv-val {% if not book.genre %}meta{% endif %}">{{ book.genre or "-" }}</span>
       </div>
       {% if book.word_count %}
       <div class="kv">
@@ -45,19 +45,19 @@
   </div>
 </div>
 
-<div class="panel">
-  <div class="panel-header">
-    <span class="ph-diamond">◆</span> BODY TEXT
+<div class="panel kcui-panel">
+  <div class="panel-header kcui-panel-header">
+    BODY TEXT
     {% if book.word_count %}
     <span class="badge badge-dim" style="margin-left:auto;">{{ "{:,}".format(book.word_count) }} words</span>
     {% endif %}
     {% if book.body and 'KORE\\_ANCHOR\\_' in book.body %}
     <form method="post" action="/library/{{ book.id }}/repair-anchors" style="margin-left:{% if not book.word_count %}auto{% else %}0.5rem{% endif %};">
-      <button type="submit" class="btn btn-dim" title="Fix broken TOC anchor links">↺ repair anchors</button>
+      <button type="submit" class="btn btn-dim" title="Fix broken TOC anchor links"> repair anchors</button>
     </form>
     {% endif %}
   </div>
-  <div class="panel-body" style="padding:0;">
+  <div class="panel-body kcui-panel-body" style="padding:0;">
     {% if book.body %}
     <div id="book-body" class="scrollable-body book-md"></div>
     <script>const _bookRaw = {{ book.body | tojson }};</script>
@@ -80,7 +80,7 @@
     target.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
-  // Handle page-load fragment — defer until after browser layout
+  // Handle page-load fragment - defer until after browser layout
   if (window.location.hash) {
     requestAnimationFrame(function() {
       scrollToId(decodeURIComponent(window.location.hash.slice(1)));

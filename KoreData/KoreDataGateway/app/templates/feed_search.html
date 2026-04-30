@@ -1,19 +1,19 @@
 {% extends "base.html" %}
-{% block title %}Search – KoreData{% endblock %}
+{% block title %}Search - KoreData{% endblock %}
 {% block main_class %}kcui-main{% endblock %}
 
 {% block content %}
 <div class="kcui-page kcui-page--narrow kcui-stack">
-<div class="panel" style="margin-bottom:1.25rem;">
-  <div class="panel-header">
-    <span class="ph-diamond">◆</span> SEARCH
+<div class="panel kcui-panel" style="margin-bottom:1.25rem;">
+  <div class="panel-header kcui-panel-header">
+    SEARCH
     {% if domain %}<span class="badge badge-dim" style="margin-left:0.5rem;">{{ domain }}</span>{% endif %}
   </div>
-  <div class="panel-body">
+  <div class="panel-body kcui-panel-body">
     <form action="/feeds/search" method="get">
-      <p class="meta" style="margin-bottom:0.4rem;">Space or comma separated terms are AND-matched — each word must appear somewhere in the headline or body. There is no phrase search.</p>
+      <p class="meta" style="margin-bottom:0.4rem;">Space or comma separated terms are AND-matched - each word must appear somewhere in the headline or body. There is no phrase search.</p>
       <div style="display:flex; flex-direction:row; gap:0;">
-        <input type="search" name="q" value="{{ q }}" placeholder="search all feeds…" style="flex:1;">
+        <input type="search" name="q" value="{{ q }}" placeholder="search all feeds..." style="flex:1;">
         {% if domain %}<input type="hidden" name="domain" value="{{ domain }}">{% endif %}
         <button type="submit">SEARCH</button>
       </div>
@@ -59,13 +59,13 @@
 </div>
 
 {% if q %}
-<div class="panel">
-  <div class="panel-header">
-    <span class="ph-diamond">◆</span> RESULTS
+<div class="panel kcui-panel">
+  <div class="panel-header kcui-panel-header">
+    RESULTS
     <span class="badge" style="margin-left:0.5rem;">{{ results|length }}</span>
     <span class="meta" style="margin-left:0.75rem;">for "{{ q }}"</span>
   </div>
-  <div class="panel-body" style="padding:0;">
+  <div class="panel-body kcui-panel-body" style="padding:0;">
     {% if results %}
     <form method="post" action="/feeds/entries/bulk-delete">
       <div style="display:flex; align-items:center; padding:0.4rem 0.75rem;
@@ -100,7 +100,7 @@
             <td><a href="/feeds/{{ r.domain }}/{{ r.id }}">{{ r.headline or "(no title)" }}</a></td>
             <td><span class="badge badge-dim">{{ r.domain }}</span></td>
             <td class="meta">{{ r.feed_name }}</td>
-            <td class="meta">{{ r.published[:16] if r.published else "—" }}</td>
+            <td class="meta">{{ r.published[:16] if r.published else "-" }}</td>
           </tr>
           {% endfor %}
         </tbody>

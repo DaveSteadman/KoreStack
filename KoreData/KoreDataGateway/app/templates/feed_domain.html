@@ -1,20 +1,19 @@
 {% extends "base.html" %}
-{% block title %}{{ domain }} – KoreData{% endblock %}
+{% block title %}{{ domain }} - KoreData{% endblock %}
 {% block main_class %}kcui-main{% endblock %}
 
 {% block content %}
 <div class="kcui-page kcui-page--narrow kcui-stack">
-<!-- ── Feed management ─────────────────────────────────────── -->
 <div class="two-col" style="margin-bottom:1.25rem;">
 
   <!-- Left column: feeds table + domain age settings -->
   <div>
-    <div class="panel" style="margin-bottom:1.25rem;">
-      <div class="panel-header">
-        <span class="ph-diamond">◆</span> FEEDS
+    <div class="panel kcui-panel" style="margin-bottom:1.25rem;">
+      <div class="panel-header kcui-panel-header">
+        FEEDS
         <span class="badge badge-dim" style="margin-left:0.5rem;">{{ feeds|length }}</span>
       </div>
-      <div class="panel-body" style="padding:0;">
+      <div class="panel-body kcui-panel-body" style="padding:0;">
         {% if feeds %}
         <table>
           <thead>
@@ -56,7 +55,7 @@
               <td style="text-align:center;">
                 {% set cnt = feed_counts.get(f.name, 0) %}
                 {% if cnt > 0 %}<span class="badge badge-dim">{{ cnt }}</span>
-                {% else %}<span class="meta" style="font-size:11px;">—</span>
+                {% else %}<span class="meta" style="font-size:11px;">-</span>
                 {% endif %}
               </td>
               <td class="meta" data-col="next" style="text-align:right; white-space:nowrap;">
@@ -81,17 +80,17 @@
           </tbody>
         </table>
         {% else %}
-        <p class="meta" style="padding:1rem;">no feeds — add one →</p>
+        <p class="meta" style="padding:1rem;">no feeds - add one -></p>
         {% endif %}
       </div>
     </div>
 
     <!-- Domain age settings -->
-    <div class="panel">
-      <div class="panel-header">
-        <span class="ph-diamond">◆</span> DOMAIN AGE SETTINGS
+    <div class="panel kcui-panel">
+      <div class="panel-header kcui-panel-header">
+        DOMAIN AGE SETTINGS
       </div>
-      <div class="panel-body">
+      <div class="panel-body kcui-panel-body">
         <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.75rem;">
           <select id="age-mode-select" onchange="showAgeRow(this.value)" style="width:auto;">
             <option value="none"            {% if age_settings.mode == 'none'            %}selected{% endif %}>No limit</option>
@@ -130,11 +129,11 @@
 
   <!-- Right column: add/edit feed + manage entries -->
   <div>
-    <div class="panel" style="margin-bottom:1.25rem;">
-      <div class="panel-header">
-        <span class="ph-diamond">◆</span> <span id="panel-mode-label">ADD FEED</span>
+    <div class="panel kcui-panel" style="margin-bottom:1.25rem;">
+      <div class="panel-header kcui-panel-header">
+        <span id="panel-mode-label">ADD FEED</span>
       </div>
-      <div class="panel-body">
+      <div class="panel-body kcui-panel-body">
         <!-- Add form -->
         <form id="form-add" method="post" action="/feeds/{{ domain }}/feeds/add">
           <div>
@@ -150,7 +149,7 @@
           </div>
           <div>
             <label id="add-url_label" for="add-url">RSS URL</label>
-            <input id="add-url" name="url" type="url" placeholder="https://…/feed" required>
+            <input id="add-url" name="url" type="url" placeholder="https://.../feed" required>
           </div>
           <div>
             <label for="add-update_rate">Update rate (minutes)</label>
@@ -203,11 +202,11 @@
     </div>
 
     {% if feeds %}
-    <div class="panel">
-      <div class="panel-header">
-        <span class="ph-diamond">◆</span> MANAGE ENTRIES
+    <div class="panel kcui-panel">
+      <div class="panel-header kcui-panel-header">
+        MANAGE ENTRIES
       </div>
-      <div class="panel-body">
+      <div class="panel-body kcui-panel-body">
         <form method="post" action="/feeds/{{ domain }}/entries/delete-by-feed" id="form-del-feed">
           <label for="del_feed" style="display:block; margin-bottom:0.4rem; font-size:12px; letter-spacing:.04em; font-weight:600; text-transform:uppercase;">Delete by Feed</label>
           <div style="display:flex; gap:0;">
@@ -235,20 +234,17 @@
   </div>
 
 </div>
-
-
-<!-- ── Entry list ──────────────────────────────────────────── -->
-<div class="panel">
-  <div class="panel-header">
-    <span class="ph-diamond">◆</span> ENTRIES
+<div class="panel kcui-panel">
+  <div class="panel-header kcui-panel-header">
+    ENTRIES
     <span class="badge" id="entry-count" style="margin-left:0.75rem;">{{ total }}</span>
     <form action="/feeds/search" method="get" style="flex-direction:row; display:flex; gap:0; margin-left:auto;">
-      <input type="search" name="q" placeholder="search {{ domain }}…" style="width:200px;">
+      <input type="search" name="q" placeholder="search {{ domain }}..." style="width:200px;">
       <input type="hidden" name="domain" value="{{ domain }}">
       <button type="submit">SEARCH</button>
     </form>
   </div>
-  <div class="panel-body" style="padding:0;">
+  <div class="panel-body kcui-panel-body" style="padding:0;">
     <table>
       <thead>
         <tr>
@@ -265,7 +261,7 @@
           <td class="meta">{{ e.id }}</td>
           <td><a href="/feeds/{{ domain }}/{{ e.id }}">{{ e.headline or "(no title)" }}</a></td>
           <td class="meta">{{ e.feed_name }}</td>
-          <td class="meta" style="white-space:nowrap;">{{ e.published[:16] if e.published else "—" }}</td>
+          <td class="meta" style="white-space:nowrap;">{{ e.published[:16] if e.published else "-" }}</td>
           <td>
             <button class="btn-danger btn-sm" title="Delete entry"
               onclick="deleteEntry(this, '/feeds/{{ domain }}/entries/{{ e.id }}/delete')">&#x2715;</button>
@@ -281,11 +277,11 @@
 
 <div class="pagination">
   {% if offset > 0 %}
-  <a href="/feeds/{{ domain }}?limit={{ limit }}&offset={{ offset - limit }}">← PREV</a>
+  <a href="/feeds/{{ domain }}?limit={{ limit }}&offset={{ offset - limit }}"><- PREV</a>
   {% endif %}
-  <span class="pg-info">{{ offset + 1 }}–{{ offset + entries|length }} of {{ total }}</span>
+  <span class="pg-info">{{ offset + 1 }}-{{ offset + entries|length }} of {{ total }}</span>
   {% if offset + limit < total %}
-  <a href="/feeds/{{ domain }}?limit={{ limit }}&offset={{ offset + limit }}">NEXT →</a>
+  <a href="/feeds/{{ domain }}?limit={{ limit }}&offset={{ offset + limit }}">NEXT -></a>
   {% endif %}
 </div>
 </div>
@@ -297,7 +293,7 @@ function syncTypeLabel(prefix) {
   const isWeb = document.getElementById(prefix + '-feed_type').value === 'web';
   document.getElementById(prefix + '-url_label').textContent = isWeb ? 'Starting URL' : 'RSS URL';
   const urlInput = document.getElementById(prefix + '-url');
-  if (urlInput) urlInput.placeholder = isWeb ? 'https://example.com/news/' : 'https://…/feed';
+  if (urlInput) urlInput.placeholder = isWeb ? 'https://example.com/news/' : 'https://.../feed';
 }
 
 function editFeed(id, name, url, type, rate) {
@@ -393,7 +389,6 @@ async function deleteEntry(btn, url) {
     } else { btn.disabled = false; }
   } catch (e) { btn.disabled = false; }
 }
-
 
 function cancelAgeGate() {
   document.getElementById('age-mode-select').value = '{{ age_settings.mode }}';

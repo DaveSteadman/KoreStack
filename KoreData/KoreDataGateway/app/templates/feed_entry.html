@@ -1,17 +1,17 @@
 {% extends "base.html" %}
-{% block title %}{{ entry.headline or "Entry" }} – KoreData{% endblock %}
+{% block title %}{{ entry.headline or "Entry" }} - KoreData{% endblock %}
 {% block main_class %}kcui-main{% endblock %}
 
 {% block content %}
 <div class="kcui-page kcui-page--narrow kcui-stack">
-<div class="panel" style="margin-bottom:1rem;">
-  <div class="panel-header">
-    <span class="ph-diamond">◆</span> ENTRY #{{ entry.id }}
+<div class="panel kcui-panel" style="margin-bottom:1rem;">
+  <div class="panel-header kcui-panel-header">
+    ENTRY #{{ entry.id }}
     {% if entry.url %}
-    <a href="{{ entry.url }}" target="_blank" rel="noopener" style="margin-left:auto; font-size:11px; color:var(--dim);">SOURCE ↗</a>
+    <a href="{{ entry.url }}" target="_blank" rel="noopener" style="margin-left:auto; font-size:11px; color:var(--dim);">SOURCE -></a>
     {% endif %}
   </div>
-  <div class="panel-body">
+  <div class="panel-body kcui-panel-body">
     <p style="font-size:1rem; color:var(--text); margin-bottom:1rem; line-height:1.4;">{{ entry.headline or "(no title)" }}</p>
 
     <div style="display:flex; flex-direction:column; gap:0.35rem;">
@@ -25,11 +25,11 @@
       </div>
       <div class="kv">
         <span class="kv-key">published</span>
-        <span class="kv-val meta">{{ entry.published or "—" }}</span>
+        <span class="kv-val meta">{{ entry.published or "-" }}</span>
       </div>
       <div class="kv">
         <span class="kv-key">ingested</span>
-        <span class="kv-val meta">{{ entry.ingested_at or "—" }}</span>
+        <span class="kv-val meta">{{ entry.ingested_at or "-" }}</span>
       </div>
       {% if entry.metadata %}
         {% if entry.metadata.author %}
@@ -55,11 +55,11 @@
   </div>
 </div>
 
-<div class="panel">
-  <div class="panel-header">
-    <span class="ph-diamond">◆</span> PAGE CONTENT
+<div class="panel kcui-panel">
+  <div class="panel-header kcui-panel-header">
+    PAGE CONTENT
   </div>
-  <div class="panel-body" style="padding:0;">
+  <div class="panel-body kcui-panel-body" style="padding:0;">
     {% if entry.page_text %}
     <pre>{{ entry.page_text }}</pre>
     {% else %}

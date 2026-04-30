@@ -1,12 +1,12 @@
 {% extends "base.html" %}
-{% block title %}README — MiniFeed{% endblock %}
+{% block title %}README - MiniFeed{% endblock %}
 
 {% block content %}
-<div class="panel">
-  <div class="panel-header">
-    <span class="ph-diamond">◆</span> README
+<div class="panel kcui-panel">
+  <div class="panel-header kcui-panel-header">
+    README
   </div>
-  <div class="panel-body prose">
+  <div class="panel-body prose kcui-panel-body">
     {{ readme_html | safe }}
   </div>
 </div>
@@ -22,7 +22,7 @@
   .prose p { margin: 0.6rem 0; }
   .prose ul, .prose ol { padding-left: 1.5rem; margin: 0.5rem 0; }
   .prose li { margin: 0.2rem 0; }
-  .prose code { background: var(--surface2, #1e1e1e); padding: 0.1em 0.35em; border-radius: 3px; font-size: 0.88em; font-family: monospace; }
+  .prose code { background: var(--surface2, #1e1e1e); padding: 0.1em 0.35em; border-radius: 3px; font-size: 0.88em; font-family: var(--font-code); }
   .prose pre { background: var(--surface2, #1e1e1e); border: 1px solid var(--border); border-radius: 4px; padding: 1rem; overflow-x: auto; margin: 0.75rem 0; }
   .prose pre code { background: none; padding: 0; }
   .prose table { border-collapse: collapse; width: 100%; margin: 0.75rem 0; }

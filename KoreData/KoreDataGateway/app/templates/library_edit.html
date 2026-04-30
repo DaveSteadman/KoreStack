@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Edit #{{ book.id }} — KoreLibrary{% endblock %}
+{% block title %}Edit #{{ book.id }} - KoreLibrary{% endblock %}
 {% block main_class %}kcui-main{% endblock %}
 
 {% block content %}
@@ -11,28 +11,28 @@
 </style>
 {% if error %}
 <div style="background:rgba(255,95,95,0.1); border:1px solid var(--red); color:var(--red); padding:0.6rem 1rem; margin-bottom:1rem; font-size:12px;">
-  ✗ {{ error }}
+   {{ error }}
 </div>
 {% endif %}
 
 <div style="display:grid; grid-template-columns:1fr; gap:1rem;">
 
-  <div class="panel">
-    <div class="panel-header" style="gap:0.4rem;">
-      <span class="ph-diamond">◆</span> EDIT BOOK #{{ book.id }}
+  <div class="panel kcui-panel">
+    <div class="panel-header kcui-panel-header" style="gap:0.4rem;">
+      EDIT BOOK #{{ book.id }}
       <span style="margin-left:auto; display:flex; gap:0.4rem; align-items:center;">
-        <button type="submit" form="edit-form" style="font-size:11px; padding:3px 10px;">✓ SAVE</button>
+        <button type="submit" form="edit-form" style="font-size:11px; padding:3px 10px;"> SAVE</button>
         <a href="/library/{{ book.id }}">
-          <button type="button" style="font-size:11px; padding:3px 10px; background:transparent; border-color:var(--border); color:var(--dim);">✕ CANCEL</button>
+          <button type="button" style="font-size:11px; padding:3px 10px; background:transparent; border-color:var(--border); color:var(--dim);"> CANCEL</button>
         </a>
         <form method="post" action="/library/{{ book.id }}/delete" style="margin:0;"
               onsubmit="return confirm('Permanently delete {{ book.title | replace("'","\\x27") }}?')">
-          <button type="submit" style="background:rgba(255,95,95,0.15); border-color:var(--red); color:var(--red); font-size:11px; padding:3px 10px;">✗ DELETE</button>
+          <button type="submit" style="background:rgba(255,95,95,0.15); border-color:var(--red); color:var(--red); font-size:11px; padding:3px 10px;"> DELETE</button>
         </form>
       </span>
     </div>
 
-    <div class="panel-body">
+    <div class="panel-body kcui-panel-body">
       <form id="edit-form" method="post" action="/library/{{ book.id }}/edit">
 
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; margin-bottom:0.75rem;">

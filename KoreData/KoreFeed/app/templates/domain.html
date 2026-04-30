@@ -1,20 +1,18 @@
 {% extends "base.html" %}
-{% block title %}{{ domain }} – MiniFeed{% endblock %}
+{% block title %}{{ domain }} - MiniFeed{% endblock %}
 
 {% block content %}
 <div class="breadcrumb">
-  <a href="/">home</a><span class="sep">›</span>{{ domain }}
+  <a href="/">home</a><span class="sep"> > </span>{{ domain }}
 </div>
-
-<!-- ── Feed management ─────────────────────────────────────── -->
 <div class="two-col" style="margin-bottom:1.25rem;">
 
-  <div class="panel" style="margin-bottom:0;">
-    <div class="panel-header">
-      <span class="ph-diamond">◆</span> FEEDS
+  <div class="panel kcui-panel" style="margin-bottom:0;">
+    <div class="panel-header kcui-panel-header">
+      FEEDS
       <span class="badge badge-dim" style="margin-left:0.5rem;">{{ feeds|length }}</span>
     </div>
-    <div class="panel-body" style="padding:0;">
+    <div class="panel-body kcui-panel-body" style="padding:0;">
       {% if feeds %}
       <table>
         <thead>
@@ -61,7 +59,7 @@
               {% if cnt > 0 %}
               <span class="badge badge-dim">{{ cnt }}</span>
               {% else %}
-              <span class="meta" style="font-size:11px;">—</span>
+              <span class="meta" style="font-size:11px;">-</span>
               {% endif %}
             </td>
             <td class="meta" data-col="next" style="text-align:right; white-space:nowrap;">
@@ -91,16 +89,16 @@
         </tbody>
       </table>
       {% else %}
-      <p class="meta" style="padding:1rem;">no feeds — add one →</p>
+      <p class="meta" style="padding:1rem;">no feeds - add one -></p>
       {% endif %}
     </div>
   </div>
 
-  <div class="panel" style="margin-bottom:0;">
-    <div class="panel-header">
-      <span class="ph-diamond">◆</span> ADD FEED
+  <div class="panel kcui-panel" style="margin-bottom:0;">
+    <div class="panel-header kcui-panel-header">
+      ADD FEED
     </div>
-    <div class="panel-body">
+    <div class="panel-body kcui-panel-body">
       <form method="post" action="/web/{{ domain }}/feeds/add">
         <div>
           <label for="name">Feed name</label>
@@ -111,7 +109,7 @@
           <select id="feed_type" name="feed_type" onchange="
             var isWeb = this.value === 'web';
             document.getElementById('url_label').textContent = isWeb ? 'Starting URL' : 'RSS URL';
-            document.getElementById('url').placeholder = isWeb ? 'https://example.com/news/' : 'https://…/feed';
+            document.getElementById('url').placeholder = isWeb ? 'https://example.com/news/' : 'https://.../feed';
           ">
             <option value="rss">RSS Feed</option>
             <option value="web">Web Page</option>
@@ -119,7 +117,7 @@
         </div>
         <div>
           <label id="url_label" for="url">RSS URL</label>
-          <input id="url" name="url" type="url" placeholder="https://…/feed" required>
+          <input id="url" name="url" type="url" placeholder="https://.../feed" required>
         </div>
         <div>
           <label for="update_rate">Update rate (minutes)</label>
@@ -139,12 +137,11 @@
   </div>
 
 </div>
-<!-- ── Entry management ───────────────────────────────── -->
-<div class="panel">
-  <div class="panel-header">
-    <span class="ph-diamond">◆</span> MANAGE ENTRIES
+<div class="panel kcui-panel">
+  <div class="panel-header kcui-panel-header">
+    MANAGE ENTRIES
   </div>
-  <div class="panel-body">
+  <div class="panel-body kcui-panel-body">
 
     <!-- Age category ---------------------------------------------------- -->
     <div>
@@ -249,18 +246,17 @@
 
   </div>
 </div>
-<!-- ── Entry list ──────────────────────────────────────────── -->
-<div class="panel">
-  <div class="panel-header">
-    <span class="ph-diamond">◆</span> ENTRIES
+<div class="panel kcui-panel">
+  <div class="panel-header kcui-panel-header">
+    ENTRIES
     <span class="badge" id="entry-count" style="margin-left:0.75rem;">{{ total }}</span>
     <form action="/web/search" method="get" style="flex-direction:row; display:flex; gap:0; margin-left:auto;">
-      <input type="search" name="q" placeholder="search {{ domain }}…" style="width:200px;">
+      <input type="search" name="q" placeholder="search {{ domain }}..." style="width:200px;">
       <input type="hidden" name="domain" value="{{ domain }}">
       <button type="submit">SEARCH</button>
     </form>
   </div>
-  <div class="panel-body" style="padding:0;">
+  <div class="panel-body kcui-panel-body" style="padding:0;">
     <table>
       <thead>
         <tr>
@@ -277,7 +273,7 @@
           <td class="meta">{{ e.id }}</td>
           <td><a href="/web/{{ domain }}/{{ e.id }}">{{ e.headline or "(no title)" }}</a></td>
           <td class="meta">{{ e.feed_name }}</td>
-          <td class="meta" style="white-space:nowrap;">{{ e.published[:16] if e.published else "—" }}</td>
+          <td class="meta" style="white-space:nowrap;">{{ e.published[:16] if e.published else "-" }}</td>
           <td>
             <button class="btn-danger btn-sm" title="Delete entry"
               onclick="deleteEntry(this, '/web/{{ domain }}/entries/{{ e.id }}/delete')">&#x2715;</button>
@@ -293,11 +289,11 @@
 
 <div class="pagination">
   {% if offset > 0 %}
-  <a href="/web/{{ domain }}?limit={{ limit }}&offset={{ offset - limit }}">← PREV</a>
+  <a href="/web/{{ domain }}?limit={{ limit }}&offset={{ offset - limit }}"><- PREV</a>
   {% endif %}
-  <span class="pg-info">{{ offset + 1 }}–{{ offset + entries|length }} of {{ total }}</span>
+  <span class="pg-info">{{ offset + 1 }}-{{ offset + entries|length }} of {{ total }}</span>
   {% if offset + limit < total %}
-  <a href="/web/{{ domain }}?limit={{ limit }}&offset={{ offset + limit }}">NEXT →</a>
+  <a href="/web/{{ domain }}?limit={{ limit }}&offset={{ offset + limit }}">NEXT -></a>
   {% endif %}
 </div>
 {% endblock %}
@@ -402,7 +398,6 @@ async function deleteEntry(btn, url) {
 }
 
 (function () {
-  // ── Age panel toggle ──────────────────────────────────────────────────────
   function showAgePanel(mode) {
     document.querySelectorAll('.age-subpanel').forEach(el => el.style.display = 'none');
     const map = { none: 'age-panel-none', days_previous: 'age-panel-days', calendar_period: 'age-panel-calendar' };
@@ -414,7 +409,6 @@ async function deleteEntry(btn, url) {
   const sel = document.getElementById('age-mode-select');
   if (sel) showAgePanel(sel.value);
 
-  // ── Age purge helpers ─────────────────────────────────────────────────────
   window.purgeDaysPrevious = function () {
     const days = document.getElementById('age-days-input').value;
     if (!days || days < 1) return;
@@ -427,13 +421,12 @@ async function deleteEntry(btn, url) {
     const start = document.getElementById('age-start-input').value;
     const end   = document.getElementById('age-end-input').value;
     if (!start || !end) { alert('Set both a start and end date first.'); return; }
-    if (!confirm(`Delete ALL entries published outside ${start} – ${end}?`)) return;
+    if (!confirm(`Delete ALL entries published outside ${start} - ${end}?`)) return;
     document.getElementById('purge-start-val').value = start;
     document.getElementById('purge-end-val').value   = end;
     document.getElementById('form-purge-calendar').submit();
   };
 
-  // ── Feed/entry refresh ────────────────────────────────────────────────────
   async function refreshData() {
     try {
       const resp = await fetch(window.location.href, { headers: { 'X-Requested-With': 'poll' } });
@@ -459,7 +452,7 @@ async function deleteEntry(btn, url) {
       if (newCount && curCount) {
         curCount.textContent = newCount.textContent;
       }
-    } catch (_) { /* network hiccup — try again next tick */ }
+    } catch (_) { /* network hiccup - try again next tick */ }
   }
 
   setInterval(refreshData, 30000);

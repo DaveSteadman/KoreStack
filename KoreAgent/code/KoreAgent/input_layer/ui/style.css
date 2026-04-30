@@ -35,7 +35,7 @@
     --bg-wrap-btn-active: rgba(174, 180, 7, 0.274);
     --font-mono:    var(--font-code, "Cascadia Code", "Fira Code", "Courier New", monospace);
     --radius:       2px;
-    --gap:          4px;
+    --gap:          12px;
     --header-h:     42px;
 }
 
@@ -216,34 +216,15 @@ body.splitter-drag-h { user-select: none; cursor: row-resize; }
    PANELS
    ============================================================ */
 
-.panel {
+.panel.kcui-panel {
     display: flex;
     flex-direction: column;
-    background: var(--bg-panel);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
     min-height: 0;
-    overflow: hidden;
 }
 
-.panel-header {
-    display: flex;
-    align-items: center;
+.panel-header.kcui-panel-header {
+    justify-content: flex-start;
     gap: 8px;
-    padding: 6px 10px;
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-    font-size: 10px;
-    letter-spacing: 0.22em;
-    text-transform: uppercase;
-    color: var(--text-dim);
-}
-
-.panel-header .dot {
-    width: 6px;
-    height: 6px;
-    background: var(--border-hi);
-    transform: rotate(45deg);
     flex-shrink: 0;
 }
 
@@ -279,11 +260,10 @@ body.splitter-drag-h { user-select: none; cursor: row-resize; }
 .wrap-btn.webskills-on  { border-color: #1a7a8a; color: #40d0e8; background: rgba(20, 160, 190, 0.15); font-weight: bold; }
 .wrap-btn.webskills-off { border-color: #444;    color: #666;    background: transparent; }
 
-.panel-body {
+.panel-body.kcui-panel-body {
     flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
-    padding: 8px 10px;
     font-family: var(--font-mono);
     font-size: 12px;
     line-height: 1.6;
@@ -293,27 +273,33 @@ body.splitter-drag-h { user-select: none; cursor: row-resize; }
     scrollbar-color: var(--border) transparent;
 }
 
+.timeline-body {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
 /* nowrap mode: horizontal scroll, lines must not break */
-.panel-body.nowrap {
+.panel-body.kcui-panel-body.nowrap {
     overflow-x: auto;
     white-space: pre !important;
 }
 
-.panel-body.nowrap .log-line,
-.panel-body.nowrap .msg-text {
+.panel-body.kcui-panel-body.nowrap .log-line,
+.panel-body.kcui-panel-body.nowrap .msg-text {
     white-space: pre;
 }
 
-.panel-body::-webkit-scrollbar       { width: 4px; height: 4px; }
-.panel-body::-webkit-scrollbar-track  { background: transparent; }
-.panel-body::-webkit-scrollbar-thumb  { background: var(--border); border-radius: 2px; }
+.panel-body.kcui-panel-body::-webkit-scrollbar       { width: 4px; height: 4px; }
+.panel-body.kcui-panel-body::-webkit-scrollbar-track  { background: transparent; }
+.panel-body.kcui-panel-body::-webkit-scrollbar-thumb  { background: var(--border); border-radius: 2px; }
 
 /* Live-follow mode is intentionally non-manual: hide the scrollbar to make the auto state explicit. */
-.panel-body.live-follow {
+.panel-body.kcui-panel-body.live-follow {
     scrollbar-width: none;
 }
 
-.panel-body.live-follow::-webkit-scrollbar {
+.panel-body.kcui-panel-body.live-follow::-webkit-scrollbar {
     width: 0;
     height: 0;
 }
@@ -331,7 +317,7 @@ body.splitter-drag-h { user-select: none; cursor: row-resize; }
 #timeline-ticker {
     flex:        1;
     overflow:    hidden;
-    padding:     4px 8px;
+    padding:     0;
     font-family: var(--font-mono);
     font-size:   11px;
     min-height:  0;
@@ -340,7 +326,7 @@ body.splitter-drag-h { user-select: none; cursor: row-resize; }
 /* Queue section: collapses to nothing when empty */
 #timeline-queue {
     flex:        0 0 auto;
-    padding:     0 8px 4px;
+    padding:     0;
     font-family: var(--font-mono);
     font-size:   11px;
     max-height:  220px;
@@ -533,11 +519,11 @@ body.splitter-drag-h { user-select: none; cursor: row-resize; }
     padding: 0;
 }
 
-#panel-input .panel-body {
+#panel-input .panel-body.kcui-panel-body {
     display: flex;
     align-items: stretch;
     gap: 8px;
-    padding: 4px 8px;
+    padding: 12px;
     overflow: hidden;
 }
 

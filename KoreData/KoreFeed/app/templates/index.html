@@ -2,14 +2,14 @@
 {% block title %}MiniFeed{% endblock %}
 
 {% block content %}
-<div class="panel" style="margin-bottom:1.25rem;">
-  <div class="panel-header">
-    <span class="ph-diamond">◆</span> SEARCH
+<div class="panel kcui-panel" style="margin-bottom:1.25rem;">
+  <div class="panel-header kcui-panel-header">
+    SEARCH
   </div>
-  <div class="panel-body">
+  <div class="panel-body kcui-panel-body">
     <form action="/web/search" method="get" style="flex-direction:row; display:flex; gap:0;">
-      <input type="search" name="q" placeholder="search all feeds…" style="flex:1;"
-             title="Terms are matched individually with AND logic — 'ai defence' finds entries containing both words anywhere in the headline or body">
+      <input type="search" name="q" placeholder="search all feeds..." style="flex:1;"
+             title="Terms are matched individually with AND logic - 'ai defence' finds entries containing both words anywhere in the headline or body">
       <button type="submit">SEARCH</button>
     </form>
     <p class="meta" style="margin-top:0.5rem;">Space or comma separated terms are AND-matched. Each word must appear somewhere in the headline or body.</p>
@@ -19,12 +19,12 @@
 
   <!-- Left: domain list -->
   <div>
-    <div class="panel">
-      <div class="panel-header">
-        <span class="ph-diamond">◆</span> DOMAINS
+    <div class="panel kcui-panel">
+      <div class="panel-header kcui-panel-header">
+        DOMAINS
         <span class="badge badge-dim" style="margin-left:auto;">{{ domains|length }}</span>
       </div>
-      <div class="panel-body" style="padding:0;">
+      <div class="panel-body kcui-panel-body" style="padding:0;">
         {% if domains %}
         <table>
           <thead>
@@ -51,7 +51,7 @@
           </tbody>
         </table>
         {% else %}
-        <p class="meta" style="padding:1rem;">no domains yet — create one below</p>
+        <p class="meta" style="padding:1rem;">no domains yet - create one below</p>
         {% endif %}
       </div>
     </div>
@@ -59,11 +59,11 @@
 
   <!-- Right: create + rename -->
   <div>
-    <div class="panel">
-      <div class="panel-header">
-        <span class="ph-diamond">◆</span> CREATE DOMAIN
+    <div class="panel kcui-panel">
+      <div class="panel-header kcui-panel-header">
+        CREATE DOMAIN
       </div>
-      <div class="panel-body">
+      <div class="panel-body kcui-panel-body">
         <form method="post" action="/web/domains/create">
           <div>
             <label for="new_domain">Domain name</label>
@@ -77,11 +77,11 @@
     </div>
 
     {% if domains %}
-    <div class="panel" style="margin-top:1rem;">
-      <div class="panel-header">
-        <span class="ph-diamond">◆</span> RENAME DOMAIN
+    <div class="panel kcui-panel" style="margin-top:1rem;">
+      <div class="panel-header kcui-panel-header">
+        RENAME DOMAIN
       </div>
-      <div class="panel-body">
+      <div class="panel-body kcui-panel-body">
         <form method="post" id="rename-form" action="/web/domains/__DOMAIN__/rename">
           <div>
             <label for="rename_from">Domain</label>
@@ -107,12 +107,12 @@
 
 </div>
 {% if all_feeds %}
-<div class="panel" style="margin-top:1.25rem;">
-  <div class="panel-header">
-    <span class="ph-diamond">◆</span> FEED STATUS
+<div class="panel kcui-panel" style="margin-top:1.25rem;">
+  <div class="panel-header kcui-panel-header">
+    FEED STATUS
     <span class="badge badge-dim" style="margin-left:auto;">{{ all_feeds|length }} feed{{ 's' if all_feeds|length != 1 else '' }}</span>
   </div>
-  <div class="panel-body" style="padding:0; overflow-x:auto;">
+  <div class="panel-body kcui-panel-body" style="padding:0; overflow-x:auto;">
     <table>
       <thead>
         <tr>
@@ -139,16 +139,16 @@
               {{ f.last_fetched_at[:16].replace("T"," ") }}
               {% if dur is not none %}<span class="meta" title="{{ dur }}s"> ({{ dur }}s)</span>{% endif %}
             {% else %}
-              <span class="meta">—</span>
+              <span class="meta">-</span>
             {% endif %}
           </td>
           <td>
             {% if status == "ok" %}
-              <span style="color:var(--green, #4caf50); font-weight:600;">✓ ok</span>
+              <span style="color:var(--green, #4caf50); font-weight:600;"> ok</span>
             {% elif status == "error" %}
-              <span style="color:var(--red, #e57373); font-weight:600;" title="{{ f.get('last_error','') }}">✗ {{ (f.get("last_error") or "error")[:80] }}</span>
+              <span style="color:var(--red, #e57373); font-weight:600;" title="{{ f.get('last_error','') }}"> {{ (f.get("last_error") or "error")[:80] }}</span>
             {% else %}
-              <span class="meta">—</span>
+              <span class="meta">-</span>
             {% endif %}
           </td>
           <td class="meta" style="font-size:11px;">
@@ -162,7 +162,7 @@
             {% endif %}
           </td>
           <td class="meta" style="text-align:center;">
-            {% if status == "ok" %}{{ f.get("last_new_entries", "—") }}{% else %}—{% endif %}
+            {% if status == "ok" %}{{ f.get("last_new_entries", "-") }}{% else %}-{% endif %}
           </td>
           <td style="text-align:right; white-space:nowrap;">
             {% if f._next_mins is none %}

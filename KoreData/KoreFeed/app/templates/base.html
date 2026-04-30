@@ -21,7 +21,7 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { height: 100%; }
     body {
-      font-family: 'Cascadia Code', 'Fira Code', 'Courier New', monospace;
+      font-family: var(--font-ui);
       background: var(--bg); color: var(--text);
       font-size: 13px; line-height: 1.55;
     }
@@ -69,20 +69,12 @@
     main { padding: 1.5rem 2rem; max-width: 1320px; margin: 0 auto; }
 
     /* ─── panel / card ───────────────────────────── */
-    .panel {
-      border: 1px solid var(--border);
-      background: var(--panel);
-      margin-bottom: 1.25rem;
+    .panel.kcui-panel { margin-bottom: 1.25rem; }
+    .panel-header.kcui-panel-header {
+      justify-content: flex-start;
+      gap: 0.6rem;
     }
-    .panel-header {
-      display: flex; align-items: center; gap: 0.6rem;
-      padding: 0.4rem 0.85rem;
-      border-bottom: 1px solid var(--border);
-      color: var(--dim); font-size: 11px; letter-spacing: 0.08em;
-      text-transform: uppercase;
-    }
-    .panel-header .ph-diamond { color: var(--green); }
-    .panel-body { padding: 1rem 1.1rem; }
+    .panel-body.kcui-panel-body { padding: 12px; }
 
     /* ─── two-column layout ──────────────────────── */
     .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }

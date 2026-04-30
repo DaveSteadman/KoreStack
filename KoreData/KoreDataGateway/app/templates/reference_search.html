@@ -4,15 +4,15 @@
 
 {% block content %}
 <div class="kcui-page kcui-page--narrow kcui-stack">
-<div class="panel" style="margin-bottom:1.25rem;">
-  <div class="panel-header">
-    <span class="ph-diamond">◆</span> SEARCH ARTICLES
+<div class="panel kcui-panel" style="margin-bottom:1.25rem;">
+  <div class="panel-header kcui-panel-header">
+    SEARCH ARTICLES
   </div>
-  <div class="panel-body">
+  <div class="panel-body kcui-panel-body">
     <form action="/reference/search" method="get">
-      <p class="meta" style="margin-bottom:0.4rem;">Space or comma separated terms are AND-matched — each word must appear anywhere in the article title or body.</p>
+      <p class="meta" style="margin-bottom:0.4rem;">Space or comma separated terms are AND-matched - each word must appear anywhere in the article title or body.</p>
       <div style="display:flex; flex-direction:row; gap:0;">
-        <input type="search" name="q" value="{{ q }}" placeholder="search articles…" style="flex:1;">
+        <input type="search" name="q" value="{{ q }}" placeholder="search articles..." style="flex:1;">
         <button type="submit">SEARCH</button>
       </div>
       <div style="margin-top:0.6rem;">
@@ -32,12 +32,12 @@
 </div>
 
 {% if searched %}
-<div class="panel">
-  <div class="panel-header">
-    <span class="ph-diamond">◆</span> RESULTS
+<div class="panel kcui-panel">
+  <div class="panel-header kcui-panel-header">
+    RESULTS
     <span class="badge badge-dim" style="margin-left:0.5rem;">{{ results | length }}</span>
   </div>
-  <div class="panel-body" style="padding:0; overflow-x:auto;">
+  <div class="panel-body kcui-panel-body" style="padding:0; overflow-x:auto;">
     {% if results %}
     <table>
       <thead>
@@ -52,7 +52,7 @@
         <tr>
           <td><a href="/reference/{{ a.title | urlencode }}">{{ a.title }}</a></td>
           <td class="meta" style="text-align:right;">
-            {% if a.word_count %}{{ "{:,}".format(a.word_count) }}{% else %}—{% endif %}
+            {% if a.word_count %}{{ "{:,}".format(a.word_count) }}{% else %}-{% endif %}
           </td>
           <td class="meta" style="font-size:11px;">
             {% for cat in (a.categories or [])[:4] %}

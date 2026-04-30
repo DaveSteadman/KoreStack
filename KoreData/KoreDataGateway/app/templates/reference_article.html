@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}{{ article.title }} — KoreReference{% endblock %}
+{% block title %}{{ article.title }} - KoreReference{% endblock %}
 {% block main_class %}kcui-main{% endblock %}
 
 {% block content %}
@@ -8,34 +8,33 @@
 
   <!-- Main article panel -->
   <div style="min-width:0;">
-    <div class="panel" style="margin-bottom:1rem;">
-      <div class="panel-header">
-        <span class="ph-diamond">◆</span>
+    <div class="panel kcui-panel" style="margin-bottom:1rem;">
+      <div class="panel-header kcui-panel-header">
         {{ article.title }}
         {% if article.word_count %}
         <span class="badge badge-dim" style="margin-left:0.5rem;">{{ "{:,}".format(article.word_count) }} words</span>
         {% endif %}
         <a href="/reference/{{ article.title | urlencode }}/edit" style="margin-left:auto;">
-          <button type="button" style="font-size:11px; padding:3px 10px;">✎ EDIT</button>
+          <button type="button" style="font-size:11px; padding:3px 10px;">EDIT</button>
         </a>
       </div>
 
       {% if article.summary %}
-      <div class="panel-body" style="border-bottom:1px solid var(--border); font-style:italic; color:var(--dim); font-size:13px;">
+      <div class="panel-body kcui-panel-body" style="border-bottom:1px solid var(--border); font-style:italic; color:var(--dim); font-size:13px;">
         {{ article.summary | wikilinks }}
       </div>
       {% endif %}
 
       {% if article.sections %}
-      <div class="panel-body" style="padding:0.4rem 1rem; border-bottom:1px solid var(--border); font-size:11px; color:var(--dim);">
+      <div class="panel-body kcui-panel-body" style="padding:0.4rem 1rem; border-bottom:1px solid var(--border); font-size:11px; color:var(--dim);">
         SECTIONS:
         {% for s in article.sections %}
-        <a href="#sec-{{ loop.index }}" style="color:var(--dim); margin-left:0.5rem;">{{ s.title }}</a>{% if not loop.last %} ·{% endif %}
+        <a href="#sec-{{ loop.index }}" style="color:var(--dim); margin-left:0.5rem;">{{ s.title }}</a>{% if not loop.last %} | {% endif %}
         {% endfor %}
       </div>
       {% endif %}
 
-      <div class="panel-body scrollable-body" style="overflow-x:auto; font-size:13px; line-height:1.65; white-space:normal;">
+      <div class="panel-body scrollable-body kcui-panel-body" style="overflow-x:auto; font-size:13px; line-height:1.65; white-space:normal;">
         {% if article.sections %}
           {% for s in article.sections %}
           <div id="sec-{{ loop.index }}" style="margin-bottom:1.2rem;">
@@ -58,11 +57,11 @@
   <div style="min-width:0;">
     <!-- Facts -->
     {% if article.facts %}
-    <div class="panel" style="margin-bottom:1rem;">
-      <div class="panel-header" style="font-size:11px;">
-        <span class="ph-diamond">◆</span> AT A GLANCE
+    <div class="panel kcui-panel" style="margin-bottom:1rem;">
+      <div class="panel-header kcui-panel-header" style="font-size:11px;">
+        AT A GLANCE
       </div>
-      <div class="panel-body" style="padding:0; font-size:12px;">
+      <div class="panel-body kcui-panel-body" style="padding:0; font-size:12px;">
         <table style="width:100%; table-layout:fixed;">
           <tbody>
             {% for pair in article.facts %}
@@ -79,11 +78,11 @@
 
     <!-- Categories -->
     {% if article.categories %}
-    <div class="panel" style="margin-bottom:1rem;">
-      <div class="panel-header" style="font-size:11px;">
-        <span class="ph-diamond">◆</span> CATEGORIES
+    <div class="panel kcui-panel" style="margin-bottom:1rem;">
+      <div class="panel-header kcui-panel-header" style="font-size:11px;">
+        CATEGORIES
       </div>
-      <div class="panel-body" style="display:flex; flex-wrap:wrap; gap:0.4rem; font-size:11px; padding:0.6rem 0.75rem;">
+      <div class="panel-body kcui-panel-body" style="display:flex; flex-wrap:wrap; gap:0.4rem; font-size:11px; padding:0.6rem 0.75rem;">
         {% for cat in article.categories %}
         <a href="/reference/categories/{{ cat | urlencode }}" class="badge" style="text-decoration:none;">{{ cat }}</a>
         {% endfor %}
@@ -93,11 +92,11 @@
 
     <!-- Backlinks -->
     {% if backlinks %}
-    <div class="panel" style="margin-bottom:1rem;">
-      <div class="panel-header" style="font-size:11px;">
-        <span class="ph-diamond">◆</span> LINKED FROM
+    <div class="panel kcui-panel" style="margin-bottom:1rem;">
+      <div class="panel-header kcui-panel-header" style="font-size:11px;">
+        LINKED FROM
       </div>
-      <div class="panel-body" style="padding:0.4rem 0.75rem; font-size:12px;">
+      <div class="panel-body kcui-panel-body" style="padding:0.4rem 0.75rem; font-size:12px;">
         {% for bl in backlinks %}
         <div style="margin-bottom:0.3rem;">
           <a href="/reference/{{ bl.title | urlencode }}">{{ bl.title }}</a>
@@ -108,13 +107,13 @@
     {% endif %}
 
     <!-- Outbound links -->
-    <div class="panel">
-      <div class="panel-header" style="font-size:11px; cursor:pointer;" onclick="toggleLinks(this)">
-        <span class="ph-diamond">◆</span> OUTBOUND LINKS <span id="links-toggle" style="margin-left:auto; color:var(--dim);">▼ hide</span>
+    <div class="panel kcui-panel">
+      <div class="panel-header kcui-panel-header" style="font-size:11px; cursor:pointer;" onclick="toggleLinks(this)">
+        OUTBOUND LINKS <span id="links-toggle" style="margin-left:auto; color:var(--dim);">hide</span>
       </div>
       <div id="links-panel">
-        <div class="panel-body" style="padding:0.4rem 0.75rem; font-size:12px; max-height:280px; overflow-y:auto;" id="links-list">
-          <span class="meta">loading…</span>
+        <div class="panel-body kcui-panel-body" style="padding:0.4rem 0.75rem; font-size:12px; max-height:280px; overflow-y:auto;" id="links-list">
+          <span class="meta">loading...</span>
         </div>
       </div>
     </div>
@@ -155,11 +154,11 @@ function toggleLinks(header) {
   const toggle = document.getElementById('links-toggle');
   if (panel.style.display === 'none') {
     panel.style.display = '';
-    toggle.textContent = '▼ hide';
+    toggle.textContent = '';
     loadLinks();
   } else {
     panel.style.display = 'none';
-    toggle.textContent = '▶ show';
+    toggle.textContent = ' show';
   }
 }
 

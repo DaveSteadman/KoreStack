@@ -1,18 +1,18 @@
 {% extends "base.html" %}
-{% block title %}Search — KoreLibrary{% endblock %}
+{% block title %}Search - KoreLibrary{% endblock %}
 {% block main_class %}kcui-main{% endblock %}
 
 {% block content %}
 <div class="kcui-page kcui-page--narrow kcui-stack">
-<div class="panel" style="margin-bottom:1.25rem;">
-  <div class="panel-header">
-    <span class="ph-diamond">◆</span> SEARCH BOOKS
+<div class="panel kcui-panel" style="margin-bottom:1.25rem;">
+  <div class="panel-header kcui-panel-header">
+    SEARCH BOOKS
   </div>
-  <div class="panel-body">
+  <div class="panel-body kcui-panel-body">
     <form action="/library/search" method="get">
       <p class="meta" style="margin-bottom:0.4rem;">Space or comma separated terms are AND-matched. Metadata fields can be used alone or combined with the text search.</p>
       <div style="display:flex; flex-direction:row; gap:0;">
-        <input type="search" name="q" value="{{ q }}" placeholder="full-text search…" style="flex:1;">
+        <input type="search" name="q" value="{{ q }}" placeholder="full-text search..." style="flex:1;">
         <button type="submit">SEARCH</button>
       </div>
       <div style="display:flex; flex-wrap:wrap; gap:0.75rem; margin-top:0.6rem; align-items:center;">
@@ -58,12 +58,12 @@
 </div>
 
 {% if searched %}
-<div class="panel">
-  <div class="panel-header">
-    <span class="ph-diamond">◆</span> RESULTS
+<div class="panel kcui-panel">
+  <div class="panel-header kcui-panel-header">
+    RESULTS
     <span class="badge" style="margin-left:0.5rem;">{{ results|length }}</span>
   </div>
-  <div class="panel-body" style="padding:0;">
+  <div class="panel-body kcui-panel-body" style="padding:0;">
     {% if results %}
     <table>
       <thead>
@@ -82,10 +82,10 @@
         <tr>
           <td class="meta">{{ r.id }}</td>
           <td><a href="/library/{{ r.id }}">{{ r.title }}</a></td>
-          <td class="meta">{{ r.author or "—" }}</td>
-          <td class="meta">{{ r.year or "—" }}</td>
-          <td class="meta">{{ r.language or "—" }}</td>
-          <td class="meta">{{ r.genre or "—" }}</td>
+          <td class="meta">{{ r.author or "-" }}</td>
+          <td class="meta">{{ r.year or "-" }}</td>
+          <td class="meta">{{ r.language or "-" }}</td>
+          <td class="meta">{{ r.genre or "-" }}</td>
           <td class="meta" style="font-size:11px; font-style:italic;">{{ r.snippet or "" }}</td>
         </tr>
         {% endfor %}

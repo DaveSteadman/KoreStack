@@ -49,6 +49,7 @@ class WorkspaceLayout {
   constructor(element) {
     this.element = element;
     this.key = element.dataset.kcuiLayoutKey || '';
+    this.disableBelow = Number.parseInt(element.dataset.kcuiDisableBelow || '', 10);
     this.columnTracks = parseIndexList(element.dataset.kcuiColumns);
     this.rowTracks = parseIndexList(element.dataset.kcuiRows);
     this.columnMins = parseNumberList(element.dataset.kcuiColumnsMin);
@@ -56,6 +57,10 @@ class WorkspaceLayout {
     this.baseColumns = [];
     this.baseRows = [];
     this._resizeHandler = () => this.reapply();
+  }
+
+  isResponsiveDisabled() {
+    return Number.isInteger(this.disableBelow) && window.innerWidth < this.disableBelow;
   }
 
   init() {
@@ -216,6 +221,11 @@ class WorkspaceLayout {
   }
 
   reapply() {
+    if (this.isResponsiveDisabled()) {
+      this.element.style.removeProperty('grid-template-columns');
+      this.element.style.removeProperty('grid-template-rows');
+      return;
+    }
     this.reapplyAxis('columns');
     this.reapplyAxis('rows');
   }
@@ -271,5 +281,6 @@ function resetWorkspaceLayout(keyOrElement) {
 }
 
 window.resetWorkspaceLayout = resetWorkspaceLayout;
+window.initWorkspaceLayouts = initWorkspaceLayouts;
 
 export { initWorkspaceLayouts, resetWorkspaceLayout };

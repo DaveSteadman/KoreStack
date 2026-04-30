@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}KoreComms — Connections{% endblock %}
+{% block title %}KoreComms â€” Connections{% endblock %}
 {% block main_class %}kcui-main{% endblock %}
 
 {% block content %}
@@ -10,7 +10,7 @@
 {% endif %}
 
 <div class="panel">
-  <div class="panel-header"><span class="ph-diamond">◆</span> Configured Interfaces</div>
+  <div class="panel-header">Configured Interfaces</div>
   <table>
     <thead>
       <tr>
@@ -23,7 +23,7 @@
         <td class="dim">{{ iface.id }}</td>
         <td><span class="badge badge-{{ iface.type }}">{{ iface.type }}</span></td>
         <td>{{ iface.name }}</td>
-        <td>{% if iface.enabled %}<span style="color:var(--green)">●</span>{% else %}<span class="dim">○</span>{% endif %}</td>
+        <td>{% if iface.enabled %}<span style="color:var(--green)">â—</span>{% else %}<span class="dim">â—‹</span>{% endif %}</td>
         <td class="dim">{{ iface.created_at[:16] }}</td>
         <td>
           <div class="gap-row">

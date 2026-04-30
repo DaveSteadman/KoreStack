@@ -27,6 +27,12 @@
   height: 100%;
 }
 
+.kcui-workspace__region.kcui-panel,
+.kcui-workspace__region.kcui-frame,
+.kcui-workspace__region.panel {
+  height: 100%;
+}
+
 .kcui-workspace__region--scroll {
   overflow: auto;
 }
