@@ -151,9 +151,9 @@ function renderConvList(conversations) {
         <span class="conv-subject">${escHtml(subject)}</span>
     </div>
     <div class="conv-item-mid">
-        <span class="pill pill-${displayStatus.className}">${displayStatus.label}</span>
-        <span class="pill pill-${c.profile}">${c.profile}</span>
-        <span class="pill">${escHtml(c.channel_type)}</span>
+        ${pill(displayStatus.label)}
+        ${pill(c.profile)}
+        <span class="kcui-tag kcui-tag--pill kcui-tag--dim">${escHtml(c.channel_type)}</span>
     </div>
     <div class="conv-item-bot">${ts}</div>
 </div>`;
@@ -211,9 +211,9 @@ function renderMeta(conv) {
     const displayStatus = getDisplayStatus(conv.status);
     const rows = [
         ["id",              conv.id],
-        ["status",          pill(displayStatus.label, `pill-${displayStatus.className}`)],
+        ["status",          pill(displayStatus.label)],
         ["channel_type",    escHtml(conv.channel_type || "-")],
-        ["profile",         pill(conv.profile,      `pill-${conv.profile}`)],
+        ["profile",         pill(conv.profile)],
         ["subject",         escHtml(conv.subject || "(none)")],
         ["turn_count",      conv.turn_count ?? 0],
         ["token_estimate",  (conv.token_estimate ?? 0).toLocaleString()],
@@ -502,13 +502,13 @@ function renderMessages(msgs) {
 <div class="msg-row${summarisedClass}">
     <span class="msg-id">#${m.id}</span>
     <span>
-        ${pill(m.direction, `pill-${m.direction}`)}
+        ${pill(m.direction)}
     </span>
     <span class="msg-content">${escHtml(m.content)}</span>
     <span class="msg-time">${ts}</span>
     <span class="msg-flags">
         ${pill(m.status)}
-        ${m.summarised ? '<span class="pill" style="color:var(--text-dim)">summ</span>' : ""}
+        ${m.summarised ? '<span class="kcui-tag kcui-tag--pill kcui-tag--dim">summ</span>' : ""}
     </span>
 </div>`;
     }).join("");
@@ -555,7 +555,7 @@ function renderEvents(evts) {
 <tr>
     <td class="mono">${e.id}</td>
     <td>${escHtml(e.event_type)}</td>
-    <td>${pill(e.status, `pill-${e.status}`)}</td>
+    <td>${pill(e.status)}</td>
     <td>${e.priority ?? 0}</td>
     <td style="color:var(--text-dim);font-size:10px;">${escHtml(e.claimed_by || "-")}</td>
     <td style="color:var(--text-dim);font-size:10px;white-space:nowrap;">${formatDateTime(e.created_at)}</td>
@@ -685,8 +685,32 @@ function escHtml(s) {
         .replace(/"/g, "&quot;");
 }
 
-function pill(text, cls) {
-    return `<span class="pill ${cls || ""}">${escHtml(text)}</span>`;
+// Color map for kcui-tag — maps status/direction/role values to --color modifier
+const TAG_COLORS = {
+    // conversation status
+    awaiting_inbound: "accent",
+    active:           "accent",
+    waiting_agent:    "warning",
+    agent_processing: "info",
+    archived:         "dim",
+    deleted:          "danger",
+    // message direction
+    inbound:          "warning",
+    outbound:         "info",
+    // message/event status
+    pending:          "warning",
+    claimed:          "info",
+    completed:        "accent",
+    failed:           "danger",
+    // profile / role
+    admin:            "warning",
+    external:         "dim",
+    readonly:         "danger",
+};
+
+function pill(text, _unused) {
+    const color = TAG_COLORS[text] || "dim";
+    return `<span class="kcui-tag kcui-tag--pill kcui-tag--${color}">${escHtml(text)}</span>`;
 }
 
 function formatDateTime(iso) {

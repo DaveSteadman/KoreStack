@@ -43,6 +43,83 @@ function koreDiagFileIcon(size = 12) {
   </svg>`;
 }
 
+function koreCodeIcon(size = 12) {
+  const s = `width="${size}" height="${size}"`;
+  return `<svg ${s} viewBox="0 0 20 20" fill="none" aria-hidden="true">
+    <path d="M8 6.8 4.8 10 8 13.2" stroke="currentColor" stroke-width="1.7" stroke-linecap="square" stroke-linejoin="miter"/>
+    <path d="M12 6.8 15.2 10 12 13.2" stroke="currentColor" stroke-width="1.7" stroke-linecap="square" stroke-linejoin="miter"/>
+    <path d="M10.9 5.9 9.1 14.1" stroke="currentColor" stroke-width="1.5" stroke-linecap="square"/>
+  </svg>`;
+}
+
+// ── File-type icons ───────────────────────────────────────────────────────────
+
+function pyFileIcon(size = 12) {
+  const s = `width="${size}" height="${size}"`;
+  return `<svg ${s} viewBox="0 0 20 20" fill="none" aria-hidden="true">
+    <rect x="3" y="2" width="14" height="16" rx="2" stroke="currentColor" stroke-width="1.5"/>
+    <path d="M7 7h2.5a1.5 1.5 0 0 1 0 3H7M13 13h-2.5a1.5 1.5 0 0 1 0-3H13" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+  </svg>`;
+}
+
+function jsFileIcon(size = 12) {
+  const s = `width="${size}" height="${size}"`;
+  return `<svg ${s} viewBox="0 0 20 20" fill="none" aria-hidden="true">
+    <rect x="3" y="2" width="14" height="16" rx="2" stroke="currentColor" stroke-width="1.5"/>
+    <path d="M7.5 8v4.5a1.5 1.5 0 0 1-3 0M11 8v4a1.5 1.5 0 0 0 3 0V8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>`;
+}
+
+function jsonFileIcon(size = 12) {
+  const s = `width="${size}" height="${size}"`;
+  return `<svg ${s} viewBox="0 0 20 20" fill="none" aria-hidden="true">
+    <rect x="3" y="2" width="14" height="16" rx="2" stroke="currentColor" stroke-width="1.5"/>
+    <path d="M7.5 7.5A1.5 1.5 0 0 0 6 9v2a1.5 1.5 0 0 0 1.5 1.5M12.5 7.5A1.5 1.5 0 0 1 14 9v2a1.5 1.5 0 0 1-1.5 1.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+    <circle cx="10" cy="10" r="1" fill="currentColor"/>
+  </svg>`;
+}
+
+function htmlFileIcon(size = 12) {
+  const s = `width="${size}" height="${size}"`;
+  return `<svg ${s} viewBox="0 0 20 20" fill="none" aria-hidden="true">
+    <rect x="3" y="2" width="14" height="16" rx="2" stroke="currentColor" stroke-width="1.5"/>
+    <path d="M8 8.5 6 10l2 1.5M12 8.5l2 1.5-2 1.5M10.5 7.5l-1 5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>`;
+}
+
+function cssFileIcon(size = 12) {
+  const s = `width="${size}" height="${size}"`;
+  return `<svg ${s} viewBox="0 0 20 20" fill="none" aria-hidden="true">
+    <rect x="3" y="2" width="14" height="16" rx="2" stroke="currentColor" stroke-width="1.5"/>
+    <path d="M12.5 8a2 2 0 0 0-4 0c0 1 1 1.5 2 2s2 1 2 2a2 2 0 0 1-4 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+  </svg>`;
+}
+
+function genericFileIcon(size = 12) {
+  const s = `width="${size}" height="${size}"`;
+  return `<svg ${s} viewBox="0 0 20 20" fill="none" aria-hidden="true">
+    <path d="M6 2.8h5.7L15.2 6v10.2a1.8 1.8 0 0 1-1.8 1.8H6a1.8 1.8 0 0 1-1.8-1.8V4.6A1.8 1.8 0 0 1 6 2.8Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+    <path d="M11.7 2.8V6h3.5" stroke="currentColor" stroke-width="1.45" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>`;
+}
+
+/**
+ * Returns an SVG icon for a given file path based on its extension.
+ * Falls back to a generic file icon for unknown types.
+ */
+export function fileIconForPath(path, size = 12) {
+  if (!path) { return genericFileIcon(size); }
+  const lower = path.toLowerCase();
+  if (lower.endsWith('.py') || lower.endsWith('.pyi')) { return pyFileIcon(size); }
+  if (lower.endsWith('.js') || lower.endsWith('.mjs') || lower.endsWith('.cjs') || lower.endsWith('.ts')) { return jsFileIcon(size); }
+  if (lower.endsWith('.json')) { return jsonFileIcon(size); }
+  if (lower.endsWith('.md') || lower.endsWith('.markdown')) { return koreDocFileIcon(size); }
+  if (lower.endsWith('.html') || lower.endsWith('.htm')) { return htmlFileIcon(size); }
+  if (lower.endsWith('.css')) { return cssFileIcon(size); }
+  if (lower.endsWith('.csv') || lower.endsWith('.tsv')) { return koreSheetFileIcon(size); }
+  return genericFileIcon(size);
+}
+
 export const SUITE_ICONS = {
   korestack(size = 12) {
     const s = `width="${size}" height="${size}"`;
@@ -69,6 +146,7 @@ export const SUITE_ICONS = {
     </svg>`;
   },
   koredocs: koreDocsIcon,
+  korecode: koreCodeIcon,
   korecomms(size = 12) {
     const s = `width="${size}" height="${size}"`;
     return `<svg ${s} viewBox="0 0 20 20" fill="none" aria-hidden="true">

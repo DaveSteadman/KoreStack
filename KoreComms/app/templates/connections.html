@@ -21,7 +21,7 @@
       {% for iface in interfaces %}
       <tr>
         <td class="dim">{{ iface.id }}</td>
-        <td><span class="badge badge-{{ iface.type }}">{{ iface.type }}</span></td>
+        <td><span class="kcui-tag kcui-tag--info">{{ iface.type }}</span></td>
         <td>{{ iface.name }}</td>
         <td>{% if iface.enabled %}<span style="color:var(--green)">â—</span>{% else %}<span class="dim">â—‹</span>{% endif %}</td>
         <td class="dim">{{ iface.created_at[:16] }}</td>

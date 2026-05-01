@@ -19,7 +19,7 @@ const MAX_CHAT_MESSAGES = 200;
 
 // CSS class name constants used by toggleWrap.
 const CSS_NOWRAP      = "nowrap";
-const CSS_WRAP_ACTIVE = "wrap-active";
+const CSS_WRAP_ACTIVE = "is-on";
 
 // All registered slash commands - used for command-name tab completion.
 const _ALL_COMMANDS = [

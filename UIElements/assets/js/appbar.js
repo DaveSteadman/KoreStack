@@ -1,5 +1,5 @@
-import { SUITE_ICONS, resolveIcon } from './icons.js';
-import { applyTheme, themeFor } from './theme.js';
+import { SUITE_ICONS, resolveIcon } from './icons.js?v=20260501a';
+import { applyTheme, themeFor } from './theme.js?v=20260501a';
 
 const DEFAULT_TYPE_URL = {
   koredoc: '/doc',
@@ -103,6 +103,7 @@ export function initAppBar(options = {}) {
     tabs = [],
     note = null,
     actionsHtml = '',
+    editorTabsSlot = null,
   } = options;
 
   const host = document.getElementById(mountId);
@@ -143,7 +144,9 @@ export function initAppBar(options = {}) {
 
   const tabsHtml = tabs.length
     ? `<div class="kappbar-group kappbar-tabs" role="navigation" aria-label="Application navigation">${tabs.map((tab) => tabMarkup(tab, icons, 13)).join('')}</div>`
-    : '';
+    : editorTabsSlot
+      ? `<div class="kappbar-group kappbar-editortabs" id="${escapeHtml(editorTabsSlot)}"></div>`
+      : '';
 
   const noteHtml = noteMarkup(note);
 

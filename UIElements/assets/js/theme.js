@@ -5,6 +5,7 @@ const SERVICE_THEMES = {
   koredata: { accent: '#a78bfa', accent2: '#c8b4ff' },
   koredocs: { accent: '#ffd166', accent2: '#ffe3a3' },
   korecomms: { accent: '#ff8fab', accent2: '#ffb4c8' },
+  korecode: { accent: '#7ee081', accent2: '#b4f0b6' },
 };
 
 const APP_THEME_KEYS = {

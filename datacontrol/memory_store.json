@@ -205,8 +205,8 @@
       "updated": null,
       "category": "general",
       "fact": "[2026-04-19 20:58:26] Running prompt 8/15: \"count how many times the letter e appears in the word 'accelerate'\"",
-      "access_count": 9,
-      "last_accessed": "2026-04-29 22:35:06"
+      "access_count": 11,
+      "last_accessed": "2026-05-01 12:49:13"
     },
     {
       "id": "a80550db",
@@ -259,8 +259,8 @@
       "updated": null,
       "category": "general",
       "fact": "[2026-04-19 20:59:45] Running prompt 14/15: 'calculate compound interest on 10000 at 5 percent per year for 10 years'",
-      "access_count": 7,
-      "last_accessed": "2026-04-29 22:35:35"
+      "access_count": 8,
+      "last_accessed": "2026-05-01 12:45:56"
     },
     {
       "id": "ee258697",
@@ -493,8 +493,8 @@
       "updated": null,
       "category": "general",
       "fact": "The system currently has about **103.2 GB of RAM available**",
-      "access_count": 8,
-      "last_accessed": "2026-04-26 11:47:33"
+      "access_count": 9,
+      "last_accessed": "2026-05-01 12:49:13"
     },
     {
       "id": "9c3f0721",
@@ -682,8 +682,8 @@
       "updated": null,
       "category": "preference",
       "fact": "The default model I use is llama3.",
-      "access_count": 3,
-      "last_accessed": "2026-04-26 11:31:56"
+      "access_count": 4,
+      "last_accessed": "2026-05-01 12:49:13"
     },
     {
       "id": "eba9d39b",
@@ -1078,8 +1078,8 @@
       "updated": null,
       "category": "project",
       "fact": "you still need to write client code and manage model deployment, which is more overhead than needed for a quick‑start solo project",
-      "access_count": 0,
-      "last_accessed": null
+      "access_count": 1,
+      "last_accessed": "2026-04-29 23:04:59"
     },
     {
       "id": "7be9693e",
@@ -1141,8 +1141,8 @@
       "updated": null,
       "category": "environment",
       "fact": "The folder **calcs** has been created, and inside it a new spreadsheet **comp** has been added",
-      "access_count": 1,
-      "last_accessed": "2026-04-26 16:39:19"
+      "access_count": 2,
+      "last_accessed": "2026-05-01 12:45:56"
     },
     {
       "id": "f62005f9",
@@ -1213,6 +1213,24 @@
       "updated": null,
       "category": "general",
       "fact": "The compound interest earned is **$6,288.95**, giving a final amount of **$16,288.95** after 10 years",
+      "access_count": 0,
+      "last_accessed": null
+    },
+    {
+      "id": "2d9e7247",
+      "stored": "2026-04-29 23:15:06",
+      "updated": null,
+      "category": "environment",
+      "fact": "**`from pydantic import BaseModel`** – Base class for data validation and parsing using Python type hints",
+      "access_count": 0,
+      "last_accessed": null
+    },
+    {
+      "id": "b9567c21",
+      "stored": "2026-05-01 12:46:27",
+      "updated": null,
+      "category": "project",
+      "fact": "This table is ready for use in any downstream calculations, reporting, or visualisation you need",
       "access_count": 0,
       "last_accessed": null
     }

@@ -373,7 +373,7 @@ MCP connections (configured external tool providers):
 - **Live mode** (`_logLive = true`): each new line triggers `_scrollLogSmooth()`, a rAF decay-loop that eases to the bottom at 30% per frame.
 - Upward wheel scroll exits live mode; re-entry is only via the [live] button (no auto-reselect).
 - Scrollbar grab (pointer down right of `clientWidth`) also exits live mode.
-- The [live] button shows the `wrap-active` CSS class when live mode is engaged.
+- The [live] button shows the `is-on` CSS class when live mode is engaged.
 - Clicking [live] when off snaps instantly to the bottom and resumes the latest log file.
 - Panel resize snaps instantly to the bottom (does not use the smooth loop) so that `_isLogNearBottom()` stays accurate and live mode is not inadvertently exited.
 - Log navigation buttons ([up] / [down]) step through section separators in the log body.

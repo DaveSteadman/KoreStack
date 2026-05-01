@@ -1,0 +1,87 @@
+html,
+body {
+  height: 100%;
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+}
+
+body {
+  font: 13px/1.5 var(--font-ui, sans-serif);
+  overflow: hidden;
+}
+
+#code-app {
+  height: calc(100vh - var(--topbar-h, 38px) - var(--appbar-h, 42px));
+  overflow: hidden;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 14px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.panel-kicker {
+  color: var(--text-dim);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.panel-title {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.panel-path {
+  font-size: 10px;
+  color: var(--text-dim);
+  letter-spacing: 0.02em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.panel-status {
+  min-height: 22px;
+  padding: 8px 14px;
+  color: var(--text-2);
+  font-size: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.toolbar-btn,
+.icon-btn {
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 0;
+  background: var(--surface-2);
+  color: var(--text);
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: var(--kcui-tracking-label);
+  font-size: var(--kcui-text-label);
+}
+
+.toolbar-btn:hover,
+.icon-btn:hover {
+  border-color: color-mix(in srgb, var(--accent) 46%, transparent);
+}
+
+.toolbar-btn-primary {
+  border-color: color-mix(in srgb, var(--accent) 52%, transparent);
+  color: var(--accent-2);
+}
+
+@media (max-width: 680px) {
+  #code-app {
+    height: calc(100vh - var(--topbar-h, 38px) - var(--appbar-h, 42px));
+  }
+}

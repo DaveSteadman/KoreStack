@@ -13,33 +13,22 @@
       <tr><th>Time</th><th>Action</th><th>Detail</th></tr>
     </thead>
     <tbody>
+      {% set action_colors = {
+        'forwarded': 'info',
+        'routed':    'accent',
+        'fetched':   'info',
+        'replied':   'accent',
+        'completed': 'accent',
+        'sent':      'warning',
+        'send_new':  'warning',
+        'injected':  'warning',
+        'deleted':   'danger',
+        'polled':    'dim',
+      } %}
       {% for e in entries %}
       <tr>
         <td class="dim" style="font-size:11px; white-space:nowrap;">{{ e.logged_at[:19] }}</td>
-        <td>
-          {% set ac = e.action %}
-          {% if ac == 'forwarded' %}
-            <span style="color:var(--blue)">forwarded</span>
-          {% elif ac == 'routed' %}
-            <span style="color:var(--green)">routed</span>
-          {% elif ac == 'fetched' %}
-            <span style="color:var(--blue)">fetched</span>
-          {% elif ac == 'replied' %}
-            <span style="color:var(--green)">replied</span>
-          {% elif ac == 'completed' %}
-            <span style="color:var(--green)">completed</span>
-          {% elif ac == 'sent' or ac == 'send_new' %}
-            <span style="color:var(--amber)">{{ ac }}</span>
-          {% elif ac == 'injected' %}
-            <span style="color:var(--amber)">injected</span>
-          {% elif ac == 'deleted' %}
-            <span style="color:var(--red)">deleted</span>
-          {% elif ac == 'polled' %}
-            <span class="dim">polled</span>
-          {% else %}
-            {{ ac }}
-          {% endif %}
-        </td>
+        <td><span class="kcui-tag kcui-tag--pill kcui-tag--{{ action_colors.get(e.action, 'dim') }}">{{ e.action }}</span></td>
         <td class="dim" style="font-size:12px;">{{ e.detail or '' }}</td>
       </tr>
       {% endfor %}

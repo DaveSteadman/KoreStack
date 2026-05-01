@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KoreCode</title>
+  <link rel="stylesheet" href="/ui-elements/assets/css/chrome.css" />
+  <link rel="stylesheet" href="/ui-elements/assets/css/panels.css" />
+  <link rel="stylesheet" href="/static/code/css/base.css" />
+  <link rel="stylesheet" href="/static/code/css/explorer.css" />
+  <link rel="stylesheet" href="/static/code/css/find.css" />
+  <link rel="stylesheet" href="/static/code/css/editor.css" />
+</head>
+<body>
+  <div id="topbar"></div>
+  <div id="app-bar"></div>
+  <main id="code-app" class="kcui-panels">
+    <aside id="code-sidebar" class="kcui-panel-left">
+      <div class="panel-header">
+        <div>
+          <div class="panel-kicker">Explorer</div>
+          <div id="root-label" class="panel-title">KoreStack</div>
+          <div id="root-path" class="panel-path" title=""></div>
+        </div>
+        <button id="btn-refresh-tree" class="icon-btn" type="button" title="Refresh explorer">Refresh</button>
+      </div>
+      <div id="tree-status" class="panel-status">Loading workspace…</div>
+      <div id="code-tree" aria-label="File explorer"></div>
+    </aside>
+    <div id="code-splitter" class="kcui-splitter" aria-hidden="true"></div>
+    <section id="code-main" class="kcui-panel-right">
+      <div id="editor-topbar">
+        <div id="editor-actions">
+          <button id="btn-find" class="toolbar-btn" type="button">Find</button>
+          <button id="btn-save" class="toolbar-btn toolbar-btn-primary" type="button">Save</button>
+        </div>
+      </div>
+      <div id="editor-meta">
+        <div id="file-breadcrumb">No file selected</div>
+        <div id="file-state">Read/write editor</div>
+      </div>
+      <div id="editor-surface">
+        <div id="editor-findbar" hidden>
+          <label for="find-input">Find</label>
+          <input id="find-input" type="text" autocomplete="off" spellcheck="false" placeholder="Search in file" />
+          <button id="btn-find-prev" class="toolbar-btn" type="button">Prev</button>
+          <button id="btn-find-next" class="toolbar-btn" type="button">Next</button>
+          <button id="btn-find-close" class="toolbar-btn" type="button">Close</button>
+        </div>
+        <div id="editor-empty">
+          <h1>KoreCode</h1>
+          <p>Select a file from the explorer to start editing.</p>
+        </div>
+        <div id="editor-host"></div>
+      </div>
+    </section>
+  </main>
+  <script type="module" src="/static/code/js/main.js"></script>
+</body>
+</html>

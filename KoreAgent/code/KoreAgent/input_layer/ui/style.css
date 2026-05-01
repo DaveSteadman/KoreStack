@@ -254,11 +254,35 @@ body.splitter-drag-h { user-select: none; cursor: row-resize; }
 
 .wrap-btn:hover,
 .wrap-btn:focus-visible { border-color: var(--border-hi); color: var(--text-hi); }
-.wrap-btn.wrap-active   { border-color: var(--border-hi); color: var(--text-hi); background: var(--bg-wrap-btn-active); }
+.wrap-btn.is-on         { border-color: var(--border-hi); color: var(--text-hi); background: var(--bg-wrap-btn-active); }
 .wrap-btn.sandbox-on    { border-color: #2a6a3a; color: #70c080; background: rgba(40, 140, 70, 0.18); }
 .wrap-btn.sandbox-off   { border-color: #7a2a2a; color: #e08080; background: rgba(160, 40, 40, 0.18); }
 .wrap-btn.webskills-on  { border-color: #1a7a8a; color: #40d0e8; background: rgba(20, 160, 190, 0.15); font-weight: bold; }
 .wrap-btn.webskills-off { border-color: #444;    color: #666;    background: transparent; }
+
+/* ─── Chat panel button specific states ─────────────────── */
+#sandbox-btn.sandbox-on  { border-color: #2a6a3a; color: #70c080; background: rgba(40, 140, 70, 0.18); }
+#sandbox-btn.sandbox-off { border-color: #7a2a2a; color: #e08080; background: rgba(160, 40, 40, 0.18); }
+#webskills-btn.webskills-on  { border-color: #1a7a8a; color: #40d0e8; background: rgba(20, 160, 190, 0.15); }
+#webskills-btn.webskills-off { border-color: #444;    color: #666;    background: transparent; }
+#wrap-btn-chat.is-on {
+    color: var(--yellow); border-color: var(--yellow);
+    background: rgba(240, 192, 96, 0.12);
+}
+
+/* ─── Log panel button specific states ───────────────────── */
+#log-btn-up, #log-btn-down {
+    color: var(--text-hi); border-color: var(--text-hi);
+}
+#log-btn-live { color: var(--text-dim); border-color: var(--border); }
+#log-btn-live.is-on {
+    color: var(--green); border-color: var(--green);
+    background: rgba(74, 247, 122, 0.12);
+}
+#wrap-btn-log.is-on {
+    color: var(--yellow); border-color: var(--yellow);
+    background: rgba(240, 192, 96, 0.12);
+}
 
 .panel-body.kcui-panel-body {
     flex: 1;

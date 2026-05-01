@@ -105,17 +105,7 @@
     .btn-danger:hover { background: rgba(255,95,95,.12); }
     .btn-sm { padding: 0.15rem 0.55rem; font-size: 11px; }
 
-    /* ─── status badges ──────────────────────────── */
-    .badge {
-      display: inline-block; font-size: var(--kcui-text-caption); letter-spacing: var(--kcui-tracking-label);
-      padding: 1px 6px; border: 1px solid; text-transform: uppercase;
-    }
-    .badge-queued    { border-color: var(--blue);  color: var(--blue); }
-    .badge-processing{ border-color: var(--amber); color: var(--amber); }
-    .badge-replied   { border-color: var(--green); color: var(--green); }
-    .badge-ignored   { border-color: var(--dim);   color: var(--dim); }
-    .badge-inbound   { border-color: var(--blue);  color: var(--blue); }
-    .badge-outbound  { border-color: var(--green); color: var(--green); }
+    /* ─── status badges removed: now using kcui-tag from UIElements ─── */
 
     /* ─── flash / info banner ────────────────────── */
     .flash {
@@ -184,7 +174,7 @@
   });
 </script>
 <script type="module">
-  import { initAppBar, initTopbar } from '/ui-elements/assets/js/chrome.js';
+  import { initAppBar, initTopbar } from '/ui-elements/assets/js/chrome.js?v=20260501a';
   initTopbar({ currentService: 'korecomms' });
   initAppBar({
     currentService: 'korecomms',

@@ -1,0 +1,117 @@
+#code-main {
+  display: grid;
+  grid-template-rows: auto auto auto minmax(0, 1fr);
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* --- Topbar actions (Find / Save) --- */
+
+#editor-topbar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  min-height: 46px;
+  padding: 6px 10px;
+  background: color-mix(in srgb, var(--bg-2) 90%, black 10%);
+  border-bottom: 1px solid var(--border);
+}
+
+#editor-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* --- Meta bar (breadcrumb / file state) --- */
+
+#editor-meta {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-2);
+  font-size: 12px;
+}
+
+#file-breadcrumb {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* --- Editor surface --- */
+
+#editor-surface {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+  background: var(--bg);
+  overflow: hidden;
+}
+
+#editor-empty {
+  grid-row: 2;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: 32px;
+}
+
+#editor-empty h1 {
+  margin: 0 0 8px;
+  font-size: 28px;
+}
+
+#editor-empty p {
+  margin: 0;
+  color: var(--text-2);
+}
+
+#editor-empty.is-hidden {
+  display: none;
+}
+
+#editor-host {
+  grid-row: 2;
+  display: none;
+  min-height: 0;
+  overflow: hidden;
+}
+
+#editor-host.is-ready {
+  display: block;
+}
+
+/* --- CodeMirror overrides --- */
+
+.cm-editor {
+  height: 100%;
+  font-size: 13px;
+}
+
+.cm-scroller {
+  font-family: Consolas, 'Courier New', monospace;
+}
+
+.cm-search,
+.cm-panels {
+  display: none !important;
+}
+
+.cm-tooltip.cm-tooltip-autocomplete {
+  background: var(--surface-2);
+  color: var(--text);
+  border-color: var(--border);
+}
+
+@media (max-width: 680px) {
+  #editor-topbar,
+  #editor-meta {
+    grid-template-columns: 1fr;
+  }
+}

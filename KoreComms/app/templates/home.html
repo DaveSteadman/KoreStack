@@ -4,12 +4,6 @@
 
 {% block content %}
 <div class="kcui-page kcui-page--narrow kcui-stack">
-<style>
-  .kc-tag {
-    font-size: 10px; color: var(--dim);
-    border: 1px solid var(--border); padding: 1px 5px; letter-spacing: 0.03em;
-  }
-</style>
 
 {% if not conversations %}
   <p class="meta">No conversations yet. <a href="/compose" style="color:var(--amber)">Inject a message</a> to get started.</p>
@@ -34,12 +28,12 @@
           </a>
         </td>
         <td>
-          <span class="badge badge-{{ conv.interface_type }}">{{ conv.interface_name }}</span>
+          <span class="kcui-tag kcui-tag--info">{{ conv.interface_name }}</span>
         </td>
         <td class="dim">
-          <span class="kc-tag">{{ conv.conversation_name or ("kccomms:" ~ conv.id) }}</span>
+          <span class="kcui-tag kcui-tag--dim">{{ conv.conversation_name or ("kccomms:" ~ conv.id) }}</span>
           {% if conv.kc_conversation_id %}
-            <span class="kc-tag">kc:{{ conv.kc_conversation_id }}</span>
+            <span class="kcui-tag kcui-tag--dim">kc:{{ conv.kc_conversation_id }}</span>
           {% endif %}
         </td>
         <td class="dim" style="font-size:11px; white-space:nowrap;">{{ conv.created_at[:16] }}</td>

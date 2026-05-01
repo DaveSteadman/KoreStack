@@ -30,7 +30,7 @@
   <div class="chat-header">
     <a href="/" class="chat-back">← Messages</a>
     <span class="chat-subj">{{ conv.koreconversation_id or "(no KoreConversation ID)" }}</span>
-    <span class="badge badge-{{ iface.type }}">{{ iface.name }}</span>
+    <span class="kcui-tag kcui-tag--info">{{ iface.name }}</span>
     <span class="tag" style="font-size:10px; color:var(--dim);">{{ conv.conversation_name or ("kccomms:" ~ conv.id) }}</span>
     <span class="tag" style="margin-left:auto; font-size:10px; color:var(--dim);">conv #{{ conv.id }}</span>
     <form method="post" action="/conversation/{{ conv.id }}/delete"
@@ -48,7 +48,8 @@
         <div class="bubble-meta">
           {% if msg.sender %}<span class="bm-sender">{{ msg.sender }}</span>{% endif %}
           <span>{{ msg.received_at[:16] }}</span>
-          <span class="badge badge-{{ msg.status }}">{{ msg.status }}</span>
+              {% set status_colors = {'queued':'info','processing':'warning','replied':'accent','ignored':'dim','sent':'warning','inbound':'warning','outbound':'info'} %}
+              <span class="kcui-tag kcui-tag--{{ status_colors.get(msg.status, 'dim') }}">{{ msg.status }}</span>
         </div>
       </div>
     </div>
@@ -160,6 +161,12 @@
     return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
 
+  const STATUS_COLORS = {
+    queued: 'info', processing: 'warning', replied: 'accent',
+    ignored: 'dim', sent: 'warning', inbound: 'warning', outbound: 'info',
+  };
+  function statusColor(s) { return STATUS_COLORS[s] || 'dim'; }
+
   function scrollDown(force) {
     const near = msgsEl.scrollHeight - msgsEl.scrollTop - msgsEl.clientHeight < 150;
     if (force || near) msgsEl.scrollTop = msgsEl.scrollHeight;
@@ -177,7 +184,7 @@
             <div class="bubble-meta">
               ${sender}
               <span>${esc(time)}</span>
-              <span class="badge badge-${esc(msg.status)}">${esc(msg.status)}</span>
+              <span class="kcui-tag kcui-tag--${statusColor(esc(msg.status))}">${esc(msg.status)}</span>
             </div>
           </div>
         </div>`;

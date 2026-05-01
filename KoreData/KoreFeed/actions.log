@@ -1,215 +1,3 @@
-[2026-04-27T23:31:37] Ingesting: Mail / Guardian (SA)
-[2026-04-27T23:31:45]   Mail / Guardian (SA): +0 entries in 8.1s [good]
-[2026-04-27T23:31:45] Ingesting: Mail / Guardian (SA)
-[2026-04-27T23:31:52]   Mail / Guardian (SA): +0 entries in 6.9s [good]
-[2026-04-27T23:31:52] Ingesting: airforce-technology
-[2026-04-27T23:31:52]   airforce-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.airforce-technology.com/feed/'
-For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
-[2026-04-27T23:31:52] Ingesting: indianexpress
-[2026-04-27T23:31:59]   Skipping indianexpress — next fetch in ~60m
-[2026-04-27T23:32:01]   indianexpress: +0 entries in 8.1s [good]
-[2026-04-27T23:32:01] Ingesting: army-technology
-[2026-04-27T23:32:01]   army-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.army-technology.com/feed/'
-For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
-[2026-04-27T23:32:01] Ingesting: BBCi
-[2026-04-27T23:32:13]   BBCi: +0 entries in 12.4s [good]
-[2026-04-27T23:32:13] Ingesting: DW
-[2026-04-27T23:32:19]   DW: +0 entries in 6.4s [good]
-[2026-04-27T23:32:59]   Skipping DW — next fetch in ~61m
-[2026-04-27T23:33:59]   Skipping BBCi — next fetch in ~61m
-[2026-04-27T23:46:22] Ingesting: lemonde
-[2026-04-27T23:46:30]   lemonde: +0 entries in 8.5s [good]
-[2026-04-28T19:36:18]   Skipping HuggingFace Blog — next fetch in ~547m
-[2026-04-28T19:36:18]   Skipping Understanding AI — next fetch in ~2257m
-[2026-04-28T19:36:18]   Skipping Ollama Blog — next fetch in ~2248m
-[2026-04-28T19:36:18]   Skipping Artificial Intelligence - News — next fetch in ~2955m
-[2026-04-28T19:36:18]   Skipping aiweekly news-today — next fetch in ~2951m
-[2026-04-28T19:36:18] Ingesting: Defense News
-[2026-04-28T19:36:18]   Skipping BBC World — next fetch in ~2952m
-[2026-04-28T19:36:18]   Skipping DW World — next fetch in ~2951m
-[2026-04-28T19:36:18]   Skipping France24 — next fetch in ~2953m
-[2026-04-28T19:36:18]   Skipping Aljazeera All — next fetch in ~2948m
-[2026-04-28T19:36:18]   Skipping The Guardian World — next fetch in ~2952m
-[2026-04-28T19:36:18]   Skipping NPR World — next fetch in ~2949m
-[2026-04-28T19:36:18] Daily prune: WorldToday — 120 entries removed
-[2026-04-28T19:36:32]   Defense News: +10 entries in 14.2s [good]
-[2026-04-28T19:36:32] Ingesting: Breaking Defense
-[2026-04-28T19:36:39]   Breaking Defense: +11 entries in 6.8s [good]
-[2026-04-28T19:36:39] Ingesting: airforce-technology
-[2026-04-28T19:36:39]   airforce-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.airforce-technology.com/feed/'
-For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
-[2026-04-28T19:36:39] Ingesting: army-technology
-[2026-04-28T19:36:40]   army-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.army-technology.com/feed/'
-For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
-[2026-04-28T19:36:40] Ingesting: defenseone
-[2026-04-28T19:36:58]   defenseone: +4 entries in 18.0s [good]
-[2026-04-28T19:36:58] Ingesting: ukdefencejournal
-[2026-04-28T19:36:58]   ukdefencejournal: HTTPStatusError: Server error '500 Internal Server Error' for url 'https://ukdefencejournal.org.uk/feed/'
-For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/500
-[2026-04-28T19:36:58] Ingesting: defenceiq - defence-technology
-[2026-04-28T19:37:17]   defenceiq - defence-technology: +0 entries in 18.7s [good]
-[2026-04-28T19:37:17] Ingesting: defenceiq - air-forces-military-aircraft
-[2026-04-28T19:37:38]   defenceiq - air-forces-military-aircraft: +0 entries in 21.2s [good]
-[2026-04-28T19:37:38] Web crawl: defense-aerospace WEB (https://www.defense-aerospace.com/)
-[2026-04-28T19:37:39]   defense-aerospace WEB: 50 level-1 candidates
-[2026-04-28T19:38:03]   defense-aerospace WEB: +2 articles from 50 pages in 25.4s [good]
-[2026-04-28T19:38:03] Web crawl: janes Insights (https://www.janes.com/osint-insights/defence-news)
-[2026-04-28T19:38:04]   janes Insights: 50 level-1 candidates
-[2026-04-28T19:38:40]   janes Insights: +26 articles from 50 pages in 36.5s [good]
-[2026-04-28T19:38:40] Ingesting: TechCrunch
-[2026-04-28T19:38:45]   TechCrunch: +16 entries in 4.9s [good]
-[2026-04-28T19:38:45] Ingesting: Ars Technica
-[2026-04-28T19:39:00]   Ars Technica: +13 entries in 15.1s [good]
-[2026-04-28T19:39:00] Ingesting: Hacker News
-[2026-04-28T19:39:12]   Hacker News: +20 entries in 11.6s [good]
-[2026-04-28T19:39:12] Ingesting: The Verge
-[2026-04-28T19:39:14]   The Verge: +10 entries in 2.7s [good]
-[2026-04-28T19:39:14] Ingesting: Wired
-[2026-04-28T19:39:32]   Wired: +21 entries in 17.8s [good]
-[2026-04-28T19:39:32] Ingesting: MIT Technology Review
-[2026-04-28T19:39:35]   MIT Technology Review: +2 entries in 2.6s [good]
-[2026-04-28T19:39:35] Ingesting: IEEE Spectrum
-[2026-04-28T19:39:48]   IEEE Spectrum: +3 entries in 13.3s [good]
-[2026-04-28T19:39:48] Ingesting: Tom's Hardware
-[2026-04-28T19:40:08]   Tom's Hardware: +18 entries in 19.7s [good]
-[2026-04-28T19:40:08] Ingesting: lemonde
-[2026-04-28T19:40:17]   lemonde: +20 entries in 8.9s [good]
-[2026-04-28T19:40:17] Ingesting: BBCi
-[2026-04-28T19:40:28]   BBCi: +24 entries in 11.5s [good]
-[2026-04-28T19:40:28] Ingesting: Australia ABC
-[2026-04-28T19:40:44]   Australia ABC: +25 entries in 15.6s [good]
-[2026-04-28T19:40:44] Ingesting: indianexpress
-[2026-04-28T19:40:51]   indianexpress: +24 entries in 7.5s [good]
-[2026-04-28T19:40:51] Ingesting: DW
-[2026-04-28T19:41:01]   DW: +22 entries in 9.4s [good]
-[2026-04-28T19:41:01] Ingesting: Mail / Guardian (SA)
-[2026-04-28T19:41:09]   Mail / Guardian (SA): +10 entries in 7.9s [good]
-[2026-04-28T19:41:09] Ingesting: latimes
-[2026-04-28T19:41:11]   latimes: +3 entries in 2.6s [good]
-[2026-04-28T19:41:11] Ingesting: TechCrunch
-[2026-04-28T19:41:16]   TechCrunch: +0 entries in 4.5s [good]
-[2026-04-28T19:41:16] Ingesting: indianexpress
-[2026-04-28T19:41:23]   indianexpress: +0 entries in 7.7s [good]
-[2026-04-28T19:41:23] Ingesting: defenceiq - defence-technology
-[2026-04-28T19:41:42]   defenceiq - defence-technology: +0 entries in 18.2s [good]
-[2026-04-28T19:41:42] Ingesting: Ars Technica
-[2026-04-28T19:41:57]   Ars Technica: +0 entries in 15.7s [good]
-[2026-04-28T19:41:57] Ingesting: lemonde
-[2026-04-28T19:42:03]   lemonde: +0 entries in 5.8s [good]
-[2026-04-28T19:42:03] Ingesting: ukdefencejournal
-[2026-04-28T19:42:04]   ukdefencejournal: HTTPStatusError: Server error '500 Internal Server Error' for url 'https://ukdefencejournal.org.uk/feed/'
-For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/500
-[2026-04-28T19:42:04] Ingesting: Hacker News
-[2026-04-28T19:42:12]   Hacker News: +0 entries in 8.0s [good]
-[2026-04-28T19:42:12] Ingesting: latimes
-[2026-04-28T19:42:13]   latimes: +0 entries in 1.8s [good]
-[2026-04-28T19:42:13] Ingesting: airforce-technology
-[2026-04-28T19:42:14]   airforce-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.airforce-technology.com/feed/'
-For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
-[2026-04-28T19:42:14] Ingesting: Mail / Guardian (SA)
-[2026-04-28T19:42:21]   Mail / Guardian (SA): +0 entries in 7.1s [good]
-[2026-04-28T19:42:21] Ingesting: Breaking Defense
-[2026-04-28T19:42:27]   Breaking Defense: +0 entries in 6.6s [good]
-[2026-04-28T19:42:27] Ingesting: The Verge
-[2026-04-28T19:42:30]   The Verge: +0 entries in 2.7s [good]
-[2026-04-28T19:42:30] Ingesting: MIT Technology Review
-[2026-04-28T19:42:33]   MIT Technology Review: +0 entries in 2.6s [good]
-[2026-04-28T19:42:33] Ingesting: IEEE Spectrum
-[2026-04-28T19:42:48]   IEEE Spectrum: +0 entries in 15.7s [good]
-[2026-04-28T19:42:48] Ingesting: Wired
-[2026-04-28T19:43:06]   Wired: +1 entries in 17.7s [good]
-[2026-04-28T19:43:06] Ingesting: Tom's Hardware
-[2026-04-28T19:43:18]   Skipping lemonde — next fetch in ~65m
-[2026-04-28T19:43:20]   Tom's Hardware: +0 entries in 13.8s [good]
-[2026-04-28T19:43:20] Ingesting: defenseone
-[2026-04-28T19:43:39]   defenseone: +0 entries in 18.9s [good]
-[2026-04-28T19:43:39] Web crawl: janes Insights (https://www.janes.com/osint-insights/defence-news)
-[2026-04-28T19:43:39]   janes Insights: 50 level-1 candidates
-[2026-04-28T19:44:07]   janes Insights: +0 articles from 50 pages in 27.6s [good]
-[2026-04-28T19:44:07] Ingesting: defenceiq - air-forces-military-aircraft
-[2026-04-28T19:44:26]   defenceiq - air-forces-military-aircraft: +0 entries in 19.7s [good]
-[2026-04-28T19:44:26] Ingesting: army-technology
-[2026-04-28T19:44:27]   army-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.army-technology.com/feed/'
-For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
-[2026-04-28T19:44:27] Web crawl: defense-aerospace WEB (https://www.defense-aerospace.com/)
-[2026-04-28T19:44:27]   defense-aerospace WEB: 50 level-1 candidates
-[2026-04-28T19:44:39]   defense-aerospace WEB: +0 articles from 50 pages in 12.0s [good]
-[2026-04-28T19:44:39] Ingesting: Defense News
-[2026-04-28T19:44:53]   Defense News: +0 entries in 14.9s [good]
-[2026-04-28T19:44:53] Ingesting: DW
-[2026-04-28T19:45:05]   DW: +0 entries in 11.3s [good]
-[2026-04-28T19:45:05] Ingesting: Australia ABC
-[2026-04-28T19:45:21]   Australia ABC: +0 entries in 16.7s [good]
-[2026-04-28T19:45:21] Ingesting: BBCi
-[2026-04-28T19:45:33]   BBCi: +0 entries in 11.1s [good]
-[2026-04-28T19:45:33] Ingesting: indianexpress
-[2026-04-28T19:45:40]   indianexpress: +0 entries in 7.8s [good]
-[2026-04-28T19:45:40] Ingesting: DW
-[2026-04-28T19:45:49]   DW: +0 entries in 8.2s [good]
-[2026-04-28T19:45:49] Ingesting: BBCi
-[2026-04-28T19:46:01]   BBCi: +0 entries in 12.9s [good]
-[2026-04-28T20:32:18]   Skipping Australia ABC — next fetch in ~11m
-[2026-04-28T20:32:18]   Skipping latimes — next fetch in ~7m
-[2026-04-28T20:36:18]   Skipping Mail / Guardian (SA) — next fetch in ~6m
-[2026-04-28T20:38:18]   Skipping indianexpress — next fetch in ~8m
-[2026-04-28T20:40:18]   Skipping DW — next fetch in ~7m
-[2026-04-28T20:42:18]   Skipping BBCi — next fetch in ~6m
-[2026-04-28T20:50:18] Ingesting: lemonde
-[2026-04-28T20:50:28]   lemonde: +4 entries in 9.4s [good]
-[2026-04-28T21:30:18] Ingesting: Australia ABC
-[2026-04-28T21:30:35]   Australia ABC: +17 entries in 16.4s [good]
-[2026-04-28T21:30:35] Ingesting: latimes
-[2026-04-28T21:30:37]   latimes: +0 entries in 2.6s [good]
-[2026-04-28T21:36:18] Ingesting: Mail / Guardian (SA)
-[2026-04-28T21:36:34]   Mail / Guardian (SA): +0 entries in 15.8s [good]
-[2026-04-28T21:39:18] Ingesting: indianexpress
-[2026-04-28T21:39:26]   indianexpress: +0 entries in 8.2s [good]
-[2026-04-28T21:42:18] Ingesting: DW
-[2026-04-28T21:42:31]   DW: +3 entries in 13.1s [good]
-[2026-04-28T21:45:18] Ingesting: BBCi
-[2026-04-28T21:45:38]   BBCi: +8 entries in 19.7s [good]
-[2026-04-28T21:57:18]   Skipping lemonde — next fetch in ~0m
-[2026-04-28T21:59:55]   Skipping HuggingFace Blog — next fetch in ~404m
-[2026-04-28T21:59:55]   Skipping Understanding AI — next fetch in ~2113m
-[2026-04-28T21:59:55]   Skipping Ollama Blog — next fetch in ~2104m
-[2026-04-28T21:59:55]   Skipping Artificial Intelligence - News — next fetch in ~2811m
-[2026-04-28T21:59:55]   Skipping aiweekly news-today — next fetch in ~2807m
-[2026-04-28T21:59:55]   Skipping Defense News — next fetch in ~2862m
-[2026-04-28T21:59:55]   Skipping Breaking Defense — next fetch in ~2869m
-[2026-04-28T21:59:55] Ingesting: airforce-technology
-[2026-04-28T21:59:55]   Skipping defenseone — next fetch in ~2866m
-[2026-04-28T21:59:55]   Skipping defenceiq - defence-technology — next fetch in ~2862m
-[2026-04-28T21:59:55]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~2861m
-[2026-04-28T21:59:55]   Skipping defense-aerospace WEB — next fetch in ~2867m
-[2026-04-28T21:59:55]   Skipping janes Insights — next fetch in ~2860m
-[2026-04-28T21:59:55]   Skipping TechCrunch — next fetch in ~221m
-[2026-04-28T21:59:55]   Skipping Ars Technica — next fetch in ~222m
-[2026-04-28T21:59:55]   Skipping Hacker News — next fetch in ~223m
-[2026-04-28T21:59:55]   Skipping The Verge — next fetch in ~221m
-[2026-04-28T21:59:55]   Skipping Wired — next fetch in ~223m
-[2026-04-28T21:59:55]   Skipping MIT Technology Review — next fetch in ~224m
-[2026-04-28T21:59:55]   Skipping IEEE Spectrum — next fetch in ~225m
-[2026-04-28T21:59:55]   Skipping Tom's Hardware — next fetch in ~221m
-[2026-04-28T21:59:55]   Skipping BBC World — next fetch in ~2808m
-[2026-04-28T21:59:55]   Skipping DW World — next fetch in ~2808m
-[2026-04-28T21:59:55]   Skipping France24 — next fetch in ~2809m
-[2026-04-28T21:59:55]   Skipping Aljazeera All — next fetch in ~2805m
-[2026-04-28T21:59:55]   Skipping The Guardian World — next fetch in ~2809m
-[2026-04-28T21:59:55]   Skipping NPR World — next fetch in ~2805m
-[2026-04-28T21:59:55]   Skipping BBCi — next fetch in ~48m
-[2026-04-28T21:59:55]   Skipping Australia ABC — next fetch in ~28m
-[2026-04-28T21:59:55]   Skipping indianexpress — next fetch in ~40m
-[2026-04-28T21:59:55]   Skipping DW — next fetch in ~44m
-[2026-04-28T21:59:55]   Skipping Mail / Guardian (SA) — next fetch in ~36m
-[2026-04-28T21:59:55]   Skipping latimes — next fetch in ~28m
-[2026-04-28T21:59:55]   Skipping Mail / Guardian (SA) — next fetch in ~36m
-[2026-04-28T21:59:55]   Skipping latimes — next fetch in ~28m
-[2026-04-28T21:59:55]   Skipping Australia ABC — next fetch in ~28m
-[2026-04-28T21:59:55]   Skipping indianexpress — next fetch in ~40m
-[2026-04-28T21:59:55]   Skipping DW — next fetch in ~44m
-[2026-04-28T21:59:55]   Skipping BBCi — next fetch in ~48m
-[2026-04-28T21:59:55]   airforce-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.airforce-technology.com/feed/'
-For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
 [2026-04-28T21:59:55] Ingesting: army-technology
 [2026-04-28T21:59:55]   army-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.army-technology.com/feed/'
 For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
@@ -998,3 +786,215 @@ For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/St
 [2026-04-29T22:34:59]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~1386m
 [2026-04-29T22:34:59]   Skipping defense-aerospace WEB — next fetch in ~1392m
 [2026-04-29T22:34:59]   Skipping janes Insights — next fetch in ~1385m
+[2026-04-30T22:19:18]   Skipping HuggingFace Blog — next fetch in ~2009m
+[2026-04-30T22:19:18] Ingesting: Understanding AI
+[2026-04-30T22:19:18]   Skipping ukdefencejournal — next fetch in ~99m
+[2026-04-30T22:19:18] Daily prune: AiNews — 4 entries removed
+[2026-04-30T22:19:21]   Understanding AI: +0 entries in 3.0s [good]
+[2026-04-30T22:19:21] Ingesting: Ollama Blog
+[2026-04-30T22:19:21]   Ollama Blog: +0 entries in 0.3s [none]
+[2026-04-30T22:19:21] Web crawl: Artificial Intelligence - News (https://www.artificialintelligence-news.com/)
+[2026-04-30T22:19:21]   Artificial Intelligence - News: 50 level-1 candidates
+[2026-04-30T22:19:40]   Artificial Intelligence - News: +3 articles from 50 pages in 19.1s [good]
+[2026-04-30T22:19:40] Web crawl: aiweekly news-today (https://aiweekly.co/ai-news-today)
+[2026-04-30T22:19:41]   aiweekly news-today: 50 level-1 candidates
+[2026-04-30T22:20:06]   aiweekly news-today: +5 articles from 50 pages in 25.7s [good]
+[2026-04-30T22:20:06] Ingesting: Defense News
+[2026-04-30T22:20:25]   Defense News: +19 entries in 18.9s [good]
+[2026-04-30T22:20:25] Ingesting: Breaking Defense
+[2026-04-30T22:20:31]   Breaking Defense: +15 entries in 6.2s [good]
+[2026-04-30T22:20:31] Ingesting: airforce-technology
+[2026-04-30T22:20:31]   airforce-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.airforce-technology.com/feed/'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+[2026-04-30T22:20:31] Ingesting: army-technology
+[2026-04-30T22:20:31]   army-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.army-technology.com/feed/'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+[2026-04-30T22:20:31] Ingesting: defenseone
+[2026-04-30T22:20:53]   defenseone: +11 entries in 21.7s [good]
+[2026-04-30T22:20:53] Ingesting: defenceiq - defence-technology
+[2026-04-30T22:21:12]   defenceiq - defence-technology: +0 entries in 18.7s [good]
+[2026-04-30T22:21:12] Ingesting: defenceiq - air-forces-military-aircraft
+[2026-04-30T22:21:33]   defenceiq - air-forces-military-aircraft: +0 entries in 21.2s [good]
+[2026-04-30T22:21:33] Web crawl: defense-aerospace WEB (https://www.defense-aerospace.com/)
+[2026-04-30T22:21:33]   defense-aerospace WEB: 50 level-1 candidates
+[2026-04-30T22:22:02]   defense-aerospace WEB: +0 articles from 50 pages in 29.2s [good]
+[2026-04-30T22:22:02] Web crawl: janes Insights (https://www.janes.com/osint-insights/defence-news)
+[2026-04-30T22:22:03]   janes Insights: 35 level-1 candidates
+[2026-04-30T22:22:24]   janes Insights: +16 articles from 35 pages in 21.5s [good]
+[2026-04-30T22:22:24] Ingesting: defenceiq - defence-technology
+[2026-04-30T22:22:42]   defenceiq - defence-technology: +0 entries in 18.0s [good]
+[2026-04-30T22:22:42] Web crawl: aiweekly news-today (https://aiweekly.co/ai-news-today)
+[2026-04-30T22:22:42]   aiweekly news-today: 50 level-1 candidates
+[2026-04-30T22:23:07]   aiweekly news-today: +0 articles from 50 pages in 25.4s [good]
+[2026-04-30T22:23:07] Web crawl: Artificial Intelligence - News (https://www.artificialintelligence-news.com/)
+[2026-04-30T22:23:07]   Artificial Intelligence - News: 50 level-1 candidates
+[2026-04-30T22:23:29]   Artificial Intelligence - News: +0 articles from 50 pages in 22.1s [good]
+[2026-04-30T22:23:29] Ingesting: Breaking Defense
+[2026-04-30T22:23:36]   Breaking Defense: +0 entries in 6.2s [good]
+[2026-04-30T22:23:36] Ingesting: Ollama Blog
+[2026-04-30T22:23:36]   Ollama Blog: +0 entries in 0.3s [none]
+[2026-04-30T22:23:36] Ingesting: Understanding AI
+[2026-04-30T22:23:37]   Understanding AI: +0 entries in 1.6s [good]
+[2026-04-30T22:23:37] Ingesting: airforce-technology
+[2026-04-30T22:23:38]   airforce-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.airforce-technology.com/feed/'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+[2026-04-30T22:23:38] Web crawl: janes Insights (https://www.janes.com/osint-insights/defence-news)
+[2026-04-30T22:23:38]   janes Insights: 35 level-1 candidates
+[2026-04-30T22:23:56]   janes Insights: +0 articles from 35 pages in 18.7s [good]
+[2026-04-30T22:23:56] Web crawl: defense-aerospace WEB (https://www.defense-aerospace.com/)
+[2026-04-30T22:23:57]   defense-aerospace WEB: 50 level-1 candidates
+[2026-04-30T22:24:08]   defense-aerospace WEB: +0 articles from 50 pages in 12.1s [good]
+[2026-04-30T22:24:08] Ingesting: Defense News
+[2026-04-30T22:24:18]   Defense News: +0 entries in 9.7s [good]
+[2026-04-30T22:24:18] Ingesting: defenseone
+[2026-04-30T22:24:39]   defenseone: +0 entries in 20.5s [good]
+[2026-04-30T22:24:39] Ingesting: defenceiq - air-forces-military-aircraft
+[2026-04-30T22:24:58]   defenceiq - air-forces-military-aircraft: +0 entries in 19.3s [good]
+[2026-04-30T22:24:58] Ingesting: army-technology
+[2026-04-30T22:24:58]   army-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.army-technology.com/feed/'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+[2026-04-30T22:50:39]   Skipping HuggingFace Blog — next fetch in ~1978m
+[2026-04-30T22:50:39]   Skipping Understanding AI — next fetch in ~5282m
+[2026-04-30T22:50:39]   Skipping Ollama Blog — next fetch in ~5273m
+[2026-04-30T22:50:39]   Skipping Artificial Intelligence - News — next fetch in ~5980m
+[2026-04-30T22:50:39]   Skipping aiweekly news-today — next fetch in ~5977m
+[2026-04-30T22:50:39]   Skipping Defense News — next fetch in ~2971m
+[2026-04-30T22:50:39]   Skipping Breaking Defense — next fetch in ~2979m
+[2026-04-30T22:50:39] Ingesting: airforce-technology
+[2026-04-30T22:50:39]   Skipping defenseone — next fetch in ~2976m
+[2026-04-30T22:50:39]   Skipping ukdefencejournal — next fetch in ~68m
+[2026-04-30T22:50:39]   Skipping defenceiq - defence-technology — next fetch in ~2973m
+[2026-04-30T22:50:39]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~2971m
+[2026-04-30T22:50:39]   Skipping defense-aerospace WEB — next fetch in ~2976m
+[2026-04-30T22:50:39]   Skipping janes Insights — next fetch in ~2969m
+[2026-04-30T22:50:39]   airforce-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.airforce-technology.com/feed/'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+[2026-04-30T22:50:39] Ingesting: army-technology
+[2026-04-30T22:50:39]   army-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.army-technology.com/feed/'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+[2026-04-30T22:50:39] Ingesting: airforce-technology
+[2026-04-30T22:50:40]   airforce-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.airforce-technology.com/feed/'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+[2026-04-30T22:50:40] Ingesting: army-technology
+[2026-04-30T22:50:40]   army-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.army-technology.com/feed/'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+[2026-04-30T22:54:24]   Skipping HuggingFace Blog — next fetch in ~1974m
+[2026-04-30T22:54:24]   Skipping Understanding AI — next fetch in ~5279m
+[2026-04-30T22:54:24]   Skipping Ollama Blog — next fetch in ~5270m
+[2026-04-30T22:54:24]   Skipping Artificial Intelligence - News — next fetch in ~5977m
+[2026-04-30T22:54:24]   Skipping aiweekly news-today — next fetch in ~5973m
+[2026-04-30T22:54:24]   Skipping Defense News — next fetch in ~2967m
+[2026-04-30T22:54:24]   Skipping Breaking Defense — next fetch in ~2976m
+[2026-04-30T22:54:24] Ingesting: airforce-technology
+[2026-04-30T22:54:24]   Skipping defenseone — next fetch in ~2973m
+[2026-04-30T22:54:24]   Skipping ukdefencejournal — next fetch in ~64m
+[2026-04-30T22:54:24]   Skipping defenceiq - defence-technology — next fetch in ~2969m
+[2026-04-30T22:54:24]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~2967m
+[2026-04-30T22:54:24]   Skipping defense-aerospace WEB — next fetch in ~2972m
+[2026-04-30T22:54:24]   Skipping janes Insights — next fetch in ~2965m
+[2026-04-30T22:54:24]   airforce-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.airforce-technology.com/feed/'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+[2026-04-30T22:54:24] Ingesting: army-technology
+[2026-04-30T22:54:24]   army-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.army-technology.com/feed/'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+[2026-04-30T22:54:24] Ingesting: airforce-technology
+[2026-04-30T22:54:24]   airforce-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.airforce-technology.com/feed/'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+[2026-04-30T22:54:24] Ingesting: army-technology
+[2026-04-30T22:54:25]   army-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.army-technology.com/feed/'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+[2026-04-30T22:59:10]   Skipping ukdefencejournal — next fetch in ~59m
+[2026-05-01T11:05:11]   Skipping HuggingFace Blog — next fetch in ~1244m
+[2026-05-01T11:05:11]   Skipping Understanding AI — next fetch in ~4548m
+[2026-05-01T11:05:11]   Skipping Ollama Blog — next fetch in ~4539m
+[2026-05-01T11:05:11]   Skipping Artificial Intelligence - News — next fetch in ~5246m
+[2026-05-01T11:05:11]   Skipping aiweekly news-today — next fetch in ~5242m
+[2026-05-01T11:05:11]   Skipping Defense News — next fetch in ~2237m
+[2026-05-01T11:05:11]   Skipping Breaking Defense — next fetch in ~2245m
+[2026-05-01T11:05:11] Ingesting: airforce-technology
+[2026-05-01T11:05:11]   Skipping defenseone — next fetch in ~2242m
+[2026-05-01T11:05:11]   Skipping defenceiq - defence-technology — next fetch in ~2238m
+[2026-05-01T11:05:11]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~2236m
+[2026-05-01T11:05:11] Daily prune: AiNews — 3 entries removed
+[2026-05-01T11:05:11]   Skipping defense-aerospace WEB — next fetch in ~2241m
+[2026-05-01T11:05:11]   Skipping janes Insights — next fetch in ~2234m
+[2026-05-01T11:05:11]   airforce-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.airforce-technology.com/feed/'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+[2026-05-01T11:05:11] Ingesting: army-technology
+[2026-05-01T11:05:11]   army-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.army-technology.com/feed/'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+[2026-05-01T11:05:11] Ingesting: ukdefencejournal
+[2026-05-01T11:05:14]   ukdefencejournal: +10 entries in 3.0s [good]
+[2026-05-01T11:05:14] Ingesting: ukdefencejournal
+[2026-05-01T11:05:17]   ukdefencejournal: +0 entries in 3.0s [good]
+[2026-05-01T11:05:17] Ingesting: airforce-technology
+[2026-05-01T11:05:17]   airforce-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.airforce-technology.com/feed/'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+[2026-05-01T11:05:17] Ingesting: army-technology
+[2026-05-01T11:05:17]   army-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.army-technology.com/feed/'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+[2026-05-01T13:50:03]   Skipping HuggingFace Blog — next fetch in ~1079m
+[2026-05-01T13:50:03]   Skipping Understanding AI — next fetch in ~4383m
+[2026-05-01T13:50:03]   Skipping Ollama Blog — next fetch in ~4374m
+[2026-05-01T13:50:03]   Skipping Artificial Intelligence - News — next fetch in ~5081m
+[2026-05-01T13:50:03]   Skipping aiweekly news-today — next fetch in ~5078m
+[2026-05-01T13:50:03]   Skipping Defense News — next fetch in ~2072m
+[2026-05-01T13:50:03]   Skipping Breaking Defense — next fetch in ~2080m
+[2026-05-01T13:50:03] Ingesting: airforce-technology
+[2026-05-01T13:50:03]   Skipping defenseone — next fetch in ~2077m
+[2026-05-01T13:50:03]   Skipping ukdefencejournal — next fetch in ~2834m
+[2026-05-01T13:50:03]   Skipping defenceiq - defence-technology — next fetch in ~2073m
+[2026-05-01T13:50:03]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~2071m
+[2026-05-01T13:50:03]   Skipping defense-aerospace WEB — next fetch in ~2077m
+[2026-05-01T13:50:03]   Skipping janes Insights — next fetch in ~2069m
+[2026-05-01T13:50:03]   airforce-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.airforce-technology.com/feed/'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+[2026-05-01T13:50:03] Ingesting: army-technology
+[2026-05-01T13:50:03]   army-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.army-technology.com/feed/'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+[2026-05-01T13:50:03] Ingesting: airforce-technology
+[2026-05-01T13:50:03]   airforce-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.airforce-technology.com/feed/'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+[2026-05-01T13:50:03] Ingesting: army-technology
+[2026-05-01T13:50:03]   army-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.army-technology.com/feed/'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+[2026-05-01T14:20:15]   Skipping HuggingFace Blog — next fetch in ~1049m
+[2026-05-01T14:20:15]   Skipping Understanding AI — next fetch in ~4353m
+[2026-05-01T14:20:15]   Skipping Ollama Blog — next fetch in ~4344m
+[2026-05-01T14:20:15]   Skipping Artificial Intelligence - News — next fetch in ~5051m
+[2026-05-01T14:20:15]   Skipping aiweekly news-today — next fetch in ~5047m
+[2026-05-01T14:20:15]   Skipping Defense News — next fetch in ~2042m
+[2026-05-01T14:20:15]   Skipping Breaking Defense — next fetch in ~2050m
+[2026-05-01T14:20:15] Ingesting: airforce-technology
+[2026-05-01T14:20:15]   Skipping defenseone — next fetch in ~2047m
+[2026-05-01T14:20:15]   Skipping ukdefencejournal — next fetch in ~2804m
+[2026-05-01T14:20:15]   Skipping defenceiq - defence-technology — next fetch in ~2043m
+[2026-05-01T14:20:15]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~2041m
+[2026-05-01T14:20:15]   Skipping defense-aerospace WEB — next fetch in ~2046m
+[2026-05-01T14:20:15]   Skipping janes Insights — next fetch in ~2039m
+[2026-05-01T14:20:15]   airforce-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.airforce-technology.com/feed/'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+[2026-05-01T14:20:15] Ingesting: army-technology
+[2026-05-01T14:20:15]   army-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.army-technology.com/feed/'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+[2026-05-01T14:20:15] Ingesting: airforce-technology
+[2026-05-01T14:20:16]   airforce-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.airforce-technology.com/feed/'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+[2026-05-01T14:20:16] Ingesting: army-technology
+[2026-05-01T14:20:16]   army-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.army-technology.com/feed/'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+[2026-05-01T14:26:10] Ingesting: army-technology
+[2026-05-01T14:26:10]   army-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.army-technology.com/feed/'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+[2026-05-01T15:23:35]   Skipping HuggingFace Blog — next fetch in ~985m
+[2026-05-01T15:23:35]   Skipping Understanding AI — next fetch in ~4290m
+[2026-05-01T15:23:35]   Skipping Artificial Intelligence - News — next fetch in ~4987m
+[2026-05-01T15:23:35]   Skipping aiweekly news-today — next fetch in ~4984m
+[2026-05-01T15:23:35]   Skipping Defense News — next fetch in ~1978m
+[2026-05-01T15:23:35]   Skipping Breaking Defense — next fetch in ~1986m
+[2026-05-01T15:23:35]   Skipping defenseone — next fetch in ~1984m
+[2026-05-01T15:23:35]   Skipping ukdefencejournal — next fetch in ~2740m
+[2026-05-01T15:23:35]   Skipping defenceiq - defence-technology — next fetch in ~1980m
+[2026-05-01T15:23:35]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~1978m
+[2026-05-01T15:23:35]   Skipping defense-aerospace WEB — next fetch in ~1983m
+[2026-05-01T15:23:35]   Skipping janes Insights — next fetch in ~1976m

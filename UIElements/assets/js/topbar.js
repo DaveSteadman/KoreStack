@@ -2,9 +2,9 @@
  * topbar.js — shared top bar for Kore suite applications.
  */
 
-import { SUITE_ICONS, resolveIcon } from './icons.js';
+import { SUITE_ICONS, resolveIcon } from './icons.js?v=20260501a';
 import { SUITE_VERSION } from './suiteMeta.js';
-import { applyTheme, themeFor } from './theme.js';
+import { applyTheme, themeFor } from './theme.js?v=20260501a';
 
 const DEFAULT_HOST = '127.0.0.1';
 
@@ -14,6 +14,7 @@ const DEFAULT_SERVICES = [
 	{ key: 'koreconversation', label: 'KoreConversation', path: '/ui', port: 8700, icon: 'koreconversation' },
 	{ key: 'koredata', label: 'KoreData', path: '/', port: 8800, icon: 'koredata' },
 	{ key: 'koredocs', label: 'KoreDocs', path: '/kf', port: 5500, icon: 'koredocs' },
+	{ key: 'korecode', label: 'KoreCode', path: '/code', port: 5600, icon: 'korecode' },
 	{ key: 'korecomms', label: 'KoreComms', path: '/', port: 8900, icon: 'korecomms' },
 ];
 

@@ -29,6 +29,7 @@ Start only selected services behind KoreStack:
 
 ```powershell
 python .\main.py --services conversation,docs
+python .\main.py --services docs,code
 ```
 
 Start services without opening the landing page HTTP server:

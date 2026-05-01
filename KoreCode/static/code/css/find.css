@@ -1,0 +1,42 @@
+#editor-findbar {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto auto;
+  gap: 8px;
+  align-items: center;
+  min-height: 40px;
+  padding: 4px 10px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+#editor-findbar[hidden] {
+  display: none;
+}
+
+#editor-findbar label {
+  color: var(--text-dim);
+  font-size: var(--kcui-text-label);
+  letter-spacing: var(--kcui-tracking-label);
+  text-transform: uppercase;
+}
+
+#find-input {
+  height: 30px;
+  min-width: 0;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 0;
+  background: var(--bg);
+  color: var(--text);
+}
+
+#find-input:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--accent) 52%, transparent);
+}
+
+@media (max-width: 680px) {
+  #editor-findbar {
+    grid-template-columns: 1fr;
+  }
+}

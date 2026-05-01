@@ -191,36 +191,7 @@ html, body {
     text-overflow: ellipsis;
 }
 
-/* ============================================================
-   STATUS PILLS
-   ============================================================ */
-
-.pill {
-    display:       inline-block;
-    font-size:     9px;
-    padding:       0 5px;
-    border-radius: 8px;
-    border:        1px solid currentColor;
-    white-space:   nowrap;
-}
-.pill-active            { color: var(--green);  }
-.pill-awaiting_inbound  { color: var(--green);  }
-.pill-waiting_agent     { color: var(--yellow); }
-.pill-agent_processing  { color: var(--cyan);   }
-.pill-archived          { color: var(--text-dim); }
-.pill-deleted           { color: var(--red);    }
-
-.pill-inbound  { color: var(--accent); }
-.pill-outbound { color: var(--green);  }
-
-.pill-admin    { color: var(--yellow); }
-.pill-external { color: var(--text-dim); }
-.pill-readonly { color: var(--red); }
-
-.pill-pending   { color: var(--yellow); }
-.pill-claimed   { color: var(--cyan);   }
-.pill-completed { color: var(--green);  }
-.pill-failed    { color: var(--red);    }
+/* Status and direction tags now use .kcui-tag from UIElements/assets/css/tags.css */
 
 /* ============================================================
    SPLITTER

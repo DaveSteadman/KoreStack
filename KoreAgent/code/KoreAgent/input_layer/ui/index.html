@@ -53,10 +53,10 @@
             <div class="panel-header kcui-panel-header">
                 <span id="log-panel-title">Log</span>
                 <span class="header-spacer"></span>
-                <button class="wrap-btn" id="log-btn-up"   onclick="logNavStep(-1)">&#x2191;</button>
-                <button class="wrap-btn" id="log-btn-down" onclick="logNavStep(+1)">&#x2193;</button>
-                <button class="wrap-btn wrap-active" id="log-btn-live" onclick="toggleLogLive()">live</button>
-                <button class="wrap-btn" id="wrap-btn-log" onclick="toggleWrap('log-body','wrap-btn-log')">wrap</button>
+                <button class="kcui-tag kcui-tag--dim" id="log-btn-up"   onclick="logNavStep(-1)">&#x2191;</button>
+                <button class="kcui-tag kcui-tag--dim" id="log-btn-down" onclick="logNavStep(+1)">&#x2193;</button>
+                <button class="kcui-tag kcui-tag--dim is-on" id="log-btn-live" onclick="toggleLogLive()">live</button>
+                <button class="kcui-tag kcui-tag--dim" id="wrap-btn-log" onclick="toggleWrap('log-body','wrap-btn-log')">wrap</button>
             </div>
             <div class="panel-body kcui-panel-body nowrap" id="log-body"></div>
         </div>
@@ -75,9 +75,9 @@
             <div class="panel-header kcui-panel-header">
                 Chat: <span id="chat-panel-title"></span>
                 <span class="header-spacer"></span>
-                <button class="wrap-btn" id="sandbox-btn" onclick="toggleSandbox()">sandbox</button>
-                <button class="wrap-btn" id="webskills-btn" onclick="toggleWebSkills()">web</button>
-                <button class="wrap-btn" id="wrap-btn-chat" onclick="toggleWrap('chat-body','wrap-btn-chat')">wrap</button>
+                <button class="kcui-tag kcui-tag--dim" id="sandbox-btn" onclick="toggleSandbox()">sandbox</button>
+                <button class="kcui-tag kcui-tag--dim" id="webskills-btn" onclick="toggleWebSkills()">web</button>
+                <button class="kcui-tag kcui-tag--dim" id="wrap-btn-chat" onclick="toggleWrap('chat-body','wrap-btn-chat')">wrap</button>
             </div>
             <div class="panel-body kcui-panel-body nowrap" id="chat-body"></div>
         </div>
@@ -111,7 +111,7 @@
 <div id="slash-suggest" hidden></div>
 
 <script type="module">
-    import { initAppBar, initTopbar } from '/ui-elements/assets/js/chrome.js';
+    import { initAppBar, initTopbar } from '/ui-elements/assets/js/chrome.js?v=20260501a';
     import { initWorkspaceLayouts } from '/ui-elements/assets/js/workspace.js';
     initTopbar({ currentService: 'koreagent' });
     initAppBar({

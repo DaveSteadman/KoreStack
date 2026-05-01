@@ -74,6 +74,15 @@ SERVICE_META: dict[str, dict[str, object]] = {
         "health_suffix": "/kf",
         "description": "KoreDocs file manager plus the doc, sheet, and diagram editors.",
     },
+    "code": {
+        "label": "KoreCode",
+        "cwd": SUITE_ROOT / "KoreCode",
+        "script": "main.py",
+        "port": 5600,
+        "url_suffix": "/code",
+        "health_suffix": "/status",
+        "description": "KoreCode lightweight code editor rooted at the KoreStack workspace.",
+    },
     "comms": {
         "label": "KoreComms",
         "cwd": SUITE_ROOT / "KoreComms",
@@ -90,6 +99,7 @@ SERVICE_ICON_KEYS: dict[str, str] = {
     "conversation": "koreconversation",
     "data": "koredata",
     "docs": "koredocs",
+    "code": "korecode",
     "comms": "korecomms",
 }
 
@@ -200,7 +210,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--services",
         default="all",
-        help="Comma-separated service list. Valid values: all, agent, conversation, data, docs, comms.",
+        help="Comma-separated service list. Valid values: all, agent, conversation, data, docs, code, comms.",
     )
     parser.add_argument("--host", default=None, help="KoreStack landing page bind address.")
     parser.add_argument("--ui-port", type=int, default=None, help="KoreStack landing page port.")
@@ -213,7 +223,7 @@ def parse_args() -> argparse.Namespace:
 def resolve_services(raw: str, services: dict[str, ServiceSpec]) -> list[ServiceSpec]:
     selected = [part.strip().lower() for part in raw.split(",") if part.strip()]
     if not selected or selected == ["all"]:
-        return [services[key] for key in ("agent", "conversation", "data", "docs", "comms")]
+        return [services[key] for key in ("agent", "conversation", "data", "docs", "code", "comms")]
 
     unknown = [name for name in selected if name not in services]
     if unknown:
@@ -398,6 +408,7 @@ def html_page(manager: StackManager, dashboard_url: str) -> str:
         "koreconversation": "http://127.0.0.1:8700/ui",
         "koredata": "http://127.0.0.1:8800/",
         "koredocs": "http://127.0.0.1:5500/kf",
+        "korecode": "http://127.0.0.1:5600/code",
         "korecomms": "http://127.0.0.1:8900/",
     }
     rows = []
@@ -470,6 +481,7 @@ def html_page(manager: StackManager, dashboard_url: str) -> str:
             --service-conversation: #59d7ff;
             --service-data: #a78bfa;
             --service-docs: #ffd166;
+            --service-code: #7ee081;
             --service-comms: #ff8fab;
     }}
     * {{ box-sizing: border-box; }}
@@ -541,6 +553,7 @@ def html_page(manager: StackManager, dashboard_url: str) -> str:
         .service-conversation {{ --service-accent: var(--service-conversation); }}
         .service-data {{ --service-accent: var(--service-data); }}
         .service-docs {{ --service-accent: var(--service-docs); }}
+        .service-code {{ --service-accent: var(--service-code); }}
         .service-comms {{ --service-accent: var(--service-comms); }}
     @media (max-width: 860px) {{
             .path-row {{ grid-template-columns: 1fr; gap: 6px; }}
@@ -585,7 +598,7 @@ def html_page(manager: StackManager, dashboard_url: str) -> str:
         </section>
   </main>
   <script type="module">
-    import {{ initAppBar, initTopbar }} from '/ui-elements/assets/js/chrome.js';
+    import {{ initAppBar, initTopbar }} from '/ui-elements/assets/js/chrome.js?v=20260501a';
         function topbarIconFor(serviceKey) {{
             return document.querySelector(`.ktopbar-item[data-service="${{serviceKey}}"] .ktopbar-icon`)?.innerHTML || '';
         }}
@@ -596,6 +609,7 @@ def html_page(manager: StackManager, dashboard_url: str) -> str:
                 conversation: 'koreconversation',
                 data: 'koredata',
                 docs: 'koredocs',
+                code: 'korecode',
                 comms: 'korecomms',
             }};
             for (const row of document.querySelectorAll('[data-service-card]')) {{
@@ -706,12 +720,14 @@ def build_handler(manager: StackManager, dashboard_url: str):
                 return
 
         def do_GET(self) -> None:  # noqa: N802
-            if self.path in ("/", ""):
+            request_path = urllib.parse.urlsplit(self.path).path
+
+            if request_path in ("/", ""):
                 body = html_page(self.manager_ref, self.dashboard_ref).encode("utf-8")
                 self._send_bytes(body, "text/html; charset=utf-8")
                 return
 
-            if self.path == "/status":
+            if request_path == "/status":
                 body = json.dumps(self.manager_ref.snapshot(), indent=2).encode("utf-8")
                 self.send_response(HTTPStatus.OK)
                 self.send_header("Content-Type", "application/json; charset=utf-8")
@@ -724,15 +740,16 @@ def build_handler(manager: StackManager, dashboard_url: str):
                     return
                 return
 
-            if self.path.startswith("/ui-elements/assets/"):
-                self._serve_ui_asset(self.path.removeprefix("/ui-elements/assets/"))
+            if request_path.startswith("/ui-elements/assets/"):
+                self._serve_ui_asset(request_path.removeprefix("/ui-elements/assets/"))
                 return
 
             self.send_error(HTTPStatus.NOT_FOUND, "Not found")
 
         def do_POST(self) -> None:  # noqa: N802
-            if self.path.startswith("/api/services/"):
-                parts = [part for part in self.path.split("/") if part]
+            request_path = urllib.parse.urlsplit(self.path).path
+            if request_path.startswith("/api/services/"):
+                parts = [part for part in request_path.split("/") if part]
                 if len(parts) != 4:
                     self.send_error(HTTPStatus.NOT_FOUND, "Unknown service action")
                     return

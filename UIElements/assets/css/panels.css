@@ -198,6 +198,65 @@
   line-height: var(--kcui-leading-dense);
 }
 
+/* ──────────────────────────────────────────────────────────────
+   Split-panel layout  (two panels + draggable vertical divider)
+   Use alongside panels.js → initPanels()
+   ────────────────────────────────────────────────────────────── */
+
+.kcui-panels {
+  --kcui-panel-left-w: 290px;
+  --kcui-splitter-w: 4px;
+  display: grid;
+  grid-template-columns: var(--kcui-panel-left-w) var(--kcui-splitter-w) minmax(0, 1fr);
+  overflow: hidden;
+  height: 100%;
+}
+
+.kcui-panel-left {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border-right: 1px solid var(--border);
+}
+
+.kcui-splitter {
+  background: var(--border);
+  cursor: col-resize;
+  flex-shrink: 0;
+  transition: background 0.1s;
+}
+
+.kcui-splitter:hover,
+.kcui-splitter.is-dragging {
+  background: color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+.kcui-panel-right {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+@media (max-width: 680px) {
+  .kcui-panels {
+    grid-template-columns: 1fr;
+    grid-template-rows: var(--kcui-panel-left-w) var(--kcui-splitter-w) minmax(0, 1fr);
+  }
+
+  .kcui-panel-left {
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .kcui-splitter {
+    cursor: row-resize;
+  }
+}
+
 .kcui-section-note {
   color: var(--text-dim);
   font-size: var(--kcui-text-label);
