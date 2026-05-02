@@ -2,11 +2,11 @@
  * fileio.js — KoreFile-backed file state + autosave for KoreDiag, plus PNG export.
  */
 
-import { createKfSyncController } from '/static/shared/js/kfSyncController.js';
+import { createKorefileSyncController } from '/static/shared/js/korefileSyncController.js';
 import { newDiagram } from './model.js';
 import { getDiagram, isDirty, markDirty, markSaved } from './store.js';
 
-const _controller = createKfSyncController({
+const _controller = createKorefileSyncController({
   logLabel: 'KoreDiag',
   alertLabel: 'Diagram',
   legacyType: 'kodiag',

@@ -5,7 +5,7 @@ import { initFind, runFind, runFindNext, runFindPrevious, closeFindBar, applyFin
 import { initExplorer, refreshTree, renderTree, expandAncestors } from './explorer.js';
 import { state } from './state.js';
 
-initTopbar({ currentService: 'korecode' });
+initTopbar({ currentService: 'korecode', urls: window.__koreSuiteUrls || {} });
 initAppBar({
   currentService: 'korecode',
   overline: 'Code Editor',

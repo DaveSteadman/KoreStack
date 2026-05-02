@@ -2,8 +2,7 @@
  * variables.css — KoreDocs design tokens.
  *
  * Single source of truth for colours, typography, and shared chrome
- * dimensions. Imported by topbar.css, which every application links.
- * To retheme the suite change values here only.
+ * dimensions. To retheme the suite change values here only.
  */
 
 :root {

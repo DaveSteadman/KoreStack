@@ -60,7 +60,7 @@ All pages extend `base.html` via `{% block content %}`.
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
-│  KoreConversation ID  │  Interface  │  Name  │  Started  │  Act  │
+│  KoreChat ID  │  Interface  │  Name  │  Started  │  Act  │
 ├──────────────────────────────────────────────────────────────────┤
 │  conv_abc123          │  [gmail]    │  Alice  │  Apr 30   │  →   │
 │  conv_def456          │  [manual]   │  Test   │  Apr 29   │  →   │
@@ -147,7 +147,7 @@ Simple form page for injecting synthetic inbound messages into the queue for tes
 │  Sender                                     │
 │  [Alice <alice@example.com>_____________]   │
 │                                             │
-│  KoreConversation ID                        │
+│  KoreChat ID                        │
 │  [conv_abc123____________________________]  │
 │                                             │
 │  Message                                    │
@@ -159,7 +159,7 @@ Simple form page for injecting synthetic inbound messages into the queue for tes
 └─────────────────────────────────────────────┘
 ```
 
-POST to `/compose`. Required fields: `sender`, `koreconversation_id`, `content`.
+POST to `/compose`. Required fields: `sender`, `korechat_id`, `content`.
 
 ---
 

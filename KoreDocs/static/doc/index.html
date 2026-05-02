@@ -6,6 +6,7 @@
   <title>KoreDoc</title>
   <link rel="stylesheet" href="/static/doc/style.css" />
   <link rel="stylesheet" href="/static/commonui/css/chrome.css" />
+  <script src="/suite-config.js"></script>
 </head>
 <body>
 
@@ -62,6 +63,10 @@
     <span id="status-counts"></span>
   </div>
 
+  <script type="module">
+    import * as topbar from '/static/commonui/js/topbar.js';
+    topbar.initTopbar({ currentService: 'koredocs', urls: window.__koreSuiteUrls || {} });
+  </script>
   <script type="module">
     import { initChrome } from '/static/doc/js/chrome.js';
     initChrome();

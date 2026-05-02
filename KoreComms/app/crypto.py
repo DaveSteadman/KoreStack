@@ -1,6 +1,6 @@
 """Encryption helpers for sensitive values stored in the database.
 
-The Fernet key is stored in config/secret.key (git-ignored).
+The Fernet key is stored alongside the KoreComms data directory (git-ignored).
 If the file does not exist it is generated on first use.
 """
 from __future__ import annotations
@@ -10,7 +10,9 @@ from pathlib import Path
 
 from cryptography.fernet import Fernet
 
-_KEY_PATH = Path("config/secret.key")
+from .config import cfg
+
+_KEY_PATH = Path(cfg["data_dir"]) / "secret.key"
 _fernet: Fernet | None = None
 
 

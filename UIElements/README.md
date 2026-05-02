@@ -75,7 +75,7 @@ The top bar is the primary cross-suite navigation strip. It is fixed at the top 
 
 ```
 ┌──────────────────────────────────────────────────────────────────────┐
-│  [KoreStack] [KoreAgent] [KoreConversation] [KoreData] … [KoreComms] │
+│  [KoreStack] [KoreAgent] [KoreChat] [KoreData] … [KoreComms] │
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -171,7 +171,7 @@ updateTag(tag, { color: 'dim', active: false });
 
 | App | Shape |
 |---|---|
-| KoreConversation | Pill (`--pill`) |
+| KoreChat | Pill (`--pill`) |
 | KoreComms | Square (no modifier) |
 | KoreAgent | Square (no modifier) |
 
@@ -181,7 +181,7 @@ updateTag(tag, { color: 'dim', active: false });
 
 ### Panels (`panels.css`)
 `.kcui-panel` + `.kcui-panel-header` + `.kcui-panel-body` — standard panel frame used in KoreAgent and
-KoreConversation split layouts.
+KoreChat split layouts.
 
 ### Tabs (`tabs.css` / `tabs.js`)
 `.kcui-tab-bar` with `renderTabs()` — used in the application bar and in multi-page apps such as KoreData.

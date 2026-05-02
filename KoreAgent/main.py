@@ -15,7 +15,7 @@ from pathlib import Path
 
 
 if __name__ == "__main__":
-    code_dir = Path(__file__).parent / "code"
-    os.chdir(code_dir)
-    sys.path.insert(0, str(code_dir))
-    runpy.run_path(str(code_dir / "main.py"), run_name="__main__")
+    app_dir = Path(__file__).parent / "app"
+    os.chdir(app_dir)
+    sys.path.insert(0, str(app_dir))
+    runpy.run_path(str(app_dir / "main.py"), run_name="__main__")

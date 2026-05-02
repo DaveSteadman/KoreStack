@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 {% block title %}{% if article %}Edit {{ article.title }}{% else %}New Article{% endif %} - KoreReference{% endblock %}
 {% block main_class %}kcui-main{% endblock %}
 
@@ -21,7 +21,7 @@
         <button type="button" style="font-size:11px; padding:3px 10px; background:transparent; border-color:var(--border); color:var(--dim);"> CANCEL</button>
       </a>
       {% if article %}
-      <form method="post" action="/reference/{{ article.title | urlencode }}/delete" style="margin:0;"
+      <form method="post" action="/ui/reference/{{ article.title | urlencode }}/delete" style="margin:0;"
             onsubmit="return confirm('Permanently delete \'{{ article.title | replace("'","\\x27") }}\'?')">
         <button type="submit" style="background:rgba(255,95,95,0.15); border-color:var(--red); color:var(--red); font-size:11px; padding:3px 10px;"> DELETE</button>
       </form>

@@ -1,4 +1,4 @@
-# KoreData UI Design
+﻿# KoreData UI Design
 
 > Status: Active
 > Date: 2026-05-01
@@ -17,11 +17,15 @@ The active UI surfaces are:
 
 | Section | URL prefix | Purpose |
 |---|---|---|
-| Home | `/` | Service health overview + unified search |
-| Feeds | `/feeds` | RSS/web feed domains and entry browser |
-| Library | `/library` | Long-form book browser |
-| Reference | `/reference` | Encyclopedia/wiki article browser |
-| RAG | `/rag` | Operator-curated RAG chunk management |
+| Home | `/ui` | Service health overview + unified search |
+| Feeds | `/ui/feeds` | RSS/web feed domains and entry browser |
+| Library | `/ui/library` | Long-form book browser |
+| Reference | `/ui/reference` | Encyclopedia/wiki article browser |
+| RAG | `/ui/rag` | Operator-curated RAG chunk management |
+| Agent search API | `/api/search` | POST — unified cross-service search for agents/MCP |
+| RAG JSON API | `/api/rag/...` | CRUD REST API for RAG chunks |
+| Feed rate API | `/api/feeds/...` | PATCH — update feed refresh rate |
+| MCP server | `/mcp` | Streamable HTTP MCP transport |
 
 Runtime architecture, service boundaries, and API contracts remain in [DESIGN.md](DESIGN.md).
 
@@ -75,7 +79,7 @@ Pages that need full-width layout (no max-width) add `class="kcui-main"` to `<ma
 
 ---
 
-## 4. Home Page (`/`)
+## 4. Home Page (`/ui`)
 
 The landing surface. Two zones: service health cards at the top, unified search below.
 
@@ -113,7 +117,7 @@ The landing surface. Two zones: service health cards at the top, unified search 
 
 ---
 
-## 5. Feeds (`/feeds`)
+## 5. Feeds (`/ui/feeds`)
 
 ### Feed Index
 
@@ -152,7 +156,7 @@ Bulk-delete via row checkboxes. Results table with sortable columns.
 
 ---
 
-## 6. Library (`/library`)
+## 6. Library (`/ui/library`)
 
 ### Library Index
 
@@ -188,7 +192,7 @@ Book body rendered from markdown using `marked.js`. Table of contents anchor lin
 
 ---
 
-## 7. Reference (`/reference`)
+## 7. Reference (`/ui/reference`)
 
 ### Reference Index
 
@@ -226,7 +230,7 @@ Two-column layout (`.two-col`, collapses at 900 px). Main column: title, summary
 
 ---
 
-## 8. RAG (`/rag`)
+## 8. RAG (`/ui/rag`)
 
 ### RAG Index
 

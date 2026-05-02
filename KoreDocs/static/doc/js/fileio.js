@@ -2,7 +2,7 @@
  * fileio.js — KoreFile-backed file state + autosave for KoreDoc.
  */
 
-import { createKfSyncController } from '/static/shared/js/kfSyncController.js';
+import { createKorefileSyncController } from '/static/shared/js/korefileSyncController.js';
 
 /** Return a blank document string with YAML frontmatter. */
 export function blankDoc(title = 'Untitled') {
@@ -10,7 +10,7 @@ export function blankDoc(title = 'Untitled') {
   return `---\ntitle: ${title}\ncreated: ${today}\n---\n\n`;
 }
 
-const _controller = createKfSyncController({
+const _controller = createKorefileSyncController({
   logLabel: 'KoreDoc',
   alertLabel: 'Document',
   legacyType: 'koredoc',

@@ -1,4 +1,4 @@
-# KoreConversation - Developer Notes
+# KoreChat - Developer Notes
 
 For the main framework developer notes see [README_DEVS.md](README_DEVS.md).
 
@@ -6,7 +6,7 @@ For the main framework developer notes see [README_DEVS.md](README_DEVS.md).
 
 ## Purpose
 
-KoreConversation (KC) is the shared conversation state service for the Kore system. It owns the canonical record of every conversation the agent is involved in, regardless of which channel the conversation originated from.
+KoreChat (KC) is the shared conversation state service for the Kore system. It owns the canonical record of every conversation the agent is involved in, regardless of which channel the conversation originated from.
 
 Neither MiniAgentFramework nor KoreComms owns conversation state directly. Both act on KC. The agent is stateless between calls - it reads from KC, processes, and writes back. No conversation context lives inside MiniAgentFramework between turns.
 
@@ -16,7 +16,7 @@ Neither MiniAgentFramework nor KoreComms owns conversation state directly. Both 
 
 | Service | Role | Port |
 |---|---|---|
-| KoreConversation | Shared conversation state, event queue | 8700 |
+| KoreChat | Shared conversation state, event queue | 8700 |
 | KoreData | Reference knowledge, web scraping, Wikipedia clone | 8800 |
 | KoreComms | External channel routing, delivery, inbox/outbox | 8900 |
 | MiniAgentFramework | LLM execution, tool use, reasoning | 8000 |
@@ -30,7 +30,7 @@ The agent never sees email addresses, phone numbers, OAuth tokens, or any channe
 ## Code Layout
 
 ```
-../KoreConversation/
+../KoreChat/
   main.py              Entry point - launches uvicorn
   requirements.txt
   DESIGN.md            Original design document
@@ -61,7 +61,7 @@ code/KoreAgent/input_layer/
 
 ## Database
 
-KC uses SQLite with WAL mode. The database file is created at startup at `data_dir/koreconversation.db`.
+KC uses SQLite with WAL mode. The database file is created at startup at `data_dir/korechat.db`.
 
 Default `data_dir` is `<repo_root>/datacontrol/conversations/`. This is configured in `config/default.json` or falls back to the built-in default in `app/config.py`.
 
@@ -342,7 +342,7 @@ The sidebar width is resizable via drag.
 
 ## Relationship to datacontrol/chatsessions/
 
-The historical `datacontrol/chatsessions/` directory stored one JSON file per browser session containing turns, summary, and scratchpad. KoreConversation supersedes this:
+The historical `datacontrol/chatsessions/` directory stored one JSON file per browser session containing turns, summary, and scratchpad. KoreChat supersedes this:
 
 | Old | New |
 |---|---|
@@ -362,17 +362,17 @@ Prefer the suite-level launcher from the repository root:
 
 ```
 cd ..
-cd KoreConversation
+cd KoreChat
 python main.py
 ```
 
 That folder now contains the live implementation. The legacy
-`KoreAgent/code/KoreConversation/` location is retained only as a compatibility shim.
+`KoreAgent/code/KoreChat/` location is retained only as a compatibility shim.
 
 The legacy embedded launcher still works if you need it during transition:
 
 ```
-cd code/KoreConversation
+cd code/KoreChat
 python main.py
 ```
 
@@ -382,7 +382,7 @@ Or directly via uvicorn:
 uvicorn app.api:app --host 0.0.0.0 --port 8700
 ```
 
-Config overrides go in `../KoreConversation/config/default.json`. All keys are optional.
+Config overrides go in `../KoreChat/config/default.json`. All keys are optional.
 
 ```json
 {
@@ -399,8 +399,8 @@ A relative `data_dir` is resolved against the repo root.
 
 ## Suggested Reading Order
 
-1. [DESIGN.md](../KoreConversation/DESIGN.md) - original design intent and principles
-2. [app/database.py](../KoreConversation/app/database.py) - schema, claim mechanics, all queries
-3. [app/api.py](../KoreConversation/app/api.py) - routes, SSE broadcaster, reaper thread
-4. [app/config.py](../KoreConversation/app/config.py) - config loading
+1. [DESIGN.md](../KoreChat/DESIGN.md) - original design intent and principles
+2. [app/database.py](../KoreChat/app/database.py) - schema, claim mechanics, all queries
+3. [app/api.py](../KoreChat/app/api.py) - routes, SSE broadcaster, reaper thread
+4. [app/config.py](../KoreChat/app/config.py) - config loading
 5. [code/KoreAgent/input_layer/koreconv_input.py](code/KoreAgent/input_layer/koreconv_input.py) - MAF polling loop, event handler, prompt builder

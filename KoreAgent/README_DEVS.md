@@ -1,4 +1,4 @@
-﻿# MiniAgentFramework - Developer Notes
+# MiniAgentFramework - Developer Notes
 
 ![MiniAgentFramework](progress/readme_dev_header.png)
 
@@ -66,7 +66,7 @@ flowchart TD
     R --> Y[runtime_logger.py]
     Y --> Z[datacontrol/logs]
 
-    G3 --> AA[KoreConversation]
+    G3 --> AA[KoreChat]
     F --> AB[schedules]
 ```
 
@@ -84,7 +84,7 @@ Browser UI
   -> tool_loop calls LLM and skills
   -> results streamed over /runs/{id}/stream SSE
   -> logs written to datacontrol/logs/YYYY-MM-DD/
-  -> browser session state reconstructed from KoreConversation
+  -> browser session state reconstructed from KoreChat
 ```
 
 ### 2. Slash command
@@ -440,7 +440,7 @@ Everything mutable lives under the configured control-data root. In this checkou
 |---|---|
 | `default.json` | persisted startup defaults |
 | `datacontrol/memory_store.json` | durable memory facts |
-| `datacontrol/conversations/koreconversation.db` | canonical persisted conversation state for webchat and external channels |
+| `datacontrol/conversations/korechat.db` | canonical persisted conversation state for webchat and external channels |
 | `datacontrol/logs/YYYY-MM-DD/` | runtime evidence logs |
 | `datacontrol/schedules/` | scheduled tasks |
 | `datacontrol/test_prompts/` | prompt suites |

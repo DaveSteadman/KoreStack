@@ -1,9 +1,7 @@
-import * as topbar from '/static/commonui/js/topbar.js';
 import * as appbar from '/static/commonui/js/appbar.js';
 import { renderAppMenu } from '/static/commonui/js/appMenu.js';
 
 export function initChrome() {
-  topbar.initTopbar({ currentService: 'koredocs' });
   renderAppMenu({
     app: 'koredoc',
     appLabel: 'KoreDoc',

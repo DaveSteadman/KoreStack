@@ -51,7 +51,7 @@ if __name__ == "__main__":
     _LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
     _print_status()
     uvicorn.run(
-        "app.api:app",
+        "app.server:app",
         host=cfg["host"],
         port=cfg["port"],
         log_level=cfg["log_level"],

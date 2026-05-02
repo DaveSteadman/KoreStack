@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 {% block title %}RAG Chunk #{{ chunk.id }}{% endblock %}
 {% block main_class %}kcui-main{% endblock %}
 
@@ -8,7 +8,7 @@
   <div class="panel-header kcui-panel-header">
     CHUNK #{{ chunk.id }}
     <div style="margin-left:auto; display:flex; gap:0.5rem;">
-      <form action="/rag/{{ chunk.id }}/delete" method="post" style="display:inline;"
+      <form action="/ui/rag/{{ chunk.id }}/delete" method="post" style="display:inline;"
             onsubmit="return confirm('Delete this chunk?');">
         <button type="submit" class="btn btn-sm btn-danger">DELETE</button>
       </form>

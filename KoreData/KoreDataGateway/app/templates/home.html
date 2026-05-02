@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 {% block title %}KoreData - Home{% endblock %}
 {% block main_class %}kcui-main{% endblock %}
 
@@ -145,20 +145,20 @@
         </div>
         <div class="svc-links">
           {% if svc.slug == "feeds" %}
-            <a href="/{{ svc.slug }}">Browse</a>
-            <a href="/feeds/search">Search</a>
+            <a href="/ui/{{ svc.slug }}">Browse</a>
+            <a href="/ui/feeds/search">Search</a>
           {% elif svc.slug == "library" %}
-            <a href="/{{ svc.slug }}">Browse</a>
-            <a href="/library/search">Search</a>
-            <a href="/library/import">Import</a>
+            <a href="/ui/{{ svc.slug }}">Browse</a>
+            <a href="/ui/library/search">Search</a>
+            <a href="/ui/library/import">Import</a>
           {% elif svc.slug == "reference" %}
-            <a href="/{{ svc.slug }}">Browse</a>
-            <a href="/reference/search">Search</a>
-            <a href="/reference/import">Import</a>
+            <a href="/ui/{{ svc.slug }}">Browse</a>
+            <a href="/ui/reference/search">Search</a>
+            <a href="/ui/reference/import">Import</a>
           {% elif svc.slug == "rag" %}
-            <a href="/{{ svc.slug }}">Browse</a>
-            <a href="/rag/search">Search</a>
-            <a href="/rag/insert">Insert</a>
+            <a href="/ui/{{ svc.slug }}">Browse</a>
+            <a href="/ui/rag/search">Search</a>
+            <a href="/ui/rag/insert">Insert</a>
           {% endif %}
         </div>
       </div>
@@ -169,7 +169,7 @@
 <div class="panel kcui-panel">
   <div class="panel-header kcui-panel-header">
     SEARCH
-    <span class="meta" style="margin-left:0.5rem;font-size:11px">- agent API | POST /search</span>
+    <span class="meta" style="margin-left:0.5rem;font-size:11px">- agent API | POST /api/search</span>
   </div>
   <div class="panel-body kcui-panel-body">
     <p class="meta" style="margin-bottom:0.4rem;">Space or comma separated terms are AND-matched across all selected services.</p>
@@ -393,7 +393,7 @@ async function runSearch() {
   document.getElementById('sq-results-panel').style.display = 'none';
 
   try {
-    const resp = await fetch('/search', {
+    const resp = await fetch('/api/search', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify(payload),

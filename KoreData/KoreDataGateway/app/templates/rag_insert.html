@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 {% block title %}Insert Chunk{% endblock %}
 {% block main_class %}kcui-main{% endblock %}
 
@@ -13,7 +13,7 @@
     <p style="color:var(--red); margin-bottom:0.75rem; font-size:12px;">Error: {{ error }}</p>
     {% endif %}
 
-    <form action="/rag/insert" method="post">
+    <form action="/ui/rag/insert" method="post">
       <label>Title <span class="meta">(optional)</span></label>
       <input type="text" name="title" placeholder="short label for this chunk">
 
@@ -28,7 +28,7 @@
 
       <div style="display:flex; gap:0.5rem; margin-top:0.25rem;">
         <button type="submit">INSERT</button>
-        <a class="btn btn-secondary" href="/rag">CANCEL</a>
+        <a class="btn btn-secondary" href="/ui/rag">CANCEL</a>
       </div>
     </form>
   </div>
@@ -41,7 +41,7 @@
   <div class="panel-body kcui-panel-body">
     <p class="meta" style="margin-bottom:0.75rem;">
       You can POST directly to <code>POST /api/rag/chunks</code> or use the top-level
-      <code>POST /search</code> with <code>"domains": ["rag"]</code> to include RAG results in
+      <code>POST /api/search</code> with <code>"domains": ["rag"]</code> to include RAG results in
       multi-service searches.
     </p>
     <pre style="font-size:11px; line-height:1.7;">POST /api/rag/chunks

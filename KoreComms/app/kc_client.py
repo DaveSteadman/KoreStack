@@ -1,4 +1,4 @@
-"""HTTP client for the KoreConversation service.
+"""HTTP client for the KoreChat service.
 
 Uses stdlib urllib only — no extra dependencies.
 Every public function raises RuntimeError on network / HTTP errors so the
@@ -24,7 +24,7 @@ _CLAIMED_BY = "korecomms"
 # ---------------------------------------------------------------------------
 
 def _base() -> str:
-    return cfg["koreconversation_url"].rstrip("/")
+    return cfg["korechat_url"].rstrip("/")
 
 
 def _post(path: str, payload: dict) -> dict:

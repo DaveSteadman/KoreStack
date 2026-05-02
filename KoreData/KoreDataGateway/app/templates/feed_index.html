@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 {% block title %}KoreData - Feeds{% endblock %}
 {% block main_class %}kcui-main{% endblock %}
 
@@ -9,7 +9,7 @@
     SEARCH
   </div>
   <div class="panel-body kcui-panel-body">
-    <form action="/feeds/search" method="get">
+    <form action="/ui/feeds/search" method="get">
       <p class="meta" style="margin-bottom:0.4rem;">Space or comma separated terms are AND-matched - each word must appear somewhere in the headline or body. There is no phrase search.</p>
       <div style="display:flex; flex-direction:row; gap:0;">
         <input type="search" name="q" placeholder="search all feeds..." style="flex:1;">
@@ -77,10 +77,10 @@
           <tbody>
             {% for d in domains %}
             <tr style="cursor:pointer;" onclick="editDomain('{{ d.domain }}')">
-              <td><a href="/feeds/{{ d.domain }}" onclick="event.stopPropagation()">{{ d.domain }}</a></td>
+              <td><a href="/ui/feeds/{{ d.domain }}" onclick="event.stopPropagation()">{{ d.domain }}</a></td>
               <td class="meta" style="text-align:right;"><span class="badge badge-dim">{{ d.entry_count }}</span></td>
               <td style="text-align:right; white-space:nowrap;">
-                <form method="post" action="/feeds/domains/{{ d.domain }}/delete"
+                <form method="post" action="/ui/feeds/domains/{{ d.domain }}/delete"
                       style="flex-direction:row; display:inline-flex; gap:0.4rem;">
                   <button class="btn-danger btn-sm" type="submit"
                     onclick="event.stopPropagation(); return confirm('Delete domain {{ d.domain }} and all its data?')">DELETE</button>
@@ -106,7 +106,7 @@
       <div class="panel-body kcui-panel-body">
 
         <!-- Create form -->
-        <form id="create-domain-form" method="post" action="/feeds/domains/create">
+        <form id="create-domain-form" method="post" action="/ui/feeds/domains/create">
           <div>
             <label for="new_domain">Domain name</label>
             <input id="new_domain" name="domain" type="text" placeholder="e.g. TechNews" required>
@@ -161,7 +161,7 @@
         {% for f in all_feeds %}
         {% set status = f.get("last_status") %}
         <tr>
-          <td class="meta"><a href="/feeds/{{ f.domain }}">{{ f.domain }}</a></td>
+          <td class="meta"><a href="/ui/feeds/{{ f.domain }}">{{ f.domain }}</a></td>
           <td>{{ f.name }}</td>
           <td class="meta" style="text-align:center;">{{ f.get("update_rate", 60) }}m</td>
           <td class="meta" style="text-align:center; white-space:nowrap;">
@@ -213,7 +213,7 @@
 function editDomain(name) {
   document.getElementById('create-domain-form').style.display = 'none';
   document.getElementById('rename-domain-form').style.display = '';
-  document.getElementById('rename-domain-form').action = '/feeds/domains/' + encodeURIComponent(name) + '/rename';
+  document.getElementById('rename-domain-form').action = '/ui/feeds/domains/' + encodeURIComponent(name) + '/rename';
   document.getElementById('rename_current').value = name;
   document.getElementById('rename_to').value = '';
   document.getElementById('rename_to').focus();

@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 {% block title %}{{ domain }} - KoreData{% endblock %}
 {% block main_class %}kcui-main{% endblock %}
 
@@ -67,10 +67,10 @@
               <td>
                 <button class="btn-sm" title="Refresh now"
                   style="color:var(--green); border-color:var(--green);"
-                  onclick="triggerRefresh(this, '/feeds/{{ domain }}/feeds/{{ f.id }}/refresh')">&#x21bb;</button>
+                  onclick="triggerRefresh(this, '/ui/feeds/{{ domain }}/feeds/{{ f.id }}/refresh')">&#x21bb;</button>
               </td>
               <td>
-                <form method="post" action="/feeds/{{ domain }}/feeds/{{ f.id }}/delete" style="flex-direction:row;">
+                <form method="post" action="/ui/feeds/{{ domain }}/feeds/{{ f.id }}/delete" style="flex-direction:row;">
                   <button class="btn-danger btn-sm" type="submit"
                     onclick="return confirm('Remove {{ f.name }}?')">&#x2715;</button>
                 </form>
@@ -135,7 +135,7 @@
       </div>
       <div class="panel-body kcui-panel-body">
         <!-- Add form -->
-        <form id="form-add" method="post" action="/feeds/{{ domain }}/feeds/add">
+        <form id="form-add" method="post" action="/ui/feeds/{{ domain }}/feeds/add">
           <div>
             <label for="add-name">Feed name</label>
             <input id="add-name" name="name" type="text" placeholder="TechCrunch" required>
@@ -207,7 +207,7 @@
         MANAGE ENTRIES
       </div>
       <div class="panel-body kcui-panel-body">
-        <form method="post" action="/feeds/{{ domain }}/entries/delete-by-feed" id="form-del-feed">
+        <form method="post" action="/ui/feeds/{{ domain }}/entries/delete-by-feed" id="form-del-feed">
           <label for="del_feed" style="display:block; margin-bottom:0.4rem; font-size:12px; letter-spacing:.04em; font-weight:600; text-transform:uppercase;">Delete by Feed</label>
           <div style="display:flex; gap:0;">
             <select id="del_feed" name="feed_name" style="flex:1;">
@@ -221,10 +221,10 @@
             </button>
           </div>
         </form>
-        <form id="form-purge-days" method="post" action="/feeds/{{ domain }}/entries/delete-older-than" style="display:none;">
+        <form id="form-purge-days" method="post" action="/ui/feeds/{{ domain }}/entries/delete-older-than" style="display:none;">
           <input type="hidden" name="days" id="purge-days-val" value="{{ age_settings.days or 30 }}">
         </form>
-        <form id="form-purge-calendar" method="post" action="/feeds/{{ domain }}/entries/delete-outside-calendar" style="display:none;">
+        <form id="form-purge-calendar" method="post" action="/ui/feeds/{{ domain }}/entries/delete-outside-calendar" style="display:none;">
           <input type="hidden" name="start_date" id="purge-start-val" value="{{ age_settings.start_date or '' }}">
           <input type="hidden" name="end_date"   id="purge-end-val"   value="{{ age_settings.end_date or '' }}">
         </form>
@@ -238,7 +238,7 @@
   <div class="panel-header kcui-panel-header">
     ENTRIES
     <span class="badge" id="entry-count" style="margin-left:0.75rem;">{{ total }}</span>
-    <form action="/feeds/search" method="get" style="flex-direction:row; display:flex; gap:0; margin-left:auto;">
+    <form action="/ui/feeds/search" method="get" style="flex-direction:row; display:flex; gap:0; margin-left:auto;">
       <input type="search" name="q" placeholder="search {{ domain }}..." style="width:200px;">
       <input type="hidden" name="domain" value="{{ domain }}">
       <button type="submit">SEARCH</button>
@@ -259,12 +259,12 @@
         {% for e in entries %}
         <tr>
           <td class="meta">{{ e.id }}</td>
-          <td><a href="/feeds/{{ domain }}/{{ e.id }}">{{ e.headline or "(no title)" }}</a></td>
+          <td><a href="/ui/feeds/{{ domain }}/{{ e.id }}">{{ e.headline or "(no title)" }}</a></td>
           <td class="meta">{{ e.feed_name }}</td>
           <td class="meta" style="white-space:nowrap;">{{ e.published[:16] if e.published else "-" }}</td>
           <td>
             <button class="btn-danger btn-sm" title="Delete entry"
-              onclick="deleteEntry(this, '/feeds/{{ domain }}/entries/{{ e.id }}/delete')">&#x2715;</button>
+              onclick="deleteEntry(this, '/ui/feeds/{{ domain }}/entries/{{ e.id }}/delete')">&#x2715;</button>
           </td>
         </tr>
         {% else %}
@@ -277,11 +277,11 @@
 
 <div class="pagination">
   {% if offset > 0 %}
-  <a href="/feeds/{{ domain }}?limit={{ limit }}&offset={{ offset - limit }}"><- PREV</a>
+  <a href="/ui/feeds/{{ domain }}?limit={{ limit }}&offset={{ offset - limit }}"><- PREV</a>
   {% endif %}
   <span class="pg-info">{{ offset + 1 }}-{{ offset + entries|length }} of {{ total }}</span>
   {% if offset + limit < total %}
-  <a href="/feeds/{{ domain }}?limit={{ limit }}&offset={{ offset + limit }}">NEXT -></a>
+  <a href="/ui/feeds/{{ domain }}?limit={{ limit }}&offset={{ offset + limit }}">NEXT -></a>
   {% endif %}
 </div>
 </div>
@@ -299,7 +299,7 @@ function syncTypeLabel(prefix) {
 function editFeed(id, name, url, type, rate) {
   document.getElementById('form-add').style.display = 'none';
   const form = document.getElementById('form-edit');
-  form.action = `/feeds/{{ domain }}/feeds/${id}/update`;
+  form.action = `/ui/feeds/{{ domain }}/feeds/${id}/update`;
   form.style.display = '';
   document.getElementById('edit-name').value = name;
   document.getElementById('edit-url').value = url;
@@ -417,7 +417,7 @@ function cancelAgeGate() {
       body.set('start_date', document.getElementById('age-start-input').value || '');
       body.set('end_date',   document.getElementById('age-end-input').value   || '');
     }
-    await fetch('/feeds/{{ domain }}/settings/age-mode', { method: 'POST', body });
+    await fetch('/ui/feeds/{{ domain }}/settings/age-mode', { method: 'POST', body });
   }
 
   window.showAgeRow  = showAgeRow;

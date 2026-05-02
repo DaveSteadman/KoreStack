@@ -11,52 +11,34 @@
     "host": "127.0.0.1"
   },
   "services": {
-    "agent": {
-      "port": 8000,
-      "url": "http://127.0.0.1:8000"
-    },
-    "conversation": {
-      "port": 8700,
-      "url": "http://127.0.0.1:8700"
-    },
-    "data": {
-      "port": 8800,
-      "url": "http://127.0.0.1:8800"
-    },
-    "comms": {
-      "port": 8900,
-      "url": "http://127.0.0.1:8900"
-    },
-    "docs": {
-      "port": 5500,
-      "url": "http://127.0.0.1:5500"
-    },
-    "code": {
-      "port": 5600,
-      "url": "http://127.0.0.1:5600"
-    },
-    "korestack": {
-      "port": 8600,
-      "url": "http://127.0.0.1:8600"
-    }
+    "agent":        { "port": 8000 },
+    "conversation": { "port": 8700 },
+    "data":         { "port": 8800, "_subports": "+1=korefeed, +2=korelibrary, +3=korerag, +4=korereference" },
+    "comms":        { "port": 8900 },
+    "docs":         { "port": 5500 },
+    "code":         { "port": 5600 }
   },
   "connections": {
-    "korecomms": "http://127.0.0.1:8900",
-    "koreconversation": "http://127.0.0.1:8700"
+    "korechat": "http://127.0.0.1:8700",
+    "korecomms": "http://127.0.0.1:8900"
   },
   "mcp": {
     "connections": [
       {
         "name": "KoreData",
-        "url": "http://127.0.0.1:8800/mcp",
+        "service": "data",
+        "path": "/mcp",
         "enabled": true,
+        "purpose": "reference search and retrieval across feeds, encyclopedia, library, and internal documents",
         "expected_prefix": "koredata_"
       },
       {
         "name": "KoreDocs",
-        "url": "http://127.0.0.1:5500/mcp/sse",
-        "enabled": true,
+        "service": "docs",
+        "path": "/mcp/sse",
         "transport": "sse",
+        "enabled": true,
+        "purpose": "document navigation, structured editing, and KoreFile authoring",
         "expected_prefix": "koredocs_"
       }
     ]

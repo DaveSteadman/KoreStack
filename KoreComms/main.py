@@ -4,7 +4,7 @@ Run with:
     python main.py
 
 Or via uvicorn directly:
-    uvicorn app.api:app --host 0.0.0.0 --port 8900
+    uvicorn app.server:app --host 0.0.0.0 --port 8900
 """
 from __future__ import annotations
 
@@ -34,7 +34,7 @@ def _print_banner() -> None:
         "",
         row("WebUI:", f"http://localhost:{cfg['port']}/"),
         row("Agent API:", f"http://localhost:{cfg['port']}/api/"),
-        row("KoreConversation:", cfg.get("koreconversation_url", "http://localhost:8700")),
+        row("KoreChat:", cfg.get("korechat_url", "http://localhost:8700")),
         row("Poll interval:", f"{cfg['poll_interval']}s"),
         row("Data dir:", cfg["data_dir"]),
         row("Log level:", cfg["log_level"].upper()),
@@ -50,7 +50,7 @@ if __name__ == "__main__":
     _log_path.parent.mkdir(parents=True, exist_ok=True)
     _print_banner()
     uvicorn.run(
-        "app.api:app",
+        "app.server:app",
         host=cfg["host"],
         port=int(cfg["port"]),
         log_level=cfg["log_level"],

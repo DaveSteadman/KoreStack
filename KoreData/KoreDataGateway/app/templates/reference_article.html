@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 {% block title %}{{ article.title }} - KoreReference{% endblock %}
 {% block main_class %}kcui-main{% endblock %}
 
@@ -14,7 +14,7 @@
         {% if article.word_count %}
         <span class="badge badge-dim" style="margin-left:0.5rem;">{{ "{:,}".format(article.word_count) }} words</span>
         {% endif %}
-        <a href="/reference/{{ article.title | urlencode }}/edit" style="margin-left:auto;">
+        <a href="/ui/reference/{{ article.title | urlencode }}/edit" style="margin-left:auto;">
           <button type="button" style="font-size:11px; padding:3px 10px;">EDIT</button>
         </a>
       </div>
@@ -84,7 +84,7 @@
       </div>
       <div class="panel-body kcui-panel-body" style="display:flex; flex-wrap:wrap; gap:0.4rem; font-size:11px; padding:0.6rem 0.75rem;">
         {% for cat in article.categories %}
-        <a href="/reference/categories/{{ cat | urlencode }}" class="badge" style="text-decoration:none;">{{ cat }}</a>
+        <a href="/ui/reference/categories/{{ cat | urlencode }}" class="badge" style="text-decoration:none;">{{ cat }}</a>
         {% endfor %}
       </div>
     </div>
@@ -99,7 +99,7 @@
       <div class="panel-body kcui-panel-body" style="padding:0.4rem 0.75rem; font-size:12px;">
         {% for bl in backlinks %}
         <div style="margin-bottom:0.3rem;">
-          <a href="/reference/{{ bl.title | urlencode }}">{{ bl.title }}</a>
+          <a href="/ui/reference/{{ bl.title | urlencode }}">{{ bl.title }}</a>
         </div>
         {% endfor %}
       </div>
@@ -166,13 +166,13 @@ function loadLinks() {
   const list = document.getElementById('links-list');
   if (list.dataset.loaded) return;
   list.dataset.loaded = '1';
-  fetch('/reference/{{ article.title | urlencode }}/links-json')
+  fetch('/ui/reference/{{ article.title | urlencode }}/links-json')
     .then(r => r.json())
     .then(links => {
       if (!links.length) { list.innerHTML = '<span class="meta">No outbound links.</span>'; return; }
       list.innerHTML = links.map(l => l.to_id
-        ? `<div style="margin-bottom:0.25rem;"><a href="/reference/${encodeURIComponent(l.to_title)}">${l.to_title}</a></div>`
-          : `<div style="margin-bottom:0.25rem;"><a href="/reference/${encodeURIComponent(l.to_title)}" style="color:var(--dim);" title="Not yet imported">${l.to_title}</a></div>`
+        ? `<div style="margin-bottom:0.25rem;"><a href="/ui/reference/${encodeURIComponent(l.to_title)}">${l.to_title}</a></div>`
+          : `<div style="margin-bottom:0.25rem;"><a href="/ui/reference/${encodeURIComponent(l.to_title)}" style="color:var(--dim);" title="Not yet imported">${l.to_title}</a></div>`
       ).join('');
     })
     .catch(() => { list.innerHTML = '<span class="meta">Failed to load links.</span>'; });

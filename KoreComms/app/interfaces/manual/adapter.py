@@ -2,7 +2,7 @@
 
 Inbound messages are injected by a human via the WebUI compose form.
 Outbound replies are acknowledged but not transmitted anywhere externally;
-the reply content lives in KoreConversation and is visible through the chat UI.
+the reply content lives in KoreChat and is visible through the chat UI.
 """
 from __future__ import annotations
 

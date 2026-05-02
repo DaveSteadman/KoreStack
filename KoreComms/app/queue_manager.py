@@ -1,6 +1,6 @@
 """Queue manager — stub.
 
-The inbound message queue has moved to KoreConversation. This module is
+The inbound message queue has moved to KoreChat. This module is
 retained as a no-op to preserve compatibility with any remaining imports.
 """
 from __future__ import annotations

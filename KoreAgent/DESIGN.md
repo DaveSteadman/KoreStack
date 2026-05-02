@@ -1,4 +1,4 @@
-﻿# MiniAgentFramework - Design and Requirements
+# MiniAgentFramework - Design and Requirements
 
 ## Purpose
 The is a requirements document, of defining statements around the functionality of MiniAgentFramework.
@@ -279,19 +279,19 @@ MCP connections (configured external tool providers):
 | `/tasks` | list scheduled tasks and their next-fire times |
 | `/task <name>` | trigger a scheduled task immediately |
 | `/version` | display version string |
-| `/session name <alias>` | rename the current webchat conversation in KoreConversation |
-| `/session list` | list resumable webchat conversations from KoreConversation |
-| `/session resume <name>` | switch to a KoreConversation-backed webchat session and replay its history in the UI |
-| `/session resumecopy <old> <new>` | clone a KoreConversation, including message history and metadata, and resume the copy |
+| `/session name <alias>` | rename the current webchat conversation in KoreChat |
+| `/session list` | list resumable webchat conversations from KoreChat |
+| `/session resume <name>` | switch to a KoreChat-backed webchat session and replay its history in the UI |
+| `/session resumecopy <old> <new>` | clone a KoreChat, including message history and metadata, and resume the copy |
 | `/session park` | leave the current conversation in place and start a fresh unnamed webchat session ID |
-| `/session delete <name\|all>` | delete one or all webchat conversations from KoreConversation |
+| `/session delete <name\|all>` | delete one or all webchat conversations from KoreChat |
 | `/session info` | show session ID, conversation ID, status, turn count, and token estimate |
 
 **Claims:**
 - Only input entered through the main web chat panel is eligible for slash-command interception.
 - In that web chat path, any input whose first non-whitespace character is `/` is routed to the slash processor.
-- Regular web chat messages are appended to KoreConversation and answered through the KoreConversation event flow.
-- Slash-like text arriving through other KoreConversation conversations is treated as plain message content, not as a control command.
+- Regular web chat messages are appended to KoreChat and answered through the KoreChat event flow.
+- Slash-like text arriving through other KoreChat conversations is treated as plain message content, not as a control command.
 - `handle()` returns `True` if the input was consumed as a slash command, `False` otherwise.
 - `SlashCommandContext` carries `config`, `output`, `clear_history`, `session_id`, `switch_session`, and `rename_session`; commands do not access global state directly.
 - `switch_session(new_id, name)` fires an SSE `switch_session` event causing the browser to update its session ID and replay history.
@@ -306,26 +306,26 @@ MCP connections (configured external tool providers):
 
 **File:** `code/input_layer/api.py` (`_load_session`, `_save_session`, `_compact_old_turns`, `_build_summary_block`)
 
-**Intent:** Reconstruct browser-session continuity from KoreConversation state while keeping runtime scratchpad and orchestration state transient between requests.
+**Intent:** Reconstruct browser-session continuity from KoreChat state while keeping runtime scratchpad and orchestration state transient between requests.
 
 **Claims:**
-- Browser session IDs map to KoreConversation `external_id` values using the `webchat_<session_id>` convention.
-- `_load_session()` rebuilds `ConversationHistory` from KoreConversation messages on every request, pairing inbound and outbound messages in chronological order.
-- `_load_session()` restores the persisted KoreConversation scratchpad into the active runtime scratch store before orchestration.
+- Browser session IDs map to KoreChat `external_id` values using the `webchat_<session_id>` convention.
+- `_load_session()` rebuilds `ConversationHistory` from KoreChat messages on every request, pairing inbound and outbound messages in chronological order.
+- `_load_session()` restores the persisted KoreChat scratchpad into the active runtime scratch store before orchestration.
 - `thread_summary` is exposed back into the runtime as a synthetic summary block so long conversations can still be compressed without keeping raw history in local files.
-- `_save_session()` is now a compatibility shim. It no longer writes chat JSON files; it only flushes scratchpad state back into KoreConversation.
-- `_flush_scratch_to_session()` patches the linked KoreConversation scratchpad with the current runtime scratch store.
-- `DELETE /sessions/{id}` deletes the linked KoreConversation and clears in-memory scratch for that web session.
+- `_save_session()` is now a compatibility shim. It no longer writes chat JSON files; it only flushes scratchpad state back into KoreChat.
+- `_flush_scratch_to_session()` patches the linked KoreChat scratchpad with the current runtime scratch store.
+- `DELETE /sessions/{id}` deletes the linked KoreChat and clears in-memory scratch for that web session.
 - Test-prompt runs (`/test`) still use isolated `ConversationHistory` objects and never write browser session state.
 
 ### Named sessions
 
 **Claims:**
-- `/session name <alias>` patches the current conversation subject in KoreConversation; it does not change the browser session ID.
+- `/session name <alias>` patches the current conversation subject in KoreChat; it does not change the browser session ID.
 - `/session resume <name>` resolves a webchat conversation by display name, derives its session ID from `external_id`, and emits a `switch_session` event so the browser reloads history from the API.
 - `/session resumecopy <old> <new>` creates a new webchat conversation, replays the source message history into it, copies summary/scratchpad counters, and switches the browser into the new session.
 - `/session park` simply switches the browser to a fresh `web_<timestamp>` session ID. The backing conversation is created lazily when the next prompt is sent.
-- `/session delete all` removes all webchat KoreConversation records, not a local `named/` directory.
+- `/session delete all` removes all webchat KoreChat records, not a local `named/` directory.
 - `GET /completions` returns `{ sessions, test_files, task_names, models }` so the browser tab-complete feature has live named-session names without a separate polling loop.
 
 ---

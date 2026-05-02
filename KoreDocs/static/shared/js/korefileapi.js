@@ -1,5 +1,5 @@
 /**
- * korefileapi.js — Shared HTTP client for the KoreFile /api/kf/* endpoints.
+ * korefileapi.js — Shared HTTP client for the KoreFile /api/* endpoints.
  */
 
 import { fetchWithAuth } from '/static/shared/js/auth.js';
@@ -10,7 +10,7 @@ async function _req(method, path, body, { keepalive = false } = {}) {
     opts.headers['Content-Type'] = 'application/json';
     opts.body = JSON.stringify(body);
   }
-  const res = await fetchWithAuth('/api/kf' + path, opts);
+  const res = await fetchWithAuth('/api' + path, opts);
   if (!res.ok) {
     const raw = await res.text().catch(() => res.statusText);
     let detail = raw;

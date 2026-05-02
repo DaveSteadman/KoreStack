@@ -1,0 +1,41 @@
+# KoreStack — consolidated Python dependencies
+#
+# Single virtual environment for the entire suite:
+#   python -m venv .venv
+#   .venv\Scripts\Activate.ps1
+#   pip install -r requirements.txt
+
+# ── Core web framework (all services) ─────────────────────────────────────
+fastapi>=0.111
+uvicorn[standard]>=0.29.0
+python-dotenv>=1.0
+
+# ── HTTP / templates ──────────────────────────────────────────────────────
+httpx>=0.27.0
+jinja2>=3.1.0
+python-multipart>=0.0.9
+
+# ── MCP ───────────────────────────────────────────────────────────────────
+# fastmcp is the framework layer (KoreDocs); mcp is the protocol client (KoreAgent, KoreDataGateway)
+fastmcp>=3.2
+mcp>=1.6.0
+
+# ── Web scraping / content extraction ────────────────────────────────────
+beautifulsoup4>=4.12.0
+trafilatura>=1.9.0
+markdownify>=0.12.0
+markdown>=3.6
+feedparser>=6.0.0
+
+# ── Scheduling ────────────────────────────────────────────────────────────
+apscheduler>=3.10.4
+
+# ── System metrics ────────────────────────────────────────────────────────
+psutil>=5.9
+certifi>=2024.0
+
+# ── Google / Auth (KoreComms) ─────────────────────────────────────────────
+cryptography>=42.0.0
+google-auth>=2.29.0
+google-auth-oauthlib>=1.2.0
+google-api-python-client>=2.126.0

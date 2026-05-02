@@ -101,14 +101,14 @@ interaction.init(canvas);
 ui.initMenus();
 ui.initToolbar();
 ui.initHierarchy();
-topbar.initTopbar({ currentService: 'koredocs' });
+topbar.initTopbar({ currentService: 'koredocs', urls: window.__koreSuiteUrls || {} });
 appbar.initAppTabs('kodiag');
 
 const autoOpened = await fileio.autoOpenFromUrl(diagram => {
   store.loadDiagram(diagram);
 });
 if (!autoOpened) {
-  location.replace('/kf');
+  location.replace('/ui');
 }
 
 if (fileio.currentName()) {

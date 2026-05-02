@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 {% block title %}Import - KoreReference{% endblock %}
 {% block main_class %}kcui-main{% endblock %}
 
@@ -123,7 +123,7 @@
         <div id="pg_done_title" style="font-size:14px; font-weight:600; color:var(--green); margin-bottom:0.4rem;"></div>
         <div id="pg_done_detail" style="font-size:11px; color:var(--dim); margin-bottom:1.25rem; word-break:break-all;"></div>
         <div style="display:flex; gap:0.5rem; justify-content:center;">
-          <a href="/reference"><button type="button" style="font-size:11px; padding:3px 10px;">View articles -></button></a>
+          <a href="/ui/reference"><button type="button" style="font-size:11px; padding:3px 10px;">View articles -></button></a>
           <button type="button" onclick="resetToIdle()" style="font-size:11px; padding:3px 10px; background:transparent; border-color:var(--dim); color:var(--dim);">Import another</button>
         </div>
       </div>
@@ -230,7 +230,7 @@ async function crawlStart() {
   document.getElementById('c_stop_btn').style.display = '';
 
   try {
-    const endpoint = '/reference/import/crawl';
+    const endpoint = '/ui/reference/import/crawl';
     const body = { seed_url: seed, max_depth: depth, limit: limit, resume: resume };
     const resp = await fetch(endpoint, {
       method: 'POST',
@@ -247,7 +247,7 @@ async function crawlStart() {
 }
 
 async function crawlStop() {
-  await fetch('/reference/import/stop', { method: 'POST' });
+  await fetch('/ui/reference/import/stop', { method: 'POST' });
 }
 
 function showError(msg) {
@@ -266,7 +266,7 @@ function startPolling() {
 
 async function pollStatus() {
   try {
-    const resp = await fetch('/reference/import/status');
+    const resp = await fetch('/ui/reference/import/status');
     if (!resp.ok) return;
     const s = await resp.json();
     renderStatus(s);
@@ -340,7 +340,7 @@ function renderStatus(s) {
 
 (async function () {
   try {
-    const resp = await fetch('/reference/import/status');
+    const resp = await fetch('/ui/reference/import/status');
     if (!resp.ok) return;
     const s = await resp.json();
     if (s.running) {

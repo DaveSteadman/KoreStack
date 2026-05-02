@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 {% block title %}KoreRAG{% endblock %}
 {% block main_class %}kcui-main{% endblock %}
 
@@ -9,8 +9,8 @@
     RAG CHUNKS
     <span class="badge badge-dim" style="margin-left:0.5rem;">{{ total }}</span>
     <div style="margin-left:auto; display:flex; gap:0.5rem;">
-      <a class="btn btn-sm" href="/rag/search">SEARCH</a>
-      <a class="btn btn-sm" href="/rag/insert">+ INSERT</a>
+      <a class="btn btn-sm" href="/ui/rag/search">SEARCH</a>
+      <a class="btn btn-sm" href="/ui/rag/insert">+ INSERT</a>
     </div>
   </div>
   <div class="panel-body kcui-panel-body" style="padding:0; overflow-x:auto;">
@@ -30,7 +30,7 @@
         {% for c in chunks %}
         <tr>
           <td class="meta">{{ c.id }}</td>
-          <td><a href="/rag/{{ c.id }}">{{ c.title or "(untitled)" }}</a></td>
+          <td><a href="/ui/rag/{{ c.id }}">{{ c.title or "(untitled)" }}</a></td>
           <td class="meta" style="font-size:11px;">{{ c.source or "-" }}</td>
           <td class="meta" style="font-size:11px;">{{ c.tags or "" }}</td>
           <td class="meta" style="text-align:right;">
@@ -42,7 +42,7 @@
       </tbody>
     </table>
     {% else %}
-    <p class="meta" style="padding:1rem;">No chunks stored yet. <a href="/rag/insert">Insert one now.</a></p>
+    <p class="meta" style="padding:1rem;">No chunks stored yet. <a href="/ui/rag/insert">Insert one now.</a></p>
     {% endif %}
   </div>
 </div>
@@ -50,11 +50,11 @@
 {% if total > limit %}
 <div class="pagination">
   {% if offset > 0 %}
-  <a href="/rag?limit={{ limit }}&offset={{ [offset - limit, 0] | max }}"><- Prev</a>
+  <a href="/ui/rag?limit={{ limit }}&offset={{ [offset - limit, 0] | max }}"><- Prev</a>
   {% endif %}
   <span class="pg-info">{{ offset + 1 }}-{{ [offset + limit, total] | min }} of {{ total }}</span>
   {% if offset + limit < total %}
-  <a href="/rag?limit={{ limit }}&offset={{ offset + limit }}">Next -></a>
+  <a href="/ui/rag?limit={{ limit }}&offset={{ offset + limit }}">Next -></a>
   {% endif %}
 </div>
 {% endif %}

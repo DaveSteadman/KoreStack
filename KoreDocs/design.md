@@ -76,17 +76,17 @@ DELETE /api/files/{name}      -> delete file
 POST   /api/files             -> create new file  { name, content }
 
 # KoreFile database storage (Phase 2)
-GET    /api/kf/folders                    -> list folder tree
-POST   /api/kf/folders                    -> create folder  { name, parent_id }
-DELETE /api/kf/folders/{folder_id}        -> delete folder (must be empty)
+GET    /api/folders                    -> list folder tree
+POST   /api/folders                    -> create folder  { name, parent_id }
+DELETE /api/folders/{folder_id}        -> delete folder (must be empty)
 
-GET    /api/kf/files                      -> list files (metadata only, ?folder_id=)
-GET    /api/kf/files/{file_id}            -> get file with content
-POST   /api/kf/files                      -> create/import file  { folder_id, name, content }
-PUT    /api/kf/files/{file_id}            -> save file content + update metadata
-DELETE /api/kf/files/{file_id}            -> delete file
+GET    /api/files                      -> list files (metadata only, ?folder_id=)
+GET    /api/files/{file_id}            -> get file with content
+POST   /api/files                      -> create/import file  { folder_id, name, content }
+PUT    /api/files/{file_id}            -> save file content + update metadata
+DELETE /api/files/{file_id}            -> delete file
 
-GET    /api/kf/search?q=&type=&folder_id= -> FTS5 full-text search
+GET    /api/search?q=&type=&folder_id= -> FTS5 full-text search
 ```
 
 The watched flat-folder path and database path are configured via `.env`:
@@ -205,7 +205,7 @@ via a **source tag** on the URL:
 | Source | URL query param | API used |
 |---|---|---|
 | Flat file system | `?src=fs&file=notes.koredoc` | `/api/files/*` |
-| KoreFile database | `?src=kf&id=42` | `/api/kf/files/*` |
+| KoreFile database | `?src=kf&id=42` | `/api/files/*` |
 
 When no source tag is present, the app defaults to the flat file system (Phase 1
 backward compatibility).
@@ -221,7 +221,7 @@ it came from disk or the database. Only the transport layer differs.
 
 **Import from flat FS into KoreFile DB:**
 
-A one-shot `/api/kf/import-fs` endpoint walks `KOREDOCS_DATA_DIR`, reads every `*.kore*`
+A one-shot `/api/import-fs` endpoint walks `KOREDOCS_DATA_DIR`, reads every `*.kore*`
 file, and inserts each into the DB under a folder matching its relative OS path. This is
 the migration path; after import the user can work entirely in KoreFile.
 
@@ -690,7 +690,7 @@ Records stored as row objects. UI: filterable, sortable table with an edit form.
 | **Phase 1b** | KoreDiag migrated into monolith; file I/O via flat API |
 | **Phase 1c** | KoreDoc editor canvas, inline styling, save/load via file API |
 | **Phase 1d** | KoreSheet grid canvas, cell editing, aggregate formulas, save/load |
-| **Phase 2a** | KoreFile SQLite schema, `/api/kf/*` routes, import-from-FS tool |
+| **Phase 2a** | KoreFile SQLite schema, `/api/*` routes, import-from-FS tool |
 | **Phase 2b** | Front-end dual-storage (`?src=kf`), file picker with KoreFile browser |
 | **Phase 2c** | MCP server (`fastmcp`), stdio + SSE transports, all seven tools |
 | **Phase 3** | KoreSlide; KoreBase; KoreDoc diagram embeds |

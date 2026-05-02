@@ -3,10 +3,10 @@
 Two duties run on the same interval:
 
   1. _poll_inbound  — calls poll() on each enabled interface, forwards new
-                      messages to KoreConversation, and stores thin routing
+                      messages to KoreChat, and stores thin routing
                       records locally for deduplication and reply anchoring.
 
-  2. _poll_outbound — drains KoreConversation's outbound_ready event queue,
+  2. _poll_outbound — drains KoreChat's outbound_ready event queue,
                       routing each agent response back through the correct
                       external interface.
 """
@@ -55,7 +55,7 @@ def _resolve_kc_conversation(local_conv: dict) -> dict | None:
         kc_conv = kc_client.create_conversation(
             external_id=conversation_name,
             channel_type=local_conv.get("interface_type", "manual"),
-            subject=local_conv.get("koreconversation_id"),
+            subject=local_conv.get("korechat_id"),
         )
         logger.info(
             "Recreated KC conversation %d for local conv %d via name %s",
@@ -70,11 +70,11 @@ def _resolve_kc_conversation(local_conv: dict) -> dict | None:
 
 
 # ---------------------------------------------------------------------------
-# Inbound: external → KoreConversation
+# Inbound: external → KoreChat
 # ---------------------------------------------------------------------------
 
 def _forward_message(iface_row: dict, msg: dict) -> None:
-    """Store routing metadata locally and push the message to KoreConversation."""
+    """Store routing metadata locally and push the message to KoreChat."""
     ext_msg_id    = msg["external_message_id"]
     ext_thread_id = msg["external_thread_id"]
 
@@ -87,7 +87,7 @@ def _forward_message(iface_row: dict, msg: dict) -> None:
         local_conv_id = db.conversation_create(
             interface_id=iface_row["id"],
             external_thread_id=ext_thread_id,
-            koreconversation_id=msg.get("subject"),
+            korechat_id=msg.get("subject"),
         )
         local_conv = db.conversation_get(local_conv_id)
         assert local_conv is not None
@@ -113,7 +113,7 @@ def _forward_message(iface_row: dict, msg: dict) -> None:
         sender_display      = msg.get("sender", ""),
     )
 
-    # Append to KoreConversation. The newer KC API raises response_needed itself.
+    # Append to KoreChat. The newer KC API raises response_needed itself.
     kc_client.append_message(
         kc_conversation_id = kc_conv["id"],
         direction          = "inbound",
@@ -139,7 +139,7 @@ def _poll_inbound() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Outbound: KoreConversation → external interface
+# Outbound: KoreChat → external interface
 # ---------------------------------------------------------------------------
 
 def _route_outbound_for_conversation(local_conv: dict) -> None:
@@ -181,7 +181,7 @@ def _route_outbound_for_conversation(local_conv: dict) -> None:
 
 
 def _route_outbound_event(event: dict) -> None:
-    """Handle one KoreConversation event addressed to KoreComms."""
+    """Handle one KoreChat event addressed to KoreComms."""
     event_type = event.get("event_type")
     conversation = event.get("conversation") or {}
     kc_conv_id = event.get("conversation_id") or conversation.get("id")
@@ -237,7 +237,7 @@ def _route_outbound_event(event: dict) -> None:
 
 
 def _drain_outbound_events() -> None:
-    """Claim and handle all currently pending KoreConversation outbound events."""
+    """Claim and handle all currently pending KoreChat outbound events."""
     while not _stop_event.is_set():
         try:
             event = kc_client.claim_next_event()

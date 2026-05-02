@@ -33,7 +33,7 @@ const autoOpened = await fileio.autoOpenFromUrl(v => {
   properties.refresh(v, fileio.currentName());
 });
 if (!autoOpened) {
-  location.replace('/kf');
+  location.replace('/ui');
 }
 
 // Restore any unsaved draft for this tab (takes priority over server / blank content)

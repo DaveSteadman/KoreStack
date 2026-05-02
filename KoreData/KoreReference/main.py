@@ -44,7 +44,7 @@ if __name__ == "__main__":
     stats = get_status()
     _print_banner()
     uvicorn.run(
-        "app.api:app",
+        "app.server:app",
         host=cfg["host"],
         port=cfg["port"],
         log_level=cfg["log_level"],

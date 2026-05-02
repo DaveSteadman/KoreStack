@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 {% block title %}{% if mode == "incomplete" %}Incomplete - {% endif %}KoreLibrary{% endblock %}
 {% block main_class %}kcui-main{% endblock %}
 
@@ -10,17 +10,17 @@
     <span class="badge badge-dim" style="margin-left:0.5rem;">{{ total }}</span>
     <span style="margin-left:auto; display:flex; gap:0.75rem; align-items:center;">
       {% if mode == "all" %}
-      <a href="/library/incomplete" style="font-size:11px; color:var(--amber);">INCOMPLETE -></a>
+      <a href="/ui/library/incomplete" style="font-size:11px; color:var(--amber);">INCOMPLETE -></a>
       {% else %}
-      <a href="/library" style="font-size:11px; color:var(--dim);">ALL BOOKS -></a>
+      <a href="/ui/library" style="font-size:11px; color:var(--dim);">ALL BOOKS -></a>
       {% endif %}
-      <a href="/library/search" style="font-size:11px; color:var(--dim);">SEARCH -></a>
-      <a href="/library/import" style="font-size:11px; color:var(--dim);">IMPORT -></a>
+      <a href="/ui/library/search" style="font-size:11px; color:var(--dim);">SEARCH -></a>
+      <a href="/ui/library/import" style="font-size:11px; color:var(--dim);">IMPORT -></a>
     </span>
   </div>
   {% if mode == "all" %}
   <div class="panel-body kcui-panel-body" style="padding:0.5rem 1rem; border-bottom:1px solid var(--border);">
-    <form action="/library/search" method="get">
+    <form action="/ui/library/search" method="get">
       <p class="meta" style="margin-bottom:0.4rem;">Space or comma separated terms are AND-matched. Metadata fields can be used alone or combined.</p>
       <div style="display:flex; flex-direction:row; gap:0;">
         <input type="search" name="q" placeholder="full-text search..." style="flex:1;">
@@ -72,10 +72,10 @@
     <p class="meta">Books with one or more missing metadata fields.
       Filter:
       {% for f in ['author','year','language','genre'] %}
-      <a href="/library/incomplete?fields={{ f }}" style="font-size:11px; margin-left:0.4rem;
+      <a href="/ui/library/incomplete?fields={{ f }}" style="font-size:11px; margin-left:0.4rem;
         {% if filter_fields == f %}color:var(--green);{% endif %}">{{ f }}</a>
       {% endfor %}
-      {% if filter_fields %}<a href="/library/incomplete" style="font-size:11px; margin-left:0.4rem; color:var(--dim);">clear</a>{% endif %}
+      {% if filter_fields %}<a href="/ui/library/incomplete" style="font-size:11px; margin-left:0.4rem; color:var(--dim);">clear</a>{% endif %}
     </p>
   </div>
   {% endif %}
@@ -98,7 +98,7 @@
         {% for b in books %}
         <tr>
           <td class="meta">{{ b.id }}</td>
-          <td><a href="/library/{{ b.id }}">{{ b.title }}</a></td>
+          <td><a href="/ui/library/{{ b.id }}">{{ b.title }}</a></td>
           <td class="meta">{{ b.author or "-" }}</td>
           <td class="meta">{{ b.year or "-" }}</td>
           <td class="meta">{{ b.language or "-" }}</td>
@@ -128,10 +128,10 @@
 {% if mode == "all" and offset + limit < total %}
 <div class="pagination">
   {% if offset > 0 %}
-  <a href="/library?limit={{ limit }}&offset={{ offset - limit }}"><- PREV</a>
+  <a href="/ui/library?limit={{ limit }}&offset={{ offset - limit }}"><- PREV</a>
   {% endif %}
   <span class="pg-info">{{ offset + 1 }}-{{ [offset + limit, total]|min }} of {{ total }}</span>
-  <a href="/library?limit={{ limit }}&offset={{ offset + limit }}">NEXT -></a>
+  <a href="/ui/library?limit={{ limit }}&offset={{ offset + limit }}">NEXT -></a>
 </div>
 {% endif %}
 </div>

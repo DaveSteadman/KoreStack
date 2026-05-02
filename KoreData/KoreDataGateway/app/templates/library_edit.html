@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 {% block title %}Edit #{{ book.id }} - KoreLibrary{% endblock %}
 {% block main_class %}kcui-main{% endblock %}
 
@@ -22,10 +22,10 @@
       EDIT BOOK #{{ book.id }}
       <span style="margin-left:auto; display:flex; gap:0.4rem; align-items:center;">
         <button type="submit" form="edit-form" style="font-size:11px; padding:3px 10px;"> SAVE</button>
-        <a href="/library/{{ book.id }}">
+        <a href="/ui/library/{{ book.id }}">
           <button type="button" style="font-size:11px; padding:3px 10px; background:transparent; border-color:var(--border); color:var(--dim);"> CANCEL</button>
         </a>
-        <form method="post" action="/library/{{ book.id }}/delete" style="margin:0;"
+        <form method="post" action="/ui/library/{{ book.id }}/delete" style="margin:0;"
               onsubmit="return confirm('Permanently delete {{ book.title | replace("'","\\x27") }}?')">
           <button type="submit" style="background:rgba(255,95,95,0.15); border-color:var(--red); color:var(--red); font-size:11px; padding:3px 10px;"> DELETE</button>
         </form>
@@ -33,7 +33,7 @@
     </div>
 
     <div class="panel-body kcui-panel-body">
-      <form id="edit-form" method="post" action="/library/{{ book.id }}/edit">
+      <form id="edit-form" method="post" action="/ui/library/{{ book.id }}/edit">
 
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; margin-bottom:0.75rem;">
 

@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parent
 FRAME_ORDER = [
     "01-korestack.png",
     "02-koreagent.png",
-    "03-koreconversation.png",
+    "03-korechat.png",
     "04-koredata.png",
     "05-koredocs-tabs.png",
     "06-koredocs-doc.png",

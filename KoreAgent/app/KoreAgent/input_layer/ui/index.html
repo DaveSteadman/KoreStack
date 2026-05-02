@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KoreAgent</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico?v=2">
+    <link rel="stylesheet" href="/ui-elements/assets/css/workspace.css">
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="/suite-config.js"></script>
+</head>
+<body>
+<div id="layout">
+    <div id="topbar"></div>
+    <div id="app-bar"></div>
+
+    <!-- ================================================
+         MAIN GRID
+         ================================================ -->
+    <div
+        id="main-grid"
+        class="kcui-workspace"
+        data-kcui-workspace
+        data-kcui-layout-key="koreagent-main-v1"
+        data-kcui-columns="0,2,4"
+        data-kcui-columns-min="120,80,80"
+        data-kcui-rows="0,2"
+        data-kcui-rows-min="80,60"
+        data-kcui-disable-below="900"
+    >
+
+        <!-- Timeline -->
+        <div class="panel kcui-panel kcui-workspace__region" id="panel-timeline">
+            <div class="panel-header kcui-panel-header">
+                Schedule
+            </div>
+            <div class="panel-body kcui-panel-body timeline-body">
+                <div id="timeline-ticker"></div>
+                <div id="timeline-queue"></div>
+            </div>
+        </div>
+
+        <div
+            class="splitter splitter-v kcui-workspace__splitter kcui-workspace__splitter--v"
+            id="splitter-v1"
+            data-kcui-splitter
+            data-kcui-axis="columns"
+            data-kcui-before="0"
+            data-kcui-after="2"
+        ></div>
+
+        <!-- Log stream -->
+        <div class="panel kcui-panel kcui-workspace__region" id="panel-log">
+            <div class="panel-header kcui-panel-header">
+                <span id="log-panel-title">Log</span>
+                <span class="header-spacer"></span>
+                <button class="kcui-tag kcui-tag--dim" id="log-btn-up"   onclick="logNavStep(-1)">&#x2191;</button>
+                <button class="kcui-tag kcui-tag--dim" id="log-btn-down" onclick="logNavStep(+1)">&#x2193;</button>
+                <button class="kcui-tag kcui-tag--dim is-on" id="log-btn-live" onclick="toggleLogLive()">live</button>
+                <button class="kcui-tag kcui-tag--dim" id="wrap-btn-log" onclick="toggleWrap('log-body','wrap-btn-log')">wrap</button>
+            </div>
+            <div class="panel-body kcui-panel-body nowrap" id="log-body"></div>
+        </div>
+
+        <div
+            class="splitter splitter-v kcui-workspace__splitter kcui-workspace__splitter--v"
+            id="splitter-v2"
+            data-kcui-splitter
+            data-kcui-axis="columns"
+            data-kcui-before="2"
+            data-kcui-after="4"
+        ></div>
+
+        <!-- Chat -->
+        <div class="panel kcui-panel kcui-workspace__region" id="panel-chat">
+            <div class="panel-header kcui-panel-header">
+                Chat: <span id="chat-panel-title"></span>
+                <span class="header-spacer"></span>
+                <button class="kcui-tag kcui-tag--dim" id="sandbox-btn" onclick="toggleSandbox()">sandbox</button>
+                <button class="kcui-tag kcui-tag--dim" id="webskills-btn" onclick="toggleWebSkills()">web</button>
+                <button class="kcui-tag kcui-tag--dim" id="wrap-btn-chat" onclick="toggleWrap('chat-body','wrap-btn-chat')">wrap</button>
+            </div>
+            <div class="panel-body kcui-panel-body nowrap" id="chat-body"></div>
+        </div>
+
+        <div
+            class="splitter splitter-h kcui-workspace__splitter kcui-workspace__splitter--h"
+            id="splitter-h1"
+            data-kcui-splitter
+            data-kcui-axis="rows"
+            data-kcui-before="0"
+            data-kcui-after="2"
+        ></div>
+
+        <!-- Input bar -->
+        <div class="panel kcui-panel kcui-workspace__region" id="panel-input">
+            <div class="panel-body kcui-panel-body">
+                <textarea
+                    id="chat-input"
+                    rows="2"
+                    placeholder="Type a prompt and press Enter (Shift+Enter for newline)..."
+                    autocomplete="off"
+                    spellcheck="false"
+                ></textarea>
+                <button id="send-btn">Send</button>
+            </div>
+        </div>
+
+    </div><!-- #main-grid -->
+</div><!-- #layout -->
+
+<div id="slash-suggest" hidden></div>
+
+<script type="module">
+    import { initAppBar, initTopbar } from '/ui-elements/assets/js/chrome.js?v=20260501a';
+    import { initWorkspaceLayouts } from '/ui-elements/assets/js/workspace.js';
+    initTopbar({ currentService: 'koreagent', urls: window.__koreSuiteUrls || {} });
+    initAppBar({
+        currentService: 'koreagent',
+        overline: 'Agent Control',
+        brandLabel: 'KoreAgent',
+        brandIcon: 'koreagent',
+        statusDot: { id: 'ollama-dot', className: 'off', title: 'Model backend status' },
+        chips: [
+            { label: 'Host', value: '', valueId: 'ollama-host' },
+            { label: 'Model', value: '', valueId: 'ollama-model' },
+            { label: 'Context', value: '', valueId: 'ollama-ctx' },
+        ],
+        actionsHtml: `
+            <button class="kappbar-button" id="btn-reset-layout" onclick="resetLayout()">Default Layout</button>
+            <a class="kappbar-button" href="/README.md" target="_blank" rel="noopener noreferrer">Readme</a>
+        `,
+    });
+    initWorkspaceLayouts();
+</script>
+<script src="/static/app.js?v=13"></script>
+</body>
+</html>

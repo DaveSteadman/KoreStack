@@ -2,14 +2,16 @@ import os
 import json
 from pathlib import Path
 
-_CONFIG_FILE = Path("../config/default.json")
+_SUITE_ROOT   = Path(__file__).resolve().parents[2]  # KoreStack/
+_CONFIG_FILE  = _SUITE_ROOT / "config" / "default.json"
+_LOCAL_CONFIG = _SUITE_ROOT / "config" / "local.json"
 
 
 def get_suite_root() -> Path:
     env_root = os.environ.get("KORE_SUITE_ROOT", "").strip()
     if env_root:
         return Path(env_root).resolve()
-    return Path(__file__).resolve().parents[2].parent
+    return _SUITE_ROOT
 
 
 def get_suite_datacontrol_dir() -> Path:
@@ -26,25 +28,46 @@ def get_suite_datauser_dir() -> Path:
     return get_suite_root() / "datauser"
 
 
+# KoreData sub-services are assigned ports as offsets from the gateway ("data") port.
+# This means changing the gateway port in local.json automatically shifts all sub-services.
+_DATA_SUBSERVICE_OFFSETS: dict[str, int] = {
+    "korefeed":      1,
+    "korelibrary":   2,
+    "korerag":       3,
+    "korereference": 4,
+}
+
+
 def load_config(section: str, defaults: dict) -> dict:
-    """Load config from default.json merging global and section-level settings.
+    """Load config from central default.json + local.json.
 
     Resolution order (later wins):
       1. *defaults*
-      2. Top-level ``host`` / ``log_level`` keys
-      3. ``ports.<section>`` mapped to ``port``
-      4. ``<section>`` dict (section-level overrides)
+      2. ``network.host`` + ``services.data.port`` offset (for sub-services) from default.json
+      3. ``services.<section>.port`` from default.json (explicit override)
+      4. ``<section>`` dict from default.json
+      5. Same three steps repeated for local.json
     """
-    if not _CONFIG_FILE.exists():
-        return dict(defaults)
-    with open(_CONFIG_FILE, encoding="utf-8") as f:
-        raw = json.load(f)
     result = dict(defaults)
-    for key in ("host", "log_level"):
-        if key in raw:
-            result[key] = raw[key]
-    port = raw.get("ports", {}).get(section)
-    if port is not None:
-        result["port"] = port
-    result.update(raw.get(section, {}))
+    offset = _DATA_SUBSERVICE_OFFSETS.get(section)
+    for cfg_path in (_CONFIG_FILE, _LOCAL_CONFIG):
+        if not cfg_path.exists():
+            continue
+        with open(cfg_path, encoding="utf-8") as f:
+            raw = json.load(f)
+        host = raw.get("network", {}).get("host")
+        if host is not None:
+            result["host"] = host
+        if "log_level" in raw:
+            result["log_level"] = raw["log_level"]
+        # Sub-services: derive port from data gateway port + fixed offset
+        if offset is not None:
+            data_port = raw.get("services", {}).get("data", {}).get("port")
+            if data_port is not None:
+                result["port"] = data_port + offset
+        # Explicit port entry still takes priority if present
+        port = raw.get("services", {}).get(section, {}).get("port")
+        if port is not None:
+            result["port"] = port
+        result.update(raw.get(section, {}))
     return result

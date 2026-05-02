@@ -52,6 +52,6 @@ Apps provide their own workflow content inside those shared regions.
 
 ## KoreAgent Implication
 
-KoreConversation under the KoreAgent implementation tree is an early adopter for the shared outer shell.
+KoreChat under the KoreAgent implementation tree is an early adopter for the shared outer shell.
 Its detailed conversation surface should remain local, but the top-level shell, menu framing,
 neutral panel primitives, and split-workspace mechanics should come from UIElements.

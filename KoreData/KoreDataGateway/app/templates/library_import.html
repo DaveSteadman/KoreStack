@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 {% block title %}Import - KoreLibrary{% endblock %}
 {% block main_class %}kcui-main{% endblock %}
 
@@ -16,7 +16,7 @@
       ADD BOOK MANUALLY
     </div>
     <div class="panel-body kcui-panel-body">
-      <form action="/library/import/manual" method="post">
+      <form action="/ui/library/import/manual" method="post">
         <div style="display:grid; grid-template-columns:1fr; gap:0.6rem;">
 
           <div>
@@ -261,7 +261,7 @@ async function kiwixLoadInventory() {
   if (!url) { setStatus('Enter a Kiwix server URL first.', 'var(--amber)'); return; }
   sel.innerHTML = '<option value="">- loading... -</option>';
   try {
-    const resp = await fetch('/library/kiwix/inventory?kiwix_url=' + encodeURIComponent(url));
+    const resp = await fetch('/ui/library/kiwix/inventory?kiwix_url=' + encodeURIComponent(url));
     const data = await resp.json();
     const books = data.books || [];
     if (!books.length) {
@@ -317,7 +317,7 @@ async function kiwixBrowseLetter(letter, zim, pfx, btn) {
   bstat.textContent = `Loading "${letter}"...`;
 
   try {
-    const url = `/library/kiwix/suggest?zim=${encodeURIComponent(zim)}&pattern=${encodeURIComponent(letter)}&count=500&kiwix_url=${encodeURIComponent(kiwixUrl())}`;
+    const url = `/ui/library/kiwix/suggest?zim=${encodeURIComponent(zim)}&pattern=${encodeURIComponent(letter)}&count=500&kiwix_url=${encodeURIComponent(kiwixUrl())}`;
     const resp = await fetch(url);
     if (!resp.ok) { bstat.textContent = ' Could not load'; bstat.style.color = 'var(--red)'; return; }
     const items = await resp.json();
@@ -346,7 +346,7 @@ async function kiwixSearch() {
   document.getElementById('k_results_wrap').style.display = 'none';
 
   try {
-    const apiUrl = `/library/kiwix/search?zim=${encodeURIComponent(zim)}&q=${encodeURIComponent(q)}&count=100&kiwix_url=${encodeURIComponent(kiwixUrl())}`;
+    const apiUrl = `/ui/library/kiwix/search?zim=${encodeURIComponent(zim)}&q=${encodeURIComponent(q)}&count=100&kiwix_url=${encodeURIComponent(kiwixUrl())}`;
     const resp = await fetch(apiUrl);
     if (!resp.ok) { const d = await resp.json(); setStatus(' ' + (d.detail || resp.status), 'var(--red)'); return; }
     const items = await resp.json();
@@ -430,7 +430,7 @@ async function kiwixImport(title, zimName, articleUrl, rowId) {
   logLine(`  kiwix_url: ${kiwixUrl() || '(none - using server default)'}`, 'var(--dim)');
 
   try {
-    const resp = await fetch('/library/import/kiwix', {
+    const resp = await fetch('/ui/library/import/kiwix', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -446,7 +446,7 @@ async function kiwixImport(title, zimName, articleUrl, rowId) {
         btn.textContent = ' Done';
         btn.style.color = 'var(--green)';
         const td = row.querySelector('td:first-child');
-        if (td && body && body.id) td.innerHTML += ` <a href="/library/${body.id}" style="font-size:11px; color:var(--blue);">-> view</a>`;
+        if (td && body && body.id) td.innerHTML += ` <a href="/ui/library/${body.id}" style="font-size:11px; color:var(--blue);">-> view</a>`;
       }
     } else {
       const msg = (body && body.detail) || `Error ${resp.status}`;
@@ -481,7 +481,7 @@ async function kiwixImportViewerUrl() {
   logLine(`-> POST /library/import/kiwix/viewer`, 'var(--dim)');
   logLine(`  viewer_url: ${raw}`, 'var(--dim)');
   try {
-    const resp = await fetch('/library/import/kiwix/viewer', {
+    const resp = await fetch('/ui/library/import/kiwix/viewer', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ viewer_url: raw }),
@@ -526,7 +526,7 @@ async function catalogLoad() {
   document.getElementById('cat_results').innerHTML = '';
   document.getElementById('cat_total').textContent = '';
   try {
-    let apiUrl = `/library/kiwix/catalog?zim=${encodeURIComponent(zim)}`;
+    let apiUrl = `/ui/library/kiwix/catalog?zim=${encodeURIComponent(zim)}`;
     if (author) apiUrl += `&author=${encodeURIComponent(author)}`;
     if (url) apiUrl += `&kiwix_url=${encodeURIComponent(url)}`;
     const resp = await fetch(apiUrl);
@@ -641,7 +641,7 @@ async function batchImport() {
   batchLog(`-> Starting batch import of ${urls.length} URL(s)`, 'var(--dim)');
 
   try {
-    const resp = await fetch('/library/import/kiwix/viewer/batch', {
+    const resp = await fetch('/ui/library/import/kiwix/viewer/batch', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ urls }),

@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 {% block title %}RAG Search{% endblock %}
 {% block main_class %}kcui-main{% endblock %}
 
@@ -9,7 +9,7 @@
     SEARCH CHUNKS
   </div>
   <div class="panel-body kcui-panel-body">
-    <form action="/rag/search" method="get">
+    <form action="/ui/rag/search" method="get">
       <p class="meta" style="margin-bottom:0.4rem;">Space or comma separated terms are AND-matched against title, source, tags, and content.</p>
       <div style="display:flex; flex-direction:row; gap:0;">
         <input type="search" name="q" value="{{ q }}" placeholder="search chunks..." style="flex:1;">
@@ -50,7 +50,7 @@
     {% for r in results %}
     <div style="border-bottom:1px solid var(--border); padding:0.75rem 0; {% if loop.last %}border-bottom:none;{% endif %}">
       <div style="display:flex; align-items:baseline; gap:0.6rem; margin-bottom:0.2rem;">
-        <a href="/rag/{{ r.id }}" style="color:var(--text); font-size:13px;">{{ r.title or "(untitled)" }}</a>
+        <a href="/ui/rag/{{ r.id }}" style="color:var(--text); font-size:13px;">{{ r.title or "(untitled)" }}</a>
         <span class="meta" style="font-size:11px;">#{{ r.id }}</span>
       </div>
       {% if r.source or r.tags %}

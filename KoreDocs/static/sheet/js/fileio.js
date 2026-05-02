@@ -2,7 +2,7 @@
  * fileio.js — KoreFile-backed file state + autosave for KoreSheet.
  */
 
-import { createKfSyncController } from '/static/shared/js/kfSyncController.js';
+import { createKorefileSyncController } from '/static/shared/js/korefileSyncController.js';
 import { fromJSON } from './cell.js';
 
 function _blankSheet(name) {
@@ -17,7 +17,7 @@ function _blankSheet(name) {
   });
 }
 
-const _controller = createKfSyncController({
+const _controller = createKorefileSyncController({
   logLabel: 'KoreSheet',
   alertLabel: 'Sheet',
   legacyType: 'koresheet',

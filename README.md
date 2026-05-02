@@ -13,7 +13,7 @@ In the current shape of the suite:
 
 - `KoreStack` is the control plane and landing page
 - `KoreAgent` is the main agent runtime and orchestration surface
-- `KoreConversation` provides shared conversation-state services
+- `KoreChat` provides shared conversation-state services
 - `KoreData` remains the data and knowledge service family
 - `KoreDocs` remains the document and file service
 - `KoreComms` remains the communications hub
@@ -50,7 +50,7 @@ python .\main.py
 That starts the KoreStack landing page and launches the standard service set:
 
 - KoreAgent on port 8000
-- KoreConversation on port 8700
+- KoreChat on port 8700
 - KoreData on port 8800
 - KoreDocs on port 5500
 - KoreComms on port 8900
@@ -77,7 +77,7 @@ The top-level layout now reflects the consolidated suite contract:
 
 - `KoreStack/` - suite coordination and landing page
 - `KoreAgent/` - agent runtime and orchestration
-- `KoreConversation/` - conversation-state service
+- `KoreChat/` - conversation-state service
 - `KoreData/` - data and knowledge services
 - `KoreDocs/` - document and file services
 - `KoreComms/` - communications services

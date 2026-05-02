@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 {% block title %}Search - KoreData{% endblock %}
 {% block main_class %}kcui-main{% endblock %}
 
@@ -10,7 +10,7 @@
     {% if domain %}<span class="badge badge-dim" style="margin-left:0.5rem;">{{ domain }}</span>{% endif %}
   </div>
   <div class="panel-body kcui-panel-body">
-    <form action="/feeds/search" method="get">
+    <form action="/ui/feeds/search" method="get">
       <p class="meta" style="margin-bottom:0.4rem;">Space or comma separated terms are AND-matched - each word must appear somewhere in the headline or body. There is no phrase search.</p>
       <div style="display:flex; flex-direction:row; gap:0;">
         <input type="search" name="q" value="{{ q }}" placeholder="search all feeds..." style="flex:1;">
@@ -67,7 +67,7 @@
   </div>
   <div class="panel-body kcui-panel-body" style="padding:0;">
     {% if results %}
-    <form method="post" action="/feeds/entries/bulk-delete">
+    <form method="post" action="/ui/feeds/entries/bulk-delete">
       <div style="display:flex; align-items:center; padding:0.4rem 0.75rem;
                   border-bottom:1px solid var(--border); gap:0.75rem;">
         <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;
@@ -97,7 +97,7 @@
           <tr>
             <td><input class="row-check" type="checkbox" name="sel" value="{{ r.domain }}:{{ r.id }}"></td>
             <td class="meta">{{ r.id }}</td>
-            <td><a href="/feeds/{{ r.domain }}/{{ r.id }}">{{ r.headline or "(no title)" }}</a></td>
+            <td><a href="/ui/feeds/{{ r.domain }}/{{ r.id }}">{{ r.headline or "(no title)" }}</a></td>
             <td><span class="badge badge-dim">{{ r.domain }}</span></td>
             <td class="meta">{{ r.feed_name }}</td>
             <td class="meta">{{ r.published[:16] if r.published else "-" }}</td>

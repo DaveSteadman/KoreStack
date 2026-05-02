@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}MiniFeed{% endblock %}</title>
   <link rel="stylesheet" href="/ui-elements/assets/css/chrome.css">
+  <script src="/suite-config.js"></script>
   <style>
     :root {
       --bg:      #0b0c10;
@@ -256,7 +257,7 @@
   </script>
   <script type="module">
     import { initAppBar, initTopbar } from '/ui-elements/assets/js/chrome.js?v=20260501a';
-    initTopbar({ currentService: 'koredata' });
+    initTopbar({ currentService: 'koredata', urls: window.__koreSuiteUrls || {} });
     initAppBar({
       currentService: 'koredata',
       overline: 'Feed Worker',

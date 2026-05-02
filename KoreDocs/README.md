@@ -48,7 +48,7 @@ process:
 python .\main.py
 ```
 
-Open the UI at **http://localhost:5500** (redirects to `/kf`).
+Open the UI at **http://localhost:5500** (redirects to `/ui`).
 
 The MCP server is available immediately on the same port:
 - **SSE transport** — `GET http://localhost:5500/mcp/sse`
@@ -83,7 +83,7 @@ POST http://localhost:5500/mcp/messages
 
 ### Storage architecture note
 
-- File creation, opening, renaming, moving, and deletion are handled in **KoreFiles** (`/kf`).
+- File creation, opening, renaming, moving, and deletion are handled in **KoreFiles** (`/ui`).
 - KoreDoc, KoreSheet, and KoreDiag are editor surfaces for files that already exist in KoreFile.
 - When a file is opened from KoreFiles, edits are autosaved back to the KoreFile DB with a 1 second debounce. Navigation/page-hide triggers an immediate keepalive flush of any pending save.
 - The MCP server operates on **KoreFile**, so agent-visible files and user-edited files now share the same storage backend.
@@ -132,12 +132,12 @@ parameter:
 
 | Source | URL | API prefix |
 |---|---|---|
-| Flat file system | `?src=fs&file=notes.koredoc` | `/api/files/` |
-| KoreFile DB | `?id=42&file=notes.koredoc` | `/api/kf/files/` |
+| Flat file system | `?src=fs&file=notes.koredoc` | `/api/legacy/files/` |
+| KoreFile DB | `?id=42&file=notes.koredoc` | `/api/files/` |
 
 No source param → defaults to flat FS (Phase 1 compatibility).
 
-The current recommended workflow is KoreFiles-first: create and open files from `/kf`, then edit them in the app-specific surface.
+The current recommended workflow is KoreFiles-first: create and open files from `/ui`, then edit them in the app-specific surface.
 
 ### Importing existing files
 
@@ -145,7 +145,7 @@ A one-shot endpoint walks `KOREDOCS_DATA_DIR` and imports every `*.kore*` file i
 DB, creating matching folders for the relative OS path:
 
 ```
-POST /api/kf/import-fs
+POST /api/import-fs
 ```
 
 After import you can work entirely inside KoreFile and stop using the flat directory.
@@ -153,26 +153,26 @@ After import you can work entirely inside KoreFile and stop using the flat direc
 ### KoreFile REST API
 
 ```
-GET    /api/kf/folders                     list folder tree
-POST   /api/kf/folders                     create folder  { name, parent_id }
-DELETE /api/kf/folders/{id}                delete (must be empty)
+GET    /api/folders                     list folder tree
+POST   /api/folders                     create folder  { name, parent_id }
+DELETE /api/folders/{id}                delete (must be empty)
 
-GET    /api/kf/files?folder_id=&type=      list files (metadata only)
-GET    /api/kf/files/{id}                  get file with content
-POST   /api/kf/files                       create  { folder_id, name, content }
-PUT    /api/kf/files/{id}                  save content
-DELETE /api/kf/files/{id}                  delete
+GET    /api/files?folder_id=&type=      list files (metadata only)
+GET    /api/files/{id}                  get file with content
+POST   /api/files                       create  { folder_id, name, content }
+PUT    /api/files/{id}                  save content
+DELETE /api/files/{id}                  delete
 
-GET    /api/kf/sheets/{id}                 sheet metadata / optional sparse cells
-GET    /api/kf/sheets/{id}/range           read A1-style range (?range=A1:C10&values_only=1)
-GET    /api/kf/sheets/{id}/table           read header-keyed rows (?header_row=1&range=A1:C10)
-POST   /api/kf/sheets/{id}/cells           sparse cell writes { cells }
-POST   /api/kf/sheets/{id}/rows/append     append list-style or header-mapped rows
-POST   /api/kf/sheets/{id}/rows/upsert     update-or-append rows by key columns
-POST   /api/kf/sheets/{id}/range/clear     clear a range { range }
+GET    /api/sheets/{id}                 sheet metadata / optional sparse cells
+GET    /api/sheets/{id}/range           read A1-style range (?range=A1:C10&values_only=1)
+GET    /api/sheets/{id}/table           read header-keyed rows (?header_row=1&range=A1:C10)
+POST   /api/sheets/{id}/cells           sparse cell writes { cells }
+POST   /api/sheets/{id}/rows/append     append list-style or header-mapped rows
+POST   /api/sheets/{id}/rows/upsert     update-or-append rows by key columns
+POST   /api/sheets/{id}/range/clear     clear a range { range }
 
-GET    /api/kf/search?q=&type=&folder_id=  FTS5 full-text search
-POST   /api/kf/import-fs                   import from flat data directory
+GET    /api/search?q=&type=&folder_id=  FTS5 full-text search
+POST   /api/import-fs                   import from flat data directory
 GET    /api/schema?type=                   file type schema / examples
 ```
 

@@ -1,10 +1,11 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}KoreData{% endblock %}</title>
   <link rel="stylesheet" href="/ui-elements/assets/css/chrome.css">
+  <script src="/suite-config.js"></script>
   <style>
     :root {
       --bg:      #0b0c10;
@@ -16,7 +17,6 @@
       --amber:   #f0c060;
       --blue:    #6eb5ff;
       --red:     #ff5f5f;
-      --header-h: 42px;
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { height: 100%; }
@@ -25,23 +25,6 @@
       background: var(--bg); color: var(--text);
       font-size: var(--kcui-text-body); line-height: var(--kcui-leading-body);
     }
-
-    /* ─── header bar ─────────────────────────────── */
-    header {
-      height: var(--header-h);
-      background: var(--panel);
-      border-bottom: 1px solid var(--border);
-      display: flex; align-items: center;
-      padding: 0 1.5rem; gap: 1.5rem;
-      position: sticky; top: var(--topbar-h, var(--tab-h, 38px)); z-index: 100;
-    }
-    .logo {
-      font-size: 1rem; font-weight: 700; letter-spacing: 0.06em;
-      text-decoration: none; flex-shrink: 0;
-      color: var(--text);
-    }
-    .logo .l-kore { color: var(--text); }
-    .logo .l-data { color: var(--green); }
 
     .dot-live {
       width: 7px; height: 7px; border-radius: 50%;
@@ -53,17 +36,6 @@
     .dot-live.online {
       background: var(--green);
       box-shadow: 0 0 6px var(--green);
-    }
-
-    nav { margin-left: auto; display: flex; gap: 1.25rem; }
-    nav a { color: var(--dim); text-decoration: none; font-size: var(--kcui-text-body-sm); letter-spacing: var(--kcui-tracking-tight); }
-    nav a:hover { color: var(--text); }
-    nav a.active { color: var(--green); }
-
-    /* tag badge (header bar) */
-    .tag {
-      font-size: var(--kcui-text-label); letter-spacing: var(--kcui-tracking-tight);
-      padding: 1px 6px; border: 1px solid var(--border); color: var(--dim);
     }
 
     /* ─── layout ─────────────────────────────────── */
@@ -318,7 +290,7 @@
   </script>
   <script type="module">
     import { initAppBar, initTopbar } from '/ui-elements/assets/js/chrome.js?v=20260501a';
-    initTopbar({ currentService: 'koredata' });
+    initTopbar({ currentService: 'koredata', urls: window.__koreSuiteUrls || {} });
     initAppBar({
       currentService: 'koredata',
       overline: 'Data Service',
@@ -330,10 +302,10 @@
       ],
       tabs: [
         { label: 'Home', href: '/', active: {{ 'true' if request.url.path == '/' else 'false' }} },
-        { label: 'Feeds', href: '/feeds', active: {{ 'true' if request.url.path.startswith('/feeds') else 'false' }} },
-        { label: 'Library', href: '/library', active: {{ 'true' if request.url.path.startswith('/library') else 'false' }} },
-        { label: 'Reference', href: '/reference', active: {{ 'true' if request.url.path.startswith('/reference') else 'false' }} },
-        { label: 'RAG', href: '/rag', active: {{ 'true' if request.url.path.startswith('/rag') else 'false' }} },
+        { label: 'Feeds', href: '/ui/feeds', active: {{ 'true' if request.url.path.startswith('/ui/feeds') else 'false' }} },
+        { label: 'Library', href: '/ui/library', active: {{ 'true' if request.url.path.startswith('/ui/library') else 'false' }} },
+        { label: 'Reference', href: '/ui/reference', active: {{ 'true' if request.url.path.startswith('/ui/reference') else 'false' }} },
+        { label: 'RAG', href: '/ui/rag', active: {{ 'true' if request.url.path.startswith('/ui/rag') else 'false' }} },
         { label: 'API Docs', href: '/docs', target: '_blank', rel: 'noopener' },
       ],
     });

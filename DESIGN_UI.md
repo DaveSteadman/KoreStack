@@ -60,7 +60,7 @@ Current suite identities are:
 
 - KoreStack
 - KoreAgent
-- KoreConversation
+- KoreChat
 - KoreData
 - KoreDocs
 - KoreComms
@@ -103,7 +103,7 @@ The rule is simple: divider-based pages are still panel pages. They are panels a
 UIElements should expose one workspace system with a small set of variants:
 
 - dashboard workspace for panel-based pages such as KoreData and the KoreStack landing page
-- split workspace for divider-based pages such as KoreAgent and KoreConversation
+- split workspace for divider-based pages such as KoreAgent and KoreChat
 - hybrid workspace for pages that need a dashboard summary area plus a persistent split work surface
 
 These are variants of one layout language, not separate design systems.
@@ -120,7 +120,7 @@ That pattern is essentially:
 - restrained outer padding compared with dashboard pages
 - shared panel chrome, headers, and scrolling rules
 
-KoreConversation should use the same pattern when it presents a conversation list beside an active thread or detail surface.
+KoreChat should use the same pattern when it presents a conversation list beside an active thread or detail surface.
 
 ### 5.3 Dashboard Workspace
 

@@ -1,7 +1,7 @@
 const SERVICE_THEMES = {
   korestack: { accent: '#6eb5ff', accent2: '#9fd0ff' },
   koreagent: { accent: '#66f0c9', accent2: '#9af7de' },
-  koreconversation: { accent: '#59d7ff', accent2: '#93e7ff' },
+  korechat: { accent: '#59d7ff', accent2: '#93e7ff' },
   koredata: { accent: '#a78bfa', accent2: '#c8b4ff' },
   koredocs: { accent: '#ffd166', accent2: '#ffe3a3' },
   korecomms: { accent: '#ff8fab', accent2: '#ffb4c8' },

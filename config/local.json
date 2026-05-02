@@ -1,0 +1,14 @@
+{
+  "services": {
+    "agent":        { "port": 8605 },
+    "conversation": { "port": 8630 },
+    "data":         { "port": 8620, "_subports": "+1=korefeed, +2=korelibrary, +3=korerag, +4=korereference" },
+    "comms":        { "port": 8625 },
+    "docs":         { "port": 8615 },
+    "code":         { "port": 8610 }
+  },
+  "connections": {
+    "korechat": "http://127.0.0.1:8630",
+    "korecomms": "http://127.0.0.1:8625"
+  }
+}

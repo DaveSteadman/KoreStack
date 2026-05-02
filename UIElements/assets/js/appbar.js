@@ -1,5 +1,6 @@
 import { SUITE_ICONS, resolveIcon } from './icons.js?v=20260501a';
 import { applyTheme, themeFor } from './theme.js?v=20260501a';
+import { APPBAR_BRAND_ICON, APPBAR_HOME_ICON } from './svg_icons.js?v=20260501a';
 
 const DEFAULT_TYPE_URL = {
   koredoc: '/doc',
@@ -7,28 +8,16 @@ const DEFAULT_TYPE_URL = {
   kodiag: '/diag',
 };
 
-const DEFAULT_APPBAR_TAB_BRAND_ICON = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-  <rect x="3" y="3" width="8" height="8" rx="1.5" fill="currentColor" opacity=".95"/>
-  <rect x="13" y="3" width="8" height="8" rx="1.5" fill="currentColor" opacity=".65"/>
-  <rect x="3" y="13" width="8" height="8" rx="1.5" fill="currentColor" opacity=".65"/>
-  <rect x="13" y="13" width="8" height="8" rx="1.5" fill="currentColor" opacity=".35"/>
-</svg>`;
-
-const DEFAULT_APPBAR_HOME_ICON = `<svg viewBox="0 0 20 20" fill="none" width="13" height="13" aria-hidden="true">
-  <path d="M2 5a2 2 0 0 1 2-2h4l2 2h6a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5z"
-        stroke="currentColor" stroke-width="1.5"/>
-</svg>`;
-
 const DEFAULT_APPBAR_TABS_CONFIG = {
   storeKey: 'koredocs:tabs',
   serviceKey: 'koredocs',
   typeUrl: DEFAULT_TYPE_URL,
   brandLabel: 'KoreDocs',
   brandIcon: 'koredocs',
-  homePath: '/kf',
+  homePath: '/ui',
   homeLabel: 'Files',
   homeTitle: 'KoreFile Explorer',
-  homeIcon: DEFAULT_APPBAR_HOME_ICON,
+  homeIcon: APPBAR_HOME_ICON,
   currentParams: {
     id: 'id',
     file: 'file',

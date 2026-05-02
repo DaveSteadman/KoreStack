@@ -61,13 +61,13 @@ renderAppMenu({
 
 grid.init(canvas, container, cellEditor, _onCommit, _onSelect, _beginFormulaReferenceEdit);
 fileio.init(_onStateChange);
-topbar.initTopbar({ currentService: 'koredocs' });
+topbar.initTopbar({ currentService: 'koredocs', urls: window.__koreSuiteUrls || {} });
 appbar.initAppTabs('koresheet');
 
 // Auto-open from ?file= URL param, else start with a blank sheet
 const autoOpened = await fileio.autoOpenFromUrl(_refresh);
 if (!autoOpened) {
-  location.replace('/kf');
+  location.replace('/ui');
 }
 
 // Restore any unsaved draft for this tab

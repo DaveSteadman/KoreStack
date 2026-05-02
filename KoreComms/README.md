@@ -1,6 +1,6 @@
 # KoreComms
 
-> External communication hub for [KoreAgent](../KoreAgent) — owns external-channel routing in its own SQLite database and bridges those conversations to KoreConversation by stable local conversation names.
+> External communication hub for [KoreAgent](../KoreAgent) — owns external-channel routing in its own SQLite database and bridges those conversations to KoreChat by stable local conversation names.
 
 ![KoreComms chat interface](progress/Screenshot_13-4-2026_223926_localhost.jpeg)
 
@@ -16,14 +16,14 @@ KoreComms is one of three co-operating local services:
 | [KoreAgent](../KoreAgent) | LLM wrapper with context and orchestration |
 | **KoreComms** | External communication hub (this service) |
 
-The agent never talks to Gmail, Outlook, or any other channel directly. KoreComms owns all that complexity while KoreConversation owns canonical thread state and cross-service events.
+The agent never talks to Gmail, Outlook, or any other channel directly. KoreComms owns all that complexity while KoreChat owns canonical thread state and cross-service events.
 
 ---
 
 ## Features
 
-- **Event-driven coordination** — inbound messages become KoreConversation events and outbound delivery is triggered from `outbound_ready` events instead of full-thread scans
-- **Full conversation threading** — conversation state and message history live in KoreConversation, and KoreComms reads the canonical thread on demand
+- **Event-driven coordination** — inbound messages become KoreChat events and outbound delivery is triggered from `outbound_ready` events instead of full-thread scans
+- **Full conversation threading** — conversation state and message history live in KoreChat, and KoreComms reads the canonical thread on demand
 - **Local-first conversation identity** — KoreComms keeps its own conversation rows and uses a stable `conversation_name` to find or recreate the matching agent-side conversation
 - **Chat UI** — per-conversation view with event-driven live updates, command-style input history on `Up` / `Down`, and a compose bar (`Enter` to send, `Shift+Enter` for new line)
 - **Discord integration** — bot-token polling for configured channels or threads, de-duplication by Discord message ID, and reply routing back into the same channel
@@ -86,8 +86,8 @@ Edit `config/default.json` (created automatically on first run with defaults):
 | `host` | `0.0.0.0` | Bind address |
 | `port` | `8900` | HTTP port |
 | `poll_interval` | `60` | Gmail poll interval in seconds |
-| `event_poll_interval` | `1.0` | How often KoreComms checks KoreConversation for outbound delivery events |
-| `missing_kc_conversation_policy` | `recreate` | What to do if the linked KoreConversation record is gone: `recreate` or `abort` |
+| `event_poll_interval` | `1.0` | How often KoreComms checks KoreChat for outbound delivery events |
+| `missing_kc_conversation_policy` | `recreate` | What to do if the linked KoreChat record is gone: `recreate` or `abort` |
 | `data_dir` | `Data` | SQLite database directory |
 | `maf_url` | _(empty)_ | Legacy KoreAgent base URL setting — enables agent session cleanup on conversation delete |
 
@@ -123,7 +123,7 @@ KoreAgent communicates with KoreComms exclusively via REST:
       RECEIVED         ← arrives from an interface or chat compose bar
          │
          ▼
-   KC EVENTED         ← KoreConversation raises `response_needed`
+   KC EVENTED         ← KoreChat raises `response_needed`
          │
          ▼
       AGENT WRITES DRAFT ← KoreAgent appends outbound draft
@@ -132,7 +132,7 @@ KoreAgent communicates with KoreComms exclusively via REST:
    OUTBOUND_READY     ← KoreComms claims event and routes the reply externally
 ```
 
-Only one message is in `agent_processing` for a conversation at a time. KoreConversation manages that coordination through its events table.
+Only one message is in `agent_processing` for a conversation at a time. KoreChat manages that coordination through its events table.
 
 ---
 
@@ -161,5 +161,5 @@ No changes to KoreComms routing logic are required.
 
 ## Related Repos
 
-- [KoreAgent](../KoreAgent) — the agent that processes KoreConversation events
+- [KoreAgent](../KoreAgent) — the agent that processes KoreChat events
 - [KoreData](../KoreData) — data provider used alongside the agent
