@@ -124,9 +124,11 @@ Tab styles live in `UIElements/assets/css/appbar.css` under `.kappbar-editortabs
 
 ## 6. Editor Panel
 
+The editor panel is only active when a file tab is open. When no file is open, the panel remains visible in an empty state and the editor toolbar actions are greyed out and disabled.
+
 ```
 ┌──────────────────────────────────────────────────────┐
-│  [ Find ]  [ Save ]                                  │  ← #editor-topbar / #editor-actions
+│  [ Find ]  [ Save ]                                  │  ← #editor-toolbar / #editor-actions
 ├──────────────────────────────────────────────────────┤
 │  static/code/js/main.js          read/write editor   │  ← #editor-meta
 ├──────────────────────────────────────────────────────┤
@@ -141,19 +143,21 @@ Tab styles live in `UIElements/assets/css/appbar.css` under `.kappbar-editortabs
 └──────────────────────────────────────────────────────┘
 ```
 
-### 6.1 Topbar (`#editor-topbar`)
+### 6.1 Toolbar (`#editor-toolbar`)
 
 Contains only the action buttons. No title or path — those moved to the appbar and explorer panel respectively.
+
+When no file tab is active, all toolbar buttons are disabled.
 
 - **Find** (`#btn-find`) — Toggles `#editor-findbar`.
 - **Save** (`#btn-save`) — Saves the active file. Disabled when no file is open or no unsaved changes.
 
 ### 6.2 Meta bar (`#editor-meta`)
 
-Two-column row immediately below the topbar:
+Two-column row immediately below the toolbar:
 
-- Left: `#file-breadcrumb` — Relative path of the active file within the workspace root.
-- Right: `#file-state` — Read/write state label.
+- Left: `#file-breadcrumb` — Relative path of the active file within the workspace root, or `No file open` when nothing is active.
+- Right: `#file-state` — Read/write state label, or `Editor unavailable` when nothing is active.
 
 ### 6.3 Find bar (`#editor-findbar`)
 
@@ -165,7 +169,7 @@ Controls: text input (`#find-input`), Prev (`#btn-find-prev`), Next (`#btn-find-
 
 Fills remaining vertical space.
 
-- `#editor-empty` — Shown when no file is open. Contains the KoreCode welcome text.
+- `#editor-empty` — Shown when no file is open. Contains the `No file open` empty-state message.
 - `#editor-host` — CodeMirror 6 editor mount. Visible when a file is loaded.
 
 ---
@@ -179,7 +183,7 @@ Fills remaining vertical space.
 | `static/code/css/base.css` | Page frame, panel header/kicker/title/path, shared button classes |
 | `static/code/css/explorer.css` | File tree rows, depth indentation, caret, active state |
 | `static/code/css/find.css` | Find bar layout and inputs |
-| `static/code/css/editor.css` | Editor topbar, meta bar, editor surface, empty state |
+| `static/code/css/editor.css` | Editor toolbar, meta bar, editor surface, empty state |
 
 ---
 

@@ -75,6 +75,20 @@ body {
   border-color: color-mix(in srgb, var(--accent) 46%, transparent);
 }
 
+.toolbar-btn:disabled,
+.icon-btn:disabled {
+  color: var(--text-dim);
+  border-color: var(--border);
+  background: color-mix(in srgb, var(--surface-2) 70%, black 30%);
+  cursor: default;
+  opacity: 0.65;
+}
+
+.toolbar-btn:disabled:hover,
+.icon-btn:disabled:hover {
+  border-color: var(--border);
+}
+
 .toolbar-btn-primary {
   border-color: color-mix(in srgb, var(--accent) 52%, transparent);
   color: var(--accent-2);

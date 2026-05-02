@@ -7,7 +7,7 @@
 
 /* --- Topbar actions (Find / Save) --- */
 
-#editor-topbar {
+#editor-toolbar {
   display: flex;
   justify-content: flex-end;
   align-items: center;
@@ -110,7 +110,7 @@
 }
 
 @media (max-width: 680px) {
-  #editor-topbar,
+  #editor-toolbar,
   #editor-meta {
     grid-template-columns: 1fr;
   }

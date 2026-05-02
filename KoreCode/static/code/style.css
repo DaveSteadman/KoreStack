@@ -121,7 +121,7 @@ body {
   display: grid;
 }
 
-#editor-topbar {
+#editor-toolbar {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 12px;
@@ -357,7 +357,7 @@ body {
     border-bottom: 1px solid var(--border);
   }
 
-  #editor-topbar,
+  #editor-toolbar,
   #editor-meta,
   #editor-findbar {
     grid-template-columns: 1fr;

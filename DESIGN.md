@@ -5,7 +5,7 @@
 The mission of the whole KoreStack project is to provide a LocalLLM agentic framework.
 - Call a single LLM
 - Orchestrate prompt inputs from a chat input, to a chat output
-- Consider and expanded set of tool inputs and outputs, including numerous data and doc sources
+- Consider and expanded set of tool inputs and outputs, including numerous data and doc sources 
 
 KoreStack is also the hub on the system, providing the landing page and central code and config elements.
 

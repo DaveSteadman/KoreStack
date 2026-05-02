@@ -34,6 +34,7 @@ const breadcrumb = document.getElementById('file-breadcrumb');
 const fileState = document.getElementById('file-state');
 const editorEmpty = document.getElementById('editor-empty');
 const editorHost = document.getElementById('editor-host');
+const findButton = document.getElementById('btn-find');
 const saveButton = document.getElementById('btn-save');
 
 const editorTheme = EditorView.theme(
@@ -102,6 +103,7 @@ export function createEditor({ runFind, runFindNext, runFindPrevious, closeFindB
 
   function updateSaveButton() {
     const active = getActiveTab();
+    findButton.disabled = !active;
     saveButton.disabled = !active || !active.dirty;
   }
 
@@ -153,8 +155,8 @@ export function createEditor({ runFind, runFindNext, runFindPrevious, closeFindB
   function renderMeta() {
     const active = getActiveTab();
     if (!active) {
-      breadcrumb.textContent = 'No file selected';
-      fileState.textContent = 'Read/write editor';
+      breadcrumb.textContent = 'No file open';
+      fileState.textContent = 'Editor unavailable';
       editorEmpty.classList.remove('is-hidden');
       editorHost.classList.remove('is-ready');
       updateSaveButton();
