@@ -1,31 +1,3 @@
-[2026-04-28T22:41:32]   Skipping Ollama Blog — next fetch in ~2062m
-[2026-04-28T22:41:32]   Skipping Artificial Intelligence - News — next fetch in ~2770m
-[2026-04-28T22:41:32]   Skipping aiweekly news-today — next fetch in ~2766m
-[2026-04-28T22:41:32]   Skipping Defense News — next fetch in ~2821m
-[2026-04-28T22:41:32]   Skipping Breaking Defense — next fetch in ~2827m
-[2026-04-28T22:41:32] Ingesting: airforce-technology
-[2026-04-28T22:41:32]   Skipping defenseone — next fetch in ~2825m
-[2026-04-28T22:41:32]   Skipping ukdefencejournal — next fetch in ~2957m
-[2026-04-28T22:41:32]   Skipping defenceiq - defence-technology — next fetch in ~2821m
-[2026-04-28T22:41:32]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~2819m
-[2026-04-28T22:41:32]   Skipping defense-aerospace WEB — next fetch in ~2826m
-[2026-04-28T22:41:32]   Skipping janes Insights — next fetch in ~2818m
-[2026-04-28T22:41:32]   Skipping TechCrunch — next fetch in ~179m
-[2026-04-28T22:41:32]   Skipping Ars Technica — next fetch in ~180m
-[2026-04-28T22:41:32]   Skipping Hacker News — next fetch in ~181m
-[2026-04-28T22:41:32]   Skipping The Verge — next fetch in ~179m
-[2026-04-28T22:41:32]   Skipping Wired — next fetch in ~181m
-[2026-04-28T22:41:32]   Skipping MIT Technology Review — next fetch in ~183m
-[2026-04-28T22:41:32]   Skipping IEEE Spectrum — next fetch in ~184m
-[2026-04-28T22:41:32]   Skipping Tom's Hardware — next fetch in ~179m
-[2026-04-28T22:41:32]   Skipping BBC World — next fetch in ~2766m
-[2026-04-28T22:41:32]   Skipping DW World — next fetch in ~2766m
-[2026-04-28T22:41:32]   Skipping France24 — next fetch in ~2768m
-[2026-04-28T22:41:32]   Skipping Aljazeera All — next fetch in ~2763m
-[2026-04-28T22:41:32]   Skipping The Guardian World — next fetch in ~2767m
-[2026-04-28T22:41:32]   Skipping NPR World — next fetch in ~2764m
-[2026-04-28T22:41:32]   Skipping lemonde — next fetch in ~25m
-[2026-04-28T22:41:32]   Skipping BBCi — next fetch in ~7m
 [2026-04-28T22:41:32]   Skipping Australia ABC — next fetch in ~52m
 [2026-04-28T22:41:32]   Skipping DW — next fetch in ~2m
 [2026-04-28T22:41:32]   Skipping Mail / Guardian (SA) — next fetch in ~55m
@@ -998,3 +970,31 @@ For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/St
 [2026-05-02T20:33:09]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~228m
 [2026-05-02T20:33:09]   Skipping defense-aerospace WEB — next fetch in ~233m
 [2026-05-02T20:33:09]   Skipping janes Insights — next fetch in ~226m
+[2026-05-02T23:03:12]   Skipping HuggingFace Blog — next fetch in ~2794m
+[2026-05-02T23:03:12]   Skipping Understanding AI — next fetch in ~2390m
+[2026-05-02T23:03:12]   Skipping Artificial Intelligence - News — next fetch in ~3088m
+[2026-05-02T23:03:12]   Skipping aiweekly news-today — next fetch in ~3084m
+[2026-05-02T23:03:12]   Skipping Defense News — next fetch in ~79m
+[2026-05-02T23:03:12]   Skipping Breaking Defense — next fetch in ~87m
+[2026-05-02T23:03:12]   Skipping defenseone — next fetch in ~84m
+[2026-05-02T23:03:12]   Skipping ukdefencejournal — next fetch in ~841m
+[2026-05-02T23:03:12]   Skipping defenceiq - defence-technology — next fetch in ~80m
+[2026-05-02T23:03:12]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~78m
+[2026-05-02T23:03:12]   Skipping defense-aerospace WEB — next fetch in ~83m
+[2026-05-02T23:03:12]   Skipping janes Insights — next fetch in ~76m
+[2026-05-02T23:10:28]   Skipping HuggingFace Blog — next fetch in ~2787m
+[2026-05-02T23:10:28]   Skipping Understanding AI — next fetch in ~2383m
+[2026-05-02T23:10:28]   Skipping Artificial Intelligence - News — next fetch in ~3081m
+[2026-05-02T23:10:28]   Skipping aiweekly news-today — next fetch in ~3077m
+[2026-05-02T23:10:28]   Skipping Defense News — next fetch in ~71m
+[2026-05-02T23:10:28]   Skipping Breaking Defense — next fetch in ~80m
+[2026-05-02T23:10:28]   Skipping defenseone — next fetch in ~77m
+[2026-05-02T23:10:28]   Skipping ukdefencejournal — next fetch in ~833m
+[2026-05-02T23:10:28]   Skipping defenceiq - defence-technology — next fetch in ~73m
+[2026-05-02T23:10:28]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~71m
+[2026-05-02T23:10:28]   Skipping defense-aerospace WEB — next fetch in ~76m
+[2026-05-02T23:10:28]   Skipping janes Insights — next fetch in ~69m
+[2026-05-02T23:19:56]   Skipping janes Insights — next fetch in ~59m
+[2026-05-02T23:21:58]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~59m
+[2026-05-02T23:22:18]   Skipping Defense News — next fetch in ~59m
+[2026-05-02T23:23:42]   Skipping defenceiq - defence-technology — next fetch in ~59m

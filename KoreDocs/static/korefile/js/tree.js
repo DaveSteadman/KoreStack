@@ -1,4 +1,4 @@
-/**
+﻿/**
  * tree.js — Folder tree panel for KoreFile explorer.
  *
  * Emits:
@@ -8,7 +8,7 @@
 
 import * as api     from './api.js';
 import * as dialogs from './dialogs.js';
-import { CHEVRON_SVG, EDIT_SVG, MOVE_SVG, TRASH_SVG } from '/static/commonui/js/svg_icons.js';
+import { CHEVRON_SVG, EDIT_SVG, MOVE_SVG, TRASH_SVG } from '/ui-elements/assets/js/svg_icons.js';
 
 const _treeEl = document.getElementById('kf-tree');
 

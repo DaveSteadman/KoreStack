@@ -1,4 +1,4 @@
-/**
+﻿/**
  * filelist.js — File list panel for KoreFile explorer.
  *
  * Listens for:
@@ -103,8 +103,8 @@ export async function loadSearch(q) {
 
 // ── Rendering ───────────────────────────────────────────────────
 
-import { resolveIcon, SUITE_ICONS } from '/static/commonui/js/icons.js';
-import { OPEN_SVG, EDIT_SVG, TRASH_SVG } from '/static/commonui/js/svg_icons.js';
+import { resolveIcon, SUITE_ICONS } from '/ui-elements/assets/js/icons.js';
+import { OPEN_SVG, EDIT_SVG, TRASH_SVG } from '/ui-elements/assets/js/svg_icons.js';
 
 const TYPE_URL = { koredoc: '/doc', koresheet: '/sheet', kodiag: '/diag' };
 

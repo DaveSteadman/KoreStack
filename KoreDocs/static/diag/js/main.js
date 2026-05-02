@@ -1,4 +1,4 @@
-/**
+﻿/**
  * main.js — Entry point. Wires everything together.
  */
 
@@ -8,10 +8,10 @@ import * as renderer    from './renderer.js';
 import * as interaction from './interaction.js';
 import * as ui          from './ui.js';
 import * as fileio      from './fileio.js';
-import * as topbar      from '/static/commonui/js/topbar.js';
-import * as appbar      from '/static/commonui/js/appbar.js';
+import * as topbar      from '/ui-elements/assets/js/topbar.js';
+import * as appbar      from '/ui-elements/assets/js/appbar.js';
 import * as draft       from '/static/shared/js/draft.js';
-import { renderAppMenu } from '/static/commonui/js/appMenu.js';
+import { renderAppMenu } from '/ui-elements/assets/js/appMenu.js';
 
 const _draftSave = draft.makeSaver();
 

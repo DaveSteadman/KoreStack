@@ -1,283 +1,10 @@
 {
   "schema_version": "1.0",
-  "skills_root": "KoreAgent/skills",
+  "skills_root": "app/KoreAgent/skills",
   "skills": [
     {
-      "skill_name": "DateTime Skill",
-      "relative_path": "KoreAgent/skills/DateTime/skill.md",
-      "purpose": "Return the current date, time, day name, and month name. Prefer `get_datetime_data()` in all cases - it returns both date and time in a single call. Use `get_day_name()` or `get_month_name()` only when you specifically need just that one value.",
-      "module": "code/KoreAgent/skills/DateTime/datetime_skill.py",
-      "trigger_keyword": "current date, time, day of the week, or month name",
-      "triggers": [
-        "what is the date",
-        "current date",
-        "today's date",
-        "what time is it",
-        "current time",
-        "what day is it",
-        "what year is it",
-        "what month is it",
-        "current month",
-        "month name",
-        "day of the week",
-        "day name"
-      ],
-      "functions": [
-        "get_datetime_data()",
-        "get_day_name()",
-        "get_month_name()"
-      ],
-      "inputs": [],
-      "outputs": [
-        "`get_datetime_data()` - returns a dict with two string fields:",
-        "`date` (str) - current date as `\"YYYY-MM-DD\"`",
-        "`time` (str) - current time as `\"HH:MM:SS\"`",
-        "`get_day_name()` - returns the full name of the current day of the week, e.g. `\"Saturday\"`",
-        "`get_month_name()` - returns the full name of the current month, e.g. `\"March\"`"
-      ],
-      "param_descriptions": {}
-    },
-    {
-      "skill_name": "SystemInfo Skill",
-      "relative_path": "KoreAgent/skills/SystemInfo/skill.md",
-      "purpose": "Provide runtime system information including OS name, Python and Ollama versions, RAM usage, and disk usage. Use this for any prompt about the machine, hardware, runtime environment, available resources, or version details. Do not use this for web or file queries.",
-      "module": "code/KoreAgent/skills/SystemInfo/system_info_skill.py",
-      "trigger_keyword": "system info, RAM or disk space, available memory, or OS and runtime version details",
-      "triggers": [
-        "system info",
-        "system health",
-        "machine info",
-        "specs",
-        "resource usage",
-        "RAM",
-        "memory usage",
-        "available memory",
-        "how much RAM",
-        "disk space",
-        "free space",
-        "disk available",
-        "storage",
-        "Python version",
-        "Ollama version",
-        "what OS",
-        "operating system",
-        "can we fit",
-        "do we have enough",
-        "is there enough space"
-      ],
-      "functions": [
-        "get_system_info_dict()"
-      ],
-      "inputs": [],
-      "outputs": [
-        "`get_system_info_dict()` - returns a dict with individually addressable fields:",
-        "`os` (str) - OS name, e.g. `\"Windows\"`",
-        "`python_version` (str) - e.g. `\"3.10.11\"`",
-        "`ollama_version` (str) - e.g. `\"0.18.0\"`",
-        "`ram_used_gb` (float) - RAM in use in GiB",
-        "`ram_available_gb` (float) - RAM free in GiB",
-        "`disk_used_gb` (float) - disk used in GiB",
-        "`disk_available_gb` (float) - disk free in GiB"
-      ],
-      "param_descriptions": {}
-    },
-    {
-      "skill_name": "WebFetch Skill",
-      "relative_path": "KoreAgent/skills/WebFetch/skill.md",
-      "purpose": "Fetch a web page by URL and extract its readable prose content, stripping all HTML markup, navigation, scripts, advertisements, and other non-content noise. Returns clean text ready for LLM synthesis or summarization.",
-      "module": "code/KoreAgent/skills/WebFetch/web_fetch_skill.py",
-      "trigger_keyword": "fetch",
-      "triggers": [
-        "fetch the page",
-        "read the content of",
-        "get the article from",
-        "open the URL",
-        "read this URL",
-        "what does the page say"
-      ],
-      "functions": [
-        "fetch_page_text(url: str, max_words: int = 2000, timeout_seconds: int = 15, query: str | None = None)"
-      ],
-      "inputs": [],
-      "outputs": [
-        "When `query` is None: the readable body text extracted from the page, up to `max_words` words.",
-        "When `query` is set: a concise LLM-extracted answer targeted at the query, or `\"Not found on this page.\"`",
-        "A string beginning with `\"Error:\"` if the fetch or parse failed. Never raises."
-      ],
-      "param_descriptions": {
-        "fetch_page_text": {
-          "url": "full HTTP or HTTPS URL to fetch. Local paths and ftp:// are rejected.",
-          "max_words": "maximum words of body prose to return (range 50-4000).",
-          "timeout_seconds": "network timeout in seconds (range 5-60).",
-          "query": "when provided, runs an isolated LLM extraction pass and returns only the facts relevant to the query. Use when you know exactly what you are looking for on the page."
-        }
-      }
-    },
-    {
-      "skill_name": "WebNavigate Skill",
-      "relative_path": "KoreAgent/skills/WebNavigate/skill.md",
-      "purpose": "Extract all navigable hyperlinks from a web page and return them as a numbered list with anchor text and resolved absolute URLs. Use this when you land on a hub or listing page (news front page, GitHub topic, forum index, search results page) and need to see what links are available before deciding which ones to read. This is the middle link in the web navigation chain - between `search_web` (discovery) and `fetch_page_text` (reading content). Navigation chrome (menus, login, subscribe, cookie notices) is filtered automatically.",
-      "module": "code/KoreAgent/skills/WebNavigate/web_navigate_skill.py",
-      "trigger_keyword": "links, navigate",
-      "triggers": [
-        "get links from",
-        "list links on",
-        "what links are on",
-        "navigate to",
-        "follow the links on",
-        "find links on this page",
-        "what is on the front page of",
-        "what stories are on",
-        "hub page",
-        "listing page",
-        "index page",
-        "forum page",
-        "news front page",
-        "find articles on",
-        "what pages link to"
-      ],
-      "functions": [
-        "get_page_links(url: str, filter_text: str = \"\", max_links: int = 30, timeout_seconds: int = 15)",
-        "get_page_links_text(url: str, filter_text: str = \"\", max_links: int = 30, timeout_seconds: int = 15)"
-      ],
-      "inputs": [],
-      "outputs": [
-        "`get_page_links(...)` - returns `list[dict]`, each entry `{\"text\": str, \"url\": str}`. On error: single-entry list `{\"text\": \"Error\", \"url\": ..., \"error\": \"...\"}`.",
-        "`get_page_links_text(...)` - returns a formatted plain-text block:"
-      ],
-      "param_descriptions": {
-        "get_page_links": {
-          "url": "full HTTP or HTTPS URL of the listing or hub page to extract links from.",
-          "filter_text": "case-insensitive substring; only links whose anchor text or URL contains this string are returned. Use for coarse pre-filtering when you already know a keyword. For semantic filtering (\"which links are about open source models?\") use `scratch_query` on the parked result instead.",
-          "max_links": "maximum number of links to return, 1-100.",
-          "timeout_seconds": "network timeout, 5-60."
-        }
-      }
-    },
-    {
-      "skill_name": "WebResearch Skill",
-      "relative_path": "KoreAgent/skills/WebResearch/skill.md",
-      "purpose": "Search the web, visit multiple relevant pages, extract the useful text, optionally follow promising links, and return a compact evidence-led research bundle.\n\nUse this when the answer is unlikely to be found reliably from a single search result or single page extract.\nThis skill is designed to reduce orchestration thrash by owning the search frontier internally.",
-      "module": "code/KoreAgent/skills/WebResearch/web_research_skill.py",
-      "trigger_keyword": "",
-      "triggers": [
-        "research this",
-        "investigate",
-        "look into",
-        "search and examine",
-        "find the answer across multiple pages",
-        "follow the links",
-        "gather evidence from the web"
-      ],
-      "functions": [
-        "research_traverse(query: str, max_search_results: int = 5, max_pages: int = 6, max_hops: int = 1, same_domain_only_for_hops: bool = True, timeout_seconds: int = 15, max_words_per_page: int = 450, max_evidence_quotes: int = 3)"
-      ],
-      "inputs": [],
-      "outputs": [
-        "returns a dict with:",
-        "`query` - original query",
-        "`search_url` - the DuckDuckGo search URL used to seed the traversal (useful for debugging)",
-        "`summary` - short synthesis of the strongest evidence found",
-        "`answer_confidence` - `high` when top page score >= 10, `medium` >= 5, `low` < 5. Score is driven by: title term match (+4.0), URL term match (+2.0), body term frequency (up to +3.0/term), multi-term bonus (+3.0). A focused article typically scores 10-20; shallow index/listing pages score 3-7.",
-        "`visited_count` - number of fetched pages",
-        "`seed_results` - initial search results used to seed the traversal",
-        "`best_pages` - compact list of the most relevant pages with URL, title, score, evidence snippets, and a per-page `scratch_key`",
-        "`page_manifest` - compact manifest of all useful pages, each with URL, score, depth, and per-page `scratch_key`",
-        "`exploration_log` - per-page log showing what was visited and why",
-        "`unvisited_candidates` - discovered but not visited URLs (up to 20 from the remaining frontier)",
-        "`full_report` - compact debug report listing the strongest pages and their `scratch_key` values"
-      ],
-      "param_descriptions": {
-        "research_traverse": {
-          "query": "the research question or investigation prompt.",
-          "max_search_results": "number of search results to seed the frontier from.",
-          "max_pages": "maximum total number of pages to visit.",
-          "max_hops": "how many link-following hops beyond the initial search results are allowed.",
-          "same_domain_only_for_hops": "when following links found inside pages, stay on the same domain unless set false.",
-          "timeout_seconds": "network timeout per fetch.",
-          "max_words_per_page": "truncate extracted page text per page to control size.",
-          "max_evidence_quotes": "number of best evidence snippets to keep per useful page."
-        }
-      }
-    },
-    {
-      "skill_name": "WebSearch Skill",
-      "relative_path": "KoreAgent/skills/WebSearch/skill.md",
-      "purpose": "Search the web using DuckDuckGo and return ranked results with title, URL, and snippet. No API key required. Use `search_web_text` for direct synthesis - results come back as formatted text ready to read inline. Use `search_web` when you need to iterate over individual result fields (url, title, snippet) programmatically or pass them selectively to another skill. This skill only returns results - it does not persist or save anything.",
-      "module": "code/KoreAgent/skills/WebSearch/web_search_skill.py",
-      "trigger_keyword": "search",
-      "triggers": [
-        "search the web for",
-        "find information about",
-        "look up",
-        "what is the latest news on",
-        "search for",
-        "find recent"
-      ],
-      "functions": [
-        "search_web(query: str, max_results: int = 5, timeout_seconds: int = 15, offset: int = 0, prefer_article_urls: bool = False)",
-        "search_web_text(query: str, max_results: int = 5, timeout_seconds: int = 15, max_chars_per_result: int = 500, offset: int = 0, prefer_article_urls: bool = False)"
-      ],
-      "inputs": [],
-      "outputs": [
-        "`search_web(...)` - returns `list[dict]`, each entry with `rank` (int), `title` (str), `url` (str), `snippet` (str), and `page_kind` (`article`, `hub`, `homepage`, `search-results`, or `other`). On error: single-entry list with `rank=0` and `snippet` describing the failure.",
-        "`search_web_text(...)` - returns a plain-text formatted block with rank, title, URL, snippet, and optional `[page_kind]` tag. Ready for direct LLM consumption."
-      ],
-      "param_descriptions": {
-        "search_web": {
-          "query": "search query string.",
-          "max_results": "number of results to return, 1-10.",
-          "timeout_seconds": "network timeout in seconds, 5-30.",
-          "offset": "skip this many results from the start (multiples of 30 recommended for page 2+). Best-effort GET-based paging - may not return results for all queries.",
-          "prefer_article_urls": "when true, scans up to 3 DuckDuckGo result pages, promotes concrete article/detail URLs ahead of hub pages, and annotates each result with a `page_kind` field."
-        },
-        "search_web_text": {
-          "query": "search query string.",
-          "max_results": "number of results to return, 1-10.",
-          "timeout_seconds": "network timeout in seconds, 5-30.",
-          "max_chars_per_result": "maximum characters of snippet text per result, 0-2000. Set to 0 to disable truncation.",
-          "offset": "skip this many results; use to retrieve page 2+ when the first page was exhausted.",
-          "prefer_article_urls": "same behavior as `search_web(...)`; when enabled the formatted output also includes each result's `page_kind` tag."
-        }
-      }
-    },
-    {
-      "skill_name": "WebWikipedia Skill",
-      "relative_path": "KoreAgent/skills/WebWikipedia/skill.md",
-      "purpose": "Look up a topic on the live Wikipedia REST API and return a plain-text article summary. Use this for authoritative factual reference data about a person, place, concept, event, or technology. For current news or live data, use WebSearch instead.",
-      "module": "code/KoreAgent/skills/WebWikipedia/wikipedia_skill.py",
-      "trigger_keyword": "wikipedia",
-      "triggers": [
-        "what is",
-        "tell me about",
-        "who is",
-        "look up on Wikipedia",
-        "Wikipedia article",
-        "background on",
-        "history of",
-        "definition of",
-        "bio",
-        "biography",
-        "life of",
-        "biography of"
-      ],
-      "functions": [
-        "lookup_wikipedia(topic: str, timeout: int = 15)"
-      ],
-      "inputs": [],
-      "outputs": [
-        "`lookup_wikipedia(...)` - returns a plain-text block starting with `\"Wikipedia - <article title>\"` followed by the article extract (up to 400 words). Returns `\"No Wikipedia data found for '<topic>'\"` when no matching article is found. Skips disambiguation pages automatically and tries the next candidate."
-      ],
-      "param_descriptions": {
-        "lookup_wikipedia": {
-          "topic": "subject to look up: a name, term, acronym, or short phrase.",
-          "timeout": "network timeout in seconds."
-        }
-      }
-    },
-    {
       "skill_name": "CodeExecute Skill",
-      "relative_path": "KoreAgent/system_skills/CodeExecute/skill.md",
+      "relative_path": "app/system_skills/CodeExecute/skill.md",
       "purpose": "- Execute a self-contained Python code snippet and return the captured stdout.\n- **Always prefer code over a direct answer for any calculation, sequence, table, string operation, or data generation task** - even when the answer seems obvious from training knowledge. Running code is more reliable and verifiable than recall.\n- Only Python stdlib is available; third-party packages (numpy, pandas, sympy) are not.\n- When sandbox is off (`/sandbox off`), all modules are accessible. To install and use a third-party package, use `subprocess` to pip-install it first, then import normally:\n  ```python\n  import subprocess, sys\n  subprocess.run([sys.executable, \"-m\", \"pip\", \"install\", \"numpy\"], check=True)\n  import numpy as np\n  print(np.array([1,2,3]).mean())\n  ```\n- When paired with FileAccess, call this skill first to generate the content, then park the output with `scratch_save`, and pass `{scratch:key}` as the content argument to `file_write` - this avoids carrying the full output string as an inline argument through the tool-calling loop.\n- Code must use `print()` for all output. Favour simple linear code - avoid complex class hierarchies or deeply nested call stacks.",
       "module": "code/KoreAgent/system_skills/CodeExecute/code_execute_skill.py",
       "trigger_keyword": "calculate",
@@ -323,7 +50,7 @@
     },
     {
       "skill_name": "Delegate Skill",
-      "relative_path": "KoreAgent/system_skills/Delegate/skill.md",
+      "relative_path": "app/system_skills/Delegate/skill.md",
       "purpose": "Create a fresh child orchestration context for a focused sub-task. The child gets its own\nisolated reasoning and tool-calling loop, runs independently, and returns a compact answer\nto the parent. Use this when a sub-problem would benefit from multi-step investigation\nwithout polluting the parent context with intermediate tool chatter.",
       "module": "code/KoreAgent/system_skills/Delegate/delegate_skill.py",
       "trigger_keyword": "delegate",
@@ -357,7 +84,7 @@
     },
     {
       "skill_name": "FileAccess Skill",
-      "relative_path": "KoreAgent/system_skills/FileAccess/skill.md",
+      "relative_path": "app/system_skills/FileAccess/skill.md",
       "purpose": "Interface for all file read, write, append, and search operations. All relative paths resolve under `./data/`; a `\"./\"` prefix anchors a path at the workspace root instead. Paths that escape the workspace root are rejected.",
       "module": "code/KoreAgent/system_skills/FileAccess/file_access_skill.py",
       "trigger_keyword": "file",
@@ -441,7 +168,7 @@
     },
     {
       "skill_name": "Memory Skill",
-      "relative_path": "KoreAgent/system_skills/Memory/skill.md",
+      "relative_path": "app/system_skills/Memory/skill.md",
       "purpose": "Persist and recall durable user-stated facts across sessions - identity, preferences, project context, and environment facts. A newer fact on the same subject supersedes the older one. Do not store questions, commands, or ephemeral data such as current time or system stats. Facts persist in `memory_store.json` with category, timestamps, and access tracking.",
       "module": "code/KoreAgent/system_skills/Memory/memory_skill.py",
       "trigger_keyword": "memory",
@@ -490,7 +217,7 @@
     },
     {
       "skill_name": "Scratchpad Skill",
-      "relative_path": "KoreAgent/system_skills/Scratchpad/skill.md",
+      "relative_path": "app/system_skills/Scratchpad/skill.md",
       "purpose": "Store and retrieve named working values within a session so that bulk data returned by other skills\n(web pages, file content, computation results) can be parked under a short key and referenced later\nwithout consuming context window space.  Use this skill whenever the plan involves multi-step tool\nchains where an intermediate result is needed again in a later step.  Do not use it for durable\nfacts that should survive across sessions - use the Memory skill for that.",
       "module": "code/KoreAgent/system_skills/Scratchpad/scratchpad_skill.py",
       "trigger_keyword": "scratchpad",
@@ -571,7 +298,7 @@
     },
     {
       "skill_name": "TaskManagement Skill",
-      "relative_path": "KoreAgent/system_skills/TaskManagement/skill.md",
+      "relative_path": "app/system_skills/TaskManagement/skill.md",
       "purpose": "Create, query, update, enable, disable, and delete scheduled tasks stored as JSON files in `controldata/schedules/`. Each task defines a schedule and a prompt string that the scheduler runs automatically on each firing.",
       "module": "code/KoreAgent/system_skills/TaskManagement/task_management_skill.py",
       "trigger_keyword": "task",

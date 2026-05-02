@@ -1,4 +1,4 @@
-/**
+﻿/**
  * main.js — KoreDoc application entry point.
  * Wires together editor, toolbar, properties panel, file I/O, and the menu bar.
  */
@@ -7,9 +7,9 @@ import * as editor     from './editor.js';
 import * as toolbar    from './toolbar.js';
 import * as properties from './properties.js';
 import * as fileio     from './fileio.js';
-import * as appbar     from '/static/commonui/js/appbar.js';
+import * as appbar     from '/ui-elements/assets/js/appbar.js';
 import * as draft      from '/static/shared/js/draft.js';
-import { initAppMenuEvents } from '/static/commonui/js/appMenu.js';
+import { initAppMenuEvents } from '/ui-elements/assets/js/appMenu.js';
 
 const _draftSave = draft.makeSaver();
 

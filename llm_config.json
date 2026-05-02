@@ -1,0 +1,5 @@
+{
+  "model": "nemotron-cascade-2:latest",
+  "ctx": 131072,
+  "llmhost": "http://MONTBLANC:11434"
+}

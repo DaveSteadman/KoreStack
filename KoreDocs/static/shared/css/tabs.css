@@ -1,7 +1,7 @@
 /*
  * tabs.css — compatibility wrapper for the tabbed application bar.
  *
- * Canonical ownership lives in /static/commonui/css/appbar.css.
+ * Canonical ownership lives in /ui-elements/assets/css/appbar.css.
  */
 
-@import url('/static/commonui/css/appbar.css');
+@import url('/ui-elements/assets/css/appbar.css');

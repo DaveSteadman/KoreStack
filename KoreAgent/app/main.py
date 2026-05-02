@@ -176,30 +176,30 @@ def _attach_child_to_kill_on_close_job(pid: int):
 
 _maybe_reexec_into_project_venv()
 
-import KoreAgent.llm_client as llm_client
-import KoreAgent.koreconv_client as _koreconv_client
-from KoreAgent.input_layer.api_mode import run_api_mode
-from KoreAgent.llm_client import format_running_model_report
-from KoreAgent.llm_client import get_llm_timeout
-from KoreAgent.llm_client import register_llm_call_logger
-from KoreAgent.orchestration import OrchestratorConfig
-from KoreAgent.orchestration import orchestrate_prompt
-from KoreAgent.orchestration import resolve_execution_model
-from KoreAgent.run_helpers import build_summary_block
-from KoreAgent.run_helpers import compact_turns
-from KoreAgent.run_helpers import make_task_session
-from KoreAgent.scratchpad import scratch_clear
-from KoreAgent.skills_catalog_builder import load_skills_payload
-import KoreAgent.mcp_client as _mcp_client
-from KoreAgent.utils.runtime_logger import create_log_file_path
-from KoreAgent.utils.runtime_logger import SessionLogger
-from KoreAgent.input_layer.slash_commands import SlashCommandContext
-from KoreAgent.input_layer.slash_commands import handle as handle_slash
-from KoreAgent.utils.workspace_utils import get_bootstrap_defaults_file
-from KoreAgent.utils.workspace_utils import get_controldata_dir
-from KoreAgent.utils.workspace_utils import get_logs_dir
-from KoreAgent.utils.workspace_utils import get_user_data_dir
-from KoreAgent.utils.workspace_utils import load_runtime_config
+import llm_client as llm_client
+import koreconv_client as _koreconv_client
+from input_layer.api_mode import run_api_mode
+from llm_client import format_running_model_report
+from llm_client import get_llm_timeout
+from llm_client import register_llm_call_logger
+from orchestration import OrchestratorConfig
+from orchestration import orchestrate_prompt
+from orchestration import resolve_execution_model
+from run_helpers import build_summary_block
+from run_helpers import compact_turns
+from run_helpers import make_task_session
+from scratchpad import scratch_clear
+from skills_catalog_builder import load_skills_payload
+import mcp_client as _mcp_client
+from utils.runtime_logger import create_log_file_path
+from utils.runtime_logger import SessionLogger
+from input_layer.slash_commands import SlashCommandContext
+from input_layer.slash_commands import handle as handle_slash
+from utils.workspace_utils import get_bootstrap_defaults_file
+from utils.workspace_utils import get_controldata_dir
+from utils.workspace_utils import get_logs_dir
+from utils.workspace_utils import get_user_data_dir
+from utils.workspace_utils import load_runtime_config
 
 
 # ====================================================================================================

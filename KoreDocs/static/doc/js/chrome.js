@@ -1,5 +1,5 @@
-import * as appbar from '/static/commonui/js/appbar.js';
-import { renderAppMenu } from '/static/commonui/js/appMenu.js';
+﻿import * as appbar from '/ui-elements/assets/js/appbar.js';
+import { renderAppMenu } from '/ui-elements/assets/js/appMenu.js';
 
 export function initChrome() {
   renderAppMenu({

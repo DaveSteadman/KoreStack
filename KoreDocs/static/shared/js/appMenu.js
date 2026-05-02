@@ -1,4 +1,4 @@
-import { koreDocFileIcon, koreSheetFileIcon, koreDiagFileIcon } from '/static/commonui/js/svg_icons.js';
+﻿import { koreDocFileIcon, koreSheetFileIcon, koreDiagFileIcon } from '/ui-elements/assets/js/svg_icons.js';
 
 const ICONS = {
   koredoc:   koreDocFileIcon(18),

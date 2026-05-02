@@ -1,4 +1,4 @@
-/**
+﻿/**
  * main.js — KoreSheet application entry point.
  */
 
@@ -7,10 +7,10 @@ import * as cell       from './cell.js';
 import * as properties from './properties.js';
 import * as fileio     from './fileio.js';
 import { colLetter, addrOf, evaluate } from './formula.js';
-import * as topbar     from '/static/commonui/js/topbar.js';
-import * as appbar     from '/static/commonui/js/appbar.js';
+import * as topbar     from '/ui-elements/assets/js/topbar.js';
+import * as appbar     from '/ui-elements/assets/js/appbar.js';
 import * as draft      from '/static/shared/js/draft.js';
-import { renderAppMenu, initAppMenuEvents } from '/static/commonui/js/appMenu.js';
+import { renderAppMenu, initAppMenuEvents } from '/ui-elements/assets/js/appMenu.js';
 
 const canvas      = document.getElementById('grid');
 const container   = document.getElementById('canvas-container');

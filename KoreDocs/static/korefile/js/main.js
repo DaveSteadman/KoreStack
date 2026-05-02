@@ -1,14 +1,14 @@
-/**
+﻿/**
  * main.js — KoreFile explorer entry point.
  *
  * Wires together: appMenu, tabs, tree panel, file list, toolbar, breadcrumb,
  * search box, and import button.
  */
 
-import * as topbar   from '/static/commonui/js/topbar.js';
-import * as appbar   from '/static/commonui/js/appbar.js';
-import { renderAppMenu, initAppMenuEvents } from '/static/commonui/js/appMenu.js';
-import { DOWNLOAD_SVG } from '/static/commonui/js/svg_icons.js';
+import * as topbar   from '/ui-elements/assets/js/topbar.js';
+import * as appbar   from '/ui-elements/assets/js/appbar.js';
+import { renderAppMenu, initAppMenuEvents } from '/ui-elements/assets/js/appMenu.js';
+import { DOWNLOAD_SVG } from '/ui-elements/assets/js/svg_icons.js';
 import * as tree     from './tree.js';
 import * as filelist from './filelist.js';
 import * as api      from './api.js';
