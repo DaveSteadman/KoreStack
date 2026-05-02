@@ -9,8 +9,10 @@ const DEFAULT_TYPE_URL = {
 };
 
 const DEFAULT_APPBAR_TABS_CONFIG = {
+  mountId: 'tab-bar',
   storeKey: 'koredocs:tabs',
   serviceKey: 'koredocs',
+  renderBrand: true,
   typeUrl: DEFAULT_TYPE_URL,
   brandLabel: 'KoreDocs',
   brandIcon: 'koredocs',
@@ -263,7 +265,7 @@ function closeAppTab(key) {
 }
 
 function renderAppTabs() {
-  const host = document.getElementById('tab-bar');
+  const host = document.getElementById(currentAppTabsConfig.mountId || 'tab-bar');
   if (!host) return;
 
   const theme = themeFor(currentAppTabsConfig.serviceKey || currentAppTabsType);
@@ -312,7 +314,7 @@ function renderAppTabs() {
       </svg>
     </button>`;
 
-  host.innerHTML = brandHtml + homeHtml + tabsHtml + addHtml;
+  host.innerHTML = `${currentAppTabsConfig.renderBrand === false ? '' : brandHtml}${homeHtml}${tabsHtml}${addHtml}`;
 
   for (const tab of host.querySelectorAll('.kd-tab')) {
     tab.addEventListener('mousedown', (event) => {

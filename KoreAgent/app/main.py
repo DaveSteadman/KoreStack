@@ -207,7 +207,7 @@ from utils.workspace_utils import load_runtime_config
 # ====================================================================================================
 DEFAULT_NUM_CTX      = 131072
 MAX_ITERATIONS       = 25   # safety cap; model exits naturally via native tool calling
-SKILLS_CATALOG_PATH  = Path(__file__).resolve().parent / "KoreAgent" / "skills" / "skills_catalog.json"
+SKILLS_CATALOG_PATH  = Path(__file__).resolve().parent / "skills" / "skills_catalog.json"
 LOG_DIR              = get_logs_dir()
 DEFAULTS_FILE        = get_bootstrap_defaults_file()
 

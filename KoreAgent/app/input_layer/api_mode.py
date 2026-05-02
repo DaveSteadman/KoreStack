@@ -66,6 +66,7 @@ def _can_bind(host: str, port: int) -> tuple[bool, str]:
     """Return whether the TCP listen socket can be bound, plus an optional reason."""
     bind_host = "" if host == "0.0.0.0" else host
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     try:
         sock.bind((bind_host, int(port)))
         return True, ""

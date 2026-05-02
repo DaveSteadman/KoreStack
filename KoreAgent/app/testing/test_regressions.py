@@ -43,7 +43,7 @@ from utils.workspace_utils import get_user_data_dir
 
 class RegressionTests(unittest.TestCase):
     def setUp(self) -> None:
-        self.skills_payload = load_skills_payload(CODE_DIR / "KoreAgent" / "skills" / "skills_catalog.json")
+        self.skills_payload = load_skills_payload(CODE_DIR / "skills" / "skills_catalog.json")
         scratch_clear()
 
     def tearDown(self) -> None:

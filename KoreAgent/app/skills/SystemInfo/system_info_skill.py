@@ -36,7 +36,7 @@ import sys
 import platform
 from pathlib import Path
 
-from utils.version import __version__ as _FRAMEWORK_VERSION
+from utils.suite_version import SUITE_VERSION as _FRAMEWORK_VERSION
 
 if sys.platform.startswith("win"):
     import ctypes

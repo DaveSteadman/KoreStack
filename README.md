@@ -49,11 +49,11 @@ python .\main.py
 
 That starts the KoreStack landing page and launches the standard service set:
 
-- KoreAgent on port 8000
-- KoreChat on port 8700
-- KoreData on port 8800
-- KoreDocs on port 5500
-- KoreComms on port 8900
+- KoreAgent on port 8605
+- KoreConversation on port 8630
+- KoreData on port 8620
+- KoreDocs on port 8615
+- KoreComms on port 8625
 - KoreStack on port 8600
 
 Open the suite landing page at:
@@ -88,6 +88,8 @@ The top-level layout now reflects the consolidated suite contract:
 
 The important shift is that `config/`, `datacontrol/`, and `datauser/` are now suite
 assets at the workspace root rather than being treated as belonging to just one service.
+
+`config/default.json` now matches the current suite port map. `config/local.json` remains an optional machine-local overlay rather than the place where the active defaults live.
 
 ## Common Commands
 

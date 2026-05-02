@@ -446,13 +446,17 @@ def _map_ref_article(a: dict) -> dict:
 
 
 def _map_lib_book(b: dict) -> dict:
+    route_id = b.get("route_id") or b.get("id")
     return {
-        "type":    "library_book",
-        "id":      b.get("id"),
-        "title":   b.get("title", ""),
-        "author":  b.get("author", ""),
-        "snippet": b.get("snippet") or (b.get("notes") or "")[:300],
-        "url":     f"/ui/library/{b.get('id', '')}",
+        "type":     "library_book",
+        "id":       route_id,
+        "local_id": b.get("id"),
+        "catalog":  b.get("catalog"),
+        "route_id": route_id,
+        "title":    b.get("title", ""),
+        "author":   b.get("author", ""),
+        "snippet":  b.get("snippet") or (b.get("notes") or "")[:300],
+        "url":      f"/ui/library/{route_id}",
     }
 
 
@@ -466,6 +470,22 @@ def _map_rag_chunk(c: dict) -> dict:
         "snippet": c.get("snippet") or "",
         "url":     f"/ui/rag/{c.get('id', '')}",
     }
+
+
+def _flatten_search_results(results_by_domain: dict) -> list[dict]:
+    merged: list[dict] = []
+    row_index = 0
+    while True:
+        added = False
+        for domain in ("feeds", "reference", "library", "rag"):
+            items = results_by_domain.get(domain)
+            if isinstance(items, list) and row_index < len(items):
+                merged.append(items[row_index])
+                added = True
+        if not added:
+            break
+        row_index += 1
+    return merged
 
 
 @app.post("/api/search")
@@ -510,14 +530,15 @@ async def api_search(req: _SearchRequest):
     if "rag"       in search_domains: tasks.append(("rag",       _rag()))
 
     gathered = await asyncio.gather(*(coro for _, coro in tasks), return_exceptions=True)
-    results = {
+    results_by_domain = {
         key: ({"error": str(val)} if isinstance(val, Exception) else val)
         for (key, _), val in zip(tasks, gathered)
     }
     return {
-        "query":            req.query,
-        "domains_searched": [key for key, _ in tasks],
-        "results":          results,
+        "query":             req.query,
+        "domains_searched":  [key for key, _ in tasks],
+        "results":           _flatten_search_results(results_by_domain),
+        "results_by_domain": results_by_domain,
     }
 
 
@@ -608,11 +629,11 @@ async def koredata_get_reference_article(title: str) -> dict:
 
 
 @_mcp.tool()
-async def koredata_get_library_book(book_id: int) -> dict:
+async def koredata_get_library_book(book_id: str) -> dict:
     """Fetch the full content of a library book.
 
     Args:
-        book_id: Numeric book ID returned by search.
+        book_id: Catalog-aware book id returned by search, such as "local:42".
 
     Returns the full book record including body, author, year, genre, notes, and source.
     """
@@ -937,10 +958,10 @@ async def api_proxy_feed_rate(feed_id: str, minutes: int):
 # ===========================================================================
 
 @app.get("/ui/library", response_class=HTMLResponse)
-async def lib_index(request: Request, limit: int = 200, offset: int = 0):
+async def lib_index(request: Request, limit: int = 200, offset: int = 0, catalog: Optional[str] = None):
     books_r, status_r = await asyncio.gather(
-        _lib_client.get("/books", params={"limit": limit, "offset": offset}),
-        _lib_client.get("/status"),
+        _lib_client.get("/books", params={"limit": limit, "offset": offset, "catalog": catalog} if catalog else {"limit": limit, "offset": offset}),
+        _lib_client.get("/status", params={"catalog": catalog} if catalog else None),
     )
     books  = books_r.json()  if books_r.status_code == 200  else []
     status = status_r.json() if status_r.status_code == 200 else {}
@@ -952,15 +973,18 @@ async def lib_index(request: Request, limit: int = 200, offset: int = 0):
             "limit":  limit,
             "offset": offset,
             "mode":   "all",
+            "catalog": catalog or "",
         },
     )
 
 
 @app.get("/ui/library/incomplete", response_class=HTMLResponse)
-async def lib_incomplete(request: Request, fields: Optional[str] = None):
+async def lib_incomplete(request: Request, fields: Optional[str] = None, catalog: Optional[str] = None):
     params: dict = {}
     if fields:
         params["fields"] = fields
+    if catalog:
+        params["catalog"] = catalog
     r = await _lib_client.get("/incomplete", params=params)
     books = r.json() if r.status_code == 200 else []
     return templates.TemplateResponse(
@@ -972,6 +996,7 @@ async def lib_incomplete(request: Request, fields: Optional[str] = None):
             "offset":        0,
             "mode":          "incomplete",
             "filter_fields": fields,
+            "catalog":       catalog or "",
         },
     )
 
@@ -985,6 +1010,7 @@ async def lib_search(
     year: Optional[str] = None,   # str to tolerate empty string from browser form
     language: Optional[str] = None,
     genre: Optional[str] = None,
+    catalog: Optional[str] = None,
     limit: int = 50,
     offset: int = 0,
 ):
@@ -999,6 +1025,7 @@ async def lib_search(
         if year_int: params["year"]     = year_int
         if language: params["language"] = language
         if genre:    params["genre"]    = genre
+        if catalog:  params["catalog"]  = catalog
         r = await _lib_client.get("/search", params=params)
         results = r.json() if r.status_code == 200 else []
     return templates.TemplateResponse(
@@ -1012,6 +1039,7 @@ async def lib_search(
             "year":     year_int or "",
             "language": language or "",
             "genre":    genre or "",
+            "catalog":  catalog or "",
             "limit":    limit,
         },
     )
@@ -1035,6 +1063,7 @@ async def lib_import_manual(
     language: Optional[str] = Form(None),
     genre:    Optional[str] = Form(None),
     notes:    Optional[str] = Form(None),
+    catalog:  Optional[str] = Form(None),
 ):
     payload: dict = {"title": title}
     if body:      payload["body"]      = body
@@ -1044,10 +1073,11 @@ async def lib_import_manual(
     if language:  payload["language"]  = language
     if genre:     payload["genre"]     = genre
     if notes:     payload["notes"]     = notes
+    if catalog:   payload["catalog"]   = catalog
 
     r = await _lib_client.post("/books", json=payload)
     if r.status_code in (200, 201):
-        book_id = r.json().get("id")
+        book_id = r.json().get("route_id") or r.json().get("id")
         return RedirectResponse(url=f"/ui/library/{book_id}", status_code=303)
     return templates.TemplateResponse(
         request, "library_import.html",
@@ -1115,8 +1145,8 @@ async def lib_import_kiwix_viewer_batch(request: Request):
     return JSONResponse(content=r.json(), status_code=r.status_code)
 
 
-@app.get("/ui/library/{book_id}/edit", response_class=HTMLResponse)
-async def lib_book_edit(request: Request, book_id: int):
+@app.get("/ui/library/{book_id:path}/edit", response_class=HTMLResponse)
+async def lib_book_edit(request: Request, book_id: str):
     r = await _lib_client.get(f"/books/{book_id}")
     if r.status_code == 404:
         raise HTTPException(status_code=404, detail="Book not found")
@@ -1126,10 +1156,10 @@ async def lib_book_edit(request: Request, book_id: int):
     )
 
 
-@app.post("/ui/library/{book_id}/edit", response_class=HTMLResponse)
+@app.post("/ui/library/{book_id:path}/edit", response_class=HTMLResponse)
 async def lib_book_edit_post(
     request:   Request,
-    book_id:   int,
+    book_id:   str,
     title:     str           = Form(...),
     body:      Optional[str] = Form(None),
     author:    Optional[str] = Form(None),
@@ -1160,16 +1190,16 @@ async def lib_book_edit_post(
     )
 
 
-@app.post("/ui/library/{book_id}/delete")
-async def lib_book_delete(book_id: int):
+@app.post("/ui/library/{book_id:path}/delete")
+async def lib_book_delete(book_id: str):
     r = await _lib_client.delete(f"/books/{book_id}")
     if r.status_code not in (200, 204):
         raise HTTPException(status_code=r.status_code, detail="Delete failed")
     return RedirectResponse(url="/ui/library", status_code=303)
 
 
-@app.post("/ui/library/{book_id}/repair-anchors")
-async def lib_repair_anchors(book_id: int):
+@app.post("/ui/library/{book_id:path}/repair-anchors")
+async def lib_repair_anchors(book_id: str):
     r = await _lib_client.post(f"/books/{book_id}/repair-anchors")
     if r.status_code == 404:
         raise HTTPException(status_code=404, detail="Book not found")
@@ -1178,8 +1208,8 @@ async def lib_repair_anchors(book_id: int):
     return RedirectResponse(url=f"/ui/library/{book_id}", status_code=303)
 
 
-@app.get("/ui/library/{book_id}", response_class=HTMLResponse)
-async def lib_book(request: Request, book_id: int):
+@app.get("/ui/library/{book_id:path}", response_class=HTMLResponse)
+async def lib_book(request: Request, book_id: str):
     r = await _lib_client.get(f"/books/{book_id}")
     if r.status_code == 404:
         raise HTTPException(status_code=404, detail="Book not found")

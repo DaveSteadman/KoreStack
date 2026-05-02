@@ -10,12 +10,12 @@ const DEFAULT_HOST = '127.0.0.1';
 
 const DEFAULT_SERVICES = [
 	{ key: 'korestack', label: 'KoreStack', path: '/', port: 8600, icon: 'korestack' },
-	{ key: 'koreagent', label: 'KoreAgent', path: '/', port: 8000, icon: 'koreagent' },
-	{ key: 'korechat', label: 'KoreChat', path: '/ui', port: 8700, icon: 'korechat' },
-	{ key: 'koredata', label: 'KoreData', path: '/ui', port: 8800, icon: 'koredata' },
-	{ key: 'koredocs', label: 'KoreDocs', path: '/ui', port: 5500, icon: 'koredocs' },
-	{ key: 'korecode', label: 'KoreCode', path: '/ui', port: 5600, icon: 'korecode' },
-	{ key: 'korecomms', label: 'KoreComms', path: '/ui', port: 8900, icon: 'korecomms' },
+	{ key: 'koreagent', label: 'KoreAgent', path: '/', port: 8605, icon: 'koreagent' },
+	{ key: 'korechat', label: 'KoreChat', path: '/ui', port: 8630, icon: 'korechat' },
+	{ key: 'koredata', label: 'KoreData', path: '/ui', port: 8620, icon: 'koredata' },
+	{ key: 'koredocs', label: 'KoreDocs', path: '/ui', port: 8615, icon: 'koredocs' },
+	{ key: 'korecode', label: 'KoreCode', path: '/ui', port: 8610, icon: 'korecode' },
+	{ key: 'korecomms', label: 'KoreComms', path: '/ui', port: 8625, icon: 'korecomms' },
 ];
 
 function serviceUrl(service, currentService, urls) {

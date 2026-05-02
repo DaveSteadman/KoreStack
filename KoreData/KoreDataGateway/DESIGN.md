@@ -8,7 +8,7 @@ Requirements and top-level design document for KoreDataGateway, the central hub 
 
 KoreDataGateway has two distinct but related roles:
 
-1. **Agent search interface** — the primary API that LLM agents call. Accepts a unified search request across one or more KoreData services and returns a structured JSON response the agent can act on.
+1. **Agent search interface** — the primary API that LLM agents call. Accepts a unified search request across one or more KoreData services and returns a structured JSON response with both merged and per-domain views.
 
 2. **Service management hub** — launches, monitors, and terminates the child services (KoreFeed, KoreLibrary, KoreReference, KoreRAG) and provides a web UI for each.
 
@@ -22,25 +22,25 @@ The agent search interface is the **primary goal**. All other features exist to 
 LLM Agent
     │
     ▼
-KoreDataGateway  :8800
-    ├── POST /search  ◄── primary agent API
+KoreDataGateway  :8620
+  ├── POST /api/search  ◄── primary agent API
     ├── GET  /        ◄── landing page (health + search test UI)
     ├── GET  /status  ◄── machine-readable health
-    ├── /feeds/*      ◄── proxied to KoreFeed      → :8801  (child process)
-    ├── /library/*    ◄── proxied to KoreLibrary   → :8802  (child process)
-    ├── /reference/*  ◄── proxied to KoreReference → :8804  (child process)
-    └── /rag/*        ◄── proxied to KoreRAG       → :8803  (child process)
+  ├── /feeds/*      ◄── proxied to KoreFeed      → :8621  (child process)
+  ├── /library/*    ◄── proxied to KoreLibrary   → :8622  (child process)
+  ├── /reference/*  ◄── proxied to KoreReference → :8624  (child process)
+  └── /rag/*        ◄── proxied to KoreRAG       → :8623  (child process)
 ```
 
 The gateway starts all four child services at startup (subprocess), waits for each to become healthy, and terminates them cleanly at shutdown. It holds persistent `httpx.AsyncClient` connections to each child.
 
 ---
 
-## Primary Agent API — `POST /search`
+## Primary Agent API — `POST /api/search`
 
 ### Purpose
 
-A single endpoint that an LLM agent calls to search across any combination of KoreData services with one request. The agent receives a structured list of results it can use directly or retrieve in full via follow-up calls.
+A single endpoint that an LLM agent calls to search across any combination of KoreData services with one request. The agent receives a merged flat list in `results` for ranking/selection plus `results_by_domain` for grouped inspection and UI rendering.
 
 ### Request body (JSON)
 
@@ -68,7 +68,18 @@ Example:
 {
   "query": "climate change arctic ice",
   "domains_searched": ["feeds", "reference", "rag"],
-  "results": {
+  "results": [
+    {
+      "type": "feed_entry",
+      "id": 1042,
+      "title": "Arctic ice reaches record low in 2025",
+      "source": "BBC Science",
+      "published_at": "2026-03-14 09:00:00",
+      "snippet": "…scientists warned that the Arctic ice sheet shrank…",
+      "url": "/feeds/science/1042"
+    }
+  ],
+  "results_by_domain": {
     "feeds": [
       {
         "type": "feed_entry",
@@ -106,8 +117,10 @@ Example:
 ```
 
 - `domains_searched` lists the domains that were actually queried.
-- Domains not in the request are absent from `results`.
-- A domain that errors returns `{"error": "HTTP <status>"}` instead of an array.
+- `results` is a merged flat list for agent consumers.
+- `results_by_domain` preserves the grouped service response used by the gateway UI.
+- Domains not in the request are absent from `results_by_domain`.
+- A domain that errors returns `{"error": "HTTP <status>"}` inside `results_by_domain` instead of an array.
 
 #### Result fields by domain
 

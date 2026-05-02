@@ -324,9 +324,10 @@ function highlightJson(obj) {
 function renderCards(data) {
   const container = document.getElementById('sq-cards-view');
   const domains   = data.domains_searched || [];
+  const grouped   = data.results_by_domain || data.results || {};
   let html = '';
   for (const dom of domains) {
-    const items = data.results[dom];
+    const items = grouped[dom];
     html += `<div class="rc-domain-heading">${dom.toUpperCase()}</div>`;
     if (!items) {
       html += `<div class="rc-no-results">No results.</div>`;
@@ -401,7 +402,7 @@ async function runSearch() {
     const data = await resp.json();
 
     // meta line
-    const total = Object.values(data.results || {}).reduce((n, v) => n + (Array.isArray(v) ? v.length : 0), 0);
+    const total = Array.isArray(data.results) ? data.results.length : 0;
     document.getElementById('sq-results-meta').textContent =
       `"${data.query}" | ${total} result${total !== 1 ? 's' : ''} across [${(data.domains_searched||[]).join(', ')}]`;
 

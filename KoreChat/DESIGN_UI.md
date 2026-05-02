@@ -35,7 +35,7 @@ KoreChat uses the shared KoreStack shell from UIElements.
 **Top bar** — `initTopbar({ currentService: 'korechat' })`
 
 **Application bar** — `initAppBar` with:
-- `overline: 'Debug Console'`, `brandLabel: 'KoreChat'`, `brandIcon: 'korechat'`
+- `overline: 'Chat Management'`, `brandLabel: 'KoreChat'`, `brandIcon: 'korechat'`
 - `statusDot: { id: 'status-dot', className: 'off', title: 'API status' }` — live connection indicator, updated by JS
 - `chips: [{ label: 'API', value: 'connecting...', valueId: 'status-label' }]` — API health text
 - `actionsHtml` — inline HTML injected into the appbar actions zone:

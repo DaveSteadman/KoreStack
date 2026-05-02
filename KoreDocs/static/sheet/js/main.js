@@ -62,7 +62,15 @@ renderAppMenu({
 grid.init(canvas, container, cellEditor, _onCommit, _onSelect, _beginFormulaReferenceEdit);
 fileio.init(_onStateChange);
 topbar.initTopbar({ currentService: 'koredocs', urls: window.__koreSuiteUrls || {} });
-appbar.initAppTabs('koresheet');
+appbar.initAppBar({
+  mountId: 'tab-bar',
+  currentService: 'koredocs',
+  overline: 'Spreadsheet',
+  brandLabel: 'KoreSheet',
+  brandIcon: 'koresheet',
+  editorTabsSlot: 'koredocs-tabs',
+});
+appbar.initAppTabs('koresheet', { mountId: 'koredocs-tabs', renderBrand: false });
 
 // Auto-open from ?file= URL param, else start with a blank sheet
 const autoOpened = await fileio.autoOpenFromUrl(_refresh);

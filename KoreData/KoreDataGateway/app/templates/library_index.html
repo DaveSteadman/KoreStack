@@ -97,8 +97,8 @@
       <tbody>
         {% for b in books %}
         <tr>
-          <td class="meta">{{ b.id }}</td>
-          <td><a href="/ui/library/{{ b.id }}">{{ b.title }}</a></td>
+          <td class="meta">{{ b.route_id or b.id }}</td>
+          <td><a href="/ui/library/{{ b.route_id or b.id }}">{{ b.title }}</a></td>
           <td class="meta">{{ b.author or "-" }}</td>
           <td class="meta">{{ b.year or "-" }}</td>
           <td class="meta">{{ b.language or "-" }}</td>

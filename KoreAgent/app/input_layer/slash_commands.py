@@ -43,7 +43,7 @@ from utils.workspace_utils import get_bootstrap_defaults_file
 from utils.workspace_utils import get_controldata_dir
 from utils.workspace_utils import get_logs_dir
 from utils.workspace_utils import get_test_results_dir
-from utils.version import __version__
+from utils.suite_version import SUITE_VERSION
 
 
 def handle(text: str, ctx: SlashCommandContext) -> bool:
@@ -280,7 +280,7 @@ def _cmd_stoprun(arg: str, ctx: SlashCommandContext) -> None:
 
 
 def _cmd_version(arg: str, ctx: SlashCommandContext) -> None:
-    ctx.output(f"KoreAgent {__version__}", "info")
+    ctx.output(f"KoreAgent {SUITE_VERSION}", "info")
 
 
 def _cmd_sandbox(arg: str, ctx: SlashCommandContext) -> None:

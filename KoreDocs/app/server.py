@@ -143,7 +143,11 @@ class _NoCacheMiddleware(BaseHTTPMiddleware):
     """
     async def dispatch(self, request: Request, call_next):
         response = await call_next(request)
-        if request.url.path.startswith('/static/'):
+        if (
+            request.url.path.startswith('/static/')
+            or request.url.path.startswith('/ui-elements/assets/')
+            or request.url.path.startswith('/static/commonui/')
+        ):
             response.headers['cache-control'] = 'no-store'
         return response
 

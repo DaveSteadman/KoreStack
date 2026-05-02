@@ -21,6 +21,7 @@ from app.database import (
     get_book,
     get_status,
     init_db,
+    list_catalogs,
     list_books,
     list_incomplete,
     search_books,
@@ -55,6 +56,9 @@ class BookCreate(BaseModel):
     language: Optional[str] = None
     genre: Optional[str] = None
     notes: Optional[str] = None
+    source: Optional[str] = None
+    source_id: Optional[str] = None
+    catalog: Optional[str] = None
 
 
 class BookUpdate(BaseModel):
@@ -65,6 +69,8 @@ class BookUpdate(BaseModel):
     language: Optional[str] = None
     genre: Optional[str] = None
     notes: Optional[str] = None
+    source: Optional[str] = None
+    source_id: Optional[str] = None
 
 
 class KiwixImportRequest(BaseModel):
@@ -75,20 +81,31 @@ class KiwixImportRequest(BaseModel):
     year: Optional[int] = None
     language: Optional[str] = None
     kiwix_url: Optional[str] = None
+    catalog: Optional[str] = None
 
 
 # ---------------------------------------------------------------------------
 # Books
 # ---------------------------------------------------------------------------
 
+@app.get("/catalogs", summary="List available catalogs")
+def route_list_catalogs():
+    return {"catalogs": list_catalogs()}
+
 @app.get("/books", summary="List all books (metadata only)")
-def route_list_books(limit: int = 100, offset: int = 0):
-    return list_books(limit=limit, offset=offset)
+def route_list_books(limit: int = 100, offset: int = 0, catalog: Optional[str] = None):
+    try:
+        return list_books(limit=limit, offset=offset, catalog=catalog)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
-@app.get("/books/{book_id}", summary="Get a single book with full body")
-def route_get_book(book_id: int):
-    book = get_book(book_id, include_body=True)
+@app.get("/books/{book_id:path}", summary="Get a single book with full body")
+def route_get_book(book_id: str):
+    try:
+        book = get_book(book_id, include_body=True)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     if book is None:
         raise HTTPException(status_code=404, detail="Book not found")
     return book
@@ -96,23 +113,32 @@ def route_get_book(book_id: int):
 
 @app.post("/books", status_code=201, summary="Add a new book")
 def route_add_book(data: BookCreate):
-    return add_book(
-        title=data.title,
-        body=data.body,
-        author=data.author,
-        year=data.year,
-        language=data.language,
-        genre=data.genre,
-        notes=data.notes,
-    )
+    try:
+        return add_book(
+            title=data.title,
+            body=data.body,
+            author=data.author,
+            year=data.year,
+            language=data.language,
+            genre=data.genre,
+            notes=data.notes,
+            source=data.source,
+            source_id=data.source_id,
+            catalog=data.catalog,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
-@app.patch("/books/{book_id}", summary="Update book metadata or body")
-def route_update_book(book_id: int, data: BookUpdate):
+@app.patch("/books/{book_id:path}", summary="Update book metadata or body")
+def route_update_book(book_id: str, data: BookUpdate):
     if get_book(book_id, include_body=False) is None:
         raise HTTPException(status_code=404, detail="Book not found")
-    updated = update_book(book_id, data.model_dump(exclude_none=True))
-    return updated
+    try:
+        updated = update_book(book_id, data.model_dump(exclude_none=True))
+        return updated
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 def _repair_kore_anchors(body: str) -> str:
@@ -146,8 +172,8 @@ def _repair_kore_anchors(body: str) -> str:
     return result
 
 
-@app.post("/books/{book_id}/repair-anchors", summary="Repair broken anchor spans in stored body")
-def route_repair_anchors(book_id: int):
+@app.post("/books/{book_id:path}/repair-anchors", summary="Repair broken anchor spans in stored body")
+def route_repair_anchors(book_id: str):
     book = get_book(book_id, include_body=True)
     if book is None:
         raise HTTPException(status_code=404, detail="Book not found")
@@ -155,13 +181,20 @@ def route_repair_anchors(book_id: int):
     repaired = _repair_kore_anchors(body)
     if repaired == body:
         return {"repaired": False, "message": "Nothing to repair"}
-    updated = update_book_body(book_id, repaired)
+    try:
+        updated = update_book_body(book_id, repaired)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {"repaired": True, "book": updated}
 
 
-@app.delete("/books/{book_id}", status_code=204, summary="Delete a book")
-def route_delete_book(book_id: int):
-    if not delete_book(book_id):
+@app.delete("/books/{book_id:path}", status_code=204, summary="Delete a book")
+def route_delete_book(book_id: str):
+    try:
+        deleted = delete_book(book_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    if not deleted:
         raise HTTPException(status_code=404, detail="Book not found")
     return JSONResponse(status_code=204, content=None)
 
@@ -180,22 +213,30 @@ def route_search(
     genre: Optional[str] = None,
     limit: int = 50,
     offset: int = 0,
+    catalog: Optional[str] = None,
+    catalogs: Optional[str] = None,
 ):
     if not any([q, author, title, year, language, genre]):
         raise HTTPException(
             status_code=400,
             detail="Provide at least one search parameter: q, author, title, year, language, or genre",
         )
-    return search_books(
-        q=q,
-        author=author,
-        title=title,
-        year=year,
-        language=language,
-        genre=genre,
-        limit=limit,
-        offset=offset,
-    )
+    parsed_catalogs = [value.strip() for value in (catalogs or "").split(",") if value.strip()] or None
+    try:
+        return search_books(
+            q=q,
+            author=author,
+            title=title,
+            year=year,
+            language=language,
+            genre=genre,
+            limit=limit,
+            offset=offset,
+            catalog=catalog,
+            catalogs=parsed_catalogs,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 # ---------------------------------------------------------------------------
@@ -203,7 +244,7 @@ def route_search(
 # ---------------------------------------------------------------------------
 
 @app.get("/incomplete", summary="List books with missing metadata fields")
-def route_incomplete(fields: Optional[str] = None):
+def route_incomplete(fields: Optional[str] = None, catalog: Optional[str] = None, catalogs: Optional[str] = None):
     """
     Returns books where `author`, `year`, `language`, or `genre` are NULL/empty.
     Use `?fields=author,year` to filter to specific missing fields only.
@@ -216,7 +257,11 @@ def route_incomplete(fields: Optional[str] = None):
                 status_code=400,
                 detail=f"Valid fields are: {', '.join(COMPLETENESS_FIELDS)}",
             )
-    return list_incomplete(fields=parsed_fields)
+    parsed_catalogs = [value.strip() for value in (catalogs or "").split(",") if value.strip()] or None
+    try:
+        return list_incomplete(fields=parsed_fields, catalog=catalog, catalogs=parsed_catalogs)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 # ---------------------------------------------------------------------------
@@ -556,7 +601,7 @@ async def import_kiwix(data: KiwixImportRequest):
     if not url:
         raise HTTPException(status_code=503, detail="kiwix_url not configured")
 
-    if title_exists(data.title):
+    if title_exists(data.title, catalog=data.catalog):
         raise HTTPException(status_code=409, detail=f"Already imported: {data.title!r}")
 
     # Use the URL Kiwix told us (from suggest), falling back to a reconstructed path
@@ -602,29 +647,37 @@ async def import_kiwix(data: KiwixImportRequest):
         raise HTTPException(status_code=502, detail=f"Kiwix fetch failed: {exc}") from exc
 
     parsed = _parse_gutenberg_html(r.text)
-    return add_book(
-        title=data.title,
-        body=parsed["body"],
-        author=data.author or parsed["author"],
-        year=data.year or parsed["year"],
-        language=data.language,
-        genre=parsed["genre"],
-    )
+    try:
+        return add_book(
+            title=data.title,
+            body=parsed["body"],
+            author=data.author or parsed["author"],
+            year=data.year or parsed["year"],
+            language=data.language,
+            genre=parsed["genre"],
+            source="kiwix",
+            source_id=data.article_url,
+            catalog=data.catalog,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 class KiwixViewerImportRequest(BaseModel):
     viewer_url: str          # e.g. http://host/viewer#zim/Article%20Name.123
     kiwix_url: Optional[str] = None   # override host (rarely needed)
     language: str = "en"
+    catalog: Optional[str] = None
 
 
 class KiwixViewerBatchRequest(BaseModel):
     urls: list[str]
     language: str = "en"
     kiwix_url: Optional[str] = None
+    catalog: Optional[str] = None
 
 
-async def _fetch_and_import_viewer_url(viewer_url: str, language: str, kiwix_url: Optional[str]) -> dict:
+async def _fetch_and_import_viewer_url(viewer_url: str, language: str, kiwix_url: Optional[str], catalog: Optional[str]) -> dict:
     """Shared logic for single and batch viewer-URL imports.
 
     Returns a result dict with keys: status ('ok'|'exists'|'error'), title, id, detail.
@@ -658,7 +711,7 @@ async def _fetch_and_import_viewer_url(viewer_url: str, language: str, kiwix_url
         title = parsed["title"] or _urlunquote(article_path.rsplit('.', 1)[0].replace('_', ' '))
         result["title"] = title
 
-        if title_exists(title):
+        if title_exists(title, catalog=catalog):
             result["status"] = "exists"
             result["detail"] = f"Already imported: {title!r}"
             return result
@@ -670,9 +723,12 @@ async def _fetch_and_import_viewer_url(viewer_url: str, language: str, kiwix_url
             year=parsed["year"],
             language=language,
             genre=parsed["genre"],
+            source="kiwix",
+            source_id=viewer_url,
+            catalog=catalog,
         )
         result["status"] = "ok"
-        result["id"] = book["id"]
+        result["id"] = book.get("route_id") or book["id"]
     except Exception as exc:
         result["detail"] = str(exc)
     return result
@@ -685,7 +741,7 @@ async def import_kiwix_viewer(data: KiwixViewerImportRequest):
     and imports the article directly.  The host, ZIM name, and article path
     are all derived from the URL — no guessing required.
     """
-    r = await _fetch_and_import_viewer_url(data.viewer_url, data.language, data.kiwix_url)
+    r = await _fetch_and_import_viewer_url(data.viewer_url, data.language, data.kiwix_url, data.catalog)
     if r["status"] == "error":
         raise HTTPException(status_code=502, detail=r["detail"])
     if r["status"] == "exists":
@@ -701,7 +757,7 @@ async def import_kiwix_viewer_batch(data: KiwixViewerBatchRequest):
         url = raw.strip()
         if not url or url.startswith('#'):
             continue
-        result = await _fetch_and_import_viewer_url(url, data.language, data.kiwix_url)
+        result = await _fetch_and_import_viewer_url(url, data.language, data.kiwix_url, data.catalog)
         results.append(result)
     ok    = sum(1 for r in results if r["status"] == "ok")
     exist = sum(1 for r in results if r["status"] == "exists")
@@ -714,8 +770,11 @@ async def import_kiwix_viewer_batch(data: KiwixViewerBatchRequest):
 # ---------------------------------------------------------------------------
 
 @app.get("/status", summary="Server status and database statistics")
-def route_status():
-    stats = get_status()
+def route_status(catalog: Optional[str] = None):
+    try:
+        stats = get_status(catalog=catalog)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {
         "service": "KoreLibrary",
         **stats,

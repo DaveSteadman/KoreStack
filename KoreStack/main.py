@@ -815,7 +815,7 @@ def html_page(manager: StackManager, dashboard_url: str) -> str:
     initTopbar({{ currentService: 'korestack', urls: {suite_urls_json} }});
       initAppBar({{
           currentService: 'korestack',
-          overline: 'Local Control Plane',
+          overline: 'Landing page & Config',
           brandLabel: 'KoreStack',
           brandIcon: 'korestack',
           chips: [

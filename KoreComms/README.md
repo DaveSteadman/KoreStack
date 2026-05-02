@@ -60,7 +60,7 @@ py -m venv .venv
 py main.py
 ```
 
-The WebUI is at **http://localhost:8900**.
+The WebUI is at **http://localhost:8625**.
 
 ---
 
@@ -71,25 +71,25 @@ Edit `config/default.json` (created automatically on first run with defaults):
 ```json
 {
   "host": "0.0.0.0",
-  "port": 8900,
+   "port": 8625,
   "log_level": "info",
   "poll_interval": 60,
    "event_poll_interval": 1.0,
    "missing_kc_conversation_policy": "recreate",
-  "data_dir": "Data",
-  "maf_url": "http://localhost:8901"
+   "data_dir": "datacontrol/korecomms",
+   "korechat_url": "http://localhost:8630"
 }
 ```
 
 | Key | Default | Description |
 |---|---|---|
 | `host` | `0.0.0.0` | Bind address |
-| `port` | `8900` | HTTP port |
+| `port` | `8625` | HTTP port |
 | `poll_interval` | `60` | Gmail poll interval in seconds |
 | `event_poll_interval` | `1.0` | How often KoreComms checks KoreChat for outbound delivery events |
 | `missing_kc_conversation_policy` | `recreate` | What to do if the linked KoreChat record is gone: `recreate` or `abort` |
-| `data_dir` | `Data` | SQLite database directory |
-| `maf_url` | _(empty)_ | Legacy KoreAgent base URL setting — enables agent session cleanup on conversation delete |
+| `data_dir` | `datacontrol/korecomms` | SQLite database directory under the shared suite control tree |
+| `korechat_url` | `http://localhost:8630` | KoreConversation/KoreChat base URL for outbound delivery events |
 
 Discord connection settings live per interface in the WebUI:
 

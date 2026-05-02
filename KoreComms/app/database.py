@@ -114,9 +114,6 @@ def _ensure_schema(conn: sqlite3.Connection) -> None:
     if conv_cols and "subject" in conv_cols and "korechat_id" not in conv_cols:
         conn.execute("ALTER TABLE conversations RENAME COLUMN subject TO korechat_id")
         conv_cols = {r[1] for r in conn.execute("PRAGMA table_info(conversations)")}
-    if conv_cols and "korechat_id" in conv_cols and "korechat_id" not in conv_cols:
-        conn.execute("ALTER TABLE conversations RENAME COLUMN korechat_id TO korechat_id")
-        conv_cols = {r[1] for r in conn.execute("PRAGMA table_info(conversations)")}
     if conv_cols and "korechat_id" not in conv_cols:
         conn.execute("ALTER TABLE conversations ADD COLUMN korechat_id TEXT")
     conn.execute(

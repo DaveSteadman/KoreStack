@@ -25,7 +25,7 @@ Content is:
 
 ## Data Model
 
-One SQLite database (`library.db`) holds all books in a single `books` table.
+KoreLibrary keeps a writable default catalog in `library.db` and may expose additional catalogs from `datauser/catalogs/*.db` or bundled read-only `catalogs/*.db` files. Each catalog uses the same `books` table schema.
 
 | Column       | Type    | Notes                                                      |
 |--------------|---------|------------------------------------------------------------|
@@ -45,6 +45,7 @@ One SQLite database (`library.db`) holds all books in a single `books` table.
 
 - FTS5 virtual table indexes `title`, `author`, and `body` for full-text search with BM25 ranking.
 - Metadata search (title, author, year, language, genre) is supported via standard SQL queries.
+- API responses include `catalog` and `route_id` so callers can address books uniquely across catalogs (`local:42`, `gutenberg:15`, etc.).
 
 ---
 
@@ -56,11 +57,12 @@ KoreLibrary exposes a REST API (FastAPI). There is **no local web UI** — all u
 
 | Method   | Path               | Description                              |
 |----------|--------------------|------------------------------------------|
-| `GET`    | `/books`           | List books (metadata only, no body)      |
-| `GET`    | `/books/{id}`      | Get a single book (metadata + body)      |
-| `POST`   | `/books`           | Add a new book                           |
-| `PATCH`  | `/books/{id}`      | Update metadata or body (for corrections)|
-| `DELETE` | `/books/{id}`      | Remove a book                            |
+| `GET`    | `/catalogs`        | List available catalogs and their capabilities |
+| `GET`    | `/books`           | List books (metadata only, no body), optionally scoped by `catalog` |
+| `GET`    | `/books/{id}`      | Get a single book (metadata + body). `id` may be catalog-aware (`local:42`) |
+| `POST`   | `/books`           | Add a new book to the specified writable catalog |
+| `PATCH`  | `/books/{id}`      | Update metadata or body (for corrections) |
+| `DELETE` | `/books/{id}`      | Remove a book from a writable catalog |
 
 ### Search
 
@@ -71,6 +73,7 @@ KoreLibrary exposes a REST API (FastAPI). There is **no local web UI** — all u
 Query parameters for `/search`:
 - `q` — full-text query (searches title, author, body)
 - `author`, `title`, `year`, `language`, `genre` — metadata filters
+- `catalog` or `catalogs` — scope search to one or more catalogs
 - `limit`, `offset` — pagination
 
 ### Incomplete Records
@@ -112,6 +115,8 @@ Books can be edited after import to correct:
 - Typos in body text.
 
 `updated_at` is set on every edit.
+
+Bundled catalogs are treated as read-only. Write operations against them return an error instead of mutating shipped content.
 
 ---
 

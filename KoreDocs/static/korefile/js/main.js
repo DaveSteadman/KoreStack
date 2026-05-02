@@ -44,7 +44,15 @@ initAppMenuEvents(action => {
 // ── Tab bar ─────────────────────────────────────────────────────
 
 topbar.initTopbar({ currentService: 'koredocs', urls: window.__koreSuiteUrls || {} });
-appbar.initAppTabs('korefile');
+appbar.initAppBar({
+  mountId: 'tab-bar',
+  currentService: 'koredocs',
+  overline: 'File Manager',
+  brandLabel: 'KoreFile',
+  brandIcon: 'korefile',
+  editorTabsSlot: 'koredocs-tabs',
+});
+appbar.initAppTabs('korefile', { mountId: 'koredocs-tabs', renderBrand: false });
 
 // ── State ───────────────────────────────────────────────────────
 

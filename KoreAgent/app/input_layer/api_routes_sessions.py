@@ -1,3 +1,4 @@
+import copy
 import queue
 import threading
 import uuid
@@ -66,6 +67,7 @@ def register_session_routes(
             return {"run_id": run_id, "session_id": session_id, "queued": True}
 
         def _run(_prompt=prompt_text) -> None:
+            run_config = copy.deepcopy(config)
             session_context = create_session_context(session_id=session_id, persist_path=None)
             history, summaries = load_session(session_id)
             queue_run_event(run_q, {"type": "start", "run_id": run_id, "prompt": _prompt}, priority=True)
@@ -117,7 +119,7 @@ def register_session_routes(
                         queue_run_event(run_q, {"type": "rename_session", "run_id": run_id, "session_id": new_session_id, "name": name}, priority=True)
 
                     slash_ctx = make_slash_context(
-                        config=config,
+                        config=run_config,
                         output=_slash_output,
                         clear_history=lambda: (history.clear(), session_context.clear(), clear_session_scratch(session_id), save_session(session_id, history, [], 0, 0)),
                         session_context=session_context,
@@ -141,7 +143,7 @@ def register_session_routes(
                         summary_block = build_summary_block(summaries)
                         response, p_tokens, _completion_tokens, _ok, tps = orchestrate_prompt(
                             user_prompt=_prompt,
-                            config=config,
+                            config=run_config,
                             logger=run_logger,
                             conversation_history=history.as_list() or None,
                             session_context=session_context,

@@ -2,6 +2,15 @@
 import { renderAppMenu } from '/ui-elements/assets/js/appMenu.js';
 
 export function initChrome() {
+  appbar.initAppBar({
+    mountId: 'tab-bar',
+    currentService: 'koredocs',
+    overline: 'Document Editor',
+    brandLabel: 'KoreDoc',
+    brandIcon: 'koredoc',
+    editorTabsSlot: 'koredocs-tabs',
+  });
+
   renderAppMenu({
     app: 'koredoc',
     appLabel: 'KoreDoc',
@@ -31,5 +40,5 @@ export function initChrome() {
     ],
   });
 
-  appbar.initAppTabs('koredoc');
+  appbar.initAppTabs('koredoc', { mountId: 'koredocs-tabs', renderBrand: false });
 }

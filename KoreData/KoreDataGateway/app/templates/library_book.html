@@ -6,8 +6,8 @@
 <div class="kcui-page kcui-page--narrow kcui-stack">
 <div class="panel kcui-panel" style="margin-bottom:1rem;">
   <div class="panel-header kcui-panel-header">
-    BOOK #{{ book.id }}
-    <a href="/ui/library/{{ book.id }}/edit" style="margin-left:auto; font-size:11px; color:var(--dim);">EDIT</a>
+    BOOK {{ book.route_id or book.id }}
+    <a href="/ui/library/{{ book.route_id or book.id }}/edit" style="margin-left:auto; font-size:11px; color:var(--dim);">EDIT</a>
   </div>
   <div class="panel-body kcui-panel-body">
     <p style="font-size:1.1rem; color:var(--text); margin-bottom:1rem; line-height:1.4; font-weight:600;">{{ book.title }}</p>
@@ -29,6 +29,16 @@
         <span class="kv-key">genre</span>
         <span class="kv-val {% if not book.genre %}meta{% endif %}">{{ book.genre or "-" }}</span>
       </div>
+      <div class="kv">
+        <span class="kv-key">catalog</span>
+        <span class="kv-val meta">{{ book.catalog or "local" }}</span>
+      </div>
+      {% if book.source %}
+      <div class="kv">
+        <span class="kv-key">source</span>
+        <span class="kv-val meta">{{ book.source }}</span>
+      </div>
+      {% endif %}
       {% if book.word_count %}
       <div class="kv">
         <span class="kv-key">word count</span>
@@ -52,7 +62,7 @@
     <span class="badge badge-dim" style="margin-left:auto;">{{ "{:,}".format(book.word_count) }} words</span>
     {% endif %}
     {% if book.body and 'KORE\\_ANCHOR\\_' in book.body %}
-    <form method="post" action="/ui/library/{{ book.id }}/repair-anchors" style="margin-left:{% if not book.word_count %}auto{% else %}0.5rem{% endif %};">
+    <form method="post" action="/ui/library/{{ book.route_id or book.id }}/repair-anchors" style="margin-left:{% if not book.word_count %}auto{% else %}0.5rem{% endif %};">
       <button type="submit" class="btn btn-dim" title="Fix broken TOC anchor links"> repair anchors</button>
     </form>
     {% endif %}

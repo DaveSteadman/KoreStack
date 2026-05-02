@@ -2,7 +2,7 @@
 
 A collection of local data services for LLM agents.
 
-KoreData provides structured, searchable content across three domains — live news feeds, long-form books, and encyclopedic reference articles — through a single unified API gateway. Agents query one endpoint and get ranked results from whichever services are relevant.
+KoreData provides structured, searchable content across four domains — live news feeds, long-form books, encyclopedic reference articles, and RAG chunks — through a single unified API gateway. Agents query one endpoint and get a flat merged result list plus per-domain groupings from whichever services are relevant.
 
 ![KoreData](/Progress/readme_banner.png)
 
@@ -10,18 +10,18 @@ KoreData provides structured, searchable content across three domains — live n
 
 - **Agent-first**: every service exposes a REST search API designed for LLM agent consumption, not just human browsing.
 - **Local and offline**: content is stored in local SQLite databases; no cloud search dependencies, no per-query API costs.
-- **Unified gateway**: a single `POST /search` call across KoreDataGateway reaches all three data domains simultaneously.
+- **Unified gateway**: a single `POST /api/search` call across KoreDataGateway reaches all four data domains simultaneously.
 - **Practical sources**: RSS feeds via trafilatura, ebooks via Project Gutenberg (Kiwix), and Wikipedia-scale reference articles via Kiwix ZIM files.
 
 ## Services
 
 | Service | Port | Status | Description |
 |---|---|---|---|
-| **KoreDataGateway** | 8800 | Planned | Unified agent API; proxies and aggregates results from all child services |
-| **KoreFeed** | 8801 | Working | RSS ingest with full-text scraping and per-domain SQLite/FTS5 storage |
-| **KoreLibrary** | 8802 | In development | Long-form ebook and document store, imported from Kiwix / Project Gutenberg |
-| **KoreRAG** | 8803 | Planned | Vector chunk store for RAG; segments and embeds documents for semantic retrieval |
-| **KoreReference** | 8804 | Planned | Wikipedia-scale encyclopedic articles with wikilink traversal |
+| **KoreDataGateway** | 8620 | Working | Unified agent API; proxies and aggregates results from all child services |
+| **KoreFeed** | 8621 | Working | RSS ingest with full-text scraping and per-domain SQLite/FTS5 storage |
+| **KoreLibrary** | 8622 | Working | Long-form ebook and document store with catalog-aware routing and provenance fields |
+| **KoreRAG** | 8623 | In development | Vector chunk store for RAG; segments and embeds documents for semantic retrieval |
+| **KoreReference** | 8624 | In development | Wikipedia-scale encyclopedic articles with wikilink traversal |
 
 ---
 
@@ -41,7 +41,7 @@ python main.py
 Then open:
 
 ```text
-http://localhost:8800/
+http://localhost:8620/
 ```
 
 The feed scheduler starts immediately. Configured feeds are fetched on their own intervals; a restart respects each feed's last-fetched timestamp so nothing is re-ingested unnecessarily.
@@ -52,8 +52,10 @@ The feed scheduler starts immediately. Configured feeds are fetched on their own
 
 Once KoreFeed is running, try a keyword search against the live database:
 
+Use the gateway UI to search across domains:
+
 ```text
-http://localhost:8801/search?q=artificial+intelligence
+http://localhost:8620/ui
 ```
 
 What you should see:
@@ -73,7 +75,7 @@ This is the core loop: feeds arrive on schedule, full page text is extracted, st
 
 ## What You Can Do
 
-- Point an LLM agent at `POST /search` on KoreDataGateway (port 8800) and receive ranked results across all three data domains in one call.
+- Point an LLM agent at `POST /api/search` on KoreDataGateway (port 8620) and receive a merged flat result list plus `results_by_domain` groupings in one call.
 - Manage feed inventories — add, remove, or adjust domains and fetch intervals — via the REST API or the browser UI.
 - Import an ebook collection from a local Kiwix server running Project Gutenberg ZIM content into KoreLibrary.
 - Import Wikipedia (or any Kiwix-hosted wiki) into KoreReference and traverse inter-article links as part of an agent research workflow.
@@ -87,15 +89,15 @@ This is the core loop: feeds arrive on schedule, full page text is extracted, st
 LLM Agent
     │
     ▼
-KoreDataGateway  :8800
-    ├── POST /search   ◄── primary agent endpoint
-    ├── /feeds/*       ──► KoreFeed      :8801
-    ├── /library/*     ──► KoreLibrary   :8802
-    ├── /rag/*         ──► KoreRAG       :8803
-    └── /reference/*   ──► KoreReference :8804
+KoreDataGateway  :8620
+    ├── POST /api/search  ◄── primary agent endpoint
+    ├── /feeds/*          ──► KoreFeed      :8621
+    ├── /library/*        ──► KoreLibrary   :8622
+    ├── /rag/*            ──► KoreRAG       :8623
+    └── /reference/*      ──► KoreReference :8624
 ```
 
-KoreDataGateway launches and supervises the three child services as subprocesses, waits for each to become healthy, and proxies all UI and API requests through. The gateway's `POST /search` endpoint fans requests out to however many services are specified in the call, merges the results, and returns a single structured JSON response.
+KoreDataGateway launches and supervises the four child services as subprocesses, waits for each to become healthy, and proxies all UI and API requests through. The gateway's `POST /api/search` endpoint fans requests out to however many services are specified in the call, returns a merged `results` list for agent consumers, and keeps `results_by_domain` for grouped UI rendering.
 
 While KoreDataGateway is under development, each service can be started and used independently.
 
@@ -103,7 +105,7 @@ While KoreDataGateway is under development, each service can be started and used
 
 ## Works With
 
-KoreData is designed to be the data layer for [MiniAgentFramework](https://github.com/DaveSteadman/MiniAgentFramework), a local-first Ollama-based agent framework. Point MiniAgentFramework at `POST http://localhost:8800/search` to give agents access to live news, books, and reference articles without any cloud search dependency.
+KoreData is designed to be the data layer for [MiniAgentFramework](https://github.com/DaveSteadman/MiniAgentFramework), a local-first Ollama-based agent framework. Point MiniAgentFramework at `POST http://localhost:8620/api/search` to give agents access to live news, books, reference articles, and RAG content without any cloud search dependency.
 
 ---
 

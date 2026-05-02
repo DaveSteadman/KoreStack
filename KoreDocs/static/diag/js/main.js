@@ -102,7 +102,15 @@ ui.initMenus();
 ui.initToolbar();
 ui.initHierarchy();
 topbar.initTopbar({ currentService: 'koredocs', urls: window.__koreSuiteUrls || {} });
-appbar.initAppTabs('kodiag');
+appbar.initAppBar({
+  mountId: 'tab-bar',
+  currentService: 'koredocs',
+  overline: 'Diagram Editor',
+  brandLabel: 'KoreDiag',
+  brandIcon: 'kodiag',
+  editorTabsSlot: 'koredocs-tabs',
+});
+appbar.initAppTabs('kodiag', { mountId: 'koredocs-tabs', renderBrand: false });
 
 const autoOpened = await fileio.autoOpenFromUrl(diagram => {
   store.loadDiagram(diagram);

@@ -104,7 +104,7 @@ from input_layer.slash_commands import handle as handle_slash
 from input_layer.slash_command_context import SlashCommandContext
 from utils.workspace_utils import get_logs_dir
 from utils.workspace_utils import get_test_prompts_dir
-from utils.version import __version__
+from utils.suite_version import SUITE_VERSION
 import koreconv_client as _kc_client
 
 
@@ -232,7 +232,7 @@ def finish_run_event_queue(run_id: str) -> None:
 # ====================================================================================================
 # MARK: FASTAPI APP
 # ====================================================================================================
-app = FastAPI(title="KoreAgent API", version=__version__)
+app = FastAPI(title="KoreAgent API", version=SUITE_VERSION)
 
 # Restrict CORS to localhost only. External pages cannot trigger prompt or history endpoints.
 app.add_middleware(
@@ -353,7 +353,7 @@ register_status_routes(
     get_active_num_ctx=get_active_num_ctx,
     get_active_backend=get_active_backend,
     get_ollama_ps_rows=get_ollama_ps_rows,
-    version=__version__,
+    version=SUITE_VERSION,
 )
 
 
