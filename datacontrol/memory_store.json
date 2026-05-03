@@ -7,8 +7,8 @@
       "updated": null,
       "category": "project",
       "fact": "given this CSV data, find all rows with empty or missing fields and report which row and column each problem is in:",
-      "access_count": 27,
-      "last_accessed": "2026-04-20 23:21:12"
+      "access_count": 29,
+      "last_accessed": "2026-05-03 21:53:33"
     },
     {
       "id": "db6a0135",
@@ -16,8 +16,8 @@
       "updated": null,
       "category": "general",
       "fact": "csv, add a new column called CumulativeRevenue that is a running total of the Revenue column, and save the result back to the same file",
-      "access_count": 99,
-      "last_accessed": "2026-05-01 23:51:07"
+      "access_count": 116,
+      "last_accessed": "2026-05-03 22:05:23"
     },
     {
       "id": "81396abd",
@@ -25,8 +25,8 @@
       "updated": null,
       "category": "project",
       "fact": "csv and report how many primes there are",
-      "access_count": 18,
-      "last_accessed": "2026-05-01 23:48:01"
+      "access_count": 19,
+      "last_accessed": "2026-05-03 22:05:35"
     },
     {
       "id": "a8944752",
@@ -34,8 +34,8 @@
       "updated": "2026-04-06 17:11:19",
       "category": "project",
       "fact": "The required output is a de-duplicated report of the top (ie most AI industry relevant) 5 stories",
-      "access_count": 35,
-      "last_accessed": "2026-05-01 23:51:07"
+      "access_count": 42,
+      "last_accessed": "2026-05-03 21:55:19"
     },
     {
       "id": "b958d1ea",
@@ -61,8 +61,8 @@
       "updated": null,
       "category": "general",
       "fact": "You (prior reply) [2026-04-13T21:20]: Here’s a quick guide to get the interest‑calculation program running and how to change the rate:",
-      "access_count": 53,
-      "last_accessed": "2026-05-01 23:51:07"
+      "access_count": 64,
+      "last_accessed": "2026-05-03 22:39:01"
     },
     {
       "id": "e7134709",
@@ -70,8 +70,8 @@
       "updated": null,
       "category": "environment",
       "fact": "**1. Running the Python script**",
-      "access_count": 13,
-      "last_accessed": "2026-05-01 23:51:07"
+      "access_count": 18,
+      "last_accessed": "2026-05-03 21:55:19"
     },
     {
       "id": "6f26ad0b",
@@ -79,8 +79,8 @@
       "updated": null,
       "category": "environment",
       "fact": "First, delegate a sub-task to find out what Ollama is and what its latest version is",
-      "access_count": 35,
-      "last_accessed": "2026-04-21 22:14:58"
+      "access_count": 43,
+      "last_accessed": "2026-05-03 23:00:22"
     },
     {
       "id": "8b2b7c26",
@@ -88,8 +88,8 @@
       "updated": "2026-04-21 22:18:00",
       "category": "environment",
       "fact": "cpp is a fast, open‑source C/C++ implementation of the LLaMA‑style models (and GGML‑based models) optimized for CPU inference",
-      "access_count": 32,
-      "last_accessed": "2026-05-01 23:47:31"
+      "access_count": 43,
+      "last_accessed": "2026-05-03 23:01:04"
     },
     {
       "id": "f6195e24",
@@ -97,8 +97,8 @@
       "updated": null,
       "category": "environment",
       "fact": "Provide a concise description of what the Ollama tool is and its latest released version as of 2026-04-14. Include the version number",
-      "access_count": 71,
-      "last_accessed": "2026-05-01 23:47:53"
+      "access_count": 77,
+      "last_accessed": "2026-05-03 22:40:38"
     },
     {
       "id": "19ebf437",
@@ -115,8 +115,8 @@
       "updated": null,
       "category": "environment",
       "fact": "[2026-04-15T21:48] Agent: Folder \"KoreChat\" is not found in the workspace",
-      "access_count": 5,
-      "last_accessed": "2026-04-26 13:00:11"
+      "access_count": 6,
+      "last_accessed": "2026-05-03 22:39:22"
     },
     {
       "id": "743b8d09",
@@ -124,8 +124,8 @@
       "updated": null,
       "category": "preference",
       "fact": "/stopmodel [name] Unload a running model from VRAM (Ollama only, defaults to active model)",
-      "access_count": 2,
-      "last_accessed": "2026-04-20 22:48:33"
+      "access_count": 3,
+      "last_accessed": "2026-05-03 22:39:11"
     },
     {
       "id": "a62ff67e",
@@ -142,8 +142,8 @@
       "updated": null,
       "category": "general",
       "fact": "[2026-04-19 20:56:58] Running prompt 1/15: 'calculate the first 10 fibonacci numbers'",
-      "access_count": 42,
-      "last_accessed": "2026-05-01 23:48:15"
+      "access_count": 49,
+      "last_accessed": "2026-05-03 22:06:29"
     },
     {
       "id": "cc66a06a",
@@ -151,8 +151,8 @@
       "updated": null,
       "category": "general",
       "fact": "[2026-04-19 20:57:15] Running prompt 2/15: 'print the multiplication table for 7 up to 12'",
-      "access_count": 26,
-      "last_accessed": "2026-05-01 23:48:24"
+      "access_count": 32,
+      "last_accessed": "2026-05-03 22:07:16"
     },
     {
       "id": "1271daf9",
@@ -160,8 +160,8 @@
       "updated": null,
       "category": "general",
       "fact": "[2026-04-19 20:57:28] Running prompt 3/15: 'generate a list of the first 20 prime numbers'",
-      "access_count": 38,
-      "last_accessed": "2026-05-01 23:51:07"
+      "access_count": 44,
+      "last_accessed": "2026-05-03 22:06:09"
     },
     {
       "id": "77dab5a0",
@@ -169,8 +169,8 @@
       "updated": null,
       "category": "general",
       "fact": "[2026-04-19 20:57:40] Running prompt 4/15: 'calculate 2 to the power of 32'",
-      "access_count": 18,
-      "last_accessed": "2026-05-01 23:47:57"
+      "access_count": 21,
+      "last_accessed": "2026-05-03 22:05:23"
     },
     {
       "id": "436f37c8",
@@ -178,8 +178,8 @@
       "updated": null,
       "category": "general",
       "fact": "[2026-04-19 20:57:51] Running prompt 5/15: 'print the squares and cubes of numbers 1 through 8 as a table'",
-      "access_count": 52,
-      "last_accessed": "2026-05-01 23:48:33"
+      "access_count": 60,
+      "last_accessed": "2026-05-03 22:07:49"
     },
     {
       "id": "3fabed5d",
@@ -187,8 +187,8 @@
       "updated": null,
       "category": "general",
       "fact": "[2026-04-19 20:58:03] Running prompt 6/15: 'what is the sum of all integers from 1 to 100'",
-      "access_count": 26,
-      "last_accessed": "2026-05-01 23:47:53"
+      "access_count": 33,
+      "last_accessed": "2026-05-03 22:40:38"
     },
     {
       "id": "2544e3e3",
@@ -196,8 +196,8 @@
       "updated": null,
       "category": "general",
       "fact": "[2026-04-19 20:58:15] Running prompt 7/15: 'calculate the factorial of 12'",
-      "access_count": 12,
-      "last_accessed": "2026-05-01 23:47:57"
+      "access_count": 14,
+      "last_accessed": "2026-05-03 22:05:23"
     },
     {
       "id": "c61112d1",
@@ -205,8 +205,8 @@
       "updated": null,
       "category": "general",
       "fact": "[2026-04-19 20:58:26] Running prompt 8/15: \"count how many times the letter e appears in the word 'accelerate'\"",
-      "access_count": 12,
-      "last_accessed": "2026-05-01 23:48:01"
+      "access_count": 13,
+      "last_accessed": "2026-05-03 22:05:35"
     },
     {
       "id": "a80550db",
@@ -214,8 +214,8 @@
       "updated": null,
       "category": "general",
       "fact": "[2026-04-19 20:58:38] Running prompt 9/15: 'print the first 15 terms of the collatz sequence starting at 27'",
-      "access_count": 32,
-      "last_accessed": "2026-05-01 23:48:24"
+      "access_count": 37,
+      "last_accessed": "2026-05-03 22:07:16"
     },
     {
       "id": "7187f31f",
@@ -223,8 +223,8 @@
       "updated": null,
       "category": "general",
       "fact": "[2026-04-19 20:58:51] Running prompt 10/15: 'generate the first 8 rows of pascals triangle'",
-      "access_count": 12,
-      "last_accessed": "2026-05-01 23:48:10"
+      "access_count": 14,
+      "last_accessed": "2026-05-03 22:06:09"
     },
     {
       "id": "fc084d3a",
@@ -232,8 +232,8 @@
       "updated": null,
       "category": "general",
       "fact": "[2026-04-19 20:59:08] Running prompt 11/15: 'calculate the mean median and mode of the numbers 4 7 2 9 7 1 7 3 5'",
-      "access_count": 32,
-      "last_accessed": "2026-05-01 23:48:15"
+      "access_count": 37,
+      "last_accessed": "2026-05-03 22:06:29"
     },
     {
       "id": "9313ad68",
@@ -241,8 +241,8 @@
       "updated": null,
       "category": "general",
       "fact": "[2026-04-19 20:59:20] Running prompt 12/15: 'convert 255 decimal to binary hex and octal'",
-      "access_count": 6,
-      "last_accessed": "2026-05-01 23:48:20"
+      "access_count": 7,
+      "last_accessed": "2026-05-03 22:06:53"
     },
     {
       "id": "90af0a41",
@@ -250,8 +250,8 @@
       "updated": null,
       "category": "general",
       "fact": "[2026-04-19 20:59:32] Running prompt 13/15: 'print a 5x5 identity matrix'",
-      "access_count": 6,
-      "last_accessed": "2026-05-01 23:48:24"
+      "access_count": 7,
+      "last_accessed": "2026-05-03 22:07:16"
     },
     {
       "id": "b594ed73",
@@ -259,8 +259,8 @@
       "updated": null,
       "category": "general",
       "fact": "[2026-04-19 20:59:45] Running prompt 14/15: 'calculate compound interest on 10000 at 5 percent per year for 10 years'",
-      "access_count": 9,
-      "last_accessed": "2026-05-01 23:48:29"
+      "access_count": 10,
+      "last_accessed": "2026-05-03 22:07:33"
     },
     {
       "id": "ee258697",
@@ -268,8 +268,8 @@
       "updated": null,
       "category": "general",
       "fact": "[2026-04-19 20:59:57] Running prompt 15/15: 'print all two-digit numbers that are palindromes'",
-      "access_count": 15,
-      "last_accessed": "2026-05-01 23:48:33"
+      "access_count": 19,
+      "last_accessed": "2026-05-03 22:07:49"
     },
     {
       "id": "8039c413",
@@ -277,8 +277,8 @@
       "updated": "2026-04-21 22:14:58",
       "category": "environment",
       "fact": "Investigate what Ollama is and determine its latest released version as of 2026-04-14. Provide a concise description of the tool and its latest version",
-      "access_count": 42,
-      "last_accessed": "2026-05-01 23:47:53"
+      "access_count": 48,
+      "last_accessed": "2026-05-03 22:40:38"
     },
     {
       "id": "88b5d0c0",
@@ -286,8 +286,8 @@
       "updated": null,
       "category": "project",
       "fact": "Provide a concise summary of the three most-discussed open source AI agent frameworks in Python currently, and state which one is most suitable for a solo developer",
-      "access_count": 48,
-      "last_accessed": "2026-05-01 23:47:31"
+      "access_count": 53,
+      "last_accessed": "2026-05-03 22:59:24"
     },
     {
       "id": "1b71e6b0",
@@ -322,8 +322,8 @@
       "updated": null,
       "category": "environment",
       "fact": "[2026-04-19 21:41:57] Running prompt 4/5: 'Delegate this research task: search for the current Python version release dates for Python 3.12 and 3.13, then tell me how long the gap was between those two releases",
-      "access_count": 79,
-      "last_accessed": "2026-05-01 23:48:01"
+      "access_count": 93,
+      "last_accessed": "2026-05-03 23:01:04"
     },
     {
       "id": "76f9bed1",
@@ -349,8 +349,8 @@
       "updated": null,
       "category": "environment",
       "fact": "All task details, model, and context settings are ready for continuation",
-      "access_count": 21,
-      "last_accessed": "2026-05-01 23:48:33"
+      "access_count": 26,
+      "last_accessed": "2026-05-03 22:58:54"
     },
     {
       "id": "18a7c82b",
@@ -403,8 +403,8 @@
       "updated": null,
       "category": "project",
       "fact": "The first two attempts reported that no MCP servers are configured, and the third returned a KoreDataGateway URL (http://localhost:8800/mcp) indicating five MCP tools, yet the agent again said MCP is not configured",
-      "access_count": 27,
-      "last_accessed": "2026-05-01 23:48:33"
+      "access_count": 32,
+      "last_accessed": "2026-05-03 22:52:38"
     },
     {
       "id": "fea5f129",
@@ -412,8 +412,8 @@
       "updated": null,
       "category": "project",
       "fact": "**AI‑generated music floods Deezer, yet stays invisible to listeners** – TechCrunch reported on 20 April 2026 that Deezer’s internal tracking shows 44 % of all new tracks uploaded are AI‑generated (≈75 000 per day)",
-      "access_count": 7,
-      "last_accessed": "2026-05-01 23:48:33"
+      "access_count": 8,
+      "last_accessed": "2026-05-03 22:07:49"
     },
     {
       "id": "2b17546f",
@@ -421,8 +421,8 @@
       "updated": null,
       "category": "environment",
       "fact": " The price lift, spread across 128 GB and 256 GB models, is tied to soaring LPDDR5‑5 chip costs that have been amplified by the explosive demand for AI‑centred data‑center memory",
-      "access_count": 13,
-      "last_accessed": "2026-04-26 13:01:06"
+      "access_count": 16,
+      "last_accessed": "2026-05-03 22:55:43"
     },
     {
       "id": "5ca64224",
@@ -430,8 +430,8 @@
       "updated": null,
       "category": "environment",
       "fact": " The piece notes that OpenAI is already embedding “alignment‑as‑code” pipelines that auto‑audit outputs for safety violations, and that its GPT‑5 roadmap targets a shift‑left approach where models are continuously fine‑tuned on live user feedback loops",
-      "access_count": 16,
-      "last_accessed": "2026-04-20 23:05:14"
+      "access_count": 20,
+      "last_accessed": "2026-05-03 23:00:22"
     },
     {
       "id": "c3db2f9f",
@@ -457,8 +457,8 @@
       "updated": null,
       "category": "environment",
       "fact": "Gravitational perturbations from the flyby are measurable, improving the dynamical models of asteroid Yarkovsky drift",
-      "access_count": 8,
-      "last_accessed": "2026-05-01 23:47:53"
+      "access_count": 9,
+      "last_accessed": "2026-05-03 22:05:08"
     },
     {
       "id": "9f647072",
@@ -475,8 +475,8 @@
       "updated": null,
       "category": "project",
       "fact": "If the second attempt also returns empty, stop and report what you have",
-      "access_count": 34,
-      "last_accessed": "2026-05-01 23:47:53"
+      "access_count": 41,
+      "last_accessed": "2026-05-03 22:57:28"
     },
     {
       "id": "229e32a4",
@@ -529,8 +529,8 @@
       "updated": null,
       "category": "environment",
       "fact": "| The platform’s official releases are tracked on the Ollama website and its release notes",
-      "access_count": 6,
-      "last_accessed": "2026-04-20 23:11:03"
+      "access_count": 7,
+      "last_accessed": "2026-05-03 22:52:38"
     },
     {
       "id": "20d8110e",
@@ -565,8 +565,8 @@
       "updated": null,
       "category": "environment",
       "fact": "1. **Deployment model** – Ollama is a hosted service that handles model management, downloading, and scaling for you",
-      "access_count": 4,
-      "last_accessed": "2026-04-20 22:48:33"
+      "access_count": 5,
+      "last_accessed": "2026-05-03 22:57:28"
     },
     {
       "id": "a722bfc3",
@@ -583,8 +583,8 @@
       "updated": "2026-04-20 22:37:06",
       "category": "project",
       "fact": "It is now in *maintenance* mode, but the codebase and the newer *Microsoft Agent Framework* (MAF) still get regular commits from the open‑source community",
-      "access_count": 17,
-      "last_accessed": "2026-05-01 23:48:15"
+      "access_count": 19,
+      "last_accessed": "2026-05-03 22:39:57"
     },
     {
       "id": "8b925c0c",
@@ -601,8 +601,8 @@
       "updated": null,
       "category": "environment",
       "fact": "*In short, both tools are mature and widely used, but the “latest version” information you asked for could not be retrieved from the evidence we could locate",
-      "access_count": 23,
-      "last_accessed": "2026-04-21 21:41:29"
+      "access_count": 25,
+      "last_accessed": "2026-05-03 23:01:04"
     },
     {
       "id": "b74c7c1a",
@@ -655,8 +655,8 @@
       "updated": null,
       "category": "identity",
       "fact": "My name is Alex and I am a software developer",
-      "access_count": 2,
-      "last_accessed": "2026-04-20 22:48:33"
+      "access_count": 3,
+      "last_accessed": "2026-05-03 22:35:38"
     },
     {
       "id": "0099e34a",
@@ -664,8 +664,8 @@
       "updated": null,
       "category": "project",
       "fact": "Our project is called NovaStar and it uses a Python backend",
-      "access_count": 2,
-      "last_accessed": "2026-04-20 22:48:35"
+      "access_count": 3,
+      "last_accessed": "2026-05-03 22:35:38"
     },
     {
       "id": "9ac480fe",
@@ -673,17 +673,17 @@
       "updated": null,
       "category": "preference",
       "fact": "I prefer dark mode in all my tools",
-      "access_count": 1,
-      "last_accessed": "2026-04-20 22:48:20"
+      "access_count": 2,
+      "last_accessed": "2026-05-03 22:38:18"
     },
     {
       "id": "8b5920b9",
       "stored": "2026-04-20 22:48:20",
-      "updated": null,
+      "updated": "2026-05-03 22:38:50",
       "category": "preference",
-      "fact": "The default model I use is llama3.",
-      "access_count": 4,
-      "last_accessed": "2026-05-01 12:49:13"
+      "fact": "The default model you use is **llama3**",
+      "access_count": 5,
+      "last_accessed": "2026-05-03 22:38:18"
     },
     {
       "id": "eba9d39b",
@@ -691,8 +691,8 @@
       "updated": null,
       "category": "preference",
       "fact": "Preferences updated: dark mode enabled and llama3 set as the default model",
-      "access_count": 5,
-      "last_accessed": "2026-05-01 23:48:15"
+      "access_count": 7,
+      "last_accessed": "2026-05-03 22:38:18"
     },
     {
       "id": "5ae254b9",
@@ -700,8 +700,8 @@
       "updated": null,
       "category": "project",
       "fact": "You’ve told me that NovaStar is your project and it runs on a Python backend",
-      "access_count": 1,
-      "last_accessed": "2026-04-20 22:58:15"
+      "access_count": 6,
+      "last_accessed": "2026-05-03 22:39:01"
     },
     {
       "id": "e9f1cf41",
@@ -709,44 +709,44 @@
       "updated": null,
       "category": "preference",
       "fact": " Beyond noting your environment preferences (dark‑mode enabled, llama3 as the default model), the workspace does not contain any additional NovaStar files or project‑specific documentation",
-      "access_count": 3,
-      "last_accessed": "2026-04-26 12:58:41"
+      "access_count": 4,
+      "last_accessed": "2026-05-03 22:38:18"
     },
     {
       "id": "3d808251",
       "stored": "2026-04-20 22:48:34",
-      "updated": null,
+      "updated": "2026-05-03 22:39:21",
       "category": "preference",
-      "fact": "Your name is Alex, and you use **llama3** as your preferred model",
-      "access_count": 2,
-      "last_accessed": "2026-04-20 22:48:46"
+      "fact": "Your name is **Alex**, and your preferred model is **llama3**",
+      "access_count": 6,
+      "last_accessed": "2026-05-03 22:39:57"
     },
     {
       "id": "ff7807bc",
       "stored": "2026-04-20 22:48:35",
-      "updated": "2026-04-20 22:48:39",
+      "updated": "2026-05-03 22:39:22",
       "category": "environment",
-      "fact": "Workspace folder set to **C:\\Dev\\NovaStar** and Python version set to **3.12**",
-      "access_count": 1,
-      "last_accessed": "2026-04-20 22:48:35"
+      "fact": "Our workspace folder is at C:\\Dev\\NovaStar",
+      "access_count": 2,
+      "last_accessed": "2026-05-03 22:39:22"
     },
     {
       "id": "89005b1e",
       "stored": "2026-04-20 22:48:35",
-      "updated": "2026-04-21 22:15:29",
+      "updated": "2026-05-03 22:39:38",
       "category": "environment",
-      "fact": "We have web search results for \"Ollama latest version 2026-04-14\" but we need llama",
-      "access_count": 1,
-      "last_accessed": "2026-04-20 22:48:35"
+      "fact": "We are using Python 3.12, and the workspace is at **C:\\Dev\\NovaStar**",
+      "access_count": 2,
+      "last_accessed": "2026-05-03 22:39:22"
     },
     {
       "id": "19e3ad2a",
       "stored": "2026-04-20 22:48:41",
-      "updated": "2026-04-20 22:48:46",
+      "updated": "2026-05-03 22:39:57",
       "category": "preference",
       "fact": "Actually, my preferred editor is now Neovim",
-      "access_count": 2,
-      "last_accessed": "2026-04-20 22:48:46"
+      "access_count": 4,
+      "last_accessed": "2026-05-03 22:39:57"
     },
     {
       "id": "65729f01",
@@ -754,8 +754,8 @@
       "updated": null,
       "category": "general",
       "fact": "**Row 5 (Thingamajig 3 7.00)** – Only **one column** is present instead of the expected three (column‑count mismatch)",
-      "access_count": 5,
-      "last_accessed": "2026-05-01 23:48:01"
+      "access_count": 6,
+      "last_accessed": "2026-05-03 22:05:35"
     },
     {
       "id": "1a145bf5",
@@ -772,8 +772,8 @@
       "updated": null,
       "category": "environment",
       "fact": "compiles a model into a single binary and runs purely with ggml/quantized weights",
-      "access_count": 4,
-      "last_accessed": "2026-05-01 23:48:20"
+      "access_count": 5,
+      "last_accessed": "2026-05-03 22:06:53"
     },
     {
       "id": "3c3ba318",
@@ -781,8 +781,8 @@
       "updated": null,
       "category": "project",
       "fact": "All three are open‑source, have active repositories, and are referenced in recent industry articles and GitHub stars lists, making them the most relevant candidates for open‑source LLM inference at the time of the query",
-      "access_count": 12,
-      "last_accessed": "2026-04-21 22:18:48"
+      "access_count": 14,
+      "last_accessed": "2026-05-03 22:58:54"
     },
     {
       "id": "e0e7f5a6",
@@ -790,8 +790,8 @@
       "updated": null,
       "category": "project",
       "fact": "I searched for recent coverage of AI coding assistants (using research traversal and multiple web‑search attempts) but none of the searches returned any usable articles or reports from early 2025. The tools reported “No results” for every query, and a fetch of the official Copilot site yielded a generic access‑restriction message",
-      "access_count": 17,
-      "last_accessed": "2026-04-26 23:13:57"
+      "access_count": 26,
+      "last_accessed": "2026-05-03 23:01:04"
     },
     {
       "id": "0b475ead",
@@ -805,9 +805,9 @@
     {
       "id": "fa8b5bb7",
       "stored": "2026-04-20 23:04:39",
-      "updated": null,
+      "updated": "2026-05-03 22:38:18",
       "category": "environment",
-      "fact": "Ollama is described as “the easiest way to build with open models,” letting you automate work and get up and running with tools like OpenClaw and Claude Code using open models powered by Ollama",
+      "fact": "Ollama is an open‑source platform that lets developers run modern large‑language models locally on their machines",
       "access_count": 2,
       "last_accessed": "2026-04-20 23:22:53"
     },
@@ -817,8 +817,8 @@
       "updated": null,
       "category": "environment",
       "fact": "com/library and answer the question: what models are listed on this page",
-      "access_count": 9,
-      "last_accessed": "2026-04-21 21:41:29"
+      "access_count": 10,
+      "last_accessed": "2026-05-03 22:40:19"
     },
     {
       "id": "1913c15b",
@@ -889,8 +889,8 @@
       "updated": null,
       "category": "environment",
       "fact": "**PEP 701 – F‑string Formalisation** – Inside f‑strings you can now have any valid Python expression, including multiline content, comments, back‑slashes, and Unicode escapes",
-      "access_count": 0,
-      "last_accessed": null
+      "access_count": 2,
+      "last_accessed": "2026-05-03 22:59:24"
     },
     {
       "id": "ed3db492",
@@ -898,8 +898,8 @@
       "updated": null,
       "category": "environment",
       "fact": "Python 3.13 (Oct 2024) → Python 3.14 (expected Oct 2025) is scheduled for a roughly one‑year interval, continuing the annual release cadence",
-      "access_count": 4,
-      "last_accessed": "2026-05-01 23:48:29"
+      "access_count": 7,
+      "last_accessed": "2026-05-03 22:07:33"
     },
     {
       "id": "048850f7",
@@ -934,8 +934,8 @@
       "updated": null,
       "category": "environment",
       "fact": "Python is a high‑level, general‑purpose programming language emphasizing code readability, simplicity, and ease of writing through significant indentation, “plain English” naming, an extensive (“batteries‑included”) standard library, and garbage collection",
-      "access_count": 0,
-      "last_accessed": null
+      "access_count": 1,
+      "last_accessed": "2026-05-03 22:59:24"
     },
     {
       "id": "3ce089e0",
@@ -943,8 +943,8 @@
       "updated": null,
       "category": "environment",
       "fact": "Machine learning (ML) is a subfield of artificial intelligence that focuses on developing statistical algorithms and models that can learn patterns from data, improve their performance through experience, and make predictions or decisions on new, unseen data without being explicitly programmed for each specific task",
-      "access_count": 0,
-      "last_accessed": null
+      "access_count": 4,
+      "last_accessed": "2026-05-03 22:58:54"
     },
     {
       "id": "a3b78e33",
@@ -1078,8 +1078,8 @@
       "updated": null,
       "category": "project",
       "fact": "you still need to write client code and manage model deployment, which is more overhead than needed for a quick‑start solo project",
-      "access_count": 1,
-      "last_accessed": "2026-04-29 23:04:59"
+      "access_count": 4,
+      "last_accessed": "2026-05-03 23:00:22"
     },
     {
       "id": "7be9693e",
@@ -1114,8 +1114,8 @@
       "updated": null,
       "category": "general",
       "fact": "The compound interest earned over 10 years is $6,288.95, giving a final amount of $16,288.95.",
-      "access_count": 3,
-      "last_accessed": "2026-05-01 23:48:29"
+      "access_count": 4,
+      "last_accessed": "2026-05-03 22:07:33"
     },
     {
       "id": "58190b0c",
@@ -1132,8 +1132,8 @@
       "updated": null,
       "category": "environment",
       "fact": "These are the full set of files returned when listing the root folder of the KoreFile workspace",
-      "access_count": 1,
-      "last_accessed": "2026-04-26 13:00:11"
+      "access_count": 2,
+      "last_accessed": "2026-05-03 22:39:22"
     },
     {
       "id": "6e451682",
@@ -1186,8 +1186,8 @@
       "updated": "2026-04-26 18:37:03",
       "category": "project",
       "fact": "Thus the AI News Headlines report is complete, correctly stored in the specified folder, and structurally sound",
-      "access_count": 0,
-      "last_accessed": null
+      "access_count": 3,
+      "last_accessed": "2026-05-03 23:01:04"
     },
     {
       "id": "a3a6fc86",
@@ -1213,8 +1213,8 @@
       "updated": null,
       "category": "general",
       "fact": "The compound interest earned is **$6,288.95**, giving a final amount of **$16,288.95** after 10 years",
-      "access_count": 1,
-      "last_accessed": "2026-05-01 23:48:29"
+      "access_count": 2,
+      "last_accessed": "2026-05-03 22:07:33"
     },
     {
       "id": "2d9e7247",
@@ -1240,6 +1240,159 @@
       "updated": null,
       "category": "environment",
       "fact": "I couldn’t find a “KoreDocs” folder in the workspace, so there are no subfolders to list",
+      "access_count": 1,
+      "last_accessed": "2026-05-03 22:39:22"
+    },
+    {
+      "id": "d396bf08",
+      "stored": "2026-05-03 21:51:28",
+      "updated": null,
+      "category": "environment",
+      "fact": "I tried to create the task by calling the **task_create** skill so you could have `ChatIntervalTask` run every 60 minutes and check disk space, but the scheduler skill that implements those APIs is not loaded in this environment (`Module path does not exist: code/KoreAgent/system_skills/TaskManagement/task_management_skill`)",
+      "access_count": 12,
+      "last_accessed": "2026-05-03 21:55:30"
+    },
+    {
+      "id": "fe6875f4",
+      "stored": "2026-05-03 21:51:28",
+      "updated": null,
+      "category": "general",
+      "fact": "You can still have a periodic check by adding a simple task definition yourself—either on the host machine (e",
+      "access_count": 7,
+      "last_accessed": "2026-05-03 21:55:30"
+    },
+    {
+      "id": "e93bef19",
+      "stored": "2026-05-03 21:51:28",
+      "updated": null,
+      "category": "environment",
+      "fact": ", using `cron` on Linux/macOS or a scheduled task in Windows) or by creating a placeholder file that the current system can read later",
+      "access_count": 7,
+      "last_accessed": "2026-05-03 21:55:30"
+    },
+    {
+      "id": "59c42e9b",
+      "stored": "2026-05-03 21:51:28",
+      "updated": null,
+      "category": "project",
+      "fact": "Running this script every 60 minutes will give you the kind of regular disk‑space report that the `ChatIntervalTask` was intended to schedule",
+      "access_count": 3,
+      "last_accessed": "2026-05-03 21:54:49"
+    },
+    {
+      "id": "ebef28d9",
+      "stored": "2026-05-03 21:51:52",
+      "updated": null,
+      "category": "general",
+      "fact": "The **TaskManagement** skill that the `task_*` family of tools depends on isn’t loaded in this environment, so I’m unable to create or manage scheduled tasks at the moment",
+      "access_count": 4,
+      "last_accessed": "2026-05-03 21:55:30"
+    },
+    {
+      "id": "38397d11",
+      "stored": "2026-05-03 22:04:21",
+      "updated": null,
+      "category": "environment",
+      "fact": "The python snippet output has some formatting issues but shows the table",
+      "access_count": 0,
+      "last_accessed": null
+    },
+    {
+      "id": "7bb3a1fc",
+      "stored": "2026-05-03 22:38:18",
+      "updated": null,
+      "category": "environment",
+      "fact": "**Ollama tool (what it is)**",
+      "access_count": 0,
+      "last_accessed": null
+    },
+    {
+      "id": "8516ddc9",
+      "stored": "2026-05-03 22:38:18",
+      "updated": null,
+      "category": "environment",
+      "fact": "After searching recent release information, the most current public Ollama version is **v0.23.0**, which appears in the official release announcement and is dated **May 3 2026** (the next release after the April 2026 v0.21.0 notes)",
+      "access_count": 0,
+      "last_accessed": null
+    },
+    {
+      "id": "c17cdbcd",
+      "stored": "2026-05-03 22:38:18",
+      "updated": null,
+      "category": "environment",
+      "fact": "This is the latest version that would be available at or just after the 2026‑04‑14 date",
+      "access_count": 0,
+      "last_accessed": null
+    },
+    {
+      "id": "89f63b66",
+      "stored": "2026-05-03 22:39:11",
+      "updated": null,
+      "category": "environment",
+      "fact": "**Core stack**: You told me the NovaStar code‑base is a *Python* backend",
+      "access_count": 0,
+      "last_accessed": null
+    },
+    {
+      "id": "bc169084",
+      "stored": "2026-05-03 22:39:11",
+      "updated": null,
+      "category": "project",
+      "fact": "**Current status**: It is at a **quick‑start solo‑project stage** where the main work left is writing the client code and figuring out model deployment",
+      "access_count": 0,
+      "last_accessed": null
+    },
+    {
+      "id": "6aed41ff",
+      "stored": "2026-05-03 22:39:11",
+      "updated": null,
+      "category": "preference",
+      "fact": "The default LLM you work with is **llama3**",
+      "access_count": 0,
+      "last_accessed": null
+    },
+    {
+      "id": "670ef250",
+      "stored": "2026-05-03 22:39:11",
+      "updated": null,
+      "category": "environment",
+      "fact": "You also asked to get up‑to‑speed on Ollama (the open‑source LLM runner) and its latest version (v0.23.0 as of early‑2026), though that knowledge is more about the runtime you might use for model inference in NovaStar",
+      "access_count": 0,
+      "last_accessed": null
+    },
+    {
+      "id": "bd3c0598",
+      "stored": "2026-05-03 22:39:11",
+      "updated": null,
+      "category": "preference",
+      "fact": "In short, NovaStar is a Python‑based backend you’re bootstrapping, with the rest of the development pipeline (client integration, model serving, and deployment) still to be built, while you work in dark‑mode and with llama3 as the default model",
+      "access_count": 0,
+      "last_accessed": null
+    },
+    {
+      "id": "b6ca0d27",
+      "stored": "2026-05-03 22:39:30",
+      "updated": null,
+      "category": "environment",
+      "fact": "The workspace is set to **C:\\Dev\\NovaStar**, and you are currently using **Python 3.12**",
+      "access_count": 1,
+      "last_accessed": "2026-05-03 22:39:30"
+    },
+    {
+      "id": "95076aa2",
+      "stored": "2026-05-03 22:53:28",
+      "updated": null,
+      "category": "general",
+      "fact": "I wasn’t able to reach the KoreData MCP endpoint (the local server at http://localhost:8800/mcp refused the connection) and the web searches returned no information on a running KoreData service",
+      "access_count": 0,
+      "last_accessed": null
+    },
+    {
+      "id": "bed1beec",
+      "stored": "2026-05-03 23:01:03",
+      "updated": null,
+      "category": "project",
+      "fact": "**Summary:** No KoreData project notes or process documents were located",
       "access_count": 0,
       "last_accessed": null
     }

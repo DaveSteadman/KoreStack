@@ -36,8 +36,8 @@ import sys
 from collections import Counter
 from pathlib import Path
 
-_REPO_ROOT = Path(__file__).resolve().parents[3]
-sys.path.insert(0, str(_REPO_ROOT / "code"))
+_APP_DIR = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(_APP_DIR))
 from utils.workspace_utils import trunc  # noqa: E402
 
 

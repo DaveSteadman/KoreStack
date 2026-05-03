@@ -336,10 +336,9 @@ an agent is also connected over stdio.
 | Mode | How to connect | Use-case |
 |---|---|---|
 | `stdio` | `python server.py --mcp-stdio` | Local agents (Claude Desktop, Copilot) |
-| `SSE` | `GET http://localhost:5500/mcp/sse` | Remote or multi-client agents |
-| HTTP | `POST http://localhost:5500/mcp/messages` | Stateless REST-style agent calls |
+| `streamable-http` | `http://localhost:5500/mcp` | Remote or multi-client agents |
 
-SSE and HTTP transports are available in all startup modes. The MCP server requires the
+The streamable HTTP transport is available in HTTP startup mode. The MCP server requires the
 KoreFile database to be initialised. MCP tools always go through KoreFile — they do not
 operate on the flat file system.
 

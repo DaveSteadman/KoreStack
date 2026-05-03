@@ -125,10 +125,14 @@ def _setup_logging() -> None:
 
 # ── App ────────────────────────────────────────────────────────────────────
 
+_mcp_http_app = mcp.http_app(path='/', transport='streamable-http')
+
+
 @asynccontextmanager
 async def _lifespan(app: FastAPI):
-    korefile.init_db()
-    yield
+    async with _mcp_http_app.router.lifespan_context(_mcp_http_app):
+        korefile.init_db()
+        yield
 
 
 app = FastAPI(title='KoreDocs', lifespan=_lifespan)
@@ -183,7 +187,7 @@ app.mount('/static/korefile', StaticFiles(directory=STATIC / 'korefile'), name='
 app.mount('/ui-elements/assets', StaticFiles(directory=COMMONUI_ASSETS), name='ui-elements-assets')
 app.mount('/static/commonui', StaticFiles(directory=COMMONUI_ASSETS), name='commonui')
 app.mount('/static/shared', StaticFiles(directory=STATIC / 'shared'), name='shared')
-app.mount('/mcp', mcp.http_app(path='/sse', transport='sse'), name='mcp')
+app.mount('/mcp', _mcp_http_app, name='mcp')
 
 # ── HTML routes ────────────────────────────────────────────────────────────
 
@@ -714,8 +718,7 @@ def main(argv: Optional[list[str]] = None) -> int:
         stream = stream or sys.stdout
         url = f'http://{host}:{port}'
         print(f'[KoreDocs]  {url}/ui', file=stream)
-        print(f'[KoreDocs]  MCP SSE:      {url}/mcp/sse', file=stream)
-        print(f'[KoreDocs]  MCP messages: {url}/mcp/messages', file=stream)
+        print(f'[KoreDocs]  MCP endpoint: {url}/mcp', file=stream)
         if include_stdio:
             config = {
                 'koredocs': {

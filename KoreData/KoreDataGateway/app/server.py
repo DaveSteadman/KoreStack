@@ -579,9 +579,10 @@ async def koredata_search(
         until: Latest published-date filter (YYYY-MM-DD). Applied to feeds only.
         limit: Maximum results per domain (1–20, default 5).
 
-    Returns a dict with keys "query", "domains_searched", and "results" (keyed by domain).
-    Each result item includes a "url" field — pass it to the matching get_* tool to fetch
-    full content.
+    Returns a dict with keys "query", "domains_searched", "results" (merged flat list),
+    and "results_by_domain" (per-service lists). Each result item includes a "snippet" for
+    relevance assessment and a "url" field — pass the matching id/title to the get_* tool
+    to fetch full content.
     """
     if _feed_client is None:
         return {"error": "KoreDataGateway is still starting up — retry in a moment"}
@@ -667,7 +668,7 @@ async def koredata_get_rag_chunk(chunk_id: int) -> dict:
 
 
 # ===========================================================================
-# KoreFeed — Web UI (GET / render)
+# Web UI — Core routes
 # ===========================================================================
 
 @app.get("/", include_in_schema=False)
@@ -683,6 +684,8 @@ def suite_config_js():
 
 @app.get("/ui", response_class=HTMLResponse, include_in_schema=False)
 async def web_root(request: Request):
+    if _feed_client is None:
+        raise HTTPException(status_code=503, detail="Gateway is still starting up")
     kf_r, kl_r, kr_r, krag_r = await asyncio.gather(
         _feed_client.get("/status", timeout=3.0),
         _lib_client.get("/status", timeout=3.0),
@@ -1422,6 +1425,8 @@ async def ref_article(request: Request, title: str):
 
 @app.get("/status")
 async def gateway_status():
+    if _feed_client is None:
+        return {"service": "KoreDataGateway", "status": "starting"}
     kf_r, kl_r, kr_r, krag_r = await asyncio.gather(
         _feed_client.get("/status", timeout=3.0),
         _lib_client.get("/status", timeout=3.0),

@@ -291,15 +291,24 @@
   <script type="module">
     import { initAppBar, initTopbar } from '/ui-elements/assets/js/chrome.js?v=20260501a';
     initTopbar({ currentService: 'koredata', urls: window.__koreSuiteUrls || {} });
+    {% if request.url.path.startswith('/ui/feeds') %}
+    {% set _brand = 'KoreFeed' %}{% set _overline = 'News Feeds' %}
+    {% elif request.url.path.startswith('/ui/library') %}
+    {% set _brand = 'KoreLibrary' %}{% set _overline = 'Books' %}
+    {% elif request.url.path.startswith('/ui/reference') %}
+    {% set _brand = 'KoreReference' %}{% set _overline = 'Reference' %}
+    {% elif request.url.path.startswith('/ui/rag') %}
+    {% set _brand = 'KoreRAG' %}{% set _overline = 'RAG Chunks' %}
+    {% else %}
+    {% set _brand = 'KoreData' %}{% set _overline = 'Data Gateway' %}
+    {% endif %}
     initAppBar({
       currentService: 'koredata',
-      overline: 'Data Service',
-      brandLabel: 'KoreData',
+      overline: '{{ _overline }}',
+      brandLabel: '{{ _brand }}',
       brandIcon: 'koredata',
       statusDot: { id: 'hdr-dot', className: 'dot-live', title: 'checking...' },
-      chips: [
-        { label: 'Role', value: 'Gateway' },
-      ],
+      chips: [],
       tabs: [
         { label: 'Home', href: '/', active: {{ 'true' if request.url.path == '/' else 'false' }} },
         { label: 'Feeds', href: '/ui/feeds', active: {{ 'true' if request.url.path.startswith('/ui/feeds') else 'false' }} },

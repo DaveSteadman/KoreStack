@@ -5,14 +5,15 @@ from config import load_config, _DATA_SUBSERVICE_OFFSETS
 _SECTION = "data"
 
 _DEFAULTS = {
-    "port":     int(os.environ.get("KOREDATA_PORT", "8800")),
+    "port":     int(os.environ.get("KOREDATA_PORT", "8620")),
     "host":     "0.0.0.0",
     "log_level": "info",
-    # Sub-service URL defaults match default.json data port + offsets
-    "korefeed_url":      "http://127.0.0.1:8801",
-    "korelibrary_url":   "http://127.0.0.1:8802",
-    "korerag_url":       "http://127.0.0.1:8803",
-    "korereference_url": "http://127.0.0.1:8804",
+    # Sub-service URLs are overwritten at load() time using gateway port + offsets.
+    # These values are only ever used if load_config fails to read any config file.
+    "korefeed_url":      "http://127.0.0.1:8621",
+    "korelibrary_url":   "http://127.0.0.1:8622",
+    "korerag_url":       "http://127.0.0.1:8623",
+    "korereference_url": "http://127.0.0.1:8624",
 }
 
 # Sub-service name -> url key in cfg

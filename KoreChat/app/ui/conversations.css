@@ -88,17 +88,6 @@ html, body {
     cursor:  default;
 }
 
-.section-btn-danger {
-    color:        var(--red);
-    border-color: rgba(248,113,113,0.45);
-}
-
-.section-btn-danger:hover {
-    border-color: rgba(248,113,113,0.9);
-    color:        #fecaca;
-    background:   rgba(248,113,113,0.08);
-}
-
 .auto-label {
     display:     flex;
     align-items: center;

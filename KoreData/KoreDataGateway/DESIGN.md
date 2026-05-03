@@ -23,13 +23,15 @@ LLM Agent
     │
     ▼
 KoreDataGateway  :8620
-  ├── POST /api/search  ◄── primary agent API
-    ├── GET  /        ◄── landing page (health + search test UI)
-    ├── GET  /status  ◄── machine-readable health
-  ├── /feeds/*      ◄── proxied to KoreFeed      → :8621  (child process)
-  ├── /library/*    ◄── proxied to KoreLibrary   → :8622  (child process)
-  ├── /reference/*  ◄── proxied to KoreReference → :8624  (child process)
-  └── /rag/*        ◄── proxied to KoreRAG       → :8623  (child process)
+  ├── POST /api/search        ◄── primary agent API
+  ├── GET  /mcp               ◄── MCP Streamable HTTP transport
+  ├── GET  /                  ◄── redirect → /ui
+  ├── GET  /ui                ◄── landing page (service health + search test)
+  ├── GET  /status            ◄── machine-readable health
+  ├── /ui/feeds/*      ◄── proxied to KoreFeed      → :8621  (child process)
+  ├── /ui/library/*    ◄── proxied to KoreLibrary   → :8622  (child process)
+  ├── /ui/rag/*        ◄── proxied to KoreRAG       → :8623  (child process)
+  └── /ui/reference/*  ◄── proxied to KoreReference → :8624  (child process)
 ```
 
 The gateway starts all four child services at startup (subprocess), waits for each to become healthy, and terminates them cleanly at shutdown. It holds persistent `httpx.AsyncClient` connections to each child.
@@ -76,7 +78,7 @@ Example:
       "source": "BBC Science",
       "published_at": "2026-03-14 09:00:00",
       "snippet": "…scientists warned that the Arctic ice sheet shrank…",
-      "url": "/feeds/science/1042"
+      "url": "/ui/feeds/science/1042"
     }
   ],
   "results_by_domain": {
@@ -88,7 +90,7 @@ Example:
         "source": "BBC Science",
         "published_at": "2026-03-14 09:00:00",
         "snippet": "…scientists warned that the Arctic ice sheet shrank…",
-        "url": "/feeds/science/1042"
+        "url": "/ui/feeds/science/1042"
       }
     ],
     "reference": [
@@ -98,7 +100,7 @@ Example:
         "summary": "Arctic sea ice decline refers to the loss of the Arctic Ocean ice cover…",
         "snippet": "…accelerating ice loss linked to greenhouse gas emissions…",
         "word_count": 4200,
-        "url": "/reference/Arctic_sea_ice_decline"
+        "url": "/ui/reference/Arctic_sea_ice_decline"
       }
     ],
     "rag": [
@@ -109,7 +111,7 @@ Example:
         "source": "https://ipcc.ch/report/ar7",
         "tags": "climate,arctic,ipcc",
         "snippet": "…Arctic summer sea ice is projected to disappear…",
-        "url": "/rag/7"
+        "url": "/ui/rag/7"
       }
     ]
   }
@@ -133,7 +135,7 @@ Example:
 | `source` | Feed name or domain slug |
 | `published_at` | Publication timestamp (`YYYY-MM-DD HH:MM:SS`) |
 | `snippet` | First 300 chars of page text / content / body / summary |
-| `url` | Gateway path to the full entry — `GET /feeds/{domain}/{id}` |
+| `url` | Gateway path to the full entry — `GET /ui/feeds/{domain}/{id}` |
 
 **`reference` result:**
 | Field | Description |
@@ -143,7 +145,7 @@ Example:
 | `summary` | First-paragraph summary stored with the article |
 | `snippet` | FTS highlight snippet (SQLite `snippet()`, ~20 tokens) or summary fallback |
 | `word_count` | Body word count |
-| `url` | Gateway path to the full article — `GET /reference/{title}` |
+| `url` | Gateway path to the full article — `GET /ui/reference/{title}` |
 
 **`library` result:**
 | Field | Description |
@@ -153,7 +155,7 @@ Example:
 | `title` | Book title |
 | `author` | Author name(s) |
 | `snippet` | FTS highlight snippet or first 300 chars of notes |
-| `url` | Gateway path to the full book — `GET /library/{id}` |
+| `url` | Gateway path to the full book — `GET /ui/library/{id}` |
 
 **`rag` result:**
 | Field | Description |
@@ -164,16 +166,16 @@ Example:
 | `source` | Origin URL, document name, or identifier |
 | `tags` | Comma-separated tags |
 | `snippet` | FTS highlight snippet from content (~32 tokens) |
-| `url` | Gateway path to the full chunk — `GET /rag/{id}` |
+| `url` | Gateway path to the full chunk — `GET /ui/rag/{id}` |
 
 ### Agent retrieval pattern
 
 After receiving search results the agent fetches full content as needed:
 
-- `GET /reference/{title}` — article JSON with body, sections, links, backlinks
-- `GET /feeds/{domain}/{entry_id}` — full feed entry including page text
-- `GET /library/{book_id}` — full book including body
-- `GET /rag/{chunk_id}` — full chunk with decompressed content
+- `GET /ui/reference/{title}` — article JSON with body, sections, links, backlinks
+- `GET /ui/feeds/{domain}/{entry_id}` — full feed entry including page text
+- `GET /ui/library/{book_id}` — full book including body
+- `GET /ui/rag/{chunk_id}` — full chunk with decompressed content
 
 These routes return the same data used by the web UI.
 

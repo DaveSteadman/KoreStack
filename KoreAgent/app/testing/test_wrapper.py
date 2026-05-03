@@ -46,9 +46,9 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-# sys.path must include the code/ directory before project modules can be imported.
-_REPO_ROOT = Path(__file__).resolve().parents[3]
-sys.path.insert(0, str(_REPO_ROOT / "code"))
+# sys.path must include the app/ directory before project modules can be imported.
+_APP_DIR = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(_APP_DIR))
 
 from utils.workspace_utils import get_test_results_dir
 
@@ -56,8 +56,8 @@ from utils.workspace_utils import get_test_results_dir
 # ====================================================================================================
 # MARK: CONSTANTS
 # ====================================================================================================
-REPO_ROOT = _REPO_ROOT
-MAIN_SCRIPT = REPO_ROOT / "code" / "main.py"
+REPO_ROOT = _APP_DIR.parents[1]
+MAIN_SCRIPT = _APP_DIR / "main.py"
 
 # Maximum time in seconds to wait for a single framework invocation before aborting.
 SUBPROCESS_TIMEOUT_SECONDS = 300

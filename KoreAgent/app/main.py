@@ -475,20 +475,35 @@ def _run(args, logger, log_path) -> None:
             return False
 
     # Detect sequence mode early so sidecars are not started unnecessarily.
-    # In sequence mode the sidecars are started then immediately stopped, wasting
-    # several seconds per subprocess when MCP servers are not reachable.
+    # In sequence mode we probe each MCP endpoint first: if it is reachable we
+    # connect (so the model has those tools), if not we skip it to avoid the
+    # per-server connect-timeout penalty on test runs without MCP services.
     sequence_file_path = Path(os.environ["CHAT_SEQUENCE_FILE"]) if os.environ.get("CHAT_SEQUENCE_FILE") else None
 
+    _seq_mcp_started = False  # tracks whether _mcp_client was started in sequence mode
+
     if sequence_file_path:
-        # Sidecars are not used in sequence/test mode - skip startup entirely.
-        _seq_mcp = _raw_defaults.get("mcp_connections")
-        if _seq_mcp is None:
-            _seq_mcp = _raw_defaults.get("mcp_servers") or []
-        for _srv in _seq_mcp:
-            _srv_name = _srv.get("name") or _srv.get("url", "?")
-            logger.log(f"MCP [{_srv_name}]: {_srv.get('url', '?')} (skipped in sequence mode)")
-        if not _seq_mcp:
-            logger.log("MCP connections: (none configured)")
+        from urllib.parse import urlparse as _urlparse
+        _seq_mcp = _raw_defaults.get("mcp_connections") or _raw_defaults.get("mcp_servers") or []
+        # Probe each configured MCP server; connect if any are reachable.
+        _any_mcp_reachable = any(
+            _service_reachable(f"{_urlparse(_srv.get('url', '')).scheme}://{_urlparse(_srv.get('url', '')).netloc}")
+            for _srv in _seq_mcp
+        )
+        if _any_mcp_reachable:
+            _mcp_client.start(DEFAULTS_FILE)
+            _seq_mcp_started = True
+            _mcp_status = _mcp_client.get_server_status()
+            for _srv in _mcp_status:
+                _ok_str = f"({_srv['tool_count']} tool(s))" if _srv["ok"] else "(failed to connect)"
+                _purpose = f" - {_srv['purpose']}" if _srv.get("purpose") else ""
+                logger.log(f"MCP [{_srv['name']}]: {_srv['url']} {_ok_str} {_tick if _srv['ok'] else _cross}{_purpose}")
+        else:
+            for _srv in _seq_mcp:
+                _srv_name = _srv.get("name") or _srv.get("url", "?")
+                logger.log(f"MCP [{_srv_name}]: {_srv.get('url', '?')} (skipped in sequence mode)")
+            if not _seq_mcp:
+                logger.log("MCP connections: (none configured)")
         logger.log(f"KoreChat:{_koreconv_url} (skipped in sequence mode)")
     else:
         # Start MCP client and KoreChat before status probe so they show reachable.
@@ -520,7 +535,11 @@ def _run(args, logger, log_path) -> None:
     logger.log(f"Log file:        {log_path.as_posix()}")
 
     if sequence_file_path:
-        run_chat_sequence_mode(sequence_file=sequence_file_path, config=config, logger=logger, log_path=log_path)
+        try:
+            run_chat_sequence_mode(sequence_file=sequence_file_path, config=config, logger=logger, log_path=log_path)
+        finally:
+            if _seq_mcp_started:
+                _mcp_client.stop()
         return
 
     try:

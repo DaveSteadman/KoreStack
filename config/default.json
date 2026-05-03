@@ -35,8 +35,7 @@
       {
         "name": "KoreDocs",
         "service": "docs",
-        "path": "/mcp/sse",
-        "transport": "sse",
+        "path": "/mcp",
         "enabled": true,
         "purpose": "document navigation, structured editing, and KoreFile authoring",
         "expected_prefix": "koredocs_"

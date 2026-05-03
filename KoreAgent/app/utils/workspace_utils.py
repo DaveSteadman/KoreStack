@@ -139,7 +139,7 @@ def _flatten_suite_config(raw: dict) -> dict:
 def _resolve_mcp_service_refs(config: dict) -> None:
     """Resolve service-reference MCP connections to full URLs and clean up private keys.
 
-    Connections that declare {"service": "docs", "path": "/mcp/sse"} are resolved using
+    Connections that declare {"service": "docs", "path": "/mcp"} are resolved using
     the final merged services ports and host.  This means a port override in local.json
     flows through automatically without duplicating port numbers in the MCP connection list.
 

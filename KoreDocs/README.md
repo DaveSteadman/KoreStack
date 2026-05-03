@@ -51,8 +51,7 @@ python .\main.py
 Open the UI at **http://localhost:8615** (redirects to `/ui`).
 
 The MCP server is available immediately on the same port:
-- **SSE transport** — `GET http://localhost:8615/mcp/sse`
-- **HTTP transport** — `POST http://localhost:8615/mcp/messages`
+- **Streamable HTTP** — `http://localhost:8615/mcp`
 
 For local agent use (Claude Desktop, GitHub Copilot), use **stdio transport** instead.
 The web UI still starts in a background thread on port 8615:
@@ -74,12 +73,6 @@ Add to your agent's MCP config (e.g. `mcp_servers.json`):
 
 > **Note:** `uvicorn server:app --reload` also works for development (hot-reload), but
 > does not support the `--mcp-stdio` flag. Use it when you only need the web UI.
-
-**SSE message endpoint:**
-
-```
-POST http://localhost:8615/mcp/messages
-```
 
 KoreDocs now consumes the shared shell assets from `/ui-elements/assets/`; legacy `/static/commonui/*` paths are no longer part of the supported UI contract.
 
