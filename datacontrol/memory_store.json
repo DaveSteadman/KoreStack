@@ -160,8 +160,8 @@
       "updated": null,
       "category": "general",
       "fact": "[2026-04-19 20:57:28] Running prompt 3/15: 'generate a list of the first 20 prime numbers'",
-      "access_count": 44,
-      "last_accessed": "2026-05-03 22:06:09"
+      "access_count": 48,
+      "last_accessed": "2026-05-03 23:52:04"
     },
     {
       "id": "77dab5a0",
@@ -403,8 +403,8 @@
       "updated": null,
       "category": "project",
       "fact": "The first two attempts reported that no MCP servers are configured, and the third returned a KoreDataGateway URL (http://localhost:8800/mcp) indicating five MCP tools, yet the agent again said MCP is not configured",
-      "access_count": 32,
-      "last_accessed": "2026-05-03 22:52:38"
+      "access_count": 36,
+      "last_accessed": "2026-05-03 23:52:04"
     },
     {
       "id": "fea5f129",
@@ -601,8 +601,8 @@
       "updated": null,
       "category": "environment",
       "fact": "*In short, both tools are mature and widely used, but the “latest version” information you asked for could not be retrieved from the evidence we could locate",
-      "access_count": 25,
-      "last_accessed": "2026-05-03 23:01:04"
+      "access_count": 29,
+      "last_accessed": "2026-05-03 23:52:04"
     },
     {
       "id": "b74c7c1a",
@@ -673,8 +673,8 @@
       "updated": null,
       "category": "preference",
       "fact": "I prefer dark mode in all my tools",
-      "access_count": 2,
-      "last_accessed": "2026-05-03 22:38:18"
+      "access_count": 6,
+      "last_accessed": "2026-05-03 23:52:04"
     },
     {
       "id": "8b5920b9",
@@ -790,8 +790,8 @@
       "updated": null,
       "category": "project",
       "fact": "I searched for recent coverage of AI coding assistants (using research traversal and multiple web‑search attempts) but none of the searches returned any usable articles or reports from early 2025. The tools reported “No results” for every query, and a fetch of the official Copilot site yielded a generic access‑restriction message",
-      "access_count": 26,
-      "last_accessed": "2026-05-03 23:01:04"
+      "access_count": 30,
+      "last_accessed": "2026-05-03 23:52:04"
     },
     {
       "id": "0b475ead",

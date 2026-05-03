@@ -31,6 +31,7 @@
 import asyncio
 import json
 import threading
+import time
 
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -54,10 +55,15 @@ _mcp_tool_defs:      list[dict] = []
 _mcp_tool_index:     dict[str, dict] = {}   # tool_name -> {"url": str, "connection": str, ...}
 _configured_servers: list[dict] = []        # normalized MCP connection entries, populated by start()
 _server_reachable:   dict[str, bool] = {}   # url -> True/False; populated by start()/reconnect()
+_state_lock:         threading.Lock  = threading.Lock()  # guards _mcp_tool_defs/_mcp_tool_index/_server_reachable
+_retry_thread:       threading.Thread | None = None  # background reconnect thread
 
 _CALL_TIMEOUT    = 30.0  # seconds applied to call_tool
-_CONNECT_TIMEOUT =  5.0  # seconds to wait for list_tools during startup
+_CONNECT_TIMEOUT =  5.0  # seconds per attempt during tool enumeration
 _HEALTH_TIMEOUT  =  2.0  # seconds for fast-fail ping before first call to an unchecked server
+_RETRY_INTERVAL  = 10.0  # seconds between background reconnect attempts
+_RETRY_MAX       =  9    # give up after this many retries (~90 seconds total)
+_STARTUP_WAIT    = 45.0  # total seconds start() will keep retrying unreachable servers
 
 
 # ====================================================================================================
@@ -73,8 +79,11 @@ def start(config_path: Path) -> None:
     """Start the MCP event loop thread and enumerate tools from all configured connections.
 
     No-op when the mcp package is not installed or no connections are configured.
+    If some servers fail to connect at startup, a background thread retries them for
+    up to _RETRY_MAX * _RETRY_INTERVAL seconds so that slow-starting services are
+    picked up automatically without requiring a manual /mcp reconnect.
     """
-    global _loop, _loop_thread, _mcp_tool_defs, _mcp_tool_index, _configured_servers, _server_reachable
+    global _loop, _loop_thread, _mcp_tool_defs, _mcp_tool_index, _configured_servers, _server_reachable, _retry_thread
 
     if not _MCP_AVAILABLE:
         return
@@ -93,11 +102,14 @@ def start(config_path: Path) -> None:
     )
     _loop_thread.start()
 
-    future          = asyncio.run_coroutine_threadsafe(_enumerate_all_servers(servers), _loop)
+    future          = asyncio.run_coroutine_threadsafe(
+        _enumerate_all_servers(servers, startup_deadline=time.monotonic() + _STARTUP_WAIT),
+        _loop,
+    )
     try:
-        defs, index = future.result(timeout=_CONNECT_TIMEOUT * len(servers) + 2)
+        defs, index = future.result(timeout=_STARTUP_WAIT + 5)
     except TimeoutError:
-        print(f"[mcp] Warning: tool enumeration timed out after {_CONNECT_TIMEOUT}s per server - continuing without MCP tools", flush=True)
+        print(f"[mcp] Warning: tool enumeration timed out after {_STARTUP_WAIT:.0f}s - continuing without MCP tools", flush=True)
         # Stop the event loop thread to avoid accumulating orphaned threads across restarts.
         _loop.call_soon_threadsafe(_loop.stop)
         if _loop_thread is not None:
@@ -116,6 +128,17 @@ def start(config_path: Path) -> None:
     server_list = ", ".join(s.get("name") or s["url"] for s in servers)
     print(f"[mcp] {count} tool(s) registered from: {server_list}", flush=True)
 
+    # If any server failed, launch a background thread to retry it as it starts up.
+    failed_servers = [s for s in servers if not _server_reachable.get(s.get("url", ""), False)]
+    if failed_servers and _loop is not None:
+        _retry_thread = threading.Thread(
+            target=_background_retry_loop,
+            args=(failed_servers,),
+            daemon=True,
+            name="mcp-retry",
+        )
+        _retry_thread.start()
+
 
 # ----------------------------------------------------------------------------------------------------
 def stop() -> None:
@@ -126,7 +149,6 @@ def stop() -> None:
         _loop.call_soon_threadsafe(_loop.stop)
         _loop        = None
         _loop_thread = None
-
 
 # ----------------------------------------------------------------------------------------------------
 def reconnect() -> tuple[int, list[str]]:
@@ -261,6 +283,69 @@ def call_mcp_tool(tool_name: str, arguments: dict) -> object:
 
 
 # ====================================================================================================
+# MARK: INTERNAL - BACKGROUND RETRY
+# ====================================================================================================
+def _background_retry_loop(failed_servers: list[dict]) -> None:
+    """Retry failed MCP servers every _RETRY_INTERVAL seconds up to _RETRY_MAX times.
+
+    Runs in a daemon thread started by start() when one or more servers were unreachable
+    at boot.  Merges newly-connected tools into the live tool table so the model picks
+    them up on its next invocation without requiring a manual /mcp reconnect.
+    """
+    global _mcp_tool_defs, _mcp_tool_index, _server_reachable
+
+    pending = list(failed_servers)
+    for attempt in range(1, _RETRY_MAX + 1):
+        time.sleep(_RETRY_INTERVAL)
+
+        if _loop is None:          # main app stopped — give up
+            return
+        if not pending:
+            return
+
+        newly_connected: list[dict] = []
+        for server in list(pending):
+            name = server.get("name") or server["url"]
+            url  = server["url"]
+            try:
+                future = asyncio.run_coroutine_threadsafe(
+                    asyncio.wait_for(_list_tools_async(server), timeout=_CONNECT_TIMEOUT),
+                    _loop,
+                )
+                new_defs, new_index = future.result(timeout=_CONNECT_TIMEOUT + 2)
+            except Exception:
+                continue  # still not up — will retry next cycle
+
+            if not new_defs:
+                continue  # connected but no tools — unexpected, keep retrying
+
+            with _state_lock:
+                # Skip tools that collide with an already-registered tool name.
+                for tool_name, info in new_index.items():
+                    if tool_name not in _mcp_tool_index:
+                        _mcp_tool_index[tool_name] = info
+                _mcp_tool_defs = [
+                    d for d in _mcp_tool_defs
+                    if d.get("function", {}).get("name") not in new_index
+                ] + [d for d in new_defs if d.get("function", {}).get("name") in _mcp_tool_index]
+                _server_reachable[url] = True
+
+            pending.remove(server)
+            newly_connected.append(name)
+            print(f"[mcp] auto-reconnected '{name}': {len(new_defs)} tool(s) now available", flush=True)
+
+        if not pending:
+            return
+        if attempt < _RETRY_MAX:
+            remaining = ", ".join(s.get("name") or s["url"] for s in pending)
+            print(f"[mcp] retry {attempt}/{_RETRY_MAX}: still waiting for {remaining}", flush=True)
+
+    if pending:
+        remaining = ", ".join(s.get("name") or s["url"] for s in pending)
+        print(f"[mcp] giving up on unreachable server(s) after {_RETRY_MAX} retries: {remaining}", flush=True)
+
+
+# ====================================================================================================
 # MARK: INTERNAL - CONFIG
 # ====================================================================================================
 def _load_server_config(config_path: Path) -> list[dict]:
@@ -375,31 +460,60 @@ async def _ping_server_async(server: dict) -> bool:
 
 
 # ----------------------------------------------------------------------------------------------------
-async def _enumerate_all_servers(servers: list[dict]) -> tuple[list[dict], dict]:
-    defs:  list[dict] = []
-    index: dict       = {}
+async def _enumerate_all_servers(
+    servers: list[dict],
+    startup_deadline: float | None = None,
+) -> tuple[list[dict], dict]:
+    """Enumerate tools from all servers, retrying failed ones until startup_deadline.
 
-    for server in servers:
-        name = server.get("name") or server["url"]
-        url  = server["url"]
-        try:
-            server_defs, server_index = await asyncio.wait_for(
-                _list_tools_async(server), timeout=_CONNECT_TIMEOUT
-            )
-            duplicate_names = sorted(set(index).intersection(server_index))
-            if duplicate_names:
-                names = ", ".join(duplicate_names)
-                print(f"[mcp] Warning: duplicate tool name(s) from '{name}' ignored: {names}", flush=True)
-                server_defs = [
-                    tool_def for tool_def in server_defs
-                    if tool_def.get("function", {}).get("name") not in duplicate_names
-                ]
-                for tool_name in duplicate_names:
-                    server_index.pop(tool_name, None)
-            defs.extend(server_defs)
-            index.update(server_index)
-        except Exception as exc:
-            print(f"[mcp] Warning: could not connect to '{name}' at {url}: {_format_connection_error(exc)}", flush=True)
+    Fast-starting servers (e.g. KoreDocs) are collected immediately.
+    Slow-starting servers (e.g. KoreData, which spawns 4 child processes) are retried
+    every _CONNECT_TIMEOUT seconds until they respond or the deadline passes.
+    """
+    defs:    list[dict] = []
+    index:   dict       = {}
+    pending: list[dict] = list(servers)   # servers not yet successfully connected
+
+    while pending:
+        still_pending: list[dict] = []
+
+        for server in pending:
+            name = server.get("name") or server["url"]
+            url  = server["url"]
+            try:
+                server_defs, server_index = await asyncio.wait_for(
+                    _list_tools_async(server), timeout=_CONNECT_TIMEOUT
+                )
+                duplicate_names = sorted(set(index).intersection(server_index))
+                if duplicate_names:
+                    names = ", ".join(duplicate_names)
+                    print(f"[mcp] Warning: duplicate tool name(s) from '{name}' ignored: {names}", flush=True)
+                    server_defs = [
+                        tool_def for tool_def in server_defs
+                        if tool_def.get("function", {}).get("name") not in duplicate_names
+                    ]
+                    for tool_name in duplicate_names:
+                        server_index.pop(tool_name, None)
+                defs.extend(server_defs)
+                index.update(server_index)
+            except Exception as exc:
+                still_pending.append(server)
+                if startup_deadline is None or time.monotonic() >= startup_deadline:
+                    # No retry budget left — log and abandon.
+                    print(f"[mcp] Warning: could not connect to '{name}' at {url}: {_format_connection_error(exc)}", flush=True)
+
+        pending = still_pending
+
+        if not pending:
+            break
+
+        if startup_deadline is None or time.monotonic() >= startup_deadline:
+            break
+
+        remaining = ", ".join(s.get("name") or s["url"] for s in pending)
+        wait = min(_CONNECT_TIMEOUT, max(1.0, startup_deadline - time.monotonic()))
+        print(f"[mcp] waiting for {remaining} (retrying in {wait:.0f}s)...", flush=True)
+        await asyncio.sleep(wait)
 
     return defs, index
 
