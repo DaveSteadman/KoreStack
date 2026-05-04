@@ -45,3 +45,4 @@ Thumbs.db
 KoreDocs/koredocs.log
 *.log
 datacontrol/task_queue.json
+/assets

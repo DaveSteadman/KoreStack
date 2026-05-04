@@ -3,7 +3,7 @@
 KoreStack is now the consolidated local-first suite for the Kore system. Instead of a
 set of separate repos that have to be started and understood independently, the suite is organized as one workspace with a single top-level entrypoint, a shared configuration layer, shared runtime data locations, and a coordinating control surface.
 
-![Kore Stack headline](assets/readme/kore-suite-headline.gif)
+![Kore Stack headline](progress/2026-05-04%20-%20kore-suite-headline.gif)
 
 The consolidation goal is not to turn everything into one process. The goal is to make
 the system operate as one product while keeping the service boundaries that are still
