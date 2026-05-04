@@ -4,17 +4,38 @@
 
 {% block content %}
 <div class="kcui-page kcui-page--narrow kcui-stack">
+
+{% if catalogs and catalogs|length > 1 %}
+<div style="display:flex; flex-wrap:wrap; gap:0.5rem; margin-bottom:1rem;">
+  <a href="/ui/library" class="domain-card{% if not catalog %} domain-card--active{% endif %}"
+     style="padding:0.35rem 0.75rem; border:1px solid var(--border); border-radius:3px; font-size:12px;
+            text-decoration:none; color:{% if not catalog %}var(--green){% else %}var(--dim){% endif %};
+            background:{% if not catalog %}rgba(0,255,120,0.05){% else %}transparent{% endif %};">
+    ALL
+  </a>
+  {% for cat in catalogs %}
+  <a href="/ui/library?catalog={{ cat.id }}"
+     style="padding:0.35rem 0.75rem; border:1px solid var(--border); border-radius:3px; font-size:12px;
+            text-decoration:none;
+            color:{% if catalog == cat.id %}var(--green){% else %}var(--dim){% endif %};
+            background:{% if catalog == cat.id %}rgba(0,255,120,0.05){% else %}transparent{% endif %};">
+    {{ cat.label|upper }}
+  </a>
+  {% endfor %}
+</div>
+{% endif %}
+
 <div class="panel kcui-panel" style="margin-bottom:1.25rem;">
   <div class="panel-header kcui-panel-header">
     {% if mode == "incomplete" %}INCOMPLETE RECORDS{% else %}BOOKS{% endif %}
     <span class="badge badge-dim" style="margin-left:0.5rem;">{{ total }}</span>
     <span style="margin-left:auto; display:flex; gap:0.75rem; align-items:center;">
       {% if mode == "all" %}
-      <a href="/ui/library/incomplete" style="font-size:11px; color:var(--amber);">INCOMPLETE -></a>
+      <a href="/ui/library/incomplete{% if catalog %}?catalog={{ catalog }}{% endif %}" style="font-size:11px; color:var(--amber);">INCOMPLETE -></a>
       {% else %}
-      <a href="/ui/library" style="font-size:11px; color:var(--dim);">ALL BOOKS -></a>
+      <a href="/ui/library{% if catalog %}?catalog={{ catalog }}{% endif %}" style="font-size:11px; color:var(--dim);">ALL BOOKS -></a>
       {% endif %}
-      <a href="/ui/library/search" style="font-size:11px; color:var(--dim);">SEARCH -></a>
+      <a href="/ui/library/search{% if catalog %}?catalog={{ catalog }}{% endif %}" style="font-size:11px; color:var(--dim);">SEARCH -></a>
       <a href="/ui/library/import" style="font-size:11px; color:var(--dim);">IMPORT -></a>
     </span>
   </div>
@@ -27,6 +48,10 @@
         <button type="submit">SEARCH</button>
       </div>
       <div style="display:flex; flex-wrap:wrap; gap:0.75rem; margin-top:0.6rem; align-items:center;">
+        <label style="display:flex; align-items:center; gap:0.35rem; font-size:12px; color:var(--dim);">
+          Catalog
+          <input type="text" name="catalog" value="{{ catalog }}" style="width:110px;" placeholder="all">
+        </label>
         <label style="display:flex; align-items:center; gap:0.35rem; font-size:12px; color:var(--dim);">
           Author
           <input type="text" name="author" style="width:140px;">
@@ -72,10 +97,10 @@
     <p class="meta">Books with one or more missing metadata fields.
       Filter:
       {% for f in ['author','year','language','genre'] %}
-      <a href="/ui/library/incomplete?fields={{ f }}" style="font-size:11px; margin-left:0.4rem;
+      <a href="/ui/library/incomplete?fields={{ f }}{% if catalog %}&catalog={{ catalog }}{% endif %}" style="font-size:11px; margin-left:0.4rem;
         {% if filter_fields == f %}color:var(--green);{% endif %}">{{ f }}</a>
       {% endfor %}
-      {% if filter_fields %}<a href="/ui/library/incomplete" style="font-size:11px; margin-left:0.4rem; color:var(--dim);">clear</a>{% endif %}
+      {% if filter_fields %}<a href="/ui/library/incomplete{% if catalog %}?catalog={{ catalog }}{% endif %}" style="font-size:11px; margin-left:0.4rem; color:var(--dim);">clear</a>{% endif %}
     </p>
   </div>
   {% endif %}
@@ -84,12 +109,13 @@
     <table>
       <thead>
         <tr>
-          <th style="width:50px;">#</th>
+          <th style="width:90px;">ID</th>
           <th>Title</th>
           <th style="width:180px;">Author</th>
           <th style="width:55px;">Year</th>
           <th style="width:55px;">Lang</th>
           <th style="width:120px;">Genre</th>
+          {% if not catalog %}<th style="width:75px;">Catalog</th>{% endif %}
           <th style="width:70px; text-align:right;">Words</th>
           {% if mode == "incomplete" %}<th style="width:140px;">Missing</th>{% endif %}
         </tr>
@@ -97,12 +123,13 @@
       <tbody>
         {% for b in books %}
         <tr>
-          <td class="meta">{{ b.route_id or b.id }}</td>
+          <td class="meta"><a href="/ui/library/{{ b.route_id or b.id }}" style="color:inherit;">{{ b.route_id or b.id }}</a></td>
           <td><a href="/ui/library/{{ b.route_id or b.id }}">{{ b.title }}</a></td>
           <td class="meta">{{ b.author or "-" }}</td>
           <td class="meta">{{ b.year or "-" }}</td>
           <td class="meta">{{ b.language or "-" }}</td>
           <td class="meta">{{ b.genre or "-" }}</td>
+          {% if not catalog %}<td class="meta">{{ b.catalog or "local" }}</td>{% endif %}
           <td class="meta" style="text-align:right;">
             {% if b.word_count %}{{ "{:,}".format(b.word_count) }}{% else %}-{% endif %}
           </td>

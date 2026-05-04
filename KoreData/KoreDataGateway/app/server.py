@@ -962,21 +962,24 @@ async def api_proxy_feed_rate(feed_id: str, minutes: int):
 
 @app.get("/ui/library", response_class=HTMLResponse)
 async def lib_index(request: Request, limit: int = 200, offset: int = 0, catalog: Optional[str] = None):
-    books_r, status_r = await asyncio.gather(
+    books_r, status_r, catalogs_r = await asyncio.gather(
         _lib_client.get("/books", params={"limit": limit, "offset": offset, "catalog": catalog} if catalog else {"limit": limit, "offset": offset}),
         _lib_client.get("/status", params={"catalog": catalog} if catalog else None),
+        _lib_client.get("/catalogs"),
     )
-    books  = books_r.json()  if books_r.status_code == 200  else []
-    status = status_r.json() if status_r.status_code == 200 else {}
+    books     = books_r.json()    if books_r.status_code == 200    else []
+    status    = status_r.json()   if status_r.status_code == 200   else {}
+    catalogs  = catalogs_r.json() if catalogs_r.status_code == 200 else []
     return templates.TemplateResponse(
         request, "library_index.html",
         {
-            "books":  books,
-            "total":  status.get("total_books", len(books)),
-            "limit":  limit,
-            "offset": offset,
-            "mode":   "all",
-            "catalog": catalog or "",
+            "books":    books,
+            "total":    status.get("total_books", len(books)),
+            "limit":    limit,
+            "offset":   offset,
+            "mode":     "all",
+            "catalog":  catalog or "",
+            "catalogs": catalogs,
         },
     )
 
@@ -988,8 +991,12 @@ async def lib_incomplete(request: Request, fields: Optional[str] = None, catalog
         params["fields"] = fields
     if catalog:
         params["catalog"] = catalog
-    r = await _lib_client.get("/incomplete", params=params)
-    books = r.json() if r.status_code == 200 else []
+    r, catalogs_r = await asyncio.gather(
+        _lib_client.get("/incomplete", params=params),
+        _lib_client.get("/catalogs"),
+    )
+    books    = r.json()           if r.status_code == 200           else []
+    catalogs = catalogs_r.json()  if catalogs_r.status_code == 200  else []
     return templates.TemplateResponse(
         request, "library_index.html",
         {
@@ -1000,6 +1007,7 @@ async def lib_incomplete(request: Request, fields: Optional[str] = None, catalog
             "mode":          "incomplete",
             "filter_fields": fields,
             "catalog":       catalog or "",
+            "catalogs":      catalogs,
         },
     )
 
@@ -1050,9 +1058,11 @@ async def lib_search(
 
 @app.get("/ui/library/import", response_class=HTMLResponse)
 async def lib_import(request: Request, error: Optional[str] = None):
+    catalogs_r = await _lib_client.get("/catalogs")
+    catalogs = catalogs_r.json() if catalogs_r.status_code == 200 else []
     return templates.TemplateResponse(
         request, "library_import.html",
-        {"error": error},
+        {"error": error, "catalogs": catalogs},
     )
 
 
@@ -1150,12 +1160,16 @@ async def lib_import_kiwix_viewer_batch(request: Request):
 
 @app.get("/ui/library/{book_id:path}/edit", response_class=HTMLResponse)
 async def lib_book_edit(request: Request, book_id: str):
-    r = await _lib_client.get(f"/books/{book_id}")
+    r, catalogs_r = await asyncio.gather(
+        _lib_client.get(f"/books/{book_id}"),
+        _lib_client.get("/catalogs"),
+    )
     if r.status_code == 404:
         raise HTTPException(status_code=404, detail="Book not found")
+    catalogs = catalogs_r.json() if catalogs_r.status_code == 200 else []
     return templates.TemplateResponse(
         request, "library_edit.html",
-        {"book": r.json(), "error": None},
+        {"book": r.json(), "error": None, "catalogs": catalogs},
     )
 
 
@@ -1201,6 +1215,22 @@ async def lib_book_delete(book_id: str):
     return RedirectResponse(url="/ui/library", status_code=303)
 
 
+@app.post("/ui/library/{book_id:path}/move")
+async def lib_book_move(book_id: str, catalog: str = Form(...)):
+    r = await _lib_client.post(f"/books/{book_id}/move", json={"catalog": catalog})
+    if r.status_code == 404:
+        raise HTTPException(status_code=404, detail="Book not found")
+    if r.status_code != 200:
+        try:
+            detail = r.json().get("detail", f"Move failed ({r.status_code})")
+        except Exception:
+            detail = f"Move failed ({r.status_code})"
+        raise HTTPException(status_code=r.status_code, detail=detail)
+    new_book = r.json()
+    new_id = new_book.get("route_id") or new_book.get("id")
+    return RedirectResponse(url=f"/ui/library/{new_id}", status_code=303)
+
+
 @app.post("/ui/library/{book_id:path}/repair-anchors")
 async def lib_repair_anchors(book_id: str):
     r = await _lib_client.post(f"/books/{book_id}/repair-anchors")
@@ -1213,12 +1243,16 @@ async def lib_repair_anchors(book_id: str):
 
 @app.get("/ui/library/{book_id:path}", response_class=HTMLResponse)
 async def lib_book(request: Request, book_id: str):
-    r = await _lib_client.get(f"/books/{book_id}")
+    r, catalogs_r = await asyncio.gather(
+        _lib_client.get(f"/books/{book_id}"),
+        _lib_client.get("/catalogs"),
+    )
     if r.status_code == 404:
         raise HTTPException(status_code=404, detail="Book not found")
+    catalogs = catalogs_r.json() if catalogs_r.status_code == 200 else []
     return templates.TemplateResponse(
         request, "library_book.html",
-        {"book": r.json()},
+        {"book": r.json(), "catalogs": catalogs},
     )
 
 

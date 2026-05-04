@@ -12,7 +12,6 @@ from dbutil import fts_build_query, compute_word_count as _compute_word_count
 
 DATA_DIR = Path(cfg["data_dir"])
 _DB_PATH = DATA_DIR / "library.db"
-_CATALOGS_DIR = DATA_DIR / "catalogs"
 _BUNDLED_CATALOGS_DIR = Path(__file__).resolve().parents[1] / "catalogs"
 _DEFAULT_CATALOG = str(cfg.get("default_catalog", "local") or "local").strip() or "local"
 _CATALOG_ID_RE = re.compile(r"^[A-Za-z0-9_-]+$")
@@ -26,7 +25,7 @@ def _now() -> str:
 
 
 def _normalize_catalog_id(catalog: Optional[str]) -> str:
-    value = (catalog or _DEFAULT_CATALOG).strip() or _DEFAULT_CATALOG
+    value = (catalog or _DEFAULT_CATALOG).strip().lower() or _DEFAULT_CATALOG
     if not _CATALOG_ID_RE.fullmatch(value):
         raise ValueError(f"Invalid catalog id: {catalog!r}")
     return value
@@ -57,10 +56,15 @@ def _bundled_catalog_map() -> dict[str, Path]:
 
 
 def _user_catalog_map() -> dict[str, Path]:
-    if not _CATALOGS_DIR.exists():
+    if not DATA_DIR.exists():
         return {}
+    _default_filename = _DB_PATH.name.lower()
     result: dict[str, Path] = {}
-    for path in _CATALOGS_DIR.glob("*.db"):
+    for path in DATA_DIR.glob("*.db"):
+        if path.name.lower() == _default_filename:
+            continue
+        if not _CATALOG_ID_RE.fullmatch(path.stem.lower()):
+            continue  # skip files with invalid catalog-id names (dots, spaces, etc.)
         catalog = _normalize_catalog_id(path.stem)
         result[catalog] = path.resolve()
     return result
@@ -135,7 +139,7 @@ def _catalog_info(catalog: Optional[str], create: bool = False) -> dict:
     if create:
         return {
             "id": catalog_id,
-            "path": (_CATALOGS_DIR / f"{catalog_id}.db").resolve(),
+            "path": (DATA_DIR / f"{catalog_id}.db").resolve(),
             "read_only": False,
             "source": "user",
         }
@@ -360,6 +364,7 @@ def add_book(
     compressed = _compress(cleaned_body)
     now = _now()
     with db_connection(catalog_id, create=True) as conn:
+        _ensure_schema(conn)
         cur = conn.execute("""
             INSERT INTO books (title, author, year, language, genre, notes, source, source_id,
                                word_count, body, added_at, updated_at)
@@ -371,7 +376,9 @@ def add_book(
             "INSERT INTO books_fts(rowid, title, author, body) VALUES (?, ?, ?, ?)",
             (book_id, title or "", author or "", cleaned_body or ""),
         )
-    return get_book(book_id, include_body=False, catalog=catalog_id)
+        cols = ", ".join(_BOOK_COLS)
+        row = conn.execute(f"SELECT {cols} FROM books WHERE id = ?", (book_id,)).fetchone()
+    return _row_to_dict(row, include_body=False, catalog=catalog_id)
 
 
 def get_book(book_id: str | int, include_body: bool = True, catalog: Optional[str] = None) -> Optional[dict]:
@@ -483,6 +490,42 @@ def delete_book(book_id: str | int, catalog: Optional[str] = None) -> bool:
                     _decompress(row["body"]) or "")
         conn.execute("DELETE FROM books WHERE id = ?", (local_id,))
     return True
+
+
+def move_book(book_id: str | int, dest_catalog: str, src_catalog: Optional[str] = None) -> Optional[dict]:
+    """Copy a book to dest_catalog, then delete from src_catalog.
+    Returns the new book dict with updated catalog/id, or None if source not found."""
+    src_catalog_id, local_id = parse_book_ref(book_id, catalog=src_catalog)
+    dest_catalog_id = _normalize_catalog_id(dest_catalog)
+    if src_catalog_id == dest_catalog_id:
+        return get_book(local_id, include_body=False, catalog=src_catalog_id)
+
+    _assert_catalog_writable(src_catalog_id)
+    _assert_catalog_writable(dest_catalog_id)
+
+    cols = ", ".join(_BOOK_COLS_WITH_BODY)
+    with db_connection(src_catalog_id) as conn:
+        row = conn.execute(
+            f"SELECT {cols} FROM books WHERE id = ?", (local_id,)
+        ).fetchone()
+    if not row:
+        return None
+
+    # Re-use add_book so FTS, compression, schema creation all go through the same path
+    new_book = add_book(
+        title=row["title"],
+        body=_decompress(row["body"]) if row["body"] else None,
+        author=row["author"],
+        year=row["year"],
+        language=row["language"],
+        genre=row["genre"],
+        notes=row["notes"],
+        source=row["source"],
+        source_id=row["source_id"],
+        catalog=dest_catalog_id,
+    )
+    delete_book(local_id, catalog=src_catalog_id)
+    return new_book
 
 
 # ---------------------------------------------------------------------------

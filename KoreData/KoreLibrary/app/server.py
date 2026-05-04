@@ -24,6 +24,7 @@ from app.database import (
     list_catalogs,
     list_books,
     list_incomplete,
+    move_book,
     search_books,
     title_exists,
     update_book,
@@ -71,6 +72,10 @@ class BookUpdate(BaseModel):
     notes: Optional[str] = None
     source: Optional[str] = None
     source_id: Optional[str] = None
+
+
+class BookMoveRequest(BaseModel):
+    catalog: str
 
 
 class KiwixImportRequest(BaseModel):
@@ -186,6 +191,17 @@ def route_repair_anchors(book_id: str):
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {"repaired": True, "book": updated}
+
+
+@app.post("/books/{book_id:path}/move", summary="Move a book to a different catalog")
+def route_move_book(book_id: str, data: BookMoveRequest):
+    try:
+        new_book = move_book(book_id, dest_catalog=data.catalog)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    if new_book is None:
+        raise HTTPException(status_code=404, detail="Book not found")
+    return new_book
 
 
 @app.delete("/books/{book_id:path}", status_code=204, summary="Delete a book")

@@ -84,6 +84,27 @@
 
         </div>
 
+        {% if catalogs %}
+        <div style="border-top:1px solid var(--border); padding:0.6rem 0.25rem 0.75rem; margin-bottom:0.75rem; display:flex; align-items:center; gap:0.75rem;">
+          <span style="font-size:11px; color:var(--dim); white-space:nowrap;">Move to catalog</span>
+          <div style="display:inline-flex; gap:0.35rem; align-items:center;">
+            <input name="catalog" form="move-form" type="text" placeholder="catalog name…"
+                   list="move_catalog_list" autocomplete="off"
+                   style="font-size:11px; width:140px; padding:2px 6px; border-radius:2px;"
+                   required>
+            <datalist id="move_catalog_list">
+              {% for cat in catalogs %}
+              {% if cat.id != (book.catalog or "local") %}
+              <option value="{{ cat.id }}">{{ cat.label }}</option>
+              {% endif %}
+              {% endfor %}
+            </datalist>
+            <button type="submit" form="move-form" style="font-size:11px; padding:2px 8px; background:transparent; border-color:var(--border); color:var(--dim); border-radius:2px; white-space:nowrap;">MOVE</button>
+          </div>
+          <span class="meta" style="font-size:11px;">current: {{ book.catalog or "local" }}</span>
+        </div>
+        {% endif %}
+
         <div style="margin-bottom:0.75rem;">
           <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:0.3rem;">
             <label for="e_body">Body text</label>
@@ -96,6 +117,11 @@
         </div>
 
       </form>
+      {# Move form anchor — outside edit-form to avoid nesting, wired via form= on input/button above #}
+      {% if catalogs %}
+      <form id="move-form" method="post"
+            action="/ui/library/{{ book.route_id or book.id }}/move"></form>
+      {% endif %}
     </div>
   </div>
 

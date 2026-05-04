@@ -51,6 +51,22 @@
           </div>
 
           <div>
+            <label for="m_catalog">Catalog</label>
+            <input id="m_catalog" name="catalog" type="text" placeholder="local (default)"
+              style="width:160px;"
+              {% if catalogs and catalogs|length > 1 %}
+              list="catalog_list"
+              {% endif %}>
+            {% if catalogs and catalogs|length > 1 %}
+            <datalist id="catalog_list">
+              {% for cat in catalogs %}
+              <option value="{{ cat.id }}">{{ cat.label }}</option>
+              {% endfor %}
+            </datalist>
+            {% endif %}
+          </div>
+
+          <div>
             <label for="m_body">Body text (optional - can add/edit later)</label>
             <textarea id="m_body" name="body" rows="8" placeholder="Paste full book text here..." style="font-size:11px; resize:vertical;"></textarea>
           </div>
