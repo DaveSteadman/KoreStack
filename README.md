@@ -1,112 +1,72 @@
 # KoreStack
 
-KoreStack is now the consolidated local-first suite for the Kore system. Instead of a
-set of separate repos that have to be started and understood independently, the suite is organized as one workspace with a single top-level entrypoint, a shared configuration layer, shared runtime data locations, and a coordinating control surface.
+KoreStack is a local-first AI assistant suite. One command starts the whole system: an agent you talk to, a document editor, a spreadsheet, a diagram tool, a code editor, a data library, web feeds, a reference encyclopedia, and a communications hub — all running locally, all connected.
 
 ![Kore Stack headline](progress/2026-05-04%20-%20kore-suite-headline.gif)
 
-The consolidation goal is not to turn everything into one process. The goal is to make
-the system operate as one product while keeping the service boundaries that are still
-useful.
+## The Suite
 
-In the current shape of the suite:
+| Service | What it does |
+|---|---|
+| **KoreAgent** | The main interface. Chat with the agent, watch it work, manage scheduled tasks. |
+| **KoreChat** | Conversation management — inspect and control the agent's conversation history. |
+| **KoreData** | Data services: RSS feeds, a book library, a Wikipedia-scale reference encyclopedia, and a RAG chunk store. |
+| **KoreDocs** | Document tools: a markdown editor, spreadsheet, and diagram editor, backed by a file manager. |
+| **KoreCode** | A code editor for browsing and editing the workspace files directly in the browser. |
+| **KoreComms** | External messaging hub — route inbound messages from email and other channels to the agent. |
+| **KoreStack** | The control plane — start, stop, and monitor every service from one landing page. |
 
-- `KoreStack` is the control plane and landing page
-- `KoreAgent` is the main agent runtime and orchestration surface
-- `KoreChat` provides shared conversation-state services
-- `KoreData` remains the data and knowledge service family
-- `KoreDocs` remains the document and file service
-- `KoreComms` remains the communications hub
-- `UIElements` is the shared UI shell layer
-- `config/` holds suite-level configuration
-- `datacontrol/` and `datauser/` are suite-owned runtime data areas
+## Getting Started
 
-## What KoreStack Is Now
+**First time setup** — create a virtual environment and install dependencies:
 
-KoreStack is the suite wrapper around the cooperating Kore services. It gives the system:
+```powershell
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+```
 
-- one root startup path
-- one landing page for starting, stopping, and checking services
-- one shared suite layout and naming model
-- one suite-level configuration location
-- one suite-level runtime data layout
-
-That means the repo should now be read as one application suite with multiple services,
-not as a loose collection of related projects.
-
-The naming contract used across the consolidated workspace is:
-
-- `KoreX` names identify runnable suite services
-- shared support layers that are not standalone services use non-`Kore` names
-
-## Start The Suite
-
-From the workspace root:
+Then start the suite:
 
 ```powershell
 python .\main.py
 ```
 
-That starts the KoreStack landing page and launches the standard service set:
-
-- KoreAgent on port 8605
-- KoreConversation on port 8630
-- KoreData on port 8620
-- KoreDocs on port 8615
-- KoreComms on port 8625
-- KoreStack on port 8600
-
-Open the suite landing page at:
+Then open the suite landing page:
 
 ```text
 http://127.0.0.1:8600/
 ```
 
-## Operate The Suite
+All services start automatically. Each one has its own port and its own tab in the top bar — click any service to go straight to it.
 
-KoreStack is the parent process for the local system. To stop the full suite cleanly,
-press `Ctrl+C` in the terminal where you started it.
+## Stopping and Restarting
 
-If you want to manage individual services while the suite stays up, use the controls on
-the KoreStack landing page. Service cards can be stopped, started, and restarted without
-tearing down the whole suite.
+Press `Ctrl+C` in the terminal to stop everything cleanly.
+
+To restart or stop individual services without taking down the whole suite, use the service cards on the KoreStack landing page.
+
+## Ports
+
+| Service | Port |
+|---|---|
+| KoreStack | 8600 |
+| KoreAgent | 8605 |
+| KoreCode | 8610 |
+| KoreDocs | 8615 |
+| KoreData | 8620 |
+| KoreComms | 8625 |
+| KoreChat | 8630 |
 
 ## Workspace Layout
 
-The top-level layout now reflects the consolidated suite contract:
-
-- `KoreStack/` - suite coordination and landing page
-- `KoreAgent/` - agent runtime and orchestration
-- `KoreChat/` - conversation-state service
-- `KoreData/` - data and knowledge services
-- `KoreDocs/` - document and file services
-- `KoreComms/` - communications services
-- `UIElements/` - shared UI assets and shell conventions
-- `config/` - shared suite configuration
-- `datacontrol/` - operational state, logs, schedules, queues, and test output
-- `datauser/` - user-owned working files and content
-
-The important shift is that `config/`, `datacontrol/`, and `datauser/` are now suite
-assets at the workspace root rather than being treated as belonging to just one service.
-
-`config/default.json` now matches the current suite port map. `config/local.json` remains an optional machine-local overlay rather than the place where the active defaults live.
-
-## Common Commands
-
-Run only part of the suite:
-
-```powershell
-python .\main.py --services agent,conversation,docs
-```
-
-Check service availability without starting anything:
-
-```powershell
-python .\main.py status
-```
-
-Show the resolved startup plan:
-
-```powershell
-python .\main.py --dry-run
-```
+- `KoreAgent/` — agent runtime, skills, and task scheduler
+- `KoreChat/` — conversation state and history
+- `KoreData/` — feeds, library, reference, and RAG
+- `KoreDocs/` — document, spreadsheet, and diagram editors
+- `KoreCode/` — in-browser code editor
+- `KoreComms/` — external messaging
+- `KoreStack/` — suite landing page and control plane
+- `config/` — suite configuration (`default.json` + optional `local.json` override)
+- `datacontrol/` — logs, schedules, task queues, and test output
+- `datauser/` — your working files and content
