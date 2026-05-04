@@ -1,27 +1,3 @@
-[2026-04-29T21:46:07]   Skipping France24 — next fetch in ~1383m
-[2026-04-29T21:46:07]   Skipping Aljazeera All — next fetch in ~1378m
-[2026-04-29T21:46:07]   Skipping The Guardian World — next fetch in ~1382m
-[2026-04-29T21:46:07]   Skipping NPR World — next fetch in ~1379m
-[2026-04-29T21:46:07]   Skipping lemonde — next fetch in ~20m
-[2026-04-29T21:46:07]   Skipping BBCi — next fetch in ~52m
-[2026-04-29T21:46:07]   Skipping Australia ABC — next fetch in ~47m
-[2026-04-29T21:46:07]   Skipping indianexpress — next fetch in ~50m
-[2026-04-29T21:46:07]   Skipping DW — next fetch in ~51m
-[2026-04-29T21:46:07]   Skipping Mail / Guardian (SA) — next fetch in ~49m
-[2026-04-29T21:46:07]   Skipping latimes — next fetch in ~47m
-[2026-04-29T21:46:07]   Skipping latimes — next fetch in ~47m
-[2026-04-29T21:46:07]   Skipping lemonde — next fetch in ~20m
-[2026-04-29T21:46:07]   Skipping Australia ABC — next fetch in ~47m
-[2026-04-29T21:46:07]   Skipping DW — next fetch in ~51m
-[2026-04-29T21:46:07]   Skipping BBCi — next fetch in ~52m
-[2026-04-29T21:46:07]   Skipping Mail / Guardian (SA) — next fetch in ~49m
-[2026-04-29T21:46:07]   Skipping indianexpress — next fetch in ~50m
-[2026-04-29T21:46:07]   airforce-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.airforce-technology.com/feed/'
-For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
-[2026-04-29T21:46:07] Ingesting: army-technology
-[2026-04-29T21:46:07]   army-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.army-technology.com/feed/'
-For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
-[2026-04-29T21:46:07] Ingesting: airforce-technology
 [2026-04-29T21:46:07]   airforce-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.airforce-technology.com/feed/'
 For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
 [2026-04-29T21:46:07] Ingesting: army-technology
@@ -998,3 +974,27 @@ For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/St
 [2026-05-03T23:43:33]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~2861m
 [2026-05-03T23:43:33]   Skipping defense-aerospace WEB — next fetch in ~2867m
 [2026-05-03T23:43:33]   Skipping janes Insights — next fetch in ~2860m
+[2026-05-04T10:08:24]   Skipping HuggingFace Blog — next fetch in ~689m
+[2026-05-04T10:08:24]   Skipping Understanding AI — next fetch in ~285m
+[2026-05-04T10:08:24]   Skipping Artificial Intelligence - News — next fetch in ~983m
+[2026-05-04T10:08:24]   Skipping aiweekly news-today — next fetch in ~979m
+[2026-05-04T10:08:24]   Skipping Defense News — next fetch in ~2238m
+[2026-05-04T10:08:24]   Skipping Breaking Defense — next fetch in ~2245m
+[2026-05-04T10:08:24]   Skipping defenseone — next fetch in ~2242m
+[2026-05-04T10:08:24]   Skipping ukdefencejournal — next fetch in ~2237m
+[2026-05-04T10:08:24]   Skipping defenceiq - defence-technology — next fetch in ~2239m
+[2026-05-04T10:08:24]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~2237m
+[2026-05-04T10:08:24]   Skipping defense-aerospace WEB — next fetch in ~2242m
+[2026-05-04T10:08:24]   Skipping janes Insights — next fetch in ~2235m
+[2026-05-04T10:22:59]   Skipping HuggingFace Blog — next fetch in ~674m
+[2026-05-04T10:22:59]   Skipping Understanding AI — next fetch in ~270m
+[2026-05-04T10:22:59]   Skipping Artificial Intelligence - News — next fetch in ~968m
+[2026-05-04T10:22:59]   Skipping aiweekly news-today — next fetch in ~965m
+[2026-05-04T10:22:59]   Skipping Defense News — next fetch in ~2223m
+[2026-05-04T10:22:59]   Skipping Breaking Defense — next fetch in ~2231m
+[2026-05-04T10:22:59]   Skipping defenseone — next fetch in ~2227m
+[2026-05-04T10:22:59]   Skipping ukdefencejournal — next fetch in ~2222m
+[2026-05-04T10:22:59]   Skipping defenceiq - defence-technology — next fetch in ~2225m
+[2026-05-04T10:22:59]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~2222m
+[2026-05-04T10:22:59]   Skipping defense-aerospace WEB — next fetch in ~2227m
+[2026-05-04T10:22:59]   Skipping janes Insights — next fetch in ~2221m

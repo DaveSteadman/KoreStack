@@ -614,12 +614,13 @@ def _kc_ensure_conversation(session_id: str) -> dict | None:
     return None
 
 
-def _kc_save_turn(session_id: str, user_text: str, agent_text: str) -> None:
+def _kc_save_turn(session_id: str, user_text: str, agent_text: str, token_estimate: int | None = None) -> None:
     """Write a user + agent turn to the KC conversation as inbound + outbound messages."""
     conv = _kc_ensure_conversation(session_id)
     if conv is None:
         return
-    conv_id = conv["id"]
+    conv_id    = conv["id"]
+    turn_count = (conv.get("turn_count") or 0) + 1
     try:
         _kc_post(f"/conversations/{conv_id}/messages", {
             "direction":      "inbound",
@@ -633,6 +634,15 @@ def _kc_save_turn(session_id: str, user_text: str, agent_text: str) -> None:
             "sender_display": "agent",
             "status":         "sent",
         })
+    except Exception:
+        pass
+    try:
+        patch: dict = {"turn_count": turn_count}
+        if token_estimate is not None:
+            patch["token_estimate"] = token_estimate
+        _kc_patch(f"/conversations/{conv_id}", patch)
+        # Invalidate cached conv so the next call sees the updated turn_count.
+        _kc_conv_cache.pop(session_id, None)
     except Exception:
         pass
 

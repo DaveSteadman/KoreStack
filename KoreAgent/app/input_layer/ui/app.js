@@ -7,7 +7,8 @@
 // MARK: CONFIG
 // ====================================================================================================
 const API_BASE          = "";           // same origin
-const SESSION_STORAGE_KEY = "maf.activeSession";
+const SESSION_STORAGE_KEY   = "maf.activeSession";
+const INPUT_DRAFT_KEY       = "maf.inputDraft";
 let   _sessionId        = _restoreSessionId();  // mutable: /session resume changes this
 const POLL_OLLAMA_MS    = 10_000;
 const POLL_QUEUE_MS     = 3_000;
@@ -103,6 +104,18 @@ function _persistActiveSession() {
             title: _sessionTitle,
         }));
     } catch (_) { /* ignore */ }
+}
+
+function _saveInputDraft(text) {
+    try { sessionStorage.setItem(INPUT_DRAFT_KEY, text); } catch (_) { /* ignore */ }
+}
+
+function _restoreInputDraft() {
+    try { return sessionStorage.getItem(INPUT_DRAFT_KEY) || ""; } catch (_) { return ""; }
+}
+
+function _clearInputDraft() {
+    try { sessionStorage.removeItem(INPUT_DRAFT_KEY); } catch (_) { /* ignore */ }
 }
 
 function _restoreSessionUiState() {
@@ -934,6 +947,7 @@ function submitPrompt() {
 
     // Clear input and reset history cursor immediately so the user can keep typing.
     dom.input().value = "";
+    _clearInputDraft();
     _resizeTextarea();
     _historyIdx = -1;
 
@@ -1275,8 +1289,16 @@ function init() {
 
     // Wire up input events.
     dom.input().addEventListener("keydown", onInputKeydown);
-    dom.input().addEventListener("input", () => { _historyIdx = -1; onInputChange(); });
+    dom.input().addEventListener("input", () => { _historyIdx = -1; _saveInputDraft(dom.input().value); onInputChange(); });
     dom.input().addEventListener("blur",  () => { setTimeout(_hideSuggest, 120); });
+
+    // Restore any in-progress draft from before the user navigated away.
+    const _draft = _restoreInputDraft();
+    if (_draft) {
+        dom.input().value = _draft;
+        _resizeTextarea();
+        dom.input().focus();
+    }
     dom.sendBtn().addEventListener("click", submitPrompt);
     _resizeTextarea();
 

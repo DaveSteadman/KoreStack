@@ -12,6 +12,12 @@ class PromptRequest(BaseModel):
     prompt: str
 
 
+def _runtime_config_for_prompt(config, prompt_text: str):
+    if prompt_text.startswith("/"):
+        return config
+    return copy.deepcopy(config)
+
+
 def register_session_routes(
     app,
     *,
@@ -67,7 +73,7 @@ def register_session_routes(
             return {"run_id": run_id, "session_id": session_id, "queued": True}
 
         def _run(_prompt=prompt_text) -> None:
-            run_config = copy.deepcopy(config)
+            run_config = _runtime_config_for_prompt(config, _prompt)
             session_context = create_session_context(session_id=session_id, persist_path=None)
             history, summaries = load_session(session_id)
             queue_run_event(run_q, {"type": "start", "run_id": run_id, "prompt": _prompt}, priority=True)
@@ -157,7 +163,8 @@ def register_session_routes(
                         summaries = save_session(session_id, history, summaries, p_tokens, get_active_num_ctx())
                         queue_run_event(run_q, {"type": "response", "run_id": run_id, "response": response, "tokens": p_tokens, "tps": f'{tps:.1f}' if tps > 0 else '0'}, priority=True)
                         # Persist the turn to KC asynchronously - response is already queued.
-                        threading.Thread(target=kc_save_turn, args=(session_id, _prompt, response), daemon=True).start()
+                        _kc_token_est = p_tokens + _completion_tokens
+                        threading.Thread(target=kc_save_turn, args=(session_id, _prompt, response), kwargs={"token_estimate": _kc_token_est}, daemon=True).start()
             except Exception as exc:
                 queue_run_event(run_q, {"type": "error", "run_id": run_id, "message": str(exc)}, priority=True)
             finally:

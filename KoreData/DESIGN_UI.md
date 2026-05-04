@@ -160,33 +160,51 @@ Bulk-delete via row checkboxes. Results table with sortable columns.
 
 ### Library Index
 
+The Library index opens with a catalog overview row, then the book search and listing below it. This gives the user an immediate picture of how the collection is organised before they start filtering.
+
 ```
 ┌──────────────────────────────────────────────────────────────────┐
-│  Title [___]  Author [___]  Year [___]  Language [___]           │
-│  Genre [___]  Limit [50 ±]                          [Search]     │
+│  Catalogs                                                        │
+│  ┌────────────┐  ┌────────────┐  ┌────────────┐                 │
+│  │ ancient    │  │ shakespeare│  │ dickens    │  …              │  .grid / .domain-card
+│  │ 84 books   │  │ 42 books   │  │ 18 books   │                 │
+│  └────────────┘  └────────────┘  └────────────┘                 │
+│  Clicking a card sets the Catalog filter below.                  │
 ├──────────────────────────────────────────────────────────────────┤
-│  ID  │  Title              │  Author        │  Year │  Words      │
-│  1   │  The Great Gatsby   │  Fitzgerald    │  1925 │  47,094     │
+│  Title [___]  Author [___]  Year [___]  Language [___]           │
+│  Genre [___]  Catalog [all ▾]  Limit [50 ±]         [Search]    │
+├──────────────────────────────────────────────────────────────────┤
+│  Catalog    │  ID  │  Title              │  Author     │  Year   │
+│  local      │  1   │  The Great Gatsby   │  Fitzgerald │  1925   │
+│  ancient    │  42  │  The Iliad          │  Homer      │  -750   │
 │  …                                                               │
 │  [← Prev]  Page 1 of 8  [Next →]                                 │
 └──────────────────────────────────────────────────────────────────┘
 ```
 
-Incomplete records shown with `.missing` (amber) badges on empty fields.
+- **Catalog cards** (`.domain-card`) — one card per catalog returned by `GET /catalogs`, showing the catalog ID and book count. Clicking a card populates the Catalog filter and submits the search.
+- **Catalog filter** — `<select>` populated from `GET /catalogs`; defaults to `all` (search across all catalogs). The selected value is carried through pagination.
+- **Catalog column** — every row in the results table shows the source catalog so books with the same title in different catalogs are not ambiguous.
+- **Creating a catalog** — there is no separate create-catalog action. A new catalog is created automatically the first time a book is added to it (via `POST /books` with a new `catalog` value). Until that first book is added, the catalog does not exist and will not appear in the Catalog filter.
+- Incomplete records shown with `.missing` (amber) badges on empty metadata fields.
 
 ### Book Detail
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
-│  The Great Gatsby                                                │
+│  The Great Gatsby                          Catalog: local  [▸]  │
 │  F. Scott Fitzgerald · 1925 · English · Fiction · 47,094 words  │
 │  Notes: …                                                        │
+│                                              [Move to catalog ▾] │
 ├──────────────────────────────────────────────────────────────────┤
 │  .book-md (markdown-rendered body via marked.js)                 │
 │  Chapter 1 heading                                               │
 │  Body text…                                                      │
 └──────────────────────────────────────────────────────────────────┘
 ```
+
+- **Catalog badge** — top-right of the header; shows which catalog the book lives in. Clicking it sets the catalog filter on the index and navigates back, so the user can browse siblings in the same catalog.
+- **Move to catalog** — dropdown button populated with all other known catalogs; selecting one calls `POST /books/{id}/move` and redirects to the book's new URL (`/{new_catalog}:{new_id}`).
 
 Book body rendered from markdown using `marked.js`. Table of contents anchor links scroll the page. Styled via `.book-md` (monospace, generous line height, green headings).
 

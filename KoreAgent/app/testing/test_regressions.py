@@ -36,6 +36,8 @@ from skills.WebResearch.web_research_skill import research_traverse
 from skills.SystemInfo.system_info_skill import get_system_info_string
 from tool_loop import normalize_tool_request
 from input_layer import api as api_module
+from input_layer.api_routes_sessions import _runtime_config_for_prompt
+from input_layer.slash_command_handlers_testing import _result_counts
 from testing import test_wrapper as test_wrapper_module
 from utils import workspace_utils as workspace_utils_module
 from utils.workspace_utils import get_user_data_dir
@@ -127,6 +129,44 @@ class RegressionTests(unittest.TestCase):
                 workspace_utils_module._load_path_overrides.cache_clear()
                 workspace_utils_module.get_controldata_dir.cache_clear()
                 workspace_utils_module.get_user_data_dir.cache_clear()
+
+    def test_web_slash_commands_mutate_shared_runtime_config(self) -> None:
+        config = OrchestratorConfig(
+            resolved_model="nemotron-cascade-2:latest",
+            num_ctx=131072,
+            max_iterations=3,
+            skills_payload=self.skills_payload,
+        )
+
+        slash_config = _runtime_config_for_prompt(config, "/llmserverconfig model gemma4:26b")
+        prompt_config = _runtime_config_for_prompt(config, "hello")
+
+        self.assertIs(slash_config, config)
+        self.assertIsNot(prompt_config, config)
+
+    def test_testtrend_uses_summary_counts_for_legacy_csv(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            csv_path = Path(tmp) / "test_results_20260504_102420_test_koredata_search.csv"
+            summary_path = Path(tmp) / "summary_20260504_102420_test_koredata_search.md"
+            csv_path.write_text(
+                '"timestamp","assert_result","exit_code","final_output"\n'
+                '"2026-05-04 10:24:21","PASS","0","ok"\n'
+                '"2026-05-04 10:24:22","PASS","0","ok"\n',
+                encoding="utf-8",
+            )
+            summary_path.write_text("Run: now  |  Passed: **1/2**  |  Wall-clock: 1s\n", encoding="utf-8")
+
+            rows = [{"assert_result": "PASS", "exit_code": "0", "final_output": "ok"} for _ in range(2)]
+
+            self.assertEqual(_result_counts(rows, csv_path), (2, 1, 1, 0))
+
+    def test_testtrend_prefers_persisted_wrapper_outcome(self) -> None:
+        rows = [
+            {"assert_result": "PASS", "passed": "PASS", "failure_reason": "", "exit_code": "0", "final_output": "ok"},
+            {"assert_result": "PASS", "passed": "FAIL", "failure_reason": "Search returned no results", "exit_code": "0", "final_output": "No results were found."},
+        ]
+
+        self.assertEqual(_result_counts(rows, Path("missing.csv")), (2, 1, 1, 0))
 
     def test_execute_tool_call_runs_datetime(self) -> None:
         result = execute_tool_call(

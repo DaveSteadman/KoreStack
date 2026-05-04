@@ -23,9 +23,62 @@ Content is:
 
 ---
 
+## Catalogs (Multi-Database Support)
+
+KoreLibrary organises its content into **catalogs** — separate SQLite databases that all share the same schema. This allows different content collections to be kept isolated, segmented by purpose, access pattern, or provenance, without breaking search across them.
+
+### Catalog types
+
+| Type | Location | Writable | Notes |
+|------|----------|----------|---------|
+| **Default (local)** | `{data_dir}/library.db` | Yes | The primary catalog; always present |
+| **User-added** | `{data_dir}/catalogs/{id}.db` | Yes | Created automatically on first write |
+
+`{data_dir}` is the resolved `korelibrary.data_dir` config value (default: `datauser/KoreData/Library`).
+
+The service looks for additional catalogs in exactly one folder: **`{data_dir}/catalogs/`**. Any `.db` file present there at startup is registered as a catalog. There is no recursive scan and no other location is checked.
+
+### Creating a catalog
+
+There is no separate "create catalog" step. A catalog is created automatically the first time a book is written to it:
+
+```
+POST /books
+{ "catalog": "dickens", "title": "A Tale of Two Cities", "author": "Charles Dickens", ... }
+```
+
+If `{data_dir}/catalogs/dickens.db` does not yet exist, the service creates it, applies the schema, and inserts the book. Subsequent writes to `catalog: "dickens"` open the same file. The new catalog appears in `GET /catalogs` immediately.
+
+To create an empty catalog before adding any books is not directly supported via the API — simply add the first book and the catalog comes into existence.
+
+### Catalog IDs
+
+A catalog ID is the filename stem of its `.db` file (e.g. `ancient`, `shakespeare`, `dickens`). IDs must match `[A-Za-z0-9_-]+`. The default catalog ID defaults to `local` and is configurable via `korelibrary.default_catalog`.
+
+### Book references
+
+Books can be addressed globally using the form `{catalog}:{local_id}`, e.g. `shakespeare:42`, `ancient:7`. All API responses include a `catalog` field and a `ref` field (`catalog:id`) so callers can address books unambiguously across catalogs.
+
+### Search across catalogs
+
+Search (`GET /search`) queries **all enabled catalogs** by default and merges results ranked by BM25 score. Callers can narrow the scope using the `catalog` (single) or `catalogs` (comma-separated list) query parameters. The search implementation opens each catalog database independently, executes the FTS query, and merges before applying pagination.
+
+### Write semantics
+
+Write operations (`POST /books`, `PATCH /books/{id}`, `DELETE /books/{id}`) target the specified catalog. If no catalog is specified, the default catalog is used.
+
+### Use cases
+
+- **By author**: a `dickens` catalog for Dickens novels, `shakespeare` for plays and sonnets.
+- **By era**: an `ancient` catalog for classical texts (Homer, Virgil, Plato), a `victorian` catalog for 19th-century works.
+- **By genre**: a `poetry` or `drama` catalog segmented from prose collections.
+- **Catch-all default**: `local` receives anything that doesn't fit a named catalog.
+
+---
+
 ## Data Model
 
-KoreLibrary keeps a writable default catalog in `library.db` and may expose additional catalogs from `datauser/catalogs/*.db` or bundled read-only `catalogs/*.db` files. Each catalog uses the same `books` table schema.
+Each catalog is an independent SQLite database. Every catalog uses the same `books` table schema.
 
 | Column       | Type    | Notes                                                      |
 |--------------|---------|------------------------------------------------------------|
@@ -45,7 +98,7 @@ KoreLibrary keeps a writable default catalog in `library.db` and may expose addi
 
 - FTS5 virtual table indexes `title`, `author`, and `body` for full-text search with BM25 ranking.
 - Metadata search (title, author, year, language, genre) is supported via standard SQL queries.
-- API responses include `catalog` and `route_id` so callers can address books uniquely across catalogs (`local:42`, `gutenberg:15`, etc.).
+- API responses include `catalog` and `route_id` so callers can address books uniquely across catalogs (`ancient:7`, `shakespeare:42`, etc.).
 
 ---
 
@@ -60,9 +113,10 @@ KoreLibrary exposes a REST API (FastAPI). There is **no local web UI** — all u
 | `GET`    | `/catalogs`        | List available catalogs and their capabilities |
 | `GET`    | `/books`           | List books (metadata only, no body), optionally scoped by `catalog` |
 | `GET`    | `/books/{id}`      | Get a single book (metadata + body). `id` may be catalog-aware (`local:42`) |
-| `POST`   | `/books`           | Add a new book to the specified writable catalog |
+| `POST`   | `/books`           | Add a new book. Body field `catalog` selects the target catalog (defaults to `local`) |
 | `PATCH`  | `/books/{id}`      | Update metadata or body (for corrections) |
-| `DELETE` | `/books/{id}`      | Remove a book from a writable catalog |
+| `DELETE` | `/books/{id}`      | Remove a book permanently from its catalog |
+| `POST`   | `/books/{id}/move` | Move a book to a different catalog |
 
 ### Search
 
@@ -107,6 +161,20 @@ Fields that may commonly be absent after automated import:
 - `genre` — never auto-populated; always requires manual classification.
 - `language` — usually available from Kiwix OPDS metadata; rarely missing.
 
+### Importing to a specific catalog
+
+When calling `POST /books` (or triggering a Kiwix import), include a `catalog` field in the request body to direct the book into a named catalog. If `catalog` is omitted the default catalog (`local`) is used.
+
+Example: `POST /books` with body `{ "catalog": "dickens", "title": "...", "body": "..." }` creates the book in the `dickens` catalog, which must already exist as `{data_dir}/catalogs/dickens.db`.
+
+### Deleting a book
+
+`DELETE /books/{id}` permanently removes the book and its FTS index entry from the catalog. The `id` must be catalog-aware if the book is not in the default catalog (e.g. `shakespeare:42`). There is no soft-delete; the operation is immediate and irreversible.
+
+### Moving a book between catalogs
+
+`POST /books/{id}/move` copies the book record (all metadata and body) into the destination catalog, inserts it into that catalog's FTS index, then deletes the original. The request body must include `{ "catalog": "destination_id" }`. The response returns the new catalog-aware `ref` (e.g. `dickens:99`). The move is not atomic across two SQLite files — if the delete step fails after a successful insert, both copies will exist; the duplicate can be removed with a subsequent `DELETE`.
+
 ### Manual correction
 
 Books can be edited after import to correct:
@@ -115,8 +183,6 @@ Books can be edited after import to correct:
 - Typos in body text.
 
 `updated_at` is set on every edit.
-
-Bundled catalogs are treated as read-only. Write operations against them return an error instead of mutating shipped content.
 
 ---
 

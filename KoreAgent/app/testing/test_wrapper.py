@@ -63,7 +63,8 @@ MAIN_SCRIPT = _APP_DIR / "main.py"
 SUBPROCESS_TIMEOUT_SECONDS = 300
 
 CSV_FIELDS = ["timestamp", "source_file", "prompt", "exchange_name", "turn_index",
-              "final_output", "assert_result", "duration_seconds", "exit_code", "log_file", "stderr"]
+              "final_output", "assert_result", "passed", "failure_reason",
+              "duration_seconds", "exit_code", "log_file", "stderr"]
 
 
 # ====================================================================================================
@@ -343,6 +344,8 @@ def _base_row(run_timestamp: str, source_file: str, prompt: str, exchange_name: 
         "turn_index":       turn_index,
         "final_output":     "",
         "assert_result":    "",
+        "passed":           "",
+        "failure_reason":   "",
         "duration_seconds": "0.000",
         "exit_code":        -1,
         "log_file":         "",
@@ -517,15 +520,17 @@ def _run_single_item(
         row.update({"exit_code": 125, "stderr": f"Wrapper error: {e}"})
         turn_metrics = {}
 
-    append_csv_row(output_path=output_path, row=row)
-    for turn_idx, (prompt_tokens, tps_str) in sorted(turn_metrics.items()):
-        print(f"[TURN {turn_idx}] tokens={prompt_tokens} tps={tps_str}")
-
     _passed, _failure_reason = _single_item_pass_status(
         exit_code=int(row["exit_code"]),
         final_output=row["final_output"],
         log_file=str(row["log_file"]),
     )
+    row["passed"] = "PASS" if _passed else "FAIL"
+    row["failure_reason"] = _failure_reason
+    append_csv_row(output_path=output_path, row=row)
+    for turn_idx, (prompt_tokens, tps_str) in sorted(turn_metrics.items()):
+        print(f"[TURN {turn_idx}] tokens={prompt_tokens} tps={tps_str}")
+
     status_label = "OK" if _passed else "FAIL"
     print(f"  [{status_label}] duration={row['duration_seconds']}s  exit_code={row['exit_code']}")
     _duration = float(row["duration_seconds"])
@@ -575,6 +580,8 @@ def _run_exchange_item(
     per_turn_dur  = duration / n if n else duration
     any_assert_fail = False
 
+    pending_rows: list[dict] = []
+    pending_prints: list[tuple[int, str, str, str]] = []
     for turn_idx, turn in enumerate(turns, start=1):
         user_prompt  = turn["user"]
         assert_expr  = turn.get("assert", "")
@@ -592,14 +599,12 @@ def _run_exchange_item(
             "log_file":         log_file,
             "stderr":           stderr.strip(),
         })
-        append_csv_row(output_path=output_path, row=row)
+        pending_rows.append(row)
 
         prompt_tokens, tps_str = turn_metrics.get(turn_idx, (0, "0"))
-        print(f"[TURN {turn_idx}] tokens={prompt_tokens} tps={tps_str}")
-
         status_label = "OK" if exit_code == 0 else "FAIL"
         assert_label = f"  assert={assert_result}" if assert_expr else ""
-        print(f"  [Turn {turn_idx}/{n}] [{status_label}]{assert_label}: {user_prompt!r}")
+        pending_prints.append((turn_idx, str(prompt_tokens), tps_str, f"  [Turn {turn_idx}/{n}] [{status_label}]{assert_label}: {user_prompt!r}"))
 
     _passed, _reason = _exchange_pass_status(
         exit_code=exit_code,
@@ -607,6 +612,15 @@ def _run_exchange_item(
         any_assert_fail=any_assert_fail,
         log_file=log_file,
     )
+    for row in pending_rows:
+        row["passed"] = "PASS" if _passed else "FAIL"
+        row["failure_reason"] = _reason
+        append_csv_row(output_path=output_path, row=row)
+
+    for turn_idx, prompt_tokens, tps_str, status_line in pending_prints:
+        print(f"[TURN {turn_idx}] tokens={prompt_tokens} tps={tps_str}")
+        print(status_line)
+
     _record = {
         "label":          name,
         "source_file":    source_file,

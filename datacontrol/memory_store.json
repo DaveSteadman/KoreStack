@@ -16,8 +16,8 @@
       "updated": null,
       "category": "general",
       "fact": "csv, add a new column called CumulativeRevenue that is a running total of the Revenue column, and save the result back to the same file",
-      "access_count": 116,
-      "last_accessed": "2026-05-03 22:05:23"
+      "access_count": 117,
+      "last_accessed": "2026-05-04 10:25:53"
     },
     {
       "id": "81396abd",
@@ -34,8 +34,8 @@
       "updated": "2026-04-06 17:11:19",
       "category": "project",
       "fact": "The required output is a de-duplicated report of the top (ie most AI industry relevant) 5 stories",
-      "access_count": 42,
-      "last_accessed": "2026-05-03 21:55:19"
+      "access_count": 43,
+      "last_accessed": "2026-05-04 10:26:09"
     },
     {
       "id": "b958d1ea",
@@ -61,8 +61,8 @@
       "updated": null,
       "category": "general",
       "fact": "You (prior reply) [2026-04-13T21:20]: Here’s a quick guide to get the interest‑calculation program running and how to change the rate:",
-      "access_count": 64,
-      "last_accessed": "2026-05-03 22:39:01"
+      "access_count": 65,
+      "last_accessed": "2026-05-04 10:27:01"
     },
     {
       "id": "e7134709",
@@ -79,8 +79,8 @@
       "updated": null,
       "category": "environment",
       "fact": "First, delegate a sub-task to find out what Ollama is and what its latest version is",
-      "access_count": 43,
-      "last_accessed": "2026-05-03 23:00:22"
+      "access_count": 46,
+      "last_accessed": "2026-05-04 10:25:26"
     },
     {
       "id": "8b2b7c26",
@@ -88,8 +88,8 @@
       "updated": "2026-04-21 22:18:00",
       "category": "environment",
       "fact": "cpp is a fast, open‑source C/C++ implementation of the LLaMA‑style models (and GGML‑based models) optimized for CPU inference",
-      "access_count": 43,
-      "last_accessed": "2026-05-03 23:01:04"
+      "access_count": 50,
+      "last_accessed": "2026-05-04 10:25:53"
     },
     {
       "id": "f6195e24",
@@ -286,8 +286,8 @@
       "updated": null,
       "category": "project",
       "fact": "Provide a concise summary of the three most-discussed open source AI agent frameworks in Python currently, and state which one is most suitable for a solo developer",
-      "access_count": 53,
-      "last_accessed": "2026-05-03 22:59:24"
+      "access_count": 60,
+      "last_accessed": "2026-05-04 10:26:54"
     },
     {
       "id": "1b71e6b0",
@@ -322,8 +322,8 @@
       "updated": null,
       "category": "environment",
       "fact": "[2026-04-19 21:41:57] Running prompt 4/5: 'Delegate this research task: search for the current Python version release dates for Python 3.12 and 3.13, then tell me how long the gap was between those two releases",
-      "access_count": 93,
-      "last_accessed": "2026-05-03 23:01:04"
+      "access_count": 109,
+      "last_accessed": "2026-05-04 10:27:01"
     },
     {
       "id": "76f9bed1",
@@ -349,8 +349,8 @@
       "updated": null,
       "category": "environment",
       "fact": "All task details, model, and context settings are ready for continuation",
-      "access_count": 26,
-      "last_accessed": "2026-05-03 22:58:54"
+      "access_count": 27,
+      "last_accessed": "2026-05-04 10:25:11"
     },
     {
       "id": "18a7c82b",
@@ -403,8 +403,8 @@
       "updated": null,
       "category": "project",
       "fact": "The first two attempts reported that no MCP servers are configured, and the third returned a KoreDataGateway URL (http://localhost:8800/mcp) indicating five MCP tools, yet the agent again said MCP is not configured",
-      "access_count": 36,
-      "last_accessed": "2026-05-03 23:52:04"
+      "access_count": 37,
+      "last_accessed": "2026-05-04 10:24:22"
     },
     {
       "id": "fea5f129",
@@ -421,8 +421,8 @@
       "updated": null,
       "category": "environment",
       "fact": " The price lift, spread across 128 GB and 256 GB models, is tied to soaring LPDDR5‑5 chip costs that have been amplified by the explosive demand for AI‑centred data‑center memory",
-      "access_count": 16,
-      "last_accessed": "2026-05-03 22:55:43"
+      "access_count": 18,
+      "last_accessed": "2026-05-04 10:24:47"
     },
     {
       "id": "5ca64224",
@@ -430,8 +430,8 @@
       "updated": null,
       "category": "environment",
       "fact": " The piece notes that OpenAI is already embedding “alignment‑as‑code” pipelines that auto‑audit outputs for safety violations, and that its GPT‑5 roadmap targets a shift‑left approach where models are continuously fine‑tuned on live user feedback loops",
-      "access_count": 20,
-      "last_accessed": "2026-05-03 23:00:22"
+      "access_count": 22,
+      "last_accessed": "2026-05-04 10:24:47"
     },
     {
       "id": "c3db2f9f",
@@ -475,8 +475,8 @@
       "updated": null,
       "category": "project",
       "fact": "If the second attempt also returns empty, stop and report what you have",
-      "access_count": 41,
-      "last_accessed": "2026-05-03 22:57:28"
+      "access_count": 43,
+      "last_accessed": "2026-05-04 10:27:01"
     },
     {
       "id": "229e32a4",
@@ -529,8 +529,8 @@
       "updated": null,
       "category": "environment",
       "fact": "| The platform’s official releases are tracked on the Ollama website and its release notes",
-      "access_count": 7,
-      "last_accessed": "2026-05-03 22:52:38"
+      "access_count": 8,
+      "last_accessed": "2026-05-04 10:24:22"
     },
     {
       "id": "20d8110e",
@@ -565,8 +565,8 @@
       "updated": null,
       "category": "environment",
       "fact": "1. **Deployment model** – Ollama is a hosted service that handles model management, downloading, and scaling for you",
-      "access_count": 5,
-      "last_accessed": "2026-05-03 22:57:28"
+      "access_count": 7,
+      "last_accessed": "2026-05-04 10:27:01"
     },
     {
       "id": "a722bfc3",
@@ -583,8 +583,8 @@
       "updated": "2026-04-20 22:37:06",
       "category": "project",
       "fact": "It is now in *maintenance* mode, but the codebase and the newer *Microsoft Agent Framework* (MAF) still get regular commits from the open‑source community",
-      "access_count": 19,
-      "last_accessed": "2026-05-03 22:39:57"
+      "access_count": 20,
+      "last_accessed": "2026-05-04 10:26:24"
     },
     {
       "id": "8b925c0c",
@@ -601,8 +601,8 @@
       "updated": null,
       "category": "environment",
       "fact": "*In short, both tools are mature and widely used, but the “latest version” information you asked for could not be retrieved from the evidence we could locate",
-      "access_count": 29,
-      "last_accessed": "2026-05-03 23:52:04"
+      "access_count": 34,
+      "last_accessed": "2026-05-04 10:26:39"
     },
     {
       "id": "b74c7c1a",
@@ -619,8 +619,8 @@
       "updated": null,
       "category": "project",
       "fact": "3. Summarize the three most‑discussed frameworks, indicate which is best for a solo developer, and cite the source URL you used",
-      "access_count": 16,
-      "last_accessed": "2026-04-21 22:18:48"
+      "access_count": 17,
+      "last_accessed": "2026-05-04 10:26:54"
     },
     {
       "id": "4c36acf2",
@@ -781,8 +781,8 @@
       "updated": null,
       "category": "project",
       "fact": "All three are open‑source, have active repositories, and are referenced in recent industry articles and GitHub stars lists, making them the most relevant candidates for open‑source LLM inference at the time of the query",
-      "access_count": 14,
-      "last_accessed": "2026-05-03 22:58:54"
+      "access_count": 18,
+      "last_accessed": "2026-05-04 10:26:54"
     },
     {
       "id": "e0e7f5a6",
@@ -790,8 +790,8 @@
       "updated": null,
       "category": "project",
       "fact": "I searched for recent coverage of AI coding assistants (using research traversal and multiple web‑search attempts) but none of the searches returned any usable articles or reports from early 2025. The tools reported “No results” for every query, and a fetch of the official Copilot site yielded a generic access‑restriction message",
-      "access_count": 30,
-      "last_accessed": "2026-05-03 23:52:04"
+      "access_count": 43,
+      "last_accessed": "2026-05-04 10:26:54"
     },
     {
       "id": "0b475ead",
@@ -889,8 +889,8 @@
       "updated": null,
       "category": "environment",
       "fact": "**PEP 701 – F‑string Formalisation** – Inside f‑strings you can now have any valid Python expression, including multiline content, comments, back‑slashes, and Unicode escapes",
-      "access_count": 2,
-      "last_accessed": "2026-05-03 22:59:24"
+      "access_count": 3,
+      "last_accessed": "2026-05-04 10:25:18"
     },
     {
       "id": "ed3db492",
@@ -898,8 +898,8 @@
       "updated": null,
       "category": "environment",
       "fact": "Python 3.13 (Oct 2024) → Python 3.14 (expected Oct 2025) is scheduled for a roughly one‑year interval, continuing the annual release cadence",
-      "access_count": 7,
-      "last_accessed": "2026-05-03 22:07:33"
+      "access_count": 8,
+      "last_accessed": "2026-05-04 10:14:16"
     },
     {
       "id": "048850f7",
@@ -934,8 +934,8 @@
       "updated": null,
       "category": "environment",
       "fact": "Python is a high‑level, general‑purpose programming language emphasizing code readability, simplicity, and ease of writing through significant indentation, “plain English” naming, an extensive (“batteries‑included”) standard library, and garbage collection",
-      "access_count": 1,
-      "last_accessed": "2026-05-03 22:59:24"
+      "access_count": 2,
+      "last_accessed": "2026-05-04 10:25:18"
     },
     {
       "id": "3ce089e0",
@@ -943,8 +943,8 @@
       "updated": null,
       "category": "environment",
       "fact": "Machine learning (ML) is a subfield of artificial intelligence that focuses on developing statistical algorithms and models that can learn patterns from data, improve their performance through experience, and make predictions or decisions on new, unseen data without being explicitly programmed for each specific task",
-      "access_count": 4,
-      "last_accessed": "2026-05-03 22:58:54"
+      "access_count": 7,
+      "last_accessed": "2026-05-04 10:26:24"
     },
     {
       "id": "a3b78e33",
@@ -1024,8 +1024,8 @@
       "updated": null,
       "category": "environment",
       "fact": "**Latest released version as of 2026‑04‑14:** According to the search results, the most recent release dated **on or before 2026‑04‑14** is **v0.2.24** (released 2026‑04‑12)",
-      "access_count": 0,
-      "last_accessed": null
+      "access_count": 1,
+      "last_accessed": "2026-05-04 10:26:00"
     },
     {
       "id": "a4592e8d",
@@ -1078,8 +1078,8 @@
       "updated": null,
       "category": "project",
       "fact": "you still need to write client code and manage model deployment, which is more overhead than needed for a quick‑start solo project",
-      "access_count": 4,
-      "last_accessed": "2026-05-03 23:00:22"
+      "access_count": 5,
+      "last_accessed": "2026-05-04 10:25:26"
     },
     {
       "id": "7be9693e",
@@ -1087,8 +1087,8 @@
       "updated": null,
       "category": "project",
       "fact": "*Sources* – The memory store records the three frameworks (vLLM, AutoGen, LangChain) and their URLs as the latest discussion points, and notes that “LangChain is a framework for building agents and LLM‑powered applications”【scratch load: _tc_r8_get_memory_store_text】",
-      "access_count": 0,
-      "last_accessed": null
+      "access_count": 1,
+      "last_accessed": "2026-05-04 10:26:39"
     },
     {
       "id": "8f9ddd5b",
@@ -1186,8 +1186,8 @@
       "updated": "2026-04-26 18:37:03",
       "category": "project",
       "fact": "Thus the AI News Headlines report is complete, correctly stored in the specified folder, and structurally sound",
-      "access_count": 3,
-      "last_accessed": "2026-05-03 23:01:04"
+      "access_count": 7,
+      "last_accessed": "2026-05-04 10:26:24"
     },
     {
       "id": "a3a6fc86",
@@ -1357,8 +1357,8 @@
       "updated": null,
       "category": "environment",
       "fact": "You also asked to get up‑to‑speed on Ollama (the open‑source LLM runner) and its latest version (v0.23.0 as of early‑2026), though that knowledge is more about the runtime you might use for model inference in NovaStar",
-      "access_count": 0,
-      "last_accessed": null
+      "access_count": 3,
+      "last_accessed": "2026-05-04 10:27:01"
     },
     {
       "id": "bd3c0598",
@@ -1393,6 +1393,42 @@
       "updated": null,
       "category": "project",
       "fact": "**Summary:** No KoreData project notes or process documents were located",
+      "access_count": 1,
+      "last_accessed": "2026-05-04 10:25:26"
+    },
+    {
+      "id": "1708be73",
+      "stored": "2026-05-04 10:24:52",
+      "updated": null,
+      "category": "environment",
+      "fact": "* **AI evals are becoming the new compute bottleneck** (HuggingFace Blog, 2026-04-29): Discusses the increasing cost of evaluating AI models, mentioning the Holistic Agent Leaderboard (HAL) and its use of frontier models",
+      "access_count": 0,
+      "last_accessed": null
+    },
+    {
+      "id": "9f7465af",
+      "stored": "2026-05-04 10:25:16",
+      "updated": null,
+      "category": "general",
+      "fact": "The following articles are available in the KoreData reference domain for \"machine learning\":",
+      "access_count": 2,
+      "last_accessed": "2026-05-04 10:25:53"
+    },
+    {
+      "id": "92578e99",
+      "stored": "2026-05-04 10:25:51",
+      "updated": null,
+      "category": "project",
+      "fact": "* **Summary:** Tokyo-based Terra Drone Corporation has increased investments in Ukrainian UAV enterprises, featuring the Terra A2 electric fixed-wing interceptor UAV as part of a layered defense framework",
+      "access_count": 0,
+      "last_accessed": null
+    },
+    {
+      "id": "7da773cc",
+      "stored": "2026-05-04 10:26:59",
+      "updated": null,
+      "category": "project",
+      "fact": "* This claim is supported by reports from the IDF and the UK Secretary of State for Defence regarding missile launches toward Diego Garcia in March 2026.",
       "access_count": 0,
       "last_accessed": null
     }

@@ -10,6 +10,66 @@ from utils.workspace_utils import get_test_prompts_dir
 from utils.workspace_utils import get_test_results_dir
 
 
+def _row_outcome(row: dict) -> str:
+    passed_value = row.get("passed", "").strip().upper()
+    if passed_value in {"PASS", "TRUE", "1", "YES", "OK"}:
+        return "PASS"
+    if passed_value in {"FAIL", "FALSE", "0", "NO"}:
+        return "FAIL"
+
+    failure_reason = row.get("failure_reason", "").strip()
+    if failure_reason:
+        return "FAIL"
+
+    assert_result = row.get("assert_result", "").strip().upper()
+    if assert_result == "FAIL":
+        return "FAIL"
+    if assert_result == "PASS":
+        return "PASS"
+    try:
+        code = int(row.get("exit_code", "0"))
+    except (ValueError, TypeError):
+        code = -1
+    if code != 0 or not row.get("final_output", "").strip():
+        return "FAIL"
+    return "PASS"
+
+
+def _summary_counts_from_markdown(raw_csv_path: Path) -> tuple[int, int] | None:
+    summary_name = raw_csv_path.stem.replace("test_results", "summary", 1) + ".md"
+    summary_path = raw_csv_path.with_name(summary_name)
+    if not summary_path.exists():
+        return None
+    try:
+        text = summary_path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return None
+    match = re.search(r"Passed:\s+\*\*(\d+)/(\d+)\*\*", text)
+    if not match:
+        return None
+    return int(match.group(1)), int(match.group(2))
+
+
+def _result_counts(raw_rows: list[dict], raw_csv_path: Path) -> tuple[int, int, int, int]:
+    has_persisted_outcome = any(
+        row.get("passed", "").strip() or row.get("failure_reason", "").strip()
+        for row in raw_rows
+    )
+    if not has_persisted_outcome:
+        summary_counts = _summary_counts_from_markdown(raw_csv_path)
+        if summary_counts is not None:
+            passes, total = summary_counts
+            fails = max(total - passes, 0)
+            return total, passes, fails, 0
+
+    outcomes = [_row_outcome(row) for row in raw_rows]
+    total = len(outcomes)
+    passes = outcomes.count("PASS")
+    fails = outcomes.count("FAIL")
+    gaps = outcomes.count("GAP")
+    return total, passes, fails, gaps
+
+
 def _run_one_test_file(candidate, ctx, wrapper, model: str, active_host: str, re_mod, subprocess_mod, sys_mod, output_file=None) -> dict:
     cmd = [sys_mod.executable, str(wrapper), "--prompts-file", str(candidate), "--model", model]
     if "localhost" not in active_host and "127.0.0.1" not in active_host:
@@ -296,20 +356,6 @@ def _cmd_testtrend(arg: str, ctx: SlashCommandContext) -> None:
         )
     ctx.output("-" * (90 if show_file_col else 75), "dim")
 
-    def _row_outcome(row: dict) -> str:
-        assert_result = row.get("assert_result", "").strip().upper()
-        if assert_result == "FAIL":
-            return "FAIL"
-        if assert_result == "PASS":
-            return "PASS"
-        try:
-            code = int(row.get("exit_code", "0"))
-        except (ValueError, TypeError):
-            code = -1
-        if code != 0 or not row.get("final_output", "").strip():
-            return "FAIL"
-        return "PASS"
-
     def _fmt_runtime(total_seconds: float) -> str:
         total_int = int(total_seconds)
         mins, secs = divmod(total_int, 60)
@@ -327,11 +373,7 @@ def _cmd_testtrend(arg: str, ctx: SlashCommandContext) -> None:
             ctx.output(f"  {ts_display}  (empty)", "dim")
             continue
 
-        outcomes = [_row_outcome(row) for row in raw_rows]
-        total = len(outcomes)
-        passes = outcomes.count("PASS")
-        fails = outcomes.count("FAIL")
-        gaps = outcomes.count("GAP")
+        total, passes, fails, gaps = _result_counts(raw_rows, raw_csv_path)
         pass_pct = 100.0 * passes / total if total else 0.0
 
         durations: list[float] = []

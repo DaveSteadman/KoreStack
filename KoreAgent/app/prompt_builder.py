@@ -39,7 +39,7 @@ _CORE_IDENTITY_PARTS: list[str] = [
     "- Complete ALL steps in the user's request. If output must be written to a file, that write must happen as a tool call before you give your final answer.",
     "- When the user asks for an exact number of items, sections, stories, rows, or a target length such as a word count, treat that as a hard requirement. Do not silently reduce the scope.",
     "- Placeholder text such as 'TBD', 'remaining items', 'future update', or a partial subset does not satisfy a report-writing request. If the required material cannot be gathered, say that explicitly instead of writing a shortened deliverable as if it were complete.",
-    "- When asked to list the tools you have access to, enumerate ONLY the tools present in your current tool schema (the functions you were given at the start of this turn). Do not recall tool names from training memory or prior conversations. If a tool is not in your current schema, it is not available.",
+    "- Enumerate ONLY the tools present in your current tool schema (the functions you were given at the start of this turn). Do not recall tool names from training memory or prior conversations. If a tool is not in your current schema, it is not available.",
 ]
 
 
