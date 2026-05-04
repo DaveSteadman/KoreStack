@@ -46,17 +46,23 @@ Shell styling is sourced from `UIElements/assets/css/chrome.css`. Per-service ac
 The main workspace below the shell uses a horizontal split layout.
 
 ```
-┌──────────────────────┬──┬──────────────────────────────┐
-│                      │  │                              │
-│  Explorer panel      │▓▓│  Editor panel                │
-│  (#code-sidebar)     │  │  (#code-main)                │
-│  .kcui-panel-left    │  │  .kcui-panel-right           │
-│                      │  │                              │
-│                      │  │                              │
-└──────────────────────┴──┴──────────────────────────────┘
-                       ▲
-              Drag handle (#code-splitter)
-              .kcui-splitter
+┌──────────────────────┬──┬──────────────────────────────────────────────────────────┐
+│                      │  │                                                          │
+│  Explorer panel      │▓▓│  Editor panel  (#code-main)                              │
+│  (#code-sidebar)     │  │                                                          │
+│  .kcui-panel-left    │  │  ┌─ #editor-toolbar ─────────────────────────────────┐  │
+│                      │  │  │  breadcrumb · state · [Find] [Save] [AI]          │  │
+│                      │  │  ├─ #editor-body ─────────────────────────────────── │  │
+│                      │  │  │  ┌─ #editor-surface ──────┬──┬─ #chat-panel ──┐  │  │
+│                      │  │  │  │  findbar (optional)    │▓▓│  #chat-thread  │  │  │
+│                      │  │  │  │  editor host           │  │  #chat-composer│  │  │
+│                      │  │  │  └────────────────────────┴──┴────────────────┘  │  │
+│                      │  │  └───────────────────────────────────────────────────┘  │
+│                      │  │                                                          │
+└──────────────────────┴──┴──────────────────────────────────────────────────────────┘
+         ▲                                                    ▲
+  #code-splitter                                      #chat-splitter
+  .kcui-splitter                                   (visual divider)
 ```
 
 Container: `#code-app .kcui-panels`
@@ -128,53 +134,91 @@ The editor panel is only active when a file tab is open. When no file is open, t
 
 ```
 ┌──────────────────────────────────────────────────────┐
-│  [ Find ]  [ Save ]                                  │  ← #editor-toolbar / #editor-actions
+│  breadcrumb · state · [Find] [Save] [AI]             │  ← #editor-toolbar (single bar)
 ├──────────────────────────────────────────────────────┤
-│  static/code/js/main.js          read/write editor   │  ← #editor-meta
-├──────────────────────────────────────────────────────┤
-│  ┌────────────────────────────────────────────────┐  │
-│  │ Find: [_____________] [Prev] [Next] [Close]    │  │  ← #editor-findbar (hidden by default)
-│  └────────────────────────────────────────────────┘  │
-│                                                      │
-│   1 │ import { initAppBar } from …                   │
-│   2 │ import { initPanels } from …                   │  ← #editor-host (CodeMirror)
-│   3 │ …                                              │
-│                                                      │
+│  ┌─ #editor-body ─────────────────────────────────┐  │
+│  │  ┌─ #editor-surface ──────┬──┬─ #chat-panel ─┐ │  │
+│  │  │  [Find bar, optional]  │▓▓│  #chat-thread  │ │  │
+│  │  │  1 │ import …          │  │  (exchanges)   │ │  │
+│  │  │  2 │ …                 │  ├───────────────┤ │  │
+│  │  │                        │  │  #chat-composer│ │  │
+│  │  └────────────────────────┴──┴────────────────┘ │  │
+│  └─────────────────────────────────────────────────┘  │
 └──────────────────────────────────────────────────────┘
 ```
 
 ### 6.1 Toolbar (`#editor-toolbar`)
 
-Contains only the action buttons. No title or path — those moved to the appbar and explorer panel respectively.
-
-When no file tab is active, all toolbar buttons are disabled.
+Single-row bar spanning the full width of `#code-main`. Left side shows `#file-breadcrumb` and `#file-state`; right side has the action buttons.
 
 - **Find** (`#btn-find`) — Toggles `#editor-findbar`.
 - **Save** (`#btn-save`) — Saves the active file. Disabled when no file is open or no unsaved changes.
+- **AI** (`#btn-ai`) — Toggles `#chat-panel`. Active state uses `.is-active` on the button. Keyboard shortcut: `Alt+A`.
 
-### 6.2 Meta bar (`#editor-meta`)
+### 6.2 Editor body (`#editor-body`)
 
-Two-column row immediately below the toolbar:
+Flex row below the toolbar that fills all remaining vertical space. Contains `#editor-surface`, `#chat-splitter`, and `#chat-panel`.
 
-- Left: `#file-breadcrumb` — Relative path of the active file within the workspace root, or `No file open` when nothing is active.
-- Right: `#file-state` — Read/write state label, or `Editor unavailable` when nothing is active.
+### 6.3 Editor surface (`#editor-surface`)
 
-### 6.3 Find bar (`#editor-findbar`)
+Fills the left portion of `#editor-body` (`flex: 1`). Contains the find bar and CodeMirror instance.
 
-Toggled by the Find button or `Ctrl+F` keybinding. Sits above the editor content and pushes it down. Closed with the Close button or `Escape`.
-
-Controls: text input (`#find-input`), Prev (`#btn-find-prev`), Next (`#btn-find-next`), Close (`#btn-find-close`).
-
-### 6.4 Editor surface (`#editor-surface`)
-
-Fills remaining vertical space.
-
-- `#editor-empty` — Shown when no file is open. Contains the `No file open` empty-state message.
-- `#editor-host` — CodeMirror 6 editor mount. Visible when a file is loaded.
+- `#editor-findbar` — Toggled by Find button or `Ctrl+F`. Closed with Close button or `Escape`.
+- `#editor-empty` — Shown when no file is open.
+- `#editor-host` — CodeMirror 6 editor mount.
 
 ---
 
-## 7. CSS File Ownership
+## 7. Chat Panel
+
+```
+┌─────────────────────────────┐
+│                             │  ← #chat-thread (flex: 1, scrollable)
+│  ┌───────────────────────┐  │
+│  │ Kore                  │  │  ← .chat-msg--assistant
+│  │ Here is the answer …  │  │
+│  └───────────────────────┘  │
+│  ─────────────────────────  │  ← .chat-divider
+│             [ user prompt ] │  ← .chat-msg--user .bubble
+│                             │
+├─────────────────────────────┤
+│  [textarea ___________][Snd]│  ← #chat-composer / #chat-input / #btn-chat-send
+└─────────────────────────────┘
+```
+
+`#chat-panel` is the right column inside `#editor-body`. Width: 340 px by default. Hidden (`hidden` attribute) until the **AI** button is toggled on.
+
+One chat thread exists per open file. When the active tab changes, `chat.js` re-renders the thread for the new path. All threads are held in memory (a `Map<path, exchanges[]>`) for the lifetime of the page.
+
+Each submission is a new exchange in a KoreChat conversation:
+
+1. User types a prompt and presses **Enter** (or clicks **Send**).
+2. `chat.js` derives a stable `session_id` from the file path (e.g. `kc_KoreCode__app__server_py`).
+3. `POST {koreagent}/sessions/{session_id}/prompt` — sends `{ prompt }` → receives `{ run_id }`.
+4. `GET  {koreagent}/runs/{run_id}/stream` — SSE stream. Events with `type: "response"` accumulate the reply text; `type: "done"` closes the stream.
+5. The completed assistant reply is appended to the thread and persisted in the in-memory store.
+
+KoreAgent base URL is taken from `window.__koreSuiteUrls.koreagent`, falling back to `http://127.0.0.1:8605`.
+
+### 7.1 Thread (`#chat-thread`)
+
+Scrollable flex column. Messages are rendered in submission order.
+
+- `.chat-msg--user` — Right-aligned bubble (`.bubble`). Multi-line text preserved with `white-space: pre-wrap`.
+- `.chat-msg--assistant` — Avatar label (`Kore`) above body text (`.body`). Fenced code blocks rendered as `<pre>`.
+- `.chat-thinking` — Animated dots shown while the stream is pending.
+- `.chat-divider` — 1 px horizontal rule inserted after each completed assistant exchange.
+
+### 7.2 Composer (`#chat-composer`)
+
+Pinned to the bottom of `#chat-panel`.
+
+- `#chat-input` — Auto-sizing `<textarea>` (min 34 px, max 100 px). `Enter` submits; `Shift+Enter` inserts a newline.
+- `#btn-chat-send` — Disabled while a stream is active.
+
+---
+
+## 8. CSS File Ownership
 
 | File | Owns |
 |---|---|
@@ -183,11 +227,12 @@ Fills remaining vertical space.
 | `static/code/css/base.css` | Page frame, panel header/kicker/title/path, shared button classes |
 | `static/code/css/explorer.css` | File tree rows, depth indentation, caret, active state |
 | `static/code/css/find.css` | Find bar layout and inputs |
-| `static/code/css/editor.css` | Editor toolbar, meta bar, editor surface, empty state |
+| `static/code/css/editor.css` | Editor toolbar, `#editor-body`, editor surface, empty state |
+| `static/code/css/chat.css` | Chat panel, thread, message bubbles, composer |
 
 ---
 
-## 8. JS Module Ownership
+## 9. JS Module Ownership
 
 | Module | Owns |
 |---|---|
@@ -196,6 +241,7 @@ Fills remaining vertical space.
 | `editor.js` | CodeMirror instance; tab state; `renderTabs`, `renderMeta`, `openFile`, `restoreTabs` |
 | `explorer.js` | File tree fetch and render; `initExplorer`, `refreshTree`, `renderTree`, `expandAncestors` |
 | `find.js` | Find bar logic; `initFind`, `runFind`, `runFindNext`, `runFindPrevious`, `closeFindBar` |
+| `chat.js` | Chat panel toggle, prompt submit, SSE streaming, per-file thread store; `initChat` |
 | `UIElements/…/chrome.js` | `initTopbar`, `initAppBar` — shell rendering |
 | `UIElements/…/panels.js` | `initPanels` — drag-to-resize splitter |
 | `UIElements/…/icons.js` | `fileIconForPath` — per-extension SVG file icons |

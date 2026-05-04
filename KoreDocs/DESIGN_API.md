@@ -81,8 +81,8 @@ JSON object serialized as a string. Diagram with nodes and directed edges.
   "modified": "2026-05-01T00:00:00Z",
   "settings": {},
   "nodes": [
-    { "id": "n1", "type": "rect", "label": "Start", "x": 100, "y": 100, "w": 120, "h": 40 },
-    { "id": "n2", "type": "ellipse", "label": "End",   "x": 300, "y": 100, "w": 120, "h": 40 }
+    { "id": "n1", "type": "rect", "label": "Start", "x": 100, "y": 100, "width": 120, "height": 40 },
+    { "id": "n2", "type": "ellipse", "label": "End",   "x": 300, "y": 100, "width": 120, "height": 40 }
   ],
   "edges": [
     { "id": "e1", "from": "n1", "to": "n2", "fromPort": "e", "toPort": "w", "label": "" }

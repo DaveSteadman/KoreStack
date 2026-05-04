@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>KoreStack</title>
+  <link rel="stylesheet" href="/ui-elements/assets/css/chrome.css">
+  <link rel="stylesheet" href="/ui-elements/assets/css/workspace.css">
+  <link rel="stylesheet" href="/static/stack/stack.css">
+</head>
+<body class="kcui-shell-bg">
+  <div id="topbar"></div>
+  <div id="app-bar"></div>
+  <main class="shell kcui-page kcui-page--narrow">
+    <section class="kcui-workspace kcui-workspace--dashboard kcui-workspace--stack-sm stack-workspace">
+      <div class="kcui-workspace__region stack-region">
+        <section class="panel kcui-panel paths-panel">
+          <div class="paths-header kcui-panel-header">
+            <p class="eyebrow">System Paths</p>
+            <p>Shared suite storage and document locations.</p>
+          </div>
+          <div class="kcui-panel-body"><dl class="paths-list">{{PATH_ROWS}}</dl></div>
+        </section>
+      </div>
+
+      <div class="kcui-workspace__region stack-region">
+        <section class="panel kcui-panel services-panel">
+          <div class="services-header kcui-panel-header">
+            <p class="eyebrow">Services</p>
+            <p>Compact live rows with inline controls.</p>
+          </div>
+          <div class="kcui-panel-body"><section class="services-grid">{{SERVICE_ROWS}}</section></div>
+        </section>
+      </div>
+    </section>
+
+    <section class="panel kcui-panel footer">
+      <div class="kcui-panel-body footer-body">
+        <p>Updates every 2 seconds without reloading the page.</p>
+        <p>Root command: <code>{{ROOT_COMMAND}}</code></p>
+      </div>
+    </section>
+  </main>
+  <script id="stack-bootstrap" type="application/json">{{BOOTSTRAP_JSON}}</script>
+  <script type="module" src="/static/stack/stack.js"></script>
+</body>
+</html>

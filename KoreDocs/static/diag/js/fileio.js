@@ -12,7 +12,7 @@ const _controller = createKorefileSyncController({
   legacyType: 'kodiag',
   buildBlankContent: title => JSON.stringify(newDiagram(title)),
   applyLoadedContent: (content, file, loadContent) => {
-    loadContent?.(JSON.parse(content));
+    loadContent?.(normalizeDiagram(JSON.parse(content)));
   },
   onMarkDirty: () => markDirty(),
   onMarkSaved: () => markSaved(),
@@ -30,6 +30,46 @@ export const flushAutosave = _controller.flushAutosave;
 
 function serialise() {
   return JSON.stringify(getDiagram(), null, 2);
+}
+
+function normalizeDiagram(diagram) {
+  const normalized = { ...diagram };
+  normalized.nodes = Array.isArray(normalized.nodes)
+    ? normalized.nodes.map(normalizeNode)
+    : [];
+  normalized.edges = Array.isArray(normalized.edges)
+    ? normalized.edges.map(normalizeEdge)
+    : [];
+  return normalized;
+}
+
+function normalizeNode(node) {
+  const normalized = { ...node };
+  if (typeof normalized.label === 'string') normalized.label = normalized.label.replace(/\\n/g, '\n');
+  if (normalized.width == null && normalized.w != null) normalized.width = normalized.w;
+  if (normalized.height == null && normalized.h != null) normalized.height = normalized.h;
+  if (normalized.style) {
+    normalized.style = { ...normalized.style };
+    if (normalized.style.fillColor == null && normalized.style.fill != null) {
+      normalized.style.fillColor = normalized.style.fill;
+    }
+  }
+  normalized.children = Array.isArray(normalized.children)
+    ? normalized.children.map(normalizeNode)
+    : [];
+  normalized.meta = normalized.meta || {};
+  return normalized;
+}
+
+function normalizeEdge(edge) {
+  const normalized = { ...edge };
+  if (typeof normalized.label === 'string') normalized.label = normalized.label.replace(/\\n/g, '\n');
+  if (normalized.from == null && normalized.fromNode != null) normalized.from = normalized.fromNode;
+  if (normalized.to == null && normalized.toNode != null) normalized.to = normalized.toNode;
+  normalized.via = Array.isArray(normalized.via) ? normalized.via : [];
+  normalized.style = normalized.style || {};
+  normalized.meta = normalized.meta || {};
+  return normalized;
 }
 
 // ── PNG export ─────────────────────────────────────────────────────────────
@@ -177,12 +217,15 @@ function drawDiagramToContext(ctx, diagram, gs, panX, panY, zoom) {
         ctx.fillStyle = (r*299+g*587+b2*114)/1000 > 128 ? '#1e1e2e' : '#ffffff';
         ctx.font         = `${node.style.italic ? 'italic ' : ''}${node.style.bold ? 'bold ' : ''}${(node.style.fontSize||13)*zoom}px system-ui,sans-serif`;
         ctx.textAlign    = hAlign;
-        ctx.textBaseline = vAlign;
-        ctx.fillText(
+        drawExportLabel(
+          ctx,
           node.label,
           hAlign === 'left' ? sx + pad : hAlign === 'right' ? sx + sw - pad : sx + sw/2,
           vAlign === 'top' ? sy + pad : vAlign === 'bottom' ? sy + sh - pad : sy + sh/2,
           Math.max(0, sw - pad * 2),
+          node.style,
+          vAlign,
+          zoom,
         );
       }
       ctx.restore();
@@ -194,6 +237,23 @@ function drawDiagramToContext(ctx, diagram, gs, panX, panY, zoom) {
 }
 
 function centre(b) { return { x: b.x + b.width/2, y: b.y + b.height/2 }; }
+
+function drawExportLabel(ctx, text, x, y, maxWidth, style, vAlign, zoom) {
+  const lines = String(text).split(/\r?\n/);
+  const lineHeight = (style.fontSize || 13) * zoom * 1.2;
+  let yy = y;
+  if (vAlign === 'middle') {
+    yy -= ((lines.length - 1) * lineHeight) / 2;
+  } else if (vAlign === 'bottom') {
+    yy -= (lines.length - 1) * lineHeight;
+  }
+
+  ctx.textBaseline = 'middle';
+  for (const line of lines) {
+    ctx.fillText(line, x, yy, maxWidth);
+    yy += lineHeight;
+  }
+}
 
 function drawArrowCtx(ctx, from, to, color, lw, zoom) {
   const angle = Math.atan2(to.y - from.y, to.x - from.x);

@@ -257,7 +257,7 @@ function drawNode(ctx, node, bounds) {
     ctx.font        = labelFont(style, view.zoom);
     ctx.textAlign   = labelLayout.textAlign;
     ctx.textBaseline= labelLayout.textBaseline;
-    ctx.fillText(node.label, labelLayout.x, labelLayout.y, labelLayout.maxWidth);
+    drawMultilineText(ctx, node.label, labelLayout, style);
   }
 
   ctx.restore();
@@ -284,6 +284,32 @@ function nodeLabelLayout(style, x, y, w, h) {
     textBaseline: vAlign,
     maxWidth,
   };
+}
+
+function drawMultilineText(ctx, text, layout, style) {
+  const lines = String(text).split(/\r?\n/);
+  if (lines.length === 1) {
+    ctx.fillText(lines[0], layout.x, layout.y, layout.maxWidth);
+    return;
+  }
+
+  const fontSize = (style.fontSize || 13) * view.zoom;
+  const lineHeight = fontSize * 1.2;
+  const oldBaseline = ctx.textBaseline;
+  let y = layout.y;
+
+  if (layout.textBaseline === 'middle') {
+    y -= ((lines.length - 1) * lineHeight) / 2;
+  } else if (layout.textBaseline === 'bottom') {
+    y -= (lines.length - 1) * lineHeight;
+  }
+
+  ctx.textBaseline = 'middle';
+  for (const line of lines) {
+    ctx.fillText(line, layout.x, y, layout.maxWidth);
+    y += lineHeight;
+  }
+  ctx.textBaseline = oldBaseline;
 }
 
 function drawWaypoint(ctx, node, bounds) {

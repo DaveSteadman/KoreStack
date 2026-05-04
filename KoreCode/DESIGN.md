@@ -167,19 +167,89 @@ This should produce commentary and optionally proposed replacement code.
 
 Initial presentation target is inline annotations in the editor rather than a side panel or modal.
 
-### 5.4 Selection-Aware Prompting
+### 5.4 AI Action Types
 
-Any selected text should be promotable into an LLM action.
+Each action has a fixed shape: a **target** (what the model should look at), a **context** (what supporting material is attached), and an **output contract** (what the model is expected to return).
 
-Candidate actions:
+#### 5.4.1 Continue
 
-- explain this block
-- review this block
-- improve this block
-- continue from this block
-- rewrite this block following an instruction
+The model extends the code from the cursor or end of a selected region.
 
-The selection is a first-class prompt input, not just passive editor state.
+- **Target:** cursor position or selected trailing block.
+- **Context:** current file up to the cursor; optionally signatures from the wider file.
+- **Output:** plain text continuation to be inserted after the cursor. No replacement; no explanation required.
+- **UI:** ghosted inline preview; Tab to accept, Escape to reject. Chat panel not involved.
+
+---
+
+#### 5.4.2 Replace
+
+The model rewrites a selected range according to an instruction.
+
+- **Target:** selected lines `[file, from, to, content]`.
+- **Context:** opt-in chips — whole file, signatures in scope, imports, a referenced second file.
+- **Output:** structured edit block:
+  ```json
+  {
+    "explanation": "...",
+    "edits": [{ "file": "...", "from": 120, "to": 150, "replacement": "..." }]
+  }
+  ```
+- **UI:** instruction typed in the chat composer; response renders as diff block with **Apply** and **Dismiss** buttons. Apply writes the replacement into the editor, marks the tab dirty, and enters the edit into undo history.
+
+---
+
+#### 5.4.3 Bug Hunt
+
+The model reviews a selected range or whole function for defects, not rewriting unless asked.
+
+- **Target:** selected region, or auto-expanded to the nearest enclosing function/class.
+- **Context:** always includes the whole function; optionally the whole file.
+- **Output:** commentary list — each item has a line reference, severity label (`bug` / `edge-case` / `style`), and a short explanation. Optionally a proposed replacement for each item.
+- **UI:** commentary items rendered inline in the chat thread. Line references are clickable — click jumps the editor to that line. Each item with a proposed replacement has its own **Apply** button.
+
+---
+
+#### 5.4.4 Explain
+
+The model explains what a selected region does in plain language.
+
+- **Target:** selected lines.
+- **Context:** surrounding function, optionally whole file.
+- **Output:** prose explanation only. No edits proposed.
+- **UI:** prose rendered in the chat thread. No Apply button.
+
+---
+
+#### 5.4.5 Architecture Conversation
+
+A free-form multi-turn conversation about design, structure, or approach. No file is required to be active.
+
+- **Target:** none, or a whole file attached voluntarily.
+- **Context:** user-attached files or the grand context index; no auto-injection.
+- **Output:** prose only.
+- **UI:** standard chat thread (current mode). No diff blocks. The session persists for the lifetime of the page, not per-file.
+
+---
+
+#### 5.4.6 Naming and Summarising
+
+The model proposes names, docstrings, or a module-level summary.
+
+- **Target:** selected function, class, or whole file.
+- **Context:** signatures from the enclosing scope.
+- **Output:** plain text replacement for the name, docstring block, or file header. Structured as a single-edit block.
+- **UI:** diff block in the chat thread with Apply.
+
+---
+
+#### Common UI Rules Across All Action Types
+
+- If there is a live selection when the user opens the chat composer, the selection is automatically attached as the primary target and displayed as a dismissible chip.
+- The user can manually pin additional context (whole file, a second file, signatures) using toggle chips below the input.
+- Actions that return edits always render a diff block before the Apply button is shown. The user must see the proposed change before they can apply it.
+- Apply is always undoable via the editor's normal undo stack.
+- Multiple edits in one response are applied together as a single undo unit.
 
 ---
 

@@ -1,8 +1,9 @@
-import { EditorState, Compartment } from 'https://jspm.dev/@codemirror/state';
+import { EditorState, Compartment, StateEffect, StateField, RangeSet } from 'https://jspm.dev/@codemirror/state';
 import {
   drawSelection,
   dropCursor,
   EditorView,
+  Decoration,
   highlightActiveLine,
   highlightActiveLineGutter,
   keymap,
@@ -29,6 +30,39 @@ import { css } from 'https://jspm.dev/@codemirror/lang-css';
 import { state, api, STORAGE_TABS, STORAGE_ACTIVE } from './state.js';
 import { fileIconForPath } from '/ui-elements/assets/js/icons.js';
 
+// ── Continuation ghost-text decoration ───────────────────────────────────────
+const addContinuationMark    = StateEffect.define();
+const clearContinuationMark  = StateEffect.define();
+
+const continuationField = StateField.define({
+  create: () => RangeSet.empty,
+  update(marks, tr) {
+    let next = marks.map(tr.changes);
+    for (const effect of tr.effects) {
+      if (effect.is(addContinuationMark))   next = effect.value;
+      if (effect.is(clearContinuationMark)) next = RangeSet.empty;
+    }
+    return next;
+  },
+  provide: (field) => EditorView.decorations.from(field),
+});
+
+const continuationDeco = Decoration.mark({ class: 'cm-continuation' });
+
+let _continuationView = null;   // set once the editorView is created
+
+function _applyContinuationMark(from, to) {
+  if (!_continuationView || from >= to) return;
+  _continuationView.dispatch({
+    effects: addContinuationMark.of(RangeSet.of([continuationDeco.range(from, to)])),
+  });
+}
+
+function _removeContinuationMark() {
+  if (!_continuationView) return;
+  _continuationView.dispatch({ effects: clearContinuationMark.of(null) });
+}
+
 let tabsHost = null;
 const breadcrumb = document.getElementById('file-breadcrumb');
 const fileState = document.getElementById('file-state');
@@ -48,6 +82,8 @@ const editorTheme = EditorView.theme(
       backgroundColor: 'color-mix(in srgb, var(--bg-2) 90%, black 10%)',
       color: 'var(--text-dim)',
       borderRight: '1px solid var(--border)',
+      userSelect: 'none',
+      cursor: 'default',
     },
     '.cm-activeLine': {
       backgroundColor: 'color-mix(in srgb, var(--accent) 10%, transparent)',
@@ -91,7 +127,7 @@ const codeHighlightStyle = HighlightStyle.define([
   { tag: [t.strong], fontWeight: '700', color: '#d4d4d4' },
 ]);
 
-export function createEditor({ runFind, runFindNext, runFindPrevious, closeFindBar, applyFindQuery, getCurrentFindQuery, renderTree, expandAncestors }) {
+export function createEditor({ runFind, runFindNext, runFindPrevious, closeFindBar, applyFindQuery, getCurrentFindQuery, renderTree, expandAncestors, onTabChange }) {
   const languageCompartment = new Compartment();
   const editableCompartment = new Compartment();
   const readonlyCompartment = new Compartment();
@@ -198,15 +234,27 @@ export function createEditor({ runFind, runFindNext, runFindPrevious, closeFindB
   function applyActiveTabToEditor() {
     const active = getActiveTab();
     suppressEditorSync = true;
-    editorView.dispatch({
-      changes: { from: 0, to: editorView.state.doc.length, insert: active?.content ?? '' },
-      effects: [
-        languageCompartment.reconfigure(languageForPath(active?.path)),
-        editableCompartment.reconfigure(EditorView.editable.of(Boolean(active))),
-        readonlyCompartment.reconfigure(EditorState.readOnly.of(!active)),
-      ],
-    });
-    suppressEditorSync = false;
+
+    if (active?.editorState) {
+      // Restore previously saved state — preserves cursor, selection, scroll.
+      editorView.setState(active.editorState);
+      suppressEditorSync = false;
+      const savedScrollTop = active.scrollTop ?? 0;
+      requestAnimationFrame(() => {
+        editorView.scrollDOM.scrollTop = savedScrollTop;
+      });
+    } else {
+      editorView.dispatch({
+        changes: { from: 0, to: editorView.state.doc.length, insert: active?.content ?? '' },
+        effects: [
+          languageCompartment.reconfigure(languageForPath(active?.path)),
+          editableCompartment.reconfigure(EditorView.editable.of(Boolean(active))),
+          readonlyCompartment.reconfigure(EditorState.readOnly.of(!active)),
+        ],
+      });
+      suppressEditorSync = false;
+    }
+
     applyFindQuery(getCurrentFindQuery());
     if (active) {
       editorView.focus();
@@ -214,12 +262,19 @@ export function createEditor({ runFind, runFindNext, runFindPrevious, closeFindB
   }
 
   function setActiveTab(path) {
+    // Save editor state of the outgoing tab so it can be fully restored later.
+    const leaving = getActiveTab();
+    if (leaving) {
+      leaving.editorState = editorView.state;
+      leaving.scrollTop = editorView.scrollDOM.scrollTop;
+    }
     state.activePath = path;
     applyActiveTabToEditor();
     persistTabs();
     renderTabs();
     renderMeta();
     renderTree();
+    onTabChange?.(path);
   }
 
   function closeTab(path) {
@@ -319,7 +374,54 @@ export function createEditor({ runFind, runFindNext, runFindPrevious, closeFindB
     state: EditorState.create({
       doc: '',
       extensions: [
-        lineNumbers(),
+        continuationField,
+        lineNumbers({
+          domEventHandlers: {
+            mousedown(view, line, event) {
+              if (event.button !== 0) return false;
+              const clickedLine = view.state.doc.lineAt(line.from);
+
+              if (event.shiftKey) {
+                // Extend selection from existing anchor.
+                const curAnchor = view.state.selection.main.anchor;
+                const anchorLine = view.state.doc.lineAt(curAnchor);
+                const anchor = anchorLine.from;
+                const head = clickedLine.number >= anchorLine.number
+                  ? clickedLine.to
+                  : clickedLine.from;
+                view.dispatch({ selection: { anchor, head }, scrollIntoView: false });
+                view.focus();
+                event.preventDefault();
+                return true;
+              }
+
+              const anchor = clickedLine.from;
+              view.dispatch({ selection: { anchor, head: clickedLine.to }, scrollIntoView: false });
+              view.focus();
+
+              // Drag across line numbers selects whole lines.
+              const onMove = (e) => {
+                const rect = view.scrollDOM.getBoundingClientRect();
+                const docY = e.clientY - rect.top + view.scrollDOM.scrollTop;
+                const block = view.lineBlockAtHeight(Math.max(0, docY));
+                const moveLine = view.state.doc.lineAt(block.from);
+                const head = moveLine.number >= clickedLine.number
+                  ? moveLine.to
+                  : moveLine.from;
+                view.dispatch({ selection: { anchor, head }, scrollIntoView: false });
+              };
+              const onUp = () => {
+                window.removeEventListener('mousemove', onMove);
+                window.removeEventListener('mouseup', onUp);
+              };
+              window.addEventListener('mousemove', onMove);
+              window.addEventListener('mouseup', onUp);
+
+              event.preventDefault();
+              return true;
+            },
+          },
+        }),
         highlightActiveLineGutter(),
         history(),
         foldGutter(),
@@ -377,6 +479,8 @@ export function createEditor({ runFind, runFindNext, runFindPrevious, closeFindB
     parent: editorHost,
   });
 
+  _continuationView = editorView;   // expose to module-level helpers
+
   saveButton.addEventListener('click', () => {
     void saveActiveTab();
   });
@@ -391,5 +495,101 @@ export function createEditor({ runFind, runFindNext, runFindPrevious, closeFindB
     saveActiveTab,
     restoreTabs,
     updateSaveButton,
+
+    /**
+     * Returns the text from the start of the file up to the cursor (max 120 lines),
+     * plus the cursor offset within that text. Used to build a Continue prompt.
+     */
+    getContinueContext() {
+      const tab = getActiveTab();
+      if (!tab) return null;
+      const doc    = editorView.state.doc;
+      const cursor = editorView.state.selection.main.head;
+      const line   = doc.lineAt(cursor);
+      // Up to 120 lines ending at the cursor line.
+      const fromLine = Math.max(1, line.number - 119);
+      const from     = doc.line(fromLine).from;
+      return {
+        path:   tab.path,
+        text:   doc.sliceString(from, cursor),
+        offset: cursor,
+      };
+    },
+
+    /**
+     * Inserts `text` at the current cursor position as a ghost/preview, styled
+     * with the `cm-continuation` class. Returns a controller object:
+     *   { accept(), cancel() }
+     * accept() commits the text as a real edit; cancel() removes the ghost.
+     * Any keydown other than Tab calls cancel() automatically.
+     */
+    insertContinuation(text) {
+      const offset = editorView.state.selection.main.head;
+
+      suppressEditorSync = true;
+      editorView.dispatch({
+        changes: { from: offset, insert: text },
+        selection: { anchor: offset },    // keep cursor before inserted text
+      });
+      suppressEditorSync = false;
+
+      const insertedFrom = offset;
+      const insertedTo   = offset + text.length;
+
+      let done = false;
+
+      function accept() {
+        if (done) return;
+        done = true;
+        cleanup();
+        // Move cursor to end of inserted text.
+        editorView.dispatch({ selection: { anchor: insertedTo } });
+        // Commit into the active tab content.
+        const activeTab = getActiveTab();
+        if (activeTab) {
+          activeTab.content = editorView.state.doc.toString();
+          activeTab.dirty   = activeTab.content !== activeTab.savedContent;
+          persistTabs();
+          renderTabs();
+          renderMeta();
+        }
+        editorView.focus();
+      }
+
+      function cancel() {
+        if (done) return;
+        done = true;
+        cleanup();
+        suppressEditorSync = true;
+        editorView.dispatch({ changes: { from: insertedFrom, to: insertedTo, insert: '' } });
+        suppressEditorSync = false;
+        editorView.focus();
+      }
+
+      function onKey(e) {
+        if (e.key === 'Tab') {
+          e.preventDefault();
+          accept();
+        } else if (!e.ctrlKey && !e.altKey && !e.metaKey) {
+          cancel();
+        }
+      }
+
+      function onMouseDown() { cancel(); }
+
+      function cleanup() {
+        editorView.dom.removeEventListener('keydown', onKey, true);
+        editorView.dom.removeEventListener('mousedown', onMouseDown, true);
+        _removeContinuationMark(insertedFrom, insertedTo);
+      }
+
+      editorView.dom.addEventListener('keydown', onKey, true);
+      editorView.dom.addEventListener('mousedown', onMouseDown, true);
+
+      // Mark the ghost text visually.
+      _applyContinuationMark(insertedFrom, insertedTo);
+
+      return { accept, cancel };
+    },
   };
 }

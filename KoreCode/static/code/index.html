@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="/static/code/css/explorer.css" />
   <link rel="stylesheet" href="/static/code/css/find.css" />
   <link rel="stylesheet" href="/static/code/css/editor.css" />
+  <link rel="stylesheet" href="/static/code/css/chat.css" />
   <script src="/suite-config.js"></script>
 </head>
 <body>
@@ -31,28 +32,43 @@
     <div id="code-splitter" class="kcui-splitter" aria-hidden="true"></div>
     <section id="code-main" class="kcui-panel-right">
       <div id="editor-toolbar">
+        <div id="file-breadcrumb">No file selected</div>
+        <div id="file-state">Read/write editor</div>
         <div id="editor-actions">
           <button id="btn-find" class="toolbar-btn" type="button">Find</button>
           <button id="btn-save" class="toolbar-btn toolbar-btn-primary" type="button">Save</button>
+          <button id="btn-ai" class="toolbar-btn" type="button" title="Toggle AI chat (Alt+A)">AI</button>
         </div>
       </div>
-      <div id="editor-meta">
-        <div id="file-breadcrumb">No file selected</div>
-        <div id="file-state">Read/write editor</div>
-      </div>
-      <div id="editor-surface">
-        <div id="editor-findbar" hidden>
-          <label for="find-input">Find</label>
-          <input id="find-input" type="text" autocomplete="off" spellcheck="false" placeholder="Search in file" />
-          <button id="btn-find-prev" class="toolbar-btn" type="button">Prev</button>
-          <button id="btn-find-next" class="toolbar-btn" type="button">Next</button>
-          <button id="btn-find-close" class="toolbar-btn" type="button">Close</button>
+      <div id="editor-body">
+        <div id="editor-surface">
+          <div id="editor-findbar" hidden>
+            <label for="find-input">Find</label>
+            <input id="find-input" type="text" autocomplete="off" spellcheck="false" placeholder="Search in file" />
+            <button id="btn-find-prev" class="toolbar-btn" type="button">Prev</button>
+            <button id="btn-find-next" class="toolbar-btn" type="button">Next</button>
+            <button id="btn-find-close" class="toolbar-btn" type="button">Close</button>
+          </div>
+          <div id="editor-empty">
+            <h1>No file open</h1>
+            <p>Select a file from the explorer to enable the editor toolbar and start editing.</p>
+          </div>
+          <div id="editor-host"></div>
         </div>
-        <div id="editor-empty">
-          <h1>No file open</h1>
-          <p>Select a file from the explorer to enable the editor toolbar and start editing.</p>
+        <div id="chat-splitter" aria-hidden="true"></div>
+        <div id="chat-panel" hidden>
+          <div id="chat-mode-bar">
+            <button id="btn-mode-chat" class="chat-mode-btn is-active" type="button">Chat</button>
+            <button id="btn-mode-continue" class="chat-mode-btn" type="button">Continue</button>
+          </div>
+          <div id="chat-thread"></div>
+          <div id="chat-composer">
+            <div id="chat-input-row">
+              <textarea id="chat-input" rows="2" placeholder="Ask about this file… (Enter to send)" autocomplete="off" spellcheck="false"></textarea>
+              <button id="btn-chat-send" class="toolbar-btn toolbar-btn-primary" type="button">Send</button>
+            </div>
+          </div>
         </div>
-        <div id="editor-host"></div>
       </div>
     </section>
   </main>

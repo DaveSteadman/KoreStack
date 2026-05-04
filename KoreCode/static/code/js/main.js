@@ -3,6 +3,7 @@ import { initPanels } from '/ui-elements/assets/js/panels.js';
 import { createEditor } from './editor.js';
 import { initFind, runFind, runFindNext, runFindPrevious, closeFindBar, applyFindQuery, getCurrentFindQuery } from './find.js';
 import { initExplorer, refreshTree, renderTree, expandAncestors } from './explorer.js';
+import { initChat } from './chat.js';
 import { state } from './state.js';
 
 initTopbar({ currentService: 'korecode', urls: window.__koreSuiteUrls || {} });
@@ -14,7 +15,7 @@ initAppBar({
   editorTabsSlot: 'kc-editor-tabs',
 });
 
-const { editorView, openFile, getActiveTab, renderTabs, renderMeta, restoreTabs } = createEditor({
+const editorApi = createEditor({
   runFind,
   runFindNext,
   runFindPrevious,
@@ -23,6 +24,14 @@ const { editorView, openFile, getActiveTab, renderTabs, renderMeta, restoreTabs 
   getCurrentFindQuery,
   renderTree,
   expandAncestors,
+  onTabChange: (path) => chat.onTabChange(path),
+});
+const { editorView, openFile, getActiveTab, renderTabs, renderMeta, restoreTabs } = editorApi;
+
+const chat = initChat({
+  getActiveTab,
+  getContinueContext: () => editorApi.getContinueContext(),
+  insertContinuation: (text) => editorApi.insertContinuation(text),
 });
 
 initFind({ editorView, getActiveTab });
