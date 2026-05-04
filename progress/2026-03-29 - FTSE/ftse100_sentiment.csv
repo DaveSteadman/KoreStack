@@ -1,0 +1,101 @@
+date,symbol,company,sentiment_score
+2026-03-29,III.L,3I Group PLC,0
+2026-03-29,ADM.L,Admiral Group PLC,0
+2026-03-29,AAF.L,Airtel Africa PLC,0
+2026-03-29,ALW.L,Alliance Witan PLC,0
+2026-03-29,AAL.L,Anglo American PLC,5
+2026-03-29,ANTO.L,Antofagasta PLC,4
+2026-03-29,AHT.L,Ashtead Group PLC,0
+2026-03-29,ABF.L,Associated British Foods PLC,0
+2026-03-29,AZN.L,AstraZeneca PLC,8
+2026-03-29,AUTO.L,Auto Trader Group PLC,-8
+2026-03-29,AV.L,Aviva PLC,6
+2026-03-29,BA.L,BAE Systems PLC,7
+2026-03-29,BARC.L,Barclays PLC,-6
+2026-03-29,BTRW.L,Barratt Redrow PLC,-8
+2026-03-29,BEZ.L,Beazley PLC,0
+2026-03-29,BKG.L,Berkeley Group Holdings PLC,0
+2026-03-29,BP.L,BP PLC,2
+2026-03-29,BATS.L,British American Tobacco PLC,0
+2026-03-29,BLND.L,British Land Co PLC,0
+2026-03-29,BT.A.L,BT Group PLC,-2
+2026-03-29,BNZL.L,Bunzl PLC,0
+2026-03-29,CNA.L,Centrica PLC,0
+2026-03-29,CCH.L,Coca-Cola HBC AG,0
+2026-03-29,CPG.L,Compass Group PLC,0
+2026-03-29,CTEC.L,Convatec Group PLC,0
+2026-03-29,CRDA.L,Croda International PLC,0
+2026-03-29,DCC.L,DCC PLC,0
+2026-03-29,DGE.L,Diageo PLC,0
+2026-03-29,DPLM.L,Diploma PLC,0
+2026-03-29,EZJ.L,Easyjet PLC,0
+2026-03-29,EDV.L,Endeavour Mining PLC,7
+2026-03-29,ENT.L,Entain PLC,0
+2026-03-29,EXPN.L,Experian PLC,0
+2026-03-29,FCIT.L,F&C Investment Trust PLC,0
+2026-03-29,FRES.L,Fresnillo PLC,0
+2026-03-29,GAW.L,Games Workshop Group PLC,0
+2026-03-29,GLEN.L,Glencore PLC,7
+2026-03-29,GSK.L,GSK PLC,3
+2026-03-29,HLN.L,Haleon PLC,0
+2026-03-29,HLMA.L,Halma PLC,0
+2026-03-29,HL.L,Hargreaves Lansdown PLC,0
+2026-03-29,HIK.L,Hikma Pharmaceuticals PLC,0
+2026-03-29,HSX.L,Hiscox LD,0
+2026-03-29,HWDN.L,Howden Joinery Group PLC,0
+2026-03-29,HSBA.L,HSBA Holdings PLC,-7
+2026-03-29,IMI.L,IMI PLC,0
+2026-03-29,IMB.L,Imperial Brands PLC,0
+2026-03-29,INF.L,Informa PLC,0
+2026-03-29,IHG.L,Intercontinental Hotels Group PLC,0
+2026-03-29,ICG.L,Intermediate Capital Group PLC,0
+2026-03-29,ITRK.L,Intertek Group PLC,0
+2026-03-29,IAG.L,International Consolidated Airlines Group,0
+2026-03-29,JD.L,JD Sports Fashion PLC,0
+2026-03-29,KGF.L,Kingfisher PLC,0
+2026-03-29,LAND.L,Land Securities Group PLC,0
+2026-03-29,LGEN.L,Legal & General Group PLC,6
+2026-03-29,LLOY.L,Lloyds Banking Group PLC,-7
+2026-03-29,LSEG.L,London Stock Exchange Group PLC,3
+2026-03-29,LMP.L,Londonmetric Property PLC,0
+2026-03-29,MNG.L,M&G PLC,0
+2026-03-29,MKS.L,Marks & Spencer Group PLC,5
+2026-03-29,MRO.L,Melrose Industries PLC,0
+2026-03-29,MNDI.L,Mondi PLC,0
+2026-03-29,NG.L,National Grid PLC,0
+2026-03-29,NWG.L,NatWest Group PLC,-3
+2026-03-29,NXT.L,Next PLC,0
+2026-03-29,PSON.L,Pearson PLC,0
+2026-03-29,PSH.L,Pershing Square Holdings Ltd,0
+2026-03-29,PSN.L,Persimmon PLC,-8
+2026-03-29,PHNX.L,Phoenix Group Holdings PLC,0
+2026-03-29,PRU.L,Prudential PLC,6
+2026-03-29,RKT.L,Reckitt Benckiser Group PLC,6
+2026-03-29,REL.L,RELX PLC,0
+2026-03-29,RTO.L,Rentokil Initial PLC,0
+2026-03-29,RMV.L,Rightmove PLC,0
+2026-03-29,RIO.L,Rio Tinto PLC,7
+2026-03-29,RR.L,Rolls-Royce Holdings PLC,7
+2026-03-29,SGE.L,Sage Group PLC,0
+2026-03-29,SBRY.L,Sainsbury (J) PLC,-3
+2026-03-29,SDR.L,Schroders PLC,0
+2026-03-29,SMT.L,Scottish Mortgage Inv Trust PLC,0
+2026-03-29,SGRO.L,Segro PLC,0
+2026-03-29,SVT.L,Severn Trent PLC,0
+2026-03-29,SHEL.L,Shell PLC,5
+2026-03-29,SN.L,Smith & Nephew PLC,0
+2026-03-29,SMDS.L,Smith (DS) PLC,0
+2026-03-29,SMIN.L,Smiths Group PLC,0
+2026-03-29,SPX.L,Spirax Group PLC,0
+2026-03-29,SSE.L,SSE PLC,0
+2026-03-29,STJ.L,St James's Place PLC,0
+2026-03-29,STAN.L,Standard Chartered PLC,-7
+2026-03-29,TW.L,Taylor Wimpey PLC,0
+2026-03-29,TSCO.L,Tesco PLC,-4
+2026-03-29,ULVR.L,Unilever PLC,0
+2026-03-29,UTG.L,Unite Group PLC,0
+2026-03-29,UU.L,United Utilities Group PLC,0
+2026-03-29,VOD.L,Vodafone Group PLC,-5
+2026-03-29,WEIR.L,Weir Group PLC,0
+2026-03-29,WTB.L,Whitbread PLC,0
+2026-03-29,WPP.L,WPP PLC,0

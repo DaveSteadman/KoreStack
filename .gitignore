@@ -35,7 +35,6 @@ Thumbs.db
 **/data/
 **/Data/
 **/datauser/
-**/Progress/
 
 # Common runtime output that may exist outside the data roots
 **/logs/
