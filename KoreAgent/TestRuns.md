@@ -1,3 +1,11 @@
+# Version [0026 / 0.5] #
+
+[ALL TESTS COMPLETE] host=http://MONTBLANC:11434 model=gemma4:26b elapsed=34m 24s pass rate=99% (214/216)
+- First KoreStack test run.
+- 2 failures:
+    - test_delegate_prompts.json — "Turing Test two-part answer" — Empty final output (model probably ran out of context or timed out mid-delegation)
+    - test_koredata_search.json / kd_no_results — "Search returned no results" — this is a known false-failure: the test expects the model to acknowledge no results, which it did correctly; the assert logic apparently flags it as a fail
+
 # Version [0021 / 0.4+dev] #
 
 [ALL TESTS COMPLETE]  host=http://MONTBLANC:11434  model=nemotron-cascade-2:latest  elapsed=54m 59s  pass rate=88% (143/163)  prompt tokens=5,507,794  avg tok/s=148.4

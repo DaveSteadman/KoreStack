@@ -1,1 +1,1 @@
-export const SUITE_VERSION = '[0026 / 0.4+dev]';
+export const SUITE_VERSION = '[0027 / 0.5]';

@@ -586,6 +586,9 @@ async def koredata_search(
     """
     if _feed_client is None:
         return {"error": "KoreDataGateway is still starting up — retry in a moment"}
+    # Coerce comma-separated string to list in case the model serialises incorrectly
+    if isinstance(domains, str):
+        domains = [d.strip() for d in domains.split(",") if d.strip()]
     req = _SearchRequest(query=query, domains=domains or [], since=since, until=until, limit=limit)
     return await api_search(req)
 
