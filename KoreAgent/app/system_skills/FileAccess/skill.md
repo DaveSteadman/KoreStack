@@ -1,4 +1,4 @@
-﻿# FileAccess Skill
+# FileAccess Skill
 
 ## Purpose
 Interface for all file read, write, append, and search operations. All relative paths resolve under `./data/`; a `"./"` prefix anchors a path at the workspace root instead. Paths that escape the workspace root are rejected.
@@ -6,7 +6,7 @@ Interface for all file read, write, append, and search operations. All relative 
 ## Trigger keyword: file
 
 ## Interface
-- Module: `code/KoreAgent/system_skills/FileAccess/file_access_skill.py`
+- Module: `KoreAgent/app/system_skills/FileAccess/file_access_skill.py`
 - Functions:
   - `file_write(path: str, content: str)`
   - `file_append(path: str, content: str)`

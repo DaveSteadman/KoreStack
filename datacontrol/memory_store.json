@@ -403,8 +403,8 @@
       "updated": null,
       "category": "project",
       "fact": "The first two attempts reported that no MCP servers are configured, and the third returned a KoreDataGateway URL (http://localhost:8800/mcp) indicating five MCP tools, yet the agent again said MCP is not configured",
-      "access_count": 53,
-      "last_accessed": "2026-05-04 13:46:41"
+      "access_count": 54,
+      "last_accessed": "2026-05-05 23:39:10"
     },
     {
       "id": "fea5f129",

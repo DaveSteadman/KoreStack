@@ -1,4 +1,4 @@
-﻿# Delegate Skill
+# Delegate Skill
 
 ## Purpose
 Create a fresh child orchestration context for a focused sub-task. The child gets its own
@@ -9,7 +9,7 @@ without polluting the parent context with intermediate tool chatter.
 ## Trigger keyword: delegate
 
 ## Interface
-- Module: `code/KoreAgent/system_skills/Delegate/delegate_skill.py`
+- Module: `KoreAgent/app/system_skills/Delegate/delegate_skill.py`
 - Functions:
   - `delegate(prompt: str, instructions: str = "", max_iterations: int = 3, output_key: str = "", scratchpad_visible_keys: list[str] | None = None, tools_allowlist: list[str] | None = None)`
 

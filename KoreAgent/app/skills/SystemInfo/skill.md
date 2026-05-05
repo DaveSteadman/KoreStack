@@ -1,4 +1,4 @@
-﻿# SystemInfo Skill
+# SystemInfo Skill
 
 ## Purpose
 Provide runtime system information including OS name, Python and Ollama versions, RAM usage, and disk usage. Use this for any prompt about the machine, hardware, runtime environment, available resources, or version details. Do not use this for web or file queries.
@@ -6,7 +6,7 @@ Provide runtime system information including OS name, Python and Ollama versions
 ## Trigger keyword: system info, RAM or disk space, available memory, or OS and runtime version details
 
 ## Interface
-- Module: `code/KoreAgent/skills/SystemInfo/system_info_skill.py`
+- Module: `KoreAgent/app/skills/SystemInfo/system_info_skill.py`
 - Functions:
   - `get_system_info_dict()`
 

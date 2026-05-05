@@ -1,4 +1,4 @@
-﻿# WebWikipedia Skill
+# WebWikipedia Skill
 
 ## Purpose
 Look up a topic on the live Wikipedia REST API and return a plain-text article summary. Use this for authoritative factual reference data about a person, place, concept, event, or technology. For current news or live data, use WebSearch instead.
@@ -6,7 +6,7 @@ Look up a topic on the live Wikipedia REST API and return a plain-text article s
 ## Trigger keyword: wikipedia
 
 ## Interface
-- Module: `code/KoreAgent/skills/WebWikipedia/wikipedia_skill.py`
+- Module: `KoreAgent/app/skills/WebWikipedia/wikipedia_skill.py`
 - Functions:
   - `lookup_wikipedia(topic: str, timeout: int = 15)`
 
@@ -53,7 +53,7 @@ article - always try Wikipedia first before issuing a web search.
 Article extracts can be several hundred words.  When the content will be used in a downstream
 step (write to file, summarise, compare with another result), park it with `scratch_save` first.
 
-- `lookup_wikipedia("Python programming language")` → `scratch_save("wikiarticle", <output>)` → reference with `{scratch:wikiarticle}` in later steps
+- `lookup_wikipedia("Python programming language")` ? `scratch_save("wikiarticle", <output>)` ? reference with `{scratch:wikiarticle}` in later steps
 - `write_file("data/article.txt", "{scratch:wikiarticle}")` - write parked article content without a separate `scratch_load`
 
 ## Examples

@@ -1,4 +1,4 @@
-﻿# TaskManagement Skill
+# TaskManagement Skill
 
 ## Purpose
 Create, query, update, enable, disable, and delete scheduled tasks stored as JSON files in `controldata/schedules/`. Each task defines a schedule and a prompt string that the scheduler runs automatically on each firing.
@@ -6,7 +6,7 @@ Create, query, update, enable, disable, and delete scheduled tasks stored as JSO
 ## Trigger keyword: task
 
 ## Interface
-- Module: `code/KoreAgent/system_skills/TaskManagement/task_management_skill.py`
+- Module: `KoreAgent/app/system_skills/TaskManagement/task_management_skill.py`
 - Functions:
   - `task_list()`
   - `task_get(name: str)`

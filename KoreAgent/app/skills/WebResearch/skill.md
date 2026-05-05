@@ -1,4 +1,4 @@
-﻿# WebResearch Skill
+# WebResearch Skill
 
 ## Purpose
 Search the web, visit multiple relevant pages, extract the useful text, optionally follow promising links, and return a compact evidence-led research bundle.
@@ -7,7 +7,7 @@ Use this when the answer is unlikely to be found reliably from a single search r
 This skill is designed to reduce orchestration thrash by owning the search frontier internally.
 
 ## Interface
-- Module: `code/KoreAgent/skills/WebResearch/web_research_skill.py`
+- Module: `KoreAgent/app/skills/WebResearch/web_research_skill.py`
 - Functions:
   - `research_traverse(query: str, max_search_results: int = 5, max_pages: int = 6, max_hops: int = 1, same_domain_only_for_hops: bool = True, timeout_seconds: int = 15, max_words_per_page: int = 450, max_evidence_quotes: int = 3)`
 

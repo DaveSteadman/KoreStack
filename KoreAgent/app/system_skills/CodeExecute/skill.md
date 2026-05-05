@@ -1,4 +1,4 @@
-﻿# CodeExecute Skill
+# CodeExecute Skill
 
 ## Purpose
 - Execute a self-contained Python code snippet and return the captured stdout.
@@ -17,7 +17,7 @@
 ## Trigger keyword: calculate
 
 ## Interface
-- Module: `code/KoreAgent/system_skills/CodeExecute/code_execute_skill.py`
+- Module: `KoreAgent/app/system_skills/CodeExecute/code_execute_skill.py`
 - Functions:
   - `run_python_snippet(code: str)`
 
@@ -70,7 +70,7 @@ used in a downstream step, park it with `scratch_save` immediately after executi
 `{scratch:key}` as the `content` argument to `write_file` or `append_file` - this avoids
 carrying the full output string inline through subsequent tool-calling rounds.
 
-- `run_python_snippet(...)` → `scratch_save("codeout", <output>)` → `write_file("data/result.txt", "{scratch:codeout}")`
+- `run_python_snippet(...)` ? `scratch_save("codeout", <output>)` ? `write_file("data/result.txt", "{scratch:codeout}")`
 
 ## Examples
 - `run_python_snippet(code="import math\nfor i in range(1, 6):\n    print(i, math.factorial(i))")` - print factorials 1-5

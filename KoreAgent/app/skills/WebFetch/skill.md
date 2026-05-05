@@ -1,4 +1,4 @@
-﻿# WebFetch Skill
+# WebFetch Skill
 
 ## Purpose
 Fetch a web page by URL and extract its readable prose content, stripping all HTML markup, navigation, scripts, advertisements, and other non-content noise. Returns clean text ready for LLM synthesis or summarization.
@@ -6,7 +6,7 @@ Fetch a web page by URL and extract its readable prose content, stripping all HT
 ## Trigger keyword: fetch
 
 ## Interface
-- Module: `code/KoreAgent/skills/WebFetch/web_fetch_skill.py`
+- Module: `KoreAgent/app/skills/WebFetch/web_fetch_skill.py`
 - Entry point: `fetch_page_text(url: str, max_words: int = 2000, timeout_seconds: int = 15, query: str | None = None)`
 
 ## Parameters

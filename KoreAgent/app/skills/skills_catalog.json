@@ -6,7 +6,7 @@
       "skill_name": "DateTime Skill",
       "relative_path": "app/skills/DateTime/skill.md",
       "purpose": "Return the current date, time, day name, and month name. Prefer `get_datetime_data()` in all cases - it returns both date and time in a single call. Use `get_day_name()` or `get_month_name()` only when you specifically need just that one value.",
-      "module": "code/KoreAgent/skills/DateTime/datetime_skill.py",
+      "module": "KoreAgent/app/skills/DateTime/datetime_skill.py",
       "trigger_keyword": "current date, time, day of the week, or month name",
       "triggers": [
         "what is the date",
@@ -41,7 +41,7 @@
       "skill_name": "SystemInfo Skill",
       "relative_path": "app/skills/SystemInfo/skill.md",
       "purpose": "Provide runtime system information including OS name, Python and Ollama versions, RAM usage, and disk usage. Use this for any prompt about the machine, hardware, runtime environment, available resources, or version details. Do not use this for web or file queries.",
-      "module": "code/KoreAgent/skills/SystemInfo/system_info_skill.py",
+      "module": "KoreAgent/app/skills/SystemInfo/system_info_skill.py",
       "trigger_keyword": "system info, RAM or disk space, available memory, or OS and runtime version details",
       "triggers": [
         "system info",
@@ -85,7 +85,7 @@
       "skill_name": "WebFetch Skill",
       "relative_path": "app/skills/WebFetch/skill.md",
       "purpose": "Fetch a web page by URL and extract its readable prose content, stripping all HTML markup, navigation, scripts, advertisements, and other non-content noise. Returns clean text ready for LLM synthesis or summarization.",
-      "module": "code/KoreAgent/skills/WebFetch/web_fetch_skill.py",
+      "module": "KoreAgent/app/skills/WebFetch/web_fetch_skill.py",
       "trigger_keyword": "fetch",
       "triggers": [
         "fetch the page",
@@ -117,7 +117,7 @@
       "skill_name": "WebNavigate Skill",
       "relative_path": "app/skills/WebNavigate/skill.md",
       "purpose": "Extract all navigable hyperlinks from a web page and return them as a numbered list with anchor text and resolved absolute URLs. Use this when you land on a hub or listing page (news front page, GitHub topic, forum index, search results page) and need to see what links are available before deciding which ones to read. This is the middle link in the web navigation chain - between `search_web` (discovery) and `fetch_page_text` (reading content). Navigation chrome (menus, login, subscribe, cookie notices) is filtered automatically.",
-      "module": "code/KoreAgent/skills/WebNavigate/web_navigate_skill.py",
+      "module": "KoreAgent/app/skills/WebNavigate/web_navigate_skill.py",
       "trigger_keyword": "links, navigate",
       "triggers": [
         "get links from",
@@ -158,7 +158,7 @@
       "skill_name": "WebResearch Skill",
       "relative_path": "app/skills/WebResearch/skill.md",
       "purpose": "Search the web, visit multiple relevant pages, extract the useful text, optionally follow promising links, and return a compact evidence-led research bundle.\n\nUse this when the answer is unlikely to be found reliably from a single search result or single page extract.\nThis skill is designed to reduce orchestration thrash by owning the search frontier internally.",
-      "module": "code/KoreAgent/skills/WebResearch/web_research_skill.py",
+      "module": "KoreAgent/app/skills/WebResearch/web_research_skill.py",
       "trigger_keyword": "",
       "triggers": [
         "research this",
@@ -204,7 +204,7 @@
       "skill_name": "WebSearch Skill",
       "relative_path": "app/skills/WebSearch/skill.md",
       "purpose": "Search the web using DuckDuckGo and return ranked results with title, URL, and snippet. No API key required. Use `search_web_text` for direct synthesis - results come back as formatted text ready to read inline. Use `search_web` when you need to iterate over individual result fields (url, title, snippet) programmatically or pass them selectively to another skill. This skill only returns results - it does not persist or save anything.",
-      "module": "code/KoreAgent/skills/WebSearch/web_search_skill.py",
+      "module": "KoreAgent/app/skills/WebSearch/web_search_skill.py",
       "trigger_keyword": "search",
       "triggers": [
         "search the web for",
@@ -245,7 +245,7 @@
       "skill_name": "WebWikipedia Skill",
       "relative_path": "app/skills/WebWikipedia/skill.md",
       "purpose": "Look up a topic on the live Wikipedia REST API and return a plain-text article summary. Use this for authoritative factual reference data about a person, place, concept, event, or technology. For current news or live data, use WebSearch instead.",
-      "module": "code/KoreAgent/skills/WebWikipedia/wikipedia_skill.py",
+      "module": "KoreAgent/app/skills/WebWikipedia/wikipedia_skill.py",
       "trigger_keyword": "wikipedia",
       "triggers": [
         "what is",
@@ -279,7 +279,7 @@
       "skill_name": "CodeExecute Skill",
       "relative_path": "app/system_skills/CodeExecute/skill.md",
       "purpose": "- Execute a self-contained Python code snippet and return the captured stdout.\n- **Always prefer code over a direct answer for any calculation, sequence, table, string operation, or data generation task** - even when the answer seems obvious from training knowledge. Running code is more reliable and verifiable than recall.\n- Only Python stdlib is available; third-party packages (numpy, pandas, sympy) are not.\n- When sandbox is off (`/sandbox off`), all modules are accessible. To install and use a third-party package, use `subprocess` to pip-install it first, then import normally:\n  ```python\n  import subprocess, sys\n  subprocess.run([sys.executable, \"-m\", \"pip\", \"install\", \"numpy\"], check=True)\n  import numpy as np\n  print(np.array([1,2,3]).mean())\n  ```\n- When paired with FileAccess, call this skill first to generate the content, then park the output with `scratch_save`, and pass `{scratch:key}` as the content argument to `file_write` - this avoids carrying the full output string as an inline argument through the tool-calling loop.\n- Code must use `print()` for all output. Favour simple linear code - avoid complex class hierarchies or deeply nested call stacks.",
-      "module": "code/KoreAgent/system_skills/CodeExecute/code_execute_skill.py",
+      "module": "KoreAgent/app/system_skills/CodeExecute/code_execute_skill.py",
       "trigger_keyword": "calculate",
       "triggers": [
         "calculate",
@@ -325,7 +325,7 @@
       "skill_name": "Delegate Skill",
       "relative_path": "app/system_skills/Delegate/skill.md",
       "purpose": "Create a fresh child orchestration context for a focused sub-task. The child gets its own\nisolated reasoning and tool-calling loop, runs independently, and returns a compact answer\nto the parent. Use this when a sub-problem would benefit from multi-step investigation\nwithout polluting the parent context with intermediate tool chatter.",
-      "module": "code/KoreAgent/system_skills/Delegate/delegate_skill.py",
+      "module": "KoreAgent/app/system_skills/Delegate/delegate_skill.py",
       "trigger_keyword": "delegate",
       "triggers": [
         "the task contains a clear sub-problem that should be solved independently",
@@ -359,7 +359,7 @@
       "skill_name": "FileAccess Skill",
       "relative_path": "app/system_skills/FileAccess/skill.md",
       "purpose": "Interface for all file read, write, append, and search operations. All relative paths resolve under `./data/`; a `\"./\"` prefix anchors a path at the workspace root instead. Paths that escape the workspace root are rejected.",
-      "module": "code/KoreAgent/system_skills/FileAccess/file_access_skill.py",
+      "module": "KoreAgent/app/system_skills/FileAccess/file_access_skill.py",
       "trigger_keyword": "file",
       "triggers": [
         "write to file",
@@ -443,7 +443,7 @@
       "skill_name": "Memory Skill",
       "relative_path": "app/system_skills/Memory/skill.md",
       "purpose": "Persist and recall durable user-stated facts across sessions - identity, preferences, project context, and environment facts. A newer fact on the same subject supersedes the older one. Do not store questions, commands, or ephemeral data such as current time or system stats. Facts persist in `memory_store.json` with category, timestamps, and access tracking.",
-      "module": "code/KoreAgent/system_skills/Memory/memory_skill.py",
+      "module": "KoreAgent/app/system_skills/Memory/memory_skill.py",
       "trigger_keyword": "memory",
       "triggers": [
         "remember",
@@ -492,7 +492,7 @@
       "skill_name": "Scratchpad Skill",
       "relative_path": "app/system_skills/Scratchpad/skill.md",
       "purpose": "Store and retrieve named working values within a session so that bulk data returned by other skills\n(web pages, file content, computation results) can be parked under a short key and referenced later\nwithout consuming context window space.  Use this skill whenever the plan involves multi-step tool\nchains where an intermediate result is needed again in a later step.  Do not use it for durable\nfacts that should survive across sessions - use the Memory skill for that.",
-      "module": "code/KoreAgent/system_skills/Scratchpad/scratchpad_skill.py",
+      "module": "KoreAgent/app/system_skills/Scratchpad/scratchpad_skill.py",
       "trigger_keyword": "scratchpad",
       "triggers": [
         "save to scratchpad",
@@ -573,7 +573,7 @@
       "skill_name": "TaskManagement Skill",
       "relative_path": "app/system_skills/TaskManagement/skill.md",
       "purpose": "Create, query, update, enable, disable, and delete scheduled tasks stored as JSON files in `controldata/schedules/`. Each task defines a schedule and a prompt string that the scheduler runs automatically on each firing.",
-      "module": "code/KoreAgent/system_skills/TaskManagement/task_management_skill.py",
+      "module": "KoreAgent/app/system_skills/TaskManagement/task_management_skill.py",
       "trigger_keyword": "task",
       "triggers": [
         "create task",

@@ -1,4 +1,4 @@
-﻿# WebNavigate Skill
+# WebNavigate Skill
 
 ## Purpose
 Extract all navigable hyperlinks from a web page and return them as a numbered list with anchor text and resolved absolute URLs. Use this when you land on a hub or listing page (news front page, GitHub topic, forum index, search results page) and need to see what links are available before deciding which ones to read. This is the middle link in the web navigation chain - between `search_web` (discovery) and `fetch_page_text` (reading content). Navigation chrome (menus, login, subscribe, cookie notices) is filtered automatically.
@@ -6,7 +6,7 @@ Extract all navigable hyperlinks from a web page and return them as a numbered l
 ## Trigger keyword: links, navigate
 
 ## Interface
-- Module: `code/KoreAgent/skills/WebNavigate/web_navigate_skill.py`
+- Module: `KoreAgent/app/skills/WebNavigate/web_navigate_skill.py`
 - Functions:
   - `get_page_links(url: str, filter_text: str = "", max_links: int = 30, timeout_seconds: int = 15)`
   - `get_page_links_text(url: str, filter_text: str = "", max_links: int = 30, timeout_seconds: int = 15)`
@@ -49,19 +49,19 @@ This skill is the middle step of a three-stage chain. Understanding the chain is
 ```
 STAGE 1 - Discovery (find entry-point URLs by topic)
   search_web_text("AI tools this week")
-  → returns: titles, URLs, snippets from DuckDuckGo
+  ? returns: titles, URLs, snippets from DuckDuckGo
 
 STAGE 2 - Navigation (see what is on a listing/hub page)
   get_page_links_text("https://news.ycombinator.com")
-  → returns: numbered link list with anchor text and absolute URLs
+  ? returns: numbered link list with anchor text and absolute URLs
   [result auto-parks in scratchpad if large]
 
   scratch_query("_tc_r2_get_page_links_text", "which links are about open source AI tools?")
-  → returns: "Items 3, 7, 14 look relevant - ..."
+  ? returns: "Items 3, 7, 14 look relevant - ..."
 
 STAGE 3 - Content (read selected pages)
   fetch_page_text("https://...", query="what does this project do?")
-  → returns: compact extracted answer
+  ? returns: compact extracted answer
 ```
 
 **When to use each stage:**
@@ -77,14 +77,14 @@ STAGE 3 - Content (read selected pages)
 
 ```
 Step 1: get_page_links_text("https://news.ycombinator.com")
-        → result auto-parks to _tc_r1_get_page_links_text
+        ? result auto-parks to _tc_r1_get_page_links_text
 
 Step 2: scratch_query("_tc_r1_get_page_links_text",
         "which items mention AI, LLM, machine learning, or open source models?")
-        → returns a compact filtered list of matching item numbers
+        ? returns a compact filtered list of matching item numbers
 
 Step 3: scratch_peek("_tc_r1_get_page_links_text", "Item 7")
-        → returns the URL for that item
+        ? returns the URL for that item
 
 Step 4: fetch_page_text(url, query="what is this project and how would a developer use it?")
 ```

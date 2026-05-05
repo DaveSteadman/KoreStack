@@ -1,4 +1,4 @@
-﻿# Scratchpad Skill
+# Scratchpad Skill
 
 ## Purpose
 Store and retrieve named working values within a session so that bulk data returned by other skills
@@ -10,7 +10,7 @@ facts that should survive across sessions - use the Memory skill for that.
 ## Trigger keyword: scratchpad
 
 ## Interface
-- Module: `code/KoreAgent/system_skills/Scratchpad/scratchpad_skill.py`
+- Module: `KoreAgent/app/system_skills/Scratchpad/scratchpad_skill.py`
 - Functions:
   - `scratch_save(key: str, value: str)`
   - `scratch_load(key: str)`

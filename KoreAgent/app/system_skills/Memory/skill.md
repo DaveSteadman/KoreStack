@@ -1,4 +1,4 @@
-﻿# Memory Skill
+# Memory Skill
 
 ## Purpose
 Persist and recall durable user-stated facts across sessions - identity, preferences, project context, and environment facts. A newer fact on the same subject supersedes the older one. Do not store questions, commands, or ephemeral data such as current time or system stats. Facts persist in `memory_store.json` with category, timestamps, and access tracking.
@@ -6,7 +6,7 @@ Persist and recall durable user-stated facts across sessions - identity, prefere
 ## Trigger keyword: memory
 
 ## Interface
-- Module: `code/KoreAgent/system_skills/Memory/memory_skill.py`
+- Module: `KoreAgent/app/system_skills/Memory/memory_skill.py`
 - Functions:
   - `store_prompt_memories(user_prompt: str)`
   - `recall_relevant_memories(user_prompt: str, limit: int = 5, min_score: float = 0.25)`

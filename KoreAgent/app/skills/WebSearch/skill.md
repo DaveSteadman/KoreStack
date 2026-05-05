@@ -1,4 +1,4 @@
-﻿# WebSearch Skill
+# WebSearch Skill
 
 ## Purpose
 Search the web using DuckDuckGo and return ranked results with title, URL, and snippet. No API key required. Use `search_web_text` for direct synthesis - results come back as formatted text ready to read inline. Use `search_web` when you need to iterate over individual result fields (url, title, snippet) programmatically or pass them selectively to another skill. This skill only returns results - it does not persist or save anything.
@@ -6,7 +6,7 @@ Search the web using DuckDuckGo and return ranked results with title, URL, and s
 ## Trigger keyword: search
 
 ## Interface
-- Module: `code/KoreAgent/skills/WebSearch/web_search_skill.py`
+- Module: `KoreAgent/app/skills/WebSearch/web_search_skill.py`
 - Functions:
   - `search_web(query: str, max_results: int = 5, timeout_seconds: int = 15, offset: int = 0, prefer_article_urls: bool = False)`
   - `search_web_text(query: str, max_results: int = 5, timeout_seconds: int = 15, max_chars_per_result: int = 500, offset: int = 0, prefer_article_urls: bool = False)`
@@ -92,7 +92,7 @@ Search results can be large.  When the result will be referenced in a later step
 extract a field, write to file), park it immediately with `scratch_save` so the full text does
 not have to be re-fetched or carried as an inline string through subsequent planning rounds.
 
-- `search_web_text("Python 3.14 release notes")` → `scratch_save("searchresult", <output>)` → use `{scratch:searchresult}` in downstream steps
+- `search_web_text("Python 3.14 release notes")` ? `scratch_save("searchresult", <output>)` ? use `{scratch:searchresult}` in downstream steps
 - `write_file("data/results.txt", "{scratch:searchresult}")` - write parked search result without an extra `scratch_load` call
 
 ## Examples
