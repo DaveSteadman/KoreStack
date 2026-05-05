@@ -48,17 +48,30 @@
   background: color-mix(in srgb, var(--accent) 12%, var(--surface));
   border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
   color: var(--text);
+  display: flex;
+  gap: 8px;
+  align-items: center;
 }
 
-.continue-status--preview kbd {
-  display: inline-block;
-  padding: 1px 5px;
-  background: var(--surface-2);
+.continue-btn {
+  padding: 4px 14px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
   border: 1px solid var(--border);
-  border-radius: 3px;
-  font-size: 11px;
-  font-family: Consolas, 'Courier New', monospace;
+  line-height: 1.4;
 }
+.continue-btn--accept {
+  background: var(--accent);
+  color: var(--bg);
+  border-color: var(--accent);
+}
+.continue-btn--accept:hover { opacity: 0.88; }
+.continue-btn--dismiss {
+  background: transparent;
+  color: var(--text-dim);
+}
+.continue-btn--dismiss:hover { color: var(--text); }
 
 .continue-status--accepted  { color: color-mix(in srgb, #4ade80 80%, var(--text)); }
 .continue-status--cancelled { color: var(--text-dim); }
@@ -243,6 +256,19 @@
   border-top: 1px solid var(--border);
   background: var(--bg-2);
   padding: 8px 10px;
+}
+
+#chat-selection-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  font-size: 11px;
+  color: var(--text-dim);
 }
 
 #chat-input-row {

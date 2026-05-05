@@ -25,6 +25,7 @@ const editorApi = createEditor({
   renderTree,
   expandAncestors,
   onTabChange: (path) => chat.onTabChange(path),
+  onSelectionChange: (text) => chat.onSelectionChange(text),
 });
 const { editorView, openFile, getActiveTab, renderTabs, renderMeta, restoreTabs } = editorApi;
 
@@ -32,6 +33,7 @@ const chat = initChat({
   getActiveTab,
   getContinueContext: () => editorApi.getContinueContext(),
   insertContinuation: (text) => editorApi.insertContinuation(text),
+  getEditorSelection: () => editorApi.getEditorSelection(),
 });
 
 initFind({ editorView, getActiveTab });

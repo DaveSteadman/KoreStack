@@ -13,9 +13,26 @@
 // KoreAgent base URL: window.__koreSuiteUrls.koreagent (fallback: http://127.0.0.1:8605).
 
 const _KOREAGENT_FALLBACK = 'http://127.0.0.1:8605';
+const _STATE_KEY = 'korecode.chat-state';
 
 // In-memory chat thread store: path → Array<{ role: 'user'|'assistant', text: string }>
 const _threads = new Map();
+
+function _saveState(open, mode) {
+  try {
+    const threads = {};
+    for (const [path, msgs] of _threads) threads[path] = msgs;
+    localStorage.setItem(_STATE_KEY, JSON.stringify({ open, mode, threads }));
+  } catch (_) {}
+}
+
+function _loadState() {
+  try {
+    const raw = localStorage.getItem(_STATE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch (_) { return null; }
+}
 
 // SSE reader active during a streaming response.
 let _activeReader = null;
@@ -29,7 +46,7 @@ let _activeReader = null;
  * }} opts
  * @returns {{ onTabChange: (path: string | null) => void }}
  */
-export function initChat({ getActiveTab, getContinueContext, insertContinuation }) {
+export function initChat({ getActiveTab, getContinueContext, insertContinuation, getEditorSelection = null }) {
   const panel         = document.getElementById('chat-panel');
   const thread        = document.getElementById('chat-thread');
   const input         = document.getElementById('chat-input');
@@ -37,8 +54,26 @@ export function initChat({ getActiveTab, getContinueContext, insertContinuation 
   const aiBtn         = document.getElementById('btn-ai');
   const btnModeChat    = document.getElementById('btn-mode-chat');
   const btnModeContinue = document.getElementById('btn-mode-continue');
+  const selectionChip  = document.getElementById('chat-selection-chip');
+  const selectionLabel = document.getElementById('chat-selection-label');
+
+  let _currentSelection = null;
+
+  function _updateSelectionChip() {
+    if (!selectionChip) return;
+    if (_currentSelection && !panel.hidden) {
+      const lines = _currentSelection.split('\n').length;
+      selectionLabel.textContent = `${lines} line${lines === 1 ? '' : 's'} selected · will be sent as context`;
+      selectionChip.hidden = false;
+    } else {
+      selectionChip.hidden = true;
+    }
+  }
 
   let _mode = 'chat';   // 'chat' | 'continue'
+  let _panelOpen = false;
+
+  function _save() { _saveState(_panelOpen, _mode); }
 
   // ── Helpers ─────────────────────────────────────────────────────────────
 
@@ -48,7 +83,7 @@ export function initChat({ getActiveTab, getContinueContext, insertContinuation 
 
   /** Derive a stable, URL-safe session ID from the file path. */
   function sessionForPath(path) {
-    const sanitized = path.replace(/[^A-Za-z0-9_.-]/g, '_').slice(-60);
+    const sanitized = path.replace(/[^A-Za-z0-9_-]/g, '_').slice(-60);
     return `kc_${sanitized}`;
   }
 
@@ -71,6 +106,7 @@ export function initChat({ getActiveTab, getContinueContext, insertContinuation 
       composer.hidden = false;
       _clearContinueStatus();
     }
+    _save();
   }
 
   btnModeChat.addEventListener('click', () => setMode('chat'));
@@ -85,10 +121,16 @@ export function initChat({ getActiveTab, getContinueContext, insertContinuation 
   aiBtn.addEventListener('click', () => {
     const nowOpen = panel.hidden;
     panel.hidden = !nowOpen;
+    _panelOpen = nowOpen;
     aiBtn.classList.toggle('is-active', nowOpen);
+    _save();
     if (nowOpen) {
+      _currentSelection = getEditorSelection?.() ?? null;
+      _updateSelectionChip();
       renderThread(currentPath());
       input.focus();
+    } else {
+      selectionChip && (selectionChip.hidden = true);
     }
   });
 
@@ -116,8 +158,15 @@ export function initChat({ getActiveTab, getContinueContext, insertContinuation 
     const path = currentPath();
     if (!text || !path || _activeReader) return;
 
+    const sel = _currentSelection;
+    const prompt = sel
+      ? `The following code is selected in the editor:\n\`\`\`\n${sel}\n\`\`\`\n\n${text}`
+      : text;
+
     input.value = '';
     _autosize(input);
+    _currentSelection = null;
+    _updateSelectionChip();
 
     _pushMessage(path, { role: 'user', text });
     renderThread(path);
@@ -132,7 +181,7 @@ export function initChat({ getActiveTab, getContinueContext, insertContinuation 
       const resp = await fetch(`${base}/sessions/${encodeURIComponent(sessionId)}/prompt`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ prompt: text }),
+        body:    JSON.stringify({ prompt }),
       });
 
       if (!resp.ok) throw new Error(`${resp.status} ${resp.statusText}`);
@@ -169,7 +218,9 @@ export function initChat({ getActiveTab, getContinueContext, insertContinuation 
       el.innerHTML = 'Generating\u2026 <span class="chat-thinking-dots"><span>\u2022</span><span>\u2022</span><span>\u2022</span></span>';
     } else if (state === 'preview') {
       el.className = 'continue-status continue-status--preview';
-      el.innerHTML = '<kbd>Tab</kbd> to accept &nbsp;·&nbsp; any other key or click to cancel';
+      el.innerHTML =
+        '<button id="btn-continue-accept" class="continue-btn continue-btn--accept">Accept</button>' +
+        '<button id="btn-continue-cancel" class="continue-btn continue-btn--dismiss">Dismiss</button>';
     } else if (state === 'accepted') {
       el.className = 'continue-status continue-status--accepted';
       el.textContent = `Accepted. ${extra ?? ''}`;
@@ -207,14 +258,16 @@ export function initChat({ getActiveTab, getContinueContext, insertContinuation 
 
     const systemNote = [
       'You are a code completion assistant.',
-      'The user will send you a block of code.',
-      'Reply with ONLY the next logical continuation of that code.',
+      'You will be given code before and after a cursor position.',
+      'Reply with ONLY the code to insert at the cursor so that it fits naturally between the prefix and suffix.',
       'Do not repeat any of the provided code.',
       'Do not include markdown fences, explanations, or commentary.',
       'Output only the raw code to insert at the cursor.',
     ].join(' ');
 
-    const prompt = `${systemNote}\n\n\`\`\`\n${ctx.text}\n\`\`\``;
+    const prompt = ctx.suffix?.trim()
+      ? `${systemNote}\n\n[CODE BEFORE CURSOR]\n\`\`\`\n${ctx.text}\n\`\`\`\n\n[CODE AFTER CURSOR]\n\`\`\`\n${ctx.suffix}\n\`\`\``
+      : `${systemNote}\n\n\`\`\`\n${ctx.text}\n\`\`\``;
 
     let controller = null;
 
@@ -250,12 +303,17 @@ export function initChat({ getActiveTab, getContinueContext, insertContinuation 
         origAccept();
         _showContinueStatus('accepted', `${insertion.split('\n').length} line(s) inserted.`);
         btnModeContinue.disabled = false;
+        setTimeout(() => setMode('chat'), 1500);
       };
       controller.cancel = () => {
         origCancel();
         _showContinueStatus('cancelled');
         btnModeContinue.disabled = false;
+        setTimeout(() => setMode('chat'), 1500);
       };
+
+      document.getElementById('btn-continue-accept')?.addEventListener('click', (e) => { e.stopPropagation(); controller.accept(); });
+      document.getElementById('btn-continue-cancel')?.addEventListener('click', (e) => { e.stopPropagation(); controller.cancel(); });
 
     } catch (err) {
       _showContinueStatus('error', err.message);
@@ -353,6 +411,7 @@ export function initChat({ getActiveTab, getContinueContext, insertContinuation 
   function _pushMessage(path, msg) {
     if (!_threads.has(path)) _threads.set(path, []);
     _threads.get(path).push(msg);
+    _save();
   }
 
   function renderThread(path) {
@@ -473,6 +532,29 @@ export function initChat({ getActiveTab, getContinueContext, insertContinuation 
 
   input.addEventListener('input', () => _autosize(input));
 
+  // ── Restore persisted state ───────────────────────────────────────────────
+
+  (function _restore() {
+    const saved = _loadState();
+    if (!saved) return;
+    // Restore threads.
+    if (saved.threads) {
+      for (const [path, msgs] of Object.entries(saved.threads)) {
+        if (Array.isArray(msgs) && msgs.length) _threads.set(path, msgs);
+      }
+    }
+    // Restore panel open state.
+    if (saved.open) {
+      _panelOpen = true;
+      panel.hidden = false;
+      aiBtn.classList.add('is-active');
+    }
+    // Restore mode (thread render deferred until onTabChange fires after restoreTabs).
+    if (saved.mode === 'continue' || saved.mode === 'chat') {
+      setMode(saved.mode);
+    }
+  })();
+
   // ── Public API ────────────────────────────────────────────────────────────
 
   return {
@@ -481,6 +563,11 @@ export function initChat({ getActiveTab, getContinueContext, insertContinuation 
       if (panel.hidden) return;
       if (_mode === 'chat') renderThread(path);
       else _showContinueStatus('idle');
+    },
+    /** Call when the editor selection changes. */
+    onSelectionChange(text) {
+      _currentSelection = text;
+      _updateSelectionChip();
     },
   };
 }

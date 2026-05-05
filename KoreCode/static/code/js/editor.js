@@ -6,6 +6,7 @@ import {
   Decoration,
   highlightActiveLine,
   highlightActiveLineGutter,
+  highlightWhitespace,
   keymap,
   lineNumbers,
 } from 'https://jspm.dev/@codemirror/view';
@@ -127,7 +128,7 @@ const codeHighlightStyle = HighlightStyle.define([
   { tag: [t.strong], fontWeight: '700', color: '#d4d4d4' },
 ]);
 
-export function createEditor({ runFind, runFindNext, runFindPrevious, closeFindBar, applyFindQuery, getCurrentFindQuery, renderTree, expandAncestors, onTabChange }) {
+export function createEditor({ runFind, runFindNext, runFindPrevious, closeFindBar, applyFindQuery, getCurrentFindQuery, renderTree, expandAncestors, onTabChange, onSelectionChange = null }) {
   const languageCompartment = new Compartment();
   const editableCompartment = new Compartment();
   const readonlyCompartment = new Compartment();
@@ -433,6 +434,7 @@ export function createEditor({ runFind, runFindNext, runFindPrevious, closeFindB
         autocompletion(),
         highlightActiveLine(),
         highlightSelectionMatches(),
+        highlightWhitespace(),
         syntaxHighlighting(codeHighlightStyle, { fallback: true }),
         languageCompartment.of([]),
         editableCompartment.of(EditorView.editable.of(false)),
@@ -461,6 +463,11 @@ export function createEditor({ runFind, runFindNext, runFindPrevious, closeFindB
         ]),
         editorTheme,
         EditorView.updateListener.of((update) => {
+          if (update.selectionSet && !suppressEditorSync) {
+            const sel = update.state.selection.main;
+            const selText = sel.empty ? null : update.state.doc.sliceString(sel.from, sel.to);
+            onSelectionChange?.(selText);
+          }
           if (!update.docChanged || suppressEditorSync) {
             return;
           }
@@ -496,24 +503,30 @@ export function createEditor({ runFind, runFindNext, runFindPrevious, closeFindB
     restoreTabs,
     updateSaveButton,
 
-    /**
-     * Returns the text from the start of the file up to the cursor (max 120 lines),
-     * plus the cursor offset within that text. Used to build a Continue prompt.
-     */
     getContinueContext() {
       const tab = getActiveTab();
       if (!tab) return null;
       const doc    = editorView.state.doc;
       const cursor = editorView.state.selection.main.head;
       const line   = doc.lineAt(cursor);
-      // Up to 120 lines ending at the cursor line.
+      // Prefix: up to 120 lines ending at cursor.
       const fromLine = Math.max(1, line.number - 119);
       const from     = doc.line(fromLine).from;
+      // Suffix: up to 40 lines starting after cursor.
+      const toLine = Math.min(doc.lines, line.number + 40);
+      const to     = doc.line(toLine).to;
       return {
         path:   tab.path,
         text:   doc.sliceString(from, cursor),
+        suffix: doc.sliceString(cursor, to),
         offset: cursor,
       };
+    },
+
+    getEditorSelection() {
+      const sel = editorView.state.selection.main;
+      if (sel.empty) return null;
+      return editorView.state.doc.sliceString(sel.from, sel.to);
     },
 
     /**
@@ -566,16 +579,18 @@ export function createEditor({ runFind, runFindNext, runFindPrevious, closeFindB
         editorView.focus();
       }
 
+      // Mutable controller — chat.js may replace .accept/.cancel after creation.
+      const ctl = { accept, cancel };
+
       function onKey(e) {
-        if (e.key === 'Tab') {
-          e.preventDefault();
-          accept();
-        } else if (!e.ctrlKey && !e.altKey && !e.metaKey) {
-          cancel();
+        // Any regular keypress while ghost text is visible cancels the preview
+        // so the user doesn't accidentally type alongside it.
+        if (!e.ctrlKey && !e.altKey && !e.metaKey) {
+          ctl.cancel();
         }
       }
 
-      function onMouseDown() { cancel(); }
+      function onMouseDown() { ctl.cancel(); }
 
       function cleanup() {
         editorView.dom.removeEventListener('keydown', onKey, true);
@@ -589,7 +604,7 @@ export function createEditor({ runFind, runFindNext, runFindPrevious, closeFindB
       // Mark the ghost text visually.
       _applyContinuationMark(insertedFrom, insertedTo);
 
-      return { accept, cancel };
+      return ctl;
     },
   };
 }

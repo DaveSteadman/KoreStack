@@ -94,6 +94,13 @@
 
 /* --- CodeMirror overrides --- */
 
+.cm-highlightSpace::before {
+  content: '·';
+  color: var(--text-dim);
+  opacity: 0.4;
+  pointer-events: none;
+}
+
 .cm-editor {
   height: 100%;
   font-size: 13px;
