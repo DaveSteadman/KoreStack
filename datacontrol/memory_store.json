@@ -2187,6 +2187,15 @@
       "fact": "If your environment uses an older version of Python, you must stick with the `if/elif` approach",
       "access_count": 0,
       "last_accessed": null
+    },
+    {
+      "id": "32a1de4a",
+      "stored": "2026-05-06 22:52:02",
+      "updated": null,
+      "category": "environment",
+      "fact": "* **Type Hinting (`: float`)**: This tells anyone reading the code (and the Python interpreter) that these variables are expected to be **floating-point numbers** (decimals)",
+      "access_count": 0,
+      "last_accessed": null
     }
   ]
 }

@@ -22,11 +22,11 @@ const _DEFAULT_PANEL_W = 340;
 // In-memory chat thread store: path → Array<{ role: 'user'|'assistant', text: string }>
 const _threads = new Map();
 
-function _saveState(open, mode, pendingRuns = {}) {
+function _saveState(open, mode, pendingRuns = {}, continueState = null) {
   try {
     const threads = {};
     for (const [path, msgs] of _threads) threads[path] = msgs;
-    localStorage.setItem(_STATE_KEY, JSON.stringify({ open, mode, threads, pendingRuns }));
+    localStorage.setItem(_STATE_KEY, JSON.stringify({ open, mode, threads, pendingRuns, continueState }));
   } catch (_) {}
 }
 
@@ -50,7 +50,7 @@ let _activeReader = null;
  * }} opts
  * @returns {{ onTabChange: (path: string | null) => void }}
  */
-export function initChat({ getActiveTab, getContinueContext, insertContinuation, insertFromChat = null, getEditorSelection = null }) {
+export function initChat({ getActiveTab, getContinueContext, insertContinuation, insertFromChat = null, getEditorSelection = null, getCursorInfo = null }) {
   const panel         = document.getElementById('chat-panel');
   const splitter      = document.getElementById('chat-splitter');
   const thread        = document.getElementById('chat-thread');
@@ -64,9 +64,22 @@ export function initChat({ getActiveTab, getContinueContext, insertContinuation,
   const progressNote = document.getElementById('chat-progress-note');
 
   let _currentSelection = null;
+  let _currentCursor = { line: 1, column: 1, offset: 0 };
+
+  function _refreshCursorFromEditor() {
+    const cursor = getCursorInfo?.();
+    if (cursor && typeof cursor.line === 'number' && typeof cursor.column === 'number') {
+      _currentCursor = {
+        line: cursor.line,
+        column: cursor.column,
+        offset: typeof cursor.offset === 'number' ? cursor.offset : _currentCursor.offset,
+      };
+    }
+  }
 
   function _refreshSelectionFromEditor() {
     _currentSelection = getEditorSelection?.() ?? null;
+    _refreshCursorFromEditor();
     _updateSelectionChip();
   }
 
@@ -77,10 +90,11 @@ export function initChat({ getActiveTab, getContinueContext, insertContinuation,
       return;
     }
     const lines = _currentSelection ? _currentSelection.split('\n').length : 0;
+    const cursorText = `cursor L${_currentCursor.line}, C${_currentCursor.column}`;
     if (lines > 0) {
-      selectionLabel.textContent = `${lines} line${lines === 1 ? '' : 's'} selected · will be sent as context`;
+      selectionLabel.textContent = `${lines} line${lines === 1 ? '' : 's'} selected · ${cursorText} · will be sent as context`;
     } else {
-      selectionLabel.textContent = '0 lines selected · insert uses cursor position';
+      selectionLabel.textContent = `0 lines selected · ${cursorText} · insert uses cursor position`;
     }
     selectionChip.hidden = false;
   }
@@ -89,6 +103,7 @@ export function initChat({ getActiveTab, getContinueContext, insertContinuation,
   let _panelOpen = false;
   let _dragStartX = null;
   let _dragStartW = null;
+  let _continueInProgress = false;
   const _pendingRuns = new Map(); // path -> runId
 
   function _pendingToObject() {
@@ -97,7 +112,7 @@ export function initChat({ getActiveTab, getContinueContext, insertContinuation,
     return out;
   }
 
-  function _save() { _saveState(_panelOpen, _mode, _pendingToObject()); }
+  function _save() { _saveState(_panelOpen, _mode, _pendingToObject(), _continueStateSnapshot()); }
 
   function _setPending(path, runId) {
     if (!path || !runId) return;
@@ -120,10 +135,13 @@ export function initChat({ getActiveTab, getContinueContext, insertContinuation,
       return;
     }
     const path = currentPath();
-    progressNote.hidden = !(path && _pendingRuns.has(path));
-    if (!progressNote.hidden) {
-      progressNote.textContent = 'Thinking...';
-    }
+    const hasAnyPending = _pendingRuns.size > 0;
+    const hasCurrentPending = Boolean(path && _pendingRuns.has(path));
+    progressNote.hidden = !hasAnyPending;
+    if (progressNote.hidden) return;
+    progressNote.textContent = hasCurrentPending
+      ? 'Generating...'
+      : 'Generating... (in another tab)';
   }
 
   function _errorText(err) {
@@ -279,6 +297,21 @@ export function initChat({ getActiveTab, getContinueContext, insertContinuation,
     }
   });
 
+  // Refresh and resume when the page regains focus/visibility after switching tabs/apps.
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden || panel.hidden) return;
+    _syncThinkingNote();
+    void _resumePendingForPath(currentPath());
+    void _resumeContinueIfNeeded();
+  });
+
+  window.addEventListener('focus', () => {
+    if (panel.hidden) return;
+    _syncThinkingNote();
+    void _resumePendingForPath(currentPath());
+    void _resumeContinueIfNeeded();
+  });
+
   // ── Submit ───────────────────────────────────────────────────────────────
 
   input.addEventListener('keydown', (e) => {
@@ -429,6 +462,23 @@ export function initChat({ getActiveTab, getContinueContext, insertContinuation,
   // ── Continue mode ────────────────────────────────────────────────────────
 
   let _continueStatus = null;  // the current status element in the thread
+  let _continueController = null;
+  let _continuePreviewPath = null;
+  let _continuePendingRunId = null;
+  let _continuePendingContext = null;
+  let _continueResumeInFlight = false;
+
+  function _continueStateSnapshot() {
+    if (!_continueInProgress && !_continuePendingRunId) {
+      return null;
+    }
+    return {
+      inProgress: Boolean(_continueInProgress),
+      pendingRunId: _continuePendingRunId ?? null,
+      pendingContext: _continuePendingContext ?? null,
+      previewPath: _continuePreviewPath ?? null,
+    };
+  }
 
   function _showContinueStatus(state, extra) {
     _clearContinueStatus();
@@ -465,6 +515,34 @@ export function initChat({ getActiveTab, getContinueContext, insertContinuation,
     _continueStatus = null;
   }
 
+  function _clearContinuePreviewState() {
+    _continueController = null;
+    _continuePreviewPath = null;
+  }
+
+  function _clearContinuePendingRun() {
+    _continuePendingRunId = null;
+    _continuePendingContext = null;
+    _continueResumeInFlight = false;
+    _save();
+  }
+
+  function _bindContinuePreviewButtons() {
+    const acceptBtn = document.getElementById('btn-continue-accept');
+    const cancelBtn = document.getElementById('btn-continue-cancel');
+    if (!_continueController || !acceptBtn || !cancelBtn) {
+      return;
+    }
+    acceptBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      _continueController?.accept();
+    });
+    cancelBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      _continueController?.cancel();
+    });
+  }
+
   async function _runContinue() {
     if (_activeReader) return;
     const ctx = getContinueContext?.();
@@ -474,6 +552,7 @@ export function initChat({ getActiveTab, getContinueContext, insertContinuation,
     }
 
     _showContinueStatus('thinking');
+    _continueInProgress = true;
     btnModeContinue.disabled = true;
 
     // One shared workspace session for Continue actions.
@@ -493,8 +572,6 @@ export function initChat({ getActiveTab, getContinueContext, insertContinuation,
       ? `${systemNote}\n\n[CODE BEFORE CURSOR]\n\`\`\`\n${ctx.text}\n\`\`\`\n\n[CODE AFTER CURSOR]\n\`\`\`\n${ctx.suffix}\n\`\`\``
       : `${systemNote}\n\n\`\`\`\n${ctx.text}\n\`\`\``;
 
-    let controller = null;
-
     try {
       const resp = await fetch(`${base}/sessions/${encodeURIComponent(sessionId)}/prompt`, {
         method:  'POST',
@@ -504,7 +581,11 @@ export function initChat({ getActiveTab, getContinueContext, insertContinuation,
       if (!resp.ok) throw new Error(`${resp.status} ${resp.statusText}`);
 
       const { run_id } = await resp.json();
+      _continuePendingRunId = run_id;
+      _continuePendingContext = { path: ctx.path, offset: ctx.offset };
+      _save();
       const reply = await _streamContinue(base, run_id);
+      _clearContinuePendingRun();
 
       if (!reply.trim()) {
         _showContinueStatus('cancelled', '');
@@ -515,34 +596,120 @@ export function initChat({ getActiveTab, getContinueContext, insertContinuation,
       // Strip any accidental leading newline that appears when the model
       // outputs a blank first line before the code.
       const insertion = reply.replace(/^\n/, '');
+      const insertionLineCount = insertion.split('\n').length;
+      const continuePath = ctx.path;
 
+      _continueInProgress = false;
       _showContinueStatus('preview');
-      controller = insertContinuation(insertion);
+      _continueController = insertContinuation(insertion, { path: continuePath, offset: ctx.offset });
+      _continuePreviewPath = continuePath;
+      _save();
+      _bindContinuePreviewButtons();
 
       // Replace the preview status once the user decides.
-      const origAccept = controller.accept.bind(controller);
-      const origCancel = controller.cancel.bind(controller);
+      const origAccept = _continueController.accept.bind(_continueController);
+      const origCancel = _continueController.cancel.bind(_continueController);
 
-      controller.accept = () => {
+      _continueController.accept = () => {
         origAccept();
-        _showContinueStatus('accepted', `${insertion.split('\n').length} line(s) inserted.`);
+        _continueInProgress = false;
+        _showContinueStatus('accepted', `${insertionLineCount} line(s) inserted.`);
+        _clearContinuePreviewState();
+        _save();
         btnModeContinue.disabled = false;
         setTimeout(() => setMode('chat'), 1500);
       };
-      controller.cancel = () => {
+      _continueController.cancel = () => {
         origCancel();
+        _continueInProgress = false;
         _showContinueStatus('cancelled');
+        _clearContinuePreviewState();
+        _save();
         btnModeContinue.disabled = false;
         setTimeout(() => setMode('chat'), 1500);
       };
-
-      document.getElementById('btn-continue-accept')?.addEventListener('click', (e) => { e.stopPropagation(); controller.accept(); });
-      document.getElementById('btn-continue-cancel')?.addEventListener('click', (e) => { e.stopPropagation(); controller.cancel(); });
 
     } catch (err) {
+      if (_isTransientStreamInterrupt(err) && _continuePendingRunId) {
+        _continueInProgress = true;
+        _save();
+        _showContinueStatus('thinking');
+        return;
+      }
+      _continueInProgress = false;
+      _clearContinuePendingRun();
+      _save();
       _showContinueStatus('error', _errorText(err));
       btnModeContinue.disabled = false;
       _activeReader = null;
+    }
+  }
+
+  async function _resumeContinueIfNeeded() {
+    if (!_continueInProgress || !_continuePendingRunId || _activeReader || _continueResumeInFlight) {
+      return;
+    }
+    _continueResumeInFlight = true;
+    const base = agentBase();
+    try {
+      const reply = await _streamContinue(base, _continuePendingRunId);
+      _clearContinuePendingRun();
+      if (!reply.trim()) {
+        _continueInProgress = false;
+        _showContinueStatus('error', 'Continue returned no content.');
+        btnModeContinue.disabled = false;
+        return;
+      }
+
+      const insertion = reply.replace(/^\n/, '');
+      const insertionLineCount = insertion.split('\n').length;
+      const continuePath = _continuePendingContext?.path ?? currentPath();
+      const continueOffset = typeof _continuePendingContext?.offset === 'number'
+        ? _continuePendingContext.offset
+        : undefined;
+
+      _continueInProgress = false;
+      _showContinueStatus('preview');
+      _continueController = insertContinuation(insertion, { path: continuePath, offset: continueOffset });
+      _continuePreviewPath = continuePath;
+      _save();
+      _bindContinuePreviewButtons();
+
+      const origAccept = _continueController.accept.bind(_continueController);
+      const origCancel = _continueController.cancel.bind(_continueController);
+
+      _continueController.accept = () => {
+        origAccept();
+        _continueInProgress = false;
+        _showContinueStatus('accepted', `${insertionLineCount} line(s) inserted.`);
+        _clearContinuePreviewState();
+        _save();
+        btnModeContinue.disabled = false;
+        setTimeout(() => setMode('chat'), 1500);
+      };
+      _continueController.cancel = () => {
+        origCancel();
+        _continueInProgress = false;
+        _showContinueStatus('cancelled');
+        _clearContinuePreviewState();
+        _save();
+        btnModeContinue.disabled = false;
+        setTimeout(() => setMode('chat'), 1500);
+      };
+    } catch (err) {
+      if (_isTransientStreamInterrupt(err)) {
+        _continueInProgress = true;
+        _save();
+        _showContinueStatus('thinking');
+      } else {
+        _continueInProgress = false;
+        _clearContinuePendingRun();
+        _save();
+        _showContinueStatus('error', _errorText(err));
+        btnModeContinue.disabled = false;
+      }
+    } finally {
+      _continueResumeInFlight = false;
     }
   }
 
@@ -858,6 +1025,13 @@ export function initChat({ getActiveTab, getContinueContext, insertContinuation,
         }
       }
     }
+    if (saved.continueState && typeof saved.continueState === 'object') {
+      const c = saved.continueState;
+      _continueInProgress = Boolean(c.inProgress);
+      _continuePendingRunId = typeof c.pendingRunId === 'string' && c.pendingRunId ? c.pendingRunId : null;
+      _continuePendingContext = c.pendingContext && typeof c.pendingContext === 'object' ? c.pendingContext : null;
+      _continuePreviewPath = typeof c.previewPath === 'string' && c.previewPath ? c.previewPath : null;
+    }
     _syncThinkingNote();
     // Restore panel open state.
     if (saved.open) {
@@ -866,6 +1040,10 @@ export function initChat({ getActiveTab, getContinueContext, insertContinuation,
     // Restore mode (thread render deferred until onTabChange fires after restoreTabs).
     if (saved.mode === 'continue' || saved.mode === 'chat') {
       setMode(saved.mode);
+      if (saved.mode === 'continue' && _continueInProgress) {
+        _showContinueStatus('thinking');
+        void _resumeContinueIfNeeded();
+      }
     }
   })();
 
@@ -881,11 +1059,32 @@ export function initChat({ getActiveTab, getContinueContext, insertContinuation,
         renderThread(path);
         void _resumePendingForPath(path);
       }
-      else _showContinueStatus('idle');
+      else if (_continueInProgress) {
+        _showContinueStatus('thinking');
+        void _resumeContinueIfNeeded();
+      } else if (_continueController && path && _continuePreviewPath === path) {
+        _showContinueStatus('preview');
+        _bindContinuePreviewButtons();
+      } else if (_continueController && _continuePreviewPath && path !== _continuePreviewPath) {
+        _showContinueStatus('error', 'Continue preview is attached to a different file tab. Return there to Accept or Dismiss.');
+      } else {
+        _showContinueStatus('idle');
+      }
     },
     /** Call when the editor selection changes. */
-    onSelectionChange(text) {
-      _currentSelection = text;
+    onSelectionChange(payload) {
+      if (payload && typeof payload === 'object') {
+        _currentSelection = payload.text ?? null;
+        if (typeof payload.line === 'number' && typeof payload.column === 'number') {
+          _currentCursor = {
+            line: payload.line,
+            column: payload.column,
+            offset: typeof payload.offset === 'number' ? payload.offset : _currentCursor.offset,
+          };
+        }
+      } else {
+        _currentSelection = payload;
+      }
       _updateSelectionChip();
     },
   };

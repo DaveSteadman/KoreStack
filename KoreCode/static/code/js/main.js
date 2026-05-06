@@ -34,6 +34,7 @@ const chat = initChat({
   insertContinuation: (text) => editorApi.insertContinuation(text),
   insertFromChat: (text) => editorApi.insertTextAtSelection(text),
   getEditorSelection: () => editorApi.getEditorSelection(),
+  getCursorInfo: () => editorApi.getCursorInfo(),
 });
 
 initFind({ editorView, getActiveTab });

@@ -196,6 +196,17 @@ export function createEditor({ runFind, runFindNext, runFindPrevious, closeFindB
     return state.openTabs.find((tab) => tab.path === state.activePath) ?? null;
   }
 
+  function getCursorInfo() {
+    const sel = editorView.state.selection.main;
+    const head = sel.head;
+    const line = editorView.state.doc.lineAt(head);
+    return {
+      line: line.number,
+      column: (head - line.from) + 1,
+      offset: head,
+    };
+  }
+
   function updateSaveButton() {
     const active = getActiveTab();
     findButton.disabled = !active;
@@ -532,7 +543,14 @@ export function createEditor({ runFind, runFindNext, runFindPrevious, closeFindB
           if (update.selectionSet) {
             const sel = update.state.selection.main;
             const selText = sel.empty ? null : update.state.doc.sliceString(sel.from, sel.to);
-            onSelectionChange?.(selText);
+            const head = sel.head;
+            const line = update.state.doc.lineAt(head);
+            onSelectionChange?.({
+              text: selText,
+              line: line.number,
+              column: (head - line.from) + 1,
+              offset: head,
+            });
           }
           if (!update.docChanged || suppressEditorSync) {
             return;
@@ -602,6 +620,8 @@ export function createEditor({ runFind, runFindNext, runFindPrevious, closeFindB
       return editorView.state.doc.sliceString(sel.from, sel.to);
     },
 
+    getCursorInfo,
+
     insertTextAtSelection(text) {
       const activeTab = getActiveTab();
       if (!activeTab || typeof text !== 'string' || !text.length) {
@@ -624,8 +644,18 @@ export function createEditor({ runFind, runFindNext, runFindPrevious, closeFindB
      * accept() commits the text as a real edit; cancel() removes the ghost.
      * Any keydown other than Tab calls cancel() automatically.
      */
-    insertContinuation(text) {
-      const offset = editorView.state.selection.main.head;
+    insertContinuation(text, options = {}) {
+      const targetPath = typeof options.path === 'string' ? options.path : null;
+      if (targetPath && state.activePath !== targetPath) {
+        const targetTab = state.openTabs.find((tab) => tab.path === targetPath);
+        if (targetTab) {
+          setActiveTab(targetPath);
+        }
+      }
+
+      const offset = typeof options.offset === 'number'
+        ? Math.max(0, Math.min(editorView.state.doc.length, options.offset))
+        : editorView.state.selection.main.head;
 
       suppressEditorSync = true;
       editorView.dispatch({
