@@ -28,8 +28,30 @@ import { json } from 'https://jspm.dev/@codemirror/lang-json';
 import { markdown } from 'https://jspm.dev/@codemirror/lang-markdown';
 import { html } from 'https://jspm.dev/@codemirror/lang-html';
 import { css } from 'https://jspm.dev/@codemirror/lang-css';
-import { state, api, STORAGE_TABS, STORAGE_ACTIVE } from './state.js';
+import { state, api, STORAGE_TABS, STORAGE_ACTIVE, STORAGE_DRAFTS } from './state.js';
 import { fileIconForPath } from '/ui-elements/assets/js/icons.js';
+
+const STORAGE_LINE_WRAP = 'korecode:line-wrap';
+
+function _loadDrafts() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(STORAGE_DRAFTS) || '{}');
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+      return {};
+    }
+    return raw;
+  } catch {
+    return {};
+  }
+}
+
+function _saveDrafts(drafts) {
+  try {
+    localStorage.setItem(STORAGE_DRAFTS, JSON.stringify(drafts));
+  } catch {
+    // Ignore localStorage quota or availability errors.
+  }
+}
 
 // ── Continuation ghost-text decoration ───────────────────────────────────────
 const addContinuationMark    = StateEffect.define();
@@ -71,6 +93,7 @@ const editorEmpty = document.getElementById('editor-empty');
 const editorHost = document.getElementById('editor-host');
 const findButton = document.getElementById('btn-find');
 const saveButton = document.getElementById('btn-save');
+const wrapButton = document.getElementById('btn-wrap');
 
 const editorTheme = EditorView.theme(
   {
@@ -132,7 +155,42 @@ export function createEditor({ runFind, runFindNext, runFindPrevious, closeFindB
   const languageCompartment = new Compartment();
   const editableCompartment = new Compartment();
   const readonlyCompartment = new Compartment();
+  const wrapCompartment = new Compartment();
   let suppressEditorSync = false;
+  const drafts = _loadDrafts();
+  let lineWrapEnabled = localStorage.getItem(STORAGE_LINE_WRAP) === '1';
+
+  function updateWrapButton() {
+    if (!wrapButton) return;
+    wrapButton.classList.toggle('is-active', lineWrapEnabled);
+    wrapButton.setAttribute('aria-pressed', lineWrapEnabled ? 'true' : 'false');
+    wrapButton.title = lineWrapEnabled ? 'Disable line wrap' : 'Enable line wrap';
+  }
+
+  function applyLineWrap(enabled) {
+    lineWrapEnabled = Boolean(enabled);
+    editorView.dispatch({
+      effects: wrapCompartment.reconfigure(lineWrapEnabled ? EditorView.lineWrapping : []),
+    });
+    try {
+      localStorage.setItem(STORAGE_LINE_WRAP, lineWrapEnabled ? '1' : '0');
+    } catch {
+      // Ignore localStorage availability errors.
+    }
+    updateWrapButton();
+  }
+
+  function setDraft(path, content) {
+    if (!path) return;
+    drafts[path] = content;
+    _saveDrafts(drafts);
+  }
+
+  function clearDraft(path) {
+    if (!path || !(path in drafts)) return;
+    delete drafts[path];
+    _saveDrafts(drafts);
+  }
 
   function getActiveTab() {
     return state.openTabs.find((tab) => tab.path === state.activePath) ?? null;
@@ -239,6 +297,9 @@ export function createEditor({ runFind, runFindNext, runFindPrevious, closeFindB
     if (active?.editorState) {
       // Restore previously saved state — preserves cursor, selection, scroll.
       editorView.setState(active.editorState);
+      editorView.dispatch({
+        effects: wrapCompartment.reconfigure(lineWrapEnabled ? EditorView.lineWrapping : []),
+      });
       suppressEditorSync = false;
       const savedScrollTop = active.scrollTop ?? 0;
       requestAnimationFrame(() => {
@@ -286,6 +347,7 @@ export function createEditor({ runFind, runFindNext, runFindPrevious, closeFindB
     if (tab.dirty && !window.confirm(`Discard unsaved changes in ${tab.name}?`)) {
       return;
     }
+    clearDraft(path);
     state.openTabs = state.openTabs.filter((item) => item.path !== path);
     if (state.activePath === path) {
       const next = state.openTabs[state.openTabs.length - 1] || null;
@@ -315,6 +377,7 @@ export function createEditor({ runFind, runFindNext, runFindPrevious, closeFindB
     active.savedContent = active.content;
     active.modifiedAt = payload.modified_at;
     active.dirty = false;
+    clearDraft(active.path);
     persistTabs();
     renderTabs();
     renderMeta();
@@ -330,13 +393,15 @@ export function createEditor({ runFind, runFindNext, runFindPrevious, closeFindB
     const treeStatus = document.getElementById('tree-status');
     treeStatus.textContent = `Opening ${path}\u2026`;
     const payload = await api(`/api/file?path=${encodeURIComponent(path)}`);
+    const draftContent = typeof drafts[payload.path] === 'string' ? drafts[payload.path] : null;
+    const initialContent = draftContent ?? payload.content;
     const tab = {
       path: payload.path,
       name: payload.name,
-      content: payload.content,
+      content: initialContent,
       savedContent: payload.content,
       modifiedAt: payload.modified_at,
-      dirty: false,
+      dirty: initialContent !== payload.content,
     };
     state.openTabs.push(tab);
     await expandAncestors(path);
@@ -439,6 +504,7 @@ export function createEditor({ runFind, runFindNext, runFindPrevious, closeFindB
         languageCompartment.of([]),
         editableCompartment.of(EditorView.editable.of(false)),
         readonlyCompartment.of(EditorState.readOnly.of(true)),
+        wrapCompartment.of(lineWrapEnabled ? EditorView.lineWrapping : []),
         keymap.of([
           { key: 'Mod-s', run: () => { void saveActiveTab(); return true; } },
           { key: 'Mod-f', run: () => runFind() },
@@ -463,7 +529,7 @@ export function createEditor({ runFind, runFindNext, runFindPrevious, closeFindB
         ]),
         editorTheme,
         EditorView.updateListener.of((update) => {
-          if (update.selectionSet && !suppressEditorSync) {
+          if (update.selectionSet) {
             const sel = update.state.selection.main;
             const selText = sel.empty ? null : update.state.doc.sliceString(sel.from, sel.to);
             onSelectionChange?.(selText);
@@ -477,6 +543,8 @@ export function createEditor({ runFind, runFindNext, runFindPrevious, closeFindB
           }
           activeTab.content = update.state.doc.toString();
           activeTab.dirty = activeTab.content !== activeTab.savedContent;
+          if (activeTab.dirty) setDraft(activeTab.path, activeTab.content);
+          else clearDraft(activeTab.path);
           persistTabs();
           renderTabs();
           renderMeta();
@@ -491,6 +559,11 @@ export function createEditor({ runFind, runFindNext, runFindPrevious, closeFindB
   saveButton.addEventListener('click', () => {
     void saveActiveTab();
   });
+
+  wrapButton?.addEventListener('click', () => {
+    applyLineWrap(!lineWrapEnabled);
+  });
+  updateWrapButton();
 
   return {
     editorView,
@@ -529,6 +602,21 @@ export function createEditor({ runFind, runFindNext, runFindPrevious, closeFindB
       return editorView.state.doc.sliceString(sel.from, sel.to);
     },
 
+    insertTextAtSelection(text) {
+      const activeTab = getActiveTab();
+      if (!activeTab || typeof text !== 'string' || !text.length) {
+        return false;
+      }
+      const sel = editorView.state.selection.main;
+      const from = sel.from;
+      editorView.dispatch({
+        changes: { from: sel.from, to: sel.to, insert: text },
+        selection: { anchor: from + text.length },
+      });
+      editorView.focus();
+      return true;
+    },
+
     /**
      * Inserts `text` at the current cursor position as a ghost/preview, styled
      * with the `cm-continuation` class. Returns a controller object:
@@ -562,6 +650,8 @@ export function createEditor({ runFind, runFindNext, runFindPrevious, closeFindB
         if (activeTab) {
           activeTab.content = editorView.state.doc.toString();
           activeTab.dirty   = activeTab.content !== activeTab.savedContent;
+          if (activeTab.dirty) setDraft(activeTab.path, activeTab.content);
+          else clearDraft(activeTab.path);
           persistTabs();
           renderTabs();
           renderMeta();

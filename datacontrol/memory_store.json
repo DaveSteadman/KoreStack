@@ -286,8 +286,8 @@
       "updated": null,
       "category": "project",
       "fact": "Provide a concise summary of the three most-discussed open source AI agent frameworks in Python currently, and state which one is most suitable for a solo developer",
-      "access_count": 90,
-      "last_accessed": "2026-05-04 13:52:08"
+      "access_count": 92,
+      "last_accessed": "2026-05-06 22:13:10"
     },
     {
       "id": "1b71e6b0",
@@ -430,8 +430,8 @@
       "updated": null,
       "category": "environment",
       "fact": " The piece notes that OpenAI is already embedding “alignment‑as‑code” pipelines that auto‑audit outputs for safety violations, and that its GPT‑5 roadmap targets a shift‑left approach where models are continuously fine‑tuned on live user feedback loops",
-      "access_count": 29,
-      "last_accessed": "2026-05-04 13:41:15"
+      "access_count": 31,
+      "last_accessed": "2026-05-06 22:13:10"
     },
     {
       "id": "c3db2f9f",
@@ -508,9 +508,9 @@
     {
       "id": "6713ee28",
       "stored": "2026-04-20 22:30:51",
-      "updated": null,
+      "updated": "2026-05-06 22:00:04",
       "category": "environment",
-      "fact": "Yes – the installed Python version is 3.14.4.",
+      "fact": "Yes, this is a perfect candidate for the **`match`** statement (Python's version of a `switch`/`case` statement), which was introduced in **Python 3.10**",
       "access_count": 2,
       "last_accessed": "2026-05-04 13:19:28"
     },
@@ -574,8 +574,8 @@
       "updated": null,
       "category": "general",
       "fact": "cpp runs entirely on the machine where the code is compiled",
-      "access_count": 0,
-      "last_accessed": null
+      "access_count": 2,
+      "last_accessed": "2026-05-06 22:13:10"
     },
     {
       "id": "aa3290cb",
@@ -754,8 +754,8 @@
       "updated": null,
       "category": "general",
       "fact": "**Row 5 (Thingamajig 3 7.00)** – Only **one column** is present instead of the expected three (column‑count mismatch)",
-      "access_count": 8,
-      "last_accessed": "2026-05-04 13:22:24"
+      "access_count": 10,
+      "last_accessed": "2026-05-06 22:13:10"
     },
     {
       "id": "1a145bf5",
@@ -898,8 +898,8 @@
       "updated": null,
       "category": "environment",
       "fact": "Python 3.13 (Oct 2024) → Python 3.14 (expected Oct 2025) is scheduled for a roughly one‑year interval, continuing the annual release cadence",
-      "access_count": 14,
-      "last_accessed": "2026-05-04 13:47:53"
+      "access_count": 16,
+      "last_accessed": "2026-05-06 22:13:10"
     },
     {
       "id": "048850f7",
@@ -2158,6 +2158,33 @@
       "updated": null,
       "category": "environment",
       "fact": "Because they are highly parallelizable, researchers could scale models from millions of parameters to trillions",
+      "access_count": 0,
+      "last_accessed": null
+    },
+    {
+      "id": "3d41eb17",
+      "stored": "2026-05-06 22:00:04",
+      "updated": null,
+      "category": "environment",
+      "fact": "Using `match` makes the code more readable by removing the repetitive `path",
+      "access_count": 0,
+      "last_accessed": null
+    },
+    {
+      "id": "a097d1ee",
+      "stored": "2026-05-06 22:00:04",
+      "updated": null,
+      "category": "environment",
+      "fact": "1. **Readability**: You are matching against the value of `path",
+      "access_count": 0,
+      "last_accessed": null
+    },
+    {
+      "id": "900804b5",
+      "stored": "2026-05-06 22:00:04",
+      "updated": null,
+      "category": "environment",
+      "fact": "If your environment uses an older version of Python, you must stick with the `if/elif` approach",
       "access_count": 0,
       "last_accessed": null
     }

@@ -1,5 +1,6 @@
 export const STORAGE_TABS = 'korecode:open-tabs';
 export const STORAGE_ACTIVE = 'korecode:active-tab';
+export const STORAGE_DRAFTS = 'korecode:file-drafts';
 
 export const state = {
   root: '',

@@ -4,7 +4,6 @@ import { createEditor } from './editor.js';
 import { initFind, runFind, runFindNext, runFindPrevious, closeFindBar, applyFindQuery, getCurrentFindQuery } from './find.js';
 import { initExplorer, refreshTree, renderTree, expandAncestors } from './explorer.js';
 import { initChat } from './chat.js';
-import { state } from './state.js';
 
 initTopbar({ currentService: 'korecode', urls: window.__koreSuiteUrls || {} });
 initAppBar({
@@ -33,6 +32,7 @@ const chat = initChat({
   getActiveTab,
   getContinueContext: () => editorApi.getContinueContext(),
   insertContinuation: (text) => editorApi.insertContinuation(text),
+  insertFromChat: (text) => editorApi.insertTextAtSelection(text),
   getEditorSelection: () => editorApi.getEditorSelection(),
 });
 
@@ -45,14 +45,6 @@ initPanels({
   minLeft: 160,
   maxLeft: 600,
   storageKey: 'korecode-sidebar-w',
-});
-
-window.addEventListener('beforeunload', (event) => {
-  if (!state.openTabs.some((tab) => tab.dirty)) {
-    return;
-  }
-  event.preventDefault();
-  event.returnValue = '';
 });
 
 void boot();

@@ -37,6 +37,7 @@
         <div id="editor-actions">
           <button id="btn-find" class="toolbar-btn" type="button">Find</button>
           <button id="btn-save" class="toolbar-btn toolbar-btn-primary" type="button">Save</button>
+          <button id="btn-wrap" class="toolbar-btn" type="button" title="Toggle line wrap">Wrap</button>
           <button id="btn-ai" class="toolbar-btn" type="button" title="Toggle AI chat (Alt+A)">AI</button>
         </div>
       </div>
@@ -61,6 +62,7 @@
             <button id="btn-mode-chat" class="chat-mode-btn is-active" type="button">Chat</button>
             <button id="btn-mode-continue" class="chat-mode-btn" type="button">Continue</button>
           </div>
+          <div id="chat-progress-note" hidden>Thinking...</div>
           <div id="chat-thread"></div>
           <div id="chat-composer">
             <div id="chat-selection-chip" hidden>

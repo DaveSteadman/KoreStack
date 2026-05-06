@@ -94,6 +94,12 @@ body {
   color: var(--accent-2);
 }
 
+.toolbar-btn.is-active {
+  background: color-mix(in srgb, var(--accent) 16%, var(--surface-2));
+  border-color: color-mix(in srgb, var(--accent) 42%, transparent);
+  color: var(--text);
+}
+
 @media (max-width: 680px) {
   #code-app {
     height: calc(100vh - var(--topbar-h, 38px) - var(--appbar-h, 42px));

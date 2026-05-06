@@ -25,6 +25,15 @@
   color: var(--text);
 }
 
+#chat-progress-note {
+  flex-shrink: 0;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--text-dim);
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+}
+
 .chat-mode-btn.is-active {
   background: color-mix(in srgb, var(--accent) 18%, var(--surface));
   border-color: color-mix(in srgb, var(--accent) 40%, transparent);
@@ -95,6 +104,10 @@
 }
 
 #chat-splitter:hover {
+  background: var(--accent);
+}
+
+#chat-splitter.is-dragging {
   background: var(--accent);
 }
 
@@ -214,6 +227,17 @@
   white-space: pre;
   scrollbar-width: thin;
   scrollbar-color: var(--border) transparent;
+}
+
+.chat-msg-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.chat-msg-actions .kcui-tag:disabled {
+  opacity: 0.45;
+  cursor: default;
 }
 
 /* Divider between completed exchanges */
