@@ -7,10 +7,8 @@ import * as cell       from './cell.js';
 import * as properties from './properties.js';
 import * as fileio     from './fileio.js';
 import { colLetter, addrOf, evaluate } from './formula.js';
-import * as topbar     from '/ui-elements/assets/js/topbar.js';
-import * as appbar     from '/ui-elements/assets/js/appbar.js';
+import { initTopbar, initAppBar, initAppTabs, renderAppMenu, initAppMenuEvents } from '/ui-elements/assets/js/chrome.js?v=20260508b';
 import * as draft      from '/static/shared/js/draft.js';
-import { renderAppMenu, initAppMenuEvents } from '/ui-elements/assets/js/appMenu.js';
 
 const canvas      = document.getElementById('grid');
 const container   = document.getElementById('canvas-container');
@@ -61,8 +59,8 @@ renderAppMenu({
 
 grid.init(canvas, container, cellEditor, _onCommit, _onSelect, _beginFormulaReferenceEdit);
 fileio.init(_onStateChange);
-topbar.initTopbar({ currentService: 'koredocs', urls: window.__koreSuiteUrls || {} });
-appbar.initAppBar({
+initTopbar({ currentService: 'koredocs', urls: window.__koreSuiteUrls || {} });
+initAppBar({
   mountId: 'tab-bar',
   currentService: 'koredocs',
   overline: 'Spreadsheet',
@@ -70,7 +68,7 @@ appbar.initAppBar({
   brandIcon: 'koresheet',
   editorTabsSlot: 'koredocs-tabs',
 });
-appbar.initAppTabs('koresheet', { mountId: 'koredocs-tabs', renderBrand: false });
+initAppTabs('koresheet', { mountId: 'koredocs-tabs', renderBrand: false });
 
 // Auto-open from ?file= URL param, else start with a blank sheet
 const autoOpened = await fileio.autoOpenFromUrl(_refresh);

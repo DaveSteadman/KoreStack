@@ -1,52 +1,98 @@
 /**
  * icons.js — shared icon registry for UIElements shell primitives.
- * All SVG markup is sourced from svg_icons.js.
+ *
+ * Icons are file-based SVGs imported under UIElements/assets/icons/<set-name>.
  */
 
-import {
-  koreStackIcon, koreAgentIcon, koreDataIcon, koreDocsIcon, koreCodeIcon,
-  koreCommsIcon, koreChatIcon,
-  koreDocFileIcon, koreSheetFileIcon, koreDiagFileIcon,
-  pyFileIcon, jsFileIcon, jsonFileIcon, htmlFileIcon, cssFileIcon, genericFileIcon,
-} from './svg_icons.js?v=20260501a';
+import { SVG_ICON_SETS, svgIconUrl, svgIconImg, svgIconMask } from './svgicons.js?v=20260508b';
 
 export { fileIconForPath };
 
-/**
- * Returns an SVG icon for a given file path based on its extension.
- * Falls back to a generic file icon for unknown types.
- */
-function fileIconForPath(path, size = 12) {
-  if (!path) { return genericFileIcon(size); }
-  const lower = path.toLowerCase();
-  if (lower.endsWith('.py') || lower.endsWith('.pyi')) { return pyFileIcon(size); }
-  if (lower.endsWith('.js') || lower.endsWith('.mjs') || lower.endsWith('.cjs') || lower.endsWith('.ts')) { return jsFileIcon(size); }
-  if (lower.endsWith('.json')) { return jsonFileIcon(size); }
-  if (lower.endsWith('.md') || lower.endsWith('.markdown')) { return koreDocFileIcon(size); }
-  if (lower.endsWith('.html') || lower.endsWith('.htm')) { return htmlFileIcon(size); }
-  if (lower.endsWith('.css')) { return cssFileIcon(size); }
-  if (lower.endsWith('.csv') || lower.endsWith('.tsv')) { return koreSheetFileIcon(size); }
-  return genericFileIcon(size);
+// Back-compat alias.
+export const ICON_SETS = SVG_ICON_SETS;
+
+// One icon file per app and per KoreDocs file type.
+export const ICON_FILES = Object.freeze({
+  korestack: 'layer-group-svgrepo-com',
+  koreagent: 'circuit-svgrepo-com',
+  koredata: 'table-alt-svgrepo-com',
+  koredocs: 'book-user-svgrepo-com',
+  korecode: 'draw-square-svgrepo-com',
+  korecomms: 'network-wired-svgrepo-com',
+  korechat: 'bell-svgrepo-com',
+  koredoc: 'text-svgrepo-com',
+  koresheet: 'table-list-alt-svgrepo-com',
+  kodiag: 'chart-mixed-svgrepo-com',
+  korefile: 'folder-image-svgrepo-com',
+});
+
+function makePackIcon(iconName) {
+  return (size = 12) => svgIconMask(iconName, {
+    setName: 'dazzle-line',
+    size,
+    className: 'kcui-icon kcui-icon--mask',
+    color: 'var(--kcui-icon-color, currentColor)',
+    alt: '',
+  });
 }
 
+export const KORESTACK_ICON = makePackIcon(ICON_FILES.korestack);
+export const KOREAGENT_ICON = makePackIcon(ICON_FILES.koreagent);
+export const KOREDATA_ICON = makePackIcon(ICON_FILES.koredata);
+export const KOREDOCS_ICON = makePackIcon(ICON_FILES.koredocs);
+export const KORECODE_ICON = makePackIcon(ICON_FILES.korecode);
+export const KORECOMMS_ICON = makePackIcon(ICON_FILES.korecomms);
+export const KORECHAT_ICON = makePackIcon(ICON_FILES.korechat);
+
+export const KOREDOC_FILE_ICON = makePackIcon(ICON_FILES.koredoc);
+export const KORESHEET_FILE_ICON = makePackIcon(ICON_FILES.koresheet);
+export const KODIAG_FILE_ICON = makePackIcon(ICON_FILES.kodiag);
+export const KOREFILE_ICON = makePackIcon(ICON_FILES.korefile);
+
 export const SUITE_ICONS = {
-  korestack: koreStackIcon,
-  koreagent: koreAgentIcon,
-  koredata: koreDataIcon,
-  koredocs: koreDocsIcon,
-  korecode: koreCodeIcon,
-  korecomms: koreCommsIcon,
-  korechat: koreChatIcon,
-  koredoc: koreDocFileIcon,
-  koresheet: koreSheetFileIcon,
-  kodiag: koreDiagFileIcon,
-  korefile: koreDocsIcon,
+  korestack: KORESTACK_ICON,
+  koreagent: KOREAGENT_ICON,
+  koredata: KOREDATA_ICON,
+  koredocs: KOREDOCS_ICON,
+  korecode: KORECODE_ICON,
+  korecomms: KORECOMMS_ICON,
+  korechat: KORECHAT_ICON,
+  koredoc: KOREDOC_FILE_ICON,
+  koresheet: KORESHEET_FILE_ICON,
+  kodiag: KODIAG_FILE_ICON,
+  korefile: KOREFILE_ICON,
 };
+
+/**
+ * Returns an SVG icon for a given file path based on extension.
+ * KoreDocs file types are explicit; unknowns fall back to KOREFILE_ICON.
+ */
+function fileIconForPath(path, size = 12) {
+  if (!path) return KOREFILE_ICON(size);
+  const lower = path.toLowerCase();
+  if (lower.endsWith('.koredoc') || lower.endsWith('.md') || lower.endsWith('.markdown') || lower.endsWith('.txt')) return KOREDOC_FILE_ICON(size);
+  if (lower.endsWith('.koresheet') || lower.endsWith('.csv') || lower.endsWith('.tsv') || lower.endsWith('.xlsx')) return KORESHEET_FILE_ICON(size);
+  if (lower.endsWith('.kodiag') || lower.endsWith('.drawio') || lower.endsWith('.mermaid')) return KODIAG_FILE_ICON(size);
+  return KOREFILE_ICON(size);
+}
 
 export function resolveIcon(icons, key, size) {
   const icon = icons[key];
   if (typeof icon === 'function') return icon(size);
   if (typeof icon === 'string') return icon;
   return '';
+}
+
+// Back-compat aliases so older imports continue to work.
+export function iconSetUrl(iconName, setName = 'dazzle-line') {
+  return svgIconUrl(iconName, setName);
+}
+
+export function iconSetImg(iconName, options = {}) {
+  return svgIconImg(iconName, options);
+}
+
+export function iconSetMask(iconName, options = {}) {
+  return svgIconMask(iconName, options);
 }
 

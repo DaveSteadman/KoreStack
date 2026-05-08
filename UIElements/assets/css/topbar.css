@@ -19,7 +19,6 @@
 	min-height: var(--topbar-h, var(--tab-h, 38px));
 	background: var(--panel, #0f1117);
 	border-bottom: 1px solid var(--border, #1e2233);
-	font-family: var(--font-topbar, var(--font-ui, monospace));
 	overflow-x: auto;
 	overflow-y: hidden;
 	scrollbar-width: none;
@@ -68,16 +67,17 @@
 .ktopbar-icon {
 	display: inline-flex;
 	align-items: center;
+	justify-content: center;
+	width: var(--ktopbar-label-size, 13px);
+	height: var(--ktopbar-label-size, 13px);
+	flex: 0 0 var(--ktopbar-label-size, 13px);
 	color: var(--topbar-accent);
 }
 
-.ktopbar-label {
-	font-family: var(--font-topbar, var(--font-ui, monospace));
-	font-size: var(--kcui-text-topbar, 11px);
-	font-weight: 600;
-	line-height: 1.15;
-	letter-spacing: var(--kcui-tracking-topbar, 0.12em);
-	text-transform: uppercase;
+.ktopbar-icon svg {
+	width: 100%;
+	height: 100%;
+	display: block;
 }
 
 .ktopbar-trailing {
@@ -90,8 +90,4 @@
 	flex-shrink: 0;
 }
 
-.ktopbar-trailing .kcui-text-topbar,
-.ktopbar-trailing .kcui-text-topbar-title,
-.ktopbar-trailing .kcui-text-caption {
-	color: inherit;
-}
+

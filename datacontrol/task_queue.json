@@ -1,38 +1,11 @@
 {
-  "active": {
-    "name": "api_kc_continue_2159969eaa6b4837a1a16c0771bd7b2b",
-    "kind": "api_chat",
-    "label": "You are a code completion assistant. You will be",
-    "started_at": "2026-05-06T23:17:00"
-  },
-  "pending": [
-    {
-      "name": "api_kc_continue_1aa97a48afc345008ebf11bec22f7486",
-      "kind": "api_chat",
-      "label": "You are a code completion assistant. You will be",
-      "queued_at": "2026-05-06T23:17:09"
-    }
-  ],
-  "pending_count": 1,
-  "queue_count": 2,
-  "queued_prompt_count": 2,
-  "next_prompts": [
-    {
-      "name": "api_kc_continue_2159969eaa6b4837a1a16c0771bd7b2b",
-      "kind": "api_chat",
-      "label": "You are a code completion assistant. You will be",
-      "started_at": "2026-05-06T23:17:00",
-      "state": "active"
-    },
-    {
-      "name": "api_kc_continue_1aa97a48afc345008ebf11bec22f7486",
-      "kind": "api_chat",
-      "label": "You are a code completion assistant. You will be",
-      "queued_at": "2026-05-06T23:17:09",
-      "state": "pending"
-    }
-  ],
+  "active": null,
+  "pending": [],
+  "pending_count": 0,
+  "queue_count": 0,
+  "queued_prompt_count": 0,
+  "next_prompts": [],
   "next_prompts_limit": null,
   "pending_preview_limit": null,
-  "updated_at": "2026-05-06T23:17:09"
+  "updated_at": "2026-05-08T23:09:17"
 }

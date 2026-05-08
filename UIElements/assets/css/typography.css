@@ -1,0 +1,335 @@
+/*
+ * typography.css — semantic typography role classes for shared shell chrome.
+ *
+ * Organized to match docs/architecture.md role groupings.
+ * Uses direct values for readability; keep classes semantic.
+ */
+
+/* Shared nerdy shell stack */
+.kcui-role-app-overline,
+.kcui-role-app-title,
+.kcui-role-tab-title,
+.kcui-role-tab-title-active,
+.kcui-role-panel-title,
+.kcui-role-panel-subtitle,
+.kcui-role-section-heading,
+.kcui-role-button-text,
+.kcui-role-menu-item-label,
+.kcui-role-input-label,
+.kcui-role-input-value,
+.kcui-role-comment,
+.kcui-role-helper-text,
+.kcui-role-status-text,
+.kcui-role-dialog-title,
+.kcui-role-dialog-body,
+.kcui-role-tooltip-text,
+.kcui-role-footer-meta,
+#app-brand,
+.ktopbar-label,
+.kappbar-overline,
+.kappbar-title,
+#kd-brand,
+.kappbar-tab,
+.kappbar-editortab,
+.kd-kf-link,
+.kd-tab,
+.kcui-panel-header,
+.kcui-card-copy,
+.kcui-card-label,
+.kappbar-button,
+.kappbar-toggle,
+.menu-item,
+.dropdown li,
+.kappbar-select,
+.kappbar-input,
+.shortcut,
+.kcui-section-note,
+[data-role="app-title"],
+.kcui-statusbar,
+.kappbar-note {
+  font-family: 'Roboto Mono', 'Cascadia Code', 'Fira Code', 'Courier New', monospace;
+}
+
+/* --- Shared Utility Font Classes ----------------------- */
+
+.kcui-shell-bg {
+  font: var(--kcui-text-body) / var(--kcui-leading-body) var(--font-ui);
+}
+
+.kcui-type-ui {
+  font-family: var(--font-ui);
+}
+
+.kcui-type-code {
+  font-family: var(--font-code);
+}
+
+.kcui-type-doc {
+  font-family: var(--font-doc);
+}
+
+.kcui-text-body {
+  font-size: var(--kcui-text-body);
+  line-height: var(--kcui-leading-body);
+}
+
+.kcui-text-body-sm {
+  font-size: var(--kcui-text-body-sm);
+  line-height: var(--kcui-leading-body);
+}
+
+.kcui-text-data {
+  font-size: var(--kcui-text-data);
+  line-height: var(--kcui-leading-body);
+}
+
+.kcui-text-title {
+  font-size: var(--kcui-text-title);
+  line-height: 1.2;
+  font-weight: 700;
+  letter-spacing: var(--kcui-tracking-tight);
+}
+
+.kcui-text-title-sm {
+  font-size: var(--kcui-text-title-sm);
+  line-height: 1.15;
+  font-weight: 700;
+  letter-spacing: var(--kcui-tracking-label);
+  text-transform: uppercase;
+}
+
+.kcui-text-label {
+  font-size: var(--kcui-text-label);
+  line-height: var(--kcui-leading-dense);
+  letter-spacing: var(--kcui-tracking-label);
+  text-transform: uppercase;
+}
+
+.kcui-text-caption {
+  font-size: var(--kcui-text-caption);
+  line-height: var(--kcui-leading-dense);
+}
+
+.kcui-text-micro {
+  font-size: var(--kcui-text-micro);
+  line-height: 1.2;
+}
+
+.kcui-text-eyebrow {
+  font-size: var(--kcui-text-caption);
+  line-height: 1.2;
+  letter-spacing: var(--kcui-tracking-eyebrow);
+  text-transform: uppercase;
+}
+
+/* --- Top Bar Fonts ----------------------- */
+
+.ktopbar-item {
+  --ktopbar-label-size: 12px;
+}
+
+.ktopbar-label {
+  font-size: var(--ktopbar-label-size);
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* --- App Menu Fonts ----------------------- */
+
+#app-brand {
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1.1;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* --- Application Bar Fonts ----------------------- */
+
+.kcui-role-app-overline,
+.kappbar-overline {
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.kcui-role-app-title,
+.kappbar-title,
+#kd-brand {
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.kcui-role-tab-title,
+.kappbar-tab,
+.kappbar-editortab,
+.kd-kf-link,
+.kd-tab {
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.15;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.kcui-role-tab-title-active,
+.kappbar-tab.is-active,
+.kappbar-editortab.is-active,
+.kd-kf-link.kd-kf-active,
+.kd-tab.active {
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* --- Panels Fonts ----------------------- */
+
+.kcui-role-panel-title,
+.kcui-panel-header {
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.kcui-role-panel-subtitle,
+.kcui-card-copy {
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1.3;
+  letter-spacing: 0.04em;
+  text-transform: none;
+}
+
+.kcui-role-section-heading,
+.kcui-card-label {
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.kcui-card-title {
+  font-size: var(--kcui-text-body);
+  font-weight: 700;
+  letter-spacing: var(--kcui-tracking-tight);
+}
+
+.kcui-card-value {
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+/* --- Minor UI Elements Fonts ----------------------- */
+
+.kcui-role-button-text,
+.kappbar-button,
+.kappbar-toggle {
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* --- Generic Fonts ----------------------- */
+
+.kcui-role-menu-item-label,
+.menu-item,
+.dropdown li {
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.35;
+  letter-spacing: 0.04em;
+  text-transform: none;
+}
+
+.kcui-role-input-label {
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.kcui-role-input-value,
+.kappbar-select,
+.kappbar-input {
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.35;
+  letter-spacing: 0.04em;
+  text-transform: none;
+}
+
+.kcui-role-comment,
+.shortcut {
+  font-size: 10px;
+  font-weight: 400;
+  line-height: 1.35;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.kcui-role-helper-text,
+.kcui-section-note,
+[data-role="app-title"] {
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1.35;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.kcui-role-status-text,
+.kcui-statusbar,
+.kappbar-note {
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.kcui-role-dialog-title {
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.kcui-role-dialog-body {
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.45;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.kcui-role-tooltip-text {
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1.25;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.kcui-role-footer-meta {
+  font-size: 9px;
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}

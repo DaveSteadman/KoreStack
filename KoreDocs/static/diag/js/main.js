@@ -8,10 +8,8 @@ import * as renderer    from './renderer.js';
 import * as interaction from './interaction.js';
 import * as ui          from './ui.js';
 import * as fileio      from './fileio.js';
-import * as topbar      from '/ui-elements/assets/js/topbar.js';
-import * as appbar      from '/ui-elements/assets/js/appbar.js';
+import { initTopbar, initAppBar, initAppTabs, renderAppMenu } from '/ui-elements/assets/js/chrome.js?v=20260508b';
 import * as draft       from '/static/shared/js/draft.js';
-import { renderAppMenu } from '/ui-elements/assets/js/appMenu.js';
 
 const _draftSave = draft.makeSaver();
 
@@ -101,8 +99,8 @@ interaction.init(canvas);
 ui.initMenus();
 ui.initToolbar();
 ui.initHierarchy();
-topbar.initTopbar({ currentService: 'koredocs', urls: window.__koreSuiteUrls || {} });
-appbar.initAppBar({
+initTopbar({ currentService: 'koredocs', urls: window.__koreSuiteUrls || {} });
+initAppBar({
   mountId: 'tab-bar',
   currentService: 'koredocs',
   overline: 'Diagram Editor',
@@ -110,7 +108,7 @@ appbar.initAppBar({
   brandIcon: 'kodiag',
   editorTabsSlot: 'koredocs-tabs',
 });
-appbar.initAppTabs('kodiag', { mountId: 'koredocs-tabs', renderBrand: false });
+initAppTabs('kodiag', { mountId: 'koredocs-tabs', renderBrand: false });
 
 const autoOpened = await fileio.autoOpenFromUrl(diagram => {
   store.loadDiagram(diagram);

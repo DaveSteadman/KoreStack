@@ -64,8 +64,8 @@
   </div>
 
   <script type="module">
-    import * as topbar from '/ui-elements/assets/js/topbar.js';
-    topbar.initTopbar({ currentService: 'koredocs', urls: window.__koreSuiteUrls || {} });
+    import { initTopbar } from '/ui-elements/assets/js/chrome.js?v=20260508b';
+    initTopbar({ currentService: 'koredocs', urls: window.__koreSuiteUrls || {} });
   </script>
   <script type="module">
     import { initChrome } from '/static/doc/js/chrome.js';

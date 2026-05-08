@@ -16,10 +16,6 @@
   gap: 7px;
   padding: 0 14px 0 8px;
   margin-right: 4px;
-  font-weight: 700;
-  font-size: 12px;
-  letter-spacing: .08em;
-  text-transform: uppercase;
   color: var(--accent);
   cursor: default;
   border-right: 1px solid var(--border);
@@ -34,8 +30,6 @@
   display: flex;
   align-items: center;
   cursor: default;
-  font-size: 11px;
-  font-weight: 500;
   color: var(--text-dim);
   border-radius: 0;
   transition: background 120ms, color 120ms;
@@ -75,7 +69,6 @@
   align-items: center;
   cursor: default;
   white-space: nowrap;
-  font-size: 11px;
   color: var(--text);
   transition: background 100ms, color 100ms;
 }
@@ -95,8 +88,6 @@
 
 .shortcut {
   color: var(--text-dim);
-  font-size: 11px;
-  font-family: var(--font-code);
 }
 
 .dropdown li:hover .shortcut {
@@ -106,8 +97,6 @@
 [data-role="app-title"] {
   margin-left: auto;
   margin-right: 12px;
-  font-size: 13px;
-  font-weight: 500;
   color: var(--text-2);
   pointer-events: none;
 }

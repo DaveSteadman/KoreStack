@@ -60,8 +60,7 @@ document.addEventListener("DOMContentLoaded", () => {
     Promise.all([loadStatus(), loadConversations(), loadDetail]);
     initSplitter();
 
-    document.getElementById("filter-status").addEventListener("change",  applyFilters);
-    document.getElementById("filter-channel").addEventListener("change", applyFilters);
+    bindUiEvents();
 
     // Connect to the SSE push stream - this replaces the 5-second poll interval.
     // A 30-second fallback interval handles SSE gaps (reconnect window, etc.).
@@ -76,6 +75,36 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     window.addEventListener("focus", refreshAll);
 });
+
+function bindUiEvents() {
+    document.getElementById("filter-status").addEventListener("change", applyFilters);
+    document.getElementById("filter-channel").addEventListener("change", applyFilters);
+
+    document.getElementById("btn-create-conv").addEventListener("click", createConversation);
+    document.getElementById("btn-new-conv")?.addEventListener("click", createConversation);
+    document.getElementById("btn-refresh")?.addEventListener("click", refreshAll);
+    document.getElementById("rename-conv-btn").addEventListener("click", renameConversation);
+    document.getElementById("delete-conv-btn").addEventListener("click", deleteConversation);
+    document.getElementById("compose-btn").addEventListener("click", sendMessage);
+    document.getElementById("chk-summarised").addEventListener("change", reloadMessages);
+    document.getElementById("chk-auto")?.addEventListener("change", toggleAuto);
+
+    document.getElementById("conv-list").addEventListener("click", (event) => {
+        const row = event.target.closest(".conv-item[data-id]");
+        if (!row) return;
+        const id = Number.parseInt(row.dataset.id, 10);
+        if (!Number.isNaN(id)) {
+            selectConversation(id);
+        }
+    });
+
+    document.getElementById("compose-text").addEventListener("keydown", (event) => {
+        if (event.key === "Enter" && !event.shiftKey) {
+            event.preventDefault();
+            sendMessage();
+        }
+    });
+}
 
 // ====================================================================================================
 // STATUS
@@ -145,7 +174,7 @@ function renderConvList(conversations) {
         const ts       = formatDateTime(c.last_activity_at);
         const displayStatus = getDisplayStatus(c.status);
         return `
-<div class="conv-item${selected}" onclick="selectConversation(${c.id})" data-id="${c.id}">
+<div class="conv-item${selected}" data-id="${c.id}">
     <div class="conv-item-top">
         <span class="conv-id">#${c.id}</span>
         <span class="conv-subject">${escHtml(subject)}</span>
@@ -296,12 +325,6 @@ function renderInputHistory(entries) {
 // ====================================================================================================
 // COMPOSE
 // ====================================================================================================
-
-document.addEventListener("DOMContentLoaded", () => {
-    document.getElementById("compose-text").addEventListener("keydown", e => {
-        if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
-    });
-});
 
 async function sendMessage() {
     if (_selectedId === null) return;

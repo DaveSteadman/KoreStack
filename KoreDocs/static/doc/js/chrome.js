@@ -1,8 +1,7 @@
-﻿import * as appbar from '/ui-elements/assets/js/appbar.js';
-import { renderAppMenu } from '/ui-elements/assets/js/appMenu.js';
+﻿import { initAppBar, initAppTabs, renderAppMenu } from '/ui-elements/assets/js/chrome.js?v=20260508b';
 
 export function initChrome() {
-  appbar.initAppBar({
+  initAppBar({
     mountId: 'tab-bar',
     currentService: 'koredocs',
     overline: 'Document Editor',
@@ -40,5 +39,5 @@ export function initChrome() {
     ],
   });
 
-  appbar.initAppTabs('koredoc', { mountId: 'koredocs-tabs', renderBrand: false });
+  initAppTabs('koredoc', { mountId: 'koredocs-tabs', renderBrand: false });
 }

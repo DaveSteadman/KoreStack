@@ -1,5 +1,3 @@
-@import url('/ui-elements/assets/css/chrome.css');
-
 /* ============================================================
     KoreAgent Web UI - style.css
     Shared Kore shell with service-specific layout rules.
@@ -8,20 +6,15 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-    --bg:           #0b0c10;
-    --bg-panel:     #0f1117;
-    --bg-panel2:    #141823;
-    --border:       #1e2233;
-    --border-hi:    #2f3650;
-    --text:         #c5c8d0;
-    --text-dim:     #4e5466;
-    --text-hi:      #eef2f8;
-    --accent:       #6eb5ff;
-    --accent-dim:   rgba(110,181,255,0.16);
-    --green:        #4af77a;
-    --red:          #ff5f5f;
-    --blue:         #6eb5ff;
-    --yellow:       #f0c060;
+    --bg-panel:     var(--surface);
+    --bg-panel2:    var(--surface-2);
+    --border-hi:    var(--border-2);
+    --text-hi:      var(--text);
+    --accent-dim:   color-mix(in srgb, var(--info) 18%, transparent);
+    --green:        var(--success);
+    --red:          var(--danger);
+    --blue:         var(--info);
+    --yellow:       var(--warning);
     /* Semantic color tokens - shared by log and chat panels */
     --clr-body:       rgba(255,255,255,0.70);
     --clr-title:      rgba(255,255,255,0.90);
@@ -33,7 +26,7 @@
     --clr-agent:      #4ade80;
     --bg-wrap-btn:        transparent;
     --bg-wrap-btn-active: rgba(174, 180, 7, 0.274);
-    --font-mono:    var(--font-code, "Cascadia Code", "Fira Code", "Courier New", monospace);
+    --font-mono:    var(--font-code);
     --radius:       2px;
     --gap:          12px;
     --header-h:     42px;
@@ -43,7 +36,7 @@ html, body {
     height: 100%;
     background: var(--bg);
     color: var(--text);
-    font-family: var(--font-mono);
+    font-family: var(--font-ui);
     font-size: 13px;
     line-height: 1.5;
     overflow: hidden;

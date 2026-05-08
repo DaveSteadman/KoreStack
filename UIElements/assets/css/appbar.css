@@ -9,7 +9,6 @@
   display: flex;
   align-items: center;
   min-height: var(--appbar-h, 42px);
-  font-family: var(--font-topbar, var(--font-ui, monospace));
   background:
     linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0) 55%),
     var(--panel, #0f1117);
@@ -64,21 +63,10 @@
 }
 
 .kappbar-overline {
-  font-family: var(--font-topbar, var(--font-ui, monospace));
-  font-size: var(--kcui-text-caption, 10px);
-  line-height: 1;
-  letter-spacing: var(--kcui-tracking-eyebrow, 0.18em);
-  text-transform: uppercase;
   color: var(--text-dim, #4e5466);
 }
 
 .kappbar-title {
-  font-family: var(--font-topbar, var(--font-ui, monospace));
-  font-size: var(--kcui-text-topbar-title, 12px);
-  line-height: 1.1;
-  font-weight: 700;
-  letter-spacing: var(--kcui-tracking-topbar-tight, 0.08em);
-  text-transform: uppercase;
   color: var(--text, #c5c8d0);
   white-space: nowrap;
 }
@@ -119,55 +107,6 @@
   box-shadow: 0 0 8px color-mix(in srgb, var(--warning, #f0c060) 68%, transparent);
 }
 
-.kappbar-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 24px;
-  padding: 0 8px;
-  border: 1px solid var(--border, #1e2233);
-  background: color-mix(in srgb, var(--surface-2, #141823) 78%, transparent);
-  color: var(--text-dim, #4e5466);
-  font-family: var(--font-topbar, var(--font-ui, monospace));
-  font-size: var(--kcui-text-caption, 10px);
-  letter-spacing: var(--kcui-tracking-label, 0.08em);
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
-.kappbar-chip strong,
-.kappbar-chip-value {
-  color: var(--text, #c5c8d0);
-  font-size: var(--kcui-text-topbar, 11px);
-  letter-spacing: var(--kcui-tracking-tight, 0.04em);
-  font-weight: 600;
-}
-
-.kappbar-chip.is-accent {
-  border-color: color-mix(in srgb, var(--kappbar-accent) 48%, var(--border, #1e2233));
-  color: color-mix(in srgb, var(--kappbar-accent) 75%, white 10%);
-}
-
-.kappbar-chip.is-accent strong,
-.kappbar-chip.is-accent .kappbar-chip-value {
-  color: var(--kappbar-accent);
-}
-
-.kappbar-chip.is-danger {
-  border-color: color-mix(in srgb, var(--danger, #ff5f5f) 48%, var(--border, #1e2233));
-  color: color-mix(in srgb, var(--danger, #ff5f5f) 72%, white 8%);
-}
-
-.kappbar-chip.is-danger strong,
-.kappbar-chip.is-danger .kappbar-chip-value {
-  color: var(--danger, #ff5f5f);
-}
-
-.kappbar-chip.is-muted strong,
-.kappbar-chip.is-muted .kappbar-chip-value {
-  color: var(--text-2, #949aa7);
-}
-
 .kappbar-tabs {
   gap: 0;
   flex: 1 1 auto;
@@ -188,10 +127,6 @@
   padding: 0 13px;
   color: var(--text-dim, #4e5466);
   text-decoration: none;
-  font-family: var(--font-topbar, var(--font-ui, monospace));
-  font-size: var(--kcui-text-topbar, 11px);
-  letter-spacing: var(--kcui-tracking-topbar-tight, 0.08em);
-  text-transform: uppercase;
   border-right: 1px solid var(--border, #1e2233);
   white-space: nowrap;
   transition: color 120ms, background 120ms, box-shadow 120ms;
@@ -251,9 +186,6 @@
   background: var(--surface-2, #141823);
   color: var(--text, #c5c8d0);
   font: inherit;
-  font-size: 10px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
 }
 
 .kappbar-select,
@@ -279,9 +211,6 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-size: 10px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
   color: var(--text-dim, #4e5466);
   white-space: nowrap;
 }
@@ -339,12 +268,7 @@
   border-right: 1px solid var(--border, #1e2233);
   background: transparent;
   color: var(--text-dim, #4e5466);
-  font-family: var(--font-topbar, var(--font-ui, monospace));
-  font-size: var(--kcui-text-topbar, 11px);
-  font-weight: 500;
-  letter-spacing: var(--kcui-tracking-topbar-tight, 0.08em);
   text-align: left;
-  text-transform: uppercase;
   white-space: nowrap;
   cursor: default;
   flex-shrink: 0;
@@ -440,7 +364,6 @@
   flex-shrink: 0;
   gap: 0;
   box-sizing: border-box;
-  font-family: var(--font-topbar, var(--font-ui, monospace));
 }
 
 #kd-brand {
@@ -451,11 +374,6 @@
   min-height: var(--appbar-h, 42px);
   height: var(--appbar-h, 42px);
   box-sizing: border-box;
-  font-family: var(--font-topbar, var(--font-ui, monospace));
-  font-size: var(--kcui-text-topbar-title, 12px);
-  font-weight: 700;
-  letter-spacing: var(--kcui-tracking-topbar-tight, 0.08em);
-  text-transform: uppercase;
   color: var(--tabs-accent-2);
   border-right: 1px solid var(--border, #1e2233);
   flex-shrink: 0;
@@ -481,10 +399,6 @@
   min-height: var(--appbar-h, 42px);
   height: var(--appbar-h, 42px);
   box-sizing: border-box;
-  font-size: var(--kcui-text-topbar, 11px);
-  font-weight: 500;
-  letter-spacing: var(--kcui-tracking-topbar-tight, 0.08em);
-  text-transform: uppercase;
   color: var(--text-dim, #4e5466);
   text-decoration: none;
   border-right: 1px solid var(--border, #1e2233);
@@ -537,10 +451,6 @@
   min-width: 90px;
   max-width: 200px;
   cursor: default;
-  font-size: var(--kcui-text-topbar, 11px);
-  font-weight: 500;
-  letter-spacing: var(--kcui-tracking-topbar-tight, 0.08em);
-  text-transform: uppercase;
   color: var(--text-dim, #4e5466);
   border-right: 1px solid var(--border, #1e2233);
   transition: background 120ms, color 120ms;

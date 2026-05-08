@@ -20,7 +20,7 @@
   display:        inline-flex;
   align-items:    center;
   gap:            4px;
-  font-family:    var(--font-topbar, var(--font-ui, monospace));
+  font-family:    var(--font-ui, monospace);
   font-size:      var(--kcui-text-caption, 10px);
   letter-spacing: var(--kcui-tracking-label, 0.08em);
   text-transform: uppercase;
@@ -28,9 +28,21 @@
   line-height:    1.5;
   padding:        1px 6px;
   border:         1px solid currentColor;
+  border-radius:  0;
   background:     transparent;
   color:          var(--text-dim, #4e5466);
   user-select:    none;
+}
+
+/* Shape rule: labels are rounded, interactive controls stay square. */
+.kcui-tag:not(button):not(a) {
+  border-radius: 999px;
+  padding:       0 7px;
+}
+
+button.kcui-tag,
+a.kcui-tag {
+  border-radius: 0;
 }
 
 /* ─── Color variants ────────────────────────────────────────────────── */

@@ -1,4 +1,4 @@
-import { initAppBar, initTopbar } from '/ui-elements/assets/js/chrome.js?v=20260501a';
+import { initAppBar, initTopbar, SUITE_ICONS, resolveIcon } from '/ui-elements/assets/js/chrome.js?v=20260508b';
 
 const SERVICE_KEY_BY_SLUG = {
   agent: 'koreagent',
@@ -15,6 +15,8 @@ const STATE_COLOR = {
   down: 'danger',
 };
 
+const SERVICES_PANEL_ICON_SIZE = 39;
+
 function readBootstrap() {
   const node = document.getElementById('stack-bootstrap');
   if (!node) return {};
@@ -28,16 +30,12 @@ function readBootstrap() {
 const bootstrap = readBootstrap();
 let current = bootstrap.snapshot || { stack: { metrics: {} }, services: [] };
 
-function topbarIconFor(serviceKey) {
-  return document.querySelector(`.ktopbar-item[data-service="${serviceKey}"] .ktopbar-icon`)?.innerHTML || '';
-}
-
 function initServicePanelIcons() {
   for (const row of document.querySelectorAll('[data-service-card]')) {
     const serviceKey = SERVICE_KEY_BY_SLUG[row.dataset.serviceCard];
     const glyph = row.querySelector('.service-glyph');
     if (!serviceKey || !glyph) continue;
-    const iconHtml = topbarIconFor(serviceKey);
+    const iconHtml = resolveIcon(SUITE_ICONS, serviceKey, SERVICES_PANEL_ICON_SIZE);
     if (iconHtml) glyph.innerHTML = iconHtml;
   }
 }

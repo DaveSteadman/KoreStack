@@ -2,9 +2,9 @@
  * topbar.js — shared top bar for Kore suite applications.
  */
 
-import { SUITE_ICONS, resolveIcon } from './icons.js?v=20260501a';
-import { SUITE_VERSION } from './suiteMeta.js';
-import { applyTheme, themeFor } from './theme.js?v=20260501a';
+import { SUITE_ICONS, resolveIcon } from './icons.js?v=20260508b';
+import { SUITE_VERSION } from './suiteMeta.js?v=20260508b';
+import { applyTheme, themeFor } from './theme.js?v=20260508b';
 
 const DEFAULT_HOST = '127.0.0.1';
 
@@ -17,6 +17,8 @@ const DEFAULT_SERVICES = [
 	{ key: 'korecode', label: 'KoreCode', path: '/ui', port: 8610, icon: 'korecode' },
 	{ key: 'korecomms', label: 'KoreComms', path: '/ui', port: 8625, icon: 'korecomms' },
 ];
+
+const SUITE_VERSION_RE = /export\s+const\s+SUITE_VERSION\s*=\s*['\"]([^'\"]+)['\"]/;
 
 function serviceUrl(service, currentService, urls) {
 	if (urls[service.key]) return urls[service.key];
@@ -41,8 +43,20 @@ function serviceItemHtml(service, currentService, urls, iconSize) {
 	return `
 		<a class="ktopbar-item${active}" data-service="${service.key}" href="${url}" title="${service.label}" style="--topbar-accent:${accent}">
 			<span class="ktopbar-icon" aria-hidden="true">${serviceIcon(service, iconSize)}</span>
-			<span class="ktopbar-label kcui-text-topbar">${service.label}</span>
+			<span class="ktopbar-label">${service.label}</span>
 		</a>`;
+}
+
+async function refreshVersionChip(host) {
+	const chip = host.querySelector('#version-chip');
+	if (!chip) return;
+	try {
+		const response = await fetch('/ui-elements/assets/js/suiteMeta.js', { cache: 'no-store' });
+		if (!response.ok) return;
+		const text = await response.text();
+		const match = SUITE_VERSION_RE.exec(text);
+		if (match?.[1]) chip.textContent = match[1];
+	} catch (_) {}
 }
 
 let _lastTopbarOptions = null;
@@ -96,8 +110,12 @@ export function initTopbar(options = {}) {
 			<div class="ktopbar-main">
 				${services.map((service) => serviceItemHtml(service, currentService, urls, iconSize)).join('')}
 			</div>
-			${versionText ? `<div class="ktopbar-trailing"><span id="version-chip" class="kcui-text-topbar" title="Suite version">${versionText}</span></div>` : ''}
+			${versionText ? `<div class="ktopbar-trailing"><span id="version-chip" class="kcui-tag kcui-tag--dim" title="Suite version">${versionText}</span></div>` : ''}
 		</nav>`;
+
+	if (versionText) {
+		refreshVersionChip(host);
+	}
 
 	const nav = host.querySelector('.ktopbar-nav');
 	if (nav) {

@@ -1,5 +1,3 @@
-@import url('/ui-elements/assets/css/chrome.css');
-
 /* ============================================================
     KoreChat Debug UI - conversations.css
     Shared Kore shell with conversation-specific layout rules.
@@ -9,21 +7,12 @@
 [hidden] { display: none !important; }
 
 :root {
-    --bg:           #0b0c10;
-    --bg-panel:     #0f1117;
-    --bg-panel2:    #141823;
-    --bg-row-alt:   #121620;
-    --border:       #1e2233;
-    --border-hi:    #2f3650;
-    --text:         #c5c8d0;
-    --text-dim:     #4e5466;
-    --text-hi:      #eef2f8;
-    --accent:       #6eb5ff;
-    --green:        #4af77a;
-    --red:          #ff5f5f;
-    --yellow:       #f0c060;
-    --cyan:         #22d3ee;
-    --font-mono:    var(--font-code, "Cascadia Code", "Fira Code", "Courier New", monospace);
+    --bg-panel:     var(--surface);
+    --bg-panel2:    var(--surface-2);
+    --bg-row-alt:   color-mix(in srgb, var(--surface-2) 85%, var(--bg) 15%);
+    --border-hi:    var(--border-2);
+    --text-hi:      var(--text);
+    --font-mono:    var(--font-code);
     --radius:       2px;
     --header-h:     42px;
     --sidebar-w:    320px;
@@ -34,7 +23,7 @@ html, body {
     height: 100%;
     background: var(--bg);
     color: var(--text);
-    font-family: var(--font-mono);
+    font-family: var(--font-ui);
     font-size: 12px;
     line-height: 1.55;
     overflow: hidden;
@@ -237,9 +226,10 @@ html, body {
     padding:      5px 10px;
     background:   var(--bg-panel);
     border-bottom: 1px solid var(--border);
-    font-size:    10px;
-    font-weight:  600;
-    letter-spacing: 0.10em;
+    font-size:    var(--kcui-text-label);
+    font-weight:  400;
+    letter-spacing: var(--kcui-tracking-label);
+    text-transform: uppercase;
     color:        var(--text-dim);
 }
 
@@ -274,22 +264,29 @@ html, body {
 .kv-table {
     width:           100%;
     border-collapse: collapse;
-    font-size:       11px;
+    font-size:       var(--kcui-text-data);
 }
 .kv-table tr:nth-child(even) { background: var(--bg-row-alt); }
 .kv-table td {
-    padding:     4px 10px;
+    padding:     0.4rem 0.75rem;
     vertical-align: top;
+    border-bottom: 1px solid var(--border);
 }
 .kv-table td:first-child {
     color:       var(--text-dim);
     white-space: nowrap;
-    width:       160px;
-    font-size:   10px;
+    width:       140px;
+    font-size:   var(--kcui-text-label);
+    letter-spacing: var(--kcui-tracking-tight);
+    text-transform: uppercase;
 }
 .kv-table td:last-child {
     color:       var(--text-hi);
     word-break:  break-word;
+}
+
+.kv-table tr:last-child td {
+    border-bottom: none;
 }
 
 .meta-grid {
@@ -338,8 +335,8 @@ html, body {
 }
 
 .history-item {
-    padding:     5px 12px;
-    font-size:   11px;
+    padding:     0.4rem 0.75rem;
+    font-size:   var(--kcui-text-body-sm);
     color:       var(--text);
     border-bottom: 1px solid var(--border);
     white-space: nowrap;
@@ -349,6 +346,17 @@ html, body {
 
 .history-item:first-child {
     color: var(--text-hi);
+}
+
+/* KoreData parity: metadata and list panels share table-like alignment rhythm. */
+#sec-meta .section-header,
+#sec-scratchpad .section-header,
+#sec-history .section-header,
+#sec-compose .section-header,
+#sec-messages .section-header,
+#sec-events .section-header {
+    justify-content: flex-start;
+    gap: 0.6rem;
 }
 
 .history-item:last-child {
@@ -371,7 +379,7 @@ html, body {
 #compose-row {
     display:     flex;
     gap:         8px;
-    padding:     8px 10px;
+    padding:     0.4rem 0.75rem;
     background:  var(--bg-panel2);
     align-items: center;
 }
@@ -380,8 +388,8 @@ html, body {
     background:   var(--bg-panel);
     border:       1px solid var(--border);
     color:        var(--text-dim);
-    font-family:  var(--font-mono);
-    font-size:    10px;
+    font-family:  var(--font-ui);
+    font-size:    var(--kcui-text-data);
     padding:      3px 6px;
     border-radius: var(--radius);
     flex-shrink:  0;
@@ -392,8 +400,8 @@ html, body {
     background:   var(--bg-panel);
     border:       1px solid var(--border);
     color:        var(--text-hi);
-    font-family:  var(--font-mono);
-    font-size:    11px;
+    font-family:  var(--font-ui);
+    font-size:    var(--kcui-text-data);
     padding:      4px 8px;
     border-radius: var(--radius);
     outline:      none;
@@ -406,8 +414,10 @@ html, body {
     background:    transparent;
     border:        1px solid var(--border);
     color:         var(--text-dim);
-    font-family:   var(--font-mono);
-    font-size:     10px;
+    font-family:   var(--font-ui);
+    font-size:     var(--kcui-text-body-sm);
+    letter-spacing: var(--kcui-tracking-label);
+    text-transform: uppercase;
     padding:       3px 12px;
     border-radius: var(--radius);
     cursor:        pointer;
@@ -422,17 +432,17 @@ html, body {
     grid-template-columns: 80px 90px 1fr 120px 80px;
     align-items:   start;
     gap:           0 8px;
-    padding:       5px 10px;
+    padding:       0.4rem 0.75rem;
     border-bottom: 1px solid var(--border);
-    font-size:     11px;
+    font-size:     var(--kcui-text-data);
 }
 .msg-row:nth-child(even) { background: var(--bg-row-alt); }
 .msg-row.summarised-row  { opacity: 0.5; }
 
-.msg-id       { color: var(--text-dim); font-size: 10px; }
-.msg-sender   { color: var(--text-dim); font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.msg-id       { color: var(--text-dim); font-size: var(--kcui-text-label); letter-spacing: var(--kcui-tracking-tight); }
+.msg-sender   { color: var(--text-dim); font-size: var(--kcui-text-label); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .msg-content  { color: var(--text); white-space: pre-wrap; word-break: break-word; }
-.msg-time     { color: var(--text-dim); font-size: 10px; text-align: right; white-space: nowrap; }
+.msg-time     { color: var(--text-dim); font-size: var(--kcui-text-body-sm); text-align: right; white-space: nowrap; }
 .msg-flags    { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
 
 /* ============================================================
@@ -444,20 +454,22 @@ html, body {
 .evt-table {
     width:           100%;
     border-collapse: collapse;
-    font-size:       11px;
+    font-size:       var(--kcui-text-data);
 }
 .evt-table th {
     background:   var(--bg-panel);
-    padding:      4px 10px;
+    padding:      0.4rem 0.75rem;
     text-align:   left;
     color:        var(--text-dim);
-    font-size:    10px;
-    font-weight:  600;
+    font-size:    var(--kcui-text-label);
+    font-weight:  400;
+    letter-spacing: var(--kcui-tracking-label);
+    text-transform: uppercase;
     border-bottom: 1px solid var(--border);
     white-space:  nowrap;
 }
 .evt-table td {
-    padding:       4px 10px;
+    padding:       0.4rem 0.75rem;
     border-bottom: 1px solid var(--border);
     vertical-align: top;
 }

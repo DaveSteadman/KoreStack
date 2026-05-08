@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>KoreAgent</title>
     <link rel="icon" type="image/x-icon" href="/favicon.ico?v=2">
-    <link rel="stylesheet" href="/ui-elements/assets/css/workspace.css">
+    <link rel="stylesheet" href="/ui-elements/assets/css/chrome.css?v=20260508b">
+    <link rel="stylesheet" href="/ui-elements/assets/css/workspace.css?v=20260508b">
     <link rel="stylesheet" href="/static/style.css">
     <script src="/suite-config.js"></script>
 </head>
@@ -54,10 +55,10 @@
             <div class="panel-header kcui-panel-header">
                 <span id="log-panel-title">Log</span>
                 <span class="header-spacer"></span>
-                <button class="kcui-tag kcui-tag--dim" id="log-btn-up"   onclick="logNavStep(-1)">&#x2191;</button>
-                <button class="kcui-tag kcui-tag--dim" id="log-btn-down" onclick="logNavStep(+1)">&#x2193;</button>
-                <button class="kcui-tag kcui-tag--dim is-on" id="log-btn-live" onclick="toggleLogLive()">live</button>
-                <button class="kcui-tag kcui-tag--dim" id="wrap-btn-log" onclick="toggleWrap('log-body','wrap-btn-log')">wrap</button>
+                <button class="kcui-tag kcui-tag--dim" id="log-btn-up" type="button">&#x2191;</button>
+                <button class="kcui-tag kcui-tag--dim" id="log-btn-down" type="button">&#x2193;</button>
+                <button class="kcui-tag kcui-tag--dim is-on" id="log-btn-live" type="button">live</button>
+                <button class="kcui-tag kcui-tag--dim" id="wrap-btn-log" type="button">wrap</button>
             </div>
             <div class="panel-body kcui-panel-body nowrap" id="log-body"></div>
         </div>
@@ -76,9 +77,9 @@
             <div class="panel-header kcui-panel-header">
                 Chat: <span id="chat-panel-title"></span>
                 <span class="header-spacer"></span>
-                <button class="kcui-tag kcui-tag--dim" id="sandbox-btn" onclick="toggleSandbox()">sandbox</button>
-                <button class="kcui-tag kcui-tag--dim" id="webskills-btn" onclick="toggleWebSkills()">web</button>
-                <button class="kcui-tag kcui-tag--dim" id="wrap-btn-chat" onclick="toggleWrap('chat-body','wrap-btn-chat')">wrap</button>
+                <button class="kcui-tag kcui-tag--dim" id="sandbox-btn" type="button">sandbox</button>
+                <button class="kcui-tag kcui-tag--dim" id="webskills-btn" type="button">web</button>
+                <button class="kcui-tag kcui-tag--dim" id="wrap-btn-chat" type="button">wrap</button>
             </div>
             <div class="panel-body kcui-panel-body nowrap" id="chat-body"></div>
         </div>
@@ -112,7 +113,7 @@
 <div id="slash-suggest" hidden></div>
 
 <script type="module">
-    import { initAppBar, initTopbar } from '/ui-elements/assets/js/chrome.js?v=20260501a';
+    import { initAppBar, initTopbar } from '/ui-elements/assets/js/chrome.js?v=20260508b';
     import { initWorkspaceLayouts } from '/ui-elements/assets/js/workspace.js';
     initTopbar({ currentService: 'koreagent', urls: window.__koreSuiteUrls || {} });
     initAppBar({
@@ -126,10 +127,10 @@
             { label: 'Model', value: '', valueId: 'ollama-model' },
             { label: 'Context', value: '', valueId: 'ollama-ctx' },
         ],
-        actionsHtml: `
-            <button class="kappbar-button" id="btn-reset-layout" onclick="resetLayout()">Default Layout</button>
-            <a class="kappbar-button" href="/README.md" target="_blank" rel="noopener noreferrer">Readme</a>
-        `,
+        actions: [
+            { kind: 'button', id: 'btn-reset-layout', action: 'reset-layout', label: 'Default Layout', className: 'kcui-tag kcui-tag--dim' },
+            { kind: 'button', id: 'btn-open-readme', action: 'open-readme', label: 'Readme', className: 'kcui-tag kcui-tag--dim' },
+        ],
     });
     initWorkspaceLayouts();
 </script>

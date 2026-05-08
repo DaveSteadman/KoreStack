@@ -1,4 +1,4 @@
-import { initAppBar, initTopbar } from '/ui-elements/assets/js/chrome.js?v=20260501a';
+import { initAppBar, initTopbar } from '/ui-elements/assets/js/chrome.js?v=20260508b';
 import { initPanels } from '/ui-elements/assets/js/panels.js';
 import { createEditor } from './editor.js';
 import { initFind, runFind, runFindNext, runFindPrevious, closeFindBar, applyFindQuery, getCurrentFindQuery } from './find.js';

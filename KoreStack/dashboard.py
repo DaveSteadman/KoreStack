@@ -84,10 +84,9 @@ def _path_rows_markup(paths: dict[str, object]) -> str:
     return "".join(rows)
 
 
-def _dashboard_bootstrap(snapshot: dict[str, object], suite_urls: dict[str, str], dashboard_url: str, ui_assets_dir: Path) -> dict[str, object]:
+def _dashboard_bootstrap(snapshot: dict[str, object], suite_urls: dict[str, str], dashboard_url: str) -> dict[str, object]:
     stack = snapshot["stack"]
     metrics = stack["metrics"]
-    ui_note = "available" if ui_assets_dir.exists() else "missing"
     return {
         "snapshot": snapshot,
         "suiteUrls": suite_urls,
@@ -95,7 +94,6 @@ def _dashboard_bootstrap(snapshot: dict[str, object], suite_urls: dict[str, str]
             {"label": "Running", "value": f"{metrics['running']} / {metrics['selected']}", "tone": "accent"},
             {"label": "Reachable", "value": str(metrics["reachable"])},
             {"label": "Dashboard", "value": dashboard_url},
-            {"label": "UIElements", "value": ui_note},
         ],
     }
 
@@ -108,7 +106,7 @@ def html_page(manager: Any, dashboard_url: str, stack_static_dir: Path, ui_asset
     snapshot = manager.snapshot()
     stack = snapshot["stack"]
     suite_urls = build_suite_urls(manager, dashboard_url, service_icon_keys)
-    bootstrap_json = json.dumps(_dashboard_bootstrap(snapshot, suite_urls, dashboard_url, ui_assets_dir)).replace("</", "<\\/")
+    bootstrap_json = json.dumps(_dashboard_bootstrap(snapshot, suite_urls, dashboard_url)).replace("</", "<\\/")
     root_command = f"python .\\main.py --services {','.join(stack['services'])}"
     return (
         _load_stack_template(stack_static_dir)

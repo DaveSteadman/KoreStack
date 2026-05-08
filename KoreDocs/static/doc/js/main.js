@@ -7,9 +7,8 @@ import * as editor     from './editor.js';
 import * as toolbar    from './toolbar.js';
 import * as properties from './properties.js';
 import * as fileio     from './fileio.js';
-import * as appbar     from '/ui-elements/assets/js/appbar.js';
+import { trackAppTab, initAppMenuEvents } from '/ui-elements/assets/js/chrome.js?v=20260508b';
 import * as draft      from '/static/shared/js/draft.js';
-import { initAppMenuEvents } from '/ui-elements/assets/js/appMenu.js';
 
 const _draftSave = draft.makeSaver();
 
@@ -92,7 +91,7 @@ function _onStateChange(name, dirty) {
   document.title = (dirty ? '● ' : '') + (name ?? 'Untitled') + ' — KoreDoc';
   _updateStatus();
   properties.refresh(editor.getValue(), name);
-  if (name) appbar.trackAppTab(name, 'koredoc', fileio.currentId());
+  if (name) trackAppTab(name, 'koredoc', fileio.currentId());
 }
 
 function _updateStatus() {

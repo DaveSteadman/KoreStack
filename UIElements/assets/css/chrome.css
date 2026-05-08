@@ -3,6 +3,7 @@
  */
 
 @import url('./tokens.css');
+@import url('./typography.css');
 @import url('./topbar.css');
 @import url('./appbar.css');
 @import url('./app-menu.css');

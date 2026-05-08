@@ -1,62 +1,3 @@
-[2026-04-30T22:54:24]   Skipping Breaking Defense — next fetch in ~2976m
-[2026-04-30T22:54:24] Ingesting: airforce-technology
-[2026-04-30T22:54:24]   Skipping defenseone — next fetch in ~2973m
-[2026-04-30T22:54:24]   Skipping ukdefencejournal — next fetch in ~64m
-[2026-04-30T22:54:24]   Skipping defenceiq - defence-technology — next fetch in ~2969m
-[2026-04-30T22:54:24]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~2967m
-[2026-04-30T22:54:24]   Skipping defense-aerospace WEB — next fetch in ~2972m
-[2026-04-30T22:54:24]   Skipping janes Insights — next fetch in ~2965m
-[2026-04-30T22:54:24]   airforce-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.airforce-technology.com/feed/'
-For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
-[2026-04-30T22:54:24] Ingesting: army-technology
-[2026-04-30T22:54:24]   army-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.army-technology.com/feed/'
-For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
-[2026-04-30T22:54:24] Ingesting: airforce-technology
-[2026-04-30T22:54:24]   airforce-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.airforce-technology.com/feed/'
-For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
-[2026-04-30T22:54:24] Ingesting: army-technology
-[2026-04-30T22:54:25]   army-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.army-technology.com/feed/'
-For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
-[2026-04-30T22:59:10]   Skipping ukdefencejournal — next fetch in ~59m
-[2026-05-01T11:05:11]   Skipping HuggingFace Blog — next fetch in ~1244m
-[2026-05-01T11:05:11]   Skipping Understanding AI — next fetch in ~4548m
-[2026-05-01T11:05:11]   Skipping Ollama Blog — next fetch in ~4539m
-[2026-05-01T11:05:11]   Skipping Artificial Intelligence - News — next fetch in ~5246m
-[2026-05-01T11:05:11]   Skipping aiweekly news-today — next fetch in ~5242m
-[2026-05-01T11:05:11]   Skipping Defense News — next fetch in ~2237m
-[2026-05-01T11:05:11]   Skipping Breaking Defense — next fetch in ~2245m
-[2026-05-01T11:05:11] Ingesting: airforce-technology
-[2026-05-01T11:05:11]   Skipping defenseone — next fetch in ~2242m
-[2026-05-01T11:05:11]   Skipping defenceiq - defence-technology — next fetch in ~2238m
-[2026-05-01T11:05:11]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~2236m
-[2026-05-01T11:05:11] Daily prune: AiNews — 3 entries removed
-[2026-05-01T11:05:11]   Skipping defense-aerospace WEB — next fetch in ~2241m
-[2026-05-01T11:05:11]   Skipping janes Insights — next fetch in ~2234m
-[2026-05-01T11:05:11]   airforce-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.airforce-technology.com/feed/'
-For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
-[2026-05-01T11:05:11] Ingesting: army-technology
-[2026-05-01T11:05:11]   army-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.army-technology.com/feed/'
-For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
-[2026-05-01T11:05:11] Ingesting: ukdefencejournal
-[2026-05-01T11:05:14]   ukdefencejournal: +10 entries in 3.0s [good]
-[2026-05-01T11:05:14] Ingesting: ukdefencejournal
-[2026-05-01T11:05:17]   ukdefencejournal: +0 entries in 3.0s [good]
-[2026-05-01T11:05:17] Ingesting: airforce-technology
-[2026-05-01T11:05:17]   airforce-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.airforce-technology.com/feed/'
-For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
-[2026-05-01T11:05:17] Ingesting: army-technology
-[2026-05-01T11:05:17]   army-technology: HTTPStatusError: Client error '403 Forbidden' for url 'https://www.army-technology.com/feed/'
-For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
-[2026-05-01T13:50:03]   Skipping HuggingFace Blog — next fetch in ~1079m
-[2026-05-01T13:50:03]   Skipping Understanding AI — next fetch in ~4383m
-[2026-05-01T13:50:03]   Skipping Ollama Blog — next fetch in ~4374m
-[2026-05-01T13:50:03]   Skipping Artificial Intelligence - News — next fetch in ~5081m
-[2026-05-01T13:50:03]   Skipping aiweekly news-today — next fetch in ~5078m
-[2026-05-01T13:50:03]   Skipping Defense News — next fetch in ~2072m
-[2026-05-01T13:50:03]   Skipping Breaking Defense — next fetch in ~2080m
-[2026-05-01T13:50:03] Ingesting: airforce-technology
-[2026-05-01T13:50:03]   Skipping defenseone — next fetch in ~2077m
-[2026-05-01T13:50:03]   Skipping ukdefencejournal — next fetch in ~2834m
 [2026-05-01T13:50:03]   Skipping defenceiq - defence-technology — next fetch in ~2073m
 [2026-05-01T13:50:03]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~2071m
 [2026-05-01T13:50:03]   Skipping defense-aerospace WEB — next fetch in ~2077m
@@ -998,3 +939,62 @@ For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/St
 [2026-05-06T21:20:45]   defenceiq - air-forces-military-aircraft: +0 entries in 19.0s [good]
 [2026-05-06T21:20:45] Ingesting: Defense News
 [2026-05-06T21:20:54]   Defense News: +0 entries in 9.1s [good]
+[2026-05-06T23:01:09]   Skipping HuggingFace Blog — next fetch in ~640m
+[2026-05-06T23:01:09]   Skipping Understanding AI — next fetch in ~2098m
+[2026-05-06T23:01:09]   Skipping Artificial Intelligence - News — next fetch in ~4528m
+[2026-05-06T23:01:09]   Skipping aiweekly news-today — next fetch in ~4525m
+[2026-05-06T23:01:09]   Skipping Defense News — next fetch in ~2897m
+[2026-05-06T23:01:09]   Skipping Breaking Defense — next fetch in ~2905m
+[2026-05-06T23:01:09]   Skipping defenseone — next fetch in ~2901m
+[2026-05-06T23:01:09]   Skipping ukdefencejournal — next fetch in ~2897m
+[2026-05-06T23:01:09]   Skipping defenceiq - defence-technology — next fetch in ~2898m
+[2026-05-06T23:01:09]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~2896m
+[2026-05-06T23:01:09]   Skipping defense-aerospace WEB — next fetch in ~2902m
+[2026-05-06T23:01:09]   Skipping janes Insights — next fetch in ~2894m
+[2026-05-08T19:51:52] Ingesting: HuggingFace Blog
+[2026-05-08T19:51:52]   Skipping Artificial Intelligence - News — next fetch in ~1838m
+[2026-05-08T19:51:52]   Skipping aiweekly news-today — next fetch in ~1834m
+[2026-05-08T19:51:52]   Skipping Defense News — next fetch in ~207m
+[2026-05-08T19:51:52]   Skipping Breaking Defense — next fetch in ~214m
+[2026-05-08T19:51:52]   Skipping defenseone — next fetch in ~211m
+[2026-05-08T19:51:52]   Skipping ukdefencejournal — next fetch in ~206m
+[2026-05-08T19:51:52] Daily prune: AiNews — 3 entries removed
+[2026-05-08T19:51:52]   Skipping defenceiq - defence-technology — next fetch in ~208m
+[2026-05-08T19:51:52]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~205m
+[2026-05-08T19:51:52]   Skipping defense-aerospace WEB — next fetch in ~211m
+[2026-05-08T19:51:52]   Skipping janes Insights — next fetch in ~203m
+[2026-05-08T19:51:59]   HuggingFace Blog: +4 entries in 7.6s [good]
+[2026-05-08T19:51:59] Ingesting: Understanding AI
+[2026-05-08T19:52:01]   Understanding AI: +1 entries in 2.2s [good]
+[2026-05-08T19:52:01] Ingesting: Understanding AI
+[2026-05-08T19:52:03]   Understanding AI: +0 entries in 1.8s [good]
+[2026-05-08T19:52:03] Ingesting: HuggingFace Blog
+[2026-05-08T19:52:11]   HuggingFace Blog: +0 entries in 7.7s [good]
+[2026-05-08T22:15:39]   Skipping janes Insights — next fetch in ~59m
+[2026-05-08T22:17:45]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~59m
+[2026-05-08T22:18:22]   Skipping ukdefencejournal — next fetch in ~59m
+[2026-05-08T22:18:54]   Skipping Defense News — next fetch in ~59m
+[2026-05-08T22:20:08]   Skipping defenceiq - defence-technology — next fetch in ~59m
+[2026-05-08T22:22:59]   Skipping defenseone — next fetch in ~59m
+[2026-05-08T22:23:26]   Skipping defense-aerospace WEB — next fetch in ~59m
+[2026-05-08T22:26:19]   Skipping Breaking Defense — next fetch in ~59m
+[2026-05-08T23:09:21]   Skipping HuggingFace Blog — next fetch in ~3402m
+[2026-05-08T23:09:21]   Skipping Understanding AI — next fetch in ~5112m
+[2026-05-08T23:09:21]   Skipping Artificial Intelligence - News — next fetch in ~1640m
+[2026-05-08T23:09:21]   Skipping aiweekly news-today — next fetch in ~1637m
+[2026-05-08T23:09:21]   Skipping Defense News — next fetch in ~9m
+[2026-05-08T23:09:21]   Skipping Breaking Defense — next fetch in ~16m
+[2026-05-08T23:09:21]   Skipping defenseone — next fetch in ~13m
+[2026-05-08T23:09:21]   Skipping ukdefencejournal — next fetch in ~9m
+[2026-05-08T23:09:21]   Skipping defenceiq - defence-technology — next fetch in ~10m
+[2026-05-08T23:09:21]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~8m
+[2026-05-08T23:09:21]   Skipping defense-aerospace WEB — next fetch in ~14m
+[2026-05-08T23:09:21]   Skipping janes Insights — next fetch in ~6m
+[2026-05-08T23:09:21]   Skipping janes Insights — next fetch in ~6m
+[2026-05-08T23:09:21]   Skipping defense-aerospace WEB — next fetch in ~14m
+[2026-05-08T23:09:21]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~8m
+[2026-05-08T23:09:21]   Skipping Defense News — next fetch in ~9m
+[2026-05-08T23:09:21]   Skipping ukdefencejournal — next fetch in ~9m
+[2026-05-08T23:09:21]   Skipping Breaking Defense — next fetch in ~16m
+[2026-05-08T23:09:21]   Skipping defenceiq - defence-technology — next fetch in ~10m
+[2026-05-08T23:09:21]   Skipping defenseone — next fetch in ~13m

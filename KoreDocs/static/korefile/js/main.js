@@ -5,9 +5,7 @@
  * search box, and import button.
  */
 
-import * as topbar   from '/ui-elements/assets/js/topbar.js';
-import * as appbar   from '/ui-elements/assets/js/appbar.js';
-import { renderAppMenu, initAppMenuEvents } from '/ui-elements/assets/js/appMenu.js';
+import { initTopbar, initAppBar, initAppTabs, renderAppMenu, initAppMenuEvents } from '/ui-elements/assets/js/chrome.js?v=20260508b';
 import { DOWNLOAD_SVG } from '/ui-elements/assets/js/svg_icons.js';
 import * as tree     from './tree.js';
 import * as filelist from './filelist.js';
@@ -43,8 +41,8 @@ initAppMenuEvents(action => {
 
 // ── Tab bar ─────────────────────────────────────────────────────
 
-topbar.initTopbar({ currentService: 'koredocs', urls: window.__koreSuiteUrls || {} });
-appbar.initAppBar({
+initTopbar({ currentService: 'koredocs', urls: window.__koreSuiteUrls || {} });
+initAppBar({
   mountId: 'tab-bar',
   currentService: 'koredocs',
   overline: 'File Manager',
@@ -52,7 +50,7 @@ appbar.initAppBar({
   brandIcon: 'korefile',
   editorTabsSlot: 'koredocs-tabs',
 });
-appbar.initAppTabs('korefile', { mountId: 'koredocs-tabs', renderBrand: false });
+initAppTabs('korefile', { mountId: 'koredocs-tabs', renderBrand: false });
 
 // ── State ───────────────────────────────────────────────────────
 

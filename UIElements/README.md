@@ -38,6 +38,7 @@ UIElements/assets/
     chrome.js         ← bundle: re-exports all JS below
     suiteMeta.js      ← suite version constant
     icons.js          ← SUITE_ICONS SVG map + resolveIcon()
+    svgicons.js       ← external icon-pack URL/image/gallery helpers
     theme.js          ← per-service accent color map + applyTheme()
     topbar.js         ← initTopbar()
     appbar.js         ← initAppBar()
@@ -46,6 +47,13 @@ UIElements/assets/
     panels.js         ← panel resize helpers
     workspace.js      ← splitter drag behavior
     tags.js           ← createTag() + updateTag()
+  icons/
+    dazzle-line/      ← imported external SVG pack(s)
+    README.md         ← import + usage instructions
+
+UIElements/SVGicons/
+  dazzle-line/        ← downloaded icon source files + manifest
+  README.md           ← source folder workflow
   fonts/
     RobotoMono-*.ttf  ← suite typeface (Regular, Medium, SemiBold, Bold)
 ```
@@ -192,3 +200,19 @@ three-panel log / chat / input layout.
 
 ### App Menu (`app-menu.css` / `appMenu.js`)
 Slide-out or dropdown menu anchored to the top bar. Provides cross-service navigation on smaller viewports.
+
+### External Icon Packs
+External SVG packs are stored under `UIElements/SVGicons/<set-name>/` and mirrored to
+`UIElements/assets/icons/<set-name>/` for browser use.
+
+JS helpers are exported by `svgicons.js` and re-exported from `chrome.js`:
+- `svgIconUrl(iconName, setName)`
+- `svgIconImg(iconName, { setName, size, className, alt })`
+- `mountSvgIcon(element, iconName, options)`
+- `renderSvgIconGallery(container, iconNames, options)`
+
+Import downloaded icon zips with:
+
+```bash
+python tools/import_icon_pack.py --zip <path-to-zip> --set dazzle-line
+```

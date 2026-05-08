@@ -53,14 +53,33 @@ function iconMarkup(icon, iconSize, icons) {
   return '';
 }
 
+function tagToneClass(tone) {
+  if (!tone) return 'kcui-tag--dim';
+  switch (tone) {
+    case 'accent':
+      return 'kcui-tag--accent';
+    case 'success':
+      return 'kcui-tag--success';
+    case 'warning':
+      return 'kcui-tag--warning';
+    case 'danger':
+      return 'kcui-tag--danger';
+    case 'info':
+      return 'kcui-tag--info';
+    case 'dim':
+    default:
+      return 'kcui-tag--dim';
+  }
+}
+
 function chipMarkup(chip) {
-  const toneClass = chip.tone ? ` is-${chip.tone}` : '';
+  const toneClass = tagToneClass(chip.tone);
   const chipId = chip.id ? ` id="${escapeHtml(chip.id)}"` : '';
-  const label = chip.label ? `<span class="kappbar-chip-label kcui-text-caption">${escapeHtml(chip.label)}</span>` : '';
+  const label = chip.label ? `<span>${escapeHtml(chip.label)}</span>` : '';
   const value = chip.valueId
-    ? `<strong class="kappbar-chip-value kcui-text-topbar" id="${escapeHtml(chip.valueId)}">${escapeHtml(chip.value ?? '')}</strong>`
-    : `<strong class="kappbar-chip-value kcui-text-topbar">${escapeHtml(chip.value ?? '')}</strong>`;
-  return `<span class="kappbar-chip${toneClass}"${chipId}>${label}${value}</span>`;
+    ? `<span id="${escapeHtml(chip.valueId)}">${escapeHtml(chip.value ?? '')}</span>`
+    : `<span>${escapeHtml(chip.value ?? '')}</span>`;
+  return `<span class="kcui-tag ${toneClass}"${chipId}>${label}${value}</span>`;
 }
 
 function tabMarkup(tab, icons, iconSize) {
@@ -68,7 +87,7 @@ function tabMarkup(tab, icons, iconSize) {
   const target = tab.target ? ` target="${escapeHtml(tab.target)}"` : '';
   const rel = tab.rel ? ` rel="${escapeHtml(tab.rel)}"` : '';
   const icon = tab.icon ? `<span class="kappbar-tabicon" aria-hidden="true">${iconMarkup(tab.icon, iconSize, icons)}</span>` : '';
-  return `<a class="kappbar-tab${activeClass}" href="${escapeHtml(tab.href)}"${target}${rel}>${icon}<span class="kcui-text-topbar">${escapeHtml(tab.label)}</span></a>`;
+  return `<a class="kappbar-tab${activeClass}" href="${escapeHtml(tab.href)}"${target}${rel}>${icon}<span>${escapeHtml(tab.label)}</span></a>`;
 }
 
 function noteMarkup(note) {
@@ -76,7 +95,51 @@ function noteMarkup(note) {
   const noteId = note.id ? ` id="${escapeHtml(note.id)}"` : '';
   const noteTitle = note.title ? ` title="${escapeHtml(note.title)}"` : '';
   const noteClass = note.className ? ` ${escapeHtml(note.className)}` : '';
-  return `<span class="kappbar-note kcui-text-topbar${noteClass}"${noteId}${noteTitle}>${escapeHtml(note.text ?? '')}</span>`;
+  return `<span class="kappbar-note${noteClass}"${noteId}${noteTitle}>${escapeHtml(note.text ?? '')}</span>`;
+}
+
+function actionOptionMarkup(option) {
+  const selected = option.selected ? ' selected' : '';
+  return `<option value="${escapeHtml(option.value ?? '')}"${selected}>${escapeHtml(option.label ?? option.value ?? '')}</option>`;
+}
+
+function actionMarkup(action) {
+  if (!action || !action.kind) return '';
+
+  if (action.kind === 'stack') {
+    const stackClass = action.className ? ` ${escapeHtml(action.className)}` : '';
+    const children = Array.isArray(action.items) ? action.items.map(actionMarkup).join('') : '';
+    return `<div class="kappbar-stack${stackClass}">${children}</div>`;
+  }
+
+  if (action.kind === 'button') {
+    const buttonClass = action.className ? ` ${escapeHtml(action.className)}` : '';
+    const buttonId = action.id ? ` id="${escapeHtml(action.id)}"` : '';
+    const buttonType = action.type ? escapeHtml(action.type) : 'button';
+    const dataAction = action.action ? ` data-action="${escapeHtml(action.action)}"` : '';
+    const title = action.title ? ` title="${escapeHtml(action.title)}"` : '';
+    return `<button class="kappbar-button${buttonClass}"${buttonId} type="${buttonType}"${dataAction}${title}>${escapeHtml(action.label ?? '')}</button>`;
+  }
+
+  if (action.kind === 'toggle') {
+    const labelClass = action.className ? ` ${escapeHtml(action.className)}` : '';
+    const labelText = action.label ? `${escapeHtml(action.label)} ` : '';
+    const inputId = action.id ? ` id="${escapeHtml(action.id)}"` : '';
+    const checked = action.checked ? ' checked' : '';
+    const dataAction = action.action ? ` data-action="${escapeHtml(action.action)}"` : '';
+    return `<label class="kappbar-toggle${labelClass}">${labelText}<input type="checkbox"${inputId}${checked}${dataAction}></label>`;
+  }
+
+  if (action.kind === 'select') {
+    const labelClass = action.className ? ` ${escapeHtml(action.className)}` : '';
+    const labelText = escapeHtml(action.label ?? '');
+    const selectId = action.id ? ` id="${escapeHtml(action.id)}"` : '';
+    const dataAction = action.action ? ` data-action="${escapeHtml(action.action)}"` : '';
+    const options = Array.isArray(action.options) ? action.options.map(actionOptionMarkup).join('') : '';
+    return `<label class="kappbar-toggle${labelClass}">${labelText}<select class="kappbar-select"${selectId}${dataAction}>${options}</select></label>`;
+  }
+
+  return '';
 }
 
 export function initAppBar(options = {}) {
@@ -93,6 +156,7 @@ export function initAppBar(options = {}) {
     chips = [],
     tabs = [],
     note = null,
+    actions = [],
     actionsHtml = '',
     editorTabsSlot = null,
   } = options;
@@ -114,8 +178,8 @@ export function initAppBar(options = {}) {
       <div class="kappbar-group kappbar-brand">
         <span class="kappbar-brandmark" aria-hidden="true">${iconMarkup(brandIcon, 18, icons)}</span>
         <span class="kappbar-brandtext">
-          ${overline ? `<span class="kappbar-overline kcui-text-caption">${escapeHtml(overline)}</span>` : ''}
-          <span class="kappbar-title kcui-text-topbar-title">${escapeHtml(brandLabel)}</span>
+          ${overline ? `<span class="kappbar-overline">${escapeHtml(overline)}</span>` : ''}
+          <span class="kappbar-title">${escapeHtml(brandLabel)}</span>
         </span>
       </div>`
     : '';
@@ -140,10 +204,10 @@ export function initAppBar(options = {}) {
       : '';
 
   const noteHtml = noteMarkup(note);
+  const actionsFromConfig = Array.isArray(actions) ? actions.map(actionMarkup).join('') : '';
+  const actionsContent = `${noteHtml}${actionsFromConfig}${actionsHtml}`;
 
-  const actionsContent = `${noteHtml}${actionsHtml}`;
-
-  const actionsGroup = (noteHtml || actionsHtml)
+  const actionsGroup = (noteHtml || actionsFromConfig || actionsHtml)
     ? `<div class="kappbar-group kappbar-actions">${actionsContent}</div>`
     : '';
 

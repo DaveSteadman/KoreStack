@@ -1291,6 +1291,17 @@ function init() {
     dom.input().addEventListener("keydown", onInputKeydown);
     dom.input().addEventListener("input", () => { _historyIdx = -1; _saveInputDraft(dom.input().value); onInputChange(); });
     dom.input().addEventListener("blur",  () => { setTimeout(_hideSuggest, 120); });
+    $("log-btn-up")?.addEventListener("click", () => { logNavStep(-1); });
+    $("log-btn-down")?.addEventListener("click", () => { logNavStep(1); });
+    $("log-btn-live")?.addEventListener("click", toggleLogLive);
+    $("wrap-btn-log")?.addEventListener("click", () => { toggleWrap("log-body", "wrap-btn-log"); });
+    $("sandbox-btn")?.addEventListener("click", toggleSandbox);
+    $("webskills-btn")?.addEventListener("click", toggleWebSkills);
+    $("wrap-btn-chat")?.addEventListener("click", () => { toggleWrap("chat-body", "wrap-btn-chat"); });
+    $("btn-reset-layout")?.addEventListener("click", resetLayout);
+    $("btn-open-readme")?.addEventListener("click", () => {
+        window.open("/README.md", "_blank", "noopener,noreferrer");
+    });
 
     // Restore any in-progress draft from before the user navigated away.
     const _draft = _restoreInputDraft();
