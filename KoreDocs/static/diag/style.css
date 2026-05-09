@@ -23,7 +23,7 @@
   --danger:      #f38ba8;
 
   --font-ui:   'Inter', system-ui, sans-serif;
-  --font-code: 'JetBrains Mono', 'Cascadia Code', Consolas, monospace;
+  --font-code: 'Roboto Mono', 'Cascadia Code', 'Fira Code', 'Courier New', monospace;
 
   color-scheme: dark;
 }

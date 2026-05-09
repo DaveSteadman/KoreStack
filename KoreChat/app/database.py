@@ -91,6 +91,7 @@ CREATE TABLE IF NOT EXISTS conversations (
     status              TEXT    NOT NULL DEFAULT 'active'
                                 CHECK(status IN ('active','waiting_agent','agent_processing','archived','deleted')),
     subject             TEXT,
+    protected           INTEGER NOT NULL DEFAULT 0,
     external_id         TEXT,
     thread_summary      TEXT    NOT NULL DEFAULT '',
     scratchpad          TEXT    NOT NULL DEFAULT '{}',
@@ -154,6 +155,31 @@ def init_db() -> None:
             c.execute("ALTER TABLE conversations ADD COLUMN external_id TEXT")
         if cols and "input_history" not in cols:
             c.execute("ALTER TABLE conversations ADD COLUMN input_history TEXT NOT NULL DEFAULT '[]'")
+        if cols and "protected" not in cols:
+            c.execute("ALTER TABLE conversations ADD COLUMN protected INTEGER NOT NULL DEFAULT 0")
+            if "has_explicit_name" in cols:
+                c.execute("UPDATE conversations SET protected = coalesce(has_explicit_name, 0)")
+            c.execute(
+                """
+                UPDATE conversations
+                SET protected = CASE
+                    WHEN lower(trim(coalesce(subject, ''))) IN ('', 'new conversation') THEN 0
+                    WHEN lower(trim(coalesce(subject, ''))) = lower('webchat ' || substr(coalesce(external_id, ''), 9))
+                         AND lower(coalesce(external_id, '')) LIKE 'webchat_%' THEN 0
+                    ELSE 1
+                END
+                """
+            )
+        else:
+            # Correct legacy values where auto-generated webchat names were marked protected.
+            c.execute(
+                """
+                UPDATE conversations
+                SET protected = 0
+                WHERE lower(trim(coalesce(subject, ''))) = lower('webchat ' || substr(coalesce(external_id, ''), 9))
+                  AND lower(coalesce(external_id, '')) LIKE 'webchat_%'
+                """
+            )
         c.executescript(_SCHEMA)
     _wal_initialized = True
 
@@ -174,6 +200,16 @@ def _default_profile(channel_type: str) -> str:
     return _PROFILE_DEFAULTS.get(channel_type, _FALLBACK_PROFILE)
 
 
+def _is_protected_subject(subject: str | None, external_id: str | None = None) -> int:
+    normalized = (subject or "").strip().lower()
+    if normalized in ("", "new conversation"):
+        return 0
+    ext = (external_id or "").strip().lower()
+    if ext.startswith("webchat_") and normalized == f"webchat {ext[8:]}":
+        return 0
+    return 1
+
+
 # ----------------------------------------------------------------------------------------------------
 def _claimable_event_types_for_consumer(claimed_by: str) -> tuple[str, ...] | None:
     key = (claimed_by or "").strip().lower()
@@ -191,19 +227,21 @@ def conversation_create(
     background_context: str        = "",
     profile:            str | None = None,
     external_id:        str | None = None,
+    protected:          bool | None = None,
 ) -> dict:
     now     = _now()
     profile = profile or _default_profile(channel_type)
+    protected_value = int(protected) if protected is not None else _is_protected_subject(subject, external_id)
     with _conn() as c:
         cur = c.execute(
             """
             INSERT INTO conversations
-                (channel_type, profile, status, subject, external_id, thread_summary, scratchpad,
+                (channel_type, profile, status, subject, protected, external_id, thread_summary, scratchpad,
                  background_context, token_estimate, turn_count,
                  last_activity_at, created_at, updated_at)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
             """,
-            (channel_type, profile, "active", subject, external_id, "", "{}", background_context, 0, 0, now, now, now),
+            (channel_type, profile, "active", subject, protected_value, external_id, "", "{}", background_context, 0, 0, now, now, now),
         )
         row_id = cur.lastrowid
     return conversation_get(row_id)
@@ -363,6 +401,7 @@ def conversation_update(
     conversation_id: int,
     status:           str | None  = None,
     subject:          str | None  = None,
+    protected:        bool | None = None,
     thread_summary:   str | None  = None,
     scratchpad:       dict | None = None,
     background_context: str | None = None,
@@ -378,6 +417,11 @@ def conversation_update(
     if subject is not None:
         fields.append("subject = ?")
         params.append(subject)
+        if _is_protected_subject(subject):
+            fields.append("protected = 1")
+    if protected is not None:
+        fields.append("protected = ?")
+        params.append(int(protected))
     if thread_summary is not None:
         fields.append("thread_summary = ?")
         params.append(thread_summary)
@@ -436,13 +480,11 @@ def conversation_delete(conversation_id: int) -> bool:
 
 # ----------------------------------------------------------------------------------------------------
 def conversation_cull_default_inactive(max_default_chat_age_days: int) -> list[int]:
-        """Delete stale, untouched default conversations older than max age.
+        """Delete stale unprotected conversations older than max age.
 
-        A conversation is culled when all conditions are true:
-            - subject is unset/blank or "New conversation"
-            - created_at is older than max_default_chat_age_days
-            - no activity since creation (last_activity_at == created_at)
-            - no messages exist
+        A conversation is culled when both conditions are true:
+            - protected is false
+            - last activity is older than max_default_chat_age_days
         """
         now = datetime.now(timezone.utc)
         cutoff = (now - timedelta(days=max_default_chat_age_days)).isoformat()
@@ -451,13 +493,8 @@ def conversation_cull_default_inactive(max_default_chat_age_days: int) -> list[i
                         """
                         SELECT id
                         FROM conversations
-                        WHERE created_at <= ?
-                            AND lower(trim(coalesce(subject, ''))) IN ('', 'new conversation')
-                            AND last_activity_at = created_at
-                            AND NOT EXISTS (
-                                SELECT 1 FROM messages m
-                                WHERE m.conversation_id = conversations.id
-                            )
+                        WHERE coalesce(last_activity_at, created_at) <= ?
+                            AND coalesce(protected, 0) = 0
                         """,
                         (cutoff,),
                 ).fetchall()

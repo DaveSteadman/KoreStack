@@ -34,8 +34,8 @@
   --accent-2:  #86f6a3;
 
   /* ── Typography ──────────────────────────────────────────── */
-  --font-ui:   'Cascadia Code', 'Fira Code', 'Courier New', monospace;
-  --font-code: 'Cascadia Code', 'Fira Code', 'Courier New', monospace;
+  --font-ui:   'Roboto Mono', 'Cascadia Code', 'Fira Code', 'Courier New', monospace;
+  --font-code: 'Roboto Mono', 'Cascadia Code', 'Fira Code', 'Courier New', monospace;
 
   color-scheme: dark;
 }

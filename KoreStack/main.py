@@ -143,7 +143,8 @@ def load_suite_config() -> dict:
             raw = json.loads(path.read_text(encoding="utf-8"))
             if isinstance(raw, dict):
                 config = _merge_dict(config, raw)
-        except Exception:
+        except Exception as exc:
+            log.warning("failed to parse suite config %s: %s", path, exc)
             continue
     return config
 
@@ -242,8 +243,8 @@ def save_address_to_local_config(slug: str, host: str, port: int) -> None:
     if SUITE_CONFIG_LOCAL.exists():
         try:
             config = json.loads(SUITE_CONFIG_LOCAL.read_text(encoding="utf-8"))
-        except Exception:
-            pass
+        except Exception as exc:
+            log.warning("failed to read local config %s: %s", SUITE_CONFIG_LOCAL, exc)
     if not isinstance(config.get("services"), dict):
         config["services"] = {}
     if not isinstance(config["services"].get(slug), dict):
@@ -335,8 +336,20 @@ class StackManager:
         self._lock = threading.Lock()
         self._snapshot_cache: dict | None = None
         self._cache_lock = threading.Lock()
-        t = threading.Thread(target=self._refresh_loop, daemon=True)
-        t.start()
+        self._refresh_stop = threading.Event()
+        self._refresh_thread = threading.Thread(target=self._refresh_loop, daemon=True)
+        self._refresh_thread.start()
+
+    def get_service_spec(self, slug: str) -> ServiceSpec | None:
+        return self._service_map.get(slug)
+
+    def invalidate_snapshot_cache(self) -> None:
+        with self._cache_lock:
+            self._snapshot_cache = None
+
+    def get_live_processes(self) -> list[subprocess.Popen[bytes]]:
+        with self._lock:
+            return [proc for proc in self._processes.values() if proc.poll() is None]
 
     def start(self) -> None:
         for spec in self._services:
@@ -456,6 +469,7 @@ class StackManager:
         return self.start_service(slug)
 
     def stop(self) -> None:
+        self._refresh_stop.set()
         with self._lock:
             items = list(self._processes.items())
 
@@ -483,17 +497,18 @@ class StackManager:
                 fh.close()
             except OSError:
                 pass
+        self._refresh_thread.join(timeout=2)
 
     def _refresh_loop(self) -> None:
         """Background thread: refreshes the probe cache every 3 seconds."""
-        while True:
+        while not self._refresh_stop.is_set():
             try:
                 fresh = self._compute_snapshot()
                 with self._cache_lock:
                     self._snapshot_cache = fresh
-            except Exception:
-                pass
-            time.sleep(3)
+            except Exception as exc:
+                log.warning("snapshot refresh failed: %s", exc)
+            self._refresh_stop.wait(3)
 
     def snapshot(self) -> dict[str, object]:
         """Return the most recently cached snapshot (instant), computing fresh on first call."""
@@ -654,8 +669,7 @@ def main() -> int:
 
     try:
         while not stop_event.is_set():
-            with manager._lock:
-                live = [proc for proc in manager._processes.values() if proc.poll() is None]
+            live = manager.get_live_processes()
             if not live and args.no_dashboard:
                 break
             if not live and dashboard_thread is None:

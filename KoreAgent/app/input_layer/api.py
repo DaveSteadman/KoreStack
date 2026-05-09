@@ -600,10 +600,12 @@ def _kc_ensure_conversation(session_id: str) -> dict | None:
     try:
         external_id = _kc_external_id_for_session(session_id)
         # Use any pending display name set by /newchat <name>, fall back to default.
-        subject = _kc_session_names.pop(session_id, None) or f"Webchat {session_id}"
+        pending_name = _kc_session_names.pop(session_id, None)
+        subject = pending_name or f"Webchat {session_id}"
         conv = _kc_post("/conversations", {
             "channel_type": "webchat",
             "subject":      subject,
+            "protected":    bool(pending_name),
             "external_id":  external_id,
         })
     except Exception:
@@ -1037,6 +1039,7 @@ def kc_send(body: KcSendRequest):
         new_conv = _kc_post("/conversations", {
             "channel_type": "webchat",
             "subject":      f"Webchat {body.session_id}",
+            "protected":    False,
             "external_id":  external_id,
         })
         if not new_conv:

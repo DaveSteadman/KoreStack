@@ -16,9 +16,24 @@ export function initExplorer({ openFile }) {
 
 export async function refreshTree() {
   treeStatus.textContent = 'Loading workspace\u2026';
+  const expandedPaths = [...state.expanded].filter(Boolean);
   state.tree.clear();
   try {
     await ensureDirectory('');
+    for (const path of expandedPaths) {
+      try {
+        await ensureDirectory(path);
+      } catch {
+        state.expanded.delete(path);
+      }
+    }
+    if (state.activePath) {
+      try {
+        await expandAncestors(state.activePath);
+      } catch {
+        // If the active file path no longer exists, keep refresh successful.
+      }
+    }
     treeStatus.textContent = 'Workspace loaded';
     renderTree();
   } catch (error) {

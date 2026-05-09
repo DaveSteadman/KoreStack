@@ -27,6 +27,7 @@ let _defaultCullInterval = null;
 const DEFAULT_CHAT_AGE_STORAGE_KEY = "kc_max_default_chat_age_days";
 const DEFAULT_CHAT_AGE_FALLBACK_DAYS = 7;
 const DEFAULT_CHAT_AGE_CULL_MS = 60 * 60 * 1000;
+const AUTO_REFRESH_MS = 30_000;
 
 // ====================================================================================================
 // CACHE HELPERS
@@ -73,7 +74,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const chk = document.getElementById("chk-auto");
     chk.checked = true;
     _connectSSE();
-    _autoInterval = setInterval(refreshAll, 30000);
+    _autoInterval = setInterval(refreshAll, AUTO_REFRESH_MS);
 
     // Also refresh immediately when the tab becomes visible again.
     document.addEventListener("visibilitychange", () => {
@@ -93,6 +94,7 @@ function bindUiEvents() {
     document.getElementById("compose-btn").addEventListener("click", sendMessage);
     document.getElementById("chk-summarised").addEventListener("change", reloadMessages);
     document.getElementById("chk-auto")?.addEventListener("change", toggleAuto);
+    document.getElementById("meta-table")?.addEventListener("click", onMetaTableClick);
 
     document.getElementById("conv-list").addEventListener("click", (event) => {
         const row = event.target.closest(".conv-item[data-id]");
@@ -152,7 +154,7 @@ function renderConvList(conversations) {
     document.getElementById("conv-count").textContent = conversations.length;
 
     if (conversations.length === 0) {
-        el.innerHTML = "<div style='padding:12px;color:var(--text-dim);font-size:11px;'>No conversations.</div>";
+        el.innerHTML = "<div class='empty-note'>No conversations.</div>";
         return;
     }
 
@@ -230,10 +232,13 @@ function _renderDetail(data) {
 
 function renderMeta(conv) {
     const displayStatus = getDisplayStatus(conv.status);
+    const isProtected = Number(conv.protected || 0) === 1;
+    const protectedButton = `<button type="button" id="meta-protected-toggle" class="kcui-tag ${isProtected ? "kcui-tag--success" : "kcui-tag--warning"}" data-protected="${isProtected ? 1 : 0}" title="Toggle protected">${isProtected ? "Yes" : "No"}</button>`;
     const rows = [
         ["id",              conv.id],
         ["status",          pill(displayStatus.label)],
         ["profile",         pill(conv.profile)],
+        ["protected",       protectedButton],
         ["subject",         escHtml(conv.subject || "(none)")],
         ["turn_count",      conv.turn_count ?? 0],
         ["token_estimate",  (conv.token_estimate ?? 0).toLocaleString()],
@@ -249,6 +254,32 @@ function renderMeta(conv) {
 
 function renderMetaColumn(rows) {
     return `<table class="kv-table meta-col">${rows.map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join("")}</table>`;
+}
+
+async function onMetaTableClick(event) {
+    const btn = event.target.closest("#meta-protected-toggle");
+    if (!btn) return;
+    if (_selectedId === null) return;
+    const current = String(btn.dataset.protected || "0") === "1";
+    const next = !current;
+    btn.disabled = true;
+    try {
+        const resp = await fetch(`/conversations/${_selectedId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ protected: next }),
+        });
+        if (!resp.ok) {
+            const err = await resp.text().catch(() => "");
+            throw new Error(`HTTP ${resp.status}: ${err}`);
+        }
+        await refreshAll();
+    } catch (e) {
+        console.error("toggleProtected:", e);
+        window.alert(`Protected toggle failed: ${e.message}`);
+    } finally {
+        btn.disabled = false;
+    }
 }
 
 // ====================================================================================================
@@ -332,7 +363,7 @@ async function sendMessage() {
 
     // Inbound messages for webchat conversations route through the MAF agent so the agent
     // processes them and writes the response back to KC - exactly like typing in the agent page.
-    const MAF_BASE     = "http://localhost:8000";
+    const MAF_BASE     = String(window.__koreSuiteUrls?.koreagent || "http://127.0.0.1:8605").replace(/\/$/, "");
     const wcPrefix     = "webchat_";
     const isWebchat    = direction === "inbound" && _selectedExternalId && _selectedExternalId.startsWith(wcPrefix);
 
@@ -505,7 +536,7 @@ function renderMessages(msgs) {
 
     if (visible.length === 0) {
         document.getElementById("messages-body").innerHTML =
-            "<div style='padding:10px;color:var(--text-dim);font-size:11px;'>No messages.</div>";
+            "<div class='empty-note'>No messages.</div>";
         return;
     }
 
@@ -537,7 +568,7 @@ function renderEvents(evts) {
 
     if (evts.length === 0) {
         document.getElementById("events-body").innerHTML =
-            "<div style='padding:10px;color:var(--text-dim);font-size:11px;'>No events.</div>";
+            "<div class='empty-note'>No events.</div>";
         return;
     }
 
@@ -571,10 +602,10 @@ function renderEvents(evts) {
     <td>${escHtml(e.event_type)}</td>
     <td>${pill(e.status)}</td>
     <td>${e.priority ?? 0}</td>
-    <td style="color:var(--text-dim);font-size:10px;">${escHtml(e.claimed_by || "-")}</td>
-    <td style="color:var(--text-dim);font-size:10px;white-space:nowrap;">${formatDateTime(e.created_at)}</td>
-    <td style="color:var(--text-dim);font-size:10px;white-space:nowrap;">${formatDateTime(e.completed_at)}</td>
-    <td><pre style="font-size:10px;color:var(--text-dim);white-space:pre-wrap;">${payload}</pre></td>
+    <td class="evt-meta">${escHtml(e.claimed_by || "-")}</td>
+    <td class="evt-meta evt-meta--nowrap">${formatDateTime(e.created_at)}</td>
+    <td class="evt-meta evt-meta--nowrap">${formatDateTime(e.completed_at)}</td>
+    <td><pre class="evt-payload">${payload}</pre></td>
 </tr>`;
     }).join("");
 
@@ -646,7 +677,7 @@ function toggleAuto() {
     const on = document.getElementById("chk-auto").checked;
     if (on) {
         _connectSSE();
-        if (!_autoInterval) _autoInterval = setInterval(refreshAll, 30000);
+        if (!_autoInterval) _autoInterval = setInterval(refreshAll, AUTO_REFRESH_MS);
     } else {
         if (_sse)          { try { _sse.close(); } catch (_) {} _sse = null; }
         if (_autoInterval) { clearInterval(_autoInterval); _autoInterval = null; }

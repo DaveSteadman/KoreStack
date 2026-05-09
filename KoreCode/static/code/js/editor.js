@@ -268,6 +268,8 @@ export function createEditor({ runFind, runFindNext, runFindPrevious, closeFindB
     if (!active) {
       breadcrumb.textContent = 'No file open';
       fileState.textContent = 'Editor unavailable';
+      fileState.classList.remove('kcui-tag--warning');
+      fileState.classList.add('kcui-tag--dim');
       editorEmpty.classList.remove('is-hidden');
       editorHost.classList.remove('is-ready');
       updateSaveButton();
@@ -275,6 +277,8 @@ export function createEditor({ runFind, runFindNext, runFindPrevious, closeFindB
     }
     breadcrumb.textContent = active.path;
     fileState.textContent = active.dirty ? 'Unsaved changes' : 'Saved';
+    fileState.classList.toggle('kcui-tag--warning', Boolean(active.dirty));
+    fileState.classList.toggle('kcui-tag--dim', !active.dirty);
     editorEmpty.classList.add('is-hidden');
     editorHost.classList.add('is-ready');
     updateSaveButton();

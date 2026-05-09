@@ -226,6 +226,27 @@ html, body {
     font-size:  10px;
 }
 
+.empty-note {
+    padding: 10px;
+    color: var(--text-dim);
+    font-size: 11px;
+}
+
+.evt-meta {
+    color: var(--text-dim);
+    font-size: 10px;
+}
+
+.evt-meta--nowrap {
+    white-space: nowrap;
+}
+
+.evt-payload {
+    font-size: 10px;
+    color: var(--text-dim);
+    white-space: pre-wrap;
+}
+
 /* ============================================================
    KV TABLE
    ============================================================ */

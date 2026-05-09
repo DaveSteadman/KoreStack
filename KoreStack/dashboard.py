@@ -33,6 +33,7 @@ def _service_state(service: dict[str, object]) -> tuple[str, str, str]:
 
 def _service_row_markup(service: dict[str, object]) -> str:
     css_state, state_label, tag_color = _service_state(service)
+    state_markup = "" if css_state == "up" else f'<span class="kcui-tag kcui-tag--{tag_color}" data-field="state">{state_label}</span>'
     slug = html.escape(str(service["slug"]))
     label = html.escape(str(service["label"]))
     icon_key = html.escape(str(service["iconKey"]))
@@ -48,7 +49,7 @@ def _service_row_markup(service: dict[str, object]) -> str:
           <h2>{label}</h2>
           <p class="service-copy">{description}</p>
         </div>
-        <div class="service-cell service-state"><span class="kcui-tag kcui-tag--{tag_color}" data-field="state">{state_label}</span></div>
+        <div class="service-cell service-state">{state_markup}</div>
         <div class="service-cell address-edit">
           <input type="text" class="host-input" data-field="host" value="{host}" aria-label="Host for {label}">
           <input type="number" class="port-input" data-field="port" value="{port}" min="1024" max="65535" aria-label="Port for {label}">
@@ -257,11 +258,10 @@ def build_handler(
             probe_reachable: bool | None = None
             probe_detail: str | None = None
             if action in ("start", "restart", "setaddress"):
-                spec_after = self.manager_ref._service_map.get(slug)
+                spec_after = self.manager_ref.get_service_spec(slug)
                 if spec_after:
                     probe_reachable, probe_detail = probe_http_with_retry(spec_after.health_url)
-            with self.manager_ref._cache_lock:
-                self.manager_ref._snapshot_cache = None
+            self.manager_ref.invalidate_snapshot_cache()
             result: dict[str, object] = {"ok": True, "service": slug, "action": action, "changed": changed}
             if probe_reachable is not None:
                 result["reachable"] = probe_reachable
@@ -302,7 +302,7 @@ def serve_dashboard(
     )
     httpd = ThreadingHTTPServer((host, port), handler)
     httpd.timeout = 0.5
-    print(f"KoreStack  {dashboard_url}  (logs -> KoreStack/logs/)")
+    log.info("KoreStack  %s  (logs -> KoreStack/logs/)", dashboard_url)
     log.info("landing page %s", dashboard_url)
     while not stop_event.is_set():
         httpd.handle_request()

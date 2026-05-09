@@ -143,6 +143,7 @@ def status():
 class ConversationCreateRequest(BaseModel):
     channel_type:       str
     subject:            str | None = None
+    protected:          bool | None = None
     background_context: str        = ""
     profile:            str | None = None
     external_id:        str | None = None
@@ -151,6 +152,7 @@ class ConversationCreateRequest(BaseModel):
 class ConversationPatchRequest(BaseModel):
     status:             str | None  = None
     subject:            str | None  = None
+    protected:          bool | None = None
     thread_summary:     str | None  = None
     scratchpad:         dict | None = None
     background_context: str | None  = None
@@ -168,6 +170,7 @@ def create_conversation(req: ConversationCreateRequest):
     result = db.conversation_create(
         channel_type       = req.channel_type,
         subject            = req.subject,
+        protected          = req.protected,
         background_context = req.background_context,
         profile            = req.profile,
         external_id        = req.external_id,
@@ -238,6 +241,7 @@ def patch_conversation(conversation_id: int, req: ConversationPatchRequest):
         conversation_id    = conversation_id,
         status             = req.status,
         subject            = req.subject,
+        protected          = req.protected,
         thread_summary     = req.thread_summary,
         scratchpad         = req.scratchpad,
         background_context = req.background_context,

@@ -9,7 +9,7 @@
  *   <span  class="kcui-tag kcui-tag--accent">active</span>
  *   <button class="kcui-tag kcui-tag--warning is-on" type="button">Sandbox</button>
  *
- * Color modifiers:  --accent  --success  --warning  --danger  --info  --dim
+ * Color modifiers:  --accent  --success  --warning  --danger  --info  --muted  --dim
  * Shape modifiers:  --pill   (border-radius: 999px for rounded tags)
  * State modifiers:  is-on    is-off
  */
@@ -52,6 +52,7 @@ a.kcui-tag {
 .kcui-tag--warning { color: var(--warning, #f0c060); }
 .kcui-tag--danger  { color: var(--danger,  #ff5f5f); }
 .kcui-tag--info    { color: var(--info,    #6eb5ff); }
+.kcui-tag--muted   { color: var(--text-2,  #b8c0cc); }
 .kcui-tag--dim     { color: var(--text-dim, #4e5466); }
 
 /* ─── Shape variant ─────────────────────────────────────────────────── */
