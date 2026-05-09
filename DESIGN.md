@@ -226,6 +226,30 @@ That document owns:
 
 ---
 
+## 6A. No-Flicker Rule (Global, Mandatory)
+
+No page in the KoreStack suite may flicker during refresh, polling, filtering, or any incremental update. This is a hard design rule and applies to all services and all UI surfaces.
+
+Required behavior:
+
+- Keep existing layout and content mounted while new data is loading.
+- Update only the specific rows, cards, or fields that changed.
+- Preserve scroll position, focus, and text selection across updates.
+- Avoid rapid hide/show toggles for primary containers.
+- Use stable dimensions or placeholders when loading to prevent visual jumps.
+
+Forbidden behavior:
+
+- Clearing a whole panel and repainting it on each refresh tick.
+- Replacing full page or full panel DOM trees when only part of the data changed.
+- Forcing layout collapse/expand cycles to indicate loading state.
+
+Acceptance standard:
+
+- Under periodic updates, the operator must be able to keep reading or interacting without visible flash, blanking, or layout jitter.
+
+---
+
 ## 7. Landing Page Reference
 
 The KoreStack landing page UX and navigation behavior are defined in [DESIGN_UI.md](DESIGN_UI.md).

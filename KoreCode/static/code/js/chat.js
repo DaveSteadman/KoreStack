@@ -199,7 +199,9 @@ export function initChat({ getActiveTab, getContinueContext, insertContinuation,
     panel.hidden = !open;
     splitter.hidden = !open;
     _panelOpen = open;
-    aiBtn.classList.toggle('is-active', open);
+    aiBtn.classList.toggle('is-on', open);
+    aiBtn.classList.toggle('kcui-tag--accent', open);
+    aiBtn.classList.toggle('kcui-tag--dim', !open);
     _syncThinkingNote();
     _save();
   }

@@ -25,7 +25,7 @@ def build_suite_urls(manager: Any, dashboard_url: str, service_icon_keys: dict[s
 
 def _service_state(service: dict[str, object]) -> tuple[str, str, str]:
     if service["reachable"]:
-        return "up", "Reachable", "accent"
+        return "up", "Up", "accent"
     if service["running"]:
         return "starting", "Starting", "warning"
     return "down", "Stopped", "danger"
@@ -92,7 +92,6 @@ def _dashboard_bootstrap(snapshot: dict[str, object], suite_urls: dict[str, str]
         "suiteUrls": suite_urls,
         "chips": [
             {"label": "Running", "value": f"{metrics['running']} / {metrics['selected']}", "tone": "accent"},
-            {"label": "Reachable", "value": str(metrics["reachable"])},
             {"label": "Dashboard", "value": dashboard_url},
         ],
     }

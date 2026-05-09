@@ -122,13 +122,12 @@
         brandLabel: 'KoreAgent',
         brandIcon: 'koreagent',
         chips: [
-            { label: 'Host', value: '', valueId: 'ollama-host' },
-            { label: 'Model', value: '', valueId: 'ollama-model' },
-            { label: 'Context', value: '', valueId: 'ollama-ctx' },
+            { label: 'Host', value: '', valueId: 'ollama-host', tone: 'info' },
+            { label: 'Model', value: '', valueId: 'ollama-model', tone: 'info' },
+            { label: 'Context', value: '', valueId: 'ollama-ctx', tone: 'info' },
         ],
         actions: [
             { kind: 'button', id: 'btn-reset-layout', action: 'reset-layout', label: 'Default Layout', className: 'kcui-tag kcui-tag--dim' },
-            { kind: 'button', id: 'btn-open-readme', action: 'open-readme', label: 'Readme', className: 'kcui-tag kcui-tag--dim' },
         ],
     });
     initWorkspaceLayouts();

@@ -439,9 +439,49 @@ function cancelAgeGate() {
 (function () {
   var DELAY = 5000;
   var timer;
+  var inflight = false;
+
+  function canRefreshNow() {
+    if (document.visibilityState !== 'visible') return false;
+    if (document.activeElement && (
+      document.activeElement.matches('input, textarea, select') ||
+      document.activeElement.closest('#form-edit')
+    )) return false;
+    return true;
+  }
+
+  async function refreshInPlace() {
+    if (inflight || !canRefreshNow()) return;
+    inflight = true;
+    try {
+      var resp = await fetch(location.href, { cache: 'no-store' });
+      if (!resp.ok) return;
+      var html = await resp.text();
+      var doc = new DOMParser().parseFromString(html, 'text/html');
+
+      var oldFeeds = document.getElementById('feeds-tbody');
+      var newFeeds = doc.getElementById('feeds-tbody');
+      if (oldFeeds && newFeeds) oldFeeds.innerHTML = newFeeds.innerHTML;
+
+      var oldEntries = document.getElementById('entries-tbody');
+      var newEntries = doc.getElementById('entries-tbody');
+      if (oldEntries && newEntries) oldEntries.innerHTML = newEntries.innerHTML;
+
+      var oldCount = document.getElementById('entry-count');
+      var newCount = doc.getElementById('entry-count');
+      if (oldCount && newCount) oldCount.textContent = newCount.textContent;
+
+      document.querySelectorAll('.rate-input').forEach(function (i) { i.dataset.prev = i.value; });
+    } catch (_) {
+      // keep current DOM on transient refresh errors
+    } finally {
+      inflight = false;
+    }
+  }
+
   function schedule() {
     clearTimeout(timer);
-    timer = setTimeout(function () { location.reload(); }, DELAY);
+    timer = setTimeout(refreshInPlace, DELAY);
   }
   ['mousedown', 'keydown', 'touchstart'].forEach(function (evt) {
     document.addEventListener(evt, schedule, { passive: true });

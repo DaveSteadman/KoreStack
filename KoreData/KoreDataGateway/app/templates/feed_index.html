@@ -229,10 +229,50 @@ function cancelEditDomain() {
 (function () {
   var DELAY = 5000;
   var timer;
+  var inflight = false;
+
+  async function refreshInPlace() {
+    if (inflight || document.visibilityState !== 'visible') return;
+    inflight = true;
+    try {
+      const resp = await fetch(location.href, { cache: 'no-store' });
+      if (!resp.ok) return;
+      const html = await resp.text();
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+
+      const oldDomains = document.querySelector('table tbody');
+      const newDomains = doc.querySelector('table tbody');
+      if (oldDomains && newDomains) oldDomains.innerHTML = newDomains.innerHTML;
+
+      const oldFeedStatusPanel = Array.from(document.querySelectorAll('.panel.kcui-panel')).find(function (p) {
+        return p.querySelector('.panel-header') && p.querySelector('.panel-header').textContent.includes('FEED STATUS');
+      });
+      const newFeedStatusPanel = Array.from(doc.querySelectorAll('.panel.kcui-panel')).find(function (p) {
+        return p.querySelector('.panel-header') && p.querySelector('.panel-header').textContent.includes('FEED STATUS');
+      });
+
+      if (oldFeedStatusPanel && newFeedStatusPanel) {
+        oldFeedStatusPanel.innerHTML = newFeedStatusPanel.innerHTML;
+      }
+      if (oldFeedStatusPanel && !newFeedStatusPanel) {
+        oldFeedStatusPanel.remove();
+      }
+      if (!oldFeedStatusPanel && newFeedStatusPanel) {
+        const page = document.querySelector('.kcui-page.kcui-page--narrow.kcui-stack');
+        if (page) page.appendChild(newFeedStatusPanel);
+      }
+    } catch (_) {
+      // keep current DOM on transient refresh errors
+    } finally {
+      inflight = false;
+    }
+  }
+
   function schedule() {
     clearTimeout(timer);
-    timer = setTimeout(function () { location.reload(); }, DELAY);
+    timer = setTimeout(refreshInPlace, DELAY);
   }
+
   ['mousedown', 'keydown', 'touchstart'].forEach(function (evt) {
     document.addEventListener(evt, schedule, { passive: true });
   });

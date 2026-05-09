@@ -1237,12 +1237,9 @@ function onInputChange() {
 
 function _resizeTextarea() {
     const ta = dom.input();
-    const minHeight = 48;
-    const maxHeight = 180;
-    ta.style.height = "auto";
-    const nextHeight = Math.max(minHeight, Math.min(ta.scrollHeight, maxHeight));
-    ta.style.height = nextHeight + "px";
-    ta.style.overflowY = ta.scrollHeight > maxHeight ? "auto" : "hidden";
+    // Input panel now owns textarea sizing; keep it matched to panel height.
+    ta.style.height = "100%";
+    ta.style.overflowY = "auto";
 }
 
 // ====================================================================================================
@@ -1296,9 +1293,6 @@ function init() {
     $("webskills-btn")?.addEventListener("click", toggleWebSkills);
     $("wrap-btn-chat")?.addEventListener("click", () => { toggleWrap("chat-body", "wrap-btn-chat"); });
     $("btn-reset-layout")?.addEventListener("click", resetLayout);
-    $("btn-open-readme")?.addEventListener("click", () => {
-        window.open("/README.md", "_blank", "noopener,noreferrer");
-    });
 
     // Restore any in-progress draft from before the user navigated away.
     const _draft = _restoreInputDraft();

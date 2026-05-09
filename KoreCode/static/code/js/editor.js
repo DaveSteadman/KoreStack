@@ -162,7 +162,9 @@ export function createEditor({ runFind, runFindNext, runFindPrevious, closeFindB
 
   function updateWrapButton() {
     if (!wrapButton) return;
-    wrapButton.classList.toggle('is-active', lineWrapEnabled);
+    wrapButton.classList.toggle('is-on', lineWrapEnabled);
+    wrapButton.classList.toggle('kcui-tag--warning', lineWrapEnabled);
+    wrapButton.classList.toggle('kcui-tag--dim', !lineWrapEnabled);
     wrapButton.setAttribute('aria-pressed', lineWrapEnabled ? 'true' : 'false');
     wrapButton.title = lineWrapEnabled ? 'Disable line wrap' : 'Enable line wrap';
   }
@@ -209,8 +211,11 @@ export function createEditor({ runFind, runFindNext, runFindPrevious, closeFindB
 
   function updateSaveButton() {
     const active = getActiveTab();
+    const dirty = Boolean(active?.dirty);
     findButton.disabled = !active;
-    saveButton.disabled = !active || !active.dirty;
+    saveButton.disabled = !active || !dirty;
+    saveButton.classList.toggle('kcui-tag--info', dirty);
+    saveButton.classList.toggle('kcui-tag--dim', !dirty);
   }
 
   function persistTabs() {

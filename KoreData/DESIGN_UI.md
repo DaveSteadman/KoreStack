@@ -42,7 +42,7 @@ KoreData uses the shared KoreStack shell from UIElements. The shell is initializ
 ├─────────────────────────────────────────────────────────────────────┤
 │  Application Bar  (#app-bar)                                        │
 │  KoreData brand  │  ● status dot  │  Role: Gateway                  │
-│  [Home] [Feeds] [Library] [Reference] [RAG] [API Docs ↗]           │
+│  [Home] [Feeds] [Library] [Reference] [RAG]                        │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
