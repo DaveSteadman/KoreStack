@@ -1,6 +1,8 @@
 # KoreStack
 
-KoreStack is a local-first AI assistant suite. One command starts the whole system: an agent you talk to, a document editor, a spreadsheet, a diagram tool, a code editor, a data library, web feeds, a reference encyclopedia, and a communications hub — all running locally, all connected.
+KoreStack is a local-first AI agent suite. One command line starts the whole system: an agent you talk to, a document editor, a spreadsheet, a diagram tool, a code editor, a data library, web feeds, a reference encyclopedia, and a communications hub — all running locally, all inter-connected.
+
+It has no browser extensions, installed services or opaque config.
 
 ![Kore Stack headline](progress/2026-05-04%20-%20kore-suite-headline.gif)
 
