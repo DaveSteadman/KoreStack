@@ -143,6 +143,114 @@
   overflow: hidden;
 }
 
+/* Shared left file navigator panel (KoreCode/KoreDocs). */
+.kcui-navpanel {
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+}
+
+.kcui-navpanel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 34px;
+  padding: 10px 12px 8px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-dim);
+}
+
+.kcui-navpanel-status {
+  min-height: 22px;
+  padding: 8px 12px;
+  color: var(--text-2);
+  border-bottom: 1px solid var(--border);
+}
+
+.kcui-navpanel-tree {
+  flex: 1;
+  overflow: auto;
+  padding: 8px 8px 14px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.kcui-navpanel .tree-row,
+.kcui-navpanel .tree-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text-2);
+  text-align: left;
+  user-select: none;
+}
+
+.kcui-navpanel .tree-row {
+  width: 100%;
+  padding: 0 10px 0 calc(10px + var(--depth, 0) * 16px);
+  cursor: pointer;
+}
+
+.kcui-navpanel .tree-item {
+  margin: 0;
+  padding: 0 10px 0 calc(10px + var(--indent, 0) * 16px);
+  cursor: default;
+}
+
+.kcui-navpanel .tree-row:hover,
+.kcui-navpanel .tree-item:hover {
+  background: color-mix(in srgb, var(--surface) 86%, transparent);
+  color: var(--text);
+}
+
+.kcui-navpanel .tree-row.is-active,
+.kcui-navpanel .tree-item.selected {
+  background: color-mix(in srgb, var(--accent) 24%, transparent);
+  color: var(--text);
+}
+
+.kcui-navpanel .tree-row.is-dir {
+  font-weight: 600;
+}
+
+.kcui-navpanel .tree-caret {
+  width: 12px;
+  color: var(--accent-2);
+  flex: 0 0 12px;
+}
+
+.kcui-navpanel .tree-row.is-file .tree-caret {
+  visibility: hidden;
+}
+
+.kcui-navpanel .tree-toggle {
+  width: 12px;
+  color: var(--accent-2);
+  flex: 0 0 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.kcui-navpanel .tree-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kcui-navpanel .tree-children {
+  display: grid;
+}
+
+.kcui-navpanel .tree-children.open {
+  display: block;
+}
+
 @media (max-width: 680px) {
   .kcui-panels {
     grid-template-columns: 1fr;

@@ -17,8 +17,8 @@
   <div id="topbar"></div>
   <div id="app-bar"></div>
   <main id="code-app" class="kcui-panels">
-    <aside id="code-sidebar" class="kcui-panel-left">
-      <div class="panel-header">
+    <aside id="code-sidebar" class="kcui-panel-left kcui-navpanel">
+      <div class="panel-header kcui-navpanel-header kcui-panel-header">
         <div>
           <div class="panel-kicker">Explorer</div>
           <div id="root-label" class="panel-title">KoreStack</div>
@@ -26,8 +26,8 @@
         </div>
         <button id="btn-refresh-tree" class="icon-btn" type="button" title="Refresh explorer">Refresh</button>
       </div>
-      <div id="tree-status" class="panel-status">Loading workspace…</div>
-      <div id="code-tree" aria-label="File explorer"></div>
+      <div id="tree-status" class="panel-status kcui-navpanel-status">Loading workspace…</div>
+      <div id="code-tree" class="kcui-navpanel-tree" aria-label="File explorer"></div>
     </aside>
     <div id="code-splitter" class="kcui-splitter" aria-hidden="true"></div>
     <section id="code-main" class="kcui-panel-right">

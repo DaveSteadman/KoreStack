@@ -1,61 +1,6 @@
-#code-sidebar {
-  background: var(--surface);
-}
-
-#code-tree {
-  flex: 1;
-  overflow: auto;
-  padding: 8px 8px 14px;
-}
-
-.tree-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  min-height: 30px;
-  padding: 0 10px 0 calc(10px + var(--depth, 0) * 16px);
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  color: var(--text-2);
-  text-align: left;
-  cursor: pointer;
-}
-
-.tree-row:hover {
-  background: color-mix(in srgb, var(--surface) 86%, transparent);
-  color: var(--text);
-}
-
-.tree-row.is-active {
-  background: color-mix(in srgb, var(--accent) 24%, transparent);
-  color: var(--text);
-}
-
-.tree-row.is-dir {
-  font-weight: 600;
-}
-
-.tree-caret {
-  width: 12px;
-  color: var(--accent-2);
-  flex: 0 0 12px;
-}
-
-.tree-row.is-file .tree-caret {
-  visibility: hidden;
-}
-
-.tree-label {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.tree-children {
-  display: grid;
-}
+/*
+ * KoreCode explorer visuals are defined in shared UIElements
+ * navigator rules (panels.css) via .kcui-navpanel classes.
+ */
 
 

@@ -46,7 +46,11 @@
 .kcui-section-note,
 [data-role="app-title"],
 .kcui-statusbar,
-.kappbar-note {
+.kappbar-note,
+.kcui-navpanel,
+.kcui-navpanel .tree-row,
+.kcui-navpanel .tree-item,
+.kcui-navpanel .tree-label {
   font-family: 'Roboto Mono', 'Cascadia Code', 'Fira Code', 'Courier New', monospace;
 }
 

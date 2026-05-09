@@ -27,7 +27,7 @@ export const ICON_FILES = Object.freeze({
   koredoc: 'text-svgrepo-com',
   koresheet: 'table-list-alt-svgrepo-com',
   kodiag: 'draw-square-svgrepo-com',
-  korefile: 'folder-search-svgrepo-com',
+  korefile: 'class-16-svgrepo-com',
 });
 
 function makePackIcon(iconName) {
