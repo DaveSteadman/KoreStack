@@ -48,7 +48,7 @@ _CORE_IDENTITY_PARTS: list[str] = [
 # ====================================================================================================
 # Behavioral notes contributed by each system skill (system_skills/).
 # These entries name a specific system capability, which is why they cannot live in core identity.
-# One cluster per skill. Memory contributes dynamically (top_facts / recalled_memories blocks)
+# One cluster per skill.
 # and has no static entry here.
 #
 # Note: dynamic collection would be cleaner but causes a circular import via orchestration.py.
@@ -196,14 +196,10 @@ def build_system_message(
     sandbox_enabled: bool,
     scratchpad_visible_keys: list[str] | None = None,
     conversation_summary: str | None = None,
-    top_facts: str | None = None,
-    recalled_memories: str | None = None,
 ) -> str:
     system_parts: list[str] = list(_CORE_IDENTITY_PARTS) + list(_SYSTEM_SKILL_GUIDANCE) + list(_TOOL_ROUTING_FUDGE)
     if ambient_system_info:
         system_parts.append(f"\n{ambient_system_info}")
-    if top_facts:
-        system_parts.append(f"\nKnown facts about this user and environment:\n{top_facts}")
     if conversation_summary:
         system_parts.append(f"\nPrior conversation summary (oldest exchanges, compressed):\n{conversation_summary}")
 
@@ -216,9 +212,6 @@ def build_system_message(
         if skill_guidance:
             system_parts.append(f"\n{skill_guidance}")
 
-    if recalled_memories:
-        system_parts.append(f"\nMemories relevant to this prompt:\n{recalled_memories}")
-
     if not sandbox_enabled:
         system_parts.append("\nPython execution sandbox: OFF - code snippets have unrestricted access to all modules and file I/O.")
 
@@ -226,13 +219,19 @@ def build_system_message(
     if scratchpad_visible_keys is not None:
         scratch_store = {key: value for key, value in scratch_store.items() if key in scratchpad_visible_keys}
     if scratch_store:
-        named_keys = {key: value for key, value in scratch_store.items() if not key.startswith("_tc_")}
-        auto_keys = {key: value for key, value in scratch_store.items() if key.startswith("_tc_")}
+        named_keys   = {k: v for k, v in scratch_store.items() if not k.startswith(("_tc_", "_cx_", "research_page_"))}
+        auto_keys    = {k: v for k, v in scratch_store.items() if k.startswith("_tc_") or k.startswith("research_page_")}
+        context_keys = {k: v for k, v in scratch_store.items() if k.startswith("_cx_")}
         key_lines = []
         if named_keys:
-            key_lines.append("Named:      " + ", ".join(f"{key} ({len(value):,} chars)" for key, value in sorted(named_keys.items())))
+            key_lines.append("Named:             " + ", ".join(f"{key} ({len(value):,} chars)" for key, value in sorted(named_keys.items())))
         if auto_keys:
-            key_lines.append("Auto-saved: " + ", ".join(f"{key} ({len(value):,} chars)" for key, value in sorted(auto_keys.items())))
-        system_parts.append("\nScratchpad keys currently stored:\n  " + "\n  ".join(key_lines) + "\nReference them in skill arguments using {scratch:key} or load them with scratch_load().")
+            key_lines.append("Auto-saved:        " + ", ".join(f"{key} ({len(value):,} chars)" for key, value in sorted(auto_keys.items())))
+        if context_keys:
+            key_lines.append("Compacted-context: " + ", ".join(f"{key} ({len(value):,} chars)" for key, value in sorted(context_keys.items())))
+        suffix = "\nReference them in skill arguments using {scratch:key} or load them with scratch_load()."
+        if context_keys:
+            suffix += " Compacted-context keys (_cx_*) hold earlier turn content saved during context compaction; use scratch_query to extract information from them."
+        system_parts.append("\nScratchpad keys currently stored:\n  " + "\n  ".join(key_lines) + suffix)
 
     return "\n".join(system_parts)

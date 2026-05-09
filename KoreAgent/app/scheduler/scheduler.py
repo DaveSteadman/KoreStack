@@ -1,7 +1,7 @@
 # ====================================================================================================
 # MARK: OVERVIEW
 # ====================================================================================================
-# Lightweight schedule management utilities for MiniAgentFramework scheduler mode.
+# Lightweight schedule management utilities for KoreAgent.
 #
 # Provides:
 #   task_queue   -- module-level TaskQueue that serialises all LLM calls sequentially.
@@ -260,7 +260,7 @@ class TaskQueue:
 # ====================================================================================================
 # MARK: MODULE INSTANCES
 # ====================================================================================================
-# task_queue is the shared singleton used by all scheduler and API mode code.
+# task_queue is the shared singleton used by all scheduled-task and server code.
 # llm_lock is a back-compat alias for task_queue.run_lock.
 task_queue: TaskQueue    = TaskQueue()
 llm_lock:   threading.Lock = task_queue.run_lock

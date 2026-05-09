@@ -1,12 +1,12 @@
 # ====================================================================================================
 # MARK: OVERVIEW
 # ====================================================================================================
-# API execution mode for MiniAgentFramework.
+# Server startup for KoreAgent.
 #
-# Provides run_api_mode(), which:
+# Provides run_api_mode(), which is the main entry point called by main.py:
 #   - Loads schedules and initialises the task queue
 #   - Wires up api.py's push_log_line as the LLM-call log sink
-#   - Starts a background scheduler thread so scheduled tasks fire
+#   - Starts a background scheduler thread that hot-reloads and fires scheduled tasks
 #   - Launches uvicorn to serve the FastAPI app
 #
 # Related modules:
@@ -59,7 +59,7 @@ _DEFAULT_HOST         = "0.0.0.0"
 
 
 # ====================================================================================================
-# MARK: API MODE
+# MARK: SERVER STARTUP
 # ====================================================================================================
 
 def _can_bind(host: str, port: int) -> tuple[bool, str]:
@@ -127,11 +127,25 @@ def run_api_mode(
     )
 
     # -----------------------------------------------------------------------
-    # Background scheduler thread - identical logic to scheduler mode.
+    # Background scheduler thread.
     # -----------------------------------------------------------------------
     def _scheduler_loop() -> None:
         while not shutdown.is_set():
             now = datetime.now()
+            # Hot-reload schedules from disk on every poll cycle so task CRUD changes
+            # (create/delete/enable/disable/reschedule) take effect without a restart.
+            # enabled_tasks[:] mutates the shared list in-place so the API endpoints
+            # (which reference the same list object via api.py's _enabled_tasks) see
+            # the updated view automatically.
+            try:
+                _all = load_schedules_dir(_SCHEDULES_DIR)
+                enabled_tasks[:] = [t for t in _all if t.get("enabled", True)]
+            except FileNotFoundError:
+                enabled_tasks[:] = []
+            for t in enabled_tasks:
+                if t["name"] not in last_run:
+                    last_run[t["name"]] = initial_last_run(t, now)
+
             for task in enabled_tasks:
                 if shutdown.is_set():
                     break
@@ -191,7 +205,7 @@ def run_api_mode(
     )
 
     push_log_line(f"[API] Server starting on http://{host}:{port}")
-    print(f"\nAPI mode - http://{host}:{port}  (send interrupt to stop)", flush=True)
+    print(f"\nKoreAgent - http://{host}:{port}  (send interrupt to stop)", flush=True)
     print(f"Web UI:   http://localhost:{port}/", flush=True)
 
     uvicorn_config = uvicorn.Config(

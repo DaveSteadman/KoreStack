@@ -1,7 +1,7 @@
 # ====================================================================================================
 # MARK: OVERVIEW
 # ====================================================================================================
-# DateTime skill module for the MiniAgentFramework.
+# DateTime skill module for KoreAgent.
 #
 # Provides a single callable function that returns structured date and time values.
 #

@@ -1,7 +1,7 @@
 # ====================================================================================================
 # MARK: OVERVIEW
 # ====================================================================================================
-# WebSearch skill for the MiniAgentFramework.
+# WebSearch skill for KoreAgent.
 #
 # Searches DuckDuckGo Lite (lite.duckduckgo.com) - no API key, no JavaScript required.
 # Uses Python stdlib (urllib) only; no mandatory third-party dependencies.

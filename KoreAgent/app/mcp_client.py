@@ -1,7 +1,7 @@
 # ====================================================================================================
 # MARK: OVERVIEW
 # ====================================================================================================
-# Bridges the synchronous MiniAgentFramework skill pipeline to async MCP servers.
+# Bridges the synchronous KoreAgent skill pipeline to async MCP servers.
 #
 # Maintains a dedicated asyncio event loop in a background daemon thread.
 # All async MCP operations are dispatched from the sync orchestration thread via

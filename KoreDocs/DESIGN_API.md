@@ -9,7 +9,7 @@
 
 This document covers the programmatic HTTP API exposed by KoreDocs for use by KoreAgent, KoreComms, and other suite services. It does not cover the MCP tool layer (see `koredocs_mcp.py`) or the browser UI (see `DESIGN_UI.md`).
 
-Base URL: `http://127.0.0.1:<port>` (default port 5500; overridden by KoreStack via `--port`).
+Base URL: `http://127.0.0.1:<port>` (suite default port 8615 from top-level config; standalone fallback default is 5500).
 
 All request and response bodies are JSON unless noted. Successful mutation responses always include `{"ok": true}` or the updated resource object.
 

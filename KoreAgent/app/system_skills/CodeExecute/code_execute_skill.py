@@ -1,7 +1,7 @@
 # ====================================================================================================
 # MARK: OVERVIEW
 # ====================================================================================================
-# CodeExecute skill module for the MiniAgentFramework.
+# CodeExecute skill module for KoreAgent.
 #
 # Runs a Python code snippet supplied by the model inside a sandboxed environment with a
 # restricted import whitelist, stripped dangerous builtins, and a wall-clock timeout.  Captured

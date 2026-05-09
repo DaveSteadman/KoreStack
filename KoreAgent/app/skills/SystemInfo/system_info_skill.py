@@ -1,7 +1,7 @@
 # ====================================================================================================
 # MARK: OVERVIEW
 # ====================================================================================================
-# SystemInfo skill module for the MiniAgentFramework.
+# SystemInfo skill module for KoreAgent.
 #
 # Provides a callable tool function the model can invoke when a user prompt requires
 # information about the runtime environment:

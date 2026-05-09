@@ -657,6 +657,7 @@ def main() -> int:
             daemon=True,
         )
         dashboard_thread.start()
+        print(f"\nKoreStack: http://{dashboard_host}:{dashboard_port}/\n", flush=True)
         if args.open_browser:
             webbrowser.open(f"http://{dashboard_host}:{dashboard_port}/")
 

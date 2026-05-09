@@ -3,6 +3,26 @@
 {% block main_class %}kcui-main{% endblock %}
 
 {% block content %}
+<style>
+  .kg-log-pane {
+    font-family: var(--font-code);
+    font-size: 11px;
+    line-height: 1.7;
+    max-height: 220px;
+    overflow-y: auto;
+  }
+
+  .kg-log-pane--tall {
+    max-height: 280px;
+  }
+
+  .kg-batch-urls {
+    font-family: var(--font-code);
+    font-size: 11px;
+    resize: vertical;
+    width: 100%;
+  }
+</style>
 <div class="kcui-page kcui-page--narrow kcui-stack">
 {% if error %}
 <div style="background:rgba(255,95,95,0.1); border:1px solid var(--red); color:var(--red); padding:0.6rem 1rem; margin-bottom:1rem; font-size:12px;">
@@ -145,7 +165,7 @@
           <span class="meta" style="font-size:11px; letter-spacing:0.04em;">IMPORT LOG</span>
           <button type="button" onclick="clearLog()" style="font-size:10px; padding:1px 6px; background:transparent; border-color:var(--border); color:var(--dim);">CLEAR</button>
         </div>
-        <div id="k_log" style="font-family:var(--font-code); font-size:11px; line-height:1.7; max-height:220px; overflow-y:auto;"></div>
+        <div id="k_log" class="kg-log-pane"></div>
       </div>
 
     </div>
@@ -162,9 +182,9 @@
         Paste one Kiwix viewer URL per line (e.g. <code>http://host/viewer#zim/Article_Name.123</code>). Blank lines are ignored. Already-imported titles are skipped.
       </p>
       <div style="display:grid; grid-template-columns:1fr auto; gap:0.5rem; margin-bottom:0.6rem; align-items:start;">
-        <textarea id="batch_urls" rows="8"
+        <textarea id="batch_urls" rows="8" class="kg-batch-urls"
           placeholder="http://192.168.1.33:8080/viewer#gutenberg_en_all_2023-09/A/Adventures_of_Huckleberry_Finn.1837&#10;http://192.168.1.33:8080/viewer#gutenberg_en_all_2023-09/A/Moby-Dick.2701&#10;...one URL per line"
-          style="font-family:var(--font-code); font-size:11px; resize:vertical; width:100%;"></textarea>
+          ></textarea>
         <div style="display:flex; flex-direction:column; gap:0.4rem;">
           <button type="button" onclick="batchImport()" id="batch_btn" style="white-space:nowrap;">START IMPORT</button>
           <button type="button" onclick="batchClear()" style="font-size:10px; padding:2px 6px; background:transparent; border-color:var(--border); color:var(--dim); white-space:nowrap;">CLEAR LOG</button>
@@ -173,7 +193,7 @@
       <div id="batch_status" class="meta" style="min-height:1.2em; margin-bottom:0.4rem;"></div>
       <div id="batch_log_wrap" style="display:none;">
         <div style="font-size:11px; letter-spacing:0.04em; color:var(--dim); margin-bottom:0.3rem;">IMPORT LOG</div>
-        <div id="batch_log" style="font-family:var(--font-code); font-size:11px; line-height:1.7; max-height:280px; overflow-y:auto;"></div>
+        <div id="batch_log" class="kg-log-pane kg-log-pane--tall"></div>
       </div>
     </div>
   </div>

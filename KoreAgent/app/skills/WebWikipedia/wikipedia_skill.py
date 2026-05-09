@@ -1,7 +1,7 @@
 # ====================================================================================================
 # MARK: OVERVIEW
 # ====================================================================================================
-# WebWikipedia lookup skill for the MiniAgentFramework.
+# WebWikipedia lookup skill for KoreAgent.
 #
 # Provides a single LLM-callable tool that accepts a topic string, searches Wikipedia via the
 # OpenSearch API to resolve the best matching article title, then retrieves a plain-text extract

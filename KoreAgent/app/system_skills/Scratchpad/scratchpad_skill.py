@@ -1,7 +1,7 @@
 # ====================================================================================================
 # MARK: OVERVIEW
 # ====================================================================================================
-# Scratchpad skill module for the MiniAgentFramework.
+# Scratchpad skill module for KoreAgent.
 #
 # Thin wrapper that re-exports the four LLM-callable functions from the shared scratchpad
 # module (code/scratchpad.py).  Keeping the implementation in scratchpad.py allows

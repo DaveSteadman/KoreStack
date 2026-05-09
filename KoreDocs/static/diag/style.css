@@ -22,7 +22,7 @@
   --accent-2:    #9d8ff8;
   --danger:      #f38ba8;
 
-  --font-ui:   'Inter', system-ui, sans-serif;
+  --font-ui:   'Roboto Mono', 'Cascadia Code', 'Fira Code', 'Courier New', monospace;
   --font-code: 'Roboto Mono', 'Cascadia Code', 'Fira Code', 'Courier New', monospace;
 
   color-scheme: dark;

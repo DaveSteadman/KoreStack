@@ -1,149 +1,125 @@
 
-# KoreData
-Folder C:\Util\GithubRepos\KoreData defines a data source service, that scrapes the internet for new data, or holds a wikipedia clone. It provides that data to an agent to support its activities.
-
-# MiniAgentFramework
-Folder C:\Util\GithubRepos\MiniAgentFramework defines an agent framework that wraps an LLM in context and orchestration functionality to perform actions beyond the scope of a simple chat interface.
-
 # KoreComms
 
 ## Purpose
 
-KoreComms interfaces external communication services with MiniAgentFramework, allowing the agent to send and receive messages beyond a single PC. It acts as a central communication hub: normalising messages from heterogeneous sources into a single, sequentially-processed queue, and routing replies back out via the correct channel.
+KoreComms is the external messaging hub for the suite. It manages channel interfaces (Gmail and manual), tracks conversation mappings, and routes inbound and outbound traffic through KoreChat as the canonical conversation state service.
 
 ---
 
 ## System Context
 
-KoreComms is one of three co-operating services:
+KoreComms collaborates primarily with KoreChat and KoreAgent:
 
 | Service | Role |
 |---|---|
-| **KoreData** | Provides data to the agent (web scraping, Wikipedia clone) |
-| **MiniAgentFramework** | LLM wrapper with context and orchestration |
-| **KoreComms** | External communication hub (this service) |
+| **KoreComms** | Channel adapters, operator messaging UI, delivery orchestration |
+| **KoreChat** | Canonical conversation/messages/events state |
+| **KoreAgent** | Agent runtime that consumes and produces KoreChat events |
 
-All services run locally (same machine by default) but are bound to an IP address so they can be re-hosted or distributed in future.
-
----
-
-## Tech Stack
-
-- **Language / Framework:** Python — FastAPI or Flask, consistent with KoreData and MiniAgentFramework.
-- **Database:** SQLite, held locally, storing all conversations and messages.
-- **Deployment:** Local, IP-bound. Mirrors KoreData's hosting model so the service address is configurable.
+KoreComms does not own canonical thread history. It stores interface and external-message metadata locally, while message and event flow coordination is driven through KoreChat APIs.
 
 ---
 
-## Core Concepts
+## Runtime Model
 
-### Interfaces
-An *interface* represents a single connection to an external (or internal) communication channel. The design supports many interface *types* and multiple *instances* of each type. In the first implementation there is one Gmail account and one Manual interface.
+1. Inbound channel traffic is normalized by an interface adapter.
+2. KoreComms resolves or creates the linked KoreChat conversation.
+3. KoreComms appends inbound messages and raises response events in KoreChat.
+4. Agent-generated outbound content is read from KoreChat/event flow and delivered back through the source interface.
+5. Delivery state is written back to KoreChat and local activity logs.
 
-| Interface Type | Description | First Instance |
+This model replaces the older direct dequeue/reply API pattern.
+
+---
+
+## API Surface
+
+### Health and shared assets
+
+| Method | Path | Description |
 |---|---|---|
-| **Gmail** | Polls a Gmail mailbox via the Gmail API | One OAuth2 account |
-| **Manual** | Synthetic channel for local testing; messages injected via WebUI, replies stored internally | One instance |
+| `GET` | `/status` | Service health payload used by suite orchestration |
+| `GET` | `/suite-config.js` | Suite URLs/config for shell/runtime links |
+| `GET` | `/ui-elements/assets/{asset_path}` | Shared UIElements assets |
 
-All future interface types (e.g. Outlook, SMS, Slack) must conform to the same interface contract so they can be added without restructuring the core.
+### JSON API
 
-### Thread-Safe Message Queue
-All interface instances feed received messages into **one shared, thread-safe queue**. Messages are processed **sequentially** (FIFO). This ensures the agent never handles two messages concurrently and simplifies state management.
-
-### Conversations & Threading
-Messages are grouped into **conversations** (e.g. an email reply chain maps to one conversation). When the agent requests the next message, it receives the full conversation thread — all prior messages in that conversation — so it has complete context.
-
----
-
-## Message Lifecycle
-
-```
-[External Source]
-      │
-      ▼
-  RECEIVED          ← message arrives from an interface (Gmail poll or Manual injection)
-      │
-      ▼
-   QUEUED           ← placed on the thread-safe inbound queue
-      │
-      ▼
-  PROCESSING        ← agent has called GET /next-message; message locked for agent
-      │
-      ▼
-  HANDLED
-   ├── Replied      ← agent called POST /reply, then POST /complete
-   └── Ignored      ← agent called POST /complete without replying
-```
-
-- Only one message is in PROCESSING at a time (single agent, single KoreComms).
-- Once HANDLED, the agent calls GET /next-message again to advance.
-
----
-
-## Agent REST API
-
-The agent (MiniAgentFramework) communicates with KoreComms exclusively via REST.
-
-| Endpoint | Method | Description |
+| Method | Path | Description |
 |---|---|---|
-| `/next-message` | GET | Dequeue the next QUEUED message. Returns the message plus full conversation thread. Moves state to PROCESSING. Returns 204 if queue is empty. |
-| `/reply` | POST | Send a reply via the same channel the inbound message arrived on. Body includes message ID and reply text/content. |
-| `/complete` | POST | Mark the current message as HANDLED. Body specifies sub-state: `replied` or `ignored`. |
-| `/send` | POST | Initiate a brand-new outbound message on a specified interface (agent or human-triggered). |
+| `POST` | `/api/send` | Start new outbound conversation via selected interface |
+| `GET` | `/api/conversation/{conv_id}` | Lightweight conversation JSON |
+| `GET` | `/api/conversation/{conv_id}/detail` | Conversation detail JSON for UI refresh |
+| `GET` | `/api/events/stream` | Event stream for live conversation updates |
+| `POST` | `/api/conversation/{conv_id}/send` | Send message into an existing conversation |
 
-All endpoints return JSON. The agent and WebUI are the only consumers of this API.
+### HTML UI routes
 
----
-
-## Interface: Gmail
-
-- **Authentication:** OAuth2 with a stored refresh token (standard Gmail API). Credentials configured via the WebUI and persisted in the database.
-- **Polling:** Background thread polls at a configurable interval (default **60 seconds**). Interval is stored in configuration and adjustable via the WebUI.
-- **Inbound:** New emails are fetched, de-duplicated (tracked by Gmail message ID), parsed, and inserted into the message queue.
-- **Threading:** Gmail thread IDs are used to group messages into KoreComms conversations.
-- **Outbound / Reply:** Replies are sent via the Gmail API using the same thread. New outbound messages create a new Gmail thread.
-
----
-
-## Interface: Manual (Testing)
-
-- Messages are injected by a human through the WebUI (Compose / Inject form).
-- The injected message is placed on the shared queue exactly as if it arrived from an external source.
-- Replies from the agent are stored in the database and visible in the WebUI — no external transmission occurs.
-- This interface is always present and cannot be removed; it provides a zero-dependency test path.
-
----
-
-## WebUI
-
-Mirrors the KoreData WebUI pattern (locally accessible web interface). Provides:
-
-1. **Message View** — browse all incoming and outgoing messages across all interfaces, with conversation threading.
-2. **Compose / Inject** — create a synthetic inbound message via the Manual interface to test agent behaviour.
-3. **Connection Configuration** — add, edit, or remove external interface connections (e.g. add a Gmail OAuth account, set polling interval).
-4. **State Editor** — view and manually override message state (for debugging, e.g. re-queue a HANDLED message).
-5. **Agent Activity Log** — view a log of agent actions: messages fetched, replies sent, completions recorded.
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/` | Conversation list |
+| `GET` | `/compose` | Manual compose/inject form |
+| `POST` | `/compose` | Submit manual injected inbound message |
+| `GET` | `/connections` | Interface connection list |
+| `GET` | `/connections/new` | New connection form |
+| `POST` | `/connections/new` | Create connection |
+| `GET` | `/connections/{iface_id}` | Edit/view connection |
+| `POST` | `/connections/{iface_id}` | Save connection updates |
+| `POST` | `/connections/{iface_id}/delete` | Delete connection |
+| `GET` | `/connections/{iface_id}/gmail-authorize` | Start Gmail OAuth flow |
+| `GET` | `/gmail-callback` | Complete Gmail OAuth callback |
+| `GET` | `/activity` | Activity log UI |
+| `GET` | `/conversation/{conv_id}` | Conversation thread page |
+| `POST` | `/conversation/{conv_id}/delete` | Delete conversation |
+| `POST` | `/conversation/{conv_id}/send` | Send from HTML thread composer |
 
 ---
 
-## Database Schema (outline)
+## Interfaces
 
-| Table | Key Columns |
-|---|---|
-| `interfaces` | id, type, name, config_json, enabled |
-| `conversations` | id, interface_id, external_thread_id, created_at |
-| `messages` | id, conversation_id, direction (inbound/outbound), status, content, received_at, handled_at |
-| `config` | key, value (for global settings such as polling interval) |
+### Gmail
 
-- `config_json` on `interfaces` stores interface-specific credentials and settings (e.g. Gmail refresh token, poll interval override). Sensitive values should be stored encrypted at rest.
+- OAuth-backed channel with polling for inbound messages.
+- Uses external thread IDs and message IDs for dedupe and reply routing.
+- Outbound replies/new messages are sent through Gmail APIs and linked back to KoreChat records.
+
+### Manual
+
+- Local operator-only interface for testing and controlled message injection.
+- Messages are entered through the Web UI and flow through the same KoreChat-backed path as other interfaces.
 
 ---
 
-## Non-Functional Requirements
+## Data Ownership
 
-- **Sequential processing:** the inbound queue is consumed one message at a time; no concurrent agent processing.
-- **Reliability:** if polling fails (network error, API quota), log the error and retry on the next poll cycle; do not crash.
-- **Security:** OAuth2 refresh tokens and any credentials stored in the database must be encrypted at rest. The REST API should be accessible only on localhost (or a trusted network) — no public exposure without additional auth.
-- **Extensibility:** adding a new interface type requires implementing a defined Python interface (adapter pattern) and registering it; no changes to core queue or agent API.
-- **Consistency with ecosystem:** coding style, project structure, and configuration conventions should match KoreData and MiniAgentFramework.
+| Store | Owned by | Notes |
+|---|---|---|
+| Canonical conversation history | KoreChat | Conversations, messages, events |
+| Interface definitions | KoreComms SQLite | Type, credentials/settings, enabled state |
+| External message mapping | KoreComms SQLite | External IDs and delivery correlation |
+| Operator activity log | KoreComms SQLite/logs | Auditing and troubleshooting context |
+
+---
+
+## Configuration
+
+KoreComms reads suite config from top-level config files and environment overrides.
+
+| Key | Typical suite value | Notes |
+|---|---|---|
+| `host` | `127.0.0.1` | From suite network host when launched via KoreStack |
+| `port` | `8625` | Suite default from config/default.json services.comms.port |
+| `korechat_url` | `http://127.0.0.1:8630` | Suite connection target |
+| `poll_interval` | `60` | Interface polling cadence |
+
+Standalone fallback defaults may differ (for example port 8900), but suite-mode values from config/default.json are authoritative for the integrated stack.
+
+---
+
+## Non-Functional Expectations
+
+- Sequential and deterministic processing for each interface poll cycle.
+- Durable handoff behavior through KoreChat events.
+- Clear operator visibility through activity logs and thread UI.
+- Extensible adapter model for adding channels without redesigning core routing.
 

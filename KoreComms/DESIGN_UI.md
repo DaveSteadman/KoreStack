@@ -13,18 +13,20 @@ KoreComms is the communication hub — it manages incoming and outgoing messages
 
 It is server-rendered via FastAPI + Jinja2. There is no SPA layer; each page is a full HTML response.
 
-Runtime architecture, interface connectors, and queue contracts remain in [DESIGN.md](DESIGN.md).
+Runtime architecture, interface connectors, and delivery contracts remain in [DESIGN.md](DESIGN.md).
 
 ---
 
 ## 2. Shell
 
-KoreComms uses a traditional server-rendered header rather than the UIElements `initTopbar` / `initAppBar` JS shell. It inherits shared CSS tokens from `/ui-elements/assets/css/chrome.css`.
+KoreComms uses the shared UIElements shell, initialized in `base.html`.
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│  KoreComms  │  Messages  Compose  Connections  Activity  State  │
-│  <header>   │  <nav>                                            │
+│  Suite Top Bar  (#topbar)                                       │
+├─────────────────────────────────────────────────────────────────┤
+│  Application Bar  (#app-bar)                                    │
+│  KoreComms brand  │  Conversations Compose Connections Activity │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                 │
 │   <main>  {% block content %}                                   │
@@ -32,11 +34,11 @@ KoreComms uses a traditional server-rendered header rather than the UIElements `
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-**Header** (`<header>`) — Fixed height (`--header-h: 42px`). Contains the wordmark logo and navigation links.
+**Top bar** — Initialized by `initTopbar({ currentService: 'korecomms' })`.
 
-**Logo** (`.logo`) — `Kore` in `--text`, `Comms` in `--service-accent` (amber).
+**Application bar** — Initialized by `initAppBar(...)` and provides app identity + primary tabs.
 
-**Navigation** (`<nav>`) — Links to all top-level pages. Active page link uses `--service-accent`.
+**Local nav/header styles** — Used within page content areas, not as a replacement for the suite shell.
 
 All pages extend `base.html` via `{% block content %}`.
 
@@ -52,7 +54,6 @@ All pages extend `base.html` via `{% block content %}`.
 | `/connections` | `connections.html` | Interface management |
 | `/connections/new?type={t}` | `connection_edit.html` | Add/edit interface |
 | `/activity` | `activity_log.html` | Agent action log |
-| `/state-editor` | `state_editor.html` | Manual state override |
 
 ---
 
@@ -132,7 +133,7 @@ Full-screen layout (`min-height: 100dvh`). Three zones stacked vertically.
     kcui-tag        ← message status (`--accent` replied/sent, `--warning` queued, `--info` processing, `--dim` ignored)
 ```
 
-**Status bar** (`.chat-statusbar`) — `#agent-status` shows live agent activity (idle / processing).
+**Status bar** (`.chat-statusbar`) — `#agent-status` reflects live delivery/agent state from the event stream.
 
 **Composer** (`.chat-compose`, sticky bottom) — `<textarea>` + Submit button. POSTs to the conversation reply endpoint.
 
@@ -231,15 +232,7 @@ No pagination control — fixed at 200 rows.
 
 ---
 
-## 10. State Editor (`/state-editor`)
-
-Operator tool for manually overriding individual message status values. Used for debugging and queue recovery.
-
-Form per message: select target message, choose new status, submit POST.
-
----
-
-## 11. Shared Components
+## 10. Shared Components
 
 All pages in `base.html` share these component classes:
 
@@ -256,7 +249,7 @@ All pages in `base.html` share these component classes:
 
 ---
 
-## 12. CSS Ownership
+## 11. CSS Ownership
 
 | File | Owns |
 |---|---|

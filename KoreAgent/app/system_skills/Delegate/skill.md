@@ -23,9 +23,9 @@ without polluting the parent context with intermediate tool chatter.
   Mirrors `scratch_query`'s `save_result_key`. The parent can then use `scratch_query(output_key, ...)` or
   `{scratch:output_key}` downstream without capturing the answer from the return dict inline.
 - `scratchpad_visible_keys` *(optional)* - list of scratchpad key names the child can see in its system prompt.
-  When provided, the child's key listing is limited to only those keys. When omitted, the child sees no
-  parent scratchpad keys (safe default - prevents silent context leakage from auto-saved `_tc_*` keys).
-  Pass explicit keys to hand the child exactly the content it needs: e.g. `["search_hits", "page_draft"]`.
+  When omitted (default), the child sees **no** parent scratchpad keys — this prevents silent leakage of
+  all auto-saved `_tc_*` noise into the child context.
+  Pass an explicit list to hand the child exactly the data it needs: e.g. `["search_hits", "page_draft"]`.
 - `tools_allowlist` *(optional)* - list of function names the child is permitted to call.
   When provided, the child's tool set is restricted to only skills that expose those functions. Use to create
   focused sub-loops: e.g. `["fetch_page_text", "scratch_save"]` for a child whose only job is to fetch and
@@ -46,7 +46,8 @@ Decide the decomposition BEFORE calling any tools: identify the independent sub-
 then fire one delegate per part and synthesise the results at the parent level.
 
 Prefer width over depth: multiple sibling delegates from the parent is safer and cleaner
-than a chain of delegates spawning delegates. Recursive depth is capped at 2.
+than a chain of delegates spawning delegates. Child delegates cannot spawn further delegates
+(Delegate is excluded from the child toolset by default). Only the top-level agent can delegate.
 
 ## Triggers
 Invoke this skill when:

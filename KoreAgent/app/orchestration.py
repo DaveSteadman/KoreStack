@@ -45,10 +45,6 @@ from scratchpad import scratch_list as _scratch_list
 from prompt_builder import build_system_message as _prompt_builder_build_system_message
 from session_runtime import bind_session
 from skill_executor import build_catalog_gates
-from system_skills.Memory.memory_skill import get_top_facts
-from system_skills.Memory.memory_skill import recall_relevant_memories
-from system_skills.Memory.memory_skill import store_exchange_memories
-from system_skills.Memory.memory_skill import store_prompt_memories
 from skills.SystemInfo.system_info_skill import get_static_system_info_string
 from skills_catalog_builder import build_tool_definitions
 from tool_loop import extract_result_fields as _tool_loop_extract_result_fields
@@ -218,7 +214,7 @@ class SessionContext:
     """
 
     MAX_CONTENT_WORDS = 300   # max words stored per web-extract / file-read body
-    MAX_INJECT_TURNS  = 2     # how many prior turns to include in each new prompt
+    MAX_INJECT_TURNS  = 3     # how many prior turns to include in each new prompt
 
     def __init__(self, session_id: str, persist_path: Path | None = None) -> None:
         self._session_id = session_id
@@ -483,24 +479,6 @@ def orchestrate_prompt(
         _log(f"Max rounds:     {config.max_iterations}")
         _log(f"Prompt:         {user_prompt[:300]}{' ...' if len(user_prompt) > 300 else ''}")
 
-        # -- Memory --
-        _log_file_only("[progress] Storing prompt memories...")
-        # Persist any facts in the prompt before tool calls run, so the turn is captured even on failure.
-        # Skip for slash commands and very short prompts - they cannot contain storable facts.
-        if user_prompt.startswith("/") or len(user_prompt.split()) < 4:
-            memory_store_result = "Memory storage skipped."
-        else:
-            memory_store_result = store_prompt_memories(user_prompt=user_prompt)
-        _log_file_only("[progress] Recalling relevant memories...")
-        recalled_memories = recall_relevant_memories(user_prompt=user_prompt, limit=5, min_score=0.2)
-        top_facts         = get_top_facts(limit=6)
-
-        _log_section("MEMORY")
-        _log(memory_store_result)
-        _log(recalled_memories)
-        if top_facts:
-            _log_file_only(f"[memory] Top facts injected ({top_facts.count(chr(10)) + 1} entries).")
-
         ambient_system_info = get_static_system_info_string()
         _log_section("AMBIENT SYSTEM INFO")
         _log(ambient_system_info)
@@ -521,8 +499,6 @@ def orchestrate_prompt(
             sandbox_enabled=_SANDBOX_ENABLED,
             scratchpad_visible_keys=scratchpad_visible_keys,
             conversation_summary=conversation_summary,
-            top_facts=top_facts or None,
-            recalled_memories=recalled_memories if "No" not in recalled_memories[:3] else None,
         )
 
         messages: list[dict] = [{"role": "system", "content": system_message}]
@@ -573,16 +549,6 @@ def orchestrate_prompt(
             _log_section_file_only("SCRATCHPAD STATE")
             _log_file_only(_scratch_list())
             _log(f"Total: {prompt_tokens:,} prompt tokens | {completion_tokens:,} completion tokens")
-
-            # Store facts from the assistant response side of the exchange.
-            # This captures agent-confirmed actions and entities stated in the reply.
-            if final_response and run_success and not user_prompt.startswith("/"):
-                _log_file_only("[progress] Storing exchange memories (response side)...")
-                exchange_result = store_exchange_memories(
-                    user_prompt        = user_prompt,
-                    assistant_response = final_response,
-                )
-                _log_file_only(f"[memory] {exchange_result}")
 
             store_last_run_state(_context_map, messages)
 

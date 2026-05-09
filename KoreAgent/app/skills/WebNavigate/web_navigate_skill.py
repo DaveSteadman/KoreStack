@@ -1,7 +1,7 @@
 # ====================================================================================================
 # MARK: OVERVIEW
 # ====================================================================================================
-# WebNavigate skill for MiniAgentFramework.
+# WebNavigate skill for KoreAgent.
 #
 # Extracts all navigable hyperlinks from a web page and returns them as a structured list or
 # formatted text block. Designed as the middle link in the web chain:

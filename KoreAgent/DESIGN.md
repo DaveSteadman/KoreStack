@@ -1,7 +1,7 @@
-# MiniAgentFramework - Design and Requirements
+# KoreAgent - Design and Requirements
 
 ## Purpose
-The is a requirements document, of defining statements around the functionality of MiniAgentFramework.
+This is a requirements document defining statements around the functionality of KoreAgent.
 
 Each section names a component, states its intent, and lists verifiable behavioral claims.
 A claim is verifiable when it is unambiguously true or false from reading the source.
@@ -45,21 +45,21 @@ A list of the headline functional areas that define the project:
 
 The system is divided into two layers with a clean interface between them.
 
-- `KoreAgent/` is stateless with respect to sessions, users, and file I/O (except the scratchpad store, which is process-lifetime).
-- `input_layer/` owns session identity, file persistence, and request routing.
+- `KoreAgent/` is stateless with respect to durable session storage, users, and file I/O.
+- `KoreAgent/app/input_layer/` owns session identity, file persistence, and request routing.
 - `KoreAgent/orchestration.py` is the single entry point: it accepts parameters and returns results; it never reads from files or knows what session it is in.
 
 **Claims:**
 - `orchestrate_prompt` accepts `conversation_history` as a parameter; it does not fetch it internally.
 - `orchestrate_prompt` accepts `session_context` as a parameter; it does not create or persist one internally.
 - No file I/O for session state occurs inside `KoreAgent/` (scratchpad dump is opt-in and explicitly controlled).
-- The scratchpad store is a module-level dict shared across all calls within a process lifetime, including delegate children.
+- Scratchpad state is session-scoped in-memory storage keyed by session ID; delegate children run inside the same session context unless explicitly constrained.
 
 ---
 
 ## Server - LLM client
 
-**Files:** `code/KoreAgent/llm_client.py` (routing facade), `code/KoreAgent/llm_client_openai.py` (shared state and OpenAI-compatible core), `code/KoreAgent/llm_client_ollama.py` (Ollama-specific)
+**Files:** `KoreAgent/app/llm_client.py` (routing facade), `KoreAgent/app/llm_client_openai.py` (shared state and OpenAI-compatible core), `KoreAgent/app/llm_client_ollama.py` (Ollama-specific)
 
 **Intent:** Multi-backend LLM client supporting Ollama and LM Studio. Manages host configuration, backend selection, model resolution, health checking, and raw LLM calls. All other modules import through the facade (`llm_client.py`); none make direct HTTP requests to the inference server.
 
@@ -76,7 +76,7 @@ The system is divided into two layers with a clean interface between them.
 
 ## Server - Orchestration pipeline
 
-**File:** `code/KoreAgent/orchestration.py`
+**File:** `KoreAgent/app/orchestration.py`
 
 **Intent:** Stateless tool-calling pipeline. Accepts a prompt, config, and optional history; runs a tool loop until the model produces a plain-text final answer; returns the answer and token metrics.
 
@@ -97,14 +97,14 @@ The system is divided into two layers with a clean interface between them.
 
 ## Server - Context control
 
-**Files:** `code/KoreAgent/scratchpad.py`, `code/KoreAgent/system_skills/Delegate/`, `code/KoreAgent/prompt_tokens.py`
+**Files:** `KoreAgent/app/scratchpad.py`, `KoreAgent/app/system_skills/Delegate/`, `KoreAgent/app/prompt_tokens.py`
 
 **Intent:** Three complementary mechanisms for keeping large data out of the LLM context window and for isolating sub-task reasoning.
 
 ### Scratchpad store
 
 **Claims:**
-- `_STORE` is a module-level `dict[str, str]`; it persists for the process lifetime only.
+- Scratch values are stored in a module-level per-session map (`_SESSION_STORES`) and scoped by session ID.
 - Keys are validated: lowercased, alphanumeric and underscore only, non-empty.
 - `scratch_save` overwrites silently on duplicate key.
 - `scratch_query(key, query, save_result_key, instructions)` runs the query in an isolated single-turn LLM call (no tools, clean message thread). The raw stored content never enters the caller's context window.
@@ -112,7 +112,7 @@ The system is divided into two layers with a clean interface between them.
 - When `save_result_key` is provided, the extracted answer is also saved to that key.
 - `scratch_peek(key, substring, context_chars)` returns a windowed view with `>>>match<<<` highlighting; it does not load the full value into the response.
 - Large tool results (>= 600 chars) are automatically saved to `_tc_r{round}_{funcname}` keys by the orchestration loop; the message thread receives a truncated version with a key reference.
-- Auto-saved keys are prefixed `_tc_` to distinguish them from user-named keys.
+- Auto-saved keys include `_tc_` tool-output keys and `research_page_` web-research page artifacts.
 - `scratch_clear()` is called at session reset; it removes all keys including auto-saved ones.
 
 ### Token substitution
@@ -138,14 +138,14 @@ The system is divided into two layers with a clean interface between them.
 
 ## Server - Skill system
 
-**Files:** `code/KoreAgent/skills/`, `code/KoreAgent/skill_executor.py`, `code/KoreAgent/skills_catalog_builder.py`
+**Files:** `KoreAgent/app/skills/`, `KoreAgent/app/skill_executor.py`, `KoreAgent/app/skills_catalog_builder.py`
 
 **Intent:** Each skill is a self-contained directory with a `skill.md` definition and a Python module. The catalog builder parses all `skill.md` files into a JSON schema used by orchestration. The executor loads and calls skill functions dynamically.
 
 ### Skill catalog
 
 **Claims:**
-- `skills_catalog_builder.py` scans `code/KoreAgent/skills/` recursively for `skill.md` files.
+- `skills_catalog_builder.py` scans `KoreAgent/app/skills/` recursively for `skill.md` files.
 - The catalog is written to `skills_summary.md` in the skills root.
 - Catalog building can be LLM-assisted or local (deterministic regex fallback via `--no-llm`).
 - The orchestration layer hot-reloads the catalog automatically when `skills_summary.md` is modified on disk.
@@ -197,7 +197,7 @@ MCP connections (configured external tool providers):
 
 ## Server - Scheduler
 
-**File:** `code/KoreAgent/scheduler/scheduler.py`
+**File:** `KoreAgent/app/scheduler/scheduler.py`
 
 **Intent:** Sequential task queue that serialises all LLM calls. Also loads and evaluates schedule definitions from JSON files.
 
@@ -214,7 +214,7 @@ MCP connections (configured external tool providers):
 
 ## Server - API layer
 
-**File:** `code/input_layer/api.py`
+**File:** `KoreAgent/app/input_layer/api.py`
 
 **Intent:** FastAPI application that exposes the engine as a REST + SSE service. Owns session identity, conversation persistence, and run-event streaming.
 
@@ -233,7 +233,7 @@ MCP connections (configured external tool providers):
 
 ## Server - Exit behavior
 
-**Files:** `code/main.py`, `code/input_layer/api_mode.py`
+**Files:** `KoreAgent/main.py`, `KoreAgent/app/input_layer/api_mode.py`
 
 **Intent:** The API server must start and stop predictably across Windows and Linux, release its listen port on shutdown, and avoid leaving behind orphaned listener processes after an interrupt or termination request.
 
@@ -252,7 +252,7 @@ MCP connections (configured external tool providers):
 
 ## Server - Slash commands
 
-**File:** `code/input_layer/slash_commands.py`
+**File:** `KoreAgent/app/input_layer/slash_commands.py`
 
 **Intent:** Shared command processor for all input modes. Commands are dispatched from a registry dict; adding a new command requires only a handler function and a registry entry.
 
@@ -304,7 +304,7 @@ MCP connections (configured external tool providers):
 
 ## Server - Session persistence
 
-**File:** `code/input_layer/api.py` (`_load_session`, `_save_session`, `_compact_old_turns`, `_build_summary_block`)
+**File:** `KoreAgent/app/input_layer/api.py` (`_load_session`, `_save_session`, `_compact_old_turns`, `_build_summary_block`)
 
 **Intent:** Reconstruct browser-session continuity from KoreChat state while keeping runtime scratchpad and orchestration state transient between requests.
 
@@ -332,7 +332,7 @@ MCP connections (configured external tool providers):
 
 ## Server - Testing
 
-**Files:** `code/KoreAgent/testing/`, `datacontrol/test_prompts/`
+**Files:** `KoreAgent/app/testing/`, `datacontrol/test_prompts/`
 
 **Intent:** Automated regression testing via prompt sequences. Each test file contains a list of prompts and expected response patterns. Results are written to dated directories and compared against prior runs.
 
@@ -347,7 +347,7 @@ MCP connections (configured external tool providers):
 
 ## UI - Layout and panels
 
-**Files:** `code/input_layer/ui/index.html`, `code/input_layer/ui/app.js`, `code/input_layer/ui/style.css`
+**Files:** `KoreAgent/app/input_layer/ui/index.html`, `KoreAgent/app/input_layer/ui/app.js`, `KoreAgent/app/input_layer/ui/style.css`
 
 **Intent:** Single-page web UI served as static files by the FastAPI app. Three resizable panels: Schedule timeline (left), Log stream (centre), Chat (right), with a shared input bar at the bottom.
 
@@ -362,7 +362,7 @@ MCP connections (configured external tool providers):
 
 ## UI - Log panel
 
-**Files:** `code/input_layer/ui/app.js` (MARK: LOG STREAM)
+**Files:** `KoreAgent/app/input_layer/ui/app.js` (MARK: LOG STREAM)
 
 **Intent:** Live-tail display of the active log file. Colour-coded by line type. Scrolls smoothly to the bottom while live mode is engaged; pauses on user scroll.
 
@@ -383,7 +383,7 @@ MCP connections (configured external tool providers):
 
 ## UI - Chat panel
 
-**Files:** `code/input_layer/ui/app.js` (MARK: CHAT, MARK: RUN STREAM)
+**Files:** `KoreAgent/app/input_layer/ui/app.js` (MARK: CHAT, MARK: RUN STREAM)
 
 **Intent:** Conversation display. Each prompt and response is a message bubble. Streams response events in real time via a per-run SSE connection.
 
@@ -404,7 +404,7 @@ MCP connections (configured external tool providers):
 
 ## UI - Schedule timeline
 
-**Files:** `code/input_layer/ui/app.js` (MARK: TIMELINE, MARK: QUEUE STATUS)
+**Files:** `KoreAgent/app/input_layer/ui/app.js` (MARK: TIMELINE, MARK: QUEUE STATUS)
 
 **Intent:** Visual display of scheduled tasks as a horizontal time axis plus a queue status area showing pending and active tasks.
 
@@ -420,7 +420,7 @@ MCP connections (configured external tool providers):
 
 ## UI - Prompt input
 
-**Files:** `code/input_layer/ui/app.js` (MARK: SUBMIT PROMPT, MARK: KEYBOARD HANDLER)
+**Files:** `KoreAgent/app/input_layer/ui/app.js` (MARK: SUBMIT PROMPT, MARK: KEYBOARD HANDLER)
 
 **Intent:** Multi-line textarea for prompt entry. Enter submits; Shift+Enter inserts a newline. Prompt is also appended to the input history list.
 

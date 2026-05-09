@@ -1,7 +1,7 @@
 # ====================================================================================================
 # MARK: OVERVIEW
 # ====================================================================================================
-# FileAccess skill module for the MiniAgentFramework.
+# FileAccess skill module for KoreAgent.
 #
 # Provides safe file read/write/append operations constrained to the workspace root, with sensible
 # defaults for relative paths.

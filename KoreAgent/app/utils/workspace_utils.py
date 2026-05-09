@@ -1,7 +1,7 @@
 # ====================================================================================================
 # MARK: OVERVIEW
 # ====================================================================================================
-# Shared workspace-root resolution and well-known directory accessors for the MiniAgentFramework.
+# Shared workspace-root resolution and well-known directory accessors for KoreAgent.
 #
 # All modules that need to construct paths relative to the repository root should import
 # the relevant accessor from here rather than rolling their own __file__-based computation.

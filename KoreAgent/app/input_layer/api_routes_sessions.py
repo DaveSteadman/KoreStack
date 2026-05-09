@@ -160,11 +160,16 @@ def register_session_routes(
                             ).start(),
                         )
                         history.add(_prompt, response)
-                        summaries = save_session(session_id, history, summaries, p_tokens, get_active_num_ctx())
+                        # Queue the response immediately so the client is not blocked by
+                        # the post-turn compaction pass that may invoke the LLM.
                         queue_run_event(run_q, {"type": "response", "run_id": run_id, "response": response, "tokens": p_tokens, "tps": f'{tps:.1f}' if tps > 0 else '0'}, priority=True)
                         # Persist the turn to KC asynchronously - response is already queued.
                         _kc_token_est = p_tokens + _completion_tokens
                         threading.Thread(target=kc_save_turn, args=(session_id, _prompt, response), kwargs={"token_estimate": _kc_token_est}, daemon=True).start()
+                        # Compact old history if the context window is filling up.
+                        # Runs synchronously after the response is queued; the task_queue
+                        # serialises prompts per-session so the next turn waits for this.
+                        summaries = save_session(session_id, history, summaries, p_tokens, get_active_num_ctx())
             except Exception as exc:
                 queue_run_event(run_q, {"type": "error", "run_id": run_id, "message": str(exc)}, priority=True)
             finally:

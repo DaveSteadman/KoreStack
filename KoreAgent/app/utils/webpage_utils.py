@@ -1,7 +1,7 @@
 # ====================================================================================================
 # MARK: OVERVIEW
 # ====================================================================================================
-# Shared web utilities for MiniAgentFramework skills.
+# Shared web utilities for KoreAgent skills.
 #
 # Provides common HTTP fetching, HTML extraction, and text manipulation utilities used across
 # the web skill modules (WebSearch).  Centralising these

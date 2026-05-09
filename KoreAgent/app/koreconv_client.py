@@ -20,7 +20,7 @@
 #   "koreconvurl": "http://localhost:8700"
 #
 # Related modules:
-#   - main.py            -- calls start() before run_api_mode, stop() in finally
+#   - main.py            -- calls start() before server startup, stop() in finally
 #   - workspace_utils.py -- get_workspace_root() / get_suite_root() for locating the entrypoint
 # ====================================================================================================
 

@@ -1,7 +1,7 @@
 # ====================================================================================================
 # MARK: OVERVIEW
 # ====================================================================================================
-# KoreChat input source for MiniAgentFramework.
+# KoreChat input source for KoreAgent.
 #
 # Runs as a background polling thread (started by api_mode.py) that calls
 # GET /events/next?claimed_by=agent on KoreChat. Each claimed event delivers

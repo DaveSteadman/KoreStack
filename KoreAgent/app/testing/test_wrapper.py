@@ -1,7 +1,7 @@
 # ====================================================================================================
 # MARK: OVERVIEW
 # ====================================================================================================
-# Test runner for MiniAgentFramework.
+# Test runner for KoreAgent.
 #
 # Invoked as a subprocess by the /test slash command in slash_commands.py.
 # Not intended for interactive use.
@@ -26,6 +26,10 @@
 #   Assert expressions:
 #       contains|<text>       -- output must contain text (case-insensitive)
 #       not_contains|<text>   -- output must NOT contain text (case-insensitive)
+#       all_contains|a||b     -- output must contain all listed fragments (case-insensitive)
+#       none_contains|a||b    -- output must contain none of the listed fragments (case-insensitive)
+#       regex|<pattern>       -- output must match regex pattern
+#       not_regex|<pattern>   -- output must not match regex pattern
 #       not_empty             -- output must be non-empty
 #       exit_code|<n>         -- subprocess exit code must equal n
 # ====================================================================================================
@@ -259,7 +263,13 @@ def _single_item_pass_status(exit_code: int, final_output: str, log_file: str) -
 
 
 # ----------------------------------------------------------------------------------------------------
-def _exchange_pass_status(exit_code: int, turn_outputs: dict[int, str], any_assert_fail: bool, log_file: str) -> tuple[bool, str]:
+def _exchange_pass_status(
+    exit_code: int,
+    turn_outputs: dict[int, str],
+    any_assert_fail: bool,
+    log_file: str,
+    allow_no_results: bool = False,
+) -> tuple[bool, str]:
     """Return (passed, failure_reason) for a multi-turn exchange run."""
     if exit_code != 0:
         return False, f"Exit code {exit_code}"
@@ -267,7 +277,7 @@ def _exchange_pass_status(exit_code: int, turn_outputs: dict[int, str], any_asse
         return False, "Assert failed"
     if any(not str(output).strip() for output in turn_outputs.values()):
         return False, "One or more turns produced empty output"
-    if any(_output_indicates_no_results(str(output)) for output in turn_outputs.values()):
+    if (not allow_no_results) and any(_output_indicates_no_results(str(output)) for output in turn_outputs.values()):
         return False, "Search returned no results"
     if _log_indicates_validation_failure(log_file):
         return False, "Orchestration validation failed"
@@ -285,6 +295,28 @@ def _evaluate_assert(expression: str, final_output: str, exit_code: int) -> str:
         return "PASS" if value.lower() in final_output.lower() else "FAIL"
     if op == "not_contains":
         return "PASS" if value.lower() not in final_output.lower() else "FAIL"
+    if op == "all_contains":
+        parts = [p.strip() for p in value.split("||") if p.strip()]
+        if not parts:
+            return "SKIP"
+        lowered = final_output.lower()
+        return "PASS" if all(part.lower() in lowered for part in parts) else "FAIL"
+    if op == "none_contains":
+        parts = [p.strip() for p in value.split("||") if p.strip()]
+        if not parts:
+            return "SKIP"
+        lowered = final_output.lower()
+        return "PASS" if all(part.lower() not in lowered for part in parts) else "FAIL"
+    if op == "regex":
+        try:
+            return "PASS" if re.search(value, final_output, flags=re.IGNORECASE) else "FAIL"
+        except re.error:
+            return "SKIP"
+    if op == "not_regex":
+        try:
+            return "PASS" if not re.search(value, final_output, flags=re.IGNORECASE) else "FAIL"
+        except re.error:
+            return "SKIP"
     if op == "not_empty":
         return "PASS" if final_output.strip() else "FAIL"
     if op == "exit_code":
@@ -579,6 +611,7 @@ def _run_exchange_item(
     turn_metrics  = _parse_turn_metrics(stdout)
     per_turn_dur  = duration / n if n else duration
     any_assert_fail = False
+    allow_no_results = any(bool(turn.get("allow_no_results")) for turn in turns)
 
     pending_rows: list[dict] = []
     pending_prints: list[tuple[int, str, str, str]] = []
@@ -611,6 +644,7 @@ def _run_exchange_item(
         turn_outputs=turn_outputs,
         any_assert_fail=any_assert_fail,
         log_file=log_file,
+        allow_no_results=allow_no_results,
     )
     for row in pending_rows:
         row["passed"] = "PASS" if _passed else "FAIL"
@@ -636,7 +670,7 @@ def _run_exchange_item(
 # ====================================================================================================
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Test runner for MiniAgentFramework - invoked by /test slash command."
+        description="Test runner for KoreAgent - invoked by /test slash command."
     )
     parser.add_argument(
         "--prompts-file",

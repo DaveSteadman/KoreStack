@@ -1,7 +1,7 @@
 # ====================================================================================================
 # MARK: OVERVIEW
 # ====================================================================================================
-# Session-scoped scratchpad store for the MiniAgentFramework.
+# Session-scoped scratchpad store for KoreAgent.
 #
 # Provides a lightweight named-value store that persists for the lifetime of the process
 # (i.e. one interactive session or scheduled run).  The LLM can save intermediate results
@@ -274,14 +274,6 @@ def scratch_query(
 
     model   = _get_active_model()
     num_ctx = _get_active_num_ctx()
-    query_lower = query.lower()
-    content_lower = content.lower()
-    if (
-        not model
-        and any(token in query_lower for token in ("list all", "every", "full list", "complete list"))
-        and ("search results for:" in content_lower or "https://" in content_lower)
-    ):
-        return "Not found in content."
     if not model:
         return "Error: no active model available.  Run a prompt first."
 
@@ -297,7 +289,7 @@ def scratch_query(
     ]
 
     try:
-        result    = _call_llm_chat(model_name=model, messages=inner_messages, tools=None, num_ctx=num_ctx)
+        result    = _call_llm_chat(model_name=model, messages=inner_messages, tools=None, num_ctx=min(num_ctx, 8192))
         extracted = (result.response or "").strip()
         if not extracted:
             return f"LLM returned an empty response for query on key '{validated}'."

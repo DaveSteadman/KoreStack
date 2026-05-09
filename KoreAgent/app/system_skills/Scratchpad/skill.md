@@ -4,8 +4,7 @@
 Store and retrieve named working values within a session so that bulk data returned by other skills
 (web pages, file content, computation results) can be parked under a short key and referenced later
 without consuming context window space.  Use this skill whenever the plan involves multi-step tool
-chains where an intermediate result is needed again in a later step.  Do not use it for durable
-facts that should survive across sessions - use the Memory skill for that.
+chains where an intermediate result is needed again in a later step.
 
 ## Trigger keyword: scratchpad
 

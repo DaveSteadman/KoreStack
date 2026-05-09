@@ -322,12 +322,12 @@ The web UI and the MCP server are **co-launched in a single process**. There is 
 separate "start the MCP server" step — starting KoreDocs starts everything.
 
 ```
-python server.py          # HTTP mode: web UI + MCP SSE/HTTP on port 5500
-python server.py --mcp-stdio  # stdio mode: web UI on port 5500 in background thread;
+python server.py          # HTTP mode: web UI + MCP SSE/HTTP (suite default port 8615)
+python server.py --mcp-stdio  # stdio mode: web UI in background thread;
                               #             MCP protocol on stdin/stdout
 ```
 
-The `--mcp-stdio` flag changes only the MCP *transport*. The web UI (HTTP on port 5500)
+The `--mcp-stdio` flag changes only the MCP *transport*. The web UI (HTTP on the configured docs port)
 always starts regardless of transport mode, so a user can have their browser open while
 an agent is also connected over stdio.
 
@@ -336,7 +336,9 @@ an agent is also connected over stdio.
 | Mode | How to connect | Use-case |
 |---|---|---|
 | `stdio` | `python server.py --mcp-stdio` | Local agents (Claude Desktop, Copilot) |
-| `streamable-http` | `http://localhost:5500/mcp` | Remote or multi-client agents |
+| `streamable-http` | `http://localhost:8615/mcp` | Remote or multi-client agents in suite mode |
+
+When running KoreDocs standalone (outside KoreStack launch), the fallback local default remains port 5500.
 
 The streamable HTTP transport is available in HTTP startup mode. The MCP server requires the
 KoreFile database to be initialised. MCP tools always go through KoreFile — they do not

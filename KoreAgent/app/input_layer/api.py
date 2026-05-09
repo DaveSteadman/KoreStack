@@ -1,7 +1,7 @@
 # ====================================================================================================
 # MARK: OVERVIEW
 # ====================================================================================================
-# FastAPI application exposing the MiniAgentFramework engine as a REST + SSE service.
+# FastAPI application exposing the KoreAgent engine as a REST + SSE service.
 #
 # Endpoints:
 #   GET  /                             serve static web UI (index.html)
@@ -127,7 +127,7 @@ _UI_ELEMENTS_ASSETS  = Path(
         str(Path(__file__).resolve().parents[4] / "UIElements" / "assets"),
     )
 ).resolve()
-_COMPACT_FILL_PCT    = 0.75  # compact when prompt-token fill reaches this fraction of num_ctx
+_COMPACT_FILL_PCT    = 0.65  # compact when prompt-token fill reaches this fraction of num_ctx
 _QUEUE_PREVIEW_LIMIT = 10
 _LOG_POLL_SECS       = 1.0      # how often the log-tail SSE generator checks for new lines
 _LOG_TAIL_LINES      = 200      # how many historic lines to send on first connect
@@ -770,8 +770,47 @@ def _save_session(
     prompt_tokens: int,
     num_ctx:       int,
 ) -> list[dict]:
-    """Retained for compatibility - runtime session state now lives in KoreChat."""
+    """Persist session state and compact old history when context fill is high."""
     _flush_scratch_to_session(session_id)
+
+    # Compact old turns with LLM summarization when the last prompt consumed a large
+    # share of the context window.  This keeps future turns from growing unboundedly
+    # and is the primary mechanism that makes "endless chat" sustainable over many turns.
+    _KEEP_RECENT_TURNS = 4   # always keep the N most-recent turns untouched
+    _BATCH_SIZE        = 4   # turns to compress per compaction pass
+
+    if (
+        num_ctx > 0
+        and prompt_tokens > 0
+        and (prompt_tokens / num_ctx) >= _COMPACT_FILL_PCT
+        and len(history) >= _KEEP_RECENT_TURNS + _BATCH_SIZE
+    ):
+        raw = history.as_list()
+        turn_dicts: list[dict] = []
+        for i in range(0, len(raw) - 1, 2):
+            if raw[i]["role"] == "user" and raw[i + 1]["role"] == "assistant":
+                turn_dicts.append({
+                    "user_prompt":        raw[i]["content"],
+                    "assistant_response": raw[i + 1]["content"],
+                })
+        if len(turn_dicts) >= _KEEP_RECENT_TURNS + _BATCH_SIZE:
+            compactable  = turn_dicts[: len(turn_dicts) - _KEEP_RECENT_TURNS]
+            recent_turns = turn_dicts[len(turn_dicts) - _KEEP_RECENT_TURNS :]
+            remaining_dicts, updated_summaries = _compact_old_turns(compactable, summaries, _BATCH_SIZE)
+            if len(updated_summaries) > len(summaries):
+                # Compaction produced a new summary - rebuild in-memory history and persist.
+                history.clear()
+                for t in remaining_dicts + recent_turns:
+                    history.add(t["user_prompt"], t["assistant_response"])
+                summaries = updated_summaries
+                conv = _kc_get_conversation_for_session(session_id)
+                if conv:
+                    try:
+                        combined = _build_summary_block(summaries)
+                        _kc_patch(f"/conversations/{conv['id']}", {"thread_summary": combined})
+                    except Exception as exc:
+                        print(f"[session] Warning: could not store thread_summary: {exc}", flush=True)
+
     return summaries
 
 

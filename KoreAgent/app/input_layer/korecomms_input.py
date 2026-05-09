@@ -1,7 +1,7 @@
 # ====================================================================================================
 # MARK: OVERVIEW
 # ====================================================================================================
-# KoreComms input source for MiniAgentFramework.
+# KoreComms input source for KoreAgent.
 #
 # Runs as a background polling thread (started by api_mode.py) that checks the KoreComms
 # service for pending inbound messages. Each message is enqueued into the framework's

@@ -31,8 +31,6 @@ from orchestration import request_stop
 from orchestration import get_sandbox_enabled
 from orchestration import set_sandbox_enabled
 from orchestration import set_skill_guidance_enabled
-from system_skills.Memory.memory_skill import MEMORY_STORE_LEGACY_PATH
-from system_skills.Memory.memory_skill import MEMORY_STORE_PATH
 from input_layer.slash_command_context import SlashCommandContext
 from input_layer.slash_command_handlers_models import register_model_slash_commands
 from input_layer.slash_command_handlers_sessions import register_session_slash_commands
@@ -213,17 +211,6 @@ def _cmd_newchat(arg: str, ctx: SlashCommandContext) -> None:
     ctx.clear_history()
     ctx.output("Conversation history cleared - starting a new chat.", "success")
 
-
-def _cmd_clearmemory(arg: str, ctx: SlashCommandContext) -> None:
-    deleted = []
-    for path in (MEMORY_STORE_PATH, MEMORY_STORE_LEGACY_PATH):
-        if path.exists():
-            path.unlink()
-            deleted.append(path.name)
-    if deleted:
-        ctx.output(f"Memory store cleared ({', '.join(deleted)} deleted).", "success")
-    else:
-        ctx.output("Memory store was already empty.", "dim")
 
 
 def _cmd_reskills(arg: str, ctx: SlashCommandContext) -> None:
@@ -463,7 +450,6 @@ _REGISTRY: dict[str, Callable] = {
     "/timeout": _cmd_timeout,
     "/stoprun": _cmd_stoprun,
     "/newchat": _cmd_newchat,
-    "/clearmemory": _cmd_clearmemory,
     "/reskill": _cmd_reskills,
     "/version": _cmd_version,
     "/sandbox": _cmd_sandbox,
@@ -480,7 +466,6 @@ _DESCRIPTIONS: dict[str, str] = {
     "/timeout": "<seconds>  Set LLM generation timeout (e.g. /timeout 1800 for heavy analysis)",
     "/stoprun": "Cancel the active LLM run (after its current round) and clear all pending queued prompts",
     "/newchat": "(retired - use /session new [name])",
-    "/clearmemory": "Delete the memory store file, starting with a blank memory next session",
     "/reskill": "[min|max]  Rebuild skills catalog and set system prompt guidance mode (default: min)",
     "/version": "Show framework version, active model, and context size",
     "/sandbox": "<on|off>  Enable/disable Python code execution sandbox (import whitelist + blocked builtins)",

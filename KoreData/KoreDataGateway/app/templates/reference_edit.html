@@ -3,6 +3,14 @@
 {% block main_class %}kcui-main{% endblock %}
 
 {% block content %}
+<style>
+  .re-body-textarea {
+    font-size: 12px;
+    line-height: 1.6;
+    resize: vertical;
+    font-family: inherit;
+  }
+</style>
 <div class="kcui-page kcui-page--narrow kcui-stack">
 {% if error %}
 <div style="background:rgba(255,95,95,0.1); border:1px solid var(--red); color:var(--red); padding:0.6rem 1rem; margin-bottom:1rem; font-size:12px;">
@@ -61,8 +69,8 @@
           <label for="e_facts">Facts
             <span style="font-size:10px; color:var(--dim); text-transform:none; letter-spacing:0;">one <code style="color:var(--amber);">Label: Value</code> per line &middot; values support <code style="color:var(--amber);">[[wikilinks]]</code></span>
           </label>
-          <textarea id="e_facts" name="facts" rows="6"
-                    style="font-size:12px; line-height:1.6; resize:vertical; font-family:inherit;">{% if article and article.facts %}{% for pair in article.facts %}{{ pair[0] }}: {{ pair[1] }}
+          <textarea id="e_facts" name="facts" rows="6" class="re-body-textarea"
+                    >{% if article and article.facts %}{% for pair in article.facts %}{{ pair[0] }}: {{ pair[1] }}
 {% endfor %}{% endif %}</textarea>
         </div>
 
@@ -93,8 +101,8 @@
             <button type="button" onclick="copyBody()" style="font-size:10px; padding:2px 8px;"> COPY</button>
           </span>
         </div>
-        <textarea id="e_body" name="body" rows="28"
-                  style="font-size:12px; line-height:1.6; resize:vertical; font-family:inherit;">{{ edit_body if edit_body is defined else (article.body if article else (form.body if form else '')) }}</textarea>
+        <textarea id="e_body" name="body" rows="28" class="re-body-textarea"
+            >{{ edit_body if edit_body is defined else (article.body if article else (form.body if form else '')) }}</textarea>
       </div>
 
     </form>

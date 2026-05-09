@@ -2,20 +2,20 @@
 
 ## Purpose
 
-KoreChat is the shared conversation state service for the Kore system. It owns the canonical record of every conversation the agent is involved in, regardless of which channel the conversation originated from. Both MiniAgentFramework and KoreComms act on this service; neither owns conversation state directly.
+KoreChat is the shared conversation state service for the Kore system. It owns the canonical record of every conversation the agent is involved in, regardless of which channel the conversation originated from. Both KoreAgent and KoreComms act on this service; neither owns conversation state directly.
 
 ---
 
 ## System Context
 
-KoreChat is the fourth co-operating service in the Kore stack:
+KoreChat is one of the core co-operating services in the suite stack:
 
 | Service | Role | Port |
 |---|---|---|
-| **KoreChat** | Shared conversation state, event queue (this service) | 8700 |
-| **KoreData** | Reference knowledge, web scraping, Wikipedia clone | 8800 |
-| **KoreComms** | External channel routing, delivery, inbox/outbox | 8900 |
-| **MiniAgentFramework** | LLM execution, tool use, reasoning | 8000 |
+| **KoreChat** | Shared conversation state, event queue (this service) | 8630 |
+| **KoreData** | Reference knowledge and data services | 8620 |
+| **KoreComms** | External channel routing, delivery, inbox/outbox | 8625 |
+| **KoreAgent** | LLM execution, tool use, reasoning | 8605 |
 
 ---
 
@@ -27,7 +27,7 @@ A conversation is not a log file, not a session, not a queue entry. It is a self
 
 ### The agent is stateless between calls
 
-MiniAgentFramework holds no conversation state in memory. Each time it processes a pending event it performs a clean read-process-write cycle:
+KoreAgent holds no durable conversation state in memory. Each time it processes a pending event it performs a clean read-process-write cycle:
 
 1. Claim event from KoreChat
 2. GET conversation (summary + unsummarised messages + scratchpad)
@@ -36,7 +36,7 @@ MiniAgentFramework holds no conversation state in memory. Each time it processes
 5. POST outbound message
 6. Complete event, raise next event if needed
 
-Between calls, no conversation context lives inside MiniAgentFramework.
+Between calls, no durable conversation context lives inside KoreAgent runtime state.
 
 ### Channel identity is private to KoreComms
 
@@ -73,8 +73,11 @@ The central conversation record.
 | profile | TEXT | 'admin', 'external', 'readonly' |
 | status | TEXT | See status lifecycle below |
 | subject | TEXT nullable | Email subject or equivalent |
+| protected | INTEGER (0/1) | If 1, excluded from default inactivity culling |
+| external_id | TEXT nullable | External session/thread key (for example webchat session mapping) |
 | thread_summary | TEXT | LLM-compressed rolling context |
 | scratchpad | TEXT (JSON) | Derived facts as key/value object |
+| input_history | TEXT (JSON array) | Raw input sequence metadata for session-bound flows |
 | background_context | TEXT | Standing instructions for this contact/topic |
 | token_estimate | INTEGER | Rough current prompt size, triggers compression |
 | turn_count | INTEGER | Number of exchange rounds |
@@ -110,7 +113,7 @@ The raw append-only exchange log.
 
 ### events
 
-The coordination queue between MiniAgentFramework and KoreComms. Atomic claim prevents double-pickup.
+The coordination queue between KoreAgent and KoreComms. Atomic claim prevents double-pickup.
 
 | Field | Type | Notes |
 |---|---|---|
@@ -129,10 +132,10 @@ Event types:
 
 | Type | Raised by | Consumed by |
 |---|---|---|
-| `response_needed` | KoreComms (inbound message arrived) | MiniAgentFramework |
-| `outbound_ready` | MiniAgentFramework (draft reply written) | KoreComms |
-| `compress_needed` | MiniAgentFramework (token_estimate threshold crossed) | MiniAgentFramework |
-| `conversation_closed` | KoreComms (thread ended at channel level) | MiniAgentFramework |
+| `response_needed` | KoreComms (inbound message arrived) | KoreAgent |
+| `outbound_ready` | KoreAgent (draft reply written) | KoreComms |
+| `compress_needed` | KoreAgent (token_estimate threshold crossed) | KoreAgent |
+| `conversation_closed` | KoreComms (thread ended at channel level) | KoreAgent |
 | `conversation_deleted` | Either service | Both |
 
 ---
@@ -169,7 +172,7 @@ Event types:
 
 | Method | Path | Description |
 |---|---|---|
-| GET | /status | Health check, returns version + counts |
+| GET | /status | Health check, returns status plus conversation/event counts |
 
 ---
 
@@ -218,7 +221,7 @@ A background thread runs every 60 seconds. Events with `status = 'claimed'` and 
 
 ## Relationship to chatsessions/
 
-KoreChat supersedes the historical `datacontrol/chatsessions/` directory used by MiniAgentFramework. That directory stored one JSON file per session containing turns, summaries, and scratchpad.
+KoreChat supersedes the historical `datacontrol/chatsessions/` directory used by earlier KoreAgent generations. That directory stored one JSON file per session containing turns, summaries, and scratchpad.
 
 Under the new model:
 - turns -> messages table

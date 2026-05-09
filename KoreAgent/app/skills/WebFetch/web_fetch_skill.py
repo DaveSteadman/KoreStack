@@ -1,7 +1,7 @@
 # ====================================================================================================
 # MARK: OVERVIEW
 # ====================================================================================================
-# WebFetch skill for the MiniAgentFramework.
+# WebFetch skill for KoreAgent.
 #
 # Fetches a web page by URL and extracts readable prose text, stripping all HTML markup, navigation,
 # scripts, headers, footers, and other noise. Returns clean text suitable for an LLM to synthesize

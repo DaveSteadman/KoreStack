@@ -66,10 +66,11 @@ Invoke this skill when the prompt contains any of these concepts or phrases:
 - `update task`, `change schedule`, `delete task`, `remove task`
 
 ## Scratchpad integration
-Not applicable for scheduled tasks.  Each task fires in a fresh subprocess where the
-scratchpad `_STORE` is always empty - values saved by a prior skill call within the
-scheduled prompt will not survive to a subsequent one.  Scratchpad can be used normally
-when TaskManagement is invoked as one step within an interactive session plan.
+Each scheduled task runs in a background thread within the same process. The scratchpad
+is keyed by session ID (`task_<name>`), so **named keys persist across runs of the same
+task** — a value saved in one run is visible in the next. Auto-saved `_tc_*` keys evict
+beyond MAX_AUTO_KEYS (40) as usual. Scratchpad can be used normally when TaskManagement
+is invoked as one step within an interactive session plan.
 
 ## Examples
 - `task_list()` - show all scheduled tasks
@@ -81,6 +82,6 @@ when TaskManagement is invoked as one step within an interactive session plan.
   - Returns: `"Task 'DailyWeather' created."`
 - `task_create("HourlyMemCheck", "60", "Check free RAM and log it to data/memlog.csv.")` - create an interval task
 - `task_set_enabled("PerformanceHeadroom", False)` - disable the task
-  - Returns: `"Task 'PerformanceHeadroom' updated."`
+  - Returns: `"Task 'PerformanceHeadroom' disabled."`
 - `task_set_schedule("HourlyMemCheck", "30")` - change to every 30 minutes
 - `task_delete("OldTask")` - permanently remove the task

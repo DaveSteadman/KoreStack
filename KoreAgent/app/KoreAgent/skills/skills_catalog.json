@@ -165,60 +165,11 @@
           "search_root": "workspace-relative directory to restrict the search. Leave empty to search the whole workspace."
         }
       }
-    },
-    {
-      "skill_name": "Memory Skill",
-      "relative_path": "app/system_skills/Memory/skill.md",
-      "purpose": "Persist and recall durable user-stated facts across sessions - identity, preferences, project context, and environment facts. A newer fact on the same subject supersedes the older one. Do not store questions, commands, or ephemeral data such as current time or system stats. Facts persist in `memory_store.json` with category, timestamps, and access tracking.",
-      "module": "KoreAgent/app/system_skills/Memory/memory_skill.py",
-      "trigger_keyword": "memory",
-      "triggers": [
-        "remember",
-        "store this",
-        "save this fact",
-        "note that",
-        "recall",
-        "what do you know about",
-        "do you remember",
-        "my name is",
-        "I prefer",
-        "our project is",
-        "the default model is",
-        "show memory",
-        "memory store",
-        "what have you stored"
-      ],
-      "functions": [
-        "store_prompt_memories(user_prompt: str)",
-        "recall_relevant_memories(user_prompt: str, limit: int = 5, min_score: float = 0.25)",
-        "extract_environment_facts(user_prompt: str)",
-        "get_memory_store_text()"
-      ],
-      "inputs": [],
-      "outputs": [
-        "`store_prompt_memories(...)` - returns `\"Stored N new memory fact(s).\"` or `\"Updated N existing memory fact(s).\"`.",
-        "`recall_relevant_memories(...)` - returns a formatted ranked list of memories with category and relevance score.",
-        "`extract_environment_facts(...)` - returns a list of candidate environment facts extracted from the prompt.",
-        "`get_memory_store_text()` - returns the full pretty-printed JSON of the memory store."
-      ],
-      "param_descriptions": {
-        "store_prompt_memories": {
-          "user_prompt": "raw user text to extract facts from and store."
-        },
-        "recall_relevant_memories": {
-          "user_prompt": "current prompt used as the relevance query.",
-          "limit": "maximum number of memories to return.",
-          "min_score": "minimum token-overlap relevance threshold; lower values return more results."
-        },
-        "extract_environment_facts": {
-          "user_prompt": "raw user text to inspect for environment-specific facts only."
-        }
-      }
-    },
+    }
     {
       "skill_name": "Scratchpad Skill",
       "relative_path": "app/system_skills/Scratchpad/skill.md",
-      "purpose": "Store and retrieve named working values within a session so that bulk data returned by other skills\n(web pages, file content, computation results) can be parked under a short key and referenced later\nwithout consuming context window space.  Use this skill whenever the plan involves multi-step tool\nchains where an intermediate result is needed again in a later step.  Do not use it for durable\nfacts that should survive across sessions - use the Memory skill for that.",
+      "purpose": "Store and retrieve named working values within a session so that bulk data returned by other skills\n(web pages, file content, computation results) can be parked under a short key and referenced later\nwithout consuming context window space.  Use this skill whenever the plan involves multi-step tool\nchains where an intermediate result is needed again in a later step.",
       "module": "KoreAgent/app/system_skills/Scratchpad/scratchpad_skill.py",
       "trigger_keyword": "scratchpad",
       "triggers": [

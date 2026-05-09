@@ -1,7 +1,7 @@
 # ====================================================================================================
 # MARK: OVERVIEW
 # ====================================================================================================
-# ResearchTraverse skill for MiniAgentFramework.
+# ResearchTraverse skill for KoreAgent.
 #
 # Generic multi-page web research primitive:
 # - searches DuckDuckGo

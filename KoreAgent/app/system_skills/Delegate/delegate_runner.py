@@ -1,5 +1,6 @@
 import copy
 import threading
+import time
 
 from scratchpad import scratch_save as scratch_auto_save
 from session_runtime import get_active_session_id
@@ -8,6 +9,9 @@ from utils.workspace_utils import trunc
 
 _delegate_tls: threading.local = threading.local()
 MAX_DELEGATE_DEPTH: int = 2
+
+# Child answers longer than this are auto-saved to a scratchpad key to keep the parent thread compact.
+_DELEGATE_AUTO_SAVE_THRESHOLD: int = 512
 
 
 def get_delegate_runtime_tls() -> threading.local:
@@ -98,7 +102,29 @@ def run_delegate_subrun(
     )
 
     logger.log_file_only(f"[delegate] spawning child run: depth={depth + 1} max_iter={child_iterations} prompt={trunc(child_prompt, 80)}")
+
+    # Check stop state before starting the child run - the parent may have been stopped
+    # while this delegate was queued.
+    try:
+        from orchestration import is_stop_requested as _is_stop_requested
+        if _is_stop_requested():
+            return {
+                "status": "error",
+                "answer": "[Run stopped by /stoprun - delegate did not execute.]",
+                "delegate_prompt": child_prompt,
+                "depth": depth + 1,
+                "max_iterations": child_iterations,
+                "elapsed_s": 0.0,
+            }
+    except ImportError:
+        pass
+
+    # Default: child sees no parent scratchpad keys (prevents _tc_* noise leakage).
+    # Caller must explicitly list the keys the child is allowed to see.
+    child_visible_keys = scratchpad_visible_keys if scratchpad_visible_keys is not None else []
+
     previous = push_delegate_runtime(logger=logger, delegate_depth=depth + 1, config=child_config)
+    _start = time.monotonic()
     try:
         answer, _, _, run_success, _ = orchestrate_prompt_fn(
             user_prompt=child_prompt,
@@ -108,7 +134,7 @@ def run_delegate_subrun(
             session_context=None,
             quiet=True,
             delegate_depth=depth + 1,
-            scratchpad_visible_keys=scratchpad_visible_keys,
+            scratchpad_visible_keys=child_visible_keys,
             bound_session_id=parent_session_id,
         )
         status = "ok" if run_success else "error"
@@ -117,6 +143,8 @@ def run_delegate_subrun(
         status = "error"
     finally:
         pop_delegate_runtime(previous)
+    elapsed = time.monotonic() - _start
+    logger.log_file_only(f"[delegate] child done: depth={depth + 1} status={status} elapsed={elapsed:.1f}s prompt={trunc(child_prompt, 80)}")
 
     if output_key and status == "ok":
         try:
@@ -127,5 +155,13 @@ def run_delegate_subrun(
             answer = f"[Result saved to scratchpad key '{out_key.lower()}'. Use scratch_load('{out_key.lower()}') or {{scratch:{out_key.lower()}}} to access it.]"
         except Exception as exc:
             logger.log_file_only(f"[delegate] Warning: could not save result to scratchpad key '{out_key}': {exc}")
+    elif not output_key and status == "ok" and isinstance(answer, str) and len(answer) >= _DELEGATE_AUTO_SAVE_THRESHOLD:
+        # No explicit output_key but answer is large - auto-save to keep parent thread compact.
+        auto_key = f"_tc_delegate_d{depth + 1}"
+        try:
+            scratch_auto_save(auto_key, answer)
+            answer = f"[Answer auto-saved to scratchpad key '{auto_key}' ({len(answer):,} chars). Use scratch_load('{auto_key}') or scratch_query('{auto_key}', ...) to access it.]"
+        except Exception as exc:
+            logger.log_file_only(f"[delegate] Warning: could not auto-save large result: {exc}")
 
-    return {"status": status, "answer": answer, "delegate_prompt": child_prompt, "depth": depth + 1, "max_iterations": child_iterations}
+    return {"status": status, "answer": answer, "delegate_prompt": child_prompt, "depth": depth + 1, "max_iterations": child_iterations, "elapsed_s": round(elapsed, 2)}

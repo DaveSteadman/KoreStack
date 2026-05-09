@@ -17,7 +17,8 @@
       --text-dim:    #666680;
       --accent:      #6b8aff;
       --accent-2:    #a78bfa;
-      --font-ui:     'Segoe UI', system-ui, sans-serif;
+      --font-ui:     'Roboto Mono', 'Cascadia Code', 'Fira Code', 'Courier New', monospace;
+      --font-code:   'Roboto Mono', 'Cascadia Code', 'Fira Code', 'Courier New', monospace;
       --topbar-h:    38px;
       --appbar-h:    42px;
     }
@@ -201,7 +202,7 @@
     .fake-editor {
       flex: 1;
       overflow: hidden;
-      font: 13px/1.7 Consolas, 'Courier New', monospace;
+      font: 13px/1.7 var(--font-code);
       color: var(--text-2);
       display: flex;
     }
@@ -326,7 +327,7 @@
     .chat-code-block pre {
       margin: 0;
       padding: 10px 12px;
-      font: 12px/1.6 Consolas, 'Courier New', monospace;
+      font: 12px/1.6 var(--font-code);
       background: var(--bg);
       color: var(--text-2);
       overflow-x: auto;

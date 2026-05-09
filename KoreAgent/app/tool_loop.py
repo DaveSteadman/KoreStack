@@ -14,9 +14,12 @@ from utils.workspace_utils import trunc
 
 
 # Cap for tool result content in messages; longer content is auto-saved to scratchpad and truncated in the message with a reference note
-TOOL_MSG_MAX_CHARS: int = 4096 
+TOOL_MSG_MAX_CHARS: int = 4096
 
-TOOL_MSG_AUTO_SCRATCH_MIN: int = 600
+# Tool results at or above this length are auto-saved to scratchpad before being injected
+# into the thread.  Keeping this low means more results are available for later retrieval
+# even after their thread message is compacted.
+TOOL_MSG_AUTO_SCRATCH_MIN: int = 200
 
 _COT_PLANNING_RE = re.compile(
     r"\b(?:we should|we can|we need|we will|we could|we\'ll|we\'re|we must|"
@@ -260,7 +263,7 @@ def run_tool_loop(
 
             _log_section(f"TOOL ROUND {round_num}")
             _log_file_only(f"[progress] Round {round_num}: calling model...")
-            thread_chars, compact_count = assess_compact(context_map, messages, round_num, config.num_ctx)
+            thread_chars, compact_count = assess_compact(context_map, messages, round_num, config.num_ctx, save_fn=scratch_auto_save)
             if compact_count:
                 _log_file_only(f"[context] compacted {compact_count} message(s) (threshold {COMPACT_THRESHOLD:.0%} exceeded)")
             _log_file_only(f"[context] thread: {thread_chars:,} chars (~{thread_chars // 4:,} tok est.) | window: {config.num_ctx:,} | remaining est.: ~{config.num_ctx - thread_chars // 4:,}")
@@ -335,7 +338,7 @@ def run_tool_loop(
             context_map.append({"round": round_num, "role": "asst", "label": f"(tool calls x{len(result.tool_calls)})", "chars": len(assistant_content), "auto_key": None, "msg_idx": len(messages) - 1})
 
             round_outputs: list[ToolCallResult] = []
-            for tool_call in result.tool_calls:
+            for tc_idx, tool_call in enumerate(result.tool_calls):
                 tc_id = tool_call.get("id", "")
                 tc_func = tool_call.get("function", {})
                 func_name = tc_func.get("name", "")
@@ -370,7 +373,7 @@ def run_tool_loop(
                 auto_scratch_key = None
                 if not output.get("is_error") and not is_scratch_reader and isinstance(result_content, str) and len(result_content) >= TOOL_MSG_AUTO_SCRATCH_MIN:
                     safe_name = func_name.lower()[:24]
-                    auto_scratch_key = f"_tc_r{round_num}_{safe_name}"
+                    auto_scratch_key = f"_tc_r{round_num}_{tc_idx + 1}_{safe_name}"
                     scratch_auto_save(auto_scratch_key, result_content)
                     scratch_pin(auto_scratch_key)
                     if len(result_content) > TOOL_MSG_MAX_CHARS:

@@ -200,7 +200,7 @@ For each child service (KoreFeed, KoreLibrary, KoreReference, KoreRAG), displaye
 
 ### Search test panel
 
-Mirrors exactly what an agent calls via `POST /search`:
+Mirrors exactly what an agent calls via `POST /api/search`:
 
 - `query` text input (Enter key or SEARCH button submits)
 - `domains` checkboxes — Feeds / Reference / Library / RAG (all checked by default)
@@ -218,10 +218,10 @@ Machine-readable health endpoint used by the landing page and agents.
   "service": "KoreDataGateway",
   "version": "...",
   "children": {
-    "korefeed":      { "url": "http://127.0.0.1:8801", "healthy": true, ... },
-    "korelibrary":   { "url": "http://127.0.0.1:8802", "healthy": true, ... },
-    "korereference": { "url": "http://127.0.0.1:8804", "healthy": true, ... },
-    "korerag":       { "url": "http://127.0.0.1:8803", "healthy": true, ... }
+    "korefeed":      { "url": "http://127.0.0.1:8621", "healthy": true, ... },
+    "korelibrary":   { "url": "http://127.0.0.1:8622", "healthy": true, ... },
+    "korereference": { "url": "http://127.0.0.1:8624", "healthy": true, ... },
+    "korerag":       { "url": "http://127.0.0.1:8623", "healthy": true, ... }
   }
 }
 ```
@@ -254,13 +254,13 @@ At gateway shutdown (SIGTERM or process exit):
 
 | Key | Default | Description |
 |-----|---------|-------------|
-| `port` | `8800` | Gateway listen port |
+| `port` | `8620` | Gateway listen port in suite mode |
 | `host` | `0.0.0.0` | Gateway bind address |
 | `log_level` | `"info"` | Uvicorn log level |
-| `korefeed_url` | `http://127.0.0.1:8801` | KoreFeed base URL |
-| `korelibrary_url` | `http://127.0.0.1:8802` | KoreLibrary base URL |
-| `korereference_url` | `http://127.0.0.1:8804` | KoreReference base URL |
-| `korerag_url` | `http://127.0.0.1:8803` | KoreRAG base URL |
+| `korefeed_url` | `http://127.0.0.1:8621` | KoreFeed base URL |
+| `korelibrary_url` | `http://127.0.0.1:8622` | KoreLibrary base URL |
+| `korereference_url` | `http://127.0.0.1:8624` | KoreReference base URL |
+| `korerag_url` | `http://127.0.0.1:8623` | KoreRAG base URL |
 
 ---
 
@@ -274,81 +274,81 @@ The gateway proxies web UI interactions to the appropriate child service and ren
 |--------|------|-------------|
 | `GET` | `/` | Landing page: service health + search test panel |
 | `GET` | `/status` | Machine-readable health JSON (gateway + all children) |
-| `POST` | `/search` | Primary agent search API |
+| `POST` | `/api/search` | Primary agent search API |
 
-### KoreFeed — `/feeds/*`
+### KoreFeed — `/ui/feeds/*`
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/feeds` | Feed domain list with feed management UI |
-| `GET` | `/feeds/search` | Search feed entries (`q`, `domain`, `since`, `until`, `limit`) |
-| `GET` | `/feeds/{domain}` | Entry list for a domain with age/purge controls |
-| `GET` | `/feeds/{domain}/{entry_id}` | Single entry detail |
-| `POST` | `/feeds/domains/create` | Create domain |
-| `POST` | `/feeds/domains/{domain}/delete` | Delete domain |
-| `POST` | `/feeds/domains/{domain}/rename` | Rename domain |
-| `POST` | `/feeds/{domain}/feeds/add` | Add feed to domain |
-| `POST` | `/feeds/{domain}/feeds/{feed_id}/delete` | Remove feed |
-| `POST` | `/feeds/{domain}/feeds/{feed_id}/refresh` | Force refresh (returns JSON) |
-| `POST` | `/feeds/{domain}/entries/{entry_id}/delete` | Delete entry (returns JSON) |
-| `POST` | `/feeds/{domain}/entries/delete-older-than` | Bulk age purge |
-| `POST` | `/feeds/{domain}/entries/delete-by-feed` | Purge by feed name |
-| `POST` | `/feeds/entries/bulk-delete` | Bulk delete by ID list (form `sel[]=domain:id`) |
-| `POST` | `/feeds/{domain}/settings/age-mode` | Set age/calendar retention mode |
-| `POST` | `/feeds/{domain}/entries/delete-outside-calendar` | Calendar purge |
+| `GET` | `/ui/feeds` | Feed domain list with feed management UI |
+| `GET` | `/ui/feeds/search` | Search feed entries (`q`, `domain`, `since`, `until`, `limit`) |
+| `GET` | `/ui/feeds/{domain}` | Entry list for a domain with age/purge controls |
+| `GET` | `/ui/feeds/{domain}/{entry_id}` | Single entry detail |
+| `POST` | `/ui/feeds/domains/create` | Create domain |
+| `POST` | `/ui/feeds/domains/{domain}/delete` | Delete domain |
+| `POST` | `/ui/feeds/domains/{domain}/rename` | Rename domain |
+| `POST` | `/ui/feeds/{domain}/feeds/add` | Add feed to domain |
+| `POST` | `/ui/feeds/{domain}/feeds/{feed_id}/delete` | Remove feed |
+| `POST` | `/ui/feeds/{domain}/feeds/{feed_id}/refresh` | Force refresh (returns JSON) |
+| `POST` | `/ui/feeds/{domain}/entries/{entry_id}/delete` | Delete entry (returns JSON) |
+| `POST` | `/ui/feeds/{domain}/entries/delete-older-than` | Bulk age purge |
+| `POST` | `/ui/feeds/{domain}/entries/delete-by-feed` | Purge by feed name |
+| `POST` | `/ui/feeds/entries/bulk-delete` | Bulk delete by ID list (form `sel[]=domain:id`) |
+| `POST` | `/ui/feeds/{domain}/settings/age-mode` | Set age/calendar retention mode |
+| `POST` | `/ui/feeds/{domain}/entries/delete-outside-calendar` | Calendar purge |
 | `PATCH` | `/api/feeds/{feed_id}/rate` | Update feed poll rate in minutes (browser JS → proxied to KoreFeed) |
 
-### KoreLibrary — `/library/*`
+### KoreLibrary — `/ui/library/*`
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/library` | Book list with inline search panel |
-| `GET` | `/library/incomplete` | Books with missing metadata fields |
-| `GET` | `/library/search` | Search books (`q`, `author`, `title`, `year`, `language`, `genre`, `limit`, `offset`) |
-| `GET` | `/library/import` | Import UI (manual form + Kiwix browser + Gutenberg catalog) |
-| `POST` | `/library/import/manual` | Manual import form submission |
-| `GET` | `/library/kiwix/inventory` | ZIM book inventory (JSON) |
-| `GET` | `/library/kiwix/suggest` | Title suggest from Kiwix (JSON) |
-| `GET` | `/library/kiwix/search` | Search within Kiwix (JSON) |
-| `GET` | `/library/kiwix/catalog` | Gutenberg author/book catalog from Kiwix ZIM (`?zim=`, `?author=`) |
-| `POST` | `/library/import/kiwix` | Start Kiwix import (JSON) |
-| `POST` | `/library/import/kiwix/viewer` | Kiwix viewer URL import (JSON) |
-| `POST` | `/library/import/kiwix/viewer/batch` | Batch import from viewer URL list (JSON) |
-| `GET` | `/library/{book_id}/edit` | Edit book metadata form |
-| `POST` | `/library/{book_id}/edit` | Save book edits |
-| `POST` | `/library/{book_id}/delete` | Delete book |
-| `POST` | `/library/{book_id}/repair-anchors` | Repair broken anchor spans in stored body |
-| `GET` | `/library/{book_id}` | View book |
+| `GET` | `/ui/library` | Book list with inline search panel |
+| `GET` | `/ui/library/incomplete` | Books with missing metadata fields |
+| `GET` | `/ui/library/search` | Search books (`q`, `author`, `title`, `year`, `language`, `genre`, `limit`, `offset`) |
+| `GET` | `/ui/library/import` | Import UI (manual form + Kiwix browser + Gutenberg catalog) |
+| `POST` | `/ui/library/import/manual` | Manual import form submission |
+| `GET` | `/ui/library/kiwix/inventory` | ZIM book inventory (JSON) |
+| `GET` | `/ui/library/kiwix/suggest` | Title suggest from Kiwix (JSON) |
+| `GET` | `/ui/library/kiwix/search` | Search within Kiwix (JSON) |
+| `GET` | `/ui/library/kiwix/catalog` | Gutenberg author/book catalog from Kiwix ZIM (`?zim=`, `?author=`) |
+| `POST` | `/ui/library/import/kiwix` | Start Kiwix import (JSON) |
+| `POST` | `/ui/library/import/kiwix/viewer` | Kiwix viewer URL import (JSON) |
+| `POST` | `/ui/library/import/kiwix/viewer/batch` | Batch import from viewer URL list (JSON) |
+| `GET` | `/ui/library/{book_id}/edit` | Edit book metadata form |
+| `POST` | `/ui/library/{book_id}/edit` | Save book edits |
+| `POST` | `/ui/library/{book_id}/delete` | Delete book |
+| `POST` | `/ui/library/{book_id}/repair-anchors` | Repair broken anchor spans in stored body |
+| `GET` | `/ui/library/{book_id}` | View book |
 
-### KoreReference — `/reference/*`
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/reference` | Article index (recent articles) |
-| `GET` | `/reference/search` | Search articles by full-text query (`q`, `limit`, `offset`) |
-| `GET` | `/reference/import` | Kiwix crawl import UI |
-| `POST` | `/reference/import/crawl` | Start crawl (proxied JSON) |
-| `GET` | `/reference/import/status` | Crawl progress (proxied JSON) |
-| `POST` | `/reference/import/stop` | Stop crawl (proxied JSON) |
-| `GET` | `/reference/new` | New article form |
-| `POST` | `/reference/new` | Create article |
-| `GET` | `/reference/{title}/edit` | Edit article |
-| `POST` | `/reference/{title}/edit` | Save article edits (upsert via KoreReference `/articles`) |
-| `POST` | `/reference/delete-all` | Delete all articles |
-| `POST` | `/reference/{title}/delete` | Delete article |
-| `GET` | `/reference/{title}/links-json` | Outbound links JSON (for UI panel) |
-| `GET` | `/reference/{title}` | View article with backlinks panel |
-
-### KoreRAG — `/rag/*`
+### KoreReference — `/ui/reference/*`
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/rag` | Chunk browser (paginated list, metadata only) |
-| `GET` | `/rag/search` | Search chunks by FTS query (`q`, `source`, `tags`, `limit`) |
-| `GET` | `/rag/insert` | Insert form UI |
-| `POST` | `/rag/insert` | Submit new chunk (title, source, tags, content) |
-| `GET` | `/rag/{chunk_id}` | View full chunk with decompressed content |
-| `POST` | `/rag/{chunk_id}/delete` | Delete chunk |
+| `GET` | `/ui/reference` | Article index (recent articles) |
+| `GET` | `/ui/reference/search` | Search articles by full-text query (`q`, `limit`, `offset`) |
+| `GET` | `/ui/reference/import` | Kiwix crawl import UI |
+| `POST` | `/ui/reference/import/crawl` | Start crawl (proxied JSON) |
+| `GET` | `/ui/reference/import/status` | Crawl progress (proxied JSON) |
+| `POST` | `/ui/reference/import/stop` | Stop crawl (proxied JSON) |
+| `GET` | `/ui/reference/new` | New article form |
+| `POST` | `/ui/reference/new` | Create article |
+| `GET` | `/ui/reference/{title}/edit` | Edit article |
+| `POST` | `/ui/reference/{title}/edit` | Save article edits (upsert via KoreReference `/articles`) |
+| `POST` | `/ui/reference/delete-all` | Delete all articles |
+| `POST` | `/ui/reference/{title}/delete` | Delete article |
+| `GET` | `/ui/reference/{title}/links-json` | Outbound links JSON (for UI panel) |
+| `GET` | `/ui/reference/{title}` | View article with backlinks panel |
+
+### KoreRAG — `/ui/rag/*`
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/ui/rag` | Chunk browser (paginated list, metadata only) |
+| `GET` | `/ui/rag/search` | Search chunks by FTS query (`q`, `source`, `tags`, `limit`) |
+| `GET` | `/ui/rag/insert` | Insert form UI |
+| `POST` | `/ui/rag/insert` | Submit new chunk (title, source, tags, content) |
+| `GET` | `/ui/rag/{chunk_id}` | View full chunk with decompressed content |
+| `POST` | `/ui/rag/{chunk_id}/delete` | Delete chunk |
 
 #### KoreRAG JSON API proxy (for programmatic / agent use)
 
@@ -359,7 +359,7 @@ The gateway proxies web UI interactions to the appropriate child service and ren
 | `POST` | `/api/rag/chunks` | Create chunk (JSON body: `content`, `title`, `source`, `tags`) |
 | `PATCH` | `/api/rag/chunks/{id}` | Update chunk fields (JSON) |
 | `DELETE` | `/api/rag/chunks/{id}` | Delete chunk (JSON) |
-| `GET` | `/api/rag/search` | FTS search — same params as `/rag/search` (JSON) |
+| `GET` | `/api/rag/search` | FTS search — same params as `/ui/rag/search` (JSON) |
 
 ---
 
@@ -372,9 +372,9 @@ The gateway is solely responsible for converting stored content into HTML for th
 Article bodies are stored as wikitext with `[[wikilinks]]` notation and `== Heading ==` section markers. The gateway renders them via the `wikilinks` Jinja2 filter:
 
 1. Split body on `<<<TABLE>>>…<<<ENDTABLE>>>` markers to separate pre-rendered HTML table segments from plain wikitext.
-2. For plain wikitext segments: escape HTML, convert `[[Display|Target]]` / `[[Target]]` to `<a href="/reference/{target}">` anchors, convert double newlines to `</p><p>` and single newlines to `<br>`.
+2. For plain wikitext segments: escape HTML, convert `[[Display|Target]]` / `[[Target]]` to `<a href="/ui/reference/{target}">` anchors, convert double newlines to `</p><p>` and single newlines to `<br>`.
 3. For `<<<TABLE>>>` segments: resolve `[[wikilinks]]` inside the pre-rendered HTML and pass through as-is.
-4. Both resolved and unresolved wikilinks link to `/reference/{title}` (resolution is done at import time by KoreReference, not at render time).
+4. Both resolved and unresolved wikilinks link to `/ui/reference/{title}` (resolution is done at import time by KoreReference, not at render time).
 
 ### Reference article — edit round-trip
 
@@ -394,4 +394,4 @@ RAG chunk content is stored compressed (zlib) in the database. It is decompresse
 
 - The gateway does **not** store any data of its own (no database, no persistent state beyond child process handles).
 - The gateway does **not** implement authentication or access control — it is an internal tool on a trusted network.
-- The gateway does **not** provide write access to data via the agent API — `POST /search` and all `GET` retrieval routes are read-only from the agent's perspective. Write operations (insert, update, delete) require direct UI interaction or explicit `POST`/`PATCH`/`DELETE` API calls.
+- The gateway does **not** provide write access to data via the agent API — `POST /api/search` and all `GET` retrieval routes are read-only from the agent's perspective. Write operations (insert, update, delete) require direct UI interaction or explicit `POST`/`PATCH`/`DELETE` API calls.

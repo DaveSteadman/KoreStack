@@ -1,7 +1,7 @@
 # ====================================================================================================
 # MARK: OVERVIEW
 # ====================================================================================================
-# TaskManagement skill for the MiniAgentFramework.
+# TaskManagement skill for KoreAgent.
 #
 # Provides create/read/update/delete operations on scheduled task JSON files stored in
 # datacontrol/schedules/.  Each task lives in its own file named task_<name>.json so the
@@ -104,10 +104,10 @@ def _find_task(name: str) -> "tuple[Path, dict, int] | None":
 
 
 def _save(json_path: Path, data: dict) -> None:
-    json_path.write_text(
-        json.dumps(data, indent=2, ensure_ascii=False) + "\n",
-        encoding="utf-8",
-    )
+    content = json.dumps(data, indent=2, ensure_ascii=False) + "\n"
+    tmp = json_path.with_suffix(".tmp")
+    tmp.write_text(content, encoding="utf-8")
+    tmp.replace(json_path)
 
 
 # ====================================================================================================

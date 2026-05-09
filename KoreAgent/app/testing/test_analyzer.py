@@ -1,7 +1,7 @@
 # ====================================================================================================
 # MARK: OVERVIEW
 # ====================================================================================================
-# Test results analyzer for MiniAgentFramework.
+# Test results analyzer for KoreAgent.
 #
 # Reads a test results CSV produced by test_wrapper.py, then for each row parses the associated
 # log file to extract structured information about:
@@ -82,6 +82,9 @@ ANALYSIS_FIELDS = [
     "final_output_length",
     "outcome",               # PASS / FAIL / TIMEOUT / GAP
     "failure_reason",
+    "persisted_passed",
+    "persisted_failure_reason",
+    "quality_flags",
     "iterations_used",
     "planner_mode",          # TOOL_CALLS / DIRECT / UNKNOWN
     "skills_selected",       # comma-separated list
@@ -223,6 +226,46 @@ def classify_outcome(exit_code: int, final_output: str) -> tuple[str, str]:
     return "PASS", ""
 
 
+# ----------------------------------------------------------------------------------------------------
+def _prompt_quality_issues(prompt: str, final_output: str) -> list[str]:
+    """Return deterministic quality issues derived from prompt-aware checks."""
+    issues: list[str] = []
+    prompt_lower = (prompt or "").lower()
+    output_lower = (final_output or "").lower()
+
+    # Catch currency-like corruption such as "$3larillion".
+    if re.search(r"\$\d+[a-z]{2,}\b", output_lower):
+        issues.append("Suspicious alphanumeric currency token detected")
+
+    if "multiplication table for 7 up to 12" in prompt_lower:
+        expected_lines = [f"7 x {i} = {7*i}" for i in range(1, 13)]
+        missing = [line for line in expected_lines if line.lower() not in output_lower]
+        if missing:
+            issues.append(f"Multiplication table missing expected lines ({len(missing)} missing)")
+
+    if "filter the following csv to show only rows where units is greater than 100" in prompt_lower:
+        expected_rows = [
+            "Apple,150,1.20",
+            "Cherry,200,2.50",
+            "Elder,110,1.80",
+        ]
+        missing = [row for row in expected_rows if row.lower() not in output_lower]
+        if missing:
+            issues.append("CSV filter output missing one or more expected rows")
+
+    if "add a total column that sums jan through dec for each row" in prompt_lower:
+        expected_rows = [
+            "London,8,9,11,14,17,20,22,22,19,15,11,8,176",
+            "Paris,5,7,10,14,18,22,25,24,21,15,10,6,177",
+            "Cairo,13,15,18,22,27,30,32,31,29,25,19,14,275",
+        ]
+        missing = [row for row in expected_rows if row.lower() not in output_lower]
+        if missing:
+            issues.append("Row-total output does not match expected totals")
+
+    return issues
+
+
 # ====================================================================================================
 # MARK: GAP REPORT
 # ====================================================================================================
@@ -337,8 +380,11 @@ def analyze_results_file(csv_path: Path) -> tuple[Path, Path]:
             exit_code_int = -1
 
         assert_result = row.get("assert_result", "").strip().upper()
+        persisted_passed = row.get("passed", "").strip().upper()
+        persisted_failure_reason = row.get("failure_reason", "").strip()
 
         outcome, failure_reason = classify_outcome(exit_code_int, final_output)
+        quality_issues = _prompt_quality_issues(prompt, final_output)
 
         log_info = {}
         if log_file:
@@ -354,6 +400,19 @@ def analyze_results_file(csv_path: Path) -> tuple[Path, Path]:
             outcome        = "FAIL"
             failure_reason = "Orchestration validation failed (from log)"
 
+        # Respect persisted wrapper outcome fields when present.
+        if persisted_passed == "FAIL":
+            outcome = "FAIL"
+            if persisted_failure_reason:
+                failure_reason = persisted_failure_reason
+        elif persisted_passed == "PASS" and outcome == "FAIL" and persisted_failure_reason:
+            quality_issues.append("Persisted PASS row conflicts with computed FAIL outcome")
+
+        # Upgrade to FAIL when deterministic quality checks detect bad content.
+        if outcome == "PASS" and quality_issues:
+            outcome = "FAIL"
+            failure_reason = quality_issues[0]
+
         preview = trunc(final_output.replace("\n", " ").replace("\r", ""), 120)
 
         analysis_rows.append({
@@ -364,6 +423,9 @@ def analyze_results_file(csv_path: Path) -> tuple[Path, Path]:
             "final_output_length": len(final_output),
             "outcome":             outcome,
             "failure_reason":      failure_reason,
+            "persisted_passed":    persisted_passed,
+            "persisted_failure_reason": persisted_failure_reason,
+            "quality_flags":       " | ".join(quality_issues),
             "iterations_used":     log_info.get("iterations_used", 1),
             "planner_mode":        log_info.get("planner_mode", "UNKNOWN"),
             "skills_selected":     log_info.get("skills_selected", ""),
@@ -453,7 +515,7 @@ def run_analysis(csv_path: Path) -> None:
 
 # ----------------------------------------------------------------------------------------------------
 def _parse_cli_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Analyse a MiniAgentFramework test results CSV.")
+    parser = argparse.ArgumentParser(description="Analyse a KoreAgent test results CSV.")
     parser.add_argument(
         "csv_file",
         type=Path,
