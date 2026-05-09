@@ -8,6 +8,7 @@ import * as properties from './properties.js';
 import * as fileio     from './fileio.js';
 import { colLetter, addrOf, evaluate } from './formula.js';
 import { initTopbar, initAppBar, initAppTabs, renderAppMenu, initAppMenuEvents } from '/ui-elements/assets/js/chrome.js?v=20260508b';
+import { trackAppTab } from '/ui-elements/assets/js/chrome.js?v=20260508b';
 import * as draft      from '/static/shared/js/draft.js';
 
 const canvas      = document.getElementById('grid');
@@ -376,7 +377,7 @@ function _onStateChange(name, dirty) {
   document.getElementById('sheet-dirty').classList.toggle('hidden', !dirty);
   document.title = (dirty ? '● ' : '') + (name ?? 'Untitled') + ' — KoreSheet';
   document.getElementById('status-file').textContent = name ?? 'Untitled.koresheet';
-  if (name) appbar.trackAppTab(name, 'koresheet', fileio.currentId());
+  if (name) trackAppTab(name, 'koresheet', fileio.currentId());
 }
 
 function _refresh() {

@@ -104,7 +104,19 @@ export async function loadSearch(q) {
 // ── Rendering ───────────────────────────────────────────────────
 
 import { resolveIcon, SUITE_ICONS } from '/ui-elements/assets/js/icons.js';
-import { OPEN_SVG, EDIT_SVG, TRASH_SVG } from '/ui-elements/assets/js/svg_icons.js';
+
+const OPEN_SVG = `<svg viewBox="0 0 20 20" fill="none" width="12" height="12">
+  <path d="M4 4h5v2H6v8h8v-3h2v5H4V4z" fill="currentColor"/>
+  <path d="M10 10l6-6M11 4h5v5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>`;
+
+const EDIT_SVG = `<svg viewBox="0 0 20 20" fill="none" width="12" height="12">
+  <path d="M14.5 3.5a2.121 2.121 0 0 1 3 3L6 18H3v-3L14.5 3.5z" stroke="currentColor" stroke-width="1.5"/>
+</svg>`;
+
+const TRASH_SVG = `<svg viewBox="0 0 20 20" fill="none" width="12" height="12">
+  <path d="M3 6h14M8 6V4h4v2M5 6l1 11h8l1-11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+</svg>`;
 
 const TYPE_URL = { koredoc: '/doc', koresheet: '/sheet', kodiag: '/diag' };
 

@@ -8,9 +8,25 @@
 
 import * as api     from './api.js';
 import * as dialogs from './dialogs.js';
-import { CHEVRON_SVG, EDIT_SVG, MOVE_SVG, TRASH_SVG } from '/ui-elements/assets/js/svg_icons.js';
 
 const _treeEl = document.getElementById('kf-tree');
+
+const CHEVRON_SVG = `<svg viewBox="0 0 20 20" fill="none" width="12" height="12">
+  <path d="M7 5l5 5-5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>`;
+
+const EDIT_SVG = `<svg viewBox="0 0 20 20" fill="none" width="12" height="12">
+  <path d="M14.5 3.5a2.121 2.121 0 0 1 3 3L6 18H3v-3L14.5 3.5z" stroke="currentColor" stroke-width="1.5"/>
+</svg>`;
+
+const TRASH_SVG = `<svg viewBox="0 0 20 20" fill="none" width="12" height="12">
+  <path d="M3 6h14M8 6V4h4v2M5 6l1 11h8l1-11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+</svg>`;
+
+const MOVE_SVG = `<svg viewBox="0 0 20 20" fill="none" width="12" height="12">
+  <path d="M2 5a2 2 0 0 1 2-2h4l2 2h6a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5z" stroke="currentColor" stroke-width="1.4"/>
+  <path d="M10 9v6M7 12l3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>`;
 
 // ── State ───────────────────────────────────────────────────────
 

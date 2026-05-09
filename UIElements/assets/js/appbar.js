@@ -1,6 +1,5 @@
 import { SUITE_ICONS, resolveIcon } from './icons.js?v=20260501a';
 import { applyTheme, themeFor } from './theme.js?v=20260501a';
-import { APPBAR_BRAND_ICON, APPBAR_HOME_ICON } from './svg_icons.js?v=20260501a';
 
 const DEFAULT_TYPE_URL = {
   koredoc: '/doc',
@@ -19,7 +18,7 @@ const DEFAULT_APPBAR_TABS_CONFIG = {
   homePath: '/ui',
   homeLabel: 'Files',
   homeTitle: 'KoreFile Explorer',
-  homeIcon: APPBAR_HOME_ICON,
+  homeIcon: 'korefile',
   currentParams: {
     id: 'id',
     file: 'file',
@@ -49,7 +48,11 @@ function escapeHtml(value) {
 
 function iconMarkup(icon, iconSize, icons) {
   if (typeof icon === 'function') return icon(iconSize);
-  if (typeof icon === 'string') return resolveIcon(icons, icon, iconSize);
+  if (typeof icon === 'string') {
+    const trimmed = icon.trim();
+    if (trimmed.startsWith('<svg')) return trimmed;
+    return resolveIcon(icons, icon, iconSize);
+  }
   return '';
 }
 
@@ -152,7 +155,6 @@ export function initAppBar(options = {}) {
     brandIcon = currentService,
     iconSize = 16,
     icons = SUITE_ICONS,
-    statusDot = null,
     chips = [],
     tabs = [],
     note = null,
@@ -185,12 +187,6 @@ export function initAppBar(options = {}) {
     : '';
 
   const metaItems = [];
-  if (statusDot) {
-    const dotId = statusDot.id ? ` id="${escapeHtml(statusDot.id)}"` : '';
-    const dotClass = statusDot.className ? ` ${escapeHtml(statusDot.className)}` : '';
-    const dotTitle = statusDot.title ? ` title="${escapeHtml(statusDot.title)}"` : '';
-    metaItems.push(`<span class="kappbar-presence${dotClass}"${dotId}${dotTitle}></span>`);
-  }
   metaItems.push(...chips.map(chipMarkup));
 
   const meta = metaItems.length
@@ -349,7 +345,7 @@ function renderAppTabs() {
   const isHome = location.pathname === currentAppTabsConfig.homePath ? ' kd-kf-active' : '';
   const homeHtml = `
     <a id="kd-kf-link" class="kd-kf-link${isHome}" href="${escapeHtml(currentAppTabsConfig.homePath)}" title="${escapeHtml(currentAppTabsConfig.homeTitle)}" style="order:2;flex-shrink:0">
-      ${currentAppTabsConfig.homeIcon}
+      ${iconMarkup(currentAppTabsConfig.homeIcon, currentAppTabsConfig.iconSize, currentAppTabsConfig.icons)}
       <span>${escapeHtml(currentAppTabsConfig.homeLabel)}</span>
     </a>`;
 

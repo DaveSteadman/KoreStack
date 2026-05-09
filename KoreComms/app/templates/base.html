@@ -37,15 +37,6 @@
       text-decoration: none; flex-shrink: 0; color: var(--text); }
     .logo .l-kore { color: var(--text); }
     .logo .l-comms { color: var(--service-accent); }
-    .dot-live {
-      width: 7px; height: 7px; border-radius: 50%;
-      background: var(--red); box-shadow: 0 0 6px var(--red);
-      display: inline-block; flex-shrink: 0;
-      transition: background .4s, box-shadow .4s;
-    }
-    .dot-live.live {
-      background: var(--green); box-shadow: 0 0 6px var(--green);
-    }
     nav { margin-left: auto; display: flex; gap: 1.25rem; }
     nav a { color: var(--dim); text-decoration: none; font-size: var(--kcui-text-body-sm); letter-spacing: var(--kcui-tracking-tight); }
     nav a:hover { color: var(--text); }
@@ -129,44 +120,6 @@
   {% block content %}{% endblock %}
 </main>
 <script>
-  // ─── live status dot ─────────────────────────────
-  (function () {
-    function boot() {
-      const dot = document.getElementById('status-dot');
-      if (!dot) {
-        requestAnimationFrame(boot);
-        return;
-      }
-      // Restore last-known state immediately to avoid red flash on navigation.
-      if (sessionStorage.getItem('kc-live') === '1') {
-        dot.classList.add('live');
-        dot.title = 'Connected';
-      }
-      function ping() {
-        fetch('/status', { method: 'GET', cache: 'no-store' })
-          .then(r => {
-            if (r.ok) {
-              dot.classList.add('live');
-              dot.title = 'Connected';
-              sessionStorage.setItem('kc-live', '1');
-            } else {
-              dot.classList.remove('live');
-              dot.title = 'Error ' + r.status;
-              sessionStorage.removeItem('kc-live');
-            }
-          })
-          .catch(() => {
-            dot.classList.remove('live');
-            dot.title = 'Disconnected';
-            sessionStorage.removeItem('kc-live');
-          });
-      }
-      ping();
-      setInterval(ping, 5000);
-    }
-    boot();
-  })();
-
   // ─── stepper controls ────────────────────────────
   document.querySelectorAll('.num-stepper').forEach(w => {
     const inp = w.querySelector('input[type=number]');
@@ -182,7 +135,6 @@
     overline: 'External Messaging',
     brandLabel: 'KoreComms',
     brandIcon: 'korecomms',
-    statusDot: { id: 'status-dot', className: 'dot-live', title: 'Connecting...' },
     chips: [],
     tabs: [
       { label: 'Conversations', href: '/', active: {{ 'true' if request.url.path == '/' else 'false' }} },

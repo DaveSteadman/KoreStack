@@ -119,18 +119,6 @@ html, body {
     color: var(--border);
 }
 
-#header #ollama-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--text-dim);
-    flex-shrink: 0;
-    transition: background 0.3s;
-}
-
-#header #ollama-dot.on  { background: var(--green); }
-#header #ollama-dot.off { background: var(--red); }
-
 /* ============================================================
    MAIN GRID
    ============================================================ */

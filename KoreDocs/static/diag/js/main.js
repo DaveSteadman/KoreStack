@@ -9,6 +9,7 @@ import * as interaction from './interaction.js';
 import * as ui          from './ui.js';
 import * as fileio      from './fileio.js';
 import { initTopbar, initAppBar, initAppTabs, renderAppMenu } from '/ui-elements/assets/js/chrome.js?v=20260508b';
+import { trackAppTab } from '/ui-elements/assets/js/chrome.js?v=20260508b';
 import * as draft       from '/static/shared/js/draft.js';
 
 const _draftSave = draft.makeSaver();
@@ -118,7 +119,7 @@ if (!autoOpened) {
 }
 
 if (fileio.currentName()) {
-  appbar.trackAppTab(fileio.currentName(), 'kodiag', fileio.currentId());
+  trackAppTab(fileio.currentName(), 'kodiag', fileio.currentId());
 }
 
 // Set initial tool + cursor

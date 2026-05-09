@@ -54,28 +54,7 @@ html, body {
     grid-row: 3;
 }
 
-.section-btn {
-    background:    transparent;
-    border:        1px solid var(--border);
-    color:         var(--text-dim);
-    font-family:   var(--font-mono);
-    font-size:     10px;
-    padding:       1px 8px;
-    border-radius: var(--radius);
-    cursor:        pointer;
-    white-space:   nowrap;
-    text-transform: lowercase;
-}
-
-.section-btn:hover {
-    border-color: var(--border-hi);
-    color:        var(--text-hi);
-}
-
-.section-btn:disabled {
-    opacity: 0.5;
-    cursor:  default;
-}
+.flex-gap { flex: 1; }
 
 .auto-label {
     display:     flex;
@@ -97,18 +76,8 @@ html, body {
     background:     var(--bg-panel);
 }
 
-.panel-header {
-    display:      flex;
-    align-items:  center;
-    gap:          8px;
-    padding:      0 10px;
-    height:       28px;
-    font-size:    10px;
-    font-weight:  600;
-    letter-spacing: 0.12em;
-    color:        var(--text-dim);
-    border-bottom: 1px solid var(--border);
-    flex-shrink:  0;
+#sidebar .section-header {
+    justify-content: flex-start;
 }
 
 .count-badge {

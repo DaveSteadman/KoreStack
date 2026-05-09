@@ -77,36 +77,6 @@
   border-right: 1px solid var(--border, #1e2233);
 }
 
-.kappbar-presence {
-  width: 8px;
-  height: 8px;
-  border-radius: 999px;
-  background: var(--text-dim, #4e5466);
-  box-shadow: 0 0 0 1px rgba(0,0,0,0.35);
-  flex-shrink: 0;
-}
-
-.kappbar-presence.on,
-.kappbar-presence.live,
-.kappbar-presence.online {
-  background: var(--success, #4af77a);
-  box-shadow: 0 0 8px color-mix(in srgb, var(--success, #4af77a) 72%, transparent);
-}
-
-.kappbar-presence.off,
-.kappbar-presence.down,
-.kappbar-presence.error {
-  background: var(--danger, #ff5f5f);
-  box-shadow: 0 0 8px color-mix(in srgb, var(--danger, #ff5f5f) 70%, transparent);
-}
-
-.kappbar-presence.warn,
-.kappbar-presence.starting,
-.kappbar-presence.pending {
-  background: var(--warning, #f0c060);
-  box-shadow: 0 0 8px color-mix(in srgb, var(--warning, #f0c060) 68%, transparent);
-}
-
 .kappbar-tabs {
   gap: 0;
   flex: 1 1 auto;

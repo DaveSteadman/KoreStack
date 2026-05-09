@@ -22,6 +22,11 @@ let _sse                = null;   // EventSource for /stream push notifications
 let _allConversations   = [];
 let _dragStartX         = null;
 let _dragStartW         = null;
+let _defaultCullInterval = null;
+
+const DEFAULT_CHAT_AGE_STORAGE_KEY = "kc_max_default_chat_age_days";
+const DEFAULT_CHAT_AGE_FALLBACK_DAYS = 7;
+const DEFAULT_CHAT_AGE_CULL_MS = 60 * 60 * 1000;
 
 // ====================================================================================================
 // CACHE HELPERS
@@ -47,7 +52,7 @@ function _cacheGet(key) {
 document.addEventListener("DOMContentLoaded", () => {
     // Render from localStorage cache immediately - before any network request.
     const cachedList = _cacheGet("kc_conv_list");
-    if (cachedList) { _allConversations = cachedList; applyFilters(); }
+    if (cachedList) { _allConversations = cachedList; renderConversationListState(); }
 
     const saved = parseInt(localStorage.getItem("kc_selected_id"), 10);
     if (saved && !isNaN(saved)) {
@@ -61,6 +66,7 @@ document.addEventListener("DOMContentLoaded", () => {
     initSplitter();
 
     bindUiEvents();
+    initDefaultChatAgeCulling();
 
     // Connect to the SSE push stream - this replaces the 5-second poll interval.
     // A 30-second fallback interval handles SSE gaps (reconnect window, etc.).
@@ -77,8 +83,7 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 function bindUiEvents() {
-    document.getElementById("filter-status").addEventListener("change", applyFilters);
-    document.getElementById("filter-channel").addEventListener("change", applyFilters);
+    document.getElementById("max-default-chat-age")?.addEventListener("change", onMaxDefaultChatAgeChanged);
 
     document.getElementById("btn-create-conv").addEventListener("click", createConversation);
     document.getElementById("btn-new-conv")?.addEventListener("click", createConversation);
@@ -114,12 +119,9 @@ async function loadStatus() {
     try {
         const r = await fetch("/status");
         if (!r.ok) { throw new Error(`HTTP ${r.status}`); }
-        const d = await r.json();
-
-        document.getElementById("status-dot").className   = "kappbar-presence on";
+        await r.json();
         document.getElementById("status-label").textContent = "connected";
     } catch {
-        document.getElementById("status-dot").className   = "kappbar-presence off";
         document.getElementById("status-label").textContent = "offline";
     }
 }
@@ -134,24 +136,15 @@ async function loadConversations() {
         if (!r.ok) { throw new Error(`HTTP ${r.status}`); }
         _allConversations = await r.json();
         _cacheSet("kc_conv_list", _allConversations);
-        applyFilters();
+        renderConversationListState();
     } catch (e) {
         console.error("loadConversations:", e);
     }
     return _allConversations;
 }
 
-function applyFilters() {
-    const statusFilter  = document.getElementById("filter-status").value;
-    const channelFilter = document.getElementById("filter-channel").value;
-
-    const filtered = _allConversations.filter(c => {
-        if (statusFilter  && c.status       !== statusFilter)  return false;
-        if (channelFilter && c.channel_type !== channelFilter) return false;
-        return true;
-    });
-
-    renderConvList(filtered);
+function renderConversationListState() {
+    renderConvList(_allConversations);
 }
 
 function renderConvList(conversations) {
@@ -182,7 +175,6 @@ function renderConvList(conversations) {
     <div class="conv-item-mid">
         ${pill(displayStatus.label)}
         ${pill(c.profile)}
-        <span class="kcui-tag kcui-tag--pill kcui-tag--dim">${escHtml(c.channel_type)}</span>
     </div>
     <div class="conv-item-bot">${ts}</div>
 </div>`;
@@ -241,7 +233,6 @@ function renderMeta(conv) {
     const rows = [
         ["id",              conv.id],
         ["status",          pill(displayStatus.label)],
-        ["channel_type",    escHtml(conv.channel_type || "-")],
         ["profile",         pill(conv.profile)],
         ["subject",         escHtml(conv.subject || "(none)")],
         ["turn_count",      conv.turn_count ?? 0],
@@ -623,7 +614,7 @@ function _connectSSE() {
                 // Remove from list; clear detail if it was selected.
                 _allConversations = _allConversations.filter(c => c.id !== cid);
                 _cacheSet("kc_conv_list", _allConversations);
-                applyFilters();
+                renderConversationListState();
                 if (_selectedId === cid) {
                     _selectedId         = null;
                     _selectedExternalId = null;
@@ -659,6 +650,65 @@ function toggleAuto() {
     } else {
         if (_sse)          { try { _sse.close(); } catch (_) {} _sse = null; }
         if (_autoInterval) { clearInterval(_autoInterval); _autoInterval = null; }
+    }
+}
+
+// ====================================================================================================
+// DEFAULT CHAT CULLING
+// ====================================================================================================
+
+function _normalizeChatAgeDays(raw) {
+    const n = Number.parseInt(String(raw ?? ""), 10);
+    if ([1, 3, 7, 30].includes(n)) return n;
+    return DEFAULT_CHAT_AGE_FALLBACK_DAYS;
+}
+
+function _selectedChatAgeDays() {
+    const sel = document.getElementById("max-default-chat-age");
+    return _normalizeChatAgeDays(sel?.value);
+}
+
+function _setChatAgeSelect(days) {
+    const sel = document.getElementById("max-default-chat-age");
+    if (!sel) return;
+    sel.value = String(_normalizeChatAgeDays(days));
+}
+
+function initDefaultChatAgeCulling() {
+    const saved = _normalizeChatAgeDays(localStorage.getItem(DEFAULT_CHAT_AGE_STORAGE_KEY));
+    _setChatAgeSelect(saved);
+    void runDefaultChatCull(saved);
+
+    if (_defaultCullInterval) clearInterval(_defaultCullInterval);
+    _defaultCullInterval = setInterval(() => {
+        void runDefaultChatCull(_selectedChatAgeDays());
+    }, DEFAULT_CHAT_AGE_CULL_MS);
+}
+
+function onMaxDefaultChatAgeChanged() {
+    const days = _selectedChatAgeDays();
+    localStorage.setItem(DEFAULT_CHAT_AGE_STORAGE_KEY, String(days));
+    void runDefaultChatCull(days);
+}
+
+async function runDefaultChatCull(maxDefaultChatAgeDays) {
+    try {
+        const resp = await fetch("/maintenance/default-chat-cull", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ max_default_chat_age_days: _normalizeChatAgeDays(maxDefaultChatAgeDays) }),
+        });
+        if (!resp.ok) {
+            const err = await resp.text().catch(() => "");
+            console.warn("default chat cull failed:", resp.status, err);
+            return;
+        }
+        const result = await resp.json();
+        if ((result.deleted_count || 0) > 0) {
+            await refreshAll();
+        }
+    } catch (e) {
+        console.warn("default chat cull failed:", e);
     }
 }
 

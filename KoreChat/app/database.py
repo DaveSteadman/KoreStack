@@ -21,6 +21,7 @@ import json
 import sqlite3
 from contextlib import contextmanager
 from datetime import datetime
+from datetime import timedelta
 from datetime import timezone
 from pathlib import Path
 from typing import Generator
@@ -431,6 +432,42 @@ def conversation_delete(conversation_id: int) -> bool:
         c.execute("DELETE FROM events WHERE conversation_id = ?", (conversation_id,))
         cur = c.execute("DELETE FROM conversations WHERE id = ?", (conversation_id,))
     return cur.rowcount > 0
+
+
+# ----------------------------------------------------------------------------------------------------
+def conversation_cull_default_inactive(max_default_chat_age_days: int) -> list[int]:
+        """Delete stale, untouched default conversations older than max age.
+
+        A conversation is culled when all conditions are true:
+            - subject is unset/blank or "New conversation"
+            - created_at is older than max_default_chat_age_days
+            - no activity since creation (last_activity_at == created_at)
+            - no messages exist
+        """
+        now = datetime.now(timezone.utc)
+        cutoff = (now - timedelta(days=max_default_chat_age_days)).isoformat()
+        with _conn() as c:
+                rows = c.execute(
+                        """
+                        SELECT id
+                        FROM conversations
+                        WHERE created_at <= ?
+                            AND lower(trim(coalesce(subject, ''))) IN ('', 'new conversation')
+                            AND last_activity_at = created_at
+                            AND NOT EXISTS (
+                                SELECT 1 FROM messages m
+                                WHERE m.conversation_id = conversations.id
+                            )
+                        """,
+                        (cutoff,),
+                ).fetchall()
+                ids = [int(r["id"]) for r in rows]
+                if not ids:
+                        return []
+
+                c.executemany("DELETE FROM events WHERE conversation_id = ?", [(cid,) for cid in ids])
+                c.executemany("DELETE FROM conversations WHERE id = ?", [(cid,) for cid in ids])
+        return ids
 
 
 # ====================================================================================================

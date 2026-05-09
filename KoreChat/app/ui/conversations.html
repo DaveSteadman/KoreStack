@@ -21,11 +21,11 @@
 
         <!-- Conversation list -->
         <div id="sidebar" class="kcui-panel">
-            <div class="panel-header kcui-panel-header">
+            <div class="section-header kcui-panel-header">
                 Conversations
                 <span class="count-badge" id="conv-count">0</span>
                 <div class="flex-gap"></div>
-                <button class="section-btn" id="btn-create-conv" type="button">new</button>
+                <button class="kcui-tag kcui-tag--dim" id="btn-create-conv" type="button">New</button>
             </div>
             <div id="conv-list"></div>
         </div>
@@ -140,7 +140,6 @@
         overline: 'Chat Management',
         brandLabel: 'KoreChat',
         brandIcon: 'korechat',
-        statusDot: { id: 'status-dot', className: 'off', title: 'API status' },
         chips: [
             { label: 'API', value: 'connecting...', valueId: 'status-label' },
         ],
@@ -150,30 +149,14 @@
                 items: [
                     {
                         kind: 'select',
-                        label: 'Status',
-                        id: 'filter-status',
-                        action: 'filter-status',
+                        label: 'Max Default Chat Age',
+                        id: 'max-default-chat-age',
+                        action: 'max-default-chat-age',
                         options: [
-                            { value: '', label: 'all', selected: true },
-                            { value: 'active', label: 'awaiting_inbound' },
-                            { value: 'waiting_agent', label: 'waiting_agent' },
-                            { value: 'agent_processing', label: 'agent_processing' },
-                            { value: 'archived', label: 'archived' },
-                            { value: 'deleted', label: 'deleted' },
-                        ],
-                    },
-                    {
-                        kind: 'select',
-                        label: 'Channel',
-                        id: 'filter-channel',
-                        action: 'filter-channel',
-                        options: [
-                            { value: '', label: 'all', selected: true },
-                            { value: 'webchat', label: 'webchat' },
-                            { value: 'gmail', label: 'gmail' },
-                            { value: 'sms', label: 'sms' },
-                            { value: 'whatsapp', label: 'whatsapp' },
-                            { value: 'manual', label: 'manual' },
+                            { value: '1', label: '1 Day' },
+                            { value: '3', label: '3 Days' },
+                            { value: '7', label: '7 Days', selected: true },
+                            { value: '30', label: '30 Days' },
                         ],
                     },
                 ],

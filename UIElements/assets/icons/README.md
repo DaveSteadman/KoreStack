@@ -5,7 +5,7 @@ Source downloads are stored in `UIElements/SVGicons/`.
 
 ## Dazzle Line Import
 
-1. Download the icon zip from SVGRepo manually in a browser.
+1. Download the icon zip from SVGRepo manually in a browser: https://www.svgrepo.com/collection/dazzle-line-icons/
 2. Import into the repository:
 
 ```bash

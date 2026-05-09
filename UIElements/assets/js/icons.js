@@ -15,15 +15,15 @@ export const ICON_SETS = SVG_ICON_SETS;
 export const ICON_FILES = Object.freeze({
   korestack: 'layer-group-svgrepo-com',
   koreagent: 'circuit-svgrepo-com',
-  koredata: 'table-alt-svgrepo-com',
-  koredocs: 'book-user-svgrepo-com',
-  korecode: 'draw-square-svgrepo-com',
-  korecomms: 'network-wired-svgrepo-com',
-  korechat: 'bell-svgrepo-com',
+  koredata: 'globe-alt-svgrepo-com',
+  koredocs: 'pen-square-svgrepo-com',
+  korecode: 'square-terminal-svgrepo-com',
+  korecomms: 'send-alt-1-svgrepo-com',
+  korechat: 'message-circle-chat-svgrepo-com',
   koredoc: 'text-svgrepo-com',
   koresheet: 'table-list-alt-svgrepo-com',
-  kodiag: 'chart-mixed-svgrepo-com',
-  korefile: 'folder-image-svgrepo-com',
+  kodiag: 'draw-square-svgrepo-com',
+  korefile: 'folder-search-svgrepo-com',
 });
 
 function makePackIcon(iconName) {

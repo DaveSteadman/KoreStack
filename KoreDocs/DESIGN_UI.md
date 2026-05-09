@@ -248,5 +248,5 @@ Always visible at the bottom of the editor surface.
 | **UIElements (commonui)** | |
 | `/static/commonui/js/appbar.js` | Tab bar management, `kd:before-navigate` event |
 | `/static/commonui/js/appMenu.js` | Suite-wide application menu bar rendering and event dispatch |
-| `/static/commonui/js/svg_icons.js` | All SVG markup — sole source of truth for icons |
+| `/ui-elements/assets/js/icons.js` | Shared icon registry and service/file icon helpers |
 | `/static/commonui/js/topbar.js` | Suite top bar (`initTopbar`) |

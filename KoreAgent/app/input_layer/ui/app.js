@@ -70,7 +70,6 @@ let _suggestBase  = "";   // portion of input before the completion token
 const $ = id => document.getElementById(id);
 
 const dom = {
-    ollamaDot:    () => $("ollama-dot"),
     ollamaHost:   () => $("ollama-host"),
     ollamaModel:  () => $("ollama-model"),
     ollamaCtx:    () => $("ollama-ctx"),
@@ -276,7 +275,6 @@ async function refreshOllamaStatus() {
         dom.ollamaHost().textContent  = "unreachable";
         dom.ollamaModel().textContent = "";
         dom.ollamaCtx().textContent   = "";
-        dom.ollamaDot().className = "kappbar-presence off";
         _ollamaReachable = false;
         return;
     }
@@ -295,7 +293,6 @@ async function refreshOllamaStatus() {
     dom.ollamaHost().textContent  = (data.host || "") + " (" + backend + ")";
     dom.ollamaModel().textContent = modelName;
     dom.ollamaCtx().textContent   = ctxVal;
-    dom.ollamaDot().className = "kappbar-presence on";
     _ollamaReachable = true;
 }
 

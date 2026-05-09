@@ -158,6 +158,10 @@ class ConversationPatchRequest(BaseModel):
     turn_count:         int | None  = None
 
 
+class DefaultChatCullRequest(BaseModel):
+    max_default_chat_age_days: int = 7
+
+
 # ----------------------------------------------------------------------------------------------------
 @app.post("/conversations", status_code=201)
 def create_conversation(req: ConversationCreateRequest):
@@ -255,6 +259,23 @@ def delete_conversation(conversation_id: int):
     db.conversation_delete(conversation_id)
     _kc_push("conv_deleted", conversation_id)
     return Response(status_code=204)
+
+
+# ----------------------------------------------------------------------------------------------------
+@app.post("/maintenance/default-chat-cull")
+def cull_default_chats(req: DefaultChatCullRequest):
+    if req.max_default_chat_age_days not in (1, 3, 7, 30):
+        raise HTTPException(status_code=400, detail="max_default_chat_age_days must be one of 1, 3, 7, 30")
+
+    deleted_ids = db.conversation_cull_default_inactive(req.max_default_chat_age_days)
+    for cid in deleted_ids:
+        _kc_push("conv_deleted", cid)
+
+    return {
+        "max_default_chat_age_days": req.max_default_chat_age_days,
+        "deleted_count": len(deleted_ids),
+        "deleted_ids": deleted_ids,
+    }
 
 
 # ====================================================================================================

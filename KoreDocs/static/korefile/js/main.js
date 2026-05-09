@@ -6,10 +6,14 @@
  */
 
 import { initTopbar, initAppBar, initAppTabs, renderAppMenu, initAppMenuEvents } from '/ui-elements/assets/js/chrome.js?v=20260508b';
-import { DOWNLOAD_SVG } from '/ui-elements/assets/js/svg_icons.js';
 import * as tree     from './tree.js';
 import * as filelist from './filelist.js';
 import * as api      from './api.js';
+
+const DOWNLOAD_SVG = `<svg viewBox="0 0 20 20" fill="none" width="14" height="14">
+  <path d="M10 3v10m0 0-3-3m3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M3 14v2a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+</svg>`;
 
 // ── App menu ────────────────────────────────────────────────────
 
