@@ -76,8 +76,9 @@ if not COMMONUI_ASSETS.exists():
 DATA_DIR = Path(os.environ.get('KOREDOCS_DATA_DIR', str(SUITE_DATAUSER / 'KoreFiles')))
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
-DB_PATH  = Path(os.environ.get('KOREDOCS_DB_PATH',
-                                str(SUITE_DATACONTROL / 'koredocs' / 'korefile.db')))
+CONTROL_DIR = Path(os.environ.get('KOREDOCS_CONTROL_DIR', str(SUITE_DATACONTROL / 'koredocs')))
+CONTROL_DIR.mkdir(parents=True, exist_ok=True)
+DB_PATH  = CONTROL_DIR / 'korefile.db'
 LOG_PATH = SUITE_DATACONTROL / 'logs' / 'koredocs' / 'koredocs.log'
 LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
 

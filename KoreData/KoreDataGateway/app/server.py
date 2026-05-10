@@ -41,14 +41,14 @@ from mcp.server.fastmcp import FastMCP
 from pydantic import BaseModel, Field
 
 from app.config import cfg
-from config import get_suite_datacontrol_dir
+from config import get_koredata_dir
 
 # ---------------------------------------------------------------------------
 # Child process management
 # ---------------------------------------------------------------------------
 
 _BASE = Path(__file__).parent.parent.parent  # KoreData/ root
-_DATA = get_suite_datacontrol_dir() / "koredata"
+_DATA = get_koredata_dir()
 
 _SERVICES = [
     (_BASE / "KoreFeed",      "KoreFeed",      _DATA / "Feeds"),
@@ -112,7 +112,7 @@ async def _wait_for(client: httpx.AsyncClient, label: str, timeout: float = 20.0
         except Exception:
             pass
         await asyncio.sleep(0.5)
-    print(f"  ⚠ {label} did not respond within {timeout:.0f}s — continuing anyway")
+    print(f"  [!] {label} did not respond within {timeout:.0f}s - continuing anyway")
 
 
 # ---------------------------------------------------------------------------

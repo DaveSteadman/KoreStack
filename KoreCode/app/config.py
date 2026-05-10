@@ -30,8 +30,18 @@ _DEFAULTS = {
     "log_level": "info",
 }
 
-
 def load() -> dict:
+    """
+    Loads the application configuration by merging defaults with settings from config files.
+
+    The function checks for the existence of both the primary configuration file 
+    (_CONFIG_FILE) and a local configuration override (_LOCAL_CONFIG). If these 
+    files exist, it parses them as JSON and extracts specific networking and 
+    service parameters (host, log_level, and port) to override the default values.
+
+    Returns:
+        dict: A dictionary containing the merged configuration settings.
+    """
     result = dict(_DEFAULTS)
     for cfg_path in (_CONFIG_FILE, _LOCAL_CONFIG):
         if not cfg_path.exists():
@@ -47,6 +57,5 @@ def load() -> dict:
         if port is not None:
             result["port"] = port
     return result
-
 
 cfg = load()

@@ -165,6 +165,7 @@ class TaskQueue:
         return cancelled
 
     # ----------------------------------------------------------------------------------------------------
+  
     def stop(self) -> None:
         """Request worker shutdown.  The in-flight task runs to completion."""
         self._shutdown.set()
@@ -172,6 +173,7 @@ class TaskQueue:
         self._delete_state()
 
     # ----------------------------------------------------------------------------------------------------
+  
     def _delete_state(self) -> None:
         try:
             from utils.workspace_utils import get_controldata_dir
@@ -185,6 +187,7 @@ class TaskQueue:
                 pass
 
     # ----------------------------------------------------------------------------------------------------
+  
     def _write_state(self) -> None:
         try:
             from utils.workspace_utils import get_controldata_dir
@@ -202,6 +205,7 @@ class TaskQueue:
                 pass
 
     # ----------------------------------------------------------------------------------------------------
+  
     def _worker_loop(self) -> None:
         while not self._shutdown.is_set():
             self._has_work.wait(timeout=1.0)

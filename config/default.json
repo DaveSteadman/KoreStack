@@ -2,10 +2,12 @@
   "paths": {
     "datacontrol": "datacontrol",
     "datauser": "datauser",
-    "conversation_data": "datacontrol/korechat",
-    "comms_data": "datacontrol/korecomms",
-    "docs_data": "datauser/KoreFiles",
-    "docs_db": "datacontrol/koredocs/korefile.db"
+    "korechat": "datacontrol/korechat",
+    "korecomms": "datacontrol/korecomms",
+    "koredata": "datacontrol/koredata",
+    "koreagent": "datacontrol/koreagent",
+    "koredocs": "datacontrol/koredocs",
+    "docs_data": "datauser/KoreFiles"
   },
   "network": {
     "host": "127.0.0.1"

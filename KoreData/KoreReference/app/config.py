@@ -12,14 +12,14 @@
 # ====================================================================================================
 from pathlib import Path
 
-from config import get_suite_datacontrol_dir, load_config
+from config import get_koredata_dir, load_config
 
 _SECTION = "korereference"
 
 _DEFAULTS = {
     "port": 8804,
     "host": "0.0.0.0",
-    "data_dir": str(get_suite_datacontrol_dir() / "koredata" / "Reference"),
+    "data_dir": str(get_koredata_dir() / "Reference"),
     "log_level": "info",
 }
 

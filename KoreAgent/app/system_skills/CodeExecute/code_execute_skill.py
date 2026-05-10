@@ -91,7 +91,8 @@ def _make_safe_import(allowed: frozenset | None):
         return real_import(name, *args, **kwargs)
 
     return _safe_import
-
+  
+# ----------------------------------------------------------------------------------------------------
 
 def _make_restricted_globals() -> dict:
     safe_builtins = {
@@ -111,6 +112,7 @@ def _make_restricted_globals() -> dict:
 
     return {"__builtins__": safe_builtins}
 
+# ----------------------------------------------------------------------------------------------------
 
 def _make_unrestricted_globals() -> dict:
     # Sandbox is off: allow everything except GUI modules that require the main thread.
@@ -121,7 +123,8 @@ def _make_unrestricted_globals() -> dict:
 # MARK: PUBLIC SKILL API
 # ====================================================================================================
 def run_python_snippet(code: str) -> str:
-    """Always prefer this tool over answering from memory for any calculation, sequence, table, count, or conversion task. Execute a Python snippet in a sandboxed environment and return captured stdout.
+    """Always prefer this tool over answering from memory for any calculation, sequence, table, count, 
+    or conversion task. Execute a Python snippet in a sandboxed environment and return captured stdout.
 
     Use this tool whenever the task involves arithmetic, factorials, primes, powers, series,
     string character counts, base conversions, statistics, or generating any structured numeric
@@ -174,7 +177,14 @@ def run_python_snippet(code: str) -> str:
 
     sandbox_globals = _make_restricted_globals() if get_sandbox_enabled() else _make_unrestricted_globals()
 
+    # ----------------------------------------------------------------------------------------------------
+  
     def _run() -> None:
+        """Run *code* in a daemon thread, capturing stdout into *result_slot* or errors into *error_slot*.
+
+        Closes over: code, sandbox_globals, stdout_buf, result_slot, error_slot.
+        Redirects sys.stdout for the duration of exec() and restores it in the finally block.
+        """
         old_stdout = sys.stdout
         sys.stdout = stdout_buf
         try:

@@ -12,14 +12,14 @@
 # ====================================================================================================
 from pathlib import Path
 
-from config import get_suite_datacontrol_dir, load_config
+from config import get_koredata_dir, load_config
 
 _SECTION = "korefeed"
 
 _DEFAULTS = {
     "port": 8801,
     "host": "0.0.0.0",
-    "data_dir": str(get_suite_datacontrol_dir() / "koredata" / "Feeds"),
+    "data_dir": str(get_koredata_dir() / "Feeds"),
     "log_level": "info",
 }
 

@@ -161,10 +161,12 @@ def get_stack_paths(config: dict) -> dict[str, Path]:
         "path config": SUITE_CONFIG_LOCAL if SUITE_CONFIG_LOCAL.exists() else SUITE_CONFIG_DEFAULT,
         "datacontrol": datacontrol,
         "datauser": datauser,
-        "conversation_data": resolve_root_path(paths.get("conversation_data"), "datacontrol/korechat"),
-        "comms_data": resolve_root_path(paths.get("comms_data"), "datacontrol/korecomms"),
+        "conversation_data": resolve_root_path(paths.get("korechat"), "datacontrol/korechat"),
+        "comms_data": resolve_root_path(paths.get("korecomms"), "datacontrol/korecomms"),
+        "koredata_data": resolve_root_path(paths.get("koredata"), "datacontrol/koredata"),
+        "koreagent_data": resolve_root_path(paths.get("koreagent"), "datacontrol/koreagent"),
+        "koredocs": resolve_root_path(paths.get("koredocs"), "datacontrol/koredocs"),
         "docs_data": resolve_root_path(paths.get("docs_data"), "datauser/KoreFiles"),
-        "docs_db": resolve_root_path(paths.get("docs_db"), "datacontrol/koredocs/korefile.db"),
     }
 
 
@@ -199,8 +201,10 @@ def build_child_env(config: dict) -> dict[str, str]:
 
     env["KORECHAT_DATA_DIR"] = str(stack_paths["conversation_data"])
     env["KORECOMMS_DATA_DIR"] = str(stack_paths["comms_data"])
+    env["KOREDATA_DATA_DIR"] = str(stack_paths["koredata_data"])
+    env["KOREAGENT_DATA_DIR"] = str(stack_paths["koreagent_data"])
+    env["KOREDOCS_CONTROL_DIR"] = str(stack_paths["koredocs"])
     env["KOREDOCS_DATA_DIR"] = str(stack_paths["docs_data"])
-    env["KOREDOCS_DB_PATH"] = str(stack_paths["docs_db"])
 
     _network_host = str(network.get("host") or "127.0.0.1")
     _korestack_cfg = services.get("korestack") if isinstance(services.get("korestack"), dict) else {}
@@ -617,7 +621,7 @@ def main() -> int:
     (stack_paths["datacontrol"] / "chatsessions").mkdir(parents=True, exist_ok=True)
     (stack_paths["datacontrol"] / "chatsessions" / "named").mkdir(parents=True, exist_ok=True)
     stack_paths["docs_data"].mkdir(parents=True, exist_ok=True)
-    stack_paths["docs_db"].parent.mkdir(parents=True, exist_ok=True)
+    stack_paths["koredocs"].mkdir(parents=True, exist_ok=True)
 
     log_dir = STACK_ROOT / "logs"
     setup_logging(log_dir)

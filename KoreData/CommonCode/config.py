@@ -19,7 +19,8 @@ import os
 import json
 from pathlib import Path
 
-_SUITE_ROOT   = Path(__file__).resolve().parents[2]  # KoreStack/_CONFIG_FILE  = _SUITE_ROOT / "config" / "default.json"
+_SUITE_ROOT   = Path(__file__).resolve().parents[2]  # KoreStack/
+_CONFIG_FILE  = _SUITE_ROOT / "config" / "default.json"
 _LOCAL_CONFIG = _SUITE_ROOT / "config" / "local.json"
 
 
@@ -42,6 +43,13 @@ def get_suite_datauser_dir() -> Path:
     if env_path:
         return Path(env_path).resolve()
     return get_suite_root() / "datauser"
+
+
+def get_koredata_dir() -> Path:
+    env_path = os.environ.get("KOREDATA_DATA_DIR", "").strip()
+    if env_path:
+        return Path(env_path).resolve()
+    return get_suite_datacontrol_dir() / "koredata"
 
 
 # KoreData sub-services are assigned ports as offsets from the gateway ("data") port.
