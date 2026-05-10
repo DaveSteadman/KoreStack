@@ -177,7 +177,7 @@ _TABLE_MARKER_RE = re.compile(r'<<<TABLE>>>(.*?)<<<ENDTABLE>>>', re.DOTALL)
 _WIKILINK_RE     = re.compile(r'\[\[([^\]]+)\]\]')
 
 
-def _resolve_wikilinks_in_html(html: str) -> str:
+def _resolve_wikilinks_in_html(html: str, dead_links: set | None = None) -> str:
     """Replace [[Display|Target]] / [[Target]] patterns inside already-safe HTML."""
     def _repl(m: re.Match) -> str:
         inner = m.group(1)
@@ -187,11 +187,12 @@ def _resolve_wikilinks_in_html(html: str) -> str:
             display = target = inner
         target  = target.strip()
         display = display.strip()
-        return f'<a href="/ui/reference/{quote(target)}">{escape(display)}</a>'
+        cls = ' class="ref-link-dead"' if dead_links and target.lower() in dead_links else ''
+        return f'<a href="/ui/reference/{quote(target)}"{cls}>{escape(display)}</a>'
     return _WIKILINK_RE.sub(_repl, html)
 
 
-def _process_inline(text: str) -> str:
+def _process_inline(text: str, dead_links: set | None = None) -> str:
     """HTML-escape text and convert [[wikilinks]] to <a> anchors."""
     parts: list[str] = []
     last_end = 0
@@ -204,7 +205,8 @@ def _process_inline(text: str) -> str:
             display = target = inner
         target = target.strip()
         display = display.strip()
-        parts.append(f'<a href="/ui/reference/{quote(target)}">{escape(display)}</a>')
+        cls = ' class="ref-link-dead"' if dead_links and target.lower() in dead_links else ''
+        parts.append(f'<a href="/ui/reference/{quote(target)}"{cls}>{escape(display)}</a>')
         last_end = m.end()
     parts.append(str(escape(text[last_end:])))
     return "".join(parts)
@@ -220,7 +222,7 @@ def serve_ui_elements_asset(asset_path: str):
     return FileResponse(str(candidate), headers={"Cache-Control": "no-store"})
 
 
-def _render_list_lines(lines: list[str]) -> str:
+def _render_list_lines(lines: list[str], dead_links: set | None = None) -> str:
     """Recursively render indented '* '/'# '-prefixed lines into nested ul/ol HTML."""
     if not lines:
         return ''
@@ -233,13 +235,13 @@ def _render_list_lines(lines: list[str]) -> str:
         if indent < base_indent:
             break
         if indent == base_indent:
-            item_text = _process_inline(lines[i].lstrip()[2:].strip())
+            item_text = _process_inline(lines[i].lstrip()[2:].strip(), dead_links)
             j = i + 1
             children: list[str] = []
             while j < len(lines) and (len(lines[j]) - len(lines[j].lstrip())) > base_indent:
                 children.append(lines[j])
                 j += 1
-            child_html = _render_list_lines(children) if children else ''
+            child_html = _render_list_lines(children, dead_links) if children else ''
             html.append(f'<li>{item_text}{child_html}</li>')
             i = j
         else:
@@ -248,7 +250,7 @@ def _render_list_lines(lines: list[str]) -> str:
     return ''.join(html)
 
 
-def _process_wikitext(text: str) -> str:
+def _process_wikitext(text: str, dead_links: set | None = None) -> str:
     """Escape text, convert [[wikilinks]], paragraphs, lists, and line breaks to HTML."""
     text = text.replace('\r\n', '\n').replace('\r', '\n')
     html_parts: list[str] = []
@@ -258,17 +260,18 @@ def _process_wikitext(text: str) -> str:
             continue
         lines = [l for l in block.split('\n') if l.strip()]
         if lines and all(l.lstrip().startswith(('* ', '# ')) for l in lines):
-            html_parts.append(_render_list_lines(lines))
+            html_parts.append(_render_list_lines(lines, dead_links))
         else:
-            inner = _process_inline('\n'.join(lines))
+            inner = _process_inline('\n'.join(lines), dead_links)
             inner = inner.replace('\n', '<br>')
             html_parts.append(f'<p>{inner}</p>')
     return ''.join(html_parts)
 
 
-def _wikilinks_filter(text: str) -> Markup:
+def _wikilinks_filter(text: str, dead_links: set | None = None) -> Markup:
     """Convert [[Title]] wikilinks to anchors; pass <<<TABLE>>>...<<<ENDTABLE>>> through as raw HTML.
-    HTML-escapes all user text. Double newlines → paragraph breaks; single → <br>."""
+    HTML-escapes all user text. Double newlines → paragraph breaks; single → <br>.
+    If dead_links is provided, links whose target is in that set get class="ref-link-dead"."""
     if not text:
         return Markup("")
     result: list[str] = []
@@ -276,12 +279,12 @@ def _wikilinks_filter(text: str) -> Markup:
     for m in _TABLE_MARKER_RE.finditer(text):
         segment = text[last_end:m.start()]
         if segment.strip():
-            result.append(_process_wikitext(segment))
-        result.append(_resolve_wikilinks_in_html(m.group(1)))  # table HTML with wikilinks resolved
+            result.append(_process_wikitext(segment, dead_links))
+        result.append(_resolve_wikilinks_in_html(m.group(1), dead_links))  # table HTML with wikilinks resolved
         last_end = m.end()
     remaining = text[last_end:]
     if remaining.strip():
-        result.append(_process_wikitext(remaining))
+        result.append(_process_wikitext(remaining, dead_links))
     return Markup("".join(result))
 
 
@@ -1447,12 +1450,25 @@ async def ref_article(request: Request, title: str):
     if r.status_code == 404:
         raise HTTPException(status_code=404, detail=f"Article not found: {title!r}")
     article = r.json()
-    # Fetch backlinks count (lightweight)
-    bl_r = await _ref_client.get(f"/articles/{quote(title, safe='')}/backlinks", params={"limit": 10})
+    # Fetch backlinks and outbound links in parallel.
+    bl_r, lk_r = await asyncio.gather(
+        _ref_client.get(f"/articles/{quote(title, safe='')}/backlinks", params={"limit": 10}),
+        _ref_client.get(f"/articles/{quote(title, safe='')}/links"),
+    )
     backlinks = bl_r.json() if bl_r.status_code == 200 else []
+    # Build the set of unresolved (dead) link titles: to_id is null in the links table.
+    # Normalise to lower-case so the comparison is case-insensitive (the links table
+    # sometimes stores titles with different capitalisation than the body wikitext).
+    links_data = lk_r.json() if lk_r.status_code == 200 else []
+    dead_links: set[str] = {l["to_title"].lower() for l in links_data if l.get("to_id") is None}
+    # Extract the full lead (all paragraphs before the first == section heading ==).
+    # body_to_sections() drops this preamble; we surface it separately as article["lead"].
+    _body = article.get("body") or ""
+    _heading = re.search(r'(?m)^== .+? ==$', _body)
+    article["lead"] = _body[:_heading.start()].strip() if _heading else (article.get("summary") or "")
     return templates.TemplateResponse(
         request, "reference_article.html",
-        {"article": article, "backlinks": backlinks},
+        {"article": article, "backlinks": backlinks, "dead_links": dead_links},
     )
 
 

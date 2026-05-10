@@ -17,6 +17,7 @@
 
 let _selectedId         = null;
 let _selectedExternalId = null;
+let _selectedConv       = null;
 let _autoInterval       = null;
 let _sse                = null;   // EventSource for /stream push notifications
 let _allConversations   = [];
@@ -213,6 +214,7 @@ function _renderDetail(data) {
 
     if (conv) {
         _selectedExternalId = conv.external_id || null;
+        _selectedConv = conv;
         renderMeta(conv);
         renderBackground(conv.background_context || "");
         renderSummary(conv.thread_summary || "");
@@ -230,16 +232,28 @@ function _renderDetail(data) {
 // META TABLE
 // ====================================================================================================
 
+function _protectUntilLabel(conv) {
+    const isProtected = Number(conv.protected || 0) === 1;
+    if (isProtected) return "Protected";
+    const lastActivity = conv.last_activity_at;
+    if (!lastActivity) return "(unknown)";
+    const ageDays = _normalizeChatAgeDays(localStorage.getItem(DEFAULT_CHAT_AGE_STORAGE_KEY));
+    const expiryMs = new Date(lastActivity).getTime() + ageDays * 86_400_000;
+    if (isNaN(expiryMs)) return "(unknown)";
+    return formatDateTime(new Date(expiryMs).toISOString());
+}
+
 function renderMeta(conv) {
     const displayStatus = getDisplayStatus(conv.status);
     const isProtected = Number(conv.protected || 0) === 1;
     const protectedButton = `<button type="button" id="meta-protected-toggle" class="kcui-tag ${isProtected ? "kcui-tag--success" : "kcui-tag--warning"}" data-protected="${isProtected ? 1 : 0}" title="Toggle protected">${isProtected ? "Yes" : "No"}</button>`;
+    const idLabel = `${conv.id}&ensp;/&ensp;${escHtml(conv.subject || "(none)")}`;
     const rows = [
-        ["id",              conv.id],
+        ["id",              idLabel],
         ["status",          pill(displayStatus.label)],
         ["profile",         pill(conv.profile)],
         ["protected",       protectedButton],
-        ["subject",         escHtml(conv.subject || "(none)")],
+        ["protect until",   _protectUntilLabel(conv)],
         ["turn_count",      conv.turn_count ?? 0],
         ["token_estimate",  (conv.token_estimate ?? 0).toLocaleString()],
         ["last_activity_at",formatDateTime(conv.last_activity_at)],
@@ -719,6 +733,7 @@ function initDefaultChatAgeCulling() {
 function onMaxDefaultChatAgeChanged() {
     const days = _selectedChatAgeDays();
     localStorage.setItem(DEFAULT_CHAT_AGE_STORAGE_KEY, String(days));
+    if (_selectedConv) renderMeta(_selectedConv);
     void runDefaultChatCull(days);
 }
 

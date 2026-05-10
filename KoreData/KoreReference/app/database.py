@@ -359,7 +359,7 @@ def resolve_links() -> int:
     with db_connection() as conn:
         cur = conn.execute("""
             UPDATE links SET to_id = (
-                SELECT id FROM articles WHERE title = links.to_title
+                SELECT id FROM articles WHERE lower(title) = lower(links.to_title)
             )
             WHERE to_id IS NULL
         """)

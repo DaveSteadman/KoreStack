@@ -55,6 +55,8 @@ def register_session_routes(
     get_session_turns,
     get_session_conversation,
     kc_set_session_name=None,
+    get_llm_direct_enabled=None,
+    call_llm_chat=None,
 ) -> None:
     @app.post("/sessions/{session_id}/prompt")
     def post_prompt(session_id: str, body: PromptRequest):
@@ -78,7 +80,31 @@ def register_session_routes(
             history, summaries = load_session(session_id)
             queue_run_event(run_q, {"type": "start", "run_id": run_id, "prompt": _prompt}, priority=True)
             try:
-                if _prompt.startswith("/"):
+                # ------------------------------------------------------------------
+                # LLM Direct mode: straight to the LLM, no slash handling, no tools.
+                # ------------------------------------------------------------------
+                if get_llm_direct_enabled and get_llm_direct_enabled():
+                    from llm_client import get_active_model
+                    model   = get_active_model()
+                    num_ctx = get_active_num_ctx()
+                    if not model:
+                        queue_run_event(run_q, {"type": "error", "run_id": run_id, "message": "No model loaded"}, priority=True)
+                        return
+                    messages: list[dict] = [*history.as_list(), {"role": "user", "content": _prompt}]
+                    result = call_llm_chat(model_name=model, messages=messages, tools=None, num_ctx=num_ctx)
+                    response  = (result.response or "").strip()
+                    p_tokens  = result.prompt_tokens or 0
+                    c_tokens  = result.completion_tokens or 0
+                    tps_val   = result.tokens_per_second or 0.0
+                    history.add(_prompt, response)
+                    queue_run_event(run_q, {"type": "response", "run_id": run_id, "response": response, "tokens": p_tokens, "tps": f"{tps_val:.1f}" if tps_val > 0 else "0"}, priority=True)
+                    threading.Thread(target=kc_save_turn, args=(session_id, _prompt, response), kwargs={"token_estimate": p_tokens + c_tokens}, daemon=True).start()
+                    # Pass prompt_tokens=0 to suppress compaction - LLM-Direct deliberately
+                    # bypasses orchestration mechanics; compaction is the agent's concern.
+                    save_session(session_id, history, summaries, 0, 0)
+                    return
+                # ------------------------------------------------------------------
+                elif _prompt.startswith("/"):
                     output_lines: list[str] = []
                     streamed_output = False
 

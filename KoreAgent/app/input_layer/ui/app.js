@@ -678,6 +678,38 @@ async function _initWebSkillsBtn() {
 
 // ----------------------------------------------------------------------------------------------------
 
+function _updateDirectBtn(directOn) {
+    const btn = $('direct-btn');
+    if (!btn) return;
+    if (directOn) {
+        btn.textContent = "LLM-DIRECT on";
+        btn.classList.remove("direct-off");
+        btn.classList.add("direct-on");
+    } else {
+        btn.textContent = "LLM-DIRECT";
+        btn.classList.remove("direct-on");
+        btn.classList.add("direct-off");
+    }
+    // Grey out settings that don't apply in direct mode.
+    $('sandbox-btn')?.classList.toggle("direct-inactive", directOn);
+    $('webskills-btn')?.classList.toggle("direct-inactive", directOn);
+}
+
+async function toggleDirect() {
+    const current = await apiFetch("/settings/llmdirect");
+    if (!current) return;
+    const next = !current.llmdirect;
+    const result = await apiFetch("/settings/llmdirect?enabled=" + next, { method: "POST" });
+    if (result) _updateDirectBtn(result.llmdirect);
+}
+
+async function _initDirectBtn() {
+    const data = await apiFetch("/settings/llmdirect");
+    if (data) _updateDirectBtn(data.llmdirect);
+}
+
+// ----------------------------------------------------------------------------------------------------
+
 async function logNavStep(delta) {
     // delta: -1 = older (up), +1 = newer (down).
     const data = await apiFetch("/logs");
@@ -1281,6 +1313,9 @@ function init() {
     // Read web skills state from server and reflect it in the button.
     _initWebSkillsBtn();
 
+    // Read LLM Direct state from server and reflect it in the button.
+    _initDirectBtn();
+
     // Wire up input events.
     dom.input().addEventListener("keydown", onInputKeydown);
     dom.input().addEventListener("input", () => { _historyIdx = -1; _saveInputDraft(dom.input().value); onInputChange(); });
@@ -1291,6 +1326,7 @@ function init() {
     $("wrap-btn-log")?.addEventListener("click", () => { toggleWrap("log-body", "wrap-btn-log"); });
     $("sandbox-btn")?.addEventListener("click", toggleSandbox);
     $("webskills-btn")?.addEventListener("click", toggleWebSkills);
+    $("direct-btn")?.addEventListener("click", toggleDirect);
     $("wrap-btn-chat")?.addEventListener("click", () => { toggleWrap("chat-body", "wrap-btn-chat"); });
     $("btn-reset-layout")?.addEventListener("click", resetLayout);
 

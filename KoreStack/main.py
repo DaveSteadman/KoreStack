@@ -158,6 +158,7 @@ def get_stack_paths(config: dict) -> dict[str, Path]:
     datacontrol = resolve_root_path(paths.get("datacontrol"), "datacontrol")
     datauser = resolve_root_path(paths.get("datauser"), "datauser")
     return {
+        "path config": SUITE_CONFIG_LOCAL if SUITE_CONFIG_LOCAL.exists() else SUITE_CONFIG_DEFAULT,
         "datacontrol": datacontrol,
         "datauser": datauser,
         "conversation_data": resolve_root_path(paths.get("conversation_data"), "datacontrol/conversations"),
@@ -640,6 +641,7 @@ def main() -> int:
             print(f"  korestack http://{dashboard_host}:{dashboard_port}/")
         return 0
 
+    print("Starting...", flush=True)
     manager.start()
 
     stop_event = threading.Event()

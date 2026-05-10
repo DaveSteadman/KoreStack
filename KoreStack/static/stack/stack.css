@@ -103,10 +103,8 @@ a { color: inherit; }
 
 .path-row dt {
   color: var(--stack-muted);
+  font-family: var(--font-ui);
   margin: 0;
-  font-size: 11px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
 }
 
 .path-row dd {
@@ -116,8 +114,8 @@ a { color: inherit; }
 
 .path-row code {
   display: block;
-  color: var(--stack-accent);
-  font-size: 0.95rem;
+  font-family: var(--font-ui);
+  color: var(--stack-ink);
   overflow-wrap: anywhere;
 }
 

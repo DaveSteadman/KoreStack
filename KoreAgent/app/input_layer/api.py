@@ -80,6 +80,7 @@ from llm_client import get_active_model
 from llm_client import get_active_num_ctx
 from llm_client import get_ollama_ps_rows
 from llm_client import list_ollama_models
+from llm_client import call_llm_chat
 from orchestration import ConversationHistory
 from orchestration import OrchestratorConfig
 from orchestration import SessionContext
@@ -426,6 +427,33 @@ def settings_webskills_post(enabled: bool):
     """Set the web skills enabled state."""
     set_web_skills_enabled(enabled)
     return {"webskills": get_web_skills_enabled()}
+
+
+# ----------------------------------------------------------------------------------------------------
+# LLM Direct: bypass orchestration, tool loop, and slash handling - straight to call_llm_chat.
+_llm_direct_enabled: bool = False
+
+
+def get_llm_direct_enabled() -> bool:
+    return _llm_direct_enabled
+
+
+def set_llm_direct_enabled(enabled: bool) -> None:
+    global _llm_direct_enabled
+    _llm_direct_enabled = bool(enabled)
+
+
+@app.get("/settings/llmdirect")
+def settings_llmdirect_get():
+    """Return the current LLM Direct mode state."""
+    return {"llmdirect": get_llm_direct_enabled()}
+
+
+@app.post("/settings/llmdirect")
+def settings_llmdirect_post(enabled: bool):
+    """Set the LLM Direct mode state."""
+    set_llm_direct_enabled(enabled)
+    return {"llmdirect": get_llm_direct_enabled()}
 
 
 register_task_routes(
@@ -935,6 +963,8 @@ register_session_routes(
     get_session_turns=_get_session_turns,
     get_session_conversation=_kc_get_conversation_for_session,
     kc_set_session_name=_kc_set_session_name,
+    get_llm_direct_enabled=get_llm_direct_enabled,
+    call_llm_chat=call_llm_chat,
 )
 
 register_log_routes(

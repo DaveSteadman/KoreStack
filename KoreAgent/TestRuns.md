@@ -1,7 +1,8 @@
-# Version 0030 / 0.d+dev
+# Version 0030 / 0.5+dev
 
 [ALL TESTS COMPLETE]  host=http://MONTBLANC:11434  model=gemma4:26b  elapsed=39m 53s  pass rate=96% (157/164)  prompt tokens=6,749,202  avg tok/s=70.1
 
+[ALL TESTS COMPLETE]  host=http://MONTBLANC:11434  model=gemma4:26b  elapsed=32m 0s  pass rate=98% (157/160)  prompt tokens=5,794,928  avg tok/s=71.0
 
 # Version [0026 / 0.5] #
 

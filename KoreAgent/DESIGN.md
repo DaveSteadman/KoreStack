@@ -27,6 +27,7 @@ Use this file to check whether the system matches its stated design, or to ident
 - [UI - Chat panel](#ui---chat-panel)
 - [UI - Schedule timeline](#ui---schedule-timeline)
 - [UI - Prompt input](#ui---prompt-input)
+- [UI - LLM-Direct mode](#ui---llm-direct-mode)
 
 ---
 
@@ -433,3 +434,23 @@ MCP connections (configured external tool providers):
 - `/stoprun` submitted via the input box is handled immediately server-side without joining the task queue.
 - The session ID is a module-level `let` variable initialised to `web_{Date.now()}` on page load; it is updated in-place by `rename_session` and `switch_session` SSE events.
 - Tab-completing a `/` prefix opens a dropdown driven by `GET /completions`; Tab cycles candidates, ArrowUp/Down navigates, Escape closes, Enter selects. Completing a command or sub-command chains immediately to the next argument slot.
+
+---
+
+## UI - LLM-Direct mode
+
+**Files:** `KoreAgent/app/input_layer/api.py`, `KoreAgent/app/input_layer/api_routes_sessions.py`, `KoreAgent/app/input_layer/ui/app.js`, `KoreAgent/app/input_layer/ui/index.html`, `KoreAgent/app/input_layer/ui/style.css`
+
+**Intent:** A fast-lane bypass that sends the prompt straight to the LLM with no orchestration, no tool calls, no slash-command handling, and no context compaction. The response is still recorded in the conversation history (session file + KoreChat turn). Use it when you want an immediate, unmediated reply and do not need agent capabilities.
+
+The design principle is that each mode does one thing well: LLM-Direct is "fast lane, no overhead"; the agent is "full power, full management". If you want orchestration, tools, and endless-chat compaction, leave LLM-Direct off.
+
+**Claims:**
+- A server-side boolean flag `_llm_direct_enabled` is toggled via `POST /settings/llmdirect?enabled=true|false`; its state is returned by `GET /settings/llmdirect`.
+- When the flag is set, the prompt handler in `api_routes_sessions.py` branches before slash detection and before `orchestrate_prompt`, calling `call_llm_chat` directly.
+- The full conversation history (`history.as_list()`) is sent to the LLM so it has context from prior turns.
+- No tools are passed (`tools=None`); tool calling is not available in this mode.
+- The turn is saved to the in-memory history and persisted to KoreChat via `kc_save_turn`.
+- `save_session` is called with `prompt_tokens=0` and `num_ctx=0` to suppress compaction; history is written but not summarised.
+- The [LLM-DIRECT] button in the chat panel header toggles the flag; it turns purple and reads "LLM-DIRECT on" when active.
+- The [sandbox] and [web] buttons are greyed out (opacity 0.28, pointer-events none) while LLM-Direct is active, reflecting that those settings are not in effect.
