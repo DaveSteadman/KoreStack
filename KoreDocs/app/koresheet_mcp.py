@@ -1,4 +1,17 @@
-"""MCP tools and helpers for .koresheet documents."""
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# MCP tools and helpers for .koresheet spreadsheet documents.
+#
+# .koresheet files are stored as JSON in the KoreFile virtual FS with a grid format
+# consisting of version, meta, cols, rows, and cells keys.  Formula recomputation
+# is triggered automatically on write.
+#
+# Related modules:
+#   - app/_mcp_shared.py    -- _create_serialized_file, _ensure_extension
+#   - app/koredocs_mcp.py   -- imports this module to register its tools
+#   - app/korefile.py       -- underlying virtual FS
+# ====================================================================================================
 
 from __future__ import annotations
 import json

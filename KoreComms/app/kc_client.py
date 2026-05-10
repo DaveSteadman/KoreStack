@@ -1,9 +1,22 @@
-"""HTTP client for the KoreChat service.
-
-Uses stdlib urllib only — no extra dependencies.
-Every public function raises RuntimeError on network / HTTP errors so the
-caller can catch, log, and continue without crashing the poller thread.
-"""
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# HTTP client for the KoreChat service.
+#
+# Uses stdlib urllib only — no extra dependencies.
+# Every public function raises RuntimeError on network/HTTP errors so the
+# caller (typically the poller thread) can catch, log, and continue without crashing.
+#
+# Public API:
+#   _base()    -- returns the configured KoreChat base URL
+#   _post()    -- HTTP POST helper returning parsed JSON
+#   _get()     -- HTTP GET helper returning parsed JSON
+#   _patch()   -- HTTP PATCH helper returning parsed JSON
+#
+# Related modules:
+#   - app/poller.py   -- calls kc_client to forward inbound messages and drain outbound queue
+#   - app/server.py   -- calls kc_client to list conversations and send replies
+# ====================================================================================================
 from __future__ import annotations
 
 import json

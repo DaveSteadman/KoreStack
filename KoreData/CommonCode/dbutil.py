@@ -1,3 +1,17 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Shared database utilities for KoreData sub-services.
+#
+# Provides fts_build_query(): converts a raw user search string into a safe FTS5 MATCH
+# expression supporting phrase search (quoted strings) and bare word AND-joining.
+# Also provides word_count() for estimating content length in words.
+#
+# Related modules:
+#   - KoreRAG/app/database.py        -- passes user queries through fts_build_query
+#   - KoreReference/app/database.py  -- same
+#   - KoreLibrary/app/database.py    -- same
+# ====================================================================================================
 import re
 from typing import Optional
 

@@ -1,3 +1,25 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Tool-calling loop: drives the multi-turn LLM <-> skill conversation for one orchestration round.
+#
+# The main entry point is run_tool_loop(), called by orchestration.py.  Each iteration:
+#   1. Builds the user message from conversation history and scratchpad context
+#   2. Calls the LLM (call_llm_chat) with available tool definitions
+#   3. Parses any tool_calls from the response
+#   4. Validates and executes each call via skill_executor.execute_tool_call()
+#   5. Injects tool results back into the message thread
+#   6. Loops until the model returns a plain text response (no tool calls)
+#
+# Large tool results are auto-saved to scratchpad and truncated in the thread.
+# Compaction is assessed after each round and triggered when context fill is high.
+#
+# Related modules:
+#   - skill_executor.py   -- execute_tool_call dispatches to the correct skill function
+#   - context_manager.py  -- assess_compact, compact_context, store_last_run_state
+#   - orchestration.py    -- calls run_tool_loop() for each conversation turn
+#   - scratchpad.py       -- auto-saves large tool results
+# ====================================================================================================
 import json
 import re
 from pathlib import Path
@@ -20,6 +42,64 @@ TOOL_MSG_MAX_CHARS: int = 4096
 # into the thread.  Keeping this low means more results are available for later retrieval
 # even after their thread message is compacted.
 TOOL_MSG_AUTO_SCRATCH_MIN: int = 200
+
+_DATA_TOOL_SOURCE: dict[str, str] = {
+    "koredata_get_reference_article": "KoreReference",
+    "koredata_get_feed_entry": "KoreFeed",
+    "koredata_get_library_book": "KoreLibrary",
+    "koredata_get_rag_chunk": "KoreRAG",
+    "lookup_wikipedia": "Wikipedia",
+    "fetch_page_text": "WebFetch",
+    "fetch_page_text_text": "WebFetch",
+    "search_web": "WebSearch",
+    "search_web_text": "WebSearch",
+    "research_traverse": "WebResearch",
+}
+
+
+def _build_data_envelope(func_name: str, arguments: dict, result_content: str) -> str:
+    """Prepend a compact structured header to results from known data-sourcing tools.
+
+    The header gives the LLM clear provenance (source service, query, result count)
+    without relying on it parsing the raw payload to infer context.
+    Results from unknown/non-data tools are returned unchanged.
+    """
+    fn = func_name.lower()
+    if fn.startswith("koredata_search"):
+        source = "KoreData"
+    else:
+        source = _DATA_TOOL_SOURCE.get(fn)
+    if source is None:
+        return result_content
+
+    query = (
+        arguments.get("query")
+        or arguments.get("topic")
+        or arguments.get("title")
+        or arguments.get("url")
+        or ""
+    )
+    query_part = f' | query: "{str(query)[:60]}"' if query else ""
+
+    # Try to extract a result count from JSON payload.
+    result_count_part = ""
+    try:
+        parsed = json.loads(result_content)
+        if isinstance(parsed, list):
+            result_count_part = f" | results: {len(parsed)}"
+        elif isinstance(parsed, dict):
+            results = parsed.get("results")
+            if isinstance(results, list):
+                result_count_part = f" | results: {len(results)}"
+            elif "title" in parsed and "body" in parsed:
+                word_count = parsed.get("word_count") or len((parsed.get("body") or "").split())
+                result_count_part = f" | article: \"{str(parsed['title'])[:50]}\" | ~{word_count:,} words"
+    except (json.JSONDecodeError, ValueError, TypeError):
+        pass
+
+    header = f"[SOURCE: {source}{query_part}{result_count_part}]\n"
+    return header + result_content
+
 
 _COT_PLANNING_RE = re.compile(
     r"\b(?:we should|we can|we need|we will|we could|we\'ll|we\'re|we must|"
@@ -376,14 +456,18 @@ def run_tool_loop(
                     auto_scratch_key = f"_tc_r{round_num}_{tc_idx + 1}_{safe_name}"
                     scratch_auto_save(auto_scratch_key, result_content)
                     scratch_pin(auto_scratch_key)
-                    if len(result_content) > TOOL_MSG_MAX_CHARS:
-                        result_content = result_content[:TOOL_MSG_MAX_CHARS] + f"\n... [truncated - full content auto-saved to scratchpad key: {auto_scratch_key}]"
+
+                # Build thread content: add provenance envelope for data tools, then truncate.
+                # The scratchpad copy (saved above) keeps the raw content for scratch_query use.
+                thread_content = _build_data_envelope(func_name, arguments, result_content) if not output.get("is_error") else result_content
+                if auto_scratch_key and len(thread_content) > TOOL_MSG_MAX_CHARS:
+                    thread_content = thread_content[:TOOL_MSG_MAX_CHARS] + f"\n... [truncated - full content auto-saved to scratchpad key: {auto_scratch_key}]"
 
                 _log(f"     {trunc(str(result_content), 120)}")
                 round_outputs.append(output)
                 tool_outputs.append(output)
-                messages.append({"role": "tool", "tool_call_id": tc_id, "name": func_name, "content": result_content})
-                context_map.append({"round": round_num, "role": "tool", "label": func_name, "chars": len(result_content), "auto_key": auto_scratch_key, "msg_idx": len(messages) - 1})
+                messages.append({"role": "tool", "tool_call_id": tc_id, "name": func_name, "content": thread_content})
+                context_map.append({"round": round_num, "role": "tool", "label": func_name, "chars": len(thread_content), "auto_key": auto_scratch_key, "msg_idx": len(messages) - 1})
 
             if on_tool_round_complete is not None:
                 try:

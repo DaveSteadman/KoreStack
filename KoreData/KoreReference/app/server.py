@@ -1,3 +1,26 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# FastAPI application for KoreReference — a Wikipedia-snapshot article store.
+#
+# Provides REST API for article CRUD, backlink resolution, full-text search,
+# and Kiwix import automation (bulk crawl from a local Kiwix server).
+#
+# Key endpoints:
+#   GET  /api/articles           -- paginated article listing
+#   GET  /api/articles/{id}      -- single article with body and tables
+#   POST /api/articles           -- create/update an article
+#   DELETE /api/articles/{id}    -- delete an article
+#   GET  /api/search?q=          -- full-text search
+#   POST /api/import/kiwix       -- start a background Kiwix crawl
+#   GET  /api/import/status      -- current import progress
+#
+# Related modules:
+#   - app/database.py               -- all DB operations
+#   - app/importers/kiwix.py        -- background Kiwix import
+#   - app/importers/state.py        -- thread-safe import progress state
+#   - app/config.py                 -- cfg (host, port, data_dir)
+# ====================================================================================================
 from contextlib import asynccontextmanager
 from typing import Optional
 

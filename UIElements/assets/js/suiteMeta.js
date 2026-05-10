@@ -1,1 +1,1 @@
-export const SUITE_VERSION = 'Build:0031 / 0.5+dev';
+export const SUITE_VERSION = 'Build:0032 / 0.5+dev';

@@ -1,3 +1,18 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# SQLite database layer for KoreLibrary.
+#
+# Schema:
+#   books  -- book catalog entries with FTS5 full-text search across title and author
+#
+# Supports catalog:id format (e.g. "openlibrary:OL12345W") for cross-catalog deduplication.
+# Completeness checking flags entries missing key metadata fields.
+#
+# Related modules:
+#   - app/server.py    -- catalog read/write and search operations
+#   - CommonCode/dbutil.py  -- fts_build_query
+# ====================================================================================================
 import re
 import sqlite3
 from contextlib import contextmanager

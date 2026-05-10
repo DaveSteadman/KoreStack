@@ -1,3 +1,23 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Slash command handlers for test suite execution and result reporting.
+#
+# Commands handled:
+#   /test              -- list available test prompt files
+#   /test <file>       -- run a test prompt file and report pass/fail counts
+#   /test results      -- show the most recent test result summary
+#
+# Delegates test execution to run_helpers.run_prompt_batch().  Reads raw CSV output and
+# emits [TEST COMPLETE] / [ALL TESTS COMPLETE] lines that routes_sessions.py captures
+# for KoreChat summary writes.
+#
+# Related modules:
+#   - input_layer/slash_commands.py    -- registers all handlers
+#   - run_helpers.py                   -- run_prompt_batch (test execution)
+#   - testing/test_wrapper.py          -- the underlying test runner invoked per file
+#   - utils/workspace_utils.py         -- get_test_prompts_dir, get_test_results_dir
+# ====================================================================================================
 import csv
 import re
 from datetime import datetime

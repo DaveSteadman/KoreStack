@@ -1,3 +1,19 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Shared helpers for running batched prompt sequences and compressing conversation history.
+#
+# Provides run_prompt_batch(), called by the /test slash command handler to execute a JSON
+# prompt file sequentially and capture pass/fail output.  Also provides compact_turns(),
+# an in-memory conversation compressor using an isolated LLM call (used when KoreChat
+# compaction is unavailable), and make_task_session() which creates a session context
+# for a scheduled task run.
+#
+# Related modules:
+#   - input_layer/slash_command_handlers_testing.py  -- calls run_prompt_batch for /test
+#   - server_startup.py                              -- calls make_task_session for scheduled tasks
+#   - orchestration.py                               -- orchestrate_prompt
+# ====================================================================================================
 from pathlib import Path
 
 from orchestration import ConversationHistory

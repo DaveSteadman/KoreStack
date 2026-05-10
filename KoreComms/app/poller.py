@@ -1,15 +1,24 @@
-"""Background polling thread.
-
-Two duties run on the same interval:
-
-  1. _poll_inbound  — calls poll() on each enabled interface, forwards new
-                      messages to KoreChat, and stores thin routing
-                      records locally for deduplication and reply anchoring.
-
-  2. _poll_outbound — drains KoreChat's outbound_ready event queue,
-                      routing each agent response back through the correct
-                      external interface.
-"""
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Background polling thread for KoreComms — bridges external interfaces to KoreChat.
+#
+# Two duties run on a shared interval:
+#   _poll_inbound   -- calls poll() on each enabled interface adapter, forwards new
+#                      messages to KoreChat, and stores thin routing records locally
+#                      for deduplication and reply anchoring.
+#   _poll_outbound  -- drains KoreChat's outbound_ready event queue, routing each
+#                      agent response back through the correct external interface.
+#
+# Public API:
+#   start()  -- launches the polling thread (call once at startup from server.py)
+#   stop()   -- signals the thread to exit gracefully
+#
+# Related modules:
+#   - app/kc_client.py             -- forwards messages to / polls events from KoreChat
+#   - app/database.py              -- reads/writes routing and dedup records
+#   - app/interfaces/              -- adapter .poll() and .route_reply() methods
+# ====================================================================================================
 from __future__ import annotations
 
 import logging

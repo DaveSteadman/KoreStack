@@ -1,3 +1,19 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Kiwix Wikipedia snapshot importer for KoreReference.
+#
+# Crawls a Kiwix HTTP API server (e.g. kiwix-serve) starting from a seed URL,
+# following article links via a BFS queue.  Parses each article page with BeautifulSoup,
+# extracts clean text and table data via shared helpers, and stores articles in the
+# KoreReference SQLite database.
+#
+# Related modules:
+#   - app/importers/state.py   -- thread-safe progress state updated during crawl
+#   - app/importers/shared.py  -- HTML table extraction and noise removal
+#   - app/database.py          -- upsert_article for storing each crawled article
+#   - app/server.py            -- POST /api/import/kiwix triggers this importer
+# ====================================================================================================
 from collections import deque
 from typing import Optional
 from urllib.parse import unquote, urlparse

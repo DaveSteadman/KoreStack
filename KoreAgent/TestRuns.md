@@ -1,3 +1,8 @@
+
+# Version 0032 / 0.5+dev
+
+[ALL TESTS COMPLETE] test_results_20260510_210234_all | pass rate=94% (233/247)
+
 # Version 0030 / 0.5+dev
 
 [ALL TESTS COMPLETE]  host=http://MONTBLANC:11434  model=gemma4:26b  elapsed=39m 53s  pass rate=96% (157/164)  prompt tokens=6,749,202  avg tok/s=70.1

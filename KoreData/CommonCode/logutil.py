@@ -1,3 +1,15 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Logging configuration helpers for KoreData sub-services.
+#
+# Provides LineCappedFileHandler: a rotating file handler that caps the log at _MAX_LINES
+# and trims it every _TRIM_INTERVAL writes to prevent unbounded growth.
+# make_log_config() returns a logging.config dict that wires up console + file handlers.
+#
+# Related modules:
+#   - KoreReference/main.py, KoreFeed/main.py, etc. -- each calls make_log_config() at startup
+# ====================================================================================================
 import logging
 from pathlib import Path
 

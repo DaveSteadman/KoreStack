@@ -1,9 +1,20 @@
-"""Manual interface — synthetic channel used for local testing via the WebUI.
-
-Inbound messages are injected by a human via the WebUI compose form.
-Outbound replies are acknowledged but not transmitted anywhere externally;
-the reply content lives in KoreChat and is visible through the chat UI.
-"""
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Manual interface adapter — synthetic channel for local testing via the WebUI.
+#
+# Inbound messages are injected by a human using the WebUI compose form.
+# Outbound replies are acknowledged but not transmitted externally; the reply
+# content lives in KoreChat and is visible through the chat UI.
+#
+# poll() is a no-op because no external system needs to be polled.
+# route_reply() creates/updates a thread_id in the conversation record and logs the reply.
+#
+# Related modules:
+#   - app/interfaces/common/base.py     -- BaseInterface ABC
+#   - app/interfaces/common/registry.py -- registered as type "manual"
+#   - app/database.py                   -- conversation and routing record access
+# ====================================================================================================
 from __future__ import annotations
 
 import uuid

@@ -1,4 +1,26 @@
-﻿import asyncio
+﻿# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# FastAPI gateway for KoreData — proxy, web UI, child process lifecycle, and MCP federation.
+#
+# Manages the four sub-service processes (KoreFeed, KoreLibrary, KoreRAG, KoreReference),
+# federates their MCP endpoints, and proxies API requests.  Also serves the KoreData
+# web UI via Jinja2 templates.
+#
+# Key responsibilities:
+#   - Spawn and supervise child sub-service processes
+#   - Proxy /api/search across all sub-services and merge results
+#   - Mount MCP tools from each sub-service via federation
+#   - Serve web UI pages for feed management (GET|POST /ui/feeds/*)
+#
+# Related modules:
+#   - app/config.py       -- cfg (host, port, sub-service URLs)
+#   - KoreFeed/           -- feed management sub-service
+#   - KoreLibrary/        -- book catalog sub-service
+#   - KoreRAG/            -- RAG chunk store sub-service
+#   - KoreReference/      -- Wikipedia reference article sub-service
+# ====================================================================================================
+import asyncio
 import json as _json
 import os
 import re
@@ -623,7 +645,16 @@ async def koredata_get_reference_article(title: str) -> dict:
     Args:
         title: Article title exactly as returned by search (URL-decoding is handled automatically).
 
-    Returns the full article including body, sections, summary, facts, and links.
+    Returns the full article including:
+    - body: full wikitext body
+    - sections: list of section dicts [{title, content}]
+    - summary: short description
+    - lead: introductory paragraphs before the first section heading
+    - facts: structured infobox data as a list of {key, value} pairs (empty list when not available)
+    - links: internal links from this article to other articles
+
+    Use this tool when you have a specific article title. For keyword searches across the
+    reference collection, use koredata_search(domains=["reference"]) instead.
     """
     if _ref_client is None:
         return {"error": "KoreDataGateway is still starting up — retry in a moment"}

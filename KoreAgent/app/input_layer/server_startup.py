@@ -5,12 +5,12 @@
 #
 # Provides run_api_mode(), which is the main entry point called by main.py:
 #   - Loads schedules and initialises the task queue
-#   - Wires up api.py's push_log_line as the LLM-call log sink
+#   - Wires up server.py's push_log_line as the LLM-call log sink
 #   - Starts a background scheduler thread that hot-reloads and fires scheduled tasks
 #   - Launches uvicorn to serve the FastAPI app
 #
 # Related modules:
-#   - api.py              -- FastAPI app, all endpoints, setup(), push_log_line()
+#   - server.py             -- FastAPI app, all endpoints, setup(), push_log_line()
 #   - main.py             -- creates config and calls run_api_mode()
 #   - scheduler.py        -- task_queue, load_schedules_dir, is_task_due
 #   - orchestration.py    -- orchestrate_prompt, OrchestratorConfig
@@ -22,21 +22,27 @@
 # MARK: IMPORTS
 # ====================================================================================================
 import asyncio
+import json
 import socket
 import sys
 import threading
 import time
+import urllib.error
+import urllib.request
 from datetime import datetime
 from pathlib import Path
 
 import llm_client as llm_client
 from run_helpers import run_prompt_batch
-from input_layer.api import app
-from input_layer.api import push_log_line
-from input_layer.api import setup as api_setup
-from input_layer.api import _load_session
-from input_layer.api import _save_session
+from input_layer.server import app
+from input_layer.server import push_log_line
+from input_layer.server import setup as api_setup
+from input_layer.server import _load_session
+from input_layer.server import _save_session
 from input_layer.koreconv_input import start_koreconv_loop
+from input_layer.koreconv_input import _get_base_url as _kc_get_base_url
+from input_layer.koreconv_input import _http_get as _kc_http_get
+from input_layer.koreconv_input import _http_post as _kc_http_post
 from orchestration import OrchestratorConfig
 from utils.runtime_logger import SessionLogger
 from utils.runtime_logger import create_log_file_path
@@ -135,7 +141,7 @@ def run_api_mode(
             # Hot-reload schedules from disk on every poll cycle so task CRUD changes
             # (create/delete/enable/disable/reschedule) take effect without a restart.
             # enabled_tasks[:] mutates the shared list in-place so the API endpoints
-            # (which reference the same list object via api.py's _enabled_tasks) see
+            # (which reference the same list object via server.py's _enabled_tasks) see
             # the updated view automatically.
             try:
                 _all = load_schedules_dir(_SCHEDULES_DIR)
@@ -165,8 +171,45 @@ def run_api_mode(
                                 current = prompt_text.get("prompt", "") if isinstance(prompt_text, dict) else str(prompt_text)
                                 if current:
                                     push_log_line(f"[SCHEDULER] {_name}: {current[:80]}")
+
+                            # Item 7: Fetch prior run output from KoreChat for continuity.
+                            # This lets the model know what it produced last time so it can
+                            # build on, update, or cross-reference prior results.
+                            kc_base = _kc_get_base_url()
+                            prior_context_prefix = ""
+                            if kc_base:
+                                try:
+                                    prior_conv = _kc_http_get(kc_base, f"/conversations/by-external-id/task:{_name}")
+                                    if prior_conv and prior_conv.get("id"):
+                                        msgs = _kc_http_get(
+                                            kc_base,
+                                            f"/conversations/{prior_conv['id']}/messages?limit=10",
+                                        ) or []
+                                        last_out = next(
+                                            (m for m in reversed(msgs) if m.get("direction") == "outbound"),
+                                            None,
+                                        )
+                                        if last_out:
+                                            ts = (last_out.get("created_at") or "")[:10]
+                                            snippet = (last_out.get("content") or "")[:400].strip()
+                                            prior_context_prefix = (
+                                                f"[Previous run ({ts})]:\n{snippet}\n\n"
+                                            )
+                                            push_log_line(f"[SCHEDULER] {_name}: loaded prior context ({len(snippet)} chars)")
+                                except Exception as exc:
+                                    push_log_line(f"[SCHEDULER] {_name}: could not fetch prior context: {exc}")
+
+                            # Prepend prior run context to the first prompt if available.
+                            enriched_prompts = list(_prompts)
+                            if prior_context_prefix and enriched_prompts:
+                                first = enriched_prompts[0]
+                                if isinstance(first, dict):
+                                    enriched_prompts[0] = dict(first, prompt=prior_context_prefix + first.get("prompt", ""))
+                                else:
+                                    enriched_prompts[0] = prior_context_prefix + str(first)
+
                             results = run_prompt_batch(
-                                _prompts,
+                                enriched_prompts,
                                 session_id=f"task_{_name}",
                                 persist_path=None,
                                 config=config,
@@ -177,6 +220,40 @@ def run_api_mode(
                             for item in results:
                                 tps_str = f"{item['tps']:.1f}" if item["tps"] > 0 else "0"
                                 push_log_line(f"[SCHEDULER] {_name}: done [{item['prompt_tokens']:,} tok, {tps_str} tok/s]")
+
+                            # Item 3: Post task output to KoreChat so prior runs are available
+                            # to future runs and to human review via the KoreChat UI.
+                            if kc_base:
+                                try:
+                                    full_output = "\n\n".join(
+                                        r.get("response", "").strip()
+                                        for r in results
+                                        if r.get("response", "").strip()
+                                    )
+                                    if full_output:
+                                        # Re-fetch (or create) the task's KoreChat conversation.
+                                        task_conv = _kc_http_get(kc_base, f"/conversations/by-external-id/task:{_name}")
+                                        if not task_conv:
+                                            task_conv = _kc_http_post(kc_base, "/conversations", {
+                                                "external_id":  f"task:{_name}",
+                                                "subject":      f"Scheduled: {_name}",
+                                                "channel_type": "scheduled",
+                                            })
+                                        if task_conv and task_conv.get("id"):
+                                            _kc_http_post(
+                                                kc_base,
+                                                f"/conversations/{task_conv['id']}/messages",
+                                                {
+                                                    "direction":      "outbound",
+                                                    "content":        full_output,
+                                                    "sender_display": "agent",
+                                                    "status":         "sent",
+                                                },
+                                            )
+                                            push_log_line(f"[SCHEDULER] {_name}: output posted to KoreChat")
+                                except Exception as exc:
+                                    push_log_line(f"[SCHEDULER] {_name}: could not post to KoreChat: {exc}")
+
                     except Exception as exc:
                         push_log_line(f"[SCHEDULER] {_name} error: {exc}")
                     last_run[_name] = _when

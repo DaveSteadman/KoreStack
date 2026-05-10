@@ -1,4 +1,19 @@
-"""Read KoreCode port/host from the central suite config."""
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# KoreCode configuration loader.
+#
+# Reads host and port from the suite-level config/default.json + config/local.json.
+# Exposes a module-level cfg dict so server.py can import one name.
+#
+# Defaults:
+#   port: 8610   (env: KORECODE_PORT)
+#   host: 0.0.0.0
+#
+# Related modules:
+#   - app/server.py        -- imports cfg, load()
+#   - KoreData/CommonCode/config.py  -- shared load_config() pattern
+# ====================================================================================================
 from __future__ import annotations
 
 import json

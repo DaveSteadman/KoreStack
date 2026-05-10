@@ -1,3 +1,25 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# FastAPI application for KoreFeed — RSS/Atom feed aggregator.
+#
+# Provides REST API and Jinja2 web UI for managing feed subscriptions and browsing
+# article entries.  Feed polling is handled by the background ingest scheduler.
+#
+# Key endpoints:
+#   GET  /api/feeds           -- list all feed subscriptions
+#   POST /api/feeds           -- add a new feed
+#   DELETE /api/feeds/{id}    -- remove a feed
+#   GET  /api/entries?domain= -- paginated entry listing by domain
+#   GET  /api/search?q=       -- full-text article search
+#   GET  /                    -- web UI feed dashboard
+#
+# Related modules:
+#   - app/database.py      -- all DB operations
+#   - app/ingest.py        -- background RSS polling scheduler
+#   - app/feed_manager.py  -- feed JSON configuration file I/O
+#   - app/config.py        -- cfg (host, port, data_dir)
+# ====================================================================================================
 from contextlib import asynccontextmanager
 import os
 from pathlib import Path

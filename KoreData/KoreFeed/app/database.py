@@ -1,3 +1,19 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# SQLite database layer for KoreFeed.
+#
+# Schema:
+#   entries  -- feed article metadata and content, organised by domain
+#
+# Supports RFC 2822 and ISO 8601 date parsing so diverse feed formats are handled
+# uniformly.  WAL mode enabled.  Age-based retention is enforced by the ingest scheduler.
+#
+# Related modules:
+#   - app/server.py      -- article read operations
+#   - app/ingest.py      -- background ingest scheduler writes new entries
+#   - CommonCode/compress.py  -- article body compression (if enabled)
+# ====================================================================================================
 import sqlite3
 import json
 import re

@@ -1,8 +1,28 @@
-"""Shared helpers for KoreDocs MCP modules.
-
-Provides folder/file utilities, name validation, and the koredoc parser helpers
-used by koredoc_mcp.py, koresheet_mcp.py, and kodiag_mcp.py.
-"""
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Shared helpers for KoreDocs MCP modules.
+#
+# Provides folder/file utilities, name validation, and the koredoc parser helpers
+# used by koredoc_mcp.py, koresheet_mcp.py, and kodiag_mcp.py.
+#
+# Key helpers:
+#   _normalise_folder_path()         -- normalize and validate folder path strings
+#   _folder_tree()                   -- recursive folder listing
+#   _folder_tree_with_files()        -- folder tree including file entries
+#   _folder_id_for_path()            -- resolve folder path to DB id
+#   _file_summary()                  -- compact single-file metadata dict
+#   _create_serialized_file()        -- create a new file with serialized content
+#   _ensure_extension()              -- append file extension if absent
+#   _koredoc_parse / _koredoc_find_heading / etc.  -- heading-level editing helpers
+#
+# Related modules:
+#   - app/_mcp_instance.py   -- mcp singleton re-exported from here
+#   - app/korefile.py        -- low-level virtual FS operations
+#   - app/koredoc_mcp.py     -- uses koredoc parser helpers
+#   - app/koresheet_mcp.py   -- uses _create_serialized_file, _ensure_extension
+#   - app/kodiag_mcp.py      -- uses _create_serialized_file, _ensure_extension
+# ====================================================================================================
 
 from __future__ import annotations
 

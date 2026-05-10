@@ -1,8 +1,21 @@
-"""Encryption helpers for sensitive values stored in the database.
-
-The Fernet key is stored alongside the KoreComms data directory (git-ignored).
-If the file does not exist it is generated on first use.
-"""
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Encryption helpers for sensitive values stored in the database.
+#
+# Uses Fernet symmetric encryption.  The key file lives alongside the KoreComms data
+# directory and is git-ignored.  If the key file is absent it is generated on first use.
+#
+# Public API:
+#   encrypt(plaintext: str) -> str   -- returns base64-encoded ciphertext
+#   decrypt(ciphertext: str) -> str  -- returns original plaintext
+#   _get_fernet()                    -- loads or generates the Fernet key (LRU-cached)
+#
+# Related modules:
+#   - app/database.py              -- stores encrypted config_json values
+#   - app/interfaces/discord/adapter.py  -- encrypts/decrypts bot tokens
+#   - app/interfaces/gmail/adapter.py    -- encrypts/decrypts OAuth credentials
+# ====================================================================================================
 from __future__ import annotations
 
 import os

@@ -1,3 +1,20 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# KoreStack suite health dashboard — HTTP server that serves a live status page.
+#
+# Runs a threading.HTTPServer on a configurable port.  Polls each service's /status
+# endpoint at a configurable interval and renders an HTML dashboard showing each
+# service as up (green), starting (yellow), or down (red).
+#
+# Key functions:
+#   build_suite_urls(cfg)          -- build the service URL map from config
+#   _service_state(url, timeout)   -- probe a service and return its state string
+#   _service_row_markup(name, url) -- generate the HTML card for one service
+#
+# Related modules:
+#   - KoreStack/main.py  -- starts the dashboard thread alongside all services
+# ====================================================================================================
 from __future__ import annotations
 
 import html

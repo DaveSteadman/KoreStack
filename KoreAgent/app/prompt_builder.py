@@ -91,7 +91,7 @@ _TOOL_ROUTING_FUDGE: list[str] = [
     # Long-term fix: KoreData tool descriptions and a routing layer that checks
     # query intent before selecting between local and web tools.
     "- When the prompt explicitly names 'KoreData' as the target (e.g. 'search KoreData for', 'find in KoreData', 'KoreData library', 'KoreRAG'), use the available KoreData MCP search/retrieval tools first. Do not call search_web or research_traverse for these prompts.",
-    "- For factual, reference, news, book, internal document, or encyclopaedic queries that do not explicitly say 'search the web' or 'search online', use KoreData MCP search/retrieval tools first when they are available. Fall back to web tools only if KoreData returns empty results.",
+    "- For factual, reference, news, book, internal document, or encyclopaedic queries that do not explicitly say 'search the web' or 'search online', use KoreData MCP search/retrieval tools first when they are available. For a single known title, call koredata_get_reference_article first — it returns the full article including body, sections, and structured facts (infobox data). For broader queries, call koredata_search(domains=[\"reference\"]) first. Fall back to web tools only if KoreData returns empty results.",
     "- When a prompt says 'search the web for', 'search online for', or 'find on the internet', call a web tool directly - skip KoreData.",
     "- When a prompt says 'search for', 'find information about', or 'look up' without specifying the web, use KoreData MCP search/retrieval tools first when they are available. Fall back to search_web only on empty results.",
 
@@ -149,6 +149,64 @@ _TOOL_ROUTING_FUDGE: list[str] = [
 
 
 # ====================================================================================================
+# MARK: PER-QUERY ROUTING HINT
+# ====================================================================================================
+# A per-call routing hint that is derived from the actual user prompt at message-build time.
+# Unlike the static fudge above, this is targeted to the specific query intent.
+# It fires as the last system block so it has the most immediate influence on the model.
+# This supplements the fudge; as hint coverage improves, overlapping fudge entries can be removed.
+
+# Phrases that indicate explicit web-search intent — skip the local-first hint for these.
+_ROUTING_WEB_EXPLICIT = frozenset([
+    "search the web", "search online", "search the internet", "find on the internet",
+    "find on the web", "google", "internet search", "web search",
+])
+
+# Keywords/phrases that suggest an encyclopaedic or factual lookup — try KoreReference first.
+_ROUTING_REFERENCE_PHRASES = (
+    "what is ", "what are ", "who is ", "who was ", "who were ",
+    "define ", "definition of", "tell me about", "explain ",
+    "history of ", "biography of ", "overview of ",
+    "facts about ", "describe ", "encyclopedia",
+)
+
+# Keywords that signal an in-depth research task — invoke research_traverse.
+_ROUTING_RESEARCH_PHRASES = (
+    "research ", "investigate ", "look into ", "find evidence ",
+    "deep dive", "deep-dive", "in-depth ", "study ",
+)
+
+
+def build_routing_hint(user_prompt: str, has_koredata: bool = True) -> str:
+    """Return a per-query routing instruction based on detected prompt intent.
+
+    Returns an empty string when no strong signal is found (no hint injected).
+    The returned string should be appended to the system message as a dedicated block.
+    """
+    if not user_prompt:
+        return ""
+    lower = user_prompt.lower()
+
+    # Explicit web intent — no local-first hint needed.
+    if any(phrase in lower for phrase in _ROUTING_WEB_EXPLICIT):
+        return ""
+
+    # Research intent.
+    if any(phrase in lower for phrase in _ROUTING_RESEARCH_PHRASES):
+        return "[Routing hint for this query]: this prompt signals an in-depth research task — call research_traverse."
+
+    # Encyclopaedic / reference intent.
+    if has_koredata and any(phrase in lower for phrase in _ROUTING_REFERENCE_PHRASES):
+        return (
+            "[Routing hint for this query]: this prompt is encyclopaedic or biographical — "
+            "call koredata_get_reference_article or koredata_search(domains=[\"reference\"]) "
+            "before any web tool."
+        )
+
+    return ""
+
+
+# ====================================================================================================
 # MARK: SKILL SELECTION GUIDANCE
 # ====================================================================================================
 def build_skill_selection_guidance(skills_payload: dict) -> str:
@@ -196,6 +254,8 @@ def build_system_message(
     sandbox_enabled: bool,
     scratchpad_visible_keys: list[str] | None = None,
     conversation_summary: str | None = None,
+    user_prompt: str | None = None,
+    token_pressure: float = 0.0,
 ) -> str:
     system_parts: list[str] = list(_CORE_IDENTITY_PARTS) + list(_SYSTEM_SKILL_GUIDANCE) + list(_TOOL_ROUTING_FUDGE)
     if ambient_system_info:
@@ -233,5 +293,23 @@ def build_system_message(
         if context_keys:
             suffix += " Compacted-context keys (_cx_*) hold earlier turn content saved during context compaction; use scratch_query to extract information from them."
         system_parts.append("\nScratchpad keys currently stored:\n  " + "\n  ".join(key_lines) + suffix)
+
+    # Token pressure warning — injected just before routing hint so it's near the top of
+    # the model's attention but not the absolute last instruction.
+    if token_pressure > 0.6:
+        pct = int(token_pressure * 100)
+        system_parts.append(
+            f"\nNOTE: Context window is at {pct}% capacity. Prefer concise answers. "
+            "Do not re-read content already loaded this session."
+        )
+
+    # Per-query routing hint: injected last so it is the freshest, most prominent instruction.
+    has_koredata = any(
+        skill.get("module", "").startswith("koredata") or "koredata" in str(skill.get("functions", "")).lower()
+        for skill in skills_payload.get("skills", [])
+    )
+    routing_hint = build_routing_hint(user_prompt or "", has_koredata=has_koredata)
+    if routing_hint:
+        system_parts.append(f"\n{routing_hint}")
 
     return "\n".join(system_parts)

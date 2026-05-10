@@ -1,3 +1,17 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Root launcher for KoreLibrary sub-service.
+#
+# Prints a startup banner showing total book count and incomplete entry count, then
+# starts the FastAPI app under uvicorn.  Default port: 8802  (gateway 8620 + offset 2).
+#
+# Related modules:
+#   - app/server.py    -- FastAPI application and book catalog API routes
+#   - app/config.py    -- cfg (host, port, data_dir)
+#   - app/database.py  -- book catalog storage (SQLite + FTS5); get_status()
+#   - CommonCode/      -- shared logutil, config
+# ====================================================================================================
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "CommonCode"))

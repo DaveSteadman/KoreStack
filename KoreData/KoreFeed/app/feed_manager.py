@@ -1,3 +1,16 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Feed configuration manager for KoreFeed.
+#
+# Stores and retrieves feed metadata (URL, domain, enabled state, last_fetched, status)
+# as JSON files, one per domain, in the data_dir/feeds/ directory.
+# Provides load_feeds() and save_feeds() as the single source of truth for feed config.
+#
+# Related modules:
+#   - app/ingest.py  -- reads feed config to drive the polling scheduler
+#   - app/server.py  -- CRUD operations on feeds via this module
+# ====================================================================================================
 import json
 import re
 import uuid

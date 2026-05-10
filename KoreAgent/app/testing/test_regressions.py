@@ -1,3 +1,23 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Regression test suite for KoreAgent core modules.
+#
+# Uses unittest.TestCase to validate key module imports and basic function behaviour:
+#   - skill_executor.execute_tool_call dispatch
+#   - scratchpad read/write round-trip
+#   - file_access skill validation
+#   - web tools availability
+#   - orchestration helpers (compact_context, assess_compact)
+#
+# Run via:  python -m pytest testing/test_regressions.py -v
+#        or:  /test test_regressions from within KoreAgent chat UI
+#
+# Related modules:
+#   - testing/test_wrapper.py  -- wraps individual test files for /test execution
+#   - skill_executor.py        -- execute_tool_call
+#   - scratchpad.py            -- scratch_save, scratch_load
+# ====================================================================================================
 import sys
 import tempfile
 import unittest
@@ -35,8 +55,8 @@ from skills.WebSearch.web_search_skill import search_web
 from skills.WebResearch.web_research_skill import research_traverse
 from skills.SystemInfo.system_info_skill import get_system_info_string
 from tool_loop import normalize_tool_request
-from input_layer import api as api_module
-from input_layer.api_routes_sessions import _runtime_config_for_prompt
+from input_layer import server as api_module
+from input_layer.routes_sessions import _runtime_config_for_prompt
 from input_layer.slash_command_handlers_testing import _result_counts
 from testing import test_wrapper as test_wrapper_module
 from utils import workspace_utils as workspace_utils_module

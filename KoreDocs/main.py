@@ -1,9 +1,14 @@
-"""Root launcher for KoreDocs.
-
-Keeps startup consistent with the other repos so KoreDocs can be started with:
-
-    python ./main.py
-"""
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Root launcher for KoreDocs.
+#
+# Entry point that keeps startup consistent with the rest of the suite.
+# Run with:  python ./main.py
+#
+# Related modules:
+#   - app/server.py  -- main() starts the FastAPI app under uvicorn (default port: 8615)
+# ====================================================================================================
 
 from __future__ import annotations
 

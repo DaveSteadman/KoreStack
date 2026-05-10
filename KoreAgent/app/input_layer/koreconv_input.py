@@ -3,7 +3,7 @@
 # ====================================================================================================
 # KoreChat input source for KoreAgent.
 #
-# Runs as a background polling thread (started by api_mode.py) that calls
+# Runs as a background polling thread (started by server_startup.py) that calls
 # GET /events/next?claimed_by=agent on KoreChat. Each claimed event delivers
 # a conversation record with its full message list. The agent builds a prompt from the
 # conversation, runs orchestration, then writes the reply back as an outbound message,
@@ -29,7 +29,7 @@
 #                       log_dir, session_logger_cls, shutdown)
 #
 # Related modules:
-#   - api_mode.py          -- calls start_koreconv_loop alongside _scheduler_loop
+#   - server_startup.py  -- calls start_koreconv_loop alongside _scheduler_loop
 #   - scheduler.py         -- task_queue singleton used for serialisation
 #   - orchestration.py     -- orchestrate_prompt, OrchestratorConfig
 #   - run_helpers.py       -- make_task_session
@@ -148,6 +148,33 @@ def _http_patch(base: str, path: str, payload: dict, timeout: int = _DEFAULT_TIM
 # ====================================================================================================
 # MARK: PROMPT BUILDER
 # ====================================================================================================
+
+# ----------------------------------------------------------------------------------------------------
+def _merge_conv_facts(scratchpad: dict, user_prompt: str, turn_count: int) -> dict:
+    """Merge auto-extracted conversation facts into the scratchpad before persisting to KoreChat.
+
+    These reserved _kc_* keys give the model durable per-channel memory about the
+    conversation state without requiring explicit scratchpad tool calls.
+
+    Keys written:
+      _kc_last_asked  — the most recent user message (truncated to 200 chars)
+      _kc_turn        — current turn number (post-completion)
+    """
+    # Extract the most recent user message from the built prompt text.
+    last_asked = ""
+    for marker in ("--- Respond to this message ---\n", "--- Conversation ---\n"):
+        idx = user_prompt.rfind(marker)
+        if idx >= 0:
+            last_asked = user_prompt[idx + len(marker):].strip()[:200]
+            break
+    if not last_asked:
+        last_asked = user_prompt.strip()[:200]
+
+    updated = dict(scratchpad)
+    updated["_kc_last_asked"] = last_asked
+    updated["_kc_turn"] = str(turn_count + 1)
+    return updated
+
 
 # ----------------------------------------------------------------------------------------------------
 def _build_prompt(conv: dict, messages: list[dict], push_log_line=None) -> str:
@@ -442,6 +469,32 @@ def _handle_event(
             max_turns    = 10,
         )
 
+        # Item 4: Restore SessionContext from KoreChat background_context so the model
+        # can reference prior fetched data across restarts and resume turns.
+        background_ctx = (conv.get("background_context") or "").strip()
+        if background_ctx:
+            try:
+                restored_turns = json.loads(background_ctx)
+                if isinstance(restored_turns, list):
+                    valid = [
+                        t for t in restored_turns
+                        if isinstance(t, dict)
+                        and all(k in t for k in ("turn", "user_prompt", "assistant_response", "skill_outputs"))
+                    ]
+                    if valid:
+                        with session_ctx._lock:
+                            if not session_ctx._turns:
+                                session_ctx._turns = valid
+                        push_log_line(f"[KORECONV] Conv {conv_id}: restored {len(valid)} turn(s) from background_context")
+            except Exception as exc:
+                push_log_line(f"[KORECONV] Conv {conv_id}: could not restore background_context: {exc}")
+
+        # Item 5: Compute token pressure from the stored estimate vs the model's context window.
+        # This is passed to orchestrate_prompt so build_system_message can warn the model when
+        # the context window is getting full.
+        stored_token_estimate = conv.get("token_estimate") or 0
+        token_pressure = (stored_token_estimate / config.num_ctx) if config.num_ctx > 0 else 0.0
+
         response, prompt_tokens, completion_tokens, ok, tps = orchestrate_prompt(
             user_prompt          = user_prompt,
             config               = config,
@@ -449,6 +502,7 @@ def _handle_event(
             conversation_history = None,
             session_context      = session_ctx,
             quiet                = True,
+            token_pressure       = token_pressure,
         )
 
         tps_str = f"{tps:.1f}" if tps > 0 else "0"
@@ -458,6 +512,26 @@ def _handle_event(
 
         reply              = response.strip()
         current_scratchpad = get_store(session_id=session_id)
+        current_scratchpad = _merge_conv_facts(current_scratchpad, user_prompt, turn_count)
+
+        # Item 4: Serialize session context turns for persistence in KoreChat background_context.
+        # This lets the model reference prior fetched data after restarts or on resume.
+        sc_turns = session_ctx.get_turns()
+        if sc_turns:
+            compact_sc = []
+            for t in sc_turns[-3:]:
+                compact_sc.append({
+                    "turn":               t.get("turn"),
+                    "user_prompt":        (t.get("user_prompt") or "")[:150],
+                    "assistant_response": (t.get("assistant_response") or "")[:300],
+                    "skill_outputs":      [
+                        {"skill": o.get("skill", "?"), "summary": (o.get("summary") or "")[:100]}
+                        for o in (t.get("skill_outputs") or [])[:4]
+                    ],
+                })
+            new_background_context = json.dumps(compact_sc, ensure_ascii=False)
+        else:
+            new_background_context = background_ctx  # keep existing if this turn had no tool calls
 
         # token_estimate reflects what the next turn will start from: prompt consumed
         # this turn plus the completion tokens (which become part of the thread next turn).
@@ -479,10 +553,11 @@ def _handle_event(
         # so the conversation does not stay in agent_processing indefinitely.
         try:
             _http_patch(base, f"/conversations/{conv_id}", {
-                "status":         "active",
-                "token_estimate": new_token_estimate,
-                "turn_count":     turn_count + 1,
-                "scratchpad":     current_scratchpad,
+                "status":             "active",
+                "token_estimate":     new_token_estimate,
+                "turn_count":         turn_count + 1,
+                "scratchpad":         current_scratchpad,
+                "background_context": new_background_context,
             })
         except Exception as exc:
             push_log_line(

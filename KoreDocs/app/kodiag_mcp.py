@@ -1,4 +1,17 @@
-"""MCP tools and helpers for .kodiag diagram documents."""
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# MCP tools and helpers for .kodiag diagram documents.
+#
+# .kodiag files are stored as JSON in the KoreFile virtual FS with a node/edge/style
+# format.  The _normalize_node_for_editor() helper ensures consistent node shapes
+# before serialization.  UUID-based node IDs are generated at creation time.
+#
+# Related modules:
+#   - app/_mcp_shared.py    -- _create_serialized_file, _ensure_extension
+#   - app/koredocs_mcp.py   -- imports this module to register its tools
+#   - app/korefile.py       -- underlying virtual FS
+# ====================================================================================================
 
 from __future__ import annotations
 import json

@@ -1,9 +1,25 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Suite configuration helpers shared by all KoreData sub-services.
+#
+# Provides get_suite_root(), get_suite_datacontrol_dir(), and get_suite_datauser_dir()
+# which locate the KoreStack suite directories by traversing from __file__.
+# load_config(section) reads config/default.json + config/local.json and returns the
+# merged section dict.  _DATA_SUBSERVICE_OFFSETS maps service names to port offsets
+# from the gateway base port.
+#
+# Respects the KORE_SUITE_ROOT environment variable for non-standard installations.
+#
+# Related modules:
+#   - KoreDataGateway/app/config.py  -- uses _DATA_SUBSERVICE_OFFSETS to build child URLs
+#   - KoreReference/app/config.py, KoreFeed/app/config.py, etc. -- call load_config()
+# ====================================================================================================
 import os
 import json
 from pathlib import Path
 
-_SUITE_ROOT   = Path(__file__).resolve().parents[2]  # KoreStack/
-_CONFIG_FILE  = _SUITE_ROOT / "config" / "default.json"
+_SUITE_ROOT   = Path(__file__).resolve().parents[2]  # KoreStack/_CONFIG_FILE  = _SUITE_ROOT / "config" / "default.json"
 _LOCAL_CONFIG = _SUITE_ROOT / "config" / "local.json"
 
 

@@ -1,4 +1,18 @@
-"""MCP tools for .koredoc documents. Imported by koredocs_mcp.py after shared helpers are available."""
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# MCP tools for .koredoc documents.
+#
+# Imported by koredocs_mcp.py after shared helpers are available.
+# Registers tool handlers for creating, reading, and editing .koredoc Markdown files
+# stored in the KoreFile virtual file system.  Heading-based editing tools allow
+# surgical modification of individual document sections.
+#
+# Related modules:
+#   - app/_mcp_shared.py    -- parser helpers (_koredoc_parse, _koredoc_find_heading, etc.)
+#   - app/koredocs_mcp.py   -- imports this module to register its tools
+#   - app/korefile.py       -- underlying virtual FS
+# ====================================================================================================
 
 from __future__ import annotations
 from typing import Optional, Annotated

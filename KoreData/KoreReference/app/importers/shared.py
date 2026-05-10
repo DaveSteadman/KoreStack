@@ -1,3 +1,14 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Shared HTML processing helpers for KoreReference importers.
+#
+# Provides table extraction from HTML, noise removal (scripts, styles, nav elements),
+# and FTS text building so all importer backends produce consistent clean text.
+#
+# Related modules:
+#   - app/importers/kiwix.py  -- calls shared helpers during article crawl
+# ====================================================================================================
 import re
 from copy import deepcopy
 from typing import Optional

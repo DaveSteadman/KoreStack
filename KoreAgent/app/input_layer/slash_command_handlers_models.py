@@ -1,3 +1,23 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Slash command handlers for LLM server and model configuration.
+#
+# Commands handled:
+#   /llmserverconfig                  -- show current model, ctx, and backend
+#   /llmserverconfig model list       -- list models available on the active server
+#   /llmserverconfig model <name>     -- switch the active model (clears history)
+#   /llmserverconfig ctx <n>          -- set context window size
+#   /llmserverconfig host <url>       -- switch LLM server host
+#   /llmserverconfig stop             -- unload the current model from memory
+#
+# Registered in slash_commands.py under the /llmserverconfig command.
+#
+# Related modules:
+#   - input_layer/slash_commands.py         -- registers all handlers
+#   - input_layer/slash_command_context.py  -- SlashCommandContext passed to each handler
+#   - llm_client.py                         -- configure_host, list_ollama_models, stop_model
+# ====================================================================================================
 import json
 import urllib.request
 from typing import Callable

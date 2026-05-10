@@ -1,3 +1,24 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# FastAPI application for KoreLibrary — a book catalog service.
+#
+# Provides REST API and Jinja2 web UI for managing a book catalog with FTS5 search.
+# Supports importing books from XML catalogs (OPDS/MODS) via BeautifulSoup.
+#
+# Key endpoints:
+#   GET  /api/books            -- paginated catalog listing
+#   POST /api/books            -- add a new book entry
+#   PUT  /api/books/{id}       -- update an existing book entry
+#   DELETE /api/books/{id}     -- remove a book entry
+#   GET  /api/search?q=        -- full-text search across title, author, description
+#   POST /api/import/xml       -- bulk import from XML catalog
+#   GET  /                     -- web UI book catalog
+#
+# Related modules:
+#   - app/database.py  -- all DB operations and FTS5 search
+#   - app/config.py    -- cfg (host, port, data_dir)
+# ====================================================================================================
 import html as _html
 import json as _json
 import re as _re

@@ -1,3 +1,20 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# FastAPI route group for log file listing and streaming endpoints.
+#
+# Registered into the FastAPI app by register_log_routes(), called from server.py.
+#
+# Endpoints:
+#   GET /logs                    -- list all log directories and filenames
+#   GET /logs/latest             -- path of the most recently written log file
+#   GET /logs/{date}/{filename}  -- serve a specific log file as a line array
+#   GET /logs/stream             -- SSE: fan-out tail of all log lines from push_log_line()
+#   GET /logs/file?path=<path>   -- SSE: tail a specific log file with historic backfill
+#
+# Related modules:
+#   - input_layer/server.py  -- registers this group; provides push_log_line and subscriber lists
+# ====================================================================================================
 import queue
 import time
 from datetime import datetime

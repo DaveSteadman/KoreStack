@@ -1,4 +1,17 @@
-"""Gmail OAuth helpers used by the WebUI."""
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Gmail OAuth helpers used by the KoreComms WebUI.
+#
+# Supports the standard OAuth2 authorisation code flow:
+#   1. build_consent_url() -- constructs the Google consent screen URL; redirect the user here.
+#   2. exchange_code()     -- trades the returned authorisation code for a refresh token.
+#
+# Related modules:
+#   - app/server.py                      -- /connections/{id}/gmail-authorize and /gmail-callback
+#   - app/interfaces/gmail/adapter.py    -- uses the stored refresh token for API polling
+#   - app/crypto.py                      -- refresh token is stored encrypted in the database
+# ====================================================================================================
 from __future__ import annotations
 
 SCOPES = [

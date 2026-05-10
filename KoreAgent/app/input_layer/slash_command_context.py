@@ -1,3 +1,18 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# SlashCommandContext dataclass: shared mutable state threaded through all slash command handlers.
+#
+# Bundles config, output callback, history-clear callback, and optional session management
+# callables so command handlers don't need direct imports from server.py.  This keeps
+# the slash command modules decoupled and independently testable.
+#
+# Related modules:
+#   - input_layer/slash_commands.py                    -- creates and passes context to handlers
+#   - input_layer/routes_sessions.py                   -- constructs the context per-prompt
+#   - input_layer/slash_command_handlers_models.py     -- reads config, calls output
+#   - input_layer/slash_command_handlers_sessions.py   -- calls switch_session, delete_session_state
+# ====================================================================================================
 from dataclasses import dataclass
 from typing import Callable
 

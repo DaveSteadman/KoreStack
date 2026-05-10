@@ -1,4 +1,40 @@
-"""FastAPI application â€” WebUI routes + KoreComms REST API."""
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# FastAPI application — WebUI routes + KoreComms REST API.
+#
+# Serves the messaging management WebUI via Jinja2 templates and exposes a REST API
+# consumed by the KoreAgent poller and external clients.
+#
+# Endpoints:
+#   GET  /status                             health check
+#   POST /api/send                           send a message via a named interface
+#   GET  /                                   dashboard (activity feed)
+#   GET  /compose                            compose form (reply/new message)
+#   POST /compose                            submit a composed message
+#   GET  /connections                        list configured interface connections
+#   POST /connections                        save updated connection list order
+#   GET  /connections/new                    new connection form
+#   POST /connections/new                    create a new interface connection
+#   GET  /connections/{id}                   edit an existing connection
+#   POST /connections/{id}                   update a connection
+#   POST /connections/{id}/delete            delete a connection
+#   GET  /connections/{id}/gmail-authorize   start Gmail OAuth flow
+#   GET  /gmail-callback                     OAuth redirect handler; stores refresh token
+#   GET  /activity                           activity log page
+#   GET  /api/conversation/{id}              conversation record JSON
+#   GET  /api/conversation/{id}/detail       full conversation + messages JSON
+#   GET  /api/events/stream                  SSE: new activity log events
+#   POST /api/conversation/{id}/send         send a reply to a specific conversation
+#   GET  /conversation/{id}                  conversation detail page
+#
+# Related modules:
+#   - app/config.py        -- cfg (host, port, data_dir)
+#   - app/database.py      -- all DB read/write operations
+#   - app/poller.py        -- start() / stop() for the background polling thread
+#   - app/kc_client.py     -- KoreChat API calls
+#   - app/interfaces/      -- adapter registry and type-specific adapters
+# ====================================================================================================
 from __future__ import annotations
 
 import json

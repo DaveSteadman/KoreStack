@@ -1,3 +1,28 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# FastAPI route group for session lifecycle and run-event streaming endpoints.
+#
+# Registered into the FastAPI app by register_session_routes(), called from server.py.
+# All dependencies (config, session load/save, SSE helpers, etc.) are injected at
+# registration time — this module has no direct imports from server.py.
+#
+# Endpoints:
+#   POST /sessions/{id}/prompt   -- submit a prompt; enqueues on task_queue, returns run_id
+#   GET  /sessions/{id}/history  -- full conversation history for a session (from KoreChat)
+#   GET  /runs/{id}/stream       -- SSE: stream events for a specific enqueued run
+#
+# Key internals:
+#   _runtime_config_for_prompt()  -- deep-copies config for non-slash prompts
+#   _slash_output()               -- SSE output callback during slash command execution
+#   kc_test_summary_lines         -- captures [TEST COMPLETE] lines for KC summary writes
+#
+# Related modules:
+#   - input_layer/server.py  -- registers this group; provides all injected dependencies
+#   - orchestration.py       -- orchestrate_prompt, ConversationHistory
+#   - slash_commands.py      -- handle_slash dispatches the command to domain handlers
+#   - scheduler.py           -- task_queue for sequential prompt execution
+# ====================================================================================================
 import copy
 import queue
 import threading
@@ -106,6 +131,9 @@ def register_session_routes(
                 # ------------------------------------------------------------------
                 elif _prompt.startswith("/"):
                     output_lines: list[str] = []
+                    # Collect only [TEST COMPLETE] / [ALL TESTS COMPLETE] lines for KC persistence.
+                    # Full per-turn output is never written to the conversation (too large).
+                    kc_test_summary_lines: list[str] = []
                     streamed_output = False
 
                     def _slash_output(text: str, level: str = "info") -> None:
@@ -135,6 +163,7 @@ def register_session_routes(
 
                         test_complete_match = test_complete_re.match(text)
                         if test_complete_match:
+                            kc_test_summary_lines.append(text)
                             queue_run_event(run_q, {"type": "test_complete", "run_id": run_id, "text": text, "level": level}, priority=True)
                             streamed_output = True
                             return
@@ -164,8 +193,14 @@ def register_session_routes(
                     slash_response = "\n".join(output_lines) if output_lines else ("(done)" if handled else f"Unknown command: {_prompt.split()[0]}")
                     if not streamed_output:
                         queue_run_event(run_q, {"type": "response", "run_id": run_id, "response": slash_response, "tokens": 0, "tps": "0"}, priority=True)
-                    # Record the slash command and its output in the KC conversation thread (background).
-                    threading.Thread(target=kc_save_turn, args=(session_id, _prompt, slash_response), daemon=True).start()
+                    # Write to KoreChat: for test runs save only the compact result summary lines
+                    # (not the full per-turn output which can be hundreds of KB). For all other
+                    # slash commands save the normal response text.
+                    if kc_test_summary_lines:
+                        kc_agent_text = "\n".join(kc_test_summary_lines)
+                        threading.Thread(target=kc_save_turn, args=(session_id, _prompt, kc_agent_text), daemon=True).start()
+                    else:
+                        threading.Thread(target=kc_save_turn, args=(session_id, _prompt, slash_response), daemon=True).start()
                 else:
                     log_path = create_log_file_path(log_dir=log_dir)
                     set_latest_log_path(log_path)

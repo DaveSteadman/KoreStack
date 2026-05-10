@@ -1,3 +1,23 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# In-run context map and compaction engine for the active LLM session.
+#
+# Tracks the per-message context budget so that prompt compaction can be triggered
+# when the conversation grows large.  Maintains last-run state (context map and raw
+# messages) for introspection tools that report what is currently in context.
+#
+# Public API:
+#   store_last_run_state(context_map, messages)  -- snapshot after each LLM round
+#   get_last_context_map()                       -- current context breakdown
+#   get_last_messages()                          -- raw message list
+#   compact_context(context_map, messages, idx)  -- replace one entry with a compact placeholder
+#   assess_compact(context_map, messages)        -- decide whether compaction is needed
+#
+# Related modules:
+#   - tool_loop.py     -- calls assess_compact / store_last_run_state after each round
+#   - orchestration.py -- passes compact_context callback for mid-session compaction
+# ====================================================================================================
 import re
 import threading
 

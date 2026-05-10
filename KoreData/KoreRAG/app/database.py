@@ -1,3 +1,19 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# SQLite database layer for KoreRAG.
+#
+# Schema:
+#   chunks  -- text chunks with FTS5 full-text search; content, title, source, tags, metadata
+#
+# Content is zlib-compressed.  FTS5 index is a contentless table kept in sync on every write.
+# WAL mode enabled.  get_status() returns chunk count and database file size.
+#
+# Related modules:
+#   - app/server.py         -- all read/write and search operations
+#   - CommonCode/compress.py  -- body storage compression
+#   - CommonCode/dbutil.py    -- fts_build_query
+# ====================================================================================================
 import sqlite3
 from contextlib import contextmanager
 from pathlib import Path

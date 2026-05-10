@@ -1,3 +1,21 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Background RSS/Atom feed polling scheduler for KoreFeed.
+#
+# Runs a threading-based scheduler that polls each enabled feed on a configurable interval.
+# Uses feedparser + trafilatura for article parsing.  Enforces age-based retention rules
+# and logs polling activity to the KoreComms activity_log.
+#
+# Public API:
+#   start()   -- launch the background polling thread (called from server.py lifespan)
+#   stop()    -- signal the polling thread to exit
+#
+# Related modules:
+#   - app/feed_manager.py  -- loads feed configuration (URLs, domains, enabled state)
+#   - app/database.py      -- writes parsed articles to SQLite
+#   - app/config.py        -- cfg (poll_interval, retention_days)
+# ====================================================================================================
 import collections
 import queue
 import re

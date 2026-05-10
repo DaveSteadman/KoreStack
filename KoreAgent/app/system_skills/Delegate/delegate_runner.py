@@ -1,3 +1,23 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Delegate sub-run execution engine with depth limiting.
+#
+# Provides run_delegate_subrun() which spawns a nested orchestrator call on behalf of the
+# Delegate skill.  A thread-local stack prevents infinite delegation (MAX_DELEGATE_DEPTH=2).
+# The delegate uses its own session namespace so its scratchpad and context are isolated
+# from the parent run.
+#
+# Public API:
+#   push_delegate_runtime()     -- pushes a new depth entry onto the TLS stack
+#   pop_delegate_runtime()      -- pops after the sub-run completes
+#   run_delegate_subrun(prompt, config, ...)  -- orchestrates the sub-run and returns a result
+#
+# Related modules:
+#   - system_skills/Delegate/skill.py  -- the Delegate skill that calls run_delegate_subrun
+#   - orchestration.py                 -- orchestrate_prompt called by the sub-run
+#   - session_runtime.py               -- provides bind_session for session isolation
+# ====================================================================================================
 import copy
 import threading
 import time

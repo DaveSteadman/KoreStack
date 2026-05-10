@@ -1,17 +1,26 @@
-"""korefile.py — KoreFile virtual file system (SQLite + FTS5).
-
-Folder hierarchy:
-  Adjacency-list model with a materialised path string (e.g. "/Projects/KoreDocs").
-  The root folder (id=1) has path='/' and no parent.
-
-File storage:
-  Content is zlib-compressed.  The FTS5 index is a contentless table kept in
-  sync on every write — same pattern as KoreData/KoreRAG.
-
-Configuration:
-  Call configure(db_path) once at startup (before init_db()).
-  server.py does this at module load time from the KOREDOCS_DB_PATH env var.
-"""
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# KoreFile virtual file system: SQLite adjacency-list + FTS5 for KoreDocs.
+#
+# Folder hierarchy:
+#   Adjacency-list model with a materialised path string (e.g. "/Projects/KoreDocs").
+#   The root folder (id=1) has path='/' and no parent.
+#
+# File storage:
+#   Content is zlib-compressed.  The FTS5 index is a contentless table kept in sync
+#   on every write — same pattern as KoreData/KoreRAG.
+#
+# Public API:
+#   configure(db_path)  -- set the database path (call once at startup before init_db)
+#   init_db()           -- create tables if absent
+#   ConflictError       -- raised on duplicate name within a folder
+#
+# Related modules:
+#   - app/server.py         -- calls configure() and init_db() at startup
+#   - app/_mcp_shared.py    -- folder/file helpers built on top of korefile
+#   - app/koredocs_mcp.py   -- MCP tool layer
+# ====================================================================================================
 
 from __future__ import annotations
 

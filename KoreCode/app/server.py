@@ -1,3 +1,30 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# FastAPI application for KoreCode — an in-browser code and file editor for the KoreStack suite.
+#
+# Serves a single-page app that allows browsing, viewing, and editing files in the workspace.
+# File access is sandboxed to the suite root with configurable ignored directories.
+#
+# Endpoints:
+#   GET /                    serve static web UI (index.html)
+#   GET /suite-config.js     service URL map injected as window.__koreSuiteUrls
+#   GET /ui                  redirect to / (canonical UI entry)
+#   GET /code                redirect to / (legacy alias)
+#   GET /status              health check (service name + version)
+#   GET /api/tree            directory tree JSON (filtered by IGNORED_DIRS)
+#   GET /api/file?path=      read a file (text or binary, up to MAX_READ_BYTES)
+#   PUT /api/file?path=      write a file; validates path stays within workspace root
+#
+# Constants:
+#   IGNORED_DIRS     -- directory names excluded from the tree listing
+#   TEXT_EXTENSIONS  -- file extensions treated as UTF-8 text
+#   MAX_READ_BYTES   -- maximum file size served raw (1.5 MB)
+#
+# Related modules:
+#   - app/config.py       -- load(), cfg (host / port)
+#   - static/             -- bundled single-page web application
+# ====================================================================================================
 from __future__ import annotations
 
 import argparse

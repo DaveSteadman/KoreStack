@@ -1,3 +1,18 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Root launcher for KoreDataGateway.
+#
+# Prints a startup banner showing the gateway URL and all child sub-service URLs
+# (KoreFeed, KoreLibrary, KoreRAG, KoreReference), then starts the gateway FastAPI app
+# under uvicorn.  The gateway spawns and manages child sub-service processes.
+# Default port: 8620.
+#
+# Related modules:
+#   - app/server.py   -- gateway FastAPI app; proxy, MCP federation, child process lifecycle
+#   - app/config.py   -- cfg (host, port, sub-service base URLs)
+#   - CommonCode/     -- shared logutil, config
+# ====================================================================================================
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "CommonCode"))

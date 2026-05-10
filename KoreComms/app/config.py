@@ -1,3 +1,23 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# KoreComms configuration loader.
+#
+# Reads host, port, KoreChat URL, poll intervals, and missing-conversation policy from
+# the suite-level config/default.json + config/local.json.  Exposes a module-level cfg
+# dict so server.py and poller.py can import one name.
+#
+# Defaults:
+#   port:                          8900  (env: KORECOMMS_PORT)
+#   korechat_url:                  http://localhost:8700
+#   poll_interval:                 60  (seconds)
+#   event_poll_interval:           5   (seconds)
+#   missing_kc_conversation_policy: "create"
+#
+# Related modules:
+#   - app/server.py   -- imports cfg
+#   - app/poller.py   -- reads poll_interval from cfg
+# ====================================================================================================
 import json
 import os
 from pathlib import Path

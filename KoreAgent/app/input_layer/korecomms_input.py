@@ -3,7 +3,7 @@
 # ====================================================================================================
 # KoreComms input source for KoreAgent.
 #
-# Runs as a background polling thread (started by api_mode.py) that checks the KoreComms
+# Runs as a background polling thread (started by server_startup.py) that checks the KoreComms
 # service for pending inbound messages. Each message is enqueued into the framework's
 # shared task_queue so it is processed sequentially alongside scheduled tasks and other
 # agent work. The LLM drives the reply - it decides what to say; the framework handles
@@ -26,9 +26,9 @@
 #                        LOG_DIR, load_session, save_session, shutdown_event)
 #
 # Related modules:
-#   - api_mode.py          -- calls start_korecomms_loop alongside _scheduler_loop
+#   - server_startup.py  -- calls start_korecomms_loop alongside _scheduler_loop
 #   - scheduler.py         -- task_queue singleton used for serialisation
-#   - api.py               -- _load_session / _save_session passed in as callables
+#   - server.py            -- _load_session / _save_session passed in as callables
 #   - orchestration.py     -- orchestrate_prompt, OrchestratorConfig
 #   - run_helpers.py       -- make_task_session (ConversationHistory + SessionContext)
 # ====================================================================================================

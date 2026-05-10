@@ -338,7 +338,7 @@ Single JSON payload for orchestration planning.
         "you want a focused, isolated sub-investigation before final synthesis"
       ],
       "functions": [
-        "delegate(prompt: str, instructions: str = \"\", max_iterations: int = 3, output_key: str = \"\", scratchpad_visible_keys: list[str] | None = None, tools_allowlist: list[str] | None = None)"
+        "delegate(prompt: str, instructions: str = \"\", max_iterations: int = 3, output_key: str = \"\", scratchpad_visible_keys: list[str] | None = None, scratchpad_prefix: str | None = None, tools_allowlist: list[str] | None = None)"
       ],
       "inputs": [],
       "outputs": [
@@ -355,6 +355,7 @@ Single JSON payload for orchestration planning.
           "max_iterations": "maximum tool-calling rounds for the child run, 1-8 recommended.",
           "output_key": "scratchpad key name to save the child's final answer under automatically.",
           "scratchpad_visible_keys": "list of scratchpad key names the child can see in its system prompt.",
+          "scratchpad_prefix": "pass all scratchpad keys whose names start with this string to the child. Merged with scratchpad_visible_keys.",
           "tools_allowlist": "list of function names the child is permitted to call."
         }
       }

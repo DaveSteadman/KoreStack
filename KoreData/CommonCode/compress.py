@@ -1,3 +1,17 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Zlib compression helpers for KoreData content storage.
+#
+# Provides compress() and decompress() for storing article/chunk/document content
+# as compressed bytes in SQLite BLOBs.  decompress() handles legacy uncompressed
+# strings transparently so old rows can be read without migration.
+#
+# Related modules:
+#   - KoreReference/app/database.py  -- stores article bodies compressed
+#   - KoreRAG/app/database.py        -- stores chunk content compressed
+#   - KoreDocs/app/korefile.py       -- same pattern for KoreFile content
+# ====================================================================================================
 import zlib
 from typing import Optional
 

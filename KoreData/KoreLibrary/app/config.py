@@ -1,3 +1,15 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# KoreLibrary configuration loader.
+#
+# Reads host, port, and data_dir from the suite-level config under the [korelibrary]
+# section.  Default port: 8802  (gateway 8620 + offset 2).
+#
+# Related modules:
+#   - KoreLibrary/main.py      -- imports cfg at startup
+#   - KoreLibrary/app/server.py -- imports cfg for uvicorn bind and data_dir
+# ====================================================================================================
 from pathlib import Path
 
 from config import get_suite_datauser_dir, load_config

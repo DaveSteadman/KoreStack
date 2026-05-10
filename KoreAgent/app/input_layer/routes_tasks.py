@@ -1,3 +1,23 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# FastAPI route group for task schedule and queue endpoints.
+#
+# Registered into the FastAPI app by register_task_routes(), called from server.py.
+#
+# Endpoints:
+#   GET /tasks     -- enabled scheduled tasks with last-run and computed next-fire times
+#   GET /queue     -- current task queue state (pending count and preview)
+#   GET /timeline  -- 60-slot minute-resolution timeline centred on now
+#
+# Helper functions:
+#   _next_fire(task, last, now)                   -- ISO next-fire for interval/daily tasks
+#   _task_at_slot(slot, now, enabled_tasks, last) -- which task fires at a given slot
+#
+# Related modules:
+#   - input_layer/server.py  -- registers this route group; provides _enabled_tasks / _last_run
+#   - scheduler.py           -- task_queue, is_task_due
+# ====================================================================================================
 from datetime import datetime
 from datetime import timedelta
 

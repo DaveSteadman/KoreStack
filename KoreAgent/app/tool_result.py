@@ -1,3 +1,16 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# ToolCallResult dataclass: the value returned by skill_executor.execute_tool_call().
+#
+# Bundles tool name, function, module path, arguments, result, status, and error message
+# into one object with dict-compatible .get() / __getitem__ access so callers can treat
+# results as either an object or a dict.  .display_name() produces a readable log label.
+#
+# Related modules:
+#   - skill_executor.py  -- constructs ToolCallResult on every skill invocation
+#   - tool_loop.py       -- consumes ToolCallResult to build LLM tool-result messages
+# ====================================================================================================
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any

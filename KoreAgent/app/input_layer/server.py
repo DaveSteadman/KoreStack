@@ -4,39 +4,46 @@
 # FastAPI application exposing the KoreAgent engine as a REST + SSE service.
 #
 # Endpoints:
-#   GET  /                             serve static web UI (index.html)
-#   GET  /version                      return framework version string
-#   GET  /status/ollama                current 'ollama ps' model status
-#   GET  /settings/sandbox             return current sandbox enabled state
-#   POST /settings/sandbox?enabled=    set sandbox enabled state
-#   GET  /settings/webskills           return current web skills enabled state
-#   POST /settings/webskills?enabled=  set web skills enabled state
-#   GET  /completions                  tab-completion candidates (sessions, test files, tasks, models)
-#   GET  /tasks                        enabled scheduled tasks with last-run and next-fire times
-#   GET  /timeline                     minute-resolution task timeline centred on now
-#   GET  /queue                        current task queue state
-#   GET  /sessions/{id}/input-history  last 20 input history entries for the session
-#   POST /sessions/{id}/input-history  append an entry to session input history
-#   GET  /sessions/{id}/history        full conversation history for a session
-#   POST /sessions/{id}/prompt         submit a new prompt (enqueues on task_queue)
-#   GET  /logs                         list all log directories and files
-#   GET  /logs/latest                  path of the most recently written log file
-#   GET  /logs/stream                  SSE: tail all new log lines across all log files
-#   GET  /logs/file?path=<path>        SSE: tail a specific log file (used for per-run view)
-#   GET  /logs/{date}/{filename}       serve a specific log file
-#   GET  /runs/{id}/stream             SSE: stream events for a specific enqueued run
+#   GET  /                              serve static web UI (index.html)
+#   GET  /suite-config.js               service URL map injected as window.__koreSuiteUrls
+#   GET  /ui-elements/assets/{path}     shared UIElements static assets
+#   GET  /version                       return framework version string
+#   GET  /status/ollama                 current 'ollama ps' model status
+#   GET  /settings/sandbox              return current sandbox enabled state
+#   POST /settings/sandbox?enabled=     set sandbox enabled state
+#   GET  /settings/webskills            return current web skills enabled state
+#   POST /settings/webskills?enabled=   set web skills enabled state
+#   GET  /settings/llmdirect            LLM Direct mode state (bypass orchestration, tools, slash)
+#   POST /settings/llmdirect?enabled=   set LLM Direct mode state
+#   GET  /completions                   tab-completion candidates (sessions, test files, tasks, models)
+#   GET  /tasks                         enabled scheduled tasks with last-run and next-fire times
+#   GET  /timeline                      minute-resolution task timeline centred on now
+#   GET  /queue                         current task queue state
+#   GET  /sessions/{id}/input-history   last 20 input history entries for the session
+#   POST /sessions/{id}/input-history   append an entry to session input history
+#   GET  /sessions/{id}/history         full conversation history for a session
+#   POST /sessions/{id}/prompt          submit a new prompt (enqueues on task_queue)
+#   GET  /logs                          list all log directories and files
+#   GET  /logs/latest                   path of the most recently written log file
+#   GET  /logs/stream                   SSE: tail all new log lines across all log files
+#   GET  /logs/file?path=<path>         SSE: tail a specific log file (used for per-run view)
+#   GET  /logs/{date}/{filename}        serve a specific log file
+#   GET  /runs/{id}/stream              SSE: stream events for a specific enqueued run
+#   POST /kc/send                       append inbound message to KoreChat conversation
+#   GET  /kc/conversations/{id}/messages  proxy KC message list to browser
+#   GET  /kc/conversations/{id}           proxy KC conversation record to browser
 #
 # SSE events are plain text/event-stream with a "data: <json>\n\n" envelope.
 # CORS is restricted to localhost origins only - requests from external sites are blocked.
 #
-# Instantiated once in modes/api_mode.py, then served by uvicorn.
+# Instantiated once in server_startup.py, then served by uvicorn.
 #
 # Related modules:
-#   - modes/api_mode.py       -- constructs and starts this app
+#   - server_startup.py       -- constructs and starts this app
 #   - scheduler.py            -- task_queue singleton, load_schedules_dir, is_task_due
 #   - orchestration.py        -- orchestrate_prompt, OrchestratorConfig, ConversationHistory
 #   - runtime_logger.py       -- SessionLogger, create_log_file_path
-#   - llm_client.py        -- get_ollama_ps_rows, get_active_host
+#   - llm_client.py           -- get_ollama_ps_rows, get_active_host
 #   - slash_commands.py       -- SlashCommandContext, handle; /session commands manage named sessions
 # ====================================================================================================
 
@@ -93,10 +100,10 @@ from orchestration import set_web_skills_enabled
 from scratchpad import get_store as get_scratch_store
 from scratchpad import scratch_clear
 from scratchpad import scratch_save as scratch_restore_key
-from input_layer.api_routes_logs import register_log_routes
-from input_layer.api_routes_sessions import register_session_routes
-from input_layer.api_routes_status import register_status_routes
-from input_layer.api_routes_tasks import register_task_routes
+from input_layer.routes_logs import register_log_routes
+from input_layer.routes_sessions import register_session_routes
+from input_layer.routes_status import register_status_routes
+from input_layer.routes_tasks import register_task_routes
 from utils.runtime_logger import SessionLogger
 from utils.runtime_logger import create_log_file_path
 from scheduler.scheduler import is_task_due
@@ -137,7 +144,7 @@ _LOG_TAIL_LINES      = 200      # how many historic lines to send on first conne
 # ====================================================================================================
 # MARK: GLOBAL STATE
 # ====================================================================================================
-# These are set once by api_mode.py before uvicorn starts.
+# These are set once by server_startup.py before uvicorn starts.
 _config:         OrchestratorConfig | None = None
 _last_run:       dict[str, datetime | None] = {}
 _enabled_tasks:  list[dict] = []
@@ -161,7 +168,7 @@ def setup(
     last_run: dict[str, datetime | None],
     shutdown_event: threading.Event,
 ) -> None:
-    """Called once by api_mode.py before serving. Stores shared state."""
+    """Called once by server_startup.py before serving. Stores shared state."""
     global _config, _enabled_tasks, _last_run, _shutdown_event
     _config         = config
     _enabled_tasks  = enabled_tasks

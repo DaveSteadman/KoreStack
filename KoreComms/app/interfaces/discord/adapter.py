@@ -1,19 +1,27 @@
-"""Discord interface adapter.
-
-Authentication:
-  Bot token stored encrypted in interfaces.config_json under the key
-  'bot_token'.
-
-Polling:
-  Uses the Discord REST API to poll configured channel IDs. A per-channel
-  last-seen message watermark is stored in config_json under
-  'last_seen_message_ids' so the first poll can establish a baseline without
-  importing existing channel history.
-
-Routing:
-  Each Discord channel or thread maps to one KoreComms conversation via its
-  channel ID. Replies are posted back into the same channel/thread.
-"""
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Discord interface adapter for KoreComms.
+#
+# Authentication:
+#   Bot token stored encrypted in interfaces.config_json under the key 'bot_token'.
+#
+# Polling:
+#   Uses the Discord REST API to poll configured channel IDs.  A per-channel
+#   last-seen message watermark is stored in config_json under
+#   'last_seen_message_ids' so the first poll establishes a baseline without
+#   importing existing channel history.
+#
+# Routing:
+#   Each Discord channel or thread maps to one KoreComms conversation via its
+#   channel ID.  Replies are posted back into the same channel/thread.
+#
+# Related modules:
+#   - app/interfaces/common/base.py     -- BaseInterface ABC
+#   - app/interfaces/common/registry.py -- registered as type "discord"
+#   - app/crypto.py                     -- encrypt/decrypt bot token
+#   - app/database.py                   -- conversation routing records
+# ====================================================================================================
 from __future__ import annotations
 
 import json

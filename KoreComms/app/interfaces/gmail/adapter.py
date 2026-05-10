@@ -1,16 +1,25 @@
-"""Gmail interface adapter.
-
-Authentication:
-  OAuth2 with a stored refresh token.  The refresh token and client
-  credentials are stored encrypted in interfaces.config_json under the
-  keys 'client_id', 'client_secret', and 'refresh_token'.
-
-Polling:
-  Uses the ``after:`` Gmail search operator anchored to the timestamp of
-  the last successful poll (stored as 'last_poll_epoch' in config_json).
-  Messages are de-duplicated via their Gmail message ID stored in
-  messages.external_message_id.
-"""
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Gmail interface adapter for KoreComms.
+#
+# Authentication:
+#   OAuth2 with a stored refresh token.  The refresh token and client credentials are
+#   stored encrypted in interfaces.config_json under the keys 'client_id', 'client_secret',
+#   and 'refresh_token'.
+#
+# Polling:
+#   Uses the Gmail "after:" search operator anchored to the timestamp of the last successful
+#   poll (stored as 'last_poll_epoch' in config_json).  Messages are de-duplicated via their
+#   Gmail message ID stored in external_messages.external_message_id.
+#
+# Related modules:
+#   - app/interfaces/common/base.py     -- BaseInterface ABC
+#   - app/interfaces/common/registry.py -- registered as type "gmail"
+#   - app/interfaces/gmail/oauth.py     -- OAuth helpers for the WebUI authorization flow
+#   - app/crypto.py                     -- encrypt/decrypt OAuth credentials
+#   - app/database.py                   -- conversation routing and dedup records
+# ====================================================================================================
 from __future__ import annotations
 
 import base64

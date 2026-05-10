@@ -1,10 +1,21 @@
-"""Abstract base class for all KoreComms interface adapters.
-
-To add a new interface type:
-  1. Create a package under app/interfaces/ for that type.
-  2. Subclass BaseInterface in that package.
-  3. Register the type string in app/interfaces/common/registry.py.
-"""
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Abstract base class for all KoreComms interface adapters.
+#
+# To add a new interface type:
+#   1. Create a package under app/interfaces/<type>/.
+#   2. Subclass BaseInterface and implement poll() and route_reply().
+#   3. Register the type string in app/interfaces/common/registry.py.
+#
+# Abstract methods:
+#   poll(db_path, kc_base_url) -> None     -- check for new inbound messages
+#   route_reply(conversation, message_text) -> None  -- send an outbound reply
+#
+# Related modules:
+#   - app/interfaces/common/registry.py    -- maps type strings to adapter classes
+#   - app/poller.py                        -- calls poll() and route_reply() in the loop
+# ====================================================================================================
 from __future__ import annotations
 
 from abc import ABC, abstractmethod

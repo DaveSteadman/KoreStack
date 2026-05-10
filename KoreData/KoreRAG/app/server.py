@@ -1,3 +1,23 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# FastAPI application for KoreRAG — a retrieval-augmented generation chunk store.
+#
+# Provides REST API for storing and searching text chunks (documents, notes, web pages)
+# with FTS5 full-text search and optional metadata tagging.
+#
+# Key endpoints:
+#   GET  /api/chunks           -- paginated chunk listing
+#   POST /api/chunks           -- add or update a chunk
+#   DELETE /api/chunks/{id}    -- remove a chunk
+#   GET  /api/search?q=        -- full-text search with snippet highlights
+#   GET  /api/status           -- chunk count and database size
+#
+# Related modules:
+#   - app/database.py    -- all DB operations; get_status()
+#   - app/config.py      -- cfg (host, port, data_dir)
+#   - CommonCode/dbutil.py  -- fts_build_query
+# ====================================================================================================
 from contextlib import asynccontextmanager
 from typing import Optional
 

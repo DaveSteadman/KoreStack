@@ -1,4 +1,18 @@
-"""Read KoreDocs port/host from the central suite config."""
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# KoreDocs configuration loader.
+#
+# Reads host and port from the suite-level config/default.json + config/local.json.
+# Exposes a module-level cfg dict so server.py can import one name.
+#
+# Defaults:
+#   port: 8615   (env: KOREDOCS_PORT)
+#   host: 0.0.0.0
+#
+# Related modules:
+#   - app/server.py  -- imports cfg, load()
+# ====================================================================================================
 from __future__ import annotations
 
 import json

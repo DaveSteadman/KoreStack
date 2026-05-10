@@ -1,12 +1,26 @@
-"""MCP tools for KoreDocs — assembler module.
-
-Defines the shared ``mcp`` instance, cross-type public helpers, and
-cross-type MCP tools, then imports the per-document-type sub-modules
-(koredoc_mcp, koresheet_mcp, kodiag_mcp) to register their tools.
-
-``server.py`` imports ``mcp``, ``FORMAT_INFO``, and the sheet functions
-from this module; all of those are re-exported at the bottom.
-"""
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# MCP tools for KoreDocs — assembler module.
+#
+# Defines the shared mcp instance (re-exported from _mcp_instance), cross-type public
+# helpers, and cross-type MCP tools, then imports the per-document-type sub-modules
+# (koredoc_mcp, koresheet_mcp, kodiag_mcp) to register their tools.
+#
+# Cross-type MCP tools:
+#   list_supported_types()      -- list all document types KoreDocs can create
+#   search_files(query, ...)    -- full-text search across all document types
+#
+# server.py imports mcp, FORMAT_INFO, and the sheet functions from this module.
+#
+# Related modules:
+#   - app/_mcp_instance.py  -- FastMCP singleton
+#   - app/_mcp_shared.py    -- shared folder/file helpers
+#   - app/koredoc_mcp.py    -- .koredoc document tools
+#   - app/koresheet_mcp.py  -- .koresheet spreadsheet tools
+#   - app/kodiag_mcp.py     -- .kodiag diagram tools
+#   - app/server.py         -- mounts mcp into the FastAPI app
+# ====================================================================================================
 
 from __future__ import annotations
 

@@ -11,11 +11,11 @@ without polluting the parent context with intermediate tool chatter.
 ## Interface
 - Module: `KoreAgent/app/system_skills/Delegate/delegate_skill.py`
 - Functions:
-  - `delegate(prompt: str, instructions: str = "", max_iterations: int = 3, output_key: str = "", scratchpad_visible_keys: list[str] | None = None, tools_allowlist: list[str] | None = None)`
+  - `delegate(prompt: str, instructions: str = "", max_iterations: int = 3, output_key: str = "", scratchpad_visible_keys: list[str] | None = None, scratchpad_prefix: str | None = None, tools_allowlist: list[str] | None = None)`
 
 ## Parameters
 
-### `delegate(prompt, instructions = "", max_iterations = 3, output_key = "", scratchpad_visible_keys = None, tools_allowlist = None)`
+### `delegate(prompt, instructions = "", max_iterations = 3, output_key = "", scratchpad_visible_keys = None, scratchpad_prefix = None, tools_allowlist = None)`
 - `prompt` *(required)* - the child task to execute. Must be a complete, self-contained question or instruction.
 - `instructions` *(optional)* - extra steering prepended to the child prompt, e.g. "research thoroughly and return a concise answer with evidence".
 - `max_iterations` *(optional, default 3)* - maximum tool-calling rounds for the child run, 1-8 recommended.
@@ -26,6 +26,10 @@ without polluting the parent context with intermediate tool chatter.
   When omitted (default), the child sees **no** parent scratchpad keys — this prevents silent leakage of
   all auto-saved `_tc_*` noise into the child context.
   Pass an explicit list to hand the child exactly the data it needs: e.g. `["search_hits", "page_draft"]`.
+- `scratchpad_prefix` *(optional)* - pass all scratchpad keys whose names start with this string to the child.
+  Complements `scratchpad_visible_keys` — both lists are merged (deduped). Useful when auto-saved keys follow
+  a naming convention: e.g. `scratchpad_prefix="turn_3_"` passes every key saved during turn 3, or
+  `scratchpad_prefix="_tc_r2"` passes all tool-call auto-saves from round 2 of the parent run.
 - `tools_allowlist` *(optional)* - list of function names the child is permitted to call.
   When provided, the child's tool set is restricted to only skills that expose those functions. Use to create
   focused sub-loops: e.g. `["fetch_page_text", "scratch_save"]` for a child whose only job is to fetch and

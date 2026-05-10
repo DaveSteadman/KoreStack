@@ -1,17 +1,30 @@
-"""server.py — KoreDocs FastAPI monolith.
-
-Serves all front ends and provides the file API.
-
-Run with:
-    python main.py                  # web UI + MCP SSE/HTTP (port from config/local.json docs entry)
-    python main.py --mcp-stdio     # web UI on configured port + MCP on stdin/stdout
-    python main.py --port 8080     # override port at runtime
-
-For development (hot-reload, web UI only):
-    uvicorn app.server:app --reload --port 8615
-
-Ctrl+C always gives a clean unified shutdown in both modes.
-"""
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# FastAPI monolith for KoreDocs — document management, web UI, and MCP server.
+#
+# Serves all front ends (document editor, sheet editor, diagram editor, KoreFile browser)
+# and exposes the file API used by the MCP tool layer.  Supports two startup modes:
+#   web UI + MCP SSE/HTTP  -- default
+#   web UI + MCP stdio     -- python main.py --mcp-stdio
+#
+# Run with:
+#   python main.py                 # MCP SSE/HTTP + web UI (port from config)
+#   python main.py --mcp-stdio    # MCP stdio + web UI
+#   python main.py --port 8080    # override port at runtime
+#
+# Constants:
+#   DATA_DIR   -- KoreFiles data directory
+#   DB_PATH    -- SQLite database path (passed to korefile.configure)
+#   LOG_PATH   -- log file path
+#   API_TOKEN  -- optional bearer token for MCP endpoint authentication
+#
+# Related modules:
+#   - app/korefile.py      -- KoreFile virtual file system (SQLite + FTS5)
+#   - app/koredocs_mcp.py  -- MCP tool assembler (registers all tool handlers)
+#   - app/config.py        -- cfg (host, port)
+#   - static/              -- bundled single-page web application
+# ====================================================================================================
 
 from __future__ import annotations
 

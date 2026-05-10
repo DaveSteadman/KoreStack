@@ -1,3 +1,20 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# KoreDataGateway configuration loader.
+#
+# Reads host, port from the suite-level config under the [data] section and computes
+# child sub-service base URLs from _DATA_SUBSERVICE_OFFSETS:
+#   KoreFeed      -- base + 1 (8621)
+#   KoreLibrary   -- base + 2 (8622)
+#   KoreRAG       -- base + 3 (8623)
+#   KoreReference -- base + 4 (8624)
+# Default gateway port: 8620.
+#
+# Related modules:
+#   - KoreDataGateway/main.py    -- imports cfg at startup
+#   - KoreDataGateway/app/server.py -- imports cfg and sub-service URLs
+# ====================================================================================================
 import os
 
 from config import load_config, _DATA_SUBSERVICE_OFFSETS

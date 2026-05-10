@@ -1,3 +1,23 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Slash command handlers for scheduled task management.
+#
+# Commands handled:
+#   /tasks              -- list all scheduled tasks with status and schedule
+#   /tasks add          -- create a new task schedule entry
+#   /tasks enable <n>   -- enable a task by name
+#   /tasks disable <n>  -- disable a task by name
+#   /tasks delete <n>   -- remove a task schedule entry
+#   /tasks edit <n>     -- open a task schedule in an editor
+#
+# Registered in slash_commands.py under the /tasks command.
+#
+# Related modules:
+#   - input_layer/slash_commands.py         -- registers all handlers
+#   - input_layer/slash_command_context.py  -- SlashCommandContext
+#   - utils/workspace_utils.py              -- get_schedules_dir
+# ====================================================================================================
 import json
 import re
 from typing import Callable

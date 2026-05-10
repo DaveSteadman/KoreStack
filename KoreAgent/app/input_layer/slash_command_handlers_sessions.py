@@ -1,3 +1,23 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Slash command handlers for session and conversation management.
+#
+# Commands handled:
+#   /session list          -- list all KoreChat webchat conversations
+#   /session switch <name> -- switch to a named conversation (creating if absent)
+#   /session rename <name> -- rename the current conversation in KoreChat
+#   /session delete        -- delete the current conversation and clear local state
+#   /newchat [name]        -- start a fresh conversation (with optional display name)
+#   /compress              -- compress old conversation history via LLM summarisation
+#
+# Talks to KoreChat via stdlib urllib (no extra dependencies).
+#
+# Related modules:
+#   - input_layer/slash_commands.py         -- registers all handlers
+#   - input_layer/slash_command_context.py  -- SlashCommandContext with session callbacks
+#   - koreconv_client.py                    -- KoreChat base URL
+# ====================================================================================================
 import json
 import time
 import urllib.error

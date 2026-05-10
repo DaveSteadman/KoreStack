@@ -6,11 +6,11 @@
 # Starts the FastAPI server with the web UI and background scheduler.
 #
 # Core orchestration pipeline lives in orchestration.py.
-# API/web mode lives in modes/api_mode.py.
+# Server startup lives in input_layer/server_startup.py.
 #
 # Related modules:
 #   - orchestration.py          -- OrchestratorConfig, orchestrate_prompt
-#   - modes/api_mode.py         -- run_api_mode (FastAPI + uvicorn + scheduler)
+#   - input_layer/server_startup.py -- run_api_mode (FastAPI + uvicorn + scheduler)
 #   - llm_client.py              -- server management and LLM calls
 #   - skills_catalog_builder.py -- load_skills_payload, tool definitions
 #   - utils/runtime_logger.py   -- SessionLogger, create_log_file_path
@@ -178,7 +178,7 @@ _maybe_reexec_into_project_venv()
 
 import llm_client as llm_client
 import koreconv_client as _koreconv_client
-from input_layer.api_mode import run_api_mode
+from input_layer.server_startup import run_api_mode
 from llm_client import format_running_model_report
 from llm_client import get_llm_timeout
 from llm_client import register_llm_call_logger

@@ -12,7 +12,7 @@
 #
 # Related modules:
 #   - main.py                    -- creates config, dispatches modes
-#   - modes/api_mode.py         -- run_api_mode
+#   - input_layer/server_startup.py -- run_api_mode
 #   - skill_executor.py          -- execute_tool_call (executes individual skill calls)
 #   - skills_catalog_builder.py  -- build_tool_definitions (generates JSON Schema tool specs)
 #   - llm_client.py              -- call_llm_chat (/v1/chat/completions with tools support)
@@ -433,6 +433,7 @@ def orchestrate_prompt(
     conversation_summary: str | None = None,
     on_tool_round_complete: object | None = None,
     bound_session_id: str | None = None,
+    token_pressure: float = 0.0,
 ) -> tuple[str, int, int, bool, float]:
     """Run the tool-calling pipeline for one prompt.
 
@@ -499,6 +500,8 @@ def orchestrate_prompt(
             sandbox_enabled=_SANDBOX_ENABLED,
             scratchpad_visible_keys=scratchpad_visible_keys,
             conversation_summary=conversation_summary,
+            user_prompt=user_prompt,
+            token_pressure=token_pressure,
         )
 
         messages: list[dict] = [{"role": "system", "content": system_message}]

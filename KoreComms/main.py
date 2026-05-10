@@ -1,11 +1,18 @@
-"""KoreComms entry point.
-
-Run with:
-    python main.py
-
-Or via uvicorn directly:
-    uvicorn app.server:app --host 0.0.0.0 --port 8900
-"""
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Root launcher for KoreComms — the external messaging bridge for KoreStack.
+#
+# Loads configuration, prints a startup banner showing the WebUI port, and starts
+# the FastAPI application under uvicorn.  Default port: 8900 (env: KORECOMMS_PORT).
+#
+# Run with:  python ./main.py
+#
+# Related modules:
+#   - app/server.py   -- FastAPI application and all routes
+#   - app/config.py   -- configuration loading
+#   - app/poller.py   -- starts the background polling thread
+# ====================================================================================================
 from __future__ import annotations
 
 from datetime import datetime

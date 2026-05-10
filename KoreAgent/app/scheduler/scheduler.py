@@ -24,10 +24,10 @@
 # Queue state is persisted to datacontrol/task_queue.json on every enqueue/dequeue so the
 # web UI and other tooling can observe pending and active tasks.
 #
-# The scheduler loop lives in modes/api_mode.py.
+# The scheduler loop lives in input_layer/server_startup.py.
 #
 # Related modules:
-#   - modes/api_mode.py -- uses task_queue, load_schedules_dir, is_task_due
+#   - input_layer/server_startup.py -- uses task_queue, load_schedules_dir, is_task_due
 # ====================================================================================================
 
 

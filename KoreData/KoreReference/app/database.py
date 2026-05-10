@@ -1,3 +1,21 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# SQLite database layer for KoreReference.
+#
+# Schema:
+#   articles  -- wiki article content with zlib-compressed body, FTS5 full-text index,
+#                backlink resolution, and extracted table data
+#
+# FTS5 content is kept in sync with every write.  WAL mode is enabled.
+# Body content is compressed via CommonCode/compress.py.
+#
+# Related modules:
+#   - app/server.py                  -- all read/write operations
+#   - app/importers/kiwix.py         -- bulk article import
+#   - CommonCode/compress.py         -- body storage compression
+#   - CommonCode/dbutil.py           -- fts_build_query
+# ====================================================================================================
 import json
 import re
 import sqlite3

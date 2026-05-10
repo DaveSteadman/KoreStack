@@ -1,15 +1,22 @@
-"""SQLite data-access layer for KoreComms.
-
-Schema:
-  interfaces        - external channel configurations (OAuth tokens, etc.)
-  conversations     - routing table: links an interface to a KoreChat ID
-  external_messages - thin deduplication and reply-anchoring records
-  activity_log      - operational audit trail
-
-KoreComms does NOT store message content; that lives in KoreChat.
-Each public function creates its own connection so it is safe to call from
-any thread. WAL mode is enabled for better read concurrency.
-"""
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# SQLite data-access layer for KoreComms.
+#
+# Schema:
+#   interfaces        -- external channel configurations (type, name, enabled, config_json)
+#   conversations     -- routing table linking an interface + external thread to a KoreChat ID
+#   external_messages -- thin deduplication and reply-anchoring records
+#   activity_log      -- operational audit trail
+#
+# KoreComms does NOT store message content; that lives in KoreChat.
+# Each public function creates its own connection so it is safe to call from any thread.
+# WAL mode is enabled for better read concurrency.
+#
+# Related modules:
+#   - app/server.py  -- read/write operations via this module
+#   - app/poller.py  -- read/write during inbound/outbound polling
+# ====================================================================================================
 from __future__ import annotations
 
 import json
