@@ -12,14 +12,14 @@
 # ====================================================================================================
 from pathlib import Path
 
-from config import get_suite_datauser_dir, load_config
+from config import get_suite_datacontrol_dir, load_config
 
 _SECTION = "korelibrary"
 
 _DEFAULTS = {
     "port": 8802,
     "host": "0.0.0.0",
-    "data_dir": str(get_suite_datauser_dir() / "KoreData" / "Library"),
+    "data_dir": str(get_suite_datacontrol_dir() / "koredata" / "Library"),
     "log_level": "info",
 }
 

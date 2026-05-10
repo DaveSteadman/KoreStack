@@ -70,5 +70,23 @@ To restart or stop individual services without taking down the whole suite, use 
 - `KoreComms/` — external messaging
 - `KoreStack/` — suite landing page and control plane
 - `config/` — suite configuration (`default.json` + optional `local.json` override)
-- `datacontrol/` — logs, schedules, task queues, and test output
-- `datauser/` — your working files and content
+- `datacontrol/` — service-owned, structured runtime data (see below)
+- `datauser/` — unstructured user files; freely navigable by the agent's file access skill
+
+## Data Layout
+
+KoreStack separates **structured service data** from **unstructured user files**.
+
+**`datacontrol/`** is owned by the services. Each service has a named subfolder for its databases and runtime state:
+
+| Folder | Owner | Contents |
+|---|---|---|
+| `datacontrol/koreagent/` | KoreAgent | task queue state |
+| `datacontrol/korechat/` | KoreChat | conversation database and logs |
+| `datacontrol/korecomms/` | KoreComms | messaging database and interface state |
+| `datacontrol/koredata/` | KoreData | sub-service databases (Feeds, Library, RAG, Reference) |
+| `datacontrol/koredocs/` | KoreDocs | document index database |
+| `datacontrol/logs/` | All services | rotating log files, one subfolder per service |
+| `datacontrol/schedules/` | KoreAgent | task schedule definitions |
+
+**`datauser/`** is unstructured and user-facing. It is the agent's writable workspace — notes, documents, spreadsheets, exports, and any files created or managed during a session. No service owns a specific subfolder here.

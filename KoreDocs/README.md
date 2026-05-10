@@ -33,10 +33,10 @@ Copy `.env.example` to `.env` and edit as needed:
 KOREDOCS_DATA_DIR=C:\Util\Data\KoreFiles
 
 # Path to the KoreFile SQLite database (Phase 2 virtual file system)
-KOREDOCS_DB_PATH=C:\Util\Data\KoreFiles\korefile.db
+KOREDOCS_DB_PATH=C:\Util\Data\datacontrol\korefile\korefile.db
 ```
 
-Both settings have sensible defaults (`./data` and `./data/korefile.db`) if you skip
+Both settings have sensible defaults (`datacontrol/korefile` and `datacontrol/korefile/korefile.db`) if you skip
 this step.
 
 ### 3. Start

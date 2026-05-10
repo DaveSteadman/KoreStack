@@ -122,8 +122,8 @@ class RegressionTests(unittest.TestCase):
     def test_workspace_utils_reads_folder_overrides_from_bootstrap_defaults(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_root = Path(tmp)
-            # Bootstrap file is llm_config.json (returned by get_bootstrap_defaults_file)
-            bootstrap = tmp_root / "llm_config.json"
+            # Bootstrap file is config/llm_config.json (returned by get_bootstrap_defaults_file)
+            bootstrap = tmp_root / "config" / "llm_config.json"
             bootstrap.parent.mkdir(parents=True, exist_ok=True)
             bootstrap.write_text(
                 '{\n'

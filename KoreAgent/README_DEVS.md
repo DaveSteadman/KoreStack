@@ -440,7 +440,7 @@ Everything mutable lives under the configured control-data root. In this checkou
 |---|---|
 | `default.json` | persisted startup defaults |
 | `datacontrol/memory_store.json` | durable memory facts |
-| `datacontrol/conversations/korechat.db` | canonical persisted conversation state for webchat and external channels |
+| `datacontrol/korechat/korechat.db` | canonical persisted conversation state for webchat and external channels |
 | `datacontrol/logs/YYYY-MM-DD/` | runtime evidence logs |
 | `datacontrol/schedules/` | scheduled tasks |
 | `datacontrol/test_prompts/` | prompt suites |

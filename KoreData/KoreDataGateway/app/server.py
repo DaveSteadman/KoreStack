@@ -41,14 +41,14 @@ from mcp.server.fastmcp import FastMCP
 from pydantic import BaseModel, Field
 
 from app.config import cfg
-from config import get_suite_datauser_dir
+from config import get_suite_datacontrol_dir
 
 # ---------------------------------------------------------------------------
 # Child process management
 # ---------------------------------------------------------------------------
 
 _BASE = Path(__file__).parent.parent.parent  # KoreData/ root
-_DATA = get_suite_datauser_dir() / "KoreData"
+_DATA = get_suite_datacontrol_dir() / "koredata"
 
 _SERVICES = [
     (_BASE / "KoreFeed",      "KoreFeed",      _DATA / "Feeds"),

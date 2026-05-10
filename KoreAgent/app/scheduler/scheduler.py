@@ -21,7 +21,7 @@
 #   interval   fires every N minutes  {"type": "interval", "minutes": N}
 #   daily      fires once per day at a fixed wall-clock time  {"type": "daily", "time": "HH:MM"}
 #
-# Queue state is persisted to datacontrol/task_queue.json on every enqueue/dequeue so the
+# Queue state is persisted to datacontrol/koreagent/task_queue.json on every enqueue/dequeue so the
 # web UI and other tooling can observe pending and active tasks.
 #
 # The scheduler loop lives in input_layer/server_startup.py.
@@ -175,7 +175,7 @@ class TaskQueue:
     def _delete_state(self) -> None:
         try:
             from utils.workspace_utils import get_controldata_dir
-            path = get_controldata_dir() / "task_queue.json"
+            path = get_controldata_dir() / "koreagent" / "task_queue.json"
             path.unlink(missing_ok=True)
         except Exception as exc:
             try:
@@ -188,7 +188,8 @@ class TaskQueue:
     def _write_state(self) -> None:
         try:
             from utils.workspace_utils import get_controldata_dir
-            path = get_controldata_dir() / "task_queue.json"
+            path = get_controldata_dir() / "koreagent" / "task_queue.json"
+            path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(
                 json.dumps(self.get_state(), indent=2),
                 encoding="utf-8",

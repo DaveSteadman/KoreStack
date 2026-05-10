@@ -63,7 +63,7 @@ code/KoreAgent/input_layer/
 
 KC uses SQLite with WAL mode. The database file is created at startup at `data_dir/korechat.db`.
 
-Default `data_dir` is `<repo_root>/datacontrol/conversations/`. This is configured in `config/default.json` or falls back to the built-in default in `app/config.py`.
+Default `data_dir` is `<repo_root>/datacontrol/korechat/`. This is configured in `config/default.json` or falls back to the built-in default in `app/config.py`.
 
 ### conversations
 
@@ -389,7 +389,7 @@ Config overrides go in `../KoreChat/config/default.json`. All keys are optional.
     "port": 8700,
     "host": "0.0.0.0",
     "log_level": "info",
-    "data_dir": "../../datacontrol/conversations"
+    "data_dir": "../../datacontrol/korechat"
 }
 ```
 

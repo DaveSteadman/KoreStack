@@ -77,7 +77,7 @@ DATA_DIR = Path(os.environ.get('KOREDOCS_DATA_DIR', str(SUITE_DATAUSER / 'KoreFi
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 DB_PATH  = Path(os.environ.get('KOREDOCS_DB_PATH',
-                                str(DATA_DIR / 'korefile.db')))
+                                str(SUITE_DATACONTROL / 'koredocs' / 'korefile.db')))
 LOG_PATH = SUITE_DATACONTROL / 'logs' / 'koredocs' / 'koredocs.log'
 LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
 

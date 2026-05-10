@@ -93,7 +93,7 @@ The watched flat-folder path and database path are configured via `.env`:
 
 ```
 KOREDOCS_DATA_DIR=C:\Util\Data\KoreFiles
-KOREDOCS_DB_PATH=C:\Util\Data\KoreFiles\korefile.db
+KOREDOCS_DB_PATH=C:\Util\Data\datacontrol\korefile\korefile.db
 ```
 
 ### 3.2 Front Ends

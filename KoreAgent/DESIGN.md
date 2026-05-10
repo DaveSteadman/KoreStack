@@ -208,7 +208,7 @@ MCP connections (configured external tool providers):
 - Enqueueing a name that is already queued or active is a no-op (returns False); deduplication prevents backlog from repeated schedule triggers.
 - Two schedule types are supported: `interval` (every N minutes) and `daily` (once at a fixed wall-clock time).
 - Schedule files live in `datacontrol/schedules/*.json`; each must have a top-level `"tasks"` list.
-- Queue state is written to `datacontrol/task_queue.json` on every enqueue and dequeue so the web UI can poll it.
+- Queue state is written to `datacontrol/koreagent/task_queue.json` on every enqueue and dequeue so the web UI can poll it.
 - The scheduler loop lives in `api_mode.py`, not in `scheduler.py`; `scheduler.py` provides utilities only.
 
 ---

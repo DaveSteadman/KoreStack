@@ -45,3 +45,8 @@ KoreDocs/koredocs.log
 *.log
 datacontrol/task_queue.json
 /assets
+/datacontrol/koredata/Feeds
+/datacontrol/koredata/Library
+/datacontrol/koredata/Reference
+/datacontrol/koredocs
+/datacontrol/koredata/RAG

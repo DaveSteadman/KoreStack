@@ -7,7 +7,7 @@
 # overrides the built-in default. Missing keys fall back to the defaults below so the service
 # starts with no config file present.
 #
-# data_dir defaults to <repo_root>/datacontrol/conversations so that all persisted data
+# data_dir defaults to <repo_root>/datacontrol/korechat so that all persisted data
 # (database, log) lands in the shared datacontrol folder alongside MiniAgentFramework data.
 # The repo root is inferred from this file's location:
 #   KoreChat/app/config.py  ->  parents[2]  ->  repo root
@@ -26,7 +26,7 @@ _DEFAULTS: dict = {
     "host":      os.environ.get("KORECHAT_HOST", "0.0.0.0"),
     "port":      int(os.environ.get("KORECHAT_PORT", "8700")),
     "log_level": os.environ.get("KORECHAT_LOG_LEVEL", "info"),
-    "data_dir":  os.environ.get("KORECHAT_DATA_DIR", str(_REPO_ROOT / "datacontrol" / "conversations")),
+    "data_dir":  os.environ.get("KORECHAT_DATA_DIR", str(_REPO_ROOT / "datacontrol" / "korechat")),
 }
 
 

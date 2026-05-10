@@ -34,7 +34,7 @@ KoreLibrary organises its content into **catalogs** — separate SQLite database
 | **Default (local)** | `{data_dir}/library.db` | Yes | The primary catalog; always present |
 | **User-added** | `{data_dir}/catalogs/{id}.db` | Yes | Created automatically on first write |
 
-`{data_dir}` is the resolved `korelibrary.data_dir` config value (default: `datauser/KoreData/Library`).
+`{data_dir}` is the resolved `korelibrary.data_dir` config value (default: `datacontrol/koredata/Library`).
 
 The service looks for additional catalogs in exactly one folder: **`{data_dir}/catalogs/`**. Any `.db` file present there at startup is registered as a catalog. There is no recursive scan and no other location is checked.
 

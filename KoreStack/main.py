@@ -161,10 +161,10 @@ def get_stack_paths(config: dict) -> dict[str, Path]:
         "path config": SUITE_CONFIG_LOCAL if SUITE_CONFIG_LOCAL.exists() else SUITE_CONFIG_DEFAULT,
         "datacontrol": datacontrol,
         "datauser": datauser,
-        "conversation_data": resolve_root_path(paths.get("conversation_data"), "datacontrol/conversations"),
+        "conversation_data": resolve_root_path(paths.get("conversation_data"), "datacontrol/korechat"),
         "comms_data": resolve_root_path(paths.get("comms_data"), "datacontrol/korecomms"),
         "docs_data": resolve_root_path(paths.get("docs_data"), "datauser/KoreFiles"),
-        "docs_db": resolve_root_path(paths.get("docs_db"), "datauser/KoreFiles/korefile.db"),
+        "docs_db": resolve_root_path(paths.get("docs_db"), "datacontrol/koredocs/korefile.db"),
     }
 
 
