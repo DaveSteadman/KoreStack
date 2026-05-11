@@ -18,7 +18,7 @@
           <th>Managed by</th>
           <th style="width:100px; text-align:right;">Chunks</th>
           <th style="width:120px; text-align:right;">Size</th>
-          <th style="width:90px;"></th>
+          <th style="width:160px; white-space:nowrap;"></th>
         </tr>
       </thead>
       <tbody>
@@ -40,9 +40,9 @@
           <td class="meta" style="text-align:right; font-size:11px;">
             {% if d.db_size_bytes is not none %}{{ "{:,.0f}".format(d.db_size_bytes / 1024) }} KB{% else %}-{% endif %}
           </td>
-          <td style="text-align:right;">
-            {% if d.navigation %}<a class="btn btn-sm" href="/ui/rag/explore/{{ d.id }}" style="margin-right:0.25rem;">EXPLORE</a>{% endif %}
-            <a class="btn btn-sm" href="/ui/rag?db={{ d.id }}">BROWSE</a>
+          <td style="text-align:right; white-space:nowrap;">
+            {% if d.navigation %}<a class="kcui-tag kcui-tag--accent" href="/ui/rag/explore/{{ d.id }}" style="margin-right:0.4rem;">EXPLORE</a>{% endif %}
+            <a class="kcui-tag kcui-tag--muted" href="/ui/rag?db={{ d.id }}">BROWSE</a>
           </td>
         </tr>
         {% endfor %}
