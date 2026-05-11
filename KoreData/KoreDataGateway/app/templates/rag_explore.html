@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Explore {{ db_id | title }}{% endblock %}
+{% block main_class %}kcui-main{% endblock %}
+
+{% block content %}
+{% set cur_db_info = databases | selectattr("id", "eq", db_id) | list | first if databases else None %}
+<div class="kcui-page kcui-stack">
+<div class="panel kcui-panel" style="margin-bottom:1rem;">
+  <div class="panel-header kcui-panel-header">
+    EXPLORE &mdash; {{ cur_db_info.display_name if cur_db_info else db_id }}
+    <div style="margin-left:auto; display:flex; gap:0.5rem; align-items:center;">
+      <a class="btn btn-sm" href="/ui/rag/search?db={{ db_id }}">SEARCH</a>
+      <a class="btn btn-sm" href="/ui/rag?db={{ db_id }}">BROWSE ALL</a>
+      <a class="btn btn-sm" href="/ui/rag/databases" title="All databases">&#9776;</a>
+    </div>
+  </div>
+</div>
+
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; align-items:start;">
+
+{# ---- Sittings ---- #}
+<div class="panel kcui-panel">
+  <div class="panel-header kcui-panel-header">
+    SITTINGS
+    <span class="badge badge-dim" style="margin-left:0.5rem;">{{ sittings | length }}</span>
+  </div>
+  <div class="panel-body kcui-panel-body" style="padding:0; overflow-x:auto;">
+    {% if sittings %}
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>House</th>
+          <th style="width:80px; text-align:right;">Debates</th>
+          <th style="width:60px;"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in sittings %}
+        <tr>
+          <td><a href="/ui/rag/explore/{{ db_id }}/sitting/{{ s.sitting_date }}" style="font-weight:500;">{{ s.sitting_date }}</a></td>
+          <td class="meta" style="font-size:11px;">{{ s.house or "Commons" }}</td>
+          <td class="meta" style="text-align:right;">{{ s.debate_count or 0 }}</td>
+          <td style="text-align:right;">
+            <a class="btn btn-sm" href="/ui/rag/explore/{{ db_id }}/sitting/{{ s.sitting_date }}">VIEW</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="meta" style="padding:1rem;">No sittings found.</p>
+    {% endif %}
+  </div>
+</div>
+
+{# ---- Members ---- #}
+<div class="panel kcui-panel">
+  <div class="panel-header kcui-panel-header">
+    MEMBERS
+    <span class="badge badge-dim" style="margin-left:0.5rem;">{{ members | length }}</span>
+  </div>
+  <div class="panel-body kcui-panel-body" style="padding:0; overflow-x:auto;">
+    {% if members %}
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Party</th>
+          <th>Constituency</th>
+          <th style="width:70px; text-align:right;">Speeches</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for m in members %}
+        <tr>
+          <td>
+            <a href="/ui/rag/explore/{{ db_id }}/member/{{ m.member_id }}">{{ m.display_name }}</a>
+          </td>
+          <td class="meta" style="font-size:11px;">{{ m.party or "" }}</td>
+          <td class="meta" style="font-size:11px;">{{ m.constituency or "" }}</td>
+          <td class="meta" style="text-align:right;">{{ m.speech_count or 0 }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="meta" style="padding:1rem;">No members found.</p>
+    {% endif %}
+  </div>
+</div>
+
+</div>{# end grid #}
+</div>
+{% endblock %}

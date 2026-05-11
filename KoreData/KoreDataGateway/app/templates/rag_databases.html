@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}RAG Databases{% endblock %}
+{% block main_class %}kcui-main{% endblock %}
+
+{% block content %}
+<div class="kcui-page kcui-page--narrow kcui-stack">
+<div class="panel kcui-panel">
+  <div class="panel-header kcui-panel-header">
+    RAG DATABASES
+    <span class="badge badge-dim" style="margin-left:0.5rem;">{{ databases | length }}</span>
+  </div>
+  <div class="panel-body kcui-panel-body" style="padding:0; overflow-x:auto;">
+    {% if databases %}
+    <table>
+      <thead>
+        <tr>
+          <th>Database</th>
+          <th>Managed by</th>
+          <th style="width:100px; text-align:right;">Chunks</th>
+          <th style="width:120px; text-align:right;">Size</th>
+          <th style="width:90px;"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in databases %}
+        <tr>
+          <td>
+            <a href="/ui/rag?db={{ d.id }}" style="font-weight:500;">{{ d.display_name }}</a>
+            {% if d.description %}
+            <div class="meta" style="font-size:11px; margin-top:0.15rem;">{{ d.description }}</div>
+            {% endif %}
+          </td>
+          <td class="meta" style="font-size:11px;">
+            {{ d.managed_by or "user" }}
+            {% if d.ingestor %}<span style="color:var(--amber);"> / {{ d.ingestor }}</span>{% endif %}
+          </td>
+          <td class="meta" style="text-align:right;">
+            {% if d.total_chunks is not none %}{{ "{:,}".format(d.total_chunks) }}{% else %}-{% endif %}
+          </td>
+          <td class="meta" style="text-align:right; font-size:11px;">
+            {% if d.db_size_bytes is not none %}{{ "{:,.0f}".format(d.db_size_bytes / 1024) }} KB{% else %}-{% endif %}
+          </td>
+          <td style="text-align:right;">
+            {% if d.navigation %}<a class="btn btn-sm" href="/ui/rag/explore/{{ d.id }}" style="margin-right:0.25rem;">EXPLORE</a>{% endif %}
+            <a class="btn btn-sm" href="/ui/rag?db={{ d.id }}">BROWSE</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="meta" style="padding:1rem;">No databases found.</p>
+    {% endif %}
+  </div>
+</div>
+</div>
+{% endblock %}

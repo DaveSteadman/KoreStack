@@ -3,14 +3,28 @@
 {% block main_class %}kcui-main{% endblock %}
 
 {% block content %}
+{% set cur_db_info = databases | selectattr("id", "eq", db) | list | first if databases else None %}
+{% set has_nav = cur_db_info and cur_db_info.navigation %}
 <div class="kcui-page kcui-page--narrow kcui-stack">
 <div class="panel kcui-panel">
   <div class="panel-header kcui-panel-header">
     RAG CHUNKS
     <span class="badge badge-dim" style="margin-left:0.5rem;">{{ total }}</span>
-    <div style="margin-left:auto; display:flex; gap:0.5rem;">
-      <a class="btn btn-sm" href="/ui/rag/search">SEARCH</a>
-      <a class="btn btn-sm" href="/ui/rag/insert">+ INSERT</a>
+    <div style="margin-left:auto; display:flex; gap:0.5rem; align-items:center;">
+      {% if databases | length > 1 %}
+      <span class="meta" style="font-size:11px;">DB:</span>
+      <select onchange="location.href='/ui/rag?db='+this.value" style="font-size:11px; padding:0.15rem 0.3rem; max-width:160px;">
+        {% for d in databases %}
+        <option value="{{ d.id }}" {% if d.id == db %}selected{% endif %}>{{ d.display_name }}</option>
+        {% endfor %}
+      </select>
+      {% else %}
+      <span class="meta" style="font-size:11px;">{{ databases[0].display_name if databases else db }}</span>
+      {% endif %}
+      {% if has_nav %}<a class="btn btn-sm" href="/ui/rag/explore/{{ db }}">EXPLORE</a>{% endif %}
+      <a class="btn btn-sm" href="/ui/rag/search?db={{ db }}">SEARCH</a>
+      <a class="btn btn-sm" href="/ui/rag/insert?db={{ db }}">+ INSERT</a>
+      <a class="btn btn-sm" href="/ui/rag/databases" title="All databases">&#9776;</a>
     </div>
   </div>
   <div class="panel-body kcui-panel-body" style="padding:0; overflow-x:auto;">
@@ -30,7 +44,7 @@
         {% for c in chunks %}
         <tr>
           <td class="meta">{{ c.id }}</td>
-          <td><a href="/ui/rag/{{ c.id }}">{{ c.title or "(untitled)" }}</a></td>
+          <td><a href="/ui/rag/{{ c.id }}?db={{ db }}">{{ c.title or "(untitled)" }}</a></td>
           <td class="meta" style="font-size:11px;">{{ c.source or "-" }}</td>
           <td class="meta" style="font-size:11px;">{{ c.tags or "" }}</td>
           <td class="meta" style="text-align:right;">
@@ -42,7 +56,7 @@
       </tbody>
     </table>
     {% else %}
-    <p class="meta" style="padding:1rem;">No chunks stored yet. <a href="/ui/rag/insert">Insert one now.</a></p>
+    <p class="meta" style="padding:1rem;">No chunks stored yet. <a href="/ui/rag/insert?db={{ db }}">Insert one now.</a></p>
     {% endif %}
   </div>
 </div>
@@ -50,11 +64,11 @@
 {% if total > limit %}
 <div class="pagination">
   {% if offset > 0 %}
-  <a href="/ui/rag?limit={{ limit }}&offset={{ [offset - limit, 0] | max }}"><- Prev</a>
+  <a href="/ui/rag?db={{ db }}&limit={{ limit }}&offset={{ [offset - limit, 0] | max }}"><- Prev</a>
   {% endif %}
   <span class="pg-info">{{ offset + 1 }}-{{ [offset + limit, total] | min }} of {{ total }}</span>
   {% if offset + limit < total %}
-  <a href="/ui/rag?limit={{ limit }}&offset={{ offset + limit }}">Next -></a>
+  <a href="/ui/rag?db={{ db }}&limit={{ limit }}&offset={{ offset + limit }}">Next -></a>
   {% endif %}
 </div>
 {% endif %}

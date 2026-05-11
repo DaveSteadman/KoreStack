@@ -8,7 +8,8 @@
   <div class="panel-header kcui-panel-header">
     CHUNK #{{ chunk.id }}
     <div style="margin-left:auto; display:flex; gap:0.5rem;">
-      <form action="/ui/rag/{{ chunk.id }}/delete" method="post" style="display:inline;"
+      <a class="btn btn-sm btn-secondary" href="/ui/rag?db={{ db }}">&#8592; INDEX</a>
+      <form action="/ui/rag/{{ chunk.id }}/delete?db={{ db }}" method="post" style="display:inline;"
             onsubmit="return confirm('Delete this chunk?');">
         <button type="submit" class="btn btn-sm btn-danger">DELETE</button>
       </form>

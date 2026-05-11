@@ -20,7 +20,8 @@ import logutil
 import uvicorn
 from datetime import datetime
 from app.config import cfg
-from app.database import get_status
+from app.database import get_status, init_db
+from app.registry import list_databases, list_database_ids
 from config import get_suite_datacontrol_dir
 
 _W = 80
@@ -28,7 +29,7 @@ _W = 80
 
 def _print_banner() -> None:
     now = datetime.now().strftime("%H:%M:%S")
-    stats = get_status()
+    dbs = list_databases()
     host = cfg["host"]
     port = cfg["port"]
     data_dir = cfg["data_dir"]
@@ -48,22 +49,29 @@ def _print_banner() -> None:
         row("Host:", f"http://{host}:{port}/"),
         row("Data dir:", data_dir),
         row("Log level:", log_level),
-        row("Total chunks:", str(stats["total_chunks"])),
-        row("DB size:", f"{stats['db_size_bytes']:,} bytes"),
         "",
-        sep,
-        "",
+        "  Databases:",
     ]
+    for db_info in dbs:
+        db_id = db_info["id"]
+        try:
+            stats = get_status(db=db_id)
+            chunks = stats["total_chunks"]
+            size_kb = stats["db_size_bytes"] // 1024
+            lines.append(f"    {db_info['display_name']:<28} {chunks:,} chunks  ({size_kb:,} KB)")
+        except Exception:
+            lines.append(f"    {db_info['display_name']:<28} (not yet initialised)")
+    lines += ["", sep, ""]
     print("\n".join(lines))
 
 
 if __name__ == "__main__":
-    from app.database import init_db
     _DATA_DIR = Path(cfg["data_dir"])
     _DATA_DIR.mkdir(parents=True, exist_ok=True)
     _LOG_PATH = get_suite_datacontrol_dir() / "logs" / "koredata" / "rag.log"
     _LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
-    init_db()
+    for _db_id in list_database_ids():
+        init_db(db=_db_id)
     _print_banner()
     uvicorn.run(
         "app.server:app",

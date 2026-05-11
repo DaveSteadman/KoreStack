@@ -7,6 +7,18 @@
 <div class="panel kcui-panel">
   <div class="panel-header kcui-panel-header">
     INSERT CHUNK
+    <div style="margin-left:auto; display:flex; gap:0.5rem; align-items:center;">
+      {% if databases | length > 1 %}
+      <select onchange="location.href='/ui/rag/insert?db='+this.value" style="font-size:11px; padding:0.15rem 0.3rem;">
+        {% for d in databases %}
+        <option value="{{ d.id }}" {% if d.id == db %}selected{% endif %}>{{ d.display_name }}</option>
+        {% endfor %}
+      </select>
+      {% else %}
+      <span class="meta" style="font-size:11px;">{{ databases[0].display_name if databases else db }}</span>
+      {% endif %}
+      <a class="btn btn-sm" href="/ui/rag?db={{ db }}">INDEX</a>
+    </div>
   </div>
   <div class="panel-body kcui-panel-body">
     {% if error %}
@@ -14,6 +26,7 @@
     {% endif %}
 
     <form action="/ui/rag/insert" method="post">
+      <input type="hidden" name="db" value="{{ db }}">
       <label>Title <span class="meta">(optional)</span></label>
       <input type="text" name="title" placeholder="short label for this chunk">
 
@@ -28,7 +41,7 @@
 
       <div style="display:flex; gap:0.5rem; margin-top:0.25rem;">
         <button type="submit">INSERT</button>
-        <a class="btn btn-secondary" href="/ui/rag">CANCEL</a>
+        <a class="btn btn-secondary" href="/ui/rag?db={{ db }}">CANCEL</a>
       </div>
     </form>
   </div>

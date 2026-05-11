@@ -486,6 +486,7 @@ def _map_lib_book(b: dict) -> dict:
 
 
 def _map_rag_chunk(c: dict) -> dict:
+    db_id = c.get("db", "default")
     return {
         "type":    "rag_chunk",
         "id":      c.get("id"),
@@ -493,7 +494,7 @@ def _map_rag_chunk(c: dict) -> dict:
         "source":  c.get("source", ""),
         "tags":    c.get("tags", ""),
         "snippet": c.get("snippet") or "",
-        "url":     f"/ui/rag/{c.get('id', '')}",
+        "url":     f"/ui/rag/{c.get('id', '')}?db={db_id}",
     }
 
 
@@ -543,7 +544,7 @@ async def api_search(req: _SearchRequest):
 
     async def _rag():
         params: dict = {"q": req.query, "limit": limit}
-        r = await _rag_client.get("/search", params=params, timeout=10.0)
+        r = await _rag_client.get("/search/all", params=params, timeout=10.0)
         if r.status_code != 200:
             return {"error": f"HTTP {r.status_code}"}
         return [_map_rag_chunk(c) for c in (r.json() or [])[:limit]]
@@ -1534,22 +1535,63 @@ async def gateway_status():
 # ===========================================================================
 
 @app.get("/ui/rag", response_class=HTMLResponse)
-async def rag_index(request: Request, limit: int = 100, offset: int = 0):
-    chunks_r, status_r = await asyncio.gather(
-        _rag_client.get("/chunks", params={"limit": limit, "offset": offset}),
-        _rag_client.get("/status"),
+async def rag_index(request: Request, limit: int = 100, offset: int = 0, db: str = "default"):
+    # If no db param was explicitly given, redirect to the most-populated database
+    if "db" not in request.query_params:
+        dbs_r = await _rag_client.get("/databases")
+        databases = dbs_r.json() if dbs_r.status_code == 200 else []
+        non_default = [d for d in databases if d["id"] != "default"]
+        if non_default:
+            # Pick the db with the most chunks; fall back to first non-default
+            best = non_default[0]["id"]
+            best_count = 0
+            for d in non_default:
+                st = await _rag_client.get("/status", params={"db": d["id"]})
+                if st.status_code == 200:
+                    count = st.json().get("total_chunks", 0)
+                    if count > best_count:
+                        best_count = count
+                        best = d["id"]
+            # If the best DB has navigation, go straight to the explore view
+            best_db = next((d for d in databases if d["id"] == best), None)
+            if best_db and best_db.get("navigation"):
+                return RedirectResponse(url=f"/ui/rag/explore/{best}", status_code=302)
+            params = dict(request.query_params)
+            params["db"] = best
+            qs = "&".join(f"{k}={v}" for k, v in params.items())
+            return RedirectResponse(url=f"/ui/rag?{qs}", status_code=302)
+
+    chunks_r, status_r, dbs_r = await asyncio.gather(
+        _rag_client.get("/chunks", params={"limit": limit, "offset": offset, "db": db}),
+        _rag_client.get("/status", params={"db": db}),
+        _rag_client.get("/databases"),
     )
-    chunks = chunks_r.json() if chunks_r.status_code == 200 else []
-    status = status_r.json() if status_r.status_code == 200 else {}
+    chunks    = chunks_r.json() if chunks_r.status_code == 200 else []
+    status    = status_r.json() if status_r.status_code == 200 else {}
+    databases = dbs_r.json()    if dbs_r.status_code == 200    else []
     return templates.TemplateResponse(
         request, "rag_index.html",
         {
-            "chunks": chunks,
-            "total":  status.get("total_chunks", len(chunks)),
-            "limit":  limit,
-            "offset": offset,
+            "chunks":    chunks,
+            "total":     status.get("total_chunks", len(chunks)),
+            "limit":     limit,
+            "offset":    offset,
+            "db":        db,
+            "databases": databases,
         },
     )
+
+
+@app.get("/ui/rag/databases", response_class=HTMLResponse)
+async def rag_databases(request: Request):
+    dbs_r = await _rag_client.get("/databases")
+    databases = dbs_r.json() if dbs_r.status_code == 200 else []
+    async def _enrich(db_id: str) -> dict:
+        r = await _rag_client.get(f"/databases/{db_id}/info")
+        return r.json() if r.status_code == 200 else {"id": db_id}
+    enriched = await asyncio.gather(*[_enrich(d["id"]) for d in databases], return_exceptions=True)
+    enriched = [e if isinstance(e, dict) else {"id": "?", "error": str(e)} for e in enriched]
+    return templates.TemplateResponse(request, "rag_databases.html", {"databases": enriched})
 
 
 @app.get("/ui/rag/search", response_class=HTMLResponse)
@@ -1559,31 +1601,41 @@ async def rag_search(
     source: Optional[str] = None,
     tags: Optional[str] = None,
     limit: int = 20,
+    db: str = "default",
 ):
     results = []
     searched = bool(q)
     if searched:
-        params: dict = {"q": q, "limit": limit}
+        params: dict = {"q": q, "limit": limit, "db": db}
         if source: params["source"] = source
         if tags:   params["tags"]   = tags
         r = await _rag_client.get("/search", params=params)
         results = r.json() if r.status_code == 200 else []
+    dbs_r = await _rag_client.get("/databases")
+    databases = dbs_r.json() if dbs_r.status_code == 200 else []
     return templates.TemplateResponse(
         request, "rag_search.html",
         {
-            "results":  results,
-            "searched": searched,
-            "q":        q or "",
-            "source":   source or "",
-            "tags":     tags or "",
-            "limit":    limit,
+            "results":   results,
+            "searched":  searched,
+            "q":         q or "",
+            "source":    source or "",
+            "tags":      tags or "",
+            "limit":     limit,
+            "db":        db,
+            "databases": databases,
         },
     )
 
 
 @app.get("/ui/rag/insert", response_class=HTMLResponse)
-async def rag_insert(request: Request):
-    return templates.TemplateResponse(request, "rag_insert.html", {"error": None, "success": None})
+async def rag_insert(request: Request, db: str = "default"):
+    dbs_r = await _rag_client.get("/databases")
+    databases = dbs_r.json() if dbs_r.status_code == 200 else []
+    return templates.TemplateResponse(
+        request, "rag_insert.html",
+        {"error": None, "success": None, "db": db, "databases": databases},
+    )
 
 
 @app.post("/ui/rag/insert", response_class=HTMLResponse)
@@ -1593,36 +1645,105 @@ async def rag_insert_post(
     title:   Optional[str] = Form(None),
     source:  Optional[str] = Form(None),
     tags:    Optional[str] = Form(None),
+    db:      str           = Form("default"),
 ):
     payload: dict = {"content": content}
     if title:  payload["title"]  = title
     if source: payload["source"] = source
     if tags:   payload["tags"]   = tags
-    r = await _rag_client.post("/chunks", json=payload)
+    r = await _rag_client.post("/chunks", params={"db": db}, json=payload)
     if r.status_code in (200, 201):
         chunk_id = r.json().get("id")
-        return RedirectResponse(url=f"/ui/rag/{chunk_id}", status_code=303)
+        return RedirectResponse(url=f"/ui/rag/{chunk_id}?db={db}", status_code=303)
+    dbs_r = await _rag_client.get("/databases")
+    databases = dbs_r.json() if dbs_r.status_code == 200 else []
     return templates.TemplateResponse(
         request, "rag_insert.html",
-        {"error": r.json().get("detail", f"Error {r.status_code}"), "success": None},
+        {"error": r.json().get("detail", f"Error {r.status_code}"), "success": None, "db": db, "databases": databases},
         status_code=400,
     )
 
 
 @app.get("/ui/rag/{chunk_id}", response_class=HTMLResponse)
-async def rag_chunk(request: Request, chunk_id: int):
-    r = await _rag_client.get(f"/chunks/{chunk_id}")
+async def rag_chunk(request: Request, chunk_id: int, db: str = "default"):
+    r = await _rag_client.get(f"/chunks/{chunk_id}", params={"db": db})
     if r.status_code == 404:
         raise HTTPException(status_code=404, detail="Chunk not found")
-    return templates.TemplateResponse(request, "rag_chunk.html", {"chunk": r.json()})
+    return templates.TemplateResponse(request, "rag_chunk.html", {"chunk": r.json(), "db": db})
 
 
 @app.post("/ui/rag/{chunk_id}/delete")
-async def rag_chunk_delete(chunk_id: int):
-    r = await _rag_client.delete(f"/chunks/{chunk_id}")
+async def rag_chunk_delete(chunk_id: int, db: str = "default"):
+    r = await _rag_client.delete(f"/chunks/{chunk_id}", params={"db": db})
     if r.status_code not in (200, 204):
         raise HTTPException(status_code=r.status_code, detail="Delete failed")
-    return RedirectResponse(url="/ui/rag", status_code=303)
+    return RedirectResponse(url=f"/ui/rag?db={db}", status_code=303)
+
+
+# ---------------------------------------------------------------------------
+# KoreRAG explore (navigation tables for structured databases)
+# ---------------------------------------------------------------------------
+
+@app.get("/ui/rag/explore/{db_id}", response_class=HTMLResponse)
+async def rag_explore(request: Request, db_id: str):
+    sittings_r, members_r, dbs_r = await asyncio.gather(
+        _rag_client.get(f"/databases/{db_id}/sittings"),
+        _rag_client.get(f"/databases/{db_id}/members"),
+        _rag_client.get("/databases"),
+    )
+    sittings  = sittings_r.json()  if sittings_r.status_code == 200  else []
+    members   = members_r.json()   if members_r.status_code == 200   else []
+    databases = dbs_r.json()       if dbs_r.status_code == 200       else []
+    return templates.TemplateResponse(
+        request, "rag_explore.html",
+        {"db_id": db_id, "sittings": sittings, "members": members, "databases": databases},
+    )
+
+
+@app.get("/ui/rag/explore/{db_id}/sitting/{date}", response_class=HTMLResponse)
+async def rag_explore_sitting(request: Request, db_id: str, date: str):
+    debates_r, dbs_r = await asyncio.gather(
+        _rag_client.get(f"/databases/{db_id}/sittings/{date}/debates"),
+        _rag_client.get("/databases"),
+    )
+    debates   = debates_r.json()  if debates_r.status_code == 200  else []
+    databases = dbs_r.json()      if dbs_r.status_code == 200      else []
+    return templates.TemplateResponse(
+        request, "rag_explore_sitting.html",
+        {"db_id": db_id, "date": date, "debates": debates, "databases": databases},
+    )
+
+
+@app.get("/ui/rag/explore/{db_id}/debate/{uuid}", response_class=HTMLResponse)
+async def rag_explore_debate(request: Request, db_id: str, uuid: str):
+    debate_r, speeches_r, dbs_r = await asyncio.gather(
+        _rag_client.get(f"/databases/{db_id}/debates/{uuid}"),
+        _rag_client.get(f"/databases/{db_id}/debates/{uuid}/speeches"),
+        _rag_client.get("/databases"),
+    )
+    debate    = debate_r.json()   if debate_r.status_code == 200   else {}
+    speeches  = speeches_r.json() if speeches_r.status_code == 200 else []
+    databases = dbs_r.json()      if dbs_r.status_code == 200      else []
+    return templates.TemplateResponse(
+        request, "rag_explore_debate.html",
+        {"db_id": db_id, "debate": debate, "speeches": speeches, "databases": databases},
+    )
+
+
+@app.get("/ui/rag/explore/{db_id}/member/{member_id}", response_class=HTMLResponse)
+async def rag_explore_member(request: Request, db_id: str, member_id: int):
+    member_r, speeches_r, dbs_r = await asyncio.gather(
+        _rag_client.get(f"/databases/{db_id}/members/{member_id}"),
+        _rag_client.get(f"/databases/{db_id}/members/{member_id}/speeches"),
+        _rag_client.get("/databases"),
+    )
+    member    = member_r.json()   if member_r.status_code == 200   else {}
+    speeches  = speeches_r.json() if speeches_r.status_code == 200 else []
+    databases = dbs_r.json()      if dbs_r.status_code == 200      else []
+    return templates.TemplateResponse(
+        request, "rag_explore_member.html",
+        {"db_id": db_id, "member": member, "speeches": speeches, "databases": databases},
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -1649,21 +1770,27 @@ async def api_rag_add(request: Request):
 
 
 @app.patch("/api/rag/chunks/{chunk_id}")
-async def api_rag_update(chunk_id: int, request: Request):
+async def api_rag_update(chunk_id: int, request: Request, db: str = "default"):
     payload = await request.json()
-    r = await _rag_client.patch(f"/chunks/{chunk_id}", json=payload)
+    r = await _rag_client.patch(f"/chunks/{chunk_id}", params={"db": db}, json=payload)
     return JSONResponse(content=r.json(), status_code=r.status_code)
 
 
 @app.delete("/api/rag/chunks/{chunk_id}")
-async def api_rag_delete(chunk_id: int):
-    r = await _rag_client.delete(f"/chunks/{chunk_id}")
+async def api_rag_delete(chunk_id: int, db: str = "default"):
+    r = await _rag_client.delete(f"/chunks/{chunk_id}", params={"db": db})
     return JSONResponse(content=r.json(), status_code=r.status_code)
 
 
 @app.get("/api/rag/search")
-async def api_rag_search(q: str, limit: int = 20, source: Optional[str] = None, tags: Optional[str] = None):
-    params: dict = {"q": q, "limit": limit}
+async def api_rag_search(
+    q: str,
+    limit: int = 20,
+    source: Optional[str] = None,
+    tags: Optional[str] = None,
+    db: str = "default",
+):
+    params: dict = {"q": q, "limit": limit, "db": db}
     if source: params["source"] = source
     if tags:   params["tags"]   = tags
     r = await _rag_client.get("/search", params=params)

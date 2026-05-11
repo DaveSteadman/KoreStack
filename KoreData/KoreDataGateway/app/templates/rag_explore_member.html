@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}{{ member.display_name or "Member" }}{% endblock %}
+{% block main_class %}kcui-main{% endblock %}
+
+{% block content %}
+<style>
+  .member-reader { max-width: 780px; margin: 0 auto; padding: 1.5rem 2rem; }
+  .member-header-bar {
+    position: sticky; top: 0; z-index: 10;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    padding: 0.6rem 1.5rem;
+    display: flex; align-items: center; gap: 0.5rem;
+  }
+  .member-name-bar {
+    font-size: 0.85rem; color: var(--dim);
+    flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .bio-block {
+    color: var(--text); line-height: 1.65; font-size: 0.9rem;
+    white-space: pre-wrap;
+    border-left: 2px solid var(--green);
+    padding-left: 0.9rem;
+    margin-top: 0.75rem;
+  }
+  .section-heading {
+    font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--dim); margin: 1.5rem 0 0.75rem;
+    padding-bottom: 0.3rem; border-bottom: 1px solid var(--border);
+  }
+  .debate-group { margin-bottom: 1.75rem; }
+  .debate-group-label {
+    display: flex; align-items: baseline; gap: 0.6rem; margin-bottom: 0.6rem;
+  }
+  .debate-group-date { font-size: 11px; color: var(--amber); }
+  .debate-group-title { font-size: 0.82rem; }
+  .speech-block {
+    color: var(--text); line-height: 1.65; font-size: 0.9rem;
+    white-space: pre-wrap;
+    border-left: 2px solid var(--border);
+    padding-left: 0.9rem;
+    margin-bottom: 0.75rem;
+  }
+  .speech-block:hover { border-left-color: var(--dim); }
+  .speech-block:last-child { margin-bottom: 0; }
+</style>
+
+<div class="member-header-bar">
+  <a class="btn btn-sm" href="/ui/rag/explore/{{ db_id }}">&#8592; EXPLORE</a>
+  <span class="member-name-bar">{{ member.display_name or "(unknown)" }}</span>
+  <a class="btn btn-sm" href="/ui/rag/search?db={{ db_id }}">SEARCH</a>
+</div>
+
+<div class="member-reader">
+
+  {# ── Profile metadata ── #}
+  <div style="display:flex; align-items:baseline; gap:0.75rem; flex-wrap:wrap; margin-bottom:0.4rem;">
+    <span style="font-size:1.15rem; font-weight:600; color:var(--green);">{{ member.display_name or "(unknown)" }}</span>
+    {% if member.party %}<span class="meta" style="font-size:12px;">{{ member.party }}</span>{% endif %}
+    {% if member.constituency %}<span class="meta" style="font-size:12px;">{{ member.constituency }}</span>{% endif %}
+  </div>
+  {% if member.bio %}
+  <div class="bio-block">{{ member.bio }}</div>
+  {% endif %}
+
+  {# ── Speeches grouped by debate ── #}
+  {% if speeches %}
+  <div class="section-heading">{{ speeches | length }} speech{{ "es" if speeches | length != 1 else "" }} in record</div>
+
+  {# Group consecutive speeches sharing the same debate_uuid #}
+  {% set ns = namespace(last_uuid=None) %}
+  {% for s in speeches %}
+    {% if s.debate_uuid != ns.last_uuid %}
+      {% if not loop.first %}</div>{% endif %}
+      <div class="debate-group">
+      <div class="debate-group-label">
+        <span class="debate-group-date">{{ s.sitting_date }}</span>
+        <a href="/ui/rag/explore/{{ db_id }}/debate/{{ s.debate_uuid }}" class="debate-group-title" style="color:var(--blue);">{{ s.debate_title or "(debate)" }}</a>
+      </div>
+      {% set ns.last_uuid = s.debate_uuid %}
+    {% endif %}
+    <div class="speech-block">{{ s.content or "" }}</div>
+  {% endfor %}
+  </div>
+  {% else %}
+  <p class="meta" style="margin-top:1.5rem;">No speeches found in the current record for this member.</p>
+  {% endif %}
+
+</div>
+{% endblock %}

@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Sitting {{ date }}{% endblock %}
+{% block main_class %}kcui-main{% endblock %}
+
+{% block content %}
+<div class="kcui-page kcui-page--narrow kcui-stack">
+<div class="panel kcui-panel">
+  <div class="panel-header kcui-panel-header">
+    SITTING &mdash; {{ date }}
+    <span class="badge badge-dim" style="margin-left:0.5rem;">{{ debates | length }}</span>
+    <div style="margin-left:auto; display:flex; gap:0.5rem; align-items:center;">
+      <a class="btn btn-sm" href="/ui/rag/explore/{{ db_id }}">&#8592; SITTINGS</a>
+      <a class="btn btn-sm" href="/ui/rag/search?db={{ db_id }}">SEARCH</a>
+    </div>
+  </div>
+  <div class="panel-body kcui-panel-body" style="padding:0; overflow-x:auto;">
+    {% if debates %}
+    <table>
+      <thead>
+        <tr>
+          <th style="width:40px;">#</th>
+          <th>Debate</th>
+          <th style="width:80px; text-align:right;">Speeches</th>
+          <th style="width:70px;"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in debates %}
+        <tr>
+          <td class="meta">{{ d.item_number or loop.index }}</td>
+          <td>
+            <a href="/ui/rag/explore/{{ db_id }}/debate/{{ d.uuid }}" style="font-weight:500;">{{ d.title or "(untitled)" }}</a>
+          </td>
+          <td class="meta" style="text-align:right;">{{ d.speech_count or 0 }}</td>
+          <td style="text-align:right;">
+            <a class="btn btn-sm" href="/ui/rag/explore/{{ db_id }}/debate/{{ d.uuid }}">READ</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="meta" style="padding:1rem;">No debates found for this sitting.</p>
+    {% endif %}
+  </div>
+</div>
+</div>
+{% endblock %}

@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}{{ debate.title or "Debate" }}{% endblock %}
+{% block main_class %}kcui-main{% endblock %}
+
+{% block content %}
+<style>
+  .debate-reader { max-width: 780px; margin: 0 auto; padding: 1.5rem 2rem; }
+  .debate-speech { margin-bottom: 1.5rem; }
+  .speech-speaker {
+    display: flex; align-items: baseline; gap: 0.6rem;
+    margin-bottom: 0.4rem;
+  }
+  .speech-name { font-weight: 600; color: var(--green); font-size: 0.95rem; }
+  .speech-party { font-size: 11px; color: var(--dim); }
+  .speech-body {
+    color: var(--text); line-height: 1.65;
+    font-size: 0.9rem;
+    white-space: pre-wrap;
+    border-left: 2px solid var(--border);
+    padding-left: 0.9rem;
+  }
+  .speech-body:hover { border-left-color: var(--dim); }
+  .debate-header-bar {
+    position: sticky; top: 0; z-index: 10;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    padding: 0.6rem 1.5rem;
+    display: flex; align-items: center; gap: 0.5rem;
+  }
+  .debate-title {
+    font-size: 0.85rem; color: var(--dim);
+    flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .speech-count { font-size: 11px; color: var(--dim); margin-left: auto; flex-shrink: 0; }
+</style>
+
+<div class="debate-header-bar">
+  {% if debate.sitting_date %}
+  <a class="btn btn-sm" href="/ui/rag/explore/{{ db_id }}/sitting/{{ debate.sitting_date }}">&#8592; {{ debate.sitting_date }}</a>
+  {% else %}
+  <a class="btn btn-sm" href="/ui/rag/explore/{{ db_id }}">&#8592; EXPLORE</a>
+  {% endif %}
+  <span class="debate-title">{{ debate.title or "(untitled)" }}</span>
+  {% if debate.url %}
+  <a href="{{ debate.url }}" target="_blank" rel="noopener" class="btn btn-sm" title="View on hansard.parliament.uk">&#8599;</a>
+  {% endif %}
+  <a class="btn btn-sm" href="/ui/rag/search?db={{ db_id }}">SEARCH</a>
+  <span class="speech-count">{{ speeches | length }} speech{{ "es" if speeches | length != 1 else "" }}</span>
+</div>
+
+<div class="debate-reader">
+  {% if speeches %}
+    {% for s in speeches %}
+    <div class="debate-speech" id="speech-{{ loop.index }}">
+      <div class="speech-speaker">
+        {% if s.member_id %}
+        <a href="/ui/rag/explore/{{ db_id }}/member/{{ s.member_id }}" class="speech-name">{{ s.member_name or s.speaker_raw or "(unknown)" }}</a>
+        {% else %}
+        <span class="speech-name">{{ s.speaker_raw or "(unknown)" }}</span>
+        {% endif %}
+        {% if s.party %}<span class="speech-party">{{ s.party }}</span>{% endif %}
+        {% if s.constituency %}<span class="speech-party">{{ s.constituency }}</span>{% endif %}
+      </div>
+      <div class="speech-body">{{ s.content or "" }}</div>
+    </div>
+    {% endfor %}
+  {% else %}
+  <p class="meta">No speeches found for this debate.</p>
+  {% endif %}
+</div>
+{% endblock %}

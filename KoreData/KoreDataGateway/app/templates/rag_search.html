@@ -7,9 +7,23 @@
 <div class="panel kcui-panel" style="margin-bottom:1.25rem;">
   <div class="panel-header kcui-panel-header">
     SEARCH CHUNKS
+    <div style="margin-left:auto; display:flex; gap:0.5rem; align-items:center;">
+      {% if databases | length > 1 %}
+      <select onchange="location.href='/ui/rag/search?db='+this.value" style="font-size:11px; padding:0.15rem 0.3rem;">
+        {% for d in databases %}
+        <option value="{{ d.id }}" {% if d.id == db %}selected{% endif %}>{{ d.display_name }}</option>
+        {% endfor %}
+      </select>
+      {% else %}
+      <span class="meta" style="font-size:11px;">{{ databases[0].display_name if databases else db }}</span>
+      {% endif %}
+      <a class="btn btn-sm" href="/ui/rag?db={{ db }}">INDEX</a>
+      <a class="btn btn-sm" href="/ui/rag/databases" title="All databases">&#9776;</a>
+    </div>
   </div>
   <div class="panel-body kcui-panel-body">
     <form action="/ui/rag/search" method="get">
+      <input type="hidden" name="db" value="{{ db }}">
       <p class="meta" style="margin-bottom:0.4rem;">Space or comma separated terms are AND-matched against title, source, tags, and content.</p>
       <div style="display:flex; flex-direction:row; gap:0;">
         <input type="search" name="q" value="{{ q }}" placeholder="search chunks..." style="flex:1;">
@@ -50,7 +64,7 @@
     {% for r in results %}
     <div style="border-bottom:1px solid var(--border); padding:0.75rem 0; {% if loop.last %}border-bottom:none;{% endif %}">
       <div style="display:flex; align-items:baseline; gap:0.6rem; margin-bottom:0.2rem;">
-        <a href="/ui/rag/{{ r.id }}" style="color:var(--text); font-size:13px;">{{ r.title or "(untitled)" }}</a>
+        <a href="/ui/rag/{{ r.id }}?db={{ db }}" style="color:var(--text); font-size:13px;">{{ r.title or "(untitled)" }}</a>
         <span class="meta" style="font-size:11px;">#{{ r.id }}</span>
       </div>
       {% if r.source or r.tags %}
