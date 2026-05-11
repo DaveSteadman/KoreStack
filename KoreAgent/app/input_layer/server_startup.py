@@ -162,7 +162,9 @@ def run_api_mode(
                 if not is_task_due(task, last_run.get(name), now):
                     continue
 
-                def _run_task(_name=name, _prompts=list(prompts), _when=now) -> None:
+                output_template = task.get("output_template", "").strip()
+
+                def _run_task(_name=name, _prompts=list(prompts), _when=now, _output_template=output_template) -> None:
                     push_log_line(f"[SCHEDULER] Starting task: {_name}")
                     try:
                         run_log_path = create_log_file_path(log_dir=_LOG_DIR)
@@ -207,6 +209,16 @@ def run_api_mode(
                                     enriched_prompts[0] = dict(first, prompt=prior_context_prefix + first.get("prompt", ""))
                                 else:
                                     enriched_prompts[0] = prior_context_prefix + str(first)
+
+                            # Append output_template to every prompt so formatting/save
+                            # instructions are separated from the retrieval instructions.
+                            if _output_template:
+                                enriched_prompts = [
+                                    dict(p, prompt=p.get("prompt", "") + "\n\n" + _output_template)
+                                    if isinstance(p, dict)
+                                    else str(p) + "\n\n" + _output_template
+                                    for p in enriched_prompts
+                                ]
 
                             results = run_prompt_batch(
                                 enriched_prompts,

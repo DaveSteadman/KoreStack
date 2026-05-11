@@ -39,6 +39,12 @@ report-building chain (e.g. fetch stats, compute headroom, write to file), park 
 summary string with `scratch_save` so it can be included in the final assembled output via
 `{scratch:key}` without re-invoking the skill.
 
+## When NOT to call this tool
+System info (RAM, disk, OS, Python/Ollama versions) is injected into the system prompt
+automatically at session startup. If those values are already visible in context, do not
+call `get_system_info_dict` again — the data is current. Only call this tool when the user
+explicitly asks to refresh the reading (e.g. "check RAM again", "re-read disk space").
+
 ## Examples
 - `get_system_info_dict()` - retrieve all system metrics
   - Returns: `{"os": "Windows", "python_version": "3.10.11", "ollama_version": "0.18.2", "ram_used_gb": 12.34, "ram_available_gb": 19.66, "disk_used_gb": 110.25, "disk_available_gb": 401.75}`

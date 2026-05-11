@@ -11,8 +11,8 @@ import * as dialogs from './dialogs.js';
 
 const _treeEl = document.getElementById('kf-tree');
 
-const CHEVRON_SVG = `<svg viewBox="0 0 20 20" fill="none" width="12" height="12">
-  <path d="M7 5l5 5-5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+const TRIANGLE_SVG = `<svg viewBox="0 0 20 20" width="10" height="10">
+  <path d="M6 4l9 6-9 6z" fill="currentColor"/>
 </svg>`;
 
 const EDIT_SVG = `<svg viewBox="0 0 20 20" fill="none" width="12" height="12">
@@ -68,8 +68,8 @@ function _renderNode(folder, children, depth) {
   const label = folder.path === '/' ? 'Root' : folder.name;
 
   const chevron = hasKids
-    ? `<span class="tree-toggle">${CHEVRON_SVG}</span>`
-    : `<span class="tree-toggle" style="visibility:hidden">${CHEVRON_SVG}</span>`;
+    ? `<span class="tree-toggle">${TRIANGLE_SVG}</span>`
+    : `<span class="tree-toggle" style="visibility:hidden">${TRIANGLE_SVG}</span>`;
 
   const actions = folder.id !== 1
     ? `<span class="tree-actions">

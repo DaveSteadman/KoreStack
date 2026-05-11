@@ -179,12 +179,14 @@ def task_get(name: str) -> str:
 
 # ----------------------------------------------------------------------------------------------------
 
-def task_create(name: str, schedule: str, prompt: str) -> str:
+def task_create(name: str, schedule: str, prompt: str, output_template: str = "") -> str:
     """Create a new scheduled task.
 
-    name     -- unique task identifier (letters, digits, hyphens, underscores)
-    schedule -- interval in minutes (e.g. '60') or daily HH:MM (e.g. '08:30')
-    prompt   -- the instruction the scheduler will run on each firing
+    name            -- unique task identifier (letters, digits, hyphens, underscores)
+    schedule        -- interval in minutes (e.g. '60') or daily HH:MM (e.g. '08:30')
+    prompt          -- the instruction the scheduler will run on each firing
+    output_template -- optional formatting/save instruction appended to every prompt at
+                       runtime (e.g. 'Save the result as a markdown file in reports/{today}/')
     """
     try:
         name = _validate_name(name)
@@ -207,14 +209,16 @@ def task_create(name: str, schedule: str, prompt: str) -> str:
     schedules_dir.mkdir(parents=True, exist_ok=True)
     json_path = schedules_dir / f"task_{name}.json"
 
-    _save(json_path, {
-        "tasks": [{
-            "name":     name,
-            "enabled":  True,
-            "schedule": schedule_dict,
-            "prompts":  [prompt],
-        }]
-    })
+    task_record: dict = {
+        "name":     name,
+        "enabled":  True,
+        "schedule": schedule_dict,
+        "prompts":  [prompt],
+    }
+    if output_template := output_template.strip():
+        task_record["output_template"] = output_template
+
+    _save(json_path, {"tasks": [task_record]})
     return f"Task '{name}' created ({_schedule_str(schedule_dict)})."
 
 
@@ -272,8 +276,12 @@ def task_set_schedule(name: str, schedule: str) -> str:
 
 # ----------------------------------------------------------------------------------------------------
 
-def task_set_prompt(name: str, prompt: str) -> str:
-    """Replace the prompt of an existing task."""
+def task_set_prompt(name: str, prompt: str, output_template: str = "") -> str:
+    """Replace the prompt (and optionally the output_template) of an existing task.
+
+    output_template -- when provided, replaces the existing output_template; pass an
+                       empty string to remove it.
+    """
     try:
         name = _validate_name(name)
     except ValueError as exc:
@@ -289,6 +297,12 @@ def task_set_prompt(name: str, prompt: str) -> str:
 
     json_path, data, idx = found
     data["tasks"][idx]["prompts"] = [prompt]
+    # Update or remove output_template depending on what was passed.
+    if output_template.strip():
+        data["tasks"][idx]["output_template"] = output_template.strip()
+    elif "output_template" in data["tasks"][idx] and output_template != "":
+        # Explicit empty string means remove it.
+        del data["tasks"][idx]["output_template"]
     _save(json_path, data)
     return f"Task '{name}' prompt updated."
 

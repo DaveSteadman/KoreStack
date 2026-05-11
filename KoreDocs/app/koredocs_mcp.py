@@ -218,7 +218,12 @@ def koredocs_get_file_format_info(
 def koredocs_create_folder(
     path: Annotated[str, 'Folder path in KoreFile, such as "/Projects/Calcs". Missing parents are created automatically.'],
 ) -> dict:
-    """Create a folder in KoreFile and return the resulting folder record."""
+    """Create a folder in KoreFile and return the resulting folder record.
+
+    Use this tool (not filesystem folder_create or file_write) when the user asks to save,
+    create, publish, or organise files in KoreDocs, KoreFile, or KoreFiles. The KoreFile
+    storage surface is the correct destination for all KoreDocs document operations.
+    """
     normalized = _normalise_folder_path(path)
     _folder_id_for_path(normalized, create=True)
     folder = korefile.get_folder_by_path(normalized)
@@ -234,7 +239,11 @@ def koredocs_create_file(
     content: Annotated[str, 'Complete serialized file content.'],
     metadata: Annotated[Optional[dict], 'Optional metadata object.'] = None,
 ) -> dict:
-    """Canonical prefixed alias for create_file."""
+    """Create a file in KoreFile. Use this instead of filesystem file_write when the
+    destination is KoreDocs, KoreFile, or KoreFiles. For documents use koredocs_create_koredoc;
+    for spreadsheets prefer the semantic sheet tools (koredocs_create_sheet_table,
+    koredocs_create_compounding_schedule) over raw file creation.
+    """
     return create_file(folder_path=folder_path, name=name, content=content, metadata=metadata)
 
 

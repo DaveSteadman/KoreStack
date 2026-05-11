@@ -288,16 +288,17 @@ def summarize_locally(skill_md_path: Path) -> dict:
         output_lines = [line.strip(" -") for line in output_section[0][0].splitlines() if line.strip().startswith("-")]
 
     return {
-        "skill_name":        title,
-        "relative_path":     skill_md_path.as_posix(),
-        "purpose":           purpose,
-        "module":            module,
-        "trigger_keyword":   trigger_keyword,
-        "triggers":          _parse_triggers(skill_text),
-        "functions":         functions,
-        "inputs":            input_lines,
-        "outputs":           output_lines,
-        "param_descriptions": _parse_param_descriptions(skill_text),
+        "skill_name":              title,
+        "relative_path":           skill_md_path.as_posix(),
+        "purpose":                 purpose,
+        "module":                  module,
+        "trigger_keyword":         trigger_keyword,
+        "triggers":                _parse_triggers(skill_text),
+        "functions":               functions,
+        "inputs":                  input_lines,
+        "outputs":                 output_lines,
+        "param_descriptions":      _parse_param_descriptions(skill_text),
+        "tool_selection_guidance": _section_body(skill_text, "Tool selection guidance"),
     }
 
 
@@ -341,6 +342,7 @@ def normalize_summary(summary: dict, skill_md_path: Path) -> dict:
     normalized.setdefault("trigger_keyword", "")
     normalized.setdefault("triggers", [])
     normalized.setdefault("param_descriptions", {})
+    normalized.setdefault("tool_selection_guidance", "")
     for field_name in ["functions", "inputs", "outputs"]:
         field_value = normalized.get(field_name, [])
         if isinstance(field_value, list):
@@ -566,6 +568,7 @@ def build_tool_definitions(skills_payload: dict) -> list[dict]:
         purpose         = skill.get("purpose", "")
         trigger_kw      = skill.get("trigger_keyword", "").strip()
         description     = f"Triggered by keyword '{trigger_kw}'. {purpose}" if trigger_kw else purpose
+        sel_guidance    = (skill.get("tool_selection_guidance") or "").strip()
 
         skill_module = None
         skill_module_path = str(skill.get("module", "")).strip()
@@ -584,12 +587,16 @@ def build_tool_definitions(skills_payload: dict) -> list[dict]:
             seen_names.add(func_name)
 
             # Prefer a per-function docstring over the skill-level description.
+            # Append tool selection guidance (from skill.md ## Tool selection guidance)
+            # so the model sees routing and usage rules inline in the tool schema.
             func_description = description
             if skill_module:
                 func_obj = getattr(skill_module, func_name, None)
                 if func_obj and getattr(func_obj, "__doc__", None):
                     first_para = func_obj.__doc__.strip().split("\n\n")[0]
                     func_description = " ".join(first_para.split())
+            if sel_guidance:
+                func_description = func_description.rstrip() + "\n\n" + sel_guidance
 
             properties: dict = {}
             required:   list = []

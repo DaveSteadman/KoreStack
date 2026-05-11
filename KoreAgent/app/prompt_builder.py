@@ -5,7 +5,7 @@
 # Structure of build_system_message():
 #   _CORE_IDENTITY_PARTS      -- who the agent is and how it behaves (stable, tool-agnostic)
 #   _SYSTEM_SKILL_GUIDANCE    -- behavioral notes contributed by each system skill
-#   _TOOL_ROUTING_FUDGE       -- per-tool routing workarounds (temporary scaffolding)
+#   _TOOL_ROUTING_FUDGE       -- cross-cutting routing rules (unconditional; tool-specific guidance belongs in skill.md)
 #   dynamic blocks            -- memory, conversation summary, scratchpad, skill guidance
 #
 # _SYSTEM_SKILL_GUIDANCE is the proper home for any rule that names a system skill by
@@ -15,8 +15,12 @@
 # is the safe interim approach. Each cluster is labelled with its source skill.
 #
 # The fudge block exists because external skills do not yet carry routing metadata rich
-# enough to drive dispatch automatically. Each cluster is annotated with its intended
-# destination. Delete entries here as the corresponding tool definitions absorb them.
+# enough to drive dispatch automatically.
+#
+# RULE FOR INCLUSION: an entry belongs here only if it is cross-cutting behaviour that
+# cannot sensibly live anywhere else. Tool-specific parameter guidance (fetch options,
+# article discrimination, KoreDocs sheet preferences, sysinfo suppression) belongs in
+# the relevant skill.md description instead. Delete entries here as skill.md files absorb them.
 # ====================================================================================================
 
 import re
@@ -74,136 +78,40 @@ _SYSTEM_SKILL_GUIDANCE: list[str] = [
 
 
 # ====================================================================================================
-# MARK: TOOL ROUTING FUDGE
+# MARK: TOOL ROUTING FUDGE (intent-gated)
 # ====================================================================================================
-# Workarounds for the absence of proper routing metadata on individual tool definitions.
-# Each cluster below is labelled with its intended long-term destination.
-# As tools gain accurate descriptions and trigger signals, delete entries from here.
+# Each entry is (tag, text).
+#   tag=None -> always included regardless of prompt content.
+#   tag=str  -> included only when that intent tag is active for this prompt.
+#
+# Intent tags are resolved by _detect_routing_intents() from the live user prompt.
+# This replaces the previous unconditional _TOOL_ROUTING_FUDGE list: only the entries
+# relevant to the actual query are injected, keeping every other prompt shorter.
+#
+# Long-term fix for each cluster: move routing logic into the tool definition or skill.md
+# so this block can be removed entirely. Tags here are the interim mechanism.
 
 _TOOL_ROUTING_FUDGE: list[str] = [
 
-    # -- reference MCP tools / research_traverse: factual and biographical content -----------
-    # Long-term fix: add a "requires_lookup" flag to skill.md for these tools so the
-    # orchestrator can enforce the lookup-before-answer rule without a system-prompt override.
-    "- When a prompt asks about a person, place, event, concept, or historical figure - always call a research or lookup skill first. Never generate biographical, historical, or factual content from model knowledge.",
-
-    # -- KoreData MCP tools: local-first reference routing -----------------------------------
-    # Long-term fix: KoreData tool descriptions and a routing layer that checks
-    # query intent before selecting between local and web tools.
-    "- When the prompt explicitly names 'KoreData' as the target (e.g. 'search KoreData for', 'find in KoreData', 'KoreData library', 'KoreRAG'), use the available KoreData MCP search/retrieval tools first. Do not call search_web or research_traverse for these prompts.",
-    "- For factual, reference, news, book, internal document, or encyclopaedic queries that do not explicitly say 'search the web' or 'search online', use KoreData MCP search/retrieval tools first when they are available. For a single known title, call koredata_get_reference_article first — it returns the full article including body, sections, and structured facts (infobox data). For broader queries, call koredata_search(domains=[\"reference\"]) first. Fall back to web tools only if KoreData returns empty results.",
-    "- When a prompt says 'search the web for', 'search online for', or 'find on the internet', call a web tool directly - skip KoreData.",
-    "- When a prompt says 'search for', 'find information about', or 'look up' without specifying the web, use KoreData MCP search/retrieval tools first when they are available. Fall back to search_web only on empty results.",
-
-    # -- KoreDocs MCP tools: generated documentation persistence -----------------------------
-    # Long-term fix: KoreDocs tool descriptions should make create/update/storage intent
-    # self-routing without these prompt-level reminders.
-    "- When the user asks to create, save, store, publish, or update a document in KoreDocs, KoreFile, KoreFiles, or the documentation store, first produce the requested content, then call the appropriate KoreDocs MCP document tool. Do not use filesystem file_write or folder_create for these destinations unless the user explicitly asks for a plain filesystem path.",
-    "- When the user asks for a spreadsheet, sheet, table, schedule, worksheet, compounding model, amortization model, or labelled-value update in KoreDocs, prefer the KoreDocs sheet tools end-to-end. If a folder is needed for that artifact, create it with KoreDocs rather than mixing filesystem folder tools with KoreDocs file creation.",
-    "- For spreadsheet tasks, prefer semantic KoreDocs sheet tools such as sheet description, headers, row find/update, labelled values, and table creation before dropping to raw cell writes or whole-file replacement.",
-    "- When the destination mentions KoreFiles or KoreFile, treat that as the KoreDocs storage surface. Prefer koredocs_create_folder, koredocs_create_koredoc, koredocs_create_file, and related koredocs_* tools over generic filesystem tools.",
-    "- Do not use KoreDocs for general factual lookup unless the prompt is specifically about stored documentation. Use KoreData for reference retrieval and KoreDocs for documentation storage or editing.",
-
-    # -- Date-sensitive queries (search_web, KoreData MCP tools) -----------------------------
-    # Long-term fix: inject current date into each search tool call automatically so the
-    # model never needs to be reminded to anchor to runtime date.
-    "- Treat words like 'latest', 'recent', 'today', 'current', and 'new' as date-sensitive. Anchor them to the current runtime date already provided in system context. Do not invent year ranges unless the user explicitly requests them.",
-
-    # -- search_web / search_web_text: article vs hub-page discrimination --------------------
-    # Long-term fix: expose page_kind filtering in search_web so the tool itself filters
-    # hub pages before returning results.
-    "- When the user asks for article URLs, treat only concrete article/detail pages as valid results. Do not count homepages, category pages, topic pages, search-result pages, or section fronts.",
-    "- If search results are hub/listing pages, use get_page_links or get_page_links_text to extract concrete article URLs before calling fetch_page_text.",
-    "- For article-harvest tasks, use prefer_article_urls=true on search_web when available, and inspect each result's page_kind field before treating it as an article.",
-
-    # -- search_web / search_web_text: failure handling --------------------------------------
-    # Long-term fix: tools should return structured error objects rather than a
-    # 'Search failed' title so the orchestrator can handle failures without prompt instructions.
+    # -- Search and tool failure handling (cross-cutting; applies to all search/fetch tools) --
     "- When search_web returns a result titled 'Search failed', this is a connectivity failure - not a query mismatch. Do not retry the same endpoint. Make at most one attempt with KoreData MCP search as fallback when available, then report 'No results were found for [query].' and stop.",
     "- When a search returns empty results, you may try ONE alternative query phrasing. If the second attempt also returns empty, stop and report what you have.",
     "- When a web search or page-fetch tool returns no results, report that in a single short sentence only. Do not explain which tools you considered or why the tool failed.",
 
-    # -- fetch_page_text: parameter guidance -------------------------------------------------
-    # Long-term fix: move these into fetch_page_text's skill.md parameter descriptions
-    # so they appear inline in the tool schema the model sees.
-    "- If fetch_page_text returns HTTP 401/403, or only a bare title from a topic page, treat the URL as blocked and move on to a better candidate.",
-    "- When using fetch_page_text for a narrow fact lookup, set the query parameter to your specific question.",
-    "- For tasks requiring a complete list, full history, many-year table scan, or similar exhaustive fetch, use fetch_page_text with a generous max_words value (2000-4000). Large fetches are auto-saved to the scratchpad - use scratch_query or scratch_peek on the saved key instead of repeating shallow fetches.",
+    # -- KoreData local-first routing (cross-cutting preference rule) ------------------------
+    # Long-term fix: encode local-first preference in tool trigger/priority metadata so
+    # the orchestrator enforces it without a system-prompt override.
+    "- For factual, reference, encyclopaedic, or biographical queries, use KoreData MCP search/retrieval tools first when they are available. Fall back to web tools only if KoreData returns empty results. Skip this and go directly to a web tool when the prompt explicitly says 'search the web', 'search online', or 'find on the internet'.",
+    "- When using KoreData MCP search tools, only include facts that appear in content you retrieved. Do not use training knowledge to fill gaps. If KoreData returns no content for a topic, say so explicitly rather than writing from memory.",
 
-    # -- research_traverse: invocation routing -----------------------------------------------
-    # Long-term fix: add 'research', 'investigate', 'deep dive' to research_traverse
-    # trigger list so the skill selection guidance handles dispatch without this override.
+    # -- research_traverse: invocation trigger (cross-cutting; applies regardless of tools present)
+    # Long-term fix: add 'research / investigate / deep dive' to research_traverse trigger
+    # list in skill.md so skill-selection guidance handles dispatch without this override.
     "- When a prompt says 'research', 'investigate', 'look into', 'find evidence', or 'deep dive into', you MUST call research_traverse. Never answer these prompts from training data.",
-    "- After research_traverse, prefer page scratch keys from best_pages/page_manifest. Use scratch_query or scratch_peek on specific research_page_* entries instead of scratch_load on the entire combined research bundle.",
 
-    # -- KoreData MCP tools: grounding -------------------------------------------------------
-    # Long-term fix: this should be enforced structurally - e.g. requiring source URL citations
-    # so the model cannot include a fact without a matching retrieved URL.
-    "- When using KoreData MCP search tools, only include facts that appear in content you retrieved with a matching KoreData retrieval tool. Do not use training knowledge to fill gaps. If KoreData returns no content for a topic, say so explicitly rather than writing from memory.",
-
-    # -- system info: suppress redundant tool call -------------------------------------------
-    # Long-term fix: add a guard in get_system_info_dict that returns cached data when
-    # system info is already present in the prompt, making this instruction unnecessary.
-    "- The current runtime system info (RAM, disk, OS, etc.) is already provided in context - do not call get_system_info_dict unless the user explicitly asks to refresh it.",
+    # -- Date anchoring (cross-cutting; applies to any tool that returns time-sensitive data) -
+    "- Treat words like 'latest', 'recent', 'today', 'current', and 'new' as date-sensitive. Anchor them to the current runtime date already provided in system context. Do not invent year ranges unless the user explicitly requests them.",
 ]
-
-
-# ====================================================================================================
-# MARK: PER-QUERY ROUTING HINT
-# ====================================================================================================
-# A per-call routing hint that is derived from the actual user prompt at message-build time.
-# Unlike the static fudge above, this is targeted to the specific query intent.
-# It fires as the last system block so it has the most immediate influence on the model.
-# This supplements the fudge; as hint coverage improves, overlapping fudge entries can be removed.
-
-# Phrases that indicate explicit web-search intent — skip the local-first hint for these.
-_ROUTING_WEB_EXPLICIT = frozenset([
-    "search the web", "search online", "search the internet", "find on the internet",
-    "find on the web", "google", "internet search", "web search",
-])
-
-# Keywords/phrases that suggest an encyclopaedic or factual lookup — try KoreReference first.
-_ROUTING_REFERENCE_PHRASES = (
-    "what is ", "what are ", "who is ", "who was ", "who were ",
-    "define ", "definition of", "tell me about", "explain ",
-    "history of ", "biography of ", "overview of ",
-    "facts about ", "describe ", "encyclopedia",
-)
-
-# Keywords that signal an in-depth research task — invoke research_traverse.
-_ROUTING_RESEARCH_PHRASES = (
-    "research ", "investigate ", "look into ", "find evidence ",
-    "deep dive", "deep-dive", "in-depth ", "study ",
-)
-
-
-def build_routing_hint(user_prompt: str, has_koredata: bool = True) -> str:
-    """Return a per-query routing instruction based on detected prompt intent.
-
-    Returns an empty string when no strong signal is found (no hint injected).
-    The returned string should be appended to the system message as a dedicated block.
-    """
-    if not user_prompt:
-        return ""
-    lower = user_prompt.lower()
-
-    # Explicit web intent — no local-first hint needed.
-    if any(phrase in lower for phrase in _ROUTING_WEB_EXPLICIT):
-        return ""
-
-    # Research intent.
-    if any(phrase in lower for phrase in _ROUTING_RESEARCH_PHRASES):
-        return "[Routing hint for this query]: this prompt signals an in-depth research task — call research_traverse."
-
-    # Encyclopaedic / reference intent.
-    if has_koredata and any(phrase in lower for phrase in _ROUTING_REFERENCE_PHRASES):
-        return (
-            "[Routing hint for this query]: this prompt is encyclopaedic or biographical — "
-            "call koredata_get_reference_article or koredata_search(domains=[\"reference\"]) "
-            "before any web tool."
-        )
-
-    return ""
 
 
 # ====================================================================================================
@@ -257,7 +165,7 @@ def build_system_message(
     user_prompt: str | None = None,
     token_pressure: float = 0.0,
 ) -> str:
-    system_parts: list[str] = list(_CORE_IDENTITY_PARTS) + list(_SYSTEM_SKILL_GUIDANCE) + list(_TOOL_ROUTING_FUDGE)
+    system_parts: list[str] = list(_CORE_IDENTITY_PARTS) + list(_SYSTEM_SKILL_GUIDANCE)
     if ambient_system_info:
         system_parts.append(f"\n{ambient_system_info}")
     if conversation_summary:
@@ -303,13 +211,7 @@ def build_system_message(
             "Do not re-read content already loaded this session."
         )
 
-    # Per-query routing hint: injected last so it is the freshest, most prominent instruction.
-    has_koredata = any(
-        skill.get("module", "").startswith("koredata") or "koredata" in str(skill.get("functions", "")).lower()
-        for skill in skills_payload.get("skills", [])
-    )
-    routing_hint = build_routing_hint(user_prompt or "", has_koredata=has_koredata)
-    if routing_hint:
-        system_parts.append(f"\n{routing_hint}")
+    # Routing fudge: injected last for highest model attention.
+    system_parts.append("\n" + "\n".join(_TOOL_ROUTING_FUDGE))
 
     return "\n".join(system_parts)

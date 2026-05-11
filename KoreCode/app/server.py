@@ -31,6 +31,7 @@ import argparse
 import json
 import logging
 import os
+import shutil
 from pathlib import Path
 
 import uvicorn
@@ -276,6 +277,51 @@ def api_write_file(body: WriteBody, path: str = Query(...)):
         'size': stat.st_size,
         'modified_at': int(stat.st_mtime),
     }
+
+
+@app.post('/api/file')
+def api_create_file(path: str = Query(...)):
+    candidate = _resolve_relative_path(path)
+    if candidate.exists():
+        raise HTTPException(status_code=409, detail='File already exists')
+    candidate.parent.mkdir(parents=True, exist_ok=True)
+    candidate.write_text('', encoding='utf-8')
+    stat = candidate.stat()
+    return {'ok': True, 'path': _to_posix(candidate), 'size': stat.st_size}
+
+
+@app.delete('/api/file')
+def api_delete_file(path: str = Query(...)):
+    candidate = _resolve_relative_path(path)
+    if not candidate.exists():
+        raise HTTPException(status_code=404, detail='File not found')
+    if not candidate.is_file():
+        raise HTTPException(status_code=400, detail='Path is not a file')
+    candidate.unlink()
+    return {'ok': True, 'path': _to_posix(candidate)}
+
+
+@app.post('/api/dir')
+def api_create_dir(path: str = Query(...)):
+    candidate = _resolve_relative_path(path)
+    if candidate.exists():
+        raise HTTPException(status_code=409, detail='Directory already exists')
+    candidate.mkdir(parents=True, exist_ok=False)
+    return {'ok': True, 'path': _to_posix(candidate)}
+
+
+@app.delete('/api/dir')
+def api_delete_dir(path: str = Query(...)):
+    candidate = _resolve_relative_path(path)
+    if not candidate.exists():
+        raise HTTPException(status_code=404, detail='Directory not found')
+    if not candidate.is_dir():
+        raise HTTPException(status_code=400, detail='Path is not a directory')
+    try:
+        candidate.rmdir()
+    except OSError:
+        raise HTTPException(status_code=409, detail='Directory is not empty')
+    return {'ok': True, 'path': _to_posix(candidate)}
 
 
 def parse_args() -> argparse.Namespace:

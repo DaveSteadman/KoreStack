@@ -355,7 +355,7 @@ Single JSON payload for orchestration planning.
           "max_iterations": "maximum tool-calling rounds for the child run, 1-8 recommended.",
           "output_key": "scratchpad key name to save the child's final answer under automatically.",
           "scratchpad_visible_keys": "list of scratchpad key names the child can see in its system prompt.",
-          "scratchpad_prefix": "pass all scratchpad keys whose names start with this string to the child. Merged with scratchpad_visible_keys.",
+          "scratchpad_prefix": "pass all scratchpad keys whose names start with this string to the child.",
           "tools_allowlist": "list of function names the child is permitted to call."
         }
       }
@@ -443,7 +443,7 @@ Single JSON payload for orchestration planning.
           "search_root": "workspace-relative directory to restrict the search. Leave empty to search the whole workspace."
         }
       }
-    }
+    },
     {
       "skill_name": "Scratchpad Skill",
       "relative_path": "app/system_skills/Scratchpad/skill.md",
