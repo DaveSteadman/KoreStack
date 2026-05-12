@@ -8,7 +8,38 @@
   <div class="panel-header kcui-panel-header">
     RAG DATABASES
     <span class="badge badge-dim" style="margin-left:0.5rem;">{{ databases | length }}</span>
+    <button type="button" class="kcui-tag kcui-tag--accent"
+            style="margin-left:auto;"
+            onclick="document.getElementById('new-db-form').hidden=!document.getElementById('new-db-form').hidden">
+      + NEW
+    </button>
   </div>
+
+  <div id="new-db-form" hidden style="padding:0.6rem 1rem; border-bottom:1px solid var(--border, #23262e);">
+    {% if create_error %}
+    <div class="meta" style="color:var(--danger,#ff5f5f); margin-bottom:0.4rem; font-size:11px;">{{ create_error }}</div>
+    {% endif %}
+    <form method="post" action="/ui/rag/databases"
+          style="display:grid; grid-template-columns:160px 200px 1fr auto; gap:0.5rem; align-items:end;">
+      <div style="display:flex; flex-direction:column; gap:0.2rem;">
+        <label class="meta" style="font-size:10px; letter-spacing:0.08em; text-transform:uppercase;">Name <span style="color:var(--danger);">*</span></label>
+        <input name="name" required placeholder="my_database"
+               style="font-family:var(--font-ui,monospace); font-size:12px; background:var(--bg-2,#1a1d23); border:1px solid var(--border,#23262e); color:var(--text,#e0e4ef); padding:3px 7px; width:100%;">
+      </div>
+      <div style="display:flex; flex-direction:column; gap:0.2rem;">
+        <label class="meta" style="font-size:10px; letter-spacing:0.08em; text-transform:uppercase;">Display name</label>
+        <input name="display_name" placeholder="My Database"
+               style="font-family:var(--font-ui,monospace); font-size:12px; background:var(--bg-2,#1a1d23); border:1px solid var(--border,#23262e); color:var(--text,#e0e4ef); padding:3px 7px; width:100%;">
+      </div>
+      <div style="display:flex; flex-direction:column; gap:0.2rem;">
+        <label class="meta" style="font-size:10px; letter-spacing:0.08em; text-transform:uppercase;">Description</label>
+        <input name="description" placeholder="Optional description"
+               style="font-family:var(--font-ui,monospace); font-size:12px; background:var(--bg-2,#1a1d23); border:1px solid var(--border,#23262e); color:var(--text,#e0e4ef); padding:3px 7px; width:100%;">
+      </div>
+      <button type="submit" class="kcui-tag kcui-tag--accent">CREATE</button>
+    </form>
+  </div>
+
   <div class="panel-body kcui-panel-body" style="padding:0; overflow-x:auto;">
     {% if databases %}
     <table>
@@ -18,7 +49,7 @@
           <th>Managed by</th>
           <th style="width:100px; text-align:right;">Chunks</th>
           <th style="width:120px; text-align:right;">Size</th>
-          <th style="width:160px; white-space:nowrap;"></th>
+          <th style="width:200px; white-space:nowrap;"></th>
         </tr>
       </thead>
       <tbody>
@@ -30,19 +61,50 @@
             <div class="meta" style="font-size:11px; margin-top:0.15rem;">{{ d.description }}</div>
             {% endif %}
           </td>
-          <td class="meta" style="font-size:11px;">
+          <td id="db-{{ d.id }}-managed" class="meta" style="font-size:11px;">
             {{ d.managed_by or "user" }}
             {% if d.ingestor %}<span style="color:var(--amber);"> / {{ d.ingestor }}</span>{% endif %}
+            {% if d.sync %}
+              {% if d.sync.status == "running" %}
+                <div style="margin-top:0.2rem; color:var(--accent, #4af77a);">&#9654; Running&hellip;</div>
+              {% elif d.sync.status == "complete" %}
+                <div style="margin-top:0.2rem; color:var(--green, #4caf50);">&#10003; Complete</div>
+              {% elif d.sync.status == "stopped" %}
+                <div style="margin-top:0.2rem; color:var(--warning, #f0a000);">&#9632; Stopped</div>
+              {% elif d.sync.status == "not_started" %}
+                <div style="margin-top:0.2rem; color:var(--muted, #888);">Not started</div>
+              {% endif %}
+              {% if d.sync.status != "running" and d.sync.last_date_ingested %}
+                <div style="margin-top:0.2rem; color:var(--muted, #888);">Last: {{ d.sync.last_date_ingested }}</div>
+              {% endif %}
+            {% endif %}
           </td>
-          <td class="meta" style="text-align:right;">
-            {% if d.total_chunks is not none %}{{ "{:,}".format(d.total_chunks) }}{% else %}-{% endif %}
+          <td id="db-{{ d.id }}-chunks" class="meta" style="text-align:right;">
+            {% if d.total_chunks is not none and d.total_chunks > 0 %}{{ "{:,}".format(d.total_chunks) }}
+            {% elif d.sync and d.sync.total_chunks %}{{ "{:,}".format(d.sync.total_chunks) }}
+            {% else %}-{% endif %}
           </td>
-          <td class="meta" style="text-align:right; font-size:11px;">
+          <td id="db-{{ d.id }}-size" class="meta" style="text-align:right; font-size:11px;">
             {% if d.db_size_bytes is not none %}{{ "{:,.0f}".format(d.db_size_bytes / 1024) }} KB{% else %}-{% endif %}
           </td>
-          <td style="text-align:right; white-space:nowrap;">
-            {% if d.navigation %}<a class="kcui-tag kcui-tag--accent" href="/ui/rag/explore/{{ d.id }}" style="margin-right:0.4rem;">EXPLORE</a>{% endif %}
+          <td id="db-{{ d.id }}-actions" style="text-align:right; white-space:nowrap;">
+            {% if d.managed_by == "ingestor" and d.sync %}
+              {% if d.sync.status == "running" %}
+            <form method="post" action="/ui/rag/databases/{{ d.id }}/stop" style="display:inline; margin-right:0.4rem;">
+              <button type="submit" class="kcui-tag kcui-tag--danger">STOP</button>
+            </form>
+              {% else %}
+            <form method="post" action="/ui/rag/databases/{{ d.id }}/sync" style="display:inline; margin-right:0.4rem;">
+              <button type="submit" class="kcui-tag kcui-tag--warning">INGEST</button>
+            </form>
+              {% endif %}
+            {% endif %}
+            {% if d.navigation %}<a class="kcui-tag kcui-tag--accent" href="/ui/rag/explore/{{ d.id }}">EXPLORE</a>{% endif %}
             <a class="kcui-tag kcui-tag--muted" href="/ui/rag?db={{ d.id }}">BROWSE</a>
+            <form method="post" action="/ui/rag/databases/{{ d.id }}/delete" style="display:inline; margin-left:0.6rem;"
+                  onsubmit="return confirm('Delete database &quot;{{ d.id }}&quot; and all its data?\nThis cannot be undone.')">
+              <button type="submit" class="kcui-tag kcui-tag--danger">DELETE</button>
+            </form>
           </td>
         </tr>
         {% endfor %}
@@ -54,4 +116,84 @@
   </div>
 </div>
 </div>
+
+{% if create_error %}
+<script>document.getElementById('new-db-form').hidden = false;</script>
+{% endif %}
+
+<script>
+(function () {
+  function fmtNum(n) {
+    return (n !== null && n !== undefined && n !== '') ? Number(n).toLocaleString() : '-';
+  }
+  function fmtKB(b) {
+    return (b !== null && b !== undefined) ? Math.round(b / 1024).toLocaleString() + ' KB' : '-';
+  }
+
+  function renderManaged(d) {
+    let h = d.managed_by || 'user';
+    if (d.ingestor) h += ' <span style="color:var(--amber);"> / ' + d.ingestor + '</span>';
+    if (d.sync) {
+      const s = d.sync.status;
+      if      (s === 'running')     h += '<div style="margin-top:0.2rem;color:var(--accent,#4af77a);">&#9654; Running&hellip;</div>';
+      else if (s === 'complete')    h += '<div style="margin-top:0.2rem;color:var(--green,#4caf50);">&#10003; Complete</div>';
+      else if (s === 'stopped')     h += '<div style="margin-top:0.2rem;color:var(--warning,#f0a000);">&#9632; Stopped</div>';
+      else if (s === 'not_started') h += '<div style="margin-top:0.2rem;color:var(--muted,#888);">Not started</div>';
+      if (s !== 'running' && d.sync.last_date_ingested)
+        h += '<div style="margin-top:0.2rem;color:var(--muted,#888);">Last: ' + d.sync.last_date_ingested + '</div>';
+    }
+    return h;
+  }
+
+  function renderChunks(d) {
+    if (d.total_chunks !== null && d.total_chunks !== undefined && d.total_chunks > 0) return fmtNum(d.total_chunks);
+    if (d.sync && d.sync.total_chunks) return fmtNum(d.sync.total_chunks);
+    return '-';
+  }
+
+  function renderActions(d) {
+    let h = '';
+    if (d.managed_by === 'ingestor' && d.sync) {
+      if (d.sync.status === 'running')
+        h += '<form method="post" action="/ui/rag/databases/' + d.id + '/stop" style="display:inline;margin-right:0.4rem;"><button type="submit" class="kcui-tag kcui-tag--danger">STOP</button></form>';
+      else
+        h += '<form method="post" action="/ui/rag/databases/' + d.id + '/sync" style="display:inline;margin-right:0.4rem;"><button type="submit" class="kcui-tag kcui-tag--warning">INGEST</button></form>';
+    }
+    if (d.navigation) h += '<a class="kcui-tag kcui-tag--accent" href="/ui/rag/explore/' + d.id + '">EXPLORE</a>';
+    h += '<a class="kcui-tag kcui-tag--muted" href="/ui/rag?db=' + d.id + '">BROWSE</a>';
+    h += '<form method="post" action="/ui/rag/databases/' + d.id + '/delete" style="display:inline;margin-left:0.6rem;"'
+       + ' onsubmit="return confirm(\'Delete database &quot;' + d.id + '&quot; and all its data?\\nThis cannot be undone.\');"'
+       + '><button type="submit" class="kcui-tag kcui-tag--danger">DELETE</button></form>';
+    return h;
+  }
+
+  function applyUpdate(databases) {
+    let anyRunning = false;
+    databases.forEach(function (d) {
+      if (d.sync && d.sync.status === 'running') anyRunning = true;
+      var m = document.getElementById('db-' + d.id + '-managed');
+      var c = document.getElementById('db-' + d.id + '-chunks');
+      var s = document.getElementById('db-' + d.id + '-size');
+      var a = document.getElementById('db-' + d.id + '-actions');
+      if (m) m.innerHTML = renderManaged(d);
+      if (c) c.innerHTML = renderChunks(d);
+      if (s) s.innerHTML = fmtKB(d.db_size_bytes);
+      if (a) a.innerHTML = renderActions(d);
+    });
+    return anyRunning;
+  }
+
+  var _timer = null;
+  function poll() {
+    fetch('/ui/rag/databases/json')
+      .then(function (r) { return r.json(); })
+      .then(function (databases) {
+        var anyRunning = applyUpdate(databases);
+        _timer = setTimeout(poll, anyRunning ? 4000 : 15000);
+      })
+      .catch(function () { _timer = setTimeout(poll, 15000); });
+  }
+  _timer = setTimeout(poll, 5000);
+})();
+</script>
 {% endblock %}

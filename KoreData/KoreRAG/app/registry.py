@@ -3,12 +3,13 @@
 # ====================================================================================================
 # Database registry for KoreRAG — multi-database support.
 #
-# Scans {data_dir}/databases/ for .db files at startup.  Each database may have a companion
-# .json descriptor file controlling display_name, managed_by, ingestor, navigation, etc.
+# Scans {data_dir}/databases/ for database subfolders and .db files at startup.
+# Each database may have a companion .json descriptor file controlling
+# display_name, managed_by, ingestor, navigation, etc.
 # Databases without a descriptor are registered with user-managed defaults.
 #
-# The default database is always {data_dir}/rag.db with id "default".
-# Named databases live in {data_dir}/databases/{name}.db.
+# All databases live under {data_dir}/databases/{name}/ (subfolder layout).
+# Legacy flat .db files directly in databases/ are also discovered as a fallback.
 #
 # Public interface:
 #   get_db_path(db: str) -> Path          -- resolve database id to its .db file Path
@@ -77,20 +78,27 @@ def reload() -> None:
     """Re-scan data_dir for databases.  Safe to call at any time."""
     _registry.clear()
 
-    # Default database — always present, even if the file does not exist yet.
-    default_path = _DATA_DIR / "rag.db"
-    entry = _load_descriptor("default", default_path)
-    # Override display name for the default db so it reads nicely.
-    if entry["display_name"] in ("Default", "default"):
-        entry["display_name"] = "RAG (default)"
-    _registry["default"] = entry
-
-    # Named databases in databases/ subdirectory.
+    # All databases live in databases/ subdirectory.
     if _DBS_DIR.exists():
+        # Primary: per-database subfolders — databases/{name}/{name}.db|.json
+        for subdir in sorted(p for p in _DBS_DIR.iterdir() if p.is_dir()):
+            name = subdir.name
+            if name not in _registry:
+                db_file = subdir / f"{name}.db"
+                _registry[name] = _load_descriptor(name, db_file)
+
+        # Legacy fallback: flat .db files directly in databases/
         for db_file in sorted(_DBS_DIR.glob("*.db")):
             name = db_file.stem
             if name not in _registry:
                 _registry[name] = _load_descriptor(name, db_file)
+
+        # Legacy fallback: flat .json with no matching .db (orphan descriptor)
+        for json_file in sorted(_DBS_DIR.glob("*.json")):
+            name = json_file.stem
+            if name not in _registry:
+                expected_db = json_file.with_suffix(".db")
+                _registry[name] = _load_descriptor(name, expected_db)
 
 
 reload()  # Auto-initialize at import time.

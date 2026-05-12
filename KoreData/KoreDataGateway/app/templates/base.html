@@ -281,7 +281,7 @@
         { label: 'Feeds', href: '/ui/feeds', active: {{ 'true' if request.url.path.startswith('/ui/feeds') else 'false' }} },
         { label: 'Library', href: '/ui/library', active: {{ 'true' if request.url.path.startswith('/ui/library') else 'false' }} },
         { label: 'Reference', href: '/ui/reference', active: {{ 'true' if request.url.path.startswith('/ui/reference') else 'false' }} },
-        { label: 'RAG', href: '/ui/rag', active: {{ 'true' if request.url.path.startswith('/ui/rag') else 'false' }} },
+        { label: 'RAG', href: '/ui/rag/databases', active: {{ 'true' if request.url.path.startswith('/ui/rag') else 'false' }} },
       ],
     });
   </script>

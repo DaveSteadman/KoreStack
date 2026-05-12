@@ -61,6 +61,30 @@ def init_db(db: str = "default") -> None:
                 content=''
             )
         """)
+        # Drop any legacy content-table triggers (old schema used auto-triggers; these are
+        # incompatible with compressed storage and must be removed if present).
+        for _trg in ("chunks_ai", "chunks_ad", "chunks_au"):
+            conn.execute(f"DROP TRIGGER IF EXISTS {_trg}")
+        # Migrate: compress any uncompressed text rows and rebuild FTS clean.
+        _uncompressed = conn.execute(
+            "SELECT COUNT(*) FROM chunks WHERE typeof(content)='text' AND content IS NOT NULL"
+        ).fetchone()[0]
+        if _uncompressed:
+            _rows = conn.execute(
+                "SELECT id, title, source, tags, content FROM chunks WHERE typeof(content)='text'"
+            ).fetchall()
+            conn.execute("DELETE FROM chunks_fts")
+            for _row in _rows:
+                _plain = _row["content"]
+                conn.execute(
+                    "UPDATE chunks SET content=?, word_count=? WHERE id=?",
+                    (_compress(_plain), _compute_word_count(_plain), _row["id"]),
+                )
+                conn.execute(
+                    "INSERT INTO chunks_fts(rowid, title, source, tags, content) VALUES (?,?,?,?,?)",
+                    (_row["id"], _row["title"] or "", _row["source"] or "",
+                     _row["tags"] or "", _plain),
+                )
 
 
 _CHUNK_COLS = ("id", "title", "source", "tags", "word_count", "created_at")

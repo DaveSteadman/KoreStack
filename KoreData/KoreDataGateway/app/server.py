@@ -1540,12 +1540,11 @@ async def rag_index(request: Request, limit: int = 100, offset: int = 0, db: str
     if "db" not in request.query_params:
         dbs_r = await _rag_client.get("/databases")
         databases = dbs_r.json() if dbs_r.status_code == 200 else []
-        non_default = [d for d in databases if d["id"] != "default"]
-        if non_default:
-            # Pick the db with the most chunks; fall back to first non-default
-            best = non_default[0]["id"]
+        if databases:
+            # Pick the db with the most chunks; fall back to first in list
+            best = databases[0]["id"]
             best_count = 0
-            for d in non_default:
+            for d in databases:
                 st = await _rag_client.get("/status", params={"db": d["id"]})
                 if st.status_code == 200:
                     count = st.json().get("total_chunks", 0)
@@ -1582,16 +1581,74 @@ async def rag_index(request: Request, limit: int = 100, offset: int = 0, db: str
     )
 
 
-@app.get("/ui/rag/databases", response_class=HTMLResponse)
-async def rag_databases(request: Request):
+async def _rag_databases_enriched() -> list[dict]:
+    """Fetch and enrich all RAG database descriptors from KoreRAG."""
     dbs_r = await _rag_client.get("/databases")
     databases = dbs_r.json() if dbs_r.status_code == 200 else []
     async def _enrich(db_id: str) -> dict:
         r = await _rag_client.get(f"/databases/{db_id}/info")
         return r.json() if r.status_code == 200 else {"id": db_id}
     enriched = await asyncio.gather(*[_enrich(d["id"]) for d in databases], return_exceptions=True)
-    enriched = [e if isinstance(e, dict) else {"id": "?", "error": str(e)} for e in enriched]
+    return [e if isinstance(e, dict) else {"id": "?", "error": str(e)} for e in enriched]
+
+
+@app.get("/ui/rag/databases/json")
+async def rag_databases_json():
+    """JSON snapshot of all RAG database descriptors — used by the page's live-update polling."""
+    return await _rag_databases_enriched()
+
+
+@app.get("/ui/rag/databases", response_class=HTMLResponse)
+async def rag_databases(request: Request):
+    enriched = await _rag_databases_enriched()
     return templates.TemplateResponse(request, "rag_databases.html", {"databases": enriched})
+
+
+@app.post("/ui/rag/databases/{name}/sync")
+async def rag_database_sync(name: str):
+    """Fire-and-forget: ask KoreRAG to launch the database's ingest.py."""
+    r = await _rag_client.post(f"/databases/{name}/sync", timeout=10.0)
+    return RedirectResponse("/ui/rag/databases", status_code=303)
+
+
+@app.post("/ui/rag/databases/{name}/stop")
+async def rag_database_stop(name: str):
+    """Ask KoreRAG to terminate the running ingest process for this database."""
+    await _rag_client.post(f"/databases/{name}/stop", timeout=10.0)
+    return RedirectResponse("/ui/rag/databases", status_code=303)
+
+
+@app.post("/ui/rag/databases/{name}/delete")
+async def rag_database_delete(name: str):
+    """Delete a database and all its data files."""
+    await _rag_client.delete(f"/databases/{name}", timeout=10.0)
+    return RedirectResponse("/ui/rag/databases", status_code=303)
+
+
+@app.post("/ui/rag/databases", response_class=HTMLResponse)
+async def rag_database_create(
+    request: Request,
+    name:         str           = Form(...),
+    display_name: Optional[str] = Form(None),
+    description:  Optional[str] = Form(None),
+):
+    """Create a new user-managed database and redirect back to the list."""
+    payload = {"name": name}
+    if display_name: payload["display_name"] = display_name
+    if description:  payload["description"]  = description
+    r = await _rag_client.post("/databases", json=payload, timeout=10.0)
+    if r.status_code not in (200, 201):
+        # Re-render the databases page with the error inline
+        enriched = await _rag_databases_enriched()
+        try:
+            detail = r.json().get("detail", r.text)
+        except Exception:
+            detail = r.text
+        return templates.TemplateResponse(
+            request, "rag_databases.html",
+            {"databases": enriched, "create_error": detail},
+        )
+    return RedirectResponse("/ui/rag/databases", status_code=303)
 
 
 @app.get("/ui/rag/search", response_class=HTMLResponse)

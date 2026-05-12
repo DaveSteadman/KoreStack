@@ -49,10 +49,11 @@ def get_db_path() -> Path:
 
 @contextmanager
 def db_connection():
-    conn = sqlite3.connect(str(get_db_path()), check_same_thread=False)
+    conn = sqlite3.connect(str(get_db_path()), check_same_thread=False, timeout=30)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
+    conn.execute("PRAGMA busy_timeout=30000")
     try:
         yield conn
         conn.commit()
