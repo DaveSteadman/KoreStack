@@ -177,7 +177,6 @@ def _attach_child_to_kill_on_close_job(pid: int):
 _maybe_reexec_into_project_venv()
 
 import llm_client as llm_client
-import koreconv_client as _koreconv_client
 from input_layer.server_startup import run_api_mode
 from llm_client import format_running_model_report
 from llm_client import get_llm_timeout
@@ -217,7 +216,7 @@ _DEFAULTS_KEYS = {"model", "ctx", "agentport", "llmhost"}
 # All valid keys in default.json - superset of _DEFAULTS_KEYS.
 # Keys here that are not in _DEFAULTS_KEYS are read directly by skills or slash commands
 # and are not passed through argparse.
-_KNOWN_KEYS = _DEFAULTS_KEYS | {"koreconvurl", "korecommsurl", "korecomms_poll_secs", "ControlDataFolder", "UserDataFolder", "mcp_connections", "mcp_servers"}
+_KNOWN_KEYS = _DEFAULTS_KEYS | {"korechaturl", "ControlDataFolder", "UserDataFolder", "mcp_connections", "mcp_servers"}
 
 
 # ====================================================================================================
@@ -464,7 +463,7 @@ def _run(args, logger, log_path) -> None:
         _raw_defaults  = load_runtime_config()
     except Exception:
         _raw_defaults  = {}
-    _koreconv_url = str(_raw_defaults.get("koreconvurl", "")).strip().rstrip("/") or "http://localhost:8700"
+    _koreconv_url = str(_raw_defaults.get("korechaturl", "")).strip().rstrip("/") or "http://localhost:8630"
 
     def _service_reachable(base_url: str) -> bool:
         try:
@@ -506,9 +505,7 @@ def _run(args, logger, log_path) -> None:
                 logger.log("MCP connections: (none configured)")
         logger.log(f"KoreChat:{_koreconv_url} (skipped in sequence mode)")
     else:
-        # Start MCP client and KoreChat before status probe so they show reachable.
         _mcp_client.start(DEFAULTS_FILE)
-        _koreconv_client.start(DEFAULTS_FILE)
 
         _mcp_status = _mcp_client.get_server_status()
         for _srv in _mcp_status:
@@ -545,7 +542,6 @@ def _run(args, logger, log_path) -> None:
     try:
         run_api_mode(config=config, logger=logger, log_path=log_path, host="0.0.0.0", port=args.agentport)
     finally:
-        _koreconv_client.stop()
         _mcp_client.stop()
 
 

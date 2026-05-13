@@ -54,7 +54,7 @@ MAF-side integration lives at:
 ```
 code/KoreAgent/input_layer/
   koreconv_input.py    Background polling thread, prompt builder, event handler
-  koreconv_client.py   Process lifecycle helpers (start/stop the KC process)
+  koreconv_client.py   KoreChat URL accessor and reachability check
 ```
 
 ---

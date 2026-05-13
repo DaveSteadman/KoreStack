@@ -117,9 +117,7 @@ def _flatten_suite_config(raw: dict) -> dict:
 
     connections = raw.get("connections") if isinstance(raw.get("connections"), dict) else {}
     if isinstance(connections.get("korechat"), str):
-        flattened["koreconvurl"] = connections["korechat"]
-    if isinstance(connections.get("korecomms"), str):
-        flattened["korecommsurl"] = connections["korecomms"]
+        flattened["korechaturl"] = connections["korechat"]
 
     mcp = raw.get("mcp") if isinstance(raw.get("mcp"), dict) else {}
     if isinstance(mcp.get("connections"), list):

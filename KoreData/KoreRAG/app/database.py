@@ -409,14 +409,13 @@ def get_member_by_id(member_id: int, db: str = "default") -> Optional[dict]:
 
 
 def get_member_speeches(member_id: int, db: str = "default") -> list[dict]:
-    """List speeches by a member with content, matched by name against speaker_raw."""
+    """List speeches by a member with content, looked up by member_id."""
     with db_connection(db) as conn:
         m = conn.execute(
-            "SELECT display_name FROM h_members WHERE member_id = ?", (member_id,)
+            "SELECT member_id FROM h_members WHERE member_id = ?", (member_id,)
         ).fetchone()
         if m is None:
             return []
-        name = _bare_name(m["display_name"])
         rows = conn.execute("""
             SELECT s.chunk_id, s.speech_order, s.speaker_raw,
                    d.uuid AS debate_uuid, d.title AS debate_title, d.sitting_date,
@@ -424,9 +423,9 @@ def get_member_speeches(member_id: int, db: str = "default") -> list[dict]:
             FROM h_speeches s
             JOIN h_debates d ON d.uuid = s.debate_uuid
             JOIN chunks c ON c.id = s.chunk_id
-            WHERE s.speaker_raw = ? OR s.speaker_raw LIKE ?
+            WHERE s.member_id = ?
             ORDER BY d.sitting_date DESC, s.speech_order
-        """, (name, name + " (%")).fetchall()
+        """, (member_id,)).fetchall()
     result = []
     for r in rows:
         d = dict(r)

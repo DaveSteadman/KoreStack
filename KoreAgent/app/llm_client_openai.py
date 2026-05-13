@@ -3,19 +3,19 @@
 # ====================================================================================================
 # Shared state and OpenAI-compatible core for the llm_client_*.py sub-modules.
 #
-# Contains everything that is not Ollama-proprietary:
+# Contains everything that is not backend-proprietary:
 #   - Module-level connection state and all accessor/mutator functions.
 #   - Host configuration and backend detection utilities, including configure_server() for
 #     explicit backend targeting.
-#   - LM Studio health check, /v1/models listing, and model report.
 #   - Health-check cache helpers used by both backends.
 #   - The _request_json HTTP helper (thread-safe, hard timeout enforcement).
 #   - OllamaCallResult and ChatCallResult data structures.
 #   - Model name resolution utilities (resolve_model_name, is_explicit_model_name).
 #
 # Related modules:
-#   - llm_client_ollama.py -- Ollama-specific: model management, process lifecycle, /api/generate
-#   - llm_client.py        -- Routing facade: re-exports all public names + call_llm_chat
+#   - llm_client_ollama.py   -- Ollama-specific: model management, process lifecycle, /api/generate
+#   - llm_client_lmstudio.py -- LM Studio-specific: health check, /v1/models listing, model report
+#   - llm_client.py          -- Routing facade: re-exports all public names + call_llm_chat
 # ====================================================================================================
 
 
@@ -371,31 +371,4 @@ def is_explicit_model_name(requested_model: str) -> bool:
     """
     requested = requested_model.strip()
     return bool(requested) and ":" in requested and not any(ch.isspace() for ch in requested)
-
-
-# ====================================================================================================
-# MARK: LMSTUDIO
-# ====================================================================================================
-def ensure_lmstudio_reachable(host: str) -> None:
-    if is_host_health_cached(host):
-        return
-    try:
-        _request_json(f"{host.rstrip('/')}/v1/models", timeout=3.0)
-        mark_host_healthy(host)
-    except Exception:
-        raise RuntimeError(f"LM Studio is not reachable at {host}. Ensure LM Studio is running.")
-
-
-# ----------------------------------------------------------------------------------------------------
-def list_lmstudio_models(host: str) -> list[str]:
-    try:
-        body = _request_json(f"{host.rstrip('/')}/v1/models", timeout=10.0)
-        return [m.get("id", "") for m in body.get("data", []) if m.get("id")]
-    except Exception as exc:
-        raise RuntimeError(f"Unable to list LM Studio models at {host}: {exc}") from exc
-
-
-# ----------------------------------------------------------------------------------------------------
-def format_lmstudio_model_report(model_name: str) -> str:
-    return f"Model runtime status: {model_name} via LM Studio (runtime details not available)"
 

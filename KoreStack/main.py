@@ -295,7 +295,7 @@ def parse_args() -> argparse.Namespace:
 def resolve_services(raw: str, services: dict[str, ServiceSpec]) -> list[ServiceSpec]:
     selected = [part.strip().lower() for part in raw.split(",") if part.strip()]
     if not selected or selected == ["all"]:
-        return [services[key] for key in ("agent", "conversation", "data", "docs", "code", "comms")]
+        return [services[key] for key in ("conversation", "agent", "data", "docs", "code", "comms")]
 
     unknown = [name for name in selected if name not in services]
     if unknown:

@@ -569,18 +569,22 @@ async def api_search(req: _SearchRequest):
 
 
 def _add_next_mins(feeds: list) -> None:
-    """Compute _next_mins for each feed dict in-place."""
+    """Compute _next_mins and _next_secs for each feed dict in-place."""
     now = datetime.utcnow()
     for f in feeds:
         last = f.get("last_fetched_at")
         if last:
             try:
                 nxt = datetime.fromisoformat(last) + timedelta(minutes=int(f.get("update_rate", 60)))
-                f["_next_mins"] = int((nxt - now).total_seconds() / 60)
+                secs = int((nxt - now).total_seconds())
+                f["_next_secs"] = max(0, secs)
+                f["_next_mins"] = secs // 60
             except Exception:
                 f["_next_mins"] = None
+                f["_next_secs"] = None
         else:
             f["_next_mins"] = None
+            f["_next_secs"] = None
 
 
 # ===========================================================================
@@ -808,6 +812,7 @@ async def web_domain(request: Request, domain: str, limit: int = 50, offset: int
     feeds       = [f for f in all_feeds if f.get("domain") == domain]
     _add_next_mins(feeds)
     feed_refresh_mins = {f["id"]: f.get("_next_mins") for f in feeds}
+    feed_refresh_secs = {f["id"]: f.get("_next_secs") for f in feeds}
 
     return templates.TemplateResponse(
         request, "feed_domain.html",
@@ -821,6 +826,7 @@ async def web_domain(request: Request, domain: str, limit: int = 50, offset: int
             "age_settings":      age_settings,
             "feed_counts":       feed_counts,
             "feed_refresh_mins": feed_refresh_mins,
+            "feed_refresh_secs": feed_refresh_secs,
         },
     )
 

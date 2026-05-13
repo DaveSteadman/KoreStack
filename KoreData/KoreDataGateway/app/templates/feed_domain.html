@@ -58,10 +58,11 @@
                 {% else %}<span class="meta" style="font-size:11px;">-</span>
                 {% endif %}
               </td>
-              <td class="meta" data-col="next" style="text-align:right; white-space:nowrap;">
-                {% set mins = feed_refresh_mins.get(f.id) %}
-                {% if mins is none or mins <= 0 %}<span style="color:var(--amber);">now</span>
-                {% else %}{{ mins }}m
+              <td class="meta" data-col="next" style="text-align:right; white-space:nowrap;"
+                data-next-secs="{{ feed_refresh_secs.get(f.id) if feed_refresh_secs.get(f.id) is not none else '' }}">
+                {% set secs = feed_refresh_secs.get(f.id) %}
+                {% if secs is none or secs <= 0 %}<span style="color:var(--amber);">now</span>
+                {% else %}{{ (secs // 60) }}m
                 {% endif %}
               </td>
               <td>
@@ -491,6 +492,18 @@ function cancelAgeGate() {
     else clearTimeout(timer);
   });
   schedule();
+}());
+
+(function () {
+  setInterval(function () {
+    document.querySelectorAll('td[data-next-secs]').forEach(function (td) {
+      var raw = td.dataset.nextSecs;
+      if (raw === '' || raw === undefined) return;
+      var secs = Math.max(0, parseInt(raw, 10) - 60);
+      td.dataset.nextSecs = secs;
+      td.innerHTML = secs <= 0 ? '<span style="color:var(--amber);">now</span>' : Math.floor(secs / 60) + 'm';
+    });
+  }, 60000);
 }());
 </script>
 {% endblock %}

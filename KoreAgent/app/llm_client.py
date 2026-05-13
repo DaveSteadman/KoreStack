@@ -11,8 +11,9 @@
 # as routing wrappers that delegate to llm_client_ollama or llm_client_lmstudio).
 #
 # Sub-modules:
-#   - llm_client_openai.py -- Shared state, config, HTTP, data types, LM Studio management
-#   - llm_client_ollama.py -- Ollama: /api/tags, /api/generate, /api/ps, process lifecycle
+#   - llm_client_openai.py   -- Shared state, config, HTTP, data types
+#   - llm_client_ollama.py   -- Ollama: /api/tags, /api/generate, /api/ps, process lifecycle
+#   - llm_client_lmstudio.py -- LM Studio: health check, /v1/models listing, model report
 #
 # Related callers:
 #   - main.py                   -- calls configure_host(), ensure_ollama_running(), model utilities
@@ -30,8 +31,9 @@ import time
 import urllib.error
 import urllib.request
 
-import llm_client_openai as _openai
-import llm_client_ollama as _ollama
+import llm_client_openai   as _openai
+import llm_client_ollama   as _ollama
+import llm_client_lmstudio as _lmstudio
 
 from llm_client_openai import DEFAULT_OLLAMAHOST
 from llm_client_openai import DEFAULT_LMSTUDIO_HOST
@@ -57,7 +59,6 @@ from llm_client_ollama  import start_ollama_server
 from llm_client_ollama  import stop_model
 from llm_client_ollama  import call_ollama_extended
 from llm_client_ollama  import call_ollama
-from llm_client_ollama  import get_ollama_ps_rows
 from llm_client_ollama  import get_running_model_row
 from utils.workspace_utils         import trunc
 
@@ -65,6 +66,15 @@ from utils.workspace_utils         import trunc
 # ====================================================================================================
 # MARK: ROUTING
 # ====================================================================================================
+def get_ollama_ps_rows() -> list[dict]:
+    """Return currently running models. Routes by active backend.
+
+    - Ollama: parses `ollama ps` (local) or calls /api/ps (remote).
+    - LM Studio: returns [] — no equivalent endpoint exists.
+    """
+    if _openai.get_active_backend() == "lmstudio":
+        return []
+    return _ollama.get_ollama_ps_rows()
 def ensure_ollama_running(
     host: str | None = None,
     start_if_needed: bool = True,
@@ -79,7 +89,7 @@ def ensure_ollama_running(
     """
     host = host or _openai.get_active_host()
     if _openai._is_lmstudio_host(host):
-        _openai.ensure_lmstudio_reachable(host)
+        _lmstudio.ensure_lmstudio_reachable(host)
         return
     _ollama.ensure_ollama_running(
         host=host,
@@ -99,7 +109,7 @@ def list_ollama_models(host: str | None = None) -> list[str]:
     """
     host = host or _openai.get_active_host()
     if _openai._is_lmstudio_host(host):
-        return _openai.list_lmstudio_models(host)
+        return _lmstudio.list_lmstudio_models(host)
     return _ollama.list_ollama_models(host=host)
 
 
@@ -110,7 +120,7 @@ def format_running_model_report(model_name: str) -> str:
     Routes to the backend-specific implementation.
     """
     if _openai._is_lmstudio_host(_openai.get_active_host()):
-        return _openai.format_lmstudio_model_report(model_name)
+        return _lmstudio.format_lmstudio_model_report(model_name)
     return _ollama.format_running_model_report(model_name)
 
 

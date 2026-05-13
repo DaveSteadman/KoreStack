@@ -89,7 +89,7 @@ Edit `config/default.json` (created automatically on first run with defaults):
 | `event_poll_interval` | `1.0` | How often KoreComms checks KoreChat for outbound delivery events |
 | `missing_kc_conversation_policy` | `recreate` | What to do if the linked KoreChat record is gone: `recreate` or `abort` |
 | `data_dir` | `datacontrol/korecomms` | SQLite database directory under the shared suite control tree |
-| `korechat_url` | `http://localhost:8630` | KoreConversation/KoreChat base URL for outbound delivery events |
+| `korechat_url` | `http://localhost:8630` | KoreChat base URL for outbound delivery events |
 
 Discord connection settings live per interface in the WebUI:
 

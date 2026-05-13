@@ -1,5 +1,5 @@
 {
-  "model": "gemma4:26b",
-  "ctx": 131072,
-  "llmhost": "http://MONTBLANC:11434"
+  "model": "nemotron-cascade-2-30b-a3b-nvfp4",
+  "ctx": 100000,
+  "llmhost": "http://MONTBLANC:1234"
 }

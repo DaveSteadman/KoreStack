@@ -67,6 +67,34 @@ _STARTUP_WAIT    = 45.0  # total seconds start() will keep retrying unreachable 
 
 
 # ====================================================================================================
+# MARK: SCHEMA SANITIZATION
+# ====================================================================================================
+def _sanitize_schema(obj):
+    """Recursively remove null/None values and collapse Optional anyOf wrappers.
+
+    LM Studio's Jinja prompt template applies | string to JSON values and raises
+    'Cannot apply filter "string" to type: NullValue' if any field is JSON null.
+    Pydantic/FastMCP generates schemas for Optional parameters that contain
+    {"default": null} and {"anyOf": [..., {"type": "null"}]}, both of which trigger
+    this error. This function strips those before the schema is sent to the LLM.
+    """
+    if isinstance(obj, dict):
+        # Drop any key whose value is None/null (e.g. "default": null).
+        cleaned = {k: _sanitize_schema(v) for k, v in obj.items() if v is not None}
+        # Collapse {"anyOf": [<real_schema>, {"type": "null"}]} -> <real_schema>
+        if "anyOf" in cleaned:
+            non_null = [s for s in cleaned["anyOf"] if s != {"type": "null"}]
+            if len(non_null) == 1:
+                merged = dict(non_null[0])
+                merged.update({k: v for k, v in cleaned.items() if k != "anyOf"})
+                return merged
+        return cleaned
+    if isinstance(obj, list):
+        return [_sanitize_schema(item) for item in obj if item is not None]
+    return obj
+
+
+# ====================================================================================================
 # MARK: LIFECYCLE
 # ====================================================================================================
 def _run_loop(loop: asyncio.AbstractEventLoop) -> None:
@@ -561,7 +589,7 @@ async def _list_tools_async(server: dict) -> tuple[list[dict], dict]:
                     "function": {
                         "name":        tool.name,
                         "description": tool.description or "",
-                        "parameters":  schema,
+                        "parameters":  _sanitize_schema(schema),
                     },
                 }
                 defs.append(tool_def)

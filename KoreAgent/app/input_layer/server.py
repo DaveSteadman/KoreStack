@@ -269,10 +269,10 @@ def _get_korechat_base_url() -> str | None:
     try:
         raw = json.loads(defaults_path.read_text(encoding="utf-8")) if defaults_path.exists() else {}
     except Exception:
-        return "http://localhost:8700"
+        return "http://localhost:8630"
 
-    configured = str(raw.get("koreconvurl", "")).strip().rstrip("/")
-    return configured or "http://localhost:8700"
+    configured = str(raw.get("korechaturl", "")).strip().rstrip("/")
+    return configured or "http://localhost:8630"
 
 @app.get("/", include_in_schema=False)
 def serve_index():

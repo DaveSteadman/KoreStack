@@ -21,7 +21,7 @@
 # Each conversation maps to a stable session_id "kc_conv_{id}" for orchestration history.
 #
 # Configuration:
-#   "koreconvurl" in default.json (repo root), e.g. "http://localhost:8700".
+#   "korechaturl" in default.json (repo root), e.g. "http://localhost:8630".
 #   If absent, the thread exits immediately with a notice.
 #
 # Public entry point:
@@ -33,7 +33,7 @@
 #   - scheduler.py         -- task_queue singleton used for serialisation
 #   - orchestration.py     -- orchestrate_prompt, OrchestratorConfig
 #   - run_helpers.py       -- make_task_session
-#   - koreconv_client.py   -- process lifecycle (start/stop); not used here for HTTP
+#   - koreconv_client.py   -- KoreChat URL accessor
 # ====================================================================================================
 
 
@@ -60,8 +60,8 @@ from utils.workspace_utils import load_runtime_config
 # ====================================================================================================
 # MARK: CONSTANTS
 # ====================================================================================================
-_CONFIG_KEY        = "koreconvurl"
-_DEFAULT_BASE_URL  = "http://localhost:8700"
+_CONFIG_KEY        = "korechaturl"
+_DEFAULT_BASE_URL  = "http://localhost:8630"
 _DEFAULT_POLL_SECS = 3
 _DEFAULT_TIMEOUT   = 8
 _SESSION_PREFIX    = "kc_conv_"
@@ -187,7 +187,7 @@ def _build_prompt(conv: dict, messages: list[dict], push_log_line=None) -> str:
             scratchpad = json.loads(scratchpad)
         except Exception as exc:
             if push_log_line:
-                push_log_line(f"[KORECONV] Conv {conv.get('id', '?')}: scratchpad JSON decode failed - prompt built without scratchpad: {exc}")
+                push_log_line(f"[KORECHAT] Conv {conv.get('id', '?')}: scratchpad JSON decode failed - prompt built without scratchpad: {exc}")
             scratchpad = {}
 
     # Unsummarised messages only - summarised ones are already in thread_summary.
@@ -259,30 +259,30 @@ def _handle_compress_needed(
     conv_id  = conv.get("id")
 
     if not conv_id:
-        push_log_line(f"[KORECONV] compress event {event_id} has no conversation - completing as failed")
+        push_log_line(f"[KORECHAT] compress event {event_id} has no conversation - completing as failed")
         try:
             _http_post(base, f"/events/{event_id}/complete", {"status": "failed"})
         except Exception as exc:
-            push_log_line(f"[KORECONV] Event {event_id}: complete call failed: {exc}")
+            push_log_line(f"[KORECHAT] Event {event_id}: complete call failed: {exc}")
         return
 
     # Fetch all unsummarised messages.
     try:
         raw = _http_get(base, f"/conversations/{conv_id}/messages?summarised=0&limit=500") or []
     except Exception as exc:
-        push_log_line(f"[KORECONV] Conv {conv_id}: could not fetch messages for compression: {exc}")
+        push_log_line(f"[KORECHAT] Conv {conv_id}: could not fetch messages for compression: {exc}")
         try:
             _http_post(base, f"/events/{event_id}/complete", {"status": "failed"})
         except Exception as exc:
-            push_log_line(f"[KORECONV] Event {event_id}: complete call failed: {exc}")
+            push_log_line(f"[KORECHAT] Event {event_id}: complete call failed: {exc}")
         return
 
     if not raw:
-        push_log_line(f"[KORECONV] Conv {conv_id}: no unsummarised messages - nothing to compress")
+        push_log_line(f"[KORECHAT] Conv {conv_id}: no unsummarised messages - nothing to compress")
         try:
             _http_post(base, f"/events/{event_id}/complete", {"status": "completed"})
         except Exception as exc:
-            push_log_line(f"[KORECONV] Event {event_id}: complete call failed: {exc}")
+            push_log_line(f"[KORECHAT] Event {event_id}: complete call failed: {exc}")
         return
 
     lines = []
@@ -296,7 +296,7 @@ def _handle_compress_needed(
     input_chars    = len(messages_text)
     input_tok_est  = input_chars // 4
 
-    push_log_line(f"[KORECONV] Compressing conv {conv_id}: {len(raw)} messages, ~{input_tok_est:,} tok input")
+    push_log_line(f"[KORECHAT] Compressing conv {conv_id}: {len(raw)} messages, ~{input_tok_est:,} tok input")
 
     compress_prompt = _COMPRESS_PROMPT_TEMPLATE.format(messages=messages_text)
 
@@ -319,11 +319,11 @@ def _handle_compress_needed(
         )
 
     if not ok or not summary.strip():
-        push_log_line(f"[KORECONV] Conv {conv_id}: compression run failed - leaving messages unsummarised")
+        push_log_line(f"[KORECHAT] Conv {conv_id}: compression run failed - leaving messages unsummarised")
         try:
             _http_post(base, f"/events/{event_id}/complete", {"status": "failed"})
         except Exception as exc:
-            push_log_line(f"[KORECONV] Event {event_id}: complete call failed: {exc}")
+            push_log_line(f"[KORECHAT] Event {event_id}: complete call failed: {exc}")
         return
 
     # Append new summary to existing thread_summary.
@@ -336,7 +336,7 @@ def _handle_compress_needed(
         try:
             _http_patch(base, f"/messages/{msg_id}", {"summarised": 1})
         except Exception as exc:
-            push_log_line(f"[KORECONV] Conv {conv_id}: could not mark message {msg_id} summarised: {exc}")
+            push_log_line(f"[KORECHAT] Conv {conv_id}: could not mark message {msg_id} summarised: {exc}")
 
     # Patch conversation - reset token_estimate to rough summary size only.
     summary_tokens = len(new_summary) // 4
@@ -346,18 +346,18 @@ def _handle_compress_needed(
             "token_estimate": summary_tokens,
         })
     except Exception as exc:
-        push_log_line(f"[KORECONV] Conv {conv_id}: failed to patch summary after compression: {exc}")
+        push_log_line(f"[KORECHAT] Conv {conv_id}: failed to patch summary after compression: {exc}")
 
     reduction_pct = int(100 * (1 - summary_tokens / input_tok_est)) if input_tok_est > 0 else 0
     push_log_line(
-        f"[KORECONV] Conv {conv_id}: compressed {len(message_ids)} message(s) "
+        f"[KORECHAT] Conv {conv_id}: compressed {len(message_ids)} message(s) "
         f"~{input_tok_est:,} tok -> ~{summary_tokens:,} tok ({reduction_pct}% reduction)"
     )
 
     try:
         _http_post(base, f"/events/{event_id}/complete", {"status": "completed"})
     except Exception as exc:
-        push_log_line(f"[KORECONV] Event {event_id}: complete failed: {exc}")
+        push_log_line(f"[KORECHAT] Event {event_id}: complete failed: {exc}")
 
 
 # ====================================================================================================
@@ -395,24 +395,24 @@ def _handle_event(
         return
 
     if event_type != "response_needed":
-        push_log_line(f"[KORECONV] Skipping unsupported event {event_id} ({event_type or 'unknown'})")
+        push_log_line(f"[KORECHAT] Skipping unsupported event {event_id} ({event_type or 'unknown'})")
         try:
             _http_post(base, f"/events/{event_id}/complete", {"status": "completed"})
         except Exception as exc:
-            push_log_line(f"[KORECONV] Event {event_id}: skip-complete failed: {exc}")
+            push_log_line(f"[KORECHAT] Event {event_id}: skip-complete failed: {exc}")
         return
 
     if not conv_id:
-        push_log_line(f"[KORECONV] Event {event_id} has no conversation - completing as failed")
+        push_log_line(f"[KORECHAT] Event {event_id} has no conversation - completing as failed")
         try:
             _http_post(base, f"/events/{event_id}/complete", {"status": "failed"})
         except Exception as exc:
-            push_log_line(f"[KORECONV] Event {event_id}: complete call failed: {exc}")
+            push_log_line(f"[KORECHAT] Event {event_id}: complete call failed: {exc}")
         return
 
     session_id = f"{_SESSION_PREFIX}{conv_id}"
     turn_count = conv.get("turn_count", 0)
-    push_log_line(f"[KORECONV] Handling event {event_id} (conv {conv_id}, turn {turn_count + 1})")
+    push_log_line(f"[KORECHAT] Handling event {event_id} (conv {conv_id}, turn {turn_count + 1})")
 
     run_log_path = create_log_file_path(log_dir=log_dir)
     with session_logger_cls(run_log_path) as run_logger:
@@ -424,7 +424,7 @@ def _handle_event(
             try:
                 messages = _http_get(base, f"/conversations/{conv_id}/messages?limit=500") or []
             except Exception as exc:
-                push_log_line(f"[KORECONV] Conv {conv_id}: could not fetch messages: {exc}")
+                push_log_line(f"[KORECHAT] Conv {conv_id}: could not fetch messages: {exc}")
                 messages = []
 
         # Guard against duplicate processing: if the most recent message is already outbound,
@@ -437,11 +437,11 @@ def _handle_event(
         except Exception:
             fresh_messages = messages
         if fresh_messages and (fresh_messages[-1].get("direction") or "") == "outbound":
-            push_log_line(f"[KORECONV] Conv {conv_id}: event {event_id} skipped - turn already answered by web API path")
+            push_log_line(f"[KORECHAT] Conv {conv_id}: event {event_id} skipped - turn already answered by web API path")
             try:
                 _http_post(base, f"/events/{event_id}/complete", {"status": "completed"})
             except Exception as exc:
-                push_log_line(f"[KORECONV] Event {event_id}: complete call failed: {exc}")
+                push_log_line(f"[KORECHAT] Event {event_id}: complete call failed: {exc}")
             return
 
         # Restore persisted scratchpad state into the active session before orchestration
@@ -457,7 +457,7 @@ def _handle_event(
             try:
                 scratch_save(scratch_key, str(scratch_value), session_id=session_id)
             except Exception as exc:
-                push_log_line(f"[KORECONV] Conv {conv_id}: could not restore scratchpad key {scratch_key!r}: {exc}")
+                push_log_line(f"[KORECHAT] Conv {conv_id}: could not restore scratchpad key {scratch_key!r}: {exc}")
 
         user_prompt = _build_prompt(conv, messages, push_log_line=push_log_line)
 
@@ -485,9 +485,9 @@ def _handle_event(
                         with session_ctx._lock:
                             if not session_ctx._turns:
                                 session_ctx._turns = valid
-                        push_log_line(f"[KORECONV] Conv {conv_id}: restored {len(valid)} turn(s) from background_context")
+                        push_log_line(f"[KORECHAT] Conv {conv_id}: restored {len(valid)} turn(s) from background_context")
             except Exception as exc:
-                push_log_line(f"[KORECONV] Conv {conv_id}: could not restore background_context: {exc}")
+                push_log_line(f"[KORECHAT] Conv {conv_id}: could not restore background_context: {exc}")
 
         # Item 5: Compute token pressure from the stored estimate vs the model's context window.
         # This is passed to orchestrate_prompt so build_system_message can warn the model when
@@ -507,7 +507,7 @@ def _handle_event(
 
         tps_str = f"{tps:.1f}" if tps > 0 else "0"
         push_log_line(
-            f"[KORECONV] Conv {conv_id}: [{prompt_tokens:,} tok, {tps_str} tok/s, ok={ok}]"
+            f"[KORECHAT] Conv {conv_id}: [{prompt_tokens:,} tok, {tps_str} tok/s, ok={ok}]"
         )
 
         reply              = response.strip()
@@ -546,7 +546,7 @@ def _handle_event(
                 "status":         "sent",
             })
         except Exception as exc:
-            push_log_line(f"[KORECONV] Conv {conv_id}: failed to write outbound message: {exc}")
+            push_log_line(f"[KORECHAT] Conv {conv_id}: failed to write outbound message: {exc}")
 
         # Patch conversation metadata including scratchpad.
         # This is the durable write - we log failures loudly but still complete the event
@@ -561,16 +561,16 @@ def _handle_event(
             })
         except Exception as exc:
             push_log_line(
-                f"[KORECONV] Conv {conv_id}: WARN - conversation patch failed (scratchpad may be stale): {exc}"
+                f"[KORECHAT] Conv {conv_id}: WARN - conversation patch failed (scratchpad may be stale): {exc}"
             )
 
         # Complete the event.
         try:
             _http_post(base, f"/events/{event_id}/complete", {"status": "completed"})
         except Exception as exc:
-            push_log_line(f"[KORECONV] Event {event_id}: complete failed: {exc}")
+            push_log_line(f"[KORECHAT] Event {event_id}: complete failed: {exc}")
 
-        # Raise outbound_ready for KoreComms delivery if needed.
+        # Raise outbound_ready so KoreChat can signal KoreComms for non-webchat delivery.
         channel = conv.get("channel_type", "webchat")
         if channel not in {"webchat", "manual"}:
             try:
@@ -581,14 +581,14 @@ def _handle_event(
                     "payload":         {},
                 })
             except Exception as exc:
-                push_log_line(f"[KORECONV] Conv {conv_id}: outbound_ready event failed: {exc}")
+                push_log_line(f"[KORECHAT] Conv {conv_id}: outbound_ready event failed: {exc}")
 
         # Check whether the running token estimate has crossed the compression threshold.
         # Uses config.num_ctx so /ctx size in the UI controls the trigger point directly.
         compress_at = int(config.num_ctx * _COMPRESS_THRESHOLD)
         if new_token_estimate >= compress_at:
             push_log_line(
-                f"[KORECONV] Conv {conv_id}: token_estimate {new_token_estimate:,} >= "
+                f"[KORECHAT] Conv {conv_id}: token_estimate {new_token_estimate:,} >= "
                 f"compress threshold {compress_at:,} (ctx {config.num_ctx:,} * {_COMPRESS_THRESHOLD}) "
                 f"- queuing compress_needed"
             )
@@ -600,7 +600,7 @@ def _handle_event(
                     "payload":         {},
                 })
             except Exception as exc:
-                push_log_line(f"[KORECONV] Conv {conv_id}: could not queue compress_needed: {exc}")
+                push_log_line(f"[KORECHAT] Conv {conv_id}: could not queue compress_needed: {exc}")
 
 
 # ====================================================================================================
@@ -621,15 +621,15 @@ def start_koreconv_loop(
 
     Polls GET /events/next?claimed_by=agent every _DEFAULT_POLL_SECS seconds.
     Each claimed event is enqueued into task_queue so LLM work runs serially.
-    If koreconvurl is not configured, the thread exits immediately.
+    If korechaturl is not configured, the thread exits immediately.
     """
     def _loop() -> None:
         base = _get_base_url()
         if not base:
-            push_log_line("[KORECONV] koreconvurl not configured - KoreChat integration disabled.")
+            push_log_line("[KORECHAT] korechaturl not configured - KoreChat integration disabled.")
             return
 
-        push_log_line(f"[KORECONV] Polling {base} every {_DEFAULT_POLL_SECS}s")
+        push_log_line(f"[KORECHAT] Polling {base} every {_DEFAULT_POLL_SECS}s")
 
         while not shutdown.is_set():
             try:
@@ -651,12 +651,12 @@ def start_koreconv_loop(
 
                     queued = task_queue.enqueue(task_name, "koreconv", _run_event)
                     if queued:
-                        push_log_line(f"[KORECONV] Event {event_id} (conv {conv_id}) queued as '{task_name}'")
+                        push_log_line(f"[KORECHAT] Event {event_id} (conv {conv_id}) queued as '{task_name}'")
                     else:
-                        push_log_line(f"[KORECONV] Event {event_id} (conv {conv_id}) already in task queue - skipping")
+                        push_log_line(f"[KORECHAT] Event {event_id} (conv {conv_id}) already in task queue - skipping")
 
             except Exception as exc:
-                push_log_line(f"[KORECONV] Poll error: {exc}")
+                push_log_line(f"[KORECHAT] Poll error: {exc}")
 
             # Short-burst sleep so shutdown is responsive.
             for _ in range(_DEFAULT_POLL_SECS * 2):

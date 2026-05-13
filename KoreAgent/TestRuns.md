@@ -1,3 +1,8 @@
+# Version 0035 / 0.5+dev
+
+[ALL TESTS COMPLETE]  host=http://MONTBLANC:1234  model=nemotron-cascade-2-30b-a3b-nvfp4  elapsed=66m 55s  pass rate=94% (165/176)  prompt tokens=16,120,993  avg tok/s=135.4
+- LM-Studio test run
+- Normal web search issues
 
 # Version 0032 / 0.5+dev
 
