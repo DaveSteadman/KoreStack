@@ -95,6 +95,8 @@ def init_db() -> None:
         """)
         conn.execute("CREATE INDEX IF NOT EXISTS idx_links_from ON links (from_id)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_links_to   ON links (to_id)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_links_to_title ON links (to_title)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_articles_title_lower ON articles (lower(title))")
         # FTS: contentless — body is stored compressed so triggers can't index it.
         # Python code in upsert/delete manages FTS explicitly with plain text.
         conn.execute("""
@@ -373,16 +375,25 @@ def get_random_article() -> Optional[dict]:
 # Links
 # ---------------------------------------------------------------------------
 
-def resolve_links() -> int:
-    """Fill in to_id for unresolved links. Returns count resolved."""
-    with db_connection() as conn:
-        cur = conn.execute("""
-            UPDATE links SET to_id = (
-                SELECT id FROM articles WHERE lower(title) = lower(links.to_title)
-            )
-            WHERE to_id IS NULL
-        """)
-        return cur.rowcount
+def resolve_links(batch_size: int = 500) -> int:
+    """Fill in to_id for unresolved links. Runs in batches to avoid a single long write lock."""
+    total_resolved = 0
+    while True:
+        with db_connection() as conn:
+            cur = conn.execute("""
+                UPDATE links SET to_id = (
+                    SELECT id FROM articles WHERE lower(title) = lower(links.to_title)
+                )
+                WHERE to_id IS NULL
+                  AND rowid IN (
+                      SELECT rowid FROM links WHERE to_id IS NULL LIMIT ?
+                  )
+            """, (batch_size,))
+            resolved = cur.rowcount
+        total_resolved += resolved
+        if resolved == 0:
+            break
+    return total_resolved
 
 
 def get_unresolved_link_titles(limit: int = 10_000) -> list[str]:

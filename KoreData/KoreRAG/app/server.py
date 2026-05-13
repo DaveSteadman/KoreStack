@@ -245,6 +245,17 @@ def route_database_info(name: str):
     desc = get_descriptor(name)
     if desc is None:
         raise HTTPException(status_code=404, detail=f"Unknown database: {name!r}")
+    # Read sync status fresh from disk so polling always reflects what the
+    # ingest subprocess has written, bypassing the in-memory registry cache.
+    ingestor = desc.get("ingestor") or name
+    json_path = Path(cfg["data_dir"]) / "databases" / ingestor / f"{ingestor}.json"
+    if json_path.exists():
+        try:
+            d = json.loads(json_path.read_text(encoding="utf-8"))
+            if "sync" in d:
+                desc = {**desc, "sync": d["sync"]}
+        except Exception:
+            pass
     try:
         status = get_status(db=name)
     except Exception:

@@ -1007,7 +1007,7 @@ async def lib_index(request: Request, limit: int = 200, offset: int = 0, catalog
     )
     books     = books_r.json()    if books_r.status_code == 200    else []
     status    = status_r.json()   if status_r.status_code == 200   else {}
-    catalogs  = catalogs_r.json() if catalogs_r.status_code == 200 else []
+    catalogs  = (catalogs_r.json().get("catalogs", []) if catalogs_r.status_code == 200 else [])
     return templates.TemplateResponse(
         request, "library_index.html",
         {
@@ -1034,7 +1034,7 @@ async def lib_incomplete(request: Request, fields: Optional[str] = None, catalog
         _lib_client.get("/catalogs"),
     )
     books    = r.json()           if r.status_code == 200           else []
-    catalogs = catalogs_r.json()  if catalogs_r.status_code == 200  else []
+    catalogs = (catalogs_r.json().get("catalogs", []) if catalogs_r.status_code == 200 else [])
     return templates.TemplateResponse(
         request, "library_index.html",
         {
@@ -1077,6 +1077,8 @@ async def lib_search(
         if catalog:  params["catalog"]  = catalog
         r = await _lib_client.get("/search", params=params)
         results = r.json() if r.status_code == 200 else []
+    catalogs_r = await _lib_client.get("/catalogs")
+    catalogs = (catalogs_r.json().get("catalogs", []) if catalogs_r.status_code == 200 else [])
     return templates.TemplateResponse(
         request, "library_search.html",
         {
@@ -1090,6 +1092,7 @@ async def lib_search(
             "genre":    genre or "",
             "catalog":  catalog or "",
             "limit":    limit,
+            "catalogs": catalogs,
         },
     )
 
@@ -1097,7 +1100,7 @@ async def lib_search(
 @app.get("/ui/library/import", response_class=HTMLResponse)
 async def lib_import(request: Request, error: Optional[str] = None):
     catalogs_r = await _lib_client.get("/catalogs")
-    catalogs = catalogs_r.json() if catalogs_r.status_code == 200 else []
+    catalogs = (catalogs_r.json().get("catalogs", []) if catalogs_r.status_code == 200 else [])
     return templates.TemplateResponse(
         request, "library_import.html",
         {"error": error, "catalogs": catalogs},

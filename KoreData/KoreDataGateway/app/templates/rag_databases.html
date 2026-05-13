@@ -88,23 +88,25 @@
             {% if d.db_size_bytes is not none %}{{ "{:,.0f}".format(d.db_size_bytes / 1024) }} KB{% else %}-{% endif %}
           </td>
           <td id="db-{{ d.id }}-actions" style="text-align:right; white-space:nowrap;">
+            <span style="display:inline-flex; gap:0.4rem; align-items:center;">
             {% if d.managed_by == "ingestor" and d.sync %}
               {% if d.sync.status == "running" %}
-            <form method="post" action="/ui/rag/databases/{{ d.id }}/stop" style="display:inline; margin-right:0.4rem;">
+            <form method="post" action="/ui/rag/databases/{{ d.id }}/stop" style="display:contents;">
               <button type="submit" class="kcui-tag kcui-tag--danger">STOP</button>
             </form>
               {% else %}
-            <form method="post" action="/ui/rag/databases/{{ d.id }}/sync" style="display:inline; margin-right:0.4rem;">
+            <form method="post" action="/ui/rag/databases/{{ d.id }}/sync" style="display:contents;">
               <button type="submit" class="kcui-tag kcui-tag--warning">INGEST</button>
             </form>
               {% endif %}
             {% endif %}
             {% if d.navigation %}<a class="kcui-tag kcui-tag--accent" href="/ui/rag/explore/{{ d.id }}">EXPLORE</a>{% endif %}
             <a class="kcui-tag kcui-tag--muted" href="/ui/rag?db={{ d.id }}">BROWSE</a>
-            <form method="post" action="/ui/rag/databases/{{ d.id }}/delete" style="display:inline; margin-left:0.6rem;"
+            <form method="post" action="/ui/rag/databases/{{ d.id }}/delete" style="display:contents;"
                   onsubmit="return confirm('Delete database &quot;{{ d.id }}&quot; and all its data?\nThis cannot be undone.')">
               <button type="submit" class="kcui-tag kcui-tag--danger">DELETE</button>
             </form>
+            </span>
           </td>
         </tr>
         {% endfor %}
@@ -152,18 +154,19 @@
   }
 
   function renderActions(d) {
-    let h = '';
+    let h = '<span style="display:inline-flex;gap:0.4rem;align-items:center;">';
     if (d.managed_by === 'ingestor' && d.sync) {
       if (d.sync.status === 'running')
-        h += '<form method="post" action="/ui/rag/databases/' + d.id + '/stop" style="display:inline;margin-right:0.4rem;"><button type="submit" class="kcui-tag kcui-tag--danger">STOP</button></form>';
+        h += '<form method="post" action="/ui/rag/databases/' + d.id + '/stop" style="display:contents;"><button type="submit" class="kcui-tag kcui-tag--danger">STOP</button></form>';
       else
-        h += '<form method="post" action="/ui/rag/databases/' + d.id + '/sync" style="display:inline;margin-right:0.4rem;"><button type="submit" class="kcui-tag kcui-tag--warning">INGEST</button></form>';
+        h += '<form method="post" action="/ui/rag/databases/' + d.id + '/sync" style="display:contents;"><button type="submit" class="kcui-tag kcui-tag--warning">INGEST</button></form>';
     }
     if (d.navigation) h += '<a class="kcui-tag kcui-tag--accent" href="/ui/rag/explore/' + d.id + '">EXPLORE</a>';
     h += '<a class="kcui-tag kcui-tag--muted" href="/ui/rag?db=' + d.id + '">BROWSE</a>';
-    h += '<form method="post" action="/ui/rag/databases/' + d.id + '/delete" style="display:inline;margin-left:0.6rem;"'
+    h += '<form method="post" action="/ui/rag/databases/' + d.id + '/delete" style="display:contents;"'
        + ' onsubmit="return confirm(\'Delete database &quot;' + d.id + '&quot; and all its data?\\nThis cannot be undone.\');"'
        + '><button type="submit" class="kcui-tag kcui-tag--danger">DELETE</button></form>';
+    h += '</span>';
     return h;
   }
 
