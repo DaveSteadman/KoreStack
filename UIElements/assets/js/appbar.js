@@ -121,7 +121,8 @@ function actionMarkup(action) {
     const buttonType = action.type ? escapeHtml(action.type) : 'button';
     const dataAction = action.action ? ` data-action="${escapeHtml(action.action)}"` : '';
     const title = action.title ? ` title="${escapeHtml(action.title)}"` : '';
-    return `<button class="kappbar-button${buttonClass}"${buttonId} type="${buttonType}"${dataAction}${title}>${escapeHtml(action.label ?? '')}</button>`;
+    const baseClass = action.tag ? buttonClass.trim() : `kappbar-button${buttonClass}`;
+    return `<button class="${baseClass}"${buttonId} type="${buttonType}"${dataAction}${title}>${escapeHtml(action.label ?? '')}</button>`;
   }
 
   if (action.kind === 'toggle') {
