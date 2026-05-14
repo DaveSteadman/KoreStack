@@ -44,13 +44,13 @@
     {% for msg in thread %}
     <div class="bubble-row {{ msg.direction }}" data-msg-id="{{ msg.id }}">
       <div class="bubble">
-        <div class="bubble-content">{{ msg.content }}</div>
         <div class="bubble-meta">
           {% if msg.sender %}<span class="bm-sender">{{ msg.sender }}</span>{% endif %}
           <span>{{ msg.received_at[:16] }}</span>
               {% set status_colors = {'queued':'info','processing':'warning','replied':'accent','ignored':'dim','sent':'warning','inbound':'warning','outbound':'info'} %}
               <span class="kcui-tag kcui-tag--{{ status_colors.get(msg.status, 'dim') }}">{{ msg.status }}</span>
         </div>
+        <div class="bubble-content">{{ msg.content }}</div>
       </div>
     </div>
     {% endfor %}
@@ -97,23 +97,39 @@
   .chat-messages::-webkit-scrollbar-thumb:hover { background: var(--dim); }
 
   .bubble-row { display: flex; }
-  .bubble-row.inbound  { justify-content: flex-end; }
+  .bubble-row.inbound  { justify-content: flex-end; text-align: right; }
   .bubble-row.outbound { justify-content: flex-start; }
 
-  .bubble {
-    max-width: 65%; padding: 0.55rem 0.85rem;
-    border: 1px solid var(--border); font-size: 13px; line-height: 1.55;
-  }
-  .inbound  .bubble { background: rgba(240,192,96,.08); border-color: rgba(240,192,96,.25); }
-  .outbound .bubble { background: var(--panel); }
+  .bubble { max-width: 65%; }
 
-  .bubble-content { white-space: pre-wrap; word-break: break-word; color: var(--text); }
   .bubble-meta {
-    margin-top: 0.3rem; font-size: 10.5px; color: var(--dim);
+    font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--text-dim);
     display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;
+    margin-bottom: 3px;
   }
-  .inbound .bubble-meta { justify-content: flex-end; }
-  .bm-sender { color: var(--blue); }
+  .inbound  .bubble-meta { justify-content: flex-end; }
+  .bm-sender { color: rgba(96, 165, 250, 0.9); }
+  .outbound .bm-sender { color: rgba(74, 222, 128, 0.9); }
+
+  .bubble-content {
+    color: var(--text);
+    white-space: pre-wrap; word-break: break-word;
+    font-family: var(--font-ui); font-size: 12px; line-height: 1.55;
+    display: inline-block; padding: 6px 10px;
+  }
+  /* inbound = from external, right-aligned: blue bubble, bottom-right corner flat */
+  .inbound  .bubble-content {
+    border:        1px solid rgba(96, 165, 250, 0.35);
+    border-radius: 10px 10px 0 10px;
+    background:    rgba(96, 165, 250, 0.05);
+  }
+  /* outbound = from agent, left-aligned: green bubble, bottom-left corner flat */
+  .outbound .bubble-content {
+    border:        1px solid rgba(74, 222, 128, 0.35);
+    border-radius: 10px 10px 10px 0;
+    background:    rgba(74, 222, 128, 0.05);
+  }
 
   .chat-statusbar {
     padding: 0.2rem 1.25rem; font-size: 11px; color: var(--dim);
@@ -197,12 +213,12 @@
       return `
         <div class="bubble-row ${esc(msg.direction)}" data-msg-id="${esc(msg.id)}">
           <div class="bubble">
-            <div class="bubble-content">${esc(msg.content)}</div>
             <div class="bubble-meta">
               ${sender}
               <span>${esc(time)}</span>
               <span class="kcui-tag kcui-tag--${statusColor(esc(msg.status))}">${esc(msg.status)}</span>
             </div>
+            <div class="bubble-content">${esc(msg.content)}</div>
           </div>
         </div>`;
     }).join('');

@@ -10,13 +10,11 @@
   <div style="min-width:0;">
     <div class="panel kcui-panel" style="margin-bottom:1rem;">
       <div class="panel-header kcui-panel-header">
-        {{ article.title }}
+        <span class="kcui-tag kcui-tag--dim">Entry Name: {{ article.title }}</span>
         {% if article.word_count %}
-        <span class="badge badge-dim" style="margin-left:0.5rem;">{{ "{:,}".format(article.word_count) }} words</span>
+        <span class="kcui-tag kcui-tag--dim" style="margin-left:0.5rem;">{{ "{:,}".format(article.word_count) }} words</span>
         {% endif %}
-        <a href="/ui/reference/{{ article.title | urlencode }}/edit" style="margin-left:auto;">
-          <button type="button" style="font-size:11px; padding:3px 10px;">EDIT</button>
-        </a>
+        <a href="/ui/reference/{{ article.title | urlencode }}/edit" class="kcui-tag kcui-tag--dim" style="margin-left:auto;">edit</a>
       </div>
 
       {% if article.lead %}
