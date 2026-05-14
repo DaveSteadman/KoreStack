@@ -3,12 +3,26 @@
 {% block main_class %}kcui-main{% endblock %}
 
 {% block content %}
+<style>
+  #edit-panel { display: none; }
+  #edit-panel.open { display: block; }
+  .chunk-textarea {
+    font-size: 12px;
+    line-height: 1.6;
+    resize: vertical;
+    font-family: inherit;
+  }
+</style>
 <div class="kcui-page kcui-page--narrow kcui-stack">
+
+<!-- view panel -->
 <div class="panel kcui-panel">
   <div class="panel-header kcui-panel-header">
     CHUNK #{{ chunk.id }}
     <div style="margin-left:auto; display:flex; gap:0.5rem;">
       <a class="btn btn-sm btn-secondary" href="/ui/rag?db={{ db }}">&#8592; INDEX</a>
+      <button type="button" class="btn btn-sm btn-primary" id="btn-edit"
+              onclick="document.getElementById('edit-panel').classList.toggle('open');this.textContent=document.getElementById('edit-panel').classList.contains('open')?'CANCEL':'EDIT';">EDIT</button>
       <form action="/ui/rag/{{ chunk.id }}/delete?db={{ db }}" method="post" style="display:inline;"
             onsubmit="return confirm('Delete this chunk?');">
         <button type="submit" class="btn btn-sm btn-danger">DELETE</button>
@@ -34,6 +48,38 @@
       <span class="meta">Created</span>
       <span class="meta" style="font-size:11px;">{{ chunk.created_at or "" }}</span>
     </div>
+  </div>
+</div>
+
+<!-- edit panel (hidden until EDIT clicked) -->
+<div class="panel kcui-panel" id="edit-panel">
+  <div class="panel-header kcui-panel-header">EDIT CHUNK #{{ chunk.id }}</div>
+  <div class="panel-body kcui-panel-body">
+    <form id="edit-form" method="post" action="/ui/rag/{{ chunk.id }}/edit?db={{ db }}">
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; margin-bottom:0.75rem;">
+        <div style="grid-column:1 / -1;">
+          <label for="e_title">Title</label>
+          <input id="e_title" name="title" type="text" value="{{ chunk.title or '' }}" placeholder="Chunk title…">
+        </div>
+        <div>
+          <label for="e_source">Source</label>
+          <input id="e_source" name="source" type="text" value="{{ chunk.source or '' }}" placeholder="URL or reference…">
+        </div>
+        <div>
+          <label for="e_tags">Tags</label>
+          <input id="e_tags" name="tags" type="text" value="{{ chunk.tags or '' }}" placeholder="comma-separated…">
+        </div>
+        <div style="grid-column:1 / -1;">
+          <label for="e_content">Content <span style="color:var(--red);">*</span></label>
+          <textarea id="e_content" name="content" rows="14" class="chunk-textarea" required>{{ chunk.content or '' }}</textarea>
+        </div>
+      </div>
+      <div style="display:flex; gap:0.5rem; justify-content:flex-end;">
+        <button type="submit" class="btn btn-sm btn-primary">SAVE</button>
+        <button type="button" class="btn btn-sm btn-secondary"
+                onclick="document.getElementById('edit-panel').classList.remove('open');document.getElementById('btn-edit').textContent='EDIT';">CANCEL</button>
+      </div>
+    </form>
   </div>
 </div>
 

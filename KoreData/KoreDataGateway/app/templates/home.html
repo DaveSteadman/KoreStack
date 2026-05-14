@@ -16,6 +16,7 @@
 
   .svc-card {
     padding: 12px;
+    display: flex; flex-direction: column;
   }
   .svc-card.online  { border-left: 3px solid var(--green); }
   .svc-card.offline { border-left: 3px solid var(--red); }
@@ -46,8 +47,11 @@
   .svc-stat-key { color: var(--dim); min-width: 80px; }
   .svc-stat-val { color: var(--text); font-variant-numeric: tabular-nums; }
 
-  .svc-links { display: flex; gap: 0.6rem; flex-wrap: wrap; }
-  .svc-links a { font-size: 11px; color: var(--blue); letter-spacing: 0.04em; }
+  .svc-actions {
+    display: flex; flex-direction: row; flex-wrap: nowrap; gap: 0.4rem;
+    padding-top: 0.5rem; margin-top: auto;
+    border-top: 1px solid var(--border);
+  }
 
   #sq-spinner { display: none; color: var(--dim); font-size: 12px; letter-spacing: 0.06em; }
 
@@ -143,22 +147,22 @@
             <div class="svc-stat"><span class="svc-stat-key">db size</span><span class="svc-stat-val">{{ "%.1f KB" | format(svc.stats.get("db_size_bytes", 0) / 1024) if svc.stats.get("db_size_bytes") else "-" }}</span></div>
           {% endif %}
         </div>
-        <div class="svc-links">
+        <div class="svc-actions">
           {% if svc.slug == "feeds" %}
-            <a href="/ui/{{ svc.slug }}">Browse</a>
-            <a href="/ui/feeds/search">Search</a>
+            <a class="kcui-tag kcui-tag--accent" href="/ui/{{ svc.slug }}">browse</a>
+            <a class="kcui-tag kcui-tag--warning" href="/ui/feeds/search">search</a>
           {% elif svc.slug == "library" %}
-            <a href="/ui/{{ svc.slug }}">Browse</a>
-            <a href="/ui/library/search">Search</a>
-            <a href="/ui/library/import">Import</a>
+            <a class="kcui-tag kcui-tag--accent" href="/ui/{{ svc.slug }}">browse</a>
+            <a class="kcui-tag kcui-tag--warning" href="/ui/library/search">search</a>
+            <a class="kcui-tag kcui-tag--info" href="/ui/library/import">import</a>
           {% elif svc.slug == "reference" %}
-            <a href="/ui/{{ svc.slug }}">Browse</a>
-            <a href="/ui/reference/search">Search</a>
-            <a href="/ui/reference/import">Import</a>
+            <a class="kcui-tag kcui-tag--accent" href="/ui/{{ svc.slug }}">browse</a>
+            <a class="kcui-tag kcui-tag--warning" href="/ui/reference/search">search</a>
+            <a class="kcui-tag kcui-tag--info" href="/ui/reference/import">import</a>
           {% elif svc.slug == "rag" %}
-            <a href="/ui/{{ svc.slug }}">Browse</a>
-            <a href="/ui/rag/search">Search</a>
-            <a href="/ui/rag/insert">Insert</a>
+            <a class="kcui-tag kcui-tag--accent" href="/ui/{{ svc.slug }}">browse</a>
+            <a class="kcui-tag kcui-tag--warning" href="/ui/rag/search">search</a>
+            <a class="kcui-tag kcui-tag--info" href="/ui/rag/insert">insert</a>
           {% endif %}
         </div>
       </div>

@@ -1738,6 +1738,23 @@ async def rag_chunk(request: Request, chunk_id: int, db: str = "default"):
     return templates.TemplateResponse(request, "rag_chunk.html", {"chunk": r.json(), "db": db})
 
 
+@app.post("/ui/rag/{chunk_id}/edit")
+async def rag_chunk_edit(
+    request: Request,
+    chunk_id: int,
+    db: str = "default",
+    title: str = Form(""),
+    source: str = Form(""),
+    tags: str = Form(""),
+    content: str = Form(""),
+):
+    payload = {"title": title, "source": source, "tags": tags, "content": content}
+    r = await _rag_client.patch(f"/chunks/{chunk_id}", params={"db": db}, json=payload)
+    if r.status_code not in (200, 204):
+        raise HTTPException(status_code=r.status_code, detail="Update failed")
+    return RedirectResponse(url=f"/ui/rag/{chunk_id}?db={db}", status_code=303)
+
+
 @app.post("/ui/rag/{chunk_id}/delete")
 async def rag_chunk_delete(chunk_id: int, db: str = "default"):
     r = await _rag_client.delete(f"/chunks/{chunk_id}", params={"db": db})

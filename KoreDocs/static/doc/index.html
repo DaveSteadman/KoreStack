@@ -6,7 +6,7 @@
   <title>KoreStack</title>
   <link rel="icon" type="image/x-icon" href="/ui-elements/assets/icons/favicon.ico" />
   <link rel="stylesheet" href="/static/doc/style.css" />
-  <link rel="stylesheet" href="/ui-elements/assets/css/chrome.css" />
+  <link rel="stylesheet" href="/ui-elements/assets/css/chrome.css?v=20260508b" />
   <script src="/suite-config.js"></script>
 </head>
 <body>
@@ -64,14 +64,6 @@
     <span id="status-counts"></span>
   </div>
 
-  <script type="module">
-    import { initTopbar } from '/ui-elements/assets/js/chrome.js?v=20260508b';
-    initTopbar({ currentService: 'koredocs', urls: window.__koreSuiteUrls || {} });
-  </script>
-  <script type="module">
-    import { initChrome } from '/static/doc/js/chrome.js';
-    initChrome();
-  </script>
   <script type="module" src="/static/doc/js/main.js"></script>
 </body>
 </html>

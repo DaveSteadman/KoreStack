@@ -8,12 +8,14 @@ import * as toolbar    from './toolbar.js';
 import * as properties from './properties.js';
 import * as fileio     from './fileio.js';
 import { trackAppTab, initAppMenuEvents } from '/ui-elements/assets/js/chrome.js?v=20260508b';
+import { initChrome } from './chrome.js';
 import * as draft      from '/static/shared/js/draft.js';
 
 const _draftSave = draft.makeSaver();
 
 // ── Bootstrap ──────────────────────────────────────────────────────────────
 
+initChrome();
 editor.init(document.getElementById('editor-host'), _onEditorChange);
 toolbar.init();
 
