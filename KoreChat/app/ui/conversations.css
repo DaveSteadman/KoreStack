@@ -476,6 +476,73 @@ html, body {
 ::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 2px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
 
+/* ============================================================
+   NEW CONVERSATION INLINE FORM
+   ============================================================ */
+
+#new-conv-form {
+    border-bottom: 1px solid var(--border);
+    background:    var(--bg-panel2);
+}
+
+#new-conv-row {
+    display:     flex;
+    gap:         6px;
+    padding:     6px 10px;
+    align-items: center;
+}
+
+#new-conv-name {
+    flex:         1;
+    background:   var(--bg-panel);
+    border:       1px solid var(--border);
+    color:        var(--text-hi);
+    font-family:  var(--font-ui);
+    font-size:    var(--kcui-text-data);
+    padding:      3px 7px;
+    border-radius: var(--radius);
+    outline:      none;
+    transition:   border-color 0.15s;
+}
+#new-conv-name:focus { border-color: var(--border-hi); }
+
+/* ============================================================
+   INLINE NAME EDIT IN META TABLE
+   ============================================================ */
+
+.meta-name-row {
+    display:     flex;
+    gap:         6px;
+    align-items: center;
+}
+
+.meta-name-input {
+    flex:         1;
+    background:   var(--bg-panel2);
+    border:       1px solid var(--border);
+    color:        var(--text-hi);
+    font-family:  var(--font-ui);
+    font-size:    var(--kcui-text-data);
+    padding:      2px 6px;
+    border-radius: var(--radius);
+    outline:      none;
+    min-width:    0;
+    transition:   border-color 0.15s;
+}
+.meta-name-input:focus { border-color: var(--border-hi); }
+
+.meta-protected-row {
+    display:     inline-flex;
+    align-items: center;
+    gap:         8px;
+    flex-wrap:   wrap;
+}
+
+.meta-protected-until {
+    color:     var(--text-dim);
+    font-size: var(--kcui-text-label);
+}
+
 @media (max-width: 920px) {
     #app-bar {
         flex-wrap: wrap;

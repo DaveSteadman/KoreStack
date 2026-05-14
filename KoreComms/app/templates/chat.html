@@ -31,11 +31,11 @@
     <a href="/" class="chat-back">← Messages</a>
     <span class="chat-subj">{{ conv.korechat_id or "(no KoreChat ID)" }}</span>
     <span class="kcui-tag kcui-tag--info">{{ iface.name }}</span>
-    <span class="tag" style="font-size:10px; color:var(--dim);">{{ conv.conversation_name or ("kccomms:" ~ conv.id) }}</span>
-    <span class="tag" style="margin-left:auto; font-size:10px; color:var(--dim);">conv #{{ conv.id }}</span>
+    <span class="kcui-tag kcui-tag--dim">{{ conv.conversation_name or ("kccomms:" ~ conv.id) }}</span>
+    <span class="kcui-tag kcui-tag--dim" style="margin-left:auto;">conv #{{ conv.id }}</span>
     <form method="post" action="/conversation/{{ conv.id }}/delete"
           onsubmit="return confirm('Delete this entire conversation and its agent memory? This cannot be undone.')">
-      <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+      <button type="submit" class="kcui-tag kcui-tag--danger">delete</button>
     </form>
   </div>
 
@@ -66,8 +66,9 @@
   <form class="chat-compose" id="chat-form"
         action="/conversation/{{ conv.id }}/send" method="post">
     <textarea name="content" id="chat-input"
-              placeholder="Type a reply… (Shift+Enter for new line)" rows="2"></textarea>
-    <button type="submit" class="btn btn-primary">Send</button>
+              placeholder="Type a reply... (Shift+Enter for newline)"
+              autocomplete="off" spellcheck="false" rows="2"></textarea>
+    <button type="submit" id="send-btn">send</button>
   </form>
 
 </div>
@@ -124,17 +125,33 @@
 
   .chat-compose {
     border-top: 1px solid var(--border); background: var(--panel);
-    padding: 0.65rem 1.25rem;
-    display: flex; flex-direction: row; gap: 0.75rem; align-items: flex-end;
+    padding: 12px;
+    display: flex; flex-direction: row; gap: 8px; align-items: stretch;
     flex-shrink: 0;
   }
-  .chat-compose textarea {
-    flex: 1; resize: none; height: 56px;
-    background: var(--bg); border: 1px solid var(--border);
-    color: var(--text); font-family: inherit; font-size: 13px;
-    padding: 0.45rem 0.7rem; line-height: 1.5; min-height: 40px;
+  #chat-input {
+    flex: 1 1 auto; min-width: 0;
+    min-height: 48px; height: 100%;
+    background: var(--surface-2); border: 1px solid var(--border);
+    color: var(--text); font-family: var(--font-ui); font-size: 12px;
+    padding: 8px 12px; line-height: 1.5; resize: none; outline: none;
+    transition: border-color 0.15s;
+    overflow-y: auto; align-self: stretch;
   }
-  .chat-compose textarea:focus { border-color: var(--amber); }
+  #chat-input:focus { border-color: var(--border-2); }
+  #chat-input::placeholder { color: var(--text-dim); }
+  #send-btn {
+    background: transparent; color: var(--text-dim);
+    border: 1px solid var(--border-2);
+    padding: 0 20px; font-size: 11px;
+    letter-spacing: 0.22em; text-transform: uppercase;
+    cursor: pointer; font-family: var(--font-ui); font-weight: 600;
+    transition: background 0.15s, color 0.15s;
+    flex-shrink: 0; align-self: stretch; min-height: 48px;
+  }
+  #send-btn:hover,
+  #send-btn:focus-visible { background: rgba(74,247,122,0.1); color: var(--text); outline: 1px solid var(--border-2); outline-offset: 2px; }
+  #send-btn:disabled { opacity: 0.35; cursor: default; }
 </style>
 {% endblock %}
 

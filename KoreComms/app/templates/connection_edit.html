@@ -61,8 +61,8 @@
       {% endif %}
 
       <div class="gap-row" style="margin-top:0.75rem;">
-        <button class="btn btn-primary" type="submit">{% if iface %}Save Changes{% else %}Create Connection{% endif %}</button>
-        <a class="btn" href="/connections">Cancel</a>
+        <button class="kcui-tag kcui-tag--accent" type="submit">{% if iface %}save changes{% else %}create connection{% endif %}</button>
+        <a class="kcui-tag kcui-tag--dim" href="/connections">cancel</a>
       </div>
     </form>
 
@@ -76,8 +76,8 @@
         Save your client credentials above first, then click Authorize to grant Gmail access.
       </p>
     {% endif %}
-    <a class="btn btn-primary" href="/connections/{{ iface.id }}/gmail-authorize">
-      {% if gmail_authorized %}Re-authorize{% else %}Authorize Gmail{% endif %}
+    <a class="kcui-tag kcui-tag--accent" href="/connections/{{ iface.id }}/gmail-authorize">
+      {% if gmail_authorized %}re-authorize{% else %}authorize gmail{% endif %}
     </a>
     {% endif %}
 

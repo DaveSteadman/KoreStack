@@ -157,7 +157,7 @@ function _renderList() {
       <tr data-id="${f.id}" data-folder="${f.folder_id}" data-name="${_esc(f.name)}" data-ext="${f.ext}" data-revision="${f.revision ?? ''}">
         <td class="col-icon"><span class="file-icon">${_fileIcon(f.ext)}</span></td>
         <td class="col-name" title="${_esc(f.name)}">${_esc(title)}</td>
-        <td class="col-type"><span class="badge">${_esc(f.ext)}</span></td>
+        <td class="col-type"><span class="kcui-tag kcui-tag--info">${_esc(f.ext)}</span></td>
         <td class="col-words">${(f.word_count ?? 0).toLocaleString()}</td>
         <td class="col-modified">${_fmt(f.modified_at)}</td>
         <td class="col-actions">

@@ -87,10 +87,14 @@ document.addEventListener("DOMContentLoaded", () => {
 function bindUiEvents() {
     document.getElementById("max-default-chat-age")?.addEventListener("change", onMaxDefaultChatAgeChanged);
 
-    document.getElementById("btn-create-conv").addEventListener("click", createConversation);
-    document.getElementById("btn-new-conv")?.addEventListener("click", createConversation);
+    document.getElementById("btn-create-conv").addEventListener("click", toggleNewConvForm);
     document.getElementById("btn-refresh")?.addEventListener("click", refreshAll);
-    document.getElementById("rename-conv-btn").addEventListener("click", renameConversation);
+    document.getElementById("new-conv-submit").addEventListener("click", createConversation);
+    document.getElementById("new-conv-cancel").addEventListener("click", hideNewConvForm);
+    document.getElementById("new-conv-name").addEventListener("keydown", e => {
+        if (e.key === "Enter")  createConversation();
+        if (e.key === "Escape") hideNewConvForm();
+    });
     document.getElementById("delete-conv-btn").addEventListener("click", deleteConversation);
     document.getElementById("compose-btn").addEventListener("click", sendMessage);
     document.getElementById("chk-summarised").addEventListener("change", reloadMessages);
@@ -247,13 +251,13 @@ function renderMeta(conv) {
     const displayStatus = getDisplayStatus(conv.status);
     const isProtected = Number(conv.protected || 0) === 1;
     const protectedButton = `<button type="button" id="meta-protected-toggle" class="kcui-tag ${isProtected ? "kcui-tag--success" : "kcui-tag--warning"}" data-protected="${isProtected ? 1 : 0}" title="Toggle protected">${isProtected ? "Yes" : "No"}</button>`;
-    const idLabel = `${conv.id}&ensp;/&ensp;${escHtml(conv.subject || "(none)")}`;
+    const nameRow = `<div class="meta-name-row"><input class="meta-name-input" id="meta-name-input" type="text" value="${escHtml(conv.subject || '')}" autocomplete="off"><button id="meta-name-apply" class="kcui-tag kcui-tag--dim" type="button">apply</button></div>`;
     const rows = [
-        ["id",              idLabel],
+        ["id",              conv.id],
+        ["name",            nameRow],
         ["status",          pill(displayStatus.label)],
         ["profile",         pill(conv.profile)],
-        ["protected",       protectedButton],
-        ["protect until",   _protectUntilLabel(conv)],
+        ["protected",       `<span class="meta-protected-row">${protectedButton}<span class="meta-protected-until">${escHtml(_protectUntilLabel(conv))}</span></span>`],
         ["turn_count",      conv.turn_count ?? 0],
         ["token_estimate",  (conv.token_estimate ?? 0).toLocaleString()],
         ["last_activity_at",formatDateTime(conv.last_activity_at)],
@@ -271,28 +275,56 @@ function renderMetaColumn(rows) {
 }
 
 async function onMetaTableClick(event) {
-    const btn = event.target.closest("#meta-protected-toggle");
-    if (!btn) return;
     if (_selectedId === null) return;
-    const current = String(btn.dataset.protected || "0") === "1";
-    const next = !current;
-    btn.disabled = true;
-    try {
-        const resp = await fetch(`/conversations/${_selectedId}`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ protected: next }),
-        });
-        if (!resp.ok) {
-            const err = await resp.text().catch(() => "");
-            throw new Error(`HTTP ${resp.status}: ${err}`);
+
+    const protectedBtn = event.target.closest("#meta-protected-toggle");
+    if (protectedBtn) {
+        const current = String(protectedBtn.dataset.protected || "0") === "1";
+        const next = !current;
+        protectedBtn.disabled = true;
+        try {
+            const resp = await fetch(`/conversations/${_selectedId}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ protected: next }),
+            });
+            if (!resp.ok) {
+                const err = await resp.text().catch(() => "");
+                throw new Error(`HTTP ${resp.status}: ${err}`);
+            }
+            await refreshAll();
+        } catch (e) {
+            console.error("toggleProtected:", e);
+            window.alert(`Protected toggle failed: ${e.message}`);
+        } finally {
+            protectedBtn.disabled = false;
         }
-        await refreshAll();
-    } catch (e) {
-        console.error("toggleProtected:", e);
-        window.alert(`Protected toggle failed: ${e.message}`);
-    } finally {
-        btn.disabled = false;
+        return;
+    }
+
+    const applyBtn = event.target.closest("#meta-name-apply");
+    if (applyBtn) {
+        const input = document.getElementById("meta-name-input");
+        const subject = (input?.value || "").trim();
+        if (!subject) return;
+        applyBtn.disabled = true;
+        try {
+            const resp = await fetch(`/conversations/${_selectedId}`, {
+                method:  "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body:    JSON.stringify({ subject }),
+            });
+            if (!resp.ok) {
+                const err = await resp.text().catch(() => "");
+                throw new Error(`HTTP ${resp.status}: ${err}`);
+            }
+            await refreshAll();
+        } catch (e) {
+            console.error("renameConversation:", e);
+            window.alert(`Rename failed: ${e.message}`);
+        } finally {
+            applyBtn.disabled = false;
+        }
     }
 }
 
@@ -476,9 +508,25 @@ async function deleteConversation() {
     }
 }
 
+function toggleNewConvForm() {
+    const form = document.getElementById("new-conv-form");
+    form.hidden = !form.hidden;
+    if (!form.hidden) {
+        const input = document.getElementById("new-conv-name");
+        input.value = "";
+        input.focus();
+    }
+}
+
+function hideNewConvForm() {
+    document.getElementById("new-conv-form").hidden = true;
+}
+
 async function createConversation() {
-    const subject = window.prompt("New conversation name:", "New conversation");
-    if (subject === null) return;
+    const input = document.getElementById("new-conv-name");
+    const subject = (input?.value || "").trim() || "New conversation";
+    const submitBtn = document.getElementById("new-conv-submit");
+    if (submitBtn) submitBtn.disabled = true;
 
     try {
         const resp = await fetch("/conversations", {
@@ -487,7 +535,7 @@ async function createConversation() {
             body:    JSON.stringify({
                 channel_type: "webchat",
                 profile:      "admin",
-                subject:      subject.trim() || "New conversation",
+                subject,
             }),
         });
         if (!resp.ok) {
@@ -495,12 +543,15 @@ async function createConversation() {
             throw new Error(`HTTP ${resp.status}: ${err}`);
         }
 
+        hideNewConvForm();
         const conv = await resp.json();
         await loadConversations();
         await selectConversation(conv.id);
     } catch (e) {
         console.error("createConversation:", e);
         window.alert(`Create failed: ${e.message}`);
+    } finally {
+        if (submitBtn) submitBtn.disabled = false;
     }
 }
 

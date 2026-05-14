@@ -43,6 +43,7 @@
 button.kcui-tag,
 a.kcui-tag {
   border-radius: 0;
+  text-decoration: none;
 }
 
 /* ─── Color variants ────────────────────────────────────────────────── */

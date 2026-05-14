@@ -28,6 +28,13 @@
                 <div class="flex-gap"></div>
                 <button class="kcui-tag kcui-tag--dim" id="btn-create-conv" type="button">New</button>
             </div>
+            <div id="new-conv-form" hidden>
+                <div id="new-conv-row">
+                    <input type="text" id="new-conv-name" placeholder="Conversation name…" autocomplete="off">
+                    <button class="kcui-tag kcui-tag--dim" id="new-conv-submit" type="button">create</button>
+                    <button class="kcui-tag kcui-tag--dim" id="new-conv-cancel" type="button">cancel</button>
+                </div>
+            </div>
             <div id="conv-list"></div>
         </div>
 
@@ -49,7 +56,6 @@
                     <div class="section-header kcui-panel-header">
                         <span class="section-icon">i</span> Metadata
                         <div class="flex-gap"></div>
-                        <button id="rename-conv-btn" class="kcui-tag kcui-tag--dim" type="button">rename</button>
                         <button id="delete-conv-btn" class="kcui-tag kcui-tag--danger" type="button">delete</button>
                     </div>
                     <div id="meta-table" class="meta-grid"></div>
@@ -162,8 +168,7 @@
                     },
                 ],
             },
-            { kind: 'button', id: 'btn-new-conv', action: 'create-conversation', label: 'New', className: 'kcui-tag kcui-tag--dim' },
-            { kind: 'button', id: 'btn-refresh', action: 'refresh-all', label: 'Refresh', className: 'kcui-tag kcui-tag--dim' },
+            { kind: 'button', id: 'btn-refresh', action: 'refresh-all', label: 'Refresh', className: 'kcui-tag kcui-tag--dim', tag: true },
             { kind: 'toggle', id: 'chk-auto', action: 'toggle-auto', label: 'Auto', checked: true },
         ],
     });
