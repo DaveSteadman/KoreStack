@@ -1,34 +1,31 @@
 # ====================================================================================================
 # MARK: OVERVIEW
 # ====================================================================================================
-# FastAPI application for KoreGraph — a SQLite-backed entity / relation graph store.
+# FastAPI application for KoreGraph — a SQLite-backed concept / relation graph store.
+#
+# Schema: 2 tables only — vocab (concept_id + term) and relations (subject/predicate/object concept_ids).
 #
 # Key endpoints:
-#   GET  /status                          -- health + entity/relation counts
-#   GET  /ui/entities                     -- entity management page
-#   GET  /ui/relations                    -- relations management page
-#   GET  /ui/vocab                        -- relation-type vocabulary page
-#   GET  /api/entities                    -- list entities (paginated, optional search)
-#   POST /api/entities                    -- create entity
-#   GET  /api/entities/{id}               -- get entity with aliases + relations
-#   PUT  /api/entities/{id}               -- update entity
-#   DELETE /api/entities/{id}             -- delete entity
-#   POST /api/entities/{id}/aliases       -- add alias
-#   DELETE /api/aliases/{id}              -- remove alias
-#   GET  /api/relation-types             -- list relation types
-#   POST /api/relation-types             -- create relation type
-#   DELETE /api/relation-types/{id}      -- delete relation type
-#   GET  /api/relations                  -- list relations
-#   POST /api/relations                  -- upsert relation
-#   PATCH /api/relations                 -- update state/score
-#   DELETE /api/relations                -- delete relation
-#   POST /api/evidence                   -- add evidence for a relation
-#   GET  /api/search?q=                  -- entity name/alias search
-#   GET  /api/expand?entity_id=&depth=   -- sub-graph traversal
+#   GET  /status                                -- health + concept/vocab/relation counts
+#   GET  /ui/vocab                              -- vocab management page
+#   GET  /ui/relations                          -- relations management page
+#   GET  /api/vocab                             -- list vocab terms
+#   POST /api/vocab                             -- add vocab term
+#   GET  /api/vocab/{id}                        -- get term detail with aliases
+#   DELETE /api/vocab/{id}                      -- delete term
+#   POST /api/vocab/{id}/aliases                -- add alias
+#   DELETE /api/vocab-aliases/{id}              -- remove alias
+#   POST /api/vocab/{canonical_id}/merge/{id}   -- merge term into canonical
+#   GET  /api/relations                         -- list relations (paginated)
+#   POST /api/relations                         -- upsert relation
+#   PATCH /api/relations                        -- update state/score
+#   DELETE /api/relations                       -- delete relation
+#   GET  /api/search?q=                         -- vocab keyword search
+#   GET  /api/expand?concept_id=&depth=         -- sub-graph traversal
 #
 # MCP tools (mounted at /mcp):
-#   search_entities   -- search for entities by keyword
-#   expand_graph      -- expand a named entity into its neighbourhood sub-graph
+#   search_vocab    -- search vocab for concepts by keyword
+#   expand_concept  -- expand a concept into its neighbourhood sub-graph
 #
 # Related modules:
 #   - app/config.py     -- cfg (host, port, data_dir)
@@ -47,37 +44,22 @@ from pydantic import BaseModel
 
 from app.config import cfg
 from app.database import (
-    add_alias,
-    add_evidence,
-    add_relation_type_alias,
     add_vocab_alias,
     add_vocab_term,
-    count_entities,
     count_relations,
-    create_entity,
-    create_relation_type,
-    delete_alias,
-    delete_entity,
     delete_relation,
-    delete_relation_type,
-    delete_relation_type_alias,
     delete_vocab_alias,
     delete_vocab_term,
-    expand_entity,
-    get_entity,
+    expand_concept,
     get_status,
     get_vocab_detail,
     init_db,
-    list_entities,
-    list_evidence,
-    list_relation_types,
     list_relations,
     list_vocab,
     merge_vocab_terms,
-    search_entities,
-    update_entity,
     update_relation_state_score,
     upsert_relation,
+    _get_or_create_vocab_term,
 )
 
 # ---------------------------------------------------------------------------
@@ -115,37 +97,36 @@ app = FastAPI(
 _mcp = FastMCP(
     "KoreGraph",
     instructions=(
-        "Search and traverse the KoreGraph entity-relation knowledge graph.\n\n"
-        "Entities are named things (people, organisations, concepts, places, events). "
-        "Relations are typed directional or undirected connections between two entities.\n\n"
+        "Search and traverse the KoreGraph concept-relation knowledge graph.\n\n"
+        "Concepts are vocabulary terms (people, organisations, topics, places). "
+        "Relations are typed triples: (subject_concept_id, predicate_concept_id, object_concept_id).\n\n"
         "Canonical workflow:\n"
-        "1. Call search_entities to find the entity IDs for names you are interested in.\n"
-        "2. Call expand_graph with an entity_id to retrieve its neighbourhood (nodes + edges).\n"
-        "3. Use the returned graph to answer questions about connections between entities.\n\n"
-        "State filter: 0=proposed, 1=active, 2=deprecated, 3=rejected. "
-        "By default expand_graph returns all active (state=1) relations only."
+        "1. Call search_vocab to find concept_ids for the terms you care about.\n"
+        "2. Call expand_concept with a concept_id to retrieve its neighbourhood (nodes + edges).\n"
+        "3. Use the returned graph to answer questions about connections between concepts.\n\n"
+        "State filter: 0=proposed, 1=active, 2=deprecated, 3=rejected."
     ),
     streamable_http_path="/",
     stateless_http=True,
 )
 
 
-@_mcp.tool(description="Search for entities in KoreGraph by name or alias keyword.")
-def mcp_search_entities(q: str, limit: int = 20) -> list[dict]:
-    """Return a list of matching entities with id, name, type, description."""
+@_mcp.tool(description="Search KoreGraph vocab for concepts matching a keyword.")
+def mcp_search_vocab(q: str, limit: int = 20) -> list[dict]:
+    """Return matching vocab terms with concept_id, term, alias_count."""
     if not q or not q.strip():
         return []
-    return search_entities(q.strip(), limit=min(limit, 100))
+    return list_vocab(q=q.strip(), limit=min(limit, 100))
 
 
 @_mcp.tool(description=(
-    "Expand a KoreGraph entity into its neighbourhood sub-graph. "
+    "Expand a KoreGraph concept into its neighbourhood sub-graph. "
     "Returns {nodes, edges} within the requested depth of hops."
 ))
-def mcp_expand_graph(entity_id: int, depth: int = 1, min_score: int = 0) -> dict:
-    """Return {nodes: [...], edges: [...]} for the sub-graph around entity_id."""
+def mcp_expand_concept(concept_id: int, depth: int = 1, min_score: int = 0) -> dict:
+    """Return {nodes: [...], edges: [...]} for the sub-graph around concept_id."""
     depth = max(1, min(depth, 4))
-    return expand_entity(entity_id, depth=depth, min_score=min_score)
+    return expand_concept(concept_id, depth=depth, min_score=min_score)
 
 
 app.mount("/mcp", _mcp.streamable_http_app())
@@ -190,42 +171,21 @@ def route_status():
 
 @app.get("/", include_in_schema=False)
 def route_root():
-    return RedirectResponse("/ui/entities")
+    return RedirectResponse("/ui/vocab")
 
 
 @app.get("/ui", include_in_schema=False)
 def route_ui():
-    return RedirectResponse("/ui/entities")
+    return RedirectResponse("/ui/vocab")
 
 
 # ---------------------------------------------------------------------------
-# MARK: UI — Entities
+# MARK: UI — Entities (redirects to vocab)
 # ---------------------------------------------------------------------------
 
 @app.get("/ui/entities", include_in_schema=False)
-def route_ui_entities(request: Request, q: Optional[str] = None,
-                      page: int = 1, page_size: int = 50):
-    page = max(1, page)
-    page_size = max(10, min(200, page_size))
-    offset = (page - 1) * page_size
-    total = count_entities(q=q)
-    entities = list_entities(limit=page_size, offset=offset, q=q)
-    relation_types = list_relation_types()
-    total_pages = max(1, (total + page_size - 1) // page_size)
-    return templates.TemplateResponse(
-        request,
-        "entities.html",
-        {
-            "entities": entities,
-            "relation_types": relation_types,
-            "q": q or "",
-            "page": page,
-            "page_size": page_size,
-            "total": total,
-            "total_pages": total_pages,
-            "_pfx": cfg.get("ui_prefix", ""),
-        },
-    )
+def route_ui_entities():
+    return RedirectResponse("/ui/vocab")
 
 
 # ---------------------------------------------------------------------------
@@ -237,23 +197,21 @@ _STATE_LABELS = {0: "proposed", 1: "active", 2: "deprecated", 3: "rejected"}
 
 @app.get("/ui/relations", include_in_schema=False)
 def route_ui_relations(request: Request, state: Optional[int] = None,
-                       entity_id: Optional[int] = None,
+                       concept_id: Optional[int] = None,
                        page: int = 1, page_size: int = 50):
     page = max(1, page)
     page_size = max(10, min(200, page_size))
     offset = (page - 1) * page_size
-    total = count_relations(state=state, entity_id=entity_id)
-    relations = list_relations(limit=page_size, offset=offset, state=state, entity_id=entity_id)
-    relation_types = list_relation_types()
+    total = count_relations(state=state, concept_id=concept_id)
+    relations = list_relations(limit=page_size, offset=offset, state=state, concept_id=concept_id)
     total_pages = max(1, (total + page_size - 1) // page_size)
     return templates.TemplateResponse(
         request,
         "relations.html",
         {
             "relations": relations,
-            "relation_types": relation_types,
             "state": state,
-            "entity_id": entity_id,
+            "concept_id": concept_id,
             "page": page,
             "page_size": page_size,
             "total": total,
@@ -281,172 +239,34 @@ def route_ui_vocab(request: Request):
 # MARK: Pydantic models
 # ---------------------------------------------------------------------------
 
-class EntityCreate(BaseModel):
-    name: str
-    type: Optional[str] = None
-    description: Optional[str] = None
-
-
-class EntityUpdate(BaseModel):
-    name: Optional[str] = None
-    type: Optional[str] = None
-    description: Optional[str] = None
-
-
-class AliasCreate(BaseModel):
-    alias: str
-
-
 class VocabCreate(BaseModel):
     term: str
 
 
-class RelationTypeCreate(BaseModel):
-    label: str
-    directed: bool = True
-
-
 class RelationUpsert(BaseModel):
-    source_entity_id: int
-    relation_type_id: int
-    target_entity_id: int
+    subject_concept_id: int
+    predicate_concept_id: int
+    object_concept_id: int
     state: int = 0
     score: int = 0
 
 
 class RelationPatch(BaseModel):
-    source_entity_id: int
-    relation_type_id: int
-    target_entity_id: int
+    subject_concept_id: int
+    predicate_concept_id: int
+    object_concept_id: int
     state: Optional[int] = None
     score: Optional[int] = None
 
 
 class RelationKey(BaseModel):
-    source_entity_id: int
-    relation_type_id: int
-    target_entity_id: int
+    subject_concept_id: int
+    predicate_concept_id: int
+    object_concept_id: int
 
 
-class EvidenceCreate(BaseModel):
-    source_entity_id: int
-    relation_type_id: int
-    target_entity_id: int
-    evidence: str
-
-
-# ---------------------------------------------------------------------------
-# MARK: API — Entities
-# ---------------------------------------------------------------------------
-
-@app.get("/api/entities", summary="List entities (paginated)")
-def api_list_entities(q: Optional[str] = None, limit: int = 100, offset: int = 0):
-    limit = max(1, min(500, limit))
-    return {
-        "total": count_entities(q=q),
-        "items": list_entities(limit=limit, offset=offset, q=q),
-    }
-
-
-@app.post("/api/entities", summary="Create a new entity", status_code=201)
-def api_create_entity(body: EntityCreate):
-    if not body.name or not body.name.strip():
-        raise HTTPException(status_code=400, detail="Entity name must not be empty")
-    try:
-        return create_entity(body.name, type_=body.type, description=body.description)
-    except Exception as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
-
-
-@app.get("/api/entities/{entity_id}", summary="Get entity with aliases and relations")
-def api_get_entity(entity_id: int):
-    entity = get_entity(entity_id)
-    if entity is None:
-        raise HTTPException(status_code=404, detail="Entity not found")
-    return entity
-
-
-@app.put("/api/entities/{entity_id}", summary="Update entity fields")
-def api_update_entity(entity_id: int, body: EntityUpdate):
-    result = update_entity(entity_id, name=body.name, type_=body.type, description=body.description)
-    if result is None:
-        raise HTTPException(status_code=404, detail="Entity not found")
-    return result
-
-
-@app.delete("/api/entities/{entity_id}", summary="Delete entity (cascades to relations)")
-def api_delete_entity(entity_id: int):
-    if not delete_entity(entity_id):
-        raise HTTPException(status_code=404, detail="Entity not found")
-    return {"ok": True}
-
-
-# ---------------------------------------------------------------------------
-# MARK: API — Aliases
-# ---------------------------------------------------------------------------
-
-@app.post("/api/entities/{entity_id}/aliases", summary="Add alias to entity", status_code=201)
-def api_add_alias(entity_id: int, body: AliasCreate):
-    if not body.alias or not body.alias.strip():
-        raise HTTPException(status_code=400, detail="Alias must not be empty")
-    # Verify entity exists
-    if get_entity(entity_id) is None:
-        raise HTTPException(status_code=404, detail="Entity not found")
-    try:
-        return add_alias(entity_id, body.alias)
-    except Exception as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
-
-
-@app.delete("/api/aliases/{alias_id}", summary="Remove an entity alias")
-def api_delete_alias(alias_id: int):
-    if not delete_alias(alias_id):
-        raise HTTPException(status_code=404, detail="Alias not found")
-    return {"ok": True}
-
-
-# ---------------------------------------------------------------------------
-# MARK: API — Relation types
-# ---------------------------------------------------------------------------
-
-@app.get("/api/relation-types", summary="List relation type vocabulary")
-def api_list_relation_types():
-    return list_relation_types()
-
-
-@app.post("/api/relation-types", summary="Create a new relation type", status_code=201)
-def api_create_relation_type(body: RelationTypeCreate):
-    try:
-        return create_relation_type(body.label, directed=body.directed)
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-    except Exception as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
-
-
-@app.delete("/api/relation-types/{rt_id}", summary="Delete a relation type")
-def api_delete_relation_type(rt_id: int):
-    if not delete_relation_type(rt_id):
-        raise HTTPException(status_code=404, detail="Relation type not found")
-    return {"ok": True}
-
-
-@app.post("/api/relation-types/{rt_id}/aliases", summary="Add an alias to a relation type", status_code=201)
-def api_add_relation_type_alias(rt_id: int, body: AliasCreate):
-    alias = body.alias.strip()
-    if not alias:
-        raise HTTPException(status_code=400, detail="Alias is required")
-    try:
-        return add_relation_type_alias(rt_id, alias)
-    except Exception as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
-
-
-@app.delete("/api/relation-type-aliases/{alias_id}", summary="Remove a relation type alias")
-def api_delete_relation_type_alias(alias_id: int):
-    if not delete_relation_type_alias(alias_id):
-        raise HTTPException(status_code=404, detail="Alias not found")
-    return {"ok": True}
+class VocabAliasCreate(BaseModel):
+    alias: str
 
 
 # ---------------------------------------------------------------------------
@@ -454,22 +274,22 @@ def api_delete_relation_type_alias(alias_id: int):
 # ---------------------------------------------------------------------------
 
 @app.get("/api/relations", summary="List relations (paginated)")
-def api_list_relations(state: Optional[int] = None, entity_id: Optional[int] = None,
+def api_list_relations(state: Optional[int] = None, concept_id: Optional[int] = None,
                        limit: int = 100, offset: int = 0):
     limit = max(1, min(500, limit))
     return {
-        "total": count_relations(state=state, entity_id=entity_id),
-        "items": list_relations(limit=limit, offset=offset, state=state, entity_id=entity_id),
+        "total": count_relations(state=state, concept_id=concept_id),
+        "items": list_relations(limit=limit, offset=offset, state=state, concept_id=concept_id),
     }
 
 
-@app.post("/api/relations", summary="Upsert a relation (create or update state/score)", status_code=201)
+@app.post("/api/relations", summary="Upsert a relation", status_code=201)
 def api_upsert_relation(body: RelationUpsert):
     try:
         return upsert_relation(
-            source_id=body.source_entity_id,
-            relation_type_id=body.relation_type_id,
-            target_id=body.target_entity_id,
+            subject_concept_id=body.subject_concept_id,
+            predicate_concept_id=body.predicate_concept_id,
+            object_concept_id=body.object_concept_id,
             state=body.state,
             score=body.score,
         )
@@ -480,9 +300,9 @@ def api_upsert_relation(body: RelationUpsert):
 @app.patch("/api/relations", summary="Update relation state and/or score")
 def api_patch_relation(body: RelationPatch):
     result = update_relation_state_score(
-        source_id=body.source_entity_id,
-        relation_type_id=body.relation_type_id,
-        target_id=body.target_entity_id,
+        subject_concept_id=body.subject_concept_id,
+        predicate_concept_id=body.predicate_concept_id,
+        object_concept_id=body.object_concept_id,
         state=body.state,
         score=body.score,
     )
@@ -493,43 +313,27 @@ def api_patch_relation(body: RelationPatch):
 
 @app.delete("/api/relations", summary="Delete a relation")
 def api_delete_relation(body: RelationKey):
-    if not delete_relation(body.source_entity_id, body.relation_type_id, body.target_entity_id):
+    if not delete_relation(body.subject_concept_id, body.predicate_concept_id, body.object_concept_id):
         raise HTTPException(status_code=404, detail="Relation not found")
     return {"ok": True}
-
-
-# ---------------------------------------------------------------------------
-# MARK: API — Evidence
-# ---------------------------------------------------------------------------
-
-@app.post("/api/evidence", summary="Add evidence text for a relation", status_code=201)
-def api_add_evidence(body: EvidenceCreate):
-    if not body.evidence or not body.evidence.strip():
-        raise HTTPException(status_code=400, detail="Evidence text must not be empty")
-    return add_evidence(body.source_entity_id, body.relation_type_id, body.target_entity_id, body.evidence)
-
-
-@app.get("/api/evidence", summary="List evidence for a relation")
-def api_list_evidence(source_entity_id: int, relation_type_id: int, target_entity_id: int):
-    return list_evidence(source_entity_id, relation_type_id, target_entity_id)
 
 
 # ---------------------------------------------------------------------------
 # MARK: API — Search + expand
 # ---------------------------------------------------------------------------
 
-@app.get("/api/search", summary="Search entities by name or alias")
+@app.get("/api/search", summary="Search vocab by keyword")
 def api_search(q: str, limit: int = 20):
     if not q or not q.strip():
         raise HTTPException(status_code=400, detail="Query must not be empty")
     limit = max(1, min(100, limit))
-    return search_entities(q.strip(), limit=limit)
+    return list_vocab(q=q.strip(), limit=limit)
 
 
-@app.get("/api/expand", summary="Expand entity sub-graph by depth")
-def api_expand(entity_id: int, depth: int = 1, min_score: int = 0):
+@app.get("/api/expand", summary="Expand concept sub-graph by depth")
+def api_expand(concept_id: int, depth: int = 1, min_score: int = 0):
     depth = max(1, min(depth, 4))
-    return expand_entity(entity_id, depth=depth, min_score=min_score)
+    return expand_concept(concept_id, depth=depth, min_score=min_score)
 
 
 # ---------------------------------------------------------------------------
@@ -566,7 +370,7 @@ def api_delete_vocab(vocab_id: int):
 
 
 @app.post("/api/vocab/{vocab_id}/aliases", summary="Add alias to vocab term", status_code=201)
-def api_add_vocab_alias(vocab_id: int, body: AliasCreate):
+def api_add_vocab_alias(vocab_id: int, body: VocabAliasCreate):
     try:
         return add_vocab_alias(vocab_id, body.alias)
     except Exception as exc:

@@ -154,6 +154,7 @@
 <body>
   <div id="topbar"></div>
   <div id="app-bar"></div>
+  <div id="sub-bar"></div>
   <main class="{% block main_class %}{% endblock %}">
     {% block content %}{% endblock %}
   </main>
@@ -172,17 +173,29 @@
   </script>
   <script type="module">
     import { initAppBar, initTopbar } from '/ui-elements/assets/js/chrome.js?v=20260508b';
-    initTopbar({ currentService: 'koregraph', urls: window.__koreSuiteUrls || {} });
+    initTopbar({ currentService: 'koredata', urls: window.__koreSuiteUrls || {} });
     initAppBar({
-      currentService: 'koregraph',
+      mountId: 'app-bar',
+      currentService: 'koredata',
       overline: 'Knowledge Graph',
       brandLabel: 'KoreGraph',
       brandIcon: 'koregraph',
       chips: [],
       tabs: [
-        { label: 'Vocab',     href: '{{ _pfx | default('') }}/ui/vocab',     active: {{ 'true' if request.url.path.startswith('/ui/vocab') else 'false' }} },
-        { label: 'Relations', href: '{{ _pfx | default('') }}/ui/relations',  active: {{ 'true' if request.url.path.startswith('/ui/relations') else 'false' }} },
-        { label: 'Entities',  href: '{{ _pfx | default('') }}/ui/entities',   active: {{ 'true' if request.url.path.startswith('/ui/entities') else 'false' }} },
+        { label: 'Home',      href: '/',                        active: false },
+        { label: 'Feeds',     href: '/ui/feeds',                active: false },
+        { label: 'Library',   href: '/ui/library',              active: false },
+        { label: 'Reference', href: '/ui/reference',            active: false },
+        { label: 'RAG',       href: '/ui/rag/databases',        active: false },
+        { label: 'Graph',     href: '{{ _pfx | default("") }}/', active: true  },
+      ],
+    });
+    initAppBar({
+      mountId: 'sub-bar',
+      tabs: [
+        { label: 'Vocab',     href: '{{ _pfx | default("") }}/ui/vocab',     active: {{ 'true' if request.url.path.startswith('/ui/vocab') else 'false' }} },
+        { label: 'Relations', href: '{{ _pfx | default("") }}/ui/relations',  active: {{ 'true' if request.url.path.startswith('/ui/relations') else 'false' }} },
+        { label: 'Entities',  href: '{{ _pfx | default("") }}/ui/entities',   active: {{ 'true' if request.url.path.startswith('/ui/entities') else 'false' }} },
       ],
     });
   </script>

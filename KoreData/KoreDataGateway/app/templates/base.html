@@ -269,6 +269,8 @@
     {% set _brand = 'KoreReference' %}{% set _overline = 'Reference' %}{% set _brand_icon = 'korereference' %}
     {% elif request.url.path.startswith('/ui/rag') %}
     {% set _brand = 'KoreRAG' %}{% set _overline = 'RAG Chunks' %}{% set _brand_icon = 'korerag' %}
+    {% elif request.url.path.startswith('/graph') %}
+    {% set _brand = 'KoreGraph' %}{% set _overline = 'Knowledge Graph' %}{% set _brand_icon = 'koregraph' %}
     {% else %}
     {% set _brand = 'KoreData' %}{% set _overline = 'Data Gateway' %}{% set _brand_icon = 'koredata' %}
     {% endif %}
@@ -284,6 +286,7 @@
         { label: 'Library', href: '/ui/library', active: {{ 'true' if request.url.path.startswith('/ui/library') else 'false' }} },
         { label: 'Reference', href: '/ui/reference', active: {{ 'true' if request.url.path.startswith('/ui/reference') else 'false' }} },
         { label: 'RAG', href: '/ui/rag/databases', active: {{ 'true' if request.url.path.startswith('/ui/rag') else 'false' }} },
+        { label: 'Graph', href: '/graph/', active: {{ 'true' if request.url.path.startswith('/graph') else 'false' }} },
       ],
     });
   </script>

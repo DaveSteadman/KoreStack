@@ -3,17 +3,16 @@
 # ====================================================================================================
 # SQLite database layer for KoreGraph.
 #
-# Schema (5 tables):
-#   entities        -- named entities (person, org, concept, place, event, …)
-#   entity_aliases  -- alternative names / synonyms mapping to a canonical entity
-#   relation_types  -- labelled vocabulary of relationship kinds
-#   relations       -- core adjacency list (12-byte hot rows: 4+2+4+1+1)
-#   relation_evidence -- optional citations for relations
+# Schema (2 tables only):
+#   vocab      -- the only place raw strings live; maps terms to integer concept IDs
+#   relations  -- directed triples: (subject, predicate, object) stored as concept_id integers
+#
+# Design principle: vocab is the single string→number gateway.
+#   Every other table is pure integers (concept_ids). No raw strings anywhere else.
 #
 # Seed data:
-#   _seed_relation_types() inserts the built-in vocabulary on first run.
-#   RELATION_BLACKLIST is a frozenset of words that must never become entity names
-#   or relation type labels (stop words, prepositions, articles).
+#   _seed_predicates() ensures common predicate terms exist in vocab on first run.
+#   CONCEPT_BLACKLIST is a frozenset of words that must never become concept terms.
 #
 # Related modules:
 #   - app/server.py  -- all DB calls
@@ -53,9 +52,9 @@ def db_connection():
 # MARK: Blacklist
 # ---------------------------------------------------------------------------
 
-#: Words that must never become entity names or relation type labels.
+#: Words that must never become concept terms or predicate labels.
 #: Edit this set to extend it; it is checked before every insert.
-RELATION_BLACKLIST: frozenset[str] = frozenset({
+CONCEPT_BLACKLIST: frozenset[str] = frozenset({
     "is", "are", "was", "were", "be", "been", "being",
     "a", "an", "the",
     "in", "on", "at", "to", "of", "for", "by", "as", "with",
@@ -67,7 +66,7 @@ RELATION_BLACKLIST: frozenset[str] = frozenset({
 
 
 def _is_blacklisted(word: str) -> bool:
-    return word.strip().lower() in RELATION_BLACKLIST
+    return word.strip().lower() in CONCEPT_BLACKLIST
 
 
 # ---------------------------------------------------------------------------
@@ -77,68 +76,20 @@ def _is_blacklisted(word: str) -> bool:
 def init_db() -> None:
     _DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     with db_connection() as conn:
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS entities (
-                id            INTEGER PRIMARY KEY AUTOINCREMENT,
-                name_vocab_id INTEGER NOT NULL,
-                type_vocab_id INTEGER,
-                description   TEXT,
-                created_at    TEXT DEFAULT (datetime('now','utc')),
-                UNIQUE(name_vocab_id)
-            )
-        """)
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS entity_aliases (
-                id          INTEGER PRIMARY KEY AUTOINCREMENT,
-                entity_id   INTEGER NOT NULL REFERENCES entities(id) ON DELETE CASCADE,
-                alias       TEXT    NOT NULL,
-                UNIQUE (alias)
-            )
-        """)
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS relation_types (
-                id       INTEGER PRIMARY KEY AUTOINCREMENT,
-                label    TEXT    NOT NULL UNIQUE,
-                directed INTEGER NOT NULL DEFAULT 1
-            )
-        """)
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS relations (
-                source_entity_id  INTEGER NOT NULL REFERENCES entities(id) ON DELETE CASCADE,
-                relation_type_id  INTEGER NOT NULL REFERENCES relation_types(id) ON DELETE CASCADE,
-                target_entity_id  INTEGER NOT NULL REFERENCES entities(id) ON DELETE CASCADE,
-                state             INTEGER NOT NULL DEFAULT 0,
-                score             INTEGER NOT NULL DEFAULT 0,
-                UNIQUE (source_entity_id, relation_type_id, target_entity_id)
-            )
-        """)
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS relation_evidence (
-                id               INTEGER PRIMARY KEY AUTOINCREMENT,
-                source_entity_id INTEGER NOT NULL,
-                relation_type_id INTEGER NOT NULL,
-                target_entity_id INTEGER NOT NULL,
-                evidence         TEXT,
-                created_at       TEXT DEFAULT (datetime('now','utc')),
-                FOREIGN KEY (source_entity_id, relation_type_id, target_entity_id)
-                    REFERENCES relations(source_entity_id, relation_type_id, target_entity_id)
-                    ON DELETE CASCADE
-            )
-        """)
-        # Indexes for traversal speed
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_rel_source ON relations(source_entity_id, score DESC)")
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_rel_target ON relations(target_entity_id, score DESC)")
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_alias ON entity_aliases(alias)")
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS relation_type_aliases (
-                id               INTEGER PRIMARY KEY AUTOINCREMENT,
-                relation_type_id INTEGER NOT NULL REFERENCES relation_types(id) ON DELETE CASCADE,
-                alias            TEXT    NOT NULL,
-                UNIQUE (alias)
-            )
-        """)
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_rt_alias ON relation_type_aliases(alias)")
-        # vocab: flat alias model — each row has a concept_id shared by all its aliases
+
+        # ── Vocab ─────────────────────────────────────────────────────────────
+        # Maps raw string terms to integer concept IDs.
+        # Multiple rows may share the same concept_id — those are aliases.
+        # Every other table stores concept_id integers only; no raw strings.
+        #
+        #   vocab
+        #   ├── id          row PK (used for vocab CRUD operations)
+        #   ├── concept_id  the shared number all aliases for a concept resolve to
+        #   └── term        the raw string (UNIQUE across the whole table)
+        #
+        # e.g.  "Boston Red Sox" → concept_id 7
+        #        "BoSox"         → concept_id 7  (same concept, different term)
+        # ──────────────────────────────────────────────────────────────────────
         _vocab_cols = {r[1] for r in conn.execute("PRAGMA table_info(vocab)")}
         if not _vocab_cols:
             conn.execute("""
@@ -149,7 +100,6 @@ def init_db() -> None:
                 )
             """)
         elif "concept_id" not in _vocab_cols:
-            # migrate old (id, term) schema: assign concept_id = id, fold vocab_aliases in
             conn.execute("ALTER TABLE vocab ADD COLUMN concept_id INTEGER")
             conn.execute("UPDATE vocab SET concept_id = id WHERE concept_id IS NULL")
             try:
@@ -168,59 +118,121 @@ def init_db() -> None:
                 pass
             conn.execute("DROP TABLE IF EXISTS vocab_aliases")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_vocab_concept ON vocab(concept_id)")
-        # entities: migrate from text columns to vocab-linked IDs if needed
-        _ent_cols = {r[1] for r in conn.execute("PRAGMA table_info(entities)")}
-        if _ent_cols and "name_vocab_id" not in _ent_cols:
+
+        # ── Relations ─────────────────────────────────────────────────────────
+        # Pure triple store. All three positions are concept_ids from vocab.
+        # No entity IDs, no relation-type IDs — just numbers from the vocab table.
+        #
+        #   relations
+        #   ├── subject_concept_id    the "from" concept  (a vocab concept_id)
+        #   ├── predicate_concept_id  the relationship kind (also a vocab concept_id)
+        #   ├── object_concept_id     the "to" concept    (also a vocab concept_id)
+        #   ├── state   0 = proposed  1 = active  2 = deprecated  3 = rejected
+        #   └── score   0–255 confidence / weight
+        #
+        # e.g.  subject=7 ("Boston Red Sox")  predicate=12 ("member_of")  object=3 ("MLB")
+        # ──────────────────────────────────────────────────────────────────────
+        _rel_cols = {r[1] for r in conn.execute("PRAGMA table_info(relations)")}
+        if not _rel_cols:
             conn.execute("""
-                CREATE TABLE entities_new (
-                    id            INTEGER PRIMARY KEY AUTOINCREMENT,
-                    name_vocab_id INTEGER NOT NULL,
-                    type_vocab_id INTEGER,
-                    description   TEXT,
-                    created_at    TEXT DEFAULT (datetime('now','utc')),
-                    UNIQUE(name_vocab_id)
+                CREATE TABLE relations (
+                    subject_concept_id   INTEGER NOT NULL,
+                    predicate_concept_id INTEGER NOT NULL,
+                    object_concept_id    INTEGER NOT NULL,
+                    state                INTEGER NOT NULL DEFAULT 0,
+                    score                INTEGER NOT NULL DEFAULT 0,
+                    UNIQUE (subject_concept_id, predicate_concept_id, object_concept_id)
                 )
             """)
-            for _er in conn.execute(
-                "SELECT id, name, type, description, created_at FROM entities"
-            ).fetchall():
-                _name_vid = _get_or_create_vocab_term(conn, _er["name"])
-                _type_vid = (
-                    _get_or_create_vocab_term(conn, _er["type"].strip())
-                    if _er["type"] and _er["type"].strip()
-                    else None
+        elif "subject_concept_id" not in _rel_cols:
+            conn.execute("""
+                CREATE TABLE relations_new (
+                    subject_concept_id   INTEGER NOT NULL,
+                    predicate_concept_id INTEGER NOT NULL,
+                    object_concept_id    INTEGER NOT NULL,
+                    state                INTEGER NOT NULL DEFAULT 0,
+                    score                INTEGER NOT NULL DEFAULT 0,
+                    UNIQUE (subject_concept_id, predicate_concept_id, object_concept_id)
                 )
-                conn.execute(
-                    "INSERT INTO entities_new"
-                    " (id, name_vocab_id, type_vocab_id, description, created_at)"
-                    " VALUES (?,?,?,?,?)",
-                    (_er["id"], _name_vid, _type_vid, _er["description"], _er["created_at"]),
-                )
-            conn.execute("DROP TABLE entities")
-            conn.execute("ALTER TABLE entities_new RENAME TO entities")
-        _seed_relation_types(conn)
+            """)
+            try:
+                for _r in conn.execute(
+                    "SELECT source_entity_id, relation_type_id, target_entity_id, state, score"
+                    " FROM relations"
+                ).fetchall():
+                    _src = conn.execute(
+                        "SELECT name_concept_id FROM entities WHERE id=?",
+                        (_r["source_entity_id"],),
+                    ).fetchone()
+                    _tgt = conn.execute(
+                        "SELECT name_concept_id FROM entities WHERE id=?",
+                        (_r["target_entity_id"],),
+                    ).fetchone()
+                    _rt = conn.execute(
+                        "SELECT label FROM relation_types WHERE id=?",
+                        (_r["relation_type_id"],),
+                    ).fetchone()
+                    if _src and _tgt and _rt:
+                        _pred_cid = _get_or_create_vocab_term(conn, _rt["label"])
+                        conn.execute(
+                            "INSERT OR IGNORE INTO relations_new"
+                            " (subject_concept_id, predicate_concept_id, object_concept_id,"
+                            "  state, score)"
+                            " VALUES (?,?,?,?,?)",
+                            (
+                                _src["name_concept_id"],
+                                _pred_cid,
+                                _tgt["name_concept_id"],
+                                _r["state"],
+                                _r["score"],
+                            ),
+                        )
+            except Exception:
+                pass
+            conn.execute("DROP TABLE relations")
+            conn.execute("ALTER TABLE relations_new RENAME TO relations")
+
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_rel_subject"
+            " ON relations(subject_concept_id, score DESC)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_rel_object"
+            " ON relations(object_concept_id, score DESC)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_rel_predicate"
+            " ON relations(predicate_concept_id)"
+        )
+
+        for _tbl in (
+            "relation_evidence",
+            "relation_type_aliases",
+            "relation_types",
+            "entity_aliases",
+            "entities",
+        ):
+            conn.execute(f"DROP TABLE IF EXISTS {_tbl}")
+
+        _seed_predicates(conn)
 
 
-def _seed_relation_types(conn: sqlite3.Connection) -> None:
-    """Insert the canonical starter vocabulary on first run. Edit this list to change it."""
-    SEED = [
-        ("works_for",      1),
-        ("founded",        1),
-        ("part_of",        1),
-        ("related_to",     0),
-        ("opposed_to",     0),
-        ("located_in",     1),
-        ("successor_of",   1),
-        ("predecessor_of", 1),
-        ("alias_of",       0),
-        ("owns",           1),
-        ("parent_of",      1),
-        ("member_of",      1),
+def _seed_predicates(conn: sqlite3.Connection) -> None:
+    """Ensure common predicate terms exist in vocab on first run."""
+    PREDICATES = [
+        "works_for", "founded", "part_of", "related_to", "opposed_to",
+        "located_in", "successor_of", "predecessor_of", "alias_of",
+        "owns", "parent_of", "member_of",
     ]
-    conn.executemany(
-        "INSERT OR IGNORE INTO relation_types (label, directed) VALUES (?, ?)",
-        SEED,
-    )
+    for p in PREDICATES:
+        if not conn.execute("SELECT 1 FROM vocab WHERE term=?", (p,)).fetchone():
+            concept_id = conn.execute(
+                "SELECT COALESCE(MAX(concept_id), 0) + 1 FROM vocab"
+            ).fetchone()[0]
+            conn.execute(
+                "INSERT OR IGNORE INTO vocab (concept_id, term) VALUES (?, ?)",
+                (concept_id, p),
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -229,14 +241,16 @@ def _seed_relation_types(conn: sqlite3.Connection) -> None:
 
 def get_status() -> dict:
     with db_connection() as conn:
-        entities  = conn.execute("SELECT COUNT(*) FROM entities").fetchone()[0]
+        concepts  = conn.execute("SELECT COUNT(DISTINCT concept_id) FROM vocab").fetchone()[0]
+        terms     = conn.execute("SELECT COUNT(*) FROM vocab").fetchone()[0]
         relations = conn.execute("SELECT COUNT(*) FROM relations").fetchone()[0]
         proposed  = conn.execute("SELECT COUNT(*) FROM relations WHERE state=0").fetchone()[0]
         active    = conn.execute("SELECT COUNT(*) FROM relations WHERE state=1").fetchone()[0]
         size      = _DB_PATH.stat().st_size if _DB_PATH.exists() else 0
     return {
         "ok": True,
-        "entities": entities,
+        "concepts": concepts,
+        "vocab_terms": terms,
         "relations": relations,
         "relations_proposed": proposed,
         "relations_active": active,
@@ -245,349 +259,28 @@ def get_status() -> dict:
 
 
 # ---------------------------------------------------------------------------
-# MARK: Entities
+# MARK: Vocab internals
 # ---------------------------------------------------------------------------
 
 def _get_or_create_vocab_term(conn: sqlite3.Connection, term: str) -> int:
-    """Return vocab.id for term, creating a new single-term concept if not found."""
-    row = conn.execute("SELECT id FROM vocab WHERE term=?", (term,)).fetchone()
+    """Return concept_id for term, creating a new single-term concept if not found."""
+    row = conn.execute("SELECT concept_id FROM vocab WHERE term=?", (term,)).fetchone()
     if row:
-        return row["id"]
+        return row["concept_id"]
     concept_id = conn.execute(
         "SELECT COALESCE(MAX(concept_id), 0) + 1 FROM vocab"
     ).fetchone()[0]
-    cur = conn.execute(
+    conn.execute(
         "INSERT INTO vocab (concept_id, term) VALUES (?, ?)", (concept_id, term)
     )
-    return cur.lastrowid
+    return concept_id
+
+# ── Everything below this line that was entity/alias/relation_type code is REMOVED ──
+# (entities, entity_aliases, relation_types, relation_evidence tables no longer exist)
 
 
-def list_entities(limit: int = 100, offset: int = 0, q: Optional[str] = None) -> list[dict]:
-    with db_connection() as conn:
-        if q:
-            like = f"%{q}%"
-            rows = conn.execute(
-                """
-                SELECT e.id, vn.term AS name, vt.term AS type,
-                       e.name_vocab_id, e.type_vocab_id, e.description, e.created_at,
-                       (SELECT COUNT(*) FROM entity_aliases WHERE entity_id = e.id) AS alias_count,
-                       (SELECT COUNT(*) FROM relations
-                        WHERE source_entity_id = e.id OR target_entity_id = e.id) AS relation_count
-                FROM entities e
-                JOIN vocab vn ON vn.id = e.name_vocab_id
-                LEFT JOIN vocab vt ON vt.id = e.type_vocab_id
-                WHERE vn.term LIKE ? OR e.description LIKE ?
-                   OR EXISTS (SELECT 1 FROM entity_aliases WHERE entity_id = e.id AND alias LIKE ?)
-                ORDER BY vn.term
-                LIMIT ? OFFSET ?
-                """,
-                (like, like, like, limit, offset),
-            ).fetchall()
-        else:
-            rows = conn.execute(
-                """
-                SELECT e.id, vn.term AS name, vt.term AS type,
-                       e.name_vocab_id, e.type_vocab_id, e.description, e.created_at,
-                       (SELECT COUNT(*) FROM entity_aliases WHERE entity_id = e.id) AS alias_count,
-                       (SELECT COUNT(*) FROM relations
-                        WHERE source_entity_id = e.id OR target_entity_id = e.id) AS relation_count
-                FROM entities e
-                JOIN vocab vn ON vn.id = e.name_vocab_id
-                LEFT JOIN vocab vt ON vt.id = e.type_vocab_id
-                ORDER BY vn.term
-                LIMIT ? OFFSET ?
-                """,
-                (limit, offset),
-            ).fetchall()
-        entities = [dict(r) for r in rows]
-        if entities:
-            ids = [e["id"] for e in entities]
-            placeholders = ",".join("?" * len(ids))
-            alias_rows = conn.execute(
-                f"SELECT entity_id, alias FROM entity_aliases WHERE entity_id IN ({placeholders}) ORDER BY alias",
-                ids,
-            ).fetchall()
-            alias_map: dict = {}
-            for ar in alias_rows:
-                alias_map.setdefault(ar["entity_id"], []).append(ar["alias"])
-            for e in entities:
-                e["aliases"] = alias_map.get(e["id"], [])
-        return entities
 
 
-def count_entities(q: Optional[str] = None) -> int:
-    with db_connection() as conn:
-        if q:
-            like = f"%{q}%"
-            return conn.execute(
-                """
-                SELECT COUNT(*) FROM entities e
-                JOIN vocab vn ON vn.id = e.name_vocab_id
-                WHERE vn.term LIKE ? OR e.description LIKE ?
-                   OR EXISTS (SELECT 1 FROM entity_aliases WHERE entity_id = e.id AND alias LIKE ?)
-                """,
-                (like, like, like),
-            ).fetchone()[0]
-        return conn.execute("SELECT COUNT(*) FROM entities").fetchone()[0]
-
-
-def get_entity(entity_id: int) -> Optional[dict]:
-    with db_connection() as conn:
-        row = conn.execute(
-            """
-            SELECT e.id, vn.term AS name, vt.term AS type,
-                   e.name_vocab_id, e.type_vocab_id, e.description, e.created_at
-            FROM entities e
-            JOIN vocab vn ON vn.id = e.name_vocab_id
-            LEFT JOIN vocab vt ON vt.id = e.type_vocab_id
-            WHERE e.id=?
-            """,
-            (entity_id,),
-        ).fetchone()
-        if row is None:
-            return None
-        entity = dict(row)
-        entity["aliases"] = [
-            dict(r) for r in conn.execute(
-                "SELECT id, alias FROM entity_aliases WHERE entity_id=? ORDER BY alias",
-                (entity_id,),
-            ).fetchall()
-        ]
-        entity["relations"] = _get_entity_relations(conn, entity_id)
-        return entity
-
-
-def _get_entity_relations(conn: sqlite3.Connection, entity_id: int) -> list[dict]:
-    rows = conn.execute(
-        """
-        SELECT r.source_entity_id, vs.term AS source_name,
-               rt.label AS relation_type,
-               r.target_entity_id, vt2.term AS target_name,
-               r.state, r.score
-        FROM relations r
-        JOIN entities es ON es.id = r.source_entity_id
-        JOIN vocab vs ON vs.id = es.name_vocab_id
-        JOIN entities et ON et.id = r.target_entity_id
-        JOIN vocab vt2 ON vt2.id = et.name_vocab_id
-        JOIN relation_types rt ON rt.id = r.relation_type_id
-        WHERE r.source_entity_id=? OR r.target_entity_id=?
-        ORDER BY r.score DESC
-        LIMIT 200
-        """,
-        (entity_id, entity_id),
-    ).fetchall()
-    return [dict(r) for r in rows]
-
-
-def create_entity(name: str, type_: Optional[str] = None, description: Optional[str] = None) -> dict:
-    name = name.strip()
-    if not name:
-        raise ValueError("Name must not be empty")
-    with db_connection() as conn:
-        name_vocab_id = _get_or_create_vocab_term(conn, name)
-        type_vocab_id = (
-            _get_or_create_vocab_term(conn, type_.strip())
-            if type_ and type_.strip()
-            else None
-        )
-        cur = conn.execute(
-            "INSERT INTO entities (name_vocab_id, type_vocab_id, description) VALUES (?, ?, ?)",
-            (name_vocab_id, type_vocab_id, description),
-        )
-        return {
-            "id": cur.lastrowid,
-            "name": name,
-            "name_vocab_id": name_vocab_id,
-            "type": type_,
-            "type_vocab_id": type_vocab_id,
-            "description": description,
-        }
-
-
-def update_entity(entity_id: int, name: Optional[str] = None,
-                  type_: Optional[str] = None, description: Optional[str] = None) -> Optional[dict]:
-    with db_connection() as conn:
-        row = conn.execute(
-            """
-            SELECT e.id, vn.term AS name, vt.term AS type,
-                   e.name_vocab_id, e.type_vocab_id, e.description
-            FROM entities e
-            JOIN vocab vn ON vn.id = e.name_vocab_id
-            LEFT JOIN vocab vt ON vt.id = e.type_vocab_id
-            WHERE e.id=?
-            """,
-            (entity_id,),
-        ).fetchone()
-        if row is None:
-            return None
-        new_name_vid = (
-            _get_or_create_vocab_term(conn, name.strip())
-            if name and name.strip()
-            else row["name_vocab_id"]
-        )
-        new_type_vid = (
-            _get_or_create_vocab_term(conn, type_.strip())
-            if type_ is not None and type_.strip()
-            else (None if type_ is not None else row["type_vocab_id"])
-        )
-        new_desc = description if description is not None else row["description"]
-        conn.execute(
-            "UPDATE entities SET name_vocab_id=?, type_vocab_id=?, description=? WHERE id=?",
-            (new_name_vid, new_type_vid, new_desc, entity_id),
-        )
-        vn_row = conn.execute("SELECT term FROM vocab WHERE id=?", (new_name_vid,)).fetchone()
-        vt_row = conn.execute("SELECT term FROM vocab WHERE id=?", (new_type_vid,)).fetchone() if new_type_vid else None
-        return {
-            "id": entity_id,
-            "name": vn_row["term"] if vn_row else name,
-            "name_vocab_id": new_name_vid,
-            "type": vt_row["term"] if vt_row else None,
-            "type_vocab_id": new_type_vid,
-            "description": new_desc,
-        }
-
-
-def delete_entity(entity_id: int) -> bool:
-    with db_connection() as conn:
-        cur = conn.execute("DELETE FROM entities WHERE id=?", (entity_id,))
-        return cur.rowcount > 0
-
-
-# ---------------------------------------------------------------------------
-# MARK: Aliases
-# ---------------------------------------------------------------------------
-
-def add_alias(entity_id: int, alias: str) -> dict:
-    with db_connection() as conn:
-        cur = conn.execute(
-            "INSERT INTO entity_aliases (entity_id, alias) VALUES (?, ?)",
-            (entity_id, alias.strip()),
-        )
-        return {"id": cur.lastrowid, "entity_id": entity_id, "alias": alias.strip()}
-
-
-def delete_alias(alias_id: int) -> bool:
-    with db_connection() as conn:
-        cur = conn.execute("DELETE FROM entity_aliases WHERE id=?", (alias_id,))
-        return cur.rowcount > 0
-
-
-def resolve_alias(term: str) -> Optional[dict]:
-    """Return entity matching name or alias, or None."""
-    with db_connection() as conn:
-        row = conn.execute(
-            """
-            SELECT e.id, vn.term AS name, vt.term AS type,
-                   e.name_vocab_id, e.type_vocab_id, e.description
-            FROM entities e
-            JOIN vocab vn ON vn.id = e.name_vocab_id
-            LEFT JOIN vocab vt ON vt.id = e.type_vocab_id
-            WHERE vn.term=? COLLATE NOCASE
-            """,
-            (term,),
-        ).fetchone()
-        if row:
-            return dict(row)
-        row = conn.execute(
-            """
-            SELECT e.id, vn.term AS name, vt.term AS type,
-                   e.name_vocab_id, e.type_vocab_id, e.description
-            FROM entities e
-            JOIN vocab vn ON vn.id = e.name_vocab_id
-            LEFT JOIN vocab vt ON vt.id = e.type_vocab_id
-            JOIN entity_aliases a ON a.entity_id = e.id
-            WHERE a.alias=? COLLATE NOCASE
-            """,
-            (term,),
-        ).fetchone()
-        return dict(row) if row else None
-
-
-def search_entities(q: str, limit: int = 20) -> list[dict]:
-    like = f"%{q}%"
-    with db_connection() as conn:
-        rows = conn.execute(
-            """
-            SELECT DISTINCT e.id, vn.term AS name, vt.term AS type, e.description
-            FROM entities e
-            JOIN vocab vn ON vn.id = e.name_vocab_id
-            LEFT JOIN vocab vt ON vt.id = e.type_vocab_id
-            LEFT JOIN entity_aliases a ON a.entity_id = e.id
-            WHERE vn.term LIKE ? OR a.alias LIKE ?
-            ORDER BY vn.term
-            LIMIT ?
-            """,
-            (like, like, limit),
-        ).fetchall()
-        return [dict(r) for r in rows]
-
-
-# ---------------------------------------------------------------------------
-# MARK: Relation types
-# ---------------------------------------------------------------------------
-
-def list_relation_types() -> list[dict]:
-    with db_connection() as conn:
-        rows = conn.execute(
-            """
-            SELECT rt.id, rt.label, rt.directed,
-                   COUNT(r.relation_type_id) AS relation_count
-            FROM relation_types rt
-            LEFT JOIN relations r ON r.relation_type_id = rt.id
-            GROUP BY rt.id
-            ORDER BY rt.label
-            """
-        ).fetchall()
-        rts = [dict(r) for r in rows]
-        if rts:
-            ids = [rt["id"] for rt in rts]
-            placeholders = ",".join("?" * len(ids))
-            alias_rows = conn.execute(
-                f"SELECT id, relation_type_id, alias FROM relation_type_aliases"
-                f" WHERE relation_type_id IN ({placeholders}) ORDER BY alias",
-                ids,
-            ).fetchall()
-            alias_map: dict = {}
-            for ar in alias_rows:
-                alias_map.setdefault(ar["relation_type_id"], []).append(
-                    {"id": ar["id"], "alias": ar["alias"]}
-                )
-            for rt in rts:
-                rt["aliases"] = alias_map.get(rt["id"], [])
-        return rts
-
-
-def create_relation_type(label: str, directed: bool = True) -> dict:
-    label = label.strip().lower().replace(" ", "_")
-    if _is_blacklisted(label):
-        raise ValueError(f"Label {label!r} is blacklisted")
-    with db_connection() as conn:
-        cur = conn.execute(
-            "INSERT INTO relation_types (label, directed) VALUES (?, ?)",
-            (label, int(directed)),
-        )
-        return {"id": cur.lastrowid, "label": label, "directed": int(directed)}
-
-
-def delete_relation_type(rt_id: int) -> bool:
-    with db_connection() as conn:
-        cur = conn.execute("DELETE FROM relation_types WHERE id=?", (rt_id,))
-        return cur.rowcount > 0
-
-
-def add_relation_type_alias(rt_id: int, alias: str) -> dict:
-    with db_connection() as conn:
-        cur = conn.execute(
-            "INSERT INTO relation_type_aliases (relation_type_id, alias) VALUES (?, ?)",
-            (rt_id, alias.strip()),
-        )
-        return {"id": cur.lastrowid, "relation_type_id": rt_id, "alias": alias.strip()}
-
-
-def delete_relation_type_alias(alias_id: int) -> bool:
-    with db_connection() as conn:
-        cur = conn.execute("DELETE FROM relation_type_aliases WHERE id=?", (alias_id,))
-        return cur.rowcount > 0
 
 
 # ---------------------------------------------------------------------------
@@ -714,12 +407,18 @@ def merge_vocab_terms(canonical_id: int, merge_id: int) -> dict:
 
 _STATE_LABELS = {0: "proposed", 1: "active", 2: "deprecated", 3: "rejected"}
 
+_REL_JOIN = """
+    JOIN vocab vs ON vs.id = (SELECT MIN(id) FROM vocab WHERE concept_id = r.subject_concept_id)
+    JOIN vocab vp ON vp.id = (SELECT MIN(id) FROM vocab WHERE concept_id = r.predicate_concept_id)
+    JOIN vocab vo ON vo.id = (SELECT MIN(id) FROM vocab WHERE concept_id = r.object_concept_id)
+"""
+
 
 def list_relations(
     limit: int = 100,
     offset: int = 0,
     state: Optional[int] = None,
-    entity_id: Optional[int] = None,
+    concept_id: Optional[int] = None,
 ) -> list[dict]:
     with db_connection() as conn:
         wheres = []
@@ -727,22 +426,18 @@ def list_relations(
         if state is not None:
             wheres.append("r.state=?")
             params.append(state)
-        if entity_id is not None:
-            wheres.append("(r.source_entity_id=? OR r.target_entity_id=?)")
-            params.extend([entity_id, entity_id])
+        if concept_id is not None:
+            wheres.append("(r.subject_concept_id=? OR r.object_concept_id=?)")
+            params.extend([concept_id, concept_id])
         where_sql = ("WHERE " + " AND ".join(wheres)) if wheres else ""
         rows = conn.execute(
             f"""
-            SELECT r.source_entity_id, vs.term AS source_name,
-                   r.relation_type_id, rt.label AS relation_type,
-                   r.target_entity_id, vt.term AS target_name,
+            SELECT r.subject_concept_id, vs.term AS subject_name,
+                   r.predicate_concept_id, vp.term AS predicate_name,
+                   r.object_concept_id, vo.term AS object_name,
                    r.state, r.score
             FROM relations r
-            JOIN entities es ON es.id = r.source_entity_id
-            JOIN vocab vs ON vs.id = es.name_vocab_id
-            JOIN entities et ON et.id = r.target_entity_id
-            JOIN vocab vt ON vt.id = et.name_vocab_id
-            JOIN relation_types rt ON rt.id = r.relation_type_id
+            {_REL_JOIN}
             {where_sql}
             ORDER BY r.score DESC, vs.term
             LIMIT ? OFFSET ?
@@ -755,24 +450,24 @@ def list_relations(
         ]
 
 
-def count_relations(state: Optional[int] = None, entity_id: Optional[int] = None) -> int:
+def count_relations(state: Optional[int] = None, concept_id: Optional[int] = None) -> int:
     with db_connection() as conn:
         wheres = []
         params: list = []
         if state is not None:
             wheres.append("state=?")
             params.append(state)
-        if entity_id is not None:
-            wheres.append("(source_entity_id=? OR target_entity_id=?)")
-            params.extend([entity_id, entity_id])
+        if concept_id is not None:
+            wheres.append("(subject_concept_id=? OR object_concept_id=?)")
+            params.extend([concept_id, concept_id])
         where_sql = ("WHERE " + " AND ".join(wheres)) if wheres else ""
         return conn.execute(f"SELECT COUNT(*) FROM relations {where_sql}", params).fetchone()[0]
 
 
 def upsert_relation(
-    source_id: int,
-    relation_type_id: int,
-    target_id: int,
+    subject_concept_id: int,
+    predicate_concept_id: int,
+    object_concept_id: int,
     state: int = 0,
     score: int = 0,
 ) -> dict:
@@ -781,91 +476,75 @@ def upsert_relation(
     with db_connection() as conn:
         conn.execute(
             """
-            INSERT INTO relations (source_entity_id, relation_type_id, target_entity_id, state, score)
+            INSERT INTO relations
+                (subject_concept_id, predicate_concept_id, object_concept_id, state, score)
             VALUES (?, ?, ?, ?, ?)
-            ON CONFLICT(source_entity_id, relation_type_id, target_entity_id)
+            ON CONFLICT(subject_concept_id, predicate_concept_id, object_concept_id)
             DO UPDATE SET state=excluded.state, score=excluded.score
             """,
-            (source_id, relation_type_id, target_id, state, score),
+            (subject_concept_id, predicate_concept_id, object_concept_id, state, score),
         )
         return {
-            "source_entity_id": source_id,
-            "relation_type_id": relation_type_id,
-            "target_entity_id": target_id,
+            "subject_concept_id": subject_concept_id,
+            "predicate_concept_id": predicate_concept_id,
+            "object_concept_id": object_concept_id,
             "state": state,
             "score": score,
         }
 
 
 def update_relation_state_score(
-    source_id: int, relation_type_id: int, target_id: int,
-    state: Optional[int] = None, score: Optional[int] = None,
+    subject_concept_id: int,
+    predicate_concept_id: int,
+    object_concept_id: int,
+    state: Optional[int] = None,
+    score: Optional[int] = None,
 ) -> Optional[dict]:
     with db_connection() as conn:
         row = conn.execute(
-            "SELECT * FROM relations WHERE source_entity_id=? AND relation_type_id=? AND target_entity_id=?",
-            (source_id, relation_type_id, target_id),
+            "SELECT state, score FROM relations"
+            " WHERE subject_concept_id=? AND predicate_concept_id=? AND object_concept_id=?",
+            (subject_concept_id, predicate_concept_id, object_concept_id),
         ).fetchone()
         if row is None:
             return None
         new_state = max(0, min(3, state)) if state is not None else row["state"]
         new_score = max(0, min(255, score)) if score is not None else row["score"]
         conn.execute(
-            "UPDATE relations SET state=?, score=? WHERE source_entity_id=? AND relation_type_id=? AND target_entity_id=?",
-            (new_state, new_score, source_id, relation_type_id, target_id),
+            "UPDATE relations SET state=?, score=?"
+            " WHERE subject_concept_id=? AND predicate_concept_id=? AND object_concept_id=?",
+            (new_state, new_score, subject_concept_id, predicate_concept_id, object_concept_id),
         )
-        return {"source_entity_id": source_id, "relation_type_id": relation_type_id,
-                "target_entity_id": target_id, "state": new_state, "score": new_score}
+        return {
+            "subject_concept_id": subject_concept_id,
+            "predicate_concept_id": predicate_concept_id,
+            "object_concept_id": object_concept_id,
+            "state": new_state,
+            "score": new_score,
+        }
 
 
-def delete_relation(source_id: int, relation_type_id: int, target_id: int) -> bool:
+def delete_relation(
+    subject_concept_id: int, predicate_concept_id: int, object_concept_id: int
+) -> bool:
     with db_connection() as conn:
         cur = conn.execute(
-            "DELETE FROM relations WHERE source_entity_id=? AND relation_type_id=? AND target_entity_id=?",
-            (source_id, relation_type_id, target_id),
+            "DELETE FROM relations"
+            " WHERE subject_concept_id=? AND predicate_concept_id=? AND object_concept_id=?",
+            (subject_concept_id, predicate_concept_id, object_concept_id),
         )
         return cur.rowcount > 0
-
-
-# ---------------------------------------------------------------------------
-# MARK: Evidence
-# ---------------------------------------------------------------------------
-
-def add_evidence(source_id: int, relation_type_id: int, target_id: int, evidence: str) -> dict:
-    with db_connection() as conn:
-        cur = conn.execute(
-            """
-            INSERT INTO relation_evidence
-                (source_entity_id, relation_type_id, target_entity_id, evidence)
-            VALUES (?, ?, ?, ?)
-            """,
-            (source_id, relation_type_id, target_id, evidence.strip()),
-        )
-        return {"id": cur.lastrowid, "evidence": evidence.strip()}
-
-
-def list_evidence(source_id: int, relation_type_id: int, target_id: int) -> list[dict]:
-    with db_connection() as conn:
-        rows = conn.execute(
-            """
-            SELECT id, evidence, created_at FROM relation_evidence
-            WHERE source_entity_id=? AND relation_type_id=? AND target_entity_id=?
-            ORDER BY created_at
-            """,
-            (source_id, relation_type_id, target_id),
-        ).fetchall()
-        return [dict(r) for r in rows]
 
 
 # ---------------------------------------------------------------------------
 # MARK: Graph traversal (API expand)
 # ---------------------------------------------------------------------------
 
-def expand_entity(entity_id: int, depth: int = 1, min_score: int = 0) -> dict:
-    """Return a {nodes, edges} sub-graph within *depth* hops of *entity_id*."""
-    visited_nodes: set[int] = set()
+def expand_concept(concept_id: int, depth: int = 1, min_score: int = 0) -> dict:
+    """Return a {nodes, edges} sub-graph within *depth* hops of *concept_id*."""
+    visited: set[int] = set()
     edges: list[dict] = []
-    frontier = {entity_id}
+    frontier = {concept_id}
 
     with db_connection() as conn:
         for _ in range(depth):
@@ -875,51 +554,48 @@ def expand_entity(entity_id: int, depth: int = 1, min_score: int = 0) -> dict:
             placeholders = ",".join("?" * len(frontier))
             rows = conn.execute(
                 f"""
-                SELECT r.source_entity_id, vs.term AS source_name,
-                       r.relation_type_id, rt.label AS relation_type,
-                       r.target_entity_id, vt.term AS target_name,
+                SELECT r.subject_concept_id, vs.term AS subject_name,
+                       r.predicate_concept_id, vp.term AS predicate_name,
+                       r.object_concept_id, vo.term AS object_name,
                        r.state, r.score
                 FROM relations r
-                JOIN entities es ON es.id = r.source_entity_id
-                JOIN vocab vs ON vs.id = es.name_vocab_id
-                JOIN entities et ON et.id = r.target_entity_id
-                JOIN vocab vt ON vt.id = et.name_vocab_id
-                JOIN relation_types rt ON rt.id = r.relation_type_id
-                WHERE (r.source_entity_id IN ({placeholders})
-                    OR r.target_entity_id IN ({placeholders}))
+                {_REL_JOIN}
+                WHERE (r.subject_concept_id IN ({placeholders})
+                    OR r.object_concept_id IN ({placeholders}))
                   AND r.score >= ?
                 ORDER BY r.score DESC
                 """,
                 list(frontier) + list(frontier) + [min_score],
             ).fetchall()
+            seen_edges: set[tuple] = {
+                (e["subject_concept_id"], e["predicate_concept_id"], e["object_concept_id"])
+                for e in edges
+            }
             for r in rows:
-                edge_key = (r["source_entity_id"], r["relation_type_id"], r["target_entity_id"])
-                if not any(
-                    e["source_entity_id"] == edge_key[0]
-                    and e["relation_type_id"] == edge_key[1]
-                    and e["target_entity_id"] == edge_key[2]
-                    for e in edges
-                ):
+                key = (r["subject_concept_id"], r["predicate_concept_id"], r["object_concept_id"])
+                if key not in seen_edges:
                     edges.append(dict(r))
-                for nid in (r["source_entity_id"], r["target_entity_id"]):
-                    if nid not in visited_nodes:
-                        next_frontier.add(nid)
-            visited_nodes |= frontier
-            frontier = next_frontier - visited_nodes
+                    seen_edges.add(key)
+                for cid in (r["subject_concept_id"], r["object_concept_id"]):
+                    if cid not in visited:
+                        next_frontier.add(cid)
+            visited |= frontier
+            frontier = next_frontier - visited
 
-        all_node_ids = visited_nodes | frontier
-        nodes = []
-        if all_node_ids:
-            placeholders = ",".join("?" * len(all_node_ids))
+        all_concept_ids = visited | frontier
+        nodes: list[dict] = []
+        if all_concept_ids:
+            placeholders = ",".join("?" * len(all_concept_ids))
             node_rows = conn.execute(
                 f"""
-                SELECT e.id, vn.term AS name, vt.term AS type, e.description
-                FROM entities e
-                JOIN vocab vn ON vn.id = e.name_vocab_id
-                LEFT JOIN vocab vt ON vt.id = e.type_vocab_id
-                WHERE e.id IN ({placeholders})
+                SELECT concept_id,
+                       MIN(term) AS name,
+                       COUNT(*) - 1 AS alias_count
+                FROM vocab
+                WHERE concept_id IN ({placeholders})
+                GROUP BY concept_id
                 """,
-                list(all_node_ids),
+                list(all_concept_ids),
             ).fetchall()
             nodes = [dict(r) for r in node_rows]
 
