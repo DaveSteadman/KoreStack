@@ -20,6 +20,7 @@ export const ICON_FILES = Object.freeze({
   korelibrary: 'book-user-svgrepo-com',
   korereference: 'graduation-hat-alt-1-svgrepo-com',
   korerag: 'truck-svgrepo-com',
+  koregraph: 'chart-network-svgrepo-com',
   koredocs: 'pen-square-svgrepo-com',
   korecode: 'square-terminal-svgrepo-com',
   korecomms: 'send-alt-1-svgrepo-com',
@@ -47,6 +48,7 @@ export const KOREFEED_ICON = makePackIcon(ICON_FILES.korefeed);
 export const KORELIBRARY_ICON = makePackIcon(ICON_FILES.korelibrary);
 export const KOREREFERENCE_ICON = makePackIcon(ICON_FILES.korereference);
 export const KORERAG_ICON = makePackIcon(ICON_FILES.korerag);
+export const KOREGRAPH_ICON = makePackIcon(ICON_FILES.koregraph);
 export const KOREDOCS_ICON = makePackIcon(ICON_FILES.koredocs);
 export const KORECODE_ICON = makePackIcon(ICON_FILES.korecode);
 export const KORECOMMS_ICON = makePackIcon(ICON_FILES.korecomms);
@@ -65,6 +67,7 @@ export const SUITE_ICONS = {
   korelibrary: KORELIBRARY_ICON,
   korereference: KOREREFERENCE_ICON,
   korerag: KORERAG_ICON,
+  koregraph: KOREGRAPH_ICON,
   koredocs: KOREDOCS_ICON,
   korecode: KORECODE_ICON,
   korecomms: KORECOMMS_ICON,

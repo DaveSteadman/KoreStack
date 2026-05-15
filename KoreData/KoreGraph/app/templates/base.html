@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KoreGraph{% block title_suffix %}{% endblock %}</title>
+  <link rel="icon" type="image/x-icon" href="/ui-elements/assets/icons/favicon.ico">
+  <link rel="stylesheet" href="/ui-elements/assets/css/chrome.css?v=20260508b">
+  <script src="/suite-config.js"></script>
+  <style>
+    :root {
+      --bg:      #0b0c10;
+      --panel:   #0f1117;
+      --border:  #1e2233;
+      --text:    #c5c8d0;
+      --dim:     #4e5466;
+      --green:   #4af77a;
+      --amber:   #f0c060;
+      --blue:    #6eb5ff;
+      --red:     #ff5f5f;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font-ui);
+      background: var(--bg); color: var(--text);
+      font-size: var(--kcui-text-body); line-height: var(--kcui-leading-body);
+    }
+
+    /* ─── layout ─────────────────────────────────── */
+    main { padding: 1.5rem 2rem; max-width: 1320px; margin: 0 auto; }
+    main.kcui-main { padding: 0; max-width: none; }
+
+    /* ─── panel / card ───────────────────────────── */
+    .panel { border: 1px solid var(--border); background: var(--panel); margin-bottom: 1.25rem; }
+    .panel-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--border);
+    }
+    .panel-title { font-size: var(--kcui-text-label); color: var(--dim); letter-spacing: var(--kcui-tracking-label); text-transform: uppercase; }
+    .panel-body { padding: 0.75rem; }
+
+    /* ─── table ──────────────────────────────────── */
+    table { width: 100%; border-collapse: collapse; font-size: var(--kcui-text-data); }
+    th, td { text-align: left; padding: 0.4rem 0.75rem; border-bottom: 1px solid var(--border); }
+    th { color: var(--dim); font-weight: 400; font-size: var(--kcui-text-label); letter-spacing: var(--kcui-tracking-label); text-transform: uppercase; }
+    tr:last-child td { border-bottom: none; }
+    tbody tr:hover td { background: rgba(255,255,255,.025); }
+
+    /* ─── forms ──────────────────────────────────── */
+    label { font-size: var(--kcui-text-label); color: var(--dim); letter-spacing: var(--kcui-tracking-tight); text-transform: uppercase; }
+    input[type=text], input[type=search], input[type=number], textarea, select {
+      padding: 0.35rem 0.6rem;
+      background: var(--bg); color: var(--text);
+      border: 1px solid var(--border);
+      font-family: inherit; font-size: var(--kcui-text-data); outline: none;
+    }
+    input[type=text], input[type=search] { width: 100%; }
+    input:focus, select:focus, textarea:focus { border-color: var(--green); }
+    input::placeholder, textarea::placeholder { color: var(--dim); }
+    textarea { resize: vertical; min-height: 60px; width: 100%; }
+    select { width: 100%; }
+
+    /* number stepper */
+    .num-stepper {
+      display: inline-flex; border: 1px solid var(--border); overflow: hidden;
+    }
+    .num-stepper input[type=number] {
+      border: none; background: transparent; color: var(--text);
+      font-family: inherit; font-size: var(--kcui-text-body); padding: 0.25rem 0.4rem;
+      -moz-appearance: textfield; min-width: 0; outline: none; text-align: right; width: 52px;
+    }
+    .num-stepper input[type=number]::-webkit-inner-spin-button,
+    .num-stepper input[type=number]::-webkit-outer-spin-button { display: none; }
+    .num-stepper:focus-within { border-color: var(--green); }
+    .stepper-btns {
+      display: flex; flex-direction: column;
+      border-left: 1px solid var(--border); width: 20px; flex-shrink: 0;
+    }
+    .stepper-btns button {
+      flex: 1; padding: 0; border: none; border-radius: 0;
+      background: transparent; color: var(--dim); cursor: pointer;
+      font-size: var(--kcui-text-micro); line-height: 1; letter-spacing: 0; text-transform: none;
+      display: flex; align-items: center; justify-content: center;
+      min-width: 0; transition: background .1s, color .1s;
+    }
+    .stepper-btns button:first-child { border-bottom: 1px solid var(--border); }
+    .stepper-btns button:hover { background: rgba(74,247,122,.15); color: var(--green); }
+
+    /* buttons */
+    button, .btn {
+      padding: 0.4rem 1rem;
+      background: transparent; color: var(--green);
+      border: 1px solid var(--green);
+      font-family: inherit; font-size: var(--kcui-text-body-sm); cursor: pointer;
+      letter-spacing: var(--kcui-tracking-label); text-transform: uppercase;
+      transition: background .12s; white-space: nowrap;
+    }
+    button:hover, .btn:hover { background: rgba(74,247,122,.1); }
+    .btn-danger { color: var(--red); border-color: var(--red); }
+    .btn-danger:hover { background: rgba(255,95,95,.1); }
+    .btn-sm { padding: 0.2rem 0.5rem; font-size: var(--kcui-text-label); }
+    .btn-secondary { color: var(--dim); border-color: var(--dim); }
+    .btn-secondary:hover { background: rgba(78,84,102,.15); }
+
+    /* ─── misc ───────────────────────────────────── */
+    a { color: var(--blue); text-decoration: none; }
+    a:hover { text-decoration: underline; color: var(--text); }
+    .meta { color: var(--dim); font-size: var(--kcui-text-body-sm); }
+    .badge {
+      display: inline-block;
+      border: 1px solid var(--green); color: var(--green);
+      padding: 0 5px; font-size: var(--kcui-text-label); letter-spacing: var(--kcui-tracking-tight);
+    }
+    .badge-dim  { border-color: var(--border); color: var(--dim); }
+    .badge-amber { border-color: var(--amber); color: var(--amber); }
+    .badge-blue  { border-color: var(--blue);  color: var(--blue); }
+    .badge-red   { border-color: var(--red);   color: var(--red); }
+
+    .pagination { display: flex; gap: 0.5rem; margin-top: 1rem; align-items: center; }
+    .pagination a {
+      padding: 0.25rem 0.65rem; border: 1px solid var(--border); color: var(--dim);
+      text-decoration: none; font-size: var(--kcui-text-body-sm);
+    }
+    .pagination a:hover { border-color: var(--green); color: var(--green); }
+    .pg-info { color: var(--dim); font-size: var(--kcui-text-body-sm); }
+
+    /* graph-specific */
+    .state-0 { color: var(--amber); }
+    .state-1 { color: var(--green); }
+    .state-2 { color: var(--dim); }
+    .state-3 { color: var(--red); }
+
+    .score-bar {
+      display: inline-block; height: 6px; background: var(--green);
+      vertical-align: middle; opacity: 0.55; border-radius: 2px;
+    }
+
+    /* inline form row */
+    .form-row { display: flex; gap: 0.5rem; align-items: flex-end; flex-wrap: wrap; }
+    .form-row .field { display: flex; flex-direction: column; gap: 0.2rem; }
+    .form-row .field-lg { flex: 1; min-width: 160px; }
+    .form-row .field-sm { width: 120px; }
+    .form-row .field-xs { width: 80px; }
+
+    /* Dark scrollbars */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: #2a2d3e; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #3a3d52; }
+    * { scrollbar-width: thin; scrollbar-color: #2a2d3e var(--bg); }
+  </style>
+</head>
+<body>
+  <div id="topbar"></div>
+  <div id="app-bar"></div>
+  <main class="{% block main_class %}{% endblock %}">
+    {% block content %}{% endblock %}
+  </main>
+  <script>
+  window._kgPfx = {{ _pfx | default('') | tojson }};
+  function stepNum(btn, delta) {
+    const input = btn.closest('.num-stepper').querySelector('input[type=number]');
+    const min  = input.min  !== '' ? parseInt(input.min,  10) : -Infinity;
+    const max  = input.max  !== '' ? parseInt(input.max,  10) :  Infinity;
+    const step = input.step !== '' ? parseInt(input.step, 10) : 1;
+    let val = parseInt(input.value, 10);
+    if (isNaN(val)) val = parseInt(input.min, 10) || 0;
+    input.value = Math.min(max, Math.max(min, val + delta * step));
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+  </script>
+  <script type="module">
+    import { initAppBar, initTopbar } from '/ui-elements/assets/js/chrome.js?v=20260508b';
+    initTopbar({ currentService: 'koregraph', urls: window.__koreSuiteUrls || {} });
+    initAppBar({
+      currentService: 'koregraph',
+      overline: 'Knowledge Graph',
+      brandLabel: 'KoreGraph',
+      brandIcon: 'koregraph',
+      chips: [],
+      tabs: [
+        { label: 'Vocab',     href: '{{ _pfx | default('') }}/ui/vocab',     active: {{ 'true' if request.url.path.startswith('/ui/vocab') else 'false' }} },
+        { label: 'Relations', href: '{{ _pfx | default('') }}/ui/relations',  active: {{ 'true' if request.url.path.startswith('/ui/relations') else 'false' }} },
+        { label: 'Entities',  href: '{{ _pfx | default('') }}/ui/entities',   active: {{ 'true' if request.url.path.startswith('/ui/entities') else 'false' }} },
+      ],
+    });
+  </script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

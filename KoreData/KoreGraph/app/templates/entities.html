@@ -1,0 +1,363 @@
+{% extends "base.html" %}
+{% block title_suffix %} — Entities{% endblock %}
+{% block main_class %}kcui-main{% endblock %}
+
+{% block content %}
+<style>
+  .kg-layout { display: grid; grid-template-columns: 1fr 340px; gap: 1.25rem; padding: 1.25rem; }
+  @media (max-width: 900px) { .kg-layout { grid-template-columns: 1fr; } }
+
+  .entity-name { color: var(--text); font-weight: 500; }
+  .entity-type { color: var(--dim); font-size: var(--kcui-text-label); margin-left: 0.4rem; }
+  .entity-desc { color: var(--dim); font-size: var(--kcui-text-body-sm); }
+  .alias-chips { display: flex; flex-wrap: wrap; gap: 0.2rem; max-width: 200px; }
+  .alias-chip  { border: 1px solid var(--border); color: var(--dim); padding: 0.05rem 0.35rem;
+                 font-size: var(--kcui-text-label); font-family: var(--font-code); white-space: nowrap; }
+
+  /* inline search bar */
+  .search-bar { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+  .search-bar input { flex: 1; }
+</style>
+
+<div class="kg-layout">
+  <!-- left: entity table -->
+  <div>
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Entities
+          {% if total %}<span class="badge-dim badge" style="margin-left:0.5rem">{{ total }}</span>{% endif %}
+        </span>
+      </div>
+      <div class="panel-body">
+        <!-- search -->
+        <form class="search-bar" method="get" action="{{ _pfx }}/ui/entities">
+          <input type="search" name="q" placeholder="Search entities…" value="{{ q }}">
+          <button type="submit">Search</button>
+          {% if q %}<a href="{{ _pfx }}/ui/entities" class="btn btn-secondary btn-sm" style="display:flex;align-items:center">Clear</a>{% endif %}
+        </form>
+
+        {% if entities %}
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Type</th>
+              <th>Aliases</th>
+              <th>Relations</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="entity-tbody">
+            {% for e in entities %}
+            <tr id="entity-row-{{ e.id }}">
+              <td>
+                <span class="entity-name">{{ e.name }}</span>
+              </td>
+              <td><span class="meta">{{ e.type or '' }}</span></td>
+              <td>
+                {% if e.aliases %}
+                <div class="alias-chips">{% for a in e.aliases %}<span class="alias-chip">{{ a }}</span>{% endfor %}</div>
+                {% else %}<span class="meta">—</span>{% endif %}
+              </td>
+              <td><span class="meta">{{ e.relation_count }}</span></td>
+              <td style="text-align:right;white-space:nowrap">
+                <button class="btn btn-sm btn-secondary" onclick="editEntity({{ e.id }}, {{ e.name|tojson }}, {{ (e.type or '')|tojson }}, {{ (e.description or '')|tojson }})">Edit</button>
+                <button class="btn btn-sm btn-danger" onclick="deleteEntity({{ e.id }}, {{ e.name|tojson }})">Del</button>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+
+        <!-- pagination -->
+        {% if total_pages > 1 %}
+        <div class="pagination">
+          {% if page > 1 %}
+          <a href="{{ _pfx }}/ui/entities?{% if q %}q={{ q }}&{% endif %}page={{ page - 1 }}">&laquo; Prev</a>
+          {% endif %}
+          <span class="pg-info">Page {{ page }} / {{ total_pages }}</span>
+          {% if page < total_pages %}
+          <a href="{{ _pfx }}/ui/entities?{% if q %}q={{ q }}&{% endif %}page={{ page + 1 }}">Next &raquo;</a>
+          {% endif %}
+        </div>
+        {% endif %}
+        {% else %}
+        <p class="meta" style="padding:0.5rem 0">{{ 'No entities match "' + q + '".' if q else 'No entities yet. Add one using the form.' }}</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- right: add / edit form -->
+  <div>
+    <div class="panel" id="entity-form-panel">
+      <div class="panel-header">
+        <span class="panel-title" id="entity-form-title">Add Entity</span>
+      </div>
+      <div class="panel-body">
+        <div style="display:flex;flex-direction:column;gap:0.6rem">
+          <input type="hidden" id="ef-id" value="">
+          <div>
+            <label>Name</label>
+            <input type="text" id="ef-name" placeholder="e.g. Elon Musk">
+          </div>
+          <div>
+            <label>Type</label>
+            <input type="text" id="ef-type" placeholder="e.g. person, org, concept, place">
+          </div>
+          <div>
+            <label>Description</label>
+            <textarea id="ef-description" rows="3" placeholder="Optional short description"></textarea>
+          </div>
+          <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+            <button onclick="saveEntity()">Save</button>
+            <button class="btn-secondary" onclick="clearEntityForm()">Cancel</button>
+          </div>
+          <div id="ef-msg" class="meta" style="min-height:1.2em"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- alias sub-panel (shown when editing) -->
+    <div class="panel" id="alias-panel" style="display:none">
+      <div class="panel-header">
+        <span class="panel-title">Aliases for <span id="alias-entity-name"></span></span>
+      </div>
+      <div class="panel-body">
+        <div id="alias-list" style="margin-bottom:0.6rem"></div>
+        <div class="form-row">
+          <div class="field field-lg">
+            <input type="text" id="alias-input" placeholder="Add alias…">
+          </div>
+          <button onclick="addAlias()">Add</button>
+        </div>
+        <div id="alias-msg" class="meta" style="min-height:1.2em;margin-top:0.3rem"></div>
+      </div>
+    </div>
+
+    <!-- add relation sub-panel (shown when editing) -->
+    <div class="panel" id="rel-panel" style="display:none">
+      <div class="panel-header">
+        <span class="panel-title">Add Relation</span>
+      </div>
+      <div class="panel-body">
+        <div style="display:flex;flex-direction:column;gap:0.5rem">
+          <div>
+            <label>Target entity name</label>
+            <input type="text" id="rel-target-name" placeholder="Search target…">
+            <div id="rel-target-results" style="margin-top:0.3rem"></div>
+          </div>
+          <div>
+            <label>Relation type</label>
+            <select id="rel-type">
+              {% for rt in relation_types %}
+              <option value="{{ rt.id }}">{{ rt.label }}{% if not rt.directed %} (undirected){% endif %}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div style="display:flex;gap:0.75rem">
+            <div class="field field-sm">
+              <label>State</label>
+              <select id="rel-state">
+                <option value="0">Proposed</option>
+                <option value="1">Active</option>
+                <option value="2">Deprecated</option>
+                <option value="3">Rejected</option>
+              </select>
+            </div>
+            <div class="field field-xs">
+              <label>Score</label>
+              <div class="num-stepper">
+                <input type="number" id="rel-score" min="0" max="255" value="0">
+                <div class="stepper-btns">
+                  <button type="button" onclick="stepNum(this,1)" tabindex="-1">▲</button>
+                  <button type="button" onclick="stepNum(this,-1)" tabindex="-1">▼</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <input type="hidden" id="rel-target-id" value="">
+          <button onclick="saveRelation()">Add Relation</button>
+          <div id="rel-msg" class="meta" style="min-height:1.2em"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let _currentEntityId = null;
+
+function clearEntityForm() {
+  _currentEntityId = null;
+  document.getElementById('ef-id').value = '';
+  document.getElementById('ef-name').value = '';
+  document.getElementById('ef-type').value = '';
+  document.getElementById('ef-description').value = '';
+  document.getElementById('entity-form-title').textContent = 'Add Entity';
+  document.getElementById('ef-msg').textContent = '';
+  document.getElementById('alias-panel').style.display = 'none';
+  document.getElementById('rel-panel').style.display = 'none';
+}
+
+function editEntity(id, name, type, description) {
+  _currentEntityId = id;
+  document.getElementById('ef-id').value = id;
+  document.getElementById('ef-name').value = name;
+  document.getElementById('ef-type').value = type;
+  document.getElementById('ef-description').value = description;
+  document.getElementById('entity-form-title').textContent = 'Edit Entity';
+  document.getElementById('ef-msg').textContent = '';
+  document.getElementById('alias-entity-name').textContent = name;
+  document.getElementById('alias-panel').style.display = '';
+  document.getElementById('rel-panel').style.display = '';
+  loadAliases(id);
+}
+
+async function saveEntity() {
+  const id   = document.getElementById('ef-id').value;
+  const name = document.getElementById('ef-name').value.trim();
+  const type = document.getElementById('ef-type').value.trim();
+  const desc = document.getElementById('ef-description').value.trim();
+  const msg  = document.getElementById('ef-msg');
+  if (!name) { msg.textContent = 'Name is required.'; return; }
+  try {
+    let url, method, body;
+    if (id) {
+      url    = window._kgPfx + `/api/entities/${id}`;
+      method = 'PUT';
+      body   = JSON.stringify({ name, type: type || null, description: desc || null });
+    } else {
+      url    = window._kgPfx + '/api/entities';
+      method = 'POST';
+      body   = JSON.stringify({ name, type: type || null, description: desc || null });
+    }
+    const r = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body });
+    if (!r.ok) { const d = await r.json(); msg.textContent = d.detail || 'Error'; return; }
+    msg.textContent = id ? 'Saved.' : 'Created.';
+    setTimeout(() => location.reload(), 600);
+  } catch (e) { msg.textContent = String(e); }
+}
+
+async function deleteEntity(id, name) {
+  if (!confirm(`Delete entity "${name}"? This will also delete all its relations.`)) return;
+  const r = await fetch(window._kgPfx + `/api/entities/${id}`, { method: 'DELETE' });
+  if (r.ok) {
+    const row = document.getElementById(`entity-row-${id}`);
+    if (row) row.remove();
+    if (_currentEntityId === id) clearEntityForm();
+  } else {
+    const d = await r.json();
+    alert(d.detail || 'Error deleting entity');
+  }
+}
+
+// ─── Aliases ──────────────────────────────────────────────────────────────
+
+async function loadAliases(entityId) {
+  const r = await fetch(window._kgPfx + `/api/entities/${entityId}`);
+  const d = await r.json();
+  const list = document.getElementById('alias-list');
+  list.innerHTML = '';
+  for (const a of (d.aliases || [])) {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:2px 0;';
+    row.innerHTML = `<span class="meta">${escHtml(a.alias)}</span>
+      <button class="btn btn-sm btn-danger" onclick="deleteAlias(${a.id}, this.closest('div'))">Del</button>`;
+    list.appendChild(row);
+  }
+  if (!d.aliases || d.aliases.length === 0) {
+    list.innerHTML = '<span class="meta">No aliases.</span>';
+  }
+}
+
+async function addAlias() {
+  const alias = document.getElementById('alias-input').value.trim();
+  const msg   = document.getElementById('alias-msg');
+  if (!alias || !_currentEntityId) return;
+  const r = await fetch(window._kgPfx + `/api/entities/${_currentEntityId}/aliases`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ alias }),
+  });
+  if (r.ok) {
+    document.getElementById('alias-input').value = '';
+    msg.textContent = '';
+    loadAliases(_currentEntityId);
+  } else {
+    const d = await r.json();
+    msg.textContent = d.detail || 'Error';
+  }
+}
+
+async function deleteAlias(aliasId, rowEl) {
+  const r = await fetch(window._kgPfx + `/api/aliases/${aliasId}`, { method: 'DELETE' });
+  if (r.ok) rowEl.remove();
+}
+
+// ─── Relations ────────────────────────────────────────────────────────────
+
+let _relTargetSearchTimer;
+document.getElementById('rel-target-name').addEventListener('input', function() {
+  clearTimeout(_relTargetSearchTimer);
+  const q = this.value.trim();
+  if (q.length < 2) { document.getElementById('rel-target-results').innerHTML = ''; return; }
+  _relTargetSearchTimer = setTimeout(() => searchTargets(q), 300);
+});
+
+async function searchTargets(q) {
+  const r   = await fetch(window._kgPfx + `/api/search?q=${encodeURIComponent(q)}&limit=8`);
+  const items = await r.json();
+  const box   = document.getElementById('rel-target-results');
+  box.innerHTML = '';
+  for (const e of items) {
+    const btn = document.createElement('button');
+    btn.className = 'btn btn-sm btn-secondary';
+    btn.style.cssText = 'display:block;width:100%;text-align:left;margin-bottom:2px;text-transform:none;';
+    btn.textContent = e.name + (e.type ? ` [${e.type}]` : '');
+    btn.onclick = () => {
+      document.getElementById('rel-target-name').value = e.name;
+      document.getElementById('rel-target-id').value   = e.id;
+      box.innerHTML = '';
+    };
+    box.appendChild(btn);
+  }
+}
+
+async function saveRelation() {
+  const msg    = document.getElementById('rel-msg');
+  const sid    = _currentEntityId;
+  const tid    = parseInt(document.getElementById('rel-target-id').value, 10);
+  const rtId   = parseInt(document.getElementById('rel-type').value, 10);
+  const state  = parseInt(document.getElementById('rel-state').value, 10);
+  const score  = parseInt(document.getElementById('rel-score').value, 10);
+  if (!sid) { msg.textContent = 'Select an entity to edit first.'; return; }
+  if (!tid)  { msg.textContent = 'Pick a target entity from the search list.'; return; }
+  const r = await fetch(window._kgPfx + '/api/relations', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      source_entity_id: sid,
+      relation_type_id: rtId,
+      target_entity_id: tid,
+      state, score,
+    }),
+  });
+  if (r.ok) {
+    msg.textContent = 'Relation saved.';
+    document.getElementById('rel-target-name').value = '';
+    document.getElementById('rel-target-id').value   = '';
+  } else {
+    const d = await r.json();
+    msg.textContent = d.detail || 'Error';
+  }
+}
+
+// ─── util ─────────────────────────────────────────────────────────────────
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+{% endblock %}

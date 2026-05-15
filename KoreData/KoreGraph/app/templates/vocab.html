@@ -1,0 +1,328 @@
+{% extends "base.html" %}
+{% block title_suffix %} — Vocab{% endblock %}
+{% block main_class %}kcui-main{% endblock %}
+
+{% block content %}
+<style>
+  .kg-vocab-layout {
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    gap: 0;
+    align-items: start;
+  }
+  @media (max-width: 700px) { .kg-vocab-layout { grid-template-columns: 1fr; } }
+
+  /* ── left list ─────────────────────────────────────────────────────── */
+  .kg-vocab-left {
+    border-right: 1px solid var(--border);
+  }
+  .vocab-toolbar {
+    display: flex; gap: 0.5rem; align-items: center;
+    padding: 0.6rem 0.75rem; border-bottom: 1px solid var(--border);
+  }
+  .vocab-toolbar input[type=search] { flex: 1; min-width: 0; }
+  .vocab-add-row {
+    display: flex; gap: 0.5rem; align-items: center;
+    padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--border);
+    background: var(--panel);
+  }
+  .vocab-add-row input[type=text] { flex: 1; }
+  .vocab-list-scroll { /* natural height — page scrolls */ }
+  #v-tbody tr { cursor: pointer; }
+  #v-tbody tr.v-selected td { background: rgba(74,247,122,.07); }
+  #v-tbody tr.v-merge-target { cursor: crosshair; }
+  #v-tbody tr.v-merge-target:hover td { background: rgba(240,192,96,.07); color: var(--amber); }
+
+  /* ── right panel ───────────────────────────────────────────────────── */
+  .kg-vocab-panel {
+    display: flex; flex-direction: column; gap: 1rem;
+    padding: 1rem;
+    border-left: 1px solid var(--border);
+    position: sticky; top: 0;
+    max-height: 100vh; overflow-y: auto;
+  }
+  .v-panel-empty {
+    display: flex; align-items: center; justify-content: center;
+    height: 100%; color: var(--dim); font-size: var(--kcui-text-body-sm); text-align: center;
+  }
+  .v-panel-header {
+    display: flex; justify-content: space-between; align-items: baseline;
+    padding-bottom: 0.5rem; border-bottom: 1px solid var(--border);
+  }
+  .v-panel-term { font-family: var(--font-code); color: var(--text); word-break: break-all; }
+  .v-section-label {
+    font-size: var(--kcui-text-label); color: var(--dim);
+    letter-spacing: var(--kcui-tracking-label); text-transform: uppercase;
+    margin-bottom: 0.3rem;
+  }
+  .alias-chips { display: flex; flex-wrap: wrap; gap: 0.25rem; align-items: center; min-height: 1.4em; }
+  .v-chip {
+    display: inline-flex; align-items: center; gap: 0.2rem;
+    border: 1px solid var(--border); color: var(--dim);
+    padding: 0.05rem 0.35rem; font-size: var(--kcui-text-label); font-family: var(--font-code);
+  }
+  .v-chip button {
+    all: unset; cursor: pointer; color: var(--dim); font-size: 10px;
+    line-height: 1; padding: 0 0.1rem;
+  }
+  .v-chip button:hover { color: var(--red); }
+  .v-alias-add { display: flex; gap: 0.35rem; margin-top: 0.4rem; }
+  .v-alias-add input { flex: 1; font-size: var(--kcui-text-label); padding: 0.2rem 0.4rem; }
+  .v-alias-add button { padding: 0.2rem 0.6rem; font-size: var(--kcui-text-label); }
+  .v-merge-hint {
+    font-size: var(--kcui-text-body-sm); color: var(--amber);
+    padding: 0.35rem 0.5rem; border: 1px solid rgba(240,192,96,.4);
+    background: rgba(240,192,96,.04); margin-top: 0.4rem; display: none;
+  }
+  .v-panel-footer { margin-top: auto; padding-top: 0.75rem; border-top: 1px solid var(--border); }
+</style>
+
+<div class="kg-vocab-layout">
+
+  <!-- ── left: list ─────────────────────────────────────────────────── -->
+  <div class="kg-vocab-left">
+    <div class="vocab-toolbar">
+      <input type="search" id="v-search" placeholder="Search terms…" autocomplete="off">
+      <span id="v-count" class="meta"></span>
+    </div>
+    <div class="vocab-add-row" id="v-add-row">
+      <input type="text" id="v-add-input" placeholder="New term…"
+        onkeydown="if(event.key==='Enter')saveAddTerm()">
+      <button onclick="saveAddTerm()">Save</button>
+    </div>
+    <div class="vocab-list-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:56px">Concept</th>
+            <th>Term</th>
+            <th style="width:56px;text-align:center">Aliases</th>
+          </tr>
+        </thead>
+        <tbody id="v-tbody">
+          <tr><td colspan="3" class="meta" style="padding:1rem;text-align:center">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── right: detail panel ────────────────────────────────────────── -->
+  <div class="kg-vocab-panel" id="v-panel">
+    <div class="v-panel-empty">Select a term<br>to view details</div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let _selectedId   = null;
+let _selectedTerm = null;
+let _mergeMode    = false;
+let _terms        = [];
+
+// ── Load / render list ──────────────────────────────────────────────────
+async function loadVocab() {
+  const q   = document.getElementById('v-search').value.trim();
+  const url = window._kgPfx + '/api/vocab' + (q ? '?q=' + encodeURIComponent(q) : '');
+  const r   = await fetch(url);
+  _terms = await r.json();
+  renderList();
+}
+
+function renderList() {
+  const tbody = document.getElementById('v-tbody');
+  document.getElementById('v-count').textContent = _terms.length;
+  tbody.innerHTML = '';
+  if (!_terms.length) {
+    tbody.innerHTML = '<tr><td colspan="3" class="meta" style="padding:1rem;text-align:center">No terms.</td></tr>';
+    return;
+  }
+  for (const t of _terms) {
+    const tr = document.createElement('tr');
+    tr.id = 'vr-' + t.id;
+    if (t.id === _selectedId) tr.classList.add('v-selected');
+    if (_mergeMode && t.id !== _selectedId) tr.classList.add('v-merge-target');
+    tr.innerHTML =
+      `<td><span class="meta">${t.concept_id}</span></td>` +
+      `<td style="font-family:var(--font-code)">${escHtml(t.term)}</td>` +
+      `<td style="text-align:center">${t.alias_count > 0
+        ? `<span class="badge-dim badge">${t.alias_count}</span>`
+        : '<span class="meta">—</span>'}`;
+    tr.onclick = () => _mergeMode ? doMerge(t.id, t.term) : selectTerm(t.id, t.term);
+    tbody.appendChild(tr);
+  }
+}
+
+// ── Select ──────────────────────────────────────────────────────────────
+async function selectTerm(id, term) {
+  _selectedId   = id;
+  _selectedTerm = term;
+  _mergeMode    = false;
+  renderList();
+  const r = await fetch(window._kgPfx + '/api/vocab/' + id);
+  if (r.ok) renderPanel(await r.json());
+}
+
+function renderPanel(d) {
+  const others = d.siblings.filter(s => s.id !== d.id);
+  document.getElementById('v-panel').innerHTML = `
+    <div class="v-panel-header">
+      <span class="v-panel-term">${escHtml(d.term)}</span>
+      <span class="meta">concept ${d.concept_id}</span>
+    </div>
+
+    <div>
+      <div class="v-section-label">Other names</div>
+      <div class="alias-chips" id="v-alias-chips">${
+        others.length
+          ? others.map(s =>
+              `<span class="v-chip" id="va-${s.id}">${escHtml(s.term)}<button onclick="deleteVocabAlias(${s.id})" title="Remove">✕</button></span>`
+            ).join('')
+          : '<span class="meta" id="v-alias-none">none</span>'
+      }</div>
+      <div class="v-alias-add">
+        <input type="text" id="v-alias-input" placeholder="Add alias…"
+          onkeydown="if(event.key==='Enter')addVocabAlias(${d.id})">
+        <button onclick="addVocabAlias(${d.id})">Add</button>
+      </div>
+    </div>
+
+    <div>
+      <div class="v-section-label">Merge</div>
+      <p class="meta" style="margin-bottom:0.4rem;font-size:var(--kcui-text-body-sm)">
+        Select another term in the list to merge it into
+        <strong style="color:var(--text);font-family:var(--font-code)">${escHtml(d.term)}</strong>.
+        It becomes an alias here.
+      </p>
+      <button id="v-merge-btn" class="btn btn-secondary" onclick="toggleMerge(${d.id})">
+        Merge term into this…
+      </button>
+      <div id="v-merge-hint" class="v-merge-hint">
+        Click any row in the list — it will become an alias of <strong>${escHtml(d.term)}</strong>.
+      </div>
+    </div>
+
+    <div class="v-panel-footer">
+      <button class="btn btn-danger"
+        onclick="deleteVocabTerm(${d.id}, ${escHtml(JSON.stringify(d.term))})">
+        Delete "${escHtml(d.term)}"
+      </button>
+    </div>
+  `;
+}
+
+// ── Merge ──────────────────────────────────────────────────────────────
+function toggleMerge() {
+  _mergeMode = !_mergeMode;
+  renderList();
+  const btn  = document.getElementById('v-merge-btn');
+  const hint = document.getElementById('v-merge-hint');
+  if (btn)  btn.textContent    = _mergeMode ? '✕ Cancel merge' : 'Merge term into this…';
+  if (hint) hint.style.display = _mergeMode ? '' : 'none';
+}
+
+async function doMerge(mergeId, mergeTerm) {
+  if (!confirm(`Merge "${mergeTerm}" into "${_selectedTerm}"?\n\n"${mergeTerm}" becomes an alias and is removed from the list.`)) return;
+  const r = await fetch(window._kgPfx + `/api/vocab/${_selectedId}/merge/${mergeId}`, { method: 'POST' });
+  if (r.ok) {
+    _mergeMode = false;
+    await loadVocab();
+    const dr = await fetch(window._kgPfx + '/api/vocab/' + _selectedId);
+    if (dr.ok) renderPanel(await dr.json());
+  } else {
+    const d = await r.json();
+    alert(d.detail || 'Merge failed');
+  }
+}
+
+// ── Aliases ────────────────────────────────────────────────────────────
+async function addVocabAlias(id) {
+  const inp   = document.getElementById('v-alias-input');
+  const alias = inp.value.trim();
+  if (!alias) return;
+  const r = await fetch(window._kgPfx + '/api/vocab/' + id + '/aliases', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ alias }),
+  });
+  if (r.ok) {
+    const d = await r.json();
+    inp.value = '';
+    document.getElementById('v-alias-none')?.remove();
+    const chip = document.createElement('span');
+    chip.className = 'v-chip';
+    chip.id = 'va-' + d.id;
+    chip.innerHTML = escHtml(d.term) + `<button onclick="deleteVocabAlias(${d.id})" title="Remove">✕</button>`;
+    document.getElementById('v-alias-chips').appendChild(chip);
+    await loadVocab();
+  } else {
+    const d = await r.json();
+    alert(d.detail || 'Error');
+  }
+}
+
+async function deleteVocabAlias(aliasId) {
+  const r = await fetch(window._kgPfx + '/api/vocab-aliases/' + aliasId, { method: 'DELETE' });
+  if (r.ok) {
+    document.getElementById('va-' + aliasId)?.remove();
+    const chips = document.getElementById('v-alias-chips');
+    if (chips && !chips.querySelector('.v-chip')) {
+      const none = document.createElement('span');
+      none.className = 'meta'; none.id = 'v-alias-none'; none.textContent = 'none';
+      chips.appendChild(none);
+    }
+    await loadVocab();
+  }
+}
+
+// ── Delete term ─────────────────────────────────────────────────────────
+async function deleteVocabTerm(id, termText) {
+  if (!confirm(`Delete vocab term "${termText}"?`)) return;
+  const r = await fetch(window._kgPfx + '/api/vocab/' + id, { method: 'DELETE' });
+  if (r.ok) {
+    _selectedId = null; _selectedTerm = null;
+    document.getElementById('v-panel').innerHTML =
+      '<div class="v-panel-empty">Select a term<br>to view details</div>';
+    await loadVocab();
+  } else {
+    const d = await r.json();
+    alert(d.detail || 'Error');
+  }
+}
+
+// ── Add term ────────────────────────────────────────────────────────────
+async function saveAddTerm() {
+  const inp  = document.getElementById('v-add-input');
+  const term = inp.value.trim();
+  if (!term) return;
+  const r = await fetch(window._kgPfx + '/api/vocab', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ term }),
+  });
+  if (r.ok) {
+    const d = await r.json();
+    inp.value = '';
+    await loadVocab();
+    selectTerm(d.id, d.term);
+  } else {
+    const d = await r.json();
+    alert(d.detail || 'Error');
+  }
+}
+
+// ── Utilities ───────────────────────────────────────────────────────────
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+let _searchTimer;
+document.getElementById('v-search').addEventListener('input', function () {
+  clearTimeout(_searchTimer);
+  _searchTimer = setTimeout(loadVocab, 300);
+});
+
+loadVocab();
+</script>
+{% endblock %}

@@ -55,6 +55,7 @@ _SERVICES = [
     (_BASE / "KoreLibrary",   "KoreLibrary",   _DATA / "Library"),
     (_BASE / "KoreReference", "KoreReference", _DATA / "Reference"),
     (_BASE / "KoreRAG",       "KoreRAG",       _DATA / "RAG"),
+    (_BASE / "KoreGraph",     "KoreGraph",     _DATA / "Graph"),
 ]
 
 _children: list[tuple[subprocess.Popen, str, object]] = []
@@ -72,11 +73,13 @@ def _start_children() -> None:
         log_path = data_dir / "service.log"
         log_path.parent.mkdir(parents=True, exist_ok=True)
         log_file = open(log_path, "a", encoding="utf-8")  # noqa: SIM115
+        extra_env = {"KG_UI_PREFIX": "/graph"} if label == "KoreGraph" else {}
         proc = subprocess.Popen(
             [sys.executable, "main.py"],
             cwd=service_dir,
             stdout=log_file,
             stderr=log_file,
+            env={**os.environ, **extra_env},
         )
         _children.append((proc, label, log_file))
         print(f"  > {label} starting  (pid {proc.pid})  log -> {_display_path(log_path)}")
@@ -119,26 +122,29 @@ async def _wait_for(client: httpx.AsyncClient, label: str, timeout: float = 20.0
 # App + lifespan
 # ---------------------------------------------------------------------------
 
-_feed_client: httpx.AsyncClient | None = None
-_lib_client:  httpx.AsyncClient | None = None
-_ref_client:  httpx.AsyncClient | None = None
-_rag_client:  httpx.AsyncClient | None = None
+_feed_client:  httpx.AsyncClient | None = None
+_lib_client:   httpx.AsyncClient | None = None
+_ref_client:   httpx.AsyncClient | None = None
+_rag_client:   httpx.AsyncClient | None = None
+_graph_client: httpx.AsyncClient | None = None
 
 
 @asynccontextmanager
 async def _lifespan(app: FastAPI):
-    global _feed_client, _lib_client, _ref_client, _rag_client
+    global _feed_client, _lib_client, _ref_client, _rag_client, _graph_client
     print("\n  KoreDataGateway — starting child services")
     _start_children()
-    _feed_client = httpx.AsyncClient(base_url=cfg["korefeed_url"],      timeout=15.0)
-    _lib_client  = httpx.AsyncClient(base_url=cfg["korelibrary_url"],   timeout=15.0)
-    _ref_client  = httpx.AsyncClient(base_url=cfg["korereference_url"], timeout=15.0)
-    _rag_client  = httpx.AsyncClient(base_url=cfg["korerag_url"],       timeout=15.0)
+    _feed_client  = httpx.AsyncClient(base_url=cfg["korefeed_url"],      timeout=15.0)
+    _lib_client   = httpx.AsyncClient(base_url=cfg["korelibrary_url"],   timeout=15.0)
+    _ref_client   = httpx.AsyncClient(base_url=cfg["korereference_url"], timeout=15.0)
+    _rag_client   = httpx.AsyncClient(base_url=cfg["korerag_url"],       timeout=15.0)
+    _graph_client = httpx.AsyncClient(base_url=cfg["koregraph_url"],     timeout=15.0)
     await asyncio.gather(
         _wait_for(_feed_client,  "KoreFeed",      timeout=60.0),
         _wait_for(_lib_client,   "KoreLibrary"),
         _wait_for(_ref_client,   "KoreReference"),
         _wait_for(_rag_client,   "KoreRAG"),
+        _wait_for(_graph_client, "KoreGraph"),
     )
     print("  All services ready\n")
     async with _mcp.session_manager.run():
@@ -148,6 +154,7 @@ async def _lifespan(app: FastAPI):
     await _lib_client.aclose()
     await _ref_client.aclose()
     await _rag_client.aclose()
+    await _graph_client.aclose()
     _stop_children()
 
 
@@ -728,11 +735,12 @@ def suite_config_js():
 async def web_root(request: Request):
     if _feed_client is None:
         raise HTTPException(status_code=503, detail="Gateway is still starting up")
-    kf_r, kl_r, kr_r, krag_r = await asyncio.gather(
+    kf_r, kl_r, kr_r, krag_r, kg_r = await asyncio.gather(
         _feed_client.get("/status", timeout=3.0),
         _lib_client.get("/status", timeout=3.0),
         _ref_client.get("/status", timeout=3.0),
         _rag_client.get("/status", timeout=3.0),
+        _graph_client.get("/status", timeout=3.0),
         return_exceptions=True,
     )
     services = [
@@ -740,8 +748,36 @@ async def web_root(request: Request):
         _svc_ui(kl_r,   "KoreLibrary",   "library",   cfg["korelibrary_url"]),
         _svc_ui(kr_r,   "KoreReference", "reference", cfg["korereference_url"]),
         _svc_ui(krag_r, "KoreRAG",       "rag",       cfg["korerag_url"]),
+        _svc_ui(kg_r,   "KoreGraph",     "graph",     cfg["koregraph_url"]),
     ]
     return templates.TemplateResponse(request, "home.html", {"services": services})
+
+
+@app.api_route("/graph/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"], include_in_schema=False)
+async def proxy_graph(request: Request, path: str):
+    """Transparent reverse proxy forwarding /graph/{path} to KoreGraph."""
+    if _graph_client is None:
+        raise HTTPException(status_code=503, detail="KoreGraph not available")
+    body = await request.body()
+    headers = {k: v for k, v in request.headers.items() if k.lower() not in ("host", "content-length")}
+    try:
+        resp = await _graph_client.request(
+            method=request.method,
+            url=f"/{path}",
+            headers=headers,
+            content=body,
+            params=dict(request.query_params),
+            follow_redirects=False,
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail=f"KoreGraph unreachable: {exc}") from exc
+    resp_headers = {k: v for k, v in resp.headers.items() if k.lower() != "transfer-encoding"}
+    # Rewrite Location headers so redirects stay within the proxy path
+    if "location" in resp_headers:
+        loc = resp_headers["location"]
+        if loc.startswith("/") and not loc.startswith("/graph"):
+            resp_headers["location"] = f"/graph{loc}"
+    return Response(content=resp.content, status_code=resp.status_code, headers=resp_headers)
 
 
 @app.get("/ui/feeds", response_class=HTMLResponse)
@@ -1521,11 +1557,12 @@ async def ref_article(request: Request, title: str):
 async def gateway_status():
     if _feed_client is None:
         return {"service": "KoreDataGateway", "status": "starting"}
-    kf_r, kl_r, kr_r, krag_r = await asyncio.gather(
+    kf_r, kl_r, kr_r, krag_r, kg_r = await asyncio.gather(
         _feed_client.get("/status", timeout=3.0),
         _lib_client.get("/status", timeout=3.0),
         _ref_client.get("/status", timeout=3.0),
         _rag_client.get("/status", timeout=3.0),
+        _graph_client.get("/status", timeout=3.0),
         return_exceptions=True,
     )
     return {
@@ -1535,6 +1572,7 @@ async def gateway_status():
             "korelibrary":   _svc_status(kl_r,   cfg["korelibrary_url"]),
             "korereference": _svc_status(kr_r,   cfg["korereference_url"]),
             "korerag":       _svc_status(krag_r, cfg["korerag_url"]),
+            "koregraph":     _svc_status(kg_r,   cfg["koregraph_url"]),
         },
     }
 

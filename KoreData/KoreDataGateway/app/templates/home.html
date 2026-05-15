@@ -9,9 +9,10 @@
   }
 
   .svc-grid {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
   }
-  @media (max-width: 900px) { .svc-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 1100px) { .svc-grid { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 700px)  { .svc-grid { grid-template-columns: repeat(2, 1fr); } }
   @media (max-width: 500px)  { .svc-grid { grid-template-columns: 1fr; } }
 
   .svc-card {
@@ -124,6 +125,7 @@
           {%- elif svc.slug == "library" %}Long form book content
           {%- elif svc.slug == "reference" %}Linked encyclopedia
           {%- elif svc.slug == "rag" %}Searchable user data
+          {%- elif svc.slug == "graph" %}Entity &amp; relation graph
           {%- endif %}
         </div>
         <div class="svc-badge {{ cls }}">
@@ -145,6 +147,10 @@
           {% elif svc.slug == "rag" %}
             <div class="svc-stat"><span class="svc-stat-key">chunks</span><span class="svc-stat-val">{{ svc.stats.get("total_chunks", "-") }}</span></div>
             <div class="svc-stat"><span class="svc-stat-key">db size</span><span class="svc-stat-val">{{ "%.1f KB" | format(svc.stats.get("db_size_bytes", 0) / 1024) if svc.stats.get("db_size_bytes") else "-" }}</span></div>
+          {% elif svc.slug == "graph" %}
+            <div class="svc-stat"><span class="svc-stat-key">entities</span><span class="svc-stat-val">{{ svc.stats.get("entities", "-") }}</span></div>
+            <div class="svc-stat"><span class="svc-stat-key">relations</span><span class="svc-stat-val">{{ svc.stats.get("relations", "-") }}</span></div>
+            <div class="svc-stat"><span class="svc-stat-key">proposed</span><span class="svc-stat-val">{{ svc.stats.get("relations_proposed", "-") }}</span></div>
           {% endif %}
         </div>
         <div class="svc-actions">
@@ -163,6 +169,10 @@
             <a class="kcui-tag kcui-tag--accent" href="/ui/{{ svc.slug }}">browse</a>
             <a class="kcui-tag kcui-tag--warning" href="/ui/rag/search">search</a>
             <a class="kcui-tag kcui-tag--info" href="/ui/rag/insert">insert</a>
+          {% elif svc.slug == "graph" %}
+            <a class="kcui-tag kcui-tag--accent" href="/graph/ui/entities">entities</a>
+            <a class="kcui-tag kcui-tag--warning" href="/graph/ui/relations">relations</a>
+            <a class="kcui-tag kcui-tag--info" href="/graph/ui/vocab">vocab</a>
           {% endif %}
         </div>
       </div>
