@@ -22,10 +22,6 @@
   .svc-card.online  { border-left: 3px solid var(--green); }
   .svc-card.offline { border-left: 3px solid var(--red); }
 
-  .svc-name {
-    font-size: 0.875rem; font-weight: 700; letter-spacing: 0.05em;
-    color: var(--text); margin-bottom: 0.1rem;
-  }
   .svc-desc {
     font-size: 10.5px; color: var(--dim); letter-spacing: 0.02em;
     margin-bottom: 0.35rem;
@@ -52,6 +48,48 @@
     display: flex; flex-direction: row; flex-wrap: nowrap; gap: 0.4rem;
     padding-top: 0.5rem; margin-top: auto;
     border-top: 1px solid var(--border);
+  }
+
+  .svc-banner {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: -12px -12px 10px;
+    padding: 8px 10px;
+    background: color-mix(in srgb, #a78bfa 10%, var(--panel));
+    border-bottom: 1px solid color-mix(in srgb, #a78bfa 22%, var(--border));
+  }
+  .svc-banner-icon {
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    background-color: #a78bfa;
+    mask-size: contain;
+    mask-repeat: no-repeat;
+    mask-position: center;
+    -webkit-mask-size: contain;
+    -webkit-mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+  }
+  .svc-banner-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  .svc-banner-overline {
+    font-size: 9px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #a78bfa;
+    line-height: 1;
+    margin-bottom: 2px;
+  }
+  .svc-banner-title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.2;
   }
 
   #sq-spinner { display: none; color: var(--dim); font-size: 12px; letter-spacing: 0.06em; }
@@ -116,10 +154,18 @@
   </div>
   <div class="panel-body kcui-panel-body">
     <div class="svc-grid kcui-card-grid" id="svc-grid">
+      {% set icon_map = {'feeds': 'square-rss-svgrepo-com', 'library': 'book-user-svgrepo-com', 'reference': 'graduation-hat-alt-1-svgrepo-com', 'rag': 'truck-svgrepo-com', 'graph': 'chart-network-svgrepo-com'} %}
       {% for svc in services %}
       {% set cls = "online" if svc.healthy else "offline" %}
+      {% set icon_file = icon_map.get(svc.slug, '') %}
       <div class="svc-card kcui-card {{ cls }}" id="svc-{{ svc.slug }}">
-        <div class="svc-name">{{ svc.label }}</div>
+        <div class="svc-banner">
+          <span class="svc-banner-icon" aria-hidden="true" style="mask-image: url('/ui-elements/assets/icons/dazzle-line/{{ icon_file }}.svg'); -webkit-mask-image: url('/ui-elements/assets/icons/dazzle-line/{{ icon_file }}.svg');"></span>
+          <span class="svc-banner-text">
+            <span class="svc-banner-overline">{{ svc.slug | upper }}</span>
+            <span class="svc-banner-title">{{ svc.label }}</span>
+          </span>
+        </div>
         <div class="svc-desc">
           {%- if svc.slug == "feeds" %}RSS feed &amp; website data
           {%- elif svc.slug == "library" %}Long form book content
