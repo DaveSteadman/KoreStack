@@ -39,6 +39,28 @@
       "tool_selection_guidance": ""
     },
     {
+      "skill_name": "KoreGraphAnalysis Skill",
+      "relative_path": "app/skills/KoreGraphAnalysis/skill.md",
+      "purpose": "Extract factual knowledge graph connections from library book text and populate KoreGraph.\nUse this whenever the task involves reading a book or document from KoreLibrary and generating\nstructured knowledge graph edges from its content.",
+      "module": "",
+      "trigger_keyword": "",
+      "triggers": [
+        "read a book and add connections",
+        "extract connections from book",
+        "build a knowledge graph from",
+        "library book to KoreGraph",
+        "book to graph",
+        "read chunks and propose connections",
+        "graph connections from science book",
+        "process all chunks"
+      ],
+      "functions": [],
+      "inputs": [],
+      "outputs": [],
+      "param_descriptions": {},
+      "tool_selection_guidance": ""
+    },
+    {
       "skill_name": "SystemInfo Skill",
       "relative_path": "app/skills/SystemInfo/skill.md",
       "purpose": "Provide runtime system information including OS name, Python and Ollama versions, RAM usage, and disk usage. Use this for any prompt about the machine, hardware, runtime environment, available resources, or version details. Do not use this for web or file queries.",

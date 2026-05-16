@@ -7,7 +7,7 @@
 # and Kiwix import automation (bulk crawl from a local Kiwix server).
 #
 # Key endpoints:
-#   GET  /api/articles           -- paginated article listing
+#   GET  /api/articles           -- article listing (limit/offset)
 #   GET  /api/articles/{id}      -- single article with body and tables
 #   POST /api/articles           -- create/update an article
 #   DELETE /api/articles/{id}    -- delete an article

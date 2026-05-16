@@ -22,6 +22,7 @@
 # ====================================================================================================
 import asyncio
 import json as _json
+import math
 import os
 import re
 import subprocess
@@ -168,26 +169,70 @@ app = FastAPI(
 # MCP server (mounted at /mcp — Streamable HTTP transport)
 # ---------------------------------------------------------------------------
 
+_CHUNK_SIZE = 8000  # default characters per library book chunk
+
+_INSTR_SEARCH = (
+    "Use koredata_search(query, domains) to search across services. "
+    "Omit domains to search all at once. "
+    "Results include a snippet field (first ~300 chars) for relevance assessment. "
+    "Base answers ONLY on content retrieved from the get_* tools — do not supplement with training knowledge."
+)
+
+_INSTR_FEEDS = (
+    "KoreFeeds — current news and articles. "
+    "Search with domains=[\"feeds\"]; optionally filter by since/until (YYYY-MM-DD). "
+    "Fetch full entries with koredata_get_feed_entry(domain, entry_id)."
+)
+
+_INSTR_REFERENCE = (
+    "KoreReference — encyclopedia-style wiki articles. "
+    "Search with domains=[\"reference\"]. "
+    "Fetch full articles with koredata_get_reference_article(title)."
+)
+
+_INSTR_LIBRARY = (
+    "KoreLibrary — full-text books. "
+    "Find a book by title with koredata_find_library_book(title) — returns book_id, author, "
+    f"genre, word_count, and chunks (number of {_CHUNK_SIZE}-char chunks to read the full text). "
+    "Browse all books with koredata_get_library_index(). "
+    f"Read a book chunk-by-chunk with koredata_get_library_book_chunk(book_id, offset_chars, length_chars={_CHUNK_SIZE}). "
+    "Each call returns: chunk (the text slice), next_offset, has_more. "
+    "Pass next_offset as offset_chars for the next call. Stop when has_more is false. "
+    "Never attempt to read a whole book in one call — always use chunks. "
+    "To extract KoreGraph connections from an entire book automatically, call "
+    "koredata_build_graph_from_book(book_id) — it reads every chunk and submits all "
+    "connections to KoreGraph in one tool call."
+)
+
+_INSTR_RAG = (
+    "KoreRAG — internal documents and user notes. "
+    "Search with domains=[\"rag\"]. "
+    "Fetch full chunks with koredata_get_rag_chunk(chunk_id)."
+)
+
+_INSTR_GRAPH = (
+    "KoreGraph — concept knowledge graph. "
+    "Search with domains=[\"graph\"] returns concept edges (start, connection, end, score). "
+    "Add a single connection: mcp_create_connection(start, connection, end). "
+    "Add multiple connections at once: mcp_create_connections([{start, connection, end}, ...]). "
+    "Always use mcp_create_connections when submitting more than one connection. "
+    "Preferred relationship types: is_a (taxonomy only), part_of, contributed_to, discovered, "
+    "developed, proposed, invented, studied, applied_to, influenced, precedes, lived_in, "
+    "wrote, disproved, succeeded, is_type_of. "
+    "Nodes must be named entities — people, theories, instruments, places — not chapter headings, "
+    "historical eras, or abstract topic labels."
+)
+
 _mcp = FastMCP(
     "KoreDataGateway",
-    instructions=(
-        "Search KoreData services (news feeds, reference articles, library books, RAG chunks) "
-        "and retrieve full content by ID or title.\n\n"
-        "Canonical workflow:\n"
-        "1. Call koredata_search first. Omit domains to search all four services at once.\n"
-        "2. Read the snippet field in each result to assess relevance - snippets contain the "
-        "first 300 characters of the article body.\n"
-        "3. Call the matching get function only for the most relevant results - "
-        "koredata_get_reference_article, koredata_get_feed_entry, koredata_get_library_book, "
-        "or koredata_get_rag_chunk.\n"
-        "4. Base your answer ONLY on the full content from the get_* calls. "
-        "Do NOT supplement with training knowledge - if KoreData has no content on a topic, say so.\n\n"
-        "Domain routing: feeds=news/current events, reference=encyclopedia/facts/history, "
-        "library=books/full texts, rag=internal documents/user notes.\n"
-        "Use since/until date filters for time-bounded news searches (YYYY-MM-DD format).\n"
-        "Do NOT pass url fields from search results to web fetch tools - use the koredata_get_* functions.\n"
-        "Always call koredata_search before falling back to web search tools."
-    ),
+    instructions="\n\n".join([
+        _INSTR_SEARCH,
+        _INSTR_FEEDS,
+        _INSTR_REFERENCE,
+        _INSTR_LIBRARY,
+        _INSTR_RAG,
+        _INSTR_GRAPH,
+    ]),
     streamable_http_path="/",
     stateless_http=True,
 )
@@ -510,7 +555,7 @@ def _flatten_search_results(results_by_domain: dict) -> list[dict]:
     row_index = 0
     while True:
         added = False
-        for domain in ("feeds", "reference", "library", "rag"):
+        for domain in ("feeds", "reference", "library", "rag", "graph"):
             items = results_by_domain.get(domain)
             if isinstance(items, list) and row_index < len(items):
                 merged.append(items[row_index])
@@ -556,11 +601,33 @@ async def api_search(req: _SearchRequest):
             return {"error": f"HTTP {r.status_code}"}
         return [_map_rag_chunk(c) for c in (r.json() or [])[:limit]]
 
+    async def _graph():
+        params: dict = {"q": req.query, "depth": 1, "min_score": 0}
+        r = await _graph_client.get("/api/expand-by-term", params=params, timeout=10.0)
+        if r.status_code != 200:
+            return {"error": f"HTTP {r.status_code}"}
+        data = r.json()
+        if not data.get("matched"):
+            return []
+        # Include unreviewed (0) and accepted (1); exclude rejected (2) and flagged (3)
+        active = [e for e in (data.get("edges") or []) if e.get("state", 0) in (0, 1)]
+        edges = sorted(active, key=lambda e: e.get("score", 0), reverse=True)[:50]
+        return [
+            {
+                "start":      e.get("start_name", ""),
+                "connection": e.get("connection_name", ""),
+                "end":        e.get("end_name", ""),
+                "score":      e.get("score", 0),
+            }
+            for e in edges
+        ]
+
     tasks: list[tuple[str, Any]] = []
     if "feeds"     in search_domains: tasks.append(("feeds",     _feeds()))
     if "reference" in search_domains: tasks.append(("reference", _reference()))
     if "library"   in search_domains: tasks.append(("library",   _library()))
     if "rag"       in search_domains: tasks.append(("rag",       _rag()))
+    if "graph"     in search_domains: tasks.append(("graph",     _graph()))
 
     gathered = await asyncio.gather(*(coro for _, coro in tasks), return_exceptions=True)
     results_by_domain = {
@@ -679,22 +746,280 @@ async def koredata_get_reference_article(title: str) -> dict:
 
 
 @_mcp.tool()
-async def koredata_get_library_book(book_id: str) -> dict:
-    """Fetch the full content of a library book.
+async def koredata_find_library_book(title: str) -> dict:
+    """Find library books by title. Returns closest matches ranked by title similarity.
+
+    Use this to locate a book_id before reading with koredata_get_library_book_chunk.
+    Searches across all catalogs. Prefer this over koredata_search for known titles.
 
     Args:
-        book_id: Catalog-aware book id returned by search, such as "local:42".
+        title: Book title or partial title (e.g. "History of Science").
 
-    Returns the full book record including body, author, year, genre, notes, and source.
+    Returns:
+        count   — number of matches found
+        matches — list ordered best-match first, each with book_id, title, author,
+                  year, genre, word_count, chunks.
     """
     if _lib_client is None:
         return {"error": "KoreDataGateway is still starting up — retry in a moment"}
-    r = await _lib_client.get(f"/books/{book_id}", timeout=10.0)
+    r = await _lib_client.get("/search", params={"title": title, "limit": 20}, timeout=10.0)
+    if r.status_code != 200:
+        return {"error": f"HTTP {r.status_code}"}
+    books = r.json()
+    if not isinstance(books, list):
+        books = books.get("value", [])
+
+    # Rank: exact match > starts-with > contains (all case-insensitive).
+    q_lower = title.lower()
+    def _rank(b):
+        t = (b.get("title") or "").lower()
+        if t == q_lower:           return 0
+        if t.startswith(q_lower):  return 1
+        return 2
+    books.sort(key=_rank)
+
+    return {
+        "count": len(books),
+        "matches": [
+            {
+                "book_id":    b.get("route_id") or f"{b.get('catalog')}:{b.get('id')}",
+                "title":      b.get("title"),
+                "author":     b.get("author"),
+                "year":       b.get("year"),
+                "genre":      b.get("genre"),
+                "word_count": b.get("word_count"),
+                "chunks":     math.ceil((b.get("word_count") or 0) * 5 / _CHUNK_SIZE) or None,
+            }
+            for b in books
+        ],
+    }
+
+
+@_mcp.tool()
+async def koredata_get_library_index() -> dict:
+    """Return a full index of all library books — title, author, catalog, genre, word_count,
+    and chunk count (how many _CHUNK_SIZE-char chunks it takes to read the full text).
+
+    Call this once to choose a book, then call koredata_get_library_book_chunk to read it.
+    Chunk count is calculated from word_count (≈5 chars/word ÷ _CHUNK_SIZE chars/chunk).
+    """
+    if _lib_client is None:
+        return {"error": "KoreDataGateway is still starting up — retry in a moment"}
+    r = await _lib_client.get("/books", params={"limit": 200, "offset": 0}, timeout=15.0)
+    if r.status_code != 200:
+        return {"error": f"HTTP {r.status_code}"}
+    data  = r.json()
+    books = data if isinstance(data, list) else data.get("value", [])
+    return {
+        "count": len(books),
+        "books": [
+            {
+                "book_id":      b.get("route_id") or f"local:{b.get('id')}",
+                "title":        b.get("title"),
+                "author":       b.get("author"),
+                "year":         b.get("year"),
+                "catalog":      b.get("catalog"),
+                "genre":        b.get("genre"),
+                "word_count":   b.get("word_count"),
+                "chunks":       math.ceil((b.get("word_count") or 0) * 5 / _CHUNK_SIZE) or None,
+            }
+            for b in books
+        ],
+    }
+
+
+@_mcp.tool()
+async def koredata_get_library_book_chunk(
+    book_id: str,
+    offset_chars: int = 0,
+    length_chars: int = _CHUNK_SIZE,
+) -> dict:
+    """Read a section of a library book body by character offset.
+
+    Books are often 50,000–100,000 words. Use this instead of koredata_get_library_book
+    to read long books in manageable chunks. Call repeatedly with increasing offset_chars
+    to page through the full text.
+
+    Args:
+        book_id: Book ID from search or koredata_get_library_index (e.g. "sciencehistory:6").
+        offset_chars: Character position to start reading from (default 0 = beginning).
+        length_chars: Characters to return (default 8000, max 16000).
+
+    Returns:
+        title, author, genre — book metadata
+        chunk              — the text slice
+        offset_chars       — offset used
+        next_offset        — pass this as offset_chars for the next chunk (null if at end)
+        total_chars        — full body length in characters
+        has_more           — true if there is more content after this chunk
+    """
+    if _lib_client is None:
+        return {"error": "KoreDataGateway is still starting up — retry in a moment"}
+    length_chars = max(100, min(length_chars, 16000))
+    offset_chars = max(0, offset_chars)
+    r = await _lib_client.get(
+        f"/books/{book_id}/chunk",
+        params={"offset": offset_chars, "length": length_chars},
+        timeout=15.0,
+    )
     if r.status_code == 404:
         return {"error": f"Library book not found: id={book_id}"}
     if r.status_code != 200:
         return {"error": f"HTTP {r.status_code}"}
-    return r.json()
+    data = r.json()
+    # Strip repeating book metadata from non-first chunks to reduce context noise.
+    if offset_chars > 0:
+        return {
+            "chunk":        data.get("chunk"),
+            "offset_chars": data.get("offset_chars"),
+            "next_offset":  data.get("next_offset"),
+            "total_chars":  data.get("total_chars"),
+            "has_more":     data.get("has_more"),
+        }
+    return data
+
+
+@_mcp.tool(description=(
+    "Read every chunk of a library book, extract factual entity-relationship connections "
+    "using linguistic patterns, and submit them all to KoreGraph automatically. "
+    "Returns a summary: chunks_processed, connections_extracted, connections_submitted, errors. "
+    "Use this instead of manually looping through chunks when the goal is to populate KoreGraph "
+    "from a book. Call koredata_find_library_book first to obtain the book_id."
+))
+async def koredata_build_graph_from_book(book_id: str) -> dict:
+    """Extract and submit KoreGraph connections from every chunk of a library book."""
+    import re
+
+    if _lib_client is None or _graph_client is None:
+        return {"error": "KoreDataGateway is still starting up — retry in a moment"}
+
+    _STOP = {
+        "man", "men", "time", "times", "way", "ways", "fact", "thing", "things",
+        "world", "work", "works", "first", "last", "great", "part", "parts",
+        "same", "such", "this", "that", "these", "those", "which", "what",
+        "one", "two", "three", "four", "five", "many", "more", "most",
+        "place", "places", "name", "names", "view", "views", "form", "forms",
+        "new", "old", "long", "large", "small", "early", "late", "good",
+        "life", "hand", "head", "body", "line", "point", "case", "kind",
+    }
+
+    def _extract(sent: str) -> list[dict]:
+        s = sent.strip()
+        if len(s) < 20 or s.startswith("#"):
+            return []
+        out: list[dict] = []
+        # Pattern 1: "Name verb [the/a/…] object"
+        for m in re.finditer(
+            r"\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2})"
+            r"\s+(discovered|invented|proposed|developed|founded|established|"
+            r"proved|disproved|wrote|described|calculated|measured|introduced|"
+            r"studied|applied|created|derived|formulated|demonstrated|showed)"
+            r"\s+(?:(?:the|a|an|his|her|its|that|how)\s+)?"
+            r"([A-Za-z][a-z]{2,}(?:\s+(?:of\s+)?[a-z]{2,}){0,3})",
+            s,
+        ):
+            subj, verb, obj = m.group(1), m.group(2), m.group(3).strip()
+            if obj.split()[0].lower() not in _STOP and len(obj) >= 4:
+                out.append({"start": subj, "connection": verb, "end": obj})
+        # Pattern 2: "Name was [a/an] profession/nationality"
+        for m in re.finditer(
+            r"\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2})"
+            r"\s+was\s+(?:a|an)\s+"
+            r"(Greek|Roman|Egyptian|Arab|Persian|Babylonian|Chinese|Indian|"
+            r"mathematician|philosopher|astronomer|physicist|chemist|biologist|"
+            r"physician|geographer|geometer|naturalist|historian|engineer|"
+            r"theologian|logician|scholar|scientist)",
+            s,
+        ):
+            out.append({"start": m.group(1), "connection": "is_a", "end": m.group(2)})
+        # Pattern 3: "Name lived/worked/taught in/at Place"
+        for m in re.finditer(
+            r"\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2})"
+            r"\s+(?:lived|worked|resided|taught|studied)\s+(?:in|at)\s+"
+            r"([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,1})",
+            s,
+        ):
+            out.append({"start": m.group(1), "connection": "lived_in", "end": m.group(2)})
+        # Pattern 4: "Name influenced/inspired/succeeded/preceded Name"
+        for m in re.finditer(
+            r"\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2})"
+            r"\s+(influenced|inspired|succeeded|preceded)\s+"
+            r"([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2})",
+            s,
+        ):
+            out.append({"start": m.group(1), "connection": m.group(2), "end": m.group(3)})
+        return out
+
+    # ── fetch all chunks ──────────────────────────────────────────────────
+    all_conns: list[dict] = []
+    offset = 0
+    chunks_processed = 0
+
+    while True:
+        r = await _lib_client.get(
+            f"/books/{book_id}/chunk",
+            params={"offset": offset, "length": 16000},
+            timeout=60.0,
+        )
+        if r.status_code == 404:
+            return {"error": f"Book not found: {book_id}"}
+        if r.status_code != 200:
+            return {"error": f"KoreLibrary returned HTTP {r.status_code}"}
+        data = r.json()
+        text = data.get("chunk", "")
+        for sent in re.split(r"(?<=[.!?])\s+", text):
+            all_conns.extend(_extract(sent))
+        chunks_processed += 1
+        if not data.get("has_more"):
+            break
+        offset = data["next_offset"]
+
+    # ── deduplicate ───────────────────────────────────────────────────────
+    seen: set[tuple] = set()
+    unique: list[dict] = []
+    for c in all_conns:
+        key = (c["start"].lower(), c["connection"], c["end"].lower())
+        if key not in seen:
+            seen.add(key)
+            unique.append(c)
+
+    # ── submit to KoreGraph ───────────────────────────────────────────────
+    submitted = 0
+    errors = 0
+    batch_size = 100
+
+    for i in range(0, len(unique), batch_size):
+        batch = unique[i : i + batch_size]
+        gr = await _graph_client.post(
+            "/api/connections/by-name/batch",
+            json=batch,
+            timeout=60.0,
+        )
+        if gr.is_success:
+            result = gr.json()
+            submitted += result.get("accepted", len(batch))
+            errors    += len(result.get("errors", []))
+        else:
+            # Fallback: individual calls
+            for c in batch:
+                gr2 = await _graph_client.post(
+                    "/api/connections/by-name",
+                    json=c,
+                    timeout=10.0,
+                )
+                if gr2.is_success:
+                    submitted += 1
+                else:
+                    errors += 1
+
+    return {
+        "book_id":                book_id,
+        "chunks_processed":       chunks_processed,
+        "connections_extracted":  len(all_conns),
+        "connections_unique":     len(unique),
+        "connections_submitted":  submitted,
+        "errors":                 errors,
+    }
 
 
 @_mcp.tool()

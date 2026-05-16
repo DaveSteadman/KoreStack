@@ -9,6 +9,7 @@
 const API_BASE          = "";           // same origin
 const SESSION_STORAGE_KEY   = "maf.activeSession";
 const INPUT_DRAFT_KEY       = "maf.inputDraft";
+const WRAP_STATE_KEY        = "maf.wrapState";
 let   _sessionId        = _restoreSessionId();  // mutable: /session resume changes this
 const POLL_OLLAMA_MS    = 10_000;
 const POLL_QUEUE_MS     = 3_000;
@@ -462,10 +463,31 @@ function toggleWrap(bodyId, btnId) {
     if (ctl) {
         ctl.runWithoutScrollTracking(applyToggle);
         if (wasLive) ctl.followSoon();
+        _saveWrapState();
         return;
     }
 
     applyToggle();
+    _saveWrapState();
+}
+
+function _saveWrapState() {
+    try {
+        localStorage.setItem(WRAP_STATE_KEY, JSON.stringify({
+            log:  !$('log-body')?.classList.contains(CSS_NOWRAP),
+            chat: !$('chat-body')?.classList.contains(CSS_NOWRAP),
+        }));
+    } catch (_) { /* ignore */ }
+}
+
+function _restoreWrapState() {
+    try {
+        const raw = localStorage.getItem(WRAP_STATE_KEY);
+        if (!raw) return;
+        const saved = JSON.parse(raw);
+        if (saved.log)  { $('log-body')?.classList.remove(CSS_NOWRAP);  $('wrap-btn-log')?.classList.add(CSS_WRAP_ACTIVE); }
+        if (saved.chat) { $('chat-body')?.classList.remove(CSS_NOWRAP); $('wrap-btn-chat')?.classList.add(CSS_WRAP_ACTIVE); }
+    } catch (_) { /* ignore */ }
 }
 
 // ====================================================================================================
@@ -1300,6 +1322,7 @@ function startPolling() {
 function init() {
     _restoreSessionUiState();
     _persistActiveSession();
+    _restoreWrapState();
 
     // Initialise drag-resize splitters and apply stored layout.
     initSplitters();

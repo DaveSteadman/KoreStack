@@ -55,12 +55,12 @@ def db_connection():
 #: Words that must never become concept terms or predicate labels.
 #: Edit this set to extend it; it is checked before every insert.
 CONCEPT_BLACKLIST: frozenset[str] = frozenset({
-    "is", "are", "was", "were", "be", "been", "being",
-    "a", "an", "the",
+    "a", "an", "the", "this", "that", "these", "those",
     "in", "on", "at", "to", "of", "for", "by", "as", "with",
+    "is", "are", "was", "were", "be", "been", "being",
     "from", "into", "onto", "upon", "about", "over", "under",
-    "and", "or", "but", "not", "nor", "so", "yet",
-    "it", "its", "this", "that", "these", "those",
+    "and", "or", "but", "not", "nor", "so", "yet", 
+    "it", "its", "then", "there", "here",
     "he", "she", "they", "we", "you", "i",
 })
 
@@ -336,6 +336,25 @@ def delete_vocab_term(vocab_id: int) -> bool:
         return cur.rowcount > 0
 
 
+def rename_vocab_term(vocab_id: int, new_term: str) -> Optional[dict]:
+    new_term = new_term.strip()
+    if not new_term:
+        raise ValueError("Term must not be empty")
+    with db_connection() as conn:
+        row = conn.execute(
+            "SELECT id, concept_id, term FROM vocab WHERE id=?", (vocab_id,)
+        ).fetchone()
+        if row is None:
+            return None
+        existing = conn.execute(
+            "SELECT id FROM vocab WHERE term=? AND id != ?", (new_term, vocab_id)
+        ).fetchone()
+        if existing:
+            raise ValueError(f"Term '{new_term}' already exists")
+        conn.execute("UPDATE vocab SET term=? WHERE id=?", (new_term, vocab_id))
+        return {"id": vocab_id, "concept_id": row["concept_id"], "term": new_term}
+
+
 def get_vocab_detail(vocab_id: int) -> Optional[dict]:
     with db_connection() as conn:
         row = conn.execute(
@@ -343,62 +362,113 @@ def get_vocab_detail(vocab_id: int) -> Optional[dict]:
         ).fetchone()
         if row is None:
             return None
-        siblings = conn.execute(
-            "SELECT id, term FROM vocab WHERE concept_id=? ORDER BY term",
-            (row["concept_id"],),
+        aliases = conn.execute(
+            "SELECT id, term FROM vocab WHERE concept_id=? AND id!=? ORDER BY id",
+            (row["concept_id"], vocab_id),
         ).fetchall()
         return {
             "id": row["id"],
             "concept_id": row["concept_id"],
             "term": row["term"],
-            "siblings": [dict(s) for s in siblings],
+            "aliases": [{"id": a["id"], "term": a["term"]} for a in aliases],
         }
 
 
-def add_vocab_alias(canonical_id: int, alias: str) -> dict:
-    alias = alias.strip()
-    if not alias:
-        raise ValueError("Alias must not be empty")
+def merge_vocab_term(vocab_id: int, target_id: int) -> Optional[dict]:
+    """Make vocab_id an alias of the same concept as target_id.
+
+    All relations that use the old concept_id are remapped to the target concept_id.
+    Duplicate triples (same triple already exists under the target concept) have their
+    scores accumulated rather than raising a conflict.
+    """
+    _UPSERT = """
+        INSERT INTO relations
+            (subject_concept_id, predicate_concept_id, object_concept_id, state, score)
+        VALUES (?, ?, ?, ?, ?)
+        ON CONFLICT(subject_concept_id, predicate_concept_id, object_concept_id)
+        DO UPDATE SET score = MIN(255, score + excluded.score),
+                      state = MAX(state, excluded.state)
+    """
     with db_connection() as conn:
+        target = conn.execute(
+            "SELECT concept_id FROM vocab WHERE id=?", (target_id,)
+        ).fetchone()
+        if target is None:
+            return None
         row = conn.execute(
-            "SELECT concept_id FROM vocab WHERE id=?", (canonical_id,)
+            "SELECT id, concept_id, term FROM vocab WHERE id=?", (vocab_id,)
         ).fetchone()
         if row is None:
-            raise ValueError(f"Vocab term {canonical_id} not found")
-        concept_id = row["concept_id"]
-        cur = conn.execute(
-            "INSERT INTO vocab (concept_id, term) VALUES (?, ?)", (concept_id, alias)
-        )
-        return {"id": cur.lastrowid, "concept_id": concept_id, "term": alias}
+            return None
 
+        old_cid = row["concept_id"]
+        new_cid = target["concept_id"]
 
-def delete_vocab_alias(alias_id: int) -> bool:
-    return delete_vocab_term(alias_id)
+        if old_cid == new_cid:
+            return {"id": vocab_id, "concept_id": new_cid, "term": row["term"],
+                    "aliases": []}
 
-
-def merge_vocab_terms(canonical_id: int, merge_id: int) -> dict:
-    if canonical_id == merge_id:
-        raise ValueError("Cannot merge a term with itself")
-    with db_connection() as conn:
-        canonical_row = conn.execute(
-            "SELECT concept_id FROM vocab WHERE id=?", (canonical_id,)
-        ).fetchone()
-        merge_row = conn.execute(
-            "SELECT concept_id FROM vocab WHERE id=?", (merge_id,)
-        ).fetchone()
-        if canonical_row is None:
-            raise ValueError(f"Canonical vocab term {canonical_id} not found")
-        if merge_row is None:
-            raise ValueError(f"Merge vocab term {merge_id} not found")
-        canonical_concept = canonical_row["concept_id"]
-        merge_concept = merge_row["concept_id"]
-        if canonical_concept == merge_concept:
-            raise ValueError("Terms are already in the same concept group")
+        # Remap every vocab row in the old concept group to the new concept_id
         conn.execute(
-            "UPDATE vocab SET concept_id=? WHERE concept_id=?",
-            (canonical_concept, merge_concept),
+            "UPDATE vocab SET concept_id=? WHERE concept_id=?", (new_cid, old_cid)
         )
-        return {"ok": True, "concept_id": canonical_concept}
+
+        # Collect all relations touching old_cid (any position), remap, re-insert
+        all_rels = conn.execute(
+            "SELECT subject_concept_id, predicate_concept_id, object_concept_id, state, score"
+            " FROM relations"
+            " WHERE subject_concept_id=? OR predicate_concept_id=? OR object_concept_id=?",
+            (old_cid, old_cid, old_cid),
+        ).fetchall()
+        conn.execute(
+            "DELETE FROM relations"
+            " WHERE subject_concept_id=? OR predicate_concept_id=? OR object_concept_id=?",
+            (old_cid, old_cid, old_cid),
+        )
+
+        def _r(cid: int) -> int:
+            return new_cid if cid == old_cid else cid
+
+        for rel in all_rels:
+            conn.execute(
+                _UPSERT,
+                (
+                    _r(rel["subject_concept_id"]),
+                    _r(rel["predicate_concept_id"]),
+                    _r(rel["object_concept_id"]),
+                    rel["state"],
+                    rel["score"],
+                ),
+            )
+
+        return {"id": vocab_id, "concept_id": new_cid, "term": row["term"]}
+
+
+def unmerge_vocab_term(vocab_id: int) -> Optional[dict]:
+    """Give this vocab row its own new concept_id, splitting it from its alias group.
+
+    Relations are NOT moved — the term starts fresh with no connections.
+    Raises ValueError if the term has no aliases (nothing to split from).
+    """
+    with db_connection() as conn:
+        row = conn.execute(
+            "SELECT id, concept_id, term FROM vocab WHERE id=?", (vocab_id,)
+        ).fetchone()
+        if row is None:
+            return None
+        sibling_count = conn.execute(
+            "SELECT COUNT(*) FROM vocab WHERE concept_id=? AND id!=?",
+            (row["concept_id"], vocab_id),
+        ).fetchone()[0]
+        if sibling_count == 0:
+            raise ValueError("Term has no aliases — nothing to split from")
+        new_concept_id = conn.execute(
+            "SELECT COALESCE(MAX(concept_id), 0) + 1 FROM vocab"
+        ).fetchone()[0]
+        conn.execute(
+            "UPDATE vocab SET concept_id=? WHERE id=?", (new_concept_id, vocab_id)
+        )
+        return {"id": vocab_id, "concept_id": new_concept_id, "term": row["term"]}
 
 
 # ---------------------------------------------------------------------------
@@ -432,9 +502,9 @@ def list_relations(
         where_sql = ("WHERE " + " AND ".join(wheres)) if wheres else ""
         rows = conn.execute(
             f"""
-            SELECT r.subject_concept_id, vs.term AS subject_name,
-                   r.predicate_concept_id, vp.term AS predicate_name,
-                   r.object_concept_id, vo.term AS object_name,
+            SELECT r.subject_concept_id AS start_concept_id,   vs.term AS start_name,
+                   r.predicate_concept_id AS connection_concept_id, vp.term AS connection_name,
+                   r.object_concept_id AS end_concept_id,      vo.term AS end_name,
                    r.state, r.score
             FROM relations r
             {_REL_JOIN}
@@ -480,14 +550,15 @@ def upsert_relation(
                 (subject_concept_id, predicate_concept_id, object_concept_id, state, score)
             VALUES (?, ?, ?, ?, ?)
             ON CONFLICT(subject_concept_id, predicate_concept_id, object_concept_id)
-            DO UPDATE SET state=excluded.state, score=excluded.score
+            DO UPDATE SET state=excluded.state,
+                          score=MIN(255, score + excluded.score)
             """,
             (subject_concept_id, predicate_concept_id, object_concept_id, state, score),
         )
         return {
-            "subject_concept_id": subject_concept_id,
-            "predicate_concept_id": predicate_concept_id,
-            "object_concept_id": object_concept_id,
+            "start_concept_id": subject_concept_id,
+            "connection_concept_id": predicate_concept_id,
+            "end_concept_id": object_concept_id,
             "state": state,
             "score": score,
         }
@@ -516,9 +587,9 @@ def update_relation_state_score(
             (new_state, new_score, subject_concept_id, predicate_concept_id, object_concept_id),
         )
         return {
-            "subject_concept_id": subject_concept_id,
-            "predicate_concept_id": predicate_concept_id,
-            "object_concept_id": object_concept_id,
+            "start_concept_id": subject_concept_id,
+            "connection_concept_id": predicate_concept_id,
+            "end_concept_id": object_concept_id,
             "state": new_state,
             "score": new_score,
         }
@@ -532,6 +603,28 @@ def delete_relation(
             "DELETE FROM relations"
             " WHERE subject_concept_id=? AND predicate_concept_id=? AND object_concept_id=?",
             (subject_concept_id, predicate_concept_id, object_concept_id),
+        )
+        return cur.rowcount > 0
+
+
+def delete_connection_by_name(start: str, connection: str, end: str) -> bool:
+    """Delete a relation by string names. Returns False if any term is unknown or relation not found."""
+    with db_connection() as conn:
+        def _lookup(term: str) -> Optional[int]:
+            row = conn.execute(
+                "SELECT concept_id FROM vocab WHERE term=?", (term.strip(),)
+            ).fetchone()
+            return row["concept_id"] if row else None
+
+        start_id = _lookup(start)
+        conn_id  = _lookup(connection)
+        end_id   = _lookup(end)
+        if start_id is None or conn_id is None or end_id is None:
+            return False
+        cur = conn.execute(
+            "DELETE FROM relations"
+            " WHERE subject_concept_id=? AND predicate_concept_id=? AND object_concept_id=?",
+            (start_id, conn_id, end_id),
         )
         return cur.rowcount > 0
 
@@ -554,9 +647,9 @@ def expand_concept(concept_id: int, depth: int = 1, min_score: int = 0) -> dict:
             placeholders = ",".join("?" * len(frontier))
             rows = conn.execute(
                 f"""
-                SELECT r.subject_concept_id, vs.term AS subject_name,
-                       r.predicate_concept_id, vp.term AS predicate_name,
-                       r.object_concept_id, vo.term AS object_name,
+                SELECT r.subject_concept_id AS start_concept_id,   vs.term AS start_name,
+                       r.predicate_concept_id AS connection_concept_id, vp.term AS connection_name,
+                       r.object_concept_id AS end_concept_id,      vo.term AS end_name,
                        r.state, r.score
                 FROM relations r
                 {_REL_JOIN}
@@ -568,15 +661,15 @@ def expand_concept(concept_id: int, depth: int = 1, min_score: int = 0) -> dict:
                 list(frontier) + list(frontier) + [min_score],
             ).fetchall()
             seen_edges: set[tuple] = {
-                (e["subject_concept_id"], e["predicate_concept_id"], e["object_concept_id"])
+                (e["start_concept_id"], e["connection_concept_id"], e["end_concept_id"])
                 for e in edges
             }
             for r in rows:
-                key = (r["subject_concept_id"], r["predicate_concept_id"], r["object_concept_id"])
+                key = (r["start_concept_id"], r["connection_concept_id"], r["end_concept_id"])
                 if key not in seen_edges:
                     edges.append(dict(r))
                     seen_edges.add(key)
-                for cid in (r["subject_concept_id"], r["object_concept_id"]):
+                for cid in (r["start_concept_id"], r["end_concept_id"]):
                     if cid not in visited:
                         next_frontier.add(cid)
             visited |= frontier
@@ -600,3 +693,54 @@ def expand_concept(concept_id: int, depth: int = 1, min_score: int = 0) -> dict:
             nodes = [dict(r) for r in node_rows]
 
     return {"nodes": nodes, "edges": edges}
+
+
+def expand_by_term(term: str, depth: int = 1, min_score: int = 0) -> dict:
+    """String-based expand. Returns {query, matched, nodes, edges} with all names as strings."""
+    term = term.strip()
+    with db_connection() as conn:
+        row = conn.execute(
+            "SELECT DISTINCT concept_id FROM vocab WHERE term=? LIMIT 1", (term,)
+        ).fetchone()
+        if row is None:
+            row = conn.execute(
+                "SELECT DISTINCT concept_id FROM vocab WHERE term LIKE ? LIMIT 1",
+                (f"%{term}%",),
+            ).fetchone()
+    if row is None:
+        return {"query": term, "matched": False, "nodes": [], "edges": []}
+    result = expand_concept(row["concept_id"], depth=depth, min_score=min_score)
+    return {"query": term, "matched": True, **result}
+
+
+def upsert_connection_by_name(
+    start: str, connection: str, end: str, state: int = 0, score: int = 0
+) -> dict:
+    """Create/reinforce a connection using string names. Vocab entries created on demand."""
+    start, connection, end = start.strip(), connection.strip(), end.strip()
+    if not start:
+        raise ValueError("start must not be empty")
+    if not connection:
+        raise ValueError("connection must not be empty")
+    if not end:
+        raise ValueError("end must not be empty")
+    if _is_blacklisted(connection):
+        raise ValueError(f"'{connection}' is a blacklisted term")
+    score = max(0, min(255, score))
+    state = max(0, min(3, state))
+    with db_connection() as conn:
+        start_id = _get_or_create_vocab_term(conn, start)
+        conn_id = _get_or_create_vocab_term(conn, connection)
+        end_id = _get_or_create_vocab_term(conn, end)
+        conn.execute(
+            """
+            INSERT INTO relations
+                (subject_concept_id, predicate_concept_id, object_concept_id, state, score)
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(subject_concept_id, predicate_concept_id, object_concept_id)
+            DO UPDATE SET state=excluded.state,
+                          score=MIN(255, score + excluded.score)
+            """,
+            (start_id, conn_id, end_id, state, score),
+        )
+    return {"start": start, "connection": connection, "end": end, "state": state, "score": score}

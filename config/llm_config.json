@@ -1,5 +1,5 @@
 {
-  "model": "nemotron-cascade-2-30b-a3b-nvfp4",
+  "model": "nemotron-cascade-2:latest",
   "ctx": 100000,
-  "llmhost": "http://MONTBLANC:1234"
+  "llmhost": "http://MONTBLANC:11434"
 }

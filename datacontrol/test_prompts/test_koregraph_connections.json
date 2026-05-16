@@ -1,0 +1,51 @@
+[
+    {
+        "exchange": "kg_propose_single",
+        "turns": [{
+            "user": "Assess the following text and add any concept connections you identify to KoreGraph.\n\nText: 'The F-22 Raptor is a stealth fighter aircraft manufactured by Lockheed Martin and operated by the United States Air Force.'",
+            "assert": "not_contains|unable to connect"
+        }]
+    },
+    {
+        "exchange": "kg_propose_multi",
+        "turns": [{
+            "user": "Read this passage and store all concept relationships you can identify in KoreGraph. For each connection added, tell me what you stored.\n\nPassage: 'The Nvidia H100 is a GPU designed for AI training. OpenAI uses H100 GPUs to train its large language models. The H100 is manufactured by Nvidia and is built on the Hopper architecture.'",
+            "assert": "not_contains|unable to connect"
+        }]
+    },
+    {
+        "exchange": "kg_propose_with_expand",
+        "turns": [{
+            "user": "First check what connections already exist in KoreGraph for 'Lockheed Martin', then assess this text and add any new connections that are not already present.\n\nText: 'Lockheed Martin produces the F-35 Lightning II, a multirole fighter aircraft. The F-35 is operated by NATO member states and is powered by a Pratt and Whitney F135 engine.'",
+            "assert": "not_contains|unable to connect"
+        }]
+    },
+    {
+        "exchange": "kg_propose_from_koredata",
+        "turns": [{
+            "user": "Search KoreData for F-35 news, read the top result, then identify and store any concept connections you find in KoreGraph. Report each connection you add.",
+            "assert": "not_contains|unable to connect"
+        }]
+    },
+    {
+        "exchange": "kg_propose_technology",
+        "turns": [{
+            "user": "Assess this technology passage and add all concept relationships to KoreGraph.\n\nPassage: 'Python is a high-level programming language created by Guido van Rossum. It is widely used for machine learning and data science. PyTorch is a machine learning framework developed by Meta that uses Python as its primary interface.'",
+            "assert": "not_contains|unable to connect"
+        }]
+    },
+    {
+        "exchange": "kg_review_and_propose",
+        "turns": [{
+            "user": "Check what concepts are currently in KoreGraph by searching for 'Aircraft', then review this text and propose and store any connections that would extend the graph.\n\nText: 'The Eurofighter Typhoon is a multirole combat aircraft produced by a European consortium. It is operated by the Royal Air Force and uses two EJ200 engines.'",
+            "assert": "not_contains|unable to connect"
+        }]
+    },
+    {
+        "exchange": "kg_from_science_book",
+        "turns": [{
+            "user": "Find the science history book in the KoreData library and process it for KoreGraph connections using this two-step approach:\n\nSTEP 1 — Find the book:\nCall koredata_find_library_book('History of Science'). Note the book_id (e.g. 'sciencehistory:2') and chunk count.\n\nSTEP 2 — Run this Python script via run_python_snippet, replacing BOOK_ID with the actual book_id you found:\n\n```python\nimport sys, subprocess\ntry:\n    import requests\nexcept ImportError:\n    subprocess.run([sys.executable, '-m', 'pip', 'install', 'requests', '-q'], check=True)\n    import requests\nimport re\n\nLIBRARY = 'http://127.0.0.1:8622'\nGRAPH   = 'http://127.0.0.1:8626'\nBOOK_ID = 'REPLACE_WITH_BOOK_ID'\nCHUNK   = 16000\n\n_STOP = {'man','men','time','times','way','ways','fact','thing','things','world','work','works','first','last','great','part','parts','same','such','this','that','these','those','which','what','one','two','three','four','five','many','more','most','place','places','name','names','view','views','form','forms'}\n\ndef _sent(text):\n    return re.split(r'(?<=[.!?])\\s+', text)\n\ndef _extract(sent):\n    s = sent.strip()\n    if len(s) < 20 or s.startswith('#'):\n        return []\n    out = []\n    for m in re.finditer(r'\\b([A-Z][a-z]+(?:\\s+[A-Z][a-z]+){0,2})\\s+(discovered|invented|proposed|developed|founded|established|proved|disproved|wrote|described|calculated|measured|introduced|studied|applied|created|derived|formulated|demonstrated|showed)\\s+(?:(?:the|a|an|his|her|its|that|how)\\s+)?([A-Za-z][a-z]{2,}(?:\\s+(?:of\\s+)?[a-z]{2,}){0,3})', s):\n        subj, verb, obj = m.group(1), m.group(2), m.group(3).strip()\n        if obj.split()[0].lower() not in _STOP and len(obj) >= 4:\n            out.append({'start': subj, 'connection': verb, 'end': obj})\n    for m in re.finditer(r'\\b([A-Z][a-z]+(?:\\s+[A-Z][a-z]+){0,2})\\s+was\\s+(?:a|an)\\s+(Greek|Roman|Egyptian|Arab|Persian|Babylonian|Chinese|Indian|mathematician|philosopher|astronomer|physicist|chemist|biologist|physician|geographer|geometer|naturalist|historian|engineer|theologian|logician|scholar|scientist)', s):\n        out.append({'start': m.group(1), 'connection': 'is_a', 'end': m.group(2)})\n    for m in re.finditer(r'\\b([A-Z][a-z]+(?:\\s+[A-Z][a-z]+){0,2})\\s+(?:lived|worked|resided|taught|studied)\\s+(?:in|at)\\s+([A-Z][a-z]+(?:\\s+[A-Z][a-z]+){0,1})', s):\n        out.append({'start': m.group(1), 'connection': 'lived_in', 'end': m.group(2)})\n    for m in re.finditer(r'\\b([A-Z][a-z]+(?:\\s+[A-Z][a-z]+){0,2})\\s+(influenced|inspired|succeeded|preceded)\\s+([A-Z][a-z]+(?:\\s+[A-Z][a-z]+){0,2})', s):\n        out.append({'start': m.group(1), 'connection': m.group(2), 'end': m.group(3)})\n    return out\n\nall_conns = []\noffset = 0\nchunk_num = 0\nwhile True:\n    resp = requests.get(f'{LIBRARY}/books/{BOOK_ID}/chunk', params={'offset': offset, 'length': CHUNK}, timeout=30)\n    if not resp.ok:\n        print(f'ERROR fetching chunk {chunk_num}: {resp.status_code}')\n        break\n    data = resp.json()\n    text = data.get('chunk', '')\n    found = []\n    for sent in _sent(text):\n        found.extend(_extract(sent))\n    all_conns.extend(found)\n    print(f'Chunk {chunk_num:3d}  offset={offset:>7d}  +{len(found):3d} conns  total={len(all_conns)}')\n    if not data.get('has_more'):\n        break\n    offset = data['next_offset']\n    chunk_num += 1\n\nseen = set()\nunique = []\nfor c in all_conns:\n    key = (c['start'].lower(), c['connection'], c['end'].lower())\n    if key not in seen:\n        seen.add(key)\n        unique.append(c)\nprint(f'\\nUnique connections to submit: {len(unique)}')\n\nBATCH_URL = f'{GRAPH}/api/connections/by-name/batch'\nSINGLE_URL = f'{GRAPH}/api/connections/by-name'\nBATCH_SIZE = 100\nsubmitted = 0\nerrors = 0\nfor i in range(0, len(unique), BATCH_SIZE):\n    batch = unique[i:i+BATCH_SIZE]\n    r = requests.post(BATCH_URL, json=batch, timeout=60)\n    if r.ok:\n        result = r.json()\n        submitted += result.get('accepted', len(batch))\n        errors += len(result.get('errors', []))\n        print(f'Batch {i//BATCH_SIZE+1:3d}: submitted={submitted}  errors={errors}')\n    else:\n        for c in batch:\n            r2 = requests.post(SINGLE_URL, json=c, timeout=10)\n            if r2.ok:\n                submitted += 1\n            else:\n                errors += 1\n        print(f'Batch {i//BATCH_SIZE+1:3d} fallback: submitted={submitted}  errors={errors}')\nprint(f'\\nDone. submitted={submitted}  errors={errors}')\n```",
+            "assert": "not_contains|unable to connect"
+        }]
+    }
+]

@@ -7,7 +7,7 @@
 # with FTS5 full-text search and optional metadata tagging.
 #
 # Key endpoints:
-#   GET  /api/chunks           -- paginated chunk listing
+#   GET  /api/chunks           -- chunk listing (limit/offset)
 #   POST /api/chunks           -- add or update a chunk
 #   DELETE /api/chunks/{id}    -- remove a chunk
 #   GET  /api/search?q=        -- full-text search with snippet highlights

@@ -1,0 +1,520 @@
+{% extends "base.html" %}
+{% block title_suffix %} — Graph{% endblock %}
+{% block main_class %}kcui-main{% endblock %}
+
+{% block content %}
+<style>
+  .kg-graph-page {
+    display: flex; flex-direction: column;
+    height: calc(100dvh - 132px); /* topbar + appbar + subbar ≈ 3 × 44px */
+    padding: 0.75rem; gap: 0.5rem; min-height: 0;
+  }
+
+  /* ── search row ───────────────────────────────────────────────────────── */
+  .kg-search-row {
+    display: flex; gap: 0.5rem; align-items: center;
+    position: relative; flex-shrink: 0;
+  }
+  .kg-search-row input[type=search] { flex: 1; min-width: 0; }
+
+  .kg-ac {
+    position: absolute; top: 100%; left: 0;
+    width: calc(100% - 5.5rem);
+    background: var(--panel); border: 1px solid var(--border);
+    z-index: 200; margin-top: 2px; display: none;
+    max-height: 240px; overflow-y: auto;
+  }
+  .kg-ac-item {
+    padding: 0.3rem 0.65rem; cursor: pointer;
+    font-size: var(--kcui-text-body-sm); font-family: var(--font-code, monospace);
+    border-bottom: 1px solid var(--border);
+  }
+  .kg-ac-item:last-child { border-bottom: none; }
+  .kg-ac-item:hover { background: rgba(74,247,122,.07); color: var(--green); }
+
+  /* ── canvas area ──────────────────────────────────────────────────────── */
+  .kg-canvas-outer {
+    flex: 1; min-height: 0;
+    border: 1px solid var(--border); background: var(--bg);
+    position: relative; overflow: hidden;
+  }
+  #g-canvas { display: block; }
+
+  .kg-hint {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--dim); font-size: var(--kcui-text-body-sm);
+    pointer-events: none;
+  }
+</style>
+
+<div class="kg-graph-page">
+  <div class="kg-search-row">
+    <input type="search" id="g-input" placeholder="Search concepts…" autocomplete="off">
+    <button id="g-btn">Expand</button>
+    <div class="kg-ac" id="g-ac"></div>
+  </div>
+  <div class="kg-canvas-outer" id="g-outer">
+    <div class="kg-hint" id="g-hint">Search for a concept to explore its connections</div>
+    <canvas id="g-canvas"></canvas>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  'use strict';
+
+  const pfx    = window._kgPfx || '';
+  const input  = document.getElementById('g-input');
+  const btn    = document.getElementById('g-btn');
+  const ac     = document.getElementById('g-ac');
+  const outer  = document.getElementById('g-outer');
+  const canvas = document.getElementById('g-canvas');
+  const ctx    = canvas.getContext('2d');
+  const hint   = document.getElementById('g-hint');
+
+  // ── Palette (matches KoreGraph dark theme) ──────────────────────────────
+  const C = {
+    bg:     '#0b0c10',
+    panel:  '#0f1117',
+    border: '#1e2233',
+    text:   '#c5c8d0',
+    dim:    '#4e5466',
+    green:  '#4af77a',
+    blue:   '#6eb5ff',
+  };
+
+  // ── View — KoreDiag-style zoom + pan ────────────────────────────────────
+  const view = { zoom: 1.0, pan: { x: 0, y: 0 } };
+
+  // ── Graph state ─────────────────────────────────────────────────────────
+  let _graphData  = null;                 // raw API response
+  let _positions  = new Map();            // concept_id → { wx, wy }  (world px)
+  let _nodeRing   = new Map();            // concept_id → 0 | 1 | 2
+  let _centralId  = null;
+
+  const NODE_R  = 34;                     // ring-1 node radius (world px)
+  const NODE_R2 = 26;                     // ring-2 node radius
+
+  // ── Resize (KoreDiag pattern) ────────────────────────────────────────────
+  function resize() {
+    canvas.width  = outer.clientWidth;
+    canvas.height = outer.clientHeight;
+    draw();
+  }
+  new ResizeObserver(resize).observe(outer);
+
+  // ── Draw — canvas, translate/scale like KoreDiag renderer.js ─────────────
+  function draw() {
+    const W = canvas.width, H = canvas.height;
+    ctx.clearRect(0, 0, W, H);
+    if (!_graphData || !_graphData.matched) return;
+
+    const { nodes, edges } = _graphData;
+
+    ctx.save();
+    ctx.translate(view.pan.x, view.pan.y);
+    ctx.scale(view.zoom, view.zoom);
+
+    // Group edges by unordered pair so we can stagger labels
+    const pairs = new Map();
+    for (const e of edges) {
+      if (e.start_concept_id === e.end_concept_id) continue;
+      if (!_positions.has(e.start_concept_id) || !_positions.has(e.end_concept_id)) continue;
+      const key = [e.start_concept_id, e.end_concept_id].sort().join('_');
+      if (!pairs.has(key)) pairs.set(key, []);
+      pairs.get(key).push(e);
+    }
+
+    // ── edges (behind nodes) ────────────────────────────────────────────
+    for (const group of pairs.values()) {
+      const count = group.length;
+      group.forEach((e, gi) => {
+        const p1  = _positions.get(e.start_concept_id);
+        const p2  = _positions.get(e.end_concept_id);
+        const dx  = p2.wx - p1.wx,  dy  = p2.wy - p1.wy;
+        const len = Math.hypot(dx, dy);
+        if (len < 1) return;
+        const ux = dx / len, uy = dy / len;
+
+        // Clip line to each node's actual circle boundary
+        const r1c = nodeRadius(e.start_concept_id);
+        const r2c = nodeRadius(e.end_concept_id);
+        const x1 = p1.wx + ux * r1c,        y1 = p1.wy + uy * r1c;
+        const x2 = p2.wx - ux * (r2c + 2),  y2 = p2.wy - uy * (r2c + 2);
+
+        ctx.save();
+        ctx.strokeStyle  = C.blue;
+        ctx.globalAlpha  = 0.45;
+        ctx.lineWidth    = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+        ctx.restore();
+
+        // Arrowhead — borrowed from KoreDiag drawArrow()
+        drawArrow(p1, p2, e.end_concept_id);
+
+        // Edge label — perpendicular offset for visual staggering
+        const stagger = (gi - (count - 1) / 2) * 15;
+        const lx = (x1 + x2) / 2 + (-uy) * stagger;
+        const ly = (y1 + y2) / 2 + ( ux) * stagger;
+
+        ctx.save();
+        ctx.font         = '10px monospace';
+        ctx.textAlign    = 'center';
+        ctx.textBaseline = 'middle';
+        const lbl = e.connection_name;
+        const tw  = ctx.measureText(lbl).width;
+        // small background rect for readability
+        ctx.fillStyle  = C.bg;
+        ctx.globalAlpha = 0.82;
+        ctx.fillRect(lx - tw / 2 - 3, ly - 7, tw + 6, 14);
+        ctx.globalAlpha = 1;
+        ctx.fillStyle  = C.dim;
+        ctx.fillText(lbl, lx, ly);
+        ctx.restore();
+      });
+    }
+
+    // ── nodes (on top of edges) ─────────────────────────────────────────
+    for (const nd of nodes) {
+      const p         = _positions.get(nd.concept_id);
+      if (!p) continue;
+      const isCentral = nd.concept_id === _centralId;
+      const isRing2   = _nodeRing.get(nd.concept_id) === 2;
+      const r         = nodeRadius(nd.concept_id);
+
+      // Circle
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(p.wx, p.wy, r, 0, Math.PI * 2);
+      ctx.fillStyle   = C.panel;
+      ctx.fill();
+      ctx.strokeStyle = isCentral ? C.green : isRing2 ? C.dim : C.border;
+      ctx.lineWidth   = isCentral ? 2 : 1.5;
+      ctx.stroke();
+
+      // Label — wrap on spaces to fit inside the circle
+      ctx.font         = '11px monospace';
+      ctx.textAlign    = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle    = isCentral ? C.green : isRing2 ? C.dim : C.text;
+      const maxW  = r * 1.55;   // usable chord width (leaves small margin)
+      const lines = wrapLabel(nd.name, maxW);
+      const lineH = 13;
+      const topY  = p.wy - (lines.length - 1) * lineH / 2;
+      for (let li = 0; li < lines.length; li++) {
+        ctx.fillText(lines[li], p.wx, topY + li * lineH);
+      }
+      ctx.restore();
+    }
+
+    ctx.restore(); // undo translate/scale
+  }
+
+  // Wrap a label on space boundaries to fit within maxPx.
+  // Falls back to truncation for single words that are still too wide.
+  function wrapLabel(name, maxPx) {
+    ctx.font = '11px monospace';
+    const words = name.split(' ');
+    const lines = [];
+    let cur = '';
+    for (const word of words) {
+      const test = cur ? cur + ' ' + word : word;
+      if (ctx.measureText(test).width <= maxPx) {
+        cur = test;
+      } else {
+        if (cur) lines.push(cur);
+        if (ctx.measureText(word).width > maxPx) {
+          // Single word too wide — truncate it
+          let t = word;
+          while (t.length > 1 && ctx.measureText(t + '…').width > maxPx) t = t.slice(0, -1);
+          lines.push(t + '…');
+          cur = '';
+        } else {
+          cur = word;
+        }
+      }
+    }
+    if (cur) lines.push(cur);
+    return lines;
+  }
+
+  // Per-ring node radius
+  function nodeRadius(id) {
+    if (id === _centralId) return NODE_R + 6;
+    return _nodeRing.get(id) === 2 ? NODE_R2 : NODE_R;
+  }
+
+  // Arrowhead — same math as KoreDiag renderer.js drawArrow()
+  function drawArrow(from, to, toId) {
+    const dx    = to.wx - from.wx,  dy = to.wy - from.wy;
+    const angle = Math.atan2(dy, dx);
+    const size  = 9;
+    const tr    = nodeRadius(toId);
+    const tx    = to.wx - (tr + 2) * Math.cos(angle);
+    const ty    = to.wy - (tr + 2) * Math.sin(angle);
+    ctx.save();
+    ctx.fillStyle   = C.blue;
+    ctx.globalAlpha = 0.65;
+    ctx.beginPath();
+    ctx.moveTo(tx, ty);
+    ctx.lineTo(tx - size * Math.cos(angle - 0.4), ty - size * Math.sin(angle - 0.4));
+    ctx.lineTo(tx - size * Math.cos(angle + 0.4), ty - size * Math.sin(angle + 0.4));
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // ── Layout — multi-ring radial layout ────────────────────────────────────
+  function buildLayout(data) {
+    _positions.clear();
+    _nodeRing.clear();
+    const { nodes, edges } = data;
+    const qLower  = (data.query || '').toLowerCase();
+    const central = nodes.find(n => n.name.toLowerCase() === qLower) || nodes[0];
+    if (!central) return false;
+
+    _centralId = central.concept_id;
+
+    // ── Classify nodes by ring via BFS from central ──────────────────────
+    const ring1Set = new Set();
+    const ring2Set = new Set();
+
+    for (const e of edges) {
+      if (e.start_concept_id === _centralId && e.end_concept_id !== _centralId)
+        ring1Set.add(e.end_concept_id);
+      if (e.end_concept_id === _centralId && e.start_concept_id !== _centralId)
+        ring1Set.add(e.start_concept_id);
+    }
+    for (const e of edges) {
+      if (ring1Set.has(e.start_concept_id) && e.end_concept_id !== _centralId && !ring1Set.has(e.end_concept_id))
+        ring2Set.add(e.end_concept_id);
+      if (ring1Set.has(e.end_concept_id) && e.start_concept_id !== _centralId && !ring1Set.has(e.start_concept_id))
+        ring2Set.add(e.start_concept_id);
+    }
+
+    const ring1 = [...ring1Set].map(id => nodes.find(n => n.concept_id === id)).filter(Boolean);
+    const ring2 = [...ring2Set].map(id => nodes.find(n => n.concept_id === id)).filter(Boolean);
+    const n1 = ring1.length;
+    const n2 = ring2.length;
+
+    // ── Orbit radii — scale with node counts so rings never crowd ────────
+    const R1 = n1 === 0 ? 0 : Math.max(160, n1 * NODE_R * 2.8 / (2 * Math.PI));
+    const R2 = n2 === 0 ? 0 : Math.max(R1 + 140, n2 * NODE_R2 * 2.8 / (2 * Math.PI));
+
+    // ── Place central ─────────────────────────────────────────────────────
+    _positions.set(_centralId, { wx: 0, wy: 0 });
+    _nodeRing.set(_centralId, 0);
+
+    // ── Ring 1 — evenly spaced, 12 o'clock start ─────────────────────────
+    const ring1Angle = new Map();
+    ring1.forEach((nd, i) => {
+      const angle = (2 * Math.PI * i / n1) - Math.PI / 2;
+      ring1Angle.set(nd.concept_id, angle);
+      _positions.set(nd.concept_id, { wx: R1 * Math.cos(angle), wy: R1 * Math.sin(angle) });
+      _nodeRing.set(nd.concept_id, 1);
+    });
+
+    // ── Ring 2 — grouped in sector behind each ring-1 parent ─────────────
+    if (n2 > 0) {
+      // Map each ring-2 node to its ring-1 parents
+      const parents = new Map();
+      for (const e of edges) {
+        const link = (a, b) => {
+          if (ring1Set.has(a) && ring2Set.has(b)) {
+            if (!parents.has(b)) parents.set(b, []);
+            if (!parents.get(b).includes(a)) parents.get(b).push(a);
+          }
+        };
+        link(e.start_concept_id, e.end_concept_id);
+        link(e.end_concept_id, e.start_concept_id);
+      }
+
+      // Group by primary (first) parent
+      const groups = new Map();
+      for (const nd2 of ring2) {
+        const pList   = parents.get(nd2.concept_id) || [];
+        const primary = pList[0] ?? ring1[0]?.concept_id;
+        if (primary !== undefined) {
+          if (!groups.has(primary)) groups.set(primary, []);
+          groups.get(primary).push(nd2.concept_id);
+        }
+      }
+
+      // Spread each group within its parent's angular sector
+      const sectorFrac = 0.82;   // fraction of equal slice to use (avoids overlap at edges)
+      for (const [parentId, children] of groups) {
+        const parentAngle = ring1Angle.get(parentId) ?? 0;
+        const sliceWidth  = (2 * Math.PI / Math.max(n1, 1)) * sectorFrac;
+        const nc = children.length;
+        children.forEach((cid, j) => {
+          const spread = nc === 1 ? 0 : (j / (nc - 1) - 0.5) * sliceWidth;
+          const angle  = parentAngle + spread;
+          _positions.set(cid, { wx: R2 * Math.cos(angle), wy: R2 * Math.sin(angle) });
+          _nodeRing.set(cid, 2);
+        });
+      }
+    }
+
+    return true;
+  }
+
+  function resetView() {
+    view.zoom  = 1.0;
+    view.pan.x = canvas.width  / 2;
+    view.pan.y = canvas.height / 2;
+  }
+
+  // ── Expand ────────────────────────────────────────────────────────────────
+  async function doExpand() {
+    hideAC();
+    const term = input.value.trim();
+    if (!term) return;
+    try {
+      const r = await fetch(`${pfx}/api/expand-by-term?q=${enc(term)}&depth=2`);
+      if (!r.ok) return;
+      const data = await r.json();
+      if (!data.matched) {
+        hint.textContent   = `No concept found for "${esc(data.query)}"`;
+        hint.style.display = 'flex';
+        _graphData = null;
+        draw();
+        return;
+      }
+      _graphData = data;
+      sessionStorage.setItem('kg-last-term', term);
+      if (!buildLayout(data)) return;
+      hint.style.display = 'none';
+      resetView();
+      draw();
+    } catch (err) {
+      console.error('expand failed', err);
+    }
+  }
+
+  // ── Pan + Zoom — KoreDiag interaction.js patterns ──────────────────────
+  let _panning   = false;
+  let _panStart  = { x: 0, y: 0 };
+  let _panOrigin = { x: 0, y: 0 };
+
+  canvas.addEventListener('mousedown', e => {
+    if (e.button === 1) { e.preventDefault(); startPan(e); return; }
+    if (e.button !== 0) return;
+    const rect = canvas.getBoundingClientRect();
+    const hit  = hitAt(e.clientX - rect.left, e.clientY - rect.top);
+    if (hit !== null && hit !== _centralId) {
+      const nd = (_graphData?.nodes || []).find(n => n.concept_id === hit);
+      if (nd) { input.value = nd.name; doExpand(); }
+      return;
+    }
+    startPan(e);
+  });
+
+  canvas.addEventListener('mousemove', e => {
+    const rect = canvas.getBoundingClientRect();
+    if (_panning) {
+      view.pan.x = _panOrigin.x + (e.clientX - _panStart.x);
+      view.pan.y = _panOrigin.y + (e.clientY - _panStart.y);
+      draw();
+    } else {
+      const hit = hitAt(e.clientX - rect.left, e.clientY - rect.top);
+      canvas.style.cursor = (hit !== null && hit !== _centralId) ? 'pointer' : 'grab';
+    }
+  });
+
+  window.addEventListener('mouseup', () => {
+    _panning = false;
+    canvas.style.cursor = 'grab';
+  });
+
+  // Zoom toward cursor — same math as KoreDiag interaction.js onWheel
+  canvas.addEventListener('wheel', e => {
+    e.preventDefault();
+    const rect   = canvas.getBoundingClientRect();
+    const mx     = e.clientX - rect.left;
+    const my     = e.clientY - rect.top;
+    const factor = e.deltaY < 0 ? 1.1 : 0.9;
+    view.pan.x   = mx - (mx - view.pan.x) * factor;
+    view.pan.y   = my - (my - view.pan.y) * factor;
+    view.zoom    = Math.max(0.1, Math.min(6, view.zoom * factor));
+    draw();
+  }, { passive: false });
+
+  function startPan(e) {
+    _panning      = true;
+    _panStart     = { x: e.clientX, y: e.clientY };
+    _panOrigin    = { x: view.pan.x, y: view.pan.y };
+    canvas.style.cursor = 'grabbing';
+  }
+
+  // ── Hit test — screen → world → radius check ────────────────────────────
+  function hitAt(sx, sy) {
+    const wx = (sx - view.pan.x) / view.zoom;
+    const wy = (sy - view.pan.y) / view.zoom;
+    for (const [id, p] of _positions) {
+      if (Math.hypot(wx - p.wx, wy - p.wy) <= nodeRadius(id)) return id;
+    }
+    return null;
+  }
+
+  // ── Autocomplete ─────────────────────────────────────────────────────────
+  let _acTimer = null;
+
+  input.addEventListener('input', () => {
+    clearTimeout(_acTimer);
+    const q = input.value.trim();
+    if (q.length < 2) { hideAC(); return; }
+    _acTimer = setTimeout(() => loadAC(q), 180);
+  });
+
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter')  { hideAC(); doExpand(); }
+    if (e.key === 'Escape') { hideAC(); }
+  });
+
+  btn.addEventListener('click', doExpand);
+
+  document.addEventListener('pointerdown', e => {
+    if (!e.target.closest('.kg-search-row')) hideAC();
+  });
+
+  async function loadAC(q) {
+    try {
+      const r = await fetch(`${pfx}/api/search?q=${enc(q)}&limit=12`);
+      if (!r.ok) { hideAC(); return; }
+      const items = await r.json();
+      if (!items.length) { hideAC(); return; }
+      ac.innerHTML = '';
+      for (const it of items) {
+        const d = document.createElement('div');
+        d.className = 'kg-ac-item';
+        d.textContent = it.term;
+        d.addEventListener('pointerdown', ev => {
+          ev.preventDefault();
+          input.value = it.term;
+          hideAC();
+          doExpand();
+        });
+        ac.appendChild(d);
+      }
+      ac.style.display = 'block';
+    } catch { hideAC(); }
+  }
+
+  function hideAC() { ac.style.display = 'none'; }
+
+  // ── Restore last term on page load ───────────────────────────────────────
+  const _saved = sessionStorage.getItem('kg-last-term');
+  if (_saved) { input.value = _saved; doExpand(); }
+
+  function enc(s) { return encodeURIComponent(s); }
+  function esc(s) { return s ? s.replace(/&/g, '&amp;').replace(/</g, '&lt;') : ''; }
+
+})();
+</script>
+{% endblock %}

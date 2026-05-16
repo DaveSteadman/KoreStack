@@ -406,6 +406,41 @@ def get_book(book_id: str | int, include_body: bool = True, catalog: Optional[st
     return _row_to_dict(row, include_body=include_body, catalog=catalog_id) if row else None
 
 
+def get_book_chunk(
+    book_id: str | int,
+    offset_chars: int = 0,
+    length_chars: int = 4096,
+    catalog: Optional[str] = None,
+) -> Optional[dict]:
+    """Return a character slice of a book body. Only the slice travels over the wire."""
+    catalog_id, local_id = parse_book_ref(book_id, catalog=catalog)
+    with db_connection(catalog_id) as conn:
+        row = conn.execute(
+            "SELECT id, title, author, genre, word_count, body FROM books WHERE id = ?",
+            (local_id,),
+        ).fetchone()
+    if row is None:
+        return None
+    body         = _decompress(row["body"]) or ""
+    offset_chars = max(0, offset_chars)
+    length_chars = max(1, length_chars)
+    chunk        = body[offset_chars: offset_chars + length_chars]
+    next_offset  = offset_chars + length_chars
+    total_chars  = len(body)
+    return {
+        "route_id":     make_book_ref(catalog_id, local_id),
+        "title":        row["title"],
+        "author":       row["author"],
+        "genre":        row["genre"],
+        "word_count":   row["word_count"],
+        "chunk":        chunk,
+        "offset_chars": offset_chars,
+        "next_offset":  next_offset if next_offset < total_chars else None,
+        "total_chars":  total_chars,
+        "has_more":     next_offset < total_chars,
+    }
+
+
 def update_book_body(book_id: str | int, body: str, catalog: Optional[str] = None) -> Optional[dict]:
     catalog_id, local_id = parse_book_ref(book_id, catalog=catalog)
     _assert_catalog_writable(catalog_id)

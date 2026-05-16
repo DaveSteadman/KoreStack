@@ -7,7 +7,7 @@
 # Supports importing books from XML catalogs (OPDS/MODS) via BeautifulSoup.
 #
 # Key endpoints:
-#   GET  /api/books            -- paginated catalog listing
+#   GET  /api/books            -- catalog listing (limit/offset)
 #   POST /api/books            -- add a new book entry
 #   PUT  /api/books/{id}       -- update an existing book entry
 #   DELETE /api/books/{id}     -- remove a book entry
@@ -40,6 +40,7 @@ from app.database import (
     add_book,
     delete_book,
     get_book,
+    get_book_chunk,
     get_status,
     init_db,
     list_catalogs,
@@ -124,6 +125,17 @@ def route_list_books(limit: int = 100, offset: int = 0, catalog: Optional[str] =
         return list_books(limit=limit, offset=offset, catalog=catalog)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.get("/books/{book_id:path}/chunk", summary="Get a character-slice of a book body")
+def route_get_book_chunk(book_id: str, offset: int = 0, length: int = 4096):
+    try:
+        result = get_book_chunk(book_id, offset_chars=offset, length_chars=length)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    if result is None:
+        raise HTTPException(status_code=404, detail="Book not found")
+    return result
 
 
 @app.get("/books/{book_id:path}", summary="Get a single book with full body")

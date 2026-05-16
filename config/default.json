@@ -16,6 +16,7 @@
     "agent":        { "port": 8605 },
     "conversation": { "port": 8630 },
     "data":         { "port": 8620, "_subports": "+1=korefeed, +2=korelibrary, +3=korerag, +4=korereference, +6=koregraph" },
+    "koregraph":    { "port": 8626 },
     "comms":        { "port": 8625 },
     "docs":         { "port": 8615 },
     "code":         { "port": 8610 }
@@ -41,6 +42,14 @@
         "enabled": true,
         "purpose": "document navigation, structured editing, and KoreFile authoring",
         "expected_prefix": "koredocs_"
+      },
+      {
+        "name": "KoreGraph",
+        "service": "koregraph",
+        "path": "/mcp",
+        "enabled": true,
+        "purpose": "concept knowledge graph — search concepts by name, explore connections between concepts, and store new concept-relationship-concept triples extracted from text",
+        "expected_prefix": ""
       }
     ]
   }

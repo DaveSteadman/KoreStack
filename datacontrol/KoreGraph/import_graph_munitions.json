@@ -1,0 +1,29 @@
+{
+  "id": "import_graph_munitions",
+  "name": "Import Military Munitions Connections",
+  "description": "Imports typed connections for military munitions: missiles, rockets, bombs, torpedoes, grenades, artillery shells, ammunition. Extracts has_type, made_by, designed_by, originated_in, used_in (wars), operated_by, has_variant. No LLM required.",
+  "script": "import_graph_munitions.py",
+  "args": [
+    {
+      "flag": "--limit",
+      "type": "int",
+      "default": 0,
+      "help": "Max articles to scan (0 = all)"
+    },
+    {
+      "flag": "--dry-run",
+      "type": "bool",
+      "default": false,
+      "help": "Count only, no writes"
+    },
+    {
+      "flag": "--extra",
+      "type": "bool",
+      "default": false,
+      "help": "Also include guided_by (guidance system), has_warhead, launched_from"
+    }
+  ],
+  "last_run": "2026-05-17 00:32:48",
+  "last_status": "ok",
+  "last_log": "C:\\Util\\GithubRepos\\KoreStack\\datacontrol\\KoreGraph\\logs\\import_graph_munitions_20260517_003225.log"
+}

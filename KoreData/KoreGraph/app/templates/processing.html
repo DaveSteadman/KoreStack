@@ -1,0 +1,441 @@
+{% extends "base.html" %}
+{% block title_suffix %} — Processing{% endblock %}
+{% block main_class %}kg-processing-root{% endblock %}
+{% block content %}
+<style>
+  .kg-processing-root {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - var(--kcui-topbar-height, 40px) - var(--kcui-appbar-height, 40px) - var(--kcui-subbar-height, 36px));
+    overflow: hidden;
+  }
+
+  /* ── Two-column layout ────────────────────────────────────────────── */
+  .kg-proc-layout {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  /* ── Left: script list ────────────────────────────────────────────── */
+  .kg-proc-left {
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .kg-proc-left-header {
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--panel);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+  }
+  .kg-proc-script-list {
+    overflow-y: auto;
+    flex: 1;
+  }
+  .proc-item {
+    border-bottom: 1px solid var(--border);
+    padding: 0.65rem 0.75rem;
+    cursor: pointer;
+    transition: background .1s;
+  }
+  .proc-item:hover   { background: var(--hover, rgba(255,255,255,.04)); }
+  .proc-item.p-sel   { background: rgba(74,247,122,.06); border-left: 2px solid var(--green); padding-left: calc(0.75rem - 2px); }
+  .proc-item-name    { font-family: var(--font-code); font-size: var(--kcui-text-body-sm); color: var(--text); }
+  .proc-item-desc    { font-size: var(--kcui-text-label); color: var(--dim); margin-top: 0.2rem; line-height: 1.4; }
+  .proc-item-meta    { font-size: var(--kcui-text-label); color: var(--dim); margin-top: 0.3rem; display: flex; gap: 0.4rem; align-items: center; }
+
+  /* ── Right: config + log ──────────────────────────────────────────── */
+  .kg-proc-right {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-height: 0;
+  }
+
+  /* Empty state */
+  .proc-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    color: var(--dim);
+    font-size: var(--kcui-text-body-sm);
+  }
+
+  /* Config area */
+  .proc-config {
+    flex-shrink: 0;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--panel);
+  }
+  .proc-config-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+  }
+  .proc-script-title {
+    font-family: var(--font-code);
+    font-size: var(--kcui-text-body);
+    color: var(--text);
+  }
+  .proc-args {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1rem;
+    margin-bottom: 0.6rem;
+  }
+  .proc-arg {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .proc-arg label {
+    font-family: var(--font-code);
+    font-size: var(--kcui-text-body-sm);
+    color: var(--dim);
+    text-transform: none;
+    letter-spacing: 0;
+    white-space: nowrap;
+  }
+  .proc-arg input[type=number],
+  .proc-arg input[type=text] {
+    width: 90px;
+    font-size: var(--kcui-text-body-sm);
+    padding: 0.2rem 0.4rem;
+  }
+  .proc-arg .proc-arg-help {
+    font-size: var(--kcui-text-label);
+    color: var(--dim);
+  }
+  .proc-run-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+  .proc-run-msg {
+    font-size: var(--kcui-text-body-sm);
+    color: var(--red);
+  }
+
+  /* Log area */
+  .proc-log-wrap {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .proc-log-header {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.35rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--panel);
+    flex-shrink: 0;
+  }
+  .proc-log-header .section-label {
+    font-size: var(--kcui-text-label);
+    letter-spacing: var(--kcui-tracking-label);
+    text-transform: uppercase;
+    color: var(--dim);
+  }
+  .proc-log-info {
+    flex: 1;
+    font-size: var(--kcui-text-body-sm);
+    color: var(--dim);
+  }
+  .proc-log-body {
+    flex: 1;
+    overflow-y: auto;
+    font-family: var(--font-code);
+    font-size: var(--kcui-text-label);
+    line-height: 1.55;
+    padding: 0.6rem 0.75rem;
+    white-space: pre-wrap;
+    word-break: break-all;
+    color: var(--text);
+  }
+  .proc-log-empty { color: var(--dim); }
+
+  /* Status dot */
+  .proc-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--border);
+    flex-shrink: 0;
+  }
+  .proc-dot.is-running { background: var(--green); animation: proc-blink 1s ease-in-out infinite; }
+  .proc-dot.is-ok      { background: var(--green); }
+  .proc-dot.is-error   { background: var(--red); }
+  @keyframes proc-blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+</style>
+
+<div class="kg-proc-layout">
+
+  <!-- ── Left: script list ───────────────────────────────────────────── -->
+  <div class="kg-proc-left">
+    <div class="kg-proc-left-header">
+      <span class="meta" style="text-transform:uppercase;letter-spacing:var(--kcui-tracking-label);font-size:var(--kcui-text-label)">Scripts</span>
+      <span class="meta" id="p-count" style="font-size:var(--kcui-text-label)"></span>
+    </div>
+    <div class="kg-proc-script-list" id="p-list">
+      <div class="meta" style="padding:1rem;text-align:center;font-size:var(--kcui-text-body-sm)">Loading…</div>
+    </div>
+  </div>
+
+  <!-- ── Right: config + log ─────────────────────────────────────────── -->
+  <div class="kg-proc-right">
+
+    <!-- Empty state -->
+    <div class="proc-empty" id="p-empty">Select a script to configure and run</div>
+
+    <!-- Config section (hidden until script selected) -->
+    <div class="proc-config" id="p-config" style="display:none">
+      <div class="proc-config-head">
+        <span class="proc-script-title" id="p-script-title"></span>
+        <span class="meta" id="p-last-run" style="font-size:var(--kcui-text-label)"></span>
+      </div>
+      <div class="proc-args" id="p-args"></div>
+      <div class="proc-run-bar">
+        <button id="p-run-btn" onclick="procRun()">▶ Run</button>
+        <button id="p-stop-btn" class="btn-danger" onclick="procStop()" style="display:none">■ Stop</button>
+        <span class="proc-run-msg" id="p-run-msg"></span>
+      </div>
+    </div>
+
+    <!-- Log section (hidden until script selected) -->
+    <div class="proc-log-wrap" id="p-log-wrap" style="display:none">
+      <div class="proc-log-header">
+        <div class="proc-dot" id="p-dot"></div>
+        <span class="section-label">Output</span>
+        <span class="proc-log-info" id="p-log-info"></span>
+        <button class="btn-sm btn-secondary" onclick="procClearLog()" style="padding:0.1rem 0.45rem;font-size:var(--kcui-text-label)">Clear</button>
+      </div>
+      <div class="proc-log-body" id="p-log-body">
+        <span class="proc-log-empty">No output yet.</span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+'use strict';
+let _scripts    = [];
+let _selId      = null;
+let _pollTimer  = null;
+let _logCursor  = 0;
+let _wasRunning = false;
+
+// ── Script list ────────────────────────────────────────────────────────
+async function loadScripts() {
+  let data;
+  try {
+    const r = await fetch(window._kgPfx + '/api/processing/scripts');
+    data = await r.json();
+  } catch {
+    document.getElementById('p-list').innerHTML =
+      '<div class="meta" style="padding:1rem;text-align:center;color:var(--red)">Failed to load scripts</div>';
+    return;
+  }
+  _scripts = data;
+  document.getElementById('p-count').textContent = _scripts.length ? `(${_scripts.length})` : '';
+  renderList();
+}
+
+function renderList() {
+  const el = document.getElementById('p-list');
+  if (!_scripts.length) {
+    el.innerHTML = '<div class="meta" style="padding:1rem;text-align:center;font-size:var(--kcui-text-body-sm)">No scripts found in the processing directory.<br>Add .py + .json files to datacontrol/KoreGraph/</div>';
+    return;
+  }
+  el.innerHTML = _scripts.map(s => `
+    <div class="proc-item${s.id === _selId ? ' p-sel' : ''}" data-sid="${esc(s.id)}" onclick="selectScript(this.dataset.sid)">
+      <div class="proc-item-name">${esc(s.name || s.id)}</div>
+      ${s.description ? `<div class="proc-item-desc">${esc(s.description)}</div>` : ''}
+      <div class="proc-item-meta">
+        ${s.last_run
+          ? `<span>Last: ${esc(s.last_run)}</span><span>·</span><span class="${s.last_status === 'ok' ? 'state-1' : 'state-3'}">${esc(s.last_status || '')}</span>`
+          : '<span>Never run</span>'}
+      </div>
+    </div>
+  `).join('');
+}
+
+// ── Select script ──────────────────────────────────────────────────────
+function selectScript(id) {
+  _selId = id;
+  renderList();
+
+  const s = _scripts.find(x => x.id === id);
+  if (!s) return;
+
+  // Show config + log panels
+  document.getElementById('p-empty').style.display    = 'none';
+  document.getElementById('p-config').style.display   = '';
+  document.getElementById('p-log-wrap').style.display = '';
+
+  document.getElementById('p-script-title').textContent = s.name || s.id;
+  document.getElementById('p-last-run').textContent =
+    s.last_run ? `Last run: ${s.last_run}` : '';
+
+  renderArgs(s.args || []);
+  document.getElementById('p-run-msg').textContent = '';
+
+  // Start polling to catch any currently-running job
+  startPolling();
+}
+
+function renderArgs(args) {
+  const el = document.getElementById('p-args');
+  if (!args.length) {
+    el.innerHTML = '<span class="meta" style="font-size:var(--kcui-text-body-sm)">No configurable arguments.</span>';
+    return;
+  }
+  el.innerHTML = args.map(a => {
+    const fid = 'parg_' + a.flag.replace(/[^a-zA-Z0-9_]/g, '_');
+    if (a.type === 'bool') {
+      return `<div class="proc-arg">
+        <input type="checkbox" id="${fid}" ${a.default ? 'checked' : ''}>
+        <label for="${fid}" style="font-size:var(--kcui-text-body-sm)">${esc(a.flag)}</label>
+        ${a.help ? `<span class="proc-arg-help">${esc(a.help)}</span>` : ''}
+      </div>`;
+    }
+    return `<div class="proc-arg">
+      <label for="${fid}">${esc(a.flag)}</label>
+      <input type="${a.type === 'int' ? 'number' : 'text'}" id="${fid}" value="${esc(String(a.default ?? ''))}">
+      ${a.help ? `<span class="proc-arg-help">${esc(a.help)}</span>` : ''}
+    </div>`;
+  }).join('');
+}
+
+// ── Run / stop ─────────────────────────────────────────────────────────
+async function procRun() {
+  if (!_selId) return;
+  const s = _scripts.find(x => x.id === _selId);
+  if (!s) return;
+
+  const args = {};
+  for (const a of (s.args || [])) {
+    const fid = 'parg_' + a.flag.replace(/[^a-zA-Z0-9_]/g, '_');
+    const el = document.getElementById(fid);
+    if (!el) continue;
+    if (a.type === 'bool') {
+      if (el.checked) args[a.flag] = true;
+    } else {
+      const v = el.value.trim();
+      args[a.flag] = a.type === 'int' ? (parseInt(v, 10) || 0) : v;
+    }
+  }
+
+  const r = await fetch(window._kgPfx + '/api/processing/run', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ script_id: _selId, args }),
+  });
+  const d = await r.json().catch(() => ({}));
+
+  document.getElementById('p-run-msg').textContent = r.ok ? '' : (d.detail || 'Error starting job');
+  if (!r.ok) return;
+
+  // Reset log view
+  document.getElementById('p-log-body').innerHTML = '<span class="proc-log-empty">Starting…</span>';
+  _logCursor = 0;
+  _wasRunning = false;
+  startPolling();
+}
+
+async function procStop() {
+  const r = await fetch(window._kgPfx + '/api/processing/stop', { method: 'POST' });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) document.getElementById('p-run-msg').textContent = d.detail || 'Stop failed';
+}
+
+// ── Log polling ────────────────────────────────────────────────────────
+function startPolling() {
+  if (_pollTimer) return;
+  _pollTimer = setInterval(pollStatus, 1000);
+  pollStatus();
+}
+
+function stopPolling() {
+  if (_pollTimer) { clearInterval(_pollTimer); _pollTimer = null; }
+}
+
+async function pollStatus() {
+  let d;
+  try {
+    const r = await fetch(window._kgPfx + '/api/processing/log?cursor=' + _logCursor);
+    d = await r.json();
+  } catch { return; }
+
+  const running  = d.running;
+  const runBtn   = document.getElementById('p-run-btn');
+  const stopBtn  = document.getElementById('p-stop-btn');
+  const dot      = document.getElementById('p-dot');
+  const logInfo  = document.getElementById('p-log-info');
+
+  // Only show live status if the running job matches our selected script
+  const relevant = !d.script_id || d.script_id === _selId;
+
+  if (relevant) {
+    runBtn.disabled       = running;
+    stopBtn.style.display = running ? '' : 'none';
+
+    dot.className = 'proc-dot' +
+      (running ? ' is-running' : (d.exit_code === 0 ? ' is-ok' : (d.exit_code !== null ? ' is-error' : '')));
+
+    logInfo.textContent = running
+      ? `Running ${esc(d.script || '')}  (${d.elapsed || ''})`
+      : (d.exit_code !== null ? `Exited ${d.exit_code} — ${esc(d.script || '')}` : '');
+  }
+
+  // Append new lines
+  if (relevant && d.lines && d.lines.length) {
+    const body = document.getElementById('p-log-body');
+    if (body.querySelector('.proc-log-empty')) body.innerHTML = '';
+    body.textContent += d.lines.join('\n') + '\n';
+    body.scrollTop = body.scrollHeight;
+    _logCursor = d.cursor;
+  }
+
+  // Job finished
+  if (_wasRunning && !running) {
+    stopPolling();
+    await loadScripts();  // refresh last_run metadata
+  }
+  _wasRunning = running;
+  if (!running && !_wasRunning) stopPolling();
+}
+
+function procClearLog() {
+  document.getElementById('p-log-body').innerHTML = '<span class="proc-log-empty">Cleared.</span>';
+  document.getElementById('p-dot').className = 'proc-dot';
+  document.getElementById('p-log-info').textContent = '';
+}
+
+// ── Util ───────────────────────────────────────────────────────────────
+function esc(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+loadScripts();
+</script>
+{% endblock %}

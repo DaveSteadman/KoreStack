@@ -137,6 +137,27 @@
   .rc-domain-heading:first-child { margin-top: 0; }
   .rc-error { color: var(--red); font-size: 12px; font-style: italic; }
 
+  /* graph connection table */
+  .graph-table {
+    width: 100%; border-collapse: collapse; font-size: 12px;
+  }
+  .graph-table th {
+    text-align: left; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--dim); padding: 0.3rem 0.5rem; border-bottom: 1px solid var(--border);
+    font-weight: normal;
+  }
+  .graph-table td {
+    padding: 0.25rem 0.5rem; border-bottom: 1px solid var(--border); color: var(--text);
+    white-space: nowrap;
+  }
+  .graph-table tr:last-child td { border-bottom: none; }
+  .graph-table .gc-conn { color: var(--dim); }
+  .graph-table .gc-score { color: var(--amber); text-align: right; }
+  .graph-table .gc-state-0 { color: var(--dim); }
+  .graph-table .gc-state-1 { color: var(--green); }
+  .graph-table .gc-state-2 { color: var(--amber); }
+  .graph-table .gc-state-3 { color: var(--red); }
+
   /* JSON highlight */
   pre.json { font-size: 12px; line-height: 1.6; }
   .jt-key    { color: var(--blue); }
@@ -216,9 +237,8 @@
             <a class="kcui-tag kcui-tag--warning" href="/ui/rag/search">search</a>
             <a class="kcui-tag kcui-tag--info" href="/ui/rag/insert">insert</a>
           {% elif svc.slug == "graph" %}
-            <a class="kcui-tag kcui-tag--accent" href="/graph/ui/entities">entities</a>
-            <a class="kcui-tag kcui-tag--warning" href="/graph/ui/relations">relations</a>
-            <a class="kcui-tag kcui-tag--info" href="/graph/ui/vocab">vocab</a>
+            <a class="kcui-tag kcui-tag--accent" href="/graph/ui/vocab">vocab</a>
+            <a class="kcui-tag kcui-tag--warning" href="/graph/ui/connections">connections</a>
           {% endif %}
         </div>
       </div>
@@ -254,6 +274,9 @@
       </label>
       <label style="display:flex; align-items:center; gap:5px; font-size:12px; color:var(--text); cursor:pointer; text-transform:none; letter-spacing:normal;">
         <input type="checkbox" class="sq-domain" value="rag" checked style="accent-color:var(--green); width:auto; cursor:pointer;"> RAG
+      </label>
+      <label style="display:flex; align-items:center; gap:5px; font-size:12px; color:var(--text); cursor:pointer; text-transform:none; letter-spacing:normal;">
+        <input type="checkbox" class="sq-domain" value="graph" checked style="accent-color:var(--accent); width:auto; cursor:pointer;"> Graph
       </label>
     </div>
 
@@ -385,6 +408,7 @@ function renderCards(data) {
   const container = document.getElementById('sq-cards-view');
   const domains   = data.domains_searched || [];
   const grouped   = data.results_by_domain || data.results || {};
+  const STATE_LABELS = ['proposed', 'active', 'deprecated', 'rejected'];
   let html = '';
   for (const dom of domains) {
     const items = grouped[dom];
@@ -395,6 +419,19 @@ function renderCards(data) {
       html += `<div class="rc-error">Error: ${escHtml(items.error)}</div>`;
     } else if (!Array.isArray(items) || items.length === 0) {
       html += `<div class="rc-no-results">No results.</div>`;
+    } else if (dom === 'graph') {
+      html += '<table class="graph-table"><thead><tr>';
+      html += '<th>Start</th><th>Connection</th><th>End</th><th style="text-align:right">Score</th>';
+      html += '</tr></thead><tbody>';
+      for (const r of items) {
+        html += `<tr>
+          <td>${escHtml(r.start || '')}</td>
+          <td class="gc-conn">${escHtml(r.connection || '')}</td>
+          <td>${escHtml(r.end || '')}</td>
+          <td class="gc-score">${r.score ?? ''}</td>
+        </tr>`;
+      }
+      html += '</tbody></table>';
     } else {
       for (const r of items) {
         html += renderCard(r);
@@ -406,7 +443,6 @@ function renderCards(data) {
 
 function renderCard(r) {
   const title   = escHtml(r.title || '(untitled)');
-  const url     = escHtml(r.url  || '#');
   const snippet = escHtml(r.snippet || r.summary || '');
   let meta = '';
   if (r.type === 'feed_entry') {
@@ -422,10 +458,13 @@ function renderCard(r) {
     const tags = r.tags   ? ` | ${escHtml(r.tags)}` : '';
     meta = `${src}${tags}`;
   }
-  const typeLabel = (r.type || '').replace('_', ' ');
+  const typeLabel = (r.type || '').replace(/_/g, ' ');
+  const titleHtml = r.url
+    ? `<a class="rc-title" href="${escHtml(r.url)}">${title}</a>`
+    : `<span class="rc-title">${title}</span>`;
   return `<div class="result-card">
     <div class="rc-type">${escHtml(typeLabel)}</div>
-    <a class="rc-title" href="${url}">${title}</a>
+    ${titleHtml}
     ${meta ? `<div class="rc-meta">${meta}</div>` : ''}
     ${snippet ? `<div class="rc-snippet">${snippet}</div>` : ''}
   </div>`;

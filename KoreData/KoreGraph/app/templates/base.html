@@ -117,12 +117,12 @@
     .badge-blue  { border-color: var(--blue);  color: var(--blue); }
     .badge-red   { border-color: var(--red);   color: var(--red); }
 
-    .pagination { display: flex; gap: 0.5rem; margin-top: 1rem; align-items: center; }
-    .pagination a {
+    .batch-nav { display: flex; gap: 0.5rem; margin-top: 1rem; align-items: center; }
+    .batch-nav a {
       padding: 0.25rem 0.65rem; border: 1px solid var(--border); color: var(--dim);
       text-decoration: none; font-size: var(--kcui-text-body-sm);
     }
-    .pagination a:hover { border-color: var(--green); color: var(--green); }
+    .batch-nav a:hover { border-color: var(--green); color: var(--green); }
     .pg-info { color: var(--dim); font-size: var(--kcui-text-body-sm); }
 
     /* graph-specific */
@@ -193,9 +193,10 @@
     initAppBar({
       mountId: 'sub-bar',
       tabs: [
-        { label: 'Vocab',     href: '{{ _pfx | default("") }}/ui/vocab',     active: {{ 'true' if request.url.path.startswith('/ui/vocab') else 'false' }} },
-        { label: 'Relations', href: '{{ _pfx | default("") }}/ui/relations',  active: {{ 'true' if request.url.path.startswith('/ui/relations') else 'false' }} },
-        { label: 'Entities',  href: '{{ _pfx | default("") }}/ui/entities',   active: {{ 'true' if request.url.path.startswith('/ui/entities') else 'false' }} },
+        { label: 'Vocab',       href: '{{ _pfx | default("") }}/ui/vocab',       active: {{ 'true' if request.url.path.startswith('/ui/vocab') else 'false' }} },
+        { label: 'Connections', href: '{{ _pfx | default("") }}/ui/connections',  active: {{ 'true' if request.url.path.startswith('/ui/connections') else 'false' }} },
+        { label: 'Graph',       href: '{{ _pfx | default("") }}/ui/graph',        active: {{ 'true' if request.url.path.startswith('/ui/graph') else 'false' }} },
+        { label: 'Processing',  href: '{{ _pfx | default("") }}/ui/processing',   active: {{ 'true' if request.url.path.startswith('/ui/processing') else 'false' }} },
       ],
     });
   </script>
