@@ -491,8 +491,8 @@ def api_expand_by_term(q: str, depth: int = 1, min_score: int = 0):
 # ---------------------------------------------------------------------------
 
 @app.get("/api/vocab", summary="List vocab terms")
-def api_list_vocab(q: Optional[str] = None, limit: int = 500):
-    limit = max(1, min(2000, limit))
+def api_list_vocab(q: Optional[str] = None, limit: int = 100000):
+    limit = max(1, min(100000, limit))
     return list_vocab(q=q or None, limit=limit)
 
 

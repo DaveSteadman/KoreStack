@@ -180,7 +180,7 @@ let _mergeAcIdx    = -1;
 async function loadVocab(resetPage) {
   if (resetPage) _page = 0;
   const q   = document.getElementById('v-search').value.trim();
-  const url = window._kgPfx + '/api/vocab' + (q ? '?q=' + encodeURIComponent(q) : '');
+  const url = window._kgPfx + '/api/vocab?limit=100000' + (q ? '&q=' + encodeURIComponent(q) : '');
   const r   = await fetch(url);
   _terms = await r.json();
   renderList();
