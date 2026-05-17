@@ -19,7 +19,7 @@
 
   .kg-ac {
     position: absolute; top: 100%; left: 0;
-    width: calc(100% - 5.5rem);
+    width: calc(100% - 10rem);
     background: var(--panel); border: 1px solid var(--border);
     z-index: 200; margin-top: 2px; display: none;
     max-height: 240px; overflow-y: auto;
@@ -46,12 +46,25 @@
     color: var(--dim); font-size: var(--kcui-text-body-sm);
     pointer-events: none;
   }
+
+  /* ── square nav buttons ───────────────────────────────────────── */
+  .kg-nav-btn {
+    width: 1.75rem; height: 1.75rem;
+    padding: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    font-size: 0.75rem;
+    line-height: 1;
+  }
 </style>
 
 <div class="kg-graph-page">
   <div class="kg-search-row">
     <input type="search" id="g-input" placeholder="Search concepts…" autocomplete="off">
     <button id="g-btn">Expand</button>
+    <button id="g-prev" class="kg-nav-btn" disabled title="Previous">&#x25C2;</button>
+    <button id="g-next" class="kg-nav-btn" disabled title="Next">&#x25B8;</button>
+    <button id="g-search-gw" class="btn-sm" disabled title="Search in KoreData">Search &#x2197;</button>
     <div class="kg-ac" id="g-ac"></div>
   </div>
   <div class="kg-canvas-outer" id="g-outer">
@@ -69,6 +82,7 @@
   const pfx    = window._kgPfx || '';
   const input  = document.getElementById('g-input');
   const btn    = document.getElementById('g-btn');
+  const gwBtn  = document.getElementById('g-search-gw');
   const ac     = document.getElementById('g-ac');
   const outer  = document.getElementById('g-outer');
   const canvas = document.getElementById('g-canvas');
@@ -370,6 +384,45 @@
     view.pan.y = canvas.height / 2;
   }
 
+  function saveView() {
+    sessionStorage.setItem('kg-last-view', JSON.stringify(
+      { zoom: view.zoom, pan: { x: view.pan.x, y: view.pan.y } }
+    ));
+  }
+
+  // ── History ──────────────────────────────────────────────────────────
+  let _history    = [];
+  let _histIdx    = -1;
+  let _histNaving = false;
+
+  function histPush(term) {
+    if (_histNaving) return;
+    _history = _history.slice(0, _histIdx + 1);
+    if (_history[_history.length - 1] !== term) {
+      _history.push(term);
+      _histIdx = _history.length - 1;
+    }
+    sessionStorage.setItem('kg-history', JSON.stringify({ terms: _history, idx: _histIdx }));
+    updateHistBtns();
+  }
+
+  function updateHistBtns() {
+    document.getElementById('g-prev').disabled = (_histIdx <= 0);
+    document.getElementById('g-next').disabled = (_histIdx >= _history.length - 1);
+  }
+
+  async function histNav(delta) {
+    const newIdx = _histIdx + delta;
+    if (newIdx < 0 || newIdx >= _history.length) return;
+    _histIdx    = newIdx;
+    _histNaving = true;
+    input.value = _history[_histIdx];
+    await doExpand();
+    _histNaving = false;
+    sessionStorage.setItem('kg-history', JSON.stringify({ terms: _history, idx: _histIdx }));
+    updateHistBtns();
+  }
+
   // ── Expand ────────────────────────────────────────────────────────────────
   async function doExpand() {
     hideAC();
@@ -388,10 +441,12 @@
       }
       _graphData = data;
       sessionStorage.setItem('kg-last-term', term);
+      histPush(term);
       if (!buildLayout(data)) return;
       hint.style.display = 'none';
       resetView();
       draw();
+      gwBtn.disabled = false;
     } catch (err) {
       console.error('expand failed', err);
     }
@@ -428,11 +483,13 @@
   });
 
   window.addEventListener('mouseup', () => {
+    if (_panning) saveView();
     _panning = false;
     canvas.style.cursor = 'grab';
   });
 
   // Zoom toward cursor — same math as KoreDiag interaction.js onWheel
+  let _saveViewTimer = null;
   canvas.addEventListener('wheel', e => {
     e.preventDefault();
     const rect   = canvas.getBoundingClientRect();
@@ -443,6 +500,8 @@
     view.pan.y   = my - (my - view.pan.y) * factor;
     view.zoom    = Math.max(0.1, Math.min(6, view.zoom * factor));
     draw();
+    clearTimeout(_saveViewTimer);
+    _saveViewTimer = setTimeout(saveView, 400);
   }, { passive: false });
 
   function startPan(e) {
@@ -468,6 +527,7 @@
   input.addEventListener('input', () => {
     clearTimeout(_acTimer);
     const q = input.value.trim();
+    if (!q) gwBtn.disabled = true;
     if (q.length < 2) { hideAC(); return; }
     _acTimer = setTimeout(() => loadAC(q), 180);
   });
@@ -478,6 +538,13 @@
   });
 
   btn.addEventListener('click', doExpand);
+  document.getElementById('g-prev').addEventListener('click', () => histNav(-1));
+  document.getElementById('g-next').addEventListener('click', () => histNav(1));
+  gwBtn.addEventListener('click', () => {
+    const term = input.value.trim();
+    if (!term) return;
+    window.location.href = '/ui?q=' + enc(term);
+  });
 
   document.addEventListener('pointerdown', e => {
     if (!e.target.closest('.kg-search-row')) hideAC();
@@ -508,9 +575,36 @@
 
   function hideAC() { ac.style.display = 'none'; }
 
-  // ── Restore last term on page load ───────────────────────────────────────
-  const _saved = sessionStorage.getItem('kg-last-term');
-  if (_saved) { input.value = _saved; doExpand(); }
+  // ── Restore state on page load ─────────────────────────────────────────
+  (function () {
+    const savedHist = sessionStorage.getItem('kg-history');
+    if (savedHist) {
+      try {
+        const h = JSON.parse(savedHist);
+        _history = h.terms || [];
+        _histIdx = typeof h.idx === 'number' ? h.idx : _history.length - 1;
+      } catch (_) {}
+    }
+    updateHistBtns();
+    const savedTerm = sessionStorage.getItem('kg-last-term');
+    if (savedTerm) {
+      input.value = savedTerm;
+      _histNaving = true;
+      doExpand().then(() => {
+        _histNaving = false;
+        const savedView = sessionStorage.getItem('kg-last-view');
+        if (savedView) {
+          try {
+            const v = JSON.parse(savedView);
+            view.zoom  = v.zoom;
+            view.pan.x = v.pan.x;
+            view.pan.y = v.pan.y;
+            draw();
+          } catch (_) {}
+        }
+      });
+    }
+  })();
 
   function enc(s) { return encodeURIComponent(s); }
   function esc(s) { return s ? s.replace(/&/g, '&amp;').replace(/</g, '&lt;') : ''; }

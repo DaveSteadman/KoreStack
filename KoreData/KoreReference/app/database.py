@@ -418,10 +418,13 @@ def get_links(title: str) -> list[dict]:
     """Outbound links from an article."""
     with db_connection() as conn:
         rows = conn.execute("""
-            SELECT l.to_title, a.id as to_id, a.summary
+            SELECT l.to_title,
+                   COALESCE(l.to_id, late.id)          AS to_id,
+                   COALESCE(a.summary, late.summary)    AS summary
             FROM links l
             JOIN articles src ON src.title=? AND src.id=l.from_id
-            LEFT JOIN articles a ON a.id=l.to_id
+            LEFT JOIN articles a    ON a.id=l.to_id
+            LEFT JOIN articles late ON late.title=l.to_title AND l.to_id IS NULL
             ORDER BY l.to_title
         """, (title,)).fetchall()
     return [{"to_title": r["to_title"], "to_id": r["to_id"], "summary": r["summary"]} for r in rows]

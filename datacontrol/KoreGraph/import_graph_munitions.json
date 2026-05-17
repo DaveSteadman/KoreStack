@@ -23,7 +23,7 @@
       "help": "Also include guided_by (guidance system), has_warhead, launched_from"
     }
   ],
-  "last_run": "2026-05-17 00:48:14",
+  "last_run": "2026-05-17 12:05:13",
   "last_status": "ok",
-  "last_log": "C:\\Util\\GithubRepos\\KoreStack\\datacontrol\\KoreGraph\\logs\\import_graph_munitions_20260517_004752.log"
+  "last_log": "C:\\Util\\GithubRepos\\KoreStack\\datacontrol\\KoreGraph\\logs\\import_graph_munitions_20260517_120446.log"
 }

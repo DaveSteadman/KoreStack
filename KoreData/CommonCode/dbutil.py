@@ -24,9 +24,9 @@ def fts_build_query(q: str) -> str:
     All tokens are combined with implicit AND (FTS5 default).
 
     Examples:
-        "art of war"          → "art of war"          (exact phrase)
-        art of war            → "art" "of" "war"       (all three words, any order)
-        sun tzu "art of war"  → "sun" "tzu" "art of war"
+        "art of war"          -> "art of war"          (exact phrase)
+        art of war            -> "art" "of" "war"       (all three words, any order)
+        sun tzu "art of war"  -> "sun" "tzu" "art of war"
     """
     parts: list[str] = []
     for m in re.finditer(r'"([^"]+)"|(\S+)', (q or "").strip()):

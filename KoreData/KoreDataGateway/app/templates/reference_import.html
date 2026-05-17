@@ -21,12 +21,12 @@
 
         <div>
           <label for="c_seed">Seed URL <span style="color:var(--red);">*</span>
-            <span id="c_source_badge" class="badge" style="margin-left:0.4rem; font-size:9px; display:none;"></span>
+            <span id="c_source_badge" class="kcui-tag kcui-tag--accent" style="margin-left:0.4rem; display:none;"></span>
           </label>
           <input id="c_seed" type="text"
             placeholder="http://host/viewer#zim/Article  or  http://host/zim/A/Article_Title"
             oninput="detectUrlType(this.value)"
-            style="width:100%; font-size:11px;">
+            style="width:100%; font-size:11px; margin-top:0.3rem;">
         </div>
 
         <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:0.6rem; align-items:end;">
@@ -69,7 +69,7 @@
 <div class="panel kcui-panel" id="progress_panel">
     <div class="panel-header kcui-panel-header">
       PROGRESS
-      <span id="pg_badge" class="badge badge-dim" style="margin-left:0.5rem; display:none;"></span>
+      <span id="pg_badge" class="kcui-tag kcui-tag--accent" style="margin-left:0.5rem; display:none;"></span>
     </div>
     <div class="panel-body kcui-panel-body">
 
@@ -123,8 +123,8 @@
         <div id="pg_done_title" style="font-size:14px; font-weight:600; color:var(--green); margin-bottom:0.4rem;"></div>
         <div id="pg_done_detail" style="font-size:11px; color:var(--dim); margin-bottom:1.25rem; word-break:break-all;"></div>
         <div style="display:flex; gap:0.5rem; justify-content:center;">
-          <a href="/ui/reference"><button type="button" style="font-size:11px; padding:3px 10px;">View articles -></button></a>
-          <button type="button" onclick="resetToIdle()" style="font-size:11px; padding:3px 10px; background:transparent; border-color:var(--dim); color:var(--dim);">Import another</button>
+          <a href="/ui/reference" class="kcui-tag kcui-tag--accent">View Articles &#x2192;</a>
+          <button type="button" class="kcui-tag kcui-tag--dim" onclick="resetToIdle()">Import Another</button>
         </div>
       </div>
 
@@ -181,8 +181,6 @@ function detectUrlType(url) {
   if (!val) { badge.style.display = 'none'; return; }
   badge.textContent = 'KIWIX';
   badge.style.display = '';
-  badge.style.borderColor = 'var(--green)';
-  badge.style.color = 'var(--green)';
 }
 
 function resetToIdle() {
@@ -209,10 +207,8 @@ function resetPanel() {
   document.getElementById('pg_done_msg').style.display = 'none';
   document.getElementById('pg_label').textContent      = 'Starting...';
   const badge = document.getElementById('pg_badge');
-  badge.style.display     = '';
-  badge.textContent       = 'RUNNING';
-  badge.style.borderColor = 'var(--green)';
-  badge.style.color       = 'var(--green)';
+  badge.style.display = '';
+  badge.textContent   = 'RUNNING';
 }
 
 async function crawlStart() {
@@ -299,7 +295,6 @@ function renderStatus(s) {
 
     const badge = document.getElementById('pg_badge');
     badge.style.display = ''; badge.textContent = 'RUNNING';
-    badge.style.borderColor = 'var(--green)'; badge.style.color = 'var(--green)';
 
     const seedRow = document.getElementById('pg_seed_row');
     if (s.seed) { seedRow.style.display = ''; document.getElementById('pg_seed').textContent = s.seed; }
@@ -327,7 +322,6 @@ function renderStatus(s) {
 
     const badge = document.getElementById('pg_badge');
     badge.style.display = ''; badge.textContent = 'COMPLETE';
-    badge.style.borderColor = 'var(--green)'; badge.style.color = 'var(--green)';
 
     document.getElementById('pg_done_title').textContent =
       done > 0 ? `${done.toLocaleString()} article${done !== 1 ? 's' : ''} imported` : 'Import finished';

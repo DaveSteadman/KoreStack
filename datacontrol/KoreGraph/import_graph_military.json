@@ -23,7 +23,7 @@
       "help": "Also include derived_from, developed_into, predecessor, successor"
     }
   ],
-  "last_run": "2026-05-17 00:47:48",
+  "last_run": "2026-05-17 12:04:06",
   "last_status": "ok",
-  "last_log": "C:\\Util\\GithubRepos\\KoreStack\\datacontrol\\KoreGraph\\logs\\import_graph_military_20260517_004730.log"
+  "last_log": "C:\\Util\\GithubRepos\\KoreStack\\datacontrol\\KoreGraph\\logs\\import_graph_military_20260517_120342.log"
 }

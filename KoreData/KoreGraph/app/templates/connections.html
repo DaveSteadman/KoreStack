@@ -10,12 +10,6 @@
   .conn-type   { color: var(--blue); font-size: var(--kcui-text-label); letter-spacing: 0.04em; }
   .conn-end    { color: var(--text); }
   .state-filter { display: flex; gap: 0.4rem; margin-bottom: 1rem; flex-wrap: wrap; align-items: center; }
-  .state-filter a {
-    padding: 0.2rem 0.6rem; border: 1px solid var(--border); color: var(--dim);
-    font-size: var(--kcui-text-label); text-decoration: none; letter-spacing: 0.04em; text-transform: uppercase;
-  }
-  .state-filter a.active { border-color: var(--green); color: var(--green); }
-  .state-filter a:hover  { border-color: var(--text); color: var(--text); }
   .vocab-result {
     padding: 0.25rem 0.5rem; cursor: pointer; border: 1px solid var(--border);
     margin-bottom: 2px; font-size: var(--kcui-text-body-sm); background: var(--bg); display: block;
@@ -30,12 +24,12 @@
   <!-- state filter tabs -->
   <div class="state-filter">
     <span class="meta">State:</span>
-    <a href="{{ _pfx }}/ui/connections" class="{{ 'active' if state is none else '' }}">All</a>
-    <a href="{{ _pfx }}/ui/connections?state=0" class="{{ 'active' if state == 0 else '' }}">Proposed</a>
-    <a href="{{ _pfx }}/ui/connections?state=1" class="{{ 'active' if state == 1 else '' }}">Active</a>
-    <a href="{{ _pfx }}/ui/connections?state=2" class="{{ 'active' if state == 2 else '' }}">Deprecated</a>
-    <a href="{{ _pfx }}/ui/connections?state=3" class="{{ 'active' if state == 3 else '' }}">Rejected</a>
-    {% if total %}<span class="badge-dim badge" style="margin-left:0.3rem">{{ total }}</span>{% endif %}
+    <a href="{{ _pfx }}/ui/connections" class="kcui-tag {{ 'kcui-tag--accent is-on' if state is none else 'kcui-tag--muted' }}">All</a>
+    <a href="{{ _pfx }}/ui/connections?state=0" class="kcui-tag {{ 'kcui-tag--accent is-on' if state == 0 else 'kcui-tag--muted' }}">Proposed</a>
+    <a href="{{ _pfx }}/ui/connections?state=1" class="kcui-tag {{ 'kcui-tag--accent is-on' if state == 1 else 'kcui-tag--muted' }}">Active</a>
+    <a href="{{ _pfx }}/ui/connections?state=2" class="kcui-tag {{ 'kcui-tag--accent is-on' if state == 2 else 'kcui-tag--muted' }}">Deprecated</a>
+    <a href="{{ _pfx }}/ui/connections?state=3" class="kcui-tag {{ 'kcui-tag--accent is-on' if state == 3 else 'kcui-tag--muted' }}">Rejected</a>
+    {% if total %}<span class="kcui-tag kcui-tag--info" style="margin-left:0.3rem">Num Conns:{{ total }}</span>{% endif %}
   </div>
 
   <div class="panel">

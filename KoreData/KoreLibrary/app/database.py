@@ -299,6 +299,34 @@ def _strip_page_markers(text: str) -> str:
     return re.sub(r"\{[ivxlcdmIVXLCDM\d]+\}", "", text)
 
 
+def _make_body_snippet(body: str, q: str, context_chars: int = 300) -> Optional[str]:
+    """Find first occurrence of any query word in *body* and return context around it.
+
+    Used when FTS5 contentless snippet() returns NULL.  Marks the matched word
+    with square brackets, e.g. ``...some text [AT&T] more text...``.
+    """
+    # Extract bare words from the raw query string (strip FTS quote wrappers)
+    words = [w.strip('"').strip() for w in q.split() if w.strip('"').strip()]
+    body_lower = body.lower()
+    best_pos = -1
+    best_word = ""
+    for word in words:
+        pos = body_lower.find(word.lower())
+        if pos != -1 and (best_pos == -1 or pos < best_pos):
+            best_pos = pos
+            best_word = word
+    if best_pos == -1:
+        return None
+    half = context_chars // 2
+    start = max(0, best_pos - half)
+    end   = min(len(body), best_pos + len(best_word) + half)
+    text  = body[start:end].strip()
+    # Bracket the first match for visibility
+    if best_word:
+        text = re.sub(re.escape(best_word), f"[{best_word}]", text, count=1, flags=re.IGNORECASE)
+    return ("..." if start > 0 else "") + text + ("..." if end < len(body) else "")
+
+
 def _fts_delete(conn: sqlite3.Connection, book_id: int, title: str, author: str, body: str) -> None:
     """Remove a book from the FTS index."""
     conn.execute(
@@ -593,6 +621,7 @@ def search_books(
     offset: int = 0,
     catalog: Optional[str] = None,
     catalogs: Optional[list[str]] = None,
+    fts_scope: str = "all",  # "all": title+author+body; "metadata": title+author only
 ) -> list[dict]:
     cols = ", ".join(f"b.{c}" for c in _BOOK_COLS)
     result_sets: list[list[dict]] = []
@@ -600,7 +629,11 @@ def search_books(
     for catalog_id in _selected_catalog_ids(catalog=catalog, catalogs=catalogs):
         params: list = []
         if q:
-            snippet_col = "snippet(books_fts, 2, '[', ']', '...', 32) AS snippet"
+            # metadata scope: restrict FTS5 to title/author columns to avoid body false-positives
+            if fts_scope == "metadata":
+                snippet_col = "NULL AS snippet"
+            else:
+                snippet_col = "snippet(books_fts, 2, '[', ']', '...', 32) AS snippet"
             sql = f"""
                 SELECT {cols}, {snippet_col}
                 FROM books_fts
@@ -610,6 +643,8 @@ def search_books(
             fts_q = fts_build_query(q)
             if not fts_q:
                 continue
+            if fts_scope == "metadata":
+                fts_q = "{title author}: " + fts_q
             params.append(fts_q)
             filters, filter_params = _build_meta_filters(
                 author, title, year, language, genre, table_prefix="b"
@@ -631,14 +666,22 @@ def search_books(
             sql += " ORDER BY b.title LIMIT ? OFFSET 0"
             params += [limit + offset]
 
+        result: list[dict] = []
         with db_connection(catalog_id) as conn:
             rows = conn.execute(sql, params).fetchall()
-
-        result: list[dict] = []
-        for row in rows:
-            d = _row_to_dict(row, include_body=False, catalog=catalog_id)
-            d["snippet"] = row["snippet"]
-            result.append(d)
+            for row in rows:
+                d = _row_to_dict(row, include_body=False, catalog=catalog_id)
+                snippet = row["snippet"]
+                if q and snippet is None:
+                    # Contentless FTS5: snippet() returns NULL; extract manually
+                    body_row = conn.execute(
+                        "SELECT body FROM books WHERE id = ?", (d["id"],)
+                    ).fetchone()
+                    if body_row and body_row[0]:
+                        body_text = _decompress(body_row[0]) or ""
+                        snippet = _make_body_snippet(body_text, q)
+                d["snippet"] = snippet
+                result.append(d)
         result_sets.append(result)
 
     if not result_sets:

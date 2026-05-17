@@ -157,6 +157,8 @@
   .graph-table .gc-state-1 { color: var(--green); }
   .graph-table .gc-state-2 { color: var(--amber); }
   .graph-table .gc-state-3 { color: var(--red); }
+  .graph-table .gc-term-link { color: inherit; text-decoration: none; }
+  .graph-table .gc-term-link:hover { text-decoration: underline; }
 
   /* JSON highlight */
   pre.json { font-size: 12px; line-height: 1.6; }
@@ -238,7 +240,8 @@
             <a class="kcui-tag kcui-tag--info" href="/ui/rag/insert">insert</a>
           {% elif svc.slug == "graph" %}
             <a class="kcui-tag kcui-tag--accent" href="/graph/ui/vocab">vocab</a>
-            <a class="kcui-tag kcui-tag--warning" href="/graph/ui/connections">connections</a>
+            <a class="kcui-tag kcui-tag--warning" href="/graph/ui/connections">conns.</a>
+            <a class="kcui-tag kcui-tag--info" href="/graph/ui/graph">graph</a>
           {% endif %}
         </div>
       </div>
@@ -424,35 +427,44 @@ function renderCards(data) {
       html += '<th>Start</th><th>Connection</th><th>End</th><th style="text-align:right">Score</th>';
       html += '</tr></thead><tbody>';
       for (const r of items) {
+        const startLink = r.start ? `<a href="/graph/ui/graph" class="gc-term-link" data-term="${escHtml(r.start)}">${escHtml(r.start)}</a>` : '';
+        const endLink   = r.end   ? `<a href="/graph/ui/graph" class="gc-term-link" data-term="${escHtml(r.end)}">${escHtml(r.end)}</a>`   : '';
         html += `<tr>
-          <td>${escHtml(r.start || '')}</td>
+          <td>${startLink}</td>
           <td class="gc-conn">${escHtml(r.connection || '')}</td>
-          <td>${escHtml(r.end || '')}</td>
+          <td>${endLink}</td>
           <td class="gc-score">${r.score ?? ''}</td>
         </tr>`;
       }
       html += '</tbody></table>';
     } else {
+      const sq = data.query || '';
       for (const r of items) {
-        html += renderCard(r);
+        html += renderCard(r, sq);
       }
     }
   }
   container.innerHTML = html || '<div class="rc-no-results">No results.</div>';
 }
 
-function renderCard(r) {
-  const title   = escHtml(r.title || '(untitled)');
-  const snippet = escHtml(r.snippet || r.summary || '');
+function renderCard(r, searchQuery) {
+  const title   = escHtml(decodeHtml(r.title || '(untitled)'));
+  const snippet = escHtml(decodeHtml(r.snippet || r.summary || ''));
   let meta = '';
   if (r.type === 'feed_entry') {
-    const src = r.source ? escHtml(r.source) : '';
+    const src = r.source ? escHtml(decodeHtml(r.source)) : '';
     const ts  = r.published_at ? ` | ${escHtml(r.published_at.slice(0,10))}` : '';
     meta = `${src}${ts}`;
   } else if (r.type === 'reference_article') {
     meta = r.word_count ? `${r.word_count.toLocaleString()} words` : '';
   } else if (r.type === 'library_book') {
-    meta = r.author ? escHtml(r.author) : '';
+    const authorPart = r.author ? escHtml(r.author) : '';
+    let findLink = '';
+    if (searchQuery && r.title) {
+      const href = `/ui/library/search?q=${encodeURIComponent(searchQuery)}&title=${encodeURIComponent(r.title)}`;
+      findLink = ` | <a href="${href}" style="color:var(--dim);">find in book ↗</a>`;
+    }
+    meta = authorPart + findLink;
   } else if (r.type === 'rag_chunk') {
     const src  = r.source ? escHtml(r.source) : '';
     const tags = r.tags   ? ` | ${escHtml(r.tags)}` : '';
@@ -475,6 +487,26 @@ function escHtml(s) {
     .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
     .replace(/"/g,'&quot;');
 }
+
+function decodeHtml(s) {
+  const ta = document.createElement('textarea');
+  ta.innerHTML = String(s);
+  return ta.value;
+}
+
+function goToGraph(term) {
+  sessionStorage.setItem('kg-last-term', term);
+  sessionStorage.removeItem('kg-last-view');
+  sessionStorage.removeItem('kg-history');
+  window.location.href = '/graph/ui/graph';
+}
+
+document.addEventListener('click', function(e) {
+  const link = e.target.closest('.gc-term-link');
+  if (!link) return;
+  e.preventDefault();
+  goToGraph(link.dataset.term);
+});
 
 async function runSearch() {
   const query = document.getElementById('sq-query').value.trim();
@@ -510,6 +542,7 @@ async function runSearch() {
 
     // cards view
     renderCards(data);
+    saveSearchState(data);
 
     document.getElementById('sq-results-panel').style.display = '';
     showTab('cards');
@@ -520,6 +553,55 @@ async function runSearch() {
     document.getElementById('sq-spinner').style.display = 'none';
   }
 }
+
+function saveSearchState(data) {
+  const state = {
+    query:   document.getElementById('sq-query').value,
+    domains: [...document.querySelectorAll('.sq-domain')].map(e => ({ value: e.value, checked: e.checked })),
+    since:   document.getElementById('sq-since').value,
+    until:   document.getElementById('sq-until').value,
+    limit:   document.getElementById('sq-limit').value,
+    data:    data,
+  };
+  sessionStorage.setItem('home-search-state', JSON.stringify(state));
+}
+
+function restoreSearchState() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const urlQ = urlParams.get('q');
+  if (urlQ) {
+    document.getElementById('sq-query').value = urlQ;
+    history.replaceState(null, '', window.location.pathname);
+    runSearch();
+    return;
+  }
+  const raw = sessionStorage.getItem('home-search-state');
+  if (!raw) return;
+  try {
+    const state = JSON.parse(raw);
+    document.getElementById('sq-query').value = state.query || '';
+    if (state.domains) {
+      state.domains.forEach(({ value, checked }) => {
+        const el = document.querySelector(`.sq-domain[value="${value}"]`);
+        if (el) el.checked = checked;
+      });
+    }
+    if (state.since) document.getElementById('sq-since').value = state.since;
+    if (state.until) document.getElementById('sq-until').value = state.until;
+    if (state.limit) document.getElementById('sq-limit').value = state.limit;
+    if (state.data) {
+      const total = Array.isArray(state.data.results) ? state.data.results.length : 0;
+      document.getElementById('sq-results-meta').textContent =
+        `"${state.data.query}" | ${total} result${total !== 1 ? 's' : ''} across [${(state.data.domains_searched||[]).join(', ')}]`;
+      document.getElementById('sq-json-pre').innerHTML = highlightJson(state.data);
+      renderCards(state.data);
+      document.getElementById('sq-results-panel').style.display = '';
+      showTab('cards');
+    }
+  } catch (_) {}
+}
+
+document.addEventListener('DOMContentLoaded', restoreSearchState);
 
 const _SVC_STATS = {
   feeds:     [['domains','total_domains'],['feeds','total_feeds'],['entries','total_entries']],

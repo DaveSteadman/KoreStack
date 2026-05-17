@@ -33,7 +33,14 @@
     padding: 0.4rem 0.75rem; border-bottom: 1px solid var(--border);
     background: var(--panel);
   }
-  .vocab-pager button { padding: 0.2rem 0.6rem; min-width: 2rem; }
+  .vocab-pager .kg-nav-btn {
+    width: 1.75rem; height: 1.75rem;
+    padding: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    font-size: 0.75rem;
+    line-height: 1;
+  }
   .vocab-pager .v-page-info { flex: 1; text-align: center; }
   .vocab-pager select { padding: 0.2rem 0.3rem; font-size: var(--kcui-text-body-sm); }
   .vocab-grid {
@@ -141,17 +148,17 @@
       <button onclick="saveAddTerm()">Save</button>
     </div>
     <div class="vocab-pager">
-      <button id="v-prev" onclick="changePage(-1)" disabled>‹</button>
+      <button id="v-prev" class="kg-nav-btn" onclick="changePage(-1)" disabled title="Previous">&#x25C2;</button>
       <span class="v-page-info meta" id="v-page-info"></span>
-      <button id="v-next" onclick="changePage(1)" disabled>›</button>
+      <button id="v-next" class="kg-nav-btn" onclick="changePage(1)" disabled title="Next">&#x25B8;</button>
     </div>
     <div class="vocab-grid" id="v-grid">
       <div class="meta" style="padding:1rem;text-align:center;grid-column:1/-1">Loading…</div>
     </div>
     <div class="vocab-pager">
-      <button id="v-prev2" onclick="changePage(-1)" disabled>‹</button>
+      <button id="v-prev2" class="kg-nav-btn" onclick="changePage(-1)" disabled title="Previous">&#x25C2;</button>
       <span class="v-page-info meta" id="v-page-info2"></span>
-      <button id="v-next2" onclick="changePage(1)" disabled>›</button>
+      <button id="v-next2" class="kg-nav-btn" onclick="changePage(1)" disabled title="Next">&#x25B8;</button>
     </div>
   </div>
 
@@ -270,7 +277,10 @@ function renderPanel(d) {
   document.getElementById('v-panel').innerHTML = `
     <div class="v-panel-header">
       <span class="v-panel-term" id="v-panel-term">${escHtml(d.term)}</span>
-      <span class="meta">concept ${d.concept_id}</span>
+      <span style="display:flex;align-items:baseline;gap:0.6rem;">
+        <span class="meta">concept ${d.concept_id}</span>
+        <button onclick="goToGraph(${escHtml(JSON.stringify(d.term))})" style="font-size:var(--kcui-text-label);padding:0.1rem 0.5rem;">to Graph ↗</button>
+      </span>
     </div>
 
     <div>
@@ -307,6 +317,13 @@ function renderPanel(d) {
       </button>
     </div>
   `;
+}
+
+// ── Graph nav ──────────────────────────────────────────────────────────
+function goToGraph(term) {
+  sessionStorage.setItem('kg-last-term', term);
+  sessionStorage.removeItem('kg-last-view');  // new term — let graph reset to centre
+  window.location.href = window._kgPfx + '/ui/graph';
 }
 
 // ── Rename ─────────────────────────────────────────────────────────────

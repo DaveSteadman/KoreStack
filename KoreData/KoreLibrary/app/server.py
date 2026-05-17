@@ -264,6 +264,7 @@ def route_search(
     offset: int = 0,
     catalog: Optional[str] = None,
     catalogs: Optional[str] = None,
+    scope: Optional[str] = None,  # "metadata": restrict FTS to title+author only
 ):
     if not any([q, author, title, year, language, genre]):
         raise HTTPException(
@@ -283,6 +284,7 @@ def route_search(
             offset=offset,
             catalog=catalog,
             catalogs=parsed_catalogs,
+            fts_scope=scope if scope in ("all", "metadata") else "all",
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

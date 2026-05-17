@@ -87,7 +87,10 @@
   function scrollToId(id) {
     const target = document.getElementById(id);
     if (!target) return;
-    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const bar = document.querySelector('.kcui-topbar') || document.querySelector('header');
+    const offset = bar ? bar.getBoundingClientRect().height + 12 : 12;
+    const y = target.getBoundingClientRect().top + window.scrollY - offset;
+    window.scrollTo({ top: y, behavior: 'smooth' });
   }
 
   // Handle page-load fragment - defer until after browser layout
