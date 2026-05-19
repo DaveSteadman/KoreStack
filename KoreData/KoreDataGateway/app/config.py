@@ -47,11 +47,11 @@ _SVC_URL_KEYS = {
 
 def load() -> dict:
     result = load_config(_SECTION, _DEFAULTS)
-    # Sub-service URLs are derived from gateway port + offsets (same logic as load_config).
     gateway_port = result["port"]
+    # For each sub-service, prefer an explicit port from config; fall back to gateway offset.
     for svc, url_key in _SVC_URL_KEYS.items():
-        offset = _DATA_SUBSERVICE_OFFSETS[svc]
-        result[url_key] = f"http://127.0.0.1:{gateway_port + offset}"
+        svc_cfg = load_config(svc, {"port": gateway_port + _DATA_SUBSERVICE_OFFSETS[svc]})
+        result[url_key] = f"http://127.0.0.1:{svc_cfg['port']}"
     return result
 
 

@@ -41,7 +41,7 @@ def _print_banner() -> None:
         "",
         row("WebUI:", f"http://localhost:{cfg['port']}/"),
         row("Agent API:", f"http://localhost:{cfg['port']}/api/"),
-        row("KoreChat:", cfg.get("korechat_url", "http://localhost:8700")),
+        row("KoreChat:", cfg["korechat_url"]),
         row("Poll interval:", f"{cfg['poll_interval']}s"),
         row("Data dir:", cfg["data_dir"]),
         row("Log level:", cfg["log_level"].upper()),

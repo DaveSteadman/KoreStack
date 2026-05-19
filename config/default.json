@@ -1,13 +1,15 @@
 {
+  "comment": "Factory defaults - every parameter is defined here. Override machine-specific values in local.json (see local.example.json for a template). local.json is not committed to source control.",
+  
   "paths": {
-    "datacontrol": "datacontrol",
-    "datauser": "datauser",
-    "korechat": "datacontrol/korechat",
-    "korecomms": "datacontrol/korecomms",
-    "koredata": "datacontrol/koredata",
-    "koreagent": "datacontrol/koreagent",
-    "koredocs": "datacontrol/koredocs",
-    "docs_data": "datauser/KoreFiles"
+    "datacontrolroot": "C:\\absolutepath\\datacontrol",
+    "datauserroot":    "C:\\absolutepath\\datauser",
+    "korechat":        "korechat",
+    "korecomms":       "korecomms",
+    "koredata":        "koredata",
+    "koreagent":       "koreagent",
+    "koredocs":        "koredocs",
+    "docs_data":       "KoreFiles"
   },
   "network": {
     "host": "127.0.0.1"
@@ -15,15 +17,15 @@
   "services": {
     "agent":        { "port": 8605 },
     "conversation": { "port": 8630 },
-    "data":         { "port": 8620, "_subports": "+1=korefeed, +2=korelibrary, +3=korerag, +4=korereference, +6=koregraph" },
+    "data":         { "port": 8620 },
+    "korefeed":     { "port": 8621 },
+    "korelibrary":  { "port": 8622 },
+    "korerag":      { "port": 8623 },
+    "korereference":{ "port": 8624 },
     "koregraph":    { "port": 8626 },
     "comms":        { "port": 8625 },
     "docs":         { "port": 8615 },
     "code":         { "port": 8610 }
-  },
-  "connections": {
-    "korechat": "http://127.0.0.1:8630",
-    "korecomms": "http://127.0.0.1:8625"
   },
   "mcp": {
     "connections": [

@@ -4,7 +4,7 @@ Reads every chunk from a KoreLibrary book, asks the LLM to extract
 entity-relationship triples, and submits them to KoreGraph.
 
 Supported backends:
-  --backend lmstudio    http://MONTBLANC:1234/v1/chat/completions  (OpenAI-compat, default)
+  --backend lmstudio    http://localhost:1234/v1/chat/completions  (OpenAI-compat, default)
   --backend ollama      http://127.0.0.1:11434/api/chat
 
 Usage:
@@ -19,11 +19,44 @@ import json
 import argparse
 import httpx
 import time
+from pathlib import Path
 
-LIBRARY   = "http://127.0.0.1:8622"
-GRAPH     = "http://127.0.0.1:8626"
-OLLAMA    = "http://127.0.0.1:11434"
-LMSTUDIO  = "http://MONTBLANC:1234"
+
+def _load_suite_config() -> dict:
+    """Merge config/default.json + config/local.json, return combined dict."""
+    _root = Path(__file__).resolve().parent
+    _result: dict = {}
+    for _name in ("default.json", "local.json"):
+        try:
+            _raw = json.loads((_root / "config" / _name).read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        for _k, _v in _raw.items():
+            if isinstance(_v, dict) and isinstance(_result.get(_k), dict):
+                _result[_k] = {**_result[_k], **_v}
+            else:
+                _result[_k] = _v
+    return _result
+
+
+def _load_llm_config() -> dict:
+    try:
+        _path = Path(__file__).resolve().parent / "config" / "llm_config.json"
+        return json.loads(_path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+_suite_cfg  = _load_suite_config()
+_llm_cfg    = _load_llm_config()
+_svc_host   = _suite_cfg.get("network", {}).get("host", "127.0.0.1")
+_data_port  = _suite_cfg.get("services", {}).get("data", {}).get("port", 8620)
+_graph_port = _suite_cfg.get("services", {}).get("koregraph", {}).get("port", 8626)
+
+LIBRARY  = f"http://{_svc_host}:{_data_port + 2}"
+GRAPH    = f"http://{_svc_host}:{_graph_port}"
+OLLAMA   = str(_llm_cfg.get("llmhost", f"http://{_svc_host}:11434")).rstrip("/")
+LMSTUDIO = "http://localhost:1234"
 
 SYSTEM_PROMPT = (
     "You extract entity-relationship triples from history-of-science texts. "

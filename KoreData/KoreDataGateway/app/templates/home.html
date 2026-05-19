@@ -214,12 +214,12 @@
             <div class="svc-stat"><span class="svc-stat-key">redirects</span><span class="svc-stat-val">{{ svc.stats.get("total_redirects", "-") }}</span></div>
             <div class="svc-stat"><span class="svc-stat-key">links</span><span class="svc-stat-val">{{ svc.stats.get("total_links", "-") }}</span></div>
           {% elif svc.slug == "rag" %}
+            <div class="svc-stat"><span class="svc-stat-key">databases</span><span class="svc-stat-val">{{ svc.stats.get("databases", "-") }}</span></div>
             <div class="svc-stat"><span class="svc-stat-key">chunks</span><span class="svc-stat-val">{{ svc.stats.get("total_chunks", "-") }}</span></div>
             <div class="svc-stat"><span class="svc-stat-key">db size</span><span class="svc-stat-val">{{ "%.1f KB" | format(svc.stats.get("db_size_bytes", 0) / 1024) if svc.stats.get("db_size_bytes") else "-" }}</span></div>
           {% elif svc.slug == "graph" %}
-            <div class="svc-stat"><span class="svc-stat-key">entities</span><span class="svc-stat-val">{{ svc.stats.get("entities", "-") }}</span></div>
-            <div class="svc-stat"><span class="svc-stat-key">relations</span><span class="svc-stat-val">{{ svc.stats.get("relations", "-") }}</span></div>
-            <div class="svc-stat"><span class="svc-stat-key">proposed</span><span class="svc-stat-val">{{ svc.stats.get("relations_proposed", "-") }}</span></div>
+            <div class="svc-stat"><span class="svc-stat-key">vocab</span><span class="svc-stat-val">{{ svc.stats.get("vocab_terms", "-") }}</span></div>
+            <div class="svc-stat"><span class="svc-stat-key">connections</span><span class="svc-stat-val">{{ svc.stats.get("relations", "-") }}</span></div>
           {% endif %}
         </div>
         <div class="svc-actions">

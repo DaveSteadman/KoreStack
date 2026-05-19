@@ -155,18 +155,25 @@ def resolve_root_path(value: object, default: str) -> Path:
 
 def get_stack_paths(config: dict) -> dict[str, Path]:
     paths = config.get("paths") if isinstance(config.get("paths"), dict) else {}
-    datacontrol = resolve_root_path(paths.get("datacontrol"), "datacontrol")
-    datauser = resolve_root_path(paths.get("datauser"), "datauser")
+    datacontrol = resolve_root_path(paths.get("datacontrolroot"), "datacontrol")
+    datauser    = resolve_root_path(paths.get("datauserroot"),    "datauser")
+
+    def _dc(key: str, default: str) -> Path:
+        return (datacontrol / str(paths.get(key) or default)).resolve()
+
+    def _du(key: str, default: str) -> Path:
+        return (datauser / str(paths.get(key) or default)).resolve()
+
     return {
-        "path config": SUITE_CONFIG_LOCAL if SUITE_CONFIG_LOCAL.exists() else SUITE_CONFIG_DEFAULT,
-        "datacontrol": datacontrol,
-        "datauser": datauser,
-        "conversation_data": resolve_root_path(paths.get("korechat"), "datacontrol/korechat"),
-        "comms_data": resolve_root_path(paths.get("korecomms"), "datacontrol/korecomms"),
-        "koredata_data": resolve_root_path(paths.get("koredata"), "datacontrol/koredata"),
-        "koreagent_data": resolve_root_path(paths.get("koreagent"), "datacontrol/koreagent"),
-        "koredocs": resolve_root_path(paths.get("koredocs"), "datacontrol/koredocs"),
-        "docs_data": resolve_root_path(paths.get("docs_data"), "datauser/KoreFiles"),
+        "path config":    SUITE_CONFIG_LOCAL if SUITE_CONFIG_LOCAL.exists() else SUITE_CONFIG_DEFAULT,
+        "datacontrol":    datacontrol,
+        "datauser":       datauser,
+        "conversation_data": _dc("korechat",  "korechat"),
+        "comms_data":        _dc("korecomms", "korecomms"),
+        "koredata_data":     _dc("koredata",  "koredata"),
+        "koreagent_data":    _dc("koreagent", "koreagent"),
+        "koredocs":          _dc("koredocs",  "koredocs"),
+        "docs_data":         _du("docs_data", "KoreFiles"),
     }
 
 
@@ -191,6 +198,8 @@ def build_child_env(config: dict) -> dict[str, str]:
         env["KORECHAT_HOST"] = str(network["host"])
         env["KORECOMMS_HOST"] = str(network["host"])
 
+    _network_host = str(network.get("host") or "127.0.0.1")
+
     if conversation.get("port") is not None:
         env["KORECHAT_PORT"] = str(conversation["port"])
     if comms.get("port") is not None:
@@ -198,6 +207,9 @@ def build_child_env(config: dict) -> dict[str, str]:
 
     if connections.get("korechat"):
         env["KORECOMMS_KORECHAT_URL"] = str(connections["korechat"])
+    else:
+        _korechat_port = int(conversation.get("port", 8630))
+        env["KORECOMMS_KORECHAT_URL"] = f"http://{_network_host}:{_korechat_port}"
 
     env["KORECHAT_DATA_DIR"] = str(stack_paths["conversation_data"])
     env["KORECOMMS_DATA_DIR"] = str(stack_paths["comms_data"])
@@ -205,8 +217,6 @@ def build_child_env(config: dict) -> dict[str, str]:
     env["KOREAGENT_DATA_DIR"] = str(stack_paths["koreagent_data"])
     env["KOREDOCS_CONTROL_DIR"] = str(stack_paths["koredocs"])
     env["KOREDOCS_DATA_DIR"] = str(stack_paths["docs_data"])
-
-    _network_host = str(network.get("host") or "127.0.0.1")
     _korestack_cfg = services.get("korestack") if isinstance(services.get("korestack"), dict) else {}
     _korestack_port = int(_korestack_cfg.get("port", 8600) if _korestack_cfg else 8600)
     _suite_urls: dict[str, str] = {"korestack": f"http://{_network_host}:{_korestack_port}/"}
@@ -581,7 +591,7 @@ class StackManager:
                     "running": running_count,
                     "reachable": reachable_count,
                 },
-                "paths": {key: str(value) for key, value in self._stack_paths.items()},
+                "paths": {k: str(self._stack_paths[k]) for k in ("path config", "datacontrol", "datauser")},
             },
             "services": entries,
         }
@@ -602,6 +612,62 @@ def _get_stack_service_config(config: dict) -> dict:
     return services_cfg.get("suite") if isinstance(services_cfg.get("suite"), dict) else {}
 
 
+def _bootstrap_data_dirs(stack_paths: dict[str, Path]) -> None:
+    """Create every directory the suite needs before any child process starts.
+
+    Uses parents=True and exist_ok=True throughout so this is always safe to
+    call — it is a no-op when the directories already exist, and on a fresh
+    install it builds the full tree in one shot.
+    """
+    dc = stack_paths["datacontrol"]
+    du = stack_paths["datauser"]
+    kd = stack_paths["koredata_data"]
+
+    fresh = not dc.exists()
+
+    dirs = [
+        dc,
+        du,
+        # KoreChat
+        stack_paths["conversation_data"],
+        # KoreComms
+        stack_paths["comms_data"],
+        # KoreAgent
+        stack_paths["koreagent_data"],
+        # KoreData gateway + sub-services
+        kd,
+        kd / "Feeds",
+        kd / "Library",
+        kd / "Reference",
+        kd / "RAG",
+        kd / "Graph",
+        # KoreDocs
+        stack_paths["koredocs"],
+        # KoreGraph import tool (not a service, but keep alongside runtime dirs)
+        dc / "KoreGraph",
+        # Shared datacontrol tree
+        dc / "logs",
+        dc / "schedules",
+        dc / "test_prompts",
+        dc / "test_results",
+        dc / "chatsessions",
+        dc / "chatsessions" / "named",
+        # User data
+        stack_paths["docs_data"],
+    ]
+
+    for d in dirs:
+        d.mkdir(parents=True, exist_ok=True)
+
+    if fresh:
+        print(
+            f"Fresh install: created data directories under\n"
+            f"  datacontrol: {dc}\n"
+            f"  datauser:    {du}",
+            flush=True,
+        )
+
+
 def main() -> int:
     args = parse_args()
     suite_config = load_suite_config()
@@ -610,18 +676,7 @@ def main() -> int:
     child_env = build_child_env(suite_config)
     stack_paths = get_stack_paths(suite_config)
 
-    stack_paths["datacontrol"].mkdir(parents=True, exist_ok=True)
-    stack_paths["datauser"].mkdir(parents=True, exist_ok=True)
-    stack_paths["conversation_data"].mkdir(parents=True, exist_ok=True)
-    stack_paths["comms_data"].mkdir(parents=True, exist_ok=True)
-    (stack_paths["datacontrol"] / "logs").mkdir(parents=True, exist_ok=True)
-    (stack_paths["datacontrol"] / "schedules").mkdir(parents=True, exist_ok=True)
-    (stack_paths["datacontrol"] / "test_prompts").mkdir(parents=True, exist_ok=True)
-    (stack_paths["datacontrol"] / "test_results").mkdir(parents=True, exist_ok=True)
-    (stack_paths["datacontrol"] / "chatsessions").mkdir(parents=True, exist_ok=True)
-    (stack_paths["datacontrol"] / "chatsessions" / "named").mkdir(parents=True, exist_ok=True)
-    stack_paths["docs_data"].mkdir(parents=True, exist_ok=True)
-    stack_paths["koredocs"].mkdir(parents=True, exist_ok=True)
+    _bootstrap_data_dirs(stack_paths)
 
     log_dir = STACK_ROOT / "logs"
     setup_logging(log_dir)

@@ -1,7 +1,30 @@
 import re, httpx
+import json
+from pathlib import Path
 
-LIBRARY = 'http://127.0.0.1:8622'
-GRAPH   = 'http://127.0.0.1:8626'
+
+def _load_suite_config() -> dict:
+    _root = Path(__file__).resolve().parent
+    _result: dict = {}
+    for _name in ("default.json", "local.json"):
+        try:
+            _raw = json.loads((_root / "config" / _name).read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        for _k, _v in _raw.items():
+            if isinstance(_v, dict) and isinstance(_result.get(_k), dict):
+                _result[_k] = {**_result[_k], **_v}
+            else:
+                _result[_k] = _v
+    return _result
+
+
+_suite_cfg = _load_suite_config()
+_svc_host  = _suite_cfg.get("network", {}).get("host", "127.0.0.1")
+_data_port = _suite_cfg.get("services", {}).get("data", {}).get("port", 8620)
+
+LIBRARY = f"http://{_svc_host}:{_data_port + 2}"
+GRAPH   = f"http://{_svc_host}:{_suite_cfg.get('services', {}).get('koregraph', {}).get('port', 8626)}"
 BOOK_ID = 'sciencehistory:2'
 CHUNK   = 16000
 

@@ -221,10 +221,20 @@ class ChunkUpdate(BaseModel):
 
 @app.get("/status", summary="Service health and stats")
 def route_status(db: Optional[str] = Query(None)):
-    # No db specified — return a simple alive response so the gateway health
-    # probe succeeds regardless of which databases are registered.
+    # No db specified — return aggregate stats across all registered databases.
     if db is None:
-        return {"ok": True, "databases": len(list_database_ids())}
+        db_ids = list_database_ids()
+        total_chunks = 0
+        total_bytes  = 0
+        for db_id in db_ids:
+            try:
+                s = get_status(db=db_id)
+                total_chunks += s.get("total_chunks", 0)
+                total_bytes  += s.get("db_size_bytes", 0)
+            except Exception:
+                pass
+        return {"ok": True, "databases": len(db_ids),
+                "total_chunks": total_chunks, "db_size_bytes": total_bytes}
     try:
         return get_status(db=db)
     except KeyError:

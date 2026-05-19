@@ -1,0 +1,7 @@
+/*
+ * tabs.css — compatibility wrapper for the tabbed application bar variant.
+ *
+ * Canonical ownership now lives in appbar.css.
+ */
+
+@import url('./appbar.css');

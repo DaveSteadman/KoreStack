@@ -170,7 +170,7 @@ def init_db() -> None:
                 END
                 """
             )
-        else:
+        elif cols:
             # Correct legacy values where auto-generated webchat names were marked protected.
             c.execute(
                 """

@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KoreIcons — UIElements3</title>
+  <link rel="stylesheet" href="/ui-elements-3/assets/css/tokens.css">
+  <link rel="stylesheet" href="/ui-elements-3/assets/css/kore-icons.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #000;
+      color: var(--kg-white);
+      font-family: monospace;
+      padding: 2.5rem 3rem;
+      font-size: 11px;
+      line-height: 1.6;
+    }
+
+    h1 {
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--kg-white);
+      margin-bottom: 0.25rem;
+    }
+
+    .page-sub {
+      font-size: 10px;
+      color: #444;
+      letter-spacing: 0.08em;
+      margin-bottom: 3rem;
+    }
+
+    .section { margin-bottom: 2.5rem; }
+
+    .section-title {
+      font-size: 9px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: #555;
+      margin-bottom: 0.75rem;
+    }
+
+    .caption {
+      font-size: 9px;
+      color: #444;
+      margin-top: 0.5rem;
+      letter-spacing: 0.06em;
+    }
+
+    /* Dazzle-line icons rendered as masks so they inherit currentColor. */
+    .kg-dazzle-icon {
+      display: block;
+      width: 70%;
+      height: 70%;
+      background-color: currentColor;
+      -webkit-mask-image: var(--icon-url);
+      -webkit-mask-repeat: no-repeat;
+      -webkit-mask-position: center;
+      -webkit-mask-size: contain;
+      mask-image: var(--icon-url);
+      mask-repeat: no-repeat;
+      mask-position: center;
+      mask-size: contain;
+      pointer-events: none;
+    }
+
+    .kg-dazzle-icon--up { transform: rotate(-90deg); }
+    .kg-dazzle-icon--down { transform: rotate(90deg); }
+    .kg-dazzle-icon--left { transform: rotate(180deg); }
+    .kg-dazzle-icon--right { transform: rotate(0deg); }
+  </style>
+</head>
+<body>
+
+  <h1>KoreIcons — 11×11 Grid System</h1>
+  <p class="page-sub">Fill-based SVG. No strokes. viewBox 0 0 11 11. Scale via --kg-u.</p>
+
+
+  <!-- ── Icon set ─────────────────────────────────────────────────── -->
+  <div class="section">
+    <div class="section-title">Icon set — U=4px (tile=44px)</div>
+    <div class="kg-row">
+
+      <!-- Plus / Add -->
+      <div class="kg-tile" style="color: var(--kg-white);">
+        <svg class="kg-icon" viewBox="0 0 11 11" overflow="hidden">
+          <rect x="4" y="0" width="3" height="11" fill="currentColor"/>
+          <rect x="0" y="4" width="11" height="3" fill="currentColor"/>
+        </svg>
+      </div>
+
+      <!-- Cross / Close -->
+      <div class="kg-tile" style="color: var(--kg-white);">
+        <svg class="kg-icon" viewBox="0 0 11 11" overflow="hidden">
+          <g fill="currentColor" transform="rotate(45 5.5 5.5)">
+            <rect x="4" y="-2" width="3" height="15"/>
+            <rect x="-2" y="4" width="15" height="3"/>
+          </g>
+        </svg>
+      </div>
+
+      <!-- Chevron right -->
+      <div class="kg-tile" style="color: var(--kg-white);">
+        <svg class="kg-icon" viewBox="0 0 11 11" overflow="hidden">
+          <polygon points="1,0 10,5.5 1,11 1,8 7,5.5 1,3" fill="currentColor"/>
+        </svg>
+      </div>
+
+      <!-- Chevron left -->
+      <div class="kg-tile" style="color: var(--kg-white);">
+        <svg class="kg-icon" viewBox="0 0 11 11" overflow="hidden">
+          <polygon points="10,0 1,5.5 10,11 10,8 4,5.5 10,3" fill="currentColor"/>
+        </svg>
+      </div>
+
+      <!-- Chevron up -->
+      <div class="kg-tile" style="color: var(--kg-white);">
+        <svg class="kg-icon" viewBox="0 0 11 11" overflow="hidden">
+          <polygon points="0,10 5.5,1 11,10 8,10 5.5,4 3,10" fill="currentColor"/>
+        </svg>
+      </div>
+
+      <!-- Chevron down -->
+      <div class="kg-tile" style="color: var(--kg-white);">
+        <svg class="kg-icon" viewBox="0 0 11 11" overflow="hidden">
+          <polygon points="0,1 5.5,10 11,1 8,1 5.5,7 3,1" fill="currentColor"/>
+        </svg>
+      </div>
+
+      <!-- Ring -->
+      <div class="kg-tile" style="color: var(--kg-white);">
+        <svg class="kg-icon" viewBox="0 0 11 11" overflow="hidden">
+          <path fill-rule="evenodd" fill="currentColor"
+            d="M0.5,5.5 a5,5 0 0 0 10,0 a5,5 0 0 0 -10,0 Z
+               M2.5,5.5 a3,3 0 0 1  6,0 a3,3 0 0 1  -6,0 Z"/>
+        </svg>
+      </div>
+
+      <!-- Target (double ring) -->
+      <div class="kg-tile" style="color: var(--kg-white);">
+        <svg class="kg-icon" viewBox="0 0 11 11" overflow="hidden">
+          <path fill-rule="evenodd" fill="currentColor"
+            d="M0,5.5   a5.5,5.5 0 0 0 11,0   a5.5,5.5 0 0 0 -11,0   Z
+               M1.5,5.5  a4,4     0 0 1  8,0   a4,4     0 0 1  -8,0   Z
+               M2.5,5.5  a3,3     0 0 0  6,0   a3,3     0 0 0  -6,0   Z
+               M4,5.5    a1.5,1.5 0 0 1  3,0   a1.5,1.5 0 0 1  -3,0   Z"/>
+        </svg>
+      </div>
+
+      <!-- Download -->
+      <div class="kg-tile" style="color: var(--kg-white);">
+        <svg class="kg-icon" viewBox="0 0 11 11" overflow="hidden">
+          <polygon points="4,0 7,0 7,5 11,5 5.5,8.5 0,5 4,5" fill="currentColor"/>
+          <rect x="0" y="9.5" width="11" height="1.5" fill="currentColor"/>
+        </svg>
+      </div>
+
+      <!-- Search -->
+      <div class="kg-tile" style="color: var(--kg-white);">
+        <svg class="kg-icon" viewBox="0 0 11 11" overflow="hidden">
+          <path fill-rule="evenodd" fill="currentColor"
+            d="M0.5,4.5 a4,4 0 0 0 8,0   a4,4 0 0 0 -8,0 Z
+               M2,4.5   a2.5,2.5 0 0 1 5,0 a2.5,2.5 0 0 1 -5,0 Z"/>
+          <polygon points="6.8,8.2 8.2,6.8 10.7,9.3 9.3,10.7" fill="currentColor"/>
+        </svg>
+      </div>
+
+    </div>
+    <p class="caption">plus · cross · chevron ×4 · ring · target · download · search</p>
+  </div>
+
+
+  <!-- ── Color palette ─────────────────────────────────────────────── -->
+  <div class="section">
+    <div class="section-title">Color palette — same icon, any color</div>
+    <div class="kg-row">
+      <div class="kg-tile" style="color: var(--kg-white);">
+        <svg class="kg-icon" viewBox="0 0 11 11" overflow="hidden">
+          <path fill-rule="evenodd" fill="currentColor"
+            d="M0,5.5 a5.5,5.5 0 0 0 11,0 a5.5,5.5 0 0 0 -11,0 Z
+               M1.5,5.5 a4,4 0 0 1 8,0 a4,4 0 0 1 -8,0 Z
+               M2.5,5.5 a3,3 0 0 0 6,0 a3,3 0 0 0 -6,0 Z
+               M4,5.5 a1.5,1.5 0 0 1 3,0 a1.5,1.5 0 0 1 -3,0 Z"/>
+        </svg>
+      </div>
+      <div class="kg-tile" style="color: var(--kg-red);">
+        <svg class="kg-icon" viewBox="0 0 11 11" overflow="hidden">
+          <path fill-rule="evenodd" fill="currentColor"
+            d="M0,5.5 a5.5,5.5 0 0 0 11,0 a5.5,5.5 0 0 0 -11,0 Z
+               M1.5,5.5 a4,4 0 0 1 8,0 a4,4 0 0 1 -8,0 Z
+               M2.5,5.5 a3,3 0 0 0 6,0 a3,3 0 0 0 -6,0 Z
+               M4,5.5 a1.5,1.5 0 0 1 3,0 a1.5,1.5 0 0 1 -3,0 Z"/>
+        </svg>
+      </div>
+      <div class="kg-tile" style="color: var(--kg-cyan);">
+        <svg class="kg-icon" viewBox="0 0 11 11" overflow="hidden">
+          <path fill-rule="evenodd" fill="currentColor"
+            d="M0,5.5 a5.5,5.5 0 0 0 11,0 a5.5,5.5 0 0 0 -11,0 Z
+               M1.5,5.5 a4,4 0 0 1 8,0 a4,4 0 0 1 -8,0 Z
+               M2.5,5.5 a3,3 0 0 0 6,0 a3,3 0 0 0 -6,0 Z
+               M4,5.5 a1.5,1.5 0 0 1 3,0 a1.5,1.5 0 0 1 -3,0 Z"/>
+        </svg>
+      </div>
+      <div class="kg-tile" style="color: var(--kg-yellow);">
+        <svg class="kg-icon" viewBox="0 0 11 11" overflow="hidden">
+          <path fill-rule="evenodd" fill="currentColor"
+            d="M0,5.5 a5.5,5.5 0 0 0 11,0 a5.5,5.5 0 0 0 -11,0 Z
+               M1.5,5.5 a4,4 0 0 1 8,0 a4,4 0 0 1 -8,0 Z
+               M2.5,5.5 a3,3 0 0 0 6,0 a3,3 0 0 0 -6,0 Z
+               M4,5.5 a1.5,1.5 0 0 1 3,0 a1.5,1.5 0 0 1 -3,0 Z"/>
+        </svg>
+      </div>
+      <div class="kg-tile" style="color: var(--kg-orange);">
+        <svg class="kg-icon" viewBox="0 0 11 11" overflow="hidden">
+          <path fill-rule="evenodd" fill="currentColor"
+            d="M0,5.5 a5.5,5.5 0 0 0 11,0 a5.5,5.5 0 0 0 -11,0 Z
+               M1.5,5.5 a4,4 0 0 1 8,0 a4,4 0 0 1 -8,0 Z
+               M2.5,5.5 a3,3 0 0 0 6,0 a3,3 0 0 0 -6,0 Z
+               M4,5.5 a1.5,1.5 0 0 1 3,0 a1.5,1.5 0 0 1 -3,0 Z"/>
+        </svg>
+      </div>
+      <div class="kg-tile" style="color: var(--kg-green);">
+        <svg class="kg-icon" viewBox="0 0 11 11" overflow="hidden">
+          <path fill-rule="evenodd" fill="currentColor"
+            d="M0,5.5 a5.5,5.5 0 0 0 11,0 a5.5,5.5 0 0 0 -11,0 Z
+               M1.5,5.5 a4,4 0 0 1 8,0 a4,4 0 0 1 -8,0 Z
+               M2.5,5.5 a3,3 0 0 0 6,0 a3,3 0 0 0 -6,0 Z
+               M4,5.5 a1.5,1.5 0 0 1 3,0 a1.5,1.5 0 0 1 -3,0 Z"/>
+        </svg>
+      </div>
+      <div class="kg-tile" style="color: var(--kg-blue);">
+        <svg class="kg-icon" viewBox="0 0 11 11" overflow="hidden">
+          <path fill-rule="evenodd" fill="currentColor"
+            d="M0,5.5 a5.5,5.5 0 0 0 11,0 a5.5,5.5 0 0 0 -11,0 Z
+               M1.5,5.5 a4,4 0 0 1 8,0 a4,4 0 0 1 -8,0 Z
+               M2.5,5.5 a3,3 0 0 0 6,0 a3,3 0 0 0 -6,0 Z
+               M4,5.5 a1.5,1.5 0 0 1 3,0 a1.5,1.5 0 0 1 -3,0 Z"/>
+        </svg>
+      </div>
+      <div class="kg-tile" style="color: var(--kg-purple);">
+        <svg class="kg-icon" viewBox="0 0 11 11" overflow="hidden">
+          <path fill-rule="evenodd" fill="currentColor"
+            d="M0,5.5 a5.5,5.5 0 0 0 11,0 a5.5,5.5 0 0 0 -11,0 Z
+               M1.5,5.5 a4,4 0 0 1 8,0 a4,4 0 0 1 -8,0 Z
+               M2.5,5.5 a3,3 0 0 0 6,0 a3,3 0 0 0 -6,0 Z
+               M4,5.5 a1.5,1.5 0 0 1 3,0 a1.5,1.5 0 0 1 -3,0 Z"/>
+        </svg>
+      </div>
+      <div class="kg-tile" style="color: var(--kg-pink);">
+        <svg class="kg-icon" viewBox="0 0 11 11" overflow="hidden">
+          <path fill-rule="evenodd" fill="currentColor"
+            d="M0,5.5 a5.5,5.5 0 0 0 11,0 a5.5,5.5 0 0 0 -11,0 Z
+               M1.5,5.5 a4,4 0 0 1 8,0 a4,4 0 0 1 -8,0 Z
+               M2.5,5.5 a3,3 0 0 0 6,0 a3,3 0 0 0 -6,0 Z
+               M4,5.5 a1.5,1.5 0 0 1 3,0 a1.5,1.5 0 0 1 -3,0 Z"/>
+        </svg>
+      </div>
+    </div>
+    <p class="caption">white · red · cyan · yellow · orange · green · blue · purple · pink</p>
+  </div>
+
+
+  <!-- ── Scale ─────────────────────────────────────────────────────── -->
+  <div class="section">
+    <div class="section-title">Scale — same icon, same SVG, three unit sizes</div>
+    <div class="kg-row" style="align-items: flex-end;">
+
+      <!-- U=2px — 22px tile -->
+      <div style="--kg-u: 2px;">
+        <div class="kg-tile" style="color: var(--kg-cyan);">
+          <svg class="kg-icon" viewBox="0 0 11 11" overflow="hidden">
+            <g fill="currentColor" transform="rotate(45 5.5 5.5)">
+              <rect x="4" y="-2" width="3" height="15"/>
+              <rect x="-2" y="4" width="15" height="3"/>
+            </g>
+          </svg>
+        </div>
+        <p class="caption">U=2px · 22px</p>
+      </div>
+
+      <!-- U=4px — 44px tile -->
+      <div style="--kg-u: 4px;">
+        <div class="kg-tile" style="color: var(--kg-cyan);">
+          <svg class="kg-icon" viewBox="0 0 11 11" overflow="hidden">
+            <g fill="currentColor" transform="rotate(45 5.5 5.5)">
+              <rect x="4" y="-2" width="3" height="15"/>
+              <rect x="-2" y="4" width="15" height="3"/>
+            </g>
+          </svg>
+        </div>
+        <p class="caption">U=4px · 44px</p>
+      </div>
+
+      <!-- U=8px — 88px tile -->
+      <div style="--kg-u: 8px;">
+        <div class="kg-tile" style="color: var(--kg-cyan);">
+          <svg class="kg-icon" viewBox="0 0 11 11" overflow="hidden">
+            <g fill="currentColor" transform="rotate(45 5.5 5.5)">
+              <rect x="4" y="-2" width="3" height="15"/>
+              <rect x="-2" y="4" width="15" height="3"/>
+            </g>
+          </svg>
+        </div>
+        <p class="caption">U=8px · 88px</p>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ── Combined tiles ────────────────────────────────────────────── -->
+  <div class="section">
+    <div class="section-title">Combined tiles — 2×1 (23×11 viewBox)</div>
+    <div class="kg-row">
+
+      <!-- Bar chart — white -->
+      <div class="kg-tile kg-tile--2w" style="color: var(--kg-white);">
+        <svg class="kg-icon" viewBox="0 0 23 11" overflow="hidden">
+          <rect x="2"  y="5"  width="3" height="6"  fill="currentColor"/>
+          <rect x="6"  y="2"  width="3" height="9"  fill="currentColor"/>
+          <rect x="10" y="0"  width="3" height="11" fill="currentColor"/>
+          <rect x="14" y="3"  width="3" height="8"  fill="currentColor"/>
+          <rect x="18" y="6"  width="3" height="5"  fill="currentColor"/>
+        </svg>
+      </div>
+
+      <!-- Bar chart — red -->
+      <div class="kg-tile kg-tile--2w" style="color: var(--kg-red);">
+        <svg class="kg-icon" viewBox="0 0 23 11" overflow="hidden">
+          <rect x="2"  y="5"  width="3" height="6"  fill="currentColor"/>
+          <rect x="6"  y="2"  width="3" height="9"  fill="currentColor"/>
+          <rect x="10" y="0"  width="3" height="11" fill="currentColor"/>
+          <rect x="14" y="3"  width="3" height="8"  fill="currentColor"/>
+          <rect x="18" y="6"  width="3" height="5"  fill="currentColor"/>
+        </svg>
+      </div>
+
+      <!-- Horizontal stripes — cyan -->
+      <div class="kg-tile kg-tile--2w" style="color: var(--kg-cyan);">
+        <svg class="kg-icon" viewBox="0 0 23 11" overflow="hidden">
+          <rect x="0" y="1"   width="23" height="2" fill="currentColor"/>
+          <rect x="0" y="4.5" width="23" height="2" fill="currentColor"/>
+          <rect x="0" y="8"   width="23" height="2" fill="currentColor"/>
+        </svg>
+      </div>
+
+    </div>
+    <p class="caption">viewBox="0 0 23 11" — 2 tiles wide (11+1+11), 1 tile tall</p>
+  </div>
+
+
+  <!-- ── Buttons (UIElements2 dazzle-line) ────────────────────────── -->
+  <div class="section">
+    <div class="section-title">Directional buttons — dazzle-line icon set</div>
+    <div class="kg-row" style="margin-bottom: var(--kg-gap);">
+      <button class="kg-btn" title="up">
+        <span
+          class="kg-dazzle-icon kg-dazzle-icon--up"
+          style="--icon-url: url('/ui-elements-2/assets/icons/dazzle-line/send-alt-1-svgrepo-com.svg');"
+          aria-hidden="true"
+        ></span>
+      </button>
+      <button class="kg-btn" title="down">
+        <span
+          class="kg-dazzle-icon kg-dazzle-icon--down"
+          style="--icon-url: url('/ui-elements-2/assets/icons/dazzle-line/send-alt-1-svgrepo-com.svg');"
+          aria-hidden="true"
+        ></span>
+      </button>
+      <button class="kg-btn" title="left">
+        <span
+          class="kg-dazzle-icon kg-dazzle-icon--left"
+          style="--icon-url: url('/ui-elements-2/assets/icons/dazzle-line/send-alt-1-svgrepo-com.svg');"
+          aria-hidden="true"
+        ></span>
+      </button>
+      <button class="kg-btn" title="right">
+        <span
+          class="kg-dazzle-icon kg-dazzle-icon--right"
+          style="--icon-url: url('/ui-elements-2/assets/icons/dazzle-line/send-alt-1-svgrepo-com.svg');"
+          aria-hidden="true"
+        ></span>
+      </button>
+    </div>
+    <p class="caption">sourced from UIElements2/assets/icons/dazzle-line/send-alt-1-svgrepo-com.svg</p>
+  </div>
+
+
+  <!-- ── Mixed-color tile ──────────────────────────────────────────── -->
+  <div class="section">
+    <div class="section-title">Multi-color — explicit fills (no currentColor)</div>
+    <div class="kg-row">
+
+      <!-- Anaglyph X: red + cyan bars -->
+      <div class="kg-tile">
+        <svg class="kg-icon" viewBox="0 0 11 11" overflow="hidden">
+          <rect x="4" y="-2" width="3" height="15"
+            transform="rotate(45 5.5 5.5)" fill="var(--kg-red)"/>
+          <rect x="-2" y="4" width="15" height="3"
+            transform="rotate(45 5.5 5.5)" fill="var(--kg-cyan)"/>
+        </svg>
+      </div>
+
+      <!-- Target: white outer, red middle, cyan inner -->
+      <div class="kg-tile">
+        <svg class="kg-icon" viewBox="0 0 11 11" overflow="hidden">
+          <circle cx="5.5" cy="5.5" r="5.5" fill="var(--kg-white)"/>
+          <circle cx="5.5" cy="5.5" r="4"   fill="var(--kg-black)"/>
+          <circle cx="5.5" cy="5.5" r="3"   fill="var(--kg-red)"/>
+          <circle cx="5.5" cy="5.5" r="1.5" fill="var(--kg-black)"/>
+          <circle cx="5.5" cy="5.5" r="0.75" fill="var(--kg-cyan)"/>
+        </svg>
+      </div>
+
+      <!-- Plus: red vertical, cyan horizontal (overlap is white) -->
+      <div class="kg-tile">
+        <svg class="kg-icon" viewBox="0 0 11 11" overflow="hidden">
+          <rect x="4" y="0" width="3" height="11" fill="var(--kg-red)"/>
+          <rect x="0" y="4" width="11" height="3" fill="var(--kg-cyan)"/>
+          <rect x="4" y="4" width="3"  height="3" fill="var(--kg-white)"/>
+        </svg>
+      </div>
+
+      <!-- Diagonal stripes: alternating red / cyan / white -->
+      <div class="kg-tile">
+        <svg class="kg-icon" viewBox="0 0 11 11" overflow="hidden">
+          <rect x="-4" y="4.5" width="20" height="2" transform="rotate(-45 5.5 5.5)" fill="var(--kg-white)"/>
+          <rect x="-4" y="0"   width="20" height="2" transform="rotate(-45 5.5 5.5)" fill="var(--kg-cyan)"/>
+          <rect x="-4" y="9"   width="20" height="2" transform="rotate(-45 5.5 5.5)" fill="var(--kg-red)"/>
+        </svg>
+      </div>
+
+    </div>
+    <p class="caption">explicit fill values — red/cyan anaglyph palette</p>
+  </div>
+
+</body>
+</html>

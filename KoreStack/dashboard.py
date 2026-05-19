@@ -89,17 +89,13 @@ def _service_row_markup(service: dict[str, object]) -> str:
 
 
 def _path_rows_markup(paths: dict[str, object]) -> str:
-    rows = []
+    labels = {"path config": "Config", "datacontrol": "Data control", "datauser": "Data user"}
+    items = []
     for key, value in paths.items():
-        rows.append(
-            f"""
-      <div class="path-row">
-        <dt>{html.escape(str(key))}</dt>
-        <dd><code>{html.escape(str(value))}</code></dd>
-      </div>
-            """
-        )
-    return "".join(rows)
+        label = html.escape(labels.get(key, key))
+        path = html.escape(str(value))
+        items.append(f'<span><b>{label}</b><code>{path}</code></span>')
+    return '<p class="paths-compact">' + "".join(items) + "</p>"
 
 
 def _dashboard_bootstrap(snapshot: dict[str, object], suite_urls: dict[str, str], dashboard_url: str) -> dict[str, object]:

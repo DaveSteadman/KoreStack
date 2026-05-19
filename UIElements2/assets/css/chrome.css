@@ -1,0 +1,11 @@
+/*
+ * chrome.css — convenience bundle for the Kore shell layer.
+ */
+
+@import url('./tokens.css');
+@import url('./typography.css');
+@import url('./topbar.css');
+@import url('./appbar.css');
+@import url('./app-menu.css');
+@import url('./panels.css');
+@import url('./tags.css');

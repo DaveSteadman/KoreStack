@@ -1,0 +1,338 @@
+/*
+ * panels.css — generic outer frame and panel primitives.
+ *
+ * These classes are optional. Apps can adopt them incrementally while keeping
+ * their inner work surfaces product-specific.
+ */
+
+.kcui-shell-bg {
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+
+.kcui-text-dim {
+  color: var(--text-dim);
+}
+
+.kcui-page {
+  --kcui-page-max: 1440px;
+  width: min(var(--kcui-page-max), calc(100% - 24px));
+  margin: 0 auto;
+  padding: 12px 0;
+}
+
+.kcui-page--narrow {
+  --kcui-page-max: 1320px;
+}
+
+.kcui-page--wide {
+  --kcui-page-max: 1440px;
+}
+
+.kcui-stack {
+  display: grid;
+  gap: 12px;
+}
+
+.kcui-grid-2 {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.kcui-grid-4 {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.kcui-grid-auto {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+}
+
+.kcui-card-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.kcui-card-grid--tiles {
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+}
+
+.kcui-card-grid--stats {
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+}
+
+.kcui-card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--kcui-radius-md);
+  padding: 12px;
+}
+
+.kcui-card--metric {
+  display: grid;
+  align-content: center;
+  gap: 4px;
+  min-height: 76px;
+}
+
+.kcui-card-title {
+  margin: 0;
+  color: var(--text);
+}
+
+.kcui-card-copy {
+  margin: 0;
+  color: var(--text-dim);
+}
+
+.kcui-card-value {
+  display: block;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.kcui-card-label {
+  color: var(--text-dim);
+}
+
+/* ──────────────────────────────────────────────────────────────
+   Split-panel layout  (two panels + draggable vertical divider)
+   Use alongside panels.js → initPanels()
+   ────────────────────────────────────────────────────────────── */
+
+.kcui-panels {
+  --kcui-panel-left-w: 290px;
+  --kcui-splitter-w: 4px;
+  display: grid;
+  grid-template-columns: var(--kcui-panel-left-w) var(--kcui-splitter-w) minmax(0, 1fr);
+  overflow: hidden;
+  height: 100%;
+}
+
+.kcui-panel-left {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border-right: 1px solid var(--border);
+}
+
+.kcui-splitter {
+  background: var(--border);
+  cursor: col-resize;
+  flex-shrink: 0;
+  transition: background 0.1s;
+}
+
+.kcui-splitter:hover,
+.kcui-splitter.is-dragging {
+  background: color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+.kcui-panel-right {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Shared left file navigator panel (KoreCode/KoreDocs). */
+.kcui-navpanel {
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+}
+
+.kcui-navpanel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 34px;
+  padding: 10px 12px 8px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-dim);
+}
+
+.kcui-navpanel-status {
+  min-height: 22px;
+  padding: 8px 12px;
+  color: var(--text-2);
+  border-bottom: 1px solid var(--border);
+}
+
+.kcui-navpanel-tree {
+  flex: 1;
+  overflow: auto;
+  padding: 8px 8px 14px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.kcui-navpanel .tree-row,
+.kcui-navpanel .tree-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text-2);
+  text-align: left;
+  user-select: none;
+}
+
+.kcui-navpanel .tree-row {
+  width: 100%;
+  padding: 0 10px 0 calc(10px + var(--depth, 0) * 16px);
+  cursor: pointer;
+}
+
+.kcui-navpanel .tree-item {
+  margin: 0;
+  padding: 0 10px 0 calc(10px + var(--indent, 0) * 16px);
+  cursor: default;
+}
+
+.kcui-navpanel .tree-row:hover,
+.kcui-navpanel .tree-item:hover {
+  background: color-mix(in srgb, var(--surface) 86%, transparent);
+  color: var(--text);
+}
+
+.kcui-navpanel .tree-row.is-active,
+.kcui-navpanel .tree-item.selected {
+  background: color-mix(in srgb, var(--accent) 24%, transparent);
+  color: var(--text);
+}
+
+.kcui-navpanel .tree-row.is-dir {
+  font-weight: 600;
+}
+
+.kcui-navpanel .tree-caret {
+  width: 12px;
+  color: var(--accent-2);
+  flex: 0 0 12px;
+}
+
+.kcui-navpanel .tree-row.is-file .tree-caret {
+  visibility: hidden;
+}
+
+.kcui-navpanel .tree-toggle {
+  width: 12px;
+  color: var(--accent-2);
+  flex: 0 0 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.kcui-navpanel .tree-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kcui-navpanel .tree-children {
+  display: grid;
+}
+
+.kcui-navpanel .tree-children.open {
+  display: block;
+}
+
+@media (max-width: 680px) {
+  .kcui-panels {
+    grid-template-columns: 1fr;
+    grid-template-rows: var(--kcui-panel-left-w) var(--kcui-splitter-w) minmax(0, 1fr);
+  }
+
+  .kcui-panel-left {
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .kcui-splitter {
+    cursor: row-resize;
+  }
+}
+
+.kcui-section-note {
+  color: var(--text-dim);
+}
+
+.kcui-frame {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--kcui-radius-lg);
+}
+
+.kcui-panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--kcui-radius-md);
+  overflow: hidden;
+}
+
+.kcui-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 34px;
+  padding: 8px 12px 7px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-dim);
+}
+
+.kcui-panel-body {
+  padding: 12px;
+}
+
+.kcui-sidebar {
+  background: var(--surface);
+  border-inline: 1px solid var(--border);
+}
+
+.kcui-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 38px;
+  padding: 0 10px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+
+.kcui-statusbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 24px;
+  padding: 0 10px;
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+  color: var(--text-dim);
+}
+
+@media (max-width: 900px) {
+  .kcui-grid-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .kcui-grid-2,
+  .kcui-grid-4 {
+    grid-template-columns: 1fr;
+  }
+}

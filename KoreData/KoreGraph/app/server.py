@@ -691,7 +691,11 @@ def api_processing_run(body: ProcessingRunBody):
                 desc = json.load(f)
             desc["last_run"]    = _time.strftime("%Y-%m-%d %H:%M:%S")
             desc["last_status"] = "ok" if ec == 0 else f"error ({ec})"
-            desc["last_log"]    = lp
+            _scripts_dir = _get_scripts_dir()
+            try:
+                desc["last_log"] = str(Path(lp).relative_to(_scripts_dir))
+            except ValueError:
+                desc["last_log"] = lp
             with open(jf, "w", encoding="utf-8") as f:
                 json.dump(desc, f, indent=2)
         except Exception:

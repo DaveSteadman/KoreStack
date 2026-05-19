@@ -20,8 +20,12 @@ A series of design discussions (May 2026) identified recurring friction in the K
 
 ## Conclusions from Discussion
 
-### `kcui-tag` is v1 - Element2 replaces it
-`kcui-tag` was the first-generation annotation component. Element2 supersedes it. The replacement is `e2-tag`: same annotation/badge semantics and small size, but defined within the Element2 vocabulary so it coexists cleanly with `e2-btn` and `e2-input` in rows. All `kcui-tag` uses are migration targets - none are permanent.
+### `kcui-tag` is v1 — Element2 replaces it
+`kcui-tag` was the first-generation annotation component. In Element2 it is replaced by two things depending on how it was being used:
+- **annotation/badge** (read-only label, status, count): use `e2-label`. Same slot height as every other control.
+- **action button** (Import Another, View Articles, mode toggle): use `e2-btn` or `e2-seg`.
+
+There is no sub-slot tag component in Element2. All controls share `--e2-h`. All `kcui-tag` uses are migration targets — none are permanent.
 
 ### View-modifier controls belong on their target, not in the header
 Controls that modify *how a panel displays its content* (`wrap`, `live`) should be **corner overlays on the panel body**, not header buttons. This creates unambiguous spatial association and frees the panel header for identity + mode controls only. A reusable `.panel-overlay-controls` pattern will be defined in UIElements.
@@ -60,19 +64,18 @@ border-radius: var(--e2-radius)    /* theme-level variable; shape is NOT per-com
 box-sizing:   border-box
 ```
 
-Corner shape (`--e2-radius`) is a theme-level decision, set once, applied uniformly. Component names encode **what a thing is** - not how it is drawn. An `e2-btn` is an interactive action trigger; an `e2-label` is a non-interactive descriptor; an `e2-tag` is an annotation. Whether any of them has square, softened, or pill corners is a style detail that can change without touching HTML.
+Corner shape (`--e2-radius`) is a theme-level decision, set once, applied uniformly. Component names encode **what a thing is** - not how it is drawn. An `e2-btn` is an interactive action trigger; an `e2-label` is a non-interactive descriptor. Whether any of them has square, softened, or pill corners is a style detail that can change without touching HTML.
 
 ### Components derived from the slot
 | Component | Element | Semantic role |
 |---|---|---|
 | `e2-btn` | `<button>` | Interactive action trigger; full slot height, variable width |
-| `e2-btn--icon` | `<button>` | Interactive action trigger; square slot (width = height), glyph only |
+| `e2-iconbtn` | `<button>` | Interactive action trigger; square slot (width = height), glyph only |
 | `e2-input` | `<input>` | Text entry; full slot height, flex-grow in row |
 | `e2-select` | `<select>` | Option selector; full slot height |
 | `e2-number` | `<input type=number>` | Numeric entry; full slot height, fixed width |
 | `e2-slider` | `<input type=range>` | Range selector; vertically centred in slot |
 | `e2-label` | `<span>` or `<label>` | Non-interactive descriptor; inline, vertically centred |
-| `e2-tag` | `<span>` | Annotation / badge; sub-slot height; replaces `kcui-tag` |
 | `e2-seg` | `<div>` + `<button>` children | Segmented control; mutually exclusive option group; all children share slot height |
 
 ### What stays outside Element2
@@ -135,7 +138,7 @@ Sub-section navigation. Minimal - names and active underline only.
 An `e2-row` is a flex row with `gap: var(--e2-gap)` and `align-items: stretch`. Every direct child is either an Element2 component (same height) or a spacer. No mixing of `kcui-tag` buttons and `e2-btn` in the same row.
 
 ### Colour / state vocabulary
-Element2 buttons adopt the existing colour modifier vocabulary (`--accent`, `--muted`, `--dim`, `--info`, `--warning`, `--danger`) so the tag colour system is reused, not replaced.
+Element2 buttons adopt the existing colour modifier vocabulary (`--accent`, `--muted`, `--dim`, `--info`, `--warning`, `--danger`) so the colour system is reused, not replaced.
 
 We need buttons to be a consistent color when in a diabled state, multicolored in helping highlight their individuality, and variations on that color to support transparent fill and hover/click changes.
 
@@ -155,11 +158,10 @@ We need buttons to be a consistent color when in a diabled state, multicolored i
 
 **Step 3 - Test page**
 - [ ] Build `UIElements2/docs/element2.html` - a standalone test/reference page showing:
-  - All Element2 components in isolation (button, icon-button, input, select, number, slider, label, tag, segmented control)
+  - All Element2 components in isolation (button, icon-button, input, select, number, slider, label, segmented control)
   - Mixed rows: input + button, input + icon-button + button
   - Panel with split-pane layout (clamped variant and free variant)
   - Panel overlay controls example
-  - `e2-tag` annotations alongside Element2 rows; side-by-side comparison with old `kcui-tag`
   - Topbar 1/2/3 stack example
   - Dark theme only
 - [ ] Debug all alignment, font, and spacing issues in the test page before touching live pages
@@ -167,20 +169,17 @@ We need buttons to be a consistent color when in a diabled state, multicolored i
 ### Phase 1 - UIElements2 library additions
 - [ ] Add `navbar.css` to `UIElements2/assets/css/`: `--bar-h`, `.topbar1`, `.topbar1-btn`, `.topbar1-version`, `.topbar2`, `.topbar2-btn`, `.topbar3`, `.topbar3-btn`, per-service color tokens
 - [ ] Build `UIElements2/docs/navbar.html` - reference page showing Topbar 1/2/3, active states, version label
-- [ ] Add `element2.css` to `UIElements2/assets/css/` (includes `e2-tag` replacing `kcui-tag`)
-- [ ] Add `.panel-overlay-controls` pattern to `UIElements2`
-- [ ] Add segmented control (`.e2-seg`) pattern
-- [ ] Mark `kcui-tag` in `UIElements2/assets/css/tags.css` as **deprecated** with a comment pointing to `e2-tag`
-- [ ] Update `UIElements2/README.md`: Element2 usage rules; `kcui-tag` → `e2-tag` migration note; navbar usage rules
+- [ ] Add `element2.css` to `UIElements2/assets/css/` (all controls at `--e2-h`; no sub-slot components)
+- [ ] Update `UIElements2/README.md`: Element2 usage rules; `kcui-tag` migration note (`kcui-tag` → `e2-label` or `e2-btn`); navbar usage rules
 
 ### Phase 2 - KoreGraph (lowest complexity, already partially modernised)
 - [ ] Replace `kg-nav-btn` definition with `--e2-h`-based reference
-- [ ] Replace `btn-sm` uses with `e2-btn` or `e2-btn--icon`
+- [ ] Replace `btn-sm` uses with `e2-btn` or `e2-iconbtn`
 - [ ] Move any view-modifier tags to panel overlay pattern
 
 ### Phase 3 - KoreDataGateway
 - [ ] Search row: `input + SEARCH + e2-btn` - align to `--e2-h`
-- [ ] `kcui-tag` → `e2-tag` for all status/count annotations; `kcui-tag` → `e2-btn` for all action uses
+- [ ] `kcui-tag` → `e2-label` for all status/count annotations; `kcui-tag` → `e2-btn` for all action uses
 - [ ] Verify `decodeHtml` + `escHtml` rendering covers all result card fields
 
 ### Phase 4 - KoreAgent
@@ -216,9 +215,9 @@ We need buttons to be a consistent color when in a diabled state, multicolored i
 
 **Control migrations**
 - `reference_import.html`: `Import Another` / `View Articles` use `kcui-tag` as action buttons — migrate to `e2-btn` during Phase 3
-- `connections.html`: state filter links use `kcui-tag` toggle-state — migrate to `e2-tag is-on` during Phase 2
-- `btn-sm`: ad-hoc small button class used across KoreGraph — migrate to `e2-btn` or `e2-btn--icon` during Phase 2
-- KoreAgent `log-btn-up/down`: currently `kcui-tag` scroll buttons - migrate to `e2-btn--icon` overlay during Phase 4
+- `connections.html`: state filter links use `kcui-tag` toggle-state — migrate to `e2-btn is-active` during Phase 2
+- `btn-sm`: ad-hoc small button class used across KoreGraph — migrate to `e2-btn` or `e2-iconbtn` during Phase 2
+- KoreAgent `log-btn-up/down`: currently `kcui-tag` scroll buttons - migrate to `e2-iconbtn` overlay during Phase 4
 - KoreAgent mode selectors: `kcui-tag` as `<button>` - migrate to `e2-seg` during Phase 4
 - Home search row (`sq-domain` checkboxes, date filters, limit input): inconsistent sizing - full Element2 row pass during Phase 3
 

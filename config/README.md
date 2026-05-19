@@ -25,9 +25,3 @@ This file is machine-specific and should not be committed to version control.
 Holds the active model name, context window size, and LLM host URL used by KoreAgent at
 startup.  This is read before the main config merge so the agent can initialise its LLM
 connection independently of the rest of the suite.
-
-## Status
-
-Individual services still retain their own local config and may not consume `default.json`
-directly yet.  KoreStack reads this folder first and passes resolved values down during
-startup.

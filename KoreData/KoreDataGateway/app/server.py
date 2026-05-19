@@ -246,7 +246,6 @@ _UI_ELEMENTS_ASSETS = Path(
     )
 ).resolve()
 
-
 _TABLE_MARKER_RE = re.compile(r'<<<TABLE>>>(.*?)<<<ENDTABLE>>>', re.DOTALL)
 _WIKILINK_RE     = re.compile(r'\[\[([^\]]+)\]\]')
 

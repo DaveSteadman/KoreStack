@@ -84,39 +84,59 @@ a { color: inherit; }
   margin: 0;
 }
 
+.paths-compact {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  font-size: 12px;
+}
+
+.paths-compact span {
+  display: grid;
+  grid-template-columns: 7em 1fr;
+  gap: 0 10px;
+  align-items: baseline;
+}
+
+.paths-compact b {
+  color: var(--stack-muted);
+  font-weight: normal;
+  white-space: nowrap;
+}
+
+.paths-compact code {
+  font-family: var(--font-ui);
+  font-size: inherit;
+  color: var(--stack-ink);
+  overflow-wrap: anywhere;
+}
+
+/* fallback for pre-restart server that still renders dt/dd rows */
 .path-row {
   display: grid;
-  grid-template-columns: minmax(120px, 180px) minmax(0, 1fr);
-  gap: 12px;
-  align-items: start;
-  padding: 8px 0;
-  min-width: 0;
-  border-top: 1px solid var(--stack-line);
+  grid-template-columns: 9em 1fr;
+  gap: 0 8px;
+  align-items: baseline;
+  padding: 2px 0;
+  font-size: 12px;
 }
-
-.path-row:first-child {
-  border-top: 0;
-  padding-top: 0;
-}
-
-.path-row:last-child { padding-bottom: 0; }
 
 .path-row dt {
   color: var(--stack-muted);
-  font-family: var(--font-ui);
+  font-weight: normal;
   margin: 0;
 }
 
 .path-row dd {
   margin: 0;
-  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .path-row code {
-  display: block;
   font-family: var(--font-ui);
+  font-size: inherit;
   color: var(--stack-ink);
-  overflow-wrap: anywhere;
 }
 
 .services-grid {
@@ -311,11 +331,6 @@ code {
 .service-comms { --service-accent: var(--service-comms); }
 
 @media (max-width: 860px) {
-  .path-row {
-    grid-template-columns: 1fr;
-    gap: 6px;
-  }
-
   .service-row {
     grid-template-columns: 1fr;
     align-items: start;

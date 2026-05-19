@@ -105,10 +105,10 @@ def _flatten_suite_config(raw: dict) -> dict:
         return flattened
 
     paths = raw.get("paths") if isinstance(raw.get("paths"), dict) else {}
-    if isinstance(paths.get("datacontrol"), str):
-        flattened["ControlDataFolder"] = paths["datacontrol"]
-    if isinstance(paths.get("datauser"), str):
-        flattened["UserDataFolder"] = paths["datauser"]
+    if isinstance(paths.get("datacontrolroot"), str):
+        flattened["ControlDataFolder"] = paths["datacontrolroot"]
+    if isinstance(paths.get("datauserroot"), str):
+        flattened["UserDataFolder"] = paths["datauserroot"]
 
     services = raw.get("services") if isinstance(raw.get("services"), dict) else {}
     agent = services.get("agent") if isinstance(services.get("agent"), dict) else {}
@@ -118,6 +118,11 @@ def _flatten_suite_config(raw: dict) -> dict:
     connections = raw.get("connections") if isinstance(raw.get("connections"), dict) else {}
     if isinstance(connections.get("korechat"), str):
         flattened["korechaturl"] = connections["korechat"]
+    elif isinstance(services.get("conversation"), dict):
+        _net = raw.get("network") if isinstance(raw.get("network"), dict) else {}
+        _kc_host = str(_net.get("host") or "127.0.0.1")
+        _kc_port = services["conversation"].get("port", 8630)
+        flattened["korechaturl"] = f"http://{_kc_host}:{_kc_port}"
 
     mcp = raw.get("mcp") if isinstance(raw.get("mcp"), dict) else {}
     if isinstance(mcp.get("connections"), list):

@@ -35,7 +35,7 @@ _DEFAULTS: dict = {
     "event_poll_interval": 1.0,
     "missing_kc_conversation_policy": "recreate",
     "data_dir": os.environ.get("KORECOMMS_DATA_DIR", str(_DEFAULT_DATA_DIR)),
-    "korechat_url": os.environ.get("KORECOMMS_KORECHAT_URL", "http://localhost:8700"),
+    "korechat_url": os.environ.get("KORECOMMS_KORECHAT_URL", "http://localhost:8630"),
 }
 
 
