@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sidebar Nav — Explore</title>
+  <link rel="stylesheet" href="/ui-elements-2/assets/css/tokens.css">
+  <link rel="stylesheet" href="/ui-elements-2/assets/css/element2.css">
+  <style>
+
+    /* ── Reset ───────────────────────────────────────────────────────── */
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-ui);
+      font-size: var(--kcui-text-body);
+    }
+
+    /* ── Page shell ──────────────────────────────────────────────────── */
+    .e2-shell {
+      display: flex;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    /* ══════════════════════════════════════════════════════════════════
+       SIDEBAR
+       ══════════════════════════════════════════════════════════════════ */
+    .e2-sidebar {
+      --rail-w:  48px;
+      --full-w: 172px;
+      --transition: 200ms ease;
+      width: var(--rail-w);
+      height: 100%;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      overflow: hidden;
+      transition: width var(--transition);
+      z-index: 110;
+    }
+
+    /* Expand on hover OR when pinned open */
+    .e2-sidebar:hover,
+    .e2-sidebar.is-open {
+      width: var(--full-w);
+    }
+
+    /* ── Brand block ─────────────────────────────────────────────────── */
+    .e2-sb-brand {
+      height: 48px;
+      display: flex;
+      align-items: center;
+      padding: 0 14px;
+      gap: 11px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+
+    .e2-sb-mark {
+      width: 20px;
+      height: 20px;
+      flex: 0 0 20px;
+      background-color: var(--text-2);
+      mask-image: url('/ui-elements-2/assets/icons/dazzle-line/layer-group-svgrepo-com.svg');
+      -webkit-mask-image: url('/ui-elements-2/assets/icons/dazzle-line/layer-group-svgrepo-com.svg');
+      mask-repeat: no-repeat;
+      -webkit-mask-repeat: no-repeat;
+      mask-position: center;
+      -webkit-mask-position: center;
+      mask-size: contain;
+      -webkit-mask-size: contain;
+    }
+
+    .e2-sb-brand-text {
+      font-size: var(--kcui-text-body-sm);
+      font-weight: 600;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      opacity: 0;
+      transition: opacity 120ms ease 80ms;
+    }
+
+    .e2-sidebar:hover .e2-sb-brand-text,
+    .e2-sidebar.is-open .e2-sb-brand-text {
+      opacity: 1;
+    }
+
+    /* ── Nav items ───────────────────────────────────────────────────── */
+    .e2-sb-nav {
+      flex: 1 1 auto;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .e2-sb-item {
+      --item-accent: var(--accent);
+      display: flex;
+      align-items: center;
+      height: 44px;
+      padding: 0 14px;
+      gap: 12px;
+      color: var(--text-dim);
+      text-decoration: none;
+      white-space: nowrap;
+      overflow: hidden;
+      flex-shrink: 0;
+      transition: color 120ms, background 120ms, box-shadow 120ms;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      background: color-mix(in srgb, var(--item-accent) 5%, transparent);
+      box-shadow: inset 4px 0 0 color-mix(in srgb, var(--item-accent) 40%, transparent);
+      border-left: none;
+      border-top: none;
+      border-right: none;
+      font-family: var(--font-ui);
+      font-size: var(--kcui-text-body-sm);
+    }
+
+    .e2-sb-item:hover {
+      color: var(--text);
+      background: color-mix(in srgb, white 4%, transparent);
+    }
+
+    .e2-sb-item.is-active {
+      color: var(--item-accent);
+      background: color-mix(in srgb, var(--item-accent) 9%, transparent);
+      box-shadow: inset 4px 0 0 var(--item-accent);
+    }
+
+    .e2-sb-icon {
+      width: 18px;
+      height: 18px;
+      flex: 0 0 18px;
+      display: block;
+      color: color-mix(in srgb, var(--item-accent) 55%, var(--text-dim));
+      background-color: currentColor;
+      mask-image: var(--icon-url);
+      -webkit-mask-image: var(--icon-url);
+      mask-repeat: no-repeat;
+      -webkit-mask-repeat: no-repeat;
+      mask-position: center;
+      -webkit-mask-position: center;
+      mask-size: contain;
+      -webkit-mask-size: contain;
+    }
+
+    .e2-sb-item:hover .e2-sb-icon,
+    .e2-sb-item.is-active .e2-sb-icon {
+      color: var(--item-accent);
+    }
+
+    .e2-sb-label {
+      font-size: var(--kcui-text-body-sm);
+      overflow: hidden;
+      opacity: 0;
+      transition: opacity 120ms ease 80ms;
+    }
+
+    .e2-sidebar:hover .e2-sb-label,
+    .e2-sidebar.is-open .e2-sb-label {
+      opacity: 1;
+    }
+
+    /* ── Sub-items (always visible, left bar shows group membership) ── */
+    .e2-sb-sub {
+      --sub-accent: var(--svc-color-data);
+      display: flex;
+      align-items: center;
+      height: 38px;
+      padding: 0 14px;
+      gap: 10px;
+      color: var(--text-dim);
+      text-decoration: none;
+      white-space: nowrap;
+      overflow: hidden;
+      flex-shrink: 0;
+      transition: color 120ms, background 120ms, box-shadow 120ms;
+      border-bottom: 1px solid var(--border);
+      background: color-mix(in srgb, var(--sub-accent) 5%, color-mix(in srgb, black 18%, var(--surface)));
+      box-shadow: inset 4px 0 0 color-mix(in srgb, var(--sub-accent) 40%, transparent);
+      font-size: var(--kcui-text-body-sm);
+    }
+
+    .e2-sb-sub:hover {
+      color: var(--text);
+      background: color-mix(in srgb, var(--sub-accent) 8%, var(--surface));
+    }
+
+    .e2-sb-sub.is-active {
+      color: var(--sub-accent);
+      background: color-mix(in srgb, var(--sub-accent) 12%, var(--surface));
+      box-shadow: inset 4px 0 0 var(--sub-accent);
+    }
+
+    .e2-sb-sub-icon {
+      width: 18px;
+      height: 18px;
+      flex: 0 0 18px;
+      display: block;
+      color: color-mix(in srgb, var(--sub-accent) 55%, var(--text-dim));
+      background-color: currentColor;
+      mask-image: var(--icon-url);
+      -webkit-mask-image: var(--icon-url);
+      mask-repeat: no-repeat;
+      -webkit-mask-repeat: no-repeat;
+      mask-position: center;
+      -webkit-mask-position: center;
+      mask-size: contain;
+      -webkit-mask-size: contain;
+    }
+
+    .e2-sb-sub:hover .e2-sb-sub-icon,
+    .e2-sb-sub.is-active .e2-sb-sub-icon {
+      color: var(--sub-accent);
+    }
+
+    /* ── Service group wrappers ─────────────────────────────────────── */
+    .e2-sb-group {
+      /* accent colour flows to children via --group-accent */
+    }
+
+    /* Sub-items inherit their group's accent colour */
+    .e2-sb-group .e2-sb-sub {
+      --sub-accent: var(--group-accent);
+    }
+
+    /* ── Footer ──────────────────────────────────────────────────────── */
+    .e2-sb-footer {
+      border-top: 1px solid var(--border);
+      height: 44px;
+      display: flex;
+      align-items: center;
+      padding: 0 14px;
+      gap: 12px;
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+
+    .e2-sb-pin {
+      width: 18px;
+      height: 18px;
+      flex: 0 0 18px;
+      background: transparent;
+      border: none;
+      color: var(--text-dim);
+      cursor: pointer;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: color 120ms;
+    }
+
+    .e2-sb-pin:hover { color: var(--text); }
+
+    .e2-sidebar.is-open .e2-sb-pin { color: var(--accent); }
+
+    .e2-sb-pin svg {
+      width: 14px;
+      height: 14px;
+      display: block;
+      transition: transform 200ms ease;
+    }
+
+    .e2-sidebar.is-open .e2-sb-pin svg {
+      transform: rotate(45deg);
+    }
+
+    .e2-sb-version {
+      font-size: var(--kcui-text-caption);
+      color: var(--text-dim);
+      white-space: nowrap;
+      overflow: hidden;
+      opacity: 0;
+      transition: opacity 120ms ease 80ms;
+    }
+
+    .e2-sidebar:hover .e2-sb-version,
+    .e2-sidebar.is-open .e2-sb-version {
+      opacity: 1;
+    }
+
+    /* ══════════════════════════════════════════════════════════════════
+       MAIN AREA
+       ══════════════════════════════════════════════════════════════════ */
+    .e2-main {
+      flex: 1 1 auto;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── Bar 2 ───────────────────────────────────────────────────────── */
+    .bar2 {
+      display: flex;
+      align-items: center;
+      height: var(--bar-h);
+      background: var(--bg-2);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      overflow-x: auto;
+      overflow-y: hidden;
+      scrollbar-width: none;
+    }
+    .bar2::-webkit-scrollbar { display: none; }
+
+    /* ── Bar 3 ───────────────────────────────────────────────────────── */
+    .bar3 {
+      display: flex;
+      align-items: center;
+      height: var(--bar-h);
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    /* Shared tab button used in both bars */
+    .tb {
+      display: inline-flex;
+      align-items: center;
+      height: var(--bar-h);
+      padding: 0 14px;
+      gap: 7px;
+      font-family: var(--font-ui);
+      font-size: var(--kcui-text-body-sm);
+      color: var(--text-dim);
+      text-decoration: none;
+      cursor: pointer;
+      background: transparent;
+      border: none;
+      border-right: 1px solid var(--border);
+      white-space: nowrap;
+      transition: color 120ms, background 120ms, box-shadow 120ms;
+      flex-shrink: 0;
+    }
+    .tb:hover { color: var(--text); }
+    .tb.is-active {
+      color: var(--text);
+      background: var(--bg);
+      box-shadow: inset 0 -3px 0 var(--accent);
+    }
+    .tb.is-active-data {
+      color: var(--svc-color-data);
+      background: color-mix(in srgb, var(--svc-color-data) 10%, transparent);
+      box-shadow: inset 0 -3px 0 var(--svc-color-data);
+    }
+
+    .tb-home {
+      min-width: 10rem;
+      font-size: var(--kcui-text-body-sm);
+      font-weight: 600;
+      gap: 8px;
+    }
+
+    .tb-icon {
+      width: 14px;
+      height: 14px;
+      flex: 0 0 14px;
+      display: block;
+      background-color: currentColor;
+      mask-image: var(--icon-url);
+      -webkit-mask-image: var(--icon-url);
+      mask-repeat: no-repeat;
+      -webkit-mask-repeat: no-repeat;
+      mask-position: center;
+      -webkit-mask-position: center;
+      mask-size: contain;
+      -webkit-mask-size: contain;
+    }
+
+    .tb-closable {
+      gap: 5px;
+      padding-right: 4px;
+    }
+
+    .tb-close {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: var(--e2-h);
+      height: var(--e2-h);
+      flex: 0 0 var(--e2-h);
+      background: transparent;
+      border: none;
+      color: var(--text-dim);
+      cursor: pointer;
+      padding: 0;
+      transition: color 120ms, background 120ms;
+      border-radius: var(--e2-radius);
+    }
+    .tb-close:hover {
+      color: var(--danger);
+      background: color-mix(in srgb, var(--danger) 12%, transparent);
+    }
+    .tb-close svg { width: 10px; height: 10px; display: block; }
+
+    .tb-right {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0 10px;
+      border-left: 1px solid var(--border);
+      height: 100%;
+    }
+
+    /* ── Content area ────────────────────────────────────────────────── */
+    .e2-content {
+      flex: 1 1 auto;
+      overflow-y: auto;
+      padding: 1.5rem;
+    }
+
+    .content-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 1.25rem;
+    }
+
+    .content-title {
+      font-size: var(--kcui-text-title);
+      font-weight: 600;
+      color: var(--text);
+      margin: 0;
+    }
+
+    .content-sub {
+      font-size: var(--kcui-text-body-sm);
+      color: var(--text-dim);
+      margin: 0;
+      margin-top: 2px;
+    }
+
+    /* Stat cards */
+    .stat-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 1.25rem;
+    }
+
+    .stat-card {
+      flex: 1 1 0;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 14px 16px;
+    }
+
+    .stat-label {
+      font-size: var(--kcui-text-caption);
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: var(--kcui-tracking-label);
+      margin-bottom: 4px;
+    }
+
+    .stat-value {
+      font-size: var(--kcui-text-title);
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .stat-card--accent .stat-value { color: var(--svc-color-data); }
+    .stat-card--ok     .stat-value { color: var(--accent); }
+    .stat-card--warn   .stat-value { color: var(--warning); }
+
+    /* Feed table */
+    .feed-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: var(--kcui-text-body-sm);
+    }
+
+    .feed-table th {
+      text-align: left;
+      font-weight: 500;
+      color: var(--text-dim);
+      font-size: var(--kcui-text-caption);
+      text-transform: uppercase;
+      letter-spacing: var(--kcui-tracking-label);
+      padding: 0 12px 8px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .feed-table td {
+      padding: 9px 12px;
+      color: var(--text);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .feed-table tr:last-child td { border-bottom: none; }
+
+    .feed-table tr:hover td {
+      background: color-mix(in srgb, white 3%, transparent);
+    }
+
+    .feed-pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 1px 7px;
+      font-size: var(--kcui-text-caption);
+      border: 1px solid currentColor;
+      border-radius: 10px;
+    }
+
+    .feed-pill--live  { color: var(--accent); }
+    .feed-pill--idle  { color: var(--text-dim); }
+    .feed-pill--warn  { color: var(--warning); }
+
+    .feed-dim { color: var(--text-dim); }
+
+    /* ── Explore annotation bar ──────────────────────────────────────── */
+    .explore-note {
+      background: color-mix(in srgb, var(--warning) 8%, var(--surface));
+      border-bottom: 1px solid color-mix(in srgb, var(--warning) 30%, var(--border));
+      padding: 6px 16px;
+      font-size: var(--kcui-text-caption);
+      color: var(--warning);
+      letter-spacing: 0.06em;
+      flex-shrink: 0;
+    }
+
+  </style>
+</head>
+<body>
+
+<div class="e2-shell">
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       SIDEBAR
+       ══════════════════════════════════════════════════════════════════ -->
+  <nav class="e2-sidebar" id="e2-sidebar" aria-label="Kore suite services">
+
+    <!-- Service nav -->
+    <div class="e2-sb-nav">
+
+      <a class="e2-sb-item" href="#" style="--item-accent: var(--svc-color-stack);">
+        <span class="e2-sb-icon" style="--icon-url: url('/ui-elements-2/assets/icons/dazzle-line/layer-group-svgrepo-com.svg');" aria-hidden="true"></span>
+        <span class="e2-sb-label">KoreStack</span>
+      </a>
+
+      <a class="e2-sb-item" href="#" style="--item-accent: var(--svc-color-agent);">
+        <span class="e2-sb-icon" style="--icon-url: url('/ui-elements-2/assets/icons/dazzle-line/circuit-svgrepo-com.svg');" aria-hidden="true"></span>
+        <span class="e2-sb-label">KoreAgent</span>
+      </a>
+
+      <a class="e2-sb-item" href="#" style="--item-accent: var(--svc-color-chat);">
+        <span class="e2-sb-icon" style="--icon-url: url('/ui-elements-2/assets/icons/dazzle-line/message-square-lines-svgrepo-com.svg');" aria-hidden="true"></span>
+        <span class="e2-sb-label">KoreChat</span>
+      </a>
+
+      <div class="e2-sb-group" style="--group-accent: var(--svc-color-data);">
+
+        <a class="e2-sb-item is-active" href="#" style="--item-accent: var(--svc-color-data);">
+          <span class="e2-sb-icon" style="--icon-url: url('/ui-elements-2/assets/icons/dazzle-line/database-svgrepo-com.svg');" aria-hidden="true"></span>
+          <span class="e2-sb-label">KoreData</span>
+        </a>
+
+        <a class="e2-sb-sub is-active" href="#">
+          <span class="e2-sb-sub-icon" style="--icon-url: url('/ui-elements-2/assets/icons/dazzle-line/square-rss-svgrepo-com.svg');" aria-hidden="true"></span>
+          <span class="e2-sb-label">KoreFeeds</span>
+        </a>
+
+        <a class="e2-sb-sub" href="#">
+          <span class="e2-sb-sub-icon" style="--icon-url: url('/ui-elements-2/assets/icons/dazzle-line/layers-svgrepo-com.svg');" aria-hidden="true"></span>
+          <span class="e2-sb-label">KoreLibrary</span>
+        </a>
+
+        <a class="e2-sb-sub" href="#">
+          <span class="e2-sb-sub-icon" style="--icon-url: url('/ui-elements-2/assets/icons/dazzle-line/book-user-svgrepo-com.svg');" aria-hidden="true"></span>
+          <span class="e2-sb-label">KoreReference</span>
+        </a>
+
+        <a class="e2-sb-sub" href="#">
+          <span class="e2-sb-sub-icon" style="--icon-url: url('/ui-elements-2/assets/icons/dazzle-line/chart-network-svgrepo-com.svg');" aria-hidden="true"></span>
+          <span class="e2-sb-label">KoreGraph</span>
+        </a>
+
+        <a class="e2-sb-sub" href="#">
+          <span class="e2-sb-sub-icon" style="--icon-url: url('/ui-elements-2/assets/icons/dazzle-line/folder-search-svgrepo-com.svg');" aria-hidden="true"></span>
+          <span class="e2-sb-label">KoreRAG</span>
+        </a>
+
+      </div>
+
+      <div class="e2-sb-group" style="--group-accent: var(--svc-color-docs);">
+
+        <a class="e2-sb-item" href="#" style="--item-accent: var(--svc-color-docs);">
+          <span class="e2-sb-icon" style="--icon-url: url('/ui-elements-2/assets/icons/dazzle-line/pen-square-svgrepo-com.svg');" aria-hidden="true"></span>
+          <span class="e2-sb-label">KoreDocs</span>
+        </a>
+
+        <a class="e2-sb-sub" href="#">
+          <span class="e2-sb-sub-icon" style="--icon-url: url('/ui-elements-2/assets/icons/dazzle-line/text-svgrepo-com.svg');" aria-hidden="true"></span>
+          <span class="e2-sb-label">KoreWrite</span>
+        </a>
+
+        <a class="e2-sb-sub" href="#">
+          <span class="e2-sb-sub-icon" style="--icon-url: url('/ui-elements-2/assets/icons/dazzle-line/table-alt-svgrepo-com.svg');" aria-hidden="true"></span>
+          <span class="e2-sb-label">KoreSheet</span>
+        </a>
+
+        <a class="e2-sb-sub" href="#">
+          <span class="e2-sb-sub-icon" style="--icon-url: url('/ui-elements-2/assets/icons/dazzle-line/shapes-svgrepo-com.svg');" aria-hidden="true"></span>
+          <span class="e2-sb-label">KoreDiag</span>
+        </a>
+
+      </div>
+
+      <a class="e2-sb-item" href="#" style="--item-accent: var(--svc-color-code);">
+        <span class="e2-sb-icon" style="--icon-url: url('/ui-elements-2/assets/icons/dazzle-line/code-svgrepo-com.svg');" aria-hidden="true"></span>
+        <span class="e2-sb-label">KoreCode</span>
+      </a>
+
+      <a class="e2-sb-item" href="#" style="--item-accent: var(--svc-color-comms);">
+        <span class="e2-sb-icon" style="--icon-url: url('/ui-elements-2/assets/icons/dazzle-line/mail-open-svgrepo-com.svg');" aria-hidden="true"></span>
+        <span class="e2-sb-label">KoreComms</span>
+      </a>
+
+    </div>
+
+    <!-- Footer: pin toggle + version -->
+    <div class="e2-sb-footer">
+      <button class="e2-sb-pin" id="sidebar-pin" title="Pin sidebar open" aria-pressed="false">
+        <!-- Thumbtack icon — rotates 45° when pinned -->
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="8" y1="9" x2="8" y2="15"/>
+          <path d="M5 2h6l1 4H4z"/>
+          <line x1="8" y1="6" x2="8" y2="9"/>
+        </svg>
+      </button>
+      <span class="e2-sb-version">v2.0.0-alpha</span>
+    </div>
+
+  </nav>
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       MAIN AREA
+       ══════════════════════════════════════════════════════════════════ -->
+  <div class="e2-main">
+
+    <!-- Exploration notice -->
+    <div class="explore-note">EXPLORE — sidebar-nav concept · hover to expand · pin button locks it open</div>
+
+    <!-- Bar 2: service bar -->
+    <div class="bar2">
+      <a class="tb tb-home is-active-data" href="#">
+        <span class="tb-icon" style="--icon-url: url('/ui-elements-2/assets/icons/dazzle-line/database-svgrepo-com.svg');" aria-hidden="true"></span>
+        Data Gateway
+      </a>
+      <a class="tb" href="#">Feeds</a>
+      <a class="tb" href="#">Library</a>
+      <div class="tb tb-closable" role="group">
+        <span class="tb-icon" style="--icon-url: url('/ui-elements-2/assets/icons/dazzle-line/file-alt-svgrepo-com.svg');" aria-hidden="true"></span>
+        Draft Query
+        <button class="tb-close" type="button" aria-label="Close tab" title="Close tab">
+          <svg viewBox="0 0 10 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true">
+            <line x1="2" y1="2" x2="8" y2="8"/>
+            <line x1="8" y1="2" x2="2" y2="8"/>
+          </svg>
+        </button>
+      </div>
+      <div class="tb-right">
+        <span class="e2-label e2-label--pill" style="color: var(--svc-color-data);">UK</span>
+        <span class="e2-label e2-label--pill" style="color: var(--info);">42 feeds</span>
+        <span class="e2-label e2-label--pill" style="color: var(--warning);">live</span>
+      </div>
+    </div>
+
+    <!-- Bar 3: category tabs -->
+    <div class="bar3">
+      <a class="tb is-active" href="#">All</a>
+      <a class="tb" href="#">UK</a>
+      <a class="tb" href="#">Defence</a>
+      <a class="tb" href="#">Tech</a>
+    </div>
+
+    <!-- Content -->
+    <div class="e2-content">
+
+      <div class="content-header">
+        <div>
+          <p class="content-title">Feeds</p>
+          <p class="content-sub">42 active sources · last sync 2m ago</p>
+        </div>
+        <div style="margin-left:auto; display:flex; gap:6px;">
+          <button class="e2-btn e2-btn--muted" type="button">Filter</button>
+          <button class="e2-btn e2-btn--accent" type="button">+ Add feed</button>
+        </div>
+      </div>
+
+      <div class="stat-row">
+        <div class="stat-card stat-card--accent">
+          <div class="stat-label">Active feeds</div>
+          <div class="stat-value">42</div>
+        </div>
+        <div class="stat-card stat-card--ok">
+          <div class="stat-label">Categories</div>
+          <div class="stat-value">6</div>
+        </div>
+        <div class="stat-card stat-card--warn">
+          <div class="stat-label">Errors (24h)</div>
+          <div class="stat-value">3</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Items today</div>
+          <div class="stat-value">1,284</div>
+        </div>
+      </div>
+
+      <table class="feed-table">
+        <thead>
+          <tr>
+            <th>Source</th>
+            <th>Category</th>
+            <th>Items today</th>
+            <th>Last item</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Reuters UK</td>
+            <td class="feed-dim">News</td>
+            <td>318</td>
+            <td class="feed-dim">4 min ago</td>
+            <td><span class="feed-pill feed-pill--live">live</span></td>
+          </tr>
+          <tr>
+            <td>Bloomberg Markets</td>
+            <td class="feed-dim">Finance</td>
+            <td>204</td>
+            <td class="feed-dim">1 min ago</td>
+            <td><span class="feed-pill feed-pill--live">live</span></td>
+          </tr>
+          <tr>
+            <td>Jane's Defence</td>
+            <td class="feed-dim">Defence</td>
+            <td>47</td>
+            <td class="feed-dim">18 min ago</td>
+            <td><span class="feed-pill feed-pill--idle">idle</span></td>
+          </tr>
+          <tr>
+            <td>TechCrunch</td>
+            <td class="feed-dim">Technology</td>
+            <td>91</td>
+            <td class="feed-dim">7 min ago</td>
+            <td><span class="feed-pill feed-pill--live">live</span></td>
+          </tr>
+          <tr>
+            <td>UKRI Research</td>
+            <td class="feed-dim">Science</td>
+            <td>23</td>
+            <td class="feed-dim">2 hrs ago</td>
+            <td><span class="feed-pill feed-pill--warn">delayed</span></td>
+          </tr>
+          <tr>
+            <td>Gov.uk Press</td>
+            <td class="feed-dim">Government</td>
+            <td>12</td>
+            <td class="feed-dim">34 min ago</td>
+            <td><span class="feed-pill feed-pill--idle">idle</span></td>
+          </tr>
+        </tbody>
+      </table>
+
+    </div><!-- /e2-content -->
+  </div><!-- /e2-main -->
+
+</div><!-- /e2-shell -->
+
+<script>
+  const sidebar = document.getElementById('e2-sidebar');
+  const pin     = document.getElementById('sidebar-pin');
+
+  pin.addEventListener('click', () => {
+    const open = sidebar.classList.toggle('is-open');
+    pin.setAttribute('aria-pressed', String(open));
+    pin.title = open ? 'Unpin sidebar' : 'Pin sidebar open';
+  });
+</script>
+
+</body>
+</html>

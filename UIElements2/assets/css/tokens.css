@@ -111,11 +111,12 @@
   --bar-h:     2.375rem;  /* 38px — height for all three topbars (matches v1 --kcui-tab-h) */
 
   /* Per-service color tokens (extend as services are onboarded) */
-  --svc-color-data:    #6eb5ff;
+  --svc-color-stack:   #2dd4bf;
+  --svc-color-data:    #c4a050;
   --svc-color-agent:   #4af77a;
   --svc-color-graph:   #c084fc;
   --svc-color-chat:    #f0c060;
-  --svc-color-docs:    #94a3b8;
+  --svc-color-docs:    #6eb5ff;
   --svc-color-code:    #fb923c;
   --svc-color-comms:   #f472b6;
 }
