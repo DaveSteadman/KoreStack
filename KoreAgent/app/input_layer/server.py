@@ -23,6 +23,7 @@
 #   POST /sessions/{id}/input-history   append an entry to session input history
 #   GET  /sessions/{id}/history         full conversation history for a session
 #   POST /sessions/{id}/prompt          submit a new prompt (enqueues on task_queue)
+#   POST /sessions/request-switch       request the active session be switched (consumed by /queue)
 #   GET  /logs                          list all log directories and files
 #   GET  /logs/latest                   path of the most recently written log file
 #   GET  /logs/stream                   SSE: tail all new log lines across all log files
@@ -156,6 +157,9 @@ _run_event_queues: dict[str, queue.Queue] = {}
 _run_queues_lock:  threading.Lock = threading.Lock()
 
 _latest_log_path: str | None = None
+
+_pending_switch:      dict | None   = None
+_pending_switch_lock: threading.Lock = threading.Lock()
 
 
 # ====================================================================================================
@@ -463,6 +467,50 @@ def settings_llmdirect_post(enabled: bool):
     return {"llmdirect": get_llm_direct_enabled()}
 
 
+# ====================================================================================================
+# MARK: SESSION SWITCH REQUEST
+# ====================================================================================================
+# Allows other services (e.g. KoreChat UI) to request that the KoreAgent switches its
+# active session.  The pending switch is stored here and returned once via /queue, where
+# the KoreAgent browser UI picks it up on its regular poll cycle.
+
+class SessionSwitchRequest(BaseModel):
+    name: str
+
+
+def _pop_pending_switch() -> dict | None:
+    global _pending_switch
+    with _pending_switch_lock:
+        sw = _pending_switch
+        _pending_switch = None
+    return sw
+
+
+@app.post("/sessions/request-switch", status_code=200)
+def post_request_switch(body: SessionSwitchRequest):
+    # Use the same name/lookup helpers as the slash command handler but search ALL
+    # conversation types (not just webchat) so KoreComms and other channels work too.
+    from input_layer.slash_command_handlers_sessions import (
+        _list_all_conversations,
+        _session_id_from_external_id,
+        _display_name,
+    )
+    global _pending_switch
+    target = body.name.strip().lower()
+    conversations = _list_all_conversations()
+    conv = next((c for c in conversations if _display_name(c).lower() == target), None)
+    if conv is None:
+        conv = next((c for c in conversations if target in _display_name(c).lower()), None)
+    if conv is None:
+        raise HTTPException(status_code=404, detail=f"No conversation named '{body.name}' found.")
+    session_id = _session_id_from_external_id(str(conv.get("external_id") or ""))
+    name = _display_name(conv)
+    _validate_session_id(session_id)
+    with _pending_switch_lock:
+        _pending_switch = {"session_id": session_id, "name": name}
+    return {"ok": True}
+
+
 register_task_routes(
     app,
     get_enabled_tasks=lambda: _enabled_tasks,
@@ -470,6 +518,7 @@ register_task_routes(
     is_task_due=is_task_due,
     task_queue=task_queue,
     queue_preview_limit=_QUEUE_PREVIEW_LIMIT,
+    get_pending_switch=_pop_pending_switch,
 )
 
 

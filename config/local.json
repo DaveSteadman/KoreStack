@@ -2,7 +2,7 @@
   "comment": "Local values - override factory defaults here (defined in default.json, same structure)",
 
   "paths": {
-    "datacontrolroot": "C:\\Util\\GithubRepos\\KoreStack\\datacontrol",
-    "datauserroot":    "C:\\Util\\GithubRepos\\KoreStack\\datauser"
+    "datacontrolroot": "C:\\Util\\GithubRepos\\KoreStack-FullData\\datacontrol",
+    "datauserroot":    "C:\\Util\\GithubRepos\\KoreStack-FullData\\datauser"
   }
 }

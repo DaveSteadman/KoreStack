@@ -1,11 +1,17 @@
 /**
- * chrome.js — shared shell entrypoint for Kore suite applications.
+ * chrome.js — single JS entry point for all UIElements2 modules.
+ *
+ * Import this one file to get the complete UIElements2 component library.
  */
 
-export * from './topbar.js?v=20260508b';
-export * from './appbar.js?v=20260508b';
-export * from './appMenu.js?v=20260508b';
-export * from './icons.js?v=20260508b';
-export * from './svgicons.js?v=20260508b';
-export * from './theme.js?v=20260508b';
-export * from './tags.js?v=20260508b';
+export * from './element2.js';
+export * from './topbar.js';
+export * from './appbar.js';
+export * from './appMenu.js';
+export * from './icons.js';
+export * from './svgicons.js';
+export * from './theme.js';
+export * from './tags.js';
+export * from './tabs.js';
+export * from './panels.js';
+export * from './workspace.js';

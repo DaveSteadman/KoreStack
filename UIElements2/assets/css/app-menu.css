@@ -1,3 +1,26 @@
+/*
+ * app-menu.css — pull-down menu bar with animated dropdown lists and editable page title.
+ *
+ * Styles the classic application menu bar: a horizontal strip of top-level menu items
+ * that reveal animated dropdown lists on click, keyboard shortcut label alignment,
+ * an optionally in-place-editable page title, and a dirty-state indicator dot.
+ *
+ * Key selectors:
+ *   #menu-bar               — outer bar strip with panel background and bottom border
+ *   #app-brand              — leftmost brand logo/icon area
+ *   .menu-item              — top-level menu label; .open triggers dropdown visibility
+ *   .dropdown               — absolute-positioned dropdown list
+ *   .dropdown li            — individual menu action row
+ *   .dropdown li.sep        — horizontal rule separator between action groups
+ *   .shortcut               — right-aligned keyboard shortcut label inside a menu row
+ *   [data-role="app-title"] — page title area; .is-editable enables in-place rename
+ *   [data-role="app-dirty"] — dot indicator shown when the document has unsaved changes
+ *
+ * Related modules:
+ *   - appMenu.js    — JS that renders HTML into #app-menu-host and dispatches actions
+ *   - tokens.css    — --menu-h, --panel, --border, --text, --accent and other tokens
+ */
+
 #menu-bar {
   display: flex;
   align-items: center;

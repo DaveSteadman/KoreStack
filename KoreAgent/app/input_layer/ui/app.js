@@ -306,6 +306,21 @@ async function refreshQueue() {
     if (!data) return;
     _renderTimelineQueue(data);
     _scheduleTimelineRefresh();
+    if (data.pending_switch) {
+        _applySessionSwitch(data.pending_switch.session_id, data.pending_switch.name || "");
+    }
+}
+
+function _applySessionSwitch(sessionId, name) {
+    _sessionId = sessionId;
+    _setChatPanelTitle(name);
+    clearChatPanel();
+    if (name) {
+        appendChatMessage("agent", "\u2500\u2500\u2500 Session: " + name + " \u2500\u2500\u2500");
+    }
+    _loadSessionHistory(sessionId);
+    _loadHistory();
+    _loadCompletions();
 }
 
 // ----------------------------------------------------------------------------------------------------

@@ -41,7 +41,7 @@ def _load() -> dict:
         host = raw.get("network", {}).get("host")
         if host is not None:
             result["host"] = host
-        port = raw.get("services", {}).get("conversation", {}).get("port")
+        port = raw.get("services", {}).get("korechat", {}).get("port")
         if port is not None:
             result["port"] = port
     # Env vars always take final precedence over config file values

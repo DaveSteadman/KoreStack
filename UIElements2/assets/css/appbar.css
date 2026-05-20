@@ -1,3 +1,25 @@
+/*
+ * appbar.css — per-application sticky app bar: brand block, navigation tabs, and action area.
+ *
+ * Renders the secondary bar that sits below the suite topbar for a single application.
+ * Contains a brand section (icon + overline + title), a horizontal tab strip with
+ * per-service accent underline active state, a spacer, and an action area that holds
+ * buttons, selects, toggles, and metadata chips.
+ *
+ * Key selectors:
+ *   .kappbar-host           — sticky container positioned below the topbar
+ *   .kappbar                — main bar row; sets --kappbar-accent from the service theme
+ *   .kappbar-brand          — icon + overline + title block on the left
+ *   .kappbar-tabs           — scrolling tab strip container
+ *   .kappbar-tab            — individual tab; .is-active adds accent underline
+ *   .kappbar-actions        — right-aligned slot for buttons, selects, and toggles
+ *   .kappbar-note           — small metadata chip displayed after the title
+ *
+ * Related modules:
+ *   - appbar.js     — JS that builds and injects the HTML for this bar
+ *   - tokens.css    — --topbar-h, --appbar-h, --accent, --panel, and other tokens
+ */
+
 .kappbar-host {
   position: sticky;
   top: var(--topbar-h, var(--tab-h, 38px));

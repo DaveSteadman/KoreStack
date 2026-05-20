@@ -1,11 +1,11 @@
 /**
  * svgicons.js — helpers for file-based SVG icon packs.
  *
- * Works with icons mirrored under /ui-elements/assets/icons/<set-name>/.
+ * Works with icons under /ui-elements-2/assets/icons/<set-name>/.
  */
 
 export const SVG_ICON_SETS = Object.freeze({
-  'dazzle-line': '/ui-elements/assets/icons/dazzle-line',
+  'dazzle-line': '/ui-elements-2/assets/icons/dazzle-line',
 });
 
 function sanitizeIconName(name) {

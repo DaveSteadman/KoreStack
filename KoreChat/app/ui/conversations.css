@@ -140,6 +140,9 @@ html, body {
 
 /* Status and direction tags now use .kcui-tag from UIElements/assets/css/tags.css */
 
+#agent-resume-btn { color: #e07820; }
+#agent-resume-btn:hover { color: #f09030; }
+
 /* ============================================================
    SPLITTER
    ============================================================ */

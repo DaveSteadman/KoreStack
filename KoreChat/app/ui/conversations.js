@@ -95,6 +95,7 @@ function bindUiEvents() {
         if (e.key === "Enter")  createConversation();
         if (e.key === "Escape") hideNewConvForm();
     });
+    document.getElementById("agent-resume-btn").addEventListener("click", agentResume);
     document.getElementById("delete-conv-btn").addEventListener("click", deleteConversation);
     document.getElementById("compose-btn").addEventListener("click", sendMessage);
     document.getElementById("chk-summarised").addEventListener("change", reloadMessages);
@@ -475,6 +476,47 @@ function _listenForResponse(runId, mafBase) {
     es.onerror = done;
     // Safety net - close after 3 minutes regardless.
     setTimeout(done, 180000);
+}
+
+async function agentResume() {
+    if (_selectedId === null || !_selectedConv) return;
+
+    const agentUrl = (window.__koreSuiteUrls || {}).koreagent;
+    if (!agentUrl) {
+        window.alert("KoreAgent URL is not known. Is KoreStack running?");
+        return;
+    }
+
+    // Derive the display name the same way the server does (_display_name in slash_command_handlers_sessions.py).
+    const subject    = String(_selectedConv.subject || "").trim();
+    const externalId = String(_selectedConv.external_id || "");
+    const name = subject
+        || (externalId.startsWith("webchat_") ? externalId.slice("webchat_".length) : externalId)
+        || "";
+    if (!name) {
+        window.alert("This conversation has no name.");
+        return;
+    }
+
+    const btn = document.getElementById("agent-resume-btn");
+    btn.disabled = true;
+    try {
+        const base = agentUrl.replace(/\/$/, "");
+        const resp = await fetch(`${base}/sessions/request-switch`, {
+            method:  "POST",
+            headers: { "Content-Type": "application/json" },
+            body:    JSON.stringify({ name }),
+        });
+        if (!resp.ok) {
+            const err = await resp.text();
+            throw new Error(`HTTP ${resp.status}: ${err}`);
+        }
+    } catch (e) {
+        console.error("agentResume:", e);
+        window.alert(`Agent resume failed: ${e.message}`);
+    } finally {
+        btn.disabled = false;
+    }
 }
 
 async function deleteConversation() {

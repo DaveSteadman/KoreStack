@@ -53,7 +53,7 @@ def load() -> dict:
             result["host"] = host
         if "log_level" in raw:
             result["log_level"] = raw["log_level"]
-        port = raw.get("services", {}).get("code", {}).get("port")
+        port = raw.get("services", {}).get("korecode", {}).get("port")
         if port is not None:
             result["port"] = port
     return result

@@ -1,3 +1,21 @@
+/**
+ * theme.js — per-service color theme registry.
+ *
+ * Maps every Kore service key to a two-accent palette (accent + accent2) and exposes
+ * helpers to look up, resolve aliased, and apply themes as CSS custom properties.
+ * Used by topbar.js and appbar.js to tint each service's UI chrome.
+ *
+ * Key functions:
+ *   resolveThemeKey(key)         — normalise alias keys (e.g. 'koredoc' → 'koredocs')
+ *   themeFor(key)                — return { accent, accent2 } for a service key
+ *   applyTheme(target, key)      — set --accent / --accent2 on a DOM element
+ *   serviceThemes()              — return a copy of the full SERVICE_THEMES map
+ *
+ * Related modules:
+ *   - topbar.js    — calls applyTheme to colour each service link
+ *   - appbar.js    — calls applyTheme to set the bar's accent underline colour
+ */
+
 const SERVICE_THEMES = {
   korestack: { accent: '#6eb5ff', accent2: '#9fd0ff' },
   koreagent: { accent: '#66f0c9', accent2: '#9af7de' },

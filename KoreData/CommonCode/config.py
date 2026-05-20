@@ -87,7 +87,7 @@ def load_config(section: str, defaults: dict) -> dict:
             result["log_level"] = raw["log_level"]
         # Sub-services: derive port from data gateway port + fixed offset
         if offset is not None:
-            data_port = raw.get("services", {}).get("data", {}).get("port")
+            data_port = raw.get("services", {}).get("koredatagateway", {}).get("port")
             if data_port is not None:
                 result["port"] = data_port + offset
         # Explicit port entry still takes priority if present

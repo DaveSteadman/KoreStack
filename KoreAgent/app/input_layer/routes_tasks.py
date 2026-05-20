@@ -65,7 +65,7 @@ def _task_at_slot(slot_dt: datetime, now_min: datetime, enabled_tasks: list[dict
     return None
 
 
-def register_task_routes(app, *, get_enabled_tasks, get_last_run, is_task_due, task_queue, queue_preview_limit: int) -> None:
+def register_task_routes(app, *, get_enabled_tasks, get_last_run, is_task_due, task_queue, queue_preview_limit: int, get_pending_switch=None) -> None:
     @app.get("/tasks")
     def get_tasks():
         now = datetime.now()
@@ -90,11 +90,13 @@ def register_task_routes(app, *, get_enabled_tasks, get_last_run, is_task_due, t
     @app.get("/queue")
     def get_queue():
         queue_state = task_queue.get_state(pending_limit=queue_preview_limit)
+        pending_switch = get_pending_switch() if get_pending_switch else None
         return {
             "queued_prompt_count": queue_state.get("queued_prompt_count", 0),
             "next_prompts": queue_state.get("next_prompts", []),
             "next_prompts_limit": queue_state.get("next_prompts_limit", queue_preview_limit),
             "updated_at": queue_state.get("updated_at"),
+            "pending_switch": pending_switch,
         }
 
     @app.get("/timeline")

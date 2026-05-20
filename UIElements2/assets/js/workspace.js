@@ -1,3 +1,26 @@
+/**
+ * workspace.js — data-attribute-driven multi-region grid layout with draggable splitters.
+ *
+ * Reads `data-kcui-workspace`, `data-kcui-workspace-region`, and
+ * `data-kcui-workspace-splitter` attributes to build a CSS grid layout with resizable
+ * column and/or row tracks.  Pointer-capture drag on splitter elements resizes adjacent
+ * tracks proportionally; layout fractions are persisted and restored via localStorage.
+ *
+ * Key class  WorkspaceLayout:
+ *   init()                — parse data attributes and build initial grid state
+ *   bindSplitters()       — attach pointerdown drag handlers to all splitter elements
+ *   startDrag(e, axis)    — begin a pointer-capture drag for a splitter
+ *   applyTracks(axis)     — write computed track sizes back to the grid element
+ *   loadState() / saveState() — persist and restore track fractions via localStorage
+ *   reapply()             — re-apply saved fractions (e.g. after a window resize)
+ *
+ * Usage:
+ *   The module auto-initialises on DOMContentLoaded; all instances are in `workspaces`.
+ *
+ * Related modules:
+ *   - workspace.css   — .kcui-workspace, .kcui-workspace__region, splitter styles
+ */
+
 const DRAG_CLASS_X = 'kcui-workspace-drag--x';
 const DRAG_CLASS_Y = 'kcui-workspace-drag--y';
 

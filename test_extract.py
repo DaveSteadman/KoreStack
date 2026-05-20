@@ -21,7 +21,7 @@ def _load_suite_config() -> dict:
 
 _suite_cfg = _load_suite_config()
 _svc_host  = _suite_cfg.get("network", {}).get("host", "127.0.0.1")
-_data_port = _suite_cfg.get("services", {}).get("data", {}).get("port", 8620)
+_data_port = _suite_cfg.get("services", {}).get("koredatagateway", {}).get("port", 8620)
 
 LIBRARY = f"http://{_svc_host}:{_data_port + 2}"
 GRAPH   = f"http://{_svc_host}:{_suite_cfg.get('services', {}).get('koregraph', {}).get('port', 8626)}"

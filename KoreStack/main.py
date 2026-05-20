@@ -48,7 +48,7 @@ class ServiceSpec:
 
 
 SERVICE_META: dict[str, dict[str, object]] = {
-    "agent": {
+    "koreagent": {
         "label": "KoreAgent",
         "cwd": SUITE_ROOT / "KoreAgent",
         "script": "main.py",
@@ -58,7 +58,7 @@ SERVICE_META: dict[str, dict[str, object]] = {
         "port_arg": "--agentport",
         "description": "KoreAgent web UI and orchestration surface.",
     },
-    "conversation": {
+    "korechat": {
         "label": "KoreChat",
         "cwd": SUITE_ROOT / "KoreChat",
         "script": "main.py",
@@ -68,7 +68,7 @@ SERVICE_META: dict[str, dict[str, object]] = {
         "port_env": "KORECHAT_PORT",
         "description": "Shared conversation-state service for agent and comms flows.",
     },
-    "data": {
+    "koredatagateway": {
         "label": "KoreData",
         "cwd": SUITE_ROOT / "KoreData",
         "script": "main.py",
@@ -78,7 +78,7 @@ SERVICE_META: dict[str, dict[str, object]] = {
         "port_env": "KOREDATA_PORT",
         "description": "KoreData gateway with the feed, library, reference, and RAG services behind it.",
     },
-    "docs": {
+    "koredocs": {
         "label": "KoreDocs",
         "cwd": SUITE_ROOT / "KoreDocs",
         "script": "main.py",
@@ -88,7 +88,7 @@ SERVICE_META: dict[str, dict[str, object]] = {
         "port_arg": "--port",
         "description": "KoreDocs file manager plus the doc, sheet, and diagram editors.",
     },
-    "code": {
+    "korecode": {
         "label": "KoreCode",
         "cwd": SUITE_ROOT / "KoreCode",
         "script": "main.py",
@@ -98,7 +98,7 @@ SERVICE_META: dict[str, dict[str, object]] = {
         "port_arg": "--port",
         "description": "KoreCode lightweight code editor rooted at the KoreStack workspace.",
     },
-    "comms": {
+    "korecomms": {
         "label": "KoreComms",
         "cwd": SUITE_ROOT / "KoreComms",
         "script": "main.py",
@@ -111,12 +111,12 @@ SERVICE_META: dict[str, dict[str, object]] = {
 }
 
 SERVICE_ICON_KEYS: dict[str, str] = {
-    "agent": "koreagent",
-    "conversation": "korechat",
-    "data": "koredata",
-    "docs": "koredocs",
-    "code": "korecode",
-    "comms": "korecomms",
+    "koreagent":        "koreagent",
+    "korechat":         "korechat",
+    "koredatagateway":  "koredata",
+    "koredocs":         "koredocs",
+    "korecode":         "korecode",
+    "korecomms":        "korecomms",
 }
 
 
@@ -191,8 +191,8 @@ def build_child_env(config: dict) -> dict[str, str]:
     env["KORE_SUITE_DATAUSER"] = str(stack_paths["datauser"])
     env["KORE_UIELEMENTS_ASSETS_DIR"] = str(get_ui_assets_dir())
 
-    conversation = services.get("conversation") if isinstance(services.get("conversation"), dict) else {}
-    comms = services.get("comms") if isinstance(services.get("comms"), dict) else {}
+    korechat = services.get("korechat") if isinstance(services.get("korechat"), dict) else {}
+    korecomms = services.get("korecomms") if isinstance(services.get("korecomms"), dict) else {}
 
     if network.get("host"):
         env["KORECHAT_HOST"] = str(network["host"])
@@ -200,15 +200,15 @@ def build_child_env(config: dict) -> dict[str, str]:
 
     _network_host = str(network.get("host") or "127.0.0.1")
 
-    if conversation.get("port") is not None:
-        env["KORECHAT_PORT"] = str(conversation["port"])
-    if comms.get("port") is not None:
-        env["KORECOMMS_PORT"] = str(comms["port"])
+    if korechat.get("port") is not None:
+        env["KORECHAT_PORT"] = str(korechat["port"])
+    if korecomms.get("port") is not None:
+        env["KORECOMMS_PORT"] = str(korecomms["port"])
 
     if connections.get("korechat"):
         env["KORECOMMS_KORECHAT_URL"] = str(connections["korechat"])
     else:
-        _korechat_port = int(conversation.get("port", 8630))
+        _korechat_port = int(korechat.get("port", 8630))
         env["KORECOMMS_KORECHAT_URL"] = f"http://{_network_host}:{_korechat_port}"
 
     env["KORECHAT_DATA_DIR"] = str(stack_paths["conversation_data"])
@@ -305,7 +305,7 @@ def parse_args() -> argparse.Namespace:
 def resolve_services(raw: str, services: dict[str, ServiceSpec]) -> list[ServiceSpec]:
     selected = [part.strip().lower() for part in raw.split(",") if part.strip()]
     if not selected or selected == ["all"]:
-        return [services[key] for key in ("conversation", "agent", "data", "docs", "code", "comms")]
+        return [services[key] for key in ("korechat", "koreagent", "koredatagateway", "koredocs", "korecode", "korecomms")]
 
     unknown = [name for name in selected if name not in services]
     if unknown:

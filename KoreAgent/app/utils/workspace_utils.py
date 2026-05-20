@@ -111,17 +111,17 @@ def _flatten_suite_config(raw: dict) -> dict:
         flattened["UserDataFolder"] = paths["datauserroot"]
 
     services = raw.get("services") if isinstance(raw.get("services"), dict) else {}
-    agent = services.get("agent") if isinstance(services.get("agent"), dict) else {}
+    agent = services.get("koreagent") if isinstance(services.get("koreagent"), dict) else {}
     if agent.get("port") is not None:
         flattened["agentport"] = agent["port"]
 
     connections = raw.get("connections") if isinstance(raw.get("connections"), dict) else {}
     if isinstance(connections.get("korechat"), str):
         flattened["korechaturl"] = connections["korechat"]
-    elif isinstance(services.get("conversation"), dict):
+    elif isinstance(services.get("korechat"), dict):
         _net = raw.get("network") if isinstance(raw.get("network"), dict) else {}
         _kc_host = str(_net.get("host") or "127.0.0.1")
-        _kc_port = services["conversation"].get("port", 8630)
+        _kc_port = services["korechat"].get("port", 8630)
         flattened["korechaturl"] = f"http://{_kc_host}:{_kc_port}"
 
     mcp = raw.get("mcp") if isinstance(raw.get("mcp"), dict) else {}

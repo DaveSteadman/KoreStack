@@ -2,7 +2,7 @@
  * panels.js — draggable split-panel layout utility.
  *
  * Usage:
- *   import { initPanels } from '/ui-elements/assets/js/panels.js';
+ *   import { initPanels } from '/ui-elements-2/assets/js/panels.js';
  *
  *   initPanels({
  *     panelsEl:   document.getElementById('my-panels'),   // .kcui-panels grid container

@@ -235,9 +235,11 @@
 }
 
 .e2-stepper {
-  --e2-stepper-tone: var(--accent, #4af77a);
+  --e2-stepper-tone:    var(--accent, #4af77a);
+  --e2-stepper-input-w: 3.25rem;
+  --e2-stepper-btn-w:   calc(var(--e2-h) * 0.72);
   display: inline-grid;
-  grid-template-columns: 52px 20px;
+  grid-template-columns: var(--e2-stepper-input-w) var(--e2-stepper-btn-w);
   align-items: stretch;
   height: var(--e2-h);
   border: 1px solid var(--text-dim, #4e5466);
@@ -396,17 +398,6 @@
 .e2-slider--labeled {
   gap: 0.35rem;
 }
-
-.e2-slider__label {
-  font-size:   var(--e2-font, 12px);
-  color:       var(--text, #c5c8d0);
-  white-space: nowrap;
-  flex-shrink: 0;
-  line-height: 1;
-  user-select: none;
-}
-
-
 
 .e2-slider--bare input[type="range"]::-moz-range-track {
   background:    var(--border-2, #2b3148);

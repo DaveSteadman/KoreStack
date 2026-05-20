@@ -1,12 +1,12 @@
 import { initAppBar, initTopbar, SUITE_ICONS, resolveIcon } from '/ui-elements/assets/js/chrome.js?v=20260508b';
 
 const SERVICE_KEY_BY_SLUG = {
-  agent: 'koreagent',
-  conversation: 'korechat',
-  data: 'koredata',
-  docs: 'koredocs',
-  code: 'korecode',
-  comms: 'korecomms',
+  koreagent: 'koreagent',
+  korechat: 'korechat',
+  koredatagateway: 'koredata',
+  koredocs: 'koredocs',
+  korecode: 'korecode',
+  korecomms: 'korecomms',
 };
 
 const STATE_COLOR = {

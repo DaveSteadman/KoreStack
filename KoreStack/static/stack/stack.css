@@ -9,12 +9,12 @@
   --stack-success: var(--success);
   --stack-warn: var(--warning);
   --stack-danger: var(--danger);
-  --service-agent: #66f0c9;
-  --service-conversation: #59d7ff;
-  --service-data: #a78bfa;
-  --service-docs: #ffd166;
-  --service-code: #7ee081;
-  --service-comms: #ff8fab;
+  --service-koreagent: #66f0c9;
+  --service-korechat: #59d7ff;
+  --service-koredatagateway: #a78bfa;
+  --service-koredocs: #ffd166;
+  --service-korecode: #7ee081;
+  --service-korecomms: #ff8fab;
 }
 
 * { box-sizing: border-box; }
@@ -323,12 +323,12 @@ code {
   color: var(--stack-accent);
 }
 
-.service-agent { --service-accent: var(--service-agent); }
-.service-conversation { --service-accent: var(--service-conversation); }
-.service-data { --service-accent: var(--service-data); }
-.service-docs { --service-accent: var(--service-docs); }
-.service-code { --service-accent: var(--service-code); }
-.service-comms { --service-accent: var(--service-comms); }
+.service-koreagent { --service-accent: var(--service-koreagent); }
+.service-korechat { --service-accent: var(--service-korechat); }
+.service-koredatagateway { --service-accent: var(--service-koredatagateway); }
+.service-koredocs { --service-accent: var(--service-koredocs); }
+.service-korecode { --service-accent: var(--service-korecode); }
+.service-korecomms { --service-accent: var(--service-korecomms); }
 
 @media (max-width: 860px) {
   .service-row {

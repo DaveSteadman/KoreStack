@@ -1,3 +1,24 @@
+/**
+ * appMenu.js — renders the pull-down menu bar and wires action dispatch.
+ *
+ * Builds the classic application menu bar HTML into `#app-menu-host` from a declarative
+ * menu/item configuration, handles open/close toggling of dropdown lists, and routes
+ * menu item clicks to a caller-supplied onAction callback.
+ *
+ * Key functions:
+ *   renderAppMenu(options)        — build and mount the menu bar from a declarative config
+ *   initAppMenuEvents(onAction)   — attach open/close and click listeners; dispatch actions
+ *   configureAppMenu(config)      — update icon resolver and default settings
+ *
+ * options shape for renderAppMenu:
+ *   { app, appLabel, titleId, dirtyId, initialTitle, menus, editableTitle, appIcon, config }
+ *   menus: [{ label, items: [{ label, action, shortcut } | 'sep'] }]
+ *
+ * Related modules:
+ *   - app-menu.css   — visual styles for #menu-bar, .menu-item, .dropdown, etc.
+ *   - icons.js       — SUITE_ICONS / resolveIcon for the app brand icon
+ */
+
 import { SUITE_ICONS, resolveIcon } from './icons.js';
 
 const DEFAULT_CONFIG = {

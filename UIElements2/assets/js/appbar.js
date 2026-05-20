@@ -1,5 +1,25 @@
-import { SUITE_ICONS, resolveIcon } from './icons.js?v=20260501a';
-import { applyTheme, themeFor } from './theme.js?v=20260501a';
+/**
+ * appbar.js — builds and injects the per-application app bar and navigation tab strip.
+ *
+ * Renders the app bar HTML (brand block, tab strip, metadata chips, and action controls)
+ * from a declarative options object, applies the per-service theme colour via applyTheme,
+ * and manages tab persistence + KoreDocs-style document tab tracking via localStorage.
+ *
+ * Key functions:
+ *   initAppBar(options)          — render and mount the full app bar from an options object
+ *   initAppTabs(options)         — initialise the document tab strip with persistence
+ *   trackAppTab(id, label, url)  — register or update a document tab entry
+ *   configureAppTabs(config)     — update tab strip configuration at runtime
+ *
+ * Related modules:
+ *   - appbar.css   — visual styles for all .kappbar-* elements
+ *   - theme.js     — applyTheme / themeFor used to set the accent colour
+ *   - icons.js     — SUITE_ICONS / resolveIcon for brand and tab icons
+ *   - tabs.js      — compatibility shim that re-exports initAppTabs / trackAppTab
+ */
+
+import { SUITE_ICONS, resolveIcon } from './icons.js';
+import { applyTheme, themeFor } from './theme.js';
 
 const DEFAULT_TYPE_URL = {
   koredoc: '/doc',

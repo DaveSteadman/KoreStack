@@ -1,8 +1,14 @@
 # UI Gen2 Workplan
 
+## Mission 
+
+Create a unified graphical style and UI architecture across the KoreStack project.
+
 ## Background - The Problems Being Solved
 
-A series of design discussions (May 2026) identified recurring friction in the KoreStack UI:
+KoreStack is assembled from a number of separately developed microservices, each with its own design patterns. While they have been brought closer together through some common styles, a revamp of all html pages is due.
+
+A series of design discussions identified recurring friction in the KoreStack UI:
 
 1. **Height inconsistency.** `kcui-tag` (small, ~18–20px), `btn-sm`, `kg-nav-btn` (1.75rem), and `input` all have different heights. Placing them in the same row requires manual fudging per page.
 
@@ -12,7 +18,7 @@ A series of design discussions (May 2026) identified recurring friction in the K
 
 4. **Ad-hoc panel header composition.** Each page assembles its own header row independently, with no shared pattern for title / mode group / view tweaks.
 
-5. **No canonical layout test.** Problems are discovered page-by-page rather than caught in a single reference layout.
+5. **No canonical layout.** Problems are discovered page-by-page rather than caught in a single reference layout.
 
 6. **Python vs. Jinja inconsistency.** Some pages are built in pure Python (string concatenation), others in Jinja2 templates. There is no enforced standard.
 

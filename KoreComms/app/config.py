@@ -49,7 +49,7 @@ def _load() -> dict:
         host = raw.get("network", {}).get("host")
         if host is not None:
             result["host"] = host
-        port = raw.get("services", {}).get("comms", {}).get("port")
+        port = raw.get("services", {}).get("korecomms", {}).get("port")
         if port is not None:
             result["port"] = port
         korechat = raw.get("connections", {}).get("korechat")
