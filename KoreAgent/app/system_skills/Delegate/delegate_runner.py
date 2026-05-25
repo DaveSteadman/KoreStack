@@ -30,8 +30,25 @@ from utils.workspace_utils import trunc
 _delegate_tls: threading.local = threading.local()
 MAX_DELEGATE_DEPTH: int = 2
 
+_delegate_branch_lock: threading.Lock = threading.Lock()
+_delegate_branch_seq: int = 0
+
 # Child answers longer than this are auto-saved to a scratchpad key to keep the parent thread compact.
 _DELEGATE_AUTO_SAVE_THRESHOLD: int = 512
+
+
+def _next_delegate_branch_id() -> str:
+    global _delegate_branch_seq
+    with _delegate_branch_lock:
+        _delegate_branch_seq += 1
+        return f"branch-{_delegate_branch_seq:04d}"
+
+
+def _emit_delegate_event(logger, event: str, branch_id: str, **fields) -> None:
+    parts = [f"event={event}", f"branch_id={branch_id}"]
+    for key, value in fields.items():
+        parts.append(f"{key}={value}")
+    logger.log_file_only("[delegate:event] " + " ".join(parts))
 
 
 def get_delegate_runtime_tls() -> threading.local:
@@ -66,10 +83,19 @@ def run_delegate_subrun(
     orchestrate_prompt_fn,
     config_cls,
 ) -> dict:
+    branch_id = _next_delegate_branch_id()
     prompt = str(prompt or "").strip()
     instructions = str(instructions or "").strip()
     if not prompt:
-        return {"status": "error", "answer": "delegate() requires a non-empty prompt.", "delegate_prompt": "", "depth": 0, "max_iterations": max_iterations}
+        return {
+            "status": "error",
+            "answer": "delegate() requires a non-empty prompt.",
+            "delegate_prompt": "",
+            "depth": 0,
+            "max_iterations": max_iterations,
+            "branch_id": branch_id,
+            "events": ["invalid_prompt"],
+        }
 
     logger = getattr(_delegate_tls, "logger", None)
     depth = int(getattr(_delegate_tls, "delegate_depth", 0))
@@ -81,6 +107,8 @@ def run_delegate_subrun(
             "delegate_prompt": prompt,
             "depth": depth,
             "max_iterations": max_iterations,
+            "branch_id": branch_id,
+            "events": ["runtime_unavailable"],
         }
     if depth >= MAX_DELEGATE_DEPTH:
         return {
@@ -89,6 +117,8 @@ def run_delegate_subrun(
             "delegate_prompt": prompt,
             "depth": depth,
             "max_iterations": max_iterations,
+            "branch_id": branch_id,
+            "events": ["depth_rejected"],
         }
 
     child_prompt = f"{instructions}\n\n{prompt}".strip() if instructions else prompt
@@ -122,12 +152,21 @@ def run_delegate_subrun(
     )
 
     logger.log_file_only(f"[delegate] spawning child run: depth={depth + 1} max_iter={child_iterations} prompt={trunc(child_prompt, 80)}")
+    _emit_delegate_event(
+        logger,
+        "task_spawned",
+        branch_id,
+        depth=depth + 1,
+        max_iter=child_iterations,
+        prompt=trunc(child_prompt, 80),
+    )
 
     # Check stop state before starting the child run - the parent may have been stopped
     # while this delegate was queued.
     try:
         from orchestration import is_stop_requested as _is_stop_requested
         if _is_stop_requested():
+            _emit_delegate_event(logger, "task_aborted", branch_id, reason="stop_requested")
             return {
                 "status": "error",
                 "answer": "[Run stopped by /stoprun - delegate did not execute.]",
@@ -135,6 +174,8 @@ def run_delegate_subrun(
                 "depth": depth + 1,
                 "max_iterations": child_iterations,
                 "elapsed_s": 0.0,
+                "branch_id": branch_id,
+                "events": ["task_spawned", "task_aborted"],
             }
     except ImportError:
         pass
@@ -145,6 +186,8 @@ def run_delegate_subrun(
 
     previous = push_delegate_runtime(logger=logger, delegate_depth=depth + 1, config=child_config)
     _start = time.monotonic()
+    _emit_delegate_event(logger, "task_started", branch_id, depth=depth + 1)
+    events = ["task_spawned", "task_started"]
     try:
         answer, _, _, run_success, _ = orchestrate_prompt_fn(
             user_prompt=child_prompt,
@@ -158,13 +201,17 @@ def run_delegate_subrun(
             bound_session_id=parent_session_id,
         )
         status = "ok" if run_success else "error"
+        events.append("task_completed" if run_success else "task_failed")
     except Exception as exc:
         answer = f"Delegate child run failed: {exc}"
         status = "error"
+        events.append("task_failed")
     finally:
         pop_delegate_runtime(previous)
     elapsed = time.monotonic() - _start
     logger.log_file_only(f"[delegate] child done: depth={depth + 1} status={status} elapsed={elapsed:.1f}s prompt={trunc(child_prompt, 80)}")
+    _emit_delegate_event(logger, "task_finished", branch_id, depth=depth + 1, status=status, elapsed=f"{elapsed:.2f}s")
+    events.append("task_finished")
 
     if output_key and status == "ok":
         try:
@@ -184,4 +231,13 @@ def run_delegate_subrun(
         except Exception as exc:
             logger.log_file_only(f"[delegate] Warning: could not auto-save large result: {exc}")
 
-    return {"status": status, "answer": answer, "delegate_prompt": child_prompt, "depth": depth + 1, "max_iterations": child_iterations, "elapsed_s": round(elapsed, 2)}
+    return {
+        "status": status,
+        "answer": answer,
+        "delegate_prompt": child_prompt,
+        "depth": depth + 1,
+        "max_iterations": child_iterations,
+        "elapsed_s": round(elapsed, 2),
+        "branch_id": branch_id,
+        "events": events,
+    }

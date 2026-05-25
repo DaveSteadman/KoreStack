@@ -5,6 +5,7 @@ const DEFAULT_TYPE_URL = {
   koredoc: '/doc',
   koresheet: '/sheet',
   kodiag: '/diag',
+  textedit: '/textedit',
 };
 
 const DEFAULT_APPBAR_TABS_CONFIG = {
@@ -263,18 +264,25 @@ function saveAppTabs(tabs) {
   localStorage.setItem(appTabsStorageKey(), JSON.stringify(tabs));
 }
 
+function makeAppTabKey(type, id, name) {
+  const safeType = type || currentAppTabsType || 'koredocs';
+  if (id != null) return `${safeType}:kf:${id}`;
+  return `${safeType}:name:${name}`;
+}
+
 function appTabKey(tab) {
-  return tab.id != null ? `kf:${tab.id}` : tab.name;
+  return makeAppTabKey(tab.type, tab.id, tab.name);
 }
 
 function currentAppTabId() {
   const params = new URLSearchParams(location.search);
+  const type = currentAppTabsType;
   const id = params.get(currentAppTabsConfig.currentParams.id);
-  if (id) return `kf:${id}`;
+  if (id) return makeAppTabKey(type, id, null);
   const file = params.get(currentAppTabsConfig.currentParams.file);
-  if (file) return file;
+  if (file) return makeAppTabKey(type, null, file);
   const untitled = params.get(currentAppTabsConfig.currentParams.untitled);
-  return untitled ? currentAppTabsConfig.currentUntitledPrefix + untitled : null;
+  return untitled ? makeAppTabKey(type, null, currentAppTabsConfig.currentUntitledPrefix + untitled) : null;
 }
 
 function appTabUrl(tab) {
@@ -299,7 +307,8 @@ function autoRegisterUntitledAppTab() {
   if (!untitled || params.get(currentAppTabsConfig.currentParams.file)) return;
   const name = currentAppTabsConfig.currentUntitledPrefix + untitled;
   const tabs = loadAppTabs();
-  if (!tabs.find((tab) => tab.name === name)) {
+  const targetKey = makeAppTabKey(currentAppTabsType, null, name);
+  if (!tabs.find((tab) => appTabKey(tab) === targetKey)) {
     tabs.push({ name, type: currentAppTabsType, untitled: true });
     saveAppTabs(tabs);
   }
@@ -417,7 +426,7 @@ export function trackAppTab(name, type, id = null) {
   if (!name) return;
   const tabs = loadAppTabs();
   const current = currentAppTabId();
-  const key = id != null ? `kf:${id}` : name;
+  const key = makeAppTabKey(type || currentAppTabsType, id, name);
   const untitledIndex = current ? tabs.findIndex((tab) => appTabKey(tab) === current && tab.untitled) : -1;
 
   if (untitledIndex !== -1) {

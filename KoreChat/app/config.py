@@ -14,13 +14,15 @@
 # This is resilient to the working directory at launch time.
 # ====================================================================================================
 
-import json
 import os
+import sys
 from pathlib import Path
 
-_REPO_ROOT    = Path(os.environ.get("KORE_SUITE_ROOT", str(Path(__file__).resolve().parents[2]))).resolve()
-_CONFIG_FILE  = _REPO_ROOT / "config" / "default.json"
-_LOCAL_CONFIG = _REPO_ROOT / "config" / "local.json"
+_REPO_ROOT = Path(os.environ.get("KORE_SUITE_ROOT", str(Path(__file__).resolve().parents[2]))).resolve()
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
+from KoreCommon.suite_config import load_service_config
 
 _DEFAULTS: dict = {
     "host":      os.environ.get("KORECHAT_HOST", "0.0.0.0"),
@@ -32,29 +34,17 @@ _DEFAULTS: dict = {
 
 # ----------------------------------------------------------------------------------------------------
 def _load() -> dict:
-    result = dict(_DEFAULTS)
-    for cfg_path in (_CONFIG_FILE, _LOCAL_CONFIG):
-        if not cfg_path.exists():
-            continue
-        with open(cfg_path, encoding="utf-8") as f:
-            raw = json.load(f)
-        host = raw.get("network", {}).get("host")
-        if host is not None:
-            result["host"] = host
-        port = raw.get("services", {}).get("korechat", {}).get("port")
-        if port is not None:
-            result["port"] = port
-    # Env vars always take final precedence over config file values
-    # (KoreStack injects the correct port at spawn time via env)
-    for key, env_var in [
-        ("host",      "KORECHAT_HOST"),
-        ("port",      "KORECHAT_PORT"),
-        ("log_level", "KORECHAT_LOG_LEVEL"),
-        ("data_dir",  "KORECHAT_DATA_DIR"),
-    ]:
-        val = os.environ.get(env_var)
-        if val is not None:
-            result[key] = int(val) if key == "port" else val
+    result = load_service_config(
+        service_key="korechat",
+        defaults=_DEFAULTS,
+        suite_root=_REPO_ROOT,
+        env_overrides={
+            "host": "KORECHAT_HOST",
+            "port": "KORECHAT_PORT",
+            "log_level": "KORECHAT_LOG_LEVEL",
+            "data_dir": "KORECHAT_DATA_DIR",
+        },
+    )
     return result
 
 

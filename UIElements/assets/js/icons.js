@@ -25,7 +25,8 @@ export const ICON_FILES = Object.freeze({
   korecode: 'square-terminal-svgrepo-com',
   korecomms: 'send-alt-1-svgrepo-com',
   korechat: 'message-circle-chat-svgrepo-com',
-  koredoc: 'text-svgrepo-com',
+  koredoc: 'text-size-svgrepo-com',
+  textedit: 'text-svgrepo-com',
   koresheet: 'table-list-alt-svgrepo-com',
   kodiag: 'draw-square-svgrepo-com',
   korefile: 'class-16-svgrepo-com',
@@ -55,6 +56,7 @@ export const KORECOMMS_ICON = makePackIcon(ICON_FILES.korecomms);
 export const KORECHAT_ICON = makePackIcon(ICON_FILES.korechat);
 
 export const KOREDOC_FILE_ICON = makePackIcon(ICON_FILES.koredoc);
+export const TEXTEDIT_FILE_ICON = makePackIcon(ICON_FILES.textedit);
 export const KORESHEET_FILE_ICON = makePackIcon(ICON_FILES.koresheet);
 export const KODIAG_FILE_ICON = makePackIcon(ICON_FILES.kodiag);
 export const KOREFILE_ICON = makePackIcon(ICON_FILES.korefile);
@@ -73,6 +75,7 @@ export const SUITE_ICONS = {
   korecomms: KORECOMMS_ICON,
   korechat: KORECHAT_ICON,
   koredoc: KOREDOC_FILE_ICON,
+  textedit: TEXTEDIT_FILE_ICON,
   koresheet: KORESHEET_FILE_ICON,
   kodiag: KODIAG_FILE_ICON,
   korefile: KOREFILE_ICON,
@@ -85,7 +88,8 @@ export const SUITE_ICONS = {
 function fileIconForPath(path, size = 12) {
   if (!path) return KOREFILE_ICON(size);
   const lower = path.toLowerCase();
-  if (lower.endsWith('.koredoc') || lower.endsWith('.md') || lower.endsWith('.markdown') || lower.endsWith('.txt')) return KOREDOC_FILE_ICON(size);
+  if (lower.endsWith('.txt')) return TEXTEDIT_FILE_ICON(size);
+  if (lower.endsWith('.koredoc') || lower.endsWith('.md') || lower.endsWith('.markdown')) return KOREDOC_FILE_ICON(size);
   if (lower.endsWith('.koresheet') || lower.endsWith('.csv') || lower.endsWith('.tsv') || lower.endsWith('.xlsx')) return KORESHEET_FILE_ICON(size);
   if (lower.endsWith('.kodiag') || lower.endsWith('.drawio') || lower.endsWith('.mermaid')) return KODIAG_FILE_ICON(size);
   return KOREFILE_ICON(size);

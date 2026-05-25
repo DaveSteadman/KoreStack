@@ -95,12 +95,12 @@ class KiwixCrawlRequest(BaseModel):
     seed_url: str
     max_depth: int = 1
     limit: int = 200
-    delay_seconds: float = Field(default=1.0, ge=0.0, le=10.0)
+    delay_seconds: float = Field(default=1.0, ge=0.1, le=10.0)
     resume: bool = True
 
 
 class KiwixThrottleRequest(BaseModel):
-    delay_seconds: float = Field(default=1.0, ge=0.0, le=10.0)
+    delay_seconds: float = Field(default=1.0, ge=0.1, le=10.0)
 
 
 

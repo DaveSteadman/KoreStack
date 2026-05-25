@@ -10,9 +10,8 @@
 //   POST {koreagent}/sessions/{session_id}/prompt  →  { run_id }
 //   GET  {koreagent}/runs/{run_id}/stream          →  SSE events
 //
-// KoreAgent base URL: window.__koreSuiteUrls.koreagent (fallback: http://127.0.0.1:8605).
-
-const _KOREAGENT_FALLBACK = 'http://127.0.0.1:8605';
+// KoreAgent base URL: window.__koreSuiteUrls.koreagent, then localStorage cache,
+// then current-host fallback on the standard KoreAgent port.
 const _STATE_KEY = 'korecode.chat-state';
 const _WIDTH_KEY = 'korecode-chat-w';
 const _MIN_PANEL_W = 260;
@@ -217,8 +216,27 @@ export function initChat({ getActiveTab, getContinueContext, insertContinuation,
 
   // ── Helpers ─────────────────────────────────────────────────────────────
 
+  function _cachedSuiteUrls() {
+    try {
+      const raw = localStorage.getItem('kore.suite-urls');
+      return raw ? JSON.parse(raw) : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function _defaultAgentBase() {
+    const host = window.location?.hostname || '127.0.0.1';
+    return `http://${host}:8605`;
+  }
+
   function agentBase() {
-    return ((window.__koreSuiteUrls?.koreagent) ?? _KOREAGENT_FALLBACK).replace(/\/$/, '');
+    const cached = _cachedSuiteUrls();
+    return (
+      window.__koreSuiteUrls?.koreagent
+      || cached?.koreagent
+      || _defaultAgentBase()
+    ).replace(/\/$/, '');
   }
 
   /** Derive a stable, URL-safe session ID from the file path. */

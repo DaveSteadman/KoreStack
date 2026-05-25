@@ -65,6 +65,7 @@ import json
 import queue
 import re
 import threading
+import httpx
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -1138,13 +1139,57 @@ def _kc_delete(path: str) -> None:
         raise HTTPException(status_code=503, detail=f"KoreChat unreachable: {exc.reason}") from exc
 
 
+async def _kc_request_async(method: str, path: str, payload: dict | None = None) -> dict | list | None:
+    """Async proxy helper for browser-facing KC routes.
+
+    Uses HTTPX so FastAPI handlers avoid blocking the event loop while waiting on I/O.
+    """
+    base = _kc_client.get_base_url()
+    if not base:
+        raise HTTPException(status_code=503, detail="KoreChat not configured")
+
+    url = f"{base}{path}"
+    request_kwargs: dict = {
+        "headers": {"Accept": "application/json"},
+    }
+    if payload is not None:
+        request_kwargs["json"] = payload
+
+    try:
+        async with httpx.AsyncClient(timeout=_KC_TIMEOUT) as client:
+            response = await client.request(method, url, **request_kwargs)
+    except httpx.ConnectError as exc:
+        raise HTTPException(status_code=503, detail=f"KoreChat unreachable: {exc}") from exc
+    except httpx.TimeoutException as exc:
+        raise HTTPException(status_code=504, detail="KoreChat request timed out") from exc
+
+    if response.status_code == 204:
+        return None
+
+    if response.is_error:
+        detail = response.text[:200] if response.text else f"KoreChat HTTP {response.status_code}"
+        raise HTTPException(status_code=response.status_code, detail=detail)
+
+    body = response.text.strip()
+    return json.loads(body) if body else None
+
+
+async def _kc_get_async(path: str) -> dict | list | None:
+    return await _kc_request_async("GET", path)
+
+
+async def _kc_post_async(path: str, payload: dict) -> dict | None:
+    response = await _kc_request_async("POST", path, payload)
+    return response if isinstance(response, dict) else None
+
+
 class KcSendRequest(BaseModel):
     session_id: str
     content:    str
 
 
 @app.post("/kc/send", status_code=201)
-def kc_send(body: KcSendRequest):
+async def kc_send(body: KcSendRequest):
     """Append an inbound chat message to KoreChat.
 
     Finds or creates the KC conversation for the given session_id (mapped via external_id).
@@ -1160,7 +1205,7 @@ def kc_send(body: KcSendRequest):
     # Find existing conversation by external_id; create if absent.
     conv_id: int | None = None
     try:
-        existing = _kc_get(f"/conversations/by-external-id/{urllib.parse.quote(external_id, safe='')}")
+        existing = await _kc_get_async(f"/conversations/by-external-id/{urllib.parse.quote(external_id, safe='')}")
         if isinstance(existing, dict) and existing.get("id"):
             conv_id = int(existing["id"])
     except HTTPException as exc:
@@ -1169,7 +1214,7 @@ def kc_send(body: KcSendRequest):
 
     if conv_id is None:
         # Create a new webchat conversation tied to this session.
-        new_conv = _kc_post("/conversations", {
+        new_conv = await _kc_post_async("/conversations", {
             "channel_type": "webchat",
             "subject":      f"Webchat {body.session_id}",
             "protected":    False,
@@ -1180,7 +1225,7 @@ def kc_send(body: KcSendRequest):
         conv_id = new_conv["id"]
 
     # Append inbound message.
-    msg = _kc_post(f"/conversations/{conv_id}/messages", {
+    msg = await _kc_post_async(f"/conversations/{conv_id}/messages", {
         "direction":      "inbound",
         "content":        content,
         "sender_display": body.session_id,
@@ -1193,15 +1238,15 @@ def kc_send(body: KcSendRequest):
 
 
 @app.get("/kc/conversations/{conv_id}/messages")
-def kc_get_messages(conv_id: int, limit: int = 100):
+async def kc_get_messages(conv_id: int, limit: int = 100):
     """Proxy the message list for a KC conversation to the browser."""
-    return _kc_get(f"/conversations/{conv_id}/messages?limit={limit}") or []
+    return await _kc_get_async(f"/conversations/{conv_id}/messages?limit={limit}") or []
 
 
 @app.get("/kc/conversations/{conv_id}")
-def kc_get_conversation(conv_id: int):
+async def kc_get_conversation(conv_id: int):
     """Proxy a KC conversation record to the browser."""
-    result = _kc_get(f"/conversations/{conv_id}")
+    result = await _kc_get_async(f"/conversations/{conv_id}")
     if result is None:
         raise HTTPException(status_code=404, detail="Conversation not found")
     return result

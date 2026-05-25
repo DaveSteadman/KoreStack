@@ -6,7 +6,9 @@ import { SUITE_ICONS, resolveIcon } from './icons.js?v=20260508b';
 import { SUITE_VERSION } from './suiteMeta.js?v=20260508b';
 import { applyTheme, themeFor } from './theme.js?v=20260508b';
 
-const DEFAULT_HOST = '127.0.0.1';
+function currentHost() {
+	return (typeof window !== 'undefined' && window.location?.hostname) || '127.0.0.1';
+}
 
 const DEFAULT_SERVICES = [
 	{ key: 'korestack', label: 'KoreStack', path: '/', port: 8600, icon: 'korestack' },
@@ -29,7 +31,7 @@ function serviceUrl(service, currentService, urls) {
 	if (typeof window !== 'undefined' && service.key === currentService) {
 		return new URL(service.path, window.location.origin).href;
 	}
-	return `http://${DEFAULT_HOST}:${service.port}${service.path}`;
+	return `http://${currentHost()}:${service.port}${service.path}`;
 }
 
 function serviceIcon(service, iconSize) {
@@ -67,7 +69,8 @@ let _lastTopbarOptions = null;
 function _seedUrlsFromKoreStack() {
 	const korestack = DEFAULT_SERVICES.find((s) => s.key === 'korestack');
 	if (!korestack) return;
-	fetch(`http://127.0.0.1:${korestack.port}/suite-urls`, { cache: 'no-store' })
+	const fallbackBase = `http://${currentHost()}:${korestack.port}`;
+	fetch(`${fallbackBase}/suite-urls`, { cache: 'no-store' })
 		.then((r) => (r.ok ? r.json() : null))
 		.then((data) => {
 			if (!data) return;

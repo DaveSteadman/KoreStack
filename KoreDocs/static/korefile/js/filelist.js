@@ -114,6 +114,10 @@ const EDIT_SVG = `<svg viewBox="0 0 20 20" fill="none" width="12" height="12">
   <path d="M14.5 3.5a2.121 2.121 0 0 1 3 3L6 18H3v-3L14.5 3.5z" stroke="currentColor" stroke-width="1.5"/>
 </svg>`;
 
+const TEXT_SVG = `<svg viewBox="0 0 20 20" fill="none" width="12" height="12">
+  <path d="M4 5h12M4 10h12M4 15h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+</svg>`;
+
 const TRASH_SVG = `<svg viewBox="0 0 20 20" fill="none" width="12" height="12">
   <path d="M3 6h14M8 6V4h4v2M5 6l1 11h8l1-11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
 </svg>`;
@@ -163,6 +167,7 @@ function _renderList() {
         <td class="col-actions">
           <div class="row-actions">
             ${_actionBtn('open', 'Open', OPEN_SVG)}
+            ${_actionBtn('open-text', 'Open as Text', TEXT_SVG)}
             ${_actionBtn('rename', 'Rename', EDIT_SVG)}
             ${_actionBtn('delete', 'Delete', TRASH_SVG)}
           </div>
@@ -223,6 +228,7 @@ _tbody.addEventListener('click', e => {
   if (!row) return;
   const action = btn.dataset.btn;
   if (action === 'open')   _openFile(row);
+  if (action === 'open-text') _openFileAsText(row);
   if (action === 'rename') _startRename(row);
   if (action === 'delete') _deleteFile(row);
 });
@@ -265,6 +271,7 @@ _ctxMenu.addEventListener('click', e => {
   _hideCtx();
   const action = li.dataset.action;
   if (action === 'open')   _openFile(_contextTarget);
+  if (action === 'open-text') _openFileAsText(_contextTarget);
   if (action === 'rename') _startRename(_contextTarget);
   if (action === 'delete') _deleteFile(_contextTarget);
   if (action === 'move')   _moveFile(_contextTarget);
@@ -292,6 +299,21 @@ function _openFile(row) {
 
   // Navigate in the same window — everything is one SPA.
   location.href = url + '?id=' + encodeURIComponent(id) + '&file=' + encodeURIComponent(name);
+}
+
+function _openFileAsText(row) {
+  const id = parseInt(row.dataset.id, 10);
+  const name = row.dataset.name;
+  try {
+    const tabs = JSON.parse(localStorage.getItem(_TABS_KEY) || '[]');
+    if (!tabs.find(t => t.type === 'textedit' && (t.id != null ? t.id === id : t.name === name))) {
+      tabs.push({ id, name, type: 'textedit' });
+      localStorage.setItem(_TABS_KEY, JSON.stringify(tabs));
+    }
+  } catch {
+    // Ignore storage failures.
+  }
+  location.href = '/textedit?id=' + encodeURIComponent(id) + '&file=' + encodeURIComponent(name);
 }
 
 function _startRename(row) {

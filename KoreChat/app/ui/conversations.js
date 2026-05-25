@@ -30,6 +30,20 @@ const DEFAULT_CHAT_AGE_FALLBACK_DAYS = 7;
 const DEFAULT_CHAT_AGE_CULL_MS = 60 * 60 * 1000;
 const AUTO_REFRESH_MS = 30_000;
 
+function _cachedSuiteUrls() {
+    try {
+        const raw = localStorage.getItem("kore.suite-urls");
+        return raw ? JSON.parse(raw) : null;
+    } catch (_) {
+        return null;
+    }
+}
+
+function _defaultKoreAgentBase() {
+    const host = window.location?.hostname || "127.0.0.1";
+    return `http://${host}:8605`;
+}
+
 // ====================================================================================================
 // CACHE HELPERS
 // ====================================================================================================
@@ -410,7 +424,11 @@ async function sendMessage() {
 
     // Inbound messages for webchat conversations route through the MAF agent so the agent
     // processes them and writes the response back to KC - exactly like typing in the agent page.
-    const MAF_BASE     = String(window.__koreSuiteUrls?.koreagent || "http://127.0.0.1:8605").replace(/\/$/, "");
+    const MAF_BASE     = String(
+        window.__koreSuiteUrls?.koreagent
+        || _cachedSuiteUrls()?.koreagent
+        || _defaultKoreAgentBase()
+    ).replace(/\/$/, "");
     const wcPrefix     = "webchat_";
     const isWebchat    = direction === "inbound" && _selectedExternalId && _selectedExternalId.startsWith(wcPrefix);
 

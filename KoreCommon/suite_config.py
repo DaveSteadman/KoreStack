@@ -1,0 +1,77 @@
+from __future__ import annotations
+
+import json
+import os
+from pathlib import Path
+from typing import Any, Callable
+
+
+RawMerger = Callable[[dict[str, Any], dict[str, Any]], None]
+
+
+def _coerce_env_value(raw_value: str, current_value: Any) -> Any:
+    if isinstance(current_value, bool):
+        return raw_value.strip().lower() in {"1", "true", "yes", "on"}
+    if isinstance(current_value, int) and not isinstance(current_value, bool):
+        return int(raw_value)
+    if isinstance(current_value, float):
+        return float(raw_value)
+    return raw_value
+
+
+def _read_json(path: Path) -> dict[str, Any]:
+    with open(path, encoding="utf-8") as handle:
+        data = json.load(handle)
+    return data if isinstance(data, dict) else {}
+
+
+def load_service_config(
+    *,
+    service_key: str,
+    defaults: dict[str, Any],
+    suite_root: Path,
+    env_overrides: dict[str, str] | None = None,
+    raw_merger: RawMerger | None = None,
+) -> dict[str, Any]:
+    """Load merged service config from config/default.json + config/local.json.
+
+    Merge order is defaults -> default.json -> local.json -> env overrides.
+    Common keys resolved from the suite config are:
+      - network.host      -> result['host']
+      - log_level         -> result['log_level']
+      - services.<key>.port -> result['port']
+    """
+    result = dict(defaults)
+    cfg_default = suite_root / "config" / "default.json"
+    cfg_local = suite_root / "config" / "local.json"
+
+    for cfg_path in (cfg_default, cfg_local):
+        if not cfg_path.exists():
+            continue
+
+        raw = _read_json(cfg_path)
+        host = raw.get("network", {}).get("host")
+        if host is not None:
+            result["host"] = host
+
+        if "log_level" in raw:
+            result["log_level"] = raw["log_level"]
+
+        port = raw.get("services", {}).get(service_key, {}).get("port")
+        if port is not None:
+            result["port"] = port
+
+        if raw_merger is not None:
+            raw_merger(result, raw)
+
+    for key, env_name in (env_overrides or {}).items():
+        env_value = os.environ.get(env_name)
+        if env_value is None:
+            continue
+        current = result.get(key)
+        if current is None:
+            result[key] = env_value
+            continue
+        result[key] = _coerce_env_value(env_value, current)
+
+    return result

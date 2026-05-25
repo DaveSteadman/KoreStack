@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TextEdit - KoreDocs</title>
+  <link rel="icon" type="image/x-icon" href="/ui-elements/assets/icons/favicon.ico" />
+  <link rel="stylesheet" href="/ui-elements/assets/css/chrome.css?v=20260508b" />
+  <link rel="stylesheet" href="/static/textedit/style.css" />
+  <script src="/suite-config.js"></script>
+</head>
+<body>
+  <div id="topbar"></div>
+  <div id="tab-bar"></div>
+  <div id="app-menu-host"></div>
+
+  <main id="te-main">
+    <section id="te-toolbar" class="kcui-panel">
+      <label for="te-target" class="te-label">Target</label>
+      <input id="te-target" type="text" placeholder="id=123 or path=KoreDocs/README.md" />
+      <button id="te-open" type="button" class="kcui-tag kcui-tag--dim">open</button>
+      <button id="te-save" type="button" class="kcui-tag kcui-tag--accent" disabled>save</button>
+      <span id="te-status" aria-live="polite"></span>
+    </section>
+
+    <section id="te-meta" class="kcui-panel">
+      <div><strong>Source:</strong> <span id="te-source">-</span></div>
+      <div><strong>Name/Path:</strong> <span id="te-name">-</span></div>
+      <div><strong>Size:</strong> <span id="te-size">-</span></div>
+      <div><strong>Encoding:</strong> <span id="te-encoding">-</span></div>
+    </section>
+
+    <textarea id="te-editor" spellcheck="false" placeholder="Open a file to inspect plain text markup..."></textarea>
+  </main>
+
+  <script type="module" src="/static/textedit/js/main.js"></script>
+</body>
+</html>

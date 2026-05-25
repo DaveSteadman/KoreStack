@@ -51,6 +51,7 @@ _active_backend: str = "ollama"
 # Skills use get_active_model() / get_active_num_ctx() instead of accepting these as parameters.
 _active_model:   str = ""
 _active_num_ctx: int = 131072
+_active_state_lock: threading.RLock = threading.RLock()
 
 # Cache of last successful server health-check time per host.
 # Avoids an HTTP round-trip on every LLM call (many calls/prompt = unnecessary health hits).
@@ -119,18 +120,21 @@ def register_session_config(model: str, num_ctx: int) -> None:
     thick skills can read the ambient values without needing them passed as parameters.
     """
     global _active_model, _active_num_ctx
-    _active_model   = model
-    _active_num_ctx = num_ctx
+    with _active_state_lock:
+        _active_model = model
+        _active_num_ctx = num_ctx
 
 
 def get_active_model() -> str:
     """Return the currently active session model name."""
-    return _active_model
+    with _active_state_lock:
+        return _active_model
 
 
 def get_active_num_ctx() -> int:
     """Return the currently active session context window in tokens."""
-    return _active_num_ctx
+    with _active_state_lock:
+        return _active_num_ctx
 
 
 # ====================================================================================================
@@ -173,8 +177,9 @@ def configure_host(host: str) -> None:
     resolved = HOST_ALIASES.get(host.strip().lower(), host.strip())
     if "://" not in resolved:
         resolved = f"http://{resolved}:11434"
-    _active_host    = resolved.rstrip("/")
-    _active_backend = "lmstudio" if _is_lmstudio_host(_active_host) else "ollama"
+    with _active_state_lock:
+        _active_host = resolved.rstrip("/")
+        _active_backend = "lmstudio" if _is_lmstudio_host(_active_host) else "ollama"
 
 
 # ----------------------------------------------------------------------------------------------------
@@ -203,19 +208,22 @@ def configure_server(backend: str, host: str | None = None) -> None:
                 resolved = f"http://{host}"
         else:
             resolved = host
-    _active_host    = resolved.rstrip("/")
-    _active_backend = backend
+    with _active_state_lock:
+        _active_host = resolved.rstrip("/")
+        _active_backend = backend
 
 
 # ----------------------------------------------------------------------------------------------------
 def get_active_host() -> str:
     """Return the currently configured server host URL."""
-    return _active_host
+    with _active_state_lock:
+        return _active_host
 
 
 def get_active_backend() -> str:
     """Return the currently configured backend: 'ollama' or 'lmstudio'."""
-    return _active_backend
+    with _active_state_lock:
+        return _active_backend
 
 
 # ----------------------------------------------------------------------------------------------------

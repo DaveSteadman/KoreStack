@@ -197,6 +197,7 @@ app.add_middleware(_AuthMiddleware)
 app.mount('/static/doc',    StaticFiles(directory=STATIC / 'doc'),    name='doc')
 app.mount('/static/sheet',  StaticFiles(directory=STATIC / 'sheet'),  name='sheet')
 app.mount('/static/diag',   StaticFiles(directory=STATIC / 'diag'),   name='diag')
+app.mount('/static/textedit', StaticFiles(directory=STATIC / 'textedit'), name='textedit')
 app.mount('/static/korefile', StaticFiles(directory=STATIC / 'korefile'), name='korefile')
 app.mount('/ui-elements/assets', StaticFiles(directory=COMMONUI_ASSETS), name='ui-elements-assets')
 app.mount('/static/commonui', StaticFiles(directory=COMMONUI_ASSETS), name='commonui')
@@ -233,6 +234,11 @@ def serve_sheet():
 @app.get('/diag', include_in_schema=False)
 def serve_diag():
     return FileResponse(STATIC / 'diag' / 'index.html')
+
+
+@app.get('/textedit', include_in_schema=False)
+def serve_textedit():
+    return FileResponse(STATIC / 'textedit' / 'index.html')
 
 # ── File API ───────────────────────────────────────────────────────────────
 
@@ -418,6 +424,110 @@ class _KfFileUpdate(BaseModel):
 class _KfSheetCellsWrite(BaseModel):
     cells: dict[str, Any]
     expected_revision: Optional[int] = None
+
+
+class _TextEditSaveBody(BaseModel):
+    file_id: Optional[int] = None
+    path: Optional[str] = None
+    content: str
+    expected_revision: Optional[int] = None
+
+
+_TEXTEDIT_MAX_BYTES = 4 * 1024 * 1024
+
+
+def _resolve_textedit_path(path_value: str) -> Path:
+    raw = (path_value or '').strip()
+    if not raw:
+        raise HTTPException(status_code=400, detail='Path is required')
+    candidate = Path(raw)
+    if not candidate.is_absolute():
+        candidate = (SUITE_ROOT / candidate).resolve()
+    else:
+        candidate = candidate.resolve()
+    try:
+        candidate.relative_to(SUITE_ROOT)
+    except ValueError:
+        raise HTTPException(status_code=400, detail='Path must be inside the suite root')
+    if not candidate.exists() or not candidate.is_file():
+        raise HTTPException(status_code=404, detail='File not found')
+    return candidate
+
+
+@app.get('/api/textedit/open', summary='Open any file as plain UTF-8 text')
+def textedit_open(
+    file_id: Annotated[int | None, Query()] = None,
+    path: Annotated[str | None, Query()] = None,
+):
+    if (file_id is None) == (path is None):
+        raise HTTPException(status_code=400, detail='Provide exactly one of file_id or path')
+
+    if file_id is not None:
+        f = korefile.get_file(file_id, include_content=True)
+        if f is None:
+            raise HTTPException(status_code=404, detail='File not found')
+        content = f.get('content') or ''
+        return {
+            'source': 'korefile',
+            'file_id': f.get('id'),
+            'name': f.get('name'),
+            'revision': f.get('revision'),
+            'content': content,
+            'encoding': 'utf-8',
+            'byte_length': len(content.encode('utf-8')),
+            'truncated': False,
+        }
+
+    disk_path = _resolve_textedit_path(path or '')
+    raw = disk_path.read_bytes()
+    truncated = False
+    total_len = len(raw)
+    if total_len > _TEXTEDIT_MAX_BYTES:
+        raw = raw[:_TEXTEDIT_MAX_BYTES]
+        truncated = True
+    rel = str(disk_path.relative_to(SUITE_ROOT)).replace('\\', '/')
+    return {
+        'source': 'filesystem',
+        'path': rel,
+        'full_path': str(disk_path),
+        'content': raw.decode('utf-8', errors='replace'),
+        'encoding': 'utf-8 (replacement for invalid bytes)',
+        'byte_length': total_len,
+        'truncated': truncated,
+    }
+
+
+@app.put('/api/textedit/save', summary='Save plain text back to KoreFile or filesystem')
+def textedit_save(body: _TextEditSaveBody):
+    if (body.file_id is None) == (body.path is None):
+        raise HTTPException(status_code=400, detail='Provide exactly one of file_id or path')
+
+    if body.file_id is not None:
+        try:
+            updated = korefile.update_file(
+                body.file_id,
+                body.content,
+                metadata=None,
+                expected_revision=body.expected_revision,
+            )
+            if updated is None:
+                raise HTTPException(status_code=404, detail='File not found')
+            return {
+                'ok': True,
+                'source': 'korefile',
+                'file_id': updated.get('id'),
+                'revision': updated.get('revision'),
+            }
+        except korefile.ConflictError:
+            raise HTTPException(status_code=409, detail='File changed in the background; refresh and retry.')
+
+    disk_path = _resolve_textedit_path(body.path or '')
+    disk_path.write_text(body.content, encoding='utf-8')
+    return {
+        'ok': True,
+        'source': 'filesystem',
+        'path': str(disk_path.relative_to(SUITE_ROOT)).replace('\\', '/'),
+    }
 
 
 class _KfSheetRowsAppend(BaseModel):
