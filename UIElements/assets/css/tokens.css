@@ -69,9 +69,9 @@
   --danger: #ff5f5f;
   --info: #6eb5ff;
 
-  --kcui-font-ui: 'Roboto Mono', 'Cascadia Code', 'Fira Code', 'Courier New', monospace;
-  --kcui-font-code: 'Roboto Mono', 'Cascadia Code', 'Fira Code', 'Courier New', monospace;
-  --kcui-font-doc: 'Georgia', 'Times New Roman', serif;
+  --kcui-font-ui:   'Roboto Mono', monospace;
+  --kcui-font-code: 'Roboto Mono', monospace;
+  --kcui-font-doc: 'Roboto Mono', monospace;
 
   --kcui-text-body: 13px;
   --kcui-text-body-sm: 12px;
@@ -100,6 +100,10 @@ html,
 body {
   margin: 0;
   padding: 0;
+  font-family: var(--font-ui);
+  font-size: var(--kcui-text-body);
+  color: var(--text);
+  background: var(--bg);
 }
 
 *,

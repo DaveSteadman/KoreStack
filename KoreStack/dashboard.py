@@ -42,7 +42,7 @@ def build_suite_urls(manager: Any, dashboard_url: str, service_icon_keys: dict[s
 
 def _service_state(service: dict[str, object]) -> tuple[str, str, str]:
     if service["reachable"]:
-        return "up", "Up", "accent"
+        return "up", "Running", "success"
     if service["running"]:
         return "starting", "Starting", "warning"
     return "down", "Stopped", "danger"
@@ -50,7 +50,7 @@ def _service_state(service: dict[str, object]) -> tuple[str, str, str]:
 
 def _service_row_markup(service: dict[str, object]) -> str:
     css_state, state_label, tag_color = _service_state(service)
-    state_markup = "" if css_state == "up" else f'<span class="kcui-tag kcui-tag--{tag_color}" data-field="state">{state_label}</span>'
+    state_markup = f'<span class="kcui-tag kcui-tag--{tag_color}" data-field="state">{state_label}</span>'
     slug = html.escape(str(service["slug"]))
     label = html.escape(str(service["label"]))
     icon_key = html.escape(str(service["iconKey"]))
@@ -68,9 +68,8 @@ def _service_row_markup(service: dict[str, object]) -> str:
         </div>
         <div class="service-cell service-state">{state_markup}</div>
         <div class="service-cell address-edit">
-          <input type="text" class="host-input" data-field="host" value="{host}" aria-label="Host for {label}">
           <input type="number" class="port-input" data-field="port" value="{port}" min="1024" max="65535" aria-label="Port for {label}">
-          <button class="kcui-tag kcui-tag--dim" type="button" data-service="{slug}" data-action="setaddress" title="Save address and restart {label}">set</button>
+          <button class="kcui-tag kcui-tag--dim" type="button" data-service="{slug}" data-action="setaddress" title="Save port and restart {label}">set</button>
         </div>
         <div class="service-cell service-link"><a data-field="url" href="{url}" target="_blank" rel="noreferrer">{url}</a></div>
         <div class="service-cell service-actions actions">

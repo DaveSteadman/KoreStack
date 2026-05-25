@@ -354,6 +354,8 @@ class StackManager:
         self._refresh_stop = threading.Event()
         self._refresh_thread = threading.Thread(target=self._refresh_loop, daemon=True)
         self._refresh_thread.start()
+        self._watch_thread = threading.Thread(target=self._watch_loop, daemon=True)
+        self._watch_thread.start()
 
     def get_service_spec(self, slug: str) -> ServiceSpec | None:
         return self._service_map.get(slug)
@@ -513,6 +515,65 @@ class StackManager:
             except OSError:
                 pass
         self._refresh_thread.join(timeout=2)
+        self._watch_thread.join(timeout=2)
+
+    def _watch_loop(self) -> None:
+        """Background thread: polls service .py files and auto-restarts on change."""
+        cwd_to_slug: dict[Path, str] = {
+            spec.cwd.resolve(): spec.slug for spec in self._services
+        }
+
+        def _scan() -> dict[Path, float]:
+            result: dict[Path, float] = {}
+            for cwd in cwd_to_slug:
+                for py_file in cwd.rglob("*.py"):
+                    if "__pycache__" in py_file.parts:
+                        continue
+                    try:
+                        result[py_file] = py_file.stat().st_mtime
+                    except OSError:
+                        pass
+            return result
+
+        def _slug_for(py_file: Path) -> str | None:
+            for cwd, slug in cwd_to_slug.items():
+                try:
+                    py_file.relative_to(cwd)
+                    return slug
+                except ValueError:
+                    continue
+            return None
+
+        mtimes = _scan()
+        while not self._refresh_stop.is_set():
+            self._refresh_stop.wait(2.0)
+            if self._refresh_stop.is_set():
+                break
+            new_mtimes = _scan()
+            changed_slugs: set[str] = set()
+            for py_file, mtime in new_mtimes.items():
+                if mtimes.get(py_file) != mtime:
+                    slug = _slug_for(py_file)
+                    if slug:
+                        changed_slugs.add(slug)
+                        try:
+                            rel = py_file.relative_to(SUITE_ROOT)
+                        except ValueError:
+                            rel = py_file
+                        log.info("source changed: %s", rel)
+            mtimes = new_mtimes
+            if changed_slugs:
+                self._refresh_stop.wait(0.5)  # debounce cascading saves
+                for slug in sorted(changed_slugs):
+                    spec = self._service_map.get(slug)
+                    label = spec.label if spec else slug
+                    log.info("auto-restarting %s (source changed)", label)
+                    print(f"[watcher] restarting {label} ...", flush=True)
+                    try:
+                        self.restart_service(slug)
+                    except Exception as exc:
+                        log.warning("auto-restart %s failed: %s", slug, exc)
+                self.invalidate_snapshot_cache()
 
     def _refresh_loop(self) -> None:
         """Background thread: refreshes the probe cache every 3 seconds."""

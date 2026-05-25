@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Page Title</title>
+
+  <!--
+    KoreCommonUI stylesheets.
+    Load tokens.css first — all other sheets depend on it.
+    Adjust the base path to match how your service serves these files.
+  -->
+  <link rel="stylesheet" href="../assets/css/tokens.css">
+  <link rel="stylesheet" href="../assets/css/fonts.css">
+  <link rel="stylesheet" href="../assets/css/common.css">
+  <link rel="stylesheet" href="../assets/css/icons.css">
+</head>
+<body>
+
+  <div class="kc-topbars">
+
+    <!-- Bar 1 — suite-level navigation.
+         topbar.js renders the service entries automatically from its SERVICES
+         registry. Configure each page with:
+         - data-kc-items: service keys and order
+         - data-kc-links: JSON map of key -> href
+         - data-active: key to underline (is-active)
+         Never write <a class="kc-entry"> entries by hand here. -->
+    <div
+      class="kc-bar kc-bar--1"
+      data-kc-topbar
+      data-active="stack"
+      data-kc-items="stack,agent,chat,data,docs,code,comms"
+      data-kc-links='{"stack":"#","agent":"#","chat":"#","data":"#","docs":"#","code":"#","comms":"#"}'>
+      <span class="kc-bar__end">v0.0.0</span>
+    </div>
+
+    <!-- Bar 2 — app-level navigation / tabs -->
+    <div class="kc-bar kc-bar--2">
+      <a class="kc-btn is-active" href="#">
+        <span class="kc-icon-slot"><!-- app icon --></span>
+        App Name
+      </a>
+      <a class="kc-btn" href="#">Tab A</a>
+      <a class="kc-btn" href="#">Tab B</a>
+      <a class="kc-btn" href="#">Tab C</a>
+    </div>
+
+    <!-- Bar 3 — secondary filter / sub-navigation -->
+    <div class="kc-bar kc-bar--3">
+      <a class="kc-btn is-active" href="#">All</a>
+      <a class="kc-btn" href="#">Filter A</a>
+      <a class="kc-btn" href="#">Filter B</a>
+    </div>
+
+  </div>
+
+  <!-- Page body -->
+  <main class="page-content">
+
+    <div class="kc-panel">
+
+      <!-- Panel header row -->
+      <div class="kc-panel__header">
+        <span class="kc-panel__title">Panel Title</span>
+        <div id="kc-panel-header-actions" class="kc-row"></div>
+      </div>
+
+      <!-- Panel body -->
+      <div class="kc-panel__body">
+        <p>Panel content goes here. This area scrolls when the content overflows the panel height.</p>
+      </div>
+
+      <!-- Panel footer with action buttons -->
+      <div class="kc-panel__footer">
+        <div id="kc-panel-footer-actions-left" class="kc-row"></div>
+        <span class="kc-spacer"></span>
+        <div id="kc-panel-footer-actions-right" class="kc-row"></div>
+      </div>
+
+    </div>
+
+    <!--
+      Button template block: copy/paste this section into service pages.
+      JS fills each row target so button markup remains consistent everywhere.
+    -->
+    <section class="kc-doc-block" aria-labelledby="kc-doc-btn-title">
+      <h2 id="kc-doc-btn-title" class="kc-doc-title">kc-action-btn - Action trigger</h2>
+      <p class="kc-doc-copy">Full slot height. Variable width. Use &lt;button&gt; or &lt;a&gt;.</p>
+
+      <h3 class="kc-doc-kicker">DEFAULT / COLOUR VARIANTS</h3>
+      <div class="kc-doc-card">
+        <div id="kc-demo-row-variants" class="kc-row"></div>
+      </div>
+
+      <h3 class="kc-doc-kicker">STATES</h3>
+      <div class="kc-doc-card">
+        <div id="kc-demo-row-states" class="kc-row"></div>
+      </div>
+
+      <h3 class="kc-doc-kicker">ICON-BUTTON kc-iconbtn</h3>
+      <p class="kc-doc-copy">Square slot (width = height). Glyph only - no text.</p>
+      <div class="kc-doc-card">
+        <div id="kc-demo-row-icons" class="kc-row"></div>
+      </div>
+
+      <h3 class="kc-doc-kicker">ARROWS</h3>
+      <div class="kc-doc-card">
+        <div id="kc-demo-row-arrows" class="kc-row"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- topbar.js renders bar 1 service entries from its SERVICES registry. -->
+  <script type="module" src="../assets/js/topbar.js"></script>
+  <script type="module" src="../assets/js/template_buttons.js"></script>
+
+</body>
+</html>

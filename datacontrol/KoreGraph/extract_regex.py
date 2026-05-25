@@ -1,10 +1,24 @@
-import re, httpx
+"""
+Graph extraction using regex pattern matching (no LLM).
+Reads every chunk from a KoreLibrary book, applies rule-based triple
+extraction, and submits the results to KoreGraph.
+
+Patterns covered: discovered/invented/wrote/etc, is_a, lived_in,
+influenced/preceded/succeeded.
+
+Usage:
+    python extract_regex.py
+    (edit BOOK_ID and CHUNK at the top of this file to change targets)
+"""
+
+import re
+import httpx
 import json
 from pathlib import Path
 
 
 def _load_suite_config() -> dict:
-    _root = Path(__file__).resolve().parent
+    _root = Path(__file__).resolve().parent.parent.parent
     _result: dict = {}
     for _name in ("default.json", "local.json"):
         try:
@@ -19,12 +33,13 @@ def _load_suite_config() -> dict:
     return _result
 
 
-_suite_cfg = _load_suite_config()
-_svc_host  = _suite_cfg.get("network", {}).get("host", "127.0.0.1")
-_data_port = _suite_cfg.get("services", {}).get("koredatagateway", {}).get("port", 8620)
+_suite_cfg  = _load_suite_config()
+_svc_host   = _suite_cfg.get("network", {}).get("host", "127.0.0.1")
+_lib_port   = _suite_cfg.get("services", {}).get("korelibrary",  {}).get("port", 9605)
+_graph_port = _suite_cfg.get("services", {}).get("koregraph",    {}).get("port", 9608)
 
-LIBRARY = f"http://{_svc_host}:{_data_port + 2}"
-GRAPH   = f"http://{_svc_host}:{_suite_cfg.get('services', {}).get('koregraph', {}).get('port', 8626)}"
+LIBRARY = f"http://{_svc_host}:{_lib_port}"
+GRAPH   = f"http://{_svc_host}:{_graph_port}"
 BOOK_ID = 'sciencehistory:2'
 CHUNK   = 16000
 
@@ -35,6 +50,7 @@ _STOP = {
     'name','names','view','views','form','forms','new','old','long','large','small',
     'early','late','good','life','hand','head','body','line','point','case','kind',
 }
+
 
 def _extract(sent):
     s = sent.strip()
@@ -74,42 +90,47 @@ def _extract(sent):
         out.append({'start': m.group(1), 'connection': m.group(2), 'end': m.group(3)})
     return out
 
-client = httpx.Client(timeout=60)
-all_conns, offset, cn = [], 0, 0
-while True:
-    r = client.get(f'{LIBRARY}/books/{BOOK_ID}/chunk', params={'offset': offset, 'length': CHUNK})
-    data = r.json()
-    text = data.get('chunk', '')
-    found = [c for s in re.split(r'(?<=[.!?])\s+', text) for c in _extract(s)]
-    all_conns.extend(found)
-    cn += 1
-    print(f'Chunk {cn:3d}  offset={offset:>7d}  +{len(found):3d}  total={len(all_conns)}')
-    if not data.get('has_more'):
-        break
-    offset = data['next_offset']
 
-seen = set(); unique = []
-for c in all_conns:
-    k = (c['start'].lower(), c['connection'], c['end'].lower())
-    if k not in seen:
-        seen.add(k); unique.append(c)
+if __name__ == "__main__":
+    print(f"Script: {Path(__file__).resolve()}", flush=True)
+    print(f"Library: {LIBRARY}  Graph: {GRAPH}", flush=True)
+    client = httpx.Client(timeout=60)
+    all_conns, offset, cn = [], 0, 0
+    while True:
+        r = client.get(f'{LIBRARY}/books/{BOOK_ID}/chunk', params={'offset': offset, 'length': CHUNK})
+        data = r.json()
+        text = data.get('chunk', '')
+        found = [c for s in re.split(r'(?<=[.!?])\s+', text) for c in _extract(s)]
+        all_conns.extend(found)
+        cn += 1
+        print(f'Chunk {cn:3d}  offset={offset:>7d}  +{len(found):3d}  total={len(all_conns)}')
+        if not data.get('has_more'):
+            break
+        offset = data['next_offset']
 
-print(f'\nSample connections:')
-for c in unique[:25]:
-    print(f'  {c["start"]} --{c["connection"]}--> {c["end"]}')
-print(f'\nTotal unique: {len(unique)}')
+    seen = set()
+    unique = []
+    for c in all_conns:
+        k = (c['start'].lower(), c['connection'], c['end'].lower())
+        if k not in seen:
+            seen.add(k)
+            unique.append(c)
 
-# Submit
-submitted, errors = 0, 0
-for i in range(0, len(unique), 100):
-    batch = unique[i:i+100]
-    gr = client.post(f'{GRAPH}/api/connections/by-name/batch', json=batch, timeout=60)
-    if gr.is_success:
-        result = gr.json()
-        submitted += result.get('accepted', len(batch))
-        errors    += len(result.get('errors', []))
-    else:
-        print(f'Batch error: {gr.status_code}')
-        errors += len(batch)
+    print(f'\nSample connections:')
+    for c in unique[:25]:
+        print(f'  {c["start"]} --{c["connection"]}--> {c["end"]}')
+    print(f'\nTotal unique: {len(unique)}')
 
-print(f'\nSubmitted: {submitted}  Errors: {errors}')
+    submitted, errors = 0, 0
+    for i in range(0, len(unique), 100):
+        batch = unique[i:i+100]
+        gr = client.post(f'{GRAPH}/api/connections/by-name/batch', json=batch, timeout=60)
+        if gr.is_success:
+            result = gr.json()
+            submitted += result.get('accepted', len(batch))
+            errors    += len(result.get('errors', []))
+        else:
+            print(f'Batch error: {gr.status_code}')
+            errors += len(batch)
+
+    print(f'\nSubmitted: {submitted}  Errors: {errors}')

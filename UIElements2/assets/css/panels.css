@@ -307,7 +307,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  min-height: 38px;
+  min-height: var(--row-h);
   padding: 0 10px;
   background: var(--bg);
   border-bottom: 1px solid var(--border);

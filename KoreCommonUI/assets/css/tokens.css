@@ -1,0 +1,76 @@
+/*
+ * tokens.css — KoreCommonUI design constants.
+ *
+ * This is the single source of truth for every size, colour, and spacing value
+ * used across all KoreStack pages.  Include this file before any other stylesheet.
+ *
+ * Rule: no page may hard-code a dimension.  If a value is needed and not yet
+ * defined here, define it here first, then reference the token.
+ */
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   FOUNDATIONAL HEIGHT CONSTANTS
+   Two numbers govern every structural height in the system.
+   Change either one here; the change propagates automatically.
+   ═══════════════════════════════════════════════════════════════════════════ */
+:root {
+
+   /* ── Typography ─────────────────────────────────────────────────────────── */
+   /* Font tokens and font styles are defined only in assets/css/fonts.css. */
+
+  /* ── Colour palette (dark theme default) ────────────────────────────────── */
+  --bg:        #0b0c10;
+  --bg-2:      #0f1117;
+  --surface:   #0f1117;
+  --surface-2: #141823;
+  --border:    #1e2233;
+  --border-2:  #2b3148;
+
+  --text:      #c5c8d0;
+  --text-2:    #949aa7;
+  --text-dim:  #4e5466;
+
+  --accent:    #4af77a;
+  --accent-2:  #2ecc71;
+
+   /* ── Spacing (purpose-defined only) ────────────────────────────────────── */
+   --space-control-gap:         0.375rem; /* gap between sibling controls/buttons in a row */
+   --space-topbar-end-gap:      0.625rem; /* gap between items in topbar end slot */
+   --space-topbar-end-pad-extra: 0.25rem; /* extra side inset for topbar end slot */
+
+  --el-h:  1.75rem;      /* element height  — every button, input, label, icon slot, and control */
+  --pad-h: 0.7rem;    /* padding above, below, and left of every element — the only padding   */
+  --kc-icon-size: 1.1rem;  /* icon glyph size inside a bar entry or button          */
+
+  /* Row height is derived: one control + padding top and bottom.
+     Use --row-h for topbars, panel title bars, and toolbar rows. */
+  --row-h: calc(var(--el-h) + 2 * var(--pad-h));   /* = 2.375 rem */
+
+  /* ── Aliases ────────────────────────────────────────────────────────────── */
+  --bar-h: var(--row-h);   /* topbar / appbar height */
+  --e2-h:  var(--el-h);    /* legacy alias — prefer --el-h in new code */
+
+
+
+  /* ── Radius ─────────────────────────────────────────────────────────────── */
+  --radius-sm: 2px;
+  --radius-md: 4px;
+
+  /* ── Semantic UI colors ─────────────────────────────────────────────────── */
+  --success: #4af77a;
+  --warning: #f0c060;
+  --danger:  #ff5f5f;
+  --info:    #6eb5ff;
+  --muted:   #4e5466;
+
+  /* ── Service accent colors ───────────────────────────────────────────────── */
+  /* Synced with SERVICE in colors.js */
+  --svc-stack:  #2dd4bf;
+  --svc-agent:  #4af77a;
+  --svc-chat:   #f0c060;
+  --svc-data:   #c4a050;
+  --svc-docs:   #6eb5ff;
+  --svc-code:   #fb923c;
+  --svc-comms:  #f472b6;
+  --svc-graph:  #c084fc;
+}

@@ -511,6 +511,7 @@ async function agentResume() {
             const err = await resp.text();
             throw new Error(`HTTP ${resp.status}: ${err}`);
         }
+        window.location.href = agentUrl;
     } catch (e) {
         console.error("agentResume:", e);
         window.alert(`Agent resume failed: ${e.message}`);

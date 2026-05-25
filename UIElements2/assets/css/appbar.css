@@ -22,7 +22,7 @@
 
 .kappbar-host {
   position: sticky;
-  top: var(--topbar-h, var(--tab-h, 38px));
+  top: var(--bar-h);
   z-index: 100;
 }
 
@@ -30,7 +30,7 @@
   --kappbar-accent: var(--accent);
   display: flex;
   align-items: center;
-  min-height: var(--appbar-h, 42px);
+  min-height: var(--bar-h);
   background:
     linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0) 55%),
     var(--panel, #0f1117);
@@ -48,7 +48,7 @@
 .kappbar-group {
   display: flex;
   align-items: center;
-  min-height: var(--appbar-h, 42px);
+  min-height: var(--bar-h);
   flex-shrink: 0;
 }
 
@@ -60,8 +60,8 @@
 }
 
 .kappbar-brandmark {
-  width: 28px;
-  height: 28px;
+  width: var(--el-h);
+  height: var(--el-h);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -115,7 +115,7 @@
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  height: var(--appbar-h, 42px);
+  height: var(--bar-h);
   padding: 0 13px;
   color: var(--text-dim, #4e5466);
   text-decoration: none;
@@ -254,7 +254,7 @@
   gap: 7px;
   min-width: 90px;
   max-width: 200px;
-  height: var(--appbar-h, 42px);
+  height: var(--bar-h);
   padding: 0 10px 0 12px;
   border: none;
   border-right: 1px solid var(--border, #1e2233);
@@ -345,8 +345,8 @@
   --tabs-accent-2: var(--accent-2, #86f6a3);
   display: flex;
   align-items: center;
-  min-height: var(--appbar-h, 42px);
-  height: var(--appbar-h, 42px);
+  min-height: var(--bar-h);
+  height: var(--bar-h);
   background:
     linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0) 55%),
     var(--panel, #0f1117);
@@ -363,8 +363,8 @@
   align-items: center;
   gap: 8px;
   padding: 0 14px 0 10px;
-  min-height: var(--appbar-h, 42px);
-  height: var(--appbar-h, 42px);
+  min-height: var(--bar-h);
+  height: var(--bar-h);
   box-sizing: border-box;
   color: var(--tabs-accent-2);
   border-right: 1px solid var(--border, #1e2233);
@@ -388,8 +388,8 @@
   align-items: center;
   gap: 7px;
   padding: 0 13px;
-  min-height: var(--appbar-h, 42px);
-  height: var(--appbar-h, 42px);
+  min-height: var(--bar-h);
+  height: var(--bar-h);
   box-sizing: border-box;
   color: var(--text-dim, #4e5466);
   text-decoration: none;
@@ -424,8 +424,8 @@
   overflow-x: auto;
   overflow-y: hidden;
   scrollbar-width: none;
-  min-height: var(--appbar-h, 42px);
-  height: var(--appbar-h, 42px);
+  min-height: var(--bar-h);
+  height: var(--bar-h);
 }
 
 .kd-tabs::-webkit-scrollbar {
@@ -437,8 +437,8 @@
   align-items: center;
   gap: 7px;
   padding: 0 13px;
-  min-height: var(--appbar-h, 42px);
-  height: var(--appbar-h, 42px);
+  min-height: var(--bar-h);
+  height: var(--bar-h);
   box-sizing: border-box;
   min-width: 90px;
   max-width: 200px;
@@ -522,9 +522,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 38px;
-  min-height: var(--appbar-h, 42px);
-  height: var(--appbar-h, 42px);
+  width: var(--bar-h);
+  min-height: var(--bar-h);
+  height: var(--bar-h);
   box-sizing: border-box;
   border: none;
   background: transparent;

@@ -10,7 +10,7 @@ const SERVICE_KEY_BY_SLUG = {
 };
 
 const STATE_COLOR = {
-  up: 'accent',
+  up: 'success',
   starting: 'warning',
   down: 'danger',
 };
@@ -45,7 +45,7 @@ function stateForService(service) {
 }
 
 function stateLabel(service) {
-  return service.reachable ? 'Reachable' : (service.running ? 'Starting' : 'Stopped');
+  return service.reachable ? 'Running' : (service.running ? 'Starting' : 'Stopped');
 }
 
 function setText(node, value) {
@@ -77,7 +77,7 @@ function updateCard(service) {
   const stateTag = card.querySelector('[data-field="state"]');
   setText(stateTag, stateLabel(service));
   if (stateTag) {
-    stateTag.classList.remove('kcui-tag--accent', 'kcui-tag--warning', 'kcui-tag--danger');
+    stateTag.classList.remove('kcui-tag--accent', 'kcui-tag--success', 'kcui-tag--warning', 'kcui-tag--danger');
     stateTag.classList.add(`kcui-tag--${STATE_COLOR[stateForService(service)] || 'dim'}`);
   }
 
@@ -191,13 +191,12 @@ function wireControls() {
   for (const button of document.querySelectorAll('[data-action="setaddress"]')) {
     button.addEventListener('click', () => {
       const cell = button.closest('.address-edit');
-      const host = cell?.querySelector('.host-input')?.value?.trim();
       const port = cell?.querySelector('.port-input')?.value;
-      if (host && port) setAddressAction(button.dataset.service, host, port);
+      if (port) setAddressAction(button.dataset.service, '127.0.0.1', port);
     });
   }
 
-  for (const input of document.querySelectorAll('.port-input, .host-input')) {
+  for (const input of document.querySelectorAll('.port-input')) {
     input.addEventListener('input', () => { input.dataset.dirty = '1'; });
     input.addEventListener('blur', () => { if (input.dataset.dirty) delete input.dataset.dirty; });
   }

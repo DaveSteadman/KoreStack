@@ -34,8 +34,38 @@ except ImportError:
     import requests
 import re
 
-LIBRARY = "http://127.0.0.1:8622"
-GRAPH   = "http://127.0.0.1:8626"
+import json as _j
+import pathlib as _pl
+
+def _load_cfg():
+    p = _pl.Path.cwd()
+    for _ in range(8):
+        if (p / 'config' / 'default.json').exists():
+            break
+        p = p.parent
+    else:
+        return {}
+    result = {}
+    for n in ('default.json', 'local.json'):
+        try:
+            d = _j.loads((p / 'config' / n).read_text(encoding='utf-8'))
+        except Exception:
+            continue
+        for k, v in d.items():
+            if isinstance(v, dict) and isinstance(result.get(k), dict):
+                result[k] = {**result[k], **v}
+            else:
+                result[k] = v
+    return result
+
+_cfg        = _load_cfg()
+_host       = _cfg.get('network', {}).get('host', '127.0.0.1')
+_svcs       = _cfg.get('services', {})
+_lib_port   = _svcs.get('korelibrary', {}).get('port', 9605)
+_graph_port = _svcs.get('koregraph', {}).get('port', 9608)
+LIBRARY     = f'http://{_host}:{_lib_port}'
+GRAPH       = f'http://{_host}:{_graph_port}'
+print(f'Config: library={LIBRARY}  graph={GRAPH}')
 BOOK_ID = "REPLACE_WITH_BOOK_ID"   # <-- substitute actual book_id here
 CHUNK   = 16000
 

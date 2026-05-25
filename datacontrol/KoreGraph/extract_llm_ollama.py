@@ -1,17 +1,15 @@
 """
-Direct book-to-graph extraction using an LLM (no agent).
+Graph extraction using an LLM via Ollama.
 Reads every chunk from a KoreLibrary book, asks the LLM to extract
 entity-relationship triples, and submits them to KoreGraph.
 
-Supported backends:
-  --backend lmstudio    http://localhost:1234/v1/chat/completions  (OpenAI-compat, default)
-  --backend ollama      http://127.0.0.1:11434/api/chat
+Backend: Ollama   http://127.0.0.1:11434/api/chat
+Ollama host is read from config/llm_config.json ("llmhost").
 
 Usage:
-    python extract_graph.py sciencehistory:2
-    python extract_graph.py sciencehistory:2 --backend lmstudio --model openai/gpt-oss-20b
-    python extract_graph.py sciencehistory:2 --dry-run
-    python extract_graph.py sciencehistory:2 --backend ollama --model qwen3.5:27b
+    python extract_llm_ollama.py sciencehistory:2
+    python extract_llm_ollama.py sciencehistory:2 --model qwen3.5:27b
+    python extract_llm_ollama.py sciencehistory:2 --dry-run
 """
 
 import re
@@ -21,10 +19,11 @@ import httpx
 import time
 from pathlib import Path
 
+# ── Config ────────────────────────────────────────────────────────────────────
 
 def _load_suite_config() -> dict:
-    """Merge config/default.json + config/local.json, return combined dict."""
-    _root = Path(__file__).resolve().parent
+    """Merge config/default.json + config/local.json from the repo root."""
+    _root = Path(__file__).resolve().parent.parent.parent
     _result: dict = {}
     for _name in ("default.json", "local.json"):
         try:
@@ -40,8 +39,8 @@ def _load_suite_config() -> dict:
 
 
 def _load_llm_config() -> dict:
+    _path = Path(__file__).resolve().parent.parent.parent / "config" / "llm_config.json"
     try:
-        _path = Path(__file__).resolve().parent / "config" / "llm_config.json"
         return json.loads(_path.read_text(encoding="utf-8"))
     except Exception:
         return {}
@@ -50,13 +49,14 @@ def _load_llm_config() -> dict:
 _suite_cfg  = _load_suite_config()
 _llm_cfg    = _load_llm_config()
 _svc_host   = _suite_cfg.get("network", {}).get("host", "127.0.0.1")
-_data_port  = _suite_cfg.get("services", {}).get("koredatagateway", {}).get("port", 8620)
-_graph_port = _suite_cfg.get("services", {}).get("koregraph", {}).get("port", 8626)
+_lib_port   = _suite_cfg.get("services", {}).get("korelibrary",  {}).get("port", 9605)
+_graph_port = _suite_cfg.get("services", {}).get("koregraph",    {}).get("port", 9608)
 
-LIBRARY  = f"http://{_svc_host}:{_data_port + 2}"
-GRAPH    = f"http://{_svc_host}:{_graph_port}"
-OLLAMA   = str(_llm_cfg.get("llmhost", f"http://{_svc_host}:11434")).rstrip("/")
-LMSTUDIO = "http://localhost:1234"
+LIBRARY = f"http://{_svc_host}:{_lib_port}"
+GRAPH   = f"http://{_svc_host}:{_graph_port}"
+OLLAMA  = str(_llm_cfg.get("llmhost", f"http://{_svc_host}:11434")).rstrip("/")
+
+# ── Prompt ────────────────────────────────────────────────────────────────────
 
 SYSTEM_PROMPT = (
     "You extract entity-relationship triples from history-of-science texts. "
@@ -78,6 +78,7 @@ SYSTEM_PROMPT = (
 
 USER_TEMPLATE = "/no_think\nExtract triples from this text:\n\n{text}"
 
+# ── Helpers ───────────────────────────────────────────────────────────────────
 
 def fetch_chunks(book_id: str, chunk_size: int):
     client = httpx.Client(timeout=30)
@@ -120,36 +121,6 @@ def _parse_response(raw: str) -> list[dict]:
     return result
 
 
-def llm_extract_ollama(text: str, model: str, client: httpx.Client) -> list[dict]:
-    payload = {
-        "model":  model,
-        "stream": False,
-        "messages": [
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user",   "content": USER_TEMPLATE.format(text=text)},
-        ],
-        "options": {"temperature": 0.0},
-    }
-    r = client.post(f"{OLLAMA}/api/chat", json=payload, timeout=300)
-    r.raise_for_status()
-    return _parse_response(r.json()["message"]["content"])
-
-
-def llm_extract_lmstudio(text: str, model: str, client: httpx.Client) -> list[dict]:
-    payload = {
-        "model":       model,
-        "stream":      False,
-        "temperature": 0.0,
-        "messages": [
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user",   "content": USER_TEMPLATE.format(text=text)},
-        ],
-    }
-    r = client.post(f"{LMSTUDIO}/v1/chat/completions", json=payload, timeout=300)
-    r.raise_for_status()
-    return _parse_response(r.json()["choices"][0]["message"]["content"])
-
-
 def submit_batch(conns: list[dict], client: httpx.Client, dry_run: bool) -> tuple[int, int]:
     if dry_run:
         return len(conns), 0
@@ -165,29 +136,45 @@ def submit_batch(conns: list[dict], client: httpx.Client, dry_run: bool) -> tupl
             errors += len(batch)
     return accepted, errors
 
+# ── Extraction ────────────────────────────────────────────────────────────────
+
+def llm_extract(text: str, model: str, client: httpx.Client) -> list[dict]:
+    payload = {
+        "model":  model,
+        "stream": False,
+        "messages": [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user",   "content": USER_TEMPLATE.format(text=text)},
+        ],
+        "options": {"temperature": 0.0},
+    }
+    r = client.post(f"{OLLAMA}/api/chat", json=payload, timeout=300)
+    r.raise_for_status()
+    return _parse_response(r.json()["message"]["content"])
+
+# ── Main ──────────────────────────────────────────────────────────────────────
 
 def main():
-    ap = argparse.ArgumentParser()
+    ap = argparse.ArgumentParser(
+        description="Extract graph triples from a KoreLibrary book using Ollama."
+    )
     ap.add_argument("book_id")
-    ap.add_argument("--backend", default="lmstudio", choices=["ollama", "lmstudio"])
-    ap.add_argument("--model",   default="openai/gpt-oss-20b")
+    ap.add_argument("--model",   default="qwen3.5:27b")
     ap.add_argument("--chunk",   type=int, default=3000)
     ap.add_argument("--dry-run", action="store_true",
                     help="Extract but do not submit to KoreGraph")
     args = ap.parse_args()
 
+    print(f"Script:  {Path(__file__).resolve()}", flush=True)
+    print(f"Library: {LIBRARY}  Graph: {GRAPH}", flush=True)
     print(f"Book:    {args.book_id}", flush=True)
-    print(f"Backend: {args.backend}   Model: {args.model}", flush=True)
+    print(f"Backend: ollama   Model: {args.model}", flush=True)
+    print(f"Ollama:  {OLLAMA}", flush=True)
     print(f"Chunk:   {args.chunk}   dry-run={args.dry_run}", flush=True)
     print(flush=True)
 
     llm_client   = httpx.Client(timeout=300)
     graph_client = httpx.Client(timeout=60)
-
-    if args.backend == "ollama":
-        def extract(text): return llm_extract_ollama(text, args.model, llm_client)
-    else:
-        def extract(text): return llm_extract_lmstudio(text, args.model, llm_client)
 
     all_conns: list[dict] = []
     chunk_num = 0
@@ -202,13 +189,12 @@ def main():
 
         t1 = time.time()
         try:
-            found = extract(text)
+            found = llm_extract(text, args.model, llm_client)
         except Exception as exc:
             print(f"  chunk {chunk_num:3d}  offset={offset:>8d}  LLM ERROR: {exc}", flush=True)
             found = []
         elapsed = time.time() - t1
 
-        # Deduplicate within running set
         new_unique = []
         for c in found:
             k = (c["start"].lower(), c["connection"], c["end"].lower())

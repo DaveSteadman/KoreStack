@@ -39,18 +39,31 @@
 }
 
 :root {
-  --kcui-tab-h: 38px;
-  --kcui-appbar-h: 42px;
-  --kcui-menu-h: 40px;
+  /* ═══════════════════════════════════════════════════════════════
+     FOUNDATIONAL CONSTANTS  — every height in the system derives
+     from one of these two numbers.  Change here; nothing else needs
+     to be touched.
+     ═══════════════════════════════════════════════════════════════ */
+  --row-h: 2.375rem;   /* row height : topbars, panel title bars, toolbar rows  */
+  --el-h:  1.75rem;    /* element height : buttons, inputs, all controls        */
+
+  /* ─── canonical aliases (keep both names usable) ───────────────── */
+  --bar-h: var(--row-h);
+  --e2-h:  var(--el-h);
+
+  /* ─── legacy kcui chrome tokens (now downstream of --row-h) ─────── */
+  --kcui-tab-h:    var(--row-h);
+  --kcui-appbar-h: var(--row-h);
+  --kcui-menu-h:   var(--row-h);
   --kcui-radius-sm: 0;
   --kcui-radius-md: 2px;
   --kcui-radius-lg: 2px;
   --kcui-shadow-overlay: 0 12px 32px rgba(0, 0, 0, .45);
 
-  --tab-h: var(--kcui-tab-h);
+  --tab-h:    var(--kcui-tab-h);
   --appbar-h: var(--kcui-appbar-h);
-  --menu-h: var(--kcui-menu-h);
-  --header-h: 42px;
+  --menu-h:   var(--kcui-menu-h);
+  --header-h: var(--row-h);
 
   --bg: #0b0c10;
   --bg-2: #0f1117;
@@ -99,16 +112,12 @@
 
   /* ─── Element2 tokens ──────────────────────────────────────────────── */
 
-  /* Control slot */
-  --e2-h:      1.75rem;   /* 28px @ 16px root — single canonical control height */
+  /* Control slot — height comes from --el-h / --e2-h above */
   --e2-pad-v:  0;         /* vertical padding inside slot (height is fixed) */
   --e2-pad-h:  0.625rem;  /* 10px — horizontal padding */
   --e2-font:   var(--kcui-text-body-sm, 12px);
   --e2-gap:    0.375rem;  /* 6px — gap between elements in an e2-row */
   --e2-radius: 2px;       /* theme-level shape; applied uniformly to all e2 components */
-
-  /* Navigation chrome */
-  --bar-h:     2.375rem;  /* 38px — height for all three topbars (matches v1 --kcui-tab-h) */
 
   /* Per-service color tokens (extend as services are onboarded) */
   --svc-color-stack:   #2dd4bf;

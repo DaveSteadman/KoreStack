@@ -85,8 +85,8 @@
     }
 
     .tb-icon-slot {
-      width: 1.65rem;
-      height: 1.65rem;
+      width: var(--el-h);
+      height: var(--el-h);
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -162,8 +162,8 @@
     }
 
     .tb2-home .tb-icon-slot {
-      width: 1.5rem;
-      height: 1.5rem;
+      width: var(--el-h);
+      height: var(--el-h);
     }
 
     .tb2-home .tb-svc-text {
@@ -208,8 +208,8 @@
     }
 
     .tb2-icon-slot {
-      width: 1.5rem;
-      height: 1.5rem;
+      width: var(--el-h);
+      height: var(--el-h);
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -398,15 +398,6 @@
       margin-bottom: 1rem;
     }
 
-    /* Match header row rhythm to doc rows: full e2 control height + row padding. */
-    .demo-split-wrap .e2-pane-header {
-      --demo-pane-pad-v: 0.75rem;
-      --demo-pane-pad-h: 1rem;
-      min-height: calc(var(--e2-h) + (2 * var(--demo-pane-pad-v)));
-      height: auto;
-      padding: var(--demo-pane-pad-v) var(--demo-pane-pad-h);
-      box-sizing: border-box;
-    }
 
     .demo-pane-body {
       flex: 1 1 auto;
@@ -503,8 +494,8 @@
   <div class="doc-section">
     <h2>Element2 — Component Reference</h2>
     <p class="doc-desc">
-      Single canonical control height: <code>--e2-h: 1.75rem</code>.
-      All interactive components derive from this slot. Shape is a theme variable
+      Two foundational constants: <code>--row-h</code> (topbars, panel headers, toolbar rows)
+      and <code>--el-h</code> (buttons, inputs, all interactive controls). Shape is a theme variable
       (<code>--e2-radius: 2px</code>), not per-component. This page is the
       Phase 0 test and reference document — build here, then migrate live pages.
     </p>

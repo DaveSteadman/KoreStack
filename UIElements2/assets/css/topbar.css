@@ -8,7 +8,7 @@
 	position: sticky;
 	top: 0;
 	z-index: 120;
-	min-height: var(--topbar-h, var(--tab-h, 38px));
+	min-height: var(--bar-h);
 	background: var(--panel, #0f1117);
 }
 
@@ -16,7 +16,7 @@
 	display: flex;
 	align-items: stretch;
 	justify-content: flex-start;
-	min-height: var(--topbar-h, var(--tab-h, 38px));
+	min-height: var(--bar-h);
 	background: var(--panel, #0f1117);
 	border-bottom: 1px solid var(--border, #1e2233);
 	overflow-x: auto;
@@ -43,7 +43,7 @@
 	display: inline-flex;
 	align-items: center;
 	gap: 8px;
-	min-height: var(--topbar-h, var(--tab-h, 38px));
+	min-height: var(--bar-h);
 	padding: 0 14px;
 	color: var(--text-dim, #4e5466);
 	text-decoration: none;

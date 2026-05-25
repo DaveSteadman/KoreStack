@@ -1,0 +1,91 @@
+/*
+ * fonts.css — the only file allowed to define font styles.
+ *
+ * Policy:
+ * - Only Roboto Mono from assets/fonts/ is permitted.
+ * - No other KoreCommonUI file may declare font-family, font-size,
+ *   font-weight, line-height, or @font-face.
+ */
+
+@font-face {
+  font-family: 'Roboto Mono';
+  src: url('../fonts/RobotoMono-Regular.ttf') format('truetype');
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Roboto Mono';
+  src: url('../fonts/RobotoMono-Medium.ttf') format('truetype');
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Roboto Mono';
+  src: url('../fonts/RobotoMono-SemiBold.ttf') format('truetype');
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Roboto Mono';
+  src: url('../fonts/RobotoMono-Bold.ttf') format('truetype');
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+}
+
+:root {
+  --font-ui: 'Roboto Mono';
+  --font-mono: 'Roboto Mono';
+
+  --kcui-text-body: 13px;
+  --kcui-text-body-sm: 12px;
+  --kcui-text-label: 11px;
+  --kcui-leading-body: 1.5;
+
+  --kcui-font-weight-regular: 400;
+  --kcui-font-weight-medium: 500;
+  --kcui-font-weight-semibold: 600;
+  --kcui-font-weight-bold: 700;
+}
+
+html,
+body {
+  font-family: var(--font-ui);
+  font-size: var(--kcui-text-body);
+  font-weight: var(--kcui-font-weight-regular);
+  line-height: var(--kcui-leading-body);
+}
+
+.kc-btn,
+.kc-panel__title,
+.kc-action-btn {
+  font-family: var(--font-ui);
+  font-size: var(--kcui-text-body-sm);
+  font-weight: var(--kcui-font-weight-regular);
+}
+
+.kc-entry {
+  font-family: var(--font-ui);
+  font-size: var(--kcui-text-body-sm);
+  font-weight: var(--kcui-font-weight-medium);
+}
+
+.kc-panel__body {
+  font-size: var(--kcui-text-body-sm);
+  line-height: var(--kcui-leading-body);
+}
+
+.kc-bar__end {
+  font-size: var(--kcui-text-body-sm);
+  font-weight: var(--kcui-font-weight-regular);
+}
+
+.kc-action-btn {
+  line-height: 1;
+}

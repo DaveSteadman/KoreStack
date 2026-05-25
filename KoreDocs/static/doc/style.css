@@ -10,7 +10,7 @@
   --green:     #a6e3a1;
   --blue:      #89b4fa;
 
-  --font-doc:  'Georgia', 'Times New Roman', serif;
+  --font-doc:  'Roboto Mono', monospace;
 }
 
 html, body {

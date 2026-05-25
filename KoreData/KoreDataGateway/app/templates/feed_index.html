@@ -62,7 +62,7 @@
     <div class="panel kcui-panel">
       <div class="panel-header kcui-panel-header">
         DOMAINS
-        <span class="badge badge-dim" style="margin-left:auto;">{{ domains|length }}</span>
+        <span id="domain-count-badge" class="badge badge-dim" style="margin-left:auto;">{{ domains|length }}</span>
       </div>
       <div class="panel-body kcui-panel-body" style="padding:0;">
         {% if domains %}
@@ -74,7 +74,7 @@
               <th style="width:100px;"></th>
             </tr>
           </thead>
-          <tbody>
+          <tbody id="domains-tbody">
             {% for d in domains %}
             <tr style="cursor:pointer;" onclick="editDomain('{{ d.domain }}')">
               <td><a href="/ui/feeds/{{ d.domain }}" onclick="event.stopPropagation()">{{ d.domain }}</a></td>
@@ -138,10 +138,10 @@
 
 </div>
 {% if all_feeds %}
-<div class="panel kcui-panel" style="margin-top:1.25rem;">
+<div id="feed-status-panel" class="panel kcui-panel" style="margin-top:1.25rem;">
   <div class="panel-header kcui-panel-header">
     FEED STATUS
-    <span class="badge badge-dim" style="margin-left:auto;">{{ all_feeds|length }} feed{{ 's' if all_feeds|length != 1 else '' }}</span>
+    <span id="feed-count-badge" class="badge badge-dim" style="margin-left:auto;">{{ all_feeds|length }} feed{{ 's' if all_feeds|length != 1 else '' }}</span>
   </div>
   <div class="panel-body kcui-panel-body" style="padding:0; overflow-x:auto;">
     <table>
@@ -157,7 +157,7 @@
           <th style="width:80px; text-align:right;">Next</th>
         </tr>
       </thead>
-      <tbody>
+      <tbody id="feeds-tbody">
         {% for f in all_feeds %}
         {% set status = f.get("last_status") %}
         <tr>
@@ -228,59 +228,169 @@ function cancelEditDomain() {
 
 (function () {
   var DELAY = 5000;
-  var timer;
+  var timer = null;
   var inflight = false;
+  var domainsTbody = document.getElementById('domains-tbody');
+  var feedsTbody = document.getElementById('feeds-tbody');
+  var domainCountBadge = document.getElementById('domain-count-badge');
+  var feedCountBadge = document.getElementById('feed-count-badge');
+
+  function esc(text) {
+    return String(text == null ? '' : text)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function parseUtcIso(s) {
+    if (!s) return null;
+    var m = String(s).match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?/);
+    if (!m) return null;
+    return new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +(m[6] || 0)));
+  }
+
+  function calcNextMins(feed, now) {
+    var last = parseUtcIso(feed.last_fetched_at);
+    if (!last) return null;
+    var rate = parseInt(feed.update_rate || 60, 10);
+    if (!Number.isFinite(rate) || rate < 1) rate = 60;
+    var next = new Date(last.getTime() + rate * 60000);
+    return Math.floor((next.getTime() - now.getTime()) / 60000);
+  }
+
+  function statusCell(feed) {
+    if (feed.last_status === 'ok') return '<span style="color:var(--green);"> ok</span>';
+    if (feed.last_status === 'error') {
+      var err = feed.last_error || 'error';
+      return '<span style="color:var(--red);" title="' + esc(err) + '"> ' + esc(String(err).slice(0, 80)) + '</span>';
+    }
+    return '<span class="meta">-</span>';
+  }
+
+  function contentCell(feed) {
+    var cs = feed.content_status || 'good';
+    if (cs === 'poor') return '<span style="color:var(--amber);">Poor Content</span>';
+    if (cs === 'none') return '<span style="color:var(--red);">No Content Found</span>';
+    return '<span class="meta">Good Feed</span>';
+  }
+
+  function nextCell(nextMins) {
+    if (nextMins == null) return '<span style="color:var(--amber);">pending</span>';
+    if (nextMins <= 0) return '<span style="color:var(--amber);">overdue ' + Math.abs(nextMins) + 'm</span>';
+    return '<span class="meta">in ' + nextMins + 'm</span>';
+  }
+
+  function lastRunCell(feed) {
+    if (!feed.last_fetched_at) return '<span class="meta">-</span>';
+    var when = esc(String(feed.last_fetched_at).slice(0, 16).replace('T', ' '));
+    var dur = feed.last_duration_s;
+    if (dur == null) return when;
+    return when + '<span class="meta" title="' + esc(dur) + 's"> (' + esc(dur) + 's)</span>';
+  }
+
+  function renderDomains(domains) {
+    return domains.map(function (d) {
+      var domain = esc(d.domain);
+      var count = esc(d.entry_count);
+      return '' +
+        '<tr style="cursor:pointer;" onclick="editDomain(\'' + domain + '\')">' +
+          '<td><a href="/ui/feeds/' + domain + '" onclick="event.stopPropagation()">' + domain + '</a></td>' +
+          '<td class="meta" style="text-align:right;"><span class="badge badge-dim">' + count + '</span></td>' +
+          '<td style="text-align:right; white-space:nowrap;">' +
+            '<form method="post" action="/ui/feeds/domains/' + domain + '/delete" style="flex-direction:row; display:inline-flex; gap:0.4rem;">' +
+              '<button class="btn-danger btn-sm" type="submit" onclick="event.stopPropagation(); return confirm(\'Delete domain ' + domain + ' and all its data?\')">DELETE</button>' +
+            '</form>' +
+          '</td>' +
+        '</tr>';
+    }).join('');
+  }
+
+  function renderFeeds(feeds) {
+    var now = new Date();
+    var enriched = feeds.map(function (f) {
+      return { feed: f, nextMins: calcNextMins(f, now) };
+    });
+    enriched.sort(function (a, b) {
+      function bucket(v) {
+        if (v == null) return 0;
+        return v <= 0 ? 1 : 2;
+      }
+      var ba = bucket(a.nextMins);
+      var bb = bucket(b.nextMins);
+      if (ba !== bb) return ba - bb;
+      var va = a.nextMins == null ? 0 : a.nextMins;
+      var vb = b.nextMins == null ? 0 : b.nextMins;
+      return va - vb;
+    });
+
+    return enriched.map(function (row) {
+      var f = row.feed;
+      var domain = esc(f.domain || '');
+      var name = esc(f.name || '');
+      var rate = esc((f.update_rate || 60) + 'm');
+      var lastNew = f.last_status === 'ok' ? esc(f.last_new_entries == null ? '-' : f.last_new_entries) : '-';
+      return '' +
+        '<tr>' +
+          '<td class="meta"><a href="/ui/feeds/' + domain + '">' + domain + '</a></td>' +
+          '<td>' + name + '</td>' +
+          '<td class="meta" style="text-align:center;">' + rate + '</td>' +
+          '<td class="meta" style="text-align:center; white-space:nowrap;">' + lastRunCell(f) + '</td>' +
+          '<td>' + statusCell(f) + '</td>' +
+          '<td class="meta" style="font-size:11px;">' + contentCell(f) + '</td>' +
+          '<td class="meta" style="text-align:center;">' + lastNew + '</td>' +
+          '<td style="text-align:right; white-space:nowrap;">' + nextCell(row.nextMins) + '</td>' +
+        '</tr>';
+    }).join('');
+  }
 
   async function refreshInPlace() {
     if (inflight || document.visibilityState !== 'visible') return;
     inflight = true;
     try {
-      const resp = await fetch(location.href, { cache: 'no-store' });
-      if (!resp.ok) return;
-      const html = await resp.text();
-      const doc = new DOMParser().parseFromString(html, 'text/html');
+      const domainsResp = await fetch('/api/domains', { cache: 'no-store' });
+      const feedsResp = await fetch('/api/feeds', { cache: 'no-store' });
+      if (!domainsResp.ok || !feedsResp.ok) return;
 
-      const oldDomains = document.querySelector('table tbody');
-      const newDomains = doc.querySelector('table tbody');
-      if (oldDomains && newDomains) oldDomains.innerHTML = newDomains.innerHTML;
+      const domains = await domainsResp.json();
+      const feeds = await feedsResp.json();
 
-      const oldFeedStatusPanel = Array.from(document.querySelectorAll('.panel.kcui-panel')).find(function (p) {
-        return p.querySelector('.panel-header') && p.querySelector('.panel-header').textContent.includes('FEED STATUS');
-      });
-      const newFeedStatusPanel = Array.from(doc.querySelectorAll('.panel.kcui-panel')).find(function (p) {
-        return p.querySelector('.panel-header') && p.querySelector('.panel-header').textContent.includes('FEED STATUS');
-      });
-
-      if (oldFeedStatusPanel && newFeedStatusPanel) {
-        oldFeedStatusPanel.innerHTML = newFeedStatusPanel.innerHTML;
+      if (domainsTbody) {
+        const html = renderDomains(domains);
+        if (domainsTbody.innerHTML !== html) domainsTbody.innerHTML = html;
       }
-      if (oldFeedStatusPanel && !newFeedStatusPanel) {
-        oldFeedStatusPanel.remove();
+      if (domainCountBadge) {
+        domainCountBadge.textContent = String(domains.length);
       }
-      if (!oldFeedStatusPanel && newFeedStatusPanel) {
-        const page = document.querySelector('.kcui-page.kcui-page--narrow.kcui-stack');
-        if (page) page.appendChild(newFeedStatusPanel);
+
+      if (feedsTbody) {
+        const html = renderFeeds(feeds);
+        if (feedsTbody.innerHTML !== html) feedsTbody.innerHTML = html;
+      }
+      if (feedCountBadge) {
+        feedCountBadge.textContent = feeds.length + ' feed' + (feeds.length === 1 ? '' : 's');
       }
     } catch (_) {
       // keep current DOM on transient refresh errors
     } finally {
       inflight = false;
+      if (document.visibilityState === 'visible') {
+        timer = setTimeout(refreshInPlace, DELAY);
+      }
     }
   }
 
-  function schedule() {
-    clearTimeout(timer);
-    timer = setTimeout(refreshInPlace, DELAY);
-  }
-
-  ['mousedown', 'keydown', 'touchstart'].forEach(function (evt) {
-    document.addEventListener(evt, schedule, { passive: true });
-  });
   document.addEventListener('visibilitychange', function () {
-    if (document.visibilityState === 'visible') schedule();
-    else clearTimeout(timer);
+    if (document.visibilityState === 'visible') {
+      clearTimeout(timer);
+      refreshInPlace();
+    } else {
+      clearTimeout(timer);
+    }
   });
-  schedule();
+
+  timer = setTimeout(refreshInPlace, DELAY);
 }());
 </script>
 </div>
