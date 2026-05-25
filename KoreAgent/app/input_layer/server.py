@@ -65,13 +65,10 @@ import json
 import queue
 import re
 import threading
-import time
 import urllib.error
 import urllib.parse
 import urllib.request
-import uuid
 from datetime import datetime
-from datetime import timedelta
 
 from fastapi import FastAPI
 from fastapi import HTTPException
@@ -79,7 +76,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.responses import RedirectResponse
 from fastapi.responses import Response
-from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from llm_client import get_active_backend
@@ -109,6 +105,7 @@ from utils.runtime_logger import SessionLogger
 from utils.runtime_logger import create_log_file_path
 from scheduler.scheduler import is_task_due
 from scheduler.scheduler import task_queue
+from scheduler.shared_state import SchedulerSharedState
 from input_layer.slash_commands import handle as handle_slash
 from input_layer.slash_command_context import SlashCommandContext
 from utils.workspace_utils import get_logs_dir
@@ -149,6 +146,7 @@ _LOG_TAIL_LINES      = 200      # how many historic lines to send on first conne
 _config:         OrchestratorConfig | None = None
 _last_run:       dict[str, datetime | None] = {}
 _enabled_tasks:  list[dict] = []
+_scheduler_state: SchedulerSharedState | None = None
 _shutdown_event: threading.Event = threading.Event()
 
 # Per-run event queues: run_id -> queue.Queue[dict | None]
@@ -171,13 +169,21 @@ def setup(
     enabled_tasks: list[dict],
     last_run: dict[str, datetime | None],
     shutdown_event: threading.Event,
+    scheduler_state: SchedulerSharedState | None = None,
 ) -> None:
     """Called once by server_startup.py before serving. Stores shared state."""
-    global _config, _enabled_tasks, _last_run, _shutdown_event
+    global _config, _enabled_tasks, _last_run, _shutdown_event, _scheduler_state
     _config         = config
     _enabled_tasks  = enabled_tasks
     _last_run       = last_run
+    _scheduler_state = scheduler_state
     _shutdown_event = shutdown_event
+
+
+def _get_scheduler_snapshot() -> tuple[list[dict], dict[str, datetime | None]]:
+    if _scheduler_state is not None:
+        return _scheduler_state.snapshot()
+    return list(_enabled_tasks), dict(_last_run)
 
 
 def _set_latest_log_path(path: str | Path | None) -> None:
@@ -395,7 +401,8 @@ def get_completions():
     if test_dir.exists():
         test_files = sorted(p.stem for p in test_dir.glob("*.json"))
 
-    task_names = [t.get("name", "") for t in _enabled_tasks if t.get("name")]
+    enabled_tasks, _ = _get_scheduler_snapshot()
+    task_names = [t.get("name", "") for t in enabled_tasks if t.get("name")]
 
     try:
         models = list_ollama_models()
@@ -513,8 +520,9 @@ def post_request_switch(body: SessionSwitchRequest):
 
 register_task_routes(
     app,
-    get_enabled_tasks=lambda: _enabled_tasks,
-    get_last_run=lambda: _last_run,
+    get_enabled_tasks=lambda: _get_scheduler_snapshot()[0],
+    get_last_run=lambda: _get_scheduler_snapshot()[1],
+    get_scheduler_snapshot=_get_scheduler_snapshot,
     is_task_due=is_task_due,
     task_queue=task_queue,
     queue_preview_limit=_QUEUE_PREVIEW_LIMIT,

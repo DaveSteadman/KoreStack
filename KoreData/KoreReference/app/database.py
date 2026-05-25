@@ -273,6 +273,7 @@ def upsert_article(
     facts: Optional[list] = None,
     redirect_to: Optional[str] = None,
     link_titles: Optional[list[str]] = None,
+    conn: Optional[sqlite3.Connection] = None,
     **_ignored,
 ) -> dict:
     """Insert or update an article."""
@@ -280,8 +281,8 @@ def upsert_article(
     wc = _word_count(body)
     facts_json = json.dumps(facts or [])
 
-    with db_connection() as conn:
-        existing = conn.execute(
+    def _upsert(active_conn: sqlite3.Connection) -> int:
+        existing = active_conn.execute(
             "SELECT id FROM articles WHERE title = ?", (title,)
         ).fetchone()
 
@@ -291,24 +292,24 @@ def upsert_article(
         if existing:
             article_id = existing["id"]
             # Update FTS with tag-stripped text before storing compressed
-            conn.execute(
+            active_conn.execute(
                 "INSERT INTO articles_fts(articles_fts, rowid, title, body) VALUES('delete',?,?,?)",
                 (article_id, title, fts_body),
             )
-            conn.execute(
+            active_conn.execute(
                 "INSERT INTO articles_fts(rowid, title, body) VALUES(?,?,?)",
                 (article_id, title, fts_body),
             )
-            conn.execute("""
+            active_conn.execute("""
                 UPDATE articles
                 SET redirect_to=?, summary=?, body=?,
                     facts=?, word_count=?
                 WHERE id=?
             """, (redirect_to, summary, compressed_body,
                   facts_json, wc, article_id))
-            conn.execute("DELETE FROM links WHERE from_id=?", (article_id,))
+            active_conn.execute("DELETE FROM links WHERE from_id=?", (article_id,))
         else:
-            cur = conn.execute("""
+            cur = active_conn.execute("""
                 INSERT INTO articles
                     (title, redirect_to, summary, body,
                      facts, word_count)
@@ -317,19 +318,26 @@ def upsert_article(
                   facts_json, wc))
             article_id = cur.lastrowid
             # Sync FTS with tag-stripped text after insert
-            conn.execute(
+            active_conn.execute(
                 "INSERT INTO articles_fts(rowid, title, body) VALUES(?,?,?)",
                 (article_id, title, fts_body),
             )
 
         # Insert links (to_id resolved later)
         for lt in (link_titles or []):
-            conn.execute(
+            active_conn.execute(
                 "INSERT INTO links (from_id, to_title) VALUES (?, ?)",
                 (article_id, lt),
             )
+        return article_id
 
-    return get_article_by_id(article_id, full=False)
+    if conn is None:
+        with db_connection() as owned_conn:
+            article_id = _upsert(owned_conn)
+        return get_article_by_id(article_id, full=False)
+
+    article_id = _upsert(conn)
+    return {"id": article_id, "title": title}
 
 
 def delete_article(title: str) -> bool:

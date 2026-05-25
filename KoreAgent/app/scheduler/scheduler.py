@@ -37,9 +37,20 @@
 import json
 import sys
 import threading
+import time
 from collections import deque
 from datetime import datetime
 from pathlib import Path
+
+
+_DEFAULT_TIMEOUT_BY_KIND: dict[str, int] = {
+    "api_chat": 15 * 60,
+    "koreconv": 15 * 60,
+    "scheduled": 30 * 60,
+    "task_run": 30 * 60,
+}
+_TIMEOUT_POLL_SECS = 0.5
+_STALL_GRACE_SECS = 30
 
 
 # ====================================================================================================
@@ -83,7 +94,15 @@ class TaskQueue:
         return self._run_lock
 
     # ----------------------------------------------------------------------------------------------------
-    def enqueue(self, name: str, kind: str, fn, label: str = "") -> bool:
+    def enqueue(
+        self,
+        name: str,
+        kind: str,
+        fn,
+        label: str = "",
+        timeout_seconds: int | None = None,
+        cancel_fn=None,
+    ) -> bool:
         """Append *fn* to the execution queue.
 
         Returns False without enqueueing if *name* already appears in the queue or is
@@ -97,7 +116,10 @@ class TaskQueue:
                 "kind":      kind,
                 "label":     label,
                 "queued_at": datetime.now().isoformat(timespec="seconds"),
+                "queued_ts": time.time(),
                 "fn":        fn,
+                "timeout_seconds": timeout_seconds,
+                "cancel_fn": cancel_fn,
             })
             self._queued_names.add(name)
         self._has_work.set()
@@ -107,6 +129,7 @@ class TaskQueue:
     # ----------------------------------------------------------------------------------------------------
     def get_state(self, pending_limit: int | None = None) -> dict:
         """Return a JSON-serialisable snapshot of current queue state."""
+        now_ts = time.time()
         with self._state_lock:
             active        = dict(self._active) if self._active else None
             pending_count = len(self._deque)   # authoritative count before any preview truncation
@@ -116,7 +139,13 @@ class TaskQueue:
                 visible_pending_limit = max(0, pending_limit - (1 if active else 0))
                 pending_items = pending_items[:visible_pending_limit]
             pending = [
-                {"name": item["name"], "kind": item["kind"], "label": item.get("label", ""), "queued_at": item["queued_at"]}
+                {
+                    "name": item["name"],
+                    "kind": item["kind"],
+                    "label": item.get("label", ""),
+                    "queued_at": item["queued_at"],
+                    "timeout_seconds": item.get("timeout_seconds"),
+                }
                 for item in pending_items
             ]
             next_prompts: list[dict] = []
@@ -126,6 +155,10 @@ class TaskQueue:
                     "kind":       active["kind"],
                     "label":      active.get("label", ""),
                     "started_at": active.get("started_at"),
+                    "timeout_seconds": active.get("timeout_seconds"),
+                    "cancel_requested": bool(active.get("cancel_requested", False)),
+                    "cancel_reason": active.get("cancel_reason"),
+                    "timed_out": bool(active.get("timed_out", False)),
                     "state":      "active",
                 })
             next_prompts.extend([
@@ -134,10 +167,42 @@ class TaskQueue:
                     "kind":      item["kind"],
                     "label":     item.get("label", ""),
                     "queued_at": item["queued_at"],
+                    "timeout_seconds": item.get("timeout_seconds"),
                     "state":     "pending",
                 }
                 for item in pending_items
             ])
+
+            active_age_s = None
+            active_timeout_s = None
+            active_timeout_exceeded = False
+            active_cancel_requested = False
+            if active:
+                started_ts = active.get("started_ts")
+                timeout_s = active.get("timeout_seconds")
+                if isinstance(started_ts, (int, float)):
+                    active_age_s = max(0.0, now_ts - float(started_ts))
+                if isinstance(timeout_s, (int, float)) and timeout_s > 0:
+                    active_timeout_s = int(timeout_s)
+                    if active_age_s is not None and active_age_s >= float(timeout_s):
+                        active_timeout_exceeded = True
+                active_cancel_requested = bool(active.get("cancel_requested", False))
+
+            pending_ages = [
+                max(0.0, now_ts - float(item.get("queued_ts")))
+                for item in self._deque
+                if isinstance(item.get("queued_ts"), (int, float))
+            ]
+            oldest_pending_age_s = max(pending_ages) if pending_ages else None
+            queue_lag_s = active_age_s if active_age_s is not None else oldest_pending_age_s
+            stalled = bool(
+                active
+                and (
+                    (active_timeout_exceeded and (active_age_s or 0.0) >= (float(active_timeout_s or 0) + _STALL_GRACE_SECS))
+                    or (active_cancel_requested and (active_age_s or 0.0) >= _STALL_GRACE_SECS)
+                )
+            )
+
         return {
             "active":                active,
             "pending":               pending,
@@ -147,6 +212,13 @@ class TaskQueue:
             "next_prompts":          next_prompts,
             "next_prompts_limit":    pending_limit,
             "pending_preview_limit": pending_limit,
+            "active_age_s":          int(active_age_s) if active_age_s is not None else None,
+            "active_timeout_s":      active_timeout_s,
+            "active_timeout_exceeded": active_timeout_exceeded,
+            "active_cancel_requested": active_cancel_requested,
+            "oldest_pending_age_s":  int(oldest_pending_age_s) if oldest_pending_age_s is not None else None,
+            "queue_lag_s":           int(queue_lag_s) if queue_lag_s is not None else None,
+            "stalled":               stalled,
             "updated_at":            datetime.now().isoformat(timespec="seconds"),
         }
 
@@ -228,11 +300,21 @@ class TaskQueue:
                             break
                         item             = self._deque.popleft()
                         self._queued_names.discard(item["name"])
+                        timeout_s = item.get("timeout_seconds")
+                        if timeout_s is None:
+                            timeout_s = _DEFAULT_TIMEOUT_BY_KIND.get(str(item.get("kind", "")))
+                        now_ts = time.time()
                         self._active     = {
                             "name":       item["name"],
                             "kind":       item["kind"],
                             "label":      item.get("label", ""),
                             "started_at": datetime.now().isoformat(timespec="seconds"),
+                            "started_ts": now_ts,
+                            "timeout_seconds": timeout_s,
+                            "cancel_requested": False,
+                            "cancel_reason": None,
+                            "cancel_requested_at": None,
+                            "timed_out": False,
                         }
 
                     self._write_state()
@@ -244,7 +326,44 @@ class TaskQueue:
                             reset_search_session()
                         except Exception:
                             pass
-                        item["fn"]()
+
+                        cancel_requested = False
+                        task_done = threading.Event()
+                        task_error: dict[str, Exception] = {}
+
+                        def _run_item() -> None:
+                            try:
+                                item["fn"]()
+                            except Exception as exc:
+                                task_error["exc"] = exc
+                            finally:
+                                task_done.set()
+
+                        runner = threading.Thread(target=_run_item, daemon=True, name=f"task-runner-{item['name']}")
+                        runner.start()
+
+                        while not task_done.wait(_TIMEOUT_POLL_SECS):
+                            active = self._active or {}
+                            timeout_s = active.get("timeout_seconds")
+                            started_ts = active.get("started_ts")
+                            elapsed_s = (time.time() - float(started_ts)) if isinstance(started_ts, (int, float)) else None
+
+                            if self._shutdown.is_set() and not cancel_requested:
+                                self._request_cancel(item, reason="shutdown")
+                                cancel_requested = True
+
+                            if (
+                                not cancel_requested
+                                and isinstance(timeout_s, (int, float))
+                                and timeout_s > 0
+                                and elapsed_s is not None
+                                and elapsed_s >= float(timeout_s)
+                            ):
+                                self._request_cancel(item, reason="timeout")
+                                cancel_requested = True
+
+                        if "exc" in task_error:
+                            raise task_error["exc"]
                     except Exception as exc:
                         # Log the failure so it is visible in the log file and
                         # the /logs/stream SSE endpoint.
@@ -260,6 +379,31 @@ class TaskQueue:
                     with self._state_lock:
                         self._active = None
                     self._write_state()
+
+    def _request_cancel(self, item: dict, reason: str) -> None:
+        with self._state_lock:
+            if self._active is not None:
+                self._active["cancel_requested"] = True
+                self._active["cancel_reason"] = reason
+                self._active["cancel_requested_at"] = datetime.now().isoformat(timespec="seconds")
+                if reason == "timeout":
+                    self._active["timed_out"] = True
+        self._write_state()
+
+        cancel_fn = item.get("cancel_fn")
+        if callable(cancel_fn):
+            try:
+                cancel_fn(reason)
+                return
+            except Exception:
+                pass
+
+        # Default cancellation path for orchestration-backed work.
+        try:
+            from orchestration import request_stop
+            request_stop()
+        except Exception:
+            pass
 
 
 # ====================================================================================================

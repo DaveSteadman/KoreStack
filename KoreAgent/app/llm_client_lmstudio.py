@@ -34,8 +34,8 @@ def ensure_lmstudio_reachable(host: str) -> None:
     try:
         _core._request_json(f"{host.rstrip('/')}/v1/models", timeout=3.0)
         _core.mark_host_healthy(host)
-    except Exception:
-        raise RuntimeError(f"LM Studio is not reachable at {host}. Ensure LM Studio is running.")
+    except Exception as exc:
+        raise RuntimeError(f"LM Studio is not reachable at {host}. Ensure LM Studio is running.") from exc
 
 
 # ====================================================================================================

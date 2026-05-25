@@ -63,6 +63,40 @@ from llm_client_ollama  import get_running_model_row
 from utils.workspace_utils         import trunc
 
 
+__all__ = [
+    "DEFAULT_OLLAMAHOST",
+    "DEFAULT_LMSTUDIO_HOST",
+    "OLLAMA_CLOUD_HOST",
+    "HOST_ALIASES",
+    "OllamaCallResult",
+    "ChatCallResult",
+    "configure_host",
+    "configure_server",
+    "get_active_host",
+    "get_active_backend",
+    "get_active_model",
+    "get_active_num_ctx",
+    "get_llm_timeout",
+    "set_llm_timeout",
+    "register_llm_call_logger",
+    "log_to_session",
+    "register_session_config",
+    "resolve_model_name",
+    "is_explicit_model_name",
+    "is_ollama_running",
+    "start_ollama_server",
+    "stop_model",
+    "call_ollama_extended",
+    "call_ollama",
+    "get_running_model_row",
+    "get_ollama_ps_rows",
+    "ensure_ollama_running",
+    "list_ollama_models",
+    "format_running_model_report",
+    "call_llm_chat",
+]
+
+
 # ====================================================================================================
 # MARK: ROUTING
 # ====================================================================================================

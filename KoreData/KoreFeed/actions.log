@@ -1,443 +1,3 @@
-[2026-05-17T09:48:24]   Skipping Janes Analysis — next fetch in ~82m
-[2026-05-17T09:48:24]   Skipping UK Gov — next fetch in ~328m
-[2026-05-17T09:48:24]   Skipping Sweden Government — next fetch in ~579m
-[2026-05-17T09:48:24]   Skipping UN News - Global — next fetch in ~568m
-[2026-05-17T09:48:24]   Skipping UK Gov News — next fetch in ~568m
-[2026-05-17T09:48:24]   Skipping UN News - All — next fetch in ~568m
-[2026-05-17T09:48:24]   Skipping BBC World News — next fetch in ~568m
-[2026-05-17T10:11:14]   Skipping Janes Analysis — next fetch in ~59m
-[2026-05-17T14:17:10]   Skipping UK Gov — next fetch in ~59m
-[2026-05-17T18:16:34]   Skipping UN News - All — next fetch in ~59m
-[2026-05-17T18:16:40]   Skipping UK Gov News — next fetch in ~59m
-[2026-05-17T18:16:50]   Skipping BBC World News — next fetch in ~59m
-[2026-05-17T18:17:05]   Skipping UN News - Global — next fetch in ~59m
-[2026-05-17T18:27:31]   Skipping Sweden Government — next fetch in ~59m
-[2026-05-17T20:17:10] Ingesting: UK Gov
-[2026-05-17T20:17:17]   UK Gov: +0 entries in 7.2s [good]
-[2026-05-17T23:38:32]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~59m
-[2026-05-17T23:39:12]   Skipping Defense News — next fetch in ~59m
-[2026-05-17T23:39:59]   Skipping ukdefencejournal — next fetch in ~59m
-[2026-05-17T23:41:57]   Skipping defenceiq - defence-technology — next fetch in ~59m
-[2026-05-17T23:59:31]   Skipping defenseone — next fetch in ~59m
-[2026-05-18T00:03:35]   Skipping Breaking Defense — next fetch in ~59m
-[2026-05-18T01:48:24] Daily prune: AiNews — 1 entries removed
-[2026-05-18T01:48:24] Daily prune: DefenseNews — 1 entries removed
-[2026-05-18T02:17:10]   Skipping UK Gov — next fetch in ~0m
-[2026-05-18T06:52:58] Ingesting: UN News - All
-[2026-05-18T06:53:15]   UN News - All: +4 entries in 17.2s [good]
-[2026-05-18T06:53:15] Ingesting: BBC World News
-[2026-05-18T06:53:27]   BBC World News: +10 entries in 11.5s [good]
-[2026-05-18T06:53:27] Ingesting: UK Gov News
-[2026-05-18T06:53:33]   UK Gov News: +2 entries in 6.2s [good]
-[2026-05-18T06:53:33] Ingesting: Sweden Government
-[2026-05-18T06:53:56]   Sweden Government: +5 entries in 23.5s [poor]
-[2026-05-18T06:53:56] Ingesting: UN News - Global
-[2026-05-18T06:54:14]   UN News - Global: +0 entries in 17.4s [good]
-[2026-05-18T08:17:10] Ingesting: UK Gov
-[2026-05-18T08:17:16]   UK Gov: +3 entries in 6.4s [good]
-[2026-05-18T18:55:56] Ingesting: Sweden Government
-[2026-05-18T18:56:20]   Sweden Government: +0 entries in 23.9s [poor]
-[2026-05-18T18:56:20] Ingesting: UN News - Global
-[2026-05-18T18:56:39]   UN News - Global: +2 entries in 18.2s [good]
-[2026-05-18T18:56:39] Ingesting: UK Gov
-[2026-05-18T18:56:46]   UK Gov: +19 entries in 7.1s [good]
-[2026-05-18T18:56:46] Ingesting: UK Gov News
-[2026-05-18T18:56:52]   UK Gov News: +19 entries in 5.9s [good]
-[2026-05-18T18:56:52] Ingesting: BBC World News
-[2026-05-18T18:57:07]   BBC World News: +13 entries in 15.6s [good]
-[2026-05-18T18:57:07] Ingesting: UN News - All
-[2026-05-18T18:57:26]   UN News - All: +1 entries in 19.1s [good]
-[2026-05-18T19:35:36]   Skipping HuggingFace Blog — next fetch in ~59m
-[2026-05-18T20:17:10]   Skipping UK Gov — next fetch in ~279m
-[2026-05-19T00:16:34]   Skipping UN News - All — next fetch in ~280m
-[2026-05-19T00:16:40]   Skipping UK Gov News — next fetch in ~280m
-[2026-05-19T00:16:50]   Skipping BBC World News — next fetch in ~280m
-[2026-05-19T00:17:05]   Skipping UN News - Global — next fetch in ~279m
-[2026-05-19T00:57:31]   Skipping Sweden Government — next fetch in ~248m
-[2026-05-19T02:04:09]   Skipping Artificial Intelligence - News — next fetch in ~59m
-[2026-05-19T02:17:10] Ingesting: UK Gov
-[2026-05-19T02:17:17]   UK Gov: +6 entries in 7.6s [good]
-[2026-05-19T17:23:23] Ingesting: BBC World News
-[2026-05-19T17:23:36]   BBC World News: +19 entries in 12.8s [good]
-[2026-05-19T17:23:36] Ingesting: UN News - Global
-[2026-05-19T17:24:15]   UN News - Global: +3 entries in 38.9s [good]
-[2026-05-19T17:24:15] Ingesting: UK Gov News
-[2026-05-19T17:24:21]   UK Gov News: +20 entries in 6.7s [good]
-[2026-05-19T17:24:21] Ingesting: UK Gov
-[2026-05-19T17:24:28]   UK Gov: +20 entries in 6.1s [good]
-[2026-05-19T17:24:28] Ingesting: UN News - All
-[2026-05-19T17:25:05]   UN News - All: +4 entries in 37.8s [good]
-[2026-05-19T17:25:05] Ingesting: Sweden Government
-[2026-05-19T17:25:27]   Sweden Government: +1 entries in 22.1s [poor]
-[2026-05-19T20:16:34]   Skipping UN News - All — next fetch in ~428m
-[2026-05-19T20:16:40]   Skipping UK Gov News — next fetch in ~427m
-[2026-05-19T20:16:50]   Skipping BBC World News — next fetch in ~426m
-[2026-05-19T20:17:05]   Skipping UN News - Global — next fetch in ~427m
-[2026-05-19T20:17:10]   Skipping UK Gov — next fetch in ~187m
-[2026-05-19T21:16:19] Ingesting: HuggingFace Blog
-[2026-05-19T21:16:19]   Skipping Understanding AI — next fetch in ~639m
-[2026-05-19T21:16:19]   Skipping defense-aerospace WEB — next fetch in ~327m
-[2026-05-19T21:16:19]   Skipping janes Insights — next fetch in ~297m
-[2026-05-19T21:16:19]   Skipping UK Gov — next fetch in ~128m
-[2026-05-19T21:16:19]   Skipping Sweden Government — next fetch in ~379m
-[2026-05-19T21:16:19]   Skipping UN News - Global — next fetch in ~367m
-[2026-05-19T21:16:19]   Skipping UK Gov News — next fetch in ~368m
-[2026-05-19T21:16:19]   Skipping UN News - All — next fetch in ~368m
-[2026-05-19T21:16:19]   Skipping BBC World News — next fetch in ~367m
-[2026-05-19T21:16:27]   HuggingFace Blog: +5 entries in 8.4s [good]
-[2026-05-19T21:16:27] Web crawl: Artificial Intelligence - News (https://www.artificialintelligence-news.com/)
-[2026-05-19T21:16:28]   Artificial Intelligence - News: 50 level-1 candidates
-[2026-05-19T21:16:47]   Artificial Intelligence - News: +0 articles from 50 pages in 19.7s [good]
-[2026-05-19T21:16:47] Ingesting: Defense News
-[2026-05-19T21:17:01]   Defense News: +13 entries in 14.4s [good]
-[2026-05-19T21:17:01] Ingesting: Breaking Defense
-[2026-05-19T21:17:08]   Breaking Defense: +13 entries in 6.7s [good]
-[2026-05-19T21:17:08] Ingesting: defenseone
-[2026-05-19T21:17:27]   defenseone: +6 entries in 19.0s [good]
-[2026-05-19T21:17:27] Ingesting: ukdefencejournal
-[2026-05-19T21:17:30]   ukdefencejournal: +10 entries in 3.4s [good]
-[2026-05-19T21:17:30] Ingesting: defenceiq - defence-technology
-[2026-05-19T21:17:47]   defenceiq - defence-technology: +0 entries in 16.3s [good]
-[2026-05-19T21:17:47] Ingesting: defenceiq - air-forces-military-aircraft
-[2026-05-19T21:18:07]   defenceiq - air-forces-military-aircraft: +0 entries in 20.0s [good]
-[2026-05-19T21:18:07] Web crawl: Janes Analysis (https://www.janes.com/defence-intelligence-insights/defence-and-national-security-analysis)
-[2026-05-19T21:18:07]   Janes Analysis: 50 level-1 candidates
-[2026-05-19T21:18:37]   Janes Analysis: +3 articles from 50 pages in 30.7s [good]
-[2026-05-19T21:18:37] Ingesting: ukdefencejournal
-[2026-05-19T21:18:41]   ukdefencejournal: +0 entries in 3.3s [good]
-[2026-05-19T21:18:41] Web crawl: Janes Analysis (https://www.janes.com/defence-intelligence-insights/defence-and-national-security-analysis)
-[2026-05-19T21:18:41]   Janes Analysis: 50 level-1 candidates
-[2026-05-19T21:19:11]   Janes Analysis: +0 articles from 50 pages in 30.6s [good]
-[2026-05-19T21:19:11] Ingesting: defenceiq - defence-technology
-[2026-05-19T21:19:28]   defenceiq - defence-technology: +0 entries in 16.1s [good]
-[2026-05-19T21:19:28] Web crawl: Artificial Intelligence - News (https://www.artificialintelligence-news.com/)
-[2026-05-19T21:19:28]   Artificial Intelligence - News: 50 level-1 candidates
-[2026-05-19T21:19:49]   Artificial Intelligence - News: +0 articles from 50 pages in 21.2s [good]
-[2026-05-19T21:19:49] Ingesting: HuggingFace Blog
-[2026-05-19T21:19:57]   HuggingFace Blog: +0 entries in 8.2s [good]
-[2026-05-19T21:19:57] Ingesting: defenseone
-[2026-05-19T21:20:17]   defenseone: +0 entries in 19.8s [good]
-[2026-05-19T21:20:17] Ingesting: Breaking Defense
-[2026-05-19T21:20:22]   Breaking Defense: +0 entries in 5.5s [good]
-[2026-05-19T21:20:22] Ingesting: defenceiq - air-forces-military-aircraft
-[2026-05-19T21:20:40]   defenceiq - air-forces-military-aircraft: +0 entries in 18.2s [good]
-[2026-05-19T21:20:40] Ingesting: Defense News
-[2026-05-19T21:20:51]   Defense News: +0 entries in 10.9s [good]
-[2026-05-19T21:23:22]   Skipping HuggingFace Blog — next fetch in ~3596m
-[2026-05-19T21:23:22]   Skipping Understanding AI — next fetch in ~632m
-[2026-05-19T21:23:22]   Skipping Artificial Intelligence - News — next fetch in ~6004m
-[2026-05-19T21:23:22]   Skipping Defense News — next fetch in ~2995m
-[2026-05-19T21:23:22]   Skipping Breaking Defense — next fetch in ~3003m
-[2026-05-19T21:23:22]   Skipping defenseone — next fetch in ~2999m
-[2026-05-19T21:23:22]   Skipping ukdefencejournal — next fetch in ~2994m
-[2026-05-19T21:23:22]   Skipping defenceiq - defence-technology — next fetch in ~2997m
-[2026-05-19T21:23:22]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~2994m
-[2026-05-19T21:23:22]   Skipping defense-aerospace WEB — next fetch in ~320m
-[2026-05-19T21:23:22]   Skipping janes Insights — next fetch in ~290m
-[2026-05-19T21:23:22]   Skipping Janes Analysis — next fetch in ~5995m
-[2026-05-19T21:23:22]   Skipping UK Gov — next fetch in ~121m
-[2026-05-19T21:23:22]   Skipping Sweden Government — next fetch in ~372m
-[2026-05-19T21:23:22]   Skipping UN News - Global — next fetch in ~360m
-[2026-05-19T21:23:22]   Skipping UK Gov News — next fetch in ~360m
-[2026-05-19T21:23:22]   Skipping UN News - All — next fetch in ~361m
-[2026-05-19T21:23:22]   Skipping BBC World News — next fetch in ~360m
-[2026-05-19T22:04:31] Ingesting: UN Global News
-[2026-05-19T22:04:52]   UN Global News: +30 entries in 20.7s [good]
-[2026-05-19T22:05:37] Ingesting: BBC World News
-[2026-05-19T22:05:50]   BBC World News: +34 entries in 13.0s [good]
-[2026-05-19T22:53:36]   Skipping UN Global News — next fetch in ~951m
-[2026-05-19T22:53:36]   Skipping BBC World News — next fetch in ~952m
-[2026-05-19T22:53:36] Daily prune: Global_News — 4 entries removed
-[2026-05-19T22:55:23]   Skipping UN Global News — next fetch in ~949m
-[2026-05-19T22:55:23]   Skipping BBC World News — next fetch in ~950m
-[2026-05-20T06:55:09]   Skipping HuggingFace Blog — next fetch in ~3024m
-[2026-05-20T06:55:09]   Skipping Understanding AI — next fetch in ~60m
-[2026-05-20T06:55:09]   Skipping Artificial Intelligence - News — next fetch in ~5432m
-[2026-05-20T06:55:09]   Skipping Defense News — next fetch in ~2423m
-[2026-05-20T06:55:09]   Skipping Breaking Defense — next fetch in ~2432m
-[2026-05-20T06:55:09]   Skipping defenseone — next fetch in ~2428m
-[2026-05-20T06:55:09]   Skipping ukdefencejournal — next fetch in ~2422m
-[2026-05-20T06:55:09]   Skipping defenceiq - defence-technology — next fetch in ~2425m
-[2026-05-20T06:55:09]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~2422m
-[2026-05-20T06:55:09] Web crawl: defense-aerospace WEB (https://www.defense-aerospace.com/)
-[2026-05-20T06:55:09]   Skipping Janes Analysis — next fetch in ~5424m
-[2026-05-20T06:55:09] Daily prune: AiNews — 1 entries removed
-[2026-05-20T06:55:09]   defense-aerospace WEB: 50 level-1 candidates
-[2026-05-20T06:55:38]   defense-aerospace WEB: +6 articles from 50 pages in 29.3s [good]
-[2026-05-20T06:55:38] Web crawl: janes Insights (https://www.janes.com/osint-insights/defence-news)
-[2026-05-20T06:55:39]   janes Insights: 50 level-1 candidates
-[2026-05-20T06:56:04]   Skipping Understanding AI — next fetch in ~59m
-[2026-05-20T06:56:07]   janes Insights: +15 articles from 50 pages in 29.1s [good]
-[2026-05-20T06:56:07] Ingesting: UK Gov
-[2026-05-20T06:56:14]   UK Gov: +9 entries in 7.1s [good]
-[2026-05-20T06:56:14] Ingesting: Sweden Government
-[2026-05-20T06:56:34]   Sweden Government: +0 entries in 19.7s [poor]
-[2026-05-20T06:56:34] Ingesting: UN News - Global
-[2026-05-20T06:56:49]   UN News - Global: +4 entries in 15.1s [good]
-[2026-05-20T06:56:49] Ingesting: UK Gov News
-[2026-05-20T06:56:55]   UK Gov News: +9 entries in 5.9s [good]
-[2026-05-20T06:56:55] Ingesting: UN News - All
-[2026-05-20T06:57:11]   UN News - All: +2 entries in 16.3s [good]
-[2026-05-20T06:57:11] Ingesting: BBC World News
-[2026-05-20T06:57:25]   BBC World News: +5 entries in 14.1s [good]
-[2026-05-20T06:57:25] Ingesting: UN News - Global
-[2026-05-20T06:57:41]   UN News - Global: +0 entries in 15.2s [good]
-[2026-05-20T06:57:41] Ingesting: UK Gov
-[2026-05-20T06:57:46]   UK Gov: +0 entries in 5.8s [good]
-[2026-05-20T06:57:46] Ingesting: UK Gov News
-[2026-05-20T06:57:52]   UK Gov News: +0 entries in 5.9s [good]
-[2026-05-20T06:57:52] Ingesting: BBC World News
-[2026-05-20T06:58:02]   BBC World News: +0 entries in 10.2s [good]
-[2026-05-20T06:58:02] Ingesting: UN News - All
-[2026-05-20T06:58:18]   UN News - All: +0 entries in 15.9s [good]
-[2026-05-20T06:58:18] Ingesting: Sweden Government
-[2026-05-20T06:58:38]   Sweden Government: +0 entries in 19.9s [poor]
-[2026-05-20T06:58:38] Web crawl: defense-aerospace WEB (https://www.defense-aerospace.com/)
-[2026-05-20T06:58:38]   defense-aerospace WEB: 50 level-1 candidates
-[2026-05-20T06:58:51]   defense-aerospace WEB: +0 articles from 50 pages in 12.5s [good]
-[2026-05-20T06:58:51] Web crawl: janes Insights (https://www.janes.com/osint-insights/defence-news)
-[2026-05-20T06:58:51]   janes Insights: 50 level-1 candidates
-[2026-05-20T06:59:19]   janes Insights: +0 articles from 50 pages in 28.7s [good]
-[2026-05-20T07:25:04]   Skipping HuggingFace Blog — next fetch in ~2994m
-[2026-05-20T07:25:04]   Skipping Understanding AI — next fetch in ~30m
-[2026-05-20T07:25:04]   Skipping Artificial Intelligence - News — next fetch in ~5402m
-[2026-05-20T07:25:04]   Skipping Defense News — next fetch in ~2393m
-[2026-05-20T07:25:04]   Skipping Breaking Defense — next fetch in ~2402m
-[2026-05-20T07:25:04]   Skipping defenseone — next fetch in ~2398m
-[2026-05-20T07:25:04]   Skipping ukdefencejournal — next fetch in ~2392m
-[2026-05-20T07:25:04]   Skipping defenceiq - defence-technology — next fetch in ~2395m
-[2026-05-20T07:25:04]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~2392m
-[2026-05-20T07:25:04]   Skipping defense-aerospace WEB — next fetch in ~5976m
-[2026-05-20T07:25:04]   Skipping janes Insights — next fetch in ~5970m
-[2026-05-20T07:25:04]   Skipping Janes Analysis — next fetch in ~5394m
-[2026-05-20T07:25:04]   Skipping UK Gov — next fetch in ~332m
-[2026-05-20T07:25:04]   Skipping Sweden Government — next fetch in ~583m
-[2026-05-20T07:25:04]   Skipping UN News - Global — next fetch in ~572m
-[2026-05-20T07:25:04]   Skipping UK Gov News — next fetch in ~572m
-[2026-05-20T07:25:04]   Skipping UN News - All — next fetch in ~573m
-[2026-05-20T07:25:04]   Skipping BBC World News — next fetch in ~572m
-[2026-05-20T07:25:04]   Skipping Understanding AI — next fetch in ~30m
-[2026-05-20T07:29:22]   Skipping HuggingFace Blog — next fetch in ~2990m
-[2026-05-20T07:29:22]   Skipping Understanding AI — next fetch in ~26m
-[2026-05-20T07:29:22]   Skipping Artificial Intelligence - News — next fetch in ~5398m
-[2026-05-20T07:29:22]   Skipping Defense News — next fetch in ~2389m
-[2026-05-20T07:29:22]   Skipping Breaking Defense — next fetch in ~2397m
-[2026-05-20T07:29:22]   Skipping defenseone — next fetch in ~2393m
-[2026-05-20T07:29:22]   Skipping ukdefencejournal — next fetch in ~2388m
-[2026-05-20T07:29:22]   Skipping defenceiq - defence-technology — next fetch in ~2391m
-[2026-05-20T07:29:22]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~2388m
-[2026-05-20T07:29:22]   Skipping defense-aerospace WEB — next fetch in ~5972m
-[2026-05-20T07:29:22]   Skipping janes Insights — next fetch in ~5965m
-[2026-05-20T07:29:22]   Skipping Janes Analysis — next fetch in ~5389m
-[2026-05-20T07:29:22]   Skipping UK Gov — next fetch in ~328m
-[2026-05-20T07:29:22]   Skipping Sweden Government — next fetch in ~579m
-[2026-05-20T07:29:22]   Skipping UN News - Global — next fetch in ~568m
-[2026-05-20T07:29:22]   Skipping UK Gov News — next fetch in ~568m
-[2026-05-20T07:29:22]   Skipping UN News - All — next fetch in ~568m
-[2026-05-20T07:29:22]   Skipping BBC World News — next fetch in ~568m
-[2026-05-20T07:29:22]   Skipping Understanding AI — next fetch in ~26m
-[2026-05-20T07:48:20]   Skipping HuggingFace Blog — next fetch in ~2971m
-[2026-05-20T07:48:20]   Skipping Understanding AI — next fetch in ~7m
-[2026-05-20T07:48:20]   Skipping Artificial Intelligence - News — next fetch in ~5379m
-[2026-05-20T07:48:20]   Skipping Defense News — next fetch in ~2370m
-[2026-05-20T07:48:20]   Skipping Breaking Defense — next fetch in ~2379m
-[2026-05-20T07:48:20]   Skipping defenseone — next fetch in ~2374m
-[2026-05-20T07:48:20]   Skipping ukdefencejournal — next fetch in ~2369m
-[2026-05-20T07:48:20]   Skipping defenceiq - defence-technology — next fetch in ~2372m
-[2026-05-20T07:48:20]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~2369m
-[2026-05-20T07:48:20]   Skipping defense-aerospace WEB — next fetch in ~5953m
-[2026-05-20T07:48:20]   Skipping janes Insights — next fetch in ~5946m
-[2026-05-20T07:48:20]   Skipping Janes Analysis — next fetch in ~5370m
-[2026-05-20T07:48:20]   Skipping UK Gov — next fetch in ~309m
-[2026-05-20T07:48:20]   Skipping Sweden Government — next fetch in ~560m
-[2026-05-20T07:48:20]   Skipping UN News - Global — next fetch in ~549m
-[2026-05-20T07:48:20]   Skipping UK Gov News — next fetch in ~549m
-[2026-05-20T07:48:20]   Skipping UN News - All — next fetch in ~549m
-[2026-05-20T07:48:20]   Skipping BBC World News — next fetch in ~549m
-[2026-05-20T07:48:20]   Skipping Understanding AI — next fetch in ~7m
-[2026-05-20T08:24:48]   Skipping HuggingFace Blog — next fetch in ~2935m
-[2026-05-20T08:24:48] Ingesting: Understanding AI
-[2026-05-20T08:24:48]   Skipping Artificial Intelligence - News — next fetch in ~5343m
-[2026-05-20T08:24:48]   Skipping Defense News — next fetch in ~2334m
-[2026-05-20T08:24:48]   Skipping Breaking Defense — next fetch in ~2342m
-[2026-05-20T08:24:48]   Skipping defenseone — next fetch in ~2338m
-[2026-05-20T08:24:48]   Skipping ukdefencejournal — next fetch in ~2332m
-[2026-05-20T08:24:48]   Skipping defenceiq - defence-technology — next fetch in ~2335m
-[2026-05-20T08:24:48]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~2332m
-[2026-05-20T08:24:48]   Skipping defense-aerospace WEB — next fetch in ~5917m
-[2026-05-20T08:24:48]   Skipping janes Insights — next fetch in ~5910m
-[2026-05-20T08:24:48]   Skipping Janes Analysis — next fetch in ~5334m
-[2026-05-20T08:24:48]   Skipping UK Gov — next fetch in ~272m
-[2026-05-20T08:24:48]   Skipping Sweden Government — next fetch in ~523m
-[2026-05-20T08:24:48]   Skipping UN News - Global — next fetch in ~512m
-[2026-05-20T08:24:48]   Skipping UK Gov News — next fetch in ~513m
-[2026-05-20T08:24:48]   Skipping UN News - All — next fetch in ~513m
-[2026-05-20T08:24:48]   Skipping BBC World News — next fetch in ~513m
-[2026-05-20T08:24:50]   Understanding AI: +0 entries in 2.5s [good]
-[2026-05-20T08:24:50] Ingesting: Understanding AI
-[2026-05-20T08:24:52]   Understanding AI: +0 entries in 1.7s [good]
-[2026-05-20T11:57:46]   Skipping UK Gov — next fetch in ~59m
-[2026-05-20T18:02:36] Ingesting: UK Gov News
-[2026-05-20T18:02:42]   UK Gov News: +19 entries in 6.3s [good]
-[2026-05-20T18:02:42] Ingesting: UN News - Global
-[2026-05-20T18:02:59]   UN News - Global: +1 entries in 17.2s [good]
-[2026-05-20T18:02:59] Ingesting: BBC World News
-[2026-05-20T18:03:10]   BBC World News: +17 entries in 10.7s [good]
-[2026-05-20T18:03:10] Ingesting: UN News - All
-[2026-05-20T18:03:27]   UN News - All: +1 entries in 16.6s [good]
-[2026-05-20T18:03:27] Ingesting: Sweden Government
-[2026-05-20T18:03:47]   Sweden Government: +1 entries in 20.4s [poor]
-[2026-05-20T18:03:47] Ingesting: UK Gov
-[2026-05-20T18:03:52]   UK Gov: +19 entries in 5.2s [good]
-[2026-05-20T20:42:32]   Skipping HuggingFace Blog — next fetch in ~2197m
-[2026-05-20T20:42:32]   Skipping Understanding AI — next fetch in ~4572m
-[2026-05-20T20:42:32]   Skipping Artificial Intelligence - News — next fetch in ~4605m
-[2026-05-20T20:42:32]   Skipping Defense News — next fetch in ~1596m
-[2026-05-20T20:42:32]   Skipping Breaking Defense — next fetch in ~1604m
-[2026-05-20T20:42:32]   Skipping defenseone — next fetch in ~1600m
-[2026-05-20T20:42:32]   Skipping ukdefencejournal — next fetch in ~1595m
-[2026-05-20T20:42:32]   Skipping defenceiq - defence-technology — next fetch in ~1597m
-[2026-05-20T20:42:32]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~1595m
-[2026-05-20T20:42:32]   Skipping defense-aerospace WEB — next fetch in ~5179m
-[2026-05-20T20:42:32]   Skipping janes Insights — next fetch in ~5172m
-[2026-05-20T20:42:32]   Skipping Janes Analysis — next fetch in ~4596m
-[2026-05-20T20:42:32]   Skipping UK Gov — next fetch in ~201m
-[2026-05-20T20:42:32]   Skipping Sweden Government — next fetch in ~451m
-[2026-05-20T20:42:32]   Skipping UN News - Global — next fetch in ~440m
-[2026-05-20T20:42:32]   Skipping UK Gov News — next fetch in ~440m
-[2026-05-20T20:42:32]   Skipping UN News - All — next fetch in ~440m
-[2026-05-20T20:42:32]   Skipping BBC World News — next fetch in ~440m
-[2026-05-20T20:47:49]   Skipping HuggingFace Blog — next fetch in ~2192m
-[2026-05-20T20:47:49]   Skipping Understanding AI — next fetch in ~4567m
-[2026-05-20T20:47:49]   Skipping Artificial Intelligence - News — next fetch in ~4599m
-[2026-05-20T20:47:49]   Skipping Defense News — next fetch in ~1591m
-[2026-05-20T20:47:49]   Skipping Breaking Defense — next fetch in ~1599m
-[2026-05-20T20:47:49]   Skipping defenseone — next fetch in ~1595m
-[2026-05-20T20:47:49]   Skipping ukdefencejournal — next fetch in ~1589m
-[2026-05-20T20:47:49]   Skipping defenceiq - defence-technology — next fetch in ~1592m
-[2026-05-20T20:47:49]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~1589m
-[2026-05-20T20:47:49]   Skipping defense-aerospace WEB — next fetch in ~5174m
-[2026-05-20T20:47:49]   Skipping janes Insights — next fetch in ~5167m
-[2026-05-20T20:47:49]   Skipping Janes Analysis — next fetch in ~4591m
-[2026-05-20T20:47:49]   Skipping UK Gov — next fetch in ~196m
-[2026-05-20T20:47:49]   Skipping Sweden Government — next fetch in ~445m
-[2026-05-20T20:47:49]   Skipping UN News - Global — next fetch in ~435m
-[2026-05-20T20:47:49]   Skipping UK Gov News — next fetch in ~434m
-[2026-05-20T20:47:49]   Skipping UN News - All — next fetch in ~435m
-[2026-05-20T20:47:49]   Skipping BBC World News — next fetch in ~435m
-[2026-05-20T21:42:33]   Skipping HuggingFace Blog — next fetch in ~2137m
-[2026-05-20T21:42:33]   Skipping Understanding AI — next fetch in ~4512m
-[2026-05-20T21:42:33]   Skipping Artificial Intelligence - News — next fetch in ~4545m
-[2026-05-20T21:42:33]   Skipping Defense News — next fetch in ~1536m
-[2026-05-20T21:42:33]   Skipping Breaking Defense — next fetch in ~1544m
-[2026-05-20T21:42:33]   Skipping defenseone — next fetch in ~1540m
-[2026-05-20T21:42:33]   Skipping ukdefencejournal — next fetch in ~1535m
-[2026-05-20T21:42:33]   Skipping defenceiq - defence-technology — next fetch in ~1537m
-[2026-05-20T21:42:33]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~1535m
-[2026-05-20T21:42:33]   Skipping defense-aerospace WEB — next fetch in ~5119m
-[2026-05-20T21:42:33]   Skipping janes Insights — next fetch in ~5112m
-[2026-05-20T21:42:33]   Skipping Janes Analysis — next fetch in ~4536m
-[2026-05-20T21:42:33]   Skipping UK Gov — next fetch in ~141m
-[2026-05-20T21:42:33]   Skipping Sweden Government — next fetch in ~391m
-[2026-05-20T21:42:33]   Skipping UN News - Global — next fetch in ~380m
-[2026-05-20T21:42:33]   Skipping UK Gov News — next fetch in ~380m
-[2026-05-20T21:42:33]   Skipping UN News - All — next fetch in ~380m
-[2026-05-20T21:42:33]   Skipping BBC World News — next fetch in ~380m
-[2026-05-21T08:06:24]   Skipping HuggingFace Blog — next fetch in ~1513m
-[2026-05-21T08:06:24]   Skipping Understanding AI — next fetch in ~3888m
-[2026-05-21T08:06:24]   Skipping Artificial Intelligence - News — next fetch in ~3921m
-[2026-05-21T08:06:24]   Skipping Defense News — next fetch in ~912m
-[2026-05-21T08:06:24]   Skipping Breaking Defense — next fetch in ~920m
-[2026-05-21T08:06:24]   Skipping defenseone — next fetch in ~916m
-[2026-05-21T08:06:24]   Skipping ukdefencejournal — next fetch in ~911m
-[2026-05-21T08:06:24]   Skipping defenceiq - defence-technology — next fetch in ~914m
-[2026-05-21T08:06:24] Daily prune: AiNews — 2 entries removed
-[2026-05-21T08:06:24]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~911m
-[2026-05-21T08:06:24]   Skipping defense-aerospace WEB — next fetch in ~4495m
-[2026-05-21T08:06:24]   Skipping janes Insights — next fetch in ~4488m
-[2026-05-21T08:06:24]   Skipping Janes Analysis — next fetch in ~3912m
-[2026-05-21T08:06:24] Ingesting: UK Gov
-[2026-05-21T08:06:30]   UK Gov: +9 entries in 6.2s [good]
-[2026-05-21T08:06:30] Ingesting: Sweden Government
-[2026-05-21T08:06:51]   Sweden Government: +0 entries in 21.1s [poor]
-[2026-05-21T08:06:51] Ingesting: UN News - Global
-[2026-05-21T08:07:10]   UN News - Global: +3 entries in 19.4s [good]
-[2026-05-21T08:07:10] Ingesting: UK Gov News
-[2026-05-21T08:07:16]   UK Gov News: +9 entries in 5.3s [good]
-[2026-05-21T08:07:16] Ingesting: UN News - All
-[2026-05-21T08:07:32]   UN News - All: +4 entries in 16.2s [good]
-[2026-05-21T08:07:32] Ingesting: BBC World News
-[2026-05-21T08:07:44]   BBC World News: +8 entries in 12.0s [good]
-[2026-05-21T08:07:44] Ingesting: UK Gov News
-[2026-05-21T08:07:49]   UK Gov News: +0 entries in 5.2s [good]
-[2026-05-21T08:07:49] Ingesting: UN News - Global
-[2026-05-21T08:08:05]   UN News - Global: +0 entries in 15.7s [good]
-[2026-05-21T08:08:05] Ingesting: BBC World News
-[2026-05-21T08:08:14]   BBC World News: +0 entries in 9.1s [good]
-[2026-05-21T08:08:14] Ingesting: UK Gov
-[2026-05-21T08:08:19]   UK Gov: +0 entries in 5.3s [good]
-[2026-05-21T08:08:19] Ingesting: UN News - All
-[2026-05-21T08:08:40]   UN News - All: +0 entries in 20.7s [good]
-[2026-05-21T08:08:40] Ingesting: Sweden Government
-[2026-05-21T08:09:02]   Sweden Government: +0 entries in 22.1s [poor]
-[2026-05-21T08:09:02] Web crawl: National Armaments Director Group (https://des.mod.uk/news/?page=1&pageSize=25)
-[2026-05-21T08:09:02]   National Armaments Director Group: 30 level-1 candidates
-[2026-05-21T08:09:10]   National Armaments Director Group: +19 articles from 30 pages in 8.3s [good]
-[2026-05-21T08:09:10] Ingesting: UK Gov News
-[2026-05-21T08:09:15]   UK Gov News: +0 entries in 5.1s [good]
-[2026-05-21T08:09:15] Ingesting: UN News - Global
-[2026-05-21T08:09:31]   UN News - Global: +0 entries in 15.4s [good]
-[2026-05-21T08:09:31] Ingesting: BBC World News
-[2026-05-21T08:09:52]   BBC World News: +0 entries in 21.4s [good]
-[2026-05-21T08:09:52] Ingesting: UN News - All
-[2026-05-21T08:10:08]   UN News - All: +0 entries in 16.0s [good]
-[2026-05-21T08:10:08] Web crawl: National Armaments Director Group (https://des.mod.uk/news/?page=1&pageSize=25)
-[2026-05-21T08:10:09]   National Armaments Director Group: 30 level-1 candidates
-[2026-05-21T08:10:16]   National Armaments Director Group: +19 articles from 30 pages in 8.0s [good]
-[2026-05-21T17:11:11]   Skipping HuggingFace Blog — next fetch in ~968m
-[2026-05-21T17:11:11]   Skipping Understanding AI — next fetch in ~3343m
-[2026-05-21T17:11:11]   Skipping Artificial Intelligence - News — next fetch in ~3376m
-[2026-05-21T17:11:11]   Skipping Defense News — next fetch in ~367m
-[2026-05-21T17:11:11]   Skipping Breaking Defense — next fetch in ~376m
-[2026-05-21T17:11:11]   Skipping defenseone — next fetch in ~372m
-[2026-05-21T17:11:11]   Skipping ukdefencejournal — next fetch in ~366m
-[2026-05-21T17:11:11]   Skipping defenceiq - defence-technology — next fetch in ~369m
-[2026-05-21T17:11:11]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~366m
-[2026-05-21T17:11:11]   Skipping defense-aerospace WEB — next fetch in ~3950m
-[2026-05-21T17:11:11]   Skipping janes Insights — next fetch in ~3944m
-[2026-05-21T17:11:11]   Skipping Janes Analysis — next fetch in ~3367m
-[2026-05-21T17:11:11]   Skipping National Armaments Director Group — next fetch in ~5459m
-[2026-05-21T17:11:11] Ingesting: UK Gov
-[2026-05-21T17:11:11]   Skipping Sweden Government — next fetch in ~67m
-[2026-05-21T17:11:11]   Skipping UN News - Global — next fetch in ~58m
-[2026-05-21T17:11:11]   Skipping UK Gov News — next fetch in ~58m
-[2026-05-21T17:11:11]   Skipping UN News - All — next fetch in ~58m
-[2026-05-21T17:11:11]   Skipping BBC World News — next fetch in ~58m
-[2026-05-21T17:11:11]   Skipping UK Gov News — next fetch in ~58m
-[2026-05-21T17:11:11]   Skipping UN News - Global — next fetch in ~58m
-[2026-05-21T17:11:11]   Skipping UN News - All — next fetch in ~58m
-[2026-05-21T17:11:11]   Skipping BBC World News — next fetch in ~58m
-[2026-05-21T17:11:17]   UK Gov: +19 entries in 5.9s [good]
-[2026-05-21T17:11:17] Ingesting: UK Gov
-[2026-05-21T17:11:22]   UK Gov: +0 entries in 5.0s [good]
-[2026-05-21T17:12:05] Web crawl: National Armaments Director Group (https://des.mod.uk/news/?page=1&pageSize=25)
-[2026-05-21T17:12:05]   National Armaments Director Group: 1 level-1 candidates
-[2026-05-21T17:12:06]   National Armaments Director Group: +0 articles from 1 pages in 0.7s [good]
-[2026-05-21T17:19:02]   Skipping Sweden Government — next fetch in ~59m
-[2026-05-21T17:29:28] Web crawl: National Armaments Director Group (https://des.mod.uk/news/?page=1&pageSize=25)
-[2026-05-21T17:29:29]   National Armaments Director Group: 1 level-1 candidates
-[2026-05-21T17:29:29]   National Armaments Director Group: +0 articles from 1 pages in 0.7s [good]
-[2026-05-21T17:35:02] Web crawl: National Armaments Director Group (https://des.mod.uk/news/?page=1&pageSize=25)
-[2026-05-21T17:35:03]   National Armaments Director Group: 1 level-1 candidates
-[2026-05-21T17:35:03]   National Armaments Director Group: +0 articles from 1 pages in 0.7s [good]
-[2026-05-21T18:27:48] Web crawl: National Armaments Director Group (https://des.mod.uk/news/?page=1&pageSize=25)
-[2026-05-21T18:27:48]   National Armaments Director Group: 1 level-1 candidates
-[2026-05-21T18:27:48]   National Armaments Director Group: +0 articles from 1 pages in 0.7s [good]
-[2026-05-21T18:28:19] Ingesting: Defense News
-[2026-05-21T18:28:34]   Defense News: +10 entries in 15.7s [good]
-[2026-05-21T18:29:01] Web crawl: National Armaments Director Group (https://des.mod.uk/news/?page=1&pageSize=25)
-[2026-05-21T18:29:02]   National Armaments Director Group: 1 level-1 candidates
-[2026-05-21T18:29:02]   National Armaments Director Group: +0 articles from 1 pages in 0.7s [good]
 [2026-05-21T18:36:19] Web crawl: National Armaments Director Group (https://des.mod.uk/news/?page=1&pageSize=25)
 [2026-05-21T18:36:20]   National Armaments Director Group: 1 level-1 candidates
 [2026-05-21T18:36:20]   National Armaments Director Group: +0 articles from 1 pages in 0.8s [good]
@@ -998,3 +558,443 @@
 [2026-05-25T10:09:09] Web crawl: janes Insights (https://www.janes.com/osint-insights/defence-news)
 [2026-05-25T10:09:10]   janes Insights: 15 level-1 candidates
 [2026-05-25T10:09:17]   janes Insights: +15 articles from 19 pages in 7.9s [good]
+[2026-05-25T11:04:32]   Skipping HuggingFace Blog — next fetch in ~3528m
+[2026-05-25T11:04:32]   Skipping Understanding AI — next fetch in ~5253m
+[2026-05-25T11:04:32]   Skipping Artificial Intelligence - News — next fetch in ~4465m
+[2026-05-25T11:04:32]   Skipping Defense News — next fetch in ~2941m
+[2026-05-25T11:04:32]   Skipping Breaking Defense — next fetch in ~2950m
+[2026-05-25T11:04:32]   Skipping defenseone — next fetch in ~2947m
+[2026-05-25T11:04:32]   Skipping ukdefencejournal — next fetch in ~2943m
+[2026-05-25T11:04:32]   Skipping defenceiq - defence-technology — next fetch in ~2945m
+[2026-05-25T11:04:32]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~2941m
+[2026-05-25T11:04:32]   Skipping defense-aerospace WEB — next fetch in ~5934m
+[2026-05-25T11:04:32]   Skipping janes Insights — next fetch in ~5940m
+[2026-05-25T11:04:32]   Skipping Janes Analysis — next fetch in ~4456m
+[2026-05-25T11:04:32]   Skipping National Armaments Director Group — next fetch in ~2404m
+[2026-05-25T11:04:32]   Skipping UK Gov — next fetch in ~287m
+[2026-05-25T11:04:32]   Skipping Sweden Government — next fetch in ~149m
+[2026-05-25T11:04:32]   Skipping UN News - Global — next fetch in ~82m
+[2026-05-25T11:04:32]   Skipping UK Gov News — next fetch in ~81m
+[2026-05-25T11:04:32]   Skipping UN News - All — next fetch in ~82m
+[2026-05-25T11:04:32]   Skipping BBC World News — next fetch in ~82m
+[2026-05-25T11:05:06]   Skipping HuggingFace Blog — next fetch in ~3527m
+[2026-05-25T11:05:06]   Skipping Understanding AI — next fetch in ~5252m
+[2026-05-25T11:05:06]   Skipping Artificial Intelligence - News — next fetch in ~4464m
+[2026-05-25T11:05:06]   Skipping Defense News — next fetch in ~2941m
+[2026-05-25T11:05:06]   Skipping Breaking Defense — next fetch in ~2950m
+[2026-05-25T11:05:06]   Skipping defenseone — next fetch in ~2946m
+[2026-05-25T11:05:06]   Skipping ukdefencejournal — next fetch in ~2942m
+[2026-05-25T11:05:06]   Skipping defenceiq - defence-technology — next fetch in ~2944m
+[2026-05-25T11:05:06]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~2941m
+[2026-05-25T11:05:06]   Skipping defense-aerospace WEB — next fetch in ~5934m
+[2026-05-25T11:05:06]   Skipping janes Insights — next fetch in ~5940m
+[2026-05-25T11:05:06]   Skipping Janes Analysis — next fetch in ~4456m
+[2026-05-25T11:05:06]   Skipping National Armaments Director Group — next fetch in ~2404m
+[2026-05-25T11:05:06]   Skipping UK Gov — next fetch in ~286m
+[2026-05-25T11:05:06]   Skipping Sweden Government — next fetch in ~148m
+[2026-05-25T11:05:06]   Skipping UN News - Global — next fetch in ~81m
+[2026-05-25T11:05:06]   Skipping UK Gov News — next fetch in ~80m
+[2026-05-25T11:05:06]   Skipping UN News - All — next fetch in ~81m
+[2026-05-25T11:05:06]   Skipping BBC World News — next fetch in ~82m
+[2026-05-25T11:05:10]   Skipping HuggingFace Blog — next fetch in ~3527m
+[2026-05-25T11:05:10]   Skipping Understanding AI — next fetch in ~5252m
+[2026-05-25T11:05:10]   Skipping Artificial Intelligence - News — next fetch in ~4464m
+[2026-05-25T11:05:10]   Skipping Defense News — next fetch in ~2941m
+[2026-05-25T11:05:10]   Skipping Breaking Defense — next fetch in ~2950m
+[2026-05-25T11:05:10]   Skipping defenseone — next fetch in ~2946m
+[2026-05-25T11:05:10]   Skipping ukdefencejournal — next fetch in ~2942m
+[2026-05-25T11:05:10]   Skipping defenceiq - defence-technology — next fetch in ~2944m
+[2026-05-25T11:05:10]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~2940m
+[2026-05-25T11:05:10]   Skipping defense-aerospace WEB — next fetch in ~5934m
+[2026-05-25T11:05:10]   Skipping janes Insights — next fetch in ~5940m
+[2026-05-25T11:05:10]   Skipping Janes Analysis — next fetch in ~4456m
+[2026-05-25T11:05:10]   Skipping National Armaments Director Group — next fetch in ~2404m
+[2026-05-25T11:05:10]   Skipping UK Gov — next fetch in ~286m
+[2026-05-25T11:05:10]   Skipping Sweden Government — next fetch in ~148m
+[2026-05-25T11:05:10]   Skipping UN News - Global — next fetch in ~81m
+[2026-05-25T11:05:10]   Skipping UK Gov News — next fetch in ~80m
+[2026-05-25T11:05:10]   Skipping UN News - All — next fetch in ~81m
+[2026-05-25T11:05:10]   Skipping BBC World News — next fetch in ~82m
+[2026-05-25T11:05:34]   Skipping HuggingFace Blog — next fetch in ~3527m
+[2026-05-25T11:05:34]   Skipping Understanding AI — next fetch in ~5252m
+[2026-05-25T11:05:34]   Skipping Artificial Intelligence - News — next fetch in ~4464m
+[2026-05-25T11:05:34]   Skipping Defense News — next fetch in ~2940m
+[2026-05-25T11:05:34]   Skipping Breaking Defense — next fetch in ~2949m
+[2026-05-25T11:05:34]   Skipping defenseone — next fetch in ~2946m
+[2026-05-25T11:05:34]   Skipping ukdefencejournal — next fetch in ~2942m
+[2026-05-25T11:05:34]   Skipping defenceiq - defence-technology — next fetch in ~2944m
+[2026-05-25T11:05:34]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~2940m
+[2026-05-25T11:05:34]   Skipping defense-aerospace WEB — next fetch in ~5933m
+[2026-05-25T11:05:34]   Skipping janes Insights — next fetch in ~5939m
+[2026-05-25T11:05:34]   Skipping Janes Analysis — next fetch in ~4455m
+[2026-05-25T11:05:34]   Skipping National Armaments Director Group — next fetch in ~2403m
+[2026-05-25T11:05:34]   Skipping UK Gov — next fetch in ~285m
+[2026-05-25T11:05:34]   Skipping Sweden Government — next fetch in ~148m
+[2026-05-25T11:05:34]   Skipping UN News - Global — next fetch in ~81m
+[2026-05-25T11:05:34]   Skipping UK Gov News — next fetch in ~80m
+[2026-05-25T11:05:34]   Skipping UN News - All — next fetch in ~81m
+[2026-05-25T11:05:34]   Skipping BBC World News — next fetch in ~81m
+[2026-05-25T11:06:46]   Skipping HuggingFace Blog — next fetch in ~3526m
+[2026-05-25T11:06:46]   Skipping Understanding AI — next fetch in ~5251m
+[2026-05-25T11:06:46]   Skipping Artificial Intelligence - News — next fetch in ~4463m
+[2026-05-25T11:06:46]   Skipping Defense News — next fetch in ~2939m
+[2026-05-25T11:06:46]   Skipping Breaking Defense — next fetch in ~2948m
+[2026-05-25T11:06:46]   Skipping defenseone — next fetch in ~2944m
+[2026-05-25T11:06:46]   Skipping ukdefencejournal — next fetch in ~2940m
+[2026-05-25T11:06:46]   Skipping defenceiq - defence-technology — next fetch in ~2943m
+[2026-05-25T11:06:46]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~2939m
+[2026-05-25T11:06:46]   Skipping defense-aerospace WEB — next fetch in ~5932m
+[2026-05-25T11:06:46]   Skipping janes Insights — next fetch in ~5938m
+[2026-05-25T11:06:46]   Skipping Janes Analysis — next fetch in ~4454m
+[2026-05-25T11:06:46]   Skipping National Armaments Director Group — next fetch in ~2402m
+[2026-05-25T11:06:46]   Skipping UK Gov — next fetch in ~284m
+[2026-05-25T11:06:46]   Skipping Sweden Government — next fetch in ~147m
+[2026-05-25T11:06:46]   Skipping UN News - Global — next fetch in ~79m
+[2026-05-25T11:06:46]   Skipping UK Gov News — next fetch in ~78m
+[2026-05-25T11:06:46]   Skipping UN News - All — next fetch in ~80m
+[2026-05-25T11:06:46]   Skipping BBC World News — next fetch in ~80m
+[2026-05-25T11:08:09]   Skipping HuggingFace Blog — next fetch in ~3524m
+[2026-05-25T11:08:09]   Skipping Understanding AI — next fetch in ~5249m
+[2026-05-25T11:08:09]   Skipping Artificial Intelligence - News — next fetch in ~4461m
+[2026-05-25T11:08:09]   Skipping Defense News — next fetch in ~2938m
+[2026-05-25T11:08:09]   Skipping Breaking Defense — next fetch in ~2947m
+[2026-05-25T11:08:09]   Skipping defenseone — next fetch in ~2943m
+[2026-05-25T11:08:09]   Skipping ukdefencejournal — next fetch in ~2939m
+[2026-05-25T11:08:09]   Skipping defenceiq - defence-technology — next fetch in ~2941m
+[2026-05-25T11:08:09]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~2937m
+[2026-05-25T11:08:09]   Skipping defense-aerospace WEB — next fetch in ~5931m
+[2026-05-25T11:08:09]   Skipping janes Insights — next fetch in ~5937m
+[2026-05-25T11:08:09]   Skipping Janes Analysis — next fetch in ~4453m
+[2026-05-25T11:08:09]   Skipping National Armaments Director Group — next fetch in ~2401m
+[2026-05-25T11:08:09]   Skipping UK Gov — next fetch in ~283m
+[2026-05-25T11:08:09]   Skipping Sweden Government — next fetch in ~145m
+[2026-05-25T11:08:09]   Skipping UN News - Global — next fetch in ~78m
+[2026-05-25T11:08:09]   Skipping UK Gov News — next fetch in ~77m
+[2026-05-25T11:08:09]   Skipping UN News - All — next fetch in ~78m
+[2026-05-25T11:08:09]   Skipping BBC World News — next fetch in ~79m
+[2026-05-25T11:14:37]   Skipping HuggingFace Blog — next fetch in ~3518m
+[2026-05-25T11:14:37]   Skipping Understanding AI — next fetch in ~5243m
+[2026-05-25T11:14:37]   Skipping Artificial Intelligence - News — next fetch in ~4455m
+[2026-05-25T11:14:37]   Skipping Defense News — next fetch in ~2931m
+[2026-05-25T11:14:37]   Skipping Breaking Defense — next fetch in ~2940m
+[2026-05-25T11:14:37]   Skipping defenseone — next fetch in ~2936m
+[2026-05-25T11:14:37]   Skipping ukdefencejournal — next fetch in ~2933m
+[2026-05-25T11:14:37]   Skipping defenceiq - defence-technology — next fetch in ~2935m
+[2026-05-25T11:14:37]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~2931m
+[2026-05-25T11:14:37]   Skipping defense-aerospace WEB — next fetch in ~5924m
+[2026-05-25T11:14:37]   Skipping janes Insights — next fetch in ~5930m
+[2026-05-25T11:14:37]   Skipping Janes Analysis — next fetch in ~4446m
+[2026-05-25T11:14:37]   Skipping National Armaments Director Group — next fetch in ~2394m
+[2026-05-25T11:14:37]   Skipping UK Gov — next fetch in ~276m
+[2026-05-25T11:14:37]   Skipping Sweden Government — next fetch in ~139m
+[2026-05-25T11:14:37]   Skipping UN News - Global — next fetch in ~72m
+[2026-05-25T11:14:37]   Skipping UK Gov News — next fetch in ~71m
+[2026-05-25T11:14:37]   Skipping UN News - All — next fetch in ~72m
+[2026-05-25T11:14:37]   Skipping BBC World News — next fetch in ~72m
+[2026-05-25T11:14:41]   Skipping HuggingFace Blog — next fetch in ~3518m
+[2026-05-25T11:14:41]   Skipping Understanding AI — next fetch in ~5243m
+[2026-05-25T11:14:41]   Skipping Artificial Intelligence - News — next fetch in ~4455m
+[2026-05-25T11:14:41]   Skipping Defense News — next fetch in ~2931m
+[2026-05-25T11:14:41]   Skipping Breaking Defense — next fetch in ~2940m
+[2026-05-25T11:14:41]   Skipping defenseone — next fetch in ~2936m
+[2026-05-25T11:14:41]   Skipping ukdefencejournal — next fetch in ~2932m
+[2026-05-25T11:14:41]   Skipping defenceiq - defence-technology — next fetch in ~2935m
+[2026-05-25T11:14:41]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~2931m
+[2026-05-25T11:14:41]   Skipping defense-aerospace WEB — next fetch in ~5924m
+[2026-05-25T11:14:41]   Skipping janes Insights — next fetch in ~5930m
+[2026-05-25T11:14:41]   Skipping Janes Analysis — next fetch in ~4446m
+[2026-05-25T11:14:41]   Skipping National Armaments Director Group — next fetch in ~2394m
+[2026-05-25T11:14:41]   Skipping UK Gov — next fetch in ~276m
+[2026-05-25T11:14:41]   Skipping Sweden Government — next fetch in ~139m
+[2026-05-25T11:14:41]   Skipping UN News - Global — next fetch in ~71m
+[2026-05-25T11:14:41]   Skipping UK Gov News — next fetch in ~70m
+[2026-05-25T11:14:41]   Skipping UN News - All — next fetch in ~72m
+[2026-05-25T11:14:41]   Skipping BBC World News — next fetch in ~72m
+[2026-05-25T11:15:40]   Skipping HuggingFace Blog — next fetch in ~3517m
+[2026-05-25T11:15:40]   Skipping Understanding AI — next fetch in ~5242m
+[2026-05-25T11:15:40]   Skipping Artificial Intelligence - News — next fetch in ~4454m
+[2026-05-25T11:15:40]   Skipping Defense News — next fetch in ~2930m
+[2026-05-25T11:15:40]   Skipping Breaking Defense — next fetch in ~2939m
+[2026-05-25T11:15:40]   Skipping defenseone — next fetch in ~2935m
+[2026-05-25T11:15:40]   Skipping ukdefencejournal — next fetch in ~2931m
+[2026-05-25T11:15:40]   Skipping defenceiq - defence-technology — next fetch in ~2934m
+[2026-05-25T11:15:40]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~2930m
+[2026-05-25T11:15:40]   Skipping defense-aerospace WEB — next fetch in ~5923m
+[2026-05-25T11:15:40]   Skipping janes Insights — next fetch in ~5929m
+[2026-05-25T11:15:40]   Skipping Janes Analysis — next fetch in ~4445m
+[2026-05-25T11:15:40]   Skipping National Armaments Director Group — next fetch in ~2393m
+[2026-05-25T11:15:40]   Skipping UK Gov — next fetch in ~275m
+[2026-05-25T11:15:40]   Skipping Sweden Government — next fetch in ~138m
+[2026-05-25T11:15:40]   Skipping UN News - Global — next fetch in ~70m
+[2026-05-25T11:15:40]   Skipping UK Gov News — next fetch in ~69m
+[2026-05-25T11:15:40]   Skipping UN News - All — next fetch in ~71m
+[2026-05-25T11:15:40]   Skipping BBC World News — next fetch in ~71m
+[2026-05-25T11:16:47]   Skipping HuggingFace Blog — next fetch in ~3516m
+[2026-05-25T11:16:47]   Skipping Understanding AI — next fetch in ~5241m
+[2026-05-25T11:16:47]   Skipping Artificial Intelligence - News — next fetch in ~4453m
+[2026-05-25T11:16:47]   Skipping Defense News — next fetch in ~2929m
+[2026-05-25T11:16:47]   Skipping Breaking Defense — next fetch in ~2938m
+[2026-05-25T11:16:47]   Skipping defenseone — next fetch in ~2934m
+[2026-05-25T11:16:47]   Skipping ukdefencejournal — next fetch in ~2930m
+[2026-05-25T11:16:47]   Skipping defenceiq - defence-technology — next fetch in ~2933m
+[2026-05-25T11:16:47]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~2929m
+[2026-05-25T11:16:47]   Skipping defense-aerospace WEB — next fetch in ~5922m
+[2026-05-25T11:16:47]   Skipping janes Insights — next fetch in ~5928m
+[2026-05-25T11:16:47]   Skipping Janes Analysis — next fetch in ~4444m
+[2026-05-25T11:16:47]   Skipping National Armaments Director Group — next fetch in ~2392m
+[2026-05-25T11:16:47]   Skipping UK Gov — next fetch in ~274m
+[2026-05-25T11:16:47]   Skipping Sweden Government — next fetch in ~137m
+[2026-05-25T11:16:47]   Skipping UN News - Global — next fetch in ~69m
+[2026-05-25T11:16:47]   Skipping UK Gov News — next fetch in ~68m
+[2026-05-25T11:16:47]   Skipping UN News - All — next fetch in ~70m
+[2026-05-25T11:16:47]   Skipping BBC World News — next fetch in ~70m
+[2026-05-25T11:16:51]   Skipping HuggingFace Blog — next fetch in ~3516m
+[2026-05-25T11:16:51]   Skipping Understanding AI — next fetch in ~5241m
+[2026-05-25T11:16:51]   Skipping Artificial Intelligence - News — next fetch in ~4453m
+[2026-05-25T11:16:51]   Skipping Defense News — next fetch in ~2929m
+[2026-05-25T11:16:51]   Skipping Breaking Defense — next fetch in ~2938m
+[2026-05-25T11:16:51]   Skipping defenseone — next fetch in ~2934m
+[2026-05-25T11:16:51]   Skipping ukdefencejournal — next fetch in ~2930m
+[2026-05-25T11:16:51]   Skipping defenceiq - defence-technology — next fetch in ~2932m
+[2026-05-25T11:16:51]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~2929m
+[2026-05-25T11:16:51]   Skipping defense-aerospace WEB — next fetch in ~5922m
+[2026-05-25T11:16:51]   Skipping janes Insights — next fetch in ~5928m
+[2026-05-25T11:16:51]   Skipping Janes Analysis — next fetch in ~4444m
+[2026-05-25T11:16:51]   Skipping National Armaments Director Group — next fetch in ~2392m
+[2026-05-25T11:16:51]   Skipping UK Gov — next fetch in ~274m
+[2026-05-25T11:16:51]   Skipping Sweden Government — next fetch in ~137m
+[2026-05-25T11:16:51]   Skipping UN News - Global — next fetch in ~69m
+[2026-05-25T11:16:51]   Skipping UK Gov News — next fetch in ~68m
+[2026-05-25T11:16:51]   Skipping UN News - All — next fetch in ~70m
+[2026-05-25T11:16:51]   Skipping BBC World News — next fetch in ~70m
+[2026-05-25T11:16:55]   Skipping HuggingFace Blog — next fetch in ~3516m
+[2026-05-25T11:16:55]   Skipping Understanding AI — next fetch in ~5241m
+[2026-05-25T11:16:55]   Skipping Artificial Intelligence - News — next fetch in ~4453m
+[2026-05-25T11:16:55]   Skipping Defense News — next fetch in ~2929m
+[2026-05-25T11:16:55]   Skipping Breaking Defense — next fetch in ~2938m
+[2026-05-25T11:16:55]   Skipping defenseone — next fetch in ~2934m
+[2026-05-25T11:16:55]   Skipping ukdefencejournal — next fetch in ~2930m
+[2026-05-25T11:16:55]   Skipping defenceiq - defence-technology — next fetch in ~2932m
+[2026-05-25T11:16:55]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~2929m
+[2026-05-25T11:16:55]   Skipping defense-aerospace WEB — next fetch in ~5922m
+[2026-05-25T11:16:55]   Skipping janes Insights — next fetch in ~5928m
+[2026-05-25T11:16:55]   Skipping Janes Analysis — next fetch in ~4444m
+[2026-05-25T11:16:55]   Skipping National Armaments Director Group — next fetch in ~2392m
+[2026-05-25T11:16:55]   Skipping UK Gov — next fetch in ~274m
+[2026-05-25T11:16:55]   Skipping Sweden Government — next fetch in ~137m
+[2026-05-25T11:16:55]   Skipping UN News - Global — next fetch in ~69m
+[2026-05-25T11:16:55]   Skipping UK Gov News — next fetch in ~68m
+[2026-05-25T11:16:55]   Skipping UN News - All — next fetch in ~70m
+[2026-05-25T11:16:55]   Skipping BBC World News — next fetch in ~70m
+[2026-05-25T11:17:23]   Skipping HuggingFace Blog — next fetch in ~3515m
+[2026-05-25T11:17:23]   Skipping Understanding AI — next fetch in ~5240m
+[2026-05-25T11:17:23]   Skipping Artificial Intelligence - News — next fetch in ~4452m
+[2026-05-25T11:17:23]   Skipping Defense News — next fetch in ~2928m
+[2026-05-25T11:17:23]   Skipping Breaking Defense — next fetch in ~2937m
+[2026-05-25T11:17:23]   Skipping defenseone — next fetch in ~2934m
+[2026-05-25T11:17:23]   Skipping ukdefencejournal — next fetch in ~2930m
+[2026-05-25T11:17:23]   Skipping defenceiq - defence-technology — next fetch in ~2932m
+[2026-05-25T11:17:23]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~2928m
+[2026-05-25T11:17:23]   Skipping defense-aerospace WEB — next fetch in ~5921m
+[2026-05-25T11:17:23]   Skipping janes Insights — next fetch in ~5927m
+[2026-05-25T11:17:23]   Skipping Janes Analysis — next fetch in ~4444m
+[2026-05-25T11:17:23]   Skipping National Armaments Director Group — next fetch in ~2391m
+[2026-05-25T11:17:23]   Skipping UK Gov — next fetch in ~274m
+[2026-05-25T11:17:23]   Skipping Sweden Government — next fetch in ~136m
+[2026-05-25T11:17:23]   Skipping UN News - Global — next fetch in ~69m
+[2026-05-25T11:17:23]   Skipping UK Gov News — next fetch in ~68m
+[2026-05-25T11:17:23]   Skipping UN News - All — next fetch in ~69m
+[2026-05-25T11:17:23]   Skipping BBC World News — next fetch in ~69m
+[2026-05-25T11:18:42]   Skipping HuggingFace Blog — next fetch in ~3514m
+[2026-05-25T11:18:42]   Skipping Understanding AI — next fetch in ~5239m
+[2026-05-25T11:18:42]   Skipping Artificial Intelligence - News — next fetch in ~4451m
+[2026-05-25T11:18:42]   Skipping Defense News — next fetch in ~2927m
+[2026-05-25T11:18:42]   Skipping Breaking Defense — next fetch in ~2936m
+[2026-05-25T11:18:42]   Skipping defenseone — next fetch in ~2932m
+[2026-05-25T11:18:42]   Skipping ukdefencejournal — next fetch in ~2928m
+[2026-05-25T11:18:42]   Skipping defenceiq - defence-technology — next fetch in ~2931m
+[2026-05-25T11:18:42]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~2927m
+[2026-05-25T11:18:42]   Skipping defense-aerospace WEB — next fetch in ~5920m
+[2026-05-25T11:18:42]   Skipping janes Insights — next fetch in ~5926m
+[2026-05-25T11:18:42]   Skipping Janes Analysis — next fetch in ~4442m
+[2026-05-25T11:18:42]   Skipping National Armaments Director Group — next fetch in ~2390m
+[2026-05-25T11:18:42]   Skipping UK Gov — next fetch in ~272m
+[2026-05-25T11:18:42]   Skipping Sweden Government — next fetch in ~135m
+[2026-05-25T11:18:42]   Skipping UN News - Global — next fetch in ~67m
+[2026-05-25T11:18:42]   Skipping UK Gov News — next fetch in ~66m
+[2026-05-25T11:18:42]   Skipping UN News - All — next fetch in ~68m
+[2026-05-25T11:18:42]   Skipping BBC World News — next fetch in ~68m
+[2026-05-25T11:19:20]   Skipping HuggingFace Blog — next fetch in ~3513m
+[2026-05-25T11:19:20]   Skipping Understanding AI — next fetch in ~5238m
+[2026-05-25T11:19:20]   Skipping Artificial Intelligence - News — next fetch in ~4450m
+[2026-05-25T11:19:20]   Skipping Defense News — next fetch in ~2926m
+[2026-05-25T11:19:20]   Skipping Breaking Defense — next fetch in ~2935m
+[2026-05-25T11:19:20]   Skipping defenseone — next fetch in ~2932m
+[2026-05-25T11:19:20]   Skipping ukdefencejournal — next fetch in ~2928m
+[2026-05-25T11:19:20]   Skipping defenceiq - defence-technology — next fetch in ~2930m
+[2026-05-25T11:19:20]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~2926m
+[2026-05-25T11:19:20]   Skipping defense-aerospace WEB — next fetch in ~5919m
+[2026-05-25T11:19:20]   Skipping janes Insights — next fetch in ~5925m
+[2026-05-25T11:19:20]   Skipping Janes Analysis — next fetch in ~4442m
+[2026-05-25T11:19:20]   Skipping National Armaments Director Group — next fetch in ~2389m
+[2026-05-25T11:19:20]   Skipping UK Gov — next fetch in ~272m
+[2026-05-25T11:19:20]   Skipping Sweden Government — next fetch in ~134m
+[2026-05-25T11:19:20]   Skipping UN News - Global — next fetch in ~67m
+[2026-05-25T11:19:20]   Skipping UK Gov News — next fetch in ~66m
+[2026-05-25T11:19:20]   Skipping UN News - All — next fetch in ~67m
+[2026-05-25T11:19:20]   Skipping BBC World News — next fetch in ~68m
+[2026-05-25T11:21:17]   Skipping HuggingFace Blog — next fetch in ~3511m
+[2026-05-25T11:21:17]   Skipping Understanding AI — next fetch in ~5236m
+[2026-05-25T11:21:17]   Skipping Artificial Intelligence - News — next fetch in ~4448m
+[2026-05-25T11:21:17]   Skipping Defense News — next fetch in ~2924m
+[2026-05-25T11:21:17]   Skipping Breaking Defense — next fetch in ~2934m
+[2026-05-25T11:21:17]   Skipping defenseone — next fetch in ~2930m
+[2026-05-25T11:21:17]   Skipping ukdefencejournal — next fetch in ~2926m
+[2026-05-25T11:21:17]   Skipping defenceiq - defence-technology — next fetch in ~2928m
+[2026-05-25T11:21:17]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~2924m
+[2026-05-25T11:21:17]   Skipping defense-aerospace WEB — next fetch in ~5917m
+[2026-05-25T11:21:17]   Skipping janes Insights — next fetch in ~5923m
+[2026-05-25T11:21:17]   Skipping Janes Analysis — next fetch in ~4440m
+[2026-05-25T11:21:17]   Skipping National Armaments Director Group — next fetch in ~2387m
+[2026-05-25T11:21:17]   Skipping UK Gov — next fetch in ~270m
+[2026-05-25T11:21:17]   Skipping Sweden Government — next fetch in ~132m
+[2026-05-25T11:21:17]   Skipping UN News - Global — next fetch in ~65m
+[2026-05-25T11:21:17]   Skipping UK Gov News — next fetch in ~64m
+[2026-05-25T11:21:17]   Skipping UN News - All — next fetch in ~65m
+[2026-05-25T11:21:17]   Skipping BBC World News — next fetch in ~66m
+[2026-05-25T11:25:40]   Skipping UK Gov News — next fetch in ~59m
+[2026-05-25T11:25:48]   Skipping HuggingFace Blog — next fetch in ~3507m
+[2026-05-25T11:25:48]   Skipping Understanding AI — next fetch in ~5232m
+[2026-05-25T11:25:48]   Skipping Artificial Intelligence - News — next fetch in ~4444m
+[2026-05-25T11:25:48]   Skipping Defense News — next fetch in ~2920m
+[2026-05-25T11:25:48]   Skipping Breaking Defense — next fetch in ~2929m
+[2026-05-25T11:25:48]   Skipping defenseone — next fetch in ~2925m
+[2026-05-25T11:25:48]   Skipping ukdefencejournal — next fetch in ~2921m
+[2026-05-25T11:25:48]   Skipping defenceiq - defence-technology — next fetch in ~2924m
+[2026-05-25T11:25:48]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~2920m
+[2026-05-25T11:25:48]   Skipping defense-aerospace WEB — next fetch in ~5913m
+[2026-05-25T11:25:48]   Skipping janes Insights — next fetch in ~5919m
+[2026-05-25T11:25:48]   Skipping Janes Analysis — next fetch in ~4435m
+[2026-05-25T11:25:48]   Skipping National Armaments Director Group — next fetch in ~2383m
+[2026-05-25T11:25:48]   Skipping UK Gov — next fetch in ~265m
+[2026-05-25T11:25:48]   Skipping Sweden Government — next fetch in ~128m
+[2026-05-25T11:25:48]   Skipping UN News - Global — next fetch in ~60m
+[2026-05-25T11:25:48]   Skipping UK Gov News — next fetch in ~59m
+[2026-05-25T11:25:48]   Skipping UN News - All — next fetch in ~61m
+[2026-05-25T11:25:48]   Skipping BBC World News — next fetch in ~61m
+[2026-05-25T11:25:48]   Skipping UK Gov News — next fetch in ~59m
+[2026-05-25T11:26:34]   Skipping HuggingFace Blog — next fetch in ~3506m
+[2026-05-25T11:26:34]   Skipping Understanding AI — next fetch in ~5231m
+[2026-05-25T11:26:34]   Skipping Artificial Intelligence - News — next fetch in ~4443m
+[2026-05-25T11:26:34]   Skipping Defense News — next fetch in ~2919m
+[2026-05-25T11:26:34]   Skipping Breaking Defense — next fetch in ~2928m
+[2026-05-25T11:26:34]   Skipping defenseone — next fetch in ~2925m
+[2026-05-25T11:26:34]   Skipping ukdefencejournal — next fetch in ~2921m
+[2026-05-25T11:26:34]   Skipping defenceiq - defence-technology — next fetch in ~2923m
+[2026-05-25T11:26:34]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~2919m
+[2026-05-25T11:26:34]   Skipping defense-aerospace WEB — next fetch in ~5912m
+[2026-05-25T11:26:34]   Skipping janes Insights — next fetch in ~5918m
+[2026-05-25T11:26:34]   Skipping Janes Analysis — next fetch in ~4434m
+[2026-05-25T11:26:34]   Skipping National Armaments Director Group — next fetch in ~2382m
+[2026-05-25T11:26:34]   Skipping UK Gov — next fetch in ~264m
+[2026-05-25T11:26:34]   Skipping Sweden Government — next fetch in ~127m
+[2026-05-25T11:26:34]   Skipping UN News - Global — next fetch in ~60m
+[2026-05-25T11:26:34]   Skipping UK Gov News — next fetch in ~59m
+[2026-05-25T11:26:34]   Skipping UN News - All — next fetch in ~60m
+[2026-05-25T11:26:34]   Skipping BBC World News — next fetch in ~60m
+[2026-05-25T11:26:34]   Skipping UK Gov News — next fetch in ~59m
+[2026-05-25T11:26:39]   Skipping UN News - Global — next fetch in ~59m
+[2026-05-25T11:27:02]   Skipping UN News - All — next fetch in ~59m
+[2026-05-25T11:27:22]   Skipping BBC World News — next fetch in ~59m
+[2026-05-25T11:28:58]   Skipping HuggingFace Blog — next fetch in ~3504m
+[2026-05-25T11:28:58]   Skipping Understanding AI — next fetch in ~5229m
+[2026-05-25T11:28:58]   Skipping Artificial Intelligence - News — next fetch in ~4441m
+[2026-05-25T11:28:58]   Skipping Defense News — next fetch in ~2917m
+[2026-05-25T11:28:58]   Skipping Breaking Defense — next fetch in ~2926m
+[2026-05-25T11:28:58]   Skipping defenseone — next fetch in ~2922m
+[2026-05-25T11:28:58]   Skipping ukdefencejournal — next fetch in ~2918m
+[2026-05-25T11:28:58]   Skipping defenceiq - defence-technology — next fetch in ~2920m
+[2026-05-25T11:28:58]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~2917m
+[2026-05-25T11:28:58]   Skipping defense-aerospace WEB — next fetch in ~5910m
+[2026-05-25T11:28:58]   Skipping janes Insights — next fetch in ~5916m
+[2026-05-25T11:28:58]   Skipping Janes Analysis — next fetch in ~4432m
+[2026-05-25T11:28:58]   Skipping National Armaments Director Group — next fetch in ~2380m
+[2026-05-25T11:28:58]   Skipping UK Gov — next fetch in ~262m
+[2026-05-25T11:28:58]   Skipping Sweden Government — next fetch in ~124m
+[2026-05-25T11:28:58]   Skipping UN News - Global — next fetch in ~57m
+[2026-05-25T11:28:58]   Skipping UK Gov News — next fetch in ~56m
+[2026-05-25T11:28:58]   Skipping UN News - All — next fetch in ~58m
+[2026-05-25T11:28:58]   Skipping BBC World News — next fetch in ~58m
+[2026-05-25T11:28:58]   Skipping UK Gov News — next fetch in ~56m
+[2026-05-25T11:28:58]   Skipping UN News - Global — next fetch in ~57m
+[2026-05-25T11:28:58]   Skipping UN News - All — next fetch in ~58m
+[2026-05-25T11:28:58]   Skipping BBC World News — next fetch in ~58m
+[2026-05-25T11:29:16]   Skipping HuggingFace Blog — next fetch in ~3503m
+[2026-05-25T11:29:16]   Skipping Understanding AI — next fetch in ~5228m
+[2026-05-25T11:29:16]   Skipping Artificial Intelligence - News — next fetch in ~4440m
+[2026-05-25T11:29:16]   Skipping Defense News — next fetch in ~2916m
+[2026-05-25T11:29:16]   Skipping Breaking Defense — next fetch in ~2926m
+[2026-05-25T11:29:16]   Skipping defenseone — next fetch in ~2922m
+[2026-05-25T11:29:16]   Skipping ukdefencejournal — next fetch in ~2918m
+[2026-05-25T11:29:16]   Skipping defenceiq - defence-technology — next fetch in ~2920m
+[2026-05-25T11:29:16]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~2916m
+[2026-05-25T11:29:16]   Skipping defense-aerospace WEB — next fetch in ~5909m
+[2026-05-25T11:29:16]   Skipping janes Insights — next fetch in ~5916m
+[2026-05-25T11:29:16]   Skipping Janes Analysis — next fetch in ~4432m
+[2026-05-25T11:29:16]   Skipping National Armaments Director Group — next fetch in ~2380m
+[2026-05-25T11:29:16]   Skipping UK Gov — next fetch in ~262m
+[2026-05-25T11:29:16]   Skipping Sweden Government — next fetch in ~124m
+[2026-05-25T11:29:16]   Skipping UN News - Global — next fetch in ~57m
+[2026-05-25T11:29:16]   Skipping UK Gov News — next fetch in ~56m
+[2026-05-25T11:29:16]   Skipping UN News - All — next fetch in ~57m
+[2026-05-25T11:29:16]   Skipping BBC World News — next fetch in ~58m
+[2026-05-25T11:29:16]   Skipping UK Gov News — next fetch in ~56m
+[2026-05-25T11:29:16]   Skipping UN News - Global — next fetch in ~57m
+[2026-05-25T11:29:16]   Skipping UN News - All — next fetch in ~57m
+[2026-05-25T11:29:16]   Skipping BBC World News — next fetch in ~58m
+[2026-05-25T11:30:37]   Skipping HuggingFace Blog — next fetch in ~3502m
+[2026-05-25T11:30:37]   Skipping Understanding AI — next fetch in ~5227m
+[2026-05-25T11:30:37]   Skipping Artificial Intelligence - News — next fetch in ~4439m
+[2026-05-25T11:30:37]   Skipping Defense News — next fetch in ~2915m
+[2026-05-25T11:30:37]   Skipping Breaking Defense — next fetch in ~2924m
+[2026-05-25T11:30:37]   Skipping defenseone — next fetch in ~2920m
+[2026-05-25T11:30:37]   Skipping ukdefencejournal — next fetch in ~2917m
+[2026-05-25T11:30:37]   Skipping defenceiq - defence-technology — next fetch in ~2919m
+[2026-05-25T11:30:37]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~2915m
+[2026-05-25T11:30:37]   Skipping defense-aerospace WEB — next fetch in ~5908m
+[2026-05-25T11:30:37]   Skipping janes Insights — next fetch in ~5914m
+[2026-05-25T11:30:37]   Skipping Janes Analysis — next fetch in ~4430m
+[2026-05-25T11:30:37]   Skipping National Armaments Director Group — next fetch in ~2378m
+[2026-05-25T11:30:37]   Skipping UK Gov — next fetch in ~260m
+[2026-05-25T11:30:37]   Skipping Sweden Government — next fetch in ~123m
+[2026-05-25T11:30:37]   Skipping UN News - Global — next fetch in ~56m
+[2026-05-25T11:30:37]   Skipping UK Gov News — next fetch in ~55m
+[2026-05-25T11:30:37]   Skipping UN News - All — next fetch in ~56m
+[2026-05-25T11:30:37]   Skipping BBC World News — next fetch in ~56m
+[2026-05-25T11:30:37]   Skipping UK Gov News — next fetch in ~55m
+[2026-05-25T11:30:37]   Skipping UN News - Global — next fetch in ~56m
+[2026-05-25T11:30:37]   Skipping UN News - All — next fetch in ~56m
+[2026-05-25T11:30:37]   Skipping BBC World News — next fetch in ~56m
+[2026-05-25T11:30:52]   Skipping HuggingFace Blog — next fetch in ~3502m
+[2026-05-25T11:30:52]   Skipping Understanding AI — next fetch in ~5227m
+[2026-05-25T11:30:52]   Skipping Artificial Intelligence - News — next fetch in ~4439m
+[2026-05-25T11:30:52]   Skipping Defense News — next fetch in ~2915m
+[2026-05-25T11:30:52]   Skipping Breaking Defense — next fetch in ~2924m
+[2026-05-25T11:30:52]   Skipping defenseone — next fetch in ~2920m
+[2026-05-25T11:30:52]   Skipping ukdefencejournal — next fetch in ~2916m
+[2026-05-25T11:30:52]   Skipping defenceiq - defence-technology — next fetch in ~2918m
+[2026-05-25T11:30:52]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~2915m
+[2026-05-25T11:30:52]   Skipping defense-aerospace WEB — next fetch in ~5908m
+[2026-05-25T11:30:52]   Skipping janes Insights — next fetch in ~5914m
+[2026-05-25T11:30:52]   Skipping Janes Analysis — next fetch in ~4430m
+[2026-05-25T11:30:52]   Skipping National Armaments Director Group — next fetch in ~2378m
+[2026-05-25T11:30:52]   Skipping UK Gov — next fetch in ~260m
+[2026-05-25T11:30:52]   Skipping Sweden Government — next fetch in ~123m
+[2026-05-25T11:30:52]   Skipping UN News - Global — next fetch in ~55m
+[2026-05-25T11:30:52]   Skipping UK Gov News — next fetch in ~54m
+[2026-05-25T11:30:52]   Skipping UN News - All — next fetch in ~56m
+[2026-05-25T11:30:52]   Skipping BBC World News — next fetch in ~56m
+[2026-05-25T11:30:52]   Skipping UK Gov News — next fetch in ~54m
+[2026-05-25T11:30:52]   Skipping UN News - Global — next fetch in ~55m
+[2026-05-25T11:30:52]   Skipping BBC World News — next fetch in ~56m
+[2026-05-25T11:30:52]   Skipping UN News - All — next fetch in ~56m

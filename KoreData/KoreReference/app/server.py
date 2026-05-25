@@ -27,7 +27,7 @@ from typing import Optional
 import httpx
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.config import cfg
 from app.database import (
@@ -53,7 +53,7 @@ from app.importers.kiwix import (
     run_kiwix_crawl,
     run_kiwix_import,
 )
-from app.importers.state import import_lock, import_state
+from app.importers.state import import_lock, import_state, import_stop_event
 
 
 @asynccontextmanager
@@ -95,7 +95,12 @@ class KiwixCrawlRequest(BaseModel):
     seed_url: str
     max_depth: int = 1
     limit: int = 200
+    delay_seconds: float = Field(default=1.0, ge=0.0, le=10.0)
     resume: bool = True
+
+
+class KiwixThrottleRequest(BaseModel):
+    delay_seconds: float = Field(default=1.0, ge=0.0, le=10.0)
 
 
 
@@ -227,6 +232,7 @@ def route_search(
 def route_import_kiwix(req: KiwixImportRequest, background_tasks: BackgroundTasks):
     if not import_lock.acquire(blocking=False):
         raise HTTPException(status_code=409, detail="Import already running")
+    import_stop_event.clear()
     import_state.update({
         "running": True, "done": 0, "total": 0,
         "errors": 0, "last_error": None, "mode": "prefix", "seed": None,
@@ -243,6 +249,7 @@ def route_import_kiwix(req: KiwixImportRequest, background_tasks: BackgroundTask
 def route_import_kiwix_crawl(req: KiwixCrawlRequest, background_tasks: BackgroundTasks):
     if not import_lock.acquire(blocking=False):
         raise HTTPException(status_code=409, detail="Import already running")
+    import_stop_event.clear()
     try:
         _, _, start_title = parse_seed_url(req.seed_url)
     except ValueError as exc:
@@ -251,13 +258,20 @@ def route_import_kiwix_crawl(req: KiwixCrawlRequest, background_tasks: Backgroun
     import_state.update({
         "running": True, "done": 0, "total": 1,
         "errors": 0, "last_error": None, "mode": "crawl", "seed": start_title,
+        "delay_seconds": req.delay_seconds,
         "redirects_stored": 0, "last_redirect": None,
     })
     import_lock.release()
     background_tasks.add_task(
-        run_kiwix_crawl, req.seed_url, req.max_depth, req.limit, req.resume
+        run_kiwix_crawl, req.seed_url, req.max_depth, req.limit, req.delay_seconds, req.resume
     )
-    return {"started": True, "seed": start_title, "max_depth": req.max_depth, "limit": req.limit}
+    return {
+        "started": True,
+        "seed": start_title,
+        "max_depth": req.max_depth,
+        "limit": req.limit,
+        "delay_seconds": req.delay_seconds,
+    }
 
 
 
@@ -265,8 +279,18 @@ def route_import_kiwix_crawl(req: KiwixCrawlRequest, background_tasks: Backgroun
 def route_import_stop():
     if import_state.get("running"):
         import_state["running"] = False
+        import_stop_event.set()
         return {"stopped": True}
     return {"stopped": False, "detail": "No import was running"}
+
+
+@app.post("/import/throttle", summary="Adjust crawl delay while import is running")
+def route_import_throttle(req: KiwixThrottleRequest):
+    import_state["delay_seconds"] = req.delay_seconds
+    return {
+        "running": bool(import_state.get("running")),
+        "delay_seconds": float(import_state.get("delay_seconds") or 0.0),
+    }
 
 
 

@@ -1,6 +1,0 @@
-{
-  "model": "nemotron-cascade-2:latest",
-  "ctx": 128000,
-  "llmhost": "http://localhost:11434",
-  "korecomms_poll_secs": 15
-}

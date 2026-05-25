@@ -144,10 +144,10 @@ def _get_ollama_ps_rows_local() -> list[dict[str, str]]:
             check=False,
             timeout=10,
         )
-    except subprocess.TimeoutExpired:
-        raise RuntimeError("'ollama ps' did not respond within 10 s - is Ollama running?")
-    except FileNotFoundError:
-        raise RuntimeError("'ollama' executable not found on PATH.")
+    except subprocess.TimeoutExpired as exc:
+        raise RuntimeError("'ollama ps' did not respond within 10 s - is Ollama running?") from exc
+    except FileNotFoundError as exc:
+        raise RuntimeError("'ollama' executable not found on PATH.") from exc
 
     if result.returncode != 0:
         raise RuntimeError(f"Failed to run 'ollama ps': {result.stderr.strip()}")

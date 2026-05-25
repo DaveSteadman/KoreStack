@@ -117,7 +117,6 @@
           <th style="width:55px;">Year</th>
           <th style="width:55px;">Lang</th>
           <th style="width:120px;">Genre</th>
-          {% if not catalog %}<th style="width:75px;">Catalog</th>{% endif %}
           <th style="width:70px; text-align:right;">Words</th>
           {% if mode == "incomplete" %}<th style="width:140px;">Missing</th>{% endif %}
         </tr>
@@ -131,7 +130,6 @@
           <td class="meta">{{ b.year or "-" }}</td>
           <td class="meta">{{ b.language or "-" }}</td>
           <td class="meta">{{ b.genre or "-" }}</td>
-          {% if not catalog %}<td class="meta">{{ b.catalog or "local" }}</td>{% endif %}
           <td class="meta" style="text-align:right;">
             {% if b.word_count %}{{ "{:,}".format(b.word_count) }}{% else %}-{% endif %}
           </td>

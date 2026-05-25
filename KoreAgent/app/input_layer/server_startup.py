@@ -22,13 +22,10 @@
 # MARK: IMPORTS
 # ====================================================================================================
 import asyncio
-import json
 import socket
 import sys
 import threading
 import time
-import urllib.error
-import urllib.request
 from datetime import datetime
 from pathlib import Path
 
@@ -37,8 +34,6 @@ from run_helpers import run_prompt_batch
 from input_layer.server import app
 from input_layer.server import push_log_line
 from input_layer.server import setup as api_setup
-from input_layer.server import _load_session
-from input_layer.server import _save_session
 from input_layer.koreconv_input import start_koreconv_loop
 from input_layer.koreconv_input import _get_base_url as _kc_get_base_url
 from input_layer.koreconv_input import _http_get as _kc_http_get
@@ -50,6 +45,7 @@ from scheduler.scheduler import initial_last_run
 from scheduler.scheduler import is_task_due
 from scheduler.scheduler import load_schedules_dir
 from scheduler.scheduler import task_queue
+from scheduler.shared_state import SchedulerSharedState
 from utils.workspace_utils import get_logs_dir
 from utils.workspace_utils import get_schedules_dir
 
@@ -123,6 +119,7 @@ def run_api_mode(
         t["name"]: initial_last_run(t, _startup)
         for t in enabled_tasks
     }
+    scheduler_state = SchedulerSharedState(enabled_tasks=enabled_tasks, last_run=last_run)
 
     # Publish shared state to the API module.
     api_setup(
@@ -130,6 +127,7 @@ def run_api_mode(
         enabled_tasks  = enabled_tasks,
         last_run       = last_run,
         shutdown_event = shutdown,
+        scheduler_state = scheduler_state,
     )
 
     # -----------------------------------------------------------------------
@@ -145,12 +143,15 @@ def run_api_mode(
             # the updated view automatically.
             try:
                 _all = load_schedules_dir(_SCHEDULES_DIR)
-                enabled_tasks[:] = [t for t in _all if t.get("enabled", True)]
+                scheduler_state.replace_enabled_tasks([t for t in _all if t.get("enabled", True)])
             except FileNotFoundError:
-                enabled_tasks[:] = []
+                scheduler_state.replace_enabled_tasks([])
+
+            enabled_tasks, last_run = scheduler_state.snapshot()
             for t in enabled_tasks:
-                if t["name"] not in last_run:
-                    last_run[t["name"]] = initial_last_run(t, now)
+                scheduler_state.ensure_last_run(t["name"], initial_last_run(t, now))
+
+            enabled_tasks, last_run = scheduler_state.snapshot()
 
             for task in enabled_tasks:
                 if shutdown.is_set():
@@ -164,7 +165,7 @@ def run_api_mode(
 
                 output_template = task.get("output_template", "").strip()
 
-                def _run_task(_name=name, _prompts=list(prompts), _when=now, _output_template=output_template) -> None:
+                def _run_task(_name=name, _prompts=tuple(prompts), _when=now, _output_template=output_template) -> None:
                     push_log_line(f"[SCHEDULER] Starting task: {_name}")
                     try:
                         run_log_path = create_log_file_path(log_dir=_LOG_DIR)
@@ -268,11 +269,11 @@ def run_api_mode(
 
                     except Exception as exc:
                         push_log_line(f"[SCHEDULER] {_name} error: {exc}")
-                    last_run[_name] = _when
+                    scheduler_state.set_last_run(_name, _when)
                     push_log_line(f"[SCHEDULER] Task '{_name}' completed.")
 
                 if task_queue.enqueue(name, "scheduled", _run_task):
-                    last_run[name] = now
+                    scheduler_state.set_last_run(name, now)
                     push_log_line(f"[SCHEDULER] Task '{name}' queued.")
 
             for _ in range(_SCHEDULER_POLL_SECS * 2):

@@ -20,10 +20,8 @@
 # ====================================================================================================
 # MARK: IMPORTS
 # ====================================================================================================
-import asyncio
 import argparse
 import ctypes
-import json
 import os
 import subprocess
 import sys
@@ -84,9 +82,9 @@ def _maybe_reexec_into_project_venv() -> None:
         # If the child received the same terminal interrupt it should exit on its own.
         try:
             raise SystemExit(child.wait(timeout=5))
-        except subprocess.TimeoutExpired:
+        except subprocess.TimeoutExpired as exc:
             child.terminate()
-            raise SystemExit(child.wait(timeout=5))
+            raise SystemExit(child.wait(timeout=5)) from exc
     finally:
         if job_handle is not None:
             ctypes.windll.kernel32.CloseHandle(job_handle)

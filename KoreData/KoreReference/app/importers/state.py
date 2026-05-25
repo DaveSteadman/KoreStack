@@ -15,8 +15,10 @@ import threading
 
 import_lock: threading.Lock = threading.Lock()
 state_lock: threading.Lock = threading.Lock()
+import_stop_event: threading.Event = threading.Event()
 import_state: dict = {
     "running": False, "done": 0, "total": 0, "limit": 0, "errors": 0,
     "last_error": None, "mode": None, "seed": None,
+    "delay_seconds": 0.0,
     "redirects_stored": 0, "last_redirect": None,
 }

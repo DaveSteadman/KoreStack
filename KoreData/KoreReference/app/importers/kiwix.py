@@ -21,9 +21,9 @@ from urllib.parse import unquote, urlparse
 import httpx
 from bs4 import BeautifulSoup
 
-from app.database import get_article_by_title, get_links, get_unresolved_link_titles, resolve_links, upsert_article
+from app.database import db_connection, get_article_by_title, get_links, get_unresolved_link_titles, resolve_links, upsert_article
 from app.importers.shared import extract_article_html, extract_facts, remove_noise
-from app.importers.state import import_state, state_lock
+from app.importers.state import import_state, import_stop_event, state_lock
 
 
 # ---------------------------------------------------------------------------
@@ -175,8 +175,8 @@ def parse_kiwix_article(html: str, title: str) -> dict:
 # ---------------------------------------------------------------------------
 
 def import_one(
-    client: httpx.Client, kiwix_base: str, zim_name: str, title: str, resume: bool
-) -> None:
+    client: httpx.Client, kiwix_base: str, zim_name: str, title: str, resume: bool, db_conn=None
+) -> bool:
     """Fetch and upsert a single article by title. Raises on HTTP error."""
     resp = client.get(article_url(kiwix_base, zim_name, title))
 
@@ -191,11 +191,12 @@ def import_one(
         raw = location.rstrip("/").rsplit("/", 1)[-1].split("#")[0] if location else ""
         redirect_to = unquote(raw).replace("_", " ").strip() if raw else None
         if redirect_to and redirect_to != title:
-            upsert_article(title=title, body=None, redirect_to=redirect_to)
+            upsert_article(title=title, body=None, redirect_to=redirect_to, conn=db_conn)
             with state_lock:
                 import_state["redirects_stored"] += 1
             import_state["last_redirect"] = f"{title!r} -> {redirect_to!r}"
-        return
+            return True
+        return False
 
     resp.raise_for_status()
     parsed = parse_kiwix_article(resp.text, title)
@@ -203,20 +204,23 @@ def import_one(
         # Fallback: HTML meta-refresh redirect (some ZIM formats)
         redirect_to = parsed.get("redirect_to")
         if redirect_to:
-            upsert_article(title=title, body=None, redirect_to=redirect_to)
+            upsert_article(title=title, body=None, redirect_to=redirect_to, conn=db_conn)
             with state_lock:
                 import_state["redirects_stored"] += 1
             import_state["last_redirect"] = f"{title!r} -> {redirect_to!r}"
-        return
+            return True
+        return False
     if not (parsed["body"] or parsed["summary"]):
-        return  # empty stub — skip
+        return False  # empty stub — skip
     upsert_article(
         title=title,
         body=parsed["body"],
         summary=parsed["summary"],
         facts=parsed["facts"],
         link_titles=parsed["link_titles"],
+        conn=db_conn,
     )
+    return True
 
 
 def run_kiwix_import(
@@ -229,7 +233,8 @@ def run_kiwix_import(
 ) -> None:
     kiwix_base = kiwix_url.rstrip("/")
 
-    with httpx.Client(timeout=30.0, follow_redirects=False) as client:
+    with db_connection() as write_conn, httpx.Client(timeout=30.0, follow_redirects=False) as client:
+        writes_since_commit = 0
         if titles:
             work = titles[:limit] if limit else titles
         else:
@@ -246,7 +251,12 @@ def run_kiwix_import(
             if not import_state["running"]:
                 break
             try:
-                import_one(client, kiwix_base, zim_name, title, resume)
+                wrote = import_one(client, kiwix_base, zim_name, title, resume, db_conn=write_conn)
+                if wrote:
+                    writes_since_commit += 1
+                    if writes_since_commit >= 25:
+                        write_conn.commit()
+                        writes_since_commit = 0
                 with state_lock:
                     import_state["done"] += 1
             except Exception as exc:
@@ -271,12 +281,18 @@ def run_kiwix_backfill(zim_name: str, kiwix_url: str, limit: int) -> None:
     titles = get_unresolved_link_titles(limit=limit)
     import_state["total"] = len(titles)
 
-    with httpx.Client(timeout=30.0, follow_redirects=False) as client:
+    with db_connection() as write_conn, httpx.Client(timeout=30.0, follow_redirects=False) as client:
+        writes_since_commit = 0
         for title in titles:
             if not import_state["running"]:
                 break
             try:
-                import_one(client, kiwix_base, zim_name, title, resume=False)
+                wrote = import_one(client, kiwix_base, zim_name, title, resume=False, db_conn=write_conn)
+                if wrote:
+                    writes_since_commit += 1
+                    if writes_since_commit >= 25:
+                        write_conn.commit()
+                        writes_since_commit = 0
                 with state_lock:
                     import_state["done"] += 1
             except httpx.HTTPStatusError as exc:
@@ -296,7 +312,7 @@ def run_kiwix_backfill(zim_name: str, kiwix_url: str, limit: int) -> None:
     resolve_links()
 
 
-def run_kiwix_crawl(seed_url: str, max_depth: int, limit: int, resume: bool) -> None:
+def run_kiwix_crawl(seed_url: str, max_depth: int, limit: int, delay_seconds: float, resume: bool) -> None:
     """BFS crawl starting from seed_url, following wikilinks up to max_depth hops."""
     try:
         kiwix_base, zim_name, start_title = parse_seed_url(seed_url)
@@ -308,8 +324,24 @@ def run_kiwix_crawl(seed_url: str, max_depth: int, limit: int, resume: bool) -> 
     visited: set[str] = {start_title}
     import_state["total"] = 1
     import_state["limit"] = limit
+    import_state["delay_seconds"] = max(0.0, float(delay_seconds or 0.0))
 
-    with httpx.Client(timeout=30.0, follow_redirects=False) as client:
+    def _pace() -> None:
+        delay = max(0.0, float(import_state.get("delay_seconds") or 0.0))
+        if delay <= 0:
+            return
+        import_stop_event.wait(timeout=delay)
+
+    with db_connection() as write_conn, httpx.Client(timeout=30.0, follow_redirects=False) as client:
+        writes_since_commit = 0
+
+        def _flush_periodically() -> None:
+            nonlocal writes_since_commit
+            writes_since_commit += 1
+            if writes_since_commit >= 25:
+                write_conn.commit()
+                writes_since_commit = 0
+
         while queue and import_state["running"]:
             if import_state["done"] >= limit:
                 break
@@ -327,6 +359,7 @@ def run_kiwix_crawl(seed_url: str, max_depth: int, limit: int, resume: bool) -> 
                             if lt and lt not in visited:
                                 visited.add(lt)
                                 queue.append((lt, depth + 1))
+                        _pace()
                         continue
                     # Article exists but has no links and we need depth expansion —
                     # fall through to re-fetch so links get extracted and saved
@@ -340,12 +373,14 @@ def run_kiwix_crawl(seed_url: str, max_depth: int, limit: int, resume: bool) -> 
                     raw = location.rstrip("/").rsplit("/", 1)[-1].split("#")[0] if location else ""
                     redirect_to = unquote(raw).replace("_", " ").strip() if raw else None
                     if redirect_to and redirect_to != title:
-                        upsert_article(title=title, body=None, redirect_to=redirect_to)
+                        upsert_article(title=title, body=None, redirect_to=redirect_to, conn=write_conn)
+                        _flush_periodically()
                         with state_lock:
                             import_state["redirects_stored"] += 1
                         import_state["last_redirect"] = f"{title!r} -> {redirect_to!r}"
                     with state_lock:
                         import_state["done"] += 1
+                    _pace()
                     continue
 
                 resp.raise_for_status()
@@ -354,16 +389,19 @@ def run_kiwix_crawl(seed_url: str, max_depth: int, limit: int, resume: bool) -> 
                 if parsed.get("redirect"):
                     redirect_to = parsed.get("redirect_to")
                     if redirect_to:
-                        upsert_article(title=title, body=None, redirect_to=redirect_to)
+                        upsert_article(title=title, body=None, redirect_to=redirect_to, conn=write_conn)
+                        _flush_periodically()
                         with state_lock:
                             import_state["redirects_stored"] += 1
                         import_state["last_redirect"] = f"{title!r} -> {redirect_to!r}"
                     with state_lock:
                         import_state["done"] += 1
+                    _pace()
                     continue
                 if not (parsed["body"] or parsed["summary"]):
                     with state_lock:
                         import_state["done"] += 1
+                    _pace()
                     continue  # empty stub — skip without storing
                 upsert_article(
                     title=title,
@@ -371,7 +409,9 @@ def run_kiwix_crawl(seed_url: str, max_depth: int, limit: int, resume: bool) -> 
                     summary=parsed["summary"],
                     facts=parsed["facts"],
                     link_titles=parsed["link_titles"],
+                    conn=write_conn,
                 )
+                _flush_periodically()
                 with state_lock:
                     import_state["done"] += 1
 
@@ -385,10 +425,13 @@ def run_kiwix_crawl(seed_url: str, max_depth: int, limit: int, resume: bool) -> 
                     with state_lock:
                         import_state["total"] = max(import_state["total"], len(visited))
 
+                _pace()
+
             except Exception as exc:
                 with state_lock:
                     import_state["errors"] += 1
                 import_state["last_error"] = f"{title}: {exc}"
+                _pace()
 
     import_state["running"] = False
     resolve_links()

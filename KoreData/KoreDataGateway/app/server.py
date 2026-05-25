@@ -1696,6 +1696,13 @@ async def ref_import_stop():
     return JSONResponse(content=r.json(), status_code=r.status_code)
 
 
+@app.post("/ui/reference/import/throttle")
+async def ref_import_throttle(request: Request):
+    payload = await request.json()
+    r = await _ref_client.post("/import/throttle", json=payload)
+    return JSONResponse(content=r.json(), status_code=r.status_code)
+
+
 @app.get("/ui/reference", response_class=HTMLResponse)
 async def ref_index(request: Request, limit: int = 100, offset: int = 0):
     articles_r, status_r = await asyncio.gather(
