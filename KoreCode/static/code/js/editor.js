@@ -380,6 +380,16 @@ export function createEditor({ runFind, runFindNext, runFindPrevious, closeFindB
     renderTree();
   }
 
+  function resetWorkspaceContext() {
+    state.openTabs = [];
+    state.activePath = null;
+    persistTabs();
+    applyActiveTabToEditor();
+    renderTabs();
+    renderMeta();
+    onTabChange?.(null);
+  }
+
   async function saveActiveTab() {
     const active = getActiveTab();
     if (!active) {
@@ -389,13 +399,46 @@ export function createEditor({ runFind, runFindNext, runFindPrevious, closeFindB
       return true;
     }
     fileState.textContent = 'Saving\u2026';
-    const payload = await api(`/api/file?path=${encodeURIComponent(active.path)}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content: active.content }),
-    });
+    const savePayload = {
+      content: active.content,
+      expected_modified_at: active.modifiedAt ?? null,
+      expected_modified_at_ns: active.modifiedAtNs ?? null,
+      expected_hash: active.contentHash ?? null,
+    };
+
+    let payload;
+    try {
+      payload = await api(`/api/file?path=${encodeURIComponent(active.path)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(savePayload),
+      });
+    } catch (err) {
+      const message = String(err?.message || err || '').toLowerCase();
+      if (!message.includes('file not found')) {
+        throw err;
+      }
+
+      // If backend root drifted, resync it to the currently displayed explorer root and retry once.
+      const rootPathText = document.getElementById('root-path')?.textContent?.trim();
+      if (!rootPathText) {
+        throw err;
+      }
+      await api('/api/root', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ root: rootPathText }),
+      });
+      payload = await api(`/api/file?path=${encodeURIComponent(active.path)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(savePayload),
+      });
+    }
     active.savedContent = active.content;
     active.modifiedAt = payload.modified_at;
+    active.modifiedAtNs = payload.modified_at_ns ?? null;
+    active.contentHash = payload.content_hash ?? null;
     active.dirty = false;
     clearDraft(active.path);
     persistTabs();
@@ -404,14 +447,15 @@ export function createEditor({ runFind, runFindNext, runFindPrevious, closeFindB
     return true;
   }
 
-  async function openFile(path) {
+  async function openFile(path, opts = {}) {
+    const activate = opts.activate !== false;
     const existing = state.openTabs.find((tab) => tab.path === path);
     if (existing) {
-      setActiveTab(path);
+      if (activate) {
+        setActiveTab(path);
+      }
       return;
     }
-    const treeStatus = document.getElementById('tree-status');
-    treeStatus.textContent = `Opening ${path}\u2026`;
     const payload = await api(`/api/file?path=${encodeURIComponent(path)}`);
     const draftContent = typeof drafts[payload.path] === 'string' ? drafts[payload.path] : null;
     const initialContent = draftContent ?? payload.content;
@@ -421,12 +465,20 @@ export function createEditor({ runFind, runFindNext, runFindPrevious, closeFindB
       content: initialContent,
       savedContent: payload.content,
       modifiedAt: payload.modified_at,
+      modifiedAtNs: payload.modified_at_ns ?? null,
+      contentHash: payload.content_hash ?? null,
       dirty: initialContent !== payload.content,
     };
     state.openTabs.push(tab);
     await expandAncestors(path);
-    setActiveTab(path);
-    treeStatus.textContent = `Opened ${path}`;
+    if (activate) {
+      setActiveTab(path);
+    } else {
+      persistTabs();
+      renderTabs();
+      renderMeta();
+      renderTree();
+    }
   }
 
   async function restoreTabs() {
@@ -584,13 +636,117 @@ export function createEditor({ runFind, runFindNext, runFindPrevious, closeFindB
   _continuationView = editorView;   // expose to module-level helpers
 
   saveButton.addEventListener('click', () => {
-    void saveActiveTab();
+    void saveActiveTab().catch((err) => {
+      fileState.textContent = `Save failed: ${err?.message || err}`;
+      fileState.classList.add('kcui-tag--warning');
+      fileState.classList.remove('kcui-tag--dim');
+    });
   });
 
   wrapButton?.addEventListener('click', () => {
     applyLineWrap(!lineWrapEnabled);
   });
   updateWrapButton();
+
+  function _replaceLines(content, fromLine, toLine, replacement) {
+    const lines = content.split('\n');
+    const from = Math.max(1, Number(fromLine || 1));
+    const to = Math.max(from, Number(toLine || from));
+    const before = lines.slice(0, from - 1);
+    const after = lines.slice(to);
+    const middle = String(replacement ?? '').split('\n');
+    return [...before, ...middle, ...after].join('\n');
+  }
+
+  async function applyStructuredEdits(edits) {
+    if (!Array.isArray(edits) || edits.length === 0) {
+      return { ok: false, applied: 0, errors: ['No edits provided.'] };
+    }
+    const errors = [];
+    let applied = 0;
+    const touchedPaths = new Set();
+
+    for (const edit of edits) {
+      const path = String(edit?.file || '').trim();
+      if (!path) {
+        errors.push('Edit missing file path.');
+        continue;
+      }
+      try {
+        let tab = state.openTabs.find((item) => item.path === path);
+        if (!tab) {
+          try {
+            await openFile(path, { activate: false });
+          } catch {
+            // If the target file does not exist yet, create it and reopen.
+            await api(`/api/file?path=${encodeURIComponent(path)}`, { method: 'POST' });
+            await openFile(path, { activate: false });
+          }
+          tab = state.openTabs.find((item) => item.path === path);
+        }
+        if (!tab) {
+          errors.push(`Could not open ${path}.`);
+          continue;
+        }
+        const from = Number(edit.from || 1);
+        const to = Number(edit.to || from);
+        const replacement = String(edit.replacement ?? '');
+        tab.content = _replaceLines(tab.content, from, to, replacement);
+        tab.dirty = tab.content !== tab.savedContent;
+        if (tab.dirty) setDraft(tab.path, tab.content);
+        else clearDraft(tab.path);
+        touchedPaths.add(tab.path);
+        applied += 1;
+      } catch (err) {
+        errors.push(`Failed to apply edit for ${path}: ${err?.message || err}`);
+      }
+    }
+
+    const active = getActiveTab();
+    if (active && touchedPaths.has(active.path)) {
+      suppressEditorSync = true;
+      editorView.dispatch({
+        changes: { from: 0, to: editorView.state.doc.length, insert: active.content },
+      });
+      suppressEditorSync = false;
+      editorView.focus();
+    }
+
+    persistTabs();
+    renderTabs();
+    renderMeta();
+    state.tree.clear();
+    renderTree();
+
+    return { ok: errors.length === 0, applied, errors };
+  }
+
+  async function saveTabs(paths = null) {
+    const targets = Array.isArray(paths) && paths.length
+      ? state.openTabs.filter((tab) => paths.includes(tab.path))
+      : state.openTabs.filter((tab) => tab.dirty);
+    const previousActivePath = state.activePath;
+    const errors = [];
+    let saved = 0;
+
+    for (const tab of targets) {
+      try {
+        if (state.activePath !== tab.path) {
+          setActiveTab(tab.path);
+        }
+        const ok = await saveActiveTab();
+        if (ok) saved += 1;
+      } catch (err) {
+        errors.push(`${tab.path}: ${err?.message || err}`);
+      }
+    }
+
+    if (previousActivePath && state.activePath !== previousActivePath && state.openTabs.some((tab) => tab.path === previousActivePath)) {
+      setActiveTab(previousActivePath);
+    }
+
+    return { ok: errors.length === 0, saved, errors };
+  }
 
   return {
     editorView,
@@ -602,6 +758,9 @@ export function createEditor({ runFind, runFindNext, runFindPrevious, closeFindB
     saveActiveTab,
     restoreTabs,
     updateSaveButton,
+    applyStructuredEdits,
+    saveTabs,
+    resetWorkspaceContext,
 
     getContinueContext() {
       const tab = getActiveTab();

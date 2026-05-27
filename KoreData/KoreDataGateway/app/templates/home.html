@@ -255,7 +255,7 @@
     <span class="meta" style="margin-left:0.5rem;font-size:11px">- agent API | POST /api/search</span>
   </div>
   <div class="panel-body kcui-panel-body">
-    <p class="meta" style="margin-bottom:0.4rem;">Space or comma separated terms are AND-matched across all selected services.</p>
+    <p class="meta" style="margin-bottom:0.4rem;">Bare terms use AND by default. Use quotes for phrases, OR or | for alternatives, NOT to exclude, and parentheses to group.</p>
     <div style="display:flex; flex-direction:row; gap:0; margin-bottom:0.75rem;">
       <input id="sq-query" type="search" placeholder="e.g. climate change arctic ice" autocomplete="off"
              style="flex:1;" onkeydown="if(event.key==='Enter') runSearch()">
@@ -313,12 +313,13 @@
       <label style="display:flex; align-items:center; gap:0.35rem; font-size:12px; color:var(--dim);">
         Limit
         <div class="num-stepper">
-          <input id="sq-limit" type="number" placeholder="5" min="1" max="20" style="width:52px;">
+          <input id="sq-limit" type="number" value="20" placeholder="20" min="1" max="200" style="width:52px;">
           <div class="stepper-btns">
             <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,1)">&#9650;</button>
             <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,-1)">&#9660;</button>
           </div>
         </div>
+        <span class="meta">per service</span>
       </label>
     </div>
 
@@ -338,7 +339,7 @@
         <tbody>
           <tr>
             <td><code style="color:var(--text);">art of war</code></td>
-            <td>All three words anywhere in the document (any order)</td>
+            <td>All three words anywhere in the document, because bare terms default to AND</td>
             <td>Returns entries mentioning art, of, and war individually</td>
           </tr>
           <tr>
@@ -352,16 +353,43 @@
             <td>Must contain sun, tzu, and the phrase <em>art of war</em></td>
           </tr>
           <tr>
-            <td><code style="color:var(--text);">climate change arctic</code></td>
-            <td>All three words present anywhere - standard keyword search</td>
-            <td>Broad coverage across news, reference, and books</td>
+            <td><code style="color:var(--text);">plato OR aristotle</code></td>
+            <td>Either side may match</td>
+            <td>Useful for alternate names, rival schools, or multiple candidate topics</td>
+          </tr>
+          <tr>
+            <td><code style="color:var(--text);">plato | aristotle</code></td>
+            <td>Same as <strong>OR</strong>, using a shorter shorthand</td>
+            <td>Quick way to broaden a search without typing the full operator</td>
+          </tr>
+          <tr>
+            <td><code style="color:var(--text);">stoic NOT roman</code></td>
+            <td>Results must contain <em>stoic</em> and must not contain <em>roman</em></td>
+            <td>Useful for removing a noisy term that dominates results</td>
+          </tr>
+          <tr>
+            <td><code style="color:var(--text);">(plato OR socrates) dialogue</code></td>
+            <td>Parentheses group alternatives before combining with another required term</td>
+            <td>Finds dialogue material about either Plato or Socrates</td>
+          </tr>
+          <tr>
+            <td><code style="color:var(--text);">roman, republic</code></td>
+            <td>Comma still behaves like the old separator, so both terms are required</td>
+            <td>Keeps earlier searches working without changing meaning</td>
           </tr>
         </tbody>
       </table>
       <p class="meta" style="margin-top:0.6rem; font-size:11px;">
-        Wrap any multi-word phrase in <strong>double quotes</strong> to require exact adjacency.
-        Unquoted terms are always combined with AND - every word must appear somewhere in the result.
-        The <strong>Since / Until</strong> date filters apply to feeds only; reference, library, and RAG results are unaffected by date.
+        <strong>Quick rules:</strong> bare terms default to AND, <strong>OR</strong> or <strong>|</strong> broadens a search,
+        <strong>NOT</strong> excludes a term, and parentheses control grouping. Wrap any multi-word phrase in
+        <strong>double quotes</strong> to require exact adjacency.
+      </p>
+      <p class="meta" style="margin-top:0.45rem; font-size:11px;">
+        The boolean syntax above applies to the text-search services: <strong>Feeds</strong>, <strong>Reference</strong>,
+        <strong>Library</strong>, and <strong>RAG</strong>. <strong>Graph</strong> is still term-expansion based, so complex boolean
+        operators are mainly useful for the other four services. The <strong>Since / Until</strong> date filters apply to
+        feeds only. The <strong>Limit</strong> value is applied <strong>per selected service</strong>. The default is
+        <strong>20</strong>, but you can raise it as high as <strong>200</strong> when you need broader retrieval.
       </p>
     </div>
   </div>
@@ -515,7 +543,7 @@ async function runSearch() {
   const domains = [...document.querySelectorAll('.sq-domain:checked')].map(e => e.value);
   const since   = document.getElementById('sq-since').value;
   const until   = document.getElementById('sq-until').value;
-  const limit   = parseInt(document.getElementById('sq-limit').value, 10) || 5;
+  const limit   = parseInt(document.getElementById('sq-limit').value, 10) || 20;
 
   const payload = { query, domains, limit };
   if (since) payload.since = since;

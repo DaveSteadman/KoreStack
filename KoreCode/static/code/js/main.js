@@ -28,6 +28,9 @@ const editorApi = createEditor({
 });
 const { editorView, openFile, getActiveTab, renderTabs, renderMeta, restoreTabs } = editorApi;
 
+window.__kcApplyStructuredEdits = async (edits) => editorApi.applyStructuredEdits(edits);
+window.__kcSaveTabs = async (paths) => editorApi.saveTabs(paths);
+
 const chat = initChat({
   getActiveTab,
   getContinueContext: () => editorApi.getContinueContext(),
@@ -38,7 +41,10 @@ const chat = initChat({
 });
 
 initFind({ editorView, getActiveTab });
-initExplorer({ openFile });
+initExplorer({
+  openFile,
+  onRootChanged: () => editorApi.resetWorkspaceContext(),
+});
 initPanels({
   panelsEl: document.getElementById('code-app'),
   leftEl: document.getElementById('code-sidebar'),

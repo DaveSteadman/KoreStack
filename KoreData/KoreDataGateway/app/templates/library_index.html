@@ -37,7 +37,7 @@
   {% if mode == "all" %}
   <div class="panel-body kcui-panel-body" style="padding:0.5rem 1rem; border-bottom:1px solid var(--border);">
     <form action="/ui/library/search" method="get">
-      <p class="meta" style="margin-bottom:0.4rem;">Space or comma separated terms are AND-matched. Metadata fields can be used alone or combined.</p>
+      <p class="meta" style="margin-bottom:0.4rem;">Bare terms use AND by default. Use quotes, OR or |, NOT, and parentheses for text search. Metadata fields can still be combined separately.</p>
       <div style="display:flex; flex-direction:row; gap:0;">
         <input type="search" name="q" placeholder="full-text search..." style="flex:1;">
         <button type="submit">SEARCH</button>

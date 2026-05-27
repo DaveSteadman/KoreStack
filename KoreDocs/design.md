@@ -78,7 +78,7 @@ POST   /api/files             -> create new file  { name, content }
 # KoreFile database storage (Phase 2)
 GET    /api/folders                    -> list folder tree
 POST   /api/folders                    -> create folder  { name, parent_id }
-DELETE /api/folders/{folder_id}        -> delete folder (must be empty)
+DELETE /api/folders/{folder_id}        -> delete folder (?recursive=true removes nested content)
 
 GET    /api/files                      -> list files (metadata only, ?folder_id=)
 GET    /api/files/{file_id}            -> get file with content

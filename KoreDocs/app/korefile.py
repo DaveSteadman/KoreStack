@@ -340,8 +340,8 @@ def move_folder(folder_id: int, new_parent_id: int, *, expected_revision: int | 
     return _row_to_folder(row)
 
 
-def delete_folder(folder_id: int, *, expected_revision: int | None = None) -> bool:
-    """Delete a folder.  Raises ValueError if it has children or files."""
+def delete_folder(folder_id: int, *, expected_revision: int | None = None, recursive: bool = False) -> bool:
+    """Delete a folder. Raises ValueError if non-recursive delete hits children or files."""
     with _db() as conn:
         folder = _get_folder(conn, folder_id)
         if not folder:
@@ -351,9 +351,34 @@ def delete_folder(folder_id: int, *, expected_revision: int | None = None) -> bo
             raise ConflictError(
                 f'Folder {folder_id} revision mismatch: expected {expected_revision}, current {current_revision}'
             )
+        if folder_id == 1:
+            raise ValueError('Cannot delete the root folder')
         parent_id = folder['parent_id']
-        # FK RESTRICT handles the child/file guard — let it propagate as ValueError
-        conn.execute('DELETE FROM folders WHERE id=?', (folder_id,))
+
+        if recursive:
+            subtree_path = folder['path']
+            file_rows = conn.execute(
+                'SELECT files.id, files.name, files.metadata, files.content '
+                'FROM files '
+                'JOIN folders ON folders.id = files.folder_id '
+                'WHERE folders.path = ? OR folders.path LIKE ?',
+                (subtree_path, subtree_path + '/%'),
+            ).fetchall()
+            for row in file_rows:
+                content = _decompress(row['content']) or ''
+                _fts_delete(conn, row['id'], row['name'], row['metadata'] or '', content)
+                conn.execute('DELETE FROM files WHERE id=?', (row['id'],))
+
+            folder_rows = conn.execute(
+                'SELECT id FROM folders WHERE path = ? OR path LIKE ? ORDER BY LENGTH(path) DESC, id DESC',
+                (subtree_path, subtree_path + '/%'),
+            ).fetchall()
+            for row in folder_rows:
+                conn.execute('DELETE FROM folders WHERE id=?', (row['id'],))
+        else:
+            # FK RESTRICT handles the child/file guard — let it propagate as ValueError
+            conn.execute('DELETE FROM folders WHERE id=?', (folder_id,))
+
         if parent_id is not None:
             conn.execute(
                 'UPDATE folders SET revision=revision+1, modified_at=datetime(\'now\',\'utc\') WHERE id=?',

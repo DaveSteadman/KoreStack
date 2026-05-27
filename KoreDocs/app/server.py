@@ -569,10 +569,14 @@ def kf_create_folder(body: _KfFolderCreate):
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@app.delete('/api/folders/{folder_id}', summary='Delete an empty folder')
-def kf_delete_folder(folder_id: int, expected_revision: Annotated[int | None, Query()] = None):
+@app.delete('/api/folders/{folder_id}', summary='Delete a folder')
+def kf_delete_folder(
+    folder_id: int,
+    expected_revision: Annotated[int | None, Query()] = None,
+    recursive: Annotated[bool, Query()] = False,
+):
     try:
-        if not korefile.delete_folder(folder_id, expected_revision=expected_revision):
+        if not korefile.delete_folder(folder_id, expected_revision=expected_revision, recursive=recursive):
             raise HTTPException(status_code=404, detail='Folder not found')
     except HTTPException:
         raise
@@ -581,7 +585,7 @@ def kf_delete_folder(folder_id: int, expected_revision: Annotated[int | None, Qu
     except Exception as e:
         detail = str(e)
         if 'FOREIGN KEY constraint failed' in detail:
-            detail = 'Folder is not empty. Delete or move its files and sub-folders first.'
+            detail = 'Folder is not empty. Confirm recursive delete or move its files and sub-folders first.'
         raise HTTPException(status_code=409, detail=detail)
     return {'ok': True}
 

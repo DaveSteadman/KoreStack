@@ -19,9 +19,12 @@
 #   - session_runtime.py               -- provides bind_session for session isolation
 # ====================================================================================================
 import copy
+import re
 import threading
 import time
 
+from datasets import get_prompt_dataset_manifests
+from scratchpad import get_store as get_scratchpad_store
 from scratchpad import scratch_save as scratch_auto_save
 from session_runtime import get_active_session_id
 from utils.workspace_utils import trunc
@@ -35,6 +38,7 @@ _delegate_branch_seq: int = 0
 
 # Child answers longer than this are auto-saved to a scratchpad key to keep the parent thread compact.
 _DELEGATE_AUTO_SAVE_THRESHOLD: int = 512
+_DATASET_DELEGATE_TOOLS: tuple[str, ...] = ("dataset_get", "dataset_inspect")
 
 
 def _next_delegate_branch_id() -> str:
@@ -49,6 +53,36 @@ def _emit_delegate_event(logger, event: str, branch_id: str, **fields) -> None:
     for key, value in fields.items():
         parts.append(f"{key}={value}")
     logger.log_file_only("[delegate:event] " + " ".join(parts))
+
+
+def _detect_referenced_datasets(child_prompt: str) -> list[str]:
+    prompt_lower = str(child_prompt or "").lower()
+    if not prompt_lower:
+        return []
+
+    referenced: list[str] = []
+    for dataset in get_prompt_dataset_manifests():
+        name = str(dataset.get("name") or "").strip().lower()
+        if not name:
+            continue
+        pattern = rf"(?<![A-Za-z0-9_]){re.escape(name)}(?![A-Za-z0-9_])"
+        if re.search(pattern, prompt_lower) and name not in referenced:
+            referenced.append(name)
+    return referenced
+
+
+def _matching_dataset_scratch_keys(dataset_names: list[str]) -> list[str]:
+    if not dataset_names:
+        return []
+
+    store = get_scratchpad_store()
+    matched: list[str] = []
+    for dataset_name in dataset_names:
+        prefix = f"_dataset_get_{dataset_name}_"
+        for key in store.keys():
+            if key.startswith(prefix) and key not in matched:
+                matched.append(key)
+    return matched
 
 
 def get_delegate_runtime_tls() -> threading.local:
@@ -125,6 +159,10 @@ def run_delegate_subrun(
     child_iterations = max(1, min(int(max_iterations), 8))
     allowlist_set = set(tools_allowlist) if tools_allowlist else None
     parent_session_id = get_active_session_id()
+    referenced_datasets = _detect_referenced_datasets(child_prompt)
+
+    if allowlist_set is not None and referenced_datasets:
+        allowlist_set.update(_DATASET_DELEGATE_TOOLS)
 
     def _skill_in_allowlist(skill: dict) -> bool:
         if allowlist_set is None:
@@ -181,8 +219,14 @@ def run_delegate_subrun(
         pass
 
     # Default: child sees no parent scratchpad keys (prevents _tc_* noise leakage).
-    # Caller must explicitly list the keys the child is allowed to see.
-    child_visible_keys = scratchpad_visible_keys if scratchpad_visible_keys is not None else []
+    # Caller must explicitly list the keys the child is allowed to see. When the child prompt
+    # explicitly references a known dataset, also expose matching dataset_get scratch keys so a
+    # recent parent fetch can be reused without reloading from a truncated preview.
+    child_visible_keys = list(scratchpad_visible_keys) if scratchpad_visible_keys is not None else []
+    if referenced_datasets:
+        for key in _matching_dataset_scratch_keys(referenced_datasets):
+            if key not in child_visible_keys:
+                child_visible_keys.append(key)
 
     previous = push_delegate_runtime(logger=logger, delegate_depth=depth + 1, config=child_config)
     _start = time.monotonic()

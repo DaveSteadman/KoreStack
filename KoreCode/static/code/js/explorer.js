@@ -4,8 +4,14 @@ const treeHost = document.getElementById('code-tree');
 const treeStatus = document.getElementById('tree-status');
 const rootLabel = document.getElementById('root-label');
 const refreshTreeButton = document.getElementById('btn-refresh-tree');
+const rootSelect = document.getElementById('root-select');
+const CUSTOM_ROOT_VALUE = '__custom__';
 
 let _openFile = null;
+let _onRootChanged = null;
+let _settingRoot = false;
+let _currentRootValue = '';
+let _rootPicker = null;
 
 // ── SVG icons ────────────────────────────────────────────────────────────────
 
@@ -46,25 +52,78 @@ async function _invalidateDir(dirPath) {
   await ensureDirectory(dirPath);
 }
 
+function _askName(title, placeholder = 'Name') {
+  return new Promise((resolve) => {
+    const overlay = document.createElement('div');
+    overlay.className = 'name-prompt-overlay';
+    overlay.innerHTML = `
+      <div class="name-prompt-dialog" role="dialog" aria-modal="true" aria-label="${title}">
+        <div class="name-prompt-title">${title}</div>
+        <input class="name-prompt-input" type="text" spellcheck="false" placeholder="${placeholder}" />
+        <div class="name-prompt-actions">
+          <button type="button" class="kcui-tag kcui-tag--muted name-prompt-cancel">Cancel</button>
+          <button type="button" class="kcui-tag kcui-tag--accent name-prompt-ok">Create</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+
+    const input = overlay.querySelector('.name-prompt-input');
+    const cancelBtn = overlay.querySelector('.name-prompt-cancel');
+    const okBtn = overlay.querySelector('.name-prompt-ok');
+
+    let done = false;
+    const close = (value = null) => {
+      if (done) return;
+      done = true;
+      overlay.remove();
+      resolve(value);
+    };
+
+    cancelBtn.addEventListener('click', () => close(null));
+    okBtn.addEventListener('click', () => {
+      const value = String(input.value || '').trim();
+      if (!value) return;
+      close(value);
+    });
+    input.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        okBtn.click();
+      }
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        close(null);
+      }
+    });
+    overlay.addEventListener('click', (event) => {
+      if (event.target === overlay) close(null);
+    });
+
+    input.focus();
+    input.select();
+  });
+}
+
 async function _createFile(dirPath) {
-  const name = window.prompt('New file name:');
-  if (!name?.trim()) return;
-  const newPath = dirPath ? `${dirPath}/${name.trim()}` : name.trim();
+  const name = await _askName('New file', 'File name (e.g. notes.md)');
+  if (!name) return;
+  const newPath = dirPath ? `${dirPath}/${name}` : name;
   try {
     await api(`/api/file?path=${encodeURIComponent(newPath)}`, { method: 'POST' });
     state.expanded.add(dirPath);
     await _invalidateDir(dirPath);
     renderTree();
-    void _openFile(newPath);
+    treeStatus.textContent = `Created ${newPath}`;
   } catch (err) {
     alert('Could not create file: ' + err.message);
   }
 }
 
 async function _createDir(dirPath) {
-  const name = window.prompt('New folder name:');
-  if (!name?.trim()) return;
-  const newPath = dirPath ? `${dirPath}/${name.trim()}` : name.trim();
+  const name = await _askName('New folder', 'Folder name');
+  if (!name) return;
+  const newPath = dirPath ? `${dirPath}/${name}` : name;
   try {
     await api(`/api/dir?path=${encodeURIComponent(newPath)}`, { method: 'POST' });
     state.expanded.add(dirPath);
@@ -98,15 +157,198 @@ async function _deleteDirItem(dirPath, dirLabel) {
   }
 }
 
-export function initExplorer({ openFile }) {
+export function initExplorer({ openFile, onRootChanged = null }) {
   _openFile = openFile;
+  _onRootChanged = onRootChanged;
   refreshTreeButton.addEventListener('click', () => {
     void refreshTree();
   });
+  rootSelect?.addEventListener('change', () => {
+    if (_settingRoot) return;
+    if (rootSelect.value === CUSTOM_ROOT_VALUE) {
+      void openCustomRootPicker(_currentRootValue);
+      return;
+    }
+    void switchRoot(rootSelect.value);
+  });
+}
+
+function ensureRootPicker() {
+  if (_rootPicker) return _rootPicker;
+
+  const overlay = document.createElement('div');
+  overlay.id = 'root-picker-overlay';
+  overlay.hidden = true;
+  overlay.innerHTML = `
+    <div id="root-picker-dialog" role="dialog" aria-modal="true" aria-label="Select root folder">
+      <div class="root-picker-title">Select Root Folder</div>
+      <div class="root-picker-row">
+        <button id="root-picker-up" class="kcui-tag kcui-tag--muted" type="button">Up</button>
+        <input id="root-picker-path" type="text" spellcheck="false" placeholder="Absolute folder path" />
+        <button id="root-picker-go" class="kcui-tag kcui-tag--muted" type="button">Go</button>
+      </div>
+      <div id="root-picker-list" class="root-picker-list"></div>
+      <div class="root-picker-actions">
+        <button id="root-picker-cancel" class="kcui-tag kcui-tag--muted" type="button">Cancel</button>
+        <button id="root-picker-select" class="kcui-tag kcui-tag--accent" type="button">Use This Folder</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const picker = {
+    overlay,
+    pathInput: overlay.querySelector('#root-picker-path'),
+    list: overlay.querySelector('#root-picker-list'),
+    upBtn: overlay.querySelector('#root-picker-up'),
+    goBtn: overlay.querySelector('#root-picker-go'),
+    cancelBtn: overlay.querySelector('#root-picker-cancel'),
+    selectBtn: overlay.querySelector('#root-picker-select'),
+    currentPath: '',
+    parentPath: null,
+  };
+
+  const close = () => {
+    picker.overlay.hidden = true;
+    void loadRootOptions();
+  };
+
+  picker.cancelBtn.addEventListener('click', close);
+  picker.overlay.addEventListener('click', (event) => {
+    if (event.target === picker.overlay) {
+      close();
+    }
+  });
+  picker.upBtn.addEventListener('click', () => {
+    if (!picker.parentPath) return;
+    void loadBrowsePath(picker.parentPath);
+  });
+  picker.goBtn.addEventListener('click', () => {
+    const target = picker.pathInput.value.trim();
+    if (!target) return;
+    void loadBrowsePath(target);
+  });
+  picker.pathInput.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      const target = picker.pathInput.value.trim();
+      if (target) void loadBrowsePath(target);
+    }
+  });
+  picker.selectBtn.addEventListener('click', async () => {
+    const target = picker.pathInput.value.trim();
+    if (!target) return;
+    picker.overlay.hidden = true;
+    await switchRoot(target);
+  });
+
+  _rootPicker = picker;
+  return picker;
+}
+
+async function loadBrowsePath(path = null) {
+  const picker = ensureRootPicker();
+  picker.list.textContent = 'Loading folders…';
+  const query = path ? `?path=${encodeURIComponent(path)}` : '';
+  try {
+    const payload = await api(`/api/root-browse${query}`);
+    picker.currentPath = payload.path || '';
+    picker.parentPath = payload.parent || null;
+    picker.pathInput.value = picker.currentPath;
+    picker.upBtn.disabled = !picker.parentPath;
+
+    picker.list.innerHTML = '';
+    const directories = Array.isArray(payload.directories) ? payload.directories : [];
+    if (!directories.length) {
+      const empty = document.createElement('div');
+      empty.className = 'root-picker-empty';
+      empty.textContent = 'No subfolders available.';
+      picker.list.appendChild(empty);
+      return;
+    }
+    for (const directory of directories) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'root-picker-item';
+      btn.textContent = directory.name || directory.path;
+      btn.title = directory.path || '';
+      btn.addEventListener('click', () => {
+        void loadBrowsePath(directory.path);
+      });
+      picker.list.appendChild(btn);
+    }
+  } catch (err) {
+    picker.list.innerHTML = '';
+    const issue = document.createElement('div');
+    issue.className = 'root-picker-empty';
+    issue.textContent = `Browse failed: ${err.message || err}`;
+    picker.list.appendChild(issue);
+  }
+}
+
+async function openCustomRootPicker(initialPath) {
+  const picker = ensureRootPicker();
+  picker.overlay.hidden = false;
+  const target = initialPath && initialPath !== CUSTOM_ROOT_VALUE ? initialPath : null;
+  await loadBrowsePath(target);
+}
+
+async function loadRootOptions() {
+  if (!rootSelect) return;
+  try {
+    const payload = await api('/api/root-options');
+    const options = Array.isArray(payload?.options) ? payload.options : [];
+    const current = typeof payload?.current === 'string' ? payload.current : '';
+    _currentRootValue = current;
+    _settingRoot = true;
+    rootSelect.innerHTML = '';
+    for (const option of options) {
+      const opt = document.createElement('option');
+      opt.value = option.value || '';
+      opt.textContent = option.label || option.value || 'workspace';
+      rootSelect.appendChild(opt);
+    }
+    const customOpt = document.createElement('option');
+    customOpt.value = CUSTOM_ROOT_VALUE;
+    customOpt.textContent = 'Custom path…';
+    rootSelect.appendChild(customOpt);
+    rootSelect.value = current;
+    rootSelect.disabled = false;
+  } catch {
+    rootSelect.innerHTML = '<option value="">root unavailable</option>';
+    rootSelect.disabled = true;
+  } finally {
+    _settingRoot = false;
+  }
+}
+
+export async function switchRoot(rootValue) {
+  if (_settingRoot) return;
+  treeStatus.textContent = 'Switching root…';
+  try {
+    _settingRoot = true;
+    await api('/api/root', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ root: rootValue || '' }),
+    });
+    state.tree.clear();
+    state.expanded.clear();
+    _onRootChanged?.();
+    await loadRootOptions();
+    await refreshTree();
+    treeStatus.textContent = 'Root switched';
+  } catch (err) {
+    treeStatus.textContent = `Root switch failed: ${err.message || err}`;
+    await loadRootOptions();
+  } finally {
+    _settingRoot = false;
+  }
 }
 
 export async function refreshTree() {
   treeStatus.textContent = 'Loading workspace\u2026';
+  await loadRootOptions();
   const expandedPaths = [...state.expanded].filter(Boolean);
   state.tree.clear();
   try {

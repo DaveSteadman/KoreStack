@@ -1,0 +1,31 @@
+[
+  {
+    "exchange": "datasets - save inspect filter lifecycle",
+    "turns": [
+      {
+        "user": "Create a dataset named phase1_feed_raw using dataset_save with exactly these records: [{\"title\":\"Renewable energy project expands\",\"url\":\"https://example.com/energy-1\",\"source\":\"Example News\",\"published_at\":\"2026-05-20\",\"snippet\":\"A new solar project expands renewable generation.\"},{\"title\":\"Renewable energy project expands\",\"url\":\"https://example.com/energy-1\",\"source\":\"Example News\",\"published_at\":\"2026-05-20\",\"snippet\":\"Duplicate row for testing dedupe.\"},{\"title\":\"Battery storage improves grid resilience\",\"url\":\"https://example.com/energy-2\",\"source\":\"Grid Weekly\",\"published_at\":\"2026-05-21\",\"snippet\":\"Battery storage is helping stabilize renewable-heavy grids.\"},{\"title\":\"Football transfer rumours round-up\",\"url\":\"https://example.com/sport-1\",\"source\":\"Sport Daily\",\"published_at\":\"2026-05-21\",\"snippet\":\"A summary of football transfer rumours.\"},{\"title\":\"Wind farm financing reaches new milestone\",\"url\":\"https://example.com/energy-3\",\"source\":\"Finance Wire\",\"published_at\":\"2026-05-22\",\"snippet\":\"Wind energy financing hit a new milestone this quarter.\"}]. After saving, call dataset_list and answer with the dataset list.",
+        "assert": "contains|phase1_feed_raw"
+      },
+      {
+        "user": "Use dataset_drop_where on phase1_feed_raw with predicate duplicate by url and save_as phase1_feed_deduped. Then call dataset_list and answer with the dataset list.",
+        "assert": "contains|phase1_feed_deduped"
+      },
+      {
+        "user": "Call dataset_inspect on phase1_feed_deduped and tell me the schema and count.",
+        "assert": "all_contains|title||url"
+      },
+      {
+        "user": "Use dataset_filter on phase1_feed_deduped with save_as phase1_feed_relevant. Keep only items clearly about renewable energy, battery storage, wind energy, or grid resilience. Use fields [title, source, published_at, url, snippet]. After the tool call, answer with only the resulting dataset name.",
+        "assert": "contains|phase1_feed_relevant"
+      },
+      {
+        "user": "Call dataset_get on phase1_feed_relevant with max_records 2 and fields [title, url]. Return the retrieved records.",
+        "assert": "regex|Renewable|Battery|Wind"
+      },
+      {
+        "user": "Delete the datasets phase1_feed_raw, phase1_feed_deduped, and phase1_feed_relevant. Then answer with a short confirmation.",
+        "assert": "regex|deleted|removed"
+      }
+    ]
+  }
+]

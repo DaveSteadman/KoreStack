@@ -32,8 +32,11 @@ async function _req(method, path, body) {
 
 export const listFolders    = ()                => _req('GET',    '/folders');
 export const createFolder   = (name, pid)       => _req('POST',   '/folders',       { name, parent_id: pid });
-export const deleteFolder   = (id, expectedRevision = null) => {
-  const qs = expectedRevision == null ? '' : `?expected_revision=${encodeURIComponent(expectedRevision)}`;
+export const deleteFolder   = (id, expectedRevision = null, recursive = false) => {
+  const params = new URLSearchParams();
+  if (expectedRevision != null) params.set('expected_revision', expectedRevision);
+  if (recursive) params.set('recursive', 'true');
+  const qs = params.toString() ? `?${params.toString()}` : '';
   return _req('DELETE', `/folders/${id}${qs}`);
 };
 export const patchFolder    = (id, updates)     => _req('PATCH',  `/folders/${id}`, updates);

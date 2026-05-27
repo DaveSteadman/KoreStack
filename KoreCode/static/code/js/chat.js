@@ -1,24 +1,21 @@
 // chat.js
 //
 // Chat panel for KoreCode.
-//
-// Modes:
-//   chat     — conversational, one thread per file
-//   continue — sends file context up to cursor, inserts ghost text; Tab=accept, else=cancel
-//
-// Submissions go to KoreAgent via:
-//   POST {koreagent}/sessions/{session_id}/prompt  →  { run_id }
-//   GET  {koreagent}/runs/{run_id}/stream          →  SSE events
-//
-// KoreAgent base URL: window.__koreSuiteUrls.koreagent, then localStorage cache,
-// then current-host fallback on the standard KoreAgent port.
+import { buildPromptByMode, buildAgentToolFollowupPrompt } from './chat/prompting.js';
+import { extractAgentEnvelope, executeAgentToolRequests } from './chat/agent-loop.js';
+import { createThreadUI } from './chat/thread-ui.js';
+import { createContinueModeController } from './chat/continue-mode.js';
+
 const _STATE_KEY = 'korecode.chat-state';
 const _WIDTH_KEY = 'korecode-chat-w';
+const _WORKSPACE_CONTEXT_KEY = 'korecode.workspace-context';
 const _MIN_PANEL_W = 260;
 const _MAX_PANEL_W = 720;
 const _DEFAULT_PANEL_W = 340;
+const _MAX_AGENT_TOOL_TURNS = 3;
+const _WORKSPACE_THREAD_KEY = '__workspace__';
 
-// In-memory chat thread store: path → Array<{ role: 'user'|'assistant', text: string }>
+// In-memory chat thread store: path -> Array<{ role: 'user'|'assistant', text: string }>
 const _threads = new Map();
 
 function _saveState(open, mode, pendingRuns = {}, continueState = null) {
@@ -34,7 +31,25 @@ function _loadState() {
     const raw = localStorage.getItem(_STATE_KEY);
     if (!raw) return null;
     return JSON.parse(raw);
-  } catch (_) { return null; }
+  } catch (_) {
+    return null;
+  }
+}
+
+function _loadWorkspaceContextEnabled() {
+  try {
+    const raw = localStorage.getItem(_WORKSPACE_CONTEXT_KEY);
+    if (raw == null) return true;
+    return raw !== '0';
+  } catch (_) {
+    return true;
+  }
+}
+
+function _saveWorkspaceContextEnabled(value) {
+  try {
+    localStorage.setItem(_WORKSPACE_CONTEXT_KEY, value ? '1' : '0');
+  } catch (_) {}
 }
 
 // SSE reader active during a streaming response.
@@ -44,26 +59,58 @@ let _activeReader = null;
  * Initialise the chat panel.
  * @param {{
  *   getActiveTab:       () => { path: string } | null,
- *   getContinueContext: () => { path: string, text: string, offset: number } | null,
- *   insertContinuation: (text: string) => { accept(): void, cancel(): void },
+ *   getContinueContext: () => { path: string, text: string, suffix?: string, offset: number } | null,
+ *   insertContinuation: (text: string, opts?: object) => { accept(): void, cancel(): void },
  * }} opts
- * @returns {{ onTabChange: (path: string | null) => void }}
+ * @returns {{ onTabChange: (path: string | null) => void, onSelectionChange: (payload: any) => void }}
  */
-export function initChat({ getActiveTab, getContinueContext, insertContinuation, insertFromChat = null, getEditorSelection = null, getCursorInfo = null }) {
-  const panel         = document.getElementById('chat-panel');
-  const splitter      = document.getElementById('chat-splitter');
-  const thread        = document.getElementById('chat-thread');
-  const input         = document.getElementById('chat-input');
-  const sendBtn       = document.getElementById('btn-chat-send');
-  const aiBtn         = document.getElementById('btn-ai');
-  const btnModeChat    = document.getElementById('btn-mode-chat');
+export function initChat({
+  getActiveTab,
+  getContinueContext,
+  insertContinuation,
+  insertFromChat = null,
+  getEditorSelection = null,
+  getCursorInfo = null,
+}) {
+  const panel = document.getElementById('chat-panel');
+  const splitter = document.getElementById('chat-splitter');
+  const thread = document.getElementById('chat-thread');
+  const input = document.getElementById('chat-input');
+  const sendBtn = document.getElementById('btn-chat-send');
+  const aiBtn = document.getElementById('btn-ai');
+  const btnModeChat = document.getElementById('btn-mode-chat');
   const btnModeContinue = document.getElementById('btn-mode-continue');
-  const selectionChip  = document.getElementById('chat-selection-chip');
+  const btnModeExplain = document.getElementById('btn-mode-explain');
+  const btnModeBugHunt = document.getElementById('btn-mode-bughunt');
+  const btnModeRefactor = document.getElementById('btn-mode-refactor');
+  const btnModeTests = document.getElementById('btn-mode-tests');
+  const btnChatRetry = document.getElementById('btn-chat-retry');
+  const btnChatClear = document.getElementById('btn-chat-clear');
+  const btnChatStop = document.getElementById('btn-chat-stop');
+  const btnWorkspaceContext = document.getElementById('btn-workspace-context');
+  const selectionChip = document.getElementById('chat-selection-chip');
   const selectionLabel = document.getElementById('chat-selection-label');
   const progressNote = document.getElementById('chat-progress-note');
 
   let _currentSelection = null;
   let _currentCursor = { line: 1, column: 1, offset: 0 };
+
+  let _mode = 'chat';
+  let _panelOpen = false;
+  let _dragStartX = null;
+  let _dragStartW = null;
+  const _pendingRuns = new Map(); // path -> runId
+  let _manualStopRequested = false;
+  let _isGenerating = false;
+  let _workspaceContextEnabled = _loadWorkspaceContextEnabled();
+  let _continueControllerApi = { stateSnapshot: () => null };
+
+  const _threadUI = createThreadUI({
+    thread,
+    insertFromChat,
+    applyStructuredEdits: (edits) => window.__kcApplyStructuredEdits?.(edits),
+    saveTabs: (paths) => window.__kcSaveTabs?.(paths),
+  });
 
   function _refreshCursorFromEditor() {
     const cursor = getCursorInfo?.();
@@ -91,19 +138,78 @@ export function initChat({ getActiveTab, getContinueContext, insertContinuation,
     const lines = _currentSelection ? _currentSelection.split('\n').length : 0;
     const cursorText = `cursor L${_currentCursor.line}, C${_currentCursor.column}`;
     if (lines > 0) {
-      selectionLabel.textContent = `${lines} line${lines === 1 ? '' : 's'} selected · ${cursorText} · will be sent as context`;
+      selectionLabel.textContent = `${lines} line${lines === 1 ? '' : 's'} selected - ${cursorText} - will be sent as context`;
     } else {
-      selectionLabel.textContent = `0 lines selected · ${cursorText} · insert uses cursor position`;
+      selectionLabel.textContent = `0 lines selected - ${cursorText} - insert uses cursor position`;
     }
     selectionChip.hidden = false;
   }
 
-  let _mode = 'chat';   // 'chat' | 'continue'
-  let _panelOpen = false;
-  let _dragStartX = null;
-  let _dragStartW = null;
-  let _continueInProgress = false;
-  const _pendingRuns = new Map(); // path -> runId
+  function _readSavedWidth() {
+    try {
+      const raw = localStorage.getItem(_WIDTH_KEY);
+      if (!raw) return _DEFAULT_PANEL_W;
+      const val = Number(raw);
+      if (!Number.isFinite(val)) return _DEFAULT_PANEL_W;
+      return Math.max(_MIN_PANEL_W, Math.min(_MAX_PANEL_W, val));
+    } catch (_) {
+      return _DEFAULT_PANEL_W;
+    }
+  }
+
+  function _saveWidth(width) {
+    try {
+      localStorage.setItem(_WIDTH_KEY, String(width));
+    } catch (_) {}
+  }
+
+  function _setPanelWidth(width) {
+    const w = Math.max(_MIN_PANEL_W, Math.min(_MAX_PANEL_W, Math.round(width)));
+    panel.style.width = `${w}px`;
+    _saveWidth(w);
+  }
+
+  function _stopResizeDrag() {
+    if (_dragStartX === null) return;
+    _dragStartX = null;
+    _dragStartW = null;
+    splitter.classList.remove('is-dragging');
+    document.body.style.userSelect = '';
+    document.body.style.cursor = '';
+  }
+
+  function _setPanelOpen(open) {
+    _panelOpen = Boolean(open);
+    panel.hidden = !_panelOpen;
+    splitter.hidden = !_panelOpen;
+    aiBtn.classList.toggle('is-active', _panelOpen);
+    _save();
+    _syncThinkingNote();
+    _updateSelectionChip();
+  }
+
+  function _consumeManualStop() {
+    if (!_manualStopRequested) return false;
+    _manualStopRequested = false;
+    return true;
+  }
+
+  function _renderWorkspaceContextToggle() {
+    if (!btnWorkspaceContext) return;
+    btnWorkspaceContext.textContent = _workspaceContextEnabled ? 'Workspace: On' : 'Workspace: Off';
+    btnWorkspaceContext.setAttribute('aria-pressed', _workspaceContextEnabled ? 'true' : 'false');
+    btnWorkspaceContext.classList.toggle('kcui-tag--accent', _workspaceContextEnabled);
+    btnWorkspaceContext.classList.toggle('kcui-tag--dim', !_workspaceContextEnabled);
+  }
+
+  function _setGenerating(active) {
+    _isGenerating = Boolean(active);
+    sendBtn.disabled = _isGenerating;
+    if (btnChatStop) {
+      btnChatStop.hidden = !_isGenerating;
+      btnChatStop.disabled = !_isGenerating;
+    }
+  }
 
   function _pendingToObject() {
     const out = {};
@@ -111,7 +217,9 @@ export function initChat({ getActiveTab, getContinueContext, insertContinuation,
     return out;
   }
 
-  function _save() { _saveState(_panelOpen, _mode, _pendingToObject(), _continueStateSnapshot()); }
+  function _save() {
+    _saveState(_panelOpen, _mode, _pendingToObject(), _continueControllerApi.stateSnapshot());
+  }
 
   function _setPending(path, runId) {
     if (!path || !runId) return;
@@ -138,9 +246,40 @@ export function initChat({ getActiveTab, getContinueContext, insertContinuation,
     const hasCurrentPending = Boolean(path && _pendingRuns.has(path));
     progressNote.hidden = !hasAnyPending;
     if (progressNote.hidden) return;
-    progressNote.textContent = hasCurrentPending
-      ? 'Generating...'
-      : 'Generating... (in another tab)';
+    progressNote.textContent = hasCurrentPending ? 'Generating...' : 'Generating... (in another tab)';
+  }
+
+  function _lastUserMessage(path) {
+    if (!path) return null;
+    const messages = _threads.get(path) ?? [];
+    for (let i = messages.length - 1; i >= 0; i -= 1) {
+      if (messages[i]?.role === 'user' && typeof messages[i].text === 'string' && messages[i].text.trim()) {
+        return messages[i].text;
+      }
+    }
+    return null;
+  }
+
+  function _clearThread(path) {
+    if (!path) return;
+    _threads.delete(path);
+    _save();
+    renderThread(path);
+  }
+
+  function _localAssistantMessage(path, text) {
+    if (!path || !text) return;
+    _pushMessage(path, { role: 'assistant', text });
+    renderThread(path);
+  }
+
+  function _showChatNotice(text) {
+    if (!text) return;
+    const el = document.createElement('div');
+    el.className = 'chat-thinking';
+    el.textContent = text;
+    thread.appendChild(el);
+    _scrollBottom();
   }
 
   function _errorText(err) {
@@ -154,71 +293,27 @@ export function initChat({ getActiveTab, getContinueContext, insertContinuation,
     const name = typeof err?.name === 'string' ? err.name : '';
     const msg = _errorText(err).toLowerCase();
     return (
-      name === 'AbortError' ||
-      msg.includes('aborted') ||
-      msg.includes('failed to fetch') ||
-      msg.includes('illegal access') ||
-      msg.includes('access is denied') ||
-      msg.includes('permission denied') ||
-      msg.includes('securityerror') ||
-      msg.includes('networkerror') ||
-      msg.includes('stream is locked')
+      name === 'AbortError'
+      || msg.includes('aborted')
+      || msg.includes('failed to fetch')
+      || msg.includes('illegal access')
+      || msg.includes('access is denied')
+      || msg.includes('permission denied')
+      || msg.includes('securityerror')
+      || msg.includes('networkerror')
     );
   }
 
   function _safeCancelReader(reader) {
     if (!reader) return;
     try {
-      const out = reader.cancel();
-      if (out && typeof out.catch === 'function') {
-        out.catch(() => {});
-      }
-    } catch (_) {
-      // Ignore reader cancellation failures during tab focus/context changes.
-    }
+      reader.cancel();
+    } catch (_) {}
   }
-
-  function _readSavedWidth() {
-    try {
-      const raw = Number.parseInt(localStorage.getItem(_WIDTH_KEY), 10);
-      if (Number.isNaN(raw)) return _DEFAULT_PANEL_W;
-      return Math.max(_MIN_PANEL_W, Math.min(_MAX_PANEL_W, raw));
-    } catch (_) {
-      return _DEFAULT_PANEL_W;
-    }
-  }
-
-  function _setPanelWidth(widthPx) {
-    const clamped = Math.max(_MIN_PANEL_W, Math.min(_MAX_PANEL_W, Math.round(widthPx)));
-    panel.style.width = `${clamped}px`;
-    try { localStorage.setItem(_WIDTH_KEY, String(clamped)); } catch (_) {}
-  }
-
-  function _setPanelOpen(open) {
-    panel.hidden = !open;
-    splitter.hidden = !open;
-    _panelOpen = open;
-    aiBtn.classList.toggle('is-on', open);
-    aiBtn.classList.toggle('kcui-tag--accent', open);
-    aiBtn.classList.toggle('kcui-tag--dim', !open);
-    _syncThinkingNote();
-    _save();
-  }
-
-  function _stopResizeDrag() {
-    if (_dragStartX === null) return;
-    _dragStartX = null;
-    _dragStartW = null;
-    splitter.classList.remove('is-dragging');
-    document.body.style.userSelect = '';
-    document.body.style.cursor = '';
-  }
-
-  // ── Helpers ─────────────────────────────────────────────────────────────
 
   function _cachedSuiteUrls() {
     try {
-      const raw = localStorage.getItem('kore.suite-urls');
+      const raw = localStorage.getItem('koresuite.urls');
       return raw ? JSON.parse(raw) : null;
     } catch (_) {
       return null;
@@ -239,7 +334,6 @@ export function initChat({ getActiveTab, getContinueContext, insertContinuation,
     ).replace(/\/$/, '');
   }
 
-  /** Derive a stable, URL-safe session ID from the file path. */
   function sessionForPath(path) {
     const sanitized = path.replace(/[^A-Za-z0-9_-]/g, '_').slice(-60);
     return `kc_${sanitized}`;
@@ -249,32 +343,113 @@ export function initChat({ getActiveTab, getContinueContext, insertContinuation,
     return getActiveTab()?.path ?? null;
   }
 
-  // ── Mode bar ─────────────────────────────────────────────────────────────
+  function currentThreadPath() {
+    return currentPath() || _WORKSPACE_THREAD_KEY;
+  }
+
+  function _setModeButtons(mode) {
+    const entries = [
+      ['chat', btnModeChat],
+      ['continue', btnModeContinue],
+      ['explain', btnModeExplain],
+      ['bughunt', btnModeBugHunt],
+      ['refactor', btnModeRefactor],
+      ['tests', btnModeTests],
+    ];
+    for (const [name, button] of entries) {
+      if (!button) continue;
+      button.classList.toggle('is-active', mode === name);
+    }
+  }
 
   function setMode(mode) {
     _mode = mode;
-    btnModeChat.classList.toggle('is-active', mode === 'chat');
-    btnModeContinue.classList.toggle('is-active', mode === 'continue');
-    // Continue mode: hide composer (no text input needed), show status area.
+    _setModeButtons(mode);
     const composer = document.getElementById('chat-composer');
     if (mode === 'continue') {
       composer.hidden = true;
-      _showContinueStatus('idle');
+      _continueControllerApi.onTabChange(currentPath());
     } else {
       composer.hidden = false;
-      _clearContinueStatus();
+      _continueControllerApi.clearStatus?.();
     }
     _save();
   }
 
-  btnModeChat.addEventListener('click', () => setMode('chat'));
-  btnModeContinue.addEventListener('click', () => {
-    setMode('continue');
-    // Immediately run a continuation if a file is open.
-    void _runContinue();
+  function _scrollBottom() {
+    _threadUI.scrollBottom();
+  }
+
+  function _appendThinking(label = 'Kore is thinking') {
+    return _threadUI.appendThinking(label);
+  }
+
+  function _appendLivePre() {
+    return _threadUI.appendLivePre();
+  }
+
+  function renderThread(path) {
+    _threadUI.renderThread(path, path ? (_threads.get(path) ?? []) : []);
+  }
+
+  _continueControllerApi = createContinueModeController({
+    thread,
+    btnModeContinue,
+    getContinueContext,
+    insertContinuation,
+    agentBase,
+    getCurrentPath: currentPath,
+    setMode,
+    setGenerating: _setGenerating,
+    save: _save,
+    consumeManualStop: _consumeManualStop,
+    isTransientStreamInterrupt: _isTransientStreamInterrupt,
+    errorText: _errorText,
+    safeCancelReader: _safeCancelReader,
+    setActiveReader: (reader) => {
+      _activeReader = reader;
+    },
   });
 
-  // ── Toggle ───────────────────────────────────────────────────────────────
+  btnModeChat?.addEventListener('click', () => setMode('chat'));
+  btnModeContinue?.addEventListener('click', () => {
+    setMode('continue');
+    void _continueControllerApi.runContinue();
+  });
+  btnModeExplain?.addEventListener('click', () => setMode('explain'));
+  btnModeBugHunt?.addEventListener('click', () => setMode('bughunt'));
+  btnModeRefactor?.addEventListener('click', () => setMode('refactor'));
+  btnModeTests?.addEventListener('click', () => setMode('tests'));
+
+  btnChatRetry?.addEventListener('click', () => {
+    const path = currentPath();
+    if (!path || _activeReader) return;
+    const last = _lastUserMessage(path);
+    if (!last) {
+      _localAssistantMessage(path, 'No previous user prompt to retry for this file thread.');
+      return;
+    }
+    void _send(last, { appendUserMessage: false });
+  });
+
+  btnChatClear?.addEventListener('click', () => {
+    const path = currentPath();
+    if (!path) return;
+    _clearThread(path);
+  });
+
+  btnChatStop?.addEventListener('click', () => {
+    if (!_activeReader) return;
+    _manualStopRequested = true;
+    _safeCancelReader(_activeReader);
+    _activeReader = null;
+  });
+
+  btnWorkspaceContext?.addEventListener('click', () => {
+    _workspaceContextEnabled = !_workspaceContextEnabled;
+    _saveWorkspaceContextEnabled(_workspaceContextEnabled);
+    _renderWorkspaceContextToggle();
+  });
 
   aiBtn.addEventListener('click', () => {
     const nowOpen = panel.hidden;
@@ -309,7 +484,6 @@ export function initChat({ getActiveTab, getContinueContext, insertContinuation,
 
   document.addEventListener('mouseup', _stopResizeDrag);
 
-  // Alt+A keyboard shortcut.
   document.addEventListener('keydown', (e) => {
     if (e.altKey && e.key === 'a') {
       e.preventDefault();
@@ -317,28 +491,39 @@ export function initChat({ getActiveTab, getContinueContext, insertContinuation,
     }
   });
 
-  // Refresh and resume when the page regains focus/visibility after switching tabs/apps.
   document.addEventListener('visibilitychange', () => {
     if (document.hidden || panel.hidden) return;
     _syncThinkingNote();
     void _resumePendingForPath(currentPath());
-    void _resumeContinueIfNeeded();
+    void _continueControllerApi.resumeContinueIfNeeded();
   });
 
   window.addEventListener('focus', () => {
     if (panel.hidden) return;
     _syncThinkingNote();
     void _resumePendingForPath(currentPath());
-    void _resumeContinueIfNeeded();
+    void _continueControllerApi.resumeContinueIfNeeded();
   });
 
-  // ── Submit ───────────────────────────────────────────────────────────────
-
   input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      void _send();
+      return;
+    }
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       void _send();
     }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    if (!_isGenerating || !_activeReader) return;
+    e.preventDefault();
+    _manualStopRequested = true;
+    _safeCancelReader(_activeReader);
+    _activeReader = null;
   });
 
   sendBtn.addEventListener('click', () => void _send());
@@ -349,8 +534,8 @@ export function initChat({ getActiveTab, getContinueContext, insertContinuation,
     if (!runId) return;
 
     const base = agentBase();
-    const thinkingEl = _appendThinking('Resuming response…');
-    sendBtn.disabled = true;
+    const thinkingEl = _appendThinking('Resuming response...');
+    _setGenerating(true);
 
     try {
       const reply = await _streamResponse(base, runId, thinkingEl);
@@ -361,6 +546,11 @@ export function initChat({ getActiveTab, getContinueContext, insertContinuation,
       renderThread(path);
     } catch (err) {
       thinkingEl?.remove();
+      if (_consumeManualStop()) {
+        _clearPending(path);
+        _localAssistantMessage(path, 'Generation stopped.');
+        return;
+      }
       const recovered = await _recoverAssistantFromHistory(path);
       if (recovered) {
         _clearPending(path);
@@ -374,7 +564,7 @@ export function initChat({ getActiveTab, getContinueContext, insertContinuation,
       _pushMessage(path, { role: 'assistant', text: `Error: ${_errorText(err)}` });
       renderThread(path);
     } finally {
-      sendBtn.disabled = false;
+      _setGenerating(false);
       _activeReader = null;
       _syncThinkingNote();
       _scrollBottom();
@@ -391,7 +581,7 @@ export function initChat({ getActiveTab, getContinueContext, insertContinuation,
       const payload = await resp.json();
       const turns = Array.isArray(payload?.turns) ? payload.turns : [];
       let assistantText = null;
-      for (let i = turns.length - 1; i >= 0; i--) {
+      for (let i = turns.length - 1; i >= 0; i -= 1) {
         const turn = turns[i];
         if (turn?.role === 'assistant' && typeof turn?.content === 'string' && turn.content.trim()) {
           assistantText = turn.content;
@@ -412,53 +602,164 @@ export function initChat({ getActiveTab, getContinueContext, insertContinuation,
     }
   }
 
-  async function _send() {
+  function _handleSlashCommand(path, text) {
+    if (!text.startsWith('/')) return false;
+    const normalized = text.slice(1).trim().replaceAll('\n', ' ').replaceAll('\t', ' ');
+    const [cmdRaw, ...rest] = normalized.split(' ').filter(Boolean);
+    const cmd = (cmdRaw || '').toLowerCase();
+    const arg = rest.join(' ').toLowerCase();
+    if (!cmd) return false;
+
+    const modeNames = ['chat', 'continue', 'explain', 'bughunt', 'refactor', 'tests'];
+    if (cmd === 'help') {
+      _localAssistantMessage(path, 'Commands: /help, /clear, /retry, /workspace <on|off>, /mode <chat|continue|explain|bughunt|refactor|tests>, /chat, /continue, /explain, /bughunt, /refactor, /tests');
+      return true;
+    }
+    if (cmd === 'clear') {
+      _clearThread(path);
+      return true;
+    }
+    if (cmd === 'retry') {
+      const last = _lastUserMessage(path);
+      if (last) void _send(last, { appendUserMessage: false });
+      else _localAssistantMessage(path, 'No previous user prompt to retry for this file thread.');
+      return true;
+    }
+    if (cmd === 'workspace') {
+      if (arg === 'on' || arg === 'off') {
+        _workspaceContextEnabled = arg === 'on';
+        _saveWorkspaceContextEnabled(_workspaceContextEnabled);
+        _renderWorkspaceContextToggle();
+        _localAssistantMessage(path, `Workspace context ${_workspaceContextEnabled ? 'enabled' : 'disabled'}.`);
+      } else {
+        _localAssistantMessage(path, 'Use /workspace on or /workspace off');
+      }
+      return true;
+    }
+    if (cmd === 'mode') {
+      if (modeNames.includes(arg)) {
+        if (arg === 'continue') {
+          setMode('continue');
+          void _continueControllerApi.runContinue();
+        } else {
+          setMode(arg);
+        }
+      } else {
+        _localAssistantMessage(path, 'Unknown mode. Use /mode chat|continue|explain|bughunt|refactor|tests');
+      }
+      return true;
+    }
+    if (modeNames.includes(cmd)) {
+      if (cmd === 'continue') {
+        setMode('continue');
+        void _continueControllerApi.runContinue();
+      } else {
+        setMode(cmd);
+      }
+      return true;
+    }
+    _localAssistantMessage(path, `Unknown command: /${cmd}. Use /help.`);
+    return true;
+  }
+
+  async function _send(overrideText = null, opts = {}) {
+    const appendUserMessage = opts.appendUserMessage !== false;
     _refreshSelectionFromEditor();
-    const text = input.value.trim();
-    const path = currentPath();
-    if (!text || !path || _activeReader) return;
+    const text = (overrideText ?? input.value).trim();
+    const activePath = currentPath();
+    const path = activePath || _WORKSPACE_THREAD_KEY;
+    if (!text || _activeReader) return;
+    if (overrideText == null && _handleSlashCommand(path, text)) {
+      input.value = '';
+      _autosize(input);
+      return;
+    }
     if (_pendingRuns.has(path)) {
       void _resumePendingForPath(path);
       return;
     }
 
-    const sel = _currentSelection;
-    const prompt = sel
-      ? `The following code is selected in the editor:\n\`\`\`\n${sel}\n\`\`\`\n\n${text}`
-      : text;
+    const prompt = await buildPromptByMode({
+      mode: _mode,
+      userText: text,
+      path: activePath || '.',
+      selection: _currentSelection,
+      cursor: _currentCursor,
+      workspaceContextEnabled: _workspaceContextEnabled,
+    });
 
-    input.value = '';
-    _autosize(input);
+    if (overrideText == null) {
+      input.value = '';
+      _autosize(input);
+    }
     _currentSelection = null;
     _updateSelectionChip();
 
-    _pushMessage(path, { role: 'user', text });
+    if (appendUserMessage) {
+      _pushMessage(path, { role: 'user', text });
+    }
     renderThread(path);
 
     const thinkingEl = _appendThinking();
-    sendBtn.disabled = true;
+    _manualStopRequested = false;
+    _setGenerating(true);
 
     try {
       const sessionId = sessionForPath(path);
-      const base      = agentBase();
+      const base = agentBase();
 
-      const resp = await fetch(`${base}/sessions/${encodeURIComponent(sessionId)}/prompt`, {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ prompt }),
-      });
+      const _startPromptRun = async (runPrompt) => {
+        const resp = await fetch(`${base}/sessions/${encodeURIComponent(sessionId)}/prompt`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt: runPrompt }),
+        });
+        if (!resp.ok) throw new Error(`${resp.status} ${resp.statusText}`);
+        const payload = await resp.json();
+        return payload.run_id;
+      };
 
-      if (!resp.ok) throw new Error(`${resp.status} ${resp.statusText}`);
-
-      const { run_id } = await resp.json();
-      _setPending(path, run_id);
-      const reply = await _streamResponse(base, run_id, thinkingEl);
-
+      let runId = await _startPromptRun(prompt);
+      _setPending(path, runId);
+      let finalReply = await _streamResponse(base, runId, thinkingEl);
       _clearPending(path);
-      _pushMessage(path, { role: 'assistant', text: reply });
+
+      for (let turn = 0; turn < _MAX_AGENT_TOOL_TURNS; turn += 1) {
+        const envelope = extractAgentEnvelope(finalReply);
+        const requestedTools = Array.isArray(envelope?.tool_requests) ? envelope.tool_requests : [];
+        const shouldContinue = envelope?.kind === 'tool_requests' && envelope?.next === 'continue' && requestedTools.length > 0;
+        if (!shouldContinue) break;
+
+        const toolResults = await executeAgentToolRequests({
+          toolRequests: requestedTools,
+          activePath,
+          workspaceContextEnabled: _workspaceContextEnabled,
+          errorText: _errorText,
+        });
+        const followupPrompt = buildAgentToolFollowupPrompt({
+          mode: _mode,
+          path: activePath || '.',
+          userText: text,
+          previousResponse: finalReply,
+          toolResults,
+        });
+
+        const followThinking = _appendThinking(`Agent tool step ${turn + 1}...`);
+        runId = await _startPromptRun(followupPrompt);
+        _setPending(path, runId);
+        finalReply = await _streamResponse(base, runId, followThinking);
+        _clearPending(path);
+      }
+
+      _pushMessage(path, { role: 'assistant', text: finalReply });
       renderThread(path);
     } catch (err) {
       thinkingEl?.remove();
+      if (_consumeManualStop()) {
+        _clearPending(path);
+        _localAssistantMessage(path, 'Generation stopped.');
+        return;
+      }
       const recovered = await _recoverAssistantFromHistory(path);
       if (recovered) {
         _clearPending(path);
@@ -472,320 +773,24 @@ export function initChat({ getActiveTab, getContinueContext, insertContinuation,
       _pushMessage(path, { role: 'assistant', text: `Error: ${_errorText(err)}` });
       renderThread(path);
     } finally {
-      sendBtn.disabled = false;
-      _activeReader    = null;
+      _setGenerating(false);
+      _activeReader = null;
       _syncThinkingNote();
       _scrollBottom();
     }
   }
 
-  // ── Continue mode ────────────────────────────────────────────────────────
-
-  let _continueStatus = null;  // the current status element in the thread
-  let _continueController = null;
-  let _continuePreviewPath = null;
-  let _continuePendingRunId = null;
-  let _continuePendingContext = null;
-  let _continueResumeInFlight = false;
-
-  function _continueStateSnapshot() {
-    if (!_continueInProgress && !_continuePendingRunId) {
-      return null;
-    }
-    return {
-      inProgress: Boolean(_continueInProgress),
-      pendingRunId: _continuePendingRunId ?? null,
-      pendingContext: _continuePendingContext ?? null,
-      previewPath: _continuePreviewPath ?? null,
-    };
-  }
-
-  function _showContinueStatus(state, extra) {
-    _clearContinueStatus();
-    const el = document.createElement('div');
-    el.id = 'continue-status';
-    if (state === 'idle') {
-      el.className = 'continue-status continue-status--idle';
-      el.textContent = 'Click Continue to generate from cursor.';
-    } else if (state === 'thinking') {
-      el.className = 'continue-status continue-status--thinking';
-      el.innerHTML = 'Generating\u2026 <span class="chat-thinking-dots"><span>\u2022</span><span>\u2022</span><span>\u2022</span></span>';
-    } else if (state === 'preview') {
-      el.className = 'continue-status continue-status--preview';
-      el.innerHTML =
-        '<button id="btn-continue-accept" class="continue-btn continue-btn--accept">Accept</button>' +
-        '<button id="btn-continue-cancel" class="continue-btn continue-btn--dismiss">Dismiss</button>';
-    } else if (state === 'accepted') {
-      el.className = 'continue-status continue-status--accepted';
-      el.textContent = `Accepted. ${extra ?? ''}`;
-    } else if (state === 'cancelled') {
-      el.className = 'continue-status continue-status--cancelled';
-      el.textContent = 'Cancelled.';
-    } else if (state === 'error') {
-      el.className = 'continue-status continue-status--error';
-      el.textContent = `Error: ${extra ?? 'unknown'}`;
-    }
-    thread.appendChild(el);
-    _continueStatus = el;
-    thread.scrollTop = thread.scrollHeight;
-  }
-
-  function _clearContinueStatus() {
-    _continueStatus?.remove();
-    _continueStatus = null;
-  }
-
-  function _clearContinuePreviewState() {
-    _continueController = null;
-    _continuePreviewPath = null;
-  }
-
-  function _clearContinuePendingRun() {
-    _continuePendingRunId = null;
-    _continuePendingContext = null;
-    _continueResumeInFlight = false;
-    _save();
-  }
-
-  function _bindContinuePreviewButtons() {
-    const acceptBtn = document.getElementById('btn-continue-accept');
-    const cancelBtn = document.getElementById('btn-continue-cancel');
-    if (!_continueController || !acceptBtn || !cancelBtn) {
-      return;
-    }
-    acceptBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      _continueController?.accept();
-    });
-    cancelBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      _continueController?.cancel();
-    });
-  }
-
-  async function _runContinue() {
-    if (_activeReader) return;
-    const ctx = getContinueContext?.();
-    if (!ctx) {
-      _showContinueStatus('error', 'No file open.');
-      return;
-    }
-
-    _showContinueStatus('thinking');
-    _continueInProgress = true;
-    btnModeContinue.disabled = true;
-
-    // One shared workspace session for Continue actions.
-    const sessionId = 'kc_continue';
-    const base      = agentBase();
-
-    const systemNote = [
-      'You are a code completion assistant.',
-      'You will be given code before and after a cursor position.',
-      'Reply with ONLY the code to insert at the cursor so that it fits naturally between the prefix and suffix.',
-      'Do not repeat any of the provided code.',
-      'Do not include markdown fences, explanations, or commentary.',
-      'Output only the raw code to insert at the cursor.',
-    ].join(' ');
-
-    const prompt = ctx.suffix?.trim()
-      ? `${systemNote}\n\n[CODE BEFORE CURSOR]\n\`\`\`\n${ctx.text}\n\`\`\`\n\n[CODE AFTER CURSOR]\n\`\`\`\n${ctx.suffix}\n\`\`\``
-      : `${systemNote}\n\n\`\`\`\n${ctx.text}\n\`\`\``;
-
-    try {
-      const resp = await fetch(`${base}/sessions/${encodeURIComponent(sessionId)}/prompt`, {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ prompt }),
-      });
-      if (!resp.ok) throw new Error(`${resp.status} ${resp.statusText}`);
-
-      const { run_id } = await resp.json();
-      _continuePendingRunId = run_id;
-      _continuePendingContext = { path: ctx.path, offset: ctx.offset };
-      _save();
-      const reply = await _streamContinue(base, run_id);
-      _clearContinuePendingRun();
-
-      if (!reply.trim()) {
-        _showContinueStatus('cancelled', '');
-        _showContinueStatus('error', 'Empty response.');
-        return;
-      }
-
-      // Strip any accidental leading newline that appears when the model
-      // outputs a blank first line before the code.
-      const insertion = reply.replace(/^\n/, '');
-      const insertionLineCount = insertion.split('\n').length;
-      const continuePath = ctx.path;
-
-      _continueInProgress = false;
-      _showContinueStatus('preview');
-      _continueController = insertContinuation(insertion, { path: continuePath, offset: ctx.offset });
-      _continuePreviewPath = continuePath;
-      _save();
-      _bindContinuePreviewButtons();
-
-      // Replace the preview status once the user decides.
-      const origAccept = _continueController.accept.bind(_continueController);
-      const origCancel = _continueController.cancel.bind(_continueController);
-
-      _continueController.accept = () => {
-        origAccept();
-        _continueInProgress = false;
-        _showContinueStatus('accepted', `${insertionLineCount} line(s) inserted.`);
-        _clearContinuePreviewState();
-        _save();
-        btnModeContinue.disabled = false;
-        setTimeout(() => setMode('chat'), 1500);
-      };
-      _continueController.cancel = () => {
-        origCancel();
-        _continueInProgress = false;
-        _showContinueStatus('cancelled');
-        _clearContinuePreviewState();
-        _save();
-        btnModeContinue.disabled = false;
-        setTimeout(() => setMode('chat'), 1500);
-      };
-
-    } catch (err) {
-      if (_isTransientStreamInterrupt(err) && _continuePendingRunId) {
-        _continueInProgress = true;
-        _save();
-        _showContinueStatus('thinking');
-        return;
-      }
-      _continueInProgress = false;
-      _clearContinuePendingRun();
-      _save();
-      _showContinueStatus('error', _errorText(err));
-      btnModeContinue.disabled = false;
-      _activeReader = null;
-    }
-  }
-
-  async function _resumeContinueIfNeeded() {
-    if (!_continueInProgress || !_continuePendingRunId || _activeReader || _continueResumeInFlight) {
-      return;
-    }
-    _continueResumeInFlight = true;
-    const base = agentBase();
-    try {
-      const reply = await _streamContinue(base, _continuePendingRunId);
-      _clearContinuePendingRun();
-      if (!reply.trim()) {
-        _continueInProgress = false;
-        _showContinueStatus('error', 'Continue returned no content.');
-        btnModeContinue.disabled = false;
-        return;
-      }
-
-      const insertion = reply.replace(/^\n/, '');
-      const insertionLineCount = insertion.split('\n').length;
-      const continuePath = _continuePendingContext?.path ?? currentPath();
-      const continueOffset = typeof _continuePendingContext?.offset === 'number'
-        ? _continuePendingContext.offset
-        : undefined;
-
-      _continueInProgress = false;
-      _showContinueStatus('preview');
-      _continueController = insertContinuation(insertion, { path: continuePath, offset: continueOffset });
-      _continuePreviewPath = continuePath;
-      _save();
-      _bindContinuePreviewButtons();
-
-      const origAccept = _continueController.accept.bind(_continueController);
-      const origCancel = _continueController.cancel.bind(_continueController);
-
-      _continueController.accept = () => {
-        origAccept();
-        _continueInProgress = false;
-        _showContinueStatus('accepted', `${insertionLineCount} line(s) inserted.`);
-        _clearContinuePreviewState();
-        _save();
-        btnModeContinue.disabled = false;
-        setTimeout(() => setMode('chat'), 1500);
-      };
-      _continueController.cancel = () => {
-        origCancel();
-        _continueInProgress = false;
-        _showContinueStatus('cancelled');
-        _clearContinuePreviewState();
-        _save();
-        btnModeContinue.disabled = false;
-        setTimeout(() => setMode('chat'), 1500);
-      };
-    } catch (err) {
-      if (_isTransientStreamInterrupt(err)) {
-        _continueInProgress = true;
-        _save();
-        _showContinueStatus('thinking');
-      } else {
-        _continueInProgress = false;
-        _clearContinuePendingRun();
-        _save();
-        _showContinueStatus('error', _errorText(err));
-        btnModeContinue.disabled = false;
-      }
-    } finally {
-      _continueResumeInFlight = false;
-    }
-  }
-
-  async function _streamContinue(base, runId) {
-    const response = await fetch(`${base}/runs/${encodeURIComponent(runId)}/stream`);
-    if (!response.ok) throw new Error(`Stream ${response.status}`);
-
-    const reader  = response.body.getReader();
-    _activeReader = reader;
-    const decoder = new TextDecoder();
-    let   buffer  = '';
-    let   reply   = '';
-
-    try {
-      outer: while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop();
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue;
-          const raw = line.slice(6).trim();
-          if (!raw) continue;
-          let event;
-          try { event = JSON.parse(raw); } catch { continue; }
-          if (event.type === 'response') reply += event.response ?? '';
-          else if (event.type === 'done') break outer;
-        }
-      }
-    } catch (err) {
-      if (!(reply.trim() && _isTransientStreamInterrupt(err))) {
-        throw err;
-      }
-    } finally {
-      _safeCancelReader(reader);
-      _activeReader = null;
-    }
-    return reply;
-  }
-
-  // ── SSE streaming (chat mode) ────────────────────────────────────────────
-
   async function _streamResponse(base, runId, thinkingEl) {
     const response = await fetch(`${base}/runs/${encodeURIComponent(runId)}/stream`);
     if (!response.ok) throw new Error(`Stream ${response.status}`);
 
-    const reader  = response.body.getReader();
+    const reader = response.body.getReader();
     _activeReader = reader;
     const decoder = new TextDecoder();
-    let   buffer  = '';
-    let   reply   = '';
+    let buffer = '';
+    let reply = '';
 
     thinkingEl?.remove();
-
-    // A live <pre> element that updates as tokens arrive.
     const liveEl = _appendLivePre();
 
     try {
@@ -795,14 +800,18 @@ export function initChat({ getActiveTab, getContinueContext, insertContinuation,
 
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split('\n');
-        buffer = lines.pop(); // hold incomplete last line
+        buffer = lines.pop();
 
         for (const line of lines) {
           if (!line.startsWith('data: ')) continue;
           const raw = line.slice(6).trim();
           if (!raw) continue;
           let event;
-          try { event = JSON.parse(raw); } catch { continue; }
+          try {
+            event = JSON.parse(raw);
+          } catch {
+            continue;
+          }
 
           if (event.type === 'response') {
             reply += event.response ?? '';
@@ -825,197 +834,11 @@ export function initChat({ getActiveTab, getContinueContext, insertContinuation,
     return reply;
   }
 
-  // ── Thread rendering ──────────────────────────────────────────────────────
-
   function _pushMessage(path, msg) {
     if (!_threads.has(path)) _threads.set(path, []);
     _threads.get(path).push(msg);
     _save();
   }
-
-  function renderThread(path) {
-    thread.innerHTML = '';
-    if (!path) return;
-
-    const msgs = _threads.get(path) ?? [];
-
-    if (!msgs.length) {
-      const empty = document.createElement('div');
-      empty.id = 'chat-empty';
-      empty.textContent = 'Ask about this file\u2026';
-      thread.appendChild(empty);
-      return;
-    }
-
-    for (let i = 0; i < msgs.length; i++) {
-      const msg = msgs[i];
-      thread.appendChild(_buildMsgEl(msg));
-
-      // Divider after each completed assistant reply (not at end).
-      if (msg.role === 'assistant' && i < msgs.length - 1) {
-        const div = document.createElement('div');
-        div.className = 'chat-divider';
-        thread.appendChild(div);
-      }
-    }
-
-    _scrollBottom();
-  }
-
-  function _buildMsgEl(msg) {
-    const el = document.createElement('div');
-
-    if (msg.role === 'user') {
-      el.className = 'chat-msg chat-msg--user';
-      const bubble = document.createElement('div');
-      bubble.className = 'bubble';
-      bubble.textContent = msg.text;
-      el.appendChild(bubble);
-    } else {
-      el.className = 'chat-msg chat-msg--assistant';
-      const avatar = document.createElement('div');
-      avatar.className = 'avatar';
-      avatar.textContent = 'Kore';
-      const body = document.createElement('div');
-      body.className = 'body';
-      body.innerHTML = _renderAssistantText(msg.text);
-      const codeText = _extractCodeForActions(msg.text);
-      el.appendChild(avatar);
-      el.appendChild(body);
-      if (codeText) {
-        el.appendChild(_buildAssistantActions(codeText));
-      }
-    }
-
-    return el;
-  }
-
-  function _appendThinking(label = 'Kore is thinking') {
-    const el = document.createElement('div');
-    el.className = 'chat-thinking';
-    el.innerHTML = `${_esc(label)} <span class="chat-thinking-dots"><span>\u2022</span><span>\u2022</span><span>\u2022</span></span>`;
-    thread.appendChild(el);
-    _scrollBottom();
-    return el;
-  }
-
-  function _appendLivePre() {
-    const el     = document.createElement('div');
-    el.className = 'chat-msg chat-msg--assistant';
-    const avatar = document.createElement('div');
-    avatar.className = 'avatar';
-    avatar.textContent = 'Kore';
-    const body   = document.createElement('div');
-    body.className = 'body';
-    const pre    = document.createElement('pre');
-    pre.style.cssText = 'margin:0;padding:0;background:none;border:none;white-space:pre-wrap;word-break:break-word;';
-    body.appendChild(pre);
-    el.appendChild(avatar);
-    el.appendChild(body);
-    thread.appendChild(el);
-    _scrollBottom();
-    return pre;
-  }
-
-  function _extractCodeForActions(text) {
-    const blocks = [];
-    const pattern = /```[^\n]*\n?([\s\S]*?)```/g;
-    let match;
-    while ((match = pattern.exec(text)) !== null) {
-      const snippet = (match[1] ?? '').trim();
-      if (snippet) blocks.push(snippet);
-    }
-    if (!blocks.length) return null;
-    return blocks.join('\n\n');
-  }
-
-  async function _copyText(text, btn) {
-    const prev = btn.textContent;
-    try {
-      await navigator.clipboard.writeText(text);
-      btn.textContent = 'copied';
-    } catch {
-      const ta = document.createElement('textarea');
-      ta.value = text;
-      ta.setAttribute('readonly', 'readonly');
-      ta.style.position = 'fixed';
-      ta.style.opacity = '0';
-      document.body.appendChild(ta);
-      ta.select();
-      try {
-        document.execCommand('copy');
-        btn.textContent = 'copied';
-      } finally {
-        document.body.removeChild(ta);
-      }
-    }
-    setTimeout(() => {
-      btn.textContent = prev;
-    }, 1000);
-  }
-
-  function _buildAssistantActions(codeText) {
-    const row = document.createElement('div');
-    row.className = 'chat-msg-actions';
-
-    const copyBtn = document.createElement('button');
-    copyBtn.type = 'button';
-    copyBtn.className = 'kcui-tag kcui-tag--info';
-    copyBtn.textContent = 'copy';
-    copyBtn.addEventListener('click', () => {
-      void _copyText(codeText, copyBtn);
-    });
-
-    const insertBtn = document.createElement('button');
-    insertBtn.type = 'button';
-    insertBtn.className = 'kcui-tag kcui-tag--accent';
-    insertBtn.textContent = 'insert';
-    insertBtn.disabled = typeof insertFromChat !== 'function';
-    insertBtn.addEventListener('click', () => {
-      if (typeof insertFromChat !== 'function') return;
-      const inserted = insertFromChat(codeText);
-      const prev = insertBtn.textContent;
-      insertBtn.textContent = inserted ? 'inserted' : 'no file';
-      setTimeout(() => {
-        insertBtn.textContent = prev;
-      }, 1000);
-    });
-
-    row.appendChild(copyBtn);
-    row.appendChild(insertBtn);
-    return row;
-  }
-
-  function _scrollBottom() {
-    thread.scrollTop = thread.scrollHeight;
-  }
-
-  // ── Text renderer ─────────────────────────────────────────────────────────
-  // Splits on fenced code blocks. Everything else is emitted as <p> elements.
-
-  function _esc(s) {
-    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  }
-
-  function _renderAssistantText(text) {
-    return text
-      .split(/(```[\s\S]*?```)/g)
-      .map((part) => {
-        if (part.startsWith('```')) {
-          const inner = part.replace(/^```[^\n]*\n?/, '').replace(/```$/, '');
-          return `<pre>${_esc(inner)}</pre>`;
-        }
-        return part
-          .split(/\n{2,}/)
-          .map((para) => para.trim())
-          .filter(Boolean)
-          .map((para) => `<p>${_esc(para)}</p>`)
-          .join('');
-      })
-      .join('');
-  }
-
-  // ── Auto-size textarea ────────────────────────────────────────────────────
 
   function _autosize(el) {
     el.style.height = 'auto';
@@ -1023,8 +846,7 @@ export function initChat({ getActiveTab, getContinueContext, insertContinuation,
   }
 
   input.addEventListener('input', () => _autosize(input));
-
-  // ── Restore persisted state ───────────────────────────────────────────────
+  _renderWorkspaceContextToggle();
 
   (function _restore() {
     _setPanelWidth(_readSavedWidth());
@@ -1032,12 +854,13 @@ export function initChat({ getActiveTab, getContinueContext, insertContinuation,
 
     const saved = _loadState();
     if (!saved) return;
-    // Restore threads.
+
     if (saved.threads) {
       for (const [path, msgs] of Object.entries(saved.threads)) {
         if (Array.isArray(msgs) && msgs.length) _threads.set(path, msgs);
       }
     }
+
     if (saved.pendingRuns && typeof saved.pendingRuns === 'object') {
       for (const [path, runId] of Object.entries(saved.pendingRuns)) {
         if (typeof path === 'string' && typeof runId === 'string' && runId) {
@@ -1045,53 +868,37 @@ export function initChat({ getActiveTab, getContinueContext, insertContinuation,
         }
       }
     }
+
     if (saved.continueState && typeof saved.continueState === 'object') {
-      const c = saved.continueState;
-      _continueInProgress = Boolean(c.inProgress);
-      _continuePendingRunId = typeof c.pendingRunId === 'string' && c.pendingRunId ? c.pendingRunId : null;
-      _continuePendingContext = c.pendingContext && typeof c.pendingContext === 'object' ? c.pendingContext : null;
-      _continuePreviewPath = typeof c.previewPath === 'string' && c.previewPath ? c.previewPath : null;
+      _continueControllerApi.restoreState(saved.continueState);
     }
+
     _syncThinkingNote();
-    // Restore panel open state.
+
     if (saved.open) {
       _setPanelOpen(true);
     }
-    // Restore mode (thread render deferred until onTabChange fires after restoreTabs).
-    if (saved.mode === 'continue' || saved.mode === 'chat') {
+
+    if (['continue', 'chat', 'explain', 'bughunt', 'refactor', 'tests'].includes(saved.mode)) {
       setMode(saved.mode);
-      if (saved.mode === 'continue' && _continueInProgress) {
-        _showContinueStatus('thinking');
-        void _resumeContinueIfNeeded();
+      if (saved.mode === 'continue' && _continueControllerApi.isInProgress()) {
+        void _continueControllerApi.resumeContinueIfNeeded();
       }
     }
   })();
 
-  // ── Public API ────────────────────────────────────────────────────────────
-
   return {
-    /** Call when the active editor tab changes so the thread re-renders. */
     onTabChange(path) {
       if (panel.hidden) return;
       _refreshSelectionFromEditor();
       _syncThinkingNote();
-      if (_mode === 'chat') {
+      if (_mode !== 'continue') {
         renderThread(path);
         void _resumePendingForPath(path);
-      }
-      else if (_continueInProgress) {
-        _showContinueStatus('thinking');
-        void _resumeContinueIfNeeded();
-      } else if (_continueController && path && _continuePreviewPath === path) {
-        _showContinueStatus('preview');
-        _bindContinuePreviewButtons();
-      } else if (_continueController && _continuePreviewPath && path !== _continuePreviewPath) {
-        _showContinueStatus('error', 'Continue preview is attached to a different file tab. Return there to Accept or Dismiss.');
       } else {
-        _showContinueStatus('idle');
+        _continueControllerApi.onTabChange(path);
       }
     },
-    /** Call when the editor selection changes. */
     onSelectionChange(payload) {
       if (payload && typeof payload === 'object') {
         _currentSelection = payload.text ?? null;

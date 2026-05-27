@@ -139,6 +139,31 @@ def _flatten_suite_config(raw: dict) -> dict:
     return flattened
 
 
+def _merge_runtime_config_layer(merged: dict, layer: dict) -> None:
+    """Merge one flattened suite config layer into the runtime config.
+
+    Most keys are last-write-wins, but the private service map used for MCP
+    service-reference resolution must be merged so partial local overrides do
+    not discard the default suite service ports.
+    """
+    if not isinstance(layer, dict):
+        return
+
+    layer_copy = dict(layer)
+    layer_services = layer_copy.pop("_suite_services", None)
+    if isinstance(layer_services, dict):
+        merged_services = merged.get("_suite_services")
+        if isinstance(merged_services, dict):
+            merged["_suite_services"] = {**merged_services, **layer_services}
+        else:
+            merged["_suite_services"] = dict(layer_services)
+
+    if "_suite_host" in layer_copy:
+        merged["_suite_host"] = layer_copy.pop("_suite_host")
+
+    merged.update(layer_copy)
+
+
 def _resolve_mcp_service_refs(config: dict) -> None:
     """Resolve service-reference MCP connections to full URLs and clean up private keys.
 
@@ -172,11 +197,11 @@ def load_runtime_config() -> dict:
 
     suite_defaults = get_suite_defaults_file()
     if suite_defaults.exists():
-        merged.update(_flatten_suite_config(_read_json_file(suite_defaults)))
+        _merge_runtime_config_layer(merged, _flatten_suite_config(_read_json_file(suite_defaults)))
 
     suite_local = get_suite_local_file()
     if suite_local.exists():
-        merged.update(_flatten_suite_config(_read_json_file(suite_local)))
+        _merge_runtime_config_layer(merged, _flatten_suite_config(_read_json_file(suite_local)))
 
     # Resolve any MCP connections that use service references instead of hardcoded URLs.
     # This runs after all config layers are merged so local.json port overrides are honoured.

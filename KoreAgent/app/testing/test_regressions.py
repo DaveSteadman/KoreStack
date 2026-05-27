@@ -18,6 +18,7 @@
 #   - skill_executor.py        -- execute_tool_call
 #   - scratchpad.py            -- scratch_save, scratch_load
 # ====================================================================================================
+import json
 import sys
 import tempfile
 import unittest
@@ -32,11 +33,27 @@ CODE_DIR = Path(__file__).resolve().parents[1]
 if str(CODE_DIR) not in sys.path:
     sys.path.insert(0, str(CODE_DIR))
 
+import datasets as datasets_module
 from skill_executor import execute_tool_call
+import datasets_store
 import mcp_client
 from orchestration import _delegate_tls
 from orchestration import delegate_subrun
 from orchestration import OrchestratorConfig
+from datasets import auto_route_tool_result
+from datasets import clear_session_datasets
+from datasets import dataset_drop_where
+from datasets import dataset_expand_full_text
+from datasets import dataset_filter
+from datasets import dataset_get
+from datasets import dataset_inspect
+from datasets import dataset_list
+from datasets import dataset_rename
+from datasets import dataset_save
+from datasets import dataset_write_koredoc
+from datasets import delete_session_datasets
+from datasets import get_persisted_datasets_payload
+from datasets import restore_persisted_datasets
 from prompt_builder import build_system_message
 from scratchpad import scratch_clear
 from scratchpad import get_store
@@ -55,6 +72,7 @@ from skills.WebSearch.web_search_skill import search_web
 from skills.WebResearch.web_research_skill import research_traverse
 from skills.SystemInfo.system_info_skill import get_system_info_string
 from tool_loop import normalize_tool_request
+from tool_loop import _derive_auto_scratch_key
 from input_layer import server as api_module
 from input_layer.routes_sessions import _runtime_config_for_prompt
 from input_layer.slash_command_handlers_testing import _result_counts
@@ -67,9 +85,41 @@ class RegressionTests(unittest.TestCase):
     def setUp(self) -> None:
         self.skills_payload = load_skills_payload(CODE_DIR / "skills" / "skills_catalog.json")
         scratch_clear()
+        delete_session_datasets("dataset_test")
+        delete_session_datasets("dataset_restore")
+        delete_session_datasets("dataset_prompt")
+        delete_session_datasets("dataset_filter")
+        delete_session_datasets("dataset_auto")
+        delete_session_datasets("dataset_paging")
+        delete_session_datasets("dataset_export")
+        delete_session_datasets("dataset_fulltext")
+        clear_session_datasets("dataset_test")
+        clear_session_datasets("dataset_restore")
+        clear_session_datasets("dataset_prompt")
+        clear_session_datasets("dataset_filter")
+        clear_session_datasets("dataset_auto")
+        clear_session_datasets("dataset_paging")
+        clear_session_datasets("dataset_export")
+        clear_session_datasets("dataset_fulltext")
 
     def tearDown(self) -> None:
         scratch_clear()
+        delete_session_datasets("dataset_test")
+        delete_session_datasets("dataset_restore")
+        delete_session_datasets("dataset_prompt")
+        delete_session_datasets("dataset_filter")
+        delete_session_datasets("dataset_auto")
+        delete_session_datasets("dataset_paging")
+        delete_session_datasets("dataset_export")
+        delete_session_datasets("dataset_fulltext")
+        clear_session_datasets("dataset_test")
+        clear_session_datasets("dataset_restore")
+        clear_session_datasets("dataset_prompt")
+        clear_session_datasets("dataset_filter")
+        clear_session_datasets("dataset_auto")
+        clear_session_datasets("dataset_paging")
+        clear_session_datasets("dataset_export")
+        clear_session_datasets("dataset_fulltext")
 
     def test_write_file_writes_system_info_csv(self) -> None:
         user_data_dir = get_user_data_dir()
@@ -251,6 +301,69 @@ class RegressionTests(unittest.TestCase):
         self.assertEqual(servers[0]["name"], "Legacy")
         self.assertEqual(servers[0]["expected_prefix"], "legacy_")
 
+    def test_suite_mcp_service_refs_resolve_urls(self) -> None:
+        config = workspace_utils_module._flatten_suite_config({
+            "network": {"host": "127.0.0.1"},
+            "services": {
+                "koredatagateway": {"port": 9603},
+                "koredocs": {"port": 9610},
+                "koregraph": {"port": 9608},
+            },
+            "mcp": {
+                "connections": [
+                    {"name": "KoreData", "service": "koredatagateway", "path": "/mcp", "expected_prefix": "koredata_"},
+                    {"name": "KoreDocs", "service": "koredocs", "path": "/mcp", "expected_prefix": "koredocs_"},
+                ]
+            },
+        })
+
+        workspace_utils_module._resolve_mcp_service_refs(config)
+
+        self.assertEqual(
+            config["mcp_connections"],
+            [
+                {"name": "KoreData", "service": "koredatagateway", "path": "/mcp", "expected_prefix": "koredata_", "url": "http://127.0.0.1:9603/mcp"},
+                {"name": "KoreDocs", "service": "koredocs", "path": "/mcp", "expected_prefix": "koredocs_", "url": "http://127.0.0.1:9610/mcp"},
+            ],
+        )
+
+    def test_runtime_config_merge_keeps_default_service_ports_for_mcp_refs(self) -> None:
+        merged: dict = {}
+        workspace_utils_module._merge_runtime_config_layer(
+            merged,
+            workspace_utils_module._flatten_suite_config({
+                "network": {"host": "127.0.0.1"},
+                "services": {
+                    "koredatagateway": {"port": 9603},
+                    "koredocs": {"port": 9610},
+                },
+                "mcp": {
+                    "connections": [
+                        {"name": "KoreData", "service": "koredatagateway", "path": "/mcp", "expected_prefix": "koredata_"},
+                        {"name": "KoreDocs", "service": "koredocs", "path": "/mcp", "expected_prefix": "koredocs_"},
+                    ]
+                },
+            }),
+        )
+        workspace_utils_module._merge_runtime_config_layer(
+            merged,
+            workspace_utils_module._flatten_suite_config({
+                "services": {
+                    "koreagent": {"port": 9601},
+                }
+            }),
+        )
+
+        workspace_utils_module._resolve_mcp_service_refs(merged)
+
+        self.assertEqual(
+            merged["mcp_connections"],
+            [
+                {"name": "KoreData", "service": "koredatagateway", "path": "/mcp", "expected_prefix": "koredata_", "url": "http://127.0.0.1:9603/mcp"},
+                {"name": "KoreDocs", "service": "koredocs", "path": "/mcp", "expected_prefix": "koredocs_", "url": "http://127.0.0.1:9610/mcp"},
+            ],
+        )
+
     def test_mcp_connection_error_formatter_unwraps_exception_groups(self) -> None:
         inner = ConnectionRefusedError("connection refused")
         outer = ExceptionGroup("unhandled errors in a TaskGroup", [inner])
@@ -401,12 +514,358 @@ class RegressionTests(unittest.TestCase):
         mock_delete.assert_called_once_with("/conversations/7")
         self.assertEqual(get_store(session_id), {})
 
+    def test_dataset_rename_preserves_dataset_id(self) -> None:
+        session_id = "dataset_test"
+        dataset_save(
+            "feed_items_raw",
+            [
+                {"title": "Alpha", "url": "https://example.com/a", "source": "Example"},
+                {"title": "Beta", "url": "https://example.com/b", "source": "Example"},
+            ],
+            session_id=session_id,
+        )
+
+        before = json.loads(dataset_inspect("feed_items_raw", session_id=session_id))
+        rename_result = dataset_rename("feed_items_raw", "feed_items_relevant", session_id=session_id)
+        after = json.loads(dataset_inspect("feed_items_relevant", session_id=session_id))
+
+        self.assertIn("feed_items_relevant", rename_result)
+        self.assertEqual(before["dataset_id"], after["dataset_id"])
+
+    def test_dataset_drop_where_forks_by_default(self) -> None:
+        session_id = "dataset_test"
+        dataset_save(
+            "feed_items_raw",
+            [
+                {"title": "Alpha", "url": "https://example.com/a"},
+                {"title": "Alpha duplicate", "url": "https://example.com/a"},
+                {"title": "Beta", "url": "https://example.com/b"},
+            ],
+            session_id=session_id,
+        )
+
+        result = dataset_drop_where("feed_items_raw", "duplicate by url", save_as="feed_items_deduped", session_id=session_id)
+        original = json.loads(dataset_inspect("feed_items_raw", session_id=session_id))
+        deduped = json.loads(dataset_inspect("feed_items_deduped", session_id=session_id))
+
+        self.assertIn("feed_items_deduped", result)
+        self.assertEqual(original["count"], 3)
+        self.assertEqual(deduped["count"], 2)
+
+    def test_dataset_filter_uses_projected_records(self) -> None:
+        session_id = "dataset_filter"
+        dataset_save(
+            "feed_items_raw",
+            [
+                {"title": "Renewable energy accelerates", "url": "https://example.com/a", "body": "solar body"},
+                {"title": "Football transfer rumours", "url": "https://example.com/b", "body": "sports body"},
+            ],
+            session_id=session_id,
+        )
+
+        def fake_call_llm_chat(**kwargs):
+            content = kwargs["messages"][1]["content"]
+            if "Renewable energy accelerates" in content:
+                return SimpleNamespace(response='{"keep": true, "reason": "topical"}')
+            return SimpleNamespace(response='{"keep": false, "reason": "off-topic"}')
+
+        with patch("llm_client.get_active_model", return_value="gpt-oss:20b"):
+            with patch("llm_client.get_active_num_ctx", return_value=131072):
+                with patch("llm_client.call_llm_chat", side_effect=fake_call_llm_chat):
+                    result = dataset_filter(
+                        "feed_items_raw",
+                        "Keep only items about renewable energy.",
+                        save_as="feed_items_relevant",
+                        fields=["title", "url"],
+                        session_id=session_id,
+                    )
+
+        filtered = json.loads(dataset_inspect("feed_items_relevant", session_id=session_id))
+        self.assertIn("feed_items_relevant", result)
+        self.assertEqual(filtered["count"], 1)
+
+    def test_dataset_persistence_round_trip_handles_spillover(self) -> None:
+        session_id = "dataset_restore"
+        large_records = [
+            {
+                "title": f"Article {index}",
+                "url": f"https://example.com/{index}",
+                "body": "x" * 12000,
+            }
+            for index in range(5)
+        ]
+        dataset_save("feed_items_raw", large_records, session_id=session_id)
+
+        payload = get_persisted_datasets_payload(session_id)
+        self.assertFalse(payload["feed_items_raw"]["inline"])
+        self.assertEqual(payload["feed_items_raw"]["count"], 5)
+
+        clear_session_datasets(session_id)
+        restore_persisted_datasets(payload, session_id)
+
+        listed = dataset_get("feed_items_raw", max_records=1, fields=["title", "url"], session_id=session_id)
+        self.assertIn("Article 0", listed)
+
+    def test_dataset_reports_missing_spillover_row(self) -> None:
+        session_id = "dataset_restore"
+        large_records = [
+            {"title": f"Article {index}", "url": f"https://example.com/{index}", "body": "x" * 12000}
+            for index in range(5)
+        ]
+        dataset_save("feed_items_raw", large_records, session_id=session_id)
+        payload = get_persisted_datasets_payload(session_id)
+        dataset_id = payload["feed_items_raw"]["dataset_id"]
+
+        datasets_store.delete_dataset(dataset_id)
+        clear_session_datasets(session_id)
+        restore_persisted_datasets(payload, session_id)
+
+        result = dataset_inspect("feed_items_raw", session_id=session_id)
+        self.assertIn("missing spillover row", result)
+
+    def test_dataset_get_returns_paged_envelope(self) -> None:
+        session_id = "dataset_paging"
+        dataset_save(
+            "feed_items_raw",
+            [{"id": index, "title": f"Story {index}", "url": f"https://example.com/{index}"} for index in range(6)],
+            session_id=session_id,
+        )
+
+        payload = json.loads(dataset_get("feed_items_raw", offset=2, limit=2, fields=["id", "title"], session_id=session_id))
+
+        self.assertEqual(payload["name"], "feed_items_raw")
+        self.assertEqual(payload["total_count"], 6)
+        self.assertEqual(payload["offset"], 2)
+        self.assertEqual(payload["limit"], 2)
+        self.assertEqual(payload["returned"], 2)
+        self.assertTrue(payload["has_more"])
+        self.assertEqual(payload["next_offset"], 4)
+        self.assertEqual(payload["records"], [{"id": 2, "title": "Story 2"}, {"id": 3, "title": "Story 3"}])
+
+    def test_dataset_write_koredoc_writes_real_dataset_rows(self) -> None:
+        session_id = "dataset_export"
+        dataset_save(
+            "drone_test_raw_5",
+            [
+                {"id": 4037, "title": "Real story alpha", "source": "AP", "snippet": "Alpha snippet", "url": "https://example.com/a"},
+                {"id": 4463, "title": "Real story beta", "source": "UKDJ", "snippet": "Beta snippet", "url": "https://example.com/b"},
+            ],
+            source_tool="koredata_search",
+            session_id=session_id,
+        )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_root = Path(tmp)
+            data_dir = tmp_root / "data"
+            data_dir.mkdir(parents=True, exist_ok=True)
+
+            with patch.object(file_access_module, "WORKSPACE_ROOT", tmp_root):
+                with patch.object(file_access_module, "DEFAULT_DATA_DIR", data_dir):
+                    result = dataset_write_koredoc("drone_test_raw_5", "feeds2", session_id=session_id)
+
+            exported = data_dir / "KoreDocs" / "feeds2" / "drone_test_raw_5.koredoc"
+            self.assertTrue(exported.exists())
+            content = exported.read_text(encoding="utf-8")
+
+        self.assertIn("Exported dataset 'drone_test_raw_5' records 1-2 of 2", result)
+        self.assertIn("KoreDocs document 'drone_test_raw_5.koredoc'", result)
+        self.assertIn("at 'KoreDocs/feeds2/drone_test_raw_5.koredoc'", result)
+        self.assertNotIn("Wrote ", result)
+        self.assertIn("Real story alpha", content)
+        self.assertIn("Real story beta", content)
+        self.assertNotIn("sample snippet", content.lower())
+
+    def test_dataset_expand_full_text_creates_enriched_dataset(self) -> None:
+        session_id = "dataset_fulltext"
+        dataset_save(
+            "drone_test_raw_6",
+            [
+                {
+                    "artifact_ref": "feed_entry|domain=tech|id=42",
+                    "title": "Drone story",
+                    "snippet": "preview",
+                },
+                {
+                    "artifact_ref": "reference_article|title=Drone%20warfare",
+                    "title": "Drone warfare",
+                    "snippet": "preview",
+                },
+                {
+                    "title": "Missing ref row",
+                    "snippet": "preview",
+                },
+            ],
+            source_tool="koredata_search",
+            source_args={"query": "drones", "domains": ["feeds", "reference"]},
+            session_id=session_id,
+        )
+
+        def fake_fetch(refid: str, *, client=None, base_url: str = "") -> dict:
+            if refid == "feed_entry|domain=tech|id=42":
+                return {"page_text": "Full feed body", "domain": "tech", "id": 42}
+            if refid == "reference_article|title=Drone%20warfare":
+                return {"body": "Full reference body", "title": "Drone warfare"}
+            return {"error": "not found"}
+
+        with patch.object(datasets_module, "_get_koredata_gateway_base_url", return_value="http://127.0.0.1:9603"):
+            with patch.object(datasets_module, "_fetch_full_text_payload", side_effect=fake_fetch):
+                result = dataset_expand_full_text("drone_test_raw_6", save_as="drone_test_fulltext", session_id=session_id)
+
+        self.assertIn("Created dataset 'drone_test_fulltext'", result)
+        self.assertIn("expanded 2/3 selected records", result)
+        self.assertIn("Skipped 1 record", result)
+
+        expanded_payload = json.loads(dataset_get("drone_test_fulltext", session_id=session_id))
+        self.assertEqual(expanded_payload["total_count"], 2)
+        self.assertEqual(expanded_payload["records"][0]["artifact_ref"], "feed_entry|domain=tech|id=42")
+        self.assertEqual(expanded_payload["records"][0]["page_text"], "Full feed body")
+        self.assertEqual(expanded_payload["records"][1]["body"], "Full reference body")
+
+        manifest = json.loads(dataset_inspect("drone_test_fulltext", session_id=session_id))
+        self.assertEqual(manifest["source_tool"], "dataset_expand_full_text")
+
+    def test_file_write_blocks_suspicious_placeholder_koredoc_content(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_root = Path(tmp)
+            data_dir = tmp_root / "data"
+            data_dir.mkdir(parents=True, exist_ok=True)
+
+            with patch.object(file_access_module, "WORKSPACE_ROOT", tmp_root):
+                with patch.object(file_access_module, "DEFAULT_DATA_DIR", data_dir):
+                    result = file_write(
+                        "KoreDocs/feeds2/drone_test_raw_5.koredoc",
+                        "### Record 1\n- **Snippet:** This is a sample snippet for entry 1.\n",
+                    )
+
+        self.assertIn("refusing to write suspicious placeholder content", result)
+
+    def test_dataset_get_uses_deterministic_scratch_key(self) -> None:
+        key = _derive_auto_scratch_key(
+            "dataset_get",
+            {"name": "drone_test_raw_5", "offset": 20, "limit": 10, "fields": ["id", "title"]},
+            7,
+            1,
+        )
+
+        self.assertEqual(key, "_dataset_get_drone_test_raw_5_o20_l10_fid_title")
+
+    def test_system_prompt_lists_dataset_manifests(self) -> None:
+        session_id = "dataset_prompt"
+        dataset_save(
+            "feed_items_raw",
+            [
+                {"title": "Alpha", "url": "https://example.com/a", "source": "Example"},
+                {"title": "Beta", "url": "https://example.com/b", "source": "Example"},
+            ],
+            source_tool="koredata_search",
+            session_id=session_id,
+        )
+
+        with bind_session(session_id):
+            system_message = build_system_message("", None, self.skills_payload, skill_guidance_enabled=False, sandbox_enabled=True)
+
+        self.assertIn("Datasets currently stored", system_message)
+        self.assertIn("feed_items_raw", system_message)
+        self.assertIn("source=koredata_search", system_message)
+
+    def test_system_prompt_hides_dataset_manifests_without_dataset_tools(self) -> None:
+        session_id = "dataset_prompt"
+        dataset_save(
+            "feed_items_raw",
+            [{"title": "Alpha", "url": "https://example.com/a", "source": "Example"}],
+            source_tool="koredata_search",
+            session_id=session_id,
+        )
+
+        with bind_session(session_id):
+            system_message = build_system_message("", None, {"skills": []}, skill_guidance_enabled=False, sandbox_enabled=True)
+
+        self.assertNotIn("Datasets currently stored", system_message)
+
+    def test_auto_route_tool_result_saves_record_collections_as_dataset(self) -> None:
+        session_id = "dataset_auto"
+        manifest = auto_route_tool_result(
+            "koredata_search",
+            {"query": "renewable energy", "domains": ["feeds"]},
+            [
+                {"title": f"Story {index}", "url": f"https://example.com/{index}", "source": "Example"}
+                for index in range(5)
+            ],
+            session_id=session_id,
+        )
+
+        self.assertIsNotNone(manifest)
+        self.assertIn("Dataset 'koredata_search_1' created", manifest)
+        self.assertIn("dataset_rename", manifest)
+        self.assertIn("koredata_search_1", dataset_list(session_id=session_id))
+
+    def test_auto_route_tool_result_parses_stringified_json_results(self) -> None:
+        session_id = "dataset_auto_json"
+        payload = json.dumps({
+            "query": "drones",
+            "results": [
+                {"title": f"Story {index}", "url": f"https://example.com/{index}", "source": "Example"}
+                for index in range(5)
+            ],
+        })
+
+        manifest = auto_route_tool_result(
+            "koredata_search",
+            {"query": "drones", "domains": ["feeds"]},
+            payload,
+            session_id=session_id,
+        )
+
+        self.assertIsNotNone(manifest)
+        self.assertIn("5 records", manifest)
+        self.assertIn("koredata_search_1", dataset_list(session_id=session_id))
+
+    def test_auto_route_tool_result_skips_dataset_get_payloads(self) -> None:
+        session_id = "dataset_auto_skip_get"
+        payload = json.dumps([
+            {"id": index, "title": f"Story {index}", "url": f"https://example.com/{index}"}
+            for index in range(5)
+        ])
+
+        manifest = auto_route_tool_result(
+            "dataset_get",
+            {"name": "feed_items_raw", "max_records": 5},
+            payload,
+            session_id=session_id,
+        )
+
+        self.assertIsNone(manifest)
+        self.assertEqual(dataset_list(session_id=session_id), "No datasets stored.")
+
+    def test_dataset_save_accepts_results_envelope_dict(self) -> None:
+        session_id = "dataset_save_envelope"
+        message = dataset_save(
+            "feed_items_raw",
+            {
+                "query": "drones",
+                "results": [
+                    {"title": "Story 1", "url": "https://example.com/1", "source": "Example"},
+                    {"title": "Story 2", "url": "https://example.com/2", "source": "Example"},
+                ],
+            },
+            source_tool="koredata_search",
+            source_args={"query": "drones", "domains": ["feeds"]},
+            session_id=session_id,
+        )
+
+        self.assertIn("Saved dataset 'feed_items_raw' (2 records", message)
+
     def test_system_prompt_steers_exhaustive_fetches_into_scratchpad(self) -> None:
         system_message = build_system_message("", None, {"skills": []}, skill_guidance_enabled=False, sandbox_enabled=True)
 
-        self.assertIn("complete list, full history, many-year table scan", system_message)
-        self.assertIn("auto-saved to the scratchpad", system_message)
-        self.assertIn("scratch_query or scratch_peek", system_message)
+        self.assertIn("The scratchpad tool can store intermediate results across steps.", system_message)
+        self.assertIn("do not rebuild full records from the visible preview", system_message)
+        self.assertIn("Do not turn dataset_get output into a new dataset summary", system_message)
+        self.assertIn("prefer dataset_write_koredoc", system_message)
+        self.assertIn("treat that as a KoreDocs destination", system_message)
+        self.assertIn("prefer koredata_get_full_text(refid)", system_message)
+        self.assertIn("prefer dataset_expand_full_text", system_message)
+        self.assertIn("For KoreDocs outputs, prefer dataset_write_koredoc", system_message)
 
     def test_system_prompt_steers_research_traverse_to_page_keys(self) -> None:
         system_message = build_system_message("", None, {"skills": []}, skill_guidance_enabled=False, sandbox_enabled=True)
@@ -494,6 +953,60 @@ class RegressionTests(unittest.TestCase):
 
         self.assertEqual(result["status"], "ok")
         self.assertEqual(captured["bound_session_id"], "parent_session")
+
+    def test_delegate_subrun_auto_includes_dataset_access_for_named_dataset_tasks(self) -> None:
+        dummy_logger = SimpleNamespace(log_file_only=lambda *_args, **_kwargs: None)
+        config = OrchestratorConfig(
+            resolved_model="gpt-oss:20b",
+            num_ctx=131072,
+            max_iterations=3,
+            skills_payload=self.skills_payload,
+        )
+
+        previous_logger = getattr(_delegate_tls, "logger", None)
+        previous_depth = getattr(_delegate_tls, "delegate_depth", 0)
+        previous_config = getattr(_delegate_tls, "config", None)
+
+        _delegate_tls.logger = dummy_logger
+        _delegate_tls.delegate_depth = 0
+        _delegate_tls.config = config
+
+        captured = {}
+        session_id = "dataset_prompt"
+        dataset_save(
+            "drone_test_raw_7",
+            [{"artifact_ref": "feed_entry|domain=world|id=1", "title": "Story", "source": "Example"}],
+            source_tool="koredata_search",
+            session_id=session_id,
+        )
+        scratch_save("_dataset_get_drone_test_raw_7_o0_l25", "cached rows", session_id=session_id)
+
+        def fake_orchestrate_prompt(**kwargs):
+            captured["child_functions"] = {
+                fn.split("(", 1)[0].strip()
+                for skill in kwargs["config"].skills_payload.get("skills", [])
+                for fn in skill.get("functions", [])
+            }
+            captured["scratchpad_visible_keys"] = list(kwargs.get("scratchpad_visible_keys") or [])
+            return ("ok", 0, 0, True, 0.0)
+
+        try:
+            with bind_session(session_id):
+                with patch("orchestration.orchestrate_prompt", side_effect=fake_orchestrate_prompt):
+                    result = delegate_subrun(
+                        "Process dataset drone_test_raw_7 and fetch each article body.",
+                        tools_allowlist=["koredata_get_full_text"],
+                        scratchpad_visible_keys=[],
+                    )
+        finally:
+            _delegate_tls.logger = previous_logger
+            _delegate_tls.delegate_depth = previous_depth
+            _delegate_tls.config = previous_config
+
+        self.assertEqual(result["status"], "ok")
+        self.assertIn("dataset_get", captured["child_functions"])
+        self.assertIn("dataset_inspect", captured["child_functions"])
+        self.assertIn("_dataset_get_drone_test_raw_7_o0_l25", captured["scratchpad_visible_keys"])
 
     def test_search_web_prefer_article_urls_promotes_article_results(self) -> None:
         html_text = "".join([

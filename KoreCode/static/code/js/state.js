@@ -16,7 +16,8 @@ export async function api(url, options = {}) {
     let detail = `${response.status} ${response.statusText}`;
     try {
       const payload = await response.json();
-      detail = payload.detail || detail;
+      const rawDetail = payload.detail || detail;
+      detail = typeof rawDetail === 'string' ? rawDetail : JSON.stringify(rawDetail);
     } catch {
       // Ignore invalid JSON error payloads.
     }

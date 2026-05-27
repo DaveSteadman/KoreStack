@@ -129,7 +129,7 @@ The folder system is a virtual tree backed by a SQLite database. The root folder
 | `GET` | `/api/folders` | List all folders, flat, ordered by path |
 | `POST` | `/api/folders` | Create a folder |
 | `PATCH` | `/api/folders/{folder_id}` | Rename and/or move a folder |
-| `DELETE` | `/api/folders/{folder_id}` | Delete an empty folder |
+| `DELETE` | `/api/folders/{folder_id}` | Delete a folder; pass `recursive=true` to remove nested files and sub-folders |
 
 **POST /api/folders**
 
@@ -150,7 +150,8 @@ All fields optional. `expected_revision` enables optimistic concurrency — retu
 **DELETE /api/folders/{folder_id}**
 
 Query param `?expected_revision=<n>` optional.  
-Returns `409` if the folder is not empty (contains files or sub-folders).
+Query param `?recursive=true` deletes all nested files and sub-folders after confirmation.
+Returns `409` if the folder is not empty and `recursive` is not enabled.
 
 ---
 

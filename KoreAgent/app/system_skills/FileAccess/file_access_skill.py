@@ -18,6 +18,7 @@
 # MARK: IMPORTS
 # ====================================================================================================
 import json
+import re
 from pathlib import Path
 
 from utils.workspace_utils import get_user_data_dir
@@ -30,6 +31,11 @@ from utils.workspace_utils import get_workspace_root
 # ====================================================================================================
 WORKSPACE_ROOT   = get_workspace_root()
 DEFAULT_DATA_DIR = get_user_data_dir()
+
+_REMAINING_RECORDS_RE = re.compile(r"\bremaining\s+\d+\s+records?\b", re.IGNORECASE)
+_SAME_SCHEMA_RE = re.compile(r"\bfollow\s+the\s+same\s+schema\b|\bsame\s+schema\b", re.IGNORECASE)
+_SAMPLE_SNIPPET_RE = re.compile(r"\bsample\s+snippet\b|\bexample\s+snippet\b", re.IGNORECASE)
+_PLACEHOLDER_RE = re.compile(r"\bplaceholder\b", re.IGNORECASE)
 
 
 
@@ -105,12 +111,31 @@ def _resolve_safe_path(file_path: str) -> Path:
     return candidate
 
 
+def _suspicious_document_write_reason(target_path: Path, content: str) -> str:
+    if target_path.suffix.lower() != ".koredoc":
+        return ""
+
+    text = str(content or "")
+    lowered = text.lower()
+    record_block_like = "## record " in lowered or "### record " in lowered
+
+    if _REMAINING_RECORDS_RE.search(text):
+        return "contains a remaining-records summary instead of full output"
+    if _SAME_SCHEMA_RE.search(text):
+        return "contains a same-schema summary instead of full output"
+    if record_block_like and _SAMPLE_SNIPPET_RE.search(text):
+        return "contains sample snippet placeholder text"
+    if record_block_like and _PLACEHOLDER_RE.search(text):
+        return "contains placeholder text"
+    return ""
+
+
 # ====================================================================================================
 # MARK: PUBLIC SKILL API
 # ====================================================================================================
 
 # ----------------------------------------------------------------------------------------------------
-def file_write(path: str, content: str) -> str:
+def file_write(path: str, content: str, skip_content_guard: bool = False) -> str:
     try:
         target_path = _resolve_safe_path(path)
     except ValueError as err:
@@ -119,6 +144,13 @@ def file_write(path: str, content: str) -> str:
     text_to_write = str(content).replace("\\n", "\n")  # unescape literal \n from model output
     if not text_to_write.endswith("\n"):
         text_to_write += "\n"
+    if not skip_content_guard:
+        reason = _suspicious_document_write_reason(target_path, text_to_write)
+        if reason:
+            return (
+                f"Error: refusing to write suspicious placeholder content to {_display_path(target_path)}; {reason}. "
+                "Use dataset_write_koredoc or retrieve the real dataset records first."
+            )
     target_path.write_text(text_to_write, encoding="utf-8")
     return f"Wrote {_display_path(target_path)}"
 
@@ -280,7 +312,7 @@ def folder_exists(path: str) -> str:
 
 
 # ----------------------------------------------------------------------------------------------------
-def file_write_from_scratch(scratch_key: str, path: str) -> str:
+def file_write_from_scratch(scratch_key: str, path: str, skip_content_guard: bool = False) -> str:
     """Write the content stored in a scratchpad key to a file at path.
 
     Reads the auto-saved scratchpad key (e.g. _tc_r5_fetch_page_text shown in a truncation
@@ -301,5 +333,12 @@ def file_write_from_scratch(scratch_key: str, path: str) -> str:
     except ValueError as err:
         return f"Error: {err}"
     target_path.parent.mkdir(parents=True, exist_ok=True)
+    if not skip_content_guard:
+        reason = _suspicious_document_write_reason(target_path, content)
+        if reason:
+            return (
+                f"Error: refusing to write suspicious placeholder content to {_display_path(target_path)}; {reason}. "
+                "Use dataset_write_koredoc or retrieve the real dataset records first."
+            )
     target_path.write_text(content, encoding="utf-8")
     return f"Wrote {_display_path(target_path)} ({len(content):,} chars from scratch key {scratch_key!r})"

@@ -242,11 +242,11 @@ async function _moveFolder(folder) {
 async function _deleteFolder(folder) {
   const ok = await dialogs.confirm(
     'Delete Folder',
-    `Delete "${folder.name}"? This will fail if the folder has files or sub-folders.`,
+    `Delete "${folder.name}" and everything inside it? This cannot be undone.`,
   );
   if (!ok) return;
   try {
-    await api.deleteFolder(folder.id, folder.revision);
+    await api.deleteFolder(folder.id, folder.revision, true);
     if (_selected === folder.id) _selected = 1;
     await refresh();
     _emit('refresh', {});

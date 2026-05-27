@@ -95,6 +95,10 @@ from orchestration import orchestrate_prompt
 from orchestration import request_stop
 from orchestration import set_sandbox_enabled
 from orchestration import set_web_skills_enabled
+from datasets import clear_session_datasets
+from datasets import delete_session_datasets as delete_persisted_session_datasets
+from datasets import merge_persisted_session_payload
+from datasets import restore_persisted_datasets
 from scratchpad import get_store as get_scratch_store
 from scratchpad import scratch_clear
 from scratchpad import scratch_save as scratch_restore_key
@@ -751,12 +755,17 @@ def _load_session(session_id: str) -> tuple["ConversationHistory", list[dict]]:
         return history, summaries
 
     scratch_clear(session_id)
+    clear_session_datasets(session_id)
     scratchpad = conv.get("scratchpad") or {}
     if isinstance(scratchpad, str):
         try:
             scratchpad = json.loads(scratchpad)
         except Exception:
             scratchpad = {}
+    datasets_payload = {}
+    if isinstance(scratchpad, dict):
+        datasets_payload = scratchpad.pop("__datasets", {})
+    restore_persisted_datasets(datasets_payload, session_id)
     for key, value in scratchpad.items():
         try:
             scratch_restore_key(key, str(value), session_id)
@@ -914,13 +923,14 @@ def _flush_scratch_to_session(session_id: str) -> None:
         return
     try:
         named_scratch = {k: v for k, v in get_scratch_store(session_id).items() if not k.startswith("_tc_")}
-        _kc_patch(f"/conversations/{conv['id']}", {"scratchpad": named_scratch})
+        _kc_patch(f"/conversations/{conv['id']}", {"scratchpad": merge_persisted_session_payload(named_scratch, session_id)})
     except Exception as exc:
         print(f"[session] Warning: could not flush scratchpad to KoreChat for session '{session_id}': {exc}", flush=True)
 
 
 def _delete_session_state(session_id: str) -> None:
     scratch_clear(session_id)
+    delete_persisted_session_datasets(session_id)
     _kc_conv_cache.pop(session_id, None)
     conv = _kc_get_conversation_for_session(session_id)
     if conv is None:

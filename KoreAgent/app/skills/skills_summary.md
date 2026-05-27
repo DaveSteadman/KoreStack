@@ -356,6 +356,108 @@ Single JSON payload for orchestration planning.
       "tool_selection_guidance": ""
     },
     {
+      "skill_name": "Datasets Skill",
+      "relative_path": "app/system_skills/Datasets/skill.md",
+      "purpose": "Store and refine structured record collections across prompts and sessions. Use datasets when a tool\nreturns a collection of objects such as feed items, search results, references, or any other\nrecord-shaped working set that needs iterative filtering.",
+      "module": "KoreAgent/app/system_skills/Datasets/datasets_skill.py",
+      "trigger_keyword": "datasets",
+      "triggers": [
+        "dataset",
+        "working set",
+        "record set",
+        "retained set",
+        "filter these results",
+        "keep the best items",
+        "dedupe these rows",
+        "save this list for later",
+        "work on these records across prompts",
+        "inspect the current set",
+        "show the retained items"
+      ],
+      "functions": [
+        "dataset_save(name: str, records: list[dict], source_tool: str = \"\", source_args: dict = None, replace: bool = False)",
+        "dataset_rename(name: str, new_name: str)",
+        "dataset_list()",
+        "dataset_inspect(name: str)",
+        "dataset_get(name: str, indices: list[int] = None, max_records: int = 0, fields: list[str] = None, offset: int = 0, limit: int = 0)",
+        "dataset_write_koredoc(name: str, folder_path: str, document_name: str = \"\", fields: list[str] = None, offset: int = 0, limit: int = 0)",
+        "dataset_delete(name: str)",
+        "dataset_drop_where(name: str, predicate: str, save_as: str = \"\", replace: bool = False)",
+        "dataset_expand_full_text(name: str, save_as: str = \"\", replace: bool = False, offset: int = 0, limit: int = 0)",
+        "dataset_filter(name: str, prompt: str, save_as: str = \"\", replace: bool = False, fields: list[str] = None, excerpt_chars: int = 300)"
+      ],
+      "inputs": [],
+      "outputs": [
+        "`dataset_save(...)` - confirmation with dataset id, count, and schema.",
+        "`dataset_rename(...)` - confirmation including the unchanged dataset id.",
+        "`dataset_list()` - compact manifest list of all active datasets.",
+        "`dataset_inspect(...)` - JSON manifest with metadata, history tail, and sample records.",
+        "`dataset_get(...)` - JSON object with paging metadata plus the selected records under `records`.",
+        "`dataset_write_koredoc(...)` - deterministic export of real dataset rows to a KoreDocs `.koredoc` document.",
+        "`dataset_delete(...)` - confirmation or not-found message.",
+        "`dataset_drop_where(...)` - confirmation describing the predicate and resulting counts.",
+        "`dataset_expand_full_text(...)` - confirmation describing how many rows were expanded through `artifact_ref` and how many were skipped.",
+        "`dataset_filter(...)` - confirmation describing the filter pass and resulting counts."
+      ],
+      "param_descriptions": {
+        "dataset_save": {
+          "name": "dataset name. Letters, digits, and underscores only.",
+          "records": "list of structured objects to store.",
+          "source_tool": "tool name that produced the records.",
+          "source_args": "original tool arguments as an object.",
+          "replace": "overwrite an existing dataset of the same name."
+        },
+        "dataset_rename": {
+          "name": "current dataset name.",
+          "new_name": "replacement name. Renames the label only; the internal dataset id stays fixed."
+        },
+        "dataset_inspect": {
+          "name": "dataset to inspect."
+        },
+        "dataset_get": {
+          "name": "dataset to retrieve from.",
+          "indices": "specific zero-based record indices to return.",
+          "max_records": "maximum number of leading records to return when indices are omitted.",
+          "offset": "zero-based starting offset for paged reads when indices are omitted.",
+          "limit": "page size for paged reads when indices are omitted.",
+          "fields": "field projection for each returned record."
+        },
+        "dataset_write_koredoc": {
+          "name": "dataset to export.",
+          "folder_path": "KoreDocs folder path such as `feeds2` or `KoreDocs/feeds2`.",
+          "document_name": "`.koredoc` file name; defaults to the dataset name.",
+          "fields": "field projection for each exported record; defaults to the dataset schema.",
+          "offset": "zero-based starting offset for paged exports.",
+          "limit": "maximum number of records to export; omit or set to 0 to export all remaining records."
+        },
+        "dataset_delete": {
+          "name": "dataset to remove."
+        },
+        "dataset_drop_where": {
+          "name": "dataset to transform.",
+          "predicate": "deterministic drop rule such as `duplicate by url` or `missing field body`.",
+          "save_as": "name for a forked dataset. When omitted and `replace` is false, a derived name is created automatically.",
+          "replace": "mutate the original dataset in place."
+        },
+        "dataset_expand_full_text": {
+          "name": "source dataset whose records already include `artifact_ref` values from `koredata_search(...)`.",
+          "save_as": "name for the enriched fork. When omitted and `replace` is false, a `_fulltext` dataset name is derived automatically.",
+          "replace": "mutate the original dataset in place.",
+          "offset": "zero-based starting offset for partial enrichment of large datasets.",
+          "limit": "maximum number of records to enrich; omit or set to 0 to enrich all remaining records."
+        },
+        "dataset_filter": {
+          "name": "dataset to filter.",
+          "prompt": "keep/drop instruction for the LLM.",
+          "save_as": "name for a forked dataset. When omitted and `replace` is false, a derived name is created automatically.",
+          "replace": "mutate the original dataset in place.",
+          "fields": "projected fields to show the LLM for each record.",
+          "excerpt_chars": "maximum characters to include from large text fields when projection needs a snippet."
+        }
+      },
+      "tool_selection_guidance": "Use datasets for structured collections. Use the existing scratchpad for string content.\n\nTypical workflow:\n1. Save or auto-ingest a record collection into a dataset.\n2. Inspect it with `dataset_list()` or `dataset_inspect(name)`.\n3. Remove obvious junk cheaply with `dataset_drop_where(...)`.\n4. Apply judgement with `dataset_filter(...)`, using `fields` so the model sees only the relevant record projection.\n5. Fetch the retained records with `dataset_get(...)` when you need them for synthesis.\n6. When KoreData search results include `artifact_ref` and the user wants full bodies instead of snippets, call `dataset_expand_full_text(...)` rather than hand-looping per-row fetches.\n7. Use `dataset_write_koredoc(...)` when the user wants a faithful KoreDocs export of real rows.\n\nPrefer forking over replacement. Keep earlier stages unless the user explicitly wants to overwrite them."
+    },
+    {
       "skill_name": "Delegate Skill",
       "relative_path": "app/system_skills/Delegate/skill.md",
       "purpose": "Create a fresh child orchestration context for a focused sub-task. The child gets its own\nisolated reasoning and tool-calling loop, runs independently, and returns a compact answer\nto the parent. Use this when a sub-problem would benefit from multi-step investigation\nwithout polluting the parent context with intermediate tool chatter.",

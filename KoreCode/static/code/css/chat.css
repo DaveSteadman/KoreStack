@@ -4,13 +4,15 @@
   flex-shrink: 0;
   display: flex;
   gap: 4px;
+  flex-wrap: wrap;
   padding: 6px 10px;
   border-bottom: 1px solid var(--border);
   background: var(--bg-2);
 }
 
 .chat-mode-btn {
-  flex: 1;
+  flex: 1 1 calc(33.33% - 4px);
+  min-width: 72px;
   padding: 4px 0;
   border: 1px solid var(--border);
   border-radius: 4px;
@@ -32,6 +34,19 @@
   font-size: 11px;
   color: var(--text-dim);
   background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+}
+
+#chat-toolbar {
+  flex-shrink: 0;
+  display: flex;
+  gap: 6px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface-2) 70%, var(--surface));
+}
+
+#chat-toolbar .kcui-tag {
+  font-size: 11px;
 }
 
 .chat-mode-btn.is-active {
@@ -293,6 +308,28 @@
   border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
   font-size: 11px;
   color: var(--text-dim);
+}
+
+#chat-quick-prompts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.chat-quick-btn {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text-2);
+  padding: 3px 10px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.chat-quick-btn:hover {
+  background: color-mix(in srgb, var(--accent) 15%, var(--surface-2));
+  color: var(--text);
 }
 
 #chat-input-row {

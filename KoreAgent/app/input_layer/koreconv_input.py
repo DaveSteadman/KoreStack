@@ -47,6 +47,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
+from datasets import merge_persisted_session_payload
 from orchestration import OrchestratorConfig
 from orchestration import orchestrate_prompt
 from run_helpers import make_task_session
@@ -513,6 +514,7 @@ def _handle_event(
         reply              = response.strip()
         current_scratchpad = get_store(session_id=session_id)
         current_scratchpad = _merge_conv_facts(current_scratchpad, user_prompt, turn_count)
+        persisted_session_state = merge_persisted_session_payload(current_scratchpad, session_id)
 
         # Item 4: Serialize session context turns for persistence in KoreChat background_context.
         # This lets the model reference prior fetched data after restarts or on resume.
@@ -556,7 +558,7 @@ def _handle_event(
                 "status":             "active",
                 "token_estimate":     new_token_estimate,
                 "turn_count":         turn_count + 1,
-                "scratchpad":         current_scratchpad,
+                "scratchpad":         persisted_session_state,
                 "background_context": new_background_context,
             })
         except Exception as exc:

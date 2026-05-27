@@ -25,6 +25,7 @@
 
 import re
 
+from datasets import get_prompt_dataset_manifests
 from scratchpad import get_store as get_scratchpad_store
 
 
@@ -68,9 +69,16 @@ _SYSTEM_SKILL_GUIDANCE: list[str] = [
 
     # -- Scratchpad (system_skills/Scratchpad/) ----------------------------------------------
     "- The scratchpad tool can store intermediate results across steps.",
+    "- When a tool result says it was truncated and auto-saved to scratchpad, do not rebuild full records from the visible preview. Load the scratchpad copy or reuse any auto-created dataset instead.",
+    "- When the user asks to output a dataset in full, keep dataset_get results as source data. Do not turn dataset_get output into a new dataset summary and do not fabricate placeholder rows.",
+    "- When the user wants a faithful document export from a dataset, prefer dataset_write_koredoc instead of manually rewriting rows into file content.",
+    "- When KoreData search results include artifact_ref, prefer koredata_get_full_text(refid) for follow-up retrieval instead of rebuilding domain-specific lookup arguments by hand.",
+    "- When the user wants a full-text dataset from KoreData search results, prefer dataset_expand_full_text(...) over manual per-row fetch loops.",
 
     # -- FileAccess (system_skills/FileAccess/) ----------------------------------------------
-    "- Filesystem read and write operations must go through the file_write / file_read / file_append tools. Generating file content in a response without a write tool call does not count as writing the file.",
+    "- Generic filesystem read and write operations must go through the file_write / file_read / file_append tools. Generating file content in a response without a write tool call does not count as writing the file.",
+    "- When the user asks to save something into KoreDocs or a `.koredoc`, treat that as a KoreDocs destination, not a generic file-access request.",
+    "- Use file_write / file_append for ordinary workspace files. For KoreDocs outputs, prefer dataset_write_koredoc for faithful dataset exports and dedicated KoreDocs tools when editing an existing KoreDocs document.",
 
     # -- TaskManagement (system_skills/TaskManagement/) --------------------------------------
     "- Creating, listing, updating, or deleting scheduled tasks requires calling the task_* tools. Do not generate task JSON by hand.",
@@ -153,6 +161,15 @@ def build_skill_selection_guidance(skills_payload: dict) -> str:
     return "Available tools - select based on what the task requires:\n" + "\n".join(lines)
 
 
+def _payload_has_dataset_tools(skills_payload: dict) -> bool:
+    for skill in skills_payload.get("skills", []):
+        for function_sig in skill.get("functions", []):
+            name = str(function_sig).split("(", 1)[0].strip()
+            if name.startswith("dataset_"):
+                return True
+    return False
+
+
 def build_system_message(
     ambient_system_info: str,
     session_context,
@@ -201,6 +218,24 @@ def build_system_message(
         if context_keys:
             suffix += " Compacted-context keys (_cx_*) hold earlier turn content saved during context compaction; use scratch_query to extract information from them."
         system_parts.append("\nScratchpad keys currently stored:\n  " + "\n  ".join(key_lines) + suffix)
+
+    dataset_manifests = get_prompt_dataset_manifests() if _payload_has_dataset_tools(skills_payload) else []
+    if dataset_manifests:
+        lines: list[str] = []
+        for dataset in dataset_manifests:
+            fields = ",".join((dataset.get("schema") or [])[:5])
+            last_history = (dataset.get("history") or [])[-1] if dataset.get("history") else {}
+            last_op = last_history.get("op", "save")
+            source = dataset.get("source_tool") or (dataset.get("parent_dataset_id") or "dataset")
+            lines.append(
+                f"- {dataset.get('name', '?'):<22} {dataset.get('count', len(dataset.get('records') or []))} records  "
+                f"source={source}  updated={dataset.get('updated_at', '')}"
+            )
+            lines.append(f"  last: {last_op}  fields=[{fields}]")
+        system_parts.append(
+            "\nDatasets currently stored:\n" + "\n".join(lines) + "\n"
+            "Use dataset_* tools to inspect, filter, or retrieve these structured working sets."
+        )
 
     # Token pressure warning — injected just before routing hint so it's near the top of
     # the model's attention but not the absolute last instruction.

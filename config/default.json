@@ -32,7 +32,7 @@
     "connections": [
       {
         "name": "KoreData",
-        "service": "data",
+        "service": "koredatagateway",
         "path": "/mcp",
         "enabled": true,
         "purpose": "reference search and retrieval across feeds, encyclopedia, library, and internal documents",
@@ -40,19 +40,11 @@
       },
       {
         "name": "KoreDocs",
-        "service": "docs",
+        "service": "koredocs",
         "path": "/mcp",
         "enabled": true,
         "purpose": "document navigation, structured editing, and KoreFile authoring",
         "expected_prefix": "koredocs_"
-      },
-      {
-        "name": "KoreGraph",
-        "service": "koregraph",
-        "path": "/mcp",
-        "enabled": true,
-        "purpose": "concept knowledge graph — search concepts by name, explore connections between concepts, and store new concept-relationship-concept triples extracted from text",
-        "expected_prefix": ""
       }
     ]
   }

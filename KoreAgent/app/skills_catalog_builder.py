@@ -497,9 +497,18 @@ _PARAM_RE     = re.compile(r'([A-Za-z_][A-Za-z0-9_]*)\s*(?::\s*([A-Za-z_][A-Za-z
 def _python_type_to_json_schema(ptype: str) -> dict:
     """Return a JSON Schema fragment for a Python type annotation string."""
     ptype_stripped = ptype.strip()
+    if "|" in ptype_stripped:
+        non_none = [part.strip() for part in ptype_stripped.split("|") if part.strip().lower() not in {"none", "null"}]
+        if len(non_none) == 1:
+            return _python_type_to_json_schema(non_none[0])
+        if non_none:
+            return {"anyOf": [_python_type_to_json_schema(part) for part in non_none]}
     list_match = re.match(r'^list\[([^\]]+)\]$', ptype_stripped, re.IGNORECASE)
     if list_match:
         return {"type": "array", "items": _python_type_to_json_schema(list_match.group(1))}
+    dict_match = re.match(r'^dict(?:\[[^\]]*\])?$', ptype_stripped, re.IGNORECASE)
+    if dict_match or ptype_stripped.lower() in ("dict", "object"):
+        return {"type": "object"}
     ptype_lower = ptype_stripped.lower()
     if ptype_lower in ("bool", "boolean"):
         return {"type": "boolean"}

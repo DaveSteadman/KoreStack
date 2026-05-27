@@ -31,7 +31,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Optional
-from urllib.parse import quote
+from urllib.parse import quote, unquote
 
 import httpx
 from fastapi import FastAPI, Form, HTTPException, Request
@@ -174,20 +174,20 @@ _CHUNK_SIZE = 8000  # default characters per library book chunk
 _INSTR_SEARCH = (
     "Use koredata_search(query, domains) to search across services. "
     "Omit domains to search all at once. "
-    "Results include a snippet field (first ~300 chars) for relevance assessment. "
+    "Results include a snippet field (first ~300 chars) and an artifact_ref for follow-up fetches. "
     "Base answers ONLY on content retrieved from the get_* tools — do not supplement with training knowledge."
 )
 
 _INSTR_FEEDS = (
     "KoreFeeds — current news and articles. "
     "Search with domains=[\"feeds\"]; optionally filter by since/until (YYYY-MM-DD). "
-    "Fetch full entries with koredata_get_feed_entry(domain, entry_id)."
+    "Fetch full entries with koredata_get_full_text(refid) or koredata_get_feed_entry(domain, entry_id)."
 )
 
 _INSTR_REFERENCE = (
     "KoreReference — encyclopedia-style wiki articles. "
     "Search with domains=[\"reference\"]. "
-    "Fetch full articles with koredata_get_reference_article(title)."
+    "Fetch full articles with koredata_get_full_text(refid) or koredata_get_reference_article(title)."
 )
 
 _INSTR_LIBRARY = (
@@ -207,7 +207,7 @@ _INSTR_LIBRARY = (
 _INSTR_RAG = (
     "KoreRAG — internal documents and user notes. "
     "Search with domains=[\"rag\"]. "
-    "Fetch full chunks with koredata_get_rag_chunk(chunk_id)."
+    "Fetch full chunks with koredata_get_full_text(refid) or koredata_get_rag_chunk(chunk_id)."
 )
 
 _INSTR_GRAPH = (
@@ -491,7 +491,39 @@ class _SearchRequest(BaseModel):
     domains: list[str] = Field(default_factory=list)
     since: Optional[str] = None
     until: Optional[str] = None
-    limit: int = Field(default=5, ge=1, le=20)
+    limit: int = Field(default=20, ge=1, le=200)
+
+
+class _FullTextRequest(BaseModel):
+    refid: str
+
+
+def _build_artifact_ref(kind: str, **parts: Any) -> str:
+    ref_parts = [kind]
+    for key, value in parts.items():
+        encoded = quote("" if value is None else str(value), safe="")
+        ref_parts.append(f"{key}={encoded}")
+    return "|".join(ref_parts)
+
+
+def _parse_artifact_ref(refid: str) -> tuple[str, dict[str, str]]:
+    text = str(refid or "").strip()
+    if not text:
+        raise ValueError("Artifact ref is empty.")
+    segments = text.split("|")
+    kind = segments[0].strip()
+    if not kind:
+        raise ValueError("Artifact ref is missing its kind.")
+    values: dict[str, str] = {}
+    for segment in segments[1:]:
+        if "=" not in segment:
+            raise ValueError(f"Malformed artifact ref component: {segment!r}")
+        key, encoded = segment.split("=", 1)
+        key = key.strip()
+        if not key:
+            raise ValueError("Artifact ref contains an empty key.")
+        values[key] = unquote(encoded)
+    return kind, values
 
 
 def _map_feed_entry(e: dict) -> dict:
@@ -500,6 +532,7 @@ def _map_feed_entry(e: dict) -> dict:
     body   = e.get("page_text") or e.get("content") or e.get("body") or e.get("summary") or ""
     return {
         "type":         "feed_entry",
+        "artifact_ref": _build_artifact_ref("feed_entry", domain=domain, id=eid),
         "id":           eid,
         "title":        e.get("headline") or e.get("title", ""),
         "source":       e.get("feed_name") or e.get("source_name") or domain,
@@ -513,6 +546,7 @@ def _map_ref_article(a: dict) -> dict:
     title = a.get("title", "")
     return {
         "type":       "reference_article",
+        "artifact_ref": _build_artifact_ref("reference_article", title=title),
         "title":      title,
         "summary":    a.get("summary", ""),
         "snippet":    a.get("snippet") or (a.get("summary") or "")[:300],
@@ -525,6 +559,7 @@ def _map_lib_book(b: dict) -> dict:
     route_id = b.get("route_id") or b.get("id")
     return {
         "type":     "library_book",
+        "artifact_ref": _build_artifact_ref("library_book", book_id=route_id),
         "id":       route_id,
         "local_id": b.get("id"),
         "catalog":  b.get("catalog"),
@@ -540,6 +575,7 @@ def _map_rag_chunk(c: dict) -> dict:
     db_id = c.get("db", "default")
     return {
         "type":    "rag_chunk",
+        "artifact_ref": _build_artifact_ref("rag_chunk", id=c.get("id")),
         "id":      c.get("id"),
         "title":   c.get("title", ""),
         "source":  c.get("source", ""),
@@ -641,6 +677,11 @@ async def api_search(req: _SearchRequest):
     }
 
 
+@app.post("/api/full-text")
+async def api_full_text(req: _FullTextRequest):
+    return await koredata_get_full_text(req.refid)
+
+
 def _add_next_mins(feeds: list) -> None:
     """Compute _next_mins and _next_secs for each feed dict in-place."""
     now = datetime.utcnow()
@@ -670,22 +711,23 @@ async def koredata_search(
     domains: Optional[list[str]] = None,
     since: Optional[str] = None,
     until: Optional[str] = None,
-    limit: int = 5,
+    limit: int = 20,
 ) -> dict:
     """Search across KoreData services and return structured results.
 
     Args:
-        query: Natural-language or keyword search string.
+        query: Search string. Bare terms use AND by default. Use quoted phrases,
+               OR or | for alternatives, NOT to exclude, and parentheses to group.
         domains: Which services to search — any of "feeds", "reference", "library", "rag".
                  Omit or pass null to search all four.
         since: Earliest published-date filter (YYYY-MM-DD). Applied to feeds only.
         until: Latest published-date filter (YYYY-MM-DD). Applied to feeds only.
-        limit: Maximum results per domain (1–20, default 5).
+        limit: Maximum results per selected domain (1–200, default 20).
 
     Returns a dict with keys "query", "domains_searched", "results" (merged flat list),
-    and "results_by_domain" (per-service lists). Each result item includes a "snippet" for
-    relevance assessment and a "url" field — pass the matching id/title to the get_* tool
-    to fetch full content.
+    and "results_by_domain" (per-service lists). Text-bearing result items include a
+    "snippet" for relevance assessment, a "url" field, and an "artifact_ref" string that
+    can be passed to koredata_get_full_text(refid) to fetch the full content.
     """
     if _feed_client is None:
         return {"error": "KoreDataGateway is still starting up — retry in a moment"}
@@ -1038,6 +1080,64 @@ async def koredata_get_rag_chunk(chunk_id: int) -> dict:
     if r.status_code != 200:
         return {"error": f"HTTP {r.status_code}"}
     return r.json()
+
+
+@_mcp.tool()
+async def koredata_get_full_text(refid: str) -> dict:
+    """Fetch the full content for a text-bearing search result via its artifact_ref.
+
+    Args:
+        refid: The artifact_ref value returned by koredata_search(...). Supported kinds:
+               feed_entry, reference_article, rag_chunk. Library books return a chunking
+               guidance error because they should be read incrementally.
+
+    Use this when you already have a search result row and want a single follow-up fetch path
+    without switching on domain-specific ids or title fields.
+    """
+    try:
+        kind, parts = _parse_artifact_ref(refid)
+    except ValueError as exc:
+        return {"error": str(exc)}
+
+    if kind == "feed_entry":
+        domain = (parts.get("domain") or "").strip()
+        raw_id = (parts.get("id") or "").strip()
+        if not domain or not raw_id:
+            return {"error": f"Feed artifact ref is incomplete: {refid!r}"}
+        try:
+            entry_id = int(raw_id)
+        except ValueError:
+            return {"error": f"Feed artifact ref has non-numeric id: {raw_id!r}"}
+        return await koredata_get_feed_entry(domain=domain, entry_id=entry_id)
+
+    if kind == "reference_article":
+        title = (parts.get("title") or "").strip()
+        if not title:
+            return {"error": f"Reference artifact ref is missing title: {refid!r}"}
+        return await koredata_get_reference_article(title=title)
+
+    if kind == "rag_chunk":
+        raw_id = (parts.get("id") or "").strip()
+        if not raw_id:
+            return {"error": f"RAG artifact ref is missing id: {refid!r}"}
+        try:
+            chunk_id = int(raw_id)
+        except ValueError:
+            return {"error": f"RAG artifact ref has non-numeric id: {raw_id!r}"}
+        return await koredata_get_rag_chunk(chunk_id=chunk_id)
+
+    if kind == "library_book":
+        book_id = (parts.get("book_id") or "").strip()
+        if not book_id:
+            return {"error": f"Library artifact ref is missing book_id: {refid!r}"}
+        return {
+            "error": (
+                "Library books are chunked by design. "
+                f"Use koredata_get_library_book_chunk(book_id={book_id!r}, offset_chars=0)."
+            )
+        }
+
+    return {"error": f"Unsupported artifact ref kind: {kind!r}"}
 
 
 # ===========================================================================

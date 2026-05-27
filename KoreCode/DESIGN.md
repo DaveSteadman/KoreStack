@@ -89,14 +89,6 @@ The Find control should toggle a dedicated find panel on and off within the acti
 
 Phase 1 prioritizes reliability, low dependency count, and fully open-source components over feature breadth.
 
-Nice-to-have but not required for first usable version:
-
-- split editors
-- replace-in-file
-- minimap
-- code folding
-- file rename/create/delete in the tree
-
 ---
 
 ## 4. File System Scope

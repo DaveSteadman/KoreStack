@@ -26,6 +26,7 @@ from pathlib import Path
 
 from context_manager import COMPACT_THRESHOLD
 from context_manager import assess_compact
+from datasets import auto_route_tool_result
 from scratchpad import scratch_save as scratch_auto_save
 from scratchpad import scratch_pin
 from scratchpad import scratch_unpin_all
@@ -110,6 +111,46 @@ _COT_PLANNING_RE = re.compile(
 )
 _CONTENT_MARKER_RE = re.compile(r"(?:^|\n)(\*\*|#{1,3} |\| |\d+\. |- )")
 _WRITE_FILE_BLOCK_RE = re.compile(r"WRITE_FILE:\s*([^\n]+)\n---FILE_START---[ \t]*\n(.*?)\n?---FILE_END---", re.DOTALL)
+_SCRATCH_KEY_SAFE_RE = re.compile(r"[^a-z0-9_]+")
+
+
+def _safe_scratch_component(value: object, fallback: str = "x") -> str:
+    cleaned = _SCRATCH_KEY_SAFE_RE.sub("_", str(value or "").strip().lower()).strip("_")
+    return cleaned[:40] or fallback
+
+
+def _derive_auto_scratch_key(func_name: str, arguments: dict, round_num: int, tool_ordinal: int) -> str:
+    normalized_name = str(func_name or "").strip().lower()
+    if normalized_name == "dataset_get":
+        dataset_name = _safe_scratch_component(arguments.get("name"), "dataset")
+        indices = arguments.get("indices")
+        selector = "page"
+        if isinstance(indices, list) and indices:
+            int_indices = [index for index in indices if isinstance(index, int)]
+            if int_indices:
+                if len(int_indices) == 1:
+                    selector = f"i{int_indices[0]}"
+                else:
+                    selector = f"i{int_indices[0]}_{int_indices[-1]}_{len(int_indices)}"
+            else:
+                selector = "indices"
+        else:
+            offset = max(0, int(arguments.get("offset") or 0)) if str(arguments.get("offset") or "").strip() else 0
+            limit = arguments.get("limit") or arguments.get("max_records") or 20
+            try:
+                limit = max(0, int(limit)) or 20
+            except (TypeError, ValueError):
+                limit = 20
+            selector = f"o{offset}_l{limit}"
+        fields = arguments.get("fields")
+        if isinstance(fields, list) and fields:
+            field_fragment = "_".join(_safe_scratch_component(field) for field in fields[:3])
+            if field_fragment:
+                selector += f"_f{field_fragment}"
+        return f"_dataset_get_{dataset_name}_{selector}"
+
+    safe_name = normalized_name[:24]
+    return f"_tc_r{round_num}_{tool_ordinal}_{safe_name}"
 
 
 def normalize_tool_request(func_name: str, arguments: dict | None) -> tuple[str, dict, str | None]:
@@ -375,7 +416,9 @@ def run_tool_loop(
             if thinking:
                 _log_file_only(f"[thinking]\n{thinking}\n[/thinking]")
 
-            if not result.tool_calls:
+            tool_calls = list(result.tool_calls or [])
+
+            if not tool_calls:
                 candidate = strip_cot_preamble(result.response)
                 # Guard: detect the "describing a tool call instead of invoking it" hallucination.
                 # Some models emit the raw JSON object {"tool": "...", "arguments": {...}} as text
@@ -384,7 +427,7 @@ def run_tool_loop(
                 _synthetic_tc = _extract_raw_json_tool_call(candidate)
                 if _synthetic_tc is not None:
                     _log_file_only(f"[warn] Round {round_num}: model emitted raw JSON tool call instead of invoking - forcing re-invocation.")
-                    result.tool_calls = [_synthetic_tc]
+                    tool_calls = [_synthetic_tc]
                 else:
                     final_response = candidate
                     run_success = bool(final_response)
@@ -394,9 +437,9 @@ def run_tool_loop(
                     context_map.append({"round": round_num, "role": "asst", "label": "final answer", "chars": len(final_response), "auto_key": None, "msg_idx": len(messages) - 1})
                     break
 
-            _log(f"Round {round_num}: model requested {len(result.tool_calls)} tool call(s).")
+            _log(f"Round {round_num}: model requested {len(tool_calls)} tool call(s).")
             _log_file_only("[progress] Executing tool calls...")
-            current_tc_fingerprints = frozenset((tc.get("function", {}).get("name", ""), tc.get("function", {}).get("arguments", "{}")) for tc in result.tool_calls)
+            current_tc_fingerprints = frozenset((tc.get("function", {}).get("name", ""), tc.get("function", {}).get("arguments", "{}")) for tc in tool_calls)
             if current_tc_fingerprints and current_tc_fingerprints == prev_round_tc_fingerprints:
                 correction = (
                     "You have requested the exact same tool call(s) as the previous round. "
@@ -413,12 +456,12 @@ def run_tool_loop(
             # Strip planning text when tool calls are present - the spec allows empty content
             # alongside tool_calls, and the planning prose adds tokens to every subsequent round
             # without providing information the model needs.
-            assistant_content = "" if result.tool_calls else (result.response or "")
-            messages.append({"role": "assistant", "content": assistant_content, "tool_calls": result.tool_calls})
-            context_map.append({"round": round_num, "role": "asst", "label": f"(tool calls x{len(result.tool_calls)})", "chars": len(assistant_content), "auto_key": None, "msg_idx": len(messages) - 1})
+            assistant_content = "" if tool_calls else (result.response or "")
+            messages.append({"role": "assistant", "content": assistant_content, "tool_calls": tool_calls})
+            context_map.append({"round": round_num, "role": "asst", "label": f"(tool calls x{len(tool_calls)})", "chars": len(assistant_content), "auto_key": None, "msg_idx": len(messages) - 1})
 
             round_outputs: list[ToolCallResult] = []
-            for tc_idx, tool_call in enumerate(result.tool_calls):
+            for tc_idx, tool_call in enumerate(tool_calls):
                 tc_id = tool_call.get("id", "")
                 tc_func = tool_call.get("function", {})
                 func_name = tc_func.get("name", "")
@@ -440,7 +483,14 @@ def run_tool_loop(
                     _log_file_only(f"[tool-normalize] {normalization_note}")
                 try:
                     output = execute_tool_call(func_name, arguments, config.skills_payload, user_prompt, catalog_gates)
-                    result_content = output["result"]
+                    raw_result_content = output["result"]
+                    auto_dataset_manifest = None
+                    if not output.get("is_error"):
+                        try:
+                            auto_dataset_manifest = auto_route_tool_result(func_name, arguments, raw_result_content)
+                        except Exception as exc:
+                            _log_file_only(f"[dataset-auto-route] skipped for {func_name}: {exc}")
+                    result_content = auto_dataset_manifest or raw_result_content
                     if not isinstance(result_content, str):
                         result_content = json.dumps(result_content, default=str)
                     if output.get("is_error"):
@@ -451,15 +501,16 @@ def run_tool_loop(
 
                 is_scratch_reader = func_name.lower().startswith("scratch_")
                 auto_scratch_key = None
-                if not output.get("is_error") and not is_scratch_reader and isinstance(result_content, str) and len(result_content) >= TOOL_MSG_AUTO_SCRATCH_MIN:
-                    safe_name = func_name.lower()[:24]
-                    auto_scratch_key = f"_tc_r{round_num}_{tc_idx + 1}_{safe_name}"
+                if not output.get("is_error") and not is_scratch_reader and isinstance(result_content, str) and len(result_content) >= TOOL_MSG_AUTO_SCRATCH_MIN and not auto_dataset_manifest:
+                    auto_scratch_key = _derive_auto_scratch_key(func_name, arguments, round_num, tc_idx + 1)
                     scratch_auto_save(auto_scratch_key, result_content)
                     scratch_pin(auto_scratch_key)
 
                 # Build thread content: add provenance envelope for data tools, then truncate.
                 # The scratchpad copy (saved above) keeps the raw content for scratch_query use.
                 thread_content = _build_data_envelope(func_name, arguments, result_content) if not output.get("is_error") else result_content
+                if auto_scratch_key and func_name.lower() == "dataset_get":
+                    thread_content += f"\n[dataset_get scratch key: {auto_scratch_key}]"
                 if auto_scratch_key and len(thread_content) > TOOL_MSG_MAX_CHARS:
                     thread_content = thread_content[:TOOL_MSG_MAX_CHARS] + f"\n... [truncated - full content auto-saved to scratchpad key: {auto_scratch_key}]"
 

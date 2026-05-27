@@ -25,7 +25,10 @@
           <div id="root-label" class="panel-title">KoreStack</div>
           <div id="root-path" class="panel-path" title=""></div>
         </div>
-        <button id="btn-refresh-tree" class="kcui-tag kcui-tag--muted" type="button" title="Refresh explorer">Refresh</button>
+        <div id="explorer-controls">
+          <select id="root-select" class="kcui-tag kcui-tag--muted" title="Select development root"></select>
+          <button id="btn-refresh-tree" class="kcui-tag kcui-tag--muted" type="button" title="Refresh explorer">Refresh</button>
+        </div>
       </div>
       <div id="tree-status" class="panel-status kcui-navpanel-status">Loading workspace…</div>
       <div id="code-tree" class="kcui-navpanel-tree" aria-label="File explorer"></div>
@@ -59,9 +62,11 @@
         </div>
         <div id="chat-splitter" aria-hidden="true"></div>
         <div id="chat-panel" hidden>
-          <div id="chat-mode-bar">
-            <button id="btn-mode-chat" class="chat-mode-btn is-active" type="button">Chat</button>
-            <button id="btn-mode-continue" class="chat-mode-btn" type="button">Continue</button>
+          <div id="chat-toolbar">
+            <button id="btn-chat-retry" class="kcui-tag kcui-tag--muted" type="button" title="Regenerate last response">Retry</button>
+            <button id="btn-chat-clear" class="kcui-tag kcui-tag--muted" type="button" title="Clear current file thread">Clear</button>
+            <button id="btn-workspace-context" class="kcui-tag kcui-tag--accent" type="button" title="Toggle cross-file workspace context" aria-pressed="true">Workspace: On</button>
+            <button id="btn-chat-stop" class="kcui-tag kcui-tag--warning" type="button" title="Stop generation" hidden>Stop</button>
           </div>
           <div id="chat-progress-note" hidden>Generating...</div>
           <div id="chat-thread"></div>
@@ -70,7 +75,7 @@
               <span id="chat-selection-label"></span>
             </div>
             <div id="chat-input-row">
-              <textarea id="chat-input" rows="2" placeholder="Ask about this file… (Enter to send)" autocomplete="off" spellcheck="false"></textarea>
+              <textarea id="chat-input" rows="2" placeholder="Ask, use /commands, or reference files with @path… (Enter to send)" autocomplete="off" spellcheck="false"></textarea>
               <button id="btn-chat-send" class="toolbar-btn toolbar-btn-primary" type="button">Send</button>
             </div>
           </div>
