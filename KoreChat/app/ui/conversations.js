@@ -367,23 +367,170 @@ function renderSummary(text) {
 // SCRATCHPAD
 // ====================================================================================================
 
+const SCRATCHPAD_PREVIEW_LIMIT = 96;
+
 function renderScratchpad(scratchpad) {
     let data = scratchpad;
     if (typeof data === "string") {
         try { data = JSON.parse(data); } catch { data = {}; }
     }
     data = data || {};
-    const keys = Object.keys(data);
+    const keys = Object.keys(data).filter(k => k !== "__datasets");
     document.getElementById("scratchpad-empty").hidden = keys.length > 0;
 
     if (keys.length === 0) {
-        document.getElementById("scratchpad-table").innerHTML = "";
+        document.getElementById("scratchpad-list").innerHTML = "";
         return;
     }
 
-    document.getElementById("scratchpad-table").innerHTML = keys.map(k =>
-        `<tr><td>${escHtml(k)}</td><td>${escHtml(String(data[k]))}</td></tr>`
+    document.getElementById("scratchpad-list").innerHTML = keys.map(k =>
+        _renderScratchpadEntry(k, data[k])
     ).join("");
+}
+
+function _renderScratchpadEntry(key, value) {
+    const analysis = _scratchpadAnalyzeValue(key, value);
+    const type = analysis.type;
+    const detailText = analysis.detailText;
+    const compactText = _scratchpadCompactText(analysis.summaryValue);
+    const preview = _scratchpadPreviewText(key, analysis.summaryValue, type, compactText);
+    const meta = _scratchpadMetaText(analysis.summaryValue, type, analysis.charCount);
+    const previewHtml = preview ? `&quot;${escHtml(preview)}&quot;` : `<span class="scratchpad-preview-empty">(empty)</span>`;
+
+    return `
+<details class="scratchpad-entry scratchpad-entry--${type}">
+    <summary class="scratchpad-summary">
+        <span class="scratchpad-key">${escHtml(key)}</span>
+        <span class="scratchpad-preview">${previewHtml}</span>
+        <span class="scratchpad-meta">${escHtml(meta)}</span>
+    </summary>
+    <pre class="scratchpad-content">${escHtml(detailText)}</pre>
+</details>`;
+}
+
+function _scratchpadAnalyzeValue(key, value) {
+    if (typeof value === "string") {
+        const parsed = _scratchpadParseJsonObject(value);
+        if (parsed !== null) {
+            return {
+                type: _scratchpadValueType(key, parsed),
+                summaryValue: parsed,
+                detailText: _scratchpadDetailText(parsed),
+                charCount: value.length,
+            };
+        }
+    }
+
+    const detailText = _scratchpadDetailText(value);
+    return {
+        type: _scratchpadValueType(key, value),
+        summaryValue: value,
+        detailText,
+        charCount: detailText.length,
+    };
+}
+
+function _scratchpadParseJsonObject(text) {
+    const trimmed = String(text || "").trim();
+    if (!trimmed || (trimmed[0] !== "{" && trimmed[0] !== "[")) return null;
+    try {
+        const parsed = JSON.parse(trimmed);
+        if (parsed && typeof parsed === "object") return parsed;
+    } catch (_) { /* ignore */ }
+    return null;
+}
+
+function _scratchpadValueType(key, value) {
+    if (key === "__datasets" && value && typeof value === "object" && !Array.isArray(value)) return "datasets";
+    if (typeof value === "string") return "string";
+    if (Array.isArray(value)) return "array";
+    if (value && typeof value === "object") {
+        if (_looksLikeDataset(value)) return "dataset";
+        return "object";
+    }
+    if (value === null || value === undefined) return "empty";
+    return typeof value;
+}
+
+function _looksLikeDataset(value) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+    if (Object.prototype.hasOwnProperty.call(value, "dataset_id")) return true;
+    if (Array.isArray(value.records)) {
+        return Array.isArray(value.fields)
+            || Array.isArray(value.schema)
+            || typeof value.count === "number"
+            || typeof value.total_count === "number"
+            || typeof value.returned === "number";
+    }
+    return false;
+}
+
+function _scratchpadDetailText(value) {
+    if (value === null || value === undefined) return "";
+    if (typeof value === "string") return value;
+    try {
+        return JSON.stringify(value, null, 2);
+    } catch (_) {
+        return String(value);
+    }
+}
+
+function _scratchpadCompactText(value) {
+    if (value === null || value === undefined) return "";
+    if (typeof value === "string") return value;
+    try {
+        return JSON.stringify(value);
+    } catch (_) {
+        return String(value);
+    }
+}
+
+function _scratchpadPreviewText(key, value, type, compactText) {
+    if (type === "string") return _scratchpadExcerpt(compactText);
+    if (type === "dataset") {
+        const datasetName = typeof value?.name === "string" && value.name.trim() ? value.name.trim() : key;
+        const fields = Array.isArray(value?.fields) ? value.fields : (Array.isArray(value?.schema) ? value.schema : []);
+        const fieldPreview = fields.length ? `: ${fields.slice(0, 4).join(", ")}${fields.length > 4 ? ", ..." : ""}` : "";
+        return _scratchpadExcerpt(`${datasetName}${fieldPreview}`);
+    }
+    if (type === "datasets") {
+        const names = Object.keys(value || {});
+        if (!names.length) return "";
+        return _scratchpadExcerpt(names.slice(0, 4).join(", ") + (names.length > 4 ? ", ..." : ""));
+    }
+    if (type === "empty") return "";
+    return _scratchpadExcerpt(_scratchpadOneLine(compactText));
+}
+
+function _scratchpadMetaText(value, type, charCountRaw) {
+    const charCount = Number(charCountRaw || 0).toLocaleString("en-GB");
+    if (type === "string") return `[string ${charCount} characters]`;
+    if (type === "dataset") return `[dataset ${_scratchpadDatasetRowCount(value)} rows, ${charCount} characters]`;
+    if (type === "datasets") return `[datasets ${Object.keys(value || {}).length} items, ${charCount} characters]`;
+    if (type === "array") return `[array ${value.length} items, ${charCount} characters]`;
+    if (type === "object") return `[object ${Object.keys(value || {}).length} keys, ${charCount} characters]`;
+    if (type === "empty") return "[empty]";
+    return `[${type} ${charCount} characters]`;
+}
+
+function _scratchpadDatasetRowCount(value) {
+    if (!value || typeof value !== "object") return 0;
+    if (typeof value.total_count === "number") return value.total_count;
+    if (typeof value.count === "number") return value.count;
+    if (Array.isArray(value.records)) return value.records.length;
+    if (typeof value.returned === "number") return value.returned;
+    return 0;
+}
+
+function _scratchpadExcerpt(text, limit = SCRATCHPAD_PREVIEW_LIMIT) {
+    const normalized = _scratchpadOneLine(text);
+    if (!normalized) return "";
+    if (normalized.length <= limit) return normalized;
+    return normalized.slice(0, Math.max(0, limit - 3)).trimEnd() + "...";
+}
+
+function _scratchpadOneLine(text) {
+    return String(text || "").replace(/\s+/g, " ").trim();
 }
 
 // ====================================================================================================

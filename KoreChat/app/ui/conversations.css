@@ -315,6 +315,96 @@ html, body {
 }
 
 /* ============================================================
+   SCRATCHPAD
+   ============================================================ */
+
+.scratchpad-list {
+    background: var(--bg-panel2);
+}
+
+.scratchpad-entry {
+    border-bottom: 1px solid var(--border);
+}
+
+.scratchpad-entry:last-child {
+    border-bottom: 0;
+}
+
+.scratchpad-summary {
+    display: grid;
+    grid-template-columns: minmax(180px, 240px) minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: start;
+    padding: 0.55rem 0.75rem;
+    cursor: pointer;
+    list-style: none;
+}
+
+.scratchpad-summary::-webkit-details-marker {
+    display: none;
+}
+
+.scratchpad-entry[open] .scratchpad-summary {
+    border-bottom: 1px solid var(--border);
+}
+
+.scratchpad-key {
+    color: var(--text-dim);
+    font-size: var(--kcui-text-label);
+    letter-spacing: var(--kcui-tracking-tight);
+    overflow-wrap: anywhere;
+    text-transform: uppercase;
+}
+
+.scratchpad-preview {
+    color: var(--text-hi);
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.scratchpad-preview-empty {
+    color: var(--text-dim);
+    font-style: italic;
+}
+
+.scratchpad-meta {
+    color: var(--text-dim);
+    font-size: 10px;
+    white-space: nowrap;
+}
+
+.scratchpad-content {
+    margin: 0;
+    padding: 0.75rem;
+    max-height: 360px;
+    overflow: auto;
+    background: color-mix(in srgb, var(--bg-panel) 82%, var(--bg) 18%);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+@media (max-width: 900px) {
+    .scratchpad-summary {
+        grid-template-columns: 1fr;
+        gap: 4px;
+    }
+
+    .scratchpad-preview {
+        white-space: normal;
+    }
+
+    .scratchpad-meta {
+        white-space: normal;
+    }
+}
+
+/* ============================================================
    INPUT HISTORY
    ============================================================ */
 
