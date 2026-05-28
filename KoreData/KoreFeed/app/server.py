@@ -31,6 +31,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from pydantic import BaseModel, HttpUrl
 
 from app.database import (
+    FeedDatabaseError,
     delete_domain_db,
     delete_entries_by_feed,
     delete_entries_by_ids,
@@ -230,13 +231,19 @@ def api_rename_domain(domain: str, new_name: str):
 @app.get("/api/domains/{domain}/entries", tags=["content"])
 def api_get_entries(domain: str, limit: int = 50, offset: int = 0):
     """Paginated list of entries for a domain."""
-    return get_entries(domain, limit=limit, offset=offset)
+    try:
+        return get_entries(domain, limit=limit, offset=offset)
+    except FeedDatabaseError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 @app.get("/api/domains/{domain}/entries/{entry_id}", tags=["content"])
 def api_get_entry(domain: str, entry_id: int):
     """Fetch a single entry by ID."""
-    entry = get_entry(domain, entry_id)
+    try:
+        entry = get_entry(domain, entry_id)
+    except FeedDatabaseError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
     if not entry:
         raise HTTPException(status_code=404, detail="Entry not found")
     return entry

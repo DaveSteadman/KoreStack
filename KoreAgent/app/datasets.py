@@ -30,8 +30,9 @@ _REGEX_RE = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*)\s*~=\s*(.+)$")
 _CMP_RE = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*)\s*([<>])\s*(.+)$")
 
 INLINE_THRESHOLD_BYTES = 50_000
-_MANIFEST_HISTORY_LIMIT = 2
+_MANIFEST_HISTORY_LIMIT = 10
 _FULL_TEXT_TIMEOUT_SECS = 60.0
+_PERSISTED_DATASETS_KEY = "__datasets"
 
 _SESSION_DATASETS: dict[str, dict[str, dict]] = {}
 _DATASET_LOCK: threading.RLock = threading.RLock()
@@ -227,7 +228,11 @@ def _manifest(dataset: dict) -> dict:
         "count": int(dataset.get("count", len(dataset.get("records") or []))),
         "schema": list(dataset.get("schema") or []),
         "source_tool": dataset.get("source_tool") or "",
+        "source_args": _coerce_source_args(dataset.get("source_args")),
+        "parent_dataset_id": dataset.get("parent_dataset_id") or "",
+        "created_at": dataset.get("created_at") or "",
         "updated_at": dataset.get("updated_at") or "",
+        "auto_named": bool(dataset.get("auto_named")),
         "history_tail": list((dataset.get("history") or [])[-_MANIFEST_HISTORY_LIMIT:]),
     }
 
@@ -235,6 +240,7 @@ def _manifest(dataset: dict) -> dict:
 def _inline_entry(dataset: dict) -> dict:
     entry = _manifest(dataset)
     entry["records"] = dataset.get("records") or []
+    entry["history"] = list(dataset.get("history") or [])
     return entry
 
 
@@ -243,6 +249,7 @@ def _ensure_loaded(dataset: dict) -> dict:
         return dataset
     loaded = datasets_store.load_dataset(dataset["dataset_id"])
     if loaded is None:
+        dataset["missing_spillover"] = True
         raise KeyError(dataset["dataset_id"])
     dataset["records"] = loaded.get("records") or []
     dataset["schema"] = loaded.get("schema") or []
@@ -255,6 +262,7 @@ def _ensure_loaded(dataset: dict) -> dict:
     dataset["storage_mode"] = loaded.get("storage_mode") or "spillover"
     dataset["auto_named"] = bool(loaded.get("auto_named"))
     dataset["count"] = len(dataset.get("records") or [])
+    dataset.pop("missing_spillover", None)
     return dataset
 
 
@@ -423,6 +431,51 @@ def _coerce_source_args(source_args: object) -> object:
     return source_args
 
 
+def split_persisted_session_payload(payload: object) -> tuple[dict[str, object], dict[str, dict]]:
+    if not isinstance(payload, dict):
+        return {}, {}
+    named_scratch: dict[str, object] = {}
+    datasets_payload: dict[str, dict] = {}
+    for raw_key, raw_value in payload.items():
+        key = str(raw_key)
+        if key == _PERSISTED_DATASETS_KEY:
+            if isinstance(raw_value, dict):
+                datasets_payload = dict(raw_value)
+            continue
+        named_scratch[key] = raw_value
+    return named_scratch, datasets_payload
+
+
+def hydrate_session_state(
+    payload: object,
+    session_id: str | None = None,
+    *,
+    scratch_clearer=None,
+    scratch_restorer=None,
+    warning_logger=None,
+) -> dict[str, object]:
+    resolved = _resolve_session_id(session_id)
+    named_scratch, datasets_payload = split_persisted_session_payload(payload)
+
+    if scratch_clearer is not None:
+        scratch_clearer(session_id=resolved)
+    clear_session_datasets(resolved)
+    restore_persisted_datasets(datasets_payload, resolved)
+
+    if scratch_restorer is None:
+        return named_scratch
+
+    for scratch_key, scratch_value in named_scratch.items():
+        try:
+            scratch_restorer(scratch_key, str(scratch_value), session_id=resolved)
+        except TypeError:
+            scratch_restorer(scratch_key, str(scratch_value), resolved)
+        except Exception as exc:
+            if warning_logger is not None:
+                warning_logger(f"could not restore scratchpad key {scratch_key!r}: {exc}")
+    return named_scratch
+
+
 def _write_dataset(dataset: dict, session_id: str | None = None) -> None:
     resolved = _resolve_session_id(session_id)
     store = _session_map(resolved)
@@ -480,14 +533,16 @@ def _save_dataset_internal(
         "updated_at": now,
         "storage_mode": storage_mode,
         "auto_named": bool(auto_named),
+        "missing_spillover": False,
     }
     _write_dataset(dataset, resolved)
     return dataset
 
 
 def get_prompt_dataset_manifests(session_id: str | None = None) -> list[dict]:
-    store = _session_map(session_id)
+    resolved = _resolve_session_id(session_id)
     with _DATASET_LOCK:
+        store = _SESSION_DATASETS.get(resolved, {})
         datasets = [
             {
                 **dataset,
@@ -501,12 +556,15 @@ def get_prompt_dataset_manifests(session_id: str | None = None) -> list[dict]:
 def get_persisted_datasets_payload(session_id: str | None = None) -> dict:
     payload: dict[str, dict] = {}
     for dataset in get_prompt_dataset_manifests(session_id):
-        resolved_dataset = _ensure_loaded(dataset)
-        if resolved_dataset.get("storage_mode") == "inline":
-            payload[resolved_dataset["name"]] = _inline_entry(resolved_dataset)
-        else:
-            datasets_store.upsert_dataset(resolved_dataset)
-            payload[resolved_dataset["name"]] = _manifest(resolved_dataset)
+        if dataset.get("storage_mode") == "inline":
+            payload[dataset["name"]] = _inline_entry(dataset)
+            continue
+        if dataset.get("records") is not None:
+            try:
+                datasets_store.upsert_dataset(dataset)
+            except Exception as exc:
+                print(f"[dataset] Warning: could not refresh spillover row '{dataset['name']}': {exc}", flush=True)
+        payload[dataset["name"]] = _manifest(dataset)
     return payload
 
 
@@ -514,8 +572,50 @@ def merge_persisted_session_payload(named_scratch: dict[str, str], session_id: s
     payload = dict(named_scratch)
     datasets_payload = get_persisted_datasets_payload(session_id)
     if datasets_payload:
-        payload["__datasets"] = datasets_payload
+        payload[_PERSISTED_DATASETS_KEY] = datasets_payload
     return payload
+
+
+def _coerce_history_items(value: object) -> list[dict]:
+    if not isinstance(value, list):
+        return []
+    return [dict(item) for item in value if isinstance(item, dict)]
+
+
+def _coerce_schema(value: object) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [str(item) for item in value if str(item or "").strip()]
+
+
+def _restore_dataset_entry(validated_name: str, entry: dict, resolved: str) -> dict:
+    inline = bool(entry.get("inline"))
+    records = None
+    if inline:
+        try:
+            records = _coerce_records(entry.get("records") or [])
+        except ValueError as exc:
+            raise ValueError(f"invalid inline records: {exc}") from exc
+
+    history = _coerce_history_items(entry.get("history")) or _coerce_history_items(entry.get("history_tail"))
+    dataset_id = str(entry.get("dataset_id") or _new_dataset_id()).strip() or _new_dataset_id()
+    return {
+        "dataset_id": dataset_id,
+        "session_id": resolved,
+        "name": validated_name,
+        "records": records,
+        "count": _coerce_non_negative_int(entry.get("count"), len(records or [])),
+        "schema": _coerce_schema(entry.get("schema")),
+        "source_tool": str(entry.get("source_tool") or ""),
+        "source_args": _coerce_source_args(entry.get("source_args")),
+        "parent_dataset_id": str(entry.get("parent_dataset_id") or ""),
+        "history": history,
+        "created_at": str(entry.get("created_at") or _utc_now()),
+        "updated_at": str(entry.get("updated_at") or _utc_now()),
+        "storage_mode": "inline" if inline else "spillover",
+        "auto_named": bool(entry.get("auto_named")),
+        "missing_spillover": bool(entry.get("missing_spillover")),
+    }
 
 
 def restore_persisted_datasets(payload: object, session_id: str | None = None) -> None:
@@ -529,23 +629,13 @@ def restore_persisted_datasets(payload: object, session_id: str | None = None) -
         except ValueError:
             continue
         if not isinstance(entry, dict):
+            print(f"[dataset] Warning: skipping persisted dataset '{validated_name}' because its payload is not an object.", flush=True)
             continue
-        dataset = {
-            "dataset_id": str(entry.get("dataset_id") or _new_dataset_id()),
-            "session_id": resolved,
-            "name": validated_name,
-            "records": list(entry.get("records") or []) if entry.get("inline") else None,
-            "count": int(entry.get("count") or len(entry.get("records") or [])),
-            "schema": list(entry.get("schema") or []),
-            "source_tool": str(entry.get("source_tool") or ""),
-            "source_args": None,
-            "parent_dataset_id": str(entry.get("parent_dataset_id") or ""),
-            "history": list(entry.get("history") or entry.get("history_tail") or []),
-            "created_at": str(entry.get("created_at") or _utc_now()),
-            "updated_at": str(entry.get("updated_at") or _utc_now()),
-            "storage_mode": "inline" if entry.get("inline") else "spillover",
-            "auto_named": bool(entry.get("auto_named")),
-        }
+        try:
+            dataset = _restore_dataset_entry(validated_name, entry, resolved)
+        except ValueError as exc:
+            print(f"[dataset] Warning: skipping persisted dataset '{validated_name}': {exc}", flush=True)
+            continue
         restored[validated_name] = dataset
     with _DATASET_LOCK:
         _SESSION_DATASETS[resolved] = restored
@@ -577,6 +667,18 @@ def _missing_spillover_error(name: str, dataset_id: str) -> str:
     return (
         f"Dataset '{name}' refers to missing spillover row {dataset_id}. "
         "Re-fetch the source data or delete this dataset handle."
+    )
+
+
+def _json_dataset_error(name: str, error_text: str) -> str:
+    return json.dumps(
+        {
+            "ok": False,
+            "name": str(name or "").strip().lower(),
+            "error": error_text,
+        },
+        indent=2,
+        ensure_ascii=False,
     )
 
 
@@ -652,14 +754,15 @@ def dataset_inspect(name: str, session_id: str | None = None) -> str:
     try:
         dataset = _get_dataset(name, session_id)
     except ValueError as exc:
-        return f"Error: {exc}"
+        return _json_dataset_error(name, f"Error: {exc}")
     except LookupError:
-        return f"Dataset '{_validate_name(name)}' not found."
+        return _json_dataset_error(name, f"Dataset '{_validate_name(name)}' not found.")
     except FileNotFoundError as exc:
-        return _missing_spillover_error(_validate_name(name), str(exc))
+        return _json_dataset_error(name, _missing_spillover_error(_validate_name(name), str(exc)))
 
     sample = [_project_record(record, list(dataset.get("schema") or [])[:5], 250) for record in (dataset.get("records") or [])[:3]]
     payload = {
+        "ok": True,
         "dataset_id": dataset["dataset_id"],
         "name": dataset["name"],
         "count": len(dataset.get("records") or []),
@@ -687,17 +790,18 @@ def dataset_get(
     try:
         dataset = _get_dataset(name, session_id)
     except ValueError as exc:
-        return f"Error: {exc}"
+        return _json_dataset_error(name, f"Error: {exc}")
     except LookupError:
-        return f"Dataset '{_validate_name(name)}' not found."
+        return _json_dataset_error(name, f"Dataset '{_validate_name(name)}' not found.")
     except FileNotFoundError as exc:
-        return _missing_spillover_error(_validate_name(name), str(exc))
+        return _json_dataset_error(name, _missing_spillover_error(_validate_name(name), str(exc)))
 
     records = dataset.get("records") or []
     selected, selection = _select_records(records, indices=indices, offset=offset, limit=limit, max_records=max_records)
     if fields:
         selected = [{field: record.get(field) for field in fields if field in record} for record in selected]
     payload = {
+        "ok": True,
         "dataset_id": dataset["dataset_id"],
         "name": dataset["name"],
         "total_count": len(records),

@@ -63,7 +63,7 @@ def get_db_path() -> Path:
 
 @contextmanager
 def _conn() -> Generator[sqlite3.Connection, None, None]:
-    c = sqlite3.connect(get_db_path(), check_same_thread=False)
+    c = sqlite3.connect(get_db_path())
     c.row_factory = sqlite3.Row
     if not _wal_initialized:
         c.execute("PRAGMA journal_mode=WAL")
@@ -196,6 +196,28 @@ def _row_to_dict(row: sqlite3.Row) -> dict:
     return dict(row)
 
 
+def _decode_json_value(raw_value: str, default: object, *, label: str) -> tuple[object, str | None]:
+    try:
+        return json.loads(raw_value or json.dumps(default)), None
+    except json.JSONDecodeError as exc:
+        detail = f"{label} JSON decode failed: {exc.msg} at line {exc.lineno} column {exc.colno}"
+        print(f"[database] Warning: {detail}", flush=True)
+        return default, detail
+
+
+def _decode_scratchpad_fields(record: dict, *, label: str) -> None:
+    raw_scratchpad = str(record.get("scratchpad") or "{}")
+    scratchpad, scratchpad_error = _decode_json_value(raw_scratchpad, {}, label=f"{label} scratchpad")
+    record["scratchpad"] = scratchpad if isinstance(scratchpad, dict) else {}
+    if scratchpad_error:
+        record["scratchpad_raw"] = raw_scratchpad
+        record["scratchpad_parse_error"] = scratchpad_error
+
+    raw_input_history = str(record.get("input_history") or "[]")
+    input_history, _input_history_error = _decode_json_value(raw_input_history, [], label=f"{label} input_history")
+    record["input_history"] = input_history if isinstance(input_history, list) else []
+
+
 def _default_profile(channel_type: str) -> str:
     return _PROFILE_DEFAULTS.get(channel_type, _FALLBACK_PROFILE)
 
@@ -256,15 +278,7 @@ def conversation_get_by_external_id(external_id: str) -> dict | None:
     if row is None:
         return None
     result = _row_to_dict(row)
-    try:
-        result["scratchpad"] = json.loads(result["scratchpad"] or "{}")
-    except json.JSONDecodeError:
-        print(f"[database] Warning: malformed scratchpad JSON for external_id={external_id} - resetting to empty", flush=True)
-        result["scratchpad"] = {}
-    try:
-        result["input_history"] = json.loads(result.get("input_history") or "[]")
-    except json.JSONDecodeError:
-        result["input_history"] = []
+    _decode_scratchpad_fields(result, label=f"conversation external_id={external_id}")
     return result
 
 
@@ -277,15 +291,7 @@ def conversation_get(conversation_id: int) -> dict | None:
     if row is None:
         return None
     result = _row_to_dict(row)
-    try:
-        result["scratchpad"] = json.loads(result["scratchpad"] or "{}")
-    except json.JSONDecodeError:
-        print(f"[database] Warning: malformed scratchpad JSON for conversation {conversation_id} - resetting to empty", flush=True)
-        result["scratchpad"] = {}
-    try:
-        result["input_history"] = json.loads(result.get("input_history") or "[]")
-    except json.JSONDecodeError:
-        result["input_history"] = []
+    _decode_scratchpad_fields(result, label=f"conversation {conversation_id}")
     return result
 
 
@@ -320,14 +326,7 @@ def conversation_get_detail(conversation_id: int) -> dict | None:
         if conv_row is None:
             return None
         conv = _row_to_dict(conv_row)
-        try:
-            conv["scratchpad"] = json.loads(conv["scratchpad"] or "{}")
-        except json.JSONDecodeError:
-            conv["scratchpad"] = {}
-        try:
-            conv["input_history"] = json.loads(conv.get("input_history") or "[]")
-        except json.JSONDecodeError:
-            conv["input_history"] = []
+        _decode_scratchpad_fields(conv, label=f"conversation {conversation_id}")
         msg_rows = c.execute(
             "SELECT * FROM messages WHERE conversation_id = ? ORDER BY created_at ASC LIMIT 500",
             (conversation_id,),
@@ -383,15 +382,7 @@ def conversation_list(
     result = []
     for row in rows:
         item = _row_to_dict(row)
-        try:
-            item["scratchpad"] = json.loads(item["scratchpad"] or "{}")
-        except json.JSONDecodeError:
-            print(f"[database] Warning: malformed scratchpad JSON for conversation {item.get('id')} - resetting to empty", flush=True)
-            item["scratchpad"] = {}
-        try:
-            item["input_history"] = json.loads(item.get("input_history") or "[]")
-        except json.JSONDecodeError:
-            item["input_history"] = []
+        _decode_scratchpad_fields(item, label=f"conversation {item.get('id')}")
         result.append(item)
     return result
 

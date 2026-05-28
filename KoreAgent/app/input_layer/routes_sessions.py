@@ -32,6 +32,8 @@ from fastapi import HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
+from conversation_state import estimate_next_turn_tokens
+
 
 class PromptRequest(BaseModel):
     prompt: str
@@ -123,7 +125,12 @@ def register_session_routes(
                     tps_val   = result.tokens_per_second or 0.0
                     history.add(_prompt, response)
                     queue_run_event(run_q, {"type": "response", "run_id": run_id, "response": response, "tokens": p_tokens, "tps": f"{tps_val:.1f}" if tps_val > 0 else "0"}, priority=True)
-                    threading.Thread(target=kc_save_turn, args=(session_id, _prompt, response), kwargs={"token_estimate": p_tokens + c_tokens}, daemon=True).start()
+                    threading.Thread(
+                        target=kc_save_turn,
+                        args=(session_id, _prompt, response),
+                        kwargs={"token_estimate": estimate_next_turn_tokens(p_tokens, c_tokens)},
+                        daemon=True,
+                    ).start()
                     # Pass prompt_tokens=0 to suppress compaction - LLM-Direct deliberately
                     # bypasses orchestration mechanics; compaction is the agent's concern.
                     save_session(session_id, history, summaries, 0, 0)
@@ -225,7 +232,7 @@ def register_session_routes(
                         # the post-turn compaction pass that may invoke the LLM.
                         queue_run_event(run_q, {"type": "response", "run_id": run_id, "response": response, "tokens": p_tokens, "tps": f'{tps:.1f}' if tps > 0 else '0'}, priority=True)
                         # Persist the turn to KC asynchronously - response is already queued.
-                        _kc_token_est = p_tokens + _completion_tokens
+                        _kc_token_est = estimate_next_turn_tokens(p_tokens, _completion_tokens)
                         threading.Thread(target=kc_save_turn, args=(session_id, _prompt, response), kwargs={"token_estimate": _kc_token_est}, daemon=True).start()
                         # Compact old history if the context window is filling up.
                         # Runs synchronously after the response is queued; the task_queue

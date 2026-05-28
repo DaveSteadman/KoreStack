@@ -46,7 +46,7 @@ def get_db_path() -> Path:
 @contextmanager
 def _conn() -> Generator[sqlite3.Connection, None, None]:
     global _wal_initialized
-    connection = sqlite3.connect(get_db_path(), check_same_thread=False)
+    connection = sqlite3.connect(get_db_path())
     connection.row_factory = sqlite3.Row
     if not _wal_initialized:
         connection.execute("PRAGMA journal_mode=WAL")

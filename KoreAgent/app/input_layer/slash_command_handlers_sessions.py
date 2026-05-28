@@ -210,13 +210,15 @@ def _clone_conversation(source: dict, new_name: str, session_id: str) -> dict:
             },
         )
 
+    copied_turn_count = sum(1 for message in source_messages if (message.get("direction") or "") == "inbound")
+
     _kc_patch(
         f"/conversations/{created['id']}",
         {
             "thread_summary": source.get("thread_summary") or "",
             "scratchpad": source.get("scratchpad") or {},
-            "token_estimate": source.get("token_estimate") or 0,
-            "turn_count": source.get("turn_count") or 0,
+            "token_estimate": 0,
+            "turn_count": copied_turn_count,
             "status": "active",
         },
     )

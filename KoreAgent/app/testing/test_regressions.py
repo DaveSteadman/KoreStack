@@ -34,12 +34,15 @@ if str(CODE_DIR) not in sys.path:
     sys.path.insert(0, str(CODE_DIR))
 
 import datasets as datasets_module
+from conversation_state import decode_background_context
+from conversation_state import encode_background_context
 from skill_executor import execute_tool_call
 import datasets_store
 import mcp_client
 from orchestration import _delegate_tls
 from orchestration import delegate_subrun
 from orchestration import OrchestratorConfig
+from input_layer import koreconv_input as koreconv_input_module
 from datasets import auto_route_tool_result
 from datasets import clear_session_datasets
 from datasets import dataset_drop_where
@@ -74,6 +77,7 @@ from skills.SystemInfo.system_info_skill import get_system_info_string
 from tool_loop import normalize_tool_request
 from tool_loop import _derive_auto_scratch_key
 from input_layer import server as api_module
+from input_layer import slash_command_handlers_sessions as session_handlers_module
 from input_layer.routes_sessions import _runtime_config_for_prompt
 from input_layer.slash_command_handlers_testing import _result_counts
 from testing import test_wrapper as test_wrapper_module
@@ -101,6 +105,10 @@ class RegressionTests(unittest.TestCase):
         clear_session_datasets("dataset_paging")
         clear_session_datasets("dataset_export")
         clear_session_datasets("dataset_fulltext")
+        delete_session_datasets("dataset_load_session")
+        clear_session_datasets("dataset_load_session")
+        delete_session_datasets("kc_conv_701")
+        clear_session_datasets("kc_conv_701")
 
     def tearDown(self) -> None:
         scratch_clear()
@@ -120,6 +128,10 @@ class RegressionTests(unittest.TestCase):
         clear_session_datasets("dataset_paging")
         clear_session_datasets("dataset_export")
         clear_session_datasets("dataset_fulltext")
+        delete_session_datasets("dataset_load_session")
+        clear_session_datasets("dataset_load_session")
+        delete_session_datasets("kc_conv_701")
+        clear_session_datasets("kc_conv_701")
 
     def test_write_file_writes_system_info_csv(self) -> None:
         user_data_dir = get_user_data_dir()
@@ -503,6 +515,263 @@ class RegressionTests(unittest.TestCase):
         self.assertEqual(summaries, [{"text": "Prior summary", "turn_range": [1, 1]}])
         self.assertEqual(scratch_load("topic", session_id), "alpha")
 
+    def test_load_session_restores_datasets_from_korechat_payload(self) -> None:
+        session_id = "dataset_load_session"
+        dataset_save(
+            "feed_items_raw",
+            [
+                {"title": "Alpha", "url": "https://example.com/a", "source": "Example"},
+                {"title": "Beta", "url": "https://example.com/b", "source": "Example"},
+            ],
+            source_tool="koredata_search",
+            source_args={"query": "alpha beta"},
+            session_id=session_id,
+        )
+        datasets_payload = get_persisted_datasets_payload(session_id)
+
+        clear_session_datasets(session_id)
+        scratch_clear(session_id)
+
+        conversation = {
+            "id": 7,
+            "thread_summary": "",
+            "scratchpad": {
+                "topic": "alpha",
+                "__datasets": datasets_payload,
+            },
+        }
+
+        with patch.object(api_module, "_kc_get_conversation_for_session", return_value=conversation):
+            with patch.object(api_module, "_kc_get", return_value=[]):
+                history, summaries = api_module._load_session(session_id)
+
+        self.assertEqual(history.as_list(), [])
+        self.assertEqual(summaries, [])
+        self.assertEqual(scratch_load("topic", session_id), "alpha")
+        manifest = json.loads(dataset_inspect("feed_items_raw", session_id=session_id))
+        self.assertEqual(manifest["source_tool"], "koredata_search")
+        self.assertEqual(manifest["count"], 2)
+
+    def test_koreconv_prompt_hides_internal_dataset_transport_key(self) -> None:
+        prompt = koreconv_input_module._build_prompt(
+            {
+                "id": 7,
+                "thread_summary": "",
+                "background_context": "",
+                "scratchpad": {
+                    "topic": "alpha",
+                    "__datasets": {
+                        "feed_items_raw": {
+                            "dataset_id": "ds_example",
+                            "inline": False,
+                            "count": 2,
+                            "schema": ["title", "url"],
+                        }
+                    },
+                },
+            },
+            [],
+        )
+
+        self.assertIn("topic: alpha", prompt)
+        self.assertNotIn("__datasets", prompt)
+        self.assertNotIn("ds_example", prompt)
+
+    def test_koreconv_event_restores_datasets_before_orchestration(self) -> None:
+        session_id = "kc_conv_701"
+        dataset_save(
+            "feed_items_raw",
+            [
+                {"title": "Alpha", "url": "https://example.com/a", "source": "Example"},
+                {"title": "Beta", "url": "https://example.com/b", "source": "Example"},
+            ],
+            source_tool="koredata_search",
+            session_id=session_id,
+        )
+        datasets_payload = get_persisted_datasets_payload(session_id)
+        clear_session_datasets(session_id)
+        scratch_clear(session_id)
+
+        event = {
+            "id": 91,
+            "event_type": "response_needed",
+            "conversation": {
+                "id": 701,
+                "turn_count": 0,
+                "channel_type": "webchat",
+                "scratchpad": {"__datasets": datasets_payload},
+                "messages": [{"direction": "inbound", "content": "list datasets", "summarised": 0}],
+            },
+        }
+
+        captured = {}
+        patched_calls = []
+
+        class _DummyLogger:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, tb):
+                return False
+
+        class _DummySessionContext:
+            def __init__(self) -> None:
+                self._lock = unittest.mock.MagicMock()
+                self._lock.__enter__ = lambda *_args: None
+                self._lock.__exit__ = lambda *_args: False
+                self._turns = []
+
+            def get_turns(self):
+                return []
+
+        def fake_orchestrate_prompt(**_kwargs):
+            captured["datasets"] = dataset_list(session_id=session_id)
+            return ("Datasets available.", 10, 5, True, 1.0)
+
+        with patch.object(koreconv_input_module, "_get_base_url", return_value="http://127.0.0.1:9602"):
+            with patch.object(koreconv_input_module, "make_task_session", return_value=(None, _DummySessionContext())):
+                with patch.object(koreconv_input_module, "orchestrate_prompt", side_effect=fake_orchestrate_prompt):
+                    with patch.object(koreconv_input_module, "_http_post", side_effect=lambda *args, **kwargs: patched_calls.append(("post", args, kwargs)) or {}):
+                        with patch.object(koreconv_input_module, "_http_patch", side_effect=lambda *args, **kwargs: patched_calls.append(("patch", args, kwargs)) or {}):
+                            koreconv_input_module._handle_event(
+                                event,
+                                OrchestratorConfig(
+                                    resolved_model="gpt-oss:20b",
+                                    num_ctx=131072,
+                                    max_iterations=3,
+                                    skills_payload=self.skills_payload,
+                                ),
+                                Path("."),
+                                lambda _path: _DummyLogger(),
+                                lambda log_dir: Path(log_dir) / "dummy.log",
+                                lambda _line: None,
+                            )
+
+        self.assertIn("feed_items_raw", captured["datasets"])
+        patch_payloads = [args[2] for kind, args, _kwargs in patched_calls if kind == "patch" and len(args) >= 3]
+        self.assertTrue(any("scratchpad" in payload for payload in patch_payloads))
+
+    def test_background_context_round_trip_is_versioned(self) -> None:
+        encoded = encode_background_context(
+            [
+                {
+                    "turn": 4,
+                    "user_prompt": "Find the latest feed items about batteries.",
+                    "assistant_response": "I found three relevant stories.",
+                    "skill_outputs": [{"skill": "koredata_search", "summary": "3 results"}],
+                }
+            ]
+        )
+
+        payload = json.loads(encoded)
+        restored_turns, warning = decode_background_context(encoded)
+
+        self.assertEqual(payload["version"], 1)
+        self.assertIsNone(warning)
+        self.assertEqual(restored_turns[0]["turn"], 4)
+        self.assertEqual(restored_turns[0]["skill_outputs"][0]["skill"], "koredata_search")
+
+    def test_koreconv_event_marks_failed_when_outbound_write_fails(self) -> None:
+        event = {
+            "id": 91,
+            "event_type": "response_needed",
+            "conversation": {
+                "id": 701,
+                "turn_count": 0,
+                "channel_type": "webchat",
+                "background_context": "",
+                "scratchpad": {},
+                "messages": [{"direction": "inbound", "content": "hello", "summarised": 0}],
+            },
+        }
+
+        posts: list[tuple[str, dict]] = []
+        patches: list[tuple[str, dict]] = []
+
+        class _DummyLogger:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, tb):
+                return False
+
+        class _DummySessionContext:
+            def __init__(self) -> None:
+                self._lock = unittest.mock.MagicMock()
+                self._lock.__enter__ = lambda *_args: None
+                self._lock.__exit__ = lambda *_args: False
+                self._turns = []
+
+            def get_turns(self):
+                return []
+
+        def fake_http_post(_base: str, path: str, payload: dict, timeout: int = 8):
+            posts.append((path, payload))
+            if path == "/conversations/701/messages":
+                raise RuntimeError("write failed")
+            return {}
+
+        with patch.object(koreconv_input_module, "_get_base_url", return_value="http://127.0.0.1:9602"):
+            with patch.object(koreconv_input_module, "_http_get", return_value=[]):
+                with patch.object(koreconv_input_module, "make_task_session", return_value=(None, _DummySessionContext())):
+                    with patch.object(koreconv_input_module, "orchestrate_prompt", return_value=("Hi", 10, 5, True, 1.0)):
+                        with patch.object(koreconv_input_module, "_http_post", side_effect=fake_http_post):
+                            with patch.object(koreconv_input_module, "_http_patch", side_effect=lambda _base, path, payload, timeout=8: patches.append((path, payload)) or {}):
+                                koreconv_input_module._handle_event(
+                                    event,
+                                    OrchestratorConfig(
+                                        resolved_model="gpt-oss:20b",
+                                        num_ctx=131072,
+                                        max_iterations=3,
+                                        skills_payload=self.skills_payload,
+                                    ),
+                                    Path("."),
+                                    lambda _path: _DummyLogger(),
+                                    lambda log_dir: Path(log_dir) / "dummy.log",
+                                    lambda _line: None,
+                                )
+
+        self.assertIn(("/events/91/complete", {"status": "failed"}), posts)
+        self.assertEqual(patches, [])
+
+    def test_clone_conversation_resets_token_estimate_and_recomputes_turn_count(self) -> None:
+        source = {
+            "id": 7,
+            "channel_type": "webchat",
+            "background_context": "ctx",
+            "profile": "admin",
+            "thread_summary": "summary",
+            "scratchpad": {"topic": "alpha"},
+            "token_estimate": 999,
+            "turn_count": 42,
+        }
+        source_messages = [
+            {"direction": "inbound", "content": "one", "sender_display": "user", "status": "received"},
+            {"direction": "outbound", "content": "reply", "sender_display": "agent", "status": "sent"},
+            {"direction": "inbound", "content": "two", "sender_display": "user", "status": "received"},
+        ]
+        patch_calls = []
+
+        def fake_post(path: str, payload: dict):
+            if path == "/conversations":
+                return {"id": 99}
+            return {}
+
+        def fake_get(path: str):
+            if path == "/conversations/7/messages?limit=1000":
+                return source_messages
+            if path == "/conversations/99":
+                return {"id": 99}
+            return None
+
+        with patch.object(session_handlers_module, "_kc_post", side_effect=fake_post):
+            with patch.object(session_handlers_module, "_kc_get", side_effect=fake_get):
+                with patch.object(session_handlers_module, "_kc_patch", side_effect=lambda path, payload: patch_calls.append((path, payload)) or {}):
+                    session_handlers_module._clone_conversation(source, "Copy", "web_2")
+
+        self.assertEqual(patch_calls[-1][1]["token_estimate"], 0)
+        self.assertEqual(patch_calls[-1][1]["turn_count"], 2)
+
     def test_delete_session_state_deletes_korechat_record(self) -> None:
         session_id = "web_1775338532521"
         scratch_save("topic", "alpha", session_id)
@@ -620,8 +889,9 @@ class RegressionTests(unittest.TestCase):
         clear_session_datasets(session_id)
         restore_persisted_datasets(payload, session_id)
 
-        result = dataset_inspect("feed_items_raw", session_id=session_id)
-        self.assertIn("missing spillover row", result)
+        result = json.loads(dataset_inspect("feed_items_raw", session_id=session_id))
+        self.assertFalse(result["ok"])
+        self.assertIn("missing spillover row", result["error"])
 
     def test_dataset_get_returns_paged_envelope(self) -> None:
         session_id = "dataset_paging"

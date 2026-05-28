@@ -33,6 +33,10 @@ _domains_ready: set[str] = set()
 _domains_lock = threading.Lock()
 
 
+class FeedDatabaseError(RuntimeError):
+    pass
+
+
 def _parse_published(s: str) -> Optional[datetime]:
     """Parse an RSS date string to a naive UTC datetime. Returns None on failure."""
     if not s:
@@ -64,7 +68,7 @@ def get_db_path(domain: str) -> Path:
 
 @contextmanager
 def db_connection(domain: str):
-    conn = sqlite3.connect(str(get_db_path(domain)), check_same_thread=False)
+    conn = sqlite3.connect(str(get_db_path(domain)))
     conn.row_factory = sqlite3.Row
     try:
         yield conn
@@ -179,8 +183,8 @@ def get_entries(domain: str, limit: int = 50, offset: int = 0) -> list[dict]:
                 (limit, offset),
             ).fetchall()
             return [dict(r) for r in rows]
-    except Exception:
-        return []
+    except Exception as exc:
+        raise FeedDatabaseError(f"Could not load entries for domain '{domain}': {exc}") from exc
 
 
 def get_entry(domain: str, entry_id: int) -> Optional[dict]:
@@ -190,8 +194,8 @@ def get_entry(domain: str, entry_id: int) -> Optional[dict]:
                 "SELECT * FROM entries WHERE id = ? AND deleted = 0", (entry_id,)
             ).fetchone()
             return dict(row) if row else None
-    except Exception:
-        return None
+    except Exception as exc:
+        raise FeedDatabaseError(f"Could not load entry {entry_id} for domain '{domain}': {exc}") from exc
 
 
 def search_entries(
