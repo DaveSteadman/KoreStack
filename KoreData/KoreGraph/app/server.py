@@ -106,9 +106,9 @@ _mcp = FastMCP(
         "Search and traverse the KoreGraph concept-connection knowledge graph.\n\n"
         "All tools use plain string terms — no integer concept_ids required.\n\n"
         "Canonical workflow:\n"
-        "1. Call search_vocab to find terms matching a keyword.\n"
-        "2. Call expand_concept_by_term with a string term to retrieve its neighbourhood.\n"
-        "3. Call create_connection to add or reinforce a connection using three strings.\n\n"
+        "1. Call graph_connection_search_vocab to find terms matching a keyword.\n"
+        "2. Call graph_connection_expand_concept_by_term with a string term to retrieve its neighbourhood.\n"
+        "3. Call graph_connection_create to add or reinforce a graph connection using three strings.\n\n"
         "State filter: 0=proposed, 1=active, 2=deprecated, 3=rejected."
     ),
     streamable_http_path="/",
@@ -116,8 +116,8 @@ _mcp = FastMCP(
 )
 
 
-@_mcp.tool(description="Search KoreGraph vocab for concepts matching a keyword.")
-def mcp_search_vocab(q: str, limit: int = 20) -> list[dict]:
+@_mcp.tool(description="Search KoreGraph vocab for graph concepts matching a keyword.")
+def graph_connection_search_vocab(q: str, limit: int = 20) -> list[dict]:
     """Return matching vocab terms with concept_id, term, alias_count."""
     if not q or not q.strip():
         return []
@@ -128,7 +128,7 @@ def mcp_search_vocab(q: str, limit: int = 20) -> list[dict]:
     "Expand a KoreGraph concept into its neighbourhood sub-graph. "
     "Returns {nodes, edges} within the requested depth of hops."
 ))
-def mcp_expand_concept(concept_id: int, depth: int = 1, min_score: int = 0) -> dict:
+def graph_connection_expand_concept(concept_id: int, depth: int = 1, min_score: int = 0) -> dict:
     """Return {nodes: [...], edges: [...]} for the sub-graph around concept_id."""
     depth = max(1, min(depth, 4))
     return expand_concept(concept_id, depth=depth, min_score=min_score)
@@ -139,18 +139,18 @@ def mcp_expand_concept(concept_id: int, depth: int = 1, min_score: int = 0) -> d
     "No concept_id needed — pass the term as a plain string. "
     "Returns {query, matched, nodes, edges} with all names as strings."
 ))
-def mcp_expand_concept_by_term(term: str, depth: int = 1, min_score: int = 0) -> dict:
+def graph_connection_expand_concept_by_term(term: str, depth: int = 1, min_score: int = 0) -> dict:
     """String-based expand. Returns {query, matched, nodes, edges}."""
     depth = max(1, min(depth, 4))
     return expand_by_term(term=term, depth=depth, min_score=min_score)
 
 
 @_mcp.tool(description=(
-    "Create or reinforce a connection between two concepts using plain string names. "
+    "Create or reinforce a graph connection between two concepts using plain string names. "
     "Vocab entries are created automatically if they do not exist. "
     "Repeated calls with the same triple accumulate score (capped at 255)."
 ))
-def mcp_create_connection(
+def graph_connection_create(
     start: str,
     connection: str,
     end: str,
@@ -164,12 +164,12 @@ def mcp_create_connection(
 
 
 @_mcp.tool(description=(
-    "List KoreGraph connections in batches using limit and offset. "
+    "List KoreGraph graph connections in batches using limit and offset. "
     "Returns {total, items} where each item has start_name, connection_name, end_name, state, score. "
     "Use limit/offset to step through all connections. "
-    "Optionally filter by state: 0=unreviewed, 1=accepted, 2=rejected, 3=flagged."
+    "Optionally filter by state: 0=proposed, 1=active, 2=deprecated, 3=rejected."
 ))
-def mcp_list_connections(
+def graph_connection_list(
     limit: int = 100,
     offset: int = 0,
     state: Optional[int] = None,
@@ -182,23 +182,23 @@ def mcp_list_connections(
 
 
 @_mcp.tool(description=(
-    "Delete a KoreGraph connection by the plain string names of its three concepts. "
+    "Delete a KoreGraph graph connection by the plain string names of its three concepts. "
     "Returns {deleted: true} on success or {deleted: false} if the triple was not found. "
-    "Use mcp_list_connections first to see current connections and their exact names."
+    "Use graph_connection_list first to see current graph connections and their exact names."
 ))
-def mcp_delete_connection(start: str, connection: str, end: str) -> dict:
+def graph_connection_delete(start: str, connection: str, end: str) -> dict:
     """Delete a (start, connection, end) triple by string names."""
     ok = delete_connection_by_name(start=start, connection=connection, end=end)
     return {"deleted": ok, "start": start, "connection": connection, "end": end}
 
 
 @_mcp.tool(description=(
-    "Create or reinforce multiple connections in a single call. "
+    "Create or reinforce multiple graph connections in a single call. "
     "Each item must have start, connection, end (strings). "
     "state and score are optional per item (defaults: state=0, score=1). "
-    "Use this instead of repeated mcp_create_connection calls."
+    "Use this instead of repeated graph_connection_create calls."
 ))
-def mcp_create_connections(connections: list[dict]) -> dict:
+def graph_connection_create_many(connections: list[dict]) -> dict:
     """Batch create/reinforce (start, connection, end) triples by string name."""
     accepted = []
     errors   = []

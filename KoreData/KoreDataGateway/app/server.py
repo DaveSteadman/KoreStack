@@ -213,9 +213,9 @@ _INSTR_RAG = (
 _INSTR_GRAPH = (
     "KoreGraph — concept knowledge graph. "
     "Search with domains=[\"graph\"] returns concept edges (start, connection, end, score). "
-    "Add a single connection: mcp_create_connection(start, connection, end). "
-    "Add multiple connections at once: mcp_create_connections([{start, connection, end}, ...]). "
-    "Always use mcp_create_connections when submitting more than one connection. "
+    "If KoreGraph MCP tools are available, add a single graph connection with graph_connection_create(start, connection, end). "
+    "Add multiple graph connections at once with graph_connection_create_many([{start, connection, end}, ...]). "
+    "Always use graph_connection_create_many when submitting more than one graph connection. "
     "Preferred relationship types: is_a (taxonomy only), part_of, contributed_to, discovered, "
     "developed, proposed, invented, studied, applied_to, influenced, precedes, lived_in, "
     "wrote, disproved, succeeded, is_type_of. "

@@ -45,6 +45,23 @@
         "enabled": true,
         "purpose": "document navigation, structured editing, and KoreFile authoring",
         "expected_prefix": "koredocs_"
+      },
+      {
+        "name": "KoreGraph",
+        "service": "koregraph",
+        "path": "/mcp",
+        "enabled": true,
+        "purpose": "concept graph search, traversal, and connection creation",
+        "expected_prefix": "graph_connection_",
+        "allowed_tools": [
+          "graph_connection_search_vocab",
+          "graph_connection_expand_concept",
+          "graph_connection_expand_concept_by_term",
+          "graph_connection_create",
+          "graph_connection_create_many",
+          "graph_connection_list",
+          "graph_connection_delete"
+        ]
       }
     ]
   }

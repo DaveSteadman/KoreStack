@@ -235,8 +235,8 @@ Good relationship types: `discovered`, `invented`, `proposed`, `developed`, `stu
 Do NOT create `"X is_a Science"` for chapter headings or topic groups.
 
 ### 4. Submit as one batch
-Call `mcp_create_connections([...])` with all connections from the chunk at once.
-Never use `mcp_create_connection` (single) when you have multiple connections.
+Call `graph_connection_create_many([...])` with all graph connections from the chunk at once.
+Never use `graph_connection_create` (single) when you have multiple graph connections.
 
 ### 5. Continue
 Use `next_offset` for the next call. Repeat until `has_more` is false.
@@ -248,7 +248,7 @@ Use `next_offset` for the next call. Repeat until `has_more` is false.
 - **Do not** call `scratch_query` on chunk keys — it returns headings, not facts.
 - **Do not** invent connections from training knowledge. Only extract what is stated in the text.
 - **Do not** create nodes for chapter headings, historical eras, or abstract category labels.
-- **Do not** use single `mcp_create_connection` calls in a loop — batch always.
+- **Do not** use single `graph_connection_create` calls in a loop — batch always.
 - **Do not** stop at chunk 0. Chunk 0 is usually a table of contents.
 
 ---

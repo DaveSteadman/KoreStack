@@ -34,6 +34,7 @@ if str(CODE_DIR) not in sys.path:
     sys.path.insert(0, str(CODE_DIR))
 
 import datasets as datasets_module
+import tool_loop as tool_loop_module
 from conversation_state import decode_background_context
 from conversation_state import encode_background_context
 from skill_executor import execute_tool_call
@@ -76,6 +77,8 @@ from skills.WebResearch.web_research_skill import research_traverse
 from skills.SystemInfo.system_info_skill import get_system_info_string
 from tool_loop import normalize_tool_request
 from tool_loop import _derive_auto_scratch_key
+from tool_loop import _extract_graph_connection_batch_from_text
+from tool_result import ToolCallResult
 from input_layer import server as api_module
 from input_layer import slash_command_handlers_sessions as session_handlers_module
 from input_layer.routes_sessions import _runtime_config_for_prompt
@@ -152,6 +155,122 @@ class RegressionTests(unittest.TestCase):
         finally:
             if output_path.exists():
                 output_path.unlink()
+
+    def test_extract_graph_connection_batch_from_final_answer(self) -> None:
+        text = """
+[
+  ["Office for Budget Responsibility", "reports_to", "U.K. Government"],
+  {"subject": "HM Treasury", "predicate": "reports_to", "object": "U.K. Government"}
+]
+"""
+
+        connections = _extract_graph_connection_batch_from_text(text)
+
+        self.assertEqual(
+            connections,
+            [
+                {
+                    "start": "Office for Budget Responsibility",
+                    "connection": "reports_to",
+                    "end": "U.K. Government",
+                },
+                {
+                    "start": "HM Treasury",
+                    "connection": "reports_to",
+                    "end": "U.K. Government",
+                },
+            ],
+        )
+
+    def test_graph_write_guard_forces_tool_call_for_printed_triples(self) -> None:
+        calls: list[tuple[str, dict]] = []
+
+        class _DummyLogger:
+            def log(self, _message: str = "") -> None:
+                pass
+
+            def log_file_only(self, _message: str = "") -> None:
+                pass
+
+            def log_section(self, _title: str) -> None:
+                pass
+
+            def log_section_file_only(self, _title: str) -> None:
+                pass
+
+        class _FakeResult:
+            def __init__(self, response: str, tool_calls: list | None = None) -> None:
+                self.response = response
+                self.message = {"content": response}
+                self.finish_reason = "tool_calls" if tool_calls else "stop"
+                self.prompt_tokens = 10
+                self.completion_tokens = 5
+                self.tokens_per_second = 1.0
+                self.tool_calls = tool_calls or []
+
+        responses = [
+            _FakeResult('[["A", "reports_to", "B"]]'),
+            _FakeResult("Added to graph."),
+        ]
+
+        def fake_call_llm_chat(**_kwargs):
+            return responses.pop(0)
+
+        def fake_execute_tool_call(func_name, arguments, *_args):
+            calls.append((func_name, arguments))
+            return ToolCallResult(
+                tool=func_name,
+                function=func_name,
+                module="mcp_client",
+                arguments=arguments,
+                result={"accepted": 1, "errors": []},
+            )
+
+        config = SimpleNamespace(
+            resolved_model="test-model",
+            max_iterations=3,
+            num_ctx=8192,
+            skills_payload={"skills": []},
+        )
+        tool_defs = [
+            {
+                "type": "function",
+                "function": {
+                    "name": "graph_connection_create_many",
+                    "description": "Create graph connections",
+                    "parameters": {"type": "object", "properties": {}},
+                },
+            }
+        ]
+        messages = [
+            {"role": "system", "content": "system"},
+            {"role": "user", "content": "add these triples to the graph"},
+        ]
+        context_map = [
+            {"round": 0, "role": "sys", "label": "system", "chars": 6, "auto_key": None, "msg_idx": 0},
+            {"round": 0, "role": "user", "label": "prompt", "chars": 32, "auto_key": None, "msg_idx": 1},
+        ]
+
+        with patch.object(tool_loop_module, "execute_tool_call", side_effect=fake_execute_tool_call):
+            final_response, _prompt_tokens, _completion_tokens, run_success, _tps, tool_outputs = tool_loop_module.run_tool_loop(
+                config=config,
+                messages=messages,
+                tool_defs=tool_defs,
+                catalog_gates={},
+                context_map=context_map,
+                user_prompt="add these triples to the graph",
+                logger=_DummyLogger(),
+                quiet=True,
+                call_llm_chat=fake_call_llm_chat,
+                stop_requested=lambda: False,
+                clear_stop=lambda: None,
+            )
+
+        self.assertTrue(run_success)
+        self.assertEqual(final_response, "Added to graph.")
+        self.assertEqual(len(tool_outputs), 1)
+        self.assertEqual(calls[0][0], "graph_connection_create_many")
+        self.assertEqual(calls[0][1], {"connections": [{"start": "A", "connection": "reports_to", "end": "B"}]})
 
     def test_read_file_accepts_workspace_relative_data_prefix(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

@@ -112,6 +112,11 @@ _COT_PLANNING_RE = re.compile(
 _CONTENT_MARKER_RE = re.compile(r"(?:^|\n)(\*\*|#{1,3} |\| |\d+\. |- )")
 _WRITE_FILE_BLOCK_RE = re.compile(r"WRITE_FILE:\s*([^\n]+)\n---FILE_START---[ \t]*\n(.*?)\n?---FILE_END---", re.DOTALL)
 _SCRATCH_KEY_SAFE_RE = re.compile(r"[^a-z0-9_]+")
+_GRAPH_WRITE_INTENT_RE = re.compile(
+    r"\b(?:add|create|insert|save|store|submit|write|load)\b.{0,80}\b(?:graph|koregraph|triple|triples|graph connection|graph connections)\b"
+    r"|\b(?:graph|koregraph|triple|triples|graph connection|graph connections)\b.{0,80}\b(?:add|create|insert|save|store|submit|write|load)\b",
+    re.IGNORECASE | re.DOTALL,
+)
 
 
 def _safe_scratch_component(value: object, fallback: str = "x") -> str:
@@ -293,6 +298,105 @@ def _extract_raw_json_tool_call(text: str) -> dict | None:
     }
 
 
+def _tool_def_available(tool_defs: list[dict], tool_name: str) -> bool:
+    for tool_def in tool_defs:
+        if tool_def.get("function", {}).get("name") == tool_name:
+            return True
+    return False
+
+
+def _is_graph_connection_write_request(user_prompt: str) -> bool:
+    return bool(_GRAPH_WRITE_INTENT_RE.search(user_prompt or ""))
+
+
+def _coerce_graph_connection_item(item: object) -> dict | None:
+    if isinstance(item, (list, tuple)) and len(item) >= 3:
+        start, connection, end = item[0], item[1], item[2]
+        if str(start).strip() and str(connection).strip() and str(end).strip():
+            result = {"start": str(start), "connection": str(connection), "end": str(end)}
+            if len(item) >= 4 and isinstance(item[3], int):
+                result["state"] = item[3]
+            if len(item) >= 5 and isinstance(item[4], int):
+                result["score"] = item[4]
+            return result
+    if isinstance(item, dict):
+        start = item.get("start") or item.get("subject") or item.get("source")
+        connection = item.get("connection") or item.get("predicate") or item.get("relation") or item.get("relationship")
+        end = item.get("end") or item.get("object") or item.get("target")
+        if str(start or "").strip() and str(connection or "").strip() and str(end or "").strip():
+            result = {"start": str(start), "connection": str(connection), "end": str(end)}
+            if isinstance(item.get("state"), int):
+                result["state"] = item["state"]
+            if isinstance(item.get("score"), int):
+                result["score"] = item["score"]
+            return result
+    return None
+
+
+def _coerce_graph_connection_batch(value: object) -> list[dict]:
+    if isinstance(value, dict):
+        for key in ("connections", "triples", "items", "records", "data"):
+            nested = value.get(key)
+            if isinstance(nested, list):
+                return _coerce_graph_connection_batch(nested)
+        single = _coerce_graph_connection_item(value)
+        return [single] if single else []
+    if isinstance(value, list):
+        connections: list[dict] = []
+        for item in value:
+            connection = _coerce_graph_connection_item(item)
+            if connection is not None:
+                connections.append(connection)
+        return connections
+    return []
+
+
+def _extract_graph_connection_batch_from_text(text: str) -> list[dict]:
+    stripped = (text or "").strip()
+    if not stripped:
+        return []
+
+    try:
+        parsed = json.loads(stripped)
+        connections = _coerce_graph_connection_batch(parsed)
+        if connections:
+            return connections
+    except (json.JSONDecodeError, ValueError, TypeError):
+        pass
+
+    decoder = json.JSONDecoder()
+    for index, char in enumerate(stripped):
+        if char not in "[{":
+            continue
+        try:
+            parsed, _end = decoder.raw_decode(stripped[index:])
+        except (json.JSONDecodeError, ValueError):
+            continue
+        connections = _coerce_graph_connection_batch(parsed)
+        if connections:
+            return connections
+    return []
+
+
+def _graph_connection_tool_already_called(tool_outputs: list[ToolCallResult]) -> bool:
+    for output in tool_outputs:
+        name = str(output.get("tool") or output.get("function") or "")
+        if name.startswith("graph_connection_"):
+            return True
+    return False
+
+
+def _build_graph_connection_create_many_call(connections: list[dict], round_num: int) -> dict:
+    return {
+        "id": f"forced_graph_connection_create_many_{round_num}",
+        "type": "function",
+        "function": {
+            "name": "graph_connection_create_many",
+            "arguments": json.dumps({"connections": connections}),
+        },
+    }
+
+
 # ----------------------------------------------------------------------------------------------------
 def strip_cot_preamble(text: str) -> str:
     if not text:
@@ -372,6 +476,8 @@ def run_tool_loop(
     run_success = False
     final_response = ""
     prev_round_tc_fingerprints: frozenset = frozenset()
+    graph_write_guard_corrections = 0
+    graph_write_guard_active = _is_graph_connection_write_request(user_prompt) and _tool_def_available(tool_defs, "graph_connection_create_many")
 
     clear_stop()
     try:
@@ -428,6 +534,32 @@ def run_tool_loop(
                 if _synthetic_tc is not None:
                     _log_file_only(f"[warn] Round {round_num}: model emitted raw JSON tool call instead of invoking - forcing re-invocation.")
                     tool_calls = [_synthetic_tc]
+                elif graph_write_guard_active and not _graph_connection_tool_already_called(tool_outputs):
+                    connections = _extract_graph_connection_batch_from_text(candidate)
+                    if connections:
+                        _log_file_only(
+                            f"[warn] Round {round_num}: model answered a graph-write request without tools - forcing graph_connection_create_many({len(connections)} connection(s))."
+                        )
+                        tool_calls = [_build_graph_connection_create_many_call(connections, round_num)]
+                    elif graph_write_guard_corrections < 1:
+                        correction = (
+                            "The user asked to add graph connections. This is a write operation. "
+                            "You must call graph_connection_create_many with the triples from the conversation or scratchpad before giving a final answer. "
+                            "Do not merely print the triples or claim they were added."
+                        )
+                        graph_write_guard_corrections += 1
+                        _log_file_only(f"[warn] Round {round_num}: graph-write request produced no tool call and no parseable triples - injecting correction.")
+                        messages.append({"role": "user", "content": correction})
+                        context_map.append({"round": round_num, "role": "user", "label": "[graph-write tool correction]", "chars": len(correction), "auto_key": None, "msg_idx": len(messages) - 1})
+                        continue
+                    else:
+                        final_response = "I could not add the graph connections because no parseable triples were available to submit."
+                        run_success = False
+                        _log(final_response)
+                        _log_file_only(f"[progress] Round {round_num}: graph-write guard stopped final answer without a tool call.")
+                        messages.append({"role": "assistant", "content": final_response})
+                        context_map.append({"round": round_num, "role": "asst", "label": "graph-write guard failure", "chars": len(final_response), "auto_key": None, "msg_idx": len(messages) - 1})
+                        break
                 else:
                     final_response = candidate
                     run_success = bool(final_response)
