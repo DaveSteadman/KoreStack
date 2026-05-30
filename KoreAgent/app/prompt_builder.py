@@ -23,10 +23,13 @@
 # the relevant skill.md description instead. Delete entries here as skill.md files absorb them.
 # ====================================================================================================
 
+import json
 import re
 
+from datasets import coerce_persisted_scratchpad_payload
 from datasets import get_prompt_dataset_manifests
 from scratchpad import get_store as get_scratchpad_store
+from utils.workspace_utils import trunc
 
 
 # ====================================================================================================
@@ -170,6 +173,50 @@ def _payload_has_dataset_tools(skills_payload: dict) -> bool:
     return False
 
 
+def _build_conversation_entry_block(conversation_entry: dict | None) -> str:
+    if not isinstance(conversation_entry, dict) or not conversation_entry:
+        return ""
+
+    snapshot: dict[str, object] = {}
+    for key, value in conversation_entry.items():
+        if key == "scratchpad":
+            named_scratch = coerce_persisted_scratchpad_payload(value)
+            if named_scratch:
+                snapshot["scratchpad"] = {"keys": sorted(str(name) for name in named_scratch.keys())}
+            continue
+
+        if key == "datasets" and isinstance(value, dict):
+            dataset_names = sorted(str(name) for name in value.keys())
+            if dataset_names:
+                snapshot["datasets"] = {"names": dataset_names}
+            continue
+
+        if key == "background_context":
+            text = str(value or "").strip()
+            if text:
+                snapshot["background_context"] = {
+                    "chars": len(text),
+                    "preview": trunc(text, 500),
+                }
+            continue
+
+        if key == "messages" and isinstance(value, list):
+            snapshot["messages"] = {"count": len(value)}
+            continue
+
+        if isinstance(value, str):
+            snapshot[key] = trunc(value, 500)
+            continue
+
+        snapshot[key] = value
+
+    if not snapshot:
+        return ""
+
+    rendered = json.dumps(snapshot, ensure_ascii=True, indent=2, sort_keys=True)
+    return f"\nActive KoreChat conversation entry:\n{rendered}"
+
+
 def build_system_message(
     ambient_system_info: str,
     session_context,
@@ -177,6 +224,7 @@ def build_system_message(
     *,
     skill_guidance_enabled: bool,
     sandbox_enabled: bool,
+    conversation_entry: dict | None = None,
     scratchpad_visible_keys: list[str] | None = None,
     conversation_summary: str | None = None,
     user_prompt: str | None = None,
@@ -187,6 +235,10 @@ def build_system_message(
         system_parts.append(f"\n{ambient_system_info}")
     if conversation_summary:
         system_parts.append(f"\nPrior conversation summary (oldest exchanges, compressed):\n{conversation_summary}")
+
+    conversation_entry_block = _build_conversation_entry_block(conversation_entry)
+    if conversation_entry_block:
+        system_parts.append(conversation_entry_block)
 
     prior_inject = session_context.as_inject_block() if session_context else ""
     if prior_inject:

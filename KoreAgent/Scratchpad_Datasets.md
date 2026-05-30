@@ -99,20 +99,19 @@ This is the entire audit trail. No separate decisions table, no link table, no r
 
 ## Storage layering
 
-Datasets must persist across sessions without bloating KoreChat's `conversations.scratchpad` JSON
-column with large payloads.
+Datasets must persist across sessions without bloating KoreChat's named scratchpad payload or
+mixing two different state models into one conversation field.
 
 Two-tier storage, transparent to the agent:
 
-- **Inline.** Datasets whose serialized JSON is under ~50KB are stored inside
-  `conversations.scratchpad` under a reserved `__datasets` subkey. They ride the existing
-  `_kc_patch` persistence path with zero new persistence code.
+- **Inline.** Datasets whose serialized JSON is under ~50KB are stored inside the dedicated
+  `conversations.datasets` JSON field.
 
 - **Spillover.** Larger datasets live in a single local SQLite file at
-  `datacontrol/koreagent/datasets.db`. The scratchpad JSON holds only a handle:
+  `datacontrol/koreagent/datasets.db`. The `datasets` field holds only a handle manifest:
 
   ```json
-  { "__datasets": { "feed_items_raw": { "__handle": "ds:42", "count": 80, "size": 380000 } } }
+  { "feed_items_raw": { "__handle": "ds:42", "count": 80, "size": 380000 } }
   ```
 
 The promotion threshold is checked on every write. A dataset that shrinks back below the threshold
@@ -319,8 +318,8 @@ Phase 1, single PR:
 
 1. `KoreAgent/app/datasets.py` - in-memory store, JSON serialization, history append, parent links.
 2. `KoreAgent/app/datasets_store.py` - SQLite spillover (one table, WAL, per-call `_conn`).
-3. Extend `KoreAgent/app/scratchpad.py` to expose dataset handles under `__datasets` in the
-   serialized scratchpad payload, so KoreChat persistence picks them up automatically.
+3. Persist dataset manifests through the dedicated KoreChat `datasets` field so scratchpad and
+  datasets remain distinct in storage, API payloads, and the inspector UI.
 4. Classifier branch in `KoreAgent/app/tool_loop.py` next to `scratch_auto_save`.
 5. New skill at `KoreAgent/app/system_skills/Datasets/` with `skill.md` and `datasets_skill.py`,
    following the existing `Scratchpad` skill layout.

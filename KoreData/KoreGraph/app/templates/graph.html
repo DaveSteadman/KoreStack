@@ -5,134 +5,506 @@
 {% block content %}
 <style>
   .kg-graph-page {
-    display: flex; flex-direction: column;
-    height: calc(100dvh - 132px); /* topbar + appbar + subbar ≈ 3 × 44px */
-    padding: 0.75rem; gap: 0.5rem; min-height: 0;
+    height: calc(100dvh - 132px);
+    min-height: 0;
+    padding: 0.75rem;
   }
 
-  /* ── search row ───────────────────────────────────────────────────────── */
-  .kg-search-row {
-    display: flex; gap: 0.5rem; align-items: center;
-    position: relative; flex-shrink: 0;
+  .kg-shell {
+    position: relative;
+    display: block;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    background: var(--panel);
   }
-  .kg-search-row input[type=search] { flex: 1; min-width: 0; }
+
+  .kg-sidebar {
+    position: absolute;
+    inset: 0 auto 0 0;
+    z-index: 12;
+    display: flex;
+    flex-direction: column;
+    width: min(var(--kg-sidebar-w, 320px), 88vw);
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    background: color-mix(in srgb, var(--panel) 82%, black 18%);
+    border-right: 1px solid var(--border);
+    box-shadow: 12px 0 32px rgba(0, 0, 0, 0.32);
+    transform: translateX(calc(-100% - 12px));
+    opacity: 0;
+    pointer-events: none;
+    transition: transform 140ms ease, opacity 140ms ease;
+  }
+
+  .kg-splitter {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: calc(min(var(--kg-sidebar-w, 320px), 88vw) - 2px);
+    z-index: 13;
+    width: 4px;
+    background: var(--border);
+    cursor: col-resize;
+    opacity: 0;
+    pointer-events: none;
+    transition: background 0.1s;
+  }
+
+  .kg-shell.is-sidebar-open .kg-sidebar {
+    transform: translateX(0);
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .kg-shell.is-sidebar-open .kg-splitter {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .kg-splitter:hover,
+  .kg-splitter.is-dragging {
+    background: color-mix(in srgb, var(--green) 55%, transparent);
+  }
+
+  .kg-main {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    background: var(--bg);
+  }
+
+  .kg-sidebar .panel-header {
+    padding: 0.8rem 0.9rem 0.65rem;
+    gap: 0.75rem;
+  }
+
+  .kg-sidebar .panel-body {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    padding: 0.9rem;
+  }
+
+  .kg-sidebar-actions {
+    display: flex;
+    gap: 0.45rem;
+    align-items: center;
+  }
+
+  .kg-sidebar-status {
+    min-height: 22px;
+    padding: 0.55rem 0.9rem;
+    border-bottom: 1px solid var(--border);
+    color: var(--dim);
+    font-size: var(--kcui-text-body-sm);
+  }
+
+  .kg-empty-selection {
+    display: grid;
+    gap: 0.75rem;
+    color: var(--dim);
+    font-size: var(--kcui-text-body-sm);
+  }
+
+  .kg-selection-card {
+    display: grid;
+    gap: 0.9rem;
+  }
+
+  .kg-selection-summary {
+    display: grid;
+    gap: 0.35rem;
+    padding: 0.75rem;
+    border: 1px solid var(--border);
+    background: color-mix(in srgb, var(--bg) 84%, transparent);
+  }
+
+  .kg-selection-type {
+    color: var(--dim);
+    font-size: var(--kcui-text-label);
+    letter-spacing: var(--kcui-tracking-label);
+    text-transform: uppercase;
+  }
+
+  .kg-selection-title {
+    color: var(--text);
+    font-size: 1rem;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+  }
+
+  .kg-selection-copy {
+    color: var(--dim);
+    font-size: var(--kcui-text-body-sm);
+  }
+
+  .kg-meta-grid {
+    display: grid;
+    gap: 0.4rem;
+  }
+
+  .kg-meta-row {
+    display: grid;
+    grid-template-columns: 88px minmax(0, 1fr);
+    gap: 0.65rem;
+    align-items: start;
+    padding: 0.35rem 0;
+    border-bottom: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  }
+
+  .kg-meta-row:last-child {
+    border-bottom: none;
+  }
+
+  .kg-meta-label {
+    color: var(--dim);
+    font-size: var(--kcui-text-label);
+    letter-spacing: var(--kcui-tracking-label);
+    text-transform: uppercase;
+  }
+
+  .kg-meta-value {
+    color: var(--text);
+    overflow-wrap: anywhere;
+  }
+
+  .kg-alias-list {
+    display: grid;
+    gap: 0.35rem;
+    padding-left: 1rem;
+    color: var(--text);
+  }
+
+  .kg-sidebar-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    padding-top: 0.35rem;
+  }
+
+  .kg-search-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    position: relative;
+    flex-shrink: 0;
+    padding: 0.75rem;
+    border-bottom: 1px solid var(--border);
+    background: color-mix(in srgb, var(--panel) 88%, black 12%);
+  }
+
+  .kg-search-row input[type=search] {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .kg-search-row .is-active {
+    background: rgba(74, 247, 122, 0.1);
+  }
 
   .kg-ac {
-    position: absolute; top: 100%; left: 0;
-    width: calc(100% - 10rem);
-    background: var(--panel); border: 1px solid var(--border);
-    z-index: 200; margin-top: 2px; display: none;
-    max-height: 240px; overflow-y: auto;
+    position: absolute;
+    top: calc(100% - 1px);
+    left: 0.75rem;
+    width: calc(100% - 15.6rem);
+    background: var(--panel);
+    border: 1px solid var(--border);
+    z-index: 200;
+    display: none;
+    max-height: 240px;
+    overflow-y: auto;
   }
+
   .kg-ac-item {
-    padding: 0.3rem 0.65rem; cursor: pointer;
-    font-size: var(--kcui-text-body-sm); font-family: var(--font-code, monospace);
+    padding: 0.3rem 0.65rem;
+    cursor: pointer;
+    font-size: var(--kcui-text-body-sm);
+    font-family: var(--font-code, monospace);
     border-bottom: 1px solid var(--border);
   }
-  .kg-ac-item:last-child { border-bottom: none; }
-  .kg-ac-item:hover { background: rgba(74,247,122,.07); color: var(--green); }
 
-  /* ── canvas area ──────────────────────────────────────────────────────── */
-  .kg-canvas-outer {
-    flex: 1; min-height: 0;
-    border: 1px solid var(--border); background: var(--bg);
-    position: relative; overflow: hidden;
+  .kg-ac-item:last-child {
+    border-bottom: none;
   }
-  #g-canvas { display: block; }
+
+  .kg-ac-item:hover {
+    background: rgba(74,247,122,.07);
+    color: var(--green);
+  }
+
+  .kg-canvas-outer {
+    flex: 1;
+    min-height: 0;
+    position: relative;
+    overflow: hidden;
+  }
+
+  #g-canvas {
+    display: block;
+  }
 
   .kg-hint {
-    position: absolute; inset: 0;
-    display: flex; align-items: center; justify-content: center;
-    color: var(--dim); font-size: var(--kcui-text-body-sm);
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--dim);
+    font-size: var(--kcui-text-body-sm);
     pointer-events: none;
+    text-align: center;
+    padding: 1rem;
   }
 
-  /* ── square nav buttons ───────────────────────────────────────── */
   .kg-nav-btn {
-    width: 1.75rem; height: 1.75rem;
+    width: 1.75rem;
+    height: 1.75rem;
     padding: 0;
-    display: inline-flex; align-items: center; justify-content: center;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     flex-shrink: 0;
     font-size: 0.75rem;
     line-height: 1;
   }
+
+  @media (max-width: 960px) {
+    .kg-sidebar {
+      width: min(var(--kg-sidebar-w, 320px), 88vw);
+    }
+
+    .kg-splitter {
+      display: none !important;
+    }
+  }
 </style>
 
 <div class="kg-graph-page">
-  <div class="kg-search-row">
-    <input type="search" id="g-input" placeholder="Search concepts…" autocomplete="off">
-    <button id="g-btn">Expand</button>
-    <button id="g-prev" class="kg-nav-btn" disabled title="Previous">&#x25C2;</button>
-    <button id="g-next" class="kg-nav-btn" disabled title="Next">&#x25B8;</button>
-    <button id="g-search-gw" class="btn-sm" disabled title="Search in KoreData">Search &#x2197;</button>
-    <div class="kg-ac" id="g-ac"></div>
-  </div>
-  <div class="kg-canvas-outer" id="g-outer">
-    <div class="kg-hint" id="g-hint">Search for a concept to explore its connections</div>
-    <canvas id="g-canvas"></canvas>
+  <div class="kg-shell" id="kg-shell">
+    <aside class="kg-sidebar" id="kg-sidebar" aria-hidden="true">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">Selection</div>
+          <div class="panel-path" id="kg-selection-path">No graph item selected</div>
+        </div>
+        <div class="kg-sidebar-actions">
+          <button id="kg-close-sidebar" class="btn btn-secondary btn-sm" type="button">Close</button>
+        </div>
+      </div>
+      <div class="kg-sidebar-status" id="kg-sidebar-status">Click a node circle or connection label to inspect it.</div>
+      <div class="panel-body">
+        <div class="kg-empty-selection" id="kg-empty-selection">
+          <div>Select a node circle to inspect a vocab concept.</div>
+          <div>Select a connection label to inspect that edge.</div>
+          <div>Delete is the first action wired into this panel; more actions can hang off the same selection model later.</div>
+        </div>
+        <div class="kg-selection-card" id="kg-selection-card" hidden>
+          <div class="kg-selection-summary">
+            <div class="kg-selection-type" id="kg-selection-type"></div>
+            <div class="kg-selection-title" id="kg-selection-title"></div>
+            <div class="kg-selection-copy" id="kg-selection-copy"></div>
+          </div>
+          <div class="kg-meta-grid" id="kg-selection-meta"></div>
+          <div class="kg-sidebar-footer">
+            <button id="kg-delete-selection" class="btn btn-danger" type="button" disabled>Delete</button>
+          </div>
+        </div>
+      </div>
+    </aside>
+    <div class="kg-splitter" id="kg-splitter" aria-hidden="true"></div>
+    <section class="kg-main">
+      <div class="kg-search-row">
+        <input type="search" id="g-input" placeholder="Search concepts…" autocomplete="off">
+        <button id="g-btn" type="button">Expand</button>
+        <button id="g-prev" class="kg-nav-btn" type="button" disabled title="Previous">&#x25C2;</button>
+        <button id="g-next" class="kg-nav-btn" type="button" disabled title="Next">&#x25B8;</button>
+        <button id="g-search-gw" class="btn-sm" type="button" disabled title="Search in KoreData">Search &#x2197;</button>
+        <button id="g-toggle-sidebar" class="btn btn-secondary btn-sm" type="button" title="Toggle selection sidebar">Selection</button>
+        <div class="kg-ac" id="g-ac"></div>
+      </div>
+      <div class="kg-canvas-outer" id="g-outer">
+        <div class="kg-hint" id="g-hint">Search for a concept to explore its connections</div>
+        <canvas id="g-canvas"></canvas>
+      </div>
+    </section>
   </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
-<script>
+<script type="module">
 (function () {
   'use strict';
 
-  const pfx    = window._kgPfx || '';
-  const input  = document.getElementById('g-input');
-  const btn    = document.getElementById('g-btn');
-  const gwBtn  = document.getElementById('g-search-gw');
-  const ac     = document.getElementById('g-ac');
-  const outer  = document.getElementById('g-outer');
-  const canvas = document.getElementById('g-canvas');
-  const ctx    = canvas.getContext('2d');
-  const hint   = document.getElementById('g-hint');
+  const pfx = window._kgPfx || '';
+  const _SIDEBAR_STATE_KEY = 'koregraph.graph-sidebar-state';
+  const _SIDEBAR_WIDTH_KEY = 'koregraph-graph-sidebar-w';
+  const _MIN_SIDEBAR_W = 260;
+  const _MAX_SIDEBAR_W = 560;
+  const _DEFAULT_SIDEBAR_W = 320;
+  const _PAN_THRESHOLD = 6;
 
-  // ── Palette (matches KoreGraph dark theme) ──────────────────────────────
+  const input = document.getElementById('g-input');
+  const btn = document.getElementById('g-btn');
+  const gwBtn = document.getElementById('g-search-gw');
+  const ac = document.getElementById('g-ac');
+  const outer = document.getElementById('g-outer');
+  const canvas = document.getElementById('g-canvas');
+  const ctx = canvas.getContext('2d');
+  const hint = document.getElementById('g-hint');
+  const shell = document.getElementById('kg-shell');
+  const sidebar = document.getElementById('kg-sidebar');
+  const splitter = document.getElementById('kg-splitter');
+  const toggleSidebarBtn = document.getElementById('g-toggle-sidebar');
+  const closeSidebarBtn = document.getElementById('kg-close-sidebar');
+  const sidebarStatus = document.getElementById('kg-sidebar-status');
+  const selectionPath = document.getElementById('kg-selection-path');
+  const emptySelection = document.getElementById('kg-empty-selection');
+  const selectionCard = document.getElementById('kg-selection-card');
+  const selectionType = document.getElementById('kg-selection-type');
+  const selectionTitle = document.getElementById('kg-selection-title');
+  const selectionCopy = document.getElementById('kg-selection-copy');
+  const selectionMeta = document.getElementById('kg-selection-meta');
+  const deleteSelectionBtn = document.getElementById('kg-delete-selection');
+
   const C = {
-    bg:     '#0b0c10',
-    panel:  '#0f1117',
+    bg: '#0b0c10',
+    panel: '#0f1117',
     border: '#1e2233',
-    text:   '#c5c8d0',
-    dim:    '#4e5466',
-    green:  '#4af77a',
-    blue:   '#6eb5ff',
+    text: '#c5c8d0',
+    dim: '#4e5466',
+    green: '#4af77a',
+    blue: '#6eb5ff',
+    amber: '#f0c060',
   };
 
-  // ── View — KoreDiag-style zoom + pan ────────────────────────────────────
   const view = { zoom: 1.0, pan: { x: 0, y: 0 } };
+  let _graphData = null;
+  let _positions = new Map();
+  let _nodeRing = new Map();
+  let _centralId = null;
+  let _nodeHits = [];
+  let _edgeLabelHits = [];
+  let _selection = null;
+  let _nodeDetail = null;
+  let _sidebarOpen = false;
 
-  // ── Graph state ─────────────────────────────────────────────────────────
-  let _graphData  = null;                 // raw API response
-  let _positions  = new Map();            // concept_id → { wx, wy }  (world px)
-  let _nodeRing   = new Map();            // concept_id → 0 | 1 | 2
-  let _centralId  = null;
+  const NODE_R = 34;
+  const NODE_R2 = 26;
 
-  const NODE_R  = 34;                     // ring-1 node radius (world px)
-  const NODE_R2 = 26;                     // ring-2 node radius
+  function _readSidebarWidth() {
+    try {
+      const raw = Number(localStorage.getItem(_SIDEBAR_WIDTH_KEY));
+      if (!Number.isFinite(raw)) return _DEFAULT_SIDEBAR_W;
+      return Math.max(_MIN_SIDEBAR_W, Math.min(_MAX_SIDEBAR_W, raw));
+    } catch (_) {
+      return _DEFAULT_SIDEBAR_W;
+    }
+  }
 
-  // ── Resize (KoreDiag pattern) ────────────────────────────────────────────
+  function _applySidebarWidth(width) {
+    const clamped = Math.max(_MIN_SIDEBAR_W, Math.min(_MAX_SIDEBAR_W, Number(width) || _DEFAULT_SIDEBAR_W));
+    shell.style.setProperty('--kg-sidebar-w', `${clamped}px`);
+    try {
+      localStorage.setItem(_SIDEBAR_WIDTH_KEY, String(clamped));
+    } catch (_) {}
+    return clamped;
+  }
+
+  function _loadSidebarState() {
+    try {
+      const raw = localStorage.getItem(_SIDEBAR_STATE_KEY);
+      if (!raw) return null;
+      return JSON.parse(raw);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function _saveSidebarState() {
+    try {
+      localStorage.setItem(_SIDEBAR_STATE_KEY, JSON.stringify({
+        open: _sidebarOpen,
+        selection: _serializeSelection(),
+      }));
+    } catch (_) {}
+  }
+
+  function _serializeSelection() {
+    if (!_selection) return null;
+    if (_selection.kind === 'node') {
+      return {
+        kind: 'node',
+        concept_id: _selection.node.concept_id,
+        vocab_id: _selection.node.vocab_id,
+      };
+    }
+    return {
+      kind: 'edge',
+      start_concept_id: _selection.edge.start_concept_id,
+      connection_concept_id: _selection.edge.connection_concept_id,
+      end_concept_id: _selection.edge.end_concept_id,
+    };
+  }
+
+  function _setSidebarOpen(open) {
+    _sidebarOpen = Boolean(open);
+    shell.classList.toggle('is-sidebar-open', _sidebarOpen);
+    sidebar.setAttribute('aria-hidden', _sidebarOpen ? 'false' : 'true');
+    toggleSidebarBtn.classList.toggle('is-active', _sidebarOpen);
+    _saveSidebarState();
+    requestAnimationFrame(resize);
+  }
+
+  function _setSidebarStatus(message) {
+    sidebarStatus.textContent = message;
+  }
+
   function resize() {
-    canvas.width  = outer.clientWidth;
+    canvas.width = outer.clientWidth;
     canvas.height = outer.clientHeight;
     draw();
   }
   new ResizeObserver(resize).observe(outer);
+  _applySidebarWidth(_readSidebarWidth());
 
-  // ── Draw — canvas, translate/scale like KoreDiag renderer.js ─────────────
+  function nodeRadius(id) {
+    if (id === _centralId) return NODE_R + 6;
+    return _nodeRing.get(id) === 2 ? NODE_R2 : NODE_R;
+  }
+
+  function _sameEdge(a, b) {
+    return Boolean(a && b
+      && a.start_concept_id === b.start_concept_id
+      && a.connection_concept_id === b.connection_concept_id
+      && a.end_concept_id === b.end_concept_id);
+  }
+
+  function _isSelectedNode(id) {
+    return _selection?.kind === 'node' && _selection.node?.concept_id === id;
+  }
+
+  function _isSelectedEdge(edge) {
+    return _selection?.kind === 'edge' && _sameEdge(_selection.edge, edge);
+  }
+
   function draw() {
-    const W = canvas.width, H = canvas.height;
-    ctx.clearRect(0, 0, W, H);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    _nodeHits = [];
+    _edgeLabelHits = [];
     if (!_graphData || !_graphData.matched) return;
 
     const { nodes, edges } = _graphData;
-
     ctx.save();
     ctx.translate(view.pan.x, view.pan.y);
     ctx.scale(view.zoom, view.zoom);
 
-    // Group edges by unordered pair so we can stagger labels
     const pairs = new Map();
     for (const e of edges) {
       if (e.start_concept_id === e.end_concept_id) continue;
@@ -142,96 +514,95 @@
       pairs.get(key).push(e);
     }
 
-    // ── edges (behind nodes) ────────────────────────────────────────────
     for (const group of pairs.values()) {
       const count = group.length;
       group.forEach((e, gi) => {
-        const p1  = _positions.get(e.start_concept_id);
-        const p2  = _positions.get(e.end_concept_id);
-        const dx  = p2.wx - p1.wx,  dy  = p2.wy - p1.wy;
+        const p1 = _positions.get(e.start_concept_id);
+        const p2 = _positions.get(e.end_concept_id);
+        const dx = p2.wx - p1.wx;
+        const dy = p2.wy - p1.wy;
         const len = Math.hypot(dx, dy);
         if (len < 1) return;
-        const ux = dx / len, uy = dy / len;
+        const ux = dx / len;
+        const uy = dy / len;
+        const selected = _isSelectedEdge(e);
 
-        // Clip line to each node's actual circle boundary
         const r1c = nodeRadius(e.start_concept_id);
         const r2c = nodeRadius(e.end_concept_id);
-        const x1 = p1.wx + ux * r1c,        y1 = p1.wy + uy * r1c;
-        const x2 = p2.wx - ux * (r2c + 2),  y2 = p2.wy - uy * (r2c + 2);
+        const x1 = p1.wx + ux * r1c;
+        const y1 = p1.wy + uy * r1c;
+        const x2 = p2.wx - ux * (r2c + 2);
+        const y2 = p2.wy - uy * (r2c + 2);
 
         ctx.save();
-        ctx.strokeStyle  = C.blue;
-        ctx.globalAlpha  = 0.45;
-        ctx.lineWidth    = 1.5;
+        ctx.strokeStyle = selected ? C.amber : C.blue;
+        ctx.globalAlpha = selected ? 0.92 : 0.45;
+        ctx.lineWidth = selected ? 2.6 : 1.5;
         ctx.beginPath();
         ctx.moveTo(x1, y1);
         ctx.lineTo(x2, y2);
         ctx.stroke();
         ctx.restore();
 
-        // Arrowhead — borrowed from KoreDiag drawArrow()
-        drawArrow(p1, p2, e.end_concept_id);
+        drawArrow(p1, p2, e.end_concept_id, selected);
 
-        // Edge label — perpendicular offset for visual staggering
         const stagger = (gi - (count - 1) / 2) * 15;
         const lx = (x1 + x2) / 2 + (-uy) * stagger;
-        const ly = (y1 + y2) / 2 + ( ux) * stagger;
-
+        const ly = (y1 + y2) / 2 + ux * stagger;
         ctx.save();
-        ctx.font         = '10px monospace';
-        ctx.textAlign    = 'center';
+        ctx.font = '10px monospace';
+        ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         const lbl = e.connection_name;
-        const tw  = ctx.measureText(lbl).width;
-        // small background rect for readability
-        ctx.fillStyle  = C.bg;
-        ctx.globalAlpha = 0.82;
-        ctx.fillRect(lx - tw / 2 - 3, ly - 7, tw + 6, 14);
+        const tw = ctx.measureText(lbl).width;
+        const hit = { x: lx - tw / 2 - 3, y: ly - 7, w: tw + 6, h: 14, edge: e };
+        _edgeLabelHits.push(hit);
+        ctx.fillStyle = selected ? 'rgba(240, 192, 96, 0.16)' : C.bg;
+        ctx.globalAlpha = selected ? 1 : 0.82;
+        ctx.fillRect(hit.x, hit.y, hit.w, hit.h);
         ctx.globalAlpha = 1;
-        ctx.fillStyle  = C.dim;
+        ctx.fillStyle = selected ? C.amber : C.dim;
         ctx.fillText(lbl, lx, ly);
         ctx.restore();
       });
     }
 
-    // ── nodes (on top of edges) ─────────────────────────────────────────
     for (const nd of nodes) {
-      const p         = _positions.get(nd.concept_id);
+      const p = _positions.get(nd.concept_id);
       if (!p) continue;
       const isCentral = nd.concept_id === _centralId;
-      const isRing2   = _nodeRing.get(nd.concept_id) === 2;
-      const r         = nodeRadius(nd.concept_id);
+      const isRing2 = _nodeRing.get(nd.concept_id) === 2;
+      const isSelected = _isSelectedNode(nd.concept_id);
+      const r = nodeRadius(nd.concept_id);
 
-      // Circle
       ctx.save();
       ctx.beginPath();
       ctx.arc(p.wx, p.wy, r, 0, Math.PI * 2);
-      ctx.fillStyle   = C.panel;
+      ctx.fillStyle = isSelected ? 'rgba(240, 192, 96, 0.14)' : C.panel;
       ctx.fill();
-      ctx.strokeStyle = isCentral ? C.green : isRing2 ? C.dim : C.border;
-      ctx.lineWidth   = isCentral ? 2 : 1.5;
+      ctx.strokeStyle = isSelected ? C.amber : (isCentral ? C.green : (isRing2 ? C.dim : C.border));
+      ctx.lineWidth = isSelected ? 2.4 : (isCentral ? 2 : 1.5);
       ctx.stroke();
 
-      // Label — wrap on spaces to fit inside the circle
-      ctx.font         = '11px monospace';
-      ctx.textAlign    = 'center';
+      ctx.font = '11px monospace';
+      ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillStyle    = isCentral ? C.green : isRing2 ? C.dim : C.text;
-      const maxW  = r * 1.55;   // usable chord width (leaves small margin)
+      ctx.fillStyle = isSelected ? C.amber : (isCentral ? C.green : (isRing2 ? C.dim : C.text));
+      const maxW = r * 1.55;
       const lines = wrapLabel(nd.name, maxW);
       const lineH = 13;
-      const topY  = p.wy - (lines.length - 1) * lineH / 2;
+      const topY = p.wy - (lines.length - 1) * lineH / 2;
       for (let li = 0; li < lines.length; li++) {
         ctx.fillText(lines[li], p.wx, topY + li * lineH);
       }
       ctx.restore();
+
+      _nodeHits.push({ x: p.wx, y: p.wy, r, node: nd });
     }
 
-    ctx.restore(); // undo translate/scale
+    ctx.restore();
   }
 
-  // Wrap a label on space boundaries to fit within maxPx.
-  // Falls back to truncation for single words that are still too wide.
   function wrapLabel(name, maxPx) {
     ctx.font = '11px monospace';
     const words = name.split(' ');
@@ -244,7 +615,6 @@
       } else {
         if (cur) lines.push(cur);
         if (ctx.measureText(word).width > maxPx) {
-          // Single word too wide — truncate it
           let t = word;
           while (t.length > 1 && ctx.measureText(t + '…').width > maxPx) t = t.slice(0, -1);
           lines.push(t + '…');
@@ -258,23 +628,17 @@
     return lines;
   }
 
-  // Per-ring node radius
-  function nodeRadius(id) {
-    if (id === _centralId) return NODE_R + 6;
-    return _nodeRing.get(id) === 2 ? NODE_R2 : NODE_R;
-  }
-
-  // Arrowhead — same math as KoreDiag renderer.js drawArrow()
-  function drawArrow(from, to, toId) {
-    const dx    = to.wx - from.wx,  dy = to.wy - from.wy;
+  function drawArrow(from, to, toId, selected) {
+    const dx = to.wx - from.wx;
+    const dy = to.wy - from.wy;
     const angle = Math.atan2(dy, dx);
-    const size  = 9;
-    const tr    = nodeRadius(toId);
-    const tx    = to.wx - (tr + 2) * Math.cos(angle);
-    const ty    = to.wy - (tr + 2) * Math.sin(angle);
+    const size = 9;
+    const tr = nodeRadius(toId);
+    const tx = to.wx - (tr + 2) * Math.cos(angle);
+    const ty = to.wy - (tr + 2) * Math.sin(angle);
     ctx.save();
-    ctx.fillStyle   = C.blue;
-    ctx.globalAlpha = 0.65;
+    ctx.fillStyle = selected ? C.amber : C.blue;
+    ctx.globalAlpha = selected ? 0.92 : 0.65;
     ctx.beginPath();
     ctx.moveTo(tx, ty);
     ctx.lineTo(tx - size * Math.cos(angle - 0.4), ty - size * Math.sin(angle - 0.4));
@@ -284,59 +648,46 @@
     ctx.restore();
   }
 
-  // ── Layout — multi-ring radial layout ────────────────────────────────────
   function buildLayout(data) {
     _positions.clear();
     _nodeRing.clear();
     const { nodes, edges } = data;
-    const qLower  = (data.query || '').toLowerCase();
+    const qLower = (data.query || '').toLowerCase();
     const central = nodes.find(n => n.name.toLowerCase() === qLower) || nodes[0];
     if (!central) return false;
 
     _centralId = central.concept_id;
-
-    // ── Classify nodes by ring via BFS from central ──────────────────────
     const ring1Set = new Set();
     const ring2Set = new Set();
 
     for (const e of edges) {
-      if (e.start_concept_id === _centralId && e.end_concept_id !== _centralId)
-        ring1Set.add(e.end_concept_id);
-      if (e.end_concept_id === _centralId && e.start_concept_id !== _centralId)
-        ring1Set.add(e.start_concept_id);
+      if (e.start_concept_id === _centralId && e.end_concept_id !== _centralId) ring1Set.add(e.end_concept_id);
+      if (e.end_concept_id === _centralId && e.start_concept_id !== _centralId) ring1Set.add(e.start_concept_id);
     }
     for (const e of edges) {
-      if (ring1Set.has(e.start_concept_id) && e.end_concept_id !== _centralId && !ring1Set.has(e.end_concept_id))
-        ring2Set.add(e.end_concept_id);
-      if (ring1Set.has(e.end_concept_id) && e.start_concept_id !== _centralId && !ring1Set.has(e.start_concept_id))
-        ring2Set.add(e.start_concept_id);
+      if (ring1Set.has(e.start_concept_id) && e.end_concept_id !== _centralId && !ring1Set.has(e.end_concept_id)) ring2Set.add(e.end_concept_id);
+      if (ring1Set.has(e.end_concept_id) && e.start_concept_id !== _centralId && !ring1Set.has(e.start_concept_id)) ring2Set.add(e.start_concept_id);
     }
 
     const ring1 = [...ring1Set].map(id => nodes.find(n => n.concept_id === id)).filter(Boolean);
     const ring2 = [...ring2Set].map(id => nodes.find(n => n.concept_id === id)).filter(Boolean);
     const n1 = ring1.length;
     const n2 = ring2.length;
-
-    // ── Orbit radii — scale with node counts so rings never crowd ────────
     const R1 = n1 === 0 ? 0 : Math.max(160, n1 * NODE_R * 2.8 / (2 * Math.PI));
     const R2 = n2 === 0 ? 0 : Math.max(R1 + 140, n2 * NODE_R2 * 2.8 / (2 * Math.PI));
 
-    // ── Place central ─────────────────────────────────────────────────────
     _positions.set(_centralId, { wx: 0, wy: 0 });
     _nodeRing.set(_centralId, 0);
 
-    // ── Ring 1 — evenly spaced, 12 o'clock start ─────────────────────────
     const ring1Angle = new Map();
     ring1.forEach((nd, i) => {
-      const angle = (2 * Math.PI * i / n1) - Math.PI / 2;
+      const angle = (2 * Math.PI * i / Math.max(n1, 1)) - Math.PI / 2;
       ring1Angle.set(nd.concept_id, angle);
       _positions.set(nd.concept_id, { wx: R1 * Math.cos(angle), wy: R1 * Math.sin(angle) });
       _nodeRing.set(nd.concept_id, 1);
     });
 
-    // ── Ring 2 — grouped in sector behind each ring-1 parent ─────────────
     if (n2 > 0) {
-      // Map each ring-2 node to its ring-1 parents
       const parents = new Map();
       for (const e of edges) {
         const link = (a, b) => {
@@ -349,10 +700,9 @@
         link(e.end_concept_id, e.start_concept_id);
       }
 
-      // Group by primary (first) parent
       const groups = new Map();
       for (const nd2 of ring2) {
-        const pList   = parents.get(nd2.concept_id) || [];
+        const pList = parents.get(nd2.concept_id) || [];
         const primary = pList[0] ?? ring1[0]?.concept_id;
         if (primary !== undefined) {
           if (!groups.has(primary)) groups.set(primary, []);
@@ -360,15 +710,14 @@
         }
       }
 
-      // Spread each group within its parent's angular sector
-      const sectorFrac = 0.82;   // fraction of equal slice to use (avoids overlap at edges)
+      const sectorFrac = 0.82;
       for (const [parentId, children] of groups) {
         const parentAngle = ring1Angle.get(parentId) ?? 0;
-        const sliceWidth  = (2 * Math.PI / Math.max(n1, 1)) * sectorFrac;
+        const sliceWidth = (2 * Math.PI / Math.max(n1, 1)) * sectorFrac;
         const nc = children.length;
         children.forEach((cid, j) => {
           const spread = nc === 1 ? 0 : (j / (nc - 1) - 0.5) * sliceWidth;
-          const angle  = parentAngle + spread;
+          const angle = parentAngle + spread;
           _positions.set(cid, { wx: R2 * Math.cos(angle), wy: R2 * Math.sin(angle) });
           _nodeRing.set(cid, 2);
         });
@@ -379,20 +728,17 @@
   }
 
   function resetView() {
-    view.zoom  = 1.0;
-    view.pan.x = canvas.width  / 2;
+    view.zoom = 1.0;
+    view.pan.x = canvas.width / 2;
     view.pan.y = canvas.height / 2;
   }
 
   function saveView() {
-    sessionStorage.setItem('kg-last-view', JSON.stringify(
-      { zoom: view.zoom, pan: { x: view.pan.x, y: view.pan.y } }
-    ));
+    sessionStorage.setItem('kg-last-view', JSON.stringify({ zoom: view.zoom, pan: { x: view.pan.x, y: view.pan.y } }));
   }
 
-  // ── History ──────────────────────────────────────────────────────────
-  let _history    = [];
-  let _histIdx    = -1;
+  let _history = [];
+  let _histIdx = -1;
   let _histNaving = false;
 
   function histPush(term) {
@@ -407,14 +753,14 @@
   }
 
   function updateHistBtns() {
-    document.getElementById('g-prev').disabled = (_histIdx <= 0);
-    document.getElementById('g-next').disabled = (_histIdx >= _history.length - 1);
+    document.getElementById('g-prev').disabled = _histIdx <= 0;
+    document.getElementById('g-next').disabled = _histIdx >= _history.length - 1;
   }
 
   async function histNav(delta) {
     const newIdx = _histIdx + delta;
     if (newIdx < 0 || newIdx >= _history.length) return;
-    _histIdx    = newIdx;
+    _histIdx = newIdx;
     _histNaving = true;
     input.value = _history[_histIdx];
     await doExpand();
@@ -423,118 +769,427 @@
     updateHistBtns();
   }
 
-  // ── Expand ────────────────────────────────────────────────────────────────
   async function doExpand() {
     hideAC();
     const term = input.value.trim();
-    if (!term) return;
+    if (!term) return false;
     try {
       const r = await fetch(`${pfx}/api/expand-by-term?q=${enc(term)}&depth=2`);
-      if (!r.ok) return;
+      if (!r.ok) return false;
       const data = await r.json();
       if (!data.matched) {
-        hint.textContent   = `No concept found for "${esc(data.query)}"`;
+        hint.textContent = `No concept found for "${esc(data.query)}"`;
         hint.style.display = 'flex';
         _graphData = null;
+        _clearSelection(false);
         draw();
-        return;
+        gwBtn.disabled = true;
+        return false;
       }
       _graphData = data;
       sessionStorage.setItem('kg-last-term', term);
       histPush(term);
-      if (!buildLayout(data)) return;
+      if (!buildLayout(data)) return false;
       hint.style.display = 'none';
       resetView();
+      _restoreSelectionFromState();
       draw();
       gwBtn.disabled = false;
+      return true;
     } catch (err) {
       console.error('expand failed', err);
+      return false;
     }
   }
 
-  // ── Pan + Zoom — KoreDiag interaction.js patterns ──────────────────────
-  let _panning   = false;
-  let _panStart  = { x: 0, y: 0 };
+  let _panning = false;
+  let _pendingBlankPan = null;
+  let _sidebarResizeDrag = null;
+  let _panStart = { x: 0, y: 0 };
   let _panOrigin = { x: 0, y: 0 };
 
+  splitter.addEventListener('mousedown', e => {
+    if (!_sidebarOpen) return;
+    e.preventDefault();
+    _sidebarResizeDrag = { startX: e.clientX, startW: _readSidebarWidth() };
+    splitter.classList.add('is-dragging');
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = 'col-resize';
+  });
+
   canvas.addEventListener('mousedown', e => {
-    if (e.button === 1) { e.preventDefault(); startPan(e); return; }
-    if (e.button !== 0) return;
-    const rect = canvas.getBoundingClientRect();
-    const hit  = hitAt(e.clientX - rect.left, e.clientY - rect.top);
-    if (hit !== null && hit !== _centralId) {
-      const nd = (_graphData?.nodes || []).find(n => n.concept_id === hit);
-      if (nd) { input.value = nd.name; doExpand(); }
+    if (e.button === 1) {
+      e.preventDefault();
+      startPan(e);
       return;
     }
-    startPan(e);
+    if (e.button !== 0) return;
+    const rect = canvas.getBoundingClientRect();
+    const sx = e.clientX - rect.left;
+    const sy = e.clientY - rect.top;
+    const nodeHit = hitNodeAt(sx, sy);
+    if (nodeHit) {
+      e.preventDefault();
+      handleNodeClick(nodeHit);
+      return;
+    }
+    const edgeHit = hitEdgeLabelAt(sx, sy);
+    if (edgeHit) {
+      e.preventDefault();
+      selectEdge(edgeHit);
+      return;
+    }
+    _pendingBlankPan = {
+      startX: e.clientX,
+      startY: e.clientY,
+      originX: view.pan.x,
+      originY: view.pan.y,
+      moved: false,
+    };
   });
 
   canvas.addEventListener('mousemove', e => {
     const rect = canvas.getBoundingClientRect();
+    const sx = e.clientX - rect.left;
+    const sy = e.clientY - rect.top;
+    if (_sidebarResizeDrag) {
+      const nextW = _sidebarResizeDrag.startW + (e.clientX - _sidebarResizeDrag.startX);
+      _applySidebarWidth(nextW);
+      return;
+    }
     if (_panning) {
       view.pan.x = _panOrigin.x + (e.clientX - _panStart.x);
       view.pan.y = _panOrigin.y + (e.clientY - _panStart.y);
       draw();
+    } else if (_pendingBlankPan) {
+      const dx = e.clientX - _pendingBlankPan.startX;
+      const dy = e.clientY - _pendingBlankPan.startY;
+      if (!_pendingBlankPan.moved && Math.hypot(dx, dy) >= _PAN_THRESHOLD) {
+        _pendingBlankPan.moved = true;
+        _panning = true;
+        _panStart = { x: _pendingBlankPan.startX, y: _pendingBlankPan.startY };
+        _panOrigin = { x: _pendingBlankPan.originX, y: _pendingBlankPan.originY };
+        canvas.style.cursor = 'grabbing';
+      }
+      if (_panning) {
+        view.pan.x = _panOrigin.x + (e.clientX - _panStart.x);
+        view.pan.y = _panOrigin.y + (e.clientY - _panStart.y);
+        draw();
+      }
     } else {
-      const hit = hitAt(e.clientX - rect.left, e.clientY - rect.top);
-      canvas.style.cursor = (hit !== null && hit !== _centralId) ? 'pointer' : 'grab';
+      const nodeHit = hitNodeAt(sx, sy);
+      const edgeHit = nodeHit ? null : hitEdgeLabelAt(sx, sy);
+      canvas.style.cursor = nodeHit || edgeHit ? 'pointer' : 'grab';
     }
   });
 
   window.addEventListener('mouseup', () => {
+    if (_sidebarResizeDrag) {
+      _sidebarResizeDrag = null;
+      splitter.classList.remove('is-dragging');
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
+    }
     if (_panning) saveView();
+    if (_pendingBlankPan && !_pendingBlankPan.moved) {
+      _clearSelection(false);
+      _setSidebarOpen(false);
+    }
+    _pendingBlankPan = null;
     _panning = false;
     canvas.style.cursor = 'grab';
   });
 
-  // Zoom toward cursor — same math as KoreDiag interaction.js onWheel
   let _saveViewTimer = null;
   canvas.addEventListener('wheel', e => {
     e.preventDefault();
-    const rect   = canvas.getBoundingClientRect();
-    const mx     = e.clientX - rect.left;
-    const my     = e.clientY - rect.top;
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
     const factor = e.deltaY < 0 ? 1.1 : 0.9;
-    view.pan.x   = mx - (mx - view.pan.x) * factor;
-    view.pan.y   = my - (my - view.pan.y) * factor;
-    view.zoom    = Math.max(0.1, Math.min(6, view.zoom * factor));
+    view.pan.x = mx - (mx - view.pan.x) * factor;
+    view.pan.y = my - (my - view.pan.y) * factor;
+    view.zoom = Math.max(0.1, Math.min(6, view.zoom * factor));
     draw();
     clearTimeout(_saveViewTimer);
     _saveViewTimer = setTimeout(saveView, 400);
   }, { passive: false });
 
   function startPan(e) {
-    _panning      = true;
-    _panStart     = { x: e.clientX, y: e.clientY };
-    _panOrigin    = { x: view.pan.x, y: view.pan.y };
+    _panning = true;
+    _panStart = { x: e.clientX, y: e.clientY };
+    _panOrigin = { x: view.pan.x, y: view.pan.y };
     canvas.style.cursor = 'grabbing';
   }
 
-  // ── Hit test — screen → world → radius check ────────────────────────────
-  function hitAt(sx, sy) {
-    const wx = (sx - view.pan.x) / view.zoom;
-    const wy = (sy - view.pan.y) / view.zoom;
-    for (const [id, p] of _positions) {
-      if (Math.hypot(wx - p.wx, wy - p.wy) <= nodeRadius(id)) return id;
+  function _screenToWorld(sx, sy) {
+    return { wx: (sx - view.pan.x) / view.zoom, wy: (sy - view.pan.y) / view.zoom };
+  }
+
+  function hitNodeAt(sx, sy) {
+    const { wx, wy } = _screenToWorld(sx, sy);
+    for (const hit of _nodeHits) {
+      if (Math.hypot(wx - hit.x, wy - hit.y) <= hit.r) return hit.node;
     }
     return null;
   }
 
-  // ── Autocomplete ─────────────────────────────────────────────────────────
-  let _acTimer = null;
+  function hitEdgeLabelAt(sx, sy) {
+    const { wx, wy } = _screenToWorld(sx, sy);
+    for (const hit of _edgeLabelHits) {
+      if (wx >= hit.x && wx <= hit.x + hit.w && wy >= hit.y && wy <= hit.y + hit.h) return hit.edge;
+    }
+    return null;
+  }
 
+  async function handleNodeClick(node) {
+    const sameNodeSelected = _selection?.kind === 'node' && _selection.node?.concept_id === node.concept_id;
+    const isCentralNode = node.concept_id === _centralId;
+
+    if (sameNodeSelected || isCentralNode) {
+      if (sameNodeSelected && _sidebarOpen) {
+        _clearSelection(false);
+        _setSidebarOpen(false);
+        return;
+      }
+      await selectNode(node);
+      return;
+    }
+
+    _clearSelection(false);
+    _setSidebarOpen(false);
+    input.value = node.name;
+    await doExpand();
+  }
+
+  async function selectNode(node) {
+    _selection = { kind: 'node', node };
+    _nodeDetail = null;
+    _setSidebarOpen(true);
+    _setSidebarStatus(`Selected concept "${node.name}".`);
+    renderSidebar();
+    draw();
+    _saveSidebarState();
+    if (!node.vocab_id) return;
+    try {
+      const detail = await apiJson(`${pfx}/api/vocab/${node.vocab_id}`);
+      if (_selection?.kind !== 'node' || _selection.node?.concept_id !== node.concept_id) return;
+      _nodeDetail = detail;
+      renderSidebar();
+    } catch (err) {
+      if (_selection?.kind !== 'node' || _selection.node?.concept_id !== node.concept_id) return;
+      _setSidebarStatus(`Selected concept "${node.name}". Detail lookup failed.`);
+      renderSidebar();
+    }
+  }
+
+  function selectEdge(edge) {
+    _selection = { kind: 'edge', edge };
+    _nodeDetail = null;
+    _setSidebarOpen(true);
+    _setSidebarStatus(`Selected connection "${edge.connection_name}".`);
+    renderSidebar();
+    draw();
+    _saveSidebarState();
+  }
+
+  function _clearSelection(save = true) {
+    _selection = null;
+    _nodeDetail = null;
+    _setSidebarStatus('Click a node circle or connection label to inspect it.');
+    renderSidebar();
+    draw();
+    if (save) _saveSidebarState();
+  }
+
+  function _renderMetaRow(label, valueHtml) {
+    return `<div class="kg-meta-row"><div class="kg-meta-label">${esc(label)}</div><div class="kg-meta-value">${valueHtml}</div></div>`;
+  }
+
+  function renderSidebar() {
+    selectionCard.hidden = !_selection;
+    emptySelection.hidden = Boolean(_selection);
+    deleteSelectionBtn.disabled = !_selection;
+    if (!_selection) {
+      selectionPath.textContent = 'No graph item selected';
+      selectionType.textContent = '';
+      selectionTitle.textContent = '';
+      selectionCopy.textContent = '';
+      selectionMeta.innerHTML = '';
+      deleteSelectionBtn.textContent = 'Delete';
+      return;
+    }
+
+    if (_selection.kind === 'node') {
+      const node = _selection.node;
+      const aliases = Array.isArray(_nodeDetail?.aliases) ? _nodeDetail.aliases : [];
+      selectionPath.textContent = `Concept ${node.concept_id}`;
+      selectionType.textContent = 'Vocab Concept';
+      selectionTitle.textContent = _nodeDetail?.term || node.name;
+      selectionCopy.textContent = aliases.length
+        ? `${aliases.length} alias${aliases.length === 1 ? '' : 'es'} attached to this concept.`
+        : 'No additional aliases recorded for this concept.';
+      const aliasHtml = aliases.length
+        ? `<ol class="kg-alias-list">${aliases.map(alias => `<li>${esc(alias.term)}</li>`).join('')}</ol>`
+        : 'None';
+      selectionMeta.innerHTML = [
+        _renderMetaRow('Concept', esc(String(node.concept_id))),
+        _renderMetaRow('Vocab Row', esc(String(node.vocab_id || _nodeDetail?.id || '—'))),
+        _renderMetaRow('Aliases', aliasHtml),
+      ].join('');
+      deleteSelectionBtn.textContent = 'Delete Concept';
+      return;
+    }
+
+    const edge = _selection.edge;
+    selectionPath.textContent = `${edge.start_name} / ${edge.connection_name} / ${edge.end_name}`;
+    selectionType.textContent = 'Connection';
+    selectionTitle.textContent = edge.connection_name;
+    selectionCopy.textContent = `${edge.start_name} → ${edge.end_name}`;
+    selectionMeta.innerHTML = [
+      _renderMetaRow('Start', `${esc(edge.start_name)} <span class="meta">(#${esc(String(edge.start_concept_id))})</span>`),
+      _renderMetaRow('Connection', `${esc(edge.connection_name)} <span class="meta">(#${esc(String(edge.connection_concept_id))})</span>`),
+      _renderMetaRow('End', `${esc(edge.end_name)} <span class="meta">(#${esc(String(edge.end_concept_id))})</span>`),
+      _renderMetaRow('State', esc(edge.state_label || String(edge.state ?? ''))),
+      _renderMetaRow('Score', esc(String(edge.score ?? '0'))),
+    ].join('');
+    deleteSelectionBtn.textContent = 'Delete Connection';
+  }
+
+  function _deleteRecoveryTerms(deletedConceptId, deletedName) {
+    const out = [];
+    const seen = new Set();
+    const addTerm = (value) => {
+      const term = String(value || '').trim();
+      if (!term) return;
+      const key = term.toLowerCase();
+      if (seen.has(key)) return;
+      seen.add(key);
+      out.push(term);
+    };
+
+    seen.add(String(deletedName || '').trim().toLowerCase());
+
+    const nodes = (_graphData?.nodes || []).filter((node) => node.concept_id !== deletedConceptId);
+    const origin = _positions.get(deletedConceptId) || _positions.get(_centralId) || null;
+    const scoredNodes = nodes.map((node) => {
+      const pos = _positions.get(node.concept_id);
+      const distance = origin && pos ? Math.hypot(pos.wx - origin.wx, pos.wy - origin.wy) : Number.POSITIVE_INFINITY;
+      return { node, distance };
+    }).sort((a, b) => a.distance - b.distance || a.node.name.localeCompare(b.node.name));
+
+    for (const entry of scoredNodes) addTerm(entry.node.name);
+    for (let i = _history.length - 1; i >= 0; i -= 1) addTerm(_history[i]);
+    return out;
+  }
+
+  async function _recoverDeletedNode(node, noticePrefix) {
+    _clearSelection(false);
+    _setSidebarOpen(false);
+
+    const recoveryTerms = _deleteRecoveryTerms(node.concept_id, node.name);
+    for (const term of recoveryTerms) {
+      input.value = term;
+      const ok = await doExpand();
+      if (ok) {
+        _setSidebarStatus(`${noticePrefix} Showing "${term}".`);
+        _saveSidebarState();
+        return true;
+      }
+    }
+
+    input.value = '';
+    _graphData = null;
+    hint.textContent = `${noticePrefix} Search for another concept to continue.`;
+    hint.style.display = 'flex';
+    gwBtn.disabled = true;
+    draw();
+    _setSidebarStatus(noticePrefix);
+    _saveSidebarState();
+    return false;
+  }
+
+  async function deleteSelection() {
+    if (!_selection) return;
+    try {
+      if (_selection.kind === 'node') {
+        const node = _selection.node;
+        if (!window.confirm(`Delete concept "${node.name}" and all touching relations?`)) return;
+        const result = await apiJson(`${pfx}/api/concepts/${node.concept_id}`, { method: 'DELETE' });
+        await _recoverDeletedNode(
+          node,
+          `Deleted concept "${node.name}" (${result.deleted_relations} relation${result.deleted_relations === 1 ? '' : 's'} removed).`
+        );
+      } else {
+        const edge = _selection.edge;
+        if (!window.confirm(`Delete connection "${edge.start_name} / ${edge.connection_name} / ${edge.end_name}"?`)) return;
+        await apiJson(`${pfx}/api/connections`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            start_concept_id: edge.start_concept_id,
+            connection_concept_id: edge.connection_concept_id,
+            end_concept_id: edge.end_concept_id,
+          }),
+        });
+        _clearSelection(false);
+        _setSidebarStatus(`Deleted connection "${edge.connection_name}".`);
+        _setSidebarOpen(false);
+        await doExpand();
+        _saveSidebarState();
+        return;
+      }
+    } catch (err) {
+      console.error('delete failed', err);
+      if (_selection?.kind === 'node' && /not found|http 404/i.test(String(err.message || ''))) {
+        await _recoverDeletedNode(_selection.node, `Concept "${_selection.node.name}" is no longer present.`);
+        return;
+      }
+      _setSidebarStatus(err.message || 'Delete failed.');
+    }
+  }
+
+  function _restoreSelectionFromState() {
+    const saved = _loadSidebarState();
+    if (!saved?.selection || !_graphData) {
+      renderSidebar();
+      return;
+    }
+    const sel = saved.selection;
+    if (sel.kind === 'node') {
+      const node = (_graphData.nodes || []).find(n => n.concept_id === sel.concept_id);
+      if (node) {
+        selectNode(node);
+        return;
+      }
+    } else {
+      const edge = (_graphData.edges || []).find(item => _sameEdge(item, sel));
+      if (edge) {
+        selectEdge(edge);
+        return;
+      }
+    }
+    _clearSelection(false);
+  }
+
+  let _acTimer = null;
   input.addEventListener('input', () => {
     clearTimeout(_acTimer);
     const q = input.value.trim();
     if (!q) gwBtn.disabled = true;
-    if (q.length < 2) { hideAC(); return; }
+    if (q.length < 2) {
+      hideAC();
+      return;
+    }
     _acTimer = setTimeout(() => loadAC(q), 180);
   });
 
   input.addEventListener('keydown', e => {
-    if (e.key === 'Enter')  { hideAC(); doExpand(); }
-    if (e.key === 'Escape') { hideAC(); }
+    if (e.key === 'Enter') {
+      hideAC();
+      doExpand();
+    }
+    if (e.key === 'Escape') hideAC();
   });
 
   btn.addEventListener('click', doExpand);
@@ -545,6 +1200,9 @@
     if (!term) return;
     window.location.href = '/ui?q=' + enc(term);
   });
+  toggleSidebarBtn.addEventListener('click', () => _setSidebarOpen(!_sidebarOpen));
+  closeSidebarBtn.addEventListener('click', () => _setSidebarOpen(false));
+  deleteSelectionBtn.addEventListener('click', deleteSelection);
 
   document.addEventListener('pointerdown', e => {
     if (!e.target.closest('.kg-search-row')) hideAC();
@@ -553,9 +1211,15 @@
   async function loadAC(q) {
     try {
       const r = await fetch(`${pfx}/api/search?q=${enc(q)}&limit=12`);
-      if (!r.ok) { hideAC(); return; }
+      if (!r.ok) {
+        hideAC();
+        return;
+      }
       const items = await r.json();
-      if (!items.length) { hideAC(); return; }
+      if (!items.length) {
+        hideAC();
+        return;
+      }
       ac.innerHTML = '';
       for (const it of items) {
         const d = document.createElement('div');
@@ -570,13 +1234,32 @@
         ac.appendChild(d);
       }
       ac.style.display = 'block';
-    } catch { hideAC(); }
+    } catch {
+      hideAC();
+    }
   }
 
-  function hideAC() { ac.style.display = 'none'; }
+  function hideAC() {
+    ac.style.display = 'none';
+  }
 
-  // ── Restore state on page load ─────────────────────────────────────────
-  (function () {
+  async function apiJson(url, options = {}) {
+    const response = await fetch(url, options);
+    if (response.ok) {
+      if (response.status === 204) return null;
+      return response.json();
+    }
+    let message = `HTTP ${response.status}`;
+    try {
+      const payload = await response.json();
+      if (payload?.detail) message = String(payload.detail);
+    } catch (_) {}
+    throw new Error(message);
+  }
+
+  (function restoreState() {
+    const savedState = _loadSidebarState();
+    _setSidebarOpen(Boolean(savedState?.open));
     const savedHist = sessionStorage.getItem('kg-history');
     if (savedHist) {
       try {
@@ -596,19 +1279,27 @@
         if (savedView) {
           try {
             const v = JSON.parse(savedView);
-            view.zoom  = v.zoom;
+            view.zoom = v.zoom;
             view.pan.x = v.pan.x;
             view.pan.y = v.pan.y;
             draw();
           } catch (_) {}
         }
       });
+    } else {
+      renderSidebar();
     }
   })();
 
   function enc(s) { return encodeURIComponent(s); }
-  function esc(s) { return s ? s.replace(/&/g, '&amp;').replace(/</g, '&lt;') : ''; }
-
+  function esc(s) {
+    return String(s || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
 })();
 </script>
 {% endblock %}

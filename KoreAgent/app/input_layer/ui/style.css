@@ -24,8 +24,6 @@
     --clr-thinking:   rgba(255,255,255,0.22);
     --clr-user:       #60a5fa;
     --clr-agent:      #4ade80;
-    --bg-wrap-btn:        transparent;
-    --bg-wrap-btn-active: rgba(174, 180, 7, 0.274);
     --font-mono:    var(--font-code);
     --radius:       2px;
     --gap:          12px;
@@ -193,61 +191,12 @@ body.splitter-drag-h { user-select: none; cursor: row-resize; }
     height: 1px;
 }
 
-/* ============================================================
-   PANELS
-   ============================================================ */
-
-.panel.kcui-panel {
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-}
-
-.panel-header.kcui-panel-header {
-    justify-content: flex-start;
-    gap: 8px;
-    flex-shrink: 0;
-}
-
-.header-spacer { flex: 1; }
-
-.nav-group {
-    display:    flex;
-    gap:        4px;
-    flex-shrink: 0;
-}
-
-.wrap-btn {
-    background:      var(--bg-wrap-btn);
-    border:          1px solid var(--border);
-    border-radius:   var(--radius);
-    color:           var(--text-dim);
-    font-family:     var(--font-mono);
-    font-size:       9px;
-    letter-spacing:  0.1em;
-    padding:         1px 6px;
-    cursor:          pointer;
-    text-transform:  lowercase;
-    text-decoration: none;
-    transition:      border-color 0.15s, color 0.15s, background 0.15s;
-    flex-shrink:     0;
-}
-
-.wrap-btn:hover,
-.wrap-btn:focus-visible { border-color: var(--border-hi); color: var(--text-hi); }
-.wrap-btn.is-on         { border-color: var(--border-hi); color: var(--text-hi); background: var(--bg-wrap-btn-active); }
-.wrap-btn.sandbox-on    { border-color: #2a6a3a; color: #70c080; background: rgba(40, 140, 70, 0.18); }
-.wrap-btn.sandbox-off   { border-color: #7a2a2a; color: #e08080; background: rgba(160, 40, 40, 0.18); }
-.wrap-btn.webskills-on  { border-color: #1a7a8a; color: #40d0e8; background: rgba(20, 160, 190, 0.15); font-weight: bold; }
-.wrap-btn.webskills-off { border-color: #444;    color: #666;    background: transparent; }
-
 /* ─── Chat panel button specific states ─────────────────── */
 #sandbox-btn.sandbox-on  { border-color: #2a6a3a; color: #70c080; background: rgba(40, 140, 70, 0.18); }
 #sandbox-btn.sandbox-off { border-color: #7a2a2a; color: #e08080; background: rgba(160, 40, 40, 0.18); }
 #webskills-btn.webskills-on  { border-color: #1a7a8a; color: #40d0e8; background: rgba(20, 160, 190, 0.15); }
 #webskills-btn.webskills-off { border-color: #444;    color: #666;    background: transparent; }
 #direct-btn.direct-on  { border-color: #7a4a8a; color: #c080e0; background: rgba(140, 60, 180, 0.18); }
-.direct-inactive       { opacity: 0.28; pointer-events: none; }
 #wrap-btn-chat.is-on {
     color: var(--yellow); border-color: var(--yellow);
     background: rgba(240, 192, 96, 0.12);
@@ -267,48 +216,10 @@ body.splitter-drag-h { user-select: none; cursor: row-resize; }
     background: rgba(240, 192, 96, 0.12);
 }
 
-.panel-body.kcui-panel-body {
-    flex: 1;
-    overflow-y: auto;
-    overflow-x: hidden;
-    font-family: var(--font-mono);
-    font-size: 12px;
-    line-height: 1.6;
-    overscroll-behavior-y: contain;
-    scrollbar-gutter: stable;
-    scrollbar-width: thin;
-    scrollbar-color: var(--border) transparent;
-}
-
 .timeline-body {
     display: flex;
     flex-direction: column;
     min-height: 0;
-}
-
-/* nowrap mode: horizontal scroll, lines must not break */
-.panel-body.kcui-panel-body.nowrap {
-    overflow-x: auto;
-    white-space: pre !important;
-}
-
-.panel-body.kcui-panel-body.nowrap .log-line,
-.panel-body.kcui-panel-body.nowrap .msg-text {
-    white-space: pre;
-}
-
-.panel-body.kcui-panel-body::-webkit-scrollbar       { width: 4px; height: 4px; }
-.panel-body.kcui-panel-body::-webkit-scrollbar-track  { background: transparent; }
-.panel-body.kcui-panel-body::-webkit-scrollbar-thumb  { background: var(--border); border-radius: 2px; }
-
-/* Live-follow mode is intentionally non-manual: hide the scrollbar to make the auto state explicit. */
-.panel-body.kcui-panel-body.live-follow {
-    scrollbar-width: none;
-}
-
-.panel-body.kcui-panel-body.live-follow::-webkit-scrollbar {
-    width: 0;
-    height: 0;
 }
 
 /* ============================================================

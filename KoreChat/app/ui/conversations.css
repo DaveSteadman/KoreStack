@@ -191,6 +191,10 @@ html, body {
     overflow:      hidden;
 }
 
+.datasets-list {
+    border-top: 0;
+}
+
 .section-header {
     display:      flex;
     align-items:  center;

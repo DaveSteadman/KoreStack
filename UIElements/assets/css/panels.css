@@ -284,6 +284,12 @@
   overflow: hidden;
 }
 
+.kcui-panel--column {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
 .kcui-panel-header {
   display: flex;
   align-items: center;
@@ -294,8 +300,70 @@
   color: var(--text-dim);
 }
 
+.kcui-panel-header--start {
+  justify-content: flex-start;
+  gap: 8px;
+}
+
+.kcui-panel-spacer {
+  flex: 1 1 auto;
+}
+
 .kcui-panel-body {
   padding: 12px;
+}
+
+.kcui-panel-body--fill {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.kcui-panel-body--mono {
+  font-family: var(--font-code);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.kcui-panel-body--scroll {
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior-y: contain;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.kcui-panel-body--scroll::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.kcui-panel-body--scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.kcui-panel-body--scroll::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 2px;
+}
+
+.kcui-panel-body--nowrap {
+  overflow-x: auto;
+  white-space: pre !important;
+}
+
+.kcui-panel-body--nowrap .log-line,
+.kcui-panel-body--nowrap .msg-text {
+  white-space: pre;
+}
+
+.kcui-panel-body--live-follow {
+  scrollbar-width: none;
+}
+
+.kcui-panel-body--live-follow::-webkit-scrollbar {
+  width: 0;
+  height: 0;
 }
 
 .kcui-sidebar {

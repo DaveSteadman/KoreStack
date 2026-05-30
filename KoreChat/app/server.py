@@ -155,6 +155,7 @@ class ConversationPatchRequest(BaseModel):
     protected:          bool | None = None
     thread_summary:     str | None  = None
     scratchpad:         dict | None = None
+    datasets:           dict | None = None
     background_context: str | None  = None
     token_estimate:     int | None  = None
     turn_count:         int | None  = None
@@ -244,6 +245,7 @@ def patch_conversation(conversation_id: int, req: ConversationPatchRequest):
         protected          = req.protected,
         thread_summary     = req.thread_summary,
         scratchpad         = req.scratchpad,
+        datasets           = req.datasets,
         background_context = req.background_context,
         token_estimate     = req.token_estimate,
         turn_count         = req.turn_count,

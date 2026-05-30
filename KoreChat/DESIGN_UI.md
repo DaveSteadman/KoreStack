@@ -152,7 +152,10 @@ A vertically stacked list of collapsible sections. Each section has a `.section-
 │  <pre>…</pre>                                            │  #summary-text .text-block
 ├──────────────────────────────────────────────────────────┤
 │  [P] Scratchpad                  (empty)                 │  #sec-scratchpad
-│  key │ value                                             │  #scratchpad-table .kv-table
+│  key │ value                                             │  #scratchpad-list
+├──────────────────────────────────────────────────────────┤
+│  [D] Datasets                    (empty)                 │  #sec-datasets
+│  dataset │ manifest                                      │  #datasets-list
 ├──────────────────────────────────────────────────────────┤
 │  [H] Input History       [3]     (empty)                 │  #sec-history
 │  1. "Hello"                                              │  #history-list .history-list

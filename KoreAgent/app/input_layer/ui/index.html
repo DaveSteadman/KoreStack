@@ -31,11 +31,11 @@
     >
 
         <!-- Timeline -->
-        <div class="panel kcui-panel kcui-workspace__region" id="panel-timeline">
-            <div class="panel-header kcui-panel-header">
+        <div class="panel kcui-panel kcui-panel--column kcui-workspace__region" id="panel-timeline">
+            <div class="panel-header kcui-panel-header kcui-panel-header--start">
                 Schedule
             </div>
-            <div class="panel-body kcui-panel-body timeline-body">
+            <div class="panel-body kcui-panel-body kcui-panel-body--fill kcui-panel-body--scroll kcui-panel-body--mono timeline-body">
                 <div id="timeline-ticker"></div>
                 <div id="timeline-queue"></div>
             </div>
@@ -51,16 +51,16 @@
         ></div>
 
         <!-- Log stream -->
-        <div class="panel kcui-panel kcui-workspace__region" id="panel-log">
-            <div class="panel-header kcui-panel-header">
+        <div class="panel kcui-panel kcui-panel--column kcui-workspace__region" id="panel-log">
+            <div class="panel-header kcui-panel-header kcui-panel-header--start">
                 <span id="log-panel-title">Log</span>
-                <span class="header-spacer"></span>
+                <span class="kcui-panel-spacer"></span>
                 <button class="kcui-tag kcui-tag--dim" id="log-btn-up" type="button">&#x2191;</button>
                 <button class="kcui-tag kcui-tag--dim" id="log-btn-down" type="button">&#x2193;</button>
                 <button class="kcui-tag kcui-tag--dim is-on" id="log-btn-live" type="button">live</button>
                 <button class="kcui-tag kcui-tag--dim" id="wrap-btn-log" type="button">wrap</button>
             </div>
-            <div class="panel-body kcui-panel-body nowrap" id="log-body"></div>
+            <div class="panel-body kcui-panel-body kcui-panel-body--fill kcui-panel-body--scroll kcui-panel-body--mono kcui-panel-body--nowrap" id="log-body"></div>
         </div>
 
         <div
@@ -73,16 +73,16 @@
         ></div>
 
         <!-- Chat -->
-        <div class="panel kcui-panel kcui-workspace__region" id="panel-chat">
-            <div class="panel-header kcui-panel-header">
+        <div class="panel kcui-panel kcui-panel--column kcui-workspace__region" id="panel-chat">
+            <div class="panel-header kcui-panel-header kcui-panel-header--start">
                 Chat: <span id="chat-panel-title"></span>
-                <span class="header-spacer"></span>
+                <span class="kcui-panel-spacer"></span>
                 <button class="kcui-tag kcui-tag--dim" id="sandbox-btn" type="button">sandbox</button>
                 <button class="kcui-tag kcui-tag--dim" id="webskills-btn" type="button">web</button>
                 <button class="kcui-tag kcui-tag--dim" id="direct-btn" type="button">LLM-DIRECT</button>
                 <button class="kcui-tag kcui-tag--dim" id="wrap-btn-chat" type="button">wrap</button>
             </div>
-            <div class="panel-body kcui-panel-body nowrap" id="chat-body"></div>
+            <div class="panel-body kcui-panel-body kcui-panel-body--fill kcui-panel-body--scroll kcui-panel-body--mono kcui-panel-body--nowrap" id="chat-body"></div>
         </div>
 
         <div
@@ -96,7 +96,7 @@
 
         <!-- Input bar -->
         <div class="panel kcui-panel kcui-workspace__region" id="panel-input">
-            <div class="panel-body kcui-panel-body">
+            <div class="panel-body kcui-panel-body kcui-panel-body--fill">
                 <textarea
                     id="chat-input"
                     rows="2"

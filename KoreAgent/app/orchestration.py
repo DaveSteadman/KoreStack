@@ -429,6 +429,7 @@ def orchestrate_prompt(
     session_context: "SessionContext | None" = None,
     quiet: bool = False,
     delegate_depth: int = 0,
+    conversation_entry: dict | None = None,
     scratchpad_visible_keys: list[str] | None = None,
     conversation_summary: str | None = None,
     on_tool_round_complete: object | None = None,
@@ -498,6 +499,7 @@ def orchestrate_prompt(
             active_payload,
             skill_guidance_enabled=_SKILL_GUIDANCE_ENABLED,
             sandbox_enabled=_SANDBOX_ENABLED,
+            conversation_entry=conversation_entry,
             scratchpad_visible_keys=scratchpad_visible_keys,
             conversation_summary=conversation_summary,
             user_prompt=user_prompt,
@@ -516,7 +518,12 @@ def orchestrate_prompt(
         messages.append({"role": "user", "content": user_prompt})
         _context_map.append({"round": 0, "role": "user", "label": trunc(user_prompt, 50), "chars": len(user_prompt), "auto_key": None, "msg_idx": len(messages) - 1})
 
-        _prev_delegate_runtime = push_delegate_runtime(logger=logger, delegate_depth=delegate_depth, config=config)
+        _prev_delegate_runtime = push_delegate_runtime(
+            logger=logger,
+            delegate_depth=delegate_depth,
+            config=config,
+            conversation_entry=conversation_entry,
+        )
         catalog_gates = build_catalog_gates(active_payload)
 
         # Register a per-run stop event so that /stoprun only affects this session.

@@ -336,6 +336,29 @@ def delete_vocab_term(vocab_id: int) -> bool:
         return cur.rowcount > 0
 
 
+def delete_concept(concept_id: int) -> dict:
+    """Delete a concept plus every relation that references it."""
+    with db_connection() as conn:
+        vocab_rows = conn.execute(
+            "SELECT COUNT(*) FROM vocab WHERE concept_id=?", (concept_id,)
+        ).fetchone()[0]
+        if vocab_rows == 0:
+            return {"deleted": False, "concept_id": concept_id, "deleted_vocab_terms": 0, "deleted_relations": 0}
+
+        rel_cur = conn.execute(
+            "DELETE FROM relations"
+            " WHERE subject_concept_id=? OR predicate_concept_id=? OR object_concept_id=?",
+            (concept_id, concept_id, concept_id),
+        )
+        vocab_cur = conn.execute("DELETE FROM vocab WHERE concept_id=?", (concept_id,))
+        return {
+            "deleted": True,
+            "concept_id": concept_id,
+            "deleted_vocab_terms": vocab_cur.rowcount,
+            "deleted_relations": rel_cur.rowcount,
+        }
+
+
 def rename_vocab_term(vocab_id: int, new_term: str) -> Optional[dict]:
     new_term = new_term.strip()
     if not new_term:
@@ -681,12 +704,19 @@ def expand_concept(concept_id: int, depth: int = 1, min_score: int = 0) -> dict:
             placeholders = ",".join("?" * len(all_concept_ids))
             node_rows = conn.execute(
                 f"""
-                SELECT concept_id,
-                       MIN(term) AS name,
-                       COUNT(*) - 1 AS alias_count
-                FROM vocab
-                WHERE concept_id IN ({placeholders})
-                GROUP BY concept_id
+                SELECT v.concept_id,
+                       v.id AS vocab_id,
+                       v.term AS name,
+                       counts.alias_count AS alias_count
+                FROM vocab v
+                JOIN (
+                    SELECT concept_id, MIN(id) AS vocab_id, COUNT(*) - 1 AS alias_count
+                    FROM vocab
+                    WHERE concept_id IN ({placeholders})
+                    GROUP BY concept_id
+                ) counts
+                  ON counts.vocab_id = v.id
+                ORDER BY v.term
                 """,
                 list(all_concept_ids),
             ).fetchall()

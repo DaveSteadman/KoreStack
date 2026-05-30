@@ -30,9 +30,9 @@ A conversation is not a log file, not a session, not a queue entry. It is a self
 KoreAgent holds no durable conversation state in memory. Each time it processes a pending event it performs a clean read-process-write cycle:
 
 1. Claim event from KoreChat
-2. GET conversation (summary + unsummarised messages + scratchpad)
+2. GET conversation (summary + unsummarised messages + scratchpad + datasets)
 3. Build prompt and run LLM
-4. PATCH conversation (updated summary, scratchpad, token estimate)
+4. PATCH conversation (updated summary, scratchpad, datasets, token estimate)
 5. POST outbound message
 6. Complete event, raise next event if needed
 
@@ -77,6 +77,7 @@ The central conversation record.
 | external_id | TEXT nullable | External session/thread key (for example webchat session mapping) |
 | thread_summary | TEXT | LLM-compressed rolling context |
 | scratchpad | TEXT (JSON) | Derived facts as key/value object |
+| datasets | TEXT (JSON) | Named dataset manifests persisted alongside the conversation |
 | input_history | TEXT (JSON array) | Raw input sequence metadata for session-bound flows |
 | background_context | TEXT | Standing instructions for this contact/topic |
 | token_estimate | INTEGER | Rough current prompt size, triggers compression |
@@ -149,7 +150,7 @@ Event types:
 | POST | /conversations | Create a new conversation, returns {id, ...} |
 | GET | /conversations | List conversations (query: status, channel_type, limit, offset) |
 | GET | /conversations/{id} | Full record including unsummarised messages |
-| PATCH | /conversations/{id} | Partial update: status, thread_summary, scratchpad, background_context, token_estimate, turn_count |
+| PATCH | /conversations/{id} | Partial update: status, thread_summary, scratchpad, datasets, background_context, token_estimate, turn_count |
 | DELETE | /conversations/{id} | Hard-delete the conversation row plus dependent events/messages |
 
 ### Messages
@@ -184,13 +185,13 @@ GET /events/next?claimed_by=agent
   -> 200: event claimed
 
 GET /conversations/{conversation_id}
-  -> thread_summary + scratchpad + background_context + unsummarised messages
+  -> thread_summary + scratchpad + datasets + background_context + unsummarised messages
 
 Build prompt from conversation fields
 Run LLM (orchestrate_prompt)
 
 POST /conversations/{id}/messages  {direction: outbound, content: response}
-PATCH /conversations/{id}          {thread_summary, scratchpad, token_estimate, turn_count, status}
+PATCH /conversations/{id}          {thread_summary, scratchpad, datasets, token_estimate, turn_count, status}
 POST /events/{event_id}/complete   {status: completed}
 
 If response produced for a non-webchat, non-manual channel:
@@ -221,12 +222,13 @@ A background thread runs every 60 seconds. Events with `status = 'claimed'` and 
 
 ## Relationship to chatsessions/
 
-KoreChat supersedes the historical `datacontrol/chatsessions/` directory used by earlier KoreAgent generations. That directory stored one JSON file per session containing turns, summaries, and scratchpad.
+KoreChat supersedes the historical `datacontrol/chatsessions/` directory used by earlier KoreAgent generations. That directory stored one JSON file per session containing turns, summaries, scratchpad, and dataset state.
 
 Under the new model:
 - turns -> messages table
 - summaries -> thread_summary field (single rolling compacted text)
 - scratchpad -> scratchpad field
+- datasets -> datasets field
 - session_id string -> conversation id integer
 
 The old `chatsessions/` directory can remain on disk as historical data, but active runtime flows no longer write browser session state there. Session slash commands now operate through KoreChat APIs and `external_id` mappings.

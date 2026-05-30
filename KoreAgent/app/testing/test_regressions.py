@@ -654,10 +654,8 @@ class RegressionTests(unittest.TestCase):
         conversation = {
             "id": 7,
             "thread_summary": "",
-            "scratchpad": {
-                "topic": "alpha",
-                "__datasets": datasets_payload,
-            },
+            "scratchpad": {"topic": "alpha"},
+            "datasets": datasets_payload,
         }
 
         with patch.object(api_module, "_kc_get_conversation_for_session", return_value=conversation):
@@ -671,29 +669,28 @@ class RegressionTests(unittest.TestCase):
         self.assertEqual(manifest["source_tool"], "koredata_search")
         self.assertEqual(manifest["count"], 2)
 
-    def test_koreconv_prompt_hides_internal_dataset_transport_key(self) -> None:
+    def test_koreconv_prompt_renders_datasets_separately(self) -> None:
         prompt = koreconv_input_module._build_prompt(
             {
                 "id": 7,
                 "thread_summary": "",
                 "background_context": "",
-                "scratchpad": {
-                    "topic": "alpha",
-                    "__datasets": {
-                        "feed_items_raw": {
-                            "dataset_id": "ds_example",
-                            "inline": False,
-                            "count": 2,
-                            "schema": ["title", "url"],
-                        }
-                    },
+                "scratchpad": {"topic": "alpha"},
+                "datasets": {
+                    "feed_items_raw": {
+                        "dataset_id": "ds_example",
+                        "inline": False,
+                        "count": 2,
+                        "schema": ["title", "url"],
+                    }
                 },
             },
             [],
         )
 
         self.assertIn("topic: alpha", prompt)
-        self.assertNotIn("__datasets", prompt)
+        self.assertIn("--- Datasets ---", prompt)
+        self.assertIn("feed_items_raw: 2 records fields=[title, url]", prompt)
         self.assertNotIn("ds_example", prompt)
 
     def test_koreconv_event_restores_datasets_before_orchestration(self) -> None:
@@ -718,7 +715,8 @@ class RegressionTests(unittest.TestCase):
                 "id": 701,
                 "turn_count": 0,
                 "channel_type": "webchat",
-                "scratchpad": {"__datasets": datasets_payload},
+                "scratchpad": {},
+                "datasets": datasets_payload,
                 "messages": [{"direction": "inbound", "content": "list datasets", "summarised": 0}],
             },
         }
@@ -768,7 +766,7 @@ class RegressionTests(unittest.TestCase):
 
         self.assertIn("feed_items_raw", captured["datasets"])
         patch_payloads = [args[2] for kind, args, _kwargs in patched_calls if kind == "patch" and len(args) >= 3]
-        self.assertTrue(any("scratchpad" in payload for payload in patch_payloads))
+        self.assertTrue(any("scratchpad" in payload and "datasets" in payload for payload in patch_payloads))
 
     def test_background_context_round_trip_is_versioned(self) -> None:
         encoded = encode_background_context(
@@ -1171,6 +1169,39 @@ class RegressionTests(unittest.TestCase):
 
         self.assertNotIn("Datasets currently stored", system_message)
 
+    def test_system_prompt_includes_korechat_conversation_snapshot(self) -> None:
+        system_message = build_system_message(
+            "",
+            None,
+            {"skills": []},
+            skill_guidance_enabled=False,
+            sandbox_enabled=True,
+            conversation_entry={
+                "id": 7,
+                "channel_type": "webchat",
+                "subject": "Delegate parent",
+                "background_context": "prior turn context goes here",
+                "scratchpad": {"topic": "alpha"},
+                "datasets": {
+                    "feed_items_raw": {
+                        "dataset_id": "ds_7",
+                        "inline": False,
+                        "count": 2,
+                        "schema": ["title", "url"],
+                    }
+                },
+                "messages": [{"direction": "inbound", "content": "Hello"}],
+            },
+        )
+
+        self.assertIn("Active KoreChat conversation entry", system_message)
+        self.assertIn('"subject": "Delegate parent"', system_message)
+        self.assertIn('"datasets": {', system_message)
+        self.assertIn('"feed_items_raw"', system_message)
+        self.assertIn('"names": [', system_message)
+        self.assertIn('"messages": {', system_message)
+        self.assertIn('"count": 1', system_message)
+
     def test_auto_route_tool_result_saves_record_collections_as_dataset(self) -> None:
         session_id = "dataset_auto"
         manifest = auto_route_tool_result(
@@ -1320,15 +1351,18 @@ class RegressionTests(unittest.TestCase):
         previous_logger = getattr(_delegate_tls, "logger", None)
         previous_depth = getattr(_delegate_tls, "delegate_depth", 0)
         previous_config = getattr(_delegate_tls, "config", None)
+        previous_conversation_entry = getattr(_delegate_tls, "conversation_entry", None)
 
         _delegate_tls.logger = dummy_logger
         _delegate_tls.delegate_depth = 0
         _delegate_tls.config = config
+        _delegate_tls.conversation_entry = {"id": 7, "subject": "Parent conversation"}
 
         captured = {}
 
         def fake_orchestrate_prompt(**kwargs):
             captured["bound_session_id"] = kwargs.get("bound_session_id")
+            captured["conversation_entry"] = kwargs.get("conversation_entry")
             return ("ok", 0, 0, True, 0.0)
 
         try:
@@ -1339,9 +1373,11 @@ class RegressionTests(unittest.TestCase):
             _delegate_tls.logger = previous_logger
             _delegate_tls.delegate_depth = previous_depth
             _delegate_tls.config = previous_config
+            _delegate_tls.conversation_entry = previous_conversation_entry
 
         self.assertEqual(result["status"], "ok")
         self.assertEqual(captured["bound_session_id"], "parent_session")
+        self.assertEqual(captured["conversation_entry"], {"id": 7, "subject": "Parent conversation"})
 
     def test_delegate_subrun_auto_includes_dataset_access_for_named_dataset_tasks(self) -> None:
         dummy_logger = SimpleNamespace(log_file_only=lambda *_args, **_kwargs: None)

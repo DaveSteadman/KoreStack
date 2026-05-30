@@ -15,6 +15,7 @@
 #   PATCH /api/vocab/{id}       -- rename vocab term
 #   GET  /api/vocab/{id}        -- get term detail
 #   DELETE /api/vocab/{id}      -- delete term
+#   DELETE /api/concepts/{id}   -- delete concept plus touching relations
 #   GET  /api/connections       -- list connections (limit/offset)
 #   POST /api/connections       -- upsert connection (score accumulates)
 #   PATCH /api/connections      -- update state/score
@@ -49,6 +50,7 @@ from app.config import cfg
 from app.database import (
     add_vocab_term,
     count_relations,
+    delete_concept,
     delete_connection_by_name,
     delete_relation,
     delete_vocab_term,
@@ -94,6 +96,13 @@ app = FastAPI(
     description="Concept / connection knowledge graph store for KoreData",
     lifespan=_lifespan,
 )
+
+
+def _request_ui_prefix(request: Request) -> str:
+    forwarded = (request.headers.get("x-forwarded-prefix") or "").strip()
+    if not forwarded:
+        return ""
+    return forwarded if forwarded.startswith("/") else f"/{forwarded}"
 
 
 # ---------------------------------------------------------------------------
@@ -289,6 +298,7 @@ def route_ui_connections(request: Request, state: Optional[int] = None,
     total = count_relations(state=state, concept_id=concept_id)
     connections = list_relations(limit=page_size, offset=offset, state=state, concept_id=concept_id)
     total_pages = max(1, (total + page_size - 1) // page_size)
+    request_prefix = _request_ui_prefix(request)
     return templates.TemplateResponse(
         request,
         "connections.html",
@@ -301,7 +311,7 @@ def route_ui_connections(request: Request, state: Optional[int] = None,
             "total": total,
             "total_pages": total_pages,
             "state_labels": _STATE_LABELS,
-            "_pfx": cfg.get("ui_prefix", ""),
+            "_pfx": request_prefix,
         },
     )
 
@@ -312,10 +322,11 @@ def route_ui_connections(request: Request, state: Optional[int] = None,
 
 @app.get("/ui/graph", include_in_schema=False)
 def route_ui_graph(request: Request):
+    request_prefix = _request_ui_prefix(request)
     return templates.TemplateResponse(
         request,
         "graph.html",
-        {"_pfx": cfg.get("ui_prefix", "")},
+        {"_pfx": request_prefix},
     )
 
 
@@ -325,10 +336,11 @@ def route_ui_graph(request: Request):
 
 @app.get("/ui/vocab", include_in_schema=False)
 def route_ui_vocab(request: Request):
+    request_prefix = _request_ui_prefix(request)
     return templates.TemplateResponse(
         request,
         "vocab.html",
-        {"_pfx": cfg.get("ui_prefix", "")},
+        {"_pfx": request_prefix},
     )
 
 
@@ -530,6 +542,14 @@ def api_delete_vocab(vocab_id: int):
     return {"ok": True}
 
 
+@app.delete("/api/concepts/{concept_id}", summary="Delete a concept and every relation that references it")
+def api_delete_concept(concept_id: int):
+    result = delete_concept(concept_id)
+    if not result.get("deleted"):
+        raise HTTPException(status_code=404, detail="Concept not found")
+    return result
+
+
 @app.post("/api/vocab/{vocab_id}/merge", summary="Merge term as alias of another concept")
 def api_merge_vocab(vocab_id: int, body: VocabMergeIn):
     try:
@@ -602,10 +622,11 @@ def _list_processing_scripts() -> list[dict]:
 
 @app.get("/ui/processing", include_in_schema=False)
 def route_ui_processing(request: Request):
+    request_prefix = _request_ui_prefix(request)
     return templates.TemplateResponse(
         request,
         "processing.html",
-        {"_pfx": cfg.get("ui_prefix", "")},
+        {"_pfx": request_prefix},
     )
 
 

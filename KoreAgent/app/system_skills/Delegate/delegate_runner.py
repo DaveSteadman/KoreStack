@@ -89,20 +89,22 @@ def get_delegate_runtime_tls() -> threading.local:
     return _delegate_tls
 
 
-def push_delegate_runtime(*, logger, delegate_depth: int, config) -> tuple[object, int, object]:
+def push_delegate_runtime(*, logger, delegate_depth: int, config, conversation_entry=None) -> tuple[object, int, object, object]:
     previous = (
         getattr(_delegate_tls, "logger", None),
         getattr(_delegate_tls, "delegate_depth", 0),
         getattr(_delegate_tls, "config", None),
+        getattr(_delegate_tls, "conversation_entry", None),
     )
     _delegate_tls.logger = logger
     _delegate_tls.delegate_depth = delegate_depth
     _delegate_tls.config = config
+    _delegate_tls.conversation_entry = conversation_entry
     return previous
 
 
-def pop_delegate_runtime(previous: tuple[object, int, object]) -> None:
-    _delegate_tls.logger, _delegate_tls.delegate_depth, _delegate_tls.config = previous
+def pop_delegate_runtime(previous: tuple[object, int, object, object]) -> None:
+    _delegate_tls.logger, _delegate_tls.delegate_depth, _delegate_tls.config, _delegate_tls.conversation_entry = previous
 
 
 def run_delegate_subrun(
@@ -134,6 +136,7 @@ def run_delegate_subrun(
     logger = getattr(_delegate_tls, "logger", None)
     depth = int(getattr(_delegate_tls, "delegate_depth", 0))
     config = getattr(_delegate_tls, "config", None)
+    conversation_entry = getattr(_delegate_tls, "conversation_entry", None)
     if logger is None or config is None:
         return {
             "status": "error",
@@ -241,6 +244,7 @@ def run_delegate_subrun(
             session_context=None,
             quiet=True,
             delegate_depth=depth + 1,
+            conversation_entry=conversation_entry,
             scratchpad_visible_keys=child_visible_keys,
             bound_session_id=parent_session_id,
         )

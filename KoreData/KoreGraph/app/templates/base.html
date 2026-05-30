@@ -152,6 +152,7 @@
   </style>
 </head>
 <body>
+  {% set req_pfx = _pfx or ('/graph' if request.url.path.startswith('/graph/') else '') %}
   <div id="topbar"></div>
   <div id="app-bar"></div>
   <div id="sub-bar"></div>
@@ -159,7 +160,7 @@
     {% block content %}{% endblock %}
   </main>
   <script>
-  window._kgPfx = {{ _pfx | default('') | tojson }};
+  window._kgPfx = {{ req_pfx | tojson }};
   function stepNum(btn, delta) {
     const input = btn.closest('.num-stepper').querySelector('input[type=number]');
     const min  = input.min  !== '' ? parseInt(input.min,  10) : -Infinity;
@@ -172,7 +173,7 @@
   }
   </script>
   <script type="module">
-    import { initAppBar, initTopbar } from '/ui-elements/assets/js/chrome.js?v=20260508b';
+    import { initAppBar, initTopbar } from '/ui-elements/assets/js/chrome.js?v=20260530a';
     initTopbar({ currentService: 'koredata', urls: window.__koreSuiteUrls || {} });
     initAppBar({
       mountId: 'app-bar',
@@ -187,16 +188,16 @@
         { label: 'Library',   href: '/ui/library',              active: false },
         { label: 'Reference', href: '/ui/reference',            active: false },
         { label: 'RAG',       href: '/ui/rag/databases',        active: false },
-        { label: 'Graph',     href: '{{ _pfx | default("") }}/', active: true  },
+        { label: 'Graph',     href: '{{ req_pfx }}/', active: true  },
       ],
     });
     initAppBar({
       mountId: 'sub-bar',
       tabs: [
-        { label: 'Vocab',       href: '{{ _pfx | default("") }}/ui/vocab',       active: {{ 'true' if request.url.path.startswith('/ui/vocab') else 'false' }} },
-        { label: 'Connections', href: '{{ _pfx | default("") }}/ui/connections',  active: {{ 'true' if request.url.path.startswith('/ui/connections') else 'false' }} },
-        { label: 'Graph',       href: '{{ _pfx | default("") }}/ui/graph',        active: {{ 'true' if request.url.path.startswith('/ui/graph') else 'false' }} },
-        { label: 'Processing',  href: '{{ _pfx | default("") }}/ui/processing',   active: {{ 'true' if request.url.path.startswith('/ui/processing') else 'false' }} },
+        { label: 'Vocab',       href: '{{ req_pfx }}/ui/vocab',       active: {{ 'true' if request.url.path.endswith('/ui/vocab') else 'false' }} },
+        { label: 'Connections', href: '{{ req_pfx }}/ui/connections', active: {{ 'true' if request.url.path.endswith('/ui/connections') else 'false' }} },
+        { label: 'Graph',       href: '{{ req_pfx }}/ui/graph',       active: {{ 'true' if request.url.path.endswith('/ui/graph') else 'false' }} },
+        { label: 'Processing',  href: '{{ req_pfx }}/ui/processing',  active: {{ 'true' if request.url.path.endswith('/ui/processing') else 'false' }} },
       ],
     });
   </script>

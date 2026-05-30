@@ -105,6 +105,7 @@ def register_session_routes(
             run_config = _runtime_config_for_prompt(config, _prompt)
             session_context = create_session_context(session_id=session_id, persist_path=None)
             history, summaries = load_session(session_id)
+            conversation_entry = get_session_conversation(session_id)
             queue_run_event(run_q, {"type": "start", "run_id": run_id, "prompt": _prompt}, priority=True)
             try:
                 # ------------------------------------------------------------------
@@ -222,6 +223,7 @@ def register_session_routes(
                             conversation_history=history.as_list() or None,
                             session_context=session_context,
                             quiet=True,
+                            conversation_entry=conversation_entry,
                             conversation_summary=summary_block or None,
                             on_tool_round_complete=lambda: threading.Thread(
                                 target=flush_scratch_session, args=(session_id,), daemon=True

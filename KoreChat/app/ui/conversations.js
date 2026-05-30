@@ -238,6 +238,7 @@ function _renderDetail(data) {
         renderBackground(conv.background_context || "");
         renderSummary(conv.thread_summary || "");
         renderScratchpad(conv.scratchpad);
+        renderDatasets(conv.datasets);
         renderInputHistory(conv.input_history || []);
     }
     document.querySelectorAll(".conv-item").forEach(el => {
@@ -375,7 +376,7 @@ function renderScratchpad(scratchpad) {
         try { data = JSON.parse(data); } catch { data = {}; }
     }
     data = data || {};
-    const keys = Object.keys(data).filter(k => k !== "__datasets");
+    const keys = Object.keys(data);
     document.getElementById("scratchpad-empty").hidden = keys.length > 0;
 
     if (keys.length === 0) {
@@ -384,6 +385,25 @@ function renderScratchpad(scratchpad) {
     }
 
     document.getElementById("scratchpad-list").innerHTML = keys.map(k =>
+        _renderScratchpadEntry(k, data[k])
+    ).join("");
+}
+
+function renderDatasets(datasets) {
+    let data = datasets;
+    if (typeof data === "string") {
+        try { data = JSON.parse(data); } catch { data = {}; }
+    }
+    data = data || {};
+    const keys = Object.keys(data);
+    document.getElementById("datasets-empty").hidden = keys.length > 0;
+
+    if (keys.length === 0) {
+        document.getElementById("datasets-list").innerHTML = "";
+        return;
+    }
+
+    document.getElementById("datasets-list").innerHTML = keys.map(k =>
         _renderScratchpadEntry(k, data[k])
     ).join("");
 }
@@ -441,7 +461,6 @@ function _scratchpadParseJsonObject(text) {
 }
 
 function _scratchpadValueType(key, value) {
-    if (key === "__datasets" && value && typeof value === "object" && !Array.isArray(value)) return "datasets";
     if (typeof value === "string") return "string";
     if (Array.isArray(value)) return "array";
     if (value && typeof value === "object") {
@@ -493,11 +512,6 @@ function _scratchpadPreviewText(key, value, type, compactText) {
         const fieldPreview = fields.length ? `: ${fields.slice(0, 4).join(", ")}${fields.length > 4 ? ", ..." : ""}` : "";
         return _scratchpadExcerpt(`${datasetName}${fieldPreview}`);
     }
-    if (type === "datasets") {
-        const names = Object.keys(value || {});
-        if (!names.length) return "";
-        return _scratchpadExcerpt(names.slice(0, 4).join(", ") + (names.length > 4 ? ", ..." : ""));
-    }
     if (type === "empty") return "";
     return _scratchpadExcerpt(_scratchpadOneLine(compactText));
 }
@@ -506,7 +520,6 @@ function _scratchpadMetaText(value, type, charCountRaw) {
     const charCount = Number(charCountRaw || 0).toLocaleString("en-GB");
     if (type === "string") return `[string ${charCount} characters]`;
     if (type === "dataset") return `[dataset ${_scratchpadDatasetRowCount(value)} rows, ${charCount} characters]`;
-    if (type === "datasets") return `[datasets ${Object.keys(value || {}).length} items, ${charCount} characters]`;
     if (type === "array") return `[array ${value.length} items, ${charCount} characters]`;
     if (type === "object") return `[object ${Object.keys(value || {}).length} keys, ${charCount} characters]`;
     if (type === "empty") return "[empty]";

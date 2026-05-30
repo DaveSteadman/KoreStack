@@ -51,9 +51,11 @@ from conversation_state import decode_background_context
 from conversation_state import encode_background_context
 from conversation_state import estimate_next_turn_tokens
 from conversation_state import estimate_summary_tokens
+from datasets import build_persisted_scratchpad_payload
+from datasets import coerce_persisted_datasets_payload
+from datasets import coerce_persisted_scratchpad_payload
+from datasets import get_persisted_datasets_payload
 from datasets import hydrate_session_state
-from datasets import merge_persisted_session_payload
-from datasets import split_persisted_session_payload
 from orchestration import OrchestratorConfig
 from orchestration import orchestrate_prompt
 from run_helpers import make_task_session
@@ -196,7 +198,7 @@ def _merge_conv_facts(scratchpad: dict, user_prompt: str, turn_count: int) -> di
     return updated
 
 
-def _split_conversation_scratchpad(conv: dict, push_log_line=None) -> tuple[dict[str, object], dict[str, dict]]:
+def _coerce_conversation_scratchpad(conv: dict, push_log_line=None) -> dict[str, object]:
     scratchpad = conv.get("scratchpad") or {}
     if isinstance(scratchpad, str):
         try:
@@ -205,7 +207,11 @@ def _split_conversation_scratchpad(conv: dict, push_log_line=None) -> tuple[dict
             if push_log_line:
                 push_log_line(f"[KORECHAT] Conv {conv.get('id', '?')}: scratchpad JSON decode failed - prompt built without scratchpad: {exc}")
             scratchpad = {}
-    return split_persisted_session_payload(scratchpad)
+    return coerce_persisted_scratchpad_payload(scratchpad)
+
+
+def _coerce_conversation_datasets(conv: dict) -> dict[str, dict]:
+    return coerce_persisted_datasets_payload(conv.get("datasets") or {})
 
 
 # ----------------------------------------------------------------------------------------------------
@@ -213,7 +219,8 @@ def _build_prompt(conv: dict, messages: list[dict], push_log_line=None) -> str:
     """Build an LLM user prompt from a KoreChat conversation record and its messages."""
     thread_summary    = (conv.get("thread_summary") or "").strip()
     background        = (conv.get("background_context") or "").strip()
-    scratchpad, _datasets_payload = _split_conversation_scratchpad(conv, push_log_line=push_log_line)
+    scratchpad = _coerce_conversation_scratchpad(conv, push_log_line=push_log_line)
+    datasets_payload = _coerce_conversation_datasets(conv)
 
     # Unsummarised messages only - summarised ones are already in thread_summary.
     unsummarised = [m for m in messages if not m.get("summarised")]
@@ -229,6 +236,16 @@ def _build_prompt(conv: dict, messages: list[dict], push_log_line=None) -> str:
     if scratchpad:
         kv = "\n".join(f"  {k}: {v}" for k, v in scratchpad.items())
         parts.append(f"--- Scratchpad ---\n{kv}")
+
+    if datasets_payload:
+        lines: list[str] = []
+        for dataset_name, manifest in sorted(datasets_payload.items()):
+            count = int(manifest.get("count", 0))
+            schema = manifest.get("schema") or []
+            fields = ", ".join(str(field) for field in schema[:5])
+            suffix = f" fields=[{fields}]" if fields else ""
+            lines.append(f"  {dataset_name}: {count} records{suffix}")
+        parts.append("--- Datasets ---\n" + "\n".join(lines))
 
     if unsummarised:
         lines: list[str] = []
@@ -332,6 +349,7 @@ def _handle_compress_needed(
             conversation_history = None,
             session_context      = session_ctx,
             quiet                = True,
+            conversation_entry   = conv,
         )
 
     if not ok or not summary.strip():
@@ -452,6 +470,7 @@ def _handle_event(
         hydrate_session_state(
             conv.get("scratchpad") or {},
             session_id,
+            datasets_payload=conv.get("datasets") or {},
             scratch_clearer=scratch_clear,
             scratch_restorer=scratch_save,
             warning_logger=lambda message: push_log_line(f"[KORECHAT] Conv {conv_id}: {message}"),
@@ -493,6 +512,7 @@ def _handle_event(
             conversation_history = None,
             session_context      = session_ctx,
             quiet                = True,
+            conversation_entry   = conv,
             token_pressure       = token_pressure,
         )
 
@@ -504,7 +524,8 @@ def _handle_event(
         reply              = response.strip()
         current_scratchpad = get_store(session_id=session_id)
         current_scratchpad = _merge_conv_facts(current_scratchpad, user_prompt, turn_count)
-        persisted_session_state = merge_persisted_session_payload(current_scratchpad, session_id)
+        persisted_scratchpad = build_persisted_scratchpad_payload(current_scratchpad)
+        persisted_datasets = get_persisted_datasets_payload(session_id)
 
         # Item 4: Serialize session context turns for persistence in KoreChat background_context.
         # This lets the model reference prior fetched data after restarts or on resume.
@@ -539,7 +560,8 @@ def _handle_event(
                 "status":             "active",
                 "token_estimate":     new_token_estimate,
                 "turn_count":         turn_count + 1,
-                "scratchpad":         persisted_session_state,
+                "scratchpad":         persisted_scratchpad,
+                "datasets":           persisted_datasets,
                 "background_context": new_background_context,
             })
         except Exception as exc:

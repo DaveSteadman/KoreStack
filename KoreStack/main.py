@@ -218,7 +218,7 @@ def build_child_env(config: dict) -> dict[str, str]:
     env["KOREDOCS_CONTROL_DIR"] = str(stack_paths["koredocs"])
     env["KOREDOCS_DATA_DIR"] = str(stack_paths["docs_data"])
     _korestack_cfg = services.get("korestack") if isinstance(services.get("korestack"), dict) else {}
-    _korestack_port = int(_korestack_cfg.get("port", 8600) if _korestack_cfg else 8600)
+    _korestack_port = int(_korestack_cfg.get("port", 9600) if _korestack_cfg else 9600)
     _suite_urls: dict[str, str] = {"korestack": f"http://{_network_host}:{_korestack_port}/"}
     for _slug, _meta in SERVICE_META.items():
         _svc_cfg = services.get(_slug) if isinstance(services.get(_slug), dict) else {}
@@ -747,7 +747,7 @@ def main() -> int:
     network_cfg = suite_config.get("network") if isinstance(suite_config.get("network"), dict) else {}
     stack_cfg = _get_stack_service_config(suite_config)
     dashboard_host = args.host or str(network_cfg.get("host") or "127.0.0.1")
-    dashboard_port = int(args.ui_port or stack_cfg.get("port") or 8600)
+    dashboard_port = int(args.ui_port or stack_cfg.get("port") or 9600)
 
     if args.command == "status":
         print_snapshot(manager.snapshot())

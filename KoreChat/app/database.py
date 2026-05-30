@@ -7,7 +7,7 @@
 # WAL mode is enabled so readers and writers can overlap without blocking.
 #
 # Schema summary:
-#   conversations  - canonical conversation record (summary, scratchpad, profile, status)
+#   conversations  - canonical conversation record (summary, scratchpad, datasets, profile, status)
 #   messages       - append-only exchange log (inbound/outbound, summarised flag)
 #   events         - coordination queue between MiniAgentFramework and KoreComms
 #                    (atomic claim via BEGIN IMMEDIATE prevents double-pickup)
@@ -95,6 +95,7 @@ CREATE TABLE IF NOT EXISTS conversations (
     external_id         TEXT,
     thread_summary      TEXT    NOT NULL DEFAULT '',
     scratchpad          TEXT    NOT NULL DEFAULT '{}',
+    datasets            TEXT    NOT NULL DEFAULT '{}',
     input_history       TEXT    NOT NULL DEFAULT '[]',
     background_context  TEXT    NOT NULL DEFAULT '',
     token_estimate      INTEGER NOT NULL DEFAULT 0,
@@ -155,6 +156,24 @@ def init_db() -> None:
             c.execute("ALTER TABLE conversations ADD COLUMN external_id TEXT")
         if cols and "input_history" not in cols:
             c.execute("ALTER TABLE conversations ADD COLUMN input_history TEXT NOT NULL DEFAULT '[]'")
+        if cols and "datasets" not in cols:
+            c.execute("ALTER TABLE conversations ADD COLUMN datasets TEXT NOT NULL DEFAULT '{}'")
+            rows = c.execute("SELECT id, scratchpad FROM conversations").fetchall()
+            for row in rows:
+                raw_scratchpad = str(row["scratchpad"] or "{}")
+                try:
+                    scratchpad_payload = json.loads(raw_scratchpad)
+                except json.JSONDecodeError:
+                    continue
+                if not isinstance(scratchpad_payload, dict):
+                    continue
+                datasets_payload = scratchpad_payload.pop("__datasets", None)
+                if not isinstance(datasets_payload, dict):
+                    continue
+                c.execute(
+                    "UPDATE conversations SET scratchpad = ?, datasets = ? WHERE id = ?",
+                    (json.dumps(scratchpad_payload), json.dumps(datasets_payload), row["id"]),
+                )
         if cols and "protected" not in cols:
             c.execute("ALTER TABLE conversations ADD COLUMN protected INTEGER NOT NULL DEFAULT 0")
             if "has_explicit_name" in cols:
@@ -205,13 +224,20 @@ def _decode_json_value(raw_value: str, default: object, *, label: str) -> tuple[
         return default, detail
 
 
-def _decode_scratchpad_fields(record: dict, *, label: str) -> None:
+def _decode_session_state_fields(record: dict, *, label: str) -> None:
     raw_scratchpad = str(record.get("scratchpad") or "{}")
     scratchpad, scratchpad_error = _decode_json_value(raw_scratchpad, {}, label=f"{label} scratchpad")
     record["scratchpad"] = scratchpad if isinstance(scratchpad, dict) else {}
     if scratchpad_error:
         record["scratchpad_raw"] = raw_scratchpad
         record["scratchpad_parse_error"] = scratchpad_error
+
+    raw_datasets = str(record.get("datasets") or "{}")
+    datasets, datasets_error = _decode_json_value(raw_datasets, {}, label=f"{label} datasets")
+    record["datasets"] = datasets if isinstance(datasets, dict) else {}
+    if datasets_error:
+        record["datasets_raw"] = raw_datasets
+        record["datasets_parse_error"] = datasets_error
 
     raw_input_history = str(record.get("input_history") or "[]")
     input_history, _input_history_error = _decode_json_value(raw_input_history, [], label=f"{label} input_history")
@@ -258,12 +284,12 @@ def conversation_create(
         cur = c.execute(
             """
             INSERT INTO conversations
-                (channel_type, profile, status, subject, protected, external_id, thread_summary, scratchpad,
+                (channel_type, profile, status, subject, protected, external_id, thread_summary, scratchpad, datasets,
                  background_context, token_estimate, turn_count,
                  last_activity_at, created_at, updated_at)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
             """,
-            (channel_type, profile, "active", subject, protected_value, external_id, "", "{}", background_context, 0, 0, now, now, now),
+            (channel_type, profile, "active", subject, protected_value, external_id, "", "{}", "{}", background_context, 0, 0, now, now, now),
         )
         row_id = cur.lastrowid
     return conversation_get(row_id)
@@ -278,7 +304,7 @@ def conversation_get_by_external_id(external_id: str) -> dict | None:
     if row is None:
         return None
     result = _row_to_dict(row)
-    _decode_scratchpad_fields(result, label=f"conversation external_id={external_id}")
+    _decode_session_state_fields(result, label=f"conversation external_id={external_id}")
     return result
 
 
@@ -291,7 +317,7 @@ def conversation_get(conversation_id: int) -> dict | None:
     if row is None:
         return None
     result = _row_to_dict(row)
-    _decode_scratchpad_fields(result, label=f"conversation {conversation_id}")
+    _decode_session_state_fields(result, label=f"conversation {conversation_id}")
     return result
 
 
@@ -326,7 +352,7 @@ def conversation_get_detail(conversation_id: int) -> dict | None:
         if conv_row is None:
             return None
         conv = _row_to_dict(conv_row)
-        _decode_scratchpad_fields(conv, label=f"conversation {conversation_id}")
+        _decode_session_state_fields(conv, label=f"conversation {conversation_id}")
         msg_rows = c.execute(
             "SELECT * FROM messages WHERE conversation_id = ? ORDER BY created_at ASC LIMIT 500",
             (conversation_id,),
@@ -382,7 +408,7 @@ def conversation_list(
     result = []
     for row in rows:
         item = _row_to_dict(row)
-        _decode_scratchpad_fields(item, label=f"conversation {item.get('id')}")
+        _decode_session_state_fields(item, label=f"conversation {item.get('id')}")
         result.append(item)
     return result
 
@@ -395,6 +421,7 @@ def conversation_update(
     protected:        bool | None = None,
     thread_summary:   str | None  = None,
     scratchpad:       dict | None = None,
+    datasets:         dict | None = None,
     background_context: str | None = None,
     token_estimate:   int | None  = None,
     turn_count:       int | None  = None,
@@ -419,6 +446,9 @@ def conversation_update(
     if scratchpad is not None:
         fields.append("scratchpad = ?")
         params.append(json.dumps(scratchpad))
+    if datasets is not None:
+        fields.append("datasets = ?")
+        params.append(json.dumps(datasets))
     if background_context is not None:
         fields.append("background_context = ?")
         params.append(background_context)

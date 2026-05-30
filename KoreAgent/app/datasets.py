@@ -32,8 +32,6 @@ _CMP_RE = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*)\s*([<>])\s*(.+)$")
 INLINE_THRESHOLD_BYTES = 50_000
 _MANIFEST_HISTORY_LIMIT = 10
 _FULL_TEXT_TIMEOUT_SECS = 60.0
-_PERSISTED_DATASETS_KEY = "__datasets"
-
 _SESSION_DATASETS: dict[str, dict[str, dict]] = {}
 _DATASET_LOCK: threading.RLock = threading.RLock()
 
@@ -55,8 +53,6 @@ def _validate_name(name: str) -> str:
         raise ValueError(
             f"Dataset name '{name}' contains invalid characters. Use letters, digits, and underscores only."
         )
-    if cleaned == "__datasets":
-        raise ValueError("Dataset name '__datasets' is reserved.")
     return cleaned
 
 
@@ -431,36 +427,43 @@ def _coerce_source_args(source_args: object) -> object:
     return source_args
 
 
-def split_persisted_session_payload(payload: object) -> tuple[dict[str, object], dict[str, dict]]:
+def coerce_persisted_scratchpad_payload(payload: object) -> dict[str, object]:
     if not isinstance(payload, dict):
-        return {}, {}
+        return {}
     named_scratch: dict[str, object] = {}
-    datasets_payload: dict[str, dict] = {}
     for raw_key, raw_value in payload.items():
         key = str(raw_key)
-        if key == _PERSISTED_DATASETS_KEY:
-            if isinstance(raw_value, dict):
-                datasets_payload = dict(raw_value)
-            continue
         named_scratch[key] = raw_value
-    return named_scratch, datasets_payload
+    return named_scratch
+
+
+def coerce_persisted_datasets_payload(payload: object) -> dict[str, dict]:
+    if not isinstance(payload, dict):
+        return {}
+    return {
+        str(raw_name): dict(entry)
+        for raw_name, entry in payload.items()
+        if isinstance(entry, dict)
+    }
 
 
 def hydrate_session_state(
-    payload: object,
+    scratchpad_payload: object,
     session_id: str | None = None,
     *,
+    datasets_payload: object = None,
     scratch_clearer=None,
     scratch_restorer=None,
     warning_logger=None,
 ) -> dict[str, object]:
     resolved = _resolve_session_id(session_id)
-    named_scratch, datasets_payload = split_persisted_session_payload(payload)
+    named_scratch = coerce_persisted_scratchpad_payload(scratchpad_payload)
+    persisted_datasets = coerce_persisted_datasets_payload(datasets_payload)
 
     if scratch_clearer is not None:
         scratch_clearer(session_id=resolved)
     clear_session_datasets(resolved)
-    restore_persisted_datasets(datasets_payload, resolved)
+    restore_persisted_datasets(persisted_datasets, resolved)
 
     if scratch_restorer is None:
         return named_scratch
@@ -568,12 +571,8 @@ def get_persisted_datasets_payload(session_id: str | None = None) -> dict:
     return payload
 
 
-def merge_persisted_session_payload(named_scratch: dict[str, str], session_id: str | None = None) -> dict:
-    payload = dict(named_scratch)
-    datasets_payload = get_persisted_datasets_payload(session_id)
-    if datasets_payload:
-        payload[_PERSISTED_DATASETS_KEY] = datasets_payload
-    return payload
+def build_persisted_scratchpad_payload(named_scratch: dict[str, str]) -> dict:
+    return dict(named_scratch)
 
 
 def _coerce_history_items(value: object) -> list[dict]:

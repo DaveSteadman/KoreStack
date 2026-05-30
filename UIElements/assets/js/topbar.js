@@ -11,13 +11,13 @@ function currentHost() {
 }
 
 const DEFAULT_SERVICES = [
-	{ key: 'korestack', label: 'KoreStack', path: '/', port: 8600, icon: 'korestack' },
-	{ key: 'koreagent', label: 'KoreAgent', path: '/', port: 8605, icon: 'koreagent' },
-	{ key: 'korechat', label: 'KoreChat', path: '/ui', port: 8630, icon: 'korechat' },
-	{ key: 'koredata', label: 'KoreData', path: '/ui', port: 8620, icon: 'koredata' },
-	{ key: 'koredocs', label: 'KoreDocs', path: '/ui', port: 8615, icon: 'koredocs' },
-	{ key: 'korecode', label: 'KoreCode', path: '/ui', port: 8610, icon: 'korecode' },
-	{ key: 'korecomms', label: 'KoreComms', path: '/ui', port: 8625, icon: 'korecomms' },
+	{ key: 'korestack', label: 'KoreStack', path: '/', port: 9600, icon: 'korestack' },
+	{ key: 'koreagent', label: 'KoreAgent', path: '/', port: 9601, icon: 'koreagent' },
+	{ key: 'korechat', label: 'KoreChat', path: '/ui', port: 9602, icon: 'korechat' },
+	{ key: 'koredata', label: 'KoreData', path: '/', port: 9603, icon: 'koredata' },
+	{ key: 'koredocs', label: 'KoreDocs', path: '/ui', port: 9610, icon: 'koredocs' },
+	{ key: 'korecode', label: 'KoreCode', path: '/ui', port: 9611, icon: 'korecode' },
+	{ key: 'korecomms', label: 'KoreComms', path: '/', port: 9609, icon: 'korecomms' },
 ];
 
 const SUITE_VERSION_RE = /export\s+const\s+SUITE_VERSION\s*=\s*['\"]([^'\"]+)['\"]/;
@@ -66,10 +66,15 @@ let _lastTopbarOptions = null;
 // On a fresh browser session, seed the URL registry from KoreStack's /suite-urls endpoint.
 // Renders immediately with whatever is available (localStorage or defaults), then re-renders
 // once the fetch returns if localStorage was empty.
-function _seedUrlsFromKoreStack() {
-	const korestack = DEFAULT_SERVICES.find((s) => s.key === 'korestack');
-	if (!korestack) return;
-	const fallbackBase = `http://${currentHost()}:${korestack.port}`;
+function _seedUrlsFromKoreStack(koreStackUrl = null) {
+	const fallbackBase = koreStackUrl
+		? koreStackUrl.replace(/\/$/, '')
+		: (() => {
+			const korestack = DEFAULT_SERVICES.find((s) => s.key === 'korestack');
+			if (!korestack) return null;
+			return `http://${currentHost()}:${korestack.port}`;
+		})();
+	if (!fallbackBase) return;
 	fetch(`${fallbackBase}/suite-urls`, { cache: 'no-store' })
 		.then((r) => (r.ok ? r.json() : null))
 		.then((data) => {
@@ -99,7 +104,7 @@ export function initTopbar(options = {}) {
 
 	// If the URL registry is absent (fresh browser session), fetch from KoreStack once to seed it.
 	if (typeof window !== 'undefined' && !localStorage.getItem('kore.suite-urls')) {
-		_seedUrlsFromKoreStack();
+		_seedUrlsFromKoreStack(urls.korestack || null);
 	}
 
 	if (currentService) {

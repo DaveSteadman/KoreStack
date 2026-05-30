@@ -217,6 +217,7 @@ def _clone_conversation(source: dict, new_name: str, session_id: str) -> dict:
         {
             "thread_summary": source.get("thread_summary") or "",
             "scratchpad": source.get("scratchpad") or {},
+            "datasets": source.get("datasets") or {},
             "token_estimate": 0,
             "turn_count": copied_turn_count,
             "status": "active",

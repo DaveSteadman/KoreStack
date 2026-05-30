@@ -1184,6 +1184,7 @@ async def proxy_graph(request: Request, path: str):
         raise HTTPException(status_code=503, detail="KoreGraph not available")
     body = await request.body()
     headers = {k: v for k, v in request.headers.items() if k.lower() not in ("host", "content-length")}
+    headers["x-forwarded-prefix"] = "/graph"
     try:
         resp = await _graph_client.request(
             method=request.method,

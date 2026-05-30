@@ -190,46 +190,42 @@ Use transparent inline-or-spillover storage.
 
 ### Inline datasets
 
-If a dataset serializes below a threshold such as ~50KB, store it directly in the named scratchpad
-payload under a reserved `__datasets` key.
+If a dataset serializes below a threshold such as ~50KB, store it directly in the dedicated
+conversation `datasets` payload.
 
 Example shape:
 
 ```json
 {
-  "__datasets": {
-    "feed_items_shortlist": {
-      "dataset_id": "ds_20260527_001",
-      "inline": true,
-      "count": 12,
-      "schema": ["title", "url", "source", "published_at", "snippet"],
-      "history_tail": [ ... ],
-      "records": [ ... ]
-    }
+  "feed_items_shortlist": {
+    "dataset_id": "ds_20260527_001",
+    "inline": true,
+    "count": 12,
+    "schema": ["title", "url", "source", "published_at", "snippet"],
+    "history_tail": [ ... ],
+    "records": [ ... ]
   }
 }
 ```
 
-This rides the existing KoreChat scratchpad persistence path.
+This rides the dedicated KoreChat datasets persistence path.
 
 ### Spillover datasets
 
-If the payload exceeds the threshold, store only a compact handle in scratchpad and place the full
-content in a local SQLite store at `datacontrol/koreagent/datasets.db`.
+If the payload exceeds the threshold, store only a compact handle manifest in `datasets` and place
+the full content in a local SQLite store at `datacontrol/koreagent/datasets.db`.
 
-Scratchpad handle shape:
+Datasets handle shape:
 
 ```json
 {
-  "__datasets": {
-    "feed_items_raw": {
-      "dataset_id": "ds_20260527_002",
-      "inline": false,
-      "count": 80,
-      "schema": ["title", "url", "source", "published_at", "body"],
-      "size": 380000,
-      "history_tail": [ ... ]
-    }
+  "feed_items_raw": {
+    "dataset_id": "ds_20260527_002",
+    "inline": false,
+    "count": 80,
+    "schema": ["title", "url", "source", "published_at", "body"],
+    "size": 380000,
+    "history_tail": [ ... ]
   }
 }
 ```
@@ -528,9 +524,9 @@ Phase 1, single focused implementation slice:
 2. `KoreAgent/app/datasets_store.py`
    SQLite spillover store with one table and session-scoped operations.
 
-3. `KoreAgent/app/scratchpad.py`
-   Extend serialized named scratchpad payload to include `__datasets` manifest data and inline
-   dataset storage.
+3. KoreChat conversation persistence
+  Store scratchpad and datasets in separate fields so the transport model matches the runtime
+  model.
 
 4. `KoreAgent/app/prompt_builder.py`
    Add a compact dataset manifest block to each turn.

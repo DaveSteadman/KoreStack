@@ -37,13 +37,13 @@ const DEFAULT_HOST = '127.0.0.1';
 // Override ports in config/local.json; the server injects window.__koreSuiteUrls
 // with the live values so the JS never needs to be edited for port changes.
 const DEFAULT_SERVICES = [
-    { key: 'korestack', label: 'KoreStack', path: '/', port: 8600, icon: 'korestack' },
-    { key: 'koreagent', label: 'KoreAgent', path: '/', port: 8605, icon: 'koreagent' },
-    { key: 'korechat', label: 'KoreChat', path: '/ui', port: 8630, icon: 'korechat' },
-    { key: 'koredata', label: 'KoreData', path: '/ui', port: 8620, icon: 'koredata' },
-    { key: 'koredocs', label: 'KoreDocs', path: '/ui', port: 8615, icon: 'koredocs' },
-    { key: 'korecode', label: 'KoreCode', path: '/ui', port: 8610, icon: 'korecode' },
-    { key: 'korecomms', label: 'KoreComms', path: '/ui', port: 8625, icon: 'korecomms' },
+    { key: 'korestack', label: 'KoreStack', path: '/', port: 9600, icon: 'korestack' },
+    { key: 'koreagent', label: 'KoreAgent', path: '/', port: 9601, icon: 'koreagent' },
+    { key: 'korechat', label: 'KoreChat', path: '/ui', port: 9602, icon: 'korechat' },
+    { key: 'koredata', label: 'KoreData', path: '/', port: 9603, icon: 'koredata' },
+    { key: 'koredocs', label: 'KoreDocs', path: '/ui', port: 9610, icon: 'koredocs' },
+    { key: 'korecode', label: 'KoreCode', path: '/ui', port: 9611, icon: 'korecode' },
+    { key: 'korecomms', label: 'KoreComms', path: '/', port: 9609, icon: 'korecomms' },
 ];
 
 const SUITE_VERSION_RE = /export\s+const\s+SUITE_VERSION\s*=\s*['\"]([^'\"]+)['\"]/;

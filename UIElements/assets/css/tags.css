@@ -100,3 +100,8 @@ button.kcui-tag:focus-visible {
 button.kcui-tag:active {
   background: color-mix(in srgb, currentColor 18%, transparent);
 }
+
+.kcui-tag--inactive {
+  opacity: 0.28;
+  pointer-events: none;
+}
