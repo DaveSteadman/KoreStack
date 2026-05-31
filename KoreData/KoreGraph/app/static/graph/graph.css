@@ -1,0 +1,329 @@
+.kg-graph-page {
+  height: calc(100dvh - 132px);
+  min-height: 0;
+  padding: 0.75rem;
+}
+
+.kg-shell {
+  position: relative;
+  display: block;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--panel);
+}
+
+.kg-sidebar {
+  position: absolute;
+  inset: 0 auto 0 0;
+  z-index: 12;
+  display: flex;
+  flex-direction: column;
+  width: min(var(--kg-sidebar-w, 320px), 88vw);
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--panel) 82%, black 18%);
+  border-right: 1px solid var(--border);
+  box-shadow: 12px 0 32px rgba(0, 0, 0, 0.32);
+  transform: translateX(calc(-100% - 12px));
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 140ms ease, opacity 140ms ease;
+}
+
+.kg-splitter {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(min(var(--kg-sidebar-w, 320px), 88vw) - 2px);
+  z-index: 13;
+  width: 4px;
+  background: var(--border);
+  cursor: col-resize;
+  opacity: 0;
+  pointer-events: none;
+  transition: background 0.1s;
+}
+
+.kg-shell.is-sidebar-open .kg-sidebar {
+  transform: translateX(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.kg-shell.is-sidebar-open .kg-splitter {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.kg-splitter:hover,
+.kg-splitter.is-dragging {
+  background: color-mix(in srgb, var(--green) 55%, transparent);
+}
+
+.kg-main {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+.kg-sidebar .panel-header {
+  padding: 0.8rem 0.9rem 0.65rem;
+  gap: 0.75rem;
+}
+
+.kg-sidebar .panel-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 0.9rem;
+}
+
+.kg-sidebar-actions {
+  display: flex;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.kg-sidebar-status {
+  min-height: 22px;
+  padding: 0.55rem 0.9rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--dim);
+  font-size: var(--kcui-text-body-sm);
+}
+
+.kg-empty-selection {
+  display: grid;
+  gap: 0.75rem;
+  color: var(--dim);
+  font-size: var(--kcui-text-body-sm);
+}
+
+.kg-selection-card {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.kg-selection-summary {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg) 84%, transparent);
+}
+
+.kg-selection-type {
+  color: var(--dim);
+  font-size: var(--kcui-text-label);
+  letter-spacing: var(--kcui-tracking-label);
+  text-transform: uppercase;
+}
+
+.kg-selection-title {
+  color: var(--text);
+  font-size: 1rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.kg-selection-copy {
+  color: var(--dim);
+  font-size: var(--kcui-text-body-sm);
+}
+
+.kg-meta-grid {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.kg-meta-row {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr);
+  gap: 0.65rem;
+  align-items: start;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+}
+
+.kg-meta-row:last-child {
+  border-bottom: none;
+}
+
+.kg-meta-label {
+  color: var(--dim);
+  font-size: var(--kcui-text-label);
+  letter-spacing: var(--kcui-tracking-label);
+  text-transform: uppercase;
+}
+
+.kg-meta-value {
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.kg-alias-list {
+  display: grid;
+  gap: 0.35rem;
+  padding-left: 1rem;
+  color: var(--text);
+}
+
+.kg-sidebar-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding-top: 0.35rem;
+}
+
+.kg-search-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  position: relative;
+  flex-shrink: 0;
+  padding: 0.75rem;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--panel) 88%, black 12%);
+}
+
+.kg-search-row input[type=search] {
+  flex: 1;
+  min-width: 0;
+}
+
+.kg-search-row .is-active {
+  background: rgba(74, 247, 122, 0.1);
+}
+
+.kg-ac {
+  position: absolute;
+  top: calc(100% - 1px);
+  left: 0.75rem;
+  width: calc(100% - 15.6rem);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  z-index: 200;
+  display: none;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.kg-ac-item {
+  padding: 0.3rem 0.65rem;
+  cursor: pointer;
+  font-size: var(--kcui-text-body-sm);
+  font-family: var(--font-code, monospace);
+  border-bottom: 1px solid var(--border);
+}
+
+.kg-ac-item:last-child {
+  border-bottom: none;
+}
+
+.kg-ac-item:hover {
+  background: rgba(74, 247, 122, 0.07);
+  color: var(--green);
+}
+
+.kg-canvas-outer {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.kg-canvas-overlay {
+  position: absolute;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 20;
+  display: flex;
+  pointer-events: none;
+}
+
+.kg-canvas-overlay > * {
+  pointer-events: auto;
+}
+
+#g-canvas {
+  display: block;
+}
+
+.kg-hint {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--dim);
+  font-size: var(--kcui-text-body-sm);
+  pointer-events: none;
+  text-align: center;
+  padding: 1rem;
+}
+
+.kg-nav-btn {
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  line-height: 1;
+}
+
+.kg-showcase-btn {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0;
+  border-color: color-mix(in srgb, var(--green) 68%, var(--border));
+  background: color-mix(in srgb, var(--panel) 86%, black 14%);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.32);
+}
+
+.kg-showcase-btn:hover {
+  background: color-mix(in srgb, rgba(74, 247, 122, 0.14) 70%, var(--panel));
+}
+
+.kg-showcase-btn.is-active {
+  background: rgba(74, 247, 122, 0.16);
+  box-shadow: 0 0 0 1px rgba(74, 247, 122, 0.22), 0 10px 26px rgba(0, 0, 0, 0.34);
+}
+
+.kg-showcase-btn:disabled {
+  opacity: 0.45;
+  box-shadow: none;
+}
+
+.kg-showcase-icon {
+  width: 1.65rem;
+  height: 1.65rem;
+  background: currentColor;
+  mask-image: url('/ui-elements/assets/icons/dazzle-line/clapperboard-play-svgrepo-com.svg');
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: contain;
+  -webkit-mask-image: url('/ui-elements/assets/icons/dazzle-line/clapperboard-play-svgrepo-com.svg');
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  -webkit-mask-size: contain;
+}
+
+@media (max-width: 960px) {
+  .kg-sidebar {
+    width: min(var(--kg-sidebar-w, 320px), 88vw);
+  }
+
+  .kg-splitter {
+    display: none !important;
+  }
+}

@@ -82,6 +82,7 @@ _UI_ELEMENTS_ASSETS = Path(
         str(Path(__file__).resolve().parents[3] / "UIElements" / "assets"),
     )
 ).resolve()
+_STATIC_DIR = (Path(__file__).parent / "static").resolve()
 
 
 @asynccontextmanager
@@ -247,6 +248,16 @@ def suite_config_js():
 def serve_ui_elements_asset(asset_path: str):
     candidate = (_UI_ELEMENTS_ASSETS / asset_path).resolve()
     if candidate != _UI_ELEMENTS_ASSETS and _UI_ELEMENTS_ASSETS not in candidate.parents:
+        raise HTTPException(status_code=404, detail="Asset not found")
+    if not candidate.exists() or not candidate.is_file():
+        raise HTTPException(status_code=404, detail="Asset not found")
+    return FileResponse(str(candidate), headers={"Cache-Control": "no-store"})
+
+
+@app.get("/static/{asset_path:path}", include_in_schema=False)
+def serve_local_static_asset(asset_path: str):
+    candidate = (_STATIC_DIR / asset_path).resolve()
+    if candidate != _STATIC_DIR and _STATIC_DIR not in candidate.parents:
         raise HTTPException(status_code=404, detail="Asset not found")
     if not candidate.exists() or not candidate.is_file():
         raise HTTPException(status_code=404, detail="Asset not found")

@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+{% set req_pfx = _pfx or ('/graph' if request.url.path.startswith('/graph/') else '') %}
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -150,9 +151,9 @@
     ::-webkit-scrollbar-thumb:hover { background: #3a3d52; }
     * { scrollbar-width: thin; scrollbar-color: #2a2d3e var(--bg); }
   </style>
+  {% block head_extra %}{% endblock %}
 </head>
 <body>
-  {% set req_pfx = _pfx or ('/graph' if request.url.path.startswith('/graph/') else '') %}
   <div id="topbar"></div>
   <div id="app-bar"></div>
   <div id="sub-bar"></div>
