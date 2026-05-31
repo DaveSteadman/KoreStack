@@ -324,8 +324,8 @@
         <button id="g-btn" type="button">Expand</button>
         <button id="g-prev" class="kg-nav-btn" type="button" disabled title="Previous">&#x25C2;</button>
         <button id="g-next" class="kg-nav-btn" type="button" disabled title="Next">&#x25B8;</button>
+        <button id="g-showcase" class="kg-nav-btn" type="button" title="Toggle showcase traversal" aria-pressed="false"></button>
         <button id="g-search-gw" class="btn-sm" type="button" disabled title="Search in KoreData">Search &#x2197;</button>
-        <button id="g-toggle-sidebar" class="btn btn-secondary btn-sm" type="button" title="Toggle selection sidebar">Selection</button>
         <div class="kg-ac" id="g-ac"></div>
       </div>
       <div class="kg-canvas-outer" id="g-outer">
@@ -349,9 +349,13 @@
   const _MAX_SIDEBAR_W = 560;
   const _DEFAULT_SIDEBAR_W = 320;
   const _PAN_THRESHOLD = 6;
+  const SHOWCASE_ICON = '▣';
+  const SHOWCASE_INTERVAL_MS = 2000;
+  const SHOWCASE_RECENT_LIMIT = 10;
 
   const input = document.getElementById('g-input');
   const btn = document.getElementById('g-btn');
+  const showcaseBtn = document.getElementById('g-showcase');
   const gwBtn = document.getElementById('g-search-gw');
   const ac = document.getElementById('g-ac');
   const outer = document.getElementById('g-outer');
@@ -361,7 +365,6 @@
   const shell = document.getElementById('kg-shell');
   const sidebar = document.getElementById('kg-sidebar');
   const splitter = document.getElementById('kg-splitter');
-  const toggleSidebarBtn = document.getElementById('g-toggle-sidebar');
   const closeSidebarBtn = document.getElementById('kg-close-sidebar');
   const sidebarStatus = document.getElementById('kg-sidebar-status');
   const selectionPath = document.getElementById('kg-selection-path');
@@ -394,9 +397,16 @@
   let _selection = null;
   let _nodeDetail = null;
   let _sidebarOpen = false;
+  let _transition = null;
+  let _showcaseActive = false;
+  let _showcaseTimer = null;
+  let _showcaseBusy = false;
+  let _showcaseRecent = [];
 
   const NODE_R = 34;
   const NODE_R2 = 26;
+  const TRANSITION_MS = 1000;
+  const TRANSITION_HANDOFF_FRACTION = 0.28;
 
   function _readSidebarWidth() {
     try {
@@ -457,9 +467,108 @@
     _sidebarOpen = Boolean(open);
     shell.classList.toggle('is-sidebar-open', _sidebarOpen);
     sidebar.setAttribute('aria-hidden', _sidebarOpen ? 'false' : 'true');
-    toggleSidebarBtn.classList.toggle('is-active', _sidebarOpen);
     _saveSidebarState();
     requestAnimationFrame(resize);
+  }
+
+  function _showcaseCandidates() {
+    if (!_graphData?.matched) return [];
+    const nodes = _graphData.nodes || [];
+    const directIds = new Set();
+    for (const edge of _graphData.edges || []) {
+      if (edge.start_concept_id === _centralId && edge.end_concept_id !== _centralId) {
+        directIds.add(edge.end_concept_id);
+      }
+      if (edge.end_concept_id === _centralId && edge.start_concept_id !== _centralId) {
+        directIds.add(edge.start_concept_id);
+      }
+    }
+
+    const directNodes = nodes.filter(node => directIds.has(node.concept_id));
+    if (directNodes.length) return directNodes;
+    return nodes.filter(node => node.concept_id !== _centralId && _nodeRing.get(node.concept_id) === 1);
+  }
+
+  function _rememberShowcaseNode(conceptId) {
+    if (!Number.isFinite(conceptId)) return;
+    _showcaseRecent = _showcaseRecent.filter(id => id !== conceptId);
+    _showcaseRecent.push(conceptId);
+    if (_showcaseRecent.length > SHOWCASE_RECENT_LIMIT) {
+      _showcaseRecent = _showcaseRecent.slice(-SHOWCASE_RECENT_LIMIT);
+    }
+  }
+
+  function _updateShowcaseButton() {
+    showcaseBtn.textContent = SHOWCASE_ICON;
+    showcaseBtn.classList.toggle('is-active', _showcaseActive);
+    showcaseBtn.setAttribute('aria-pressed', _showcaseActive ? 'true' : 'false');
+    showcaseBtn.title = _showcaseActive ? 'Stop showcase traversal' : 'Start showcase traversal';
+    showcaseBtn.disabled = !_graphData?.matched || _showcaseCandidates().length === 0;
+  }
+
+  function _stopShowcase() {
+    _showcaseActive = false;
+    _showcaseBusy = false;
+    if (_showcaseTimer) {
+      clearTimeout(_showcaseTimer);
+      _showcaseTimer = null;
+    }
+    _updateShowcaseButton();
+  }
+
+  function _scheduleShowcase(delay = SHOWCASE_INTERVAL_MS) {
+    if (_showcaseTimer) clearTimeout(_showcaseTimer);
+    if (!_showcaseActive) return;
+    _showcaseTimer = setTimeout(_runShowcaseStep, delay);
+  }
+
+  async function _runShowcaseStep() {
+    _showcaseTimer = null;
+    if (!_showcaseActive) return;
+    if (_transition || _showcaseBusy || _panning || _pendingBlankPan || _sidebarResizeDrag) {
+      _scheduleShowcase(300);
+      return;
+    }
+
+    const candidates = _showcaseCandidates();
+    if (!candidates.length) {
+      _stopShowcase();
+      return;
+    }
+
+    const recentSet = new Set(_showcaseRecent);
+    const unselected = candidates.filter(node => node.concept_id !== _selection?.node?.concept_id);
+    const unrecent = unselected.filter(node => !recentSet.has(node.concept_id));
+    const pool = unrecent.length ? unrecent : (unselected.length ? unselected : candidates);
+    const node = pool[Math.floor(Math.random() * pool.length)];
+    if (!node) {
+      _scheduleShowcase();
+      return;
+    }
+
+    _showcaseBusy = true;
+    try {
+      _rememberShowcaseNode(node.concept_id);
+      await handleNodeClick(node);
+    } finally {
+      _showcaseBusy = false;
+      if (_showcaseActive) _scheduleShowcase();
+    }
+  }
+
+  function _toggleShowcase() {
+    if (_showcaseActive) {
+      _stopShowcase();
+      return;
+    }
+    if (!_graphData?.matched || _showcaseCandidates().length === 0) {
+      _updateShowcaseButton();
+      return;
+    }
+    _showcaseActive = true;
+    _showcaseRecent = Number.isFinite(_centralId) ? [_centralId] : [];
+    _updateShowcaseButton();
+    _scheduleShowcase(0);
   }
 
   function _setSidebarStatus(message) {
@@ -477,6 +586,190 @@
   function nodeRadius(id) {
     if (id === _centralId) return NODE_R + 6;
     return _nodeRing.get(id) === 2 ? NODE_R2 : NODE_R;
+  }
+
+  function _sceneNodeRadius(scene, id) {
+    if (id === scene.centralId) return NODE_R + 6;
+    return scene.nodeRing.get(id) === 2 ? NODE_R2 : NODE_R;
+  }
+
+  function _snapshotGraphScene() {
+    if (!_graphData || !_graphData.matched) return null;
+    return {
+      graphData: _graphData,
+      positions: new Map(Array.from(_positions.entries(), ([id, pos]) => [id, { wx: pos.wx, wy: pos.wy }])),
+      nodeRing: new Map(_nodeRing),
+      centralId: _centralId,
+      view: {
+        zoom: view.zoom,
+        pan: { x: view.pan.x, y: view.pan.y },
+      },
+    };
+  }
+
+  function _easeInOut(t) {
+    return 0.5 - Math.cos(Math.PI * t) / 2;
+  }
+
+  function _lerp(a, b, t) {
+    return a + (b - a) * t;
+  }
+
+  function _hexToRgb(hex) {
+    if (typeof hex !== 'string') return null;
+    const value = hex.trim();
+    const match = /^#([0-9a-f]{6})$/i.exec(value);
+    if (!match) return null;
+    const raw = match[1];
+    return {
+      r: parseInt(raw.slice(0, 2), 16),
+      g: parseInt(raw.slice(2, 4), 16),
+      b: parseInt(raw.slice(4, 6), 16),
+    };
+  }
+
+  function _mixColor(from, to, t) {
+    const a = _hexToRgb(from);
+    const b = _hexToRgb(to);
+    if (!a || !b) return t >= 1 ? to : from;
+    return `rgb(${Math.round(_lerp(a.r, b.r, t))} ${Math.round(_lerp(a.g, b.g, t))} ${Math.round(_lerp(a.b, b.b, t))})`;
+  }
+
+  function _sceneNodeById(scene, conceptId) {
+    return scene?.graphData?.nodes?.find(nd => nd.concept_id === conceptId) || null;
+  }
+
+  function _defaultNodeVisual(scene, nd) {
+    const isCentral = nd.concept_id === scene.centralId;
+    const isRing2 = scene.nodeRing.get(nd.concept_id) === 2;
+    const isSelected = _isSelectedNode(nd.concept_id);
+    return {
+      fillStyle: isSelected ? 'rgba(240, 192, 96, 0.14)' : C.panel,
+      strokeStyle: isSelected ? C.amber : (isCentral ? C.green : (isRing2 ? C.dim : C.border)),
+      lineWidth: isSelected ? 2.4 : (isCentral ? 2 : 1.5),
+      textStyle: isSelected ? C.amber : (isCentral ? C.green : (isRing2 ? C.dim : C.text)),
+    };
+  }
+
+  function _lerpNodeVisual(from, to, t) {
+    return {
+      fillStyle: t >= 1 ? to.fillStyle : from.fillStyle,
+      strokeStyle: _mixColor(from.strokeStyle, to.strokeStyle, t),
+      lineWidth: _lerp(from.lineWidth, to.lineWidth, t),
+      textStyle: _mixColor(from.textStyle, to.textStyle, t),
+    };
+  }
+
+  function _buildTransitionNodeVisuals(transition, handoff) {
+    const previousScene = transition?.previousScene;
+    const nextScene = transition?.nextScene;
+    if (!previousScene || !nextScene) return null;
+
+    const visuals = new Map();
+    const previousCentralNode = _sceneNodeById(previousScene, previousScene.centralId);
+    const nextCentralNode = _sceneNodeById(nextScene, previousScene.centralId) || previousCentralNode;
+    if (previousCentralNode && nextCentralNode) {
+      visuals.set(
+        previousScene.centralId,
+        _lerpNodeVisual(
+          _defaultNodeVisual(previousScene, previousCentralNode),
+          _defaultNodeVisual(nextScene, nextCentralNode),
+          handoff,
+        ),
+      );
+    }
+
+    const focusNode = _sceneNodeById(previousScene, transition.focusNodeId);
+    const promotedFocusNode = _sceneNodeById(nextScene, transition.focusNodeId) || focusNode;
+    if (focusNode && promotedFocusNode) {
+      visuals.set(
+        transition.focusNodeId,
+        _lerpNodeVisual(
+          _defaultNodeVisual(previousScene, focusNode),
+          _defaultNodeVisual(nextScene, promotedFocusNode),
+          handoff,
+        ),
+      );
+    }
+
+    return visuals;
+  }
+
+  function _screenPointFor(scene, conceptId) {
+    const pos = scene?.positions?.get(conceptId);
+    if (!pos) return null;
+    return {
+      x: scene.view.pan.x + pos.wx * scene.view.zoom,
+      y: scene.view.pan.y + pos.wy * scene.view.zoom,
+    };
+  }
+
+  function _tickTransition() {
+    if (!_transition) return;
+    const elapsed = performance.now() - _transition.startedAt;
+    if (elapsed >= _transition.duration) {
+      _transition = null;
+      draw();
+      return;
+    }
+    draw();
+    requestAnimationFrame(_tickTransition);
+  }
+
+  function _startGraphTransition(previousScene, focusNodeId) {
+    const nextScene = _snapshotGraphScene();
+    if (!previousScene || !nextScene || !_screenPointFor(previousScene, focusNodeId) || !_screenPointFor(nextScene, focusNodeId)) {
+      _transition = null;
+      draw();
+      return;
+    }
+
+    _transition = {
+      previousScene,
+      nextScene,
+      focusNodeId,
+      duration: TRANSITION_MS,
+      startedAt: performance.now(),
+    };
+    requestAnimationFrame(_tickTransition);
+  }
+
+  function _buildInterpolatedScene(transition, eased) {
+    const previousScene = transition?.previousScene;
+    const nextScene = transition?.nextScene;
+    if (!previousScene || !nextScene) return nextScene;
+
+    const viewState = {
+      pan: {
+        x: _lerp(previousScene.view.pan.x, nextScene.view.pan.x, eased),
+        y: _lerp(previousScene.view.pan.y, nextScene.view.pan.y, eased),
+      },
+      zoom: _lerp(previousScene.view.zoom, nextScene.view.zoom, eased),
+    };
+
+    const positions = new Map();
+    for (const nd of nextScene.graphData.nodes) {
+      const nextScreen = _screenPointFor(nextScene, nd.concept_id);
+      if (!nextScreen) continue;
+      const prevScreen = _screenPointFor(previousScene, nd.concept_id) || nextScreen;
+      const currentScreen = {
+        x: _lerp(prevScreen.x, nextScreen.x, eased),
+        y: _lerp(prevScreen.y, nextScreen.y, eased),
+      };
+      const zoom = Math.abs(viewState.zoom) < 1e-6 ? 1 : viewState.zoom;
+      positions.set(nd.concept_id, {
+        wx: (currentScreen.x - viewState.pan.x) / zoom,
+        wy: (currentScreen.y - viewState.pan.y) / zoom,
+      });
+    }
+
+    return {
+      graphData: nextScene.graphData,
+      positions,
+      nodeRing: nextScene.nodeRing,
+      centralId: nextScene.centralId,
+      view: viewState,
+    };
   }
 
   function _sameEdge(a, b) {
@@ -498,17 +791,51 @@
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     _nodeHits = [];
     _edgeLabelHits = [];
-    if (!_graphData || !_graphData.matched) return;
+    if (_transition) {
+      const elapsed = performance.now() - _transition.startedAt;
+      const progress = Math.min(1, elapsed / _transition.duration);
+      const handoffProgress = Math.min(1, progress / TRANSITION_HANDOFF_FRACTION);
+      const handoffEased = _easeInOut(handoffProgress);
+      const motionProgress = progress <= TRANSITION_HANDOFF_FRACTION
+        ? 0
+        : (progress - TRANSITION_HANDOFF_FRACTION) / (1 - TRANSITION_HANDOFF_FRACTION);
+      const motionEased = _easeInOut(motionProgress);
+      const previousNodeVisuals = _buildTransitionNodeVisuals(_transition, handoffEased);
 
-    const { nodes, edges } = _graphData;
+      _drawScene(_transition.previousScene, {
+        sceneAlpha: motionProgress > 0 ? 1 - motionEased : 1,
+        nodeVisuals: previousNodeVisuals,
+      });
+
+      if (motionProgress > 0) {
+        const transitionScene = _buildInterpolatedScene(_transition, motionEased);
+        _drawScene(transitionScene, { sceneAlpha: motionEased });
+      }
+      return;
+    }
+    if (!_graphData || !_graphData.matched) return;
+    _drawScene(_snapshotGraphScene(), { collectHits: true, sceneAlpha: 1 });
+  }
+
+  function _drawScene(scene, options = {}) {
+    if (!scene?.graphData?.matched) return;
+
+    const collectHits = Boolean(options.collectHits);
+    const nodeVisuals = options.nodeVisuals instanceof Map ? options.nodeVisuals : null;
+    const sceneAlpha = Math.max(0, Math.min(1, Number(options.sceneAlpha) || 0));
+    if (sceneAlpha <= 0) return;
+
+    const pan = options.pan || scene.view?.pan || view.pan;
+    const zoom = options.zoom || scene.view?.zoom || view.zoom;
+    const { nodes, edges } = scene.graphData;
     ctx.save();
-    ctx.translate(view.pan.x, view.pan.y);
-    ctx.scale(view.zoom, view.zoom);
+    ctx.translate(pan.x, pan.y);
+    ctx.scale(zoom, zoom);
 
     const pairs = new Map();
     for (const e of edges) {
       if (e.start_concept_id === e.end_concept_id) continue;
-      if (!_positions.has(e.start_concept_id) || !_positions.has(e.end_concept_id)) continue;
+      if (!scene.positions.has(e.start_concept_id) || !scene.positions.has(e.end_concept_id)) continue;
       const key = [e.start_concept_id, e.end_concept_id].sort().join('_');
       if (!pairs.has(key)) pairs.set(key, []);
       pairs.get(key).push(e);
@@ -517,8 +844,8 @@
     for (const group of pairs.values()) {
       const count = group.length;
       group.forEach((e, gi) => {
-        const p1 = _positions.get(e.start_concept_id);
-        const p2 = _positions.get(e.end_concept_id);
+        const p1 = scene.positions.get(e.start_concept_id);
+        const p2 = scene.positions.get(e.end_concept_id);
         const dx = p2.wx - p1.wx;
         const dy = p2.wy - p1.wy;
         const len = Math.hypot(dx, dy);
@@ -527,8 +854,8 @@
         const uy = dy / len;
         const selected = _isSelectedEdge(e);
 
-        const r1c = nodeRadius(e.start_concept_id);
-        const r2c = nodeRadius(e.end_concept_id);
+        const r1c = _sceneNodeRadius(scene, e.start_concept_id);
+        const r2c = _sceneNodeRadius(scene, e.end_concept_id);
         const x1 = p1.wx + ux * r1c;
         const y1 = p1.wy + uy * r1c;
         const x2 = p2.wx - ux * (r2c + 2);
@@ -536,7 +863,7 @@
 
         ctx.save();
         ctx.strokeStyle = selected ? C.amber : C.blue;
-        ctx.globalAlpha = selected ? 0.92 : 0.45;
+    ctx.globalAlpha = sceneAlpha * (selected ? 0.92 : 0.45);
         ctx.lineWidth = selected ? 2.6 : 1.5;
         ctx.beginPath();
         ctx.moveTo(x1, y1);
@@ -544,7 +871,7 @@
         ctx.stroke();
         ctx.restore();
 
-        drawArrow(p1, p2, e.end_concept_id, selected);
+        drawArrow(p1, p2, r2c, selected, sceneAlpha);
 
         const stagger = (gi - (count - 1) / 2) * 15;
         const lx = (x1 + x2) / 2 + (-uy) * stagger;
@@ -556,11 +883,11 @@
         const lbl = e.connection_name;
         const tw = ctx.measureText(lbl).width;
         const hit = { x: lx - tw / 2 - 3, y: ly - 7, w: tw + 6, h: 14, edge: e };
-        _edgeLabelHits.push(hit);
+        if (collectHits) _edgeLabelHits.push(hit);
         ctx.fillStyle = selected ? 'rgba(240, 192, 96, 0.16)' : C.bg;
-        ctx.globalAlpha = selected ? 1 : 0.82;
+        ctx.globalAlpha = sceneAlpha * (selected ? 1 : 0.82);
         ctx.fillRect(hit.x, hit.y, hit.w, hit.h);
-        ctx.globalAlpha = 1;
+        ctx.globalAlpha = sceneAlpha;
         ctx.fillStyle = selected ? C.amber : C.dim;
         ctx.fillText(lbl, lx, ly);
         ctx.restore();
@@ -568,26 +895,25 @@
     }
 
     for (const nd of nodes) {
-      const p = _positions.get(nd.concept_id);
+      const p = scene.positions.get(nd.concept_id);
       if (!p) continue;
-      const isCentral = nd.concept_id === _centralId;
-      const isRing2 = _nodeRing.get(nd.concept_id) === 2;
-      const isSelected = _isSelectedNode(nd.concept_id);
-      const r = nodeRadius(nd.concept_id);
+      const visual = nodeVisuals?.get(nd.concept_id) || _defaultNodeVisual(scene, nd);
+      const r = _sceneNodeRadius(scene, nd.concept_id);
 
       ctx.save();
+      ctx.globalAlpha = sceneAlpha;
       ctx.beginPath();
       ctx.arc(p.wx, p.wy, r, 0, Math.PI * 2);
-      ctx.fillStyle = isSelected ? 'rgba(240, 192, 96, 0.14)' : C.panel;
+      ctx.fillStyle = visual.fillStyle;
       ctx.fill();
-      ctx.strokeStyle = isSelected ? C.amber : (isCentral ? C.green : (isRing2 ? C.dim : C.border));
-      ctx.lineWidth = isSelected ? 2.4 : (isCentral ? 2 : 1.5);
+      ctx.strokeStyle = visual.strokeStyle;
+      ctx.lineWidth = visual.lineWidth;
       ctx.stroke();
 
       ctx.font = '11px monospace';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillStyle = isSelected ? C.amber : (isCentral ? C.green : (isRing2 ? C.dim : C.text));
+      ctx.fillStyle = visual.textStyle;
       const maxW = r * 1.55;
       const lines = wrapLabel(nd.name, maxW);
       const lineH = 13;
@@ -597,7 +923,7 @@
       }
       ctx.restore();
 
-      _nodeHits.push({ x: p.wx, y: p.wy, r, node: nd });
+      if (collectHits) _nodeHits.push({ x: p.wx, y: p.wy, r, node: nd });
     }
 
     ctx.restore();
@@ -628,17 +954,16 @@
     return lines;
   }
 
-  function drawArrow(from, to, toId, selected) {
+  function drawArrow(from, to, targetRadius, selected, sceneAlpha = 1) {
     const dx = to.wx - from.wx;
     const dy = to.wy - from.wy;
     const angle = Math.atan2(dy, dx);
     const size = 9;
-    const tr = nodeRadius(toId);
-    const tx = to.wx - (tr + 2) * Math.cos(angle);
-    const ty = to.wy - (tr + 2) * Math.sin(angle);
+    const tx = to.wx - (targetRadius + 2) * Math.cos(angle);
+    const ty = to.wy - (targetRadius + 2) * Math.sin(angle);
     ctx.save();
     ctx.fillStyle = selected ? C.amber : C.blue;
-    ctx.globalAlpha = selected ? 0.92 : 0.65;
+    ctx.globalAlpha = sceneAlpha * (selected ? 0.92 : 0.65);
     ctx.beginPath();
     ctx.moveTo(tx, ty);
     ctx.lineTo(tx - size * Math.cos(angle - 0.4), ty - size * Math.sin(angle - 0.4));
@@ -769,10 +1094,13 @@
     updateHistBtns();
   }
 
-  async function doExpand() {
+  async function doExpand(options = {}) {
     hideAC();
     const term = input.value.trim();
     if (!term) return false;
+    const focusNodeId = Number.isFinite(options.focusNodeId) ? options.focusNodeId : null;
+    const previousScene = focusNodeId !== null ? _snapshotGraphScene() : null;
+    _transition = null;
     try {
       const r = await fetch(`${pfx}/api/expand-by-term?q=${enc(term)}&depth=2`);
       if (!r.ok) return false;
@@ -782,6 +1110,7 @@
         hint.style.display = 'flex';
         _graphData = null;
         _clearSelection(false);
+        _stopShowcase();
         draw();
         gwBtn.disabled = true;
         return false;
@@ -793,11 +1122,17 @@
       hint.style.display = 'none';
       resetView();
       _restoreSelectionFromState();
-      draw();
+      if (previousScene && focusNodeId !== null) {
+        _startGraphTransition(previousScene, focusNodeId);
+      } else {
+        draw();
+      }
       gwBtn.disabled = false;
+      _updateShowcaseButton();
       return true;
     } catch (err) {
       console.error('expand failed', err);
+      _updateShowcaseButton();
       return false;
     }
   }
@@ -818,6 +1153,7 @@
   });
 
   canvas.addEventListener('mousedown', e => {
+    if (_transition) return;
     if (e.button === 1) {
       e.preventDefault();
       startPan(e);
@@ -852,6 +1188,10 @@
     const rect = canvas.getBoundingClientRect();
     const sx = e.clientX - rect.left;
     const sy = e.clientY - rect.top;
+    if (_transition) {
+      canvas.style.cursor = 'default';
+      return;
+    }
     if (_sidebarResizeDrag) {
       const nextW = _sidebarResizeDrag.startW + (e.clientX - _sidebarResizeDrag.startX);
       _applySidebarWidth(nextW);
@@ -902,6 +1242,7 @@
 
   let _saveViewTimer = null;
   canvas.addEventListener('wheel', e => {
+    if (_transition) return;
     e.preventDefault();
     const rect = canvas.getBoundingClientRect();
     const mx = e.clientX - rect.left;
@@ -959,7 +1300,7 @@
     _clearSelection(false);
     _setSidebarOpen(false);
     input.value = node.name;
-    await doExpand();
+    await doExpand({ focusNodeId: node.concept_id });
   }
 
   async function selectNode(node) {
@@ -1195,12 +1536,12 @@
   btn.addEventListener('click', doExpand);
   document.getElementById('g-prev').addEventListener('click', () => histNav(-1));
   document.getElementById('g-next').addEventListener('click', () => histNav(1));
+  showcaseBtn.addEventListener('click', _toggleShowcase);
   gwBtn.addEventListener('click', () => {
     const term = input.value.trim();
     if (!term) return;
     window.location.href = '/ui?q=' + enc(term);
   });
-  toggleSidebarBtn.addEventListener('click', () => _setSidebarOpen(!_sidebarOpen));
   closeSidebarBtn.addEventListener('click', () => _setSidebarOpen(false));
   deleteSelectionBtn.addEventListener('click', deleteSelection);
 
@@ -1258,6 +1599,7 @@
   }
 
   (function restoreState() {
+    _updateShowcaseButton();
     const savedState = _loadSidebarState();
     _setSidebarOpen(Boolean(savedState?.open));
     const savedHist = sessionStorage.getItem('kg-history');

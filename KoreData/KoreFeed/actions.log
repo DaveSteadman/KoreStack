@@ -1,5 +1,3 @@
-[2026-05-28T22:24:15]   Germany: +0 articles from 44 pages in 19.1s [good]
-[2026-05-28T22:24:33] Web crawl: Germany (https://www.bundesregierung.de/breg-en/news)
 [2026-05-28T22:24:33]   Germany: 20 level-1 candidates
 [2026-05-28T22:24:50]   Germany: +0 articles from 44 pages in 17.5s [good]
 [2026-05-28T22:32:24] Web crawl: Japan (https://www.japan.go.jp/publications/news/index.html)
@@ -998,3 +996,5 @@
 [2026-05-30T10:47:14]   Skipping BBC World News — next fetch in ~471m
 [2026-05-30T10:47:14]   Skipping AP World News — next fetch in ~471m
 [2026-05-30T10:47:14]   Skipping HuggingFace Blog - already queued/running
+[2026-05-30T16:48:29] Ingesting: UN Global News
+[2026-05-30T16:49:38]   UN Global News: +30 entries in 69.5s [good]

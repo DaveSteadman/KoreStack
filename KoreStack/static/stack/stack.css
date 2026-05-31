@@ -331,10 +331,133 @@ code {
 .service-korecomms { --service-accent: var(--service-korecomms); }
 
 @media (max-width: 860px) {
-  .service-row {
-    grid-template-columns: 1fr;
-    align-items: start;
+  .paths-header,
+  .services-header {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
-  .service-actions { justify-self: start; }
+  .paths-compact span,
+  .path-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+  }
+
+  .service-row {
+    grid-template-columns: 78px auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      "glyph core core state"
+      "glyph address link actions";
+    align-items: center;
+    gap: 8px 10px;
+    padding: 10px 12px 10px 0;
+  }
+
+  .service-glyph {
+    grid-area: glyph;
+    width: 78px;
+    height: 78px;
+    min-height: 78px;
+    justify-self: stretch;
+    align-self: stretch;
+    border-right: none;
+  }
+
+  .service-core,
+  .service-state,
+  .address-edit,
+  .service-link,
+  .service-actions {
+    min-height: auto;
+    padding-block: 0;
+  }
+
+  .service-core {
+    grid-area: core;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: baseline;
+    column-gap: 10px;
+  }
+
+  .service-core .eyebrow {
+    margin: 0;
+  }
+
+  .service-core h2 {
+    font-size: 1rem;
+  }
+
+  .service-copy {
+    display: none;
+  }
+
+  .service-state {
+    grid-area: state;
+    justify-content: flex-end;
+  }
+
+  .address-edit {
+    grid-area: address;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 6px;
+    align-self: center;
+  }
+
+  .service-link {
+    grid-area: link;
+    min-width: 0;
+    align-self: center;
+  }
+
+  .service-link a {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .service-actions {
+    grid-area: actions;
+    align-self: center;
+    justify-self: end;
+  }
+
+  .host-input,
+  .port-input {
+    width: 64px;
+  }
+}
+
+@media (max-width: 560px) {
+  .service-row {
+    grid-template-columns: 68px auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      "glyph core core state"
+      "glyph address link actions";
+    gap: 8px;
+  }
+
+  .service-glyph {
+    width: 68px;
+    height: 68px;
+    min-height: 68px;
+  }
+
+  .service-core {
+    column-gap: 8px;
+  }
+
+  .service-core .eyebrow {
+    font-size: 10px;
+  }
+
+  .service-core h2 {
+    font-size: 0.96rem;
+  }
+
+  .service-link,
+  .service-actions {
+    align-self: center;
+  }
 }
