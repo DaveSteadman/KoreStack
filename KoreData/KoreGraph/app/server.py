@@ -694,6 +694,8 @@ def api_processing_run(body: ProcessingRunBody):
 
         env = os.environ.copy()
         env["PYTHONUNBUFFERED"] = "1"
+        env["PYTHONIOENCODING"] = "utf-8"
+        env["PYTHONUTF8"] = "1"
 
         with open(log_path, "w", encoding="utf-8") as lf:
             new_proc = subprocess.Popen(

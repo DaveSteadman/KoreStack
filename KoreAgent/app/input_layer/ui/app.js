@@ -52,6 +52,7 @@ let _logLines       = [];
 let _logEventSource = null;
 let _inputHistory   = [];     // loaded per conversation from server on init or session switch
 let _historyIdx        = -1;     // -1 = not browsing history
+let _historyDraft      = null;   // unsent text preserved while browsing input history
 let _ollamaReachable   = true;   // updated by refreshOllamaStatus; used in submitPrompt
 let _timelineRefreshTimer = null;
 let _queueResizeObserver  = null;
@@ -1018,6 +1019,7 @@ function submitPrompt() {
     _clearInputDraft();
     _resizeTextarea();
     _historyIdx = -1;
+    _historyDraft = null;
 
     // Dispatch immediately so the Python queue reflects the real prompt backlog.
     _dispatchPrompt(text);
@@ -1269,8 +1271,10 @@ function onInputKeydown(e) {
             dom.input().value = _inputHistory[_historyIdx];
         } else {
             _historyIdx = -1;
-            dom.input().value = "";
+            dom.input().value = _historyDraft ?? _restoreInputDraft();
+            _historyDraft = null;
         }
+        _resizeTextarea();
         const elD = dom.input();
         elD.setSelectionRange(elD.value.length, elD.value.length);
         return;
@@ -1288,11 +1292,14 @@ function onInputKeydown(e) {
         if (_inputHistory.length === 0) return;
         e.preventDefault();
         if (_historyIdx === -1) {
+            _historyDraft = dom.input().value;
+            _saveInputDraft(_historyDraft);
             _historyIdx = _inputHistory.length - 1;
         } else if (_historyIdx > 0) {
             _historyIdx--;
         }
         dom.input().value = _inputHistory[_historyIdx];
+        _resizeTextarea();
         const elU = dom.input();
         elU.setSelectionRange(elU.value.length, elU.value.length);
         return;
@@ -1358,7 +1365,7 @@ function init() {
 
     // Wire up input events.
     dom.input().addEventListener("keydown", onInputKeydown);
-    dom.input().addEventListener("input", () => { _historyIdx = -1; _saveInputDraft(dom.input().value); onInputChange(); });
+    dom.input().addEventListener("input", () => { _historyIdx = -1; _historyDraft = null; _saveInputDraft(dom.input().value); onInputChange(); });
     dom.input().addEventListener("blur",  () => { setTimeout(_hideSuggest, 120); });
     $("log-btn-up")?.addEventListener("click", () => { logNavStep(-1); });
     $("log-btn-down")?.addEventListener("click", () => { logNavStep(1); });

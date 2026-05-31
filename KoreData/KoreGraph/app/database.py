@@ -359,6 +359,51 @@ def delete_concept(concept_id: int) -> dict:
         }
 
 
+def delete_orphaned_vocab_terms(dry_run: bool = False) -> dict:
+    """Delete vocab concepts that are not referenced by any relation."""
+    with db_connection() as conn:
+        orphan_rows = conn.execute(
+            """
+            SELECT v.concept_id, COUNT(*) AS vocab_count, MIN(v.term) AS sample_term
+            FROM vocab v
+            WHERE NOT EXISTS (
+                SELECT 1
+                FROM relations r
+                WHERE r.subject_concept_id = v.concept_id
+                   OR r.predicate_concept_id = v.concept_id
+                   OR r.object_concept_id = v.concept_id
+            )
+            GROUP BY v.concept_id
+            ORDER BY MIN(v.term)
+            """
+        ).fetchall()
+        orphan_concepts = len(orphan_rows)
+        orphan_vocab_terms = sum(int(row["vocab_count"]) for row in orphan_rows)
+        sample_terms = [row["sample_term"] for row in orphan_rows[:20]]
+
+        if not orphan_rows or dry_run:
+            return {
+                "dry_run": dry_run,
+                "orphaned_concepts": orphan_concepts,
+                "orphaned_vocab_terms": orphan_vocab_terms,
+                "deleted_concepts": 0 if dry_run else orphan_concepts,
+                "deleted_vocab_terms": 0 if dry_run else orphan_vocab_terms,
+                "sample_terms": sample_terms,
+            }
+
+        concept_ids = [row["concept_id"] for row in orphan_rows]
+        placeholders = ",".join("?" for _ in concept_ids)
+        conn.execute(f"DELETE FROM vocab WHERE concept_id IN ({placeholders})", concept_ids)
+        return {
+            "dry_run": False,
+            "orphaned_concepts": orphan_concepts,
+            "orphaned_vocab_terms": orphan_vocab_terms,
+            "deleted_concepts": orphan_concepts,
+            "deleted_vocab_terms": orphan_vocab_terms,
+            "sample_terms": sample_terms,
+        }
+
+
 def rename_vocab_term(vocab_id: int, new_term: str) -> Optional[dict]:
     new_term = new_term.strip()
     if not new_term:

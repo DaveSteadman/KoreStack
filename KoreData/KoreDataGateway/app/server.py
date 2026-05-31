@@ -1453,6 +1453,18 @@ async def web_delete_outside_calendar(
 # KoreFeed API proxy (called directly by browser JS)
 # ---------------------------------------------------------------------------
 
+@app.get("/api/domains")
+async def api_proxy_feed_domains():
+    r = await _feed_client.get("/api/domains")
+    return JSONResponse(content=r.json(), status_code=r.status_code)
+
+
+@app.get("/api/feeds")
+async def api_proxy_feeds():
+    r = await _feed_client.get("/api/feeds")
+    return JSONResponse(content=r.json(), status_code=r.status_code)
+
+
 @app.patch("/api/feeds/{feed_id}/rate")
 async def api_proxy_feed_rate(feed_id: str, minutes: int):
     r = await _feed_client.patch(f"/api/feeds/{feed_id}/rate", params={"minutes": minutes})

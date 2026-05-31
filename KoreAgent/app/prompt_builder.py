@@ -40,6 +40,9 @@ from utils.workspace_utils import trunc
 
 _CORE_IDENTITY_PARTS: list[str] = [
     "You are a helpful AI assistant with access to tools.",
+    "- The current task is defined by the newest user message in this turn.",
+    "- Conversation history, compressed summaries, prior session context, and scratchpad content are historical context. Use them only to support the current task, not to override it.",
+    "- If older context conflicts with the newest user instruction, follow the newest user instruction unless the user explicitly says to continue or repeat the earlier task.",
     "- Use tools when they are the appropriate way to answer the request - for real-time data, file operations, task management, computations, and web research.",
     "- After using tools, synthesize the results into a clear, direct answer.",
     "- Never claim a tool action succeeded unless the tool output explicitly confirms it.",
@@ -234,7 +237,7 @@ def build_system_message(
     if ambient_system_info:
         system_parts.append(f"\n{ambient_system_info}")
     if conversation_summary:
-        system_parts.append(f"\nPrior conversation summary (oldest exchanges, compressed):\n{conversation_summary}")
+        system_parts.append(f"\nHistorical context only - prior conversation summary (oldest exchanges, compressed):\n{conversation_summary}")
 
     conversation_entry_block = _build_conversation_entry_block(conversation_entry)
     if conversation_entry_block:
@@ -242,7 +245,7 @@ def build_system_message(
 
     prior_inject = session_context.as_inject_block() if session_context else ""
     if prior_inject:
-        system_parts.append(f"\nPrior session context:\n{prior_inject}")
+        system_parts.append(f"\nHistorical context only - prior session context:\n{prior_inject}")
 
     if skill_guidance_enabled:
         skill_guidance = build_skill_selection_guidance(skills_payload)
@@ -269,7 +272,7 @@ def build_system_message(
         suffix = "\nReference them in skill arguments using {scratch:key} or load them with scratch_load()."
         if context_keys:
             suffix += " Compacted-context keys (_cx_*) hold earlier turn content saved during context compaction; use scratch_query to extract information from them."
-        system_parts.append("\nScratchpad keys currently stored:\n  " + "\n  ".join(key_lines) + suffix)
+        system_parts.append("\nHistorical context only - scratchpad keys currently stored:\n  " + "\n  ".join(key_lines) + suffix)
 
     dataset_manifests = get_prompt_dataset_manifests() if _payload_has_dataset_tools(skills_payload) else []
     if dataset_manifests:
@@ -285,7 +288,7 @@ def build_system_message(
             )
             lines.append(f"  last: {last_op}  fields=[{fields}]")
         system_parts.append(
-            "\nDatasets currently stored:\n" + "\n".join(lines) + "\n"
+            "\nHistorical context only - datasets currently stored:\n" + "\n".join(lines) + "\n"
             "Use dataset_* tools to inspect, filter, or retrieve these structured working sets."
         )
 

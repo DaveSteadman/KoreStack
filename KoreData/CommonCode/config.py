@@ -17,11 +17,42 @@
 # ====================================================================================================
 import os
 import json
+from functools import lru_cache
 from pathlib import Path
 
 _SUITE_ROOT   = Path(__file__).resolve().parents[2]  # KoreStack/
 _CONFIG_FILE  = _SUITE_ROOT / "config" / "default.json"
 _LOCAL_CONFIG = _SUITE_ROOT / "config" / "local.json"
+
+
+@lru_cache(maxsize=1)
+def _load_paths_config() -> dict:
+    paths: dict = {}
+    for cfg_path in (_CONFIG_FILE, _LOCAL_CONFIG):
+        if not cfg_path.exists():
+            continue
+        with open(cfg_path, encoding="utf-8") as f:
+            raw = json.load(f)
+        if isinstance(raw.get("paths"), dict):
+            paths.update(raw["paths"])
+    return paths
+
+
+def _resolve_configured_root(key: str) -> Path | None:
+    raw_value = _load_paths_config().get(key)
+    if not isinstance(raw_value, str):
+        return None
+
+    raw_value = raw_value.strip()
+    if not raw_value:
+        return None
+
+    candidate = Path(raw_value)
+    if any(part.lower() == "absolutepath" for part in candidate.parts):
+        return None
+    if not candidate.is_absolute():
+        candidate = get_suite_root() / candidate
+    return candidate.resolve()
 
 
 def get_suite_root() -> Path:
@@ -35,6 +66,9 @@ def get_suite_datacontrol_dir() -> Path:
     env_path = os.environ.get("KORE_SUITE_DATACONTROL", "").strip()
     if env_path:
         return Path(env_path).resolve()
+    configured = _resolve_configured_root("datacontrolroot")
+    if configured is not None:
+        return configured
     return get_suite_root() / "datacontrol"
 
 
@@ -42,6 +76,9 @@ def get_suite_datauser_dir() -> Path:
     env_path = os.environ.get("KORE_SUITE_DATAUSER", "").strip()
     if env_path:
         return Path(env_path).resolve()
+    configured = _resolve_configured_root("datauserroot")
+    if configured is not None:
+        return configured
     return get_suite_root() / "datauser"
 
 
