@@ -17,8 +17,15 @@ import json
 from pathlib import Path
 
 
+def _find_repo_root() -> Path:
+    for candidate in Path(__file__).resolve().parents:
+        if (candidate / "config" / "default.json").exists():
+            return candidate
+    raise RuntimeError("Could not locate repo root from script path")
+
+
 def _load_suite_config() -> dict:
-    _root = Path(__file__).resolve().parent.parent.parent
+    _root = _find_repo_root()
     _result: dict = {}
     for _name in ("default.json", "local.json"):
         try:

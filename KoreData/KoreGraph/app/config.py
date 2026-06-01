@@ -25,7 +25,7 @@ _DEFAULTS = {
     "host": "0.0.0.0",
     "log_level": "info",
     "data_dir": str(get_koredata_dir() / "Graph"),
-    "scripts_dir": str(get_koredata_dir().parent / "KoreGraph"),
+    "scripts_dir": str(get_koredata_dir() / "Graph"),
     "ui_prefix": os.environ.get("KG_UI_PREFIX", ""),
 }
 

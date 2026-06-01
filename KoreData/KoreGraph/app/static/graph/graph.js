@@ -1198,7 +1198,8 @@
   gwBtn.addEventListener('click', () => {
     const term = input.value.trim();
     if (!term) return;
-    window.location.href = '/ui?q=' + enc(term);
+    const phrase = term.includes('"') ? term : `"${term}"`;
+    window.location.href = '/ui?q=' + enc(phrase);
   });
   closeSidebarBtn.addEventListener('click', () => _setSidebarOpen(false));
   deleteSelectionBtn.addEventListener('click', deleteSelection);

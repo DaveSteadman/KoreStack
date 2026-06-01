@@ -584,7 +584,7 @@ def api_unmerge_vocab(vocab_id: int):
 
 
 # ---------------------------------------------------------------------------
-# MARK: Processing — job runner for datacontrol/KoreGraph/ scripts
+# MARK: Processing — job runner for datacontrol/koredata/Graph/ scripts
 # ---------------------------------------------------------------------------
 
 # In-memory single-job tracker (one script at a time).

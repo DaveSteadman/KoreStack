@@ -20,9 +20,15 @@ from pathlib import Path
 
 # ── Config ────────────────────────────────────────────────────────────────────
 
+def _find_repo_root() -> Path:
+    for candidate in Path(__file__).resolve().parents:
+        if (candidate / "config" / "default.json").exists():
+            return candidate
+    raise RuntimeError("Could not locate repo root from script path")
+
 def _load_suite_config() -> dict:
     """Merge config/default.json + config/local.json from the repo root."""
-    _root = Path(__file__).resolve().parent.parent.parent
+    _root = _find_repo_root()
     _result: dict = {}
     for _name in ("default.json", "local.json"):
         try:
@@ -38,7 +44,7 @@ def _load_suite_config() -> dict:
 
 
 def _load_llm_config() -> dict:
-    _path = Path(__file__).resolve().parent.parent.parent / "config" / "llm_config.json"
+    _path = _find_repo_root() / "config" / "llm_config.json"
     try:
         return json.loads(_path.read_text(encoding="utf-8"))
     except Exception:

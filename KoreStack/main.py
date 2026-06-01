@@ -704,8 +704,6 @@ def _bootstrap_data_dirs(stack_paths: dict[str, Path]) -> None:
         kd / "Graph",
         # KoreDocs
         stack_paths["koredocs"],
-        # KoreGraph import tool (not a service, but keep alongside runtime dirs)
-        dc / "KoreGraph",
         # Shared datacontrol tree
         dc / "logs",
         dc / "schedules",

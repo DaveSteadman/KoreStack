@@ -49,4 +49,9 @@ datacontrol/task_queue.json
 /datacontrol/koredata/Library
 /datacontrol/koredata/Reference
 /datacontrol/koredocs
-/datacontrol/koredata/RAG
+/datacontrol/koredata/Graph/*.db
+/datacontrol/koredata/Graph/service.log
+/datacontrol/koredata/Graph/__pycache__/
+/datacontrol/koredata/RAG/service.log
+/datacontrol/koredata/RAG/databases/**/*.db
+/datacontrol/koredata/RAG/databases/**/__pycache__/
