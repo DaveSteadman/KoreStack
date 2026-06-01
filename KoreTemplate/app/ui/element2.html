@@ -734,6 +734,30 @@
   </div>
 
 
+  <!-- ── Section: Operations ─────────────────────────────────────── -->
+  <div class="doc-section">
+    <h2>Operations — Themed dialogs</h2>
+    <p class="doc-desc">
+      Consistent launchers for file select, folder select, and action confirmation.
+      File and folder selection now use custom browse dialogs with in-dialog traversal,
+      so the navigation, current path, and commit actions all stay inside the Element2 theme.
+    </p>
+
+    <div class="doc-row">
+      <div class="e2-row e2-row--wrap">
+        <button class="e2-btn e2-btn--info" id="e2-demo-file" type="button">Launch File Select</button>
+        <button class="e2-btn e2-btn--accent" id="e2-demo-folder" type="button">Launch Folder Select</button>
+        <button class="e2-btn e2-btn--danger" id="e2-demo-confirm" type="button">Launch Confirmation</button>
+      </div>
+    </div>
+
+    <div class="doc-row">
+      <span class="doc-label">Last result</span>
+      <span class="e2-label e2-label--wrap" id="e2-op-result">No operation launched yet</span>
+    </div>
+  </div>
+
+
   <!-- ── Section: Split-pane (clamped) ─────────────────────────────── -->
   <div class="doc-section">
     <h2>Split-pane layout — Clamped variant</h2>
@@ -937,7 +961,13 @@
 </div><!-- /doc-page -->
 
 
-<script>
+<script type="module">
+  import {
+    showConfirmDialog,
+    showFileSelectDialog,
+    showFolderSelectDialog,
+  } from '/ui-elements-2/assets/js/chrome.js';
+
   /* ── Segmented control — toggle is-active ──────────────────────── */
   document.querySelectorAll('.e2-seg').forEach(seg => {
     seg.addEventListener('click', e => {
@@ -1063,6 +1093,42 @@
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
     });
+  });
+
+  /* ── Dialog launcher row ────────────────────────────────────────── */
+  const opResult = document.getElementById('e2-op-result');
+
+  document.getElementById('e2-demo-file').addEventListener('click', async () => {
+    const file = await showFileSelectDialog({
+      description: 'Traverse the workspace tree directly inside the Element2 file browser.',
+    });
+    opResult.textContent = file
+      ? `File selected: ${file.displayPath}`
+      : 'File select cancelled';
+  });
+
+  document.getElementById('e2-demo-folder').addEventListener('click', async () => {
+    const folder = await showFolderSelectDialog({
+      description: 'Traverse the workspace tree directly inside the Element2 folder browser.',
+    });
+    if (folder) {
+      opResult.textContent = `Folder selected: ${folder.displayPath}`;
+      return;
+    }
+    opResult.textContent = 'Folder select cancelled';
+  });
+
+  document.getElementById('e2-demo-confirm').addEventListener('click', async () => {
+    const confirmed = await showConfirmDialog({
+      title: 'Confirm Delete',
+      description: 'Use the same popup style for destructive actions across services.',
+      message: 'Delete the selected dataset snapshot? This action cannot be undone.',
+      confirmLabel: 'Delete',
+      confirmTone: 'danger',
+    });
+    opResult.textContent = confirmed
+      ? 'Confirmation accepted'
+      : 'Confirmation cancelled';
   });
 </script>
 </body>

@@ -6,6 +6,8 @@
 # Endpoints:
 #   GET  /                                   redirect to element2 reference page
 #   GET  /status                             health check
+#   GET  /api/fs/roots                       browse roots for custom file dialogs
+#   GET  /api/fs/list                        directory listing for custom file dialogs
 #   GET  /suite-config.js                    suite URL map (same pattern across all services)
 #   GET  /ui-elements/assets/{path}          UIElements v1 assets  (frozen — for kcui-tag comparison)
 #   GET  /ui-elements-2/assets/{path}        UIElements2 assets
@@ -23,7 +25,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse, RedirectResponse, Response
 
 # ---------------------------------------------------------------------------
@@ -55,6 +57,37 @@ _UI_ELEMENTS3_ASSETS = Path(
 
 _UI_DIR = Path(__file__).parent / "ui"
 
+
+def _build_browse_roots() -> dict[str, Path]:
+    configured = os.environ.get("KORETEMPLATE_FILE_DIALOG_ROOTS", "").strip()
+    roots: dict[str, Path] = {"workspace": _BASE}
+    if configured:
+        for index, raw in enumerate(configured.split(os.pathsep), start=1):
+            candidate = Path(raw).expanduser().resolve()
+            if candidate.exists() and candidate.is_dir():
+                roots[f"extra{index}"] = candidate
+    return roots
+
+
+_BROWSE_ROOTS = _build_browse_roots()
+
+
+def _get_browse_root(root_id: str) -> Path:
+    root = _BROWSE_ROOTS.get(root_id)
+    if root is None:
+        raise HTTPException(status_code=404, detail="Unknown browse root")
+    return root
+
+
+def _resolve_browse_path(root: Path, relative_path: str) -> Path:
+    if relative_path in {"", "."}:
+        return root
+
+    candidate = (root / relative_path).resolve()
+    if candidate != root and root not in candidate.parents:
+        raise HTTPException(status_code=400, detail="Path escapes browse root")
+    return candidate
+
 # ---------------------------------------------------------------------------
 # App
 # ---------------------------------------------------------------------------
@@ -75,6 +108,60 @@ def root():
 @app.get("/status")
 def status():
     return {"status": "ok", "service": _SERVICE_NAME}
+
+
+@app.get("/api/fs/roots")
+def api_fs_roots():
+    return {
+        "roots": [
+            {
+                "id": root_id,
+                "label": root_path.name or str(root_path),
+                "path": str(root_path),
+            }
+            for root_id, root_path in _BROWSE_ROOTS.items()
+        ]
+    }
+
+
+@app.get("/api/fs/list")
+def api_fs_list(
+    root: str = Query("workspace"),
+    path: str = Query(""),
+):
+    root_path = _get_browse_root(root)
+    current = _resolve_browse_path(root_path, path)
+    if not current.exists() or not current.is_dir():
+        raise HTTPException(status_code=404, detail="Directory not found")
+
+    try:
+        relative = current.relative_to(root_path)
+        relative_path = "" if str(relative) == "." else relative.as_posix()
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Invalid browse path") from exc
+
+    entries = []
+    for child in sorted(current.iterdir(), key=lambda item: (item.is_file(), item.name.lower())):
+        entries.append({
+            "name": child.name,
+            "type": "dir" if child.is_dir() else "file",
+            "path": child.relative_to(root_path).as_posix(),
+            "absolute_path": str(child),
+            "size": None if child.is_dir() else child.stat().st_size,
+        })
+
+    return {
+        "root": {
+            "id": root,
+            "label": root_path.name or str(root_path),
+            "path": str(root_path),
+        },
+        "path": relative_path,
+        "display_path": "/" if not relative_path else f"/{relative_path}",
+        "absolute_path": str(current),
+        "parent_path": "" if not relative_path else ("" if Path(relative_path).parent.as_posix() == "." else Path(relative_path).parent.as_posix()),
+        "entries": entries,
+    }
 
 
 @app.get("/suite-config.js", include_in_schema=False)
