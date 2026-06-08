@@ -1,1000 +1,1000 @@
-[2026-05-28T22:24:33]   Germany: 20 level-1 candidates
-[2026-05-28T22:24:50]   Germany: +0 articles from 44 pages in 17.5s [good]
-[2026-05-28T22:32:24] Web crawl: Japan (https://www.japan.go.jp/publications/news/index.html)
-[2026-05-28T22:32:24]   Japan: 0 level-1 candidates
-[2026-05-28T22:32:25]   Japan: no links found; page may require JS rendering
-[2026-05-28T22:32:25]   Japan: +0 articles from 0 pages in 1.3s [none]
-[2026-05-28T22:35:43] Web crawl: Vietnam (https://en.baochinhphu.vn/multimedia/longform.htm)
-[2026-05-28T22:35:44]   Vietnam: 26 level-1 candidates
-[2026-05-28T22:36:15]   Vietnam: +26 articles from 26 pages in 31.4s [good]
-[2026-05-28T23:05:38]   Skipping UK Gov — next fetch in ~59m
-[2026-05-28T23:15:45]   Skipping HuggingFace Blog — next fetch in ~2077m
-[2026-05-28T23:15:45]   Skipping Understanding AI — next fetch in ~202m
-[2026-05-28T23:15:45]   Skipping Artificial Intelligence - News — next fetch in ~5694m
-[2026-05-28T23:15:45]   Skipping Defense News — next fetch in ~1418m
-[2026-05-28T23:15:45]   Skipping Breaking Defense — next fetch in ~1427m
-[2026-05-28T23:15:45]   Skipping defenseone — next fetch in ~1423m
-[2026-05-28T23:15:45]   Skipping ukdefencejournal — next fetch in ~1419m
-[2026-05-28T23:15:45]   Skipping defenceiq - defence-technology — next fetch in ~1422m
-[2026-05-28T23:15:45]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~1418m
-[2026-05-28T23:15:45]   Skipping defense-aerospace WEB — next fetch in ~883m
-[2026-05-28T23:15:45]   Skipping janes Insights — next fetch in ~889m
-[2026-05-28T23:15:45]   Skipping Janes Analysis — next fetch in ~5684m
-[2026-05-28T23:15:45]   Skipping National Armaments Director Group — next fetch in ~978m
-[2026-05-28T23:15:45]   Skipping Canada Defense — next fetch in ~546m
-[2026-05-28T23:15:45]   Skipping Canada Security — next fetch in ~546m
-[2026-05-28T23:15:45]   Skipping UK Gov — next fetch in ~49m
-[2026-05-28T23:15:45]   Skipping Sweden Government — next fetch in ~299m
-[2026-05-28T23:15:45]   Skipping Spain — next fetch in ~984m
-[2026-05-28T23:15:45]   Skipping Latvia — next fetch in ~287m
-[2026-05-28T23:15:45]   Skipping Lithuania — next fetch in ~285m
-[2026-05-28T23:15:45]   Skipping Estonia — next fetch in ~287m
-[2026-05-28T23:15:45]   Skipping Finland — next fetch in ~286m
-[2026-05-28T23:15:45]   Skipping Norway — next fetch in ~286m
-[2026-05-28T23:15:45]   Skipping Denmark — next fetch in ~286m
-[2026-05-28T23:15:45]   Skipping Czech Republic — next fetch in ~289m
-[2026-05-28T23:15:45]   Skipping Netherlands — next fetch in ~529m
-[2026-05-28T23:15:45]   Skipping New Zealand — next fetch in ~538m
-[2026-05-28T23:15:45]   Skipping Taiwan — next fetch in ~547m
-[2026-05-28T23:15:45]   Skipping UN News - Global — next fetch in ~288m
-[2026-05-28T23:15:45]   Skipping UK Gov News — next fetch in ~288m
-[2026-05-28T23:15:45]   Skipping UN News - All — next fetch in ~288m
-[2026-05-28T23:15:45]   Skipping BBC World News — next fetch in ~289m
-[2026-05-28T23:15:45]   Skipping AP World News — next fetch in ~289m
-[2026-05-28T23:15:45]   Skipping UK Gov — next fetch in ~49m
-[2026-05-28T23:16:03]   Skipping HuggingFace Blog — next fetch in ~2077m
-[2026-05-28T23:16:03]   Skipping Understanding AI — next fetch in ~201m
-[2026-05-28T23:16:03]   Skipping Artificial Intelligence - News — next fetch in ~5693m
-[2026-05-28T23:16:03]   Skipping Defense News — next fetch in ~1418m
-[2026-05-28T23:16:03]   Skipping Breaking Defense — next fetch in ~1427m
-[2026-05-28T23:16:03]   Skipping defenseone — next fetch in ~1423m
-[2026-05-28T23:16:03]   Skipping ukdefencejournal — next fetch in ~1419m
-[2026-05-28T23:16:03]   Skipping defenceiq - defence-technology — next fetch in ~1421m
-[2026-05-28T23:16:03]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~1418m
-[2026-05-28T23:16:03]   Skipping defense-aerospace WEB — next fetch in ~883m
-[2026-05-28T23:16:03]   Skipping janes Insights — next fetch in ~889m
-[2026-05-28T23:16:03]   Skipping Janes Analysis — next fetch in ~5684m
-[2026-05-28T23:16:03]   Skipping National Armaments Director Group — next fetch in ~978m
-[2026-05-28T23:16:03]   Skipping Canada Defense — next fetch in ~545m
-[2026-05-28T23:16:03]   Skipping Canada Security — next fetch in ~546m
-[2026-05-28T23:16:03]   Skipping UK Gov — next fetch in ~49m
-[2026-05-28T23:16:03]   Skipping Sweden Government — next fetch in ~299m
-[2026-05-28T23:16:03]   Skipping Spain — next fetch in ~984m
-[2026-05-28T23:16:03]   Skipping Latvia — next fetch in ~287m
-[2026-05-28T23:16:03]   Skipping Lithuania — next fetch in ~284m
-[2026-05-28T23:16:03]   Skipping Estonia — next fetch in ~287m
-[2026-05-28T23:16:03]   Skipping Finland — next fetch in ~286m
-[2026-05-28T23:16:03]   Skipping Norway — next fetch in ~286m
-[2026-05-28T23:16:03]   Skipping Denmark — next fetch in ~285m
-[2026-05-28T23:16:03]   Skipping Czech Republic — next fetch in ~288m
-[2026-05-28T23:16:03]   Skipping Netherlands — next fetch in ~529m
-[2026-05-28T23:16:03]   Skipping New Zealand — next fetch in ~537m
-[2026-05-28T23:16:03]   Skipping Taiwan — next fetch in ~546m
-[2026-05-28T23:16:03]   Skipping UN News - Global — next fetch in ~288m
-[2026-05-28T23:16:03]   Skipping UK Gov News — next fetch in ~288m
-[2026-05-28T23:16:03]   Skipping UN News - All — next fetch in ~288m
-[2026-05-28T23:16:03]   Skipping BBC World News — next fetch in ~289m
-[2026-05-28T23:16:03]   Skipping AP World News — next fetch in ~288m
-[2026-05-28T23:16:03]   Skipping UK Gov — next fetch in ~49m
-[2026-05-28T23:16:15]   Skipping HuggingFace Blog — next fetch in ~2077m
-[2026-05-28T23:16:15]   Skipping Understanding AI — next fetch in ~201m
-[2026-05-28T23:16:15]   Skipping Artificial Intelligence - News — next fetch in ~5693m
-[2026-05-28T23:16:15]   Skipping Defense News — next fetch in ~1417m
-[2026-05-28T23:16:15]   Skipping Breaking Defense — next fetch in ~1427m
-[2026-05-28T23:16:15]   Skipping defenseone — next fetch in ~1423m
-[2026-05-28T23:16:15]   Skipping ukdefencejournal — next fetch in ~1419m
-[2026-05-28T23:16:15]   Skipping defenceiq - defence-technology — next fetch in ~1421m
-[2026-05-28T23:16:15]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~1417m
-[2026-05-28T23:16:15]   Skipping defense-aerospace WEB — next fetch in ~882m
-[2026-05-28T23:16:15]   Skipping janes Insights — next fetch in ~889m
-[2026-05-28T23:16:15]   Skipping Janes Analysis — next fetch in ~5684m
-[2026-05-28T23:16:15]   Skipping National Armaments Director Group — next fetch in ~978m
-[2026-05-28T23:16:15]   Skipping Canada Defense — next fetch in ~545m
-[2026-05-28T23:16:15]   Skipping Canada Security — next fetch in ~546m
-[2026-05-28T23:16:15]   Skipping UK Gov — next fetch in ~49m
-[2026-05-28T23:16:15]   Skipping Sweden Government — next fetch in ~299m
-[2026-05-28T23:16:15]   Skipping Spain — next fetch in ~984m
-[2026-05-28T23:16:15]   Skipping Latvia — next fetch in ~287m
-[2026-05-28T23:16:15]   Skipping Lithuania — next fetch in ~284m
-[2026-05-28T23:16:15]   Skipping Estonia — next fetch in ~286m
-[2026-05-28T23:16:15]   Skipping Finland — next fetch in ~286m
-[2026-05-28T23:16:15]   Skipping Norway — next fetch in ~286m
-[2026-05-28T23:16:15]   Skipping Denmark — next fetch in ~285m
-[2026-05-28T23:16:15]   Skipping Czech Republic — next fetch in ~288m
-[2026-05-28T23:16:15]   Skipping Netherlands — next fetch in ~529m
-[2026-05-28T23:16:15]   Skipping New Zealand — next fetch in ~537m
-[2026-05-28T23:16:15]   Skipping Taiwan — next fetch in ~546m
-[2026-05-28T23:16:15]   Skipping UN News - Global — next fetch in ~287m
-[2026-05-28T23:16:15]   Skipping UK Gov News — next fetch in ~287m
-[2026-05-28T23:16:15]   Skipping UN News - All — next fetch in ~288m
-[2026-05-28T23:16:15]   Skipping BBC World News — next fetch in ~289m
-[2026-05-28T23:16:15]   Skipping AP World News — next fetch in ~288m
-[2026-05-28T23:16:15]   Skipping UK Gov — next fetch in ~49m
-[2026-05-28T23:17:30]   Skipping HuggingFace Blog — next fetch in ~2076m
-[2026-05-28T23:17:30]   Skipping Understanding AI — next fetch in ~200m
-[2026-05-28T23:17:30]   Skipping Artificial Intelligence - News — next fetch in ~5692m
-[2026-05-28T23:17:30]   Skipping Defense News — next fetch in ~1416m
-[2026-05-28T23:17:30]   Skipping Breaking Defense — next fetch in ~1425m
-[2026-05-28T23:17:30]   Skipping defenseone — next fetch in ~1422m
-[2026-05-28T23:17:30]   Skipping ukdefencejournal — next fetch in ~1418m
-[2026-05-28T23:17:30]   Skipping defenceiq - defence-technology — next fetch in ~1420m
-[2026-05-28T23:17:30]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~1416m
-[2026-05-28T23:17:30]   Skipping defense-aerospace WEB — next fetch in ~881m
-[2026-05-28T23:17:30]   Skipping janes Insights — next fetch in ~887m
-[2026-05-28T23:17:30]   Skipping Janes Analysis — next fetch in ~5682m
-[2026-05-28T23:17:30]   Skipping National Armaments Director Group — next fetch in ~977m
-[2026-05-28T23:17:30]   Skipping Canada Defense — next fetch in ~544m
-[2026-05-28T23:17:30]   Skipping Canada Security — next fetch in ~544m
-[2026-05-28T23:17:30]   Skipping UK Gov — next fetch in ~48m
-[2026-05-28T23:17:30]   Skipping Sweden Government — next fetch in ~297m
-[2026-05-28T23:17:30]   Skipping Spain — next fetch in ~982m
-[2026-05-28T23:17:30]   Skipping Latvia — next fetch in ~286m
-[2026-05-28T23:17:30]   Skipping Lithuania — next fetch in ~283m
-[2026-05-28T23:17:30]   Skipping Estonia — next fetch in ~285m
-[2026-05-28T23:17:30]   Skipping Finland — next fetch in ~284m
-[2026-05-28T23:17:30]   Skipping Norway — next fetch in ~285m
-[2026-05-28T23:17:30]   Skipping Denmark — next fetch in ~284m
-[2026-05-28T23:17:30]   Skipping Czech Republic — next fetch in ~287m
-[2026-05-28T23:17:30]   Skipping Netherlands — next fetch in ~528m
-[2026-05-28T23:17:30]   Skipping New Zealand — next fetch in ~536m
-[2026-05-28T23:17:30]   Skipping Taiwan — next fetch in ~545m
-[2026-05-28T23:17:30]   Skipping UN News - Global — next fetch in ~286m
-[2026-05-28T23:17:30]   Skipping UK Gov News — next fetch in ~286m
-[2026-05-28T23:17:30]   Skipping UN News - All — next fetch in ~286m
-[2026-05-28T23:17:30]   Skipping BBC World News — next fetch in ~288m
-[2026-05-28T23:17:30]   Skipping AP World News — next fetch in ~287m
-[2026-05-28T23:17:30]   Skipping UK Gov — next fetch in ~48m
-[2026-05-28T23:21:03]   Skipping HuggingFace Blog — next fetch in ~2072m
-[2026-05-28T23:21:03]   Skipping Understanding AI — next fetch in ~196m
-[2026-05-28T23:21:03]   Skipping Artificial Intelligence - News — next fetch in ~5688m
-[2026-05-28T23:21:03]   Skipping Defense News — next fetch in ~1413m
-[2026-05-28T23:21:03]   Skipping Breaking Defense — next fetch in ~1422m
-[2026-05-28T23:21:03]   Skipping defenseone — next fetch in ~1418m
-[2026-05-28T23:21:03]   Skipping ukdefencejournal — next fetch in ~1414m
-[2026-05-28T23:21:03]   Skipping defenceiq - defence-technology — next fetch in ~1416m
-[2026-05-28T23:21:03]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~1413m
-[2026-05-28T23:21:03]   Skipping defense-aerospace WEB — next fetch in ~878m
-[2026-05-28T23:21:03]   Skipping janes Insights — next fetch in ~884m
-[2026-05-28T23:21:03]   Skipping Janes Analysis — next fetch in ~5679m
-[2026-05-28T23:21:03]   Skipping National Armaments Director Group — next fetch in ~973m
-[2026-05-28T23:21:03]   Skipping Canada Defense — next fetch in ~540m
-[2026-05-28T23:21:03]   Skipping Canada Security — next fetch in ~541m
-[2026-05-28T23:21:03]   Skipping UK Gov — next fetch in ~44m
-[2026-05-28T23:21:03]   Skipping Sweden Government — next fetch in ~294m
-[2026-05-28T23:21:03]   Skipping Spain — next fetch in ~979m
-[2026-05-28T23:21:03]   Skipping Latvia — next fetch in ~282m
-[2026-05-28T23:21:03]   Skipping Lithuania — next fetch in ~279m
-[2026-05-28T23:21:03]   Skipping Estonia — next fetch in ~282m
-[2026-05-28T23:21:03]   Skipping Finland — next fetch in ~281m
-[2026-05-28T23:21:03]   Skipping Norway — next fetch in ~281m
-[2026-05-28T23:21:03]   Skipping Denmark — next fetch in ~280m
-[2026-05-28T23:21:03]   Skipping Czech Republic — next fetch in ~283m
-[2026-05-28T23:21:03]   Skipping Netherlands — next fetch in ~524m
-[2026-05-28T23:21:03]   Skipping New Zealand — next fetch in ~532m
-[2026-05-28T23:21:03]   Skipping Taiwan — next fetch in ~541m
-[2026-05-28T23:21:03]   Skipping UN News - Global — next fetch in ~283m
-[2026-05-28T23:21:03]   Skipping UK Gov News — next fetch in ~283m
-[2026-05-28T23:21:03]   Skipping UN News - All — next fetch in ~283m
-[2026-05-28T23:21:03]   Skipping BBC World News — next fetch in ~284m
-[2026-05-28T23:21:03]   Skipping AP World News — next fetch in ~283m
-[2026-05-28T23:21:03]   Skipping UK Gov — next fetch in ~44m
-[2026-05-28T23:27:36]   Skipping HuggingFace Blog — next fetch in ~2065m
-[2026-05-28T23:27:36]   Skipping Understanding AI — next fetch in ~190m
-[2026-05-28T23:27:36]   Skipping Artificial Intelligence - News — next fetch in ~5682m
-[2026-05-28T23:27:36]   Skipping Defense News — next fetch in ~1406m
-[2026-05-28T23:27:36]   Skipping Breaking Defense — next fetch in ~1415m
-[2026-05-28T23:27:36]   Skipping defenseone — next fetch in ~1412m
-[2026-05-28T23:27:36]   Skipping ukdefencejournal — next fetch in ~1408m
-[2026-05-28T23:27:36]   Skipping defenceiq - defence-technology — next fetch in ~1410m
-[2026-05-28T23:27:36]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~1406m
-[2026-05-28T23:27:36]   Skipping defense-aerospace WEB — next fetch in ~871m
-[2026-05-28T23:27:36]   Skipping janes Insights — next fetch in ~877m
-[2026-05-28T23:27:36]   Skipping Janes Analysis — next fetch in ~5672m
-[2026-05-28T23:27:36]   Skipping National Armaments Director Group — next fetch in ~966m
-[2026-05-28T23:27:36]   Skipping Canada Defense — next fetch in ~534m
-[2026-05-28T23:27:36]   Skipping Canada Security — next fetch in ~534m
-[2026-05-28T23:27:36]   Skipping UK Gov — next fetch in ~38m
-[2026-05-28T23:27:36]   Skipping Sweden Government — next fetch in ~287m
-[2026-05-28T23:27:36]   Skipping Spain — next fetch in ~972m
-[2026-05-28T23:27:36]   Skipping Latvia — next fetch in ~276m
-[2026-05-28T23:27:36]   Skipping Lithuania — next fetch in ~273m
-[2026-05-28T23:27:36]   Skipping Estonia — next fetch in ~275m
-[2026-05-28T23:27:36]   Skipping Finland — next fetch in ~274m
-[2026-05-28T23:27:36]   Skipping Norway — next fetch in ~275m
-[2026-05-28T23:27:36]   Skipping Denmark — next fetch in ~274m
-[2026-05-28T23:27:36]   Skipping Czech Republic — next fetch in ~277m
-[2026-05-28T23:27:36]   Skipping Netherlands — next fetch in ~517m
-[2026-05-28T23:27:36]   Skipping New Zealand — next fetch in ~526m
-[2026-05-28T23:27:36]   Skipping Taiwan — next fetch in ~535m
-[2026-05-28T23:27:36]   Skipping UN News - Global — next fetch in ~276m
-[2026-05-28T23:27:36]   Skipping UK Gov News — next fetch in ~276m
-[2026-05-28T23:27:36]   Skipping UN News - All — next fetch in ~276m
-[2026-05-28T23:27:36]   Skipping BBC World News — next fetch in ~277m
-[2026-05-28T23:27:36]   Skipping AP World News — next fetch in ~277m
-[2026-05-28T23:27:36]   Skipping UK Gov — next fetch in ~38m
-[2026-05-28T23:43:51]   Skipping HuggingFace Blog — next fetch in ~2049m
-[2026-05-28T23:43:51]   Skipping Understanding AI — next fetch in ~174m
-[2026-05-28T23:43:51]   Skipping Artificial Intelligence - News — next fetch in ~5666m
-[2026-05-28T23:43:51]   Skipping Defense News — next fetch in ~1390m
-[2026-05-28T23:43:51]   Skipping Breaking Defense — next fetch in ~1399m
-[2026-05-28T23:43:51]   Skipping defenseone — next fetch in ~1395m
-[2026-05-28T23:43:51]   Skipping ukdefencejournal — next fetch in ~1391m
-[2026-05-28T23:43:51]   Skipping defenceiq - defence-technology — next fetch in ~1393m
-[2026-05-28T23:43:51]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~1390m
-[2026-05-28T23:43:51]   Skipping defense-aerospace WEB — next fetch in ~855m
-[2026-05-28T23:43:51]   Skipping janes Insights — next fetch in ~861m
-[2026-05-28T23:43:51]   Skipping Janes Analysis — next fetch in ~5656m
-[2026-05-28T23:43:51]   Skipping National Armaments Director Group — next fetch in ~950m
-[2026-05-28T23:43:51]   Skipping Canada Defense — next fetch in ~518m
-[2026-05-28T23:43:51]   Skipping Canada Security — next fetch in ~518m
-[2026-05-28T23:43:51]   Skipping UK Gov — next fetch in ~21m
-[2026-05-28T23:43:51]   Skipping Sweden Government — next fetch in ~271m
-[2026-05-28T23:43:51]   Skipping Spain — next fetch in ~956m
-[2026-05-28T23:43:51]   Skipping Latvia — next fetch in ~259m
-[2026-05-28T23:43:51]   Skipping Lithuania — next fetch in ~257m
-[2026-05-28T23:43:51]   Skipping Estonia — next fetch in ~259m
-[2026-05-28T23:43:51]   Skipping Finland — next fetch in ~258m
-[2026-05-28T23:43:51]   Skipping Norway — next fetch in ~258m
-[2026-05-28T23:43:51]   Skipping Denmark — next fetch in ~258m
-[2026-05-28T23:43:51]   Skipping Czech Republic — next fetch in ~261m
-[2026-05-28T23:43:51]   Skipping Netherlands — next fetch in ~501m
-[2026-05-28T23:43:51]   Skipping New Zealand — next fetch in ~510m
-[2026-05-28T23:43:51]   Skipping Taiwan — next fetch in ~518m
-[2026-05-28T23:43:51]   Skipping UN News - Global — next fetch in ~260m
-[2026-05-28T23:43:51]   Skipping UK Gov News — next fetch in ~260m
-[2026-05-28T23:43:51]   Skipping UN News - All — next fetch in ~260m
-[2026-05-28T23:43:51]   Skipping BBC World News — next fetch in ~261m
-[2026-05-28T23:43:51]   Skipping AP World News — next fetch in ~261m
-[2026-05-28T23:43:51]   Skipping UK Gov — next fetch in ~21m
-[2026-05-29T20:00:31]   Skipping HuggingFace Blog — next fetch in ~833m
-[2026-05-29T20:00:31] Ingesting: Understanding AI
-[2026-05-29T20:00:31]   Skipping Artificial Intelligence - News — next fetch in ~4449m
-[2026-05-29T20:00:31]   Skipping Defense News — next fetch in ~173m
-[2026-05-29T20:00:31]   Skipping Breaking Defense — next fetch in ~182m
-[2026-05-29T20:00:31]   Skipping defenseone — next fetch in ~179m
-[2026-05-29T20:00:31]   Skipping ukdefencejournal — next fetch in ~175m
-[2026-05-29T20:00:31]   Skipping defenceiq - defence-technology — next fetch in ~177m
-[2026-05-29T20:00:31]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~173m
-[2026-05-29T20:00:31] Daily prune: AiNews — 4 entries removed
-[2026-05-29T20:00:31]   Skipping Janes Analysis — next fetch in ~4439m
-[2026-05-29T20:00:31]   Skipping Norway - already queued/running
-[2026-05-29T20:00:31]   Skipping Latvia - already queued/running
-[2026-05-29T20:00:31]   Skipping Netherlands - already queued/running
-[2026-05-29T20:00:31]   Skipping Czech Republic - already queued/running
-[2026-05-29T20:00:31]   Skipping Denmark - already queued/running
-[2026-05-29T20:00:31]   Skipping Taiwan - already queued/running
-[2026-05-29T20:00:31]   Skipping UN News - Global - already queued/running
-[2026-05-29T20:00:31]   Skipping UK Gov News - already queued/running
-[2026-05-29T20:00:31]   Skipping Canada Security - already queued/running
-[2026-05-29T20:00:31]   Skipping Understanding AI - already queued/running
-[2026-05-29T20:00:31]   Skipping New Zealand - already queued/running
-[2026-05-29T20:00:31]   Skipping UK Gov - already queued/running
-[2026-05-29T20:00:31]   Skipping Spain - already queued/running
-[2026-05-29T20:00:31]   Skipping janes Insights - already queued/running
-[2026-05-29T20:00:31]   Skipping AP World News - already queued/running
-[2026-05-29T20:00:31]   Skipping BBC World News - already queued/running
-[2026-05-29T20:00:31]   Skipping Lithuania - already queued/running
-[2026-05-29T20:00:31]   Skipping Sweden Government - already queued/running
-[2026-05-29T20:00:31]   Skipping Estonia - already queued/running
-[2026-05-29T20:00:31]   Skipping defense-aerospace WEB - already queued/running
-[2026-05-29T20:00:31]   Skipping Finland - already queued/running
-[2026-05-29T20:00:31]   Skipping UN News - All - already queued/running
-[2026-05-29T20:00:31]   Skipping National Armaments Director Group - already queued/running
-[2026-05-29T20:00:31]   Skipping Canada Defense - already queued/running
-[2026-05-29T20:00:33]   Understanding AI: +1 entries in 2.1s [good]
-[2026-05-29T20:00:33] Web crawl: defense-aerospace WEB (https://www.defense-aerospace.com/)
-[2026-05-29T20:00:33]   defense-aerospace WEB: 28 level-1 candidates
-[2026-05-29T20:00:51]   defense-aerospace WEB: +3 articles from 40 pages in 18.7s [good]
-[2026-05-29T20:00:51] Web crawl: janes Insights (https://www.janes.com/osint-insights/defence-news)
-[2026-05-29T20:00:52]   janes Insights: 15 level-1 candidates
-[2026-05-29T20:00:56]   janes Insights: +15 articles from 15 pages in 5.0s [good]
-[2026-05-29T20:00:56] Web crawl: National Armaments Director Group (https://des.mod.uk/news/?page=1&pageSize=25)
-[2026-05-29T20:00:57]   National Armaments Director Group: 1 level-1 candidates
-[2026-05-29T20:00:57]   National Armaments Director Group: JS-rendered page — delegating to JSON API fallback (25 candidates)
-[2026-05-29T20:00:57] JSON listing: National Armaments Director Group (https://des.mod.uk/api/news?page=1&pageSize=25)
-[2026-05-29T20:00:57]   National Armaments Director Group: 25 article candidates
-[2026-05-29T20:01:03]   National Armaments Director Group: +0 articles from 25 pages in 6.5s [good]
-[2026-05-29T20:01:03] Ingesting: Canada Defense
-[2026-05-29T20:05:05]   Canada Defense: +1 entries in 242.0s [good]
-[2026-05-29T20:05:05] Ingesting: Canada Security
-[2026-05-29T20:05:40]   Canada Security: +0 entries in 34.8s [good]
-[2026-05-29T20:05:40] Ingesting: UK Gov
-[2026-05-29T20:05:47]   UK Gov: +17 entries in 6.5s [good]
-[2026-05-29T20:05:47] Ingesting: Sweden Government
-[2026-05-29T20:06:10]   Sweden Government: +3 entries in 23.7s [poor]
-[2026-05-29T20:06:10] Web crawl: Spain (https://www.lamoncloa.gob.es/lang/en/gobierno/news/Paginas/index.aspx)
-[2026-05-29T20:06:12]   Spain: 6 level-1 candidates
-[2026-05-29T20:06:19]   Spain: +5 articles from 9 pages in 8.9s [good]
-[2026-05-29T20:06:19] Web crawl: Latvia (https://www.mk.gov.lv/en/articles)
-[2026-05-29T20:06:20]   Latvia: 15 level-1 candidates
-[2026-05-29T20:06:42]   Latvia: +4 articles from 25 pages in 22.8s [good]
-[2026-05-29T20:06:42] Ingesting: Lithuania
-[2026-05-29T20:07:17]   Lithuania: +8 entries in 34.7s [good]
-[2026-05-29T20:07:17] Ingesting: Estonia
-[2026-05-29T20:07:40]   Estonia: +0 entries in 23.4s [good]
-[2026-05-29T20:07:40] Web crawl: Finland (https://valtioneuvosto.fi/en/frontpage)
-[2026-05-29T20:07:41]   Finland: 22 level-1 candidates
-[2026-05-29T20:08:05]   Finland: +10 articles from 31 pages in 24.9s [good]
-[2026-05-29T20:08:05] Web crawl: Norway (https://www.regjeringen.no/en/id4/)
-[2026-05-29T20:08:05]   Norway: 21 level-1 candidates
-[2026-05-29T20:08:29]   Norway: +0 articles from 39 pages in 24.2s [good]
-[2026-05-29T20:08:29] Web crawl: Denmark (https://stm.dk/en/press/press-releases/)
-[2026-05-29T20:08:30]   Denmark: 1 level-1 candidates
-[2026-05-29T20:08:30]   Denmark: no links found; page may require JS rendering
-[2026-05-29T20:08:31]   Denmark: +0 articles from 1 pages in 1.4s [poor]
-[2026-05-29T20:08:31] Ingesting: Czech Republic
-[2026-05-29T20:08:33]   Czech Republic: +0 entries in 2.2s [good]
-[2026-05-29T20:08:33] Web crawl: Netherlands (https://www.government.nl/latest)
-[2026-05-29T20:08:33]   Netherlands: 19 level-1 candidates
-[2026-05-29T20:08:44]   Netherlands: +0 articles from 24 pages in 11.2s [good]
-[2026-05-29T20:08:44] Ingesting: New Zealand
-[2026-05-29T20:08:58]   New Zealand: +9 entries in 14.2s [good]
-[2026-05-29T20:08:58] Ingesting: Taiwan
-[2026-05-29T20:09:19]   Taiwan: +4 entries in 20.3s [good]
-[2026-05-29T20:09:19] Ingesting: UN News - Global
-[2026-05-29T20:09:48]   UN News - Global: +3 entries in 29.6s [good]
-[2026-05-29T20:09:48] Ingesting: UK Gov News
-[2026-05-29T20:09:53]   UK Gov News: +17 entries in 5.0s [good]
-[2026-05-29T20:09:53] Ingesting: UN News - All
-[2026-05-29T20:10:15]   UN News - All: +6 entries in 21.3s [good]
-[2026-05-29T20:10:15] Ingesting: BBC World News
-[2026-05-29T20:10:37]   BBC World News: +20 entries in 22.2s [good]
-[2026-05-29T20:10:37] Web crawl: AP World News (https://apnews.com/world-news)
-[2026-05-29T20:10:37]   AP World News: 50 level-1 candidates
-[2026-05-29T20:11:05]   AP World News: +35 articles from 56 pages in 28.0s [good]
-[2026-05-29T21:54:10]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~59m
-[2026-05-29T21:54:15]   Skipping Defense News — next fetch in ~59m
-[2026-05-29T21:55:43]   Skipping ukdefencejournal — next fetch in ~59m
-[2026-05-29T21:57:51]   Skipping defenceiq - defence-technology — next fetch in ~59m
-[2026-05-29T21:59:40]   Skipping defenseone — next fetch in ~59m
-[2026-05-29T22:03:21]   Skipping Breaking Defense — next fetch in ~59m
-[2026-05-29T22:54:31] Catch-up check: enqueueing most overdue feed defenceiq - air-forces-military-aircraft (overdue ~0m)
-[2026-05-29T22:54:31] Ingesting: defenceiq - air-forces-military-aircraft
-[2026-05-29T22:54:49]   defenceiq - air-forces-military-aircraft: +0 entries in 18.6s [good]
-[2026-05-29T22:55:31] Catch-up check: enqueueing most overdue feed Defense News (overdue ~1m)
-[2026-05-29T22:55:31] Ingesting: Defense News
-[2026-05-29T22:55:45]   Defense News: +18 entries in 14.1s [good]
-[2026-05-29T22:56:31] Catch-up check: enqueueing most overdue feed ukdefencejournal (overdue ~0m)
-[2026-05-29T22:56:31] Ingesting: ukdefencejournal
-[2026-05-29T22:56:34]   ukdefencejournal: +10 entries in 3.5s [good]
-[2026-05-29T22:58:31] Catch-up check: enqueueing most overdue feed defenceiq - defence-technology (overdue ~0m)
-[2026-05-29T22:58:31] Ingesting: defenceiq - defence-technology
-[2026-05-29T22:58:39]   defenceiq - defence-technology: +0 entries in 8.7s [good]
-[2026-05-29T23:00:31] Catch-up check: enqueueing most overdue feed defenseone (overdue ~0m)
-[2026-05-29T23:00:31] Ingesting: defenseone
-[2026-05-29T23:00:54]   defenseone: +10 entries in 22.9s [good]
-[2026-05-29T23:03:31] Catch-up check: enqueueing most overdue feed Breaking Defense (overdue ~0m)
-[2026-05-29T23:03:31] Ingesting: Breaking Defense
-[2026-05-29T23:03:37]   Breaking Defense: +15 entries in 6.0s [good]
-[2026-05-30T08:29:34]   Skipping HuggingFace Blog — next fetch in ~84m
-[2026-05-30T08:29:34]   Skipping Understanding AI — next fetch in ~4560m
-[2026-05-30T08:29:34]   Skipping Artificial Intelligence - News — next fetch in ~3700m
-[2026-05-30T08:29:34]   Skipping Defense News — next fetch in ~2424m
-[2026-05-30T08:29:34]   Skipping Breaking Defense — next fetch in ~2441m
-[2026-05-30T08:29:34]   Skipping defenseone — next fetch in ~2434m
-[2026-05-30T08:29:34]   Skipping ukdefencejournal — next fetch in ~2425m
-[2026-05-30T08:29:34]   Skipping defenceiq - defence-technology — next fetch in ~2430m
-[2026-05-30T08:29:34]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~2422m
-[2026-05-30T08:29:34]   Skipping defense-aerospace WEB — next fetch in ~5254m
-[2026-05-30T08:29:34]   Skipping janes Insights — next fetch in ~5247m
-[2026-05-30T08:29:34]   Skipping Janes Analysis — next fetch in ~3690m
-[2026-05-30T08:29:34]   Skipping National Armaments Director Group — next fetch in ~5251m
-[2026-05-30T08:29:34] Ingesting: Canada Defense
-[2026-05-30T08:29:34]   Skipping Spain — next fetch in ~5256m
-[2026-05-30T08:29:34]   Skipping Norway - already queued/running
-[2026-05-30T08:29:34]   Skipping Latvia - already queued/running
-[2026-05-30T08:29:34]   Skipping Taiwan - already queued/running
-[2026-05-30T08:29:34]   Skipping Netherlands - already queued/running
-[2026-05-30T08:29:34]   Skipping Denmark - already queued/running
-[2026-05-30T08:29:34]   Skipping UN News - Global - already queued/running
-[2026-05-30T08:29:34]   Skipping Czech Republic - already queued/running
-[2026-05-30T08:29:34]   Skipping Canada Security - already queued/running
-[2026-05-30T08:29:34]   Skipping UK Gov News - already queued/running
-[2026-05-30T08:29:34]   Skipping New Zealand - already queued/running
-[2026-05-30T08:29:34]   Skipping UK Gov - already queued/running
-[2026-05-30T08:29:34]   Skipping AP World News - already queued/running
-[2026-05-30T08:29:34]   Skipping Lithuania - already queued/running
-[2026-05-30T08:29:34]   Skipping BBC World News - already queued/running
-[2026-05-30T08:29:34]   Skipping Sweden Government - already queued/running
-[2026-05-30T08:29:34]   Skipping Estonia - already queued/running
-[2026-05-30T08:29:34]   Skipping Finland - already queued/running
-[2026-05-30T08:29:34]   Skipping Canada Defense - already queued/running
-[2026-05-30T08:29:34]   Skipping UN News - All - already queued/running
-[2026-05-30T08:33:45]   Canada Defense: +0 entries in 250.7s [good]
-[2026-05-30T08:33:45] Ingesting: Canada Security
-[2026-05-30T08:34:19]   Canada Security: +0 entries in 33.4s [good]
-[2026-05-30T08:34:19] Ingesting: UK Gov
-[2026-05-30T08:34:25]   UK Gov: +0 entries in 6.2s [good]
-[2026-05-30T08:34:25] Ingesting: Sweden Government
-[2026-05-30T08:34:48]   Sweden Government: +0 entries in 23.3s [poor]
-[2026-05-30T08:34:48] Web crawl: Latvia (https://www.mk.gov.lv/en/articles)
-[2026-05-30T08:34:48]   Latvia: 15 level-1 candidates
-[2026-05-30T08:35:15]   Latvia: +0 articles from 25 pages in 27.4s [good]
-[2026-05-30T08:35:15] Ingesting: Lithuania
-[2026-05-30T08:35:42]   Lithuania: +1 entries in 26.3s [good]
-[2026-05-30T08:35:42] Ingesting: Estonia
-[2026-05-30T08:36:04]   Estonia: +0 entries in 22.4s [good]
-[2026-05-30T08:36:04] Web crawl: Finland (https://valtioneuvosto.fi/en/frontpage)
-[2026-05-30T08:36:04]   Finland: 22 level-1 candidates
-[2026-05-30T08:36:31]   Finland: +0 articles from 31 pages in 26.4s [good]
-[2026-05-30T08:36:31] Web crawl: Norway (https://www.regjeringen.no/en/id4/)
-[2026-05-30T08:36:31]   Norway: 21 level-1 candidates
-[2026-05-30T08:36:53]   Norway: +0 articles from 39 pages in 22.8s [good]
-[2026-05-30T08:36:53] Web crawl: Denmark (https://stm.dk/en/press/press-releases/)
-[2026-05-30T08:36:54]   Denmark: 1 level-1 candidates
-[2026-05-30T08:36:54]   Denmark: no links found; page may require JS rendering
-[2026-05-30T08:36:55]   Denmark: +0 articles from 1 pages in 1.3s [poor]
-[2026-05-30T08:36:55] Ingesting: Czech Republic
-[2026-05-30T08:36:56]   Czech Republic: +0 entries in 1.6s [good]
-[2026-05-30T08:36:56] Web crawl: Netherlands (https://www.government.nl/latest)
-[2026-05-30T08:36:57]   Netherlands: 19 level-1 candidates
-[2026-05-30T08:37:07]   Netherlands: +0 articles from 24 pages in 10.3s [good]
-[2026-05-30T08:37:07] Ingesting: New Zealand
-[2026-05-30T08:37:18]   New Zealand: +1 entries in 11.5s [good]
-[2026-05-30T08:37:18] Ingesting: Taiwan
-[2026-05-30T08:37:39]   Taiwan: +0 entries in 21.0s [good]
-[2026-05-30T08:37:39] Ingesting: UN News - Global
-[2026-05-30T08:37:55]   UN News - Global: +2 entries in 16.1s [good]
-[2026-05-30T08:37:55] Ingesting: UK Gov News
-[2026-05-30T08:38:00]   UK Gov News: +0 entries in 4.8s [good]
-[2026-05-30T08:38:00] Ingesting: UN News - All
-[2026-05-30T08:38:16]   UN News - All: +1 entries in 16.4s [good]
-[2026-05-30T08:38:16] Ingesting: BBC World News
-[2026-05-30T08:38:29]   BBC World News: +11 entries in 12.4s [good]
-[2026-05-30T08:38:29] Web crawl: AP World News (https://apnews.com/world-news)
-[2026-05-30T08:38:29]   AP World News: 50 level-1 candidates
-[2026-05-30T08:38:34] Catch-up check: enqueueing most overdue feed AP World News (overdue ~147m)
-[2026-05-30T08:38:34]   Skipping AP World News - already queued/running
-[2026-05-30T08:39:05]   AP World News: +16 articles from 67 pages in 36.6s [good]
-[2026-05-30T08:53:36]   Skipping HuggingFace Blog — next fetch in ~59m
-[2026-05-30T09:10:09] Web crawl: Brazil (https://www.gov.br/planalto/en/latest-news)
-[2026-05-30T09:10:09]   Skipping HuggingFace Blog — next fetch in ~43m
-[2026-05-30T09:10:10]   Brazil: 50 level-1 candidates
-[2026-05-30T09:10:56]   Skipping HuggingFace Blog — next fetch in ~42m
-[2026-05-30T09:11:04]   Brazil: +50 articles from 50 pages in 54.9s [good]
-[2026-05-30T09:24:08]   Skipping HuggingFace Blog — next fetch in ~29m
-[2026-05-30T09:24:08]   Skipping Understanding AI — next fetch in ~4506m
-[2026-05-30T09:24:08]   Skipping Artificial Intelligence - News — next fetch in ~3645m
-[2026-05-30T09:24:08]   Skipping Defense News — next fetch in ~2369m
-[2026-05-30T09:24:08]   Skipping Breaking Defense — next fetch in ~2386m
-[2026-05-30T09:24:08]   Skipping defenseone — next fetch in ~2379m
-[2026-05-30T09:24:08]   Skipping ukdefencejournal — next fetch in ~2371m
-[2026-05-30T09:24:08]   Skipping defenceiq - defence-technology — next fetch in ~2375m
-[2026-05-30T09:24:08]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~2367m
-[2026-05-30T09:24:08]   Skipping defense-aerospace WEB — next fetch in ~5199m
-[2026-05-30T09:24:08]   Skipping janes Insights — next fetch in ~5192m
-[2026-05-30T09:24:08]   Skipping Janes Analysis — next fetch in ~3636m
-[2026-05-30T09:24:08]   Skipping National Armaments Director Group — next fetch in ~5196m
-[2026-05-30T09:24:08]   Skipping Canada Defense — next fetch in ~549m
-[2026-05-30T09:24:08]   Skipping Canada Security — next fetch in ~550m
-[2026-05-30T09:24:08]   Skipping UK Gov — next fetch in ~310m
-[2026-05-30T09:24:08]   Skipping Sweden Government — next fetch in ~560m
-[2026-05-30T09:24:08]   Skipping Spain — next fetch in ~5202m
-[2026-05-30T09:24:08]   Skipping Latvia — next fetch in ~551m
-[2026-05-30T09:24:08]   Skipping Lithuania — next fetch in ~551m
-[2026-05-30T09:24:08]   Skipping Estonia — next fetch in ~551m
-[2026-05-30T09:24:08]   Skipping Finland — next fetch in ~552m
-[2026-05-30T09:24:08]   Skipping Norway — next fetch in ~552m
-[2026-05-30T09:24:08]   Skipping Denmark — next fetch in ~552m
-[2026-05-30T09:24:08]   Skipping Czech Republic — next fetch in ~552m
-[2026-05-30T09:24:08]   Skipping Netherlands — next fetch in ~552m
-[2026-05-30T09:24:08]   Skipping New Zealand — next fetch in ~553m
-[2026-05-30T09:24:08]   Skipping Taiwan — next fetch in ~553m
-[2026-05-30T09:24:08]   Skipping UN News - Global — next fetch in ~553m
-[2026-05-30T09:24:08]   Skipping UK Gov News — next fetch in ~553m
-[2026-05-30T09:24:08]   Skipping UN News - All — next fetch in ~554m
-[2026-05-30T09:24:08]   Skipping BBC World News — next fetch in ~554m
-[2026-05-30T09:24:08]   Skipping AP World News — next fetch in ~554m
-[2026-05-30T09:24:08]   Skipping HuggingFace Blog — next fetch in ~29m
-[2026-05-30T09:24:26]   Skipping HuggingFace Blog — next fetch in ~29m
-[2026-05-30T09:24:26]   Skipping Understanding AI — next fetch in ~4506m
-[2026-05-30T09:24:26]   Skipping Artificial Intelligence - News — next fetch in ~3645m
-[2026-05-30T09:24:26]   Skipping Defense News — next fetch in ~2369m
-[2026-05-30T09:24:26]   Skipping Breaking Defense — next fetch in ~2386m
-[2026-05-30T09:24:26]   Skipping defenseone — next fetch in ~2379m
-[2026-05-30T09:24:26]   Skipping ukdefencejournal — next fetch in ~2371m
-[2026-05-30T09:24:26]   Skipping defenceiq - defence-technology — next fetch in ~2375m
-[2026-05-30T09:24:26]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~2367m
-[2026-05-30T09:24:26]   Skipping defense-aerospace WEB — next fetch in ~5199m
-[2026-05-30T09:24:26]   Skipping janes Insights — next fetch in ~5192m
-[2026-05-30T09:24:26]   Skipping Janes Analysis — next fetch in ~3635m
-[2026-05-30T09:24:26]   Skipping National Armaments Director Group — next fetch in ~5196m
-[2026-05-30T09:24:26]   Skipping Canada Defense — next fetch in ~549m
-[2026-05-30T09:24:26]   Skipping Canada Security — next fetch in ~549m
-[2026-05-30T09:24:26]   Skipping UK Gov — next fetch in ~309m
-[2026-05-30T09:24:26]   Skipping Sweden Government — next fetch in ~560m
-[2026-05-30T09:24:26]   Skipping Spain — next fetch in ~5201m
-[2026-05-30T09:24:26]   Skipping Latvia — next fetch in ~550m
-[2026-05-30T09:24:26]   Skipping Lithuania — next fetch in ~551m
-[2026-05-30T09:24:26]   Skipping Estonia — next fetch in ~551m
-[2026-05-30T09:24:26]   Skipping Finland — next fetch in ~552m
-[2026-05-30T09:24:26]   Skipping Norway — next fetch in ~552m
-[2026-05-30T09:24:26]   Skipping Denmark — next fetch in ~552m
-[2026-05-30T09:24:26]   Skipping Czech Republic — next fetch in ~552m
-[2026-05-30T09:24:26]   Skipping Netherlands — next fetch in ~552m
-[2026-05-30T09:24:26]   Skipping New Zealand — next fetch in ~552m
-[2026-05-30T09:24:26]   Skipping Taiwan — next fetch in ~553m
-[2026-05-30T09:24:26]   Skipping UN News - Global — next fetch in ~553m
-[2026-05-30T09:24:26]   Skipping UK Gov News — next fetch in ~553m
-[2026-05-30T09:24:26]   Skipping UN News - All — next fetch in ~553m
-[2026-05-30T09:24:26]   Skipping BBC World News — next fetch in ~554m
-[2026-05-30T09:24:26]   Skipping AP World News — next fetch in ~554m
-[2026-05-30T09:24:26]   Skipping HuggingFace Blog — next fetch in ~29m
-[2026-05-30T09:31:05]   Skipping HuggingFace Blog — next fetch in ~22m
-[2026-05-30T09:31:05]   Skipping Understanding AI — next fetch in ~4499m
-[2026-05-30T09:31:05]   Skipping Artificial Intelligence - News — next fetch in ~3638m
-[2026-05-30T09:31:05]   Skipping Defense News — next fetch in ~2362m
-[2026-05-30T09:31:05]   Skipping Breaking Defense — next fetch in ~2379m
-[2026-05-30T09:31:05]   Skipping defenseone — next fetch in ~2372m
-[2026-05-30T09:31:05]   Skipping ukdefencejournal — next fetch in ~2364m
-[2026-05-30T09:31:05]   Skipping defenceiq - defence-technology — next fetch in ~2368m
-[2026-05-30T09:31:05]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~2360m
-[2026-05-30T09:31:05]   Skipping defense-aerospace WEB — next fetch in ~5192m
-[2026-05-30T09:31:05]   Skipping janes Insights — next fetch in ~5185m
-[2026-05-30T09:31:05]   Skipping Janes Analysis — next fetch in ~3629m
-[2026-05-30T09:31:05]   Skipping National Armaments Director Group — next fetch in ~5189m
-[2026-05-30T09:31:05]   Skipping Canada Defense — next fetch in ~542m
-[2026-05-30T09:31:05]   Skipping Canada Security — next fetch in ~543m
-[2026-05-30T09:31:05]   Skipping UK Gov — next fetch in ~303m
-[2026-05-30T09:31:05]   Skipping Sweden Government — next fetch in ~553m
-[2026-05-30T09:31:05]   Skipping Spain — next fetch in ~5195m
-[2026-05-30T09:31:05]   Skipping Latvia — next fetch in ~544m
-[2026-05-30T09:31:05]   Skipping Lithuania — next fetch in ~544m
-[2026-05-30T09:31:05]   Skipping Estonia — next fetch in ~544m
-[2026-05-30T09:31:05]   Skipping Finland — next fetch in ~545m
-[2026-05-30T09:31:05]   Skipping Norway — next fetch in ~545m
-[2026-05-30T09:31:05]   Skipping Denmark — next fetch in ~545m
-[2026-05-30T09:31:05]   Skipping Czech Republic — next fetch in ~545m
-[2026-05-30T09:31:05]   Skipping Netherlands — next fetch in ~546m
-[2026-05-30T09:31:05]   Skipping New Zealand — next fetch in ~546m
-[2026-05-30T09:31:05]   Skipping Taiwan — next fetch in ~546m
-[2026-05-30T09:31:05]   Skipping UN News - Global — next fetch in ~546m
-[2026-05-30T09:31:05]   Skipping UK Gov News — next fetch in ~546m
-[2026-05-30T09:31:05]   Skipping UN News - All — next fetch in ~547m
-[2026-05-30T09:31:05]   Skipping BBC World News — next fetch in ~547m
-[2026-05-30T09:31:05]   Skipping AP World News — next fetch in ~547m
-[2026-05-30T09:31:05]   Skipping HuggingFace Blog — next fetch in ~22m
-[2026-05-30T09:32:13]   Skipping HuggingFace Blog — next fetch in ~21m
-[2026-05-30T09:32:13]   Skipping Understanding AI — next fetch in ~4498m
-[2026-05-30T09:32:13]   Skipping Artificial Intelligence - News — next fetch in ~3637m
-[2026-05-30T09:32:13]   Skipping Defense News — next fetch in ~2361m
-[2026-05-30T09:32:13]   Skipping Breaking Defense — next fetch in ~2378m
-[2026-05-30T09:32:13]   Skipping defenseone — next fetch in ~2371m
-[2026-05-30T09:32:13]   Skipping ukdefencejournal — next fetch in ~2363m
-[2026-05-30T09:32:13]   Skipping defenceiq - defence-technology — next fetch in ~2367m
-[2026-05-30T09:32:13]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~2359m
-[2026-05-30T09:32:13]   Skipping defense-aerospace WEB — next fetch in ~5191m
-[2026-05-30T09:32:13]   Skipping janes Insights — next fetch in ~5184m
-[2026-05-30T09:32:13]   Skipping Janes Analysis — next fetch in ~3628m
-[2026-05-30T09:32:13]   Skipping National Armaments Director Group — next fetch in ~5188m
-[2026-05-30T09:32:13]   Skipping Canada Defense — next fetch in ~541m
-[2026-05-30T09:32:13]   Skipping Canada Security — next fetch in ~542m
-[2026-05-30T09:32:13]   Skipping UK Gov — next fetch in ~302m
-[2026-05-30T09:32:13]   Skipping Sweden Government — next fetch in ~552m
-[2026-05-30T09:32:13]   Skipping Spain — next fetch in ~5194m
-[2026-05-30T09:32:13]   Skipping Latvia — next fetch in ~543m
-[2026-05-30T09:32:13]   Skipping Lithuania — next fetch in ~543m
-[2026-05-30T09:32:13]   Skipping Estonia — next fetch in ~543m
-[2026-05-30T09:32:13]   Skipping Finland — next fetch in ~544m
-[2026-05-30T09:32:13]   Skipping Norway — next fetch in ~544m
-[2026-05-30T09:32:13]   Skipping Denmark — next fetch in ~544m
-[2026-05-30T09:32:13]   Skipping Czech Republic — next fetch in ~544m
-[2026-05-30T09:32:13]   Skipping Netherlands — next fetch in ~544m
-[2026-05-30T09:32:13]   Skipping New Zealand — next fetch in ~545m
-[2026-05-30T09:32:13]   Skipping Taiwan — next fetch in ~545m
-[2026-05-30T09:32:13]   Skipping UN News - Global — next fetch in ~545m
-[2026-05-30T09:32:13]   Skipping UK Gov News — next fetch in ~545m
-[2026-05-30T09:32:13]   Skipping UN News - All — next fetch in ~546m
-[2026-05-30T09:32:13]   Skipping BBC World News — next fetch in ~546m
-[2026-05-30T09:32:13]   Skipping AP World News — next fetch in ~546m
-[2026-05-30T09:32:13]   Skipping HuggingFace Blog — next fetch in ~21m
-[2026-05-30T09:32:48]   Skipping HuggingFace Blog — next fetch in ~20m
-[2026-05-30T09:32:48]   Skipping Understanding AI — next fetch in ~4497m
-[2026-05-30T09:32:48]   Skipping Artificial Intelligence - News — next fetch in ~3637m
-[2026-05-30T09:32:48]   Skipping Defense News — next fetch in ~2360m
-[2026-05-30T09:32:48]   Skipping Breaking Defense — next fetch in ~2377m
-[2026-05-30T09:32:48]   Skipping defenseone — next fetch in ~2371m
-[2026-05-30T09:32:48]   Skipping ukdefencejournal — next fetch in ~2362m
-[2026-05-30T09:32:48]   Skipping defenceiq - defence-technology — next fetch in ~2366m
-[2026-05-30T09:32:48]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~2359m
-[2026-05-30T09:32:48]   Skipping defense-aerospace WEB — next fetch in ~5191m
-[2026-05-30T09:32:48]   Skipping janes Insights — next fetch in ~5184m
-[2026-05-30T09:32:48]   Skipping Janes Analysis — next fetch in ~3627m
-[2026-05-30T09:32:48]   Skipping National Armaments Director Group — next fetch in ~5188m
-[2026-05-30T09:32:48]   Skipping Canada Defense — next fetch in ~540m
-[2026-05-30T09:32:48]   Skipping Canada Security — next fetch in ~541m
-[2026-05-30T09:32:48]   Skipping UK Gov — next fetch in ~301m
-[2026-05-30T09:32:48]   Skipping Sweden Government — next fetch in ~551m
-[2026-05-30T09:32:48]   Skipping Spain — next fetch in ~5193m
-[2026-05-30T09:32:48]   Skipping Latvia — next fetch in ~542m
-[2026-05-30T09:32:48]   Skipping Lithuania — next fetch in ~542m
-[2026-05-30T09:32:48]   Skipping Estonia — next fetch in ~543m
-[2026-05-30T09:32:48]   Skipping Finland — next fetch in ~543m
-[2026-05-30T09:32:48]   Skipping Norway — next fetch in ~544m
-[2026-05-30T09:32:48]   Skipping Denmark — next fetch in ~544m
-[2026-05-30T09:32:48]   Skipping Czech Republic — next fetch in ~544m
-[2026-05-30T09:32:48]   Skipping Netherlands — next fetch in ~544m
-[2026-05-30T09:32:48]   Skipping New Zealand — next fetch in ~544m
-[2026-05-30T09:32:48]   Skipping Taiwan — next fetch in ~544m
-[2026-05-30T09:32:48]   Skipping UN News - Global — next fetch in ~545m
-[2026-05-30T09:32:48]   Skipping UK Gov News — next fetch in ~545m
-[2026-05-30T09:32:48]   Skipping UN News - All — next fetch in ~545m
-[2026-05-30T09:32:48]   Skipping BBC World News — next fetch in ~545m
-[2026-05-30T09:32:48]   Skipping AP World News — next fetch in ~546m
-[2026-05-30T09:32:48]   Skipping HuggingFace Blog — next fetch in ~20m
-[2026-05-30T09:35:01]   Skipping HuggingFace Blog — next fetch in ~18m
-[2026-05-30T09:35:01]   Skipping Understanding AI — next fetch in ~4495m
-[2026-05-30T09:35:01]   Skipping Artificial Intelligence - News — next fetch in ~3634m
-[2026-05-30T09:35:01]   Skipping Defense News — next fetch in ~2358m
-[2026-05-30T09:35:01]   Skipping Breaking Defense — next fetch in ~2375m
-[2026-05-30T09:35:01]   Skipping defenseone — next fetch in ~2368m
-[2026-05-30T09:35:01]   Skipping ukdefencejournal — next fetch in ~2360m
-[2026-05-30T09:35:01]   Skipping defenceiq - defence-technology — next fetch in ~2364m
-[2026-05-30T09:35:01]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~2356m
-[2026-05-30T09:35:01]   Skipping defense-aerospace WEB — next fetch in ~5188m
-[2026-05-30T09:35:01]   Skipping janes Insights — next fetch in ~5181m
-[2026-05-30T09:35:01]   Skipping Janes Analysis — next fetch in ~3625m
-[2026-05-30T09:35:01]   Skipping National Armaments Director Group — next fetch in ~5186m
-[2026-05-30T09:35:01]   Skipping Canada Defense — next fetch in ~538m
-[2026-05-30T09:35:01]   Skipping Canada Security — next fetch in ~539m
-[2026-05-30T09:35:01]   Skipping UK Gov — next fetch in ~299m
-[2026-05-30T09:35:01]   Skipping Sweden Government — next fetch in ~549m
-[2026-05-30T09:35:01]   Skipping Spain — next fetch in ~5191m
-[2026-05-30T09:35:01]   Skipping Latvia — next fetch in ~540m
-[2026-05-30T09:35:01]   Skipping Lithuania — next fetch in ~540m
-[2026-05-30T09:35:01]   Skipping Estonia — next fetch in ~541m
-[2026-05-30T09:35:01]   Skipping Finland — next fetch in ~541m
-[2026-05-30T09:35:01]   Skipping Norway — next fetch in ~541m
-[2026-05-30T09:35:01]   Skipping Denmark — next fetch in ~541m
-[2026-05-30T09:35:01]   Skipping Czech Republic — next fetch in ~541m
-[2026-05-30T09:35:01]   Skipping Netherlands — next fetch in ~542m
-[2026-05-30T09:35:01]   Skipping New Zealand — next fetch in ~542m
-[2026-05-30T09:35:01]   Skipping Taiwan — next fetch in ~542m
-[2026-05-30T09:35:01]   Skipping UN News - Global — next fetch in ~542m
-[2026-05-30T09:35:01]   Skipping UK Gov News — next fetch in ~542m
-[2026-05-30T09:35:01]   Skipping UN News - All — next fetch in ~543m
-[2026-05-30T09:35:01]   Skipping BBC World News — next fetch in ~543m
-[2026-05-30T09:35:01]   Skipping AP World News — next fetch in ~544m
-[2026-05-30T09:35:01]   Skipping HuggingFace Blog — next fetch in ~18m
-[2026-05-30T09:46:25]   Skipping HuggingFace Blog — next fetch in ~7m
-[2026-05-30T09:46:25]   Skipping Understanding AI — next fetch in ~4484m
-[2026-05-30T09:46:25]   Skipping Artificial Intelligence - News — next fetch in ~3623m
-[2026-05-30T09:46:25]   Skipping Defense News — next fetch in ~2347m
-[2026-05-30T09:46:25]   Skipping Breaking Defense — next fetch in ~2364m
-[2026-05-30T09:46:25]   Skipping defenseone — next fetch in ~2357m
-[2026-05-30T09:46:25]   Skipping ukdefencejournal — next fetch in ~2349m
-[2026-05-30T09:46:25]   Skipping defenceiq - defence-technology — next fetch in ~2353m
-[2026-05-30T09:46:25]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~2345m
-[2026-05-30T09:46:25]   Skipping defense-aerospace WEB — next fetch in ~5177m
-[2026-05-30T09:46:25]   Skipping janes Insights — next fetch in ~5170m
-[2026-05-30T09:46:25]   Skipping Janes Analysis — next fetch in ~3614m
-[2026-05-30T09:46:25]   Skipping National Armaments Director Group — next fetch in ~5174m
-[2026-05-30T09:46:25]   Skipping Canada Defense — next fetch in ~527m
-[2026-05-30T09:46:25]   Skipping Canada Security — next fetch in ~527m
-[2026-05-30T09:46:25]   Skipping UK Gov — next fetch in ~287m
-[2026-05-30T09:46:25]   Skipping Sweden Government — next fetch in ~538m
-[2026-05-30T09:46:25]   Skipping Spain — next fetch in ~5179m
-[2026-05-30T09:46:25]   Skipping Latvia — next fetch in ~528m
-[2026-05-30T09:46:25]   Skipping Lithuania — next fetch in ~529m
-[2026-05-30T09:46:25]   Skipping Estonia — next fetch in ~529m
-[2026-05-30T09:46:25]   Skipping Finland — next fetch in ~530m
-[2026-05-30T09:46:25]   Skipping Norway — next fetch in ~530m
-[2026-05-30T09:46:25]   Skipping Denmark — next fetch in ~530m
-[2026-05-30T09:46:25]   Skipping Czech Republic — next fetch in ~530m
-[2026-05-30T09:46:25]   Skipping Netherlands — next fetch in ~530m
-[2026-05-30T09:46:25]   Skipping New Zealand — next fetch in ~530m
-[2026-05-30T09:46:25]   Skipping Taiwan — next fetch in ~531m
-[2026-05-30T09:46:25]   Skipping UN News - Global — next fetch in ~531m
-[2026-05-30T09:46:25]   Skipping UK Gov News — next fetch in ~531m
-[2026-05-30T09:46:25]   Skipping UN News - All — next fetch in ~531m
-[2026-05-30T09:46:25]   Skipping BBC World News — next fetch in ~532m
-[2026-05-30T09:46:25]   Skipping AP World News — next fetch in ~532m
-[2026-05-30T09:46:25]   Skipping HuggingFace Blog — next fetch in ~7m
-[2026-05-30T10:15:46] Ingesting: HuggingFace Blog
-[2026-05-30T10:15:46]   Skipping Understanding AI — next fetch in ~4454m
-[2026-05-30T10:15:46]   Skipping Artificial Intelligence - News — next fetch in ~3594m
-[2026-05-30T10:15:46]   Skipping Defense News — next fetch in ~2317m
-[2026-05-30T10:15:46]   Skipping Breaking Defense — next fetch in ~2334m
-[2026-05-30T10:15:46]   Skipping defenseone — next fetch in ~2328m
-[2026-05-30T10:15:46]   Skipping ukdefencejournal — next fetch in ~2319m
-[2026-05-30T10:15:46]   Skipping defenceiq - defence-technology — next fetch in ~2323m
-[2026-05-30T10:15:46]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~2316m
-[2026-05-30T10:15:46]   Skipping defense-aerospace WEB — next fetch in ~5148m
-[2026-05-30T10:15:46]   Skipping janes Insights — next fetch in ~5141m
-[2026-05-30T10:15:46]   Skipping Janes Analysis — next fetch in ~3584m
-[2026-05-30T10:15:46]   Skipping National Armaments Director Group — next fetch in ~5145m
-[2026-05-30T10:15:46]   Skipping Canada Defense — next fetch in ~497m
-[2026-05-30T10:15:46]   Skipping Canada Security — next fetch in ~498m
-[2026-05-30T10:15:46]   Skipping UK Gov — next fetch in ~258m
-[2026-05-30T10:15:46]   Skipping Sweden Government — next fetch in ~509m
-[2026-05-30T10:15:46]   Skipping Spain — next fetch in ~5150m
-[2026-05-30T10:15:46]   Skipping Latvia — next fetch in ~499m
-[2026-05-30T10:15:46]   Skipping Lithuania — next fetch in ~499m
-[2026-05-30T10:15:46]   Skipping Estonia — next fetch in ~500m
-[2026-05-30T10:15:46]   Skipping Finland — next fetch in ~500m
-[2026-05-30T10:15:46]   Skipping Norway — next fetch in ~501m
-[2026-05-30T10:15:46]   Skipping Denmark — next fetch in ~501m
-[2026-05-30T10:15:46]   Skipping Czech Republic — next fetch in ~501m
-[2026-05-30T10:15:46]   Skipping Netherlands — next fetch in ~501m
-[2026-05-30T10:15:46]   Skipping New Zealand — next fetch in ~501m
-[2026-05-30T10:15:46]   Skipping Taiwan — next fetch in ~501m
-[2026-05-30T10:15:46]   Skipping UN News - Global — next fetch in ~502m
-[2026-05-30T10:15:46]   Skipping UK Gov News — next fetch in ~502m
-[2026-05-30T10:15:46]   Skipping UN News - All — next fetch in ~502m
-[2026-05-30T10:15:46]   Skipping BBC World News — next fetch in ~502m
-[2026-05-30T10:15:46]   Skipping AP World News — next fetch in ~503m
-[2026-05-30T10:15:46]   Skipping HuggingFace Blog - already queued/running
-[2026-05-30T10:43:38] Ingesting: HuggingFace Blog
-[2026-05-30T10:43:38]   Skipping Understanding AI — next fetch in ~4426m
-[2026-05-30T10:43:38]   Skipping Artificial Intelligence - News — next fetch in ~3566m
-[2026-05-30T10:43:38]   Skipping Defense News — next fetch in ~2290m
-[2026-05-30T10:43:38]   Skipping Breaking Defense — next fetch in ~2306m
-[2026-05-30T10:43:38]   Skipping defenseone — next fetch in ~2300m
-[2026-05-30T10:43:38]   Skipping ukdefencejournal — next fetch in ~2291m
-[2026-05-30T10:43:38]   Skipping defenceiq - defence-technology — next fetch in ~2296m
-[2026-05-30T10:43:38]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~2288m
-[2026-05-30T10:43:38]   Skipping defense-aerospace WEB — next fetch in ~5120m
-[2026-05-30T10:43:38]   Skipping janes Insights — next fetch in ~5113m
-[2026-05-30T10:43:38]   Skipping Janes Analysis — next fetch in ~3556m
-[2026-05-30T10:43:38]   Skipping National Armaments Director Group — next fetch in ~5117m
-[2026-05-30T10:43:38]   Skipping Canada Defense — next fetch in ~470m
-[2026-05-30T10:43:38]   Skipping Canada Security — next fetch in ~470m
-[2026-05-30T10:43:38]   Skipping UK Gov — next fetch in ~230m
-[2026-05-30T10:43:38]   Skipping Sweden Government — next fetch in ~481m
-[2026-05-30T10:43:38]   Skipping Spain — next fetch in ~5122m
-[2026-05-30T10:43:38]   Skipping Latvia — next fetch in ~471m
-[2026-05-30T10:43:38]   Skipping Lithuania — next fetch in ~472m
-[2026-05-30T10:43:38]   Skipping Estonia — next fetch in ~472m
-[2026-05-30T10:43:38]   Skipping Finland — next fetch in ~472m
-[2026-05-30T10:43:38]   Skipping Norway — next fetch in ~473m
-[2026-05-30T10:43:38]   Skipping Denmark — next fetch in ~473m
-[2026-05-30T10:43:38]   Skipping Czech Republic — next fetch in ~473m
-[2026-05-30T10:43:38]   Skipping Netherlands — next fetch in ~473m
-[2026-05-30T10:43:38]   Skipping New Zealand — next fetch in ~473m
-[2026-05-30T10:43:38]   Skipping Taiwan — next fetch in ~474m
-[2026-05-30T10:43:38]   Skipping UN News - Global — next fetch in ~474m
-[2026-05-30T10:43:38]   Skipping UK Gov News — next fetch in ~474m
-[2026-05-30T10:43:38]   Skipping UN News - All — next fetch in ~474m
-[2026-05-30T10:43:38]   Skipping BBC World News — next fetch in ~474m
-[2026-05-30T10:43:38]   Skipping AP World News — next fetch in ~475m
-[2026-05-30T10:43:38]   Skipping HuggingFace Blog - already queued/running
-[2026-05-30T10:43:47] Ingesting: HuggingFace Blog
-[2026-05-30T10:43:47]   Skipping Understanding AI — next fetch in ~4426m
-[2026-05-30T10:43:47]   Skipping Artificial Intelligence - News — next fetch in ~3566m
-[2026-05-30T10:43:47]   Skipping Defense News — next fetch in ~2289m
-[2026-05-30T10:43:47]   Skipping Breaking Defense — next fetch in ~2306m
-[2026-05-30T10:43:47]   Skipping defenseone — next fetch in ~2300m
-[2026-05-30T10:43:47]   Skipping ukdefencejournal — next fetch in ~2291m
-[2026-05-30T10:43:47]   Skipping defenceiq - defence-technology — next fetch in ~2295m
-[2026-05-30T10:43:47]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~2288m
-[2026-05-30T10:43:47]   Skipping defense-aerospace WEB — next fetch in ~5120m
-[2026-05-30T10:43:47]   Skipping janes Insights — next fetch in ~5113m
-[2026-05-30T10:43:47]   Skipping Janes Analysis — next fetch in ~3556m
-[2026-05-30T10:43:47]   Skipping National Armaments Director Group — next fetch in ~5117m
-[2026-05-30T10:43:47]   Skipping Canada Defense — next fetch in ~469m
-[2026-05-30T10:43:47]   Skipping Canada Security — next fetch in ~470m
-[2026-05-30T10:43:47]   Skipping UK Gov — next fetch in ~230m
-[2026-05-30T10:43:47]   Skipping Sweden Government — next fetch in ~481m
-[2026-05-30T10:43:47]   Skipping Spain — next fetch in ~5122m
-[2026-05-30T10:43:47]   Skipping Latvia — next fetch in ~471m
-[2026-05-30T10:43:47]   Skipping Lithuania — next fetch in ~471m
-[2026-05-30T10:43:47]   Skipping Estonia — next fetch in ~472m
-[2026-05-30T10:43:47]   Skipping Finland — next fetch in ~472m
-[2026-05-30T10:43:47]   Skipping Norway — next fetch in ~473m
-[2026-05-30T10:43:47]   Skipping Denmark — next fetch in ~473m
-[2026-05-30T10:43:47]   Skipping Czech Republic — next fetch in ~473m
-[2026-05-30T10:43:48]   Skipping Netherlands — next fetch in ~473m
-[2026-05-30T10:43:48]   Skipping New Zealand — next fetch in ~473m
-[2026-05-30T10:43:48]   Skipping Taiwan — next fetch in ~473m
-[2026-05-30T10:43:48]   Skipping UN News - Global — next fetch in ~474m
-[2026-05-30T10:43:48]   Skipping UK Gov News — next fetch in ~474m
-[2026-05-30T10:43:48]   Skipping UN News - All — next fetch in ~474m
-[2026-05-30T10:43:48]   Skipping BBC World News — next fetch in ~474m
-[2026-05-30T10:43:48]   Skipping AP World News — next fetch in ~475m
-[2026-05-30T10:43:48]   Skipping HuggingFace Blog - already queued/running
-[2026-05-30T10:44:16] Ingesting: HuggingFace Blog
-[2026-05-30T10:44:16]   Skipping Understanding AI — next fetch in ~4426m
-[2026-05-30T10:44:16]   Skipping Artificial Intelligence - News — next fetch in ~3565m
-[2026-05-30T10:44:16]   Skipping Defense News — next fetch in ~2289m
-[2026-05-30T10:44:16]   Skipping Breaking Defense — next fetch in ~2306m
-[2026-05-30T10:44:16]   Skipping defenseone — next fetch in ~2299m
-[2026-05-30T10:44:16]   Skipping ukdefencejournal — next fetch in ~2291m
-[2026-05-30T10:44:16]   Skipping defenceiq - defence-technology — next fetch in ~2295m
-[2026-05-30T10:44:16]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~2287m
-[2026-05-30T10:44:16]   Skipping defense-aerospace WEB — next fetch in ~5119m
-[2026-05-30T10:44:16]   Skipping janes Insights — next fetch in ~5112m
-[2026-05-30T10:44:16]   Skipping Janes Analysis — next fetch in ~3556m
-[2026-05-30T10:44:16]   Skipping National Armaments Director Group — next fetch in ~5116m
-[2026-05-30T10:44:16]   Skipping Canada Defense — next fetch in ~469m
-[2026-05-30T10:44:16]   Skipping Canada Security — next fetch in ~470m
-[2026-05-30T10:44:16]   Skipping UK Gov — next fetch in ~230m
-[2026-05-30T10:44:16]   Skipping Sweden Government — next fetch in ~480m
-[2026-05-30T10:44:16]   Skipping Spain — next fetch in ~5122m
-[2026-05-30T10:44:16]   Skipping Latvia — next fetch in ~470m
-[2026-05-30T10:44:16]   Skipping Lithuania — next fetch in ~471m
-[2026-05-30T10:44:16]   Skipping Estonia — next fetch in ~471m
-[2026-05-30T10:44:16]   Skipping Finland — next fetch in ~472m
-[2026-05-30T10:44:16]   Skipping Norway — next fetch in ~472m
-[2026-05-30T10:44:16]   Skipping Denmark — next fetch in ~472m
-[2026-05-30T10:44:16]   Skipping Czech Republic — next fetch in ~472m
-[2026-05-30T10:44:16]   Skipping Netherlands — next fetch in ~472m
-[2026-05-30T10:44:16]   Skipping New Zealand — next fetch in ~473m
-[2026-05-30T10:44:16]   Skipping Taiwan — next fetch in ~473m
-[2026-05-30T10:44:16]   Skipping UN News - Global — next fetch in ~473m
-[2026-05-30T10:44:16]   Skipping UK Gov News — next fetch in ~473m
-[2026-05-30T10:44:16]   Skipping UN News - All — next fetch in ~473m
-[2026-05-30T10:44:16]   Skipping BBC World News — next fetch in ~474m
-[2026-05-30T10:44:16]   Skipping AP World News — next fetch in ~474m
-[2026-05-30T10:44:16]   Skipping HuggingFace Blog - already queued/running
-[2026-05-30T10:45:09] Ingesting: HuggingFace Blog
-[2026-05-30T10:45:09]   Skipping Understanding AI — next fetch in ~4425m
-[2026-05-30T10:45:09]   Skipping Artificial Intelligence - News — next fetch in ~3564m
-[2026-05-30T10:45:09]   Skipping Defense News — next fetch in ~2288m
-[2026-05-30T10:45:09]   Skipping Breaking Defense — next fetch in ~2305m
-[2026-05-30T10:45:09]   Skipping defenseone — next fetch in ~2298m
-[2026-05-30T10:45:09]   Skipping ukdefencejournal — next fetch in ~2290m
-[2026-05-30T10:45:09]   Skipping defenceiq - defence-technology — next fetch in ~2294m
-[2026-05-30T10:45:09]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~2286m
-[2026-05-30T10:45:09]   Skipping defense-aerospace WEB — next fetch in ~5118m
-[2026-05-30T10:45:09]   Skipping janes Insights — next fetch in ~5111m
-[2026-05-30T10:45:09]   Skipping Janes Analysis — next fetch in ~3555m
-[2026-05-30T10:45:09]   Skipping National Armaments Director Group — next fetch in ~5115m
-[2026-05-30T10:45:09]   Skipping Canada Defense — next fetch in ~468m
-[2026-05-30T10:45:09]   Skipping Canada Security — next fetch in ~469m
-[2026-05-30T10:45:09]   Skipping UK Gov — next fetch in ~229m
-[2026-05-30T10:45:09]   Skipping Sweden Government — next fetch in ~479m
-[2026-05-30T10:45:09]   Skipping Spain — next fetch in ~5121m
-[2026-05-30T10:45:09]   Skipping Latvia — next fetch in ~470m
-[2026-05-30T10:45:09]   Skipping Lithuania — next fetch in ~470m
-[2026-05-30T10:45:09]   Skipping Estonia — next fetch in ~470m
-[2026-05-30T10:45:09]   Skipping Finland — next fetch in ~471m
-[2026-05-30T10:45:09]   Skipping Norway — next fetch in ~471m
-[2026-05-30T10:45:09]   Skipping Denmark — next fetch in ~471m
-[2026-05-30T10:45:09]   Skipping Czech Republic — next fetch in ~471m
-[2026-05-30T10:45:09]   Skipping Netherlands — next fetch in ~471m
-[2026-05-30T10:45:09]   Skipping New Zealand — next fetch in ~472m
-[2026-05-30T10:45:09]   Skipping Taiwan — next fetch in ~472m
-[2026-05-30T10:45:09]   Skipping UN News - Global — next fetch in ~472m
-[2026-05-30T10:45:09]   Skipping UK Gov News — next fetch in ~472m
-[2026-05-30T10:45:09]   Skipping UN News - All — next fetch in ~473m
-[2026-05-30T10:45:09]   Skipping BBC World News — next fetch in ~473m
-[2026-05-30T10:45:09]   Skipping AP World News — next fetch in ~473m
-[2026-05-30T10:45:09]   Skipping HuggingFace Blog - already queued/running
-[2026-05-30T10:45:14] Ingesting: HuggingFace Blog
-[2026-05-30T10:45:14]   Skipping Understanding AI — next fetch in ~4425m
-[2026-05-30T10:45:14]   Skipping Artificial Intelligence - News — next fetch in ~3564m
-[2026-05-30T10:45:14]   Skipping Defense News — next fetch in ~2288m
-[2026-05-30T10:45:14]   Skipping Breaking Defense — next fetch in ~2305m
-[2026-05-30T10:45:14]   Skipping defenseone — next fetch in ~2298m
-[2026-05-30T10:45:14]   Skipping ukdefencejournal — next fetch in ~2290m
-[2026-05-30T10:45:14]   Skipping defenceiq - defence-technology — next fetch in ~2294m
-[2026-05-30T10:45:14]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~2286m
-[2026-05-30T10:45:14]   Skipping defense-aerospace WEB — next fetch in ~5118m
-[2026-05-30T10:45:14]   Skipping janes Insights — next fetch in ~5111m
-[2026-05-30T10:45:14]   Skipping Janes Analysis — next fetch in ~3555m
-[2026-05-30T10:45:14]   Skipping National Armaments Director Group — next fetch in ~5115m
-[2026-05-30T10:45:14]   Skipping Canada Defense — next fetch in ~468m
-[2026-05-30T10:45:14]   Skipping Canada Security — next fetch in ~469m
-[2026-05-30T10:45:14]   Skipping UK Gov — next fetch in ~229m
-[2026-05-30T10:45:14]   Skipping Sweden Government — next fetch in ~479m
-[2026-05-30T10:45:14]   Skipping Spain — next fetch in ~5121m
-[2026-05-30T10:45:14]   Skipping Latvia — next fetch in ~470m
-[2026-05-30T10:45:14]   Skipping Lithuania — next fetch in ~470m
-[2026-05-30T10:45:14]   Skipping Estonia — next fetch in ~470m
-[2026-05-30T10:45:14]   Skipping Finland — next fetch in ~471m
-[2026-05-30T10:45:14]   Skipping Norway — next fetch in ~471m
-[2026-05-30T10:45:14]   Skipping Denmark — next fetch in ~471m
-[2026-05-30T10:45:14]   Skipping Czech Republic — next fetch in ~471m
-[2026-05-30T10:45:14]   Skipping Netherlands — next fetch in ~471m
-[2026-05-30T10:45:14]   Skipping New Zealand — next fetch in ~472m
-[2026-05-30T10:45:14]   Skipping Taiwan — next fetch in ~472m
-[2026-05-30T10:45:14]   Skipping UN News - Global — next fetch in ~472m
-[2026-05-30T10:45:14]   Skipping UK Gov News — next fetch in ~472m
-[2026-05-30T10:45:14]   Skipping UN News - All — next fetch in ~473m
-[2026-05-30T10:45:14]   Skipping BBC World News — next fetch in ~473m
-[2026-05-30T10:45:14]   Skipping AP World News — next fetch in ~473m
-[2026-05-30T10:45:14]   Skipping HuggingFace Blog - already queued/running
-[2026-05-30T10:46:37] Ingesting: HuggingFace Blog
-[2026-05-30T10:46:37]   Skipping Understanding AI — next fetch in ~4423m
-[2026-05-30T10:46:37]   Skipping Artificial Intelligence - News — next fetch in ~3563m
-[2026-05-30T10:46:37]   Skipping Defense News — next fetch in ~2287m
-[2026-05-30T10:46:37]   Skipping Breaking Defense — next fetch in ~2303m
-[2026-05-30T10:46:37]   Skipping defenseone — next fetch in ~2297m
-[2026-05-30T10:46:37]   Skipping ukdefencejournal — next fetch in ~2288m
-[2026-05-30T10:46:37]   Skipping defenceiq - defence-technology — next fetch in ~2293m
-[2026-05-30T10:46:37]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~2285m
-[2026-05-30T10:46:37]   Skipping defense-aerospace WEB — next fetch in ~5117m
-[2026-05-30T10:46:37]   Skipping janes Insights — next fetch in ~5110m
-[2026-05-30T10:46:37]   Skipping Janes Analysis — next fetch in ~3553m
-[2026-05-30T10:46:37]   Skipping National Armaments Director Group — next fetch in ~5114m
-[2026-05-30T10:46:37]   Skipping Canada Defense — next fetch in ~467m
-[2026-05-30T10:46:37]   Skipping Canada Security — next fetch in ~467m
-[2026-05-30T10:46:37]   Skipping UK Gov — next fetch in ~227m
-[2026-05-30T10:46:37]   Skipping Sweden Government — next fetch in ~478m
-[2026-05-30T10:46:37]   Skipping Spain — next fetch in ~5119m
-[2026-05-30T10:46:37]   Skipping Latvia — next fetch in ~468m
-[2026-05-30T10:46:37]   Skipping Lithuania — next fetch in ~469m
-[2026-05-30T10:46:37]   Skipping Estonia — next fetch in ~469m
-[2026-05-30T10:46:37]   Skipping Finland — next fetch in ~469m
-[2026-05-30T10:46:37]   Skipping Norway — next fetch in ~470m
-[2026-05-30T10:46:37]   Skipping Denmark — next fetch in ~470m
-[2026-05-30T10:46:37]   Skipping Czech Republic — next fetch in ~470m
-[2026-05-30T10:46:37]   Skipping Netherlands — next fetch in ~470m
-[2026-05-30T10:46:37]   Skipping New Zealand — next fetch in ~470m
-[2026-05-30T10:46:37]   Skipping Taiwan — next fetch in ~471m
-[2026-05-30T10:46:37]   Skipping UN News - Global — next fetch in ~471m
-[2026-05-30T10:46:37]   Skipping UK Gov News — next fetch in ~471m
-[2026-05-30T10:46:37]   Skipping UN News - All — next fetch in ~471m
-[2026-05-30T10:46:37]   Skipping BBC World News — next fetch in ~471m
-[2026-05-30T10:46:37]   Skipping AP World News — next fetch in ~472m
-[2026-05-30T10:46:37]   Skipping HuggingFace Blog - already queued/running
-[2026-05-30T10:47:13] Ingesting: HuggingFace Blog
-[2026-05-30T10:47:13]   Skipping Understanding AI — next fetch in ~4423m
-[2026-05-30T10:47:13]   Skipping Artificial Intelligence - News — next fetch in ~3562m
-[2026-05-30T10:47:13]   Skipping Defense News — next fetch in ~2286m
-[2026-05-30T10:47:13]   Skipping Breaking Defense — next fetch in ~2303m
-[2026-05-30T10:47:13]   Skipping defenseone — next fetch in ~2296m
-[2026-05-30T10:47:13]   Skipping ukdefencejournal — next fetch in ~2288m
-[2026-05-30T10:47:13]   Skipping defenceiq - defence-technology — next fetch in ~2292m
-[2026-05-30T10:47:13]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~2284m
-[2026-05-30T10:47:13]   Skipping defense-aerospace WEB — next fetch in ~5116m
-[2026-05-30T10:47:13]   Skipping janes Insights — next fetch in ~5109m
-[2026-05-30T10:47:13]   Skipping Janes Analysis — next fetch in ~3553m
-[2026-05-30T10:47:13]   Skipping National Armaments Director Group — next fetch in ~5113m
-[2026-05-30T10:47:13]   Skipping Canada Defense — next fetch in ~466m
-[2026-05-30T10:47:13]   Skipping Canada Security — next fetch in ~467m
-[2026-05-30T10:47:13]   Skipping UK Gov — next fetch in ~227m
-[2026-05-30T10:47:13]   Skipping Sweden Government — next fetch in ~477m
-[2026-05-30T10:47:13]   Skipping Spain — next fetch in ~5119m
-[2026-05-30T10:47:13]   Skipping Latvia — next fetch in ~468m
-[2026-05-30T10:47:13]   Skipping Lithuania — next fetch in ~468m
-[2026-05-30T10:47:13]   Skipping Estonia — next fetch in ~468m
-[2026-05-30T10:47:13]   Skipping Finland — next fetch in ~469m
-[2026-05-30T10:47:13]   Skipping Norway — next fetch in ~469m
-[2026-05-30T10:47:13]   Skipping Denmark — next fetch in ~469m
-[2026-05-30T10:47:13]   Skipping Czech Republic — next fetch in ~469m
-[2026-05-30T10:47:13]   Skipping Netherlands — next fetch in ~469m
-[2026-05-30T10:47:13]   Skipping New Zealand — next fetch in ~470m
-[2026-05-30T10:47:13]   Skipping Taiwan — next fetch in ~470m
-[2026-05-30T10:47:13]   Skipping UN News - Global — next fetch in ~470m
-[2026-05-30T10:47:13]   Skipping UK Gov News — next fetch in ~470m
-[2026-05-30T10:47:13]   Skipping UN News - All — next fetch in ~471m
-[2026-05-30T10:47:13]   Skipping BBC World News — next fetch in ~471m
-[2026-05-30T10:47:13]   Skipping AP World News — next fetch in ~471m
-[2026-05-30T10:47:13]   Skipping HuggingFace Blog - already queued/running
-[2026-05-30T10:47:14] Ingesting: HuggingFace Blog
-[2026-05-30T10:47:14]   Skipping Understanding AI — next fetch in ~4423m
-[2026-05-30T10:47:14]   Skipping Artificial Intelligence - News — next fetch in ~3562m
-[2026-05-30T10:47:14]   Skipping Defense News — next fetch in ~2286m
-[2026-05-30T10:47:14]   Skipping Breaking Defense — next fetch in ~2303m
-[2026-05-30T10:47:14]   Skipping defenseone — next fetch in ~2296m
-[2026-05-30T10:47:14]   Skipping ukdefencejournal — next fetch in ~2288m
-[2026-05-30T10:47:14]   Skipping defenceiq - defence-technology — next fetch in ~2292m
-[2026-05-30T10:47:14]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~2284m
-[2026-05-30T10:47:14]   Skipping defense-aerospace WEB — next fetch in ~5116m
-[2026-05-30T10:47:14]   Skipping janes Insights — next fetch in ~5109m
-[2026-05-30T10:47:14]   Skipping Janes Analysis — next fetch in ~3553m
-[2026-05-30T10:47:14]   Skipping National Armaments Director Group — next fetch in ~5113m
-[2026-05-30T10:47:14]   Skipping Canada Defense — next fetch in ~466m
-[2026-05-30T10:47:14]   Skipping Canada Security — next fetch in ~467m
-[2026-05-30T10:47:14]   Skipping UK Gov — next fetch in ~227m
-[2026-05-30T10:47:14]   Skipping Sweden Government — next fetch in ~477m
-[2026-05-30T10:47:14]   Skipping Spain — next fetch in ~5119m
-[2026-05-30T10:47:14]   Skipping Latvia — next fetch in ~468m
-[2026-05-30T10:47:14]   Skipping Lithuania — next fetch in ~468m
-[2026-05-30T10:47:14]   Skipping Estonia — next fetch in ~468m
-[2026-05-30T10:47:14]   Skipping Finland — next fetch in ~469m
-[2026-05-30T10:47:14]   Skipping Norway — next fetch in ~469m
-[2026-05-30T10:47:14]   Skipping Denmark — next fetch in ~469m
-[2026-05-30T10:47:14]   Skipping Czech Republic — next fetch in ~469m
-[2026-05-30T10:47:14]   Skipping Netherlands — next fetch in ~469m
-[2026-05-30T10:47:14]   Skipping New Zealand — next fetch in ~470m
-[2026-05-30T10:47:14]   Skipping Taiwan — next fetch in ~470m
-[2026-05-30T10:47:14]   Skipping UN News - Global — next fetch in ~470m
-[2026-05-30T10:47:14]   Skipping UK Gov News — next fetch in ~470m
-[2026-05-30T10:47:14]   Skipping UN News - All — next fetch in ~471m
-[2026-05-30T10:47:14]   Skipping BBC World News — next fetch in ~471m
-[2026-05-30T10:47:14]   Skipping AP World News — next fetch in ~471m
-[2026-05-30T10:47:14]   Skipping HuggingFace Blog - already queued/running
-[2026-05-30T16:48:29] Ingesting: UN Global News
-[2026-05-30T16:49:38]   UN Global News: +30 entries in 69.5s [good]
+[2026-06-01T06:47:13]   Skipping UN News - All — next fetch in ~34m
+[2026-06-01T06:47:13]   Skipping Sweden Government — next fetch in ~42m
+[2026-06-01T06:47:37]   Skipping manual trigger for Canada Security - already queued/running
+[2026-06-01T06:47:39]   Canada Security: +0 entries in 35.1s [good]
+[2026-06-01T07:11:43] Catch-up check: enqueueing most overdue feed Canada Defense (overdue ~0m)
+[2026-06-01T07:11:43] Ingesting: Canada Defense
+[2026-06-01T07:12:43] Catch-up check: enqueueing most overdue feed Canada Defense (overdue ~1m)
+[2026-06-01T07:12:43]   Skipping Canada Defense - already queued/running
+[2026-06-01T07:13:43] Catch-up check: enqueueing most overdue feed Canada Defense (overdue ~2m)
+[2026-06-01T07:13:43]   Skipping Canada Defense - already queued/running
+[2026-06-01T07:14:43] Catch-up check: enqueueing most overdue feed Canada Defense (overdue ~3m)
+[2026-06-01T07:14:43]   Skipping Canada Defense - already queued/running
+[2026-06-01T07:15:42]   Canada Defense: +0 entries in 238.5s [good]
+[2026-06-01T07:15:43] Catch-up check: enqueueing most overdue feed Latvia (overdue ~2m)
+[2026-06-01T07:15:43] Web crawl: Latvia (https://www.mk.gov.lv/en/articles)
+[2026-06-01T07:15:44]   Latvia: 15 level-1 candidates
+[2026-06-01T07:16:43]   Latvia: +0 articles from 25 pages in 59.8s [good]
+[2026-06-01T07:16:43] Catch-up check: enqueueing most overdue feed Lithuania (overdue ~2m)
+[2026-06-01T07:16:43] Ingesting: Lithuania
+[2026-06-01T07:17:10]   Lithuania: +1 entries in 26.6s [good]
+[2026-06-01T07:17:43] Catch-up check: enqueueing most overdue feed Estonia (overdue ~2m)
+[2026-06-01T07:17:43] Ingesting: Estonia
+[2026-06-01T07:18:04]   Estonia: +0 entries in 20.6s [good]
+[2026-06-01T07:18:43] Catch-up check: enqueueing most overdue feed Finland (overdue ~2m)
+[2026-06-01T07:18:43] Web crawl: Finland (https://valtioneuvosto.fi/en/frontpage)
+[2026-06-01T07:18:45]   Finland: 23 level-1 candidates
+[2026-06-01T07:19:11]   Finland: +3 articles from 30 pages in 28.2s [good]
+[2026-06-01T07:19:43] Catch-up check: enqueueing most overdue feed Norway (overdue ~2m)
+[2026-06-01T07:19:43] Web crawl: Norway (https://www.regjeringen.no/en/id4/)
+[2026-06-01T07:19:43]   Norway: 21 level-1 candidates
+[2026-06-01T07:20:05]   Norway: +0 articles from 39 pages in 21.6s [good]
+[2026-06-01T07:20:43] Catch-up check: enqueueing most overdue feed Denmark (overdue ~3m)
+[2026-06-01T07:20:43] Web crawl: Denmark (https://stm.dk/en/press/press-releases/)
+[2026-06-01T07:20:44]   Denmark: 1 level-1 candidates
+[2026-06-01T07:20:44]   Denmark: no links found; page may require JS rendering
+[2026-06-01T07:20:45]   Denmark: +0 articles from 1 pages in 1.5s [poor]
+[2026-06-01T07:21:43] Catch-up check: enqueueing most overdue feed Czech Republic (overdue ~3m)
+[2026-06-01T07:21:43] Ingesting: Czech Republic
+[2026-06-01T07:21:44]   Czech Republic: +0 entries in 1.2s [good]
+[2026-06-01T07:22:43] Catch-up check: enqueueing most overdue feed Netherlands (overdue ~2m)
+[2026-06-01T07:22:43] Web crawl: Netherlands (https://www.government.nl/latest)
+[2026-06-01T07:22:44]   Netherlands: 19 level-1 candidates
+[2026-06-01T07:22:54]   Netherlands: +0 articles from 24 pages in 11.0s [good]
+[2026-06-01T07:23:43] Catch-up check: enqueueing most overdue feed New Zealand (overdue ~3m)
+[2026-06-01T07:23:43] Ingesting: New Zealand
+[2026-06-01T07:23:56]   New Zealand: +4 entries in 13.3s [good]
+[2026-06-01T07:24:43] Catch-up check: enqueueing most overdue feed Taiwan (overdue ~3m)
+[2026-06-01T07:24:43] Ingesting: Taiwan
+[2026-06-01T07:25:04]   Taiwan: +3 entries in 20.8s [good]
+[2026-06-01T07:25:43] Catch-up check: enqueueing most overdue feed UN News - Global (overdue ~4m)
+[2026-06-01T07:25:43] Ingesting: UN News - Global
+[2026-06-01T07:25:58]   UN News - Global: +0 entries in 15.1s [good]
+[2026-06-01T07:26:43] Catch-up check: enqueueing most overdue feed UK Gov News (overdue ~5m)
+[2026-06-01T07:26:43] Ingesting: UK Gov News
+[2026-06-01T07:26:49]   UK Gov News: +3 entries in 6.3s [good]
+[2026-06-01T07:27:43] Catch-up check: enqueueing most overdue feed UN News - All (overdue ~6m)
+[2026-06-01T07:27:43] Ingesting: UN News - All
+[2026-06-01T07:27:59]   UN News - All: +0 entries in 16.3s [good]
+[2026-06-01T07:28:43] Catch-up check: enqueueing most overdue feed BBC World News (overdue ~7m)
+[2026-06-01T07:28:43] Ingesting: BBC World News
+[2026-06-01T07:28:56]   BBC World News: +11 entries in 12.8s [good]
+[2026-06-01T07:29:43] Catch-up check: enqueueing most overdue feed AP World News (overdue ~7m)
+[2026-06-01T07:29:43] Web crawl: AP World News (https://apnews.com/world-news)
+[2026-06-01T07:29:44]   AP World News: 50 level-1 candidates
+[2026-06-01T07:30:14]   AP World News: +13 articles from 58 pages in 30.6s [good]
+[2026-06-01T07:30:43] Catch-up check: enqueueing most overdue feed Sweden Government (overdue ~0m)
+[2026-06-01T07:30:43] Ingesting: Sweden Government
+[2026-06-01T07:31:07]   Sweden Government: +0 entries in 23.6s [poor]
+[2026-06-01T08:06:50]   Skipping UK Gov — next fetch in ~60m
+[2026-06-01T09:08:43] Catch-up check: enqueueing most overdue feed UK Gov (overdue ~0m)
+[2026-06-01T09:08:43] Ingesting: UK Gov
+[2026-06-01T09:08:49]   UK Gov: +2 entries in 5.9s [good]
+[2026-06-01T17:29:25] Catch-up check: enqueueing most overdue feed UK Gov (overdue ~140m)
+[2026-06-01T17:29:25] Ingesting: UK Gov
+[2026-06-01T17:29:25]   Skipping UK Gov - already queued/running
+[2026-06-01T17:29:25]   Skipping AP World News — next fetch in ~0m
+[2026-06-01T17:29:25]   Skipping Sweden Government — next fetch in ~11m
+[2026-06-01T17:29:31]   UK Gov: +10 entries in 6.0s [good]
+[2026-06-01T17:29:31] Ingesting: Canada Defense
+[2026-06-01T17:33:53]   Canada Defense: +0 entries in 261.6s [good]
+[2026-06-01T17:33:53] Web crawl: Finland (https://valtioneuvosto.fi/en/frontpage)
+[2026-06-01T17:33:54]   Finland: 22 level-1 candidates
+[2026-06-01T17:34:12]   Finland: +6 articles from 22 pages in 19.7s [good]
+[2026-06-01T17:34:12] Ingesting: Canada Security
+[2026-06-01T17:34:45]   Canada Security: +0 entries in 32.9s [good]
+[2026-06-01T17:34:45] Web crawl: Latvia (https://www.mk.gov.lv/en/articles)
+[2026-06-01T17:34:46]   Latvia: 15 level-1 candidates
+[2026-06-01T17:35:03]   Latvia: +0 articles from 25 pages in 17.7s [good]
+[2026-06-01T17:35:03] Ingesting: Lithuania
+[2026-06-01T17:35:29]   Lithuania: +9 entries in 26.3s [good]
+[2026-06-01T17:35:29] Ingesting: Estonia
+[2026-06-01T17:35:54]   Estonia: +0 entries in 25.0s [good]
+[2026-06-01T17:35:54] Web crawl: Norway (https://www.regjeringen.no/en/id4/)
+[2026-06-01T17:35:55]   Norway: 21 level-1 candidates
+[2026-06-01T17:36:17]   Norway: +0 articles from 39 pages in 22.1s [good]
+[2026-06-01T17:36:17] Web crawl: Denmark (https://stm.dk/en/press/press-releases/)
+[2026-06-01T17:36:17]   Denmark: 1 level-1 candidates
+[2026-06-01T17:36:17]   Denmark: no links found; page may require JS rendering
+[2026-06-01T17:36:18]   Denmark: +0 articles from 1 pages in 1.4s [poor]
+[2026-06-01T17:36:18] Ingesting: Taiwan
+[2026-06-01T17:36:41]   Taiwan: +3 entries in 22.9s [good]
+[2026-06-01T17:36:41] Web crawl: Netherlands (https://www.government.nl/latest)
+[2026-06-01T17:36:41]   Netherlands: 19 level-1 candidates
+[2026-06-01T17:36:52]   Netherlands: +0 articles from 24 pages in 11.2s [good]
+[2026-06-01T17:36:52] Ingesting: Czech Republic
+[2026-06-01T17:36:53]   Czech Republic: +0 entries in 1.3s [good]
+[2026-06-01T17:36:53] Ingesting: UN News - Global
+[2026-06-01T17:37:10]   UN News - Global: +0 entries in 16.5s [good]
+[2026-06-01T17:37:10] Ingesting: New Zealand
+[2026-06-01T17:37:24]   New Zealand: +0 entries in 14.0s [good]
+[2026-06-01T17:37:24] Ingesting: UK Gov News
+[2026-06-01T17:37:30]   UK Gov News: +12 entries in 5.9s [good]
+[2026-06-01T17:37:30] Ingesting: BBC World News
+[2026-06-01T17:37:43]   BBC World News: +9 entries in 13.4s [good]
+[2026-06-01T17:37:43] Ingesting: UN News - All
+[2026-06-01T17:37:59]   UN News - All: +1 entries in 15.5s [good]
+[2026-06-01T17:38:43] Catch-up check: enqueueing most overdue feed AP World News (overdue ~8m)
+[2026-06-01T17:38:43] Web crawl: AP World News (https://apnews.com/world-news)
+[2026-06-01T17:38:44]   AP World News: 50 level-1 candidates
+[2026-06-01T17:39:23]   AP World News: +17 articles from 64 pages in 39.5s [good]
+[2026-06-01T17:41:43] Catch-up check: enqueueing most overdue feed Sweden Government (overdue ~0m)
+[2026-06-01T17:41:43] Ingesting: Sweden Government
+[2026-06-01T17:42:08]   Sweden Government: +0 entries in 24.7s [poor]
+[2026-06-01T20:06:50]   Skipping UK Gov — next fetch in ~202m
+[2026-06-01T21:00:26]   Skipping Janes Analysis — next fetch in ~59m
+[2026-06-01T21:09:57]   Skipping Artificial Intelligence - News — next fetch in ~59m
+[2026-06-01T22:00:43] Catch-up check: enqueueing most overdue feed Janes Analysis (overdue ~0m)
+[2026-06-01T22:00:43] Web crawl: Janes Analysis (https://www.janes.com/defence-intelligence-insights/defence-and-national-security-analysis)
+[2026-06-01T22:00:44]   Janes Analysis: 15 level-1 candidates
+[2026-06-01T22:00:52]   Janes Analysis: +1 articles from 15 pages in 9.3s [good]
+[2026-06-01T22:10:43] Catch-up check: enqueueing most overdue feed Artificial Intelligence - News (overdue ~0m)
+[2026-06-01T22:10:43] Web crawl: Artificial Intelligence - News (https://www.artificialintelligence-news.com/)
+[2026-06-01T22:10:43]   Artificial Intelligence - News: 50 level-1 candidates
+[2026-06-01T22:11:11]   Artificial Intelligence - News: +2 articles from 61 pages in 27.8s [good]
+[2026-06-01T23:29:43] Catch-up check: enqueueing most overdue feed UK Gov (overdue ~0m)
+[2026-06-01T23:29:43] Ingesting: UK Gov
+[2026-06-01T23:29:50]   UK Gov: +2 entries in 6.5s [good]
+[2026-06-02T02:06:50]   Skipping UK Gov — next fetch in ~202m
+[2026-06-02T02:10:52]   Skipping Canada Defense — next fetch in ~83m
+[2026-06-02T02:11:59]   Skipping Canada Security — next fetch in ~82m
+[2026-06-02T02:12:45]   Skipping Latvia — next fetch in ~82m
+[2026-06-02T02:13:52]   Skipping Lithuania — next fetch in ~81m
+[2026-06-02T02:14:48]   Skipping Estonia — next fetch in ~81m
+[2026-06-02T02:15:51]   Skipping Finland — next fetch in ~78m
+[2026-06-02T02:16:48]   Skipping Norway — next fetch in ~79m
+[2026-06-02T02:17:26]   Skipping Denmark — next fetch in ~78m
+[2026-06-02T02:18:26]   Skipping Czech Republic — next fetch in ~78m
+[2026-06-02T02:19:43]   Skipping New Zealand — next fetch in ~77m
+[2026-06-02T02:19:43]   Skipping Netherlands — next fetch in ~77m
+[2026-06-02T02:19:43]   Skipping Taiwan — next fetch in ~76m
+[2026-06-02T02:19:43]   Skipping UN News - All — next fetch in ~78m
+[2026-06-02T02:19:43]   Skipping BBC World News — next fetch in ~77m
+[2026-06-02T02:19:43]   Skipping UN News - Global — next fetch in ~77m
+[2026-06-02T02:19:43]   Skipping UK Gov News — next fetch in ~77m
+[2026-06-02T02:19:43]   Skipping AP World News — next fetch in ~79m
+[2026-06-02T09:16:30] Catch-up check: enqueueing most overdue feed Canada Defense (overdue ~342m)
+[2026-06-02T09:16:30] Ingesting: Sweden Government
+[2026-06-02T09:16:55]   Sweden Government: +0 entries in 24.6s [poor]
+[2026-06-02T09:16:55] Ingesting: UK Gov
+[2026-06-02T09:17:01]   UK Gov: +1 entries in 6.1s [good]
+[2026-06-02T09:17:01] Ingesting: Canada Defense
+[2026-06-02T18:58:16] Catch-up check: enqueueing most overdue feed Canada Defense (overdue ~924m)
+[2026-06-02T18:58:16]   Skipping Canada Defense - already queued/running
+[2026-06-02T18:58:16]   Skipping Canada Defense - already queued/running
+[2026-06-02T18:58:16]   Skipping Sweden Government — next fetch in ~28m
+[2026-06-02T21:54:55]   Skipping UK Gov - already queued/running
+[2026-06-02T21:57:01]   Canada Defense: +0 entries in 45600.1s [good]
+[2026-06-02T21:57:01] Ingesting: Canada Security
+[2026-06-02T21:57:37]   Canada Security: +0 entries in 35.3s [good]
+[2026-06-02T21:57:37] Ingesting: Estonia
+[2026-06-02T21:58:15]   Estonia: +2 entries in 38.6s [good]
+[2026-06-02T21:58:15] Ingesting: Lithuania
+[2026-06-02T21:58:55]   Lithuania: +10 entries in 40.0s [good]
+[2026-06-02T21:58:55] Ingesting: Understanding AI
+[2026-06-02T21:58:58]   Understanding AI: +1 entries in 2.6s [good]
+[2026-06-02T21:58:58] Web crawl: Latvia (https://www.mk.gov.lv/en/articles)
+[2026-06-02T21:58:58]   Latvia: 15 level-1 candidates
+[2026-06-02T21:59:11]   Latvia: +1 articles from 25 pages in 12.9s [good]
+[2026-06-02T21:59:11] Web crawl: Finland (https://valtioneuvosto.fi/en/frontpage)
+[2026-06-02T21:59:12]   Finland: 24 level-1 candidates
+[2026-06-02T21:59:32]   Finland: +7 articles from 24 pages in 21.6s [good]
+[2026-06-02T21:59:32] Web crawl: Norway (https://www.regjeringen.no/en/id4/)
+[2026-06-02T21:59:33]   Norway: 21 level-1 candidates
+[2026-06-02T21:59:54]   Norway: +0 articles from 39 pages in 22.1s [good]
+[2026-06-02T21:59:54] Web crawl: Denmark (https://stm.dk/en/press/press-releases/)
+[2026-06-02T21:59:55]   Denmark: 1 level-1 candidates
+[2026-06-02T21:59:55]   Denmark: no links found; page may require JS rendering
+[2026-06-02T21:59:56]   Denmark: +0 articles from 1 pages in 1.3s [poor]
+[2026-06-02T21:59:56] Ingesting: Czech Republic
+[2026-06-02T21:59:59]   Czech Republic: +0 entries in 2.8s [good]
+[2026-06-02T21:59:59] Ingesting: Taiwan
+[2026-06-02T22:00:17]   Taiwan: +5 entries in 18.8s [good]
+[2026-06-02T22:00:17] Web crawl: Netherlands (https://www.government.nl/latest)
+[2026-06-02T22:00:18]   Netherlands: 19 level-1 candidates
+[2026-06-02T22:00:30]   Netherlands: +0 articles from 24 pages in 12.8s [good]
+[2026-06-02T22:00:30] Ingesting: UN News - Global
+[2026-06-02T22:00:54]   UN News - Global: +2 entries in 23.7s [good]
+[2026-06-02T22:00:54] Ingesting: UK Gov News
+[2026-06-02T22:01:00]   UK Gov News: +17 entries in 6.4s [good]
+[2026-06-02T22:01:00] Web crawl: AP World News (https://apnews.com/world-news)
+[2026-06-02T22:01:01]   AP World News: 50 level-1 candidates
+[2026-06-02T22:01:35]   AP World News: +35 articles from 65 pages in 34.5s [good]
+[2026-06-02T22:01:35] Ingesting: New Zealand
+[2026-06-02T22:01:48]   New Zealand: +11 entries in 12.8s [good]
+[2026-06-02T22:01:48] Ingesting: BBC World News
+[2026-06-02T22:02:10]   BBC World News: +33 entries in 22.2s [good]
+[2026-06-02T22:02:10] Ingesting: UK Gov
+[2026-06-02T22:02:15]   UK Gov: +17 entries in 5.2s [good]
+[2026-06-02T22:02:15] Ingesting: UN News - All
+[2026-06-02T22:02:32]   UN News - All: +7 entries in 17.1s [good]
+[2026-06-02T22:02:32] Ingesting: HuggingFace Blog
+[2026-06-02T22:02:40]   HuggingFace Blog: +4 entries in 7.8s [good]
+[2026-06-02T22:02:43] Catch-up check: enqueueing most overdue feed Sweden Government (overdue ~155m)
+[2026-06-02T22:02:43] Ingesting: Sweden Government
+[2026-06-02T22:03:05]   Sweden Government: +0 entries in 22.4s [poor]
+[2026-06-02T22:10:52]   Skipping Canada Defense — next fetch in ~586m
+[2026-06-02T22:11:59]   Skipping Canada Security — next fetch in ~585m
+[2026-06-02T22:12:45]   Skipping Latvia — next fetch in ~586m
+[2026-06-02T22:13:52]   Skipping Lithuania — next fetch in ~585m
+[2026-06-02T22:14:48]   Skipping Estonia — next fetch in ~583m
+[2026-06-02T22:15:51]   Skipping Finland — next fetch in ~583m
+[2026-06-02T22:16:48]   Skipping Norway — next fetch in ~583m
+[2026-06-02T22:17:26]   Skipping Denmark — next fetch in ~582m
+[2026-06-02T22:18:26]   Skipping Czech Republic — next fetch in ~581m
+[2026-06-02T22:19:43]   Skipping Netherlands — next fetch in ~580m
+[2026-06-02T22:19:43]   Skipping UN News - Global — next fetch in ~581m
+[2026-06-02T22:19:43]   Skipping AP World News — next fetch in ~581m
+[2026-06-02T22:19:43]   Skipping BBC World News — next fetch in ~582m
+[2026-06-02T22:19:43]   Skipping UK Gov News — next fetch in ~581m
+[2026-06-02T22:19:43]   Skipping UN News - All — next fetch in ~582m
+[2026-06-02T22:19:43]   Skipping Taiwan — next fetch in ~580m
+[2026-06-02T22:19:43]   Skipping New Zealand — next fetch in ~582m
+[2026-06-02T22:56:56]   Skipping janes Insights — next fetch in ~59m
+[2026-06-02T23:01:03]   Skipping National Armaments Director Group — next fetch in ~59m
+[2026-06-02T23:03:51]   Skipping defense-aerospace WEB — next fetch in ~59m
+[2026-06-02T23:06:19]   Skipping Spain — next fetch in ~59m
+[2026-06-02T23:09:43]   Skipping Sweden Government — next fetch in ~543m
+[2026-06-04T22:34:55]   Skipping HuggingFace Blog — next fetch in ~687m
+[2026-06-04T22:34:55]   Skipping Understanding AI — next fetch in ~2394m
+[2026-06-04T22:34:55]   Skipping Artificial Intelligence - News — next fetch in ~1664m
+[2026-06-04T22:34:55] Ingesting: Defense News
+[2026-06-04T22:34:55]   Skipping Janes Analysis — next fetch in ~1645m
+[2026-06-04T22:34:55]   Skipping Norway - already queued/running
+[2026-06-04T22:34:55]   Skipping Latvia - already queued/running
+[2026-06-04T22:34:55]   Skipping Netherlands - already queued/running
+[2026-06-04T22:34:55]   Skipping Denmark - already queued/running
+[2026-06-04T22:34:55]   Skipping Taiwan - already queued/running
+[2026-06-04T22:34:55]   Skipping Czech Republic - already queued/running
+[2026-06-04T22:34:55]   Skipping defenceiq - defence-technology - already queued/running
+[2026-06-04T22:34:55]   Skipping ukdefencejournal - already queued/running
+[2026-06-04T22:34:55]   Skipping UN News - Global - already queued/running
+[2026-06-04T22:34:55]   Skipping UK Gov News - already queued/running
+[2026-06-04T22:34:55]   Skipping Canada Security - already queued/running
+[2026-06-04T22:34:55]   Skipping New Zealand - already queued/running
+[2026-06-04T22:34:55]   Skipping Breaking Defense - already queued/running
+[2026-06-04T22:34:55]   Skipping UK Gov - already queued/running
+[2026-06-04T22:34:55]   Skipping Spain - already queued/running
+[2026-06-04T22:34:55]   Skipping janes Insights - already queued/running
+[2026-06-04T22:34:55]   Skipping AP World News - already queued/running
+[2026-06-04T22:34:55]   Skipping Lithuania - already queued/running
+[2026-06-04T22:34:55]   Skipping defenseone - already queued/running
+[2026-06-04T22:34:55]   Skipping BBC World News - already queued/running
+[2026-06-04T22:34:55]   Skipping Sweden Government - already queued/running
+[2026-06-04T22:34:55]   Skipping Estonia - already queued/running
+[2026-06-04T22:34:55]   Skipping defense-aerospace WEB - already queued/running
+[2026-06-04T22:34:55]   Skipping Finland - already queued/running
+[2026-06-04T22:34:55]   Skipping Defense News - already queued/running
+[2026-06-04T22:34:55]   Skipping defenceiq - air-forces-military-aircraft - already queued/running
+[2026-06-04T22:34:55]   Skipping UN News - All - already queued/running
+[2026-06-04T22:34:55]   Skipping Canada Defense - already queued/running
+[2026-06-04T22:34:55]   Skipping National Armaments Director Group - already queued/running
+[2026-06-04T22:35:08]   Defense News: +23 entries in 12.6s [good]
+[2026-06-04T22:35:08] Ingesting: Breaking Defense
+[2026-06-04T22:35:14]   Breaking Defense: +15 entries in 6.4s [good]
+[2026-06-04T22:35:14] Ingesting: defenseone
+[2026-06-04T22:35:30]   defenseone: +11 entries in 16.3s [good]
+[2026-06-04T22:35:30] Ingesting: ukdefencejournal
+[2026-06-04T22:35:34]   ukdefencejournal: +10 entries in 3.3s [good]
+[2026-06-04T22:35:34] Ingesting: defenceiq - defence-technology
+[2026-06-04T22:35:43]   defenceiq - defence-technology: +0 entries in 9.6s [good]
+[2026-06-04T22:35:43] Ingesting: defenceiq - air-forces-military-aircraft
+[2026-06-04T22:36:02]   defenceiq - air-forces-military-aircraft: +0 entries in 18.9s [good]
+[2026-06-04T22:36:02] Web crawl: defense-aerospace WEB (https://www.defense-aerospace.com/)
+[2026-06-04T22:36:03]   defense-aerospace WEB: 29 level-1 candidates
+[2026-06-04T22:36:24]   defense-aerospace WEB: +7 articles from 38 pages in 22.2s [good]
+[2026-06-04T22:36:24] Web crawl: janes Insights (https://www.janes.com/osint-insights/defence-news)
+[2026-06-04T22:36:25]   janes Insights: 15 level-1 candidates
+[2026-06-04T22:36:30]   janes Insights: +15 articles from 15 pages in 5.0s [good]
+[2026-06-04T22:36:30] Web crawl: National Armaments Director Group (https://des.mod.uk/news/?page=1&pageSize=25)
+[2026-06-04T22:36:30]   National Armaments Director Group: 1 level-1 candidates
+[2026-06-04T22:36:30]   National Armaments Director Group: JS-rendered page — delegating to JSON API fallback (25 candidates)
+[2026-06-04T22:36:30] JSON listing: National Armaments Director Group (https://des.mod.uk/api/news?page=1&pageSize=25)
+[2026-06-04T22:36:30]   National Armaments Director Group: 25 article candidates
+[2026-06-04T22:36:37]   National Armaments Director Group: +0 articles from 25 pages in 6.7s [good]
+[2026-06-04T22:36:37] Ingesting: Canada Defense
+[2026-06-04T22:40:44]   Canada Defense: +1 entries in 246.8s [good]
+[2026-06-04T22:40:44] Ingesting: Canada Security
+[2026-06-04T22:41:18]   Canada Security: +1 entries in 34.8s [good]
+[2026-06-04T22:41:18] Ingesting: UK Gov
+[2026-06-04T22:41:25]   UK Gov: +19 entries in 6.3s [good]
+[2026-06-04T22:41:25] Ingesting: Sweden Government
+[2026-06-04T22:41:48]   Sweden Government: +0 entries in 23.5s [poor]
+[2026-06-04T22:41:48] Web crawl: Spain (https://www.lamoncloa.gob.es/lang/en/gobierno/news/Paginas/index.aspx)
+[2026-06-04T22:41:49]   Spain: 6 level-1 candidates
+[2026-06-04T22:41:57]   Spain: +5 articles from 9 pages in 9.0s [good]
+[2026-06-04T22:41:57] Web crawl: Latvia (https://www.mk.gov.lv/en/articles)
+[2026-06-04T22:41:58]   Latvia: 15 level-1 candidates
+[2026-06-04T22:42:08]   Latvia: +0 articles from 25 pages in 10.9s [good]
+[2026-06-04T22:42:08] Ingesting: Lithuania
+[2026-06-04T22:42:49]   Lithuania: +18 entries in 40.8s [good]
+[2026-06-04T22:42:49] Ingesting: Estonia
+[2026-06-04T22:43:20]   Estonia: +2 entries in 31.5s [good]
+[2026-06-04T22:43:20] Web crawl: Finland (https://valtioneuvosto.fi/en/frontpage)
+[2026-06-04T22:43:21]   Finland: 20 level-1 candidates
+[2026-06-04T22:43:37]   Finland: +8 articles from 20 pages in 16.3s [good]
+[2026-06-04T22:43:37] Web crawl: Norway (https://www.regjeringen.no/en/id4/)
+[2026-06-04T22:43:37]   Norway: 21 level-1 candidates
+[2026-06-04T22:43:58]   Norway: +1 articles from 39 pages in 21.0s [good]
+[2026-06-04T22:43:58] Web crawl: Denmark (https://stm.dk/en/press/press-releases/)
+[2026-06-04T22:43:58]   Denmark: 1 level-1 candidates
+[2026-06-04T22:43:59]   Denmark: no links found; page may require JS rendering
+[2026-06-04T22:43:59]   Denmark: +0 articles from 1 pages in 1.4s [poor]
+[2026-06-04T22:43:59] Ingesting: Czech Republic
+[2026-06-04T22:44:00]   Czech Republic: +0 entries in 0.7s [good]
+[2026-06-04T22:44:00] Web crawl: Netherlands (https://www.government.nl/latest)
+[2026-06-04T22:44:00]   Netherlands: 19 level-1 candidates
+[2026-06-04T22:44:10]   Netherlands: +0 articles from 24 pages in 10.6s [good]
+[2026-06-04T22:44:10] Ingesting: New Zealand
+[2026-06-04T22:44:24]   New Zealand: +18 entries in 13.7s [good]
+[2026-06-04T22:44:24] Ingesting: Taiwan
+[2026-06-04T22:44:47]   Taiwan: +8 entries in 22.6s [good]
+[2026-06-04T22:44:47] Ingesting: UN News - Global
+[2026-06-04T22:45:08]   UN News - Global: +7 entries in 21.4s [good]
+[2026-06-04T22:45:08] Ingesting: UK Gov News
+[2026-06-04T22:45:14]   UK Gov News: +19 entries in 5.5s [good]
+[2026-06-04T22:45:14] Ingesting: UN News - All
+[2026-06-04T22:45:32]   UN News - All: +12 entries in 17.9s [good]
+[2026-06-04T22:45:32] Ingesting: BBC World News
+[2026-06-04T22:45:44]   BBC World News: +33 entries in 12.6s [good]
+[2026-06-04T22:45:44] Web crawl: AP World News (https://apnews.com/world-news)
+[2026-06-04T22:45:44]   AP World News: 50 level-1 candidates
+[2026-06-04T22:45:55] Catch-up check: enqueueing most overdue feed AP World News (overdue ~2324m)
+[2026-06-04T22:45:55]   Skipping AP World News - already queued/running
+[2026-06-04T22:46:23]   AP World News: +38 articles from 57 pages in 39.0s [good]
+[2026-06-05T01:34:55] Daily prune: AiNews — 1 entries removed
+[2026-06-05T12:41:42] Ingesting: Taiwan
+[2026-06-05T12:41:42] Catch-up check: enqueueing most overdue feed UK Gov (overdue ~480m)
+[2026-06-05T12:41:42]   Skipping UK Gov - already queued/running
+[2026-06-05T12:42:06]   Taiwan: +6 entries in 23.3s [good]
+[2026-06-05T12:42:06] Web crawl: Latvia (https://www.mk.gov.lv/en/articles)
+[2026-06-05T12:42:06]   Latvia: 15 level-1 candidates
+[2026-06-05T12:42:30]   Latvia: +0 articles from 25 pages in 24.5s [good]
+[2026-06-05T12:42:30] Web crawl: Denmark (https://stm.dk/en/press/press-releases/)
+[2026-06-05T12:42:31]   Denmark: 1 level-1 candidates
+[2026-06-05T12:42:31]   Denmark: no links found; page may require JS rendering
+[2026-06-05T12:42:32]   Denmark: +0 articles from 1 pages in 1.4s [poor]
+[2026-06-05T12:42:32] Ingesting: UK Gov News
+[2026-06-05T12:42:37]   UK Gov News: +9 entries in 5.8s [good]
+[2026-06-05T12:42:37] Web crawl: Norway (https://www.regjeringen.no/en/id4/)
+[2026-06-05T12:42:38]   Norway: 21 level-1 candidates
+[2026-06-05T12:42:59]   Norway: +0 articles from 39 pages in 21.3s [good]
+[2026-06-05T12:42:59] Ingesting: UK Gov
+[2026-06-05T12:43:04]   UK Gov: +9 entries in 4.9s [good]
+[2026-06-05T12:43:04] Ingesting: Czech Republic
+[2026-06-05T14:01:38]   Czech Republic: ConnectError: [WinError 10054] An existing connection was forcibly closed by the remote host
+[2026-06-05T14:01:38] Web crawl: Netherlands (https://www.government.nl/latest)
+[2026-06-05T14:01:39]   Netherlands: 19 level-1 candidates
+[2026-06-05T14:01:53]   Netherlands: +0 articles from 24 pages in 14.1s [good]
+[2026-06-05T14:01:53] Ingesting: UN News - Global
+[2026-06-05T14:02:12]   UN News - Global: +2 entries in 19.5s [good]
+[2026-06-05T14:02:12] Ingesting: Canada Security
+[2026-06-05T14:02:42]   Canada Security: +0 entries in 30.2s [good]
+[2026-06-05T14:02:42] Ingesting: New Zealand
+[2026-06-05T14:02:55]   New Zealand: +5 entries in 12.5s [good]
+[2026-06-05T14:02:55] Ingesting: Lithuania
+[2026-06-05T14:03:21]   Lithuania: +4 entries in 26.3s [good]
+[2026-06-05T14:03:21] Ingesting: Estonia
+[2026-06-05T14:04:03]   Estonia: +1 entries in 42.1s [good]
+[2026-06-05T14:04:03] Web crawl: Finland (https://valtioneuvosto.fi/en/frontpage)
+[2026-06-05T14:04:04]   Finland: 20 level-1 candidates
+[2026-06-05T14:04:22]   Finland: +4 articles from 20 pages in 18.7s [good]
+[2026-06-05T14:04:22] Web crawl: AP World News (https://apnews.com/world-news)
+[2026-06-05T14:04:22]   AP World News: 50 level-1 candidates
+[2026-06-05T14:04:51]   AP World News: +27 articles from 56 pages in 29.2s [good]
+[2026-06-05T14:04:51] Ingesting: BBC World News
+[2026-06-05T14:05:02]   BBC World News: +15 entries in 11.3s [good]
+[2026-06-05T14:05:02] Ingesting: Canada Defense
+[2026-06-05T14:09:21]   Canada Defense: +0 entries in 258.3s [good]
+[2026-06-05T14:09:21] Ingesting: UN News - All
+[2026-06-05T14:09:40]   UN News - All: +2 entries in 19.5s [good]
+[2026-06-05T14:09:40] Ingesting: HuggingFace Blog
+[2026-06-05T14:09:48]   HuggingFace Blog: +5 entries in 8.1s [good]
+[2026-06-05T14:09:48] Ingesting: Sweden Government
+[2026-06-05T14:09:55] Catch-up check: enqueueing most overdue feed Czech Republic (overdue ~325m)
+[2026-06-05T14:10:12]   Sweden Government: +1 entries in 23.3s [poor]
+[2026-06-05T14:10:12] Ingesting: Czech Republic
+[2026-06-05T14:10:12]   Czech Republic: +0 entries in 0.5s [none]
+[2026-06-05T15:34:55]   Skipping UK Gov — next fetch in ~188m
+[2026-06-05T17:34:55]   Skipping Norway — next fetch in ~308m
+[2026-06-05T17:34:55]   Skipping Denmark — next fetch in ~307m
+[2026-06-05T17:34:55]   Skipping Taiwan — next fetch in ~307m
+[2026-06-05T17:34:55]   Skipping Netherlands — next fetch in ~386m
+[2026-06-05T17:34:55]   Skipping UN News - Global — next fetch in ~387m
+[2026-06-05T17:34:55]   Skipping Latvia — next fetch in ~307m
+[2026-06-05T17:34:55]   Skipping Czech Republic — next fetch in ~395m
+[2026-06-05T17:34:55]   Skipping UK Gov News — next fetch in ~307m
+[2026-06-05T17:34:55]   Skipping New Zealand — next fetch in ~387m
+[2026-06-05T17:34:55]   Skipping Canada Security — next fetch in ~387m
+[2026-06-05T17:34:55]   Skipping AP World News — next fetch in ~389m
+[2026-06-05T17:34:55]   Skipping Lithuania — next fetch in ~388m
+[2026-06-05T17:34:55]   Skipping BBC World News — next fetch in ~390m
+[2026-06-05T17:34:55]   Skipping Estonia — next fetch in ~389m
+[2026-06-05T17:34:55]   Skipping Finland — next fetch in ~389m
+[2026-06-05T17:34:55]   Skipping UN News - All — next fetch in ~394m
+[2026-06-05T17:34:55]   Skipping Canada Defense — next fetch in ~394m
+[2026-06-05T17:54:55]   Skipping Sweden Government — next fetch in ~385m
+[2026-06-05T18:43:55] Catch-up check: enqueueing most overdue feed UK Gov (overdue ~0m)
+[2026-06-05T18:43:55] Ingesting: UK Gov
+[2026-06-05T18:44:01]   UK Gov: +10 entries in 6.1s [good]
+[2026-06-05T21:58:33]   Skipping UK Gov — next fetch in ~165m
+[2026-06-05T22:42:55] Catch-up check: enqueueing most overdue feed Taiwan (overdue ~0m)
+[2026-06-05T22:42:55] Ingesting: Taiwan
+[2026-06-05T22:43:17]   Taiwan: +1 entries in 22.3s [good]
+[2026-06-05T22:43:55] Catch-up check: enqueueing most overdue feed Latvia (overdue ~1m)
+[2026-06-05T22:43:55] Web crawl: Latvia (https://www.mk.gov.lv/en/articles)
+[2026-06-05T22:43:56]   Latvia: 15 level-1 candidates
+[2026-06-05T22:44:14]   Latvia: +0 articles from 25 pages in 19.2s [good]
+[2026-06-05T22:44:55] Catch-up check: enqueueing most overdue feed Denmark (overdue ~2m)
+[2026-06-05T22:44:55] Web crawl: Denmark (https://stm.dk/en/press/press-releases/)
+[2026-06-05T22:44:56]   Denmark: 1 level-1 candidates
+[2026-06-05T22:44:56]   Denmark: no links found; page may require JS rendering
+[2026-06-05T22:44:57]   Denmark: +0 articles from 1 pages in 1.5s [poor]
+[2026-06-05T22:45:55] Catch-up check: enqueueing most overdue feed UK Gov News (overdue ~3m)
+[2026-06-05T22:45:55] Ingesting: UK Gov News
+[2026-06-05T22:46:02]   UK Gov News: +10 entries in 6.7s [good]
+[2026-06-05T22:46:55] Catch-up check: enqueueing most overdue feed Norway (overdue ~3m)
+[2026-06-05T22:46:55] Web crawl: Norway (https://www.regjeringen.no/en/id4/)
+[2026-06-05T22:46:55]   Norway: 21 level-1 candidates
+[2026-06-05T22:47:17]   Norway: +0 articles from 39 pages in 21.9s [good]
+[2026-06-06T00:01:55] Catch-up check: enqueueing most overdue feed Netherlands (overdue ~0m)
+[2026-06-06T00:01:55] Web crawl: Netherlands (https://www.government.nl/latest)
+[2026-06-06T00:01:55]   Netherlands: 19 level-1 candidates
+[2026-06-06T00:02:07]   Netherlands: +0 articles from 24 pages in 11.8s [good]
+[2026-06-06T00:02:55] Catch-up check: enqueueing most overdue feed UN News - Global (overdue ~0m)
+[2026-06-06T00:02:55] Ingesting: UN News - Global
+[2026-06-06T00:03:14]   UN News - Global: +0 entries in 18.8s [good]
+[2026-06-06T00:03:55] Catch-up check: enqueueing most overdue feed Canada Security (overdue ~1m)
+[2026-06-06T00:03:55] Ingesting: Canada Security
+[2026-06-06T00:04:25]   Canada Security: +0 entries in 30.3s [good]
+[2026-06-06T00:04:55] Catch-up check: enqueueing most overdue feed New Zealand (overdue ~2m)
+[2026-06-06T00:04:55] Ingesting: New Zealand
+[2026-06-06T00:05:08]   New Zealand: +1 entries in 13.1s [good]
+[2026-06-06T00:05:55] Catch-up check: enqueueing most overdue feed Lithuania (overdue ~2m)
+[2026-06-06T00:05:55] Ingesting: Lithuania
+[2026-06-06T00:06:20]   Lithuania: +3 entries in 25.3s [good]
+[2026-06-06T00:06:55] Catch-up check: enqueueing most overdue feed Estonia (overdue ~2m)
+[2026-06-06T00:06:55] Ingesting: Estonia
+[2026-06-06T00:07:33]   Estonia: +0 entries in 37.6s [good]
+[2026-06-06T00:07:55] Catch-up check: enqueueing most overdue feed Finland (overdue ~3m)
+[2026-06-06T00:07:55] Web crawl: Finland (https://valtioneuvosto.fi/en/frontpage)
+[2026-06-06T00:07:56]   Finland: 20 level-1 candidates
+[2026-06-06T00:08:18]   Finland: +0 articles from 20 pages in 22.8s [good]
+[2026-06-06T00:08:55] Catch-up check: enqueueing most overdue feed AP World News (overdue ~4m)
+[2026-06-06T00:08:55] Web crawl: AP World News (https://apnews.com/world-news)
+[2026-06-06T00:08:55]   AP World News: 50 level-1 candidates
+[2026-06-06T00:09:27]   AP World News: +10 articles from 59 pages in 32.0s [good]
+[2026-06-06T00:09:55] Catch-up check: enqueueing most overdue feed BBC World News (overdue ~4m)
+[2026-06-06T00:09:55] Ingesting: BBC World News
+[2026-06-06T00:10:08]   BBC World News: +7 entries in 12.6s [good]
+[2026-06-06T00:10:55] Catch-up check: enqueueing most overdue feed Canada Defense (overdue ~1m)
+[2026-06-06T00:10:55] Ingesting: Canada Defense
+[2026-06-06T00:11:55] Catch-up check: enqueueing most overdue feed Canada Defense (overdue ~2m)
+[2026-06-06T00:11:55]   Skipping Canada Defense - already queued/running
+[2026-06-06T00:12:28]   Skipping Canada Defense - already queued/running
+[2026-06-06T00:12:28]   Skipping UK Gov — next fetch in ~31m
+[2026-06-06T00:12:28]   Skipping Sweden Government — next fetch in ~7m
+[2026-06-06T00:14:46]   Canada Defense: +0 entries in 231.0s [good]
+[2026-06-06T00:14:46] Ingesting: Czech Republic
+[2026-06-06T00:14:47]   Czech Republic: +0 entries in 0.8s [none]
+[2026-06-06T00:14:47] Ingesting: UN News - All
+[2026-06-06T00:15:08]   UN News - All: +1 entries in 21.3s [good]
+[2026-06-06T01:00:52]   Skipping Janes Analysis — next fetch in ~59m
+[2026-06-06T01:19:11]   Skipping Artificial Intelligence - News — next fetch in ~59m
+[2026-06-06T09:58:53]   Skipping Canada Security — next fetch in ~5m
+[2026-06-06T09:58:53] Web crawl: Denmark (https://stm.dk/en/press/press-releases/)
+[2026-06-06T09:58:53]   Skipping UN News - Global — next fetch in ~4m
+[2026-06-06T09:58:53]   Skipping New Zealand — next fetch in ~6m
+[2026-06-06T09:58:53]   Skipping Netherlands — next fetch in ~3m
+[2026-06-06T09:58:53]   Skipping AP World News — next fetch in ~10m
+[2026-06-06T09:58:53]   Skipping Estonia — next fetch in ~8m
+[2026-06-06T09:58:53]   Skipping Lithuania — next fetch in ~7m
+[2026-06-06T09:58:53]   Skipping BBC World News — next fetch in ~11m
+[2026-06-06T09:58:53]   Skipping Finland — next fetch in ~9m
+[2026-06-06T09:58:53]   Skipping UN News - All — next fetch in ~16m
+[2026-06-06T09:58:53]   Skipping Canada Defense — next fetch in ~15m
+[2026-06-06T09:58:53]   Denmark: 1 level-1 candidates
+[2026-06-06T09:58:54]   Denmark: no links found; page may require JS rendering
+[2026-06-06T09:58:54]   Denmark: +0 articles from 1 pages in 1.4s [poor]
+[2026-06-06T09:58:54] Web crawl: Latvia (https://www.mk.gov.lv/en/articles)
+[2026-06-06T09:58:55]   Latvia: 15 level-1 candidates
+[2026-06-06T09:59:21]   Latvia: +0 articles from 25 pages in 26.4s [good]
+[2026-06-06T09:59:21] Ingesting: UK Gov
+[2026-06-06T09:59:27]   UK Gov: +0 entries in 6.1s [good]
+[2026-06-06T09:59:27] Ingesting: Taiwan
+[2026-06-06T09:59:48]   Taiwan: +0 entries in 21.3s [good]
+[2026-06-06T09:59:48] Ingesting: UK Gov News
+[2026-06-06T09:59:53]   UK Gov News: +0 entries in 5.0s [good]
+[2026-06-06T09:59:53] Web crawl: Norway (https://www.regjeringen.no/en/id4/)
+[2026-06-06T09:59:53]   Norway: 21 level-1 candidates
+[2026-06-06T10:00:16]   Norway: +0 articles from 39 pages in 23.1s [good]
+[2026-06-06T10:00:16] Ingesting: Sweden Government
+[2026-06-06T10:00:39]   Sweden Government: +0 entries in 23.1s [poor]
+[2026-06-06T11:44:01]   Skipping UK Gov — next fetch in ~255m
+[2026-06-06T13:28:58]   Skipping Understanding AI — next fetch in ~59m
+[2026-06-06T17:43:17]   Skipping Taiwan — next fetch in ~136m
+[2026-06-06T17:44:01] Ingesting: UK Gov
+[2026-06-06T17:44:07]   UK Gov: +1 entries in 6.2s [good]
+[2026-06-06T17:44:14]   Skipping Latvia — next fetch in ~135m
+[2026-06-06T17:44:57]   Skipping Denmark — next fetch in ~133m
+[2026-06-06T17:46:02]   Skipping UK Gov News — next fetch in ~133m
+[2026-06-06T17:47:17]   Skipping Norway — next fetch in ~132m
+[2026-06-06T18:33:57]   Skipping HuggingFace Blog — next fetch in ~1895m
+[2026-06-06T18:33:57] Ingesting: Understanding AI
+[2026-06-06T18:33:57]   Skipping Defense News — next fetch in ~359m
+[2026-06-06T18:33:57]   Skipping Breaking Defense — next fetch in ~368m
+[2026-06-06T18:33:57]   Skipping defenseone — next fetch in ~364m
+[2026-06-06T18:33:57]   Skipping ukdefencejournal — next fetch in ~360m
+[2026-06-06T18:33:57]   Skipping defenceiq - defence-technology — next fetch in ~362m
+[2026-06-06T18:33:57] Daily prune: AiNews — 2 entries removed
+[2026-06-06T18:33:57]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~359m
+[2026-06-06T18:33:57]   Skipping defense-aerospace WEB — next fetch in ~3365m
+[2026-06-06T18:33:57]   Skipping janes Insights — next fetch in ~3358m
+[2026-06-06T18:33:57]   Skipping National Armaments Director Group — next fetch in ~3362m
+[2026-06-06T18:33:57]   Skipping UK Gov — next fetch in ~310m
+[2026-06-06T18:33:57]   Skipping Sweden Government — next fetch in ~96m
+[2026-06-06T18:33:57]   Skipping Spain — next fetch in ~3367m
+[2026-06-06T18:33:57]   Skipping Latvia — next fetch in ~85m
+[2026-06-06T18:33:57]   Skipping Norway — next fetch in ~86m
+[2026-06-06T18:33:57]   Skipping Denmark — next fetch in ~84m
+[2026-06-06T18:33:57]   Skipping Taiwan — next fetch in ~85m
+[2026-06-06T18:33:57]   Skipping UK Gov News — next fetch in ~85m
+[2026-06-06T18:33:57]   Skipping Netherlands - already queued/running
+[2026-06-06T18:33:57]   Skipping Understanding AI - already queued/running
+[2026-06-06T18:33:57]   Skipping UN News - Global - already queued/running
+[2026-06-06T18:33:57]   Skipping Janes Analysis - already queued/running
+[2026-06-06T18:33:57]   Skipping Canada Security - already queued/running
+[2026-06-06T18:33:57]   Skipping New Zealand - already queued/running
+[2026-06-06T18:33:57]   Skipping Artificial Intelligence - News - already queued/running
+[2026-06-06T18:33:57]   Skipping AP World News - already queued/running
+[2026-06-06T18:33:57]   Skipping BBC World News - already queued/running
+[2026-06-06T18:33:57]   Skipping Lithuania - already queued/running
+[2026-06-06T18:33:57]   Skipping Estonia - already queued/running
+[2026-06-06T18:33:57]   Skipping Finland - already queued/running
+[2026-06-06T18:33:57]   Skipping UN News - All - already queued/running
+[2026-06-06T18:33:57]   Skipping Canada Defense - already queued/running
+[2026-06-06T18:33:59]   Understanding AI: +0 entries in 2.0s [good]
+[2026-06-06T18:33:59] Web crawl: Artificial Intelligence - News (https://www.artificialintelligence-news.com/)
+[2026-06-06T18:34:00]   Artificial Intelligence - News: 50 level-1 candidates
+[2026-06-06T18:34:15]   Artificial Intelligence - News: +15 articles from 50 pages in 16.5s [good]
+[2026-06-06T18:34:15] Web crawl: Janes Analysis (https://www.janes.com/defence-intelligence-insights/defence-and-national-security-analysis)
+[2026-06-06T18:34:16]   Janes Analysis: 15 level-1 candidates
+[2026-06-06T18:34:24]   Janes Analysis: +0 articles from 15 pages in 8.1s [good]
+[2026-06-06T18:34:24] Ingesting: Canada Defense
+[2026-06-06T18:35:57]   Skipping manual trigger for Lithuania - already queued/running
+[2026-06-06T18:38:28]   Canada Defense: +0 entries in 244.5s [good]
+[2026-06-06T18:38:28] Ingesting: Canada Security
+[2026-06-06T18:39:06]   Canada Security: +0 entries in 38.2s [good]
+[2026-06-06T18:39:06] Ingesting: Lithuania
+[2026-06-06T18:39:32]   Lithuania: +2 entries in 25.9s [good]
+[2026-06-06T18:39:32] Ingesting: Estonia
+[2026-06-06T18:40:14]   Estonia: +0 entries in 41.3s [good]
+[2026-06-06T18:40:14] Web crawl: Finland (https://valtioneuvosto.fi/en/frontpage)
+[2026-06-06T18:40:15]   Finland: 21 level-1 candidates
+[2026-06-06T18:40:31]   Finland: +1 articles from 21 pages in 17.5s [good]
+[2026-06-06T18:40:31] Web crawl: Netherlands (https://www.government.nl/latest)
+[2026-06-06T18:40:32]   Netherlands: 19 level-1 candidates
+[2026-06-06T18:40:43]   Netherlands: +0 articles from 24 pages in 12.1s [good]
+[2026-06-06T18:40:43] Ingesting: New Zealand
+[2026-06-06T18:40:56]   New Zealand: +1 entries in 13.0s [good]
+[2026-06-06T18:40:56] Ingesting: UN News - Global
+[2026-06-06T18:41:17]   UN News - Global: +2 entries in 20.3s [good]
+[2026-06-06T18:41:17] Ingesting: UN News - All
+[2026-06-06T18:41:33]   UN News - All: +2 entries in 16.3s [good]
+[2026-06-06T18:41:33] Ingesting: BBC World News
+[2026-06-06T18:41:47]   BBC World News: +20 entries in 14.5s [good]
+[2026-06-06T18:41:47] Web crawl: AP World News (https://apnews.com/world-news)
+[2026-06-06T18:41:48]   AP World News: 50 level-1 candidates
+[2026-06-06T18:41:57] Catch-up check: enqueueing most overdue feed AP World News (overdue ~512m)
+[2026-06-06T18:41:57]   Skipping AP World News - already queued/running
+[2026-06-06T18:42:14]   AP World News: +23 articles from 51 pages in 26.6s [good]
+[2026-06-06T18:58:54]   Skipping Denmark — next fetch in ~59m
+[2026-06-06T18:59:20]   Skipping Latvia — next fetch in ~59m
+[2026-06-06T18:59:48]   Skipping Taiwan — next fetch in ~59m
+[2026-06-06T18:59:53]   Skipping UK Gov News — next fetch in ~59m
+[2026-06-06T19:00:16]   Skipping Norway — next fetch in ~59m
+[2026-06-06T19:10:39]   Skipping Sweden Government — next fetch in ~59m
+[2026-06-06T19:58:57] Catch-up check: enqueueing most overdue feed Denmark (overdue ~0m)
+[2026-06-06T19:58:57] Web crawl: Denmark (https://stm.dk/en/press/press-releases/)
+[2026-06-06T19:58:58]   Denmark: 1 level-1 candidates
+[2026-06-06T19:58:58]   Denmark: no links found; page may require JS rendering
+[2026-06-06T19:58:59]   Denmark: +0 articles from 1 pages in 1.7s [poor]
+[2026-06-06T19:59:57] Catch-up check: enqueueing most overdue feed Latvia (overdue ~0m)
+[2026-06-06T19:59:57] Web crawl: Latvia (https://www.mk.gov.lv/en/articles)
+[2026-06-06T19:59:58]   Latvia: 15 level-1 candidates
+[2026-06-06T20:00:49]   Latvia: +0 articles from 25 pages in 52.0s [good]
+[2026-06-06T20:00:57] Catch-up check: enqueueing most overdue feed Taiwan (overdue ~1m)
+[2026-06-06T20:00:57] Ingesting: Taiwan
+[2026-06-06T20:01:18]   Taiwan: +0 entries in 21.2s [good]
+[2026-06-06T20:01:57] Catch-up check: enqueueing most overdue feed UK Gov News (overdue ~2m)
+[2026-06-06T20:01:57] Ingesting: UK Gov News
+[2026-06-06T20:02:03]   UK Gov News: +1 entries in 6.4s [good]
+[2026-06-06T20:02:57] Catch-up check: enqueueing most overdue feed Norway (overdue ~2m)
+[2026-06-06T20:02:57] Web crawl: Norway (https://www.regjeringen.no/en/id4/)
+[2026-06-06T20:02:58]   Norway: 21 level-1 candidates
+[2026-06-06T20:03:21]   Norway: +0 articles from 39 pages in 24.0s [good]
+[2026-06-06T20:10:57] Catch-up check: enqueueing most overdue feed Sweden Government (overdue ~0m)
+[2026-06-06T20:10:57] Ingesting: Sweden Government
+[2026-06-06T20:11:21]   Sweden Government: +0 entries in 24.3s [poor]
+[2026-06-06T22:44:07]   Skipping UK Gov — next fetch in ~59m
+[2026-06-06T23:33:02]   Skipping defenceiq - air-forces-military-aircraft — next fetch in ~59m
+[2026-06-06T23:33:08]   Skipping Defense News — next fetch in ~59m
+[2026-06-06T23:34:34]   Skipping ukdefencejournal — next fetch in ~59m
+[2026-06-06T23:36:43]   Skipping defenceiq - defence-technology — next fetch in ~59m
+[2026-06-06T23:38:30]   Skipping defenseone — next fetch in ~59m
+[2026-06-06T23:42:14]   Skipping Breaking Defense — next fetch in ~59m
+[2026-06-06T23:44:57] Catch-up check: enqueueing most overdue feed UK Gov (overdue ~0m)
+[2026-06-06T23:44:57] Ingesting: UK Gov
+[2026-06-06T23:45:03]   UK Gov: +1 entries in 6.2s [good]
+[2026-06-07T00:33:57] Catch-up check: enqueueing most overdue feed defenceiq - air-forces-military-aircraft (overdue ~0m)
+[2026-06-07T00:33:57] Ingesting: defenceiq - air-forces-military-aircraft
+[2026-06-07T00:34:15]   defenceiq - air-forces-military-aircraft: +0 entries in 18.5s [good]
+[2026-06-07T00:34:57] Catch-up check: enqueueing most overdue feed Defense News (overdue ~1m)
+[2026-06-07T00:34:57] Ingesting: Defense News
+[2026-06-07T00:35:11]   Defense News: +7 entries in 14.3s [good]
+[2026-06-07T00:35:57] Catch-up check: enqueueing most overdue feed ukdefencejournal (overdue ~1m)
+[2026-06-07T00:35:57] Ingesting: ukdefencejournal
+[2026-06-07T00:36:01]   ukdefencejournal: +10 entries in 3.6s [good]
+[2026-06-07T00:36:57] Catch-up check: enqueueing most overdue feed defenceiq - defence-technology (overdue ~0m)
+[2026-06-07T00:36:57] Ingesting: defenceiq - defence-technology
+[2026-06-07T00:37:05]   defenceiq - defence-technology: +0 entries in 7.9s [good]
+[2026-06-07T00:38:57] Catch-up check: enqueueing most overdue feed defenseone (overdue ~0m)
+[2026-06-07T00:38:57] Ingesting: defenseone
+[2026-06-07T00:39:17]   defenseone: +4 entries in 20.2s [good]
+[2026-06-07T00:42:57] Catch-up check: enqueueing most overdue feed Breaking Defense (overdue ~0m)
+[2026-06-07T00:42:57] Ingesting: Breaking Defense
+[2026-06-07T00:43:04]   Breaking Defense: +9 entries in 6.7s [good]
+[2026-06-07T03:33:57]   Skipping UN News - All — next fetch in ~67m
+[2026-06-07T03:33:57]   Skipping Netherlands — next fetch in ~66m
+[2026-06-07T03:33:57]   Skipping UN News - Global — next fetch in ~67m
+[2026-06-07T03:33:57]   Skipping BBC World News — next fetch in ~67m
+[2026-06-07T03:33:57]   Skipping Finland — next fetch in ~66m
+[2026-06-07T03:33:57]   Skipping AP World News — next fetch in ~68m
+[2026-06-07T03:33:57]   Skipping New Zealand — next fetch in ~66m
+[2026-06-07T03:33:57]   Skipping Lithuania — next fetch in ~65m
+[2026-06-07T03:33:57]   Skipping Canada Security — next fetch in ~65m
+[2026-06-07T03:33:57]   Skipping Estonia — next fetch in ~66m
+[2026-06-07T03:33:57]   Skipping Canada Defense — next fetch in ~64m
+[2026-06-07T09:24:07] Catch-up check: enqueueing most overdue feed Canada Defense (overdue ~285m)
+[2026-06-07T09:24:07] Ingesting: UK Gov
+[2026-06-07T09:24:13]   UK Gov: +0 entries in 6.0s [good]
+[2026-06-07T09:24:13] Web crawl: Denmark (https://stm.dk/en/press/press-releases/)
+[2026-06-07T09:24:13]   Denmark: 1 level-1 candidates
+[2026-06-07T09:24:13]   Denmark: no links found; page may require JS rendering
+[2026-06-07T09:24:14]   Denmark: +0 articles from 1 pages in 1.3s [poor]
+[2026-06-07T09:24:14] Web crawl: Latvia (https://www.mk.gov.lv/en/articles)
+[2026-06-07T09:24:14]   Latvia: 15 level-1 candidates
+[2026-06-07T09:24:35]   Latvia: +0 articles from 25 pages in 21.2s [good]
+[2026-06-07T09:24:35] Web crawl: Norway (https://www.regjeringen.no/en/id4/)
+[2026-06-07T09:24:35]   Norway: 21 level-1 candidates
+[2026-06-07T09:24:56]   Norway: +0 articles from 39 pages in 20.5s [good]
+[2026-06-07T09:24:56] Ingesting: Taiwan
+[2026-06-07T09:25:16]   Taiwan: +0 entries in 20.8s [good]
+[2026-06-07T09:25:16] Ingesting: UK Gov News
+[2026-06-07T09:25:21]   UK Gov News: +1 entries in 4.9s [good]
+[2026-06-07T09:25:21] Ingesting: Sweden Government
+[2026-06-07T09:25:44]   Sweden Government: +0 entries in 23.2s [poor]
+[2026-06-07T09:25:44] Ingesting: Canada Defense
+[2026-06-07T09:25:57] Catch-up check: enqueueing most overdue feed Canada Defense (overdue ~287m)
+[2026-06-07T09:25:57]   Skipping Canada Defense - already queued/running
+[2026-06-07T09:26:57] Catch-up check: enqueueing most overdue feed Canada Defense (overdue ~288m)
+[2026-06-07T09:26:57]   Skipping Canada Defense - already queued/running
+[2026-06-07T09:27:57] Catch-up check: enqueueing most overdue feed Canada Defense (overdue ~289m)
+[2026-06-07T09:27:57]   Skipping Canada Defense - already queued/running
+[2026-06-07T09:28:57] Catch-up check: enqueueing most overdue feed Canada Defense (overdue ~290m)
+[2026-06-07T09:28:57]   Skipping Canada Defense - already queued/running
+[2026-06-07T09:29:57] Catch-up check: enqueueing most overdue feed Canada Defense (overdue ~291m)
+[2026-06-07T09:29:57]   Skipping Canada Defense - already queued/running
+[2026-06-07T09:30:09]   Canada Defense: +0 entries in 264.8s [good]
+[2026-06-07T09:30:57] Catch-up check: enqueueing most overdue feed Canada Security (overdue ~291m)
+[2026-06-07T09:30:57] Ingesting: Canada Security
+[2026-06-07T09:31:30]   Canada Security: +0 entries in 33.5s [good]
+[2026-06-07T09:31:57] Catch-up check: enqueueing most overdue feed Lithuania (overdue ~292m)
+[2026-06-07T09:31:57] Ingesting: Lithuania
+[2026-06-07T09:32:23]   Lithuania: +1 entries in 25.6s [good]
+[2026-06-07T09:32:57] Catch-up check: enqueueing most overdue feed Estonia (overdue ~292m)
+[2026-06-07T09:32:57] Ingesting: Estonia
+[2026-06-07T09:33:34]   Estonia: +0 entries in 37.3s [good]
+[2026-06-07T09:33:57] Catch-up check: enqueueing most overdue feed Finland (overdue ~293m)
+[2026-06-07T09:33:57] Web crawl: Finland (https://valtioneuvosto.fi/en/frontpage)
+[2026-06-07T09:33:58]   Finland: 21 level-1 candidates
+[2026-06-07T09:34:13]   Finland: +0 articles from 21 pages in 16.2s [good]
+[2026-06-07T09:34:57] Catch-up check: enqueueing most overdue feed Netherlands (overdue ~294m)
+[2026-06-07T09:34:57] Web crawl: Netherlands (https://www.government.nl/latest)
+[2026-06-07T09:34:58]   Netherlands: 19 level-1 candidates
+[2026-06-07T09:35:09]   Netherlands: +0 articles from 24 pages in 12.0s [good]
+[2026-06-07T09:35:57] Catch-up check: enqueueing most overdue feed New Zealand (overdue ~295m)
+[2026-06-07T09:35:57] Ingesting: New Zealand
+[2026-06-07T09:36:11]   New Zealand: +1 entries in 13.6s [good]
+[2026-06-07T09:36:57] Catch-up check: enqueueing most overdue feed UN News - Global (overdue ~295m)
+[2026-06-07T09:36:57] Ingesting: UN News - Global
+[2026-06-07T09:37:20]   UN News - Global: +0 entries in 23.1s [good]
+[2026-06-07T09:37:57] Catch-up check: enqueueing most overdue feed UN News - All (overdue ~296m)
+[2026-06-07T09:37:57] Ingesting: UN News - All
+[2026-06-07T09:38:13]   UN News - All: +0 entries in 16.0s [good]
+[2026-06-07T09:38:57] Catch-up check: enqueueing most overdue feed BBC World News (overdue ~297m)
+[2026-06-07T09:38:57] Ingesting: BBC World News
+[2026-06-07T09:39:08]   BBC World News: +8 entries in 10.6s [good]
+[2026-06-07T09:39:57] Catch-up check: enqueueing most overdue feed AP World News (overdue ~297m)
+[2026-06-07T09:39:57] Web crawl: AP World News (https://apnews.com/world-news)
+[2026-06-07T09:39:57]   AP World News: 50 level-1 candidates
+[2026-06-07T09:40:38]   AP World News: +10 articles from 51 pages in 40.6s [good]
+[2026-06-07T10:44:07]   Skipping UK Gov — next fetch in ~280m
+[2026-06-07T13:33:57]   Skipping UN News - All — next fetch in ~364m
+[2026-06-07T13:33:57]   Skipping UN News - Global — next fetch in ~363m
+[2026-06-07T13:33:57]   Skipping Canada Security — next fetch in ~357m
+[2026-06-07T13:33:57]   Skipping Lithuania — next fetch in ~358m
+[2026-06-07T13:33:57]   Skipping Finland — next fetch in ~360m
+[2026-06-07T13:33:57]   Skipping BBC World News — next fetch in ~365m
+[2026-06-07T13:33:57]   Skipping New Zealand — next fetch in ~362m
+[2026-06-07T13:33:57]   Skipping AP World News — next fetch in ~366m
+[2026-06-07T13:33:57]   Skipping Netherlands — next fetch in ~361m
+[2026-06-07T13:33:57]   Skipping Estonia — next fetch in ~359m
+[2026-06-07T13:33:57]   Skipping Canada Defense — next fetch in ~356m
+[2026-06-07T14:58:54]   Skipping Denmark — next fetch in ~265m
+[2026-06-07T14:59:20]   Skipping Latvia — next fetch in ~265m
+[2026-06-07T14:59:48]   Skipping Taiwan — next fetch in ~265m
+[2026-06-07T14:59:53]   Skipping UK Gov News — next fetch in ~265m
+[2026-06-07T15:00:16]   Skipping Norway — next fetch in ~264m
+[2026-06-07T15:24:57] Catch-up check: enqueueing most overdue feed UK Gov (overdue ~0m)
+[2026-06-07T15:24:57] Ingesting: UK Gov
+[2026-06-07T15:25:03]   UK Gov: +0 entries in 6.4s [good]
+[2026-06-07T15:30:39]   Skipping Sweden Government — next fetch in ~245m
+[2026-06-07T21:47:33] Ingesting: UK Gov
+[2026-06-07T21:47:33] Catch-up check: enqueueing most overdue feed Denmark (overdue ~143m)
+[2026-06-07T21:47:38]   UK Gov: +0 entries in 5.7s [good]
+[2026-06-07T21:47:38] Web crawl: Denmark (https://stm.dk/en/press/press-releases/)
+[2026-06-07T21:47:39]   Denmark: 1 level-1 candidates
+[2026-06-07T21:47:39]   Denmark: no links found; page may require JS rendering
+[2026-06-07T21:47:40]   Denmark: +0 articles from 1 pages in 1.4s [poor]
+[2026-06-07T21:47:57] Catch-up check: enqueueing most overdue feed Latvia (overdue ~143m)
+[2026-06-07T21:47:57] Web crawl: Latvia (https://www.mk.gov.lv/en/articles)
+[2026-06-07T21:47:58]   Latvia: 15 level-1 candidates
+[2026-06-07T21:48:22]   Latvia: +0 articles from 25 pages in 25.0s [good]
+[2026-06-07T21:48:57] Catch-up check: enqueueing most overdue feed Norway (overdue ~144m)
+[2026-06-07T21:48:57] Web crawl: Norway (https://www.regjeringen.no/en/id4/)
+[2026-06-07T21:48:57]   Norway: 21 level-1 candidates
+[2026-06-07T21:49:19]   Norway: +0 articles from 39 pages in 22.1s [good]
+[2026-06-07T21:49:57] Catch-up check: enqueueing most overdue feed Taiwan (overdue ~144m)
+[2026-06-07T21:49:57] Ingesting: Taiwan
+[2026-06-07T21:50:19]   Taiwan: +0 entries in 22.1s [good]
+[2026-06-07T21:50:57] Catch-up check: enqueueing most overdue feed UK Gov News (overdue ~145m)
+[2026-06-07T21:50:57] Ingesting: UK Gov News
+[2026-06-07T21:51:02]   UK Gov News: +0 entries in 5.1s [good]
+[2026-06-07T21:51:57] Catch-up check: enqueueing most overdue feed Canada Defense (overdue ~141m)
+[2026-06-07T21:51:57] Ingesting: Canada Defense
+[2026-06-07T21:52:57] Catch-up check: enqueueing most overdue feed Canada Defense (overdue ~142m)
+[2026-06-07T21:52:57]   Skipping Canada Defense - already queued/running
+[2026-06-07T21:53:57] Catch-up check: enqueueing most overdue feed Canada Defense (overdue ~143m)
+[2026-06-07T21:53:57]   Skipping Canada Defense - already queued/running
+[2026-06-07T21:54:57] Catch-up check: enqueueing most overdue feed Canada Defense (overdue ~144m)
+[2026-06-07T21:54:57]   Skipping Canada Defense - already queued/running
+[2026-06-07T21:55:53]   Canada Defense: +1 entries in 235.7s [good]
+[2026-06-07T21:55:57] Catch-up check: enqueueing most overdue feed Canada Security (overdue ~144m)
+[2026-06-07T21:55:57] Ingesting: Canada Security
+[2026-06-07T21:56:31]   Canada Security: +0 entries in 33.6s [good]
+[2026-06-07T21:56:57] Catch-up check: enqueueing most overdue feed Lithuania (overdue ~144m)
+[2026-06-07T21:56:57] Ingesting: Lithuania
+[2026-06-07T21:57:23]   Lithuania: +1 entries in 25.7s [good]
+[2026-06-07T21:57:57] Catch-up check: enqueueing most overdue feed Estonia (overdue ~144m)
+[2026-06-07T21:57:57] Ingesting: Estonia
+[2026-06-07T21:58:40]   Estonia: +0 entries in 43.0s [good]
+[2026-06-07T21:58:57] Catch-up check: enqueueing most overdue feed Finland (overdue ~144m)
+[2026-06-07T21:58:57] Web crawl: Finland (https://valtioneuvosto.fi/en/frontpage)
+[2026-06-07T21:58:58]   Finland: 21 level-1 candidates
+[2026-06-07T21:59:20]   Finland: +0 articles from 21 pages in 22.8s [good]
+[2026-06-07T21:59:57] Catch-up check: enqueueing most overdue feed Netherlands (overdue ~144m)
+[2026-06-07T21:59:57] Web crawl: Netherlands (https://www.government.nl/latest)
+[2026-06-07T21:59:57]   Netherlands: 19 level-1 candidates
+[2026-06-07T22:00:10]   Netherlands: +0 articles from 24 pages in 12.9s [good]
+[2026-06-07T22:00:57] Catch-up check: enqueueing most overdue feed Sweden Government (overdue ~145m)
+[2026-06-07T22:00:57] Ingesting: Sweden Government
+[2026-06-07T22:01:21]   Sweden Government: +0 entries in 23.9s [poor]
+[2026-06-07T22:01:57] Catch-up check: enqueueing most overdue feed New Zealand (overdue ~145m)
+[2026-06-07T22:01:57] Ingesting: New Zealand
+[2026-06-07T22:02:10]   New Zealand: +1 entries in 13.3s [good]
+[2026-06-07T22:02:57] Catch-up check: enqueueing most overdue feed UN News - Global (overdue ~145m)
+[2026-06-07T22:02:57] Ingesting: UN News - Global
+[2026-06-07T22:03:30]   UN News - Global: +1 entries in 32.8s [good]
+[2026-06-07T22:03:57] Catch-up check: enqueueing most overdue feed UN News - All (overdue ~145m)
+[2026-06-07T22:03:57] Ingesting: UN News - All
+[2026-06-07T22:04:15]   UN News - All: +0 entries in 17.8s [good]
+[2026-06-07T22:04:57] Catch-up check: enqueueing most overdue feed BBC World News (overdue ~145m)
+[2026-06-07T22:04:57] Ingesting: BBC World News
+[2026-06-07T22:05:07]   BBC World News: +9 entries in 9.7s [good]
+[2026-06-07T22:05:57] Catch-up check: enqueueing most overdue feed AP World News (overdue ~145m)
+[2026-06-07T22:05:57] Web crawl: AP World News (https://apnews.com/world-news)
+[2026-06-07T22:05:58]   AP World News: 50 level-1 candidates
+[2026-06-07T22:06:29]   AP World News: +15 articles from 64 pages in 32.5s [good]
+[2026-06-07T22:44:07]   Skipping UK Gov — next fetch in ~303m
+[2026-06-07T23:33:57]   Skipping AP World News — next fetch in ~512m
+[2026-06-07T23:33:57]   Skipping UN News - Global — next fetch in ~509m
+[2026-06-07T23:33:57]   Skipping Netherlands — next fetch in ~506m
+[2026-06-07T23:33:57]   Skipping Lithuania — next fetch in ~503m
+[2026-06-07T23:33:57]   Skipping UN News - All — next fetch in ~510m
+[2026-06-07T23:33:57]   Skipping Estonia — next fetch in ~504m
+[2026-06-07T23:33:57]   Skipping New Zealand — next fetch in ~508m
+[2026-06-07T23:33:57]   Skipping BBC World News — next fetch in ~511m
+[2026-06-07T23:33:57]   Skipping Canada Security — next fetch in ~502m
+[2026-06-07T23:33:57]   Skipping Finland — next fetch in ~505m
+[2026-06-07T23:33:57]   Skipping Canada Defense — next fetch in ~501m
+[2026-06-08T00:58:54]   Skipping Denmark — next fetch in ~408m
+[2026-06-08T00:59:20]   Skipping Latvia — next fetch in ~409m
+[2026-06-08T00:59:48]   Skipping Taiwan — next fetch in ~410m
+[2026-06-08T00:59:53]   Skipping UK Gov News — next fetch in ~411m
+[2026-06-08T01:00:16]   Skipping Norway — next fetch in ~409m
+[2026-06-08T01:09:48]   Skipping HuggingFace Blog — next fetch in ~59m
+[2026-06-08T01:33:57] Daily prune: AiNews — 2 entries removed
+[2026-06-08T01:40:39]   Skipping Sweden Government — next fetch in ~390m
+[2026-06-08T02:09:57] Catch-up check: enqueueing most overdue feed HuggingFace Blog (overdue ~0m)
+[2026-06-08T02:09:57] Ingesting: HuggingFace Blog
+[2026-06-08T02:10:05]   HuggingFace Blog: +1 entries in 8.5s [good]
+[2026-06-08T06:44:26] Ingesting: UK Gov
+[2026-06-08T06:44:26] Catch-up check: enqueueing most overdue feed UK Gov (overdue ~176m)
+[2026-06-08T06:44:26]   Skipping UK Gov - already queued/running
+[2026-06-08T06:44:32]   UK Gov: +2 entries in 6.4s [good]
+[2026-06-08T07:47:57] Catch-up check: enqueueing most overdue feed Denmark (overdue ~0m)
+[2026-06-08T07:47:57] Web crawl: Denmark (https://stm.dk/en/press/press-releases/)
+[2026-06-08T07:47:58]   Denmark: 1 level-1 candidates
+[2026-06-08T07:47:58]   Denmark: no links found; page may require JS rendering
+[2026-06-08T07:47:59]   Denmark: +0 articles from 1 pages in 1.6s [poor]
+[2026-06-08T07:48:57] Catch-up check: enqueueing most overdue feed Latvia (overdue ~0m)
+[2026-06-08T07:48:57] Web crawl: Latvia (https://www.mk.gov.lv/en/articles)
+[2026-06-08T07:48:58]   Latvia: 15 level-1 candidates
+[2026-06-08T07:49:33]   Latvia: +0 articles from 25 pages in 36.1s [good]
+[2026-06-08T07:49:57] Catch-up check: enqueueing most overdue feed Norway (overdue ~0m)
+[2026-06-08T07:49:57] Web crawl: Norway (https://www.regjeringen.no/en/id4/)
+[2026-06-08T07:49:57]   Norway: 21 level-1 candidates
+[2026-06-08T07:50:23]   Norway: +0 articles from 39 pages in 25.6s [good]
+[2026-06-08T07:50:57] Catch-up check: enqueueing most overdue feed Taiwan (overdue ~0m)
+[2026-06-08T07:50:57] Ingesting: Taiwan
+[2026-06-08T07:51:18]   Taiwan: +3 entries in 21.1s [good]
+[2026-06-08T07:51:57] Catch-up check: enqueueing most overdue feed UK Gov News (overdue ~0m)
+[2026-06-08T07:51:57] Ingesting: UK Gov News
+[2026-06-08T07:52:03]   UK Gov News: +2 entries in 6.3s [good]
+[2026-06-08T07:55:57] Catch-up check: enqueueing most overdue feed Canada Defense (overdue ~0m)
+[2026-06-08T07:55:57] Ingesting: Canada Defense
+[2026-06-08T07:56:57] Catch-up check: enqueueing most overdue feed Canada Defense (overdue ~1m)
+[2026-06-08T07:56:57]   Skipping Canada Defense - already queued/running
+[2026-06-08T07:57:57] Catch-up check: enqueueing most overdue feed Canada Defense (overdue ~2m)
+[2026-06-08T07:57:57]   Skipping Canada Defense - already queued/running
+[2026-06-08T07:58:57] Catch-up check: enqueueing most overdue feed Canada Defense (overdue ~3m)
+[2026-06-08T07:58:57]   Skipping Canada Defense - already queued/running
+[2026-06-08T07:59:57] Catch-up check: enqueueing most overdue feed Canada Defense (overdue ~4m)
+[2026-06-08T07:59:57]   Skipping Canada Defense - already queued/running
+[2026-06-08T08:00:21]   Canada Defense: +0 entries in 263.8s [good]
+[2026-06-08T08:00:57] Catch-up check: enqueueing most overdue feed Canada Security (overdue ~4m)
+[2026-06-08T08:00:57] Ingesting: Canada Security
+[2026-06-08T08:01:35]   Canada Security: +0 entries in 38.0s [good]
+[2026-06-08T08:01:57] Catch-up check: enqueueing most overdue feed Lithuania (overdue ~4m)
+[2026-06-08T08:01:57] Ingesting: Lithuania
+[2026-06-08T08:02:23]   Lithuania: +2 entries in 25.5s [good]
+[2026-06-08T08:02:57] Catch-up check: enqueueing most overdue feed Estonia (overdue ~4m)
+[2026-06-08T08:02:57] Ingesting: Estonia
+[2026-06-08T08:03:35]   Estonia: +0 entries in 37.8s [good]
+[2026-06-08T08:03:57] Catch-up check: enqueueing most overdue feed Finland (overdue ~4m)
+[2026-06-08T08:03:57] Web crawl: Finland (https://valtioneuvosto.fi/en/frontpage)
+[2026-06-08T08:03:57]   Finland: 22 level-1 candidates
+[2026-06-08T08:04:14]   Finland: +2 articles from 22 pages in 17.2s [good]
+[2026-06-08T08:04:57] Catch-up check: enqueueing most overdue feed Netherlands (overdue ~4m)
+[2026-06-08T08:04:57] Web crawl: Netherlands (https://www.government.nl/latest)
+[2026-06-08T08:04:58]   Netherlands: 19 level-1 candidates
+[2026-06-08T08:05:09]   Netherlands: +0 articles from 24 pages in 12.5s [good]
+[2026-06-08T08:05:57] Catch-up check: enqueueing most overdue feed New Zealand (overdue ~3m)
+[2026-06-08T08:05:57] Ingesting: New Zealand
+[2026-06-08T08:06:11]   New Zealand: +2 entries in 13.5s [good]
+[2026-06-08T08:06:57] Catch-up check: enqueueing most overdue feed UN News - Global (overdue ~3m)
+[2026-06-08T08:06:57] Ingesting: UN News - Global
+[2026-06-08T08:07:13]   UN News - Global: +0 entries in 16.4s [good]
+[2026-06-08T08:07:57] Catch-up check: enqueueing most overdue feed UN News - All (overdue ~3m)
+[2026-06-08T08:07:57] Ingesting: UN News - All
+[2026-06-08T08:08:17]   UN News - All: +2 entries in 20.0s [good]
+[2026-06-08T08:08:57] Catch-up check: enqueueing most overdue feed BBC World News (overdue ~3m)
+[2026-06-08T08:08:57] Ingesting: BBC World News
+[2026-06-08T08:09:06]   BBC World News: +9 entries in 8.8s [good]
+[2026-06-08T08:09:57] Catch-up check: enqueueing most overdue feed AP World News (overdue ~3m)
+[2026-06-08T08:09:57] Web crawl: AP World News (https://apnews.com/world-news)
+[2026-06-08T08:09:57]   AP World News: 50 level-1 candidates
+[2026-06-08T08:10:29]   AP World News: +10 articles from 63 pages in 32.2s [good]
+[2026-06-08T08:11:57] Catch-up check: enqueueing most overdue feed Sweden Government (overdue ~0m)
+[2026-06-08T08:11:57] Ingesting: Sweden Government
+[2026-06-08T08:12:21]   Sweden Government: +1 entries in 23.7s [poor]
+[2026-06-08T09:33:57]   Skipping New Zealand — next fetch in ~512m
+[2026-06-08T09:33:57]   Skipping Estonia — next fetch in ~509m
+[2026-06-08T09:33:57]   Skipping AP World News — next fetch in ~516m
+[2026-06-08T09:33:57]   Skipping BBC World News — next fetch in ~515m
+[2026-06-08T09:33:57]   Skipping Netherlands — next fetch in ~511m
+[2026-06-08T09:33:57]   Skipping UN News - All — next fetch in ~514m
+[2026-06-08T09:33:57]   Skipping UN News - Global — next fetch in ~513m
+[2026-06-08T09:33:57]   Skipping Lithuania — next fetch in ~508m
+[2026-06-08T09:33:57]   Skipping Canada Security — next fetch in ~507m
+[2026-06-08T09:33:57]   Skipping Finland — next fetch in ~510m
+[2026-06-08T09:33:57]   Skipping Canada Defense — next fetch in ~506m
+[2026-06-08T10:44:07]   Skipping UK Gov — next fetch in ~120m
+[2026-06-08T10:58:54]   Skipping Denmark — next fetch in ~409m
+[2026-06-08T10:59:20]   Skipping Latvia — next fetch in ~410m
+[2026-06-08T10:59:48]   Skipping Taiwan — next fetch in ~411m
+[2026-06-08T10:59:53]   Skipping UK Gov News — next fetch in ~412m
+[2026-06-08T11:00:16]   Skipping Norway — next fetch in ~410m
+[2026-06-08T11:50:39]   Skipping Sweden Government — next fetch in ~391m
+[2026-06-08T17:07:19] Catch-up check: enqueueing most overdue feed UK Gov (overdue ~262m)
+[2026-06-08T17:07:19] Ingesting: UK Gov
+[2026-06-08T17:07:19]   Skipping UK Gov - already queued/running
+[2026-06-08T17:07:25]   UK Gov: +18 entries in 6.1s [good]
+[2026-06-08T17:48:57] Catch-up check: enqueueing most overdue feed Denmark (overdue ~0m)
+[2026-06-08T17:48:57] Web crawl: Denmark (https://stm.dk/en/press/press-releases/)
+[2026-06-08T17:48:58]   Denmark: 1 level-1 candidates
+[2026-06-08T17:48:58]   Denmark: no links found; page may require JS rendering
+[2026-06-08T17:48:59]   Denmark: +0 articles from 1 pages in 1.6s [poor]
+[2026-06-08T17:49:57] Catch-up check: enqueueing most overdue feed Latvia (overdue ~0m)
+[2026-06-08T17:49:57] Web crawl: Latvia (https://www.mk.gov.lv/en/articles)
+[2026-06-08T17:49:58]   Latvia: 15 level-1 candidates
+[2026-06-08T17:50:36]   Latvia: +0 articles from 25 pages in 39.1s [good]
+[2026-06-08T17:50:57] Catch-up check: enqueueing most overdue feed Norway (overdue ~0m)
+[2026-06-08T17:50:57] Web crawl: Norway (https://www.regjeringen.no/en/id4/)
+[2026-06-08T17:50:57]   Norway: 21 level-1 candidates
+[2026-06-08T17:51:21]   Norway: +0 articles from 39 pages in 24.5s [good]
+[2026-06-08T17:51:57] Catch-up check: enqueueing most overdue feed Taiwan (overdue ~0m)
+[2026-06-08T17:51:57] Ingesting: Taiwan
+[2026-06-08T17:52:18]   Taiwan: +3 entries in 21.4s [good]
+[2026-06-08T17:52:57] Catch-up check: enqueueing most overdue feed UK Gov News (overdue ~0m)
+[2026-06-08T17:52:57] Ingesting: UK Gov News
+[2026-06-08T17:53:03]   UK Gov News: +17 entries in 6.2s [good]
+[2026-06-08T18:00:57] Catch-up check: enqueueing most overdue feed Canada Defense (overdue ~0m)
+[2026-06-08T18:00:57] Ingesting: Canada Defense
+[2026-06-08T18:01:57] Catch-up check: enqueueing most overdue feed Canada Defense (overdue ~1m)
+[2026-06-08T18:01:57]   Skipping Canada Defense - already queued/running
+[2026-06-08T18:02:57] Catch-up check: enqueueing most overdue feed Canada Defense (overdue ~2m)
+[2026-06-08T18:02:57]   Skipping Canada Defense - already queued/running
+[2026-06-08T18:03:57] Catch-up check: enqueueing most overdue feed Canada Defense (overdue ~3m)
+[2026-06-08T18:03:57]   Skipping Canada Defense - already queued/running
+[2026-06-08T18:04:57] Catch-up check: enqueueing most overdue feed Canada Defense (overdue ~4m)
+[2026-06-08T18:04:57]   Skipping Canada Defense - already queued/running
+[2026-06-08T18:05:25]   Canada Defense: +1 entries in 267.8s [good]
+[2026-06-08T18:05:57] Catch-up check: enqueueing most overdue feed Canada Security (overdue ~4m)
+[2026-06-08T18:05:57] Ingesting: Canada Security
+[2026-06-08T18:06:33]   Canada Security: +0 entries in 36.1s [good]
+[2026-06-08T18:06:57] Catch-up check: enqueueing most overdue feed Lithuania (overdue ~4m)
+[2026-06-08T18:06:57] Ingesting: Lithuania
+[2026-06-08T18:07:23]   Lithuania: +9 entries in 26.0s [good]
+[2026-06-08T18:07:57] Catch-up check: enqueueing most overdue feed Estonia (overdue ~4m)
+[2026-06-08T18:07:57] Ingesting: Estonia
+[2026-06-08T18:08:37]   Estonia: +2 entries in 39.8s [good]
+[2026-06-08T18:08:57] Catch-up check: enqueueing most overdue feed Finland (overdue ~4m)
+[2026-06-08T18:08:57] Web crawl: Finland (https://valtioneuvosto.fi/en/frontpage)
+[2026-06-08T18:08:59]   Finland: 24 level-1 candidates
+[2026-06-08T18:09:22]   Finland: +4 articles from 29 pages in 25.1s [good]
+[2026-06-08T18:09:57] Catch-up check: enqueueing most overdue feed Netherlands (overdue ~4m)
+[2026-06-08T18:09:57] Web crawl: Netherlands (https://www.government.nl/latest)
+[2026-06-08T18:09:58]   Netherlands: 19 level-1 candidates
+[2026-06-08T18:10:10]   Netherlands: +0 articles from 24 pages in 13.4s [good]
+[2026-06-08T18:10:57] Catch-up check: enqueueing most overdue feed New Zealand (overdue ~4m)
+[2026-06-08T18:10:57] Ingesting: New Zealand
+[2026-06-08T18:11:10]   New Zealand: +0 entries in 13.3s [good]
+[2026-06-08T18:11:57] Catch-up check: enqueueing most overdue feed UN News - Global (overdue ~4m)
+[2026-06-08T18:11:57] Ingesting: UN News - Global
+[2026-06-08T18:12:15]   UN News - Global: +0 entries in 18.2s [good]
+[2026-06-08T18:12:57] Catch-up check: enqueueing most overdue feed UN News - All (overdue ~4m)
+[2026-06-08T18:12:57] Ingesting: UN News - All
+[2026-06-08T18:13:16]   UN News - All: +0 entries in 19.0s [good]
+[2026-06-08T18:13:57] Catch-up check: enqueueing most overdue feed BBC World News (overdue ~4m)
+[2026-06-08T18:13:57] Ingesting: BBC World News
+[2026-06-08T18:14:09]   BBC World News: +10 entries in 11.8s [good]
+[2026-06-08T18:14:57] Catch-up check: enqueueing most overdue feed AP World News (overdue ~4m)
+[2026-06-08T18:14:57] Web crawl: AP World News (https://apnews.com/world-news)
+[2026-06-08T18:14:57]   AP World News: 50 level-1 candidates
+[2026-06-08T18:15:30]   AP World News: +21 articles from 63 pages in 33.0s [good]
+[2026-06-08T18:22:57] Catch-up check: enqueueing most overdue feed Sweden Government (overdue ~0m)
+[2026-06-08T18:22:57] Ingesting: Sweden Government
+[2026-06-08T18:23:20]   Sweden Government: +0 entries in 23.4s [poor]
+[2026-06-08T19:33:57]   Skipping AP World News — next fetch in ~521m
+[2026-06-08T19:33:57]   Skipping Netherlands — next fetch in ~516m
+[2026-06-08T19:33:57]   Skipping UN News - Global — next fetch in ~518m
+[2026-06-08T19:33:57]   Skipping BBC World News — next fetch in ~520m
+[2026-06-08T19:33:57]   Skipping New Zealand — next fetch in ~517m
+[2026-06-08T19:33:57]   Skipping UN News - All — next fetch in ~519m
+[2026-06-08T19:33:57]   Skipping Estonia — next fetch in ~514m
+[2026-06-08T19:33:57]   Skipping Lithuania — next fetch in ~513m
+[2026-06-08T19:33:57]   Skipping Finland — next fetch in ~515m
+[2026-06-08T19:33:57]   Skipping Canada Security — next fetch in ~512m
+[2026-06-08T19:33:57]   Skipping Canada Defense — next fetch in ~511m
