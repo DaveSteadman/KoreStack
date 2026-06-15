@@ -1,0 +1,29 @@
+{
+  "id": "import_export_csv_nodes",
+  "name": "Import Graph From export.csv",
+  "description": "Read export.csv and seed KoreGraph vocab plus graph connections from the exported triples.",
+  "script": "import_export_csv_nodes.py",
+  "args": [
+    {
+      "flag": "--csv",
+      "type": "text",
+      "default": "export.csv",
+      "help": "CSV file to read"
+    },
+    {
+      "flag": "--db",
+      "type": "text",
+      "default": "graph.db",
+      "help": "Graph database file"
+    },
+    {
+      "flag": "--nodes-only",
+      "type": "bool",
+      "default": false,
+      "help": "Skip relation import and seed vocab only"
+    }
+  ],
+  "last_run": "2026-06-15 21:01:26",
+  "last_status": "ok",
+  "last_log": "logs\\import_export_csv_nodes_20260615_210126.log"
+}
