@@ -4,6 +4,65 @@
 
 {% block content %}
 <div class="kcui-page kcui-page--narrow kcui-stack">
+{% if processing_scripts %}
+<div class="panel kcui-panel">
+  <div class="panel-header kcui-panel-header">
+    PROCESSING
+    <span class="badge badge-dim" style="margin-left:0.5rem;">{{ processing_scripts | length }}</span>
+  </div>
+  <div class="panel-body kcui-panel-body" style="padding:0; overflow-x:auto;">
+    <table>
+      <thead>
+        <tr>
+          <th>Script</th>
+          <th>Purpose</th>
+          <th style="width:140px;">Database</th>
+          <th style="width:120px;">Schedule</th>
+          <th style="width:210px; white-space:nowrap;"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for script in processing_scripts %}
+        <tr>
+          <td>
+            <a href="/ui/rag?db={{ script.id }}" style="font-weight:500;">{{ script.display_name }}</a>
+            <div class="meta" style="font-size:11px; margin-top:0.15rem;">{{ script.id }}</div>
+          </td>
+          <td class="meta" style="font-size:11px;">{{ script.description }}</td>
+          <td class="meta" style="font-size:11px;">
+            {% if script.has_database %}
+            <span class="kcui-tag kcui-tag--success">registered</span>
+            {% else %}
+            <span class="kcui-tag kcui-tag--warning">script only</span>
+            {% endif %}
+          </td>
+          <td class="meta" style="font-size:11px;">{{ script.schedule or "-" }}</td>
+          <td style="text-align:right; white-space:nowrap;">
+            <span style="display:inline-flex; gap:0.4rem; align-items:center;">
+              {% if script.running %}
+              <span class="kcui-tag kcui-tag--success">RUNNING</span>
+              {% endif %}
+              <a class="kcui-tag kcui-tag--muted" href="/ui/rag?db={{ script.id }}">BROWSE</a>
+              {% if script.log_exists %}
+              <a class="kcui-tag kcui-tag--accent" href="/ui/rag/processing/{{ script.id }}/log">VIEW LOG</a>
+              {% endif %}
+              <form method="post" action="/ui/rag/processing/{{ script.id }}/run" style="display:contents;">
+                <button type="submit" class="kcui-tag kcui-tag--warning" {% if script.running %}disabled{% endif %}>RUN</button>
+              </form>
+              <form method="post" action="/ui/rag/processing/{{ script.id }}/run" style="display:contents;"
+                    onsubmit="return confirm('Reset and rebuild {{ script.id }} from scratch?');">
+                <input type="hidden" name="reset" value="1">
+                <button type="submit" class="kcui-tag kcui-tag--danger" {% if script.running %}disabled{% endif %}>RESET</button>
+              </form>
+            </span>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
 <div class="panel kcui-panel">
   <div class="panel-header kcui-panel-header">
     RAG DATABASES

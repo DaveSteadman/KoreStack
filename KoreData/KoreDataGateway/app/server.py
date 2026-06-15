@@ -60,6 +60,7 @@ _SERVICES = [
 ]
 
 _children: list[tuple[subprocess.Popen, str, object]] = []
+_rag_processing_jobs: dict[str, subprocess.Popen] = {}
 
 
 def _display_path(path: Path) -> Path:
@@ -2083,6 +2084,49 @@ async def _rag_databases_enriched() -> list[dict]:
     return [e if isinstance(e, dict) else {"id": "?", "error": str(e)} for e in enriched]
 
 
+def _rag_processing_scripts(database_ids: set[str]) -> list[dict]:
+    """Discover RAG database builder scripts from the configured runtime databases folder."""
+    runtime_root = Path(get_koredata_dir()) / "RAG" / "databases"
+
+    results: list[dict] = []
+    seen: set[str] = set()
+    if not runtime_root.exists():
+        return results
+
+    for subdir in sorted(p for p in runtime_root.iterdir() if p.is_dir()):
+        script_path = subdir / "ingest.py"
+        descriptor_path = subdir / f"{subdir.name}.json"
+        if not script_path.exists() or not descriptor_path.exists():
+            continue
+        script_id = subdir.name
+        if script_id in seen:
+            continue
+        seen.add(script_id)
+        try:
+            descriptor = _json.loads(descriptor_path.read_text(encoding="utf-8"))
+        except Exception:
+            descriptor = {}
+        results.append({
+            "id": script_id,
+            "display_name": descriptor.get("display_name") or script_id.replace("_", " ").title(),
+            "description": descriptor.get("description") or "Database builder script.",
+            "managed_by": descriptor.get("managed_by") or "ingestor",
+            "ingestor": descriptor.get("ingestor") or script_id,
+            "schedule": descriptor.get("schedule"),
+            "has_database": script_id in database_ids,
+            "running": script_id in _rag_processing_jobs and _rag_processing_jobs[script_id].poll() is None,
+            "source_path": str(subdir),
+            "log_exists": (subdir / "processing.log").exists(),
+        })
+    return results
+
+
+def _find_rag_processing_script(script_id: str) -> dict | None:
+    for script in _rag_processing_scripts(set()):
+        if script.get("id") == script_id:
+            return script
+    return None
+
 @app.get("/ui/rag/databases/json")
 async def rag_databases_json():
     """JSON snapshot of all RAG database descriptors — used by the page's live-update polling."""
@@ -2092,7 +2136,12 @@ async def rag_databases_json():
 @app.get("/ui/rag/databases", response_class=HTMLResponse)
 async def rag_databases(request: Request):
     enriched = await _rag_databases_enriched()
-    return templates.TemplateResponse(request, "rag_databases.html", {"databases": enriched})
+    processing = _rag_processing_scripts({d.get("id") for d in enriched if d.get("id")})
+    return templates.TemplateResponse(
+        request,
+        "rag_databases.html",
+        {"databases": enriched, "processing_scripts": processing},
+    )
 
 
 @app.post("/ui/rag/databases/{name}/sync")
@@ -2100,6 +2149,82 @@ async def rag_database_sync(name: str):
     """Fire-and-forget: ask KoreRAG to launch the database's ingest.py."""
     r = await _rag_client.post(f"/databases/{name}/sync", timeout=10.0)
     return RedirectResponse("/ui/rag/databases", status_code=303)
+
+
+@app.post("/ui/rag/processing/{script_id}/run")
+async def rag_processing_run(script_id: str, reset: int = Form(0)):
+    script = _find_rag_processing_script(script_id)
+    if script is None:
+        raise HTTPException(status_code=404, detail=f"Unknown processing script: {script_id!r}")
+
+    existing = _rag_processing_jobs.get(script_id)
+    if existing is not None and existing.poll() is None:
+        return RedirectResponse("/ui/rag/databases", status_code=303)
+
+    script_dir = Path(script["source_path"])
+    script_path = script_dir / "ingest.py"
+    if not script_path.exists():
+        raise HTTPException(status_code=404, detail=f"Missing ingest.py for {script_id!r}")
+
+    argv = [sys.executable, str(script_path)]
+    if reset:
+        argv.append("--reset")
+
+    log_path = script_dir / "processing.log"
+    log_handle = open(log_path, "ab")
+    try:
+        proc = subprocess.Popen(
+            argv,
+            cwd=str(script_dir),
+            stdout=log_handle,
+            stderr=subprocess.STDOUT,
+            env={**os.environ, "PYTHONUNBUFFERED": "1", "PYTHONUTF8": "1"},
+        )
+    finally:
+        log_handle.close()
+
+    _rag_processing_jobs[script_id] = proc
+    return RedirectResponse("/ui/rag/databases", status_code=303)
+
+
+@app.get("/ui/rag/processing/{script_id}/log", response_class=HTMLResponse)
+async def rag_processing_log(request: Request, script_id: str):
+    script = _find_rag_processing_script(script_id)
+    if script is None:
+        raise HTTPException(status_code=404, detail=f"Unknown processing script: {script_id!r}")
+
+    script_dir = Path(script["source_path"])
+    log_path = script_dir / "processing.log"
+    if not log_path.exists():
+        raise HTTPException(status_code=404, detail=f"No processing log found for {script_id!r}")
+
+    try:
+        text = log_path.read_text(encoding="utf-8", errors="replace")
+    except OSError as exc:
+        raise HTTPException(status_code=500, detail=f"Could not read processing log: {exc}") from exc
+
+    return HTMLResponse(
+        f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{escape(script_id)} processing log</title>
+  <link rel="stylesheet" href="/ui-elements/assets/css/chrome.css?v=20260508b">
+</head>
+<body class="kcui-shell-bg">
+  <main class="kcui-page kcui-page--narrow kcui-stack">
+    <section class="kcui-panel">
+      <div class="kcui-panel-header">
+        <span>{escape(script.get("display_name") or script_id)} processing log</span>
+        <a class="kcui-tag kcui-tag--muted" href="/ui/rag/databases" style="margin-left:auto;">BACK</a>
+      </div>
+      <pre class="kcui-panel-body kcui-panel-body--mono kcui-panel-body--scroll" style="max-height:75vh; white-space:pre-wrap;">{escape(text)}</pre>
+    </section>
+  </main>
+</body>
+</html>"""
+    )
 
 
 @app.post("/ui/rag/databases/{name}/stop")
@@ -2137,7 +2262,11 @@ async def rag_database_create(
             detail = r.text
         return templates.TemplateResponse(
             request, "rag_databases.html",
-            {"databases": enriched, "create_error": detail},
+            {
+                "databases": enriched,
+                "processing_scripts": _rag_processing_scripts({d.get("id") for d in enriched if d.get("id")}),
+                "create_error": detail,
+            },
         )
     return RedirectResponse("/ui/rag/databases", status_code=303)
 

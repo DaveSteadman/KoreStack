@@ -496,8 +496,12 @@ def route_create_database(data: DatabaseCreate):
 
 @app.delete("/databases/{name}", status_code=200, summary="Delete a database and all its data")
 def route_delete_database(name: str):
-    """Stop any running ingest, then delete the database subfolder (including .db, .json,
-    and any ingest scripts).  Raises 404 if unknown."""
+    """Delete a database's stored content.
+
+    For user-managed databases, remove the whole database folder.
+    For ingestor-managed databases, preserve the ingest scripts/descriptor and delete only
+    generated runtime artifacts such as the database file and logs.
+    """
     desc = get_descriptor(name)
     if desc is None:
         raise HTTPException(status_code=404, detail=f"Unknown database: {name!r}")
@@ -514,18 +518,35 @@ def route_delete_database(name: str):
             except Exception:
                 pass
 
-    # Delete the subfolder if it exists, else delete flat files.
+    def _delete_runtime_artifacts(base_dir: Path, db_id: str) -> None:
+        for candidate in (
+            base_dir / f"{db_id}.db",
+            base_dir / f"{db_id}.db-shm",
+            base_dir / f"{db_id}.db-wal",
+            base_dir / "processing.log",
+        ):
+            if candidate.exists():
+                candidate.unlink()
+
+    # Delete runtime data, preserving ingestor scripts where applicable.
     dbs_dir = Path(cfg["data_dir"]) / "databases"
     subdir = dbs_dir / name
+    is_ingestor_managed = desc.get("managed_by") == "ingestor"
     if subdir.is_dir():
         import shutil
-        shutil.rmtree(subdir)
+        if is_ingestor_managed:
+            _delete_runtime_artifacts(subdir, name)
+        else:
+            shutil.rmtree(subdir)
     else:
-        # Legacy flat layout — remove .db and .json individually.
-        for ext in (".db", ".json"):
-            f = dbs_dir / (name + ext)
-            if f.exists():
-                f.unlink()
+        if is_ingestor_managed:
+            _delete_runtime_artifacts(dbs_dir, name)
+        else:
+            # Legacy flat layout — remove .db and .json individually.
+            for ext in (".db", ".json"):
+                f = dbs_dir / (name + ext)
+                if f.exists():
+                    f.unlink()
 
     _registry_reload()
     return {"deleted": name}

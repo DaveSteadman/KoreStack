@@ -1,23 +1,3 @@
-[2026-06-01T06:47:13]   Skipping UN News - All — next fetch in ~34m
-[2026-06-01T06:47:13]   Skipping Sweden Government — next fetch in ~42m
-[2026-06-01T06:47:37]   Skipping manual trigger for Canada Security - already queued/running
-[2026-06-01T06:47:39]   Canada Security: +0 entries in 35.1s [good]
-[2026-06-01T07:11:43] Catch-up check: enqueueing most overdue feed Canada Defense (overdue ~0m)
-[2026-06-01T07:11:43] Ingesting: Canada Defense
-[2026-06-01T07:12:43] Catch-up check: enqueueing most overdue feed Canada Defense (overdue ~1m)
-[2026-06-01T07:12:43]   Skipping Canada Defense - already queued/running
-[2026-06-01T07:13:43] Catch-up check: enqueueing most overdue feed Canada Defense (overdue ~2m)
-[2026-06-01T07:13:43]   Skipping Canada Defense - already queued/running
-[2026-06-01T07:14:43] Catch-up check: enqueueing most overdue feed Canada Defense (overdue ~3m)
-[2026-06-01T07:14:43]   Skipping Canada Defense - already queued/running
-[2026-06-01T07:15:42]   Canada Defense: +0 entries in 238.5s [good]
-[2026-06-01T07:15:43] Catch-up check: enqueueing most overdue feed Latvia (overdue ~2m)
-[2026-06-01T07:15:43] Web crawl: Latvia (https://www.mk.gov.lv/en/articles)
-[2026-06-01T07:15:44]   Latvia: 15 level-1 candidates
-[2026-06-01T07:16:43]   Latvia: +0 articles from 25 pages in 59.8s [good]
-[2026-06-01T07:16:43] Catch-up check: enqueueing most overdue feed Lithuania (overdue ~2m)
-[2026-06-01T07:16:43] Ingesting: Lithuania
-[2026-06-01T07:17:10]   Lithuania: +1 entries in 26.6s [good]
 [2026-06-01T07:17:43] Catch-up check: enqueueing most overdue feed Estonia (overdue ~2m)
 [2026-06-01T07:17:43] Ingesting: Estonia
 [2026-06-01T07:18:04]   Estonia: +0 entries in 20.6s [good]
@@ -998,3 +978,23 @@
 [2026-06-08T19:33:57]   Skipping Finland — next fetch in ~515m
 [2026-06-08T19:33:57]   Skipping Canada Security — next fetch in ~512m
 [2026-06-08T19:33:57]   Skipping Canada Defense — next fetch in ~511m
+[2026-06-15T18:18:01] Web crawl: asa (https://www.bbc.co.uk/news)
+[2026-06-15T18:18:01]   asa: 50 level-1 candidates
+[2026-06-15T18:18:04]   Skipping manual trigger for asa - already queued/running
+[2026-06-15T18:18:38]   asa: +37 articles from 63 pages in 37.3s [good]
+[2026-06-15T20:07:35] Web crawl: asa (https://www.bbc.co.uk/news)
+[2026-06-15T20:07:35]   Skipping asa - already queued/running
+[2026-06-15T20:09:52] Web crawl: asa (https://www.bbc.co.uk/news)
+[2026-06-15T20:09:52]   Skipping asa - already queued/running
+[2026-06-15T20:09:52]   asa: 50 level-1 candidates
+[2026-06-15T20:10:22]   asa: +11 articles from 71 pages in 29.4s [good]
+[2026-06-15T20:12:39]   Skipping asa — next fetch in ~57m
+[2026-06-15T20:12:39]   Skipping asa — next fetch in ~57m
+[2026-06-15T20:14:34]   Skipping asa — next fetch in ~55m
+[2026-06-15T20:14:34]   Skipping asa — next fetch in ~55m
+[2026-06-15T20:18:06]   Skipping asa — next fetch in ~52m
+[2026-06-15T20:18:06]   Skipping asa — next fetch in ~52m
+[2026-06-15T20:27:26]   Skipping asa — next fetch in ~42m
+[2026-06-15T20:27:26]   Skipping asa — next fetch in ~42m
+[2026-06-15T20:29:57]   Skipping asa — next fetch in ~40m
+[2026-06-15T20:29:57]   Skipping asa — next fetch in ~40m

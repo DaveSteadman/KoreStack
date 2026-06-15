@@ -25,8 +25,6 @@ body {
   color: var(--stack-ink);
   background: var(--stack-bg);
   min-height: 100vh;
-  display: grid;
-  grid-template-rows: auto auto auto;
   overflow-x: hidden;
   overflow-y: auto;
 }
@@ -37,7 +35,7 @@ a { color: inherit; }
   display: grid;
   grid-template-rows: auto auto;
   gap: 12px;
-  padding: 12px 0;
+  padding: 0 0 12px;
 }
 
 .panel {
