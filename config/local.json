@@ -1,8 +1,8 @@
 {
   "comment": "Local values - override factory defaults here (defined in default.json, same structure)",
   "paths": {
-    "datacontrolroot": "C:/Util/GithubRepos/KoreStack/datacontrol",
-    "datauserroot": "C:/Util/GithubRepos/KoreStack/datauser"
+    "datacontrolroot": "E:/Data/03-CodeProjects/22-GithubRepos/KoreStack/datacontrol",
+    "datauserroot": "E:/Data/03-CodeProjects/22-GithubRepos/KoreStack/datauser"
   },
   "services": {
     "koreagent": {

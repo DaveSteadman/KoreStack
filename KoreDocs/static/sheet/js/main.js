@@ -7,8 +7,8 @@ import * as cell       from './cell.js';
 import * as properties from './properties.js';
 import * as fileio     from './fileio.js';
 import { colLetter, addrOf, evaluate } from './formula.js';
-import { initTopbar, initAppBar, initAppTabs, renderAppMenu, initAppMenuEvents } from '/ui-elements/assets/js/chrome.js?v=20260508b';
-import { trackAppTab } from '/ui-elements/assets/js/chrome.js?v=20260508b';
+import { initTopbar, initAppBar, initAppTabs, renderAppMenu, initAppMenuEvents } from '/ui-elements/assets/js/chrome.js';
+import { trackAppTab } from '/ui-elements/assets/js/chrome.js';
 import * as draft      from '/static/shared/js/draft.js';
 
 const canvas      = document.getElementById('grid');

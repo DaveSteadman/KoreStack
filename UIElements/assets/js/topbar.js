@@ -2,9 +2,9 @@
  * topbar.js — shared top bar for Kore suite applications.
  */
 
-import { SUITE_ICONS, resolveIcon } from './icons.js?v=20260508b';
-import { SUITE_VERSION } from './suiteMeta.js?v=20260508b';
-import { applyTheme, themeFor } from './theme.js?v=20260508b';
+import { SUITE_ICONS, resolveIcon } from './icons.js';
+import { SUITE_VERSION } from './suiteMeta.js';
+import { applyTheme, themeFor } from './theme.js';
 
 function currentHost() {
 	return (typeof window !== 'undefined' && window.location?.hostname) || '127.0.0.1';
@@ -49,13 +49,18 @@ function serviceItemHtml(service, currentService, urls, iconSize) {
 		</a>`;
 }
 
+let versionRefreshPromise = null;
+
 async function refreshVersionChip(host) {
 	const chip = host.querySelector('#version-chip');
 	if (!chip) return;
+	if (versionRefreshPromise === null) {
+		versionRefreshPromise = fetch('/ui-elements/assets/js/suiteMeta.js', { cache: 'no-store' })
+			.then((response) => (response.ok ? response.text() : ''))
+			.catch(() => '');
+	}
 	try {
-		const response = await fetch('/ui-elements/assets/js/suiteMeta.js', { cache: 'no-store' });
-		if (!response.ok) return;
-		const text = await response.text();
+		const text = await versionRefreshPromise;
 		const match = SUITE_VERSION_RE.exec(text);
 		if (match?.[1]) chip.textContent = match[1];
 	} catch (_) {}

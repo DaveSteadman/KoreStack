@@ -1,14 +1,14 @@
 :root {
-  --stack-bg: var(--bg);
-  --stack-panel: var(--surface);
-  --stack-panel-strong: var(--surface);
-  --stack-ink: var(--text);
-  --stack-muted: var(--text-dim);
-  --stack-line: var(--border);
-  --stack-accent: var(--info);
-  --stack-success: var(--success);
-  --stack-warn: var(--warning);
-  --stack-danger: var(--danger);
+  --stack-bg: var(--bg, #0b0c10);
+  --stack-panel: var(--surface, #0f1117);
+  --stack-panel-strong: var(--surface, #0f1117);
+  --stack-ink: var(--text, #c5c8d0);
+  --stack-muted: var(--text-dim, #4e5466);
+  --stack-line: var(--border, #1e2233);
+  --stack-accent: var(--info, #6eb5ff);
+  --stack-success: var(--success, #4af77a);
+  --stack-warn: var(--warning, #f0c060);
+  --stack-danger: var(--danger, #ff5f5f);
   --service-koreagent: #66f0c9;
   --service-korechat: #59d7ff;
   --service-koredatagateway: #a78bfa;
@@ -21,7 +21,7 @@
 
 body {
   margin: 0;
-  font-family: var(--font-ui);
+  font-family: var(--font-ui, "Roboto Mono", Consolas, monospace);
   color: var(--stack-ink);
   background: var(--stack-bg);
   min-height: 100vh;
@@ -31,11 +31,39 @@ body {
 
 a { color: inherit; }
 
+.kcui-page {
+  --kcui-page-max: 1320px;
+  width: min(var(--kcui-page-max), calc(100% - 24px));
+  margin: 0 auto;
+  padding: 12px 0;
+}
+
+.kcui-panel {
+  background: var(--stack-panel);
+  border: 1px solid var(--stack-line);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.kcui-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 34px;
+  padding: 8px 12px 7px;
+  border-bottom: 1px solid var(--stack-line);
+  color: var(--stack-muted);
+}
+
+.kcui-panel-body {
+  padding: 12px;
+}
+
 .shell {
   display: grid;
   grid-template-rows: auto auto;
   gap: 12px;
-  padding: 0 0 12px;
+  padding: 12px 0;
 }
 
 .panel {

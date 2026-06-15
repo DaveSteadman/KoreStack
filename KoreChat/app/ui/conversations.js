@@ -41,7 +41,7 @@ function _cachedSuiteUrls() {
 
 function _defaultKoreAgentBase() {
     const host = window.location?.hostname || "127.0.0.1";
-    return `http://${host}:8605`;
+    return `http://${host}:9601`;
 }
 
 // ====================================================================================================

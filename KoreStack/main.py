@@ -52,7 +52,7 @@ SERVICE_META: dict[str, dict[str, object]] = {
         "label": "KoreAgent",
         "cwd": SUITE_ROOT / "KoreAgent",
         "script": "main.py",
-        "port": 8605,
+        "port": 9601,
         "url_suffix": "/",
         "health_suffix": "/",
         "port_arg": "--agentport",
@@ -62,7 +62,7 @@ SERVICE_META: dict[str, dict[str, object]] = {
         "label": "KoreChat",
         "cwd": SUITE_ROOT / "KoreChat",
         "script": "main.py",
-        "port": 8630,
+        "port": 9602,
         "url_suffix": "/ui",
         "health_suffix": "/status",
         "port_env": "KORECHAT_PORT",
@@ -72,7 +72,7 @@ SERVICE_META: dict[str, dict[str, object]] = {
         "label": "KoreData",
         "cwd": SUITE_ROOT / "KoreData",
         "script": "main.py",
-        "port": 8620,
+        "port": 9603,
         "url_suffix": "/",
         "health_suffix": "/status",
         "port_env": "KOREDATA_PORT",
@@ -82,7 +82,7 @@ SERVICE_META: dict[str, dict[str, object]] = {
         "label": "KoreDocs",
         "cwd": SUITE_ROOT / "KoreDocs",
         "script": "main.py",
-        "port": 8615,
+        "port": 9610,
         "url_suffix": "/ui",
         "health_suffix": "/status",
         "port_arg": "--port",
@@ -92,7 +92,7 @@ SERVICE_META: dict[str, dict[str, object]] = {
         "label": "KoreCode",
         "cwd": SUITE_ROOT / "KoreCode",
         "script": "main.py",
-        "port": 8610,
+        "port": 9611,
         "url_suffix": "/ui",
         "health_suffix": "/status",
         "port_arg": "--port",
@@ -102,7 +102,7 @@ SERVICE_META: dict[str, dict[str, object]] = {
         "label": "KoreComms",
         "cwd": SUITE_ROOT / "KoreComms",
         "script": "main.py",
-        "port": 8625,
+        "port": 9609,
         "url_suffix": "/",
         "health_suffix": "/status",
         "port_env": "KORECOMMS_PORT",
@@ -208,7 +208,7 @@ def build_child_env(config: dict) -> dict[str, str]:
     if connections.get("korechat"):
         env["KORECOMMS_KORECHAT_URL"] = str(connections["korechat"])
     else:
-        _korechat_port = int(korechat.get("port", 8630))
+        _korechat_port = int(korechat.get("port", 9602))
         env["KORECOMMS_KORECHAT_URL"] = f"http://{_network_host}:{_korechat_port}"
 
     env["KORECHAT_DATA_DIR"] = str(stack_paths["conversation_data"])

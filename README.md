@@ -37,7 +37,7 @@ python .\main.py
 Then open the suite landing page:
 
 ```text
-http://127.0.0.1:8600/
+http://127.0.0.1:9600/
 ```
 
 All services start automatically. Each one has its own port and its own tab in the top bar — click any service to go straight to it.
@@ -52,13 +52,13 @@ To restart or stop individual services without taking down the whole suite, use 
 
 | Service | Port |
 |---|---|
-| KoreStack | 8600 |
-| KoreAgent | 8605 |
-| KoreCode | 8610 |
-| KoreDocs | 8615 |
-| KoreData | 8620 |
-| KoreComms | 8625 |
-| KoreChat | 8630 |
+| KoreStack | 9600 |
+| KoreAgent | 9601 |
+| KoreChat | 9602 |
+| KoreData | 9603 |
+| KoreComms | 9609 |
+| KoreDocs | 9610 |
+| KoreCode | 9611 |
 
 ## Workspace Layout
 

@@ -4,7 +4,7 @@
  * Icons are file-based SVGs imported under UIElements/assets/icons/<set-name>.
  */
 
-import { SVG_ICON_SETS, svgIconUrl, svgIconImg, svgIconMask } from './svgicons.js?v=20260508b';
+import { SVG_ICON_SETS, svgIconUrl, svgIconImg, svgIconMask } from './svgicons.js';
 
 export { fileIconForPath };
 

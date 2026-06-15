@@ -5,14 +5,14 @@ This document defines non-negotiable consistency rules for all Kore web pages.
 ## 1. Shared Shell Entry
 
 All pages must import shared shell APIs from:
-- `/ui-elements/assets/js/chrome.js?v=<suite-stamp>`
+- `/ui-elements/assets/js/chrome.js`
 
 Do not import `topbar.js`, `appbar.js`, or `appMenu.js` directly in app pages.
 
-## 2. One Version Stamp
+## 2. One Canonical Path
 
-Use one shared `chrome.js?v=...` stamp across all services.
-When UIElements shell JS changes, bump the stamp once and update all service entrypoints.
+Use one shared `chrome.js` path across all services.
+Do not append ad hoc version query strings to shared UIElements assets.
 
 ## 3. Top Bar Commonality
 

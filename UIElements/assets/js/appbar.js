@@ -1,5 +1,5 @@
-import { SUITE_ICONS, resolveIcon } from './icons.js?v=20260501a';
-import { applyTheme, themeFor } from './theme.js?v=20260501a';
+import { SUITE_ICONS, resolveIcon } from './icons.js';
+import { applyTheme, themeFor } from './theme.js';
 
 const DEFAULT_TYPE_URL = {
   koredoc: '/doc',

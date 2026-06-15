@@ -2210,7 +2210,7 @@ async def rag_processing_log(request: Request, script_id: str):
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{escape(script_id)} processing log</title>
-  <link rel="stylesheet" href="/ui-elements/assets/css/chrome.css?v=20260508b">
+  <link rel="stylesheet" href="/ui-elements/assets/css/chrome.css">
 </head>
 <body class="kcui-shell-bg">
   <main class="kcui-page kcui-page--narrow kcui-stack">

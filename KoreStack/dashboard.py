@@ -68,6 +68,7 @@ def _service_row_markup(service: dict[str, object]) -> str:
         </div>
         <div class="service-cell service-state">{state_markup}</div>
         <div class="service-cell address-edit">
+          <input type="text" class="host-input" data-field="host" value="{host}" aria-label="Host for {label}">
           <input type="number" class="port-input" data-field="port" value="{port}" min="1024" max="65535" aria-label="Port for {label}">
           <button class="kcui-tag kcui-tag--dim" type="button" data-service="{slug}" data-action="setaddress" title="Save port and restart {label}">set</button>
         </div>
@@ -104,8 +105,10 @@ def _dashboard_bootstrap(snapshot: dict[str, object], suite_urls: dict[str, str]
         "snapshot": snapshot,
         "suiteUrls": suite_urls,
         "chips": [
-            {"label": "Running", "value": f"{metrics['running']} / {metrics['selected']}", "tone": "accent"},
-            {"label": "Dashboard", "value": dashboard_url},
+            {"label": "Running", "value": f"{metrics['running']} / {metrics['selected']}", "valueId": "stack-running-value", "tone": "accent"},
+            {"label": "Reachable", "value": str(metrics["reachable"]), "valueId": "stack-reachable-value", "tone": "dim"},
+            {"label": "Dashboard", "value": dashboard_url, "valueId": "stack-dashboard-value", "tone": "dim"},
+            {"label": "UI Shell", "value": "available" if stack["uiElementsMounted"] else "missing", "valueId": "stack-ui-value", "tone": "success" if stack["uiElementsMounted"] else "danger"},
         ],
     }
 

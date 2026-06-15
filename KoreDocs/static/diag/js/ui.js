@@ -1,4 +1,4 @@
-﻿/**
+/**
  * ui.js — Menu bar, Properties panel, Hierarchy panel, title bar.
  */
 
@@ -12,7 +12,7 @@ import {
 import { worldBounds, buildNodeMap } from './model.js';
 import { draw } from './renderer.js';
 import { setTool, reparentNode } from './interaction.js';
-import { initAppMenuEvents } from '/ui-elements/assets/js/chrome.js?v=20260508b';
+import { initAppMenuEvents } from '/ui-elements/assets/js/chrome.js';
 
 const CUSTOM_COLOR_MIGRATION_KEY = 'korediag.customColors.v1';
 const CUSTOM_COLOR_LIMIT = 7;

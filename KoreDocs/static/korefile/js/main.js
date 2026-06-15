@@ -5,7 +5,7 @@
  * search box, and import button.
  */
 
-import { initTopbar, initAppBar, initAppTabs, renderAppMenu, initAppMenuEvents } from '/ui-elements/assets/js/chrome.js?v=20260508b';
+import { initTopbar, initAppBar, initAppTabs, renderAppMenu, initAppMenuEvents } from '/ui-elements/assets/js/chrome.js';
 import * as tree     from './tree.js';
 import * as filelist from './filelist.js';
 import * as api      from './api.js';

@@ -9,7 +9,7 @@ Each app loads the shell via two includes:
 
 ```html
 <link rel="stylesheet" href="/ui-elements/assets/css/chrome.css">
-<script type="module" src="/ui-elements/assets/js/chrome.js?v=20260501a"></script>
+<script type="module" src="/ui-elements/assets/js/chrome.js"></script>
 ```
 
 `chrome.css` and `chrome.js` are the single entry points. They re-export everything below so apps never need

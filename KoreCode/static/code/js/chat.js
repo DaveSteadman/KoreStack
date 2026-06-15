@@ -313,7 +313,7 @@ export function initChat({
 
   function _cachedSuiteUrls() {
     try {
-      const raw = localStorage.getItem('koresuite.urls');
+      const raw = localStorage.getItem('kore.suite-urls');
       return raw ? JSON.parse(raw) : null;
     } catch (_) {
       return null;
@@ -322,7 +322,7 @@ export function initChat({
 
   function _defaultAgentBase() {
     const host = window.location?.hostname || '127.0.0.1';
-    return `http://${host}:8605`;
+    return `http://${host}:9601`;
   }
 
   function agentBase() {

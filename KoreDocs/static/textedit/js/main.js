@@ -1,4 +1,4 @@
-import { initTopbar, initAppBar, initAppTabs, renderAppMenu, initAppMenuEvents, trackAppTab } from '/ui-elements/assets/js/chrome.js?v=20260508b';
+import { initTopbar, initAppBar, initAppTabs, renderAppMenu, initAppMenuEvents, trackAppTab } from '/ui-elements/assets/js/chrome.js';
 import { fetchWithAuth } from '/static/shared/js/auth.js';
 import * as draft from '/static/shared/js/draft.js';
 

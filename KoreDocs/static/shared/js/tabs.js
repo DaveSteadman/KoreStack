@@ -5,4 +5,4 @@
  * @deprecated Import from /ui-elements/assets/js/chrome.js directly in new code.
  */
 
-export { initAppTabs as init, trackAppTab as track, configureAppTabs as configureTabs } from '/ui-elements/assets/js/chrome.js?v=20260508b';
+export { initAppTabs as init, trackAppTab as track, configureAppTabs as configureTabs } from '/ui-elements/assets/js/chrome.js';

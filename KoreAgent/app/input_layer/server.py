@@ -136,7 +136,7 @@ _WEB_DIR             = Path(__file__).resolve().parent / "ui"
 _UI_ELEMENTS_ASSETS  = Path(
     os.environ.get(
         "KORE_UIELEMENTS_ASSETS_DIR",
-        str(Path(__file__).resolve().parents[4] / "UIElements" / "assets"),
+        str(Path(__file__).resolve().parents[3] / "UIElements" / "assets"),
     )
 ).resolve()
 _COMPACT_FILL_PCT    = 0.65  # compact when prompt-token fill reaches this fraction of num_ctx

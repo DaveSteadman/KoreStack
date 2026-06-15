@@ -1,4 +1,4 @@
-﻿import { initTopbar, initAppBar, initAppTabs, renderAppMenu } from '/ui-elements/assets/js/chrome.js?v=20260508b';
+import { initTopbar, initAppBar, initAppTabs, renderAppMenu } from '/ui-elements/assets/js/chrome.js';
 
 export function initChrome() {
   initTopbar({ currentService: 'koredocs', urls: window.__koreSuiteUrls || {} });
