@@ -38,8 +38,35 @@ def _load_paths_config() -> dict:
     return paths
 
 
+@lru_cache(maxsize=1)
+def _load_local_paths_config() -> dict:
+    if not _LOCAL_CONFIG.exists():
+        return {}
+
+    with open(_LOCAL_CONFIG, encoding="utf-8") as f:
+        raw = json.load(f)
+    return raw["paths"] if isinstance(raw.get("paths"), dict) else {}
+
+
 def _resolve_configured_root(key: str) -> Path | None:
     raw_value = _load_paths_config().get(key)
+    if not isinstance(raw_value, str):
+        return None
+
+    raw_value = raw_value.strip()
+    if not raw_value:
+        return None
+
+    candidate = Path(raw_value)
+    if any(part.lower() == "absolutepath" for part in candidate.parts):
+        return None
+    if not candidate.is_absolute():
+        candidate = get_suite_root() / candidate
+    return candidate.resolve()
+
+
+def _resolve_local_configured_root(key: str) -> Path | None:
+    raw_value = _load_local_paths_config().get(key)
     if not isinstance(raw_value, str):
         return None
 
@@ -87,6 +114,15 @@ def get_koredata_dir() -> Path:
     if env_path:
         return Path(env_path).resolve()
     return get_suite_datacontrol_dir() / "koredata"
+
+
+def get_required_local_datacontrol_dir() -> Path:
+    configured = _resolve_local_configured_root("datacontrolroot")
+    if configured is None:
+        raise RuntimeError(
+            "KoreGraph requires paths.datacontrolroot to be set in config/local.json."
+        )
+    return configured
 
 
 # KoreData sub-services are assigned ports as offsets from the gateway ("data") port.

@@ -234,6 +234,7 @@
 {% block scripts %}
 <script>
 'use strict';
+window._kgScriptsDir = {{ scripts_dir|tojson }};
 let _scripts    = [];
 let _selId      = null;
 let _pollTimer  = null;
@@ -259,7 +260,7 @@ async function loadScripts() {
 function renderList() {
   const el = document.getElementById('p-list');
   if (!_scripts.length) {
-    el.innerHTML = '<div class="meta" style="padding:1rem;text-align:center;font-size:var(--kcui-text-body-sm)">No scripts found in the processing directory.<br>Add .py + .json files to datacontrol/KoreGraph/</div>';
+    el.innerHTML = `<div class="meta" style="padding:1rem;text-align:center;font-size:var(--kcui-text-body-sm)">No scripts found in the processing directory.<br>Add .py + .json files to:<br><code>${esc(window._kgScriptsDir)}</code></div>`;
     return;
   }
   el.innerHTML = _scripts.map(s => `

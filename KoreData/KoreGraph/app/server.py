@@ -600,7 +600,7 @@ _proc_lock = threading.Lock()
 
 
 def _get_scripts_dir() -> Path:
-    d = Path(cfg.get("scripts_dir", ""))
+    d = Path(cfg.get("scripts_dir", "")).resolve()
     d.mkdir(parents=True, exist_ok=True)
     return d
 
@@ -618,7 +618,7 @@ def _list_processing_scripts() -> list[dict]:
                 continue
             script_path = (d / script_file).resolve()
             # Ensure script is inside scripts_dir (no traversal)
-            if d.resolve() not in script_path.parents and script_path.parent != d.resolve():
+            if d not in script_path.parents and script_path.parent != d:
                 continue
             if not script_path.exists():
                 continue
@@ -637,7 +637,10 @@ def route_ui_processing(request: Request):
     return templates.TemplateResponse(
         request,
         "processing.html",
-        {"_pfx": request_prefix},
+        {
+            "_pfx":        request_prefix,
+            "scripts_dir": str(_get_scripts_dir()),
+        },
     )
 
 
@@ -670,7 +673,7 @@ def api_processing_run(body: ProcessingRunBody):
 
         d = _get_scripts_dir()
         script_path = (d / script_info["script"]).resolve()
-        if d.resolve() not in script_path.parents and script_path.parent != d.resolve():
+        if d not in script_path.parents and script_path.parent != d:
             raise HTTPException(status_code=400, detail="Invalid script path")
         if not script_path.exists():
             raise HTTPException(status_code=404, detail="Script file not found")

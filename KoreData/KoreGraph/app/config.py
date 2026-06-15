@@ -16,18 +16,21 @@
 import os
 from pathlib import Path
 
-from config import get_koredata_dir, load_config
+from config import get_required_local_datacontrol_dir, load_config
 
 _SECTION = "koregraph"
+_LOCAL_DATACONTROL_DIR = get_required_local_datacontrol_dir()
+_LOCAL_KOREDATA_DIR    = _LOCAL_DATACONTROL_DIR / "koredata"
 
 _DEFAULTS = {
     "port": 8826,
     "host": "0.0.0.0",
     "log_level": "info",
-    "data_dir": str(get_koredata_dir() / "Graph"),
-    "scripts_dir": str(get_koredata_dir() / "Graph"),
+    "data_dir":    str(_LOCAL_KOREDATA_DIR / "Graph"),
+    "scripts_dir": str(_LOCAL_KOREDATA_DIR / "Graph" / "processing"),
     "ui_prefix": os.environ.get("KG_UI_PREFIX", ""),
 }
 
 cfg = load_config(_SECTION, _DEFAULTS)
-cfg["data_dir"] = str(Path(cfg["data_dir"]).resolve())
+cfg["data_dir"]    = str(Path(cfg["data_dir"]).resolve())
+cfg["scripts_dir"] = str(Path(cfg["scripts_dir"]).resolve())

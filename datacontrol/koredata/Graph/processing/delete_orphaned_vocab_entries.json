@@ -1,0 +1,17 @@
+{
+  "id": "delete_orphaned_vocab_entries",
+  "name": "Delete Orphaned Vocab Entries",
+  "description": "Remove vocab concepts that are not referenced by any graph connection.",
+  "script": "delete_orphaned_vocab_entries.py",
+  "args": [
+    {
+      "flag": "--dry-run",
+      "type": "bool",
+      "default": false,
+      "help": "Report orphaned concepts without deleting them."
+    }
+  ],
+  "last_run": "2026-05-31 22:35:15",
+  "last_status": "ok",
+  "last_log": "logs\\delete_orphaned_vocab_entries_20260531_223515.log"
+}

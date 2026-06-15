@@ -8,8 +8,9 @@ parser.add_argument("--nodes-only", action="store_true")
 args = parser.parse_args()
 
 base = Path(__file__).resolve().parent
+graph_root = base.parent if base.name.lower() == "processing" else base
 csv_path = Path(args.csv) if Path(args.csv).is_absolute() else base / args.csv
-db_path = Path(args.db) if Path(args.db).is_absolute() else base / args.db
+db_path = Path(args.db) if Path(args.db).is_absolute() else graph_root / args.db
 
 with csv_path.open("r", encoding="utf-8-sig", newline="") as f:
     rows = [r for r in csv.DictReader(f) if (r.get("start") or "").strip() and (r.get("connection") or "").strip() and (r.get("end") or "").strip()]

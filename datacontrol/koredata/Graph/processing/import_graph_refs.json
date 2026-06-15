@@ -1,0 +1,35 @@
+{
+  "id": "import_graph_refs",
+  "name": "Import Reference Wikilinks",
+  "description": "Bulk-imports article wikilinks and infobox facts from KoreReference into the knowledge graph. Phase 1 of graph population - no LLM required, runs fast.",
+  "script": "import_graph_refs.py",
+  "args": [
+    {
+      "flag": "--limit",
+      "type": "int",
+      "default": 0,
+      "help": "Max articles to process (0 = all)"
+    },
+    {
+      "flag": "--dry-run",
+      "type": "bool",
+      "default": false,
+      "help": "Count links only, no writes"
+    },
+    {
+      "flag": "--with-facts",
+      "type": "bool",
+      "default": false,
+      "help": "Also import infobox facts (slower)"
+    },
+    {
+      "flag": "--facts-only",
+      "type": "bool",
+      "default": false,
+      "help": "Infobox facts only, skip wikilinks"
+    }
+  ],
+  "last_run": "2026-05-16 21:45:01",
+  "last_status": "ok",
+  "last_log": null
+}
