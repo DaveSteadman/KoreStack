@@ -59,8 +59,10 @@ from app.feed_manager import (
     load_feeds,
     remove_feed,
     rename_domain_feeds,
+    sync_domain_spec,
     update_feed,
     update_feed_rate,
+    update_domain_age_settings_spec,
 )
 from app.ingest import schedule_feeds, scheduler, start_scheduler, trigger_immediate
 
@@ -70,6 +72,8 @@ async def _lifespan(app: FastAPI):
     # Migrate all existing databases (adds `deleted` column if absent, etc.)
     for _domain in list_domains():
         init_db(_domain)
+    for _domain in list_feed_domains():
+        sync_domain_spec(_domain)
     start_scheduler()
     yield
     if scheduler.running:
@@ -340,6 +344,7 @@ def api_trigger_feed(feed_id: str):
 @app.get("/api/domains/{domain}/age-settings", tags=["domains"])
 def api_get_age_settings(domain: str):
     """Get entry age/date filter settings for a domain."""
+    sync_domain_spec(domain)
     return get_domain_age_settings(domain)
 
 
@@ -358,6 +363,13 @@ def api_set_age_settings(domain: str, body: AgeSettingsBody):
         raise HTTPException(status_code=400, detail=f"mode must be one of: {', '.join(valid)}")
     set_domain_age_settings(
         domain, body.mode,
+        days=body.days,
+        start_date=body.start_date or None,
+        end_date=body.end_date or None,
+    )
+    update_domain_age_settings_spec(
+        domain,
+        body.mode,
         days=body.days,
         start_date=body.start_date or None,
         end_date=body.end_date or None,

@@ -1,31 +1,3 @@
-[2026-06-06T09:58:53]   Skipping New Zealand — next fetch in ~6m
-[2026-06-06T09:58:53]   Skipping Netherlands — next fetch in ~3m
-[2026-06-06T09:58:53]   Skipping AP World News — next fetch in ~10m
-[2026-06-06T09:58:53]   Skipping Estonia — next fetch in ~8m
-[2026-06-06T09:58:53]   Skipping Lithuania — next fetch in ~7m
-[2026-06-06T09:58:53]   Skipping BBC World News — next fetch in ~11m
-[2026-06-06T09:58:53]   Skipping Finland — next fetch in ~9m
-[2026-06-06T09:58:53]   Skipping UN News - All — next fetch in ~16m
-[2026-06-06T09:58:53]   Skipping Canada Defense — next fetch in ~15m
-[2026-06-06T09:58:53]   Denmark: 1 level-1 candidates
-[2026-06-06T09:58:54]   Denmark: no links found; page may require JS rendering
-[2026-06-06T09:58:54]   Denmark: +0 articles from 1 pages in 1.4s [poor]
-[2026-06-06T09:58:54] Web crawl: Latvia (https://www.mk.gov.lv/en/articles)
-[2026-06-06T09:58:55]   Latvia: 15 level-1 candidates
-[2026-06-06T09:59:21]   Latvia: +0 articles from 25 pages in 26.4s [good]
-[2026-06-06T09:59:21] Ingesting: UK Gov
-[2026-06-06T09:59:27]   UK Gov: +0 entries in 6.1s [good]
-[2026-06-06T09:59:27] Ingesting: Taiwan
-[2026-06-06T09:59:48]   Taiwan: +0 entries in 21.3s [good]
-[2026-06-06T09:59:48] Ingesting: UK Gov News
-[2026-06-06T09:59:53]   UK Gov News: +0 entries in 5.0s [good]
-[2026-06-06T09:59:53] Web crawl: Norway (https://www.regjeringen.no/en/id4/)
-[2026-06-06T09:59:53]   Norway: 21 level-1 candidates
-[2026-06-06T10:00:16]   Norway: +0 articles from 39 pages in 23.1s [good]
-[2026-06-06T10:00:16] Ingesting: Sweden Government
-[2026-06-06T10:00:39]   Sweden Government: +0 entries in 23.1s [poor]
-[2026-06-06T11:44:01]   Skipping UK Gov — next fetch in ~255m
-[2026-06-06T13:28:58]   Skipping Understanding AI — next fetch in ~59m
 [2026-06-06T17:43:17]   Skipping Taiwan — next fetch in ~136m
 [2026-06-06T17:44:01] Ingesting: UK Gov
 [2026-06-06T17:44:07]   UK Gov: +1 entries in 6.2s [good]
@@ -998,3 +970,31 @@
 [2026-06-15T21:38:32]   UN Global News: +18 entries in 7.3s [good]
 [2026-06-15T21:38:32] Ingesting: BBC World News
 [2026-06-15T21:38:39]   BBC World News: +29 entries in 7.1s [good]
+[2026-06-15T23:06:30]   Skipping UN Global News — next fetch in ~912m
+[2026-06-15T23:06:30]   Skipping BBC World News — next fetch in ~912m
+[2026-06-15T23:15:10]   Skipping UN Global News — next fetch in ~903m
+[2026-06-15T23:15:10]   Skipping BBC World News — next fetch in ~903m
+[2026-06-15T23:15:23]   Skipping UN Global News — next fetch in ~903m
+[2026-06-15T23:15:23]   Skipping BBC World News — next fetch in ~903m
+[2026-06-15T23:15:35]   Skipping UN Global News — next fetch in ~902m
+[2026-06-15T23:15:35]   Skipping BBC World News — next fetch in ~903m
+[2026-06-15T23:16:10]   Skipping UN Global News — next fetch in ~902m
+[2026-06-15T23:16:10]   Skipping BBC World News — next fetch in ~902m
+[2026-06-15T23:17:20]   Skipping UN Global News — next fetch in ~901m
+[2026-06-15T23:17:20]   Skipping BBC World News — next fetch in ~901m
+[2026-06-15T23:19:51]   Skipping UN Global News — next fetch in ~898m
+[2026-06-15T23:19:51]   Skipping BBC World News — next fetch in ~898m
+[2026-06-15T23:21:06]   Skipping UN Global News — next fetch in ~897m
+[2026-06-15T23:21:06]   Skipping BBC World News — next fetch in ~897m
+[2026-06-15T23:21:29] Ingesting: UN Global News
+[2026-06-15T23:31:57] Ingesting: UN Global News
+[2026-06-15T23:32:07] Ingesting: UN Global News
+[2026-06-15T23:32:44] Ingesting: UN Global News
+[2026-06-15T23:33:11] Ingesting: UN Global News
+[2026-06-15T23:36:44] Ingesting: UN Global News
+[2026-06-15T23:37:24] Ingesting: UN Global News
+[2026-06-15T23:37:38]   UN Global News: +12 entries in 13.5s [good]
+[2026-06-15T23:37:38] Ingesting: BBC World News
+[2026-06-15T23:37:45]   BBC World News: +1 entries in 7.6s [good]
+[2026-06-15T23:42:19] Ingesting: UK Gov World News
+[2026-06-15T23:42:22]   UK Gov World News: +20 entries in 3.1s [good]

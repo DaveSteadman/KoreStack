@@ -1,0 +1,23 @@
+{
+  "domain": "Global_News",
+  "age_settings": {
+    "mode": "days_previous",
+    "days": 20,
+    "start_date": null,
+    "end_date": null
+  },
+  "feeds": [
+    {
+      "name": "UN Global News",
+      "url": "https://news.un.org/feed/subscribe/en/news/region/global/feed/rss.xml",
+      "update_rate": 1000,
+      "type": "rss"
+    },
+    {
+      "name": "BBC World News",
+      "url": "https://feeds.bbci.co.uk/news/world/rss.xml",
+      "update_rate": 1000,
+      "type": "rss"
+    }
+  ]
+}
