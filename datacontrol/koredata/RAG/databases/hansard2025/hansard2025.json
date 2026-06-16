@@ -6,7 +6,6 @@
   "licence": "Open Parliament Licence",
   "managed_by": "ingestor",
   "ingestor": "hansard2025",
-  "schedule": "daily",
   "chunk_types": [
     {
       "type": "speech",
@@ -36,9 +35,7 @@
     ]
   },
   "sync": {
-    "last_run": "2026-05-13",
-    "last_date_ingested": "2025-12-18",
-    "status": "complete",
-    "total_chunks": 99690
-  }
+    "status": "not_started"
+  },
+  "schedule": "manual"
 }

@@ -17,8 +17,9 @@
           <th>Script</th>
           <th>Purpose</th>
           <th style="width:140px;">Database</th>
-          <th style="width:120px;">Schedule</th>
-          <th style="width:210px; white-space:nowrap;"></th>
+          <th style="width:150px;">Managed By</th>
+          <th style="width:170px;">Update Period</th>
+          <th style="width:220px; white-space:nowrap;"></th>
         </tr>
       </thead>
       <tbody>
@@ -29,15 +30,35 @@
             <div class="meta" style="font-size:11px; margin-top:0.15rem;">{{ script.id }}</div>
           </td>
           <td class="meta" style="font-size:11px;">{{ script.description }}</td>
-          <td class="meta" style="font-size:11px;">
+          <td class="meta" style="font-size:11px;" id="script-{{ script.id }}-database">
             {% if script.has_database %}
-            <span class="kcui-tag kcui-tag--success">registered</span>
+            <a class="kcui-tag kcui-tag--success" href="/ui/rag?db={{ script.id }}">registered</a>
             {% else %}
             <span class="kcui-tag kcui-tag--warning">script only</span>
             {% endif %}
           </td>
-          <td class="meta" style="font-size:11px;">{{ script.schedule or "-" }}</td>
-          <td style="text-align:right; white-space:nowrap;">
+          <td class="meta" style="font-size:11px;" id="script-{{ script.id }}-managed">
+            {{ script.managed_by or "ingestor" }}
+            {% if script.last_run %}
+            <div style="margin-top:0.2rem; color:var(--muted, #888);">Last run: {{ script.last_run }}</div>
+            {% endif %}
+            {% if script.last_ingested %}
+            <div style="margin-top:0.2rem; color:var(--muted, #888);">Last ingest: {{ script.last_ingested }}</div>
+            {% endif %}
+          </td>
+          <td id="script-{{ script.id }}-schedule">
+            <form method="post" action="/ui/rag/processing/{{ script.id }}/schedule" style="margin:0;">
+              <select name="schedule"
+                      onchange="this.form.submit()"
+                      style="width:100%; font-size:11px; padding:0.2rem 0.35rem;">
+                <option value="manual"  {% if script.schedule == "manual" %}selected{% endif %}>Manual</option>
+                <option value="daily"   {% if script.schedule == "daily" %}selected{% endif %}>Daily</option>
+                <option value="weekly"  {% if script.schedule == "weekly" %}selected{% endif %}>Weekly</option>
+                <option value="monthly" {% if script.schedule == "monthly" %}selected{% endif %}>Monthly</option>
+              </select>
+            </form>
+          </td>
+          <td id="script-{{ script.id }}-actions" style="text-align:right; white-space:nowrap;">
             <span style="display:inline-flex; gap:0.4rem; align-items:center;">
               {% if script.running %}
               <span class="kcui-tag kcui-tag--success">RUNNING</span>
@@ -105,7 +126,6 @@
       <thead>
         <tr>
           <th>Database</th>
-          <th>Managed by</th>
           <th style="width:100px; text-align:right;">Chunks</th>
           <th style="width:120px; text-align:right;">Size</th>
           <th style="width:200px; white-space:nowrap;"></th>
@@ -120,24 +140,6 @@
             <div class="meta" style="font-size:11px; margin-top:0.15rem;">{{ d.description }}</div>
             {% endif %}
           </td>
-          <td id="db-{{ d.id }}-managed" class="meta" style="font-size:11px;">
-            {{ d.managed_by or "user" }}
-            {% if d.ingestor %}<span style="color:var(--amber);"> / {{ d.ingestor }}</span>{% endif %}
-            {% if d.sync %}
-              {% if d.sync.status == "running" %}
-                <div style="margin-top:0.2rem; color:var(--accent, #4af77a);">&#9654; Running&hellip;</div>
-              {% elif d.sync.status == "complete" %}
-                <div style="margin-top:0.2rem; color:var(--green, #4caf50);">&#10003; Complete</div>
-              {% elif d.sync.status == "stopped" %}
-                <div style="margin-top:0.2rem; color:var(--warning, #f0a000);">&#9632; Stopped</div>
-              {% elif d.sync.status == "not_started" %}
-                <div style="margin-top:0.2rem; color:var(--muted, #888);">Not started</div>
-              {% endif %}
-              {% if d.sync.status != "running" and d.sync.last_date_ingested %}
-                <div style="margin-top:0.2rem; color:var(--muted, #888);">Last: {{ d.sync.last_date_ingested }}</div>
-              {% endif %}
-            {% endif %}
-          </td>
           <td id="db-{{ d.id }}-chunks" class="meta" style="text-align:right;">
             {% if d.total_chunks is not none and d.total_chunks > 0 %}{{ "{:,}".format(d.total_chunks) }}
             {% elif d.sync and d.sync.total_chunks %}{{ "{:,}".format(d.sync.total_chunks) }}
@@ -148,17 +150,6 @@
           </td>
           <td id="db-{{ d.id }}-actions" style="text-align:right; white-space:nowrap;">
             <span style="display:inline-flex; gap:0.4rem; align-items:center;">
-            {% if d.managed_by == "ingestor" and d.sync %}
-              {% if d.sync.status == "running" %}
-            <form method="post" action="/ui/rag/databases/{{ d.id }}/stop" style="display:contents;">
-              <button type="submit" class="kcui-tag kcui-tag--danger">STOP</button>
-            </form>
-              {% else %}
-            <form method="post" action="/ui/rag/databases/{{ d.id }}/sync" style="display:contents;">
-              <button type="submit" class="kcui-tag kcui-tag--warning">INGEST</button>
-            </form>
-              {% endif %}
-            {% endif %}
             {% if d.navigation %}<a class="kcui-tag kcui-tag--accent" href="/ui/rag/explore/{{ d.id }}">EXPLORE</a>{% endif %}
             <a class="kcui-tag kcui-tag--muted" href="/ui/rag?db={{ d.id }}">BROWSE</a>
             <form method="post" action="/ui/rag/databases/{{ d.id }}/delete" style="display:contents;"
@@ -188,22 +179,7 @@
     return (n !== null && n !== undefined && n !== '') ? Number(n).toLocaleString() : '-';
   }
   function fmtKB(b) {
-    return (b !== null && b !== undefined) ? Math.round(b / 1024).toLocaleString() + ' KB' : '-';
-  }
-
-  function renderManaged(d) {
-    let h = d.managed_by || 'user';
-    if (d.ingestor) h += ' <span style="color:var(--amber);"> / ' + d.ingestor + '</span>';
-    if (d.sync) {
-      const s = d.sync.status;
-      if      (s === 'running')     h += '<div style="margin-top:0.2rem;color:var(--accent,#4af77a);">&#9654; Running&hellip;</div>';
-      else if (s === 'complete')    h += '<div style="margin-top:0.2rem;color:var(--green,#4caf50);">&#10003; Complete</div>';
-      else if (s === 'stopped')     h += '<div style="margin-top:0.2rem;color:var(--warning,#f0a000);">&#9632; Stopped</div>';
-      else if (s === 'not_started') h += '<div style="margin-top:0.2rem;color:var(--muted,#888);">Not started</div>';
-      if (s !== 'running' && d.sync.last_date_ingested)
-        h += '<div style="margin-top:0.2rem;color:var(--muted,#888);">Last: ' + d.sync.last_date_ingested + '</div>';
-    }
-    return h;
+    return (b !== null && b !== undefined) ? Math.round(b / 1024).toLocaleString() + 'Â KB' : '-';
   }
 
   function renderChunks(d) {
@@ -212,14 +188,8 @@
     return '-';
   }
 
-  function renderActions(d) {
+  function renderDatabaseActions(d) {
     let h = '<span style="display:inline-flex;gap:0.4rem;align-items:center;">';
-    if (d.managed_by === 'ingestor' && d.sync) {
-      if (d.sync.status === 'running')
-        h += '<form method="post" action="/ui/rag/databases/' + d.id + '/stop" style="display:contents;"><button type="submit" class="kcui-tag kcui-tag--danger">STOP</button></form>';
-      else
-        h += '<form method="post" action="/ui/rag/databases/' + d.id + '/sync" style="display:contents;"><button type="submit" class="kcui-tag kcui-tag--warning">INGEST</button></form>';
-    }
     if (d.navigation) h += '<a class="kcui-tag kcui-tag--accent" href="/ui/rag/explore/' + d.id + '">EXPLORE</a>';
     h += '<a class="kcui-tag kcui-tag--muted" href="/ui/rag?db=' + d.id + '">BROWSE</a>';
     h += '<form method="post" action="/ui/rag/databases/' + d.id + '/delete" style="display:contents;"'
@@ -229,19 +199,54 @@
     return h;
   }
 
-  function applyUpdate(databases) {
-    let anyRunning = false;
+  function renderScriptManaged(script) {
+    let h = script.managed_by || 'ingestor';
+    if (script.last_run)
+      h += '<div style="margin-top:0.2rem;color:var(--muted,#888);">Last run: ' + script.last_run + '</div>';
+    if (script.last_ingested)
+      h += '<div style="margin-top:0.2rem;color:var(--muted,#888);">Last ingest: ' + script.last_ingested + '</div>';
+    return h;
+  }
+
+  function renderScriptActions(script) {
+    let h = '<span style="display:inline-flex;gap:0.4rem;align-items:center;">';
+    if (script.running)
+      h += '<span class="kcui-tag kcui-tag--success">RUNNING</span>';
+    h += '<a class="kcui-tag kcui-tag--muted" href="/ui/rag?db=' + script.id + '">BROWSE</a>';
+    if (script.log_exists)
+      h += '<a class="kcui-tag kcui-tag--accent" href="/ui/rag/processing/' + script.id + '/log">VIEW LOG</a>';
+    h += '<form method="post" action="/ui/rag/processing/' + script.id + '/run" style="display:contents;">'
+       + '<button type="submit" class="kcui-tag kcui-tag--warning"' + (script.running ? ' disabled' : '') + '>RUN</button></form>';
+    h += '<form method="post" action="/ui/rag/processing/' + script.id + '/run" style="display:contents;"'
+       + ' onsubmit="return confirm(\'Reset and rebuild ' + script.id + ' from scratch?\');">'
+       + '<input type="hidden" name="reset" value="1">'
+       + '<button type="submit" class="kcui-tag kcui-tag--danger"' + (script.running ? ' disabled' : '') + '>RESET</button></form>';
+    h += '</span>';
+    return h;
+  }
+
+  function applyUpdate(payload) {
+    const databases = payload.databases || [];
+    const scripts   = payload.processing_scripts || [];
+    let anyRunning  = false;
+
     databases.forEach(function (d) {
-      if (d.sync && d.sync.status === 'running') anyRunning = true;
-      var m = document.getElementById('db-' + d.id + '-managed');
       var c = document.getElementById('db-' + d.id + '-chunks');
       var s = document.getElementById('db-' + d.id + '-size');
       var a = document.getElementById('db-' + d.id + '-actions');
-      if (m) m.innerHTML = renderManaged(d);
       if (c) c.innerHTML = renderChunks(d);
       if (s) s.innerHTML = fmtKB(d.db_size_bytes);
-      if (a) a.innerHTML = renderActions(d);
+      if (a) a.innerHTML = renderDatabaseActions(d);
     });
+
+    scripts.forEach(function (script) {
+      if (script.running) anyRunning = true;
+      var m = document.getElementById('script-' + script.id + '-managed');
+      var a = document.getElementById('script-' + script.id + '-actions');
+      if (m) m.innerHTML = renderScriptManaged(script);
+      if (a) a.innerHTML = renderScriptActions(script);
+    });
+
     return anyRunning;
   }
 
@@ -249,8 +254,8 @@
   function poll() {
     fetch('/ui/rag/databases/json')
       .then(function (r) { return r.json(); })
-      .then(function (databases) {
-        var anyRunning = applyUpdate(databases);
+      .then(function (payload) {
+        var anyRunning = applyUpdate(payload);
         _timer = setTimeout(poll, anyRunning ? 4000 : 15000);
       })
       .catch(function () { _timer = setTimeout(poll, 15000); });

@@ -3,10 +3,11 @@
 # ====================================================================================================
 # Database registry for KoreRAG — multi-database support.
 #
-# Scans {data_dir}/databases/ for database subfolders and .db files at startup.
+# Scans {data_dir}/databases/ for actual database files at startup.
 # Each database may have a companion .json descriptor file controlling
 # display_name, managed_by, ingestor, navigation, etc.
-# Databases without a descriptor are registered with user-managed defaults.
+# Script-only folders remain available to the processing UI, but they are not registered as
+# databases until a real .db file exists.
 #
 # All databases live under {data_dir}/databases/{name}/ (subfolder layout).
 # Legacy flat .db files directly in databases/ are also discovered as a fallback.
@@ -25,7 +26,7 @@
 #     "licence":      "Open Parliament Licence",
 #     "managed_by":   "ingestor",          // "user" | "ingestor"
 #     "ingestor":     "hansard",           // ingestor module name
-#     "schedule":     "daily",
+#     "schedule":     "manual",           // "manual" | "daily" | "weekly" | "monthly"
 #     "chunk_types":  ["speech", "question", "answer"],
 #     "navigation":   {"type": "hansard"},
 #     "sync":         {"last_run": null, "status": "idle"}
@@ -83,8 +84,8 @@ def reload() -> None:
         # Primary: per-database subfolders — databases/{name}/{name}.db|.json
         for subdir in sorted(p for p in _DBS_DIR.iterdir() if p.is_dir()):
             name = subdir.name
-            if name not in _registry:
-                db_file = subdir / f"{name}.db"
+            db_file = subdir / f"{name}.db"
+            if db_file.exists() and name not in _registry:
                 _registry[name] = _load_descriptor(name, db_file)
 
         # Legacy fallback: flat .db files directly in databases/
@@ -93,11 +94,12 @@ def reload() -> None:
             if name not in _registry:
                 _registry[name] = _load_descriptor(name, db_file)
 
-        # Legacy fallback: flat .json with no matching .db (orphan descriptor)
+        # Orphan descriptors without a matching .db are intentionally skipped.
+        # They may describe a processing script, but they are not databases yet.
         for json_file in sorted(_DBS_DIR.glob("*.json")):
             name = json_file.stem
-            if name not in _registry:
-                expected_db = json_file.with_suffix(".db")
+            expected_db = json_file.with_suffix(".db")
+            if expected_db.exists() and name not in _registry:
                 _registry[name] = _load_descriptor(name, expected_db)
 
 

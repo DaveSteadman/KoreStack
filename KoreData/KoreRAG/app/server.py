@@ -20,10 +20,14 @@
 # ====================================================================================================
 from contextlib import asynccontextmanager
 from datetime import date
+from datetime import datetime
+from datetime import timedelta
 import json
 import re
 import subprocess
 import sys
+import threading
+import time
 from pathlib import Path
 from typing import Optional
 
@@ -60,6 +64,8 @@ _CODE_DBS_DIR = Path(__file__).parent.parent / "databases"
 
 # Active ingest subprocesses keyed by database name.
 _ingest_procs: dict[str, "subprocess.Popen[bytes]"] = {}
+_scheduler_stop_event: threading.Event | None = None
+_scheduler_thread:     threading.Thread | None = None
 
 # Windows Job Object handle.  All ingest processes are assigned to this job so
 # they are killed automatically if KoreRAG exits for *any* reason — including a
@@ -147,6 +153,124 @@ def _write_sync_status(json_path: Path, status: str) -> None:
     json_path.write_text(json.dumps(d, indent=2), encoding="utf-8")
 
 
+def _normalize_schedule(value: object) -> str:
+    schedule = str(value or "").strip().lower()
+    return schedule if schedule in {"manual", "daily", "weekly", "monthly"} else "manual"
+
+
+def _parse_last_run_date(value: object) -> date | None:
+    raw = str(value or "").strip()
+    if not raw:
+        return None
+    try:
+        return datetime.fromisoformat(raw).date()
+    except ValueError:
+        return None
+
+
+def _add_months(value: date, months: int) -> date:
+    year  = value.year + ((value.month - 1 + months) // 12)
+    month = ((value.month - 1 + months) % 12) + 1
+    day   = value.day
+    while day > 28:
+        try:
+            return date(year, month, day)
+        except ValueError:
+            day -= 1
+    return date(year, month, day)
+
+
+def _is_schedule_due(schedule: str, last_run: date | None, today: date) -> bool:
+    normalized = _normalize_schedule(schedule)
+    if normalized == "manual":
+        return False
+    if last_run is None:
+        return True
+    if normalized == "daily":
+        return today >= last_run + timedelta(days=1)
+    if normalized == "weekly":
+        return today >= last_run + timedelta(days=7)
+    if normalized == "monthly":
+        return today >= _add_months(last_run, 1)
+    return False
+
+
+def _prune_finished_ingest_processes() -> None:
+    for name, proc in list(_ingest_procs.items()):
+        if proc.poll() is not None:
+            _ingest_procs.pop(name, None)
+
+
+def _launch_ingestor(name: str) -> dict:
+    desc = get_descriptor(name)
+    if desc is None:
+        raise HTTPException(status_code=404, detail=f"Unknown database: {name!r}")
+
+    if desc.get("managed_by") != "ingestor" or not desc.get("ingestor"):
+        raise HTTPException(
+            status_code=409,
+            detail=f"Database {name!r} is not ingestor-managed (managed_by={desc.get('managed_by')!r})",
+        )
+
+    existing = _ingest_procs.get(name)
+    if existing is not None and existing.poll() is None:
+        return {"status": "already_running", "db": name, "ingestor": desc["ingestor"], "pid": existing.pid}
+
+    ingestor_name = desc["ingestor"]
+    data_dbs_dir  = Path(cfg["data_dir"]) / "databases"
+    ingest_py     = data_dbs_dir / ingestor_name / "ingest.py"
+
+    if not ingest_py.exists():
+        raise HTTPException(
+            status_code=400,
+            detail=f"No ingest.py found for ingestor {ingestor_name!r} at {ingest_py}",
+        )
+
+    json_path = data_dbs_dir / ingestor_name / f"{ingestor_name}.json"
+    if json_path.exists():
+        try:
+            d = json.loads(json_path.read_text(encoding="utf-8"))
+        except Exception:
+            d = {}
+        d["sync"] = {**d.get("sync", {}), "status": "running", "last_run": date.today().isoformat()}
+        json_path.write_text(json.dumps(d, indent=2), encoding="utf-8")
+    _registry_reload()
+
+    proc = subprocess.Popen(
+        [sys.executable, str(ingest_py)],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    _ingest_procs[name] = proc
+    _assign_to_job(proc)
+    return {"status": "started", "db": name, "ingestor": ingestor_name, "pid": proc.pid}
+
+
+def _run_ingest_scheduler(stop_event: threading.Event) -> None:
+    while not stop_event.wait(60):
+        try:
+            _registry_reload()
+            _prune_finished_ingest_processes()
+            today = date.today()
+            for db_id in list_database_ids():
+                desc = get_descriptor(db_id)
+                if not desc or desc.get("managed_by") != "ingestor":
+                    continue
+                sync      = desc.get("sync") or {}
+                schedule  = _normalize_schedule(desc.get("schedule"))
+                last_run  = _parse_last_run_date(sync.get("last_run"))
+                if not _is_schedule_due(schedule, last_run, today):
+                    continue
+                if sync.get("status") == "running":
+                    continue
+                try:
+                    _launch_ingestor(db_id)
+                except Exception:
+                    continue
+        except Exception:
+            continue
+
+
 def _reset_stale_running() -> None:
     """On startup, any descriptor with status='running' is stale (ingest died with
     the previous server instance).  Reset those to 'stopped' so the UI is accurate."""
@@ -167,6 +291,7 @@ def _reset_stale_running() -> None:
 
 @asynccontextmanager
 async def _lifespan(app: FastAPI):
+    global _scheduler_stop_event, _scheduler_thread
     # Bind all future ingest subprocesses to a kill-on-close Windows Job Object
     # so they die automatically whenever this process exits (graceful or forced).
     _init_job_object()
@@ -176,7 +301,19 @@ async def _lifespan(app: FastAPI):
     for db_id in list_database_ids():
         init_db(db=db_id)
     _reset_stale_running()
+    _scheduler_stop_event = threading.Event()
+    _scheduler_thread     = threading.Thread(
+        target=_run_ingest_scheduler,
+        args=( _scheduler_stop_event, ),
+        daemon=True,
+        name="korerag-ingest-scheduler",
+    )
+    _scheduler_thread.start()
     yield
+    if _scheduler_stop_event is not None:
+        _scheduler_stop_event.set()
+    if _scheduler_thread is not None and _scheduler_thread.is_alive():
+        _scheduler_thread.join(timeout=2)
     # Graceful shutdown: explicitly terminate any tracked ingest processes.
     for _name, _proc in list(_ingest_procs.items()):
         if _proc.poll() is None:
@@ -247,11 +384,13 @@ def route_status(db: Optional[str] = Query(None)):
 
 @app.get("/databases", summary="List all registered databases")
 def route_list_databases():
+    _registry_reload()
     return list_databases()
 
 
 @app.get("/databases/{name}/info", summary="Descriptor + status for a single database")
 def route_database_info(name: str):
+    _registry_reload()
     desc = get_descriptor(name)
     if desc is None:
         raise HTTPException(status_code=404, detail=f"Unknown database: {name!r}")
@@ -528,6 +667,18 @@ def route_delete_database(name: str):
             if candidate.exists():
                 candidate.unlink()
 
+    def _reset_ingestor_descriptor(base_dir: Path, db_id: str) -> None:
+        json_path = base_dir / f"{db_id}.json"
+        if not json_path.exists():
+            return
+        try:
+            descriptor = json.loads(json_path.read_text(encoding="utf-8"))
+        except Exception:
+            descriptor = {}
+        descriptor["schedule"] = str(descriptor.get("schedule") or "manual").strip().lower() or "manual"
+        descriptor["sync"]     = {"status": "not_started"}
+        json_path.write_text(json.dumps(descriptor, indent=2), encoding="utf-8")
+
     # Delete runtime data, preserving ingestor scripts where applicable.
     dbs_dir = Path(cfg["data_dir"]) / "databases"
     subdir = dbs_dir / name
@@ -536,11 +687,13 @@ def route_delete_database(name: str):
         import shutil
         if is_ingestor_managed:
             _delete_runtime_artifacts(subdir, name)
+            _reset_ingestor_descriptor(subdir, name)
         else:
             shutil.rmtree(subdir)
     else:
         if is_ingestor_managed:
             _delete_runtime_artifacts(dbs_dir, name)
+            _reset_ingestor_descriptor(dbs_dir, name)
         else:
             # Legacy flat layout — remove .db and .json individually.
             for ext in (".db", ".json"):
@@ -565,50 +718,7 @@ def route_sync(name: str):
     Returns 404 if the database is unknown, 409 if it is not ingestor-managed, or
     400 if the ingest.py script cannot be located.
     """
-    desc = get_descriptor(name)
-    if desc is None:
-        raise HTTPException(status_code=404, detail=f"Unknown database: {name!r}")
-
-    if desc.get("managed_by") != "ingestor" or not desc.get("ingestor"):
-        raise HTTPException(
-            status_code=409,
-            detail=f"Database {name!r} is not ingestor-managed (managed_by={desc.get('managed_by')!r})",
-        )
-
-    ingestor_name = desc["ingestor"]   # e.g. "hansard2026"
-
-    # Ingest script lives in the database's own data subfolder:
-    # databases/{ingestor_name}/ingest.py
-    data_dbs_dir = Path(cfg["data_dir"]) / "databases"
-    ingest_py = data_dbs_dir / ingestor_name / "ingest.py"
-
-    if not ingest_py.exists():
-        raise HTTPException(
-            status_code=400,
-            detail=f"No ingest.py found for ingestor {ingestor_name!r} at {ingest_py}",
-        )
-
-    # Mark the descriptor as "running" immediately so the UI reflects it
-    # before the subprocess has had a chance to write anything.
-    json_path = data_dbs_dir / ingestor_name / f"{ingestor_name}.json"
-    if json_path.exists():
-        try:
-            d = json.loads(json_path.read_text(encoding="utf-8"))
-        except Exception:
-            d = {}
-        d["sync"] = {**d.get("sync", {}), "status": "running", "last_run": date.today().isoformat()}
-        json_path.write_text(json.dumps(d, indent=2), encoding="utf-8")
-    _registry_reload()
-
-    proc = subprocess.Popen(
-        [sys.executable, str(ingest_py)],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
-    # Track the process and add it to the kill-on-close job object.
-    _ingest_procs[name] = proc
-    _assign_to_job(proc)
-    return {"status": "started", "db": name, "ingestor": ingestor_name, "pid": proc.pid}
+    return _launch_ingestor(name)
 
 
 @app.post("/databases/{name}/stop", summary="Stop a running ingest process")

@@ -61,6 +61,7 @@ _SERVICES = [
 
 _children: list[tuple[subprocess.Popen, str, object]] = []
 _rag_processing_jobs: dict[str, subprocess.Popen] = {}
+_RAG_SCRIPT_SCHEDULE_VALUES: set[str]             = {"manual", "daily", "weekly", "monthly"}
 
 
 def _display_path(path: Path) -> Path:
@@ -2084,6 +2085,31 @@ async def _rag_databases_enriched() -> list[dict]:
     return [e if isinstance(e, dict) else {"id": "?", "error": str(e)} for e in enriched]
 
 
+def _rag_processing_descriptor_path(script_id: str) -> Path:
+    return Path(get_koredata_dir()) / "RAG" / "databases" / script_id / f"{script_id}.json"
+
+
+def _read_rag_processing_descriptor(script_id: str) -> dict:
+    descriptor_path = _rag_processing_descriptor_path(script_id)
+    if not descriptor_path.exists():
+        return {}
+    try:
+        return _json.loads(descriptor_path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+def _write_rag_processing_descriptor(script_id: str, descriptor: dict) -> None:
+    descriptor_path = _rag_processing_descriptor_path(script_id)
+    descriptor_path.parent.mkdir(parents=True, exist_ok=True)
+    descriptor_path.write_text(_json.dumps(descriptor, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+
+def _normalize_rag_processing_schedule(value: Any) -> str:
+    schedule = str(value or "").strip().lower()
+    return schedule if schedule in _RAG_SCRIPT_SCHEDULE_VALUES else "manual"
+
+
 def _rag_processing_scripts(database_ids: set[str]) -> list[dict]:
     """Discover RAG database builder scripts from the configured runtime databases folder."""
     runtime_root = Path(get_koredata_dir()) / "RAG" / "databases"
@@ -2102,21 +2128,22 @@ def _rag_processing_scripts(database_ids: set[str]) -> list[dict]:
         if script_id in seen:
             continue
         seen.add(script_id)
-        try:
-            descriptor = _json.loads(descriptor_path.read_text(encoding="utf-8"))
-        except Exception:
-            descriptor = {}
+        descriptor = _read_rag_processing_descriptor(script_id)
+        sync       = descriptor.get("sync") or {}
         results.append({
-            "id": script_id,
-            "display_name": descriptor.get("display_name") or script_id.replace("_", " ").title(),
-            "description": descriptor.get("description") or "Database builder script.",
-            "managed_by": descriptor.get("managed_by") or "ingestor",
-            "ingestor": descriptor.get("ingestor") or script_id,
-            "schedule": descriptor.get("schedule"),
-            "has_database": script_id in database_ids,
-            "running": script_id in _rag_processing_jobs and _rag_processing_jobs[script_id].poll() is None,
-            "source_path": str(subdir),
-            "log_exists": (subdir / "processing.log").exists(),
+            "id":            script_id,
+            "display_name":  descriptor.get("display_name") or script_id.replace("_", " ").title(),
+            "description":   descriptor.get("description") or "Database builder script.",
+            "managed_by":    descriptor.get("managed_by") or "ingestor",
+            "ingestor":      descriptor.get("ingestor") or script_id,
+            "schedule":      _normalize_rag_processing_schedule(descriptor.get("schedule")),
+            "has_database":  script_id in database_ids,
+            "running":       script_id in _rag_processing_jobs and _rag_processing_jobs[script_id].poll() is None,
+            "source_path":   str(subdir),
+            "log_exists":    (subdir / "processing.log").exists(),
+            "last_run":      sync.get("last_run"),
+            "last_ingested": sync.get("last_date_ingested"),
+            "sync_status":   sync.get("status"),
         })
     return results
 
@@ -2130,7 +2157,11 @@ def _find_rag_processing_script(script_id: str) -> dict | None:
 @app.get("/ui/rag/databases/json")
 async def rag_databases_json():
     """JSON snapshot of all RAG database descriptors — used by the page's live-update polling."""
-    return await _rag_databases_enriched()
+    databases = await _rag_databases_enriched()
+    return {
+        "databases":          databases,
+        "processing_scripts": _rag_processing_scripts({d.get("id") for d in databases if d.get("id")}),
+    }
 
 
 @app.get("/ui/rag/databases", response_class=HTMLResponse)
@@ -2184,6 +2215,19 @@ async def rag_processing_run(script_id: str, reset: int = Form(0)):
         log_handle.close()
 
     _rag_processing_jobs[script_id] = proc
+    return RedirectResponse("/ui/rag/databases", status_code=303)
+
+
+@app.post("/ui/rag/processing/{script_id}/schedule")
+async def rag_processing_schedule(script_id: str, schedule: str = Form("")):
+    script = _find_rag_processing_script(script_id)
+    if script is None:
+        raise HTTPException(status_code=404, detail=f"Unknown processing script: {script_id!r}")
+
+    descriptor = _read_rag_processing_descriptor(script_id)
+    normalized = _normalize_rag_processing_schedule(schedule)
+    descriptor["schedule"] = normalized
+    _write_rag_processing_descriptor(script_id, descriptor)
     return RedirectResponse("/ui/rag/databases", status_code=303)
 
 

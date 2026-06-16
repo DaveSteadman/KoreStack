@@ -183,6 +183,7 @@
 }
 
 .kg-search-row {
+  --kg-toolbar-btn-height: calc(var(--kcui-text-body-sm) + 0.8rem + 2px);
   display: flex;
   gap: 0.5rem;
   align-items: center;
@@ -191,6 +192,13 @@
   padding: 0.75rem;
   border-bottom: 1px solid var(--border);
   background: color-mix(in srgb, var(--panel) 88%, black 12%);
+}
+
+.kg-search-row > button {
+  height: var(--kg-toolbar-btn-height);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .kg-search-row input[type=search] {
@@ -270,8 +278,8 @@
 }
 
 .kg-nav-btn {
-  width: 1.75rem;
-  height: 1.75rem;
+  width: var(--kg-toolbar-btn-height);
+  height: var(--kg-toolbar-btn-height);
   padding: 0;
   display: inline-flex;
   align-items: center;

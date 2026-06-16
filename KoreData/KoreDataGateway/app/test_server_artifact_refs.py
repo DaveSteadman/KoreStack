@@ -1,4 +1,5 @@
 import sys
+import tempfile
 from pathlib import Path
 import unittest
 
@@ -74,6 +75,44 @@ class ArtifactRefTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(result["artifact_ref"], "feed_entry|domain=tech|id=42")
         self.assertEqual(result["body"], "full")
+
+    def test_rag_processing_scripts_include_schedule_and_last_run(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            base_dir    = Path(tmp)
+            script_dir  = base_dir / "RAG" / "databases" / "alpha"
+            script_dir.mkdir(parents=True, exist_ok=True)
+            (script_dir / "ingest.py").write_text("print('ok')\n", encoding="utf-8")
+            (script_dir / "alpha.json").write_text(
+                (
+                    "{\n"
+                    '  "display_name": "Alpha",\n'
+                    '  "managed_by": "ingestor",\n'
+                    '  "schedule": "weekly",\n'
+                    '  "sync": {"last_run": "2026-06-16", "last_date_ingested": "2026-06-15", "status": "complete"}\n'
+                    "}\n"
+                ),
+                encoding="utf-8",
+            )
+
+            original_get_koredata_dir = server.get_koredata_dir
+            try:
+                server.get_koredata_dir = lambda: base_dir
+                scripts = server._rag_processing_scripts({"alpha"})
+            finally:
+                server.get_koredata_dir = original_get_koredata_dir
+
+        self.assertEqual(len(scripts), 1)
+        self.assertEqual(scripts[0]["id"], "alpha")
+        self.assertEqual(scripts[0]["schedule"], "weekly")
+        self.assertEqual(scripts[0]["last_run"], "2026-06-16")
+        self.assertEqual(scripts[0]["last_ingested"], "2026-06-15")
+        self.assertTrue(scripts[0]["has_database"])
+
+    def test_normalize_rag_processing_schedule_rejects_unknown_values(self) -> None:
+        self.assertEqual(server._normalize_rag_processing_schedule("manual"), "manual")
+        self.assertEqual(server._normalize_rag_processing_schedule("daily"), "daily")
+        self.assertEqual(server._normalize_rag_processing_schedule("monthly"), "monthly")
+        self.assertEqual(server._normalize_rag_processing_schedule("yearly"), "manual")
 
 
 if __name__ == "__main__":
