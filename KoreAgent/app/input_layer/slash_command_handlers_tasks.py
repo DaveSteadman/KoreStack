@@ -23,6 +23,8 @@ import re
 from typing import Callable
 
 from run_helpers import run_prompt_batch
+from task_korechat import load_task_turns
+from task_korechat import save_task_turn
 from input_layer.slash_command_context import SlashCommandContext
 from utils.workspace_utils import get_schedules_dir
 from utils.workspace_utils import trunc
@@ -220,12 +222,14 @@ def _cmd_task(arg: str, ctx: SlashCommandContext) -> None:
                             _ctx.output(f"[task] {_rest}: {current[:80]}", "dim")
                     results = run_prompt_batch(
                         _prompts,
-                        session_id=f"task_{_rest}",
+                        session_id   = f"task_{_rest}",
                         persist_path=None,
-                        config=_ctx.config,
-                        logger=run_logger,
-                        quiet=True,
-                        max_turns=10,
+                        config       = _ctx.config,
+                        logger       = run_logger,
+                        quiet        = True,
+                        max_turns    = 10,
+                        seeded_turns = load_task_turns(_rest),
+                        save_turn_fn = lambda user_text, agent_text, _task_name=_rest: save_task_turn(_task_name, user_text, agent_text),
                     )
                     for item in results:
                         tps_str = f"{item['tps']:.1f}" if item["tps"] > 0 else "0"

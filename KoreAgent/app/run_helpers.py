@@ -15,6 +15,7 @@
 #   - orchestration.py                               -- orchestrate_prompt
 # ====================================================================================================
 from pathlib import Path
+from typing import Callable
 
 from orchestration import ConversationHistory
 from orchestration import SessionContext
@@ -116,6 +117,24 @@ def make_task_session(
     return history, ctx
 
 
+def _seed_history(history: ConversationHistory, seeded_turns: list[dict] | None) -> None:
+    if not seeded_turns:
+        return
+
+    pending_user: str | None = None
+    for msg in seeded_turns:
+        if not isinstance(msg, dict):
+            continue
+        role    = str(msg.get("role") or "").strip()
+        content = str(msg.get("content") or "")
+        if role == "user":
+            pending_user = content
+            continue
+        if role == "assistant" and pending_user is not None:
+            history.add(pending_user, content)
+            pending_user = None
+
+
 def run_prompt_batch(
     prompts: list,
     *,
@@ -123,14 +142,17 @@ def run_prompt_batch(
     persist_path: Path | None,
     config,
     logger,
-    quiet: bool = True,
-    max_turns: int = 10,
+    quiet: bool                         = True,
+    max_turns: int                      = 10,
+    seeded_turns: list[dict] | None     = None,
+    save_turn_fn: Callable[[str, str], None] | None = None,
 ) -> list[dict]:
     history, session_ctx = make_task_session(
         session_id=session_id,
         persist_path=persist_path,
         max_turns=max_turns,
     )
+    _seed_history(history, seeded_turns)
     results: list[dict] = []
 
     for prompt_text in prompts:
@@ -146,6 +168,8 @@ def run_prompt_batch(
             quiet=quiet,
         )
         history.add(current, response)
+        if save_turn_fn is not None:
+            save_turn_fn(current, response)
         results.append({
             "prompt": current,
             "response": response,
