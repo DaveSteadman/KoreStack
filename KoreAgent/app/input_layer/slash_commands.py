@@ -358,21 +358,37 @@ def _cmd_tools(arg: str, ctx: SlashCommandContext) -> None:
 
     skill_tool_defs = build_tool_definitions(payload)
     mcp_tool_defs   = mcp_client.get_mcp_tool_definitions()
+    mcp_tool_index  = mcp_client.get_mcp_tool_index()
     tool_defs       = skill_tool_defs + mcp_tool_defs
     if not tool_defs:
         ctx.output("No tools available.", "dim")
         return
 
+    local_tool_meta: dict[str, dict] = {}
+    for skill in payload.get("skills", []):
+        skill_meta = {
+            "origin":         skill.get("origin", "local"),
+            "availability":   skill.get("availability", "configured"),
+            "role":           skill.get("role", "optional"),
+            "trust_boundary": skill.get("trust_boundary", "internal"),
+        }
+        for func_sig in skill.get("functions", []):
+            func_name = str(func_sig).split("(", 1)[0].strip()
+            if func_name:
+                local_tool_meta.setdefault(func_name, skill_meta)
+
     web_off = not get_web_skills_enabled()
     mcp_count = len(mcp_tool_defs)
     ctx.output(f"{len(tool_defs)} tool(s) active{' (web skills off)' if web_off else ''}{f', {mcp_count} via MCP' if mcp_count else ''}:", "info")
     for tool in tool_defs:
-        fn   = tool["function"]
-        name = fn["name"]
-        desc = fn.get("description", "").split("\n")[0][:80]
+        fn     = tool["function"]
+        name   = fn["name"]
+        desc   = fn.get("description", "").split("\n")[0][:80]
         params = list(fn.get("parameters", {}).get("properties", {}).keys())
-        sig = f"{name}({', '.join(params)})"
-        ctx.output(f"  {sig}", "item")
+        sig    = f"{name}({', '.join(params)})"
+        meta   = local_tool_meta.get(name) or mcp_tool_index.get(name, {})
+        label  = f"{meta.get('role', 'tool')}/{meta.get('availability', 'unknown')}/{meta.get('trust_boundary', 'unknown')}"
+        ctx.output(f"  [{label}] {sig}", "item")
         if desc:
             ctx.output(f"    {desc}", "dim")
 

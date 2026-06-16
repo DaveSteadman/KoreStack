@@ -12,14 +12,24 @@ def _task_external_id(task_name: str) -> str:
     return f"task:{task_name}"
 
 
+def _lookup_task_conversation(base: str, task_name: str) -> dict | None:
+    external_id = urllib.parse.quote(_task_external_id(task_name), safe="")
+    try:
+        existing = _http_get(base, f"/conversations/by-external-id/{external_id}")
+    except RuntimeError as exc:
+        if "KC HTTP 404" in str(exc):
+            return None
+        raise
+    return existing if isinstance(existing, dict) else None
+
+
 def ensure_task_conversation(task_name: str) -> dict:
     base = _get_base_url()
     if not base:
         raise RuntimeError("KoreChat is not configured")
 
-    external_id = urllib.parse.quote(_task_external_id(task_name), safe="")
-    existing = _http_get(base, f"/conversations/by-external-id/{external_id}")
-    if isinstance(existing, dict):
+    existing = _lookup_task_conversation(base, task_name)
+    if existing is not None:
         return existing
 
     created = _http_post(

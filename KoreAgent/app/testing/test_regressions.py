@@ -388,6 +388,24 @@ class RegressionTests(unittest.TestCase):
             self.assertIn("parameters", tool["function"])
             self.assertEqual(tool["function"]["parameters"]["type"], "object")
 
+    def test_loaded_skills_payload_infers_tool_classification_metadata(self) -> None:
+        skills = self.skills_payload.get("skills", [])
+        self.assertGreater(len(skills), 0)
+
+        system_skill = next((skill for skill in skills if skill.get("is_system_skill") is True), None)
+        local_skill  = next((skill for skill in skills if skill.get("is_system_skill") is False), None)
+
+        self.assertIsNotNone(system_skill)
+        self.assertIsNotNone(local_skill)
+        self.assertEqual(system_skill["origin"], "builtin")
+        self.assertEqual(system_skill["availability"], "guaranteed")
+        self.assertEqual(system_skill["role"], "core")
+        self.assertEqual(system_skill["trust_boundary"], "internal")
+        self.assertEqual(local_skill["origin"], "local")
+        self.assertEqual(local_skill["availability"], "configured")
+        self.assertEqual(local_skill["role"], "optional")
+        self.assertEqual(local_skill["trust_boundary"], "internal")
+
     def test_mcp_connections_prefer_new_config_and_skip_disabled_entries(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             config_path = Path(tmp) / "default.json"
@@ -431,6 +449,14 @@ class RegressionTests(unittest.TestCase):
         self.assertEqual(len(servers), 1)
         self.assertEqual(servers[0]["name"], "Legacy")
         self.assertEqual(servers[0]["expected_prefix"], "legacy_")
+
+    def test_mcp_connections_include_tool_classification_metadata(self) -> None:
+        server = mcp_client._normalize_connection({"name": "KoreData", "url": "http://data/mcp"})
+
+        self.assertEqual(server["origin"], "remote_mcp")
+        self.assertEqual(server["availability"], "discovered")
+        self.assertEqual(server["role"], "external")
+        self.assertEqual(server["trust_boundary"], "external")
 
     def test_suite_mcp_service_refs_resolve_urls(self) -> None:
         config = workspace_utils_module._flatten_suite_config({

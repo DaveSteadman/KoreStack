@@ -54,6 +54,24 @@ _LOADED_PAYLOAD_CACHE: dict[tuple[str, float, int], dict] = {}
 _TOOL_DEFS_CACHE: dict[str, list[dict]] = {}
 
 
+def _classify_local_skill(skill_md_path: Path | str) -> dict[str, object]:
+    skill_path = Path(skill_md_path).resolve()
+    is_system  = False
+    try:
+        skill_path.relative_to(DEFAULT_SYSTEM_SKILLS_ROOT.resolve())
+        is_system = True
+    except ValueError:
+        is_system = False
+
+    return {
+        "is_system_skill": is_system,
+        "origin":          "builtin" if is_system else "local",
+        "availability":    "guaranteed" if is_system else "configured",
+        "role":            "core" if is_system else "optional",
+        "trust_boundary":  "internal",
+    }
+
+
 def _workspace_abspath(module_path: str) -> Path:
     workspace_root = get_workspace_root()
     candidate = str(module_path).strip()
@@ -338,6 +356,7 @@ def to_workspace_relative_path(path: Path) -> str:
 def normalize_summary(summary: dict, skill_md_path: Path) -> dict:
     normalized = dict(summary)
     normalized["relative_path"] = to_workspace_relative_path(skill_md_path)
+    normalized.update(_classify_local_skill(skill_md_path))
 
     normalized.setdefault("trigger_keyword", "")
     normalized.setdefault("triggers", [])
@@ -480,6 +499,17 @@ def load_skills_payload(catalog_path: Path) -> dict:
     if cached is not None:
         return cached
     payload = json.loads(catalog_path.read_text(encoding="utf-8-sig"))
+    workspace_root = Path(__file__).resolve().parent.parent
+    for skill in payload.get("skills", []):
+        relative_path = str(skill.get("relative_path", "")).strip()
+        skill_path    = (workspace_root / relative_path).resolve() if relative_path else workspace_root
+        skill.update(
+            {
+                key: value
+                for key, value in _classify_local_skill(skill_path).items()
+                if key not in skill
+            }
+        )
     _LOADED_PAYLOAD_CACHE.clear()
     _LOADED_PAYLOAD_CACHE[cache_key] = payload
     return payload

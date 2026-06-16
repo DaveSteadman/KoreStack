@@ -9,6 +9,7 @@ if str(APP_ROOT) not in sys.path:
     sys.path.insert(0, str(APP_ROOT))
 
 import run_helpers
+import task_korechat
 
 
 class TaskConversationTests(unittest.TestCase):
@@ -60,6 +61,27 @@ class TaskConversationTests(unittest.TestCase):
                 ("prompt one", "reply:prompt one"),
                 ("prompt two", "reply:prompt two"),
             ],
+        )
+
+    def test_ensure_task_conversation_creates_when_external_id_is_missing(self) -> None:
+        created = {"id": 17, "subject": "XXX", "external_id": "task:XXX"}
+
+        with (
+            patch.object(task_korechat, "_get_base_url", return_value="http://kc"),
+            patch.object(task_korechat, "_http_get", side_effect=RuntimeError('KC HTTP 404: {"detail":"Conversation not found"}')),
+            patch.object(task_korechat, "_http_post", return_value=created) as post_mock,
+        ):
+            result = task_korechat.ensure_task_conversation("XXX")
+
+        self.assertEqual(result, created)
+        post_mock.assert_called_once_with(
+            "http://kc",
+            "/conversations",
+            {
+                "external_id":  "task:XXX",
+                "subject":      "XXX",
+                "channel_type": "scheduled",
+            },
         )
 
 

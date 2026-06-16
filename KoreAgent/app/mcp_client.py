@@ -246,6 +246,11 @@ def get_mcp_tool_definitions() -> list[dict]:
 
 
 # ----------------------------------------------------------------------------------------------------
+def get_mcp_tool_index() -> dict[str, dict]:
+    return {name: dict(info) for name, info in _mcp_tool_index.items()}
+
+
+# ----------------------------------------------------------------------------------------------------
 def get_server_status() -> list[dict]:
     """Return [{name, url, purpose, tool_count, ok}] for each configured connection."""
     registered_urls: dict[str, int] = {}
@@ -258,6 +263,10 @@ def get_server_status() -> list[dict]:
             "purpose":    srv.get("purpose", ""),
             "transport":  srv.get("transport", "streamable_http"),
             "enabled":    srv.get("enabled", True),
+            "origin":     srv.get("origin", "remote_mcp"),
+            "availability": srv.get("availability", "discovered"),
+            "role":       srv.get("role", "external"),
+            "trust_boundary": srv.get("trust_boundary", "external"),
             "tool_count": registered_urls.get(srv.get("url", ""), 0),
             "ok":         registered_urls.get(srv.get("url", ""), 0) > 0,
         }
@@ -422,6 +431,10 @@ def _normalize_connection(raw: dict) -> dict:
         "url":             str(raw.get("url", "")).strip(),
         "transport":       str(raw.get("transport") or "streamable_http").strip().lower(),
         "purpose":         str(raw.get("purpose", "")).strip(),
+        "origin":          "remote_mcp",
+        "availability":    "discovered",
+        "role":            "external",
+        "trust_boundary":  "external",
         "expected_prefix": str(raw.get("expected_prefix") or raw.get("tool_prefix") or "").strip(),
         "allowed_tools":   [str(tool).strip() for tool in allowed_tools if str(tool).strip()] if isinstance(allowed_tools, list) else [],
         "blocked_tools":   [str(tool).strip() for tool in blocked_tools if str(tool).strip()] if isinstance(blocked_tools, list) else [],
@@ -599,6 +612,10 @@ async def _list_tools_async(server: dict) -> tuple[list[dict], dict]:
                     "connection":      server_name,
                     "transport":       server.get("transport", "streamable_http"),
                     "purpose":         server.get("purpose", ""),
+                    "origin":          server.get("origin", "remote_mcp"),
+                    "availability":    server.get("availability", "discovered"),
+                    "role":            server.get("role", "external"),
+                    "trust_boundary":  server.get("trust_boundary", "external"),
                     "expected_prefix": expected_prefix,
                     "allowed_tools":   list(allowed_tools),
                     "blocked_tools":   list(blocked_tools),
