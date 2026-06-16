@@ -3,7 +3,7 @@
 # ====================================================================================================
 # KoreDocs configuration loader.
 #
-# Reads host and port from the suite-level config/default.json + config/local.json.
+# Reads host and port from the suite-level config/korestack_config.json.
 # Exposes a module-level cfg dict so server.py can import one name.
 #
 # Defaults:

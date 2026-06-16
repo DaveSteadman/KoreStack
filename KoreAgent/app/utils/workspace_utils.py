@@ -62,7 +62,7 @@ def get_suite_root() -> Path:
 
     workspace_root = get_workspace_root()
     parent = workspace_root.parent
-    if (parent / "config" / "default.json").exists():
+    if (parent / "config" / "korestack_config.json").exists():
         return parent.resolve()
     return workspace_root
 
@@ -74,12 +74,7 @@ def get_suite_config_dir() -> Path:
 
 @lru_cache(maxsize=1)
 def get_suite_defaults_file() -> Path:
-    return Path(os.environ.get("KORE_SUITE_CONFIG", str(get_suite_config_dir() / "default.json"))).resolve()
-
-
-@lru_cache(maxsize=1)
-def get_suite_local_file() -> Path:
-    return get_suite_config_dir() / "local.json"
+    return Path(os.environ.get("KORE_SUITE_CONFIG", str(get_suite_config_dir() / "korestack_config.json"))).resolve()
 
 
 # ====================================================================================================
@@ -168,7 +163,8 @@ def _resolve_mcp_service_refs(config: dict) -> None:
     """Resolve service-reference MCP connections to full URLs and clean up private keys.
 
     Connections that declare {"service": "docs", "path": "/mcp"} are resolved using
-    the final merged services ports and host.  This means a port override in local.json
+    the final merged services ports and host. This means a port override in
+    korestack_config.json
     flows through automatically without duplicating port numbers in the MCP connection list.
 
     Mutates *config* in-place.  Removes the private "_suite_services" and "_suite_host"
@@ -195,16 +191,12 @@ def load_runtime_config() -> dict:
     """Return merged runtime config from legacy agent defaults plus top-level suite config."""
     merged = dict(_read_json_file(get_bootstrap_defaults_file()))
 
-    suite_defaults = get_suite_defaults_file()
-    if suite_defaults.exists():
-        _merge_runtime_config_layer(merged, _flatten_suite_config(_read_json_file(suite_defaults)))
-
-    suite_local = get_suite_local_file()
-    if suite_local.exists():
-        _merge_runtime_config_layer(merged, _flatten_suite_config(_read_json_file(suite_local)))
+    suite_config = get_suite_defaults_file()
+    if suite_config.exists():
+        _merge_runtime_config_layer(merged, _flatten_suite_config(_read_json_file(suite_config)))
 
     # Resolve any MCP connections that use service references instead of hardcoded URLs.
-    # This runs after all config layers are merged so local.json port overrides are honoured.
+    # This runs after the suite config is merged so service port overrides are honoured.
     _resolve_mcp_service_refs(merged)
 
     return merged

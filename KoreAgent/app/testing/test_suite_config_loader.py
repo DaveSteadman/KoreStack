@@ -14,27 +14,18 @@ from KoreCommon.suite_config import load_service_config
 
 
 class SuiteConfigLoaderTests(unittest.TestCase):
-    def test_load_service_config_merges_default_local_and_env(self) -> None:
+    def test_load_service_config_reads_suite_config_and_env(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             cfg_dir = root / "config"
             cfg_dir.mkdir(parents=True, exist_ok=True)
 
-            (cfg_dir / "default.json").write_text(
-                json.dumps(
-                    {
-                        "network": {"host": "10.0.0.1"},
-                        "services": {"korecode": {"port": 8610}},
-                        "log_level": "warning",
-                    }
-                ),
-                encoding="utf-8",
-            )
-            (cfg_dir / "local.json").write_text(
+            (cfg_dir / "korestack_config.json").write_text(
                 json.dumps(
                     {
                         "network": {"host": "192.168.1.50"},
                         "services": {"korecode": {"port": 8619}},
+                        "log_level": "warning",
                     }
                 ),
                 encoding="utf-8",
@@ -61,11 +52,7 @@ class SuiteConfigLoaderTests(unittest.TestCase):
             cfg_dir = root / "config"
             cfg_dir.mkdir(parents=True, exist_ok=True)
 
-            (cfg_dir / "default.json").write_text(
-                json.dumps({"connections": {"korechat": "http://host-a:8630"}}),
-                encoding="utf-8",
-            )
-            (cfg_dir / "local.json").write_text(
+            (cfg_dir / "korestack_config.json").write_text(
                 json.dumps({"connections": {"korechat": "http://host-b:8630"}}),
                 encoding="utf-8",
             )

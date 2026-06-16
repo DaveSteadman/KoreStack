@@ -4,7 +4,7 @@
 # KoreComms configuration loader.
 #
 # Reads host, port, KoreChat URL, poll intervals, and missing-conversation policy from
-# the suite-level config/default.json + config/local.json.  Exposes a module-level cfg
+# the suite-level config/korestack_config.json.  Exposes a module-level cfg
 # dict so server.py and poller.py can import one name.
 #
 # Defaults:

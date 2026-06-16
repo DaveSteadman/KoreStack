@@ -32,8 +32,7 @@ SUITE_ROOT = Path(__file__).resolve().parent.parent
 STACK_ROOT = Path(__file__).resolve().parent
 STACK_STATIC_DIR = STACK_ROOT / "static"
 UI_ELEMENTS_ASSETS = SUITE_ROOT / "UIElements" / "assets"
-SUITE_CONFIG_DEFAULT = SUITE_ROOT / "config" / "default.json"
-SUITE_CONFIG_LOCAL = SUITE_ROOT / "config" / "local.json"
+SUITE_CONFIG_FILE = SUITE_ROOT / "config" / "korestack_config.json"
 
 
 @dataclass(frozen=True)
@@ -124,6 +123,16 @@ def get_ui_assets_dir() -> Path:
     return UI_ELEMENTS_ASSETS
 
 
+def _service_host(config: dict, slug: str) -> str:
+    network = config.get("network") if isinstance(config.get("network"), dict) else {}
+    services = config.get("services") if isinstance(config.get("services"), dict) else {}
+    network_host = str(network.get("host") or "127.0.0.1").strip()
+    service_cfg = services.get(slug) if isinstance(services.get(slug), dict) else {}
+    if slug == "koreagent":
+        return network_host
+    return str(service_cfg.get("host") or network_host).strip()
+
+
 def _merge_dict(base: dict, override: dict) -> dict:
     merged = dict(base)
     for key, value in override.items():
@@ -135,18 +144,14 @@ def _merge_dict(base: dict, override: dict) -> dict:
 
 
 def load_suite_config() -> dict:
-    config: dict = {}
-    for path in (SUITE_CONFIG_DEFAULT, SUITE_CONFIG_LOCAL):
-        if not path.exists():
-            continue
-        try:
-            raw = json.loads(path.read_text(encoding="utf-8"))
-            if isinstance(raw, dict):
-                config = _merge_dict(config, raw)
-        except Exception as exc:
-            log.warning("failed to parse suite config %s: %s", path, exc)
-            continue
-    return config
+    if not SUITE_CONFIG_FILE.exists():
+        return {}
+    try:
+        raw = json.loads(SUITE_CONFIG_FILE.read_text(encoding="utf-8"))
+    except Exception as exc:
+        log.warning("failed to parse suite config %s: %s", SUITE_CONFIG_FILE, exc)
+        return {}
+    return raw if isinstance(raw, dict) else {}
 
 
 def resolve_root_path(value: object, default: str) -> Path:
@@ -165,7 +170,7 @@ def get_stack_paths(config: dict) -> dict[str, Path]:
         return (datauser / str(paths.get(key) or default)).resolve()
 
     return {
-        "path config":    SUITE_CONFIG_LOCAL if SUITE_CONFIG_LOCAL.exists() else SUITE_CONFIG_DEFAULT,
+        "path config":    SUITE_CONFIG_FILE,
         "datacontrol":    datacontrol,
         "datauser":       datauser,
         "conversation_data": _dc("korechat",  "korechat"),
@@ -186,7 +191,7 @@ def build_child_env(config: dict) -> dict[str, str]:
 
     env["PYTHONUTF8"] = "1"
     env["KORE_SUITE_ROOT"] = str(SUITE_ROOT)
-    env["KORE_SUITE_CONFIG"] = str(SUITE_CONFIG_DEFAULT)
+    env["KORE_SUITE_CONFIG"] = str(SUITE_CONFIG_FILE)
     env["KORE_SUITE_DATACONTROL"] = str(stack_paths["datacontrol"])
     env["KORE_SUITE_DATAUSER"] = str(stack_paths["datauser"])
     env["KORE_UIELEMENTS_ASSETS_DIR"] = str(get_ui_assets_dir())
@@ -223,7 +228,7 @@ def build_child_env(config: dict) -> dict[str, str]:
     for _slug, _meta in SERVICE_META.items():
         _svc_cfg = services.get(_slug) if isinstance(services.get(_slug), dict) else {}
         _port = int(_svc_cfg.get("port", _meta["port"]) if _svc_cfg else _meta["port"])
-        _host = str(_svc_cfg.get("host") or _network_host).strip() if _svc_cfg else _network_host
+        _host = _service_host(config, _slug)
         _key = SERVICE_ICON_KEYS.get(_slug)
         if _key:
             _suite_urls[_key] = f"http://{_host}:{_port}{_meta['url_suffix']}"
@@ -238,7 +243,7 @@ def build_services(config: dict) -> dict[str, ServiceSpec]:
     for slug, meta in SERVICE_META.items():
         service_cfg = services_cfg.get(slug) if isinstance(services_cfg.get(slug), dict) else {}
         port = int(service_cfg.get("port", meta["port"]))
-        host = str(service_cfg.get("host") or "127.0.0.1").strip()
+        host = _service_host(config, slug)
         base_url = f"http://{host}:{port}"
         result[slug] = ServiceSpec(
             slug=slug,
@@ -252,24 +257,27 @@ def build_services(config: dict) -> dict[str, ServiceSpec]:
     return result
 
 
-def save_address_to_local_config(slug: str, host: str, port: int) -> None:
-    """Persist host+port override for *slug* into config/local.json."""
+def save_address_to_suite_config(slug: str, host: str, port: int) -> None:
+    """Persist host+port override for *slug* into config/korestack_config.json."""
     config: dict = {}
-    if SUITE_CONFIG_LOCAL.exists():
+    if SUITE_CONFIG_FILE.exists():
         try:
-            config = json.loads(SUITE_CONFIG_LOCAL.read_text(encoding="utf-8"))
+            config = json.loads(SUITE_CONFIG_FILE.read_text(encoding="utf-8"))
         except Exception as exc:
-            log.warning("failed to read local config %s: %s", SUITE_CONFIG_LOCAL, exc)
+            log.warning("failed to read suite config %s: %s", SUITE_CONFIG_FILE, exc)
     if not isinstance(config.get("services"), dict):
         config["services"] = {}
     if not isinstance(config["services"].get(slug), dict):
         config["services"][slug] = {}
-    config["services"][slug]["host"] = host
+    if slug == "koreagent":
+        config["services"][slug].pop("host", None)
+    else:
+        config["services"][slug]["host"] = host
     config["services"][slug]["port"] = port
     if "url" in config["services"][slug]:
         del config["services"][slug]["url"]
-    SUITE_CONFIG_LOCAL.parent.mkdir(parents=True, exist_ok=True)
-    SUITE_CONFIG_LOCAL.write_text(json.dumps(config, indent=2), encoding="utf-8")
+    SUITE_CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
+    SUITE_CONFIG_FILE.write_text(json.dumps(config, indent=2), encoding="utf-8")
 
 
 def setup_logging(log_dir: Path) -> None:
@@ -392,7 +400,7 @@ class StackManager:
             raise SystemExit(f"Missing service entrypoint: {script_path}")
 
         # Build the spawn command and env, injecting the current port fresh from the spec.
-        # This ensures port overrides from local.json are honoured even after set_service_address.
+        # This ensures config edits are honoured even after set_service_address.
         parsed_url = urllib.parse.urlparse(spec.health_url)
         spawn_port = parsed_url.port
         meta = SERVICE_META.get(slug, {})
@@ -460,11 +468,13 @@ class StackManager:
         return self.start_service(slug)
 
     def set_service_address(self, slug: str, host: str, port: int) -> bool:
-        """Reassign host+port, save to local config, stop and restart the service."""
+        """Reassign host+port, save to suite config, stop and restart the service."""
         spec = self._service_map.get(slug)
         if spec is None:
             raise KeyError(slug)
         meta = SERVICE_META[slug]
+        if slug == "koreagent":
+            host = urllib.parse.urlparse(spec.url).hostname or "127.0.0.1"
         base_url = f"http://{host}:{port}"
         new_spec = ServiceSpec(
             slug=slug,
@@ -475,7 +485,7 @@ class StackManager:
             health_url=base_url + str(meta["health_suffix"]),
             description=spec.description,
         )
-        save_address_to_local_config(slug, host, port)
+        save_address_to_suite_config(slug, host, port)
         self.stop_service(slug)
         with self._lock:
             for i, s in enumerate(self._services):
@@ -644,7 +654,7 @@ class StackManager:
             "stack": {
                 "label": "KoreStack",
                 "root": str(SUITE_ROOT),
-                "configPath": str(SUITE_CONFIG_DEFAULT),
+                "configPath": str(SUITE_CONFIG_FILE),
                 "uiElementsMounted": get_ui_assets_dir().exists(),
                 "services": [spec.slug for spec in self._services],
                 "metrics": {

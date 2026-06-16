@@ -208,10 +208,10 @@ SKILLS_CATALOG_PATH  = Path(__file__).resolve().parent / "skills" / "skills_cata
 LOG_DIR              = get_logs_dir()
 DEFAULTS_FILE        = get_bootstrap_defaults_file()
 
-# Keys accepted from default.json - must match the argparse dest names exactly.
+# Keys accepted from the runtime defaults file - must match the argparse dest names exactly.
 _DEFAULTS_KEYS = {"model", "ctx", "agentport", "llmhost"}
 
-# All valid keys in default.json - superset of _DEFAULTS_KEYS.
+# All valid keys in the runtime defaults file - superset of _DEFAULTS_KEYS.
 # Keys here that are not in _DEFAULTS_KEYS are read directly by skills or slash commands
 # and are not passed through argparse.
 _KNOWN_KEYS = _DEFAULTS_KEYS | {"korechaturl", "ControlDataFolder", "UserDataFolder", "mcp_connections", "mcp_servers"}
@@ -221,7 +221,7 @@ _KNOWN_KEYS = _DEFAULTS_KEYS | {"korechaturl", "ControlDataFolder", "UserDataFol
 # MARK: DEFAULTS LOADING
 # ====================================================================================================
 def _load_defaults() -> dict:
-    # Returns only recognised keys from default.json.
+    # Returns only recognised keys from the runtime defaults file.
     # Prints a startup warning listing any keys present in the file but not recognised.
     try:
         raw = load_runtime_config()
@@ -232,7 +232,7 @@ def _load_defaults() -> dict:
         if unknown:
             known_list = ", ".join(sorted(_KNOWN_KEYS))
             print(
-                f"[default.json] Unrecognised key(s) ignored: {', '.join(sorted(unknown))}. "
+                f"[defaults] Unrecognised key(s) ignored: {', '.join(sorted(unknown))}. "
                 f"Recognised keys: {known_list}.",
                 flush=True,
             )
@@ -245,7 +245,7 @@ def _load_defaults() -> dict:
 # MARK: CLI
 # ====================================================================================================
 def parse_main_args() -> argparse.Namespace:
-    # Priority: factory defaults < default.json < command-line args.
+    # Priority: factory defaults < runtime defaults file < command-line args.
     file_defaults = _load_defaults()
 
     parser = argparse.ArgumentParser(description="KoreAgent - web UI entrypoint.")

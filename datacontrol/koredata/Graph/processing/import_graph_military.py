@@ -78,7 +78,7 @@ def _find_suite_root() -> _Path:
             continue
         _seen.add(_key)
         _cfg = _cand / "config"
-        if (_cfg / "default.json").exists() or (_cfg / "local.json").exists():
+        if (_cfg / "korestack_config.json").exists():
             return _cand
 
     return _here.parents[2]
@@ -86,18 +86,10 @@ def _find_suite_root() -> _Path:
 
 def _load_suite_config() -> dict:
     _suite_root = _find_suite_root()
-    _result: dict = {}
-    for _name in ("default.json", "local.json"):
-        try:
-            _raw = _json.loads((_suite_root / "config" / _name).read_text(encoding="utf-8"))
-        except Exception:
-            continue
-        for _k, _v in _raw.items():
-            if isinstance(_v, dict) and isinstance(_result.get(_k), dict):
-                _result[_k] = {**_result[_k], **_v}
-            else:
-                _result[_k] = _v
-    return _result
+    try:
+        return _json.loads((_suite_root / "config" / "korestack_config.json").read_text(encoding="utf-8"))
+    except Exception:
+        return {}
 
 
 # ── Configuration ─────────────────────────────────────────────────────────────

@@ -3,7 +3,7 @@
 # ====================================================================================================
 # Configuration loader for KoreChat.
 #
-# Reads config/default.json relative to the working directory. Any key present in the file
+# Reads config/korestack_config.json via the shared suite loader. Any key present in the file
 # overrides the built-in default. Missing keys fall back to the defaults below so the service
 # starts with no config file present.
 #

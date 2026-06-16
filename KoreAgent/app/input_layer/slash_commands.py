@@ -397,7 +397,7 @@ def _cmd_defaults(arg: str, ctx: SlashCommandContext) -> None:
             defaults_path.parent.mkdir(parents=True, exist_ok=True)
             defaults_path.write_text(json.dumps(new_cfg, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
         except Exception as exc:
-            ctx.output(f"Error saving default.json: {exc}", "error")
+            ctx.output(f"Error saving defaults file: {exc}", "error")
             return
         ctx.output(f"Defaults saved to: {defaults_path}", "success")
         for key, value in new_cfg.items():
@@ -471,7 +471,7 @@ _DESCRIPTIONS: dict[str, str] = {
     "/sandbox": "<on|off>  Enable/disable Python code execution sandbox (import whitelist + blocked builtins)",
     "/tools": "List all tools currently exposed to the model (respects web skills toggle)",
     "/deletelogs": "<days>  Delete log, chatsession, and test_results date-folders older than N days (e.g. /deletelogs 10)",
-    "/defaults": "Show current default.json settings and file path; /defaults set saves current model/ctx/host to the file",
+    "/defaults": "Show current bootstrap defaults and file path; /defaults set saves current model/ctx/host to the file",
     "/mcp":      "[status | reconnect]  Show MCP server status or re-enumerate tools from all configured servers",
 }
 

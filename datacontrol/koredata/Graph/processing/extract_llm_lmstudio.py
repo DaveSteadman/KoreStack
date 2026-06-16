@@ -22,25 +22,17 @@ from pathlib import Path
 
 def _find_repo_root() -> Path:
     for candidate in Path(__file__).resolve().parents:
-        if (candidate / "config" / "default.json").exists():
+        if (candidate / "config" / "korestack_config.json").exists():
             return candidate
     raise RuntimeError("Could not locate repo root from script path")
 
 def _load_suite_config() -> dict:
-    """Merge config/default.json + config/local.json from the repo root."""
+    """Load config/korestack_config.json from the repo root."""
     _root = _find_repo_root()
-    _result: dict = {}
-    for _name in ("default.json", "local.json"):
-        try:
-            _raw = json.loads((_root / "config" / _name).read_text(encoding="utf-8"))
-        except Exception:
-            continue
-        for _k, _v in _raw.items():
-            if isinstance(_v, dict) and isinstance(_result.get(_k), dict):
-                _result[_k] = {**_result[_k], **_v}
-            else:
-                _result[_k] = _v
-    return _result
+    try:
+        return json.loads((_root / "config" / "korestack_config.json").read_text(encoding="utf-8"))
+    except Exception:
+        return {}
 
 
 def _load_llm_config() -> dict:

@@ -91,6 +91,7 @@ function updateCard(service) {
   const hostInput = card.querySelector('[data-field="host"]');
   if (hostInput && hostInput !== document.activeElement && !hostInput.dataset.dirty) {
     hostInput.value = service.host ?? '';
+    hostInput.readOnly = service.slug === 'koreagent';
   }
 
   const portInput = card.querySelector('[data-field="port"]');
@@ -219,7 +220,10 @@ function wireControls() {
   for (const button of document.querySelectorAll('[data-action="setaddress"]')) {
     button.addEventListener('click', () => {
       const cell = button.closest('.address-edit');
-      const host = cell?.querySelector('.host-input')?.value?.trim() || '127.0.0.1';
+      const hostInput = cell?.querySelector('.host-input');
+      const host = hostInput?.readOnly
+        ? (hostInput?.value?.trim() || '127.0.0.1')
+        : (hostInput?.value?.trim() || '127.0.0.1');
       const port = cell?.querySelector('.port-input')?.value;
       if (port) setAddressAction(button.dataset.service, host, port);
     });

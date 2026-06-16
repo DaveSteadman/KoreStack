@@ -21,7 +21,7 @@
 # Each conversation maps to a stable session_id "kc_conv_{id}" for orchestration history.
 #
 # Configuration:
-#   "korechaturl" in default.json (repo root), e.g. "http://localhost:8630".
+#   "korechaturl" in the runtime config, e.g. "http://localhost:8630".
 #   If absent, the thread exits immediately with a notice.
 #
 # Public entry point:

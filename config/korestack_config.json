@@ -1,0 +1,67 @@
+{
+  "comment": "KoreStack suite configuration.",
+  "paths": {
+    "datacontrolroot": "C:/Util/GithubRepos/KoreStack/datacontrol",
+    "datauserroot":    "C:/Util/GithubRepos/KoreStack/datauser",
+    "korechat":        "korechat",
+    "korecomms":       "korecomms",
+    "koredata":        "koredata",
+    "koreagent":       "koreagent",
+    "koredocs":        "koredocs",
+    "docs_data":       "KoreFiles"
+  },
+  "network": {
+    "host": "127.0.0.1"
+  },
+  "services": {
+    "korestack":       { "port": 9600 },
+    "koreagent":       { "port": 9601 },
+    "korechat":        { "port": 9602 },
+    "koredatagateway": { "port": 9603 },
+    "korefeed":        { "port": 9604 },
+    "korelibrary":     { "port": 9605 },
+    "korerag":         { "port": 9606 },
+    "korereference":   { "port": 9607 },
+    "koregraph":       { "port": 9608 },
+    "korecomms":       { "port": 9609 },
+    "koredocs":        { "port": 9610 },
+    "korecode":        { "port": 9611 }
+  },
+  "mcp": {
+    "connections": [
+      {
+        "name":            "KoreData",
+        "service":         "koredatagateway",
+        "path":            "/mcp",
+        "enabled":         true,
+        "purpose":         "reference search and retrieval across feeds, encyclopedia, library, and internal documents",
+        "expected_prefix": "koredata_"
+      },
+      {
+        "name":            "KoreDocs",
+        "service":         "koredocs",
+        "path":            "/mcp",
+        "enabled":         true,
+        "purpose":         "document navigation, structured editing, and KoreFile authoring",
+        "expected_prefix": "koredocs_"
+      },
+      {
+        "name":            "KoreGraph",
+        "service":         "koregraph",
+        "path":            "/mcp",
+        "enabled":         true,
+        "purpose":         "concept graph search, traversal, and connection creation",
+        "expected_prefix": "graph_connection_",
+        "allowed_tools": [
+          "graph_connection_search_vocab",
+          "graph_connection_expand_concept",
+          "graph_connection_expand_concept_by_term",
+          "graph_connection_create",
+          "graph_connection_create_many",
+          "graph_connection_list",
+          "graph_connection_delete"
+        ]
+      }
+    ]
+  }
+}

@@ -275,13 +275,13 @@ app.add_middleware(
 # take routing priority over explicit handlers, which prevents the no-store header being set.
 
 def _get_korechat_base_url() -> str | None:
-    # Prefer the live sidecar setting, but fall back to default.json so the UI link
+    # Prefer the live sidecar setting, but fall back to the suite config so the UI link
     # still works when KoreChat is configured but managed externally.
     base_url = _kc_client.get_base_url()
     if base_url:
         return base_url.rstrip("/")
 
-    defaults_path = _WEB_DIR.parent.parent.parent / "default.json"
+    defaults_path = _WEB_DIR.parent.parent.parent / "config" / "korestack_config.json"
     try:
         raw = json.loads(defaults_path.read_text(encoding="utf-8")) if defaults_path.exists() else {}
     except Exception:

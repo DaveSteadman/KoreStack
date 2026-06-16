@@ -6,7 +6,7 @@
 # KoreChat is a peer service managed by KoreStack (or started externally).
 # This module provides the configured base URL and a reachability check.
 #
-# Configuration (default.json / connections.korechat):
+# Configuration (runtime config / connections.korechat):
 #   "korechaturl": "http://127.0.0.1:8630"
 #
 # Related modules:

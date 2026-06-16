@@ -58,6 +58,7 @@ def _service_row_markup(service: dict[str, object]) -> str:
     host = html.escape(str(service["host"]))
     port = html.escape(str(service["port"]))
     url = html.escape(str(service["url"]))
+    host_readonly = ' readonly aria-readonly="true"' if slug == "koreagent" else ""
     return f"""
       <article class="service-row service-{slug} {css_state}" data-service-card="{slug}">
         <div class="service-cell service-glyph" aria-hidden="true" data-suite-icon="{icon_key}"></div>
@@ -68,7 +69,7 @@ def _service_row_markup(service: dict[str, object]) -> str:
         </div>
         <div class="service-cell service-state">{state_markup}</div>
         <div class="service-cell address-edit">
-          <input type="text" class="host-input" data-field="host" value="{host}" aria-label="Host for {label}">
+          <input type="text" class="host-input" data-field="host" value="{host}" aria-label="Host for {label}"{host_readonly}>
           <input type="number" class="port-input" data-field="port" value="{port}" min="1024" max="65535" aria-label="Port for {label}">
           <button class="kcui-tag kcui-tag--dim" type="button" data-service="{slug}" data-action="setaddress" title="Save port and restart {label}">set</button>
         </div>

@@ -33,22 +33,18 @@ def load_service_config(
     env_overrides: dict[str, str] | None = None,
     raw_merger: RawMerger | None = None,
 ) -> dict[str, Any]:
-    """Load merged service config from config/default.json + config/local.json.
+    """Load service config from config/korestack_config.json.
 
-    Merge order is defaults -> default.json -> local.json -> env overrides.
+    Merge order is defaults -> korestack_config.json -> env overrides.
     Common keys resolved from the suite config are:
       - network.host      -> result['host']
       - log_level         -> result['log_level']
       - services.<key>.port -> result['port']
     """
     result = dict(defaults)
-    cfg_default = suite_root / "config" / "default.json"
-    cfg_local = suite_root / "config" / "local.json"
+    cfg_path = suite_root / "config" / "korestack_config.json"
 
-    for cfg_path in (cfg_default, cfg_local):
-        if not cfg_path.exists():
-            continue
-
+    if cfg_path.exists():
         raw = _read_json(cfg_path)
         host = raw.get("network", {}).get("host")
         if host is not None:

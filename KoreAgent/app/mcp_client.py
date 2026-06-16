@@ -10,7 +10,7 @@
 # No changes to orchestration, skill_executor, or any existing skill module are required
 # beyond the two call sites that extend tool_defs and route tool calls.
 #
-# MCP connections are declared in default.json under "mcp_connections":
+# MCP connections are declared in the runtime config under "mcp_connections":
 #   [{"name": "KoreData", "url": "http://localhost:8800/mcp", "expected_prefix": "koredata_"}]
 # The older "mcp_servers" key is still accepted as a backwards-compatible alias.
 #
@@ -192,7 +192,7 @@ def reconnect() -> tuple[int, list[str]]:
 
     servers = _configured_servers
     if not servers:
-        return 0, ["No MCP connections configured in default.json"]
+        return 0, ["No MCP connections configured in runtime config"]
 
     if _loop is None or _loop_thread is None or not _loop_thread.is_alive():
         _loop        = asyncio.new_event_loop()
@@ -386,7 +386,7 @@ def _load_server_config(config_path: Path) -> list[dict]:
             raw_connections = data["mcp"].get("connections", [])
 
         # If the bootstrap file has no connections, fall through to the merged suite config.
-        # This allows mcp connections to be declared in config/default.json (with service
+        # This allows MCP connections to be declared in config/korestack_config.json (with service
         # references resolved against the suite's services block) rather than hardcoded here.
         if not isinstance(raw_connections, list) or not raw_connections:
             from utils.workspace_utils import load_runtime_config

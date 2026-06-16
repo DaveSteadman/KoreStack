@@ -5,9 +5,9 @@
 #
 # Provides get_suite_root(), get_suite_datacontrol_dir(), and get_suite_datauser_dir()
 # which locate the KoreStack suite directories by traversing from __file__.
-# load_config(section) reads config/default.json + config/local.json and returns the
-# merged section dict.  _DATA_SUBSERVICE_OFFSETS maps service names to port offsets
-# from the gateway base port.
+# load_config(section) reads config/korestack_config.json and returns the section
+# dict. _DATA_SUBSERVICE_OFFSETS maps service names to port offsets from the
+# gateway base port.
 #
 # Respects the KORE_SUITE_ROOT environment variable for non-standard installations.
 #
@@ -21,31 +21,20 @@ from functools import lru_cache
 from pathlib import Path
 
 _SUITE_ROOT   = Path(__file__).resolve().parents[2]  # KoreStack/
-_CONFIG_FILE  = _SUITE_ROOT / "config" / "default.json"
-_LOCAL_CONFIG = _SUITE_ROOT / "config" / "local.json"
+_CONFIG_FILE  = _SUITE_ROOT / "config" / "korestack_config.json"
 
 
 @lru_cache(maxsize=1)
 def _load_paths_config() -> dict:
     paths: dict = {}
-    for cfg_path in (_CONFIG_FILE, _LOCAL_CONFIG):
-        if not cfg_path.exists():
-            continue
-        with open(cfg_path, encoding="utf-8") as f:
-            raw = json.load(f)
-        if isinstance(raw.get("paths"), dict):
-            paths.update(raw["paths"])
-    return paths
-
-
-@lru_cache(maxsize=1)
-def _load_local_paths_config() -> dict:
-    if not _LOCAL_CONFIG.exists():
+    if not _CONFIG_FILE.exists():
         return {}
 
-    with open(_LOCAL_CONFIG, encoding="utf-8") as f:
+    with open(_CONFIG_FILE, encoding="utf-8") as f:
         raw = json.load(f)
-    return raw["paths"] if isinstance(raw.get("paths"), dict) else {}
+    if isinstance(raw.get("paths"), dict):
+        paths.update(raw["paths"])
+    return paths
 
 
 def _resolve_configured_root(key: str) -> Path | None:
@@ -66,7 +55,7 @@ def _resolve_configured_root(key: str) -> Path | None:
 
 
 def _resolve_local_configured_root(key: str) -> Path | None:
-    raw_value = _load_local_paths_config().get(key)
+    raw_value = _load_paths_config().get(key)
     if not isinstance(raw_value, str):
         return None
 
@@ -120,13 +109,13 @@ def get_required_local_datacontrol_dir() -> Path:
     configured = _resolve_local_configured_root("datacontrolroot")
     if configured is None:
         raise RuntimeError(
-            "KoreGraph requires paths.datacontrolroot to be set in config/local.json."
+            "KoreGraph requires paths.datacontrolroot to be set in config/korestack_config.json."
         )
     return configured
 
 
 # KoreData sub-services are assigned ports as offsets from the gateway ("data") port.
-# This means changing the gateway port in local.json automatically shifts all sub-services.
+# This means changing the gateway port in korestack_config.json automatically shifts all sub-services.
 _DATA_SUBSERVICE_OFFSETS: dict[str, int] = {
     "korefeed":      1,
     "korelibrary":   2,
@@ -137,35 +126,34 @@ _DATA_SUBSERVICE_OFFSETS: dict[str, int] = {
 
 
 def load_config(section: str, defaults: dict) -> dict:
-    """Load config from central default.json + local.json.
+    """Load config from central korestack_config.json.
 
-    Resolution order (later wins):
+    Resolution order:
       1. *defaults*
-      2. ``network.host`` + ``services.data.port`` offset (for sub-services) from default.json
-      3. ``services.<section>.port`` from default.json (explicit override)
-      4. ``<section>`` dict from default.json
-      5. Same three steps repeated for local.json
+      2. ``network.host`` + ``services.data.port`` offset (for sub-services) from korestack_config.json
+      3. ``services.<section>.port`` from korestack_config.json (explicit override)
+      4. ``<section>`` dict from korestack_config.json
     """
     result = dict(defaults)
     offset = _DATA_SUBSERVICE_OFFSETS.get(section)
-    for cfg_path in (_CONFIG_FILE, _LOCAL_CONFIG):
-        if not cfg_path.exists():
-            continue
-        with open(cfg_path, encoding="utf-8") as f:
-            raw = json.load(f)
-        host = raw.get("network", {}).get("host")
-        if host is not None:
-            result["host"] = host
-        if "log_level" in raw:
-            result["log_level"] = raw["log_level"]
-        # Sub-services: derive port from data gateway port + fixed offset
-        if offset is not None:
-            data_port = raw.get("services", {}).get("koredatagateway", {}).get("port")
-            if data_port is not None:
-                result["port"] = data_port + offset
-        # Explicit port entry still takes priority if present
-        port = raw.get("services", {}).get(section, {}).get("port")
-        if port is not None:
-            result["port"] = port
-        result.update(raw.get(section, {}))
+    if not _CONFIG_FILE.exists():
+        return result
+
+    with open(_CONFIG_FILE, encoding="utf-8") as f:
+        raw = json.load(f)
+    host = raw.get("network", {}).get("host")
+    if host is not None:
+        result["host"] = host
+    if "log_level" in raw:
+        result["log_level"] = raw["log_level"]
+    # Sub-services: derive port from data gateway port + fixed offset
+    if offset is not None:
+        data_port = raw.get("services", {}).get("koredatagateway", {}).get("port")
+        if data_port is not None:
+            result["port"] = data_port + offset
+    # Explicit port entry still takes priority if present
+    port = raw.get("services", {}).get(section, {}).get("port")
+    if port is not None:
+        result["port"] = port
+    result.update(raw.get(section, {}))
     return result

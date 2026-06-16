@@ -1,13 +1,3 @@
-[2026-06-06T17:43:17]   Skipping Taiwan — next fetch in ~136m
-[2026-06-06T17:44:01] Ingesting: UK Gov
-[2026-06-06T17:44:07]   UK Gov: +1 entries in 6.2s [good]
-[2026-06-06T17:44:14]   Skipping Latvia — next fetch in ~135m
-[2026-06-06T17:44:57]   Skipping Denmark — next fetch in ~133m
-[2026-06-06T17:46:02]   Skipping UK Gov News — next fetch in ~133m
-[2026-06-06T17:47:17]   Skipping Norway — next fetch in ~132m
-[2026-06-06T18:33:57]   Skipping HuggingFace Blog — next fetch in ~1895m
-[2026-06-06T18:33:57] Ingesting: Understanding AI
-[2026-06-06T18:33:57]   Skipping Defense News — next fetch in ~359m
 [2026-06-06T18:33:57]   Skipping Breaking Defense — next fetch in ~368m
 [2026-06-06T18:33:57]   Skipping defenseone — next fetch in ~364m
 [2026-06-06T18:33:57]   Skipping ukdefencejournal — next fetch in ~360m
@@ -998,3 +988,13 @@
 [2026-06-15T23:37:45]   BBC World News: +1 entries in 7.6s [good]
 [2026-06-15T23:42:19] Ingesting: UK Gov World News
 [2026-06-15T23:42:22]   UK Gov World News: +20 entries in 3.1s [good]
+[2026-06-16T21:25:49] Ingesting: UN Global News
+[2026-06-16T21:25:49]   Skipping UN Global News - already queued/running
+[2026-06-16T21:25:49]   Skipping BBC World News - already queued/running
+[2026-06-16T21:26:15]   UN Global News: +5 entries in 26.6s [good]
+[2026-06-16T21:26:15] Ingesting: BBC World News
+[2026-06-16T21:26:22]   BBC World News: +26 entries in 6.1s [good]
+[2026-06-16T21:34:51]   Skipping UN Global News — next fetch in ~991m
+[2026-06-16T21:34:51]   Skipping BBC World News — next fetch in ~991m
+[2026-06-16T21:56:04]   Skipping UN Global News — next fetch in ~970m
+[2026-06-16T21:56:04]   Skipping BBC World News — next fetch in ~970m
