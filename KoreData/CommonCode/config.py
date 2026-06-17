@@ -121,6 +121,7 @@ _DATA_SUBSERVICE_OFFSETS: dict[str, int] = {
     "korelibrary":   2,
     "korerag":       3,
     "korereference": 4,
+    "korescrape":    5,
     "koregraph":     6,
 }
 

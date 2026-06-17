@@ -3,7 +3,8 @@
 # ====================================================================================================
 # FastAPI gateway for KoreData — proxy, web UI, child process lifecycle, and MCP federation.
 #
-# Manages the four sub-service processes (KoreFeed, KoreLibrary, KoreRAG, KoreReference),
+# Manages the KoreData sub-service processes (KoreFeed, KoreLibrary, KoreRAG,
+# KoreReference, KoreScrape, KoreGraph),
 # federates their MCP endpoints, and proxies API requests.  Also serves the KoreData
 # web UI via Jinja2 templates.
 #
@@ -19,6 +20,7 @@
 #   - KoreLibrary/        -- book catalog sub-service
 #   - KoreRAG/            -- RAG chunk store sub-service
 #   - KoreReference/      -- Wikipedia reference article sub-service
+#   - KoreScrape/         -- website snapshot sub-service
 # ====================================================================================================
 import asyncio
 import json as _json
@@ -56,6 +58,7 @@ _SERVICES = [
     (_BASE / "KoreLibrary",   "KoreLibrary",   _DATA / "Library"),
     (_BASE / "KoreReference", "KoreReference", _DATA / "Reference"),
     (_BASE / "KoreRAG",       "KoreRAG",       _DATA / "RAG"),
+    (_BASE / "KoreScrape",    "KoreScrape",    _DATA / "KoreScrape"),
     (_BASE / "KoreGraph",     "KoreGraph",     _DATA / "Graph"),
 ]
 
@@ -129,24 +132,27 @@ _feed_client:  httpx.AsyncClient | None = None
 _lib_client:   httpx.AsyncClient | None = None
 _ref_client:   httpx.AsyncClient | None = None
 _rag_client:   httpx.AsyncClient | None = None
+_scrape_client: httpx.AsyncClient | None = None
 _graph_client: httpx.AsyncClient | None = None
 
 
 @asynccontextmanager
 async def _lifespan(app: FastAPI):
-    global _feed_client, _lib_client, _ref_client, _rag_client, _graph_client
+    global _feed_client, _lib_client, _ref_client, _rag_client, _scrape_client, _graph_client
     print("\n  KoreDataGateway — starting child services")
     _start_children()
     _feed_client  = httpx.AsyncClient(base_url=cfg["korefeed_url"],      timeout=15.0)
     _lib_client   = httpx.AsyncClient(base_url=cfg["korelibrary_url"],   timeout=15.0)
     _ref_client   = httpx.AsyncClient(base_url=cfg["korereference_url"], timeout=15.0)
     _rag_client   = httpx.AsyncClient(base_url=cfg["korerag_url"],       timeout=15.0)
+    _scrape_client = httpx.AsyncClient(base_url=cfg["korescrape_url"],   timeout=30.0)
     _graph_client = httpx.AsyncClient(base_url=cfg["koregraph_url"],     timeout=15.0)
     await asyncio.gather(
         _wait_for(_feed_client,  "KoreFeed",      timeout=60.0),
         _wait_for(_lib_client,   "KoreLibrary"),
         _wait_for(_ref_client,   "KoreReference"),
         _wait_for(_rag_client,   "KoreRAG"),
+        _wait_for(_scrape_client, "KoreScrape"),
         _wait_for(_graph_client, "KoreGraph"),
     )
     print("  All services ready\n")
@@ -157,6 +163,7 @@ async def _lifespan(app: FastAPI):
     await _lib_client.aclose()
     await _ref_client.aclose()
     await _rag_client.aclose()
+    await _scrape_client.aclose()
     await _graph_client.aclose()
     _stop_children()
 
@@ -471,10 +478,10 @@ def _parse_article_form(
     }
 
 
-def _svc_ui(r: Any, label: str, slug: str, url: str) -> dict:
+def _svc_ui(r: Any, label: str, slug: str, url: str, icon_key: str) -> dict:
     """Build a service summary dict for the landing page template."""
     healthy = not isinstance(r, Exception) and r.status_code == 200
-    return {"label": label, "slug": slug, "url": url, "healthy": healthy,
+    return {"label": label, "slug": slug, "url": url, "icon_key": icon_key, "healthy": healthy,
             "stats": r.json() if healthy else {}}
 
 
@@ -1161,22 +1168,81 @@ def suite_config_js():
 async def web_root(request: Request):
     if _feed_client is None:
         raise HTTPException(status_code=503, detail="Gateway is still starting up")
-    kf_r, kl_r, kr_r, krag_r, kg_r = await asyncio.gather(
+    kf_r, kl_r, kr_r, krag_r, ks_r, kg_r = await asyncio.gather(
         _feed_client.get("/status", timeout=3.0),
         _lib_client.get("/status", timeout=3.0),
         _ref_client.get("/status", timeout=3.0),
         _rag_client.get("/status", timeout=3.0),
+        _scrape_client.get("/status", timeout=3.0),
         _graph_client.get("/status", timeout=3.0),
         return_exceptions=True,
     )
     services = [
-        _svc_ui(kf_r,   "KoreFeed",      "feeds",     cfg["korefeed_url"]),
-        _svc_ui(kl_r,   "KoreLibrary",   "library",   cfg["korelibrary_url"]),
-        _svc_ui(kr_r,   "KoreReference", "reference", cfg["korereference_url"]),
-        _svc_ui(krag_r, "KoreRAG",       "rag",       cfg["korerag_url"]),
-        _svc_ui(kg_r,   "KoreGraph",     "graph",     cfg["koregraph_url"]),
+        _svc_ui(kf_r,   "KoreFeed",      "feeds",     cfg["korefeed_url"],      "korefeed"),
+        _svc_ui(kl_r,   "KoreLibrary",   "library",   cfg["korelibrary_url"],   "korelibrary"),
+        _svc_ui(kr_r,   "KoreReference", "reference", cfg["korereference_url"], "korereference"),
+        _svc_ui(krag_r, "KoreRAG",       "rag",       cfg["korerag_url"],       "korerag"),
+        _svc_ui(ks_r,   "KoreScrape",    "scrape",    cfg["korescrape_url"],    "korescrape"),
+        _svc_ui(kg_r,   "KoreGraph",     "graph",     cfg["koregraph_url"],     "koregraph"),
     ]
     return templates.TemplateResponse(request, "home.html", {"services": services})
+
+
+@app.get("/ui/scrape", response_class=HTMLResponse)
+async def scrape_index(request: Request):
+    captures_r, status_r = await asyncio.gather(
+        _scrape_client.get("/captures"),
+        _scrape_client.get("/status"),
+    )
+    captures = captures_r.json().get("captures", []) if captures_r.status_code == 200 else []
+    status   = status_r.json()                     if status_r.status_code == 200 else {}
+    return templates.TemplateResponse(
+        request,
+        "scrape_index.html",
+        {
+            "captures": captures,
+            "status":   status,
+        },
+    )
+
+
+@app.post("/ui/scrape/start")
+async def scrape_start(url: str = Form(...), depth: int = Form(0)):
+    r = await _scrape_client.post("/captures", json={"url": url, "depth": depth})
+    if r.status_code not in (200, 201, 202):
+        try:
+            detail = r.json().get("detail", f"Capture failed ({r.status_code})")
+        except Exception:
+            detail = f"Capture failed ({r.status_code})"
+        raise HTTPException(status_code=r.status_code, detail=detail)
+    capture_id = r.json()["id"]
+    return RedirectResponse(url=f"/ui/scrape/{capture_id}", status_code=303)
+
+
+@app.get("/ui/scrape/{capture_id}", response_class=HTMLResponse)
+async def scrape_capture(request: Request, capture_id: str):
+    r = await _scrape_client.get(f"/captures/{capture_id}")
+    if r.status_code == 404:
+        raise HTTPException(status_code=404, detail="Capture not found")
+    if r.status_code != 200:
+        raise HTTPException(status_code=r.status_code, detail="Capture lookup failed")
+    capture = r.json()
+    return templates.TemplateResponse(
+        request,
+        "scrape_capture.html",
+        {
+            "capture": capture,
+        },
+    )
+
+
+@app.get("/ui/scrape/files/{capture_id}/{file_path:path}", include_in_schema=False)
+async def scrape_capture_file(capture_id: str, file_path: str):
+    r = await _scrape_client.get(f"/captures/{capture_id}/files/{file_path}")
+    if r.status_code == 404:
+        raise HTTPException(status_code=404, detail="File not found")
+    content_type = r.headers.get("content-type")
+    return Response(content=r.content, status_code=r.status_code, media_type=content_type)
 
 
 @app.api_route("/graph/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"], include_in_schema=False)
@@ -2003,11 +2069,12 @@ async def ref_article(request: Request, title: str):
 async def gateway_status():
     if _feed_client is None:
         return {"service": "KoreDataGateway", "status": "starting"}
-    kf_r, kl_r, kr_r, krag_r, kg_r = await asyncio.gather(
+    kf_r, kl_r, kr_r, krag_r, ks_r, kg_r = await asyncio.gather(
         _feed_client.get("/status", timeout=3.0),
         _lib_client.get("/status", timeout=3.0),
         _ref_client.get("/status", timeout=3.0),
         _rag_client.get("/status", timeout=3.0),
+        _scrape_client.get("/status", timeout=3.0),
         _graph_client.get("/status", timeout=3.0),
         return_exceptions=True,
     )
@@ -2018,6 +2085,7 @@ async def gateway_status():
             "korelibrary":   _svc_status(kl_r,   cfg["korelibrary_url"]),
             "korereference": _svc_status(kr_r,   cfg["korereference_url"]),
             "korerag":       _svc_status(krag_r, cfg["korerag_url"]),
+            "korescrape":    _svc_status(ks_r,   cfg["korescrape_url"]),
             "koregraph":     _svc_status(kg_r,   cfg["koregraph_url"]),
         },
     }

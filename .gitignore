@@ -55,3 +55,4 @@ datacontrol/task_queue.json
 /datacontrol/koredata/RAG/service.log
 /datacontrol/koredata/RAG/databases/**/*.db
 /datacontrol/koredata/RAG/databases/**/__pycache__/
+/datacontrol/koredata/KoreScrape

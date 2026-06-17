@@ -9,6 +9,7 @@
 #   KoreLibrary   -- base + 2 (8622)
 #   KoreRAG       -- base + 3 (8623)
 #   KoreReference -- base + 4 (8624)
+#   KoreScrape    -- base + 5 (8625)
 #   KoreGraph     -- base + 6 (8626)
 # Default gateway port: 8620.
 #
@@ -32,6 +33,7 @@ _DEFAULTS = {
     "korelibrary_url":   "http://127.0.0.1:8622",
     "korerag_url":       "http://127.0.0.1:8623",
     "korereference_url": "http://127.0.0.1:8624",
+    "korescrape_url":    "http://127.0.0.1:8625",
     "koregraph_url":     "http://127.0.0.1:8626",
 }
 
@@ -41,6 +43,7 @@ _SVC_URL_KEYS = {
     "korelibrary":   "korelibrary_url",
     "korerag":       "korerag_url",
     "korereference": "korereference_url",
+    "korescrape":    "korescrape_url",
     "koregraph":     "koregraph_url",
 }
 

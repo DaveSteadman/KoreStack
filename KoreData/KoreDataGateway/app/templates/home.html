@@ -9,7 +9,7 @@
   }
 
   .svc-grid {
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(6, 1fr);
   }
   @media (max-width: 1100px) { .svc-grid { grid-template-columns: repeat(3, 1fr); } }
   @media (max-width: 700px)  { .svc-grid { grid-template-columns: repeat(2, 1fr); } }
@@ -177,13 +177,11 @@
   </div>
   <div class="panel-body kcui-panel-body">
     <div class="svc-grid kcui-card-grid" id="svc-grid">
-      {% set icon_map = {'feeds': 'square-rss-svgrepo-com', 'library': 'book-user-svgrepo-com', 'reference': 'graduation-hat-alt-1-svgrepo-com', 'rag': 'truck-svgrepo-com', 'graph': 'chart-network-svgrepo-com'} %}
       {% for svc in services %}
       {% set cls = "online" if svc.healthy else "offline" %}
-      {% set icon_file = icon_map.get(svc.slug, '') %}
       <div class="svc-card kcui-card {{ cls }}" id="svc-{{ svc.slug }}">
         <div class="svc-banner">
-          <span class="svc-banner-icon" aria-hidden="true" style="mask-image: url('/ui-elements/assets/icons/dazzle-line/{{ icon_file }}.svg'); -webkit-mask-image: url('/ui-elements/assets/icons/dazzle-line/{{ icon_file }}.svg');"></span>
+          <span class="svc-banner-icon" aria-hidden="true" data-icon-key="{{ svc.icon_key }}"></span>
           <span class="svc-banner-text">
             <span class="svc-banner-overline">{{ svc.slug | upper }}</span>
             <span class="svc-banner-title">{{ svc.label }}</span>
@@ -194,6 +192,7 @@
           {%- elif svc.slug == "library" %}Long form book content
           {%- elif svc.slug == "reference" %}Linked encyclopedia
           {%- elif svc.slug == "rag" %}Searchable user data
+          {%- elif svc.slug == "scrape" %}Website snapshot captures
           {%- elif svc.slug == "graph" %}Entity &amp; relation graph
           {%- endif %}
         </div>
@@ -217,6 +216,10 @@
             <div class="svc-stat"><span class="svc-stat-key">databases</span><span class="svc-stat-val">{{ svc.stats.get("databases", "-") }}</span></div>
             <div class="svc-stat"><span class="svc-stat-key">chunks</span><span class="svc-stat-val">{{ svc.stats.get("total_chunks", "-") }}</span></div>
             <div class="svc-stat"><span class="svc-stat-key">db size</span><span class="svc-stat-val">{{ "%.1f KB" | format(svc.stats.get("db_size_bytes", 0) / 1024) if svc.stats.get("db_size_bytes") else "-" }}</span></div>
+          {% elif svc.slug == "scrape" %}
+            <div class="svc-stat"><span class="svc-stat-key">captures</span><span class="svc-stat-val">{{ svc.stats.get("captures", "-") }}</span></div>
+            <div class="svc-stat"><span class="svc-stat-key">running</span><span class="svc-stat-val">{{ svc.stats.get("running_jobs", "-") }}</span></div>
+            <div class="svc-stat"><span class="svc-stat-key">pages</span><span class="svc-stat-val">{{ svc.stats.get("pages", "-") }}</span></div>
           {% elif svc.slug == "graph" %}
             <div class="svc-stat"><span class="svc-stat-key">vocab</span><span class="svc-stat-val">{{ svc.stats.get("vocab_terms", "-") }}</span></div>
             <div class="svc-stat"><span class="svc-stat-key">connections</span><span class="svc-stat-val">{{ svc.stats.get("relations", "-") }}</span></div>
@@ -238,6 +241,9 @@
             <a class="kcui-tag kcui-tag--accent" href="/ui/{{ svc.slug }}">browse</a>
             <a class="kcui-tag kcui-tag--warning" href="/ui/rag/search">search</a>
             <a class="kcui-tag kcui-tag--info" href="/ui/rag/insert">insert</a>
+          {% elif svc.slug == "scrape" %}
+            <a class="kcui-tag kcui-tag--accent" href="/ui/scrape">browse</a>
+            <a class="kcui-tag kcui-tag--info" href="/ui/scrape">capture</a>
           {% elif svc.slug == "graph" %}
             <a class="kcui-tag kcui-tag--accent" href="/graph/ui/vocab">vocab</a>
             <a class="kcui-tag kcui-tag--warning" href="/graph/ui/connections">conns.</a>
@@ -409,6 +415,17 @@
   </div>
 </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script type="module">
+  import { resolveIcon, SUITE_ICONS } from '/ui-elements/assets/js/chrome.js';
+
+  for (const el of document.querySelectorAll('.svc-banner-icon[data-icon-key]')) {
+    const key = el.dataset.iconKey || '';
+    el.innerHTML = resolveIcon(SUITE_ICONS, key, 18) || '';
+  }
+</script>
 {% endblock %}
 
 {% block scripts %}

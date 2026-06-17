@@ -22,6 +22,7 @@
     "korelibrary":     { "port": 9605 },
     "korerag":         { "port": 9606 },
     "korereference":   { "port": 9607 },
+    "korescrape":      { "port": 9612 },
     "koregraph":       { "port": 9608 },
     "korecomms":       { "port": 9609 },
     "koredocs":        { "port": 9610 },

@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}KoreData - Capture{% endblock %}
+
+{% block content %}
+<div class="panel kcui-panel">
+  <div class="panel-header kcui-panel-header">
+    CAPTURE
+    <a href="/ui/scrape" class="btn btn-sm btn-secondary" style="margin-left:auto;">BACK</a>
+  </div>
+  <div class="panel-body kcui-panel-body">
+    <div class="kv"><div class="kv-key">id</div><div class="kv-val">{{ capture.id }}</div></div>
+    <div class="kv"><div class="kv-key">url</div><div class="kv-val"><a href="{{ capture.url }}" target="_blank" rel="noreferrer">{{ capture.url }}</a></div></div>
+    <div class="kv"><div class="kv-key">status</div><div class="kv-val">{{ capture.status }}</div></div>
+    <div class="kv"><div class="kv-key">depth</div><div class="kv-val">{{ capture.depth }}</div></div>
+    <div class="kv"><div class="kv-key">created</div><div class="kv-val">{{ capture.created_at }}</div></div>
+    <div class="kv"><div class="kv-key">completed</div><div class="kv-val">{{ capture.completed_at or "-" }}</div></div>
+    <div class="kv"><div class="kv-key">pages</div><div class="kv-val">{{ capture.pages_saved }}</div></div>
+    <div class="kv"><div class="kv-key">assets</div><div class="kv-val">{{ capture.assets_saved }}</div></div>
+    <div style="padding-top:0.8rem; display:flex; gap:0.6rem; flex-wrap:wrap;">
+      <a class="btn btn-primary" href="/ui/scrape/files/{{ capture.id }}/{{ capture.local_root }}" target="_blank">OPEN SNAPSHOT</a>
+    </div>
+  </div>
+</div>
+
+<div class="two-col">
+  <div class="panel kcui-panel">
+    <div class="panel-header kcui-panel-header">PAGES</div>
+    <div class="panel-body kcui-panel-body">
+      {% if capture.pages %}
+      <table>
+        <thead><tr><th>Path</th><th>Depth</th></tr></thead>
+        <tbody>
+          {% for page in capture.pages %}
+          <tr>
+            <td><a href="/ui/scrape/files/{{ capture.id }}/{{ page.path }}" target="_blank">{{ page.path }}</a></td>
+            <td>{{ page.depth }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="meta">No pages saved yet.</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="panel kcui-panel">
+    <div class="panel-header kcui-panel-header">ERRORS</div>
+    <div class="panel-body kcui-panel-body">
+      {% if capture.errors %}
+      <table>
+        <thead><tr><th>Kind</th><th>URL</th><th>Error</th></tr></thead>
+        <tbody>
+          {% for err in capture.errors %}
+          <tr>
+            <td>{{ err.kind }}</td>
+            <td style="max-width:260px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ err.url }}</td>
+            <td>{{ err.error }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="meta">No errors recorded.</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="panel kcui-panel">
+  <div class="panel-header kcui-panel-header">ASSETS</div>
+  <div class="panel-body kcui-panel-body">
+    {% if capture.assets %}
+    <table>
+      <thead><tr><th>Path</th><th>Content Type</th></tr></thead>
+      <tbody>
+        {% for asset in capture.assets %}
+        <tr>
+          <td><a href="/ui/scrape/files/{{ capture.id }}/{{ asset.path }}" target="_blank">{{ asset.path }}</a></td>
+          <td>{{ asset.content_type or "-" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="meta">No assets saved yet.</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

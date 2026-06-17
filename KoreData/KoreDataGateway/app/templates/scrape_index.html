@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}KoreData - Scrape{% endblock %}
+
+{% block content %}
+<div class="two-col">
+  <div class="panel kcui-panel">
+    <div class="panel-header kcui-panel-header">NEW CAPTURE</div>
+    <div class="panel-body kcui-panel-body">
+      <form method="post" action="/ui/scrape/start">
+        <label>URL</label>
+        <input type="url" name="url" placeholder="https://example.com/" required>
+
+        <label>Depth</label>
+        <div class="num-stepper" style="width:max-content;">
+          <input type="number" name="depth" value="0" min="0" max="5" style="width:56px;">
+          <div class="stepper-btns">
+            <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,1)">&#9650;</button>
+            <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,-1)">&#9660;</button>
+          </div>
+        </div>
+        <div class="meta">Depth 0 captures one page plus its referenced assets. Higher depths follow same-origin links.</div>
+
+        <div style="padding-top:0.4rem;">
+          <button type="submit">START CAPTURE</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="panel kcui-panel">
+    <div class="panel-header kcui-panel-header">STATUS</div>
+    <div class="panel-body kcui-panel-body">
+      <div class="kv"><div class="kv-key">captures</div><div class="kv-val">{{ status.get("captures", 0) }}</div></div>
+      <div class="kv"><div class="kv-key">running jobs</div><div class="kv-val">{{ status.get("running_jobs", 0) }}</div></div>
+      <div class="kv"><div class="kv-key">saved pages</div><div class="kv-val">{{ status.get("pages", 0) }}</div></div>
+      <div class="kv"><div class="kv-key">saved assets</div><div class="kv-val">{{ status.get("assets", 0) }}</div></div>
+      <div class="kv"><div class="kv-key">latest run</div><div class="kv-val">{{ status.get("latest_run", "-") or "-" }}</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="panel kcui-panel">
+  <div class="panel-header kcui-panel-header">CAPTURES</div>
+  <div class="panel-body kcui-panel-body">
+    {% if captures %}
+    <table>
+      <thead>
+        <tr>
+          <th>URL</th>
+          <th>Status</th>
+          <th>Depth</th>
+          <th>Pages</th>
+          <th>Assets</th>
+          <th>Created</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for capture in captures %}
+        <tr>
+          <td style="max-width:480px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ capture.url }}</td>
+          <td>{{ capture.status }}</td>
+          <td>{{ capture.depth }}</td>
+          <td>{{ capture.pages_saved }}</td>
+          <td>{{ capture.assets_saved }}</td>
+          <td>{{ capture.created_at }}</td>
+          <td><a href="/ui/scrape/{{ capture.id }}">open</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="meta">No captures yet.</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
