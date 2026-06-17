@@ -17,13 +17,13 @@
 # ====================================================================================================
 from __future__ import annotations
 
-import html
 import json
 import logging
 import threading
 import urllib.parse
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from jinja2 import Environment, FileSystemLoader, select_autoescape
 from pathlib import Path
 from typing import Any, Callable, ClassVar
 
@@ -48,55 +48,30 @@ def _service_state(service: dict[str, object]) -> tuple[str, str, str]:
     return "down", "Stopped", "danger"
 
 
-def _service_row_markup(service: dict[str, object]) -> str:
+def _service_row_view(service: dict[str, object]) -> dict[str, object]:
     css_state, state_label, tag_color = _service_state(service)
-    state_markup = f'<span class="kcui-tag kcui-tag--{tag_color}" data-field="state">{state_label}</span>'
-    slug = html.escape(str(service["slug"]))
-    label = html.escape(str(service["label"]))
-    icon_key = html.escape(str(service["iconKey"]))
-    description = html.escape(str(service["description"]))
-    host = html.escape(str(service["host"]))
-    port = html.escape(str(service["port"]))
-    url = html.escape(str(service["url"]))
-    host_readonly = ' readonly aria-readonly="true"' if slug == "koreagent" else ""
-    return f"""
-      <article class="service-row service-{slug} {css_state}" data-service-card="{slug}">
-        <div class="service-cell service-glyph" aria-hidden="true" data-suite-icon="{icon_key}"></div>
-        <div class="service-cell service-core">
-          <p class="eyebrow">{slug.upper()}</p>
-          <h2>{label}</h2>
-          <p class="service-copy">{description}</p>
-        </div>
-        <div class="service-cell service-state">{state_markup}</div>
-        <div class="service-cell address-edit">
-          <input type="text" class="host-input" data-field="host" value="{host}" aria-label="Host for {label}"{host_readonly}>
-          <input type="number" class="port-input" data-field="port" value="{port}" min="1024" max="65535" aria-label="Port for {label}">
-          <button class="kcui-tag kcui-tag--dim" type="button" data-service="{slug}" data-action="setaddress" title="Save port and restart {label}">set</button>
-        </div>
-        <div class="service-cell service-link"><a data-field="url" href="{url}" target="_blank" rel="noreferrer">{url}</a></div>
-        <div class="service-cell service-actions actions">
-          <button type="button" data-service="{slug}" data-action="start" title="Start" aria-label="Start {label}">
-            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3.5v9l7-4.5-7-4.5Z" fill="currentColor"/></svg>
-          </button>
-          <button type="button" data-service="{slug}" data-action="stop" title="Stop" aria-label="Stop {label}">
-            <svg viewBox="0 0 16 16" aria-hidden="true"><rect x="4" y="4" width="8" height="8" fill="currentColor"/></svg>
-          </button>
-          <button type="button" data-service="{slug}" data-action="restart" title="Restart" aria-label="Restart {label}">
-            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3a5 5 0 1 1-4.24 2.35" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M2.8 2.8h3.6v3.6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </button>
-        </div>
-      </article>
-    """
+    return {
+        "slug":        str(service["slug"]),
+        "slug_upper":  str(service["slug"]).upper(),
+        "label":       str(service["label"]),
+        "icon_key":    str(service["iconKey"]),
+        "description": str(service["description"]),
+        "url":         str(service["url"]),
+        "css_state":   css_state,
+        "state_label": state_label,
+        "tag_color":   tag_color,
+    }
 
 
-def _path_rows_markup(paths: dict[str, object]) -> str:
+def _path_rows(paths: dict[str, object]) -> list[dict[str, str]]:
     labels = {"path config": "Config", "datacontrol": "Data control", "datauser": "Data user"}
-    items = []
+    items: list[dict[str, str]] = []
     for key, value in paths.items():
-        label = html.escape(labels.get(key, key))
-        path = html.escape(str(value))
-        items.append(f'<span><b>{label}</b><code>{path}</code></span>')
-    return '<p class="paths-compact">' + "".join(items) + "</p>"
+        items.append({
+            "label": labels.get(key, key),
+            "path":  str(value),
+        })
+    return items
 
 
 def _dashboard_bootstrap(snapshot: dict[str, object], suite_urls: dict[str, str], dashboard_url: str) -> dict[str, object]:
@@ -114,22 +89,25 @@ def _dashboard_bootstrap(snapshot: dict[str, object], suite_urls: dict[str, str]
     }
 
 
-def _load_stack_template(stack_static_dir: Path) -> str:
-    return (stack_static_dir / "stack" / "index.html").read_text(encoding="utf-8")
+def _template_env(stack_static_dir: Path) -> Environment:
+    return Environment(
+        loader     = FileSystemLoader(str(stack_static_dir / "stack")),
+        autoescape = select_autoescape(["html", "xml"]),
+    )
 
 
 def html_page(manager: Any, dashboard_url: str, stack_static_dir: Path, ui_assets_dir: Path, service_icon_keys: dict[str, str]) -> str:
-    snapshot = manager.snapshot()
-    stack = snapshot["stack"]
-    suite_urls = build_suite_urls(manager, dashboard_url, service_icon_keys)
+    snapshot       = manager.snapshot()
+    stack          = snapshot["stack"]
+    suite_urls     = build_suite_urls(manager, dashboard_url, service_icon_keys)
     bootstrap_json = json.dumps(_dashboard_bootstrap(snapshot, suite_urls, dashboard_url)).replace("</", "<\\/")
-    root_command = f"python .\\main.py --services {','.join(stack['services'])}"
-    return (
-        _load_stack_template(stack_static_dir)
-        .replace("{{PATH_ROWS}}", _path_rows_markup(stack["paths"]))
-        .replace("{{SERVICE_ROWS}}", "".join(_service_row_markup(service) for service in snapshot["services"]))
-        .replace("{{ROOT_COMMAND}}", html.escape(root_command))
-        .replace("{{BOOTSTRAP_JSON}}", bootstrap_json)
+    root_command   = f"python .\\main.py --services {','.join(stack['services'])}"
+    template       = _template_env(stack_static_dir).get_template("index.html")
+    return template.render(
+        path_rows      = _path_rows(stack["paths"]),
+        service_rows   = [_service_row_view(service) for service in snapshot["services"]],
+        root_command   = root_command,
+        bootstrap_json = bootstrap_json,
     )
 
 
@@ -239,9 +217,6 @@ def build_handler(
             self._send_bytes(asset_path.read_bytes(), _content_type_for(asset_path))
 
         def _handle_service_action(self, slug: str, action: str) -> None:
-            length = int(self.headers.get("Content-Length") or 0)
-            raw_body = self.rfile.read(length) if length else b""
-
             try:
                 if action == "start":
                     changed = self.manager_ref.start_service(slug)
@@ -249,21 +224,6 @@ def build_handler(
                     changed = self.manager_ref.stop_service(slug)
                 elif action == "restart":
                     changed = self.manager_ref.restart_service(slug)
-                elif action == "setaddress":
-                    try:
-                        payload = json.loads(raw_body or b"{}")
-                        port = int(payload.get("port", 0))
-                        host = str(payload.get("host") or "127.0.0.1").strip()
-                    except (ValueError, TypeError):
-                        self.send_error(HTTPStatus.BAD_REQUEST, "Invalid payload")
-                        return
-                    if not (1024 <= port <= 65535):
-                        self.send_error(HTTPStatus.BAD_REQUEST, "Port out of range (1024-65535)")
-                        return
-                    if not host:
-                        self.send_error(HTTPStatus.BAD_REQUEST, "Host required")
-                        return
-                    changed = self.manager_ref.set_service_address(slug, host, port)
                 else:
                     self.send_error(HTTPStatus.NOT_FOUND, "Unknown action")
                     return
@@ -273,7 +233,7 @@ def build_handler(
 
             probe_reachable: bool | None = None
             probe_detail: str | None = None
-            if action in ("start", "restart", "setaddress"):
+            if action in ("start", "restart"):
                 spec_after = self.manager_ref.get_service_spec(slug)
                 if spec_after:
                     probe_reachable, probe_detail = probe_http_with_retry(spec_after.health_url)

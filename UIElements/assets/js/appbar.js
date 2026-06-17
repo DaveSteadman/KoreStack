@@ -126,6 +126,15 @@ function actionMarkup(action) {
     return `<button class="${baseClass}"${buttonId} type="${buttonType}"${dataAction}${title}>${escapeHtml(action.label ?? '')}</button>`;
   }
 
+  if (action.kind === 'tag') {
+    const tagClass = action.className ? ` ${escapeHtml(action.className)}` : ' kcui-tag kcui-tag--dim';
+    const tagId = action.id ? ` id="${escapeHtml(action.id)}"` : '';
+    const tagType = action.type ? escapeHtml(action.type) : 'button';
+    const dataAction = action.action ? ` data-action="${escapeHtml(action.action)}"` : '';
+    const title = action.title ? ` title="${escapeHtml(action.title)}"` : '';
+    return `<button class="${tagClass.trim()}"${tagId} type="${tagType}"${dataAction}${title}>${escapeHtml(action.label ?? '')}</button>`;
+  }
+
   if (action.kind === 'toggle') {
     const labelClass = action.className ? ` ${escapeHtml(action.className)}` : '';
     const labelText = action.label ? `${escapeHtml(action.label)} ` : '';

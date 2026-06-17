@@ -257,29 +257,6 @@ def build_services(config: dict) -> dict[str, ServiceSpec]:
     return result
 
 
-def save_address_to_suite_config(slug: str, host: str, port: int) -> None:
-    """Persist host+port override for *slug* into config/korestack_config.json."""
-    config: dict = {}
-    if SUITE_CONFIG_FILE.exists():
-        try:
-            config = json.loads(SUITE_CONFIG_FILE.read_text(encoding="utf-8"))
-        except Exception as exc:
-            log.warning("failed to read suite config %s: %s", SUITE_CONFIG_FILE, exc)
-    if not isinstance(config.get("services"), dict):
-        config["services"] = {}
-    if not isinstance(config["services"].get(slug), dict):
-        config["services"][slug] = {}
-    if slug == "koreagent":
-        config["services"][slug].pop("host", None)
-    else:
-        config["services"][slug]["host"] = host
-    config["services"][slug]["port"] = port
-    if "url" in config["services"][slug]:
-        del config["services"][slug]["url"]
-    SUITE_CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
-    SUITE_CONFIG_FILE.write_text(json.dumps(config, indent=2), encoding="utf-8")
-
-
 def setup_logging(log_dir: Path) -> None:
     """Route all [korestack] messages to a rolling log file; keep console quiet."""
     log_dir.mkdir(parents=True, exist_ok=True)
@@ -400,7 +377,6 @@ class StackManager:
             raise SystemExit(f"Missing service entrypoint: {script_path}")
 
         # Build the spawn command and env, injecting the current port fresh from the spec.
-        # This ensures config edits are honoured even after set_service_address.
         parsed_url = urllib.parse.urlparse(spec.health_url)
         spawn_port = parsed_url.port
         meta = SERVICE_META.get(slug, {})
@@ -465,34 +441,6 @@ class StackManager:
 
     def restart_service(self, slug: str) -> bool:
         self.stop_service(slug)
-        return self.start_service(slug)
-
-    def set_service_address(self, slug: str, host: str, port: int) -> bool:
-        """Reassign host+port, save to suite config, stop and restart the service."""
-        spec = self._service_map.get(slug)
-        if spec is None:
-            raise KeyError(slug)
-        meta = SERVICE_META[slug]
-        if slug == "koreagent":
-            host = urllib.parse.urlparse(spec.url).hostname or "127.0.0.1"
-        base_url = f"http://{host}:{port}"
-        new_spec = ServiceSpec(
-            slug=slug,
-            label=spec.label,
-            cwd=spec.cwd,
-            script=spec.script,
-            url=base_url + str(meta["url_suffix"]),
-            health_url=base_url + str(meta["health_suffix"]),
-            description=spec.description,
-        )
-        save_address_to_suite_config(slug, host, port)
-        self.stop_service(slug)
-        with self._lock:
-            for i, s in enumerate(self._services):
-                if s.slug == slug:
-                    self._services[i] = new_spec
-                    break
-            self._service_map[slug] = new_spec
         return self.start_service(slug)
 
     def stop(self) -> None:

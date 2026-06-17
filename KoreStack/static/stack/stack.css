@@ -172,7 +172,7 @@ a { color: inherit; }
 
 .service-row {
   display: grid;
-  grid-template-columns: 60px minmax(180px, 1.45fr) auto auto minmax(220px, 1.4fr) auto;
+  grid-template-columns: 60px minmax(180px, 1.45fr) auto minmax(220px, 1.2fr) auto;
   gap: 8px;
   align-items: stretch;
   padding: 0 10px 0 0;
@@ -215,7 +215,6 @@ a { color: inherit; }
 
 .service-core,
 .service-state,
-.address-edit,
 .service-link,
 .service-actions {
   display: flex;
@@ -230,34 +229,6 @@ a { color: inherit; }
 }
 
 .service-state { justify-content: center; }
-.address-edit { gap: 4px; }
-
-.host-input,
-.port-input {
-  background: var(--stack-bg);
-  border: 1px solid var(--stack-line);
-  color: var(--stack-ink);
-  font-family: inherit;
-  font-size: 12px;
-  padding: 2px 4px;
-  border-radius: 2px;
-}
-
-.host-input { width: 108px; }
-.port-input { width: 58px; }
-
-.host-input:focus,
-.port-input:focus {
-  outline: none;
-  border-color: var(--stack-accent);
-}
-
-.port-input::-webkit-inner-spin-button,
-.port-input::-webkit-outer-spin-button {
-  -webkit-appearance: none;
-}
-
-.port-input { -moz-appearance: textfield; }
 
 .service-notice {
   position: absolute;
@@ -304,7 +275,7 @@ a { color: inherit; }
   justify-content: flex-end;
 }
 
-.actions button {
+.service-actions button {
   width: 24px;
   height: 24px;
   display: inline-flex;
@@ -320,11 +291,11 @@ a { color: inherit; }
   font-size: 11px;
 }
 
-.actions button:hover {
+.service-actions button:hover {
   background: color-mix(in srgb, var(--service-accent, var(--stack-accent)) 14%, var(--stack-bg));
 }
 
-.actions button svg {
+.service-actions button svg {
   width: 13px;
   height: 13px;
   display: block;
@@ -373,7 +344,7 @@ code {
     grid-template-columns: 78px auto minmax(0, 1fr) auto;
     grid-template-areas:
       "glyph core core state"
-      "glyph address link actions";
+      "glyph link link actions";
     align-items: center;
     gap: 8px 10px;
     padding: 10px 12px 10px 0;
@@ -391,7 +362,6 @@ code {
 
   .service-core,
   .service-state,
-  .address-edit,
   .service-link,
   .service-actions {
     min-height: auto;
@@ -423,14 +393,6 @@ code {
     justify-content: flex-end;
   }
 
-  .address-edit {
-    grid-area: address;
-    align-items: center;
-    flex-wrap: nowrap;
-    gap: 6px;
-    align-self: center;
-  }
-
   .service-link {
     grid-area: link;
     min-width: 0;
@@ -448,11 +410,6 @@ code {
     align-self: center;
     justify-self: end;
   }
-
-  .host-input,
-  .port-input {
-    width: 64px;
-  }
 }
 
 @media (max-width: 560px) {
@@ -460,7 +417,7 @@ code {
     grid-template-columns: 68px auto minmax(0, 1fr) auto;
     grid-template-areas:
       "glyph core core state"
-      "glyph address link actions";
+      "glyph link link actions";
     gap: 8px;
   }
 

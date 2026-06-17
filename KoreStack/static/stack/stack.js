@@ -88,17 +88,6 @@ function updateCard(service) {
     stateTag.classList.add(`kcui-tag--${STATE_COLOR[stateForService(service)] || 'dim'}`);
   }
 
-  const hostInput = card.querySelector('[data-field="host"]');
-  if (hostInput && hostInput !== document.activeElement && !hostInput.dataset.dirty) {
-    hostInput.value = service.host ?? '';
-    hostInput.readOnly = service.slug === 'koreagent';
-  }
-
-  const portInput = card.querySelector('[data-field="port"]');
-  if (portInput && portInput !== document.activeElement && !portInput.dataset.dirty) {
-    portInput.value = String(service.port ?? '');
-  }
-
   const urlLink = card.querySelector('[data-field="url"]');
   if (urlLink) {
     urlLink.textContent = service.url;
@@ -183,55 +172,9 @@ async function serviceAction(service, action) {
   }
 }
 
-async function setAddressAction(slug, host, port) {
-  const button = document.querySelector(`[data-service="${slug}"][data-action="setaddress"]`);
-  const card = document.querySelector(`[data-service-card="${slug}"]`);
-  const cell = button?.closest('.address-edit');
-  const hostInput = cell?.querySelector('.host-input');
-  const portInput = cell?.querySelector('.port-input');
-  if (button) button.disabled = true;
-  try {
-    const response = await fetch(`/api/services/${slug}/setaddress`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ host, port: parseInt(port, 10) }),
-    });
-    const result = response.ok ? await response.json().catch(() => null) : null;
-    if (!response.ok) {
-      showNotice(card, `Save failed (${response.status})`, 'error');
-      return;
-    }
-    if (hostInput) delete hostInput.dataset.dirty;
-    if (portInput) delete portInput.dataset.dirty;
-    await refresh();
-    showNotice(card, result?.reachable ? 'Reachable' : 'Starting - check logs', result?.reachable ? 'ok' : 'warn');
-  } catch (_error) {
-    showNotice(card, 'Save failed', 'error');
-  } finally {
-    window.setTimeout(() => { if (button) button.disabled = false; }, 600);
-  }
-}
-
 function wireControls() {
-  for (const button of document.querySelectorAll('[data-service][data-action]:not([data-action="setaddress"])')) {
+  for (const button of document.querySelectorAll('[data-service][data-action]')) {
     button.addEventListener('click', () => serviceAction(button.dataset.service, button.dataset.action));
-  }
-
-  for (const button of document.querySelectorAll('[data-action="setaddress"]')) {
-    button.addEventListener('click', () => {
-      const cell = button.closest('.address-edit');
-      const hostInput = cell?.querySelector('.host-input');
-      const host = hostInput?.readOnly
-        ? (hostInput?.value?.trim() || '127.0.0.1')
-        : (hostInput?.value?.trim() || '127.0.0.1');
-      const port = cell?.querySelector('.port-input')?.value;
-      if (port) setAddressAction(button.dataset.service, host, port);
-    });
-  }
-
-  for (const input of document.querySelectorAll('.host-input, .port-input')) {
-    input.addEventListener('input', () => { input.dataset.dirty = '1'; });
-    input.addEventListener('blur', () => { if (input.dataset.dirty) delete input.dataset.dirty; });
   }
 }
 
