@@ -728,6 +728,16 @@ class KiwixViewerBatchRequest(BaseModel):
     catalog: Optional[str] = None
 
 
+def _fallback_title_from_url(url: str) -> str:
+    up   = _urlparse(url)
+    tail = (up.path.rstrip("/").split("/")[-1] if up.path else "").strip()
+    if not tail:
+        return "Imported Page"
+    tail = tail.rsplit(".", 1)[0]
+    tail = _urlunquote(tail).replace("_", " ").replace("-", " ").strip()
+    return tail or "Imported Page"
+
+
 async def _fetch_and_import_viewer_url(viewer_url: str, language: str, kiwix_url: Optional[str], catalog: Optional[str]) -> dict:
     """Shared logic for single and batch viewer-URL imports.
 
@@ -737,29 +747,38 @@ async def _fetch_and_import_viewer_url(viewer_url: str, language: str, kiwix_url
     result: dict = {"url": viewer_url, "status": "error", "title": None, "id": None, "detail": None}
     try:
         up = _urlparse(viewer_url)
-        host = kiwix_url or f"{up.scheme}://{up.netloc}"
         fragment = up.fragment
-        if not fragment or '/' not in fragment:
-            result["detail"] = "URL must contain a fragment like #zim/Article"
+        content_url: str
+        source:      str
+        title_hint:  str
+        if fragment and "/" in fragment:
+            host         = kiwix_url or f"{up.scheme}://{up.netloc}"
+            slash        = fragment.index("/")
+            zim          = fragment[:slash]
+            article_path = fragment[slash + 1:]
+            content_url  = f"{host}/content/{zim}/{article_path}"
+            source       = "kiwix"
+            title_hint   = _urlunquote(article_path.rsplit(".", 1)[0].replace("_", " "))
+        elif up.scheme in ("http", "https") and up.netloc:
+            content_url = viewer_url
+            source      = "web"
+            title_hint  = _fallback_title_from_url(viewer_url)
+        else:
+            result["detail"] = "URL must be either a Kiwix viewer URL or a direct http(s) page URL"
             return result
-        slash = fragment.index('/')
-        zim = fragment[:slash]
-        article_path = fragment[slash + 1:]
-
-        content_url = f"{host}/content/{zim}/{article_path}"
         try:
             async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
                 r = await client.get(content_url)
-            if r.status_code == 404:
+            if r.status_code == 404 and source == "kiwix":
                 result["detail"] = f"Not found in Kiwix: {content_url}"
                 return result
             r.raise_for_status()
         except httpx.HTTPError as exc:
-            result["detail"] = f"Kiwix fetch failed: {exc}"
+            result["detail"] = f"Page fetch failed: {exc}"
             return result
 
         parsed = _parse_gutenberg_html(r.text)
-        title = parsed["title"] or _urlunquote(article_path.rsplit('.', 1)[0].replace('_', ' '))
+        title = parsed["title"] or title_hint
         result["title"] = title
 
         if title_exists(title, catalog=catalog):
@@ -774,7 +793,7 @@ async def _fetch_and_import_viewer_url(viewer_url: str, language: str, kiwix_url
             year=parsed["year"],
             language=language,
             genre=parsed["genre"],
-            source="kiwix",
+            source=source,
             source_id=viewer_url,
             catalog=catalog,
         )

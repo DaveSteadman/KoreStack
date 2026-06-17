@@ -516,7 +516,12 @@ def post_request_switch(body: SessionSwitchRequest):
         conv = next((c for c in conversations if target in _display_name(c).lower()), None)
     if conv is None:
         raise HTTPException(status_code=404, detail=f"No conversation named '{body.name}' found.")
-    session_id = _session_id_from_external_id(str(conv.get("external_id") or ""))
+    external_id  = str(conv.get("external_id") or "")
+    channel_type = str(conv.get("channel_type") or "")
+    if external_id.startswith("webchat_") or channel_type == "webchat":
+        session_id = _session_id_from_external_id(external_id)
+    else:
+        session_id = f"{_KC_DIRECT_SESSION_PREFIX}{conv['id']}"
     name = _display_name(conv)
     _validate_session_id(session_id)
     with _pending_switch_lock:
@@ -626,8 +631,18 @@ def _handle_stoprun_immediate(run_id: str, run_q: "queue.Queue") -> None:
 # ====================================================================================================
 # MARK: SESSION HELPERS
 # ====================================================================================================
+_KC_DIRECT_SESSION_PREFIX = "kc_conv_"
+
+
 def _kc_external_id_for_session(session_id: str) -> str:
     return f"webchat_{session_id}"
+
+
+def _kc_conversation_id_for_session(session_id: str) -> int | None:
+    if not session_id.startswith(_KC_DIRECT_SESSION_PREFIX):
+        return None
+    raw = session_id[len(_KC_DIRECT_SESSION_PREFIX):].strip()
+    return int(raw) if raw.isdigit() else None
 
 
 # In-memory cache: session_id -> KC conversation dict (avoids repeated GET lookups per prompt).
@@ -649,9 +664,13 @@ def _kc_set_session_name(session_id: str, name: str) -> None:
 def _kc_get_conversation_for_session(session_id: str) -> dict | None:
     if session_id in _kc_conv_cache:
         return _kc_conv_cache[session_id]
-    external_id = _kc_external_id_for_session(session_id)
     try:
-        result = _kc_get(f"/conversations/by-external-id/{urllib.parse.quote(external_id, safe='')}")
+        conv_id = _kc_conversation_id_for_session(session_id)
+        if conv_id is not None:
+            result = _kc_get(f"/conversations/{conv_id}")
+        else:
+            external_id = _kc_external_id_for_session(session_id)
+            result = _kc_get(f"/conversations/by-external-id/{urllib.parse.quote(external_id, safe='')}")
     except HTTPException as exc:
         if exc.status_code in {404, 503}:
             return None
@@ -664,9 +683,14 @@ def _kc_get_conversation_for_session(session_id: str) -> dict | None:
 
 def _get_session_turns(session_id: str) -> list[dict]:
     # Single KC HTTP call - returns paired inbound/outbound messages as turns.
-    external_id = _kc_external_id_for_session(session_id)
     try:
-        result = _kc_get(f"/conversations/by-external-id/{urllib.parse.quote(external_id, safe='')}/turns")
+        conv_id = _kc_conversation_id_for_session(session_id)
+        if conv_id is not None:
+            messages = _kc_get(f"/conversations/{conv_id}/messages?limit=1000")
+            result = {"messages": messages if isinstance(messages, list) else []}
+        else:
+            external_id = _kc_external_id_for_session(session_id)
+            result = _kc_get(f"/conversations/by-external-id/{urllib.parse.quote(external_id, safe='')}/turns")
     except HTTPException as exc:
         if exc.status_code in {404, 503}:
             return []
@@ -695,6 +719,8 @@ def _kc_ensure_conversation(session_id: str) -> dict | None:
     conv = _kc_get_conversation_for_session(session_id)
     if conv is not None:
         return conv
+    if _kc_conversation_id_for_session(session_id) is not None:
+        return None
     try:
         external_id = _kc_external_id_for_session(session_id)
         # Use any pending display name set by /newchat <name>, fall back to default.

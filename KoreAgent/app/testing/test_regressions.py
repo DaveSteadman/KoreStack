@@ -458,6 +458,36 @@ class RegressionTests(unittest.TestCase):
         self.assertEqual(server["role"], "external")
         self.assertEqual(server["trust_boundary"], "external")
 
+    def test_kc_direct_session_id_maps_to_conversation_id(self) -> None:
+        self.assertEqual(api_module._kc_conversation_id_for_session("kc_conv_4"), 4)
+        self.assertIsNone(api_module._kc_conversation_id_for_session("web_123"))
+        self.assertIsNone(api_module._kc_conversation_id_for_session("kc_conv_task"))
+
+    def test_kc_get_conversation_for_direct_session_uses_conversation_endpoint(self) -> None:
+        with patch.object(api_module, "_kc_get", return_value={"id": 4, "subject": "XXX"}) as mock_get:
+            conv = api_module._kc_get_conversation_for_session("kc_conv_4")
+
+        self.assertEqual(conv, {"id": 4, "subject": "XXX"})
+        mock_get.assert_called_once_with("/conversations/4")
+
+    def test_request_switch_uses_direct_session_for_non_webchat_conversation(self) -> None:
+        body = api_module.SessionSwitchRequest(name="XXX")
+        previous = api_module._pending_switch
+        try:
+            api_module._pending_switch = None
+            with (
+                patch("input_layer.slash_command_handlers_sessions._list_all_conversations", return_value=[
+                    {"id": 4, "subject": "XXX", "external_id": "task:XXX", "channel_type": "scheduled"},
+                ]),
+                patch("input_layer.slash_command_handlers_sessions._display_name", return_value="XXX"),
+            ):
+                result = api_module.post_request_switch(body)
+
+            self.assertEqual(result, {"ok": True})
+            self.assertEqual(api_module._pending_switch, {"session_id": "kc_conv_4", "name": "XXX"})
+        finally:
+            api_module._pending_switch = previous
+
     def test_suite_mcp_service_refs_resolve_urls(self) -> None:
         config = workspace_utils_module._flatten_suite_config({
             "network": {"host": "127.0.0.1"},
