@@ -47,7 +47,6 @@ datacontrol/task_queue.json
 /assets
 /datacontrol/koredata/Feeds/*.db
 /datacontrol/koredata/Feeds/*.state.json
-/datacontrol/koredata/Library
 /datacontrol/koredata/Reference
 /datacontrol/koredocs
 /datacontrol/koredata/Graph/*.db

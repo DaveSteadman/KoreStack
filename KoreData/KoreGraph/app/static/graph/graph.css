@@ -293,16 +293,21 @@
   width: 2.5rem;
   height: 2.5rem;
   border-radius: 0;
-  border-color: color-mix(in srgb, var(--green) 68%, var(--border));
-  background: color-mix(in srgb, var(--panel) 86%, black 14%);
+  color: color-mix(in srgb, var(--dim) 78%, var(--text));
+  border-color: color-mix(in srgb, var(--dim) 72%, var(--border));
+  background: color-mix(in srgb, var(--panel) 76%, var(--dim) 24%);
   box-shadow: 0 8px 22px rgba(0, 0, 0, 0.32);
 }
 
 .kg-showcase-btn:hover {
-  background: color-mix(in srgb, rgba(74, 247, 122, 0.14) 70%, var(--panel));
+  color: color-mix(in srgb, var(--text) 82%, white 18%);
+  border-color: color-mix(in srgb, var(--text) 32%, var(--border));
+  background: color-mix(in srgb, var(--panel) 70%, var(--dim) 30%);
 }
 
 .kg-showcase-btn.is-active {
+  color: var(--green);
+  border-color: color-mix(in srgb, var(--green) 68%, var(--border));
   background: rgba(74, 247, 122, 0.16);
   box-shadow: 0 0 0 1px rgba(74, 247, 122, 0.22), 0 10px 26px rgba(0, 0, 0, 0.34);
 }

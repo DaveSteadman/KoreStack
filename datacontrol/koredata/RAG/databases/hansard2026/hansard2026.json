@@ -36,6 +36,9 @@
     ]
   },
   "sync": {
-    "status": "not_started"
+    "last_run": "2026-06-17",
+    "last_date_ingested": "2026-03-25",
+    "status": "complete",
+    "total_chunks": 2569
   }
 }
