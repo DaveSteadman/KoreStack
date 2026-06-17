@@ -68,6 +68,17 @@
   --warning: #f0c060;
   --danger: #ff5f5f;
   --info: #6eb5ff;
+  --purple: #b88cff;
+  --yellow: #ffd84d;
+
+  /* Back-compat aliases for older templates still being migrated. */
+  --green: var(--accent);
+  --amber: var(--warning);
+  --red:   var(--danger);
+  --blue:  var(--info);
+  --violet: var(--purple);
+  --gold:   var(--yellow);
+  --dim:   var(--text-dim);
 
   --kcui-font-ui:   'Roboto Mono', monospace;
   --kcui-font-code: 'Roboto Mono', monospace;

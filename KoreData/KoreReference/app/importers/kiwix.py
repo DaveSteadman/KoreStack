@@ -30,45 +30,95 @@ from app.importers.state import import_state, import_stop_event, state_lock
 # URL parsing
 # ---------------------------------------------------------------------------
 
-def parse_seed_url(seed_url: str) -> tuple[str, str, str]:
-    """Parse a Kiwix seed into (kiwix_base, zim_name, start_title).
+_EXCLUDED_WIKI_NAMESPACES = {
+    "category",
+    "file",
+    "help",
+    "portal",
+    "special",
+    "template",
+    "talk",
+    "user",
+    "wikipedia",
+}
+
+_DEFAULT_HTTP_HEADERS = {
+    "User-Agent":      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36",
+    "Accept":          "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+    "Accept-Language": "en-GB,en;q=0.9",
+    "Cache-Control":   "no-cache",
+    "Pragma":          "no-cache",
+}
+
+
+def _http_client() -> httpx.Client:
+    return httpx.Client(
+        timeout=30.0,
+        follow_redirects=False,
+        headers=_DEFAULT_HTTP_HEADERS,
+    )
+
+
+def _is_excluded_wiki_title(title: str) -> bool:
+    head, sep, _ = title.partition(":")
+    return bool(sep and head.strip().lower() in _EXCLUDED_WIKI_NAMESPACES)
+
+
+def parse_seed_url(seed_url: str) -> tuple[str, str, str, str]:
+    """Parse a seed URL into (source_kind, base, source_name, start_title).
 
     Accepts these formats:
       http://host/viewer#zim_name/Article_Title        (Kiwix viewer fragment URL)
       http://host/content/zim_name/Article_Title        (new direct content URL)
       http://host/zim_name/A/Article_Title              (old direct content URL)
+      https://en.wikipedia.org/wiki/Article_Title       (live Wikipedia article URL)
     """
     p = urlparse(seed_url.strip())
     base = f"{p.scheme}://{p.netloc}"
+    if p.netloc.lower().endswith("wikipedia.org"):
+        path_parts = p.path.strip("/").split("/")
+        if len(path_parts) >= 2 and path_parts[0] == "wiki":
+            raw_title = "/".join(path_parts[1:])
+            title = unquote(raw_title).replace("_", " ").split("#")[0].strip()
+            if not title:
+                raise ValueError(f"Cannot parse Wikipedia article title from URL: {seed_url!r}")
+            return "wikipedia", base, p.netloc.lower(), title
+        raise ValueError(
+            f"Unrecognised Wikipedia URL: {seed_url!r}. "
+            "Expected https://<lang>.wikipedia.org/wiki/Article_Title"
+        )
     if p.fragment:
         parts = p.fragment.split("/", 1)
         if len(parts) != 2:
             raise ValueError(f"Cannot parse URL fragment: {p.fragment!r}")
         zim_name, raw_title = parts
         title = unquote(raw_title).replace("_", " ").split("#")[0].strip()
-        return base, zim_name, title
+        return "kiwix", base, zim_name, title
     path_parts = p.path.strip("/").split("/")
     # New format: /content/<zim_name>/<Title>
     if len(path_parts) >= 3 and path_parts[0] == "content":
         zim_name = path_parts[1]
         raw_title = "/".join(path_parts[2:])
         title = unquote(raw_title).replace("_", " ").split("#")[0].strip()
-        return base, zim_name, title
+        return "kiwix", base, zim_name, title
     # Old format: /<zim_name>/A/<Title>
     if len(path_parts) >= 3 and path_parts[1].upper() == "A":
         zim_name = path_parts[0]
         raw_title = "/".join(path_parts[2:])
         title = unquote(raw_title).replace("_", " ").split("#")[0].strip()
-        return base, zim_name, title
+        return "kiwix", base, zim_name, title
     raise ValueError(
-        f"Unrecognised Kiwix URL: {seed_url!r}. "
-        "Expected http://host/viewer#zim/Title or http://host/content/zim/Title"
+        f"Unrecognised seed URL: {seed_url!r}. "
+        "Expected Kiwix viewer/content URL or https://<lang>.wikipedia.org/wiki/Title"
     )
 
 
-def article_url(kiwix_base: str, zim_name: str, title: str) -> str:
-    """Kiwix serves articles at /content/<zim_name>/<Title_With_Underscores>."""
-    return f"{kiwix_base}/content/{zim_name}/{title.replace(' ', '_')}"
+def article_url(source_kind: str, source_base: str, source_name: str, title: str) -> str:
+    """Build an article URL for a supported source kind."""
+    slug = title.replace(" ", "_")
+    if source_kind == "wikipedia":
+        return f"{source_base}/wiki/{slug}"
+    return f"{source_base}/content/{source_name}/{slug}"
 
 
 def suggest_titles(
@@ -95,11 +145,22 @@ def suggest_titles(
 # HTML parsing
 # ---------------------------------------------------------------------------
 
-def _resolve_href(href: str) -> Optional[str]:
-    """Extract the article slug from a Kiwix internal href, or None if not an article link.
+def _resolve_href(href: str, source_kind: str) -> Optional[str]:
+    """Extract an article slug from a supported internal href, or None if not an article link.
 
     Handles ../A/Title (old ZIM), ./Title, bare Title (new ZIM formats).
     """
+    if source_kind == "wikipedia":
+        if not href.startswith("/wiki/"):
+            return None
+        raw = href[len("/wiki/"):]
+        raw = raw.split("#", 1)[0].strip()
+        if not raw or "/" in raw:
+            return None
+        title = raw.replace("_", " ").strip()
+        if not title or _is_excluded_wiki_title(title):
+            return None
+        return title
     if href.startswith("../A/"):
         raw = href[5:]
     elif href.startswith("./"):
@@ -115,8 +176,22 @@ def _resolve_href(href: str) -> Optional[str]:
     return raw if raw and "/" not in raw else None
 
 
-def parse_kiwix_article(html: str, title: str) -> dict:
-    """Extract body, summary, sections, categories, facts, and wikilinks from Kiwix HTML."""
+def _redirect_target_from_location(source_kind: str, location: str) -> Optional[str]:
+    if not location:
+        return None
+    parsed = urlparse(location)
+    if source_kind == "wikipedia":
+        raw = parsed.path.strip("/").split("/", 1)
+        if len(raw) == 2 and raw[0] == "wiki":
+            title = unquote(raw[1]).replace("_", " ").split("#")[0].strip()
+            return None if _is_excluded_wiki_title(title) else title
+        return None
+    raw = parsed.path.rstrip("/").rsplit("/", 1)[-1].split("#")[0]
+    return unquote(raw).replace("_", " ").strip() if raw else None
+
+
+def parse_kiwix_article(html: str, title: str, source_kind: str = "kiwix") -> dict:
+    """Extract body, summary, sections, categories, facts, and wikilinks from supported source HTML."""
     soup = BeautifulSoup(html, "html.parser")
 
     # Kiwix serves redirect articles as a meta-refresh page with an empty <body>.
@@ -129,7 +204,7 @@ def parse_kiwix_article(html: str, title: str) -> dict:
         lower = content.lower()
         if "url=" in lower:
             url_part = content[lower.index("url=") + 4:].strip()
-            raw = _resolve_href(url_part)
+            raw = _resolve_href(url_part, source_kind)
             if raw:
                 redirect_to = unquote(raw).replace("_", " ").strip()
         return {"redirect": True, "redirect_to": redirect_to, "body": "", "summary": None,
@@ -142,9 +217,9 @@ def parse_kiwix_article(html: str, title: str) -> dict:
     seen_links: set[str] = set()
     for a in soup.find_all("a", href=True):
         href = unquote(a["href"]).split("#")[0].strip()
-        if not href or "://" in href or href.startswith("mailto:") or href.startswith("/"):
+        if not href or "://" in href or href.startswith("mailto:"):
             continue
-        raw = _resolve_href(href)
+        raw = _resolve_href(href, source_kind)
         if raw is None:
             continue
         target = raw.replace("_", " ").strip()
@@ -175,10 +250,16 @@ def parse_kiwix_article(html: str, title: str) -> dict:
 # ---------------------------------------------------------------------------
 
 def import_one(
-    client: httpx.Client, kiwix_base: str, zim_name: str, title: str, resume: bool, db_conn=None
+    client: httpx.Client,
+    source_kind: str,
+    source_base: str,
+    source_name: str,
+    title: str,
+    resume: bool,
+    db_conn=None
 ) -> bool:
     """Fetch and upsert a single article by title. Raises on HTTP error."""
-    resp = client.get(article_url(kiwix_base, zim_name, title))
+    resp = client.get(article_url(source_kind, source_base, source_name, title))
 
     # Kiwix signals redirects via HTTP 301/302. Because the client does NOT follow
     # redirects, we detect them here via the Location header and store a redirect row.
@@ -188,8 +269,7 @@ def import_one(
         location = resp.headers.get("location", "")
         # Location is like /content/<zim_name>/<Canonical_Title>
         # Extract the last path segment as the target title.
-        raw = location.rstrip("/").rsplit("/", 1)[-1].split("#")[0] if location else ""
-        redirect_to = unquote(raw).replace("_", " ").strip() if raw else None
+        redirect_to = _redirect_target_from_location(source_kind, location)
         if redirect_to and redirect_to != title:
             upsert_article(title=title, body=None, redirect_to=redirect_to, conn=db_conn)
             with state_lock:
@@ -199,7 +279,7 @@ def import_one(
         return False
 
     resp.raise_for_status()
-    parsed = parse_kiwix_article(resp.text, title)
+    parsed = parse_kiwix_article(resp.text, title, source_kind=source_kind)
     if parsed.get("redirect"):
         # Fallback: HTML meta-refresh redirect (some ZIM formats)
         redirect_to = parsed.get("redirect_to")
@@ -231,9 +311,11 @@ def run_kiwix_import(
     limit: Optional[int],
     resume: bool,
 ) -> None:
-    kiwix_base = kiwix_url.rstrip("/")
+    source_kind = "kiwix"
+    source_base = kiwix_url.rstrip("/")
+    source_name = zim_name
 
-    with db_connection() as write_conn, httpx.Client(timeout=30.0, follow_redirects=False) as client:
+    with db_connection() as write_conn, _http_client() as client:
         writes_since_commit = 0
         if titles:
             work = titles[:limit] if limit else titles
@@ -251,7 +333,7 @@ def run_kiwix_import(
             if not import_state["running"]:
                 break
             try:
-                wrote = import_one(client, kiwix_base, zim_name, title, resume, db_conn=write_conn)
+                wrote = import_one(client, source_kind, source_base, source_name, title, resume, db_conn=write_conn)
                 if wrote:
                     writes_since_commit += 1
                     if writes_since_commit >= 25:
@@ -277,17 +359,19 @@ def run_kiwix_backfill(zim_name: str, kiwix_url: str, limit: int) -> None:
     in articles (because they were redirect pages at the time of import).  Fetching
     each one now will either store it as a redirect row or as a full article.
     """
-    kiwix_base = kiwix_url.rstrip("/")
+    source_kind = "kiwix"
+    source_base = kiwix_url.rstrip("/")
+    source_name = zim_name
     titles = get_unresolved_link_titles(limit=limit)
     import_state["total"] = len(titles)
 
-    with db_connection() as write_conn, httpx.Client(timeout=30.0, follow_redirects=False) as client:
+    with db_connection() as write_conn, _http_client() as client:
         writes_since_commit = 0
         for title in titles:
             if not import_state["running"]:
                 break
             try:
-                wrote = import_one(client, kiwix_base, zim_name, title, resume=False, db_conn=write_conn)
+                wrote = import_one(client, source_kind, source_base, source_name, title, resume=False, db_conn=write_conn)
                 if wrote:
                     writes_since_commit += 1
                     if writes_since_commit >= 25:
@@ -315,7 +399,7 @@ def run_kiwix_backfill(zim_name: str, kiwix_url: str, limit: int) -> None:
 def run_kiwix_crawl(seed_url: str, max_depth: int, limit: int, delay_seconds: float, resume: bool) -> None:
     """BFS crawl starting from seed_url, following wikilinks up to max_depth hops."""
     try:
-        kiwix_base, zim_name, start_title = parse_seed_url(seed_url)
+        source_kind, source_base, source_name, start_title = parse_seed_url(seed_url)
     except ValueError as exc:
         import_state.update({"running": False, "last_error": str(exc)})
         return
@@ -332,7 +416,7 @@ def run_kiwix_crawl(seed_url: str, max_depth: int, limit: int, delay_seconds: fl
             return
         import_stop_event.wait(timeout=delay)
 
-    with db_connection() as write_conn, httpx.Client(timeout=30.0, follow_redirects=False) as client:
+    with db_connection() as write_conn, _http_client() as client:
         writes_since_commit = 0
 
         def _flush_periodically() -> None:
@@ -365,13 +449,12 @@ def run_kiwix_crawl(seed_url: str, max_depth: int, limit: int, delay_seconds: fl
                     # fall through to re-fetch so links get extracted and saved
 
             try:
-                resp = client.get(article_url(kiwix_base, zim_name, title))
+                resp = client.get(article_url(source_kind, source_base, source_name, title))
 
                 if resp.is_redirect:
                     location = resp.headers.get("location", "")
                     # Location: /content/<zim_name>/<Canonical_Title>
-                    raw = location.rstrip("/").rsplit("/", 1)[-1].split("#")[0] if location else ""
-                    redirect_to = unquote(raw).replace("_", " ").strip() if raw else None
+                    redirect_to = _redirect_target_from_location(source_kind, location)
                     if redirect_to and redirect_to != title:
                         upsert_article(title=title, body=None, redirect_to=redirect_to, conn=write_conn)
                         _flush_periodically()
@@ -385,7 +468,7 @@ def run_kiwix_crawl(seed_url: str, max_depth: int, limit: int, delay_seconds: fl
 
                 resp.raise_for_status()
 
-                parsed = parse_kiwix_article(resp.text, title)
+                parsed = parse_kiwix_article(resp.text, title, source_kind=source_kind)
                 if parsed.get("redirect"):
                     redirect_to = parsed.get("redirect_to")
                     if redirect_to:

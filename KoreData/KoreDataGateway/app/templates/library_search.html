@@ -4,38 +4,36 @@
 
 {% block content %}
 <div class="kcui-page kcui-page--narrow kcui-stack">
-<div class="panel kcui-panel" style="margin-bottom:1.25rem;">
+<div class="panel kcui-panel kcui-mar-bottom-lg">
   <div class="panel-header kcui-panel-header">
     SEARCH BOOKS
   </div>
   <div class="panel-body kcui-panel-body">
     <form action="/ui/library/search" method="get">
-      <p class="meta" style="margin-bottom:0.4rem;">Bare terms use AND by default. Use quotes, OR or |, NOT, and parentheses for text search. Metadata fields can still be combined separately.</p>
-      <div style="display:flex; flex-direction:row; gap:0;">
-        <input type="search" name="q" value="{{ q }}" placeholder="full-text search..." style="flex:1;">
+      <p class="meta kcui-mar-bottom-sm">Bare terms use AND by default. Use quotes, OR or |, NOT, and parentheses for text search. Metadata fields can still be combined separately.</p>
+      <div class="kcui-search-row">
+        <input type="search" name="q" value="{{ q }}" placeholder="full-text search...">
         <button type="submit">SEARCH</button>
       </div>
-      <div style="display:flex; flex-wrap:wrap; gap:0.75rem; margin-top:0.6rem; align-items:center;">
-        <label style="display:flex; align-items:center; gap:0.35rem; font-size:12px; color:var(--dim);">
+      <div class="kcui-filter-row kcui-mar-top-md">
+        <label class="kcui-filter-label">
           Catalog
-          <select name="catalog"
-                  style="font-family:var(--font-ui,monospace); font-size:12px; background:var(--bg-2,#1a1d23);
-                         border:1px solid var(--border,#23262e); color:var(--text,#e0e4ef); padding:2px 5px;">
+          <select name="catalog">
             <option value=""{% if not catalog %} selected{% endif %}>all</option>
             {% for cat in (catalogs or []) %}
             <option value="{{ cat.id }}"{% if catalog == cat.id %} selected{% endif %}>{{ cat.label }}</option>
             {% endfor %}
           </select>
         </label>
-        <label style="display:flex; align-items:center; gap:0.35rem; font-size:12px; color:var(--dim);">
+        <label class="kcui-filter-label">
           Author
           <input type="text" name="author" value="{{ author }}" style="width:140px;">
         </label>
-        <label style="display:flex; align-items:center; gap:0.35rem; font-size:12px; color:var(--dim);">
+        <label class="kcui-filter-label">
           Title
           <input type="text" name="title" value="{{ title }}" style="width:160px;">
         </label>
-        <label style="display:flex; align-items:center; gap:0.35rem; font-size:12px; color:var(--dim);">
+        <label class="kcui-filter-label">
           Year
           <div class="num-stepper">
             <input type="number" name="year" value="{{ year }}" min="1000" max="2100" style="width:62px;">
@@ -45,15 +43,15 @@
             </div>
           </div>
         </label>
-        <label style="display:flex; align-items:center; gap:0.35rem; font-size:12px; color:var(--dim);">
+        <label class="kcui-filter-label">
           Language
           <input type="text" name="language" value="{{ language }}" style="width:55px;" placeholder="en">
         </label>
-        <label style="display:flex; align-items:center; gap:0.35rem; font-size:12px; color:var(--dim);">
+        <label class="kcui-filter-label">
           Genre
           <input type="text" name="genre" value="{{ genre }}" style="width:120px;">
         </label>
-        <label style="display:flex; align-items:center; gap:0.35rem; font-size:12px; color:var(--dim);">
+        <label class="kcui-filter-label">
           Limit
           <div class="num-stepper">
             <input type="number" name="limit" value="{{ limit }}" min="1" max="500" style="width:52px;">
@@ -103,7 +101,7 @@
       </tbody>
     </table>
     {% else %}
-    <p class="meta" style="padding:1rem;">no results found</p>
+    <p class="meta kcui-result-empty">no results found</p>
     {% endif %}
   </div>
 </div>

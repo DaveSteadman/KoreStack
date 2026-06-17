@@ -29,6 +29,7 @@ from compress import compress as _compress, decompress as _decompress
 from dbutil import fts_build_query
 
 _TABLE_MARKER_RE = re.compile(rf'{re.escape(TABLE_OPEN)}(.*?){re.escape(TABLE_CLOSE)}', re.DOTALL)
+_SIMPLE_Q_RE      = re.compile(r"^[^\s()\",|]+$")
 
 
 def _body_for_fts(body: Optional[str]) -> str:
@@ -465,11 +466,22 @@ def search_articles(
     meta_cols = ", ".join(f"a.{c}" for c in _ARTICLE_META_COLS)
 
     if q:
+        q_text = q.strip()
+        simple_q = bool(_SIMPLE_Q_RE.fullmatch(q_text))
+        prefix_results: list[dict] = []
+        seen_ids: set[int] = set()
+
+        if simple_q:
+            prefix_results = search_articles(title=q_text, limit=limit, offset=offset)
+            seen_ids       = {int(r["id"]) for r in prefix_results if r.get("id") is not None}
+            if len(prefix_results) >= limit:
+                return prefix_results
+
         # FTS path
         with db_connection() as conn:
             fts_q = fts_build_query(q)
             if not fts_q:
-                return []
+                return prefix_results
             rows = conn.execute(f"""
                 SELECT {meta_cols},
                        bm25(articles_fts) AS score
@@ -480,11 +492,15 @@ def search_articles(
                 ORDER BY score
                 LIMIT :lim OFFSET :off
             """, {"q": fts_q, "lim": limit, "off": offset}).fetchall()
-        results = []
+        results = list(prefix_results)
         for r in rows:
+            if r["id"] in seen_ids:
+                continue
             d = _row_to_dict(r)
             d["score"] = r["score"]
             results.append(d)
+            if len(results) >= limit:
+                break
         return results
 
     # Non-FTS: title prefix filter

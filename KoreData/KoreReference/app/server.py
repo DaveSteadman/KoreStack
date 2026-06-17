@@ -47,6 +47,7 @@ from app.database import (
     upsert_article,
 )
 from app.importers.kiwix import (
+    _http_client,
     import_one,
     parse_seed_url,
     run_kiwix_backfill,
@@ -245,13 +246,13 @@ def route_import_kiwix(req: KiwixImportRequest, background_tasks: BackgroundTask
     return {"started": True, "zim_name": req.zim_name}
 
 
-@app.post("/import/kiwix/crawl", status_code=202, summary="BFS crawl from a Kiwix article URL")
+@app.post("/import/kiwix/crawl", status_code=202, summary="BFS crawl from a Kiwix or Wikipedia article URL")
 def route_import_kiwix_crawl(req: KiwixCrawlRequest, background_tasks: BackgroundTasks):
     if not import_lock.acquire(blocking=False):
         raise HTTPException(status_code=409, detail="Import already running")
     import_stop_event.clear()
     try:
-        _, _, start_title = parse_seed_url(req.seed_url)
+        _, _, _, start_title = parse_seed_url(req.seed_url)
     except ValueError as exc:
         import_lock.release()
         raise HTTPException(status_code=422, detail=str(exc))
@@ -299,8 +300,8 @@ def route_import_article(zim_name: str, title: str, kiwix_url: str):
     """Synchronous single-article import — useful for testing and on-demand fetch."""
     kiwix_base = kiwix_url.rstrip("/")
     try:
-        with httpx.Client(timeout=30.0, follow_redirects=False) as client:
-            import_one(client, kiwix_base, zim_name, title, resume=True)
+        with _http_client() as client:
+            import_one(client, "kiwix", kiwix_base, zim_name, title, resume=True)
     except httpx.HTTPStatusError as exc:
         raise HTTPException(
             status_code=exc.response.status_code,

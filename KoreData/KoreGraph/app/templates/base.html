@@ -23,13 +23,23 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { height: 100%; margin: 0; padding: 0; }
     body {
+      display: flex;
+      flex-direction: column;
+      min-height: 100dvh;
       font-family: var(--font-ui);
       background: var(--bg); color: var(--text);
       font-size: var(--kcui-text-body); line-height: var(--kcui-leading-body);
     }
 
     /* ─── layout ─────────────────────────────────── */
-    main { padding: 1.5rem 2rem; max-width: 1320px; margin: 0 auto; }
+    main {
+      flex: 1 1 auto;
+      min-height: 0;
+      padding: 1.5rem 2rem;
+      max-width: 1320px;
+      margin: 0 auto;
+      width: 100%;
+    }
     main.kcui-main { padding: 0; max-width: none; }
 
     /* ─── panel / card ───────────────────────────── */

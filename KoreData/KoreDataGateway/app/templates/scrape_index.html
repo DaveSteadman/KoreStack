@@ -2,8 +2,8 @@
 {% block title %}KoreData - Scrape{% endblock %}
 
 {% block content %}
-<div class="two-col">
-  <div class="panel kcui-panel">
+<div class="kcui-grid-split">
+  <div class="kcui-panel">
     <div class="panel-header kcui-panel-header">NEW CAPTURE</div>
     <div class="panel-body kcui-panel-body">
       <form method="post" action="/ui/scrape/start">
@@ -11,7 +11,7 @@
         <input type="url" name="url" placeholder="https://example.com/" required>
 
         <label>Depth</label>
-        <div class="num-stepper" style="width:max-content;">
+        <div class="num-stepper">
           <input type="number" name="depth" value="0" min="0" max="5" style="width:56px;">
           <div class="stepper-btns">
             <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,1)">&#9650;</button>
@@ -20,14 +20,14 @@
         </div>
         <div class="meta">Depth 0 captures one page plus its referenced assets. Higher depths follow same-origin links.</div>
 
-        <div style="padding-top:0.4rem;">
+        <div class="kcui-pad-top-sm">
           <button type="submit">START CAPTURE</button>
         </div>
       </form>
     </div>
   </div>
 
-  <div class="panel kcui-panel">
+  <div class="kcui-panel">
     <div class="panel-header kcui-panel-header">STATUS</div>
     <div class="panel-body kcui-panel-body">
       <div class="kv"><div class="kv-key">captures</div><div class="kv-val">{{ status.get("captures", 0) }}</div></div>
@@ -39,7 +39,7 @@
   </div>
 </div>
 
-<div class="panel kcui-panel">
+<div class="kcui-panel">
   <div class="panel-header kcui-panel-header">CAPTURES</div>
   <div class="panel-body kcui-panel-body">
     {% if captures %}
@@ -58,7 +58,7 @@
       <tbody>
         {% for capture in captures %}
         <tr>
-          <td style="max-width:480px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ capture.url }}</td>
+          <td class="kcui-truncate">{{ capture.url }}</td>
           <td>{{ capture.status }}</td>
           <td>{{ capture.depth }}</td>
           <td>{{ capture.pages_saved }}</td>

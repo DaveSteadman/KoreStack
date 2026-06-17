@@ -3,235 +3,26 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>KoreStack</title>
+  <title>{% block title %}KoreStack{% endblock %}</title>
   <link rel="icon" type="image/x-icon" href="/ui-elements/assets/icons/favicon.ico">
   <link rel="stylesheet" href="/ui-elements/assets/css/chrome.css">
   <script src="/suite-config.js"></script>
   <style>
-    :root {
-      --bg:      #0b0c10;
-      --panel:   #0f1117;
-      --border:  #1e2233;
-      --text:    #c5c8d0;
-      --dim:     #4e5466;
-      --green:   #4af77a;
-      --amber:   #f0c060;
-      --blue:    #6eb5ff;
-      --red:     #ff5f5f;
-    }
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { height: 100%; margin: 0; padding: 0; }
-    body {
-      font-family: var(--font-ui);
-      background: var(--bg); color: var(--text);
-      font-size: var(--kcui-text-body); line-height: var(--kcui-leading-body);
+    .kcui-panel.kcui-panel {
+      margin-bottom: 1.25rem;
     }
 
-    /* ─── layout ─────────────────────────────────── */
-    main { padding: 1.5rem 2rem; max-width: 1320px; margin: 0 auto; }
-    main.kcui-main { padding: 0; max-width: none; }
-
-    /* ─── panel / card ───────────────────────────── */
-    .panel.kcui-panel { margin-bottom: 1.25rem; }
-    .panel-header.kcui-panel-header {
+    .kcui-panel-header.kcui-panel-header {
       justify-content: flex-start;
       gap: 0.6rem;
     }
-    .panel-body.kcui-panel-body { padding: 12px; }
 
-    /* ─── two-column layout ──────────────────────── */
-    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
-    @media (max-width: 900px) { .two-col { grid-template-columns: 1fr; } }
-
-    /* ─── domain grid ────────────────────────────── */
-    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 0.75rem; }
-    .domain-card {
-      border: 1px solid var(--border);
-      background: var(--bg);
-      padding: 0.75rem 1rem;
-      text-decoration: none; color: var(--text);
-      display: block; transition: border-color .12s;
+    .kcui-panel-body.kcui-panel-body {
+      padding: 12px;
     }
-    .domain-card:hover { border-color: var(--green); }
-    .domain-card .dc-name { color: var(--green); font-size: 0.95rem; margin-bottom: 0.25rem; }
-    .domain-card .dc-count { color: var(--dim); font-size: var(--kcui-text-label); }
-
-    /* ─── table ──────────────────────────────────── */
-    table { width: 100%; border-collapse: collapse; font-size: var(--kcui-text-data); }
-    th, td { text-align: left; padding: 0.4rem 0.75rem; border-bottom: 1px solid var(--border); }
-    th { color: var(--dim); font-weight: 400; font-size: var(--kcui-text-label); letter-spacing: var(--kcui-tracking-label); text-transform: uppercase; }
-    tr:last-child td { border-bottom: none; }
-    tbody tr:hover td { background: rgba(255,255,255,.025); }
-
-    /* ─── forms ──────────────────────────────────── */
-    form { display: flex; flex-direction: column; gap: 0.6rem; }
-    label { font-size: var(--kcui-text-label); color: var(--dim); letter-spacing: var(--kcui-tracking-tight); text-transform: uppercase; }
-    input[type=text], input[type=url], input[type=number], input[type=search],
-    input[type=date], textarea, select {
-      padding: 0.35rem 0.6rem;
-      background: var(--bg); color: var(--text);
-      border: 1px solid var(--border);
-      font-family: inherit; font-size: var(--kcui-text-data); width: 100%; outline: none;
-    }
-    input:focus, select:focus, textarea:focus { border-color: var(--green); }
-    input::placeholder, textarea::placeholder { color: var(--dim); }
-    textarea { resize: vertical; min-height: 80px; }
-
-    /* custom number stepper widget */
-    .num-stepper {
-      display: inline-flex;
-      border: 1px solid var(--border);
-      overflow: hidden;
-    }
-    .num-stepper input[type=number] {
-      border: none; background: transparent; color: var(--text);
-      font-family: inherit; font-size: var(--kcui-text-body); padding: 0.25rem 0.4rem;
-      -moz-appearance: textfield; min-width: 0; outline: none; text-align: right;
-    }
-    .num-stepper input[type=number]::-webkit-inner-spin-button,
-    .num-stepper input[type=number]::-webkit-outer-spin-button { display: none; }
-    .num-stepper:focus-within { border-color: var(--green); }
-    .stepper-btns {
-      display: flex; flex-direction: column;
-      border-left: 1px solid var(--border); width: 20px; flex-shrink: 0;
-    }
-    .stepper-btns button {
-      flex: 1; padding: 0; border: none; border-radius: 0;
-      background: transparent; color: var(--dim); cursor: pointer;
-      font-size: var(--kcui-text-micro); line-height: 1; letter-spacing: 0; text-transform: none;
-      display: flex; align-items: center; justify-content: center;
-      min-width: 0; transition: background .1s, color .1s;
-    }
-    .stepper-btns button:first-child { border-bottom: 1px solid var(--border); }
-    .stepper-btns button:hover { background: rgba(74,247,122,.15); color: var(--green); }
-    .rate-stepper { border-color: transparent; transition: border-color .15s; }
-    .rate-stepper:hover, .rate-stepper:focus-within { border-color: var(--border); }
-    .rate-stepper input[type=number] { width: 52px; }
-    .age-subpanel { padding: 0.6rem 0 0 0; }
-    .age-subpanel p.meta { margin-bottom: 0.5rem; }
-
-    /* date picker widget */
-    .date-pick {
-      display: inline-flex; align-items: stretch;
-      border: 1px solid var(--border); overflow: hidden; background: var(--bg);
-    }
-    .date-pick input[type=date] {
-      border: none; background: transparent; color: var(--text);
-      font-family: inherit; font-size: var(--kcui-text-body-sm); padding: 0.25rem 0.4rem;
-      outline: none; color-scheme: dark; min-width: 0; width: 112px;
-    }
-    .date-pick input[type=date]::-webkit-calendar-picker-indicator { display: none; }
-    .date-pick .cal-icon {
-      display: flex; align-items: center; padding: 0 6px;
-      border-left: 1px solid var(--border); cursor: pointer;
-      color: var(--dim); user-select: none;
-    }
-    .date-pick .cal-icon:hover { color: var(--green); }
-    .date-pick:focus-within { border-color: var(--green); }
-
-    button, .btn {
-      padding: 0.4rem 1rem;
-      background: transparent; color: var(--green);
-      border: 1px solid var(--green);
-      font-family: inherit; font-size: var(--kcui-text-body-sm); cursor: pointer;
-      letter-spacing: var(--kcui-tracking-label); text-transform: uppercase;
-      transition: background .12s; white-space: nowrap;
-    }
-    button:hover, .btn:hover { background: rgba(74,247,122,.1); }
-    .btn-danger { color: var(--red); border-color: var(--red); }
-    .btn-danger:hover { background: rgba(255,95,95,.1); }
-    .btn-sm { padding: 0.2rem 0.5rem; font-size: var(--kcui-text-label); }
-    .btn-secondary { color: var(--dim); border-color: var(--dim); }
-    .btn-secondary:hover { background: rgba(78,84,102,.15); }
-    .btn-primary { color: var(--accent); border-color: var(--accent); }
-    .btn-primary:hover { background: rgba(167,139,250,.15); }
-
-    /* ─── misc ───────────────────────────────────── */
-    a { color: var(--blue); text-decoration: none; }
-    a:hover { text-decoration: underline; color: var(--text); }
-    a.ref-link-dead { color: var(--dim); }
-    a.ref-link-dead:hover { color: var(--text); }
-    .scrollable-body p, .wiki-lead p { margin-bottom: 0.85em; }
-    h1 { font-size: 1.1rem; color: var(--text); margin-bottom: 1.1rem; letter-spacing: 0.04em; }
-    h2 { font-size: 0.85rem; color: var(--dim); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0.7rem; }
-    .badge {
-      display: inline-block;
-      border: 1px solid var(--green); color: var(--green);
-      padding: 0px 5px; font-size: var(--kcui-text-label); letter-spacing: var(--kcui-tracking-tight);
-    }
-    .badge-dim { border-color: var(--border); color: var(--dim); }
-    .meta { color: var(--dim); font-size: var(--kcui-text-body-sm); }
-    .kv { display: flex; gap: 0.75rem; }
-    .kv-key { color: var(--dim); min-width: 120px; }
-    .kv-val { color: var(--text); }
-
-    .pagination { display: flex; gap: 0.5rem; margin-top: 1rem; align-items: center; }
-    .pagination a {
-      padding: 0.25rem 0.65rem; border: 1px solid var(--border); color: var(--dim);
-      text-decoration: none; font-size: var(--kcui-text-body-sm);
-    }
-    .pagination a:hover { border-color: var(--green); color: var(--green); }
-    .pagination .pg-info { color: var(--dim); font-size: var(--kcui-text-body-sm); }
-
-    pre {
-      white-space: pre-wrap; word-break: break-word;
-      background: var(--bg); padding: 1rem;
-      border: 1px solid var(--border);
-      font-size: var(--kcui-text-body-sm); line-height: 1.65; color: var(--text);
-    }
-
-    .scrollable-body {
-      white-space: pre-wrap; word-break: break-word;
-      background: var(--bg); padding: 1rem;
-      font-size: var(--kcui-text-body-sm); line-height: 1.65; color: var(--text);
-    }
-    .scrollable-body ul, .scrollable-body ol { padding-left: 1.5em; margin-bottom: 0.6em; }
-    .scrollable-body li { margin-bottom: 0.25em; }
-
-    /* Markdown-rendered book body */
-    .book-md {
-      white-space: normal;
-      font-family: var(--font-code);
-      font-size: var(--kcui-text-body-sm);
-      line-height: 1.8;
-    }
-    .book-md p     { margin: 0 0 0.9em 0; }
-    .book-md h1, .book-md h2, .book-md h3, .book-md h4 {
-      font-family: var(--font);
-      color: var(--green);
-      margin: 1.4em 0 0.5em;
-      font-weight: 600;
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
-    }
-    .book-md h1 { font-size: 13px; }
-    .book-md h2 { font-size: 12px; }
-    .book-md h3, .book-md h4 { font-size: 11px; color: var(--dim); }
-    .book-md a  { color: var(--blue); text-decoration: none; }
-    .book-md a:hover { text-decoration: underline; }
-    .book-md blockquote {
-      border-left: 2px solid var(--border);
-      margin: 0.8em 0 0.8em 1em;
-      padding-left: 0.8em;
-      color: var(--dim);
-      font-style: italic;
-    }
-    .book-md hr { border: none; border-top: 1px solid var(--border); margin: 1.5em 0; }
-    .book-md ul, .book-md ol { padding-left: 1.5em; margin-bottom: 0.9em; }
-    .book-md li { margin-bottom: 0.3em; }
-
-    /* Dark scrollbars site-wide */
-    ::-webkit-scrollbar { width: 8px; height: 8px; }
-    ::-webkit-scrollbar-track { background: var(--bg); }
-    ::-webkit-scrollbar-thumb { background: #2a2d3e; border-radius: 4px; }
-    ::-webkit-scrollbar-thumb:hover { background: #3a3d52; }
-    * { scrollbar-width: thin; scrollbar-color: #2a2d3e var(--bg); }
-
-    /* missing field badge */
-    .missing { color: var(--amber); border-color: var(--amber); }
   </style>
 </head>
-<body>
+<body class="kcui-shell-bg">
   <div id="topbar"></div>
   <div id="app-bar"></div>
   <main class="{% block main_class %}{% endblock %}">
@@ -260,37 +51,43 @@
   </script>
   <script type="module">
     import { initAppBar, initTopbar } from '/ui-elements/assets/js/chrome.js';
+
+    const path = {{ request.url.path | tojson }};
+
+    const shellMeta = {
+      home:      { brandLabel: 'KoreData',      overline: 'Data Gateway',    brandIcon: 'koredata' },
+      feeds:     { brandLabel: 'KoreFeed',      overline: 'News Feeds',      brandIcon: 'korefeed' },
+      library:   { brandLabel: 'KoreLibrary',   overline: 'Books',           brandIcon: 'korelibrary' },
+      reference: { brandLabel: 'KoreReference', overline: 'Reference',       brandIcon: 'korereference' },
+      rag:       { brandLabel: 'KoreRAG',       overline: 'RAG Chunks',      brandIcon: 'korerag' },
+      scrape:    { brandLabel: 'KoreScrape',    overline: 'Web Snapshots',   brandIcon: 'korescrape' },
+      graph:     { brandLabel: 'KoreGraph',     overline: 'Knowledge Graph', brandIcon: 'koregraph' },
+    };
+
+    const shellTabs = [
+      { key: 'home',      label: 'Home',      href: '/' },
+      { key: 'feeds',     label: 'Feeds',     href: '/ui/feeds' },
+      { key: 'library',   label: 'Library',   href: '/ui/library' },
+      { key: 'reference', label: 'Reference', href: '/ui/reference' },
+      { key: 'rag',       label: 'RAG',       href: '/ui/rag/databases' },
+      { key: 'scrape',    label: 'Scrape',    href: '/ui/scrape' },
+      { key: 'graph',     label: 'Graph',     href: '/graph/' },
+    ];
+
+    const section = path.startsWith('/ui/feeds')     ? 'feeds'
+                  : path.startsWith('/ui/library')   ? 'library'
+                  : path.startsWith('/ui/reference') ? 'reference'
+                  : path.startsWith('/ui/rag')       ? 'rag'
+                  : path.startsWith('/ui/scrape')    ? 'scrape'
+                  : path.startsWith('/graph')        ? 'graph'
+                  : 'home';
+
     initTopbar({ currentService: 'koredata', urls: window.__koreSuiteUrls || {} });
-    {% if request.url.path.startswith('/ui/feeds') %}
-    {% set _brand = 'KoreFeed' %}{% set _overline = 'News Feeds' %}{% set _brand_icon = 'korefeed' %}
-    {% elif request.url.path.startswith('/ui/library') %}
-    {% set _brand = 'KoreLibrary' %}{% set _overline = 'Books' %}{% set _brand_icon = 'korelibrary' %}
-    {% elif request.url.path.startswith('/ui/reference') %}
-    {% set _brand = 'KoreReference' %}{% set _overline = 'Reference' %}{% set _brand_icon = 'korereference' %}
-    {% elif request.url.path.startswith('/ui/rag') %}
-    {% set _brand = 'KoreRAG' %}{% set _overline = 'RAG Chunks' %}{% set _brand_icon = 'korerag' %}
-    {% elif request.url.path.startswith('/ui/scrape') %}
-    {% set _brand = 'KoreScrape' %}{% set _overline = 'Web Snapshots' %}{% set _brand_icon = 'korescrape' %}
-    {% elif request.url.path.startswith('/graph') %}
-    {% set _brand = 'KoreGraph' %}{% set _overline = 'Knowledge Graph' %}{% set _brand_icon = 'koregraph' %}
-    {% else %}
-    {% set _brand = 'KoreData' %}{% set _overline = 'Data Gateway' %}{% set _brand_icon = 'koredata' %}
-    {% endif %}
     initAppBar({
       currentService: 'koredata',
-      overline: '{{ _overline }}',
-      brandLabel: '{{ _brand }}',
-      brandIcon: '{{ _brand_icon }}',
+      ...shellMeta[section],
       chips: [],
-      tabs: [
-        { label: 'Home', href: '/', active: {{ 'true' if request.url.path == '/' else 'false' }} },
-        { label: 'Feeds', href: '/ui/feeds', active: {{ 'true' if request.url.path.startswith('/ui/feeds') else 'false' }} },
-        { label: 'Library', href: '/ui/library', active: {{ 'true' if request.url.path.startswith('/ui/library') else 'false' }} },
-        { label: 'Reference', href: '/ui/reference', active: {{ 'true' if request.url.path.startswith('/ui/reference') else 'false' }} },
-        { label: 'RAG', href: '/ui/rag/databases', active: {{ 'true' if request.url.path.startswith('/ui/rag') else 'false' }} },
-        { label: 'Scrape', href: '/ui/scrape', active: {{ 'true' if request.url.path.startswith('/ui/scrape') else 'false' }} },
-        { label: 'Graph', href: '/graph/', active: {{ 'true' if request.url.path.startswith('/graph') else 'false' }} },
-      ],
+      tabs: shellTabs.map((tab) => ({ ...tab, active: tab.key === section })),
     });
   </script>
   {% block scripts %}{% endblock %}

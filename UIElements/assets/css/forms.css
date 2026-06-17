@@ -1,0 +1,275 @@
+/*
+ * forms.css - shared form and button primitives for shell-style apps.
+ */
+
+.kcui-shell-bg form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.kcui-shell-bg label,
+.kcui-form-label {
+  font-size: var(--kcui-text-label);
+  color: var(--text-dim);
+  letter-spacing: var(--kcui-tracking-tight);
+  text-transform: uppercase;
+}
+
+.kcui-filter-label {
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.kcui-shell-bg input[type=text],
+.kcui-shell-bg input[type=url],
+.kcui-shell-bg input[type=number],
+.kcui-shell-bg input[type=search],
+.kcui-shell-bg input[type=date],
+.kcui-shell-bg textarea,
+.kcui-shell-bg select,
+.kcui-input {
+  padding: 0.35rem 0.6rem;
+  width: 100%;
+  border: 1px solid var(--border);
+  outline: none;
+  background: var(--bg);
+  color: var(--text);
+  font-family: inherit;
+  font-size: var(--kcui-text-data);
+}
+
+.kcui-shell-bg input:focus,
+.kcui-shell-bg select:focus,
+.kcui-shell-bg textarea:focus,
+.kcui-input:focus {
+  border-color: var(--accent);
+}
+
+.kcui-shell-bg input::placeholder,
+.kcui-shell-bg textarea::placeholder,
+.kcui-input::placeholder {
+  color: var(--text-dim);
+}
+
+.kcui-shell-bg textarea,
+.kcui-textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+.kcui-shell-bg button,
+.kcui-shell-bg .btn,
+.kcui-btn {
+  padding: 0.4rem 1rem;
+  border: 1px solid var(--accent);
+  background: transparent;
+  color: var(--accent);
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: inherit;
+  font-size: var(--kcui-text-body-sm);
+  letter-spacing: var(--kcui-tracking-label);
+  text-transform: uppercase;
+  transition: background .12s;
+}
+
+.kcui-shell-bg button:hover,
+.kcui-shell-bg .btn:hover,
+.kcui-btn:hover {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+.kcui-shell-bg .btn-danger,
+.kcui-btn-danger {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+.kcui-shell-bg .btn-danger:hover,
+.kcui-btn-danger:hover {
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+}
+
+.kcui-shell-bg .btn-secondary,
+.kcui-btn-secondary {
+  color: var(--text-dim);
+  border-color: var(--text-dim);
+}
+
+.kcui-shell-bg .btn-secondary:hover,
+.kcui-btn-secondary:hover {
+  background: color-mix(in srgb, var(--text-dim) 15%, transparent);
+}
+
+.kcui-shell-bg .btn-primary,
+.kcui-btn-primary {
+  color: var(--info);
+  border-color: var(--info);
+}
+
+.kcui-shell-bg .btn-primary:hover,
+.kcui-btn-primary:hover {
+  background: color-mix(in srgb, var(--info) 15%, transparent);
+}
+
+.kcui-shell-bg .btn-sm,
+.kcui-btn-sm {
+  padding: 0.2rem 0.5rem;
+  font-size: var(--kcui-text-label);
+}
+
+.rate-stepper {
+  border-color: transparent;
+  transition: border-color .15s;
+}
+
+.rate-stepper:hover,
+.rate-stepper:focus-within {
+  border-color: var(--border);
+}
+
+.rate-stepper input[type=number] {
+  width: 52px;
+}
+
+.age-subpanel {
+  padding: 0.6rem 0 0 0;
+}
+
+.age-subpanel p.meta {
+  margin-bottom: 0.5rem;
+}
+
+.kcui-btn-quiet {
+  color: var(--text-dim);
+  border-color: var(--border);
+}
+
+.kcui-btn-quiet:hover {
+  background: color-mix(in srgb, var(--border) 35%, transparent);
+}
+
+.kcui-btn-block {
+  width: 100%;
+}
+
+.kcui-num-stepper,
+.num-stepper {
+  display: inline-flex;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+.kcui-num-stepper input[type=number],
+.num-stepper input[type=number] {
+  min-width: 0;
+  padding: 0.25rem 0.4rem;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--text);
+  text-align: right;
+  font-family: inherit;
+  font-size: var(--kcui-text-body);
+  -moz-appearance: textfield;
+}
+
+.kcui-num-stepper input[type=number]::-webkit-inner-spin-button,
+.kcui-num-stepper input[type=number]::-webkit-outer-spin-button,
+.num-stepper input[type=number]::-webkit-inner-spin-button,
+.num-stepper input[type=number]::-webkit-outer-spin-button {
+  display: none;
+}
+
+.kcui-num-stepper:focus-within,
+.num-stepper:focus-within {
+  border-color: var(--accent);
+}
+
+.kcui-stepper-btns,
+.stepper-btns {
+  display: flex;
+  width: 20px;
+  flex-shrink: 0;
+  flex-direction: column;
+  border-left: 1px solid var(--border);
+}
+
+.kcui-stepper-btns button,
+.stepper-btns button {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: var(--kcui-text-micro);
+  line-height: 1;
+  letter-spacing: 0;
+  text-transform: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.kcui-stepper-btns button:first-child,
+.stepper-btns button:first-child {
+  border-bottom: 1px solid var(--border);
+}
+
+.kcui-stepper-btns button:hover,
+.stepper-btns button:hover {
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  color: var(--accent);
+}
+
+.kcui-date-pick,
+.date-pick {
+  display: inline-flex;
+  align-items: stretch;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--bg);
+}
+
+.kcui-date-pick input[type=date],
+.date-pick input[type=date] {
+  width: 112px;
+  min-width: 0;
+  padding: 0.25rem 0.4rem;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--text);
+  color-scheme: dark;
+  font-family: inherit;
+  font-size: var(--kcui-text-body-sm);
+}
+
+.kcui-date-pick input[type=date]::-webkit-calendar-picker-indicator,
+.date-pick input[type=date]::-webkit-calendar-picker-indicator {
+  display: none;
+}
+
+.kcui-date-pick .cal-icon,
+.date-pick .cal-icon {
+  display: flex;
+  align-items: center;
+  padding: 0 6px;
+  border-left: 1px solid var(--border);
+  color: var(--text-dim);
+  cursor: pointer;
+  user-select: none;
+}
+
+.kcui-date-pick .cal-icon:hover,
+.date-pick .cal-icon:hover {
+  color: var(--accent);
+}
+
+.kcui-date-pick:focus-within,
+.date-pick:focus-within {
+  border-color: var(--accent);
+}

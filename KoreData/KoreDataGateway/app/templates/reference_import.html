@@ -11,7 +11,7 @@
     </div>
     <div class="panel-body kcui-panel-body">
       <div style="font-size:11px; color:var(--dim); margin-bottom:0.75rem; line-height:1.65;">
-        Paste a Kiwix URL. The importer fetches that article then follows
+        Paste a Kiwix or Wikipedia article URL. The importer fetches that article then follows
         its wikilinks up to the chosen depth.
         <br>
         <span style="color:var(--amber);">Warning:  Depth 2+ can queue thousands of articles - use the limit.</span>
@@ -24,7 +24,7 @@
             <span id="c_source_badge" class="kcui-tag kcui-tag--accent" style="margin-left:0.4rem; display:none;"></span>
           </label>
           <input id="c_seed" type="text"
-            placeholder="http://host/viewer#zim/Article  or  http://host/zim/A/Article_Title"
+            placeholder="http://host/viewer#zim/Article  or  https://en.wikipedia.org/wiki/Article_Title"
             oninput="detectUrlType(this.value)"
             style="width:100%; font-size:11px; margin-top:0.3rem;">
         </div>
@@ -198,7 +198,7 @@ function detectUrlType(url) {
   const badge = document.getElementById('c_source_badge');
   const val = url.trim();
   if (!val) { badge.style.display = 'none'; return; }
-  badge.textContent = 'KIWIX';
+  badge.textContent = /wikipedia\.org\/wiki\//i.test(val) ? 'WIKIPEDIA' : 'KIWIX';
   badge.style.display = '';
 }
 

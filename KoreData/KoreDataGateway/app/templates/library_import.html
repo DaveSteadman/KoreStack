@@ -4,40 +4,25 @@
 
 {% block content %}
 <style>
-  .kg-log-pane {
-    font-family: var(--font-code);
-    font-size: 11px;
-    line-height: 1.7;
-    max-height: 220px;
-    overflow-y: auto;
-  }
-
-  .kg-log-pane--tall {
-    max-height: 280px;
-  }
-
   .kg-batch-urls {
-    font-family: var(--font-code);
-    font-size: 11px;
-    resize: vertical;
-    width: 100%;
+    min-height: 160px;
   }
 </style>
 <div class="kcui-page kcui-page--narrow kcui-stack">
 {% if error %}
-<div style="background:rgba(255,95,95,0.1); border:1px solid var(--red); color:var(--red); padding:0.6rem 1rem; margin-bottom:1rem; font-size:12px;">
+<div class="kcui-alert">
    {{ error }}
 </div>
 {% endif %}
 
-<div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; align-items:start;">
+<div class="kcui-grid-split">
 <div class="panel kcui-panel">
     <div class="panel-header kcui-panel-header">
       ADD BOOK MANUALLY
     </div>
     <div class="panel-body kcui-panel-body">
       <form action="/ui/library/import/manual" method="post">
-        <div style="display:grid; grid-template-columns:1fr; gap:0.6rem;">
+        <div class="kcui-stack">
 
           <div>
             <label for="m_title">Title <span style="color:var(--red);">*</span></label>
@@ -49,14 +34,14 @@
             <input id="m_author" name="author" type="text" placeholder="e.g. Charles Dickens">
           </div>
 
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.6rem;">
+          <div class="kcui-grid-form-2">
             <div>
               <label for="m_year">Year</label>
-              <input id="m_year" name="year" type="number" placeholder="e.g. 1837" style="width:100%;">
+              <input id="m_year" name="year" type="number" placeholder="e.g. 1837">
             </div>
             <div>
               <label for="m_language">Language</label>
-              <input id="m_language" name="language" type="text" placeholder="e.g. en" style="width:100%;">
+              <input id="m_language" name="language" type="text" placeholder="e.g. en">
             </div>
           </div>
 
@@ -73,7 +58,6 @@
           <div>
             <label for="m_catalog">Catalog</label>
             <input id="m_catalog" name="catalog" type="text" placeholder="local (default)"
-              style="width:160px;"
               {% if catalogs and catalogs|length > 1 %}
               list="catalog_list"
               {% endif %}>
@@ -88,11 +72,11 @@
 
           <div>
             <label for="m_body">Body text (optional - can add/edit later)</label>
-            <textarea id="m_body" name="body" rows="8" placeholder="Paste full book text here..." style="font-size:11px; resize:vertical;"></textarea>
+            <textarea id="m_body" name="body" rows="8" class="kcui-code-input" placeholder="Paste full book text here..."></textarea>
           </div>
 
           <div>
-            <button type="submit" style="width:100%;">ADD BOOK</button>
+            <button type="submit" class="kcui-btn-block">ADD BOOK</button>
           </div>
         </div>
       </form>
@@ -103,52 +87,52 @@
       IMPORT FROM KIWIX
     </div>
     <div class="panel-body kcui-panel-body">
-      <div style="display:grid; grid-template-columns:1fr auto; gap:0.5rem; margin-bottom:0.6rem; align-items:end;">
+      <div class="kcui-grid-input-action kcui-mar-bottom-md">
         <div>
           <label for="k_url">Kiwix server URL</label>
-          <input id="k_url" type="text" value="http://192.168.1.33:8080" placeholder="http://host:port" style="width:100%;">
+          <input id="k_url" type="text" value="http://192.168.1.33:8080" placeholder="http://host:port">
         </div>
-        <button type="button" onclick="kiwixLoadInventory()" style="white-space:nowrap; align-self:flex-end;"> Reload</button>
+        <button type="button" onclick="kiwixLoadInventory()">RELOAD</button>
       </div>
 
       <!-- Paste a viewer URL directly -->
-      <div style="display:grid; grid-template-columns:1fr auto; gap:0.5rem; margin-bottom:0.75rem; align-items:end;">
+      <div class="kcui-grid-input-action kcui-mar-bottom-lg">
         <div>
-          <label for="k_viewer_url" style="color:var(--dim);">Or paste viewer URL</label>
+          <label for="k_viewer_url">Or paste viewer URL</label>
           <input id="k_viewer_url" type="text" placeholder="http://host/viewer#zim/Article%20Name.123"
-            style="width:100%; font-size:11px;"
+            class="kcui-code-input"
             onkeydown="if(event.key==='Enter') kiwixImportViewerUrl()">
         </div>
-        <button type="button" onclick="kiwixImportViewerUrl()" style="align-self:flex-end;">IMPORT</button>
+        <button type="button" onclick="kiwixImportViewerUrl()">IMPORT</button>
       </div>
 
-      <div style="margin-bottom:0.75rem;">
+      <div class="kcui-mar-bottom-lg">
         <label for="k_zim">ZIM file</label>
-        <select id="k_zim" style="width:100%;" onchange="kiwixZimSelected()">
+        <select id="k_zim" onchange="kiwixZimSelected()">
           <option value="">- enter URL above and click Reload -</option>
         </select>
       </div>
 
-      <div style="display:grid; grid-template-columns:1fr auto; gap:0.5rem; margin-bottom:0.5rem; align-items:end;">
+      <div class="kcui-grid-input-action kcui-mar-bottom-sm">
         <div>
           <label for="k_query">Search by title or author</label>
           <input id="k_query" type="text" placeholder="e.g. Charles Dickens, Bleak House, evolution..." onkeydown="if(event.key==='Enter') kiwixSearch()">
         </div>
-        <button type="button" onclick="kiwixSearch()" style="align-self:flex-end;">SEARCH</button>
+        <button type="button" onclick="kiwixSearch()">SEARCH</button>
       </div>
 
       <!-- Search results -->
-      <div id="k_results_wrap" style="display:none; margin-bottom:0.5rem;">
-        <div style="border-top:1px solid var(--border); padding-top:0.5rem;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.4rem;">
+      <div id="k_results_wrap" style="display:none;" class="kcui-mar-bottom-sm">
+        <div class="kcui-pad-top-sm" style="border-top:1px solid var(--border);">
+          <div class="kcui-actions kcui-mar-bottom-sm">
             <span class="meta" id="k_result_count"></span>
           </div>
-          <div style="max-height:320px; overflow-y:auto;">
-            <table style="width:100%;">
+          <div class="kcui-scroll-y-md">
+            <table>
               <thead>
                 <tr>
                   <th>Title</th>
-                  <th style="width:90px; text-align:center;"></th>
+                  <th class="kcui-cell-narrow"></th>
                 </tr>
               </thead>
               <tbody id="k_tbody"></tbody>
@@ -157,22 +141,22 @@
         </div>
       </div>
 
-      <div id="k_status" class="meta" style="margin-top:0.5rem; min-height:1.2em;"></div>
+      <div id="k_status" class="meta kcui-mar-top-md" style="min-height:1.2em;"></div>
 
       <!-- Import log -->
-      <div id="k_log_wrap" style="display:none; margin-top:0.75rem; border-top:1px solid var(--border); padding-top:0.5rem;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.4rem;">
+      <div id="k_log_wrap" style="display:none; border-top:1px solid var(--border);" class="kcui-mar-top-lg kcui-pad-top-sm">
+        <div class="kcui-actions kcui-mar-bottom-sm">
           <span class="meta" style="font-size:11px; letter-spacing:0.04em;">IMPORT LOG</span>
-          <button type="button" onclick="clearLog()" style="font-size:10px; padding:1px 6px; background:transparent; border-color:var(--border); color:var(--dim);">CLEAR</button>
+          <button type="button" onclick="clearLog()" class="btn btn-sm kcui-btn-quiet kcui-row-end">CLEAR</button>
         </div>
-        <div id="k_log" class="kg-log-pane"></div>
+        <div id="k_log" class="kcui-log-pane"></div>
       </div>
 
     </div>
   </div>
 
 </div>
-<div style="margin-top:1rem;">
+<div class="kcui-mar-top-lg">
   <div class="panel kcui-panel">
     <div class="panel-header kcui-panel-header">
       BATCH IMPORT FROM VIEWER URLS
@@ -181,24 +165,24 @@
       <p class="meta" style="font-size:11px; margin-bottom:0.6rem;">
         Paste one Kiwix viewer URL per line (e.g. <code>http://host/viewer#zim/Article_Name.123</code>). Blank lines are ignored. Already-imported titles are skipped.
       </p>
-      <div style="display:grid; grid-template-columns:1fr auto; gap:0.5rem; margin-bottom:0.6rem; align-items:start;">
-        <textarea id="batch_urls" rows="8" class="kg-batch-urls"
+      <div class="kcui-grid-input-action kcui-mar-bottom-md">
+        <textarea id="batch_urls" rows="8" class="kg-batch-urls kcui-code-input"
           placeholder="http://192.168.1.33:8080/viewer#gutenberg_en_all_2023-09/A/Adventures_of_Huckleberry_Finn.1837&#10;http://192.168.1.33:8080/viewer#gutenberg_en_all_2023-09/A/Moby-Dick.2701&#10;...one URL per line"
           ></textarea>
-        <div style="display:flex; flex-direction:column; gap:0.4rem;">
-          <button type="button" onclick="batchImport()" id="batch_btn" style="white-space:nowrap;">START IMPORT</button>
-          <button type="button" onclick="batchClear()" style="font-size:10px; padding:2px 6px; background:transparent; border-color:var(--border); color:var(--dim); white-space:nowrap;">CLEAR LOG</button>
+        <div class="kcui-actions--stack">
+          <button type="button" onclick="batchImport()" id="batch_btn">START IMPORT</button>
+          <button type="button" onclick="batchClear()" class="btn btn-sm kcui-btn-quiet">CLEAR LOG</button>
         </div>
       </div>
-      <div id="batch_status" class="meta" style="min-height:1.2em; margin-bottom:0.4rem;"></div>
+      <div id="batch_status" class="meta kcui-mar-bottom-sm" style="min-height:1.2em;"></div>
       <div id="batch_log_wrap" style="display:none;">
         <div style="font-size:11px; letter-spacing:0.04em; color:var(--dim); margin-bottom:0.3rem;">IMPORT LOG</div>
-        <div id="batch_log" class="kg-log-pane kg-log-pane--tall"></div>
+        <div id="batch_log" class="kcui-log-pane kcui-log-pane--tall"></div>
       </div>
     </div>
   </div>
 </div>
-<div style="margin-top:1rem;">
+<div class="kcui-mar-top-lg">
   <div class="panel kcui-panel">
     <div class="panel-header kcui-panel-header">
       GUTENBERG CATALOG
@@ -208,22 +192,22 @@
       <p class="meta" style="font-size:11px; margin-bottom:0.6rem;">
         Parses the ZIM's full book index. Select a ZIM first (Reload above), then filter by author name. Leave blank to load all authors.
       </p>
-      <div style="display:grid; grid-template-columns:1fr auto auto; gap:0.5rem; margin-bottom:0.75rem; align-items:end;">
+      <div class="kcui-grid-input-2action kcui-mar-bottom-lg">
         <div>
           <label for="cat_author">Author filter</label>
           <input id="cat_author" type="text" placeholder="e.g. Dickens, Nietzsche, Anonymous..."
             onkeydown="if(event.key==='Enter') catalogLoad()">
         </div>
-        <button type="button" onclick="catalogLoad()" style="white-space:nowrap;">SEARCH</button>
-        <button type="button" onclick="catalogAddAllToBatch()" style="white-space:nowrap; color:var(--dim); border-color:var(--border); background:transparent; font-size:11px;"
+        <button type="button" onclick="catalogLoad()">SEARCH</button>
+        <button type="button" onclick="catalogAddAllToBatch()" class="btn btn-sm kcui-btn-quiet"
           title="Copy all visible viewer URLs into the Batch Import textarea">ADD ALL TO BATCH</button>
       </div>
-      <div id="cat_status" class="meta" style="min-height:1.2em; margin-bottom:0.5rem;"></div>
-      <div id="cat_results" style="max-height:600px; overflow-y:auto;"></div>
+      <div id="cat_status" class="meta kcui-mar-bottom-sm" style="min-height:1.2em;"></div>
+      <div id="cat_results" class="kcui-scroll-y-xl"></div>
     </div>
   </div>
 </div>
-<div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; align-items:start;">
+<div class="kcui-grid-split">
 
     <!-- Title browse -->
     <div class="panel kcui-panel">
@@ -232,11 +216,11 @@
         <span id="bt_count" class="meta" style="margin-left:auto; font-size:11px;"></span>
       </div>
       <div class="panel-body kcui-panel-body">
-        <div id="bt_az" style="display:flex; flex-wrap:wrap; gap:4px; margin-bottom:0.75rem;"></div>
-        <div id="bt_status" class="meta" style="min-height:1.2em; margin-bottom:0.4rem;"></div>
-        <div style="max-height:520px; overflow-y:auto;">
-          <table style="width:100%;">
-            <thead><tr><th>Title</th><th style="width:90px; text-align:center;"></th></tr></thead>
+        <div id="bt_az" class="kcui-actions kcui-mar-bottom-lg"></div>
+        <div id="bt_status" class="meta kcui-mar-bottom-sm" style="min-height:1.2em;"></div>
+        <div class="kcui-scroll-y-lg">
+          <table>
+            <thead><tr><th>Title</th><th class="kcui-cell-narrow"></th></tr></thead>
             <tbody id="bt_tbody"></tbody>
           </table>
         </div>
@@ -250,12 +234,12 @@
         <span id="ba_count" class="meta" style="margin-left:auto; font-size:11px;"></span>
       </div>
       <div class="panel-body kcui-panel-body">
-        <p class="meta" style="font-size:11px; margin-bottom:0.6rem;">Shows ZIM articles whose title starts with that letter - author pages in Gutenberg are titled e.g. "Dickens, Charles".</p>
-        <div id="ba_az" style="display:flex; flex-wrap:wrap; gap:4px; margin-bottom:0.75rem;"></div>
-        <div id="ba_status" class="meta" style="min-height:1.2em; margin-bottom:0.4rem;"></div>
-        <div style="max-height:520px; overflow-y:auto;">
-          <table style="width:100%;">
-            <thead><tr><th>Title</th><th style="width:90px; text-align:center;"></th></tr></thead>
+        <p class="meta kcui-mar-bottom-md" style="font-size:11px;">Shows ZIM articles whose title starts with that letter - author pages in Gutenberg are titled e.g. "Dickens, Charles".</p>
+        <div id="ba_az" class="kcui-actions kcui-mar-bottom-lg"></div>
+        <div id="ba_status" class="meta kcui-mar-bottom-sm" style="min-height:1.2em;"></div>
+        <div class="kcui-scroll-y-lg">
+          <table>
+            <thead><tr><th>Title</th><th class="kcui-cell-narrow"></th></tr></thead>
             <tbody id="ba_tbody"></tbody>
           </table>
         </div>

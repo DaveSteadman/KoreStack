@@ -4,19 +4,19 @@
 
 {% block content %}
 <div class="kcui-page kcui-page--narrow kcui-stack">
-<div class="panel kcui-panel" style="margin-bottom:1.25rem;">
+<div class="panel kcui-panel kcui-mar-bottom-lg">
   <div class="panel-header kcui-panel-header">
     SEARCH ARTICLES
   </div>
   <div class="panel-body kcui-panel-body">
     <form action="/ui/reference/search" method="get">
-      <p class="meta" style="margin-bottom:0.4rem;">Bare terms use AND by default. Use quotes for phrases, OR or | for alternatives, NOT to exclude, and parentheses to group.</p>
-      <div style="display:flex; flex-direction:row; gap:0;">
-        <input type="search" name="q" value="{{ q }}" placeholder="search articles..." style="flex:1;">
+      <p class="meta kcui-mar-bottom-sm">Bare terms use AND by default. Use quotes for phrases, OR or | for alternatives, NOT to exclude, and parentheses to group.</p>
+      <div class="kcui-search-row">
+        <input type="search" name="q" value="{{ q }}" placeholder="search articles...">
         <button type="submit">SEARCH</button>
       </div>
-      <div style="margin-top:0.6rem;">
-        <label style="display:flex; align-items:center; gap:0.35rem; font-size:12px; color:var(--dim);">
+      <div class="kcui-mar-top-md">
+        <label class="kcui-filter-label">
           Top hits
           <div class="num-stepper">
             <input type="number" name="limit" value="{{ limit }}" min="1" max="200" style="width:52px;">
@@ -51,7 +51,7 @@
         {% for a in results %}
         <tr>
           <td><a href="/ui/reference/{{ a.title | urlencode }}">{{ a.title }}</a></td>
-          <td class="meta" style="text-align:right;">
+          <td class="meta kcui-text-right">
             {% if a.word_count %}{{ "{:,}".format(a.word_count) }}{% else %}-{% endif %}
           </td>
           <td class="meta" style="font-size:11px;">
@@ -64,7 +64,7 @@
       </tbody>
     </table>
     {% else %}
-    <p class="meta" style="padding:1rem;">No articles matched your query.</p>
+    <p class="meta kcui-result-empty">No articles matched your query.</p>
     {% endif %}
   </div>
 </div>

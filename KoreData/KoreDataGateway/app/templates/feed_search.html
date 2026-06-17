@@ -4,35 +4,35 @@
 
 {% block content %}
 <div class="kcui-page kcui-page--narrow kcui-stack">
-<div class="panel kcui-panel" style="margin-bottom:1.25rem;">
+<div class="panel kcui-panel kcui-mar-bottom-lg">
   <div class="panel-header kcui-panel-header">
     SEARCH
     {% if domain %}<span class="badge badge-dim" style="margin-left:0.5rem;">{{ domain }}</span>{% endif %}
   </div>
   <div class="panel-body kcui-panel-body">
     <form action="/ui/feeds/search" method="get">
-      <p class="meta" style="margin-bottom:0.4rem;">Bare terms use AND by default. Use quotes for phrases, OR or | for alternatives, NOT to exclude, and parentheses to group.</p>
-      <div style="display:flex; flex-direction:row; gap:0;">
-        <input type="search" name="q" value="{{ q }}" placeholder="search all feeds..." style="flex:1;">
+      <p class="meta kcui-mar-bottom-sm">Bare terms use AND by default. Use quotes for phrases, OR or | for alternatives, NOT to exclude, and parentheses to group.</p>
+      <div class="kcui-search-row">
+        <input type="search" name="q" value="{{ q }}" placeholder="search all feeds...">
         {% if domain %}<input type="hidden" name="domain" value="{{ domain }}">{% endif %}
         <button type="submit">SEARCH</button>
       </div>
-      <div style="display:flex; flex-wrap:wrap; gap:0.75rem; margin-top:0.6rem; align-items:center;">
-        <label style="display:flex; align-items:center; gap:0.35rem; font-size:12px; color:var(--dim);">
+      <div class="kcui-filter-row kcui-mar-top-md">
+        <label class="kcui-filter-label">
           Since
           <div class="date-pick">
             <input type="date" name="since" value="{{ since }}">
             <span class="cal-icon" onclick="this.previousElementSibling.showPicker()"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><rect x="1" y="2" width="10" height="9" rx="1"/><line x1="1" y1="5" x2="11" y2="5"/><line x1="4" y1="1" x2="4" y2="3"/><line x1="8" y1="1" x2="8" y2="3"/></svg></span>
           </div>
         </label>
-        <label style="display:flex; align-items:center; gap:0.35rem; font-size:12px; color:var(--dim);">
+        <label class="kcui-filter-label">
           Until
           <div class="date-pick">
             <input type="date" name="until" value="{{ until }}">
             <span class="cal-icon" onclick="this.previousElementSibling.showPicker()"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><rect x="1" y="2" width="10" height="9" rx="1"/><line x1="1" y1="5" x2="11" y2="5"/><line x1="4" y1="1" x2="4" y2="3"/><line x1="8" y1="1" x2="8" y2="3"/></svg></span>
           </div>
         </label>
-        <label style="display:flex; align-items:center; gap:0.35rem; font-size:12px; color:var(--dim);">
+        <label class="kcui-filter-label">
           No Older Than
           <div class="num-stepper">
             <input type="number" min="1" max="3650" style="width:52px;" oninput="setNoOlderThan(this)">
@@ -43,7 +43,7 @@
           </div>
           <span class="meta">days</span>
         </label>
-        <label style="display:flex; align-items:center; gap:0.35rem; font-size:12px; color:var(--dim);">
+        <label class="kcui-filter-label">
           Limit
           <div class="num-stepper">
             <input type="number" name="limit" value="{{ limit }}" min="1" max="500" style="width:52px;">
@@ -68,10 +68,8 @@
   <div class="panel-body kcui-panel-body" style="padding:0;">
     {% if results %}
     <form method="post" action="/ui/feeds/entries/bulk-delete">
-      <div style="display:flex; align-items:center; padding:0.4rem 0.75rem;
-                  border-bottom:1px solid var(--border); gap:0.75rem;">
-        <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;
-                       text-transform:none; font-size:12px; color:var(--dim);">
+      <div class="kcui-filter-row" style="padding:0.4rem 0.75rem; border-bottom:1px solid var(--border);">
+        <label class="kcui-filter-label" style="cursor:pointer;">
           <input type="checkbox" id="select-all"
                  onchange="document.querySelectorAll('.row-check').forEach(cb => cb.checked = this.checked)">
           select all
@@ -107,7 +105,7 @@
       </table>
     </form>
     {% else %}
-    <p class="meta" style="padding:1rem;">no results found</p>
+    <p class="meta kcui-result-empty">no results found</p>
     {% endif %}
   </div>
 </div>

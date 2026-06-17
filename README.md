@@ -4,7 +4,7 @@ KoreStack is a local-first AI agent suite. One command line starts the whole sys
 
 It has no browser extensions, installed services or opaque config.
 
-![Kore Stack headline](progress/2026-05-04%20-%20kore-suite-headline.gif)
+![Kore Stack headline](korestack_screenshots_2026-08-17.gif)
 
 ## The Suite
 

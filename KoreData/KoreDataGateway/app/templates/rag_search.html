@@ -4,18 +4,18 @@
 
 {% block content %}
 <div class="kcui-page kcui-page--narrow kcui-stack">
-<div class="panel kcui-panel" style="margin-bottom:1.25rem;">
+<div class="panel kcui-panel kcui-mar-bottom-lg">
   <div class="panel-header kcui-panel-header">
     SEARCH CHUNKS
-    <div style="margin-left:auto; display:flex; gap:0.5rem; align-items:center;">
+    <div class="kcui-actions kcui-row-end">
       {% if databases | length > 1 %}
-      <select onchange="location.href='/ui/rag/search?db='+this.value" style="font-size:11px; padding:0.15rem 0.3rem;">
+      <select onchange="location.href='/ui/rag/search?db='+this.value" class="btn-sm">
         {% for d in databases %}
         <option value="{{ d.id }}" {% if d.id == db %}selected{% endif %}>{{ d.display_name }}</option>
         {% endfor %}
       </select>
       {% else %}
-      <span class="meta" style="font-size:11px;">{{ databases[0].display_name if databases else db }}</span>
+      <span class="meta">{{ databases[0].display_name if databases else db }}</span>
       {% endif %}
       <a class="btn btn-sm" href="/ui/rag?db={{ db }}">INDEX</a>
       <a class="btn btn-sm" href="/ui/rag/databases" title="All databases">&#9776;</a>
@@ -24,21 +24,21 @@
   <div class="panel-body kcui-panel-body">
     <form action="/ui/rag/search" method="get">
       <input type="hidden" name="db" value="{{ db }}">
-      <p class="meta" style="margin-bottom:0.4rem;">Bare terms use AND by default. Use quotes for phrases, OR or | for alternatives, NOT to exclude, and parentheses to group.</p>
-      <div style="display:flex; flex-direction:row; gap:0;">
-        <input type="search" name="q" value="{{ q }}" placeholder="search chunks..." style="flex:1;">
+      <p class="meta kcui-mar-bottom-sm">Bare terms use AND by default. Use quotes for phrases, OR or | for alternatives, NOT to exclude, and parentheses to group.</p>
+      <div class="kcui-search-row">
+        <input type="search" name="q" value="{{ q }}" placeholder="search chunks...">
         <button type="submit">SEARCH</button>
       </div>
-      <div style="display:flex; flex-wrap:wrap; gap:0.75rem; margin-top:0.6rem; align-items:center;">
-        <label style="display:flex; align-items:center; gap:0.35rem; font-size:12px; color:var(--dim);">
+      <div class="kcui-filter-row kcui-mar-top-md">
+        <label class="kcui-filter-label">
           Source filter
           <input type="text" name="source" value="{{ source }}" placeholder="partial match" style="width:160px;">
         </label>
-        <label style="display:flex; align-items:center; gap:0.35rem; font-size:12px; color:var(--dim);">
+        <label class="kcui-filter-label">
           Tag filter
           <input type="text" name="tags" value="{{ tags }}" placeholder="partial match" style="width:140px;">
         </label>
-        <label style="display:flex; align-items:center; gap:0.35rem; font-size:12px; color:var(--dim);">
+        <label class="kcui-filter-label">
           Top hits
           <div class="num-stepper">
             <input type="number" name="limit" value="{{ limit }}" min="1" max="200" style="width:52px;">
@@ -62,13 +62,13 @@
   <div class="panel-body kcui-panel-body">
     {% if results %}
     {% for r in results %}
-    <div style="border-bottom:1px solid var(--border); padding:0.75rem 0; {% if loop.last %}border-bottom:none;{% endif %}">
-      <div style="display:flex; align-items:baseline; gap:0.6rem; margin-bottom:0.2rem;">
+    <div class="kcui-list-item">
+      <div class="kcui-list-item-head">
         <a href="/ui/rag/{{ r.id }}?db={{ db }}" style="color:var(--text); font-size:13px;">{{ r.title or "(untitled)" }}</a>
-        <span class="meta" style="font-size:11px;">#{{ r.id }}</span>
+        <span class="meta">#{{ r.id }}</span>
       </div>
       {% if r.source or r.tags %}
-      <div class="meta" style="font-size:11px; margin-bottom:0.25rem;">
+      <div class="meta kcui-list-item-meta">
         {% if r.source %}<span>{{ r.source }}</span>{% endif %}
         {% if r.source and r.tags %} | {% endif %}
         {% if r.tags %}<span style="color:var(--amber);">{{ r.tags }}</span>{% endif %}
@@ -76,7 +76,7 @@
       </div>
       {% endif %}
       {% if r.snippet %}
-      <div style="font-size:12px; color:var(--text); line-height:1.6; margin-top:0.25rem;">{{ r.snippet }}</div>
+      <div class="kcui-list-item-snippet">{{ r.snippet }}</div>
       {% endif %}
     </div>
     {% endfor %}

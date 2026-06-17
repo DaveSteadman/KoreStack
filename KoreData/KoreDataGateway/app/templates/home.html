@@ -4,138 +4,11 @@
 
 {% block content %}
 <style>
-  .kd-home .panel {
+  .kd-home .kcui-panel {
     margin-bottom: 0;
   }
 
-  .svc-grid {
-    grid-template-columns: repeat(6, 1fr);
-  }
-  @media (max-width: 1100px) { .svc-grid { grid-template-columns: repeat(3, 1fr); } }
-  @media (max-width: 700px)  { .svc-grid { grid-template-columns: repeat(2, 1fr); } }
-  @media (max-width: 500px)  { .svc-grid { grid-template-columns: 1fr; } }
-
-  .svc-card {
-    padding: 12px;
-    display: flex; flex-direction: column;
-  }
-  .svc-card.online  { border-left: 3px solid var(--green); }
-  .svc-card.offline { border-left: 3px solid var(--red); }
-
-  .svc-desc {
-    font-size: 10.5px; color: var(--dim); letter-spacing: 0.02em;
-    margin-bottom: 0.35rem;
-  }
-  .svc-badge {
-    display: inline-flex; align-items: center; gap: 5px;
-    font-size: 11px; letter-spacing: 0.06em; font-weight: 600;
-    margin-bottom: 0.45rem;
-  }
-  .svc-badge .dot {
-    width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
-  }
-  .svc-badge.online  { color: var(--green); }
-  .svc-badge.online  .dot { background: var(--green); box-shadow: 0 0 5px var(--green); }
-  .svc-badge.offline { color: var(--red); }
-  .svc-badge.offline .dot { background: var(--red); }
-
-  .svc-stats { display: flex; flex-direction: column; gap: 2px; margin-bottom: 0.5rem; }
-  .svc-stat  { display: flex; gap: 0.4rem; font-size: 11.5px; }
-  .svc-stat-key { color: var(--dim); min-width: 80px; }
-  .svc-stat-val { color: var(--text); font-variant-numeric: tabular-nums; }
-
-  .svc-actions {
-    display: flex; flex-direction: row; flex-wrap: nowrap; gap: 0.4rem;
-    padding-top: 0.5rem; margin-top: auto;
-    border-top: 1px solid var(--border);
-  }
-
-  .svc-banner {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin: -12px -12px 10px;
-    padding: 8px 10px;
-    background: color-mix(in srgb, #a78bfa 10%, var(--panel));
-    border-bottom: 1px solid color-mix(in srgb, #a78bfa 22%, var(--border));
-  }
-  .svc-banner-icon {
-    display: inline-block;
-    width: 18px;
-    height: 18px;
-    flex-shrink: 0;
-    background-color: #a78bfa;
-    mask-size: contain;
-    mask-repeat: no-repeat;
-    mask-position: center;
-    -webkit-mask-size: contain;
-    -webkit-mask-repeat: no-repeat;
-    -webkit-mask-position: center;
-  }
-  .svc-banner-text {
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-  }
-  .svc-banner-overline {
-    font-size: 9px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: #a78bfa;
-    line-height: 1;
-    margin-bottom: 2px;
-  }
-  .svc-banner-title {
-    font-size: 0.85rem;
-    font-weight: 700;
-    color: var(--text);
-    line-height: 1.2;
-  }
-
   #sq-spinner { display: none; color: var(--dim); font-size: 12px; letter-spacing: 0.06em; }
-
-  .result-tabs {
-    display: flex; gap: 0; border-bottom: 1px solid var(--border);
-    margin-bottom: 0.9rem;
-  }
-  .result-tab {
-    padding: 0.3rem 0.9rem; font-size: 11px;
-    letter-spacing: 0.06em; text-transform: uppercase;
-    color: var(--dim); cursor: pointer; border: none;
-    background: transparent; border-bottom: 2px solid transparent;
-    font-family: inherit;
-    transition: color .1s;
-  }
-  .result-tab.active { color: var(--green); border-bottom-color: var(--green); }
-  .result-tab:hover   { color: var(--text); }
-
-  /* result cards */
-  .result-card {
-    border: 1px solid var(--border);
-    background: var(--bg);
-    padding: 0.75rem 1rem;
-    margin-bottom: 12px;
-  }
-  .result-card:last-child { margin-bottom: 0; }
-  .rc-type {
-    font-size: 10px; letter-spacing: 0.08em; color: var(--dim);
-    text-transform: uppercase; margin-bottom: 0.25rem;
-  }
-  .rc-title {
-    font-size: 0.95rem; color: var(--blue); margin-bottom: 0.3rem;
-    text-decoration: none;
-  }
-  .rc-title:hover { text-decoration: underline; color: var(--text); }
-  .rc-meta  { color: var(--dim); font-size: 11px; margin-bottom: 0.35rem; }
-  .rc-snippet { font-size: 12px; color: var(--text); line-height: 1.6; }
-  .rc-no-results { color: var(--dim); font-size: 12px; font-style: italic; }
-  .rc-domain-heading {
-    font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
-    color: var(--dim); padding: 0.4rem 0; border-bottom: 1px solid var(--border);
-    margin-bottom: 0.6rem; margin-top: 1rem;
-  }
-  .rc-domain-heading:first-child { margin-top: 0; }
-  .rc-error { color: var(--red); font-size: 12px; font-style: italic; }
 
   /* graph connection table */
   .graph-table {
@@ -173,21 +46,21 @@
 <div class="panel kcui-panel">
   <div class="panel-header kcui-panel-header">
     SERVICES
-    <button class="btn btn-sm" style="margin-left:auto" onclick="refreshHealth()"> REFRESH</button>
+    <button class="btn btn-sm kcui-row-end" onclick="refreshHealth()">REFRESH</button>
   </div>
   <div class="panel-body kcui-panel-body">
-    <div class="svc-grid kcui-card-grid" id="svc-grid">
+    <div class="kcui-service-grid kcui-card-grid" id="svc-grid">
       {% for svc in services %}
       {% set cls = "online" if svc.healthy else "offline" %}
-      <div class="svc-card kcui-card {{ cls }}" id="svc-{{ svc.slug }}">
-        <div class="svc-banner">
-          <span class="svc-banner-icon" aria-hidden="true" data-icon-key="{{ svc.icon_key }}"></span>
-          <span class="svc-banner-text">
-            <span class="svc-banner-overline">{{ svc.slug | upper }}</span>
-            <span class="svc-banner-title">{{ svc.label }}</span>
+      <div class="kcui-service-card kcui-card {{ cls }}" id="svc-{{ svc.slug }}">
+        <div class="kcui-service-banner">
+          <span class="kcui-service-banner-icon" aria-hidden="true" data-icon-key="{{ svc.icon_key }}"></span>
+          <span class="kcui-service-banner-text">
+            <span class="kcui-service-banner-overline">{{ svc.slug | upper }}</span>
+            <span class="kcui-service-banner-title">{{ svc.label }}</span>
           </span>
         </div>
-        <div class="svc-desc">
+        <div class="kcui-service-desc">
           {%- if svc.slug == "feeds" %}RSS feed &amp; website data
           {%- elif svc.slug == "library" %}Long form book content
           {%- elif svc.slug == "reference" %}Linked encyclopedia
@@ -196,54 +69,54 @@
           {%- elif svc.slug == "graph" %}Entity &amp; relation graph
           {%- endif %}
         </div>
-        <div class="svc-badge {{ cls }}">
+        <div class="kcui-service-badge {{ cls }}">
           <span class="dot"></span>
-          {{ "ONLINE" if svc.healthy else "OFFLINE" }}{% if svc.healthy %}<span style="font-weight:400;letter-spacing:0;margin-left:5px;opacity:0.7;">{{ svc.url | replace("http://", "") }}</span>{% endif %}
+          {{ "ONLINE" if svc.healthy else "OFFLINE" }}{% if svc.healthy %}<span class="kcui-service-host">{{ svc.url | replace("http://", "") }}</span>{% endif %}
         </div>
-        <div class="svc-stats">
+        <div class="kcui-service-stats">
           {% if svc.slug == "feeds" %}
-            <div class="svc-stat"><span class="svc-stat-key">domains</span><span class="svc-stat-val">{{ svc.stats.get("total_domains", "-") }}</span></div>
-            <div class="svc-stat"><span class="svc-stat-key">feeds</span><span class="svc-stat-val">{{ svc.stats.get("total_feeds", "-") }}</span></div>
-            <div class="svc-stat"><span class="svc-stat-key">entries</span><span class="svc-stat-val">{{ svc.stats.get("total_entries", "-") }}</span></div>
+            <div class="kcui-service-stat"><span class="kcui-service-stat-key">domains</span><span class="kcui-service-stat-val">{{ svc.stats.get("total_domains", "-") }}</span></div>
+            <div class="kcui-service-stat"><span class="kcui-service-stat-key">feeds</span><span class="kcui-service-stat-val">{{ svc.stats.get("total_feeds", "-") }}</span></div>
+            <div class="kcui-service-stat"><span class="kcui-service-stat-key">entries</span><span class="kcui-service-stat-val">{{ svc.stats.get("total_entries", "-") }}</span></div>
           {% elif svc.slug == "library" %}
-            <div class="svc-stat"><span class="svc-stat-key">books</span><span class="svc-stat-val">{{ svc.stats.get("total_books", "-") }}</span></div>
-            <div class="svc-stat"><span class="svc-stat-key">incomplete</span><span class="svc-stat-val">{{ svc.stats.get("incomplete_records", "-") }}</span></div>
+            <div class="kcui-service-stat"><span class="kcui-service-stat-key">books</span><span class="kcui-service-stat-val">{{ svc.stats.get("total_books", "-") }}</span></div>
+            <div class="kcui-service-stat"><span class="kcui-service-stat-key">incomplete</span><span class="kcui-service-stat-val">{{ svc.stats.get("incomplete_records", "-") }}</span></div>
           {% elif svc.slug == "reference" %}
-            <div class="svc-stat"><span class="svc-stat-key">articles</span><span class="svc-stat-val">{{ svc.stats.get("total_articles", "-") }}</span></div>
-            <div class="svc-stat"><span class="svc-stat-key">redirects</span><span class="svc-stat-val">{{ svc.stats.get("total_redirects", "-") }}</span></div>
-            <div class="svc-stat"><span class="svc-stat-key">links</span><span class="svc-stat-val">{{ svc.stats.get("total_links", "-") }}</span></div>
+            <div class="kcui-service-stat"><span class="kcui-service-stat-key">articles</span><span class="kcui-service-stat-val">{{ svc.stats.get("total_articles", "-") }}</span></div>
+            <div class="kcui-service-stat"><span class="kcui-service-stat-key">redirects</span><span class="kcui-service-stat-val">{{ svc.stats.get("total_redirects", "-") }}</span></div>
+            <div class="kcui-service-stat"><span class="kcui-service-stat-key">links</span><span class="kcui-service-stat-val">{{ svc.stats.get("total_links", "-") }}</span></div>
           {% elif svc.slug == "rag" %}
-            <div class="svc-stat"><span class="svc-stat-key">databases</span><span class="svc-stat-val">{{ svc.stats.get("databases", "-") }}</span></div>
-            <div class="svc-stat"><span class="svc-stat-key">chunks</span><span class="svc-stat-val">{{ svc.stats.get("total_chunks", "-") }}</span></div>
-            <div class="svc-stat"><span class="svc-stat-key">db size</span><span class="svc-stat-val">{{ "%.1f KB" | format(svc.stats.get("db_size_bytes", 0) / 1024) if svc.stats.get("db_size_bytes") else "-" }}</span></div>
+            <div class="kcui-service-stat"><span class="kcui-service-stat-key">databases</span><span class="kcui-service-stat-val">{{ svc.stats.get("databases", "-") }}</span></div>
+            <div class="kcui-service-stat"><span class="kcui-service-stat-key">chunks</span><span class="kcui-service-stat-val">{{ svc.stats.get("total_chunks", "-") }}</span></div>
+            <div class="kcui-service-stat"><span class="kcui-service-stat-key">db size</span><span class="kcui-service-stat-val">{{ "%.1f KB" | format(svc.stats.get("db_size_bytes", 0) / 1024) if svc.stats.get("db_size_bytes") else "-" }}</span></div>
           {% elif svc.slug == "scrape" %}
-            <div class="svc-stat"><span class="svc-stat-key">captures</span><span class="svc-stat-val">{{ svc.stats.get("captures", "-") }}</span></div>
-            <div class="svc-stat"><span class="svc-stat-key">running</span><span class="svc-stat-val">{{ svc.stats.get("running_jobs", "-") }}</span></div>
-            <div class="svc-stat"><span class="svc-stat-key">pages</span><span class="svc-stat-val">{{ svc.stats.get("pages", "-") }}</span></div>
+            <div class="kcui-service-stat"><span class="kcui-service-stat-key">captures</span><span class="kcui-service-stat-val">{{ svc.stats.get("captures", "-") }}</span></div>
+            <div class="kcui-service-stat"><span class="kcui-service-stat-key">running</span><span class="kcui-service-stat-val">{{ svc.stats.get("running_jobs", "-") }}</span></div>
+            <div class="kcui-service-stat"><span class="kcui-service-stat-key">pages</span><span class="kcui-service-stat-val">{{ svc.stats.get("pages", "-") }}</span></div>
           {% elif svc.slug == "graph" %}
-            <div class="svc-stat"><span class="svc-stat-key">vocab</span><span class="svc-stat-val">{{ svc.stats.get("vocab_terms", "-") }}</span></div>
-            <div class="svc-stat"><span class="svc-stat-key">connections</span><span class="svc-stat-val">{{ svc.stats.get("relations", "-") }}</span></div>
+            <div class="kcui-service-stat"><span class="kcui-service-stat-key">vocab</span><span class="kcui-service-stat-val">{{ svc.stats.get("vocab_terms", "-") }}</span></div>
+            <div class="kcui-service-stat"><span class="kcui-service-stat-key">connections</span><span class="kcui-service-stat-val">{{ svc.stats.get("relations", "-") }}</span></div>
           {% endif %}
         </div>
-        <div class="svc-actions">
+        <div class="kcui-service-actions">
           {% if svc.slug == "feeds" %}
-            <a class="kcui-tag kcui-tag--accent" href="/ui/{{ svc.slug }}">browse</a>
-            <a class="kcui-tag kcui-tag--warning" href="/ui/feeds/search">search</a>
+            <a class="kcui-tag kcui-tag--info" href="/ui/{{ svc.slug }}">browse</a>
+            <a class="kcui-tag kcui-tag--purple" href="/ui/feeds/search">search</a>
           {% elif svc.slug == "library" %}
-            <a class="kcui-tag kcui-tag--accent" href="/ui/{{ svc.slug }}">browse</a>
-            <a class="kcui-tag kcui-tag--warning" href="/ui/library/search">search</a>
-            <a class="kcui-tag kcui-tag--info" href="/ui/library/import">import</a>
+            <a class="kcui-tag kcui-tag--info" href="/ui/{{ svc.slug }}">browse</a>
+            <a class="kcui-tag kcui-tag--purple" href="/ui/library/search">search</a>
+            <a class="kcui-tag kcui-tag--yellow" href="/ui/library/import">import</a>
           {% elif svc.slug == "reference" %}
-            <a class="kcui-tag kcui-tag--accent" href="/ui/{{ svc.slug }}">browse</a>
-            <a class="kcui-tag kcui-tag--warning" href="/ui/reference/search">search</a>
-            <a class="kcui-tag kcui-tag--info" href="/ui/reference/import">import</a>
+            <a class="kcui-tag kcui-tag--info" href="/ui/{{ svc.slug }}">browse</a>
+            <a class="kcui-tag kcui-tag--purple" href="/ui/reference/search">search</a>
+            <a class="kcui-tag kcui-tag--yellow" href="/ui/reference/import">import</a>
           {% elif svc.slug == "rag" %}
-            <a class="kcui-tag kcui-tag--accent" href="/ui/{{ svc.slug }}">browse</a>
-            <a class="kcui-tag kcui-tag--warning" href="/ui/rag/search">search</a>
-            <a class="kcui-tag kcui-tag--info" href="/ui/rag/insert">insert</a>
+            <a class="kcui-tag kcui-tag--info" href="/ui/{{ svc.slug }}">browse</a>
+            <a class="kcui-tag kcui-tag--purple" href="/ui/rag/search">search</a>
+            <a class="kcui-tag kcui-tag--yellow" href="/ui/rag/insert">insert</a>
           {% elif svc.slug == "scrape" %}
-            <a class="kcui-tag kcui-tag--accent" href="/ui/scrape">browse</a>
-            <a class="kcui-tag kcui-tag--info" href="/ui/scrape">capture</a>
+            <a class="kcui-tag kcui-tag--info" href="/ui/scrape">browse</a>
+            <a class="kcui-tag kcui-tag--yellow" href="/ui/scrape">capture</a>
           {% elif svc.slug == "graph" %}
             <a class="kcui-tag kcui-tag--accent" href="/graph/ui/vocab">vocab</a>
             <a class="kcui-tag kcui-tag--warning" href="/graph/ui/connections">conns.</a>
@@ -421,14 +294,11 @@
 <script type="module">
   import { resolveIcon, SUITE_ICONS } from '/ui-elements/assets/js/chrome.js';
 
-  for (const el of document.querySelectorAll('.svc-banner-icon[data-icon-key]')) {
+  for (const el of document.querySelectorAll('.kcui-service-banner-icon[data-icon-key]')) {
     const key = el.dataset.iconKey || '';
     el.innerHTML = resolveIcon(SUITE_ICONS, key, 18) || '';
   }
 </script>
-{% endblock %}
-
-{% block scripts %}
 <script>
 function showTab(t) {
   document.getElementById('sq-cards-view').style.display = t === 'cards' ? '' : 'none';
@@ -652,6 +522,9 @@ const _SVC_STATS = {
   feeds:     [['domains','total_domains'],['feeds','total_feeds'],['entries','total_entries']],
   library:   [['books','total_books'],['incomplete','incomplete_records']],
   reference: [['articles','total_articles'],['redirects','total_redirects'],['links','total_links']],
+  rag:       [['databases','databases'],['chunks','total_chunks']],
+  scrape:    [['captures','captures'],['running','running_jobs'],['pages','pages']],
+  graph:     [['vocab','vocab_terms'],['connections','relations']],
 };
 
 async function refreshHealth() {
@@ -664,15 +537,15 @@ async function refreshHealth() {
       const online = child.healthy;
       card.classList.toggle('online',  online);
       card.classList.toggle('offline', !online);
-      const badge = card.querySelector('.svc-badge');
+      const badge = card.querySelector('.kcui-service-badge');
       if (badge) {
-        badge.className = `svc-badge ${online ? 'online' : 'offline'}`;
+        badge.className = `kcui-service-badge ${online ? 'online' : 'offline'}`;
         badge.innerHTML = `<span class="dot"></span> ${online ? 'ONLINE' : 'OFFLINE'}`;
       }
-      const statsEl = card.querySelector('.svc-stats');
+      const statsEl = card.querySelector('.kcui-service-stats');
       if (statsEl && _SVC_STATS[slug]) {
         statsEl.innerHTML = _SVC_STATS[slug].map(([lbl, key]) =>
-          `<div class="svc-stat"><span class="svc-stat-key">${lbl}</span><span class="svc-stat-val">${child[key] ?? '-'}</span></div>`
+          `<div class="kcui-service-stat"><span class="kcui-service-stat-key">${lbl}</span><span class="kcui-service-stat-val">${child[key] ?? '-'}</span></div>`
         ).join('');
       }
     }

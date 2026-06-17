@@ -2,10 +2,10 @@
 {% block title %}KoreData - Capture{% endblock %}
 
 {% block content %}
-<div class="panel kcui-panel">
+<div class="kcui-panel">
   <div class="panel-header kcui-panel-header">
     CAPTURE
-    <a href="/ui/scrape" class="btn btn-sm btn-secondary" style="margin-left:auto;">BACK</a>
+    <a href="/ui/scrape" class="btn btn-sm btn-secondary kcui-row-end">BACK</a>
   </div>
   <div class="panel-body kcui-panel-body">
     <div class="kv"><div class="kv-key">id</div><div class="kv-val">{{ capture.id }}</div></div>
@@ -16,14 +16,14 @@
     <div class="kv"><div class="kv-key">completed</div><div class="kv-val">{{ capture.completed_at or "-" }}</div></div>
     <div class="kv"><div class="kv-key">pages</div><div class="kv-val">{{ capture.pages_saved }}</div></div>
     <div class="kv"><div class="kv-key">assets</div><div class="kv-val">{{ capture.assets_saved }}</div></div>
-    <div style="padding-top:0.8rem; display:flex; gap:0.6rem; flex-wrap:wrap;">
+    <div class="kcui-actions kcui-pad-top-md">
       <a class="btn btn-primary" href="/ui/scrape/files/{{ capture.id }}/{{ capture.local_root }}" target="_blank">OPEN SNAPSHOT</a>
     </div>
   </div>
 </div>
 
-<div class="two-col">
-  <div class="panel kcui-panel">
+<div class="kcui-grid-split">
+  <div class="kcui-panel">
     <div class="panel-header kcui-panel-header">PAGES</div>
     <div class="panel-body kcui-panel-body">
       {% if capture.pages %}
@@ -44,7 +44,7 @@
     </div>
   </div>
 
-  <div class="panel kcui-panel">
+  <div class="kcui-panel">
     <div class="panel-header kcui-panel-header">ERRORS</div>
     <div class="panel-body kcui-panel-body">
       {% if capture.errors %}
@@ -54,7 +54,7 @@
           {% for err in capture.errors %}
           <tr>
             <td>{{ err.kind }}</td>
-            <td style="max-width:260px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ err.url }}</td>
+            <td class="kcui-truncate">{{ err.url }}</td>
             <td>{{ err.error }}</td>
           </tr>
           {% endfor %}
@@ -67,7 +67,7 @@
   </div>
 </div>
 
-<div class="panel kcui-panel">
+<div class="kcui-panel">
   <div class="panel-header kcui-panel-header">ASSETS</div>
   <div class="panel-body kcui-panel-body">
     {% if capture.assets %}
