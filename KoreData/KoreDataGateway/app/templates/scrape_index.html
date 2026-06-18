@@ -81,6 +81,13 @@
   <div class="panel-body kcui-panel-body">
     {% if results %}
     <table style="table-layout:fixed;">
+      <colgroup>
+        <col style="width:22%;">
+        <col style="width:18%;">
+        <col style="width:8%;">
+        <col style="width:44%;">
+        <col style="width:8%;">
+      </colgroup>
       <thead>
         <tr>
           <th>Title</th>
@@ -93,8 +100,8 @@
       <tbody>
         {% for chunk in results %}
         <tr>
-          <td class="kcui-truncate">{{ chunk.page_title or chunk.page_url }}</td>
-          <td class="kcui-cell-narrow kcui-nowrap">{{ chunk.capture_id }}</td>
+          <td style="white-space:normal; word-break:break-word; line-height:1.4;">{{ chunk.page_title or chunk.page_url }}</td>
+          <td class="kcui-cell-narrow" style="white-space:normal; word-break:break-word;">{{ chunk.capture_id }}</td>
           <td class="kcui-cell-narrow kcui-nowrap">{{ chunk.match_count or 1 }}</td>
           <td style="white-space:normal; word-break:break-word; line-height:1.5;">
             {{ chunk.snippet[:200] }}{% if chunk.snippet and chunk.snippet|length > 200 %}...{% endif %}

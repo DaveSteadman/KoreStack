@@ -56,12 +56,19 @@ from config import get_koredata_dir
 _BASE = Path(__file__).parent.parent.parent  # KoreData/ root
 _DATA = get_koredata_dir()
 
+
+def _scrape_data_root() -> Path:
+    new_root = _DATA / "Scrape"
+    old_root = _DATA / "KoreScrape"
+    return new_root if new_root.exists() or not old_root.exists() else old_root
+
+
 _SERVICES = [
     (_BASE / "KoreFeed",      "KoreFeed",      _DATA / "Feeds"),
     (_BASE / "KoreLibrary",   "KoreLibrary",   _DATA / "Library"),
     (_BASE / "KoreReference", "KoreReference", _DATA / "Reference"),
     (_BASE / "KoreRAG",       "KoreRAG",       _DATA / "RAG"),
-    (_BASE / "KoreScrape",    "KoreScrape",    _DATA / "KoreScrape"),
+    (_BASE / "KoreScrape",    "KoreScrape",    _scrape_data_root()),
     (_BASE / "KoreGraph",     "KoreGraph",     _DATA / "Graph"),
 ]
 
@@ -326,7 +333,7 @@ _UI_ELEMENTS_ASSETS = Path(
         str(Path(__file__).resolve().parents[3] / "UIElements" / "assets"),
     )
 ).resolve()
-_SCRAPE_DB_PATH = Path(get_koredata_dir()) / "KoreScrape" / "scrape_index.db"
+_SCRAPE_DB_PATH = _scrape_data_root() / "scrape_index.db"
 
 _TABLE_MARKER_RE = re.compile(r'<<<TABLE>>>(.*?)<<<ENDTABLE>>>', re.DOTALL)
 _WIKILINK_RE     = re.compile(r'\[\[([^\]]+)\]\]')
@@ -470,7 +477,7 @@ def _scrape_delete_chunk_local(chunk_id: int) -> bool:
 
 
 def _scrape_capture_manifest_path(capture_id: str) -> Path | None:
-    root = Path(get_koredata_dir()) / "KoreScrape"
+    root = _scrape_data_root()
     for manifest_path in root.rglob("manifest.json"):
         try:
             data = _json.loads(manifest_path.read_text(encoding="utf-8"))
