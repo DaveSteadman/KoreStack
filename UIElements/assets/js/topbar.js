@@ -10,11 +10,20 @@ function currentHost() {
 	return (typeof window !== 'undefined' && window.location?.hostname) || '127.0.0.1';
 }
 
+function cachedSuiteUrls() {
+	try {
+		return JSON.parse(localStorage.getItem('kore.suite-urls') || 'null');
+	} catch (_) {
+		return null;
+	}
+}
+
 const DEFAULT_SERVICES = [
 	{ key: 'korestack', label: 'KoreStack', path: '/', port: 9600, icon: 'korestack' },
 	{ key: 'koreagent', label: 'KoreAgent', path: '/', port: 9601, icon: 'koreagent' },
 	{ key: 'korechat', label: 'KoreChat', path: '/ui', port: 9602, icon: 'korechat' },
 	{ key: 'koredata', label: 'KoreData', path: '/', port: 9603, icon: 'koredata' },
+	{ key: 'koredevice', label: 'KoreDevice', path: '/', port: 9613, icon: 'koredevice' },
 	{ key: 'koredocs', label: 'KoreDocs', path: '/ui', port: 9610, icon: 'koredocs' },
 	{ key: 'korecode', label: 'KoreCode', path: '/ui', port: 9611, icon: 'korecode' },
 	{ key: 'korecomms', label: 'KoreComms', path: '/', port: 9609, icon: 'korecomms' },
@@ -24,10 +33,8 @@ const SUITE_VERSION_RE = /export\s+const\s+SUITE_VERSION\s*=\s*['\"]([^'\"]+)['\
 
 function serviceUrl(service, currentService, urls) {
 	if (urls[service.key]) return urls[service.key];
-	try {
-		const cached = JSON.parse(localStorage.getItem('kore.suite-urls') || 'null');
-		if (cached?.[service.key]) return cached[service.key];
-	} catch (_) {}
+	const cached = cachedSuiteUrls();
+	if (cached?.[service.key]) return cached[service.key];
 	if (typeof window !== 'undefined' && service.key === currentService) {
 		return new URL(service.path, window.location.origin).href;
 	}
@@ -77,7 +84,7 @@ function _seedUrlsFromKoreStack(koreStackUrl = null) {
 		: (() => {
 			const korestack = DEFAULT_SERVICES.find((s) => s.key === 'korestack');
 			if (!korestack) return null;
-			return `http://${currentHost()}:${korestack.port}`;
+	return `http://${currentHost()}:${korestack.port}`;
 		})();
 	if (!fallbackBase) return;
 	fetch(`${fallbackBase}/suite-urls`, { cache: 'no-store' })
@@ -88,6 +95,16 @@ function _seedUrlsFromKoreStack(koreStackUrl = null) {
 			if (_lastTopbarOptions !== null) initTopbar(_lastTopbarOptions);
 		})
 		.catch(() => {});
+}
+
+function visibleServices(services, urls, currentService) {
+	const registry = Object.keys(urls || {}).length > 0 ? urls : (cachedSuiteUrls() || null);
+	if (!registry) return services;
+	return services.filter((service) => (
+		service.key === 'korestack'
+		|| service.key === currentService
+		|| Object.prototype.hasOwnProperty.call(registry, service.key)
+	));
 }
 
 export function initTopbar(options = {}) {
@@ -117,11 +134,12 @@ export function initTopbar(options = {}) {
 	}
 
 	host.style.setProperty('--topbar-pad-x', padX);
+	const renderedServices = visibleServices(services, urls, currentService);
 
 	host.innerHTML = `
 		<nav class="ktopbar-nav" aria-label="Kore suite services">
 			<div class="ktopbar-main">
-				${services.map((service) => serviceItemHtml(service, currentService, urls, iconSize)).join('')}
+				${renderedServices.map((service) => serviceItemHtml(service, currentService, urls, iconSize)).join('')}
 			</div>
 			${versionText ? `<div class="ktopbar-trailing"><span id="version-chip" class="kcui-tag kcui-tag--dim" title="Suite version">${versionText}</span></div>` : ''}
 		</nav>`;

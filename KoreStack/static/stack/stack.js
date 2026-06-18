@@ -4,6 +4,7 @@ const SERVICE_KEY_BY_SLUG = {
   koreagent: 'koreagent',
   korechat: 'korechat',
   koredatagateway: 'koredata',
+  koredevicegateway: 'koredevice',
   koredocs: 'koredocs',
   korecode: 'korecode',
   korecomms: 'korecomms',

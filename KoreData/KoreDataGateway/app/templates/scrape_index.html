@@ -11,14 +11,20 @@
         <input type="url" name="url" placeholder="https://example.com/" required>
 
         <label>Depth</label>
-        <div class="num-stepper">
-          <input type="number" name="depth" value="0" min="0" max="5" style="width:56px;">
-          <div class="stepper-btns">
-            <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,1)">&#9650;</button>
-            <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,-1)">&#9660;</button>
+        <div class="kcui-filter-row">
+          <div class="num-stepper">
+            <input type="number" name="depth" value="0" min="0" max="5" style="width:56px;">
+            <div class="stepper-btns">
+              <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,1)">&#9650;</button>
+              <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,-1)">&#9660;</button>
+            </div>
           </div>
+          <label class="kcui-filter-label">
+            <input type="checkbox" name="download_non_html" value="true" style="width:auto;">
+            Download non-html
+          </label>
         </div>
-        <div class="meta">Depth 0 captures one page plus its referenced assets. Higher depths follow same-origin links.</div>
+        <div class="meta">Depth 0 captures one page. Enable Download non-html to also fetch images, scripts, stylesheets, and other non-text assets. Higher depths follow same-origin links.</div>
 
         <div class="kcui-pad-top-sm">
           <button type="submit">START CAPTURE</button>
@@ -34,10 +40,76 @@
       <div class="kv"><div class="kv-key">running jobs</div><div class="kv-val">{{ status.get("running_jobs", 0) }}</div></div>
       <div class="kv"><div class="kv-key">saved pages</div><div class="kv-val">{{ status.get("pages", 0) }}</div></div>
       <div class="kv"><div class="kv-key">saved assets</div><div class="kv-val">{{ status.get("assets", 0) }}</div></div>
+      <div class="kv"><div class="kv-key">indexed pages</div><div class="kv-val">{{ status.get("indexed_pages", 0) }}</div></div>
+      <div class="kv"><div class="kv-key">indexed chunks</div><div class="kv-val">{{ status.get("indexed_chunks", 0) }}</div></div>
       <div class="kv"><div class="kv-key">latest run</div><div class="kv-val">{{ status.get("latest_run", "-") or "-" }}</div></div>
     </div>
   </div>
 </div>
+
+<div class="kcui-panel">
+  <div class="panel-header kcui-panel-header">SEARCH CAPTURED TEXT</div>
+  <div class="panel-body kcui-panel-body">
+    <form action="/ui/scrape" method="get">
+      <p class="meta kcui-mar-bottom-sm">Case-insensitive substring match across page title, URL, and extracted text.</p>
+      <div class="kcui-search-row">
+        <input type="search" name="q" value="{{ q }}" placeholder="search captured text...">
+        <button type="submit">SEARCH</button>
+      </div>
+      <div class="kcui-filter-row kcui-mar-top-md">
+        <label class="kcui-filter-label">
+          Max results
+          <div class="num-stepper">
+            <input type="number" name="limit" value="{{ limit }}" min="1" max="2000" style="width:64px;">
+            <div class="stepper-btns">
+              <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,1)">&#9650;</button>
+              <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,-1)">&#9660;</button>
+            </div>
+          </div>
+        </label>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% if searched %}
+<div class="kcui-panel">
+  <div class="panel-header kcui-panel-header">
+    SEARCH RESULTS
+    <span class="badge badge-dim" style="margin-left:0.5rem;">{{ results | length }}</span>
+  </div>
+  <div class="panel-body kcui-panel-body">
+    {% if results %}
+    <table style="table-layout:fixed;">
+      <thead>
+        <tr>
+          <th>Title</th>
+          <th class="kcui-cell-narrow">Capture</th>
+          <th class="kcui-cell-narrow">Matches</th>
+          <th>Snippet</th>
+          <th class="kcui-cell-narrow"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for chunk in results %}
+        <tr>
+          <td class="kcui-truncate">{{ chunk.page_title or chunk.page_url }}</td>
+          <td class="kcui-cell-narrow kcui-nowrap">{{ chunk.capture_id }}</td>
+          <td class="kcui-cell-narrow kcui-nowrap">{{ chunk.match_count or 1 }}</td>
+          <td style="white-space:normal; word-break:break-word; line-height:1.5;">
+            {{ chunk.snippet[:200] }}{% if chunk.snippet and chunk.snippet|length > 200 %}...{% endif %}
+          </td>
+          <td class="kcui-cell-narrow kcui-nowrap"><a href="/ui/scrape/chunks/{{ chunk.id }}?next={{ next_url_param }}">open</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="meta">No indexed text contains that substring.</div>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
 
 <div class="kcui-panel">
   <div class="panel-header kcui-panel-header">CAPTURES</div>
@@ -71,6 +143,36 @@
     </table>
     {% else %}
     <div class="meta">No captures yet.</div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="kcui-panel">
+  <div class="panel-header kcui-panel-header">RECENT INDEXED TEXT</div>
+  <div class="panel-body kcui-panel-body">
+    {% if chunks %}
+    <table>
+      <thead>
+        <tr>
+          <th>Title</th>
+          <th>Capture</th>
+          <th>Words</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for chunk in chunks %}
+        <tr>
+          <td class="kcui-truncate">{{ chunk.page_title or chunk.page_url }}</td>
+          <td>{{ chunk.capture_id }}</td>
+          <td>{{ chunk.word_count or "-" }}</td>
+          <td><a href="/ui/scrape/chunks/{{ chunk.id }}?next=/ui/scrape">open</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="meta">No indexed text yet.</div>
     {% endif %}
   </div>
 </div>

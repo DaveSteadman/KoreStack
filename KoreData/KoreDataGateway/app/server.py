@@ -27,13 +27,16 @@ import json as _json
 import math
 import os
 import re
+import signal
+import sqlite3
 import subprocess
 import sys
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
 from pathlib import Path
+import shutil
 from typing import Any, Optional
-from urllib.parse import quote, unquote
+from urllib.parse import quote, urlencode, unquote, urlsplit
 
 import httpx
 from fastapi import FastAPI, Form, HTTPException, Request
@@ -74,7 +77,69 @@ def _display_path(path: Path) -> Path:
         return path
 
 
+def _port_from_url(url: str) -> int:
+    return int(urlsplit(url).port or 0)
+
+
+def _listening_pids_on_port(port: int) -> list[int]:
+    try:
+        output = subprocess.check_output(["netstat", "-ano"], text=True, encoding="utf-8", errors="ignore")
+    except Exception:
+        return []
+    pids: list[int] = []
+    needle = f":{port}"
+    for line in output.splitlines():
+        text = line.strip()
+        if "LISTENING" not in text or needle not in text:
+            continue
+        parts = text.split()
+        if len(parts) < 5:
+            continue
+        local_addr = parts[1]
+        state      = parts[3]
+        pid_text   = parts[4]
+        if not local_addr.endswith(needle) or state != "LISTENING":
+            continue
+        try:
+            pid = int(pid_text)
+        except ValueError:
+            continue
+        if pid not in pids:
+            pids.append(pid)
+    return pids
+
+
+def _terminate_pid(pid: int, label: str) -> None:
+    if pid <= 0 or pid == os.getpid():
+        return
+    print(f"  ◼ Clearing stale {label} listener  (pid {pid})")
+    try:
+        if os.name == "nt":
+            subprocess.run(["taskkill", "/PID", str(pid), "/T", "/F"], check=False, capture_output=True)
+        else:
+            os.kill(pid, signal.SIGTERM)
+    except Exception:
+        return
+
+
+def _clear_stale_child_listeners() -> None:
+    service_ports = {
+        "KoreFeed":      _port_from_url(cfg["korefeed_url"]),
+        "KoreLibrary":   _port_from_url(cfg["korelibrary_url"]),
+        "KoreReference": _port_from_url(cfg["korereference_url"]),
+        "KoreRAG":       _port_from_url(cfg["korerag_url"]),
+        "KoreScrape":    _port_from_url(cfg["korescrape_url"]),
+        "KoreGraph":     _port_from_url(cfg["koregraph_url"]),
+    }
+    for label, port in service_ports.items():
+        if port <= 0:
+            continue
+        for pid in _listening_pids_on_port(port):
+            _terminate_pid(pid, label)
+
+
 def _start_children() -> None:
+    _clear_stale_child_listeners()
     for service_dir, label, data_dir in _SERVICES:
         log_path = data_dir / "service.log"
         log_path.parent.mkdir(parents=True, exist_ok=True)
@@ -219,6 +284,12 @@ _INSTR_RAG = (
     "Fetch full chunks with koredata_get_full_text(refid) or koredata_get_rag_chunk(chunk_id)."
 )
 
+_INSTR_SCRAPE = (
+    "KoreScrape — captured web pages indexed into extracted text chunks. "
+    "Search with domains=[\"scrape\"]. "
+    "Fetch full chunks with koredata_get_full_text(refid) or koredata_get_scrape_chunk(chunk_id)."
+)
+
 _INSTR_GRAPH = (
     "KoreGraph — concept knowledge graph. "
     "Search with domains=[\"graph\"] returns concept edges (start, connection, end, score). "
@@ -240,6 +311,7 @@ _mcp = FastMCP(
         _INSTR_REFERENCE,
         _INSTR_LIBRARY,
         _INSTR_RAG,
+        _INSTR_SCRAPE,
         _INSTR_GRAPH,
     ]),
     streamable_http_path="/",
@@ -254,6 +326,7 @@ _UI_ELEMENTS_ASSETS = Path(
         str(Path(__file__).resolve().parents[3] / "UIElements" / "assets"),
     )
 ).resolve()
+_SCRAPE_DB_PATH = Path(get_koredata_dir()) / "KoreScrape" / "scrape_index.db"
 
 _TABLE_MARKER_RE = re.compile(r'<<<TABLE>>>(.*?)<<<ENDTABLE>>>', re.DOTALL)
 _WIKILINK_RE     = re.compile(r'\[\[([^\]]+)\]\]')
@@ -371,6 +444,130 @@ def _wikilinks_filter(text: str, dead_links: set | None = None) -> Markup:
 
 
 templates.env.filters["wikilinks"] = _wikilinks_filter
+
+
+def _scrape_delete_chunk_local(chunk_id: int) -> bool:
+    if not _SCRAPE_DB_PATH.exists():
+        return False
+    conn = sqlite3.connect(str(_SCRAPE_DB_PATH))
+    conn.row_factory = sqlite3.Row
+    try:
+        row = conn.execute(
+            "SELECT id, page_title, page_url, content FROM scrape_chunks WHERE id = ?",
+            (chunk_id,),
+        ).fetchone()
+        if row is None:
+            return False
+        conn.execute(
+            "INSERT INTO scrape_chunks_fts(scrape_chunks_fts, rowid, page_title, page_url, content) VALUES ('delete', ?, ?, ?, ?)",
+            (row["id"], row["page_title"] or "", row["page_url"] or "", row["content"] or ""),
+        )
+        conn.execute("DELETE FROM scrape_chunks WHERE id = ?", (chunk_id,))
+        conn.commit()
+        return True
+    finally:
+        conn.close()
+
+
+def _scrape_capture_manifest_path(capture_id: str) -> Path | None:
+    root = Path(get_koredata_dir()) / "KoreScrape"
+    for manifest_path in root.rglob("manifest.json"):
+        try:
+            data = _json.loads(manifest_path.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        if str(data.get("id") or "") == capture_id:
+            return manifest_path
+    return None
+
+
+def _scrape_read_capture_manifest(capture_id: str) -> dict | None:
+    manifest_path = _scrape_capture_manifest_path(capture_id)
+    if manifest_path is None or not manifest_path.exists():
+        return None
+    try:
+        return _json.loads(manifest_path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+
+
+def _scrape_write_capture_manifest(capture_id: str, manifest: dict) -> bool:
+    manifest_path = _scrape_capture_manifest_path(capture_id)
+    if manifest_path is None:
+        return False
+    manifest_path.write_text(_json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+    return True
+
+
+def _scrape_delete_capture_content_local(capture_id: str) -> bool:
+    manifest = _scrape_read_capture_manifest(capture_id)
+    if not manifest:
+        return False
+    site_dir = Path(str(manifest.get("site_dir") or "")).resolve()
+    if site_dir.exists() and site_dir.is_dir():
+        shutil.rmtree(site_dir, ignore_errors=True)
+    manifest["content_deleted"]    = True
+    manifest["content_deleted_at"] = datetime.utcnow().isoformat() + "Z"
+    return _scrape_write_capture_manifest(capture_id, manifest)
+
+
+def _scrape_delete_capture_chunks_local(capture_id: str) -> bool:
+    manifest = _scrape_read_capture_manifest(capture_id)
+    if not manifest:
+        return False
+    if _SCRAPE_DB_PATH.exists():
+        conn = sqlite3.connect(str(_SCRAPE_DB_PATH))
+        try:
+            conn.execute("DELETE FROM scrape_chunks WHERE capture_id = ?", (capture_id,))
+            try:
+                conn.execute("INSERT INTO scrape_chunks_fts(scrape_chunks_fts) VALUES ('rebuild')")
+            except Exception:
+                pass
+            conn.commit()
+        finally:
+            conn.close()
+    manifest["indexed_chunks"]    = 0
+    manifest["chunks_deleted"]    = True
+    manifest["chunks_deleted_at"] = datetime.utcnow().isoformat() + "Z"
+    return _scrape_write_capture_manifest(capture_id, manifest)
+
+
+def _scrape_delete_capture_record_local(capture_id: str) -> bool:
+    manifest = _scrape_read_capture_manifest(capture_id)
+    if not manifest:
+        return False
+    if _SCRAPE_DB_PATH.exists():
+        conn = sqlite3.connect(str(_SCRAPE_DB_PATH))
+        try:
+            conn.execute("DELETE FROM scrape_chunks WHERE capture_id = ?", (capture_id,))
+            try:
+                conn.execute("INSERT INTO scrape_chunks_fts(scrape_chunks_fts) VALUES ('rebuild')")
+            except Exception:
+                pass
+            conn.commit()
+        finally:
+            conn.close()
+    capture_dir = Path(str(manifest.get("capture_dir") or "")).resolve()
+    if capture_dir.exists() and capture_dir.is_dir():
+        shutil.rmtree(capture_dir, ignore_errors=True)
+    return True
+
+
+def _scrape_capture_fully_deleted(manifest: dict | None) -> bool:
+    if not manifest:
+        return False
+    content_deleted = bool(manifest.get("content_deleted"))
+    chunks_deleted  = bool(manifest.get("chunks_deleted")) or int(manifest.get("indexed_chunks", 0) or 0) == 0
+    return content_deleted and chunks_deleted
+
+
+def _annotate_scrape_capture_chunks(rows: list[dict]) -> list[dict]:
+    for row in rows:
+        title   = str(row.get("page_title") or row.get("page_url") or "").strip()
+        preview = str(row.get("preview") or "").strip()
+        row["display_title"] = title or "(untitled page)"
+        row["display_preview"] = preview
+    return rows
 
 
 # ---------------------------------------------------------------------------
@@ -594,12 +791,28 @@ def _map_rag_chunk(c: dict) -> dict:
     }
 
 
+def _map_scrape_chunk(c: dict) -> dict:
+    capture_id = c.get("capture_id", "")
+    page_path  = c.get("page_path", "")
+    return {
+        "type":         "scrape_chunk",
+        "artifact_ref": _build_artifact_ref("scrape_chunk", id=c.get("id")),
+        "id":           c.get("id"),
+        "capture_id":   capture_id,
+        "title":        c.get("page_title", "") or c.get("page_url", ""),
+        "source":       c.get("page_url", ""),
+        "captured_at":  c.get("captured_at"),
+        "snippet":      c.get("snippet") or "",
+        "url":          f"/ui/scrape/files/{capture_id}/{page_path}" if capture_id and page_path else "",
+    }
+
+
 def _flatten_search_results(results_by_domain: dict) -> list[dict]:
     merged: list[dict] = []
     row_index = 0
     while True:
         added = False
-        for domain in ("feeds", "reference", "library", "rag", "graph"):
+        for domain in ("feeds", "reference", "library", "rag", "scrape", "graph"):
             items = results_by_domain.get(domain)
             if isinstance(items, list) and row_index < len(items):
                 merged.append(items[row_index])
@@ -612,7 +825,7 @@ def _flatten_search_results(results_by_domain: dict) -> list[dict]:
 
 @app.post("/api/search")
 async def api_search(req: _SearchRequest):
-    search_domains = [d.lower() for d in req.domains] if req.domains else ["feeds", "reference", "library", "rag"]
+    search_domains = [d.lower() for d in req.domains] if req.domains else ["feeds", "reference", "library", "rag", "scrape"]
     limit = req.limit
 
     async def _feeds():
@@ -645,6 +858,13 @@ async def api_search(req: _SearchRequest):
             return {"error": f"HTTP {r.status_code}"}
         return [_map_rag_chunk(c) for c in (r.json() or [])[:limit]]
 
+    async def _scrape():
+        params: dict = {"q": req.query, "limit": limit}
+        r = await _scrape_client.get("/search", params=params, timeout=10.0)
+        if r.status_code != 200:
+            return {"error": f"HTTP {r.status_code}"}
+        return [_map_scrape_chunk(c) for c in (r.json() or [])[:limit]]
+
     async def _graph():
         params: dict = {"q": req.query, "depth": 1, "min_score": 0}
         r = await _graph_client.get("/api/expand-by-term", params=params, timeout=10.0)
@@ -671,6 +891,7 @@ async def api_search(req: _SearchRequest):
     if "reference" in search_domains: tasks.append(("reference", _reference()))
     if "library"   in search_domains: tasks.append(("library",   _library()))
     if "rag"       in search_domains: tasks.append(("rag",       _rag()))
+    if "scrape"    in search_domains: tasks.append(("scrape",    _scrape()))
     if "graph"     in search_domains: tasks.append(("graph",     _graph()))
 
     gathered = await asyncio.gather(*(coro for _, coro in tasks), return_exceptions=True)
@@ -727,8 +948,8 @@ async def koredata_search(
     Args:
         query: Search string. Bare terms use AND by default. Use quoted phrases,
                OR or | for alternatives, NOT to exclude, and parentheses to group.
-        domains: Which services to search — any of "feeds", "reference", "library", "rag".
-                 Omit or pass null to search all four.
+        domains: Which services to search — any of "feeds", "reference", "library", "rag", "scrape".
+                 Omit or pass null to search all five.
         since: Earliest published-date filter (YYYY-MM-DD). Applied to feeds only.
         until: Latest published-date filter (YYYY-MM-DD). Applied to feeds only.
         limit: Maximum results per selected domain (1–200, default 20).
@@ -1092,12 +1313,25 @@ async def koredata_get_rag_chunk(chunk_id: int) -> dict:
 
 
 @_mcp.tool()
+async def koredata_get_scrape_chunk(chunk_id: int) -> dict:
+    """Fetch the full content of a KoreScrape extracted text chunk."""
+    if _scrape_client is None:
+        return {"error": "KoreDataGateway is still starting up — retry in a moment"}
+    r = await _scrape_client.get(f"/chunks/{chunk_id}", timeout=10.0)
+    if r.status_code == 404:
+        return {"error": f"Scrape chunk not found: id={chunk_id}"}
+    if r.status_code != 200:
+        return {"error": f"HTTP {r.status_code}"}
+    return r.json()
+
+
+@_mcp.tool()
 async def koredata_get_full_text(refid: str) -> dict:
     """Fetch the full content for a text-bearing search result via its artifact_ref.
 
     Args:
         refid: The artifact_ref value returned by koredata_search(...). Supported kinds:
-               feed_entry, reference_article, rag_chunk. Library books return a chunking
+               feed_entry, reference_article, rag_chunk, scrape_chunk. Library books return a chunking
                guidance error because they should be read incrementally.
 
     Use this when you already have a search result row and want a single follow-up fetch path
@@ -1134,6 +1368,16 @@ async def koredata_get_full_text(refid: str) -> dict:
         except ValueError:
             return {"error": f"RAG artifact ref has non-numeric id: {raw_id!r}"}
         return await koredata_get_rag_chunk(chunk_id=chunk_id)
+
+    if kind == "scrape_chunk":
+        raw_id = (parts.get("id") or "").strip()
+        if not raw_id:
+            return {"error": f"Scrape artifact ref is missing id: {refid!r}"}
+        try:
+            chunk_id = int(raw_id)
+        except ValueError:
+            return {"error": f"Scrape artifact ref has non-numeric id: {raw_id!r}"}
+        return await koredata_get_scrape_chunk(chunk_id=chunk_id)
 
     if kind == "library_book":
         book_id = (parts.get("book_id") or "").strip()
@@ -1189,26 +1433,42 @@ async def web_root(request: Request):
 
 
 @app.get("/ui/scrape", response_class=HTMLResponse)
-async def scrape_index(request: Request):
-    captures_r, status_r = await asyncio.gather(
+async def scrape_index(request: Request, q: Optional[str] = None, limit: int = 200):
+    captures_r, status_r, chunks_r = await asyncio.gather(
         _scrape_client.get("/captures"),
         _scrape_client.get("/status"),
+        _scrape_client.get("/chunks", params={"limit": 12}),
     )
     captures = captures_r.json().get("captures", []) if captures_r.status_code == 200 else []
     status   = status_r.json()                     if status_r.status_code == 200 else {}
+    chunks   = chunks_r.json()                     if chunks_r.status_code == 200 else []
+    searched = bool((q or "").strip())
+    results: list[dict] = []
+    next_url_param = ""
+    if searched:
+        next_url_param = quote(f"/ui/scrape?q={q or ''}&limit={limit}", safe="")
+    if searched:
+        search_r = await _scrape_client.get("/search", params={"q": q, "limit": limit})
+        results  = search_r.json() if search_r.status_code == 200 else []
     return templates.TemplateResponse(
         request,
         "scrape_index.html",
         {
             "captures": captures,
+            "limit":    limit,
+            "next_url_param": next_url_param,
+            "q":        q or "",
+            "results":  results,
+            "searched": searched,
             "status":   status,
+            "chunks":   chunks,
         },
     )
 
 
 @app.post("/ui/scrape/start")
-async def scrape_start(url: str = Form(...), depth: int = Form(0)):
-    r = await _scrape_client.post("/captures", json={"url": url, "depth": depth})
+async def scrape_start(url: str = Form(...), depth: int = Form(0), download_non_html: bool = Form(False)):
+    r = await _scrape_client.post("/captures", json={"url": url, "depth": depth, "download_non_html": download_non_html})
     if r.status_code not in (200, 201, 202):
         try:
             detail = r.json().get("detail", f"Capture failed ({r.status_code})")
@@ -1221,19 +1481,112 @@ async def scrape_start(url: str = Form(...), depth: int = Form(0)):
 
 @app.get("/ui/scrape/{capture_id}", response_class=HTMLResponse)
 async def scrape_capture(request: Request, capture_id: str):
-    r = await _scrape_client.get(f"/captures/{capture_id}")
-    if r.status_code == 404:
+    capture_r, chunks_r = await asyncio.gather(
+        _scrape_client.get(f"/captures/{capture_id}"),
+        _scrape_client.get("/chunks", params={"capture_id": capture_id, "limit": 100}),
+    )
+    if capture_r.status_code == 404:
         raise HTTPException(status_code=404, detail="Capture not found")
-    if r.status_code != 200:
-        raise HTTPException(status_code=r.status_code, detail="Capture lookup failed")
-    capture = r.json()
+    if capture_r.status_code != 200:
+        raise HTTPException(status_code=capture_r.status_code, detail="Capture lookup failed")
+    capture = capture_r.json()
+    chunks  = _annotate_scrape_capture_chunks(chunks_r.json()) if chunks_r.status_code == 200 else []
     return templates.TemplateResponse(
         request,
         "scrape_capture.html",
         {
             "capture": capture,
+            "chunks":  chunks,
         },
     )
+
+
+@app.get("/ui/scrape/{capture_id}/json")
+async def scrape_capture_json(capture_id: str):
+    r = await _scrape_client.get(f"/captures/{capture_id}")
+    if r.status_code == 404:
+        raise HTTPException(status_code=404, detail="Capture not found")
+    if r.status_code != 200:
+        raise HTTPException(status_code=r.status_code, detail="Capture lookup failed")
+    return JSONResponse(r.json())
+
+
+@app.get("/ui/scrape/search", response_class=HTMLResponse)
+async def scrape_search(
+    request: Request,
+    q: Optional[str] = None,
+    limit: int = 200,
+):
+    params: dict[str, Any] = {}
+    if q:
+        params["q"] = q
+    if limit:
+        params["limit"] = limit
+    target = "/ui/scrape"
+    if params:
+        target = f"{target}?{urlencode(params)}"
+    return RedirectResponse(url=target, status_code=302)
+
+
+@app.get("/ui/scrape/chunks/{chunk_id}", response_class=HTMLResponse)
+async def scrape_chunk(request: Request, chunk_id: int, next: Optional[str] = None):
+    r = await _scrape_client.get(f"/chunks/{chunk_id}")
+    if r.status_code == 404:
+        raise HTTPException(status_code=404, detail="Chunk not found")
+    if r.status_code != 200:
+        raise HTTPException(status_code=r.status_code, detail="Chunk lookup failed")
+    chunk = r.json()
+    next_url = next or f"/ui/scrape/{chunk.get('capture_id', '')}"
+    return templates.TemplateResponse(
+        request,
+        "scrape_chunk.html",
+        {
+            "chunk":    chunk,
+            "next_url": next_url,
+        },
+    )
+
+
+@app.post("/ui/scrape/chunks/{chunk_id}/delete")
+async def scrape_chunk_delete(chunk_id: int, next: str = Form("/ui/scrape")):
+    r = await _scrape_client.post(f"/chunks/{chunk_id}/delete")
+    if r.status_code == 405:
+        r = await _scrape_client.delete(f"/chunks/{chunk_id}")
+    if r.status_code not in (200, 204):
+        deleted = _scrape_delete_chunk_local(chunk_id)
+        if not deleted:
+            if r.status_code == 404:
+                raise HTTPException(status_code=404, detail="Chunk not found")
+            raise HTTPException(status_code=r.status_code, detail="Chunk delete failed")
+    target = next.strip() or "/ui/scrape"
+    return RedirectResponse(url=target, status_code=303)
+
+
+@app.get("/ui/scrape/chunks/{chunk_id}/delete")
+async def scrape_chunk_delete_get(chunk_id: int, next: str = "/ui/scrape"):
+    return await scrape_chunk_delete(chunk_id=chunk_id, next=next)
+
+
+@app.get("/ui/scrape/{capture_id}/delete-content")
+async def scrape_capture_delete_content(capture_id: str, next: Optional[str] = None):
+    if not _scrape_delete_capture_content_local(capture_id):
+        raise HTTPException(status_code=404, detail="Capture not found")
+    manifest = _scrape_read_capture_manifest(capture_id)
+    if _scrape_capture_fully_deleted(manifest):
+        _scrape_delete_capture_record_local(capture_id)
+        return RedirectResponse(url="/ui/scrape", status_code=303)
+    return RedirectResponse(url=(next or f"/ui/scrape/{capture_id}"), status_code=303)
+
+
+@app.get("/ui/scrape/{capture_id}/delete-chunks")
+async def scrape_capture_delete_chunks(capture_id: str, next: Optional[str] = None):
+    if not _scrape_delete_capture_chunks_local(capture_id):
+        raise HTTPException(status_code=404, detail="Capture not found")
+    manifest = _scrape_read_capture_manifest(capture_id)
+    if _scrape_capture_fully_deleted(manifest):
+        _scrape_delete_capture_record_local(capture_id)
+        return RedirectResponse(url="/ui/scrape", status_code=303)
+    return RedirectResponse(url=(next or f"/ui/scrape/{capture_id}"), status_code=303)
 
 
 @app.get("/ui/scrape/files/{capture_id}/{file_path:path}", include_in_schema=False)

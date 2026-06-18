@@ -77,6 +77,16 @@ SERVICE_META: dict[str, dict[str, object]] = {
         "port_env": "KOREDATA_PORT",
         "description": "KoreData gateway with the feed, library, reference, and RAG services behind it.",
     },
+    "koredevicegateway": {
+        "label": "KoreDevice",
+        "cwd": SUITE_ROOT / "KoreDevice",
+        "script": "main.py",
+        "port": 9613,
+        "url_suffix": "/",
+        "health_suffix": "/status",
+        "port_env": "KOREDEVICE_PORT",
+        "description": "KoreDevice gateway with child services for hardware values, logs, and device-side tools.",
+    },
     "koredocs": {
         "label": "KoreDocs",
         "cwd": SUITE_ROOT / "KoreDocs",
@@ -113,6 +123,7 @@ SERVICE_ICON_KEYS: dict[str, str] = {
     "koreagent":        "koreagent",
     "korechat":         "korechat",
     "koredatagateway":  "koredata",
+    "koredevicegateway": "koredevice",
     "koredocs":         "koredocs",
     "korecode":         "korecode",
     "korecomms":        "korecomms",
@@ -123,11 +134,22 @@ def get_ui_assets_dir() -> Path:
     return UI_ELEMENTS_ASSETS
 
 
+def _service_cfg(config: dict, slug: str) -> dict:
+    services = config.get("services") if isinstance(config.get("services"), dict) else {}
+    service_cfg = services.get(slug)
+    return service_cfg if isinstance(service_cfg, dict) else {}
+
+
+def is_service_enabled(config: dict, slug: str) -> bool:
+    service_cfg = _service_cfg(config, slug)
+    enabled = service_cfg.get("enabled")
+    return bool(enabled) if enabled is not None else True
+
+
 def _service_host(config: dict, slug: str) -> str:
     network = config.get("network") if isinstance(config.get("network"), dict) else {}
-    services = config.get("services") if isinstance(config.get("services"), dict) else {}
     network_host = str(network.get("host") or "127.0.0.1").strip()
-    service_cfg = services.get(slug) if isinstance(services.get(slug), dict) else {}
+    service_cfg = _service_cfg(config, slug)
     if slug == "koreagent":
         return network_host
     return str(service_cfg.get("host") or network_host).strip()
@@ -176,6 +198,7 @@ def get_stack_paths(config: dict) -> dict[str, Path]:
         "conversation_data": _dc("korechat",  "korechat"),
         "comms_data":        _dc("korecomms", "korecomms"),
         "koredata_data":     _dc("koredata",  "koredata"),
+        "koredevice_data":   _dc("koredevice","koredevice"),
         "koreagent_data":    _dc("koreagent", "koreagent"),
         "koredocs":          _dc("koredocs",  "koredocs"),
         "docs_data":         _du("docs_data", "KoreFiles"),
@@ -219,6 +242,7 @@ def build_child_env(config: dict) -> dict[str, str]:
     env["KORECHAT_DATA_DIR"] = str(stack_paths["conversation_data"])
     env["KORECOMMS_DATA_DIR"] = str(stack_paths["comms_data"])
     env["KOREDATA_DATA_DIR"] = str(stack_paths["koredata_data"])
+    env["KOREDEVICE_DATA_DIR"] = str(stack_paths["koredevice_data"])
     env["KOREAGENT_DATA_DIR"] = str(stack_paths["koreagent_data"])
     env["KOREDOCS_CONTROL_DIR"] = str(stack_paths["koredocs"])
     env["KOREDOCS_DATA_DIR"] = str(stack_paths["docs_data"])
@@ -226,6 +250,8 @@ def build_child_env(config: dict) -> dict[str, str]:
     _korestack_port = int(_korestack_cfg.get("port", 9600) if _korestack_cfg else 9600)
     _suite_urls: dict[str, str] = {"korestack": f"http://{_network_host}:{_korestack_port}/"}
     for _slug, _meta in SERVICE_META.items():
+        if not is_service_enabled(config, _slug):
+            continue
         _svc_cfg = services.get(_slug) if isinstance(services.get(_slug), dict) else {}
         _port = int(_svc_cfg.get("port", _meta["port"]) if _svc_cfg else _meta["port"])
         _host = _service_host(config, _slug)
@@ -241,6 +267,8 @@ def build_services(config: dict) -> dict[str, ServiceSpec]:
     services_cfg = config.get("services") if isinstance(config.get("services"), dict) else {}
     result: dict[str, ServiceSpec] = {}
     for slug, meta in SERVICE_META.items():
+        if not is_service_enabled(config, slug):
+            continue
         service_cfg = services_cfg.get(slug) if isinstance(services_cfg.get(slug), dict) else {}
         port = int(service_cfg.get("port", meta["port"]))
         host = _service_host(config, slug)
@@ -277,7 +305,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--services",
         default="all",
-        help="Comma-separated service list. Valid values: all, agent, conversation, data, docs, code, comms.",
+        help="Comma-separated service list. Valid values: all, korechat, koreagent, koredatagateway, koredevicegateway, koredocs, korecode, korecomms.",
     )
     parser.add_argument("--host", default=None, help="KoreStack landing page bind address.")
     parser.add_argument("--ui-port", type=int, default=None, help="KoreStack landing page port.")
@@ -290,7 +318,16 @@ def parse_args() -> argparse.Namespace:
 def resolve_services(raw: str, services: dict[str, ServiceSpec]) -> list[ServiceSpec]:
     selected = [part.strip().lower() for part in raw.split(",") if part.strip()]
     if not selected or selected == ["all"]:
-        return [services[key] for key in ("korechat", "koreagent", "koredatagateway", "koredocs", "korecode", "korecomms")]
+        preferred_order = (
+            "korechat",
+            "koreagent",
+            "koredatagateway",
+            "koredevicegateway",
+            "koredocs",
+            "korecode",
+            "korecomms",
+        )
+        return [services[key] for key in preferred_order if key in services]
 
     unknown = [name for name in selected if name not in services]
     if unknown:
@@ -641,6 +678,7 @@ def _bootstrap_data_dirs(stack_paths: dict[str, Path]) -> None:
     dc = stack_paths["datacontrol"]
     du = stack_paths["datauser"]
     kd = stack_paths["koredata_data"]
+    kv = stack_paths["koredevice_data"]
 
     fresh = not dc.exists()
 
@@ -660,6 +698,9 @@ def _bootstrap_data_dirs(stack_paths: dict[str, Path]) -> None:
         kd / "Reference",
         kd / "RAG",
         kd / "Graph",
+        # KoreDevice gateway + sub-services
+        kv,
+        kv / "Numbers",
         # KoreDocs
         stack_paths["koredocs"],
         # Shared datacontrol tree

@@ -6,6 +6,7 @@
     "korechat":        "korechat",
     "korecomms":       "korecomms",
     "koredata":        "koredata",
+    "koredevice":      "koredevice",
     "koreagent":       "koreagent",
     "koredocs":        "koredocs",
     "docs_data":       "KoreFiles"
@@ -14,19 +15,21 @@
     "host": "127.0.0.1"
   },
   "services": {
-    "korestack":       { "port": 9600 },
-    "koreagent":       { "port": 9601 },
-    "korechat":        { "port": 9602 },
-    "koredatagateway": { "port": 9603 },
-    "korefeed":        { "port": 9604 },
-    "korelibrary":     { "port": 9605 },
-    "korerag":         { "port": 9606 },
-    "korereference":   { "port": 9607 },
-    "korescrape":      { "port": 9612 },
-    "koregraph":       { "port": 9608 },
-    "korecomms":       { "port": 9609 },
-    "koredocs":        { "port": 9610 },
-    "korecode":        { "port": 9611 }
+    "korestack":         { "port": 9600, "enabled": true },
+    "koreagent":         { "port": 9601, "enabled": true },
+    "korechat":          { "port": 9602, "enabled": true },
+    "koredatagateway":   { "port": 9603, "enabled": true },
+    "korefeed":          { "port": 9604, "enabled": true },
+    "korelibrary":       { "port": 9605, "enabled": true },
+    "korerag":           { "port": 9606, "enabled": true },
+    "korereference":     { "port": 9607, "enabled": true },
+    "korescrape":        { "port": 9612, "enabled": true },
+    "koregraph":         { "port": 9608, "enabled": true },
+    "koredevicegateway": { "port": 9613, "enabled": false },
+    "koredevicenumber":  { "port": 9614, "enabled": false },
+    "korecomms":         { "port": 9609, "enabled": true },
+    "koredocs":          { "port": 9610, "enabled": true },
+    "korecode":          { "port": 9611, "enabled": true }
   },
   "mcp": {
     "connections": [

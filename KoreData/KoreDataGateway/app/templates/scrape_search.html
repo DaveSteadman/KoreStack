@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}KoreData - Scrape Search{% endblock %}
+{% block main_class %}kcui-main{% endblock %}
+
+{% block content %}
+<div class="kcui-page kcui-page--narrow kcui-stack">
+  <div class="kcui-panel">
+    <div class="panel-header kcui-panel-header">
+      SEARCH CAPTURED TEXT
+      <div class="kcui-actions kcui-row-end">
+        <a class="kcui-tag kcui-tag--purple" href="/ui/scrape">browse</a>
+      </div>
+    </div>
+    <div class="panel-body kcui-panel-body">
+      <form action="/ui/scrape/search" method="get">
+        <p class="meta kcui-mar-bottom-sm">Bare terms use AND by default. Use quotes for phrases, OR or | for alternatives, NOT to exclude, and parentheses to group.</p>
+        <div class="kcui-search-row">
+          <input type="search" name="q" value="{{ q }}" placeholder="search captured text...">
+          <button type="submit">SEARCH</button>
+        </div>
+        <div class="kcui-filter-row kcui-mar-top-md">
+          <label class="kcui-filter-label">
+            Capture
+            <select name="capture_id" style="min-width:260px;">
+              <option value="">all captures</option>
+              {% for capture in captures %}
+              <option value="{{ capture.id }}" {% if capture.id == capture_id %}selected{% endif %}>{{ capture.id }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label class="kcui-filter-label">
+            Top hits
+            <div class="num-stepper">
+              <input type="number" name="limit" value="{{ limit }}" min="1" max="200" style="width:52px;">
+              <div class="stepper-btns">
+                <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,1)">&#9650;</button>
+                <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,-1)">&#9660;</button>
+              </div>
+            </div>
+          </label>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  {% if searched %}
+  <div class="kcui-panel">
+    <div class="panel-header kcui-panel-header">
+      RESULTS
+      <span class="badge badge-dim" style="margin-left:0.5rem;">{{ results | length }}</span>
+    </div>
+    <div class="panel-body kcui-panel-body">
+      {% if results %}
+      {% for chunk in results %}
+      <div class="kcui-list-item">
+        <div class="kcui-list-item-head">
+          <a href="/ui/scrape/chunks/{{ chunk.id }}?next={{ chunk.next_url_param }}" style="color:var(--text); font-size:13px;">{{ chunk.page_title or chunk.page_url }}</a>
+          <span class="meta">#{{ chunk.id }}</span>
+        </div>
+        <div class="meta kcui-list-item-meta">
+          <span>{{ chunk.page_url }}</span>
+          {% if chunk.word_count %} | {{ "{:,}".format(chunk.word_count) }} words{% endif %}
+          {% if chunk.captured_at %} | {{ chunk.captured_at[:10] }}{% endif %}
+        </div>
+        {% if chunk.snippet %}
+        <div class="kcui-list-item-snippet">{{ chunk.snippet }}</div>
+        {% endif %}
+      </div>
+      {% endfor %}
+      {% else %}
+      <div class="meta">No captured text matched your query.</div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

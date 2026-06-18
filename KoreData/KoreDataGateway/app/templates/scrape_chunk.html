@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}KoreData - Scrape Chunk #{{ chunk.id }}{% endblock %}
+{% block main_class %}kcui-main{% endblock %}
+
+{% block content %}
+<div class="kcui-page kcui-page--narrow kcui-stack">
+  <div class="kcui-panel">
+    <div class="panel-header kcui-panel-header">
+      CHUNK #{{ chunk.id }}
+      <div class="kcui-actions kcui-row-end">
+        <a class="kcui-tag kcui-tag--info" href="/ui/scrape/{{ chunk.capture_id }}">capture</a>
+        <form method="post" action="/ui/scrape/chunks/{{ chunk.id }}/delete" style="display:inline;" onsubmit="return confirm('Delete this extracted text entry?');">
+          <input type="hidden" name="next" value="{{ next_url }}">
+          <button type="submit" class="kcui-tag kcui-tag--red">delete</button>
+        </form>
+      </div>
+    </div>
+    <div class="panel-body kcui-panel-body">
+      <div style="display:grid; grid-template-columns: 120px 1fr; gap:0.4rem 0.75rem;">
+        <span class="meta">Capture</span>
+        <span>{{ chunk.capture_id }}</span>
+        <span class="meta">Title</span>
+        <span>{{ chunk.page_title or "-" }}</span>
+        <span class="meta">URL</span>
+        <span><a href="{{ chunk.page_url }}" target="_blank" rel="noopener">{{ chunk.page_url }}</a></span>
+        <span class="meta">Snapshot</span>
+        <span><a href="/ui/scrape/files/{{ chunk.capture_id }}/{{ chunk.page_path }}" target="_blank">{{ chunk.page_path }}</a></span>
+        <span class="meta">Chunk index</span>
+        <span>{{ chunk.chunk_index }}</span>
+        <span class="meta">Words</span>
+        <span>{% if chunk.word_count %}{{ "{:,}".format(chunk.word_count) }}{% else %}-{% endif %}</span>
+        <span class="meta">Captured</span>
+        <span>{{ chunk.captured_at or "-" }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="kcui-panel">
+    <div class="panel-header kcui-panel-header">CONTENT</div>
+    <div class="panel-body kcui-panel-body">
+      <div style="white-space:pre-wrap; line-height:1.6;">{{ chunk.content or "" }}</div>
+    </div>
+  </div>
+</div>
+{% endblock %}

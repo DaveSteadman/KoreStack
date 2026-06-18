@@ -2,37 +2,99 @@
 {% block title %}KoreData - Capture{% endblock %}
 
 {% block content %}
+<style>
+  .scrape-disabled {
+    opacity: 0.45;
+  }
+</style>
 <div class="kcui-panel">
   <div class="panel-header kcui-panel-header">
     CAPTURE
-    <a href="/ui/scrape" class="btn btn-sm btn-secondary kcui-row-end">BACK</a>
+    <div class="kcui-actions kcui-row-end">
+      <a href="/ui/scrape/search?capture_id={{ capture.id }}" class="kcui-tag kcui-tag--purple">search</a>
+      <a href="/ui/scrape" class="kcui-tag kcui-tag--muted">back</a>
+    </div>
   </div>
   <div class="panel-body kcui-panel-body">
     <div class="kv"><div class="kv-key">id</div><div class="kv-val">{{ capture.id }}</div></div>
     <div class="kv"><div class="kv-key">url</div><div class="kv-val"><a href="{{ capture.url }}" target="_blank" rel="noreferrer">{{ capture.url }}</a></div></div>
-    <div class="kv"><div class="kv-key">status</div><div class="kv-val">{{ capture.status }}</div></div>
+    <div class="kv"><div class="kv-key">status</div><div class="kv-val" id="scrape-status">{{ capture.status }}</div></div>
     <div class="kv"><div class="kv-key">depth</div><div class="kv-val">{{ capture.depth }}</div></div>
     <div class="kv"><div class="kv-key">created</div><div class="kv-val">{{ capture.created_at }}</div></div>
-    <div class="kv"><div class="kv-key">completed</div><div class="kv-val">{{ capture.completed_at or "-" }}</div></div>
-    <div class="kv"><div class="kv-key">pages</div><div class="kv-val">{{ capture.pages_saved }}</div></div>
-    <div class="kv"><div class="kv-key">assets</div><div class="kv-val">{{ capture.assets_saved }}</div></div>
+    <div class="kv"><div class="kv-key">completed</div><div class="kv-val" id="scrape-completed">{{ capture.completed_at or "-" }}</div></div>
+    <div class="kv"><div class="kv-key">pages</div><div class="kv-val" id="scrape-pages">{{ capture.pages_saved }}</div></div>
+    <div class="kv"><div class="kv-key">assets</div><div class="kv-val" id="scrape-assets">{{ capture.assets_saved }}</div></div>
+    <div class="kv"><div class="kv-key">indexed chunks</div><div class="kv-val" id="scrape-indexed-chunks">{{ capture.indexed_chunks or 0 }}</div></div>
     <div class="kcui-actions kcui-pad-top-md">
-      <a class="btn btn-primary" href="/ui/scrape/files/{{ capture.id }}/{{ capture.local_root }}" target="_blank">OPEN SNAPSHOT</a>
+      {% if not capture.content_deleted %}
+      <a class="kcui-tag kcui-tag--info" href="/ui/scrape/files/{{ capture.id }}/{{ capture.local_root }}" target="_blank">open snapshot</a>
+      {% else %}
+      <span class="kcui-tag kcui-tag--dim">content deleted</span>
+      {% endif %}
+      {% if not capture.content_deleted %}
+      <a class="kcui-tag kcui-tag--red" href="/ui/scrape/{{ capture.id }}/delete-content?next=/ui/scrape/{{ capture.id }}">delete content</a>
+      {% else %}
+      <span class="kcui-tag kcui-tag--dim">content deleted</span>
+      {% endif %}
+      {% if (capture.indexed_chunks or 0) > 0 %}
+      <a class="kcui-tag kcui-tag--red" href="/ui/scrape/{{ capture.id }}/delete-chunks?next=/ui/scrape/{{ capture.id }}">delete chunks</a>
+      {% else %}
+      <span class="kcui-tag kcui-tag--dim">chunks deleted</span>
+      {% endif %}
     </div>
+  </div>
+</div>
+
+<div class="kcui-panel">
+  <div class="panel-header kcui-panel-header">INDEXED TEXT</div>
+  <div class="panel-body kcui-panel-body {% if (capture.indexed_chunks or 0) == 0 %}scrape-disabled{% endif %}">
+    {% if chunks %}
+    <table style="table-layout:fixed;">
+      <thead><tr><th>Title</th><th class="kcui-cell-narrow">Chunk</th><th class="kcui-cell-narrow">Words</th><th class="kcui-cell-narrow"></th><th class="kcui-cell-narrow"></th></tr></thead>
+      <tbody>
+        {% for chunk in chunks %}
+        <tr data-chunk-row="{{ chunk.id }}">
+          <td class="kcui-truncate">
+            <div>{{ chunk.display_title }}</div>
+            {% if chunk.display_preview %}
+            <div class="meta kcui-truncate" style="font-size:11px;">{{ chunk.display_preview }}</div>
+            {% else %}
+            <div class="meta kcui-truncate" style="font-size:11px;">{{ chunk.page_path or chunk.page_url }}</div>
+            {% endif %}
+          </td>
+          <td class="kcui-cell-narrow kcui-nowrap">{{ chunk.chunk_index }}</td>
+          <td class="kcui-cell-narrow kcui-nowrap">{{ chunk.word_count or "-" }}</td>
+          <td class="kcui-cell-narrow kcui-nowrap"><a href="/ui/scrape/chunks/{{ chunk.id }}?next=/ui/scrape/{{ capture.id }}">open</a></td>
+          <td class="kcui-cell-narrow kcui-nowrap">
+            <a class="kcui-tag kcui-tag--red" data-fast-delete="1" href="/ui/scrape/chunks/{{ chunk.id }}/delete?next=/ui/scrape/{{ capture.id }}">x</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="meta">No indexed text chunks for this capture yet.</div>
+    {% endif %}
   </div>
 </div>
 
 <div class="kcui-grid-split">
   <div class="kcui-panel">
     <div class="panel-header kcui-panel-header">PAGES</div>
-    <div class="panel-body kcui-panel-body">
+    <div class="panel-body kcui-panel-body {% if capture.content_deleted %}scrape-disabled{% endif %}">
       {% if capture.pages %}
       <table>
         <thead><tr><th>Path</th><th>Depth</th></tr></thead>
         <tbody>
           {% for page in capture.pages %}
           <tr>
-            <td><a href="/ui/scrape/files/{{ capture.id }}/{{ page.path }}" target="_blank">{{ page.path }}</a></td>
+            <td>
+              {% if capture.content_deleted %}
+              <span>{{ page.path }}</span>
+              {% else %}
+              <a href="/ui/scrape/files/{{ capture.id }}/{{ page.path }}" target="_blank">{{ page.path }}</a>
+              {% endif %}
+            </td>
             <td>{{ page.depth }}</td>
           </tr>
           {% endfor %}
@@ -69,14 +131,20 @@
 
 <div class="kcui-panel">
   <div class="panel-header kcui-panel-header">ASSETS</div>
-  <div class="panel-body kcui-panel-body">
+  <div class="panel-body kcui-panel-body {% if capture.content_deleted %}scrape-disabled{% endif %}">
     {% if capture.assets %}
     <table>
       <thead><tr><th>Path</th><th>Content Type</th></tr></thead>
       <tbody>
         {% for asset in capture.assets %}
         <tr>
-          <td><a href="/ui/scrape/files/{{ capture.id }}/{{ asset.path }}" target="_blank">{{ asset.path }}</a></td>
+          <td>
+            {% if capture.content_deleted %}
+            <span>{{ asset.path }}</span>
+            {% else %}
+            <a href="/ui/scrape/files/{{ capture.id }}/{{ asset.path }}" target="_blank">{{ asset.path }}</a>
+            {% endif %}
+          </td>
           <td>{{ asset.content_type or "-" }}</td>
         </tr>
         {% endfor %}
@@ -87,4 +155,101 @@
     {% endif %}
   </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(() => {
+  const captureId = {{ capture.id | tojson }};
+  const initialStatus = {{ capture.status | tojson }};
+  const key = 'korescrape:capture-restore:' + window.location.pathname;
+
+  const savedRaw = sessionStorage.getItem(key);
+  if (savedRaw) {
+    try {
+      const saved = JSON.parse(savedRaw);
+      const anchorId = String(saved.anchorId || '');
+      const offsetY  = Number(saved.offsetY || 0);
+      if (anchorId) {
+        const row = document.querySelector(`[data-chunk-row="${anchorId}"]`);
+        if (row) {
+          const top = row.getBoundingClientRect().top + window.scrollY;
+          window.scrollTo(0, Math.max(0, Math.round(top - offsetY)));
+        } else if (Number.isFinite(saved.scrollY)) {
+          window.scrollTo(0, saved.scrollY);
+        }
+      } else if (Number.isFinite(saved.scrollY)) {
+        window.scrollTo(0, saved.scrollY);
+      }
+    } catch {}
+    sessionStorage.removeItem(key);
+  }
+
+  function saveScrollOnly() {
+    sessionStorage.setItem(key, JSON.stringify({
+      scrollY: window.scrollY || window.pageYOffset || 0,
+    }));
+  }
+
+  function saveDeleteAnchor(link) {
+    const row = link.closest('tr[data-chunk-row]');
+    if (!row) {
+      saveScrollOnly();
+      return;
+    }
+    const sibling = row.nextElementSibling || row.previousElementSibling;
+    const anchor  = sibling && sibling.hasAttribute('data-chunk-row') ? sibling : row;
+    const rect    = anchor.getBoundingClientRect();
+    sessionStorage.setItem(key, JSON.stringify({
+      anchorId: anchor.getAttribute('data-chunk-row'),
+      offsetY:  rect.top,
+      scrollY:  window.scrollY || window.pageYOffset || 0,
+    }));
+  }
+
+  document.querySelectorAll('a[href], form[action]').forEach((el) => {
+    if (el.matches('a[data-fast-delete]')) {
+      el.addEventListener('click', () => saveDeleteAnchor(el), { capture: true });
+      return;
+    }
+    const save = () => saveScrollOnly();
+    el.addEventListener('click', save, { capture: true });
+    el.addEventListener('submit', save, { capture: true });
+  });
+
+  window.addEventListener('beforeunload', () => {
+    if (!sessionStorage.getItem(key)) {
+      saveScrollOnly();
+    }
+  });
+
+  async function pollCapture() {
+    try {
+      const resp = await fetch(`/ui/scrape/${encodeURIComponent(captureId)}/json`, { cache: 'no-store' });
+      if (!resp.ok) return;
+      const capture = await resp.json();
+      const statusEl = document.getElementById('scrape-status');
+      const completedEl = document.getElementById('scrape-completed');
+      const pagesEl = document.getElementById('scrape-pages');
+      const assetsEl = document.getElementById('scrape-assets');
+      const indexedEl = document.getElementById('scrape-indexed-chunks');
+      if (statusEl) statusEl.textContent = capture.status || '-';
+      if (completedEl) completedEl.textContent = capture.completed_at || '-';
+      if (pagesEl) pagesEl.textContent = String(capture.pages_saved ?? 0);
+      if (assetsEl) assetsEl.textContent = String(capture.assets_saved ?? 0);
+      if (indexedEl) indexedEl.textContent = String(capture.indexed_chunks ?? 0);
+
+      const doneStates = new Set(['completed', 'completed_with_errors', 'failed']);
+      if (doneStates.has(String(capture.status || '').toLowerCase())) {
+        window.location.reload();
+      }
+    } catch {}
+  }
+
+  const activeStates = new Set(['queued', 'running']);
+  if (activeStates.has(String(initialStatus || '').toLowerCase())) {
+    setInterval(pollCapture, 1000);
+  }
+})();
+</script>
 {% endblock %}

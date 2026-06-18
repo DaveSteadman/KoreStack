@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}KoreDevice{% endblock %}</title>
+  <link rel="icon" type="image/x-icon" href="/ui-elements/assets/icons/favicon.ico">
+  <link rel="stylesheet" href="/ui-elements/assets/css/chrome.css">
+</head>
+<body class="kcui-shell-bg">
+  <div id="topbar"></div>
+  <div id="app-bar"></div>
+  <main class="{% block main_class %}{% endblock %}">
+    {% block content %}{% endblock %}
+  </main>
+  <script type="module">
+    import { initAppBar, initTopbar } from '/ui-elements/assets/js/chrome.js';
+
+    const path = {{ request.url.path | tojson }};
+
+    const shellMeta = {
+      home:    { brandLabel: 'KoreDevice',       overline: 'Device Gateway',  brandIcon: 'koredevice' },
+      numbers: { brandLabel: 'KoreDeviceNumber', overline: 'Numeric Signals', brandIcon: 'koredevicenumber' },
+    };
+
+    const shellTabs = [
+      { key: 'home',    label: 'Home',    href: '/' },
+      { key: 'numbers', label: 'Numbers', href: '/ui/numbers' },
+    ];
+
+    const section = path.startsWith('/ui/numbers') ? 'numbers' : 'home';
+
+    initTopbar({ currentService: 'koredevice', urls: window.__koreSuiteUrls || {} });
+    initAppBar({
+      currentService: 'koredevice',
+      ...shellMeta[section],
+      chips: [],
+      tabs: shellTabs.map((tab) => ({ ...tab, active: tab.key === section })),
+    });
+  </script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>
+

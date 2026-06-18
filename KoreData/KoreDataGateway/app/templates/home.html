@@ -158,6 +158,9 @@
         <input type="checkbox" class="sq-domain" value="rag" checked style="accent-color:var(--green); width:auto; cursor:pointer;"> RAG
       </label>
       <label style="display:flex; align-items:center; gap:5px; font-size:12px; color:var(--text); cursor:pointer; text-transform:none; letter-spacing:normal;">
+        <input type="checkbox" class="sq-domain" value="scrape" checked style="accent-color:var(--amber); width:auto; cursor:pointer;"> Scrape
+      </label>
+      <label style="display:flex; align-items:center; gap:5px; font-size:12px; color:var(--text); cursor:pointer; text-transform:none; letter-spacing:normal;">
         <input type="checkbox" class="sq-domain" value="graph" checked style="accent-color:var(--accent); width:auto; cursor:pointer;"> Graph
       </label>
     </div>
@@ -265,8 +268,8 @@
       </p>
       <p class="meta" style="margin-top:0.45rem; font-size:11px;">
         The boolean syntax above applies to the text-search services: <strong>Feeds</strong>, <strong>Reference</strong>,
-        <strong>Library</strong>, and <strong>RAG</strong>. <strong>Graph</strong> is still term-expansion based, so complex boolean
-        operators are mainly useful for the other four services. The <strong>Since / Until</strong> date filters apply to
+        <strong>Library</strong>, <strong>RAG</strong>, and <strong>Scrape</strong>. <strong>Graph</strong> is still term-expansion based, so complex boolean
+        operators are mainly useful for the other five services. The <strong>Since / Until</strong> date filters apply to
         feeds only. The <strong>Limit</strong> value is applied <strong>per selected service</strong>. The default is
         <strong>20</strong>, but you can raise it as high as <strong>200</strong> when you need broader retrieval.
       </p>
@@ -384,6 +387,10 @@ function renderCard(r, searchQuery) {
     const src  = r.source ? escHtml(r.source) : '';
     const tags = r.tags   ? ` | ${escHtml(r.tags)}` : '';
     meta = `${src}${tags}`;
+  } else if (r.type === 'scrape_chunk') {
+    const src = r.source ? escHtml(r.source) : '';
+    const ts  = r.captured_at ? ` | ${escHtml(String(r.captured_at).slice(0,10))}` : '';
+    meta = `${src}${ts}`;
   }
   const typeLabel = (r.type || '').replace(/_/g, ' ');
   const titleHtml = r.url

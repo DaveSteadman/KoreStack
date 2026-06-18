@@ -5,6 +5,7 @@ import posixpath
 import re
 import threading
 from collections import deque
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
@@ -17,6 +18,16 @@ from fastapi.responses import FileResponse, RedirectResponse
 from pydantic import BaseModel, Field, HttpUrl
 
 from app.config import cfg
+from app.database import (
+    delete_chunk as _db_delete_chunk,
+    get_chunk as _db_get_chunk,
+    get_status as _db_get_status,
+    init_db as _init_db,
+    list_chunks as _db_list_chunks,
+    make_chunk_row,
+    replace_capture_chunks,
+    search_chunks as _db_search_chunks,
+)
 
 _DATA_DIR            = Path(cfg["data_dir"])
 _HTML_MIME_PREFIXES  = ("text/html", "application/xhtml+xml")
@@ -30,13 +41,19 @@ _ASSET_ATTRS         = (
 )
 _LINK_REL_ASSETS     = {"stylesheet", "icon", "shortcut icon", "apple-touch-icon", "preload"}
 _INVALID_SEGMENT_RE  = re.compile(r'[<>:"/\\|?*]+')
+_SPACE_RE            = re.compile(r"\s+")
 _JOB_LOCK            = threading.Lock()
 _JOBS: dict[str, dict[str, Any]] = {}
+_MIN_CHUNK_WORDS     = 100
+_TARGET_CHUNK_WORDS  = 450
+_MAX_CHUNK_WORDS     = 900
+_SINGLE_PAGE_WORDS   = 1200
 
 
 class CaptureRequest(BaseModel):
     url: HttpUrl
     depth: int = Field(default=0, ge=0, le=5)
+    download_non_html: bool = False
 
 
 def _utc_now() -> datetime:
@@ -190,6 +207,8 @@ def get_status() -> dict[str, Any]:
         total_pages  += int(capture.get("pages_saved", 0)  or 0)
         total_assets += int(capture.get("assets_saved", 0) or 0)
 
+    index_stats = _db_get_status()
+
     return {
         "service":      "KoreScrape",
         "captures":     len(captures),
@@ -197,6 +216,9 @@ def get_status() -> dict[str, Any]:
         "queued_jobs":  queued_jobs,
         "pages":        total_pages,
         "assets":       total_assets,
+        "indexed_pages": index_stats.get("indexed_pages", 0),
+        "indexed_chunks": index_stats.get("indexed_chunks", 0),
+        "db_size_bytes": index_stats.get("db_size_bytes", 0),
         "latest_run":   captures[0].get("created_at") if captures else None,
     }
 
@@ -275,6 +297,118 @@ def _asset_link_replacement(
     return _relative_href(page_rel, rel)
 
 
+def _clean_block_text(text: str) -> str:
+    cleaned = _SPACE_RE.sub(" ", (text or "").strip())
+    return cleaned.strip()
+
+
+def _extract_text_blocks(soup: BeautifulSoup) -> list[str]:
+    for tag in soup.select("script, style, noscript, nav, header, footer, svg, canvas"):
+        tag.decompose()
+
+    blocks: list[str] = []
+    selectors = ("main", "article", "[role=main]", "body")
+    root = None
+    for selector in selectors:
+        root = soup.select_one(selector)
+        if root is not None:
+            break
+    root = root or soup
+
+    for tag in root.find_all(["p", "li", "blockquote", "pre", "td", "th"]):
+        text = _clean_block_text(tag.get_text(" ", strip=True))
+        if len(text.split()) >= 12:
+            blocks.append(text)
+    return blocks
+
+
+def _build_text_chunks(
+    blocks: list[str],
+    min_words: int = _MIN_CHUNK_WORDS,
+    target_words: int = _TARGET_CHUNK_WORDS,
+    max_words: int = _MAX_CHUNK_WORDS,
+    single_page_words: int = _SINGLE_PAGE_WORDS,
+) -> list[str]:
+    total_words = sum(len(block.split()) for block in blocks)
+    if total_words <= 0:
+        return []
+    if total_words <= single_page_words:
+        merged = " ".join(blocks).strip()
+        return [merged] if len(merged.split()) >= min_words else []
+
+    chunks: list[str] = []
+    current: list[str] = []
+    words = 0
+
+    for block in blocks:
+        block_words = len(block.split())
+        if block_words >= max_words:
+            if current and words >= min_words:
+                chunks.append(" ".join(current).strip())
+                current = []
+                words = 0
+            chunks.append(block.strip())
+            continue
+
+        if current and words >= target_words and (words + block_words) > max_words:
+            chunks.append(" ".join(current).strip())
+            current = []
+            words = 0
+
+        current.append(block)
+        words += block_words
+        if words >= max_words:
+            chunks.append(" ".join(current).strip())
+            current = []
+            words = 0
+
+    if current and words >= min_words:
+        chunks.append(" ".join(current).strip())
+    return chunks
+
+
+def _index_capture_pages(capture_id: str, pages: list[dict[str, Any]], capture_dir: Path, captured_at: str) -> int:
+    site_dir = _site_dir(capture_dir)
+    rows: list[dict] = []
+
+    for page in pages:
+        page_path = str(page.get("path") or "").strip()
+        page_url  = str(page.get("url") or "").strip()
+        if not page_path or not page_url:
+            continue
+
+        candidate = (site_dir / page_path).resolve()
+        if candidate != site_dir.resolve() and site_dir.resolve() not in candidate.parents:
+            continue
+        if not candidate.exists() or not candidate.is_file():
+            continue
+        if candidate.suffix.lower() not in {".html", ".htm", ".xhtml"}:
+            continue
+
+        try:
+            html = candidate.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+
+        soup = BeautifulSoup(html, "html.parser")
+        title = _clean_block_text(soup.title.get_text(" ", strip=True) if soup.title else "")
+        blocks = _extract_text_blocks(soup)
+        chunks = _build_text_chunks(blocks)
+
+        for idx, chunk in enumerate(chunks):
+            rows.append(make_chunk_row(
+                capture_id  = capture_id,
+                page_url    = page_url,
+                page_path   = page_path,
+                page_title  = title,
+                captured_at = captured_at,
+                chunk_index = idx,
+                content     = chunk,
+            ))
+
+    return replace_capture_chunks(capture_id, rows)
+
+
 def _crawl_capture(job: dict[str, Any]) -> None:
     capture_dir   = Path(job["capture_dir"])
     site_dir      = _site_dir(capture_dir)
@@ -300,6 +434,7 @@ def _crawl_capture(job: dict[str, Any]) -> None:
         "id":            job["id"],
         "url":           root_url,
         "depth":         job["depth"],
+        "download_non_html": bool(job.get("download_non_html")),
         "created_at":    job["created_at"],
         "started_at":    job["started_at"],
         "completed_at":  None,
@@ -322,6 +457,7 @@ def _crawl_capture(job: dict[str, Any]) -> None:
         timeout          = 30.0,
         headers          = {"User-Agent": cfg.get("user_agent", "KoreScrape/1.0")},
     )
+    download_non_html = bool(job.get("download_non_html"))
 
     try:
         while queue and len(visited_pages) < max_pages:
@@ -339,6 +475,8 @@ def _crawl_capture(job: dict[str, Any]) -> None:
 
             final_url = str(response.url)
             if not _is_html_response(response):
+                if not download_non_html:
+                    continue
                 rel_asset = asset_lookup.get(final_url) or _asset_rel_path(final_url, root_host).as_posix()
                 saved_rel = _save_bytes(site_dir, Path(rel_asset), response.content)
                 asset_lookup[final_url] = saved_rel
@@ -353,20 +491,21 @@ def _crawl_capture(job: dict[str, Any]) -> None:
             soup          = BeautifulSoup(response.text, "html.parser")
             asset_targets: set[str] = set()
 
-            for tag_name, attr_name in _ASSET_ATTRS:
-                for tag in soup.find_all(tag_name):
-                    candidate = tag.get(attr_name)
-                    rewritten = _asset_link_replacement(final_url, page_rel, candidate, root_host, asset_lookup, asset_targets)
-                    if rewritten:
-                        tag[attr_name] = rewritten
+            if download_non_html:
+                for tag_name, attr_name in _ASSET_ATTRS:
+                    for tag in soup.find_all(tag_name):
+                        candidate = tag.get(attr_name)
+                        rewritten = _asset_link_replacement(final_url, page_rel, candidate, root_host, asset_lookup, asset_targets)
+                        if rewritten:
+                            tag[attr_name] = rewritten
 
-            for link in soup.find_all("link"):
-                candidate = link.get("href")
-                rel_text  = " ".join(link.get("rel", []))
-                if rel_text.lower() in _LINK_REL_ASSETS:
-                    rewritten = _asset_link_replacement(final_url, page_rel, candidate, root_host, asset_lookup, asset_targets)
-                    if rewritten:
-                        link["href"] = rewritten
+                for link in soup.find_all("link"):
+                    candidate = link.get("href")
+                    rel_text  = " ".join(link.get("rel", []))
+                    if rel_text.lower() in _LINK_REL_ASSETS:
+                        rewritten = _asset_link_replacement(final_url, page_rel, candidate, root_host, asset_lookup, asset_targets)
+                        if rewritten:
+                            link["href"] = rewritten
 
             for anchor in soup.find_all("a"):
                 candidate = anchor.get("href")
@@ -389,24 +528,25 @@ def _crawl_capture(job: dict[str, Any]) -> None:
             pages_saved += 1
             pages_meta.append({"url": final_url, "path": saved_rel, "depth": depth})
 
-            for asset_url in sorted(asset_targets):
-                if asset_url in downloaded_assets:
-                    continue
-                downloaded_assets.add(asset_url)
-                try:
-                    asset_resp = client.get(asset_url)
-                    asset_resp.raise_for_status()
-                    asset_rel  = asset_lookup.get(asset_url) or _asset_rel_path(asset_url, root_host).as_posix()
-                    saved_rel  = _save_bytes(site_dir, Path(asset_rel), asset_resp.content)
-                    asset_lookup[asset_url] = saved_rel
-                    assets_saved += 1
-                    assets_meta.append({
-                        "url":          asset_url,
-                        "path":         saved_rel,
-                        "content_type": asset_resp.headers.get("content-type", ""),
-                    })
-                except Exception as exc:
-                    errors.append({"kind": "asset", "url": asset_url, "error": str(exc)})
+            if download_non_html:
+                for asset_url in sorted(asset_targets):
+                    if asset_url in downloaded_assets:
+                        continue
+                    downloaded_assets.add(asset_url)
+                    try:
+                        asset_resp = client.get(asset_url)
+                        asset_resp.raise_for_status()
+                        asset_rel  = asset_lookup.get(asset_url) or _asset_rel_path(asset_url, root_host).as_posix()
+                        saved_rel  = _save_bytes(site_dir, Path(asset_rel), asset_resp.content)
+                        asset_lookup[asset_url] = saved_rel
+                        assets_saved += 1
+                        assets_meta.append({
+                            "url":          asset_url,
+                            "path":         saved_rel,
+                            "content_type": asset_resp.headers.get("content-type", ""),
+                        })
+                    except Exception as exc:
+                        errors.append({"kind": "asset", "url": asset_url, "error": str(exc)})
 
             manifest["pages_saved"]  = pages_saved
             manifest["assets_saved"] = assets_saved
@@ -417,11 +557,18 @@ def _crawl_capture(job: dict[str, Any]) -> None:
 
         manifest["completed_at"] = _iso_now()
         manifest["status"]       = "completed" if not errors else "completed_with_errors"
+        manifest["indexed_chunks"] = _index_capture_pages(
+            capture_id = manifest["id"],
+            pages      = pages_meta,
+            capture_dir = capture_dir,
+            captured_at = manifest["completed_at"],
+        )
         job["status"]            = manifest["status"]
     except Exception as exc:
         errors.append({"kind": "job", "url": root_url, "error": str(exc)})
         manifest["completed_at"] = _iso_now()
         manifest["status"]       = "failed"
+        manifest["indexed_chunks"] = 0
         job["status"]            = "failed"
     finally:
         client.close()
@@ -434,16 +581,17 @@ def _crawl_capture(job: dict[str, Any]) -> None:
         job["completed_at"] = manifest["completed_at"]
 
 
-def _start_capture(url: str, depth: int) -> dict[str, Any]:
+def _start_capture(url: str, depth: int, download_non_html: bool) -> dict[str, Any]:
     normalised           = _normalise_url(url)
     capture_id, out_dir  = _capture_paths(normalised)
     job = {
-        "id":          capture_id,
-        "url":         normalised,
-        "depth":       int(depth),
-        "created_at":  _iso_now(),
-        "capture_dir": out_dir.as_posix(),
-        "status":      "queued",
+        "id":                 capture_id,
+        "url":                normalised,
+        "depth":              int(depth),
+        "download_non_html":  bool(download_non_html),
+        "created_at":         _iso_now(),
+        "capture_dir":        out_dir.as_posix(),
+        "status":             "queued",
     }
     worker = threading.Thread(target=_crawl_capture, args=(job,), daemon=True, name=f"korescrape-{capture_id}")
     with _JOB_LOCK:
@@ -452,9 +600,26 @@ def _start_capture(url: str, depth: int) -> dict[str, Any]:
     return job
 
 
+@asynccontextmanager
+async def _lifespan(app: FastAPI):
+    _init_db()
+    for capture in list_captures():
+        capture_id   = str(capture.get("id") or "").strip()
+        capture_dir  = Path(str(capture.get("capture_dir") or ""))
+        pages        = capture.get("pages") if isinstance(capture.get("pages"), list) else []
+        completed_at = str(capture.get("completed_at") or capture.get("created_at") or "")
+        if capture_id and capture_dir.exists() and pages:
+            try:
+                _index_capture_pages(capture_id, pages, capture_dir, completed_at)
+            except Exception:
+                continue
+    yield
+
+
 app = FastAPI(
     title       = "KoreScrape",
     description = "Website snapshot capture service",
+    lifespan    = _lifespan,
 )
 
 
@@ -483,14 +648,47 @@ def route_get_capture(capture_id: str):
 
 @app.post("/captures", status_code=202)
 def route_create_capture(payload: CaptureRequest):
-    job = _start_capture(str(payload.url), payload.depth)
+    job = _start_capture(str(payload.url), payload.depth, payload.download_non_html)
     return {
-        "id":         job["id"],
-        "url":        job["url"],
-        "depth":      job["depth"],
-        "created_at": job["created_at"],
-        "status":     job["status"],
+        "id":                job["id"],
+        "url":               job["url"],
+        "depth":             job["depth"],
+        "download_non_html": job["download_non_html"],
+        "created_at":        job["created_at"],
+        "status":            job["status"],
     }
+
+
+@app.get("/chunks")
+def route_list_chunks(limit: int = 100, offset: int = 0, capture_id: Optional[str] = None):
+    return _db_list_chunks(limit=limit, offset=offset, capture_id=capture_id)
+
+
+@app.get("/chunks/{chunk_id}")
+def route_get_chunk(chunk_id: int):
+    chunk = _db_get_chunk(chunk_id)
+    if chunk is None:
+        raise HTTPException(status_code=404, detail="Chunk not found")
+    return chunk
+
+
+@app.delete("/chunks/{chunk_id}")
+def route_delete_chunk(chunk_id: int):
+    if not _db_delete_chunk(chunk_id):
+        raise HTTPException(status_code=404, detail="Chunk not found")
+    return {"ok": True, "id": chunk_id}
+
+
+@app.post("/chunks/{chunk_id}/delete")
+def route_delete_chunk_post(chunk_id: int):
+    if not _db_delete_chunk(chunk_id):
+        raise HTTPException(status_code=404, detail="Chunk not found")
+    return {"ok": True, "id": chunk_id}
+
+
+@app.get("/search")
+def route_search(q: str, limit: int = 20, capture_id: Optional[str] = None):
+    return _db_search_chunks(q=q, limit=limit, capture_id=capture_id)
 
 
 @app.get("/captures/{capture_id}/files/{file_path:path}", include_in_schema=False)
