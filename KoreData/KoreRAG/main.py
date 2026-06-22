@@ -4,7 +4,7 @@
 # Root launcher for KoreRAG sub-service.
 #
 # Prints a startup banner showing total chunk count and SQLite database size, then
-# starts the FastAPI app under uvicorn.  Default port: 8803  (gateway 8620 + offset 3).
+# starts the FastAPI app under uvicorn.
 #
 # Related modules:
 #   - app/server.py    -- FastAPI application and chunk/search API routes

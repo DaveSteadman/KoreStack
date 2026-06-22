@@ -19,26 +19,33 @@ function cachedSuiteUrls() {
 }
 
 const DEFAULT_SERVICES = [
-	{ key: 'korestack', label: 'KoreStack', path: '/', port: 9600, icon: 'korestack' },
-	{ key: 'koreagent', label: 'KoreAgent', path: '/', port: 9601, icon: 'koreagent' },
-	{ key: 'korechat', label: 'KoreChat', path: '/ui', port: 9602, icon: 'korechat' },
-	{ key: 'koredata', label: 'KoreData', path: '/', port: 9603, icon: 'koredata' },
-	{ key: 'koredevice', label: 'KoreDevice', path: '/', port: 9613, icon: 'koredevice' },
-	{ key: 'koredocs', label: 'KoreDocs', path: '/ui', port: 9610, icon: 'koredocs' },
-	{ key: 'korecode', label: 'KoreCode', path: '/ui', port: 9611, icon: 'korecode' },
-	{ key: 'korecomms', label: 'KoreComms', path: '/', port: 9609, icon: 'korecomms' },
+	{ key: 'korestack',  label: 'KoreStack',  path: '/',   icon: 'korestack'  },
+	{ key: 'koreagent',  label: 'KoreAgent',  path: '/',   icon: 'koreagent'  },
+	{ key: 'korechat',   label: 'KoreChat',   path: '/ui', icon: 'korechat'   },
+	{ key: 'koredata',   label: 'KoreData',   path: '/',   icon: 'koredata'   },
+	{ key: 'koredevice', label: 'KoreDevice', path: '/',   icon: 'koredevice' },
+	{ key: 'koredocs',   label: 'KoreDocs',   path: '/ui', icon: 'koredocs'   },
+	{ key: 'korecode',   label: 'KoreCode',   path: '/ui', icon: 'korecode'   },
+	{ key: 'korecomms',  label: 'KoreComms',  path: '/',   icon: 'korecomms'  },
 ];
 
 const SUITE_VERSION_RE = /export\s+const\s+SUITE_VERSION\s*=\s*['\"]([^'\"]+)['\"]/;
 
+function suiteRegistry(urls) {
+	return {
+		...(cachedSuiteUrls() || {}),
+		...((typeof window !== 'undefined' && window.__koreSuiteUrls) || {}),
+		...(urls || {}),
+	};
+}
+
 function serviceUrl(service, currentService, urls) {
-	if (urls[service.key]) return urls[service.key];
-	const cached = cachedSuiteUrls();
-	if (cached?.[service.key]) return cached[service.key];
+	const registry = suiteRegistry(urls);
+	if (registry[service.key]) return registry[service.key];
 	if (typeof window !== 'undefined' && service.key === currentService) {
 		return new URL(service.path, window.location.origin).href;
 	}
-	return `http://${currentHost()}:${service.port}${service.path}`;
+	return null;
 }
 
 function serviceIcon(service, iconSize) {
@@ -47,6 +54,7 @@ function serviceIcon(service, iconSize) {
 
 function serviceItemHtml(service, currentService, urls, iconSize) {
 	const url = serviceUrl(service, currentService, urls);
+	if (!url) return '';
 	const active = service.key === currentService ? ' is-active' : '';
 	const accent = themeFor(service.key)?.accent || 'var(--accent)';
 	return `
@@ -81,11 +89,11 @@ let _lastTopbarOptions = null;
 function _seedUrlsFromKoreStack(koreStackUrl = null) {
 	const fallbackBase = koreStackUrl
 		? koreStackUrl.replace(/\/$/, '')
-		: (() => {
-			const korestack = DEFAULT_SERVICES.find((s) => s.key === 'korestack');
-			if (!korestack) return null;
-	return `http://${currentHost()}:${korestack.port}`;
-		})();
+		: (
+			(typeof window !== 'undefined' && window.__koreSuiteUrls?.korestack)
+			|| cachedSuiteUrls()?.korestack
+			|| null
+		);
 	if (!fallbackBase) return;
 	fetch(`${fallbackBase}/suite-urls`, { cache: 'no-store' })
 		.then((r) => (r.ok ? r.json() : null))
@@ -98,8 +106,10 @@ function _seedUrlsFromKoreStack(koreStackUrl = null) {
 }
 
 function visibleServices(services, urls, currentService) {
-	const registry = Object.keys(urls || {}).length > 0 ? urls : (cachedSuiteUrls() || null);
-	if (!registry) return services;
+	const registry = suiteRegistry(urls);
+	if (Object.keys(registry).length === 0) {
+		return services.filter((service) => service.key === currentService);
+	}
 	return services.filter((service) => (
 		service.key === 'korestack'
 		|| service.key === currentService

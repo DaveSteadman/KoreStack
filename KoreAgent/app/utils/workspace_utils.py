@@ -100,10 +100,8 @@ def _flatten_suite_config(raw: dict) -> dict:
         return flattened
 
     paths = raw.get("paths") if isinstance(raw.get("paths"), dict) else {}
-    if isinstance(paths.get("datacontrolroot"), str):
-        flattened["ControlDataFolder"] = paths["datacontrolroot"]
-    if isinstance(paths.get("datauserroot"), str):
-        flattened["UserDataFolder"] = paths["datauserroot"]
+    if isinstance(paths.get("dataroot"), str) and paths["dataroot"].strip():
+        flattened["DataRootFolder"] = paths["dataroot"].strip()
 
     services = raw.get("services") if isinstance(raw.get("services"), dict) else {}
     agent = services.get("koreagent") if isinstance(services.get("koreagent"), dict) else {}
@@ -116,8 +114,9 @@ def _flatten_suite_config(raw: dict) -> dict:
     elif isinstance(services.get("korechat"), dict):
         _net = raw.get("network") if isinstance(raw.get("network"), dict) else {}
         _kc_host = str(_net.get("host") or "127.0.0.1")
-        _kc_port = services["korechat"].get("port", 8630)
-        flattened["korechaturl"] = f"http://{_kc_host}:{_kc_port}"
+        _kc_port = services["korechat"].get("port")
+        if _kc_port is not None:
+            flattened["korechaturl"] = f"http://{_kc_host}:{_kc_port}"
 
     mcp = raw.get("mcp") if isinstance(raw.get("mcp"), dict) else {}
     if isinstance(mcp.get("connections"), list):
@@ -204,19 +203,22 @@ def load_runtime_config() -> dict:
 
 @lru_cache(maxsize=1)
 def _load_path_overrides() -> dict:
-    """Load ControlDataFolder/UserDataFolder overrides from env, bootstrap defaults, then suite config."""
+    """Load dataroot overrides from env, bootstrap defaults, then suite config."""
 
     overrides: dict[str, Path] = {}
+    env_dr = os.environ.get("KORE_SUITE_DATAROOT", "").strip()
     env_cd = os.environ.get("KORE_SUITE_DATACONTROL", "").strip()
     env_ud = os.environ.get("KORE_SUITE_DATAUSER", "").strip()
+    if env_dr:
+        overrides["DataRootFolder"] = Path(env_dr).resolve()
     if env_cd:
         overrides["ControlDataFolder"] = Path(env_cd).resolve()
     if env_ud:
         overrides["UserDataFolder"] = Path(env_ud).resolve()
 
-    bootstrap_root = get_bootstrap_defaults_file().parent.resolve()
+    bootstrap_root = get_workspace_root().resolve()
     bootstrap_raw = _read_json_file(get_bootstrap_defaults_file())
-    for key in ("ControlDataFolder", "UserDataFolder"):
+    for key in ("DataRootFolder", "ControlDataFolder", "UserDataFolder"):
         if key in overrides:
             continue
         value = bootstrap_raw.get(key)
@@ -226,7 +228,7 @@ def _load_path_overrides() -> dict:
         overrides[key] = path_value if path_value.is_absolute() else (bootstrap_root / path_value).resolve()
 
     raw = load_runtime_config()
-    for key in ("ControlDataFolder", "UserDataFolder"):
+    for key in ("DataRootFolder", "ControlDataFolder", "UserDataFolder"):
         if key in overrides:
             continue
         value = raw.get(key)
@@ -243,13 +245,23 @@ def _load_path_overrides() -> dict:
 @lru_cache(maxsize=1)
 def get_controldata_dir() -> Path:
     """Return the absolute path to the datacontrol/ directory."""
-    return _load_path_overrides().get("ControlDataFolder", get_suite_root() / "datacontrol")
+    overrides = _load_path_overrides()
+    if "ControlDataFolder" in overrides:
+        return overrides["ControlDataFolder"]
+    if "DataRootFolder" in overrides:
+        return overrides["DataRootFolder"] / "datacontrol"
+    return get_suite_root() / "datacontrol"
 
 
 @lru_cache(maxsize=1)
 def get_user_data_dir() -> Path:
     """Return the absolute path to the user-data directory."""
-    return _load_path_overrides().get("UserDataFolder", get_suite_root() / "datauser")
+    overrides = _load_path_overrides()
+    if "UserDataFolder" in overrides:
+        return overrides["UserDataFolder"]
+    if "DataRootFolder" in overrides:
+        return overrides["DataRootFolder"] / "datauser"
+    return get_suite_root() / "datauser"
 
 
 @lru_cache(maxsize=1)

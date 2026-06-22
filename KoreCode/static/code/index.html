@@ -20,14 +20,14 @@
   <main id="code-app" class="kcui-panels">
     <aside id="code-sidebar" class="kcui-panel-left kcui-navpanel">
       <div class="panel-header kcui-navpanel-header kcui-panel-header">
-        <div>
-          <div class="panel-kicker">Explorer</div>
-          <div id="root-label" class="panel-title">KoreStack</div>
-          <div id="root-path" class="panel-path" title=""></div>
+        <div class="explorer-titlebar">
+          <div class="explorer-heading">
+            <div class="panel-kicker explorer-panel-title">Explorer</div>
+          </div>
+          <button id="btn-refresh-tree" class="kcui-tag kcui-tag--muted" type="button" title="Refresh explorer" aria-label="Refresh explorer">&#x21bb;</button>
         </div>
         <div id="explorer-controls">
-          <select id="root-select" class="kcui-tag kcui-tag--muted" title="Select development root"></select>
-          <button id="btn-refresh-tree" class="kcui-tag kcui-tag--muted" type="button" title="Refresh explorer">Refresh</button>
+          <select id="root-select" class="kcui-tag kcui-tag--muted" title="Select development root" aria-label="Select development root"></select>
         </div>
       </div>
       <div id="tree-status" class="panel-status kcui-navpanel-status">Loading workspace…</div>

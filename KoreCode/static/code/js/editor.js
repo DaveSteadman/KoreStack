@@ -420,7 +420,9 @@ export function createEditor({ runFind, runFindNext, runFindPrevious, closeFindB
       }
 
       // If backend root drifted, resync it to the currently displayed explorer root and retry once.
-      const rootPathText = document.getElementById('root-path')?.textContent?.trim();
+      const rootPathText = document.getElementById('root-select')?.dataset?.currentRoot?.trim()
+                        || document.getElementById('root-select')?.value?.trim()
+                        || '';
       if (!rootPathText) {
         throw err;
       }

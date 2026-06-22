@@ -40,7 +40,112 @@ Single JSON payload for orchestration planning.
         "`get_month_name()` - returns the full name of the current month, e.g. `\"March\"`"
       ],
       "param_descriptions": {},
-      "tool_selection_guidance": ""
+      "tool_selection_guidance": "",
+      "is_system_skill": false,
+      "origin": "local",
+      "availability": "configured",
+      "role": "optional",
+      "trust_boundary": "internal"
+    },
+    {
+      "skill_name": "KoreDeviceDriver Skill",
+      "relative_path": "app/skills/KoreDeviceDriver/skill.md",
+      "purpose": "Create, inspect, edit, generate, and run `KoreDeviceDriver` entries through the KoreDeviceDriver service. Use this when the user wants a reusable driver entry with executable Python code rather than a one-off answer in chat.",
+      "module": "KoreAgent/app/skills/KoreDeviceDriver/device_driver_skill.py",
+      "trigger_keyword": "device driver, driver code, hardware adapter, or KoreDeviceDriver entry",
+      "triggers": [
+        "create a device driver",
+        "write a driver",
+        "make a driver entry",
+        "edit this driver",
+        "update the driver code",
+        "change the device driver",
+        "run the driver",
+        "execute the driver snippet",
+        "test this driver",
+        "generate a driver from this prompt",
+        "write a KoreDeviceDriver entry for"
+      ],
+      "functions": [
+        "device_driver_list()",
+        "device_driver_get(name: str)",
+        "device_driver_create(name: str, display_name: str = \"\", vendor: str = \"\", protocol: str = \"\", transport_address: str = \"\", poll_interval_sec: int = 0, enabled: bool = False, description: str = \"\", python_snippet: str = \"\")",
+        "device_driver_update(name: str, display_name: str = \"\", vendor: str = \"\", protocol: str = \"\", transport_address: str = \"\", poll_interval_sec: int = 0, enabled: bool = False, description: str = \"\", python_snippet: str = \"\")",
+        "device_driver_set_code(name: str, python_snippet: str)",
+        "device_driver_run(name: str, display_name: str = \"\", vendor: str = \"\", protocol: str = \"\", transport_address: str = \"\", poll_interval_sec: int = 0, enabled: bool = False, description: str = \"\", python_snippet: str = \"\")",
+        "device_driver_generate_from_prompt(name: str, prompt: str, display_name: str = \"\", vendor: str = \"\", protocol: str = \"\", transport_address: str = \"\", poll_interval_sec: int = 0, enabled: bool = False, description: str = \"\", save: bool = True, run_after_generate: bool = False)"
+      ],
+      "inputs": [],
+      "outputs": [
+        "`device_driver_list()` - returns `list[dict]` of known driver entries.",
+        "`device_driver_get(...)` - returns one driver entry dict including `python_snippet`.",
+        "`device_driver_create(...)` - returns the created driver entry dict.",
+        "`device_driver_update(...)` - returns the updated driver entry dict.",
+        "`device_driver_set_code(...)` - returns the updated driver entry dict after replacing the snippet.",
+        "`device_driver_run(...)` - returns a dict including `ok`, `result`, `stdout`, and `error`.",
+        "`device_driver_generate_from_prompt(...)` - returns a dict including `generated_code`, whether it was saved, and optional `run_result`."
+      ],
+      "param_descriptions": {
+        "device_driver_get": {
+          "name": "exact driver entry name."
+        },
+        "device_driver_create": {
+          "name": "unique driver entry name.",
+          "display_name": "operator-facing label for the driver.",
+          "vendor": "vendor or product family label.",
+          "protocol": "protocol or adapter type, for example `modbus-tcp` or `local-python`.",
+          "transport_address": "endpoint, host, or address string for the target device.",
+          "poll_interval_sec": "polling interval in seconds; use `0` to fall back to the service default.",
+          "enabled": "whether the driver should be marked enabled.",
+          "description": "short human description of what the driver does.",
+          "python_snippet": "Python code that must define `read_driver(context)`."
+        },
+        "device_driver_update": {
+          "name": "existing driver entry name.",
+          "display_name": "replacement display label.",
+          "vendor": "replacement vendor label.",
+          "protocol": "replacement protocol label.",
+          "transport_address": "replacement transport address.",
+          "poll_interval_sec": "replacement polling interval in seconds; use `0` to leave the service default behavior.",
+          "enabled": "replacement enabled state.",
+          "description": "replacement description text.",
+          "python_snippet": "replacement Python code defining `read_driver(context)`."
+        },
+        "device_driver_set_code": {
+          "name": "existing driver entry name.",
+          "python_snippet": "replacement Python code defining `read_driver(context)`."
+        },
+        "device_driver_run": {
+          "name": "existing driver entry name to execute.",
+          "display_name": "optional runtime override for the display label.",
+          "vendor": "optional runtime override for the vendor label.",
+          "protocol": "optional runtime override for the protocol label.",
+          "transport_address": "optional runtime override for the address.",
+          "poll_interval_sec": "optional runtime override for the polling interval.",
+          "enabled": "optional runtime override for the enabled flag.",
+          "description": "optional runtime override for the description.",
+          "python_snippet": "optional runtime override for the Python snippet. When supplied, the run uses this code even if it is not saved yet."
+        },
+        "device_driver_generate_from_prompt": {
+          "name": "driver entry name to create or update.",
+          "prompt": "natural-language description of the driver behavior to generate.",
+          "display_name": "optional display label to save with the entry.",
+          "vendor": "optional vendor label to save with the entry.",
+          "protocol": "optional protocol label to save with the entry.",
+          "transport_address": "optional address to save with the entry.",
+          "poll_interval_sec": "optional poll interval to save with the entry.",
+          "enabled": "whether the saved entry should be enabled.",
+          "description": "description text to save; when blank the generation prompt is reused.",
+          "save": "when true, save the generated code into the driver entry.",
+          "run_after_generate": "when true, run the generated code immediately after generation."
+        }
+      },
+      "tool_selection_guidance": "Use this skill when the user wants reusable driver code stored in `KoreDeviceDriver`.\n\nPreferred flow for natural-language creation requests:\n1. `device_driver_generate_from_prompt(...)`\n2. `device_driver_run(...)` when the user wants verification\n3. `device_driver_get(...)` only when you need to inspect the saved entry afterward\n\nIf the user already provides concrete Python code, skip generation and use:\n1. `device_driver_create(...)` or `device_driver_set_code(...)`\n2. `device_driver_run(...)`\n\nWhen the request is only for current machine metrics, prefer `get_system_info_dict()` instead of creating a driver entry. Use `KoreDeviceDriver` only when the user explicitly wants a reusable driver artifact.",
+      "is_system_skill": false,
+      "origin": "local",
+      "availability": "configured",
+      "role": "optional",
+      "trust_boundary": "internal"
     },
     {
       "skill_name": "KoreGraphAnalysis Skill",
@@ -62,7 +167,12 @@ Single JSON payload for orchestration planning.
       "inputs": [],
       "outputs": [],
       "param_descriptions": {},
-      "tool_selection_guidance": ""
+      "tool_selection_guidance": "",
+      "is_system_skill": false,
+      "origin": "local",
+      "availability": "configured",
+      "role": "optional",
+      "trust_boundary": "internal"
     },
     {
       "skill_name": "SystemInfo Skill",
@@ -107,7 +217,12 @@ Single JSON payload for orchestration planning.
         "`disk_available_gb` (float) - disk free in GiB"
       ],
       "param_descriptions": {},
-      "tool_selection_guidance": ""
+      "tool_selection_guidance": "",
+      "is_system_skill": false,
+      "origin": "local",
+      "availability": "configured",
+      "role": "optional",
+      "trust_boundary": "internal"
     },
     {
       "skill_name": "WebFetch Skill",
@@ -140,7 +255,12 @@ Single JSON payload for orchestration planning.
           "query": "when provided, runs an isolated LLM extraction pass and returns only the facts relevant to the query. Use when you know exactly what you are looking for on the page."
         }
       },
-      "tool_selection_guidance": "**Check the scratchpad before fetching.**\nIf active scratchpad keys are listed in the system prompt, check whether the page content\nalready exists there before making a network request. Use `scratch_query(key, question)` to\nextract a specific answer from stored content without re-fetching.\n\n**This is Stage 3 in the web chain - use it on specific article/detail URLs.**\n\n`fetch_page_text` is designed to read a single known page. If the URL you have is a hub or\nlisting page (front page, topic index, search results), use `get_page_links_text` first to\nsurvey the available links, then call `fetch_page_text` on the selected items.\n\nIf the user asked for article URLs or a news briefing, do not treat a successful fetch of a\nhub page title or headline list as proof that the hub itself is the article. Use navigation to\nextract specific article/detail URLs first.\n\n| Situation | Correct tool |\n|---|---|\n| URL is a specific article/repo/doc | `fetch_page_text(url, query=...)` |\n| URL is a listing/hub/front page | `get_page_links_text(url)` first, then `fetch_page_text` |\n| No URL yet, need to find one | `search_web_text(query)` first |\n\n**Prefer `query=` for narrow factual extraction, but switch to raw+scratchpad for completeness-sensitive pages.**\n\nRaw mode (no `query`) can return up to 4,000 words directly into the orchestration layer. Large\nresults are auto-saved to the scratchpad, which lets you inspect them later with `scratch_query`\nor `scratch_peek` without repeating the network fetch.\n\nQuery mode runs an isolated throwaway LLM call and returns only a compact extracted answer when\nthe question is narrow and page-local.\n\nUse raw mode with a larger `max_words` value (typically 2000-4000) when any of these are true:\n- the question asks for `all`, `every`, `complete`, or a historical list across many years\n- the URL is a stats/index/table page rather than a single narrative article\n- you need broad page context and expect follow-up filtering in the scratchpad\n\nRule of thumb:\n- Fetching a page to answer a question -> always use `query=`\n- Fetching a page to store for later inspection -> use raw mode with generous `max_words`\n- Exhaustive or history-sensitive extraction from a stats page -> use raw mode first, let it auto-save to scratchpad, then use `scratch_query`\n\nBlocked-page rule of thumb:\n- If a fetch returns `Error: ... HTTP 401` or `Error: ... HTTP 403`, treat the page as blocked and move on to another candidate URL.\n- If a fetch returns only a bare title from a topic/search page, treat it as thin hub content rather than a substantive article."
+      "tool_selection_guidance": "**Check the scratchpad before fetching.**\nIf active scratchpad keys are listed in the system prompt, check whether the page content\nalready exists there before making a network request. Use `scratch_query(key, question)` to\nextract a specific answer from stored content without re-fetching.\n\n**This is Stage 3 in the web chain - use it on specific article/detail URLs.**\n\n`fetch_page_text` is designed to read a single known page. If the URL you have is a hub or\nlisting page (front page, topic index, search results), use `get_page_links_text` first to\nsurvey the available links, then call `fetch_page_text` on the selected items.\n\nIf the user asked for article URLs or a news briefing, do not treat a successful fetch of a\nhub page title or headline list as proof that the hub itself is the article. Use navigation to\nextract specific article/detail URLs first.\n\n| Situation | Correct tool |\n|---|---|\n| URL is a specific article/repo/doc | `fetch_page_text(url, query=...)` |\n| URL is a listing/hub/front page | `get_page_links_text(url)` first, then `fetch_page_text` |\n| No URL yet, need to find one | `search_web_text(query)` first |\n\n**Prefer `query=` for narrow factual extraction, but switch to raw+scratchpad for completeness-sensitive pages.**\n\nRaw mode (no `query`) can return up to 4,000 words directly into the orchestration layer. Large\nresults are auto-saved to the scratchpad, which lets you inspect them later with `scratch_query`\nor `scratch_peek` without repeating the network fetch.\n\nQuery mode runs an isolated throwaway LLM call and returns only a compact extracted answer when\nthe question is narrow and page-local.\n\nUse raw mode with a larger `max_words` value (typically 2000-4000) when any of these are true:\n- the question asks for `all`, `every`, `complete`, or a historical list across many years\n- the URL is a stats/index/table page rather than a single narrative article\n- you need broad page context and expect follow-up filtering in the scratchpad\n\nRule of thumb:\n- Fetching a page to answer a question -> always use `query=`\n- Fetching a page to store for later inspection -> use raw mode with generous `max_words`\n- Exhaustive or history-sensitive extraction from a stats page -> use raw mode first, let it auto-save to scratchpad, then use `scratch_query`\n\nBlocked-page rule of thumb:\n- If a fetch returns `Error: ... HTTP 401` or `Error: ... HTTP 403`, treat the page as blocked and move on to another candidate URL.\n- If a fetch returns only a bare title from a topic/search page, treat it as thin hub content rather than a substantive article.",
+      "is_system_skill": false,
+      "origin": "local",
+      "availability": "configured",
+      "role": "optional",
+      "trust_boundary": "internal"
     },
     {
       "skill_name": "WebNavigate Skill",
@@ -182,7 +302,12 @@ Single JSON payload for orchestration planning.
           "timeout_seconds": "network timeout, 5-60."
         }
       },
-      "tool_selection_guidance": ""
+      "tool_selection_guidance": "",
+      "is_system_skill": false,
+      "origin": "local",
+      "availability": "configured",
+      "role": "optional",
+      "trust_boundary": "internal"
     },
     {
       "skill_name": "WebResearch Skill",
@@ -229,7 +354,12 @@ Single JSON payload for orchestration planning.
           "max_evidence_quotes": "number of best evidence snippets to keep per useful page."
         }
       },
-      "tool_selection_guidance": "**This is the most expensive web skill - use it only when simpler tools cannot settle the question.**\n\n`research_traverse` owns its own search frontier: it searches, fetches multiple pages, follows\nlinks, and synthesises evidence internally. This makes it powerful but slow and context-heavy.\nPrefer a cheaper alternative whenever one of the following applies:\n\n| Situation | Prefer instead |\n|---|---|\n| Data already stored this session | `scratch_query` / `scratch_load` |\n| Stable factual topic (person, place, concept) | `lookup_wikipedia` |\n| Answer likely on one known page | `fetch_page_text(url=..., query=...)` |\n| Answer likely on one unknown page | `search_web_text` + `fetch_page_text(query=...)` |\n| Need to browse a listing/hub page and select items | `get_page_links_text` + `fetch_page_text` per item |\n| Multi-source investigation needed | **use `research_traverse`** |\n\n**Escalate to `research_traverse` when initial search returns zero results.**\nIf `search_web` or `search_web_text` returns \"No results\" for a topic that should have web\ncoverage, retry once with a simplified or rephrased query. If still no results, escalate to\n`research_traverse` rather than answering from training data - the traverse skill uses an\ninternal multi-step frontier that can succeed where a single-query search fails.\n\n**When `research_traverse` returns `visited_count=0`, the DuckDuckGo seed failed - not the topic.**\nThis happens when DuckDuckGo rate-limits or blocks the request. Do not report \"no results\" to the\nuser. Instead, fall back through this chain in order, stopping as soon as one succeeds:\n\n1. `lookup_wikipedia(query)` - live Wikipedia lookup.\n2. `search_web` or `search_web_text` with a simplified or rephrased version of the query.\n3. `fetch_page_text` on any promising URLs found in steps 1-2.\n\nOnly report \"no results\" to the user once all of the above are exhausted.\n\n**Exception - do not retry when the failure is a timeout.**\nIf earlier `search_web` calls in this session have already returned `title=\"Search failed\"` with\na timeout error for this query, the endpoint is unreachable. Skip steps 2-3 above and go\ndirectly to `lookup_wikipedia` (step 1) only. Do not issue more\n`search_web` calls against an endpoint that has already timed out multiple times.\n\n**The manual three-stage chain is often better for structured tasks:**\n\nWhen the goal is to ingest articles from a known site (e.g. daily news harvest, GitHub trending),\nuse the manual chain rather than `research_traverse` - it gives the orchestrator visible control\nover which items are selected:\n\n```\n1. get_page_links_text(\"https://news.ycombinator.com\")   <- survey the listing\n2. scratch_query(key, \"which links are about AI tools?\")  <- semantic selection\n3. fetch_page_text(url, query=\"what is this and how to use it?\")  <- read chosen items\n4. write_file(path, content)                              <- store results\n```\n\nReserve `research_traverse` for open-ended investigation where the set of sources is\nunknown upfront and automated frontier expansion is needed.\n\n**Check the scratchpad before researching.**\nIf related content is already stored from an earlier step, use `scratch_query` to extract the\nspecific answer rather than launching a fresh web investigation."
+      "tool_selection_guidance": "**This is the most expensive web skill - use it only when simpler tools cannot settle the question.**\n\n`research_traverse` owns its own search frontier: it searches, fetches multiple pages, follows\nlinks, and synthesises evidence internally. This makes it powerful but slow and context-heavy.\nPrefer a cheaper alternative whenever one of the following applies:\n\n| Situation | Prefer instead |\n|---|---|\n| Data already stored this session | `scratch_query` / `scratch_load` |\n| Stable factual topic (person, place, concept) | `lookup_wikipedia` |\n| Answer likely on one known page | `fetch_page_text(url=..., query=...)` |\n| Answer likely on one unknown page | `search_web_text` + `fetch_page_text(query=...)` |\n| Need to browse a listing/hub page and select items | `get_page_links_text` + `fetch_page_text` per item |\n| Multi-source investigation needed | **use `research_traverse`** |\n\n**Escalate to `research_traverse` when initial search returns zero results.**\nIf `search_web` or `search_web_text` returns \"No results\" for a topic that should have web\ncoverage, retry once with a simplified or rephrased query. If still no results, escalate to\n`research_traverse` rather than answering from training data - the traverse skill uses an\ninternal multi-step frontier that can succeed where a single-query search fails.\n\n**When `research_traverse` returns `visited_count=0`, the DuckDuckGo seed failed - not the topic.**\nThis happens when DuckDuckGo rate-limits or blocks the request. Do not report \"no results\" to the\nuser. Instead, fall back through this chain in order, stopping as soon as one succeeds:\n\n1. `lookup_wikipedia(query)` - live Wikipedia lookup.\n2. `search_web` or `search_web_text` with a simplified or rephrased version of the query.\n3. `fetch_page_text` on any promising URLs found in steps 1-2.\n\nOnly report \"no results\" to the user once all of the above are exhausted.\n\n**Exception - do not retry when the failure is a timeout.**\nIf earlier `search_web` calls in this session have already returned `title=\"Search failed\"` with\na timeout error for this query, the endpoint is unreachable. Skip steps 2-3 above and go\ndirectly to `lookup_wikipedia` (step 1) only. Do not issue more\n`search_web` calls against an endpoint that has already timed out multiple times.\n\n**The manual three-stage chain is often better for structured tasks:**\n\nWhen the goal is to ingest articles from a known site (e.g. daily news harvest, GitHub trending),\nuse the manual chain rather than `research_traverse` - it gives the orchestrator visible control\nover which items are selected:\n\n```\n1. get_page_links_text(\"https://news.ycombinator.com\")   <- survey the listing\n2. scratch_query(key, \"which links are about AI tools?\")  <- semantic selection\n3. fetch_page_text(url, query=\"what is this and how to use it?\")  <- read chosen items\n4. write_file(path, content)                              <- store results\n```\n\nReserve `research_traverse` for open-ended investigation where the set of sources is\nunknown upfront and automated frontier expansion is needed.\n\n**Check the scratchpad before researching.**\nIf related content is already stored from an earlier step, use `scratch_query` to extract the\nspecific answer rather than launching a fresh web investigation.",
+      "is_system_skill": false,
+      "origin": "local",
+      "availability": "configured",
+      "role": "optional",
+      "trust_boundary": "internal"
     },
     {
       "skill_name": "WebSearch Skill",
@@ -271,7 +401,12 @@ Single JSON payload for orchestration planning.
           "prefer_article_urls": "same behavior as `search_web(...)`; when enabled the formatted output also includes each result's `page_kind` tag."
         }
       },
-      "tool_selection_guidance": "**Check the scratchpad before searching.**\nIf relevant data from a prior step in this session is already stored, use `scratch_query` or\n`scratch_load` rather than issuing a new search. Only search the web when the data is\nconfirmed absent from the scratchpad.\n\n**Always call the search tool - never answer from training data.**\nWhen the prompt says \"search for\", \"search the web for\", \"find information about\", or \"look up\",\na tool call is mandatory. The purpose of search prompts is to retrieve current, verified data -\nnot to recall training knowledge. If the tool returns no results, report that explicitly rather\nthan substituting an answer from memory.\n\n**\"Search failed\" vs \"No results\" - treat these differently.**\n- `title=\"No results\"` - DuckDuckGo found nothing for this query. Worth retrying with a\n  simplified query or escalating to `research_traverse`.\n- `title=\"Search failed\"` with a timeout or URL error in the snippet - this is a connectivity\n  failure. The endpoint is unreachable right now. Do NOT retry the same search endpoint with\n  alternative query phrasings - it will time out again. Make at most one offline fallback\n  attempt (`lookup_wikipedia`), then immediately report no results.\n\n**Choose between `search_web` and `search_web_text`:**\n- Use `search_web_text` in almost all cases - returns formatted text ready for direct synthesis,\n  no extra processing needed.\n- Use `search_web` only when you need to iterate over individual result fields (URL, title,\n  snippet) programmatically - for example when passing each URL to a subsequent `fetch_page_text`.\n\n**When the user asks for article URLs, enable article preference.**\n- Use `prefer_article_urls=true` for prompts such as `find 5 article URLs`, `collect news articles`,\n  `gather article links`, or `build a briefing from recent coverage`.\n- Do not treat `hub`, `homepage`, or `search-results` entries as completed article picks.\n- If the top search results are still hubs, route them through `get_page_links_text(...)` to extract\n  concrete article/detail URLs before reading content.\n\n**The three-stage web chain - when to go beyond a search:**\n\n`search_web` is Stage 1: it finds entry-point URLs. Know which stage you need next:\n\n| What you have after search | Next step | When to use it |\n|---|---|---|\n| A specific article URL | `fetch_page_text(url, query=...)` | Reading a known article |\n| A hub/listing/index URL | `get_page_links_text(url)` | Surveying what is on a front page before choosing items |\n| Need multiple sources | `research_traverse(query)` | Full automated investigation |\n| Stable reference topic | `lookup_wikipedia(topic)` | Faster than web search for known subjects |\n\nThe hub-page pattern - use `get_page_links_text` as an intermediate step when the search\nresult is a listing page (HN, GitHub trending, news homepage, forum index) rather than a\ndirect article. Get the links, park them, use `scratch_query` to select, then `fetch_page_text`\non the chosen items."
+      "tool_selection_guidance": "**Check the scratchpad before searching.**\nIf relevant data from a prior step in this session is already stored, use `scratch_query` or\n`scratch_load` rather than issuing a new search. Only search the web when the data is\nconfirmed absent from the scratchpad.\n\n**Always call the search tool - never answer from training data.**\nWhen the prompt says \"search for\", \"search the web for\", \"find information about\", or \"look up\",\na tool call is mandatory. The purpose of search prompts is to retrieve current, verified data -\nnot to recall training knowledge. If the tool returns no results, report that explicitly rather\nthan substituting an answer from memory.\n\n**\"Search failed\" vs \"No results\" - treat these differently.**\n- `title=\"No results\"` - DuckDuckGo found nothing for this query. Worth retrying with a\n  simplified query or escalating to `research_traverse`.\n- `title=\"Search failed\"` with a timeout or URL error in the snippet - this is a connectivity\n  failure. The endpoint is unreachable right now. Do NOT retry the same search endpoint with\n  alternative query phrasings - it will time out again. Make at most one offline fallback\n  attempt (`lookup_wikipedia`), then immediately report no results.\n\n**Choose between `search_web` and `search_web_text`:**\n- Use `search_web_text` in almost all cases - returns formatted text ready for direct synthesis,\n  no extra processing needed.\n- Use `search_web` only when you need to iterate over individual result fields (URL, title,\n  snippet) programmatically - for example when passing each URL to a subsequent `fetch_page_text`.\n\n**When the user asks for article URLs, enable article preference.**\n- Use `prefer_article_urls=true` for prompts such as `find 5 article URLs`, `collect news articles`,\n  `gather article links`, or `build a briefing from recent coverage`.\n- Do not treat `hub`, `homepage`, or `search-results` entries as completed article picks.\n- If the top search results are still hubs, route them through `get_page_links_text(...)` to extract\n  concrete article/detail URLs before reading content.\n\n**The three-stage web chain - when to go beyond a search:**\n\n`search_web` is Stage 1: it finds entry-point URLs. Know which stage you need next:\n\n| What you have after search | Next step | When to use it |\n|---|---|---|\n| A specific article URL | `fetch_page_text(url, query=...)` | Reading a known article |\n| A hub/listing/index URL | `get_page_links_text(url)` | Surveying what is on a front page before choosing items |\n| Need multiple sources | `research_traverse(query)` | Full automated investigation |\n| Stable reference topic | `lookup_wikipedia(topic)` | Faster than web search for known subjects |\n\nThe hub-page pattern - use `get_page_links_text` as an intermediate step when the search\nresult is a listing page (HN, GitHub trending, news homepage, forum index) rather than a\ndirect article. Get the links, park them, use `scratch_query` to select, then `fetch_page_text`\non the chosen items.",
+      "is_system_skill": false,
+      "origin": "local",
+      "availability": "configured",
+      "role": "optional",
+      "trust_boundary": "internal"
     },
     {
       "skill_name": "WebWikipedia Skill",
@@ -306,7 +441,12 @@ Single JSON payload for orchestration planning.
           "timeout": "network timeout in seconds."
         }
       },
-      "tool_selection_guidance": "**Prefer `lookup_wikipedia` over `fetch_page_text` for Wikipedia content.**\nNever use `fetch_page_text` with a `wikipedia.org` URL. `lookup_wikipedia` calls the Wikipedia\nREST API directly, returns a clean pre-parsed extract, and is significantly faster and more\nreliable than scraping the HTML page. If the topic has a Wikipedia article, always call\n`lookup_wikipedia(topic)` instead of fetching the Wikipedia URL.\n\n**Check the scratchpad before calling Wikipedia.**\nIf a Wikipedia article or related content was already fetched earlier in this session, it will\nbe stored in the scratchpad. Use `scratch_query(key, question)` to extract the needed\ninformation from the stored article rather than fetching again.\n\n**Prefer Wikipedia over WebSearch for stable reference topics.**\n`lookup_wikipedia` is a single fast call that returns an authoritative, structured summary.\nFor questions about a person, place, concept, event, or technology with a well-known Wikipedia\narticle - always try Wikipedia first before issuing a web search.\n\n**When to use WebSearch instead:**\n- The topic is current news or a recent event (Wikipedia may not be updated).\n- The question is about a very specific niche where Wikipedia coverage is thin.\n- The topic requires cross-source corroboration."
+      "tool_selection_guidance": "**Prefer `lookup_wikipedia` over `fetch_page_text` for Wikipedia content.**\nNever use `fetch_page_text` with a `wikipedia.org` URL. `lookup_wikipedia` calls the Wikipedia\nREST API directly, returns a clean pre-parsed extract, and is significantly faster and more\nreliable than scraping the HTML page. If the topic has a Wikipedia article, always call\n`lookup_wikipedia(topic)` instead of fetching the Wikipedia URL.\n\n**Check the scratchpad before calling Wikipedia.**\nIf a Wikipedia article or related content was already fetched earlier in this session, it will\nbe stored in the scratchpad. Use `scratch_query(key, question)` to extract the needed\ninformation from the stored article rather than fetching again.\n\n**Prefer Wikipedia over WebSearch for stable reference topics.**\n`lookup_wikipedia` is a single fast call that returns an authoritative, structured summary.\nFor questions about a person, place, concept, event, or technology with a well-known Wikipedia\narticle - always try Wikipedia first before issuing a web search.\n\n**When to use WebSearch instead:**\n- The topic is current news or a recent event (Wikipedia may not be updated).\n- The question is about a very specific niche where Wikipedia coverage is thin.\n- The topic requires cross-source corroboration.",
+      "is_system_skill": false,
+      "origin": "local",
+      "availability": "configured",
+      "role": "optional",
+      "trust_boundary": "internal"
     },
     {
       "skill_name": "CodeExecute Skill",
@@ -353,7 +493,12 @@ Single JSON payload for orchestration planning.
           "code": "a complete, self-contained Python snippet as a string. Must use `print()` for all output."
         }
       },
-      "tool_selection_guidance": ""
+      "tool_selection_guidance": "",
+      "is_system_skill": true,
+      "origin": "builtin",
+      "availability": "guaranteed",
+      "role": "core",
+      "trust_boundary": "internal"
     },
     {
       "skill_name": "Datasets Skill",
@@ -455,7 +600,12 @@ Single JSON payload for orchestration planning.
           "excerpt_chars": "maximum characters to include from large text fields when projection needs a snippet."
         }
       },
-      "tool_selection_guidance": "Use datasets for structured collections. Use the existing scratchpad for string content.\n\nTypical workflow:\n1. Save or auto-ingest a record collection into a dataset.\n2. Inspect it with `dataset_list()` or `dataset_inspect(name)`.\n3. Remove obvious junk cheaply with `dataset_drop_where(...)`.\n4. Apply judgement with `dataset_filter(...)`, using `fields` so the model sees only the relevant record projection.\n5. Fetch the retained records with `dataset_get(...)` when you need them for synthesis.\n6. When KoreData search results include `artifact_ref` and the user wants full bodies instead of snippets, call `dataset_expand_full_text(...)` rather than hand-looping per-row fetches.\n7. Use `dataset_write_koredoc(...)` when the user wants a faithful KoreDocs export of real rows.\n\nPrefer forking over replacement. Keep earlier stages unless the user explicitly wants to overwrite them."
+      "tool_selection_guidance": "Use datasets for structured collections. Use the existing scratchpad for string content.\n\nTypical workflow:\n1. Save or auto-ingest a record collection into a dataset.\n2. Inspect it with `dataset_list()` or `dataset_inspect(name)`.\n3. Remove obvious junk cheaply with `dataset_drop_where(...)`.\n4. Apply judgement with `dataset_filter(...)`, using `fields` so the model sees only the relevant record projection.\n5. Fetch the retained records with `dataset_get(...)` when you need them for synthesis.\n6. When KoreData search results include `artifact_ref` and the user wants full bodies instead of snippets, call `dataset_expand_full_text(...)` rather than hand-looping per-row fetches.\n7. Use `dataset_write_koredoc(...)` when the user wants a faithful KoreDocs export of real rows.\n\nPrefer forking over replacement. Keep earlier stages unless the user explicitly wants to overwrite them.",
+      "is_system_skill": true,
+      "origin": "builtin",
+      "availability": "guaranteed",
+      "role": "core",
+      "trust_boundary": "internal"
     },
     {
       "skill_name": "Delegate Skill",
@@ -491,7 +641,12 @@ Single JSON payload for orchestration planning.
           "tools_allowlist": "list of function names the child is permitted to call."
         }
       },
-      "tool_selection_guidance": ""
+      "tool_selection_guidance": "",
+      "is_system_skill": true,
+      "origin": "builtin",
+      "availability": "guaranteed",
+      "role": "core",
+      "trust_boundary": "internal"
     },
     {
       "skill_name": "FileAccess Skill",
@@ -576,7 +731,12 @@ Single JSON payload for orchestration planning.
           "search_root": "workspace-relative directory to restrict the search. Leave empty to search the whole workspace."
         }
       },
-      "tool_selection_guidance": ""
+      "tool_selection_guidance": "",
+      "is_system_skill": true,
+      "origin": "builtin",
+      "availability": "guaranteed",
+      "role": "core",
+      "trust_boundary": "internal"
     },
     {
       "skill_name": "Scratchpad Skill",
@@ -658,7 +818,12 @@ Single JSON payload for orchestration planning.
           "instructions": "if provided, replaces the default \"precise extractor\" system prompt entirely."
         }
       },
-      "tool_selection_guidance": "**Check the scratchpad before making any web or file request.**\n\nIf the system prompt lists active scratchpad keys, always consider whether the data needed to\nanswer the current question might already be stored there from an earlier step in this session.\nRe-fetching data that is already in the scratchpad wastes an entire LLM call and a network round-trip.\n\nDecision tree when data may already be stored:\n1. Call `scratch_list()` if the keys are not already visible.\n2. If a relevant key exists and you need a specific answer from it - use `scratch_query(key, question)`. The query runs in an isolated context; the raw content never enters the main window.\n3. If a relevant key exists and you need the full content (e.g. to write it to a file) - use `scratch_load(key)` or `{scratch:key}` token substitution.\n4. If a relevant key exists and you need to locate a specific passage - use `scratch_peek(key, substring)`.\n5. Only proceed to a web or file skill if the data is confirmed to not be in the scratchpad.\n\nTool selection hierarchy (prefer earlier options when they can provide the answer):\n- `scratch_query` / `scratch_load` - data already in session, zero network cost\n- `lookup_wikipedia` - stable factual reference, single fast call\n- `fetch_page_text(query=...)` - known URL, isolated extraction\n- `search_web_text` + `fetch_page_text(query=...)` - URL unknown, single page answer\n- `research_traverse` - multi-source investigation, most expensive; use only when simpler tools cannot settle the question"
+      "tool_selection_guidance": "**Check the scratchpad before making any web or file request.**\n\nIf the system prompt lists active scratchpad keys, always consider whether the data needed to\nanswer the current question might already be stored there from an earlier step in this session.\nRe-fetching data that is already in the scratchpad wastes an entire LLM call and a network round-trip.\n\nDecision tree when data may already be stored:\n1. Call `scratch_list()` if the keys are not already visible.\n2. If a relevant key exists and you need a specific answer from it - use `scratch_query(key, question)`. The query runs in an isolated context; the raw content never enters the main window.\n3. If a relevant key exists and you need the full content (e.g. to write it to a file) - use `scratch_load(key)` or `{scratch:key}` token substitution.\n4. If a relevant key exists and you need to locate a specific passage - use `scratch_peek(key, substring)`.\n5. Only proceed to a web or file skill if the data is confirmed to not be in the scratchpad.\n\nTool selection hierarchy (prefer earlier options when they can provide the answer):\n- `scratch_query` / `scratch_load` - data already in session, zero network cost\n- `lookup_wikipedia` - stable factual reference, single fast call\n- `fetch_page_text(query=...)` - known URL, isolated extraction\n- `search_web_text` + `fetch_page_text(query=...)` - URL unknown, single page answer\n- `research_traverse` - multi-source investigation, most expensive; use only when simpler tools cannot settle the question",
+      "is_system_skill": true,
+      "origin": "builtin",
+      "availability": "guaranteed",
+      "role": "core",
+      "trust_boundary": "internal"
     },
     {
       "skill_name": "TaskManagement Skill",
@@ -728,7 +893,12 @@ Single JSON payload for orchestration planning.
           "name": "name of the task to permanently remove."
         }
       },
-      "tool_selection_guidance": "- For natural-language requests that ask to list, show, review, or summarise scheduled tasks, prefer `task_list()` immediately.\n- Treat phrases like `list all my scheduled tasks`, `show my tasks`, `what tasks do I have`, `what scheduled tasks are active`, and `what automation is configured` as direct matches for `task_list()`.\n- If the user names a specific task and asks for its details, use `task_get(name)` instead of `task_list()`.\n- If the user types the literal slash command `/tasks`, that is handled by the slash-command layer; otherwise, natural-language task-listing requests should use this skill."
+      "tool_selection_guidance": "- For natural-language requests that ask to list, show, review, or summarise scheduled tasks, prefer `task_list()` immediately.\n- Treat phrases like `list all my scheduled tasks`, `show my tasks`, `what tasks do I have`, `what scheduled tasks are active`, and `what automation is configured` as direct matches for `task_list()`.\n- If the user names a specific task and asks for its details, use `task_get(name)` instead of `task_list()`.\n- If the user types the literal slash command `/tasks`, that is handled by the slash-command layer; otherwise, natural-language task-listing requests should use this skill.",
+      "is_system_skill": true,
+      "origin": "builtin",
+      "availability": "guaranteed",
+      "role": "core",
+      "trust_boundary": "internal"
     }
   ]
 }

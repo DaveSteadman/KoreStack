@@ -426,6 +426,7 @@ class MessageAppendRequest(BaseModel):
     content:        str
     sender_display: str = ""
     status:         str = "received"
+    response_payload: dict | None = None
 
 
 class MessagePatchRequest(BaseModel):
@@ -448,7 +449,10 @@ def append_message(conversation_id: int, req: MessageAppendRequest):
     )
     # Inbound messages need an agent response - create the event so the agent picks it up.
     if req.direction == "inbound":
-        db.ensure_response_needed_event(conversation_id)
+        db.ensure_response_needed_event(
+            conversation_id,
+            payload=req.response_payload or {},
+        )
         db.conversation_update(conversation_id=conversation_id, status="waiting_agent")
     elif req.direction == "outbound":
         db.clear_pending_response_needed_events(conversation_id)

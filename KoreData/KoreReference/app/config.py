@@ -4,7 +4,7 @@
 # KoreReference configuration loader.
 #
 # Reads host, port, and data_dir from the suite-level config under the [korereference]
-# section.  Default port: 8804  (gateway 8620 + offset 4).
+# section.
 #
 # Related modules:
 #   - KoreReference/main.py    -- imports cfg at startup
@@ -17,7 +17,7 @@ from config import get_koredata_dir, load_config
 _SECTION = "korereference"
 
 _DEFAULTS = {
-    "port": 8804,
+    "port": None,
     "host": "0.0.0.0",
     "data_dir": str(get_koredata_dir() / "Reference"),
     "log_level": "info",

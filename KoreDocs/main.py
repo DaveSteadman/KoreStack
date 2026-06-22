@@ -7,7 +7,7 @@
 # Run with:  python ./main.py
 #
 # Related modules:
-#   - app/server.py  -- main() starts the FastAPI app under uvicorn (default port: 8615)
+#   - app/server.py  -- main() starts the FastAPI app under uvicorn using the suite config port
 # ====================================================================================================
 
 from __future__ import annotations

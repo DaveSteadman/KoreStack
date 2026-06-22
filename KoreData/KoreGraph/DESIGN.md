@@ -98,7 +98,7 @@ All proposals land as `state=0` (proposed). A curation pass promotes to `state=1
 KoreGraph follows the same pattern as KoreFeed, KoreLibrary, KoreRAG and KoreReference.
 
 ### Port
-**8826** — standalone port for KoreGraph. Proxied behind KoreDataGateway at `/graph` prefix.
+Configured via `services.koregraph.port` in `config/korestack_config.json`. Proxied behind KoreDataGateway at `/graph` prefix.
 
 ### Module layout
 ```

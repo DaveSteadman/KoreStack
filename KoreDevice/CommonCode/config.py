@@ -46,14 +46,21 @@ def get_suite_root() -> Path:
     return _SUITE_ROOT
 
 
+def get_suite_dataroot_dir() -> Path:
+    env_path = os.environ.get("KORE_SUITE_DATAROOT", "").strip()
+    if env_path:
+        return Path(env_path).resolve()
+    configured = _resolve_configured_root("dataroot")
+    if configured is not None:
+        return configured
+    return get_suite_root()
+
+
 def get_suite_datacontrol_dir() -> Path:
     env_path = os.environ.get("KORE_SUITE_DATACONTROL", "").strip()
     if env_path:
         return Path(env_path).resolve()
-    configured = _resolve_configured_root("datacontrolroot")
-    if configured is not None:
-        return configured
-    return get_suite_root() / "datacontrol"
+    return get_suite_dataroot_dir() / "datacontrol"
 
 
 def get_koredevice_dir() -> Path:
@@ -65,6 +72,7 @@ def get_koredevice_dir() -> Path:
 
 _DEVICE_SUBSERVICE_OFFSETS: dict[str, int] = {
     "koredevicenumber": 1,
+    "koredevicedriver": 2,
 }
 
 
@@ -93,5 +101,6 @@ def load_config(section: str, defaults: dict) -> dict:
         result["port"] = port
 
     result.update(raw.get(section, {}))
+    if result.get("port") is None:
+        raise RuntimeError(f"Missing services.{section}.port in config/korestack_config.json.")
     return result
-

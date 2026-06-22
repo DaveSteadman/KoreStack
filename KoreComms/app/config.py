@@ -8,8 +8,8 @@
 # dict so server.py and poller.py can import one name.
 #
 # Defaults:
-#   port:                          8900  (env: KORECOMMS_PORT)
-#   korechat_url:                  http://localhost:8700
+#   port:                          from config/korestack_config.json
+#   korechat_url:                  from connections.korechat or services.korechat in suite config
 #   poll_interval:                 60  (seconds)
 #   event_poll_interval:           5   (seconds)
 #   missing_kc_conversation_policy: "create"
@@ -31,13 +31,13 @@ _DEFAULT_DATA_DIR = _SUITE_ROOT / "datacontrol" / "korecomms"
 
 _DEFAULTS: dict = {
     "host": os.environ.get("KORECOMMS_HOST", "0.0.0.0"),
-    "port": int(os.environ.get("KORECOMMS_PORT", "8900")),
+    "port": None,
     "log_level": os.environ.get("KORECOMMS_LOG_LEVEL", "info"),
     "poll_interval": 60,
     "event_poll_interval": 1.0,
     "missing_kc_conversation_policy": "recreate",
     "data_dir": os.environ.get("KORECOMMS_DATA_DIR", str(_DEFAULT_DATA_DIR)),
-    "korechat_url": os.environ.get("KORECOMMS_KORECHAT_URL", "http://localhost:8630"),
+    "korechat_url": os.environ.get("KORECOMMS_KORECHAT_URL", "").strip() or None,
 }
 
 
@@ -46,6 +46,17 @@ def _load() -> dict:
         korechat = raw.get("connections", {}).get("korechat")
         if korechat is not None:
             result["korechat_url"] = korechat
+            return
+
+        services = raw.get("services") if isinstance(raw.get("services"), dict) else {}
+        korechat_service = services.get("korechat") if isinstance(services.get("korechat"), dict) else {}
+        korechat_port = korechat_service.get("port")
+        if korechat_port is None:
+            return
+
+        network = raw.get("network") if isinstance(raw.get("network"), dict) else {}
+        host = str(network.get("host") or result.get("host") or "127.0.0.1").strip() or "127.0.0.1"
+        result["korechat_url"] = f"http://{host}:{int(korechat_port)}"
 
     result = load_service_config(
         service_key="korecomms",
@@ -53,13 +64,15 @@ def _load() -> dict:
         suite_root=_SUITE_ROOT,
         env_overrides={
             "host": "KORECOMMS_HOST",
-            "port": "KORECOMMS_PORT",
             "log_level": "KORECOMMS_LOG_LEVEL",
             "data_dir": "KORECOMMS_DATA_DIR",
             "korechat_url": "KORECOMMS_KORECHAT_URL",
         },
         raw_merger=_merge_connections,
+        require_port=True,
     )
+    if not str(result.get("korechat_url") or "").strip():
+        raise RuntimeError("KoreComms requires a KoreChat URL resolved from suite config.")
     result["data_dir"] = str(Path(result["data_dir"]).resolve())
     return result
 

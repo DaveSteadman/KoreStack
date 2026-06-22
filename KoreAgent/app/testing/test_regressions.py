@@ -308,8 +308,7 @@ class RegressionTests(unittest.TestCase):
             bootstrap.parent.mkdir(parents=True, exist_ok=True)
             bootstrap.write_text(
                 '{\n'
-                '  "ControlDataFolder": "custom_control",\n'
-                '  "UserDataFolder": "userdata"\n'
+                '  "DataRootFolder": "suite_data"\n'
                 '}\n',
                 encoding="utf-8",
             )
@@ -322,8 +321,8 @@ class RegressionTests(unittest.TestCase):
 
             try:
                 with patch.object(workspace_utils_module, "get_workspace_root", return_value=tmp_root):
-                    self.assertEqual(workspace_utils_module.get_controldata_dir(), (tmp_root / "custom_control").resolve())
-                    self.assertEqual(workspace_utils_module.get_user_data_dir(), (tmp_root / "userdata").resolve())
+                    self.assertEqual(workspace_utils_module.get_controldata_dir(), (tmp_root / "suite_data" / "datacontrol").resolve())
+                    self.assertEqual(workspace_utils_module.get_user_data_dir(), (tmp_root / "suite_data" / "datauser").resolve())
             finally:
                 workspace_utils_module.get_bootstrap_defaults_file.cache_clear()
                 workspace_utils_module.load_runtime_config.cache_clear()

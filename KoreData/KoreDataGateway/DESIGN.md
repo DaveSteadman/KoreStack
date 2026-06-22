@@ -22,16 +22,16 @@ The agent search interface is the **primary goal**. All other features exist to 
 LLM Agent
     │
     ▼
-KoreDataGateway  :8620
+KoreDataGateway  : services.koredatagateway.port
   ├── POST /api/search        ◄── primary agent API
   ├── GET  /mcp               ◄── MCP Streamable HTTP transport
   ├── GET  /                  ◄── redirect → /ui
   ├── GET  /ui                ◄── landing page (service health + search test)
   ├── GET  /status            ◄── machine-readable health
-  ├── /ui/feeds/*      ◄── proxied to KoreFeed      → :8621  (child process)
-  ├── /ui/library/*    ◄── proxied to KoreLibrary   → :8622  (child process)
-  ├── /ui/rag/*        ◄── proxied to KoreRAG       → :8623  (child process)
-  └── /ui/reference/*  ◄── proxied to KoreReference → :8624  (child process)
+  ├── /ui/feeds/*      ◄── proxied to KoreFeed      → services.korefeed.port
+  ├── /ui/library/*    ◄── proxied to KoreLibrary   → services.korelibrary.port
+  ├── /ui/rag/*        ◄── proxied to KoreRAG       → services.korerag.port
+  └── /ui/reference/*  ◄── proxied to KoreReference → services.korereference.port
 ```
 
 The gateway starts all four child services at startup (subprocess), waits for each to become healthy, and terminates them cleanly at shutdown. It holds persistent `httpx.AsyncClient` connections to each child.
@@ -218,10 +218,10 @@ Machine-readable health endpoint used by the landing page and agents.
   "service": "KoreDataGateway",
   "version": "...",
   "children": {
-    "korefeed":      { "url": "http://127.0.0.1:8621", "healthy": true, ... },
-    "korelibrary":   { "url": "http://127.0.0.1:8622", "healthy": true, ... },
-    "korereference": { "url": "http://127.0.0.1:8624", "healthy": true, ... },
-    "korerag":       { "url": "http://127.0.0.1:8623", "healthy": true, ... }
+    "korefeed":      { "url": "http://<host>:<services.korefeed.port>", "healthy": true, ... },
+    "korelibrary":   { "url": "http://<host>:<services.korelibrary.port>", "healthy": true, ... },
+    "korereference": { "url": "http://<host>:<services.korereference.port>", "healthy": true, ... },
+    "korerag":       { "url": "http://<host>:<services.korerag.port>", "healthy": true, ... }
   }
 }
 ```
@@ -254,13 +254,13 @@ At gateway shutdown (SIGTERM or process exit):
 
 | Key | Default | Description |
 |-----|---------|-------------|
-| `port` | `8620` | Gateway listen port in suite mode |
+| `port` | `services.koredatagateway.port` | Gateway listen port from `config/korestack_config.json` |
 | `host` | `0.0.0.0` | Gateway bind address |
 | `log_level` | `"info"` | Uvicorn log level |
-| `korefeed_url` | `http://127.0.0.1:8621` | KoreFeed base URL |
-| `korelibrary_url` | `http://127.0.0.1:8622` | KoreLibrary base URL |
-| `korereference_url` | `http://127.0.0.1:8624` | KoreReference base URL |
-| `korerag_url` | `http://127.0.0.1:8623` | KoreRAG base URL |
+| `korefeed_url` | `http://<host>:<services.korefeed.port>` | KoreFeed base URL |
+| `korelibrary_url` | `http://<host>:<services.korelibrary.port>` | KoreLibrary base URL |
+| `korereference_url` | `http://<host>:<services.korereference.port>` | KoreReference base URL |
+| `korerag_url` | `http://<host>:<services.korerag.port>` | KoreRAG base URL |
 
 ---
 

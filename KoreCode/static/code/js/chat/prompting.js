@@ -7,7 +7,7 @@ const AGENT_OUTPUT_SCHEMA = {
   findings: [],
   tool_requests: [
     {
-      tool: 'read_file|read_context|list_tree|search_in_file',
+      tool: 'read_file|read_context|list_tree|search_in_file|get_python_function|replace_python_function|insert_python_function',
       args: {},
       reason: 'why this tool is needed',
     },
@@ -40,6 +40,29 @@ const AGENT_TOOL_GUIDE = {
       path: 'workspace-relative path',
       query: 'plain text to match',
       max_results: 'optional positive integer',
+    },
+  },
+  get_python_function: {
+    args: {
+      path:   'workspace-relative Python file path',
+      symbol: 'function name or ClassName.method_name',
+    },
+  },
+  replace_python_function: {
+    args: {
+      path:        'workspace-relative Python file path',
+      symbol:      'function name or ClassName.method_name',
+      expected_hash: 'file content hash returned by get_python_function',
+      replacement: 'full replacement source for that function or method',
+    },
+  },
+  insert_python_function: {
+    args: {
+      path:         'workspace-relative Python file path',
+      expected_hash: 'file content hash returned by get_python_function or read_file',
+      source:       'full source for the new function or method',
+      after_symbol: 'optional anchor function or method name',
+      into_class:   'optional class name for inserting a new method',
     },
   },
 };
@@ -115,6 +138,10 @@ function buildAgentContract(mode) {
     'When finished, set next="done" and use kind="analysis", "edits", or "final" as appropriate.',
     'When emitting edits, include line-based ranges with from/to inclusive.',
     'If creating a new file, use from=1 and to=1 and put full file content in replacement.',
+    'For Python files, prefer get_python_function before editing an existing function or method.',
+    'Before replace_python_function or insert_python_function, first obtain the current file content_hash.',
+    'Use replace_python_function when you can safely replace one whole Python function or method.',
+    'Use insert_python_function when adding a new Python function or class method.',
   ];
   return lines.join(' ');
 }

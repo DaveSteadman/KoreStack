@@ -21,7 +21,7 @@
 # Each conversation maps to a stable session_id "kc_conv_{id}" for orchestration history.
 #
 # Configuration:
-#   "korechaturl" in the runtime config, e.g. "http://localhost:8630".
+#   "korechaturl" in the runtime config, derived from suite config.
 #   If absent, the thread exits immediately with a notice.
 #
 # Public entry point:
@@ -70,7 +70,6 @@ from utils.workspace_utils import load_runtime_config
 # MARK: CONSTANTS
 # ====================================================================================================
 _CONFIG_KEY        = "korechaturl"
-_DEFAULT_BASE_URL  = "http://localhost:8630"
 _DEFAULT_POLL_SECS = 3
 _DEFAULT_TIMEOUT   = 8
 _SESSION_PREFIX    = "kc_conv_"
@@ -88,9 +87,9 @@ def _get_base_url() -> str | None:
     try:
         cfg = load_runtime_config()
         url = cfg.get(_CONFIG_KEY, "").strip().rstrip("/")
-        return url if url else _DEFAULT_BASE_URL
+        return url if url else None
     except Exception:
-        return _DEFAULT_BASE_URL
+        return None
 
 
 # ====================================================================================================
@@ -412,6 +411,16 @@ def _handle_event(
     event_type = (event.get("event_type") or "").strip()
     conv       = event.get("conversation") or {}
     conv_id    = conv.get("id")
+    raw_payload = event.get("payload")
+    if isinstance(raw_payload, str):
+        try:
+            event_payload = json.loads(raw_payload) if raw_payload.strip() else {}
+        except json.JSONDecodeError:
+            event_payload = {}
+    elif isinstance(raw_payload, dict):
+        event_payload = raw_payload
+    else:
+        event_payload = {}
 
     if event_type == "compress_needed":
         _handle_compress_needed(
@@ -476,7 +485,9 @@ def _handle_event(
             warning_logger=lambda message: push_log_line(f"[KORECHAT] Conv {conv_id}: {message}"),
         )
 
-        user_prompt = _build_prompt(conv, messages, push_log_line=push_log_line)
+        user_prompt = str(event_payload.get("prompt_override") or "").strip()
+        if not user_prompt:
+            user_prompt = _build_prompt(conv, messages, push_log_line=push_log_line)
 
         # KC owns the persisted conversation state. The agent keeps only transient
         # per-run session context in memory for this turn.
@@ -523,7 +534,8 @@ def _handle_event(
 
         reply              = response.strip()
         current_scratchpad = get_store(session_id=session_id)
-        current_scratchpad = _merge_conv_facts(current_scratchpad, user_prompt, turn_count)
+        fact_source_prompt = str(event_payload.get("visible_text") or "").strip() or user_prompt
+        current_scratchpad = _merge_conv_facts(current_scratchpad, fact_source_prompt, turn_count)
         persisted_scratchpad = build_persisted_scratchpad_payload(current_scratchpad)
         persisted_datasets = get_persisted_datasets_payload(session_id)
 
@@ -544,7 +556,7 @@ def _handle_event(
             _http_post(base, f"/conversations/{conv_id}/messages", {
                 "direction":      "outbound",
                 "content":        reply,
-                "sender_display": "agent",
+                "sender_display": str(event_payload.get("outbound_sender_display") or "agent"),
                 "status":         "sent",
             })
         except Exception as exc:

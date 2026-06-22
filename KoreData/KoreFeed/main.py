@@ -4,7 +4,7 @@
 # Root launcher for KoreFeed sub-service.
 #
 # Prints a startup status showing domain count and feed count, then starts the
-# FastAPI app under uvicorn.  Default port: 8801  (base gateway 8620 + offset 1).
+# FastAPI app under uvicorn.
 #
 # Related modules:
 #   - app/server.py       -- FastAPI application and feed API routes

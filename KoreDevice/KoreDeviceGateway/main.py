@@ -25,9 +25,10 @@ def _print_banner() -> None:
         f"  KOREDEVICEGATEWAY  [{now}]",
         sep,
         "",
-        row("Gateway:",          f"http://localhost:{cfg['port']}/"),
-        row("KoreDeviceNumber:", cfg["koredevicenumber_url"]),
-        row("Log level:",        cfg["log_level"].upper()),
+        row("Gateway:",           f"http://localhost:{cfg['port']}/"),
+        row("KoreDeviceNumber:",  cfg["koredevicenumber_url"]),
+        row("KoreDeviceDriver:",  cfg["koredevicedriver_url"]),
+        row("Log level:",         cfg["log_level"].upper()),
         "",
         sep,
         "",
@@ -46,4 +47,3 @@ if __name__ == "__main__":
         log_level  = cfg["log_level"],
         log_config = logutil.make_log_config(log_path),
     )
-

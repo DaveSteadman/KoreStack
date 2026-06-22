@@ -4,7 +4,7 @@
 # Root launcher for KoreGraph sub-service.
 #
 # Prints a startup banner showing entity count, relation count, and listen address,
-# then starts the FastAPI app under uvicorn.  Default port: 8805  (gateway 8620 + offset 5).
+# then starts the FastAPI app under uvicorn.
 #
 # Related modules:
 #   - app/server.py    -- FastAPI application, REST API, UI routes, MCP

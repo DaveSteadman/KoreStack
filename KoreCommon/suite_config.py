@@ -32,6 +32,7 @@ def load_service_config(
     suite_root: Path,
     env_overrides: dict[str, str] | None = None,
     raw_merger: RawMerger | None = None,
+    require_port: bool = False,
 ) -> dict[str, Any]:
     """Load service config from config/korestack_config.json.
 
@@ -69,5 +70,10 @@ def load_service_config(
             result[key] = env_value
             continue
         result[key] = _coerce_env_value(env_value, current)
+
+    if require_port and result.get("port") is None:
+        raise RuntimeError(
+            f"Missing services.{service_key}.port in config/korestack_config.json"
+        )
 
     return result

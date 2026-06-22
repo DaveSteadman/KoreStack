@@ -108,11 +108,11 @@ KoreComms reads suite config from top-level config files and environment overrid
 | Key | Typical suite value | Notes |
 |---|---|---|
 | `host` | `127.0.0.1` | From suite network host when launched via KoreStack |
-| `port` | `8625` | Suite default from config/default.json services.comms.port |
+| `port` | `services.korecomms.port` | Suite port from `config/korestack_config.json` |
 | `korechat_url` | `http://127.0.0.1:8630` | Suite connection target |
 | `poll_interval` | `60` | Interface polling cadence |
 
-Standalone fallback defaults may differ (for example port 8900), but suite-mode values from config/default.json are authoritative for the integrated stack.
+Ports are defined by `config/korestack_config.json`; standalone and suite mode must use that configuration rather than embedded defaults.
 
 ---
 

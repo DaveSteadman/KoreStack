@@ -15,13 +15,13 @@ KoreData provides structured, searchable content across four domains — live ne
 
 ## Services
 
-| Service | Port | Status | Description |
+| Service | Port Source | Status | Description |
 |---|---|---|---|
-| **KoreDataGateway** | 8620 | Working | Unified agent API; proxies and aggregates results from all child services |
-| **KoreFeed** | 8621 | Working | RSS ingest with full-text scraping and per-domain SQLite/FTS5 storage |
-| **KoreLibrary** | 8622 | Working | Long-form ebook and document store with catalog-aware routing and provenance fields |
-| **KoreRAG** | 8623 | In development | Vector chunk store for RAG; segments and embeds documents for semantic retrieval |
-| **KoreReference** | 8624 | In development | Wikipedia-scale encyclopedic articles with wikilink traversal |
+| **KoreDataGateway** | `services.koredatagateway.port` | Working | Unified agent API; proxies and aggregates results from all child services |
+| **KoreFeed** | `services.korefeed.port` | Working | RSS ingest with full-text scraping and per-domain SQLite/FTS5 storage |
+| **KoreLibrary** | `services.korelibrary.port` | Working | Long-form ebook and document store with catalog-aware routing and provenance fields |
+| **KoreRAG** | `services.korerag.port` | In development | Vector chunk store for RAG; segments and embeds documents for semantic retrieval |
+| **KoreReference** | `services.korereference.port` | In development | Wikipedia-scale encyclopedic articles with wikilink traversal |
 
 ---
 
@@ -41,7 +41,7 @@ python main.py
 Then open:
 
 ```text
-http://localhost:8620/
+http://<host>:<services.koredatagateway.port>/
 ```
 
 The feed scheduler starts immediately. Configured feeds are fetched on their own intervals; a restart respects each feed's last-fetched timestamp so nothing is re-ingested unnecessarily.
@@ -55,7 +55,7 @@ Once KoreFeed is running, try a keyword search against the live database:
 Use the gateway UI to search across domains:
 
 ```text
-http://localhost:8620/ui
+http://<host>:<services.koredatagateway.port>/ui
 ```
 
 What you should see:
@@ -66,7 +66,7 @@ What you should see:
 Browse by domain to see per-source coverage:
 
 ```text
-http://localhost:8801/
+http://<host>:<services.korefeed.port>/
 ```
 
 This is the core loop: feeds arrive on schedule, full page text is extracted, stored, and immediately searchable — by browser or by agent.
@@ -75,7 +75,7 @@ This is the core loop: feeds arrive on schedule, full page text is extracted, st
 
 ## What You Can Do
 
-- Point an LLM agent at `POST /api/search` on KoreDataGateway (port 8620) and receive a merged flat result list plus `results_by_domain` groupings in one call.
+- Point an LLM agent at `POST /api/search` on KoreDataGateway and receive a merged flat result list plus `results_by_domain` groupings in one call.
 - Manage feed inventories — add, remove, or adjust domains and fetch intervals — via the REST API or the browser UI.
 - Import an ebook collection from a local Kiwix server running Project Gutenberg ZIM content into KoreLibrary.
 - Import Wikipedia (or any Kiwix-hosted wiki) into KoreReference and traverse inter-article links as part of an agent research workflow.
@@ -89,12 +89,12 @@ This is the core loop: feeds arrive on schedule, full page text is extracted, st
 LLM Agent
     │
     ▼
-KoreDataGateway  :8620
+KoreDataGateway  : services.koredatagateway.port
     ├── POST /api/search  ◄── primary agent endpoint
-    ├── /feeds/*          ──► KoreFeed      :8621
-    ├── /library/*        ──► KoreLibrary   :8622
-    ├── /rag/*            ──► KoreRAG       :8623
-    └── /reference/*      ──► KoreReference :8624
+    ├── /feeds/*          ──► KoreFeed      : services.korefeed.port
+    ├── /library/*        ──► KoreLibrary   : services.korelibrary.port
+    ├── /rag/*            ──► KoreRAG       : services.korerag.port
+    └── /reference/*      ──► KoreReference : services.korereference.port
 ```
 
 KoreDataGateway launches and supervises the four child services as subprocesses, waits for each to become healthy, and proxies all UI and API requests through. The gateway's `POST /api/search` endpoint fans requests out to however many services are specified in the call, returns a merged `results` list for agent consumers, and keeps `results_by_domain` for grouped UI rendering.
@@ -105,7 +105,7 @@ While KoreDataGateway is under development, each service can be started and used
 
 ## Works With
 
-KoreData is designed to be the data layer for [MiniAgentFramework](https://github.com/DaveSteadman/MiniAgentFramework), a local-first Ollama-based agent framework. Point MiniAgentFramework at `POST http://localhost:8620/api/search` to give agents access to live news, books, reference articles, and RAG content without any cloud search dependency.
+KoreData is designed to be the data layer for [MiniAgentFramework](https://github.com/DaveSteadman/MiniAgentFramework), a local-first Ollama-based agent framework. Point MiniAgentFramework at `POST http://<host>:<services.koredatagateway.port>/api/search` to give agents access to live news, books, reference articles, and RAG content without any cloud search dependency.
 
 ---
 

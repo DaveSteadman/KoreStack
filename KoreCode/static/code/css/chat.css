@@ -310,6 +310,10 @@
   color: var(--text-dim);
 }
 
+#chat-selection-label {
+  color: color-mix(in srgb, var(--text-dim) 72%, var(--surface) 28%);
+}
+
 #chat-quick-prompts {
   display: flex;
   flex-wrap: wrap;

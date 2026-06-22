@@ -3,43 +3,56 @@ export function createContinueModeController({
   btnModeContinue,
   getContinueContext,
   insertContinuation,
-  agentBase,
   getCurrentPath,
+  getConversationExternalId,
+  fetchConversationThread,
+  postConversationFollowup,
   setMode,
   setGenerating,
   save,
   consumeManualStop,
   isTransientStreamInterrupt,
   errorText,
-  safeCancelReader,
-  setActiveReader,
 }) {
-  let continueStatus = null;
-  let continueController = null;
-  let continuePreviewPath = null;
-  let continuePendingRunId = null;
+  let continueStatus         = null;
+  let continueController     = null;
+  let continuePreviewPath    = null;
+  let continuePendingRunId   = null;
   let continuePendingContext = null;
   let continueResumeInFlight = false;
-  let continueInProgress = false;
+  let continueInProgress     = false;
 
   function stateSnapshot() {
     if (!continueInProgress && !continuePendingRunId) {
       return null;
     }
     return {
-      inProgress: Boolean(continueInProgress),
-      pendingRunId: continuePendingRunId ?? null,
+      inProgress:     Boolean(continueInProgress),
+      pendingRunId:   continuePendingRunId ?? null,
       pendingContext: continuePendingContext ?? null,
-      previewPath: continuePreviewPath ?? null,
+      previewPath:    continuePreviewPath ?? null,
     };
   }
 
   function restoreState(snapshot) {
     if (!snapshot || typeof snapshot !== 'object') return;
-    continueInProgress = Boolean(snapshot.inProgress);
-    continuePendingRunId = typeof snapshot.pendingRunId === 'string' && snapshot.pendingRunId ? snapshot.pendingRunId : null;
+    continueInProgress     = Boolean(snapshot.inProgress);
+    continuePendingRunId   = typeof snapshot.pendingRunId === 'string' && snapshot.pendingRunId ? snapshot.pendingRunId : null;
     continuePendingContext = snapshot.pendingContext && typeof snapshot.pendingContext === 'object' ? snapshot.pendingContext : null;
-    continuePreviewPath = typeof snapshot.previewPath === 'string' && snapshot.previewPath ? snapshot.previewPath : null;
+    continuePreviewPath    = typeof snapshot.previewPath === 'string' && snapshot.previewPath ? snapshot.previewPath : null;
+  }
+
+  function resetState() {
+    continueStatus?.remove();
+    continueStatus         = null;
+    continueController     = null;
+    continuePreviewPath    = null;
+    continuePendingRunId   = null;
+    continuePendingContext = null;
+    continueResumeInFlight = false;
+    continueInProgress     = false;
+    if (btnModeContinue) btnModeContinue.disabled = false;
+    save();
   }
 
   function clearContinueStatus() {
@@ -52,38 +65,38 @@ export function createContinueModeController({
     const el = document.createElement('div');
     el.id = 'continue-status';
     if (state === 'idle') {
-      el.className = 'continue-status continue-status--idle';
+      el.className   = 'continue-status continue-status--idle';
       el.textContent = 'Run /continue to generate from cursor.';
     } else if (state === 'thinking') {
       el.className = 'continue-status continue-status--thinking';
-      el.innerHTML = 'Generating… <span class="chat-thinking-dots"><span>•</span><span>•</span><span>•</span></span>';
+      el.innerHTML = 'Generating... <span class="chat-thinking-dots"><span>&bull;</span><span>&bull;</span><span>&bull;</span></span>';
     } else if (state === 'preview') {
       el.className = 'continue-status continue-status--preview';
       el.innerHTML =
         '<button id="btn-continue-accept" class="continue-btn continue-btn--accept">Accept</button>' +
         '<button id="btn-continue-cancel" class="continue-btn continue-btn--dismiss">Dismiss</button>';
     } else if (state === 'accepted') {
-      el.className = 'continue-status continue-status--accepted';
+      el.className   = 'continue-status continue-status--accepted';
       el.textContent = `Accepted. ${extra ?? ''}`;
     } else if (state === 'cancelled') {
-      el.className = 'continue-status continue-status--cancelled';
+      el.className   = 'continue-status continue-status--cancelled';
       el.textContent = 'Cancelled.';
     } else if (state === 'error') {
-      el.className = 'continue-status continue-status--error';
+      el.className   = 'continue-status continue-status--error';
       el.textContent = `Error: ${extra ?? 'unknown'}`;
     }
     thread.appendChild(el);
-    continueStatus = el;
-    thread.scrollTop = thread.scrollHeight;
+    continueStatus    = el;
+    thread.scrollTop  = thread.scrollHeight;
   }
 
   function clearContinuePreviewState() {
-    continueController = null;
+    continueController  = null;
     continuePreviewPath = null;
   }
 
   function clearContinuePendingRun() {
-    continuePendingRunId = null;
+    continuePendingRunId   = null;
     continuePendingContext = null;
     continueResumeInFlight = false;
     save();
@@ -105,48 +118,23 @@ export function createContinueModeController({
     });
   }
 
-  async function streamContinue(base, runId) {
-    const response = await fetch(`${base}/runs/${encodeURIComponent(runId)}/stream`);
-    if (!response.ok) throw new Error(`Stream ${response.status}`);
-
-    const reader = response.body.getReader();
-    setActiveReader(reader);
-    const decoder = new TextDecoder();
-    let buffer = '';
-    let reply = '';
-
-    try {
-      outer: while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop();
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue;
-          const raw = line.slice(6).trim();
-          if (!raw) continue;
-          let event;
-          try { event = JSON.parse(raw); } catch { continue; }
-          if (event.type === 'response') reply += event.response ?? '';
-          else if (event.type === 'done') break outer;
-        }
+  async function waitForContinueReply() {
+    while (true) {
+      if (consumeManualStop()) {
+        throw new DOMException('Polling aborted', 'AbortError');
       }
-    } catch (err) {
-      if (!(reply.trim() && isTransientStreamInterrupt(err))) {
-        throw err;
+      const payload = await fetchConversationThread();
+      if (!payload?.pending_response) {
+        return String(payload?.last_assistant?.content || '');
       }
-    } finally {
-      safeCancelReader(reader);
-      setActiveReader(null);
+      await new Promise((resolve) => window.setTimeout(resolve, 900));
     }
-    return reply;
   }
 
   function wirePreviewController(insertion, insertionLineCount, continuePath, continueOffset) {
-    continueInProgress = false;
+    continueInProgress  = false;
     showContinueStatus('preview');
-    continueController = insertContinuation(insertion, { path: continuePath, offset: continueOffset });
+    continueController  = insertContinuation(insertion, { path: continuePath, offset: continueOffset });
     continuePreviewPath = continuePath;
     save();
     bindContinuePreviewButtons();
@@ -187,9 +175,6 @@ export function createContinueModeController({
     if (btnModeContinue) btnModeContinue.disabled = true;
     setGenerating(true);
 
-    const sessionId = 'kc_continue';
-    const base = agentBase();
-
     const systemNote = [
       'You are a code completion assistant.',
       'You will be given code before and after a cursor position.',
@@ -204,19 +189,16 @@ export function createContinueModeController({
       : `${systemNote}\n\n\`\`\`\n${ctx.text}\n\`\`\``;
 
     try {
-      const resp = await fetch(`${base}/sessions/${encodeURIComponent(sessionId)}/prompt`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt }),
+      const payload = await postConversationFollowup({
+        prompt,
+        visibleText: '',
+        outboundSenderDisplay: '__korecode_internal__',
       });
-      if (!resp.ok) throw new Error(`${resp.status} ${resp.statusText}`);
-
-      const { run_id } = await resp.json();
-      continuePendingRunId = run_id;
+      continuePendingRunId   = String(payload?.conversation_id || getConversationExternalId() || 'continue');
       continuePendingContext = { path: ctx.path, offset: ctx.offset };
       save();
 
-      const reply = await streamContinue(base, run_id);
+      const reply = await waitForContinueReply();
       clearContinuePendingRun();
 
       if (!reply.trim()) {
@@ -225,7 +207,7 @@ export function createContinueModeController({
         return;
       }
 
-      const insertion = reply.replace(/^\n/, '');
+      const insertion          = reply.replace(/^\n/, '');
       const insertionLineCount = insertion.split('\n').length;
       wirePreviewController(insertion, insertionLineCount, ctx.path, ctx.offset);
     } catch (err) {
@@ -248,7 +230,6 @@ export function createContinueModeController({
       save();
       showContinueStatus('error', errorText(err));
       if (btnModeContinue) btnModeContinue.disabled = false;
-      setActiveReader(null);
     } finally {
       setGenerating(false);
     }
@@ -261,9 +242,8 @@ export function createContinueModeController({
     continueResumeInFlight = true;
     setGenerating(true);
 
-    const base = agentBase();
     try {
-      const reply = await streamContinue(base, continuePendingRunId);
+      const reply = await waitForContinueReply();
       clearContinuePendingRun();
       if (!reply.trim()) {
         continueInProgress = false;
@@ -272,10 +252,10 @@ export function createContinueModeController({
         return;
       }
 
-      const insertion = reply.replace(/^\n/, '');
+      const insertion          = reply.replace(/^\n/, '');
       const insertionLineCount = insertion.split('\n').length;
-      const continuePath = continuePendingContext?.path ?? getCurrentPath();
-      const continueOffset = typeof continuePendingContext?.offset === 'number'
+      const continuePath       = continuePendingContext?.path ?? getCurrentPath();
+      const continueOffset     = typeof continuePendingContext?.offset === 'number'
         ? continuePendingContext.offset
         : undefined;
       wirePreviewController(insertion, insertionLineCount, continuePath, continueOffset);
@@ -326,10 +306,11 @@ export function createContinueModeController({
   return {
     stateSnapshot,
     restoreState,
+    resetState,
     runContinue,
     resumeContinueIfNeeded,
     onTabChange,
-    clearStatus: clearContinueStatus,
-    isInProgress: () => continueInProgress,
+    clearStatus:   clearContinueStatus,
+    isInProgress:  () => continueInProgress,
   };
 }

@@ -4,7 +4,7 @@
 # KoreGraph configuration loader.
 #
 # Reads host, port, and data_dir from the suite-level config under the [koregraph]
-# section.  Default port: 8826  (gateway 8620 + offset 6).
+# section.
 #
 # ui_prefix: set via KG_UI_PREFIX env var. Empty when running standalone,
 # "/graph" when deployed behind the KoreDataGateway proxy.
@@ -23,7 +23,7 @@ _LOCAL_DATACONTROL_DIR = get_required_local_datacontrol_dir()
 _LOCAL_KOREDATA_DIR    = _LOCAL_DATACONTROL_DIR / "koredata"
 
 _DEFAULTS = {
-    "port": 8826,
+    "port": None,
     "host": "0.0.0.0",
     "log_level": "info",
     "data_dir":    str(_LOCAL_KOREDATA_DIR / "Graph"),

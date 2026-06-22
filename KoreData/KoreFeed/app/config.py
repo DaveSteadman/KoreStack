@@ -4,7 +4,7 @@
 # KoreFeed configuration loader.
 #
 # Reads host, port, and data_dir from the suite-level config under the [korefeed]
-# section.  Default port: 8801  (gateway 8620 + offset 1).
+# section.
 #
 # Related modules:
 #   - KoreFeed/main.py      -- imports cfg at startup
@@ -17,7 +17,7 @@ from config import get_koredata_dir, load_config
 _SECTION = "korefeed"
 
 _DEFAULTS = {
-    "port": 8801,
+    "port": None,
     "host": "0.0.0.0",
     "data_dir": str(get_koredata_dir() / "Feeds"),
     "log_level": "info",

@@ -14,15 +14,14 @@ const _MAX_PANEL_W = 720;
 const _DEFAULT_PANEL_W = 340;
 const _MAX_AGENT_TOOL_TURNS = 3;
 const _WORKSPACE_THREAD_KEY = '__workspace__';
+const _CONVERSATION_STORE_KEY = '__conversation__';
 
 // In-memory chat thread store: path -> Array<{ role: 'user'|'assistant', text: string }>
 const _threads = new Map();
 
-function _saveState(open, mode, pendingRuns = {}, continueState = null) {
+function _saveState(open, mode, threads = {}, pendingRuns = {}, continueState = null, conversationExternalId = null) {
   try {
-    const threads = {};
-    for (const [path, msgs] of _threads) threads[path] = msgs;
-    localStorage.setItem(_STATE_KEY, JSON.stringify({ open, mode, threads, pendingRuns, continueState }));
+    localStorage.setItem(_STATE_KEY, JSON.stringify({ open, mode, threads, pendingRuns, continueState, conversationExternalId }));
   } catch (_) {}
 }
 
@@ -104,6 +103,7 @@ export function initChat({
   let _isGenerating = false;
   let _workspaceContextEnabled = _loadWorkspaceContextEnabled();
   let _continueControllerApi = { stateSnapshot: () => null };
+  let _conversationExternalId = null;
 
   const _threadUI = createThreadUI({
     thread,
@@ -136,11 +136,12 @@ export function initChat({
       return;
     }
     const lines = _currentSelection ? _currentSelection.split('\n').length : 0;
-    const cursorText = `cursor L${_currentCursor.line}, C${_currentCursor.column}`;
     if (lines > 0) {
-      selectionLabel.textContent = `${lines} line${lines === 1 ? '' : 's'} selected - ${cursorText} - will be sent as context`;
+      const startLine = _currentCursor.line;
+      const endLine   = startLine + lines - 1;
+      selectionLabel.textContent = `[selected L${startLine}:L${endLine}]`;
     } else {
-      selectionLabel.textContent = `0 lines selected - ${cursorText} - insert uses cursor position`;
+      selectionLabel.textContent = `[insert L${_currentCursor.line}:C${_currentCursor.column}]`;
     }
     selectionChip.hidden = false;
   }
@@ -202,6 +203,29 @@ export function initChat({
     btnWorkspaceContext.classList.toggle('kcui-tag--dim', !_workspaceContextEnabled);
   }
 
+  async function _rebuildWorkspaceMenu({ announcePath = null, quiet = false } = {}) {
+    try {
+      const resp = await fetch('/api/workspace-menu/rebuild', { method: 'POST' });
+      if (!resp.ok) {
+        throw new Error(`${resp.status} ${resp.statusText}`);
+      }
+      const payload = await resp.json();
+      if (announcePath) {
+        const fileName = payload?.menu_file_name || 'KoreCodeWorkspace.md';
+        _localAssistantMessage(
+          announcePath,
+          `Workspace menu refreshed: ${fileName} (${payload?.file_count ?? 0} files indexed).`
+        );
+      }
+      return payload;
+    } catch (err) {
+      if (!quiet && announcePath) {
+        _localAssistantMessage(announcePath, `Workspace menu refresh failed: ${_errorText(err)}`);
+      }
+      throw err;
+    }
+  }
+
   function _setGenerating(active) {
     _isGenerating = Boolean(active);
     sendBtn.disabled = _isGenerating;
@@ -218,19 +242,28 @@ export function initChat({
   }
 
   function _save() {
-    _saveState(_panelOpen, _mode, _pendingToObject(), _continueControllerApi.stateSnapshot());
+    const threads = {};
+    for (const [path, msgs] of _threads) threads[path] = msgs;
+    _saveState(
+      _panelOpen,
+      _mode,
+      threads,
+      _pendingToObject(),
+      _continueControllerApi.stateSnapshot(),
+      _conversationExternalId,
+    );
   }
 
   function _setPending(path, runId) {
     if (!path || !runId) return;
-    _pendingRuns.set(path, runId);
+    _pendingRuns.set(_CONVERSATION_STORE_KEY, runId);
     _save();
     _syncThinkingNote();
   }
 
   function _clearPending(path) {
-    if (!path || !_pendingRuns.has(path)) return;
-    _pendingRuns.delete(path);
+    if (!path || !_pendingRuns.has(_CONVERSATION_STORE_KEY)) return;
+    _pendingRuns.delete(_CONVERSATION_STORE_KEY);
     _save();
     _syncThinkingNote();
   }
@@ -241,17 +274,15 @@ export function initChat({
       progressNote.hidden = true;
       return;
     }
-    const path = currentPath();
     const hasAnyPending = _pendingRuns.size > 0;
-    const hasCurrentPending = Boolean(path && _pendingRuns.has(path));
+    const hasCurrentPending = _pendingRuns.has(_CONVERSATION_STORE_KEY);
     progressNote.hidden = !hasAnyPending;
     if (progressNote.hidden) return;
     progressNote.textContent = hasCurrentPending ? 'Generating...' : 'Generating... (in another tab)';
   }
 
-  function _lastUserMessage(path) {
-    if (!path) return null;
-    const messages = _threads.get(path) ?? [];
+  function _lastUserMessage(_path) {
+    const messages = _threads.get(_CONVERSATION_STORE_KEY) ?? [];
     for (let i = messages.length - 1; i >= 0; i -= 1) {
       if (messages[i]?.role === 'user' && typeof messages[i].text === 'string' && messages[i].text.trim()) {
         return messages[i].text;
@@ -262,24 +293,134 @@ export function initChat({
 
   function _clearThread(path) {
     if (!path) return;
-    _threads.delete(path);
+    _threads.delete(_CONVERSATION_STORE_KEY);
+    _clearPending(path);
     _save();
-    renderThread(path);
+    renderThread(_CONVERSATION_STORE_KEY);
+  }
+
+  async function _clearThreadRemote(path) {
+    if (!path) return;
+    try {
+      const qs = new URLSearchParams({ path });
+      if (_conversationExternalId) {
+        qs.set('conversation_external_id', _conversationExternalId);
+      }
+      const resp = await fetch(`/api/chat/thread?${qs.toString()}`, { method: 'DELETE' });
+      if (!resp.ok) {
+        throw new Error(`${resp.status} ${resp.statusText}`);
+      }
+      _conversationExternalId = null;
+    } catch (err) {
+      _localAssistantMessage(path, `Clear thread failed: ${_errorText(err)}`);
+      return;
+    }
+    _clearThread(path);
   }
 
   function _localAssistantMessage(path, text) {
     if (!path || !text) return;
     _pushMessage(path, { role: 'assistant', text });
-    renderThread(path);
+    renderThread(_CONVERSATION_STORE_KEY);
   }
 
-  function _showChatNotice(text) {
-    if (!text) return;
-    const el = document.createElement('div');
-    el.className = 'chat-thinking';
-    el.textContent = text;
-    thread.appendChild(el);
-    _scrollBottom();
+  function _applyWorkspaceContext(enabled) {
+    _workspaceContextEnabled = Boolean(enabled);
+    _saveWorkspaceContextEnabled(_workspaceContextEnabled);
+    _renderWorkspaceContextToggle();
+  }
+
+  async function _syncWorkspaceContextForConversation(enabled) {
+    if (!_conversationExternalId) return;
+    const resp = await fetch('/api/chat/workspace-context', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        conversation_external_id: _conversationExternalId,
+        enabled: Boolean(enabled),
+      }),
+    });
+    if (!resp.ok) {
+      throw new Error(`${resp.status} ${resp.statusText}`);
+    }
+  }
+
+  function _resetConversationState({ keepPanel = true } = {}) {
+    _threads.delete(_CONVERSATION_STORE_KEY);
+    _pendingRuns.delete(_CONVERSATION_STORE_KEY);
+    _conversationExternalId = null;
+    _manualStopRequested = false;
+    _continueControllerApi.resetState?.();
+    _save();
+    _syncThinkingNote();
+    if (keepPanel) {
+      renderThread(currentThreadPath());
+    }
+  }
+
+  async function _applySlashActions(path, actions) {
+    for (const action of Array.isArray(actions) ? actions : []) {
+      const type = String(action?.type || '');
+      if (type === 'clear_thread') {
+        await _clearThreadRemote(path);
+        continue;
+      }
+      if (type === 'retry_last_user_message') {
+        const last = _lastUserMessage(path);
+        if (last) {
+          await _send(last, { appendUserMessage: false });
+        } else {
+          _localAssistantMessage(path, 'No previous user prompt to retry in this conversation.');
+        }
+        continue;
+      }
+      if (type === 'set_workspace_context') {
+        const enabled = Boolean(action.enabled);
+        _applyWorkspaceContext(enabled);
+        await _syncWorkspaceContextForConversation(enabled);
+        continue;
+      }
+      if (type === 'set_mode') {
+        const mode = String(action.mode || 'chat');
+        if (mode === 'continue') {
+          setMode('continue');
+          if (action.run_continue) {
+            void _continueControllerApi.runContinue();
+          }
+        } else {
+          setMode(mode);
+        }
+      }
+    }
+  }
+
+  async function _runSlashCommand(path, text) {
+    const resp = await fetch('/api/slash', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text,
+        current_mode: _mode,
+        workspace_context_enabled: _workspaceContextEnabled,
+        thread_path: path,
+        has_last_user_message: Boolean(_lastUserMessage(path)),
+      }),
+    });
+    if (!resp.ok) {
+      throw new Error(`${resp.status} ${resp.statusText}`);
+    }
+    const payload = await resp.json();
+    if (!payload?.handled) {
+      return false;
+    }
+    await _applySlashActions(path, payload.actions);
+    for (const message of Array.isArray(payload.messages) ? payload.messages : []) {
+      const textOut = String(message?.text || '').trim();
+      if (textOut) {
+        _localAssistantMessage(path, textOut);
+      }
+    }
+    return true;
   }
 
   function _errorText(err) {
@@ -311,40 +452,65 @@ export function initChat({
     } catch (_) {}
   }
 
-  function _cachedSuiteUrls() {
-    try {
-      const raw = localStorage.getItem('kore.suite-urls');
-      return raw ? JSON.parse(raw) : null;
-    } catch (_) {
-      return null;
-    }
-  }
-
-  function _defaultAgentBase() {
-    const host = window.location?.hostname || '127.0.0.1';
-    return `http://${host}:9601`;
-  }
-
-  function agentBase() {
-    const cached = _cachedSuiteUrls();
-    return (
-      window.__koreSuiteUrls?.koreagent
-      || cached?.koreagent
-      || _defaultAgentBase()
-    ).replace(/\/$/, '');
-  }
-
-  function sessionForPath(path) {
-    const sanitized = path.replace(/[^A-Za-z0-9_-]/g, '_').slice(-60);
-    return `kc_${sanitized}`;
-  }
-
   function currentPath() {
     return getActiveTab()?.path ?? null;
   }
 
   function currentThreadPath() {
     return currentPath() || _WORKSPACE_THREAD_KEY;
+  }
+
+  function _delay(ms) {
+    return new Promise((resolve) => window.setTimeout(resolve, ms));
+  }
+
+  function _isToolLoopAssistantText(text) {
+    const envelope = extractAgentEnvelope(text);
+    const requestedTools = Array.isArray(envelope?.tool_requests) ? envelope.tool_requests : [];
+    return envelope?.kind === 'tool_requests' && envelope?.next === 'continue' && requestedTools.length > 0;
+  }
+
+  function _filterVisibleMessages(messages) {
+    return (Array.isArray(messages) ? messages : []).filter((msg) => {
+      if (String(msg?.sender_display || '') === '__korecode_internal__') return false;
+      if (msg?.role !== 'assistant') return true;
+      return !_isToolLoopAssistantText(String(msg?.text || ''));
+    });
+  }
+
+  function _hydrateThread(path, payload, { render = true } = {}) {
+    if (payload?.external_id) {
+      _conversationExternalId = String(payload.external_id);
+    }
+    const messages = _filterVisibleMessages(payload?.messages);
+    if (messages.length) {
+      _threads.set(_CONVERSATION_STORE_KEY, messages);
+    } else {
+      _threads.delete(_CONVERSATION_STORE_KEY);
+    }
+    if (payload?.pending_response) {
+      _setPending(path, String(payload?.conversation_id || 'pending'));
+    } else {
+      _clearPending(path);
+    }
+    if (render) {
+      renderThread(path);
+    }
+    return payload;
+  }
+
+  async function _fetchThread(path) {
+    const qs = new URLSearchParams({ path });
+    if (_conversationExternalId) {
+      qs.set('conversation_external_id', _conversationExternalId);
+    }
+    qs.set('workspace_context_enabled', _workspaceContextEnabled ? 'true' : 'false');
+    const resp = await fetch(`/api/chat/thread?${qs.toString()}`);
+    if (!resp.ok) {
+      throw new Error(`${resp.status} ${resp.statusText}`);
+    }
+    const payload = await resp.json();
+    return _hydrateThread(path, payload, { render: false });
   }
 
   function _setModeButtons(mode) {
@@ -389,7 +555,7 @@ export function initChat({
   }
 
   function renderThread(path) {
-    _threadUI.renderThread(path, path ? (_threads.get(path) ?? []) : []);
+    _threadUI.renderThread(path, path ? (_threads.get(_CONVERSATION_STORE_KEY) ?? []) : []);
   }
 
   _continueControllerApi = createContinueModeController({
@@ -397,18 +563,35 @@ export function initChat({
     btnModeContinue,
     getContinueContext,
     insertContinuation,
-    agentBase,
     getCurrentPath: currentPath,
+    getConversationExternalId: () => _conversationExternalId,
+    fetchConversationThread: async () => _fetchThread(_WORKSPACE_THREAD_KEY),
+    postConversationFollowup: async ({ prompt, visibleText = '', outboundSenderDisplay = 'agent' }) => {
+      const resp = await fetch('/api/chat/followup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          path:                     _WORKSPACE_THREAD_KEY,
+          prompt,
+          visible_text:             visibleText,
+          conversation_external_id: _conversationExternalId,
+          outbound_sender_display:  outboundSenderDisplay,
+          workspace_context_enabled: _workspaceContextEnabled,
+        }),
+      });
+      if (!resp.ok) {
+        throw new Error(`${resp.status} ${resp.statusText}`);
+      }
+      const payload = await resp.json();
+      _hydrateThread(_WORKSPACE_THREAD_KEY, payload, { render: false });
+      return payload;
+    },
     setMode,
     setGenerating: _setGenerating,
     save: _save,
     consumeManualStop: _consumeManualStop,
     isTransientStreamInterrupt: _isTransientStreamInterrupt,
     errorText: _errorText,
-    safeCancelReader: _safeCancelReader,
-    setActiveReader: (reader) => {
-      _activeReader = reader;
-    },
   });
 
   btnModeChat?.addEventListener('click', () => setMode('chat'));
@@ -422,33 +605,35 @@ export function initChat({
   btnModeTests?.addEventListener('click', () => setMode('tests'));
 
   btnChatRetry?.addEventListener('click', () => {
-    const path = currentPath();
+    const path = currentThreadPath();
     if (!path || _activeReader) return;
     const last = _lastUserMessage(path);
     if (!last) {
-      _localAssistantMessage(path, 'No previous user prompt to retry for this file thread.');
+      _localAssistantMessage(path, 'No previous user prompt to retry in this conversation.');
       return;
     }
     void _send(last, { appendUserMessage: false });
   });
 
   btnChatClear?.addEventListener('click', () => {
-    const path = currentPath();
+    const path = currentThreadPath();
     if (!path) return;
-    _clearThread(path);
+    void _clearThreadRemote(path);
   });
 
   btnChatStop?.addEventListener('click', () => {
-    if (!_activeReader) return;
     _manualStopRequested = true;
-    _safeCancelReader(_activeReader);
-    _activeReader = null;
+    if (_activeReader) {
+      _safeCancelReader(_activeReader);
+      _activeReader = null;
+    }
   });
 
   btnWorkspaceContext?.addEventListener('click', () => {
-    _workspaceContextEnabled = !_workspaceContextEnabled;
-    _saveWorkspaceContextEnabled(_workspaceContextEnabled);
-    _renderWorkspaceContextToggle();
+    const nextCommand = _workspaceContextEnabled ? '/workspace off' : '/workspace on';
+    void _runSlashCommand(currentThreadPath(), nextCommand).catch((err) => {
+      _localAssistantMessage(currentThreadPath(), `Workspace command failed: ${_errorText(err)}`);
+    });
   });
 
   aiBtn.addEventListener('click', () => {
@@ -456,8 +641,16 @@ export function initChat({
     _setPanelOpen(nowOpen);
     if (nowOpen) {
       _refreshSelectionFromEditor();
-      const path = currentPath();
+      const path = currentThreadPath();
       renderThread(path);
+      if (path) {
+        void _fetchThread(path)
+          .then((payload) => {
+            _hydrateThread(path, payload);
+            renderThread(path);
+          })
+          .catch(() => {});
+      }
       void _resumePendingForPath(path);
       input.focus();
     } else {
@@ -494,14 +687,14 @@ export function initChat({
   document.addEventListener('visibilitychange', () => {
     if (document.hidden || panel.hidden) return;
     _syncThinkingNote();
-    void _resumePendingForPath(currentPath());
+    void _resumePendingForPath(currentThreadPath());
     void _continueControllerApi.resumeContinueIfNeeded();
   });
 
   window.addEventListener('focus', () => {
     if (panel.hidden) return;
     _syncThinkingNote();
-    void _resumePendingForPath(currentPath());
+    void _resumePendingForPath(currentThreadPath());
     void _continueControllerApi.resumeContinueIfNeeded();
   });
 
@@ -519,51 +712,41 @@ export function initChat({
 
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
-    if (!_isGenerating || !_activeReader) return;
+    if (!_isGenerating) return;
     e.preventDefault();
     _manualStopRequested = true;
-    _safeCancelReader(_activeReader);
-    _activeReader = null;
+    if (_activeReader) {
+      _safeCancelReader(_activeReader);
+      _activeReader = null;
+    }
   });
 
   sendBtn.addEventListener('click', () => void _send());
 
   async function _resumePendingForPath(path) {
     if (!path || _activeReader) return;
-    const runId = _pendingRuns.get(path);
-    if (!runId) return;
+    if (!_pendingRuns.has(_CONVERSATION_STORE_KEY)) return;
 
-    const base = agentBase();
-    const thinkingEl = _appendThinking('Resuming response...');
+    const thinkingEl = _appendThinking('Waiting for agent...');
     _setGenerating(true);
 
     try {
-      const reply = await _streamResponse(base, runId, thinkingEl);
-      _clearPending(path);
-      if (reply.trim()) {
-        _pushMessage(path, { role: 'assistant', text: reply });
-      }
+      const payload = await _waitForAgentTurn(path);
+      _hydrateThread(path, payload);
       renderThread(path);
     } catch (err) {
       thinkingEl?.remove();
       if (_consumeManualStop()) {
-        _clearPending(path);
-        _localAssistantMessage(path, 'Generation stopped.');
-        return;
-      }
-      const recovered = await _recoverAssistantFromHistory(path);
-      if (recovered) {
-        _clearPending(path);
-        renderThread(path);
+        _localAssistantMessage(path, 'Stopped waiting locally. The agent may still finish in the background.');
         return;
       }
       if (_isTransientStreamInterrupt(err)) {
         return;
       }
-      _clearPending(path);
       _pushMessage(path, { role: 'assistant', text: `Error: ${_errorText(err)}` });
       renderThread(path);
     } finally {
+      thinkingEl?.remove();
       _setGenerating(false);
       _activeReader = null;
       _syncThinkingNote();
@@ -571,95 +754,17 @@ export function initChat({
     }
   }
 
-  async function _recoverAssistantFromHistory(path) {
-    if (!path) return false;
-    const base = agentBase();
-    const sessionId = sessionForPath(path);
-    try {
-      const resp = await fetch(`${base}/sessions/${encodeURIComponent(sessionId)}/history`);
-      if (!resp.ok) return false;
-      const payload = await resp.json();
-      const turns = Array.isArray(payload?.turns) ? payload.turns : [];
-      let assistantText = null;
-      for (let i = turns.length - 1; i >= 0; i -= 1) {
-        const turn = turns[i];
-        if (turn?.role === 'assistant' && typeof turn?.content === 'string' && turn.content.trim()) {
-          assistantText = turn.content;
-          break;
-        }
+  async function _waitForAgentTurn(path) {
+    while (true) {
+      if (_manualStopRequested) {
+        throw new DOMException('Polling aborted', 'AbortError');
       }
-      if (!assistantText) return false;
-
-      const msgs = _threads.get(path) ?? [];
-      const lastAssistant = [...msgs].reverse().find((m) => m.role === 'assistant');
-      if (lastAssistant?.text === assistantText) {
-        return true;
+      const payload = await _fetchThread(path);
+      if (!payload?.pending_response) {
+        return payload;
       }
-      _pushMessage(path, { role: 'assistant', text: assistantText });
-      return true;
-    } catch {
-      return false;
+      await _delay(900);
     }
-  }
-
-  function _handleSlashCommand(path, text) {
-    if (!text.startsWith('/')) return false;
-    const normalized = text.slice(1).trim().replaceAll('\n', ' ').replaceAll('\t', ' ');
-    const [cmdRaw, ...rest] = normalized.split(' ').filter(Boolean);
-    const cmd = (cmdRaw || '').toLowerCase();
-    const arg = rest.join(' ').toLowerCase();
-    if (!cmd) return false;
-
-    const modeNames = ['chat', 'continue', 'explain', 'bughunt', 'refactor', 'tests'];
-    if (cmd === 'help') {
-      _localAssistantMessage(path, 'Commands: /help, /clear, /retry, /workspace <on|off>, /mode <chat|continue|explain|bughunt|refactor|tests>, /chat, /continue, /explain, /bughunt, /refactor, /tests');
-      return true;
-    }
-    if (cmd === 'clear') {
-      _clearThread(path);
-      return true;
-    }
-    if (cmd === 'retry') {
-      const last = _lastUserMessage(path);
-      if (last) void _send(last, { appendUserMessage: false });
-      else _localAssistantMessage(path, 'No previous user prompt to retry for this file thread.');
-      return true;
-    }
-    if (cmd === 'workspace') {
-      if (arg === 'on' || arg === 'off') {
-        _workspaceContextEnabled = arg === 'on';
-        _saveWorkspaceContextEnabled(_workspaceContextEnabled);
-        _renderWorkspaceContextToggle();
-        _localAssistantMessage(path, `Workspace context ${_workspaceContextEnabled ? 'enabled' : 'disabled'}.`);
-      } else {
-        _localAssistantMessage(path, 'Use /workspace on or /workspace off');
-      }
-      return true;
-    }
-    if (cmd === 'mode') {
-      if (modeNames.includes(arg)) {
-        if (arg === 'continue') {
-          setMode('continue');
-          void _continueControllerApi.runContinue();
-        } else {
-          setMode(arg);
-        }
-      } else {
-        _localAssistantMessage(path, 'Unknown mode. Use /mode chat|continue|explain|bughunt|refactor|tests');
-      }
-      return true;
-    }
-    if (modeNames.includes(cmd)) {
-      if (cmd === 'continue') {
-        setMode('continue');
-        void _continueControllerApi.runContinue();
-      } else {
-        setMode(cmd);
-      }
-      return true;
-    }
-    _localAssistantMessage(path, `Unknown command: /${cmd}. Use /help.`);
-    return true;
   }
 
   async function _send(overrideText = null, opts = {}) {
@@ -669,12 +774,22 @@ export function initChat({
     const activePath = currentPath();
     const path = activePath || _WORKSPACE_THREAD_KEY;
     if (!text || _activeReader) return;
-    if (overrideText == null && _handleSlashCommand(path, text)) {
-      input.value = '';
-      _autosize(input);
-      return;
+    if (overrideText == null && text.startsWith('/')) {
+      try {
+        const handled = await _runSlashCommand(path, text);
+        if (handled) {
+          input.value = '';
+          _autosize(input);
+          return;
+        }
+      } catch (err) {
+        _localAssistantMessage(path, `Slash command failed: ${_errorText(err)}`);
+        input.value = '';
+        _autosize(input);
+        return;
+      }
     }
-    if (_pendingRuns.has(path)) {
+    if (_pendingRuns.has(_CONVERSATION_STORE_KEY)) {
       void _resumePendingForPath(path);
       return;
     }
@@ -705,24 +820,25 @@ export function initChat({
     _setGenerating(true);
 
     try {
-      const sessionId = sessionForPath(path);
-      const base = agentBase();
+      const startResp = await fetch('/api/chat/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          path,
+          visible_text:             text,
+          prompt_override:          prompt,
+          conversation_external_id: _conversationExternalId,
+          workspace_context_enabled: _workspaceContextEnabled,
+        }),
+      });
+      if (!startResp.ok) {
+        throw new Error(`${startResp.status} ${startResp.statusText}`);
+      }
 
-      const _startPromptRun = async (runPrompt) => {
-        const resp = await fetch(`${base}/sessions/${encodeURIComponent(sessionId)}/prompt`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt: runPrompt }),
-        });
-        if (!resp.ok) throw new Error(`${resp.status} ${resp.statusText}`);
-        const payload = await resp.json();
-        return payload.run_id;
-      };
-
-      let runId = await _startPromptRun(prompt);
-      _setPending(path, runId);
-      let finalReply = await _streamResponse(base, runId, thinkingEl);
-      _clearPending(path);
+      let payload = await startResp.json();
+      _hydrateThread(path, payload);
+      let settled = await _waitForAgentTurn(path);
+      let finalReply = String(settled?.last_assistant?.content || '');
 
       for (let turn = 0; turn < _MAX_AGENT_TOOL_TURNS; turn += 1) {
         const envelope = extractAgentEnvelope(finalReply);
@@ -744,32 +860,38 @@ export function initChat({
           toolResults,
         });
 
-        const followThinking = _appendThinking(`Agent tool step ${turn + 1}...`);
-        runId = await _startPromptRun(followupPrompt);
-        _setPending(path, runId);
-        finalReply = await _streamResponse(base, runId, followThinking);
-        _clearPending(path);
+        const followResp = await fetch('/api/chat/followup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            path,
+            prompt:                   followupPrompt,
+            visible_text:             text,
+            conversation_external_id: _conversationExternalId,
+            workspace_context_enabled: _workspaceContextEnabled,
+          }),
+        });
+        if (!followResp.ok) {
+          throw new Error(`${followResp.status} ${followResp.statusText}`);
+        }
+
+        payload = await followResp.json();
+        _hydrateThread(path, payload);
+        settled = await _waitForAgentTurn(path);
+        finalReply = String(settled?.last_assistant?.content || '');
       }
 
-      _pushMessage(path, { role: 'assistant', text: finalReply });
+      _hydrateThread(path, settled);
       renderThread(path);
     } catch (err) {
       thinkingEl?.remove();
       if (_consumeManualStop()) {
-        _clearPending(path);
-        _localAssistantMessage(path, 'Generation stopped.');
-        return;
-      }
-      const recovered = await _recoverAssistantFromHistory(path);
-      if (recovered) {
-        _clearPending(path);
-        renderThread(path);
+        _localAssistantMessage(path, 'Stopped waiting locally. The agent may still finish in the background.');
         return;
       }
       if (_isTransientStreamInterrupt(err)) {
         return;
       }
-      _clearPending(path);
       _pushMessage(path, { role: 'assistant', text: `Error: ${_errorText(err)}` });
       renderThread(path);
     } finally {
@@ -780,63 +902,9 @@ export function initChat({
     }
   }
 
-  async function _streamResponse(base, runId, thinkingEl) {
-    const response = await fetch(`${base}/runs/${encodeURIComponent(runId)}/stream`);
-    if (!response.ok) throw new Error(`Stream ${response.status}`);
-
-    const reader = response.body.getReader();
-    _activeReader = reader;
-    const decoder = new TextDecoder();
-    let buffer = '';
-    let reply = '';
-
-    thinkingEl?.remove();
-    const liveEl = _appendLivePre();
-
-    try {
-      outer: while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop();
-
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue;
-          const raw = line.slice(6).trim();
-          if (!raw) continue;
-          let event;
-          try {
-            event = JSON.parse(raw);
-          } catch {
-            continue;
-          }
-
-          if (event.type === 'response') {
-            reply += event.response ?? '';
-            liveEl.textContent = reply;
-            _scrollBottom();
-          } else if (event.type === 'done') {
-            break outer;
-          }
-        }
-      }
-    } catch (err) {
-      if (!(reply.trim() && _isTransientStreamInterrupt(err))) {
-        throw err;
-      }
-    } finally {
-      _safeCancelReader(reader);
-    }
-
-    liveEl.closest('.chat-msg--assistant')?.remove();
-    return reply;
-  }
-
   function _pushMessage(path, msg) {
-    if (!_threads.has(path)) _threads.set(path, []);
-    _threads.get(path).push(msg);
+    if (!_threads.has(_CONVERSATION_STORE_KEY)) _threads.set(_CONVERSATION_STORE_KEY, []);
+    _threads.get(_CONVERSATION_STORE_KEY).push(msg);
     _save();
   }
 
@@ -856,21 +924,33 @@ export function initChat({
     if (!saved) return;
 
     if (saved.threads) {
-      for (const [path, msgs] of Object.entries(saved.threads)) {
-        if (Array.isArray(msgs) && msgs.length) _threads.set(path, msgs);
+      const savedConversation = saved.threads[_CONVERSATION_STORE_KEY];
+      if (Array.isArray(savedConversation) && savedConversation.length) {
+        _threads.set(_CONVERSATION_STORE_KEY, savedConversation);
+      } else {
+        for (const msgs of Object.values(saved.threads)) {
+          if (Array.isArray(msgs) && msgs.length) {
+            _threads.set(_CONVERSATION_STORE_KEY, msgs);
+            break;
+          }
+        }
       }
     }
 
     if (saved.pendingRuns && typeof saved.pendingRuns === 'object') {
-      for (const [path, runId] of Object.entries(saved.pendingRuns)) {
-        if (typeof path === 'string' && typeof runId === 'string' && runId) {
-          _pendingRuns.set(path, runId);
+      for (const runId of Object.values(saved.pendingRuns)) {
+        if (typeof runId === 'string' && runId) {
+          _pendingRuns.set(_CONVERSATION_STORE_KEY, runId);
+          break;
         }
       }
     }
 
     if (saved.continueState && typeof saved.continueState === 'object') {
       _continueControllerApi.restoreState(saved.continueState);
+    }
+    if (typeof saved.conversationExternalId === 'string' && saved.conversationExternalId) {
+      _conversationExternalId = saved.conversationExternalId;
     }
 
     _syncThinkingNote();
@@ -888,13 +968,29 @@ export function initChat({
   })();
 
   return {
+    async handleWorkspaceRootChanged() {
+      _resetConversationState();
+      if (!_workspaceContextEnabled) return;
+      try {
+        await _rebuildWorkspaceMenu({ quiet: true });
+      } catch (_) {}
+    },
     onTabChange(path) {
       if (panel.hidden) return;
       _refreshSelectionFromEditor();
       _syncThinkingNote();
       if (_mode !== 'continue') {
-        renderThread(path);
-        void _resumePendingForPath(path);
+        const threadPath = path || _WORKSPACE_THREAD_KEY;
+        renderThread(threadPath);
+        if (threadPath) {
+          void _fetchThread(threadPath)
+            .then((payload) => {
+              _hydrateThread(threadPath, payload);
+              renderThread(threadPath);
+            })
+            .catch(() => {});
+        }
+        void _resumePendingForPath(threadPath);
       } else {
         _continueControllerApi.onTabChange(path);
       }

@@ -60,7 +60,7 @@ py -m venv .venv
 py main.py
 ```
 
-The WebUI is at **http://localhost:8625**.
+The WebUI is at the configured KoreComms URL from `config/korestack_config.json`.
 
 ---
 
@@ -71,7 +71,7 @@ Edit `config/default.json` (created automatically on first run with defaults):
 ```json
 {
   "host": "0.0.0.0",
-   "port": 8625,
+   "port": <from config/korestack_config.json>,
   "log_level": "info",
   "poll_interval": 60,
    "event_poll_interval": 1.0,
@@ -84,7 +84,7 @@ Edit `config/default.json` (created automatically on first run with defaults):
 | Key | Default | Description |
 |---|---|---|
 | `host` | `0.0.0.0` | Bind address |
-| `port` | `8625` | HTTP port |
+| `port` | `services.korecomms.port` | HTTP port from `config/korestack_config.json` |
 | `poll_interval` | `60` | Gmail poll interval in seconds |
 | `event_poll_interval` | `1.0` | How often KoreComms checks KoreChat for outbound delivery events |
 | `missing_kc_conversation_policy` | `recreate` | What to do if the linked KoreChat record is gone: `recreate` or `abort` |

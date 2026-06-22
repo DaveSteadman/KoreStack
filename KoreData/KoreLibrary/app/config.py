@@ -4,7 +4,7 @@
 # KoreLibrary configuration loader.
 #
 # Reads host, port, and data_dir from the suite-level config under the [korelibrary]
-# section.  Default port: 8802  (gateway 8620 + offset 2).
+# section.
 #
 # Related modules:
 #   - KoreLibrary/main.py      -- imports cfg at startup
@@ -17,7 +17,7 @@ from config import get_koredata_dir, load_config
 _SECTION = "korelibrary"
 
 _DEFAULTS = {
-    "port": 8802,
+    "port": None,
     "host": "0.0.0.0",
     "data_dir": str(get_koredata_dir() / "Library"),
     "log_level": "info",

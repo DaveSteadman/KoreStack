@@ -18,7 +18,7 @@ def _default_data_dir() -> str:
     return str(new_dir if new_dir.exists() or not old_dir.exists() else old_dir)
 
 _DEFAULTS = {
-    "port":       8805,
+    "port":       None,
     "host":       "0.0.0.0",
     "log_level":  "info",
     "data_dir":   _default_data_dir(),

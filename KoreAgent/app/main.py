@@ -214,7 +214,14 @@ _DEFAULTS_KEYS = {"model", "ctx", "agentport", "llmhost"}
 # All valid keys in the runtime defaults file - superset of _DEFAULTS_KEYS.
 # Keys here that are not in _DEFAULTS_KEYS are read directly by skills or slash commands
 # and are not passed through argparse.
-_KNOWN_KEYS = _DEFAULTS_KEYS | {"korechaturl", "ControlDataFolder", "UserDataFolder", "mcp_connections", "mcp_servers"}
+_KNOWN_KEYS = _DEFAULTS_KEYS | {
+    "korechaturl",
+    "DataRootFolder",
+    "ControlDataFolder",
+    "UserDataFolder",
+    "mcp_connections",
+    "mcp_servers",
+}
 
 
 # ====================================================================================================
@@ -461,9 +468,11 @@ def _run(args, logger, log_path) -> None:
         _raw_defaults  = load_runtime_config()
     except Exception:
         _raw_defaults  = {}
-    _koreconv_url = str(_raw_defaults.get("korechaturl", "")).strip().rstrip("/") or "http://localhost:8630"
+    _koreconv_url = str(_raw_defaults.get("korechaturl", "")).strip().rstrip("/")
 
     def _service_reachable(base_url: str) -> bool:
+        if not str(base_url or "").strip():
+            return False
         try:
             import urllib.request as _ur
             _ur.urlopen(f"{base_url}/status", timeout=3)
@@ -501,7 +510,7 @@ def _run(args, logger, log_path) -> None:
                 logger.log(f"MCP [{_srv_name}]: {_srv.get('url', '?')} (skipped in sequence mode)")
             if not _seq_mcp:
                 logger.log("MCP connections: (none configured)")
-        logger.log(f"KoreChat:{_koreconv_url} (skipped in sequence mode)")
+        logger.log(f"KoreChat:{_koreconv_url or '(not configured)'} (skipped in sequence mode)")
     else:
         _mcp_client.start(DEFAULTS_FILE)
 
@@ -514,7 +523,7 @@ def _run(args, logger, log_path) -> None:
             logger.log("MCP connections: (none configured)")
 
         _kc_ok = _service_reachable(_koreconv_url)
-        logger.log(f"KoreChat:{_koreconv_url} {_tick if _kc_ok else _cross}")
+        logger.log(f"KoreChat:{_koreconv_url or '(not configured)'} {_tick if _kc_ok else _cross}")
     mode_label = (
         f"chat-sequence:{sequence_file_path.name}" if sequence_file_path else
         "api"

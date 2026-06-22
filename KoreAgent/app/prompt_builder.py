@@ -31,6 +31,8 @@ from datasets import get_prompt_dataset_manifests
 from scratchpad import get_store as get_scratchpad_store
 from utils.workspace_utils import trunc
 
+_KORECODE_WORKSPACE_MENU_KEY = "korecode_workspace_menu"
+
 
 # ====================================================================================================
 # MARK: CORE IDENTITY
@@ -220,6 +222,19 @@ def _build_conversation_entry_block(conversation_entry: dict | None) -> str:
     return f"\nActive KoreChat conversation entry:\n{rendered}"
 
 
+def _build_korecode_workspace_menu_note(conversation_entry: dict | None) -> str:
+    if not isinstance(conversation_entry, dict):
+        return ""
+    scratchpad = coerce_persisted_scratchpad_payload(conversation_entry.get("scratchpad") or {})
+    if _KORECODE_WORKSPACE_MENU_KEY not in scratchpad:
+        return ""
+    return (
+        "\nKoreCode workspace menu is preloaded in the active KoreChat scratchpad "
+        f"under key '{_KORECODE_WORKSPACE_MENU_KEY}'. Use scratch_load('{_KORECODE_WORKSPACE_MENU_KEY}') "
+        "when you need the generated workspace file/function inventory."
+    )
+
+
 def build_system_message(
     ambient_system_info: str,
     session_context,
@@ -242,6 +257,9 @@ def build_system_message(
     conversation_entry_block = _build_conversation_entry_block(conversation_entry)
     if conversation_entry_block:
         system_parts.append(conversation_entry_block)
+    workspace_menu_note = _build_korecode_workspace_menu_note(conversation_entry)
+    if workspace_menu_note:
+        system_parts.append(workspace_menu_note)
 
     prior_inject = session_context.as_inject_block() if session_context else ""
     if prior_inject:

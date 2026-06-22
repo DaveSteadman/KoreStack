@@ -51,7 +51,6 @@ SERVICE_META: dict[str, dict[str, object]] = {
         "label": "KoreAgent",
         "cwd": SUITE_ROOT / "KoreAgent",
         "script": "main.py",
-        "port": 9601,
         "url_suffix": "/",
         "health_suffix": "/",
         "port_arg": "--agentport",
@@ -61,37 +60,30 @@ SERVICE_META: dict[str, dict[str, object]] = {
         "label": "KoreChat",
         "cwd": SUITE_ROOT / "KoreChat",
         "script": "main.py",
-        "port": 9602,
         "url_suffix": "/ui",
         "health_suffix": "/status",
-        "port_env": "KORECHAT_PORT",
         "description": "Shared conversation-state service for agent and comms flows.",
     },
     "koredatagateway": {
         "label": "KoreData",
         "cwd": SUITE_ROOT / "KoreData",
         "script": "main.py",
-        "port": 9603,
         "url_suffix": "/",
         "health_suffix": "/status",
-        "port_env": "KOREDATA_PORT",
         "description": "KoreData gateway with the feed, library, reference, and RAG services behind it.",
     },
     "koredevicegateway": {
         "label": "KoreDevice",
         "cwd": SUITE_ROOT / "KoreDevice",
         "script": "main.py",
-        "port": 9613,
         "url_suffix": "/",
         "health_suffix": "/status",
-        "port_env": "KOREDEVICE_PORT",
         "description": "KoreDevice gateway with child services for hardware values, logs, and device-side tools.",
     },
     "koredocs": {
         "label": "KoreDocs",
         "cwd": SUITE_ROOT / "KoreDocs",
         "script": "main.py",
-        "port": 9610,
         "url_suffix": "/ui",
         "health_suffix": "/status",
         "port_arg": "--port",
@@ -101,7 +93,6 @@ SERVICE_META: dict[str, dict[str, object]] = {
         "label": "KoreCode",
         "cwd": SUITE_ROOT / "KoreCode",
         "script": "main.py",
-        "port": 9611,
         "url_suffix": "/ui",
         "health_suffix": "/status",
         "port_arg": "--port",
@@ -111,10 +102,8 @@ SERVICE_META: dict[str, dict[str, object]] = {
         "label": "KoreComms",
         "cwd": SUITE_ROOT / "KoreComms",
         "script": "main.py",
-        "port": 9609,
         "url_suffix": "/",
         "health_suffix": "/status",
-        "port_env": "KORECOMMS_PORT",
         "description": "KoreComms UI and API for conversation and activity flows.",
     },
 }
@@ -138,6 +127,14 @@ def _service_cfg(config: dict, slug: str) -> dict:
     services = config.get("services") if isinstance(config.get("services"), dict) else {}
     service_cfg = services.get(slug)
     return service_cfg if isinstance(service_cfg, dict) else {}
+
+
+def _require_service_port(config: dict, slug: str) -> int:
+    service_cfg = _service_cfg(config, slug)
+    port = service_cfg.get("port")
+    if port is None:
+        raise RuntimeError(f"Missing services.{slug}.port in config/korestack_config.json")
+    return int(port)
 
 
 def is_service_enabled(config: dict, slug: str) -> bool:
@@ -180,10 +177,16 @@ def resolve_root_path(value: object, default: str) -> Path:
     return (SUITE_ROOT / str(value or default)).resolve()
 
 
+def resolve_data_root(config: dict) -> Path:
+    paths = config.get("paths") if isinstance(config.get("paths"), dict) else {}
+    return resolve_root_path(paths.get("dataroot"), ".")
+
+
 def get_stack_paths(config: dict) -> dict[str, Path]:
     paths = config.get("paths") if isinstance(config.get("paths"), dict) else {}
-    datacontrol = resolve_root_path(paths.get("datacontrolroot"), "datacontrol")
-    datauser    = resolve_root_path(paths.get("datauserroot"),    "datauser")
+    dataroot    = resolve_data_root(config)
+    datacontrol = (dataroot / "datacontrol").resolve()
+    datauser    = (dataroot / "datauser").resolve()
 
     def _dc(key: str, default: str) -> Path:
         return (datacontrol / str(paths.get(key) or default)).resolve()
@@ -192,16 +195,17 @@ def get_stack_paths(config: dict) -> dict[str, Path]:
         return (datauser / str(paths.get(key) or default)).resolve()
 
     return {
-        "path config":    SUITE_CONFIG_FILE,
-        "datacontrol":    datacontrol,
-        "datauser":       datauser,
+        "path config":       SUITE_CONFIG_FILE,
+        "dataroot":          dataroot,
+        "datacontrol":       datacontrol,
+        "datauser":          datauser,
         "conversation_data": _dc("korechat",  "korechat"),
-        "comms_data":        _dc("korecomms", "korecomms"),
-        "koredata_data":     _dc("koredata",  "koredata"),
-        "koredevice_data":   _dc("koredevice","koredevice"),
-        "koreagent_data":    _dc("koreagent", "koreagent"),
-        "koredocs":          _dc("koredocs",  "koredocs"),
-        "docs_data":         _du("docs_data", "KoreFiles"),
+        "comms_data":       _dc("korecomms", "korecomms"),
+        "koredata_data":    _dc("koredata",  "koredata"),
+        "koredevice_data":  _dc("koredevice","koredevice"),
+        "koreagent_data":   _dc("koreagent", "koreagent"),
+        "koredocs":         _dc("koredocs",  "koredocs"),
+        "docs_data":        _du("docs_data", "KoreFiles"),
     }
 
 
@@ -215,6 +219,7 @@ def build_child_env(config: dict) -> dict[str, str]:
     env["PYTHONUTF8"] = "1"
     env["KORE_SUITE_ROOT"] = str(SUITE_ROOT)
     env["KORE_SUITE_CONFIG"] = str(SUITE_CONFIG_FILE)
+    env["KORE_SUITE_DATAROOT"] = str(stack_paths["dataroot"])
     env["KORE_SUITE_DATACONTROL"] = str(stack_paths["datacontrol"])
     env["KORE_SUITE_DATAUSER"] = str(stack_paths["datauser"])
     env["KORE_UIELEMENTS_ASSETS_DIR"] = str(get_ui_assets_dir())
@@ -228,15 +233,10 @@ def build_child_env(config: dict) -> dict[str, str]:
 
     _network_host = str(network.get("host") or "127.0.0.1")
 
-    if korechat.get("port") is not None:
-        env["KORECHAT_PORT"] = str(korechat["port"])
-    if korecomms.get("port") is not None:
-        env["KORECOMMS_PORT"] = str(korecomms["port"])
-
     if connections.get("korechat"):
         env["KORECOMMS_KORECHAT_URL"] = str(connections["korechat"])
     else:
-        _korechat_port = int(korechat.get("port", 9602))
+        _korechat_port = _require_service_port(config, "korechat")
         env["KORECOMMS_KORECHAT_URL"] = f"http://{_network_host}:{_korechat_port}"
 
     env["KORECHAT_DATA_DIR"] = str(stack_paths["conversation_data"])
@@ -247,13 +247,14 @@ def build_child_env(config: dict) -> dict[str, str]:
     env["KOREDOCS_CONTROL_DIR"] = str(stack_paths["koredocs"])
     env["KOREDOCS_DATA_DIR"] = str(stack_paths["docs_data"])
     _korestack_cfg = services.get("korestack") if isinstance(services.get("korestack"), dict) else {}
-    _korestack_port = int(_korestack_cfg.get("port", 9600) if _korestack_cfg else 9600)
+    _korestack_port = int(_korestack_cfg.get("port")) if _korestack_cfg and _korestack_cfg.get("port") is not None else None
+    if _korestack_port is None:
+        raise RuntimeError("Missing services.korestack.port in config/korestack_config.json")
     _suite_urls: dict[str, str] = {"korestack": f"http://{_network_host}:{_korestack_port}/"}
     for _slug, _meta in SERVICE_META.items():
         if not is_service_enabled(config, _slug):
             continue
-        _svc_cfg = services.get(_slug) if isinstance(services.get(_slug), dict) else {}
-        _port = int(_svc_cfg.get("port", _meta["port"]) if _svc_cfg else _meta["port"])
+        _port = _require_service_port(config, _slug)
         _host = _service_host(config, _slug)
         _key = SERVICE_ICON_KEYS.get(_slug)
         if _key:
@@ -269,8 +270,7 @@ def build_services(config: dict) -> dict[str, ServiceSpec]:
     for slug, meta in SERVICE_META.items():
         if not is_service_enabled(config, slug):
             continue
-        service_cfg = services_cfg.get(slug) if isinstance(services_cfg.get(slug), dict) else {}
-        port = int(service_cfg.get("port", meta["port"]))
+        port = _require_service_port(config, slug)
         host = _service_host(config, slug)
         base_url = f"http://{host}:{port}"
         result[slug] = ServiceSpec(
@@ -647,7 +647,7 @@ class StackManager:
                     "running": running_count,
                     "reachable": reachable_count,
                 },
-                "paths": {k: str(self._stack_paths[k]) for k in ("path config", "datacontrol", "datauser")},
+                "paths": {k: str(self._stack_paths[k]) for k in ("path config", "dataroot", "datacontrol", "datauser")},
             },
             "services": entries,
         }
@@ -744,7 +744,10 @@ def main() -> int:
     network_cfg = suite_config.get("network") if isinstance(suite_config.get("network"), dict) else {}
     stack_cfg = _get_stack_service_config(suite_config)
     dashboard_host = args.host or str(network_cfg.get("host") or "127.0.0.1")
-    dashboard_port = int(args.ui_port or stack_cfg.get("port") or 9600)
+    dashboard_port = args.ui_port or stack_cfg.get("port")
+    if dashboard_port is None:
+        raise RuntimeError("Missing services.korestack.port in config/korestack_config.json")
+    dashboard_port = int(dashboard_port)
 
     if args.command == "status":
         print_snapshot(manager.snapshot())

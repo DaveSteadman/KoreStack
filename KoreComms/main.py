@@ -3,8 +3,8 @@
 # ====================================================================================================
 # Root launcher for KoreComms — the external messaging bridge for KoreStack.
 #
-# Loads configuration, prints a startup banner showing the WebUI port, and starts
-# the FastAPI application under uvicorn.  Default port: 8900 (env: KORECOMMS_PORT).
+# Loads configuration, prints a startup banner showing the configured WebUI URL, and starts
+# the FastAPI application under uvicorn.
 #
 # Run with:  python ./main.py
 #

@@ -44,7 +44,7 @@
 
       <p class="meta" style="margin-top:0.3rem;">
         Register redirect URI:
-        <code style="color:var(--amber)">http://&lt;host&gt;:{{ request.url.port or 8900 }}/gmail-callback</code>
+        <code style="color:var(--amber)">{{ request.url.scheme }}://{{ request.url.hostname }}{% if request.url.port %}:{{ request.url.port }}{% endif %}/gmail-callback</code>
         in your Google Cloud Console OAuth credentials.
       </p>
       {% endif %}

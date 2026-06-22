@@ -4,7 +4,7 @@
 # KoreRAG configuration loader.
 #
 # Reads host, port, and data_dir from the suite-level config under the [korerag]
-# section.  Default port: 8803  (gateway 8620 + offset 3).
+# section.
 #
 # Related modules:
 #   - KoreRAG/main.py      -- imports cfg at startup
@@ -17,7 +17,7 @@ from config import get_koredata_dir, load_config
 _SECTION = "korerag"
 
 _DEFAULTS = {
-    "port": 8803,
+    "port": None,
     "host": "0.0.0.0",
     "log_level": "info",
     "data_dir": str(get_koredata_dir() / "RAG"),

@@ -580,7 +580,7 @@ def conversation_has_unanswered_inbound(conversation_id: int) -> bool:
 
 
 # ----------------------------------------------------------------------------------------------------
-def ensure_response_needed_event(conversation_id: int) -> bool:
+def ensure_response_needed_event(conversation_id: int, payload: dict | None = None) -> bool:
     """Atomically create a response_needed event if one does not already exist.
 
     Uses BEGIN IMMEDIATE to prevent a race between the existence check and the insert
@@ -610,9 +610,9 @@ def ensure_response_needed_event(conversation_id: int) -> bool:
         c.execute(
             """
             INSERT INTO events (conversation_id, event_type, status, priority, payload, created_at)
-            VALUES (?, 'response_needed', 'pending', 0, '{}', ?)
+            VALUES (?, 'response_needed', 'pending', 0, ?, ?)
             """,
-            (conversation_id, now),
+            (conversation_id, json.dumps(payload or {}), now),
         )
         c.execute("COMMIT")
     return True

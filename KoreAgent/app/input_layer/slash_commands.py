@@ -406,7 +406,7 @@ def _cmd_defaults(arg: str, ctx: SlashCommandContext) -> None:
     if sub == "set":
         existing = _load()
         new_cfg = {"model": ctx.config.resolved_model, "ctx": ctx.config.num_ctx, "llmhost": get_active_host()}
-        for key in ("agentport", "ControlDataFolder", "UserDataFolder", "mcp_connections", "mcp_servers"):
+        for key in ("agentport", "DataRootFolder", "ControlDataFolder", "UserDataFolder", "mcp_connections", "mcp_servers"):
             if key in existing:
                 new_cfg[key] = existing[key]
         try:

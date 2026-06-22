@@ -2,7 +2,6 @@ import { state, api } from './state.js';
 
 const treeHost = document.getElementById('code-tree');
 const treeStatus = document.getElementById('tree-status');
-const rootLabel = document.getElementById('root-label');
 const refreshTreeButton = document.getElementById('btn-refresh-tree');
 const rootSelect = document.getElementById('root-select');
 const CUSTOM_ROOT_VALUE = '__custom__';
@@ -45,6 +44,16 @@ function _actionBtn(icon, title) {
 function _parentPath(itemPath) {
   const slash = itemPath.lastIndexOf('/');
   return slash < 0 ? '' : itemPath.slice(0, slash);
+}
+
+function _currentRootPath() {
+  if (!rootSelect) return '';
+  return String(rootSelect.dataset.currentRoot || rootSelect.value || '').trim();
+}
+
+function _syncRootSelectVisualState() {
+  if (!rootSelect) return;
+  rootSelect.classList.toggle('is-custom-path', rootSelect.value === CUSTOM_ROOT_VALUE);
 }
 
 async function _invalidateDir(dirPath) {
@@ -305,18 +314,27 @@ async function loadRootOptions() {
     for (const option of options) {
       const opt = document.createElement('option');
       opt.value = option.value || '';
-      opt.textContent = option.label || option.value || 'workspace';
+      opt.textContent = option.path || option.value || option.label || 'workspace';
+      opt.title       = option.path || option.value || option.label || 'workspace';
       rootSelect.appendChild(opt);
     }
     const customOpt = document.createElement('option');
     customOpt.value = CUSTOM_ROOT_VALUE;
     customOpt.textContent = 'Custom path…';
+    customOpt.style.color = 'var(--accent)';
+    customOpt.style.fontWeight = '600';
     rootSelect.appendChild(customOpt);
     rootSelect.value = current;
+    rootSelect.title = current;
+    rootSelect.dataset.currentRoot = current;
     rootSelect.disabled = false;
+    _syncRootSelectVisualState();
   } catch {
     rootSelect.innerHTML = '<option value="">root unavailable</option>';
+    rootSelect.title = 'root unavailable';
+    rootSelect.dataset.currentRoot = '';
     rootSelect.disabled = true;
+    _syncRootSelectVisualState();
   } finally {
     _settingRoot = false;
   }
@@ -381,14 +399,15 @@ export async function ensureDirectory(path) {
   const listing = await api(`/api/tree?path=${encodeURIComponent(path)}`);
   state.tree.set(path, listing);
   state.root = listing.root;
-  rootLabel.textContent = listing.name || 'KoreStack';
-  const rootPath = document.getElementById('root-path');
-  if (rootPath) {
-    rootPath.textContent = listing.root;
-    rootPath.title = listing.root;
+  if (rootSelect && listing.root) {
+    rootSelect.title = listing.root;
+    rootSelect.dataset.currentRoot = listing.root;
+    _syncRootSelectVisualState();
   }
   return listing;
 }
+
+export { _currentRootPath };
 
 export function renderTree() {
   treeHost.innerHTML = '';
@@ -406,6 +425,9 @@ function renderDirectory(path, label, depth, isRoot = false) {
 
   const row = document.createElement('div');
   row.className = 'tree-row is-dir';
+  if (isRoot) {
+    row.classList.add('is-root');
+  }
   row.setAttribute('role', 'button');
   row.setAttribute('tabindex', '0');
   row.style.setProperty('--depth', String(depth));

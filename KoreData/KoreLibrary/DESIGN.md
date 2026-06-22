@@ -192,7 +192,7 @@ Behaviour is controlled by a JSON config file (`config/default.json`). No comman
 
 | Key        | Default     | Description                  |
 |------------|-------------|------------------------------|
-| `port`     | `8802`      | HTTP port (standalone default; suite mode derives from gateway base port) |
+| `port`     | `services.korelibrary.port` | HTTP port from `config/korestack_config.json` |
 | `host`     | `0.0.0.0`   | Bind address                 |
 | `data_dir` | `data`      | Directory for `library.db`   |
 | `log_level`| `info`      | Uvicorn log level            |

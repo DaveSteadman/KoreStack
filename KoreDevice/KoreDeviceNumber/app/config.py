@@ -5,7 +5,7 @@ from config import get_koredevice_dir, load_config
 _SECTION = "koredevicenumber"
 
 _DEFAULTS = {
-    "port":      9614,
+    "port":      None,
     "host":      "0.0.0.0",
     "data_dir":  str(get_koredevice_dir() / "Numbers"),
     "log_level": "info",

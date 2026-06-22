@@ -43,7 +43,10 @@ const chat = initChat({
 initFind({ editorView, getActiveTab });
 initExplorer({
   openFile,
-  onRootChanged: () => editorApi.resetWorkspaceContext(),
+  onRootChanged: () => {
+    editorApi.resetWorkspaceContext();
+    void chat.handleWorkspaceRootChanged();
+  },
 });
 initPanels({
   panelsEl: document.getElementById('code-app'),

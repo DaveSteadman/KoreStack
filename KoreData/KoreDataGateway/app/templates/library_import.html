@@ -90,7 +90,7 @@
       <div class="kcui-grid-input-action kcui-mar-bottom-md">
         <div>
           <label for="k_url">Kiwix server URL</label>
-          <input id="k_url" type="text" value="http://192.168.1.33:8080" placeholder="http://host:port">
+          <input id="k_url" type="text" value="" placeholder="http://host:port">
         </div>
         <button type="button" onclick="kiwixLoadInventory()">RELOAD</button>
       </div>
@@ -167,7 +167,7 @@
       </p>
       <div class="kcui-grid-input-action kcui-mar-bottom-md">
         <textarea id="batch_urls" rows="8" class="kg-batch-urls kcui-code-input"
-          placeholder="http://192.168.1.33:8080/viewer#gutenberg_en_all_2023-09/A/Adventures_of_Huckleberry_Finn.1837&#10;http://192.168.1.33:8080/viewer#gutenberg_en_all_2023-09/A/Moby-Dick.2701&#10;...one URL per line"
+          placeholder="http://host:port/viewer#zim/Article_Name.123&#10;http://host:port/viewer#zim/Another_Article.456&#10;...one URL per line"
           ></textarea>
         <div class="kcui-actions--stack">
           <button type="button" onclick="batchImport()" id="batch_btn">START IMPORT</button>

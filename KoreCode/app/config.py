@@ -7,7 +7,7 @@
 # Exposes a module-level cfg dict so server.py can import one name.
 #
 # Defaults:
-#   port: 5600   (env: KORECODE_PORT)
+#   port: from config/korestack_config.json
 #   host: 127.0.0.1
 #
 # Related modules:
@@ -28,7 +28,7 @@ from KoreCommon.suite_config import load_service_config
 
 
 _DEFAULTS = {
-    "port": int(os.environ.get("KORECODE_PORT", "5600")),
+    "port": None,
     "host": "127.0.0.1",
     "log_level": "info",
 }
@@ -41,9 +41,9 @@ def load() -> dict:
         suite_root=_SUITE_ROOT,
         env_overrides={
             "host": "KORECODE_HOST",
-            "port": "KORECODE_PORT",
             "log_level": "KORECODE_LOG_LEVEL",
         },
+        require_port=True,
     )
 
 

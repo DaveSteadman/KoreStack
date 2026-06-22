@@ -5,7 +5,6 @@
 #
 # Prints a startup banner showing the service URL and article count, initialises
 # the SQLite database, then starts the FastAPI app under uvicorn.
-# Default port: 8804  (base gateway 8620 + offset 4).
 #
 # Related modules:
 #   - app/server.py    -- FastAPI application and article API routes

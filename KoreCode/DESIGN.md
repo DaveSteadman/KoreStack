@@ -368,3 +368,5 @@ That keeps it aligned with the rest of KoreStack, reduces platform complexity, a
 - reliable local file editing
 - shared-shell integration
 - minimal, dependable editor behavior
+
+

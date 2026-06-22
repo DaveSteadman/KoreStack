@@ -7,8 +7,8 @@
   <section class="kcui-panel">
     <div class="kcui-panel-header">
       <span>Services</span>
-      <span class="kcui-row-end kcui-tag {% if services[0].healthy %}kcui-tag--success{% else %}kcui-tag--danger{% endif %}">
-        {{ "online" if services[0].healthy else "offline" }}
+      <span class="kcui-row-end kcui-tag {% if overall_ok %}kcui-tag--success{% else %}kcui-tag--danger{% endif %}">
+        {{ "online" if overall_ok else "degraded" }}
       </span>
     </div>
     <div class="kcui-panel-body">
@@ -24,12 +24,12 @@
           </div>
           <div class="kcui-service-desc">{{ svc.description }}</div>
           <div class="kcui-service-stats">
-            <div class="kcui-service-stat"><span class="kcui-service-stat-key">signals</span><span class="kcui-service-stat-val">{{ svc.stats.get("total_signals", "-") }}</span></div>
-            <div class="kcui-service-stat"><span class="kcui-service-stat-key">samples</span><span class="kcui-service-stat-val">{{ svc.stats.get("total_samples", "-") }}</span></div>
-            <div class="kcui-service-stat"><span class="kcui-service-stat-key">last</span><span class="kcui-service-stat-val">{{ svc.stats.get("last_sample_at", "-") or "-" }}</span></div>
+            {% for stat in svc.stats %}
+            <div class="kcui-service-stat"><span class="kcui-service-stat-key">{{ stat.key }}</span><span class="kcui-service-stat-val">{{ stat.value }}</span></div>
+            {% endfor %}
           </div>
           <div class="kcui-service-actions">
-            <a class="kcui-tag kcui-tag--info" href="/ui/numbers">browse</a>
+            <a class="kcui-tag kcui-tag--info" href="{{ svc.browse_href }}">browse</a>
           </div>
         </article>
         {% endfor %}
@@ -49,4 +49,3 @@
   }
 </script>
 {% endblock %}
-

@@ -6,8 +6,8 @@
 # Run with:
 #   python main.py
 #
-# Or via uvicorn directly:
-#   uvicorn app.server:app --host 0.0.0.0 --port 8700
+# Or via uvicorn directly, using the configured host and port from
+# config/korestack_config.json.
 # ====================================================================================================
 
 from datetime import datetime

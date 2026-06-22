@@ -19,16 +19,23 @@
     const path = {{ request.url.path | tojson }};
 
     const shellMeta = {
-      home:    { brandLabel: 'KoreDevice',       overline: 'Device Gateway',  brandIcon: 'koredevice' },
-      numbers: { brandLabel: 'KoreDeviceNumber', overline: 'Numeric Signals', brandIcon: 'koredevicenumber' },
+      home:         { brandLabel: 'KoreDevice',       overline: 'Device Gateway',  brandIcon: 'koredevice' },
+      numbers:      { brandLabel: 'KoreDeviceNumber', overline: 'Numeric Signals', brandIcon: 'koredevicenumber' },
+      driver:       { brandLabel: 'KoreDeviceDriver', overline: 'Driver Registry', brandIcon: 'koredevicedriver' },
+      driverDetail: { brandLabel: 'KoreDeviceDriver', overline: 'Driver Detail',   brandIcon: 'koredevicedriver' },
     };
 
     const shellTabs = [
       { key: 'home',    label: 'Home',    href: '/' },
       { key: 'numbers', label: 'Numbers', href: '/ui/numbers' },
+      { key: 'driver',  label: 'Driver',  href: '/ui/driver' },
     ];
 
-    const section = path.startsWith('/ui/numbers') ? 'numbers' : 'home';
+    const section = path.startsWith('/ui/numbers')
+      ? 'numbers'
+      : path.startsWith('/ui/driver')
+        ? (path === '/ui/driver' ? 'driver' : 'driverDetail')
+        : 'home';
 
     initTopbar({ currentService: 'koredevice', urls: window.__koreSuiteUrls || {} });
     initAppBar({
@@ -41,4 +48,3 @@
   {% block scripts %}{% endblock %}
 </body>
 </html>
-

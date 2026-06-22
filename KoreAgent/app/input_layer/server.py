@@ -285,10 +285,20 @@ def _get_korechat_base_url() -> str | None:
     try:
         raw = json.loads(defaults_path.read_text(encoding="utf-8")) if defaults_path.exists() else {}
     except Exception:
-        return "http://localhost:8630"
+        return None
 
     configured = str(raw.get("korechaturl", "")).strip().rstrip("/")
-    return configured or "http://localhost:8630"
+    if configured:
+        return configured
+
+    network = raw.get("network") if isinstance(raw.get("network"), dict) else {}
+    services = raw.get("services") if isinstance(raw.get("services"), dict) else {}
+    korechat = services.get("korechat") if isinstance(services.get("korechat"), dict) else {}
+    port = korechat.get("port")
+    if port is None:
+        return None
+    host = str(network.get("host") or "127.0.0.1").strip() or "127.0.0.1"
+    return f"http://{host}:{int(port)}"
 
 @app.get("/", include_in_schema=False)
 def serve_index():
@@ -327,6 +337,8 @@ def serve_ui_elements_asset(asset_path: str):
 @app.get("/conversations", include_in_schema=False)
 def redirect_to_korechat_ui():
     base_url = _get_korechat_base_url()
+    if not base_url:
+        raise HTTPException(status_code=503, detail="KoreChat is not configured")
     return RedirectResponse(url=f"{base_url}/ui", status_code=307)
 
 

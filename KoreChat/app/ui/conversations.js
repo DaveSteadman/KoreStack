@@ -1,7 +1,7 @@
 // ====================================================================================================
 // KoreChat Debug UI - conversations.js
 // ====================================================================================================
-// Fetches data from the KoreChat REST API (same origin, port 8700) and renders:
+// Fetches data from the KoreChat REST API on the current origin and renders:
 //   - Left sidebar: list of all conversations with key metadata
 //   - Right pane:   selected conversation's full detail - metadata, background context,
 //                   thread summary, scratchpad, messages, and events
@@ -40,8 +40,11 @@ function _cachedSuiteUrls() {
 }
 
 function _defaultKoreAgentBase() {
-    const host = window.location?.hostname || "127.0.0.1";
-    return `http://${host}:9601`;
+    return (
+        window.__koreSuiteUrls?.koreagent
+        || _cachedSuiteUrls()?.koreagent
+        || null
+    );
 }
 
 // ====================================================================================================
@@ -584,16 +587,16 @@ async function sendMessage() {
 
     // Inbound messages for webchat conversations route through the MAF agent so the agent
     // processes them and writes the response back to KC - exactly like typing in the agent page.
-    const MAF_BASE     = String(
-        window.__koreSuiteUrls?.koreagent
-        || _cachedSuiteUrls()?.koreagent
-        || _defaultKoreAgentBase()
-    ).replace(/\/$/, "");
+    const MAF_BASE     = String(_defaultKoreAgentBase() || "").replace(/\/$/, "");
     const wcPrefix     = "webchat_";
     const isWebchat    = direction === "inbound" && _selectedExternalId && _selectedExternalId.startsWith(wcPrefix);
 
     try {
         if (isWebchat) {
+            if (!MAF_BASE) {
+                window.alert("KoreAgent URL is not configured.");
+                return;
+            }
             const sessionId = _selectedExternalId.slice(wcPrefix.length);
             const resp = await fetch(`${MAF_BASE}/sessions/${encodeURIComponent(sessionId)}/prompt`, {
                 method:  "POST",

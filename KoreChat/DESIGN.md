@@ -13,8 +13,8 @@ KoreChat is one of the core co-operating services in the suite stack:
 | Service | Role | Port |
 |---|---|---|
 | **KoreChat** | Shared conversation state, event queue (this service) | 8630 |
-| **KoreData** | Reference knowledge and data services | 8620 |
-| **KoreComms** | External channel routing, delivery, inbox/outbox | 8625 |
+| **KoreData** | Reference knowledge and data services | `services.koredatagateway.port` |
+| **KoreComms** | External channel routing, delivery, inbox/outbox | `services.korecomms.port` |
 | **KoreAgent** | LLM execution, tool use, reasoning | 8605 |
 
 ---

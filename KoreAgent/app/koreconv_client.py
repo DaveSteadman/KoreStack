@@ -7,7 +7,7 @@
 # This module provides the configured base URL and a reachability check.
 #
 # Configuration (runtime config / connections.korechat):
-#   "korechaturl": "http://127.0.0.1:8630"
+#   "korechaturl": "http://<suite-host>:<configured-korechat-port>"
 #
 # Related modules:
 #   - input_layer/server.py                    -- uses get_base_url() for API endpoints

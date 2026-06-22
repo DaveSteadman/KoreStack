@@ -1,0 +1,7 @@
+KoreStack
+
+Rules:
+- All functionality is dones in python, JS/HTML/Css are all "UI / Presentation Only" files.
+
+Recommendations:
+- Vertically align code

@@ -3,8 +3,9 @@
 # ====================================================================================================
 # Suite configuration helpers shared by all KoreData sub-services.
 #
-# Provides get_suite_root(), get_suite_datacontrol_dir(), and get_suite_datauser_dir()
-# which locate the KoreStack suite directories by traversing from __file__.
+# Provides get_suite_root(), get_suite_dataroot_dir(), get_suite_datacontrol_dir(), and
+# get_suite_datauser_dir() which locate the KoreStack suite directories by traversing from
+# __file__.
 # load_config(section) reads config/korestack_config.json and returns the section
 # dict. _DATA_SUBSERVICE_OFFSETS maps service names to port offsets from the
 # gateway base port.
@@ -78,24 +79,28 @@ def get_suite_root() -> Path:
     return _SUITE_ROOT
 
 
+def get_suite_dataroot_dir() -> Path:
+    env_path = os.environ.get("KORE_SUITE_DATAROOT", "").strip()
+    if env_path:
+        return Path(env_path).resolve()
+    configured = _resolve_configured_root("dataroot")
+    if configured is not None:
+        return configured
+    return get_suite_root()
+
+
 def get_suite_datacontrol_dir() -> Path:
     env_path = os.environ.get("KORE_SUITE_DATACONTROL", "").strip()
     if env_path:
         return Path(env_path).resolve()
-    configured = _resolve_configured_root("datacontrolroot")
-    if configured is not None:
-        return configured
-    return get_suite_root() / "datacontrol"
+    return get_suite_dataroot_dir() / "datacontrol"
 
 
 def get_suite_datauser_dir() -> Path:
     env_path = os.environ.get("KORE_SUITE_DATAUSER", "").strip()
     if env_path:
         return Path(env_path).resolve()
-    configured = _resolve_configured_root("datauserroot")
-    if configured is not None:
-        return configured
-    return get_suite_root() / "datauser"
+    return get_suite_dataroot_dir() / "datauser"
 
 
 def get_koredata_dir() -> Path:
@@ -106,12 +111,10 @@ def get_koredata_dir() -> Path:
 
 
 def get_required_local_datacontrol_dir() -> Path:
-    configured = _resolve_local_configured_root("datacontrolroot")
+    configured = _resolve_local_configured_root("dataroot")
     if configured is None:
-        raise RuntimeError(
-            "KoreGraph requires paths.datacontrolroot to be set in config/korestack_config.json."
-        )
-    return configured
+        raise RuntimeError("KoreGraph requires paths.dataroot to be set in config/korestack_config.json.")
+    return (configured / "datacontrol").resolve()
 
 
 # KoreData sub-services are assigned ports as offsets from the gateway ("data") port.
@@ -157,4 +160,6 @@ def load_config(section: str, defaults: dict) -> dict:
     if port is not None:
         result["port"] = port
     result.update(raw.get(section, {}))
+    if result.get("port") is None:
+        raise RuntimeError(f"Missing services.{section}.port in config/korestack_config.json.")
     return result

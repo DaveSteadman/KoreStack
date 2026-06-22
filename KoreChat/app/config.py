@@ -26,7 +26,7 @@ from KoreCommon.suite_config import load_service_config
 
 _DEFAULTS: dict = {
     "host":      os.environ.get("KORECHAT_HOST", "0.0.0.0"),
-    "port":      int(os.environ.get("KORECHAT_PORT", "8700")),
+    "port":      None,
     "log_level": os.environ.get("KORECHAT_LOG_LEVEL", "info"),
     "data_dir":  os.environ.get("KORECHAT_DATA_DIR", str(_REPO_ROOT / "datacontrol" / "korechat")),
 }
@@ -40,10 +40,10 @@ def _load() -> dict:
         suite_root=_REPO_ROOT,
         env_overrides={
             "host": "KORECHAT_HOST",
-            "port": "KORECHAT_PORT",
             "log_level": "KORECHAT_LOG_LEVEL",
             "data_dir": "KORECHAT_DATA_DIR",
         },
+        require_port=True,
     )
     return result
 

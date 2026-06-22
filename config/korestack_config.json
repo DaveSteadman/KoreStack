@@ -1,15 +1,14 @@
 {
   "comment": "KoreStack suite configuration.",
   "paths": {
-    "datacontrolroot": "C:/Util/GithubRepos/KoreStack/datacontrol",
-    "datauserroot":    "C:/Util/GithubRepos/KoreStack/datauser",
-    "korechat":        "korechat",
-    "korecomms":       "korecomms",
-    "koredata":        "koredata",
-    "koredevice":      "koredevice",
-    "koreagent":       "koreagent",
-    "koredocs":        "koredocs",
-    "docs_data":       "KoreFiles"
+    "dataroot":   "C:/Util/GithubRepos/KoreStack",
+    "korechat":   "korechat",
+    "korecomms":  "korecomms",
+    "koredata":   "koredata",
+    "koredevice": "koredevice",
+    "koreagent":  "koreagent",
+    "koredocs":   "koredocs",
+    "docs_data":  "KoreFiles"
   },
   "network": {
     "host": "127.0.0.1"
@@ -25,11 +24,17 @@
     "korereference":     { "port": 9607, "enabled": true },
     "korescrape":        { "port": 9612, "enabled": true },
     "koregraph":         { "port": 9608, "enabled": true },
-    "koredevicegateway": { "port": 9613, "enabled": false },
-    "koredevicenumber":  { "port": 9614, "enabled": false },
+    "koredevicegateway": { "port": 9613, "enabled": true },
+    "koredevicenumber":  { "port": 9614, "enabled": true },
+    "koredevicedriver":  { "port": 9615, "enabled": true },
     "korecomms":         { "port": 9609, "enabled": true },
     "koredocs":          { "port": 9610, "enabled": true },
     "korecode":          { "port": 9611, "enabled": true }
+  },
+  "koredevicedriver": {
+    "default_protocol":      "modbus-tcp",
+    "default_vendor":        "Example Vendor",
+    "default_poll_interval": 5
   },
   "mcp": {
     "connections": [

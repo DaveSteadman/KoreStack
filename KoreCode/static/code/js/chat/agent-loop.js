@@ -82,6 +82,53 @@ async function toolSearchInFile(args, activePath) {
   return { path, query, matches };
 }
 
+async function toolGetPythonFunction(args, activePath) {
+  const path   = String(args?.path || activePath || '').trim();
+  const symbol = String(args?.symbol || '').trim();
+  if (!path)   throw new Error('get_python_function requires path');
+  if (!symbol) throw new Error('get_python_function requires symbol');
+  const qs = new URLSearchParams({ path, symbol });
+  const resp = await fetch(`/api/python-function?${qs.toString()}`);
+  if (!resp.ok) throw new Error(`get_python_function failed: ${resp.status}`);
+  return await resp.json();
+}
+
+async function toolReplacePythonFunction(args, activePath) {
+  const path        = String(args?.path || activePath || '').trim();
+  const symbol      = String(args?.symbol || '').trim();
+  const replacement = String(args?.replacement || '');
+  const expectedHash = String(args?.expected_hash || '').trim();
+  if (!path)   throw new Error('replace_python_function requires path');
+  if (!symbol) throw new Error('replace_python_function requires symbol');
+  if (!expectedHash) throw new Error('replace_python_function requires expected_hash');
+  if (!replacement.trim()) throw new Error('replace_python_function requires replacement');
+  const resp = await fetch('/api/python-function', {
+    method:  'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ path, symbol, replacement, expected_hash: expectedHash }),
+  });
+  if (!resp.ok) throw new Error(`replace_python_function failed: ${resp.status}`);
+  return await resp.json();
+}
+
+async function toolInsertPythonFunction(args, activePath) {
+  const path        = String(args?.path || activePath || '').trim();
+  const source      = String(args?.source || '');
+  const expectedHash = String(args?.expected_hash || '').trim();
+  const afterSymbol = args?.after_symbol == null ? null : String(args.after_symbol || '').trim() || null;
+  const intoClass   = args?.into_class   == null ? null : String(args.into_class   || '').trim() || null;
+  if (!path) throw new Error('insert_python_function requires path');
+  if (!expectedHash) throw new Error('insert_python_function requires expected_hash');
+  if (!source.trim()) throw new Error('insert_python_function requires source');
+  const resp = await fetch('/api/python-function', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ path, source, expected_hash: expectedHash, after_symbol: afterSymbol, into_class: intoClass }),
+  });
+  if (!resp.ok) throw new Error(`insert_python_function failed: ${resp.status}`);
+  return await resp.json();
+}
+
 export async function executeAgentToolRequests({
   toolRequests,
   activePath,
@@ -107,6 +154,12 @@ export async function executeAgentToolRequests({
         result = await toolListTree(args);
       } else if (tool === 'search_in_file') {
         result = await toolSearchInFile(args, activePath);
+      } else if (tool === 'get_python_function') {
+        result = await toolGetPythonFunction(args, activePath);
+      } else if (tool === 'replace_python_function') {
+        result = await toolReplacePythonFunction(args, activePath);
+      } else if (tool === 'insert_python_function') {
+        result = await toolInsertPythonFunction(args, activePath);
       } else {
         throw new Error(`Unknown tool: ${tool}`);
       }
