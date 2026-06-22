@@ -34,6 +34,11 @@ from typing import Optional
 from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel
 
+_KORECOMMON_PARENT = next((parent for parent in Path(__file__).resolve().parents if (parent / "KoreCommon").is_dir()), None)
+if _KORECOMMON_PARENT is not None and str(_KORECOMMON_PARENT) not in sys.path:
+    sys.path.insert(0, str(_KORECOMMON_PARENT))
+
+from KoreCommon.endpoint_manifest import build_endpoint_manifest
 from app.config import cfg
 from app.database import (
     add_chunk,
@@ -334,6 +339,11 @@ app = FastAPI(
 )
 
 
+@app.get("/__endpoint_manifest", include_in_schema=False)
+def endpoint_manifest() -> dict:
+    return build_endpoint_manifest(app, service_key="korerag", service_label="KoreRAG")
+
+
 # ---------------------------------------------------------------------------
 # Pydantic models
 # ---------------------------------------------------------------------------
@@ -382,13 +392,15 @@ def route_status(db: Optional[str] = Query(None)):
 # Chunks CRUD
 # ---------------------------------------------------------------------------
 
-@app.get("/databases", summary="List all registered databases")
+@app.get("/api/databases", summary="List all registered databases")
+@app.get("/databases", include_in_schema=False)
 def route_list_databases():
     _registry_reload()
     return list_databases()
 
 
-@app.get("/databases/{name}/info", summary="Descriptor + status for a single database")
+@app.get("/api/databases/{name}/info", summary="Descriptor + status for a single database")
+@app.get("/databases/{name}/info", include_in_schema=False)
 def route_database_info(name: str):
     _registry_reload()
     desc = get_descriptor(name)
@@ -412,7 +424,8 @@ def route_database_info(name: str):
     return {**desc, **{k: v for k, v in status.items() if k not in ("service",)}}
 
 
-@app.post("/admin/reload", summary="Re-scan databases/ directory and init any new databases")
+@app.post("/api/admin/reload", summary="Re-scan databases/ directory and init any new databases")
+@app.post("/admin/reload", include_in_schema=False)
 def route_admin_reload():
     _registry_reload()
     for db_id in list_database_ids():
@@ -420,7 +433,8 @@ def route_admin_reload():
     return {"databases": list_database_ids()}
 
 
-@app.get("/chunks", summary="List all chunks (metadata only)")
+@app.get("/api/chunks", summary="List all chunks (metadata only)")
+@app.get("/chunks", include_in_schema=False)
 def route_list_chunks(limit: int = 100, offset: int = 0, db: str = Query("default")):
     try:
         return list_chunks(limit=limit, offset=offset, db=db)
@@ -428,7 +442,8 @@ def route_list_chunks(limit: int = 100, offset: int = 0, db: str = Query("defaul
         raise HTTPException(status_code=404, detail=f"Unknown database: {db!r}")
 
 
-@app.get("/chunks/{chunk_id}", summary="Get a single chunk with full content")
+@app.get("/api/chunks/{chunk_id}", summary="Get a single chunk with full content")
+@app.get("/chunks/{chunk_id}", include_in_schema=False)
 def route_get_chunk(chunk_id: int, db: str = Query("default")):
     try:
         chunk = get_chunk(chunk_id, include_content=True, db=db)
@@ -439,7 +454,8 @@ def route_get_chunk(chunk_id: int, db: str = Query("default")):
     return chunk
 
 
-@app.post("/chunks", status_code=201, summary="Add a new chunk")
+@app.post("/api/chunks", status_code=201, summary="Add a new chunk")
+@app.post("/chunks", status_code=201, include_in_schema=False)
 def route_add_chunk(data: ChunkCreate, db: str = Query("default")):
     try:
         return add_chunk(
@@ -453,7 +469,8 @@ def route_add_chunk(data: ChunkCreate, db: str = Query("default")):
         raise HTTPException(status_code=404, detail=f"Unknown database: {db!r}")
 
 
-@app.patch("/chunks/{chunk_id}", summary="Update chunk fields")
+@app.patch("/api/chunks/{chunk_id}", summary="Update chunk fields")
+@app.patch("/chunks/{chunk_id}", include_in_schema=False)
 def route_update_chunk(chunk_id: int, data: ChunkUpdate, db: str = Query("default")):
     try:
         if get_chunk(chunk_id, include_content=False, db=db) is None:
@@ -466,7 +483,8 @@ def route_update_chunk(chunk_id: int, data: ChunkUpdate, db: str = Query("defaul
     return updated
 
 
-@app.delete("/chunks/{chunk_id}", summary="Delete a chunk")
+@app.delete("/api/chunks/{chunk_id}", summary="Delete a chunk")
+@app.delete("/chunks/{chunk_id}", include_in_schema=False)
 def route_delete_chunk(chunk_id: int, db: str = Query("default")):
     try:
         if not delete_chunk(chunk_id, db=db):
@@ -482,7 +500,8 @@ def route_delete_chunk(chunk_id: int, db: str = Query("default")):
 # Search
 # ---------------------------------------------------------------------------
 
-@app.get("/search", summary="Full-text search across chunks")
+@app.get("/api/search", summary="Full-text search across chunks")
+@app.get("/search", include_in_schema=False)
 def route_search(
     q: str,
     limit: int = 20,
@@ -499,7 +518,8 @@ def route_search(
     return results
 
 
-@app.get("/search/all", summary="Full-text search across all registered databases")
+@app.get("/api/search/all", summary="Full-text search across all registered databases")
+@app.get("/search/all", include_in_schema=False)
 def route_search_all(
     q: str,
     limit: int = 20,
@@ -516,7 +536,8 @@ def route_search_all(
 # Navigation (Hansard layer 2)
 # ---------------------------------------------------------------------------
 
-@app.get("/databases/{name}/sittings", summary="List sitting dates for a Hansard database")
+@app.get("/api/databases/{name}/sittings", summary="List sitting dates for a Hansard database")
+@app.get("/databases/{name}/sittings", include_in_schema=False)
 def route_sittings(name: str):
     try:
         return get_sittings(db=name)
@@ -526,7 +547,8 @@ def route_sittings(name: str):
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
-@app.get("/databases/{name}/sittings/{date}/debates", summary="Debates for a sitting date")
+@app.get("/api/databases/{name}/sittings/{date}/debates", summary="Debates for a sitting date")
+@app.get("/databases/{name}/sittings/{date}/debates", include_in_schema=False)
 def route_sitting_debates(name: str, date: str):
     try:
         return get_sitting_debates(date=date, db=name)
@@ -536,7 +558,8 @@ def route_sitting_debates(name: str, date: str):
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
-@app.get("/databases/{name}/members", summary="Members with speech counts")
+@app.get("/api/databases/{name}/members", summary="Members with speech counts")
+@app.get("/databases/{name}/members", include_in_schema=False)
 def route_members(name: str):
     try:
         return get_members(db=name)
@@ -546,7 +569,8 @@ def route_members(name: str):
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
-@app.get("/databases/{name}/members/{member_id}", summary="Member metadata and bio")
+@app.get("/api/databases/{name}/members/{member_id}", summary="Member metadata and bio")
+@app.get("/databases/{name}/members/{member_id}", include_in_schema=False)
 def route_member(name: str, member_id: int):
     try:
         member = get_member_by_id(member_id=member_id, db=name)
@@ -559,7 +583,8 @@ def route_member(name: str, member_id: int):
     return member
 
 
-@app.get("/databases/{name}/members/{member_id}/speeches", summary="Speeches by a member")
+@app.get("/api/databases/{name}/members/{member_id}/speeches", summary="Speeches by a member")
+@app.get("/databases/{name}/members/{member_id}/speeches", include_in_schema=False)
 def route_member_speeches(name: str, member_id: int):
     try:
         return get_member_speeches(member_id=member_id, db=name)
@@ -569,7 +594,8 @@ def route_member_speeches(name: str, member_id: int):
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
-@app.get("/databases/{name}/debates/{uuid}", summary="Debate metadata by UUID")
+@app.get("/api/databases/{name}/debates/{uuid}", summary="Debate metadata by UUID")
+@app.get("/databases/{name}/debates/{uuid}", include_in_schema=False)
 def route_debate(name: str, uuid: str):
     try:
         debate = get_debate(debate_uuid=uuid, db=name)
@@ -582,7 +608,8 @@ def route_debate(name: str, uuid: str):
     return debate
 
 
-@app.get("/databases/{name}/debates/{uuid}/speeches", summary="Speeches for a debate in order")
+@app.get("/api/databases/{name}/debates/{uuid}/speeches", summary="Speeches for a debate in order")
+@app.get("/databases/{name}/debates/{uuid}/speeches", include_in_schema=False)
 def route_debate_speeches(name: str, uuid: str):
     try:
         return get_debate_speeches(debate_uuid=uuid, db=name)
@@ -603,7 +630,8 @@ class DatabaseCreate(BaseModel):
 
 _DB_ID_RE = re.compile(r"^[a-z][a-z0-9_]{0,62}$")
 
-@app.post("/databases", status_code=201, summary="Create a new user-managed database")
+@app.post("/api/databases", status_code=201, summary="Create a new user-managed database")
+@app.post("/databases", status_code=201, include_in_schema=False)
 def route_create_database(data: DatabaseCreate):
     db_id = data.name.strip().lower().replace(" ", "_")
     if not _DB_ID_RE.match(db_id):
@@ -633,7 +661,8 @@ def route_create_database(data: DatabaseCreate):
     return get_descriptor(db_id)
 
 
-@app.delete("/databases/{name}", status_code=200, summary="Delete a database and all its data")
+@app.delete("/api/databases/{name}", status_code=200, summary="Delete a database and all its data")
+@app.delete("/databases/{name}", status_code=200, include_in_schema=False)
 def route_delete_database(name: str):
     """Delete a database's stored content.
 
@@ -709,7 +738,8 @@ def route_delete_database(name: str):
 # Ingestor sync
 # ---------------------------------------------------------------------------
 
-@app.post("/databases/{name}/sync", summary="Launch the ingestor for a managed database")
+@app.post("/api/databases/{name}/sync", summary="Launch the ingestor for a managed database")
+@app.post("/databases/{name}/sync", include_in_schema=False)
 def route_sync(name: str):
     """Fire-and-forget: spawns the database's ingest.py as a subprocess and returns
     immediately.  The ingest process writes its own progress to the _meta table inside
@@ -721,7 +751,8 @@ def route_sync(name: str):
     return _launch_ingestor(name)
 
 
-@app.post("/databases/{name}/stop", summary="Stop a running ingest process")
+@app.post("/api/databases/{name}/stop", summary="Stop a running ingest process")
+@app.post("/databases/{name}/stop", include_in_schema=False)
 def route_stop(name: str):
     """Terminate a running ingest subprocess and mark the descriptor as 'stopped'.
 

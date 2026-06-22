@@ -10,10 +10,16 @@ import re
 import shutil
 import statistics
 import subprocess
+import sys
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
+_KORECOMMON_PARENT = next((parent for parent in Path(__file__).resolve().parents if (parent / "KoreCommon").is_dir()), None)
+if _KORECOMMON_PARENT is not None and str(_KORECOMMON_PARENT) not in sys.path:
+    sys.path.insert(0, str(_KORECOMMON_PARENT))
+
+from KoreCommon.endpoint_manifest import build_endpoint_manifest
 from app.database import add_driver, delete_driver, get_driver, get_status, init_db, list_drivers, update_driver
 
 
@@ -28,6 +34,11 @@ app = FastAPI(
     description = "Boilerplate driver registry and configuration service",
     lifespan    = _lifespan,
 )
+
+
+@app.get("/__endpoint_manifest", include_in_schema=False)
+def endpoint_manifest() -> dict:
+    return build_endpoint_manifest(app, service_key="koredevicedriver", service_label="KoreDeviceDriver")
 
 
 _DRIVER_RUNTIME_GLOBALS = {
@@ -140,12 +151,14 @@ def route_status():
     return get_status()
 
 
-@app.get("/drivers")
+@app.get("/api/drivers")
+@app.get("/drivers", include_in_schema=False)
 def route_drivers():
     return list_drivers()
 
 
-@app.get("/drivers/{name:path}")
+@app.get("/api/drivers/{name:path}")
+@app.get("/drivers/{name:path}", include_in_schema=False)
 def route_driver(name: str):
     driver = get_driver(name)
     if driver is None:
@@ -153,7 +166,8 @@ def route_driver(name: str):
     return driver
 
 
-@app.post("/drivers", status_code=201)
+@app.post("/api/drivers", status_code=201)
+@app.post("/drivers", status_code=201, include_in_schema=False)
 def route_add_driver(data: DriverCreate):
     try:
         return add_driver(
@@ -171,7 +185,8 @@ def route_add_driver(data: DriverCreate):
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
-@app.put("/drivers/{name:path}")
+@app.put("/api/drivers/{name:path}")
+@app.put("/drivers/{name:path}", include_in_schema=False)
 def route_update_driver(name: str, data: DriverUpdate):
     try:
         return update_driver(
@@ -191,7 +206,8 @@ def route_update_driver(name: str, data: DriverUpdate):
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
-@app.post("/drivers/{name:path}/run")
+@app.post("/api/drivers/{name:path}/run")
+@app.post("/drivers/{name:path}/run", include_in_schema=False)
 def route_run_driver(name: str, data: DriverRun):
     try:
         return _execute_driver(name, data)
@@ -201,7 +217,8 @@ def route_run_driver(name: str, data: DriverRun):
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
-@app.delete("/drivers/{name:path}")
+@app.delete("/api/drivers/{name:path}")
+@app.delete("/drivers/{name:path}", include_in_schema=False)
 def route_delete_driver(name: str):
     try:
         return delete_driver(name)

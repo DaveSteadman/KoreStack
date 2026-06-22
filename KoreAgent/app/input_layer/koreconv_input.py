@@ -159,7 +159,7 @@ def _complete_event(base: str, event_id: object, status: str, push_log_line, *, 
     context_prefix = f"[KORECHAT] {context}: " if context else "[KORECHAT] "
     for attempt in range(1, 4):
         try:
-            _http_post(base, f"/events/{event_id}/complete", {"status": status})
+            _http_post(base, f"/api/events/{event_id}/complete", {"status": status})
             return True
         except Exception as exc:
             push_log_line(f"{context_prefix}Event {event_id} complete({status}) attempt {attempt}/3 failed: {exc}")
@@ -306,7 +306,7 @@ def _handle_compress_needed(
 
     # Fetch all unsummarised messages.
     try:
-        raw = _http_get(base, f"/conversations/{conv_id}/messages?summarised=0&limit=500") or []
+        raw = _http_get(base, f"/api/conversations/{conv_id}/messages?summarised=0&limit=500") or []
     except Exception as exc:
         push_log_line(f"[KORECHAT] Conv {conv_id}: could not fetch messages for compression: {exc}")
         _complete_event(base, event_id, "failed", push_log_line, context=f"conv {conv_id}")
@@ -371,7 +371,7 @@ def _handle_compress_needed(
     # Patch conversation - reset token_estimate to rough summary size only.
     summary_tokens = estimate_summary_tokens(new_summary)
     try:
-        _http_patch(base, f"/conversations/{conv_id}", {
+        _http_patch(base, f"/api/conversations/{conv_id}", {
             "thread_summary": new_summary,
             "token_estimate": summary_tokens,
         })
@@ -455,7 +455,7 @@ def _handle_event(
         messages = conv.get("messages")
         if messages is None:
             try:
-                messages = _http_get(base, f"/conversations/{conv_id}/messages?limit=500") or []
+                messages = _http_get(base, f"/api/conversations/{conv_id}/messages?limit=500") or []
             except Exception as exc:
                 push_log_line(f"[KORECHAT] Conv {conv_id}: could not fetch messages: {exc}")
                 messages = []
@@ -466,7 +466,7 @@ def _handle_event(
         # Fetch fresh messages here (rather than trusting the event payload snapshot) because
         # _kc_save_turn posts the outbound asynchronously - the payload may be stale.
         try:
-            fresh_messages = _http_get(base, f"/conversations/{conv_id}/messages?limit=10") or []
+            fresh_messages = _http_get(base, f"/api/conversations/{conv_id}/messages?limit=10") or []
         except Exception:
             fresh_messages = messages
         if fresh_messages and (fresh_messages[-1].get("direction") or "") == "outbound":
@@ -553,7 +553,7 @@ def _handle_event(
 
         # Write outbound message first - if this fails the event is not completed.
         try:
-            _http_post(base, f"/conversations/{conv_id}/messages", {
+            _http_post(base, f"/api/conversations/{conv_id}/messages", {
                 "direction":      "outbound",
                 "content":        reply,
                 "sender_display": str(event_payload.get("outbound_sender_display") or "agent"),
@@ -568,7 +568,7 @@ def _handle_event(
         # This is the durable write - we log failures loudly but still complete the event
         # so the conversation does not stay in agent_processing indefinitely.
         try:
-            _http_patch(base, f"/conversations/{conv_id}", {
+            _http_patch(base, f"/api/conversations/{conv_id}", {
                 "status":             "active",
                 "token_estimate":     new_token_estimate,
                 "turn_count":         turn_count + 1,
@@ -590,7 +590,7 @@ def _handle_event(
         channel = conv.get("channel_type", "webchat")
         if channel not in {"webchat", "manual"}:
             try:
-                _http_post(base, "/events", {
+                _http_post(base, "/api/events", {
                     "conversation_id": conv_id,
                     "event_type":      "outbound_ready",
                     "priority":        0,
@@ -609,7 +609,7 @@ def _handle_event(
                 f"- queuing compress_needed"
             )
             try:
-                _http_post(base, "/events", {
+                _http_post(base, "/api/events", {
                     "conversation_id": conv_id,
                     "event_type":      "compress_needed",
                     "priority":        10,
@@ -649,7 +649,7 @@ def start_koreconv_loop(
 
         while not shutdown.is_set():
             try:
-                event = _http_get(base, "/events/next?claimed_by=agent")
+                event = _http_get(base, "/api/events/next?claimed_by=agent")
                 if event is not None:
                     event_id  = event.get("id")
                     conv_id   = (event.get("conversation") or {}).get("id", "?")

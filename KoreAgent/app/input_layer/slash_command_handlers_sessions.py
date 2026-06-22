@@ -132,7 +132,7 @@ def _display_name(conv: dict) -> str:
 
 
 def _list_all_conversations() -> list[dict]:
-    result = _kc_get("/conversations?limit=500") or []
+    result = _kc_get("/api/conversations?limit=500") or []
     if not isinstance(result, list):
         return []
     conversations = list(result)
@@ -141,7 +141,7 @@ def _list_all_conversations() -> list[dict]:
 
 
 def _list_webchat_conversations() -> list[dict]:
-    result = _kc_get("/conversations?channel_type=webchat&limit=500") or []
+    result = _kc_get("/api/conversations?channel_type=webchat&limit=500") or []
     if not isinstance(result, list):
         return []
     conversations = list(result)
@@ -151,7 +151,7 @@ def _list_webchat_conversations() -> list[dict]:
 
 def _find_conversation_by_session(session_id: str) -> dict | None:
     external_id = urllib.parse.quote(_external_id_for_session(session_id), safe="")
-    result = _kc_get(f"/conversations/by-external-id/{external_id}")
+    result = _kc_get(f"/api/conversations/by-external-id/{external_id}")
     return result if isinstance(result, dict) else None
 
 
@@ -160,7 +160,7 @@ def _ensure_conversation_for_session(session_id: str) -> dict:
     if existing is not None:
         return existing
     created = _kc_post(
-        "/conversations",
+        "/api/conversations",
         {
             "channel_type": "webchat",
             "subject": f"Webchat {session_id}",
@@ -191,17 +191,17 @@ def _clone_conversation(source: dict, new_name: str, session_id: str) -> dict:
         "profile": source.get("profile") or None,
         "external_id": _external_id_for_session(session_id),
     }
-    created = _kc_post("/conversations", payload)
+    created = _kc_post("/api/conversations", payload)
     if not created or not created.get("id"):
         raise RuntimeError("Failed to create KoreChat copy")
 
-    source_messages = _kc_get(f"/conversations/{source['id']}/messages?limit=1000") or []
+    source_messages = _kc_get(f"/api/conversations/{source['id']}/messages?limit=1000") or []
     if not isinstance(source_messages, list):
         source_messages = []
 
     for message in source_messages:
         _kc_post(
-            f"/conversations/{created['id']}/messages",
+            f"/api/conversations/{created['id']}/messages",
             {
                 "direction": message.get("direction") or "inbound",
                 "content": message.get("content") or "",
@@ -213,7 +213,7 @@ def _clone_conversation(source: dict, new_name: str, session_id: str) -> dict:
     copied_turn_count = sum(1 for message in source_messages if (message.get("direction") or "") == "inbound")
 
     _kc_patch(
-        f"/conversations/{created['id']}",
+        f"/api/conversations/{created['id']}",
         {
             "thread_summary": source.get("thread_summary") or "",
             "scratchpad": source.get("scratchpad") or {},
@@ -223,7 +223,7 @@ def _clone_conversation(source: dict, new_name: str, session_id: str) -> dict:
             "status": "active",
         },
     )
-    return _kc_get(f"/conversations/{created['id']}") or created
+    return _kc_get(f"/api/conversations/{created['id']}") or created
 
 
 def _cmd_session(arg: str, ctx: SlashCommandContext) -> None:
@@ -251,7 +251,7 @@ def _cmd_session(arg: str, ctx: SlashCommandContext) -> None:
                 ctx.output("Session naming is not available in this mode.", "error")
                 return
             conv = _ensure_conversation_for_session(ctx.session_id)
-            updated = _kc_patch(f"/conversations/{conv['id']}", {"subject": rest}) or conv
+            updated = _kc_patch(f"/api/conversations/{conv['id']}", {"subject": rest}) or conv
             ctx.output(f"Conversation named '{rest}'.", "success")
             if ctx.rename_session:
                 ctx.rename_session(ctx.session_id, updated.get("subject") or rest)
@@ -333,7 +333,7 @@ def _cmd_session(arg: str, ctx: SlashCommandContext) -> None:
                     if ctx.delete_session_state:
                         ctx.delete_session_state(session_id)
                     else:
-                        _kc_delete(f"/conversations/{conv['id']}")
+                        _kc_delete(f"/api/conversations/{conv['id']}")
                     ctx.output(f"  Deleted '{_display_name(conv)}'.", "item")
                 ctx.output(f"{len(conversations)} conversation(s) deleted.", "success")
                 if deleted_current and ctx.switch_session:
@@ -347,7 +347,7 @@ def _cmd_session(arg: str, ctx: SlashCommandContext) -> None:
             if ctx.delete_session_state:
                 ctx.delete_session_state(session_id)
             else:
-                _kc_delete(f"/conversations/{conv['id']}")
+                _kc_delete(f"/api/conversations/{conv['id']}")
             ctx.output(f"Deleted conversation '{_display_name(conv)}'.", "success")
             if session_id == ctx.session_id and ctx.switch_session:
                 ctx.switch_session(f"web_{int(time.time() * 1000)}", "")
@@ -406,12 +406,12 @@ def _cmd_kccompress(arg: str, ctx: SlashCommandContext) -> None:
                 return
 
         conv_id = conv.get("id")
-        unsummarised = _kc_get(f"/conversations/{conv_id}/messages?summarised=0&limit=1") or []
+        unsummarised = _kc_get(f"/api/conversations/{conv_id}/messages?summarised=0&limit=1") or []
         if not unsummarised:
             ctx.output("No unsummarised messages - nothing to compress.", "dim")
             return
 
-        _kc_post("/events", {
+        _kc_post("/api/events", {
             "conversation_id": conv_id,
             "event_type":      "compress_needed",
             "priority":        10,

@@ -15,7 +15,7 @@ def _task_external_id(task_name: str) -> str:
 def _lookup_task_conversation(base: str, task_name: str) -> dict | None:
     external_id = urllib.parse.quote(_task_external_id(task_name), safe="")
     try:
-        existing = _http_get(base, f"/conversations/by-external-id/{external_id}")
+        existing = _http_get(base, f"/api/conversations/by-external-id/{external_id}")
     except RuntimeError as exc:
         if "KC HTTP 404" in str(exc):
             return None
@@ -34,7 +34,7 @@ def ensure_task_conversation(task_name: str) -> dict:
 
     created = _http_post(
         base,
-        "/conversations",
+        "/api/conversations",
         {
             "external_id":  _task_external_id(task_name),
             "subject":      task_name,
@@ -52,7 +52,7 @@ def load_task_turns(task_name: str) -> list[dict]:
         if not base:
             return []
         conv = ensure_task_conversation(task_name)
-        result = _http_get(base, f"/conversations/{conv['id']}/messages?limit=1000") or []
+        result = _http_get(base, f"/api/conversations/{conv['id']}/messages?limit=1000") or []
     except Exception:
         return []
 
@@ -87,7 +87,7 @@ def save_task_turn(task_name: str, user_text: str, agent_text: str) -> None:
 
         _http_post(
             base,
-            f"/conversations/{conv_id}/messages",
+            f"/api/conversations/{conv_id}/messages",
             {
                 "direction":      "inbound",
                 "content":        user_text,
@@ -97,7 +97,7 @@ def save_task_turn(task_name: str, user_text: str, agent_text: str) -> None:
         )
         _http_post(
             base,
-            f"/conversations/{conv_id}/messages",
+            f"/api/conversations/{conv_id}/messages",
             {
                 "direction":      "outbound",
                 "content":        agent_text,
@@ -107,7 +107,7 @@ def save_task_turn(task_name: str, user_text: str, agent_text: str) -> None:
         )
         _http_patch(
             base,
-            f"/conversations/{conv_id}",
+            f"/api/conversations/{conv_id}",
             {
                 "subject":    task_name,
                 "turn_count": turn_count,

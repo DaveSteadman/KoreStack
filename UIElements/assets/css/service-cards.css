@@ -154,6 +154,7 @@
 .kcui-service-actions,
 .svc-actions {
   display: flex;
+  align-items: center;
   flex-direction: row;
   flex-wrap: nowrap;
   gap: 0.4rem;

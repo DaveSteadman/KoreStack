@@ -22,9 +22,11 @@
 import html as _html
 import json as _json
 import re as _re
+import sys
 import xml.etree.ElementTree as ET
 from collections import defaultdict
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Optional
 from urllib.parse import quote as _urlquote, urlparse as _urlparse, unquote as _urlunquote
 
@@ -34,6 +36,11 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
+_KORECOMMON_PARENT = next((parent for parent in Path(__file__).resolve().parents if (parent / "KoreCommon").is_dir()), None)
+if _KORECOMMON_PARENT is not None and str(_KORECOMMON_PARENT) not in sys.path:
+    sys.path.insert(0, str(_KORECOMMON_PARENT))
+
+from KoreCommon.endpoint_manifest import build_endpoint_manifest
 from app.config import cfg
 
 from app.database import (
@@ -65,6 +72,11 @@ app = FastAPI(
     description="Long-form text storage and retrieval service",
     lifespan=_lifespan,
 )
+
+
+@app.get("/__endpoint_manifest", include_in_schema=False)
+def endpoint_manifest() -> dict:
+    return build_endpoint_manifest(app, service_key="korelibrary", service_label="KoreLibrary")
 
 
 # ---------------------------------------------------------------------------
@@ -115,11 +127,13 @@ class KiwixImportRequest(BaseModel):
 # Books
 # ---------------------------------------------------------------------------
 
-@app.get("/catalogs", summary="List available catalogs")
+@app.get("/api/catalogs", summary="List available catalogs")
+@app.get("/catalogs", include_in_schema=False)
 def route_list_catalogs():
     return {"catalogs": list_catalogs()}
 
-@app.get("/books", summary="List all books (metadata only)")
+@app.get("/api/books", summary="List all books (metadata only)")
+@app.get("/books", include_in_schema=False)
 def route_list_books(limit: int = 100, offset: int = 0, catalog: Optional[str] = None):
     try:
         return list_books(limit=limit, offset=offset, catalog=catalog)
@@ -127,7 +141,8 @@ def route_list_books(limit: int = 100, offset: int = 0, catalog: Optional[str] =
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
-@app.get("/books/{book_id:path}/chunk", summary="Get a character-slice of a book body")
+@app.get("/api/books/{book_id:path}/chunk", summary="Get a character-slice of a book body")
+@app.get("/books/{book_id:path}/chunk", include_in_schema=False)
 def route_get_book_chunk(book_id: str, offset: int = 0, length: int = 4096):
     try:
         result = get_book_chunk(book_id, offset_chars=offset, length_chars=length)
@@ -138,7 +153,8 @@ def route_get_book_chunk(book_id: str, offset: int = 0, length: int = 4096):
     return result
 
 
-@app.get("/books/{book_id:path}", summary="Get a single book with full body")
+@app.get("/api/books/{book_id:path}", summary="Get a single book with full body")
+@app.get("/books/{book_id:path}", include_in_schema=False)
 def route_get_book(book_id: str):
     try:
         book = get_book(book_id, include_body=True)
@@ -149,7 +165,8 @@ def route_get_book(book_id: str):
     return book
 
 
-@app.post("/books", status_code=201, summary="Add a new book")
+@app.post("/api/books", status_code=201, summary="Add a new book")
+@app.post("/books", status_code=201, include_in_schema=False)
 def route_add_book(data: BookCreate):
     try:
         return add_book(
@@ -168,7 +185,8 @@ def route_add_book(data: BookCreate):
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
-@app.patch("/books/{book_id:path}", summary="Update book metadata or body")
+@app.patch("/api/books/{book_id:path}", summary="Update book metadata or body")
+@app.patch("/books/{book_id:path}", include_in_schema=False)
 def route_update_book(book_id: str, data: BookUpdate):
     if get_book(book_id, include_body=False) is None:
         raise HTTPException(status_code=404, detail="Book not found")
@@ -210,7 +228,8 @@ def _repair_kore_anchors(body: str) -> str:
     return result
 
 
-@app.post("/books/{book_id:path}/repair-anchors", summary="Repair broken anchor spans in stored body")
+@app.post("/api/books/{book_id:path}/repair-anchors", summary="Repair broken anchor spans in stored body")
+@app.post("/books/{book_id:path}/repair-anchors", include_in_schema=False)
 def route_repair_anchors(book_id: str):
     book = get_book(book_id, include_body=True)
     if book is None:
@@ -226,7 +245,8 @@ def route_repair_anchors(book_id: str):
     return {"repaired": True, "book": updated}
 
 
-@app.post("/books/{book_id:path}/move", summary="Move a book to a different catalog")
+@app.post("/api/books/{book_id:path}/move", summary="Move a book to a different catalog")
+@app.post("/books/{book_id:path}/move", include_in_schema=False)
 def route_move_book(book_id: str, data: BookMoveRequest):
     try:
         new_book = move_book(book_id, dest_catalog=data.catalog)
@@ -237,7 +257,8 @@ def route_move_book(book_id: str, data: BookMoveRequest):
     return new_book
 
 
-@app.delete("/books/{book_id:path}", status_code=204, summary="Delete a book")
+@app.delete("/api/books/{book_id:path}", status_code=204, summary="Delete a book")
+@app.delete("/books/{book_id:path}", status_code=204, include_in_schema=False)
 def route_delete_book(book_id: str):
     try:
         deleted = delete_book(book_id)
@@ -252,7 +273,8 @@ def route_delete_book(book_id: str):
 # Search
 # ---------------------------------------------------------------------------
 
-@app.get("/search", summary="Search books by full-text query and/or metadata filters")
+@app.get("/api/search", summary="Search books by full-text query and/or metadata filters")
+@app.get("/search", include_in_schema=False)
 def route_search(
     q: Optional[str] = None,
     author: Optional[str] = None,
@@ -294,7 +316,8 @@ def route_search(
 # Incomplete records
 # ---------------------------------------------------------------------------
 
-@app.get("/incomplete", summary="List books with missing metadata fields")
+@app.get("/api/incomplete", summary="List books with missing metadata fields")
+@app.get("/incomplete", include_in_schema=False)
 def route_incomplete(fields: Optional[str] = None, catalog: Optional[str] = None, catalogs: Optional[str] = None):
     """
     Returns books where `author`, `year`, `language`, or `genre` are NULL/empty.
@@ -412,7 +435,8 @@ def _parse_gutenberg_html(html: str) -> dict:
     return {"body": body_md, "author": author, "year": year, "title": title, "genre": genre}
 
 
-@app.get("/kiwix/inventory", summary="List available ZIM files from Kiwix OPDS catalog")
+@app.get("/api/kiwix/inventory", summary="List available ZIM files from Kiwix OPDS catalog")
+@app.get("/kiwix/inventory", include_in_schema=False)
 async def kiwix_inventory(kiwix_url: Optional[str] = None):
     url = kiwix_url or cfg.get("kiwix_url", "")
     if not url:
@@ -461,7 +485,8 @@ def _extract_link(el) -> str:
     return ""
 
 
-@app.get("/kiwix/search", summary="Full-text search within a Kiwix ZIM")
+@app.get("/api/kiwix/search", summary="Full-text search within a Kiwix ZIM")
+@app.get("/kiwix/search", include_in_schema=False)
 async def kiwix_search(zim: str, q: str, count: int = 100, kiwix_url: Optional[str] = None):
     url = kiwix_url or cfg.get("kiwix_url", "")
     if not url:
@@ -509,7 +534,8 @@ async def kiwix_search(zim: str, q: str, count: int = 100, kiwix_url: Optional[s
     return results
 
 
-@app.get("/kiwix/suggest", summary="Suggest article titles from a Kiwix ZIM")
+@app.get("/api/kiwix/suggest", summary="Suggest article titles from a Kiwix ZIM")
+@app.get("/kiwix/suggest", include_in_schema=False)
 async def kiwix_suggest(zim: str, pattern: str = "", count: int = 50, kiwix_url: Optional[str] = None):
     url = kiwix_url or cfg.get("kiwix_url", "")
     if not url:
@@ -551,7 +577,8 @@ async def kiwix_suggest(zim: str, pattern: str = "", count: int = 50, kiwix_url:
         raise HTTPException(status_code=502, detail=f"Kiwix unreachable: {exc}") from exc
 
 
-@app.get("/kiwix/catalog", summary="Return full Gutenberg ZIM catalog grouped by author")
+@app.get("/api/kiwix/catalog", summary="Return full Gutenberg ZIM catalog grouped by author")
+@app.get("/kiwix/catalog", include_in_schema=False)
 async def kiwix_catalog(
     zim: str,
     author: Optional[str] = None,
@@ -646,7 +673,8 @@ async def _kiwix_search_url(host: str, zim: str, title: str) -> tuple[Optional[s
         return None, f"Kiwix search error: {exc}"
 
 
-@app.post("/import/kiwix", status_code=201, summary="Import a single book from Kiwix by title")
+@app.post("/api/import/kiwix", status_code=201, summary="Import a single book from Kiwix by title")
+@app.post("/import/kiwix", status_code=201, include_in_schema=False)
 async def import_kiwix(data: KiwixImportRequest):
     url = data.kiwix_url or cfg.get("kiwix_url", "")
     if not url:
@@ -804,7 +832,8 @@ async def _fetch_and_import_viewer_url(viewer_url: str, language: str, kiwix_url
     return result
 
 
-@app.post("/import/kiwix/viewer", status_code=201, summary="Import a Kiwix article by its viewer URL")
+@app.post("/api/import/kiwix/viewer", status_code=201, summary="Import a Kiwix article by its viewer URL")
+@app.post("/import/kiwix/viewer", status_code=201, include_in_schema=False)
 async def import_kiwix_viewer(data: KiwixViewerImportRequest):
     """
     Parses a URL of the form  http://HOST/viewer#ZIM/Article%20Name.ID
@@ -819,7 +848,8 @@ async def import_kiwix_viewer(data: KiwixViewerImportRequest):
     return get_book(r["id"], include_body=False)
 
 
-@app.post("/import/kiwix/viewer/batch", summary="Batch-import Kiwix articles from a list of viewer URLs")
+@app.post("/api/import/kiwix/viewer/batch", summary="Batch-import Kiwix articles from a list of viewer URLs")
+@app.post("/import/kiwix/viewer/batch", include_in_schema=False)
 async def import_kiwix_viewer_batch(data: KiwixViewerBatchRequest):
     """Processes each URL in order, skipping blank lines. Never aborts early."""
     results = []

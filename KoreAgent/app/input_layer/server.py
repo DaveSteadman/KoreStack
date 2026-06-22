@@ -60,6 +60,9 @@ from pathlib import Path
 _code_dir = str(Path(__file__).resolve().parent.parent)
 if _code_dir not in sys.path:
     sys.path.insert(0, _code_dir)
+_KORECOMMON_PARENT = next((parent for parent in Path(__file__).resolve().parents if (parent / "KoreCommon").is_dir()), None)
+if _KORECOMMON_PARENT is not None and str(_KORECOMMON_PARENT) not in sys.path:
+    sys.path.insert(0, str(_KORECOMMON_PARENT))
 
 import json
 import queue
@@ -79,6 +82,7 @@ from fastapi.responses import RedirectResponse
 from fastapi.responses import Response
 from pydantic import BaseModel
 
+from KoreCommon.endpoint_manifest import build_endpoint_manifest
 from llm_client import get_active_backend
 from llm_client import get_active_host
 from llm_client import get_active_model
@@ -258,6 +262,11 @@ def finish_run_event_queue(run_id: str) -> None:
 # ====================================================================================================
 app = FastAPI(title="KoreAgent API", version=SUITE_VERSION)
 
+
+@app.get("/__endpoint_manifest", include_in_schema=False)
+def endpoint_manifest() -> dict:
+    return build_endpoint_manifest(app, service_key="koreagent", service_label="KoreAgent")
+
 # Restrict CORS to localhost only. External pages cannot trigger prompt or history endpoints.
 app.add_middleware(
     CORSMiddleware,
@@ -397,12 +406,13 @@ register_status_routes(
 # MARK: COMPLETIONS ENDPOINT
 # ====================================================================================================
 
-@app.get("/completions")
+@app.get("/api/completions")
+@app.get("/completions", include_in_schema=False)
 def get_completions():
     """Return tab-completion candidates grouped by type for the UI tab-complete feature."""
     sessions = []
     try:
-        kc_sessions = _kc_get("/conversations?channel_type=webchat&limit=500") or []
+        kc_sessions = _kc_get("/api/conversations?channel_type=webchat&limit=500") or []
         if isinstance(kc_sessions, list):
             for item in kc_sessions:
                 external_id = str(item.get("external_id") or "")
@@ -439,26 +449,30 @@ def get_completions():
 # MARK: SETTINGS ENDPOINTS
 # ====================================================================================================
 
-@app.get("/settings/sandbox")
+@app.get("/api/settings/sandbox")
+@app.get("/settings/sandbox", include_in_schema=False)
 def settings_sandbox_get():
     """Return the current Python execution sandbox state."""
     return {"sandbox": get_sandbox_enabled()}
 
 
-@app.post("/settings/sandbox")
+@app.post("/api/settings/sandbox")
+@app.post("/settings/sandbox", include_in_schema=False)
 def settings_sandbox_post(enabled: bool):
     """Set the Python execution sandbox state."""
     set_sandbox_enabled(enabled)
     return {"sandbox": get_sandbox_enabled()}
 
 
-@app.get("/settings/webskills")
+@app.get("/api/settings/webskills")
+@app.get("/settings/webskills", include_in_schema=False)
 def settings_webskills_get():
     """Return the current web skills enabled state."""
     return {"webskills": get_web_skills_enabled()}
 
 
-@app.post("/settings/webskills")
+@app.post("/api/settings/webskills")
+@app.post("/settings/webskills", include_in_schema=False)
 def settings_webskills_post(enabled: bool):
     """Set the web skills enabled state."""
     set_web_skills_enabled(enabled)
@@ -479,13 +493,15 @@ def set_llm_direct_enabled(enabled: bool) -> None:
     _llm_direct_enabled = bool(enabled)
 
 
-@app.get("/settings/llmdirect")
+@app.get("/api/settings/llmdirect")
+@app.get("/settings/llmdirect", include_in_schema=False)
 def settings_llmdirect_get():
     """Return the current LLM Direct mode state."""
     return {"llmdirect": get_llm_direct_enabled()}
 
 
-@app.post("/settings/llmdirect")
+@app.post("/api/settings/llmdirect")
+@app.post("/settings/llmdirect", include_in_schema=False)
 def settings_llmdirect_post(enabled: bool):
     """Set the LLM Direct mode state."""
     set_llm_direct_enabled(enabled)
@@ -511,7 +527,8 @@ def _pop_pending_switch() -> dict | None:
     return sw
 
 
-@app.post("/sessions/request-switch", status_code=200)
+@app.post("/api/sessions/request-switch", status_code=200)
+@app.post("/sessions/request-switch", status_code=200, include_in_schema=False)
 def post_request_switch(body: SessionSwitchRequest):
     # Use the same name/lookup helpers as the slash command handler but search ALL
     # conversation types (not just webchat) so KoreComms and other channels work too.
@@ -564,7 +581,8 @@ class HistoryAppendRequest(BaseModel):
     text: str
 
 
-@app.get("/sessions/{session_id}/input-history")
+@app.get("/api/sessions/{session_id}/input-history")
+@app.get("/sessions/{session_id}/input-history", include_in_schema=False)
 def get_session_input_history(session_id: str):
     """Return the last _HISTORY_LIMIT input history entries for the session's conversation."""
     _validate_session_id(session_id)
@@ -572,14 +590,15 @@ def get_session_input_history(session_id: str):
     if conv is None:
         return {"entries": []}
     try:
-        result  = _kc_get(f"/conversations/{conv['id']}/input-history")
+        result  = _kc_get(f"/api/conversations/{conv['id']}/input-history")
         entries = result.get("entries", []) if isinstance(result, dict) else []
     except HTTPException:
         entries = []
     return {"entries": entries[-_HISTORY_LIMIT:]}
 
 
-@app.post("/sessions/{session_id}/input-history")
+@app.post("/api/sessions/{session_id}/input-history")
+@app.post("/sessions/{session_id}/input-history", include_in_schema=False)
 def post_session_input_history(session_id: str, body: HistoryAppendRequest):
     """Append one entry to the session's per-conversation input history."""
     _validate_session_id(session_id)
@@ -590,7 +609,7 @@ def post_session_input_history(session_id: str, body: HistoryAppendRequest):
     if conv is None:
         return {"entries": [text]}
     try:
-        result  = _kc_patch(f"/conversations/{conv['id']}/input-history", {"text": text})
+        result  = _kc_patch(f"/api/conversations/{conv['id']}/input-history", {"text": text})
         entries = result.get("entries", []) if isinstance(result, dict) else []
     except HTTPException:
         entries = [text]
@@ -679,10 +698,10 @@ def _kc_get_conversation_for_session(session_id: str) -> dict | None:
     try:
         conv_id = _kc_conversation_id_for_session(session_id)
         if conv_id is not None:
-            result = _kc_get(f"/conversations/{conv_id}")
+            result = _kc_get(f"/api/conversations/{conv_id}")
         else:
             external_id = _kc_external_id_for_session(session_id)
-            result = _kc_get(f"/conversations/by-external-id/{urllib.parse.quote(external_id, safe='')}")
+            result = _kc_get(f"/api/conversations/by-external-id/{urllib.parse.quote(external_id, safe='')}")
     except HTTPException as exc:
         if exc.status_code in {404, 503}:
             return None
@@ -698,11 +717,11 @@ def _get_session_turns(session_id: str) -> list[dict]:
     try:
         conv_id = _kc_conversation_id_for_session(session_id)
         if conv_id is not None:
-            messages = _kc_get(f"/conversations/{conv_id}/messages?limit=1000")
+            messages = _kc_get(f"/api/conversations/{conv_id}/messages?limit=1000")
             result = {"messages": messages if isinstance(messages, list) else []}
         else:
             external_id = _kc_external_id_for_session(session_id)
-            result = _kc_get(f"/conversations/by-external-id/{urllib.parse.quote(external_id, safe='')}/turns")
+            result = _kc_get(f"/api/conversations/by-external-id/{urllib.parse.quote(external_id, safe='')}/turns")
     except HTTPException as exc:
         if exc.status_code in {404, 503}:
             return []
@@ -738,7 +757,7 @@ def _kc_ensure_conversation(session_id: str) -> dict | None:
         # Use any pending display name set by /newchat <name>, fall back to default.
         pending_name = _kc_session_names.pop(session_id, None)
         subject = pending_name or f"Webchat {session_id}"
-        conv = _kc_post("/conversations", {
+        conv = _kc_post("/api/conversations", {
             "channel_type": "webchat",
             "subject":      subject,
             "protected":    bool(pending_name),
@@ -760,13 +779,13 @@ def _kc_save_turn(session_id: str, user_text: str, agent_text: str, token_estima
     conv_id    = conv["id"]
     turn_count = (conv.get("turn_count") or 0) + 1
     try:
-        _kc_post(f"/conversations/{conv_id}/messages", {
+        _kc_post(f"/api/conversations/{conv_id}/messages", {
             "direction":      "inbound",
             "content":        user_text,
             "sender_display": session_id,
             "status":         "received",
         })
-        _kc_post(f"/conversations/{conv_id}/messages", {
+        _kc_post(f"/api/conversations/{conv_id}/messages", {
             "direction":      "outbound",
             "content":        agent_text,
             "sender_display": "agent",
@@ -778,7 +797,7 @@ def _kc_save_turn(session_id: str, user_text: str, agent_text: str, token_estima
         patch: dict = {"turn_count": turn_count}
         if token_estimate is not None:
             patch["token_estimate"] = token_estimate
-        _kc_patch(f"/conversations/{conv_id}", patch)
+        _kc_patch(f"/api/conversations/{conv_id}", patch)
         # Invalidate cached conv so the next call sees the updated turn_count.
         _kc_conv_cache.pop(session_id, None)
     except Exception:
@@ -813,7 +832,7 @@ def _load_session(session_id: str) -> tuple["ConversationHistory", list[dict]]:
         summaries = [{"text": thread_summary, "turn_range": [1, 1]}]
 
     try:
-        messages = _kc_get(f"/conversations/{conv['id']}/messages?summarised=0&limit=1000") or []
+        messages = _kc_get(f"/api/conversations/{conv['id']}/messages?summarised=0&limit=1000") or []
     except HTTPException:
         messages = []
 
@@ -945,7 +964,7 @@ def _save_session(
                 if conv:
                     try:
                         combined = _build_summary_block(summaries)
-                        _kc_patch(f"/conversations/{conv['id']}", {"thread_summary": combined})
+                        _kc_patch(f"/api/conversations/{conv['id']}", {"thread_summary": combined})
                     except Exception as exc:
                         print(f"[session] Warning: could not store thread_summary: {exc}", flush=True)
 
@@ -960,7 +979,7 @@ def _flush_scratch_to_session(session_id: str) -> None:
     try:
         named_scratch = {k: v for k, v in get_scratch_store(session_id).items() if not k.startswith("_tc_")}
         _kc_patch(
-            f"/conversations/{conv['id']}",
+            f"/api/conversations/{conv['id']}",
             {
                 "scratchpad": build_persisted_scratchpad_payload(named_scratch),
                 "datasets": get_persisted_datasets_payload(session_id),
@@ -978,7 +997,7 @@ def _delete_session_state(session_id: str) -> None:
     if conv is None:
         return
     try:
-        _kc_delete(f"/conversations/{conv['id']}")
+        _kc_delete(f"/api/conversations/{conv['id']}")
     except HTTPException as exc:
         if exc.status_code != 404:
             raise
@@ -1240,7 +1259,8 @@ class KcSendRequest(BaseModel):
     content:    str
 
 
-@app.post("/kc/send", status_code=201)
+@app.post("/api/kc/send", status_code=201)
+@app.post("/kc/send", status_code=201, include_in_schema=False)
 async def kc_send(body: KcSendRequest):
     """Append an inbound chat message to KoreChat.
 
@@ -1257,7 +1277,7 @@ async def kc_send(body: KcSendRequest):
     # Find existing conversation by external_id; create if absent.
     conv_id: int | None = None
     try:
-        existing = await _kc_get_async(f"/conversations/by-external-id/{urllib.parse.quote(external_id, safe='')}")
+        existing = await _kc_get_async(f"/api/conversations/by-external-id/{urllib.parse.quote(external_id, safe='')}")
         if isinstance(existing, dict) and existing.get("id"):
             conv_id = int(existing["id"])
     except HTTPException as exc:
@@ -1266,7 +1286,7 @@ async def kc_send(body: KcSendRequest):
 
     if conv_id is None:
         # Create a new webchat conversation tied to this session.
-        new_conv = await _kc_post_async("/conversations", {
+        new_conv = await _kc_post_async("/api/conversations", {
             "channel_type": "webchat",
             "subject":      f"Webchat {body.session_id}",
             "protected":    False,
@@ -1277,7 +1297,7 @@ async def kc_send(body: KcSendRequest):
         conv_id = new_conv["id"]
 
     # Append inbound message.
-    msg = await _kc_post_async(f"/conversations/{conv_id}/messages", {
+    msg = await _kc_post_async(f"/api/conversations/{conv_id}/messages", {
         "direction":      "inbound",
         "content":        content,
         "sender_display": body.session_id,
@@ -1289,16 +1309,18 @@ async def kc_send(body: KcSendRequest):
     return {"conv_id": conv_id, "msg_id": msg.get("id")}
 
 
-@app.get("/kc/conversations/{conv_id}/messages")
+@app.get("/api/kc/conversations/{conv_id}/messages")
+@app.get("/kc/conversations/{conv_id}/messages", include_in_schema=False)
 async def kc_get_messages(conv_id: int, limit: int = 100):
     """Proxy the message list for a KC conversation to the browser."""
-    return await _kc_get_async(f"/conversations/{conv_id}/messages?limit={limit}") or []
+    return await _kc_get_async(f"/api/conversations/{conv_id}/messages?limit={limit}") or []
 
 
-@app.get("/kc/conversations/{conv_id}")
+@app.get("/api/kc/conversations/{conv_id}")
+@app.get("/kc/conversations/{conv_id}", include_in_schema=False)
 async def kc_get_conversation(conv_id: int):
     """Proxy a KC conversation record to the browser."""
-    result = await _kc_get_async(f"/conversations/{conv_id}")
+    result = await _kc_get_async(f"/api/conversations/{conv_id}")
     if result is None:
         raise HTTPException(status_code=404, detail="Conversation not found")
     return result

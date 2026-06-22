@@ -17,11 +17,13 @@ from datetime import datetime
 
 
 def register_status_routes(app, *, get_active_host, get_active_model, get_active_num_ctx, get_active_backend, get_ollama_ps_rows, version: str) -> None:
-    @app.get("/version")
+    @app.get("/api/version")
+    @app.get("/version", include_in_schema=False)
     def get_version():
         return {"version": version}
 
-    @app.get("/status/ollama")
+    @app.get("/api/status/ollama")
+    @app.get("/status/ollama", include_in_schema=False)
     def get_ollama_status():
         try:
             rows = get_ollama_ps_rows()

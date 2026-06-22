@@ -37,7 +37,8 @@ def register_log_routes(
     log_subscribers,
     log_subscribers_lock,
 ) -> None:
-    @app.get("/logs")
+    @app.get("/api/logs")
+    @app.get("/logs", include_in_schema=False)
     def list_logs():
         result = []
         if log_dir.exists():
@@ -47,7 +48,8 @@ def register_log_routes(
                     result.append({"date": day_dir.name, "files": files})
         return {"log_dirs": result}
 
-    @app.get("/logs/latest")
+    @app.get("/api/logs/latest")
+    @app.get("/logs/latest", include_in_schema=False)
     def get_latest_log():
         latest = get_latest_log_file()
         if latest is None:
@@ -55,7 +57,8 @@ def register_log_routes(
         set_latest_log_path(latest)
         return {"path": str(latest)}
 
-    @app.get("/logs/{date}/{filename}")
+    @app.get("/api/logs/{date}/{filename}")
+    @app.get("/logs/{date}/{filename}", include_in_schema=False)
     def get_log_file(date: str, filename: str):
         if not all(char.isalnum() or char in "-_." for char in date + filename):
             raise HTTPException(status_code=400, detail="Invalid path characters")
@@ -68,7 +71,8 @@ def register_log_routes(
             raise HTTPException(status_code=400, detail="Path outside log directory")
         return {"lines": log_path.read_text(encoding="utf-8", errors="replace").splitlines()}
 
-    @app.get("/logs/stream")
+    @app.get("/api/logs/stream")
+    @app.get("/logs/stream", include_in_schema=False)
     def stream_logs():
         backfill = get_log_backfill()
 
@@ -100,7 +104,8 @@ def register_log_routes(
 
         return StreamingResponse(_generate(), media_type="text/event-stream")
 
-    @app.get("/logs/file")
+    @app.get("/api/logs/file")
+    @app.get("/logs/file", include_in_schema=False)
     def stream_log_file(path: str):
         try:
             requested = Path(path).resolve()

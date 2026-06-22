@@ -85,7 +85,8 @@ def register_session_routes(
     get_llm_direct_enabled=None,
     call_llm_chat=None,
 ) -> None:
-    @app.post("/sessions/{session_id}/prompt")
+    @app.post("/api/sessions/{session_id}/prompt")
+    @app.post("/sessions/{session_id}/prompt", include_in_schema=False)
     def post_prompt(session_id: str, body: PromptRequest):
         validate_session_id(session_id)
         config = config_getter()
@@ -248,7 +249,8 @@ def register_session_routes(
         task_queue.enqueue(run_id, "api_chat", _run, label=prompt_text[:48])
         return {"run_id": run_id, "session_id": session_id, "queued": True}
 
-    @app.get("/sessions/{session_id}/history")
+    @app.get("/api/sessions/{session_id}/history")
+    @app.get("/sessions/{session_id}/history", include_in_schema=False)
     def get_session_history(session_id: str):
         validate_session_id(session_id)
         turns = get_session_turns(session_id)
@@ -260,14 +262,16 @@ def register_session_routes(
             title = subject or external_id.removeprefix("webchat_") or session_id
         return {"session_id": session_id, "title": title, "turns": turns}
 
-    @app.delete("/sessions/{session_id}")
+    @app.delete("/api/sessions/{session_id}")
+    @app.delete("/sessions/{session_id}", include_in_schema=False)
     def delete_session(session_id: str):
         """Delete all persisted state for a session."""
         validate_session_id(session_id)
         delete_session_state(session_id)
         return {"ok": True, "session_id": session_id}
 
-    @app.get("/runs/{run_id}/stream")
+    @app.get("/api/runs/{run_id}/stream")
+    @app.get("/runs/{run_id}/stream", include_in_schema=False)
     def stream_run(run_id: str):
         with run_queues_lock:
             run_q = run_queues.get(run_id)

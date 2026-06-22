@@ -10,6 +10,7 @@
  *   <button class="kcui-tag kcui-tag--warning is-on" type="button">Sandbox</button>
  *
  * Color modifiers:  --accent  --success  --warning  --danger  --info  --purple  --yellow  --muted  --dim
+ * Size modifiers:   --sm
  * Shape modifiers:  --pill   (border-radius: 999px for rounded tags)
  * State modifiers:  is-on    is-off
  */
@@ -61,6 +62,12 @@ a.kcui-tag {
 .kcui-tag--muted   { color: var(--text-2,  #b8c0cc); }
 .kcui-tag--dim     { color: var(--text-dim, #4e5466); }
 
+.kcui-tag--sm {
+  font-size:   11px;
+  line-height: 1.35;
+  padding:     1px 6px;
+}
+
 /* ─── Shape variant ─────────────────────────────────────────────────── */
 
 .kcui-tag--pill {
@@ -88,6 +95,7 @@ a.kcui-tag {
 
 /* ─── Interactive (button element) ──────────────────────────────────── */
 
+a.kcui-tag,
 button.kcui-tag {
   appearance:      none;
   -webkit-appearance: none;
@@ -98,15 +106,18 @@ button.kcui-tag {
   transition:      color 0.12s, background 0.12s, border-color 0.12s;
 }
 
+a.kcui-tag:hover,
 button.kcui-tag:hover {
   background: color-mix(in srgb, currentColor 10%, transparent);
 }
 
+a.kcui-tag:focus-visible,
 button.kcui-tag:focus-visible {
   outline:        2px solid currentColor;
   outline-offset: 2px;
 }
 
+a.kcui-tag:active,
 button.kcui-tag:active {
   background: color-mix(in srgb, currentColor 18%, transparent);
 }

@@ -103,7 +103,7 @@
             class="kcui-code-input"
             onkeydown="if(event.key==='Enter') kiwixImportViewerUrl()">
         </div>
-        <button type="button" onclick="kiwixImportViewerUrl()">IMPORT</button>
+        <button class="btn btn-sm btn-primary" type="button" onclick="kiwixImportViewerUrl()">IMPORT</button>
       </div>
 
       <div class="kcui-mar-bottom-lg">
@@ -118,7 +118,7 @@
           <label for="k_query">Search by title or author</label>
           <input id="k_query" type="text" placeholder="e.g. Charles Dickens, Bleak House, evolution..." onkeydown="if(event.key==='Enter') kiwixSearch()">
         </div>
-        <button type="button" onclick="kiwixSearch()">SEARCH</button>
+        <button class="btn btn-sm btn-yellow" type="button" onclick="kiwixSearch()">SEARCH</button>
       </div>
 
       <!-- Search results -->
@@ -170,7 +170,7 @@
           placeholder="http://host:port/viewer#zim/Article_Name.123&#10;http://host:port/viewer#zim/Another_Article.456&#10;...one URL per line"
           ></textarea>
         <div class="kcui-actions--stack">
-          <button type="button" onclick="batchImport()" id="batch_btn">START IMPORT</button>
+          <button class="btn btn-sm btn-primary" type="button" onclick="batchImport()" id="batch_btn">START IMPORT</button>
           <button type="button" onclick="batchClear()" class="btn btn-sm kcui-btn-quiet">CLEAR LOG</button>
         </div>
       </div>
@@ -198,7 +198,7 @@
           <input id="cat_author" type="text" placeholder="e.g. Dickens, Nietzsche, Anonymous..."
             onkeydown="if(event.key==='Enter') catalogLoad()">
         </div>
-        <button type="button" onclick="catalogLoad()">SEARCH</button>
+        <button class="btn btn-sm btn-yellow" type="button" onclick="catalogLoad()">SEARCH</button>
         <button type="button" onclick="catalogAddAllToBatch()" class="btn btn-sm kcui-btn-quiet"
           title="Copy all visible viewer URLs into the Batch Import textarea">ADD ALL TO BATCH</button>
       </div>
@@ -407,7 +407,7 @@ function buildRows(items, zim, prefix, showSnippet) {
       <td style="font-size:12px;">${escHtml(displayTitle)}</td>
       ${snippetCell}
       <td style="text-align:center;">
-        <button type="button" style="font-size:11px; padding:2px 8px;"
+        <button class="btn btn-sm btn-primary" type="button"
           data-title="${escHtml(importTitle)}"
           data-zim="${escHtml(zim)}"
           data-article-url="${escHtml(articleUrl)}"
@@ -592,7 +592,7 @@ function catalogRender(data, zim) {
           <a href="${vu}" target="_blank" style="color:var(--text); text-decoration:none;" title="Open in Kiwix viewer">${t}</a>
         </td>
         <td style="text-align:center; width:70px; padding:3px;">
-          <button type="button" style="font-size:11px; padding:2px 8px;"
+          <button class="btn btn-sm btn-primary" type="button"
             data-title="${t}" data-zim="${escHtml(zim)}"
             data-article-url="${ap}" data-row="${rid}"
             onclick="kiwixImport(this.dataset.title, this.dataset.zim, this.dataset.articleUrl, this.dataset.row)">

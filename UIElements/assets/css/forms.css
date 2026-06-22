@@ -74,6 +74,14 @@
   transition: background .12s;
 }
 
+.kcui-shell-bg a.btn,
+a.kcui-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
 .kcui-shell-bg button:hover,
 .kcui-shell-bg .btn:hover,
 .kcui-btn:hover {
@@ -111,6 +119,28 @@
 .kcui-shell-bg .btn-primary:hover,
 .kcui-btn-primary:hover {
   background: color-mix(in srgb, var(--info) 15%, transparent);
+}
+
+.kcui-shell-bg .btn-warning,
+.kcui-btn-warning {
+  color: var(--warning);
+  border-color: var(--warning);
+}
+
+.kcui-shell-bg .btn-warning:hover,
+.kcui-btn-warning:hover {
+  background: color-mix(in srgb, var(--warning) 15%, transparent);
+}
+
+.kcui-shell-bg .btn-yellow,
+.kcui-btn-yellow {
+  color: var(--yellow);
+  border-color: var(--yellow);
+}
+
+.kcui-shell-bg .btn-yellow:hover,
+.kcui-btn-yellow:hover {
+  background: color-mix(in srgb, var(--yellow) 15%, transparent);
 }
 
 .kcui-shell-bg .btn-sm,

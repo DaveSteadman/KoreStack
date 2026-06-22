@@ -82,7 +82,8 @@ def register_task_routes(
             return get_scheduler_snapshot()
         return get_enabled_tasks(), get_last_run()
 
-    @app.get("/tasks")
+    @app.get("/api/tasks")
+    @app.get("/tasks", include_in_schema=False)
     def get_tasks():
         now = datetime.now()
         result = []
@@ -102,7 +103,8 @@ def register_task_routes(
             )
         return {"tasks": result, "ts": now.isoformat(timespec="seconds")}
 
-    @app.get("/queue")
+    @app.get("/api/queue")
+    @app.get("/queue", include_in_schema=False)
     def get_queue():
         queue_state = task_queue.get_state(pending_limit=queue_preview_limit)
         pending_switch = get_pending_switch() if get_pending_switch else None
@@ -124,7 +126,8 @@ def register_task_routes(
             "pending_switch": pending_switch,
         }
 
-    @app.get("/timeline")
+    @app.get("/api/timeline")
+    @app.get("/timeline", include_in_schema=False)
     def get_timeline(minutes_before: int = 40, minutes_after: int = 40):
         now = datetime.now()
         now_min = now.replace(second=0, microsecond=0)

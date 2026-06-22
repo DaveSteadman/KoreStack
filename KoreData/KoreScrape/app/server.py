@@ -3,6 +3,7 @@ import json
 import mimetypes
 import posixpath
 import re
+import sys
 import threading
 from collections import deque
 from contextlib import asynccontextmanager
@@ -17,6 +18,11 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, RedirectResponse
 from pydantic import BaseModel, Field, HttpUrl
 
+_KORECOMMON_PARENT = next((parent for parent in Path(__file__).resolve().parents if (parent / "KoreCommon").is_dir()), None)
+if _KORECOMMON_PARENT is not None and str(_KORECOMMON_PARENT) not in sys.path:
+    sys.path.insert(0, str(_KORECOMMON_PARENT))
+
+from KoreCommon.endpoint_manifest import build_endpoint_manifest
 from app.config import cfg
 from app.database import (
     delete_chunk as _db_delete_chunk,
@@ -623,6 +629,11 @@ app = FastAPI(
 )
 
 
+@app.get("/__endpoint_manifest", include_in_schema=False)
+def endpoint_manifest() -> dict:
+    return build_endpoint_manifest(app, service_key="korescrape", service_label="KoreScrape")
+
+
 @app.get("/", include_in_schema=False)
 def route_root():
     return RedirectResponse("/captures", status_code=302)
@@ -633,12 +644,14 @@ def route_status():
     return get_status()
 
 
-@app.get("/captures")
+@app.get("/api/captures")
+@app.get("/captures", include_in_schema=False)
 def route_list_captures():
     return {"captures": list_captures()}
 
 
-@app.get("/captures/{capture_id}")
+@app.get("/api/captures/{capture_id}")
+@app.get("/captures/{capture_id}", include_in_schema=False)
 def route_get_capture(capture_id: str):
     try:
         return get_capture(capture_id)
@@ -646,7 +659,8 @@ def route_get_capture(capture_id: str):
         raise HTTPException(status_code=404, detail="Capture not found") from exc
 
 
-@app.post("/captures", status_code=202)
+@app.post("/api/captures", status_code=202)
+@app.post("/captures", status_code=202, include_in_schema=False)
 def route_create_capture(payload: CaptureRequest):
     job = _start_capture(str(payload.url), payload.depth, payload.download_non_html)
     return {
@@ -659,12 +673,14 @@ def route_create_capture(payload: CaptureRequest):
     }
 
 
-@app.get("/chunks")
+@app.get("/api/chunks")
+@app.get("/chunks", include_in_schema=False)
 def route_list_chunks(limit: int = 100, offset: int = 0, capture_id: Optional[str] = None):
     return _db_list_chunks(limit=limit, offset=offset, capture_id=capture_id)
 
 
-@app.get("/chunks/{chunk_id}")
+@app.get("/api/chunks/{chunk_id}")
+@app.get("/chunks/{chunk_id}", include_in_schema=False)
 def route_get_chunk(chunk_id: int):
     chunk = _db_get_chunk(chunk_id)
     if chunk is None:
@@ -672,21 +688,24 @@ def route_get_chunk(chunk_id: int):
     return chunk
 
 
-@app.delete("/chunks/{chunk_id}")
+@app.delete("/api/chunks/{chunk_id}")
+@app.delete("/chunks/{chunk_id}", include_in_schema=False)
 def route_delete_chunk(chunk_id: int):
     if not _db_delete_chunk(chunk_id):
         raise HTTPException(status_code=404, detail="Chunk not found")
     return {"ok": True, "id": chunk_id}
 
 
-@app.post("/chunks/{chunk_id}/delete")
+@app.post("/api/chunks/{chunk_id}/delete")
+@app.post("/chunks/{chunk_id}/delete", include_in_schema=False)
 def route_delete_chunk_post(chunk_id: int):
     if not _db_delete_chunk(chunk_id):
         raise HTTPException(status_code=404, detail="Chunk not found")
     return {"ok": True, "id": chunk_id}
 
 
-@app.get("/search")
+@app.get("/api/search")
+@app.get("/search", include_in_schema=False)
 def route_search(q: str, limit: int = 20, capture_id: Optional[str] = None):
     return _db_search_chunks(q=q, limit=limit, capture_id=capture_id)
 

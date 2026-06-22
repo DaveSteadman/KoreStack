@@ -44,7 +44,7 @@
   {% if debate.url %}
   <a href="{{ debate.url }}" target="_blank" rel="noopener" class="btn btn-sm" title="View on hansard.parliament.uk">&#8599;</a>
   {% endif %}
-  <a class="btn btn-sm" href="/ui/rag/search?db={{ db_id }}">SEARCH</a>
+  <a class="btn btn-sm btn-yellow" href="/ui/rag/search?db={{ db_id }}">SEARCH</a>
   <span class="speech-count">{{ speeches | length }} speech{{ "es" if speeches | length != 1 else "" }}</span>
 </div>
 

@@ -27,6 +27,8 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 from pathlib import Path
 from typing import Any, Callable, ClassVar
 
+from endpoint_explorer import build_catalog, proxy_request
+
 log: logging.Logger = logging.getLogger("korestack")
 
 
@@ -111,6 +113,34 @@ def html_page(manager: Any, dashboard_url: str, stack_static_dir: Path, ui_asset
     )
 
 
+def endpoints_page(
+    manager: Any,
+    dashboard_url: str,
+    stack_static_dir: Path,
+    service_icon_keys: dict[str, str],
+    suite_config: dict[str, Any],
+) -> str:
+    snapshot = manager.snapshot()
+    suite_urls = build_suite_urls(manager, dashboard_url, service_icon_keys)
+    catalog = build_catalog(suite_config, dashboard_url)
+    bootstrap_json = json.dumps(
+        {
+            "snapshot": snapshot,
+            "suiteUrls": suite_urls,
+            "catalog": catalog,
+            "catalogUrl": "/api/endpoints/catalog",
+            "requestUrl": "/api/endpoints/request",
+            "chips": [
+                {"label": "Services", "value": str(catalog["stats"]["service_count"]), "valueId": "endpoint-service-count", "tone": "accent"},
+                {"label": "Reachable", "value": str(catalog["stats"]["reachable_count"]), "valueId": "endpoint-reachable-count", "tone": "dim"},
+                {"label": "Routes", "value": str(catalog["stats"]["route_count"]), "valueId": "endpoint-route-count", "tone": "dim"},
+            ],
+        }
+    ).replace("</", "<\\/")
+    template = _template_env(stack_static_dir).get_template("endpoints.html")
+    return template.render(bootstrap_json=bootstrap_json)
+
+
 def _content_type_for(path: Path) -> str:
     if path.suffix == ".css":
         return "text/css; charset=utf-8"
@@ -131,6 +161,7 @@ def build_handler(
     ui_assets_dir: Path,
     service_icon_keys: dict[str, str],
     probe_http_with_retry: Callable[[str], tuple[bool, str]],
+    suite_config: dict[str, Any],
 ):
     class StackHandler(BaseHTTPRequestHandler):
         manager_ref: ClassVar[Any] = manager
@@ -151,6 +182,17 @@ def build_handler(
 
             if request_path in ("/", ""):
                 body = html_page(self.manager_ref, self.dashboard_ref, stack_static_dir, ui_assets_dir, service_icon_keys).encode("utf-8")
+                self._send_bytes(body, "text/html; charset=utf-8")
+                return
+
+            if request_path == "/endpoints":
+                body = endpoints_page(
+                    self.manager_ref,
+                    self.dashboard_ref,
+                    stack_static_dir,
+                    service_icon_keys,
+                    suite_config,
+                ).encode("utf-8")
                 self._send_bytes(body, "text/html; charset=utf-8")
                 return
 
@@ -181,6 +223,19 @@ def build_handler(
                     return
                 return
 
+            if request_path == "/api/endpoints/catalog":
+                body = json.dumps(build_catalog(suite_config, self.dashboard_ref)).encode("utf-8")
+                self.send_response(HTTPStatus.OK)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.send_header("Cache-Control", "no-store")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                try:
+                    self.wfile.write(body)
+                except OSError:
+                    return
+                return
+
             if request_path.startswith("/ui-elements/assets/"):
                 self._serve_asset(ui_assets_dir, request_path.removeprefix("/ui-elements/assets/"))
                 return
@@ -193,6 +248,9 @@ def build_handler(
 
         def do_POST(self) -> None:  # noqa: N802
             request_path = urllib.parse.urlsplit(self.path).path
+            if request_path == "/api/endpoints/request":
+                self._handle_endpoint_request()
+                return
             if request_path.startswith("/api/services/"):
                 parts = [part for part in request_path.split("/") if part]
                 if len(parts) != 4:
@@ -253,6 +311,39 @@ def build_handler(
             except OSError:
                 return
 
+        def _handle_endpoint_request(self) -> None:
+            raw_length = self.headers.get("Content-Length", "0")
+            try:
+                content_length = int(raw_length)
+            except ValueError:
+                content_length = 0
+            raw_body = self.rfile.read(content_length) if content_length > 0 else b""
+            try:
+                payload = json.loads(raw_body.decode("utf-8") or "{}")
+            except Exception:
+                self.send_error(HTTPStatus.BAD_REQUEST, "Invalid JSON body")
+                return
+
+            result = proxy_request(
+                suite_config,
+                self.dashboard_ref,
+                method       = str(payload.get("method") or "GET"),
+                url          = str(payload.get("url") or ""),
+                body         = str(payload.get("body") or ""),
+                content_type = str(payload.get("content_type") or "application/json"),
+            )
+            status = int(result.get("status") or HTTPStatus.OK)
+            body = json.dumps(result).encode("utf-8")
+            self.send_response(status if 100 <= status <= 599 else HTTPStatus.OK)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            try:
+                self.wfile.write(body)
+            except OSError:
+                return
+
     return StackHandler
 
 
@@ -266,6 +357,7 @@ def serve_dashboard(
     ui_assets_dir: Path,
     service_icon_keys: dict[str, str],
     probe_http_with_retry: Callable[[str], tuple[bool, str]],
+    suite_config: dict[str, Any],
 ) -> None:
     dashboard_url = f"http://{host}:{port}/"
     handler = build_handler(
@@ -275,6 +367,7 @@ def serve_dashboard(
         ui_assets_dir=ui_assets_dir,
         service_icon_keys=service_icon_keys,
         probe_http_with_retry=probe_http_with_retry,
+        suite_config=suite_config,
     )
     httpd = ThreadingHTTPServer((host, port), handler)
     httpd.timeout = 0.5

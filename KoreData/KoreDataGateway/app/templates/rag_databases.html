@@ -67,7 +67,7 @@
               {% if script.running %}
               <span class="kcui-tag kcui-tag--success">RUNNING</span>
               {% endif %}
-              <a class="kcui-tag kcui-tag--info" href="/ui/rag?db={{ script.id }}">BROWSE</a>
+              <a class="btn btn-sm btn-warning" href="/ui/rag?db={{ script.id }}">BROWSE</a>
               {% if script.log_exists %}
               <a class="kcui-tag kcui-tag--accent" href="/ui/rag/processing/{{ script.id }}/log">VIEW LOG</a>
               {% endif %}
@@ -159,7 +159,7 @@
             <form id="db-delete-{{ d.id }}" method="post" action="/ui/rag/databases/{{ d.id }}/delete" style="display:none;"></form>
             <span style="display:inline-flex; gap:0.4rem; align-items:center;">
             {% if d.navigation %}<a class="kcui-tag kcui-tag--accent" href="/ui/rag/explore/{{ d.id }}">EXPLORE</a>{% endif %}
-            <a class="kcui-tag kcui-tag--info" href="/ui/rag?db={{ d.id }}">BROWSE</a>
+            <a class="btn btn-sm btn-warning" href="/ui/rag?db={{ d.id }}">BROWSE</a>
             <a class="kcui-tag kcui-tag--danger" href="#"
                onclick="event.preventDefault(); if(confirm('Delete database &quot;{{ d.id }}&quot; and all its data?\nThis cannot be undone.')) document.getElementById('db-delete-{{ d.id }}').submit();">DELETE</a>
             </span>
@@ -198,7 +198,7 @@
     let h = '<span style="display:inline-flex;gap:0.4rem;align-items:center;">';
     h = '<form id="db-delete-' + d.id + '" method="post" action="/ui/rag/databases/' + d.id + '/delete" style="display:none;"></form>' + h;
     if (d.navigation) h += '<a class="kcui-tag kcui-tag--accent" href="/ui/rag/explore/' + d.id + '">EXPLORE</a>';
-    h += '<a class="kcui-tag kcui-tag--info" href="/ui/rag?db=' + d.id + '">BROWSE</a>';
+    h += '<a class="btn btn-sm btn-warning" href="/ui/rag?db=' + d.id + '">BROWSE</a>';
     h += '<a class="kcui-tag kcui-tag--danger" href="#"'
        + ' onclick="event.preventDefault(); if(confirm(\'Delete database &quot;' + d.id + '&quot; and all its data?\\nThis cannot be undone.\')) document.getElementById(\'db-delete-' + d.id + '\').submit();">DELETE</a>';
     h += '</span>';
@@ -221,7 +221,7 @@
       + h;
     if (script.running)
       h += '<span class="kcui-tag kcui-tag--success">RUNNING</span>';
-    h += '<a class="kcui-tag kcui-tag--info" href="/ui/rag?db=' + script.id + '">BROWSE</a>';
+    h += '<a class="btn btn-sm btn-warning" href="/ui/rag?db=' + script.id + '">BROWSE</a>';
     if (script.log_exists)
       h += '<a class="kcui-tag kcui-tag--accent" href="/ui/rag/processing/' + script.id + '/log">VIEW LOG</a>';
     if (script.running) {

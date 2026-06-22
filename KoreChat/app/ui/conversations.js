@@ -157,7 +157,7 @@ async function loadStatus() {
 
 async function loadConversations() {
     try {
-        const r = await fetch("/conversations?limit=500");
+        const r = await fetch("/api/conversations?limit=500");
         if (!r.ok) { throw new Error(`HTTP ${r.status}`); }
         _allConversations = await r.json();
         _cacheSet("kc_conv_list", _allConversations);
@@ -218,7 +218,7 @@ async function selectConversation(id) {
     document.getElementById("detail").hidden        = false;
 
     try {
-        const r = await fetch(`/conversations/${id}/detail`);
+        const r = await fetch(`/api/conversations/${id}/detail`);
         if (!r.ok) return;
         const data = await r.json();
         _cacheSet("kc_detail_" + id, data);
@@ -302,7 +302,7 @@ async function onMetaTableClick(event) {
         const next = !current;
         protectedBtn.disabled = true;
         try {
-            const resp = await fetch(`/conversations/${_selectedId}`, {
+            const resp = await fetch(`/api/conversations/${_selectedId}`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ protected: next }),
@@ -328,7 +328,7 @@ async function onMetaTableClick(event) {
         if (!subject) return;
         applyBtn.disabled = true;
         try {
-            const resp = await fetch(`/conversations/${_selectedId}`, {
+            const resp = await fetch(`/api/conversations/${_selectedId}`, {
                 method:  "PATCH",
                 headers: { "Content-Type": "application/json" },
                 body:    JSON.stringify({ subject }),
@@ -614,7 +614,7 @@ async function sendMessage() {
             await refreshAll();
             _listenForResponse(data.run_id, MAF_BASE);
         } else {
-            const resp = await fetch(`/conversations/${_selectedId}/messages`, {
+            const resp = await fetch(`/api/conversations/${_selectedId}/messages`, {
                 method:  "POST",
                 headers: { "Content-Type": "application/json" },
                 body:    JSON.stringify({
@@ -713,7 +713,7 @@ async function deleteConversation() {
 
     btn.disabled = true;
     try {
-        const resp = await fetch(`/conversations/${id}`, { method: "DELETE" });
+        const resp = await fetch(`/api/conversations/${id}`, { method: "DELETE" });
         if (!resp.ok) {
             const err = await resp.text();
             throw new Error(`HTTP ${resp.status}: ${err}`);
@@ -753,7 +753,7 @@ async function createConversation() {
     if (submitBtn) submitBtn.disabled = true;
 
     try {
-        const resp = await fetch("/conversations", {
+        const resp = await fetch("/api/conversations", {
             method:  "POST",
             headers: { "Content-Type": "application/json" },
             body:    JSON.stringify({
@@ -787,7 +787,7 @@ async function renameConversation() {
     if (nextSubject === null) return;
 
     try {
-        const resp = await fetch(`/conversations/${_selectedId}`, {
+        const resp = await fetch(`/api/conversations/${_selectedId}`, {
             method:  "PATCH",
             headers: { "Content-Type": "application/json" },
             body:    JSON.stringify({ subject: nextSubject.trim() }),
@@ -809,7 +809,7 @@ async function renameConversation() {
 async function reloadMessages() {
     if (_selectedId === null) return;
     try {
-        const r    = await fetch(`/conversations/${_selectedId}/messages?limit=1000`);
+        const r    = await fetch(`/api/conversations/${_selectedId}/messages?limit=1000`);
         const msgs = r.ok ? await r.json() : [];
         renderMessages(msgs);
     } catch (e) {

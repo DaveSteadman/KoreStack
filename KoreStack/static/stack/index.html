@@ -27,69 +27,72 @@
 <body class="kcui-shell-bg">
   <div id="topbar"></div>
   <div id="app-bar"></div>
-  <main class="shell kcui-page kcui-page--narrow">
-    <section class="kcui-workspace kcui-workspace--dashboard kcui-workspace--stack-sm stack-workspace">
-      <div class="kcui-workspace__region stack-region">
-        <section class="panel kcui-panel paths-panel">
-          <div class="paths-header kcui-panel-header">
-            <p class="eyebrow">System Paths</p>
-            <p>Shared suite storage and document locations.</p>
-          </div>
-          <div class="kcui-panel-body">
-            <p class="paths-compact">
-            {% for row in path_rows %}
-              <span><b>{{ row.label }}</b><code>{{ row.path }}</code></span>
-            {% endfor %}
-            </p>
-          </div>
-        </section>
-      </div>
+  <main class="kcui-main">
+    <div class="kcui-page kcui-stack">
+      <section class="kcui-workspace kcui-workspace--dashboard kcui-workspace--stack-sm stack-workspace">
+        <div class="kcui-workspace__region stack-region">
+          <section class="panel kcui-panel paths-panel">
+            <div class="paths-header kcui-panel-header">
+              <p class="eyebrow">System Paths</p>
+              <p>Shared suite storage and document locations.</p>
+            </div>
+            <div class="kcui-panel-body">
+              <p class="paths-compact">
+              {% for row in path_rows %}
+                <span><b>{{ row.label }}</b><code>{{ row.path }}</code></span>
+              {% endfor %}
+              </p>
+            </div>
+          </section>
+        </div>
 
-      <div class="kcui-workspace__region stack-region">
-        <section class="panel kcui-panel services-panel">
-          <div class="services-header kcui-panel-header">
-            <p class="eyebrow">Services</p>
-            <p>Compact live rows with inline controls.</p>
-          </div>
-          <div class="kcui-panel-body">
-            <section class="services-grid">
-            {% for service in service_rows %}
-              <article class="service-row service-{{ service.slug }} {{ service.css_state }}" data-service-card="{{ service.slug }}">
-                <div class="service-cell service-glyph" aria-hidden="true" data-suite-icon="{{ service.icon_key }}"></div>
-                <div class="service-cell service-core">
-                  <p class="eyebrow">{{ service.slug_upper }}</p>
-                  <h2>{{ service.label }}</h2>
-                  <p class="service-copy">{{ service.description }}</p>
-                </div>
-                <div class="service-cell service-state">
-                  <span class="kcui-tag kcui-tag--{{ service.tag_color }}" data-field="state">{{ service.state_label }}</span>
-                </div>
-                <div class="service-cell service-link"><a data-field="url" href="{{ service.url }}" target="_blank" rel="noreferrer">{{ service.url }}</a></div>
-                <div class="service-cell service-actions actions">
-                  <button type="button" data-service="{{ service.slug }}" data-action="start" title="Start" aria-label="Start {{ service.label }}">
-                    <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3.5v9l7-4.5-7-4.5Z" fill="currentColor"/></svg>
-                  </button>
-                  <button type="button" data-service="{{ service.slug }}" data-action="stop" title="Stop" aria-label="Stop {{ service.label }}">
-                    <svg viewBox="0 0 16 16" aria-hidden="true"><rect x="4" y="4" width="8" height="8" fill="currentColor"/></svg>
-                  </button>
-                  <button type="button" data-service="{{ service.slug }}" data-action="restart" title="Restart" aria-label="Restart {{ service.label }}">
-                    <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3a5 5 0 1 1-4.24 2.35" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M2.8 2.8h3.6v3.6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                  </button>
-                </div>
-              </article>
-            {% endfor %}
-            </section>
-          </div>
-        </section>
-      </div>
-    </section>
+        <div class="kcui-workspace__region stack-region">
+          <section class="panel kcui-panel services-panel">
+            <div class="services-header kcui-panel-header">
+              <p class="eyebrow">Services</p>
+              <p>Compact live rows with inline controls.</p>
+            </div>
+            <div class="kcui-panel-body">
+              <section class="services-grid">
+              {% for service in service_rows %}
+                <article class="service-row service-{{ service.slug }} {{ service.css_state }}" data-service-card="{{ service.slug }}">
+                  <div class="service-cell service-glyph" aria-hidden="true" data-suite-icon="{{ service.icon_key }}"></div>
+                  <div class="service-cell service-core">
+                    <p class="eyebrow">{{ service.slug_upper }}</p>
+                    <h2>{{ service.label }}</h2>
+                    <p class="service-copy">{{ service.description }}</p>
+                  </div>
+                  <div class="service-cell service-state">
+                    <span class="kcui-tag kcui-tag--{{ service.tag_color }}" data-field="state">{{ service.state_label }}</span>
+                  </div>
+                  <div class="service-cell service-link"><a data-field="url" href="{{ service.url }}" target="_blank" rel="noreferrer">{{ service.url }}</a></div>
+                  <div class="service-cell service-actions actions">
+                    <button type="button" data-service="{{ service.slug }}" data-action="start" title="Start" aria-label="Start {{ service.label }}">
+                      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3.5v9l7-4.5-7-4.5Z" fill="currentColor"/></svg>
+                    </button>
+                    <button type="button" data-service="{{ service.slug }}" data-action="stop" title="Stop" aria-label="Stop {{ service.label }}">
+                      <svg viewBox="0 0 16 16" aria-hidden="true"><rect x="4" y="4" width="8" height="8" fill="currentColor"/></svg>
+                    </button>
+                    <button type="button" data-service="{{ service.slug }}" data-action="restart" title="Restart" aria-label="Restart {{ service.label }}">
+                      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3a5 5 0 1 1-4.24 2.35" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M2.8 2.8h3.6v3.6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </button>
+                  </div>
+                </article>
+              {% endfor %}
+              </section>
+            </div>
+          </section>
+        </div>
+      </section>
 
-    <section class="panel kcui-panel footer">
-      <div class="kcui-panel-body footer-body">
-        <p>Updates every 2 seconds without reloading the page.</p>
-        <p>Root command: <code>{{ root_command }}</code></p>
-      </div>
-    </section>
+      <section class="panel kcui-panel footer">
+        <div class="kcui-panel-body footer-body">
+          <p>Updates every 2 seconds without reloading the page.</p>
+          <p><a class="kcui-tag kcui-tag--accent" href="/endpoints">Endpoint Explorer</a></p>
+          <p>Root command: <code>{{ root_command }}</code></p>
+        </div>
+      </section>
+    </div>
   </main>
   <script id="stack-bootstrap" type="application/json">{{ bootstrap_json | safe }}</script>
   <script type="module" src="/static/stack/stack.js"></script>

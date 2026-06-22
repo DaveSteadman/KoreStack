@@ -40,6 +40,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import sys
 import urllib.error
 import urllib.request
 import uuid
@@ -51,6 +52,11 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Redirect
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 
+_KORECOMMON_PARENT = next((parent for parent in Path(__file__).resolve().parents if (parent / "KoreCommon").is_dir()), None)
+if _KORECOMMON_PARENT is not None and str(_KORECOMMON_PARENT) not in sys.path:
+    sys.path.insert(0, str(_KORECOMMON_PARENT))
+
+from KoreCommon.endpoint_manifest import build_endpoint_manifest
 from app import crypto, database as db, kc_client, poller, queue_manager
 from app.config import cfg
 from app.interfaces.common.registry import REGISTRY, build_adapter
@@ -98,6 +104,11 @@ async def lifespan(app: FastAPI):
     poller.stop()
 
 app = FastAPI(title="KoreComms", lifespan=lifespan)
+
+
+@app.get("/__endpoint_manifest", include_in_schema=False)
+def endpoint_manifest() -> dict:
+    return build_endpoint_manifest(app, service_key="korecomms", service_label="KoreComms")
 
 
 # ---------------------------------------------------------------------------

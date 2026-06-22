@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>KoreStack Endpoints</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      min-height: 100%;
+      background: #0b0c10;
+      color: #c5c8d0;
+      font: 13px/1.55 "Roboto Mono", Consolas, monospace;
+    }
+
+    #topbar,
+    #app-bar {
+      min-height: 0;
+    }
+  </style>
+  <link rel="icon" type="image/x-icon" href="/ui-elements/assets/icons/favicon.ico">
+  <link rel="stylesheet" href="/ui-elements/assets/css/chrome.css">
+  <link rel="stylesheet" href="/ui-elements/assets/css/workspace.css">
+  <link rel="stylesheet" href="/static/stack/stack.css">
+  <link rel="stylesheet" href="/static/stack/endpoints.css">
+</head>
+<body class="kcui-shell-bg">
+  <div id="topbar"></div>
+  <div id="app-bar"></div>
+  <main class="kcui-main">
+    <div class="kcui-page">
+      <section class="kcui-workspace endpoint-workspace">
+        <div class="kcui-workspace__region endpoint-region endpoint-region--list">
+          <section class="panel kcui-panel endpoint-panel endpoint-panel--list">
+            <div class="kcui-panel-header endpoint-header">
+              <div>
+                <p class="eyebrow">Endpoint Explorer</p>
+                <p>Live route manifests from every reachable suite service.</p>
+              </div>
+              <div class="endpoint-header-actions">
+                <a class="kcui-tag kcui-tag--dim" href="/">Back To Stack</a>
+                <button id="refresh-catalog" type="button" class="kcui-tag kcui-tag--accent">Refresh</button>
+              </div>
+            </div>
+            <div class="kcui-panel-body endpoint-body">
+              <div class="endpoint-filters">
+                <input id="route-search" class="kcui-input" type="text" placeholder="Filter by service, method, path, summary...">
+                <select id="service-filter" class="kcui-input"></select>
+                <label class="kcui-filter-label"><input id="show-hidden" type="checkbox"> hidden</label>
+                <label class="kcui-filter-label"><input id="show-assets" type="checkbox"> assets</label>
+                <label class="kcui-filter-label"><input id="show-unreachable" type="checkbox"> unreachable</label>
+              </div>
+              <div id="catalog-meta" class="endpoint-meta"></div>
+              <div id="endpoint-list" class="endpoint-list" role="list"></div>
+            </div>
+          </section>
+        </div>
+
+        <div class="kcui-workspace__region endpoint-region endpoint-region--runner">
+          <section class="panel kcui-panel endpoint-panel endpoint-panel--runner">
+            <div class="kcui-panel-header endpoint-header">
+              <div>
+                <p class="eyebrow">Request Runner</p>
+                <p id="selection-summary">Select an endpoint to inspect or run.</p>
+              </div>
+            </div>
+            <div class="kcui-panel-body endpoint-body endpoint-body--runner">
+              <div id="param-hints" class="param-hints"></div>
+              <div class="runner-grid">
+                <label>
+                  Method
+                  <select id="request-method" class="kcui-input"></select>
+                </label>
+                <label class="runner-grow">
+                  URL
+                  <input id="request-url" class="kcui-input" type="text" placeholder="http://127.0.0.1:9600/status">
+                </label>
+              </div>
+              <div class="runner-grid">
+                <label class="runner-grow">
+                  Content Type
+                  <input id="request-content-type" class="kcui-input" type="text" value="application/json">
+                </label>
+                <div class="runner-actions">
+                  <button id="request-submit" type="button" class="kcui-tag kcui-tag--accent">Submit</button>
+                  <a id="request-open" class="kcui-tag kcui-tag--dim" href="#" target="_blank" rel="noreferrer">Open</a>
+                </div>
+              </div>
+              <label class="runner-body">
+                Request Body
+                <textarea id="request-body" class="kcui-input kcui-textarea" spellcheck="false" placeholder="{}"></textarea>
+              </label>
+              <div id="response-meta" class="response-meta">No request sent yet.</div>
+              <pre id="response-body" class="response-body"></pre>
+            </div>
+          </section>
+        </div>
+      </section>
+    </div>
+  </main>
+  <script id="endpoint-bootstrap" type="application/json">{{ bootstrap_json | safe }}</script>
+  <script type="module" src="/static/stack/endpoints.js"></script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+{
+  "domain": "{domain}",
+  "age_settings": {
+    "mode": "none",
+    "days": null,
+    "start_date": null,
+    "end_date": null
+  },
+  "feeds": []
+}

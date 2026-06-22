@@ -94,7 +94,7 @@ def _json_request(method: str, url: str, payload: dict | None = None) -> dict | 
 def _get_conversation_by_external_id(external_id: str) -> dict | None:
     encoded = urllib.parse.quote(external_id, safe="")
     try:
-        payload = _json_request("GET", f"{korechat_base_url()}/conversations/by-external-id/{encoded}")
+        payload = _json_request("GET", f"{korechat_base_url()}/api/conversations/by-external-id/{encoded}")
     except RuntimeError as exc:
         if "HTTP 404" in str(exc):
             return None
@@ -105,7 +105,7 @@ def _get_conversation_by_external_id(external_id: str) -> dict | None:
 def _create_conversation(external_id: str, subject: str) -> dict:
     payload = _json_request(
         "POST",
-        f"{korechat_base_url()}/conversations",
+        f"{korechat_base_url()}/api/conversations",
         {
             "channel_type":       "webchat",
             "subject":            subject,
@@ -121,7 +121,7 @@ def _create_conversation(external_id: str, subject: str) -> dict:
 
 
 def _patch_conversation(conversation_id: int, payload: dict) -> dict:
-    result = _json_request("PATCH", f"{korechat_base_url()}/conversations/{conversation_id}", payload)
+    result = _json_request("PATCH", f"{korechat_base_url()}/api/conversations/{conversation_id}", payload)
     if not isinstance(result, dict):
         raise RuntimeError("KoreChat patch conversation returned no payload")
     return result
@@ -214,7 +214,7 @@ def set_workspace_context_enabled(
 
 
 def _conversation_detail(conversation_id: int) -> dict:
-    payload = _json_request("GET", f"{korechat_base_url()}/conversations/{conversation_id}/detail")
+    payload = _json_request("GET", f"{korechat_base_url()}/api/conversations/{conversation_id}/detail")
     if not isinstance(payload, dict):
         raise RuntimeError("KoreChat conversation detail returned no payload")
     return payload
@@ -328,7 +328,7 @@ def append_visible_message_for_conversation(
             "visible_text":    visible_text,
         },
     }
-    _json_request("POST", f"{korechat_base_url()}/conversations/{conversation['id']}/messages", payload)
+    _json_request("POST", f"{korechat_base_url()}/api/conversations/{conversation['id']}/messages", payload)
     return get_thread(
         workspace_root,
         thread_path,
@@ -365,7 +365,7 @@ def append_internal_followup(
             "outbound_sender_display": outbound_sender_display,
         },
     }
-    _json_request("POST", f"{korechat_base_url()}/conversations/{conversation['id']}/messages", payload)
+    _json_request("POST", f"{korechat_base_url()}/api/conversations/{conversation['id']}/messages", payload)
     return get_thread(
         workspace_root,
         thread_path,
@@ -383,5 +383,5 @@ def delete_thread(workspace_root: Path, thread_path: str, conversation_external_
     conversation = _get_conversation_by_external_id(external_id)
     if conversation is None:
         return False
-    _json_request("DELETE", f"{korechat_base_url()}/conversations/{conversation['id']}")
+    _json_request("DELETE", f"{korechat_base_url()}/api/conversations/{conversation['id']}")
     return True

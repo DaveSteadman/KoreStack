@@ -34,6 +34,7 @@ import json
 import logging
 import os
 import shutil
+import sys
 import textwrap
 from pathlib import Path
 
@@ -44,6 +45,12 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
+
+_KORECOMMON_PARENT = next((parent for parent in Path(__file__).resolve().parents if (parent / "KoreCommon").is_dir()), None)
+if _KORECOMMON_PARENT is not None and str(_KORECOMMON_PARENT) not in sys.path:
+    sys.path.insert(0, str(_KORECOMMON_PARENT))
+
+from KoreCommon.endpoint_manifest import build_endpoint_manifest
 
 try:
     from dotenv import load_dotenv
@@ -714,6 +721,11 @@ def _list_directory(rel_path: str) -> dict:
 
 
 app = FastAPI(title='KoreCode')
+
+
+@app.get('/__endpoint_manifest', include_in_schema=False)
+def endpoint_manifest() -> dict:
+    return build_endpoint_manifest(app, service_key='korecode', service_label='KoreCode')
 initialize_slash_commands(workspace_root_getter=_workspace_root)
 
 

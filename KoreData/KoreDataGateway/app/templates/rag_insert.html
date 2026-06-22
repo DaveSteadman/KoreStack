@@ -17,7 +17,7 @@
       {% else %}
       <span class="meta" style="font-size:11px;">{{ databases[0].display_name if databases else db }}</span>
       {% endif %}
-      <a class="btn btn-sm" href="/ui/rag?db={{ db }}">INDEX</a>
+      <a class="btn btn-sm btn-warning" href="/ui/rag?db={{ db }}">INDEX</a>
     </div>
   </div>
   <div class="panel-body kcui-panel-body">
@@ -40,7 +40,7 @@
       <textarea name="content" rows="12" placeholder="Paste or type the text content for this chunk..." required></textarea>
 
       <div style="display:flex; gap:0.5rem; margin-top:0.25rem;">
-        <button type="submit">INSERT</button>
+        <button class="btn btn-primary" type="submit">INSERT</button>
         <a class="btn btn-secondary" href="/ui/rag?db={{ db }}">CANCEL</a>
       </div>
     </form>

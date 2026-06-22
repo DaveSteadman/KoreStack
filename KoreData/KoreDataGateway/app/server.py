@@ -46,6 +46,11 @@ from markupsafe import Markup, escape
 from mcp.server.fastmcp import FastMCP
 from pydantic import BaseModel, Field
 
+_KORECOMMON_PARENT = next((parent for parent in Path(__file__).resolve().parents if (parent / "KoreCommon").is_dir()), None)
+if _KORECOMMON_PARENT is not None and str(_KORECOMMON_PARENT) not in sys.path:
+    sys.path.insert(0, str(_KORECOMMON_PARENT))
+
+from KoreCommon.endpoint_manifest import build_endpoint_manifest
 from app.config import cfg
 from config import get_koredata_dir
 
@@ -290,6 +295,11 @@ _INSTR_RAG = (
     "Search with domains=[\"rag\"]. "
     "Fetch full chunks with koredata_get_full_text(refid) or koredata_get_rag_chunk(chunk_id)."
 )
+
+
+@app.get("/__endpoint_manifest", include_in_schema=False)
+def endpoint_manifest() -> dict:
+    return build_endpoint_manifest(app, service_key="koredatagateway", service_label="KoreDataGateway")
 
 _INSTR_SCRAPE = (
     "KoreScrape — captured web pages indexed into extracted text chunks. "
@@ -846,28 +856,28 @@ async def api_search(req: _SearchRequest):
 
     async def _reference():
         params: dict = {"q": req.query, "limit": limit}
-        r = await _ref_client.get("/search", params=params, timeout=10.0)
+        r = await _ref_client.get("/api/search", params=params, timeout=10.0)
         if r.status_code != 200:
             return {"error": f"HTTP {r.status_code}"}
         return [_map_ref_article(a) for a in (r.json() or [])[:limit]]
 
     async def _library():
         params: dict = {"q": req.query, "limit": limit}
-        r = await _lib_client.get("/search", params=params, timeout=10.0)
+        r = await _lib_client.get("/api/search", params=params, timeout=10.0)
         if r.status_code != 200:
             return {"error": f"HTTP {r.status_code}"}
         return [_map_lib_book(b) for b in (r.json() or [])[:limit]]
 
     async def _rag():
         params: dict = {"q": req.query, "limit": limit}
-        r = await _rag_client.get("/search/all", params=params, timeout=10.0)
+        r = await _rag_client.get("/api/search/all", params=params, timeout=10.0)
         if r.status_code != 200:
             return {"error": f"HTTP {r.status_code}"}
         return [_map_rag_chunk(c) for c in (r.json() or [])[:limit]]
 
     async def _scrape():
         params: dict = {"q": req.query, "limit": limit}
-        r = await _scrape_client.get("/search", params=params, timeout=10.0)
+        r = await _scrape_client.get("/api/search", params=params, timeout=10.0)
         if r.status_code != 200:
             return {"error": f"HTTP {r.status_code}"}
         return [_map_scrape_chunk(c) for c in (r.json() or [])[:limit]]

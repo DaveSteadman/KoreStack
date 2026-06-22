@@ -13,12 +13,12 @@
   max-width: none;
 }
 
-.kcui-shell-bg a:not(.kcui-tag) {
+.kcui-shell-bg a:not(.kcui-tag):not(.btn):not(.kcui-btn) {
   color: var(--info);
   text-decoration: none;
 }
 
-.kcui-shell-bg a:not(.kcui-tag):hover {
+.kcui-shell-bg a:not(.kcui-tag):not(.btn):not(.kcui-btn):hover {
   color: var(--text);
   text-decoration: underline;
 }

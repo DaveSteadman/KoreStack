@@ -100,27 +100,27 @@
         </div>
         <div class="kcui-service-actions">
           {% if svc.slug == "feeds" %}
-            <a class="kcui-tag kcui-tag--info" href="/ui/{{ svc.slug }}">browse</a>
-            <a class="kcui-tag kcui-tag--purple" href="/ui/feeds/search">search</a>
+            <a class="btn btn-sm btn-warning" href="/ui/{{ svc.slug }}">browse</a>
+            <a class="btn btn-sm btn-yellow" href="/ui/feeds/search">search</a>
           {% elif svc.slug == "library" %}
-            <a class="kcui-tag kcui-tag--info" href="/ui/{{ svc.slug }}">browse</a>
-            <a class="kcui-tag kcui-tag--purple" href="/ui/library/search">search</a>
-            <a class="kcui-tag kcui-tag--yellow" href="/ui/library/import">import</a>
+            <a class="btn btn-sm btn-warning" href="/ui/{{ svc.slug }}">browse</a>
+            <a class="btn btn-sm btn-yellow" href="/ui/library/search">search</a>
+            <a class="btn btn-sm btn-primary" href="/ui/library/import">import</a>
           {% elif svc.slug == "reference" %}
-            <a class="kcui-tag kcui-tag--info" href="/ui/{{ svc.slug }}">browse</a>
-            <a class="kcui-tag kcui-tag--purple" href="/ui/reference/search">search</a>
-            <a class="kcui-tag kcui-tag--yellow" href="/ui/reference/import">import</a>
+            <a class="btn btn-sm btn-warning" href="/ui/{{ svc.slug }}">browse</a>
+            <a class="btn btn-sm btn-yellow" href="/ui/reference/search">search</a>
+            <a class="btn btn-sm btn-primary" href="/ui/reference/import">import</a>
           {% elif svc.slug == "rag" %}
-            <a class="kcui-tag kcui-tag--info" href="/ui/{{ svc.slug }}">browse</a>
-            <a class="kcui-tag kcui-tag--purple" href="/ui/rag/search">search</a>
-            <a class="kcui-tag kcui-tag--yellow" href="/ui/rag/insert">insert</a>
+            <a class="btn btn-sm btn-warning" href="/ui/{{ svc.slug }}">browse</a>
+            <a class="btn btn-sm btn-yellow" href="/ui/rag/search">search</a>
+            <a class="btn btn-sm btn-primary" href="/ui/rag/insert">insert</a>
           {% elif svc.slug == "scrape" %}
-            <a class="kcui-tag kcui-tag--info" href="/ui/scrape">browse</a>
-            <a class="kcui-tag kcui-tag--yellow" href="/ui/scrape">capture</a>
+            <a class="btn btn-sm btn-warning" href="/ui/scrape">browse</a>
+            <a class="btn btn-sm btn-warning" href="/ui/scrape">capture</a>
           {% elif svc.slug == "graph" %}
-            <a class="kcui-tag kcui-tag--accent" href="/graph/ui/vocab">vocab</a>
-            <a class="kcui-tag kcui-tag--warning" href="/graph/ui/connections">conns.</a>
-            <a class="kcui-tag kcui-tag--info" href="/graph/ui/graph">graph</a>
+            <a class="btn btn-sm btn-warning" href="/graph/ui/vocab">vocab</a>
+            <a class="btn btn-sm btn-warning" href="/graph/ui/connections">conns.</a>
+            <a class="btn btn-sm btn-warning" href="/graph/ui/graph">graph</a>
           {% endif %}
         </div>
       </div>
@@ -138,7 +138,7 @@
     <div style="display:flex; flex-direction:row; gap:0; margin-bottom:0.75rem;">
       <input id="sq-query" type="search" placeholder="e.g. climate change arctic ice" autocomplete="off"
              style="flex:1;" onkeydown="if(event.key==='Enter') runSearch()">
-      <button onclick="runSearch()">SEARCH</button>
+      <button class="btn btn-sm btn-yellow" onclick="runSearch()">SEARCH</button>
     </div>
 
     <div style="display:flex; flex-wrap:wrap; gap:1rem; align-items:center;

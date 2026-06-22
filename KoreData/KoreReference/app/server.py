@@ -22,6 +22,8 @@
 #   - app/config.py                 -- cfg (host, port, data_dir)
 # ====================================================================================================
 from contextlib import asynccontextmanager
+from pathlib import Path
+import sys
 from typing import Optional
 
 import httpx
@@ -29,6 +31,11 @@ from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
+_KORECOMMON_PARENT = next((parent for parent in Path(__file__).resolve().parents if (parent / "KoreCommon").is_dir()), None)
+if _KORECOMMON_PARENT is not None and str(_KORECOMMON_PARENT) not in sys.path:
+    sys.path.insert(0, str(_KORECOMMON_PARENT))
+
+from KoreCommon.endpoint_manifest import build_endpoint_manifest
 from app.config import cfg
 from app.database import (
     delete_all_articles,
@@ -68,6 +75,11 @@ app = FastAPI(
     description="Wikipedia-scale encyclopedia service for LLM agents",
     lifespan=_lifespan,
 )
+
+
+@app.get("/__endpoint_manifest", include_in_schema=False)
+def endpoint_manifest() -> dict:
+    return build_endpoint_manifest(app, service_key="korereference", service_label="KoreReference")
 
 
 # ---------------------------------------------------------------------------
@@ -119,12 +131,14 @@ def _require_article(title: str) -> dict:
 # Articles
 # ---------------------------------------------------------------------------
 
-@app.get("/articles", summary="List articles (metadata only)")
+@app.get("/api/articles", summary="List articles (metadata only)")
+@app.get("/articles", include_in_schema=False)
 def route_list_articles(limit: int = 100, offset: int = 0):
     return list_articles(limit=limit, offset=offset)
 
 
-@app.get("/articles/random", summary="Random non-redirect article")
+@app.get("/api/articles/random", summary="Random non-redirect article")
+@app.get("/articles/random", include_in_schema=False)
 def route_random_article():
     article = get_random_article()
     if article is None:
@@ -132,7 +146,8 @@ def route_random_article():
     return article
 
 
-@app.get("/articles/{title}", summary="Get article by title, following redirects")
+@app.get("/api/articles/{title}", summary="Get article by title, following redirects")
+@app.get("/articles/{title}", include_in_schema=False)
 def route_get_article(title: str):
     article = resolve_article(title)
     if article is None:
@@ -140,7 +155,8 @@ def route_get_article(title: str):
     return article
 
 
-@app.get("/articles/{title}/summary", summary="Summary paragraph only")
+@app.get("/api/articles/{title}/summary", summary="Summary paragraph only")
+@app.get("/articles/{title}/summary", include_in_schema=False)
 def route_get_summary(title: str):
     article = resolve_article(title)
     if article is None:
@@ -152,7 +168,8 @@ def route_get_summary(title: str):
     }
 
 
-@app.get("/articles/{title}/section/{section_name}", summary="Single named section")
+@app.get("/api/articles/{title}/section/{section_name}", summary="Single named section")
+@app.get("/articles/{title}/section/{section_name}", include_in_schema=False)
 def route_get_section(title: str, section_name: str):
     article = resolve_article(title)
     if article is None:
@@ -167,21 +184,24 @@ def route_get_section(title: str, section_name: str):
     return {"title": article["title"], "section": match["title"], "content": match["content"]}
 
 
-@app.get("/articles/{title}/links", summary="Outbound links from an article")
+@app.get("/api/articles/{title}/links", summary="Outbound links from an article")
+@app.get("/articles/{title}/links", include_in_schema=False)
 def route_get_links(title: str):
     if get_article_by_title(title, full=False) is None:
         raise HTTPException(status_code=404, detail=f"Article not found: {title!r}")
     return get_links(title)
 
 
-@app.get("/articles/{title}/backlinks", summary="Articles that link to this article")
+@app.get("/api/articles/{title}/backlinks", summary="Articles that link to this article")
+@app.get("/articles/{title}/backlinks", include_in_schema=False)
 def route_get_backlinks(title: str, limit: int = 50, offset: int = 0):
     if get_article_by_title(title, full=False) is None:
         raise HTTPException(status_code=404, detail=f"Article not found: {title!r}")
     return get_backlinks(title, limit=limit, offset=offset)
 
 
-@app.post("/articles", status_code=201, summary="Add or upsert an article")
+@app.post("/api/articles", status_code=201, summary="Add or upsert an article")
+@app.post("/articles", status_code=201, include_in_schema=False)
 def route_upsert_article(data: ArticleCreate):
     return upsert_article(
         title=data.title,
@@ -193,13 +213,15 @@ def route_upsert_article(data: ArticleCreate):
     )
 
 
-@app.delete("/articles", summary="Delete all articles")
+@app.delete("/api/articles", summary="Delete all articles")
+@app.delete("/articles", include_in_schema=False)
 def route_delete_all_articles():
     count = delete_all_articles()
     return {"deleted": count}
 
 
-@app.delete("/articles/{title}", status_code=204, summary="Remove an article and its links")
+@app.delete("/api/articles/{title}", status_code=204, summary="Remove an article and its links")
+@app.delete("/articles/{title}", status_code=204, include_in_schema=False)
 def route_delete_article(title: str):
     if not delete_article(title):
         raise HTTPException(status_code=404, detail=f"Article not found: {title!r}")
@@ -210,7 +232,8 @@ def route_delete_article(title: str):
 # Search
 # ---------------------------------------------------------------------------
 
-@app.get("/search", summary="Full-text and prefix search across articles")
+@app.get("/api/search", summary="Full-text and prefix search across articles")
+@app.get("/search", include_in_schema=False)
 def route_search(
     q: Optional[str] = None,
     title: Optional[str] = None,
@@ -229,7 +252,8 @@ def route_search(
 # Import
 # ---------------------------------------------------------------------------
 
-@app.post("/import/kiwix", summary="Trigger import from configured Kiwix server")
+@app.post("/api/import/kiwix", summary="Trigger import from configured Kiwix server")
+@app.post("/import/kiwix", include_in_schema=False)
 def route_import_kiwix(req: KiwixImportRequest, background_tasks: BackgroundTasks):
     if not import_lock.acquire(blocking=False):
         raise HTTPException(status_code=409, detail="Import already running")
@@ -246,7 +270,8 @@ def route_import_kiwix(req: KiwixImportRequest, background_tasks: BackgroundTask
     return {"started": True, "zim_name": req.zim_name}
 
 
-@app.post("/import/kiwix/crawl", status_code=202, summary="BFS crawl from a Kiwix or Wikipedia article URL")
+@app.post("/api/import/kiwix/crawl", status_code=202, summary="BFS crawl from a Kiwix or Wikipedia article URL")
+@app.post("/import/kiwix/crawl", status_code=202, include_in_schema=False)
 def route_import_kiwix_crawl(req: KiwixCrawlRequest, background_tasks: BackgroundTasks):
     if not import_lock.acquire(blocking=False):
         raise HTTPException(status_code=409, detail="Import already running")
@@ -276,7 +301,8 @@ def route_import_kiwix_crawl(req: KiwixCrawlRequest, background_tasks: Backgroun
 
 
 
-@app.post("/import/stop", summary="Abort in-progress import or crawl")
+@app.post("/api/import/stop", summary="Abort in-progress import or crawl")
+@app.post("/import/stop", include_in_schema=False)
 def route_import_stop():
     if import_state.get("running"):
         import_state["running"] = False
@@ -285,7 +311,8 @@ def route_import_stop():
     return {"stopped": False, "detail": "No import was running"}
 
 
-@app.post("/import/throttle", summary="Adjust crawl delay while import is running")
+@app.post("/api/import/throttle", summary="Adjust crawl delay while import is running")
+@app.post("/import/throttle", include_in_schema=False)
 def route_import_throttle(req: KiwixThrottleRequest):
     import_state["delay_seconds"] = req.delay_seconds
     return {
@@ -295,7 +322,8 @@ def route_import_throttle(req: KiwixThrottleRequest):
 
 
 
-@app.post("/import/article", status_code=201, summary="Import a single article by title from Kiwix")
+@app.post("/api/import/article", status_code=201, summary="Import a single article by title from Kiwix")
+@app.post("/import/article", status_code=201, include_in_schema=False)
 def route_import_article(zim_name: str, title: str, kiwix_url: str):
     """Synchronous single-article import — useful for testing and on-demand fetch."""
     kiwix_base = kiwix_url.rstrip("/")
@@ -318,7 +346,8 @@ class KiwixBackfillRequest(BaseModel):
     limit: int = 10_000
 
 
-@app.post("/import/kiwix/backfill", status_code=202, summary="Fetch unresolved link targets from Kiwix")
+@app.post("/api/import/kiwix/backfill", status_code=202, summary="Fetch unresolved link targets from Kiwix")
+@app.post("/import/kiwix/backfill", status_code=202, include_in_schema=False)
 def route_import_kiwix_backfill(req: KiwixBackfillRequest, background_tasks: BackgroundTasks):
     """Fetch every link target that exists in the links table but has no article row.
 
@@ -343,7 +372,8 @@ def route_import_kiwix_backfill(req: KiwixBackfillRequest, background_tasks: Bac
     return {"started": True, "pending": len(pending), "zim_name": req.zim_name}
 
 
-@app.get("/import/status", summary="Progress of in-progress import")
+@app.get("/api/import/status", summary="Progress of in-progress import")
+@app.get("/import/status", include_in_schema=False)
 def route_import_status():
     return dict(import_state)
 

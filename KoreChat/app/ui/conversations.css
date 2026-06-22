@@ -49,9 +49,9 @@ html, body {
 
 #main-grid {
     display:  grid;
+    height:   100%;
     grid-template-columns: var(--sidebar-w) var(--splitter-w) 1fr;
     overflow: hidden;
-    grid-row: 3;
 }
 
 .flex-gap { flex: 1; }
@@ -177,7 +177,7 @@ html, body {
 }
 
 #detail {
-    padding: 12px 16px 32px;
+    padding: 12px 12px 32px;
 }
 
 /* ============================================================

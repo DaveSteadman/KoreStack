@@ -1,7 +1,14 @@
 {% extends "base.html" %}
 {% block title %}KoreData - Scrape{% endblock %}
+{% block main_class %}kcui-main{% endblock %}
 
 {% block content %}
+<style>
+  .scrape-index-page .kcui-panel {
+    margin-bottom: 0;
+  }
+</style>
+<div class="kcui-page kcui-page--narrow kcui-stack scrape-index-page">
 <div class="kcui-grid-split">
   <div class="kcui-panel">
     <div class="panel-header kcui-panel-header">NEW CAPTURE</div>
@@ -54,7 +61,7 @@
       <p class="meta kcui-mar-bottom-sm">Case-insensitive substring match across page title, URL, and extracted text.</p>
       <div class="kcui-search-row">
         <input type="search" name="q" value="{{ q }}" placeholder="search captured text...">
-        <button type="submit">SEARCH</button>
+        <button class="btn btn-sm btn-yellow" type="submit">SEARCH</button>
       </div>
       <div class="kcui-filter-row kcui-mar-top-md">
         <label class="kcui-filter-label">
@@ -78,7 +85,7 @@
     SEARCH RESULTS
     <span class="badge badge-dim" style="margin-left:0.5rem;">{{ results | length }}</span>
   </div>
-  <div class="panel-body kcui-panel-body">
+  <div class="panel-body kcui-panel-body" style="padding:0; overflow-x:auto;">
     {% if results %}
     <table style="table-layout:fixed;">
       <colgroup>
@@ -120,7 +127,7 @@
 
 <div class="kcui-panel">
   <div class="panel-header kcui-panel-header">CAPTURES</div>
-  <div class="panel-body kcui-panel-body">
+  <div class="panel-body kcui-panel-body" style="padding:0; overflow-x:auto;">
     {% if captures %}
     <table>
       <thead>
@@ -156,7 +163,7 @@
 
 <div class="kcui-panel">
   <div class="panel-header kcui-panel-header">RECENT INDEXED TEXT</div>
-  <div class="panel-body kcui-panel-body">
+  <div class="panel-body kcui-panel-body" style="padding:0; overflow-x:auto;">
     {% if chunks %}
     <table>
       <thead>
@@ -182,5 +189,6 @@
     <div class="meta">No indexed text yet.</div>
     {% endif %}
   </div>
+</div>
 </div>
 {% endblock %}

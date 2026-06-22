@@ -31,6 +31,7 @@ from __future__ import annotations
 import logging
 import logging.handlers
 import os
+import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated, Any, Optional
@@ -43,6 +44,11 @@ from starlette.requests import Request
 from starlette.responses import Response
 from pydantic import BaseModel
 
+_KORECOMMON_PARENT = next((parent for parent in Path(__file__).resolve().parents if (parent / "KoreCommon").is_dir()), None)
+if _KORECOMMON_PARENT is not None and str(_KORECOMMON_PARENT) not in sys.path:
+    sys.path.insert(0, str(_KORECOMMON_PARENT))
+
+from KoreCommon.endpoint_manifest import build_endpoint_manifest
 from . import korefile
 from .config import cfg as _cfg
 from .koredocs_mcp import (
@@ -150,6 +156,11 @@ async def _lifespan(app: FastAPI):
 
 
 app = FastAPI(title='KoreDocs', lifespan=_lifespan)
+
+
+@app.get('/__endpoint_manifest', include_in_schema=False)
+def endpoint_manifest() -> dict:
+    return build_endpoint_manifest(app, service_key='koredocs', service_label='KoreDocs')
 
 
 class _NoCacheMiddleware(BaseHTTPMiddleware):

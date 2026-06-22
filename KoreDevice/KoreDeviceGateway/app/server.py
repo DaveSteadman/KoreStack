@@ -7,9 +7,14 @@ from pathlib import Path
 
 import httpx
 from fastapi import FastAPI, Form, HTTPException, Request
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 
+_KORECOMMON_PARENT = next((parent for parent in Path(__file__).resolve().parents if (parent / "KoreCommon").is_dir()), None)
+if _KORECOMMON_PARENT is not None and str(_KORECOMMON_PARENT) not in sys.path:
+    sys.path.insert(0, str(_KORECOMMON_PARENT))
+
+from KoreCommon.endpoint_manifest import build_endpoint_manifest
 from app.config import cfg
 from config import get_koredevice_dir
 
@@ -187,6 +192,17 @@ app = FastAPI(
 )
 
 
+@app.get("/__endpoint_manifest", include_in_schema=False)
+def endpoint_manifest() -> dict:
+    return build_endpoint_manifest(app, service_key="koredevicegateway", service_label="KoreDeviceGateway")
+
+
+@app.get("/suite-config.js", include_in_schema=False)
+def suite_config_js():
+    urls = os.environ.get("KORE_SUITE_URLS", "{}")
+    return Response(content=f"window.__koreSuiteUrls = {urls};", media_type="application/javascript", headers={"Cache-Control": "no-store"})
+
+
 @app.get("/ui-elements/assets/{asset_path:path}", include_in_schema=False)
 def serve_ui_elements_asset(asset_path: str):
     candidate = (_UI_ASSETS / asset_path).resolve()
@@ -322,7 +338,7 @@ async def numbers_page(request: Request):
         raise HTTPException(status_code=503, detail="KoreDeviceNumber unavailable")
 
     signals_r, status_r = await asyncio.gather(
-        _number_client.get("/signals"),
+        _number_client.get("/api/signals"),
         _number_client.get("/status"),
     )
     signals = signals_r.json() if signals_r.status_code == 200 else []
@@ -343,7 +359,7 @@ async def driver_page(request: Request):
         raise HTTPException(status_code=503, detail="KoreDeviceDriver unavailable")
 
     drivers_r, status_r = await asyncio.gather(
-        _driver_client.get("/drivers"),
+        _driver_client.get("/api/drivers"),
         _driver_client.get("/status"),
     )
     drivers = drivers_r.json() if drivers_r.status_code == 200 else []
@@ -364,7 +380,7 @@ async def driver_detail_page(request: Request, driver_name: str):
         raise HTTPException(status_code=503, detail="KoreDeviceDriver unavailable")
 
     driver_r, status_r = await asyncio.gather(
-        _driver_client.get(f"/drivers/{driver_name}"),
+        _driver_client.get(f"/api/drivers/{driver_name}"),
         _driver_client.get("/status"),
     )
     if driver_r.status_code == 404:
@@ -411,7 +427,7 @@ async def numbers_ingest(
         "normal_min":   normal_min,
         "normal_max":   normal_max,
     }
-    response = await _number_client.post("/samples", json=payload)
+    response = await _number_client.post("/api/samples", json=payload)
     if response.status_code not in (200, 201):
         raise HTTPException(status_code=response.status_code, detail=response.text)
     return RedirectResponse("/ui/numbers", status_code=303)
@@ -443,7 +459,7 @@ async def driver_register(
         "description":       description or None,
         "python_snippet":    python_snippet or None,
     }
-    response = await _driver_client.post("/drivers", json=payload)
+    response = await _driver_client.post("/api/drivers", json=payload)
     if response.status_code not in (200, 201):
         raise HTTPException(status_code=response.status_code, detail=response.text)
     return RedirectResponse("/ui/driver", status_code=303)
@@ -474,7 +490,7 @@ async def driver_save(
         "description":       description,
         "python_snippet":    python_snippet,
     }
-    response = await _driver_client.put(f"/drivers/{driver_name}", json=payload)
+    response = await _driver_client.put(f"/api/drivers/{driver_name}", json=payload)
     if response.status_code not in (200, 201):
         raise HTTPException(status_code=response.status_code, detail=response.text)
     updated = response.json()
@@ -508,7 +524,7 @@ async def driver_run(
         "python_snippet":    python_snippet,
     }
     run_r, status_r = await asyncio.gather(
-        _driver_client.post(f"/drivers/{driver_name}/run", json=payload),
+        _driver_client.post(f"/api/drivers/{driver_name}/run", json=payload),
         _driver_client.get("/status"),
     )
     if run_r.status_code == 404:
@@ -544,7 +560,7 @@ async def driver_delete(driver_name: str):
     if _driver_client is None:
         raise HTTPException(status_code=503, detail="KoreDeviceDriver unavailable")
 
-    response = await _driver_client.request("DELETE", f"/drivers/{driver_name}")
+    response = await _driver_client.request("DELETE", f"/api/drivers/{driver_name}")
     if response.status_code == 404:
         raise HTTPException(status_code=404, detail="Driver not found")
     if response.status_code not in (200, 204):
@@ -556,7 +572,7 @@ async def driver_delete(driver_name: str):
 async def api_numbers_signals():
     if _number_client is None:
         raise HTTPException(status_code=503, detail="KoreDeviceNumber unavailable")
-    response = await _number_client.get("/signals")
+    response = await _number_client.get("/api/signals")
     return JSONResponse(content=response.json(), status_code=response.status_code)
 
 
@@ -564,7 +580,7 @@ async def api_numbers_signals():
 async def api_numbers_signal(signal_name: str):
     if _number_client is None:
         raise HTTPException(status_code=503, detail="KoreDeviceNumber unavailable")
-    response = await _number_client.get(f"/signals/{signal_name}")
+    response = await _number_client.get(f"/api/signals/{signal_name}")
     return JSONResponse(content=response.json(), status_code=response.status_code)
 
 
@@ -572,7 +588,7 @@ async def api_numbers_signal(signal_name: str):
 async def api_driver_drivers():
     if _driver_client is None:
         raise HTTPException(status_code=503, detail="KoreDeviceDriver unavailable")
-    response = await _driver_client.get("/drivers")
+    response = await _driver_client.get("/api/drivers")
     return JSONResponse(content=response.json(), status_code=response.status_code)
 
 
@@ -580,7 +596,7 @@ async def api_driver_drivers():
 async def api_driver_driver(driver_name: str):
     if _driver_client is None:
         raise HTTPException(status_code=503, detail="KoreDeviceDriver unavailable")
-    response = await _driver_client.get(f"/drivers/{driver_name}")
+    response = await _driver_client.get(f"/api/drivers/{driver_name}")
     return JSONResponse(content=response.json(), status_code=response.status_code)
 
 
@@ -589,7 +605,7 @@ async def api_driver_run(driver_name: str, request: Request):
     if _driver_client is None:
         raise HTTPException(status_code=503, detail="KoreDeviceDriver unavailable")
     payload   = await request.json()
-    response  = await _driver_client.post(f"/drivers/{driver_name}/run", json=payload)
+    response  = await _driver_client.post(f"/api/drivers/{driver_name}/run", json=payload)
     return JSONResponse(content=response.json(), status_code=response.status_code)
 
 
@@ -597,5 +613,5 @@ async def api_driver_run(driver_name: str, request: Request):
 async def api_driver_delete(driver_name: str):
     if _driver_client is None:
         raise HTTPException(status_code=503, detail="KoreDeviceDriver unavailable")
-    response = await _driver_client.request("DELETE", f"/drivers/{driver_name}")
+    response = await _driver_client.request("DELETE", f"/api/drivers/{driver_name}")
     return JSONResponse(content=response.json(), status_code=response.status_code)

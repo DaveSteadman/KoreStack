@@ -344,7 +344,7 @@ def _generate_saved_driver_until_valid(
 # ====================================================================================================
 def device_driver_list() -> list[dict]:
     """Return every KoreDeviceDriver entry."""
-    result = _request_json(method="GET", path="/drivers")
+    result = _request_json(method="GET", path="/api/drivers")
     return result if isinstance(result, list) else [result]
 
 
@@ -352,7 +352,7 @@ def device_driver_get(name: str) -> dict:
     """Return one KoreDeviceDriver entry by name."""
     if not str(name or "").strip():
         raise RuntimeError("Driver name is required")
-    result = _request_json(method="GET", path=f"/drivers/{urllib.parse.quote(name.strip(), safe='')}")
+    result = _request_json(method="GET", path=f"/api/drivers/{urllib.parse.quote(name.strip(), safe='')}")
     return result if isinstance(result, dict) else {"result": result}
 
 
@@ -383,7 +383,7 @@ def device_driver_create(
         python_snippet    = _validate_python_snippet(python_snippet) if python_snippet.strip() else "",
     )
     payload["name"]  = clean_name
-    result           = _request_json(method="POST", path="/drivers", payload=payload)
+    result           = _request_json(method="POST", path="/api/drivers", payload=payload)
     return result if isinstance(result, dict) else {"result": result}
 
 
@@ -415,7 +415,7 @@ def device_driver_update(
     )
     result  = _request_json(
         method  = "PUT",
-        path    = f"/drivers/{urllib.parse.quote(clean_name, safe='')}",
+        path    = f"/api/drivers/{urllib.parse.quote(clean_name, safe='')}",
         payload = payload,
     )
     return result if isinstance(result, dict) else {"result": result}
@@ -465,7 +465,7 @@ def device_driver_run(
     )
     result = _request_json(
         method  = "POST",
-        path    = f"/drivers/{urllib.parse.quote(clean_name, safe='')}/run",
+        path    = f"/api/drivers/{urllib.parse.quote(clean_name, safe='')}/run",
         payload = payload,
     )
     return result if isinstance(result, dict) else {"result": result}

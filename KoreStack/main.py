@@ -775,6 +775,7 @@ def main() -> int:
                 "ui_assets_dir": get_ui_assets_dir(),
                 "service_icon_keys": SERVICE_ICON_KEYS,
                 "probe_http_with_retry": probe_http_with_retry,
+                "suite_config": suite_config,
             },
             daemon=True,
         )

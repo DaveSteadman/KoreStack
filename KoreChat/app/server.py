@@ -17,6 +17,7 @@ import json
 import logging
 import os
 import queue
+import sys
 import threading
 import time
 from contextlib import asynccontextmanager
@@ -30,6 +31,11 @@ from fastapi.responses import Response
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
+_KORECOMMON_PARENT = next((parent for parent in Path(__file__).resolve().parents if (parent / "KoreCommon").is_dir()), None)
+if _KORECOMMON_PARENT is not None and str(_KORECOMMON_PARENT) not in sys.path:
+    sys.path.insert(0, str(_KORECOMMON_PARENT))
+
+from KoreCommon.endpoint_manifest import build_endpoint_manifest
 from app import database as db
 
 logger = logging.getLogger(__name__)
@@ -107,6 +113,11 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="KoreChat", lifespan=lifespan)
 
+
+@app.get("/__endpoint_manifest", include_in_schema=False)
+def endpoint_manifest() -> dict:
+    return build_endpoint_manifest(app, service_key="korechat", service_label="KoreChat")
+
 _UI_DIR = Path(__file__).resolve().parent / "ui"
 _UI_ELEMENTS_ASSETS = Path(
     os.environ.get(
@@ -166,7 +177,8 @@ class DefaultChatCullRequest(BaseModel):
 
 
 # ----------------------------------------------------------------------------------------------------
-@app.post("/conversations", status_code=201)
+@app.post("/api/conversations", status_code=201)
+@app.post("/conversations", status_code=201, include_in_schema=False)
 def create_conversation(req: ConversationCreateRequest):
     result = db.conversation_create(
         channel_type       = req.channel_type,
@@ -181,7 +193,8 @@ def create_conversation(req: ConversationCreateRequest):
 
 
 # ----------------------------------------------------------------------------------------------------
-@app.get("/conversations/by-external-id/{external_id}")
+@app.get("/api/conversations/by-external-id/{external_id}")
+@app.get("/conversations/by-external-id/{external_id}", include_in_schema=False)
 def get_conversation_by_external_id(external_id: str):
     """Return the conversation whose external_id matches exactly, or 404."""
     conv = db.conversation_get_by_external_id(external_id)
@@ -191,7 +204,8 @@ def get_conversation_by_external_id(external_id: str):
 
 
 # ----------------------------------------------------------------------------------------------------
-@app.get("/conversations/by-external-id/{external_id}/turns")
+@app.get("/api/conversations/by-external-id/{external_id}/turns")
+@app.get("/conversations/by-external-id/{external_id}/turns", include_in_schema=False)
 def get_conversation_turns_by_external_id(external_id: str):
     """Return raw inbound/outbound messages for the conversation - single DB call, no extra data."""
     messages = db.conversation_get_turns_by_external_id(external_id)
@@ -201,7 +215,8 @@ def get_conversation_turns_by_external_id(external_id: str):
 
 
 # ----------------------------------------------------------------------------------------------------
-@app.get("/conversations")
+@app.get("/api/conversations")
+@app.get("/conversations", include_in_schema=False)
 def list_conversations(
     status:       str | None = Query(default=None),
     channel_type: str | None = Query(default=None),
@@ -217,7 +232,8 @@ def list_conversations(
 
 
 # ----------------------------------------------------------------------------------------------------
-@app.get("/conversations/{conversation_id}")
+@app.get("/api/conversations/{conversation_id}")
+@app.get("/conversations/{conversation_id}", include_in_schema=False)
 def get_conversation(conversation_id: int):
     conv = db.conversation_get_with_messages(conversation_id)
     if conv is None:
@@ -226,7 +242,8 @@ def get_conversation(conversation_id: int):
 
 
 # ----------------------------------------------------------------------------------------------------
-@app.get("/conversations/{conversation_id}/detail")
+@app.get("/api/conversations/{conversation_id}/detail")
+@app.get("/conversations/{conversation_id}/detail", include_in_schema=False)
 def get_conversation_detail(conversation_id: int):
     """Return conversation + messages + events in a single response for fast UI population."""
     detail = db.conversation_get_detail(conversation_id)
@@ -236,7 +253,8 @@ def get_conversation_detail(conversation_id: int):
 
 
 # ----------------------------------------------------------------------------------------------------
-@app.patch("/conversations/{conversation_id}")
+@app.patch("/api/conversations/{conversation_id}")
+@app.patch("/conversations/{conversation_id}", include_in_schema=False)
 def patch_conversation(conversation_id: int, req: ConversationPatchRequest):
     result = db.conversation_update(
         conversation_id    = conversation_id,
@@ -257,7 +275,8 @@ def patch_conversation(conversation_id: int, req: ConversationPatchRequest):
 
 
 # ----------------------------------------------------------------------------------------------------
-@app.delete("/conversations/{conversation_id}", status_code=204)
+@app.delete("/api/conversations/{conversation_id}", status_code=204)
+@app.delete("/conversations/{conversation_id}", status_code=204, include_in_schema=False)
 def delete_conversation(conversation_id: int):
     conv = db.conversation_get(conversation_id)
     if conv is None:
@@ -268,7 +287,8 @@ def delete_conversation(conversation_id: int):
 
 
 # ----------------------------------------------------------------------------------------------------
-@app.post("/maintenance/default-chat-cull")
+@app.post("/api/maintenance/default-chat-cull")
+@app.post("/maintenance/default-chat-cull", include_in_schema=False)
 def cull_default_chats(req: DefaultChatCullRequest):
     if req.max_default_chat_age_days not in (1, 3, 7, 30):
         raise HTTPException(status_code=400, detail="max_default_chat_age_days must be one of 1, 3, 7, 30")
@@ -296,7 +316,8 @@ class InputHistoryAppendRequest(BaseModel):
 
 
 # ----------------------------------------------------------------------------------------------------
-@app.get("/conversations/{conversation_id}/input-history")
+@app.get("/api/conversations/{conversation_id}/input-history")
+@app.get("/conversations/{conversation_id}/input-history", include_in_schema=False)
 def get_conversation_input_history(conversation_id: int):
     """Return all stored input-history entries for a conversation."""
     conv = db.conversation_get(conversation_id)
@@ -306,7 +327,8 @@ def get_conversation_input_history(conversation_id: int):
 
 
 # ----------------------------------------------------------------------------------------------------
-@app.patch("/conversations/{conversation_id}/input-history")
+@app.patch("/api/conversations/{conversation_id}/input-history")
+@app.patch("/conversations/{conversation_id}/input-history", include_in_schema=False)
 def patch_conversation_input_history(conversation_id: int, req: InputHistoryAppendRequest):
     """Append one entry to the conversation's input history (dedup, capped at _INPUT_HISTORY_MAX)."""
     conv = db.conversation_get(conversation_id)
@@ -329,7 +351,8 @@ def patch_conversation_input_history(conversation_id: int, req: InputHistoryAppe
 # MARK: EVENTS LIST
 # ====================================================================================================
 
-@app.get("/events")
+@app.get("/api/events")
+@app.get("/events", include_in_schema=False)
 def list_events(
     conversation_id: int | None = Query(default=None),
     status:          str | None = Query(default=None),
@@ -435,7 +458,8 @@ class MessagePatchRequest(BaseModel):
 
 
 # ----------------------------------------------------------------------------------------------------
-@app.post("/conversations/{conversation_id}/messages", status_code=201)
+@app.post("/api/conversations/{conversation_id}/messages", status_code=201)
+@app.post("/conversations/{conversation_id}/messages", status_code=201, include_in_schema=False)
 def append_message(conversation_id: int, req: MessageAppendRequest):
     conv = db.conversation_get(conversation_id)
     if conv is None:
@@ -462,7 +486,8 @@ def append_message(conversation_id: int, req: MessageAppendRequest):
 
 
 # ----------------------------------------------------------------------------------------------------
-@app.get("/conversations/{conversation_id}/messages")
+@app.get("/api/conversations/{conversation_id}/messages")
+@app.get("/conversations/{conversation_id}/messages", include_in_schema=False)
 def list_messages(
     conversation_id: int,
     summarised:      int | None = Query(default=None),
@@ -481,7 +506,8 @@ def list_messages(
 
 
 # ----------------------------------------------------------------------------------------------------
-@app.patch("/messages/{message_id}")
+@app.patch("/api/messages/{message_id}")
+@app.patch("/messages/{message_id}", include_in_schema=False)
 def patch_message(message_id: int, req: MessagePatchRequest):
     result = db.message_update(
         message_id = message_id,
@@ -509,7 +535,8 @@ class EventCompleteRequest(BaseModel):
 
 
 # ----------------------------------------------------------------------------------------------------
-@app.post("/events", status_code=201)
+@app.post("/api/events", status_code=201)
+@app.post("/events", status_code=201, include_in_schema=False)
 def create_event(req: EventCreateRequest):
     if req.conversation_id is not None:
         conv = db.conversation_get(req.conversation_id)
@@ -524,7 +551,8 @@ def create_event(req: EventCreateRequest):
 
 
 # ----------------------------------------------------------------------------------------------------
-@app.get("/events/next")
+@app.get("/api/events/next")
+@app.get("/events/next", include_in_schema=False)
 def get_next_event(claimed_by: str = Query(..., description="Identifier of the claiming service")):
     event = db.event_claim_next(claimed_by)
     if event is None:
@@ -538,7 +566,8 @@ def get_next_event(claimed_by: str = Query(..., description="Identifier of the c
 
 
 # ----------------------------------------------------------------------------------------------------
-@app.post("/events/{event_id}/complete")
+@app.post("/api/events/{event_id}/complete")
+@app.post("/events/{event_id}/complete", include_in_schema=False)
 def complete_event(event_id: int, req: EventCompleteRequest):
     result = db.event_complete(event_id, status=req.status)
     if result is None:
