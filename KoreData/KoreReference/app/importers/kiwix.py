@@ -443,6 +443,8 @@ def run_kiwix_crawl(seed_url: str, max_depth: int, limit: int, delay_seconds: fl
                             if lt and lt not in visited:
                                 visited.add(lt)
                                 queue.append((lt, depth + 1))
+                        with state_lock:
+                            import_state["done"] += 1
                         _pace()
                         continue
                     # Article exists but has no links and we need depth expansion —
