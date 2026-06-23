@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 {% block title %}RAG Databases{% endblock %}
 {% block main_class %}kcui-main{% endblock %}
 
@@ -192,7 +192,7 @@
     return (n !== null && n !== undefined && n !== '') ? Number(n).toLocaleString() : '-';
   }
   function fmtKB(b) {
-    return (b !== null && b !== undefined) ? Math.round(b / 1024).toLocaleString() + 'Â KB' : '-';
+    return (b !== null && b !== undefined) ? Math.round(b / 1024).toLocaleString() + ' KB' : '-';
   }
 
   function renderChunks(d) {
@@ -296,3 +296,4 @@
 })();
 </script>
 {% endblock %}
+

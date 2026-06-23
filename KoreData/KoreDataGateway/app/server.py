@@ -2592,17 +2592,65 @@ async def rag_index(request: Request, limit: int = 100, offset: int = 0, db: str
 
 async def _rag_databases_enriched() -> list[dict]:
     """Fetch and enrich all RAG database descriptors from KoreRAG."""
-    dbs_r = await _rag_client.get("/databases")
+    dbs_r     = await _rag_client.get("/databases")
     databases = dbs_r.json() if dbs_r.status_code == 200 else []
-    async def _enrich(db_id: str) -> dict:
-        r = await _rag_client.get(f"/databases/{db_id}/info")
-        return r.json() if r.status_code == 200 else {"id": db_id}
-    enriched = await asyncio.gather(*[_enrich(d["id"]) for d in databases], return_exceptions=True)
-    return [e if isinstance(e, dict) else {"id": "?", "error": str(e)} for e in enriched]
+
+    async def _enrich(base: dict[str, Any]) -> dict[str, Any]:
+        db_id = str(base.get("id") or "").strip()
+        if not db_id:
+            return base
+        try:
+            response = await _rag_client.get(f"/databases/{db_id}/info")
+        except Exception as exc:
+            return {**base, "info_error": str(exc)}
+        if response.status_code != 200:
+            return {**base, "info_error": f"HTTP {response.status_code}"}
+        try:
+            payload = response.json()
+        except Exception as exc:
+            return {**base, "info_error": f"invalid json: {exc}"}
+        if not isinstance(payload, dict):
+            return {**base, "info_error": "invalid payload"}
+        return {**base, **payload}
+
+    enriched = await asyncio.gather(*[_enrich(d) for d in databases], return_exceptions=True)
+    results: list[dict] = []
+    for index, item in enumerate(enriched):
+        if isinstance(item, dict):
+            results.append(_rag_database_with_local_fallbacks(item))
+            continue
+        fallback = databases[index] if index < len(databases) else {"id": "?"}
+        results.append(_rag_database_with_local_fallbacks({**fallback, "info_error": str(item)}))
+    return results
 
 
 def _rag_processing_descriptor_path(script_id: str) -> Path:
     return Path(get_koredata_dir()) / "RAG" / "databases" / script_id / f"{script_id}.json"
+
+
+def _rag_database_file_path(db_id: str) -> Path:
+    return Path(get_koredata_dir()) / "RAG" / "databases" / db_id / f"{db_id}.db"
+
+
+def _rag_database_size_bytes(db_id: str) -> int | None:
+    db_path = _rag_database_file_path(db_id)
+    if not db_path.exists():
+        return None
+    try:
+        return db_path.stat().st_size
+    except OSError:
+        return None
+
+
+def _rag_database_with_local_fallbacks(entry: dict[str, Any]) -> dict[str, Any]:
+    db_id = str(entry.get("id") or "").strip()
+    if not db_id:
+        return entry
+    if entry.get("db_size_bytes") is None:
+        size_bytes = _rag_database_size_bytes(db_id)
+        if size_bytes is not None:
+            return {**entry, "db_size_bytes": size_bytes}
+    return entry
 
 
 def _read_rag_processing_descriptor(script_id: str) -> dict:

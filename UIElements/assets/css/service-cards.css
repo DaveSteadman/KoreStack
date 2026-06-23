@@ -38,10 +38,19 @@
 .kcui-service-banner-icon,
 .svc-banner-icon {
   display: inline-block;
-  width: 18px;
-  height: 18px;
+  width: 22px;
+  height: 22px;
   flex-shrink: 0;
   color: var(--info);
+}
+
+.kcui-service-banner-icon > .kcui-icon,
+.kcui-service-banner-icon > .kcui-icon--mask,
+.svc-banner-icon > .kcui-icon,
+.svc-banner-icon > .kcui-icon--mask {
+  width: 100% !important;
+  height: 100% !important;
+  flex: 0 0 100% !important;
 }
 
 .kcui-service-banner-text,

@@ -77,6 +77,85 @@ class ArtifactRefTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result["artifact_ref"], "feed_entry|domain=tech|id=42")
         self.assertEqual(result["body"], "full")
 
+    async def test_rag_databases_enriched_preserves_base_navigation_on_partial_info(self) -> None:
+        class _Response:
+            def __init__(self, status_code: int, payload: object) -> None:
+                self.status_code = status_code
+                self._payload    = payload
+
+            def json(self) -> object:
+                return self._payload
+
+        class _Client:
+            async def get(self, path: str):
+                if path == "/databases":
+                    return _Response(
+                        200,
+                        [{
+                            "id":         "alpha",
+                            "navigation": {"type": "hansard"},
+                            "managed_by": "ingestor",
+                        }],
+                    )
+                if path == "/databases/alpha/info":
+                    return _Response(
+                        200,
+                        {
+                            "id":            "alpha",
+                            "db_size_bytes": 1024,
+                        },
+                    )
+                raise AssertionError(f"unexpected path: {path}")
+
+        original_rag_client = server._rag_client
+        try:
+            server._rag_client = _Client()
+            enriched = await server._rag_databases_enriched()
+        finally:
+            server._rag_client = original_rag_client
+
+        self.assertEqual(len(enriched), 1)
+        self.assertEqual(enriched[0]["id"], "alpha")
+        self.assertEqual(enriched[0]["navigation"], {"type": "hansard"})
+        self.assertEqual(enriched[0]["db_size_bytes"], 1024)
+
+    async def test_rag_databases_enriched_falls_back_to_local_db_size(self) -> None:
+        class _Response:
+            def __init__(self, status_code: int, payload: object) -> None:
+                self.status_code = status_code
+                self._payload    = payload
+
+            def json(self) -> object:
+                return self._payload
+
+        class _Client:
+            async def get(self, path: str):
+                if path == "/databases":
+                    return _Response(200, [{"id": "alpha"}])
+                if path == "/databases/alpha/info":
+                    return _Response(200, {"id": "alpha", "db_size_bytes": None})
+                raise AssertionError(f"unexpected path: {path}")
+
+        with tempfile.TemporaryDirectory() as tmp:
+            base_dir = Path(tmp)
+            db_dir   = base_dir / "RAG" / "databases" / "alpha"
+            db_path  = db_dir / "alpha.db"
+            db_dir.mkdir(parents=True, exist_ok=True)
+            db_path.write_bytes(b"x" * 4096)
+
+            original_rag_client        = server._rag_client
+            original_get_koredata_dir  = server.get_koredata_dir
+            try:
+                server._rag_client       = _Client()
+                server.get_koredata_dir  = lambda: base_dir
+                enriched                 = await server._rag_databases_enriched()
+            finally:
+                server._rag_client       = original_rag_client
+                server.get_koredata_dir  = original_get_koredata_dir
+
+        self.assertEqual(len(enriched), 1)
+        self.assertEqual(enriched[0]["db_size_bytes"], 4096)
+
     def test_rag_processing_scripts_include_schedule_and_last_run(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             base_dir         = Path(tmp)
