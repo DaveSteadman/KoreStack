@@ -29,6 +29,7 @@ import zlib
 import sqlite3
 import time
 from datetime import date
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
 from urllib.parse import unquote
@@ -615,10 +616,11 @@ def write_descriptor(
             "tables": ["h_sittings", "h_debates", "h_speeches", "h_members"],
         },
         "sync": {
-            "last_run":           date.today().isoformat(),
-            "last_date_ingested": last_date,
-            "status":             status,
-            "total_chunks":       total_chunks,
+            "last_run":                 datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "last_ingest_completed_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "last_date_ingested":       last_date,
+            "status":                   status,
+            "total_chunks":             total_chunks,
         },
     }
     json_path.write_text(json.dumps(d, indent=2), encoding="utf-8")

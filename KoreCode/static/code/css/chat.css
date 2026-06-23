@@ -49,6 +49,34 @@
   font-size: 11px;
 }
 
+.chat-linked-label {
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+#chat-linked-conversation {
+  flex-shrink: 0;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 5px 10px 6px;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface-2) 54%, var(--surface));
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--text-2);
+}
+
+#chat-linked-conversation-name {
+  min-width: 0;
+  flex: 1;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .chat-mode-btn.is-active {
   background: color-mix(in srgb, var(--accent) 18%, var(--surface));
   border-color: color-mix(in srgb, var(--accent) 40%, transparent);

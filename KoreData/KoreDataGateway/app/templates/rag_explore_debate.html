@@ -34,6 +34,36 @@
   .speech-count { font-size: 11px; color: var(--dim); margin-left: auto; flex-shrink: 0; }
 </style>
 
+{% if db_info and db_info.sync and db_info.sync.status == "running" %}
+<div class="kcui-page kcui-page--narrow kcui-stack" style="margin-bottom:1rem;">
+  <div class="kg-alert kg-alert--warn">
+    <div class="kg-alert-title">Database Sync Running</div>
+    This RAG database is still ingesting content. Debate speech lists can be temporarily incomplete while sync is active.
+  </div>
+</div>
+{% endif %}
+
+{% if errors %}
+<div class="kcui-page kcui-page--narrow kcui-stack" style="margin-bottom:1rem;">
+  <div class="kg-alert kg-alert--error">
+    <div class="kg-alert-title">RAG Data Load Error</div>
+    {% for error in errors %}
+    <div>{{ error }}</div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+{% if timings %}
+<div class="kcui-page kcui-page--narrow kcui-stack" style="margin-bottom:0.75rem;">
+  <div class="kg-inline-meta">
+    {% for item in timings %}
+    <span>{{ item.label }}: {{ item.elapsed_ms }} ms{% if not item.ok %} (failed){% endif %}</span>{% if not loop.last %} · {% endif %}
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
 <div class="debate-header-bar">
   {% if debate.sitting_date %}
   <a class="btn btn-sm" href="/ui/rag/explore/{{ db_id }}/sitting/{{ debate.sitting_date }}">&#8592; {{ debate.sitting_date }}</a>

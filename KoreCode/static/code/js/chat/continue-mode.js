@@ -5,8 +5,9 @@ export function createContinueModeController({
   insertContinuation,
   getCurrentPath,
   getConversationExternalId,
-  fetchConversationThread,
-  postConversationFollowup,
+  setConversationExternalId,
+  startContinueRun,
+  waitForRun,
   setMode,
   setGenerating,
   save,
@@ -86,8 +87,8 @@ export function createContinueModeController({
       el.textContent = `Error: ${extra ?? 'unknown'}`;
     }
     thread.appendChild(el);
-    continueStatus    = el;
-    thread.scrollTop  = thread.scrollHeight;
+    continueStatus   = el;
+    thread.scrollTop = thread.scrollHeight;
   }
 
   function clearContinuePreviewState() {
@@ -116,19 +117,6 @@ export function createContinueModeController({
       e.stopPropagation();
       continueController?.cancel();
     });
-  }
-
-  async function waitForContinueReply() {
-    while (true) {
-      if (consumeManualStop()) {
-        throw new DOMException('Polling aborted', 'AbortError');
-      }
-      const payload = await fetchConversationThread();
-      if (!payload?.pending_response) {
-        return String(payload?.last_assistant?.content || '');
-      }
-      await new Promise((resolve) => window.setTimeout(resolve, 900));
-    }
   }
 
   function wirePreviewController(insertion, insertionLineCount, continuePath, continueOffset) {
@@ -163,6 +151,27 @@ export function createContinueModeController({
     };
   }
 
+  function _runErrorMessage(run) {
+    const errors = Array.isArray(run?.errors) ? run.errors : [];
+    const last = errors.length ? errors[errors.length - 1] : null;
+    return String(last?.message || run?.output?.text || 'continue failed');
+  }
+
+  async function _awaitContinueRun(runId) {
+    const run = await waitForRun(runId);
+    if (typeof run?.conversation_external_id === 'string' && run.conversation_external_id) {
+      setConversationExternalId(run.conversation_external_id);
+    }
+    if (String(run?.status || '') !== 'completed') {
+      throw new Error(_runErrorMessage(run));
+    }
+    const insertion = String(run?.output?.text || '').replace(/^\n+/, '');
+    if (!insertion.trim()) {
+      throw new Error('Continue returned no content.');
+    }
+    return insertion;
+  }
+
   async function runContinue() {
     const ctx = getContinueContext?.();
     if (!ctx) {
@@ -175,39 +184,26 @@ export function createContinueModeController({
     if (btnModeContinue) btnModeContinue.disabled = true;
     setGenerating(true);
 
-    const systemNote = [
-      'You are a code completion assistant.',
-      'You will be given code before and after a cursor position.',
-      'Reply with ONLY the code to insert at the cursor so that it fits naturally between the prefix and suffix.',
-      'Do not repeat any of the provided code.',
-      'Do not include markdown fences, explanations, or commentary.',
-      'Output only the raw code to insert at the cursor.',
-    ].join(' ');
-
-    const prompt = ctx.suffix?.trim()
-      ? `${systemNote}\n\n[CODE BEFORE CURSOR]\n\`\`\`\n${ctx.text}\n\`\`\`\n\n[CODE AFTER CURSOR]\n\`\`\`\n${ctx.suffix}\n\`\`\``
-      : `${systemNote}\n\n\`\`\`\n${ctx.text}\n\`\`\``;
-
     try {
-      const payload = await postConversationFollowup({
-        prompt,
-        visibleText: '',
-        outboundSenderDisplay: '__korecode_internal__',
+      const payload = await startContinueRun({
+        thread_path:               '__workspace__',
+        active_path:               ctx.path,
+        prefix:                    ctx.text,
+        suffix:                    ctx.suffix || '',
+        offset:                    ctx.offset,
+        conversation_external_id:  getConversationExternalId(),
       });
-      continuePendingRunId   = String(payload?.conversation_id || getConversationExternalId() || 'continue');
+      const run = payload?.run || payload;
+      continuePendingRunId   = String(run?.run_id || '');
       continuePendingContext = { path: ctx.path, offset: ctx.offset };
+      if (typeof run?.conversation_external_id === 'string' && run.conversation_external_id) {
+        setConversationExternalId(run.conversation_external_id);
+      }
       save();
 
-      const reply = await waitForContinueReply();
+      const insertion = await _awaitContinueRun(continuePendingRunId);
       clearContinuePendingRun();
 
-      if (!reply.trim()) {
-        showContinueStatus('cancelled', '');
-        showContinueStatus('error', 'Empty response.');
-        return;
-      }
-
-      const insertion          = reply.replace(/^\n/, '');
       const insertionLineCount = insertion.split('\n').length;
       wirePreviewController(insertion, insertionLineCount, ctx.path, ctx.offset);
     } catch (err) {
@@ -243,16 +239,9 @@ export function createContinueModeController({
     setGenerating(true);
 
     try {
-      const reply = await waitForContinueReply();
+      const insertion = await _awaitContinueRun(continuePendingRunId);
       clearContinuePendingRun();
-      if (!reply.trim()) {
-        continueInProgress = false;
-        showContinueStatus('error', 'Continue returned no content.');
-        if (btnModeContinue) btnModeContinue.disabled = false;
-        return;
-      }
 
-      const insertion          = reply.replace(/^\n/, '');
       const insertionLineCount = insertion.split('\n').length;
       const continuePath       = continuePendingContext?.path ?? getCurrentPath();
       const continueOffset     = typeof continuePendingContext?.offset === 'number'

@@ -105,6 +105,8 @@ CREATE TABLE IF NOT EXISTS activity_log (
 CREATE INDEX IF NOT EXISTS idx_convs_iface        ON conversations(interface_id);
 CREATE INDEX IF NOT EXISTS idx_convs_kc_id        ON conversations(kc_chat_id);
 CREATE INDEX IF NOT EXISTS idx_convs_thread       ON conversations(external_thread_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_convs_thread_unique ON conversations(external_thread_id)
+    WHERE external_thread_id IS NOT NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS idx_convs_name  ON conversations(chat_name);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_ext_msg_id  ON external_messages(external_message_id);
 CREATE INDEX IF NOT EXISTS idx_ext_msg_conv       ON external_messages(conversation_id, direction);
@@ -237,25 +239,36 @@ def conversation_list(limit: int = 100, offset: int = 0) -> list[dict]:
 
 def conversation_create(
     interface_id:       int,
-    kc_chat_id: int | None = None,
+    kc_chat_id:         int | None = None,
     external_thread_id: str | None = None,
-    korechat_id: str | None = None,
-    chat_name:  str | None = None,
+    korechat_id:        str | None = None,
+    chat_name:          str | None = None,
 ) -> int:
     with get_db() as conn:
-        cur = conn.execute(
-            "INSERT INTO conversations "
-            "(interface_id, chat_name, kc_chat_id, external_thread_id, korechat_id, created_at) "
-            "VALUES (?,?,?,?,?,?)",
-            (interface_id, chat_name, kc_chat_id, external_thread_id, korechat_id, _now()),
-        )
-        if not chat_name:
-            chat_name = f"kccomms:{cur.lastrowid}"
-            conn.execute(
-                "UPDATE conversations SET chat_name=? WHERE id=?",
-                (chat_name, cur.lastrowid),
+        try:
+            cur = conn.execute(
+                "INSERT INTO conversations "
+                "(interface_id, chat_name, kc_chat_id, external_thread_id, korechat_id, created_at) "
+                "VALUES (?,?,?,?,?,?)",
+                (interface_id, chat_name, kc_chat_id, external_thread_id, korechat_id, _now()),
             )
-    return cur.lastrowid  # type: ignore[return-value]
+            row_id = int(cur.lastrowid)
+            if not chat_name:
+                chat_name = f"kccomms:{row_id}"
+                conn.execute(
+                    "UPDATE conversations SET chat_name=? WHERE id=?",
+                    (chat_name, row_id),
+                )
+            return row_id
+        except sqlite3.IntegrityError:
+            if external_thread_id:
+                row = conn.execute(
+                    "SELECT id FROM conversations WHERE external_thread_id=? LIMIT 1",
+                    (external_thread_id,),
+                ).fetchone()
+                if row is not None:
+                    return int(row["id"])
+            raise
 
 
 def conversation_get(conv_id: int) -> dict | None:
@@ -350,7 +363,7 @@ def external_message_create(
     external_message_id: str,
     direction:           str,
     sender_display:      str = "",
-) -> int:
+) -> bool:
     with get_db() as conn:
         cur = conn.execute(
             "INSERT OR IGNORE INTO external_messages "
@@ -358,7 +371,7 @@ def external_message_create(
             "VALUES (?,?,?,?,?)",
             (conversation_id, external_message_id, direction, sender_display, _now()),
         )
-    return cur.lastrowid  # type: ignore[return-value]
+    return cur.rowcount > 0
 
 
 def external_message_get_last_inbound(conversation_id: int) -> dict | None:

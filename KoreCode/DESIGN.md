@@ -360,13 +360,49 @@ These need answering before implementation details are locked.
 ---
 
 ## 10. Initial Recommendation
+KoreCode has improved materially, but it is still closer to “a good local code editor with AI plumbing” than “a fully capable local AI Python IDE.” The biggest remaining gaps are not cosmetic. They are execution ownership, language intelligence, environment control, and multi-file reliability.
 
-Build KoreCode as another local web app in the Kore suite using the shared UIElements shell and a proven browser editor component.
+My new top 10, ordered by positive impact:
 
-That keeps it aligned with the rest of KoreStack, reduces platform complexity, and lets the first milestone focus on three things:
+Move the full agent loop into Python
+The browser still decides too much. JS should submit intent, selection, cursor, active file, and user actions. Python should own prompt assembly, tool rounds, retries, proposal creation, validation, apply, and recovery. This is the single biggest step toward a real AI IDE.
 
-- reliable local file editing
-- shared-shell integration
-- minimal, dependable editor behavior
+Add a real Python language-service layer
+KoreCode currently has custom AST helpers, but it does not yet have IDE-grade navigation or intelligence. The next leap is go to definition, find references, rename symbol, hover, diagnostics, import resolution, and workspace symbol search. Without this, it will not feel comparable to VSCode.
+
+Replace ad hoc file/symbol helpers with a persistent workspace graph
+KoreCodeWorkspace.md is useful, but not enough. Build a proper SQLite-backed index of files, symbols, imports, references, classes, functions, and docstrings with incremental refresh. That becomes the backbone for both AI context and normal IDE navigation.
+
+Make edit proposals a first-class reviewed workflow everywhere
+You now have the start of this. Finish it. Every AI write should become:
+proposal -> preview diff -> validate -> apply -> reload -> attach to run
+No bypasses. Retire the remaining direct client-side apply path once the proposal path is complete.
+
+Add an integrated local execution environment
+A coding IDE needs to run code. KoreCode needs interpreter selection, venv awareness, pytest execution, targeted script run, lint/format commands, captured stdout/stderr, and run history. Today it can edit code, but it cannot yet close the loop like an IDE.
+
+Build a proper diagnostics pipeline
+Syntax errors, import failures, test failures, lint findings, stale hash conflicts, proposal validation failures, and agent tool failures should all surface in one consistent diagnostics model. Right now errors are fragmented across alerts, tags, and run JSON.
+
+Create a run inspector UI
+You now have backend runs, tool calls, and proposals, but they are not yet a first-class operator surface. KoreCode needs a visible run timeline with statuses, prompt snapshots, tool requests, tool results, proposal IDs, apply results, and retry/resume controls. This is critical for trust and debuggability.
+
+Unify chat/editor interactions around file-aware actions
+The current chat panel is useful, but still relatively generic. To feel like an IDE, the main actions should be explicit and file-native:
+continue, explain, bughunt, replace selection, fix failing test, rename symbol, generate tests, implement TODO
+The user should not need to rely on free-form prompting for common coding actions.
+
+Add background filesystem sync and conflict handling
+KoreCode currently behaves like it is the only editor. A serious IDE must handle external file changes, branch switches, generated files, test artifacts, and index invalidation. It needs file watching, dirty-state reconciliation, and explicit conflict UI.
+
+Retire stale architecture and duplicate paths
+   KoreCode still carries signs of multiple generations:
+older design docs that describe obsolete chat/runtime behavior
+custom AST endpoints mixed with newer run/proposal APIs
+client assumptions that still leak backend concerns
+legacy direct edit logic that should eventually disappear
+   This cleanup is lower impact than the items above, but it matters because duplication will slow every later feature.
+
+The most important shift in thinking is this: stop treating KoreCode as “editor plus chat.” Treat it as a Python-first local orchestration system with an editor front end. VSCode-level capability comes from the backend owning language knowledge, environment control, execution, diagnostics, and safe edit application.
 
 

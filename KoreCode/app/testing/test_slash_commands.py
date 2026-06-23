@@ -36,7 +36,7 @@ class KoreCodeSlashCommandTests(unittest.TestCase):
             workspace_context_enabled = False,
             thread_path               = "__workspace__",
         )
-        with patch("KoreCode.app.slash_command_handlers_workspace.build_workspace_menu", return_value={"menu_file_name": "KoreCodeWorkspace.md", "file_count": 12}):
+        with patch("KoreCode.app.slash_command_handlers_workspace.rebuild_workspace_artifacts", return_value={"menu_file_name": "KoreCodeWorkspace.md", "file_count": 12, "index": {"index_file_name": "KoreCodeWorkspace.sqlite3"}}):
             handled = slash_commands.handle("/workspace on", ctx)
         self.assertTrue(handled)
         self.assertEqual(ctx.actions, [{"type": "set_workspace_context", "enabled": True}])
@@ -49,7 +49,7 @@ class KoreCodeSlashCommandTests(unittest.TestCase):
             workspace_context_enabled = True,
             thread_path               = "__workspace__",
         )
-        with patch("KoreCode.app.slash_command_handlers_workspace.build_workspace_menu", return_value={"menu_file_name": "KoreCodeWorkspace.md", "file_count": 7}):
+        with patch("KoreCode.app.slash_command_handlers_workspace.rebuild_workspace_artifacts", return_value={"menu_file_name": "KoreCodeWorkspace.md", "file_count": 7, "index": {"index_file_name": "KoreCodeWorkspace.sqlite3"}}):
             handled = slash_commands.handle("/workspace regen", ctx)
         self.assertTrue(handled)
         self.assertEqual(ctx.actions, [])

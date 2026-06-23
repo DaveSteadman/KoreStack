@@ -750,6 +750,40 @@ export function createEditor({ runFind, runFindNext, runFindPrevious, closeFindB
     return { ok: errors.length === 0, saved, errors };
   }
 
+  async function reloadTabs(paths = []) {
+    const targets = Array.isArray(paths) && paths.length
+      ? state.openTabs.filter((tab) => paths.includes(tab.path))
+      : state.openTabs.slice();
+    const errors = [];
+    const previousActivePath = state.activePath;
+
+    for (const tab of targets) {
+      try {
+        const payload = await api(`/api/file?path=${encodeURIComponent(tab.path)}`);
+        tab.content      = payload.content;
+        tab.savedContent = payload.content;
+        tab.modifiedAt   = payload.modified_at;
+        tab.modifiedAtNs = payload.modified_at_ns ?? null;
+        tab.contentHash  = payload.content_hash ?? null;
+        tab.dirty        = false;
+        clearDraft(tab.path);
+      } catch (err) {
+        errors.push(`${tab.path}: ${err?.message || err}`);
+      }
+    }
+
+    if (previousActivePath && state.openTabs.some((tab) => tab.path === previousActivePath)) {
+      state.activePath = previousActivePath;
+      applyActiveTabToEditor();
+    }
+
+    persistTabs();
+    renderTabs();
+    renderMeta();
+    renderTree();
+    return { ok: errors.length === 0, reloaded: targets.length - errors.length, errors };
+  }
+
   return {
     editorView,
     openFile,
@@ -762,6 +796,7 @@ export function createEditor({ runFind, runFindNext, runFindPrevious, closeFindB
     updateSaveButton,
     applyStructuredEdits,
     saveTabs,
+    reloadTabs,
     resetWorkspaceContext,
 
     getContinueContext() {

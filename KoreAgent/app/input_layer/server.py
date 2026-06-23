@@ -680,6 +680,7 @@ def _kc_conversation_id_for_session(session_id: str) -> int | None:
 # Invalidated on session delete. Thread-safe for read-heavy access since dict reads are atomic
 # in CPython, but the cache is best-effort - a miss just does a fresh GET.
 _kc_conv_cache: dict[str, dict] = {}
+_kc_conv_cache_lock: threading.Lock = threading.Lock()
 
 # Pending display names set via /newchat <name>. Consumed on first conversation create.
 _kc_session_names: dict[str, str] = {}
@@ -693,8 +694,9 @@ def _kc_set_session_name(session_id: str, name: str) -> None:
 
 
 def _kc_get_conversation_for_session(session_id: str) -> dict | None:
-    if session_id in _kc_conv_cache:
-        return _kc_conv_cache[session_id]
+    with _kc_conv_cache_lock:
+        if session_id in _kc_conv_cache:
+            return _kc_conv_cache[session_id]
     try:
         conv_id = _kc_conversation_id_for_session(session_id)
         if conv_id is not None:
@@ -708,7 +710,8 @@ def _kc_get_conversation_for_session(session_id: str) -> dict | None:
         raise
     conv = result if isinstance(result, dict) else None
     if conv is not None:
-        _kc_conv_cache[session_id] = conv
+        with _kc_conv_cache_lock:
+            _kc_conv_cache[session_id] = conv
     return conv
 
 
@@ -766,7 +769,8 @@ def _kc_ensure_conversation(session_id: str) -> dict | None:
     except Exception:
         return None
     if isinstance(conv, dict):
-        _kc_conv_cache[session_id] = conv
+        with _kc_conv_cache_lock:
+            _kc_conv_cache[session_id] = conv
         return conv
     return None
 
@@ -776,32 +780,19 @@ def _kc_save_turn(session_id: str, user_text: str, agent_text: str, token_estima
     conv = _kc_ensure_conversation(session_id)
     if conv is None:
         return
-    conv_id    = conv["id"]
-    turn_count = (conv.get("turn_count") or 0) + 1
+    conv_id = conv["id"]
     try:
-        _kc_post(f"/api/conversations/{conv_id}/messages", {
-            "direction":      "inbound",
-            "content":        user_text,
-            "sender_display": session_id,
-            "status":         "received",
-        })
-        _kc_post(f"/api/conversations/{conv_id}/messages", {
-            "direction":      "outbound",
-            "content":        agent_text,
-            "sender_display": "agent",
-            "status":         "sent",
+        _kc_post(f"/api/conversations/{conv_id}/turns", {
+            "inbound_content":  user_text,
+            "outbound_content": agent_text,
+            "inbound_sender":   session_id,
+            "outbound_sender":  "agent",
+            "token_estimate":   token_estimate,
         })
     except Exception:
         pass
-    try:
-        patch: dict = {"turn_count": turn_count}
-        if token_estimate is not None:
-            patch["token_estimate"] = token_estimate
-        _kc_patch(f"/api/conversations/{conv_id}", patch)
-        # Invalidate cached conv so the next call sees the updated turn_count.
+    with _kc_conv_cache_lock:
         _kc_conv_cache.pop(session_id, None)
-    except Exception:
-        pass
 
 
 def _load_session(session_id: str) -> tuple["ConversationHistory", list[dict]]:
@@ -987,12 +978,16 @@ def _flush_scratch_to_session(session_id: str) -> None:
         )
     except Exception as exc:
         print(f"[session] Warning: could not flush scratchpad to KoreChat for session '{session_id}': {exc}", flush=True)
+    finally:
+        with _kc_conv_cache_lock:
+            _kc_conv_cache.pop(session_id, None)
 
 
 def _delete_session_state(session_id: str) -> None:
     scratch_clear(session_id)
     delete_persisted_session_datasets(session_id)
-    _kc_conv_cache.pop(session_id, None)
+    with _kc_conv_cache_lock:
+        _kc_conv_cache.pop(session_id, None)
     conv = _kc_get_conversation_for_session(session_id)
     if conv is None:
         return

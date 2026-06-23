@@ -36,6 +36,7 @@ import os
 import shutil
 import sys
 import textwrap
+from functools import partial
 from pathlib import Path
 
 import uvicorn
@@ -60,14 +61,44 @@ except ImportError:
     pass
 
 from .config import cfg as _cfg
+from .edit_store import apply_edit_proposal
+from .edit_store import create_edit_proposal
+from .edit_store import get_edit_proposal
 from .korechat_client import append_internal_followup
 from .korechat_client import append_visible_message_for_conversation
 from .korechat_client import delete_thread
 from .korechat_client import get_thread
 from .korechat_client import set_workspace_context_enabled
+from .prompt_builder import build_prompt_by_mode
+from .prompt_builder import build_tool_followup_prompt
+from .run_executor import AgentRunServices
+from .run_executor import ChatRunRequest
+from .run_executor import ContinueRunRequest
+from .run_executor import build_continue_prompt
+from .run_executor import execute_chat_run
+from .run_executor import execute_continue_run
+from .run_executor import start_background_run
+from .run_store import append_edit_proposal
+from .run_store import append_model_response
+from .run_store import append_tool_call
+from .run_store import create_run
+from .run_store import find_latest_run
+from .run_store import get_run
+from .run_store import list_runs
+from .run_store import set_run_output
+from .run_store import update_run
 from .slash_command_context import KoreCodeSlashCommandContext
 from .slash_commands import handle as handle_slash_command
 from .slash_commands import initialize as initialize_slash_commands
+from .tool_api import execute_tool_requests
+from .tool_api import tool_guide_payload
+from .workspace_artifacts import read_workspace_artifact_status
+from .workspace_artifacts import rebuild_workspace_artifacts
+from .workspace_index import get_symbol_by_qualname
+from .workspace_index import list_indexed_files
+from .workspace_index import list_indexed_symbols
+from .workspace_index import list_symbol_callees
+from .workspace_index import list_symbol_callers
 from .workspace_menu import MENU_FILENAME, build_workspace_menu, read_workspace_menu
 
 
@@ -261,10 +292,12 @@ class SlashCommandBody(BaseModel):
     thread_path:               str  = "__workspace__"
     has_last_user_message:     bool = False
 
+
 class ChatSendBody(BaseModel):
     path:                     str = "__workspace__"
     visible_text:             str
     prompt_override:          str
+    mode:                     str = "chat"
     conversation_external_id: str | None = None
     workspace_context_enabled: bool = True
 
@@ -273,14 +306,71 @@ class ChatFollowupBody(BaseModel):
     path:                     str = "__workspace__"
     prompt:                   str
     visible_text:             str = ""
+    mode:                     str = "chat"
     conversation_external_id: str | None = None
     outbound_sender_display:  str | None = None
+    workspace_context_enabled: bool = True
+
+
+class ChatRunCreateBody(BaseModel):
+    mode:                      str = "chat"
+    user_text:                 str
+    thread_path:               str = "__workspace__"
+    active_path:               str = "."
+    selection:                 str | None = None
+    cursor:                    dict | None = None
+    conversation_external_id:  str | None = None
+    workspace_context_enabled: bool = True
+    max_mention_count:         int = 4
+    max_mention_file_chars:    int = 7000
+
+
+class ContinueRunCreateBody(BaseModel):
+    thread_path:               str = "__workspace__"
+    active_path:               str
+    prefix:                    str
+    suffix:                    str = ""
+    offset:                    int = 0
+    conversation_external_id:  str | None = None
     workspace_context_enabled: bool = True
 
 
 class ChatWorkspaceContextBody(BaseModel):
     conversation_external_id: str | None = None
     enabled: bool = True
+
+
+class ChatPromptBuildBody(BaseModel):
+    mode:                      str = "chat"
+    user_text:                 str
+    path:                      str = "."
+    selection:                 str | None = None
+    cursor:                    dict | None = None
+    workspace_context_enabled: bool = True
+    max_mention_count:         int = 4
+    max_mention_file_chars:    int = 7000
+
+
+class ChatToolFollowupPromptBody(BaseModel):
+    mode:              str = "chat"
+    path:              str = "."
+    user_text:         str
+    previous_response: str
+    tool_results:      list = []
+
+
+class ChatToolExecuteBody(BaseModel):
+    tool_requests:              list[dict] = []
+    active_path:                str | None = None
+    workspace_context_enabled:  bool = True
+    run_id:                     str | None = None
+
+
+class EditProposalCreateBody(BaseModel):
+    edits:    list[dict] = []
+    run_id:   str | None = None
+    source:   str = "assistant"
+    summary:  str = ""
 
 
 class PythonFunctionReplaceBody(BaseModel):
@@ -818,7 +908,457 @@ def api_slash_command(body: SlashCommandBody):
 
 @app.post('/api/workspace-menu/rebuild')
 def api_workspace_menu_rebuild():
-    return build_workspace_menu(_workspace_root())
+    return rebuild_workspace_artifacts(_workspace_root())
+
+
+@app.post('/api/workspace-index/rebuild')
+def api_workspace_index_rebuild():
+    return rebuild_workspace_artifacts(_workspace_root())
+
+
+@app.get('/api/workspace-index/status')
+def api_workspace_index_status():
+    return read_workspace_artifact_status(_workspace_root())
+
+
+@app.get('/api/workspace-index/files')
+def api_workspace_index_files():
+    try:
+        files = list_indexed_files(_workspace_root())
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail='Workspace index not found') from exc
+    return {
+        'files': files,
+    }
+
+
+@app.get('/api/workspace-index/symbols')
+def api_workspace_index_symbols(
+    path: str | None = None,
+    query: str | None = None,
+    kind: str | None = None,
+    limit: int = 200,
+):
+    try:
+        symbols = list_indexed_symbols(
+            _workspace_root(),
+            path  = path,
+            query = query,
+            kind  = kind,
+            limit = limit,
+        )
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail='Workspace index not found') from exc
+    return {
+        'symbols': symbols,
+    }
+
+
+@app.get('/api/workspace-index/symbol')
+def api_workspace_index_symbol(qualname: str = Query(...)):
+    try:
+        symbol = get_symbol_by_qualname(_workspace_root(), qualname)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail='Workspace index not found') from exc
+    if symbol is None:
+        raise HTTPException(status_code=404, detail='Symbol not found')
+    return symbol
+
+
+@app.get('/api/workspace-index/callers')
+def api_workspace_index_callers(qualname: str = Query(...)):
+    try:
+        callers = list_symbol_callers(_workspace_root(), qualname)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail='Workspace index not found') from exc
+    return {
+        'qualname': qualname,
+        'callers': callers,
+    }
+
+
+@app.get('/api/workspace-index/callees')
+def api_workspace_index_callees(qualname: str = Query(...)):
+    try:
+        callees = list_symbol_callees(_workspace_root(), qualname)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail='Workspace index not found') from exc
+    return {
+        'qualname': qualname,
+        'callees': callees,
+    }
+
+
+@app.post('/api/chat/prompt')
+def api_chat_prompt(body: ChatPromptBuildBody):
+    prompt = build_prompt_by_mode(
+        mode                      = body.mode,
+        user_text                 = str(body.user_text or ''),
+        path                      = body.path,
+        selection                 = body.selection,
+        cursor                    = body.cursor if isinstance(body.cursor, dict) else None,
+        workspace_context_enabled = body.workspace_context_enabled,
+        workspace_root            = _workspace_root(),
+        resolve_relative_path     = _resolve_relative_path,
+        is_probably_text          = _is_probably_text,
+        read_text                 = _read_text,
+        build_context_pack        = _build_context_pack,
+        max_mention_count         = body.max_mention_count,
+        max_mention_file_chars    = body.max_mention_file_chars,
+    )
+    return {'prompt': prompt}
+
+
+@app.post('/api/chat/tool-followup-prompt')
+def api_chat_tool_followup_prompt(body: ChatToolFollowupPromptBody):
+    prompt = build_tool_followup_prompt(
+        mode              = body.mode,
+        path              = body.path,
+        user_text         = str(body.user_text or ''),
+        previous_response = str(body.previous_response or ''),
+        tool_results      = list(body.tool_results or []),
+    )
+    return {'prompt': prompt}
+
+
+@app.post('/api/chat/runs')
+def api_chat_runs(body: ChatRunCreateBody):
+    return {'run': _start_chat_backend_run(body)}
+
+
+@app.post('/api/chat/continue-runs')
+def api_chat_continue_runs(body: ContinueRunCreateBody):
+    return {'run': _start_continue_backend_run(body)}
+
+
+@app.get('/api/chat/tools')
+def api_chat_tools():
+    return {'tools': tool_guide_payload()}
+
+
+@app.post('/api/edit-proposals')
+def api_create_edit_proposal(body: EditProposalCreateBody):
+    proposal = create_edit_proposal(
+        edits                  = list(body.edits or []),
+        workspace_root         = _workspace_root(),
+        resolve_relative_path  = _resolve_relative_path,
+        is_probably_text       = _is_probably_text,
+        read_text              = _read_text,
+        validate_python_content = _validate_python_content,
+        run_id                 = body.run_id,
+        source                 = body.source,
+        summary                = body.summary,
+    )
+    run_id = str(body.run_id or '').strip()
+    if run_id:
+        append_edit_proposal(
+            run_id,
+            proposal_id   = proposal['proposal_id'],
+            source        = proposal['source'],
+            summary       = proposal.get('summary', ''),
+            validation_ok = bool(proposal.get('validation_ok')),
+            edits         = list(proposal.get('edits') or []),
+        )
+    return proposal
+
+
+@app.get('/api/edit-proposals/{proposal_id}')
+def api_get_edit_proposal(proposal_id: str):
+    try:
+        return get_edit_proposal(proposal_id)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail='Edit proposal not found') from exc
+
+
+@app.post('/api/edit-proposals/{proposal_id}/apply')
+def api_apply_edit_proposal(proposal_id: str):
+    try:
+        proposal = apply_edit_proposal(
+            proposal_id,
+            resolve_relative_path   = _resolve_relative_path,
+            is_probably_text        = _is_probably_text,
+            read_text               = _read_text,
+            validate_python_content = _validate_python_content,
+        )
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail='Edit proposal not found') from exc
+    run_id = str(proposal.get('run_id') or '').strip()
+    if run_id:
+        update_run(
+            run_id,
+            event_type    = 'edit_proposal_applied',
+            event_payload = proposal.get('apply_result') or {},
+        )
+    return proposal
+
+
+def _api_read_file_payload(path: str) -> dict:
+    candidate = _resolve_relative_path(path)
+    if not candidate.exists():
+        raise HTTPException(status_code=404, detail='File not found')
+    if not candidate.is_file():
+        raise HTTPException(status_code=400, detail='Path is not a file')
+    if not _is_probably_text(candidate):
+        raise HTTPException(status_code=415, detail='Binary files are not supported')
+    content, encoding = _read_text(candidate)
+    stat              = candidate.stat()
+    content_hash      = _content_hash(content)
+    return {
+        'path':            _to_posix(candidate),
+        'name':            candidate.name,
+        'content':         content,
+        'encoding':        encoding,
+        'size':            stat.st_size,
+        'modified_at':     int(stat.st_mtime),
+        'modified_at_ns':  int(stat.st_mtime_ns),
+        'content_hash':    content_hash,
+    }
+
+
+def _api_context_payload(path: str, start_line: int | None, end_line: int | None, include_workspace: bool) -> dict:
+    candidate = _resolve_relative_path(path)
+    if not candidate.exists():
+        raise HTTPException(status_code=404, detail='File not found')
+    if not candidate.is_file():
+        raise HTTPException(status_code=400, detail='Path is not a file')
+    if not _is_probably_text(candidate):
+        raise HTTPException(status_code=415, detail='Binary files are not supported')
+    return _build_context_pack(candidate, start_line, end_line, query=None, include_workspace=include_workspace)
+
+
+def _api_python_function_payload(path: str, symbol: str) -> dict:
+    candidate = _resolve_relative_path(path)
+    if not candidate.exists():
+        raise HTTPException(status_code=404, detail='File not found')
+    if not candidate.is_file():
+        raise HTTPException(status_code=400, detail='Path is not a file')
+    if candidate.suffix.lower() not in {'.py', '.pyi'}:
+        raise HTTPException(status_code=400, detail='Python function tools require a .py or .pyi file')
+    content, lines, entry = _find_python_function(candidate, symbol)
+    return {
+        'path':         _to_posix(candidate),
+        'content_hash': _content_hash(content),
+        **_python_function_summary(entry, lines),
+    }
+
+
+def _replace_python_function_proposal_payload(path: str, symbol: str, replacement: str, expected_hash: str) -> dict:
+    current = _api_python_function_payload(path, symbol)
+    proposal = create_edit_proposal(
+        edits = [
+            {
+                'file':          path,
+                'from':          current['start_line'],
+                'to':            current['end_line'],
+                'replacement':   replacement,
+                'reason':        f"Replace Python function {symbol}",
+                'expected_hash': expected_hash,
+            }
+        ],
+        workspace_root          = _workspace_root(),
+        resolve_relative_path   = _resolve_relative_path,
+        is_probably_text        = _is_probably_text,
+        read_text               = _read_text,
+        validate_python_content = _validate_python_content,
+        source                  = 'tool_api',
+        summary                 = f"Replace Python function {symbol}",
+    )
+    return proposal
+
+
+def _insert_python_function_proposal_payload(path: str, source: str, expected_hash: str, after_symbol: str | None, into_class: str | None) -> dict:
+    candidate = _resolve_relative_path(path)
+    if not candidate.exists():
+        raise HTTPException(status_code=404, detail='File not found')
+    if not candidate.is_file():
+        raise HTTPException(status_code=400, detail='Path is not a file')
+    if candidate.suffix.lower() not in {'.py', '.pyi'}:
+        raise HTTPException(status_code=400, detail='Python function tools require a .py or .pyi file')
+    existing_content, _encoding = _read_text(candidate)
+    _ensure_expected_hash(existing_content, expected_hash)
+    _content, lines, tree = _parse_python_file(candidate)
+    symbols               = _iter_python_function_symbols(tree)
+
+    insert_line = len(lines) + 1
+    if into_class:
+        class_node = next(
+            (node for node in getattr(tree, 'body', []) if isinstance(node, ast.ClassDef) and node.name == into_class),
+            None,
+        )
+        if class_node is None:
+            raise HTTPException(status_code=404, detail=f'Python class not found: {into_class}')
+        insert_line = int(class_node.end_lineno)
+    elif after_symbol:
+        anchor = next((entry for entry in symbols if entry['symbol'] == after_symbol), None)
+        if anchor is None:
+            raise HTTPException(status_code=404, detail=f'Anchor function not found: {after_symbol}')
+        insert_line = int(anchor['end_line'])
+
+    proposal = create_edit_proposal(
+        edits = [
+            {
+                'file':          path,
+                'from':          insert_line + 1,
+                'to':            insert_line,
+                'replacement':   source,
+                'reason':        f"Insert Python function after {after_symbol or into_class or 'end of file'}",
+                'expected_hash': expected_hash,
+            }
+        ],
+        workspace_root          = _workspace_root(),
+        resolve_relative_path   = _resolve_relative_path,
+        is_probably_text        = _is_probably_text,
+        read_text               = _read_text,
+        validate_python_content = _validate_python_content,
+        source                  = 'tool_api',
+        summary                 = f"Insert Python function into {path}",
+    )
+    return proposal
+
+
+def _make_agent_run_services() -> AgentRunServices:
+    return AgentRunServices(
+        append_visible_message_for_conversation = append_visible_message_for_conversation,
+        append_internal_followup                = append_internal_followup,
+        get_thread                              = get_thread,
+        build_tool_followup_prompt              = build_tool_followup_prompt,
+        execute_tool_requests                   = partial(
+            execute_tool_requests,
+            read_file_fn                        = _api_read_file_payload,
+            read_context_fn                     = _api_context_payload,
+            list_tree_fn                        = _list_directory,
+            get_python_function_fn              = _api_python_function_payload,
+            replace_python_function_proposal_fn = _replace_python_function_proposal_payload,
+            insert_python_function_proposal_fn  = _insert_python_function_proposal_payload,
+        ),
+        append_tool_call      = append_tool_call,
+        append_model_response = append_model_response,
+        set_run_output        = set_run_output,
+        update_run            = update_run,
+    )
+
+
+def _start_chat_backend_run(body: ChatRunCreateBody) -> dict:
+    user_text = str(body.user_text or "").strip()
+    if not user_text:
+        raise HTTPException(status_code=400, detail="user_text cannot be empty")
+
+    thread_path = str(body.thread_path or "__workspace__").strip() or "__workspace__"
+    active_path = str(body.active_path or ".").strip() or "."
+    prompt      = build_prompt_by_mode(
+        mode                      = body.mode,
+        user_text                 = user_text,
+        path                      = active_path,
+        selection                 = body.selection,
+        cursor                    = body.cursor if isinstance(body.cursor, dict) else None,
+        workspace_context_enabled = body.workspace_context_enabled,
+        workspace_root            = _workspace_root(),
+        resolve_relative_path     = _resolve_relative_path,
+        is_probably_text          = _is_probably_text,
+        read_text                 = _read_text,
+        build_context_pack        = _build_context_pack,
+        max_mention_count         = body.max_mention_count,
+        max_mention_file_chars    = body.max_mention_file_chars,
+    )
+    run = create_run(
+        run_kind                  = "chat_run",
+        mode                      = body.mode,
+        input_text                = user_text,
+        visible_text              = user_text,
+        prompt_override           = prompt,
+        path                      = thread_path,
+        workspace_root            = _workspace_root(),
+        workspace_context_enabled = body.workspace_context_enabled,
+        conversation_external_id  = body.conversation_external_id,
+        context                   = {
+            "transport":   "korechat",
+            "active_path": active_path,
+            "selection":   body.selection,
+            "cursor":      body.cursor if isinstance(body.cursor, dict) else None,
+        },
+    )
+    request = ChatRunRequest(
+        run_id                    = run["run_id"],
+        mode                      = body.mode,
+        user_text                 = user_text,
+        thread_path               = thread_path,
+        active_path               = active_path,
+        selection                 = body.selection,
+        cursor                    = body.cursor if isinstance(body.cursor, dict) else None,
+        prompt                    = prompt,
+        workspace_root            = _workspace_root(),
+        workspace_context_enabled = body.workspace_context_enabled,
+        conversation_external_id  = body.conversation_external_id,
+    )
+    start_background_run(execute_chat_run, request, _make_agent_run_services())
+    return get_run(run["run_id"])
+
+
+def _start_continue_backend_run(body: ContinueRunCreateBody) -> dict:
+    active_path = str(body.active_path or "").strip()
+    if not active_path:
+        raise HTTPException(status_code=400, detail="active_path cannot be empty")
+
+    prompt = build_continue_prompt(body.prefix, body.suffix)
+    run    = create_run(
+        run_kind                  = "continue_run",
+        mode                      = "continue",
+        input_text                = str(body.prefix or ""),
+        visible_text              = "",
+        prompt_override           = prompt,
+        path                      = str(body.thread_path or "__workspace__").strip() or "__workspace__",
+        workspace_root            = _workspace_root(),
+        workspace_context_enabled = body.workspace_context_enabled,
+        conversation_external_id  = body.conversation_external_id,
+        context                   = {
+            "transport":   "korechat",
+            "active_path": active_path,
+            "offset":      int(body.offset),
+            "suffix":      str(body.suffix or ""),
+        },
+    )
+    request = ContinueRunRequest(
+        run_id                    = run["run_id"],
+        thread_path               = str(body.thread_path or "__workspace__").strip() or "__workspace__",
+        active_path               = active_path,
+        prefix                    = str(body.prefix or ""),
+        suffix                    = str(body.suffix or ""),
+        offset                    = int(body.offset),
+        prompt                    = prompt,
+        workspace_root            = _workspace_root(),
+        workspace_context_enabled = body.workspace_context_enabled,
+        conversation_external_id  = body.conversation_external_id,
+    )
+    start_background_run(execute_continue_run, request, _make_agent_run_services())
+    return get_run(run["run_id"])
+
+
+@app.post('/api/chat/tools/execute')
+def api_chat_tools_execute(body: ChatToolExecuteBody):
+    results = execute_tool_requests(
+        tool_requests             = list(body.tool_requests or []),
+        active_path               = body.active_path,
+        workspace_context_enabled = body.workspace_context_enabled,
+        read_file_fn              = _api_read_file_payload,
+        read_context_fn           = _api_context_payload,
+        list_tree_fn              = _list_directory,
+        get_python_function_fn    = _api_python_function_payload,
+        replace_python_function_proposal_fn = _replace_python_function_proposal_payload,
+        insert_python_function_proposal_fn  = _insert_python_function_proposal_payload,
+    )
+    run_id = str(body.run_id or '').strip()
+    if run_id:
+        for item in results:
+            append_tool_call(
+                run_id,
+                tool_name     = str(item.get('tool') or ''),
+                request_index = int(item.get('request_index') or 0),
+                ok            = bool(item.get('ok')),
+                request_args  = body.tool_requests[int(item.get('request_index') or 0)].get('args', {}) if int(item.get('request_index') or 0) < len(body.tool_requests) else {},
+                result        = item.get('result') if item.get('ok') else None,
+                error         = item.get('error') if not item.get('ok') else None,
+            )
+    return {'results': results}
 
 
 @app.get('/api/chat/thread')
@@ -827,13 +1367,33 @@ def api_chat_thread(
     conversation_external_id: str | None = Query(default=None),
     workspace_context_enabled: bool = True,
 ):
-    return get_thread(
+    payload = get_thread(
         _workspace_root(),
         path,
         create=False,
         conversation_external_id=conversation_external_id,
         workspace_context_enabled=workspace_context_enabled,
     )
+    if not payload.get('pending_response'):
+        latest = find_latest_run(
+            conversation_external_id = payload.get('external_id'),
+            path                     = payload.get('path'),
+            statuses                 = {'created', 'queued', 'waiting_agent'},
+        )
+        if latest is not None and str(latest.get('run_kind') or '') in {'chat_send', 'chat_followup'}:
+            last_assistant = payload.get('last_assistant') or {}
+            update_run(
+                latest['run_id'],
+                status      = 'completed',
+                event_type  = 'agent_reply_observed',
+                event_payload = {
+                    'message_id':   last_assistant.get('id'),
+                    'created_at':   last_assistant.get('created_at'),
+                    'content_size': len(str(last_assistant.get('content') or '')),
+                },
+            )
+            payload['run'] = get_run(latest['run_id'])
+    return payload
 
 
 @app.post('/api/chat/send')
@@ -844,14 +1404,58 @@ def api_chat_send(body: ChatSendBody):
         raise HTTPException(status_code=400, detail='visible_text cannot be empty')
     if not prompt_override:
         raise HTTPException(status_code=400, detail='prompt_override cannot be empty')
-    return append_visible_message_for_conversation(
-        _workspace_root(),
-        body.path,
-        visible_text,
-        prompt_override,
-        conversation_external_id=body.conversation_external_id,
-        workspace_context_enabled=body.workspace_context_enabled,
+    run = create_run(
+        run_kind                  = 'chat_send',
+        mode                      = body.mode,
+        input_text                = visible_text,
+        visible_text              = visible_text,
+        prompt_override           = prompt_override,
+        path                      = body.path,
+        workspace_root            = _workspace_root(),
+        workspace_context_enabled = body.workspace_context_enabled,
+        conversation_external_id  = body.conversation_external_id,
+        context                   = {
+            'transport': 'korechat',
+        },
     )
+    try:
+        update_run(
+            run['run_id'],
+            status      = 'queued',
+            event_type  = 'conversation_append_started',
+            event_payload = {
+                'path': body.path,
+            },
+        )
+        thread = append_visible_message_for_conversation(
+            _workspace_root(),
+            body.path,
+            visible_text,
+            prompt_override,
+            conversation_external_id=body.conversation_external_id,
+            workspace_context_enabled=body.workspace_context_enabled,
+        )
+        update_run(
+            run['run_id'],
+            status                   = 'waiting_agent',
+            conversation_external_id = thread.get('external_id'),
+            conversation_id          = thread.get('conversation_id'),
+            event_type               = 'conversation_append_completed',
+            event_payload            = {
+                'pending_response': bool(thread.get('pending_response')),
+            },
+        )
+        thread['run'] = get_run(run['run_id'])
+        return thread
+    except Exception as exc:
+        update_run(
+            run['run_id'],
+            status      = 'failed',
+            error       = {'message': str(exc)},
+            event_type  = 'conversation_append_failed',
+            event_payload = {'path': body.path},
+        )
+        raise
 
 
 @app.post('/api/chat/followup')
@@ -859,15 +1463,75 @@ def api_chat_followup(body: ChatFollowupBody):
     prompt = str(body.prompt or '').strip()
     if not prompt:
         raise HTTPException(status_code=400, detail='prompt cannot be empty')
-    return append_internal_followup(
-        _workspace_root(),
-        body.path,
-        prompt,
-        str(body.visible_text or '').strip(),
-        conversation_external_id=body.conversation_external_id,
-        outbound_sender_display=str(body.outbound_sender_display or '').strip() or "agent",
-        workspace_context_enabled=body.workspace_context_enabled,
+    run = create_run(
+        run_kind                  = 'chat_followup',
+        mode                      = body.mode,
+        input_text                = prompt,
+        visible_text              = str(body.visible_text or '').strip(),
+        prompt_override           = prompt,
+        path                      = body.path,
+        workspace_root            = _workspace_root(),
+        workspace_context_enabled = body.workspace_context_enabled,
+        conversation_external_id  = body.conversation_external_id,
+        context                   = {
+            'transport':               'korechat',
+            'outbound_sender_display': str(body.outbound_sender_display or '').strip() or 'agent',
+        },
     )
+    try:
+        update_run(
+            run['run_id'],
+            status      = 'queued',
+            event_type  = 'followup_append_started',
+            event_payload = {
+                'path': body.path,
+            },
+        )
+        thread = append_internal_followup(
+            _workspace_root(),
+            body.path,
+            prompt,
+            str(body.visible_text or '').strip(),
+            conversation_external_id=body.conversation_external_id,
+            outbound_sender_display=str(body.outbound_sender_display or '').strip() or "agent",
+            workspace_context_enabled=body.workspace_context_enabled,
+        )
+        update_run(
+            run['run_id'],
+            status                   = 'waiting_agent',
+            conversation_external_id = thread.get('external_id'),
+            conversation_id          = thread.get('conversation_id'),
+            event_type               = 'followup_append_completed',
+            event_payload            = {
+                'pending_response': bool(thread.get('pending_response')),
+            },
+        )
+        thread['run'] = get_run(run['run_id'])
+        return thread
+    except Exception as exc:
+        update_run(
+            run['run_id'],
+            status      = 'failed',
+            error       = {'message': str(exc)},
+            event_type  = 'followup_append_failed',
+            event_payload = {'path': body.path},
+        )
+        raise
+
+
+@app.get('/api/runs')
+def api_runs(limit: int = Query(default=50, ge=1, le=200)):
+    return {
+        'runs': list_runs(limit=limit),
+    }
+
+
+@app.get('/api/runs/{run_id}')
+def api_run_detail(run_id: str):
+    try:
+        return get_run(run_id)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail='Run not found') from exc
 
 
 @app.post('/api/chat/workspace-context')

@@ -315,6 +315,14 @@ class InputHistoryAppendRequest(BaseModel):
     text: str
 
 
+class TurnAppendRequest(BaseModel):
+    inbound_content:  str
+    outbound_content: str
+    inbound_sender:   str = ""
+    outbound_sender:  str = "agent"
+    token_estimate:   int | None = None
+
+
 # ----------------------------------------------------------------------------------------------------
 @app.get("/api/conversations/{conversation_id}/input-history")
 @app.get("/conversations/{conversation_id}/input-history", include_in_schema=False)
@@ -337,13 +345,7 @@ def patch_conversation_input_history(conversation_id: int, req: InputHistoryAppe
     text = (req.text or "").strip()
     if not text:
         raise HTTPException(status_code=400, detail="text cannot be empty")
-    entries = db.conversation_get_input_history(conversation_id)
-    # Erase-dups: remove any prior occurrence so each entry appears only once.
-    entries = [e for e in entries if e != text]
-    entries.append(text)
-    if len(entries) > _INPUT_HISTORY_MAX:
-        entries = entries[-_INPUT_HISTORY_MAX:]
-    db.conversation_set_input_history(conversation_id, entries)
+    entries = db.conversation_append_input_history(conversation_id, text, _INPUT_HISTORY_MAX)
     return {"entries": entries}
 
 
@@ -483,6 +485,32 @@ def append_message(conversation_id: int, req: MessageAppendRequest):
         db.conversation_update(conversation_id=conversation_id, status="active")
     _kc_push("message_added", conversation_id)
     return msg
+
+
+# ----------------------------------------------------------------------------------------------------
+@app.post("/api/conversations/{conversation_id}/turns")
+@app.post("/conversations/{conversation_id}/turns", include_in_schema=False)
+def append_turn(conversation_id: int, req: TurnAppendRequest):
+    conv = db.conversation_get(conversation_id)
+    if conv is None:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    inbound_content  = (req.inbound_content or "").strip()
+    outbound_content = (req.outbound_content or "").strip()
+    if not inbound_content or not outbound_content:
+        raise HTTPException(status_code=400, detail="Both inbound_content and outbound_content are required")
+    result = db.conversation_append_turn(
+        conversation_id = conversation_id,
+        inbound_content = inbound_content,
+        outbound_content = outbound_content,
+        inbound_sender  = req.inbound_sender,
+        outbound_sender = req.outbound_sender,
+        token_estimate  = req.token_estimate,
+    )
+    if result is None:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    _kc_push("message_added", conversation_id)
+    _kc_push("conv_updated", conversation_id)
+    return result
 
 
 # ----------------------------------------------------------------------------------------------------

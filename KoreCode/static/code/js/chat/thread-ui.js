@@ -5,7 +5,7 @@ import {
   extractStructuredEdits,
 } from './rendering.js';
 
-export function createThreadUI({ thread, insertFromChat = null, applyStructuredEdits = null, saveTabs = null }) {
+export function createThreadUI({ thread, insertFromChat = null, createEditProposal = null, applyEditProposal = null, reloadTabs = null, saveTabs = null }) {
   function scrollBottom() {
     thread.scrollTop = thread.scrollHeight;
   }
@@ -73,23 +73,31 @@ export function createThreadUI({ thread, insertFromChat = null, applyStructuredE
     row.appendChild(copyBtn);
     row.appendChild(insertBtn);
 
-    if (structured && Array.isArray(structured.edits) && typeof applyStructuredEdits === 'function') {
+    if (structured && Array.isArray(structured.edits) && typeof createEditProposal === 'function' && typeof applyEditProposal === 'function') {
       const applyBtn = document.createElement('button');
       applyBtn.type = 'button';
       applyBtn.className = 'kcui-tag kcui-tag--warning';
-      applyBtn.textContent = 'apply edits';
+      applyBtn.textContent = 'apply proposal';
       applyBtn.addEventListener('click', async () => {
         const prev = applyBtn.textContent;
         const fileList = [...new Set(structured.edits.map((e) => String(e?.file || '').trim()).filter(Boolean))];
-        const prompt = `Apply ${structured.edits.length} edit(s) across ${fileList.length || 1} file(s)?`;
+        const prompt = `Create and apply proposal for ${structured.edits.length} edit(s) across ${fileList.length || 1} file(s)?`;
         if (!window.confirm(prompt)) return;
         applyBtn.disabled = true;
         try {
-          const result = await applyStructuredEdits(structured.edits);
-          if (result?.ok) {
-            applyBtn.textContent = `applied (${result.applied || 0})`;
+          const proposal = await createEditProposal(structured.edits);
+          if (!proposal?.validation_ok) {
+            const invalid = (proposal?.edits || []).find((edit) => !edit?.validation?.ok);
+            applyBtn.textContent = 'proposal invalid';
+            window.alert(invalid?.validation?.errors?.[0] || 'proposal validation failed');
+            return;
+          }
+          const result = await applyEditProposal(proposal.proposal_id);
+          if (result?.apply_result?.ok) {
+            await reloadTabs?.(fileList);
+            applyBtn.textContent = `applied (${result.apply_result?.applied || 0})`;
           } else {
-            const firstError = Array.isArray(result?.errors) && result.errors.length ? result.errors[0] : 'apply failed';
+            const firstError = Array.isArray(result?.apply_result?.errors) && result.apply_result.errors.length ? result.apply_result.errors[0] : 'apply failed';
             applyBtn.textContent = 'apply failed';
             window.alert(firstError);
           }
@@ -108,27 +116,34 @@ export function createThreadUI({ thread, insertFromChat = null, applyStructuredE
         const applySaveBtn = document.createElement('button');
         applySaveBtn.type = 'button';
         applySaveBtn.className = 'kcui-tag kcui-tag--accent';
-        applySaveBtn.textContent = 'apply + save';
+        applySaveBtn.textContent = 'apply proposal';
         applySaveBtn.addEventListener('click', async () => {
           const prev = applySaveBtn.textContent;
           const fileList = [...new Set(structured.edits.map((e) => String(e?.file || '').trim()).filter(Boolean))];
-          const prompt = `Apply and save ${structured.edits.length} edit(s) across ${fileList.length || 1} file(s)?`;
+          const prompt = `Create, apply, and reload proposal for ${structured.edits.length} edit(s) across ${fileList.length || 1} file(s)?`;
           if (!window.confirm(prompt)) return;
           applySaveBtn.disabled = true;
           try {
-            const applyResult = await applyStructuredEdits(structured.edits);
-            if (!applyResult?.ok) {
-              const firstApplyError = Array.isArray(applyResult?.errors) && applyResult.errors.length ? applyResult.errors[0] : 'apply failed';
+            const proposal = await createEditProposal(structured.edits);
+            if (!proposal?.validation_ok) {
+              const invalid = (proposal?.edits || []).find((edit) => !edit?.validation?.ok);
+              applySaveBtn.textContent = 'proposal invalid';
+              window.alert(invalid?.validation?.errors?.[0] || 'proposal validation failed');
+              return;
+            }
+            const applyResult = await applyEditProposal(proposal.proposal_id);
+            if (!applyResult?.apply_result?.ok) {
+              const firstApplyError = Array.isArray(applyResult?.apply_result?.errors) && applyResult.apply_result.errors.length ? applyResult.apply_result.errors[0] : 'apply failed';
               applySaveBtn.textContent = 'apply failed';
               window.alert(firstApplyError);
               return;
             }
-            const saveResult = await saveTabs(fileList);
-            if (saveResult?.ok) {
-              applySaveBtn.textContent = `saved (${saveResult.saved || 0})`;
+            const reloadResult = await reloadTabs?.(fileList);
+            if (!reloadResult || reloadResult?.ok) {
+              applySaveBtn.textContent = `applied (${applyResult.apply_result?.applied || 0})`;
             } else {
-              const firstSaveError = Array.isArray(saveResult?.errors) && saveResult.errors.length ? saveResult.errors[0] : 'save failed';
-              applySaveBtn.textContent = 'save failed';
+              const firstSaveError = Array.isArray(reloadResult?.errors) && reloadResult.errors.length ? reloadResult.errors[0] : 'reload failed';
+              applySaveBtn.textContent = 'reload failed';
               window.alert(firstSaveError);
             }
           } catch {

@@ -18,11 +18,11 @@
 }
 
 .endpoint-panel {
-  height: calc(100vh - 120px);
+  height: auto;
 }
 
 .endpoint-panel .kcui-panel-body {
-  height: calc(100% - 74px);
+  height: auto;
 }
 
 .endpoint-header {
@@ -70,7 +70,7 @@
 }
 
 .endpoint-list {
-  overflow: auto;
+  overflow: visible;
   border: 1px solid var(--border, #2f3541);
   background: rgba(10, 12, 18, 0.72);
 }
@@ -212,7 +212,6 @@
   }
 
   .endpoint-panel {
-    height: auto;
     min-height: 520px;
   }
 

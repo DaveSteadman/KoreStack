@@ -1,3 +1,4 @@
+import os
 import sys
 import tempfile
 from pathlib import Path
@@ -78,21 +79,26 @@ class ArtifactRefTests(unittest.IsolatedAsyncioTestCase):
 
     def test_rag_processing_scripts_include_schedule_and_last_run(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            base_dir    = Path(tmp)
-            script_dir  = base_dir / "RAG" / "databases" / "alpha"
+            base_dir         = Path(tmp)
+            script_dir       = base_dir / "RAG" / "databases" / "alpha"
+            processing_log   = script_dir / "processing.log"
+            descriptor_path  = script_dir / "alpha.json"
+            expected_display = "2026-06-16 22:31"
             script_dir.mkdir(parents=True, exist_ok=True)
             (script_dir / "ingest.py").write_text("print('ok')\n", encoding="utf-8")
-            (script_dir / "alpha.json").write_text(
+            descriptor_path.write_text(
                 (
                     "{\n"
                     '  "display_name": "Alpha",\n'
                     '  "managed_by": "ingestor",\n'
                     '  "schedule": "weekly",\n'
-                    '  "sync": {"last_run": "2026-06-16", "last_date_ingested": "2026-06-15", "status": "complete"}\n'
+                    '  "sync": {"last_run": "2026-06-16 21:30:45", "last_ingest_completed_at": "2026-06-16 21:42:03", "last_date_ingested": "2026-06-15", "status": "complete"}\n'
                     "}\n"
                 ),
                 encoding="utf-8",
             )
+            processing_log.write_text("ran\n", encoding="utf-8")
+            os.utime(processing_log, (1781645445, 1781645445))
 
             original_get_koredata_dir = server.get_koredata_dir
             try:
@@ -104,8 +110,8 @@ class ArtifactRefTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(scripts), 1)
         self.assertEqual(scripts[0]["id"], "alpha")
         self.assertEqual(scripts[0]["schedule"], "weekly")
-        self.assertEqual(scripts[0]["last_run"], "2026-06-16")
-        self.assertEqual(scripts[0]["last_ingested"], "2026-06-15")
+        self.assertEqual(scripts[0]["last_run"], "2026-06-16 21:30:45")
+        self.assertEqual(scripts[0]["last_run_display"], expected_display)
         self.assertTrue(scripts[0]["has_database"])
 
     def test_normalize_rag_processing_schedule_rejects_unknown_values(self) -> None:

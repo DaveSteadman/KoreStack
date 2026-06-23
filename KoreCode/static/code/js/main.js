@@ -30,6 +30,7 @@ const { editorView, openFile, getActiveTab, renderTabs, renderMeta, restoreTabs 
 
 window.__kcApplyStructuredEdits = async (edits) => editorApi.applyStructuredEdits(edits);
 window.__kcSaveTabs = async (paths) => editorApi.saveTabs(paths);
+window.__kcReloadTabs = async (paths) => editorApi.reloadTabs(paths);
 
 const chat = initChat({
   getActiveTab,

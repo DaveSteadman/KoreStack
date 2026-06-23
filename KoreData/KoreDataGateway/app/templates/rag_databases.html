@@ -7,26 +7,31 @@
 {% if processing_scripts %}
 <div class="panel kcui-panel">
   <div class="panel-header kcui-panel-header">
-    PROCESSING
+    INGESTOR SCRIPTS
     <span class="badge badge-dim" style="margin-left:0.5rem;">{{ processing_scripts | length }}</span>
+  </div>
+  <div class="kcui-panel-body" style="padding:0.6rem 1rem; border-bottom:1px solid var(--border, #23262e);">
+    <div class="meta" style="font-size:11px;">
+      These scripts build and refresh RAG databases. Browse and explore actions belong to the database entries below.
+    </div>
   </div>
   <div class="panel-body kcui-panel-body" style="padding:0; overflow-x:auto;">
     <table>
       <thead>
         <tr>
           <th>Script</th>
-          <th>Purpose</th>
+          <th style="width:32%;">Purpose</th>
           <th style="width:140px;">Database</th>
-          <th style="width:150px;">Managed By</th>
+          <th style="width:210px;">Ingestor / Last Run</th>
           <th style="width:170px;">Update Period</th>
-          <th style="width:220px; white-space:nowrap;"></th>
+          <th style="width:180px; white-space:nowrap;"></th>
         </tr>
       </thead>
       <tbody>
         {% for script in processing_scripts %}
         <tr>
           <td>
-            <a href="/ui/rag?db={{ script.id }}" style="font-weight:500;">{{ script.display_name }}</a>
+            <span style="font-weight:500;">{{ script.display_name }}</span>
             <div class="meta" style="font-size:11px; margin-top:0.15rem;">{{ script.id }}</div>
           </td>
           <td class="meta" style="font-size:11px;">{{ script.description }}</td>
@@ -39,11 +44,8 @@
           </td>
           <td class="meta" style="font-size:11px;" id="script-{{ script.id }}-managed">
             {{ script.managed_by or "ingestor" }}
-            {% if script.last_run %}
-            <div style="margin-top:0.2rem; color:var(--muted, #888);">Last run: {{ script.last_run }}</div>
-            {% endif %}
-            {% if script.last_ingested %}
-            <div style="margin-top:0.2rem; color:var(--muted, #888);">Last ingest: {{ script.last_ingested }}</div>
+            {% if script.last_run_display %}
+            <div style="margin-top:0.2rem; color:var(--muted, #888);">Last run: {{ script.last_run_display }}</div>
             {% endif %}
           </td>
           <td id="script-{{ script.id }}-schedule">
@@ -67,7 +69,6 @@
               {% if script.running %}
               <span class="kcui-tag kcui-tag--success">RUNNING</span>
               {% endif %}
-              <a class="btn btn-sm btn-warning" href="/ui/rag?db={{ script.id }}">BROWSE</a>
               {% if script.log_exists %}
               <a class="kcui-tag kcui-tag--accent" href="/ui/rag/processing/{{ script.id }}/log">VIEW LOG</a>
               {% endif %}
@@ -91,7 +92,7 @@
 {% endif %}
 <div class="panel kcui-panel">
   <div class="panel-header kcui-panel-header">
-    RAG DATABASES
+    GENERATED DATABASES
     <span class="badge badge-dim" style="margin-left:0.5rem;">{{ databases | length }}</span>
     <a class="kcui-tag kcui-tag--accent"
        href="#"
@@ -99,6 +100,11 @@
        onclick="event.preventDefault(); document.getElementById('new-db-form').hidden=!document.getElementById('new-db-form').hidden;">
       + NEW
     </a>
+  </div>
+  <div class="kcui-panel-body" style="padding:0.6rem 1rem; border-bottom:1px solid var(--border, #23262e);">
+    <div class="meta" style="font-size:11px;">
+      These are the databases the scripts create. Use these entries to browse raw chunks or explore structured navigation views.
+    </div>
   </div>
 
   <div id="new-db-form" hidden style="padding:0.6rem 1rem; border-bottom:1px solid var(--border, #23262e);">
@@ -141,8 +147,9 @@
       <tbody>
         {% for d in databases %}
         <tr>
-          <td>
+          <td id="db-{{ d.id }}-label">
             <a href="/ui/rag?db={{ d.id }}" style="font-weight:500;">{{ d.display_name }}</a>
+            <div class="meta" style="font-size:11px; margin-top:0.15rem;">{{ d.id }}</div>
             {% if d.description %}
             <div class="meta" style="font-size:11px; margin-top:0.15rem;">{{ d.description }}</div>
             {% endif %}
@@ -158,9 +165,9 @@
           <td id="db-{{ d.id }}-actions" style="text-align:right; white-space:nowrap;">
             <form id="db-delete-{{ d.id }}" method="post" action="/ui/rag/databases/{{ d.id }}/delete" style="display:none;"></form>
             <span style="display:inline-flex; gap:0.4rem; align-items:center;">
-            {% if d.navigation %}<a class="kcui-tag kcui-tag--accent" href="/ui/rag/explore/{{ d.id }}">EXPLORE</a>{% endif %}
-            <a class="btn btn-sm btn-warning" href="/ui/rag?db={{ d.id }}">BROWSE</a>
-            <a class="kcui-tag kcui-tag--danger" href="#"
+            {% if d.navigation %}<a class="kcui-tag kcui-tag--sm kcui-tag--accent" href="/ui/rag/explore/{{ d.id }}">EXPLORE</a>{% endif %}
+            <a class="kcui-tag kcui-tag--sm kcui-tag--warning" href="/ui/rag?db={{ d.id }}">BROWSE</a>
+            <a class="kcui-tag kcui-tag--sm kcui-tag--danger" href="#"
                onclick="event.preventDefault(); if(confirm('Delete database &quot;{{ d.id }}&quot; and all its data?\nThis cannot be undone.')) document.getElementById('db-delete-{{ d.id }}').submit();">DELETE</a>
             </span>
           </td>
@@ -197,20 +204,32 @@
   function renderDatabaseActions(d) {
     let h = '<span style="display:inline-flex;gap:0.4rem;align-items:center;">';
     h = '<form id="db-delete-' + d.id + '" method="post" action="/ui/rag/databases/' + d.id + '/delete" style="display:none;"></form>' + h;
-    if (d.navigation) h += '<a class="kcui-tag kcui-tag--accent" href="/ui/rag/explore/' + d.id + '">EXPLORE</a>';
-    h += '<a class="btn btn-sm btn-warning" href="/ui/rag?db=' + d.id + '">BROWSE</a>';
-    h += '<a class="kcui-tag kcui-tag--danger" href="#"'
+    if (d.navigation) h += '<a class="kcui-tag kcui-tag--sm kcui-tag--accent" href="/ui/rag/explore/' + d.id + '">EXPLORE</a>';
+    h += '<a class="kcui-tag kcui-tag--sm kcui-tag--warning" href="/ui/rag?db=' + d.id + '">BROWSE</a>';
+    h += '<a class="kcui-tag kcui-tag--sm kcui-tag--danger" href="#"'
        + ' onclick="event.preventDefault(); if(confirm(\'Delete database &quot;' + d.id + '&quot; and all its data?\\nThis cannot be undone.\')) document.getElementById(\'db-delete-' + d.id + '\').submit();">DELETE</a>';
     h += '</span>';
     return h;
   }
 
+  function renderDatabaseLabel(d) {
+    let h = '<a href="/ui/rag?db=' + d.id + '" style="font-weight:500;">' + (d.display_name || d.id) + '</a>';
+    h += '<div class="meta" style="font-size:11px; margin-top:0.15rem;">' + d.id + '</div>';
+    if (d.description) {
+      h += '<div class="meta" style="font-size:11px; margin-top:0.15rem;">' + d.description + '</div>';
+    }
+    return h;
+  }
+
+  function setHtmlIfChanged(el, html) {
+    if (!el) return;
+    if (el.innerHTML !== html) el.innerHTML = html;
+  }
+
   function renderScriptManaged(script) {
     let h = script.managed_by || 'ingestor';
-    if (script.last_run)
-      h += '<div style="margin-top:0.2rem;color:var(--muted,#888);">Last run: ' + script.last_run + '</div>';
-    if (script.last_ingested)
-      h += '<div style="margin-top:0.2rem;color:var(--muted,#888);">Last ingest: ' + script.last_ingested + '</div>';
+    if (script.last_run_display)
+      h += '<div style="margin-top:0.2rem;color:var(--muted,#888);">Last run: ' + script.last_run_display + '</div>';
     return h;
   }
 
@@ -221,7 +240,6 @@
       + h;
     if (script.running)
       h += '<span class="kcui-tag kcui-tag--success">RUNNING</span>';
-    h += '<a class="btn btn-sm btn-warning" href="/ui/rag?db=' + script.id + '">BROWSE</a>';
     if (script.log_exists)
       h += '<a class="kcui-tag kcui-tag--accent" href="/ui/rag/processing/' + script.id + '/log">VIEW LOG</a>';
     if (script.running) {
@@ -243,20 +261,22 @@
     let anyRunning  = false;
 
     databases.forEach(function (d) {
+      var l = document.getElementById('db-' + d.id + '-label');
       var c = document.getElementById('db-' + d.id + '-chunks');
       var s = document.getElementById('db-' + d.id + '-size');
       var a = document.getElementById('db-' + d.id + '-actions');
-      if (c) c.innerHTML = renderChunks(d);
-      if (s) s.innerHTML = fmtKB(d.db_size_bytes);
-      if (a) a.innerHTML = renderDatabaseActions(d);
+      setHtmlIfChanged(l, renderDatabaseLabel(d));
+      setHtmlIfChanged(c, renderChunks(d));
+      setHtmlIfChanged(s, fmtKB(d.db_size_bytes));
+      setHtmlIfChanged(a, renderDatabaseActions(d));
     });
 
     scripts.forEach(function (script) {
       if (script.running) anyRunning = true;
       var m = document.getElementById('script-' + script.id + '-managed');
       var a = document.getElementById('script-' + script.id + '-actions');
-      if (m) m.innerHTML = renderScriptManaged(script);
-      if (a) a.innerHTML = renderScriptActions(script);
+      setHtmlIfChanged(m, renderScriptManaged(script));
+      setHtmlIfChanged(a, renderScriptActions(script));
     });
 
     return anyRunning;

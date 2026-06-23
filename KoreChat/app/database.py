@@ -277,21 +277,32 @@ def conversation_create(
     external_id:        str | None = None,
     protected:          bool | None = None,
 ) -> dict:
-    now     = _now()
-    profile = profile or _default_profile(channel_type)
+    now             = _now()
+    profile         = profile or _default_profile(channel_type)
     protected_value = int(protected) if protected is not None else _is_protected_subject(subject, external_id)
     with _conn() as c:
-        cur = c.execute(
-            """
-            INSERT INTO conversations
-                (channel_type, profile, status, subject, protected, external_id, thread_summary, scratchpad, datasets,
-                 background_context, token_estimate, turn_count,
-                 last_activity_at, created_at, updated_at)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-            """,
-            (channel_type, profile, "active", subject, protected_value, external_id, "", "{}", "{}", background_context, 0, 0, now, now, now),
-        )
-        row_id = cur.lastrowid
+        try:
+            cur = c.execute(
+                """
+                INSERT INTO conversations
+                    (channel_type, profile, status, subject, protected, external_id, thread_summary, scratchpad, datasets,
+                     background_context, token_estimate, turn_count,
+                     last_activity_at, created_at, updated_at)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                """,
+                (channel_type, profile, "active", subject, protected_value, external_id, "", "{}", "{}", background_context, 0, 0, now, now, now),
+            )
+            row_id = cur.lastrowid
+        except sqlite3.IntegrityError:
+            if external_id is None:
+                raise
+            existing = c.execute(
+                "SELECT id FROM conversations WHERE external_id = ? LIMIT 1",
+                (external_id,),
+            ).fetchone()
+            if existing is None:
+                raise
+            row_id = existing["id"]
     return conversation_get(row_id)
 
 
@@ -492,6 +503,41 @@ def conversation_set_input_history(conversation_id: int, history: list) -> None:
 
 
 # ----------------------------------------------------------------------------------------------------
+def conversation_append_input_history(
+    conversation_id: int,
+    text:            str,
+    max_entries:     int,
+) -> list[str]:
+    """Atomically append one history entry with de-duplication and cap enforcement."""
+    now = _now()
+    with _conn() as c:
+        c.execute("BEGIN IMMEDIATE")
+        row = c.execute(
+            "SELECT input_history FROM conversations WHERE id = ?",
+            (conversation_id,),
+        ).fetchone()
+        if row is None:
+            c.execute("COMMIT")
+            return []
+        try:
+            entries = json.loads(row["input_history"] or "[]")
+        except json.JSONDecodeError:
+            entries = []
+        if not isinstance(entries, list):
+            entries = []
+        entries = [entry for entry in entries if entry != text]
+        entries.append(text)
+        if len(entries) > max_entries:
+            entries = entries[-max_entries:]
+        c.execute(
+            "UPDATE conversations SET input_history = ?, updated_at = ? WHERE id = ?",
+            (json.dumps(entries), now, conversation_id),
+        )
+        c.execute("COMMIT")
+    return entries
+
+
+# ----------------------------------------------------------------------------------------------------
 def conversation_delete(conversation_id: int) -> bool:
     with _conn() as c:
         c.execute("DELETE FROM events WHERE conversation_id = ?", (conversation_id,))
@@ -552,6 +598,76 @@ def message_append(
         row_id = cur.lastrowid
         row    = c.execute("SELECT * FROM messages WHERE id = ?", (row_id,)).fetchone()
     return _row_to_dict(row)
+
+
+# ----------------------------------------------------------------------------------------------------
+def conversation_append_turn(
+    conversation_id:     int,
+    inbound_content:     str,
+    outbound_content:    str,
+    inbound_sender:      str = "",
+    outbound_sender:     str = "agent",
+    token_estimate:      int | None = None,
+) -> dict | None:
+    """Atomically append a user/agent turn and update conversation counters/state."""
+    now = _now()
+    with _conn() as c:
+        c.execute("BEGIN IMMEDIATE")
+        row = c.execute(
+            "SELECT turn_count FROM conversations WHERE id = ?",
+            (conversation_id,),
+        ).fetchone()
+        if row is None:
+            c.execute("COMMIT")
+            return None
+
+        c.execute(
+            """
+            INSERT INTO messages (conversation_id, direction, content, sender_display, status, summarised, created_at)
+            VALUES (?,?,?,?,?,0,?)
+            """,
+            (conversation_id, "inbound", inbound_content, inbound_sender, "received", now),
+        )
+        c.execute(
+            """
+            INSERT INTO messages (conversation_id, direction, content, sender_display, status, summarised, created_at)
+            VALUES (?,?,?,?,?,0,?)
+            """,
+            (conversation_id, "outbound", outbound_content, outbound_sender, "sent", now),
+        )
+
+        fields = [
+            "turn_count = ?",
+            "status = ?",
+            "updated_at = ?",
+            "last_activity_at = ?",
+        ]
+        params: list[object] = [
+            int(row["turn_count"] or 0) + 1,
+            "active",
+            now,
+            now,
+        ]
+        if token_estimate is not None:
+            fields.append("token_estimate = ?")
+            params.append(token_estimate)
+        params.append(conversation_id)
+        c.execute(
+            f"UPDATE conversations SET {', '.join(fields)} WHERE id = ?",
+            params,
+        )
+        c.execute(
+            """
+            UPDATE events
+            SET status = 'completed', completed_at = ?
+            WHERE conversation_id = ?
+              AND event_type = 'response_needed'
+              AND status IN ('pending', 'claimed')
+            """,
+            (now, conversation_id),
+        )
+        c.execute("COMMIT")
+    return conversation_get(conversation_id)
 
 
 # ----------------------------------------------------------------------------------------------------

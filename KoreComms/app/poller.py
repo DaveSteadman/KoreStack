@@ -87,9 +87,6 @@ def _forward_message(iface_row: dict, msg: dict) -> None:
     ext_msg_id    = msg["external_message_id"]
     ext_thread_id = msg["external_thread_id"]
 
-    if db.external_message_exists(ext_msg_id):
-        return  # Already forwarded.
-
     # Find or create the local routing entry.
     local_conv = db.conversation_get_by_external_thread(ext_thread_id)
     if local_conv is None:
@@ -115,12 +112,14 @@ def _forward_message(iface_row: dict, msg: dict) -> None:
         return
 
     # Record the external message for deduplication and reply anchoring.
-    db.external_message_create(
+    inserted = db.external_message_create(
         conversation_id     = local_conv_id,
         external_message_id = ext_msg_id,
         direction           = "inbound",
         sender_display      = msg.get("sender", ""),
     )
+    if not inserted:
+        return
 
     # Append to KoreChat. The newer KC API raises response_needed itself.
     kc_client.append_message(
@@ -288,6 +287,8 @@ def _run(interval: int) -> None:
 
 def start() -> None:
     global _thread
+    if _thread is not None and _thread.is_alive():
+        return
     _stop_event.clear()
     interval = int(cfg.get("poll_interval", 60))
     _thread = threading.Thread(target=_run, args=(interval,), daemon=True, name="poller")

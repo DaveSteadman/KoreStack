@@ -237,7 +237,11 @@ def _launch_ingestor(name: str) -> dict:
             d = json.loads(json_path.read_text(encoding="utf-8"))
         except Exception:
             d = {}
-        d["sync"] = {**d.get("sync", {}), "status": "running", "last_run": date.today().isoformat()}
+        d["sync"] = {
+            **d.get("sync", {}),
+            "status":   "running",
+            "last_run": datetime.now().strftime("%Y-%m-%d %H:%M"),
+        }
         json_path.write_text(json.dumps(d, indent=2), encoding="utf-8")
     _registry_reload()
 

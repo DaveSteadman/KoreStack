@@ -1,8 +1,7 @@
 // chat.js
 //
 // Chat panel for KoreCode.
-import { buildPromptByMode, buildAgentToolFollowupPrompt } from './chat/prompting.js';
-import { extractAgentEnvelope, executeAgentToolRequests } from './chat/agent-loop.js';
+import { extractAgentEnvelope } from './chat/agent-loop.js';
 import { createThreadUI } from './chat/thread-ui.js';
 import { createContinueModeController } from './chat/continue-mode.js';
 
@@ -12,7 +11,6 @@ const _WORKSPACE_CONTEXT_KEY = 'korecode.workspace-context';
 const _MIN_PANEL_W = 260;
 const _MAX_PANEL_W = 720;
 const _DEFAULT_PANEL_W = 340;
-const _MAX_AGENT_TOOL_TURNS = 3;
 const _WORKSPACE_THREAD_KEY = '__workspace__';
 const _CONVERSATION_STORE_KEY = '__conversation__';
 
@@ -87,6 +85,8 @@ export function initChat({
   const btnChatClear = document.getElementById('btn-chat-clear');
   const btnChatStop = document.getElementById('btn-chat-stop');
   const btnWorkspaceContext = document.getElementById('btn-workspace-context');
+  const linkedConversation = document.getElementById('chat-linked-conversation');
+  const linkedConversationName = document.getElementById('chat-linked-conversation-name');
   const selectionChip = document.getElementById('chat-selection-chip');
   const selectionLabel = document.getElementById('chat-selection-label');
   const progressNote = document.getElementById('chat-progress-note');
@@ -104,11 +104,39 @@ export function initChat({
   let _workspaceContextEnabled = _loadWorkspaceContextEnabled();
   let _continueControllerApi = { stateSnapshot: () => null };
   let _conversationExternalId = null;
+  let _conversationTitle = null;
+  let _historyIndex = -1;
+  let _historyDraft = '';
 
   const _threadUI = createThreadUI({
     thread,
     insertFromChat,
-    applyStructuredEdits: (edits) => window.__kcApplyStructuredEdits?.(edits),
+    createEditProposal: async (edits) => {
+      const resp = await fetch('/api/edit-proposals', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({
+          edits,
+          run_id: _pendingRuns.get(_CONVERSATION_STORE_KEY) || null,
+          source: 'assistant',
+          summary: 'Assistant structured edits',
+        }),
+      });
+      if (!resp.ok) {
+        throw new Error(`${resp.status} ${resp.statusText}`);
+      }
+      return await resp.json();
+    },
+    applyEditProposal: async (proposalId) => {
+      const resp = await fetch(`/api/edit-proposals/${encodeURIComponent(proposalId)}/apply`, {
+        method: 'POST',
+      });
+      if (!resp.ok) {
+        throw new Error(`${resp.status} ${resp.statusText}`);
+      }
+      return await resp.json();
+    },
+    reloadTabs: (paths) => window.__kcReloadTabs?.(paths),
     saveTabs: (paths) => window.__kcSaveTabs?.(paths),
   });
 
@@ -144,6 +172,86 @@ export function initChat({
       selectionLabel.textContent = `[insert L${_currentCursor.line}:C${_currentCursor.column}]`;
     }
     selectionChip.hidden = false;
+  }
+
+  function _setConversationTitle(value) {
+    const next = typeof value === 'string' && value.trim() ? value.trim() : null;
+    _conversationTitle = next;
+    if (!linkedConversation || !linkedConversationName) return;
+    linkedConversation.hidden = !next;
+    if (next) {
+      linkedConversationName.textContent = next;
+      linkedConversationName.title = next;
+    } else {
+      linkedConversationName.textContent = '';
+      linkedConversationName.removeAttribute('title');
+    }
+  }
+
+  function _userPromptHistory() {
+    const messages = _threads.get(_CONVERSATION_STORE_KEY) ?? [];
+    return messages
+      .filter((msg) => msg?.role === 'user')
+      .map((msg) => String(msg?.text || ''))
+      .filter((text) => text.trim().length > 0);
+  }
+
+  function _resetPromptHistoryCursor() {
+    _historyIndex = -1;
+    _historyDraft = '';
+  }
+
+  function _setInputValue(text) {
+    input.value = String(text || '');
+    _autosize(input);
+    const pos = input.value.length;
+    input.setSelectionRange(pos, pos);
+  }
+
+  function _navigatePromptHistory(direction) {
+    const history = _userPromptHistory();
+    if (!history.length) return false;
+
+    if (direction < 0) {
+      if (_historyIndex === -1) {
+        _historyDraft = input.value;
+        _historyIndex = history.length - 1;
+      } else if (_historyIndex > 0) {
+        _historyIndex -= 1;
+      } else {
+        return false;
+      }
+      _setInputValue(history[_historyIndex] ?? '');
+      return true;
+    }
+
+    if (_historyIndex === -1) {
+      return false;
+    }
+    if (_historyIndex < history.length - 1) {
+      _historyIndex += 1;
+      _setInputValue(history[_historyIndex] ?? '');
+      return true;
+    }
+    _historyIndex = -1;
+    _setInputValue(_historyDraft);
+    _historyDraft = '';
+    return true;
+  }
+
+  function _shouldUseHistoryKey(event) {
+    if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return false;
+    if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return false;
+    const start = input.selectionStart ?? 0;
+    const end = input.selectionEnd ?? 0;
+    if (start !== end) return false;
+    const value = input.value;
+    const before = value.slice(0, start);
+    const after = value.slice(start);
+    if (event.key === 'ArrowUp') {
+      return !before.includes('\n');
+    }
+    return !after.includes('\n');
   }
 
   function _readSavedWidth() {
@@ -349,6 +457,8 @@ export function initChat({
     _threads.delete(_CONVERSATION_STORE_KEY);
     _pendingRuns.delete(_CONVERSATION_STORE_KEY);
     _conversationExternalId = null;
+    _setConversationTitle(null);
+    _resetPromptHistoryCursor();
     _manualStopRequested = false;
     _continueControllerApi.resetState?.();
     _save();
@@ -482,6 +592,7 @@ export function initChat({
     if (payload?.external_id) {
       _conversationExternalId = String(payload.external_id);
     }
+    _setConversationTitle(payload?.title);
     const messages = _filterVisibleMessages(payload?.messages);
     if (messages.length) {
       _threads.set(_CONVERSATION_STORE_KEY, messages);
@@ -489,9 +600,8 @@ export function initChat({
       _threads.delete(_CONVERSATION_STORE_KEY);
     }
     if (payload?.pending_response) {
-      _setPending(path, String(payload?.conversation_id || 'pending'));
-    } else {
-      _clearPending(path);
+      const runId = String(payload?.run?.run_id || payload?.conversation_id || 'pending');
+      _setPending(path, runId);
     }
     if (render) {
       renderThread(path);
@@ -511,6 +621,41 @@ export function initChat({
     }
     const payload = await resp.json();
     return _hydrateThread(path, payload, { render: false });
+  }
+
+  function _setConversationExternalId(value) {
+    const next = typeof value === 'string' && value ? value : null;
+    if (_conversationExternalId === next) return;
+    _conversationExternalId = next;
+    if (!next) {
+      _setConversationTitle(null);
+    }
+    _save();
+  }
+
+  async function _fetchRun(runId) {
+    const resp = await fetch(`/api/runs/${encodeURIComponent(runId)}`);
+    if (!resp.ok) {
+      throw new Error(`${resp.status} ${resp.statusText}`);
+    }
+    return await resp.json();
+  }
+
+  async function _waitForRun(runId) {
+    while (true) {
+      if (_manualStopRequested) {
+        throw new DOMException('Polling aborted', 'AbortError');
+      }
+      const run = await _fetchRun(runId);
+      if (typeof run?.conversation_external_id === 'string' && run.conversation_external_id) {
+        _setConversationExternalId(run.conversation_external_id);
+      }
+      const status = String(run?.status || '');
+      if (status === 'completed' || status === 'failed') {
+        return run;
+      }
+      await _delay(900);
+    }
   }
 
   function _setModeButtons(mode) {
@@ -565,27 +710,23 @@ export function initChat({
     insertContinuation,
     getCurrentPath: currentPath,
     getConversationExternalId: () => _conversationExternalId,
-    fetchConversationThread: async () => _fetchThread(_WORKSPACE_THREAD_KEY),
-    postConversationFollowup: async ({ prompt, visibleText = '', outboundSenderDisplay = 'agent' }) => {
-      const resp = await fetch('/api/chat/followup', {
+    setConversationExternalId: (value) => _setConversationExternalId(value),
+    startContinueRun: async (payload) => {
+      const resp = await fetch('/api/chat/continue-runs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          path:                     _WORKSPACE_THREAD_KEY,
-          prompt,
-          visible_text:             visibleText,
-          conversation_external_id: _conversationExternalId,
-          outbound_sender_display:  outboundSenderDisplay,
+          ...payload,
+          conversation_external_id: payload?.conversation_external_id ?? _conversationExternalId,
           workspace_context_enabled: _workspaceContextEnabled,
         }),
       });
       if (!resp.ok) {
         throw new Error(`${resp.status} ${resp.statusText}`);
       }
-      const payload = await resp.json();
-      _hydrateThread(_WORKSPACE_THREAD_KEY, payload, { render: false });
-      return payload;
+      return await resp.json();
     },
+    waitForRun: _waitForRun,
     setMode,
     setGenerating: _setGenerating,
     save: _save,
@@ -699,6 +840,13 @@ export function initChat({
   });
 
   input.addEventListener('keydown', (e) => {
+    if (_shouldUseHistoryKey(e)) {
+      const moved = _navigatePromptHistory(e.key === 'ArrowUp' ? -1 : 1);
+      if (moved) {
+        e.preventDefault();
+        return;
+      }
+    }
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
       void _send();
@@ -722,18 +870,33 @@ export function initChat({
   });
 
   sendBtn.addEventListener('click', () => void _send());
+  input.addEventListener('input', () => {
+    if (_historyIndex === -1) {
+      _historyDraft = input.value;
+    }
+    _autosize(input);
+  });
 
   async function _resumePendingForPath(path) {
     if (!path || _activeReader) return;
-    if (!_pendingRuns.has(_CONVERSATION_STORE_KEY)) return;
+    const pendingRunId = _pendingRuns.get(_CONVERSATION_STORE_KEY);
+    if (!pendingRunId) return;
 
     const thinkingEl = _appendThinking('Waiting for agent...');
     _setGenerating(true);
 
     try {
-      const payload = await _waitForAgentTurn(path);
-      _hydrateThread(path, payload);
-      renderThread(path);
+      const run = await _waitForRun(pendingRunId);
+      if (_conversationExternalId) {
+        const payload = await _fetchThread(path);
+        _hydrateThread(path, payload);
+        renderThread(path);
+      }
+      if (String(run?.status || '') === 'failed') {
+        const errors = Array.isArray(run?.errors) ? run.errors : [];
+        const lastError = errors.length ? errors[errors.length - 1] : null;
+        _localAssistantMessage(path, `Error: ${_errorText(lastError?.message || run?.output?.text || 'Agent run failed')}`);
+      }
     } catch (err) {
       thinkingEl?.remove();
       if (_consumeManualStop()) {
@@ -746,6 +909,7 @@ export function initChat({
       _pushMessage(path, { role: 'assistant', text: `Error: ${_errorText(err)}` });
       renderThread(path);
     } finally {
+      _clearPending(path);
       thinkingEl?.remove();
       _setGenerating(false);
       _activeReader = null;
@@ -754,25 +918,14 @@ export function initChat({
     }
   }
 
-  async function _waitForAgentTurn(path) {
-    while (true) {
-      if (_manualStopRequested) {
-        throw new DOMException('Polling aborted', 'AbortError');
-      }
-      const payload = await _fetchThread(path);
-      if (!payload?.pending_response) {
-        return payload;
-      }
-      await _delay(900);
-    }
-  }
-
   async function _send(overrideText = null, opts = {}) {
     const appendUserMessage = opts.appendUserMessage !== false;
     _refreshSelectionFromEditor();
-    const text = (overrideText ?? input.value).trim();
-    const activePath = currentPath();
-    const path = activePath || _WORKSPACE_THREAD_KEY;
+    const text            = (overrideText ?? input.value).trim();
+    const activePath      = currentPath();
+    const path            = activePath || _WORKSPACE_THREAD_KEY;
+    const selectionForRun = _currentSelection;
+    const cursorForRun    = { ..._currentCursor };
     if (!text || _activeReader) return;
     if (overrideText == null && text.startsWith('/')) {
       try {
@@ -794,19 +947,11 @@ export function initChat({
       return;
     }
 
-    const prompt = await buildPromptByMode({
-      mode: _mode,
-      userText: text,
-      path: activePath || '.',
-      selection: _currentSelection,
-      cursor: _currentCursor,
-      workspaceContextEnabled: _workspaceContextEnabled,
-    });
-
     if (overrideText == null) {
       input.value = '';
       _autosize(input);
     }
+    _resetPromptHistoryCursor();
     _currentSelection = null;
     _updateSelectionChip();
 
@@ -820,13 +965,16 @@ export function initChat({
     _setGenerating(true);
 
     try {
-      const startResp = await fetch('/api/chat/send', {
+      const startResp = await fetch('/api/chat/runs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          path,
-          visible_text:             text,
-          prompt_override:          prompt,
+          thread_path:              path,
+          active_path:              activePath || '.',
+          user_text:                text,
+          selection:                selectionForRun,
+          cursor:                   cursorForRun,
+          mode:                     _mode,
           conversation_external_id: _conversationExternalId,
           workspace_context_enabled: _workspaceContextEnabled,
         }),
@@ -835,54 +983,22 @@ export function initChat({
         throw new Error(`${startResp.status} ${startResp.statusText}`);
       }
 
-      let payload = await startResp.json();
-      _hydrateThread(path, payload);
-      let settled = await _waitForAgentTurn(path);
-      let finalReply = String(settled?.last_assistant?.content || '');
+      const payload = await startResp.json();
+      const run = payload?.run || payload;
+      _setPending(path, run?.run_id);
 
-      for (let turn = 0; turn < _MAX_AGENT_TOOL_TURNS; turn += 1) {
-        const envelope = extractAgentEnvelope(finalReply);
-        const requestedTools = Array.isArray(envelope?.tool_requests) ? envelope.tool_requests : [];
-        const shouldContinue = envelope?.kind === 'tool_requests' && envelope?.next === 'continue' && requestedTools.length > 0;
-        if (!shouldContinue) break;
-
-        const toolResults = await executeAgentToolRequests({
-          toolRequests: requestedTools,
-          activePath,
-          workspaceContextEnabled: _workspaceContextEnabled,
-          errorText: _errorText,
-        });
-        const followupPrompt = buildAgentToolFollowupPrompt({
-          mode: _mode,
-          path: activePath || '.',
-          userText: text,
-          previousResponse: finalReply,
-          toolResults,
-        });
-
-        const followResp = await fetch('/api/chat/followup', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            path,
-            prompt:                   followupPrompt,
-            visible_text:             text,
-            conversation_external_id: _conversationExternalId,
-            workspace_context_enabled: _workspaceContextEnabled,
-          }),
-        });
-        if (!followResp.ok) {
-          throw new Error(`${followResp.status} ${followResp.statusText}`);
-        }
-
-        payload = await followResp.json();
-        _hydrateThread(path, payload);
-        settled = await _waitForAgentTurn(path);
-        finalReply = String(settled?.last_assistant?.content || '');
+      const completedRun = await _waitForRun(run?.run_id);
+      _clearPending(path);
+      if (_conversationExternalId) {
+        const threadPayload = await _fetchThread(path);
+        _hydrateThread(path, threadPayload);
+        renderThread(path);
       }
-
-      _hydrateThread(path, settled);
-      renderThread(path);
+      if (String(completedRun?.status || '') === 'failed') {
+        const errors = Array.isArray(completedRun?.errors) ? completedRun.errors : [];
+        const lastError = errors.length ? errors[errors.length - 1] : null;
+        _localAssistantMessage(path, `Error: ${_errorText(lastError?.message || completedRun?.output?.text || 'Agent run failed')}`);
+      }
     } catch (err) {
       thinkingEl?.remove();
       if (_consumeManualStop()) {
@@ -895,6 +1011,7 @@ export function initChat({
       _pushMessage(path, { role: 'assistant', text: `Error: ${_errorText(err)}` });
       renderThread(path);
     } finally {
+      _clearPending(path);
       _setGenerating(false);
       _activeReader = null;
       _syncThinkingNote();
@@ -913,7 +1030,6 @@ export function initChat({
     el.style.height = `${Math.min(el.scrollHeight, 100)}px`;
   }
 
-  input.addEventListener('input', () => _autosize(input));
   _renderWorkspaceContextToggle();
 
   (function _restore() {

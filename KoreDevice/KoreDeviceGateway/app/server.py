@@ -2,6 +2,7 @@ import asyncio
 import os
 import subprocess
 import sys
+import threading
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -27,6 +28,7 @@ _SERVICES = [
 ]
 
 _children: list[tuple[subprocess.Popen, str, object]] = []
+_children_lock = threading.Lock()
 _number_client: httpx.AsyncClient | None = None
 _driver_client: httpx.AsyncClient | None = None
 _job_handle: int | None = None
@@ -128,17 +130,21 @@ def _start_children() -> None:
             env    = dict(os.environ),
         )
         _assign_to_job(proc)
-        _children.append((proc, label, log_file))
+        with _children_lock:
+            _children.append((proc, label, log_file))
         print(f"  > {label} starting  (pid {proc.pid})  log -> {_display_path(log_path)}")
 
 
 def _stop_children() -> None:
-    for proc, label, log_file in reversed(_children):
+    with _children_lock:
+        children = list(_children)
+        _children.clear()
+    for proc, label, log_file in reversed(children):
         if proc.poll() is not None:
             continue
         print(f"  [stop] Stopping {label}  (pid {proc.pid})")
         proc.terminate()
-    for proc, label, log_file in reversed(_children):
+    for proc, label, log_file in reversed(children):
         try:
             proc.wait(timeout=6)
         except subprocess.TimeoutExpired:

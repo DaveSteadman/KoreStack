@@ -24,6 +24,7 @@
 # ====================================================================================================
 import asyncio
 import json as _json
+import logging
 import math
 import os
 import re
@@ -31,10 +32,12 @@ import signal
 import sqlite3
 import subprocess
 import sys
+import time
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
 from pathlib import Path
 import shutil
+import threading
 from typing import Any, Optional
 from urllib.parse import quote, urlencode, unquote, urlsplit
 
@@ -53,6 +56,9 @@ if _KORECOMMON_PARENT is not None and str(_KORECOMMON_PARENT) not in sys.path:
 from KoreCommon.endpoint_manifest import build_endpoint_manifest
 from app.config import cfg
 from config import get_koredata_dir
+
+
+LOG = logging.getLogger("koredata.gateway")
 
 # ---------------------------------------------------------------------------
 # Child process management
@@ -78,7 +84,9 @@ _SERVICES = [
 ]
 
 _children: list[tuple[subprocess.Popen, str, object]] = []
+_children_lock = threading.Lock()
 _rag_processing_jobs: dict[str, subprocess.Popen] = {}
+_rag_processing_jobs_lock = threading.Lock()
 _RAG_SCRIPT_SCHEDULE_VALUES: set[str]             = {"manual", "daily", "weekly", "monthly"}
 
 
@@ -164,17 +172,21 @@ def _start_children() -> None:
             stderr=log_file,
             env={**os.environ, **extra_env},
         )
-        _children.append((proc, label, log_file))
+        with _children_lock:
+            _children.append((proc, label, log_file))
         print(f"  > {label} starting  (pid {proc.pid})  log -> {_display_path(log_path)}")
 
 
 def _stop_children() -> None:
-    for proc, label, log_file in reversed(_children):
+    with _children_lock:
+        children = list(_children)
+        _children.clear()
+    for proc, label, log_file in reversed(children):
         if proc.poll() is not None:
             continue  # already exited
         print(f"  ◼ Stopping {label}  (pid {proc.pid})")
         proc.terminate()
-    for proc, label, log_file in reversed(_children):
+    for proc, label, log_file in reversed(children):
         try:
             proc.wait(timeout=6)
         except subprocess.TimeoutExpired:
@@ -211,6 +223,72 @@ _ref_client:   httpx.AsyncClient | None = None
 _rag_client:   httpx.AsyncClient | None = None
 _scrape_client: httpx.AsyncClient | None = None
 _graph_client: httpx.AsyncClient | None = None
+
+
+async def _timed_client_get_json(
+    client: httpx.AsyncClient,
+    path: str,
+    *,
+    params: dict[str, object] | None = None,
+    timeout: float | None = None,
+    label: str,
+) -> dict[str, object]:
+    started = time.perf_counter()
+    try:
+        response   = await client.get(path, params=params, timeout=timeout)
+        elapsed_ms = round((time.perf_counter() - started) * 1000.0, 1)
+        if response.status_code != 200:
+            detail = ""
+            try:
+                payload = response.json()
+                if isinstance(payload, dict):
+                    detail = str(payload.get("detail") or "")
+            except Exception:
+                detail = response.text[:240]
+            message = f"{label} failed with HTTP {response.status_code}"
+            if detail:
+                message += f": {detail}"
+            LOG.warning("RAG navigation request failed: %s  path=%s  elapsed_ms=%.1f", message, path, elapsed_ms)
+            return {
+                "ok":         False,
+                "status":     response.status_code,
+                "error":      message,
+                "elapsed_ms": elapsed_ms,
+                "data":       None,
+                "path":       path,
+                "label":      label,
+            }
+        payload = response.json()
+        LOG.info("RAG navigation request ok: %s  path=%s  elapsed_ms=%.1f", label, path, elapsed_ms)
+        return {
+            "ok":         True,
+            "status":     response.status_code,
+            "error":      None,
+            "elapsed_ms": elapsed_ms,
+            "data":       payload,
+            "path":       path,
+            "label":      label,
+        }
+    except Exception as exc:
+        elapsed_ms = round((time.perf_counter() - started) * 1000.0, 1)
+        message    = f"{label} raised {type(exc).__name__}: {exc}"
+        LOG.warning("RAG navigation request error: %s  path=%s  elapsed_ms=%.1f", message, path, elapsed_ms)
+        return {
+            "ok":         False,
+            "status":     None,
+            "error":      message,
+            "elapsed_ms": elapsed_ms,
+            "data":       None,
+            "path":       path,
+            "label":      label,
+        }
+
+
+def _db_info_from_list(databases: list[dict], db_id: str) -> dict | None:
+    for item in databases or []:
+        if str(item.get("id") or "") == str(db_id):
+            return item
+    return None
 
 
 @asynccontextmanager
@@ -2548,6 +2626,40 @@ def _normalize_rag_processing_schedule(value: Any) -> str:
     return schedule if schedule in _RAG_SCRIPT_SCHEDULE_VALUES else "manual"
 
 
+def _format_rag_processing_timestamp(value: Any) -> str | None:
+    raw = str(value or "").strip()
+    if not raw:
+        return None
+    if re.fullmatch(r"\d{4}-\d{2}-\d{2}", raw):
+        return raw
+    try:
+        parsed = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+        return parsed.strftime("%Y-%m-%d %H:%M")
+    except ValueError:
+        return raw
+
+
+def _format_rag_processing_file_timestamp(path: Path) -> str | None:
+    if not path.exists():
+        return None
+    try:
+        last_written = datetime.fromtimestamp(path.stat().st_mtime) + timedelta(seconds=30)
+    except OSError:
+        return None
+    return last_written.strftime("%Y-%m-%d %H:%M")
+
+
+def _rag_processing_last_run_display(subdir: Path, descriptor_path: Path, sync: dict[str, Any]) -> str | None:
+    for candidate in (
+        subdir / "processing.log",
+        descriptor_path,
+    ):
+        display = _format_rag_processing_file_timestamp(candidate)
+        if display:
+            return display
+    return _format_rag_processing_timestamp(sync.get("last_run"))
+
+
 def _rag_processing_scripts(database_ids: set[str]) -> list[dict]:
     """Discover RAG database builder scripts from the configured runtime databases folder."""
     runtime_root = Path(get_koredata_dir()) / "RAG" / "databases"
@@ -2569,19 +2681,19 @@ def _rag_processing_scripts(database_ids: set[str]) -> list[dict]:
         descriptor = _read_rag_processing_descriptor(script_id)
         sync       = descriptor.get("sync") or {}
         results.append({
-            "id":            script_id,
-            "display_name":  descriptor.get("display_name") or script_id.replace("_", " ").title(),
-            "description":   descriptor.get("description") or "Database builder script.",
-            "managed_by":    descriptor.get("managed_by") or "ingestor",
-            "ingestor":      descriptor.get("ingestor") or script_id,
-            "schedule":      _normalize_rag_processing_schedule(descriptor.get("schedule")),
-            "has_database":  script_id in database_ids,
-            "running":       script_id in _rag_processing_jobs and _rag_processing_jobs[script_id].poll() is None,
-            "source_path":   str(subdir),
-            "log_exists":    (subdir / "processing.log").exists(),
-            "last_run":      sync.get("last_run"),
-            "last_ingested": sync.get("last_date_ingested"),
-            "sync_status":   sync.get("status"),
+            "id":                           script_id,
+            "display_name":                 descriptor.get("display_name") or script_id.replace("_", " ").title(),
+            "description":                  descriptor.get("description") or "Database builder script.",
+            "managed_by":                   descriptor.get("managed_by") or "ingestor",
+            "ingestor":                     descriptor.get("ingestor") or script_id,
+            "schedule":                     _normalize_rag_processing_schedule(descriptor.get("schedule")),
+            "has_database":                 script_id in database_ids,
+            "running":                      _rag_processing_is_running(script_id),
+            "source_path":                  str(subdir),
+            "log_exists":                   (subdir / "processing.log").exists(),
+            "last_run":                     sync.get("last_run"),
+            "last_run_display":             _rag_processing_last_run_display(subdir, descriptor_path, sync),
+            "sync_status":                  sync.get("status"),
         })
     return results
 
@@ -2591,6 +2703,17 @@ def _find_rag_processing_script(script_id: str) -> dict | None:
         if script.get("id") == script_id:
             return script
     return None
+
+
+def _rag_processing_is_running(script_id: str) -> bool:
+    with _rag_processing_jobs_lock:
+        proc = _rag_processing_jobs.get(script_id)
+        if proc is None:
+            return False
+        if proc.poll() is None:
+            return True
+        _rag_processing_jobs.pop(script_id, None)
+        return False
 
 @app.get("/ui/rag/databases/json")
 async def rag_databases_json():
@@ -2626,9 +2749,12 @@ async def rag_processing_run(script_id: str, reset: int = Form(0)):
     if script is None:
         raise HTTPException(status_code=404, detail=f"Unknown processing script: {script_id!r}")
 
-    existing = _rag_processing_jobs.get(script_id)
-    if existing is not None and existing.poll() is None:
-        return RedirectResponse("/ui/rag/databases", status_code=303)
+    with _rag_processing_jobs_lock:
+        existing = _rag_processing_jobs.get(script_id)
+        if existing is not None and existing.poll() is None:
+            return RedirectResponse("/ui/rag/databases", status_code=303)
+        if existing is not None and existing.poll() is not None:
+            _rag_processing_jobs.pop(script_id, None)
 
     script_dir = Path(script["source_path"])
     script_path = script_dir / "ingest.py"
@@ -2652,7 +2778,8 @@ async def rag_processing_run(script_id: str, reset: int = Form(0)):
     finally:
         log_handle.close()
 
-    _rag_processing_jobs[script_id] = proc
+    with _rag_processing_jobs_lock:
+        _rag_processing_jobs[script_id] = proc
     return RedirectResponse("/ui/rag/databases", status_code=303)
 
 
@@ -2863,62 +2990,106 @@ async def rag_chunk_delete(chunk_id: int, db: str = "default"):
 @app.get("/ui/rag/explore/{db_id}", response_class=HTMLResponse)
 async def rag_explore(request: Request, db_id: str):
     sittings_r, members_r, dbs_r = await asyncio.gather(
-        _rag_client.get(f"/databases/{db_id}/sittings"),
-        _rag_client.get(f"/databases/{db_id}/members"),
-        _rag_client.get("/databases"),
+        _timed_client_get_json(_rag_client, f"/databases/{db_id}/sittings", label="sittings list", timeout=30.0),
+        _timed_client_get_json(_rag_client, f"/databases/{db_id}/members",  label="members list",  timeout=30.0),
+        _timed_client_get_json(_rag_client, "/databases",                    label="database list", timeout=15.0),
     )
-    sittings  = sittings_r.json()  if sittings_r.status_code == 200  else []
-    members   = members_r.json()   if members_r.status_code == 200   else []
-    databases = dbs_r.json()       if dbs_r.status_code == 200       else []
+    sittings   = sittings_r["data"] if sittings_r["ok"] and isinstance(sittings_r["data"], list) else []
+    members    = members_r["data"]  if members_r["ok"] and isinstance(members_r["data"], list)  else []
+    databases  = dbs_r["data"]      if dbs_r["ok"] and isinstance(dbs_r["data"], list)          else []
+    db_info    = _db_info_from_list(databases, db_id)
+    errors     = [item["error"] for item in (sittings_r, members_r, dbs_r) if item.get("error")]
+    timings    = [item for item in (sittings_r, members_r, dbs_r)]
     return templates.TemplateResponse(
         request, "rag_explore.html",
-        {"db_id": db_id, "sittings": sittings, "members": members, "databases": databases},
+        {
+            "db_id":      db_id,
+            "sittings":   sittings,
+            "members":    members,
+            "databases":  databases,
+            "db_info":    db_info,
+            "errors":     errors,
+            "timings":    timings,
+        },
     )
 
 
 @app.get("/ui/rag/explore/{db_id}/sitting/{date}", response_class=HTMLResponse)
 async def rag_explore_sitting(request: Request, db_id: str, date: str):
     debates_r, dbs_r = await asyncio.gather(
-        _rag_client.get(f"/databases/{db_id}/sittings/{date}/debates"),
-        _rag_client.get("/databases"),
+        _timed_client_get_json(_rag_client, f"/databases/{db_id}/sittings/{date}/debates", label="debates for sitting", timeout=30.0),
+        _timed_client_get_json(_rag_client, "/databases",                                   label="database list",      timeout=15.0),
     )
-    debates   = debates_r.json()  if debates_r.status_code == 200  else []
-    databases = dbs_r.json()      if dbs_r.status_code == 200      else []
+    debates    = debates_r["data"] if debates_r["ok"] and isinstance(debates_r["data"], list) else []
+    databases  = dbs_r["data"]     if dbs_r["ok"] and isinstance(dbs_r["data"], list)         else []
+    db_info    = _db_info_from_list(databases, db_id)
+    errors     = [item["error"] for item in (debates_r, dbs_r) if item.get("error")]
+    timings    = [item for item in (debates_r, dbs_r)]
     return templates.TemplateResponse(
         request, "rag_explore_sitting.html",
-        {"db_id": db_id, "date": date, "debates": debates, "databases": databases},
+        {
+            "db_id":      db_id,
+            "date":       date,
+            "debates":    debates,
+            "databases":  databases,
+            "db_info":    db_info,
+            "errors":     errors,
+            "timings":    timings,
+        },
     )
 
 
 @app.get("/ui/rag/explore/{db_id}/debate/{uuid}", response_class=HTMLResponse)
 async def rag_explore_debate(request: Request, db_id: str, uuid: str):
     debate_r, speeches_r, dbs_r = await asyncio.gather(
-        _rag_client.get(f"/databases/{db_id}/debates/{uuid}"),
-        _rag_client.get(f"/databases/{db_id}/debates/{uuid}/speeches"),
-        _rag_client.get("/databases"),
+        _timed_client_get_json(_rag_client, f"/databases/{db_id}/debates/{uuid}",          label="debate metadata", timeout=30.0),
+        _timed_client_get_json(_rag_client, f"/databases/{db_id}/debates/{uuid}/speeches", label="debate speeches", timeout=30.0),
+        _timed_client_get_json(_rag_client, "/databases",                                   label="database list",   timeout=15.0),
     )
-    debate    = debate_r.json()   if debate_r.status_code == 200   else {}
-    speeches  = speeches_r.json() if speeches_r.status_code == 200 else []
-    databases = dbs_r.json()      if dbs_r.status_code == 200      else []
+    debate     = debate_r["data"]    if debate_r["ok"]    and isinstance(debate_r["data"], dict)    else {}
+    speeches   = speeches_r["data"]  if speeches_r["ok"]  and isinstance(speeches_r["data"], list)  else []
+    databases  = dbs_r["data"]       if dbs_r["ok"]       and isinstance(dbs_r["data"], list)       else []
+    db_info    = _db_info_from_list(databases, db_id)
+    errors     = [item["error"] for item in (debate_r, speeches_r, dbs_r) if item.get("error")]
+    timings    = [item for item in (debate_r, speeches_r, dbs_r)]
     return templates.TemplateResponse(
         request, "rag_explore_debate.html",
-        {"db_id": db_id, "debate": debate, "speeches": speeches, "databases": databases},
+        {
+            "db_id":      db_id,
+            "debate":     debate,
+            "speeches":   speeches,
+            "databases":  databases,
+            "db_info":    db_info,
+            "errors":     errors,
+            "timings":    timings,
+        },
     )
 
 
 @app.get("/ui/rag/explore/{db_id}/member/{member_id}", response_class=HTMLResponse)
 async def rag_explore_member(request: Request, db_id: str, member_id: int):
     member_r, speeches_r, dbs_r = await asyncio.gather(
-        _rag_client.get(f"/databases/{db_id}/members/{member_id}"),
-        _rag_client.get(f"/databases/{db_id}/members/{member_id}/speeches"),
-        _rag_client.get("/databases"),
+        _timed_client_get_json(_rag_client, f"/databases/{db_id}/members/{member_id}",          label="member metadata", timeout=30.0),
+        _timed_client_get_json(_rag_client, f"/databases/{db_id}/members/{member_id}/speeches", label="member speeches", timeout=30.0),
+        _timed_client_get_json(_rag_client, "/databases",                                         label="database list",   timeout=15.0),
     )
-    member    = member_r.json()   if member_r.status_code == 200   else {}
-    speeches  = speeches_r.json() if speeches_r.status_code == 200 else []
-    databases = dbs_r.json()      if dbs_r.status_code == 200      else []
+    member     = member_r["data"]    if member_r["ok"]    and isinstance(member_r["data"], dict)    else {}
+    speeches   = speeches_r["data"]  if speeches_r["ok"]  and isinstance(speeches_r["data"], list)  else []
+    databases  = dbs_r["data"]       if dbs_r["ok"]       and isinstance(dbs_r["data"], list)       else []
+    db_info    = _db_info_from_list(databases, db_id)
+    errors     = [item["error"] for item in (member_r, speeches_r, dbs_r) if item.get("error")]
+    timings    = [item for item in (member_r, speeches_r, dbs_r)]
     return templates.TemplateResponse(
         request, "rag_explore_member.html",
-        {"db_id": db_id, "member": member, "speeches": speeches, "databases": databases},
+        {
+            "db_id":      db_id,
+            "member":     member,
+            "speeches":   speeches,
+            "databases":  databases,
+            "db_info":    db_info,
+            "errors":     errors,
+            "timings":    timings,
+        },
     )
 
 

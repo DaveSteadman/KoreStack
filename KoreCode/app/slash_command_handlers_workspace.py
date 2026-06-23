@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Callable
 
 from .slash_command_context import KoreCodeSlashCommandContext
-from .workspace_menu import build_workspace_menu
+from .workspace_artifacts import rebuild_workspace_artifacts
 
 
 _MODE_NAMES = {"chat", "continue", "explain", "bughunt", "refactor", "tests"}
@@ -24,7 +24,7 @@ def _cmd_workspace(arg: str, ctx: KoreCodeSlashCommandContext) -> None:
     sub = arg.strip().lower()
     if sub == "on":
         ctx.add_action("set_workspace_context", enabled=True)
-        result = build_workspace_menu(_workspace_root())
+        result = rebuild_workspace_artifacts(_workspace_root())
         ctx.output("Workspace context enabled.", "success")
         ctx.output(f"Workspace menu refreshed: {result['menu_file_name']} ({result['file_count']} files indexed).", "info")
         return
@@ -33,7 +33,7 @@ def _cmd_workspace(arg: str, ctx: KoreCodeSlashCommandContext) -> None:
         ctx.output("Workspace context disabled.", "success")
         return
     if sub == "regen":
-        result = build_workspace_menu(_workspace_root())
+        result = rebuild_workspace_artifacts(_workspace_root())
         ctx.output(f"Workspace menu refreshed: {result['menu_file_name']} ({result['file_count']} files indexed).", "success")
         return
     ctx.output("Use /workspace on, /workspace off, or /workspace regen", "dim")
