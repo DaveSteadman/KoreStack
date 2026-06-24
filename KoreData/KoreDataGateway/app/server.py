@@ -2674,40 +2674,6 @@ def _normalize_rag_processing_schedule(value: Any) -> str:
     return schedule if schedule in _RAG_SCRIPT_SCHEDULE_VALUES else "manual"
 
 
-def _format_rag_processing_timestamp(value: Any) -> str | None:
-    raw = str(value or "").strip()
-    if not raw:
-        return None
-    if re.fullmatch(r"\d{4}-\d{2}-\d{2}", raw):
-        return raw
-    try:
-        parsed = datetime.fromisoformat(raw.replace("Z", "+00:00"))
-        return parsed.strftime("%Y-%m-%d %H:%M")
-    except ValueError:
-        return raw
-
-
-def _format_rag_processing_file_timestamp(path: Path) -> str | None:
-    if not path.exists():
-        return None
-    try:
-        last_written = datetime.fromtimestamp(path.stat().st_mtime) + timedelta(seconds=30)
-    except OSError:
-        return None
-    return last_written.strftime("%Y-%m-%d %H:%M")
-
-
-def _rag_processing_last_run_display(subdir: Path, descriptor_path: Path, sync: dict[str, Any]) -> str | None:
-    for candidate in (
-        subdir / "processing.log",
-        descriptor_path,
-    ):
-        display = _format_rag_processing_file_timestamp(candidate)
-        if display:
-            return display
-    return _format_rag_processing_timestamp(sync.get("last_run"))
-
-
 def _rag_processing_scripts(database_ids: set[str]) -> list[dict]:
     """Discover RAG database builder scripts from the configured runtime databases folder."""
     runtime_root = Path(get_koredata_dir()) / "RAG" / "databases"
@@ -2740,7 +2706,6 @@ def _rag_processing_scripts(database_ids: set[str]) -> list[dict]:
             "source_path":                  str(subdir),
             "log_exists":                   (subdir / "processing.log").exists(),
             "last_run":                     sync.get("last_run"),
-            "last_run_display":             _rag_processing_last_run_display(subdir, descriptor_path, sync),
             "sync_status":                  sync.get("status"),
         })
     return results
@@ -3035,8 +3000,7 @@ async def rag_chunk_delete(chunk_id: int, db: str = "default"):
 # KoreRAG explore (navigation tables for structured databases)
 # ---------------------------------------------------------------------------
 
-@app.get("/ui/rag/explore/{db_id}", response_class=HTMLResponse)
-async def rag_explore(request: Request, db_id: str):
+async def _rag_explore_payload(db_id: str) -> dict[str, Any]:
     sittings_r, members_r, dbs_r = await asyncio.gather(
         _timed_client_get_json(_rag_client, f"/databases/{db_id}/sittings", label="sittings list", timeout=30.0),
         _timed_client_get_json(_rag_client, f"/databases/{db_id}/members",  label="members list",  timeout=30.0),
@@ -3048,22 +3012,18 @@ async def rag_explore(request: Request, db_id: str):
     db_info    = _db_info_from_list(databases, db_id)
     errors     = [item["error"] for item in (sittings_r, members_r, dbs_r) if item.get("error")]
     timings    = [item for item in (sittings_r, members_r, dbs_r)]
-    return templates.TemplateResponse(
-        request, "rag_explore.html",
-        {
-            "db_id":      db_id,
-            "sittings":   sittings,
-            "members":    members,
-            "databases":  databases,
-            "db_info":    db_info,
-            "errors":     errors,
-            "timings":    timings,
-        },
-    )
+    return {
+        "db_id":      db_id,
+        "sittings":   sittings,
+        "members":    members,
+        "databases":  databases,
+        "db_info":    db_info,
+        "errors":     errors,
+        "timings":    timings,
+    }
 
 
-@app.get("/ui/rag/explore/{db_id}/sitting/{date}", response_class=HTMLResponse)
-async def rag_explore_sitting(request: Request, db_id: str, date: str):
+async def _rag_explore_sitting_payload(db_id: str, date: str) -> dict[str, Any]:
     debates_r, dbs_r = await asyncio.gather(
         _timed_client_get_json(_rag_client, f"/databases/{db_id}/sittings/{date}/debates", label="debates for sitting", timeout=30.0),
         _timed_client_get_json(_rag_client, "/databases",                                   label="database list",      timeout=15.0),
@@ -3073,22 +3033,18 @@ async def rag_explore_sitting(request: Request, db_id: str, date: str):
     db_info    = _db_info_from_list(databases, db_id)
     errors     = [item["error"] for item in (debates_r, dbs_r) if item.get("error")]
     timings    = [item for item in (debates_r, dbs_r)]
-    return templates.TemplateResponse(
-        request, "rag_explore_sitting.html",
-        {
-            "db_id":      db_id,
-            "date":       date,
-            "debates":    debates,
-            "databases":  databases,
-            "db_info":    db_info,
-            "errors":     errors,
-            "timings":    timings,
-        },
-    )
+    return {
+        "db_id":      db_id,
+        "date":       date,
+        "debates":    debates,
+        "databases":  databases,
+        "db_info":    db_info,
+        "errors":     errors,
+        "timings":    timings,
+    }
 
 
-@app.get("/ui/rag/explore/{db_id}/debate/{uuid}", response_class=HTMLResponse)
-async def rag_explore_debate(request: Request, db_id: str, uuid: str):
+async def _rag_explore_debate_payload(db_id: str, uuid: str) -> dict[str, Any]:
     debate_r, speeches_r, dbs_r = await asyncio.gather(
         _timed_client_get_json(_rag_client, f"/databases/{db_id}/debates/{uuid}",          label="debate metadata", timeout=30.0),
         _timed_client_get_json(_rag_client, f"/databases/{db_id}/debates/{uuid}/speeches", label="debate speeches", timeout=30.0),
@@ -3100,22 +3056,18 @@ async def rag_explore_debate(request: Request, db_id: str, uuid: str):
     db_info    = _db_info_from_list(databases, db_id)
     errors     = [item["error"] for item in (debate_r, speeches_r, dbs_r) if item.get("error")]
     timings    = [item for item in (debate_r, speeches_r, dbs_r)]
-    return templates.TemplateResponse(
-        request, "rag_explore_debate.html",
-        {
-            "db_id":      db_id,
-            "debate":     debate,
-            "speeches":   speeches,
-            "databases":  databases,
-            "db_info":    db_info,
-            "errors":     errors,
-            "timings":    timings,
-        },
-    )
+    return {
+        "db_id":      db_id,
+        "debate":     debate,
+        "speeches":   speeches,
+        "databases":  databases,
+        "db_info":    db_info,
+        "errors":     errors,
+        "timings":    timings,
+    }
 
 
-@app.get("/ui/rag/explore/{db_id}/member/{member_id}", response_class=HTMLResponse)
-async def rag_explore_member(request: Request, db_id: str, member_id: int):
+async def _rag_explore_member_payload(db_id: str, member_id: int) -> dict[str, Any]:
     member_r, speeches_r, dbs_r = await asyncio.gather(
         _timed_client_get_json(_rag_client, f"/databases/{db_id}/members/{member_id}",          label="member metadata", timeout=30.0),
         _timed_client_get_json(_rag_client, f"/databases/{db_id}/members/{member_id}/speeches", label="member speeches", timeout=30.0),
@@ -3127,16 +3079,99 @@ async def rag_explore_member(request: Request, db_id: str, member_id: int):
     db_info    = _db_info_from_list(databases, db_id)
     errors     = [item["error"] for item in (member_r, speeches_r, dbs_r) if item.get("error")]
     timings    = [item for item in (member_r, speeches_r, dbs_r)]
+    return {
+        "db_id":      db_id,
+        "member":     member,
+        "speeches":   speeches,
+        "databases":  databases,
+        "db_info":    db_info,
+        "errors":     errors,
+        "timings":    timings,
+    }
+
+
+@app.get("/ui/rag/explore/{db_id}/json")
+async def rag_explore_json(db_id: str):
+    return JSONResponse(await _rag_explore_payload(db_id))
+
+
+@app.get("/ui/rag/explore/{db_id}", response_class=HTMLResponse)
+async def rag_explore(request: Request, db_id: str):
+    return templates.TemplateResponse(
+        request, "rag_explore.html",
+        {
+            "db_id":      db_id,
+            "sittings":   [],
+            "members":    [],
+            "databases":  [],
+            "db_info":    {},
+            "errors":     [],
+            "timings":    [],
+        },
+    )
+
+
+@app.get("/ui/rag/explore/{db_id}/sitting/{date}/json")
+async def rag_explore_sitting_json(db_id: str, date: str):
+    return JSONResponse(await _rag_explore_sitting_payload(db_id, date))
+
+
+@app.get("/ui/rag/explore/{db_id}/sitting/{date}", response_class=HTMLResponse)
+async def rag_explore_sitting(request: Request, db_id: str, date: str):
+    return templates.TemplateResponse(
+        request, "rag_explore_sitting.html",
+        {
+            "db_id":      db_id,
+            "date":       date,
+            "debates":    [],
+            "databases":  [],
+            "db_info":    {},
+            "errors":     [],
+            "timings":    [],
+        },
+    )
+
+
+@app.get("/ui/rag/explore/{db_id}/debate/{uuid}/json")
+async def rag_explore_debate_json(db_id: str, uuid: str):
+    return JSONResponse(await _rag_explore_debate_payload(db_id, uuid))
+
+
+@app.get("/ui/rag/explore/{db_id}/debate/{uuid}", response_class=HTMLResponse)
+async def rag_explore_debate(request: Request, db_id: str, uuid: str):
+    return templates.TemplateResponse(
+        request, "rag_explore_debate.html",
+        {
+            "db_id":      db_id,
+            "uuid":       uuid,
+            "debate":     {},
+            "speeches":   [],
+            "databases":  [],
+            "db_info":    {},
+            "errors":     [],
+            "timings":    [],
+        },
+    )
+
+
+@app.get("/ui/rag/explore/{db_id}/member/{member_id}/json")
+async def rag_explore_member_json(db_id: str, member_id: int):
+    return JSONResponse(await _rag_explore_member_payload(db_id, member_id))
+
+
+@app.get("/ui/rag/explore/{db_id}/member/{member_id}", response_class=HTMLResponse)
+async def rag_explore_member(request: Request, db_id: str, member_id: int):
     return templates.TemplateResponse(
         request, "rag_explore_member.html",
         {
             "db_id":      db_id,
-            "member":     member,
-            "speeches":   speeches,
-            "databases":  databases,
-            "db_info":    db_info,
-            "errors":     errors,
-            "timings":    timings,
+            "member_id":  member_id,
+            "member":     {},
+            "speeches":   [],
+            "databases":  [],
+            "db_info":    {},
+            "errors":     [],
+            "timings":    [],
         },
     )
 

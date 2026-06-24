@@ -44,8 +44,8 @@
           </td>
           <td class="meta" style="font-size:11px;" id="script-{{ script.id }}-managed">
             {{ script.managed_by or "ingestor" }}
-            {% if script.last_run_display %}
-            <div style="margin-top:0.2rem; color:var(--muted, #888);">Last run: {{ script.last_run_display }}</div>
+            {% if script.last_run %}
+            <div style="margin-top:0.2rem; color:var(--muted, #888);">Last run: {{ script.last_run }}</div>
             {% endif %}
           </td>
           <td id="script-{{ script.id }}-schedule">
@@ -228,8 +228,8 @@
 
   function renderScriptManaged(script) {
     let h = script.managed_by || 'ingestor';
-    if (script.last_run_display)
-      h += '<div style="margin-top:0.2rem;color:var(--muted,#888);">Last run: ' + script.last_run_display + '</div>';
+    if (script.last_run)
+      h += '<div style="margin-top:0.2rem;color:var(--muted,#888);">Last run: ' + script.last_run + '</div>';
     return h;
   }
 

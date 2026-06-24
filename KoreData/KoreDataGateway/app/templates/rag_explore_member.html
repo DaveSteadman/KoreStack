@@ -1,120 +1,142 @@
 {% extends "base.html" %}
-{% block title %}{{ member.display_name or "Member" }}{% endblock %}
+{% block title %}Member{% endblock %}
 {% block main_class %}kcui-main{% endblock %}
 
 {% block content %}
 <style>
   .member-reader { max-width: 780px; margin: 0 auto; padding: 1.5rem 2rem; }
-  .member-header-bar {
-    position: sticky; top: 0; z-index: 10;
-    background: var(--panel);
-    border-bottom: 1px solid var(--border);
-    padding: 0.6rem 1.5rem;
-    display: flex; align-items: center; gap: 0.5rem;
-  }
-  .member-name-bar {
-    font-size: 0.85rem; color: var(--dim);
-    flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  }
-  .bio-block {
-    color: var(--text); line-height: 1.65; font-size: 0.9rem;
-    white-space: pre-wrap;
-    border-left: 2px solid var(--green);
-    padding-left: 0.9rem;
-    margin-top: 0.75rem;
-  }
-  .section-heading {
-    font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
-    color: var(--dim); margin: 1.5rem 0 0.75rem;
-    padding-bottom: 0.3rem; border-bottom: 1px solid var(--border);
-  }
+  .member-header-bar { position: sticky; top: 0; z-index: 10; background: var(--panel); border-bottom: 1px solid var(--border); padding: 0.6rem 1.5rem; display: flex; align-items: center; gap: 0.5rem; }
+  .member-name-bar { font-size: 0.85rem; color: var(--dim); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bio-block { color: var(--text); line-height: 1.65; font-size: 0.9rem; white-space: pre-wrap; border-left: 2px solid var(--green); padding-left: 0.9rem; margin-top: 0.75rem; }
+  .section-heading { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim); margin: 1.5rem 0 0.75rem; padding-bottom: 0.3rem; border-bottom: 1px solid var(--border); }
   .debate-group { margin-bottom: 1.75rem; }
-  .debate-group-label {
-    display: flex; align-items: baseline; gap: 0.6rem; margin-bottom: 0.6rem;
-  }
+  .debate-group-label { display: flex; align-items: baseline; gap: 0.6rem; margin-bottom: 0.6rem; }
   .debate-group-date { font-size: 11px; color: var(--amber); }
   .debate-group-title { font-size: 0.82rem; }
-  .speech-block {
-    color: var(--text); line-height: 1.65; font-size: 0.9rem;
-    white-space: pre-wrap;
-    border-left: 2px solid var(--border);
-    padding-left: 0.9rem;
-    margin-bottom: 0.75rem;
-  }
+  .speech-block { color: var(--text); line-height: 1.65; font-size: 0.9rem; white-space: pre-wrap; border-left: 2px solid var(--border); padding-left: 0.9rem; margin-bottom: 0.75rem; }
   .speech-block:hover { border-left-color: var(--dim); }
-  .speech-block:last-child { margin-bottom: 0; }
 </style>
 
-{% if db_info and db_info.sync and db_info.sync.status == "running" %}
 <div class="kcui-page kcui-page--narrow kcui-stack" style="margin-bottom:1rem;">
-  <div class="kg-alert kg-alert--warn">
+  <div id="sync-banner" class="kg-alert kg-alert--warn" style="display:none;">
     <div class="kg-alert-title">Database Sync Running</div>
     This RAG database is still ingesting content. Member speech history can be temporarily incomplete while sync is active.
   </div>
-</div>
-{% endif %}
-
-{% if errors %}
-<div class="kcui-page kcui-page--narrow kcui-stack" style="margin-bottom:1rem;">
-  <div class="kg-alert kg-alert--error">
-    <div class="kg-alert-title">RAG Data Load Error</div>
-    {% for error in errors %}
-    <div>{{ error }}</div>
-    {% endfor %}
+  <div id="load-banner" class="kg-alert kg-alert--warn">
+    <div class="kg-alert-title">Loading RAG Data</div>
+    The page shell is ready. Member details and speech history will populate as they arrive.
   </div>
-</div>
-{% endif %}
-
-{% if timings %}
-<div class="kcui-page kcui-page--narrow kcui-stack" style="margin-bottom:0.75rem;">
-  <div class="kg-inline-meta">
-    {% for item in timings %}
-    <span>{{ item.label }}: {{ item.elapsed_ms }} ms{% if not item.ok %} (failed){% endif %}</span>{% if not loop.last %} · {% endif %}
-    {% endfor %}
+  <div id="error-banner" class="kg-alert kg-alert--error" style="display:none;">
+    <div class="kg-alert-title">RAG Data Still Loading</div>
+    <div id="error-lines"></div>
   </div>
+  <div id="timings" class="kg-inline-meta" style="display:none;"></div>
 </div>
-{% endif %}
 
 <div class="member-header-bar">
   <a class="btn btn-sm" href="/ui/rag/explore/{{ db_id }}">&#8592; EXPLORE</a>
-  <span class="member-name-bar">{{ member.display_name or "(unknown)" }}</span>
+  <span class="member-name-bar" id="member-name-bar">(loading member)</span>
   <a class="btn btn-sm btn-yellow" href="/ui/rag/search?db={{ db_id }}">SEARCH</a>
 </div>
 
 <div class="member-reader">
-
-  {# ── Profile metadata ── #}
   <div style="display:flex; align-items:baseline; gap:0.75rem; flex-wrap:wrap; margin-bottom:0.4rem;">
-    <span style="font-size:1.15rem; font-weight:600; color:var(--green);">{{ member.display_name or "(unknown)" }}</span>
-    {% if member.party %}<span class="meta" style="font-size:12px;">{{ member.party }}</span>{% endif %}
-    {% if member.constituency %}<span class="meta" style="font-size:12px;">{{ member.constituency }}</span>{% endif %}
+    <span id="member-name" style="font-size:1.15rem; font-weight:600; color:var(--green);">(loading member)</span>
+    <span class="meta" id="member-party" style="font-size:12px; display:none;"></span>
+    <span class="meta" id="member-constituency" style="font-size:12px; display:none;"></span>
   </div>
-  {% if member.bio %}
-  <div class="bio-block">{{ member.bio }}</div>
-  {% endif %}
-
-  {# ── Speeches grouped by debate ── #}
-  {% if speeches %}
-  <div class="section-heading">{{ speeches | length }} speech{{ "es" if speeches | length != 1 else "" }} in record</div>
-
-  {# Group consecutive speeches sharing the same debate_uuid #}
-  {% set ns = namespace(last_uuid=None) %}
-  {% for s in speeches %}
-    {% if s.debate_uuid != ns.last_uuid %}
-      {% if not loop.first %}</div>{% endif %}
-      <div class="debate-group">
-      <div class="debate-group-label">
-        <span class="debate-group-date">{{ s.sitting_date }}</span>
-        <a href="/ui/rag/explore/{{ db_id }}/debate/{{ s.debate_uuid }}" class="debate-group-title" style="color:var(--blue);">{{ s.debate_title or "(debate)" }}</a>
-      </div>
-      {% set ns.last_uuid = s.debate_uuid %}
-    {% endif %}
-    <div class="speech-block">{{ s.content or "" }}</div>
-  {% endfor %}
-  </div>
-  {% else %}
-  <p class="meta" style="margin-top:1.5rem;">No speeches found in the current record for this member.</p>
-  {% endif %}
-
+  <div class="bio-block" id="member-bio" style="display:none;"></div>
+  <div id="member-speeches"><p class="meta" style="margin-top:1.5rem;">Loading speeches…</p></div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  const endpoint = '/ui/rag/explore/{{ db_id }}/member/{{ member_id }}/json';
+
+  function escapeHtml(value) {
+    return String(value ?? '')
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;');
+  }
+
+  function renderTimings(items) {
+    if (!items || !items.length) return '';
+    return items.map(function (item) {
+      return '<span>' + escapeHtml(item.label) + ': ' + escapeHtml(item.elapsed_ms) + ' ms' + (item.ok ? '' : ' (failed)') + '</span>';
+    }).join(' · ');
+  }
+
+  function renderSpeeches(items) {
+    if (!items || !items.length) return '<p class="meta" style="margin-top:1.5rem;">No speeches found in the current record for this member.</p>';
+    let h = '<div class="section-heading">' + items.length + ' speech' + (items.length === 1 ? '' : 'es') + ' in record</div>';
+    let lastUuid = null;
+    for (const s of items) {
+      if (s.debate_uuid !== lastUuid) {
+        if (lastUuid !== null) h += '</div>';
+        h += '<div class="debate-group"><div class="debate-group-label"><span class="debate-group-date">' + escapeHtml(s.sitting_date || '') + '</span><a href="/ui/rag/explore/{{ db_id }}/debate/' + escapeHtml(s.debate_uuid || '') + '" class="debate-group-title" style="color:var(--blue);">' + escapeHtml(s.debate_title || '(debate)') + '</a></div>';
+        lastUuid = s.debate_uuid;
+      }
+      h += '<div class="speech-block">' + escapeHtml(s.content || '') + '</div>';
+    }
+    return h + '</div>';
+  }
+
+  function applyPayload(payload) {
+    const member = payload.member || {};
+    document.getElementById('member-name-bar').textContent = member.display_name || '(unknown)';
+    document.getElementById('member-name').textContent     = member.display_name || '(unknown)';
+    document.getElementById('member-speeches').innerHTML   = renderSpeeches(payload.speeches || []);
+    document.getElementById('sync-banner').style.display   = payload.db_info && payload.db_info.sync && payload.db_info.sync.status === 'running' ? '' : 'none';
+    document.getElementById('load-banner').style.display   = 'none';
+
+    const partyEl = document.getElementById('member-party');
+    partyEl.textContent = member.party || '';
+    partyEl.style.display = member.party ? '' : 'none';
+
+    const constituencyEl = document.getElementById('member-constituency');
+    constituencyEl.textContent = member.constituency || '';
+    constituencyEl.style.display = member.constituency ? '' : 'none';
+
+    const bioEl = document.getElementById('member-bio');
+    bioEl.textContent = member.bio || '';
+    bioEl.style.display = member.bio ? '' : 'none';
+
+    const timingEl = document.getElementById('timings');
+    const timingHtml = renderTimings(payload.timings || []);
+    timingEl.innerHTML = timingHtml;
+    timingEl.style.display = timingHtml ? '' : 'none';
+
+    const errors = payload.errors || [];
+    const errorEl = document.getElementById('error-banner');
+    const errorLinesEl = document.getElementById('error-lines');
+    if (errors.length) {
+      errorLinesEl.innerHTML = errors.map(function (item) { return '<div>' + escapeHtml(item) + '</div>'; }).join('');
+      errorEl.style.display = '';
+    } else {
+      errorEl.style.display = 'none';
+      errorLinesEl.innerHTML = '';
+    }
+  }
+
+  function fetchPayload() {
+    fetch(endpoint)
+      .then(function (r) { return r.json(); })
+      .then(function (payload) {
+        applyPayload(payload);
+        if (payload.errors && payload.errors.length) window.setTimeout(fetchPayload, 3000);
+      })
+      .catch(function (err) {
+        document.getElementById('error-lines').innerHTML = '<div>' + escapeHtml(err && err.message ? err.message : err) + '</div>';
+        document.getElementById('error-banner').style.display = '';
+        window.setTimeout(fetchPayload, 3000);
+      });
+  }
+
+  fetchPayload();
+})();
+</script>
 {% endblock %}

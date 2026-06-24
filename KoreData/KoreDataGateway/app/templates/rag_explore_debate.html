@@ -1,101 +1,141 @@
 {% extends "base.html" %}
-{% block title %}{{ debate.title or "Debate" }}{% endblock %}
+{% block title %}Debate{% endblock %}
 {% block main_class %}kcui-main{% endblock %}
 
 {% block content %}
 <style>
   .debate-reader { max-width: 780px; margin: 0 auto; padding: 1.5rem 2rem; }
   .debate-speech { margin-bottom: 1.5rem; }
-  .speech-speaker {
-    display: flex; align-items: baseline; gap: 0.6rem;
-    margin-bottom: 0.4rem;
-  }
+  .speech-speaker { display: flex; align-items: baseline; gap: 0.6rem; margin-bottom: 0.4rem; }
   .speech-name { font-weight: 600; color: var(--green); font-size: 0.95rem; }
   .speech-party { font-size: 11px; color: var(--dim); }
-  .speech-body {
-    color: var(--text); line-height: 1.65;
-    font-size: 0.9rem;
-    white-space: pre-wrap;
-    border-left: 2px solid var(--border);
-    padding-left: 0.9rem;
-  }
+  .speech-body { color: var(--text); line-height: 1.65; font-size: 0.9rem; white-space: pre-wrap; border-left: 2px solid var(--border); padding-left: 0.9rem; }
   .speech-body:hover { border-left-color: var(--dim); }
-  .debate-header-bar {
-    position: sticky; top: 0; z-index: 10;
-    background: var(--panel);
-    border-bottom: 1px solid var(--border);
-    padding: 0.6rem 1.5rem;
-    display: flex; align-items: center; gap: 0.5rem;
-  }
-  .debate-title {
-    font-size: 0.85rem; color: var(--dim);
-    flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  }
+  .debate-header-bar { position: sticky; top: 0; z-index: 10; background: var(--panel); border-bottom: 1px solid var(--border); padding: 0.6rem 1.5rem; display: flex; align-items: center; gap: 0.5rem; }
+  .debate-title { font-size: 0.85rem; color: var(--dim); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .speech-count { font-size: 11px; color: var(--dim); margin-left: auto; flex-shrink: 0; }
 </style>
 
-{% if db_info and db_info.sync and db_info.sync.status == "running" %}
 <div class="kcui-page kcui-page--narrow kcui-stack" style="margin-bottom:1rem;">
-  <div class="kg-alert kg-alert--warn">
+  <div id="sync-banner" class="kg-alert kg-alert--warn" style="display:none;">
     <div class="kg-alert-title">Database Sync Running</div>
     This RAG database is still ingesting content. Debate speech lists can be temporarily incomplete while sync is active.
   </div>
-</div>
-{% endif %}
-
-{% if errors %}
-<div class="kcui-page kcui-page--narrow kcui-stack" style="margin-bottom:1rem;">
-  <div class="kg-alert kg-alert--error">
-    <div class="kg-alert-title">RAG Data Load Error</div>
-    {% for error in errors %}
-    <div>{{ error }}</div>
-    {% endfor %}
+  <div id="load-banner" class="kg-alert kg-alert--warn">
+    <div class="kg-alert-title">Loading RAG Data</div>
+    The page shell is ready. Debate metadata and speeches will populate as they arrive.
   </div>
-</div>
-{% endif %}
-
-{% if timings %}
-<div class="kcui-page kcui-page--narrow kcui-stack" style="margin-bottom:0.75rem;">
-  <div class="kg-inline-meta">
-    {% for item in timings %}
-    <span>{{ item.label }}: {{ item.elapsed_ms }} ms{% if not item.ok %} (failed){% endif %}</span>{% if not loop.last %} · {% endif %}
-    {% endfor %}
+  <div id="error-banner" class="kg-alert kg-alert--error" style="display:none;">
+    <div class="kg-alert-title">RAG Data Still Loading</div>
+    <div id="error-lines"></div>
   </div>
+  <div id="timings" class="kg-inline-meta" style="display:none;"></div>
 </div>
-{% endif %}
 
 <div class="debate-header-bar">
-  {% if debate.sitting_date %}
-  <a class="btn btn-sm" href="/ui/rag/explore/{{ db_id }}/sitting/{{ debate.sitting_date }}">&#8592; {{ debate.sitting_date }}</a>
-  {% else %}
-  <a class="btn btn-sm" href="/ui/rag/explore/{{ db_id }}">&#8592; EXPLORE</a>
-  {% endif %}
-  <span class="debate-title">{{ debate.title or "(untitled)" }}</span>
-  {% if debate.url %}
-  <a href="{{ debate.url }}" target="_blank" rel="noopener" class="btn btn-sm" title="View on hansard.parliament.uk">&#8599;</a>
-  {% endif %}
+  <a class="btn btn-sm" id="back-link" href="/ui/rag/explore/{{ db_id }}">&#8592; EXPLORE</a>
+  <span class="debate-title" id="debate-title">(loading debate)</span>
+  <a id="external-link" href="#" target="_blank" rel="noopener" class="btn btn-sm" title="View on hansard.parliament.uk" style="display:none;">&#8599;</a>
   <a class="btn btn-sm btn-yellow" href="/ui/rag/search?db={{ db_id }}">SEARCH</a>
-  <span class="speech-count">{{ speeches | length }} speech{{ "es" if speeches | length != 1 else "" }}</span>
+  <span class="speech-count" id="speech-count">…</span>
 </div>
 
-<div class="debate-reader">
-  {% if speeches %}
-    {% for s in speeches %}
-    <div class="debate-speech" id="speech-{{ loop.index }}">
-      <div class="speech-speaker">
-        {% if s.member_id %}
-        <a href="/ui/rag/explore/{{ db_id }}/member/{{ s.member_id }}" class="speech-name">{{ s.member_name or s.speaker_raw or "(unknown)" }}</a>
-        {% else %}
-        <span class="speech-name">{{ s.speaker_raw or "(unknown)" }}</span>
-        {% endif %}
-        {% if s.party %}<span class="speech-party">{{ s.party }}</span>{% endif %}
-        {% if s.constituency %}<span class="speech-party">{{ s.constituency }}</span>{% endif %}
-      </div>
-      <div class="speech-body">{{ s.content or "" }}</div>
-    </div>
-    {% endfor %}
-  {% else %}
-  <p class="meta">No speeches found for this debate.</p>
-  {% endif %}
+<div class="debate-reader" id="speech-reader">
+  <p class="meta">Loading speeches…</p>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  const endpoint = '/ui/rag/explore/{{ db_id }}/debate/{{ uuid }}/json';
+
+  function escapeHtml(value) {
+    return String(value ?? '')
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;');
+  }
+
+  function renderTimings(items) {
+    if (!items || !items.length) return '';
+    return items.map(function (item) {
+      return '<span>' + escapeHtml(item.label) + ': ' + escapeHtml(item.elapsed_ms) + ' ms' + (item.ok ? '' : ' (failed)') + '</span>';
+    }).join(' · ');
+  }
+
+  function renderSpeeches(items) {
+    if (!items || !items.length) return '<p class="meta">No speeches found for this debate.</p>';
+    let h = '';
+    for (const s of items) {
+      h += '<div class="debate-speech"><div class="speech-speaker">';
+      if (s.member_id) {
+        h += '<a href="/ui/rag/explore/{{ db_id }}/member/' + escapeHtml(s.member_id) + '" class="speech-name">' + escapeHtml(s.member_name || s.speaker_raw || '(unknown)') + '</a>';
+      } else {
+        h += '<span class="speech-name">' + escapeHtml(s.speaker_raw || '(unknown)') + '</span>';
+      }
+      if (s.party) h += '<span class="speech-party">' + escapeHtml(s.party) + '</span>';
+      if (s.constituency) h += '<span class="speech-party">' + escapeHtml(s.constituency) + '</span>';
+      h += '</div><div class="speech-body">' + escapeHtml(s.content || '') + '</div></div>';
+    }
+    return h;
+  }
+
+  function applyPayload(payload) {
+    const debate = payload.debate || {};
+    const speeches = payload.speeches || [];
+    const backLink = document.getElementById('back-link');
+    if (debate.sitting_date) {
+      backLink.href = '/ui/rag/explore/{{ db_id }}/sitting/' + encodeURIComponent(debate.sitting_date);
+      backLink.innerHTML = '&#8592; ' + escapeHtml(debate.sitting_date);
+    }
+    document.getElementById('debate-title').textContent = debate.title || '(untitled)';
+    document.getElementById('speech-count').textContent = speeches.length + ' speech' + (speeches.length === 1 ? '' : 'es');
+    document.getElementById('speech-reader').innerHTML = renderSpeeches(speeches);
+    document.getElementById('sync-banner').style.display = payload.db_info && payload.db_info.sync && payload.db_info.sync.status === 'running' ? '' : 'none';
+    document.getElementById('load-banner').style.display = 'none';
+
+    const external = document.getElementById('external-link');
+    if (debate.url) {
+      external.href = debate.url;
+      external.style.display = '';
+    } else {
+      external.style.display = 'none';
+    }
+
+    const timingEl = document.getElementById('timings');
+    const timingHtml = renderTimings(payload.timings || []);
+    timingEl.innerHTML = timingHtml;
+    timingEl.style.display = timingHtml ? '' : 'none';
+
+    const errors = payload.errors || [];
+    const errorEl = document.getElementById('error-banner');
+    const errorLinesEl = document.getElementById('error-lines');
+    if (errors.length) {
+      errorLinesEl.innerHTML = errors.map(function (item) { return '<div>' + escapeHtml(item) + '</div>'; }).join('');
+      errorEl.style.display = '';
+    } else {
+      errorEl.style.display = 'none';
+      errorLinesEl.innerHTML = '';
+    }
+  }
+
+  function fetchPayload() {
+    fetch(endpoint)
+      .then(function (r) { return r.json(); })
+      .then(function (payload) {
+        applyPayload(payload);
+        if (payload.errors && payload.errors.length) window.setTimeout(fetchPayload, 3000);
+      })
+      .catch(function (err) {
+        document.getElementById('error-lines').innerHTML = '<div>' + escapeHtml(err && err.message ? err.message : err) + '</div>';
+        document.getElementById('error-banner').style.display = '';
+        window.setTimeout(fetchPayload, 3000);
+      });
+  }
+
+  fetchPayload();
+})();
+</script>
 {% endblock %}

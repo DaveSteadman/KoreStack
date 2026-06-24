@@ -108,6 +108,9 @@ def main() -> None:
     num_days       = (range_end - range_start).days + 1
     lords_num_days = (range_end - lords_range_start).days + 1
     if num_days <= 0 and lords_num_days <= 0:
+        total_chunks   = conn.execute("SELECT COUNT(*) FROM chunks").fetchone()[0]
+        last_ingested  = hansard.get_meta(conn, "last_date_ingested_lords") or hansard.get_meta(conn, "last_date_ingested") or ""
+        hansard.write_descriptor(_JSON_PATH, _DB_ID, total_chunks, last_ingested, status="complete")
         print("  Already up to date — nothing to do.")
         conn.close()
         return

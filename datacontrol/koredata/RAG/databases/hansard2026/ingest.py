@@ -90,15 +90,25 @@ def main() -> None:
     else:
         last_checked = hansard.get_meta(conn, "last_date_checked")
         if last_checked:
-            range_start = date.fromisoformat(last_checked) + timedelta(days=1)
-            print(f"  Checkpoint:   resuming from {range_start} (last checked: {last_checked})")
+            last_checked_date = date.fromisoformat(last_checked)
+            if last_checked_date >= range_end:
+                range_start = range_end
+                print(f"  Checkpoint:   rechecking {range_start} (last checked: {last_checked})")
+            else:
+                range_start = last_checked_date + timedelta(days=1)
+                print(f"  Checkpoint:   resuming from {range_start} (last checked: {last_checked})")
         else:
             range_start = _YEAR_START
             print(f"  No checkpoint; starting from {range_start} ({_YEAR} year start)")
         last_checked_lords = hansard.get_meta(conn, "last_date_checked_lords")
         if last_checked_lords:
-            lords_range_start = date.fromisoformat(last_checked_lords) + timedelta(days=1)
-            print(f"  Lords checkpoint: resuming from {lords_range_start} (last checked: {last_checked_lords})")
+            last_checked_lords_date = date.fromisoformat(last_checked_lords)
+            if last_checked_lords_date >= range_end:
+                lords_range_start = range_end
+                print(f"  Lords checkpoint: rechecking {lords_range_start} (last checked: {last_checked_lords})")
+            else:
+                lords_range_start = last_checked_lords_date + timedelta(days=1)
+                print(f"  Lords checkpoint: resuming from {lords_range_start} (last checked: {last_checked_lords})")
         else:
             lords_range_start = _YEAR_START
             print(f"  Lords: no checkpoint; starting from {lords_range_start}")
@@ -106,6 +116,9 @@ def main() -> None:
     num_days       = (range_end - range_start).days + 1
     lords_num_days = (range_end - lords_range_start).days + 1
     if num_days <= 0 and lords_num_days <= 0:
+        total_chunks   = conn.execute("SELECT COUNT(*) FROM chunks").fetchone()[0]
+        last_ingested  = hansard.get_meta(conn, "last_date_ingested_lords") or hansard.get_meta(conn, "last_date_ingested") or ""
+        hansard.write_descriptor(_JSON_PATH, _DB_ID, total_chunks, last_ingested)
         print("  Already up to date — nothing to do.")
         conn.close()
         return

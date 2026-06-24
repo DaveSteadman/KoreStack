@@ -3,11 +3,10 @@
 {% block main_class %}kcui-main{% endblock %}
 
 {% block content %}
-{% set cur_db_info = databases | selectattr("id", "eq", db_id) | list | first if databases else None %}
 <div class="kcui-page kcui-stack">
 <div class="panel kcui-panel" style="margin-bottom:1rem;">
   <div class="panel-header kcui-panel-header">
-    EXPLORE &mdash; {{ cur_db_info.display_name if cur_db_info else db_id }}
+    <span id="explore-title">EXPLORE &mdash; {{ db_id }}</span>
     <div style="margin-left:auto; display:flex; gap:0.5rem; align-items:center;">
       <a class="btn btn-sm btn-yellow" href="/ui/rag/search?db={{ db_id }}">SEARCH</a>
       <a class="btn btn-sm btn-warning" href="/ui/rag?db={{ db_id }}">BROWSE ALL</a>
@@ -15,104 +14,138 @@
   </div>
 </div>
 
-{% if db_info and db_info.sync and db_info.sync.status == "running" %}
-<div class="kg-alert kg-alert--warn">
+<div id="sync-banner" class="kg-alert kg-alert--warn" style="display:none;">
   <div class="kg-alert-title">Database Sync Running</div>
   This RAG database is still ingesting content. Empty or incomplete tables may reflect in-progress data rather than a finished dataset.
 </div>
-{% endif %}
 
-{% if errors %}
-<div class="kg-alert kg-alert--error">
-  <div class="kg-alert-title">RAG Data Load Error</div>
-  {% for error in errors %}
-  <div>{{ error }}</div>
-  {% endfor %}
+<div id="load-banner" class="kg-alert kg-alert--warn">
+  <div class="kg-alert-title">Loading RAG Data</div>
+  The page shell is ready. Navigation data will populate as it arrives.
 </div>
-{% endif %}
 
-{% if timings %}
-<div class="kg-inline-meta">
-  {% for item in timings %}
-  <span>{{ item.label }}: {{ item.elapsed_ms }} ms{% if not item.ok %} (failed){% endif %}</span>{% if not loop.last %} · {% endif %}
-  {% endfor %}
+<div id="error-banner" class="kg-alert kg-alert--error" style="display:none;">
+  <div class="kg-alert-title">RAG Data Still Loading</div>
+  <div id="error-lines"></div>
 </div>
-{% endif %}
+
+<div id="timings" class="kg-inline-meta" style="display:none;"></div>
 
 <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; align-items:start;">
-
-{# ---- Sittings ---- #}
 <div class="panel kcui-panel">
   <div class="panel-header kcui-panel-header">
     SITTINGS
-    <span class="badge badge-dim" style="margin-left:0.5rem;">{{ sittings | length }}</span>
+    <span class="badge badge-dim" id="sittings-count" style="margin-left:0.5rem;">…</span>
   </div>
-  <div class="panel-body kcui-panel-body" style="padding:0; overflow-x:auto;">
-    {% if sittings %}
-    <table>
-      <thead>
-        <tr>
-          <th>Date</th>
-          <th>House</th>
-          <th style="width:80px; text-align:right;">Debates</th>
-          <th style="width:60px;"></th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for s in sittings %}
-        <tr>
-          <td><a href="/ui/rag/explore/{{ db_id }}/sitting/{{ s.sitting_date }}" style="font-weight:500;">{{ s.sitting_date }}</a></td>
-          <td class="meta" style="font-size:11px;">{{ s.house or "Commons" }}</td>
-          <td class="meta" style="text-align:right;">{{ s.debate_count or 0 }}</td>
-          <td style="text-align:right;">
-            <a class="btn btn-sm" href="/ui/rag/explore/{{ db_id }}/sitting/{{ s.sitting_date }}">VIEW</a>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-    {% else %}
-    <p class="meta" style="padding:1rem;">No sittings found.</p>
-    {% endif %}
+  <div class="panel-body kcui-panel-body" id="sittings-body" style="padding:0; overflow-x:auto;">
+    <p class="meta" style="padding:1rem;">Loading sittings…</p>
   </div>
 </div>
 
-{# ---- Members ---- #}
 <div class="panel kcui-panel">
   <div class="panel-header kcui-panel-header">
     MEMBERS
-    <span class="badge badge-dim" style="margin-left:0.5rem;">{{ members | length }}</span>
+    <span class="badge badge-dim" id="members-count" style="margin-left:0.5rem;">…</span>
   </div>
-  <div class="panel-body kcui-panel-body" style="padding:0; overflow-x:auto;">
-    {% if members %}
-    <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Party</th>
-          <th>Constituency</th>
-          <th style="width:70px; text-align:right;">Speeches</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for m in members %}
-        <tr>
-          <td>
-            <a href="/ui/rag/explore/{{ db_id }}/member/{{ m.member_id }}">{{ m.display_name }}</a>
-          </td>
-          <td class="meta" style="font-size:11px;">{{ m.party or "" }}</td>
-          <td class="meta" style="font-size:11px;">{{ m.constituency or "" }}</td>
-          <td class="meta" style="text-align:right;">{{ m.speech_count or 0 }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-    {% else %}
-    <p class="meta" style="padding:1rem;">No members found.</p>
-    {% endif %}
+  <div class="panel-body kcui-panel-body" id="members-body" style="padding:0; overflow-x:auto;">
+    <p class="meta" style="padding:1rem;">Loading members…</p>
   </div>
 </div>
+</div>
+</div>
+{% endblock %}
 
-</div>{# end grid #}
-</div>
+{% block scripts %}
+<script>
+(function () {
+  const endpoint = '/ui/rag/explore/{{ db_id }}/json';
+
+  function escapeHtml(value) {
+    return String(value ?? '')
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;');
+  }
+
+  function renderTimings(items) {
+    if (!items || !items.length) return '';
+    return items.map(function (item) {
+      return '<span>' + escapeHtml(item.label) + ': ' + escapeHtml(item.elapsed_ms) + ' ms' + (item.ok ? '' : ' (failed)') + '</span>';
+    }).join(' · ');
+  }
+
+  function renderSittings(items) {
+    if (!items || !items.length) return '<p class="meta" style="padding:1rem;">No sittings found.</p>';
+    let h = '<table><thead><tr><th>Date</th><th>House</th><th style="width:80px; text-align:right;">Debates</th><th style="width:60px;"></th></tr></thead><tbody>';
+    for (const s of items) {
+      const date = escapeHtml(s.sitting_date || '');
+      h += '<tr>'
+         + '<td><a href="/ui/rag/explore/{{ db_id }}/sitting/' + date + '" style="font-weight:500;">' + date + '</a></td>'
+         + '<td class="meta" style="font-size:11px;">' + escapeHtml(s.house || 'Commons') + '</td>'
+         + '<td class="meta" style="text-align:right;">' + escapeHtml(s.debate_count || 0) + '</td>'
+         + '<td style="text-align:right;"><a class="btn btn-sm" href="/ui/rag/explore/{{ db_id }}/sitting/' + date + '">VIEW</a></td>'
+         + '</tr>';
+    }
+    return h + '</tbody></table>';
+  }
+
+  function renderMembers(items) {
+    if (!items || !items.length) return '<p class="meta" style="padding:1rem;">No members found.</p>';
+    let h = '<table><thead><tr><th>Name</th><th>Party</th><th>Constituency</th><th style="width:70px; text-align:right;">Speeches</th></tr></thead><tbody>';
+    for (const m of items) {
+      h += '<tr>'
+         + '<td><a href="/ui/rag/explore/{{ db_id }}/member/' + escapeHtml(m.member_id) + '">' + escapeHtml(m.display_name || '(unknown)') + '</a></td>'
+         + '<td class="meta" style="font-size:11px;">' + escapeHtml(m.party || '') + '</td>'
+         + '<td class="meta" style="font-size:11px;">' + escapeHtml(m.constituency || '') + '</td>'
+         + '<td class="meta" style="text-align:right;">' + escapeHtml(m.speech_count || 0) + '</td>'
+         + '</tr>';
+    }
+    return h + '</tbody></table>';
+  }
+
+  function applyPayload(payload) {
+    const dbInfo = payload.db_info || {};
+    document.getElementById('explore-title').innerHTML = 'EXPLORE &mdash; ' + escapeHtml(dbInfo.display_name || payload.db_id || '{{ db_id }}');
+    document.getElementById('sittings-count').textContent = String((payload.sittings || []).length);
+    document.getElementById('members-count').textContent  = String((payload.members || []).length);
+    document.getElementById('sittings-body').innerHTML    = renderSittings(payload.sittings || []);
+    document.getElementById('members-body').innerHTML     = renderMembers(payload.members || []);
+    document.getElementById('sync-banner').style.display  = dbInfo.sync && dbInfo.sync.status === 'running' ? '' : 'none';
+    document.getElementById('load-banner').style.display  = 'none';
+
+    const timingEl = document.getElementById('timings');
+    const timingHtml = renderTimings(payload.timings || []);
+    timingEl.innerHTML = timingHtml;
+    timingEl.style.display = timingHtml ? '' : 'none';
+
+    const errors = payload.errors || [];
+    const errorEl = document.getElementById('error-banner');
+    const errorLinesEl = document.getElementById('error-lines');
+    if (errors.length) {
+      errorLinesEl.innerHTML = errors.map(function (item) { return '<div>' + escapeHtml(item) + '</div>'; }).join('');
+      errorEl.style.display = '';
+    } else {
+      errorEl.style.display = 'none';
+      errorLinesEl.innerHTML = '';
+    }
+  }
+
+  function fetchPayload(delayMs) {
+    fetch(endpoint)
+      .then(function (r) { return r.json(); })
+      .then(function (payload) {
+        applyPayload(payload);
+        if (payload.errors && payload.errors.length) window.setTimeout(function () { fetchPayload(3000); }, 3000);
+      })
+      .catch(function (err) {
+        document.getElementById('error-lines').innerHTML = '<div>' + escapeHtml(err && err.message ? err.message : err) + '</div>';
+        document.getElementById('error-banner').style.display = '';
+        window.setTimeout(function () { fetchPayload(3000); }, delayMs || 3000);
+      });
+  }
+
+  fetchPayload(3000);
+})();
+</script>
 {% endblock %}
