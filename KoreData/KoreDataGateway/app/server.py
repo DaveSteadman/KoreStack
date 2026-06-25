@@ -803,6 +803,14 @@ class _FullTextRequest(BaseModel):
     refid: str
 
 
+def _normalise_graph_query_literal(query: str) -> str:
+    """Treat a fully quoted graph query as one literal term before gateway dispatch."""
+    text = str(query or "").strip()
+    while len(text) >= 2 and text[0] == text[-1] and text[0] in {'"', "'"}:
+        text = text[1:-1].strip()
+    return text
+
+
 def _build_artifact_ref(kind: str, **parts: Any) -> str:
     ref_parts = [kind]
     for key, value in parts.items():
@@ -965,7 +973,7 @@ async def api_search(req: _SearchRequest):
         return [_map_scrape_chunk(c) for c in (r.json() or [])[:limit]]
 
     async def _graph():
-        params: dict = {"q": req.query, "depth": 1, "min_score": 0}
+        params: dict = {"q": _normalise_graph_query_literal(req.query), "depth": 1, "min_score": 0}
         r = await _graph_client.get("/api/expand-by-term", params=params, timeout=10.0)
         if r.status_code != 200:
             return {"error": f"HTTP {r.status_code}"}
@@ -1047,8 +1055,8 @@ async def koredata_search(
     Args:
         query: Search string. Bare terms use AND by default. Use quoted phrases,
                OR or | for alternatives, NOT to exclude, and parentheses to group.
-        domains: Which services to search — any of "feeds", "reference", "library", "rag", "scrape".
-                 Omit or pass null to search all five.
+        domains: Which services to search — any of "feeds", "reference", "library", "rag", "scrape", "graph".
+                 Omit or pass null to search the default UI/API set.
         since: Earliest published-date filter (YYYY-MM-DD). Applied to feeds only.
         until: Latest published-date filter (YYYY-MM-DD). Applied to feeds only.
         limit: Maximum results per selected domain (1–200, default 20).

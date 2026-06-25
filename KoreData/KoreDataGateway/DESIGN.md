@@ -49,10 +49,10 @@ A single endpoint that an LLM agent calls to search across any combination of Ko
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `query` | `string` | yes | Natural-language or keyword query string |
-| `domains` | `array[string]` | no | Which services to search: `"feeds"`, `"reference"`, `"library"`, `"rag"`. Omit or pass `[]` to search all four |
+| `domains` | `array[string]` | no | Which services to search: `"feeds"`, `"reference"`, `"library"`, `"rag"`, `"scrape"`, `"graph"`. The selected list gates which services are queried |
 | `since` | `string` (ISO 8601 date `YYYY-MM-DD`) | no | Earliest published-date filter — applied to KoreFeed only |
 | `until` | `string` (ISO 8601 date `YYYY-MM-DD`) | no | Latest published-date filter — applied to KoreFeed only |
-| `limit` | `integer` | no | Maximum results **per domain** (default 5, min 1, max 20) |
+| `limit` | `integer` | no | Maximum results **per domain** (default 20, min 1, max 200) |
 
 Example:
 ```json
