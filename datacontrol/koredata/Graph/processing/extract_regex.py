@@ -11,6 +11,13 @@ Usage:
     (edit BOOK_ID and CHUNK at the top of this file to change targets)
 """
 
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Extract regex helpers for datacontrol/koredata/Graph/processing.
+# Provides the focused helpers and module-level behaviour grouped into this file.
+# ====================================================================================================
+
 import re
 import httpx
 import json

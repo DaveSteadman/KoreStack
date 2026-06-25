@@ -1,3 +1,10 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Database helpers for KoreDevice/KoreDeviceDriver/app.
+# Owns persistence access patterns, schema-facing helpers, and storage utilities for this component.
+# ====================================================================================================
+
 import json
 from datetime import datetime, timezone
 from pathlib import Path

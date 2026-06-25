@@ -57,7 +57,6 @@ def register_session_routes(
     load_session,
     save_session,
     flush_scratch_session,
-    build_summary_block,
     create_session_context,
     clear_session_scratch,
     make_slash_context,
@@ -105,7 +104,7 @@ def register_session_routes(
         def _run(_prompt=prompt_text) -> None:
             run_config = _runtime_config_for_prompt(config, _prompt)
             session_context = create_session_context(session_id=session_id, persist_path=None)
-            history, summaries = load_session(session_id)
+            history = load_session(session_id)
             conversation_entry = get_session_conversation(session_id)
             queue_run_event(run_q, {"type": "start", "run_id": run_id, "prompt": _prompt}, priority=True)
             try:
@@ -135,7 +134,7 @@ def register_session_routes(
                     ).start()
                     # Pass prompt_tokens=0 to suppress compaction - LLM-Direct deliberately
                     # bypasses orchestration mechanics; compaction is the agent's concern.
-                    save_session(session_id, history, summaries, 0, 0)
+                    save_session(session_id, history, session_context, 0, 0)
                     return
                 # ------------------------------------------------------------------
                 elif _prompt.startswith("/"):
@@ -191,7 +190,7 @@ def register_session_routes(
                     slash_ctx = make_slash_context(
                         config=run_config,
                         output=_slash_output,
-                        clear_history=lambda: (history.clear(), session_context.clear(), clear_session_scratch(session_id), save_session(session_id, history, [], 0, 0)),
+                        clear_history=lambda: (history.clear(), session_context.clear(), clear_session_scratch(session_id), save_session(session_id, history, session_context, 0, 0)),
                         session_context=session_context,
                         session_id=session_id,
                         switch_session=_do_switch_session,
@@ -216,7 +215,6 @@ def register_session_routes(
                     queue_run_event(run_q, {"type": "log_file", "run_id": run_id, "path": str(log_path)}, priority=True)
                     with session_logger_cls(log_path) as run_logger:
                         run_logger.log_section_file_only(f"API SESSION: {session_id}")
-                        summary_block = build_summary_block(summaries)
                         response, p_tokens, _completion_tokens, _ok, tps = orchestrate_prompt(
                             user_prompt=_prompt,
                             config=run_config,
@@ -225,7 +223,6 @@ def register_session_routes(
                             session_context=session_context,
                             quiet=True,
                             conversation_entry=conversation_entry,
-                            conversation_summary=summary_block or None,
                             on_tool_round_complete=lambda: threading.Thread(
                                 target=flush_scratch_session, args=(session_id,), daemon=True
                             ).start(),
@@ -237,10 +234,7 @@ def register_session_routes(
                         # Persist the turn to KC asynchronously - response is already queued.
                         _kc_token_est = estimate_next_turn_tokens(p_tokens, _completion_tokens)
                         threading.Thread(target=kc_save_turn, args=(session_id, _prompt, response), kwargs={"token_estimate": _kc_token_est}, daemon=True).start()
-                        # Compact old history if the context window is filling up.
-                        # Runs synchronously after the response is queued; the task_queue
-                        # serialises prompts per-session so the next turn waits for this.
-                        summaries = save_session(session_id, history, summaries, p_tokens, get_active_num_ctx())
+                        save_session(session_id, history, session_context, p_tokens, get_active_num_ctx())
             except Exception as exc:
                 queue_run_event(run_q, {"type": "error", "run_id": run_id, "message": str(exc)}, priority=True)
             finally:

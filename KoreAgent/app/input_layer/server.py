@@ -68,18 +68,11 @@ import json
 import queue
 import re
 import threading
-import httpx
-import urllib.error
-import urllib.parse
-import urllib.request
 from datetime import datetime
 
 from fastapi import FastAPI
 from fastapi import HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
-from fastapi.responses import RedirectResponse
-from fastapi.responses import Response
 from pydantic import BaseModel
 
 from KoreCommon.endpoint_manifest import build_endpoint_manifest
@@ -99,14 +92,16 @@ from orchestration import orchestrate_prompt
 from orchestration import request_stop
 from orchestration import set_sandbox_enabled
 from orchestration import set_web_skills_enabled
-from datasets import clear_session_datasets
 from datasets import build_persisted_scratchpad_payload
 from datasets import delete_session_datasets as delete_persisted_session_datasets
 from datasets import get_persisted_datasets_payload
 from datasets import hydrate_session_state
+from input_layer.korechat_proxy_routes import register_korechat_proxy_routes
 from scratchpad import get_store as get_scratch_store
 from scratchpad import scratch_clear
 from scratchpad import scratch_save as scratch_restore_key
+from input_layer.server_static import register_static_routes
+from input_layer.session_service import SessionService
 from input_layer.routes_logs import register_log_routes
 from input_layer.routes_sessions import register_session_routes
 from input_layer.routes_status import register_status_routes
@@ -309,86 +304,12 @@ def _get_korechat_base_url() -> str | None:
     host = str(network.get("host") or "127.0.0.1").strip() or "127.0.0.1"
     return f"http://{host}:{int(port)}"
 
-@app.get("/", include_in_schema=False)
-def serve_index():
-    index = _WEB_DIR / "index.html"
-    if not index.exists():
-        return {"error": "Web UI not found"}
-    return FileResponse(str(index), headers={"Cache-Control": "no-store"})
-
-
-@app.get("/suite-config.js", include_in_schema=False)
-def suite_config_js():
-    urls = os.environ.get("KORE_SUITE_URLS", "{}")
-    return Response(content=f"window.__koreSuiteUrls = {urls};", media_type="application/javascript", headers={"Cache-Control": "no-store"})
-
-
-@app.get("/static/app.js", include_in_schema=False)
-def serve_app_js():
-    return FileResponse(str(_WEB_DIR / "app.js"), headers={"Cache-Control": "no-store"})
-
-
-@app.get("/static/style.css", include_in_schema=False)
-def serve_style_css():
-    return FileResponse(str(_WEB_DIR / "style.css"), headers={"Cache-Control": "no-store"})
-
-
-@app.get("/ui-elements/assets/{asset_path:path}", include_in_schema=False)
-def serve_ui_elements_asset(asset_path: str):
-    candidate = (_UI_ELEMENTS_ASSETS / asset_path).resolve()
-    if candidate != _UI_ELEMENTS_ASSETS and _UI_ELEMENTS_ASSETS not in candidate.parents:
-        raise HTTPException(status_code=404, detail="Asset not found")
-    if not candidate.exists() or not candidate.is_file():
-        raise HTTPException(status_code=404, detail="Asset not found")
-    return FileResponse(str(candidate), headers={"Cache-Control": "no-store"})
-
-
-@app.get("/conversations", include_in_schema=False)
-def redirect_to_korechat_ui():
-    base_url = _get_korechat_base_url()
-    if not base_url:
-        raise HTTPException(status_code=503, detail="KoreChat is not configured")
-    return RedirectResponse(url=f"{base_url}/ui", status_code=307)
-
-
-@app.get("/favicon.ico", include_in_schema=False)
-def serve_favicon():
-    ico = _WEB_DIR / "favicon.ico"
-    if not ico.exists():
-        from starlette.responses import Response
-        return Response(status_code=404)
-    return FileResponse(str(ico), media_type="image/x-icon", headers={"Cache-Control": "no-cache"})
-
-
-@app.get("/README.md", include_in_schema=False)
-def serve_readme():
-    import markdown
-    from starlette.responses import HTMLResponse
-    readme = _WEB_DIR.parent.parent.parent / "README.md"
-    if not readme.exists():
-        from starlette.responses import Response
-        return Response(status_code=404)
-    md_text = readme.read_text(encoding="utf-8")
-    body    = markdown.markdown(md_text, extensions=["tables", "fenced_code", "toc"])
-    html    = (
-        "<!doctype html><html><head><meta charset='utf-8'>"
-        "<title>README</title>"
-        "<style>"
-        "body{font-family:sans-serif;max-width:860px;margin:40px auto;padding:0 20px;line-height:1.6;color:#ccc;background:#1a1a1a}"
-        "h1,h2,h3{color:#e8e8e8;border-bottom:1px solid #333;padding-bottom:4px}"
-        "a{color:#6ab0f5}"
-        "code{background:#2a2a2a;padding:2px 5px;border-radius:3px;font-size:0.9em}"
-        "pre{background:#2a2a2a;padding:12px;border-radius:4px;overflow-x:auto}"
-        "pre code{background:none;padding:0}"
-        "table{border-collapse:collapse;width:100%}"
-        "th,td{border:1px solid #444;padding:6px 12px;text-align:left}"
-        "th{background:#2a2a2a}"
-        "blockquote{border-left:3px solid #555;margin:0;padding-left:16px;color:#999}"
-        "</style></head><body>"
-        + body
-        + "</body></html>"
-    )
-    return HTMLResponse(content=html, headers={"Cache-Control": "no-store"})
+register_static_routes(
+    app,
+    web_dir               = _WEB_DIR,
+    ui_elements_assets    = _UI_ELEMENTS_ASSETS,
+    get_korechat_base_url = _get_korechat_base_url,
+)
 
 
 register_status_routes(
@@ -412,7 +333,7 @@ def get_completions():
     """Return tab-completion candidates grouped by type for the UI tab-complete feature."""
     sessions = []
     try:
-        kc_sessions = _kc_get("/api/conversations?channel_type=webchat&limit=500") or []
+        kc_sessions = _session_service.kc_get("/api/conversations?channel_type=webchat&limit=500") or []
         if isinstance(kc_sessions, list):
             for item in kc_sessions:
                 external_id = str(item.get("external_id") or "")
@@ -550,7 +471,7 @@ def post_request_switch(body: SessionSwitchRequest):
     if external_id.startswith("webchat_") or channel_type == "webchat":
         session_id = _session_id_from_external_id(external_id)
     else:
-        session_id = f"{_KC_DIRECT_SESSION_PREFIX}{conv['id']}"
+        session_id = f"kc_conv_{conv['id']}"
     name = _display_name(conv)
     _validate_session_id(session_id)
     with _pending_switch_lock:
@@ -586,11 +507,11 @@ class HistoryAppendRequest(BaseModel):
 def get_session_input_history(session_id: str):
     """Return the last _HISTORY_LIMIT input history entries for the session's conversation."""
     _validate_session_id(session_id)
-    conv = _kc_get_conversation_for_session(session_id)
+    conv = _session_service.kc_get_conversation_for_session(session_id)
     if conv is None:
         return {"entries": []}
     try:
-        result  = _kc_get(f"/api/conversations/{conv['id']}/input-history")
+        result  = _session_service.kc_get(f"/api/conversations/{conv['id']}/input-history")
         entries = result.get("entries", []) if isinstance(result, dict) else []
     except HTTPException:
         entries = []
@@ -605,11 +526,11 @@ def post_session_input_history(session_id: str, body: HistoryAppendRequest):
     text = (body.text or "").strip()
     if not text:
         raise HTTPException(status_code=400, detail="text cannot be empty")
-    conv = _kc_ensure_conversation(session_id)
+    conv = _session_service.kc_ensure_conversation(session_id)
     if conv is None:
         return {"entries": [text]}
     try:
-        result  = _kc_patch(f"/api/conversations/{conv['id']}/input-history", {"text": text})
+        result  = _session_service.kc_patch(f"/api/conversations/{conv['id']}/input-history", {"text": text})
         entries = result.get("entries", []) if isinstance(result, dict) else []
     except HTTPException:
         entries = [text]
@@ -619,383 +540,25 @@ def post_session_input_history(session_id: str, body: HistoryAppendRequest):
 # timeline route is registered by register_task_routes()
 
 
-# ====================================================================================================
-# MARK: STOPRUN
-# ====================================================================================================
-# /stoprun is the only slash command that bypasses the task queue entirely.
-# It executes immediately inside post_prompt so it can act on the currently-running
-# LLM call without waiting for it to finish.  Two things happen:
-#   1. request_stop() sets a threading.Event that orchestrate_prompt() checks between
-#      rounds - the current HTTP call to Ollama finishes naturally, then the loop exits.
-#   2. clear_pending() drains every not-yet-started item from the task queue and returns
-#      their run_ids so we can push cancellation events to their SSE clients.
-
-def _handle_stoprun_immediate(run_id: str, run_q: "queue.Queue") -> None:
-    """Immediately signal the active run to stop and cancel all pending queue items."""
-    # Signal the orchestration loop to exit after its current LLM round.
-    request_stop()
-
-    # Drain all pending items from the task queue.
-    cancelled_ids = task_queue.clear_pending()
-
-    # Push a cancellation response + sentinel to each pending run's SSE client.
-    cancel_msg = "Cancelled by /stoprun."
-    for rid in cancelled_ids:
-        with _run_queues_lock:
-            q = _run_event_queues.get(rid)
-        if q is None:
-            continue
-        _queue_run_event(q, {"type": "response", "run_id": rid, "response": cancel_msg, "tokens": 0, "tps": "0"}, priority=True)
-        _queue_run_event(q, None, priority=True)
-
-    n = len(cancelled_ids)
-    active_note = "Active run will halt after its current LLM round. "
-    summary = (
-        f"{active_note}{n} pending prompt{'s' if n != 1 else ''} cancelled."
-        if n else
-        f"{active_note}No prompts were queued."
-    )
-    _queue_run_event(run_q, {"type": "response", "run_id": run_id, "response": summary, "tokens": 0, "tps": "0"}, priority=True)
-    finish_run_event_queue(run_id)
-
-
-# ====================================================================================================
-# MARK: SESSION HELPERS
-# ====================================================================================================
-_KC_DIRECT_SESSION_PREFIX = "kc_conv_"
-
-
-def _kc_external_id_for_session(session_id: str) -> str:
-    return f"webchat_{session_id}"
-
-
-def _kc_conversation_id_for_session(session_id: str) -> int | None:
-    if not session_id.startswith(_KC_DIRECT_SESSION_PREFIX):
-        return None
-    raw = session_id[len(_KC_DIRECT_SESSION_PREFIX):].strip()
-    return int(raw) if raw.isdigit() else None
-
-
-# In-memory cache: session_id -> KC conversation dict (avoids repeated GET lookups per prompt).
-# Invalidated on session delete. Thread-safe for read-heavy access since dict reads are atomic
-# in CPython, but the cache is best-effort - a miss just does a fresh GET.
-_kc_conv_cache: dict[str, dict] = {}
-_kc_conv_cache_lock: threading.Lock = threading.Lock()
-
-# Pending display names set via /newchat <name>. Consumed on first conversation create.
-_kc_session_names: dict[str, str] = {}
-
-
-def _kc_set_session_name(session_id: str, name: str) -> None:
-    if name:
-        _kc_session_names[session_id] = name
-    else:
-        _kc_session_names.pop(session_id, None)
-
-
-def _kc_get_conversation_for_session(session_id: str) -> dict | None:
-    with _kc_conv_cache_lock:
-        if session_id in _kc_conv_cache:
-            return _kc_conv_cache[session_id]
-    try:
-        conv_id = _kc_conversation_id_for_session(session_id)
-        if conv_id is not None:
-            result = _kc_get(f"/api/conversations/{conv_id}")
-        else:
-            external_id = _kc_external_id_for_session(session_id)
-            result = _kc_get(f"/api/conversations/by-external-id/{urllib.parse.quote(external_id, safe='')}")
-    except HTTPException as exc:
-        if exc.status_code in {404, 503}:
-            return None
-        raise
-    conv = result if isinstance(result, dict) else None
-    if conv is not None:
-        with _kc_conv_cache_lock:
-            _kc_conv_cache[session_id] = conv
-    return conv
-
-
-def _get_session_turns(session_id: str) -> list[dict]:
-    # Single KC HTTP call - returns paired inbound/outbound messages as turns.
-    try:
-        conv_id = _kc_conversation_id_for_session(session_id)
-        if conv_id is not None:
-            messages = _kc_get(f"/api/conversations/{conv_id}/messages?limit=1000")
-            result = {"messages": messages if isinstance(messages, list) else []}
-        else:
-            external_id = _kc_external_id_for_session(session_id)
-            result = _kc_get(f"/api/conversations/by-external-id/{urllib.parse.quote(external_id, safe='')}/turns")
-    except HTTPException as exc:
-        if exc.status_code in {404, 503}:
-            return []
-        raise
-    if not isinstance(result, dict):
-        return []
-    messages = result.get("messages") or []
-    turns: list[dict] = []
-    pending_prompt: str | None = None
-    for message in messages:
-        direction = message.get("direction")
-        content   = (message.get("content") or "").strip()
-        if not content:
-            continue
-        if direction == "inbound":
-            pending_prompt = content
-        elif direction == "outbound" and pending_prompt is not None:
-            turns.append({"role": "user",      "content": pending_prompt})
-            turns.append({"role": "assistant", "content": content})
-            pending_prompt = None
-    return turns
-
-
-def _kc_ensure_conversation(session_id: str) -> dict | None:
-    """Return the KC conversation for session_id, creating it if absent."""
-    conv = _kc_get_conversation_for_session(session_id)
-    if conv is not None:
-        return conv
-    if _kc_conversation_id_for_session(session_id) is not None:
-        return None
-    try:
-        external_id = _kc_external_id_for_session(session_id)
-        # Use any pending display name set by /newchat <name>, fall back to default.
-        pending_name = _kc_session_names.pop(session_id, None)
-        subject = pending_name or f"Webchat {session_id}"
-        conv = _kc_post("/api/conversations", {
-            "channel_type": "webchat",
-            "subject":      subject,
-            "protected":    bool(pending_name),
-            "external_id":  external_id,
-        })
-    except Exception:
-        return None
-    if isinstance(conv, dict):
-        with _kc_conv_cache_lock:
-            _kc_conv_cache[session_id] = conv
-        return conv
-    return None
-
-
-def _kc_save_turn(session_id: str, user_text: str, agent_text: str, token_estimate: int | None = None) -> None:
-    """Write a user + agent turn to the KC conversation as inbound + outbound messages."""
-    conv = _kc_ensure_conversation(session_id)
-    if conv is None:
-        return
-    conv_id = conv["id"]
-    try:
-        _kc_post(f"/api/conversations/{conv_id}/turns", {
-            "inbound_content":  user_text,
-            "outbound_content": agent_text,
-            "inbound_sender":   session_id,
-            "outbound_sender":  "agent",
-            "token_estimate":   token_estimate,
-        })
-    except Exception:
-        pass
-    with _kc_conv_cache_lock:
-        _kc_conv_cache.pop(session_id, None)
-
-
-def _load_session(session_id: str) -> tuple["ConversationHistory", list[dict]]:
-    """Load conversation history and scratchpad from KoreChat when present."""
-    history   = ConversationHistory()
-    summaries: list[dict] = []
-    conv = _kc_get_conversation_for_session(session_id)
-    if conv is None:
-        return history, summaries
-
-    scratchpad = conv.get("scratchpad") or {}
-    if isinstance(scratchpad, str):
-        try:
-            scratchpad = json.loads(scratchpad)
-        except Exception:
-            scratchpad = {}
-    hydrate_session_state(
-        scratchpad,
-        session_id,
-        datasets_payload=conv.get("datasets") or {},
-        scratch_clearer=scratch_clear,
-        scratch_restorer=scratch_restore_key,
-        warning_logger=lambda message: print(f"[session] Warning: {message}", flush=True),
-    )
-
-    thread_summary = (conv.get("thread_summary") or "").strip()
-    if thread_summary:
-        summaries = [{"text": thread_summary, "turn_range": [1, 1]}]
-
-    try:
-        messages = _kc_get(f"/api/conversations/{conv['id']}/messages?summarised=0&limit=1000") or []
-    except HTTPException:
-        messages = []
-
-    pending_prompt: str | None = None
-    for message in messages:
-        direction = message.get("direction")
-        content = (message.get("content") or "").strip()
-        if not content:
-            continue
-        if direction == "inbound":
-            pending_prompt = content
-            continue
-        if direction == "outbound" and pending_prompt is not None:
-            history.add(pending_prompt, content)
-            pending_prompt = None
-
-    return history, summaries
-
-
-def _compact_old_turns(turns: list[dict], summaries: list[dict], batch_size: int) -> tuple[list[dict], list[dict]]:
-    """Compress the oldest batch_size turns into a summary block via an isolated LLM call.
-
-    Returns (remaining_turns, updated_summaries).  Returns inputs unchanged on any error
-    (no model loaded, LLM failure) so the session is never corrupted by a failed compaction.
-    """
-    from llm_client import call_llm_chat
-    from llm_client import get_active_model
-    from llm_client import get_active_num_ctx
-
-    model   = get_active_model()
-    num_ctx = get_active_num_ctx()
-    if not model:
-        return turns, summaries
-
-    batch     = turns[:batch_size]
-    remaining = turns[batch_size:]
-    batch_text = "\n\n".join(
-        f"User: {t['user_prompt']}\nAssistant: {t['assistant_response']}"
-        for t in batch
-    )
-
-    messages = [
-        {
-            "role":    "system",
-            "content": (
-                "You are a precise conversation summariser. "
-                "Compress the following conversation exchanges into one compact paragraph. "
-                "Preserve all specific facts, decisions, code, URLs, names, and conclusions reached. "
-                "Write in third person (e.g. 'The user asked about X; the assistant explained Y and provided Z.'). "
-                "Do not interpret, evaluate, or add information not present in the exchanges."
-            ),
-        },
-        {
-            "role":    "user",
-            "content": f"Conversation to summarise:\n\n{batch_text}",
-        },
-    ]
-
-    try:
-        result       = call_llm_chat(model_name=model, messages=messages, tools=None, num_ctx=num_ctx)
-        summary_text = (result.response or "").strip()
-    except Exception as exc:
-        print(f"[session] Warning: history compaction LLM call failed: {exc}", flush=True)
-        return turns, summaries
-
-    if not summary_text:
-        return turns, summaries
-
-    prior_end   = summaries[-1]["turn_range"][1] if summaries else 0
-    new_summary = {
-        "text":       summary_text,
-        "turn_range": [prior_end + 1, prior_end + len(batch)],
-    }
-    return remaining, summaries + [new_summary]
-
-
-def _build_summary_block(summaries: list[dict]) -> str:
-    """Format summary blocks into a single string for injection into the system prompt."""
-    if not summaries:
-        return ""
-    parts = [
-        f"[Turns {s['turn_range'][0]}-{s['turn_range'][1]}] {s['text']}"
-        for s in summaries
-    ]
-    return "\n\n".join(parts)
-
-
-def _save_session(
-    session_id:    str,
-    history:       "ConversationHistory",
-    summaries:     list[dict],
-    prompt_tokens: int,
-    num_ctx:       int,
-) -> list[dict]:
-    """Persist session state and compact old history when context fill is high."""
-    _flush_scratch_to_session(session_id)
-
-    # Compact old turns with LLM summarization when the last prompt consumed a large
-    # share of the context window.  This keeps future turns from growing unboundedly
-    # and is the primary mechanism that makes "endless chat" sustainable over many turns.
-    _KEEP_RECENT_TURNS = 4   # always keep the N most-recent turns untouched
-    _BATCH_SIZE        = 4   # turns to compress per compaction pass
-
-    if (
-        num_ctx > 0
-        and prompt_tokens > 0
-        and (prompt_tokens / num_ctx) >= _COMPACT_FILL_PCT
-        and len(history) >= _KEEP_RECENT_TURNS + _BATCH_SIZE
-    ):
-        raw = history.as_list()
-        turn_dicts: list[dict] = []
-        for i in range(0, len(raw) - 1, 2):
-            if raw[i]["role"] == "user" and raw[i + 1]["role"] == "assistant":
-                turn_dicts.append({
-                    "user_prompt":        raw[i]["content"],
-                    "assistant_response": raw[i + 1]["content"],
-                })
-        if len(turn_dicts) >= _KEEP_RECENT_TURNS + _BATCH_SIZE:
-            compactable  = turn_dicts[: len(turn_dicts) - _KEEP_RECENT_TURNS]
-            recent_turns = turn_dicts[len(turn_dicts) - _KEEP_RECENT_TURNS :]
-            remaining_dicts, updated_summaries = _compact_old_turns(compactable, summaries, _BATCH_SIZE)
-            if len(updated_summaries) > len(summaries):
-                # Compaction produced a new summary - rebuild in-memory history and persist.
-                history.clear()
-                for t in remaining_dicts + recent_turns:
-                    history.add(t["user_prompt"], t["assistant_response"])
-                summaries = updated_summaries
-                conv = _kc_get_conversation_for_session(session_id)
-                if conv:
-                    try:
-                        combined = _build_summary_block(summaries)
-                        _kc_patch(f"/api/conversations/{conv['id']}", {"thread_summary": combined})
-                    except Exception as exc:
-                        print(f"[session] Warning: could not store thread_summary: {exc}", flush=True)
-
-    return summaries
-
-
-def _flush_scratch_to_session(session_id: str) -> None:
-    # Runtime scratch now syncs to KoreChat instead of chatsessions JSON files.
-    conv = _kc_get_conversation_for_session(session_id)
-    if conv is None:
-        return
-    try:
-        named_scratch = {k: v for k, v in get_scratch_store(session_id).items() if not k.startswith("_tc_")}
-        _kc_patch(
-            f"/api/conversations/{conv['id']}",
-            {
-                "scratchpad": build_persisted_scratchpad_payload(named_scratch),
-                "datasets": get_persisted_datasets_payload(session_id),
-            },
-        )
-    except Exception as exc:
-        print(f"[session] Warning: could not flush scratchpad to KoreChat for session '{session_id}': {exc}", flush=True)
-    finally:
-        with _kc_conv_cache_lock:
-            _kc_conv_cache.pop(session_id, None)
-
-
-def _delete_session_state(session_id: str) -> None:
-    scratch_clear(session_id)
-    delete_persisted_session_datasets(session_id)
-    with _kc_conv_cache_lock:
-        _kc_conv_cache.pop(session_id, None)
-    conv = _kc_get_conversation_for_session(session_id)
-    if conv is None:
-        return
-    try:
-        _kc_delete(f"/api/conversations/{conv['id']}")
-    except HTTPException as exc:
-        if exc.status_code != 404:
-            raise
+_session_service = SessionService(
+    compact_fill_pct                    = _COMPACT_FILL_PCT,
+    kc_client                           = _kc_client,
+    conversation_history_cls            = ConversationHistory,
+    session_context_cls                 = SessionContext,
+    hydrate_session_state               = hydrate_session_state,
+    scratch_clear                       = scratch_clear,
+    scratch_restore_key                 = scratch_restore_key,
+    get_scratch_store                   = get_scratch_store,
+    build_persisted_scratchpad_payload  = build_persisted_scratchpad_payload,
+    get_persisted_datasets_payload      = get_persisted_datasets_payload,
+    delete_persisted_session_datasets   = delete_persisted_session_datasets,
+    request_stop                        = request_stop,
+    task_queue                          = task_queue,
+    run_event_queues                    = _run_event_queues,
+    run_queues_lock                     = _run_queues_lock,
+    queue_run_event                     = _queue_run_event,
+    finish_run_event_queue              = finish_run_event_queue,
+)
 
 
 # ====================================================================================================
@@ -1065,12 +628,11 @@ register_session_routes(
     make_run_event_queue=_make_run_event_queue,
     queue_run_event=_queue_run_event,
     finish_run_event_queue=finish_run_event_queue,
-    handle_stoprun_immediate=_handle_stoprun_immediate,
-    load_session=_load_session,
-    save_session=_save_session,
-    flush_scratch_session=_flush_scratch_to_session,
-    build_summary_block=_build_summary_block,
-    create_session_context=SessionContext,
+    handle_stoprun_immediate=_session_service.handle_stoprun_immediate,
+    load_session=_session_service.load_session,
+    save_session=_session_service.save_session,
+    flush_scratch_session=_session_service.flush_scratch_to_session,
+    create_session_context=_session_service.create_session_context,
     clear_session_scratch=scratch_clear,
     make_slash_context=SlashCommandContext,
     handle_slash=handle_slash,
@@ -1089,14 +651,51 @@ register_session_routes(
     run_queues=_run_event_queues,
     run_queues_lock=_run_queues_lock,
     sse=lambda data: _sse(data),
-    delete_session_state=_delete_session_state,
-    kc_save_turn=_kc_save_turn,
-    get_session_turns=_get_session_turns,
-    get_session_conversation=_kc_get_conversation_for_session,
-    kc_set_session_name=_kc_set_session_name,
+    delete_session_state=_session_service.delete_session_state,
+    kc_save_turn=_session_service.kc_save_turn,
+    get_session_turns=_session_service.get_session_turns,
+    get_session_conversation=_session_service.kc_get_conversation_for_session,
+    kc_set_session_name=_session_service.kc_set_session_name,
     get_llm_direct_enabled=get_llm_direct_enabled,
     call_llm_chat=call_llm_chat,
 )
+
+
+_load_session           = _session_service.load_session
+_save_session           = _session_service.save_session
+_create_session_context = _session_service.create_session_context
+
+
+def _kc_get(path: str):
+    return _session_service.kc_get(path)
+
+
+def _kc_patch(path: str, payload: dict):
+    return _session_service.kc_patch(path, payload)
+
+
+def _kc_delete(path: str) -> None:
+    return _session_service.kc_delete(path)
+
+
+def _kc_conversation_id_for_session(session_id: str) -> int | None:
+    return _session_service.kc_conversation_id_for_session(session_id)
+
+
+def _kc_get_conversation_for_session(session_id: str) -> dict | None:
+    conv_id = _kc_conversation_id_for_session(session_id)
+    if conv_id is not None:
+        result = _kc_get(f"/conversations/{conv_id}")
+        return result if isinstance(result, dict) else None
+    return _session_service.kc_get_conversation_for_session(session_id)
+
+
+def _delete_session_state(session_id: str) -> None:
+    scratch_clear(session_id)
+    delete_persisted_session_datasets(session_id)
+    conv = _kc_get_conversation_for_session(session_id)
+    if conv is not None:
+        _kc_delete(f"/conversations/{conv['id']}")
 
 register_log_routes(
     app,
@@ -1112,210 +711,9 @@ register_log_routes(
 )
 
 
-# ====================================================================================================
-# MARK: KORECHAT PROXY ENDPOINTS
-# ====================================================================================================
-# These endpoints expose the KoreChat service to the web UI so the browser
-# always talks to a single origin (port 8000). They proxy create/send/read operations
-# to the KC service at its own port.
-#
-# POST /kc/send   - create or find the KC conversation for a session, append an inbound
-#                   message. Returns {conv_id, msg_id}. The KoreChat message
-#                   append endpoint is the sole source of response_needed events.
-# GET  /kc/conversations/{conv_id}/messages - proxy the KC message list to the browser.
-
-_KC_TIMEOUT = 8
-
-
-def _kc_get(path: str) -> dict | list | None:
-    """Proxy a GET request to the KoreChat service."""
-    base = _kc_client.get_base_url()
-    if not base:
-        raise HTTPException(status_code=503, detail="KoreChat not configured")
-    url = f"{base}{path}"
-    req = urllib.request.Request(url, headers={"Accept": "application/json"})
-    try:
-        with urllib.request.urlopen(req, timeout=_KC_TIMEOUT) as resp:
-            if resp.status == 204:
-                return None
-            return json.loads(resp.read().decode("utf-8"))
-    except urllib.error.HTTPError as exc:
-        raise HTTPException(status_code=exc.code, detail=exc.read().decode("utf-8", errors="replace")[:200]) from exc
-    except urllib.error.URLError as exc:
-        raise HTTPException(status_code=503, detail=f"KoreChat unreachable: {exc.reason}") from exc
-
-
-def _kc_post(path: str, payload: dict) -> dict | None:
-    """Proxy a POST request to the KoreChat service."""
-    base = _kc_client.get_base_url()
-    if not base:
-        raise HTTPException(status_code=503, detail="KoreChat not configured")
-    url  = f"{base}{path}"
-    body = json.dumps(payload).encode("utf-8")
-    req  = urllib.request.Request(
-        url,
-        data    = body,
-        headers = {"Content-Type": "application/json", "Accept": "application/json"},
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=_KC_TIMEOUT) as resp:
-            raw = resp.read().decode("utf-8").strip()
-            return json.loads(raw) if raw else None
-    except urllib.error.HTTPError as exc:
-        raise HTTPException(status_code=exc.code, detail=exc.read().decode("utf-8", errors="replace")[:200]) from exc
-    except urllib.error.URLError as exc:
-        raise HTTPException(status_code=503, detail=f"KoreChat unreachable: {exc.reason}") from exc
-
-
-def _kc_patch(path: str, payload: dict) -> dict | None:
-    """Proxy a PATCH request to the KoreChat service."""
-    base = _kc_client.get_base_url()
-    if not base:
-        raise HTTPException(status_code=503, detail="KoreChat not configured")
-    url  = f"{base}{path}"
-    body = json.dumps(payload).encode("utf-8")
-    req  = urllib.request.Request(
-        url,
-        data    = body,
-        method  = "PATCH",
-        headers = {"Content-Type": "application/json", "Accept": "application/json"},
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=_KC_TIMEOUT) as resp:
-            raw = resp.read().decode("utf-8").strip()
-            return json.loads(raw) if raw else None
-    except urllib.error.HTTPError as exc:
-        raise HTTPException(status_code=exc.code, detail=exc.read().decode("utf-8", errors="replace")[:200]) from exc
-    except urllib.error.URLError as exc:
-        raise HTTPException(status_code=503, detail=f"KoreChat unreachable: {exc.reason}") from exc
-
-
-def _kc_delete(path: str) -> None:
-    """Proxy a DELETE request to the KoreChat service."""
-    base = _kc_client.get_base_url()
-    if not base:
-        raise HTTPException(status_code=503, detail="KoreChat not configured")
-    req = urllib.request.Request(f"{base}{path}", method="DELETE")
-    try:
-        with urllib.request.urlopen(req, timeout=_KC_TIMEOUT):
-            return None
-    except urllib.error.HTTPError as exc:
-        raise HTTPException(status_code=exc.code, detail=exc.read().decode("utf-8", errors="replace")[:200]) from exc
-    except urllib.error.URLError as exc:
-        raise HTTPException(status_code=503, detail=f"KoreChat unreachable: {exc.reason}") from exc
-
-
-async def _kc_request_async(method: str, path: str, payload: dict | None = None) -> dict | list | None:
-    """Async proxy helper for browser-facing KC routes.
-
-    Uses HTTPX so FastAPI handlers avoid blocking the event loop while waiting on I/O.
-    """
-    base = _kc_client.get_base_url()
-    if not base:
-        raise HTTPException(status_code=503, detail="KoreChat not configured")
-
-    url = f"{base}{path}"
-    request_kwargs: dict = {
-        "headers": {"Accept": "application/json"},
-    }
-    if payload is not None:
-        request_kwargs["json"] = payload
-
-    try:
-        async with httpx.AsyncClient(timeout=_KC_TIMEOUT) as client:
-            response = await client.request(method, url, **request_kwargs)
-    except httpx.ConnectError as exc:
-        raise HTTPException(status_code=503, detail=f"KoreChat unreachable: {exc}") from exc
-    except httpx.TimeoutException as exc:
-        raise HTTPException(status_code=504, detail="KoreChat request timed out") from exc
-
-    if response.status_code == 204:
-        return None
-
-    if response.is_error:
-        detail = response.text[:200] if response.text else f"KoreChat HTTP {response.status_code}"
-        raise HTTPException(status_code=response.status_code, detail=detail)
-
-    body = response.text.strip()
-    return json.loads(body) if body else None
-
-
-async def _kc_get_async(path: str) -> dict | list | None:
-    return await _kc_request_async("GET", path)
-
-
-async def _kc_post_async(path: str, payload: dict) -> dict | None:
-    response = await _kc_request_async("POST", path, payload)
-    return response if isinstance(response, dict) else None
-
-
-class KcSendRequest(BaseModel):
-    session_id: str
-    content:    str
-
-
-@app.post("/api/kc/send", status_code=201)
-@app.post("/kc/send", status_code=201, include_in_schema=False)
-async def kc_send(body: KcSendRequest):
-    """Append an inbound chat message to KoreChat.
-
-    Finds or creates the KC conversation for the given session_id (mapped via external_id).
-    Returns {conv_id, msg_id} so the browser can poll for the outbound reply.
-    """
-    _validate_session_id(body.session_id)
-    content = (body.content or "").strip()
-    if not content:
-        raise HTTPException(status_code=400, detail="content cannot be empty")
-
-    external_id = f"webchat_{body.session_id}"
-
-    # Find existing conversation by external_id; create if absent.
-    conv_id: int | None = None
-    try:
-        existing = await _kc_get_async(f"/api/conversations/by-external-id/{urllib.parse.quote(external_id, safe='')}")
-        if isinstance(existing, dict) and existing.get("id"):
-            conv_id = int(existing["id"])
-    except HTTPException as exc:
-        if exc.status_code != 404:
-            raise
-
-    if conv_id is None:
-        # Create a new webchat conversation tied to this session.
-        new_conv = await _kc_post_async("/api/conversations", {
-            "channel_type": "webchat",
-            "subject":      f"Webchat {body.session_id}",
-            "protected":    False,
-            "external_id":  external_id,
-        })
-        if not new_conv:
-            raise HTTPException(status_code=502, detail="Failed to create KC conversation")
-        conv_id = new_conv["id"]
-
-    # Append inbound message.
-    msg = await _kc_post_async(f"/api/conversations/{conv_id}/messages", {
-        "direction":      "inbound",
-        "content":        content,
-        "sender_display": body.session_id,
-        "status":         "received",
-    })
-    if not msg:
-        raise HTTPException(status_code=502, detail="Failed to append message to KC conversation")
-
-    return {"conv_id": conv_id, "msg_id": msg.get("id")}
-
-
-@app.get("/api/kc/conversations/{conv_id}/messages")
-@app.get("/kc/conversations/{conv_id}/messages", include_in_schema=False)
-async def kc_get_messages(conv_id: int, limit: int = 100):
-    """Proxy the message list for a KC conversation to the browser."""
-    return await _kc_get_async(f"/api/conversations/{conv_id}/messages?limit={limit}") or []
-
-
-@app.get("/api/kc/conversations/{conv_id}")
-@app.get("/kc/conversations/{conv_id}", include_in_schema=False)
-async def kc_get_conversation(conv_id: int):
-    """Proxy a KC conversation record to the browser."""
-    result = await _kc_get_async(f"/api/conversations/{conv_id}")
-    if result is None:
-        raise HTTPException(status_code=404, detail="Conversation not found")
-    return result
+register_korechat_proxy_routes(
+    app,
+    validate_session_id = _validate_session_id,
+    kc_get_async        = _session_service.kc_get_async,
+    kc_post_async       = _session_service.kc_post_async,
+)

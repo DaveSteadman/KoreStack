@@ -1,4 +1,11 @@
 # ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Hansard access helpers for datacontrol/koredata/RAG/databases/hansard2026.
+# Provides the focused helpers and module-level behaviour grouped into this file.
+# ====================================================================================================
+
+# ====================================================================================================
 # hansard_access.py — shared library for Hansard database ingestion
 #
 # Shared by all year-specific Hansard databases (Hansard2025, Hansard2026, …).

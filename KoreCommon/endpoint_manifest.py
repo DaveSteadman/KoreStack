@@ -1,5 +1,12 @@
 from __future__ import annotations
 
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Endpoint manifest helpers for Kore services.
+# Builds the small metadata payloads used to describe service endpoints consistently across the suite.
+# ====================================================================================================
+
 from typing import Any
 
 from fastapi import FastAPI

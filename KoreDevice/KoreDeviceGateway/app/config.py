@@ -1,3 +1,10 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Configuration helpers for KoreDevice/KoreDeviceGateway/app.
+# Centralises environment-derived settings and default values used by this component.
+# ====================================================================================================
+
 import os
 
 from config import _DEVICE_SUBSERVICE_OFFSETS, load_config

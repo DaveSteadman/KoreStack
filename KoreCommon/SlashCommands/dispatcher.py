@@ -1,5 +1,12 @@
 from __future__ import annotations
 
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Dispatcher helpers for KoreCommon/SlashCommands.
+# Provides the focused helpers and module-level behaviour grouped into this file.
+# ====================================================================================================
+
 from typing import Callable
 
 from .context import SlashCommandContext

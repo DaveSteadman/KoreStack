@@ -8,6 +8,13 @@ started with:
 
 from __future__ import annotations
 
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Entry point for KoreAgent.
+# Bootstraps the package application or utility from the command line.
+# ====================================================================================================
+
 import os
 import runpy
 import sys

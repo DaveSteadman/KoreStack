@@ -1,3 +1,10 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# .tmp review validate helpers for KoreDocs.
+# Provides the focused helpers and module-level behaviour grouped into this file.
+# ====================================================================================================
+
 import json
 import tempfile
 from pathlib import Path

@@ -40,6 +40,7 @@ from conversation_state import encode_background_context
 from skill_executor import execute_tool_call
 import datasets_store
 import mcp_client
+from orchestration import ConversationHistory
 from orchestration import _delegate_tls
 from orchestration import delegate_subrun
 from orchestration import OrchestratorConfig
@@ -673,9 +674,10 @@ class RegressionTests(unittest.TestCase):
             {"direction": "outbound", "content": "Status is green"},
         ]
 
-        with patch.object(api_module, "_kc_get_conversation_for_session", return_value=conversation):
-            with patch.object(api_module, "_kc_get", return_value=messages):
-                history, summaries = api_module._load_session(session_id)
+        with patch.object(api_module._session_service, "kc_get_conversation_for_session", return_value=conversation):
+            with patch.object(api_module._session_service, "kc_get", return_value=messages):
+                history = api_module._load_session(session_id)
+                session_context = api_module._create_session_context(session_id=session_id, persist_path=None)
 
         self.assertEqual(
             history.as_list(),
@@ -686,7 +688,8 @@ class RegressionTests(unittest.TestCase):
                 {"role": "assistant", "content": "Status is green"},
             ],
         )
-        self.assertEqual(summaries, [{"text": "Prior summary", "turn_range": [1, 1]}])
+        self.assertEqual(len(session_context.get_turns()), 1)
+        self.assertEqual(session_context.get_turns()[0]["assistant_response"], "Prior summary")
         self.assertEqual(scratch_load("topic", session_id), "alpha")
 
     def test_load_session_restores_datasets_from_korechat_payload(self) -> None:
@@ -713,16 +716,36 @@ class RegressionTests(unittest.TestCase):
             "datasets": datasets_payload,
         }
 
-        with patch.object(api_module, "_kc_get_conversation_for_session", return_value=conversation):
-            with patch.object(api_module, "_kc_get", return_value=[]):
-                history, summaries = api_module._load_session(session_id)
+        with patch.object(api_module._session_service, "kc_get_conversation_for_session", return_value=conversation):
+            with patch.object(api_module._session_service, "kc_get", return_value=[]):
+                history = api_module._load_session(session_id)
 
         self.assertEqual(history.as_list(), [])
-        self.assertEqual(summaries, [])
         self.assertEqual(scratch_load("topic", session_id), "alpha")
         manifest = json.loads(dataset_inspect("feed_items_raw", session_id=session_id))
         self.assertEqual(manifest["source_tool"], "koredata_search")
         self.assertEqual(manifest["count"], 2)
+
+    def test_save_session_promotes_named_items_and_persists_background_context(self) -> None:
+        session_id = "web_named_memory"
+        scratch_clear(session_id)
+
+        history = ConversationHistory()
+        history.add(
+            "Remember this: my favourite colour is cobalt blue.",
+            "Noted.",
+        )
+
+        conversation = {"id": 77, "background_context": ""}
+        patched_payloads = []
+
+        with patch.object(api_module._session_service, "kc_get_conversation_for_session", return_value=conversation):
+            with patch.object(api_module._session_service, "kc_patch", side_effect=lambda path, payload: patched_payloads.append((path, payload)) or conversation):
+                session_context = api_module._create_session_context(session_id=session_id, persist_path=None)
+                api_module._save_session(session_id, history, session_context, 1000, 1024)
+
+        self.assertEqual(scratch_load("memory_favourite_colour", session_id), "cobalt blue")
+        self.assertTrue(any("background_context" in payload for _path, payload in patched_payloads))
 
     def test_koreconv_prompt_renders_datasets_separately(self) -> None:
         prompt = koreconv_input_module._build_prompt(

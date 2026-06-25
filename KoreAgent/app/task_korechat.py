@@ -1,5 +1,12 @@
 from __future__ import annotations
 
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Task korechat helpers for KoreAgent/app.
+# Provides the focused helpers and module-level behaviour grouped into this file.
+# ====================================================================================================
+
 import urllib.parse
 
 from input_layer.koreconv_input import _get_base_url

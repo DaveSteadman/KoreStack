@@ -195,6 +195,8 @@ def _stop_children() -> None:
         try:
             log_file.close()
         except Exception:
+            # Shutdown should keep draining the child list even if one log handle has
+            # already been torn down elsewhere.
             pass
 
 
@@ -208,6 +210,8 @@ async def _wait_for(client: httpx.AsyncClient, label: str, timeout: float = 20.0
                 print(f"  ✓ {label} ready")
                 return
         except Exception:
+            # Startup probes are retried for the full timeout window because each
+            # child process may bind and warm independently.
             pass
         await asyncio.sleep(0.5)
     print(f"  [!] {label} did not respond within {timeout:.0f}s - continuing anyway")

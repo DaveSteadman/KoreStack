@@ -1,4 +1,11 @@
-﻿import os, sys, tempfile
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Test coverage for ingest json.
+# Exercises the expected behaviour and regression boundaries for this area.
+# ====================================================================================================
+
+import os, sys, tempfile
 
 tmp_dir = tempfile.mkdtemp()
 print(f"TEMP DIR: {tmp_dir}")

@@ -1,3 +1,10 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Server routes and runtime wiring for KoreData/KoreScrape/app.
+# Hosts the service entrypoints, request handlers, and local runtime orchestration for this component.
+# ====================================================================================================
+
 import hashlib
 import json
 import mimetypes

@@ -1,5 +1,12 @@
 from __future__ import annotations
 
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Run executor helpers for KoreCode/app.
+# Provides the focused helpers and module-level behaviour grouped into this file.
+# ====================================================================================================
+
 import json
 import re
 import threading

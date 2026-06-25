@@ -1,5 +1,12 @@
 from __future__ import annotations
 
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Edit store helpers for KoreCode/app.
+# Provides the focused helpers and module-level behaviour grouped into this file.
+# ====================================================================================================
+
 import hashlib
 import json
 import os

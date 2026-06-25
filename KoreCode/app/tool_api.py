@@ -1,5 +1,12 @@
 from __future__ import annotations
 
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Tool api helpers for KoreCode/app.
+# Provides the focused helpers and module-level behaviour grouped into this file.
+# ====================================================================================================
+
 from dataclasses import dataclass
 from typing import Any
 

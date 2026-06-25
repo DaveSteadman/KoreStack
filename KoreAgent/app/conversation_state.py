@@ -1,10 +1,19 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Conversation state helpers for KoreAgent/app.
+# Provides the focused helpers and module-level behaviour grouped into this file.
+# ====================================================================================================
+
 import json
+import re
 
 
 _BACKGROUND_CONTEXT_VERSION = 1
-_MAX_PERSISTED_TURNS = 3
+_MAX_PERSISTED_TURNS = 8
 _MAX_PERSISTED_SKILL_OUTPUTS = 4
 _REQUIRED_TURN_KEYS = ("turn", "user_prompt", "assistant_response", "skill_outputs")
+_MEMORY_KEY_RE = re.compile(r"[^a-z0-9]+")
 
 
 def estimate_next_turn_tokens(prompt_tokens: int | None, completion_tokens: int | None) -> int:
@@ -13,6 +22,11 @@ def estimate_next_turn_tokens(prompt_tokens: int | None, completion_tokens: int 
 
 def estimate_summary_tokens(summary_text: str | None) -> int:
     return max(0, len((summary_text or "").strip()) // 4)
+
+
+def _memory_key(label: str, fallback: str) -> str:
+    cleaned = _MEMORY_KEY_RE.sub("_", label.strip().lower()).strip("_")
+    return cleaned[:40] or fallback
 
 
 def _normalize_turn(turn: object) -> dict | None:
@@ -88,3 +102,67 @@ def encode_background_context(turns: list[dict], existing_background_context: st
         },
         ensure_ascii=False,
     )
+
+
+def build_background_turn(
+    *,
+    turn: int | None,
+    user_prompt: str,
+    assistant_response: str,
+    skill_outputs: list[dict] | None = None,
+) -> dict:
+    return {
+        "turn":               turn,
+        "user_prompt":        str(user_prompt or ""),
+        "assistant_response": str(assistant_response or ""),
+        "skill_outputs": [
+            dict(item)
+            for item in (skill_outputs or [])
+            if isinstance(item, dict)
+        ],
+    }
+
+
+def merge_background_turns(
+    existing_background_context: str | None,
+    new_turns: list[dict],
+) -> str:
+    existing_turns, _warning = decode_background_context(existing_background_context)
+    merged: list[dict]       = list(existing_turns)
+    next_turn                = len(merged)
+
+    for turn in new_turns:
+        normalized = _normalize_turn(turn)
+        if normalized is None:
+            continue
+        next_turn += 1
+        normalized["turn"] = next_turn
+        merged.append(normalized)
+
+    return encode_background_context(merged)
+
+
+def extract_named_items(user_prompt: str, assistant_response: str = "") -> dict[str, str]:
+    text = f"{user_prompt}\n{assistant_response}".strip()
+    if not text:
+        return {}
+
+    named: dict[str, str] = {}
+
+    for match in re.finditer(r"\bmy\s+([a-z][a-z0-9 _-]{1,40})\s+is\s+([^.\n!?]+)", text, re.IGNORECASE):
+        label = match.group(1).strip()
+        value = match.group(2).strip(" \t:;,.")
+        if value:
+            named[f"memory_{_memory_key(label, 'fact')}"] = value[:160]
+
+    preference_match = re.search(r"\bi\s+(?:always\s+)?prefer\s+([^.\n!?]+)", text, re.IGNORECASE)
+    if preference_match:
+        named.setdefault("memory_preference", preference_match.group(1).strip(" \t:;,.")[:160])
+
+    remember_match = re.search(r"\bremember\s+this\s*:\s*([^.\n!?]+)", text, re.IGNORECASE)
+    if remember_match:
+        remembered = remember_match.group(1).strip(" \t:;,.")
+        if remembered:
+            named.setdefault("memory_remembered", remembered[:160])
+
+    return {key: value for key, value in named.items() if value}

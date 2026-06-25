@@ -1,5 +1,12 @@
 from __future__ import annotations
 
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Slash commands helpers for KoreCode/app.
+# Provides the focused helpers and module-level behaviour grouped into this file.
+# ====================================================================================================
+
 from KoreCommon.SlashCommands import handle_slash_command
 from KoreCommon.SlashCommands import write_help_lines
 

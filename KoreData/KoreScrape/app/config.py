@@ -1,3 +1,10 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Configuration helpers for KoreData/KoreScrape/app.
+# Centralises environment-derived settings and default values used by this component.
+# ====================================================================================================
+
 from pathlib import Path
 
 from config import get_koredata_dir, load_config

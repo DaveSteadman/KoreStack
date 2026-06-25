@@ -1,3 +1,10 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Database helpers for KoreData/KoreScrape/app.
+# Owns persistence access patterns, schema-facing helpers, and storage utilities for this component.
+# ====================================================================================================
+
 import sqlite3
 from contextlib import contextmanager
 from pathlib import Path

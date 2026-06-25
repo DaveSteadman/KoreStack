@@ -1,5 +1,12 @@
 from __future__ import annotations
 
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Shared state helpers for KoreAgent/app/scheduler.
+# Provides the focused helpers and module-level behaviour grouped into this file.
+# ====================================================================================================
+
 import threading
 from datetime import datetime
 

@@ -438,6 +438,7 @@ html, body {
 /* KoreData parity: metadata and list panels share table-like alignment rhythm. */
 #sec-meta .section-header,
 #sec-scratchpad .section-header,
+#sec-datasets .section-header,
 #sec-history .section-header,
 #sec-compose .section-header,
 #sec-messages .section-header,

@@ -1,3 +1,10 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Import export csv nodes helpers for datacontrol/koredata/Graph/processing.
+# Provides the focused helpers and module-level behaviour grouped into this file.
+# ====================================================================================================
+
 import argparse, csv, sqlite3
 from pathlib import Path
 

@@ -1,3 +1,10 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Server routes and runtime wiring for KoreDevice/KoreDeviceNumber/app.
+# Hosts the service entrypoints, request handlers, and local runtime orchestration for this component.
+# ====================================================================================================
+
 from contextlib import asynccontextmanager
 from pathlib import Path
 import sys

@@ -1,3 +1,10 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Configuration helpers for KoreDevice/KoreDeviceDriver/app.
+# Centralises environment-derived settings and default values used by this component.
+# ====================================================================================================
+
 from pathlib import Path
 
 from config import get_koredevice_dir, load_config

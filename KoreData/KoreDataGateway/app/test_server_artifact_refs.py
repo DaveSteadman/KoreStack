@@ -1,3 +1,10 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Test coverage for server artifact refs.
+# Exercises the expected behaviour and regression boundaries for this area.
+# ====================================================================================================
+
 import sys
 import tempfile
 from pathlib import Path

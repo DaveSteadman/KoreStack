@@ -431,7 +431,6 @@ def orchestrate_prompt(
     delegate_depth: int = 0,
     conversation_entry: dict | None = None,
     scratchpad_visible_keys: list[str] | None = None,
-    conversation_summary: str | None = None,
     on_tool_round_complete: object | None = None,
     bound_session_id: str | None = None,
     token_pressure: float = 0.0,
@@ -501,7 +500,6 @@ def orchestrate_prompt(
             sandbox_enabled=_SANDBOX_ENABLED,
             conversation_entry=conversation_entry,
             scratchpad_visible_keys=scratchpad_visible_keys,
-            conversation_summary=conversation_summary,
             user_prompt=user_prompt,
             token_pressure=token_pressure,
         )

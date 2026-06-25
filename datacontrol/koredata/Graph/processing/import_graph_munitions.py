@@ -38,6 +38,13 @@ Endpoints:
                                  GET {REF_URL}/articles/{title}
     KoreGraph:     POST {GRAPH_URL}/api/connections/by-name/batch
 """
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Import graph munitions helpers for datacontrol/koredata/Graph/processing.
+# Provides the focused helpers and module-level behaviour grouped into this file.
+# ====================================================================================================
+
 import argparse
 import io
 import os

@@ -1,3 +1,10 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Test coverage for task conversations.
+# Exercises the expected behaviour and regression boundaries for this area.
+# ====================================================================================================
+
 import unittest
 from unittest.mock import patch
 from pathlib import Path

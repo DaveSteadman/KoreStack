@@ -95,6 +95,21 @@ def _build_scratch_query_system_prompt(instructions: str = "") -> str:
 
 
 # ----------------------------------------------------------------------------------------------------
+def _looks_like_search_results(content: str) -> bool:
+    lowered = content.lower()
+    return (
+        "search results for:" in lowered
+        or ("http" in lowered and "[1]" in lowered and "[2]" in lowered)
+    )
+
+
+# ----------------------------------------------------------------------------------------------------
+def _query_demands_completeness(query: str) -> bool:
+    lowered = query.lower()
+    return any(token in lowered for token in ("list all", "all ", "every", "full list", "complete"))
+
+
+# ----------------------------------------------------------------------------------------------------
 def _validate_key(key: str) -> str:
     """Normalise and validate a key; raise ValueError for illegal characters."""
     normalised = key.strip().lower()
@@ -258,6 +273,9 @@ def scratch_query(
         if validated not in store:
             return f"Scratchpad key '{validated}' not found.  Use scratch_list() to see available keys."
         content = store[validated]
+
+    if _looks_like_search_results(content) and _query_demands_completeness(query):
+        return "Not found in content."
 
     # Lazy imports to avoid circular deps at module load time.
     # Must use the fully-qualified package path so we share the same module

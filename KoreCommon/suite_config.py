@@ -1,5 +1,12 @@
 from __future__ import annotations
 
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Suite configuration loading helpers.
+# Loads and normalises shared suite configuration used across multiple services.
+# ====================================================================================================
+
 import json
 import os
 from pathlib import Path

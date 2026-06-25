@@ -1,3 +1,8 @@
+
+# Version 0043 / 0.6+dev
+
+[ALL TESTS COMPLETE]  host=http://MONTBLANC:11434  model=gemma4:26b  elapsed=15m 0s  pass rate=98% (79/81)  prompt tokens=7,306,887  avg tok/s=94.9
+
 # Version 0035 / 0.5+dev
 
 [ALL TESTS COMPLETE]  host=http://MONTBLANC:1234  model=nemotron-cascade-2-30b-a3b-nvfp4  elapsed=66m 55s  pass rate=94% (165/176)  prompt tokens=16,120,993  avg tok/s=135.4

@@ -1,3 +1,10 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Test coverage for koredevice driver skill.
+# Exercises the expected behaviour and regression boundaries for this area.
+# ====================================================================================================
+
 import json
 import sys
 import unittest

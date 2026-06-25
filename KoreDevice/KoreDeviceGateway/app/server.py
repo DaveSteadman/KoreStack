@@ -1,3 +1,19 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# FastAPI gateway for KoreDevice child services.
+#
+# Responsibilities:
+#   - spawn and supervise the KoreDeviceNumber and KoreDeviceDriver child processes
+#   - expose the shared web UI and aggregated status endpoints
+#   - proxy a small set of requests into the child services
+#
+# Failure model:
+#   - child-service startup and shutdown are best-effort; the gateway prefers to
+#     come up and expose degraded status instead of crashing on incidental cleanup
+#     failures such as a log handle close or a transient readiness probe error.
+# ====================================================================================================
+
 import asyncio
 import os
 import subprocess
@@ -100,6 +116,8 @@ def _init_job_object() -> None:
         if k32.SetInformationJobObject(job, 9, ctypes.byref(ext), ctypes.sizeof(ext)):
             _job_handle = int(job)
     except Exception:
+        # Losing the Windows job object only affects child-process cleanup semantics;
+        # service startup should still proceed on platforms or hosts where this fails.
         pass
 
 
@@ -114,6 +132,8 @@ def _assign_to_job(proc: subprocess.Popen) -> None:
             ctypes.c_void_p(int(proc._handle)),  # type: ignore[attr-defined]
         )
     except Exception:
+        # Best-effort association: if this fails we still keep the child and fall
+        # back to explicit termination during gateway shutdown.
         pass
 
 
@@ -153,6 +173,8 @@ def _stop_children() -> None:
         try:
             log_file.close()
         except Exception:
+            # The child is already stopping; a log-close failure should not block the
+            # rest of shutdown or strand the remaining children.
             pass
 
 
@@ -166,6 +188,8 @@ async def _wait_for(client: httpx.AsyncClient, label: str, timeout: float = 20.0
                 print(f"  [ok] {label} ready")
                 return
         except Exception:
+            # Readiness probes are intentionally retried until the timeout budget
+            # expires because child services often start slightly after the gateway.
             pass
         await asyncio.sleep(0.5)
     print(f"  [!] {label} did not respond within {timeout:.0f}s - continuing anyway")
@@ -227,6 +251,8 @@ async def _number_status() -> dict:
         if response.status_code == 200:
             return response.json()
     except Exception:
+        # Surface degraded status instead of bubbling transient child-service errors
+        # into the gateway UI path.
         pass
     return {"ok": False}
 
@@ -239,6 +265,8 @@ async def _driver_status() -> dict:
         if response.status_code == 200:
             return response.json()
     except Exception:
+        # Surface degraded status instead of bubbling transient child-service errors
+        # into the gateway UI path.
         pass
     return {"ok": False}
 

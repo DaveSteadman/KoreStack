@@ -1,3 +1,10 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Test coverage for korefile delete.
+# Exercises the expected behaviour and regression boundaries for this area.
+# ====================================================================================================
+
 import tempfile
 import unittest
 from pathlib import Path

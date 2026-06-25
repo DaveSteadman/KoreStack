@@ -1,5 +1,12 @@
 from __future__ import annotations
 
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Endpoint explorer helpers for KoreStack.
+# Provides the focused helpers and module-level behaviour grouped into this file.
+# ====================================================================================================
+
 import json
 import urllib.error
 import urllib.parse

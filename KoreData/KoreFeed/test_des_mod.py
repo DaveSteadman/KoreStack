@@ -1,4 +1,11 @@
-﻿import sys
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Test coverage for des mod.
+# Exercises the expected behaviour and regression boundaries for this area.
+# ====================================================================================================
+
+import sys
 sys.path.insert(0, r'C:\Util\GithubRepos\KoreStack\KoreData\KoreFeed')
 sys.path.insert(0, r'C:\Util\GithubRepos\KoreStack\KoreData')
 sys.path.insert(0, r'C:\Util\GithubRepos\KoreStack\KoreData\CommonCode')

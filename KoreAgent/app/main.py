@@ -182,8 +182,7 @@ from llm_client import register_llm_call_logger
 from orchestration import OrchestratorConfig
 from orchestration import orchestrate_prompt
 from orchestration import resolve_execution_model
-from run_helpers import build_summary_block
-from run_helpers import compact_turns
+from conversation_state import build_background_turn
 from run_helpers import make_task_session
 from scratchpad import scratch_clear
 from skills_catalog_builder import load_skills_payload
@@ -333,24 +332,34 @@ def run_chat_sequence_mode(
         persist_path = None,
     )
 
-    summaries: list[dict] = []
-
     def _compress_in_memory() -> str:
-        nonlocal summaries
-        messages = history.as_list()
-        if not messages:
+        turns = []
+        raw   = history.as_list()
+        for index in range(0, len(raw) - 1, 2):
+            if raw[index]["role"] == "user" and raw[index + 1]["role"] == "assistant":
+                turns.append(
+                    {
+                        "user_prompt":        raw[index]["content"],
+                        "assistant_response": raw[index + 1]["content"],
+                    }
+                )
+        if not turns:
             return "No conversation history to compress."
-        remaining, updated = compact_turns(messages, summaries)
-        if len(updated) <= len(summaries):
-            return "Compression could not produce a summary."
-        turn_count = len(messages) // 2
-        summaries  = updated
+        turn_count = len(turns)
+        with session_ctx._lock:
+            next_turn = len(session_ctx._turns)
+            for turn in turns:
+                next_turn += 1
+                session_ctx._turns.append(
+                    build_background_turn(
+                        turn               = next_turn,
+                        user_prompt        = turn["user_prompt"],
+                        assistant_response = turn["assistant_response"],
+                        skill_outputs      = [],
+                    )
+                )
         history.clear()
-        for i in range(0, len(remaining) - 1, 2):
-            u = remaining[i].get("content") or ""
-            a = remaining[i + 1].get("content") or "" if i + 1 < len(remaining) else ""
-            history.add(u, a)
-        return f"Compressed {turn_count} turn(s) into summary block."
+        return f"Compressed {turn_count} turn(s) into background context."
 
     for turn_idx, user_prompt in enumerate(prompts, start=1):
         print(f"[TURN {turn_idx}] User: {user_prompt}")
@@ -380,7 +389,6 @@ def run_chat_sequence_mode(
             logger=logger,
             conversation_history=history.as_list() or None,
             session_context=session_ctx,
-            conversation_summary=build_summary_block(summaries) or None,
             quiet=True,
         )
 

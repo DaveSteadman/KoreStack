@@ -256,6 +256,8 @@ class TaskQueue:
                 from llm_client import log_to_session
                 log_to_session(f"[scheduler] Could not delete task queue state file: {exc}")
             except Exception:
+                # State-file cleanup is observability only.  Never let a logging
+                # failure turn queue shutdown into a secondary exception path.
                 pass
 
     # ----------------------------------------------------------------------------------------------------
@@ -274,6 +276,8 @@ class TaskQueue:
                 from llm_client import log_to_session
                 log_to_session(f"[scheduler] Could not write task queue state file: {exc}")
             except Exception:
+                # Queue execution must continue even if the status mirror cannot be
+                # written or logged; the in-memory queue is authoritative.
                 pass
 
     # ----------------------------------------------------------------------------------------------------
@@ -325,6 +329,8 @@ class TaskQueue:
                             from skills.WebSearch.web_search_skill import reset_search_session
                             reset_search_session()
                         except Exception:
+                            # Search-session reset is a hygiene step between tasks, not
+                            # part of task correctness, so failures stay non-fatal.
                             pass
 
                         cancel_requested = False
@@ -375,6 +381,7 @@ class TaskQueue:
                                 + traceback.format_exc()
                             )
                         except Exception:
+                            # Avoid recursive failure if session logging itself is broken.
                             pass
                     with self._state_lock:
                         self._active = None
@@ -396,6 +403,8 @@ class TaskQueue:
                 cancel_fn(reason)
                 return
             except Exception:
+                # Fall back to the generic orchestration stop path if the task-
+                # specific cancellation hook is absent or fails.
                 pass
 
         # Default cancellation path for orchestration-backed work.
@@ -403,6 +412,8 @@ class TaskQueue:
             from orchestration import request_stop
             request_stop()
         except Exception:
+            # Cancellation is best-effort here; callers observe timeout/shutdown state
+            # via _active even if the downstream stop signal cannot be delivered.
             pass
 
 

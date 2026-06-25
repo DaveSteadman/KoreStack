@@ -1,3 +1,10 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Test coverage for database regressions.
+# Exercises the expected behaviour and regression boundaries for this area.
+# ====================================================================================================
+
 import sqlite3
 import tempfile
 import unittest
@@ -11,12 +18,9 @@ class DatabaseRegressionTests(unittest.TestCase):
     def test_conversation_get_preserves_malformed_scratchpad_payload(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             temp_db_dir = Path(tmp)
-            original_db_path = db._DB_PATH
-            original_wal_initialized = db._wal_initialized
-            db._DB_PATH = None
-            db._wal_initialized = False
 
             try:
+                db.reset_runtime_state()
                 with patch.dict(db.cfg, {"data_dir": str(temp_db_dir)}):
                     db.init_db()
                     conversation = db.conversation_create("webchat", subject="Test")
@@ -28,8 +32,7 @@ class DatabaseRegressionTests(unittest.TestCase):
 
                     loaded = db.conversation_get(conversation["id"])
             finally:
-                db._DB_PATH = original_db_path
-                db._wal_initialized = original_wal_initialized
+                db.reset_runtime_state()
 
         self.assertEqual(loaded["scratchpad"], {})
         self.assertEqual(loaded["scratchpad_raw"], '{"broken": ')
@@ -38,12 +41,9 @@ class DatabaseRegressionTests(unittest.TestCase):
     def test_conversation_get_preserves_malformed_datasets_payload(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             temp_db_dir = Path(tmp)
-            original_db_path = db._DB_PATH
-            original_wal_initialized = db._wal_initialized
-            db._DB_PATH = None
-            db._wal_initialized = False
 
             try:
+                db.reset_runtime_state()
                 with patch.dict(db.cfg, {"data_dir": str(temp_db_dir)}):
                     db.init_db()
                     conversation = db.conversation_create("webchat", subject="Test")
@@ -55,8 +55,7 @@ class DatabaseRegressionTests(unittest.TestCase):
 
                     loaded = db.conversation_get(conversation["id"])
             finally:
-                db._DB_PATH = original_db_path
-                db._wal_initialized = original_wal_initialized
+                db.reset_runtime_state()
 
         self.assertEqual(loaded["datasets"], {})
         self.assertEqual(loaded["datasets_raw"], '{"broken": ')
@@ -65,12 +64,9 @@ class DatabaseRegressionTests(unittest.TestCase):
     def test_init_db_migrates_legacy_datasets_out_of_scratchpad(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             temp_db_dir = Path(tmp)
-            original_db_path = db._DB_PATH
-            original_wal_initialized = db._wal_initialized
-            db._DB_PATH = None
-            db._wal_initialized = False
 
             try:
+                db.reset_runtime_state()
                 with patch.dict(db.cfg, {"data_dir": str(temp_db_dir)}):
                     connection = sqlite3.connect(temp_db_dir / "korechat.db")
                     try:
@@ -121,8 +117,7 @@ class DatabaseRegressionTests(unittest.TestCase):
                     db.init_db()
                     loaded = db.conversation_get(1)
             finally:
-                db._DB_PATH = original_db_path
-                db._wal_initialized = original_wal_initialized
+                db.reset_runtime_state()
 
         self.assertEqual(loaded["scratchpad"], {"topic": "alpha"})
         self.assertEqual(loaded["datasets"], {"feed_items_raw": {"dataset_id": "ds_1", "count": 2}})

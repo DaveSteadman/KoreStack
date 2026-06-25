@@ -36,10 +36,10 @@
     ]
   },
   "sync": {
-    "last_run": "2026-06-24 23:02:12",
+    "last_run": "2026-06-25 09:02",
     "last_ingest_completed_at": "2026-06-24 23:02:12",
     "last_date_ingested": "2026-06-24",
-    "status": "complete",
+    "status": "stopped",
     "total_chunks": 2520
   }
 }

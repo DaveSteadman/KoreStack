@@ -82,6 +82,9 @@ _SYSTEM_SKILL_GUIDANCE: list[str] = [
     "- When the user wants a faithful document export from a dataset, prefer dataset_write_koredoc instead of manually rewriting rows into file content.",
     "- When KoreData search results include artifact_ref, prefer koredata_get_full_text(refid) for follow-up retrieval instead of rebuilding domain-specific lookup arguments by hand.",
     "- When the user wants a full-text dataset from KoreData search results, prefer dataset_expand_full_text(...) over manual per-row fetch loops.",
+    "- When research_traverse stores page scratch keys such as research_page_*, query those page scratch keys instead of scratch_load on the entire combined research bundle.",
+    "- For article harvests, count only concrete article/detail pages. Do not count homepages, category pages, topic pages, search-result pages, or section fronts.",
+    "- When harvesting article URLs from a hub page, use get_page_links or get_page_links_text first and prefer_article_urls=true when that option exists.",
 
     # -- FileAccess (system_skills/FileAccess/) ----------------------------------------------
     "- Generic filesystem read and write operations must go through the file_write / file_read / file_append tools. Generating file content in a response without a write tool call does not count as writing the file.",
@@ -244,15 +247,12 @@ def build_system_message(
     sandbox_enabled: bool,
     conversation_entry: dict | None = None,
     scratchpad_visible_keys: list[str] | None = None,
-    conversation_summary: str | None = None,
     user_prompt: str | None = None,
     token_pressure: float = 0.0,
 ) -> str:
     system_parts: list[str] = list(_CORE_IDENTITY_PARTS) + list(_SYSTEM_SKILL_GUIDANCE)
     if ambient_system_info:
         system_parts.append(f"\n{ambient_system_info}")
-    if conversation_summary:
-        system_parts.append(f"\nHistorical context only - prior conversation summary (oldest exchanges, compressed):\n{conversation_summary}")
 
     conversation_entry_block = _build_conversation_entry_block(conversation_entry)
     if conversation_entry_block:
@@ -282,7 +282,18 @@ def build_system_message(
         context_keys = {k: v for k, v in scratch_store.items() if k.startswith("_cx_")}
         key_lines = []
         if named_keys:
-            key_lines.append("Named:             " + ", ".join(f"{key} ({len(value):,} chars)" for key, value in sorted(named_keys.items())))
+            named_previews = []
+            named_large    = []
+            for key, value in sorted(named_keys.items()):
+                rendered = str(value)
+                if len(rendered) <= 120 and "\n" not in rendered:
+                    named_previews.append(f"{key}={rendered}")
+                else:
+                    named_large.append(f"{key} ({len(rendered):,} chars)")
+            if named_previews:
+                key_lines.append("Named facts:       " + " | ".join(named_previews[:12]))
+            if named_large:
+                key_lines.append("Named values:      " + ", ".join(named_large[:12]))
         if auto_keys:
             key_lines.append("Auto-saved:        " + ", ".join(f"{key} ({len(value):,} chars)" for key, value in sorted(auto_keys.items())))
         if context_keys:
@@ -306,7 +317,7 @@ def build_system_message(
             )
             lines.append(f"  last: {last_op}  fields=[{fields}]")
         system_parts.append(
-            "\nHistorical context only - datasets currently stored:\n" + "\n".join(lines) + "\n"
+            "\nHistorical context only - Datasets currently stored:\n" + "\n".join(lines) + "\n"
             "Use dataset_* tools to inspect, filter, or retrieve these structured working sets."
         )
 

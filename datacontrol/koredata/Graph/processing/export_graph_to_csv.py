@@ -1,3 +1,10 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Export graph to csv helpers for datacontrol/koredata/Graph/processing.
+# Provides the focused helpers and module-level behaviour grouped into this file.
+# ====================================================================================================
+
 import argparse
 import csv
 import sqlite3

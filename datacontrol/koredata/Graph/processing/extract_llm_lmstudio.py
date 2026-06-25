@@ -11,6 +11,13 @@ Usage:
     python extract_llm_lmstudio.py sciencehistory:2 --dry-run
 """
 
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Extract llm lmstudio helpers for datacontrol/koredata/Graph/processing.
+# Provides the focused helpers and module-level behaviour grouped into this file.
+# ====================================================================================================
+
 import re
 import json
 import argparse

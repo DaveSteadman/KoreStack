@@ -1,5 +1,12 @@
 from __future__ import annotations
 
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Entry point for KoreStack.
+# Bootstraps the package application or utility from the command line.
+# ====================================================================================================
+
 import argparse
 import json
 import logging

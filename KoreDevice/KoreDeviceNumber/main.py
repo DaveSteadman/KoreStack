@@ -1,3 +1,10 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Entry point for KoreDevice/KoreDeviceNumber.
+# Bootstraps the package application or utility from the command line.
+# ====================================================================================================
+
 import sys
 from datetime import datetime
 from pathlib import Path

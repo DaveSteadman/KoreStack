@@ -27,6 +27,13 @@ Endpoints used:
                    GET {REF_URL}/articles/{title}  (with --facts*)
     KoreGraph:     POST {GRAPH_URL}/api/connections/by-name/batch
 """
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Import graph refs helpers for datacontrol/koredata/Graph/processing.
+# Provides the focused helpers and module-level behaviour grouped into this file.
+# ====================================================================================================
+
 import argparse
 import os
 import re

@@ -4,10 +4,8 @@
 # Shared helpers for running batched prompt sequences and compressing conversation history.
 #
 # Provides run_prompt_batch(), called by the /test slash command handler to execute a JSON
-# prompt file sequentially and capture pass/fail output.  Also provides compact_turns(),
-# an in-memory conversation compressor using an isolated LLM call (used when KoreChat
-# compaction is unavailable), and make_task_session() which creates a session context
-# for a scheduled task run.
+# prompt file sequentially and capture pass/fail output, and make_task_session() which
+# creates a session context for a scheduled task run.
 #
 # Related modules:
 #   - input_layer/slash_command_handlers_testing.py  -- calls run_prompt_batch for /test
@@ -20,87 +18,6 @@ from typing import Callable
 from orchestration import ConversationHistory
 from orchestration import SessionContext
 from orchestration import orchestrate_prompt
-
-# ====================================================================================================
-# MARK: CONVERSATION COMPRESSION
-# ====================================================================================================
-
-def compact_turns(
-    messages: list[dict],
-    summaries: list[dict],
-) -> tuple[list[dict], list[dict]]:
-    # Compress all messages in [{role, content}...] format into a summary via an LLM call.
-    # Returns (remaining_messages, updated_summaries).
-    # Returns inputs unchanged on any failure so the caller is never corrupted.
-    from llm_client import call_llm_chat
-    from llm_client import get_active_model
-    from llm_client import get_active_num_ctx
-
-    model   = get_active_model()
-    num_ctx = get_active_num_ctx()
-    if not model or not messages:
-        return messages, summaries
-
-    # Pair user/assistant messages into readable exchange blocks.
-    pairs: list[str] = []
-    pending_user: str | None = None
-    for msg in messages:
-        if msg.get("role") == "user":
-            pending_user = msg.get("content") or ""
-        elif msg.get("role") == "assistant" and pending_user is not None:
-            pairs.append(f"User: {pending_user}\nAssistant: {msg.get('content') or ''}")
-            pending_user = None
-
-    if not pairs:
-        return messages, summaries
-
-    batch_text  = "\n\n".join(pairs)
-    turn_count  = len(pairs)
-    llm_messages = [
-        {
-            "role":    "system",
-            "content": (
-                "You are a precise conversation summariser. "
-                "Compress the following conversation exchanges into one compact paragraph. "
-                "Preserve all specific facts, decisions, code, URLs, names, and conclusions reached. "
-                "Write in third person (e.g. 'The user asked about X; the assistant explained Y and provided Z.'). "
-                "Do not interpret, evaluate, or add information not present in the exchanges."
-            ),
-        },
-        {
-            "role":    "user",
-            "content": f"Conversation to summarise:\n\n{batch_text}",
-        },
-    ]
-
-    try:
-        result       = call_llm_chat(model_name=model, messages=llm_messages, tools=None, num_ctx=num_ctx)
-        summary_text = (result.response or "").strip()
-    except Exception as exc:
-        print(f"[session] Warning: history compaction LLM call failed: {exc}", flush=True)
-        return messages, summaries
-
-    if not summary_text:
-        return messages, summaries
-
-    prior_end   = summaries[-1]["turn_range"][1] if summaries else 0
-    new_summary = {
-        "text":       summary_text,
-        "turn_range": [prior_end + 1, prior_end + turn_count],
-    }
-    return [], summaries + [new_summary]
-
-
-# ----------------------------------------------------------------------------------------------------
-def build_summary_block(summaries: list[dict]) -> str:
-    # Format summary dicts into a single string for injection into the system prompt.
-    if not summaries:
-        return ""
-    parts = [
-        f"[Turns {s['turn_range'][0]}-{s['turn_range'][1]}] {s['text']}"
-        for s in summaries
-    ]
-    return "\n\n".join(parts)
 
 
 # ====================================================================================================

@@ -1,5 +1,12 @@
 #!/usr/bin/env python3
 # ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Ingest helpers for datacontrol/koredata/RAG/databases/hansard2025.
+# Provides the focused helpers and module-level behaviour grouped into this file.
+# ====================================================================================================
+
+# ====================================================================================================
 # Hansard2025 / ingest.py — ingest 2025 UK Parliament debates
 #
 # Ingests all Commons sitting days for the full 2025 parliamentary year

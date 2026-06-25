@@ -11,10 +11,10 @@
 #
 # Conversation lifecycle per run:
 #   1. Claim event (GET /events/next) - returns event + full conversation
-#   2. Build prompt from thread_summary + unsummarised messages + scratchpad
+#   2. Build prompt from background_context + unsummarised messages + scratchpad
 #   3. Run orchestrate_prompt
 #   4. POST /conversations/{id}/messages  (outbound reply)
-#   5. PATCH /conversations/{id}          (updated thread_summary, scratchpad, token_estimate, turn_count)
+#   5. PATCH /conversations/{id}          (updated background_context, scratchpad, token_estimate, turn_count)
 #   6. POST /events/{event_id}/complete   {status: "completed"}
 #   7. POST /events                       {event_type: "outbound_ready"}  (for KoreComms if needed)
 #
@@ -49,8 +49,9 @@ from pathlib import Path
 
 from conversation_state import decode_background_context
 from conversation_state import encode_background_context
+from conversation_state import build_background_turn
 from conversation_state import estimate_next_turn_tokens
-from conversation_state import estimate_summary_tokens
+from conversation_state import merge_background_turns
 from datasets import build_persisted_scratchpad_payload
 from datasets import coerce_persisted_datasets_payload
 from datasets import coerce_persisted_scratchpad_payload
@@ -159,7 +160,7 @@ def _complete_event(base: str, event_id: object, status: str, push_log_line, *, 
     context_prefix = f"[KORECHAT] {context}: " if context else "[KORECHAT] "
     for attempt in range(1, 4):
         try:
-            _http_post(base, f"/api/events/{event_id}/complete", {"status": status})
+            _http_post(base, f"/events/{event_id}/complete", {"status": status})
             return True
         except Exception as exc:
             push_log_line(f"{context_prefix}Event {event_id} complete({status}) attempt {attempt}/3 failed: {exc}")
@@ -216,8 +217,8 @@ def _coerce_conversation_datasets(conv: dict) -> dict[str, dict]:
 # ----------------------------------------------------------------------------------------------------
 def _build_prompt(conv: dict, messages: list[dict], push_log_line=None) -> str:
     """Build an LLM user prompt from a KoreChat conversation record and its messages."""
-    thread_summary    = (conv.get("thread_summary") or "").strip()
     background        = (conv.get("background_context") or "").strip()
+    thread_summary    = (conv.get("thread_summary") or "").strip()
     scratchpad = _coerce_conversation_scratchpad(conv, push_log_line=push_log_line)
     datasets_payload = _coerce_conversation_datasets(conv)
 
@@ -226,10 +227,7 @@ def _build_prompt(conv: dict, messages: list[dict], push_log_line=None) -> str:
 
     parts: list[str] = []
 
-    if background:
-        parts.append(f"--- Background context ---\n{background}")
-
-    if thread_summary:
+    if thread_summary and not background:
         parts.append(f"--- Prior conversation summary ---\n{thread_summary}")
 
     if scratchpad:
@@ -276,22 +274,8 @@ def _build_prompt(conv: dict, messages: list[dict], push_log_line=None) -> str:
 # MARK: COMPRESSION
 # ====================================================================================================
 
-_COMPRESS_PROMPT_TEMPLATE = """\
-Summarise the following conversation thread into a concise paragraph that preserves
-all facts, decisions, and context needed to continue the conversation. Keep it under
-200 words. Output only the summary - no preamble or explanation.
-
---- Messages to summarise ---
-{messages}
-"""
-
-# ----------------------------------------------------------------------------------------------------
 def _handle_compress_needed(
     event:        dict,
-    config:       OrchestratorConfig,
-    log_dir:      Path,
-    session_logger_cls,
-    create_log_file_path,
     push_log_line,
 ) -> None:
     base     = _get_base_url()
@@ -306,7 +290,7 @@ def _handle_compress_needed(
 
     # Fetch all unsummarised messages.
     try:
-        raw = _http_get(base, f"/api/conversations/{conv_id}/messages?summarised=0&limit=500") or []
+        raw = _http_get(base, f"/conversations/{conv_id}/messages?summarised=0&limit=500") or []
     except Exception as exc:
         push_log_line(f"[KORECHAT] Conv {conv_id}: could not fetch messages for compression: {exc}")
         _complete_event(base, event_id, "failed", push_log_line, context=f"conv {conv_id}")
@@ -317,50 +301,50 @@ def _handle_compress_needed(
         _complete_event(base, event_id, "completed", push_log_line, context=f"conv {conv_id}")
         return
 
-    lines = []
-    for m in raw:
-        ts        = (m.get("created_at") or "")[:16]
-        direction = m.get("direction", "?")
-        content   = (m.get("content") or "").strip()
-        label     = "User" if direction == "inbound" else "Agent"
-        lines.append(f"[{ts}] {label}: {content}")
-    messages_text = "\n\n".join(lines)
-    input_chars    = len(messages_text)
-    input_tok_est  = input_chars // 4
+    archived_turns: list[dict] = []
+    pending_prompt: str | None = None
+    input_chars                = 0
+    for message in raw:
+        content     = (message.get("content") or "").strip()
+        direction   = message.get("direction")
+        input_chars += len(content)
+        if not content:
+            continue
+        if direction == "inbound":
+            pending_prompt = content
+            continue
+        if direction == "outbound" and pending_prompt is not None:
+            archived_turns.append(
+                build_background_turn(
+                    turn               = None,
+                    user_prompt        = pending_prompt,
+                    assistant_response = content,
+                    skill_outputs      = [],
+                )
+            )
+            pending_prompt = None
 
-    push_log_line(f"[KORECHAT] Compressing conv {conv_id}: {len(raw)} messages, ~{input_tok_est:,} tok input")
+    input_tok_est = input_chars // 4
+    push_log_line(f"[KORECHAT] Archiving conv {conv_id}: {len(raw)} messages, ~{input_tok_est:,} tok input")
 
-    compress_prompt = _COMPRESS_PROMPT_TEMPLATE.format(messages=messages_text)
+    if not archived_turns:
+        push_log_line(f"[KORECHAT] Conv {conv_id}: no complete turn pairs found - nothing to archive")
+        _complete_event(base, event_id, "completed", push_log_line, context=f"conv {conv_id}")
+        return
 
-    run_log_path = create_log_file_path(log_dir=log_dir)
-    with session_logger_cls(run_log_path) as run_logger:
-        session_id = f"{_SESSION_PREFIX}{conv_id}_compress"
-        _, session_ctx = make_task_session(
-            session_id   = session_id,
-            persist_path = None,
-            max_turns    = 3,
-        )
-
-        summary, prompt_tokens, _ct, ok, _ = orchestrate_prompt(
-            user_prompt          = compress_prompt,
-            config               = config,
-            logger               = run_logger,
-            conversation_history = None,
-            session_context      = session_ctx,
-            quiet                = True,
-            conversation_entry   = conv,
-        )
-
-    if not ok or not summary.strip():
-        push_log_line(f"[KORECHAT] Conv {conv_id}: compression run failed - leaving messages unsummarised")
+    archived_background = merge_background_turns(conv.get("background_context") or "", archived_turns)
+    archived_tokens     = len(archived_background) // 4
+    try:
+        _http_patch(base, f"/conversations/{conv_id}", {
+            "background_context": archived_background,
+            "token_estimate":     archived_tokens,
+        })
+    except Exception as exc:
+        push_log_line(f"[KORECHAT] Conv {conv_id}: failed to patch archived background context: {exc}")
         _complete_event(base, event_id, "failed", push_log_line, context=f"conv {conv_id}")
         return
 
-    # Append new summary to existing thread_summary.
-    existing_summary = (conv.get("thread_summary") or "").strip()
-    new_summary = (existing_summary + "\n\n" + summary.strip()).strip() if existing_summary else summary.strip()
-
-    # Mark messages as summarised.
+    # Mark messages as summarised only after durable archived context has been stored.
     message_ids = [m["id"] for m in raw if m.get("id")]
     for msg_id in message_ids:
         try:
@@ -368,22 +352,10 @@ def _handle_compress_needed(
         except Exception as exc:
             push_log_line(f"[KORECHAT] Conv {conv_id}: could not mark message {msg_id} summarised: {exc}")
 
-    # Patch conversation - reset token_estimate to rough summary size only.
-    summary_tokens = estimate_summary_tokens(new_summary)
-    try:
-        _http_patch(base, f"/api/conversations/{conv_id}", {
-            "thread_summary": new_summary,
-            "token_estimate": summary_tokens,
-        })
-    except Exception as exc:
-        push_log_line(f"[KORECHAT] Conv {conv_id}: failed to patch summary after compression: {exc}")
-        _complete_event(base, event_id, "failed", push_log_line, context=f"conv {conv_id}")
-        return
-
-    reduction_pct = int(100 * (1 - summary_tokens / input_tok_est)) if input_tok_est > 0 else 0
+    reduction_pct = int(100 * (1 - archived_tokens / input_tok_est)) if input_tok_est > 0 else 0
     push_log_line(
-        f"[KORECHAT] Conv {conv_id}: compressed {len(message_ids)} message(s) "
-        f"~{input_tok_est:,} tok -> ~{summary_tokens:,} tok ({reduction_pct}% reduction)"
+        f"[KORECHAT] Conv {conv_id}: archived {len(message_ids)} message(s) into background_context "
+        f"~{input_tok_est:,} tok -> ~{archived_tokens:,} tok ({reduction_pct}% reduction)"
     )
 
     _complete_event(base, event_id, "completed", push_log_line, context=f"conv {conv_id}")
@@ -424,12 +396,8 @@ def _handle_event(
 
     if event_type == "compress_needed":
         _handle_compress_needed(
-            event                = event,
-            config               = config,
-            log_dir              = log_dir,
-            session_logger_cls   = session_logger_cls,
-            create_log_file_path = create_log_file_path,
-            push_log_line        = push_log_line,
+            event         = event,
+            push_log_line = push_log_line,
         )
         return
 
@@ -455,7 +423,7 @@ def _handle_event(
         messages = conv.get("messages")
         if messages is None:
             try:
-                messages = _http_get(base, f"/api/conversations/{conv_id}/messages?limit=500") or []
+                messages = _http_get(base, f"/conversations/{conv_id}/messages?limit=500") or []
             except Exception as exc:
                 push_log_line(f"[KORECHAT] Conv {conv_id}: could not fetch messages: {exc}")
                 messages = []
@@ -466,7 +434,7 @@ def _handle_event(
         # Fetch fresh messages here (rather than trusting the event payload snapshot) because
         # _kc_save_turn posts the outbound asynchronously - the payload may be stale.
         try:
-            fresh_messages = _http_get(base, f"/api/conversations/{conv_id}/messages?limit=10") or []
+            fresh_messages = _http_get(base, f"/conversations/{conv_id}/messages?limit=10") or []
         except Exception:
             fresh_messages = messages
         if fresh_messages and (fresh_messages[-1].get("direction") or "") == "outbound":
@@ -553,7 +521,7 @@ def _handle_event(
 
         # Write outbound message first - if this fails the event is not completed.
         try:
-            _http_post(base, f"/api/conversations/{conv_id}/messages", {
+            _http_post(base, f"/conversations/{conv_id}/messages", {
                 "direction":      "outbound",
                 "content":        reply,
                 "sender_display": str(event_payload.get("outbound_sender_display") or "agent"),
@@ -568,7 +536,7 @@ def _handle_event(
         # This is the durable write - we log failures loudly but still complete the event
         # so the conversation does not stay in agent_processing indefinitely.
         try:
-            _http_patch(base, f"/api/conversations/{conv_id}", {
+            _http_patch(base, f"/conversations/{conv_id}", {
                 "status":             "active",
                 "token_estimate":     new_token_estimate,
                 "turn_count":         turn_count + 1,
@@ -590,7 +558,7 @@ def _handle_event(
         channel = conv.get("channel_type", "webchat")
         if channel not in {"webchat", "manual"}:
             try:
-                _http_post(base, "/api/events", {
+                _http_post(base, "/events", {
                     "conversation_id": conv_id,
                     "event_type":      "outbound_ready",
                     "priority":        0,
@@ -609,7 +577,7 @@ def _handle_event(
                 f"- queuing compress_needed"
             )
             try:
-                _http_post(base, "/api/events", {
+                _http_post(base, "/events", {
                     "conversation_id": conv_id,
                     "event_type":      "compress_needed",
                     "priority":        10,
@@ -649,7 +617,7 @@ def start_koreconv_loop(
 
         while not shutdown.is_set():
             try:
-                event = _http_get(base, "/api/events/next?claimed_by=agent")
+                event = _http_get(base, "/events/next?claimed_by=agent")
                 if event is not None:
                     event_id  = event.get("id")
                     conv_id   = (event.get("conversation") or {}).get("id", "?")

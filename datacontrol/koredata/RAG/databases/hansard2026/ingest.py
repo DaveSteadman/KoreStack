@@ -1,5 +1,12 @@
 #!/usr/bin/env python3
 # ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Ingest helpers for datacontrol/koredata/RAG/databases/hansard2026.
+# Provides the focused helpers and module-level behaviour grouped into this file.
+# ====================================================================================================
+
+# ====================================================================================================
 # Hansard2026 / ingest.py — ingest 2026 UK Parliament debates
 #
 # Ingests all Commons sitting days from 2026-01-01 to the current date.
