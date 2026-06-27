@@ -1075,6 +1075,7 @@ async def koredata_search(
     return await api_search(req)
 
 
+# MARK: KoreFeed Routines
 @_mcp.tool()
 async def koredata_get_feed_entry(domain: str, entry_id: int) -> dict:
     """Fetch the full content of a news feed entry.
@@ -1095,6 +1096,7 @@ async def koredata_get_feed_entry(domain: str, entry_id: int) -> dict:
     return r.json()
 
 
+# MARK: KoreReference Routines
 @_mcp.tool()
 async def koredata_get_reference_article(title: str) -> dict:
     """Fetch the full content of a reference (wiki-style) article.
@@ -1123,6 +1125,7 @@ async def koredata_get_reference_article(title: str) -> dict:
     return r.json()
 
 
+# MARK: KoreLibrary Routines
 @_mcp.tool()
 async def koredata_find_library_book(title: str) -> dict:
     """Find library books by title. Returns closest matches ranked by title similarity.
@@ -1257,6 +1260,7 @@ async def koredata_get_library_book_chunk(
     return data
 
 
+# MARK: KoreGraph Routines
 @_mcp.tool(description=(
     "Read every chunk of a library book, extract factual entity-relationship connections "
     "using linguistic patterns, and submit them all to KoreGraph automatically. "
@@ -1400,6 +1404,7 @@ async def koredata_build_graph_from_book(book_id: str) -> dict:
     }
 
 
+# MARK: KoreRAG Routines
 @_mcp.tool()
 async def koredata_get_rag_chunk(chunk_id: int) -> dict:
     """Fetch the full content of a RAG (retrieval-augmented generation) chunk.
@@ -1419,6 +1424,7 @@ async def koredata_get_rag_chunk(chunk_id: int) -> dict:
     return r.json()
 
 
+# MARK: KoreScrape Routines
 @_mcp.tool()
 async def koredata_get_scrape_chunk(chunk_id: int) -> dict:
     """Fetch the full content of a KoreScrape extracted text chunk."""
@@ -1539,6 +1545,7 @@ async def web_root(request: Request):
     return templates.TemplateResponse(request, "home.html", {"services": services})
 
 
+# MARK: KoreScrape UI Routes
 @app.get("/ui/scrape", response_class=HTMLResponse)
 async def scrape_index(request: Request, q: Optional[str] = None, limit: int = 200):
     captures_r, status_r, chunks_r = await asyncio.gather(
@@ -1733,6 +1740,7 @@ async def proxy_graph(request: Request, path: str):
     return Response(content=resp.content, status_code=resp.status_code, headers=resp_headers)
 
 
+# MARK: KoreFeed UI Routes
 @app.get("/ui/feeds", response_class=HTMLResponse)
 async def web_index(request: Request):
     domains_r, feeds_r = await asyncio.gather(
@@ -2005,6 +2013,7 @@ async def api_proxy_feed_rate(feed_id: str, minutes: int):
 # KoreLibrary — Web UI
 # ===========================================================================
 
+# MARK: KoreLibrary UI Routes
 @app.get("/ui/library", response_class=HTMLResponse)
 async def lib_index(request: Request, limit: int = 200, offset: int = 0, catalog: Optional[str] = None):
     books_r, status_r, catalogs_r = await asyncio.gather(
@@ -2308,6 +2317,7 @@ async def lib_book(request: Request, book_id: str):
 # KoreReference — Web UI
 # ===========================================================================
 
+# MARK: KoreReference UI Routes
 @app.get("/ui/reference/import", response_class=HTMLResponse)
 async def ref_import(request: Request):
     status_r = await _ref_client.get("/import/status")
@@ -2555,6 +2565,7 @@ async def gateway_status():
 # KoreRAG — Web UI
 # ===========================================================================
 
+# MARK: KoreRAG UI Routes
 @app.get("/ui/rag", response_class=HTMLResponse)
 async def rag_index(request: Request, limit: int = 100, offset: int = 0, db: str = "default"):
     # If no db param was explicitly given, redirect to the most-populated database

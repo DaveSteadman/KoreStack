@@ -66,9 +66,11 @@ def _service_row_view(service: dict[str, object]) -> dict[str, object]:
 
 
 def _path_rows(paths: dict[str, object]) -> list[dict[str, str]]:
-    labels = {"path config": "Config", "datacontrol": "Data control", "datauser": "Data user"}
+    labels = {"path config": "Config", "dataroot": "Data Root"}
     items: list[dict[str, str]] = []
     for key, value in paths.items():
+        if key in {"datacontrol", "datauser"}:
+            continue
         items.append({
             "label": labels.get(key, key),
             "path":  str(value),
