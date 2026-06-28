@@ -1,4 +1,8 @@
 
+# Version 0044 / 0.7
+
+[ALL TESTS COMPLETE]  host=http://MONTBLANC:11434  model=gemma4:26b  elapsed=15m 0s  pass rate=96% (55/57)  prompt tokens=4,529,046  avg tok/s=86.1
+
 # Version 0043 / 0.6+dev
 
 [ALL TESTS COMPLETE]  host=http://MONTBLANC:11434  model=gemma4:26b  elapsed=15m 0s  pass rate=98% (79/81)  prompt tokens=7,306,887  avg tok/s=94.9
