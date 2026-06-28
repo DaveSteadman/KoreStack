@@ -342,6 +342,46 @@
   color: color-mix(in srgb, var(--text-dim) 72%, var(--surface) 28%);
 }
 
+#chat-slash-suggestions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 6px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--surface) 76%, var(--bg) 24%);
+}
+
+.chat-slash-suggestion {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text);
+  font: 12px/1.4 var(--font-ui, sans-serif);
+  text-align: left;
+  cursor: pointer;
+}
+
+.chat-slash-suggestion:hover,
+.chat-slash-suggestion.is-active {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.chat-slash-suggestion-label {
+  font-weight: 600;
+}
+
+.chat-slash-suggestion-description {
+  color: var(--text-dim);
+  text-align: right;
+}
+
 #chat-quick-prompts {
   display: flex;
   flex-wrap: wrap;

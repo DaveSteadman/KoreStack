@@ -302,6 +302,10 @@
   }
 </script>
 <script>
+function suiteBaseUrl(value) {
+  return String(value || '').replace(/\/+$/, '');
+}
+
 function showTab(t) {
   document.getElementById('sq-cards-view').style.display = t === 'cards' ? '' : 'none';
   document.getElementById('sq-json-view').style.display  = t === 'json'  ? '' : 'none';
@@ -344,7 +348,7 @@ function renderCards(data) {
       html += '<th>Start</th><th>Connection</th><th>End</th><th style="text-align:right">Score</th>';
       html += '</tr></thead><tbody>';
       for (const r of items) {
-        const graphBase = (window.__koreSuiteUrls || {}).koregraph || '';
+        const graphBase = suiteBaseUrl((window.__koreSuiteUrls || {}).koregraph);
         const graphHref = `${graphBase}/ui/graph`;
         const startLink = r.start ? `<a href="${graphHref}" class="gc-term-link" data-term="${escHtml(r.start)}">${escHtml(r.start)}</a>` : '';
         const endLink   = r.end   ? `<a href="${graphHref}" class="gc-term-link" data-term="${escHtml(r.end)}">${escHtml(r.end)}</a>`   : '';
@@ -380,7 +384,7 @@ function renderCard(r, searchQuery) {
     const authorPart = r.author ? escHtml(r.author) : '';
     let findLink = '';
     if (searchQuery && r.title) {
-      const libraryBase = (window.__koreSuiteUrls || {}).korelibrary || '';
+      const libraryBase = suiteBaseUrl((window.__koreSuiteUrls || {}).korelibrary);
       const href = `${libraryBase}/ui/library/search?q=${encodeURIComponent(searchQuery)}&title=${encodeURIComponent(r.title)}`;
       findLink = ` | <a href="${href}" style="color:var(--dim);">find in book ↗</a>`;
     }
@@ -422,7 +426,7 @@ function goToGraph(term) {
   sessionStorage.setItem('kg-last-term', term);
   sessionStorage.removeItem('kg-last-view');
   sessionStorage.removeItem('kg-history');
-  const graphBase = (window.__koreSuiteUrls || {}).koregraph || '';
+  const graphBase = suiteBaseUrl((window.__koreSuiteUrls || {}).koregraph);
   window.location.href = `${graphBase}/ui/graph`;
 }
 

@@ -100,6 +100,46 @@ class KoreCodeServerTests(unittest.TestCase):
         self.assertTrue(any(item["call_qualname"] == "helper" for item in callees["callees"]))
         self.assertTrue(any(item["caller_qualname"] == "greet" for item in callers["callers"]))
 
+    def test_api_slash_complete_returns_matching_items(self) -> None:
+        payload = server.api_slash_command_complete(
+            server.SlashCommandCompleteBody(
+                text="/workspace r",
+                current_mode="chat",
+                workspace_context_enabled=True,
+                thread_path="__workspace__",
+                has_last_user_message=False,
+                limit=5,
+            )
+        )
+        self.assertTrue(any(item["label"] == "regen" for item in payload["items"]))
+
+    def test_workspace_index_rebuild_allows_duplicate_symbol_names_across_files(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "alpha.py").write_text(
+                "def helper(value):\n"
+                "    return value\n",
+                encoding="utf-8",
+            )
+            (root / "beta.py").write_text(
+                "def helper(value):\n"
+                "    return value.upper()\n",
+                encoding="utf-8",
+            )
+
+            original_root        = server._ACTIVE_ROOT
+            server._ACTIVE_ROOT  = root
+            try:
+                payload = server.api_workspace_index_rebuild()
+                files   = server.api_workspace_index_files()
+                symbols = server.api_workspace_index_symbols(query="helper")
+            finally:
+                server._ACTIVE_ROOT = original_root
+
+        self.assertEqual(payload["index"]["file_count"], 2)
+        self.assertEqual(len(files["files"]), 2)
+        self.assertEqual(sum(1 for item in symbols["symbols"] if item["qualname"] == "helper"), 2)
+
     def test_api_chat_followup_passes_outbound_sender_display(self) -> None:
         with self._temp_runs_dir(), patch("KoreCode.app.server.append_internal_followup", return_value={"ok": True}) as mocked:
             payload = server.api_chat_followup(

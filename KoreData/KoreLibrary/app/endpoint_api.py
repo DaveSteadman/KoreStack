@@ -578,7 +578,8 @@ def register_library_api(app: FastAPI) -> None:
             "authors": [{"author": a, "books": sorted(bks, key=lambda x: x["title"])} for a, bks in sorted(by_author.items())],
         }
 
-    @app.post("/api/import/kiwix", status_code=201, summary="Import a single book from Kiwix by title")
+    @app.post("/api/kiwix/import", status_code=201, summary="Import a single book from Kiwix by title")
+    @app.post("/api/import/kiwix", status_code=201, include_in_schema=False)
     @app.post("/import/kiwix", status_code=201, include_in_schema=False)
     async def import_kiwix(data: KiwixImportRequest):
         url = data.kiwix_url or cfg.get("kiwix_url", "")
@@ -638,7 +639,8 @@ def register_library_api(app: FastAPI) -> None:
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-    @app.post("/api/import/kiwix/viewer", status_code=201, summary="Import a Kiwix article by its viewer URL")
+    @app.post("/api/kiwix/import/viewer", status_code=201, summary="Import a Kiwix article by its viewer URL")
+    @app.post("/api/import/kiwix/viewer", status_code=201, include_in_schema=False)
     @app.post("/import/kiwix/viewer", status_code=201, include_in_schema=False)
     async def import_kiwix_viewer(data: KiwixViewerImportRequest):
         r = await _fetch_and_import_viewer_url(data.viewer_url, data.language, data.kiwix_url, data.catalog)
@@ -648,7 +650,8 @@ def register_library_api(app: FastAPI) -> None:
             raise HTTPException(status_code=409, detail=r["detail"])
         return get_book(r["id"], include_body=False)
 
-    @app.post("/api/import/kiwix/viewer/batch", summary="Batch-import Kiwix articles from a list of viewer URLs")
+    @app.post("/api/kiwix/import/viewer/batch", summary="Batch-import Kiwix articles from a list of viewer URLs")
+    @app.post("/api/import/kiwix/viewer/batch", include_in_schema=False)
     @app.post("/import/kiwix/viewer/batch", include_in_schema=False)
     async def import_kiwix_viewer_batch(data: KiwixViewerBatchRequest):
         results = []

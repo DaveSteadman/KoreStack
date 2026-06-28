@@ -9,6 +9,9 @@ from __future__ import annotations
 
 from typing import Callable
 
+from KoreCommon.SlashCommands import SlashCommandDefinition
+from KoreCommon.SlashCommands import SlashCommandRegistry
+
 from .slash_command_context import KoreCodeSlashCommandContext
 from .workspace_artifacts import rebuild_workspace_artifacts
 
@@ -66,36 +69,82 @@ def _set_mode_action(mode: str, ctx: KoreCodeSlashCommandContext) -> None:
     )
 
 
+def _complete_workspace(arg: str, ctx: KoreCodeSlashCommandContext) -> list[dict]:
+    options = ("on", "off", "regen")
+    prefix  = arg.strip().lower()
+    return [
+        {
+            "value":       value,
+            "label":       value,
+            "description": f"/workspace {value}",
+        }
+        for value in options
+        if not prefix or value.startswith(prefix)
+    ]
+
+
+def _complete_mode(arg: str, ctx: KoreCodeSlashCommandContext) -> list[dict]:
+    prefix = arg.strip().lower()
+    return [
+        {
+            "value":       value,
+            "label":       value,
+            "description": f"Switch to {value} mode",
+        }
+        for value in sorted(_MODE_NAMES)
+        if not prefix or value.startswith(prefix)
+    ]
+
+
 def register_workspace_slash_commands(
-    registry: dict[str, Callable],
-    descriptions: dict[str, str],
+    registry: SlashCommandRegistry,
     *,
     workspace_root_getter: Callable[[], object],
 ) -> None:
     global _workspace_root
     _workspace_root = workspace_root_getter
 
-    registry["/clear"]     = _cmd_clear
-    registry["/retry"]     = _cmd_retry
-    registry["/workspace"] = _cmd_workspace
-    registry["/mode"]      = _cmd_mode
-    registry["/chat"]      = lambda arg, ctx: _cmd_mode_alias(arg, ctx, "chat")
-    registry["/continue"]  = lambda arg, ctx: _cmd_mode_alias(arg, ctx, "continue")
-    registry["/explain"]   = lambda arg, ctx: _cmd_mode_alias(arg, ctx, "explain")
-    registry["/bughunt"]   = lambda arg, ctx: _cmd_mode_alias(arg, ctx, "bughunt")
-    registry["/refactor"]  = lambda arg, ctx: _cmd_mode_alias(arg, ctx, "refactor")
-    registry["/tests"]     = lambda arg, ctx: _cmd_mode_alias(arg, ctx, "tests")
+    registry.register(
+        SlashCommandDefinition(
+            name        = "/clear",
+            description = "Clear the current conversation",
+            handler     = _cmd_clear,
+        )
+    )
+    registry.register(
+        SlashCommandDefinition(
+            name        = "/retry",
+            description = "Retry the last user prompt in the current conversation",
+            handler     = _cmd_retry,
+        )
+    )
+    registry.register(
+        SlashCommandDefinition(
+            name        = "/workspace",
+            description = "Enable, disable, or rebuild workspace context",
+            usage       = "<on|off|regen>  Enable, disable, or rebuild workspace context",
+            handler     = _cmd_workspace,
+            completer   = _complete_workspace,
+        )
+    )
+    registry.register(
+        SlashCommandDefinition(
+            name        = "/mode",
+            description = "Change chat mode",
+            usage       = "<chat|continue|explain|bughunt|refactor|tests>  Change chat mode",
+            handler     = _cmd_mode,
+            completer   = _complete_mode,
+        )
+    )
 
-    descriptions["/clear"]     = "Clear the current conversation"
-    descriptions["/retry"]     = "Retry the last user prompt in the current conversation"
-    descriptions["/workspace"] = "<on|off|regen>  Enable, disable, or rebuild workspace context"
-    descriptions["/mode"]      = "<chat|continue|explain|bughunt|refactor|tests>  Change chat mode"
-    descriptions["/chat"]      = "Switch to chat mode"
-    descriptions["/continue"]  = "Switch to continue mode and run continuation"
-    descriptions["/explain"]   = "Switch to explain mode"
-    descriptions["/bughunt"]   = "Switch to bughunt mode"
-    descriptions["/refactor"]  = "Switch to refactor mode"
-    descriptions["/tests"]     = "Switch to tests mode"
+    for mode in sorted(_MODE_NAMES):
+        registry.register(
+            SlashCommandDefinition(
+                name        = f"/{mode}",
+                description = f"Switch to {mode} mode" if mode != "continue" else "Switch to continue mode and run continuation",
+                handler     = lambda arg, ctx, selected_mode=mode: _cmd_mode_alias(arg, ctx, selected_mode),
+            )
+        )
 
 
 _workspace_root: Callable[[], object]

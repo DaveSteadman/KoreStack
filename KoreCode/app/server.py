@@ -88,6 +88,7 @@ from .run_store import list_runs
 from .run_store import set_run_output
 from .run_store import update_run
 from .slash_command_context import KoreCodeSlashCommandContext
+from .slash_commands import complete as complete_slash_command
 from .slash_commands import handle as handle_slash_command
 from .slash_commands import initialize as initialize_slash_commands
 from .tool_api import execute_tool_requests
@@ -296,6 +297,15 @@ class SlashCommandBody(BaseModel):
     workspace_context_enabled: bool = True
     thread_path:               str  = "__workspace__"
     has_last_user_message:     bool = False
+
+
+class SlashCommandCompleteBody(BaseModel):
+    text:                      str
+    current_mode:              str  = "chat"
+    workspace_context_enabled: bool = True
+    thread_path:               str  = "__workspace__"
+    has_last_user_message:     bool = False
+    limit:                     int  = 12
 
 
 class ChatSendBody(BaseModel):
@@ -908,6 +918,24 @@ def api_slash_command(body: SlashCommandBody):
         "handled":  handled,
         "messages": messages,
         "actions":  ctx.actions,
+    }
+
+
+@app.post('/api/slash/complete')
+def api_slash_command_complete(body: SlashCommandCompleteBody):
+    ctx = KoreCodeSlashCommandContext(
+        output                    = lambda text, level="info": None,
+        current_mode              = body.current_mode,
+        workspace_context_enabled = body.workspace_context_enabled,
+        thread_path               = body.thread_path,
+        has_last_user_message     = body.has_last_user_message,
+    )
+    return {
+        "items": complete_slash_command(
+            body.text,
+            ctx,
+            limit = max(1, min(int(body.limit), 25)),
+        ),
     }
 
 

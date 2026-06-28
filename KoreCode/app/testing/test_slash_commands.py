@@ -89,6 +89,27 @@ class KoreCodeSlashCommandTests(unittest.TestCase):
             [{"type": "set_mode", "mode": "continue", "run_continue": True}],
         )
 
+    def test_complete_lists_matching_commands(self) -> None:
+        ctx = KoreCodeSlashCommandContext(
+            output                    = lambda text, level="info": None,
+            current_mode              = "chat",
+            workspace_context_enabled = True,
+            thread_path               = "__workspace__",
+        )
+        items = slash_commands.complete("/wo", ctx)
+        self.assertTrue(any(item["label"] == "/workspace" for item in items))
+
+    def test_complete_lists_workspace_subcommands(self) -> None:
+        ctx = KoreCodeSlashCommandContext(
+            output                    = lambda text, level="info": None,
+            current_mode              = "chat",
+            workspace_context_enabled = True,
+            thread_path               = "__workspace__",
+        )
+        items = slash_commands.complete("/workspace r", ctx)
+        self.assertEqual(items[0]["label"], "regen")
+        self.assertEqual(items[0]["value"], "/workspace regen ")
+
 
 if __name__ == "__main__":
     unittest.main()

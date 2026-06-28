@@ -178,6 +178,7 @@ def get_symbol_by_qualname(root: Path, qualname: str) -> dict | None:
             JOIN files f
               ON f.id = s.file_id
             WHERE s.qualname = ?
+            ORDER BY f.path, s.line_start
             LIMIT 1
             """,
             [str(qualname)],
@@ -278,7 +279,7 @@ def _rebuild_schema(conn: sqlite3.Connection) -> None:
         CREATE TABLE symbols (
             id                 INTEGER PRIMARY KEY AUTOINCREMENT,
             file_id            INTEGER NOT NULL,
-            qualname           TEXT NOT NULL UNIQUE,
+            qualname           TEXT NOT NULL,
             name               TEXT NOT NULL,
             kind               TEXT NOT NULL,
             container_qualname TEXT,
@@ -312,6 +313,8 @@ def _rebuild_schema(conn: sqlite3.Connection) -> None:
 
         CREATE INDEX idx_symbols_file_id        ON symbols(file_id);
         CREATE INDEX idx_symbols_name           ON symbols(name);
+        CREATE UNIQUE INDEX idx_symbols_file_qualname
+            ON symbols(file_id, qualname);
         CREATE INDEX idx_imports_file_id        ON imports(file_id);
         CREATE INDEX idx_calls_caller_symbol_id ON calls(caller_symbol_id);
         CREATE INDEX idx_calls_call_qualname    ON calls(call_qualname);

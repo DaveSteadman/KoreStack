@@ -12,14 +12,12 @@ const _MIN_PANEL_W = 260;
 const _MAX_PANEL_W = 720;
 const _DEFAULT_PANEL_W = 340;
 const _WORKSPACE_THREAD_KEY = '__workspace__';
-const _CONVERSATION_STORE_KEY = '__conversation__';
-
-// In-memory chat thread store: path -> Array<{ role: 'user'|'assistant', text: string }>
+// In-memory chat state keyed by thread path.
 const _threads = new Map();
 
-function _saveState(open, mode, threads = {}, pendingRuns = {}, continueState = null, conversationExternalId = null) {
+function _saveState(open, mode, threads = {}, pendingRuns = {}, continueState = null, conversationExternalIds = {}, conversationTitles = {}) {
   try {
-    localStorage.setItem(_STATE_KEY, JSON.stringify({ open, mode, threads, pendingRuns, continueState, conversationExternalId }));
+    localStorage.setItem(_STATE_KEY, JSON.stringify({ open, mode, threads, pendingRuns, continueState, conversationExternalIds, conversationTitles }));
   } catch (_) {}
 }
 
@@ -90,6 +88,7 @@ export function initChat({
   const selectionChip = document.getElementById('chat-selection-chip');
   const selectionLabel = document.getElementById('chat-selection-label');
   const progressNote = document.getElementById('chat-progress-note');
+  const slashSuggestionsEl = document.getElementById('chat-slash-suggestions');
 
   let _currentSelection = null;
   let _currentCursor = { line: 1, column: 1, offset: 0 };
@@ -103,10 +102,13 @@ export function initChat({
   let _isGenerating = false;
   let _workspaceContextEnabled = _loadWorkspaceContextEnabled();
   let _continueControllerApi = { stateSnapshot: () => null };
-  let _conversationExternalId = null;
-  let _conversationTitle = null;
+  const _conversationExternalIds = new Map();
+  const _conversationTitles = new Map();
   let _historyIndex = -1;
   let _historyDraft = '';
+  let _slashSuggestions = [];
+  let _slashSuggestionIndex = -1;
+  let _slashSuggestSeq = 0;
 
   const _threadUI = createThreadUI({
     thread,
@@ -117,7 +119,7 @@ export function initChat({
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({
           edits,
-          run_id: _pendingRuns.get(_CONVERSATION_STORE_KEY) || null,
+          run_id: _pendingRuns.get(_threadKey(currentThreadPath())) || null,
           source: 'assistant',
           summary: 'Assistant structured edits',
         }),
@@ -157,6 +159,42 @@ export function initChat({
     _updateSelectionChip();
   }
 
+  function _threadKey(path) {
+    return path || _WORKSPACE_THREAD_KEY;
+  }
+
+  function _threadMessages(path) {
+    return _threads.get(_threadKey(path)) ?? [];
+  }
+
+  function _hasThreadState(path) {
+    return _threads.has(_threadKey(path));
+  }
+
+  function _conversationExternalIdForPath(path) {
+    return _conversationExternalIds.get(_threadKey(path)) ?? null;
+  }
+
+  function _conversationTitleForPath(path) {
+    return _conversationTitles.get(_threadKey(path)) ?? null;
+  }
+
+  function _conversationExternalIdsToObject() {
+    const out = {};
+    for (const [path, externalId] of _conversationExternalIds) out[path] = externalId;
+    return out;
+  }
+
+  function _conversationTitlesToObject() {
+    const out = {};
+    for (const [path, title] of _conversationTitles) out[path] = title;
+    return out;
+  }
+
+  function _shouldFetchRemoteThread(path) {
+    return Boolean(_conversationExternalIdForPath(path) || !_hasThreadState(path));
+  }
+
   function _updateSelectionChip() {
     if (!selectionChip) return;
     if (panel.hidden) {
@@ -175,8 +213,14 @@ export function initChat({
   }
 
   function _setConversationTitle(value) {
+    const path = currentThreadPath();
     const next = typeof value === 'string' && value.trim() ? value.trim() : null;
-    _conversationTitle = next;
+    const key = _threadKey(path);
+    if (next) {
+      _conversationTitles.set(key, next);
+    } else {
+      _conversationTitles.delete(key);
+    }
     if (!linkedConversation || !linkedConversationName) return;
     linkedConversation.hidden = !next;
     if (next) {
@@ -186,10 +230,11 @@ export function initChat({
       linkedConversationName.textContent = '';
       linkedConversationName.removeAttribute('title');
     }
+    _save();
   }
 
   function _userPromptHistory() {
-    const messages = _threads.get(_CONVERSATION_STORE_KEY) ?? [];
+    const messages = _threadMessages(currentThreadPath());
     return messages
       .filter((msg) => msg?.role === 'user')
       .map((msg) => String(msg?.text || ''))
@@ -254,6 +299,84 @@ export function initChat({
     return !after.includes('\n');
   }
 
+  function _clearSlashSuggestions() {
+    _slashSuggestions = [];
+    _slashSuggestionIndex = -1;
+    if (!slashSuggestionsEl) return;
+    slashSuggestionsEl.hidden = true;
+    slashSuggestionsEl.replaceChildren();
+  }
+
+  function _renderSlashSuggestions() {
+    if (!slashSuggestionsEl) return;
+    slashSuggestionsEl.replaceChildren();
+    if (!_slashSuggestions.length) {
+      slashSuggestionsEl.hidden = true;
+      return;
+    }
+    _slashSuggestions.forEach((item, index) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = `chat-slash-suggestion${index === _slashSuggestionIndex ? ' is-active' : ''}`;
+      btn.innerHTML = `
+        <span class="chat-slash-suggestion-label"></span>
+        <span class="chat-slash-suggestion-description"></span>
+      `;
+      btn.querySelector('.chat-slash-suggestion-label').textContent = String(item?.label || item?.value || '');
+      btn.querySelector('.chat-slash-suggestion-description').textContent = String(item?.description || '');
+      btn.addEventListener('click', () => _applySlashSuggestion(index));
+      slashSuggestionsEl.appendChild(btn);
+    });
+    slashSuggestionsEl.hidden = false;
+  }
+
+  function _setSlashSuggestions(items) {
+    _slashSuggestions = Array.isArray(items) ? items : [];
+    _slashSuggestionIndex = _slashSuggestions.length ? 0 : -1;
+    _renderSlashSuggestions();
+  }
+
+  function _isSlashInput(text = input.value) {
+    return String(text || '').trimStart().startsWith('/');
+  }
+
+  async function _refreshSlashSuggestions() {
+    const currentValue = input.value;
+    if (!_isSlashInput(currentValue)) {
+      _clearSlashSuggestions();
+      return;
+    }
+    const seq = ++_slashSuggestSeq;
+    try {
+      const items = await _fetchSlashCompletions(currentValue);
+      if (seq !== _slashSuggestSeq) return;
+      _setSlashSuggestions(items);
+    } catch (_) {
+      if (seq !== _slashSuggestSeq) return;
+      _clearSlashSuggestions();
+    }
+  }
+
+  function _applySlashSuggestion(index = _slashSuggestionIndex) {
+    const item = _slashSuggestions[index];
+    if (!item) return false;
+    _setInputValue(String(item.value || ''));
+    _clearSlashSuggestions();
+    return true;
+  }
+
+  function _moveSlashSuggestion(direction) {
+    if (!_slashSuggestions.length) return false;
+    if (_slashSuggestionIndex < 0) {
+      _slashSuggestionIndex = 0;
+    } else {
+      const total = _slashSuggestions.length;
+      _slashSuggestionIndex = (_slashSuggestionIndex + direction + total) % total;
+    }
+    _renderSlashSuggestions();
+    return true;
+  }
+
   function _readSavedWidth() {
     try {
       const raw = localStorage.getItem(_WIDTH_KEY);
@@ -292,6 +415,9 @@ export function initChat({
     panel.hidden = !_panelOpen;
     splitter.hidden = !_panelOpen;
     aiBtn.classList.toggle('is-active', _panelOpen);
+    if (!_panelOpen) {
+      _clearSlashSuggestions();
+    }
     _save();
     _syncThinkingNote();
     _updateSelectionChip();
@@ -358,20 +484,21 @@ export function initChat({
       threads,
       _pendingToObject(),
       _continueControllerApi.stateSnapshot(),
-      _conversationExternalId,
+      _conversationExternalIdsToObject(),
+      _conversationTitlesToObject(),
     );
   }
 
   function _setPending(path, runId) {
     if (!path || !runId) return;
-    _pendingRuns.set(_CONVERSATION_STORE_KEY, runId);
+    _pendingRuns.set(_threadKey(path), runId);
     _save();
     _syncThinkingNote();
   }
 
   function _clearPending(path) {
-    if (!path || !_pendingRuns.has(_CONVERSATION_STORE_KEY)) return;
-    _pendingRuns.delete(_CONVERSATION_STORE_KEY);
+    if (!path || !_pendingRuns.has(_threadKey(path))) return;
+    _pendingRuns.delete(_threadKey(path));
     _save();
     _syncThinkingNote();
   }
@@ -383,14 +510,14 @@ export function initChat({
       return;
     }
     const hasAnyPending = _pendingRuns.size > 0;
-    const hasCurrentPending = _pendingRuns.has(_CONVERSATION_STORE_KEY);
+    const hasCurrentPending = _pendingRuns.has(_threadKey(currentThreadPath()));
     progressNote.hidden = !hasAnyPending;
     if (progressNote.hidden) return;
     progressNote.textContent = hasCurrentPending ? 'Generating...' : 'Generating... (in another tab)';
   }
 
   function _lastUserMessage(_path) {
-    const messages = _threads.get(_CONVERSATION_STORE_KEY) ?? [];
+    const messages = _threadMessages(_path);
     for (let i = messages.length - 1; i >= 0; i -= 1) {
       if (messages[i]?.role === 'user' && typeof messages[i].text === 'string' && messages[i].text.trim()) {
         return messages[i].text;
@@ -401,24 +528,31 @@ export function initChat({
 
   function _clearThread(path) {
     if (!path) return;
-    _threads.delete(_CONVERSATION_STORE_KEY);
+    const key = _threadKey(path);
+    _threads.delete(key);
+    _conversationExternalIds.delete(key);
+    _conversationTitles.delete(key);
+    if (_threadKey(currentThreadPath()) === key) {
+      _setConversationTitle(null);
+    }
     _clearPending(path);
     _save();
-    renderThread(_CONVERSATION_STORE_KEY);
+    renderThread(path);
   }
 
   async function _clearThreadRemote(path) {
     if (!path) return;
     try {
       const qs = new URLSearchParams({ path });
-      if (_conversationExternalId) {
-        qs.set('conversation_external_id', _conversationExternalId);
+      const externalId = _conversationExternalIdForPath(path);
+      if (externalId) {
+        qs.set('conversation_external_id', externalId);
       }
       const resp = await fetch(`/api/chat/thread?${qs.toString()}`, { method: 'DELETE' });
       if (!resp.ok) {
         throw new Error(`${resp.status} ${resp.statusText}`);
       }
-      _conversationExternalId = null;
+      _conversationExternalIds.delete(_threadKey(path));
     } catch (err) {
       _localAssistantMessage(path, `Clear thread failed: ${_errorText(err)}`);
       return;
@@ -429,7 +563,7 @@ export function initChat({
   function _localAssistantMessage(path, text) {
     if (!path || !text) return;
     _pushMessage(path, { role: 'assistant', text });
-    renderThread(_CONVERSATION_STORE_KEY);
+    renderThread(path);
   }
 
   function _applyWorkspaceContext(enabled) {
@@ -439,12 +573,13 @@ export function initChat({
   }
 
   async function _syncWorkspaceContextForConversation(enabled) {
-    if (!_conversationExternalId) return;
+    const externalId = _conversationExternalIdForPath(currentThreadPath());
+    if (!externalId) return;
     const resp = await fetch('/api/chat/workspace-context', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        conversation_external_id: _conversationExternalId,
+        conversation_external_id: externalId,
         enabled: Boolean(enabled),
       }),
     });
@@ -454,9 +589,10 @@ export function initChat({
   }
 
   function _resetConversationState({ keepPanel = true } = {}) {
-    _threads.delete(_CONVERSATION_STORE_KEY);
-    _pendingRuns.delete(_CONVERSATION_STORE_KEY);
-    _conversationExternalId = null;
+    _threads.clear();
+    _pendingRuns.clear();
+    _conversationExternalIds.clear();
+    _conversationTitles.clear();
     _setConversationTitle(null);
     _resetPromptHistoryCursor();
     _manualStopRequested = false;
@@ -533,6 +669,26 @@ export function initChat({
     return true;
   }
 
+  async function _fetchSlashCompletions(text) {
+    const resp = await fetch('/api/slash/complete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text,
+        current_mode: _mode,
+        workspace_context_enabled: _workspaceContextEnabled,
+        thread_path: currentThreadPath(),
+        has_last_user_message: Boolean(_lastUserMessage(currentThreadPath())),
+        limit: 8,
+      }),
+    });
+    if (!resp.ok) {
+      throw new Error(`${resp.status} ${resp.statusText}`);
+    }
+    const payload = await resp.json();
+    return Array.isArray(payload?.items) ? payload.items : [];
+  }
+
   function _errorText(err) {
     if (!err) return 'Unknown error';
     if (typeof err === 'string') return err;
@@ -589,20 +745,34 @@ export function initChat({
   }
 
   function _hydrateThread(path, payload, { render = true } = {}) {
+    const key = _threadKey(path);
     if (payload?.external_id) {
-      _conversationExternalId = String(payload.external_id);
+      _conversationExternalIds.set(key, String(payload.external_id));
+    } else {
+      _conversationExternalIds.delete(key);
     }
-    _setConversationTitle(payload?.title);
+    const nextTitle = typeof payload?.title === 'string' ? payload.title : null;
+    if (nextTitle && nextTitle.trim()) {
+      _conversationTitles.set(key, nextTitle.trim());
+    } else {
+      _conversationTitles.delete(key);
+    }
+    if (_threadKey(currentThreadPath()) === key) {
+      _setConversationTitle(nextTitle);
+    }
     const messages = _filterVisibleMessages(payload?.messages);
     if (messages.length) {
-      _threads.set(_CONVERSATION_STORE_KEY, messages);
+      _threads.set(key, messages);
     } else {
-      _threads.delete(_CONVERSATION_STORE_KEY);
+      _threads.delete(key);
     }
     if (payload?.pending_response) {
       const runId = String(payload?.run?.run_id || payload?.conversation_id || 'pending');
       _setPending(path, runId);
+    } else {
+      _clearPending(path);
     }
+    _save();
     if (render) {
       renderThread(path);
     }
@@ -611,8 +781,9 @@ export function initChat({
 
   async function _fetchThread(path) {
     const qs = new URLSearchParams({ path });
-    if (_conversationExternalId) {
-      qs.set('conversation_external_id', _conversationExternalId);
+    const externalId = _conversationExternalIdForPath(path);
+    if (externalId) {
+      qs.set('conversation_external_id', externalId);
     }
     qs.set('workspace_context_enabled', _workspaceContextEnabled ? 'true' : 'false');
     const resp = await fetch(`/api/chat/thread?${qs.toString()}`);
@@ -623,10 +794,15 @@ export function initChat({
     return _hydrateThread(path, payload, { render: false });
   }
 
-  function _setConversationExternalId(value) {
+  function _setConversationExternalId(value, path = currentThreadPath()) {
     const next = typeof value === 'string' && value ? value : null;
-    if (_conversationExternalId === next) return;
-    _conversationExternalId = next;
+    const key = _threadKey(path);
+    if (_conversationExternalIds.get(key) === next) return;
+    if (next) {
+      _conversationExternalIds.set(key, next);
+    } else {
+      _conversationExternalIds.delete(key);
+    }
     if (!next) {
       _setConversationTitle(null);
     }
@@ -641,14 +817,14 @@ export function initChat({
     return await resp.json();
   }
 
-  async function _waitForRun(runId) {
+  async function _waitForRun(runId, path = currentThreadPath()) {
     while (true) {
       if (_manualStopRequested) {
         throw new DOMException('Polling aborted', 'AbortError');
       }
       const run = await _fetchRun(runId);
       if (typeof run?.conversation_external_id === 'string' && run.conversation_external_id) {
-        _setConversationExternalId(run.conversation_external_id);
+        _setConversationExternalId(run.conversation_external_id, path);
       }
       const status = String(run?.status || '');
       if (status === 'completed' || status === 'failed') {
@@ -700,7 +876,7 @@ export function initChat({
   }
 
   function renderThread(path) {
-    _threadUI.renderThread(path, path ? (_threads.get(_CONVERSATION_STORE_KEY) ?? []) : []);
+    _threadUI.renderThread(path, path ? _threadMessages(path) : []);
   }
 
   _continueControllerApi = createContinueModeController({
@@ -709,15 +885,15 @@ export function initChat({
     getContinueContext,
     insertContinuation,
     getCurrentPath: currentPath,
-    getConversationExternalId: () => _conversationExternalId,
-    setConversationExternalId: (value) => _setConversationExternalId(value),
+    getConversationExternalId: () => _conversationExternalIdForPath(currentThreadPath()),
+    setConversationExternalId: (value) => _setConversationExternalId(value, currentThreadPath()),
     startContinueRun: async (payload) => {
       const resp = await fetch('/api/chat/continue-runs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...payload,
-          conversation_external_id: payload?.conversation_external_id ?? _conversationExternalId,
+          conversation_external_id: payload?.conversation_external_id ?? _conversationExternalIdForPath(currentThreadPath()),
           workspace_context_enabled: _workspaceContextEnabled,
         }),
       });
@@ -783,8 +959,9 @@ export function initChat({
     if (nowOpen) {
       _refreshSelectionFromEditor();
       const path = currentThreadPath();
+      _setConversationTitle(_conversationTitleForPath(path));
       renderThread(path);
-      if (path) {
+      if (path && _shouldFetchRemoteThread(path)) {
         void _fetchThread(path)
           .then((payload) => {
             _hydrateThread(path, payload);
@@ -840,6 +1017,29 @@ export function initChat({
   });
 
   input.addEventListener('keydown', (e) => {
+    if (e.key === 'Tab' && !e.shiftKey && !e.altKey && !e.ctrlKey && !e.metaKey) {
+      if (_applySlashSuggestion()) {
+        e.preventDefault();
+        return;
+      }
+    }
+    if (_slashSuggestions.length && !e.altKey && !e.ctrlKey && !e.metaKey) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        _moveSlashSuggestion(1);
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        _moveSlashSuggestion(-1);
+        return;
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        _clearSlashSuggestions();
+        return;
+      }
+    }
     if (_shouldUseHistoryKey(e)) {
       const moved = _navigatePromptHistory(e.key === 'ArrowUp' ? -1 : 1);
       if (moved) {
@@ -875,19 +1075,20 @@ export function initChat({
       _historyDraft = input.value;
     }
     _autosize(input);
+    void _refreshSlashSuggestions();
   });
 
   async function _resumePendingForPath(path) {
     if (!path || _activeReader) return;
-    const pendingRunId = _pendingRuns.get(_CONVERSATION_STORE_KEY);
+    const pendingRunId = _pendingRuns.get(_threadKey(path));
     if (!pendingRunId) return;
 
     const thinkingEl = _appendThinking('Waiting for agent...');
     _setGenerating(true);
 
     try {
-      const run = await _waitForRun(pendingRunId);
-      if (_conversationExternalId) {
+      const run = await _waitForRun(pendingRunId, path);
+      if (_conversationExternalIdForPath(path)) {
         const payload = await _fetchThread(path);
         _hydrateThread(path, payload);
         renderThread(path);
@@ -926,7 +1127,7 @@ export function initChat({
     const path            = activePath || _WORKSPACE_THREAD_KEY;
     const selectionForRun = _currentSelection;
     const cursorForRun    = { ..._currentCursor };
-    if (!text || _activeReader) return;
+    _clearSlashSuggestions();
     if (overrideText == null && text.startsWith('/')) {
       try {
         const handled = await _runSlashCommand(path, text);
@@ -942,7 +1143,8 @@ export function initChat({
         return;
       }
     }
-    if (_pendingRuns.has(_CONVERSATION_STORE_KEY)) {
+    if (!text || _activeReader) return;
+    if (_pendingRuns.has(_threadKey(path))) {
       void _resumePendingForPath(path);
       return;
     }
@@ -975,7 +1177,7 @@ export function initChat({
           selection:                selectionForRun,
           cursor:                   cursorForRun,
           mode:                     _mode,
-          conversation_external_id: _conversationExternalId,
+          conversation_external_id: _conversationExternalIdForPath(path),
           workspace_context_enabled: _workspaceContextEnabled,
         }),
       });
@@ -987,9 +1189,9 @@ export function initChat({
       const run = payload?.run || payload;
       _setPending(path, run?.run_id);
 
-      const completedRun = await _waitForRun(run?.run_id);
+      const completedRun = await _waitForRun(run?.run_id, path);
       _clearPending(path);
-      if (_conversationExternalId) {
+      if (_conversationExternalIdForPath(path)) {
         const threadPayload = await _fetchThread(path);
         _hydrateThread(path, threadPayload);
         renderThread(path);
@@ -1020,8 +1222,9 @@ export function initChat({
   }
 
   function _pushMessage(path, msg) {
-    if (!_threads.has(_CONVERSATION_STORE_KEY)) _threads.set(_CONVERSATION_STORE_KEY, []);
-    _threads.get(_CONVERSATION_STORE_KEY).push(msg);
+    const key = _threadKey(path);
+    if (!_threads.has(key)) _threads.set(key, []);
+    _threads.get(key).push(msg);
     _save();
   }
 
@@ -1039,34 +1242,42 @@ export function initChat({
     const saved = _loadState();
     if (!saved) return;
 
-    if (saved.threads) {
-      const savedConversation = saved.threads[_CONVERSATION_STORE_KEY];
-      if (Array.isArray(savedConversation) && savedConversation.length) {
-        _threads.set(_CONVERSATION_STORE_KEY, savedConversation);
-      } else {
-        for (const msgs of Object.values(saved.threads)) {
-          if (Array.isArray(msgs) && msgs.length) {
-            _threads.set(_CONVERSATION_STORE_KEY, msgs);
-            break;
-          }
+    if (saved.threads && typeof saved.threads === 'object') {
+      for (const [path, msgs] of Object.entries(saved.threads)) {
+        if (Array.isArray(msgs) && msgs.length) {
+          _threads.set(_threadKey(path), msgs);
         }
       }
     }
 
     if (saved.pendingRuns && typeof saved.pendingRuns === 'object') {
-      for (const runId of Object.values(saved.pendingRuns)) {
+      for (const [path, runId] of Object.entries(saved.pendingRuns)) {
         if (typeof runId === 'string' && runId) {
-          _pendingRuns.set(_CONVERSATION_STORE_KEY, runId);
-          break;
+          _pendingRuns.set(_threadKey(path), runId);
+        }
+      }
+    }
+
+    if (saved.conversationExternalIds && typeof saved.conversationExternalIds === 'object') {
+      for (const [path, externalId] of Object.entries(saved.conversationExternalIds)) {
+        if (typeof externalId === 'string' && externalId) {
+          _conversationExternalIds.set(_threadKey(path), externalId);
+        }
+      }
+    } else if (typeof saved.conversationExternalId === 'string' && saved.conversationExternalId) {
+      _conversationExternalIds.set(_WORKSPACE_THREAD_KEY, saved.conversationExternalId);
+    }
+
+    if (saved.conversationTitles && typeof saved.conversationTitles === 'object') {
+      for (const [path, title] of Object.entries(saved.conversationTitles)) {
+        if (typeof title === 'string' && title.trim()) {
+          _conversationTitles.set(_threadKey(path), title.trim());
         }
       }
     }
 
     if (saved.continueState && typeof saved.continueState === 'object') {
       _continueControllerApi.restoreState(saved.continueState);
-    }
-    if (typeof saved.conversationExternalId === 'string' && saved.conversationExternalId) {
-      _conversationExternalId = saved.conversationExternalId;
     }
 
     _syncThinkingNote();
@@ -1081,6 +1292,8 @@ export function initChat({
         void _continueControllerApi.resumeContinueIfNeeded();
       }
     }
+
+    _setConversationTitle(_conversationTitleForPath(currentThreadPath()));
   })();
 
   return {
@@ -1094,11 +1307,12 @@ export function initChat({
     onTabChange(path) {
       if (panel.hidden) return;
       _refreshSelectionFromEditor();
+      _setConversationTitle(_conversationTitleForPath(path || _WORKSPACE_THREAD_KEY));
       _syncThinkingNote();
       if (_mode !== 'continue') {
         const threadPath = path || _WORKSPACE_THREAD_KEY;
         renderThread(threadPath);
-        if (threadPath) {
+        if (threadPath && _shouldFetchRemoteThread(threadPath)) {
           void _fetchThread(threadPath)
             .then((payload) => {
               _hydrateThread(threadPath, payload);

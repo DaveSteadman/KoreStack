@@ -254,7 +254,7 @@
 {% block scripts %}
 <script>
 function libraryApiUrl(path) {
-  const base = (window.__koreSuiteUrls || {}).korelibrary || '';
+  const base = String((window.__koreSuiteUrls || {}).korelibrary || '').replace(/\/+$/, '');
   return base ? `${base}${path}` : path;
 }
 
@@ -448,14 +448,14 @@ async function kiwixImport(title, zimName, articleUrl, rowId) {
   const payload = { zim_name: zimName, title: title, kiwix_url: kiwixUrl() };
   if (articleUrl) payload.article_url = articleUrl;
 
-  logLine(`-> POST /library/import/kiwix`, 'var(--dim)');
+  logLine(`-> POST /api/kiwix/import`, 'var(--dim)');
   logLine(`  zim: ${zimName}`, 'var(--dim)');
   logLine(`  title: ${title}`, 'var(--dim)');
   logLine(`  article_url: ${articleUrl || '(reconstructed from title)'}`, 'var(--dim)');
   logLine(`  kiwix_url: ${kiwixUrl() || '(none - using server default)'}`, 'var(--dim)');
 
   try {
-    const resp = await fetch(libraryApiUrl('/api/import/kiwix'), {
+    const resp = await fetch(libraryApiUrl('/api/kiwix/import'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -503,10 +503,10 @@ async function kiwixImportViewerUrl() {
   const btn = document.querySelector('#k_viewer_url + button') ||
               document.querySelector('[onclick="kiwixImportViewerUrl()"]');
   if (btn) { btn.disabled = true; btn.textContent = '...'; }
-  logLine(`-> POST /library/import/kiwix/viewer`, 'var(--dim)');
+  logLine(`-> POST /api/kiwix/import/viewer`, 'var(--dim)');
   logLine(`  viewer_url: ${raw}`, 'var(--dim)');
   try {
-    const resp = await fetch(libraryApiUrl('/api/import/kiwix/viewer'), {
+    const resp = await fetch(libraryApiUrl('/api/kiwix/import/viewer'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ viewer_url: raw }),
@@ -666,7 +666,7 @@ async function batchImport() {
   batchLog(`-> Starting batch import of ${urls.length} URL(s)`, 'var(--dim)');
 
   try {
-    const resp = await fetch(libraryApiUrl('/api/import/kiwix/viewer/batch'), {
+    const resp = await fetch(libraryApiUrl('/api/kiwix/import/viewer/batch'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ urls }),
