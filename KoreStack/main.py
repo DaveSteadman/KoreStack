@@ -37,7 +37,12 @@ log: logging.Logger = logging.getLogger("korestack")
 
 SUITE_ROOT = Path(__file__).resolve().parent.parent
 STACK_ROOT = Path(__file__).resolve().parent
-STACK_STATIC_DIR = STACK_ROOT / "static"
+STACK_STATIC_DIR = Path(
+    os.environ.get(
+        "KORE_KORESTACK_STATIC_DIR",
+        str(SUITE_ROOT / "KoreUI" / "KoreStack" / "static"),
+    )
+).resolve()
 UI_ELEMENTS_ASSETS = SUITE_ROOT / "UIElements" / "assets"
 SUITE_CONFIG_FILE = SUITE_ROOT / "config" / "korestack_config.json"
 
@@ -116,13 +121,13 @@ SERVICE_META: dict[str, dict[str, object]] = {
 }
 
 SERVICE_ICON_KEYS: dict[str, str] = {
-    "koreagent":        "koreagent",
-    "korechat":         "korechat",
-    "koredatagateway":  "koredata",
+    "koreagent":         "koreagent",
+    "korechat":          "korechat",
+    "koredatagateway":   "koredata",
     "koredevicegateway": "koredevice",
-    "koredocs":         "koredocs",
-    "korecode":         "korecode",
-    "korecomms":        "korecomms",
+    "koredocs":          "koredocs",
+    "korecode":          "korecode",
+    "korecomms":         "korecomms",
 }
 
 
@@ -263,9 +268,29 @@ def build_child_env(config: dict) -> dict[str, str]:
             continue
         _port = _require_service_port(config, _slug)
         _host = _service_host(config, _slug)
-        _key = SERVICE_ICON_KEYS.get(_slug)
+        _url  = f"http://{_host}:{_port}{_meta['url_suffix']}"
+        _key  = SERVICE_ICON_KEYS.get(_slug)
         if _key:
-            _suite_urls[_key] = f"http://{_host}:{_port}{_meta['url_suffix']}"
+            _suite_urls[_key] = _url
+        _suite_urls[_slug] = _url
+
+    # KoreData child UIs inherit the shared shell directly, so they need concrete
+    # child-service URLs rather than falling back to the current page origin.
+    _koredata_children = {
+        "korefeed":      "/",
+        "korelibrary":   "/",
+        "korereference": "/",
+        "korerag":       "/",
+        "korescrape":    "/",
+        "koregraph":     "/",
+    }
+    for _slug, _suffix in _koredata_children.items():
+        if not is_service_enabled(config, _slug):
+            continue
+        _port = _require_service_port(config, _slug)
+        _host = _service_host(config, _slug)
+        _suite_urls[_slug] = f"http://{_host}:{_port}{_suffix}"
+
     env["KORE_SUITE_URLS"] = json.dumps(_suite_urls)
 
     return env

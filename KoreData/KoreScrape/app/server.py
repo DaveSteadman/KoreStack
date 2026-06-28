@@ -41,6 +41,7 @@ from app.database import (
     replace_capture_chunks,
     search_chunks as _db_search_chunks,
 )
+from app.endpoint_ui import register_scrape_ui
 
 _DATA_DIR            = Path(cfg["data_dir"])
 _HTML_MIME_PREFIXES  = ("text/html", "application/xhtml+xml")
@@ -643,7 +644,7 @@ def endpoint_manifest() -> dict:
 
 @app.get("/", include_in_schema=False)
 def route_root():
-    return RedirectResponse("/captures", status_code=302)
+    return RedirectResponse("/ui/scrape", status_code=302)
 
 
 @app.get("/status")
@@ -731,3 +732,6 @@ def route_capture_file(capture_id: str, file_path: str):
     if not candidate.exists() or not candidate.is_file():
         raise HTTPException(status_code=404, detail="File not found")
     return FileResponse(candidate)
+
+
+register_scrape_ui(app)

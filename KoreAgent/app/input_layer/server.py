@@ -131,7 +131,12 @@ _TURN_METRICS_RE  = re.compile(r"^\[TURN\s+(\d+)\]\s+tokens=(\d+)\s+tps=([0-9.]+
 _TEST_COMPLETE_RE = re.compile(r"^\[(TEST COMPLETE|ALL TESTS COMPLETE)\]\s+(.+)$")
 
 _LOG_DIR             = get_logs_dir()
-_WEB_DIR             = Path(__file__).resolve().parent / "ui"
+_WEB_DIR             = Path(
+    os.environ.get(
+        "KORE_KOREAGENT_UI_DIR",
+        str(Path(__file__).resolve().parents[3] / "KoreUI" / "KoreAgent" / "ui"),
+    )
+).resolve()
 _UI_ELEMENTS_ASSETS  = Path(
     os.environ.get(
         "KORE_UIELEMENTS_ASSETS_DIR",

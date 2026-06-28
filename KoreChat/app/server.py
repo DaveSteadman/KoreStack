@@ -118,7 +118,12 @@ app = FastAPI(title="KoreChat", lifespan=lifespan)
 def endpoint_manifest() -> dict:
     return build_endpoint_manifest(app, service_key="korechat", service_label="KoreChat")
 
-_UI_DIR = Path(__file__).resolve().parent / "ui"
+_UI_DIR = Path(
+    os.environ.get(
+        "KORE_KORECHAT_UI_DIR",
+        str(Path(__file__).resolve().parents[2] / "KoreUI" / "KoreChat" / "ui"),
+    )
+).resolve()
 _UI_ELEMENTS_ASSETS = Path(
     os.environ.get(
         "KORE_UIELEMENTS_ASSETS_DIR",

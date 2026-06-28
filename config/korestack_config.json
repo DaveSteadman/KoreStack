@@ -1,8 +1,8 @@
 {
   "comment": "KoreStack suite configuration.",
   "paths": {
-    "dataroot":   "C:/Util/TestData",
-    "dataroot2":   "C:/Util/GithubRepos/KoreStack",
+    "dataroot2":   "C:/Util/TestData",
+    "dataroot":   "C:/Util/GithubRepos/KoreStack/Data",
     "korechat":   "korechat",
     "korecomms":  "korecomms",
     "koredata":   "koredata",

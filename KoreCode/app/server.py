@@ -103,7 +103,12 @@ from .workspace_menu import MENU_FILENAME, build_workspace_menu, read_workspace_
 
 
 BASE_DIR = Path(__file__).parent.parent.resolve()
-STATIC_DIR = BASE_DIR / 'static'
+STATIC_DIR = Path(
+    os.environ.get(
+        'KORE_KORECODE_STATIC_DIR',
+        str(BASE_DIR.parent / 'KoreUI' / 'KoreCode' / 'static'),
+    )
+).resolve()
 SUITE_ROOT = Path(os.environ.get('KORE_SUITE_ROOT', str(BASE_DIR.parent))).resolve()
 COMMONUI_ASSETS = Path(
     os.environ.get(

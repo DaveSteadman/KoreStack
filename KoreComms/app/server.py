@@ -81,7 +81,12 @@ def _ids_to_text(value: object) -> str:
         return value
     return ""
 
-_TEMPLATES = Path(__file__).parent / "templates"
+_TEMPLATES = Path(
+    os.environ.get(
+        "KORE_KORECOMMS_TEMPLATES_DIR",
+        str(Path(__file__).resolve().parents[2] / "KoreUI" / "KoreComms" / "templates"),
+    )
+).resolve()
 _UI_ELEMENTS_ASSETS = Path(
     os.environ.get(
         "KORE_UIELEMENTS_ASSETS_DIR",

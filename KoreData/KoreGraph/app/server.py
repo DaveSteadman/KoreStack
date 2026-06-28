@@ -53,6 +53,7 @@ if _KORECOMMON_PARENT is not None and str(_KORECOMMON_PARENT) not in sys.path:
 
 from KoreCommon.endpoint_manifest import build_endpoint_manifest
 from app.config import cfg
+from app.csv_io import export_connections, import_connections
 from app.database import (
     add_vocab_term,
     count_relations,
@@ -79,7 +80,18 @@ from app.database import (
 # MARK: Setup
 # ---------------------------------------------------------------------------
 
-TEMPLATES_DIR = Path(__file__).parent / "templates"
+_GRAPH_UI_ROOT = Path(
+    os.environ.get(
+        "KORE_KOREGRAPH_UI_DIR",
+        str(Path(__file__).resolve().parents[3] / "KoreUI" / "KoreData" / "KoreGraph"),
+    )
+).resolve()
+TEMPLATES_DIR = Path(
+    os.environ.get(
+        "KORE_KOREGRAPH_TEMPLATES_DIR",
+        str(_GRAPH_UI_ROOT / "templates"),
+    )
+).resolve()
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
 _UI_ELEMENTS_ASSETS = Path(
@@ -88,7 +100,12 @@ _UI_ELEMENTS_ASSETS = Path(
         str(Path(__file__).resolve().parents[3] / "UIElements" / "assets"),
     )
 ).resolve()
-_STATIC_DIR = (Path(__file__).parent / "static").resolve()
+_STATIC_DIR = Path(
+    os.environ.get(
+        "KORE_KOREGRAPH_STATIC_DIR",
+        str(_GRAPH_UI_ROOT / "static"),
+    )
+).resolve()
 
 
 @asynccontextmanager
@@ -190,6 +207,7 @@ def graph_connection_create(
     "Use limit/offset to step through all connections. "
     "Optionally filter by state: 0=proposed, 1=active, 2=deprecated, 3=rejected."
 ))
+
 def graph_connection_list(
     limit: int = 100,
     offset: int = 0,
@@ -412,6 +430,29 @@ class ConnectionByName(BaseModel):
     score: int = 1
 
 
+class CsvImportBody(BaseModel):
+    filename: str = "connections.csv"
+
+
+def _get_csv_dir() -> Path:
+    csv_dir = Path(cfg["data_dir"]).resolve() / "csv"
+    csv_dir.mkdir(parents=True, exist_ok=True)
+    return csv_dir
+
+
+def _resolve_csv_path(filename: str) -> Path:
+    cleaned   = (filename or "").strip()
+    csv_dir   = _get_csv_dir()
+    candidate = (csv_dir / cleaned).resolve()
+    if not cleaned:
+        raise HTTPException(status_code=400, detail="filename must not be empty")
+    if candidate != csv_dir and csv_dir not in candidate.parents:
+        raise HTTPException(status_code=400, detail="Invalid filename")
+    if candidate.suffix.lower() != ".csv":
+        raise HTTPException(status_code=400, detail="filename must end with .csv")
+    return candidate
+
+
 # ---------------------------------------------------------------------------
 # MARK: API — Connections
 # ---------------------------------------------------------------------------
@@ -492,6 +533,35 @@ def api_batch_upsert_connection_by_name(body: list[ConnectionByName]):
         except Exception as exc:
             errors.append({"index": i, "item": c.model_dump(), "error": str(exc)})
     return {"accepted": len(accepted), "errors": errors}
+
+
+@app.post("/api/csv/export", summary="Export graph connections to CSV")
+def api_csv_export(filename: str = "connections.csv"):
+    csv_path  = _resolve_csv_path(filename)
+    row_count = export_connections(csv_path)
+    return {
+        "ok":       True,
+        "filename": csv_path.name,
+        "path":     str(csv_path),
+        "rows":     row_count,
+    }
+
+
+@app.post("/api/csv/import", summary="Import graph connections from CSV")
+def api_csv_import(body: CsvImportBody):
+    csv_path = _resolve_csv_path(body.filename)
+    try:
+        result = import_connections(csv_path)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    if result.get("error"):
+        raise HTTPException(status_code=404, detail=str(result["error"]))
+    return {
+        "ok":       True,
+        "filename": csv_path.name,
+        "path":     str(csv_path),
+        **result,
+    }
 
 
 # ---------------------------------------------------------------------------

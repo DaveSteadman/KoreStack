@@ -72,7 +72,12 @@ except ImportError:
 # ── Configuration ──────────────────────────────────────────────────────────
 
 BASE_DIR = Path(__file__).parent.parent
-STATIC   = BASE_DIR / 'static'
+STATIC   = Path(
+    os.environ.get(
+        'KORE_KOREDOCS_STATIC_DIR',
+        str(BASE_DIR.parent / 'KoreUI' / 'KoreDocs' / 'static'),
+    )
+).resolve()
 SUITE_ROOT = Path(os.environ.get('KORE_SUITE_ROOT', str(BASE_DIR.parent))).resolve()
 SUITE_DATACONTROL = Path(os.environ.get('KORE_SUITE_DATACONTROL', str(SUITE_ROOT / 'datacontrol'))).resolve()
 SUITE_DATAUSER = Path(os.environ.get('KORE_SUITE_DATAUSER', str(SUITE_ROOT / 'datauser'))).resolve()

@@ -1,0 +1,566 @@
+{% extends "base.html" %}
+{% block title %}KoreData - Home{% endblock %}
+{% block main_class %}kcui-main{% endblock %}
+
+{% block content %}
+<style>
+  .kd-home .kcui-panel {
+    margin-bottom: 0;
+  }
+
+  #sq-spinner { display: none; color: var(--dim); font-size: 12px; letter-spacing: 0.06em; }
+
+  /* graph connection table */
+  .graph-table {
+    width: 100%; border-collapse: collapse; font-size: 12px;
+  }
+  .graph-table th {
+    text-align: left; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--dim); padding: 0.3rem 0.5rem; border-bottom: 1px solid var(--border);
+    font-weight: normal;
+  }
+  .graph-table td {
+    padding: 0.25rem 0.5rem; border-bottom: 1px solid var(--border); color: var(--text);
+    white-space: nowrap;
+  }
+  .graph-table tr:last-child td { border-bottom: none; }
+  .graph-table .gc-conn { color: var(--dim); }
+  .graph-table .gc-score { color: var(--amber); text-align: right; }
+  .graph-table .gc-state-0 { color: var(--dim); }
+  .graph-table .gc-state-1 { color: var(--green); }
+  .graph-table .gc-state-2 { color: var(--amber); }
+  .graph-table .gc-state-3 { color: var(--red); }
+  .graph-table .gc-term-link { color: inherit; text-decoration: none; }
+  .graph-table .gc-term-link:hover { text-decoration: underline; }
+
+  /* JSON highlight */
+  pre.json { font-size: 12px; line-height: 1.6; }
+  .jt-key    { color: var(--blue); }
+  .jt-str    { color: var(--green); }
+  .jt-num    { color: var(--amber); }
+  .jt-bool   { color: var(--red); }
+  .jt-null   { color: var(--dim); }
+</style>
+
+<div class="kcui-page kcui-page--narrow kcui-stack kd-home">
+<div class="panel kcui-panel">
+  <div class="panel-header kcui-panel-header">
+    SERVICES
+    <button class="btn btn-sm kcui-row-end" onclick="refreshHealth()">REFRESH</button>
+  </div>
+  <div class="panel-body kcui-panel-body">
+    <div class="kcui-service-grid kcui-card-grid" id="svc-grid">
+      {% for svc in services %}
+      {% set cls = "online" if svc.healthy else "offline" %}
+      <div class="kcui-service-card kcui-card {{ cls }}" id="svc-{{ svc.slug }}">
+        <div class="kcui-service-banner">
+          <span class="kcui-service-banner-icon" aria-hidden="true" data-icon-key="{{ svc.icon_key }}"></span>
+          <span class="kcui-service-banner-text">
+            <span class="kcui-service-banner-overline">{{ svc.slug | upper }}</span>
+            <span class="kcui-service-banner-title">{{ svc.label }}</span>
+          </span>
+        </div>
+        <div class="kcui-service-desc">
+          {%- if svc.slug == "feeds" %}RSS feed &amp; website data
+          {%- elif svc.slug == "library" %}Long form book content
+          {%- elif svc.slug == "reference" %}Linked encyclopedia
+          {%- elif svc.slug == "rag" %}Searchable user data
+          {%- elif svc.slug == "scrape" %}Website snapshot captures
+          {%- elif svc.slug == "graph" %}Entity &amp; relation graph
+          {%- endif %}
+        </div>
+        <div class="kcui-service-badge {{ cls }}">
+          <span class="dot"></span>
+          {{ "ONLINE" if svc.healthy else "OFFLINE" }}{% if svc.healthy %}<span class="kcui-service-host">{{ svc.url | replace("http://", "") }}</span>{% endif %}
+        </div>
+        <div class="kcui-service-stats">
+          {% if svc.slug == "feeds" %}
+            <div class="kcui-service-stat"><span class="kcui-service-stat-key">domains</span><span class="kcui-service-stat-val">{{ svc.stats.get("total_domains", "-") }}</span></div>
+            <div class="kcui-service-stat"><span class="kcui-service-stat-key">feeds</span><span class="kcui-service-stat-val">{{ svc.stats.get("total_feeds", "-") }}</span></div>
+            <div class="kcui-service-stat"><span class="kcui-service-stat-key">entries</span><span class="kcui-service-stat-val">{{ svc.stats.get("total_entries", "-") }}</span></div>
+          {% elif svc.slug == "library" %}
+            <div class="kcui-service-stat"><span class="kcui-service-stat-key">books</span><span class="kcui-service-stat-val">{{ svc.stats.get("total_books", "-") }}</span></div>
+            <div class="kcui-service-stat"><span class="kcui-service-stat-key">incomplete</span><span class="kcui-service-stat-val">{{ svc.stats.get("incomplete_records", "-") }}</span></div>
+          {% elif svc.slug == "reference" %}
+            <div class="kcui-service-stat"><span class="kcui-service-stat-key">articles</span><span class="kcui-service-stat-val">{{ svc.stats.get("total_articles", "-") }}</span></div>
+            <div class="kcui-service-stat"><span class="kcui-service-stat-key">redirects</span><span class="kcui-service-stat-val">{{ svc.stats.get("total_redirects", "-") }}</span></div>
+            <div class="kcui-service-stat"><span class="kcui-service-stat-key">links</span><span class="kcui-service-stat-val">{{ svc.stats.get("total_links", "-") }}</span></div>
+          {% elif svc.slug == "rag" %}
+            <div class="kcui-service-stat"><span class="kcui-service-stat-key">databases</span><span class="kcui-service-stat-val">{{ svc.stats.get("databases", "-") }}</span></div>
+            <div class="kcui-service-stat"><span class="kcui-service-stat-key">chunks</span><span class="kcui-service-stat-val">{{ svc.stats.get("total_chunks", "-") }}</span></div>
+            <div class="kcui-service-stat"><span class="kcui-service-stat-key">db size</span><span class="kcui-service-stat-val">{{ "%.1f KB" | format(svc.stats.get("db_size_bytes", 0) / 1024) if svc.stats.get("db_size_bytes") else "-" }}</span></div>
+          {% elif svc.slug == "scrape" %}
+            <div class="kcui-service-stat"><span class="kcui-service-stat-key">captures</span><span class="kcui-service-stat-val">{{ svc.stats.get("captures", "-") }}</span></div>
+            <div class="kcui-service-stat"><span class="kcui-service-stat-key">running</span><span class="kcui-service-stat-val">{{ svc.stats.get("running_jobs", "-") }}</span></div>
+            <div class="kcui-service-stat"><span class="kcui-service-stat-key">pages</span><span class="kcui-service-stat-val">{{ svc.stats.get("pages", "-") }}</span></div>
+          {% elif svc.slug == "graph" %}
+            <div class="kcui-service-stat"><span class="kcui-service-stat-key">vocab</span><span class="kcui-service-stat-val">{{ svc.stats.get("vocab_terms", "-") }}</span></div>
+            <div class="kcui-service-stat"><span class="kcui-service-stat-key">connections</span><span class="kcui-service-stat-val">{{ svc.stats.get("relations", "-") }}</span></div>
+          {% endif %}
+        </div>
+        <div class="kcui-service-actions">
+          {% if svc.slug == "feeds" %}
+            <a class="btn btn-sm btn-warning" href="{{ svc.url }}/ui/feeds">browse</a>
+            <a class="btn btn-sm btn-yellow" href="{{ svc.url }}/ui/feeds/search">search</a>
+          {% elif svc.slug == "library" %}
+            <a class="btn btn-sm btn-warning" href="{{ svc.url }}/ui/library">browse</a>
+            <a class="btn btn-sm btn-yellow" href="{{ svc.url }}/ui/library/search">search</a>
+            <a class="btn btn-sm btn-primary" href="{{ svc.url }}/ui/library/import">import</a>
+          {% elif svc.slug == "reference" %}
+            <a class="btn btn-sm btn-warning" href="{{ svc.url }}/ui/reference">browse</a>
+            <a class="btn btn-sm btn-yellow" href="{{ svc.url }}/ui/reference/search">search</a>
+            <a class="btn btn-sm btn-primary" href="{{ svc.url }}/ui/reference/import">import</a>
+          {% elif svc.slug == "rag" %}
+            <a class="btn btn-sm btn-warning" href="{{ svc.url }}/ui/rag/databases">browse</a>
+            <a class="btn btn-sm btn-yellow" href="{{ svc.url }}/ui/rag/search">search</a>
+          {% elif svc.slug == "scrape" %}
+            <a class="btn btn-sm btn-warning" href="{{ svc.url }}/ui/scrape">browse</a>
+            <a class="btn btn-sm btn-warning" href="{{ svc.url }}/ui/scrape">capture</a>
+          {% elif svc.slug == "graph" %}
+            <a class="btn btn-sm btn-warning" href="{{ svc.url }}/ui/vocab">vocab</a>
+            <a class="btn btn-sm btn-warning" href="{{ svc.url }}/ui/connections">conns.</a>
+            <a class="btn btn-sm btn-warning" href="{{ svc.url }}/ui/graph">graph</a>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+<div class="panel kcui-panel">
+  <div class="panel-header kcui-panel-header">
+    SEARCH
+    <span class="meta" style="margin-left:0.5rem;font-size:11px">- agent API | POST /api/search</span>
+  </div>
+  <div class="panel-body kcui-panel-body">
+    <p class="meta" style="margin-bottom:0.4rem;">Bare terms use AND by default. Use quotes for phrases, OR or | for alternatives, NOT to exclude, and parentheses to group.</p>
+    <div style="display:flex; flex-direction:row; gap:0; margin-bottom:0.75rem;">
+      <input id="sq-query" type="search" placeholder="e.g. climate change arctic ice" autocomplete="off"
+             style="flex:1;" onkeydown="if(event.key==='Enter') runSearch()">
+      <button class="btn btn-sm btn-yellow" onclick="runSearch()">SEARCH</button>
+    </div>
+
+    <div style="display:flex; flex-wrap:wrap; gap:1rem; align-items:center;
+                padding:0.5rem 0; border-top:1px solid var(--border); border-bottom:1px solid var(--border);
+                margin-bottom:0.75rem;">
+      <span style="font-size:11px; color:var(--dim); letter-spacing:0.05em; text-transform:uppercase;">Services</span>
+      <label style="display:flex; align-items:center; gap:5px; font-size:12px; color:var(--text); cursor:pointer; text-transform:none; letter-spacing:normal;">
+        <input type="checkbox" class="sq-domain" value="feeds" checked style="accent-color:var(--green); width:auto; cursor:pointer;"> Feeds
+      </label>
+      <label style="display:flex; align-items:center; gap:5px; font-size:12px; color:var(--text); cursor:pointer; text-transform:none; letter-spacing:normal;">
+        <input type="checkbox" class="sq-domain" value="reference" checked style="accent-color:var(--green); width:auto; cursor:pointer;"> Reference
+      </label>
+      <label style="display:flex; align-items:center; gap:5px; font-size:12px; color:var(--text); cursor:pointer; text-transform:none; letter-spacing:normal;">
+        <input type="checkbox" class="sq-domain" value="library" checked style="accent-color:var(--green); width:auto; cursor:pointer;"> Library
+      </label>
+      <label style="display:flex; align-items:center; gap:5px; font-size:12px; color:var(--text); cursor:pointer; text-transform:none; letter-spacing:normal;">
+        <input type="checkbox" class="sq-domain" value="rag" checked style="accent-color:var(--green); width:auto; cursor:pointer;"> RAG
+      </label>
+      <label style="display:flex; align-items:center; gap:5px; font-size:12px; color:var(--text); cursor:pointer; text-transform:none; letter-spacing:normal;">
+        <input type="checkbox" class="sq-domain" value="scrape" checked style="accent-color:var(--amber); width:auto; cursor:pointer;"> Scrape
+      </label>
+      <label style="display:flex; align-items:center; gap:5px; font-size:12px; color:var(--text); cursor:pointer; text-transform:none; letter-spacing:normal;">
+        <input type="checkbox" class="sq-domain" value="graph" checked style="accent-color:var(--accent); width:auto; cursor:pointer;"> Graph
+      </label>
+    </div>
+
+    <div style="display:flex; flex-wrap:wrap; gap:0.75rem; margin-bottom:0.75rem; align-items:center;">
+      <label style="display:flex; align-items:center; gap:0.35rem; font-size:12px; color:var(--dim);">
+        Since
+        <div class="date-pick">
+          <input id="sq-since" name="since" type="date">
+          <span class="cal-icon" onclick="this.previousElementSibling.showPicker()"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><rect x="1" y="2" width="10" height="9" rx="1"/><line x1="1" y1="5" x2="11" y2="5"/><line x1="4" y1="1" x2="4" y2="3"/><line x1="8" y1="1" x2="8" y2="3"/></svg></span>
+        </div>
+      </label>
+      <label style="display:flex; align-items:center; gap:0.35rem; font-size:12px; color:var(--dim);">
+        Until
+        <div class="date-pick">
+          <input id="sq-until" name="until" type="date">
+          <span class="cal-icon" onclick="this.previousElementSibling.showPicker()"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><rect x="1" y="2" width="10" height="9" rx="1"/><line x1="1" y1="5" x2="11" y2="5"/><line x1="4" y1="1" x2="4" y2="3"/><line x1="8" y1="1" x2="8" y2="3"/></svg></span>
+        </div>
+      </label>
+      <label style="display:flex; align-items:center; gap:0.35rem; font-size:12px; color:var(--dim);">
+        No Older Than
+        <div class="num-stepper">
+          <input type="number" min="1" max="3650" style="width:52px;"
+                 oninput="const _d=parseInt(this.value);if(_d>=1){const d=new Date();d.setDate(d.getDate()-_d);document.getElementById('sq-since').value=d.toISOString().slice(0,10);}else if(!this.value){document.getElementById('sq-since').value='';}">
+          <div class="stepper-btns">
+            <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,1)">&#9650;</button>
+            <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,-1)">&#9660;</button>
+          </div>
+        </div>
+        <span class="meta">days</span>
+      </label>
+      <label style="display:flex; align-items:center; gap:0.35rem; font-size:12px; color:var(--dim);">
+        Limit
+        <div class="num-stepper">
+          <input id="sq-limit" type="number" value="20" placeholder="20" min="1" max="200" style="width:52px;">
+          <div class="stepper-btns">
+            <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,1)">&#9650;</button>
+            <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,-1)">&#9660;</button>
+          </div>
+        </div>
+        <span class="meta">per service</span>
+      </label>
+    </div>
+
+    <span id="sq-spinner">searching...</span>
+  </div>
+</div>
+<div class="panel kcui-panel">
+  <div class="panel-header kcui-panel-header" style="font-size:11px; cursor:pointer;"
+       onclick="const b=this.nextElementSibling; const arrow=this.querySelector('.sg-arrow'); const open=b.style.display!=='none'; b.style.display=open?'none':''; arrow.textContent=open?' show':' hide';">
+    SEARCH GUIDE
+    <span class="sg-arrow" style="margin-left:auto; color:var(--dim);"> show</span>
+  </div>
+  <div style="display:none;">
+    <div class="panel-body kcui-panel-body" style="font-size:12px;">
+      <table>
+        <thead><tr><th>You type</th><th>Matches</th><th>Example</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code style="color:var(--text);">art of war</code></td>
+            <td>All three words anywhere in the document, because bare terms default to AND</td>
+            <td>Returns entries mentioning art, of, and war individually</td>
+          </tr>
+          <tr>
+            <td><code style="color:var(--amber);">"art of war"</code></td>
+            <td>The exact phrase - words must appear consecutively in that order</td>
+            <td>Only returns entries containing the phrase <em>art of war</em></td>
+          </tr>
+          <tr>
+            <td><code style="color:var(--text);">sun tzu <span style="color:var(--amber);">"art of war"</span></code></td>
+            <td>All unquoted words AND the exact phrase</td>
+            <td>Must contain sun, tzu, and the phrase <em>art of war</em></td>
+          </tr>
+          <tr>
+            <td><code style="color:var(--text);">plato OR aristotle</code></td>
+            <td>Either side may match</td>
+            <td>Useful for alternate names, rival schools, or multiple candidate topics</td>
+          </tr>
+          <tr>
+            <td><code style="color:var(--text);">plato | aristotle</code></td>
+            <td>Same as <strong>OR</strong>, using a shorter shorthand</td>
+            <td>Quick way to broaden a search without typing the full operator</td>
+          </tr>
+          <tr>
+            <td><code style="color:var(--text);">stoic NOT roman</code></td>
+            <td>Results must contain <em>stoic</em> and must not contain <em>roman</em></td>
+            <td>Useful for removing a noisy term that dominates results</td>
+          </tr>
+          <tr>
+            <td><code style="color:var(--text);">(plato OR socrates) dialogue</code></td>
+            <td>Parentheses group alternatives before combining with another required term</td>
+            <td>Finds dialogue material about either Plato or Socrates</td>
+          </tr>
+          <tr>
+            <td><code style="color:var(--text);">roman, republic</code></td>
+            <td>Comma still behaves like the old separator, so both terms are required</td>
+            <td>Keeps earlier searches working without changing meaning</td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="meta" style="margin-top:0.6rem; font-size:11px;">
+        <strong>Quick rules:</strong> bare terms default to AND, <strong>OR</strong> or <strong>|</strong> broadens a search,
+        <strong>NOT</strong> excludes a term, and parentheses control grouping. Wrap any multi-word phrase in
+        <strong>double quotes</strong> to require exact adjacency.
+      </p>
+      <p class="meta" style="margin-top:0.45rem; font-size:11px;">
+        The boolean syntax above applies to the text-search services: <strong>Feeds</strong>, <strong>Reference</strong>,
+        <strong>Library</strong>, <strong>RAG</strong>, and <strong>Scrape</strong>. <strong>Graph</strong> is still term-expansion based, so complex boolean
+        operators are mainly useful for the other five services. The <strong>Since / Until</strong> date filters apply to
+        feeds only. The <strong>Limit</strong> value is applied <strong>per selected service</strong>. The default is
+        <strong>20</strong>, but you can raise it as high as <strong>200</strong> when you need broader retrieval.
+      </p>
+    </div>
+  </div>
+</div>
+<div id="sq-results-panel" class="panel kcui-panel" style="display:none">
+  <div class="panel-header kcui-panel-header">
+    RESULTS
+    <span id="sq-results-meta" class="meta" style="margin-left:0.5rem;font-size:11px"></span>
+  </div>
+  <div class="panel-body kcui-panel-body">
+    <div class="result-tabs">
+      <button class="result-tab active" id="tab-cards" onclick="showTab('cards')">CARDS</button>
+      <button class="result-tab"        id="tab-json"  onclick="showTab('json')">JSON</button>
+    </div>
+    <div id="sq-cards-view"></div>
+    <div id="sq-json-view"><pre class="json" id="sq-json-pre"></pre></div>
+  </div>
+</div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script type="module">
+  import { resolveIcon, SUITE_ICONS } from '/ui-elements/assets/js/chrome.js';
+
+  for (const el of document.querySelectorAll('.kcui-service-banner-icon[data-icon-key]')) {
+    const key = el.dataset.iconKey || '';
+    el.innerHTML = resolveIcon(SUITE_ICONS, key, 18) || '';
+  }
+</script>
+<script>
+function showTab(t) {
+  document.getElementById('sq-cards-view').style.display = t === 'cards' ? '' : 'none';
+  document.getElementById('sq-json-view').style.display  = t === 'json'  ? '' : 'none';
+  document.getElementById('tab-cards').classList.toggle('active', t === 'cards');
+  document.getElementById('tab-json').classList.toggle('active', t === 'json');
+}
+showTab('cards');
+
+function highlightJson(obj) {
+  const raw = JSON.stringify(obj, null, 2);
+  return raw
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/("(\\u[0-9a-fA-F]{4}|\\[^u]|[^\\"])*"(\s*:)?|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?|true|false|null)/g, m => {
+      if (/^"/.test(m)) {
+        return m.endsWith(':') ? `<span class="jt-key">${m}</span>` : `<span class="jt-str">${m}</span>`;
+      }
+      if (/true|false/.test(m)) return `<span class="jt-bool">${m}</span>`;
+      if (/null/.test(m))       return `<span class="jt-null">${m}</span>`;
+      return `<span class="jt-num">${m}</span>`;
+    });
+}
+
+function renderCards(data) {
+  const container = document.getElementById('sq-cards-view');
+  const domains   = data.domains_searched || [];
+  const grouped   = data.results_by_domain || data.results || {};
+  const STATE_LABELS = ['proposed', 'active', 'deprecated', 'rejected'];
+  let html = '';
+  for (const dom of domains) {
+    const items = grouped[dom];
+    html += `<div class="rc-domain-heading">${dom.toUpperCase()}</div>`;
+    if (!items) {
+      html += `<div class="rc-no-results">No results.</div>`;
+    } else if (items.error) {
+      html += `<div class="rc-error">Error: ${escHtml(items.error)}</div>`;
+    } else if (!Array.isArray(items) || items.length === 0) {
+      html += `<div class="rc-no-results">No results.</div>`;
+    } else if (dom === 'graph') {
+      html += '<table class="graph-table"><thead><tr>';
+      html += '<th>Start</th><th>Connection</th><th>End</th><th style="text-align:right">Score</th>';
+      html += '</tr></thead><tbody>';
+      for (const r of items) {
+        const graphBase = (window.__koreSuiteUrls || {}).koregraph || '';
+        const graphHref = `${graphBase}/ui/graph`;
+        const startLink = r.start ? `<a href="${graphHref}" class="gc-term-link" data-term="${escHtml(r.start)}">${escHtml(r.start)}</a>` : '';
+        const endLink   = r.end   ? `<a href="${graphHref}" class="gc-term-link" data-term="${escHtml(r.end)}">${escHtml(r.end)}</a>`   : '';
+        html += `<tr>
+          <td>${startLink}</td>
+          <td class="gc-conn">${escHtml(r.connection || '')}</td>
+          <td>${endLink}</td>
+          <td class="gc-score">${r.score ?? ''}</td>
+        </tr>`;
+      }
+      html += '</tbody></table>';
+    } else {
+      const sq = data.query || '';
+      for (const r of items) {
+        html += renderCard(r, sq);
+      }
+    }
+  }
+  container.innerHTML = html || '<div class="rc-no-results">No results.</div>';
+}
+
+function renderCard(r, searchQuery) {
+  const title   = escHtml(decodeHtml(r.title || '(untitled)'));
+  const snippet = escHtml(decodeHtml(r.snippet || r.summary || ''));
+  let meta = '';
+  if (r.type === 'feed_entry') {
+    const src = r.source ? escHtml(decodeHtml(r.source)) : '';
+    const ts  = r.published_at ? ` | ${escHtml(r.published_at.slice(0,10))}` : '';
+    meta = `${src}${ts}`;
+  } else if (r.type === 'reference_article') {
+    meta = r.word_count ? `${r.word_count.toLocaleString()} words` : '';
+  } else if (r.type === 'library_book') {
+    const authorPart = r.author ? escHtml(r.author) : '';
+    let findLink = '';
+    if (searchQuery && r.title) {
+      const libraryBase = (window.__koreSuiteUrls || {}).korelibrary || '';
+      const href = `${libraryBase}/ui/library/search?q=${encodeURIComponent(searchQuery)}&title=${encodeURIComponent(r.title)}`;
+      findLink = ` | <a href="${href}" style="color:var(--dim);">find in book ↗</a>`;
+    }
+    meta = authorPart + findLink;
+  } else if (r.type === 'rag_chunk') {
+    const src  = r.source ? escHtml(r.source) : '';
+    const tags = r.tags   ? ` | ${escHtml(r.tags)}` : '';
+    meta = `${src}${tags}`;
+  } else if (r.type === 'scrape_chunk') {
+    const src = r.source ? escHtml(r.source) : '';
+    const ts  = r.captured_at ? ` | ${escHtml(String(r.captured_at).slice(0,10))}` : '';
+    meta = `${src}${ts}`;
+  }
+  const typeLabel = (r.type || '').replace(/_/g, ' ');
+  const titleHtml = r.url
+    ? `<a class="rc-title" href="${escHtml(r.url)}">${title}</a>`
+    : `<span class="rc-title">${title}</span>`;
+  return `<div class="result-card">
+    <div class="rc-type">${escHtml(typeLabel)}</div>
+    ${titleHtml}
+    ${meta ? `<div class="rc-meta">${meta}</div>` : ''}
+    ${snippet ? `<div class="rc-snippet">${snippet}</div>` : ''}
+  </div>`;
+}
+
+function escHtml(s) {
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+
+function decodeHtml(s) {
+  const ta = document.createElement('textarea');
+  ta.innerHTML = String(s);
+  return ta.value;
+}
+
+function goToGraph(term) {
+  sessionStorage.setItem('kg-last-term', term);
+  sessionStorage.removeItem('kg-last-view');
+  sessionStorage.removeItem('kg-history');
+  const graphBase = (window.__koreSuiteUrls || {}).koregraph || '';
+  window.location.href = `${graphBase}/ui/graph`;
+}
+
+document.addEventListener('click', function(e) {
+  const link = e.target.closest('.gc-term-link');
+  if (!link) return;
+  e.preventDefault();
+  goToGraph(link.dataset.term);
+});
+
+async function runSearch() {
+  const query = document.getElementById('sq-query').value.trim();
+  if (!query) { document.getElementById('sq-query').focus(); return; }
+
+  const domains = [...document.querySelectorAll('.sq-domain:checked')].map(e => e.value);
+  const since   = document.getElementById('sq-since').value;
+  const until   = document.getElementById('sq-until').value;
+  const limit   = parseInt(document.getElementById('sq-limit').value, 10) || 20;
+
+  const payload = { query, domains, limit };
+  if (since) payload.since = since;
+  if (until) payload.until = until;
+
+  document.getElementById('sq-spinner').style.display = '';
+  document.getElementById('sq-results-panel').style.display = 'none';
+
+  try {
+    const resp = await fetch('/api/search', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(payload),
+    });
+    const data = await resp.json();
+
+    // meta line
+    const total = Array.isArray(data.results) ? data.results.length : 0;
+    document.getElementById('sq-results-meta').textContent =
+      `"${data.query}" | ${total} result${total !== 1 ? 's' : ''} across [${(data.domains_searched||[]).join(', ')}]`;
+
+    // JSON view
+    document.getElementById('sq-json-pre').innerHTML = highlightJson(data);
+
+    // cards view
+    renderCards(data);
+    saveSearchState(data);
+
+    document.getElementById('sq-results-panel').style.display = '';
+    showTab('cards');
+  } catch (e) {
+    document.getElementById('sq-results-meta').textContent = 'Error: ' + e.message;
+    document.getElementById('sq-results-panel').style.display = '';
+  } finally {
+    document.getElementById('sq-spinner').style.display = 'none';
+  }
+}
+
+function saveSearchState(data) {
+  const state = {
+    query:   document.getElementById('sq-query').value,
+    domains: [...document.querySelectorAll('.sq-domain')].map(e => ({ value: e.value, checked: e.checked })),
+    since:   document.getElementById('sq-since').value,
+    until:   document.getElementById('sq-until').value,
+    limit:   document.getElementById('sq-limit').value,
+    data:    data,
+  };
+  sessionStorage.setItem('home-search-state', JSON.stringify(state));
+}
+
+function restoreSearchState() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const urlQ = urlParams.get('q');
+  if (urlQ) {
+    document.getElementById('sq-query').value = urlQ;
+    history.replaceState(null, '', window.location.pathname);
+    runSearch();
+    return;
+  }
+  const raw = sessionStorage.getItem('home-search-state');
+  if (!raw) return;
+  try {
+    const state = JSON.parse(raw);
+    document.getElementById('sq-query').value = state.query || '';
+    if (state.domains) {
+      state.domains.forEach(({ value, checked }) => {
+        const el = document.querySelector(`.sq-domain[value="${value}"]`);
+        if (el) el.checked = checked;
+      });
+    }
+    if (state.since) document.getElementById('sq-since').value = state.since;
+    if (state.until) document.getElementById('sq-until').value = state.until;
+    if (state.limit) document.getElementById('sq-limit').value = state.limit;
+    if (state.data) {
+      const total = Array.isArray(state.data.results) ? state.data.results.length : 0;
+      document.getElementById('sq-results-meta').textContent =
+        `"${state.data.query}" | ${total} result${total !== 1 ? 's' : ''} across [${(state.data.domains_searched||[]).join(', ')}]`;
+      document.getElementById('sq-json-pre').innerHTML = highlightJson(state.data);
+      renderCards(state.data);
+      document.getElementById('sq-results-panel').style.display = '';
+      showTab('cards');
+    }
+  } catch (_) {}
+}
+
+document.addEventListener('DOMContentLoaded', restoreSearchState);
+
+const _SVC_STATS = {
+  feeds:     [['domains','total_domains'],['feeds','total_feeds'],['entries','total_entries']],
+  library:   [['books','total_books'],['incomplete','incomplete_records']],
+  reference: [['articles','total_articles'],['redirects','total_redirects'],['links','total_links']],
+  rag:       [['databases','databases'],['chunks','total_chunks']],
+  scrape:    [['captures','captures'],['running','running_jobs'],['pages','pages']],
+  graph:     [['vocab','vocab_terms'],['connections','relations']],
+};
+
+async function refreshHealth() {
+  try {
+    const r    = await fetch('/status');
+    const data = await r.json();
+    for (const [slug, child] of Object.entries(data.children || {})) {
+      const card = document.getElementById('svc-' + slug);
+      if (!card) continue;
+      const online = child.healthy;
+      card.classList.toggle('online',  online);
+      card.classList.toggle('offline', !online);
+      const badge = card.querySelector('.kcui-service-badge');
+      if (badge) {
+        badge.className = `kcui-service-badge ${online ? 'online' : 'offline'}`;
+        badge.innerHTML = `<span class="dot"></span> ${online ? 'ONLINE' : 'OFFLINE'}`;
+      }
+      const statsEl = card.querySelector('.kcui-service-stats');
+      if (statsEl && _SVC_STATS[slug]) {
+        statsEl.innerHTML = _SVC_STATS[slug].map(([lbl, key]) =>
+          `<div class="kcui-service-stat"><span class="kcui-service-stat-key">${lbl}</span><span class="kcui-service-stat-val">${child[key] ?? '-'}</span></div>`
+        ).join('');
+      }
+    }
+  } catch (_) {}
+}
+setInterval(refreshHealth, 60000);
+</script>
+{% endblock %}

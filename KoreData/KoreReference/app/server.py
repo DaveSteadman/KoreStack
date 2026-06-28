@@ -62,6 +62,7 @@ from app.importers.kiwix import (
     run_kiwix_import,
 )
 from app.importers.state import import_lock, import_state, import_stop_event
+from app.endpoint_ui import register_reference_ui
 
 
 @asynccontextmanager
@@ -75,6 +76,8 @@ app = FastAPI(
     description="Wikipedia-scale encyclopedia service for LLM agents",
     lifespan=_lifespan,
 )
+
+register_reference_ui(app)
 
 
 @app.get("/__endpoint_manifest", include_in_schema=False)

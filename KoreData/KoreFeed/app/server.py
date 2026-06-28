@@ -36,6 +36,7 @@ if _KORECOMMON_PARENT is not None and str(_KORECOMMON_PARENT) not in sys.path:
     sys.path.insert(0, str(_KORECOMMON_PARENT))
 
 from KoreCommon.endpoint_manifest import build_endpoint_manifest
+from app.endpoint_ui import register_feed_ui
 from app.database import (
     FeedDatabaseError,
     delete_domain_db,
@@ -91,6 +92,8 @@ app = FastAPI(
     description="RSS ingest server for LLM agents",
     lifespan=_lifespan,
 )
+
+register_feed_ui(app)
 
 
 @app.get("/__endpoint_manifest", include_in_schema=False)
@@ -401,4 +404,4 @@ def api_purge_outside_calendar(domain: str, start_date: str, end_date: str):
     return {"ok": True}
 
 
-# (Web UI removed — all UI is now served by KoreDataGateway)
+# UI routes live in app/endpoint_ui.py.

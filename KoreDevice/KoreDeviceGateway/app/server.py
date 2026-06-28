@@ -49,7 +49,12 @@ _number_client: httpx.AsyncClient | None = None
 _driver_client: httpx.AsyncClient | None = None
 _job_handle: int | None = None
 
-TEMPLATES_DIR = Path(__file__).parent / "templates"
+TEMPLATES_DIR = Path(
+    os.environ.get(
+        "KORE_KOREDEVICE_TEMPLATES_DIR",
+        str(Path(__file__).resolve().parents[3] / "KoreUI" / "KoreDevice" / "KoreDeviceGateway" / "templates"),
+    )
+).resolve()
 templates     = Jinja2Templates(directory=str(TEMPLATES_DIR))
 _UI_ASSETS    = Path(
     os.environ.get(

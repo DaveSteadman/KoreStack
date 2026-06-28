@@ -1,116 +1,3 @@
-[2026-06-08T08:04:57] Web crawl: Netherlands (https://www.government.nl/latest)
-[2026-06-08T08:04:58]   Netherlands: 19 level-1 candidates
-[2026-06-08T08:05:09]   Netherlands: +0 articles from 24 pages in 12.5s [good]
-[2026-06-08T08:05:57] Catch-up check: enqueueing most overdue feed New Zealand (overdue ~3m)
-[2026-06-08T08:05:57] Ingesting: New Zealand
-[2026-06-08T08:06:11]   New Zealand: +2 entries in 13.5s [good]
-[2026-06-08T08:06:57] Catch-up check: enqueueing most overdue feed UN News - Global (overdue ~3m)
-[2026-06-08T08:06:57] Ingesting: UN News - Global
-[2026-06-08T08:07:13]   UN News - Global: +0 entries in 16.4s [good]
-[2026-06-08T08:07:57] Catch-up check: enqueueing most overdue feed UN News - All (overdue ~3m)
-[2026-06-08T08:07:57] Ingesting: UN News - All
-[2026-06-08T08:08:17]   UN News - All: +2 entries in 20.0s [good]
-[2026-06-08T08:08:57] Catch-up check: enqueueing most overdue feed BBC World News (overdue ~3m)
-[2026-06-08T08:08:57] Ingesting: BBC World News
-[2026-06-08T08:09:06]   BBC World News: +9 entries in 8.8s [good]
-[2026-06-08T08:09:57] Catch-up check: enqueueing most overdue feed AP World News (overdue ~3m)
-[2026-06-08T08:09:57] Web crawl: AP World News (https://apnews.com/world-news)
-[2026-06-08T08:09:57]   AP World News: 50 level-1 candidates
-[2026-06-08T08:10:29]   AP World News: +10 articles from 63 pages in 32.2s [good]
-[2026-06-08T08:11:57] Catch-up check: enqueueing most overdue feed Sweden Government (overdue ~0m)
-[2026-06-08T08:11:57] Ingesting: Sweden Government
-[2026-06-08T08:12:21]   Sweden Government: +1 entries in 23.7s [poor]
-[2026-06-08T09:33:57]   Skipping New Zealand — next fetch in ~512m
-[2026-06-08T09:33:57]   Skipping Estonia — next fetch in ~509m
-[2026-06-08T09:33:57]   Skipping AP World News — next fetch in ~516m
-[2026-06-08T09:33:57]   Skipping BBC World News — next fetch in ~515m
-[2026-06-08T09:33:57]   Skipping Netherlands — next fetch in ~511m
-[2026-06-08T09:33:57]   Skipping UN News - All — next fetch in ~514m
-[2026-06-08T09:33:57]   Skipping UN News - Global — next fetch in ~513m
-[2026-06-08T09:33:57]   Skipping Lithuania — next fetch in ~508m
-[2026-06-08T09:33:57]   Skipping Canada Security — next fetch in ~507m
-[2026-06-08T09:33:57]   Skipping Finland — next fetch in ~510m
-[2026-06-08T09:33:57]   Skipping Canada Defense — next fetch in ~506m
-[2026-06-08T10:44:07]   Skipping UK Gov — next fetch in ~120m
-[2026-06-08T10:58:54]   Skipping Denmark — next fetch in ~409m
-[2026-06-08T10:59:20]   Skipping Latvia — next fetch in ~410m
-[2026-06-08T10:59:48]   Skipping Taiwan — next fetch in ~411m
-[2026-06-08T10:59:53]   Skipping UK Gov News — next fetch in ~412m
-[2026-06-08T11:00:16]   Skipping Norway — next fetch in ~410m
-[2026-06-08T11:50:39]   Skipping Sweden Government — next fetch in ~391m
-[2026-06-08T17:07:19] Catch-up check: enqueueing most overdue feed UK Gov (overdue ~262m)
-[2026-06-08T17:07:19] Ingesting: UK Gov
-[2026-06-08T17:07:19]   Skipping UK Gov - already queued/running
-[2026-06-08T17:07:25]   UK Gov: +18 entries in 6.1s [good]
-[2026-06-08T17:48:57] Catch-up check: enqueueing most overdue feed Denmark (overdue ~0m)
-[2026-06-08T17:48:57] Web crawl: Denmark (https://stm.dk/en/press/press-releases/)
-[2026-06-08T17:48:58]   Denmark: 1 level-1 candidates
-[2026-06-08T17:48:58]   Denmark: no links found; page may require JS rendering
-[2026-06-08T17:48:59]   Denmark: +0 articles from 1 pages in 1.6s [poor]
-[2026-06-08T17:49:57] Catch-up check: enqueueing most overdue feed Latvia (overdue ~0m)
-[2026-06-08T17:49:57] Web crawl: Latvia (https://www.mk.gov.lv/en/articles)
-[2026-06-08T17:49:58]   Latvia: 15 level-1 candidates
-[2026-06-08T17:50:36]   Latvia: +0 articles from 25 pages in 39.1s [good]
-[2026-06-08T17:50:57] Catch-up check: enqueueing most overdue feed Norway (overdue ~0m)
-[2026-06-08T17:50:57] Web crawl: Norway (https://www.regjeringen.no/en/id4/)
-[2026-06-08T17:50:57]   Norway: 21 level-1 candidates
-[2026-06-08T17:51:21]   Norway: +0 articles from 39 pages in 24.5s [good]
-[2026-06-08T17:51:57] Catch-up check: enqueueing most overdue feed Taiwan (overdue ~0m)
-[2026-06-08T17:51:57] Ingesting: Taiwan
-[2026-06-08T17:52:18]   Taiwan: +3 entries in 21.4s [good]
-[2026-06-08T17:52:57] Catch-up check: enqueueing most overdue feed UK Gov News (overdue ~0m)
-[2026-06-08T17:52:57] Ingesting: UK Gov News
-[2026-06-08T17:53:03]   UK Gov News: +17 entries in 6.2s [good]
-[2026-06-08T18:00:57] Catch-up check: enqueueing most overdue feed Canada Defense (overdue ~0m)
-[2026-06-08T18:00:57] Ingesting: Canada Defense
-[2026-06-08T18:01:57] Catch-up check: enqueueing most overdue feed Canada Defense (overdue ~1m)
-[2026-06-08T18:01:57]   Skipping Canada Defense - already queued/running
-[2026-06-08T18:02:57] Catch-up check: enqueueing most overdue feed Canada Defense (overdue ~2m)
-[2026-06-08T18:02:57]   Skipping Canada Defense - already queued/running
-[2026-06-08T18:03:57] Catch-up check: enqueueing most overdue feed Canada Defense (overdue ~3m)
-[2026-06-08T18:03:57]   Skipping Canada Defense - already queued/running
-[2026-06-08T18:04:57] Catch-up check: enqueueing most overdue feed Canada Defense (overdue ~4m)
-[2026-06-08T18:04:57]   Skipping Canada Defense - already queued/running
-[2026-06-08T18:05:25]   Canada Defense: +1 entries in 267.8s [good]
-[2026-06-08T18:05:57] Catch-up check: enqueueing most overdue feed Canada Security (overdue ~4m)
-[2026-06-08T18:05:57] Ingesting: Canada Security
-[2026-06-08T18:06:33]   Canada Security: +0 entries in 36.1s [good]
-[2026-06-08T18:06:57] Catch-up check: enqueueing most overdue feed Lithuania (overdue ~4m)
-[2026-06-08T18:06:57] Ingesting: Lithuania
-[2026-06-08T18:07:23]   Lithuania: +9 entries in 26.0s [good]
-[2026-06-08T18:07:57] Catch-up check: enqueueing most overdue feed Estonia (overdue ~4m)
-[2026-06-08T18:07:57] Ingesting: Estonia
-[2026-06-08T18:08:37]   Estonia: +2 entries in 39.8s [good]
-[2026-06-08T18:08:57] Catch-up check: enqueueing most overdue feed Finland (overdue ~4m)
-[2026-06-08T18:08:57] Web crawl: Finland (https://valtioneuvosto.fi/en/frontpage)
-[2026-06-08T18:08:59]   Finland: 24 level-1 candidates
-[2026-06-08T18:09:22]   Finland: +4 articles from 29 pages in 25.1s [good]
-[2026-06-08T18:09:57] Catch-up check: enqueueing most overdue feed Netherlands (overdue ~4m)
-[2026-06-08T18:09:57] Web crawl: Netherlands (https://www.government.nl/latest)
-[2026-06-08T18:09:58]   Netherlands: 19 level-1 candidates
-[2026-06-08T18:10:10]   Netherlands: +0 articles from 24 pages in 13.4s [good]
-[2026-06-08T18:10:57] Catch-up check: enqueueing most overdue feed New Zealand (overdue ~4m)
-[2026-06-08T18:10:57] Ingesting: New Zealand
-[2026-06-08T18:11:10]   New Zealand: +0 entries in 13.3s [good]
-[2026-06-08T18:11:57] Catch-up check: enqueueing most overdue feed UN News - Global (overdue ~4m)
-[2026-06-08T18:11:57] Ingesting: UN News - Global
-[2026-06-08T18:12:15]   UN News - Global: +0 entries in 18.2s [good]
-[2026-06-08T18:12:57] Catch-up check: enqueueing most overdue feed UN News - All (overdue ~4m)
-[2026-06-08T18:12:57] Ingesting: UN News - All
-[2026-06-08T18:13:16]   UN News - All: +0 entries in 19.0s [good]
-[2026-06-08T18:13:57] Catch-up check: enqueueing most overdue feed BBC World News (overdue ~4m)
-[2026-06-08T18:13:57] Ingesting: BBC World News
-[2026-06-08T18:14:09]   BBC World News: +10 entries in 11.8s [good]
-[2026-06-08T18:14:57] Catch-up check: enqueueing most overdue feed AP World News (overdue ~4m)
-[2026-06-08T18:14:57] Web crawl: AP World News (https://apnews.com/world-news)
-[2026-06-08T18:14:57]   AP World News: 50 level-1 candidates
-[2026-06-08T18:15:30]   AP World News: +21 articles from 63 pages in 33.0s [good]
-[2026-06-08T18:22:57] Catch-up check: enqueueing most overdue feed Sweden Government (overdue ~0m)
-[2026-06-08T18:22:57] Ingesting: Sweden Government
-[2026-06-08T18:23:20]   Sweden Government: +0 entries in 23.4s [poor]
-[2026-06-08T19:33:57]   Skipping AP World News — next fetch in ~521m
-[2026-06-08T19:33:57]   Skipping Netherlands — next fetch in ~516m
-[2026-06-08T19:33:57]   Skipping UN News - Global — next fetch in ~518m
 [2026-06-08T19:33:57]   Skipping BBC World News — next fetch in ~520m
 [2026-06-08T19:33:57]   Skipping New Zealand — next fetch in ~517m
 [2026-06-08T19:33:57]   Skipping UN News - All — next fetch in ~519m
@@ -998,3 +885,116 @@
 [2026-06-25T21:00:59]   Skipping BBC World News — next fetch in ~418m
 [2026-06-25T22:10:17]   Skipping UN Global News — next fetch in ~349m
 [2026-06-25T22:10:17]   Skipping BBC World News — next fetch in ~349m
+[2026-06-27T23:48:31] Daily prune: Global_News — 2 entries removed
+[2026-06-27T23:48:31] Ingesting: UN Global News
+[2026-06-27T23:48:31]   Skipping BBC World News - already queued/running
+[2026-06-27T23:48:31]   Skipping UN Global News - already queued/running
+[2026-06-27T23:48:45]   UN Global News: +2 entries in 13.9s [good]
+[2026-06-27T23:48:45] Ingesting: BBC World News
+[2026-06-27T23:48:52]   BBC World News: +24 entries in 6.8s [good]
+[2026-06-28T09:41:29]   Skipping UN Global News — next fetch in ~407m
+[2026-06-28T09:41:29]   Skipping BBC World News — next fetch in ~407m
+[2026-06-28T10:04:26]   Skipping UN Global News — next fetch in ~384m
+[2026-06-28T10:04:26]   Skipping BBC World News — next fetch in ~384m
+[2026-06-28T10:05:13]   Skipping UN Global News — next fetch in ~383m
+[2026-06-28T10:05:13]   Skipping BBC World News — next fetch in ~383m
+[2026-06-28T10:21:23]   Skipping UN Global News — next fetch in ~367m
+[2026-06-28T10:21:23]   Skipping BBC World News — next fetch in ~367m
+[2026-06-28T10:21:48]   Skipping UN Global News — next fetch in ~366m
+[2026-06-28T10:21:48]   Skipping BBC World News — next fetch in ~367m
+[2026-06-28T10:22:55]   Skipping UN Global News — next fetch in ~365m
+[2026-06-28T10:22:55]   Skipping BBC World News — next fetch in ~365m
+[2026-06-28T10:24:30]   Skipping UN Global News — next fetch in ~364m
+[2026-06-28T10:24:30]   Skipping BBC World News — next fetch in ~364m
+[2026-06-28T10:25:29]   Skipping UN Global News — next fetch in ~363m
+[2026-06-28T10:25:29]   Skipping BBC World News — next fetch in ~363m
+[2026-06-28T10:25:38]   Skipping UN Global News — next fetch in ~363m
+[2026-06-28T10:25:38]   Skipping BBC World News — next fetch in ~363m
+[2026-06-28T10:26:21]   Skipping UN Global News — next fetch in ~362m
+[2026-06-28T10:26:21]   Skipping BBC World News — next fetch in ~362m
+[2026-06-28T10:52:48]   Skipping UN Global News — next fetch in ~335m
+[2026-06-28T10:52:48]   Skipping BBC World News — next fetch in ~336m
+[2026-06-28T10:58:06]   Skipping UN Global News — next fetch in ~330m
+[2026-06-28T10:58:06]   Skipping BBC World News — next fetch in ~330m
+[2026-06-28T10:58:27]   Skipping UN Global News — next fetch in ~330m
+[2026-06-28T10:58:27]   Skipping BBC World News — next fetch in ~330m
+[2026-06-28T10:58:57]   Skipping UN Global News — next fetch in ~329m
+[2026-06-28T10:58:57]   Skipping BBC World News — next fetch in ~329m
+[2026-06-28T11:00:03]   Skipping UN Global News — next fetch in ~328m
+[2026-06-28T11:00:03]   Skipping BBC World News — next fetch in ~328m
+[2026-06-28T11:00:09]   Skipping UN Global News — next fetch in ~328m
+[2026-06-28T11:00:09]   Skipping BBC World News — next fetch in ~328m
+[2026-06-28T11:04:36]   Skipping UN Global News — next fetch in ~324m
+[2026-06-28T11:04:37]   Skipping BBC World News — next fetch in ~324m
+[2026-06-28T11:04:49]   Skipping UN Global News — next fetch in ~323m
+[2026-06-28T11:04:49]   Skipping BBC World News — next fetch in ~324m
+[2026-06-28T11:14:24]   Skipping UN Global News — next fetch in ~314m
+[2026-06-28T11:14:24]   Skipping BBC World News — next fetch in ~314m
+[2026-06-28T11:19:44]   Skipping UN Global News — next fetch in ~309m
+[2026-06-28T11:19:44]   Skipping BBC World News — next fetch in ~309m
+[2026-06-28T11:26:03]   Skipping UN Global News — next fetch in ~302m
+[2026-06-28T11:26:03]   Skipping BBC World News — next fetch in ~302m
+[2026-06-28T11:26:44]   Skipping UN Global News — next fetch in ~302m
+[2026-06-28T11:26:44]   Skipping BBC World News — next fetch in ~302m
+[2026-06-28T11:29:00]   Skipping UN Global News — next fetch in ~299m
+[2026-06-28T11:29:00]   Skipping BBC World News — next fetch in ~299m
+[2026-06-28T11:29:25]   Skipping UN Global News — next fetch in ~299m
+[2026-06-28T11:29:25]   Skipping BBC World News — next fetch in ~299m
+[2026-06-28T11:36:09]   Skipping UN Global News — next fetch in ~292m
+[2026-06-28T11:36:09]   Skipping BBC World News — next fetch in ~292m
+[2026-06-28T11:36:12]   Skipping UN Global News — next fetch in ~292m
+[2026-06-28T11:36:12]   Skipping BBC World News — next fetch in ~292m
+[2026-06-28T11:39:26]   Skipping UN Global News — next fetch in ~289m
+[2026-06-28T11:39:26]   Skipping BBC World News — next fetch in ~289m
+[2026-06-28T11:41:06]   Skipping UN Global News — next fetch in ~287m
+[2026-06-28T11:41:06]   Skipping BBC World News — next fetch in ~287m
+[2026-06-28T11:43:12]   Skipping UN Global News — next fetch in ~285m
+[2026-06-28T11:43:12]   Skipping BBC World News — next fetch in ~285m
+[2026-06-28T11:43:43]   Skipping UN Global News — next fetch in ~285m
+[2026-06-28T11:43:43]   Skipping BBC World News — next fetch in ~285m
+[2026-06-28T11:47:50]   Skipping UN Global News — next fetch in ~280m
+[2026-06-28T11:47:50]   Skipping BBC World News — next fetch in ~281m
+[2026-06-28T11:48:07]   Skipping UN Global News — next fetch in ~280m
+[2026-06-28T11:48:07]   Skipping BBC World News — next fetch in ~280m
+[2026-06-28T11:49:26]   Skipping UN Global News — next fetch in ~279m
+[2026-06-28T11:49:26]   Skipping BBC World News — next fetch in ~279m
+[2026-06-28T11:51:51]   Skipping UN Global News — next fetch in ~276m
+[2026-06-28T11:51:51]   Skipping BBC World News — next fetch in ~277m
+[2026-06-28T11:59:15]   Skipping UN Global News — next fetch in ~269m
+[2026-06-28T11:59:15]   Skipping BBC World News — next fetch in ~269m
+[2026-06-28T12:12:29]   Skipping UN Global News — next fetch in ~256m
+[2026-06-28T12:12:29]   Skipping BBC World News — next fetch in ~256m
+[2026-06-28T12:12:44]   Skipping UN Global News — next fetch in ~256m
+[2026-06-28T12:12:44]   Skipping BBC World News — next fetch in ~256m
+[2026-06-28T12:12:55]   Skipping UN Global News — next fetch in ~255m
+[2026-06-28T12:12:55]   Skipping BBC World News — next fetch in ~255m
+[2026-06-28T12:13:03]   Skipping UN Global News — next fetch in ~255m
+[2026-06-28T12:13:03]   Skipping BBC World News — next fetch in ~255m
+[2026-06-28T12:13:10]   Skipping UN Global News — next fetch in ~255m
+[2026-06-28T12:13:10]   Skipping BBC World News — next fetch in ~255m
+[2026-06-28T12:13:16]   Skipping UN Global News — next fetch in ~255m
+[2026-06-28T12:13:16]   Skipping BBC World News — next fetch in ~255m
+[2026-06-28T12:18:20]   Skipping UN Global News — next fetch in ~250m
+[2026-06-28T12:18:20]   Skipping BBC World News — next fetch in ~250m
+[2026-06-28T12:23:06]   Skipping UN Global News — next fetch in ~245m
+[2026-06-28T12:23:06]   Skipping BBC World News — next fetch in ~245m
+[2026-06-28T12:27:58]   Skipping UN Global News — next fetch in ~240m
+[2026-06-28T12:27:58]   Skipping BBC World News — next fetch in ~240m
+[2026-06-28T13:22:49]   Skipping UN Global News — next fetch in ~185m
+[2026-06-28T13:22:49]   Skipping BBC World News — next fetch in ~186m
+[2026-06-28T15:28:45]   Skipping UN Global News — next fetch in ~59m
+[2026-06-28T15:28:52]   Skipping BBC World News — next fetch in ~59m
+[2026-06-28T16:28:09]   Skipping UN Global News — next fetch in ~0m
+[2026-06-28T16:28:09]   Skipping BBC World News — next fetch in ~0m
+[2026-06-28T16:28:09]   Skipping UN Global News — next fetch in ~0m
+[2026-06-28T16:28:09]   Skipping BBC World News — next fetch in ~0m
+[2026-06-28T16:29:09] Catch-up check: enqueueing most overdue feed UN Global News (overdue ~0m)
+[2026-06-28T16:29:09] Ingesting: UN Global News
+[2026-06-28T16:29:25]   UN Global News: +0 entries in 15.2s [good]
+[2026-06-28T16:30:09] Catch-up check: enqueueing most overdue feed BBC World News (overdue ~1m)
+[2026-06-28T16:30:09] Ingesting: BBC World News
+[2026-06-28T16:30:17]   BBC World News: +15 entries in 8.0s [good]
+[2026-06-28T16:41:58]   Skipping UN Global News — next fetch in ~987m
+[2026-06-28T16:41:58]   Skipping BBC World News — next fetch in ~988m
+[2026-06-28T16:45:45]   Skipping UN Global News — next fetch in ~983m
+[2026-06-28T16:45:46]   Skipping BBC World News — next fetch in ~984m
