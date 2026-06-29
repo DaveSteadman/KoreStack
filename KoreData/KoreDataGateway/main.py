@@ -12,6 +12,9 @@
 #   - app/config.py   -- cfg (host, port, sub-service base URLs)
 #   - CommonCode/     -- shared logutil, config
 # ====================================================================================================
+import os
+import signal
+import subprocess
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "CommonCode"))
@@ -23,6 +26,55 @@ from app.config import cfg
 from config import get_suite_datacontrol_dir
 
 _W = 80
+
+
+def _listening_pids_on_port(port: int) -> list[int]:
+    try:
+        output = subprocess.check_output(["netstat", "-ano"], text=True, encoding="utf-8", errors="ignore")
+    except Exception:
+        return []
+    pids: list[int] = []
+    needle = f":{port}"
+    for line in output.splitlines():
+        text = line.strip()
+        if "LISTENING" not in text or needle not in text:
+            continue
+        parts = text.split()
+        if len(parts) < 5:
+            continue
+        local_addr = parts[1]
+        state      = parts[3]
+        pid_text   = parts[4]
+        if not local_addr.endswith(needle) or state != "LISTENING":
+            continue
+        try:
+            pid = int(pid_text)
+        except ValueError:
+            continue
+        if pid not in pids:
+            pids.append(pid)
+    return pids
+
+
+def _terminate_pid(pid: int, label: str) -> None:
+    if pid <= 0 or pid == os.getpid():
+        return
+    print(f"  ◼ Clearing stale {label} listener  (pid {pid})")
+    try:
+        if os.name == "nt":
+            subprocess.run(["taskkill", "/PID", str(pid), "/T", "/F"], check=False, capture_output=True)
+        else:
+            os.kill(pid, signal.SIGTERM)
+    except Exception:
+        return
+
+
+def _clear_stale_gateway_listener() -> None:
+    port = int(cfg["port"])
+    if port <= 0:
+        return
+    for pid in _listening_pids_on_port(port):
+        _terminate_pid(pid, "KoreDataGateway")
 
 
 def _print_banner() -> None:
@@ -55,6 +107,7 @@ if __name__ == "__main__":
     _LOG_PATH = get_suite_datacontrol_dir() / "logs" / "koredata" / "gateway.log"
     _LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
     _print_banner()
+    _clear_stale_gateway_listener()
     uvicorn.run(
         "app.server:app",
         host=cfg["host"],

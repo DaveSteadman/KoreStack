@@ -27,10 +27,11 @@
   <div class="state-filter">
     <span class="meta">State:</span>
     <a href="{{ _pfx }}/ui/connections" class="kcui-tag {{ 'kcui-tag--accent is-on' if state is none else 'kcui-tag--muted' }}">All</a>
-    <a href="{{ _pfx }}/ui/connections?state=0" class="kcui-tag {{ 'kcui-tag--accent is-on' if state == 0 else 'kcui-tag--muted' }}">Proposed</a>
-    <a href="{{ _pfx }}/ui/connections?state=1" class="kcui-tag {{ 'kcui-tag--accent is-on' if state == 1 else 'kcui-tag--muted' }}">Active</a>
-    <a href="{{ _pfx }}/ui/connections?state=2" class="kcui-tag {{ 'kcui-tag--accent is-on' if state == 2 else 'kcui-tag--muted' }}">Deprecated</a>
-    <a href="{{ _pfx }}/ui/connections?state=3" class="kcui-tag {{ 'kcui-tag--accent is-on' if state == 3 else 'kcui-tag--muted' }}">Rejected</a>
+    <a href="{{ _pfx }}/ui/connections?state=0" class="kcui-tag {{ 'kcui-tag--accent is-on' if state == 0 else 'kcui-tag--muted' }}">proposed</a>
+    <a href="{{ _pfx }}/ui/connections?state=1" class="kcui-tag {{ 'kcui-tag--accent is-on' if state == 1 else 'kcui-tag--muted' }}">active</a>
+    <a href="{{ _pfx }}/ui/connections?state=2" class="kcui-tag {{ 'kcui-tag--accent is-on' if state == 2 else 'kcui-tag--muted' }}">deprecated</a>
+    <a href="{{ _pfx }}/ui/connections?state=3" class="kcui-tag {{ 'kcui-tag--accent is-on' if state == 3 else 'kcui-tag--muted' }}">rejected</a>
+    <a href="{{ _pfx }}/ui/connections?state=4" class="kcui-tag {{ 'kcui-tag--accent is-on' if state == 4 else 'kcui-tag--muted' }}">pasttense</a>
     {% if total %}<span id="conn-count" class="kcui-tag kcui-tag--info" style="margin-left:0.3rem">Num Conns:{{ total }}</span>{% endif %}
   </div>
 
@@ -64,10 +65,11 @@
                 data-cxn="{{ conn.connection_concept_id }}"
                 data-tgt="{{ conn.end_concept_id }}"
                 onchange="patchState(this)">
-                <option value="0" {{ 'selected' if conn.state == 0 else '' }}>Proposed</option>
-                <option value="1" {{ 'selected' if conn.state == 1 else '' }}>Active</option>
-                <option value="2" {{ 'selected' if conn.state == 2 else '' }}>Deprecated</option>
-                <option value="3" {{ 'selected' if conn.state == 3 else '' }}>Rejected</option>
+                <option value="0" {{ 'selected' if conn.state == 0 else '' }}>proposed</option>
+                <option value="1" {{ 'selected' if conn.state == 1 else '' }}>active</option>
+                <option value="2" {{ 'selected' if conn.state == 2 else '' }}>deprecated</option>
+                <option value="3" {{ 'selected' if conn.state == 3 else '' }}>rejected</option>
+                <option value="4" {{ 'selected' if conn.state == 4 else '' }}>pasttense</option>
               </select>
             </td>
             <td>
@@ -154,10 +156,11 @@
             <div class="field field-sm">
               <label>State</label>
               <select id="nc-state">
-                <option value="0">Proposed</option>
-                <option value="1">Active</option>
-                <option value="2">Deprecated</option>
-                <option value="3">Rejected</option>
+                <option value="0">proposed</option>
+                <option value="1">active</option>
+                <option value="2">deprecated</option>
+                <option value="3">rejected</option>
+                <option value="4">pasttense</option>
               </select>
             </div>
             <div class="field field-xs">
@@ -180,17 +183,21 @@
     <div class="panel">
       <div class="panel-header"><span class="panel-title">Import / Export</span></div>
       <div class="panel-body">
-        <div style="display:flex;flex-direction:column;gap:0.6rem">
-          <div>
-            <label>CSV Filename</label>
-            <input type="text" id="csv-filename" value="connections.csv" placeholder="connections.csv" autocomplete="off">
-          </div>
-          <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
-            <button type="button" onclick="exportConnectionsCsv()">Export CSV</button>
-            <button type="button" onclick="importConnectionsCsv()">Import CSV</button>
-          </div>
-          <div class="meta">Uses the KoreGraph service CSV folder on the server.</div>
-          <div id="csv-msg" class="meta" style="min-height:2.4em"></div>
+          <div style="display:flex;flex-direction:column;gap:0.6rem">
+            <div>
+              <label>CSV Filename</label>
+              <input type="text" id="csv-filename" value="connections.csv" placeholder="connections.csv" autocomplete="off">
+            </div>
+            <label style="display:flex;align-items:center;gap:0.5rem">
+              <input type="checkbox" id="csv-include-state-score">
+              <span>Include state and score columns on export</span>
+            </label>
+            <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+              <button type="button" onclick="exportConnectionsCsv()">Export CSV</button>
+              <button type="button" onclick="importConnectionsCsv()">Import CSV</button>
+            </div>
+            <div class="meta">Uses the KoreGraph service CSV folder on the server. Import accepts either `start, connection, end` or `start, connection, end, state, score`, where `state` is a name like `proposed` or `active`.</div>
+            <div id="csv-msg" class="meta" style="min-height:2.4em"></div>
         </div>
       </div>
     </div>
@@ -389,6 +396,10 @@ function getCsvFilename() {
   return (document.getElementById('csv-filename')?.value || '').trim();
 }
 
+function getCsvIncludeStateScore() {
+  return Boolean(document.getElementById('csv-include-state-score')?.checked);
+}
+
 function setCsvMessage(text, isError = false) {
   const msg = document.getElementById('csv-msg');
   if (!msg) return;
@@ -397,21 +408,25 @@ function setCsvMessage(text, isError = false) {
 }
 
 async function exportConnectionsCsv() {
-  const filename = getCsvFilename();
+  const filename          = getCsvFilename();
+  const includeStateScore = getCsvIncludeStateScore();
   if (!filename) {
     setCsvMessage('Enter a CSV filename.', true);
     return;
   }
   setCsvMessage('Exporting…');
-  const r = await fetch(window._kgPfx + `/api/csv/export?filename=${encodeURIComponent(filename)}`, {
-    method: 'POST',
-  });
+  const r = await fetch(
+    window._kgPfx + `/api/csv/export?filename=${encodeURIComponent(filename)}&include_state_score=${includeStateScore ? 'true' : 'false'}`,
+    {
+      method: 'POST',
+    },
+  );
   const d = await r.json().catch(() => ({}));
   if (!r.ok) {
     setCsvMessage(d.detail || 'Export failed.', true);
     return;
   }
-  setCsvMessage(`Exported ${d.rows} rows to ${d.filename}.`);
+  setCsvMessage(`Exported ${d.rows} rows to ${d.filename}${d.include_state_score ? ' with state/score columns' : ''}.`);
 }
 
 async function importConnectionsCsv() {
@@ -431,7 +446,13 @@ async function importConnectionsCsv() {
     setCsvMessage(d.detail || 'Import failed.', true);
     return;
   }
-  setCsvMessage(`Imported ${d.imported}, skipped ${d.skipped} from ${d.filename}.`);
+  const updateNote = d.updated
+    ? ` updated ${d.updated},`
+    : '';
+  const metadataNote = d.imported_with_metadata
+    ? ` ${d.imported_with_metadata} row${d.imported_with_metadata === 1 ? '' : 's'} included state/score.`
+    : '';
+  setCsvMessage(`Imported ${d.imported},${updateNote} skipped ${d.skipped} from ${d.filename}.${metadataNote}`);
   setTimeout(() => location.reload(), 700);
 }
 

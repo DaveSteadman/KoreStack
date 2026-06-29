@@ -32,9 +32,6 @@ Thumbs.db
 .DS_Store
 
 # Workspace runtime and data folders
-**/data/
-**/Data/
-**/datauser/
 
 # Common runtime output that may exist outside the data roots
 **/logs/
@@ -59,3 +56,9 @@ datacontrol/task_queue.json
 /datacontrol/koredata/Scrape
 /datacontrol/korecode/edit_proposals
 /datacontrol/korecode/runs
+/Data/datacontrol/korecode/edit_proposals
+*.db
+/Data/datacontrol/korecode/runs
+/Data/datacontrol/koredata/Scrape
+/Data/datauser
+*.log

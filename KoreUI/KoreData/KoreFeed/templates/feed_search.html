@@ -3,12 +3,14 @@
 {% block main_class %}kcui-main{% endblock %}
 
 {% block content %}
-<div class="kcui-page kcui-page--narrow kcui-stack">
-<div class="panel kcui-panel kcui-mar-bottom-lg">
+
+<div class="kcui-page kcui-page--narrow kcui-stack kd-home">
+<div class="panel kcui-panel">
   <div class="panel-header kcui-panel-header">
     SEARCH
     {% if domain %}<span class="badge badge-dim" style="margin-left:0.5rem;">{{ domain }}</span>{% endif %}
   </div>
+
   <div class="panel-body kcui-panel-body">
     <form action="/ui/feeds/search" method="get">
       <p class="meta kcui-mar-bottom-sm">Bare terms use AND by default. Use quotes for phrases, OR or | for alternatives, NOT to exclude, and parentheses to group.</p>

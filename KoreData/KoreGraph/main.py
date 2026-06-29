@@ -21,6 +21,7 @@ import uvicorn
 from datetime import datetime
 from app.config import cfg
 from app.database import get_status, init_db
+from config import get_suite_datacontrol_dir
 
 _W = 80
 
@@ -71,6 +72,8 @@ def _print_banner() -> None:
 if __name__ == "__main__":
     _DATA_DIR = Path(cfg["data_dir"])
     _DATA_DIR.mkdir(parents=True, exist_ok=True)
+    _LOG_PATH = get_suite_datacontrol_dir() / "logs" / "koredata" / "graph.log"
+    _LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
     init_db()
     _print_banner()
     uvicorn.run(
@@ -78,4 +81,5 @@ if __name__ == "__main__":
         host=cfg["host"],
         port=cfg["port"],
         log_level=cfg["log_level"],
+        log_config=logutil.make_log_config(_LOG_PATH),
     )

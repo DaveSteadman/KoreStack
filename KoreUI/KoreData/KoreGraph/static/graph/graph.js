@@ -10,55 +10,64 @@
   const _PAN_THRESHOLD = 6;
   const SHOWCASE_INTERVAL_MS = 2000;
   const SHOWCASE_RECENT_LIMIT = 10;
+  const EDGE_STATE_LABELS = ['proposed', 'active', 'deprecated', 'rejected', 'pasttense'];
 
-  const input = document.getElementById('g-input');
-  const btn = document.getElementById('g-btn');
-  const showcaseBtn = document.getElementById('g-showcase');
-  const gwBtn = document.getElementById('g-search-gw');
-  const ac = document.getElementById('g-ac');
-  const outer = document.getElementById('g-outer');
-  const canvas = document.getElementById('g-canvas');
-  const ctx = canvas.getContext('2d');
-  const hint = document.getElementById('g-hint');
-  const shell = document.getElementById('kg-shell');
-  const sidebar = document.getElementById('kg-sidebar');
-  const splitter = document.getElementById('kg-splitter');
-  const closeSidebarBtn = document.getElementById('kg-close-sidebar');
-  const sidebarStatus = document.getElementById('kg-sidebar-status');
-  const selectionPath = document.getElementById('kg-selection-path');
-  const emptySelection = document.getElementById('kg-empty-selection');
-  const selectionCard = document.getElementById('kg-selection-card');
-  const selectionType = document.getElementById('kg-selection-type');
-  const selectionTitle = document.getElementById('kg-selection-title');
-  const selectionCopy = document.getElementById('kg-selection-copy');
-  const selectionMeta = document.getElementById('kg-selection-meta');
+  const input              = document.getElementById('g-input');
+  const btn                = document.getElementById('g-btn');
+  const showcaseBtn        = document.getElementById('g-showcase');
+  const gwBtn              = document.getElementById('g-search-gw');
+  const ac                 = document.getElementById('g-ac');
+  const outer              = document.getElementById('g-outer');
+  const canvas             = document.getElementById('g-canvas');
+  const ctx                = canvas.getContext('2d');
+  const hint               = document.getElementById('g-hint');
+  const shell              = document.getElementById('kg-shell');
+  const sidebar            = document.getElementById('kg-sidebar');
+  const splitter           = document.getElementById('kg-splitter');
+  const closeSidebarBtn    = document.getElementById('kg-close-sidebar');
+  const sidebarStatus      = document.getElementById('kg-sidebar-status');
+  const selectionPath      = document.getElementById('kg-selection-path');
+  const emptySelection     = document.getElementById('kg-empty-selection');
+  const selectionCard      = document.getElementById('kg-selection-card');
+  const selectionType      = document.getElementById('kg-selection-type');
+  const selectionTitle     = document.getElementById('kg-selection-title');
+  const selectionCopy      = document.getElementById('kg-selection-copy');
+  const selectionMeta      = document.getElementById('kg-selection-meta');
   const deleteSelectionBtn = document.getElementById('kg-delete-selection');
 
   const C = {
-    bg: '#0b0c10',
-    panel: '#0f1117',
+    bg:     '#0b0c10',
+    panel:  '#0f1117',
     border: '#1e2233',
-    text: '#c5c8d0',
-    dim: '#4e5466',
-    green: '#4af77a',
-    blue: '#6eb5ff',
-    amber: '#f0c060',
+    text:   '#c5c8d0',
+    dim:    '#4e5466',
+    green:  '#409659',
+    blue:   '#6eb5ff',
+    amber:  '#f0c060',
   };
 
+  const EDGE_TYPE_COLORS = [
+    '#40454e', // proposed
+    '#10d84f', // active
+    '#922b2b', // deprecated
+    '#6b5757', // rejected
+    '#5946ba', // pasttense
+  ];
+
   const view = { zoom: 1.0, pan: { x: 0, y: 0 } };
-  let _graphData = null;
-  let _positions = new Map();
-  let _nodeRing = new Map();
-  let _centralId = null;
-  let _nodeHits = [];
-  let _edgeLabelHits = [];
-  let _selection = null;
-  let _nodeDetail = null;
-  let _sidebarOpen = false;
-  let _transition = null;
+  let _graphData      = null;
+  let _positions      = new Map();
+  let _nodeRing       = new Map();
+  let _centralId      = null;
+  let _nodeHits       = [];
+  let _edgeLabelHits  = [];
+  let _selection      = null;
+  let _nodeDetail     = null;
+  let _sidebarOpen    = false;
+  let _transition     = null;
   let _showcaseActive = false;
-  let _showcaseTimer = null;
-  let _showcaseBusy = false;
+  let _showcaseTimer  = null;
+  let _showcaseBusy   = false;
   let _showcaseRecent = [];
 
   const NODE_R = 34;
@@ -519,8 +528,10 @@
         const x2 = p2.wx - ux * (r2c + 2);
         const y2 = p2.wy - uy * (r2c + 2);
 
+        const edgeColor = _edgeColor(e);
+
         ctx.save();
-        ctx.strokeStyle = selected ? C.amber : C.blue;
+        ctx.strokeStyle = selected ? C.amber : edgeColor;
         ctx.globalAlpha = sceneAlpha * (selected ? 0.92 : 0.45);
         ctx.lineWidth = selected ? 2.6 : 1.5;
         ctx.beginPath();
@@ -529,7 +540,7 @@
         ctx.stroke();
         ctx.restore();
 
-        drawArrow(p1, p2, r2c, selected, sceneAlpha);
+        drawArrow(p1, p2, r2c, selected, edgeColor, sceneAlpha);
 
         const stagger = (gi - (count - 1) / 2) * 15;
         const lx = (x1 + x2) / 2 + (-uy) * stagger;
@@ -612,7 +623,7 @@
     return lines;
   }
 
-  function drawArrow(from, to, targetRadius, selected, sceneAlpha = 1) {
+  function drawArrow(from, to, targetRadius, selected, edgeColor, sceneAlpha = 1) {
     const dx = to.wx - from.wx;
     const dy = to.wy - from.wy;
     const angle = Math.atan2(dy, dx);
@@ -620,7 +631,7 @@
     const tx = to.wx - (targetRadius + 2) * Math.cos(angle);
     const ty = to.wy - (targetRadius + 2) * Math.sin(angle);
     ctx.save();
-    ctx.fillStyle = selected ? C.amber : C.blue;
+    ctx.fillStyle = selected ? C.amber : edgeColor;
     ctx.globalAlpha = sceneAlpha * (selected ? 0.92 : 0.65);
     ctx.beginPath();
     ctx.moveTo(tx, ty);
@@ -1005,6 +1016,39 @@
     return `<div class="kg-meta-row"><div class="kg-meta-label">${esc(label)}</div><div class="kg-meta-value">${valueHtml}</div></div>`;
   }
 
+  function _edgeColor(edge) {
+    const state = Number.isFinite(edge?.state) ? edge.state : 1;
+    return EDGE_TYPE_COLORS[state] || C.blue;
+  }
+
+  function _renderEdgeStateSelect(edge) {
+    const currentState = Number.isFinite(edge?.state) ? edge.state : 0;
+    const options = EDGE_STATE_LABELS
+      .map((label, idx) => `<option value="${idx}"${idx === currentState ? ' selected' : ''}>${esc(label)}</option>`)
+      .join('');
+    return `<select class="kg-state-select" data-role="edge-state">${options}</select>`;
+  }
+
+  function _patchGraphEdge(edge, patch) {
+    if (!edge) return;
+    const allEdges = _graphData?.edges || [];
+    for (const candidate of allEdges) {
+      if (!_sameEdge(candidate, edge)) continue;
+      if (patch.state !== undefined) {
+        candidate.state = patch.state;
+        candidate.state_label = EDGE_STATE_LABELS[patch.state] || String(patch.state);
+      }
+      if (patch.score !== undefined) candidate.score = patch.score;
+    }
+    if (_selection?.kind === 'edge' && _sameEdge(_selection.edge, edge)) {
+      if (patch.state !== undefined) {
+        _selection.edge.state = patch.state;
+        _selection.edge.state_label = EDGE_STATE_LABELS[patch.state] || String(patch.state);
+      }
+      if (patch.score !== undefined) _selection.edge.score = patch.score;
+    }
+  }
+
   function renderSidebar() {
     selectionCard.hidden = !_selection;
     emptySelection.hidden = Boolean(_selection);
@@ -1049,10 +1093,53 @@
       _renderMetaRow('Start', `${esc(edge.start_name)} <span class="meta">(#${esc(String(edge.start_concept_id))})</span>`),
       _renderMetaRow('Connection', `${esc(edge.connection_name)} <span class="meta">(#${esc(String(edge.connection_concept_id))})</span>`),
       _renderMetaRow('End', `${esc(edge.end_name)} <span class="meta">(#${esc(String(edge.end_concept_id))})</span>`),
-      _renderMetaRow('State', esc(edge.state_label || String(edge.state ?? ''))),
+      _renderMetaRow('State', _renderEdgeStateSelect(edge)),
       _renderMetaRow('Score', esc(String(edge.score ?? '0'))),
     ].join('');
     deleteSelectionBtn.textContent = 'Delete Connection';
+  }
+
+  async function patchConnection(src, cxn, tgt, patch) {
+    const response = await fetch(`${pfx}/api/connections`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ start_concept_id: src, connection_concept_id: cxn, end_concept_id: tgt, ...patch }),
+    });
+    if (!response.ok) {
+      let message = 'Connection update failed';
+      try {
+        const payload = await response.json();
+        if (payload?.detail) message = String(payload.detail);
+      } catch (_) {}
+      throw new Error(message);
+    }
+    return response.json();
+  }
+
+  async function patchSelectedEdgeState(selectEl) {
+    if (_selection?.kind !== 'edge') return;
+    const edge = _selection.edge;
+    const nextState = parseInt(selectEl.value, 10);
+    const previousState = Number.isFinite(edge?.state) ? edge.state : 0;
+    if (!Number.isFinite(nextState) || nextState === previousState) return;
+    selectEl.disabled = true;
+    try {
+      const updated = await patchConnection(
+        edge.start_concept_id,
+        edge.connection_concept_id,
+        edge.end_concept_id,
+        { state: nextState },
+      );
+      _patchGraphEdge(edge, updated);
+      _setSidebarStatus(`Updated connection state to ${EDGE_STATE_LABELS[updated.state] || updated.state}.`);
+      renderSidebar();
+      _saveSidebarState();
+    } catch (err) {
+      selectEl.value = String(previousState);
+      _setSidebarStatus(err.message || 'Connection update failed.');
+    } finally {
+      selectEl.disabled = false;
+    }
   }
 
   function _deleteRecoveryTerms(deletedConceptId, deletedName) {
@@ -1203,6 +1290,11 @@
   });
   closeSidebarBtn.addEventListener('click', () => _setSidebarOpen(false));
   deleteSelectionBtn.addEventListener('click', deleteSelection);
+  selectionMeta.addEventListener('change', event => {
+    const target = event.target;
+    if (!(target instanceof HTMLSelectElement)) return;
+    if (target.dataset.role === 'edge-state') patchSelectedEdgeState(target);
+  });
 
   document.addEventListener('pointerdown', e => {
     if (!e.target.closest('.kg-search-row')) hideAC();

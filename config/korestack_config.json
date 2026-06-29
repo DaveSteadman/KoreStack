@@ -1,15 +1,13 @@
 {
   "comment": "KoreStack suite configuration.",
   "paths": {
-    "dataroot2":   "C:/Util/TestData",
     "dataroot":   "C:/Util/GithubRepos/KoreStack/Data",
     "korechat":   "korechat",
     "korecomms":  "korecomms",
     "koredata":   "koredata",
     "koredevice": "koredevice",
     "koreagent":  "koreagent",
-    "koredocs":   "koredocs",
-    "docs_data":  "KoreFiles"
+    "koredocs":   "koredocs"
   },
   "network": {
     "host": "127.0.0.1"

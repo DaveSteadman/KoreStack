@@ -168,6 +168,12 @@
   overflow-wrap: anywhere;
 }
 
+.kg-state-select {
+  width: 100%;
+  max-width: 11rem;
+  font-size: var(--kcui-text-label);
+}
+
 .kg-alias-list {
   display: grid;
   gap: 0.35rem;

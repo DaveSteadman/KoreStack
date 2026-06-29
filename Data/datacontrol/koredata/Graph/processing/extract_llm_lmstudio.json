@@ -1,0 +1,26 @@
+{
+  "id": "extract_llm_lmstudio",
+  "name": "Extract Graph Triples (LM Studio)",
+  "description": "LLM-assisted extraction from a KoreLibrary book into KoreGraph using an OpenAI-compatible LM Studio endpoint.",
+  "script": "extract_llm_lmstudio.py",
+  "args": [
+    {
+      "flag": "--model",
+      "type": "text",
+      "default": "openai/gpt-oss-20b",
+      "help": "LM Studio model identifier"
+    },
+    {
+      "flag": "--chunk",
+      "type": "int",
+      "default": 3000,
+      "help": "Chunk size in characters"
+    },
+    {
+      "flag": "--dry-run",
+      "type": "bool",
+      "default": false,
+      "help": "Extract without submitting to KoreGraph"
+    }
+  ]
+}

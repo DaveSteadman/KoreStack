@@ -1,0 +1,41 @@
+[
+  {
+    "name": "c_drive_free_space",
+    "display_name": "c_drive_free_space",
+    "vendor": "Example Vendor",
+    "protocol": "modbus-tcp",
+    "transport_address": "",
+    "poll_interval_sec": 5,
+    "enabled": false,
+    "description": "Read the amount of free disk space on the C: drive and return it in GB.",
+    "python_snippet": "import shutil\r\n\r\ndef read_driver(context):\r\n    metadata = context.get('driver', {})\r\n    # The task specifies the C: drive, but we inspect metadata to see if a specific path is provided\r\n    target_path = metadata.get('path', 'C:\\\\')\r\n    \r\n    try:\r\n        usage = shutil.disk_usage(target_path)\r\n        # Convert bytes to Gigabytes (1024^3)\r\n        free_gb = usage.free / (1024**3)\r\n        return {\r\n            \"drive\": target_path,\r\n            \"free_space_gb\": round(free_gb, 2),\r\n            \"status\": \"success\"\r\n        }\r\n    except Exception as e:\r\n        return {\r\n            \"drive\": target_path,\r\n            \"error\": str(e),\r\n            \"status\": \"failed\"\r\n        }\n",
+    "created_at": "2026-06-19T22:29:10.393346+00:00",
+    "updated_at": "2026-06-19T22:32:14.357962+00:00"
+  },
+  {
+    "name": "system_metrics_monitor",
+    "display_name": "system_metrics_monitor",
+    "vendor": "Example Vendor",
+    "protocol": "modbus-tcp",
+    "transport_address": "",
+    "poll_interval_sec": 5,
+    "enabled": false,
+    "description": "Create a Python snippet that reads the current system CPU usage percentage, available RAM in GB, and a dictionary of all disk partitions with their free space in GB. The function must be named `read_driver(context)` and return this information as a dictionary. Use the `psutil` library.",
+    "python_snippet": "def read_driver(context):\n    import os\n    import shutil\n    import platform\n\n    # Get CPU load (using os.getloadavg if available, else fallback)\n    try:\n        cpu_load = os.getloadavg()[0]\n    except (AttributeError, OSError):\n        cpu_load = \"unavailable\"\n\n    disk_info = {}\n    # Checking common mount points for Windows and Linux\n    paths_to_check = [\"/\", \"C:\\\\\"] if platform.system() == \"Windows\" else [\"/\"]\n    \n    for path in paths_to_check:\n        if os.path.exists(path):\n            try:\n                usage = shutil.disk_usage(path)\n                disk_info[path] = {\n                    \"total_gb\": usage.total / (1024**3),\n                    \"free_gb\": usage.free / (1024**3),\n                    \"used_gb\": usage.used / (1024**3)\n                }\n            except Exception as e:\n                disk_info[path] = f\"Error: {str(e)}\"\n\n    return {\n        \"platform\": platform.system(),\n        \"cpu_load_1min\": cpu_load,\n        \"disk_usage\": disk_info\n    }\n",
+    "created_at": "2026-06-20T21:35:45.035568+00:00",
+    "updated_at": "2026-06-20T21:36:53.152324+00:00"
+  },
+  {
+    "name": "network_status_monitor",
+    "display_name": "network_status_monitor",
+    "vendor": "Example Vendor",
+    "protocol": "modbus-tcp",
+    "transport_address": "",
+    "poll_interval_sec": 5,
+    "enabled": false,
+    "description": "Create a robust Python device driver named 'network_status_monitor'. \n\nThe `read_driver(context)` function must perform these tasks:\n1.  **Imports**: Ensure `subprocess`, `platform`, `re`, and `socket` are imported at the very top of the script.\n2.  **Core Logic**:\n    *   Determine if the system is Windows or Unix to set the correct ping flag (`-n` vs `-c`).\n    *   Define a helper function `ping_host(host)` that uses `subprocess.check_output(['ping', flag, '1', host], ...)` and regex to extract latency. It should return a dictionary: `{'status': 'connected'/'disconnected', 'latency_ms': float|None}`.\n3.  **Checks**:\n    *   **Internet**: Ping `8.8.8.8`.\n    *   **Local Gateway**: Ping `192.168.1.1`.\n    *   **Custom Probes**: Check the `context` for a list of IP addresses under `context['driver'].get('extra_probes', [])`. For each IP in this list, perform the same ping check and include it in the results.\n4.  **Output**: Return a dictionary with:\n    *   `timestamp`: current time (can use `datetime.now().isoformat()`).\n        *   `connectivity_report`: A map where keys are the host IP/name and values are their status/latency objects.\n        *   Example structure: `{\"8.8.8.8\": {\"status\": \"connected\", \"latency_ms\": 12.5}, ...}`\n\nEnsure the code is self-contained, handles exceptions gracefully (returning 'disconnected' on failure), and does not rely on any external global variables outside the function or the module scope.",
+    "python_snippet": "import subprocess\nimport platform\nimport re\nimport datetime\n\ndef read_driver(context):\n    \"\"\"\n    Reads the network connectivity status by pinging key hosts.\n    Supports custom host probes via context['driver']['extra_probes'].\n    \"\"\"\n    sys_platform = platform.system().lower()\n    ping_flag = '-n' if sys_platform == 'windows' else '-c'\n\n    def ping_host(host, flag):\n        try:\n            # Ping 1 packet with a timeout to be responsive\n            cmd = ['ping', flag, '1', host]\n            output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, universal_newlines=True, timeout=3)\n            \n            # Regex for latency: accommodates 'time=20ms', 'time<1ms', etc.\n            match = re.search(r'time[=< ]([\\d.]+)', output)\n            latency = float(match.group(1)) if match else None\n            \n            return {'status': 'connected', 'latency_ms': latency}\n        except Exception:\n            return {'status': 'disconnected', 'latency_ms': None}\n\n    # Default targets: Google DNS (Internet) and a common local gateway IP\n    targets = ['8.8.8.8', '192.168.1.1']\n    \n    # Add extra probes from driver configuration\n    try:\n        driver_config = context.get('driver', {})\n        extra_probes = driver_config.get('extra_probes', [])\n        if isinstance(extra_probes, list):\n            for probe in extra_probes:\n                if probe not in targets:\n                    targets.append(probe)\n    except Exception:\n        pass\n\n    # Execute probes and build report\n    connectivity_report = {}\n    for host in targets:\n        connectivity_report[host] = ping_host(host, ping_flag)\n\n    return {\n        'timestamp': datetime.datetime.now().isoformat(),\n        'connectivity_report': connectivity_report\n    }\n",
+    "created_at": "2026-06-20T21:42:49.395202+00:00",
+    "updated_at": "2026-06-20T21:49:25.365035+00:00"
+  }
+]

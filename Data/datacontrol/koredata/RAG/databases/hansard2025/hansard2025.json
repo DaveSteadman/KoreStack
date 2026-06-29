@@ -1,0 +1,41 @@
+{
+  "id": "hansard2025",
+  "display_name": "Hansard \u2014 UK Parliament (hansard2025)",
+  "description": "Official verbatim record of UK Parliamentary debates. Sourced from developer.parliament.uk and hansard.parliament.uk.",
+  "source_url": "https://hansard.parliament.uk/",
+  "licence": "Open Parliament Licence",
+  "managed_by": "ingestor",
+  "ingestor": "hansard2025",
+  "chunk_types": [
+    {
+      "type": "speech",
+      "required_tags": [
+        "house",
+        "date",
+        "debate",
+        "speaker"
+      ]
+    },
+    {
+      "type": "member",
+      "required_tags": [
+        "house",
+        "party",
+        "member_id"
+      ]
+    }
+  ],
+  "navigation": {
+    "type": "hansard",
+    "tables": [
+      "h_sittings",
+      "h_debates",
+      "h_speeches",
+      "h_members"
+    ]
+  },
+  "sync": {
+    "status": "not_started"
+  },
+  "schedule": "manual"
+}

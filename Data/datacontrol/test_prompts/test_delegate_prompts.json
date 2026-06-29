@@ -1,0 +1,7 @@
+[
+    "I need to compare two things. First, delegate a sub-task to find out what Ollama is and what its latest version is. Then separately, delegate another sub-task to find out what llama.cpp is and what its latest version is. Then write me a short comparison of the two tools.",
+    "Delegate a focused investigation: what are the three most-discussed open source AI agent frameworks in Python right now? Search the web, read at least one result page, and return a concise summary. Then tell me which one looks most suitable for a solo developer.",
+    "I want a two-part answer. First delegate a sub-task to look up the Wikipedia article on the Turing Test and extract the key points. Then delegate a second sub-task to search the web for recent criticism of the Turing Test. Then synthesise both into a single balanced paragraph.",
+    "Delegate this research task: search for the current Python version release dates for Python 3.12 and 3.13, then tell me how long the gap was between those two releases. Return only the answer with the dates and gap in days.",
+    "I need a quick fact check. Delegate a sub-task to search the web and confirm: is DuckDuckGo still a US-based company and is it still independently owned? Return just the confirmed facts with source URLs."
+]

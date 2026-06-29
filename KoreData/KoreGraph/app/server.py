@@ -32,6 +32,7 @@
 #   - app/database.py   -- all DB operations
 # ====================================================================================================
 import json
+import logging
 import os
 import subprocess
 import sys
@@ -75,6 +76,8 @@ from app.database import (
     upsert_connection_by_name,
     upsert_relation,
 )
+
+LOG = logging.getLogger("koredata.graph")
 
 # ---------------------------------------------------------------------------
 # MARK: Setup
@@ -147,7 +150,7 @@ _mcp = FastMCP(
         "1. Call graph_connection_search_vocab to find terms matching a keyword.\n"
         "2. Call graph_connection_expand_concept_by_term with a string term to retrieve its neighbourhood.\n"
         "3. Call graph_connection_create to add or reinforce a graph connection using three strings.\n\n"
-        "State filter: 0=proposed, 1=active, 2=deprecated, 3=rejected."
+        "State filter: 0=proposed, 1=active, 2=deprecated, 3=rejected, 4=pasttense."
     ),
     streamable_http_path="/",
     stateless_http=True,
@@ -205,7 +208,7 @@ def graph_connection_create(
     "List KoreGraph graph connections in batches using limit and offset. "
     "Returns {total, items} where each item has start_name, connection_name, end_name, state, score. "
     "Use limit/offset to step through all connections. "
-    "Optionally filter by state: 0=proposed, 1=active, 2=deprecated, 3=rejected."
+    "Optionally filter by state: 0=proposed, 1=active, 2=deprecated, 3=rejected, 4=pasttense."
 ))
 
 def graph_connection_list(
@@ -320,7 +323,7 @@ def route_ui():
 # MARK: UI — Connections
 # ---------------------------------------------------------------------------
 
-_STATE_LABELS = {0: "proposed", 1: "active", 2: "deprecated", 3: "rejected"}
+_STATE_LABELS = {0: "proposed", 1: "active", 2: "deprecated", 3: "rejected", 4: "pasttense"}
 
 
 @app.get("/ui/relations", include_in_schema=False)
@@ -536,26 +539,41 @@ def api_batch_upsert_connection_by_name(body: list[ConnectionByName]):
 
 
 @app.post("/api/csv/export", summary="Export graph connections to CSV")
-def api_csv_export(filename: str = "connections.csv"):
+def api_csv_export(filename: str = "connections.csv", include_state_score: bool = False):
     csv_path  = _resolve_csv_path(filename)
-    row_count = export_connections(csv_path)
+    row_count = export_connections(csv_path, include_state_score=include_state_score)
     return {
-        "ok":       True,
-        "filename": csv_path.name,
-        "path":     str(csv_path),
-        "rows":     row_count,
+        "ok":                  True,
+        "filename":            csv_path.name,
+        "path":                str(csv_path),
+        "rows":                row_count,
+        "include_state_score": include_state_score,
     }
 
 
 @app.post("/api/csv/import", summary="Import graph connections from CSV")
 def api_csv_import(body: CsvImportBody):
     csv_path = _resolve_csv_path(body.filename)
+    LOG.info("CSV import started file=%s path=%s", csv_path.name, csv_path)
     try:
         result = import_connections(csv_path)
     except ValueError as exc:
+        LOG.warning("CSV import rejected file=%s error=%s", csv_path.name, exc)
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception:
+        LOG.exception("CSV import failed file=%s", csv_path.name)
+        raise
     if result.get("error"):
+        LOG.warning("CSV import file error file=%s error=%s", csv_path.name, result["error"])
         raise HTTPException(status_code=404, detail=str(result["error"]))
+    LOG.info(
+        "CSV import completed file=%s imported=%s updated=%s skipped=%s imported_with_metadata=%s",
+        csv_path.name,
+        result.get("imported", 0),
+        result.get("updated", 0),
+        result.get("skipped", 0),
+        result.get("imported_with_metadata", 0),
+    )
     return {
         "ok":       True,
         "filename": csv_path.name,

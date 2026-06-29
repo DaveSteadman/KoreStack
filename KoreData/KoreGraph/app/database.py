@@ -127,7 +127,7 @@ def init_db() -> None:
         #   ├── subject_concept_id    the "from" concept  (a vocab concept_id)
         #   ├── predicate_concept_id  the relationship kind (also a vocab concept_id)
         #   ├── object_concept_id     the "to" concept    (also a vocab concept_id)
-        #   ├── state   0 = proposed  1 = active  2 = deprecated  3 = rejected
+        #   ├── state   0 = proposed  1 = active  2 = deprecated  3 = rejected  4 = pasttense
         #   └── score   0–255 confidence / weight
         #
         # e.g.  subject=7 ("Boston Red Sox")  predicate=12 ("member_of")  object=3 ("MLB")
@@ -222,7 +222,7 @@ def _seed_predicates(conn: sqlite3.Connection) -> None:
     PREDICATES = [
         "works_for", "founded", "part_of", "related_to", "opposed_to",
         "located_in", "successor_of", "predecessor_of", "alias_of",
-        "owns", "parent_of", "member_of",
+        "owns",      "parent_of", "member_of",
     ]
     for p in PREDICATES:
         if not conn.execute("SELECT 1 FROM vocab WHERE term=?", (p,)).fetchone():
@@ -543,7 +543,7 @@ def unmerge_vocab_term(vocab_id: int) -> Optional[dict]:
 # MARK: Relations
 # ---------------------------------------------------------------------------
 
-_STATE_LABELS = {0: "proposed", 1: "active", 2: "deprecated", 3: "rejected"}
+_STATE_LABELS = {0: "proposed", 1: "active", 2: "deprecated", 3: "rejected", 4: "pasttense"}
 
 _REL_JOIN = """
     JOIN vocab vs ON vs.id = (SELECT MIN(id) FROM vocab WHERE concept_id = r.subject_concept_id)
@@ -610,7 +610,7 @@ def upsert_relation(
     score: int = 0,
 ) -> dict:
     score = max(0, min(255, score))
-    state = max(0, min(3, state))
+    state = max(0, min(4, state))
     with db_connection() as conn:
         conn.execute(
             """
@@ -647,7 +647,7 @@ def update_relation_state_score(
         ).fetchone()
         if row is None:
             return None
-        new_state = max(0, min(3, state)) if state is not None else row["state"]
+        new_state = max(0, min(4, state)) if state is not None else row["state"]
         new_score = max(0, min(255, score)) if score is not None else row["score"]
         conn.execute(
             "UPDATE relations SET state=?, score=?"
@@ -802,7 +802,7 @@ def upsert_connection_by_name(
     if _is_blacklisted(connection):
         raise ValueError(f"'{connection}' is a blacklisted term")
     score = max(0, min(255, score))
-    state = max(0, min(3, state))
+    state = max(0, min(4, state))
     with db_connection() as conn:
         start_id = _get_or_create_vocab_term(conn, start)
         conn_id = _get_or_create_vocab_term(conn, connection)

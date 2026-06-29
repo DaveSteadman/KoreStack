@@ -1,0 +1,7 @@
+{
+  "id": "extract_regex",
+  "name": "Extract Graph Triples (Regex)",
+  "description": "Rule-based extraction from a KoreLibrary book into KoreGraph using regex patterns.",
+  "script": "extract_regex.py",
+  "args": []
+}

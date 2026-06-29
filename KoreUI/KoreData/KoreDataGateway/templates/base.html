@@ -6,56 +6,8 @@
   <title>{% block title %}KoreStack{% endblock %}</title>
   <link rel="icon" type="image/x-icon" href="/ui-elements/assets/icons/favicon.ico">
   <link rel="stylesheet" href="/ui-elements/assets/css/chrome.css">
+  <link rel="stylesheet" href="/ui-elements/assets/css/koredata-shell.css">
   <script src="/suite-config.js"></script>
-  <style>
-    .kcui-panel.kcui-panel {
-      margin-bottom: 1.25rem;
-    }
-
-    .kcui-panel-header.kcui-panel-header {
-      justify-content: flex-start;
-      gap: 0.6rem;
-    }
-
-    .kcui-panel-body.kcui-panel-body {
-      padding: 12px;
-    }
-
-    .kg-alert {
-      padding: 10px 12px;
-      border: 1px solid var(--border);
-      background: color-mix(in srgb, var(--panel, #1f2430) 88%, black 12%);
-      color: var(--text);
-      font-size: 12px;
-      line-height: 1.5;
-    }
-
-    .kg-alert--error {
-      border-color: var(--red);
-      background: color-mix(in srgb, rgba(255,95,95,0.16) 70%, var(--panel, #1f2430) 30%);
-      color: var(--text);
-    }
-
-    .kg-alert--warn {
-      border-color: var(--amber);
-      background: color-mix(in srgb, rgba(255,210,90,0.12) 70%, var(--panel, #1f2430) 30%);
-      color: var(--text);
-    }
-
-    .kg-alert-title {
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      margin-bottom: 6px;
-      color: var(--dim);
-    }
-
-    .kg-inline-meta {
-      font-size: 11px;
-      color: var(--dim);
-    }
-  </style>
 </head>
 <body class="kcui-shell-bg">
   <div id="topbar"></div>

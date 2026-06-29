@@ -1,0 +1,152 @@
+[
+  {
+    "exchange": "slash /tasks - list tasks",
+    "turns": [
+      { "user": "/tasks", "assert": "not_empty" }
+    ]
+  },
+
+  {
+    "exchange": "slash /task add interval then list",
+    "turns": [
+      { "user": "/task add TestIntervalTask 45 Check free RAM and report it", "assert": "contains|created" },
+      { "user": "/tasks", "assert": "contains|TestIntervalTask" },
+      { "user": "/task delete TestIntervalTask", "assert": "contains|deleted" }
+    ]
+  },
+
+  {
+    "exchange": "slash /task add daily then list",
+    "turns": [
+      { "user": "/task add TestDailyTask 03:30 Run a daily system health summary", "assert": "contains|created" },
+      { "user": "/tasks", "assert": "contains|TestDailyTask" },
+      { "user": "/task delete TestDailyTask", "assert": "contains|deleted" }
+    ]
+  },
+
+  {
+    "exchange": "slash /task disable then enable",
+    "turns": [
+      { "user": "/task add TestToggleTask 60 A task for toggle testing", "assert": "contains|created" },
+      { "user": "/task disable TestToggleTask", "assert": "contains|disabled" },
+      { "user": "/tasks", "assert": "contains|off" },
+      { "user": "/task enable TestToggleTask", "assert": "contains|enabled" },
+      { "user": "/tasks", "assert": "contains|on" },
+      { "user": "/task delete TestToggleTask", "assert": "contains|deleted" }
+    ]
+  },
+
+  {
+    "exchange": "slash /task delete",
+    "turns": [
+      { "user": "/task add TestDeleteTask 10 Temporary task for deletion test", "assert": "contains|created" },
+      { "user": "/task delete TestDeleteTask", "assert": "contains|deleted" },
+      { "user": "/tasks", "assert": "not_contains|TestDeleteTask" }
+    ]
+  },
+
+  {
+    "exchange": "slash /task add - bad schedule arg",
+    "turns": [
+      { "user": "/task add BadTask notanumber Do something", "assert": "contains|Invalid" }
+    ]
+  },
+
+  {
+    "exchange": "slash /task add - duplicate name rejected",
+    "turns": [
+      { "user": "/task add DupeTask 30 First version", "assert": "contains|created" },
+      { "user": "/task add DupeTask 30 Second version", "assert": "contains|already exists" },
+      { "user": "/task delete DupeTask", "assert": "contains|deleted" }
+    ]
+  },
+
+  {
+    "exchange": "slash /task enable - unknown task",
+    "turns": [
+      { "user": "/task enable NonExistentTask99", "assert": "contains|not found" }
+    ]
+  },
+
+  {
+    "exchange": "slash /task delete - unknown task",
+    "turns": [
+      { "user": "/task delete NonExistentTask99", "assert": "contains|not found" }
+    ]
+  },
+
+  {
+    "exchange": "chat - list tasks via natural language",
+    "turns": [
+      { "user": "/task add ChatListTest 60 A task created to test natural language listing", "assert": "contains|created" },
+      { "user": "list all my scheduled tasks", "assert": "contains|ChatListTest" },
+      { "user": "/task delete ChatListTest", "assert": "contains|deleted" }
+    ]
+  },
+
+  {
+    "exchange": "chat - get task details",
+    "turns": [
+      { "user": "/task add ChatGetTest 90 A task for get-task testing", "assert": "contains|created" },
+      { "user": "show me the details of the ChatGetTest task", "assert": "contains|ChatGetTest" },
+      { "user": "/task delete ChatGetTest", "assert": "contains|deleted" }
+    ]
+  },
+
+  {
+    "exchange": "chat - create interval task via natural language",
+    "turns": [
+      { "user": "create a scheduled task called ChatIntervalTask that runs every 60 minutes and checks available disk space", "assert": "contains|ChatIntervalTask" },
+      { "user": "/tasks", "assert": "contains|ChatIntervalTask" },
+      { "user": "/task delete ChatIntervalTask", "assert": "contains|deleted" }
+    ]
+  },
+
+  {
+    "exchange": "chat - create daily task via natural language",
+    "turns": [
+      { "user": "create a daily scheduled task called ChatDailyTask that runs at 07:00 and summarises the morning tech news", "assert": "contains|ChatDailyTask" },
+      { "user": "/tasks", "assert": "contains|ChatDailyTask" },
+      { "user": "/task delete ChatDailyTask", "assert": "contains|deleted" }
+    ]
+  },
+
+  {
+    "exchange": "chat - disable task via natural language",
+    "turns": [
+      { "user": "/task add ChatDisableTest 30 Task for chat-disable testing", "assert": "contains|created" },
+      { "user": "disable the ChatDisableTest task", "assert": "not_empty" },
+      { "user": "/tasks", "assert": "contains|off" },
+      { "user": "/task delete ChatDisableTest", "assert": "contains|deleted" }
+    ]
+  },
+
+  {
+    "exchange": "chat - change task schedule via natural language",
+    "turns": [
+      { "user": "/task add ChatRescheduleTest 60 Task for rescheduling test", "assert": "contains|created" },
+      { "user": "change the ChatRescheduleTest task to run every 15 minutes", "assert": "not_empty" },
+      { "user": "show me the details of ChatRescheduleTest", "assert": "contains|15" },
+      { "user": "/task delete ChatRescheduleTest", "assert": "contains|deleted" }
+    ]
+  },
+
+  {
+    "exchange": "chat - update task prompt via natural language",
+    "turns": [
+      { "user": "/task add ChatPromptTest 60 Original prompt text here", "assert": "contains|created" },
+      { "user": "update the prompt for the ChatPromptTest task to: check RAM and write the result to data/ramlog.txt", "assert": "not_empty" },
+      { "user": "show me the details of ChatPromptTest", "assert": "contains|ramlog" },
+      { "user": "/task delete ChatPromptTest", "assert": "contains|deleted" }
+    ]
+  },
+
+  {
+    "exchange": "chat - delete task via natural language",
+    "turns": [
+      { "user": "/task add ChatDeleteTest 20 Temporary task for natural language deletion", "assert": "contains|created" },
+      { "user": "delete the ChatDeleteTest scheduled task", "assert": "not_empty" },
+      { "user": "/tasks", "assert": "not_contains|ChatDeleteTest" }
+    ]
+  }
+]
