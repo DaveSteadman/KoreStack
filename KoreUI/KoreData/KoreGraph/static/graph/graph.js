@@ -41,14 +41,14 @@
     border: '#1e2233',
     text:   '#c5c8d0',
     dim:    '#4e5466',
-    green:  '#409659',
+    green:  '#46da70',
     blue:   '#6eb5ff',
     amber:  '#f0c060',
   };
 
   const EDGE_TYPE_COLORS = [
     '#40454e', // proposed
-    '#10d84f', // active
+    '#3e6a4c', // active
     '#922b2b', // deprecated
     '#6b5757', // rejected
     '#5946ba', // pasttense

@@ -578,16 +578,69 @@ async def api_search(req: _SearchRequest):
         return [_map_scrape_chunk(c) for c in (r.json() or [])[:limit]]
 
     async def _graph():
-        params: dict = {"q": _normalise_graph_query_literal(req.query), "depth": 1, "min_score": 0}
-        r = await _graph_client.get("/api/expand-by-term", params=params, timeout=10.0)
+        query = _normalise_graph_query_literal(req.query)
+        query_l = query.lower()
+        r = await _graph_client.get("/api/search", params={"q": query, "limit": min(limit, 50)}, timeout=10.0)
         if r.status_code != 200:
             return {"error": f"HTTP {r.status_code}"}
-        data = r.json()
-        if not data.get("matched"):
+        matches = r.json() or []
+        if not matches:
             return []
-        # Include unreviewed (0) and accepted (1); exclude rejected (2) and flagged (3)
-        active = [e for e in (data.get("edges") or []) if e.get("state", 0) in (0, 1)]
-        edges = sorted(active, key=lambda e: e.get("score", 0), reverse=True)[:50]
+
+        concept_rows = matches[: min(len(matches), max(1, min(limit, 8)))]
+        expand_calls = [
+            _graph_client.get(
+                "/api/expand",
+                params={"concept_id": row.get("concept_id"), "depth": 1, "min_score": 0},
+                timeout=10.0,
+            )
+            for row in concept_rows
+            if row.get("concept_id") is not None
+        ]
+        expand_results = await asyncio.gather(*expand_calls, return_exceptions=True)
+
+        seen: set[tuple[str, str, str]] = set()
+        edges: list[dict] = []
+        for response in expand_results:
+            if isinstance(response, Exception) or response.status_code != 200:
+                continue
+            data = response.json() or {}
+            for edge in data.get("edges") or []:
+                if edge.get("state", 0) not in (0, 1, 4):
+                    continue
+                key = (
+                    str(edge.get("start_name", "")),
+                    str(edge.get("connection_name", "")),
+                    str(edge.get("end_name", "")),
+                )
+                if key in seen:
+                    continue
+                seen.add(key)
+                edges.append(edge)
+
+        def _edge_match_rank(edge: dict) -> tuple[int, int]:
+            start_l      = str(edge.get("start_name", "")).lower()
+            end_l        = str(edge.get("end_name", "")).lower()
+            connection_l = str(edge.get("connection_name", "")).lower()
+            if query_l and query_l in start_l:
+                return (0, start_l.index(query_l))
+            if query_l and query_l in end_l:
+                return (1, end_l.index(query_l))
+            if query_l and query_l in connection_l:
+                return (2, connection_l.index(query_l))
+            return (3, 10_000)
+
+        edges = sorted(
+            edges,
+            key=lambda e: (
+                _edge_match_rank(e)[0],
+                _edge_match_rank(e)[1],
+                -int(e.get("score", 0)),
+                str(e.get("start_name", "")).lower(),
+                str(e.get("connection_name", "")).lower(),
+                str(e.get("end_name", "")).lower(),
+            ),
+        )[:50]
         return [
             {
                 "start":      e.get("start_name", ""),

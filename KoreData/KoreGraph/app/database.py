@@ -288,17 +288,22 @@ def _get_or_create_vocab_term(conn: sqlite3.Connection, term: str) -> int:
 # ---------------------------------------------------------------------------
 
 def list_vocab(q: Optional[str] = None, limit: int = 500) -> list[dict]:
-    like = f"%{q}%" if q else None
     with db_connection() as conn:
-        if like:
+        if q:
+            term      = q.strip()
+            term_l    = term.lower()
+            like      = f"%{term_l}%"
             rows = conn.execute(
                 """
                 SELECT id, concept_id, term,
                        (SELECT COUNT(*) FROM vocab v2
                         WHERE v2.concept_id = vocab.concept_id) - 1 AS alias_count
                 FROM vocab
-                WHERE term LIKE ?
-                ORDER BY concept_id, term LIMIT ?
+                WHERE lower(term) LIKE ?
+                ORDER BY lower(term),
+                         lower(term),
+                         concept_id
+                LIMIT ?
                 """,
                 (like, limit),
             ).fetchall()
@@ -774,13 +779,23 @@ def expand_by_term(term: str, depth: int = 1, min_score: int = 0) -> dict:
     """String-based expand. Returns {query, matched, nodes, edges} with all names as strings."""
     term = term.strip()
     with db_connection() as conn:
+        term_l = term.lower()
         row = conn.execute(
-            "SELECT DISTINCT concept_id FROM vocab WHERE term=? LIMIT 1", (term,)
+            "SELECT concept_id FROM vocab WHERE lower(term)=? ORDER BY lower(term), concept_id LIMIT 1",
+            (term_l,),
         ).fetchone()
         if row is None:
             row = conn.execute(
-                "SELECT DISTINCT concept_id FROM vocab WHERE term LIKE ? LIMIT 1",
-                (f"%{term}%",),
+                """
+                SELECT concept_id
+                FROM vocab
+                WHERE lower(term) LIKE ?
+                ORDER BY lower(term),
+                         lower(term),
+                         concept_id
+                LIMIT 1
+                """,
+                (f"%{term_l}%",),
             ).fetchone()
     if row is None:
         return {"query": term, "matched": False, "nodes": [], "edges": []}
