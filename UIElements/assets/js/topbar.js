@@ -23,7 +23,6 @@ const DEFAULT_SERVICES = [
 	{ key: 'koreagent',  label: 'KoreAgent',  path: '/',   icon: 'koreagent'  },
 	{ key: 'korechat',   label: 'KoreChat',   path: '/ui', icon: 'korechat'   },
 	{ key: 'koredata',   label: 'KoreData',   path: '/',   icon: 'koredata'   },
-	{ key: 'koredevice', label: 'KoreDevice', path: '/',   icon: 'koredevice' },
 	{ key: 'koredocs',   label: 'KoreDocs',   path: '/ui', icon: 'koredocs'   },
 	{ key: 'korecode',   label: 'KoreCode',   path: '/ui', icon: 'korecode'   },
 	{ key: 'korecomms',  label: 'KoreComms',  path: '/',   icon: 'korecomms'  },

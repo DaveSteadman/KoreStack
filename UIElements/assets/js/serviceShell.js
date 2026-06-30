@@ -122,43 +122,6 @@ export function initKoreDataShell(options = {}) {
   });
 }
 
-export function initKoreDeviceShell(options = {}) {
-  const {
-    urls,
-    path,
-    section,
-    topbarOptions,
-    appBarOptions,
-  } = options;
-
-  return initServiceShell({
-    currentService: 'koredevice',
-    urls,
-    path,
-    section,
-    shellMeta: {
-      home:         { brandLabel: 'KoreDevice',       overline: 'Device Gateway',  brandIcon: 'koredevice' },
-      numbers:      { brandLabel: 'KoreDeviceNumber', overline: 'Numeric Signals', brandIcon: 'koredevicenumber' },
-      driver:       { brandLabel: 'KoreDeviceDriver', overline: 'Driver Registry', brandIcon: 'koredevicedriver' },
-      driverDetail: { brandLabel: 'KoreDeviceDriver', overline: 'Driver Detail',   brandIcon: 'koredevicedriver' },
-    },
-    shellTabs: [
-      { key: 'home',    label: 'Home',    href: '/' },
-      { key: 'numbers', label: 'Numbers', href: '/ui/numbers' },
-      { key: 'driver',  label: 'Driver',  href: '/ui/driver', activeSections: ['driver', 'driverDetail'] },
-    ],
-    resolveSection(resolvedPath) {
-      return resolvedPath.startsWith('/ui/numbers')
-        ? 'numbers'
-        : resolvedPath.startsWith('/ui/driver')
-          ? (resolvedPath === '/ui/driver' ? 'driver' : 'driverDetail')
-          : 'home';
-    },
-    topbarOptions,
-    appBarOptions,
-  });
-}
-
 export function initKoreCommsShell(options = {}) {
   const {
     urls,

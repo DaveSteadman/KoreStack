@@ -26,9 +26,6 @@ export const ICON_FILES = Object.freeze({
   korecode: 'square-terminal-svgrepo-com',
   korecomms: 'send-alt-1-svgrepo-com',
   korechat: 'message-circle-chat-svgrepo-com',
-  koredevice: 'diagram-project-svgrepo-com',
-  koredevicenumber: 'chart-mixed-svgrepo-com',
-  koredevicedriver: 'sliders-svgrepo-com',
   koredoc: 'text-size-svgrepo-com',
   textedit: 'text-svgrepo-com',
   koresheet: 'table-list-alt-svgrepo-com',
@@ -59,9 +56,6 @@ export const KOREDOCS_ICON = makePackIcon(ICON_FILES.koredocs);
 export const KORECODE_ICON = makePackIcon(ICON_FILES.korecode);
 export const KORECOMMS_ICON = makePackIcon(ICON_FILES.korecomms);
 export const KORECHAT_ICON = makePackIcon(ICON_FILES.korechat);
-export const KOREDEVICE_ICON = makePackIcon(ICON_FILES.koredevice);
-export const KOREDEVICENUMBER_ICON = makePackIcon(ICON_FILES.koredevicenumber);
-export const KOREDEVICEDRIVER_ICON = makePackIcon(ICON_FILES.koredevicedriver);
 
 export const KOREDOC_FILE_ICON = makePackIcon(ICON_FILES.koredoc);
 export const TEXTEDIT_FILE_ICON = makePackIcon(ICON_FILES.textedit);
@@ -83,9 +77,6 @@ export const SUITE_ICONS = {
   korecode: KORECODE_ICON,
   korecomms: KORECOMMS_ICON,
   korechat: KORECHAT_ICON,
-  koredevice: KOREDEVICE_ICON,
-  koredevicenumber: KOREDEVICENUMBER_ICON,
-  koredevicedriver: KOREDEVICEDRIVER_ICON,
   koredoc: KOREDOC_FILE_ICON,
   textedit: TEXTEDIT_FILE_ICON,
   koresheet: KORESHEET_FILE_ICON,

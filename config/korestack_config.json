@@ -5,7 +5,6 @@
     "korechat":   "korechat",
     "korecomms":  "korecomms",
     "koredata":   "koredata",
-    "koredevice": "koredevice",
     "koreagent":  "koreagent",
     "koredocs":   "koredocs"
   },
@@ -23,17 +22,9 @@
     "korereference":     { "port": 19607, "enabled": true },
     "korescrape":        { "port": 19612, "enabled": true },
     "koregraph":         { "port": 19608, "enabled": true },
-    "koredevicegateway": { "port": 19613, "enabled": true },
-    "koredevicenumber":  { "port": 19614, "enabled": true },
-    "koredevicedriver":  { "port": 19615, "enabled": true },
     "korecomms":         { "port": 19609, "enabled": true },
     "koredocs":          { "port": 19610, "enabled": true },
     "korecode":          { "port": 19611, "enabled": true }
-  },
-  "koredevicedriver": {
-    "default_protocol":      "modbus-tcp",
-    "default_vendor":        "Example Vendor",
-    "default_poll_interval": 5
   },
   "mcp": {
     "connections": [

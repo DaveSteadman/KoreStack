@@ -84,14 +84,6 @@ SERVICE_META: dict[str, dict[str, object]] = {
         "health_suffix": "/status",
         "description": "KoreData gateway with the feed, library, reference, and RAG services behind it.",
     },
-    "koredevicegateway": {
-        "label": "KoreDevice",
-        "cwd": SUITE_ROOT / "KoreDevice",
-        "script": "main.py",
-        "url_suffix": "/",
-        "health_suffix": "/status",
-        "description": "KoreDevice gateway with child services for hardware values, logs, and device-side tools.",
-    },
     "koredocs": {
         "label": "KoreDocs",
         "cwd": SUITE_ROOT / "KoreDocs",
@@ -124,7 +116,6 @@ SERVICE_ICON_KEYS: dict[str, str] = {
     "koreagent":         "koreagent",
     "korechat":          "korechat",
     "koredatagateway":   "koredata",
-    "koredevicegateway": "koredevice",
     "koredocs":          "koredocs",
     "korecode":          "korecode",
     "korecomms":         "korecomms",
@@ -214,7 +205,6 @@ def get_stack_paths(config: dict) -> dict[str, Path]:
         "conversation_data": _dc("korechat",  "korechat"),
         "comms_data":       _dc("korecomms", "korecomms"),
         "koredata_data":    _dc("koredata",  "koredata"),
-        "koredevice_data":  _dc("koredevice","koredevice"),
         "koreagent_data":   _dc("koreagent", "koreagent"),
         "koredocs":         _dc("koredocs",  "koredocs"),
         "docs_data":        _du("docs_data", "KoreFiles"),
@@ -254,7 +244,6 @@ def build_child_env(config: dict) -> dict[str, str]:
     env["KORECHAT_DATA_DIR"] = str(stack_paths["conversation_data"])
     env["KORECOMMS_DATA_DIR"] = str(stack_paths["comms_data"])
     env["KOREDATA_DATA_DIR"] = str(stack_paths["koredata_data"])
-    env["KOREDEVICE_DATA_DIR"] = str(stack_paths["koredevice_data"])
     env["KOREAGENT_DATA_DIR"] = str(stack_paths["koreagent_data"])
     env["KOREDOCS_CONTROL_DIR"] = str(stack_paths["koredocs"])
     env["KOREDOCS_DATA_DIR"] = str(stack_paths["docs_data"])
@@ -337,7 +326,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--services",
         default="all",
-        help="Comma-separated service list. Valid values: all, korechat, koreagent, koredatagateway, koredevicegateway, koredocs, korecode, korecomms.",
+        help="Comma-separated service list. Valid values: all, korechat, koreagent, koredatagateway, koredocs, korecode, korecomms.",
     )
     parser.add_argument("--host", default=None, help="KoreStack landing page bind address.")
     parser.add_argument("--ui-port", type=int, default=None, help="KoreStack landing page port.")
@@ -354,7 +343,6 @@ def resolve_services(raw: str, services: dict[str, ServiceSpec]) -> list[Service
             "korechat",
             "koreagent",
             "koredatagateway",
-            "koredevicegateway",
             "koredocs",
             "korecode",
             "korecomms",
@@ -710,8 +698,6 @@ def _bootstrap_data_dirs(stack_paths: dict[str, Path]) -> None:
     dc = stack_paths["datacontrol"]
     du = stack_paths["datauser"]
     kd = stack_paths["koredata_data"]
-    kv = stack_paths["koredevice_data"]
-
     fresh = not dc.exists()
 
     dirs = [
@@ -730,9 +716,6 @@ def _bootstrap_data_dirs(stack_paths: dict[str, Path]) -> None:
         kd / "Reference",
         kd / "RAG",
         kd / "Graph",
-        # KoreDevice gateway + sub-services
-        kv,
-        kv / "Numbers",
         # KoreDocs
         stack_paths["koredocs"],
         # Shared datacontrol tree
