@@ -70,6 +70,7 @@
           <thead>
             <tr>
               <th>Domain</th>
+              <th class="kcui-text-center" style="width:74px;">On</th>
               <th class="kcui-text-right" style="width:90px;">Entries</th>
               <th style="width:100px;"></th>
             </tr>
@@ -78,12 +79,22 @@
             {% for d in domains %}
             <tr class="kcui-row-clickable" onclick="editDomain('{{ d.domain }}')">
               <td><a href="/ui/feeds/{{ d.domain }}" onclick="event.stopPropagation()">{{ d.domain }}</a></td>
+              <td class="kcui-text-center">
+                <input
+                  type="checkbox"
+                  {% if d.enabled %}checked{% endif %}
+                  data-prev-checked="{% if d.enabled %}1{% endif %}"
+                  style="width:auto;"
+                  title="Enable or disable all feed processing for this domain"
+                  onclick="event.stopPropagation()"
+                  onchange="toggleDomainEnabled('{{ d.domain }}', this)">
+              </td>
               <td class="meta kcui-text-right"><span class="badge badge-dim">{{ d.entry_count }}</span></td>
               <td class="kcui-text-right kcui-nowrap">
                 <form method="post" action="/ui/feeds/domains/{{ d.domain }}/delete"
                       class="kcui-inline-form">
                   <button class="btn-danger btn-sm" type="submit"
-                    onclick="event.stopPropagation(); return confirm('Delete domain {{ d.domain }} and all its data?')">DELETE</button>
+                    onclick="event.stopPropagation(); event.preventDefault(); confirmDeleteDomain('{{ d.domain }}', this.form); return false;">DELETE</button>
                 </form>
               </td>
             </tr>
@@ -226,6 +237,36 @@ function cancelEditDomain() {
   document.getElementById('new_domain').value = '';
 }
 
+async function toggleDomainEnabled(domain, input) {
+  var prior = input.dataset.prevChecked === '1';
+  var enabled = !!input.checked;
+  input.disabled = true;
+  try {
+    var body = new URLSearchParams();
+    body.set('enabled', enabled ? 'true' : 'false');
+    var resp = await fetch('/ui/feeds/domains/' + encodeURIComponent(domain) + '/enabled', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+      body: body.toString(),
+    });
+    if (!resp.ok) throw new Error('toggle failed');
+    input.dataset.prevChecked = enabled ? '1' : '';
+  } catch (_) {
+    input.checked = prior;
+    await window.kcuiAlert('Domain Toggle Failed', 'Could not update domain processing state.');
+  } finally {
+    input.disabled = false;
+  }
+}
+
+async function confirmDeleteDomain(domain, form) {
+  const ok = await window.kcuiConfirm(
+    'Delete Domain',
+    'Delete domain "' + domain + '" and all its data?'
+  );
+  if (ok) form.submit();
+}
+
 (function () {
   var DELAY = 5000;
   var timer = null;
@@ -292,15 +333,19 @@ function cancelEditDomain() {
 
   function renderDomains(domains) {
     return domains.map(function (d) {
-      var domain = esc(d.domain);
-      var count = esc(d.entry_count);
+      var domain  = esc(d.domain);
+      var count   = esc(d.entry_count);
+      var checked = d.enabled ? ' checked data-prev-checked="1"' : ' data-prev-checked=""';
       return '' +
         '<tr class="kcui-row-clickable" onclick="editDomain(\'' + domain + '\')">' +
           '<td><a href="/ui/feeds/' + domain + '" onclick="event.stopPropagation()">' + domain + '</a></td>' +
+          '<td class="kcui-text-center">' +
+            '<input type="checkbox" style="width:auto;" title="Enable or disable all feed processing for this domain" onclick="event.stopPropagation()" onchange="toggleDomainEnabled(\'' + domain + '\', this)"' + checked + '>' +
+          '</td>' +
           '<td class="meta kcui-text-right"><span class="badge badge-dim">' + count + '</span></td>' +
           '<td class="kcui-text-right kcui-nowrap">' +
             '<form method="post" action="/ui/feeds/domains/' + domain + '/delete" class="kcui-inline-form">' +
-              '<button class="btn-danger btn-sm" type="submit" onclick="event.stopPropagation(); return confirm(\'Delete domain ' + domain + ' and all its data?\')">DELETE</button>' +
+              '<button class="btn-danger btn-sm" type="submit" onclick="event.stopPropagation(); event.preventDefault(); confirmDeleteDomain(\'' + domain + '\', this.form); return false;">DELETE</button>' +
             '</form>' +
           '</td>' +
         '</tr>';

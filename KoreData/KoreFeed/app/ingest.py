@@ -597,6 +597,9 @@ def _enqueue(feed: dict) -> None:
     current = get_feed(feed["id"])
     if current is None:
         return  # feed was deleted
+    if not current.get("domain_enabled", True):
+        _log(f"  Skipping {current['name']} - domain {current.get('domain', '?')} disabled")
+        return
     last = current.get("last_fetched_at")
     if last:
         try:
@@ -632,6 +635,8 @@ def _enqueue_most_overdue() -> None:
     winner_overdue_secs: float = -1.0
 
     for feed in load_feeds():
+        if not feed.get("domain_enabled", True):
+            continue
         last = feed.get("last_fetched_at")
         if not last:
             overdue_secs = float("inf")
@@ -681,6 +686,8 @@ def schedule_feeds() -> None:
     scheduler.remove_all_jobs()
     now = datetime.utcnow()
     for feed in load_feeds():
+        if not feed.get("domain_enabled", True):
+            continue
         # Align the first tick to last_fetched_at + update_rate so the scheduler
         # doesn't drift relative to actual fetch times after a restart.
         next_run = None
@@ -705,6 +712,9 @@ def schedule_feeds() -> None:
 
 def trigger_immediate(feed: dict) -> None:
     """Push a feed directly onto the ingest queue."""
+    if not feed.get("domain_enabled", True):
+        _log(f"  Skipping manual trigger for {feed.get('name', '?')} - domain {feed.get('domain', '?')} disabled")
+        return
     fid = str(feed.get("id", ""))
     if fid:
         with _state_lock:
@@ -753,6 +763,8 @@ def start_scheduler() -> None:
 
     # Enqueue feeds that are due — respects last_fetched_at gate
     for feed in load_feeds():
+        if not feed.get("domain_enabled", True):
+            continue
         _enqueue(feed)
 
     scheduler.start()

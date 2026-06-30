@@ -1,5 +1,6 @@
 {
   "domain": "Global_News",
+  "enabled": true,
   "age_settings": {
     "mode": "days_previous",
     "days": 20,

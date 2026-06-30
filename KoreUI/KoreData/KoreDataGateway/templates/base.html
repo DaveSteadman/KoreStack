@@ -8,6 +8,63 @@
   <link rel="stylesheet" href="/ui-elements/assets/css/chrome.css">
   <link rel="stylesheet" href="/ui-elements/assets/css/koredata-shell.css">
   <script src="/suite-config.js"></script>
+  <style>
+    dialog.kcui-dialog {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      margin: 0;
+      transform: translate(-50%, -50%);
+      min-width: min(420px, calc(100vw - 2rem));
+      max-width: min(520px, calc(100vw - 2rem));
+      padding: 0;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background:
+        linear-gradient(180deg, color-mix(in srgb, var(--surface) 92%, var(--accent) 8%), var(--surface));
+      color: var(--text);
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.55);
+      overflow: hidden;
+    }
+
+    dialog.kcui-dialog::backdrop {
+      background: rgba(4, 8, 16, 0.72);
+      backdrop-filter: blur(4px);
+    }
+
+    .kcui-dialog-card {
+      display: grid;
+      gap: var(--kcui-gap-panel);
+      padding: calc(var(--kcui-gap-panel) * 1.25);
+    }
+
+    .kcui-dialog-title {
+      margin: 0;
+      font-size: 13px;
+      line-height: 1.2;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+
+    .kcui-dialog-body {
+      margin: 0;
+      font-size: 13px;
+      line-height: 1.6;
+      color: var(--text);
+      white-space: pre-wrap;
+    }
+
+    .kcui-dialog-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.5rem;
+    }
+
+    .kcui-dialog-actions .btn {
+      min-width: 88px;
+    }
+  </style>
 </head>
 <body class="kcui-shell-bg">
   <div id="topbar"></div>
@@ -15,6 +72,25 @@
   <main class="{% block main_class %}{% endblock %}">
     {% block content %}{% endblock %}
   </main>
+  <dialog id="kcui-alert-dialog" class="kcui-dialog">
+    <form method="dialog" class="kcui-dialog-card">
+      <h3 id="kcui-alert-title" class="kcui-dialog-title">Notice</h3>
+      <p  id="kcui-alert-body"  class="kcui-dialog-body"></p>
+      <div class="kcui-dialog-actions">
+        <button id="kcui-alert-ok" class="btn btn-sm btn-primary" value="ok">OK</button>
+      </div>
+    </form>
+  </dialog>
+  <dialog id="kcui-confirm-dialog" class="kcui-dialog">
+    <form method="dialog" class="kcui-dialog-card">
+      <h3 id="kcui-confirm-title" class="kcui-dialog-title">Confirm</h3>
+      <p  id="kcui-confirm-body"  class="kcui-dialog-body"></p>
+      <div class="kcui-dialog-actions">
+        <button id="kcui-confirm-cancel" class="btn btn-sm btn-secondary" value="cancel">Cancel</button>
+        <button id="kcui-confirm-ok"     class="btn btn-sm btn-danger"    value="ok">Confirm</button>
+      </div>
+    </form>
+  </dialog>
   <script>
   function stepNum(btn, delta) {
     const input = btn.closest('.num-stepper').querySelector('input[type=number]');
@@ -35,6 +111,41 @@
     const form = input.closest('form');
     if (form) form.querySelector('[name=since]').value = d.toISOString().slice(0, 10);
   }
+
+  (() => {
+    const alertDialog   = document.getElementById('kcui-alert-dialog');
+    const alertTitle    = document.getElementById('kcui-alert-title');
+    const alertBody     = document.getElementById('kcui-alert-body');
+    const confirmDialog = document.getElementById('kcui-confirm-dialog');
+    const confirmTitle  = document.getElementById('kcui-confirm-title');
+    const confirmBody   = document.getElementById('kcui-confirm-body');
+
+    function bindDialogClose(dialog, resolve, mapper) {
+      const onClose = () => {
+        dialog.removeEventListener('close', onClose);
+        resolve(mapper(dialog.returnValue));
+      };
+      dialog.addEventListener('close', onClose, { once: true });
+    }
+
+    window.kcuiAlert = function kcuiAlert(title, message = '') {
+      return new Promise(resolve => {
+        alertTitle.textContent = title || 'Notice';
+        alertBody.textContent  = message || '';
+        bindDialogClose(alertDialog, resolve, () => true);
+        alertDialog.showModal();
+      });
+    };
+
+    window.kcuiConfirm = function kcuiConfirm(title, message = '') {
+      return new Promise(resolve => {
+        confirmTitle.textContent = title || 'Confirm';
+        confirmBody.textContent  = message || '';
+        bindDialogClose(confirmDialog, resolve, value => value === 'ok');
+        confirmDialog.showModal();
+      });
+    };
+  })();
   </script>
   <script type="module">
     import { initKoreDataShell } from '/ui-elements/assets/js/chrome.js';

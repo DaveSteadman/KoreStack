@@ -40,6 +40,25 @@
   .jt-num    { color: var(--amber); }
   .jt-bool   { color: var(--red); }
   .jt-null   { color: var(--dim); }
+
+  .kd-service-check {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    color: var(--text);
+    cursor: pointer;
+    text-transform: none;
+    letter-spacing: normal;
+    white-space: nowrap;
+  }
+
+  .kd-service-check input {
+    width: auto;
+    margin: 0;
+    cursor: pointer;
+    accent-color: var(--accent);
+  }
 </style>
 
 <div class="kcui-page kcui-page--narrow kcui-stack kd-home">
@@ -144,23 +163,23 @@
                 padding:0.5rem 0; border-top:1px solid var(--border); border-bottom:1px solid var(--border);
                 margin-bottom:0.75rem;">
       <span style="font-size:11px; color:var(--dim); letter-spacing:0.05em; text-transform:uppercase;">Services</span>
-      <label style="display:flex; align-items:center; gap:5px; font-size:12px; color:var(--text); cursor:pointer; text-transform:none; letter-spacing:normal;">
-        <input type="checkbox" class="sq-domain" value="feeds" checked style="accent-color:var(--green); width:auto; cursor:pointer;"> Feeds
+      <label class="kd-service-check">
+        <input type="checkbox" class="sq-domain" value="feeds" checked> Feeds
       </label>
-      <label style="display:flex; align-items:center; gap:5px; font-size:12px; color:var(--text); cursor:pointer; text-transform:none; letter-spacing:normal;">
-        <input type="checkbox" class="sq-domain" value="reference" checked style="accent-color:var(--green); width:auto; cursor:pointer;"> Reference
+      <label class="kd-service-check">
+        <input type="checkbox" class="sq-domain" value="reference" checked> Reference
       </label>
-      <label style="display:flex; align-items:center; gap:5px; font-size:12px; color:var(--text); cursor:pointer; text-transform:none; letter-spacing:normal;">
-        <input type="checkbox" class="sq-domain" value="library" checked style="accent-color:var(--green); width:auto; cursor:pointer;"> Library
+      <label class="kd-service-check">
+        <input type="checkbox" class="sq-domain" value="library" checked> Library
       </label>
-      <label style="display:flex; align-items:center; gap:5px; font-size:12px; color:var(--text); cursor:pointer; text-transform:none; letter-spacing:normal;">
-        <input type="checkbox" class="sq-domain" value="rag" checked style="accent-color:var(--green); width:auto; cursor:pointer;"> RAG
+      <label class="kd-service-check">
+        <input type="checkbox" class="sq-domain" value="rag" checked> RAG
       </label>
-      <label style="display:flex; align-items:center; gap:5px; font-size:12px; color:var(--text); cursor:pointer; text-transform:none; letter-spacing:normal;">
-        <input type="checkbox" class="sq-domain" value="scrape" checked style="accent-color:var(--amber); width:auto; cursor:pointer;"> Scrape
+      <label class="kd-service-check">
+        <input type="checkbox" class="sq-domain" value="scrape" checked> Scrape
       </label>
-      <label style="display:flex; align-items:center; gap:5px; font-size:12px; color:var(--text); cursor:pointer; text-transform:none; letter-spacing:normal;">
-        <input type="checkbox" class="sq-domain" value="graph" checked style="accent-color:var(--accent); width:auto; cursor:pointer;"> Graph
+      <label class="kd-service-check">
+        <input type="checkbox" class="sq-domain" value="graph" checked> Graph
       </label>
     </div>
 

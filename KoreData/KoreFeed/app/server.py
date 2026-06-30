@@ -62,10 +62,12 @@ from app.feed_manager import (
     create_domain,
     delete_domain_feeds,
     get_feed,
+    get_domain_enabled,
     list_feed_domains,
     load_feeds,
     remove_feed,
     rename_domain_feeds,
+    set_domain_enabled,
     sync_domain_spec,
     update_feed,
     update_feed_rate,
@@ -214,10 +216,10 @@ def api_update_feed(feed_id: str, body: FeedUpdate):
 @app.get("/api/domains", tags=["domains"])
 def api_list_domains():
     """List all domains with entry counts."""
-    db_domains  = set(list_domains())
+    db_domains   = set(list_domains())
     feed_domains = set(list_feed_domains())
-    all_domains = sorted(db_domains | feed_domains)
-    return [{"domain": d, "entry_count": get_entry_count(d)} for d in all_domains]
+    all_domains  = sorted(db_domains | feed_domains)
+    return [{"domain": d, "entry_count": get_entry_count(d), "enabled": get_domain_enabled(d)} for d in all_domains]
 
 
 @app.post("/api/domains", status_code=201, tags=["domains"])
@@ -244,6 +246,15 @@ def api_rename_domain(domain: str, new_name: str):
     rename_domain_db(domain, new_name)
     schedule_feeds()
     return {"renamed": new_name}
+
+
+@app.post("/api/domains/{domain}/enabled", tags=["domains"])
+def api_set_domain_enabled(domain: str, enabled: bool):
+    """Enable or disable all feed processing for a domain."""
+    if not set_domain_enabled(domain, enabled):
+        raise HTTPException(status_code=404, detail="Domain not found")
+    schedule_feeds()
+    return {"domain": domain, "enabled": enabled}
 
 
 @app.get("/api/domains/{domain}/entries", tags=["content"])

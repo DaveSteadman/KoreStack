@@ -92,28 +92,44 @@ def _normalise_age_settings(raw_age_settings: object) -> dict:
     }
 
 
-def _read_domain_spec(domain: str) -> tuple[str, list, dict]:
+def _normalise_domain_enabled(raw_enabled: object) -> bool:
+    if isinstance(raw_enabled, bool):
+        return raw_enabled
+    if isinstance(raw_enabled, (int, float)):
+        return bool(raw_enabled)
+    if isinstance(raw_enabled, str):
+        value = raw_enabled.strip().lower()
+        if value in {"1", "true", "yes", "on"}:
+            return True
+        if value in {"0", "false", "no", "off"}:
+            return False
+    return True
+
+
+def _read_domain_spec(domain: str) -> tuple[str, list, dict, bool]:
     path = _domain_file(domain)
     if not path.exists():
-        return domain, [], {"mode": "none", "days": None, "start_date": None, "end_date": None}
+        return domain, [], {"mode": "none", "days": None, "start_date": None, "end_date": None}, True
 
     with open(path, encoding="utf-8") as handle:
         raw = json.load(handle)
 
     if isinstance(raw, dict):
-        raw_domain       = str(raw.get("domain") or domain).strip() or domain
-        raw_feeds        = raw.get("feeds", [])
-        raw_age_settings = _normalise_age_settings(raw.get("age_settings"))
+        raw_domain        = str(raw.get("domain") or domain).strip() or domain
+        raw_feeds         = raw.get("feeds", [])
+        raw_age_settings  = _normalise_age_settings(raw.get("age_settings"))
+        raw_enabled       = _normalise_domain_enabled(raw.get("enabled", True))
     elif isinstance(raw, list):
-        raw_domain       = domain
-        raw_feeds        = raw
-        raw_age_settings = {"mode": "none", "days": None, "start_date": None, "end_date": None}
+        raw_domain        = domain
+        raw_feeds         = raw
+        raw_age_settings  = {"mode": "none", "days": None, "start_date": None, "end_date": None}
+        raw_enabled       = True
     else:
-        return domain, [], {"mode": "none", "days": None, "start_date": None, "end_date": None}
+        return domain, [], {"mode": "none", "days": None, "start_date": None, "end_date": None}, True
 
     if not isinstance(raw_feeds, list):
         raw_feeds = []
-    return raw_domain, raw_feeds, raw_age_settings
+    return raw_domain, raw_feeds, raw_age_settings, raw_enabled
 
 
 def _apply_domain_age_settings(domain: str, age_settings: dict) -> None:
@@ -128,7 +144,7 @@ def _apply_domain_age_settings(domain: str, age_settings: dict) -> None:
 
 
 def _load_domain_file(domain: str) -> list[dict]:
-    raw_domain, raw_feeds, raw_age_settings = _read_domain_spec(domain)
+    raw_domain, raw_feeds, raw_age_settings, raw_enabled = _read_domain_spec(domain)
     _apply_domain_age_settings(raw_domain, raw_age_settings)
 
     state = _load_domain_state(raw_domain)
@@ -142,12 +158,13 @@ def _load_domain_file(domain: str) -> list[dict]:
             continue
         feed_id = _feed_identity(raw_domain, name, url)
         feed = {
-            "id":          feed_id,
-            "domain":      raw_domain,
-            "name":        name,
-            "url":         url,
-            "update_rate": int(item.get("update_rate") or 60),
-            "type":        str(item.get("type") or "rss").strip() or "rss",
+            "id":             feed_id,
+            "domain":         raw_domain,
+            "domain_enabled": raw_enabled,
+            "name":           name,
+            "url":            url,
+            "update_rate":    int(item.get("update_rate") or 60),
+            "type":           str(item.get("type") or "rss").strip() or "rss",
         }
         if feed["update_rate"] < 1:
             feed["update_rate"] = 60
@@ -158,9 +175,10 @@ def _load_domain_file(domain: str) -> list[dict]:
 
 def _save_domain_file(domain: str, feeds: list[dict]) -> None:
     FEEDS_DIR.mkdir(exist_ok=True)
+    enabled      = get_domain_enabled(domain)
     age_settings = get_domain_age_settings(domain)
     with open(_domain_file(domain), "w", encoding="utf-8") as f:
-        json.dump(_build_export_spec(domain, feeds, age_settings), f, indent=2)
+        json.dump(_build_export_spec(domain, feeds, age_settings, enabled), f, indent=2)
 
 
 def _build_export_feed(raw_feed: dict) -> dict:
@@ -175,9 +193,10 @@ def _build_export_feed(raw_feed: dict) -> dict:
     return export_feed
 
 
-def _build_export_spec(domain: str, feeds: list[dict], age_settings: Optional[dict] = None) -> dict:
+def _build_export_spec(domain: str, feeds: list[dict], age_settings: Optional[dict] = None, enabled: bool = True) -> dict:
     return {
         "domain":       domain,
+        "enabled":      bool(enabled),
         "age_settings": _normalise_age_settings(age_settings),
         "feeds":        [
             _build_export_feed(feed)
@@ -280,6 +299,7 @@ def create_domain(domain: str) -> bool:
         json.dump(
             {
                 "domain":       domain,
+                "enabled":      True,
                 "age_settings": {"mode": "none", "days": None, "start_date": None, "end_date": None},
                 "feeds":        [],
             },
@@ -296,7 +316,7 @@ def update_domain_age_settings_spec(
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
 ) -> None:
-    _, raw_feeds, _ = _read_domain_spec(domain)
+    _, raw_feeds, _, enabled = _read_domain_spec(domain)
     age_settings = _normalise_age_settings({
         "mode":       mode,
         "days":       days,
@@ -308,6 +328,7 @@ def update_domain_age_settings_spec(
         json.dump(
             {
                 "domain":       domain,
+                "enabled":      enabled,
                 "age_settings": age_settings,
                 "feeds":        [
                     _build_export_feed(feed)
@@ -323,7 +344,7 @@ def update_domain_age_settings_spec(
 
 
 def sync_domain_spec(domain: str) -> None:
-    spec_domain, raw_feeds, age_settings = _read_domain_spec(domain)
+    spec_domain, raw_feeds, age_settings, enabled = _read_domain_spec(domain)
     _apply_domain_age_settings(spec_domain, age_settings)
     FEEDS_DIR.mkdir(exist_ok=True)
     with open(_domain_file(spec_domain), "w", encoding="utf-8") as handle:
@@ -332,6 +353,7 @@ def sync_domain_spec(domain: str) -> None:
                 spec_domain,
                 _normalise_import_feeds(raw_feeds, spec_domain),
                 get_domain_age_settings(spec_domain),
+                enabled,
             ),
             handle,
             indent=2,
@@ -433,15 +455,38 @@ def rename_domain_feeds(old: str, new: str) -> bool:
     old_path = _domain_file(old)
     if not old_path.exists():
         return False
-    _, _, age_settings = _read_domain_spec(old)
+    _, _, age_settings, enabled = _read_domain_spec(old)
     feeds = _load_domain_file(old)
     for f in feeds:
         f["domain"] = new
     FEEDS_DIR.mkdir(exist_ok=True)
     with open(_domain_file(new), "w", encoding="utf-8") as handle:
-        json.dump(_build_export_spec(new, feeds, age_settings), handle, indent=2)
+        json.dump(_build_export_spec(new, feeds, age_settings, enabled), handle, indent=2)
     old_path.unlink()
     old_state_path = _state_file(old)
     if old_state_path.exists():
         old_state_path.unlink()
+    return True
+
+
+def get_domain_enabled(domain: str) -> bool:
+    _, _, _, enabled = _read_domain_spec(domain)
+    return enabled
+
+
+def set_domain_enabled(domain: str, enabled: bool) -> bool:
+    spec_domain, raw_feeds, age_settings, _ = _read_domain_spec(domain)
+    path = _domain_file(domain)
+    FEEDS_DIR.mkdir(exist_ok=True)
+    with open(path, "w", encoding="utf-8") as handle:
+        json.dump(
+            _build_export_spec(
+                spec_domain,
+                _normalise_import_feeds(raw_feeds, spec_domain),
+                age_settings,
+                enabled,
+            ),
+            handle,
+            indent=2,
+        )
     return True

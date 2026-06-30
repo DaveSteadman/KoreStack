@@ -1,5 +1,6 @@
 {
   "domain": "{domain}",
+  "enabled": false,
   "age_settings": {
     "mode": "none",
     "days": null,

@@ -32,10 +32,12 @@ from app.feed_manager import (
     create_domain,
     delete_domain_feeds,
     get_feed,
+    get_domain_enabled,
     list_feed_domains,
     load_feeds,
     remove_feed,
     rename_domain_feeds,
+    set_domain_enabled,
     sync_domain_spec,
     update_domain_age_settings_spec,
     update_feed,
@@ -94,7 +96,14 @@ def register_feed_ui(app: FastAPI) -> None:
     def web_index(request: Request):
         db_domains   = set(list_domains())
         feed_domains = set(list_feed_domains())
-        domains      = [{"domain": domain, "entry_count": get_entry_count(domain)} for domain in sorted(db_domains | feed_domains)]
+        domains      = [
+            {
+                "domain":      domain,
+                "entry_count": get_entry_count(domain),
+                "enabled":     get_domain_enabled(domain),
+            }
+            for domain in sorted(db_domains | feed_domains)
+        ]
         all_feeds    = load_feeds()
         _add_next_mins(all_feeds)
         all_feeds.sort(
@@ -191,6 +200,14 @@ def register_feed_ui(app: FastAPI) -> None:
         rename_domain_db(domain, new_name)
         schedule_feeds()
         return RedirectResponse("/ui/feeds", status_code=303)
+
+    @app.post("/ui/feeds/domains/{domain}/enabled", include_in_schema=False)
+    def web_set_domain_enabled(domain: str, enabled: str = Form("true")):
+        is_enabled = str(enabled).strip().lower() in {"1", "true", "yes", "on"}
+        if not set_domain_enabled(domain, is_enabled):
+            raise HTTPException(status_code=404, detail="Domain not found")
+        schedule_feeds()
+        return JSONResponse({"domain": domain, "enabled": is_enabled})
 
     @app.post("/ui/feeds/{domain}/feeds/add", include_in_schema=False)
     def web_add_feed(
