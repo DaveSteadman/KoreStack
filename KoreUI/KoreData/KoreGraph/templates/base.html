@@ -184,39 +184,16 @@
   }
   </script>
   <script type="module">
-    import { initAppBar, initTopbar } from '/ui-elements/assets/js/chrome.js';
+    import { initAppBar, initKoreDataShell } from '/ui-elements/assets/js/chrome.js';
 
-    const suiteUrls = window.__koreSuiteUrls || {};
-
-    function baseUrl(value) {
-      return String(value || '').replace(/\/+$/, '');
-    }
-
-    const gatewayBase   = baseUrl(suiteUrls.koredatagateway || suiteUrls.koredata);
-    const feedBase      = baseUrl(suiteUrls.korefeed        || gatewayBase);
-    const libraryBase   = baseUrl(suiteUrls.korelibrary     || gatewayBase);
-    const referenceBase = baseUrl(suiteUrls.korereference   || gatewayBase);
-    const ragBase       = baseUrl(suiteUrls.korerag         || gatewayBase);
-    const scrapeBase    = baseUrl(suiteUrls.korescrape      || gatewayBase);
-    const graphBase     = baseUrl(suiteUrls.koregraph) || '{{ req_pfx }}';
-
-    initTopbar({ currentService: 'koredata', urls: suiteUrls });
-    initAppBar({
-      mountId: 'app-bar',
-      currentService: 'koredata',
-      overline: 'Knowledge Graph',
-      brandLabel: 'KoreGraph',
-      brandIcon: 'koregraph',
-      chips: [],
-      tabs: [
-        { label: 'Home',      href: `${gatewayBase}/ui`,                 active: false },
-        { label: 'Feeds',     href: `${feedBase}/ui/feeds`,              active: false },
-        { label: 'Library',   href: `${libraryBase}/ui/library`,         active: false },
-        { label: 'Reference', href: `${referenceBase}/ui/reference`,     active: false },
-        { label: 'RAG',       href: `${ragBase}/ui/rag/databases`,       active: false },
-        { label: 'Scrape',    href: `${scrapeBase}/ui/scrape`,           active: false },
-        { label: 'Graph',     href: `${graphBase}/ui/vocab`,             active: true  },
-      ],
+    initKoreDataShell({
+      path: {{ request.url.path | tojson }},
+      urls: window.__koreSuiteUrls || {},
+      section: 'graph',
+      graphBaseOverride: '{{ req_pfx }}',
+      appBarOptions: {
+        mountId: 'app-bar',
+      },
     });
     initAppBar({
       mountId: 'sub-bar',

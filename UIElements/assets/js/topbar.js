@@ -54,14 +54,16 @@ function serviceIcon(service, iconSize) {
 
 function serviceItemHtml(service, currentService, urls, iconSize) {
 	const url = serviceUrl(service, currentService, urls);
-	if (!url) return '';
 	const active = service.key === currentService ? ' is-active' : '';
+	const disabled = !url ? ' is-disabled' : '';
 	const accent = themeFor(service.key)?.accent || 'var(--accent)';
+	const tag = url ? 'a' : 'span';
+	const hrefAttr = url ? ` href="${url}"` : '';
 	return `
-		<a class="ktopbar-item${active}" data-service="${service.key}" href="${url}" title="${service.label}" style="--topbar-accent:${accent}">
+		<${tag} class="ktopbar-item${active}${disabled}" data-service="${service.key}" title="${service.label}" style="--topbar-accent:${accent}"${hrefAttr}>
 			<span class="ktopbar-icon" aria-hidden="true">${serviceIcon(service, iconSize)}</span>
 			<span class="ktopbar-label">${service.label}</span>
-		</a>`;
+		</${tag}>`;
 }
 
 let versionRefreshPromise = null;
@@ -106,15 +108,7 @@ function _seedUrlsFromKoreStack(koreStackUrl = null) {
 }
 
 function visibleServices(services, urls, currentService) {
-	const registry = suiteRegistry(urls);
-	if (Object.keys(registry).length === 0) {
-		return services.filter((service) => service.key === currentService);
-	}
-	return services.filter((service) => (
-		service.key === 'korestack'
-		|| service.key === currentService
-		|| Object.prototype.hasOwnProperty.call(registry, service.key)
-	));
+	return services;
 }
 
 export function initTopbar(options = {}) {

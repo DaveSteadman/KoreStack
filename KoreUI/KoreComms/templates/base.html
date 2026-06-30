@@ -129,20 +129,10 @@
   });
 </script>
 <script type="module">
-  import { initAppBar, initTopbar } from '/ui-elements/assets/js/chrome.js';
-  initTopbar({ currentService: 'korecomms', urls: window.__koreSuiteUrls || {} });
-  initAppBar({
-    currentService: 'korecomms',
-    overline: 'External Messaging',
-    brandLabel: 'KoreComms',
-    brandIcon: 'korecomms',
-    chips: [],
-    tabs: [
-      { label: 'Conversations', href: '/', active: {{ 'true' if request.url.path == '/' else 'false' }} },
-      { label: 'Compose', href: '/compose', active: {{ 'true' if request.url.path == '/compose' else 'false' }} },
-      { label: 'Connections', href: '/connections', active: {{ 'true' if request.url.path.startswith('/connections') else 'false' }} },
-      { label: 'Activity', href: '/activity', active: {{ 'true' if request.url.path == '/activity' else 'false' }} },
-    ],
+  import { initKoreCommsShell } from '/ui-elements/assets/js/chrome.js';
+  initKoreCommsShell({
+    path: {{ request.url.path | tojson }},
+    urls: window.__koreSuiteUrls || {},
   });
 </script>
 {% block scripts %}{% endblock %}

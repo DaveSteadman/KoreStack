@@ -10,3 +10,4 @@ export * from './svgicons.js';
 export * from './theme.js';
 export * from './tags.js';
 export * from './suiteMeta.js';
+export * from './serviceShell.js';

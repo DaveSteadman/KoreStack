@@ -37,57 +37,11 @@
   }
   </script>
   <script type="module">
-    import { initAppBar, initTopbar } from '/ui-elements/assets/js/chrome.js';
+    import { initKoreDataShell } from '/ui-elements/assets/js/chrome.js';
 
-    const path = {{ request.url.path | tojson }};
-
-    const shellMeta = {
-      home:      { brandLabel: 'KoreData',      overline: 'Data Gateway',    brandIcon: 'koredata' },
-      feeds:     { brandLabel: 'KoreFeed',      overline: 'News Feeds',      brandIcon: 'korefeed' },
-      library:   { brandLabel: 'KoreLibrary',   overline: 'Books',           brandIcon: 'korelibrary' },
-      reference: { brandLabel: 'KoreReference', overline: 'Reference',       brandIcon: 'korereference' },
-      rag:       { brandLabel: 'KoreRAG',       overline: 'RAG Chunks',      brandIcon: 'korerag' },
-      scrape:    { brandLabel: 'KoreScrape',    overline: 'Web Snapshots',   brandIcon: 'korescrape' },
-      graph:     { brandLabel: 'KoreGraph',     overline: 'Knowledge Graph', brandIcon: 'koregraph' },
-    };
-
-    const suiteUrls = window.__koreSuiteUrls || {};
-
-    function baseUrl(value) {
-      return String(value || '').replace(/\/+$/, '');
-    }
-
-    const gatewayBase   = baseUrl(suiteUrls.koredatagateway || suiteUrls.koredata);
-    const feedBase      = baseUrl(suiteUrls.korefeed        || gatewayBase);
-    const libraryBase   = baseUrl(suiteUrls.korelibrary     || gatewayBase);
-    const referenceBase = baseUrl(suiteUrls.korereference   || gatewayBase);
-    const ragBase       = baseUrl(suiteUrls.korerag         || gatewayBase);
-    const scrapeBase    = baseUrl(suiteUrls.korescrape      || gatewayBase);
-    const graphBase     = baseUrl(suiteUrls.koregraph       || gatewayBase);
-    const shellTabs = [
-      { key: 'home',      label: 'Home',      href: `${gatewayBase}/ui` },
-      { key: 'feeds',     label: 'Feeds',     href: `${feedBase}/ui/feeds` },
-      { key: 'library',   label: 'Library',   href: `${libraryBase}/ui/library` },
-      { key: 'reference', label: 'Reference', href: `${referenceBase}/ui/reference` },
-      { key: 'rag',       label: 'RAG',       href: `${ragBase}/ui/rag/databases` },
-      { key: 'scrape',    label: 'Scrape',    href: `${scrapeBase}/ui/scrape` },
-      { key: 'graph',     label: 'Graph',     href: `${graphBase}/ui/vocab` },
-    ];
-
-    const section = path.startsWith('/ui/feeds')     ? 'feeds'
-                  : path.startsWith('/ui/library')   ? 'library'
-                  : path.startsWith('/ui/reference') ? 'reference'
-                  : path.startsWith('/ui/rag')       ? 'rag'
-                  : path.startsWith('/ui/scrape')    ? 'scrape'
-                  : path.startsWith('/graph')        ? 'graph'
-                  : 'home';
-
-    initTopbar({ currentService: 'koredata', urls: suiteUrls });
-    initAppBar({
-      currentService: 'koredata',
-      ...shellMeta[section],
-      chips: [],
-      tabs: shellTabs.map((tab) => ({ ...tab, active: tab.key === section })),
+    initKoreDataShell({
+      path: {{ request.url.path | tojson }},
+      urls: window.__koreSuiteUrls || {},
     });
   </script>
   {% block scripts %}{% endblock %}
