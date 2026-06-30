@@ -56,7 +56,7 @@
   <div class="panel-header kcui-panel-header">EDIT CHUNK #{{ chunk.id }}</div>
   <div class="panel-body kcui-panel-body">
     <form id="edit-form" method="post" action="/ui/rag/{{ chunk.id }}/edit?db={{ db }}">
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; margin-bottom:0.75rem;">
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--kcui-gap-panel); margin-bottom:var(--kcui-gap-panel);">
         <div style="grid-column:1 / -1;">
           <label for="e_title">Title</label>
           <input id="e_title" name="title" type="text" value="{{ chunk.title or '' }}" placeholder="Chunk title…">

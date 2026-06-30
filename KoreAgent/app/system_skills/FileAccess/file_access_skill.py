@@ -47,6 +47,11 @@ def _ensure_data_dir() -> None:
 
 
 def _display_path(target_path: Path) -> str:
+    try:
+        relative = target_path.relative_to(DEFAULT_DATA_DIR).as_posix()
+        return f"{DEFAULT_DATA_DIR.name}/{relative}" if relative else DEFAULT_DATA_DIR.name
+    except ValueError:
+        pass
     for root in (WORKSPACE_ROOT, get_suite_root()):
         try:
             return target_path.relative_to(root).as_posix()

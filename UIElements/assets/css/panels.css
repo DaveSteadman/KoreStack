@@ -17,9 +17,9 @@
 
 .kcui-page {
   --kcui-page-max: 1440px;
-  width: min(var(--kcui-page-max), calc(100% - 24px));
+  width: min(var(--kcui-page-max), calc(100% - (var(--kcui-gap-panel) * 2)));
   margin: 0 auto;
-  padding: 12px 0;
+  padding: var(--kcui-gap-panel) 0;
 }
 
 .kcui-page--narrow {
@@ -32,30 +32,30 @@
 
 .kcui-stack {
   display: grid;
-  gap: 12px;
+  gap: var(--kcui-gap-panel);
 }
 
 .kcui-grid-2 {
   display: grid;
-  gap: 12px;
+  gap: var(--kcui-gap-panel);
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .kcui-grid-4 {
   display: grid;
-  gap: 12px;
+  gap: var(--kcui-gap-panel);
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .kcui-grid-auto {
   display: grid;
-  gap: 12px;
+  gap: var(--kcui-gap-panel);
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
 }
 
 .kcui-card-grid {
   display: grid;
-  gap: 12px;
+  gap: var(--kcui-gap-panel);
 }
 
 .kcui-card-grid--tiles {
@@ -70,7 +70,7 @@
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: var(--kcui-radius-md);
-  padding: 12px;
+  padding: var(--kcui-gap-panel);
 }
 
 .kcui-card--metric {
@@ -153,16 +153,16 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--kcui-gap-panel);
   min-height: 34px;
-  padding: 10px 12px 8px;
+  padding: 10px var(--kcui-gap-panel) 8px;
   border-bottom: 1px solid var(--border);
   color: var(--text-dim);
 }
 
 .kcui-navpanel-status {
   min-height: 22px;
-  padding: 8px 12px;
+  padding: 8px var(--kcui-gap-panel);
   color: var(--text-2);
   border-bottom: 1px solid var(--border);
 }
@@ -295,7 +295,7 @@
   align-items: center;
   justify-content: space-between;
   min-height: 34px;
-  padding: 8px 12px 7px;
+  padding: 8px var(--kcui-gap-panel) 7px;
   border-bottom: 1px solid var(--border);
   color: var(--text-dim);
 }
@@ -310,7 +310,7 @@
 }
 
 .kcui-panel-body {
-  padding: 12px;
+  padding: var(--kcui-gap-panel);
 }
 
 .kcui-panel-body--fill {
@@ -384,7 +384,7 @@
 .kcui-statusbar {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--kcui-gap-panel);
   min-height: 24px;
   padding: 0 10px;
   background: var(--bg);

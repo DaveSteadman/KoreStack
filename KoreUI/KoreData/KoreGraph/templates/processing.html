@@ -72,7 +72,7 @@
   /* Config area */
   .proc-config {
     flex-shrink: 0;
-    padding: 0.75rem 1rem;
+    padding: var(--kcui-gap-panel);
     border-bottom: 1px solid var(--border);
     background: var(--panel);
   }
@@ -189,7 +189,7 @@
       <span class="meta" id="p-count" style="font-size:var(--kcui-text-label)"></span>
     </div>
     <div class="kg-proc-script-list" id="p-list">
-      <div class="meta" style="padding:1rem;text-align:center;font-size:var(--kcui-text-body-sm)">Loading…</div>
+      <div class="meta" style="padding:var(--kcui-gap-panel);text-align:center;font-size:var(--kcui-text-body-sm)">Loading…</div>
     </div>
   </div>
 
@@ -249,7 +249,7 @@ async function loadScripts() {
     data = await r.json();
   } catch {
     document.getElementById('p-list').innerHTML =
-      '<div class="meta" style="padding:1rem;text-align:center;color:var(--red)">Failed to load scripts</div>';
+      '<div class="meta" style="padding:var(--kcui-gap-panel);text-align:center;color:var(--red)">Failed to load scripts</div>';
     return;
   }
   _scripts = data;
@@ -260,7 +260,7 @@ async function loadScripts() {
 function renderList() {
   const el = document.getElementById('p-list');
   if (!_scripts.length) {
-    el.innerHTML = `<div class="meta" style="padding:1rem;text-align:center;font-size:var(--kcui-text-body-sm)">No scripts found in the processing directory.<br>Add .py + .json files to:<br><code>${esc(window._kgScriptsDir)}</code></div>`;
+    el.innerHTML = `<div class="meta" style="padding:var(--kcui-gap-panel);text-align:center;font-size:var(--kcui-text-body-sm)">No scripts found in the processing directory.<br>Add .py + .json files to:<br><code>${esc(window._kgScriptsDir)}</code></div>`;
     return;
   }
   el.innerHTML = _scripts.map(s => `

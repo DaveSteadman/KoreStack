@@ -72,7 +72,7 @@
     <div id="book-body" class="scrollable-body book-md"></div>
     <script>const _bookRaw = {{ book.body | tojson }};</script>
     {% else %}
-    <p class="meta" style="padding:1rem;">no body text</p>
+    <p class="meta" style="padding:var(--kcui-gap-panel);">no body text</p>
     {% endif %}
   </div>
 </div>

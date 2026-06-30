@@ -16,7 +16,7 @@
   }
   .vocab-result:hover { border-color: var(--green); color: var(--green); }
   .conn-actions { display: inline-flex; align-items: center; justify-content: flex-end; gap: 0.35rem; white-space: nowrap; }
-  .kg-side-stack { display: flex; flex-direction: column; gap: 1rem; }
+  .kg-side-stack { display: flex; flex-direction: column; gap: var(--kcui-gap-panel); }
 </style>
 
 <div class="kg-conn-layout">
@@ -121,7 +121,7 @@
       {% endif %}
 
       {% else %}
-      <p class="meta" style="padding:1rem">No connections{{ ' with state "' + state_labels.get(state, state|string) + '"' if state is not none else '' }}.</p>
+      <p class="meta" style="padding:var(--kcui-gap-panel)">No connections{{ ' with state "' + state_labels.get(state, state|string) + '"' if state is not none else '' }}.</p>
       {% endif %}
     </div>
   </div>
@@ -226,7 +226,7 @@ function removeConnectionRow(rowEl) {
   const tbody = document.querySelector('tbody');
   if (tbody && !tbody.querySelector('tr')) {
     const body = document.querySelector('.panel-body');
-    if (body) body.innerHTML = '<p class="meta" style="padding:1rem">No connections in this view.</p>';
+    if (body) body.innerHTML = '<p class="meta" style="padding:var(--kcui-gap-panel)">No connections in this view.</p>';
   }
 }
 

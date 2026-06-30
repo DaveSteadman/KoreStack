@@ -31,14 +31,14 @@
 
 <div id="timings" class="kg-inline-meta" style="display:none;"></div>
 
-<div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; align-items:start;">
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--kcui-gap-panel); align-items:start;">
 <div class="panel kcui-panel">
   <div class="panel-header kcui-panel-header">
     SITTINGS
     <span class="badge badge-dim" id="sittings-count" style="margin-left:0.5rem;">…</span>
   </div>
   <div class="panel-body kcui-panel-body" id="sittings-body" style="padding:0; overflow-x:auto;">
-    <p class="meta" style="padding:1rem;">Loading sittings…</p>
+    <p class="meta" style="padding:var(--kcui-gap-panel);">Loading sittings…</p>
   </div>
 </div>
 
@@ -48,7 +48,7 @@
     <span class="badge badge-dim" id="members-count" style="margin-left:0.5rem;">…</span>
   </div>
   <div class="panel-body kcui-panel-body" id="members-body" style="padding:0; overflow-x:auto;">
-    <p class="meta" style="padding:1rem;">Loading members…</p>
+    <p class="meta" style="padding:var(--kcui-gap-panel);">Loading members…</p>
   </div>
 </div>
 </div>
@@ -76,7 +76,7 @@
   }
 
   function renderSittings(items) {
-    if (!items || !items.length) return '<p class="meta" style="padding:1rem;">No sittings found.</p>';
+    if (!items || !items.length) return '<p class="meta" style="padding:var(--kcui-gap-panel);">No sittings found.</p>';
     let h = '<table><thead><tr><th>Date</th><th>House</th><th style="width:80px; text-align:right;">Debates</th><th style="width:60px;"></th></tr></thead><tbody>';
     for (const s of items) {
       const date = escapeHtml(s.sitting_date || '');
@@ -91,7 +91,7 @@
   }
 
   function renderMembers(items) {
-    if (!items || !items.length) return '<p class="meta" style="padding:1rem;">No members found.</p>';
+    if (!items || !items.length) return '<p class="meta" style="padding:var(--kcui-gap-panel);">No members found.</p>';
     let h = '<table><thead><tr><th>Name</th><th>Party</th><th>Constituency</th><th style="width:70px; text-align:right;">Speeches</th></tr></thead><tbody>';
     for (const m of items) {
       h += '<tr>'

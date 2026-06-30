@@ -42,7 +42,7 @@
         <input type="search" name="q" placeholder="full-text search..." style="flex:1;">
         <button class="btn btn-sm btn-yellow" type="submit">SEARCH</button>
       </div>
-      <div style="display:flex; flex-wrap:wrap; gap:0.75rem; margin-top:0.6rem; align-items:center;">
+      <div style="display:flex; flex-wrap:wrap; gap:var(--kcui-gap-panel); margin-top:0.6rem; align-items:center;">
         <label style="display:flex; align-items:center; gap:0.35rem; font-size:12px; color:var(--dim);">
           Catalog
           <select name="catalog"
@@ -145,7 +145,7 @@
       </tbody>
     </table>
     {% else %}
-    <p class="meta" style="padding:1rem;">
+    <p class="meta" style="padding:var(--kcui-gap-panel);">
       {% if mode == "incomplete" %}No incomplete records found.{% else %}No books yet.{% endif %}
     </p>
     {% endif %}

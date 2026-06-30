@@ -15,7 +15,7 @@
 </div>
 {% endif %}
 
-<div style="display:grid; grid-template-columns:1fr; gap:1rem;">
+<div style="display:grid; grid-template-columns:1fr; gap:var(--kcui-gap-panel);">
 
   <div class="panel kcui-panel">
     <div class="panel-header kcui-panel-header" style="gap:0.4rem;">
@@ -35,7 +35,7 @@
     <div class="panel-body kcui-panel-body">
       <form id="edit-form" method="post" action="/ui/library/{{ book.route_id or book.id }}/edit">
 
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; margin-bottom:0.75rem;">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--kcui-gap-panel); margin-bottom:var(--kcui-gap-panel);">
 
           <div style="grid-column:1 / -1;">
             <label for="e_title">Title <span style="color:var(--red);">*</span></label>
@@ -85,7 +85,7 @@
         </div>
 
         {% if catalogs %}
-        <div style="border-top:1px solid var(--border); padding:0.6rem 0.25rem 0.75rem; margin-bottom:0.75rem; display:flex; align-items:center; gap:0.75rem;">
+        <div style="border-top:1px solid var(--border); padding:0.6rem 0.25rem var(--kcui-gap-panel); margin-bottom:var(--kcui-gap-panel); display:flex; align-items:center; gap:var(--kcui-gap-panel);">
           <span style="font-size:11px; color:var(--dim); white-space:nowrap;">Move to catalog</span>
           <div style="display:inline-flex; gap:0.35rem; align-items:center;">
             <input name="catalog" form="move-form" type="text" placeholder="catalog name…"

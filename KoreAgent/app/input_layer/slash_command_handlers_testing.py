@@ -19,6 +19,7 @@
 #   - utils/workspace_utils.py         -- get_test_prompts_dir, get_test_results_dir
 # ====================================================================================================
 import csv
+import json
 import re
 from datetime import datetime
 from pathlib import Path
@@ -28,6 +29,69 @@ from llm_client import get_active_host
 from input_layer.slash_command_context import SlashCommandContext
 from utils.workspace_utils import get_test_prompts_dir
 from utils.workspace_utils import get_test_results_dir
+
+
+def _count_test_items(candidate: Path) -> int:
+    try:
+        data = json.loads(candidate.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return 0
+    return len(data) if isinstance(data, list) else 0
+
+
+def _write_all_run_summary(
+    csv_path: Path,
+    suite_results: list[dict],
+    elapsed_seconds: float,
+    completed_suites: int,
+    planned_suites: int,
+    planned_tests: int,
+) -> Path:
+    summary_path = csv_path.with_name(csv_path.stem.replace("test_results", "summary", 1) + ".md")
+    total_tests   = sum(int(item["total"])  for item in suite_results)
+    total_passed  = sum(int(item["passed"]) for item in suite_results)
+    total_failed  = max(total_tests - total_passed, 0)
+    mins, seconds = divmod(int(elapsed_seconds), 60)
+    wall_clock    = f"{mins}m {seconds}s" if mins else f"{seconds}s"
+    run_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    lines = [
+        "# Test Run Summary",
+        "",
+        f"Run: {run_timestamp}  |  Passed: **{total_passed}/{total_tests}**  |  Wall-clock: {wall_clock}",
+        f"Suites completed: **{completed_suites}/{planned_suites}**  |  Planned tests: **{planned_tests}**",
+        "",
+        "## Results by Suite",
+        "",
+        "| Suite | Pass | Fail | Total |",
+        "| ----- | ---: | ---: | ----: |",
+    ]
+    for item in suite_results:
+        failed = max(int(item["total"]) - int(item["passed"]), 0)
+        lines.append(f"| {item['name']} | {item['passed']} | {failed} | {item['total']} |")
+    lines.append("")
+
+    if total_failed:
+        lines += [
+            f"## Failures ({total_failed})",
+            "",
+            "| Suite | Pass | Fail | Total |",
+            "| ----- | ---: | ---: | ----: |",
+        ]
+        for item in suite_results:
+            failed = max(int(item["total"]) - int(item["passed"]), 0)
+            if failed > 0:
+                lines.append(f"| {item['name']} | {item['passed']} | {failed} | {item['total']} |")
+    else:
+        lines += [
+            "## Failures",
+            "",
+            "None - all tests passed.",
+        ]
+    lines.append("")
+
+    summary_path.write_text("\n".join(lines), encoding="utf-8")
+    return summary_path
 
 
 def _row_outcome(row: dict) -> str:
@@ -162,12 +226,13 @@ def _run_one_test_file(candidate, ctx, wrapper, model: str, active_host: str, re
                 "passed": 0,
                 "total": 0,
                 "prompt_tokens": prompt_tokens_total,
+                "stopped": True,
                 "tps_sum": tps_sum,
                 "tps_samples": tps_samples,
             }
     except Exception as exc:
         ctx.output(f"Error running {candidate.name}: {exc}", "error")
-        return {"passed": 0, "total": 0, "prompt_tokens": 0, "tps_sum": 0.0, "tps_samples": 0}
+        return {"passed": 0, "total": 0, "prompt_tokens": 0, "stopped": False, "tps_sum": 0.0, "tps_samples": 0}
 
     if test_passed is not None:
         suspicious_metrics = test_total > 0 and prompt_tokens_total == 0 and tps_samples == 0
@@ -189,6 +254,7 @@ def _run_one_test_file(candidate, ctx, wrapper, model: str, active_host: str, re
             "passed": test_passed,
             "total": test_total,
             "prompt_tokens": prompt_tokens_total,
+            "stopped": False,
             "tps_sum": tps_sum,
             "tps_samples": tps_samples,
         }
@@ -196,7 +262,7 @@ def _run_one_test_file(candidate, ctx, wrapper, model: str, active_host: str, re
         ctx.output(f"[Test: {candidate.name}  completed (no summary)]", "dim")
     else:
         ctx.output(f"[Test: {candidate.name}  exited with code {proc.returncode}]", "error")
-    return {"passed": 0, "total": 0, "prompt_tokens": prompt_tokens_total, "tps_sum": tps_sum, "tps_samples": tps_samples}
+    return {"passed": 0, "total": 0, "prompt_tokens": prompt_tokens_total, "stopped": False, "tps_sum": tps_sum, "tps_samples": tps_samples}
 
 
 def _run_post_test_checks(ctx, csv_path, testcode_dir, subprocess_mod, sys_mod) -> None:
@@ -237,6 +303,7 @@ def _cmd_test(arg: str, ctx: SlashCommandContext) -> None:
     import subprocess
     import sys
     import time
+    from orchestration import clear_stop
 
     test_prompts_dir = get_test_prompts_dir()
     wrapper = Path(__file__).resolve().parent.parent / "testing" / "test_wrapper.py"
@@ -252,6 +319,7 @@ def _cmd_test(arg: str, ctx: SlashCommandContext) -> None:
         return
 
     if arg.strip().lower() == "all":
+        clear_stop()
         if not test_prompts_dir.exists():
             ctx.output("Test prompts directory not found.", "error")
             return
@@ -261,33 +329,61 @@ def _cmd_test(arg: str, ctx: SlashCommandContext) -> None:
             return
 
         def _run_all(_files=list(all_files), _wrapper=wrapper, _ctx=ctx) -> None:
+            from orchestration import is_stop_requested
+
             model = _ctx.config.resolved_model
             host = get_active_host()
             now = datetime.now()
             shared_output = get_test_results_dir() / now.strftime("%Y-%m-%d") / f"test_results_{now.strftime('%Y%m%d_%H%M%S')}_all.csv"
             shared_output.parent.mkdir(parents=True, exist_ok=True)
+            planned_tests = sum(_count_test_items(file_path) for file_path in _files)
             _ctx.output(f"Running all {len(_files)} test file(s) - host: {host}  model: {model}", "info")
+            _ctx.output(f"Planned test count: {planned_tests}", "dim")
             _ctx.output(f"Results file: {shared_output}", "dim")
             total_passed = total_tests = total_prompt_tokens = total_tps_samples = 0
+            completed_suites = 0
+            run_stopped = False
+            suite_results: list[dict] = []
             total_tps_sum = 0.0
             wall_start = time.monotonic()
             bar = "=" * 47
             for index, candidate in enumerate(_files, start=1):
+                if is_stop_requested():
+                    run_stopped = True
+                    break
                 _ctx.output(bar, "info")
                 _ctx.output(f"= Test Suite: {candidate.stem}", "info")
                 _ctx.output(bar, "info")
                 _ctx.output(f"[{index}/{len(_files)}] Starting: {candidate.name}", "info")
                 result = _run_one_test_file(candidate, _ctx, _wrapper, model, host, re, subprocess, sys, output_file=shared_output)
+                if result.get("stopped"):
+                    run_stopped = True
+                    break
                 total_passed += result["passed"]
                 total_tests += result["total"]
                 total_prompt_tokens += result["prompt_tokens"]
                 total_tps_sum += result["tps_sum"]
                 total_tps_samples += result["tps_samples"]
+                completed_suites += 1
+                suite_results.append({
+                    "name":   candidate.name,
+                    "passed": result["passed"],
+                    "total":  result["total"],
+                })
             elapsed = time.monotonic() - wall_start
             mins, sec = divmod(int(elapsed), 60)
             time_str = f"{mins}m {sec}s" if mins else f"{sec}s"
             pass_rate = (100.0 * total_passed / total_tests) if total_tests else 0.0
             avg_tps = (total_tps_sum / total_tps_samples) if total_tps_samples else 0.0
+            if run_stopped:
+                _ctx.output(
+                    f"[TEST RUN STOPPED]  host={host}  model={model}  elapsed={time_str}  "
+                    f"suites={completed_suites}/{len(_files)}  tests={total_passed}/{total_tests}"
+                    f" of planned {planned_tests}  prompt tokens={total_prompt_tokens:,}  avg tok/s={avg_tps:.1f}",
+                    "error",
+                )
+                return
+
             level = "success" if total_passed == total_tests and total_tests > 0 else "error"
             _ctx.output(
                 f"[ALL TESTS COMPLETE]  host={host}  model={model}  elapsed={time_str}  "
@@ -295,12 +391,22 @@ def _cmd_test(arg: str, ctx: SlashCommandContext) -> None:
                 f"prompt tokens={total_prompt_tokens:,}  avg tok/s={avg_tps:.1f}",
                 level,
             )
+            summary_path = _write_all_run_summary(
+                csv_path         = shared_output,
+                suite_results    = suite_results,
+                elapsed_seconds  = elapsed,
+                completed_suites = completed_suites,
+                planned_suites   = len(_files),
+                planned_tests    = planned_tests,
+            )
+            _ctx.output(f"Summary written to: {summary_path}", "dim")
             _run_post_test_checks(_ctx, shared_output, _wrapper.parent, subprocess, sys)
 
         _run_all()
         return
 
     candidate = Path(arg)
+    clear_stop()
     if not candidate.is_absolute():
         candidate = test_prompts_dir / arg
         if not candidate.suffix:

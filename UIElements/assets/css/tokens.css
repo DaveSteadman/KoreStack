@@ -43,6 +43,7 @@
   --kcui-radius-sm: 0;
   --kcui-radius-md: 2px;
   --kcui-radius-lg: 2px;
+  --kcui-gap-panel: 12px;
   --kcui-shadow-overlay: 0 12px 32px rgba(0, 0, 0, .45);
 
   --tab-h: var(--kcui-tab-h);

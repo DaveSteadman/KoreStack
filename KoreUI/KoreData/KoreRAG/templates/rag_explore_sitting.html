@@ -31,7 +31,7 @@
     </div>
   </div>
   <div class="panel-body kcui-panel-body" id="debates-body" style="padding:0; overflow-x:auto;">
-    <p class="meta" style="padding:1rem;">Loading debates…</p>
+    <p class="meta" style="padding:var(--kcui-gap-panel);">Loading debates…</p>
   </div>
 </div>
 </div>
@@ -58,7 +58,7 @@
   }
 
   function renderDebates(items) {
-    if (!items || !items.length) return '<p class="meta" style="padding:1rem;">No debates found for this sitting.</p>';
+    if (!items || !items.length) return '<p class="meta" style="padding:var(--kcui-gap-panel);">No debates found for this sitting.</p>';
     let h = '<table><thead><tr><th style="width:40px;">#</th><th>Debate</th><th style="width:80px; text-align:right;">Speeches</th><th style="width:70px;"></th></tr></thead><tbody>';
     for (const d of items) {
       const uuid = escapeHtml(d.uuid || '');

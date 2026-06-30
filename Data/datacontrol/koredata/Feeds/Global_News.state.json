@@ -1,18 +1,18 @@
 {
   "b1793774-b52a-5f4b-8e74-ce19f72b0d7b": {
-    "last_fetched_at": "2026-06-29T21:27:42",
+    "last_fetched_at": "2026-06-30T16:32:55",
     "last_status": "ok",
     "last_error": null,
-    "last_duration_s": 26.9,
-    "last_new_entries": 1,
+    "last_duration_s": 15.0,
+    "last_new_entries": 2,
     "content_status": "good"
   },
   "6a210cd2-498a-5b3a-a151-5bad67afe07e": {
-    "last_fetched_at": "2026-06-29T21:28:25",
+    "last_fetched_at": "2026-06-30T16:33:04",
     "last_status": "ok",
     "last_error": null,
-    "last_duration_s": 10.0,
-    "last_new_entries": 22,
+    "last_duration_s": 9.0,
+    "last_new_entries": 17,
     "content_status": "good"
   }
 }
