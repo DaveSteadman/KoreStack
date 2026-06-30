@@ -4,7 +4,7 @@
 
 {% block content %}
 <div class="kcui-page kcui-page--narrow kcui-stack">
-<div class="panel kcui-panel kcui-mar-bottom-lg">
+<div class="panel kcui-panel">
   <div class="panel-header kcui-panel-header">
     SEARCH
   </div>
@@ -58,7 +58,7 @@
 <div class="two-col">
 
   <!-- Left: domain list -->
-  <div>
+  <div class="kcui-stack">
     <div class="panel kcui-panel">
       <div class="panel-header kcui-panel-header">
         DOMAINS
@@ -98,7 +98,7 @@
   </div>
 
   <!-- Right: create / rename panel -->
-  <div>
+  <div class="kcui-stack">
     <div class="panel kcui-panel">
       <div class="panel-header kcui-panel-header">
         <span id="domain-panel-label">CREATE DOMAIN</span>
@@ -138,7 +138,7 @@
 
 </div>
 {% if all_feeds %}
-<div id="feed-status-panel" class="panel kcui-panel kcui-mar-top-lg">
+<div id="feed-status-panel" class="panel kcui-panel">
   <div class="panel-header kcui-panel-header">
     FEED STATUS
     <span id="feed-count-badge" class="badge badge-dim" style="margin-left:auto;">{{ all_feeds|length }} feed{{ 's' if all_feeds|length != 1 else '' }}</span>

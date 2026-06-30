@@ -4,11 +4,11 @@
 
 {% block content %}
 <div class="kcui-page kcui-page--narrow kcui-stack">
-<div class="two-col" style="margin-bottom:1.25rem;">
+<div class="two-col">
 
   <!-- Left column: feeds table + domain age settings -->
-  <div>
-    <div class="panel kcui-panel" style="margin-bottom:1.25rem;">
+  <div class="kcui-stack">
+    <div class="panel kcui-panel">
       <div class="panel-header kcui-panel-header">
         FEEDS
         <span class="badge badge-dim" style="margin-left:0.5rem;">{{ feeds|length }}</span>
@@ -129,8 +129,8 @@
   </div>
 
   <!-- Right column: add/edit feed + manage entries -->
-  <div>
-    <div class="panel kcui-panel" style="margin-bottom:1.25rem;">
+  <div class="kcui-stack">
+    <div class="panel kcui-panel">
       <div class="panel-header kcui-panel-header">
         <span id="panel-mode-label">ADD FEED</span>
       </div>
@@ -194,7 +194,7 @@
         </form>
 
         <!-- Action row -->
-        <div style="margin-top:0.75rem; padding-top:0.75rem; border-top:1px solid var(--border); display:flex; gap:0.5rem; align-items:center;">
+        <div style="margin-top:var(--kcui-gap-panel); padding-top:var(--kcui-gap-panel); border-top:1px solid var(--border); display:flex; gap:0.5rem; align-items:center;">
           <button id="btn-submit-add"  type="button" onclick="document.getElementById('form-add').submit()">ADD FEED</button>
           <button id="btn-submit-edit" type="button" onclick="document.getElementById('form-edit').submit()" style="display:none;">SAVE CHANGES</button>
           <button id="btn-cancel-edit" type="button" class="btn-secondary" onclick="cancelEdit()" style="display:none;">CANCEL</button>

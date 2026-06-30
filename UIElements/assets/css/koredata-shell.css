@@ -10,6 +10,10 @@
   margin-bottom: 0;
 }
 
+.kcui-shell-bg .kcui-grid-split > .kcui-panel.kcui-panel {
+  margin-bottom: 0;
+}
+
 .kcui-shell-bg .kcui-panel-header.kcui-panel-header {
   justify-content: flex-start;
   gap: var(--kcui-space-panel, 12px);

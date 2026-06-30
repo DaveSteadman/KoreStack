@@ -48,7 +48,7 @@
 
 .two-col {
   display: grid;
-  gap: 1.5rem;
+  gap: var(--kcui-gap-panel);
   grid-template-columns: 1fr 1fr;
 }
 
@@ -339,7 +339,7 @@
 
 .kcui-grid-split {
   display: grid;
-  gap: 1rem;
+  gap: var(--kcui-gap-panel);
   align-items: start;
   grid-template-columns: 1fr 1fr;
 }
