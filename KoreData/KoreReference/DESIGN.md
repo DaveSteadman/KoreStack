@@ -291,7 +291,7 @@ The API is designed for the following common agent workflows:
 
 ## Configuration
 
-Behaviour is controlled by a JSON config file (`config/default.json`).
+Behaviour is controlled by the shared suite config file (`config/korestack_config.json`).
 
 | Key           | Default     | Description                                          |
 |---------------|-------------|------------------------------------------------------|

@@ -1,0 +1,18 @@
+{
+  "domain": "TestFeedsArea",
+  "enabled": true,
+  "age_settings": {
+    "mode": "days_previous",
+    "days": 30,
+    "start_date": null,
+    "end_date": null
+  },
+  "feeds": [
+    {
+      "name": "UK Gov (Govwire): Dept For Business & Trade",
+      "url": "https://www.govwire.co.uk/rss/department-for-business-and-trade",
+      "update_rate": 1000,
+      "type": "rss"
+    }
+  ]
+}

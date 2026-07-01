@@ -250,7 +250,7 @@ At gateway shutdown (SIGTERM or process exit):
 3. Any child that does not exit is sent `SIGKILL`.
 4. Log file handles are closed.
 
-### Configuration — `config/default.json`
+### Configuration — `config/korestack_config.json`
 
 | Key | Default | Description |
 |-----|---------|-------------|

@@ -1,0 +1,36 @@
+{
+  "domain": "NorthAmericaGovNews",
+  "enabled": true,
+  "age_settings": {
+    "mode": "none",
+    "days": null,
+    "start_date": null,
+    "end_date": null
+  },
+  "feeds": [
+    {
+      "name": "Canada Senate",
+      "url": "https://sencanada.ca/en/rss/news",
+      "update_rate": 1000,
+      "type": "rss"
+    },
+    {
+      "name": "USA Congress Bills",
+      "url": "https://www.govinfo.gov/rss/bills.xml",
+      "update_rate": 1000,
+      "type": "rss"
+    },
+    {
+      "name": "Bermuda",
+      "url": "https://www.gov.bm/news/rss",
+      "update_rate": 1000,
+      "type": "rss"
+    },
+    {
+      "name": "Cuba President",
+      "url": "https://www.presidencia.gob.cu/en/feed/",
+      "update_rate": 1000,
+      "type": "rss"
+    }
+  ]
+}

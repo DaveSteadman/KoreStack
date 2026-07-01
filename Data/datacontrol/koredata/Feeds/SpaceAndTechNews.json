@@ -1,0 +1,36 @@
+{
+  "domain": "SpaceAndTechNews",
+  "enabled": true,
+  "age_settings": {
+    "mode": "none",
+    "days": null,
+    "start_date": null,
+    "end_date": null
+  },
+  "feeds": [
+    {
+      "name": "Nasa",
+      "url": "https://www.nasa.gov/news-release/feed/",
+      "update_rate": 1000,
+      "type": "rss"
+    },
+    {
+      "name": "ESA",
+      "url": "https://www.esa.int/rssfeed/Our_Activities/Space_News",
+      "update_rate": 1000,
+      "type": "rss"
+    },
+    {
+      "name": "AstronomyNow (News)",
+      "url": "https://astronomynow.com/feed/",
+      "update_rate": 1000,
+      "type": "rss"
+    },
+    {
+      "name": "SpaceNews (News)",
+      "url": "https://spacenews.com/feed/",
+      "update_rate": 1000,
+      "type": "rss"
+    }
+  ]
+}

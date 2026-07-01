@@ -69,7 +69,7 @@ To restart or stop individual services without taking down the whole suite, use 
 - `KoreCode/` — in-browser code editor
 - `KoreComms/` — external messaging
 - `KoreStack/` — suite landing page and control plane
-- `config/` — suite configuration (`default.json` + optional `local.json` override)
+- `config/` — suite configuration (`korestack_config.json` and `llm_config.json`)
 - `datacontrol/` — service-owned, structured runtime data (see below)
 - `datauser/` — unstructured user files; freely navigable by the agent's file access skill
 

@@ -37,7 +37,7 @@ from app.database import (
     insert_entry,
     list_domains,
 )
-from app.feed_manager import load_feeds, get_feed, update_feed_last_fetched, update_feed_status
+from app.feed_manager import get_domain_enabled, load_feeds, get_feed, update_feed_last_fetched, update_feed_status
 
 scheduler = BackgroundScheduler(
     daemon=True,
@@ -78,6 +78,13 @@ def _log(msg: str) -> None:
     with _log_lock:
         _log_buffer.append(line)
         _LOG_FILE.write_text("".join(_log_buffer), encoding="utf-8")
+
+
+def _normalise_feed_text(value: str) -> str:
+    text = _html.unescape(str(value or ""))
+    text = text.replace("\xa0", " ")
+    text = re.sub(r"\s+", " ", text)
+    return text.strip()
 
 
 def _fetch_page_text(url: str) -> str:
@@ -538,8 +545,8 @@ def ingest_feed(feed: dict) -> None:
         entries_processed = 0
         pages_with_content = 0
         for entry in parsed.entries:
-            headline = entry.get("title", "")
-            url = entry.get("link", "")
+            headline = _normalise_feed_text(entry.get("title", ""))
+            url      = str(entry.get("link", "") or "").strip()
             pub_parsed = entry.get("published_parsed") or entry.get("updated_parsed")
             if pub_parsed:
                 pub_dt = datetime(*pub_parsed[:6])
@@ -552,9 +559,9 @@ def ingest_feed(feed: dict) -> None:
                 published = entry.get("published", entry.get("updated", ""))
             entries_processed += 1
             metadata = {
-                "author": entry.get("author", ""),
-                "tags": [t.get("term", "") for t in entry.get("tags", [])],
-                "summary": entry.get("summary", ""),
+                "author":  _normalise_feed_text(entry.get("author", "")),
+                "tags":    [_normalise_feed_text(t.get("term", "")) for t in entry.get("tags", [])],
+                "summary": _normalise_feed_text(entry.get("summary", "")),
             }
             page_text = _fetch_page_text(url) if url else ""
             if page_text:
@@ -728,6 +735,9 @@ def trigger_immediate(feed: dict) -> None:
 def _daily_prune() -> None:
     """Apply each domain's age rule once per day. Called hourly; skips if already done today."""
     for domain in list_domains():
+        # A disabled domain is fully paused: no ingest work and no automatic age-rule culling.
+        if not get_domain_enabled(domain):
+            continue
         n = apply_age_rule(domain)
         if n:
             _log(f"Daily prune: {domain} — {n} entries removed")

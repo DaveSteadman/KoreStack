@@ -188,7 +188,7 @@ Books can be edited after import to correct:
 
 ## Configuration
 
-Behaviour is controlled by a JSON config file (`config/default.json`). No command-line flags.
+Behaviour is controlled by the shared suite config file (`config/korestack_config.json`). No command-line flags.
 
 | Key        | Default     | Description                  |
 |------------|-------------|------------------------------|

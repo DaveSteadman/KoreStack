@@ -408,7 +408,7 @@ class RegressionTests(unittest.TestCase):
 
     def test_mcp_connections_prefer_new_config_and_skip_disabled_entries(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            config_path = Path(tmp) / "default.json"
+            config_path = Path(tmp) / "korestack_config.json"
             config_path.write_text(
                 '{\n'
                 '  "mcp_servers": [\n'
@@ -434,7 +434,7 @@ class RegressionTests(unittest.TestCase):
 
     def test_mcp_connections_accept_legacy_mcp_servers_key(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            config_path = Path(tmp) / "default.json"
+            config_path = Path(tmp) / "korestack_config.json"
             config_path.write_text(
                 '{\n'
                 '  "mcp_servers": [\n'

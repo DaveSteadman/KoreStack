@@ -38,5 +38,37 @@
     "last_duration_s": 2.7,
     "last_new_entries": 26,
     "content_status": "poor"
+  },
+  "6c8a1d4d-8391-5c02-b28f-fa16a19ad0e9": {
+    "last_fetched_at": "2026-07-01T05:59:13",
+    "last_status": "ok",
+    "last_error": null,
+    "last_duration_s": 4.7,
+    "last_new_entries": 10,
+    "content_status": "good"
+  },
+  "753d84b5-61b9-53cd-bdcb-7385eb2ff61e": {
+    "last_fetched_at": "2026-07-01T06:01:20",
+    "last_status": "ok",
+    "last_error": null,
+    "last_duration_s": 127.4,
+    "last_new_entries": 20,
+    "content_status": "good"
+  },
+  "3bac32f2-5eb3-5bff-bd7d-813d73a4a958": {
+    "last_fetched_at": "2026-07-01T06:07:17",
+    "last_status": "ok",
+    "last_error": null,
+    "last_duration_s": 9.3,
+    "last_new_entries": 30,
+    "content_status": "good"
+  },
+  "2799d537-a710-57b8-8ffa-faa384658e88": {
+    "last_fetched_at": "2026-07-01T06:19:20",
+    "last_status": "ok",
+    "last_error": null,
+    "last_duration_s": 4.3,
+    "last_new_entries": 20,
+    "content_status": "good"
   }
 }

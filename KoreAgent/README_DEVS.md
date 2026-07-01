@@ -162,7 +162,7 @@ code/
 ### `code/main.py`
 
 - Entry point.
-- Loads `default.json` (repo root).
+- Loads `config/korestack_config.json` and `config/llm_config.json`.
 - Resolves model and host.
 - Loads `code/KoreAgent/skills/skills_catalog.json`.
 - Starts API mode via `input_layer/api_mode.py`.
@@ -434,11 +434,11 @@ The important mental model here is: browser prompts and scheduled tasks ultimate
 
 ## Runtime Data
 
-Everything mutable lives under the configured control-data root. In this checkout `default.json` points `ControlDataFolder` at `datacontrol/`.
+Everything mutable lives under the configured control-data root. In this checkout `config/llm_config.json` points `DataRootFolder` at the suite data root, which yields `datacontrol/`.
 
 | Path | Purpose |
 |---|---|
-| `default.json` | persisted startup defaults |
+| `config/korestack_config.json` | shared suite runtime defaults |
 | `datacontrol/memory_store.json` | durable memory facts |
 | `datacontrol/korechat/korechat.db` | canonical persisted conversation state for webchat and external channels |
 | `datacontrol/logs/YYYY-MM-DD/` | runtime evidence logs |
@@ -473,4 +473,3 @@ If you are coming back to the code after a refactor, this order should rebuild t
 8. [code/KoreAgent/context_manager.py](code/KoreAgent/context_manager.py)
 9. [code/KoreAgent/system_skills/Delegate/delegate_runner.py](code/KoreAgent/system_skills/Delegate/delegate_runner.py)
 10. [code/KoreAgent/skill_executor.py](code/KoreAgent/skill_executor.py)
-

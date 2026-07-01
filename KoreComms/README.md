@@ -66,30 +66,29 @@ The WebUI is at the configured KoreComms URL from `config/korestack_config.json`
 
 ## Configuration
 
-Edit `config/default.json` (created automatically on first run with defaults):
+Edit `config/korestack_config.json` for shared suite values:
 
 ```json
 {
-  "host": "0.0.0.0",
-   "port": <from config/korestack_config.json>,
+  "network": {"host": "0.0.0.0"},
+  "services": {"korecomms": {"port": 9609}},
   "log_level": "info",
-  "poll_interval": 60,
-   "event_poll_interval": 1.0,
-   "missing_kc_conversation_policy": "recreate",
-   "data_dir": "datacontrol/korecomms",
-   "korechat_url": "http://localhost:8630"
+  "connections": {"korechat": "http://localhost:9602"}
 }
 ```
 
+Other KoreComms settings currently come from built-in defaults or `KORECOMMS_*` environment
+variables rather than extra keys in the suite config file.
+
 | Key | Default | Description |
 |---|---|---|
-| `host` | `0.0.0.0` | Bind address |
+| `host` | `network.host` | Bind address from `config/korestack_config.json` |
 | `port` | `services.korecomms.port` | HTTP port from `config/korestack_config.json` |
-| `poll_interval` | `60` | Gmail poll interval in seconds |
-| `event_poll_interval` | `1.0` | How often KoreComms checks KoreChat for outbound delivery events |
-| `missing_kc_conversation_policy` | `recreate` | What to do if the linked KoreChat record is gone: `recreate` or `abort` |
-| `data_dir` | `datacontrol/korecomms` | SQLite database directory under the shared suite control tree |
-| `korechat_url` | `http://localhost:8630` | KoreChat base URL for outbound delivery events |
+| `poll_interval` | `60` | Built-in default, overridable via environment |
+| `event_poll_interval` | `1.0` | Built-in default, overridable via environment |
+| `missing_kc_conversation_policy` | `recreate` | Built-in default, overridable via environment |
+| `data_dir` | `datacontrol/korecomms` | Built-in default path under the shared suite control tree, overridable via environment |
+| `korechat_url` | `connections.korechat` | KoreChat base URL for outbound delivery events |
 
 Discord connection settings live per interface in the WebUI:
 

@@ -146,8 +146,8 @@ KoreStack starts and monitors the selected services as separate child processes.
 
 It loads suite configuration from:
 
-- `config/default.json`
-- `config/local.json` when present
+- `config/korestack_config.json`
+- `config/llm_config.json`
 
 It then passes the resolved suite paths and shared environment settings into the child runtimes.
 
@@ -343,8 +343,8 @@ Does not belong in `config/`:
 
 ### 7.3 Migration Intent
 
-The former `MiniAgentFramework/default.json`, now housed at `KoreAgent/default.json`, is
-effectively acting as the suite's first global config file.
+The former per-project config has been replaced by
+`config/korestack_config.json` as the suite's global config file.
 
 That should be treated as a transitional state.
 
@@ -444,8 +444,8 @@ The following decisions have been made for the current design direction.
 
 ### 11.1 Configuration
 
-- Should start with one canonical `config/default.json`. This is the factory default.
-- Machine-local overrides should live in `config/local.json`.
+- Use one canonical `config/korestack_config.json` for shared suite config.
+- Keep bootstrap LLM settings in `config/llm_config.json`.
 - Shared suite config should be resolved by KoreStack and passed down to services.
 
 ### 11.2 KoreChat
@@ -462,4 +462,3 @@ The following decisions have been made for the current design direction.
 
 - KoreData and KoreDocs remain MCP-first integrations for the agent runtime.
 - KoreData child services stay behind KoreDataGateway at suite level.
-

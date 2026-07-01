@@ -187,7 +187,7 @@ MCP connections (configured external tool providers):
 - Each skill directory contains exactly one `skill.md` that defines its public interface for the catalog builder.
 - Skills do not import from each other directly; inter-skill data flows through the scratchpad.
 - Skill functions that take large values as arguments support `{scratch:key}` token substitution as an alternative to passing inline text.
-- MCP connections are declared in `default.json` under `mcp_connections`; the older `mcp_servers` key remains a backwards-compatible alias.
+- MCP connections are declared in `config/korestack_config.json` under `mcp_connections`; the older `mcp_servers` key remains a backwards-compatible alias.
 - MCP connections can use `transport: "streamable_http"` (default) or `transport: "sse"` for classic MCP SSE endpoints.
 - MCP tool names are owned by the MCP server. The framework exposes the names returned by `list_tools()` unchanged, optionally validating them with `expected_prefix`.
 - Per-connection `allowed_tools` and `blocked_tools` lists can restrict which server-published tools are exposed to the model.

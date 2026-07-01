@@ -1,5 +1,7 @@
 import json
+import html as _html
 import os
+import re
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
@@ -83,6 +85,27 @@ def _add_next_mins(feeds: list[dict]) -> None:
             feed["_next_secs"] = None
 
 
+def _normalise_entry_text(value: object) -> str:
+    text = _html.unescape(str(value or ""))
+    text = text.replace("\xa0", " ")
+    text = re.sub(r"\s+", " ", text)
+    return text.strip()
+
+
+def _normalise_entry_for_display(entry: dict) -> dict:
+    if entry.get("headline"):
+        entry["headline"] = _normalise_entry_text(entry.get("headline"))
+    metadata = entry.get("metadata")
+    if isinstance(metadata, dict):
+        if metadata.get("author"):
+            metadata["author"] = _normalise_entry_text(metadata.get("author"))
+        if metadata.get("summary"):
+            metadata["summary"] = _normalise_entry_text(metadata.get("summary"))
+        if isinstance(metadata.get("tags"), list):
+            metadata["tags"] = [_normalise_entry_text(tag) for tag in metadata["tags"]]
+    return entry
+
+
 def register_feed_ui(app: FastAPI) -> None:
     @app.get("/", include_in_schema=False)
     def route_root():
@@ -126,6 +149,7 @@ def register_feed_ui(app: FastAPI) -> None:
         results = []
         if q.strip():
             results = search_entries(domain or None, q, limit=limit, include_body=False, since=since, until=until)
+            results = [_normalise_entry_for_display(result) for result in results]
         return templates.TemplateResponse(
             request,
             "feed_search.html",
@@ -142,6 +166,7 @@ def register_feed_ui(app: FastAPI) -> None:
     @app.get("/ui/feeds/{domain}", response_class=HTMLResponse, include_in_schema=False)
     def web_domain(request: Request, domain: str, limit: int = 50, offset: int = 0):
         entries       = get_entries(domain, limit=limit, offset=offset)
+        entries       = [_normalise_entry_for_display(entry) for entry in entries]
         all_domains   = [{"domain": item, "entry_count": get_entry_count(item)} for item in sorted(set(list_domains()) | set(list_feed_domains()))]
         all_feeds     = load_feeds()
         age_settings  = get_domain_age_settings(domain)
@@ -179,6 +204,7 @@ def register_feed_ui(app: FastAPI) -> None:
                 entry["metadata"] = json.loads(entry["metadata"])
             except Exception:
                 pass
+        entry = _normalise_entry_for_display(entry)
         return templates.TemplateResponse(request, "feed_entry.html", {"domain": domain, "entry": entry})
 
     @app.post("/ui/feeds/domains/create", include_in_schema=False)

@@ -35,7 +35,7 @@ The agent never sees email addresses, phone numbers, OAuth tokens, or any channe
   requirements.txt
   DESIGN.md            Original design document
   config/
-    default.json       Config overrides (port, host, log_level, data_dir)
+    korestack_config.json  Shared suite config (port, host, log_level, data_dir)
   app/
     __init__.py
     api.py             FastAPI application - routes, SSE broadcaster, reaper thread
@@ -63,7 +63,7 @@ code/KoreAgent/input_layer/
 
 KC uses SQLite with WAL mode. The database file is created at startup at `data_dir/korechat.db`.
 
-Default `data_dir` is `<repo_root>/datacontrol/korechat/`. This is configured in `config/default.json` or falls back to the built-in default in `app/config.py`.
+Default `data_dir` is `<repo_root>/datacontrol/korechat/`. This is configured in `config/korestack_config.json` or falls back to the built-in default in `app/config.py`.
 
 ### conversations
 
@@ -253,7 +253,7 @@ Profiles are a KC concept. MiniAgentFramework reads the profile from the convers
 
 ### Configuration
 
-`koreconvurl` in `default.json` at the repo root sets the KC base URL (e.g. `http://localhost:8700`). If the key is absent the KC integration thread exits immediately and logs a notice. No other configuration is required.
+`connections.korechat` in `config/korestack_config.json` sets the KC base URL (for example `http://localhost:9602`). If the key is absent the KC integration thread exits immediately and logs a notice. No other configuration is required.
 
 ### Background Polling Thread
 
@@ -382,7 +382,7 @@ Or directly via uvicorn:
 uvicorn app.api:app --host 0.0.0.0 --port 8700
 ```
 
-Config overrides go in `../KoreChat/config/default.json`. All keys are optional.
+Config overrides go in `../config/korestack_config.json`. All keys are optional.
 
 ```json
 {
