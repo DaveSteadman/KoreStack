@@ -743,13 +743,27 @@ def _daily_prune() -> None:
             _log(f"Daily prune: {domain} — {n} entries removed")
 
 
+def _sentence_chroma_catchup() -> None:
+    """Backfill any feed sentences not yet indexed into the per-domain Chroma stores."""
+    try:
+        from app.chroma_index import sync_all_domains_pending
+
+        counts = sync_all_domains_pending(batch_size=250, max_batches_per_domain=20)
+        for domain, count in counts.items():
+            if count:
+                _log(f"Sentence Chroma catchup: {domain} â€” {count} sentence(s) indexed")
+    except Exception as exc:
+        _log(f"Sentence Chroma catchup failed: {type(exc).__name__}: {exc}")
+
+
 def start_scheduler() -> None:
     # Start the single worker thread
     t = threading.Thread(target=_worker, daemon=True, name="ingest-worker")
     t.start()
 
-    # Run startup prune in background so uvicorn can respond immediately
+    # Run startup prune/index catchup in background so uvicorn can respond immediately
     threading.Thread(target=_daily_prune, daemon=True, name="startup-prune").start()
+    threading.Thread(target=_sentence_chroma_catchup, daemon=True, name="startup-chroma-catchup").start()
 
     schedule_feeds()
 
@@ -768,6 +782,14 @@ def start_scheduler() -> None:
         "interval",
         minutes=1,
         id="overdue_catchup",
+        replace_existing=True,
+    )
+
+    scheduler.add_job(
+        _sentence_chroma_catchup,
+        "interval",
+        minutes=10,
+        id="sentence_chroma_catchup",
         replace_existing=True,
     )
 

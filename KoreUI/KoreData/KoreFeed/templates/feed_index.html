@@ -10,12 +10,21 @@
   </div>
   <div class="panel-body kcui-panel-body">
     <form action="/ui/feeds/search" method="get">
-      <p class="meta kcui-mar-bottom-sm">Bare terms use AND by default. Use quotes for phrases, OR or | for alternatives, NOT to exclude, and parentheses to group.</p>
+      <input type="hidden" name="mode" id="search-mode-input" value="keyword">
+      <p class="meta kcui-mar-bottom-sm" id="search-mode-hint">Bare terms use AND by default. Use quotes for phrases, OR or | for alternatives, NOT to exclude, and parentheses to group.</p>
       <div class="kcui-search-row">
         <input type="search" name="q" placeholder="search all feeds...">
         <button class="btn btn-sm btn-yellow" type="submit">SEARCH</button>
       </div>
       <div class="kcui-filter-row kcui-mar-top-md">
+        <label class="kcui-filter-label" style="cursor:pointer;">
+          <input type="checkbox" id="mode-keyword" checked onchange="toggleSearchMode('keyword')">
+          Keyword
+        </label>
+        <label class="kcui-filter-label" style="cursor:pointer;">
+          <input type="checkbox" id="mode-semantic" onchange="toggleSearchMode('semantic')">
+          Semantic
+        </label>
         <label class="kcui-filter-label">
           Since
           <div class="date-pick">
@@ -221,6 +230,27 @@
 {% endif %}
 
 <script>
+function toggleSearchMode(mode) {
+  var keyword = document.getElementById('mode-keyword');
+  var semantic = document.getElementById('mode-semantic');
+  var hidden = document.getElementById('search-mode-input');
+  var hint = document.getElementById('search-mode-hint');
+  if (!keyword || !semantic || !hidden || !hint) return;
+
+  if (mode === 'semantic') {
+    semantic.checked = true;
+    keyword.checked = false;
+    hidden.value = 'semantic';
+    hint.textContent = 'Semantic search works best with a plain-language description of the idea you want, not boolean keyword syntax.';
+    return;
+  }
+
+  keyword.checked = true;
+  semantic.checked = false;
+  hidden.value = 'keyword';
+  hint.textContent = 'Bare terms use AND by default. Use quotes for phrases, OR or | for alternatives, NOT to exclude, and parentheses to group.';
+}
+
 function editDomain(name) {
   document.getElementById('create-domain-form').style.display = 'none';
   document.getElementById('rename-domain-form').style.display = '';

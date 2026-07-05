@@ -279,7 +279,8 @@ _INSTR_SEARCH = (
 _INSTR_FEEDS = (
     "KoreFeeds — current news and articles. "
     "Search with domains=[\"feeds\"]; optionally filter by since/until (YYYY-MM-DD). "
-    "Fetch full entries with koredata_get_full_text(refid) or koredata_get_feed_entry(domain, entry_id)."
+    "Fetch full entries with koredata_get_full_text(refid) or koredata_get_feed_entry(domain, entry_id). "
+    "Fetch a specific indexed sentence with koredata_get_sentence(locator), where locator looks like feeds/<domain>/<sentence_id>."
 )
 
 _INSTR_REFERENCE = (
@@ -408,6 +409,10 @@ class _FullTextRequest(BaseModel):
     refid: str
 
 
+class _SentenceRequest(BaseModel):
+    locator: str
+
+
 def _normalise_graph_query_literal(query: str) -> str:
     """Treat a fully quoted graph query as one literal term before gateway dispatch."""
     text = str(query or "").strip()
@@ -442,6 +447,21 @@ def _parse_artifact_ref(refid: str) -> tuple[str, dict[str, str]]:
             raise ValueError("Artifact ref contains an empty key.")
         values[key] = unquote(encoded)
     return kind, values
+
+
+def _parse_sentence_locator(locator: str) -> tuple[str, str, int]:
+    text = str(locator or "").strip().strip("/")
+    parts = [part.strip() for part in text.split("/") if part.strip()]
+    if len(parts) != 3:
+        raise ValueError(
+            "Sentence locator must look like <service>/<database>/<sentence_id>."
+        )
+    service, database, raw_id = parts
+    try:
+        sentence_id = int(raw_id)
+    except ValueError as exc:
+        raise ValueError(f"Sentence locator has non-numeric sentence_id: {raw_id!r}") from exc
+    return service.lower(), database, sentence_id
 
 
 def _map_feed_entry(e: dict) -> dict:
@@ -677,6 +697,16 @@ async def api_full_text(req: _FullTextRequest):
     return await koredata_get_full_text(req.refid)
 
 
+@app.post("/api/sentence")
+async def api_sentence(req: _SentenceRequest):
+    return await koredata_get_sentence(req.locator)
+
+
+@app.get("/api/sentence/{locator:path}")
+async def api_sentence_get(locator: str):
+    return await koredata_get_sentence(locator)
+
+
 # ===========================================================================
 # MCP tools
 # ===========================================================================
@@ -712,6 +742,45 @@ async def koredata_search(
         domains = [d.strip() for d in domains.split(",") if d.strip()]
     req = _SearchRequest(query=query, domains=domains or [], since=since, until=until, limit=limit)
     return await api_search(req)
+
+
+@_mcp.tool()
+async def koredata_get_sentence(locator: str) -> dict:
+    """Fetch a single indexed sentence by semantic locator.
+
+    Args:
+        locator: Sentence locator in the form "<service>/<database>/<sentence_id>".
+                 Currently supported: feeds/<domain>/<sentence_id>.
+
+    Returns the sentence text plus source metadata so the agent can recover the
+    originating entry and surrounding provenance.
+    """
+    try:
+        service, database, sentence_id = _parse_sentence_locator(locator)
+    except ValueError as exc:
+        return {"error": str(exc)}
+
+    if service == "feeds":
+        if _feed_client is None:
+            return {"error": "KoreDataGateway is still starting up — retry in a moment"}
+        r = await _feed_client.get(
+            f"/api/domains/{quote(database, safe='')}/sentences/{sentence_id}",
+            timeout=10.0,
+        )
+        if r.status_code == 404:
+            return {
+                "error": (
+                    f"Sentence not found: locator={locator!r}"
+                )
+            }
+        if r.status_code != 200:
+            return {"error": f"HTTP {r.status_code}"}
+        data = r.json()
+        if isinstance(data, dict) and "locator" not in data:
+            data["locator"] = f"feeds/{database}/{sentence_id}"
+        return data
+
+    return {"error": f"Unsupported sentence locator service: {service!r}"}
 
 
 # MARK: KoreFeed Routines

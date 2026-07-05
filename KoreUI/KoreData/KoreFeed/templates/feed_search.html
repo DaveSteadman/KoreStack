@@ -13,13 +13,28 @@
 
   <div class="panel-body kcui-panel-body">
     <form action="/ui/feeds/search" method="get">
-      <p class="meta kcui-mar-bottom-sm">Bare terms use AND by default. Use quotes for phrases, OR or | for alternatives, NOT to exclude, and parentheses to group.</p>
+      <input type="hidden" name="mode" id="search-mode-input" value="{{ mode }}">
+      <p class="meta kcui-mar-bottom-sm" id="search-mode-hint">
+        {% if mode == 'semantic' %}
+        Semantic search works best with a plain-language description of the idea you want, not boolean keyword syntax.
+        {% else %}
+        Bare terms use AND by default. Use quotes for phrases, OR or | for alternatives, NOT to exclude, and parentheses to group.
+        {% endif %}
+      </p>
       <div class="kcui-search-row">
         <input type="search" name="q" value="{{ q }}" placeholder="search all feeds...">
         {% if domain %}<input type="hidden" name="domain" value="{{ domain }}">{% endif %}
         <button class="btn btn-sm btn-yellow" type="submit">SEARCH</button>
       </div>
       <div class="kcui-filter-row kcui-mar-top-md">
+        <label class="kcui-filter-label" style="cursor:pointer;">
+          <input type="checkbox" id="mode-keyword" {% if mode != 'semantic' %}checked{% endif %} onchange="toggleSearchMode('keyword')">
+          Keyword
+        </label>
+        <label class="kcui-filter-label" style="cursor:pointer;">
+          <input type="checkbox" id="mode-semantic" {% if mode == 'semantic' %}checked{% endif %} onchange="toggleSearchMode('semantic')">
+          Semantic
+        </label>
         <label class="kcui-filter-label">
           Since
           <div class="date-pick">
@@ -65,7 +80,7 @@
   <div class="panel-header kcui-panel-header">
     RESULTS
     <span class="badge" style="margin-left:0.5rem;">{{ results|length }}</span>
-    <span class="meta" style="margin-left:0.75rem;">for "{{ q }}"</span>
+    <span class="meta" style="margin-left:0.75rem;">{{ mode }} search for "{{ q }}"</span>
   </div>
   <div class="panel-body kcui-panel-body" style="padding:0;">
     {% if results %}
@@ -97,7 +112,16 @@
           <tr>
             <td><input class="row-check" type="checkbox" name="sel" value="{{ r.domain }}:{{ r.id }}"></td>
             <td class="meta">{{ r.id }}</td>
-            <td><a href="/ui/feeds/{{ r.domain }}/{{ r.id }}">{{ r.headline or "(no title)" }}</a></td>
+            <td>
+              <a href="/ui/feeds/{{ r.domain }}/{{ r.id }}">{{ r.headline or "(no title)" }}</a>
+              {% if mode == 'semantic' and r.snippet %}
+              <div class="meta" style="margin-top:0.25rem; font-size:11px; line-height:1.35;">{{ r.snippet }}</div>
+              <div class="meta" style="font-size:10px;">
+                {{ r.sentence_locator }}
+                {% if r.distance is not none %} | distance {{ '%.4f'|format(r.distance) }}{% endif %}
+              </div>
+              {% endif %}
+            </td>
             <td><span class="badge badge-dim">{{ r.domain }}</span></td>
             <td class="meta">{{ r.feed_name }}</td>
             <td class="meta">{{ r.published[:16] if r.published else "-" }}</td>
@@ -113,4 +137,29 @@
 </div>
 {% endif %}
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function toggleSearchMode(mode) {
+  var keyword = document.getElementById('mode-keyword');
+  var semantic = document.getElementById('mode-semantic');
+  var hidden = document.getElementById('search-mode-input');
+  var hint = document.getElementById('search-mode-hint');
+  if (!keyword || !semantic || !hidden || !hint) return;
+
+  if (mode === 'semantic') {
+    semantic.checked = true;
+    keyword.checked = false;
+    hidden.value = 'semantic';
+    hint.textContent = 'Semantic search works best with a plain-language description of the idea you want, not boolean keyword syntax.';
+    return;
+  }
+
+  keyword.checked = true;
+  semantic.checked = false;
+  hidden.value = 'keyword';
+  hint.textContent = 'Bare terms use AND by default. Use quotes for phrases, OR or | for alternatives, NOT to exclude, and parentheses to group.';
+}
+</script>
 {% endblock %}

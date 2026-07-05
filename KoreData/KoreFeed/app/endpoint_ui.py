@@ -29,6 +29,7 @@ from app.database import (
     search_entries,
     set_domain_age_settings,
 )
+from app.chroma_index import semantic_search
 from app.feed_manager import (
     add_feed,
     create_domain,
@@ -106,6 +107,20 @@ def _normalise_entry_for_display(entry: dict) -> dict:
     return entry
 
 
+def _filter_results_by_date(results: list[dict], since: Optional[str], until: Optional[str]) -> list[dict]:
+    filtered: list[dict] = []
+    since_prefix = str(since or "").strip()
+    until_prefix = str(until or "").strip()
+    for result in results:
+        published = str(result.get("published") or "")
+        if since_prefix and (not published or published[:10] < since_prefix):
+            continue
+        if until_prefix and (not published or published[:10] > until_prefix):
+            continue
+        filtered.append(result)
+    return filtered
+
+
 def register_feed_ui(app: FastAPI) -> None:
     @app.get("/", include_in_schema=False)
     def route_root():
@@ -145,10 +160,16 @@ def register_feed_ui(app: FastAPI) -> None:
         since:   Optional[str]  = None,
         until:   Optional[str]  = None,
         limit:   int            = 50,
+        mode:    str            = "keyword",
     ):
+        search_mode = "semantic" if str(mode).strip().lower() == "semantic" else "keyword"
         results = []
         if q.strip():
-            results = search_entries(domain or None, q, limit=limit, include_body=False, since=since, until=until)
+            if search_mode == "semantic":
+                results = semantic_search(domain or None, q, limit=limit)
+                results = _filter_results_by_date(results, since, until)
+            else:
+                results = search_entries(domain or None, q, limit=limit, include_body=False, since=since, until=until)
             results = [_normalise_entry_for_display(result) for result in results]
         return templates.TemplateResponse(
             request,
@@ -160,6 +181,7 @@ def register_feed_ui(app: FastAPI) -> None:
                 "since":   since or "",
                 "until":   until or "",
                 "limit":   limit,
+                "mode":    search_mode,
             },
         )
 

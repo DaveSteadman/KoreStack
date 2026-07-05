@@ -45,18 +45,21 @@ from app.database import (
     delete_entries_older_than,
     delete_entries_outside_calendar,
     delete_entry,
+    get_entry_sentences,
     get_domain_age_settings,
     get_entries,
     get_entry,
     get_entry_count,
     get_feed_counts,
     get_recent_entries,
+    get_sentence,
     init_db,
     list_domains,
     rename_domain_db,
     search_entries,
     set_domain_age_settings,
 )
+from app.chroma_index import semantic_search
 from app.feed_manager import (
     add_feed,
     create_domain,
@@ -278,6 +281,39 @@ def api_get_entry(domain: str, entry_id: int):
     return entry
 
 
+@app.get("/api/domains/{domain}/entries/{entry_id}/sentences", tags=["content"])
+def api_get_entry_sentences(domain: str, entry_id: int):
+    """List the indexed sentences for a single entry."""
+    try:
+        if not get_entry(domain, entry_id):
+            raise HTTPException(status_code=404, detail="Entry not found")
+        rows = get_entry_sentences(domain, entry_id)
+    except FeedDatabaseError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    return [
+        {
+            **row,
+            "locator": f"feeds/{domain}/{row['id']}",
+        }
+        for row in rows
+    ]
+
+
+@app.get("/api/domains/{domain}/sentences/{sentence_id}", tags=["content"])
+def api_get_sentence(domain: str, sentence_id: int):
+    """Fetch a single indexed sentence by its per-domain sentence ID."""
+    try:
+        row = get_sentence(domain, sentence_id)
+    except FeedDatabaseError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    if not row:
+        raise HTTPException(status_code=404, detail="Sentence not found")
+    return {
+        **row,
+        "locator": f"feeds/{domain}/{row['id']}",
+    }
+
+
 @app.delete("/api/domains/{domain}/entries/{entry_id}", tags=["content"])
 def api_delete_entry(domain: str, entry_id: int):
     """Delete a single entry by ID."""
@@ -328,6 +364,16 @@ def api_search(
     """
     return search_entries(domain or None, q, limit=limit, include_body=full,
                           since=since, until=until)
+
+
+@app.get("/api/semantic-search", tags=["content"])
+def api_semantic_search(
+    q: str,
+    domain: Optional[str] = None,
+    limit: int = 50,
+):
+    """Semantic sentence search across the per-domain Chroma stores."""
+    return semantic_search(domain or None, q, limit=limit)
 
 
 @app.get("/api/recent", tags=["content"])

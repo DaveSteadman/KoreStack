@@ -37,6 +37,117 @@ class FeedDatabaseError(RuntimeError):
     pass
 
 
+def _split_sentences(text: str) -> list[tuple[int, int, str]]:
+    """Split text into sentence-like spans with stable offsets into the original text."""
+    text = str(text or "")
+    if not text:
+        return []
+
+    sentences: list[tuple[int, int, str]] = []
+    start = 0
+    i = 0
+    n = len(text)
+    while start < n and text[start].isspace():
+        start += 1
+    i = start
+    while i < n:
+        if text[i] in ".!?":
+            end = i + 1
+            while end < n and text[end] in "\"')]":
+                end += 1
+            if end == n or text[end].isspace():
+                sentence = text[start:end].strip()
+                if sentence:
+                    sentences.append((start, end, sentence))
+                while end < n and text[end].isspace():
+                    end += 1
+                start = end
+                i = end
+                continue
+        i += 1
+
+    if start < n:
+        sentence = text[start:].strip()
+        if sentence:
+            sentences.append((start, n, sentence))
+    return sentences
+
+
+def _index_entry_sentences(
+    conn: sqlite3.Connection,
+    entry_id: int,
+    headline: str,
+    page_text: str,
+) -> None:
+    rows: list[tuple[int, int, str, int, int]] = []
+    sentence_index = 0
+    for source_field, raw_text in (("headline", headline), ("page_text", page_text)):
+        for char_start, char_end, _sentence_text in _split_sentences(raw_text):
+            rows.append(
+                (entry_id, sentence_index, source_field, char_start, char_end)
+            )
+            sentence_index += 1
+    if rows:
+        conn.executemany(
+            """
+            INSERT INTO sentences
+                (entry_id, sentence_index, source_field, char_start, char_end)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            rows,
+        )
+
+
+def _rebuild_sentence_index(conn: sqlite3.Connection) -> None:
+    conn.execute("DELETE FROM sentences")
+    _backfill_entry_sentences(conn)
+
+
+def _backfill_entry_sentences(conn: sqlite3.Connection) -> None:
+    rows = conn.execute(
+        """
+        SELECT e.id, e.headline, e.page_text
+        FROM entries e
+        WHERE e.deleted = 0
+          AND NOT EXISTS (
+              SELECT 1
+              FROM sentences s
+              WHERE s.entry_id = e.id AND s.deleted = 0
+          )
+        """
+    ).fetchall()
+    for row in rows:
+        _index_entry_sentences(
+            conn,
+            int(row["id"]),
+            row["headline"] or "",
+            row["page_text"] or "",
+        )
+
+
+def _sentence_index_needs_rebuild(conn: sqlite3.Connection) -> bool:
+    sentence_cols = {row[1] for row in conn.execute("PRAGMA table_info(sentences)").fetchall()}
+    if "sentence_text" in sentence_cols:
+        row = conn.execute(
+            "SELECT 1 FROM sentences WHERE sentence_text IS NOT NULL AND sentence_text != '' LIMIT 1"
+        ).fetchone()
+        if row:
+            return True
+    return False
+
+
+def _extract_sentence_text(entry_row: sqlite3.Row | dict, sentence_row: sqlite3.Row | dict) -> str:
+    source_field = str(sentence_row["source_field"] or "")
+    source_text = str(entry_row.get(source_field, "") if isinstance(entry_row, dict) else entry_row[source_field] or "")
+    char_start = max(0, int(sentence_row["char_start"]))
+    char_end = max(char_start, int(sentence_row["char_end"]))
+    return source_text[char_start:char_end].strip()
+
+
+def _sentence_locator(domain: str, sentence_id: int) -> str:
+    return f"feeds/{domain}/{sentence_id}"
+
+
 def _parse_published(s: str) -> Optional[datetime]:
     """Parse an RSS date string to a naive UTC datetime. Returns None on failure."""
     if not s:
@@ -96,6 +207,19 @@ def init_db(domain: str) -> None:
             )
         """)
         conn.execute("""
+            CREATE TABLE IF NOT EXISTS sentences (
+                id             INTEGER PRIMARY KEY AUTOINCREMENT,
+                entry_id       INTEGER NOT NULL,
+                sentence_index INTEGER NOT NULL,
+                source_field   TEXT NOT NULL,
+                char_start     INTEGER NOT NULL,
+                char_end       INTEGER NOT NULL,
+                chroma_indexed_at TEXT,
+                deleted        INTEGER NOT NULL DEFAULT 0,
+                UNIQUE(entry_id, sentence_index)
+            )
+        """)
+        conn.execute("""
             CREATE TABLE IF NOT EXISTS domain_settings (
                 key   TEXT PRIMARY KEY,
                 value TEXT
@@ -105,8 +229,23 @@ def init_db(domain: str) -> None:
         cols = {row[1] for row in conn.execute("PRAGMA table_info(entries)").fetchall()}
         if "deleted" not in cols:
             conn.execute("ALTER TABLE entries ADD COLUMN deleted INTEGER NOT NULL DEFAULT 0")
+        sentence_cols = {row[1] for row in conn.execute("PRAGMA table_info(sentences)").fetchall()}
+        if "deleted" not in sentence_cols:
+            conn.execute("ALTER TABLE sentences ADD COLUMN deleted INTEGER NOT NULL DEFAULT 0")
+        if "chroma_indexed_at" not in sentence_cols:
+            conn.execute("ALTER TABLE sentences ADD COLUMN chroma_indexed_at TEXT")
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_sentences_entry_id ON sentences(entry_id)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_sentences_chroma_indexed_at ON sentences(chroma_indexed_at)"
+        )
         # normalise any published values not yet in UTC YYYY-MM-DD HH:MM:SS
         _normalise_published(conn)
+        if _sentence_index_needs_rebuild(conn):
+            _rebuild_sentence_index(conn)
+        else:
+            _backfill_entry_sentences(conn)
 
         # FTS5 virtual table for word-boundary search + BM25 ranking
         conn.execute("""
@@ -152,6 +291,7 @@ def insert_entry(
     metadata: dict,
     page_text: str,
 ) -> bool:
+    inserted_entry_id: int | None = None
     with _domains_lock:
         if domain not in _domains_ready:
             init_db(domain)
@@ -167,12 +307,21 @@ def insert_entry(
         )
         # Only index rows that were actually inserted (not ignored duplicates)
         if cur.rowcount > 0 and cur.lastrowid:
+            _index_entry_sentences(conn, cur.lastrowid, headline or "", page_text or "")
             conn.execute(
                 "INSERT INTO entries_fts(rowid, headline, page_text) VALUES (?, ?, ?)",
                 (cur.lastrowid, headline or "", page_text or ""),
             )
-            return True
+            inserted_entry_id = int(cur.lastrowid)
+    if inserted_entry_id is None:
         return False
+    try:
+        from app.chroma_index import sync_entry_sentences
+
+        sync_entry_sentences(domain, inserted_entry_id)
+    except Exception:
+        pass
+    return True
 
 
 def get_entries(domain: str, limit: int = 50, offset: int = 0) -> list[dict]:
@@ -196,6 +345,126 @@ def get_entry(domain: str, entry_id: int) -> Optional[dict]:
             return dict(row) if row else None
     except Exception as exc:
         raise FeedDatabaseError(f"Could not load entry {entry_id} for domain '{domain}': {exc}") from exc
+
+
+def get_entry_sentences(domain: str, entry_id: int) -> list[dict]:
+    try:
+        with db_connection(domain) as conn:
+            rows = conn.execute(
+                """
+                SELECT s.id, s.entry_id, s.sentence_index, s.source_field,
+                       s.char_start, s.char_end,
+                       e.feed_name, e.headline, e.page_text, e.url, e.published, e.ingested_at
+                FROM sentences s
+                JOIN entries e ON e.id = s.entry_id
+                WHERE s.entry_id = ? AND s.deleted = 0 AND e.deleted = 0
+                ORDER BY s.sentence_index ASC
+                """,
+                (entry_id,),
+            ).fetchall()
+            results: list[dict] = []
+            for row in rows:
+                item = dict(row)
+                item["sentence_text"] = _extract_sentence_text(item, item)
+                item.pop("page_text", None)
+                results.append(item)
+            return results
+    except Exception as exc:
+        raise FeedDatabaseError(
+            f"Could not load sentences for entry {entry_id} in domain '{domain}': {exc}"
+        ) from exc
+
+
+def get_sentence(domain: str, sentence_id: int) -> Optional[dict]:
+    try:
+        with db_connection(domain) as conn:
+            row = conn.execute(
+                """
+                SELECT s.id, s.entry_id, s.sentence_index, s.source_field,
+                       s.char_start, s.char_end,
+                       e.feed_name, e.headline, e.page_text, e.url, e.published, e.ingested_at
+                FROM sentences s
+                JOIN entries e ON e.id = s.entry_id
+                WHERE s.id = ? AND s.deleted = 0 AND e.deleted = 0
+                """,
+                (sentence_id,),
+            ).fetchone()
+            if not row:
+                return None
+            item = dict(row)
+            item["sentence_text"] = _extract_sentence_text(item, item)
+            item.pop("page_text", None)
+            return item
+    except Exception as exc:
+        raise FeedDatabaseError(
+            f"Could not load sentence {sentence_id} for domain '{domain}': {exc}"
+        ) from exc
+
+
+def get_sentences_for_chroma(
+    domain: str,
+    limit: int = 250,
+    sentence_ids: Optional[list[int]] = None,
+    only_unindexed: bool = False,
+) -> list[dict]:
+    try:
+        with db_connection(domain) as conn:
+            clauses = ["s.deleted = 0", "e.deleted = 0"]
+            params: list[object] = []
+            if sentence_ids:
+                validated = [int(i) for i in sentence_ids]
+                placeholders = ",".join("?" * len(validated))
+                clauses.append(f"s.id IN ({placeholders})")
+                params.extend(validated)
+            if only_unindexed:
+                clauses.append("(s.chroma_indexed_at IS NULL OR s.chroma_indexed_at = '')")
+            params.append(max(1, int(limit)))
+            rows = conn.execute(
+                f"""
+                SELECT s.id, s.entry_id, s.sentence_index, s.source_field,
+                       s.char_start, s.char_end, s.chroma_indexed_at,
+                       e.feed_name, e.headline, e.page_text, e.url, e.published, e.ingested_at
+                FROM sentences s
+                JOIN entries e ON e.id = s.entry_id
+                WHERE {' AND '.join(clauses)}
+                ORDER BY s.id ASC
+                LIMIT ?
+                """,
+                params,
+            ).fetchall()
+            results: list[dict] = []
+            for row in rows:
+                item = dict(row)
+                item["sentence_text"] = _extract_sentence_text(item, item)
+                item["locator"] = _sentence_locator(domain, int(item["id"]))
+                item.pop("page_text", None)
+                results.append(item)
+            return results
+    except Exception as exc:
+        raise FeedDatabaseError(
+            f"Could not load sentences for Chroma sync in domain '{domain}': {exc}"
+        ) from exc
+
+
+def mark_sentences_chroma_indexed(domain: str, sentence_ids: list[int]) -> int:
+    if not sentence_ids:
+        return 0
+    validated = [int(i) for i in sentence_ids]
+    placeholders = ",".join("?" * len(validated))
+    timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+    try:
+        with db_connection(domain) as conn:
+            cur = conn.execute(
+                f"""
+                UPDATE sentences
+                SET chroma_indexed_at = ?
+                WHERE deleted = 0 AND id IN ({placeholders})
+                """,
+                [timestamp, *validated],
+            )
+            return cur.rowcount
+    except Exception:
+        return 0
 
 
 def search_entries(
@@ -281,7 +550,7 @@ def list_domains() -> list[str]:
     return [f.stem for f in sorted(DATA_DIR.glob("*.db"))]
 
 
-def _tombstone(conn: sqlite3.Connection, where: str, params: list) -> int:
+def _tombstone(domain: str, conn: sqlite3.Connection, where: str, params: list) -> int:
     """Soft-delete: blank content fields and set deleted=1. URL is preserved for dedup."""
     # Capture IDs before the update so we can remove them from the FTS index
     ids = [
@@ -289,13 +558,35 @@ def _tombstone(conn: sqlite3.Connection, where: str, params: list) -> int:
             f"SELECT id FROM entries WHERE deleted=0 AND {where}", params
         ).fetchall()
     ]
+    sentence_ids: list[int] = []
+    if ids:
+        placeholders = ",".join("?" * len(ids))
+        sentence_ids = [
+            int(r[0]) for r in conn.execute(
+                f"SELECT id FROM sentences WHERE deleted=0 AND entry_id IN ({placeholders})",
+                ids,
+            ).fetchall()
+        ]
     cur = conn.execute(
         f"UPDATE entries SET headline=NULL, page_text=NULL, metadata=NULL, deleted=1"
         f" WHERE deleted=0 AND {where}",
         params,
     )
+    if ids:
+        placeholders = ",".join("?" * len(ids))
+        conn.execute(
+            f"UPDATE sentences SET deleted=1 WHERE deleted=0 AND entry_id IN ({placeholders})",
+            ids,
+        )
     for id_ in ids:
         conn.execute("DELETE FROM entries_fts WHERE rowid=?", (id_,))
+    if sentence_ids:
+        try:
+            from app.chroma_index import delete_sentence_ids
+
+            delete_sentence_ids(domain, sentence_ids)
+        except Exception:
+            pass
     return cur.rowcount
 
 
@@ -303,7 +594,7 @@ def delete_entry(domain: str, entry_id: int) -> bool:
     """Soft-delete a single entry. Returns True if the row was tombstoned."""
     try:
         with db_connection(domain) as conn:
-            return _tombstone(conn, "id = ?", [entry_id]) > 0
+            return _tombstone(domain, conn, "id = ?", [entry_id]) > 0
     except Exception:
         return False
 
@@ -312,7 +603,7 @@ def delete_entries_by_feed(domain: str, feed_name: str) -> int:
     """Soft-delete all entries from a specific feed. Returns count tombstoned."""
     try:
         with db_connection(domain) as conn:
-            return _tombstone(conn, "feed_name = ?", [feed_name])
+            return _tombstone(domain, conn, "feed_name = ?", [feed_name])
     except Exception:
         return 0
 
@@ -323,6 +614,7 @@ def delete_entries_older_than(domain: str, days: float) -> int:
     try:
         with db_connection(domain) as conn:
             return _tombstone(
+                domain,
                 conn,
                 "published IS NOT NULL AND published != '' AND published < ?",
                 [cutoff],
@@ -339,7 +631,7 @@ def delete_entries_by_ids(domain: str, ids: list[int]) -> int:
     placeholders = ",".join("?" * len(validated))
     try:
         with db_connection(domain) as conn:
-            return _tombstone(conn, f"id IN ({placeholders})", validated)
+            return _tombstone(domain, conn, f"id IN ({placeholders})", validated)
     except Exception:
         return 0
 
@@ -428,6 +720,7 @@ def delete_entries_outside_calendar(domain: str, start_date: str, end_date: str)
     try:
         with db_connection(domain) as conn:
             return _tombstone(
+                domain,
                 conn,
                 "(published IS NULL OR published = '' OR published < ? OR published > ?)",
                 [start_str, end_str],
@@ -474,20 +767,34 @@ def apply_age_rule(domain: str) -> int:
 def delete_domain_db(domain: str) -> bool:
     """Delete the SQLite database for a domain. Returns False if it didn't exist."""
     path = get_db_path(domain)
-    if not path.exists():
-        return False
-    path.unlink()
-    return True
+    deleted_db = False
+    if path.exists():
+        path.unlink()
+        deleted_db = True
+    try:
+        from app.chroma_index import delete_domain_store
+
+        delete_domain_store(domain)
+    except Exception:
+        pass
+    return deleted_db
 
 
 def rename_domain_db(old: str, new: str) -> bool:
     """Rename the SQLite database file for a domain. Returns False if old didn't exist."""
     old_path = get_db_path(old)
-    if not old_path.exists():
-        return False
-    new_path = get_db_path(new)
-    old_path.rename(new_path)
-    return True
+    renamed_db = False
+    if old_path.exists():
+        new_path = get_db_path(new)
+        old_path.rename(new_path)
+        renamed_db = True
+    try:
+        from app.chroma_index import rename_domain_store
+
+        rename_domain_store(old, new)
+    except Exception:
+        pass
+    return renamed_db
 
 
 def rename_feed_entries(domain: str, old_name: str, new_name: str) -> int:

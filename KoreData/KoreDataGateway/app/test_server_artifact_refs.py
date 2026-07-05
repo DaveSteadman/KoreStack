@@ -46,6 +46,13 @@ class ArtifactRefTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(kind, "reference_article")
         self.assertEqual(parts["title"], "History of Flight/Drone?")
 
+    def test_parse_sentence_locator_restores_parts(self) -> None:
+        service, database, sentence_id = server._parse_sentence_locator("feeds/tech/1234")
+
+        self.assertEqual(service, "feeds")
+        self.assertEqual(database, "tech")
+        self.assertEqual(sentence_id, 1234)
+
     async def test_get_full_text_dispatches_feed_ref(self) -> None:
         original = server.koredata_get_feed_entry
 
@@ -82,6 +89,49 @@ class ArtifactRefTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(result["artifact_ref"], "feed_entry|domain=tech|id=42")
         self.assertEqual(result["body"], "full")
+
+    async def test_get_sentence_dispatches_feed_locator(self) -> None:
+        class _Response:
+            def __init__(self, status_code: int, payload: object) -> None:
+                self.status_code = status_code
+                self._payload = payload
+
+            def json(self) -> object:
+                return self._payload
+
+        class _Client:
+            async def get(self, path: str, timeout: float = 10.0):
+                self.last_path = path
+                self.last_timeout = timeout
+                return _Response(
+                    200,
+                    {"id": 1234, "locator": "feeds/tech/1234", "sentence_text": "Alpha sentence."},
+                )
+
+        original_feed_client = server._feed_client
+        try:
+            server._feed_client = _Client()
+            result = await server.koredata_get_sentence("feeds/tech/1234")
+        finally:
+            server._feed_client = original_feed_client
+
+        self.assertEqual(result["locator"], "feeds/tech/1234")
+        self.assertEqual(result["sentence_text"], "Alpha sentence.")
+
+    async def test_api_sentence_delegates_to_sentence_dispatcher(self) -> None:
+        original = server.koredata_get_sentence
+
+        async def fake_get_sentence(locator: str) -> dict:
+            return {"locator": locator, "sentence_text": "full"}
+
+        server.koredata_get_sentence = fake_get_sentence
+        try:
+            result = await server.api_sentence(server._SentenceRequest(locator="feeds/tech/42"))
+        finally:
+            server.koredata_get_sentence = original
+
+        self.assertEqual(result["locator"], "feeds/tech/42")
+        self.assertEqual(result["sentence_text"], "full")
 
     async def test_rag_databases_enriched_preserves_base_navigation_on_partial_info(self) -> None:
         class _Response:
