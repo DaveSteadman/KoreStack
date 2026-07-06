@@ -19,9 +19,11 @@
 #   - scratchpad.py            -- scratch_save, scratch_load
 # ====================================================================================================
 import json
+import sqlite3
 import sys
 import tempfile
 import unittest
+import zlib
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -76,6 +78,7 @@ from skills.WebFetch.web_fetch_skill import fetch_page_text
 from skills.WebSearch.web_search_skill import search_web
 from skills.WebResearch.web_research_skill import research_traverse
 from skills.SystemInfo.system_info_skill import get_system_info_string
+from KoreDocs.app import korefile as koredocs_korefile
 from tool_loop import normalize_tool_request
 from tool_loop import _derive_auto_scratch_key
 from tool_loop import _extract_graph_connection_batch_from_text
@@ -378,6 +381,242 @@ class RegressionTests(unittest.TestCase):
         self.assertEqual(result["function"], "get_datetime_data")
         self.assertIsNotNone(result["result"])
         self.assertNotIn("error", str(result["result"]).lower())
+
+    def test_execute_tool_call_unknown_tool_not_masked_as_inactive(self) -> None:
+        with self.assertRaises(RuntimeError) as ctx:
+            execute_tool_call(
+                tool_name="koredec_table_read",
+                arguments={},
+                skills_payload=self.skills_payload,
+                active_tool_names={"tools_catalog_list", "tools_active_add"},
+            )
+
+        self.assertIn("not found in skills catalog", str(ctx.exception))
+
+    def test_tool_loop_auto_activates_known_inactive_tool_and_blocks_dead_end_final(self) -> None:
+        class _DummyLogger:
+            def log(self, _message: str = "") -> None:
+                pass
+
+            def log_file_only(self, _message: str = "") -> None:
+                pass
+
+            def log_section(self, _title: str) -> None:
+                pass
+
+            def log_section_file_only(self, _title: str) -> None:
+                pass
+
+        class _FakeResult:
+            def __init__(self, response: str, tool_calls: list | None = None) -> None:
+                self.response = response
+                self.message = {"content": response}
+                self.finish_reason = "tool_calls" if tool_calls else "stop"
+                self.prompt_tokens = 10
+                self.completion_tokens = 5
+                self.tokens_per_second = 1.0
+                self.tool_calls = tool_calls or []
+
+        def _tool_call(name: str) -> dict:
+            return {
+                "id": f"tc_{name}",
+                "type": "function",
+                "function": {"name": name, "arguments": "{}"},
+            }
+
+        responses = [
+            _FakeResult("", [_tool_call("dataset_list")]),
+            _FakeResult("I should inspect the active tool set first."),
+            _FakeResult("", [_tool_call("dataset_list")]),
+            _FakeResult("Datasets listed."),
+        ]
+        runtime_state = {
+            "active": {"tools_catalog_list", "tools_active_add"},
+            "known": {"dataset_list", "tools_catalog_list", "tools_active_add"},
+        }
+        calls: list[str] = []
+
+        def fake_call_llm_chat(**_kwargs):
+            return responses.pop(0)
+
+        def fake_execute_tool_call(func_name, arguments, *_args):
+            calls.append(func_name)
+            if func_name == "dataset_list" and func_name not in runtime_state["active"]:
+                raise RuntimeError("Tool 'dataset_list' is not active for this conversation")
+            return ToolCallResult(
+                tool=func_name,
+                function=func_name,
+                module="datasets",
+                arguments=arguments,
+                result="No datasets stored.",
+            )
+
+        def fake_promote_selected_tools(tool_names, *args, **kwargs):
+            for tool_name in tool_names:
+                runtime_state["active"].add(tool_name)
+            return {
+                "added": list(tool_names),
+                "promoted": [],
+                "evicted": [],
+                "active_tools": sorted(runtime_state["active"]),
+            }
+
+        def fake_runtime_provider():
+            return {
+                "tool_defs": [],
+                "catalog_gates": {},
+                "active_tool_names": set(runtime_state["active"]),
+                "missing_selected": [],
+                "all_known_tool_names": set(runtime_state["known"]),
+            }
+
+        config = SimpleNamespace(
+            resolved_model="test-model",
+            max_iterations=4,
+            num_ctx=8192,
+            skills_payload={"skills": []},
+        )
+        messages = [
+            {"role": "system", "content": "system"},
+            {"role": "user", "content": "list the datasets"},
+        ]
+        context_map = [
+            {"round": 0, "role": "sys", "label": "system", "chars": 6, "auto_key": None, "msg_idx": 0},
+            {"round": 0, "role": "user", "label": "prompt", "chars": 17, "auto_key": None, "msg_idx": 1},
+        ]
+
+        with (
+            patch.object(tool_loop_module, "execute_tool_call", side_effect=fake_execute_tool_call),
+            patch("tool_selection_state.promote_selected_tools", side_effect=fake_promote_selected_tools),
+        ):
+            final_response, _prompt_tokens, _completion_tokens, run_success, _tps, _tool_outputs = tool_loop_module.run_tool_loop(
+                config=config,
+                messages=messages,
+                tool_defs=[],
+                catalog_gates={},
+                active_tool_names=set(runtime_state["active"]),
+                context_map=context_map,
+                user_prompt="list the datasets",
+                logger=_DummyLogger(),
+                quiet=True,
+                call_llm_chat=fake_call_llm_chat,
+                stop_requested=lambda: False,
+                clear_stop=lambda: None,
+                tool_runtime_provider=fake_runtime_provider,
+            )
+
+        self.assertTrue(run_success)
+        self.assertEqual(final_response, "Datasets listed.")
+        self.assertEqual(calls, ["dataset_list", "dataset_list"])
+        self.assertIn("dataset_list", runtime_state["active"])
+        joined_messages = "\n".join(str(message.get("content", "")) for message in messages)
+        self.assertIn("It has been added to the active tool set", joined_messages)
+        self.assertIn("Recovery still required: do not answer yet. Retry `dataset_list` now", joined_messages)
+
+    def test_tool_loop_suggests_corrected_tool_name_for_invalid_request(self) -> None:
+        class _DummyLogger:
+            def log(self, _message: str = "") -> None:
+                pass
+
+            def log_file_only(self, _message: str = "") -> None:
+                pass
+
+            def log_section(self, _title: str) -> None:
+                pass
+
+            def log_section_file_only(self, _title: str) -> None:
+                pass
+
+        class _FakeResult:
+            def __init__(self, response: str, tool_calls: list | None = None) -> None:
+                self.response = response
+                self.message = {"content": response}
+                self.finish_reason = "tool_calls" if tool_calls else "stop"
+                self.prompt_tokens = 10
+                self.completion_tokens = 5
+                self.tokens_per_second = 1.0
+                self.tool_calls = tool_calls or []
+
+        def _tool_call(name: str) -> dict:
+            return {
+                "id": f"tc_{name}",
+                "type": "function",
+                "function": {"name": name, "arguments": "{}"},
+            }
+
+        responses = [
+            _FakeResult("", [_tool_call("koredec_table_read")]),
+            _FakeResult("", [_tool_call("koredoc_table_read")]),
+            _FakeResult("Read completed."),
+        ]
+        runtime_state = {
+            "active": {"koredoc_table_read", "tools_catalog_list", "tools_active_add"},
+            "known": {"koredoc_table_read", "tools_catalog_list", "tools_active_add"},
+        }
+        calls: list[str] = []
+
+        def fake_call_llm_chat(**_kwargs):
+            return responses.pop(0)
+
+        def fake_execute_tool_call(func_name, arguments, *_args):
+            calls.append(func_name)
+            if func_name == "koredec_table_read":
+                raise RuntimeError("Tool 'koredec_table_read' not found in skills catalog")
+            return ToolCallResult(
+                tool=func_name,
+                function=func_name,
+                module="docs",
+                arguments=arguments,
+                result="table data",
+            )
+
+        def fake_runtime_provider():
+            return {
+                "tool_defs": [],
+                "catalog_gates": {},
+                "active_tool_names": set(runtime_state["active"]),
+                "missing_selected": [],
+                "all_known_tool_names": set(runtime_state["known"]),
+            }
+
+        config = SimpleNamespace(
+            resolved_model="test-model",
+            max_iterations=4,
+            num_ctx=8192,
+            skills_payload={"skills": []},
+        )
+        messages = [
+            {"role": "system", "content": "system"},
+            {"role": "user", "content": "read the table"},
+        ]
+        context_map = [
+            {"round": 0, "role": "sys", "label": "system", "chars": 6, "auto_key": None, "msg_idx": 0},
+            {"round": 0, "role": "user", "label": "prompt", "chars": 14, "auto_key": None, "msg_idx": 1},
+        ]
+
+        with patch.object(tool_loop_module, "execute_tool_call", side_effect=fake_execute_tool_call):
+            final_response, _prompt_tokens, _completion_tokens, run_success, _tps, _tool_outputs = tool_loop_module.run_tool_loop(
+                config=config,
+                messages=messages,
+                tool_defs=[],
+                catalog_gates={},
+                active_tool_names=set(runtime_state["active"]),
+                context_map=context_map,
+                user_prompt="read the table",
+                logger=_DummyLogger(),
+                quiet=True,
+                call_llm_chat=fake_call_llm_chat,
+                stop_requested=lambda: False,
+                clear_stop=lambda: None,
+                tool_runtime_provider=fake_runtime_provider,
+            )
+
+        self.assertTrue(run_success)
+        self.assertEqual(final_response, "Read completed.")
+        self.assertEqual(calls, ["koredec_table_read", "koredoc_table_read"])
+        joined_messages = "\n".join(str(message.get("content", "")) for message in messages)
+        self.assertIn("Closest valid tool: `koredoc_table_read`.", joined_messages)
+        self.assertIn("Retry using `koredoc_table_read` only.", joined_messages)
 
     def test_build_tool_definitions_has_entries(self) -> None:
         tool_defs = build_tool_definitions(self.skills_payload)
@@ -1128,17 +1367,92 @@ class RegressionTests(unittest.TestCase):
                 with patch.object(file_access_module, "DEFAULT_DATA_DIR", data_dir):
                     result = dataset_write_koredoc("drone_test_raw_5", "feeds2", session_id=session_id)
 
-            exported = data_dir / "KoreDocs" / "feeds2" / "drone_test_raw_5.koredoc"
+            exported = data_dir / "feeds2" / "drone_test_raw_5.koredoc"
             self.assertTrue(exported.exists())
             content = exported.read_text(encoding="utf-8")
 
         self.assertIn("Exported dataset 'drone_test_raw_5' records 1-2 of 2", result)
         self.assertIn("KoreDocs document 'drone_test_raw_5.koredoc'", result)
-        self.assertIn("at 'KoreDocs/feeds2/drone_test_raw_5.koredoc'", result)
+        self.assertIn("at 'feeds2/drone_test_raw_5.koredoc'", result)
         self.assertNotIn("Wrote ", result)
         self.assertIn("Real story alpha", content)
         self.assertIn("Real story beta", content)
         self.assertNotIn("sample snippet", content.lower())
+
+    def test_file_write_strips_legacy_koredocs_prefix_to_datauser_root(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_root = Path(tmp)
+            data_dir = tmp_root / "data"
+            data_dir.mkdir(parents=True, exist_ok=True)
+
+            with patch.object(file_access_module, "WORKSPACE_ROOT", tmp_root):
+                with patch.object(file_access_module, "DEFAULT_DATA_DIR", data_dir):
+                    result = file_write("KoreDocs/notes/example.koredoc", "# Hello")
+
+            written = data_dir / "notes" / "example.koredoc"
+            self.assertTrue(written.exists())
+            self.assertEqual(result, "Wrote data/notes/example.koredoc")
+
+    def test_koredocs_korefile_migrates_legacy_db_into_filesystem_root(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_root = Path(tmp)
+            root_dir = tmp_root / "datauser"
+            legacy_db = tmp_root / "korefile.db"
+
+            conn = sqlite3.connect(str(legacy_db))
+            try:
+                conn.execute(
+                    """
+                    CREATE TABLE folders (
+                        id INTEGER PRIMARY KEY,
+                        parent_id INTEGER,
+                        name TEXT NOT NULL,
+                        path TEXT NOT NULL UNIQUE,
+                        revision INTEGER NOT NULL DEFAULT 1,
+                        modified_at TEXT,
+                        created_at TEXT
+                    )
+                    """
+                )
+                conn.execute(
+                    """
+                    CREATE TABLE files (
+                        id INTEGER PRIMARY KEY,
+                        folder_id INTEGER NOT NULL,
+                        name TEXT NOT NULL,
+                        ext TEXT NOT NULL,
+                        content BLOB,
+                        metadata TEXT,
+                        word_count INTEGER,
+                        revision INTEGER NOT NULL DEFAULT 1,
+                        created_at TEXT,
+                        modified_at TEXT
+                    )
+                    """
+                )
+                conn.execute("INSERT INTO folders (id, parent_id, name, path) VALUES (1, NULL, 'Root', '/')")
+                conn.execute("INSERT INTO folders (id, parent_id, name, path) VALUES (2, 1, 'Radar', '/Radar')")
+                conn.execute(
+                    "INSERT INTO files (id, folder_id, name, ext, content, metadata, word_count, revision) VALUES (1, 2, 'companies.koredoc', 'koredoc', ?, '{}', 2, 1)",
+                    (zlib.compress(b"# Radar Companies"),),
+                )
+                conn.commit()
+            finally:
+                conn.close()
+
+            koredocs_korefile.configure(root_dir, legacy_db)
+            koredocs_korefile.init_db()
+
+            migrated = root_dir / "Radar" / "companies.koredoc"
+            self.assertTrue(migrated.exists())
+            self.assertEqual(migrated.read_text(encoding="utf-8"), "# Radar Companies")
+            self.assertFalse(legacy_db.exists())
+            self.assertFalse(Path(str(legacy_db) + "-wal").exists())
+            self.assertFalse(Path(str(legacy_db) + "-shm").exists())
+
+            files = koredocs_korefile.list_files(folder_path="/Radar")
+            self.assertEqual(len(files), 1)
+            self.assertEqual(files[0]["name"], "companies.koredoc")
 
     def test_dataset_expand_full_text_creates_enriched_dataset(self) -> None:
         session_id = "dataset_fulltext"

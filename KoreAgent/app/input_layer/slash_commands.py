@@ -25,6 +25,7 @@ from context_manager import get_last_context_map
 from context_manager import get_last_messages
 from context_manager import compact_context
 from context_manager import format_context_map
+from orchestration import _filter_web_skills
 from orchestration import get_skill_guidance_enabled
 from orchestration import get_web_skills_enabled
 from orchestration import request_stop
@@ -37,6 +38,9 @@ from input_layer.slash_command_handlers_sessions import register_session_slash_c
 from input_layer.slash_command_handlers_tasks import register_task_slash_commands
 from input_layer.slash_command_handlers_testing import register_testing_slash_commands
 import mcp_client
+from tool_selection_state import ALWAYS_ON_TOOL_NAMES
+from tool_selection_state import build_all_tool_catalog
+from tool_selection_state import derive_active_tool_runtime
 from utils.workspace_utils import get_bootstrap_defaults_file
 from utils.workspace_utils import get_controldata_dir
 from utils.workspace_utils import get_logs_dir
@@ -346,48 +350,46 @@ def _cmd_deletelogs(arg: str, ctx: SlashCommandContext) -> None:
 
 
 def _cmd_tools(arg: str, ctx: SlashCommandContext) -> None:
-    from orchestration import _filter_web_skills
-    from skills_catalog_builder import build_tool_definitions
-
-    payload = ctx.config.skills_payload
-    if not get_web_skills_enabled():
-        payload = _filter_web_skills(payload)
-
-    skill_tool_defs = build_tool_definitions(payload)
-    mcp_tool_defs   = mcp_client.get_mcp_tool_definitions()
-    mcp_tool_index  = mcp_client.get_mcp_tool_index()
-    tool_defs       = skill_tool_defs + mcp_tool_defs
-    if not tool_defs:
-        ctx.output("No tools available.", "dim")
+    sub = str(arg or "").strip().lower()
+    if not sub:
+        ctx.output("Usage: /tools all  |  /tools active", "dim")
         return
-
-    local_tool_meta: dict[str, dict] = {}
-    for skill in payload.get("skills", []):
-        skill_meta = {
-            "origin":         skill.get("origin", "local"),
-            "availability":   skill.get("availability", "configured"),
-            "role":           skill.get("role", "optional"),
-            "trust_boundary": skill.get("trust_boundary", "internal"),
-        }
-        for func_sig in skill.get("functions", []):
-            func_name = str(func_sig).split("(", 1)[0].strip()
-            if func_name:
-                local_tool_meta.setdefault(func_name, skill_meta)
-
-    web_off = not get_web_skills_enabled()
-    mcp_count = len(mcp_tool_defs)
-    ctx.output(f"{len(tool_defs)} tool(s) active{' (web skills off)' if web_off else ''}{f', {mcp_count} via MCP' if mcp_count else ''}:", "info")
-    for tool in tool_defs:
-        fn     = tool["function"]
-        name   = fn["name"]
-        desc   = fn.get("description", "").split("\n")[0][:80]
-        params = list(fn.get("parameters", {}).get("properties", {}).keys())
-        sig    = f"{name}({', '.join(params)})"
-        meta   = local_tool_meta.get(name) or mcp_tool_index.get(name, {})
-        label  = f"{meta.get('role', 'tool')}/{meta.get('availability', 'unknown')}/{meta.get('trust_boundary', 'unknown')}"
-        ctx.output(f"  [{label}] {sig}", "item")
-        if desc:
-            ctx.output(f"    {desc}", "dim")
+    if sub == "all":
+        entries = build_all_tool_catalog(ctx.config.skills_payload, include_mcp=True, session_id=ctx.session_id)
+        if not entries:
+            ctx.output("No tools available.", "dim")
+            return
+        mcp_count = sum(1 for entry in entries if entry.get("origin") == "mcp")
+        ctx.output(f"{len(entries)} tool(s) available in the full catalog{f', {mcp_count} via MCP' if mcp_count else ''}:", "info")
+        for entry in entries:
+            active_marker = "active" if entry.get("active") else "idle"
+            label = f"{entry.get('origin', 'local')}/{entry.get('role', 'tool')}/{entry.get('availability', 'unknown')}/{active_marker}"
+            ctx.output(f"  [{label}] {entry.get('name', '')}", "item")
+            desc = str(entry.get("description", "")).strip()
+            if desc:
+                ctx.output(f"    {desc[:120]}", "dim")
+        return
+    if sub == "active":
+        available_payload = ctx.config.skills_payload if get_web_skills_enabled() else _filter_web_skills(ctx.config.skills_payload)
+        runtime = derive_active_tool_runtime(
+            ctx.config.skills_payload,
+            available_local_payload=available_payload,
+            session_id=ctx.session_id,
+            conversation_entry=None,
+        )
+        active_names = sorted(runtime["active_tool_names"])
+        if not active_names:
+            ctx.output("No active tools. Only the tool-selection control plane is available.", "dim")
+            return
+        ctx.output(f"{len(active_names)} active tool(s) exposed to the model (cap 32 + always-on control tools):", "info")
+        for name in active_names:
+            marker = "always-on" if name in ALWAYS_ON_TOOL_NAMES else "selected"
+            ctx.output(f"  [{marker}] {name}", "item")
+        missing = runtime.get("missing_selected", []) or []
+        if missing:
+            ctx.output(f"Pruned missing tools: {', '.join(missing)}", "dim")
+        return
+    ctx.output("Usage: /tools all  |  /tools active", "dim")
 
 
 def _cmd_defaults(arg: str, ctx: SlashCommandContext) -> None:
@@ -482,7 +484,7 @@ _DESCRIPTIONS: dict[str, str] = {
     "/reskill": "[min|max]  Rebuild skills catalog and set system prompt guidance mode (default: min)",
     "/version": "Show framework version, active model, and context size",
     "/sandbox": "<on|off>  Enable/disable Python code execution sandbox (import whitelist + blocked builtins)",
-    "/tools": "List all tools currently exposed to the model (respects web skills toggle)",
+    "/tools": "[all | active]  Show the full tool catalog or the active prompt-exposed tool set",
     "/deletelogs": "<days>  Delete log, chatsession, and test_results date-folders older than N days (e.g. /deletelogs 10)",
     "/defaults": "Show current bootstrap defaults and file path; /defaults set saves current model/ctx/host to the file",
     "/mcp":      "[status | reconnect]  Show MCP server status or re-enumerate tools from all configured servers",

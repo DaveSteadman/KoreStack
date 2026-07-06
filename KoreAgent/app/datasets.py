@@ -357,12 +357,12 @@ def _select_records(
 def _normalise_koredocs_folder(folder_path: str) -> str:
     cleaned = str(folder_path or "").strip().replace("\\", "/").strip("/")
     if not cleaned:
-        return "KoreDocs"
+        return ""
     if cleaned.lower() == "koredocs":
-        return "KoreDocs"
+        return ""
     if cleaned.lower().startswith("koredocs/"):
-        return "KoreDocs/" + cleaned.split("/", 1)[1]
-    return f"KoreDocs/{cleaned}"
+        return cleaned.split("/", 1)[1]
+    return cleaned
 
 
 def _normalise_koredoc_name(document_name: str, fallback_name: str) -> str:
@@ -845,7 +845,8 @@ def dataset_write_koredoc(
 
     from system_skills.FileAccess.file_access_skill import file_write
 
-    write_result = file_write(f"{target_folder}/{target_name}", markdown, skip_content_guard=True)
+    target_path = f"{target_folder}/{target_name}" if target_folder else target_name
+    write_result = file_write(target_path, markdown, skip_content_guard=True)
     if write_result.startswith("Error:"):
         return write_result
 
@@ -853,7 +854,7 @@ def dataset_write_koredoc(
     exported_range_end = selection["offset"] + selection["returned"]
     return (
         f"Exported dataset '{dataset['name']}' records {exported_range_start}-{exported_range_end} "
-        f"of {len(records)} to KoreDocs document '{target_name}' at '{target_folder}/{target_name}'."
+        f"of {len(records)} to KoreDocs document '{target_name}' at '{target_path}'."
     )
 
 

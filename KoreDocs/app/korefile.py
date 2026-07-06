@@ -1,412 +1,154 @@
 # ====================================================================================================
 # MARK: OVERVIEW
 # ====================================================================================================
-# KoreFile virtual file system: SQLite adjacency-list + FTS5 for KoreDocs.
+# KoreDocs filesystem storage layer.
 #
-# Folder hierarchy:
-#   Adjacency-list model with a materialised path string (e.g. "/Projects/KoreDocs").
-#   The root folder (id=1) has path='/' and no parent.
-#
-# File storage:
-#   Content is zlib-compressed.  The FTS5 index is a contentless table kept in sync
-#   on every write — same pattern as KoreData/KoreRAG.
-#
-# Public API:
-#   configure(db_path)  -- set the database path (call once at startup before init_db)
-#   init_db()           -- create tables if absent
-#   ConflictError       -- raised on duplicate name within a folder
-#
-# Related modules:
-#   - app/server.py         -- calls configure() and init_db() at startup
-#   - app/_mcp_shared.py    -- folder/file helpers built on top of korefile
-#   - app/koredocs_mcp.py   -- MCP tool layer
+# This module preserves the old korefile.py API surface, but the source of truth is now the real
+# filesystem rooted at the shared datauser directory. The legacy SQLite database is migrated once
+# at startup, then deleted.
 # ====================================================================================================
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
+import shutil
 import sqlite3
 import zlib
-from contextlib import contextmanager
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
 
 
 class ConflictError(ValueError):
     pass
 
-# ── Configuration ──────────────────────────────────────────────────────────
 
-_DB_PATH: Path | None = None
+_ROOT_DIR: Path | None = None
+_LEGACY_DB_PATH: Path | None = None
+_NATIVE_EXTENSIONS = frozenset({'.koredoc', '.koresheet', '.korediag'})
+_TEXT_EXTENSIONS = frozenset({
+    '.csv',
+    '.json',
+    '.log',
+    '.md',
+    '.py',
+    '.txt',
+    '.xml',
+    '.yaml',
+    '.yml',
+})
+_VISIBLE_EXTENSIONS = _NATIVE_EXTENSIONS | _TEXT_EXTENSIONS
 
 
-def configure(db_path: Path) -> None:
-    """Set the database path.  Must be called before init_db()."""
-    global _DB_PATH
-    _DB_PATH = db_path
-    _DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+def configure(root_dir: Path, legacy_db_path: Path | None = None) -> None:
+    global _ROOT_DIR, _LEGACY_DB_PATH
+    _ROOT_DIR = Path(root_dir).resolve()
+    _ROOT_DIR.mkdir(parents=True, exist_ok=True)
+    _LEGACY_DB_PATH = Path(legacy_db_path).resolve() if legacy_db_path else None
+    if _LEGACY_DB_PATH is not None:
+        _LEGACY_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 
-def _db_path() -> Path:
-    if _DB_PATH is None:
+def _root_dir() -> Path:
+    if _ROOT_DIR is None:
         raise RuntimeError('korefile.configure() has not been called')
-    return _DB_PATH
+    return _ROOT_DIR
 
 
-# ── Database connection ────────────────────────────────────────────────────
-
-@contextmanager
-def _db():
-    conn = sqlite3.connect(str(_db_path()), check_same_thread=False)
-    conn.row_factory = sqlite3.Row
-    conn.execute('PRAGMA journal_mode=WAL')
-    conn.execute('PRAGMA foreign_keys=ON')
-    try:
-        yield conn
-        conn.commit()
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        conn.close()
+def _legacy_db_path() -> Path | None:
+    return _LEGACY_DB_PATH
 
 
-# ── Compression ────────────────────────────────────────────────────────────
-
-def _compress(text: str) -> bytes:
-    return zlib.compress(text.encode('utf-8'), level=6)
-
-
-def _decompress(blob: bytes | None) -> str | None:
-    if not blob:
-        return None
-    return zlib.decompress(blob).decode('utf-8')
-
-
-# ── FTS helpers ────────────────────────────────────────────────────────────
-
-def _fts_query(q: str) -> str:
-    """Convert a raw search string to a safe FTS5 MATCH expression."""
-    parts: list[str] = []
-    for m in re.finditer(r'"([^"]+)"|(\S+)', (q or '').strip()):
-        phrase, word = m.group(1), m.group(2)
-        if phrase:
-            inner = phrase.replace('"', '""')
-            if inner:
-                parts.append(f'"{inner}"')
-        elif word:
-            clean = word.replace('"', '')
-            if clean:
-                parts.append(f'"{clean}"')
-    return ' '.join(parts)
+def _normalize_folder_path(path: str | None) -> str:
+    raw = str(path or '').strip().replace('\\', '/')
+    if not raw or raw == '/':
+        return '/'
+    if raw.startswith('./'):
+        raw = raw[2:]
+    if not raw.startswith('/'):
+        raw = '/' + raw
+    parts = [part for part in raw.split('/') if part]
+    if any(part in ('.', '..') for part in parts):
+        raise ValueError('folder_path must not contain . or .. segments')
+    if parts and parts[0].lower() == 'koredocs':
+        parts = parts[1:]
+    return '/' + '/'.join(parts) if parts else '/'
 
 
-def _fts_insert(conn: sqlite3.Connection, file_id: int,
-                name: str, metadata: str, content: str) -> None:
-    conn.execute(
-        'INSERT INTO files_fts(rowid, name, metadata, content) VALUES (?,?,?,?)',
-        (file_id, name, metadata or '', content or ''),
+def _relative_posix(path: Path) -> str:
+    relative = path.relative_to(_root_dir())
+    text = relative.as_posix()
+    return '' if text == '.' else text
+
+
+def _folder_path_to_abs(path: str | None) -> Path:
+    normalized = _normalize_folder_path(path)
+    if normalized == '/':
+        return _root_dir()
+    return (_root_dir() / normalized.lstrip('/')).resolve()
+
+
+def _folder_abs_to_label(path: Path) -> str:
+    rel = _relative_posix(path)
+    return '/' + rel if rel else '/'
+
+
+def _iso_from_ts(timestamp: float | int | None) -> str:
+    if not timestamp:
+        return ''
+    return datetime.fromtimestamp(float(timestamp), timezone.utc).replace(microsecond=0).isoformat().replace('+00:00', 'Z')
+
+
+def _stable_id(kind: str, relative_posix: str) -> int:
+    if kind == 'folder' and not relative_posix:
+        return 1
+    digest = hashlib.blake2b(f'{kind}:{relative_posix}'.encode('utf-8'), digest_size=6).digest()
+    value = int.from_bytes(digest, 'big')
+    return value if value > 1 else value + 2
+
+
+def _folder_id_for_abs(path: Path) -> int:
+    return _stable_id('folder', _relative_posix(path))
+
+
+def _file_id_for_abs(path: Path) -> int:
+    return _stable_id('file', _relative_posix(path))
+
+
+def _iter_folder_paths() -> list[Path]:
+    root = _root_dir()
+    folders = [root]
+    folders.extend(sorted((path for path in root.rglob('*') if path.is_dir()), key=lambda item: _relative_posix(item)))
+    return folders
+
+
+def _iter_file_paths(root: Path | None = None) -> list[Path]:
+    base = root.resolve() if root is not None else _root_dir()
+    return sorted(
+        [path for path in base.rglob('*') if path.is_file() and path.suffix.lower() in _VISIBLE_EXTENSIONS],
+        key=lambda item: _relative_posix(item),
     )
 
 
-def _fts_delete(conn: sqlite3.Connection, file_id: int,
-                name: str, metadata: str, content: str) -> None:
-    conn.execute(
-        "INSERT INTO files_fts(files_fts, rowid, name, metadata, content) "
-        "VALUES ('delete',?,?,?,?)",
-        (file_id, name, metadata or '', content or ''),
-    )
-
-
-# ── Schema init ────────────────────────────────────────────────────────────
-
-def init_db() -> None:
-    """Create tables if they do not exist and ensure the root folder exists."""
-    with _db() as conn:
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS folders (
-                id         INTEGER PRIMARY KEY AUTOINCREMENT,
-                parent_id  INTEGER REFERENCES folders(id) ON DELETE RESTRICT,
-                name       TEXT NOT NULL,
-                path       TEXT NOT NULL UNIQUE,
-                revision   INTEGER NOT NULL DEFAULT 1,
-                modified_at TEXT DEFAULT (datetime('now','utc')),
-                created_at TEXT DEFAULT (datetime('now','utc'))
-            )
-        """)
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS files (
-                id          INTEGER PRIMARY KEY AUTOINCREMENT,
-                folder_id   INTEGER NOT NULL REFERENCES folders(id) ON DELETE RESTRICT,
-                name        TEXT NOT NULL,
-                ext         TEXT NOT NULL,
-                content     BLOB,
-                metadata    TEXT,
-                word_count  INTEGER,
-                revision    INTEGER NOT NULL DEFAULT 1,
-                created_at  TEXT DEFAULT (datetime('now','utc')),
-                modified_at TEXT DEFAULT (datetime('now','utc')),
-                UNIQUE (folder_id, name)
-            )
-        """)
-        conn.execute("""
-            CREATE VIRTUAL TABLE IF NOT EXISTS files_fts USING fts5(
-                name, metadata, content,
-                tokenize = 'unicode61 remove_diacritics 1',
-                content  = ''
-            )
-        """)
-        # Root folder — INSERT OR IGNORE so re-init is safe
-        conn.execute(
-            "INSERT OR IGNORE INTO folders (id, parent_id, name, path) "
-            "VALUES (1, NULL, 'Root', '/')"
-        )
-        _ensure_files_schema(conn)
-        _ensure_folders_schema(conn)
-
-
-def _ensure_files_schema(conn: sqlite3.Connection) -> None:
-    columns = {
-        row["name"]
-        for row in conn.execute("PRAGMA table_info(files)").fetchall()
-    }
-    if "revision" not in columns:
-        conn.execute(
-            "ALTER TABLE files ADD COLUMN revision INTEGER NOT NULL DEFAULT 1"
-        )
-
-
-def _ensure_folders_schema(conn: sqlite3.Connection) -> None:
-    columns = {
-        row["name"]
-        for row in conn.execute("PRAGMA table_info(folders)").fetchall()
-    }
-    if "revision" not in columns:
-        conn.execute(
-            "ALTER TABLE folders ADD COLUMN revision INTEGER NOT NULL DEFAULT 1"
-        )
-    if "modified_at" not in columns:
-        conn.execute(
-            "ALTER TABLE folders ADD COLUMN modified_at TEXT"
-        )
-        conn.execute(
-            "UPDATE folders SET modified_at = COALESCE(modified_at, created_at, datetime('now','utc'))"
-        )
-
-
-# ── Folder helpers ──────────────────────────────────────────────────────────
-
-def _row_to_folder(row: sqlite3.Row) -> dict:
+def _folder_record(path: Path) -> dict:
+    stat = path.stat()
+    parent_id = None if path == _root_dir() else _folder_id_for_abs(path.parent)
     return {
-        'id': row['id'], 'parent_id': row['parent_id'],
-        'name': row['name'], 'path': row['path'],
-        'revision': row['revision'],
-        'modified_at': row['modified_at'],
-        'created_at': row['created_at'],
+        'id': _folder_id_for_abs(path),
+        'parent_id': parent_id,
+        'name': 'Root' if path == _root_dir() else path.name,
+        'path': _folder_abs_to_label(path),
+        'revision': int(stat.st_mtime_ns),
+        'modified_at': _iso_from_ts(stat.st_mtime),
+        'created_at': _iso_from_ts(getattr(stat, 'st_ctime', stat.st_mtime)),
     }
 
 
-def _get_folder(conn: sqlite3.Connection, folder_id: int) -> sqlite3.Row | None:
-    return conn.execute(
-        'SELECT * FROM folders WHERE id=?', (folder_id,)
-    ).fetchone()
-
-
-def _ensure_folder_path(conn: sqlite3.Connection, path: str) -> int:
-    """Return the id of the folder at *path*, creating it and parents if needed."""
-    row = conn.execute('SELECT id FROM folders WHERE path=?', (path,)).fetchone()
-    if row:
-        return row['id']
-    parts = [p for p in path.split('/') if p]
-    current_path = '/'
-    current_id = 1  # root
-    for part in parts:
-        child_path = current_path.rstrip('/') + '/' + part
-        row = conn.execute(
-            'SELECT id FROM folders WHERE path=?', (child_path,)
-        ).fetchone()
-        if row:
-            current_id = row['id']
-        else:
-            cur = conn.execute(
-                'INSERT INTO folders (parent_id, name, path) VALUES (?,?,?)',
-                (current_id, part, child_path),
-            )
-            current_id = cur.lastrowid
-        current_path = child_path
-    return current_id
-
-
-# ── Folders API ─────────────────────────────────────────────────────────────
-
-def list_folders() -> list[dict]:
-    """Return all folders as a flat list ordered by path."""
-    with _db() as conn:
-        rows = conn.execute('SELECT * FROM folders ORDER BY path').fetchall()
-    return [_row_to_folder(r) for r in rows]
-
-
-def get_folder_by_path(path: str) -> dict | None:
-    with _db() as conn:
-        row = conn.execute('SELECT * FROM folders WHERE path=?', (path,)).fetchone()
-    return _row_to_folder(row) if row else None
-
-
-def create_folder(name: str, parent_id: int) -> dict:
-    """Create a folder under *parent_id*.  Returns the new folder dict."""
-    _validate_simple_name(name, kind='Folder')
-    with _db() as conn:
-        parent = _get_folder(conn, parent_id)
-        if parent is None:
-            raise ValueError(f'Parent folder {parent_id} not found')
-        new_path = parent['path'].rstrip('/') + '/' + name
-        cur = conn.execute(
-            'INSERT INTO folders (parent_id, name, path, revision, modified_at) VALUES (?,?,?,?,datetime(\'now\',\'utc\'))',
-            (parent_id, name, new_path, 1),
-        )
-        conn.execute(
-            'UPDATE folders SET revision=revision+1, modified_at=datetime(\'now\',\'utc\') WHERE id=?',
-            (parent_id,),
-        )
-        row = conn.execute(
-            'SELECT * FROM folders WHERE id=?', (cur.lastrowid,)
-        ).fetchone()
-    return _row_to_folder(row)
-
-
-def rename_folder(folder_id: int, new_name: str, *, expected_revision: int | None = None) -> dict:
-    """Rename a folder and update the paths of all descendants."""
-    _validate_simple_name(new_name, kind='Folder')
-    with _db() as conn:
-        folder = _get_folder(conn, folder_id)
-        if folder is None:
-            raise ValueError(f'Folder {folder_id} not found')
-        current_revision = int(folder['revision'])
-        if expected_revision is not None and current_revision != expected_revision:
-            raise ConflictError(
-                f'Folder {folder_id} revision mismatch: expected {expected_revision}, current {current_revision}'
-            )
-        if folder_id == 1:
-            raise ValueError('Cannot rename the root folder')
-        old_path = folder['path']
-        parent = _get_folder(conn, folder['parent_id'])
-        new_path = parent['path'].rstrip('/') + '/' + new_name
-        # Update descendant paths first (substr is 1-based in SQLite)
-        conn.execute(
-            'UPDATE folders SET path = ? || substr(path, ?) WHERE path LIKE ?',
-            (new_path, len(old_path) + 1, old_path + '/%'),
-        )
-        conn.execute(
-            'UPDATE folders SET name=?, path=?, revision=revision+1, modified_at=datetime(\'now\',\'utc\') WHERE id=?',
-            (new_name, new_path, folder_id),
-        )
-        row = conn.execute('SELECT * FROM folders WHERE id=?', (folder_id,)).fetchone()
-    return _row_to_folder(row)
-
-
-def move_folder(folder_id: int, new_parent_id: int, *, expected_revision: int | None = None) -> dict:
-    """Move a folder under a new parent, updating all descendant paths."""
-    with _db() as conn:
-        folder = _get_folder(conn, folder_id)
-        if folder is None:
-            raise ValueError(f'Folder {folder_id} not found')
-        current_revision = int(folder['revision'])
-        if expected_revision is not None and current_revision != expected_revision:
-            raise ConflictError(
-                f'Folder {folder_id} revision mismatch: expected {expected_revision}, current {current_revision}'
-            )
-        if folder_id == 1:
-            raise ValueError('Cannot move the root folder')
-        new_parent = _get_folder(conn, new_parent_id)
-        if new_parent is None:
-            raise ValueError(f'Parent folder {new_parent_id} not found')
-        old_path = folder['path']
-        np_path  = new_parent['path']
-        # Prevent moving a folder into itself or any of its descendants
-        if np_path == old_path or np_path.startswith(old_path + '/'):
-            raise ValueError('Cannot move a folder into itself or one of its descendants')
-        new_path = np_path.rstrip('/') + '/' + folder['name']
-        # Update descendant paths first
-        conn.execute(
-            'UPDATE folders SET path = ? || substr(path, ?) WHERE path LIKE ?',
-            (new_path, len(old_path) + 1, old_path + '/%'),
-        )
-        conn.execute(
-            'UPDATE folders SET parent_id=?, path=?, revision=revision+1, modified_at=datetime(\'now\',\'utc\') WHERE id=?',
-            (new_parent_id, new_path, folder_id),
-        )
-        row = conn.execute('SELECT * FROM folders WHERE id=?', (folder_id,)).fetchone()
-    return _row_to_folder(row)
-
-
-def delete_folder(folder_id: int, *, expected_revision: int | None = None, recursive: bool = False) -> bool:
-    """Delete a folder. Raises ValueError if non-recursive delete hits children or files."""
-    with _db() as conn:
-        folder = _get_folder(conn, folder_id)
-        if not folder:
-            return False
-        current_revision = int(folder['revision'])
-        if expected_revision is not None and current_revision != expected_revision:
-            raise ConflictError(
-                f'Folder {folder_id} revision mismatch: expected {expected_revision}, current {current_revision}'
-            )
-        if folder_id == 1:
-            raise ValueError('Cannot delete the root folder')
-        parent_id = folder['parent_id']
-
-        if recursive:
-            subtree_path = folder['path']
-            file_rows = conn.execute(
-                'SELECT files.id, files.name, files.metadata, files.content '
-                'FROM files '
-                'JOIN folders ON folders.id = files.folder_id '
-                'WHERE folders.path = ? OR folders.path LIKE ?',
-                (subtree_path, subtree_path + '/%'),
-            ).fetchall()
-            for row in file_rows:
-                content = _decompress(row['content']) or ''
-                _fts_delete(conn, row['id'], row['name'], row['metadata'] or '', content)
-                conn.execute('DELETE FROM files WHERE id=?', (row['id'],))
-
-            folder_rows = conn.execute(
-                'SELECT id FROM folders WHERE path = ? OR path LIKE ? ORDER BY LENGTH(path) DESC, id DESC',
-                (subtree_path, subtree_path + '/%'),
-            ).fetchall()
-            for row in folder_rows:
-                conn.execute('DELETE FROM folders WHERE id=?', (row['id'],))
-        else:
-            # FK RESTRICT handles the child/file guard — let it propagate as ValueError
-            conn.execute('DELETE FROM folders WHERE id=?', (folder_id,))
-
-        if parent_id is not None:
-            conn.execute(
-                'UPDATE folders SET revision=revision+1, modified_at=datetime(\'now\',\'utc\') WHERE id=?',
-                (parent_id,),
-            )
-    return True
-
-
-# ── File helpers ────────────────────────────────────────────────────────────
-
-_FILE_COLS = (
-    'id', 'folder_id', 'name', 'ext', 'metadata',
-    'word_count', 'revision', 'created_at', 'modified_at',
-)
-_FILE_COLS_FULL = _FILE_COLS + ('content',)
-
-
-def _row_to_file(row: sqlite3.Row, include_content: bool = False) -> dict:
-    cols = _FILE_COLS_FULL if include_content else _FILE_COLS
-    d = {c: row[c] for c in cols}
-    if include_content:
-        d['content'] = _decompress(d['content'])
-    if d.get('metadata'):
-        try:
-            d['metadata'] = json.loads(d['metadata'])
-        except (ValueError, TypeError):
-            pass
-    return d
+def _decompress_legacy(blob: bytes | None) -> str:
+    if not blob:
+        return ''
+    return zlib.decompress(blob).decode('utf-8')
 
 
 def _word_count(text: str) -> int:
@@ -414,38 +156,54 @@ def _word_count(text: str) -> int:
 
 
 def _extract_metadata(name: str, content: str) -> dict:
-    """Best-effort extraction of title/tags from document content."""
     ext = Path(name).suffix.lstrip('.')
     meta: dict = {}
     if ext == 'koredoc':
-        # YAML frontmatter between --- delimiters
-        m = re.match(r'^---\s*\n(.*?)\n---\s*\n', content, re.DOTALL)
-        if m:
-            for line in m.group(1).splitlines():
+        match = re.match(r'^---\s*\n(.*?)\n---\s*\n', content, re.DOTALL)
+        if match:
+            for line in match.group(1).splitlines():
                 if ':' in line:
-                    k, _, v = line.partition(':')
-                    meta[k.strip()] = v.strip()
+                    key, _, value = line.partition(':')
+                    meta[key.strip()] = value.strip()
         if 'title' not in meta:
-            hm = re.search(r'^#{1,3}\s+(.+)$', content, re.MULTILINE)
-            if hm:
-                meta['title'] = hm.group(1).strip()
+            heading = re.search(r'^#{1,3}\s+(.+)$', content, re.MULTILINE)
+            if heading:
+                meta['title'] = heading.group(1).strip()
     elif ext in ('koresheet', 'korediag'):
         try:
             obj = json.loads(content)
-            if isinstance(obj, dict):
-                meta['title'] = (
-                    (obj.get('meta') or {}).get('title')
-                    or obj.get('title', '')
-                )
-        except (ValueError, TypeError):
-            pass
+        except (TypeError, ValueError):
+            obj = None
+        if isinstance(obj, dict):
+            meta['title'] = ((obj.get('meta') or {}).get('title') or obj.get('title') or '')
     meta.setdefault('title', Path(name).stem)
     return meta
+
+
+def _validate_simple_name(name: str, *, kind: str, require_extension: bool = False) -> None:
+    trimmed = (name or '').strip()
+    if not trimmed:
+        raise ValueError(f'{kind} name must not be empty')
+    if trimmed != name:
+        raise ValueError(f'{kind} name must not start or end with whitespace')
+    if any(ch in name for ch in ('/', '\\', ':')):
+        raise ValueError(f'{kind} name must not contain path separators')
+    if name in {'.', '..'}:
+        raise ValueError(f'{kind} name is invalid')
+    if any(ord(ch) < 32 for ch in name):
+        raise ValueError(f'{kind} name must not contain control characters')
+    if require_extension and '.' not in name:
+        raise ValueError('File name must include an extension')
 
 
 def _validate_serialized_content(name: str, content: str) -> None:
     ext = Path(name).suffix.lstrip('.')
     if ext == 'koredoc':
+        return
+    if f'.{ext}' in _TEXT_EXTENSIONS:
+        if ext == 'csv':
+            if '\x00' in str(content):
+                raise ValueError(f'{name} must not contain NUL bytes')
         return
     try:
         obj = json.loads(content)
@@ -479,326 +237,377 @@ def _validate_serialized_content(name: str, content: str) -> None:
             raise ValueError(f'{name} fields "nodes" and "edges" must be arrays')
 
 
-def _validate_simple_name(name: str, *, kind: str, require_extension: bool = False) -> None:
-    trimmed = (name or '').strip()
-    if not trimmed:
-        raise ValueError(f'{kind} name must not be empty')
-    if trimmed != name:
-        raise ValueError(f'{kind} name must not start or end with whitespace')
-    if any(ch in name for ch in ('/', '\\', ':')):
-        raise ValueError(f'{kind} name must not contain path separators')
-    if name in {'.', '..'}:
-        raise ValueError(f'{kind} name is invalid')
-    if any(ord(ch) < 32 for ch in name):
-        raise ValueError(f'{kind} name must not contain control characters')
-    if require_extension and '.' not in name:
-        raise ValueError('File name must include an extension')
+def _file_record(path: Path, *, include_content: bool) -> dict:
+    content = path.read_text(encoding='utf-8')
+    stat = path.stat()
+    metadata = _extract_metadata(path.name, content)
+    record = {
+        'id': _file_id_for_abs(path),
+        'folder_id': _folder_id_for_abs(path.parent),
+        'folder_path': _folder_abs_to_label(path.parent),
+        'path': _relative_posix(path),
+        'name': path.name,
+        'ext': path.suffix.lstrip('.'),
+        'metadata': metadata,
+        'word_count': _word_count(content),
+        'revision': int(stat.st_mtime_ns),
+        'created_at': _iso_from_ts(getattr(stat, 'st_ctime', stat.st_mtime)),
+        'modified_at': _iso_from_ts(stat.st_mtime),
+    }
+    if include_content:
+        record['content'] = content
+    return record
 
 
-# ── Files API ───────────────────────────────────────────────────────────────
+def _resolve_folder_abs_by_id(folder_id: int) -> Path | None:
+    if folder_id == 1:
+        return _root_dir()
+    for path in _iter_folder_paths():
+        if _folder_id_for_abs(path) == folder_id:
+            return path
+    return None
 
-def list_files(folder_id: int | None = None,
-               folder_path: str | None = None,
-               ext: str | None = None,
-               name: str | None = None,
-               limit: int | None = None) -> list[dict]:
-    """List files (metadata only). Filter by folder_id, folder_path, ext, or exact name."""
-    with _db() as conn:
-        if folder_path is not None:
-            row = conn.execute(
-                'SELECT id FROM folders WHERE path=?', (folder_path,)
-            ).fetchone()
-            folder_id = row['id'] if row else None
-            if folder_id is None:
-                return []
-        cols = ','.join(_FILE_COLS)
-        clauses: list[str] = []
-        params: list[object] = []
-        if folder_id is not None:
-            clauses.append('folder_id=?')
-            params.append(folder_id)
-        if ext is not None:
-            clauses.append('ext=?')
-            params.append(ext)
-        if name is not None:
-            clauses.append('name=?')
-            params.append(name)
-        where = f" WHERE {' AND '.join(clauses)}" if clauses else ''
-        limit_sql = ''
-        if limit is not None:
-            limit_sql = ' LIMIT ?'
-            params.append(limit)
-        rows = conn.execute(
-            f'SELECT {cols} FROM files{where} ORDER BY name{limit_sql}',
-            tuple(params),
+
+def _resolve_file_abs_by_id(file_id: int) -> Path | None:
+    for path in _iter_file_paths():
+        if _file_id_for_abs(path) == file_id:
+            return path
+    return None
+
+
+def _search_terms(query: str) -> list[str]:
+    terms: list[str] = []
+    for match in re.finditer(r'"([^"]+)"|(\S+)', (query or '').strip()):
+        phrase, word = match.group(1), match.group(2)
+        value = (phrase or word or '').strip().lower()
+        if value:
+            terms.append(value)
+    return terms
+
+
+def _delete_legacy_db_files() -> None:
+    db_path = _legacy_db_path()
+    if db_path is None:
+        return
+    candidates = [db_path, Path(str(db_path) + '-wal'), Path(str(db_path) + '-shm')]
+    for candidate in candidates:
+        try:
+            if candidate.exists():
+                candidate.unlink()
+        except OSError:
+            pass
+
+
+def _migrate_legacy_db_to_fs() -> dict:
+    db_path = _legacy_db_path()
+    if db_path is None or not db_path.exists():
+        return {'migrated': 0, 'folders': 0}
+
+    imported_files = 0
+    imported_folders = 0
+    conn = sqlite3.connect(str(db_path), check_same_thread=False)
+    conn.row_factory = sqlite3.Row
+    try:
+        table_names = {
+            row['name']
+            for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
+        }
+        if 'folders' not in table_names or 'files' not in table_names:
+            _delete_legacy_db_files()
+            return {'migrated': 0, 'folders': 0}
+
+        folder_rows = conn.execute('SELECT path FROM folders ORDER BY CASE WHEN path = "/" THEN 0 ELSE LENGTH(path) END, path').fetchall()
+        for row in folder_rows:
+            folder_abs = _folder_path_to_abs(row['path'])
+            folder_abs.mkdir(parents=True, exist_ok=True)
+            imported_folders += 1
+
+        file_rows = conn.execute(
+            'SELECT f.name, f.content, folders.path AS folder_path '
+            'FROM files f JOIN folders ON folders.id = f.folder_id '
+            'ORDER BY folders.path, f.name'
         ).fetchall()
-    return [_row_to_file(r) for r in rows]
+        for row in file_rows:
+            folder_abs = _folder_path_to_abs(row['folder_path'])
+            folder_abs.mkdir(parents=True, exist_ok=True)
+            target = folder_abs / row['name']
+            target.write_text(_decompress_legacy(row['content']), encoding='utf-8')
+            imported_files += 1
+    finally:
+        conn.close()
+
+    _delete_legacy_db_files()
+    return {'migrated': imported_files, 'folders': imported_folders}
 
 
-def get_file(file_id: int, include_content: bool = True) -> dict | None:
-    cols = ','.join(_FILE_COLS_FULL if include_content else _FILE_COLS)
-    with _db() as conn:
-        row = conn.execute(
-            f'SELECT {cols} FROM files WHERE id=?', (file_id,)
-        ).fetchone()
-    return _row_to_file(row, include_content=include_content) if row else None
+def init_db() -> None:
+    _root_dir().mkdir(parents=True, exist_ok=True)
+    _migrate_legacy_db_to_fs()
 
 
-def create_file(folder_id: int, name: str, content: str,
-                metadata: dict | None = None) -> dict:
-    _validate_simple_name(name, kind='File', require_extension=True)
-    ext = Path(name).suffix.lstrip('.')
-    _validate_serialized_content(name, content)
-    if metadata is None:
-        metadata = _extract_metadata(name, content)
-    meta_json = json.dumps(metadata)
-    compressed = _compress(content)
-    wc = _word_count(content)
-    with _db() as conn:
-        cur = conn.execute(
-            'INSERT INTO files (folder_id, name, ext, content, metadata, word_count, revision) '
-            'VALUES (?,?,?,?,?,?,?)',
-            (folder_id, name, ext, compressed, meta_json, wc, 1),
-        )
-        file_id = cur.lastrowid
-        _fts_insert(conn, file_id, name, meta_json, content)
-        row = conn.execute(
-            f'SELECT {",".join(_FILE_COLS)} FROM files WHERE id=?', (file_id,)
-        ).fetchone()
-    return _row_to_file(row)
+def list_folders() -> list[dict]:
+    return [_folder_record(path) for path in _iter_folder_paths()]
 
 
-def update_file(file_id: int, content: str | None = None,
-                metadata: dict | None = None,
-                expected_revision: int | None = None) -> dict | None:
-    with _db() as conn:
-        row = conn.execute(
-            f'SELECT {",".join(_FILE_COLS_FULL)} FROM files WHERE id=?', (file_id,)
-        ).fetchone()
-        if row is None:
-            return None
-        current_revision = int(row['revision'])
-        if expected_revision is not None and current_revision != expected_revision:
-            raise ConflictError(
-                f'File {file_id} revision mismatch: expected {expected_revision}, current {current_revision}'
-            )
-        old_content  = _decompress(row['content']) or ''
-        old_meta_json = row['metadata'] or '{}'
-        new_content  = content if content is not None else old_content
-        _validate_serialized_content(row['name'], new_content)
-        if metadata is not None:
-            new_meta_dict = metadata
-        elif content is not None:
-            new_meta_dict = _extract_metadata(row['name'], new_content)
-        else:
-            new_meta_dict = json.loads(old_meta_json)
-        new_meta_json = json.dumps(new_meta_dict)
-        compressed    = _compress(new_content)
-        wc            = _word_count(new_content)
-        _fts_delete(conn, file_id, row['name'], old_meta_json, old_content)
-        conn.execute(
-            "UPDATE files SET content=?, metadata=?, word_count=?, revision=revision+1, "
-            "modified_at=datetime('now','utc') WHERE id=?",
-            (compressed, new_meta_json, wc, file_id),
-        )
-        _fts_insert(conn, file_id, row['name'], new_meta_json, new_content)
-        updated = conn.execute(
-            f'SELECT {",".join(_FILE_COLS)} FROM files WHERE id=?', (file_id,)
-        ).fetchone()
-    return _row_to_file(updated)
+def get_folder_by_path(path: str) -> dict | None:
+    folder_abs = _folder_path_to_abs(path)
+    if not folder_abs.exists() or not folder_abs.is_dir():
+        return None
+    return _folder_record(folder_abs)
 
 
-def rename_file(file_id: int, new_name: str,
-                expected_revision: int | None = None) -> dict | None:
-    _validate_simple_name(new_name, kind='File', require_extension=True)
-    ext = Path(new_name).suffix.lstrip('.')
-    with _db() as conn:
-        row = conn.execute(
-            f'SELECT {",".join(_FILE_COLS_FULL)} FROM files WHERE id=?', (file_id,)
-        ).fetchone()
-        if row is None:
-            return None
-        current_revision = int(row['revision'])
-        if expected_revision is not None and current_revision != expected_revision:
-            raise ConflictError(
-                f'File {file_id} revision mismatch: expected {expected_revision}, current {current_revision}'
-            )
-        old_content = _decompress(row['content']) or ''
-        old_meta_json = row['metadata'] or '{}'
-        _validate_serialized_content(new_name, old_content)
-        new_meta = _extract_metadata(new_name, old_content)
-        new_meta_json = json.dumps(new_meta)
-        _fts_delete(conn, file_id, row['name'], old_meta_json, old_content)
-        conn.execute(
-            'UPDATE files SET name=?, ext=?, metadata=?, revision=revision+1, modified_at=datetime(\'now\',\'utc\') WHERE id=?',
-            (new_name, ext, new_meta_json, file_id),
-        )
-        _fts_insert(conn, file_id, new_name, new_meta_json, old_content)
-        updated = conn.execute(
-            f'SELECT {",".join(_FILE_COLS)} FROM files WHERE id=?', (file_id,)
-        ).fetchone()
-    return _row_to_file(updated)
+def create_folder(name: str, parent_id: int) -> dict:
+    _validate_simple_name(name, kind='Folder')
+    parent_abs = _resolve_folder_abs_by_id(parent_id)
+    if parent_abs is None:
+        raise ValueError(f'Parent folder {parent_id} not found')
+    target = parent_abs / name
+    if target.exists():
+        raise ConflictError(f'Folder already exists: {_folder_abs_to_label(target)}')
+    target.mkdir(parents=False, exist_ok=False)
+    return _folder_record(target)
 
 
-def move_file(file_id: int, new_folder_id: int,
-              expected_revision: int | None = None) -> dict | None:
-    with _db() as conn:
-        row = conn.execute(
-            f'SELECT {",".join(_FILE_COLS_FULL)} FROM files WHERE id=?', (file_id,)
-        ).fetchone()
-        if row is None:
-            return None
-        current_revision = int(row['revision'])
-        if expected_revision is not None and current_revision != expected_revision:
-            raise ConflictError(
-                f'File {file_id} revision mismatch: expected {expected_revision}, current {current_revision}'
-            )
-        if not _get_folder(conn, new_folder_id):
-            raise ValueError(f'Folder {new_folder_id} not found')
-        conn.execute(
-            'UPDATE files SET folder_id=?, revision=revision+1, modified_at=datetime(\'now\',\'utc\') WHERE id=?',
-            (new_folder_id, file_id),
-        )
-        updated = conn.execute(
-            f'SELECT {",".join(_FILE_COLS)} FROM files WHERE id=?', (file_id,)
-        ).fetchone()
-    return _row_to_file(updated)
+def rename_folder(folder_id: int, new_name: str, *, expected_revision: int | None = None) -> dict:
+    _validate_simple_name(new_name, kind='Folder')
+    folder_abs = _resolve_folder_abs_by_id(folder_id)
+    if folder_abs is None:
+        raise ValueError(f'Folder {folder_id} not found')
+    if folder_abs == _root_dir():
+        raise ValueError('Cannot rename the root folder')
+    current_revision = int(folder_abs.stat().st_mtime_ns)
+    if expected_revision is not None and current_revision != expected_revision:
+        raise ConflictError(f'Folder {folder_id} revision mismatch: expected {expected_revision}, current {current_revision}')
+    target = folder_abs.parent / new_name
+    if target.exists():
+        raise ConflictError(f'Folder already exists: {_folder_abs_to_label(target)}')
+    folder_abs.rename(target)
+    return _folder_record(target)
 
 
-def delete_file(file_id: int, expected_revision: int | None = None) -> bool:
-    with _db() as conn:
-        row = conn.execute(
-            f'SELECT {",".join(_FILE_COLS_FULL)} FROM files WHERE id=?', (file_id,)
-        ).fetchone()
-        if row is None:
-            return False
-        current_revision = int(row['revision'])
-        if expected_revision is not None and current_revision != expected_revision:
-            raise ConflictError(
-                f'File {file_id} revision mismatch: expected {expected_revision}, current {current_revision}'
-            )
-        content = _decompress(row['content']) or ''
-        _fts_delete(conn, file_id, row['name'], row['metadata'] or '', content)
-        conn.execute('DELETE FROM files WHERE id=?', (file_id,))
+def move_folder(folder_id: int, new_parent_id: int, *, expected_revision: int | None = None) -> dict:
+    folder_abs = _resolve_folder_abs_by_id(folder_id)
+    if folder_abs is None:
+        raise ValueError(f'Folder {folder_id} not found')
+    if folder_abs == _root_dir():
+        raise ValueError('Cannot move the root folder')
+    current_revision = int(folder_abs.stat().st_mtime_ns)
+    if expected_revision is not None and current_revision != expected_revision:
+        raise ConflictError(f'Folder {folder_id} revision mismatch: expected {expected_revision}, current {current_revision}')
+    parent_abs = _resolve_folder_abs_by_id(new_parent_id)
+    if parent_abs is None:
+        raise ValueError(f'Parent folder {new_parent_id} not found')
+    if parent_abs == folder_abs or parent_abs.is_relative_to(folder_abs):
+        raise ValueError('Cannot move a folder into itself or one of its descendants')
+    target = parent_abs / folder_abs.name
+    if target.exists():
+        raise ConflictError(f'Folder already exists: {_folder_abs_to_label(target)}')
+    folder_abs.rename(target)
+    return _folder_record(target)
+
+
+def delete_folder(folder_id: int, *, expected_revision: int | None = None, recursive: bool = False) -> bool:
+    folder_abs = _resolve_folder_abs_by_id(folder_id)
+    if folder_abs is None:
+        return False
+    if folder_abs == _root_dir():
+        raise ValueError('Cannot delete the root folder')
+    current_revision = int(folder_abs.stat().st_mtime_ns)
+    if expected_revision is not None and current_revision != expected_revision:
+        raise ConflictError(f'Folder {folder_id} revision mismatch: expected {expected_revision}, current {current_revision}')
+    if recursive:
+        shutil.rmtree(folder_abs)
+        return True
+    if any(folder_abs.iterdir()):
+        raise ValueError('Folder is not empty')
+    folder_abs.rmdir()
     return True
 
 
-# ── Search ──────────────────────────────────────────────────────────────────
+def list_files(
+    folder_id: int | None = None,
+    folder_path: str | None = None,
+    ext: str | None = None,
+    name: str | None = None,
+    limit: int | None = None,
+) -> list[dict]:
+    if folder_path is not None:
+        folder_abs = _folder_path_to_abs(folder_path)
+        if not folder_abs.exists() or not folder_abs.is_dir():
+            return []
+    elif folder_id is not None:
+        folder_abs = _resolve_folder_abs_by_id(folder_id)
+        if folder_abs is None:
+            return []
+    else:
+        folder_abs = None
 
-def search(query: str, ext: str | None = None,
-           folder_path: str | None = None, limit: int = 20) -> list[dict]:
-    """Full-text search across all files.  Returns metadata + BM25 score."""
-    fts_q = _fts_query(query)
-    if not fts_q:
-        return []
-    clauses = ['f.id = fts.rowid', 'fts.files_fts MATCH ?']
-    params: list = [fts_q]
-    if ext:
-        clauses.append('f.ext = ?')
-        params.append(ext)
-    if folder_path:
-        clauses.append(
-            'f.folder_id IN '
-            '(SELECT id FROM folders WHERE path = ? OR path LIKE ?)'
-        )
-        params += [folder_path, folder_path.rstrip('/') + '/%']
-    where = ' AND '.join(clauses)
-    cols  = ', '.join(f'f.{c}' for c in _FILE_COLS)
-    sql   = (
-        f'SELECT {cols}, bm25(files_fts) AS score '
-        f'FROM files f, files_fts fts '
-        f'WHERE {where} '
-        f'ORDER BY score LIMIT ?'
-    )
-    params.append(limit)
-    with _db() as conn:
-        rows = conn.execute(sql, params).fetchall()
-    results = []
-    for r in rows:
-        d = _row_to_file(r)
-        d['score'] = r['score']
-        results.append(d)
+    files = _iter_file_paths(folder_abs)
+    results: list[dict] = []
+    for path in files:
+        if folder_abs is not None and path.parent != folder_abs:
+            continue
+        if ext is not None and path.suffix.lstrip('.') != ext:
+            continue
+        if name is not None and path.name != name:
+            continue
+        results.append(_file_record(path, include_content=False))
+        if limit is not None and len(results) >= limit:
+            break
     return results
 
 
-# ── Import from flat file system ─────────────────────────────────────────────
+def get_file(file_id: int, include_content: bool = True) -> dict | None:
+    file_abs = _resolve_file_abs_by_id(file_id)
+    if file_abs is None:
+        return None
+    return _file_record(file_abs, include_content=include_content)
 
-_IMPORTABLE = frozenset({'.koredoc', '.koresheet', '.korediag'})
+
+def create_file(folder_id: int, name: str, content: str, metadata: dict | None = None) -> dict:
+    del metadata
+    _validate_simple_name(name, kind='File', require_extension=True)
+    _validate_serialized_content(name, content)
+    folder_abs = _resolve_folder_abs_by_id(folder_id)
+    if folder_abs is None:
+        raise ValueError(f'Folder {folder_id} not found')
+    target = folder_abs / name
+    if target.exists():
+        raise ConflictError('UNIQUE constraint failed: files.folder_id, files.name')
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(content, encoding='utf-8')
+    return _file_record(target, include_content=False)
+
+
+def update_file(
+    file_id: int,
+    content: str | None = None,
+    metadata: dict | None = None,
+    expected_revision: int | None = None,
+) -> dict | None:
+    del metadata
+    file_abs = _resolve_file_abs_by_id(file_id)
+    if file_abs is None:
+        return None
+    current_revision = int(file_abs.stat().st_mtime_ns)
+    if expected_revision is not None and current_revision != expected_revision:
+        raise ConflictError(f'File {file_id} revision mismatch: expected {expected_revision}, current {current_revision}')
+    current_content = file_abs.read_text(encoding='utf-8')
+    new_content = current_content if content is None else content
+    _validate_serialized_content(file_abs.name, new_content)
+    file_abs.write_text(new_content, encoding='utf-8')
+    return _file_record(file_abs, include_content=False)
+
+
+def rename_file(file_id: int, new_name: str, expected_revision: int | None = None) -> dict | None:
+    _validate_simple_name(new_name, kind='File', require_extension=True)
+    file_abs = _resolve_file_abs_by_id(file_id)
+    if file_abs is None:
+        return None
+    current_revision = int(file_abs.stat().st_mtime_ns)
+    if expected_revision is not None and current_revision != expected_revision:
+        raise ConflictError(f'File {file_id} revision mismatch: expected {expected_revision}, current {current_revision}')
+    content = file_abs.read_text(encoding='utf-8')
+    _validate_serialized_content(new_name, content)
+    target = file_abs.with_name(new_name)
+    if target.exists():
+        raise ConflictError('UNIQUE constraint failed: files.folder_id, files.name')
+    file_abs.rename(target)
+    return _file_record(target, include_content=False)
+
+
+def move_file(file_id: int, new_folder_id: int, expected_revision: int | None = None) -> dict | None:
+    file_abs = _resolve_file_abs_by_id(file_id)
+    if file_abs is None:
+        return None
+    current_revision = int(file_abs.stat().st_mtime_ns)
+    if expected_revision is not None and current_revision != expected_revision:
+        raise ConflictError(f'File {file_id} revision mismatch: expected {expected_revision}, current {current_revision}')
+    folder_abs = _resolve_folder_abs_by_id(new_folder_id)
+    if folder_abs is None:
+        raise ValueError(f'Folder {new_folder_id} not found')
+    target = folder_abs / file_abs.name
+    if target.exists():
+        raise ConflictError('UNIQUE constraint failed: files.folder_id, files.name')
+    file_abs.rename(target)
+    return _file_record(target, include_content=False)
+
+
+def delete_file(file_id: int, expected_revision: int | None = None) -> bool:
+    file_abs = _resolve_file_abs_by_id(file_id)
+    if file_abs is None:
+        return False
+    current_revision = int(file_abs.stat().st_mtime_ns)
+    if expected_revision is not None and current_revision != expected_revision:
+        raise ConflictError(f'File {file_id} revision mismatch: expected {expected_revision}, current {current_revision}')
+    file_abs.unlink()
+    return True
+
+
+def search(query: str, ext: str | None = None, folder_path: str | None = None, limit: int = 20) -> list[dict]:
+    terms = _search_terms(query)
+    if not terms:
+        return []
+    base_folder = _folder_path_to_abs(folder_path) if folder_path else _root_dir()
+    if not base_folder.exists() or not base_folder.is_dir():
+        return []
+
+    scored: list[tuple[float, dict]] = []
+    for path in _iter_file_paths(base_folder):
+        if ext is not None and path.suffix.lstrip('.') != ext:
+            continue
+        content = path.read_text(encoding='utf-8')
+        metadata = _extract_metadata(path.name, content)
+        name_lower = path.name.lower()
+        metadata_text = json.dumps(metadata, ensure_ascii=False).lower()
+        content_lower = content.lower()
+
+        score = 0.0
+        matched_all = True
+        for term in terms:
+            if term not in name_lower and term not in metadata_text and term not in content_lower:
+                matched_all = False
+                break
+            score += name_lower.count(term) * 6.0
+            score += metadata_text.count(term) * 3.0
+            score += content_lower.count(term) * 1.0
+        if not matched_all:
+            continue
+
+        record = _file_record(path, include_content=False)
+        record['score'] = round(score, 3)
+        scored.append((score, record))
+
+    scored.sort(key=lambda item: (-item[0], item[1]['path']))
+    return [record for _, record in scored[:limit]]
 
 
 def import_from_fs(data_dir: Path) -> dict:
-    """Walk *data_dir* and import every *.kore* file into KoreFile.
+    source_root = Path(data_dir).resolve()
+    if source_root == _root_dir():
+        count = len(_iter_file_paths(source_root))
+        return {'imported': 0, 'skipped': count, 'errors': 0, 'error_details': []}
 
-    Files are placed in folders that mirror their relative OS directory path.
-    Files already present (same folder + name) are skipped, not overwritten.
-    Returns ``{'imported': N, 'skipped': N, 'errors': N, 'error_details': [...]}``.
-    """
-    imported = skipped = errors = 0
+    imported = 0
+    skipped = 0
+    errors = 0
     error_details: list[dict] = []
-    staged: list[dict] = []
-    with _db() as conn:
-        for p in sorted(data_dir.rglob('*')):
-            if not p.is_file() or p.suffix not in _IMPORTABLE:
-                continue
-            rel = p.relative_to(data_dir)
-            folder_path = (
-                '/' + '/'.join(rel.parts[:-1]) if len(rel.parts) > 1 else '/'
-            )
-            try:
-                row = conn.execute(
-                    'SELECT id FROM folders WHERE path=?',
-                    (folder_path,),
-                ).fetchone()
-                if row is not None:
-                    exists = conn.execute(
-                        'SELECT id FROM files WHERE folder_id=? AND name=?',
-                        (row['id'], p.name),
-                    ).fetchone()
-                    if exists:
-                        skipped += 1
-                        continue
-                content = p.read_text(encoding='utf-8')
-                _validate_simple_name(p.name, kind='File', require_extension=True)
-                _validate_serialized_content(p.name, content)
-                meta = _extract_metadata(p.name, content)
-                staged.append({
-                    'folder_path': folder_path,
-                    'name': p.name,
-                    'ext': p.suffix.lstrip('.'),
-                    'content': content,
-                    'meta_json': json.dumps(meta),
-                    'compressed': _compress(content),
-                    'word_count': _word_count(content),
-                })
-            except Exception as exc:
-                errors += 1
-                error_details.append({'file': str(rel).replace('\\', '/'), 'error': str(exc)})
-    if errors:
-        return {'imported': imported, 'skipped': skipped, 'errors': errors, 'error_details': error_details}
-    with _db() as conn:
-        for item in staged:
-            folder_id = _ensure_folder_path(conn, item['folder_path'])
-            exists = conn.execute(
-                'SELECT id FROM files WHERE folder_id=? AND name=?',
-                (folder_id, item['name']),
-            ).fetchone()
-            if exists:
+    for path in sorted(source_root.rglob('*')):
+        if not path.is_file() or path.suffix.lower() not in _VISIBLE_EXTENSIONS:
+            continue
+        rel = path.relative_to(source_root)
+        target = (_root_dir() / rel).resolve()
+        try:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            content = path.read_text(encoding='utf-8')
+            _validate_simple_name(target.name, kind='File', require_extension=True)
+            _validate_serialized_content(target.name, content)
+            if target.exists():
                 skipped += 1
                 continue
-            cur = conn.execute(
-                'INSERT INTO files '
-                '(folder_id, name, ext, content, metadata, word_count, revision) '
-                'VALUES (?,?,?,?,?,?,?)',
-                (
-                    folder_id,
-                    item['name'],
-                    item['ext'],
-                    item['compressed'],
-                    item['meta_json'],
-                    item['word_count'],
-                    1,
-                ),
-            )
-            _fts_insert(conn, cur.lastrowid, item['name'], item['meta_json'], item['content'])
+            target.write_text(content, encoding='utf-8')
             imported += 1
+        except Exception as exc:
+            errors += 1
+            error_details.append({'file': rel.as_posix(), 'error': str(exc)})
     return {'imported': imported, 'skipped': skipped, 'errors': errors, 'error_details': error_details}

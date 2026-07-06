@@ -795,6 +795,48 @@
       "availability": "guaranteed",
       "role": "core",
       "trust_boundary": "internal"
+    },
+    {
+      "skill_name": "ToolSelection Skill",
+      "relative_path": "app/system_skills/ToolSelection/skill.md",
+      "purpose": "- Inspect the full runtime tool catalog and activate additional tools for the current conversation without exposing the entire tool surface in every prompt.\n- Use this when the currently active tool set is too small for the task and you need to pull in a specific tool from the larger local or MCP inventory.\n- This is the control-plane skill for prompt-surface throttling. Prefer it over guessing tool names or asking for unavailable tools directly.",
+      "module": "KoreAgent/app/system_skills/ToolSelection/tool_selection_skill.py",
+      "trigger_keyword": "tools",
+      "triggers": [
+        "show available tools",
+        "list tools",
+        "what tools do we have",
+        "find the right tool",
+        "activate a tool",
+        "add this tool",
+        "tool catalog",
+        "selected tools"
+      ],
+      "functions": [
+        "tools_catalog_list(filter_text: str = \"\", max_items: int = 100, include_mcp: bool = True)",
+        "tools_active_add(tool_names: list[str])"
+      ],
+      "inputs": [],
+      "outputs": [
+        "`tools_catalog_list(...)` - returns a list of tool records with name, origin, availability, role, trust boundary, short description, and whether the tool is currently active.",
+        "`tools_active_add(...)` - returns a dict describing which tools were added, promoted, unknown, or evicted, plus the updated active-tool list."
+      ],
+      "param_descriptions": {
+        "tools_catalog_list": {
+          "filter_text": "case-insensitive substring filter applied to tool name and short description.",
+          "max_items": "maximum number of catalog entries to return, clamped to `1-200`.",
+          "include_mcp": "when `true`, include currently connected MCP tools in the catalog output."
+        },
+        "tools_active_add": {
+          "tool_names": "list of exact tool names to add to the active MRU working set for the current conversation."
+        }
+      },
+      "tool_selection_guidance": "Use this skill whenever the current active tool set does not contain the capability you need.\n\nWorkflow:\n1. Call `tools_catalog_list(...)` to inspect the larger catalog.\n2. Call `tools_active_add([...])` with the exact tool names you need.\n3. Then use those newly active tools in the next round.\n\nDo not guess tool names from memory when `tools_catalog_list(...)` can verify them.",
+      "is_system_skill": true,
+      "origin": "builtin",
+      "availability": "guaranteed",
+      "role": "core",
+      "trust_boundary": "internal"
     }
   ]
 }

@@ -112,6 +112,10 @@ def _decode_session_state_fields(record: dict, *, label: str) -> None:
         record["datasets_raw"] = raw_datasets
         record["datasets_parse_error"] = datasets_error
 
+    raw_tools_active = str(record.get("tools_active") or "[]")
+    tools_active, _tools_active_error = _decode_json_value(raw_tools_active, [], label=f"{label} tools_active")
+    record["tools_active"] = tools_active if isinstance(tools_active, list) else []
+
     raw_input_history = str(record.get("input_history") or "[]")
     input_history, _input_history_error = _decode_json_value(raw_input_history, [], label=f"{label} input_history")
     record["input_history"] = input_history if isinstance(input_history, list) else []

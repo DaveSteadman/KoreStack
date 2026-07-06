@@ -141,6 +141,7 @@ def execute_tool_call(
     skills_payload: dict,
     user_prompt: str = "",
     catalog_gates: dict[str, tuple[str, str]] | None = None,
+    active_tool_names: set[str] | None = None,
 ) -> ToolCallResult:
     """Execute one tool call and return the output record.
 
@@ -152,6 +153,8 @@ def execute_tool_call(
     """
     # MCP tools are dispatched to the remote server; they bypass the local allow-list.
     if _mcp_client.is_mcp_tool(tool_name):
+        if active_tool_names is not None and tool_name not in active_tool_names:
+            raise RuntimeError(f"Tool '{tool_name}' is not active for this conversation")
         resolved_args = {
             k: (resolve_tokens(v) if isinstance(v, str) else v)
             for k, v in arguments.items()
@@ -175,6 +178,8 @@ def execute_tool_call(
     resolved = tool_index.get(tool_name)
     if resolved is None:
         raise RuntimeError(f"Tool '{tool_name}' not found in skills catalog")
+    if active_tool_names is not None and tool_name not in active_tool_names:
+        raise RuntimeError(f"Tool '{tool_name}' is not active for this conversation")
     module_path, function_name = resolved
 
     # Fill {{today}}, {{yesterday}} etc. in any string argument before passing to the function.

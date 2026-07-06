@@ -88,6 +88,13 @@ def _normalize_data_relative_path(file_path: str) -> str:
         return normalized[7:]
     if normalized.startswith("data/"):
         return normalized[5:]
+    lowered = normalized.lower()
+    if lowered == "koredocs" or lowered == "./koredocs":
+        return ""
+    if lowered.startswith("./koredocs/"):
+        return normalized[11:]
+    if lowered.startswith("koredocs/"):
+        return normalized[9:]
 
     return normalized
 

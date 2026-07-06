@@ -163,6 +163,7 @@ class ConversationCreateRequest(BaseModel):
     background_context: str        = ""
     profile:            str | None = None
     external_id:        str | None = None
+    tools_active:       list[str] | None = None
 
 
 class ConversationPatchRequest(BaseModel):
@@ -172,6 +173,7 @@ class ConversationPatchRequest(BaseModel):
     thread_summary:     str | None  = None
     scratchpad:         dict | None = None
     datasets:           dict | None = None
+    tools_active:       list[str] | None = None
     background_context: str | None  = None
     token_estimate:     int | None  = None
     turn_count:         int | None  = None
@@ -192,6 +194,7 @@ def create_conversation(req: ConversationCreateRequest):
         background_context = req.background_context,
         profile            = req.profile,
         external_id        = req.external_id,
+        tools_active       = req.tools_active,
     )
     _kc_push("conv_created", result["id"])
     return result
@@ -269,6 +272,7 @@ def patch_conversation(conversation_id: int, req: ConversationPatchRequest):
         thread_summary     = req.thread_summary,
         scratchpad         = req.scratchpad,
         datasets           = req.datasets,
+        tools_active       = req.tools_active,
         background_context = req.background_context,
         token_estimate     = req.token_estimate,
         turn_count         = req.turn_count,

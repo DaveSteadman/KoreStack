@@ -98,6 +98,7 @@ from datasets import get_persisted_datasets_payload
 from datasets import hydrate_session_state
 from input_layer.korechat_proxy_routes import register_korechat_proxy_routes
 from scratchpad import get_store as get_scratch_store
+from tool_selection_state import clear_session_tools_active
 from scratchpad import scratch_clear
 from scratchpad import scratch_save as scratch_restore_key
 from input_layer.server_static import register_static_routes
@@ -698,6 +699,7 @@ def _kc_get_conversation_for_session(session_id: str) -> dict | None:
 def _delete_session_state(session_id: str) -> None:
     scratch_clear(session_id)
     delete_persisted_session_datasets(session_id)
+    clear_session_tools_active(session_id)
     conv = _kc_get_conversation_for_session(session_id)
     if conv is not None:
         _kc_delete(f"/conversations/{conv['id']}")

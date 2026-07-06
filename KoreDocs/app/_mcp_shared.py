@@ -52,6 +52,8 @@ def _normalise_folder_path(folder_path: str | None) -> str:
     parts = [p for p in path.split('/') if p]
     if any(p in ('.', '..') for p in parts):
         raise ValueError('folder_path must not contain . or .. segments')
+    if parts and parts[0].lower() == 'koredocs':
+        parts = parts[1:]
     return '/' + '/'.join(parts) if parts else '/'
 
 

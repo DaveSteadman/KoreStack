@@ -31,6 +31,7 @@ from conversation_state import build_background_turn
 from conversation_state import decode_background_context
 from conversation_state import extract_named_items
 from conversation_state import encode_background_context
+from tool_selection_state import clear_session_tools_active
 
 
 class SessionService:
@@ -389,6 +390,7 @@ class SessionService:
     def delete_session_state(self, session_id: str) -> None:
         self._scratch_clear(session_id)
         self._delete_persisted_session_datasets(session_id)
+        clear_session_tools_active(session_id)
         with self._kc_conv_cache_lock:
             self._kc_conv_cache.pop(session_id, None)
         conv = self.kc_get_conversation_for_session(session_id)

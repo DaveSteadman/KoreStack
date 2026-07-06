@@ -47,6 +47,7 @@ from session_runtime import bind_session
 from skill_executor import build_catalog_gates
 from skills.SystemInfo.system_info_skill import get_static_system_info_string
 from skills_catalog_builder import build_tool_definitions
+from tool_selection_state import derive_active_tool_runtime
 from tool_loop import extract_result_fields as _tool_loop_extract_result_fields
 import mcp_client as _mcp_client
 from tool_loop import format_tool_outputs as _tool_loop_format_tool_outputs
@@ -420,7 +421,6 @@ def resolve_execution_model(requested_model: str) -> str:
 # MARK: ORCHESTRATION PIPELINE
 # ====================================================================================================
 
-# ----------------------------------------------------------------------------------------------------
 def orchestrate_prompt(
     user_prompt: str,
     config: OrchestratorConfig,
@@ -484,12 +484,19 @@ def orchestrate_prompt(
         _log_section("AMBIENT SYSTEM INFO")
         _log(ambient_system_info)
 
-        active_payload = config.skills_payload if _WEB_SKILLS_ENABLED else _filter_web_skills(config.skills_payload)
+        available_local_payload = config.skills_payload if _WEB_SKILLS_ENABLED else _filter_web_skills(config.skills_payload)
+        initial_tool_runtime = derive_active_tool_runtime(
+            config.skills_payload,
+            available_local_payload=available_local_payload,
+            session_id=active_session_id,
+            conversation_entry=conversation_entry,
+        )
+        active_payload = initial_tool_runtime["active_local_payload"]
 
         tool_defs = build_tool_definitions(active_payload)
-        mcp_defs  = _mcp_client.get_mcp_tool_definitions()
-        if mcp_defs:
-            tool_defs = tool_defs + mcp_defs
+        initial_mcp_defs = list(initial_tool_runtime["active_mcp_defs"])
+        if initial_mcp_defs:
+            tool_defs = tool_defs + initial_mcp_defs
         _log_file_only(f"[progress] Tool definitions built: {len(tool_defs)} tools available.")
 
         system_message = _prompt_builder_build_system_message(
@@ -524,6 +531,27 @@ def orchestrate_prompt(
         )
         catalog_gates = build_catalog_gates(active_payload)
 
+        def _build_tool_runtime() -> dict[str, object]:
+            round_available_local_payload = config.skills_payload if _WEB_SKILLS_ENABLED else _filter_web_skills(config.skills_payload)
+            runtime = derive_active_tool_runtime(
+                config.skills_payload,
+                available_local_payload=round_available_local_payload,
+                session_id=active_session_id,
+                conversation_entry=conversation_entry,
+            )
+            round_active_payload = runtime["active_local_payload"]
+            round_tool_defs = build_tool_definitions(round_active_payload)
+            round_mcp_defs = list(runtime["active_mcp_defs"])
+            if round_mcp_defs:
+                round_tool_defs = round_tool_defs + round_mcp_defs
+            return {
+                "tool_defs": round_tool_defs,
+                "catalog_gates": build_catalog_gates(round_active_payload),
+                "active_tool_names": runtime["active_tool_names"],
+                "missing_selected": runtime["missing_selected"],
+                "all_known_tool_names": runtime["all_known_tool_names"],
+            }
+
         # Register a per-run stop event so that /stoprun only affects this session.
         _run_id         = f"{active_session_id}_{id(messages)}"
         _run_stop_event = threading.Event()
@@ -532,17 +560,19 @@ def orchestrate_prompt(
 
         try:
             final_response, prompt_tokens, completion_tokens, run_success, final_tps, tool_outputs = _tool_loop_run_tool_loop(
-                config        = config,
-                messages      = messages,
-                tool_defs     = tool_defs,
-                catalog_gates = catalog_gates,
-                context_map   = _context_map,
-                user_prompt   = user_prompt,
-                logger        = logger,
-                quiet         = quiet,
-                call_llm_chat = call_llm_chat,
+                config         = config,
+                messages       = messages,
+                tool_defs      = tool_defs,
+                catalog_gates  = catalog_gates,
+                active_tool_names = initial_tool_runtime["active_tool_names"],
+                context_map    = _context_map,
+                user_prompt    = user_prompt,
+                logger         = logger,
+                quiet          = quiet,
+                call_llm_chat  = call_llm_chat,
                 stop_requested = _run_stop_event.is_set,
-                clear_stop    = _run_stop_event.clear,
+                clear_stop     = _run_stop_event.clear,
+                tool_runtime_provider = _build_tool_runtime,
                 on_tool_round_complete = on_tool_round_complete,
             )
 

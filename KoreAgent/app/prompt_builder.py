@@ -93,6 +93,9 @@ _SYSTEM_SKILL_GUIDANCE: list[str] = [
 
     # -- TaskManagement (system_skills/TaskManagement/) --------------------------------------
     "- Creating, listing, updating, or deleting scheduled tasks requires calling the task_* tools. Do not generate task JSON by hand.",
+
+    # -- ToolSelection (system_skills/ToolSelection/) ----------------------------------------
+    "- The currently visible tool schema is only the active working set. When the needed capability is missing, use the tool-selection control skill to inspect the larger catalog and activate the specific tools you need.",
 ]
 
 
@@ -187,6 +190,9 @@ def _build_conversation_entry_block(conversation_entry: dict | None) -> str:
 
     snapshot: dict[str, object] = {}
     for key, value in conversation_entry.items():
+        if key == "tools_active":
+            continue
+
         if key == "scratchpad":
             named_scratch = coerce_persisted_scratchpad_payload(value)
             if named_scratch:

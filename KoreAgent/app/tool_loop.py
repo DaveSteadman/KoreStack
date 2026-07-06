@@ -305,6 +305,150 @@ def _tool_def_available(tool_defs: list[dict], tool_name: str) -> bool:
     return False
 
 
+def _compact_tool_name_list(tool_names: set[str] | list[str] | tuple[str, ...] | None, *, limit: int = 10) -> str:
+    names = sorted({str(name or "").strip() for name in (tool_names or []) if str(name or "").strip()})
+    if not names:
+        return "(none)"
+    if len(names) <= limit:
+        return ", ".join(names)
+    return ", ".join(names[:limit]) + f", ... (+{len(names) - limit} more)"
+
+
+def _classify_tool_recovery(
+    requested_tool_name: str,
+    *,
+    active_tool_names: set[str] | None,
+    all_known_tool_names: set[str] | None,
+) -> dict[str, object]:
+    requested = str(requested_tool_name or "").strip()
+    active_names = set(active_tool_names or set())
+    known_names = set(all_known_tool_names or set())
+    if not requested:
+        return {"classification": "unknown_name", "requested_tool": requested, "active_tool_names": sorted(active_names)}
+
+    if requested in known_names:
+        return {
+            "classification": "active_known" if requested in active_names else "inactive_known",
+            "requested_tool": requested,
+            "active_tool_names": sorted(active_names),
+        }
+
+    try:
+        from tool_selection_state import suggest_tool_name
+
+        suggestion = suggest_tool_name(requested, known_names)
+    except Exception:
+        suggestion = {"status": "none", "requested_name": requested, "candidates": []}
+
+    status = str(suggestion.get("status") or "none")
+    corrected = str(suggestion.get("best_match") or "").strip()
+    candidates = suggestion.get("candidates") if isinstance(suggestion.get("candidates"), list) else []
+
+    if status == "corrected" and corrected:
+        return {
+            "classification": "corrected_active" if corrected in active_names else "corrected_inactive",
+            "requested_tool": requested,
+            "corrected_tool": corrected,
+            "candidates": candidates,
+            "active_tool_names": sorted(active_names),
+        }
+    if status == "ambiguous":
+        return {
+            "classification": "ambiguous_name",
+            "requested_tool": requested,
+            "corrected_tool": corrected,
+            "candidates": candidates,
+            "active_tool_names": sorted(active_names),
+        }
+    return {
+        "classification": "unknown_name",
+        "requested_tool": requested,
+        "candidates": candidates,
+        "active_tool_names": sorted(active_names),
+    }
+
+
+def _build_tool_recovery_message(event: dict[str, object]) -> str:
+    classification = str(event.get("classification") or "unknown_name")
+    requested = str(event.get("requested_tool") or "").strip()
+    corrected = str(event.get("corrected_tool") or "").strip()
+    active_names = event.get("active_tool_names")
+    active_summary = _compact_tool_name_list(active_names if isinstance(active_names, list) else [])
+    candidates = event.get("candidates") if isinstance(event.get("candidates"), list) else []
+
+    if classification == "inactive_known":
+        if event.get("auto_activated"):
+            return (
+                f"Recovery required: tool `{requested}` exists in the runtime catalog but was not active for this conversation.\n"
+                f"It has been added to the active tool set for this conversation.\n"
+                "Do not answer the user yet.\n"
+                f"Retry the same tool name now: `{requested}`.\n"
+                f"Currently active tools: {active_summary}"
+            )
+        return (
+            f"Recovery required: tool `{requested}` exists in the runtime catalog but is not active for this conversation.\n"
+            "Do not answer the user yet.\n"
+            "Use ToolSelection now.\n"
+            f"Call `tools_active_add([\"{requested}\"])`, then continue the task.\n"
+            f"Currently active tools: {active_summary}"
+        )
+
+    if classification == "corrected_active":
+        return (
+            f"Recovery required: requested tool `{requested}` is not a valid tool name.\n"
+            f"Closest valid tool: `{corrected}`.\n"
+            "That corrected tool is already active for this conversation.\n"
+            "Do not answer the user yet.\n"
+            f"Retry using `{corrected}` only.\n"
+            f"Currently active tools: {active_summary}"
+        )
+
+    if classification == "corrected_inactive":
+        return (
+            f"Recovery required: requested tool `{requested}` is not a valid tool name.\n"
+            f"Closest valid tool: `{corrected}`.\n"
+            "That tool is available but not active for this conversation.\n"
+            "Do not answer the user yet.\n"
+            "Use ToolSelection now.\n"
+            f"Call `tools_active_add([\"{corrected}\"])`, then continue the task.\n"
+            f"Currently active tools: {active_summary}"
+        )
+
+    if classification == "ambiguous_name":
+        candidate_names = ", ".join(f"`{str(item.get('name', ''))}`" for item in candidates[:3] if str(item.get("name", "")).strip()) or "(no close candidates)"
+        return (
+            f"Recovery required: requested tool `{requested}` is not a valid exact tool name.\n"
+            f"Closest candidates: {candidate_names}.\n"
+            "Do not answer the user yet.\n"
+            "Use ToolSelection now.\n"
+            f"Call `tools_catalog_list(filter_text=\"{requested}\")`, choose the exact tool name, then continue the task.\n"
+            f"Currently active tools: {active_summary}"
+        )
+
+    return (
+        f"Recovery required: requested tool `{requested}` is not a valid tool name in this runtime.\n"
+        "Do not answer the user yet.\n"
+        "Use ToolSelection now.\n"
+        f"Call `tools_catalog_list(filter_text=\"{requested}\")`, then activate the correct tool and continue the task.\n"
+        f"Currently active tools: {active_summary}"
+    )
+
+
+def _build_tool_recovery_reminder(event: dict[str, object]) -> str:
+    classification = str(event.get("classification") or "unknown_name")
+    requested = str(event.get("requested_tool") or "").strip()
+    corrected = str(event.get("corrected_tool") or "").strip()
+    if classification == "inactive_known" and event.get("auto_activated"):
+        return f"Recovery still required: do not answer yet. Retry `{requested}` now; it is already active for this conversation."
+    if classification == "corrected_active":
+        return f"Recovery still required: do not answer yet. Retry with the corrected active tool name `{corrected}` only."
+    if classification == "corrected_inactive":
+        return f"Recovery still required: do not answer yet. Activate `{corrected}` with `tools_active_add([\"{corrected}\"])`, then continue the task."
+    if classification == "ambiguous_name":
+        return f"Recovery still required: do not answer yet. Inspect the catalog with `tools_catalog_list(filter_text=\"{requested}\")` and choose an exact tool name."
+    return f"Recovery still required: do not answer yet. Inspect the tool catalog and choose the exact tool needed for `{requested}`."
+
+
 def _is_graph_connection_write_request(user_prompt: str) -> bool:
     return bool(_GRAPH_WRITE_INTENT_RE.search(user_prompt or ""))
 
@@ -451,6 +595,7 @@ def run_tool_loop(
     messages: list[dict],
     tool_defs: list[dict],
     catalog_gates: dict,
+    active_tool_names: set[str] | None,
     context_map: list[dict],
     user_prompt: str,
     logger,
@@ -458,6 +603,7 @@ def run_tool_loop(
     call_llm_chat,
     stop_requested,
     clear_stop,
+    tool_runtime_provider: object | None = None,
     on_tool_round_complete: object | None = None,
 ) -> tuple[str, int, int, bool, float, list[ToolCallResult]]:
     def _log(message: str = "") -> None:
@@ -476,12 +622,33 @@ def run_tool_loop(
     run_success = False
     final_response = ""
     prev_round_tc_fingerprints: frozenset = frozenset()
+    recovery_pending: dict[str, object] | None = None
     graph_write_guard_corrections = 0
     graph_write_guard_active = _is_graph_connection_write_request(user_prompt) and _tool_def_available(tool_defs, "graph_connection_create_many")
 
     clear_stop()
     try:
         for round_num in range(1, config.max_iterations + 1):
+            current_tool_defs = tool_defs
+            current_catalog_gates = catalog_gates
+            current_active_tool_names = set(active_tool_names or set()) if active_tool_names is not None else None
+            current_all_known_tool_names = set(current_active_tool_names or set())
+            if tool_runtime_provider is not None:
+                runtime = tool_runtime_provider() or {}
+                current_tool_defs = runtime.get("tool_defs", current_tool_defs)
+                current_catalog_gates = runtime.get("catalog_gates", current_catalog_gates)
+                current_active_tool_names = set(runtime.get("active_tool_names", current_active_tool_names) or set())
+                current_all_known_tool_names = set(runtime.get("all_known_tool_names", current_all_known_tool_names) or set())
+                missing_selected = list(runtime.get("missing_selected", []) or [])
+                if missing_selected:
+                    missing_names = ", ".join(missing_selected)
+                    correction = (
+                        f"Previously selected tool(s) are no longer present in the current runtime inventory: {missing_names}. "
+                        "They were removed from the active set. Inspect the tool catalog and choose another tool if you still need that capability."
+                    )
+                    messages.append({"role": "user", "content": correction})
+                    context_map.append({"round": round_num, "role": "user", "label": "[missing tool correction]", "chars": len(correction), "auto_key": None, "msg_idx": len(messages) - 1})
+
             if stop_requested():
                 clear_stop()
                 _log(f"[/stoprun] Stop requested - halting before round {round_num}.")
@@ -496,7 +663,7 @@ def run_tool_loop(
             _log_file_only(f"[context] thread: {thread_chars:,} chars (~{thread_chars // 4:,} tok est.) | window: {config.num_ctx:,} | remaining est.: ~{config.num_ctx - thread_chars // 4:,}")
 
             try:
-                result = call_llm_chat(model_name=config.resolved_model, messages=messages, tools=tool_defs if tool_defs else None, num_ctx=config.num_ctx)
+                result = call_llm_chat(model_name=config.resolved_model, messages=messages, tools=current_tool_defs if current_tool_defs else None, num_ctx=config.num_ctx)
             except Exception as error:
                 error_str = str(error)
                 if "error parsing tool call" in error_str:
@@ -560,6 +727,17 @@ def run_tool_loop(
                         messages.append({"role": "assistant", "content": final_response})
                         context_map.append({"round": round_num, "role": "asst", "label": "graph-write guard failure", "chars": len(final_response), "auto_key": None, "msg_idx": len(messages) - 1})
                         break
+                elif recovery_pending is not None:
+                    reminders_sent = int(recovery_pending.get("reminders_sent") or 0)
+                    if reminders_sent < 1:
+                        reminder = _build_tool_recovery_reminder(recovery_pending)
+                        recovery_pending["reminders_sent"] = reminders_sent + 1
+                        prev_round_tc_fingerprints = frozenset()
+                        _log_file_only(f"[warn] Round {round_num}: model attempted to finish while tool recovery was still pending - injecting reminder.")
+                        messages.append({"role": "user", "content": reminder})
+                        context_map.append({"round": round_num, "role": "user", "label": "[tool recovery reminder]", "chars": len(reminder), "auto_key": None, "msg_idx": len(messages) - 1})
+                        continue
+                    recovery_pending = None
                 else:
                     final_response = candidate
                     run_success = bool(final_response)
@@ -571,6 +749,8 @@ def run_tool_loop(
 
             _log(f"Round {round_num}: model requested {len(tool_calls)} tool call(s).")
             _log_file_only("[progress] Executing tool calls...")
+            if recovery_pending is not None:
+                recovery_pending = None
             current_tc_fingerprints = frozenset((tc.get("function", {}).get("name", ""), tc.get("function", {}).get("arguments", "{}")) for tc in tool_calls)
             if current_tc_fingerprints and current_tc_fingerprints == prev_round_tc_fingerprints:
                 correction = (
@@ -593,6 +773,7 @@ def run_tool_loop(
             context_map.append({"round": round_num, "role": "asst", "label": f"(tool calls x{len(tool_calls)})", "chars": len(assistant_content), "auto_key": None, "msg_idx": len(messages) - 1})
 
             round_outputs: list[ToolCallResult] = []
+            round_recovery_events: list[dict[str, object]] = []
             for tc_idx, tool_call in enumerate(tool_calls):
                 tc_id = tool_call.get("id", "")
                 tc_func = tool_call.get("function", {})
@@ -614,7 +795,7 @@ def run_tool_loop(
                 if normalization_note:
                     _log_file_only(f"[tool-normalize] {normalization_note}")
                 try:
-                    output = execute_tool_call(func_name, arguments, config.skills_payload, user_prompt, catalog_gates)
+                    output = execute_tool_call(func_name, arguments, config.skills_payload, user_prompt, current_catalog_gates, current_active_tool_names)
                     raw_result_content = output["result"]
                     auto_dataset_manifest = None
                     if not output.get("is_error"):
@@ -628,6 +809,24 @@ def run_tool_loop(
                     if output.get("is_error"):
                         result_content = f"[SKILL_ERROR] {result_content}"
                 except Exception as exc:
+                    recovery_event = _classify_tool_recovery(
+                        func_name,
+                        active_tool_names=current_active_tool_names,
+                        all_known_tool_names=current_all_known_tool_names,
+                    )
+                    if recovery_event.get("classification") == "inactive_known":
+                        try:
+                            from tool_selection_state import promote_selected_tools
+
+                            promote_selected_tools([func_name])
+                            recovery_event["auto_activated"] = True
+                            current_active_tool_names = set(current_active_tool_names or set()) | {func_name}
+                        except Exception as activate_exc:
+                            recovery_event["auto_activated"] = False
+                            _log_file_only(f"[tool-recovery] could not auto-activate '{func_name}': {activate_exc}")
+                    recovery_event["active_tool_names"] = sorted(current_active_tool_names or set())
+                    if recovery_event.get("classification") != "active_known":
+                        round_recovery_events.append(recovery_event)
                     result_content = f"[SKILL_ERROR] Error executing {func_name}: {exc}"
                     output = ToolCallResult(tool=func_name, function=func_name, module="", arguments=arguments, result=result_content, status="error", error=str(exc))
 
@@ -649,8 +848,24 @@ def run_tool_loop(
                 _log(f"     {trunc(str(result_content), 120)}")
                 round_outputs.append(output)
                 tool_outputs.append(output)
+                if not output.get("is_error"):
+                    try:
+                        from tool_selection_state import note_tool_used
+                        note_tool_used(func_name)
+                    except Exception as exc:
+                        _log_file_only(f"[tool-selection] could not promote MRU tool '{func_name}': {exc}")
                 messages.append({"role": "tool", "tool_call_id": tc_id, "name": func_name, "content": thread_content})
                 context_map.append({"round": round_num, "role": "tool", "label": func_name, "chars": len(thread_content), "auto_key": auto_scratch_key, "msg_idx": len(messages) - 1})
+
+            if round_recovery_events:
+                recovery_pending = dict(round_recovery_events[0])
+                recovery_pending["reminders_sent"] = 0
+                correction = _build_tool_recovery_message(recovery_pending)
+                _log_file_only(
+                    f"[tool-recovery] {recovery_pending.get('classification')}: requested={recovery_pending.get('requested_tool')} corrected={recovery_pending.get('corrected_tool', '')}"
+                )
+                messages.append({"role": "user", "content": correction})
+                context_map.append({"round": round_num, "role": "user", "label": "[tool recovery correction]", "chars": len(correction), "auto_key": None, "msg_idx": len(messages) - 1})
 
             if on_tool_round_complete is not None:
                 try:

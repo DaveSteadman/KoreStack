@@ -35,6 +35,7 @@ CREATE TABLE IF NOT EXISTS conversations (
     thread_summary      TEXT    NOT NULL DEFAULT '',
     scratchpad          TEXT    NOT NULL DEFAULT '{}',
     datasets            TEXT    NOT NULL DEFAULT '{}',
+    tools_active        TEXT    NOT NULL DEFAULT '[]',
     input_history       TEXT    NOT NULL DEFAULT '[]',
     background_context  TEXT    NOT NULL DEFAULT '',
     token_estimate      INTEGER NOT NULL DEFAULT 0,
@@ -111,6 +112,8 @@ def init_db() -> None:
                     "UPDATE conversations SET scratchpad = ?, datasets = ? WHERE id = ?",
                     (json.dumps(scratchpad_payload), json.dumps(datasets_payload), row["id"]),
                 )
+        if cols and "tools_active" not in cols:
+            connection.execute("ALTER TABLE conversations ADD COLUMN tools_active TEXT NOT NULL DEFAULT '[]'")
         if cols and "protected" not in cols:
             connection.execute("ALTER TABLE conversations ADD COLUMN protected INTEGER NOT NULL DEFAULT 0")
             if "has_explicit_name" in cols:

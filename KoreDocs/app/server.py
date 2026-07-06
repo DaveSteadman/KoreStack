@@ -14,13 +14,13 @@
 #   python main.py --port 8080    # override port at runtime
 #
 # Constants:
-#   DATA_DIR   -- KoreFiles data directory
-#   DB_PATH    -- SQLite database path (passed to korefile.configure)
+#   DATA_DIR   -- KoreDocs filesystem root (shared datauser directory)
+#   DB_PATH    -- legacy SQLite database path used only for one-time migration
 #   LOG_PATH   -- log file path
 #   API_TOKEN  -- optional bearer token for MCP endpoint authentication
 #
 # Related modules:
-#   - app/korefile.py      -- KoreFile virtual file system (SQLite + FTS5)
+#   - app/korefile.py      -- KoreDocs filesystem storage adapter
 #   - app/koredocs_mcp.py  -- MCP tool assembler (registers all tool handlers)
 #   - app/config.py        -- cfg (host, port)
 #   - static/              -- bundled single-page web application
@@ -64,6 +64,13 @@ from .koredocs_mcp import (
 )
 
 try:
+    from KoreAgent.app.utils.workspace_utils import get_controldata_dir as _shared_get_controldata_dir
+    from KoreAgent.app.utils.workspace_utils import get_user_data_dir as _shared_get_user_data_dir
+except Exception:
+    _shared_get_controldata_dir = None
+    _shared_get_user_data_dir = None
+
+try:
     from dotenv import load_dotenv
     load_dotenv()
 except ImportError:
@@ -79,12 +86,22 @@ STATIC   = Path(
     )
 ).resolve()
 SUITE_ROOT = Path(os.environ.get('KORE_SUITE_ROOT', str(BASE_DIR.parent))).resolve()
-SUITE_DATACONTROL = Path(os.environ.get('KORE_SUITE_DATACONTROL', str(SUITE_ROOT / 'datacontrol'))).resolve()
-SUITE_DATAUSER = Path(os.environ.get('KORE_SUITE_DATAUSER', str(SUITE_ROOT / 'datauser'))).resolve()
+SUITE_DATACONTROL = Path(
+    os.environ.get(
+        'KORE_SUITE_DATACONTROL',
+        str(_shared_get_controldata_dir() if _shared_get_controldata_dir is not None else (SUITE_ROOT / 'datacontrol')),
+    )
+).resolve()
+SUITE_DATAUSER = Path(
+    os.environ.get(
+        'KORE_SUITE_DATAUSER',
+        str(_shared_get_user_data_dir() if _shared_get_user_data_dir is not None else (SUITE_ROOT / 'datauser')),
+    )
+).resolve()
 COMMONUI_ASSETS = Path(os.environ.get('KORE_UIELEMENTS_ASSETS_DIR', str(BASE_DIR.parent / 'UIElements' / 'assets')))
 if not COMMONUI_ASSETS.exists():
     COMMONUI_ASSETS = STATIC / 'shared'
-DATA_DIR = Path(os.environ.get('KOREDOCS_DATA_DIR', str(SUITE_DATAUSER / 'KoreFiles')))
+DATA_DIR = Path(os.environ.get('KOREDOCS_DATA_DIR', str(SUITE_DATAUSER)))
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 CONTROL_DIR = Path(os.environ.get('KOREDOCS_CONTROL_DIR', str(SUITE_DATACONTROL / 'koredocs')))
@@ -93,7 +110,7 @@ DB_PATH  = CONTROL_DIR / 'korefile.db'
 LOG_PATH = SUITE_DATACONTROL / 'logs' / 'koredocs' / 'koredocs.log'
 LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
 
-korefile.configure(DB_PATH)
+korefile.configure(DATA_DIR, DB_PATH)
 
 ALLOWED_EXTENSIONS = frozenset({'.koredoc', '.koresheet', '.korediag'})
 API_TOKEN = os.environ.get('KOREDOCS_API_TOKEN')

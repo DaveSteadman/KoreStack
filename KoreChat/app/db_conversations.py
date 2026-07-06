@@ -37,21 +37,23 @@ def conversation_create(
     profile: str | None = None,
     external_id: str | None = None,
     protected: bool | None = None,
+    tools_active: list[str] | None = None,
 ) -> dict:
     now             = _now()
     profile         = profile or _default_profile(channel_type)
     protected_value = int(protected) if protected is not None else _is_protected_subject(subject, external_id)
+    tools_active_payload = json.dumps(tools_active if isinstance(tools_active, list) else [])
     with _conn() as connection:
         try:
             cur = connection.execute(
                 """
                 INSERT INTO conversations
                     (channel_type, profile, status, subject, protected, external_id, thread_summary, scratchpad, datasets,
-                     background_context, token_estimate, turn_count,
+                     tools_active, background_context, token_estimate, turn_count,
                      last_activity_at, created_at, updated_at)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                 """,
-                (channel_type, profile, "active", subject, protected_value, external_id, "", "{}", "{}", background_context, 0, 0, now, now, now),
+                (channel_type, profile, "active", subject, protected_value, external_id, "", "{}", "{}", tools_active_payload, background_context, 0, 0, now, now, now),
             )
             row_id = cur.lastrowid
         except sqlite3.IntegrityError:
@@ -172,6 +174,7 @@ def conversation_update(
     thread_summary: str | None = None,
     scratchpad: dict | None = None,
     datasets: dict | None = None,
+    tools_active: list[str] | None = None,
     background_context: str | None = None,
     token_estimate: int | None = None,
     turn_count: int | None = None,
@@ -199,6 +202,9 @@ def conversation_update(
     if datasets is not None:
         fields.append("datasets = ?")
         params.append(json.dumps(datasets))
+    if tools_active is not None:
+        fields.append("tools_active = ?")
+        params.append(json.dumps(tools_active))
     if background_context is not None:
         fields.append("background_context = ?")
         params.append(background_context)
