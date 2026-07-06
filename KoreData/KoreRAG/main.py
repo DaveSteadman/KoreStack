@@ -20,8 +20,7 @@ import logutil
 import uvicorn
 from datetime import datetime
 from app.config import cfg
-from app.database import get_status, init_db
-from app.registry import list_databases, list_database_ids
+from app.registry import list_databases
 from config import get_suite_datacontrol_dir
 
 _W = 80
@@ -53,14 +52,7 @@ def _print_banner() -> None:
         "  Databases:",
     ]
     for db_info in dbs:
-        db_id = db_info["id"]
-        try:
-            stats = get_status(db=db_id)
-            chunks = stats["total_chunks"]
-            size_kb = stats["db_size_bytes"] // 1024
-            lines.append(f"    {db_info['display_name']:<28} {chunks:,} chunks  ({size_kb:,} KB)")
-        except Exception:
-            lines.append(f"    {db_info['display_name']:<28} (not yet initialised)")
+        lines.append(f"    {db_info['display_name']:<28} initialising")
     lines += ["", sep, ""]
     print("\n".join(lines))
 
@@ -70,8 +62,6 @@ if __name__ == "__main__":
     _DATA_DIR.mkdir(parents=True, exist_ok=True)
     _LOG_PATH = get_suite_datacontrol_dir() / "logs" / "koredata" / "rag.log"
     _LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
-    for _db_id in list_database_ids():
-        init_db(db=_db_id)
     _print_banner()
     uvicorn.run(
         "app.server:app",

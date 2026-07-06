@@ -176,6 +176,7 @@ _maybe_reexec_into_project_venv()
 
 import llm_client as llm_client
 from input_layer.server_startup import run_api_mode
+from input_layer.server import update_startup_state
 from llm_client import format_running_model_report
 from llm_client import get_llm_timeout
 from llm_client import register_llm_call_logger
@@ -425,25 +426,11 @@ def _run(args, logger, log_path) -> None:
     # Set the active host once; all subsequent LLM calls use this value.
     llm_client.configure_host(args.llmhost)
 
-    # Ensure the inference server is running before starting the UI. For local Ollama,
-    # ollama serve is auto-started if needed. For remote/cloud Ollama and LM Studio a
-    # warning is printed but startup continues.
-    try:
-        llm_client.ensure_ollama_running(verbose=True)
-    except RuntimeError as exc:
-        print(f"Warning: {exc}  LLM calls will fail until the server is reachable.", flush=True)
-
-    # Resolve the alias (e.g. "20b") to a concrete installed model name.
-    try:
-        resolved_model = resolve_execution_model(args.model)
-    except Exception:
-        resolved_model = args.model
-
     skills_payload = load_skills_payload(SKILLS_CATALOG_PATH)
     catalog_mtime  = SKILLS_CATALOG_PATH.stat().st_mtime if SKILLS_CATALOG_PATH.exists() else 0.0
 
     config = OrchestratorConfig(
-        resolved_model      = resolved_model,
+        resolved_model      = args.model,
         num_ctx             = args.ctx,
         max_iterations      = MAX_ITERATIONS,
         skills_payload      = skills_payload,
@@ -451,14 +438,10 @@ def _run(args, logger, log_path) -> None:
         catalog_mtime       = catalog_mtime,
     )
 
-    llm_client.register_session_config(resolved_model, args.ctx)
+    llm_client.register_session_config(config.resolved_model, args.ctx)
 
-    _host_ok    = llm_client.is_ollama_running() if llm_client.get_active_backend() == "ollama" else True
-    try:
-        _known      = llm_client.list_ollama_models()
-        _model_ok   = resolved_model in _known
-    except Exception:
-        _model_ok   = False
+    _host_ok      = False
+    _model_ok     = False
     _cd = get_controldata_dir()
     _ud = get_user_data_dir()
     _tick = chr(0x2713)
@@ -466,9 +449,9 @@ def _run(args, logger, log_path) -> None:
 
     _backend_label = "LM Studio host" if llm_client.get_active_backend() == "lmstudio" else "Ollama host"
     logger.log_section("SYSTEM STATUS")
-    logger.log(f"{_backend_label}:   {llm_client.get_active_host()} {_tick if _host_ok else _cross}")
+    logger.log(f"{_backend_label}:   {llm_client.get_active_host()} (pending)")
     logger.log(f"Requested model: {args.model}")
-    logger.log(f"Resolved model:  {resolved_model} {_tick if _model_ok else _cross}")
+    logger.log(f"Resolved model:  {config.resolved_model} (pending)")
     print(f"Control data:    {_cd} {_tick if _cd.exists() else _cross}", flush=True)
     print(f"User data:       {_ud} {_tick if _ud.exists() else _cross}", flush=True)
 
@@ -497,6 +480,15 @@ def _run(args, logger, log_path) -> None:
     _seq_mcp_started = False  # tracks whether _mcp_client was started in sequence mode
 
     if sequence_file_path:
+        try:
+            llm_client.ensure_ollama_running(verbose=True)
+        except RuntimeError as exc:
+            print(f"Warning: {exc}  LLM calls will fail until the server is reachable.", flush=True)
+        try:
+            config.resolved_model = resolve_execution_model(args.model)
+            llm_client.register_session_config(config.resolved_model, args.ctx)
+        except Exception:
+            config.resolved_model = args.model
         from urllib.parse import urlparse as _urlparse
         _seq_mcp = _raw_defaults.get("mcp_connections") or _raw_defaults.get("mcp_servers") or []
         # Probe each configured MCP server; connect if any are reachable.
@@ -519,19 +511,6 @@ def _run(args, logger, log_path) -> None:
             if not _seq_mcp:
                 logger.log("MCP connections: (none configured)")
         logger.log(f"KoreChat:{_koreconv_url or '(not configured)'} (skipped in sequence mode)")
-    else:
-        _mcp_client.start(DEFAULTS_FILE)
-
-        _mcp_status = _mcp_client.get_server_status()
-        for _srv in _mcp_status:
-            _ok_str = f"({_srv['tool_count']} tool(s))" if _srv["ok"] else "(failed to connect)"
-            _purpose = f" - {_srv['purpose']}" if _srv.get("purpose") else ""
-            logger.log(f"MCP [{_srv['name']}]: {_srv['url']} {_ok_str} {_tick if _srv['ok'] else _cross}{_purpose}")
-        if not _mcp_status:
-            logger.log("MCP connections: (none configured)")
-
-        _kc_ok = _service_reachable(_koreconv_url)
-        logger.log(f"KoreChat:{_koreconv_url or '(not configured)'} {_tick if _kc_ok else _cross}")
     mode_label = (
         f"chat-sequence:{sequence_file_path.name}" if sequence_file_path else
         "api"
@@ -540,10 +519,7 @@ def _run(args, logger, log_path) -> None:
     logger.log(f"ctx:             {args.ctx}")
     logger.log(f"LLM timeout:     {get_llm_timeout()}s")
     logger.log(f"Max iterations:  {MAX_ITERATIONS}")
-    try:
-        logger.log(format_running_model_report(resolved_model))
-    except Exception as exc:
-        logger.log(f"Model runtime status: unavailable ({exc})")
+    logger.log("Model runtime status: pending background warmup")
     logger.log(f"Log file:        {log_path.as_posix()}")
 
     if sequence_file_path:
@@ -554,8 +530,124 @@ def _run(args, logger, log_path) -> None:
                 _mcp_client.stop()
         return
 
+    update_startup_state(
+        service_status = "starting",
+        message        = "Launching HTTP server",
+        dependencies   = {
+            "llm":      {"status": "pending", "detail": f"{_backend_label} warmup pending"},
+            "mcp":      {"status": "pending", "detail": "MCP discovery pending"},
+            "korechat": {"status": "pending", "detail": "KoreChat reachability pending"},
+        },
+    )
+
+    def _background_startup() -> None:
+        resolved_model = config.resolved_model
+        dep_statuses   = {
+            "llm":      "pending",
+            "mcp":      "pending",
+            "korechat": "pending",
+        }
+
+        def _service_status() -> str:
+            return "degraded" if any(status == "degraded" for status in dep_statuses.values()) else "ready"
+
+        try:
+            llm_client.ensure_ollama_running(verbose=True)
+            _host_ok = llm_client.is_ollama_running() if llm_client.get_active_backend() == "ollama" else True
+            _known   = llm_client.list_ollama_models()
+            try:
+                resolved_model = resolve_execution_model(args.model)
+            except Exception:
+                resolved_model = args.model
+            config.resolved_model = resolved_model
+            llm_client.register_session_config(resolved_model, args.ctx)
+            _model_ok = resolved_model in _known
+            update_startup_state(
+                dependencies = {
+                    "llm": {
+                        "status": "ready" if _host_ok and _model_ok else "degraded",
+                        "detail": f"{resolved_model} on {llm_client.get_active_host()}",
+                    }
+                }
+            )
+            dep_statuses["llm"] = "ready" if _host_ok and _model_ok else "degraded"
+            logger.log(f"{_backend_label}:   {llm_client.get_active_host()} {_tick if _host_ok else _cross}")
+            logger.log(f"Resolved model:  {resolved_model} {_tick if _model_ok else _cross}")
+        except RuntimeError as exc:
+            dep_statuses["llm"] = "degraded"
+            update_startup_state(
+                service_status = "degraded",
+                dependencies   = {
+                    "llm": {
+                        "status": "degraded",
+                        "detail": str(exc),
+                    }
+                },
+            )
+            logger.log(f"{_backend_label}:   {llm_client.get_active_host()} {_cross}")
+            logger.log(f"Resolved model:  {resolved_model} {_cross}")
+            print(f"Warning: {exc}  LLM calls will fail until the server is reachable.", flush=True)
+
+        try:
+            _mcp_client.start(DEFAULTS_FILE)
+            _mcp_status = _mcp_client.get_server_status()
+            for _srv in _mcp_status:
+                _ok_str  = f"({_srv['tool_count']} tool(s))" if _srv["ok"] else "(failed to connect)"
+                _purpose = f" - {_srv['purpose']}" if _srv.get("purpose") else ""
+                logger.log(f"MCP [{_srv['name']}]: {_srv['url']} {_ok_str} {_tick if _srv['ok'] else _cross}{_purpose}")
+            if not _mcp_status:
+                logger.log("MCP connections: (none configured)")
+            _mcp_ok = any(_srv["ok"] for _srv in _mcp_status) if _mcp_status else True
+            dep_statuses["mcp"] = "ready" if _mcp_ok else "degraded"
+            update_startup_state(
+                service_status = _service_status(),
+                dependencies   = {
+                    "mcp": {
+                        "status": "ready" if _mcp_ok else "degraded",
+                        "detail": f"{sum(1 for _srv in _mcp_status if _srv['ok'])}/{len(_mcp_status)} servers connected" if _mcp_status else "No MCP connections configured",
+                    }
+                },
+            )
+        except Exception as exc:
+            dep_statuses["mcp"] = "degraded"
+            update_startup_state(
+                service_status = "degraded",
+                dependencies   = {
+                    "mcp": {
+                        "status": "degraded",
+                        "detail": str(exc),
+                    }
+                },
+            )
+            logger.log(f"MCP startup failed: {exc}")
+
+        _kc_ok = _service_reachable(_koreconv_url)
+        logger.log(f"KoreChat:{_koreconv_url or '(not configured)'} {_tick if _kc_ok else _cross}")
+        dep_statuses["korechat"] = "ready" if _kc_ok else ("disabled" if not _koreconv_url else "degraded")
+        update_startup_state(
+            service_status = _service_status(),
+            message        = "Ready" if _service_status() == "ready" else "Running with degraded dependencies",
+            dependencies   = {
+                "korechat": {
+                    "status": "ready" if _kc_ok else ("disabled" if not _koreconv_url else "degraded"),
+                    "detail": _koreconv_url or "Not configured",
+                }
+            },
+        )
+        try:
+            logger.log(format_running_model_report(config.resolved_model))
+        except Exception as exc:
+            logger.log(f"Model runtime status: unavailable ({exc})")
+
     try:
-        run_api_mode(config=config, logger=logger, log_path=log_path, host="0.0.0.0", port=args.agentport)
+        run_api_mode(
+            config             = config,
+            logger             = logger,
+            log_path           = log_path,
+            host               = "0.0.0.0",
+            port               = args.agentport,
+            background_startup = _background_startup,
+        )
     finally:
         _mcp_client.stop()
 

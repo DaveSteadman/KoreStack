@@ -2,6 +2,7 @@ import os
 import re
 from pathlib import Path
 import sys
+import json
 from typing import Optional
 from urllib.parse import quote
 
@@ -15,6 +16,7 @@ _KORECOMMON_PARENT = next((parent for parent in Path(__file__).resolve().parents
 if _KORECOMMON_PARENT is not None and str(_KORECOMMON_PARENT) not in sys.path:
     sys.path.insert(0, str(_KORECOMMON_PARENT))
 
+from config import get_suite_urls_map
 from app.database import (
     delete_all_articles,
     delete_article,
@@ -243,7 +245,7 @@ def _parse_article_form(
 def register_reference_ui(app: FastAPI) -> None:
     @app.get("/suite-config.js", include_in_schema=False)
     def suite_config_js():
-        urls = os.environ.get("KORE_SUITE_URLS", "{}")
+        urls = json.dumps(get_suite_urls_map())
         return Response(
             content    = f"window.__koreSuiteUrls = {urls};",
             media_type = "application/javascript",

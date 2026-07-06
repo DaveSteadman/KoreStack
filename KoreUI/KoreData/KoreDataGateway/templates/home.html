@@ -153,11 +153,22 @@
     <span class="meta" style="margin-left:0.5rem;font-size:11px">- agent API | POST /api/search</span>
   </div>
   <div class="panel-body kcui-panel-body">
-    <p class="meta" style="margin-bottom:0.4rem;">Bare terms use AND by default. Use quotes for phrases, OR or | for alternatives, NOT to exclude, and parentheses to group.</p>
+    <input id="sq-mode" type="hidden" value="keyword">
+    <p class="meta" id="sq-mode-hint" style="margin-bottom:0.4rem;">Bare terms use AND by default. Use quotes for phrases, OR or | for alternatives, NOT to exclude, and parentheses to group.</p>
     <div style="display:flex; flex-direction:row; gap:0; margin-bottom:0.75rem;">
       <input id="sq-query" type="search" placeholder="e.g. climate change arctic ice" autocomplete="off"
              style="flex:1;" onkeydown="if(event.key==='Enter') runSearch()">
       <button class="btn btn-sm btn-yellow" onclick="runSearch()">SEARCH</button>
+    </div>
+
+    <div style="display:flex; flex-wrap:wrap; gap:var(--kcui-gap-panel); align-items:center; margin-bottom:0.75rem;">
+      <label class="kd-service-check">
+        <input type="checkbox" id="sq-mode-keyword" checked onchange="toggleGatewaySearchMode('keyword')"> Keyword
+      </label>
+      <label class="kd-service-check">
+        <input type="checkbox" id="sq-mode-semantic" onchange="toggleGatewaySearchMode('semantic')"> Semantic
+      </label>
+      <span class="meta">semantic currently targets Feeds and Library</span>
     </div>
 
     <div style="display:flex; flex-wrap:wrap; gap:var(--kcui-gap-panel); align-items:center;
@@ -221,6 +232,16 @@
           </div>
         </div>
         <span class="meta">per service</span>
+      </label>
+      <label style="display:flex; align-items:center; gap:0.35rem; font-size:12px; color:var(--dim);">
+        Semantic Min Match
+        <div class="num-stepper">
+          <input id="sq-min-match" type="number" value="0.40" min="0" max="1" step="0.05" style="width:60px;">
+          <div class="stepper-btns">
+            <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,0.05)">&#9650;</button>
+            <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,-0.05)">&#9660;</button>
+          </div>
+        </div>
       </label>
     </div>
 
@@ -334,6 +355,27 @@ function showTab(t) {
 }
 showTab('cards');
 
+function toggleGatewaySearchMode(mode) {
+  const keyword = document.getElementById('sq-mode-keyword');
+  const semantic = document.getElementById('sq-mode-semantic');
+  const hidden = document.getElementById('sq-mode');
+  const hint = document.getElementById('sq-mode-hint');
+  if (!keyword || !semantic || !hidden || !hint) return;
+
+  if (mode === 'semantic') {
+    semantic.checked = true;
+    keyword.checked = false;
+    hidden.value = 'semantic';
+    hint.textContent = 'Semantic search works best with a plain-language description of the concept you want. Gateway semantic mode currently searches Feeds and Library only.';
+    return;
+  }
+
+  keyword.checked = true;
+  semantic.checked = false;
+  hidden.value = 'keyword';
+  hint.textContent = 'Bare terms use AND by default. Use quotes for phrases, OR or | for alternatives, NOT to exclude, and parentheses to group.';
+}
+
 function highlightJson(obj) {
   const raw = JSON.stringify(obj, null, 2);
   return raw
@@ -393,11 +435,17 @@ function renderCards(data) {
 function renderCard(r, searchQuery) {
   const title   = escHtml(decodeHtml(r.title || '(untitled)'));
   const snippet = escHtml(decodeHtml(r.snippet || r.summary || ''));
+  const feedBase = suiteBaseUrl((window.__koreSuiteUrls || {}).korefeed);
   let meta = '';
+  let titleHref = r.url || '';
   if (r.type === 'feed_entry') {
     const src = r.source ? escHtml(decodeHtml(r.source)) : '';
     const ts  = r.published_at ? ` | ${escHtml(r.published_at.slice(0,10))}` : '';
     meta = `${src}${ts}`;
+    const feedDomain = r.feed_domain || r.domain;
+    if (feedDomain && r.id != null && feedBase) {
+      titleHref = `${feedBase}/ui/feeds/${encodeURIComponent(feedDomain)}/${encodeURIComponent(r.id)}`;
+    }
   } else if (r.type === 'reference_article') {
     meta = r.word_count ? `${r.word_count.toLocaleString()} words` : '';
   } else if (r.type === 'library_book') {
@@ -418,14 +466,21 @@ function renderCard(r, searchQuery) {
     const ts  = r.captured_at ? ` | ${escHtml(String(r.captured_at).slice(0,10))}` : '';
     meta = `${src}${ts}`;
   }
+  const semanticMeta = r.match_score != null
+    ? `<div class="rc-meta"><span style="color:var(--amber);">match ${Number(r.match_score).toFixed(2)}</span>${r.sentence_locator ? ` | ${escHtml(r.sentence_locator)}` : ''}</div>`
+    : '';
   const typeLabel = (r.type || '').replace(/_/g, ' ');
-  const titleHtml = r.url
-    ? `<a class="rc-title" href="${escHtml(r.url)}">${title}</a>`
+  const titleHtml = titleHref
+    ? `<a class="rc-title" href="${escHtml(titleHref)}">${title}</a>`
     : `<span class="rc-title">${title}</span>`;
+  const sourceLink = r.type === 'feed_entry' && r.url
+    ? ` <a href="${escHtml(r.url)}" style="color:var(--amber);">(source link)</a>`
+    : '';
   return `<div class="result-card">
     <div class="rc-type">${escHtml(typeLabel)}</div>
-    ${titleHtml}
+    ${titleHtml}${sourceLink}
     ${meta ? `<div class="rc-meta">${meta}</div>` : ''}
+    ${semanticMeta}
     ${snippet ? `<div class="rc-snippet">${snippet}</div>` : ''}
   </div>`;
 }
@@ -461,14 +516,17 @@ async function runSearch() {
   const query = document.getElementById('sq-query').value.trim();
   if (!query) { document.getElementById('sq-query').focus(); return; }
 
-  const domains = [...document.querySelectorAll('.sq-domain:checked')].map(e => e.value);
-  const since   = document.getElementById('sq-since').value;
-  const until   = document.getElementById('sq-until').value;
-  const limit   = parseInt(document.getElementById('sq-limit').value, 10) || 20;
+  const domains   = [...document.querySelectorAll('.sq-domain:checked')].map(e => e.value);
+  const since     = document.getElementById('sq-since').value;
+  const until     = document.getElementById('sq-until').value;
+  const mode      = document.getElementById('sq-mode').value || 'keyword';
+  const limit     = parseInt(document.getElementById('sq-limit').value, 10) || 20;
+  const minMatch  = parseFloat(document.getElementById('sq-min-match').value);
 
-  const payload = { query, domains, limit };
+  const payload = { query, domains, mode, limit };
   if (since) payload.since = since;
   if (until) payload.until = until;
+  if (mode === 'semantic' && Number.isFinite(minMatch)) payload.min_match = minMatch;
 
   document.getElementById('sq-spinner').style.display = '';
   document.getElementById('sq-results-panel').style.display = 'none';
@@ -483,8 +541,10 @@ async function runSearch() {
 
     // meta line
     const total = Array.isArray(data.results) ? data.results.length : 0;
+    const searchMode = data.mode || mode;
+    const warningText = Array.isArray(data.warnings) && data.warnings.length ? ` | ${data.warnings.join(' | ')}` : '';
     document.getElementById('sq-results-meta').textContent =
-      `"${data.query}" | ${total} result${total !== 1 ? 's' : ''} across [${(data.domains_searched||[]).join(', ')}]`;
+      `"${data.query}" | ${searchMode} | ${total} result${total !== 1 ? 's' : ''} across [${(data.domains_searched||[]).join(', ')}]${warningText}`;
 
     // JSON view
     document.getElementById('sq-json-pre').innerHTML = highlightJson(data);
@@ -505,12 +565,14 @@ async function runSearch() {
 
 function saveSearchState(data) {
   const state = {
-    query:   document.getElementById('sq-query').value,
-    domains: [...document.querySelectorAll('.sq-domain')].map(e => ({ value: e.value, checked: e.checked })),
-    since:   document.getElementById('sq-since').value,
-    until:   document.getElementById('sq-until').value,
-    limit:   document.getElementById('sq-limit').value,
-    data:    data,
+    query:      document.getElementById('sq-query').value,
+    domains:    [...document.querySelectorAll('.sq-domain')].map(e => ({ value: e.value, checked: e.checked })),
+    since:      document.getElementById('sq-since').value,
+    until:      document.getElementById('sq-until').value,
+    mode:       document.getElementById('sq-mode').value,
+    min_match:  document.getElementById('sq-min-match').value,
+    limit:      document.getElementById('sq-limit').value,
+    data:       data,
   };
   sessionStorage.setItem('home-search-state', JSON.stringify(state));
 }
@@ -537,11 +599,14 @@ function restoreSearchState() {
     }
     if (state.since) document.getElementById('sq-since').value = state.since;
     if (state.until) document.getElementById('sq-until').value = state.until;
+    if (state.mode)  toggleGatewaySearchMode(state.mode);
+    if (state.min_match) document.getElementById('sq-min-match').value = state.min_match;
     if (state.limit) document.getElementById('sq-limit').value = state.limit;
     if (state.data) {
       const total = Array.isArray(state.data.results) ? state.data.results.length : 0;
+      const warningText = Array.isArray(state.data.warnings) && state.data.warnings.length ? ` | ${state.data.warnings.join(' | ')}` : '';
       document.getElementById('sq-results-meta').textContent =
-        `"${state.data.query}" | ${total} result${total !== 1 ? 's' : ''} across [${(state.data.domains_searched||[]).join(', ')}]`;
+        `"${state.data.query}" | ${(state.data.mode || state.mode || 'keyword')} | ${total} result${total !== 1 ? 's' : ''} across [${(state.data.domains_searched||[]).join(', ')}]${warningText}`;
       document.getElementById('sq-json-pre').innerHTML = highlightJson(state.data);
       renderCards(state.data);
       document.getElementById('sq-results-panel').style.display = '';

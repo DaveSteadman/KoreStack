@@ -20,7 +20,6 @@ import logutil
 import uvicorn
 from datetime import datetime
 from app.config import cfg
-from app.database import get_status
 from config import get_suite_datacontrol_dir
 
 _W = 80
@@ -28,7 +27,6 @@ _W = 80
 
 def _print_banner() -> None:
     now = datetime.now().strftime("%H:%M:%S")
-    stats = get_status()
     host = cfg["host"]
     port = cfg["port"]
     data_dir = cfg["data_dir"]
@@ -48,9 +46,7 @@ def _print_banner() -> None:
         row("Host:", f"http://{host}:{port}/"),
         row("Data dir:", data_dir),
         row("Log level:", log_level),
-        row("Total books:", str(stats["total_books"])),
-        row("Incomplete records:", str(stats["incomplete_records"])),
-        row("Books without body:", str(stats["books_without_body"])),
+        row("Catalog status:", "Initialising in background"),
         "",
         sep,
         "",
@@ -59,12 +55,10 @@ def _print_banner() -> None:
 
 
 if __name__ == "__main__":
-    from app.database import init_db
     _DATA_DIR = Path(cfg["data_dir"])
     _DATA_DIR.mkdir(parents=True, exist_ok=True)
     _LOG_PATH = get_suite_datacontrol_dir() / "logs" / "koredata" / "library.log"
     _LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
-    init_db()
     _print_banner()
     uvicorn.run(
         "app.server:app",

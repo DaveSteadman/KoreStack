@@ -182,10 +182,10 @@ Every mutating tool that changes an existing file accepts an optional `expected_
 
 For agent workflows, prefer the semantic sheet tools first:
 
-- Use `docs_sheet_describe`, `docs_sheet_headers_get`, `docs_sheet_preview`, and `docs_sheet_column_find` to understand sheet structure.
-- Use `docs_sheet_rows_find`, `docs_sheet_rows_update`, `docs_sheet_table_rows_append`, and `docs_sheet_headers_set` for table-shaped data.
-- Use `docs_sheet_labels_find`, `docs_sheet_named_value_get`, and `docs_sheet_named_value_set` for model-style sheets that store inputs and outputs as labels plus adjacent values.
-- Drop to `docs_sheet_range_read` or `docs_sheet_cells_write` only when a task genuinely requires raw cell addressing.
+- Use `koredocs_sheet_describe`, `koredocs_sheet_headers_get`, `koredocs_sheet_preview`, and `koredocs_sheet_column_find` to understand sheet structure.
+- Use `koredocs_sheet_rows_find`, `koredocs_sheet_rows_update`, `koredocs_sheet_table_rows_append`, and `koredocs_sheet_headers_set` for table-shaped data.
+- Use `koredocs_sheet_labels_find`, `koredocs_sheet_named_value_get`, and `koredocs_sheet_named_value_set` for model-style sheets that store inputs and outputs as labels plus adjacent values.
+- Drop to `koredocs_sheet_range_read` or `koredocs_sheet_cells_write` only when a task genuinely requires raw cell addressing.
 
 ---
 

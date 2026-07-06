@@ -100,7 +100,7 @@ Reason:
 Examples:
 
 - local tool names: `search_web_text`, `fetch_page_text`, `dataset_save`
-- MCP tool names: `docs_sheet_range_read`, `graph_connection_create_many`
+- MCP tool names: `koredocs_sheet_range_read`, `graph_connection_create_many`
 
 
 ## Core Proposal
@@ -530,7 +530,7 @@ Recommended safe policy:
 Suggested examples:
 
 - `koredec_table_read` -> high-confidence correction candidate `koredoc_table_read`
-- `docs_sheet_reed` -> likely correction candidate `docs_sheet_read`
+- `koredocs_sheet_reed` -> likely correction candidate `koredocs_sheet_range_read`
 - `graph_get` when multiple `graph_*_get*` tools exist -> ambiguous, do not auto-correct
 
 ### Suggestion versus pre-emptive loading

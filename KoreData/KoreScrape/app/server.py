@@ -62,6 +62,14 @@ _MIN_CHUNK_WORDS     = 100
 _TARGET_CHUNK_WORDS  = 450
 _MAX_CHUNK_WORDS     = 900
 _SINGLE_PAGE_WORDS   = 1200
+_REINDEX_STATE_LOCK  = threading.Lock()
+_REINDEX_STATE: dict[str, Any] = {
+    "status":         "pending",
+    "captures_seen":  0,
+    "captures_done":  0,
+    "last_capture_id": None,
+    "last_error":     None,
+}
 
 
 class CaptureRequest(BaseModel):
@@ -222,6 +230,8 @@ def get_status() -> dict[str, Any]:
         total_assets += int(capture.get("assets_saved", 0) or 0)
 
     index_stats = _db_get_status()
+    with _REINDEX_STATE_LOCK:
+        reindex_state = dict(_REINDEX_STATE)
 
     return {
         "service":      "KoreScrape",
@@ -234,6 +244,7 @@ def get_status() -> dict[str, Any]:
         "indexed_chunks": index_stats.get("indexed_chunks", 0),
         "db_size_bytes": index_stats.get("db_size_bytes", 0),
         "latest_run":   captures[0].get("created_at") if captures else None,
+        "startup_reindex": reindex_state,
     }
 
 
@@ -614,19 +625,60 @@ def _start_capture(url: str, depth: int, download_non_html: bool) -> dict[str, A
     return job
 
 
-@asynccontextmanager
-async def _lifespan(app: FastAPI):
-    _init_db()
-    for capture in list_captures():
+def _reindex_existing_captures() -> None:
+    captures = list_captures()
+    with _REINDEX_STATE_LOCK:
+        _REINDEX_STATE.update(
+            {
+                "status":         "running",
+                "captures_seen":  len(captures),
+                "captures_done":  0,
+                "last_capture_id": None,
+                "last_error":     None,
+            }
+        )
+
+    completed = 0
+    for capture in captures:
         capture_id   = str(capture.get("id") or "").strip()
         capture_dir  = Path(str(capture.get("capture_dir") or ""))
         pages        = capture.get("pages") if isinstance(capture.get("pages"), list) else []
         completed_at = str(capture.get("completed_at") or capture.get("created_at") or "")
-        if capture_id and capture_dir.exists() and pages:
-            try:
+        try:
+            if capture_id and capture_dir.exists() and pages:
                 _index_capture_pages(capture_id, pages, capture_dir, completed_at)
-            except Exception:
-                continue
+            completed += 1
+            with _REINDEX_STATE_LOCK:
+                _REINDEX_STATE.update(
+                    {
+                        "captures_done":  completed,
+                        "last_capture_id": capture_id or None,
+                    }
+                )
+        except Exception as exc:
+            with _REINDEX_STATE_LOCK:
+                _REINDEX_STATE.update(
+                    {
+                        "status":         "degraded",
+                        "last_capture_id": capture_id or None,
+                        "last_error":     f"{type(exc).__name__}: {exc}",
+                    }
+                )
+            continue
+
+    with _REINDEX_STATE_LOCK:
+        if _REINDEX_STATE.get("status") != "degraded":
+            _REINDEX_STATE["status"] = "ready"
+
+
+@asynccontextmanager
+async def _lifespan(app: FastAPI):
+    _init_db()
+    threading.Thread(
+        target = _reindex_existing_captures,
+        daemon = True,
+        name   = "korescrape-startup-reindex",
+    ).start()
     yield
 
 

@@ -7,12 +7,14 @@
 <div class="panel kcui-panel" style="margin-bottom:1rem;">
   <div class="panel-header kcui-panel-header">
     ENTRY #{{ entry.id }}
-    {% if entry.url %}
-    <a href="{{ entry.url }}" target="_blank" rel="noopener" style="margin-left:auto; font-size:11px; color:var(--dim);">SOURCE -></a>
-    {% endif %}
   </div>
   <div class="panel-body kcui-panel-body">
-    <p style="font-size:1rem; color:var(--text); margin-bottom:1rem; line-height:1.4;">{{ entry.headline or "(no title)" }}</p>
+    <p style="font-size:1rem; color:var(--text); margin-bottom:1rem; line-height:1.4;">
+      {{ entry.headline or "(no title)" }}
+      {% if entry.url %}
+      <a href="{{ entry.url }}" target="_blank" rel="noopener" style="color:var(--amber); font-size:0.85rem; white-space:nowrap;">(source link)</a>
+      {% endif %}
+    </p>
 
     <div style="display:flex; flex-direction:column; gap:0.35rem;">
       <div class="kv">
@@ -58,6 +60,10 @@
 <div class="panel kcui-panel">
   <div class="panel-header kcui-panel-header">
     PAGE CONTENT
+    <div style="margin-left:auto; display:flex; gap:0.5rem; align-items:center;">
+      <button type="button" class="kcui-tag kcui-tag--warning" onclick="toggleSentencePanel()">SENTENCES</button>
+      <button type="button" class="kcui-tag kcui-tag--info"    onclick="toggleEditPanel()">TRIM / EDIT</button>
+    </div>
   </div>
   <div class="panel-body kcui-panel-body" style="padding:0;">
     {% if entry.page_text %}
@@ -67,5 +73,117 @@
     {% endif %}
   </div>
 </div>
+
+<div id="entry-edit-panel" class="panel kcui-panel" style="display:none;">
+  <div class="panel-header kcui-panel-header">
+    TRIM PAGE CONTENT
+  </div>
+  <div class="panel-body kcui-panel-body">
+    <form method="post" action="/ui/feeds/{{ domain }}/{{ entry.id }}/content">
+      <textarea name="page_text" style="width:100%; min-height:20rem; resize:vertical; font:inherit;">{{ entry.page_text or "" }}</textarea>
+      <div style="margin-top:0.75rem; display:flex; gap:0.5rem; align-items:center;">
+        <button type="submit" class="kcui-tag kcui-tag--success">SAVE AND REBUILD SENTENCES</button>
+        <button type="button" class="kcui-tag kcui-tag--warning" onclick="toggleEditPanel()">CANCEL</button>
+      </div>
+    </form>
+  </div>
 </div>
+
+<div id="sentence-panel" class="panel kcui-panel" style="display:none;">
+  <div class="panel-header kcui-panel-header">
+    SENTENCE SPLIT
+  </div>
+  <div class="panel-body kcui-panel-body">
+    <p class="meta" style="margin-bottom:0.75rem;">Use this view to validate sentence splitting and exclude weak sentences from semantic indexing.</p>
+    <div id="sentence-panel-status" class="meta">loading on demand...</div>
+    <div id="sentence-list" style="display:flex; flex-direction:column; gap:0.75rem; margin-top:0.75rem;"></div>
+  </div>
+</div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+let sentencePanelLoaded = false;
+
+function toggleEditPanel() {
+  const panel = document.getElementById('entry-edit-panel');
+  if (!panel) return;
+  panel.style.display = panel.style.display === 'none' ? '' : 'none';
+}
+
+async function toggleSentencePanel() {
+  const panel = document.getElementById('sentence-panel');
+  if (!panel) return;
+  const opening = panel.style.display === 'none';
+  panel.style.display = opening ? '' : 'none';
+  if (opening && !sentencePanelLoaded) {
+    await loadSentences();
+  }
+}
+
+function escapeHtml(text) {
+  return String(text || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function renderSentenceRow(row) {
+  const deleted = !!row.deleted;
+  const sentenceText = escapeHtml(row.sentence_text || '');
+  const sourceField = escapeHtml(row.source_field || '');
+  return `
+    <div class="panel" style="border:1px solid var(--border); background:${deleted ? 'var(--panel-soft)' : 'var(--panel)'};">
+      <div class="panel-header" style="display:flex; gap:0.75rem; align-items:center;">
+        <span>#${row.sentence_index}</span>
+        <span class="badge ${deleted ? 'badge-dim' : 'badge-amber'}">${sourceField}</span>
+        <span class="meta">${row.char_start}-${row.char_end}</span>
+        <span style="margin-left:auto;">
+          <button type="button" class="kcui-tag ${deleted ? 'kcui-tag--dim' : 'kcui-tag--danger'}" onclick="toggleSentenceDeleted(${row.id}, ${row.entry_id}, ${deleted ? 'false' : 'true'})">
+            ${deleted ? 'RE-INCLUDE' : 'EXCLUDE'}
+          </button>
+        </span>
+      </div>
+      <div class="panel-body" style="white-space:pre-wrap;">${sentenceText || '<span class="meta">(empty)</span>'}</div>
+    </div>
+  `;
+}
+
+async function loadSentences() {
+  const status = document.getElementById('sentence-panel-status');
+  const list = document.getElementById('sentence-list');
+  if (!status || !list) return;
+  status.textContent = 'Loading sentences...';
+  try {
+    const resp = await fetch('/api/domains/{{ domain }}/entries/{{ entry.id }}/sentences');
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const rows = await resp.json();
+    list.innerHTML = rows.map(renderSentenceRow).join('');
+    status.textContent = `${rows.length} sentence row(s).`;
+    sentencePanelLoaded = true;
+  } catch (err) {
+    status.textContent = `Could not load sentences: ${err}`;
+  }
+}
+
+async function toggleSentenceDeleted(sentenceId, entryId, deleted) {
+  const status = document.getElementById('sentence-panel-status');
+  if (status) status.textContent = 'Updating sentence...';
+  try {
+    const resp = await fetch('/api/domains/{{ domain }}/sentences/' + sentenceId + '/deleted', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ deleted: deleted })
+    });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    sentencePanelLoaded = false;
+    await loadSentences();
+  } catch (err) {
+    if (status) status.textContent = `Could not update sentence: ${err}`;
+  }
+}
+</script>
 {% endblock %}

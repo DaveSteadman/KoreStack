@@ -163,3 +163,49 @@ def load_config(section: str, defaults: dict) -> dict:
     if result.get("port") is None:
         raise RuntimeError(f"Missing services.{section}.port in config/korestack_config.json.")
     return result
+
+
+def get_suite_urls_map() -> dict[str, str]:
+    if _CONFIG_FILE.exists():
+        with open(_CONFIG_FILE, encoding="utf-8") as f:
+            raw = json.load(f)
+    else:
+        raw = {}
+
+    host     = str(raw.get("network", {}).get("host") or "127.0.0.1").strip() or "127.0.0.1"
+    services = raw.get("services", {}) if isinstance(raw.get("services"), dict) else {}
+
+    def _port(name: str) -> int | None:
+        value = services.get(name, {}).get("port")
+        try:
+            return int(value) if value is not None else None
+        except (TypeError, ValueError):
+            return None
+
+    urls: dict[str, str] = {}
+    port_map = {
+        "korestack":       _port("korestack"),
+        "koreagent":       _port("koreagent"),
+        "korechat":        _port("korechat"),
+        "koredata":        _port("koredatagateway"),
+        "koredatagateway": _port("koredatagateway"),
+        "koredocs":        _port("koredocs"),
+        "korecode":        _port("korecode"),
+        "korecomms":       _port("korecomms"),
+        "korefeed":        _port("korefeed"),
+        "korelibrary":     _port("korelibrary"),
+        "korereference":   _port("korereference"),
+        "korerag":         _port("korerag"),
+        "korescrape":      _port("korescrape"),
+        "koregraph":       _port("koregraph"),
+    }
+
+    for name, port in port_map.items():
+        if port is None:
+            continue
+        base_url = f"http://{host}:{port}"
+        if name in {"korechat", "koredocs", "korecode"}:
+            urls[name] = f"{base_url}/ui"
+        else:
+            urls[name] = f"{base_url}/"
+    return urls

@@ -1,27 +1,14 @@
-# ====================================================================================================
-# MARK: OVERVIEW
-# ====================================================================================================
-# Root launcher for KoreDataGateway.
-#
-# Prints a startup banner showing the gateway URL and all child sub-service URLs
-# (KoreFeed, KoreLibrary, KoreRAG, KoreReference), then starts the gateway FastAPI app
-# under uvicorn.  The gateway spawns and manages child sub-service processes.
-#
-# Related modules:
-#   - app/server.py   -- gateway FastAPI app; proxy, MCP federation, child process lifecycle
-#   - app/config.py   -- cfg (host, port, sub-service base URLs)
-#   - CommonCode/     -- shared logutil, config
-# ====================================================================================================
 import os
 import signal
 import subprocess
 import sys
+from datetime import datetime
 from pathlib import Path
+
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "CommonCode"))
 
 import logutil
 import uvicorn
-from datetime import datetime
 from app.config import cfg
 from config import get_suite_datacontrol_dir
 
@@ -59,7 +46,7 @@ def _listening_pids_on_port(port: int) -> list[int]:
 def _terminate_pid(pid: int, label: str) -> None:
     if pid <= 0 or pid == os.getpid():
         return
-    print(f"  ◼ Clearing stale {label} listener  (pid {pid})")
+    print(f"  [stale] Clearing {label} listener  (pid {pid})")
     try:
         if os.name == "nt":
             subprocess.run(["taskkill", "/PID", str(pid), "/T", "/F"], check=False, capture_output=True)
@@ -90,12 +77,12 @@ def _print_banner() -> None:
         f"  KOREDATAGATEWAY  [{now}]",
         sep,
         "",
-        row("Gateway:", f"http://localhost:{cfg['port']}/"),
-        row("KoreFeed:", cfg["korefeed_url"]),
-        row("KoreLibrary:", cfg["korelibrary_url"]),
-        row("KoreRAG:", cfg["korerag_url"]),
+        row("Gateway:",      f"http://localhost:{cfg['port']}/"),
+        row("KoreFeed:",     cfg["korefeed_url"]),
+        row("KoreLibrary:",  cfg["korelibrary_url"]),
+        row("KoreRAG:",      cfg["korerag_url"]),
         row("KoreReference:", cfg["korereference_url"]),
-        row("Log level:", cfg["log_level"].upper()),
+        row("Log level:",    cfg["log_level"].upper()),
         "",
         sep,
         "",
@@ -110,8 +97,8 @@ if __name__ == "__main__":
     _clear_stale_gateway_listener()
     uvicorn.run(
         "app.server:app",
-        host=cfg["host"],
-        port=cfg["port"],
-        log_level=cfg["log_level"],
-        log_config=logutil.make_log_config(_LOG_PATH),
+        host       = cfg["host"],
+        port       = cfg["port"],
+        log_level  = cfg["log_level"],
+        log_config = logutil.make_log_config(_LOG_PATH),
     )

@@ -9,6 +9,9 @@
   --stack-success: var(--success, #4af77a);
   --stack-warn: var(--warning, #f0c060);
   --stack-danger: var(--danger, #ff5f5f);
+  --stack-action-start: #5be38f;
+  --stack-action-stop: #ff7a7a;
+  --stack-action-restart: #7ab7ff;
   --service-koreagent: #66f0c9;
   --service-korechat: #59d7ff;
   --service-koredatagateway: #a78bfa;
@@ -276,23 +279,38 @@ a { color: inherit; }
 }
 
 .service-actions button {
+  --service-action-color: var(--stack-ink);
   width: 24px;
   height: 24px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid color-mix(in srgb, var(--service-accent, var(--stack-accent)) 42%, transparent);
+  border: 1px solid color-mix(in srgb, var(--service-action-color) 55%, transparent);
   border-radius: 2px;
   padding: 0;
-  background: var(--stack-bg);
-  color: var(--stack-ink);
+  background: color-mix(in srgb, var(--service-action-color) 10%, var(--stack-bg));
+  color: var(--service-action-color);
   cursor: pointer;
   font: inherit;
   font-size: 11px;
+  transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease, transform 120ms ease;
 }
 
 .service-actions button:hover {
-  background: color-mix(in srgb, var(--service-accent, var(--stack-accent)) 14%, var(--stack-bg));
+  background: color-mix(in srgb, var(--service-action-color) 18%, var(--stack-bg));
+  border-color: color-mix(in srgb, var(--service-action-color) 75%, transparent);
+  transform: translateY(-1px);
+}
+
+.service-actions button:focus-visible {
+  outline: 1px solid color-mix(in srgb, var(--service-action-color) 80%, white 20%);
+  outline-offset: 1px;
+}
+
+.service-actions button:disabled {
+  opacity: 0.52;
+  cursor: default;
+  transform: none;
 }
 
 .service-actions button svg {
@@ -300,6 +318,10 @@ a { color: inherit; }
   height: 13px;
   display: block;
 }
+
+.service-action--start   { --service-action-color: var(--stack-action-start);   }
+.service-action--stop    { --service-action-color: var(--stack-action-stop);    }
+.service-action--restart { --service-action-color: var(--stack-action-restart); }
 
 .footer-body {
   display: flex;

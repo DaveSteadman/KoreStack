@@ -1,5 +1,6 @@
 import os
 import re as _re
+import json
 from pathlib import Path
 from typing import Optional
 
@@ -7,6 +8,7 @@ from fastapi import FastAPI, Form, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from jinja2 import ChoiceLoader, FileSystemLoader
+from config import get_suite_urls_map
 
 from app.database import (
     COMPLETENESS_FIELDS,
@@ -22,6 +24,7 @@ from app.database import (
     update_book,
     update_book_body,
 )
+from app.chroma_index import semantic_search
 
 _LIBRARY_UI_ROOT = Path(
     os.environ.get(
@@ -85,7 +88,7 @@ def repair_kore_anchors(body: str) -> str:
 def register_library_ui(app: FastAPI) -> None:
     @app.get("/suite-config.js", include_in_schema=False)
     def suite_config_js():
-        urls = os.environ.get("KORE_SUITE_URLS", "{}")
+        urls = json.dumps(get_suite_urls_map())
         return Response(
             content    = f"window.__koreSuiteUrls = {urls};",
             media_type = "application/javascript",
@@ -170,25 +173,42 @@ def register_library_ui(app: FastAPI) -> None:
         catalog: Optional[str]  = None,
         limit: int              = 50,
         offset: int             = 0,
+        mode: str               = "keyword",
+        min_match: float        = 0.4,
     ):
-        year_int = _parse_year(year)
-        searched = any([q, author, title, year_int, language, genre])
-        results  = []
+        year_int    = _parse_year(year)
+        search_mode = "semantic" if str(mode).strip().lower() == "semantic" else "keyword"
+        searched    = any([q, author, title, year_int, language, genre])
+        results     = []
         if searched:
             try:
-                results = search_books(
-                    q         = q,
-                    author    = author,
-                    title     = title,
-                    year      = year_int,
-                    language  = language,
-                    genre     = genre,
-                    limit     = limit,
-                    offset    = offset,
-                    catalog   = catalog,
-                    catalogs  = None,
-                    fts_scope = "all",
-                )
+                if search_mode == "semantic" and q:
+                    results = semantic_search(catalog, q, limit=limit + offset, min_match=min_match)
+                    if author:
+                        results = [item for item in results if author.lower() in str(item.get("author") or "").lower()]
+                    if title:
+                        results = [item for item in results if title.lower() in str(item.get("title") or "").lower()]
+                    if year_int is not None:
+                        results = [item for item in results if item.get("year") == year_int]
+                    if language:
+                        results = [item for item in results if str(item.get("language") or "").lower() == language.lower()]
+                    if genre:
+                        results = [item for item in results if genre.lower() in str(item.get("genre") or "").lower()]
+                    results = results[offset: offset + limit]
+                else:
+                    results = search_books(
+                        q         = q,
+                        author    = author,
+                        title     = title,
+                        year      = year_int,
+                        language  = language,
+                        genre     = genre,
+                        limit     = limit,
+                        offset    = offset,
+                        catalog   = catalog,
+                        catalogs  = None,
+                        fts_scope = "all",
+                    )
             except ValueError as exc:
                 raise HTTPException(status_code=400, detail=str(exc)) from exc
         catalogs = list_catalogs()
@@ -206,6 +226,8 @@ def register_library_ui(app: FastAPI) -> None:
                 "genre":    genre or "",
                 "catalog":  catalog or "",
                 "limit":    limit,
+                "mode":     search_mode,
+                "min_match": max(0.0, min(1.0, float(min_match or 0.0))),
                 "catalogs": catalogs,
             },
         )

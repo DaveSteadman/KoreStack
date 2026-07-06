@@ -16,7 +16,7 @@
       <input type="hidden" name="mode" id="search-mode-input" value="{{ mode }}">
       <p class="meta kcui-mar-bottom-sm" id="search-mode-hint">
         {% if mode == 'semantic' %}
-        Semantic search works best with a plain-language description of the idea you want, not boolean keyword syntax.
+        Semantic search works best with a plain-language description of the idea you want, not boolean keyword syntax. Only matches at or above the minimum match score are returned.
         {% else %}
         Bare terms use AND by default. Use quotes for phrases, OR or | for alternatives, NOT to exclude, and parentheses to group.
         {% endif %}
@@ -70,6 +70,16 @@
             </div>
           </div>
         </label>
+        <label class="kcui-filter-label">
+          Semantic Min Match
+          <div class="num-stepper">
+            <input type="number" name="min_match" value="{{ '%.2f'|format(min_match) }}" min="0" max="1" step="0.05" style="width:60px;">
+            <div class="stepper-btns">
+              <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,0.05)">&#9650;</button>
+              <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,-0.05)">&#9660;</button>
+            </div>
+          </div>
+        </label>
       </div>
     </form>
   </div>
@@ -118,7 +128,7 @@
               <div class="meta" style="margin-top:0.25rem; font-size:11px; line-height:1.35;">{{ r.snippet }}</div>
               <div class="meta" style="font-size:10px;">
                 {{ r.sentence_locator }}
-                {% if r.distance is not none %} | distance {{ '%.4f'|format(r.distance) }}{% endif %}
+                {% if r.match_score is not none %} | <span style="color:var(--amber);">match {{ '%.2f'|format(r.match_score) }}</span>{% endif %}
               </div>
               {% endif %}
             </td>
@@ -152,7 +162,7 @@ function toggleSearchMode(mode) {
     semantic.checked = true;
     keyword.checked = false;
     hidden.value = 'semantic';
-    hint.textContent = 'Semantic search works best with a plain-language description of the idea you want, not boolean keyword syntax.';
+    hint.textContent = 'Semantic search works best with a plain-language description of the idea you want, not boolean keyword syntax. Only matches at or above the minimum match score are returned.';
     return;
   }
 

@@ -9,6 +9,7 @@
 import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
+import threading
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -18,6 +19,7 @@ if _KORECOMMON_PARENT is not None and str(_KORECOMMON_PARENT) not in sys.path:
     sys.path.insert(0, str(_KORECOMMON_PARENT))
 
 from KoreCommon.endpoint_manifest import build_endpoint_manifest
+from app.chroma_index import migrate_legacy_catalog_stores
 from app.database import init_db
 from app.endpoint_api import register_library_api
 from app.endpoint_ui import register_library_ui
@@ -25,7 +27,18 @@ from app.endpoint_ui import register_library_ui
 
 @asynccontextmanager
 async def _lifespan(app: FastAPI):
-    init_db()
+    def _warm_library() -> None:
+        init_db()
+        try:
+            migrate_legacy_catalog_stores(batch_size=250)
+        except Exception:
+            pass
+
+    threading.Thread(
+        target = _warm_library,
+        daemon = True,
+        name   = "korelibrary-startup-warm",
+    ).start()
     yield
 
 

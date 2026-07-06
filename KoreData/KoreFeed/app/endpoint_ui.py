@@ -27,7 +27,9 @@ from app.database import (
     list_domains,
     rename_domain_db,
     search_entries,
+    set_sentence_deleted,
     set_domain_age_settings,
+    update_entry_page_text,
 )
 from app.chroma_index import semantic_search
 from app.feed_manager import (
@@ -161,12 +163,14 @@ def register_feed_ui(app: FastAPI) -> None:
         until:   Optional[str]  = None,
         limit:   int            = 50,
         mode:    str            = "keyword",
+        min_match: float        = 0.4,
     ):
         search_mode = "semantic" if str(mode).strip().lower() == "semantic" else "keyword"
-        results = []
+        min_match   = max(0.0, min(1.0, float(min_match or 0.0)))
+        results     = []
         if q.strip():
             if search_mode == "semantic":
-                results = semantic_search(domain or None, q, limit=limit)
+                results = semantic_search(domain or None, q, limit=limit, min_match=min_match)
                 results = _filter_results_by_date(results, since, until)
             else:
                 results = search_entries(domain or None, q, limit=limit, include_body=False, since=since, until=until)
@@ -182,6 +186,7 @@ def register_feed_ui(app: FastAPI) -> None:
                 "until":   until or "",
                 "limit":   limit,
                 "mode":    search_mode,
+                "min_match": min_match,
             },
         )
 
@@ -228,6 +233,16 @@ def register_feed_ui(app: FastAPI) -> None:
                 pass
         entry = _normalise_entry_for_display(entry)
         return templates.TemplateResponse(request, "feed_entry.html", {"domain": domain, "entry": entry})
+
+    @app.post("/ui/feeds/{domain}/{entry_id}/content", include_in_schema=False)
+    def web_update_entry_content(domain: str, entry_id: int, page_text: str = Form(...)):
+        update_entry_page_text(domain, entry_id, page_text)
+        return RedirectResponse(f"/ui/feeds/{domain}/{entry_id}", status_code=303)
+
+    @app.post("/ui/feeds/{domain}/sentences/{sentence_id}/deleted", include_in_schema=False)
+    def web_set_sentence_deleted(domain: str, sentence_id: int, deleted: str = Form(...), entry_id: int = Form(...)):
+        set_sentence_deleted(domain, sentence_id, str(deleted).strip().lower() in {"1", "true", "yes", "on"})
+        return RedirectResponse(f"/ui/feeds/{domain}/{entry_id}", status_code=303)
 
     @app.post("/ui/feeds/domains/create", include_in_schema=False)
     def web_create_domain(domain: str = Form(...)):

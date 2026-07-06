@@ -2,9 +2,12 @@ import logging
 import shutil
 import threading
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
-import chromadb
+try:
+    import chromadb
+except ModuleNotFoundError:
+    chromadb = None
 
 from app.database import (
     _sanitize_domain,
@@ -13,19 +16,54 @@ from app.database import (
     get_sentences_for_chroma,
     list_domains,
     mark_sentences_chroma_indexed,
+    reset_sentence_chroma_index,
 )
 from app.config import cfg
 
 
 LOG = logging.getLogger("korefeed.chroma")
 
-_CHROMA_ROOT = Path(cfg["data_dir"]) / "_chroma"
-_CLIENT_LOCK = threading.Lock()
-_CLIENTS: dict[str, chromadb.PersistentClient] = {}
+_CHROMA_ROOT             = Path(cfg["data_dir"]) / "_chroma"
+_COLLECTION_NAME         = "sentences"
+_COLLECTION_CONFIGURATION = {"hnsw": {"space": "cosine"}}
+_STORE_SCHEMA_VERSION    = "cosine-v2"
+_STORE_SCHEMA_FILE       = ".schema"
+_CLIENT_LOCK             = threading.Lock()
+_CLIENTS: dict[str, Any] = {}
+
+
+def chroma_available() -> bool:
+    return chromadb is not None
+
+
+def _distance_to_match_score(distance: Optional[float]) -> Optional[float]:
+    if distance is None:
+        return None
+    # Cosine-space collections return cosine distance (0 best, 2 worst).
+    # Expose cosine similarity-style scoring for UI thresholding.
+    return max(0.0, min(1.0, 1.0 - float(distance)))
 
 
 def _domain_chroma_path(domain: str) -> Path:
     return _CHROMA_ROOT / _sanitize_domain(domain)
+
+
+def _domain_schema_marker_path(domain: str) -> Path:
+    return _domain_chroma_path(domain) / _STORE_SCHEMA_FILE
+
+
+def _domain_store_is_current(domain: str) -> bool:
+    marker_path = _domain_schema_marker_path(domain)
+    try:
+        return marker_path.exists() and marker_path.read_text(encoding="utf-8").strip() == _STORE_SCHEMA_VERSION
+    except Exception:
+        return False
+
+
+def _mark_domain_store_current(domain: str) -> None:
+    marker_path = _domain_schema_marker_path(domain)
+    marker_path.parent.mkdir(parents=True, exist_ok=True)
+    marker_path.write_text(_STORE_SCHEMA_VERSION, encoding="utf-8")
 
 
 def _release_domain_client(domain: str) -> None:
@@ -47,6 +85,8 @@ def _release_domain_client(domain: str) -> None:
 
 
 def _get_collection(domain: str):
+    if chromadb is None:
+        raise RuntimeError("chromadb is not installed")
     safe_domain = _sanitize_domain(domain)
     with _CLIENT_LOCK:
         client = _CLIENTS.get(safe_domain)
@@ -55,10 +95,18 @@ def _get_collection(domain: str):
             path.mkdir(parents=True, exist_ok=True)
             client = chromadb.PersistentClient(path=str(path))
             _CLIENTS[safe_domain] = client
-        return client.get_or_create_collection(name="sentences")
+        collection = client.get_or_create_collection(
+            name          = _COLLECTION_NAME,
+            configuration = _COLLECTION_CONFIGURATION,
+        )
+        if not _domain_store_is_current(domain):
+            _mark_domain_store_current(domain)
+        return collection
 
 
 def _upsert_rows(domain: str, rows: list[dict]) -> int:
+    if chromadb is None:
+        return 0
     if not rows:
         return 0
     collection = _get_collection(domain)
@@ -101,6 +149,8 @@ def _upsert_rows(domain: str, rows: list[dict]) -> int:
 
 
 def sync_entry_sentences(domain: str, entry_id: int) -> int:
+    if chromadb is None:
+        return 0
     sentence_ids = [int(row["id"]) for row in get_entry_sentences(domain, entry_id)]
     rows = get_sentences_for_chroma(
         domain,
@@ -111,6 +161,8 @@ def sync_entry_sentences(domain: str, entry_id: int) -> int:
 
 
 def sync_pending_sentences(domain: str, batch_size: int = 250, max_batches: Optional[int] = None) -> int:
+    if chromadb is None:
+        return 0
     synced = 0
     batches = 0
     while True:
@@ -129,6 +181,8 @@ def sync_pending_sentences(domain: str, batch_size: int = 250, max_batches: Opti
 
 
 def sync_all_domains_pending(batch_size: int = 250, max_batches_per_domain: Optional[int] = None) -> dict[str, int]:
+    if chromadb is None:
+        return {domain: 0 for domain in list_domains()}
     counts: dict[str, int] = {}
     for domain in list_domains():
         try:
@@ -143,13 +197,82 @@ def sync_all_domains_pending(batch_size: int = 250, max_batches_per_domain: Opti
     return counts
 
 
-def semantic_search(domain: Optional[str], query: str, limit: int = 20) -> list[dict]:
+def rebuild_domain_store(domain: str, batch_size: int = 250) -> dict[str, Any]:
+    if chromadb is None:
+        return {"domain": domain, "rebuilt": False, "reason": "chromadb unavailable", "indexed": 0}
+
+    delete_domain_store(domain)
+    reset_sentence_chroma_index(domain)
+    _get_collection(domain)
+    indexed = sync_pending_sentences(domain, batch_size=max(1, int(batch_size)))
+    return {
+        "domain":  domain,
+        "rebuilt": True,
+        "indexed": indexed,
+    }
+
+
+def rebuild_all_domain_stores(batch_size: int = 250) -> dict[str, dict[str, Any]]:
+    results: dict[str, dict[str, Any]] = {}
+    for domain in list_domains():
+        try:
+            results[domain] = rebuild_domain_store(domain, batch_size=batch_size)
+        except Exception as exc:
+            results[domain] = {
+                "domain":  domain,
+                "rebuilt": False,
+                "reason":  str(exc),
+                "indexed": 0,
+            }
+    return results
+
+
+def migrate_legacy_domain_stores(batch_size: int = 250) -> dict[str, dict[str, Any]]:
+    if chromadb is None:
+        return {
+            domain: {"domain": domain, "rebuilt": False, "reason": "chromadb unavailable", "indexed": 0}
+            for domain in list_domains()
+        }
+
+    results: dict[str, dict[str, Any]] = {}
+    for domain in list_domains():
+        path = _domain_chroma_path(domain)
+        if path.exists() and not _domain_store_is_current(domain):
+            try:
+                results[domain] = rebuild_domain_store(domain, batch_size=batch_size)
+            except Exception as exc:
+                results[domain] = {
+                    "domain":  domain,
+                    "rebuilt": False,
+                    "reason":  str(exc),
+                    "indexed": 0,
+                }
+        else:
+            results[domain] = {
+                "domain":  domain,
+                "rebuilt": False,
+                "reason":  "already current",
+                "indexed": 0,
+            }
+    return results
+
+
+def semantic_search(
+    domain: Optional[str],
+    query: str,
+    limit: int = 20,
+    min_match: float = 0.0,
+) -> list[dict]:
+    if chromadb is None:
+        LOG.info("Semantic search unavailable: chromadb is not installed.")
+        return []
     text = str(query or "").strip()
     if not text:
         return []
 
-    domains = [domain] if domain else list_domains()
+    domains          = [domain] if domain else list_domains()
     per_domain_limit = max(1, int(limit))
+    min_match        = max(0.0, min(1.0, float(min_match or 0.0)))
     results: list[dict] = []
 
     for current_domain in domains:
@@ -177,6 +300,9 @@ def semantic_search(domain: Optional[str], query: str, limit: int = 20) -> list[
             metadata = metadatas[idx] if idx < len(metadatas) and metadatas[idx] else {}
             document = documents[idx] if idx < len(documents) else ""
             distance = distances[idx] if idx < len(distances) else None
+            match_score = _distance_to_match_score(distance)
+            if match_score is not None and match_score < min_match:
+                continue
             sentence_id = metadata.get("sentence_id")
             sentence_row = None
             try:
@@ -205,15 +331,18 @@ def semantic_search(domain: Optional[str], query: str, limit: int = 20) -> list[
                     "published": str(published or ""),
                     "url": str(url or ""),
                     "snippet": str(snippet or ""),
-                    "distance": float(distance) if distance is not None else None,
+                    "distance":    float(distance) if distance is not None else None,
+                    "match_score": float(match_score) if match_score is not None else None,
                 }
             )
 
-    results.sort(key=lambda row: (row["distance"] is None, row["distance"], row["published"]))
+    results.sort(key=lambda row: (row["match_score"] is None, -(row["match_score"] or 0.0), row["published"] or ""), reverse=False)
     return results[:limit]
 
 
 def delete_sentence_ids(domain: str, sentence_ids: list[int]) -> int:
+    if chromadb is None:
+        return 0
     if not sentence_ids:
         return 0
     collection = _get_collection(domain)
@@ -223,6 +352,8 @@ def delete_sentence_ids(domain: str, sentence_ids: list[int]) -> int:
 
 
 def delete_domain_store(domain: str) -> bool:
+    if chromadb is None:
+        return False
     path = _domain_chroma_path(domain)
     _release_domain_client(domain)
     if not path.exists():
@@ -232,6 +363,8 @@ def delete_domain_store(domain: str) -> bool:
 
 
 def rename_domain_store(old: str, new: str) -> bool:
+    if chromadb is None:
+        return False
     old_path = _domain_chroma_path(old)
     if not old_path.exists():
         return False

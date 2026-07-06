@@ -34,8 +34,11 @@ from run_helpers import run_prompt_batch
 from task_korechat import load_task_turns
 from task_korechat import save_task_turn
 from input_layer.server import app
+from input_layer.server import get_startup_state_snapshot
 from input_layer.server import push_log_line
 from input_layer.server import setup as api_setup
+from input_layer.server import set_startup_state_snapshot
+from input_layer.server import update_startup_state
 from input_layer.koreconv_input import start_koreconv_loop
 from orchestration import OrchestratorConfig
 from utils.runtime_logger import SessionLogger
@@ -84,6 +87,7 @@ def run_api_mode(
     log_path: Path,
     host: str = _DEFAULT_HOST,
     port: int = _DEFAULT_PORT,
+    background_startup: object | None = None,
 ) -> None:
     """Launch the FastAPI server with background scheduler.
 
@@ -119,6 +123,14 @@ def run_api_mode(
         for t in enabled_tasks
     }
     scheduler_state = SchedulerSharedState(enabled_tasks=enabled_tasks, last_run=last_run)
+    set_startup_state_snapshot(
+        {
+            **get_startup_state_snapshot(),
+            "service_status": "starting",
+            "message":        "HTTP server starting",
+            "started_at":     datetime.now().isoformat(timespec="seconds"),
+        }
+    )
 
     # Publish shared state to the API module.
     api_setup(
@@ -228,7 +240,32 @@ def run_api_mode(
         shutdown             = shutdown,
     )
 
+    background_thread: threading.Thread | None = None
+    if callable(background_startup):
+        def _run_background_startup() -> None:
+            try:
+                background_startup()
+            except Exception as exc:
+                message = f"[API] Background startup failed: {exc}"
+                logger.log_file_only(message)
+                push_log_line(message)
+                update_startup_state(
+                    service_status = "degraded",
+                    message        = "Background startup failed",
+                )
+
+        background_thread = threading.Thread(
+            target = _run_background_startup,
+            daemon = True,
+            name   = "api-background-startup",
+        )
+        background_thread.start()
+
     push_log_line(f"[API] Server starting on http://{host}:{port}")
+    update_startup_state(
+        service_status = "starting",
+        message        = "HTTP server accepting requests; dependency warmup continues in background",
+    )
     print(f"\nKoreAgent - http://{host}:{port}  (send interrupt to stop)", flush=True)
     print(f"Web UI:   http://localhost:{port}/", flush=True)
 
@@ -288,5 +325,10 @@ def run_api_mode(
             sched_thread.join(timeout=2)
         except KeyboardInterrupt:
             pass
+        if background_thread is not None:
+            try:
+                background_thread.join(timeout=1)
+            except KeyboardInterrupt:
+                pass
         print("\nAPI server stopped.", flush=True)
         logger.log("[API] Server stopped.")

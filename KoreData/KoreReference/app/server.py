@@ -24,6 +24,7 @@
 from contextlib import asynccontextmanager
 from pathlib import Path
 import sys
+import threading
 from typing import Optional
 
 import httpx
@@ -67,7 +68,11 @@ from app.endpoint_ui import register_reference_ui
 
 @asynccontextmanager
 async def _lifespan(app: FastAPI):
-    init_db()
+    threading.Thread(
+        target = init_db,
+        daemon = True,
+        name   = "korereference-startup-warm",
+    ).start()
     yield
 
 

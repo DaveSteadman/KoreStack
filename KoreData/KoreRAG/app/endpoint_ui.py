@@ -11,6 +11,7 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Redirect
 from fastapi.templating import Jinja2Templates
 from jinja2 import ChoiceLoader, FileSystemLoader
 from markupsafe import escape
+from config import get_suite_urls_map
 
 from app.config import cfg
 from app.database import (
@@ -286,7 +287,7 @@ def register_rag_ui(
 ) -> None:
     @app.get("/suite-config.js", include_in_schema=False)
     def suite_config_js():
-        urls = os.environ.get("KORE_SUITE_URLS", "{}")
+        urls = json.dumps(get_suite_urls_map())
         return Response(
             content    = f"window.__koreSuiteUrls = {urls};",
             media_type = "application/javascript",

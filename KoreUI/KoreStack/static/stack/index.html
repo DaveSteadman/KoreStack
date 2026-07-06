@@ -67,13 +67,13 @@
                   </div>
                   <div class="service-cell service-link"><a data-field="url" href="{{ service.url }}" target="_blank" rel="noreferrer">{{ service.url }}</a></div>
                   <div class="service-cell service-actions actions">
-                    <button type="button" data-service="{{ service.slug }}" data-action="start" title="Start" aria-label="Start {{ service.label }}">
+                    <button class="service-action service-action--start" type="button" data-service="{{ service.slug }}" data-action="start" title="Start" aria-label="Start {{ service.label }}">
                       <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3.5v9l7-4.5-7-4.5Z" fill="currentColor"/></svg>
                     </button>
-                    <button type="button" data-service="{{ service.slug }}" data-action="stop" title="Stop" aria-label="Stop {{ service.label }}">
+                    <button class="service-action service-action--stop" type="button" data-service="{{ service.slug }}" data-action="stop" title="Stop" aria-label="Stop {{ service.label }}">
                       <svg viewBox="0 0 16 16" aria-hidden="true"><rect x="4" y="4" width="8" height="8" fill="currentColor"/></svg>
                     </button>
-                    <button type="button" data-service="{{ service.slug }}" data-action="restart" title="Restart" aria-label="Restart {{ service.label }}">
+                    <button class="service-action service-action--restart" type="button" data-service="{{ service.slug }}" data-action="restart" title="Restart" aria-label="Restart {{ service.label }}">
                       <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3a5 5 0 1 1-4.24 2.35" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M2.8 2.8h3.6v3.6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
                     </button>
                   </div>

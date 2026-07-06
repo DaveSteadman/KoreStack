@@ -49,13 +49,10 @@ def _print_banner() -> None:
 
 
 if __name__ == "__main__":
-    from app.database import init_db, get_status
     _DATA_DIR = Path(cfg["data_dir"])
     _DATA_DIR.mkdir(parents=True, exist_ok=True)
     _LOG_PATH = get_suite_datacontrol_dir() / "logs" / "koredata" / "reference.log"
     _LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
-    init_db()
-    stats = get_status()
     _print_banner()
     uvicorn.run(
         "app.server:app",

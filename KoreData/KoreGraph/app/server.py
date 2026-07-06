@@ -53,6 +53,7 @@ if _KORECOMMON_PARENT is not None and str(_KORECOMMON_PARENT) not in sys.path:
     sys.path.insert(0, str(_KORECOMMON_PARENT))
 
 from KoreCommon.endpoint_manifest import build_endpoint_manifest
+from config import get_suite_urls_map
 from app.config import cfg
 from app.csv_io import export_connections, import_connections
 from app.database import (
@@ -113,7 +114,11 @@ _STATIC_DIR = Path(
 
 @asynccontextmanager
 async def _lifespan(app: FastAPI):
-    init_db()
+    threading.Thread(
+        target = init_db,
+        daemon = True,
+        name   = "koregraph-startup-warm",
+    ).start()
     async with _mcp.session_manager.run():
         yield
 
@@ -268,7 +273,7 @@ app.mount("/mcp", _mcp.streamable_http_app())
 
 @app.get("/suite-config.js", include_in_schema=False)
 def suite_config_js():
-    urls = os.environ.get("KORE_SUITE_URLS", "{}")
+    urls = json.dumps(get_suite_urls_map())
     return Response(
         content=f"window.__koreSuiteUrls = {urls};",
         media_type="application/javascript",

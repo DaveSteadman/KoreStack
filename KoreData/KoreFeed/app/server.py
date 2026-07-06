@@ -23,8 +23,11 @@
 from contextlib import asynccontextmanager
 import os
 import sys
+import threading
 from pathlib import Path
 from typing import Optional
+
+import json
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exception_handlers import http_exception_handler
@@ -36,8 +39,10 @@ if _KORECOMMON_PARENT is not None and str(_KORECOMMON_PARENT) not in sys.path:
     sys.path.insert(0, str(_KORECOMMON_PARENT))
 
 from KoreCommon.endpoint_manifest import build_endpoint_manifest
+from config import get_suite_urls_map
 from app.endpoint_ui import register_feed_ui
 from app.database import (
+    backfill_sentence_index,
     FeedDatabaseError,
     delete_domain_db,
     delete_entries_by_feed,
@@ -55,11 +60,15 @@ from app.database import (
     get_sentence,
     init_db,
     list_domains,
+    rebuild_sentence_index,
     rename_domain_db,
     search_entries,
+    search_entries_detailed,
+    set_sentence_deleted,
     set_domain_age_settings,
+    update_entry_page_text,
 )
-from app.chroma_index import semantic_search
+from app.chroma_index import migrate_legacy_domain_stores, semantic_search
 from app.feed_manager import (
     add_feed,
     create_domain,
@@ -79,13 +88,24 @@ from app.feed_manager import (
 from app.ingest import schedule_feeds, scheduler, start_scheduler, trigger_immediate
 
 
-@asynccontextmanager
-async def _lifespan(app: FastAPI):
-    # Migrate all existing databases (adds `deleted` column if absent, etc.)
+def _warm_feed_domains() -> None:
     for _domain in list_domains():
         init_db(_domain)
     for _domain in list_feed_domains():
         sync_domain_spec(_domain)
+    try:
+        migrate_legacy_domain_stores(batch_size=250)
+    except Exception:
+        pass
+
+
+@asynccontextmanager
+async def _lifespan(app: FastAPI):
+    threading.Thread(
+        target = _warm_feed_domains,
+        daemon = True,
+        name   = "korefeed-startup-warm",
+    ).start()
     start_scheduler()
     yield
     if scheduler.running:
@@ -119,7 +139,7 @@ _UI_ELEMENTS_ASSETS = Path(
 
 @app.get("/suite-config.js", include_in_schema=False)
 def suite_config_js():
-    urls = os.environ.get("KORE_SUITE_URLS", "{}")
+    urls = json.dumps(get_suite_urls_map())
     return Response(content=f"window.__koreSuiteUrls = {urls};", media_type="application/javascript", headers={"Cache-Control": "no-store"})
 
 
@@ -287,7 +307,7 @@ def api_get_entry_sentences(domain: str, entry_id: int):
     try:
         if not get_entry(domain, entry_id):
             raise HTTPException(status_code=404, detail="Entry not found")
-        rows = get_entry_sentences(domain, entry_id)
+        rows = get_entry_sentences(domain, entry_id, include_deleted=True)
     except FeedDatabaseError as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
     return [
@@ -322,6 +342,36 @@ def api_delete_entry(domain: str, entry_id: int):
     return {"deleted": entry_id}
 
 
+class EntryContentBody(BaseModel):
+    page_text: str
+
+
+class SentenceToggleBody(BaseModel):
+    deleted: bool
+
+
+@app.post("/api/domains/{domain}/entries/{entry_id}/content", tags=["content"])
+def api_update_entry_content(domain: str, entry_id: int, body: EntryContentBody):
+    try:
+        return update_entry_page_text(domain, entry_id, body.page_text)
+    except FeedDatabaseError as exc:
+        message = str(exc)
+        if "not found" in message.lower():
+            raise HTTPException(status_code=404, detail=message) from exc
+        raise HTTPException(status_code=500, detail=message) from exc
+
+
+@app.post("/api/domains/{domain}/sentences/{sentence_id}/deleted", tags=["content"])
+def api_set_sentence_deleted(domain: str, sentence_id: int, body: SentenceToggleBody):
+    try:
+        return set_sentence_deleted(domain, sentence_id, body.deleted)
+    except FeedDatabaseError as exc:
+        message = str(exc)
+        if "not found" in message.lower():
+            raise HTTPException(status_code=404, detail=message) from exc
+        raise HTTPException(status_code=500, detail=message) from exc
+
+
 @app.delete("/api/domains/{domain}/entries", tags=["content"])
 def api_delete_entries(
     domain: str,
@@ -338,6 +388,27 @@ def api_delete_entries(
         count = delete_entries_older_than(domain, older_than_days)
         return {"deleted": count, "filter": "older_than_days", "value": older_than_days}
     raise HTTPException(status_code=400, detail="Provide feed_name or older_than_days")
+
+
+@app.post("/api/domains/{domain}/sentences/backfill", tags=["content"])
+def api_backfill_sentence_index(domain: str):
+    """Create sentence rows for entries that do not yet have them."""
+    try:
+        return backfill_sentence_index(domain)
+    except FeedDatabaseError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@app.post("/api/domains/{domain}/sentences/rebuild", tags=["content"])
+def api_rebuild_sentence_index(domain: str, entry_id: Optional[int] = None):
+    """Rebuild sentence rows for an entire domain or one specific entry."""
+    try:
+        return rebuild_sentence_index(domain, entry_id=entry_id)
+    except FeedDatabaseError as exc:
+        message = str(exc)
+        if "not found" in message.lower():
+            raise HTTPException(status_code=404, detail=message) from exc
+        raise HTTPException(status_code=500, detail=message) from exc
 
 
 @app.post("/api/domains/{domain}/entries/bulk-delete", tags=["content"])
@@ -362,8 +433,20 @@ def api_search(
     since / until are ISO 8601 date strings (YYYY-MM-DD) applied against the
     entry published date.  Either or both may be omitted.
     """
-    return search_entries(domain or None, q, limit=limit, include_body=full,
-                          since=since, until=until)
+    results, failed_domains = search_entries_detailed(
+        domain=domain or None,
+        query=q,
+        limit=limit,
+        include_body=full,
+        since=since,
+        until=until,
+    )
+    headers: dict[str, str] = {}
+    if failed_domains:
+        failed_names = [item.get("domain", "") for item in failed_domains if item.get("domain")]
+        headers["X-Kore-Failed-Domain-Count"] = str(len(failed_domains))
+        headers["X-Kore-Failed-Domains"]      = ",".join(failed_names)
+    return JSONResponse(content=results, headers=headers)
 
 
 @app.get("/api/semantic-search", tags=["content"])
@@ -371,9 +454,10 @@ def api_semantic_search(
     q: str,
     domain: Optional[str] = None,
     limit: int = 50,
+    min_match: float = 0.4,
 ):
     """Semantic sentence search across the per-domain Chroma stores."""
-    return semantic_search(domain or None, q, limit=limit)
+    return semantic_search(domain or None, q, limit=limit, min_match=min_match)
 
 
 @app.get("/api/recent", tags=["content"])

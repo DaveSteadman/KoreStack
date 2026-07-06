@@ -34,7 +34,7 @@ import subprocess
 import sys
 import time
 from contextlib import asynccontextmanager
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import shutil
 import threading
@@ -55,7 +55,7 @@ if _KORECOMMON_PARENT is not None and str(_KORECOMMON_PARENT) not in sys.path:
 
 from KoreCommon.endpoint_manifest import build_endpoint_manifest
 from app.config import cfg
-from config import get_koredata_dir
+from config import get_koredata_dir, get_suite_urls_map
 
 
 LOG = logging.getLogger("koredata.gateway")
@@ -85,6 +85,15 @@ _SERVICES = [
 
 _children: list[tuple[subprocess.Popen, str, object]] = []
 _children_lock = threading.Lock()
+_startup_state_lock = threading.Lock()
+_gateway_startup_state: dict[str, Any] = {
+    "status":       "starting",
+    "message":      "Gateway booting",
+    "children":     {},
+    "started_at":   datetime.now().isoformat(timespec="seconds"),
+    "completed_at": None,
+}
+_child_readiness_task: asyncio.Task | None = None
 
 
 def _display_path(path: Path) -> Path:
@@ -129,7 +138,7 @@ def _listening_pids_on_port(port: int) -> list[int]:
 def _terminate_pid(pid: int, label: str) -> None:
     if pid <= 0 or pid == os.getpid():
         return
-    print(f"  ◼ Clearing stale {label} listener  (pid {pid})")
+    print(f"  [stale] Clearing {label} listener  (pid {pid})")
     try:
         if os.name == "nt":
             subprocess.run(["taskkill", "/PID", str(pid), "/T", "/F"], check=False, capture_output=True)
@@ -180,13 +189,13 @@ def _stop_children() -> None:
     for proc, label, log_file in reversed(children):
         if proc.poll() is not None:
             continue  # already exited
-        print(f"  ◼ Stopping {label}  (pid {proc.pid})")
+        print(f"  [stop] Stopping {label}  (pid {proc.pid})")
         proc.terminate()
     for proc, label, log_file in reversed(children):
         try:
             proc.wait(timeout=6)
         except subprocess.TimeoutExpired:
-            print(f"  ✗ Force-killing {label}")
+            print(f"  [kill] Force-killing {label}")
             proc.kill()
         try:
             log_file.close()
@@ -203,7 +212,7 @@ async def _wait_for(client: httpx.AsyncClient, label: str, timeout: float = 20.0
         try:
             r = await client.get("/status", timeout=2.0)
             if r.status_code == 200:
-                print(f"  ✓ {label} ready")
+                print(f"  [ok] {label} ready")
                 return
         except Exception:
             # Startup probes are retried for the full timeout window because each
@@ -211,6 +220,74 @@ async def _wait_for(client: httpx.AsyncClient, label: str, timeout: float = 20.0
             pass
         await asyncio.sleep(0.5)
     print(f"  [!] {label} did not respond within {timeout:.0f}s - continuing anyway")
+
+
+def _set_child_status(label: str, status: str, detail: str) -> None:
+    with _startup_state_lock:
+        children = _gateway_startup_state.setdefault("children", {})
+        children[label] = {"status": status, "detail": detail}
+
+
+def _set_gateway_status(status: str, message: str) -> None:
+    with _startup_state_lock:
+        _gateway_startup_state["status"]  = status
+        _gateway_startup_state["message"] = message
+        if status == "ready":
+            _gateway_startup_state["completed_at"] = datetime.now().isoformat(timespec="seconds")
+
+
+def _get_gateway_startup_snapshot() -> dict[str, Any]:
+    with _startup_state_lock:
+        children = _gateway_startup_state.get("children")
+        return {
+            **_gateway_startup_state,
+            "children": dict(children) if isinstance(children, dict) else {},
+        }
+
+
+async def _wait_for_children_ready() -> None:
+    checks = [
+        ("KoreFeed",      _feed_client,   60.0),
+        ("KoreLibrary",   _lib_client,    20.0),
+        ("KoreReference", _ref_client,    20.0),
+        ("KoreRAG",       _rag_client,    20.0),
+        ("KoreScrape",    _scrape_client, 20.0),
+        ("KoreGraph",     _graph_client,  20.0),
+    ]
+    for label, _client, timeout in checks:
+        _set_child_status(label, "starting", "Waiting for /status")
+
+    async def _probe(label: str, client: httpx.AsyncClient | None, timeout: float) -> tuple[str, bool]:
+        if client is None:
+            _set_child_status(label, "degraded", "Client not initialised")
+            return label, False
+        loop = asyncio.get_running_loop()
+        end  = loop.time() + timeout
+        while loop.time() < end:
+            try:
+                r = await client.get("/status", timeout=2.0)
+                if r.status_code == 200:
+                    _set_child_status(label, "ready", "Responding to /status")
+                    print(f"  [ok] {label} ready")
+                    return label, True
+            except Exception:
+                pass
+            await asyncio.sleep(0.5)
+        _set_child_status(label, "degraded", f"Did not respond within {timeout:.0f}s")
+        print(f"  [!] {label} did not respond within {timeout:.0f}s - continuing anyway")
+        return label, False
+
+    results = await asyncio.gather(
+        *(_probe(label, client, timeout) for label, client, timeout in checks),
+        return_exceptions=False,
+    )
+    ready_count = sum(1 for _label, ok in results if ok)
+    if ready_count == len(checks):
+        _set_gateway_status("ready", "All child services ready")
+        print("  All services ready\n")
+    else:
+        _set_gateway_status("degraded", f"{ready_count}/{len(checks)} child services ready")
+        print("  Gateway started with degraded child readiness\n")
 
 
 # ---------------------------------------------------------------------------
@@ -227,8 +304,10 @@ _graph_client: httpx.AsyncClient | None = None
 
 @asynccontextmanager
 async def _lifespan(app: FastAPI):
+    global _child_readiness_task
     global _feed_client, _lib_client, _ref_client, _rag_client, _scrape_client, _graph_client
     print("\n  KoreDataGateway — starting child services")
+    _set_gateway_status("starting", "Starting child services")
     _start_children()
     _feed_client   = httpx.AsyncClient(base_url=cfg["korefeed_url"],      timeout=15.0)
     _lib_client    = httpx.AsyncClient(base_url=cfg["korelibrary_url"],   timeout=15.0)
@@ -236,18 +315,17 @@ async def _lifespan(app: FastAPI):
     _rag_client    = httpx.AsyncClient(base_url=cfg["korerag_url"],       timeout=15.0)
     _scrape_client = httpx.AsyncClient(base_url=cfg["korescrape_url"],   timeout=30.0)
     _graph_client  = httpx.AsyncClient(base_url=cfg["koregraph_url"],     timeout=15.0)
-    await asyncio.gather(
-        _wait_for(_feed_client,   "KoreFeed",      timeout=60.0),
-        _wait_for(_lib_client,    "KoreLibrary"),
-        _wait_for(_ref_client,    "KoreReference"),
-        _wait_for(_rag_client,    "KoreRAG"),
-        _wait_for(_scrape_client, "KoreScrape"),
-        _wait_for(_graph_client,  "KoreGraph"),
-    )
-    print("  All services ready\n")
+    _child_readiness_task = asyncio.create_task(_wait_for_children_ready())
     async with _mcp.session_manager.run():
         yield
     print("\n  KoreDataGateway — shutting down child services")
+    if _child_readiness_task is not None:
+        _child_readiness_task.cancel()
+        try:
+            await _child_readiness_task
+        except asyncio.CancelledError:
+            pass
+        _child_readiness_task = None
     await _feed_client.aclose()
     await _lib_client.aclose()
     await _ref_client.aclose()
@@ -398,11 +476,13 @@ def _svc_status(r: Any, url: str) -> dict:
 # ---------------------------------------------------------------------------
 
 class _SearchRequest(BaseModel):
-    query: str
-    domains: list[str] = Field(default_factory=list)
-    since: Optional[str] = None
-    until: Optional[str] = None
-    limit: int = Field(default=20, ge=1, le=200)
+    query:     str
+    domains:   list[str]      = Field(default_factory=list)
+    since:     Optional[str]  = None
+    until:     Optional[str]  = None
+    mode:      str            = "keyword"
+    min_match: float          = Field(default=0.4, ge=0.0, le=1.0)
+    limit:     int            = Field(default=20, ge=1, le=200)
 
 
 class _FullTextRequest(BaseModel):
@@ -469,6 +549,7 @@ def _map_feed_entry(e: dict) -> dict:
     eid    = e.get("id", "")
     body   = e.get("page_text") or e.get("content") or e.get("body") or e.get("summary") or ""
     return {
+        "domain":       "feeds",
         "type":         "feed_entry",
         "artifact_ref": _build_artifact_ref("feed_entry", domain=domain, id=eid),
         "id":           eid,
@@ -477,26 +558,30 @@ def _map_feed_entry(e: dict) -> dict:
         "published_at": e.get("published") or e.get("published_at") or e.get("ingested_at"),
         "snippet":      body[:300].strip(),
         "url":          f"{cfg['korefeed_url']}/ui/feeds/{domain}/{eid}",
+        "score":        e.get("score"),
     }
 
 
 def _map_ref_article(a: dict) -> dict:
     title = a.get("title", "")
     return {
-        "type":       "reference_article",
+        "domain":       "reference",
+        "type":         "reference_article",
         "artifact_ref": _build_artifact_ref("reference_article", title=title),
         "title":      title,
         "summary":    a.get("summary", ""),
         "snippet":    a.get("snippet") or (a.get("summary") or "")[:300],
         "word_count": a.get("word_count"),
         "url":        f"{cfg['korereference_url']}/ui/reference/{quote(title, safe='')}",
+        "score":      a.get("score"),
     }
 
 
 def _map_lib_book(b: dict) -> dict:
     route_id = b.get("route_id") or b.get("id")
     return {
-        "type":     "library_book",
+        "domain":       "library",
+        "type":         "library_book",
         "artifact_ref": _build_artifact_ref("library_book", book_id=route_id),
         "id":       route_id,
         "local_id": b.get("id"),
@@ -506,13 +591,15 @@ def _map_lib_book(b: dict) -> dict:
         "author":   b.get("author", ""),
         "snippet":  b.get("snippet") or (b.get("notes") or "")[:300],
         "url":      f"{cfg['korelibrary_url']}/ui/library/{route_id}",
+        "score":    b.get("score"),
     }
 
 
 def _map_rag_chunk(c: dict) -> dict:
     db_id = c.get("db", "default")
     return {
-        "type":    "rag_chunk",
+        "domain":       "rag",
+        "type":         "rag_chunk",
         "artifact_ref": _build_artifact_ref("rag_chunk", id=c.get("id")),
         "id":      c.get("id"),
         "title":   c.get("title", ""),
@@ -520,6 +607,7 @@ def _map_rag_chunk(c: dict) -> dict:
         "tags":    c.get("tags", ""),
         "snippet": c.get("snippet") or "",
         "url":     f"{cfg['korerag_url']}/ui/rag/{c.get('id', '')}?db={db_id}",
+        "score":   c.get("score"),
     }
 
 
@@ -527,6 +615,7 @@ def _map_scrape_chunk(c: dict) -> dict:
     capture_id = c.get("capture_id", "")
     page_path  = c.get("page_path", "")
     return {
+        "domain":       "scrape",
         "type":         "scrape_chunk",
         "artifact_ref": _build_artifact_ref("scrape_chunk", id=c.get("id")),
         "id":           c.get("id"),
@@ -536,76 +625,268 @@ def _map_scrape_chunk(c: dict) -> dict:
         "captured_at":  c.get("captured_at"),
         "snippet":      c.get("snippet") or "",
         "url":          f"{cfg['korescrape_url']}/ui/scrape/files/{capture_id}/{page_path}" if capture_id and page_path else "",
+        "score":        c.get("score"),
     }
 
 
-def _flatten_search_results(results_by_domain: dict) -> list[dict]:
-    merged: list[dict] = []
-    row_index = 0
-    while True:
-        added = False
-        for domain in ("feeds", "reference", "library", "rag", "scrape", "graph"):
-            items = results_by_domain.get(domain)
-            if isinstance(items, list) and row_index < len(items):
-                merged.append(items[row_index])
-                added = True
-        if not added:
-            break
-        row_index += 1
-    return merged
+def _search_query_terms(query: str) -> list[str]:
+    terms: list[str] = []
+    for term in re.findall(r'"([^"]+)"|([A-Za-z0-9_:+.-]+)', str(query or "")):
+        value = (term[0] or term[1] or "").strip().lower()
+        if not value or value in {"and", "or", "not"}:
+            continue
+        terms.append(value)
+    return terms
+
+
+def _parse_search_timestamp(value: object) -> datetime | None:
+    text = str(value or "").strip()
+    if not text:
+        return None
+    normalized = text.replace("Z", "+00:00")
+    try:
+        parsed = datetime.fromisoformat(normalized)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def _result_match_score(item: dict, query: str, query_terms: list[str]) -> float:
+    text_fields = [
+        str(item.get("title", "")),
+        str(item.get("snippet", "")),
+        str(item.get("summary", "")),
+        str(item.get("source", "")),
+        str(item.get("start", "")),
+        str(item.get("connection", "")),
+        str(item.get("end", "")),
+    ]
+    haystack = "\n".join(text_fields).lower()
+    title_l  = str(item.get("title", "")).lower()
+    query_l  = str(query or "").strip().lower()
+    score    = 0.0
+
+    raw_score = item.get("score")
+    if isinstance(raw_score, (int, float)):
+        score += -float(raw_score)
+
+    if query_l and query_l in title_l:
+        score += 18.0
+    elif query_l and query_l in haystack:
+        score += 9.0
+
+    for term in query_terms:
+        if term in title_l:
+            score += 6.0
+        elif term in haystack:
+            score += 2.0
+
+    timestamp = (
+        _parse_search_timestamp(item.get("published_at"))
+        or _parse_search_timestamp(item.get("captured_at"))
+    )
+    if timestamp is not None:
+        age_days = max(0.0, (datetime.now(timezone.utc) - timestamp).total_seconds() / 86400.0)
+        score += max(0.0, 5.0 - min(age_days, 30.0) / 6.0)
+
+    domain = str(item.get("domain", "")).lower()
+    if domain == "reference":
+        score += 1.0
+    if domain == "feeds":
+        score += 0.5
+    return score
+
+
+def _merge_search_results(results_by_domain: dict[str, list[dict]], query: str, limit: int) -> list[dict]:
+    query_terms = _search_query_terms(query)
+    merged: list[tuple[float, float, int, dict]] = []
+    ordinal = 0
+
+    for domain in ("feeds", "reference", "library", "rag", "scrape", "graph"):
+        items = results_by_domain.get(domain) or []
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            annotated = dict(item)
+            annotated.setdefault("domain", domain)
+            timestamp = (
+                _parse_search_timestamp(annotated.get("published_at"))
+                or _parse_search_timestamp(annotated.get("captured_at"))
+            )
+            recency = timestamp.timestamp() if timestamp is not None else 0.0
+            merged.append((_result_match_score(annotated, query, query_terms), recency, ordinal, annotated))
+            ordinal += 1
+
+    merged.sort(
+        key=lambda row: (
+            -row[0],
+            -row[1],
+            row[2],
+        ),
+    )
+    return [item for _score, _recency, _ordinal, item in merged[:limit]]
+
+
+_SEMANTIC_SEARCH_DOMAINS = {"feeds", "library"}
 
 
 @app.post("/api/search")
 async def api_search(req: _SearchRequest):
-    search_domains = [d.lower() for d in req.domains] if req.domains else ["feeds", "reference", "library", "rag", "scrape"]
-    limit = req.limit
+    requested_domains = [d.lower() for d in req.domains] if req.domains else ["feeds", "reference", "library", "rag", "scrape"]
+    search_mode       = "semantic" if str(req.mode or "").strip().lower() == "semantic" else "keyword"
+    min_match         = max(0.0, min(1.0, float(req.min_match or 0.0)))
+    limit             = req.limit
+
+    if search_mode == "semantic":
+        unsupported_domains = [domain for domain in requested_domains if domain not in _SEMANTIC_SEARCH_DOMAINS]
+        search_domains      = [domain for domain in requested_domains if domain in _SEMANTIC_SEARCH_DOMAINS]
+        if not search_domains:
+            search_domains = sorted(_SEMANTIC_SEARCH_DOMAINS)
+    else:
+        unsupported_domains = []
+        search_domains      = requested_domains
 
     async def _feeds():
-        params: dict = {"q": req.query, "limit": limit, "full": "true"}
-        if req.since: params["since"] = req.since
-        if req.until: params["until"] = req.until
-        r = await _feed_client.get("/api/search", params=params, timeout=10.0)
+        if search_mode == "semantic":
+            params: dict = {"q": req.query, "limit": limit, "min_match": min_match}
+            r = await _feed_client.get("/api/semantic-search", params=params, timeout=10.0)
+        else:
+            params = {"q": req.query, "limit": limit, "full": "true"}
+            if req.since: params["since"] = req.since
+            if req.until: params["until"] = req.until
+            r = await _feed_client.get("/api/search", params=params, timeout=10.0)
         if r.status_code != 200:
-            return {"error": f"HTTP {r.status_code}"}
-        return [_map_feed_entry(e) for e in (r.json() or [])[:limit]]
+            return {
+                "status":   "error",
+                "results":  [],
+                "error":    f"HTTP {r.status_code}",
+                "warnings": [],
+            }
+        payload = r.json() or []
+        if not isinstance(payload, list):
+            return {
+                "status":   "error",
+                "results":  [],
+                "error":    "Feed search returned a non-list payload.",
+                "warnings": [],
+            }
+        failed_domains = [part.strip() for part in str(r.headers.get("X-Kore-Failed-Domains", "")).split(",") if part.strip()]
+        warnings: list[str] = []
+        if failed_domains:
+            warnings.append(f"Feed search skipped failing domains: {', '.join(failed_domains)}")
+        if search_mode == "semantic":
+            return {
+                "status":   "partial" if failed_domains else "ok",
+                "results":  [
+                    {
+                        "domain":          "feeds",
+                        "feed_domain":     e.get("domain") or "",
+                        "type":            "feed_entry",
+                        "artifact_ref":    _build_artifact_ref("feed_entry", domain=e.get("domain"), id=e.get("id")),
+                        "id":              e.get("id"),
+                        "title":           e.get("headline") or "",
+                        "headline":        e.get("headline") or "",
+                        "source":          e.get("feed_name") or "",
+                        "published_at":    e.get("published") or "",
+                        "snippet":         e.get("snippet") or "",
+                        "url":             e.get("url") or "",
+                        "sentence_id":     e.get("sentence_id"),
+                        "sentence_locator": e.get("sentence_locator") or "",
+                        "match_score":     e.get("match_score"),
+                    }
+                    for e in payload[:limit]
+                ],
+                "error":    "",
+                "warnings": warnings,
+            }
+        return {
+            "status":   "partial" if failed_domains else "ok",
+            "results":  [_map_feed_entry(e) for e in payload[:limit]],
+            "error":    "",
+            "warnings": warnings,
+        }
 
     async def _reference():
         params: dict = {"q": req.query, "limit": limit}
         r = await _ref_client.get("/api/search", params=params, timeout=10.0)
         if r.status_code != 200:
-            return {"error": f"HTTP {r.status_code}"}
-        return [_map_ref_article(a) for a in (r.json() or [])[:limit]]
+            return {"status": "error", "results": [], "error": f"HTTP {r.status_code}", "warnings": []}
+        payload = r.json() or []
+        if not isinstance(payload, list):
+            return {"status": "error", "results": [], "error": "Reference search returned a non-list payload.", "warnings": []}
+        return {"status": "ok", "results": [_map_ref_article(a) for a in payload[:limit]], "error": "", "warnings": []}
 
     async def _library():
-        params: dict = {"q": req.query, "limit": limit}
-        r = await _lib_client.get("/api/search", params=params, timeout=10.0)
+        if search_mode == "semantic":
+            params: dict = {"q": req.query, "limit": limit, "min_match": min_match}
+            r = await _lib_client.get("/api/semantic-search", params=params, timeout=10.0)
+        else:
+            params = {"q": req.query, "limit": limit}
+            r = await _lib_client.get("/api/search", params=params, timeout=10.0)
         if r.status_code != 200:
-            return {"error": f"HTTP {r.status_code}"}
-        return [_map_lib_book(b) for b in (r.json() or [])[:limit]]
+            return {"status": "error", "results": [], "error": f"HTTP {r.status_code}", "warnings": []}
+        payload = r.json() or []
+        if not isinstance(payload, list):
+            return {"status": "error", "results": [], "error": "Library search returned a non-list payload.", "warnings": []}
+        if search_mode == "semantic":
+            return {
+                "status": "ok",
+                "results": [
+                    {
+                        "domain":          "library",
+                        "type":            "library_book",
+                        "artifact_ref":    _build_artifact_ref("library_book", book_id=b.get("route_id") or b.get("id")),
+                        "id":              b.get("route_id") or b.get("id"),
+                        "local_id":        b.get("id"),
+                        "title":           b.get("title", ""),
+                        "author":          b.get("author", ""),
+                        "language":        b.get("language", ""),
+                        "genre":           b.get("genre", ""),
+                        "year":            b.get("year"),
+                        "snippet":         b.get("snippet") or "",
+                        "url":             f"{cfg['korelibrary_url']}/ui/library/{b.get('route_id') or b.get('id')}",
+                        "sentence_id":     b.get("sentence_id"),
+                        "sentence_locator": b.get("sentence_locator") or "",
+                        "match_score":     b.get("match_score"),
+                    }
+                    for b in payload[:limit]
+                ],
+                "error":    "",
+                "warnings": [],
+            }
+        return {"status": "ok", "results": [_map_lib_book(b) for b in payload[:limit]], "error": "", "warnings": []}
 
     async def _rag():
         params: dict = {"q": req.query, "limit": limit}
         r = await _rag_client.get("/api/search/all", params=params, timeout=10.0)
         if r.status_code != 200:
-            return {"error": f"HTTP {r.status_code}"}
-        return [_map_rag_chunk(c) for c in (r.json() or [])[:limit]]
+            return {"status": "error", "results": [], "error": f"HTTP {r.status_code}", "warnings": []}
+        payload = r.json() or []
+        if not isinstance(payload, list):
+            return {"status": "error", "results": [], "error": "RAG search returned a non-list payload.", "warnings": []}
+        return {"status": "ok", "results": [_map_rag_chunk(c) for c in payload[:limit]], "error": "", "warnings": []}
 
     async def _scrape():
         params: dict = {"q": req.query, "limit": limit}
         r = await _scrape_client.get("/api/search", params=params, timeout=10.0)
         if r.status_code != 200:
-            return {"error": f"HTTP {r.status_code}"}
-        return [_map_scrape_chunk(c) for c in (r.json() or [])[:limit]]
+            return {"status": "error", "results": [], "error": f"HTTP {r.status_code}", "warnings": []}
+        payload = r.json() or []
+        if not isinstance(payload, list):
+            return {"status": "error", "results": [], "error": "Scrape search returned a non-list payload.", "warnings": []}
+        return {"status": "ok", "results": [_map_scrape_chunk(c) for c in payload[:limit]], "error": "", "warnings": []}
 
     async def _graph():
         query = _normalise_graph_query_literal(req.query)
         query_l = query.lower()
         r = await _graph_client.get("/api/search", params={"q": query, "limit": min(limit, 50)}, timeout=10.0)
         if r.status_code != 200:
-            return {"error": f"HTTP {r.status_code}"}
+            return {"status": "error", "results": [], "error": f"HTTP {r.status_code}", "warnings": []}
         matches = r.json() or []
         if not matches:
-            return []
+            return {"status": "ok", "results": [], "error": "", "warnings": []}
 
         concept_rows = matches[: min(len(matches), max(1, min(limit, 8)))]
         expand_calls = [
@@ -661,15 +942,21 @@ async def api_search(req: _SearchRequest):
                 str(e.get("end_name", "")).lower(),
             ),
         )[:50]
-        return [
-            {
-                "start":      e.get("start_name", ""),
-                "connection": e.get("connection_name", ""),
-                "end":        e.get("end_name", ""),
-                "score":      e.get("score", 0),
-            }
-            for e in edges
-        ]
+        return {
+            "status": "ok",
+            "results": [
+                {
+                    "domain":      "graph",
+                    "start":       e.get("start_name", ""),
+                    "connection":  e.get("connection_name", ""),
+                    "end":         e.get("end_name", ""),
+                    "score":       e.get("score", 0),
+                }
+                for e in edges
+            ],
+            "error": "",
+            "warnings": [],
+        }
 
     tasks: list[tuple[str, Any]] = []
     if "feeds"     in search_domains: tasks.append(("feeds",     _feeds()))
@@ -677,18 +964,69 @@ async def api_search(req: _SearchRequest):
     if "library"   in search_domains: tasks.append(("library",   _library()))
     if "rag"       in search_domains: tasks.append(("rag",       _rag()))
     if "scrape"    in search_domains: tasks.append(("scrape",    _scrape()))
-    if "graph"     in search_domains: tasks.append(("graph",     _graph()))
+    if "graph"     in search_domains and search_mode != "semantic": tasks.append(("graph",     _graph()))
 
-    gathered = await asyncio.gather(*(coro for _, coro in tasks), return_exceptions=True)
-    results_by_domain = {
-        key: ({"error": str(val)} if isinstance(val, Exception) else val)
-        for (key, _), val in zip(tasks, gathered)
-    }
+    gathered         = await asyncio.gather(*(coro for _, coro in tasks), return_exceptions=True)
+    results_by_domain: dict[str, list[dict]] = {}
+    domain_statuses:  dict[str, dict[str, Any]] = {}
+    warnings:         list[str] = []
+
+    for (key, _task), value in zip(tasks, gathered):
+        if isinstance(value, Exception):
+            results_by_domain[key] = []
+            domain_statuses[key]   = {
+                "status":   "error",
+                "count":    0,
+                "error":    str(value),
+                "warnings": [],
+            }
+            warnings.append(f"{key} search failed: {value}")
+            continue
+
+        payload = value if isinstance(value, dict) else {}
+        results = payload.get("results") if isinstance(payload.get("results"), list) else []
+        status  = str(payload.get("status") or "ok")
+        error   = str(payload.get("error") or "")
+        domain_warnings = [str(item) for item in (payload.get("warnings") or []) if str(item).strip()]
+
+        results_by_domain[key] = results
+        domain_statuses[key]   = {
+            "status":   status,
+            "count":    len(results),
+            "error":    error,
+            "warnings": domain_warnings,
+        }
+        warnings.extend(domain_warnings)
+        if error:
+            warnings.append(f"{key} search failed: {error}")
+
+    non_ok_statuses = [item.get("status") for item in domain_statuses.values() if item.get("status") != "ok"]
+    total_results   = sum(len(items) for items in results_by_domain.values())
+    if unsupported_domains:
+        warnings.append(
+            f"Semantic search is currently available only for: {', '.join(sorted(_SEMANTIC_SEARCH_DOMAINS))}. "
+            f"Ignored: {', '.join(unsupported_domains)}"
+        )
+    if any(status == "error" for status in non_ok_statuses) and total_results == 0:
+        overall_status = "error"
+    elif non_ok_statuses:
+        overall_status = "partial"
+    else:
+        overall_status = "ok"
+
     return {
-        "query":             req.query,
-        "domains_searched":  [key for key, _ in tasks],
-        "results":           _flatten_search_results(results_by_domain),
-        "results_by_domain": results_by_domain,
+        "query":              req.query,
+        "mode":               search_mode,
+        "min_match":          min_match if search_mode == "semantic" else None,
+        "semantic_capable_domains": sorted(_SEMANTIC_SEARCH_DOMAINS),
+        "domains_searched":   [key for key, _ in tasks],
+        "status":             overall_status,
+        "partial_failure":    overall_status != "ok",
+        "result_counts_by_domain": {key: len(value) for key, value in results_by_domain.items()},
+        "domain_statuses":    domain_statuses,
+        "warnings":           warnings,
+        "results":            _merge_search_results(results_by_domain, req.query, limit),
+        "results_by_domain":  results_by_domain,
     }
 
 
@@ -1081,7 +1419,7 @@ async def root_redirect():
 
 @app.get("/suite-config.js", include_in_schema=False)
 def suite_config_js():
-    urls = os.environ.get("KORE_SUITE_URLS", "{}")
+    urls = _json.dumps(get_suite_urls_map())
     return Response(content=f"window.__koreSuiteUrls = {urls};", media_type="application/javascript", headers={"Cache-Control": "no-store"})
 
 
@@ -1117,24 +1455,38 @@ async def web_root(request: Request):
 async def gateway_status():
     if _feed_client is None:
         return {"service": "KoreDataGateway", "status": "starting"}
-    kf_r, kl_r, kr_r, krag_r, ks_r, kg_r = await asyncio.gather(
-        _feed_client.get("/status", timeout=3.0),
-        _lib_client.get("/status", timeout=3.0),
-        _ref_client.get("/status", timeout=3.0),
-        _rag_client.get("/status", timeout=3.0),
-        _scrape_client.get("/status", timeout=3.0),
-        _graph_client.get("/status", timeout=3.0),
-        return_exceptions=True,
-    )
+    startup = _get_gateway_startup_snapshot()
+    child_snapshot = startup.get("children") if isinstance(startup.get("children"), dict) else {}
     return {
         "service": "KoreDataGateway",
+        "status":  startup.get("status", "starting"),
+        "message": startup.get("message", ""),
+        "startup": startup,
         "children": {
-            "korefeed":      _svc_status(kf_r,   cfg["korefeed_url"]),
-            "korelibrary":   _svc_status(kl_r,   cfg["korelibrary_url"]),
-            "korereference": _svc_status(kr_r,   cfg["korereference_url"]),
-            "korerag":       _svc_status(krag_r, cfg["korerag_url"]),
-            "korescrape":    _svc_status(ks_r,   cfg["korescrape_url"]),
-            "koregraph":     _svc_status(kg_r,   cfg["koregraph_url"]),
+            "korefeed": {
+                "url": cfg["korefeed_url"],
+                **(child_snapshot.get("KoreFeed") or {}),
+            },
+            "korelibrary": {
+                "url": cfg["korelibrary_url"],
+                **(child_snapshot.get("KoreLibrary") or {}),
+            },
+            "korereference": {
+                "url": cfg["korereference_url"],
+                **(child_snapshot.get("KoreReference") or {}),
+            },
+            "korerag": {
+                "url": cfg["korerag_url"],
+                **(child_snapshot.get("KoreRAG") or {}),
+            },
+            "korescrape": {
+                "url": cfg["korescrape_url"],
+                **(child_snapshot.get("KoreScrape") or {}),
+            },
+            "koregraph": {
+                "url": cfg["koregraph_url"],
+                **(child_snapshot.get("KoreGraph") or {}),
+            },
         },
     }
 

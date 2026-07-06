@@ -16,19 +16,25 @@ from app.config import cfg
 from app.database import (
     COMPLETENESS_FIELDS,
     add_book,
+    backfill_sentence_index,
     delete_book,
     get_book,
     get_book_chunk,
+    get_book_sentences,
+    get_sentence,
     get_status,
     list_catalogs,
     list_books,
     list_incomplete,
     move_book,
+    rebuild_sentence_index,
     search_books,
+    set_sentence_deleted,
     title_exists,
     update_book,
     update_book_body,
 )
+from app.chroma_index import semantic_search
 from app.endpoint_ui import repair_kore_anchors
 
 
@@ -59,6 +65,10 @@ class BookUpdate(BaseModel):
 
 class BookMoveRequest(BaseModel):
     catalog: str
+
+
+class SentenceToggleRequest(BaseModel):
+    deleted: bool
 
 
 class KiwixImportRequest(BaseModel):
@@ -381,6 +391,8 @@ def register_library_api(app: FastAPI) -> None:
         catalog: Optional[str]   = None,
         catalogs: Optional[str]  = None,
         scope: Optional[str]     = None,
+        mode: str                = "keyword",
+        min_match: float         = 0.4,
     ):
         if not any([q, author, title, year, language, genre]):
             raise HTTPException(
@@ -389,6 +401,22 @@ def register_library_api(app: FastAPI) -> None:
             )
         parsed_catalogs = [value.strip() for value in (catalogs or "").split(",") if value.strip()] or None
         try:
+            search_mode = "semantic" if str(mode).strip().lower() == "semantic" else "keyword"
+            if search_mode == "semantic":
+                if not q:
+                    raise HTTPException(status_code=400, detail="Semantic search requires q")
+                results = semantic_search(catalog, q, limit=limit + offset, min_match=min_match)
+                if author:
+                    results = [item for item in results if author.lower() in str(item.get("author") or "").lower()]
+                if title:
+                    results = [item for item in results if title.lower() in str(item.get("title") or "").lower()]
+                if year is not None:
+                    results = [item for item in results if item.get("year") == year]
+                if language:
+                    results = [item for item in results if str(item.get("language") or "").lower() == language.lower()]
+                if genre:
+                    results = [item for item in results if genre.lower() in str(item.get("genre") or "").lower()]
+                return results[offset: offset + limit]
             return search_books(
                 q         = q,
                 author    = author,
@@ -404,6 +432,55 @@ def register_library_api(app: FastAPI) -> None:
             )
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.get("/api/semantic-search", summary="Semantic search across indexed library sentences")
+    def route_semantic_search(q: str, catalog: Optional[str] = None, limit: int = 50, min_match: float = 0.4):
+        try:
+            return semantic_search(catalog, q, limit=limit, min_match=min_match)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.get("/api/books/{book_id:path}/sentences", summary="List indexed sentences for a single book")
+    def route_book_sentences(book_id: str, include_deleted: bool = False):
+        try:
+            return get_book_sentences(book_id, include_deleted=include_deleted)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.get("/api/catalogs/{catalog}/sentences/{sentence_id}", summary="Fetch a single indexed sentence")
+    def route_sentence(catalog: str, sentence_id: int):
+        try:
+            row = get_sentence(catalog, sentence_id)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        if row is None:
+            raise HTTPException(status_code=404, detail="Sentence not found")
+        return row
+
+    @app.post("/api/catalogs/{catalog}/sentences/backfill", summary="Backfill sentence rows for a catalog")
+    def route_backfill_catalog_sentences(catalog: str):
+        try:
+            return backfill_sentence_index(catalog)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.post("/api/catalogs/{catalog}/sentences/rebuild", summary="Rebuild sentence rows for a catalog or one book")
+    def route_rebuild_catalog_sentences(catalog: str, book_id: Optional[str] = None):
+        try:
+            return rebuild_sentence_index(catalog, book_id=book_id)
+        except ValueError as exc:
+            message = str(exc)
+            status  = 404 if "not found" in message.lower() else 400
+            raise HTTPException(status_code=status, detail=message) from exc
+
+    @app.post("/api/catalogs/{catalog}/sentences/{sentence_id}/deleted", summary="Mark one sentence deleted or active")
+    def route_set_sentence_deleted(catalog: str, sentence_id: int, data: SentenceToggleRequest):
+        try:
+            return set_sentence_deleted(catalog, sentence_id, data.deleted)
+        except ValueError as exc:
+            message = str(exc)
+            status  = 404 if "not found" in message.lower() else 400
+            raise HTTPException(status_code=status, detail=message) from exc
 
     @app.get("/api/incomplete", summary="List books with missing metadata fields")
     @app.get("/incomplete", include_in_schema=False)

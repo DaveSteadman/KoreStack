@@ -10,6 +10,7 @@ from fastapi import FastAPI, Form, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from jinja2 import ChoiceLoader, FileSystemLoader
+from config import get_suite_urls_map
 
 from app.config import cfg
 from app.database import delete_chunk, get_chunk, list_chunks, search_chunks
@@ -170,7 +171,7 @@ def _annotate_scrape_capture_chunks(rows: list[dict]) -> list[dict]:
 def register_scrape_ui(app: FastAPI) -> None:
     @app.get("/suite-config.js", include_in_schema=False)
     def suite_config_js():
-        urls = os.environ.get("KORE_SUITE_URLS", "{}")
+        urls = json.dumps(get_suite_urls_map())
         return Response(
             content    = f"window.__koreSuiteUrls = {urls};",
             media_type = "application/javascript",

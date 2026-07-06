@@ -14,7 +14,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "CommonCode"))
 import logutil
 import uvicorn
 from app.config import cfg
-from app.server import get_status
 from config import get_suite_datacontrol_dir
 
 _W = 80
@@ -22,7 +21,6 @@ _W = 80
 
 def _print_banner() -> None:
     now      = datetime.now().strftime("%H:%M:%S")
-    stats    = get_status()
     host     = cfg["host"]
     port     = cfg["port"]
     data_dir = cfg["data_dir"]
@@ -42,10 +40,7 @@ def _print_banner() -> None:
         row("Host:",        f"http://{host}:{port}/"),
         row("Data dir:",    data_dir),
         row("Log level:",   log_lvl),
-        row("Captures:",    str(stats["captures"])),
-        row("Running jobs:", str(stats["running_jobs"])),
-        row("Saved pages:", str(stats["pages"])),
-        row("Saved assets:", str(stats["assets"])),
+        row("Index status:", "Initialising in background"),
         "",
         sep,
         "",

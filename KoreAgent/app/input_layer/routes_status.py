@@ -16,11 +16,38 @@
 from datetime import datetime
 
 
-def register_status_routes(app, *, get_active_host, get_active_model, get_active_num_ctx, get_active_backend, get_ollama_ps_rows, version: str) -> None:
+def register_status_routes(
+    app,
+    *,
+    get_active_host,
+    get_active_model,
+    get_active_num_ctx,
+    get_active_backend,
+    get_ollama_ps_rows,
+    get_startup_state,
+    version: str,
+) -> None:
     @app.get("/api/version")
     @app.get("/version", include_in_schema=False)
     def get_version():
         return {"version": version}
+
+    @app.get("/api/status")
+    @app.get("/status", include_in_schema=False)
+    def get_service_status():
+        startup = get_startup_state() or {}
+        return {
+            "service":        "KoreAgent",
+            "status":         startup.get("service_status", "starting"),
+            "message":        startup.get("message", ""),
+            "started_at":     startup.get("started_at"),
+            "dependencies":   startup.get("dependencies", {}),
+            "host":           get_active_host(),
+            "model":          get_active_model(),
+            "num_ctx":        get_active_num_ctx(),
+            "backend":        get_active_backend(),
+            "ts":             datetime.now().isoformat(timespec="seconds"),
+        }
 
     @app.get("/api/status/ollama")
     @app.get("/status/ollama", include_in_schema=False)

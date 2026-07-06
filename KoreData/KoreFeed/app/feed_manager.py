@@ -12,6 +12,8 @@
 #   - app/server.py  -- CRUD operations on feeds via this module
 # ====================================================================================================
 import json
+import logging
+import os
 import re
 import uuid
 from datetime import datetime
@@ -22,6 +24,7 @@ from app.config import cfg
 from app.database import get_domain_age_settings, init_db, rename_feed_entries, set_domain_age_settings
 
 FEEDS_DIR = Path(cfg["data_dir"])
+LOG       = logging.getLogger("korefeed.feed_manager")
 
 
 def _domain_file(domain: str) -> Path:
@@ -45,17 +48,30 @@ def _load_domain_state(domain: str) -> dict[str, dict]:
     path = _state_file(domain)
     if not path.exists():
         return {}
-    with open(path, encoding="utf-8") as handle:
-        raw = json.load(handle)
+    try:
+        with open(path, encoding="utf-8") as handle:
+            raw = json.load(handle)
+    except json.JSONDecodeError as exc:
+        LOG.warning("Ignoring unreadable feed state file %s: %s", path, exc)
+        return {}
     if not isinstance(raw, dict):
         return {}
     return {str(k): v for k, v in raw.items() if isinstance(v, dict)}
 
 
+def _write_json_atomic(path: Path, payload: object) -> None:
+    path.parent.mkdir(exist_ok=True)
+    temp_path = path.with_name(f"{path.name}.{uuid.uuid4().hex}.tmp")
+    with open(temp_path, "w", encoding="utf-8") as handle:
+        json.dump(payload, handle, indent=2)
+        handle.flush()
+        os.fsync(handle.fileno())
+    os.replace(temp_path, path)
+
+
 def _save_domain_state(domain: str, state: dict[str, dict]) -> None:
     FEEDS_DIR.mkdir(exist_ok=True)
-    with open(_state_file(domain), "w", encoding="utf-8") as handle:
-        json.dump(state, handle, indent=2)
+    _write_json_atomic(_state_file(domain), state)
 
 
 def _normalise_age_settings(raw_age_settings: object) -> dict:
@@ -111,8 +127,21 @@ def _read_domain_spec(domain: str) -> tuple[str, list, dict, bool]:
     if not path.exists():
         return domain, [], {"mode": "none", "days": None, "start_date": None, "end_date": None}, True
 
-    with open(path, encoding="utf-8") as handle:
-        raw = json.load(handle)
+    try:
+        raw_text = path.read_text(encoding="utf-8")
+    except OSError as exc:
+        LOG.warning("Could not read feed domain spec %s: %s", path, exc)
+        return domain, [], {"mode": "none", "days": None, "start_date": None, "end_date": None}, True
+
+    if not raw_text.strip():
+        LOG.warning("Feed domain spec is empty; treating as empty domain: %s", path)
+        return domain, [], {"mode": "none", "days": None, "start_date": None, "end_date": None}, True
+
+    try:
+        raw = json.loads(raw_text)
+    except json.JSONDecodeError as exc:
+        LOG.warning("Feed domain spec is invalid JSON; treating as empty domain: %s (%s)", path, exc)
+        return domain, [], {"mode": "none", "days": None, "start_date": None, "end_date": None}, True
 
     if isinstance(raw, dict):
         raw_domain        = str(raw.get("domain") or domain).strip() or domain
@@ -177,8 +206,10 @@ def _save_domain_file(domain: str, feeds: list[dict]) -> None:
     FEEDS_DIR.mkdir(exist_ok=True)
     enabled      = get_domain_enabled(domain)
     age_settings = get_domain_age_settings(domain)
-    with open(_domain_file(domain), "w", encoding="utf-8") as f:
-        json.dump(_build_export_spec(domain, feeds, age_settings, enabled), f, indent=2)
+    _write_json_atomic(
+        _domain_file(domain),
+        _build_export_spec(domain, feeds, age_settings, enabled),
+    )
 
 
 def _build_export_feed(raw_feed: dict) -> dict:
@@ -295,17 +326,15 @@ def create_domain(domain: str) -> bool:
     FEEDS_DIR.mkdir(exist_ok=True)
     if path.exists():
         return False
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(
-            {
-                "domain":       domain,
-                "enabled":      True,
-                "age_settings": {"mode": "none", "days": None, "start_date": None, "end_date": None},
-                "feeds":        [],
-            },
-            f,
-            indent=2,
-        )
+    _write_json_atomic(
+        path,
+        {
+            "domain":       domain,
+            "enabled":      True,
+            "age_settings": {"mode": "none", "days": None, "start_date": None, "end_date": None},
+            "feeds":        [],
+        },
+    )
     return True
 
 

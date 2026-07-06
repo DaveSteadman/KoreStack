@@ -275,14 +275,23 @@ def _reset_stale_running() -> None:
     _registry_reload()
 
 
+def _warm_registered_databases() -> None:
+    _registry_reload()
+    for db_id in list_database_ids():
+        init_db(db=db_id)
+    _reset_stale_running()
+
+
 @asynccontextmanager
 async def _lifespan(app: FastAPI):
     global _scheduler_stop_event, _scheduler_thread
     _init_job_object()
     _registry_reload()
-    for db_id in list_database_ids():
-        init_db(db=db_id)
-    _reset_stale_running()
+    threading.Thread(
+        target = _warm_registered_databases,
+        daemon = True,
+        name   = "korerag-startup-warm",
+    ).start()
     _scheduler_stop_event = threading.Event()
     _scheduler_thread     = threading.Thread(
         target = _run_ingest_scheduler,

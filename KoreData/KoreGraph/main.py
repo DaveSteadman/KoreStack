@@ -20,7 +20,6 @@ import logutil
 import uvicorn
 from datetime import datetime
 from app.config import cfg
-from app.database import get_status, init_db
 from config import get_suite_datacontrol_dir
 
 _W = 80
@@ -38,16 +37,6 @@ def _print_banner() -> None:
     def row(label: str, value: str) -> str:
         return f"  {label:<22} {value}"
 
-    try:
-        stats = get_status()
-        entities = f"{stats['entities']:,}"
-        relations = f"{stats['relations']:,}  (proposed: {stats['relations_proposed']:,})"
-        size_kb = f"{stats['db_size_bytes'] // 1024:,} KB"
-    except Exception:
-        entities = "(not yet initialised)"
-        relations = ""
-        size_kb = ""
-
     lines = [
         "",
         sep,
@@ -59,9 +48,7 @@ def _print_banner() -> None:
         row("Log level:", log_level),
         row("MCP endpoint:", f"http://{host}:{port}/mcp"),
         "",
-        row("Entities:", entities),
-        row("Relations:", relations),
-        row("DB size:", size_kb),
+        row("Graph status:", "Initialising in background"),
         "",
         sep,
         "",
@@ -74,7 +61,6 @@ if __name__ == "__main__":
     _DATA_DIR.mkdir(parents=True, exist_ok=True)
     _LOG_PATH = get_suite_datacontrol_dir() / "logs" / "koredata" / "graph.log"
     _LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
-    init_db()
     _print_banner()
     uvicorn.run(
         "app.server:app",

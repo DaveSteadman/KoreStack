@@ -53,7 +53,7 @@ def koredocs_sheet_create(
 
 
 @mcp.tool()
-def docs_sheet_table_create(
+def koredocs_sheet_table_create(
     folder_path: Annotated[str, 'Folder path in the shared KoreDocs/datauser tree, such as "/Projects/Calcs". Missing folders are created.'],
     name: Annotated[str, 'Filename, with or without the .koresheet extension.'],
     headers: Annotated[list[str], 'Ordered list of column headers.'],
@@ -139,7 +139,7 @@ def koredocs_sheet_rows_find(
 
 
 @mcp.tool()
-def docs_sheet_rows_update(
+def koredocs_sheet_rows_update(
     id: Annotated[int, 'KoreSheet file id.'],
     match: Annotated[dict[str, Any], 'Header-keyed filters selecting target rows.'],
     updates: Annotated[dict[str, Any], 'Header-keyed values to write into each matched row.'],
@@ -163,7 +163,7 @@ def docs_sheet_rows_update(
 
 
 @mcp.tool()
-def docs_sheet_headers_set(
+def koredocs_sheet_headers_set(
     id: Annotated[int, 'KoreSheet file id.'],
     headers: Annotated[list[str], 'Header names to write into the sheet.'],
     header_row: Annotated[int, 'Row number where the headers should be written.'] = 1,
@@ -175,7 +175,7 @@ def docs_sheet_headers_set(
 
 
 @mcp.tool()
-def docs_sheet_table_rows_append(
+def koredocs_sheet_table_rows_append(
     id: Annotated[int, 'KoreSheet file id.'],
     rows: Annotated[list[Any], 'Rows to append. Each row may be a list of values or an object keyed by header names.'],
     header_row: Annotated[Optional[int], 'Optional header row. When omitted, KoreDocs will guess a likely header row.'] = None,
@@ -194,7 +194,7 @@ def docs_sheet_table_rows_append(
 
 
 @mcp.tool()
-def docs_sheet_labels_find(
+def koredocs_sheet_labels_find(
     id: Annotated[int, 'KoreSheet file id.'],
     labels: Annotated[Optional[list[str]], 'Optional list of labels to search for. Omit to list likely label cells across the sheet.'] = None,
     match_mode: Annotated[Literal['contains', 'exact'], 'How labels should be matched.'] = 'contains',
@@ -204,7 +204,7 @@ def docs_sheet_labels_find(
 
 
 @mcp.tool()
-def docs_sheet_named_value_get(
+def koredocs_sheet_named_value_get(
     id: Annotated[int, 'KoreSheet file id.'],
     label: Annotated[str, 'Label to search for, such as "Interest Rate" or "Starting Balance".'],
     direction: Annotated[Literal['right', 'below'], 'Which neighboring cell should be treated as the value cell.'] = 'right',
@@ -214,7 +214,7 @@ def docs_sheet_named_value_get(
 
 
 @mcp.tool()
-def docs_sheet_named_value_set(
+def koredocs_sheet_named_value_set(
     id: Annotated[int, 'KoreSheet file id.'],
     label: Annotated[str, 'Label to search for, such as "Interest Rate" or "Starting Balance".'],
     value: Annotated[Any, 'New value to write into the neighboring value cell.'],
@@ -225,7 +225,7 @@ def docs_sheet_named_value_set(
     return _set_named_value(id=id, label=label, value=value, direction=direction, expected_revision=expected_revision)
 
 @mcp.tool()
-def docs_sheet_range_read(
+def koredocs_sheet_range_read(
     id: Annotated[int, 'KoreSheet file id.'],
     range: Annotated[str, 'A1-style range such as A1:C10, A:A, or 2:4.'],
     values_only: Annotated[bool, 'When true, return scalar values instead of full cell objects.'] = False,
@@ -235,7 +235,7 @@ def docs_sheet_range_read(
 
 
 @mcp.tool()
-def docs_sheet_cells_write(
+def koredocs_sheet_cells_write(
     id: Annotated[int, 'KoreSheet file id.'],
     cells: Annotated[dict[str, Any], 'Sparse cell updates keyed by A1 address.'],
     expected_revision: Annotated[Optional[int], 'Optional optimistic concurrency check.'] = None,
@@ -245,7 +245,7 @@ def docs_sheet_cells_write(
 
 
 @mcp.tool()
-def docs_sheet_table_read(
+def koredocs_sheet_table_read(
     id: Annotated[int, 'KoreSheet file id.'],
     header_row: Annotated[int, 'Row number containing column headers.'] = 1,
     range_ref: Annotated[Optional[str], 'Optional A1-style range constraining the table view.'] = None,
@@ -255,7 +255,7 @@ def docs_sheet_table_read(
 
 
 @mcp.tool()
-def docs_sheet_rows_append(
+def koredocs_sheet_rows_append(
     id: Annotated[int, 'KoreSheet file id.'],
     rows: Annotated[list[Any], 'Rows to append.'],
     start_col: Annotated[str, 'Start column for list-style rows. Defaults to A.'] = 'A',
@@ -267,7 +267,7 @@ def docs_sheet_rows_append(
 
 
 @mcp.tool()
-def docs_sheet_rows_upsert(
+def koredocs_sheet_rows_upsert(
     id: Annotated[int, 'KoreSheet file id.'],
     rows: Annotated[list[dict[str, Any]], 'Header-keyed rows to update or append.'],
     key_columns: Annotated[list[str], 'Header names that uniquely identify an existing row.'],
@@ -287,7 +287,7 @@ def docs_sheet_rows_upsert(
 
 
 @mcp.tool()
-def docs_sheet_range_clear(
+def koredocs_sheet_range_clear(
     id: Annotated[int, 'KoreSheet file id.'],
     range: Annotated[str, 'A1-style range such as B2:D9, A:A, or 3:3.'],
     expected_revision: Annotated[Optional[int], 'Optional optimistic concurrency check.'] = None,

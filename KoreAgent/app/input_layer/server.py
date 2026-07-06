@@ -69,6 +69,7 @@ import queue
 import re
 import threading
 from datetime import datetime
+from typing import Any
 
 from fastapi import FastAPI
 from fastapi import HTTPException
@@ -169,6 +170,17 @@ _latest_log_path: str | None = None
 
 _pending_switch:      dict | None   = None
 _pending_switch_lock: threading.Lock = threading.Lock()
+_startup_state:       dict[str, Any] = {
+    "service_status": "starting",
+    "started_at":     datetime.now().isoformat(timespec="seconds"),
+    "message":        "HTTP server booting",
+    "dependencies": {
+        "llm":      {"status": "pending", "detail": ""},
+        "mcp":      {"status": "pending", "detail": ""},
+        "korechat": {"status": "pending", "detail": ""},
+    },
+}
+_startup_state_lock:  threading.Lock = threading.Lock()
 
 
 # ====================================================================================================
@@ -200,6 +212,47 @@ def _get_scheduler_snapshot() -> tuple[list[dict], dict[str, datetime | None]]:
 def _set_latest_log_path(path: str | Path | None) -> None:
     global _latest_log_path
     _latest_log_path = str(path) if path else None
+
+
+def set_startup_state_snapshot(state: dict[str, Any]) -> None:
+    global _startup_state
+    with _startup_state_lock:
+        deps = state.get("dependencies")
+        _startup_state = {
+            **state,
+            "dependencies": dict(deps) if isinstance(deps, dict) else {},
+        }
+
+
+def update_startup_state(
+    *,
+    service_status: str | None = None,
+    message: str | None        = None,
+    dependencies: dict[str, dict[str, str]] | None = None,
+) -> None:
+    with _startup_state_lock:
+        if service_status is not None:
+            _startup_state["service_status"] = service_status
+        if message is not None:
+            _startup_state["message"] = message
+        if dependencies:
+            current = _startup_state.setdefault("dependencies", {})
+            for name, payload in dependencies.items():
+                if not isinstance(payload, dict):
+                    continue
+                current[name] = {
+                    **(current.get(name) or {}),
+                    **payload,
+                }
+
+
+def get_startup_state_snapshot() -> dict[str, Any]:
+    with _startup_state_lock:
+        deps = _startup_state.get("dependencies")
+        return {
+            **_startup_state,
+            "dependencies": dict(deps) if isinstance(deps, dict) else {},
+        }
 
 
 def _make_run_event_queue(run_id: str) -> queue.Queue:
@@ -320,12 +373,13 @@ register_static_routes(
 
 register_status_routes(
     app,
-    get_active_host=get_active_host,
-    get_active_model=get_active_model,
-    get_active_num_ctx=get_active_num_ctx,
-    get_active_backend=get_active_backend,
-    get_ollama_ps_rows=get_ollama_ps_rows,
-    version=SUITE_VERSION,
+    get_active_host         = get_active_host,
+    get_active_model        = get_active_model,
+    get_active_num_ctx      = get_active_num_ctx,
+    get_active_backend      = get_active_backend,
+    get_ollama_ps_rows      = get_ollama_ps_rows,
+    get_startup_state       = get_startup_state_snapshot,
+    version                 = SUITE_VERSION,
 )
 
 
