@@ -122,7 +122,8 @@ const TRASH_SVG = `<svg viewBox="0 0 20 20" fill="none" width="12" height="12">
   <path d="M3 6h14M8 6V4h4v2M5 6l1 11h8l1-11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
 </svg>`;
 
-const TYPE_URL = { koredoc: '/doc', koresheet: '/sheet', korediag: '/diag' };
+const TYPE_URL = { koredoc: '/doc', koresheet: '/sheet', korediag: '/diag', csv: '/sheet' };
+const TEXT_EXTS = new Set(['csv', 'json', 'log', 'md', 'py', 'txt', 'xml', 'yaml', 'yml']);
 
 function _fileIcon(ext) {
   return resolveIcon(SUITE_ICONS, ext, 15);
@@ -286,7 +287,14 @@ function _openFile(row) {
   const ext  = row.dataset.ext;
   const name = row.dataset.name;
   const url  = TYPE_URL[ext];
-  if (!url) { alert('Unknown file type: ' + ext); return; }
+  if (!url) {
+    if (TEXT_EXTS.has(ext)) {
+      _openFileAsText(row);
+      return;
+    }
+    alert('Unknown file type: ' + ext);
+    return;
+  }
 
   // Register in the shared tab store so it appears in the tab bar.
   try {

@@ -10,6 +10,9 @@ const state = {
   fileId: null,
   path: null,
   revision: null,
+  requestTarget: null,
+  loadedContent: '',
+  dirty: false,
 };
 
 const els = {
@@ -18,10 +21,6 @@ const els = {
   save: document.getElementById('te-save'),
   status: document.getElementById('te-status'),
   editor: document.getElementById('te-editor'),
-  source: document.getElementById('te-source'),
-  name: document.getElementById('te-name'),
-  size: document.getElementById('te-size'),
-  encoding: document.getElementById('te-encoding'),
 };
 
 renderAppMenu({
@@ -31,13 +30,13 @@ renderAppMenu({
   dirtyId: 'te-dirty',
   initialTitle: 'TextEdit',
   menus: [{ id: 'file', label: 'File', items: [
-    { action: 'open-target', label: 'Open Target' },
+    { action: 'refresh-target', label: 'Refresh From Disk' },
     { action: 'save-target', label: 'Save' },
   ] }],
 });
 
 initAppMenuEvents(action => {
-  if (action === 'open-target') openTarget();
+  if (action === 'refresh-target') refreshTarget();
   if (action === 'save-target') saveTarget();
 });
 
@@ -60,16 +59,11 @@ initAppTabs('textedit', {
   },
 });
 
-els.open.addEventListener('click', openTarget);
+els.open.addEventListener('click', refreshTarget);
 els.save.addEventListener('click', saveTarget);
 els.editor.addEventListener('input', () => {
   _draftSave(els.editor.value);
-});
-els.target.addEventListener('keydown', e => {
-  if (e.key === 'Enter') {
-    e.preventDefault();
-    openTarget();
-  }
+  _setDirty(Boolean(state.source) && els.editor.value !== state.loadedContent);
 });
 
 function setStatus(msg, isError = false) {
@@ -77,36 +71,33 @@ function setStatus(msg, isError = false) {
   els.status.style.color = isError ? '#ff8080' : '#95a6c8';
 }
 
-function parseTargetInput() {
-  const raw = (els.target.value || '').trim();
-  if (!raw) return null;
+function _displayTarget(meta) {
+  return meta.full_path || meta.path || meta.name || 'Untitled';
+}
 
-  if (/^\d+$/.test(raw)) return { file_id: parseInt(raw, 10) };
+function _setDirty(isDirty) {
+  state.dirty = isDirty;
+  els.save.classList.toggle('btn-warning', isDirty);
+  els.save.classList.toggle('te-btn-success', !isDirty);
+}
 
-  if (raw.startsWith('id=')) {
-    const id = parseInt(raw.slice(3).trim(), 10);
-    if (!Number.isNaN(id)) return { file_id: id };
-  }
-
-  if (raw.startsWith('path=')) {
-    return { path: raw.slice(5).trim() };
-  }
-
-  return { path: raw };
+function _setSaveBusy(isBusy) {
+  els.save.disabled = !state.source || isBusy;
+  els.open.disabled = !state.requestTarget || isBusy;
 }
 
 function applyLoaded(meta) {
   state.source = meta.source;
   state.fileId = meta.file_id ?? null;
   state.path = meta.path ?? null;
-  state.revision = meta.revision ?? null;
+  state.revision = meta.revision == null ? null : String(meta.revision);
+  state.requestTarget = state.fileId != null ? { file_id: state.fileId } : (state.path ? { path: state.path } : state.requestTarget);
 
   els.editor.value = meta.content || '';
-  els.source.textContent = meta.source || '-';
-  els.name.textContent = meta.name || meta.path || meta.full_path || '-';
-  els.size.textContent = typeof meta.byte_length === 'number' ? `${meta.byte_length.toLocaleString()} bytes` : '-';
-  els.encoding.textContent = meta.encoding || 'utf-8';
-  els.save.disabled = false;
+  els.target.value = _displayTarget(meta);
+  state.loadedContent = els.editor.value;
+  _setDirty(false);
+  _setSaveBusy(false);
 
   if (meta.truncated) {
     setStatus('Loaded preview (file exceeded size limit and was truncated).', true);
@@ -129,10 +120,10 @@ function applyLoaded(meta) {
   }
 }
 
-async function openTarget() {
-  const target = parseTargetInput();
+async function refreshTarget() {
+  const target = state.requestTarget;
   if (!target) {
-    setStatus('Enter a file id or path first.', true);
+    setStatus('No file is loaded yet.', true);
     return;
   }
 
@@ -140,17 +131,18 @@ async function openTarget() {
   if (target.file_id != null) qs.set('file_id', String(target.file_id));
   if (target.path) qs.set('path', target.path);
 
-  els.open.disabled = true;
-  setStatus('Opening...');
+  _setSaveBusy(true);
+  setStatus('Refreshing...');
   try {
     const res = await fetchWithAuth(`/api/textedit/open?${qs.toString()}`);
     const body = await res.json();
     if (!res.ok) throw new Error(body.detail || `HTTP ${res.status}`);
+    draft.clear();
     applyLoaded(body);
   } catch (err) {
-    setStatus(`Open failed: ${err.message}`, true);
+    setStatus(`Refresh failed: ${err.message}`, true);
   } finally {
-    els.open.disabled = false;
+    _setSaveBusy(false);
   }
 }
 
@@ -163,12 +155,11 @@ async function saveTarget() {
   const payload = { content: els.editor.value };
   if (state.source === 'korefile') {
     payload.file_id = state.fileId;
-    payload.expected_revision = state.revision;
   } else {
     payload.path = state.path;
   }
 
-  els.save.disabled = true;
+  _setSaveBusy(true);
   setStatus('Saving...');
   try {
     const res = await fetchWithAuth('/api/textedit/save', {
@@ -178,15 +169,17 @@ async function saveTarget() {
     });
     const body = await res.json();
     if (!res.ok) throw new Error(body.detail || `HTTP ${res.status}`);
-    if (typeof body.revision === 'number') {
-      state.revision = body.revision;
+    if (body.revision != null) {
+      state.revision = String(body.revision);
     }
     draft.clear();
+    state.loadedContent = els.editor.value;
+    _setDirty(false);
     setStatus('Saved.');
   } catch (err) {
     setStatus(`Save failed: ${err.message}`, true);
   } finally {
-    els.save.disabled = false;
+    _setSaveBusy(false);
   }
 }
 
@@ -206,14 +199,18 @@ window.addEventListener('pagehide', _persistDraftNow);
   const fileName = q.get('file');
 
   if (id) {
-    els.target.value = `id=${id}`;
+    state.requestTarget = { file_id: parseInt(id, 10) };
+    els.target.value = fileName || 'Loading...';
   } else if (path) {
-    els.target.value = `path=${path}`;
+    state.requestTarget = { path };
+    els.target.value = path;
   } else if (fileName) {
     els.target.value = fileName;
   }
 
-  if (els.target.value) {
-    openTarget();
+  _setSaveBusy(false);
+
+  if (state.requestTarget) {
+    refreshTarget();
   }
 })();

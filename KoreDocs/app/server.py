@@ -463,7 +463,7 @@ class _TextEditSaveBody(BaseModel):
     file_id: Optional[int] = None
     path: Optional[str] = None
     content: str
-    expected_revision: Optional[int] = None
+    expected_revision: Optional[int | str] = None
 
 
 _TEXTEDIT_MAX_BYTES = 4 * 1024 * 1024
@@ -487,6 +487,21 @@ def _resolve_textedit_path(path_value: str) -> Path:
     return candidate
 
 
+def _textedit_revision_token(value: int | None) -> str | None:
+    return None if value is None else str(value)
+
+
+def _parse_textedit_expected_revision(value: int | str | None) -> int | None:
+    if value is None or value == '':
+        return None
+    if isinstance(value, int):
+        return value
+    try:
+        return int(str(value).strip())
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail='Invalid expected_revision') from exc
+
+
 @app.get('/api/textedit/open', summary='Open any file as plain UTF-8 text')
 def textedit_open(
     file_id: Annotated[int | None, Query()] = None,
@@ -504,7 +519,7 @@ def textedit_open(
             'source': 'korefile',
             'file_id': f.get('id'),
             'name': f.get('name'),
-            'revision': f.get('revision'),
+            'revision': _textedit_revision_token(f.get('revision')),
             'content': content,
             'encoding': 'utf-8',
             'byte_length': len(content.encode('utf-8')),
@@ -541,7 +556,7 @@ def textedit_save(body: _TextEditSaveBody):
                 body.file_id,
                 body.content,
                 metadata=None,
-                expected_revision=body.expected_revision,
+                expected_revision=_parse_textedit_expected_revision(body.expected_revision),
             )
             if updated is None:
                 raise HTTPException(status_code=404, detail='File not found')
@@ -549,7 +564,7 @@ def textedit_save(body: _TextEditSaveBody):
                 'ok': True,
                 'source': 'korefile',
                 'file_id': updated.get('id'),
-                'revision': updated.get('revision'),
+                'revision': _textedit_revision_token(updated.get('revision')),
             }
         except korefile.ConflictError:
             raise HTTPException(status_code=409, detail='File changed in the background; refresh and retry.')

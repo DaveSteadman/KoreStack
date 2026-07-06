@@ -14,20 +14,15 @@
   <div id="tab-bar"></div>
   <div id="app-menu-host"></div>
 
-  <main id="te-main">
+  <main id="te-main" class="kcui-shell-bg">
     <section id="te-toolbar" class="kcui-panel">
-      <label for="te-target" class="te-label">Target</label>
-      <input id="te-target" type="text" placeholder="id=123 or path=KoreDocs/README.md" />
-      <button id="te-open" type="button" class="kcui-tag kcui-tag--dim">open</button>
-      <button id="te-save" type="button" class="kcui-tag kcui-tag--accent" disabled>save</button>
+      <label for="te-target" class="te-label">File</label>
+      <input id="te-target" type="text" placeholder="No file loaded" readonly />
+      <div class="te-actions">
+        <button id="te-open" type="button" class="btn btn-sm btn-secondary">REFRESH</button>
+        <button id="te-save" type="button" class="btn btn-sm te-btn-success" disabled>SAVE</button>
+      </div>
       <span id="te-status" aria-live="polite"></span>
-    </section>
-
-    <section id="te-meta" class="kcui-panel">
-      <div><strong>Source:</strong> <span id="te-source">-</span></div>
-      <div><strong>Name/Path:</strong> <span id="te-name">-</span></div>
-      <div><strong>Size:</strong> <span id="te-size">-</span></div>
-      <div><strong>Encoding:</strong> <span id="te-encoding">-</span></div>
     </section>
 
     <textarea id="te-editor" spellcheck="false" placeholder="Open a file to inspect plain text markup..."></textarea>
