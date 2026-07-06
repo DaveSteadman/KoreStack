@@ -20,12 +20,17 @@
 .kcui-tag {
   display:        inline-flex;
   align-items:    center;
+  min-width:      0;
+  max-width:      100%;
+  flex-shrink:    1;
   gap:            4px;
   font-family:    var(--font-ui, monospace);
   font-size:      var(--kcui-text-caption, 12px);
   letter-spacing: var(--kcui-tracking-label, 0.08em);
   text-transform: uppercase;
   white-space:    nowrap;
+  overflow:       hidden;
+  text-overflow:  ellipsis;
   line-height:    1.5;
   padding:        2px 8px;
   border:         1px solid currentColor;

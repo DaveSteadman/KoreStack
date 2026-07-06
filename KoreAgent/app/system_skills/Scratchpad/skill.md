@@ -97,7 +97,7 @@ Tool selection hierarchy (prefer earlier options when they can provide the answe
 ## Token substitution
 Any skill argument containing `{scratch:key}` is automatically resolved to the stored value
 before the skill function is called.  This lets you write:
-  `write_file("data/result.txt", "{scratch:webresult}")`
+  `file_write("exports/result.txt", "{scratch:webresult}")`
 without an explicit `scratch_load` step.
 
 ## Triggers
@@ -132,6 +132,6 @@ scratchpad integration patterns.  No self-referential use needed.
   - Returns: `"Scratchpad dump:\n\n[webresult]\npage content here..."`
 - `scratch_delete("webresult")` - removes the key
   - Returns: `"Deleted scratchpad key 'webresult'."`
-- `write_file("data/out.txt", "{scratch:webresult}")` - FileAccess write using token substitution, no extra scratch_load needed
+- `file_write("exports/out.txt", "{scratch:webresult}")` - FileAccess write using token substitution, no extra scratch_load needed
 - `scratch_search("error")` - find all keys containing "error" in their value
   - Returns: `"Keys matching 'error':\n  logdata  (312 chars)"`

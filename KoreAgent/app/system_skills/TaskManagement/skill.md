@@ -80,7 +80,7 @@ is invoked as one step within an interactive session plan.
 - `task_get("PerformanceHeadroom")` - show full details of the named task
 - `task_create("DailyWeather", "08:00", "Check the weather forecast for today.")` - create a daily task
   - Returns: `"Task 'DailyWeather' created."`
-- `task_create("HourlyMemCheck", "60", "Check free RAM and log it to data/memlog.csv.")` - create an interval task
+- `task_create("HourlyMemCheck", "60", "Check free RAM and log it to memlog.csv.")` - create an interval task
 - `task_set_enabled("PerformanceHeadroom", False)` - disable the task
   - Returns: `"Task 'PerformanceHeadroom' disabled."`
 - `task_set_schedule("HourlyMemCheck", "30")` - change to every 30 minutes

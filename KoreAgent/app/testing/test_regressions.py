@@ -19,6 +19,7 @@
 #   - scratchpad.py            -- scratch_save, scratch_load
 # ====================================================================================================
 import json
+import os
 import sqlite3
 import sys
 import tempfile
@@ -79,6 +80,7 @@ from skills.WebSearch.web_search_skill import search_web
 from skills.WebResearch.web_research_skill import research_traverse
 from skills.SystemInfo.system_info_skill import get_system_info_string
 from KoreDocs.app import korefile as koredocs_korefile
+from KoreCommon import datauser_fs as datauser_fs_module
 from tool_loop import normalize_tool_request
 from tool_loop import _derive_auto_scratch_key
 from tool_loop import _extract_graph_connection_batch_from_text
@@ -284,9 +286,18 @@ class RegressionTests(unittest.TestCase):
             target = data_dir / "ai-sites.json"
             target.write_text('{"ok": true}', encoding="utf-8")
 
-            with patch.object(file_access_module, "WORKSPACE_ROOT", tmp_root):
-                with patch.object(file_access_module, "DEFAULT_DATA_DIR", data_dir):
+            with patch.dict(os.environ, {"KORE_SUITE_ROOT": str(tmp_root), "KORE_SUITE_DATAUSER": str(data_dir)}):
+                datauser_fs_module.get_suite_root.cache_clear()
+                datauser_fs_module.get_suite_config_file.cache_clear()
+                datauser_fs_module.get_datauser_root.cache_clear()
+                datauser_fs_module._load_path_overrides.cache_clear()
+                try:
                     result = file_read("data/ai-sites.json")
+                finally:
+                    datauser_fs_module.get_suite_root.cache_clear()
+                    datauser_fs_module.get_suite_config_file.cache_clear()
+                    datauser_fs_module.get_datauser_root.cache_clear()
+                    datauser_fs_module._load_path_overrides.cache_clear()
 
         self.assertEqual(result, '{"ok": true}')
 
@@ -296,9 +307,18 @@ class RegressionTests(unittest.TestCase):
             data_dir = tmp_root / "data"
             data_dir.mkdir(parents=True, exist_ok=True)
 
-            with patch.object(file_access_module, "WORKSPACE_ROOT", tmp_root):
-                with patch.object(file_access_module, "DEFAULT_DATA_DIR", data_dir):
+            with patch.dict(os.environ, {"KORE_SUITE_ROOT": str(tmp_root), "KORE_SUITE_DATAUSER": str(data_dir)}):
+                datauser_fs_module.get_suite_root.cache_clear()
+                datauser_fs_module.get_suite_config_file.cache_clear()
+                datauser_fs_module.get_datauser_root.cache_clear()
+                datauser_fs_module._load_path_overrides.cache_clear()
+                try:
                     result = folder_create("data/2026-04-05")
+                finally:
+                    datauser_fs_module.get_suite_root.cache_clear()
+                    datauser_fs_module.get_suite_config_file.cache_clear()
+                    datauser_fs_module.get_datauser_root.cache_clear()
+                    datauser_fs_module._load_path_overrides.cache_clear()
 
             created = data_dir / "2026-04-05"
             self.assertTrue(created.exists())
@@ -1363,9 +1383,18 @@ class RegressionTests(unittest.TestCase):
             data_dir = tmp_root / "data"
             data_dir.mkdir(parents=True, exist_ok=True)
 
-            with patch.object(file_access_module, "WORKSPACE_ROOT", tmp_root):
-                with patch.object(file_access_module, "DEFAULT_DATA_DIR", data_dir):
+            with patch.dict(os.environ, {"KORE_SUITE_ROOT": str(tmp_root), "KORE_SUITE_DATAUSER": str(data_dir)}):
+                datauser_fs_module.get_suite_root.cache_clear()
+                datauser_fs_module.get_suite_config_file.cache_clear()
+                datauser_fs_module.get_datauser_root.cache_clear()
+                datauser_fs_module._load_path_overrides.cache_clear()
+                try:
                     result = dataset_write_koredoc("drone_test_raw_5", "feeds2", session_id=session_id)
+                finally:
+                    datauser_fs_module.get_suite_root.cache_clear()
+                    datauser_fs_module.get_suite_config_file.cache_clear()
+                    datauser_fs_module.get_datauser_root.cache_clear()
+                    datauser_fs_module._load_path_overrides.cache_clear()
 
             exported = data_dir / "feeds2" / "drone_test_raw_5.koredoc"
             self.assertTrue(exported.exists())
@@ -1385,9 +1414,18 @@ class RegressionTests(unittest.TestCase):
             data_dir = tmp_root / "data"
             data_dir.mkdir(parents=True, exist_ok=True)
 
-            with patch.object(file_access_module, "WORKSPACE_ROOT", tmp_root):
-                with patch.object(file_access_module, "DEFAULT_DATA_DIR", data_dir):
+            with patch.dict(os.environ, {"KORE_SUITE_ROOT": str(tmp_root), "KORE_SUITE_DATAUSER": str(data_dir)}):
+                datauser_fs_module.get_suite_root.cache_clear()
+                datauser_fs_module.get_suite_config_file.cache_clear()
+                datauser_fs_module.get_datauser_root.cache_clear()
+                datauser_fs_module._load_path_overrides.cache_clear()
+                try:
                     result = file_write("KoreDocs/notes/example.koredoc", "# Hello")
+                finally:
+                    datauser_fs_module.get_suite_root.cache_clear()
+                    datauser_fs_module.get_suite_config_file.cache_clear()
+                    datauser_fs_module.get_datauser_root.cache_clear()
+                    datauser_fs_module._load_path_overrides.cache_clear()
 
             written = data_dir / "notes" / "example.koredoc"
             self.assertTrue(written.exists())
@@ -1453,6 +1491,9 @@ class RegressionTests(unittest.TestCase):
             files = koredocs_korefile.list_files(folder_path="/Radar")
             self.assertEqual(len(files), 1)
             self.assertEqual(files[0]["name"], "companies.koredoc")
+            files_alias = koredocs_korefile.list_files(folder_path="KoreDocs/Radar")
+            self.assertEqual(len(files_alias), 1)
+            self.assertEqual(files_alias[0]["name"], "companies.koredoc")
 
     def test_dataset_expand_full_text_creates_enriched_dataset(self) -> None:
         session_id = "dataset_fulltext"
@@ -1509,12 +1550,21 @@ class RegressionTests(unittest.TestCase):
             data_dir = tmp_root / "data"
             data_dir.mkdir(parents=True, exist_ok=True)
 
-            with patch.object(file_access_module, "WORKSPACE_ROOT", tmp_root):
-                with patch.object(file_access_module, "DEFAULT_DATA_DIR", data_dir):
+            with patch.dict(os.environ, {"KORE_SUITE_ROOT": str(tmp_root), "KORE_SUITE_DATAUSER": str(data_dir)}):
+                datauser_fs_module.get_suite_root.cache_clear()
+                datauser_fs_module.get_suite_config_file.cache_clear()
+                datauser_fs_module.get_datauser_root.cache_clear()
+                datauser_fs_module._load_path_overrides.cache_clear()
+                try:
                     result = file_write(
                         "KoreDocs/feeds2/drone_test_raw_5.koredoc",
                         "### Record 1\n- **Snippet:** This is a sample snippet for entry 1.\n",
                     )
+                finally:
+                    datauser_fs_module.get_suite_root.cache_clear()
+                    datauser_fs_module.get_suite_config_file.cache_clear()
+                    datauser_fs_module.get_datauser_root.cache_clear()
+                    datauser_fs_module._load_path_overrides.cache_clear()
 
         self.assertIn("refusing to write suspicious placeholder content", result)
 

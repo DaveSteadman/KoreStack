@@ -58,7 +58,7 @@
   resize: vertical;
 }
 
-.kcui-shell-bg button,
+.kcui-shell-bg button:not(.kcui-tag),
 .kcui-shell-bg .btn,
 .kcui-btn {
   padding: 0.4rem 1rem;
@@ -82,7 +82,7 @@ a.kcui-btn {
   text-decoration: none;
 }
 
-.kcui-shell-bg button:hover,
+.kcui-shell-bg button:not(.kcui-tag):hover,
 .kcui-shell-bg .btn:hover,
 .kcui-btn:hover {
   background: color-mix(in srgb, var(--accent) 10%, transparent);

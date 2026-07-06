@@ -465,7 +465,7 @@
         },
         "dataset_write_koredoc": {
           "name": "dataset to export.",
-          "folder_path": "KoreDocs folder path such as `feeds2` or `KoreDocs/feeds2`.",
+          "folder_path": "folder path relative to the shared KoreDocs/datauser root, such as `feeds2` or `RadarData/exports`. Legacy `KoreDocs/...` prefixes are accepted for compatibility but should not be preferred in new calls.",
           "document_name": "`.koredoc` file name; defaults to the dataset name.",
           "fields": "field projection for each exported record; defaults to the dataset schema.",
           "offset": "zero-based starting offset for paged exports.",
@@ -547,7 +547,7 @@
     {
       "skill_name": "FileAccess Skill",
       "relative_path": "app/system_skills/FileAccess/skill.md",
-      "purpose": "Interface for all file read, write, append, and search operations. All relative paths resolve under `./data/`; a `\"./\"` prefix anchors a path at the workspace root instead. Paths that escape the workspace root are rejected.",
+      "purpose": "Interface for generic file read, write, append, and search operations inside the shared `datauser/` tree. Bare relative paths resolve under `datauser/`. Legacy prefixes such as `data/...`, `datauser/...`, and `KoreDocs/...` are accepted for compatibility, but new calls should prefer plain datauser-relative paths like `notes/today.txt` or `RadarData/report.csv`.",
       "module": "KoreAgent/app/system_skills/FileAccess/file_access_skill.py",
       "trigger_keyword": "file",
       "triggers": [
@@ -586,12 +586,12 @@
       ],
       "inputs": [],
       "outputs": [
-        "`file_write(...)` - returns `\"Wrote data/filename.txt\"` on success, or `\"Error: ...\"` on failure.",
-        "`file_append(...)` - returns `\"Appended data/filename.txt\"` on success, or `\"Error: ...\"` on failure.",
+        "`file_write(...)` - returns `\"Wrote datauser/filename.txt\"` on success, or `\"Error: ...\"` on failure.",
+        "`file_append(...)` - returns `\"Appended datauser/filename.txt\"` on success, or `\"Error: ...\"` on failure.",
         "`file_read(...)` - returns the file content as a string, or `\"File not found: ...\"` if the file does not exist.",
         "`file_find(...)` - returns a newline-separated list of matching workspace-relative paths, or a `\"No files found...\"` message.",
         "`folder_find(...)` - returns a newline-separated list of matching workspace-relative paths, or a `\"No folders found...\"` message.",
-        "`file_write_from_scratch(...)` - returns `\"Wrote data/file.md (12345 chars from scratch key '_tc_r5_fetch_page_text')\"` on success, or `\"Error: ...\"` on failure.",
+        "`file_write_from_scratch(...)` - returns `\"Wrote datauser/file.md (12345 chars from scratch key '_tc_r5_fetch_page_text')\"` on success, or `\"Error: ...\"` on failure.",
         "`folder_create(...)` - returns `\"Created folder: path\"` or `\"Folder already exists: path\"`, or `\"Error: ...\"` on failure.",
         "`folder_exists(...)` - returns `\"yes\"` or `\"no\"`."
       ],
@@ -601,13 +601,13 @@
           "path": "destination path; same resolution rules as `file_write`."
         },
         "folder_create": {
-          "path": "path of the directory to create, resolved under `data/`, e.g. `\"webresearch/01-Mine/2026-03-22\"`. Creates all missing parent directories. Safe to call if the folder already exists."
+          "path": "path of the directory to create, resolved under `datauser/`, e.g. `\"webresearch/01-Mine/2026-03-22\"`. Creates all missing parent directories. Safe to call if the folder already exists."
         },
         "folder_exists": {
-          "path": "workspace-relative path to check."
+          "path": "datauser-relative path to check."
         },
         "file_write": {
-          "path": "workspace-relative path. A bare name like `\"x.txt\"` resolves to `data/x.txt`. A path starting with `\"./\"` resolves from workspace root.",
+          "path": "datauser-relative path. A bare name like `\"x.txt\"` resolves to `datauser/x.txt`. Legacy aliases like `\"data/x.txt\"`, `\"datauser/x.txt\"`, and `\"KoreDocs/x.txt\"` are accepted.",
           "content": "content to write. Overwrites the file if it exists. Supports `{scratch:key}` token substitution - use `\"{scratch:mykey}\"` to write scratchpad content directly without calling `scratch_load` first."
         },
         "file_append": {
@@ -620,11 +620,11 @@
         },
         "file_find": {
           "keywords": "list of case-insensitive fragments that must ALL appear in the file name, e.g. `[\"pulse\", \"2026\"]`.",
-          "search_root": "workspace-relative directory to restrict the search, e.g. `\"data\"`. Leave empty to search the whole workspace."
+          "search_root": "datauser-relative directory to restrict the search, e.g. `\"RadarData\"`. Leave empty to search the whole `datauser/` tree. Legacy aliases like `\"KoreDocs/RadarData\"` are accepted."
         },
         "folder_find": {
           "keywords": "list of case-insensitive fragments that must ALL appear in the folder name.",
-          "search_root": "workspace-relative directory to restrict the search. Leave empty to search the whole workspace."
+          "search_root": "datauser-relative directory to restrict the search. Leave empty to search the whole `datauser/` tree. Legacy aliases like `\"KoreDocs/RadarData\"` are accepted."
         }
       },
       "tool_selection_guidance": "",

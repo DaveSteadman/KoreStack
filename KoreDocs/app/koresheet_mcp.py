@@ -41,7 +41,7 @@ from .koresheet_ranges import (
 
 @mcp.tool()
 def koredocs_sheet_create(
-    folder_path: Annotated[str, 'Folder path in KoreFile, such as "/" or "/Projects". Missing folders are created.'],
+    folder_path: Annotated[str, 'Folder path in the shared KoreDocs/datauser tree, such as "/" or "/Projects". Missing folders are created.'],
     name: Annotated[str, 'Filename, with or without the .koresheet extension.'],
     cells: Annotated[Optional[dict], 'Sparse cell map keyed by A1 address.'] = None,
     title: Annotated[Optional[str], 'Sheet title.'] = None,
@@ -54,7 +54,7 @@ def koredocs_sheet_create(
 
 @mcp.tool()
 def docs_sheet_table_create(
-    folder_path: Annotated[str, 'Folder path in KoreFile, such as "/Projects/Calcs". Missing folders are created.'],
+    folder_path: Annotated[str, 'Folder path in the shared KoreDocs/datauser tree, such as "/Projects/Calcs". Missing folders are created.'],
     name: Annotated[str, 'Filename, with or without the .koresheet extension.'],
     headers: Annotated[list[str], 'Ordered list of column headers.'],
     rows: Annotated[Optional[list[Any]], 'Optional initial rows. Each row may be a list of values or an object keyed by header names.'] = None,

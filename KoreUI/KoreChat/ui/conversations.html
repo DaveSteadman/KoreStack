@@ -22,7 +22,7 @@
 
         <!-- Conversation list -->
         <div id="sidebar" class="kcui-panel">
-            <div class="section-header kcui-panel-header">
+            <div class="section-header kcui-panel-header" data-panel-header>
                 Conversations
                 <span class="count-badge" id="conv-count">0</span>
                 <div class="flex-gap"></div>
@@ -53,7 +53,7 @@
 
                 <!-- Conversation metadata -->
                 <section class="section kcui-panel" id="sec-meta">
-                    <div class="section-header kcui-panel-header">
+                    <div class="section-header kcui-panel-header" data-panel-header>
                         <span class="section-icon">i</span> Metadata
                         <div class="flex-gap"></div>
                         <button id="agent-resume-btn" class="kcui-tag kcui-tag--warning" type="button">agent resume</button>
@@ -62,9 +62,18 @@
                     <div id="meta-table" class="meta-grid"></div>
                 </section>
 
+                <section class="section kcui-panel" id="sec-tools">
+                    <div class="section-header kcui-panel-header" data-panel-header>
+                        <span class="section-icon">T</span> Tools Active
+                        <span class="count-badge" id="tools-count">0</span>
+                        <span class="empty-badge" id="tools-empty">(empty)</span>
+                    </div>
+                    <div id="tools-active-list" class="tools-active-list"></div>
+                </section>
+
                 <!-- Background context -->
                 <section class="section kcui-panel" id="sec-bg">
-                    <div class="section-header kcui-panel-header">
+                    <div class="section-header kcui-panel-header" data-panel-header>
                         <span class="section-icon">B</span> Background Context
                         <span class="empty-badge" id="bg-empty">(empty)</span>
                     </div>
@@ -73,7 +82,7 @@
 
                 <!-- Thread summary -->
                 <section class="section kcui-panel" id="sec-summary">
-                    <div class="section-header kcui-panel-header">
+                    <div class="section-header kcui-panel-header" data-panel-header>
                         <span class="section-icon">S</span> Thread Summary
                         <span class="empty-badge" id="summary-empty">(empty)</span>
                     </div>
@@ -82,7 +91,7 @@
 
                 <!-- Scratchpad -->
                 <section class="section kcui-panel" id="sec-scratchpad">
-                    <div class="section-header kcui-panel-header">
+                    <div class="section-header kcui-panel-header" data-panel-header>
                         <span class="section-icon">P</span> Scratchpad
                         <span class="empty-badge" id="scratchpad-empty">(empty)</span>
                     </div>
@@ -90,7 +99,7 @@
                 </section>
 
                 <section class="section kcui-panel" id="sec-datasets">
-                    <div class="section-header kcui-panel-header">
+                    <div class="section-header kcui-panel-header" data-panel-header>
                         <span class="section-icon">D</span> Datasets
                         <span class="empty-badge" id="datasets-empty">(empty)</span>
                     </div>
@@ -99,7 +108,7 @@
 
                 <!-- Input history -->
                 <section class="section kcui-panel" id="sec-history">
-                    <div class="section-header kcui-panel-header">
+                    <div class="section-header kcui-panel-header" data-panel-header>
                         <span class="section-icon">H</span> Input History
                         <span class="count-badge" id="history-count">0</span>
                         <span class="empty-badge" id="history-empty">(empty)</span>
@@ -109,7 +118,7 @@
 
                 <!-- Send message -->
                 <section class="section kcui-panel" id="sec-compose">
-                    <div class="section-header kcui-panel-header">
+                    <div class="section-header kcui-panel-header" data-panel-header>
                         <span class="section-icon">+</span> Send Inbound Message
                     </div>
                     <div id="compose-row">
@@ -124,7 +133,7 @@
 
                 <!-- Messages -->
                 <section class="section kcui-panel" id="sec-messages">
-                    <div class="section-header kcui-panel-header">
+                    <div class="section-header kcui-panel-header" data-panel-header>
                         <span class="section-icon">M</span> Messages
                         <span class="count-badge" id="msg-count">0</span>
                         <div class="flex-gap"></div>
@@ -136,7 +145,7 @@
 
                 <!-- Events -->
                 <section class="section kcui-panel" id="sec-events">
-                    <div class="section-header kcui-panel-header">
+                    <div class="section-header kcui-panel-header" data-panel-header>
                         <span class="section-icon">E</span> Events
                         <span class="count-badge" id="evt-count">0</span>
                     </div>

@@ -67,12 +67,12 @@ When in doubt: write code and run it rather than recalling the answer.
 ## Scratchpad integration
 Code output can be large (generated tables, reports, CSV rows).  When the result will be
 used in a downstream step, park it with `scratch_save` immediately after execution, then pass
-`{scratch:key}` as the `content` argument to `write_file` or `append_file` - this avoids
+`{scratch:key}` as the `content` argument to `file_write` or `file_append` - this avoids
 carrying the full output string inline through subsequent tool-calling rounds.
 
-- `run_python_snippet(...)` ? `scratch_save("codeout", <output>)` ? `write_file("data/result.txt", "{scratch:codeout}")`
+- `run_python_snippet(...)` ? `scratch_save("codeout", <output>)` ? `file_write("exports/result.txt", "{scratch:codeout}")`
 
 ## Examples
 - `run_python_snippet(code="import math\nfor i in range(1, 6):\n    print(i, math.factorial(i))")` - print factorials 1-5
   - Returns: `"1 1\n2 2\n3 6\n4 24\n5 120"`
-- `run_python_snippet(code="print('index,square')\nfor i in range(1, 6):\n    print(i, i*i)")` - generate CSV content; park with scratch_save then pass to write_file
+- `run_python_snippet(code="print('index,square')\nfor i in range(1, 6):\n    print(i, i*i)")` - generate CSV content; park with scratch_save then pass to file_write

@@ -3,14 +3,14 @@
 # ====================================================================================================
 # FileAccess skill module for KoreAgent.
 #
-# Provides safe file read/write/append operations constrained to the workspace root, with sensible
-# defaults for relative paths.
+# Provides safe file read/write/append operations constrained to the shared datauser root, with
+# sensible defaults for relative paths.
 #
 # Path behavior:
-#   - bare file name or relative path resolves under data/
-#   - paths that already begin with "data/" are accepted and normalized
-#   - path starting with "./" resolves from workspace root (but still must be inside data/)
-#   - absolute paths are allowed only when they resolve inside the data/ directory
+#   - bare file name or relative path resolves under datauser/
+#   - paths that already begin with legacy prefixes like "data/", "datauser/", or "KoreDocs/"
+#     are accepted and normalized
+#   - absolute paths are allowed only when they resolve inside the datauser directory
 # ====================================================================================================
 
 
@@ -19,108 +19,26 @@
 # ====================================================================================================
 import json
 import re
-from pathlib import Path
 
-from utils.workspace_utils import get_user_data_dir
-from utils.workspace_utils import get_suite_root
-from utils.workspace_utils import get_workspace_root
+from KoreCommon.datauser_fs import DataUserPathError
+from KoreCommon.datauser_fs import create_folder as create_datauser_folder
+from KoreCommon.datauser_fs import display_datauser_path
+from KoreCommon.datauser_fs import list_datauser_files
+from KoreCommon.datauser_fs import list_datauser_folders
+from KoreCommon.datauser_fs import read_text_file
+from KoreCommon.datauser_fs import resolve_datauser_directory
+from KoreCommon.datauser_fs import resolve_datauser_path
+from KoreCommon.datauser_fs import write_text_file
 
 
 # ====================================================================================================
 # MARK: CONSTANTS
 # ====================================================================================================
-WORKSPACE_ROOT   = get_workspace_root()
-DEFAULT_DATA_DIR = get_user_data_dir()
-
 _REMAINING_RECORDS_RE = re.compile(r"\bremaining\s+\d+\s+records?\b", re.IGNORECASE)
 _SAME_SCHEMA_RE = re.compile(r"\bfollow\s+the\s+same\s+schema\b|\bsame\s+schema\b", re.IGNORECASE)
 _SAMPLE_SNIPPET_RE = re.compile(r"\bsample\s+snippet\b|\bexample\s+snippet\b", re.IGNORECASE)
 _PLACEHOLDER_RE = re.compile(r"\bplaceholder\b", re.IGNORECASE)
 
-
-
-# ====================================================================================================
-# MARK: PATH SAFETY
-# ====================================================================================================
-def _ensure_data_dir() -> None:
-    DEFAULT_DATA_DIR.mkdir(parents=True, exist_ok=True)
-
-
-def _display_path(target_path: Path) -> str:
-    try:
-        relative = target_path.relative_to(DEFAULT_DATA_DIR).as_posix()
-        return f"{DEFAULT_DATA_DIR.name}/{relative}" if relative else DEFAULT_DATA_DIR.name
-    except ValueError:
-        pass
-    for root in (WORKSPACE_ROOT, get_suite_root()):
-        try:
-            return target_path.relative_to(root).as_posix()
-        except ValueError:
-            continue
-    return target_path.as_posix()
-
-
-# ----------------------------------------------------------------------------------------------------
-def _sanitize_input_path(file_path: str) -> str:
-    cleaned = str(file_path or "").strip().strip('"').strip("'")
-    if not cleaned:
-        raise ValueError("file_path cannot be empty")
-    return cleaned.replace("\\", "/")
-
-
-# ----------------------------------------------------------------------------------------------------
-def _normalize_data_relative_path(file_path: str) -> str:
-    """Accept either data-relative paths or workspace-relative paths rooted at data/.
-
-    This makes the FileAccess tools robust to results from find_files(), which reports
-    workspace-relative paths like "data/ai-sites.json". Passing that path back into
-    read_file()/write_file()/create_folder() should continue to work rather than creating
-    or looking up "data/data/...".
-
-    Also handles "./data/..." paths that a model produces when it knows the workspace
-    layout - these are equivalent to bare data-relative paths.
-    """
-    normalized = _sanitize_input_path(file_path)
-
-    if normalized == "data" or normalized == "./data":
-        return ""
-    if normalized.startswith("./data/"):
-        return normalized[7:]
-    if normalized.startswith("data/"):
-        return normalized[5:]
-    lowered = normalized.lower()
-    if lowered == "koredocs" or lowered == "./koredocs":
-        return ""
-    if lowered.startswith("./koredocs/"):
-        return normalized[11:]
-    if lowered.startswith("koredocs/"):
-        return normalized[9:]
-
-    return normalized
-
-
-# ----------------------------------------------------------------------------------------------------
-def _resolve_safe_path(file_path: str) -> Path:
-    _ensure_data_dir()
-    normalized = _normalize_data_relative_path(file_path)
-
-    if normalized.startswith("./"):
-        candidate = (WORKSPACE_ROOT / normalized[2:]).resolve()
-    else:
-        candidate_path = Path(normalized)
-        if candidate_path.is_absolute():
-            candidate = candidate_path.resolve()
-        else:
-            # Both bare names and multi-segment relative paths resolve under data/.
-            # Use "./" prefix to anchor a path at workspace root instead.
-            candidate = (DEFAULT_DATA_DIR / normalized).resolve()
-
-    try:
-        candidate.relative_to(DEFAULT_DATA_DIR)
-    except ValueError as path_error:
-        raise ValueError(f"Path escapes data directory and is not allowed: {file_path}") from path_error
-
-    return candidate
 
 
 def _suspicious_document_write_reason(target_path: Path, content: str) -> str:
@@ -149,57 +67,47 @@ def _suspicious_document_write_reason(target_path: Path, content: str) -> str:
 # ----------------------------------------------------------------------------------------------------
 def file_write(path: str, content: str, skip_content_guard: bool = False) -> str:
     try:
-        target_path = _resolve_safe_path(path)
-    except ValueError as err:
+        target_path = resolve_datauser_path(path)
+    except DataUserPathError as err:
         return f"Error: {err}"
-    target_path.parent.mkdir(parents=True, exist_ok=True)
     text_to_write = str(content).replace("\\n", "\n")  # unescape literal \n from model output
-    if not text_to_write.endswith("\n"):
-        text_to_write += "\n"
     if not skip_content_guard:
         reason = _suspicious_document_write_reason(target_path, text_to_write)
         if reason:
             return (
-                f"Error: refusing to write suspicious placeholder content to {_display_path(target_path)}; {reason}. "
+                f"Error: refusing to write suspicious placeholder content to {display_datauser_path(target_path)}; {reason}. "
                 "Use dataset_write_koredoc or retrieve the real dataset records first."
             )
-    target_path.write_text(text_to_write, encoding="utf-8")
-    return f"Wrote {_display_path(target_path)}"
+    target_path = write_text_file(target_path, text_to_write, ensure_trailing_newline=True)
+    return f"Wrote {display_datauser_path(target_path)}"
 
 
 # ----------------------------------------------------------------------------------------------------
 def file_append(path: str, content: str) -> str:
     try:
-        target_path = _resolve_safe_path(path)
-    except ValueError as err:
+        target_path = resolve_datauser_path(path)
+    except DataUserPathError as err:
         return f"Error: {err}"
-    target_path.parent.mkdir(parents=True, exist_ok=True)
     text_to_write = str(content).replace("\\n", "\n")  # unescape literal \n from model output
-    if not text_to_write.endswith("\n"):
-        text_to_write += "\n"
-    with target_path.open("a", encoding="utf-8") as output_file:
-        output_file.write(text_to_write)
-    return f"Appended {_display_path(target_path)}"
+    target_path = write_text_file(target_path, text_to_write, append=True, ensure_trailing_newline=True)
+    return f"Appended {display_datauser_path(target_path)}"
 
 
 # ----------------------------------------------------------------------------------------------------
 def file_read(path: str, max_chars: int = 8000) -> str:
     try:
-        target_path = _resolve_safe_path(path)
-    except ValueError as err:
+        target_path = resolve_datauser_path(path)
+    except DataUserPathError as err:
         return f"Error: {err}"
     if not target_path.exists():
-        return f"File not found: {_display_path(target_path)}"
+        return f"File not found: {display_datauser_path(target_path)}"
 
     try:
         max_chars = int(max_chars)
     except (TypeError, ValueError):
         max_chars = 8000
 
-    content = target_path.read_text(encoding="utf-8")
-    if len(content) <= max_chars:
-        return content
-    return content[:max_chars] + "\n[truncated]"
+    return read_text_file(target_path, max_chars=max_chars)
 
 
 # ----------------------------------------------------------------------------------------------------
@@ -221,30 +129,21 @@ def _normalise_keywords(keywords: list[str] | str) -> list[str]:
 
 # ----------------------------------------------------------------------------------------------------
 def file_find(keywords: list[str], search_root: str = "") -> str:
-    """Search the workspace for files whose name contains all of the given keyword fragments.
+    """Search the shared datauser tree for files whose name contains all keywords.
 
-    Returns a newline-separated list of matching workspace-relative paths.
+    Returns a newline-separated list of matching datauser-relative paths.
     Pass an empty list (or omit keywords) to list all files.
-    Pass search_root (e.g. 'data') to restrict the search to a subdirectory.
+    Pass search_root (e.g. 'RadarData' or 'KoreDocs/RadarData') to restrict the search.
     """
     keywords_clean = _normalise_keywords(keywords)
 
-    if search_root and search_root.strip() not in (".", ""):
-        try:
-            sr   = search_root.strip().replace("\\", "/").lstrip("/")
-            base = (WORKSPACE_ROOT / sr).resolve()
-            base.relative_to(WORKSPACE_ROOT)
-        except ValueError:
-            return f"Error: search_root '{search_root}' escapes workspace."
-    else:
-        base = DEFAULT_DATA_DIR
-
-    matches = [
-        _display_path(p)
-        for p in sorted(base.rglob("*"))
-        if p.is_file()
-        and (not keywords_clean or all(k in p.name.lower() for k in keywords_clean))
-    ]
+    try:
+        matches = [
+            display_datauser_path(path)
+            for path in list_datauser_files(search_root=search_root, keywords=keywords_clean)
+        ]
+    except DataUserPathError as err:
+        return f"Error: {err}"
 
     label = ", ".join(f"'{k}'" for k in keywords_clean)
     if not matches:
@@ -258,30 +157,21 @@ def file_find(keywords: list[str], search_root: str = "") -> str:
 
 # ----------------------------------------------------------------------------------------------------
 def folder_find(keywords: list[str], search_root: str = "") -> str:
-    """Search the workspace for folders whose name contains all of the given keyword fragments.
+    """Search the shared datauser tree for folders whose name contains all keywords.
 
-    Returns a newline-separated list of matching workspace-relative paths.
+    Returns a newline-separated list of matching datauser-relative paths.
     Pass an empty list (or omit keywords) to list all folders.
-    Pass search_root (e.g. 'data') to restrict the search to a subdirectory.
+    Pass search_root (e.g. 'RadarData' or 'KoreDocs/RadarData') to restrict the search.
     """
     keywords_clean = _normalise_keywords(keywords)
 
-    if search_root and search_root.strip() not in (".", ""):
-        try:
-            sr   = search_root.strip().replace("\\", "/").lstrip("/")
-            base = (WORKSPACE_ROOT / sr).resolve()
-            base.relative_to(WORKSPACE_ROOT)
-        except ValueError:
-            return f"Error: search_root '{search_root}' escapes workspace."
-    else:
-        base = DEFAULT_DATA_DIR
-
-    matches = [
-        _display_path(p)
-        for p in sorted(base.rglob("*"))
-        if p.is_dir()
-        and (not keywords_clean or all(k in p.name.lower() for k in keywords_clean))
-    ]
+    try:
+        matches = [
+            display_datauser_path(path)
+            for path in list_datauser_folders(search_root=search_root, keywords=keywords_clean)
+        ]
+    except DataUserPathError as err:
+        return f"Error: {err}"
 
     label = ", ".join(f"'{k}'" for k in keywords_clean)
     if not matches:
@@ -300,13 +190,12 @@ def folder_create(path: str) -> str:
     Safe to call when the directory already exists - returns a success message either way.
     """
     try:
-        # Append a dummy leaf so _resolve_safe_path can validate the path, then take the parent.
-        folder = _resolve_safe_path(path.rstrip("/") + "/.keep").parent
-    except ValueError as err:
+        folder = resolve_datauser_directory(path)
+    except DataUserPathError as err:
         return f"Error: {err}"
     existed = folder.exists()
-    folder.mkdir(parents=True, exist_ok=True)
-    rel = _display_path(folder)
+    folder = create_datauser_folder(path)
+    rel = display_datauser_path(folder)
     return f"Folder already exists: {rel}" if existed else f"Created folder: {rel}"
 
 
@@ -317,8 +206,8 @@ def folder_exists(path: str) -> str:
     Returns 'yes' or 'no' so the model can branch on the result directly.
     """
     try:
-        folder = _resolve_safe_path(path.rstrip("/") + "/.keep").parent
-    except ValueError as err:
+        folder = resolve_datauser_directory(path)
+    except DataUserPathError as err:
         return f"Error: {err}"
     return "yes" if folder.exists() and folder.is_dir() else "no"
 
@@ -341,16 +230,15 @@ def file_write_from_scratch(scratch_key: str, path: str, skip_content_guard: boo
     if "not found" in content.lower() and len(content) < 200:
         return f"Error: scratchpad key {scratch_key!r} does not exist"
     try:
-        target_path = _resolve_safe_path(path)
-    except ValueError as err:
+        target_path = resolve_datauser_path(path)
+    except DataUserPathError as err:
         return f"Error: {err}"
-    target_path.parent.mkdir(parents=True, exist_ok=True)
     if not skip_content_guard:
         reason = _suspicious_document_write_reason(target_path, content)
         if reason:
             return (
-                f"Error: refusing to write suspicious placeholder content to {_display_path(target_path)}; {reason}. "
+                f"Error: refusing to write suspicious placeholder content to {display_datauser_path(target_path)}; {reason}. "
                 "Use dataset_write_koredoc or retrieve the real dataset records first."
             )
-    target_path.write_text(content, encoding="utf-8")
-    return f"Wrote {_display_path(target_path)} ({len(content):,} chars from scratch key {scratch_key!r})"
+    target_path = write_text_file(target_path, content)
+    return f"Wrote {display_datauser_path(target_path)} ({len(content):,} chars from scratch key {scratch_key!r})"

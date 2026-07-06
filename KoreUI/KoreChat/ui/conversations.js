@@ -29,6 +29,7 @@ const DEFAULT_CHAT_AGE_STORAGE_KEY = "kc_max_default_chat_age_days";
 const DEFAULT_CHAT_AGE_FALLBACK_DAYS = 7;
 const DEFAULT_CHAT_AGE_CULL_MS = 60 * 60 * 1000;
 const AUTO_REFRESH_MS = 30_000;
+const PANEL_COLLAPSE_STORAGE_KEY = "kc_collapsed_panels";
 
 function _cachedSuiteUrls() {
     try {
@@ -83,6 +84,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const loadDetail = (saved && !isNaN(saved)) ? selectConversation(saved) : Promise.resolve();
     Promise.all([loadStatus(), loadConversations(), loadDetail]);
     initSplitter();
+    initPanelToggles();
 
     bindUiEvents();
     initDefaultChatAgeCulling();
@@ -118,6 +120,7 @@ function bindUiEvents() {
     document.getElementById("chk-summarised").addEventListener("change", reloadMessages);
     document.getElementById("chk-auto")?.addEventListener("change", toggleAuto);
     document.getElementById("meta-table")?.addEventListener("click", onMetaTableClick);
+    document.addEventListener("click", onPanelHeaderClick);
 
     document.getElementById("conv-list").addEventListener("click", (event) => {
         const row = event.target.closest(".conv-item[data-id]");
@@ -238,6 +241,7 @@ function _renderDetail(data) {
         _selectedExternalId = conv.external_id || null;
         _selectedConv = conv;
         renderMeta(conv);
+        renderToolsActive(conv.tools_active || []);
         renderBackground(conv.background_context || "");
         renderSummary(conv.thread_summary || "");
         renderScratchpad(conv.scratchpad);
@@ -249,6 +253,59 @@ function _renderDetail(data) {
     });
     renderMessages(msgs);
     renderEvents(evts);
+}
+
+function initPanelToggles() {
+    const collapsed = _loadCollapsedPanels();
+    document.querySelectorAll("[data-panel-header]").forEach((header) => {
+        const panel = header.parentElement;
+        if (!panel?.id) return;
+        header.setAttribute("role", "button");
+        header.setAttribute("tabindex", "0");
+        _setPanelCollapsed(panel, collapsed.includes(panel.id));
+        header.addEventListener("keydown", (event) => {
+            if (event.target.closest("button, input, select, label, a") && event.target !== header) return;
+            if (event.key !== "Enter" && event.key !== " ") return;
+            event.preventDefault();
+            _togglePanel(panel);
+        });
+    });
+}
+
+function onPanelHeaderClick(event) {
+    const header = event.target.closest("[data-panel-header]");
+    if (!header) return;
+    if (event.target.closest("button, input, select, label, a")) return;
+    const panel = header.parentElement;
+    if (!panel?.id) return;
+    _togglePanel(panel);
+}
+
+function _loadCollapsedPanels() {
+    try {
+        const raw = JSON.parse(localStorage.getItem(PANEL_COLLAPSE_STORAGE_KEY) || "[]");
+        return Array.isArray(raw) ? raw : [];
+    } catch (_) {
+        return [];
+    }
+}
+
+function _saveCollapsedPanels() {
+    const collapsed = Array.from(document.querySelectorAll(".is-collapsed[id]")).map((panel) => panel.id);
+    try {
+        localStorage.setItem(PANEL_COLLAPSE_STORAGE_KEY, JSON.stringify(collapsed));
+    } catch (_) {}
+}
+
+function _setPanelCollapsed(panel, collapsed) {
+    panel.classList.toggle("is-collapsed", collapsed);
+    const header = panel.querySelector("[data-panel-header]");
+    header?.setAttribute("aria-expanded", collapsed ? "false" : "true");
+}
+
+function _togglePanel(panel) {
+    _setPanelCollapsed(panel, !panel.classList.contains("is-collapsed"));
+    _saveCollapsedPanels();
 }
 
 // ====================================================================================================
@@ -287,6 +344,18 @@ function renderMeta(conv) {
     document.getElementById("meta-table").innerHTML =
         renderMetaColumn(rows.slice(0, midpoint)) +
         renderMetaColumn(rows.slice(midpoint));
+}
+
+function renderToolsActive(tools) {
+    const items = Array.isArray(tools) ? tools.filter(Boolean) : [];
+    document.getElementById("tools-count").textContent = items.length;
+    document.getElementById("tools-empty").hidden = items.length > 0;
+    const list = document.getElementById("tools-active-list");
+    if (items.length === 0) {
+        list.innerHTML = "<div class='empty-note'>No active tools for this conversation.</div>";
+        return;
+    }
+    list.innerHTML = items.map((toolName) => `<span class="tools-active-tag">${escHtml(toolName)}</span>`).join("");
 }
 
 function renderMetaColumn(rows) {

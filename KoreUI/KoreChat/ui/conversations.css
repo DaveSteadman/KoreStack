@@ -80,6 +80,10 @@ html, body {
     justify-content: flex-start;
 }
 
+#sidebar.is-collapsed > :not(.section-header) {
+    display: none !important;
+}
+
 .count-badge {
     background:    var(--bg-panel2);
     border:        1px solid var(--border);
@@ -191,6 +195,10 @@ html, body {
     overflow:      hidden;
 }
 
+.section.is-collapsed > :not(.section-header) {
+    display: none !important;
+}
+
 .datasets-list {
     border-top: 0;
 }
@@ -207,6 +215,15 @@ html, body {
     letter-spacing: var(--kcui-tracking-label);
     text-transform: uppercase;
     color:        var(--text-dim);
+    cursor:       pointer;
+    user-select:  none;
+}
+
+.section-header button,
+.section-header input,
+.section-header select,
+.section-header label {
+    cursor: auto;
 }
 
 .section-icon {
@@ -437,6 +454,9 @@ html, body {
 
 /* KoreData parity: metadata and list panels share table-like alignment rhythm. */
 #sec-meta .section-header,
+#sec-tools .section-header,
+#sec-bg .section-header,
+#sec-summary .section-header,
 #sec-scratchpad .section-header,
 #sec-datasets .section-header,
 #sec-history .section-header,
@@ -445,6 +465,26 @@ html, body {
 #sec-events .section-header {
     justify-content: flex-start;
     gap: 0.6rem;
+}
+
+.tools-active-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    padding: 0.75rem;
+    background: var(--bg-panel2);
+}
+
+.tools-active-tag {
+    display: inline-flex;
+    align-items: center;
+    min-height: 22px;
+    padding: 0.1rem 0.45rem;
+    border: 1px solid var(--border);
+    background: var(--bg-panel);
+    color: var(--text-hi);
+    font-size: var(--kcui-text-label);
+    letter-spacing: var(--kcui-tracking-tight);
 }
 
 .history-item:last-child {

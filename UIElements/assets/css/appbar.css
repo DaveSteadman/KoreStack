@@ -140,6 +140,17 @@
   flex-shrink: 0;
 }
 
+.kappbar-actions > button.kcui-tag,
+.kappbar-actions > a.kcui-tag {
+  min-height: 0;
+  padding: 2px 8px;
+  border-radius: 0;
+  line-height: 1.5;
+  font-size: var(--kcui-text-caption, 12px);
+  letter-spacing: var(--kcui-tracking-label, 0.08em);
+  text-transform: uppercase;
+}
+
 .kappbar-note {
   display: inline-flex;
   align-items: center;

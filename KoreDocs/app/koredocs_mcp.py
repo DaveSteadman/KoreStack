@@ -113,12 +113,12 @@ def get_file_format_info(
 
 
 def create_file(
-    folder_path: Annotated[str, 'Folder path in KoreFile, such as "/" or "/Projects". Missing folders are created.'],
+    folder_path: Annotated[str, 'Folder path in the shared KoreDocs/datauser tree, such as "/" or "/Projects". Missing folders are created.'],
     name: Annotated[str, 'Filename ending in .koredoc, .koresheet, or .korediag.'],
     content: Annotated[str, 'Complete serialized file content. For .koredoc use Markdown. For .koresheet and .korediag use JSON serialized as a string.'],
     metadata: Annotated[Optional[dict], 'Optional metadata object. If omitted, KoreDocs extracts metadata from content where possible.'] = None,
 ) -> dict:
-    """Create a KoreFile document.
+    """Create a KoreDocs file.
 
     Use:
     - .koredoc: Markdown text, optionally with YAML frontmatter.
@@ -132,12 +132,12 @@ def create_file(
 
 
 def update_file(
-    id: Annotated[int, 'KoreFile document id.'],
+    id: Annotated[int, 'KoreDocs file id.'],
     content: Annotated[str, 'Complete replacement file content. For .koredoc use Markdown. For .koresheet and .korediag use JSON serialized as a string.'],
     metadata: Annotated[Optional[dict], 'Optional replacement metadata object. If omitted, KoreDocs extracts metadata from content where possible.'] = None,
     expected_revision: Annotated[Optional[int], 'Optional optimistic concurrency check. When provided, the file must still be at this revision.'] = None,
 ) -> dict:
-    """Overwrite a KoreFile document's complete content.
+    """Overwrite a KoreDocs file's complete content.
 
     Use:
     - .koredoc: Markdown text, optionally with YAML frontmatter.
@@ -151,10 +151,10 @@ def update_file(
 
 
 def delete_file(
-    id: Annotated[int, 'KoreFile document id.'],
+    id: Annotated[int, 'KoreDocs file id.'],
     expected_revision: Annotated[Optional[int], 'Optional optimistic concurrency check. When provided, the file must still be at this revision.'] = None,
 ) -> dict:
-    """Delete a KoreFile document by id."""
+    """Delete a KoreDocs file by id."""
     if not korefile.delete_file(id, expected_revision=expected_revision):
         raise ValueError(f'File not found: {id}')
     return {'ok': True, 'id': id}
@@ -216,13 +216,14 @@ def koredocs_file_format_get(
 
 @mcp.tool()
 def koredocs_folder_create(
-    path: Annotated[str, 'Folder path in KoreFile, such as "/Projects/Calcs". Missing parents are created automatically.'],
+    path: Annotated[str, 'Folder path in the shared KoreDocs/datauser tree, such as "/Projects/Calcs". Missing parents are created automatically.'],
 ) -> dict:
-    """Create a folder in KoreFile and return the resulting folder record.
+    """Create a folder in the KoreDocs file tree and return the resulting folder record.
 
-    Use this tool (not filesystem folder_create or file_write) when the user asks to save,
-    create, publish, or organise files in KoreDocs, KoreFile, or KoreFiles. The KoreFile
-    storage surface is the correct destination for all KoreDocs document operations.
+    Prefer this tool when the user wants KoreDocs-native folder organisation or needs a
+    folder record back from the tool. Generic filesystem folder creation under the shared
+    datauser root can also be handled by FileAccess when ids and KoreDocs-specific semantics
+    are not needed.
     """
     normalized = _normalise_folder_path(path)
     _folder_id_for_path(normalized, create=True)
@@ -234,22 +235,25 @@ def koredocs_folder_create(
 
 @mcp.tool()
 def koredocs_file_create(
-    folder_path: Annotated[str, 'Folder path in KoreFile, such as "/" or "/Projects". Missing folders are created.'],
+    folder_path: Annotated[str, 'Folder path in the shared KoreDocs/datauser tree, such as "/" or "/Projects". Missing folders are created.'],
     name: Annotated[str, 'Filename ending in .koredoc, .koresheet, or .korediag.'],
     content: Annotated[str, 'Complete serialized file content.'],
     metadata: Annotated[Optional[dict], 'Optional metadata object.'] = None,
 ) -> dict:
-    """Create a file in KoreFile. Use this instead of filesystem file_write when the
-    destination is KoreDocs, KoreFile, or KoreFiles. For documents use koredocs_doc_create;
-    for spreadsheets prefer the semantic sheet tools (koredocs_sheet_table_create,
-    koredocs_sheet_compounding_schedule_create) over raw file creation.
+    """Create a file in the KoreDocs file tree.
+
+    Prefer this tool when you want a KoreDocs-native typed file plus the returned metadata/id.
+    For generic plain-text or CSV writes under the shared datauser root, FileAccess is often the
+    simpler tool. For documents use koredocs_doc_create; for spreadsheets prefer the semantic
+    sheet tools (koredocs_sheet_table_create, koredocs_sheet_compounding_schedule_create)
+    over raw file creation.
     """
     return create_file(folder_path=folder_path, name=name, content=content, metadata=metadata)
 
 
 @mcp.tool()
 def koredocs_file_update(
-    id: Annotated[int, 'KoreFile document id.'],
+    id: Annotated[int, 'KoreDocs file id.'],
     content: Annotated[str, 'Complete replacement file content.'],
     metadata: Annotated[Optional[dict], 'Optional replacement metadata object.'] = None,
     expected_revision: Annotated[Optional[int], 'Optional optimistic concurrency check.'] = None,
@@ -260,7 +264,7 @@ def koredocs_file_update(
 
 @mcp.tool()
 def koredocs_file_delete(
-    id: Annotated[int, 'KoreFile document id.'],
+    id: Annotated[int, 'KoreDocs file id.'],
     expected_revision: Annotated[Optional[int], 'Optional optimistic concurrency check.'] = None,
 ) -> dict:
     """Canonical prefixed alias for delete_file."""

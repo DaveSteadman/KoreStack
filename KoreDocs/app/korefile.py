@@ -19,6 +19,18 @@ import zlib
 from datetime import datetime, timezone
 from pathlib import Path
 
+from KoreCommon.datauser_fs import create_folder as create_datauser_folder
+from KoreCommon.datauser_fs import datauser_relative_path
+from KoreCommon.datauser_fs import delete_file as delete_datauser_file
+from KoreCommon.datauser_fs import ensure_datauser_root
+from KoreCommon.datauser_fs import list_datauser_files
+from KoreCommon.datauser_fs import list_datauser_folders
+from KoreCommon.datauser_fs import normalize_datauser_relative_path
+from KoreCommon.datauser_fs import read_text_file
+from KoreCommon.datauser_fs import resolve_datauser_directory
+from KoreCommon.datauser_fs import resolve_datauser_path
+from KoreCommon.datauser_fs import write_text_file
+
 
 class ConflictError(ValueError):
     pass
@@ -44,7 +56,7 @@ _VISIBLE_EXTENSIONS = _NATIVE_EXTENSIONS | _TEXT_EXTENSIONS
 def configure(root_dir: Path, legacy_db_path: Path | None = None) -> None:
     global _ROOT_DIR, _LEGACY_DB_PATH
     _ROOT_DIR = Path(root_dir).resolve()
-    _ROOT_DIR.mkdir(parents=True, exist_ok=True)
+    ensure_datauser_root(_ROOT_DIR)
     _LEGACY_DB_PATH = Path(legacy_db_path).resolve() if legacy_db_path else None
     if _LEGACY_DB_PATH is not None:
         _LEGACY_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -66,27 +78,23 @@ def _normalize_folder_path(path: str | None) -> str:
         return '/'
     if raw.startswith('./'):
         raw = raw[2:]
-    if not raw.startswith('/'):
-        raw = '/' + raw
-    parts = [part for part in raw.split('/') if part]
+    raw = raw.lstrip('/')
+    normalized = normalize_datauser_relative_path(raw)
+    parts = [part for part in normalized.split('/') if part]
     if any(part in ('.', '..') for part in parts):
         raise ValueError('folder_path must not contain . or .. segments')
-    if parts and parts[0].lower() == 'koredocs':
-        parts = parts[1:]
     return '/' + '/'.join(parts) if parts else '/'
 
 
 def _relative_posix(path: Path) -> str:
-    relative = path.relative_to(_root_dir())
-    text = relative.as_posix()
-    return '' if text == '.' else text
+    return datauser_relative_path(path, root_dir=_root_dir())
 
 
 def _folder_path_to_abs(path: str | None) -> Path:
     normalized = _normalize_folder_path(path)
     if normalized == '/':
         return _root_dir()
-    return (_root_dir() / normalized.lstrip('/')).resolve()
+    return resolve_datauser_directory(normalized.lstrip('/'), root_dir=_root_dir())
 
 
 def _folder_abs_to_label(path: Path) -> str:
@@ -119,15 +127,17 @@ def _file_id_for_abs(path: Path) -> int:
 def _iter_folder_paths() -> list[Path]:
     root = _root_dir()
     folders = [root]
-    folders.extend(sorted((path for path in root.rglob('*') if path.is_dir()), key=lambda item: _relative_posix(item)))
+    folders.extend(list_datauser_folders(search_root='', recursive=True, root_dir=root))
     return folders
 
 
 def _iter_file_paths(root: Path | None = None) -> list[Path]:
     base = root.resolve() if root is not None else _root_dir()
-    return sorted(
-        [path for path in base.rglob('*') if path.is_file() and path.suffix.lower() in _VISIBLE_EXTENSIONS],
-        key=lambda item: _relative_posix(item),
+    return list_datauser_files(
+        search_root=_relative_posix(base),
+        recursive=True,
+        allowed_extensions=set(_VISIBLE_EXTENSIONS),
+        root_dir=_root_dir(),
     )
 
 
@@ -238,7 +248,7 @@ def _validate_serialized_content(name: str, content: str) -> None:
 
 
 def _file_record(path: Path, *, include_content: bool) -> dict:
-    content = path.read_text(encoding='utf-8')
+    content = read_text_file(path, root_dir=_root_dir())
     stat = path.stat()
     metadata = _extract_metadata(path.name, content)
     record = {
@@ -319,7 +329,7 @@ def _migrate_legacy_db_to_fs() -> dict:
         folder_rows = conn.execute('SELECT path FROM folders ORDER BY CASE WHEN path = "/" THEN 0 ELSE LENGTH(path) END, path').fetchall()
         for row in folder_rows:
             folder_abs = _folder_path_to_abs(row['path'])
-            folder_abs.mkdir(parents=True, exist_ok=True)
+            create_datauser_folder(folder_abs, root_dir=_root_dir())
             imported_folders += 1
 
         file_rows = conn.execute(
@@ -329,9 +339,9 @@ def _migrate_legacy_db_to_fs() -> dict:
         ).fetchall()
         for row in file_rows:
             folder_abs = _folder_path_to_abs(row['folder_path'])
-            folder_abs.mkdir(parents=True, exist_ok=True)
+            create_datauser_folder(folder_abs, root_dir=_root_dir())
             target = folder_abs / row['name']
-            target.write_text(_decompress_legacy(row['content']), encoding='utf-8')
+            write_text_file(target, _decompress_legacy(row['content']), root_dir=_root_dir())
             imported_files += 1
     finally:
         conn.close()
@@ -341,7 +351,7 @@ def _migrate_legacy_db_to_fs() -> dict:
 
 
 def init_db() -> None:
-    _root_dir().mkdir(parents=True, exist_ok=True)
+    ensure_datauser_root(_root_dir())
     _migrate_legacy_db_to_fs()
 
 
@@ -364,7 +374,7 @@ def create_folder(name: str, parent_id: int) -> dict:
     target = parent_abs / name
     if target.exists():
         raise ConflictError(f'Folder already exists: {_folder_abs_to_label(target)}')
-    target.mkdir(parents=False, exist_ok=False)
+    create_datauser_folder(target, root_dir=_root_dir())
     return _folder_record(target)
 
 
@@ -418,7 +428,8 @@ def delete_folder(folder_id: int, *, expected_revision: int | None = None, recur
     if recursive:
         shutil.rmtree(folder_abs)
         return True
-    if any(folder_abs.iterdir()):
+    folder_rel = _relative_posix(folder_abs)
+    if list_datauser_files(search_root=folder_rel, recursive=False, root_dir=_root_dir()) or list_datauser_folders(search_root=folder_rel, recursive=False, root_dir=_root_dir()):
         raise ValueError('Folder is not empty')
     folder_abs.rmdir()
     return True
@@ -474,8 +485,7 @@ def create_file(folder_id: int, name: str, content: str, metadata: dict | None =
     target = folder_abs / name
     if target.exists():
         raise ConflictError('UNIQUE constraint failed: files.folder_id, files.name')
-    target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(content, encoding='utf-8')
+    write_text_file(target, content, root_dir=_root_dir())
     return _file_record(target, include_content=False)
 
 
@@ -492,10 +502,10 @@ def update_file(
     current_revision = int(file_abs.stat().st_mtime_ns)
     if expected_revision is not None and current_revision != expected_revision:
         raise ConflictError(f'File {file_id} revision mismatch: expected {expected_revision}, current {current_revision}')
-    current_content = file_abs.read_text(encoding='utf-8')
+    current_content = read_text_file(file_abs, root_dir=_root_dir())
     new_content = current_content if content is None else content
     _validate_serialized_content(file_abs.name, new_content)
-    file_abs.write_text(new_content, encoding='utf-8')
+    write_text_file(file_abs, new_content, root_dir=_root_dir())
     return _file_record(file_abs, include_content=False)
 
 
@@ -507,7 +517,7 @@ def rename_file(file_id: int, new_name: str, expected_revision: int | None = Non
     current_revision = int(file_abs.stat().st_mtime_ns)
     if expected_revision is not None and current_revision != expected_revision:
         raise ConflictError(f'File {file_id} revision mismatch: expected {expected_revision}, current {current_revision}')
-    content = file_abs.read_text(encoding='utf-8')
+    content = read_text_file(file_abs, root_dir=_root_dir())
     _validate_serialized_content(new_name, content)
     target = file_abs.with_name(new_name)
     if target.exists():
@@ -540,7 +550,7 @@ def delete_file(file_id: int, expected_revision: int | None = None) -> bool:
     current_revision = int(file_abs.stat().st_mtime_ns)
     if expected_revision is not None and current_revision != expected_revision:
         raise ConflictError(f'File {file_id} revision mismatch: expected {expected_revision}, current {current_revision}')
-    file_abs.unlink()
+    delete_datauser_file(file_abs, root_dir=_root_dir())
     return True
 
 
@@ -556,7 +566,7 @@ def search(query: str, ext: str | None = None, folder_path: str | None = None, l
     for path in _iter_file_paths(base_folder):
         if ext is not None and path.suffix.lstrip('.') != ext:
             continue
-        content = path.read_text(encoding='utf-8')
+        content = read_text_file(path, root_dir=_root_dir())
         metadata = _extract_metadata(path.name, content)
         name_lower = path.name.lower()
         metadata_text = json.dumps(metadata, ensure_ascii=False).lower()
@@ -596,16 +606,15 @@ def import_from_fs(data_dir: Path) -> dict:
         if not path.is_file() or path.suffix.lower() not in _VISIBLE_EXTENSIONS:
             continue
         rel = path.relative_to(source_root)
-        target = (_root_dir() / rel).resolve()
+        target = resolve_datauser_path(rel.as_posix(), root_dir=_root_dir())
         try:
-            target.parent.mkdir(parents=True, exist_ok=True)
             content = path.read_text(encoding='utf-8')
             _validate_simple_name(target.name, kind='File', require_extension=True)
             _validate_serialized_content(target.name, content)
             if target.exists():
                 skipped += 1
                 continue
-            target.write_text(content, encoding='utf-8')
+            write_text_file(target, content, overwrite=False, root_dir=_root_dir())
             imported += 1
         except Exception as exc:
             errors += 1

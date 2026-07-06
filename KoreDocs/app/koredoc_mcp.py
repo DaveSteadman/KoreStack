@@ -25,7 +25,7 @@ from ._mcp_shared import (
 
 
 def create_koredoc(
-    folder_path: Annotated[str, 'Folder path in KoreFile, such as "/" or "/Projects". Missing folders are created.'],
+    folder_path: Annotated[str, 'Folder path in the shared KoreDocs/datauser tree, such as "/" or "/Projects". Missing folders are created.'],
     name: Annotated[str, 'Filename, with or without the .koredoc extension.'],
     markdown: Annotated[str, 'Markdown body for the document.'],
     title: Annotated[Optional[str], 'Optional title. If provided, YAML frontmatter is added.'] = None,
@@ -216,7 +216,7 @@ def koredocs_doc_markdown_append(
 
 @mcp.tool()
 def koredocs_doc_create(
-    folder_path: Annotated[str, 'Folder path in KoreFile, such as "/" or "/Projects". Missing folders are created.'],
+    folder_path: Annotated[str, 'Folder path in the shared KoreDocs/datauser tree, such as "/" or "/Projects". Missing folders are created.'],
     name: Annotated[str, 'Filename, with or without the .koredoc extension.'],
     markdown: Annotated[str, 'Markdown body for the document.'],
     title: Annotated[Optional[str], 'Optional title.'] = None,

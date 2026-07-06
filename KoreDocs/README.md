@@ -26,18 +26,22 @@ pip install -r requirements.txt
 
 ### 2. Configure
 
-Copy `.env.example` to `.env` and edit as needed:
+KoreDocs is expected to run against the suite-level shared storage layout.
+
+Important paths:
 
 ```
-# Directory scanned for .koredoc / .koresheet / .korediag files (flat FS storage)
-KOREDOCS_DATA_DIR=C:\Util\Data\KoreFiles
+# Shared suite root override (optional)
+KORE_SUITE_ROOT=C:\Util\Data\GitRepos\KoreStack
 
-# Path to the KoreFile SQLite database (Phase 2 virtual file system)
-KOREDOCS_DB_PATH=C:\Util\Data\datacontrol\korefile\korefile.db
+# Shared user-data root used by FileAccess and KoreDocs (optional override)
+KORE_SUITE_DATAUSER=C:\Util\Dropbox\Misc\KoreStackData\datauser
+
+# KoreDocs can still override its root directly, but this should normally point at the same shared datauser tree.
+KOREDOCS_DATA_DIR=C:\Util\Dropbox\Misc\KoreStackData\datauser
 ```
 
-Both settings have sensible defaults (`datacontrol/korefile` and `datacontrol/korefile/korefile.db`) if you skip
-this step.
+Legacy `korefile.db` is no longer a live storage backend. If present under `datacontrol/koredocs/`, it is treated only as a one-time migration source into the real filesystem.
 
 ### 3. Start
 
@@ -78,72 +82,25 @@ KoreDocs now consumes the shared shell assets from `/ui-elements/assets/`; legac
 
 ### Storage architecture note
 
-- File creation, opening, renaming, moving, and deletion are handled in **KoreFiles** (`/ui`).
-- KoreDoc, KoreSheet, and KoreDiag are editor surfaces for files that already exist in KoreFile.
-- When a file is opened from KoreFiles, edits are autosaved back to the KoreFile DB with a 1 second debounce. Navigation/page-hide triggers an immediate keepalive flush of any pending save.
-- The MCP server operates on **KoreFile**, so agent-visible files and user-edited files now share the same storage backend.
+- The source of truth is the real filesystem rooted at the shared `datauser/` directory.
+- FileAccess is the canonical generic mechanism for navigating, reading, and writing that tree.
+- KoreDocs lives on top of the same files and folders. Its browser, editors, and MCP tools add document-aware and sheet-aware behavior, but they do not represent a separate storage backend.
+- Legacy `korefile.db` is migration-only. After startup migration, the live system reads and writes real files.
 
 ---
 
-## KoreFile — Virtual File System
+## KoreFile — Filesystem-backed document index
 
-KoreFile is a SQLite database that provides a **virtual folder hierarchy** for all
-KoreDocs documents. It is the primary storage backend for Phase 2 and the only storage
-backend the MCP server operates on.
+`app/korefile.py` preserves the older file/folder API shape used by the browser and MCP layers, but it is now a filesystem-backed adapter over the shared `datauser/` tree.
 
-### Why KoreFile?
+That means:
 
-The flat file system (`KOREDOCS_DATA_DIR`) works for Phase 1 but has no search, no
-organisation, and no agent access. KoreFile adds:
+- folder ids and file ids are stable derived ids built from filesystem-relative paths
+- file metadata, revision numbers, and search results are computed from real files on disk
+- generic navigation semantics come from the shared `datauser` path rules used by FileAccess
+- KoreDocs-specific APIs exist to add typed editing and rich metadata on top of those files
 
-- **Folder hierarchy** — organise files into a tree of named folders (independent of the
-  OS file system)
-- **Full-text search** — SQLite FTS5 index across all document content, titles, tags, and
-  metadata; supports phrase and keyword queries
-- **MCP access** — agents read, write, and search documents through the KoreFile API
-
-### Folder hierarchy
-
-Folders use an adjacency-list model with a materialised path string
-(`/Root/Projects/KoreDocs`). The root folder has no parent. Folders cannot be deleted
-while they contain files or sub-folders.
-
-### Database schema (summary)
-
-```sql
-folders (id, parent_id, name, path, created_at)
-files   (id, folder_id, name, ext, content BLOB, metadata JSON,
-         word_count, created_at, modified_at)
-files_fts  -- FTS5 virtual table: name + metadata + content
-```
-
-Content blobs are zlib-compressed. The FTS index is a contentless FTS5 table kept in
-sync on every write, following the same pattern as KoreData/KoreRAG.
-
-## Dual storage — flat FS and KoreFile DB
-
-Both backends coexist. The front end tracks which one a file came from via a URL query
-parameter:
-
-| Source | URL | API prefix |
-|---|---|---|
-| Flat file system | `?src=fs&file=notes.koredoc` | `/api/legacy/files/` |
-| KoreFile DB | `?id=42&file=notes.koredoc` | `/api/files/` |
-
-No source param → defaults to flat FS (Phase 1 compatibility).
-
-The current recommended workflow is KoreFiles-first: create and open files from `/ui`, then edit them in the app-specific surface.
-
-### Importing existing files
-
-A one-shot endpoint walks `KOREDOCS_DATA_DIR` and imports every `*.kore*` file into the
-DB, creating matching folders for the relative OS path:
-
-```
-POST /api/import-fs
-```
-
-After import you can work entirely inside KoreFile and stop using the flat directory.
+KoreDocs accepts compatibility prefixes like `KoreDocs/...` for folder-path inputs, but these resolve into the same shared `datauser/` tree rather than a separate subtree.
 
 ### KoreFile REST API
 
@@ -171,11 +128,13 @@ POST   /api/import-fs                   import from flat data directory
 GET    /api/schema?type=                   file type schema / examples
 ```
 
+The `/api/legacy/files/*` and `/api/textedit/*` routes also operate on the same shared filesystem root. They are compatibility/raw-edit surfaces over `datauser`, not a second storage backend.
+
 ---
 
 ## MCP Tools
 
-The MCP server exposes tools that operate on KoreFile. The canonical public names use the `koredocs_` prefix with a `service_object_verb` pattern.
+The MCP server exposes typed tools that operate on the shared `datauser` tree through the KoreDocs layer. The canonical public names use the `koredocs_` prefix with a `service_object_verb` pattern.
 
 | Tool | Description |
 |---|---|

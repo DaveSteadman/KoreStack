@@ -1,7 +1,7 @@
 # FileAccess Skill
 
 ## Purpose
-Interface for all file read, write, append, and search operations. All relative paths resolve under `./data/`; a `"./"` prefix anchors a path at the workspace root instead. Paths that escape the workspace root are rejected.
+Interface for generic file read, write, append, and search operations inside the shared `datauser/` tree. Bare relative paths resolve under `datauser/`. Legacy prefixes such as `data/...`, `datauser/...`, and `KoreDocs/...` are accepted for compatibility, but new calls should prefer plain datauser-relative paths like `notes/today.txt` or `RadarData/report.csv`.
 
 ## Trigger keyword: file
 
@@ -26,14 +26,14 @@ Interface for all file read, write, append, and search operations. All relative 
 Use this when large content was auto-saved to a scratchpad key (e.g. a web page fetch that was truncated in the tool message). Avoids putting large content into tool call arguments where JSON encoding can fail.
 
 ### `folder_create(path)`
-- `path` *(required)* - path of the directory to create, resolved under `data/`, e.g. `"webresearch/01-Mine/2026-03-22"`. Creates all missing parent directories. Safe to call if the folder already exists.
+- `path` *(required)* - path of the directory to create, resolved under `datauser/`, e.g. `"webresearch/01-Mine/2026-03-22"`. Creates all missing parent directories. Safe to call if the folder already exists.
 
 ### `folder_exists(path)`
-- `path` *(required)* - workspace-relative path to check.
+- `path` *(required)* - datauser-relative path to check.
 - Returns `"yes"` or `"no"` so the model can branch on the result.
 
 ### `file_write(path, content)`
-- `path` *(required)* - workspace-relative path. A bare name like `"x.txt"` resolves to `data/x.txt`. A path starting with `"./"` resolves from workspace root.
+- `path` *(required)* - datauser-relative path. A bare name like `"x.txt"` resolves to `datauser/x.txt`. Legacy aliases like `"data/x.txt"`, `"datauser/x.txt"`, and `"KoreDocs/x.txt"` are accepted.
 - `content` *(required)* - content to write. Overwrites the file if it exists. Supports `{scratch:key}` token substitution - use `"{scratch:mykey}"` to write scratchpad content directly without calling `scratch_load` first.
 
 ### `file_append(path, content)`
@@ -46,21 +46,31 @@ Use this when large content was auto-saved to a scratchpad key (e.g. a web page 
 
 ### `file_find(keywords, search_root = "")`
 - `keywords` *(required)* - list of case-insensitive fragments that must ALL appear in the file name, e.g. `["pulse", "2026"]`.
-- `search_root` *(optional, default "")* - workspace-relative directory to restrict the search, e.g. `"data"`. Leave empty to search the whole workspace.
+- `search_root` *(optional, default "")* - datauser-relative directory to restrict the search, e.g. `"RadarData"`. Leave empty to search the whole `datauser/` tree. Legacy aliases like `"KoreDocs/RadarData"` are accepted.
 
 ### `folder_find(keywords, search_root = "")`
 - `keywords` *(required)* - list of case-insensitive fragments that must ALL appear in the folder name.
-- `search_root` *(optional, default "")* - workspace-relative directory to restrict the search. Leave empty to search the whole workspace.
+- `search_root` *(optional, default "")* - datauser-relative directory to restrict the search. Leave empty to search the whole `datauser/` tree. Legacy aliases like `"KoreDocs/RadarData"` are accepted.
 
 ## Output
-- `file_write(...)` - returns `"Wrote data/filename.txt"` on success, or `"Error: ..."` on failure.
-- `file_append(...)` - returns `"Appended data/filename.txt"` on success, or `"Error: ..."` on failure.
+- `file_write(...)` - returns `"Wrote datauser/filename.txt"` on success, or `"Error: ..."` on failure.
+- `file_append(...)` - returns `"Appended datauser/filename.txt"` on success, or `"Error: ..."` on failure.
 - `file_read(...)` - returns the file content as a string, or `"File not found: ..."` if the file does not exist.
 - `file_find(...)` - returns a newline-separated list of matching workspace-relative paths, or a `"No files found..."` message.
 - `folder_find(...)` - returns a newline-separated list of matching workspace-relative paths, or a `"No folders found..."` message.
-- `file_write_from_scratch(...)` - returns `"Wrote data/file.md (12345 chars from scratch key '_tc_r5_fetch_page_text')"` on success, or `"Error: ..."` on failure.
+- `file_write_from_scratch(...)` - returns `"Wrote datauser/file.md (12345 chars from scratch key '_tc_r5_fetch_page_text')"` on success, or `"Error: ..."` on failure.
 - `folder_create(...)` - returns `"Created folder: path"` or `"Folder already exists: path"`, or `"Error: ..."` on failure.
 - `folder_exists(...)` - returns `"yes"` or `"no"`.
+
+## KoreDocs relationship
+FileAccess is the canonical navigation and raw read/write layer for the shared `datauser/` tree. Use it for generic text and file operations, including `.txt`, `.csv`, logs, and simple exports.
+
+KoreDocs lives on top of that same tree. Its service and MCP tools should be treated as typed overlays on the same files and folders, not as a separate storage system.
+
+Use KoreDocs tools when you need document-aware or spreadsheet-aware behavior such as:
+- creating or editing structured `.koredoc`, `.koresheet`, or `.korediag` content semantically
+- working with KoreDocs file ids or folder ids
+- reading and updating sheets or document sections through typed operations
 
 ## Triggers
 Invoke this skill when the prompt contains any of these concepts or phrases:
@@ -76,16 +86,16 @@ The `content` argument of `file_write` and `file_append` supports `{scratch:key}
 This means you can park a large result (web search, code output, file content) with `scratch_save`,
 then write it to disk without a separate `scratch_load` call.
 
-- `file_write("data/result.txt", "{scratch:searchresult}")` - writes the stored value directly
-- `file_append("data/log.txt", "{scratch:codeoutput}")` - appends the stored value directly
+- `file_write("exports/result.txt", "{scratch:searchresult}")` - writes the stored value directly
+- `file_append("logs/run.log", "{scratch:codeoutput}")` - appends the stored value directly
 
 ## Examples
 - `file_write("notes/meeting.txt", "Discuss project timeline")` - creates or overwrites the file
-  - Returns: `"Wrote data/notes/meeting.txt"`
-- `file_append("data/log.txt", "new entry")` - appends a line
-  - Returns: `"Appended data/log.txt"`
-- `file_read(path="data/log.txt")` - returns full content up to 8000 chars
-- `file_find(["pulse"], "data")` - find files with "pulse" in the name under data/
-  - Returns: `"data/pulse_log.csv\ndata/sys_pulse.csv"`
+  - Returns: `"Wrote datauser/notes/meeting.txt"`
+- `file_append("logs/run.log", "new entry")` - appends a line
+  - Returns: `"Appended datauser/logs/run.log"`
+- `file_read(path="logs/run.log")` - returns full content up to 8000 chars
+- `file_find(["pulse"], "RadarData")` - find files with "pulse" in the name under the RadarData subtree
+  - Returns: `"datauser/RadarData/pulse_log.csv\ndatauser/RadarData/sys_pulse.csv"`
 - `file_find(["test", "2026"])` - find files whose name contains both fragments
 - `folder_find(["2026-03"])` - find folders containing "2026-03" in the name

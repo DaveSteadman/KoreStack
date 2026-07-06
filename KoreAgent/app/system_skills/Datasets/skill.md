@@ -50,7 +50,7 @@ No parameters.
 
 ### `dataset_write_koredoc(name, folder_path, document_name = "", fields = None, offset = 0, limit = 0)`
 - `name` *(required)* - dataset to export.
-- `folder_path` *(required)* - KoreDocs folder path such as `feeds2` or `KoreDocs/feeds2`.
+- `folder_path` *(required)* - folder path relative to the shared KoreDocs/datauser root, such as `feeds2` or `RadarData/exports`. Legacy `KoreDocs/...` prefixes are accepted for compatibility but should not be preferred in new calls.
 - `document_name` *(optional)* - `.koredoc` file name; defaults to the dataset name.
 - `fields` *(optional)* - field projection for each exported record; defaults to the dataset schema.
 - `offset` *(optional)* - zero-based starting offset for paged exports.

@@ -37,7 +37,7 @@ from pathlib import Path
 from typing import Annotated, Any, Optional
 
 from fastapi import FastAPI, HTTPException, Query
-from fastapi.responses import RedirectResponse, FileResponse, PlainTextResponse
+from fastapi.responses import RedirectResponse, FileResponse, JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
@@ -49,6 +49,18 @@ if _KORECOMMON_PARENT is not None and str(_KORECOMMON_PARENT) not in sys.path:
     sys.path.insert(0, str(_KORECOMMON_PARENT))
 
 from KoreCommon.endpoint_manifest import build_endpoint_manifest
+from KoreCommon.datauser_fs import DataUserConflictError
+from KoreCommon.datauser_fs import DataUserPathError
+from KoreCommon.datauser_fs import datauser_relative_path
+from KoreCommon.datauser_fs import display_datauser_path
+from KoreCommon.datauser_fs import file_etag as datauser_file_etag
+from KoreCommon.datauser_fs import get_datauser_root
+from KoreCommon.datauser_fs import list_datauser_files
+from KoreCommon.datauser_fs import read_binary_file
+from KoreCommon.datauser_fs import read_text_file as read_datauser_text_file
+from KoreCommon.datauser_fs import resolve_datauser_path
+from KoreCommon.datauser_fs import write_text_file as write_datauser_text_file
+from KoreCommon.datauser_fs import delete_file as delete_datauser_file
 from . import korefile
 from .config import cfg as _cfg
 from .koredocs_mcp import (
@@ -62,13 +74,6 @@ from .koredocs_mcp import (
     upsert_sheet_rows,
     write_sheet_cells,
 )
-
-try:
-    from KoreAgent.app.utils.workspace_utils import get_controldata_dir as _shared_get_controldata_dir
-    from KoreAgent.app.utils.workspace_utils import get_user_data_dir as _shared_get_user_data_dir
-except Exception:
-    _shared_get_controldata_dir = None
-    _shared_get_user_data_dir = None
 
 try:
     from dotenv import load_dotenv
@@ -89,19 +94,14 @@ SUITE_ROOT = Path(os.environ.get('KORE_SUITE_ROOT', str(BASE_DIR.parent))).resol
 SUITE_DATACONTROL = Path(
     os.environ.get(
         'KORE_SUITE_DATACONTROL',
-        str(_shared_get_controldata_dir() if _shared_get_controldata_dir is not None else (SUITE_ROOT / 'datacontrol')),
+        str(SUITE_ROOT / 'datacontrol'),
     )
 ).resolve()
-SUITE_DATAUSER = Path(
-    os.environ.get(
-        'KORE_SUITE_DATAUSER',
-        str(_shared_get_user_data_dir() if _shared_get_user_data_dir is not None else (SUITE_ROOT / 'datauser')),
-    )
-).resolve()
+SUITE_DATAUSER = get_datauser_root()
 COMMONUI_ASSETS = Path(os.environ.get('KORE_UIELEMENTS_ASSETS_DIR', str(BASE_DIR.parent / 'UIElements' / 'assets')))
 if not COMMONUI_ASSETS.exists():
     COMMONUI_ASSETS = STATIC / 'shared'
-DATA_DIR = Path(os.environ.get('KOREDOCS_DATA_DIR', str(SUITE_DATAUSER)))
+DATA_DIR = Path(os.environ.get('KOREDOCS_DATA_DIR', str(SUITE_DATAUSER))).resolve()
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 CONTROL_DIR = Path(os.environ.get('KOREDOCS_CONTROL_DIR', str(SUITE_DATACONTROL / 'koredocs')))
@@ -275,36 +275,24 @@ def serve_textedit():
 
 # ── File API ───────────────────────────────────────────────────────────────
 
-def _resolve(name: str) -> Path:
-    """Resolve *name* to a safe absolute path inside DATA_DIR.
-
-    Raises HTTP 400 if the name is empty, contains path separators or dotdot,
-    resolves outside DATA_DIR (path-traversal guard), or has an unsupported
-    file extension.
-    """
+def _resolve_legacy_name(name: str) -> Path:
     if not name:
         raise HTTPException(status_code=400, detail='Empty filename')
     if any(c in name for c in ('/', '\\', ':')):
         raise HTTPException(status_code=400, detail='Filename must not contain path separators')
-    # Reject dotdot regardless of position
     if '..' in name.split('.'):
         raise HTTPException(status_code=400, detail='Invalid filename')
-
-    path = (DATA_DIR / name).resolve()
-
-    # Path-traversal guard: resolved path must still be inside DATA_DIR
     try:
-        path.relative_to(DATA_DIR.resolve())
-    except ValueError:
-        raise HTTPException(status_code=400, detail='Invalid filename')
-
+        path = resolve_datauser_path(name)
+    except DataUserPathError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    if path.parent != DATA_DIR:
+        raise HTTPException(status_code=400, detail='Filename must resolve in the datauser root')
     if path.suffix not in ALLOWED_EXTENSIONS:
         raise HTTPException(
             status_code=400,
-            detail=f"Unsupported file type '{path.suffix}'. "
-                   f"Allowed: {', '.join(sorted(ALLOWED_EXTENSIONS))}",
+            detail=f"Unsupported file type '{path.suffix}'. Allowed: {', '.join(sorted(ALLOWED_EXTENSIONS))}",
         )
-
     return path
 
 
@@ -321,25 +309,12 @@ def _validate_flat_content(name: str, content: str) -> None:
     korefile._validate_serialized_content(name, content)
 
 
-def _file_etag(path: Path) -> str:
-    stat = path.stat()
-    return f'W/"{stat.st_mtime_ns}-{stat.st_size}"'
-
-
 def _enforce_file_match(request: Request, path: Path) -> None:
     if not path.exists():
         return
     expected = request.headers.get('if-match')
-    if expected and expected != _file_etag(path):
+    if expected and expected != datauser_file_etag(path):
         raise HTTPException(status_code=409, detail='File changed on disk; reload before writing')
-
-
-def _create_flat_file_atomically(path: Path, content: str) -> None:
-    try:
-        with path.open('x', encoding='utf-8') as handle:
-            handle.write(content)
-    except FileExistsError:
-        raise HTTPException(status_code=409, detail='File already exists')
 
 
 @app.get('/api/legacy/files')
@@ -350,17 +325,13 @@ def list_files(type: Annotated[str | None, Query()] = None):
     """
     ext_filter = f'.{type}' if type else None
     result = []
-    for p in sorted(DATA_DIR.iterdir()):
-        if not p.is_file():
+    for path in list_datauser_files(search_root='', recursive=False, allowed_extensions=set(ALLOWED_EXTENSIONS)):
+        if ext_filter and path.suffix != ext_filter:
             continue
-        if p.suffix not in ALLOWED_EXTENSIONS:
-            continue
-        if ext_filter and p.suffix != ext_filter:
-            continue
-        stat = p.stat()
+        stat = path.stat()
         result.append({
-            'name':     p.name,
-            'type':     p.suffix.lstrip('.'),
+            'name':     path.name,
+            'type':     path.suffix.lstrip('.'),
             'size':     stat.st_size,
             'modified': stat.st_mtime,
         })
@@ -370,45 +341,48 @@ def list_files(type: Annotated[str | None, Query()] = None):
 @app.get('/api/legacy/files/{name}')
 def read_file(name: str):
     """Return the raw text content of a file."""
-    path = _resolve(name)
+    path = _resolve_legacy_name(name)
     if not path.exists():
         raise HTTPException(status_code=404, detail='File not found')
-    response = PlainTextResponse(path.read_text(encoding='utf-8'))
-    response.headers['etag'] = _file_etag(path)
+    response = PlainTextResponse(read_datauser_text_file(path))
+    response.headers['etag'] = datauser_file_etag(path)
     return response
 
 
 @app.put('/api/legacy/files/{name}')
 def write_file(name: str, body: _WriteBody, request: Request):
     """Overwrite (or create) a file with the given content."""
-    path = _resolve(name)
+    path = _resolve_legacy_name(name)
     _enforce_file_match(request, path)
     _validate_flat_content(name, body.content)
-    path.write_text(body.content, encoding='utf-8')
+    write_datauser_text_file(path, body.content)
     response = JSONResponse({'ok': True, 'name': name})
-    response.headers['etag'] = _file_etag(path)
+    response.headers['etag'] = datauser_file_etag(path)
     return response
 
 
 @app.delete('/api/legacy/files/{name}')
 def delete_file(name: str, request: Request):
     """Delete a file."""
-    path = _resolve(name)
+    path = _resolve_legacy_name(name)
     if not path.exists():
         raise HTTPException(status_code=404, detail='File not found')
     _enforce_file_match(request, path)
-    path.unlink()
+    delete_datauser_file(path)
     return {'ok': True}
 
 
 @app.post('/api/legacy/files')
 def create_file(body: _CreateBody):
     """Create a new file. Returns 409 if it already exists."""
-    path = _resolve(body.name)
+    path = _resolve_legacy_name(body.name)
     _validate_flat_content(body.name, body.content)
-    _create_flat_file_atomically(path, body.content)
+    try:
+        write_datauser_text_file(path, body.content, overwrite=False)
+    except DataUserConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     response = JSONResponse({'ok': True, 'name': body.name})
-    response.headers['etag'] = _file_etag(path)
+    response.headers['etag'] = datauser_file_etag(path)
     return response
 
 
@@ -473,15 +447,10 @@ def _resolve_textedit_path(path_value: str) -> Path:
     raw = (path_value or '').strip()
     if not raw:
         raise HTTPException(status_code=400, detail='Path is required')
-    candidate = Path(raw)
-    if not candidate.is_absolute():
-        candidate = (SUITE_ROOT / candidate).resolve()
-    else:
-        candidate = candidate.resolve()
     try:
-        candidate.relative_to(SUITE_ROOT)
-    except ValueError:
-        raise HTTPException(status_code=400, detail='Path must be inside the suite root')
+        candidate = resolve_datauser_path(raw)
+    except DataUserPathError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     if not candidate.exists() or not candidate.is_file():
         raise HTTPException(status_code=404, detail='File not found')
     return candidate
@@ -527,13 +496,8 @@ def textedit_open(
         }
 
     disk_path = _resolve_textedit_path(path or '')
-    raw = disk_path.read_bytes()
-    truncated = False
-    total_len = len(raw)
-    if total_len > _TEXTEDIT_MAX_BYTES:
-        raw = raw[:_TEXTEDIT_MAX_BYTES]
-        truncated = True
-    rel = str(disk_path.relative_to(SUITE_ROOT)).replace('\\', '/')
+    raw, truncated, total_len = read_binary_file(disk_path, max_bytes=_TEXTEDIT_MAX_BYTES)
+    rel = datauser_relative_path(disk_path)
     return {
         'source': 'filesystem',
         'path': rel,
@@ -570,11 +534,11 @@ def textedit_save(body: _TextEditSaveBody):
             raise HTTPException(status_code=409, detail='File changed in the background; refresh and retry.')
 
     disk_path = _resolve_textedit_path(body.path or '')
-    disk_path.write_text(body.content, encoding='utf-8')
+    write_datauser_text_file(disk_path, body.content)
     return {
         'ok': True,
         'source': 'filesystem',
-        'path': str(disk_path.relative_to(SUITE_ROOT)).replace('\\', '/'),
+        'path': datauser_relative_path(disk_path),
     }
 
 

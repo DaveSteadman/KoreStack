@@ -124,7 +124,7 @@ def _diag_content(title: str, diagram: Optional[dict] = None) -> str:
 
 
 def create_korediag(
-    folder_path: Annotated[str, 'Folder path in KoreFile, such as "/" or "/Projects". Missing folders are created.'],
+  folder_path: Annotated[str, 'Folder path in the shared KoreDocs/datauser tree, such as "/" or "/Projects". Missing folders are created.'],
     name: Annotated[str, 'Filename, with or without the .korediag extension.'],
     diagram: Annotated[Optional[dict], 'Optional partial or complete diagram object. Missing top-level fields are filled in.'] = None,
     title: Annotated[Optional[str], 'Diagram title. Defaults to the filename stem or diagram title.'] = None,
@@ -137,7 +137,7 @@ def create_korediag(
 
 @mcp.tool()
 def koredocs_diag_create(
-    folder_path: Annotated[str, 'Folder path in KoreFile, such as "/" or "/Projects". Missing folders are created.'],
+  folder_path: Annotated[str, 'Folder path in the shared KoreDocs/datauser tree, such as "/" or "/Projects". Missing folders are created.'],
     name: Annotated[str, 'Filename, with or without the .korediag extension.'],
     diagram: Annotated[Optional[dict], 'Optional partial or complete diagram object.'] = None,
     title: Annotated[Optional[str], 'Diagram title.'] = None,
