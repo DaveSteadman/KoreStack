@@ -92,17 +92,6 @@
     </form>
   </dialog>
   <script>
-  function stepNum(btn, delta) {
-    const input = btn.closest('.num-stepper').querySelector('input[type=number]');
-    const min  = input.min  !== '' ? parseInt(input.min,  10) : -Infinity;
-    const max  = input.max  !== '' ? parseInt(input.max,  10) :  Infinity;
-    const step = input.step !== '' ? parseInt(input.step, 10) : 1;
-    let val = parseInt(input.value, 10);
-    if (isNaN(val)) val = parseInt(input.min, 10) || 1;
-    input.value = Math.min(max, Math.max(min, val + delta * step));
-    input.dispatchEvent(new Event('input', { bubbles: true }));
-    if (input.classList.contains('rate-input') && typeof saveRate === 'function') saveRate(input);
-  }
   function setNoOlderThan(input) {
     const days = parseInt(input.value, 10);
     if (isNaN(days) || days < 1) return;
@@ -148,7 +137,9 @@
   })();
   </script>
   <script type="module">
-    import { initKoreDataShell } from '/ui-elements/assets/js/chrome.js';
+    import { initKoreDataShell, installNumberStepperGlobals } from '/ui-elements/assets/js/chrome.js';
+
+    installNumberStepperGlobals();
 
     initKoreDataShell({
       path: {{ request.url.path | tojson }},

@@ -120,16 +120,12 @@
 <main class="{% block main_class %}{% endblock %}">
   {% block content %}{% endblock %}
 </main>
-<script>
-  // ─── stepper controls ────────────────────────────
-  document.querySelectorAll('.num-stepper').forEach(w => {
-    const inp = w.querySelector('input[type=number]');
-    w.querySelector('.step-up')?.addEventListener('click', () => { inp.value = +inp.value + 1; });
-    w.querySelector('.step-dn')?.addEventListener('click', () => { inp.value = Math.max(+inp.min||0, +inp.value - 1); });
-  });
-</script>
 <script type="module">
-  import { initKoreCommsShell } from '/ui-elements/assets/js/chrome.js';
+  import { bindNumberStepperPairControls, initKoreCommsShell, installNumberStepperGlobals } from '/ui-elements/assets/js/chrome.js';
+
+  installNumberStepperGlobals();
+  bindNumberStepperPairControls();
+
   initKoreCommsShell({
     path: {{ request.url.path | tojson }},
     urls: window.__koreSuiteUrls || {},

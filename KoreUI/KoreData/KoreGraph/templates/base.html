@@ -19,6 +19,10 @@
       --amber:   #f0c060;
       --blue:    #6eb5ff;
       --red:     #ff5f5f;
+      --kcui-stepper-focus-border: var(--green);
+      --kcui-stepper-button-color: var(--dim);
+      --kcui-stepper-button-hover-bg: rgba(74,247,122,.15);
+      --kcui-stepper-button-hover-color: var(--green);
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { height: 100%; margin: 0; padding: 0; }
@@ -71,32 +75,6 @@
     input::placeholder, textarea::placeholder { color: var(--dim); }
     textarea { resize: vertical; min-height: 60px; width: 100%; }
     select { width: 100%; }
-
-    /* number stepper */
-    .num-stepper {
-      display: inline-flex; border: 1px solid var(--border); overflow: hidden;
-    }
-    .num-stepper input[type=number] {
-      border: none; background: transparent; color: var(--text);
-      font-family: inherit; font-size: var(--kcui-text-body); padding: 0.25rem 0.4rem;
-      -moz-appearance: textfield; min-width: 0; outline: none; text-align: right; width: 52px;
-    }
-    .num-stepper input[type=number]::-webkit-inner-spin-button,
-    .num-stepper input[type=number]::-webkit-outer-spin-button { display: none; }
-    .num-stepper:focus-within { border-color: var(--green); }
-    .stepper-btns {
-      display: flex; flex-direction: column;
-      border-left: 1px solid var(--border); width: 20px; flex-shrink: 0;
-    }
-    .stepper-btns button {
-      flex: 1; padding: 0; border: none; border-radius: 0;
-      background: transparent; color: var(--dim); cursor: pointer;
-      font-size: var(--kcui-text-micro); line-height: 1; letter-spacing: 0; text-transform: none;
-      display: flex; align-items: center; justify-content: center;
-      min-width: 0; transition: background .1s, color .1s;
-    }
-    .stepper-btns button:first-child { border-bottom: 1px solid var(--border); }
-    .stepper-btns button:hover { background: rgba(74,247,122,.15); color: var(--green); }
 
     /* buttons */
     button, .btn {
@@ -172,19 +150,11 @@
   </main>
   <script>
   window._kgPfx = {{ req_pfx | tojson }};
-  function stepNum(btn, delta) {
-    const input = btn.closest('.num-stepper').querySelector('input[type=number]');
-    const min  = input.min  !== '' ? parseInt(input.min,  10) : -Infinity;
-    const max  = input.max  !== '' ? parseInt(input.max,  10) :  Infinity;
-    const step = input.step !== '' ? parseInt(input.step, 10) : 1;
-    let val = parseInt(input.value, 10);
-    if (isNaN(val)) val = parseInt(input.min, 10) || 0;
-    input.value = Math.min(max, Math.max(min, val + delta * step));
-    input.dispatchEvent(new Event('input', { bubbles: true }));
-  }
   </script>
   <script type="module">
-    import { initAppBar, initKoreDataShell } from '/ui-elements/assets/js/chrome.js';
+    import { initAppBar, initKoreDataShell, installNumberStepperGlobals } from '/ui-elements/assets/js/chrome.js';
+
+    installNumberStepperGlobals();
 
     initKoreDataShell({
       path: {{ request.url.path | tojson }},

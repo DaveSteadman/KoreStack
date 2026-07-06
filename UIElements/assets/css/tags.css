@@ -18,6 +18,7 @@
 /* ─── Base ──────────────────────────────────────────────────────────── */
 
 .kcui-tag {
+  --kcui-tag-color: var(--text-dim, #4e5466);
   display:        inline-flex;
   align-items:    center;
   min-width:      0;
@@ -36,7 +37,7 @@
   border:         1px solid currentColor;
   border-radius:  0;
   background:     transparent;
-  color:          var(--text-dim, #4e5466);
+  color:          var(--kcui-tag-color);
   user-select:    none;
 }
 
@@ -57,15 +58,15 @@ a.kcui-tag {
 
 /* ─── Color variants ────────────────────────────────────────────────── */
 
-.kcui-tag--accent  { color: var(--accent,  #4af77a); }
-.kcui-tag--success { color: var(--success, #4af77a); }
-.kcui-tag--warning { color: var(--warning, #f0c060); }
-.kcui-tag--danger  { color: var(--danger,  #ff5f5f); }
-.kcui-tag--info    { color: var(--info,    #6eb5ff); }
-.kcui-tag--purple  { color: var(--purple,  #b88cff); }
-.kcui-tag--yellow  { color: var(--yellow,  #ffd84d); }
-.kcui-tag--muted   { color: var(--text-2,  #b8c0cc); }
-.kcui-tag--dim     { color: var(--text-dim, #4e5466); }
+.kcui-tag--accent  { --kcui-tag-color: var(--accent,  #4af77a); }
+.kcui-tag--success { --kcui-tag-color: var(--success, #4af77a); }
+.kcui-tag--warning { --kcui-tag-color: var(--warning, #f0c060); }
+.kcui-tag--danger  { --kcui-tag-color: var(--danger,  #ff5f5f); }
+.kcui-tag--info    { --kcui-tag-color: var(--info,    #6eb5ff); }
+.kcui-tag--purple  { --kcui-tag-color: var(--purple,  #b88cff); }
+.kcui-tag--yellow  { --kcui-tag-color: var(--yellow,  #ffd84d); }
+.kcui-tag--muted   { --kcui-tag-color: var(--text-2,  #b8c0cc); }
+.kcui-tag--dim     { --kcui-tag-color: var(--text-dim, #4e5466); }
 
 .kcui-tag--sm {
   font-size:   11px;
@@ -93,6 +94,12 @@ a.kcui-tag {
   background: color-mix(in srgb, currentColor 18%, transparent);
 }
 
+.kcui-tag--dim.is-on,
+.kcui-tag--muted.is-on {
+  --kcui-tag-color: var(--success, #4af77a);
+  background: color-mix(in srgb, var(--success, #4af77a) 18%, transparent);
+}
+
 .kcui-tag.is-off {
   color:      var(--text-dim, #4e5466);
   background: transparent;
@@ -106,9 +113,12 @@ button.kcui-tag {
   -webkit-appearance: none;
   min-width:       0;
   margin:          0;
-  font:            inherit;
   cursor:          pointer;
   transition:      color 0.12s, background 0.12s, border-color 0.12s;
+}
+
+a.kcui-tag:visited {
+  color: var(--kcui-tag-color);
 }
 
 a.kcui-tag:hover,

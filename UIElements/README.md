@@ -191,6 +191,36 @@ updateTag(tag, { color: 'dim', active: false });
 `.kcui-panel` + `.kcui-panel-header` + `.kcui-panel-body` — standard panel frame used in KoreAgent and
 KoreChat split layouts.
 
+### Number Steppers (`forms.css` / `steppers.js`)
+Use `.num-stepper` or `.kcui-num-stepper` for compact numeric inputs with inline increment/decrement buttons.
+The shared pattern keeps the control to a single line height with horizontal arrow buttons after the input.
+
+Primary markup:
+
+```html
+<div class="num-stepper">
+  <input type="number" min="1" max="365" step="1">
+  <div class="stepper-btns">
+    <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,1)">▲</button>
+    <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,-1)">▼</button>
+  </div>
+</div>
+```
+
+Shared JS usage:
+
+```js
+import { installNumberStepperGlobals } from '/ui-elements/assets/js/chrome.js';
+
+installNumberStepperGlobals();
+```
+
+Apps that need a theme variation should override the stepper tokens instead of duplicating the whole component:
+- `--kcui-stepper-focus-border`
+- `--kcui-stepper-button-color`
+- `--kcui-stepper-button-hover-bg`
+- `--kcui-stepper-button-hover-color`
+
 ### Tabs (`tabs.css` / `tabs.js`)
 `.kcui-tab-bar` with `renderTabs()` — used in the application bar and in multi-page apps such as KoreData.
 

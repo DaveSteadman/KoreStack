@@ -334,18 +334,6 @@ function submitActiveForm() {
   active.submit();
 }
 
-function stepNum(btn, delta) {
-  const input = btn.closest('.num-stepper').querySelector('input[type=number]');
-  const min  = input.min !== '' ? parseInt(input.min, 10)  : -Infinity;
-  const max  = input.max !== '' ? parseInt(input.max, 10)  :  Infinity;
-  const step = input.step !== '' ? parseInt(input.step, 10) : 1;
-  let val = parseInt(input.value, 10);
-  if (isNaN(val)) val = parseInt(input.min, 10) || 1;
-  input.value = Math.min(max, Math.max(min, val + delta * step));
-  input.dispatchEvent(new Event('input', { bubbles: true }));
-  if (input.classList.contains('rate-input')) saveRate(input);
-}
-
 async function triggerRefresh(btn, url) {
   btn.disabled = true; btn.style.opacity = '0.5';
   try {
