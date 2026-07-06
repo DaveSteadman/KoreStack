@@ -68,7 +68,7 @@ from app.database import (
     set_domain_age_settings,
     update_entry_page_text,
 )
-from app.chroma_index import migrate_legacy_domain_stores, semantic_search
+from app.chroma_index import chroma_available, migrate_legacy_domain_stores, semantic_search
 from app.feed_manager import (
     add_feed,
     create_domain,
@@ -457,6 +457,8 @@ def api_semantic_search(
     min_match: float = 0.4,
 ):
     """Semantic sentence search across the per-domain Chroma stores."""
+    if not chroma_available():
+        raise HTTPException(status_code=503, detail="Semantic search unavailable: chromadb is not installed")
     return semantic_search(domain or None, q, limit=limit, min_match=min_match)
 
 

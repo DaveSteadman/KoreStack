@@ -106,15 +106,39 @@ def reload() -> None:
 reload()  # Auto-initialize at import time.
 
 
+def _canonical_subdir_db_path(db: str) -> Path:
+    return _DBS_DIR / db / f"{db}.db"
+
+
+def _canonical_flat_db_path(db: str) -> Path:
+    return _DBS_DIR / f"{db}.db"
+
+
+def _resolve_unregistered_db_path(db: str) -> Optional[Path]:
+    subdir_db_path = _canonical_subdir_db_path(db)
+    if subdir_db_path.exists() or subdir_db_path.with_suffix(".json").exists():
+        return subdir_db_path
+
+    flat_db_path = _canonical_flat_db_path(db)
+    if flat_db_path.exists() or flat_db_path.with_suffix(".json").exists():
+        return flat_db_path
+
+    return None
+
+
 # ---------------------------------------------------------------------------
 # Public interface
 # ---------------------------------------------------------------------------
 
 def get_db_path(db: str = "default") -> Path:
     """Resolve a database id to its .db file Path.  Raises KeyError if unknown."""
-    if db not in _registry:
-        raise KeyError(f"Unknown database: {db!r}")
-    path: Path = _registry[db]["db_path"]
+    entry = _registry.get(db)
+    if entry is None:
+        path = _resolve_unregistered_db_path(db)
+        if path is None:
+            raise KeyError(f"Unknown database: {db!r}")
+    else:
+        path = entry["db_path"]
     path.parent.mkdir(parents=True, exist_ok=True)
     return path
 

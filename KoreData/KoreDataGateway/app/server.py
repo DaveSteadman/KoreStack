@@ -757,6 +757,19 @@ async def api_search(req: _SearchRequest):
             if req.since: params["since"] = req.since
             if req.until: params["until"] = req.until
             r = await _feed_client.get("/api/search", params=params, timeout=10.0)
+        if search_mode == "semantic" and r.status_code == 503:
+            detail = ""
+            try:
+                detail = str((r.json() or {}).get("detail") or "")
+            except Exception:
+                detail = ""
+            warning = detail or "Semantic search unavailable."
+            return {
+                "status":   "partial",
+                "results":  [],
+                "error":    "",
+                "warnings": [f"Feed semantic search unavailable: {warning}"],
+            }
         if r.status_code != 200:
             return {
                 "status":   "error",
@@ -815,6 +828,14 @@ async def api_search(req: _SearchRequest):
             r = await _ref_client.get("/api/semantic-search", params=params, timeout=10.0)
         else:
             r = await _ref_client.get("/api/search", params=params, timeout=10.0)
+        if search_mode == "semantic" and r.status_code == 503:
+            detail = ""
+            try:
+                detail = str((r.json() or {}).get("detail") or "")
+            except Exception:
+                detail = ""
+            warning = detail or "Semantic search unavailable."
+            return {"status": "partial", "results": [], "error": "", "warnings": [f"Reference semantic search unavailable: {warning}"]}
         if r.status_code != 200:
             return {"status": "error", "results": [], "error": f"HTTP {r.status_code}", "warnings": []}
         payload = r.json() or []
@@ -851,6 +872,14 @@ async def api_search(req: _SearchRequest):
         else:
             params = {"q": req.query, "limit": limit}
             r = await _lib_client.get("/api/search", params=params, timeout=10.0)
+        if search_mode == "semantic" and r.status_code == 503:
+            detail = ""
+            try:
+                detail = str((r.json() or {}).get("detail") or "")
+            except Exception:
+                detail = ""
+            warning = detail or "Semantic search unavailable."
+            return {"status": "partial", "results": [], "error": "", "warnings": [f"Library semantic search unavailable: {warning}"]}
         if r.status_code != 200:
             return {"status": "error", "results": [], "error": f"HTTP {r.status_code}", "warnings": []}
         payload = r.json() or []

@@ -576,6 +576,8 @@ def upsert_article(
     redirect_to: Optional[str] = None,
     link_titles: Optional[list[str]] = None,
     conn: Optional[sqlite3.Connection] = None,
+    pending_deleted_sentence_ids: Optional[set[int]] = None,
+    pending_sync_article_ids: Optional[set[int]] = None,
     **_ignored,
 ) -> dict:
     """Insert or update an article."""
@@ -660,7 +662,11 @@ def upsert_article(
             pass
         return get_article_by_id(article_id, full=False)
 
-    article_id, _previous_sentence_ids = _upsert(conn)
+    article_id, previous_sentence_ids = _upsert(conn)
+    if pending_deleted_sentence_ids is not None:
+        pending_deleted_sentence_ids.update(previous_sentence_ids)
+    if pending_sync_article_ids is not None and not redirect_to:
+        pending_sync_article_ids.add(int(article_id))
     return {"id": article_id, "title": title}
 
 

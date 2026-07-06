@@ -24,7 +24,7 @@ from app.database import (
     update_book,
     update_book_body,
 )
-from app.chroma_index import semantic_search
+from app.chroma_index import chroma_available, semantic_search
 
 _LIBRARY_UI_ROOT = Path(
     os.environ.get(
@@ -180,21 +180,25 @@ def register_library_ui(app: FastAPI) -> None:
         search_mode = "semantic" if str(mode).strip().lower() == "semantic" else "keyword"
         searched    = any([q, author, title, year_int, language, genre])
         results     = []
+        search_error = ""
         if searched:
             try:
                 if search_mode == "semantic" and q:
-                    results = semantic_search(catalog, q, limit=limit + offset, min_match=min_match)
-                    if author:
-                        results = [item for item in results if author.lower() in str(item.get("author") or "").lower()]
-                    if title:
-                        results = [item for item in results if title.lower() in str(item.get("title") or "").lower()]
-                    if year_int is not None:
-                        results = [item for item in results if item.get("year") == year_int]
-                    if language:
-                        results = [item for item in results if str(item.get("language") or "").lower() == language.lower()]
-                    if genre:
-                        results = [item for item in results if genre.lower() in str(item.get("genre") or "").lower()]
-                    results = results[offset: offset + limit]
+                    if not chroma_available():
+                        search_error = "Semantic search is unavailable because chromadb is not installed in this service environment."
+                    else:
+                        results = semantic_search(catalog, q, limit=limit + offset, min_match=min_match)
+                        if author:
+                            results = [item for item in results if author.lower() in str(item.get("author") or "").lower()]
+                        if title:
+                            results = [item for item in results if title.lower() in str(item.get("title") or "").lower()]
+                        if year_int is not None:
+                            results = [item for item in results if item.get("year") == year_int]
+                        if language:
+                            results = [item for item in results if str(item.get("language") or "").lower() == language.lower()]
+                        if genre:
+                            results = [item for item in results if genre.lower() in str(item.get("genre") or "").lower()]
+                        results = results[offset: offset + limit]
                 else:
                     results = search_books(
                         q         = q,
@@ -229,6 +233,7 @@ def register_library_ui(app: FastAPI) -> None:
                 "mode":     search_mode,
                 "min_match": max(0.0, min(1.0, float(min_match or 0.0))),
                 "catalogs": catalogs,
+                "search_error": search_error,
             },
         )
 

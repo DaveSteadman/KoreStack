@@ -58,7 +58,7 @@ from app.database import (
     search_articles,
     upsert_article,
 )
-from app.chroma_index import chroma_available, semantic_search, sync_pending_sentences
+from app.chroma_index import chroma_available, close_client, semantic_search, sync_pending_sentences
 from app.importers.kiwix import (
     _http_client,
     import_one,
@@ -89,7 +89,10 @@ async def _lifespan(app: FastAPI):
         daemon = True,
         name   = "korereference-startup-warm",
     ).start()
-    yield
+    try:
+        yield
+    finally:
+        close_client()
 
 
 app = FastAPI(

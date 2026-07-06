@@ -93,7 +93,9 @@
     <span class="meta" style="margin-left:0.75rem;">{{ mode }} search for "{{ q }}"</span>
   </div>
   <div class="panel-body kcui-panel-body" style="padding:0;">
-    {% if results %}
+    {% if search_error %}
+    <p class="meta kcui-result-empty" style="color:var(--danger);">{{ search_error }}</p>
+    {% elif results %}
     <form method="post" action="/ui/feeds/entries/bulk-delete">
       <div class="kcui-filter-row" style="padding:0.4rem 0.75rem; border-bottom:1px solid var(--border);">
         <label class="kcui-filter-label" style="cursor:pointer;">

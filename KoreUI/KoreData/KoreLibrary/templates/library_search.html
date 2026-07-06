@@ -98,7 +98,9 @@
     <span class="badge" style="margin-left:0.5rem;">{{ results|length }}</span>
   </div>
   <div class="panel-body kcui-panel-body" style="padding:0;">
-    {% if results %}
+    {% if search_error %}
+    <p class="meta kcui-result-empty" style="color:var(--danger);">{{ search_error }}</p>
+    {% elif results %}
     <table>
       <thead>
         <tr>

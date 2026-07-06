@@ -31,7 +31,7 @@ from app.database import (
     set_domain_age_settings,
     update_entry_page_text,
 )
-from app.chroma_index import semantic_search
+from app.chroma_index import chroma_available, semantic_search
 from app.feed_manager import (
     add_feed,
     create_domain,
@@ -168,10 +168,14 @@ def register_feed_ui(app: FastAPI) -> None:
         search_mode = "semantic" if str(mode).strip().lower() == "semantic" else "keyword"
         min_match   = max(0.0, min(1.0, float(min_match or 0.0)))
         results     = []
+        search_error = ""
         if q.strip():
             if search_mode == "semantic":
-                results = semantic_search(domain or None, q, limit=limit, min_match=min_match)
-                results = _filter_results_by_date(results, since, until)
+                if not chroma_available():
+                    search_error = "Semantic search is unavailable because chromadb is not installed in this service environment."
+                else:
+                    results = semantic_search(domain or None, q, limit=limit, min_match=min_match)
+                    results = _filter_results_by_date(results, since, until)
             else:
                 results = search_entries(domain or None, q, limit=limit, include_body=False, since=since, until=until)
             results = [_normalise_entry_for_display(result) for result in results]
@@ -187,6 +191,7 @@ def register_feed_ui(app: FastAPI) -> None:
                 "limit":   limit,
                 "mode":    search_mode,
                 "min_match": min_match,
+                "search_error": search_error,
             },
         )
 

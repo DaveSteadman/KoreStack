@@ -34,7 +34,7 @@ from app.database import (
     update_book,
     update_book_body,
 )
-from app.chroma_index import semantic_search
+from app.chroma_index import chroma_available, semantic_search
 from app.endpoint_ui import repair_kore_anchors
 
 
@@ -436,6 +436,8 @@ def register_library_api(app: FastAPI) -> None:
     @app.get("/api/semantic-search", summary="Semantic search across indexed library sentences")
     def route_semantic_search(q: str, catalog: Optional[str] = None, limit: int = 50, min_match: float = 0.4):
         try:
+            if not chroma_available():
+                raise HTTPException(status_code=503, detail="Semantic search unavailable: chromadb is not installed")
             return semantic_search(catalog, q, limit=limit, min_match=min_match)
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc

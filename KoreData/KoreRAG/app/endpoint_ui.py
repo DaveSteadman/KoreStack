@@ -560,6 +560,7 @@ def register_rag_ui(
         dbs_dir   = _rag_runtime_root()
         db_subdir = dbs_dir / db_id
         db_subdir.mkdir(parents=True, exist_ok=True)
+        db_path   = db_subdir / f"{db_id}.db"
         json_path = db_subdir / f"{db_id}.json"
         descriptor = {
             "id":           db_id,
@@ -568,6 +569,7 @@ def register_rag_ui(
             "managed_by":   "user",
         }
         json_path.write_text(json.dumps(descriptor, indent=2), encoding="utf-8")
+        db_path.touch(exist_ok=True)
         _registry_reload()
         init_db(db=db_id)
         return RedirectResponse("/ui/rag/databases", status_code=303)

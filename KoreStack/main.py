@@ -246,7 +246,7 @@ def build_child_env(config: dict) -> dict[str, str]:
     env["KOREDATA_DATA_DIR"] = str(stack_paths["koredata_data"])
     env["KOREAGENT_DATA_DIR"] = str(stack_paths["koreagent_data"])
     env["KOREDOCS_CONTROL_DIR"] = str(stack_paths["koredocs"])
-    env["KOREDOCS_DATA_DIR"] = str(stack_paths["docs_data"])
+    env["KOREDOCS_DATA_DIR"]    = str(stack_paths["datauser"])
     _korestack_cfg = services.get("korestack") if isinstance(services.get("korestack"), dict) else {}
     _korestack_port = int(_korestack_cfg.get("port")) if _korestack_cfg and _korestack_cfg.get("port") is not None else None
     if _korestack_port is None:

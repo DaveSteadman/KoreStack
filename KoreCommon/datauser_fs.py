@@ -172,7 +172,8 @@ def datauser_relative_path(target_path: str | Path, *, root_dir: str | Path | No
     resolved = candidate.resolve()
     root = ensure_datauser_root(root_dir)
     try:
-        return resolved.relative_to(root).as_posix()
+        relative = resolved.relative_to(root)
+        return "" if relative == Path(".") else relative.as_posix()
     except ValueError as exc:
         raise DataUserPathError(f"Path is outside datauser: {target_path}") from exc
 

@@ -80,6 +80,10 @@ def _release_client() -> None:
         pass
 
 
+def close_client() -> None:
+    _release_client()
+
+
 def _get_collection():
     global _CLIENT
     if chromadb is None:
@@ -184,7 +188,7 @@ def semantic_search(query: str, limit: int = 20, min_match: float = 0.0) -> list
     path = _store_path()
     if not path.exists():
         try:
-            sync_pending_sentences(batch_size=250)
+            sync_pending_sentences(batch_size=max(25, min(250, int(limit) * 10)), max_batches=1)
         except Exception as exc:
             LOG.warning("Reference semantic catchup failed before first query: %s", exc)
         if not path.exists():
@@ -193,7 +197,7 @@ def semantic_search(query: str, limit: int = 20, min_match: float = 0.0) -> list
     try:
         collection = _get_collection()
         if collection.count() <= 0:
-            sync_pending_sentences(batch_size=250)
+            sync_pending_sentences(batch_size=max(25, min(250, int(limit) * 10)), max_batches=1)
             collection = _get_collection()
         if collection.count() <= 0:
             return []

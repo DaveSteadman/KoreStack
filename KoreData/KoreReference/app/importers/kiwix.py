@@ -256,7 +256,9 @@ def import_one(
     source_name: str,
     title: str,
     resume: bool,
-    db_conn=None
+    db_conn=None,
+    pending_deleted_sentence_ids: Optional[set[int]] = None,
+    pending_sync_article_ids: Optional[set[int]] = None,
 ) -> bool:
     """Fetch and upsert a single article by title. Raises on HTTP error."""
     resp = client.get(article_url(source_kind, source_base, source_name, title))
@@ -271,7 +273,14 @@ def import_one(
         # Extract the last path segment as the target title.
         redirect_to = _redirect_target_from_location(source_kind, location)
         if redirect_to and redirect_to != title:
-            upsert_article(title=title, body=None, redirect_to=redirect_to, conn=db_conn)
+            upsert_article(
+                title                        = title,
+                body                         = None,
+                redirect_to                  = redirect_to,
+                conn                         = db_conn,
+                pending_deleted_sentence_ids = pending_deleted_sentence_ids,
+                pending_sync_article_ids     = pending_sync_article_ids,
+            )
             with state_lock:
                 import_state["redirects_stored"] += 1
             import_state["last_redirect"] = f"{title!r} -> {redirect_to!r}"
@@ -284,7 +293,14 @@ def import_one(
         # Fallback: HTML meta-refresh redirect (some ZIM formats)
         redirect_to = parsed.get("redirect_to")
         if redirect_to:
-            upsert_article(title=title, body=None, redirect_to=redirect_to, conn=db_conn)
+            upsert_article(
+                title                        = title,
+                body                         = None,
+                redirect_to                  = redirect_to,
+                conn                         = db_conn,
+                pending_deleted_sentence_ids = pending_deleted_sentence_ids,
+                pending_sync_article_ids     = pending_sync_article_ids,
+            )
             with state_lock:
                 import_state["redirects_stored"] += 1
             import_state["last_redirect"] = f"{title!r} -> {redirect_to!r}"
@@ -293,14 +309,34 @@ def import_one(
     if not (parsed["body"] or parsed["summary"]):
         return False  # empty stub — skip
     upsert_article(
-        title=title,
-        body=parsed["body"],
-        summary=parsed["summary"],
-        facts=parsed["facts"],
-        link_titles=parsed["link_titles"],
-        conn=db_conn,
+        title                        = title,
+        body                         = parsed["body"],
+        summary                      = parsed["summary"],
+        facts                        = parsed["facts"],
+        link_titles                  = parsed["link_titles"],
+        conn                         = db_conn,
+        pending_deleted_sentence_ids = pending_deleted_sentence_ids,
+        pending_sync_article_ids     = pending_sync_article_ids,
     )
     return True
+
+
+def _flush_semantic_sync(
+    pending_deleted_sentence_ids: set[int],
+    pending_sync_article_ids: set[int],
+) -> None:
+    if not pending_deleted_sentence_ids and not pending_sync_article_ids:
+        return
+    try:
+        from app.chroma_index import delete_sentence_ids, sync_article_sentences
+        if pending_deleted_sentence_ids:
+            delete_sentence_ids(sorted(pending_deleted_sentence_ids))
+        for article_id in sorted(pending_sync_article_ids):
+            sync_article_sentences(int(article_id))
+    except Exception:
+        return
+    pending_deleted_sentence_ids.clear()
+    pending_sync_article_ids.clear()
 
 
 def run_kiwix_import(
@@ -316,7 +352,9 @@ def run_kiwix_import(
     source_name = zim_name
 
     with db_connection() as write_conn, _http_client() as client:
-        writes_since_commit = 0
+        writes_since_commit         = 0
+        pending_deleted_sentence_ids: set[int] = set()
+        pending_sync_article_ids:     set[int] = set()
         if titles:
             work = titles[:limit] if limit else titles
         else:
@@ -333,11 +371,22 @@ def run_kiwix_import(
             if not import_state["running"]:
                 break
             try:
-                wrote = import_one(client, source_kind, source_base, source_name, title, resume, db_conn=write_conn)
+                wrote = import_one(
+                    client,
+                    source_kind,
+                    source_base,
+                    source_name,
+                    title,
+                    resume,
+                    db_conn                     = write_conn,
+                    pending_deleted_sentence_ids = pending_deleted_sentence_ids,
+                    pending_sync_article_ids     = pending_sync_article_ids,
+                )
                 if wrote:
                     writes_since_commit += 1
                     if writes_since_commit >= 25:
                         write_conn.commit()
+                        _flush_semantic_sync(pending_deleted_sentence_ids, pending_sync_article_ids)
                         writes_since_commit = 0
                 with state_lock:
                     import_state["done"] += 1
@@ -345,6 +394,9 @@ def run_kiwix_import(
                 with state_lock:
                     import_state["errors"] += 1
                 import_state["last_error"] = f"{title}: {exc}"
+        if writes_since_commit > 0:
+            write_conn.commit()
+            _flush_semantic_sync(pending_deleted_sentence_ids, pending_sync_article_ids)
 
     import_state["running"] = False
     resolve_links()
@@ -371,16 +423,29 @@ def run_kiwix_backfill(zim_name: str, kiwix_url: str, limit: int) -> None:
     import_state["total"] = len(titles)
 
     with db_connection() as write_conn, _http_client() as client:
-        writes_since_commit = 0
+        writes_since_commit         = 0
+        pending_deleted_sentence_ids: set[int] = set()
+        pending_sync_article_ids:     set[int] = set()
         for title in titles:
             if not import_state["running"]:
                 break
             try:
-                wrote = import_one(client, source_kind, source_base, source_name, title, resume=False, db_conn=write_conn)
+                wrote = import_one(
+                    client,
+                    source_kind,
+                    source_base,
+                    source_name,
+                    title,
+                    resume                      = False,
+                    db_conn                     = write_conn,
+                    pending_deleted_sentence_ids = pending_deleted_sentence_ids,
+                    pending_sync_article_ids     = pending_sync_article_ids,
+                )
                 if wrote:
                     writes_since_commit += 1
                     if writes_since_commit >= 25:
                         write_conn.commit()
+                        _flush_semantic_sync(pending_deleted_sentence_ids, pending_sync_article_ids)
                         writes_since_commit = 0
                 with state_lock:
                     import_state["done"] += 1
@@ -396,6 +461,9 @@ def run_kiwix_backfill(zim_name: str, kiwix_url: str, limit: int) -> None:
                 with state_lock:
                     import_state["errors"] += 1
                 import_state["last_error"] = f"{title}: {exc}"
+        if writes_since_commit > 0:
+            write_conn.commit()
+            _flush_semantic_sync(pending_deleted_sentence_ids, pending_sync_article_ids)
 
     import_state["running"] = False
     resolve_links()
@@ -427,13 +495,16 @@ def run_kiwix_crawl(seed_url: str, max_depth: int, limit: int, delay_seconds: fl
         import_stop_event.wait(timeout=delay)
 
     with db_connection() as write_conn, _http_client() as client:
-        writes_since_commit = 0
+        writes_since_commit         = 0
+        pending_deleted_sentence_ids: set[int] = set()
+        pending_sync_article_ids:     set[int] = set()
 
         def _flush_periodically() -> None:
             nonlocal writes_since_commit
             writes_since_commit += 1
             if writes_since_commit >= 25:
                 write_conn.commit()
+                _flush_semantic_sync(pending_deleted_sentence_ids, pending_sync_article_ids)
                 writes_since_commit = 0
 
         while queue and import_state["running"]:
@@ -468,7 +539,14 @@ def run_kiwix_crawl(seed_url: str, max_depth: int, limit: int, delay_seconds: fl
                     # Location: /content/<zim_name>/<Canonical_Title>
                     redirect_to = _redirect_target_from_location(source_kind, location)
                     if redirect_to and redirect_to != title:
-                        upsert_article(title=title, body=None, redirect_to=redirect_to, conn=write_conn)
+                        upsert_article(
+                            title                        = title,
+                            body                         = None,
+                            redirect_to                  = redirect_to,
+                            conn                         = write_conn,
+                            pending_deleted_sentence_ids = pending_deleted_sentence_ids,
+                            pending_sync_article_ids     = pending_sync_article_ids,
+                        )
                         _flush_periodically()
                         with state_lock:
                             import_state["redirects_stored"] += 1
@@ -484,7 +562,14 @@ def run_kiwix_crawl(seed_url: str, max_depth: int, limit: int, delay_seconds: fl
                 if parsed.get("redirect"):
                     redirect_to = parsed.get("redirect_to")
                     if redirect_to:
-                        upsert_article(title=title, body=None, redirect_to=redirect_to, conn=write_conn)
+                        upsert_article(
+                            title                        = title,
+                            body                         = None,
+                            redirect_to                  = redirect_to,
+                            conn                         = write_conn,
+                            pending_deleted_sentence_ids = pending_deleted_sentence_ids,
+                            pending_sync_article_ids     = pending_sync_article_ids,
+                        )
                         _flush_periodically()
                         with state_lock:
                             import_state["redirects_stored"] += 1
@@ -499,12 +584,14 @@ def run_kiwix_crawl(seed_url: str, max_depth: int, limit: int, delay_seconds: fl
                     _pace()
                     continue  # empty stub — skip without storing
                 upsert_article(
-                    title=title,
-                    body=parsed["body"],
-                    summary=parsed["summary"],
-                    facts=parsed["facts"],
-                    link_titles=parsed["link_titles"],
-                    conn=write_conn,
+                    title                        = title,
+                    body                         = parsed["body"],
+                    summary                      = parsed["summary"],
+                    facts                        = parsed["facts"],
+                    link_titles                  = parsed["link_titles"],
+                    conn                         = write_conn,
+                    pending_deleted_sentence_ids = pending_deleted_sentence_ids,
+                    pending_sync_article_ids     = pending_sync_article_ids,
                 )
                 _flush_periodically()
                 with state_lock:
@@ -527,6 +614,9 @@ def run_kiwix_crawl(seed_url: str, max_depth: int, limit: int, delay_seconds: fl
                     import_state["errors"] += 1
                 import_state["last_error"] = f"{title}: {exc}"
                 _pace()
+        if writes_since_commit > 0:
+            write_conn.commit()
+            _flush_semantic_sync(pending_deleted_sentence_ids, pending_sync_article_ids)
 
     import_state["running"] = False
     resolve_links()
