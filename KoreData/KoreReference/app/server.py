@@ -39,21 +39,26 @@ if _KORECOMMON_PARENT is not None and str(_KORECOMMON_PARENT) not in sys.path:
 from KoreCommon.endpoint_manifest import build_endpoint_manifest
 from app.config import cfg
 from app.database import (
+    backfill_sentence_index,
     delete_all_articles,
     delete_article,
     get_article_by_title,
+    get_article_sentences,
     get_backlinks,
     get_links,
+    get_sentence,
     get_random_article,
     get_status,
     get_unresolved_link_titles,
     init_db,
     list_articles,
+    rebuild_sentence_index,
     resolve_article,
     resolve_links,
     search_articles,
     upsert_article,
 )
+from app.chroma_index import chroma_available, semantic_search, sync_pending_sentences
 from app.importers.kiwix import (
     _http_client,
     import_one,
@@ -66,10 +71,21 @@ from app.importers.state import import_lock, import_state, import_stop_event
 from app.endpoint_ui import register_reference_ui
 
 
+def _warm_reference_semantic_index() -> None:
+    try:
+        init_db()
+    except Exception:
+        return
+    try:
+        sync_pending_sentences(batch_size=250)
+    except Exception:
+        pass
+
+
 @asynccontextmanager
 async def _lifespan(app: FastAPI):
     threading.Thread(
-        target = init_db,
+        target = _warm_reference_semantic_index,
         daemon = True,
         name   = "korereference-startup-warm",
     ).start()
@@ -208,6 +224,22 @@ def route_get_backlinks(title: str, limit: int = 50, offset: int = 0):
     return get_backlinks(title, limit=limit, offset=offset)
 
 
+@app.get("/api/articles/{title}/sentences", summary="List indexed sentences for a single article")
+def route_article_sentences(title: str, include_deleted: bool = False):
+    article = get_article_by_title(title, full=False)
+    if article is None:
+        raise HTTPException(status_code=404, detail=f"Article not found: {title!r}")
+    return get_article_sentences(int(article["id"]), include_deleted=include_deleted)
+
+
+@app.get("/api/sentences/{sentence_id}", summary="Fetch a single indexed sentence")
+def route_sentence(sentence_id: int):
+    row = get_sentence(sentence_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail=f"Sentence not found: {sentence_id}")
+    return row
+
+
 @app.post("/api/articles", status_code=201, summary="Add or upsert an article")
 @app.post("/articles", status_code=201, include_in_schema=False)
 def route_upsert_article(data: ArticleCreate):
@@ -254,6 +286,23 @@ def route_search(
             detail="Provide at least one of: q, title",
         )
     return search_articles(q=q, title=title, limit=limit, offset=offset)
+
+
+@app.get("/api/semantic-search", summary="Semantic search across indexed reference sentences")
+def route_semantic_search(q: str, limit: int = 50, min_match: float = 0.4):
+    if not chroma_available():
+        raise HTTPException(status_code=503, detail="Semantic search unavailable: chromadb is not installed")
+    return semantic_search(q, limit=limit, min_match=min_match)
+
+
+@app.post("/api/sentences/backfill", summary="Create sentence rows for articles that do not yet have them")
+def route_backfill_sentence_index():
+    return backfill_sentence_index()
+
+
+@app.post("/api/sentences/rebuild", summary="Rebuild sentence rows for all articles or one article")
+def route_rebuild_sentence_index(article_id: Optional[int] = None):
+    return rebuild_sentence_index(article_id=article_id)
 
 
 # ---------------------------------------------------------------------------

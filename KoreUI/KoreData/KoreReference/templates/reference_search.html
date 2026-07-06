@@ -10,19 +10,46 @@
   </div>
   <div class="panel-body kcui-panel-body">
     <form action="/ui/reference/search" method="get">
-      <p class="meta kcui-mar-bottom-sm">Bare terms use AND by default. Use quotes for phrases, OR or | for alternatives, NOT to exclude, and parentheses to group.</p>
+      <p class="meta kcui-mar-bottom-sm">
+        {% if mode == 'semantic' %}
+        Semantic mode works best with a plain-language description of the concept you want. Reference semantic indexing uses summary and prose paragraphs only.
+        {% else %}
+        Bare terms use AND by default. Use quotes for phrases, OR or | for alternatives, NOT to exclude, and parentheses to group.
+        {% endif %}
+      </p>
       <div class="kcui-search-row">
         <input type="search" name="q" value="{{ q }}" placeholder="search articles...">
+        <input type="hidden" id="search-mode" name="mode" value="{{ mode or 'keyword' }}">
         <button class="btn btn-sm btn-yellow" type="submit">SEARCH</button>
       </div>
-      <div class="kcui-mar-top-md">
-        <label class="kcui-filter-label">
+      <div class="kcui-mar-top-md" style="display:flex; gap:1rem; flex-wrap:wrap; align-items:center;">
+        <label class="kcui-filter-label" style="display:flex; gap:0.35rem; align-items:center;">
+          <input type="checkbox" id="mode-keyword" {% if mode != 'semantic' %}checked{% endif %} onchange="toggleReferenceSearchMode('keyword')">
+          Keyword
+        </label>
+        <label class="kcui-filter-label" style="display:flex; gap:0.35rem; align-items:center;">
+          <input type="checkbox" id="mode-semantic" {% if mode == 'semantic' %}checked{% endif %} onchange="toggleReferenceSearchMode('semantic')">
+          Semantic
+        </label>
+      </div>
+      <div class="kcui-mar-top-md" style="display:flex; gap:1rem; flex-wrap:nowrap; align-items:flex-end;">
+        <label class="kcui-filter-label" style="display:flex; gap:0.5rem; align-items:center; margin:0;">
           Top hits
           <div class="num-stepper">
             <input type="number" name="limit" value="{{ limit }}" min="1" max="200" style="width:52px;">
             <div class="stepper-btns">
               <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,1)">&#9650;</button>
               <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,-1)">&#9660;</button>
+            </div>
+          </div>
+        </label>
+        <label class="kcui-filter-label" style="display:flex; gap:0.5rem; align-items:center; margin:0;">
+          Min match
+          <div class="num-stepper">
+            <input type="number" name="min_match" value="{{ min_match }}" min="0" max="1" step="0.05" style="width:62px;">
+            <div class="stepper-btns">
+              <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,0.05)">&#9650;</button>
+              <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,-0.05)">&#9660;</button>
             </div>
           </div>
         </label>
@@ -38,7 +65,32 @@
     <span class="badge badge-dim" style="margin-left:0.5rem;">{{ results | length }}</span>
   </div>
   <div class="panel-body kcui-panel-body" style="padding:0; overflow-x:auto;">
-    {% if results %}
+    {% if search_error %}
+    <p class="meta kcui-result-empty" style="padding:var(--kcui-gap-panel); color:var(--danger);">{{ search_error }}</p>
+    {% elif results %}
+    {% if mode == 'semantic' %}
+    <div class="kcui-result-list">
+      {% for a in results %}
+      <div class="kcui-result-card" style="padding:1rem; border-bottom:1px solid var(--line);">
+        <div style="display:flex; justify-content:space-between; gap:1rem; align-items:flex-start;">
+          <div>
+            <a href="/ui/reference/{{ a.title | urlencode }}">{{ a.title }}</a>
+            <div class="meta kcui-mar-top-xs">
+              {% if a.match_score is not none %}match {{ "%.2f"|format(a.match_score) }}{% endif %}
+              {% if a.sentence_locator %} | {{ a.sentence_locator }}{% endif %}
+            </div>
+          </div>
+          <div class="meta kcui-text-right">
+            {% if a.word_count %}{{ "{:,}".format(a.word_count) }} words{% else %}-{% endif %}
+          </div>
+        </div>
+        {% if a.snippet %}
+        <p class="kcui-mar-top-sm">{{ a.snippet }}</p>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
     <table>
       <thead>
         <tr>
@@ -63,6 +115,7 @@
         {% endfor %}
       </tbody>
     </table>
+    {% endif %}
     {% else %}
     <p class="meta kcui-result-empty">No articles matched your query.</p>
     {% endif %}
@@ -70,4 +123,21 @@
 </div>
 {% endif %}
 </div>
+<script>
+function toggleReferenceSearchMode(mode) {
+  var keyword = document.getElementById('mode-keyword');
+  var semantic = document.getElementById('mode-semantic');
+  var hidden = document.getElementById('search-mode');
+  if (!keyword || !semantic || !hidden) return;
+  if (mode === 'semantic') {
+    semantic.checked = true;
+    keyword.checked = false;
+    hidden.value = 'semantic';
+    return;
+  }
+  semantic.checked = false;
+  keyword.checked = true;
+  hidden.value = 'keyword';
+}
+</script>
 {% endblock %}

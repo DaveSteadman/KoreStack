@@ -348,6 +348,11 @@ def run_kiwix_import(
 
     import_state["running"] = False
     resolve_links()
+    try:
+        from app.chroma_index import sync_pending_sentences
+        sync_pending_sentences(batch_size=250)
+    except Exception:
+        pass
 
 
 def run_kiwix_backfill(zim_name: str, kiwix_url: str, limit: int) -> None:
@@ -394,6 +399,11 @@ def run_kiwix_backfill(zim_name: str, kiwix_url: str, limit: int) -> None:
 
     import_state["running"] = False
     resolve_links()
+    try:
+        from app.chroma_index import sync_pending_sentences
+        sync_pending_sentences(batch_size=250)
+    except Exception:
+        pass
 
 
 def run_kiwix_crawl(seed_url: str, max_depth: int, limit: int, delay_seconds: float, resume: bool) -> None:
@@ -520,3 +530,8 @@ def run_kiwix_crawl(seed_url: str, max_depth: int, limit: int, delay_seconds: fl
 
     import_state["running"] = False
     resolve_links()
+    try:
+        from app.chroma_index import sync_pending_sentences
+        sync_pending_sentences(batch_size=250)
+    except Exception:
+        pass

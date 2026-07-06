@@ -729,7 +729,7 @@ def _merge_search_results(results_by_domain: dict[str, list[dict]], query: str, 
     return [item for _score, _recency, _ordinal, item in merged[:limit]]
 
 
-_SEMANTIC_SEARCH_DOMAINS = {"feeds", "library"}
+_SEMANTIC_SEARCH_DOMAINS = {"feeds", "library", "reference"}
 
 
 @app.post("/api/search")
@@ -810,12 +810,38 @@ async def api_search(req: _SearchRequest):
 
     async def _reference():
         params: dict = {"q": req.query, "limit": limit}
-        r = await _ref_client.get("/api/search", params=params, timeout=10.0)
+        if search_mode == "semantic":
+            params["min_match"] = min_match
+            r = await _ref_client.get("/api/semantic-search", params=params, timeout=10.0)
+        else:
+            r = await _ref_client.get("/api/search", params=params, timeout=10.0)
         if r.status_code != 200:
             return {"status": "error", "results": [], "error": f"HTTP {r.status_code}", "warnings": []}
         payload = r.json() or []
         if not isinstance(payload, list):
             return {"status": "error", "results": [], "error": "Reference search returned a non-list payload.", "warnings": []}
+        if search_mode == "semantic":
+            return {
+                "status": "ok",
+                "results": [
+                    {
+                        "domain":           "reference",
+                        "type":             "reference_article",
+                        "artifact_ref":     _build_artifact_ref("reference_article", title=a.get("title") or ""),
+                        "id":               a.get("id"),
+                        "title":            a.get("title", ""),
+                        "snippet":          a.get("snippet") or "",
+                        "word_count":       a.get("word_count"),
+                        "url":              f"{cfg['korereference_url']}/ui/reference/{quote(a.get('title') or '', safe='')}",
+                        "sentence_id":      a.get("sentence_id"),
+                        "sentence_locator": a.get("sentence_locator") or "",
+                        "match_score":      a.get("match_score"),
+                    }
+                    for a in payload[:limit]
+                ],
+                "error":    "",
+                "warnings": [],
+            }
         return {"status": "ok", "results": [_map_ref_article(a) for a in payload[:limit]], "error": "", "warnings": []}
 
     async def _library():
@@ -1088,7 +1114,8 @@ async def koredata_get_sentence(locator: str) -> dict:
 
     Args:
         locator: Sentence locator in the form "<service>/<database>/<sentence_id>".
-                 Currently supported: feeds/<domain>/<sentence_id>.
+                 Currently supported: feeds/<domain>/<sentence_id>,
+                 reference/main/<sentence_id>.
 
     Returns the sentence text plus source metadata so the agent can recover the
     originating entry and surrounding provenance.
@@ -1116,6 +1143,26 @@ async def koredata_get_sentence(locator: str) -> dict:
         data = r.json()
         if isinstance(data, dict) and "locator" not in data:
             data["locator"] = f"feeds/{database}/{sentence_id}"
+        return data
+
+    if service == "reference":
+        if _ref_client is None:
+            return {"error": "KoreDataGateway is still starting up — retry in a moment"}
+        r = await _ref_client.get(
+            f"/api/sentences/{sentence_id}",
+            timeout=10.0,
+        )
+        if r.status_code == 404:
+            return {
+                "error": (
+                    f"Sentence not found: locator={locator!r}"
+                )
+            }
+        if r.status_code != 200:
+            return {"error": f"HTTP {r.status_code}"}
+        data = r.json()
+        if isinstance(data, dict) and "locator" not in data:
+            data["locator"] = f"reference/{database}/{sentence_id}"
         return data
 
     return {"error": f"Unsupported sentence locator service: {service!r}"}

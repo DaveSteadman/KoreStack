@@ -168,7 +168,7 @@
       <label class="kd-service-check">
         <input type="checkbox" id="sq-mode-semantic" onchange="toggleGatewaySearchMode('semantic')"> Semantic
       </label>
-      <span class="meta">semantic currently targets Feeds and Library</span>
+      <span class="meta">semantic currently targets Feeds, Library, and Reference</span>
     </div>
 
     <div style="display:flex; flex-wrap:wrap; gap:var(--kcui-gap-panel); align-items:center;
@@ -366,7 +366,7 @@ function toggleGatewaySearchMode(mode) {
     semantic.checked = true;
     keyword.checked = false;
     hidden.value = 'semantic';
-    hint.textContent = 'Semantic search works best with a plain-language description of the concept you want. Gateway semantic mode currently searches Feeds and Library only.';
+    hint.textContent = 'Semantic search works best with a plain-language description of the concept you want. Gateway semantic mode currently searches Feeds, Library, and Reference.';
     return;
   }
 

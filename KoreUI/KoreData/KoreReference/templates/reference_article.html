@@ -14,6 +14,7 @@
         {% if article.word_count %}
         <span class="kcui-tag kcui-tag--dim" style="margin-left:0.5rem;">{{ "{:,}".format(article.word_count) }} words</span>
         {% endif %}
+        <button type="button" class="kcui-tag kcui-tag--warning" style="margin-left:0.5rem;" onclick="toggleSentencePanel()">sentences</button>
         <a href="/ui/reference/{{ article.title | urlencode }}/edit" class="kcui-tag kcui-tag--dim" style="margin-left:auto;">edit</a>
       </div>
 
@@ -51,6 +52,17 @@
           (no content)
           {% endif %}
         {% endif %}
+      </div>
+    </div>
+
+    <div id="sentence-panel" class="panel kcui-panel" style="display:none; margin-bottom:1rem;">
+      <div class="panel-header kcui-panel-header">
+        SENTENCE SPLIT
+      </div>
+      <div class="panel-body kcui-panel-body">
+        <p class="meta" style="margin-bottom:0.75rem;">Indexed sentences come from the summary and prose paragraphs only. Sidebar, tables, lists, and trailing reference-style sections are omitted.</p>
+        <div id="sentence-panel-status" class="meta">loading on demand...</div>
+        <div id="sentence-list" style="display:flex; flex-direction:column; gap:0.75rem; margin-top:0.75rem;"></div>
       </div>
     </div>
   </div>
@@ -151,6 +163,60 @@
 }
 </style>
 <script>
+let sentencePanelLoaded = false;
+
+async function toggleSentencePanel() {
+  const panel = document.getElementById('sentence-panel');
+  if (!panel) return;
+  const opening = panel.style.display === 'none';
+  panel.style.display = opening ? '' : 'none';
+  if (opening && !sentencePanelLoaded) {
+    await loadSentences();
+  }
+}
+
+function escapeHtml(text) {
+  return String(text || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function renderSentenceRow(row) {
+  const sentenceText = escapeHtml(row.sentence_text || '');
+  const sourceField  = escapeHtml(row.source_field || '');
+  const locator      = escapeHtml(row.locator || '');
+  return `
+    <div class="panel" style="border:1px solid var(--border); background:var(--panel);">
+      <div class="panel-header" style="display:flex; gap:0.75rem; align-items:center; flex-wrap:wrap;">
+        <span>#${row.sentence_index}</span>
+        <span class="badge badge-amber">${sourceField}</span>
+        <span class="meta">${row.char_start}-${row.char_end}</span>
+        ${locator ? `<span class="meta" style="margin-left:auto;">${locator}</span>` : ''}
+      </div>
+      <div class="panel-body" style="white-space:pre-wrap;">${sentenceText || '<span class="meta">(empty)</span>'}</div>
+    </div>
+  `;
+}
+
+async function loadSentences() {
+  const status = document.getElementById('sentence-panel-status');
+  const list   = document.getElementById('sentence-list');
+  if (!status || !list) return;
+  status.textContent = 'Loading sentences...';
+  try {
+    const resp = await fetch('/api/articles/{{ article.title | urlencode }}/sentences');
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const rows = await resp.json();
+    list.innerHTML = rows.map(renderSentenceRow).join('');
+    status.textContent = `${rows.length} sentence row(s).`;
+    sentencePanelLoaded = true;
+  } catch (err) {
+    status.textContent = `Could not load sentences: ${err}`;
+  }
+}
+
 function toggleLinks(header) {
   const panel = document.getElementById('links-panel');
   const toggle = document.getElementById('links-toggle');

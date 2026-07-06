@@ -20,6 +20,7 @@ import json
 import re
 import sqlite3
 from contextlib import contextmanager
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -30,6 +31,31 @@ from dbutil import fts_build_query
 
 _TABLE_MARKER_RE = re.compile(rf'{re.escape(TABLE_OPEN)}(.*?){re.escape(TABLE_CLOSE)}', re.DOTALL)
 _SIMPLE_Q_RE      = re.compile(r"^[^\s()\",|]+$")
+_HEADING_RE       = re.compile(r'^== (.+?) ==$')
+
+_SENTENCE_SCHEMA_COLUMNS = (
+    "id",
+    "article_id",
+    "sentence_index",
+    "source_field",
+    "char_start",
+    "char_end",
+    "chroma_indexed_at",
+    "deleted",
+)
+
+_EXCLUDED_SECTION_TITLES = {
+    "see also",
+    "notes",
+    "references",
+    "citations",
+    "footnotes",
+    "works cited",
+    "sources",
+    "external links",
+    "further reading",
+    "bibliography",
+}
 
 
 def _body_for_fts(body: Optional[str]) -> str:
@@ -37,6 +63,245 @@ def _body_for_fts(body: Optional[str]) -> str:
     if not body:
         return ""
     return _TABLE_MARKER_RE.sub(lambda m: table_to_fts_text(m.group(1)), body)
+
+
+def _now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _split_sentences(text: str) -> list[tuple[int, int, str]]:
+    text = str(text or "")
+    if not text:
+        return []
+
+    sentences: list[tuple[int, int, str]] = []
+    start = 0
+    i     = 0
+    n     = len(text)
+
+    while start < n and text[start].isspace():
+        start += 1
+    i = start
+
+    while i < n:
+        if text[i] in ".!?":
+            end = i + 1
+            while end < n and text[end] in "\"')]":
+                end += 1
+            if end == n or text[end].isspace():
+                sentence = text[start:end].strip()
+                if sentence:
+                    sentences.append((start, end, sentence))
+                while end < n and text[end].isspace():
+                    end += 1
+                start = end
+                i     = end
+                continue
+        i += 1
+
+    if start < n:
+        sentence = text[start:].strip()
+        if sentence:
+            sentences.append((start, n, sentence))
+    return sentences
+
+
+def _normalize_heading_title(title: str) -> str:
+    return re.sub(r"[^a-z0-9]+", " ", str(title or "").strip().lower()).strip()
+
+
+def _iter_body_blocks(text: str) -> list[tuple[int, int, str]]:
+    value = str(text or "")
+    if not value:
+        return []
+
+    blocks: list[tuple[int, int, str]] = []
+    start = 0
+    n     = len(value)
+    while start < n:
+        split_at = value.find("\n\n", start)
+        if split_at == -1:
+            end = n
+        else:
+            end = split_at
+        block = value[start:end]
+        if block.strip():
+            blocks.append((start, end, block))
+        if split_at == -1:
+            break
+        start = split_at + 2
+        while start < n and value[start] == "\n":
+            start += 1
+    return blocks
+
+
+def _block_is_table(block_text: str) -> bool:
+    stripped = str(block_text or "").strip()
+    return stripped.startswith(TABLE_OPEN) and stripped.endswith(TABLE_CLOSE)
+
+
+def _block_is_list(block_text: str) -> bool:
+    lines = [line.strip() for line in str(block_text or "").splitlines() if line.strip()]
+    return bool(lines) and all(line.startswith("* ") or line.startswith("# ") for line in lines)
+
+
+def _iter_indexable_body_spans(body: Optional[str]) -> list[tuple[int, int]]:
+    text             = str(body or "")
+    excluded_section = False
+    spans: list[tuple[int, int]] = []
+
+    for block_start, block_end, block_text in _iter_body_blocks(text):
+        stripped = block_text.strip()
+        heading  = _HEADING_RE.fullmatch(stripped)
+        if heading:
+            excluded_section = _normalize_heading_title(heading.group(1)) in _EXCLUDED_SECTION_TITLES
+            continue
+        if excluded_section:
+            continue
+        if _block_is_table(stripped) or _block_is_list(stripped):
+            continue
+        if not any(ch.isalpha() for ch in stripped):
+            continue
+
+        leading_ws = len(block_text) - len(block_text.lstrip())
+        trailing_ws = len(block_text) - len(block_text.rstrip())
+        span_start = block_start + leading_ws
+        span_end   = block_end - trailing_ws
+        if span_start < span_end:
+            spans.append((span_start, span_end))
+    return spans
+
+
+def _index_article_sentences(
+    conn: sqlite3.Connection,
+    article_id: int,
+    summary: Optional[str],
+    body: Optional[str],
+) -> None:
+    rows: list[tuple[int, int, str, int, int]] = []
+    sentence_index = 0
+
+    for char_start, char_end, _sentence_text in _split_sentences(summary or ""):
+        rows.append((article_id, sentence_index, "summary", char_start, char_end))
+        sentence_index += 1
+
+    body_text = str(body or "")
+    for block_start, block_end in _iter_indexable_body_spans(body_text):
+        block_text = body_text[block_start:block_end]
+        for local_start, local_end, _sentence_text in _split_sentences(block_text):
+            rows.append(
+                (
+                    article_id,
+                    sentence_index,
+                    "body",
+                    block_start + local_start,
+                    block_start + local_end,
+                )
+            )
+            sentence_index += 1
+
+    if rows:
+        conn.executemany(
+            """
+            INSERT INTO sentences
+                (article_id, sentence_index, source_field, char_start, char_end)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            rows,
+        )
+
+
+def _backfill_article_sentences(conn: sqlite3.Connection) -> None:
+    rows = conn.execute(
+        """
+        SELECT a.id, a.summary, a.body
+        FROM articles a
+        WHERE a.redirect_to IS NULL
+          AND NOT EXISTS (
+              SELECT 1
+              FROM sentences s
+              WHERE s.article_id = a.id AND s.deleted = 0
+          )
+        """
+    ).fetchall()
+    for row in rows:
+        _index_article_sentences(
+            conn,
+            int(row["id"]),
+            row["summary"] or "",
+            _decompress(row["body"]) or "",
+        )
+
+
+def _sentence_index_needs_rebuild(conn: sqlite3.Connection) -> bool:
+    sentence_cols = {row[1] for row in conn.execute("PRAGMA table_info(sentences)").fetchall()}
+    if "sentence_text" in sentence_cols:
+        row = conn.execute(
+            "SELECT 1 FROM sentences WHERE sentence_text IS NOT NULL AND sentence_text != '' LIMIT 1"
+        ).fetchone()
+        if row:
+            return True
+    return False
+
+
+def _sentence_schema_needs_normalization(conn: sqlite3.Connection) -> bool:
+    current_cols = tuple(row[1] for row in conn.execute("PRAGMA table_info(sentences)").fetchall())
+    if not current_cols:
+        return False
+    return current_cols != _SENTENCE_SCHEMA_COLUMNS
+
+
+def _normalize_sentence_schema(conn: sqlite3.Connection) -> None:
+    current_cols = tuple(row[1] for row in conn.execute("PRAGMA table_info(sentences)").fetchall())
+    if not current_cols or current_cols == _SENTENCE_SCHEMA_COLUMNS:
+        return
+
+    current_set  = set(current_cols)
+    required_set = set(_SENTENCE_SCHEMA_COLUMNS)
+    compatible   = required_set.issubset(current_set)
+
+    conn.execute("DROP TABLE IF EXISTS sentences_new")
+    conn.execute("""
+        CREATE TABLE sentences_new (
+            id                INTEGER PRIMARY KEY AUTOINCREMENT,
+            article_id        INTEGER NOT NULL,
+            sentence_index    INTEGER NOT NULL,
+            source_field      TEXT NOT NULL,
+            char_start        INTEGER NOT NULL,
+            char_end          INTEGER NOT NULL,
+            chroma_indexed_at TEXT,
+            deleted           INTEGER NOT NULL DEFAULT 0,
+            UNIQUE(article_id, sentence_index)
+        )
+    """)
+
+    if compatible:
+        conn.execute("""
+            INSERT INTO sentences_new
+                (id, article_id, sentence_index, source_field, char_start, char_end, chroma_indexed_at, deleted)
+            SELECT
+                id,
+                article_id,
+                sentence_index,
+                source_field,
+                char_start,
+                char_end,
+                chroma_indexed_at,
+                deleted
+            FROM sentences
+        """)
+
+    conn.execute("DROP TABLE sentences")
+    conn.execute("ALTER TABLE sentences_new RENAME TO sentences")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_sentences_article_id ON sentences(article_id)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_sentences_chroma_indexed_at ON sentences(chroma_indexed_at)")
+
+    if not compatible:
+        _backfill_article_sentences(conn)
+
+
+def _sentence_locator(sentence_id: int) -> str:
+    return f"reference/main/{int(sentence_id)}"
 
 
 DATA_DIR = Path(cfg["data_dir"])
@@ -151,6 +416,33 @@ def init_db() -> None:
             conn.execute("DROP TABLE article_categories")
         if "categories" in _tables:
             conn.execute("DROP TABLE categories")
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS sentences (
+                id                INTEGER PRIMARY KEY AUTOINCREMENT,
+                article_id        INTEGER NOT NULL,
+                sentence_index    INTEGER NOT NULL,
+                source_field      TEXT NOT NULL,
+                char_start        INTEGER NOT NULL,
+                char_end          INTEGER NOT NULL,
+                chroma_indexed_at TEXT,
+                deleted           INTEGER NOT NULL DEFAULT 0,
+                UNIQUE(article_id, sentence_index)
+            )
+        """)
+        sentence_cols = {row[1] for row in conn.execute("PRAGMA table_info(sentences)").fetchall()}
+        if "deleted" not in sentence_cols:
+            conn.execute("ALTER TABLE sentences ADD COLUMN deleted INTEGER NOT NULL DEFAULT 0")
+        if "chroma_indexed_at" not in sentence_cols:
+            conn.execute("ALTER TABLE sentences ADD COLUMN chroma_indexed_at TEXT")
+        if _sentence_schema_needs_normalization(conn):
+            _normalize_sentence_schema(conn)
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_sentences_article_id ON sentences(article_id)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_sentences_chroma_indexed_at ON sentences(chroma_indexed_at)")
+        if _sentence_index_needs_rebuild(conn):
+            conn.execute("DELETE FROM sentences")
+            _backfill_article_sentences(conn)
+        else:
+            _backfill_article_sentences(conn)
 
 
 # ---------------------------------------------------------------------------
@@ -176,9 +468,6 @@ _ARTICLE_META_COLS = (
     "id", "title", "redirect_to", "summary", "word_count",
 )
 _ARTICLE_FULL_COLS = _ARTICLE_META_COLS + ("body", "facts")
-
-
-_HEADING_RE = re.compile(r'^== (.+?) ==$')
 
 
 def body_to_sections(body: Optional[str]) -> list[dict]:
@@ -213,6 +502,18 @@ def _row_to_dict(row: sqlite3.Row, full: bool = False) -> dict:
         d["sections"] = body_to_sections(d.get("body"))
         d["facts"]    = _parse_json_list(d.get("facts"))
     return d
+
+
+def _extract_sentence_text(article_row: sqlite3.Row | dict, sentence_row: sqlite3.Row | dict) -> str:
+    source_field = str(sentence_row["source_field"] or "")
+    if isinstance(article_row, dict):
+        source_value = article_row.get(source_field, "")
+    else:
+        source_value = article_row[source_field]
+    source_text = _decompress(source_value) if source_field == "body" else str(source_value or "")
+    char_start  = max(0, int(sentence_row["char_start"]))
+    char_end    = max(char_start, int(sentence_row["char_end"]))
+    return source_text[char_start:char_end].strip()
 
 
 # ---------------------------------------------------------------------------
@@ -278,20 +579,27 @@ def upsert_article(
     **_ignored,
 ) -> dict:
     """Insert or update an article."""
-    title = title.strip()
-    wc = _word_count(body)
+    title      = title.strip()
+    wc         = _word_count(body)
     facts_json = json.dumps(facts or [])
 
-    def _upsert(active_conn: sqlite3.Connection) -> int:
+    def _upsert(active_conn: sqlite3.Connection) -> tuple[int, list[int]]:
         existing = active_conn.execute(
             "SELECT id FROM articles WHERE title = ?", (title,)
         ).fetchone()
 
-        fts_body = _body_for_fts(body)
+        fts_body        = _body_for_fts(body)
         compressed_body = _compress(body)
+        previous_sentence_ids: list[int] = []
 
         if existing:
             article_id = existing["id"]
+            previous_sentence_ids = [
+                int(row[0]) for row in active_conn.execute(
+                    "SELECT id FROM sentences WHERE article_id = ? ORDER BY id",
+                    (article_id,),
+                ).fetchall()
+            ]
             # Update FTS with tag-stripped text before storing compressed
             active_conn.execute(
                 "INSERT INTO articles_fts(articles_fts, rowid, title, body) VALUES('delete',?,?,?)",
@@ -324,20 +632,35 @@ def upsert_article(
                 (article_id, title, fts_body),
             )
 
+        active_conn.execute("DELETE FROM sentences WHERE article_id = ?", (article_id,))
+        if not redirect_to:
+            _index_article_sentences(active_conn, article_id, summary, body)
+
         # Insert links (to_id resolved later)
         for lt in (link_titles or []):
             active_conn.execute(
                 "INSERT INTO links (from_id, to_title) VALUES (?, ?)",
                 (article_id, lt),
             )
-        return article_id
+        return article_id, previous_sentence_ids
 
     if conn is None:
         with db_connection() as owned_conn:
-            article_id = _upsert(owned_conn)
+            article_id, previous_sentence_ids = _upsert(owned_conn)
+        if previous_sentence_ids:
+            try:
+                from app.chroma_index import delete_sentence_ids
+                delete_sentence_ids(previous_sentence_ids)
+            except Exception:
+                pass
+        try:
+            from app.chroma_index import sync_article_sentences
+            sync_article_sentences(int(article_id))
+        except Exception:
+            pass
         return get_article_by_id(article_id, full=False)
 
-    article_id = _upsert(conn)
+    article_id, _previous_sentence_ids = _upsert(conn)
     return {"id": article_id, "title": title}
 
 
@@ -346,12 +669,25 @@ def delete_article(title: str) -> bool:
         row = conn.execute("SELECT id FROM articles WHERE title=?", (title,)).fetchone()
         if not row:
             return False
+        sentence_ids = [
+            int(item[0]) for item in conn.execute(
+                "SELECT id FROM sentences WHERE article_id = ?",
+                (int(row["id"]),),
+            ).fetchall()
+        ]
         conn.execute(
             "INSERT INTO articles_fts(articles_fts, rowid, title, body) VALUES('delete',?,?,'')",
             (row["id"], title),
         )
+        conn.execute("DELETE FROM sentences WHERE article_id = ?", (int(row["id"]),))
         conn.execute("DELETE FROM articles WHERE id=?", (row["id"],))
-        return True
+    if sentence_ids:
+        try:
+            from app.chroma_index import delete_sentence_ids
+            delete_sentence_ids(sentence_ids)
+        except Exception:
+            pass
+    return True
 
 
 def delete_all_articles() -> int:
@@ -359,8 +695,14 @@ def delete_all_articles() -> int:
     with db_connection() as conn:
         count = conn.execute("SELECT COUNT(*) FROM articles").fetchone()[0]
         conn.execute("DELETE FROM links")
+        conn.execute("DELETE FROM sentences")
         conn.execute("DELETE FROM articles")
         conn.execute("DELETE FROM articles_fts")
+    try:
+        from app.chroma_index import delete_store
+        delete_store()
+    except Exception:
+        pass
     # VACUUM must run outside any transaction (autocommit mode)
     conn = sqlite3.connect(str(get_db_path()), isolation_level=None)
     try:
@@ -451,6 +793,191 @@ def get_backlinks(title: str, limit: int = 50, offset: int = 0) -> list[dict]:
             LIMIT ? OFFSET ?
         """, (title, limit, offset)).fetchall()
     return [{"id": r["id"], "title": r["title"], "summary": r["summary"]} for r in rows]
+
+
+def get_article_sentences(article_id: int, include_deleted: bool = False) -> list[dict]:
+    cols = "s.id, s.article_id, s.sentence_index, s.source_field, s.char_start, s.char_end, s.chroma_indexed_at, s.deleted, a.title, a.summary, a.body"
+    where = "WHERE s.article_id = ?"
+    if not include_deleted:
+        where += " AND s.deleted = 0"
+    with db_connection() as conn:
+        rows = conn.execute(
+            f"""
+            SELECT {cols}
+            FROM sentences s
+            JOIN articles a ON a.id = s.article_id
+            {where}
+            ORDER BY s.sentence_index ASC
+            """,
+            (int(article_id),),
+        ).fetchall()
+    results: list[dict] = []
+    for row in rows:
+        item = dict(row)
+        item["sentence_text"] = _extract_sentence_text(row, row)
+        item["locator"]       = _sentence_locator(int(item["id"]))
+        item.pop("body", None)
+        results.append(item)
+    return results
+
+
+def get_sentence(sentence_id: int) -> Optional[dict]:
+    with db_connection() as conn:
+        row = conn.execute(
+            """
+            SELECT s.id, s.article_id, s.sentence_index, s.source_field, s.char_start, s.char_end,
+                   s.chroma_indexed_at, s.deleted, a.title, a.summary, a.body, a.word_count
+            FROM sentences s
+            JOIN articles a ON a.id = s.article_id
+            WHERE s.id = ?
+            """,
+            (int(sentence_id),),
+        ).fetchone()
+    if row is None:
+        return None
+    item = dict(row)
+    item["sentence_text"] = _extract_sentence_text(row, row)
+    item["locator"]       = _sentence_locator(int(item["id"]))
+    item.pop("body", None)
+    return item
+
+
+def backfill_sentence_index() -> dict:
+    with db_connection() as conn:
+        before = int(conn.execute("SELECT COUNT(*) FROM sentences WHERE deleted = 0").fetchone()[0])
+        _backfill_article_sentences(conn)
+        after  = int(conn.execute("SELECT COUNT(*) FROM sentences WHERE deleted = 0").fetchone()[0])
+    return {
+        "sentences_added": max(0, after - before),
+        "sentence_count":  after,
+    }
+
+
+def rebuild_sentence_index(article_id: Optional[int] = None) -> dict:
+    deleted_sentence_ids: list[int] = []
+    rebuilt_sentences:    int       = 0
+
+    with db_connection() as conn:
+        if article_id is None:
+            deleted_sentence_ids = [
+                int(row[0]) for row in conn.execute(
+                    "SELECT id FROM sentences WHERE deleted = 0 ORDER BY id"
+                ).fetchall()
+            ]
+            conn.execute("DELETE FROM sentences")
+            _backfill_article_sentences(conn)
+            rebuilt_sentences = int(conn.execute(
+                "SELECT COUNT(*) FROM sentences WHERE deleted = 0"
+            ).fetchone()[0])
+        else:
+            article_row = conn.execute(
+                "SELECT id, summary, body FROM articles WHERE id = ? AND redirect_to IS NULL",
+                (int(article_id),),
+            ).fetchone()
+            if article_row is None:
+                raise ValueError(f"Article not found: {article_id}")
+            deleted_sentence_ids = [
+                int(row[0]) for row in conn.execute(
+                    "SELECT id FROM sentences WHERE article_id = ? AND deleted = 0 ORDER BY id",
+                    (int(article_id),),
+                ).fetchall()
+            ]
+            conn.execute("DELETE FROM sentences WHERE article_id = ?", (int(article_id),))
+            _index_article_sentences(
+                conn,
+                int(article_id),
+                article_row["summary"] or "",
+                _decompress(article_row["body"]) or "",
+            )
+            rebuilt_sentences = int(conn.execute(
+                "SELECT COUNT(*) FROM sentences WHERE article_id = ? AND deleted = 0",
+                (int(article_id),),
+            ).fetchone()[0])
+
+    if deleted_sentence_ids:
+        try:
+            from app.chroma_index import delete_sentence_ids
+            delete_sentence_ids(deleted_sentence_ids)
+        except Exception:
+            pass
+
+    try:
+        from app.chroma_index import sync_article_sentences, sync_pending_sentences
+        if article_id is None:
+            sync_pending_sentences(batch_size=250)
+        else:
+            sync_article_sentences(int(article_id))
+    except Exception:
+        pass
+
+    return {
+        "article_id":           int(article_id) if article_id is not None else None,
+        "rebuilt_sentences":    rebuilt_sentences,
+        "deleted_sentence_ids": len(deleted_sentence_ids),
+    }
+
+
+def get_sentences_for_chroma(
+    limit: int = 250,
+    only_unindexed: bool = False,
+    sentence_ids: Optional[list[int]] = None,
+) -> list[dict]:
+    with db_connection() as conn:
+        clauses = ["s.deleted = 0"]
+        params: list[object] = []
+        if sentence_ids:
+            validated    = [int(item) for item in sentence_ids]
+            placeholders = ",".join("?" for _ in validated)
+            clauses.append(f"s.id IN ({placeholders})")
+            params.extend(validated)
+        if only_unindexed:
+            clauses.append("(s.chroma_indexed_at IS NULL OR s.chroma_indexed_at = '')")
+        params.append(max(1, int(limit)))
+        rows = conn.execute(
+            f"""
+            SELECT s.id, s.article_id, s.sentence_index, s.source_field, s.char_start, s.char_end,
+                   s.chroma_indexed_at, a.title, a.summary, a.body, a.word_count
+            FROM sentences s
+            JOIN articles a ON a.id = s.article_id
+            WHERE {" AND ".join(clauses)}
+            ORDER BY s.id ASC
+            LIMIT ?
+            """,
+            params,
+        ).fetchall()
+    results: list[dict] = []
+    for row in rows:
+        item = dict(row)
+        item["sentence_text"] = _extract_sentence_text(row, row)
+        item["locator"]       = _sentence_locator(int(item["id"]))
+        item.pop("body", None)
+        results.append(item)
+    return results
+
+
+def mark_sentences_chroma_indexed(sentence_ids: list[int]) -> int:
+    if not sentence_ids:
+        return 0
+    validated    = [int(item) for item in sentence_ids]
+    placeholders = ",".join("?" for _ in validated)
+    with db_connection() as conn:
+        cur = conn.execute(
+            f"UPDATE sentences SET chroma_indexed_at = ? WHERE id IN ({placeholders})",
+            [_now(), *validated],
+        )
+    return int(cur.rowcount or 0)
+
+
+def reset_sentence_chroma_index(article_id: Optional[int] = None) -> int:
+    with db_connection() as conn:
+        if article_id is None:
+            cur = conn.execute("UPDATE sentences SET chroma_indexed_at = NULL")
+        else:
+            cur = conn.execute(
+                "UPDATE sentences SET chroma_indexed_at = NULL WHERE article_id = ?",
+                (int(article_id),),
+            )
+    return int(cur.rowcount or 0)
 
 
 # ---------------------------------------------------------------------------
