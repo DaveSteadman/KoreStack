@@ -4,7 +4,7 @@
 # Shared helpers for KoreDocs MCP modules.
 #
 # Provides folder/file utilities, name validation, and the koredoc parser helpers
-# used by koredoc_mcp.py, koresheet_mcp.py, and kodiag_mcp.py.
+# used by koredoc_mcp.py, koresheet_mcp.py, and korediag_mcp.py.
 #
 # Key helpers:
 #   _normalise_folder_path()         -- normalize and validate folder path strings
@@ -21,7 +21,7 @@
 #   - app/korefile.py        -- low-level virtual FS operations
 #   - app/koredoc_mcp.py     -- uses koredoc parser helpers
 #   - app/koresheet_mcp.py   -- uses _create_serialized_file, _ensure_extension
-#   - app/kodiag_mcp.py      -- uses _create_serialized_file, _ensure_extension
+#   - app/korediag_mcp.py      -- uses _create_serialized_file, _ensure_extension
 # ====================================================================================================
 
 from __future__ import annotations
@@ -36,7 +36,7 @@ from ._mcp_instance import mcp  # re-export for sub-modules
 
 # ── Constants ──────────────────────────────────────────────────────────────
 
-ALLOWED_EXTENSIONS = frozenset({'koredoc', 'koresheet', 'kodiag'})
+ALLOWED_EXTENSIONS = frozenset({'koredoc', 'koresheet', 'korediag'})
 
 _KOREDOC_HEADING_RE = re.compile(r"^(#{1,6})[ \t]+(.+?)\s*$")
 

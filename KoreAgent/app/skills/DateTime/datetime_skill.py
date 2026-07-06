@@ -6,7 +6,7 @@
 # Provides a single callable function that returns structured date and time values.
 #
 # This module is discovered automatically by skills_catalog_builder.py via the accompanying
-# skill.md definition file and added to the skills_summary.md catalog.
+# skill.md definition file and added to the generated skills catalog.
 #
 # Related modules:
 #   - skill_executor.py         -- dynamically imports and calls functions from this module

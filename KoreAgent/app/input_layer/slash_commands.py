@@ -240,12 +240,10 @@ def _cmd_reskills(arg: str, ctx: SlashCommandContext) -> None:
     try:
         from skills_catalog_builder import DEFAULT_OUTPUT_FILE
         from skills_catalog_builder import DEFAULT_SKILLS_ROOT
-        from skills_catalog_builder import DEFAULT_SUMMARY_FILE
         from skills_catalog_builder import build_skills_payload
         from skills_catalog_builder import find_skill_files
         from skills_catalog_builder import load_skills_payload
         from skills_catalog_builder import write_skills_catalog
-        from skills_catalog_builder import write_skills_summary
 
         skill_files = find_skill_files(skills_root=DEFAULT_SKILLS_ROOT)
         if not skill_files:
@@ -254,7 +252,6 @@ def _cmd_reskills(arg: str, ctx: SlashCommandContext) -> None:
 
         payload = build_skills_payload(DEFAULT_SKILLS_ROOT, use_llm=False, model_name="", num_ctx=0)
         write_skills_catalog(payload, DEFAULT_OUTPUT_FILE)
-        write_skills_summary(payload, DEFAULT_SUMMARY_FILE)
         ctx.config.skills_payload = load_skills_payload(DEFAULT_OUTPUT_FILE)
         ctx.output(f"Skills catalog rebuilt: {len(payload['skills'])} skill(s) registered.  Mode: {current_mode}.", "success")
     except Exception as exc:

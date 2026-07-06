@@ -1,9 +1,9 @@
-﻿import { KOREDOC_FILE_ICON, KORESHEET_FILE_ICON, KODIAG_FILE_ICON } from '/ui-elements/assets/js/icons.js';
+﻿import { KOREDOC_FILE_ICON, KORESHEET_FILE_ICON, korediag_FILE_ICON } from '/ui-elements/assets/js/icons.js';
 
 const ICONS = {
   koredoc:   KOREDOC_FILE_ICON(18),
   koresheet: KORESHEET_FILE_ICON(18),
-  kodiag:    KODIAG_FILE_ICON(18),
+  korediag:    korediag_FILE_ICON(18),
 };
 
 function _renderMenuItem(item) {

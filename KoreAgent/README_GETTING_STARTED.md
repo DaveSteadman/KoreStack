@@ -95,10 +95,10 @@ pip install -r requirements.txt
 
 ## 7. Regenerate the skills catalog
 
-The skills catalog (`code/KoreAgent/skills/skills_summary.md`) maps all available tools for the LLM. Build it once before first use:
+The runtime skills catalog (`code/KoreAgent/app/skills/skills_catalog.json`) maps all available tools for the LLM. Build it once before first use:
 
 ```powershell
-python .\code\KoreAgent\skills_catalog_builder.py
+python .\KoreAgent\app\skills_catalog_builder.py
 ```
 
 This step is also run automatically at startup whenever any `skill.md` file is newer than the catalog, so it only needs to be run manually after a fresh clone or after editing a `skill.md`.

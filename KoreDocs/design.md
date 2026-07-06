@@ -7,7 +7,7 @@
 
 ## 1. Vision
 
-The purpose of KoreDocs is to provide a document hosting and editing environment to 
+The purpose of KoreDocs is to provide a document hosting and editing environment to
 combine agent functionalty with user purpose and value.
 
 KoreDocs is a minimal, locally-hosted document and data editing suite. Each editor is a
@@ -22,7 +22,7 @@ The suite is designed to be:
 - **LLM-readable** — formats stay as close to plain text as possible; where structure is
   needed it stays markdown-compatible or is self-describing JSON
 - **Composable** — editors share the same service and can reference each other's files
-  (e.g. a `.kodiag` embedded in a `.koredoc`)
+  (e.g. a `.korediag` embedded in a `.koredoc`)
 - **MCP-ready** — the KoreFile database is exposed as an MCP server so agents can search,
   retrieve, create, and edit documents without a browser
 
@@ -34,7 +34,7 @@ The suite is designed to be:
 |---|---|---|---|
 | **KoreDoc** | `.koredoc` | Phase 1 | Source-styled markdown document editor |
 | **KoreSheet** | `.koresheet` | Phase 1 | Grid spreadsheet with aggregate formulas |
-| **KoreDiag** | `.kodiag` | Phase 1 | Canvas-based node/edge diagramming |
+| **KoreDiag** | `.korediag` | Phase 1 | Canvas-based node/edge diagramming |
 | **KoreSlide** | `.koreslide` | Phase 2 | Full-screen slide presentations |
 | **KoreBase** | `.korebase` | Phase 2 | Custom-schema record database |
 ---
@@ -163,7 +163,7 @@ CREATE TABLE files (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     folder_id   INTEGER REFERENCES folders(id) ON DELETE RESTRICT,
     name        TEXT    NOT NULL,         -- e.g. "design.koredoc"
-    ext         TEXT    NOT NULL,         -- "koredoc" | "koresheet" | "kodiag" | ...
+    ext         TEXT    NOT NULL,         -- "koredoc" | "koresheet" | "korediag" | ...
     content     BLOB,                     -- zlib-compressed UTF-8 text
     metadata    TEXT,                     -- JSON: title, tags, frontmatter, etc.
     word_count  INTEGER,
@@ -187,7 +187,7 @@ resolution while remaining trivially searchable with `path LIKE '/Root/Projects/
 **Metadata** is a JSON column carrying whatever frontmatter the format exposes:
 - `.koredoc`: `{ "title": "...", "tags": [...], "created": "..." }`
 - `.koresheet`: `{ "title": "...", "cols": 26, "rows": 100 }`
-- `.kodiag`: `{ "title": "...", "nodeCount": 12 }`
+- `.korediag`: `{ "title": "...", "nodeCount": 12 }`
 
 ### 4.3 Folder Hierarchy Rules
 
@@ -373,11 +373,11 @@ tags: [design, koredocs]
 
 Body text here. Embed a diagram with a reference:
 
-!kodiag[Label](./my-diagram.kodiag)
+!korediag[Label](./my-diagram.korediag)
 ```
 
-The `!kodiag[label](path)` syntax is a KoreDoc extension to the standard image syntax.
-The viewer renders a live embedded preview of the `.kodiag` file.
+The `!korediag[label](path)` syntax is a KoreDoc extension to the standard image syntax.
+The viewer renders a live embedded preview of the `.korediag` file.
 
 ### 6.3 Editor Canvas
 
@@ -479,7 +479,7 @@ No cross-cell references in Phase 1.
 
 A canvas-based node/edge diagramming editor. Nodes are rectangles or ellipses; edges
 connect named anchor ports. Diagrams are stored as JSON and may be embedded inside
-KoreDoc documents via `!kodiag[label](path.kodiag)`.
+KoreDoc documents via `!korediag[label](path.korediag)`.
 
 ### 8.2 Technology Constraints
 
@@ -489,7 +489,7 @@ KoreDoc documents via `!kodiag[label](path.kodiag)`.
 | Canvas rendering | HTML5 `<canvas>` |
 | Dependencies | Browser built-ins only |
 
-### 8.3 File Format — `.kodiag`
+### 8.3 File Format — `.korediag`
 
 Files are UTF-8 JSON:
 
@@ -658,7 +658,7 @@ label change, meta change, reparent) is a reversible `Command` object. Upper bou
 |---|---|---|---|
 | KoreDoc | `.koredoc` (markdown) | Yes — Native | Plain markdown is ideal LLM input |
 | KoreSheet | `.koresheet` (JSON) | Yes — Good | Sparse cell map is self-describing |
-| KoreDiag | `.kodiag` (JSON) | Yes — Good | Node/edge structure clear in JSON |
+| KoreDiag | `.korediag` (JSON) | Yes — Good | Node/edge structure clear in JSON |
 | KoreSlide | `.koreslide` (TBD) | Target Yes | Slide-per-object, markdown content |
 | KoreBase | `.korebase` (TBD) | Target Yes | Schema + records JSON |
 

@@ -15,7 +15,7 @@ import * as draft       from '/static/shared/js/draft.js';
 const _draftSave = draft.makeSaver();
 
 renderAppMenu({
-  app: 'kodiag',
+  app: 'korediag',
   appLabel: 'KoreDiag',
   titleId: 'diag-title',
   dirtyId: 'diag-dirty',
@@ -106,10 +106,10 @@ initAppBar({
   currentService: 'koredocs',
   overline: 'Diagram Editor',
   brandLabel: 'KoreDiag',
-  brandIcon: 'kodiag',
+  brandIcon: 'korediag',
   editorTabsSlot: 'koredocs-tabs',
 });
-initAppTabs('kodiag', { mountId: 'koredocs-tabs', renderBrand: false });
+initAppTabs('korediag', { mountId: 'koredocs-tabs', renderBrand: false });
 
 const autoOpened = await fileio.autoOpenFromUrl(diagram => {
   store.loadDiagram(diagram);
@@ -119,7 +119,7 @@ if (!autoOpened) {
 }
 
 if (fileio.currentName()) {
-  trackAppTab(fileio.currentName(), 'kodiag', fileio.currentId());
+  trackAppTab(fileio.currentName(), 'korediag', fileio.currentId());
 }
 
 // Set initial tool + cursor

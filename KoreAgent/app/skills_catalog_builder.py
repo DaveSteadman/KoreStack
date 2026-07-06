@@ -5,9 +5,8 @@
 #
 # Scans the skills directory recursively for skill.md files, summarises each one into a structured
 # JSON record (skill name, module path, functions, inputs, outputs), then writes the full catalog
-# as a machine-readable JSON file for runtime use. A companion skills_summary.md file is produced
-# for human inspection only. The orchestration layer uses the JSON catalog to build JSON Schema
-# tool definitions sent to the model via /v1/chat/completions.
+# as a machine-readable JSON file for runtime use. The orchestration layer uses the JSON catalog to
+# build JSON Schema tool definitions sent to the model via /v1/chat/completions.
 #
 # Supports two summarisation modes:
 #   - LLM-assisted: sends the skill.md text to an Ollama model and parses the JSON response.
@@ -17,7 +16,6 @@
 #   python skills_catalog_builder.py
 #   python skills_catalog_builder.py --no-llm
 #   python skills_catalog_builder.py --skills-root /path/to/skills --output-json /path/to/output.json
-#   python skills_catalog_builder.py --output-summary /path/to/output.md
 #
 # Related modules:
 #   - llm_client.py    -- used for optional LLM-assisted summarisation
@@ -48,7 +46,6 @@ SKILLS_SCHEMA_VERSION        = "1.0"
 DEFAULT_SKILLS_ROOT          = Path(__file__).resolve().parent / "skills"
 DEFAULT_SYSTEM_SKILLS_ROOT   = Path(__file__).resolve().parent / "system_skills"
 DEFAULT_OUTPUT_FILE          = DEFAULT_SKILLS_ROOT / "skills_catalog.json"
-DEFAULT_SUMMARY_FILE         = DEFAULT_SKILLS_ROOT / "skills_summary.md"
 DEFAULT_SUMMARY_MODEL = "gpt-oss:20b"
 _LOADED_PAYLOAD_CACHE: dict[tuple[str, float, int], dict] = {}
 _TOOL_DEFS_CACHE: dict[str, list[dict]] = {}
@@ -127,7 +124,6 @@ def parse_catalog_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build JSON summary catalog for all skills.")
     parser.add_argument("--skills-root", default=str(DEFAULT_SKILLS_ROOT), help="Root folder containing skills.")
     parser.add_argument("--output-json", default=str(DEFAULT_OUTPUT_FILE), help="Output JSON catalog file.")
-    parser.add_argument("--output-summary", default=str(DEFAULT_SUMMARY_FILE), help="Output markdown summary file.")
     parser.add_argument("--model", default=DEFAULT_SUMMARY_MODEL, help="Ollama model used for LLM summarization.")
     parser.add_argument(
         "--no-llm",
@@ -483,14 +479,10 @@ def _rebuild_skills_catalog_if_stale(catalog_path: Path) -> None:
 
 # ----------------------------------------------------------------------------------------------------
 def load_skills_payload(catalog_path: Path) -> dict:
-    """Load the skills catalog payload from a JSON catalog path or legacy summary path."""
+    """Load the skills catalog payload from a JSON catalog path."""
     catalog_path = Path(catalog_path)
     if catalog_path.is_dir():
         catalog_path = catalog_path / DEFAULT_OUTPUT_FILE.name
-    if catalog_path.suffix.lower() == ".md":
-        raw_text = catalog_path.read_text(encoding="utf-8")
-        json_segment = extract_first_json_object(raw_text)
-        return json.loads(json_segment)
 
     _rebuild_skills_catalog_if_stale(catalog_path)
     stat = catalog_path.stat()
@@ -670,27 +662,9 @@ def build_tool_definitions(skills_payload: dict) -> list[dict]:
 
 
 # ----------------------------------------------------------------------------------------------------
-def render_summary_document(payload: dict, output_path: Path) -> str:
-    return "\n".join(
-        [
-            "# Skills Summary",
-            "",
-            "Single JSON payload for orchestration planning.",
-            "",
-            json.dumps(payload, indent=2),
-            "",
-        ]
-    )
-
-
 def write_skills_catalog(payload: dict, output_path: Path) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-
-
-def write_skills_summary(payload: dict, output_path: Path) -> None:
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(render_summary_document(payload, output_path), encoding="utf-8")
 
 
 # ----------------------------------------------------------------------------------------------------
@@ -698,7 +672,6 @@ def main() -> None:
     args        = parse_catalog_args()
     skills_root = Path(args.skills_root).resolve()
     output_json_path = Path(args.output_json).resolve()
-    output_summary_path = Path(args.output_summary).resolve()
 
     skill_files = find_skill_files(skills_root=skills_root)
     if not skill_files:
@@ -714,10 +687,8 @@ def main() -> None:
         num_ctx=args.num_ctx,
     )
     write_skills_catalog(payload, output_json_path)
-    write_skills_summary(payload, output_summary_path)
 
     print(f"Wrote {to_workspace_relative_path(output_json_path)} with {len(payload['skills'])} skill summaries.")
-    print(f"Wrote {to_workspace_relative_path(output_summary_path)} for human inspection.")
 
 
 # ----------------------------------------------------------------------------------------------------

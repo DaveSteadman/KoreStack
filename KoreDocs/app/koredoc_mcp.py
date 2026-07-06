@@ -49,7 +49,7 @@ def create_koredoc(
 
 
 @mcp.tool()
-def koredocs_get_koredoc_outline(
+def koredocs_doc_outline_get(
     id: Annotated[int, 'KoreDoc file id.'],
 ) -> dict:
     """Return the heading outline for a .koredoc document."""
@@ -75,7 +75,7 @@ def koredocs_get_koredoc_outline(
 
 
 @mcp.tool()
-def koredocs_read_koredoc_section(
+def koredocs_doc_section_read(
     id: Annotated[int, 'KoreDoc file id.'],
     heading_path: Annotated[Optional[list[str]], 'Optional heading path such as ["Overview", "Risks"].'] = None,
     start_line: Annotated[Optional[int], 'Optional 1-based start line for direct line-range reads.'] = None,
@@ -120,7 +120,7 @@ def koredocs_read_koredoc_section(
 
 
 @mcp.tool()
-def koredocs_replace_koredoc_section(
+def koredocs_doc_section_replace(
     id: Annotated[int, 'KoreDoc file id.'],
     heading_path: Annotated[list[str], 'Heading path identifying the section to replace.'],
     markdown: Annotated[str, 'Complete replacement markdown for the section, including the heading line.'],
@@ -144,7 +144,7 @@ def koredocs_replace_koredoc_section(
 
 
 @mcp.tool()
-def koredocs_insert_koredoc_section(
+def koredocs_doc_section_insert(
     id: Annotated[int, 'KoreDoc file id.'],
     markdown: Annotated[str, 'Markdown block to insert. Typically starts with a heading line.'],
     after_heading_path: Annotated[Optional[list[str]], 'Insert after the matching section.'] = None,
@@ -193,7 +193,7 @@ def koredocs_insert_koredoc_section(
 
 
 @mcp.tool()
-def koredocs_append_koredoc_markdown(
+def koredocs_doc_markdown_append(
     id: Annotated[int, 'KoreDoc file id.'],
     markdown: Annotated[str, 'Markdown block to append to the end of the document.'],
     expected_revision: Annotated[Optional[int], 'Optional optimistic concurrency check. When provided, the document must still be at this revision.'] = None,
@@ -215,7 +215,7 @@ def koredocs_append_koredoc_markdown(
 
 
 @mcp.tool()
-def koredocs_create_koredoc(
+def koredocs_doc_create(
     folder_path: Annotated[str, 'Folder path in KoreFile, such as "/" or "/Projects". Missing folders are created.'],
     name: Annotated[str, 'Filename, with or without the .koredoc extension.'],
     markdown: Annotated[str, 'Markdown body for the document.'],

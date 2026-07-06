@@ -9,7 +9,7 @@ import { getDiagram, isDirty, markDirty, markSaved } from './store.js';
 const _controller = createKorefileSyncController({
   logLabel: 'KoreDiag',
   alertLabel: 'Diagram',
-  legacyType: 'kodiag',
+  legacyType: 'korediag',
   buildBlankContent: title => JSON.stringify(newDiagram(title)),
   applyLoadedContent: (content, file, loadContent) => {
     loadContent?.(normalizeDiagram(JSON.parse(content)));

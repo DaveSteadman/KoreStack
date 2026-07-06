@@ -1,9 +1,9 @@
 # ====================================================================================================
 # MARK: OVERVIEW
 # ====================================================================================================
-# MCP tools and helpers for .kodiag diagram documents.
+# MCP tools and helpers for .korediag diagram documents.
 #
-# .kodiag files are stored as JSON in the KoreFile virtual FS with a node/edge/style
+# .korediag files are stored as JSON in the KoreFile virtual FS with a node/edge/style
 # format.  The _normalize_node_for_editor() helper ensures consistent node shapes
 # before serialization.  UUID-based node IDs are generated at creation time.
 #
@@ -123,40 +123,40 @@ def _diag_content(title: str, diagram: Optional[dict] = None) -> str:
     return json.dumps(obj, indent=2)
 
 
-def create_kodiag(
+def create_korediag(
     folder_path: Annotated[str, 'Folder path in KoreFile, such as "/" or "/Projects". Missing folders are created.'],
-    name: Annotated[str, 'Filename, with or without the .kodiag extension.'],
+    name: Annotated[str, 'Filename, with or without the .korediag extension.'],
     diagram: Annotated[Optional[dict], 'Optional partial or complete diagram object. Missing top-level fields are filled in.'] = None,
     title: Annotated[Optional[str], 'Diagram title. Defaults to the filename stem or diagram title.'] = None,
 ) -> dict:
-    """Create a .kodiag document from a diagram object, with safe defaults filled in."""
+    """Create a .korediag document from a diagram object, with safe defaults filled in."""
     doc_title = title or (diagram or {}).get('title') or name.rsplit('.', 1)[0]
     content = _diag_content(doc_title, diagram)
-    return _create_serialized_file(folder_path, name, 'kodiag', content, {'title': doc_title})
+    return _create_serialized_file(folder_path, name, 'korediag', content, {'title': doc_title})
 
 
 @mcp.tool()
-def koredocs_create_kodiag(
+def koredocs_diag_create(
     folder_path: Annotated[str, 'Folder path in KoreFile, such as "/" or "/Projects". Missing folders are created.'],
-    name: Annotated[str, 'Filename, with or without the .kodiag extension.'],
+    name: Annotated[str, 'Filename, with or without the .korediag extension.'],
     diagram: Annotated[Optional[dict], 'Optional partial or complete diagram object.'] = None,
     title: Annotated[Optional[str], 'Diagram title.'] = None,
 ) -> dict:
-    """Canonical prefixed alias for create_kodiag."""
-    return create_kodiag(folder_path=folder_path, name=name, diagram=diagram, title=title)
+    """Canonical prefixed alias for create_korediag."""
+    return create_korediag(folder_path=folder_path, name=name, diagram=diagram, title=title)
 
 
 @mcp.tool()
-def koredocs_get_diag_spec() -> str:
-    """Return a comprehensive description of the .kodiag JSON format specification.
+def koredocs_diag_spec_get() -> str:
+    """Return a comprehensive description of the .korediag JSON format specification.
 
-    Use this tool before creating or editing a .kodiag diagram document to
+    Use this tool before creating or editing a .korediag diagram document to
     understand the full schema, available node and edge types, and style options.
     """
-    return """.kodiag Document Format Specification (version 1.0)
+    return """.korediag Document Format Specification (version 1.0)
 =====================================================
 
-A .kodiag file is a JSON object. All top-level fields:
+A .korediag file is a JSON object. All top-level fields:
 
 koreDiag  (string, required)
   Schema version string. Current value: "1.0"

@@ -4,7 +4,7 @@ import { applyTheme, themeFor } from './theme.js';
 const DEFAULT_TYPE_URL = {
   koredoc: '/doc',
   koresheet: '/sheet',
-  kodiag: '/diag',
+  korediag: '/diag',
   textedit: '/textedit',
 };
 
@@ -31,7 +31,7 @@ const DEFAULT_APPBAR_TABS_CONFIG = {
   icons: SUITE_ICONS,
   titleNormalizer(name) {
     if (name && name.startsWith('__new_')) return 'Untitled';
-    return name.replace(/\.(koredoc|koresheet|kodiag)$/, '');
+    return name.replace(/\.(koredoc|koresheet|korediag)$/, '');
   },
 };
 

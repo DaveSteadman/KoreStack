@@ -266,13 +266,12 @@ The context map is the runtime’s internal “what is in context right now?” 
 
 - Reads skill metadata and produces:
   - `skills_catalog.json` for runtime
-  - `skills_summary.md` for human inspection
 - `build_tool_definitions(...)` converts the loaded catalog into JSON Schema tool definitions for Ollama tool-calling.
 
 ### `code/KoreAgent/skills/`
 
 - Each skill folder contains a `skill.md` and usually a Python module.
-- Runtime source of truth is now the generated JSON catalog, not `skills_summary.md`.
+- Runtime source of truth is the generated JSON catalog, merged from `app/skills` and `app/system_skills`.
 
 Key built-in skill families:
 - system and utility: `SystemInfo`, `DateTime`
@@ -450,7 +449,7 @@ Everything mutable lives under the configured control-data root. In this checkou
 
 ## Things To Remember
 
-- `skills_catalog.json` is the runtime catalog. `skills_summary.md` is documentation.
+- `skills_catalog.json` is the runtime catalog.
 - Scratchpad is session-scoped in-process working memory, not durable memory.
 - `orchestration.py` is now the public coordinator, not the only place where orchestration logic lives.
 - The browser/API layer and the scheduler both feed the same queue and orchestration runtime.

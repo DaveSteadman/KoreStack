@@ -122,7 +122,7 @@ const TRASH_SVG = `<svg viewBox="0 0 20 20" fill="none" width="12" height="12">
   <path d="M3 6h14M8 6V4h4v2M5 6l1 11h8l1-11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
 </svg>`;
 
-const TYPE_URL = { koredoc: '/doc', koresheet: '/sheet', kodiag: '/diag' };
+const TYPE_URL = { koredoc: '/doc', koresheet: '/sheet', korediag: '/diag' };
 
 function _fileIcon(ext) {
   return resolveIcon(SUITE_ICONS, ext, 15);

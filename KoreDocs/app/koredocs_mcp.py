@@ -5,7 +5,7 @@
 #
 # Defines the shared mcp instance (re-exported from _mcp_instance), cross-type public
 # helpers, and cross-type MCP tools, then imports the per-document-type sub-modules
-# (koredoc_mcp, koresheet_mcp, kodiag_mcp) to register their tools.
+# (koredoc_mcp, koresheet_mcp, korediag_mcp) to register their tools.
 #
 # Cross-type MCP tools:
 #   list_supported_types()      -- list all document types KoreDocs can create
@@ -18,7 +18,7 @@
 #   - app/_mcp_shared.py    -- shared folder/file helpers
 #   - app/koredoc_mcp.py    -- .koredoc document tools
 #   - app/koresheet_mcp.py  -- .koresheet spreadsheet tools
-#   - app/kodiag_mcp.py     -- .kodiag diagram tools
+#   - app/korediag_mcp.py     -- .korediag diagram tools
 #   - app/server.py         -- mounts mcp into the FastAPI app
 # ====================================================================================================
 
@@ -40,7 +40,7 @@ from ._mcp_shared import (
     _ensure_extension,
 )
 
-KoreFileType = Literal['koredoc', 'koresheet', 'kodiag']
+KoreFileType = Literal['koredoc', 'koresheet', 'korediag']
 
 
 # ── Cross-type public functions ────────────────────────────────────────────
@@ -106,7 +106,7 @@ def get_folder_structure() -> list[dict]:
 
 
 def get_file_format_info(
-    type: Annotated[KoreFileType, 'Document type: koredoc, koresheet, or kodiag.'],
+    type: Annotated[KoreFileType, 'Document type: koredoc, koresheet, or korediag.'],
 ) -> dict:
     """Return canonical schema, example content, and authoring notes for a KoreDocs file type."""
     return FORMAT_INFO[type]
@@ -114,8 +114,8 @@ def get_file_format_info(
 
 def create_file(
     folder_path: Annotated[str, 'Folder path in KoreFile, such as "/" or "/Projects". Missing folders are created.'],
-    name: Annotated[str, 'Filename ending in .koredoc, .koresheet, or .kodiag.'],
-    content: Annotated[str, 'Complete serialized file content. For .koredoc use Markdown. For .koresheet and .kodiag use JSON serialized as a string.'],
+    name: Annotated[str, 'Filename ending in .koredoc, .koresheet, or .korediag.'],
+    content: Annotated[str, 'Complete serialized file content. For .koredoc use Markdown. For .koresheet and .korediag use JSON serialized as a string.'],
     metadata: Annotated[Optional[dict], 'Optional metadata object. If omitted, KoreDocs extracts metadata from content where possible.'] = None,
 ) -> dict:
     """Create a KoreFile document.
@@ -123,7 +123,7 @@ def create_file(
     Use:
     - .koredoc: Markdown text, optionally with YAML frontmatter.
     - .koresheet: JSON object {version, meta, cols, rows, cells}, serialized as a string.
-    - .kodiag: JSON object {koreDiag, id, title, settings, nodes, edges}, serialized as a string.
+    - .korediag: JSON object {koreDiag, id, title, settings, nodes, edges}, serialized as a string.
 
     The content argument must be the complete serialized file content.
     """
@@ -133,7 +133,7 @@ def create_file(
 
 def update_file(
     id: Annotated[int, 'KoreFile document id.'],
-    content: Annotated[str, 'Complete replacement file content. For .koredoc use Markdown. For .koresheet and .kodiag use JSON serialized as a string.'],
+    content: Annotated[str, 'Complete replacement file content. For .koredoc use Markdown. For .koresheet and .korediag use JSON serialized as a string.'],
     metadata: Annotated[Optional[dict], 'Optional replacement metadata object. If omitted, KoreDocs extracts metadata from content where possible.'] = None,
     expected_revision: Annotated[Optional[int], 'Optional optimistic concurrency check. When provided, the file must still be at this revision.'] = None,
 ) -> dict:
@@ -142,7 +142,7 @@ def update_file(
     Use:
     - .koredoc: Markdown text, optionally with YAML frontmatter.
     - .koresheet: JSON object {version, meta, cols, rows, cells}, serialized as a string.
-    - .kodiag: JSON object {koreDiag, id, title, settings, nodes, edges}, serialized as a string.
+    - .korediag: JSON object {koreDiag, id, title, settings, nodes, edges}, serialized as a string.
     """
     updated = korefile.update_file(id, content, metadata, expected_revision=expected_revision)
     if updated is None:
@@ -163,13 +163,13 @@ def delete_file(
 # ── Cross-type MCP tools ───────────────────────────────────────────────────
 
 @mcp.tool()
-def koredocs_list_supported_types() -> list[dict]:
+def koredocs_types_list() -> list[dict]:
     """Canonical prefixed alias for list_supported_types."""
     return list_supported_types()
 
 
 @mcp.tool()
-def koredocs_search_files(
+def koredocs_files_search(
     query: Annotated[str, 'Search query. Supports words and quoted phrases.'],
     type: Annotated[Optional[KoreFileType], 'Optional document type filter.'] = None,
     folder_path: Annotated[Optional[str], 'Optional folder path such as "/" or "/01-misc".'] = None,
@@ -180,13 +180,13 @@ def koredocs_search_files(
 
 
 @mcp.tool()
-def koredocs_get_file(id: int) -> dict:
+def koredocs_file_get(id: int) -> dict:
     """Canonical prefixed alias for get_file."""
     return get_file(id)
 
 
 @mcp.tool()
-def koredocs_list_files(
+def koredocs_files_list(
     folder_path: Optional[str] = None,
     type: Annotated[Optional[KoreFileType], 'Optional document type filter.'] = None,
 ) -> list[dict]:
@@ -195,27 +195,27 @@ def koredocs_list_files(
 
 
 @mcp.tool()
-def koredocs_list_folders() -> list[dict]:
+def koredocs_folders_list() -> list[dict]:
     """Canonical prefixed alias for list_folders."""
     return list_folders()
 
 
 @mcp.tool()
-def koredocs_get_folder_structure() -> list[dict]:
+def koredocs_folder_structure_get() -> list[dict]:
     """Canonical prefixed alias for get_folder_structure."""
     return get_folder_structure()
 
 
 @mcp.tool()
-def koredocs_get_file_format_info(
-    type: Annotated[KoreFileType, 'Document type: koredoc, koresheet, or kodiag.'],
+def koredocs_file_format_get(
+    type: Annotated[KoreFileType, 'Document type: koredoc, koresheet, or korediag.'],
 ) -> dict:
     """Canonical prefixed alias for get_file_format_info."""
     return get_file_format_info(type)
 
 
 @mcp.tool()
-def koredocs_create_folder(
+def koredocs_folder_create(
     path: Annotated[str, 'Folder path in KoreFile, such as "/Projects/Calcs". Missing parents are created automatically.'],
 ) -> dict:
     """Create a folder in KoreFile and return the resulting folder record.
@@ -233,22 +233,22 @@ def koredocs_create_folder(
 
 
 @mcp.tool()
-def koredocs_create_file(
+def koredocs_file_create(
     folder_path: Annotated[str, 'Folder path in KoreFile, such as "/" or "/Projects". Missing folders are created.'],
-    name: Annotated[str, 'Filename ending in .koredoc, .koresheet, or .kodiag.'],
+    name: Annotated[str, 'Filename ending in .koredoc, .koresheet, or .korediag.'],
     content: Annotated[str, 'Complete serialized file content.'],
     metadata: Annotated[Optional[dict], 'Optional metadata object.'] = None,
 ) -> dict:
     """Create a file in KoreFile. Use this instead of filesystem file_write when the
-    destination is KoreDocs, KoreFile, or KoreFiles. For documents use koredocs_create_koredoc;
-    for spreadsheets prefer the semantic sheet tools (koredocs_create_sheet_table,
-    koredocs_create_compounding_schedule) over raw file creation.
+    destination is KoreDocs, KoreFile, or KoreFiles. For documents use koredocs_doc_create;
+    for spreadsheets prefer the semantic sheet tools (koredocs_sheet_table_create,
+    koredocs_sheet_compounding_schedule_create) over raw file creation.
     """
     return create_file(folder_path=folder_path, name=name, content=content, metadata=metadata)
 
 
 @mcp.tool()
-def koredocs_update_file(
+def koredocs_file_update(
     id: Annotated[int, 'KoreFile document id.'],
     content: Annotated[str, 'Complete replacement file content.'],
     metadata: Annotated[Optional[dict], 'Optional replacement metadata object.'] = None,
@@ -259,7 +259,7 @@ def koredocs_update_file(
 
 
 @mcp.tool()
-def koredocs_delete_file(
+def koredocs_file_delete(
     id: Annotated[int, 'KoreFile document id.'],
     expected_revision: Annotated[Optional[int], 'Optional optimistic concurrency check.'] = None,
 ) -> dict:
@@ -271,7 +271,8 @@ def koredocs_delete_file(
 
 from . import koredoc_mcp as _koredoc_mcp  # noqa: E402, F401
 from . import koresheet_mcp as _koresheet_mcp  # noqa: E402, F401
-from . import kodiag_mcp as _kodiag_mcp  # noqa: E402, F401
+from . import koresheet_core as _koresheet_core  # noqa: E402, F401
+from . import kodiag_mcp as _korediag_mcp  # noqa: E402, F401
 
 # ── FORMAT_INFO — defined after sub-module imports so helpers are available ─
 
@@ -299,26 +300,26 @@ FORMAT_INFO: dict[str, Any] = {
             'Content is a JSON object serialized as a string.',
             'Only non-default cells are stored in cells.',
             'Cell addresses use A1 notation. Cell values can include formula strings beginning with =.',
-            'Prefer semantic creation tools over raw JSON: use koredocs_create_compounding_schedule for compound-interest calculators, koredocs_create_sheet_table for table-shaped spreadsheets, and koredocs_create_koresheet only when explicit A1 cells are required.',
+            'Prefer semantic creation tools over raw JSON: use koredocs_sheet_compounding_schedule_create for compound-interest calculators, koredocs_sheet_table_create for table-shaped spreadsheets, and koredocs_sheet_create only when explicit A1 cells are required.',
         ],
         'recommended_tools': [
             {
-                'tool': 'koredocs_create_compounding_schedule',
+                'tool': 'koredocs_sheet_compounding_schedule_create',
                 'use_when': 'Compound interest calculator, investment growth schedule, savings projection, or yearly compounding model.',
                 'required_args': ['folder_path', 'name', 'principal', 'annual_rate', 'years'],
-                'verify_with': 'koredocs_read_sheet_range using the returned id and range A1:D14 for a 10-year schedule.',
+                'verify_with': 'koredocs_sheet_range_read using the returned id and range A1:D14 for a 10-year schedule.',
             },
             {
-                'tool': 'koredocs_create_sheet_table',
+                'tool': 'koredocs_sheet_table_create',
                 'use_when': 'New spreadsheet from named columns plus initial rows.',
                 'required_args': ['folder_path', 'name', 'headers'],
-                'verify_with': 'koredocs_preview_sheet or koredocs_read_sheet_table.',
+                'verify_with': 'koredocs_sheet_preview or koredocs_sheet_table_read.',
             },
             {
-                'tool': 'koredocs_write_sheet_cells',
+                'tool': 'koredocs_sheet_cells_write',
                 'use_when': 'Modify specific A1-addressed cells in an existing sheet.',
                 'required_args': ['id', 'cells'],
-                'verify_with': 'koredocs_read_sheet_range.',
+                'verify_with': 'koredocs_sheet_range_read.',
             },
         ],
         'schema': {
@@ -349,11 +350,11 @@ FORMAT_INFO: dict[str, Any] = {
                 },
             },
         },
-        'example': _koresheet_mcp._sheet_content('Example Sheet', {'A1': {'value': 'Name'}, 'B1': {'value': 'Score'}}),
+        'example': _koresheet_core._sheet_content('Example Sheet', {'A1': {'value': 'Name'}, 'B1': {'value': 'Score'}}),
     },
-    'kodiag': {
-        'type': 'kodiag',
-        'extension': '.kodiag',
+    'korediag': {
+        'type': 'korediag',
+        'extension': '.korediag',
         'content_type': 'application/json',
         'notes': [
             'Content is a JSON object serialized as a string.',
@@ -374,18 +375,22 @@ FORMAT_INFO: dict[str, Any] = {
                 'edges': {'type': 'array', 'items': {'type': 'object'}},
             },
         },
-        'example': _kodiag_mcp._diag_content('Example Diagram'),
+        'example': _korediag_mcp._diag_content('Example Diagram'),
     },
 }
 
 # ── Re-exports for server.py compatibility ─────────────────────────────────
 
-from .koresheet_mcp import (  # noqa: E402, F401
-    get_sheet,
-    read_sheet_range,
-    write_sheet_cells,
-    read_sheet_table,
+from .koresheet_document import (  # noqa: E402, F401
     append_sheet_rows,
+    get_sheet,
     upsert_sheet_rows,
+)
+from .koresheet_ranges import (  # noqa: E402, F401
     clear_sheet_range,
+    read_sheet_range,
+    read_sheet_table,
+)
+from .koresheet_cells import (  # noqa: E402, F401
+    write_sheet_cells,
 )

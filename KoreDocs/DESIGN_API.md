@@ -68,7 +68,7 @@ Cell fields:
 
 Cell addresses use A1 notation (`A1`, `B3`, `AA10`).
 
-### 3.3 `.kodiag`
+### 3.3 `.korediag`
 
 JSON object serialized as a string. Diagram with nodes and directed edges.
 
@@ -90,7 +90,7 @@ JSON object serialized as a string. Diagram with nodes and directed edges.
 }
 ```
 
-Node types: `rect`, `ellipse`, `waypoint`.  
+Node types: `rect`, `ellipse`, `waypoint`.
 Edge ports: compass directions `n`, `e`, `s`, `w`.
 
 ---
@@ -100,7 +100,7 @@ Edge ports: compass directions `n`, `e`, `s`, `w`.
 | Method | Path | Description |
 |---|---|---|
 | `GET` | `/api/schema` | Return format info for all supported types |
-| `GET` | `/api/schema?type=<type>` | Return format info for one type (`koredoc`, `koresheet`, `kodiag`) |
+| `GET` | `/api/schema?type=<type>` | Return format info for one type (`koredoc`, `koresheet`, `korediag`) |
 
 Response fields: `type`, `extension`, `content_type`, `notes`, `schema`, `example`.
 
@@ -149,7 +149,7 @@ All fields optional. `expected_revision` enables optimistic concurrency — retu
 
 **DELETE /api/folders/{folder_id}**
 
-Query param `?expected_revision=<n>` optional.  
+Query param `?expected_revision=<n>` optional.
 Query param `?recursive=true` deletes all nested files and sub-folders after confirmation.
 Returns `409` if the folder is not empty and `recursive` is not enabled.
 
@@ -163,7 +163,7 @@ Returns `409` if the folder is not empty and `recursive` is not enabled.
 |---|---|---|
 | `id` | int | Stable numeric identifier |
 | `name` | string | Filename including extension (e.g. `notes.koredoc`) |
-| `ext` | string | Extension without dot (`koredoc`, `koresheet`, `kodiag`) |
+| `ext` | string | Extension without dot (`koredoc`, `koresheet`, `korediag`) |
 | `folder_id` | int | Containing folder id |
 | `folder_path` | string | Containing folder path |
 | `content` | string | Full serialized file content (only present when explicitly requested) |
@@ -189,7 +189,7 @@ Returns `409` if the folder is not empty and `recursive` is not enabled.
 |---|---|---|
 | `folder_id` | int | Filter by folder id |
 | `folder_path` | string | Filter by folder path (e.g. `/Projects`) |
-| `type` | string | Filter by extension (`koredoc`, `koresheet`, `kodiag`) |
+| `type` | string | Filter by extension (`koredoc`, `koresheet`, `korediag`) |
 | `name` | string | Filter by exact filename |
 | `limit` | int 1–500 | Maximum results |
 
@@ -249,7 +249,7 @@ Query params:
 | Param | Required | Description |
 |---|---|---|
 | `q` | yes | Search query; supports words and quoted phrases |
-| `type` | no | Restrict to `koredoc`, `koresheet`, or `kodiag` |
+| `type` | no | Restrict to `koredoc`, `koresheet`, or `korediag` |
 | `folder_path` | no | Restrict to a folder path |
 | `limit` | no | Maximum results (1–200, default 20) |
 

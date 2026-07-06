@@ -146,10 +146,10 @@ The system is divided into two layers with a clean interface between them.
 ### Skill catalog
 
 **Claims:**
-- `skills_catalog_builder.py` scans `KoreAgent/app/skills/` recursively for `skill.md` files.
-- The catalog is written to `skills_summary.md` in the skills root.
+- `skills_catalog_builder.py` scans `KoreAgent/app/skills/` recursively for `skill.md` files and also merges built-in skills from `KoreAgent/app/system_skills/`.
+- The runtime catalog is written to `skills_catalog.json` in the skills root.
 - Catalog building can be LLM-assisted or local (deterministic regex fallback via `--no-llm`).
-- The orchestration layer hot-reloads the catalog automatically when `skills_summary.md` is modified on disk.
+- The orchestration layer loads `skills_catalog.json` at startup and rebuilds it automatically when a `skill.md` or referenced skill module is newer than the catalog, or when the skill count changes.
 - The catalog drives the JSON Schema tool definitions sent to the model on every LLM call.
 
 ### Skill executor

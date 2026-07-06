@@ -95,7 +95,7 @@ LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 korefile.configure(DB_PATH)
 
-ALLOWED_EXTENSIONS = frozenset({'.koredoc', '.koresheet', '.kodiag'})
+ALLOWED_EXTENSIONS = frozenset({'.koredoc', '.koresheet', '.korediag'})
 API_TOKEN = os.environ.get('KOREDOCS_API_TOKEN')
 
 # Ensure the korefile static folder exists (needed for StaticFiles mount at startup)

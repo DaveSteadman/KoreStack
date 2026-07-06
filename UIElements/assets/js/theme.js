@@ -11,7 +11,7 @@ const SERVICE_THEMES = {
 const APP_THEME_KEYS = {
   koredoc: 'koredocs',
   koresheet: 'koredocs',
-  kodiag: 'koredocs',
+  korediag: 'koredocs',
   korefile: 'koredocs',
 };
 

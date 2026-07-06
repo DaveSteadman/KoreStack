@@ -429,7 +429,7 @@ def _extract_metadata(name: str, content: str) -> dict:
             hm = re.search(r'^#{1,3}\s+(.+)$', content, re.MULTILINE)
             if hm:
                 meta['title'] = hm.group(1).strip()
-    elif ext in ('koresheet', 'kodiag'):
+    elif ext in ('koresheet', 'korediag'):
         try:
             obj = json.loads(content)
             if isinstance(obj, dict):
@@ -468,7 +468,7 @@ def _validate_serialized_content(name: str, content: str) -> None:
             raise ValueError(f'{name} fields "cols" and "rows" must be integers')
         return
 
-    if ext == 'kodiag':
+    if ext == 'korediag':
         required = {'koreDiag', 'id', 'title', 'settings', 'nodes', 'edges'}
         missing = sorted(required - obj.keys())
         if missing:
@@ -723,7 +723,7 @@ def search(query: str, ext: str | None = None,
 
 # ── Import from flat file system ─────────────────────────────────────────────
 
-_IMPORTABLE = frozenset({'.koredoc', '.koresheet', '.kodiag'})
+_IMPORTABLE = frozenset({'.koredoc', '.koresheet', '.korediag'})
 
 
 def import_from_fs(data_dir: Path) -> dict:

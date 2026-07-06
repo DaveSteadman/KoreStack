@@ -8,7 +8,7 @@ served by a single Python FastAPI back end.
 |---|---|---|---|
 | **KoreDoc** | `/doc` | `.koredoc` | Phase 1 — ProseMirror WYSIWYG markdown editor |
 | **KoreSheet** | `/sheet` | `.koresheet` | Phase 1 — grid spreadsheet with formulas |
-| **KoreDiag** | `/diag` | `.kodiag` | Phase 1 — canvas node/edge diagramming |
+| **KoreDiag** | `/diag` | `.korediag` | Phase 1 — canvas node/edge diagramming |
 
 See [design.md](design.md) for the full architecture and design decisions.
 
@@ -29,7 +29,7 @@ pip install -r requirements.txt
 Copy `.env.example` to `.env` and edit as needed:
 
 ```
-# Directory scanned for .koredoc / .koresheet / .kodiag files (flat FS storage)
+# Directory scanned for .koredoc / .koresheet / .korediag files (flat FS storage)
 KOREDOCS_DATA_DIR=C:\Util\Data\KoreFiles
 
 # Path to the KoreFile SQLite database (Phase 2 virtual file system)
@@ -175,58 +175,58 @@ GET    /api/schema?type=                   file type schema / examples
 
 ## MCP Tools
 
-The MCP server exposes tools that operate on KoreFile. The canonical public names use the `koredocs_` prefix.
+The MCP server exposes tools that operate on KoreFile. The canonical public names use the `koredocs_` prefix with a `service_object_verb` pattern.
 
 | Tool | Description |
 |---|---|
-| `koredocs_search_files` | Full-text search. Args: `query`, `type?`, `folder_path?`, `limit?` |
-| `koredocs_get_file` | Retrieve a file by id — returns metadata + full content including `revision` |
-| `koredocs_list_files` | List files in a folder (metadata only). Args: `folder_path?`, `type?` |
-| `koredocs_list_folders` | Return the full folder tree |
-| `koredocs_get_folder_structure` | Navigation starting point: return the folder tree with document summaries |
-| `koredocs_create_folder` | Create a KoreFile folder so sheet/document workflows stay inside KoreDocs |
-| `koredocs_list_supported_types` | Return every supported KoreDocs file type with schema summary, notes, and example content |
-| `koredocs_get_file_format_info` | Return canonical schema, example content, and notes for a file type |
-| `koredocs_create_file` | Create a new file. Args: `folder_path`, `name`, `content` |
-| `koredocs_create_koredoc` | Create a `.koredoc` from Markdown |
-| `koredocs_create_koresheet` | Create a `.koresheet` from a sparse cell map |
-| `koredocs_create_sheet_table` | Create a `.koresheet` from headers plus initial rows |
-| `koredocs_create_compounding_schedule` | Create a labelled compounding model with formulas and yearly rows |
-| `koredocs_create_kodiag` | Create a `.kodiag` from a diagram object, filling safe defaults |
-| `koredocs_get_koredoc_outline` | Return the heading outline for a `.koredoc` file |
-| `koredocs_read_koredoc_section` | Read a full document, one heading section, or an explicit line range |
-| `koredocs_replace_koredoc_section` | Replace one heading section using optimistic concurrency via `expected_revision?` |
-| `koredocs_insert_koredoc_section` | Insert a new markdown block relative to a section anchor |
-| `koredocs_append_koredoc_markdown` | Append markdown to the end of a document |
-| `koredocs_get_sheet` | Return sheet metadata, dimensions, used range, and optionally the sparse cell map |
-| `koredocs_describe_sheet` | Return a structural summary with guessed headers, sample rows, labels, and formulas |
-| `koredocs_get_sheet_headers` | Return detected headers, guessing the header row when omitted |
-| `koredocs_find_sheet_column` | Locate a sheet column by header name |
-| `koredocs_preview_sheet` | Return a compact table preview without dumping the entire sparse cell map |
-| `koredocs_read_sheet_range` | Read `A1`-style ranges such as `A1:C10`, `A:A`, or `2:4` |
-| `koredocs_read_sheet_table` | Read a range as header-keyed row objects |
-| `koredocs_find_sheet_rows` | Find table rows using header-keyed filters such as exact match, contains, or numeric comparisons |
-| `koredocs_update_sheet_rows` | Update all matched table rows using header-keyed values |
-| `koredocs_set_sheet_headers` | Write or replace a contiguous header row |
-| `koredocs_append_sheet_table_rows` | Append object-style or list-style rows using table semantics |
-| `koredocs_find_labelled_cells` | Find label cells and return likely adjacent values for navigation |
-| `koredocs_get_named_value` | Read a value next to a label such as `Annual Rate` or `Starting Balance` |
-| `koredocs_set_named_value` | Write a value next to a label, with revision checks when needed |
-| `koredocs_write_sheet_cells` | Apply sparse `A1`-addressed cell updates without rewriting the whole file |
-| `koredocs_append_sheet_rows` | Append list-based or header-mapped rows to an existing sheet |
-| `koredocs_upsert_sheet_rows` | Update matching rows by key columns or append when no match exists |
-| `koredocs_clear_sheet_range` | Clear all cells in a range |
-| `koredocs_update_file` | Overwrite content. Supports `expected_revision?` |
-| `koredocs_delete_file` | Delete a file. Supports `expected_revision?` |
+| `koredocs_files_search` | Full-text search. Args: `query`, `type?`, `folder_path?`, `limit?` |
+| `koredocs_file_get` | Retrieve a file by id — returns metadata + full content including `revision` |
+| `koredocs_files_list` | List files in a folder (metadata only). Args: `folder_path?`, `type?` |
+| `koredocs_folders_list` | Return the full folder tree |
+| `koredocs_folder_structure_get` | Navigation starting point: return the folder tree with document summaries |
+| `koredocs_folder_create` | Create a KoreFile folder so sheet/document workflows stay inside KoreDocs |
+| `koredocs_types_list` | Return every supported KoreDocs file type with schema summary, notes, and example content |
+| `koredocs_file_format_get` | Return canonical schema, example content, and notes for a file type |
+| `koredocs_file_create` | Create a new file. Args: `folder_path`, `name`, `content` |
+| `koredocs_doc_create` | Create a `.koredoc` from Markdown |
+| `koredocs_sheet_create` | Create a `.koresheet` from a sparse cell map |
+| `koredocs_sheet_table_create` | Create a `.koresheet` from headers plus initial rows |
+| `koredocs_sheet_compounding_schedule_create` | Create a labelled compounding model with formulas and yearly rows |
+| `koredocs_diag_create` | Create a `.korediag` from a diagram object, filling safe defaults |
+| `koredocs_doc_outline_get` | Return the heading outline for a `.koredoc` file |
+| `koredocs_doc_section_read` | Read a full document, one heading section, or an explicit line range |
+| `koredocs_doc_section_replace` | Replace one heading section using optimistic concurrency via `expected_revision?` |
+| `koredocs_doc_section_insert` | Insert a new markdown block relative to a section anchor |
+| `koredocs_doc_markdown_append` | Append markdown to the end of a document |
+| `koredocs_sheet_get` | Return sheet metadata, dimensions, used range, and optionally the sparse cell map |
+| `koredocs_sheet_describe` | Return a structural summary with guessed headers, sample rows, labels, and formulas |
+| `koredocs_sheet_headers_get` | Return detected headers, guessing the header row when omitted |
+| `koredocs_sheet_column_find` | Locate a sheet column by header name |
+| `koredocs_sheet_preview` | Return a compact table preview without dumping the entire sparse cell map |
+| `koredocs_sheet_range_read` | Read `A1`-style ranges such as `A1:C10`, `A:A`, or `2:4` |
+| `koredocs_sheet_table_read` | Read a range as header-keyed row objects |
+| `koredocs_sheet_rows_find` | Find table rows using header-keyed filters such as exact match, contains, or numeric comparisons |
+| `koredocs_sheet_rows_update` | Update all matched table rows using header-keyed values |
+| `koredocs_sheet_headers_set` | Write or replace a contiguous header row |
+| `koredocs_sheet_table_rows_append` | Append object-style or list-style rows using table semantics |
+| `koredocs_sheet_labels_find` | Find label cells and return likely adjacent values for navigation |
+| `koredocs_sheet_named_value_get` | Read a value next to a label such as `Annual Rate` or `Starting Balance` |
+| `koredocs_sheet_named_value_set` | Write a value next to a label, with revision checks when needed |
+| `koredocs_sheet_cells_write` | Apply sparse `A1`-addressed cell updates without rewriting the whole file |
+| `koredocs_sheet_rows_append` | Append list-based or header-mapped rows to an existing sheet |
+| `koredocs_sheet_rows_upsert` | Update matching rows by key columns or append when no match exists |
+| `koredocs_sheet_range_clear` | Clear all cells in a range |
+| `koredocs_file_update` | Overwrite content. Supports `expected_revision?` |
+| `koredocs_file_delete` | Delete a file. Supports `expected_revision?` |
 
 Every mutating tool that changes an existing file accepts an optional `expected_revision` argument. Use it to avoid silent overwrite when the document was changed by the UI or another agent between read and write.
 
 For agent workflows, prefer the semantic sheet tools first:
 
-- Use `koredocs_describe_sheet`, `koredocs_get_sheet_headers`, `koredocs_preview_sheet`, and `koredocs_find_sheet_column` to understand sheet structure.
-- Use `koredocs_find_sheet_rows`, `koredocs_update_sheet_rows`, `koredocs_append_sheet_table_rows`, and `koredocs_set_sheet_headers` for table-shaped data.
-- Use `koredocs_find_labelled_cells`, `koredocs_get_named_value`, and `koredocs_set_named_value` for model-style sheets that store inputs and outputs as labels plus adjacent values.
-- Drop to `koredocs_read_sheet_range` or `koredocs_write_sheet_cells` only when a task genuinely requires raw cell addressing.
+- Use `docs_sheet_describe`, `docs_sheet_headers_get`, `docs_sheet_preview`, and `docs_sheet_column_find` to understand sheet structure.
+- Use `docs_sheet_rows_find`, `docs_sheet_rows_update`, `docs_sheet_table_rows_append`, and `docs_sheet_headers_set` for table-shaped data.
+- Use `docs_sheet_labels_find`, `docs_sheet_named_value_get`, and `docs_sheet_named_value_set` for model-style sheets that store inputs and outputs as labels plus adjacent values.
+- Drop to `docs_sheet_range_read` or `docs_sheet_cells_write` only when a task genuinely requires raw cell addressing.
 
 ---
 
@@ -236,7 +236,7 @@ For agent workflows, prefer the semantic sheet tools first:
 |---|---|
 | `.koredoc` | Plain markdown with optional YAML frontmatter. Always valid markdown. |
 | `.koresheet` | JSON sparse cell map, per-cell style, aggregate formulas (`SUM`, `AVERAGE`, `COUNT`, `MIN`, `MAX`). |
-| `.kodiag` | JSON node/edge graph with hierarchy, port-anchored edges. |
+| `.korediag` | JSON node/edge graph with hierarchy, port-anchored edges. |
 
 All formats are human-readable and LLM-friendly by design. They are identical whether
 stored on the flat file system or in KoreFile.
