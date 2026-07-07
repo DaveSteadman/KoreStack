@@ -24,6 +24,14 @@ from email.utils import parsedate as _rfc_parsedate
 from pathlib import Path
 from typing import Any, Optional
 
+from KoreCommon.sentence_index import extract_sentence_text as _extract_sentence_text_common
+from KoreCommon.sentence_index import mark_sentences_indexed
+from KoreCommon.sentence_index import normalize_sentence_schema as _normalize_sentence_schema_common
+from KoreCommon.sentence_index import reset_sentence_indexed_at
+from KoreCommon.sentence_index import sentence_index_needs_rebuild as _sentence_index_needs_rebuild_common
+from KoreCommon.sentence_index import sentence_schema_columns
+from KoreCommon.sentence_index import sentence_schema_needs_normalization as _sentence_schema_needs_normalization_common
+from KoreCommon.sentence_index import split_sentences
 from app.config import cfg
 from dbutil import fts_build_query
 
@@ -37,52 +45,7 @@ class FeedDatabaseError(RuntimeError):
     pass
 
 
-_SENTENCE_SCHEMA_COLUMNS = (
-    "id",
-    "entry_id",
-    "sentence_index",
-    "source_field",
-    "char_start",
-    "char_end",
-    "chroma_indexed_at",
-    "deleted",
-)
-
-
-def _split_sentences(text: str) -> list[tuple[int, int, str]]:
-    """Split text into sentence-like spans with stable offsets into the original text."""
-    text = str(text or "")
-    if not text:
-        return []
-
-    sentences: list[tuple[int, int, str]] = []
-    start = 0
-    i = 0
-    n = len(text)
-    while start < n and text[start].isspace():
-        start += 1
-    i = start
-    while i < n:
-        if text[i] in ".!?":
-            end = i + 1
-            while end < n and text[end] in "\"')]":
-                end += 1
-            if end == n or text[end].isspace():
-                sentence = text[start:end].strip()
-                if sentence:
-                    sentences.append((start, end, sentence))
-                while end < n and text[end].isspace():
-                    end += 1
-                start = end
-                i = end
-                continue
-        i += 1
-
-    if start < n:
-        sentence = text[start:].strip()
-        if sentence:
-            sentences.append((start, n, sentence))
-    return sentences
+_SENTENCE_SCHEMA_COLUMNS = sentence_schema_columns("entry_id")
 
 
 def _index_entry_sentences(
@@ -94,7 +57,7 @@ def _index_entry_sentences(
     rows: list[tuple[int, int, str, int, int]] = []
     sentence_index = 0
     for source_field, raw_text in (("headline", headline), ("page_text", page_text)):
-        for char_start, char_end, _sentence_text in _split_sentences(raw_text):
+        for char_start, char_end, _sentence_text in split_sentences(raw_text):
             rows.append(
                 (entry_id, sentence_index, source_field, char_start, char_end)
             )
@@ -138,78 +101,24 @@ def _backfill_entry_sentences(conn: sqlite3.Connection) -> None:
 
 
 def _sentence_index_needs_rebuild(conn: sqlite3.Connection) -> bool:
-    sentence_cols = {row[1] for row in conn.execute("PRAGMA table_info(sentences)").fetchall()}
-    if "sentence_text" in sentence_cols:
-        row = conn.execute(
-            "SELECT 1 FROM sentences WHERE sentence_text IS NOT NULL AND sentence_text != '' LIMIT 1"
-        ).fetchone()
-        if row:
-            return True
-    return False
+    return _sentence_index_needs_rebuild_common(conn)
 
 
 def _sentence_schema_needs_normalization(conn: sqlite3.Connection) -> bool:
-    current_cols = tuple(row[1] for row in conn.execute("PRAGMA table_info(sentences)").fetchall())
-    if not current_cols:
-        return False
-    return current_cols != _SENTENCE_SCHEMA_COLUMNS
+    return _sentence_schema_needs_normalization_common(conn, _SENTENCE_SCHEMA_COLUMNS)
 
 
 def _normalize_sentence_schema(conn: sqlite3.Connection) -> None:
-    current_cols = tuple(row[1] for row in conn.execute("PRAGMA table_info(sentences)").fetchall())
-    if not current_cols or current_cols == _SENTENCE_SCHEMA_COLUMNS:
-        return
-
-    current_set  = set(current_cols)
-    required_set = set(_SENTENCE_SCHEMA_COLUMNS)
-    compatible   = required_set.issubset(current_set)
-
-    conn.execute("DROP TABLE IF EXISTS sentences_new")
-    conn.execute("""
-        CREATE TABLE sentences_new (
-            id                INTEGER PRIMARY KEY AUTOINCREMENT,
-            entry_id          INTEGER NOT NULL,
-            sentence_index    INTEGER NOT NULL,
-            source_field      TEXT NOT NULL,
-            char_start        INTEGER NOT NULL,
-            char_end          INTEGER NOT NULL,
-            chroma_indexed_at TEXT,
-            deleted           INTEGER NOT NULL DEFAULT 0,
-            UNIQUE(entry_id, sentence_index)
-        )
-    """)
-
-    if compatible:
-        conn.execute("""
-            INSERT INTO sentences_new
-                (id, entry_id, sentence_index, source_field, char_start, char_end, chroma_indexed_at, deleted)
-            SELECT
-                id,
-                entry_id,
-                sentence_index,
-                source_field,
-                char_start,
-                char_end,
-                chroma_indexed_at,
-                deleted
-            FROM sentences
-        """)
-
-    conn.execute("DROP TABLE sentences")
-    conn.execute("ALTER TABLE sentences_new RENAME TO sentences")
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_sentences_entry_id ON sentences(entry_id)")
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_sentences_chroma_indexed_at ON sentences(chroma_indexed_at)")
-
-    if not compatible:
-        _backfill_entry_sentences(conn)
+    _normalize_sentence_schema_common(
+        conn,
+        owner_column     = "entry_id",
+        expected_cols    = _SENTENCE_SCHEMA_COLUMNS,
+        backfill_callback = _backfill_entry_sentences,
+    )
 
 
 def _extract_sentence_text(entry_row: sqlite3.Row | dict, sentence_row: sqlite3.Row | dict) -> str:
-    source_field = str(sentence_row["source_field"] or "")
-    source_text = str(entry_row.get(source_field, "") if isinstance(entry_row, dict) else entry_row[source_field] or "")
-    char_start = max(0, int(sentence_row["char_start"]))
-    char_end = max(char_start, int(sentence_row["char_end"]))
-    return source_text[char_start:char_end].strip()
+    return _extract_sentence_text_common(entry_row, sentence_row)
 
 
 def _sentence_locator(domain: str, sentence_id: int) -> str:
@@ -729,20 +638,15 @@ def get_sentences_for_chroma(
 def mark_sentences_chroma_indexed(domain: str, sentence_ids: list[int]) -> int:
     if not sentence_ids:
         return 0
-    validated = [int(i) for i in sentence_ids]
-    placeholders = ",".join("?" * len(validated))
     timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
     try:
         with db_connection(domain) as conn:
-            cur = conn.execute(
-                f"""
-                UPDATE sentences
-                SET chroma_indexed_at = ?
-                WHERE deleted = 0 AND id IN ({placeholders})
-                """,
-                [timestamp, *validated],
+            return mark_sentences_indexed(
+                conn,
+                sentence_ids   = sentence_ids,
+                indexed_at     = timestamp,
+                deleted_filter = True,
             )
-            return cur.rowcount
     except Exception:
         return 0
 
@@ -750,24 +654,12 @@ def mark_sentences_chroma_indexed(domain: str, sentence_ids: list[int]) -> int:
 def reset_sentence_chroma_index(domain: str, entry_id: Optional[int] = None) -> int:
     try:
         with db_connection(domain) as conn:
-            if entry_id is None:
-                cur = conn.execute(
-                    """
-                    UPDATE sentences
-                    SET chroma_indexed_at = NULL
-                    WHERE deleted = 0
-                    """
-                )
-            else:
-                cur = conn.execute(
-                    """
-                    UPDATE sentences
-                    SET chroma_indexed_at = NULL
-                    WHERE deleted = 0 AND entry_id = ?
-                    """,
-                    (int(entry_id),),
-                )
-            return cur.rowcount
+            return reset_sentence_indexed_at(
+                conn,
+                owner_column   = "entry_id",
+                owner_id       = entry_id,
+                deleted_filter = True,
+            )
     except Exception:
         return 0
 

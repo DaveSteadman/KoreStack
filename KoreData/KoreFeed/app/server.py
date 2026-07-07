@@ -85,7 +85,8 @@ from app.feed_manager import (
     update_feed_rate,
     update_domain_age_settings_spec,
 )
-from app.ingest import schedule_feeds, scheduler, start_scheduler, trigger_immediate
+from app.ingest import get_runtime_status, schedule_feeds, start_scheduler, stop_scheduler, trigger_immediate
+from app.overview import get_feed_overview, invalidate_feed_overview
 
 
 def _warm_feed_domains() -> None:
@@ -108,8 +109,7 @@ async def _lifespan(app: FastAPI):
     ).start()
     start_scheduler()
     yield
-    if scheduler.running:
-        scheduler.shutdown(wait=False)
+    stop_scheduler()
 
 
 app = FastAPI(
@@ -146,15 +146,14 @@ def suite_config_js():
 @app.get("/status", tags=["meta"])
 def api_status():
     """Health check used by KoreDataGateway."""
-    domains = list_domains()
-    all_feeds = load_feeds()
-    total_entries = sum(get_entry_count(d) for d in domains)
+    overview = get_feed_overview()
     return {
-        "status": "ok",
-        "service": "KoreFeed",
-        "total_domains": len(domains),
-        "total_feeds": len(all_feeds),
-        "total_entries": total_entries,
+        "status":        "ok",
+        "service":       "KoreFeed",
+        "total_domains": overview["total_domains"],
+        "total_feeds":   overview["total_feeds"],
+        "total_entries": overview["total_entries"],
+        "runtime":       get_runtime_status(),
     }
 
 
@@ -197,7 +196,7 @@ class FeedCreate(BaseModel):
 @app.get("/api/feeds", tags=["feeds"])
 def api_list_feeds():
     """Return all configured RSS feeds."""
-    return load_feeds()
+    return get_feed_overview()["all_feeds"]
 
 
 @app.post("/api/feeds", status_code=201, tags=["feeds"])
@@ -205,6 +204,7 @@ def api_add_feed(body: FeedCreate):
     """Add a new RSS feed to the inventory."""
     feed = add_feed(body.domain, body.name, str(body.url), body.update_rate, feed_type=body.feed_type)
     init_db(body.domain)
+    invalidate_feed_overview()
     schedule_feeds()
     trigger_immediate(feed)
     return feed
@@ -215,6 +215,7 @@ def api_remove_feed(feed_id: str):
     """Remove a feed from the inventory."""
     if not remove_feed(feed_id):
         raise HTTPException(status_code=404, detail="Feed not found")
+    invalidate_feed_overview()
     schedule_feeds()
     return {"deleted": feed_id}
 
@@ -232,6 +233,7 @@ def api_update_feed(feed_id: str, body: FeedUpdate):
     updated = update_feed(feed_id, body.name, str(body.url), body.update_rate, body.feed_type)
     if updated is None:
         raise HTTPException(status_code=404, detail="Feed not found")
+    invalidate_feed_overview()
     schedule_feeds()
     return updated
 
@@ -239,10 +241,7 @@ def api_update_feed(feed_id: str, body: FeedUpdate):
 @app.get("/api/domains", tags=["domains"])
 def api_list_domains():
     """List all domains with entry counts."""
-    db_domains   = set(list_domains())
-    feed_domains = set(list_feed_domains())
-    all_domains  = sorted(db_domains | feed_domains)
-    return [{"domain": d, "entry_count": get_entry_count(d), "enabled": get_domain_enabled(d)} for d in all_domains]
+    return get_feed_overview()["domains"]
 
 
 @app.post("/api/domains", status_code=201, tags=["domains"])
@@ -250,6 +249,7 @@ def api_create_domain(domain: str):
     """Create a new empty domain."""
     create_domain(domain)
     init_db(domain)
+    invalidate_feed_overview()
     return {"domain": domain}
 
 
@@ -258,6 +258,7 @@ def api_delete_domain(domain: str):
     """Delete a domain, its feed list, and its database."""
     delete_domain_feeds(domain)
     delete_domain_db(domain)
+    invalidate_feed_overview()
     schedule_feeds()
     return {"deleted": domain}
 
@@ -267,6 +268,7 @@ def api_rename_domain(domain: str, new_name: str):
     """Rename a domain."""
     rename_domain_feeds(domain, new_name)
     rename_domain_db(domain, new_name)
+    invalidate_feed_overview()
     schedule_feeds()
     return {"renamed": new_name}
 
@@ -276,6 +278,7 @@ def api_set_domain_enabled(domain: str, enabled: bool):
     """Enable or disable all feed processing for a domain."""
     if not set_domain_enabled(domain, enabled):
         raise HTTPException(status_code=404, detail="Domain not found")
+    invalidate_feed_overview()
     schedule_feeds()
     return {"domain": domain, "enabled": enabled}
 

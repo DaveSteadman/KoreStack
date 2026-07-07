@@ -31,6 +31,7 @@ from urllib.parse import urljoin, urlparse
 
 from apscheduler.schedulers.background import BackgroundScheduler
 
+from app.config import cfg
 from app.database import (
     apply_age_rule,
     get_domain_age_settings,
@@ -48,23 +49,48 @@ _queue: queue.Queue = queue.Queue()
 _state_lock = threading.Lock()
 _queued_feed_ids: set[str] = set()
 _current_feed_id: str | None = None
+_worker_thread: threading.Thread | None = None
+_watchdog_thread: threading.Thread | None = None
+_watchdog_stop_event = threading.Event()
+
+_runtime_lock = threading.Lock()
+_runtime_state: dict[str, object] = {
+    "worker_heartbeat_at":            None,
+    "worker_loop_count":              0,
+    "watchdog_heartbeat_at":          None,
+    "watchdog_loop_count":            0,
+    "scheduler_heartbeat_at":         None,
+    "scheduler_heartbeat_count":      0,
+    "last_due_scan_at":               None,
+    "last_due_scan_reason":           "",
+    "last_due_scan_enqueued":         0,
+}
 
 _HTTP_HEADERS = {
     "User-Agent": "MiniFeed/1.0 RSS Ingest Bot (+https://github.com/minifeed)"
 }
 
-_LOG_FILE = Path("actions.log")
+_LOG_FILE = Path(cfg["data_dir"]) / "actions.log"
 _LOG_MAX_LINES = 1000
+_LOG_TRIM_MARGIN = 50
 _log_lock = threading.Lock()
 _log_buffer: collections.deque = collections.deque(maxlen=_LOG_MAX_LINES)
+_log_line_count = 0
+_WATCHDOG_INTERVAL_SECONDS = 20
+_SCHEDULER_KEEPALIVE_SECONDS = 2
+_WATCHDOG_ACTIVE_INTERVAL_SECONDS = 2
+_FEED_JOB_PREFIX = "feed:"
 
 
 def _log_init() -> None:
     """Seed the in-memory log buffer from the existing log file (if any)."""
+    global _log_line_count
+    _LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
     if _LOG_FILE.exists():
         try:
             lines = _LOG_FILE.read_text(encoding="utf-8").splitlines(keepends=True)
             _log_buffer.extend(lines)
+            _log_line_count = len(lines)
         except OSError:
             pass
 
@@ -72,12 +98,54 @@ def _log_init() -> None:
 _log_init()
 
 
+def _trim_log_file_locked() -> None:
+    global _log_line_count
+    kept_lines = list(_log_buffer)
+    _LOG_FILE.write_text("".join(kept_lines), encoding="utf-8")
+    _log_line_count = len(kept_lines)
+
+
 def _log(msg: str) -> None:
-    """Append a timestamped line to actions.log via an in-memory deque (no read on write)."""
+    """Append a timestamped line to actions.log and trim only when the cap is exceeded."""
+    global _log_line_count
     line = f"[{datetime.now().isoformat(timespec='seconds')}] {msg}\n"
     with _log_lock:
         _log_buffer.append(line)
-        _LOG_FILE.write_text("".join(_log_buffer), encoding="utf-8")
+        with _LOG_FILE.open("a", encoding="utf-8") as handle:
+            handle.write(line)
+        _log_line_count += 1
+        if _log_line_count > (_LOG_MAX_LINES + _LOG_TRIM_MARGIN):
+            _trim_log_file_locked()
+
+
+def _utc_now() -> datetime:
+    return datetime.utcnow()
+
+
+def _utc_now_iso() -> str:
+    return _utc_now().isoformat(timespec="seconds")
+
+
+def _touch_runtime(timestamp_key: str, counter_key: str | None = None) -> None:
+    with _runtime_lock:
+        _runtime_state[timestamp_key] = _utc_now_iso()
+        if counter_key is not None:
+            _runtime_state[counter_key] = int(_runtime_state.get(counter_key) or 0) + 1
+
+
+def _set_runtime(**updates: object) -> None:
+    with _runtime_lock:
+        _runtime_state.update(updates)
+
+
+def _age_seconds(iso_text: object) -> float | None:
+    if not iso_text:
+        return None
+    try:
+        then = datetime.fromisoformat(str(iso_text))
+    except Exception:
+        return None
+    return max(0.0, (_utc_now() - then).total_seconds())
 
 
 def _normalise_feed_text(value: str) -> str:
@@ -598,15 +666,16 @@ def ingest_feed(feed: dict) -> None:
     _log(f"  {feed['name']}: +{new_entries} entries in {duration:.1f}s [{content_status}]")
 
 
-def _enqueue(feed: dict) -> None:
+def _enqueue(feed: dict, *, quiet_skip: bool = False) -> bool:
     """Called by the scheduler; skips queuing if the feed was fetched recently."""
     # Reload from disk so we see the updated last_fetched_at
     current = get_feed(feed["id"])
     if current is None:
-        return  # feed was deleted
+        return False  # feed was deleted
     if not current.get("domain_enabled", True):
-        _log(f"  Skipping {current['name']} - domain {current.get('domain', '?')} disabled")
-        return
+        if not quiet_skip:
+            _log(f"  Skipping {current['name']} - domain {current.get('domain', '?')} disabled")
+        return False
     last = current.get("last_fetched_at")
     if last:
         try:
@@ -615,64 +684,52 @@ def _enqueue(feed: dict) -> None:
             now = datetime.utcnow()
             if now < next_due:
                 mins = int((next_due - now).total_seconds() / 60)
-                _log(f"  Skipping {current['name']} — next fetch in ~{mins}m")
-                return
+                if not quiet_skip:
+                    _log(f"  Skipping {current['name']} — next fetch in ~{mins}m")
+                return False
         except ValueError:
             pass  # malformed timestamp, fetch anyway
 
     fid = str(current.get("id", ""))
     if not fid:
-        return
+        return False
     with _state_lock:
         if fid == _current_feed_id or fid in _queued_feed_ids:
-            _log(f"  Skipping {current['name']} - already queued/running")
-            return
+            if not quiet_skip:
+                _log(f"  Skipping {current['name']} - already queued/running")
+            return False
         _queued_feed_ids.add(fid)
     _queue.put(current)
+    return True
 
 
-def _enqueue_most_overdue() -> None:
-    """Once-per-minute catch-up: enqueue exactly one most-overdue feed."""
-    # Let existing queued work drain first.
-    if _queue.qsize() > 0:
-        return
-
-    now = datetime.utcnow()
-    winner: dict | None = None
-    winner_overdue_secs: float = -1.0
-
+def _enqueue_due_feeds(reason: str = "watchdog", max_count: int | None = None) -> int:
+    """Queue due feeds, optionally limiting how many are advanced in one pass."""
+    enqueued = 0
     for feed in load_feeds():
         if not feed.get("domain_enabled", True):
             continue
-        last = feed.get("last_fetched_at")
-        if not last:
-            overdue_secs = float("inf")
-        else:
-            try:
-                next_due = datetime.fromisoformat(last) + timedelta(minutes=int(feed.get("update_rate", 60)))
-            except Exception:
-                continue
-            overdue_secs = (now - next_due).total_seconds()
-            if overdue_secs < 0:
-                continue
-
-        if overdue_secs > winner_overdue_secs:
-            winner = feed
-            winner_overdue_secs = overdue_secs
-
-    if winner is None:
-        return
-
-    overdue_mins = "unknown" if winner_overdue_secs == float("inf") else str(int(winner_overdue_secs // 60))
-    _log(f"Catch-up check: enqueueing most overdue feed {winner.get('name', '?')} (overdue ~{overdue_mins}m)")
-    _enqueue(winner)
+        if _enqueue(feed, quiet_skip=True):
+            enqueued += 1
+            if max_count is not None and enqueued >= max_count:
+                break
+    _set_runtime(
+        last_due_scan_at       = _utc_now_iso(),
+        last_due_scan_reason   = reason,
+        last_due_scan_enqueued = enqueued,
+    )
+    return enqueued
 
 
 def _worker() -> None:
     """Single background thread: drains the queue one feed at a time."""
     global _current_feed_id
     while True:
-        feed = _queue.get()
+        _touch_runtime("worker_heartbeat_at", "worker_loop_count")
+        try:
+            feed = _queue.get(timeout=5)
+        except queue.Empty:
+            continue
         fid = str(feed.get("id", ""))
         if fid:
             with _state_lock:
@@ -688,9 +745,38 @@ def _worker() -> None:
             _queue.task_done()
 
 
+def _scheduler_keepalive() -> None:
+    _touch_runtime("scheduler_heartbeat_at", "scheduler_heartbeat_count")
+
+
+def _feed_job_id(feed_id: object) -> str:
+    return f"{_FEED_JOB_PREFIX}{feed_id}"
+
+
+def _watchdog() -> None:
+    """Independent due-scan loop so feed updates are never tied to UI presence."""
+    global _worker_thread
+    while True:
+        _touch_runtime("watchdog_heartbeat_at", "watchdog_loop_count")
+        if _worker_thread is None or not _worker_thread.is_alive():
+            _log("Watchdog: worker thread not alive - restarting it")
+            _worker_thread = threading.Thread(target=_worker, daemon=True, name="ingest-worker")
+            _worker_thread.start()
+        enqueued = _enqueue_due_feeds(reason="watchdog", max_count=1)
+        if enqueued:
+            _log(f"Watchdog: queued {enqueued} due feed(s)")
+        else:
+            _log("Watchdog: nothing to process")
+        wait_seconds = _WATCHDOG_ACTIVE_INTERVAL_SECONDS if enqueued else _WATCHDOG_INTERVAL_SECONDS
+        if _watchdog_stop_event.wait(wait_seconds):
+            break
+
+
 def schedule_feeds() -> None:
     """Rebuild the scheduler job list from the current feed inventory."""
-    scheduler.remove_all_jobs()
+    for job in list(scheduler.get_jobs()):
+        if str(job.id).startswith(_FEED_JOB_PREFIX):
+            scheduler.remove_job(job.id)
     now = datetime.utcnow()
     for feed in load_feeds():
         if not feed.get("domain_enabled", True):
@@ -711,7 +797,7 @@ def schedule_feeds() -> None:
             "interval",
             minutes=feed["update_rate"],
             args=[feed],
-            id=feed["id"],
+            id=_feed_job_id(feed["id"]),
             replace_existing=True,
             next_run_time=next_run,
         )
@@ -740,7 +826,7 @@ def _daily_prune() -> None:
             continue
         n = apply_age_rule(domain)
         if n:
-            _log(f"Daily prune: {domain} — {n} entries removed")
+            _log(f"Daily prune: {domain} - {n} entries removed")
 
 
 def _sentence_chroma_catchup() -> None:
@@ -751,15 +837,26 @@ def _sentence_chroma_catchup() -> None:
         counts = sync_all_domains_pending(batch_size=250, max_batches_per_domain=20)
         for domain, count in counts.items():
             if count:
-                _log(f"Sentence Chroma catchup: {domain} â€” {count} sentence(s) indexed")
+                _log(f"Sentence Chroma catchup: {domain} - {count} sentence(s) indexed")
     except Exception as exc:
         _log(f"Sentence Chroma catchup failed: {type(exc).__name__}: {exc}")
 
 
 def start_scheduler() -> None:
-    # Start the single worker thread
-    t = threading.Thread(target=_worker, daemon=True, name="ingest-worker")
-    t.start()
+    global _worker_thread, _watchdog_thread
+    _watchdog_stop_event.clear()
+    _touch_runtime("worker_heartbeat_at")
+    _touch_runtime("watchdog_heartbeat_at")
+    _touch_runtime("scheduler_heartbeat_at")
+
+    # Start the single worker thread.
+    _worker_thread = threading.Thread(target=_worker, daemon=True, name="ingest-worker")
+    _worker_thread.start()
+
+    # Start an independent watchdog loop so due-feed scans continue even if the UI
+    # is absent and resume-from-sleep does not rely on APScheduler alone.
+    _watchdog_thread = threading.Thread(target=_watchdog, daemon=True, name="ingest-watchdog")
+    _watchdog_thread.start()
 
     # Run startup prune/index catchup in background so uvicorn can respond immediately
     threading.Thread(target=_daily_prune, daemon=True, name="startup-prune").start()
@@ -776,15 +873,6 @@ def start_scheduler() -> None:
         replace_existing=True,
     )
 
-    # Catch up after sleep/wake: check every minute and run one most-overdue feed.
-    scheduler.add_job(
-        _enqueue_most_overdue,
-        "interval",
-        minutes=1,
-        id="overdue_catchup",
-        replace_existing=True,
-    )
-
     scheduler.add_job(
         _sentence_chroma_catchup,
         "interval",
@@ -793,10 +881,43 @@ def start_scheduler() -> None:
         replace_existing=True,
     )
 
+    scheduler.add_job(
+        _scheduler_keepalive,
+        "interval",
+        seconds=_SCHEDULER_KEEPALIVE_SECONDS,
+        id="scheduler_keepalive",
+        replace_existing=True,
+    )
+
     # Enqueue feeds that are due — respects last_fetched_at gate
-    for feed in load_feeds():
-        if not feed.get("domain_enabled", True):
-            continue
-        _enqueue(feed)
+    _enqueue_due_feeds(reason="startup")
 
     scheduler.start()
+
+
+def stop_scheduler() -> None:
+    _watchdog_stop_event.set()
+    if scheduler.running:
+        scheduler.shutdown(wait=False)
+    if _watchdog_thread is not None and _watchdog_thread.is_alive():
+        _watchdog_thread.join(timeout=2)
+
+
+def get_runtime_status() -> dict:
+    with _runtime_lock:
+        runtime = dict(_runtime_state)
+    with _state_lock:
+        current_feed_id   = _current_feed_id
+        queued_feed_count = len(_queued_feed_ids)
+
+    runtime["queue_depth"]                       = _queue.qsize()
+    runtime["queued_feed_count"]                 = queued_feed_count
+    runtime["current_feed_id"]                   = current_feed_id
+    runtime["worker_thread_alive"]               = bool(_worker_thread and _worker_thread.is_alive())
+    runtime["watchdog_thread_alive"]             = bool(_watchdog_thread and _watchdog_thread.is_alive())
+    runtime["scheduler_running"]                 = bool(scheduler.running)
+    runtime["worker_heartbeat_stale_seconds"]    = _age_seconds(runtime.get("worker_heartbeat_at"))
+    runtime["watchdog_heartbeat_stale_seconds"]  = _age_seconds(runtime.get("watchdog_heartbeat_at"))
+    runtime["scheduler_heartbeat_stale_seconds"] = _age_seconds(runtime.get("scheduler_heartbeat_at"))
+    runtime["watchdog_phase"]                    = int(runtime.get("watchdog_loop_count") or 0) % 2
+    return runtime

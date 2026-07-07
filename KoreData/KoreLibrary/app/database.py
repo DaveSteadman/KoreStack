@@ -20,6 +20,14 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
+from KoreCommon.sentence_index import extract_sentence_text as _extract_sentence_text_common
+from KoreCommon.sentence_index import mark_sentences_indexed
+from KoreCommon.sentence_index import normalize_sentence_schema as _normalize_sentence_schema_common
+from KoreCommon.sentence_index import reset_sentence_indexed_at
+from KoreCommon.sentence_index import sentence_index_needs_rebuild as _sentence_index_needs_rebuild_common
+from KoreCommon.sentence_index import sentence_schema_columns
+from KoreCommon.sentence_index import sentence_schema_needs_normalization as _sentence_schema_needs_normalization_common
+from KoreCommon.sentence_index import split_sentences
 from app.config import cfg
 from compress import compress as _compress, decompress as _decompress
 from dbutil import fts_build_query, compute_word_count as _compute_word_count
@@ -34,57 +42,11 @@ _CATALOG_ID_RE = re.compile(r"^[A-Za-z0-9_-]+$")
 # Fields that are checked for completeness (NULL or empty = incomplete)
 COMPLETENESS_FIELDS = ("author", "year", "language", "genre")
 
-_SENTENCE_SCHEMA_COLUMNS = (
-    "id",
-    "book_id",
-    "sentence_index",
-    "source_field",
-    "char_start",
-    "char_end",
-    "chroma_indexed_at",
-    "deleted",
-)
+_SENTENCE_SCHEMA_COLUMNS = sentence_schema_columns("book_id")
 
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
-
-
-def _split_sentences(text: str) -> list[tuple[int, int, str]]:
-    text = str(text or "")
-    if not text:
-        return []
-
-    sentences: list[tuple[int, int, str]] = []
-    start = 0
-    i     = 0
-    n     = len(text)
-
-    while start < n and text[start].isspace():
-        start += 1
-    i = start
-
-    while i < n:
-        if text[i] in ".!?":
-            end = i + 1
-            while end < n and text[end] in "\"')]":
-                end += 1
-            if end == n or text[end].isspace():
-                sentence = text[start:end].strip()
-                if sentence:
-                    sentences.append((start, end, sentence))
-                while end < n and text[end].isspace():
-                    end += 1
-                start = end
-                i     = end
-                continue
-        i += 1
-
-    if start < n:
-        sentence = text[start:].strip()
-        if sentence:
-            sentences.append((start, n, sentence))
-    return sentences
 
 
 def _normalize_catalog_id(catalog: Optional[str]) -> str:
@@ -261,7 +223,7 @@ def _index_book_sentences(
     rows: list[tuple[int, int, str, int, int]] = []
     sentence_index = 0
     for source_field, raw_text in (("title", title), ("body", body)):
-        for char_start, char_end, _sentence_text in _split_sentences(raw_text):
+        for char_start, char_end, _sentence_text in split_sentences(raw_text):
             rows.append((book_id, sentence_index, source_field, char_start, char_end))
             sentence_index += 1
     if rows:
@@ -297,83 +259,28 @@ def _backfill_book_sentences(conn: sqlite3.Connection) -> None:
 
 
 def _sentence_index_needs_rebuild(conn: sqlite3.Connection) -> bool:
-    sentence_cols = {row[1] for row in conn.execute("PRAGMA table_info(sentences)").fetchall()}
-    if "sentence_text" in sentence_cols:
-        row = conn.execute(
-            "SELECT 1 FROM sentences WHERE sentence_text IS NOT NULL AND sentence_text != '' LIMIT 1"
-        ).fetchone()
-        if row:
-            return True
-    return False
+    return _sentence_index_needs_rebuild_common(conn)
 
 
 def _sentence_schema_needs_normalization(conn: sqlite3.Connection) -> bool:
-    current_cols = tuple(row[1] for row in conn.execute("PRAGMA table_info(sentences)").fetchall())
-    if not current_cols:
-        return False
-    return current_cols != _SENTENCE_SCHEMA_COLUMNS
+    return _sentence_schema_needs_normalization_common(conn, _SENTENCE_SCHEMA_COLUMNS)
 
 
 def _normalize_sentence_schema(conn: sqlite3.Connection) -> None:
-    current_cols = tuple(row[1] for row in conn.execute("PRAGMA table_info(sentences)").fetchall())
-    if not current_cols or current_cols == _SENTENCE_SCHEMA_COLUMNS:
-        return
-
-    current_set  = set(current_cols)
-    required_set = set(_SENTENCE_SCHEMA_COLUMNS)
-    compatible   = required_set.issubset(current_set)
-
-    conn.execute("DROP TABLE IF EXISTS sentences_new")
-    conn.execute("""
-        CREATE TABLE sentences_new (
-            id                INTEGER PRIMARY KEY AUTOINCREMENT,
-            book_id           INTEGER NOT NULL,
-            sentence_index    INTEGER NOT NULL,
-            source_field      TEXT NOT NULL,
-            char_start        INTEGER NOT NULL,
-            char_end          INTEGER NOT NULL,
-            chroma_indexed_at TEXT,
-            deleted           INTEGER NOT NULL DEFAULT 0,
-            UNIQUE(book_id, sentence_index)
-        )
-    """)
-
-    if compatible:
-        conn.execute("""
-            INSERT INTO sentences_new
-                (id, book_id, sentence_index, source_field, char_start, char_end, chroma_indexed_at, deleted)
-            SELECT
-                id,
-                book_id,
-                sentence_index,
-                source_field,
-                char_start,
-                char_end,
-                chroma_indexed_at,
-                deleted
-            FROM sentences
-        """)
-
-    conn.execute("DROP TABLE sentences")
-    conn.execute("ALTER TABLE sentences_new RENAME TO sentences")
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_sentences_book_id ON sentences(book_id)")
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_sentences_chroma_indexed_at ON sentences(chroma_indexed_at)")
-
-    if not compatible:
-        _backfill_book_sentences(conn)
+    _normalize_sentence_schema_common(
+        conn,
+        owner_column      = "book_id",
+        expected_cols     = _SENTENCE_SCHEMA_COLUMNS,
+        backfill_callback = _backfill_book_sentences,
+    )
 
 
 def _extract_sentence_text(book_row: sqlite3.Row | dict, sentence_row: sqlite3.Row | dict) -> str:
-    source_field = str(sentence_row["source_field"] or "")
-    if isinstance(book_row, dict):
-        source_value = book_row.get(source_field, "")
-        source_text  = _decompress(source_value) if source_field == "body" else str(source_value or "")
-    else:
-        source_value = book_row[source_field]
-        source_text  = _decompress(source_value) if source_field == "body" else str(source_value or "")
-    char_start = max(0, int(sentence_row["char_start"]))
-    char_end   = max(char_start, int(sentence_row["char_end"]))
-    return source_text[char_start:char_end].strip()
+    return _extract_sentence_text_common(
+        book_row,
+        sentence_row,
+        value_transform = lambda source_field, source_text: _decompress(source_text) if source_field == "body" else source_text,
+    )
 
 
 def _sentence_locator(catalog: str, sentence_id: int) -> str:
@@ -772,14 +679,13 @@ def mark_sentences_chroma_indexed(catalog: str, sentence_ids: list[int]) -> int:
     if not sentence_ids:
         return 0
     catalog_id = _normalize_catalog_id(catalog)
-    validated  = [int(item) for item in sentence_ids]
-    placeholders = ",".join("?" for _ in validated)
     with db_connection(catalog_id, create=True) as conn:
-        cur = conn.execute(
-            f"UPDATE sentences SET chroma_indexed_at = ? WHERE id IN ({placeholders})",
-            [_now(), *validated],
+        return mark_sentences_indexed(
+            conn,
+            sentence_ids   = sentence_ids,
+            indexed_at     = _now(),
+            deleted_filter = False,
         )
-    return int(cur.rowcount or 0)
 
 
 def reset_sentence_chroma_index(catalog: str, book_id: Optional[str | int] = None) -> int:
@@ -788,11 +694,12 @@ def reset_sentence_chroma_index(catalog: str, book_id: Optional[str | int] = Non
     if book_id is not None:
         _, local_id = parse_book_ref(book_id, catalog=catalog_id)
     with db_connection(catalog_id, create=True) as conn:
-        if local_id is None:
-            cur = conn.execute("UPDATE sentences SET chroma_indexed_at = NULL")
-        else:
-            cur = conn.execute("UPDATE sentences SET chroma_indexed_at = NULL WHERE book_id = ?", (local_id,))
-    return int(cur.rowcount or 0)
+        return reset_sentence_indexed_at(
+            conn,
+            owner_column   = "book_id",
+            owner_id       = local_id,
+            deleted_filter = False,
+        )
 
 
 def set_sentence_deleted(catalog: str, sentence_id: int, deleted: bool) -> dict:

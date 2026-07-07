@@ -38,6 +38,10 @@ from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
 
+from KoreCommon.suite_paths import get_suite_datacontrol_dir as _get_suite_datacontrol_dir_common
+from KoreCommon.suite_paths import get_suite_datauser_dir as _get_suite_datauser_dir_common
+from KoreCommon.suite_paths import get_suite_root as _get_suite_root_common
+
 
 # ====================================================================================================
 # MARK: ROOT RESOLUTION
@@ -56,15 +60,7 @@ def get_workspace_root() -> Path:
 @lru_cache(maxsize=1)
 def get_suite_root() -> Path:
     """Return the consolidated suite root when one is configured, else the local repo root."""
-    env_root = os.environ.get("KORE_SUITE_ROOT", "").strip()
-    if env_root:
-        return Path(env_root).resolve()
-
-    workspace_root = get_workspace_root()
-    parent = workspace_root.parent
-    if (parent / "config" / "korestack_config.json").exists():
-        return parent.resolve()
-    return workspace_root
+    return _get_suite_root_common()
 
 
 @lru_cache(maxsize=1)
@@ -250,7 +246,7 @@ def get_controldata_dir() -> Path:
         return overrides["ControlDataFolder"]
     if "DataRootFolder" in overrides:
         return overrides["DataRootFolder"] / "datacontrol"
-    return get_suite_root() / "datacontrol"
+    return _get_suite_datacontrol_dir_common()
 
 
 @lru_cache(maxsize=1)
@@ -261,7 +257,7 @@ def get_user_data_dir() -> Path:
         return overrides["UserDataFolder"]
     if "DataRootFolder" in overrides:
         return overrides["DataRootFolder"] / "datauser"
-    return get_suite_root() / "datauser"
+    return _get_suite_datauser_dir_common()
 
 
 @lru_cache(maxsize=1)

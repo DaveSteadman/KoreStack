@@ -47,7 +47,8 @@ from app.feed_manager import (
     update_domain_age_settings_spec,
     update_feed,
 )
-from app.ingest import schedule_feeds, trigger_immediate
+from app.ingest import get_runtime_status, schedule_feeds, trigger_immediate
+from app.overview import get_feed_overview, invalidate_feed_overview
 
 
 _FEED_UI_ROOT = Path(
@@ -134,17 +135,9 @@ def register_feed_ui(app: FastAPI) -> None:
 
     @app.get("/ui/feeds", response_class=HTMLResponse, include_in_schema=False)
     def web_index(request: Request):
-        db_domains   = set(list_domains())
-        feed_domains = set(list_feed_domains())
-        domains      = [
-            {
-                "domain":      domain,
-                "entry_count": get_entry_count(domain),
-                "enabled":     get_domain_enabled(domain),
-            }
-            for domain in sorted(db_domains | feed_domains)
-        ]
-        all_feeds    = load_feeds()
+        overview     = get_feed_overview()
+        domains      = overview["domains"]
+        all_feeds    = overview["all_feeds"]
         _add_next_mins(all_feeds)
         all_feeds.sort(
             key = lambda feed: (
@@ -152,7 +145,15 @@ def register_feed_ui(app: FastAPI) -> None:
                 feed["_next_mins"] if feed["_next_mins"] is not None else 0,
             )
         )
-        return templates.TemplateResponse(request, "feed_index.html", {"domains": domains, "all_feeds": all_feeds})
+        return templates.TemplateResponse(
+            request,
+            "feed_index.html",
+            {
+                "domains":      domains,
+                "all_feeds":    all_feeds,
+                "feed_runtime": get_runtime_status(),
+            },
+        )
 
     @app.get("/ui/feeds/search", response_class=HTMLResponse, include_in_schema=False)
     def web_search(
@@ -253,12 +254,14 @@ def register_feed_ui(app: FastAPI) -> None:
     def web_create_domain(domain: str = Form(...)):
         create_domain(domain)
         init_db(domain)
+        invalidate_feed_overview()
         return RedirectResponse("/ui/feeds", status_code=303)
 
     @app.post("/ui/feeds/domains/{domain}/delete", include_in_schema=False)
     def web_delete_domain(domain: str):
         delete_domain_feeds(domain)
         delete_domain_db(domain)
+        invalidate_feed_overview()
         schedule_feeds()
         return RedirectResponse("/ui/feeds", status_code=303)
 
@@ -266,6 +269,7 @@ def register_feed_ui(app: FastAPI) -> None:
     def web_rename_domain(domain: str, new_name: str = Form(...)):
         rename_domain_feeds(domain, new_name)
         rename_domain_db(domain, new_name)
+        invalidate_feed_overview()
         schedule_feeds()
         return RedirectResponse("/ui/feeds", status_code=303)
 
@@ -274,6 +278,7 @@ def register_feed_ui(app: FastAPI) -> None:
         is_enabled = str(enabled).strip().lower() in {"1", "true", "yes", "on"}
         if not set_domain_enabled(domain, is_enabled):
             raise HTTPException(status_code=404, detail="Domain not found")
+        invalidate_feed_overview()
         schedule_feeds()
         return JSONResponse({"domain": domain, "enabled": is_enabled})
 
@@ -287,6 +292,7 @@ def register_feed_ui(app: FastAPI) -> None:
     ):
         feed = add_feed(domain, name, url, update_rate, feed_type=feed_type)
         init_db(domain)
+        invalidate_feed_overview()
         schedule_feeds()
         trigger_immediate(feed)
         return RedirectResponse(f"/ui/feeds/{domain}", status_code=303)
@@ -295,6 +301,7 @@ def register_feed_ui(app: FastAPI) -> None:
     def web_delete_feed(domain: str, feed_id: str):
         if not remove_feed(feed_id):
             raise HTTPException(status_code=404, detail="Feed not found")
+        invalidate_feed_overview()
         schedule_feeds()
         return RedirectResponse(f"/ui/feeds/{domain}", status_code=303)
 
@@ -310,6 +317,7 @@ def register_feed_ui(app: FastAPI) -> None:
         updated = update_feed(feed_id, name, url, update_rate, feed_type)
         if updated is None:
             raise HTTPException(status_code=404, detail="Feed not found")
+        invalidate_feed_overview()
         schedule_feeds()
         return RedirectResponse(f"/ui/feeds/{domain}", status_code=303)
 

@@ -161,6 +161,16 @@
 <div id="feed-status-panel" class="panel kcui-panel">
   <div class="panel-header kcui-panel-header">
     FEED STATUS
+    <span id="feed-runtime-badge" class="badge badge-dim" title="Feed ingest watchdog keepalive" style="display:inline-flex; align-items:center; gap:0.45rem; margin-left:0.75rem; font-size:11px;">
+      <span id="feed-runtime-dot" style="display:inline-block; width:8px; height:8px; border-radius:999px; background:var(--amber); box-shadow:0 0 0 1px rgba(255,255,255,0.14);"></span>
+      <span id="feed-runtime-label">
+        {% if feed_runtime and feed_runtime.get("watchdog_thread_alive") %}
+          keepalive live
+        {% else %}
+          keepalive starting
+        {% endif %}
+      </span>
+    </span>
     <span id="feed-count-badge" class="badge badge-dim" style="margin-left:auto;">{{ all_feeds|length }} feed{{ 's' if all_feeds|length != 1 else '' }}</span>
   </div>
   <div class="panel-body kcui-panel-body" style="padding:0; overflow-x:auto;">
@@ -298,11 +308,14 @@ async function confirmDeleteDomain(domain, form) {
 }
 
 (function () {
-  var DELAY = 5000;
+  var DELAY = 2000;
   var timer = null;
   var inflight = false;
   var domainsTbody = document.getElementById('domains-tbody');
   var feedsTbody = document.getElementById('feeds-tbody');
+  var feedRuntimeBadge = document.getElementById('feed-runtime-badge');
+  var feedRuntimeDot = document.getElementById('feed-runtime-dot');
+  var feedRuntimeLabel = document.getElementById('feed-runtime-label');
   var domainCountBadge = document.getElementById('domain-count-badge');
   var feedCountBadge = document.getElementById('feed-count-badge');
 
@@ -359,6 +372,45 @@ async function confirmDeleteDomain(domain, form) {
     var dur = feed.last_duration_s;
     if (dur == null) return when;
     return when + '<span class="meta" title="' + esc(dur) + 's"> (' + esc(dur) + 's)</span>';
+  }
+
+  function updateRuntime(statusPayload) {
+    if (!feedRuntimeBadge || !feedRuntimeDot || !feedRuntimeLabel) return;
+    var runtime = statusPayload && statusPayload.runtime ? statusPayload.runtime : statusPayload;
+    if (!runtime || typeof runtime !== 'object') {
+      feedRuntimeDot.style.background = 'var(--amber)';
+      feedRuntimeLabel.textContent = 'keepalive unknown';
+      return;
+    }
+
+    var watchdogStale = Number(runtime.watchdog_heartbeat_stale_seconds);
+    var schedulerStale = Number(runtime.scheduler_heartbeat_stale_seconds);
+    var workerAlive = !!runtime.worker_thread_alive;
+    var watchdogAlive = !!runtime.watchdog_thread_alive;
+    var schedulerRunning = !!runtime.scheduler_running;
+    var healthy = watchdogAlive && workerAlive && Number.isFinite(watchdogStale) && watchdogStale < 20;
+    var schedulerFresh = schedulerRunning && Number.isFinite(schedulerStale) && schedulerStale < 20;
+    var phase = Number(runtime.watchdog_phase || 0) % 2;
+    var queueDepth = Number(runtime.queue_depth || 0);
+    var currentFeed = runtime.current_feed_id ? ' running' : '';
+
+    if (!healthy) {
+      feedRuntimeDot.style.background = 'var(--red)';
+      feedRuntimeDot.style.transform = 'scale(1)';
+      feedRuntimeLabel.textContent = 'keepalive stale';
+    } else {
+      feedRuntimeDot.style.background = phase === 0 ? 'var(--green)' : 'var(--accent)';
+      feedRuntimeDot.style.transform = phase === 0 ? 'scale(1)' : 'scale(1.18)';
+      feedRuntimeLabel.textContent =
+        'keepalive ' + Math.round(watchdogStale) + 's'
+        + (queueDepth > 0 ? ' q' + queueDepth : '')
+        + currentFeed;
+    }
+
+    feedRuntimeBadge.title =
+      'Watchdog ' + (watchdogAlive ? 'alive' : 'down')
+      + ', worker ' + (workerAlive ? 'alive' : 'down')
+      + ', scheduler ' + (schedulerFresh ? 'fresh' : (schedulerRunning ? 'stale' : 'stopped'));
   }
 
   function renderDomains(domains) {
@@ -421,15 +473,24 @@ async function confirmDeleteDomain(domain, form) {
   }
 
   async function refreshInPlace() {
-    if (inflight || document.visibilityState !== 'visible') return;
+    if (inflight) return;
     inflight = true;
     try {
-      const domainsResp = await fetch('/api/domains', { cache: 'no-store' });
-      const feedsResp = await fetch('/api/feeds', { cache: 'no-store' });
+      const responses = await Promise.all([
+        fetch('/api/domains', { cache: 'no-store' }),
+        fetch('/api/feeds',   { cache: 'no-store' }),
+        fetch('/status',      { cache: 'no-store' }),
+      ]);
+      const domainsResp = responses[0];
+      const feedsResp = responses[1];
+      const statusResp = responses[2];
       if (!domainsResp.ok || !feedsResp.ok) return;
 
       const domains = await domainsResp.json();
       const feeds = await feedsResp.json();
+      if (statusResp.ok) {
+        updateRuntime(await statusResp.json());
+      }
 
       if (domainsTbody) {
         const html = renderDomains(domains);
@@ -450,20 +511,23 @@ async function confirmDeleteDomain(domain, form) {
       // keep current DOM on transient refresh errors
     } finally {
       inflight = false;
-      if (document.visibilityState === 'visible') {
-        timer = setTimeout(refreshInPlace, DELAY);
-      }
+      timer = setTimeout(refreshInPlace, DELAY);
     }
+  }
+
+  function triggerImmediateRefresh() {
+    clearTimeout(timer);
+    refreshInPlace();
   }
 
   document.addEventListener('visibilitychange', function () {
     if (document.visibilityState === 'visible') {
-      clearTimeout(timer);
-      refreshInPlace();
-    } else {
-      clearTimeout(timer);
+      triggerImmediateRefresh();
     }
   });
+  window.addEventListener('focus', triggerImmediateRefresh);
+  window.addEventListener('pageshow', triggerImmediateRefresh);
+  window.addEventListener('online', triggerImmediateRefresh);
 
   timer = setTimeout(refreshInPlace, DELAY);
 }());

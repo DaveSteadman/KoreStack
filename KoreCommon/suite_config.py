@@ -9,8 +9,11 @@ from __future__ import annotations
 
 import json
 import os
-from pathlib import Path
 from typing import Any, Callable
+
+from pathlib import Path
+
+from KoreCommon.suite_paths import get_suite_config_file
 
 
 RawMerger = Callable[[dict[str, Any], dict[str, Any]], None]
@@ -50,7 +53,15 @@ def load_service_config(
       - services.<key>.port -> result['port']
     """
     result = dict(defaults)
-    cfg_path = suite_root / "config" / "korestack_config.json"
+    default_cfg_path = get_suite_config_file()
+    cfg_path         = Path(
+        os.environ.get(
+            "KORE_SUITE_CONFIG",
+            str((suite_root / "config" / "korestack_config.json").resolve()),
+        )
+    ).resolve()
+    if str(default_cfg_path) == str(cfg_path):
+        cfg_path = default_cfg_path
 
     if cfg_path.exists():
         raw = _read_json(cfg_path)

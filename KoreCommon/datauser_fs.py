@@ -6,6 +6,11 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Iterable
 
+from KoreCommon.suite_paths import get_suite_config_file as _get_suite_config_file_common
+from KoreCommon.suite_paths import get_suite_datauser_dir as _get_suite_datauser_dir_common
+from KoreCommon.suite_paths import get_suite_dataroot_dir as _get_suite_dataroot_dir_common
+from KoreCommon.suite_paths import get_suite_root as _get_suite_root_common
+
 
 class DataUserPathError(ValueError):
     """Raised when a caller supplies a path outside the shared datauser tree."""
@@ -30,20 +35,12 @@ def get_workspace_root() -> Path:
 
 @lru_cache(maxsize=1)
 def get_suite_root() -> Path:
-    env_root = os.environ.get("KORE_SUITE_ROOT", "").strip()
-    if env_root:
-        return Path(env_root).resolve()
-
-    workspace_root = get_workspace_root().resolve()
-    parent = workspace_root.parent
-    if (parent / "config" / "korestack_config.json").exists():
-        return parent.resolve()
-    return workspace_root
+    return _get_suite_root_common()
 
 
 @lru_cache(maxsize=1)
 def get_suite_config_file() -> Path:
-    return Path(os.environ.get("KORE_SUITE_CONFIG", str(get_suite_root() / "config" / "korestack_config.json"))).resolve()
+    return _get_suite_config_file_common()
 
 
 @lru_cache(maxsize=1)
@@ -81,6 +78,8 @@ def _load_path_overrides() -> dict[str, Path]:
             candidate = Path(dataroot.strip())
             if not any(part.lower() == "absolutepath" for part in candidate.parts):
                 overrides["DataRootFolder"] = candidate if candidate.is_absolute() else (get_suite_root() / candidate).resolve()
+    if "DataRootFolder" not in overrides:
+        overrides["SuiteDataRootFolder"] = _get_suite_dataroot_dir_common()
 
     return overrides
 
@@ -92,7 +91,9 @@ def get_datauser_root() -> Path:
         return overrides["UserDataFolder"]
     if "DataRootFolder" in overrides:
         return (overrides["DataRootFolder"] / "datauser").resolve()
-    return (get_suite_root() / "datauser").resolve()
+    if "SuiteDataRootFolder" in overrides:
+        return (overrides["SuiteDataRootFolder"] / "datauser").resolve()
+    return _get_suite_datauser_dir_common()
 
 
 def _coerce_root_dir(root_dir: str | Path | None = None) -> Path:

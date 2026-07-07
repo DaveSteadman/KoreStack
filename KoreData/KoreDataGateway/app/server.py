@@ -55,6 +55,19 @@ if _KORECOMMON_PARENT is not None and str(_KORECOMMON_PARENT) not in sys.path:
 
 from KoreCommon.endpoint_manifest import build_endpoint_manifest
 from app.config import cfg
+from app.gateway_feed import get_feed_entry as _gateway_get_feed_entry
+from app.gateway_feed import get_feed_sentence as _gateway_get_feed_sentence
+from app.gateway_library import find_library_book as _gateway_find_library_book
+from app.gateway_library import get_library_book_chunk as _gateway_get_library_book_chunk
+from app.gateway_library import get_library_index as _gateway_get_library_index
+from app.gateway_rag import get_rag_chunk as _gateway_get_rag_chunk
+from app.gateway_reference import get_reference_article as _gateway_get_reference_article
+from app.gateway_reference import get_reference_sentence as _gateway_get_reference_sentence
+from app.gateway_scrape import get_scrape_chunk as _gateway_get_scrape_chunk
+from app.gateway_search import SEMANTIC_SEARCH_DOMAINS as _SEMANTIC_SEARCH_DOMAINS
+from app.gateway_search import parse_artifact_ref as _parse_artifact_ref
+from app.gateway_search import parse_sentence_locator as _parse_sentence_locator
+from app.gateway_search import run_search as _run_search
 from config import get_koredata_dir, get_suite_urls_map
 
 
@@ -734,6 +747,17 @@ _SEMANTIC_SEARCH_DOMAINS = {"feeds", "library", "reference"}
 
 @app.post("/api/search")
 async def api_search(req: _SearchRequest):
+    return await _run_search(
+        req,
+        cfg           = cfg,
+        feed_client   = _feed_client,
+        lib_client    = _lib_client,
+        ref_client    = _ref_client,
+        rag_client    = _rag_client,
+        scrape_client = _scrape_client,
+        graph_client  = _graph_client,
+    )
+
     requested_domains = [d.lower() for d in req.domains] if req.domains else ["feeds", "reference", "library", "rag", "scrape"]
     search_mode       = "semantic" if str(req.mode or "").strip().lower() == "semantic" else "keyword"
     min_match         = max(0.0, min(1.0, float(req.min_match or 0.0)))
@@ -1155,44 +1179,18 @@ async def koredata_get_sentence(locator: str) -> dict:
         return {"error": str(exc)}
 
     if service == "feeds":
-        if _feed_client is None:
-            return {"error": "KoreDataGateway is still starting up — retry in a moment"}
-        r = await _feed_client.get(
-            f"/api/domains/{quote(database, safe='')}/sentences/{sentence_id}",
-            timeout=10.0,
+        return await _gateway_get_feed_sentence(
+            _feed_client,
+            domain      = database,
+            sentence_id = sentence_id,
         )
-        if r.status_code == 404:
-            return {
-                "error": (
-                    f"Sentence not found: locator={locator!r}"
-                )
-            }
-        if r.status_code != 200:
-            return {"error": f"HTTP {r.status_code}"}
-        data = r.json()
-        if isinstance(data, dict) and "locator" not in data:
-            data["locator"] = f"feeds/{database}/{sentence_id}"
-        return data
 
     if service == "reference":
-        if _ref_client is None:
-            return {"error": "KoreDataGateway is still starting up — retry in a moment"}
-        r = await _ref_client.get(
-            f"/api/sentences/{sentence_id}",
-            timeout=10.0,
+        return await _gateway_get_reference_sentence(
+            _ref_client,
+            database    = database,
+            sentence_id = sentence_id,
         )
-        if r.status_code == 404:
-            return {
-                "error": (
-                    f"Sentence not found: locator={locator!r}"
-                )
-            }
-        if r.status_code != 200:
-            return {"error": f"HTTP {r.status_code}"}
-        data = r.json()
-        if isinstance(data, dict) and "locator" not in data:
-            data["locator"] = f"reference/{database}/{sentence_id}"
-        return data
 
     return {"error": f"Unsupported sentence locator service: {service!r}"}
 
@@ -1208,14 +1206,11 @@ async def koredata_get_feed_entry(domain: str, entry_id: int) -> dict:
 
     Returns the full entry including page text, metadata, and publication details.
     """
-    if _feed_client is None:
-        return {"error": "KoreDataGateway is still starting up — retry in a moment"}
-    r = await _feed_client.get(f"/api/domains/{domain}/entries/{entry_id}", timeout=10.0)
-    if r.status_code == 404:
-        return {"error": f"Feed entry not found: domain={domain!r} id={entry_id}"}
-    if r.status_code != 200:
-        return {"error": f"HTTP {r.status_code}"}
-    return r.json()
+    return await _gateway_get_feed_entry(
+        _feed_client,
+        domain   = domain,
+        entry_id = entry_id,
+    )
 
 
 # MARK: KoreReference Routines
@@ -1237,14 +1232,10 @@ async def koredata_get_reference_article(title: str) -> dict:
     Use this tool when you have a specific article title. For keyword searches across the
     reference collection, use koredata_search(domains=["reference"]) instead.
     """
-    if _ref_client is None:
-        return {"error": "KoreDataGateway is still starting up — retry in a moment"}
-    r = await _ref_client.get(f"/articles/{quote(title, safe='')}", timeout=10.0)
-    if r.status_code == 404:
-        return {"error": f"Reference article not found: {title!r}"}
-    if r.status_code != 200:
-        return {"error": f"HTTP {r.status_code}"}
-    return r.json()
+    return await _gateway_get_reference_article(
+        _ref_client,
+        title = title,
+    )
 
 
 # MARK: KoreLibrary Routines
@@ -1263,39 +1254,11 @@ async def koredata_find_library_book(title: str) -> dict:
         matches — list ordered best-match first, each with book_id, title, author,
                   year, genre, word_count, chunks.
     """
-    if _lib_client is None:
-        return {"error": "KoreDataGateway is still starting up — retry in a moment"}
-    r = await _lib_client.get("/search", params={"title": title, "limit": 20}, timeout=10.0)
-    if r.status_code != 200:
-        return {"error": f"HTTP {r.status_code}"}
-    books = r.json()
-    if not isinstance(books, list):
-        books = books.get("value", [])
-
-    # Rank: exact match > starts-with > contains (all case-insensitive).
-    q_lower = title.lower()
-    def _rank(b):
-        t = (b.get("title") or "").lower()
-        if t == q_lower:           return 0
-        if t.startswith(q_lower):  return 1
-        return 2
-    books.sort(key=_rank)
-
-    return {
-        "count": len(books),
-        "matches": [
-            {
-                "book_id":    b.get("route_id") or f"{b.get('catalog')}:{b.get('id')}",
-                "title":      b.get("title"),
-                "author":     b.get("author"),
-                "year":       b.get("year"),
-                "genre":      b.get("genre"),
-                "word_count": b.get("word_count"),
-                "chunks":     math.ceil((b.get("word_count") or 0) * 5 / _CHUNK_SIZE) or None,
-            }
-            for b in books
-        ],
-    }
+    return await _gateway_find_library_book(
+        _lib_client,
+        title      = title,
+        chunk_size = _CHUNK_SIZE,
+    )
 
 
 @_mcp.tool()
@@ -1306,29 +1269,10 @@ async def koredata_get_library_index() -> dict:
     Call this once to choose a book, then call koredata_get_library_book_chunk to read it.
     Chunk count is calculated from word_count (≈5 chars/word ÷ _CHUNK_SIZE chars/chunk).
     """
-    if _lib_client is None:
-        return {"error": "KoreDataGateway is still starting up — retry in a moment"}
-    r = await _lib_client.get("/books", params={"limit": 200, "offset": 0}, timeout=15.0)
-    if r.status_code != 200:
-        return {"error": f"HTTP {r.status_code}"}
-    data  = r.json()
-    books = data if isinstance(data, list) else data.get("value", [])
-    return {
-        "count": len(books),
-        "books": [
-            {
-                "book_id":      b.get("route_id") or f"local:{b.get('id')}",
-                "title":        b.get("title"),
-                "author":       b.get("author"),
-                "year":         b.get("year"),
-                "catalog":      b.get("catalog"),
-                "genre":        b.get("genre"),
-                "word_count":   b.get("word_count"),
-                "chunks":       math.ceil((b.get("word_count") or 0) * 5 / _CHUNK_SIZE) or None,
-            }
-            for b in books
-        ],
-    }
+    return await _gateway_get_library_index(
+        _lib_client,
+        chunk_size = _CHUNK_SIZE,
+    )
 
 
 @_mcp.tool()
@@ -1356,30 +1300,12 @@ async def koredata_get_library_book_chunk(
         total_chars        — full body length in characters
         has_more           — true if there is more content after this chunk
     """
-    if _lib_client is None:
-        return {"error": "KoreDataGateway is still starting up — retry in a moment"}
-    length_chars = max(100, min(length_chars, 16000))
-    offset_chars = max(0, offset_chars)
-    r = await _lib_client.get(
-        f"/books/{book_id}/chunk",
-        params={"offset": offset_chars, "length": length_chars},
-        timeout=15.0,
+    return await _gateway_get_library_book_chunk(
+        _lib_client,
+        book_id      = book_id,
+        offset_chars = offset_chars,
+        length_chars = length_chars,
     )
-    if r.status_code == 404:
-        return {"error": f"Library book not found: id={book_id}"}
-    if r.status_code != 200:
-        return {"error": f"HTTP {r.status_code}"}
-    data = r.json()
-    # Strip repeating book metadata from non-first chunks to reduce context noise.
-    if offset_chars > 0:
-        return {
-            "chunk":        data.get("chunk"),
-            "offset_chars": data.get("offset_chars"),
-            "next_offset":  data.get("next_offset"),
-            "total_chars":  data.get("total_chars"),
-            "has_more":     data.get("has_more"),
-        }
-    return data
 
 
 # MARK: KoreRAG Routines
@@ -1392,28 +1318,20 @@ async def koredata_get_rag_chunk(chunk_id: int) -> dict:
 
     Returns the full chunk including decompressed content, title, source, and tags.
     """
-    if _rag_client is None:
-        return {"error": "KoreDataGateway is still starting up — retry in a moment"}
-    r = await _rag_client.get(f"/chunks/{chunk_id}", timeout=10.0)
-    if r.status_code == 404:
-        return {"error": f"RAG chunk not found: id={chunk_id}"}
-    if r.status_code != 200:
-        return {"error": f"HTTP {r.status_code}"}
-    return r.json()
+    return await _gateway_get_rag_chunk(
+        _rag_client,
+        chunk_id = chunk_id,
+    )
 
 
 # MARK: KoreScrape Routines
 @_mcp.tool()
 async def koredata_get_scrape_chunk(chunk_id: int) -> dict:
     """Fetch the full content of a KoreScrape extracted text chunk."""
-    if _scrape_client is None:
-        return {"error": "KoreDataGateway is still starting up — retry in a moment"}
-    r = await _scrape_client.get(f"/chunks/{chunk_id}", timeout=10.0)
-    if r.status_code == 404:
-        return {"error": f"Scrape chunk not found: id={chunk_id}"}
-    if r.status_code != 200:
-        return {"error": f"HTTP {r.status_code}"}
-    return r.json()
+    return await _gateway_get_scrape_chunk(
+        _scrape_client,
+        chunk_id = chunk_id,
+    )
 
 
 @_mcp.tool()
