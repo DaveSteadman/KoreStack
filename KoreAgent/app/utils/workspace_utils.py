@@ -34,9 +34,14 @@
 # ====================================================================================================
 import json
 import os
+import sys
 from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
+
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
 
 from KoreCommon.suite_paths import get_suite_datacontrol_dir as _get_suite_datacontrol_dir_common
 from KoreCommon.suite_paths import get_suite_datauser_dir as _get_suite_datauser_dir_common
