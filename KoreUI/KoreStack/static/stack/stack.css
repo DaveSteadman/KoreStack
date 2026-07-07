@@ -278,50 +278,13 @@ a { color: inherit; }
   justify-content: flex-end;
 }
 
-.service-actions button {
-  --service-action-color: var(--stack-ink);
-  width: 24px;
-  height: 24px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid color-mix(in srgb, var(--service-action-color) 55%, transparent);
-  border-radius: 2px;
-  padding: 0;
-  background: color-mix(in srgb, var(--service-action-color) 10%, var(--stack-bg));
-  color: var(--service-action-color);
-  cursor: pointer;
-  font: inherit;
-  font-size: 11px;
-  transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease, transform 120ms ease;
-}
-
-.service-actions button:hover {
-  background: color-mix(in srgb, var(--service-action-color) 18%, var(--stack-bg));
-  border-color: color-mix(in srgb, var(--service-action-color) 75%, transparent);
-  transform: translateY(-1px);
-}
-
-.service-actions button:focus-visible {
-  outline: 1px solid color-mix(in srgb, var(--service-action-color) 80%, white 20%);
-  outline-offset: 1px;
-}
-
-.service-actions button:disabled {
-  opacity: 0.52;
-  cursor: default;
-  transform: none;
-}
-
-.service-actions button svg {
-  width: 13px;
-  height: 13px;
+.service-actions button .kcui-icon {
   display: block;
 }
 
-.service-action--start   { --service-action-color: var(--stack-action-start);   }
-.service-action--stop    { --service-action-color: var(--stack-action-stop);    }
-.service-action--restart { --service-action-color: var(--stack-action-restart); }
+.service-action--start   { --kcui-icon-button-color: var(--stack-action-start);   }
+.service-action--stop    { --kcui-icon-button-color: var(--stack-action-stop);    }
+.service-action--restart { --kcui-icon-button-color: var(--stack-action-restart); }
 
 .footer-body {
   display: flex;

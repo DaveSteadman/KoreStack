@@ -58,7 +58,7 @@
   resize: vertical;
 }
 
-.kcui-shell-bg button:not(.kcui-tag),
+.kcui-shell-bg button:not(.kcui-tag):not(.kcui-icon-button),
 .kcui-shell-bg .btn,
 .kcui-btn {
   padding: 0.4rem 1rem;
@@ -86,6 +86,59 @@ a.kcui-btn {
 .kcui-shell-bg .btn:hover,
 .kcui-btn:hover {
   background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+.kcui-shell-bg button.kcui-icon-button,
+.kcui-icon-button,
+.kcui-btn-icon {
+  --kcui-icon-button-color: var(--accent);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  min-height: 24px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid currentColor;
+  border-radius: 2px;
+  background: transparent;
+  color: var(--kcui-icon-button-color);
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  white-space: nowrap;
+  font: inherit;
+  line-height: 1;
+  text-decoration: none;
+  transition: color .12s, background .12s, border-color .12s;
+}
+
+.kcui-shell-bg button.kcui-icon-button:hover,
+.kcui-icon-button:hover,
+.kcui-btn-icon:hover {
+  background: color-mix(in srgb, currentColor 10%, transparent);
+}
+
+.kcui-shell-bg button.kcui-icon-button:focus-visible,
+.kcui-icon-button:focus-visible,
+.kcui-btn-icon:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+.kcui-shell-bg button.kcui-icon-button:active,
+.kcui-icon-button:active,
+.kcui-btn-icon:active {
+  background: color-mix(in srgb, currentColor 18%, transparent);
+}
+
+.kcui-shell-bg button.kcui-icon-button:disabled,
+.kcui-icon-button:disabled,
+.kcui-btn-icon:disabled {
+  opacity: 0.52;
+  cursor: default;
 }
 
 .kcui-shell-bg .btn-danger,
@@ -227,10 +280,14 @@ a.kcui-btn {
   border-left: 1px solid var(--border);
 }
 
-.kcui-shell-bg .kcui-stepper-btns button,
-.kcui-shell-bg .stepper-btns button,
-.kcui-stepper-btns button,
-.stepper-btns button {
+.kcui-shell-bg .kcui-num-stepper .kcui-stepper-btns button,
+.kcui-shell-bg .kcui-num-stepper .stepper-btns button,
+.kcui-shell-bg .num-stepper .kcui-stepper-btns button,
+.kcui-shell-bg .num-stepper .stepper-btns button,
+.kcui-num-stepper .kcui-stepper-btns button,
+.kcui-num-stepper .stepper-btns button,
+.num-stepper .kcui-stepper-btns button,
+.num-stepper .stepper-btns button {
   flex: 0 0 20px;
   width: 20px;
   min-width: 0;
@@ -240,7 +297,7 @@ a.kcui-btn {
   border-radius: 0;
   background: transparent;
   color: var(--kcui-stepper-button-color, var(--text-dim));
-  font-size: var(--kcui-text-micro);
+  font-size: var(--kcui-text-body-sm);
   line-height: 1;
   letter-spacing: 0;
   text-transform: none;
@@ -249,17 +306,25 @@ a.kcui-btn {
   justify-content: center;
 }
 
-.kcui-shell-bg .kcui-stepper-btns button:first-child,
-.kcui-shell-bg .stepper-btns button:first-child,
-.kcui-stepper-btns button:first-child,
-.stepper-btns button:first-child {
+.kcui-shell-bg .kcui-num-stepper .kcui-stepper-btns button:first-child,
+.kcui-shell-bg .kcui-num-stepper .stepper-btns button:first-child,
+.kcui-shell-bg .num-stepper .kcui-stepper-btns button:first-child,
+.kcui-shell-bg .num-stepper .stepper-btns button:first-child,
+.kcui-num-stepper .kcui-stepper-btns button:first-child,
+.kcui-num-stepper .stepper-btns button:first-child,
+.num-stepper .kcui-stepper-btns button:first-child,
+.num-stepper .stepper-btns button:first-child {
   border-right: 1px solid var(--border);
 }
 
-.kcui-shell-bg .kcui-stepper-btns button:hover,
-.kcui-shell-bg .stepper-btns button:hover,
-.kcui-stepper-btns button:hover,
-.stepper-btns button:hover {
+.kcui-shell-bg .kcui-num-stepper .kcui-stepper-btns button:hover,
+.kcui-shell-bg .kcui-num-stepper .stepper-btns button:hover,
+.kcui-shell-bg .num-stepper .kcui-stepper-btns button:hover,
+.kcui-shell-bg .num-stepper .stepper-btns button:hover,
+.kcui-num-stepper .kcui-stepper-btns button:hover,
+.kcui-num-stepper .stepper-btns button:hover,
+.num-stepper .kcui-stepper-btns button:hover,
+.num-stepper .stepper-btns button:hover {
   background: var(--kcui-stepper-button-hover-bg, color-mix(in srgb, var(--accent) 15%, transparent));
   color: var(--kcui-stepper-button-hover-color, var(--accent));
 }

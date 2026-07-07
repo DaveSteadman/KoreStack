@@ -16,6 +16,7 @@ const STATE_COLOR = {
 };
 
 const SERVICES_PANEL_ICON_SIZE = 39;
+const SERVICE_ACTION_ICON_SIZE = 13;
 
 function readBootstrap() {
   const node = document.getElementById('stack-bootstrap');
@@ -72,6 +73,15 @@ function initServicePanelIcons() {
     if (!serviceKey || !glyph) continue;
     const iconHtml = chromeApi.resolveIcon(chromeApi.SUITE_ICONS, serviceKey, SERVICES_PANEL_ICON_SIZE);
     if (iconHtml) glyph.innerHTML = iconHtml;
+  }
+}
+
+function initServiceActionIcons() {
+  if (!chromeApi?.resolveIcon || !chromeApi?.ACTION_ICONS) return;
+  for (const iconNode of document.querySelectorAll('[data-action-icon]')) {
+    const action = iconNode.dataset.actionIcon;
+    const iconHtml = chromeApi.resolveIcon(chromeApi.ACTION_ICONS, action, SERVICE_ACTION_ICON_SIZE);
+    if (iconHtml) iconNode.innerHTML = iconHtml;
   }
 }
 
@@ -200,9 +210,11 @@ async function initChrome() {
       chips: bootstrap.chips || [],
     });
     initServicePanelIcons();
+    initServiceActionIcons();
     window._refreshTopbar = (urls) => {
       chromeApi.initTopbar({ currentService: 'korestack', urls });
       initServicePanelIcons();
+      initServiceActionIcons();
     };
   } catch (_error) {
     console.warn('[KoreStack] Shared UI shell could not be loaded. Falling back to local landing-page styling.', _error);

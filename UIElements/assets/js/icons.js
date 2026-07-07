@@ -57,6 +57,12 @@ export const KORECODE_ICON = makePackIcon(ICON_FILES.korecode);
 export const KORECOMMS_ICON = makePackIcon(ICON_FILES.korecomms);
 export const KORECHAT_ICON = makePackIcon(ICON_FILES.korechat);
 
+export const ACTION_ICONS = {
+  start: makePackIcon('arrow-right-svgrepo-com'),
+  stop: makePackIcon('circle-xmark-svgrepo-com'),
+  restart: makePackIcon('refresh-cw-alt-svgrepo-com'),
+};
+
 export const KOREDOC_FILE_ICON = makePackIcon(ICON_FILES.koredoc);
 export const TEXTEDIT_FILE_ICON = makePackIcon(ICON_FILES.textedit);
 export const KORESHEET_FILE_ICON = makePackIcon(ICON_FILES.koresheet);
