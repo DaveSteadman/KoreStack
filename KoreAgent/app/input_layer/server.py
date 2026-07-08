@@ -100,8 +100,12 @@ from datasets import hydrate_session_state
 from input_layer.korechat_proxy_routes import register_korechat_proxy_routes
 from scratchpad import get_store as get_scratch_store
 from tool_selection_state import clear_session_tools_active
+from tool_selection_state import ALWAYS_ON_TOOL_NAMES
+from tool_selection_state import get_selected_tools
 from scratchpad import scratch_clear
 from scratchpad import scratch_save as scratch_restore_key
+from skill_executor import build_catalog_gates
+from skill_executor import execute_tool_call
 from input_layer.server_static import register_static_routes
 from input_layer.session_service import SessionService
 from input_layer.routes_logs import register_log_routes
@@ -119,6 +123,7 @@ from utils.workspace_utils import get_logs_dir
 from utils.workspace_utils import get_test_prompts_dir
 from utils.suite_version import SUITE_VERSION
 import koreconv_client as _kc_client
+import mcp_client
 
 
 # ====================================================================================================
@@ -145,6 +150,7 @@ _UI_ELEMENTS_ASSETS  = Path(
         str(Path(__file__).resolve().parents[3] / "UIElements" / "assets"),
     )
 ).resolve()
+_WORKSPACE_ROOT      = Path(__file__).resolve().parents[3]
 _COMPACT_FILL_PCT    = 0.65  # compact when prompt-token fill reaches this fraction of num_ctx
 _QUEUE_PREVIEW_LIMIT = 10
 _LOG_POLL_SECS       = 1.0      # how often the log-tail SSE generator checks for new lines
@@ -487,6 +493,198 @@ def settings_llmdirect_post(enabled: bool):
     """Set the LLM Direct mode state."""
     set_llm_direct_enabled(enabled)
     return {"llmdirect": get_llm_direct_enabled()}
+
+
+# ====================================================================================================
+# MARK: SKILLS CATALOG ENDPOINTS
+# ====================================================================================================
+
+class SkillInvokeRequest(BaseModel):
+    tool_name: str
+    arguments: dict[str, Any] = {}
+
+
+def _get_skills_payload_or_raise() -> dict[str, Any]:
+    if _config is None:
+        raise HTTPException(status_code=503, detail="KoreAgent config is not initialized")
+    payload = _config.skills_payload if isinstance(_config.skills_payload, dict) else {}
+    if not payload:
+        raise HTTPException(status_code=503, detail="Skills payload is unavailable")
+    return payload
+
+
+def _safe_read_workspace_file(path_text: str) -> tuple[str, str] | tuple[None, None]:
+    candidate_text = str(path_text or "").strip()
+    if not candidate_text:
+        return None, None
+    normalized = candidate_text.replace("\\", "/")
+    if normalized.startswith("KoreStack/"):
+        normalized = normalized.split("/", 1)[1]
+    full_path = (_WORKSPACE_ROOT / normalized).resolve()
+    if full_path != _WORKSPACE_ROOT and _WORKSPACE_ROOT not in full_path.parents:
+        return None, None
+    if not full_path.exists() or not full_path.is_file():
+        return None, None
+    return normalized, full_path.read_text(encoding="utf-8", errors="replace")
+
+
+def _json_safe(value: Any) -> Any:
+    return json.loads(json.dumps(value, default=str))
+
+
+@app.get("/api/skills/catalog")
+def skills_catalog_get() -> dict[str, Any]:
+    payload = _get_skills_payload_or_raise()
+
+    selected = set(get_selected_tools()) | set(ALWAYS_ON_TOOL_NAMES)
+    mcp_defs = mcp_client.get_mcp_tool_definitions()
+    mcp_idx = mcp_client.get_mcp_tool_index()
+
+    providers: dict[str, dict[str, Any]] = {}
+    entries: list[dict[str, Any]] = []
+
+    def _ensure_provider(key: str, label: str, provider_type: str) -> None:
+        if key in providers:
+            return
+        providers[key] = {
+            "key": key,
+            "label": label,
+            "type": provider_type,
+            "count": 0,
+        }
+
+    for skill in payload.get("skills", []):
+        is_system = bool(skill.get("is_system_skill"))
+        provider_key = "local-system" if is_system else "local-user"
+        provider_label = "KoreAgent System Skills" if is_system else "KoreAgent Skills"
+        _ensure_provider(provider_key, provider_label, "local")
+
+        module_path = str(skill.get("module") or "").strip()
+        md_path = str(skill.get("relative_path") or "").strip()
+        skill_name = str(skill.get("skill_name") or "").strip()
+        purpose = str(skill.get("purpose") or "").strip()
+        function_sigs = skill.get("functions") or []
+
+        for function_sig in function_sigs:
+            tool_name = str(function_sig).split("(", 1)[0].strip()
+            if not tool_name:
+                continue
+            entry = {
+                "tool_name": tool_name,
+                "function_signature": str(function_sig),
+                "skill_name": skill_name,
+                "purpose": purpose,
+                "origin": skill.get("origin", "local"),
+                "provider_key": provider_key,
+                "provider_label": provider_label,
+                "provider_type": "local",
+                "active": tool_name in selected,
+                "module_path": module_path,
+                "skill_md_path": md_path,
+                "call_type": "python" if module_path else "metadata",
+            }
+            entries.append(entry)
+            providers[provider_key]["count"] += 1
+
+    for tool_def in mcp_defs:
+        fn = tool_def.get("function", {}) if isinstance(tool_def, dict) else {}
+        tool_name = str(fn.get("name") or "").strip()
+        if not tool_name:
+            continue
+        meta = mcp_idx.get(tool_name, {}) if isinstance(mcp_idx.get(tool_name, {}), dict) else {}
+        provider_label = str(meta.get("connection") or meta.get("server") or meta.get("url") or "MCP")
+        provider_key = f"mcp:{provider_label}"
+        _ensure_provider(provider_key, provider_label, "mcp")
+
+        entry = {
+            "tool_name": tool_name,
+            "function_signature": f"{tool_name}(...)",
+            "skill_name": provider_label,
+            "purpose": str(fn.get("description") or meta.get("purpose") or ""),
+            "origin": "mcp",
+            "provider_key": provider_key,
+            "provider_label": provider_label,
+            "provider_type": "mcp",
+            "active": tool_name in selected,
+            "module_path": "",
+            "skill_md_path": "",
+            "call_type": "mcp",
+        }
+        entries.append(entry)
+        providers[provider_key]["count"] += 1
+
+    entries.sort(key=lambda item: (item.get("provider_label", ""), item.get("tool_name", "")))
+    provider_rows = sorted(providers.values(), key=lambda item: item.get("label", ""))
+
+    return {
+        "providers": provider_rows,
+        "entries": entries,
+        "stats": {
+            "provider_count": len(provider_rows),
+            "entry_count": len(entries),
+            "active_count": sum(1 for item in entries if item.get("active")),
+        },
+    }
+
+
+@app.get("/api/skills/source")
+def skills_source_get(tool_name: str, source_kind: str = "module") -> dict[str, Any]:
+    payload = _get_skills_payload_or_raise()
+    wanted_tool = str(tool_name or "").strip()
+    kind = str(source_kind or "module").strip().lower()
+    if kind not in {"module", "skill_md"}:
+        raise HTTPException(status_code=400, detail="source_kind must be 'module' or 'skill_md'")
+
+    for skill in payload.get("skills", []):
+        function_sigs = skill.get("functions") or []
+        if not any(str(sig).split("(", 1)[0].strip() == wanted_tool for sig in function_sigs):
+            continue
+        path_text = str(skill.get("module") if kind == "module" else skill.get("relative_path") or "").strip()
+        rel_path, content = _safe_read_workspace_file(path_text)
+        if rel_path is None:
+            raise HTTPException(status_code=404, detail=f"No readable {kind} source available for tool '{wanted_tool}'")
+        return {
+            "tool_name": wanted_tool,
+            "source_kind": kind,
+            "path": rel_path,
+            "content": content,
+        }
+
+    raise HTTPException(status_code=404, detail=f"Tool '{wanted_tool}' not found in local skills payload")
+
+
+@app.post("/api/skills/invoke")
+def skills_invoke_post(body: SkillInvokeRequest) -> dict[str, Any]:
+    payload = _get_skills_payload_or_raise()
+    tool_name = str(body.tool_name or "").strip()
+    if not tool_name:
+        raise HTTPException(status_code=400, detail="tool_name is required")
+
+    arguments = body.arguments if isinstance(body.arguments, dict) else {}
+    catalog_gates = build_catalog_gates(payload)
+    active_all = set(catalog_gates.keys()) | set(mcp_client.get_mcp_tool_index().keys()) | set(ALWAYS_ON_TOOL_NAMES)
+
+    try:
+        output = execute_tool_call(
+            tool_name=tool_name,
+            arguments=arguments,
+            skills_payload=payload,
+            user_prompt="",
+            catalog_gates=catalog_gates,
+            active_tool_names=active_all,
+        )
+        result_payload = output.to_dict() if hasattr(output, "to_dict") else dict(output)
+        return {
+            "ok": True,
+            "tool_name": tool_name,
+            "output": _json_safe(result_payload),
+        }
+    except Exception as exc:
+        return {
+            "ok": False,
+            "tool_name": tool_name,
+            "error": f"{exc.__class__.__name__}: {exc}",
+        }
 
 
 # ====================================================================================================

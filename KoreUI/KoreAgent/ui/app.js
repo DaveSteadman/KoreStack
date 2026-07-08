@@ -1375,6 +1375,9 @@ function init() {
     $("webskills-btn")?.addEventListener("click", toggleWebSkills);
     $("direct-btn")?.addEventListener("click", toggleDirect);
     $("wrap-btn-chat")?.addEventListener("click", () => { toggleWrap("chat-body", "wrap-btn-chat"); });
+    $("btn-skills-catalog")?.addEventListener("click", () => {
+        window.location.href = "/skills-catalog";
+    });
     $("btn-reset-layout")?.addEventListener("click", resetLayout);
 
     // Restore any in-progress draft from before the user navigated away.

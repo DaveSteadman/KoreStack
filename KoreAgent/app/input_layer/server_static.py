@@ -12,6 +12,7 @@ from __future__ import annotations
 # ====================================================================================================
 
 import os
+import json
 from pathlib import Path
 from typing import Callable
 
@@ -20,6 +21,7 @@ from fastapi.responses import FileResponse
 from fastapi.responses import HTMLResponse
 from fastapi.responses import RedirectResponse
 from fastapi.responses import Response
+from KoreCommon.suite_paths import get_suite_urls_map
 
 
 def register_static_routes(
@@ -36,9 +38,16 @@ def register_static_routes(
             return {"error": "Web UI not found"}
         return FileResponse(str(index), headers={"Cache-Control": "no-store"})
 
+    @app.get("/skills-catalog", include_in_schema=False)
+    def serve_skills_catalog():
+        page = web_dir / "skills_catalog.html"
+        if not page.exists():
+            return {"error": "Skills Catalog UI not found"}
+        return FileResponse(str(page), headers={"Cache-Control": "no-store"})
+
     @app.get("/suite-config.js", include_in_schema=False)
     def suite_config_js():
-        urls = os.environ.get("KORE_SUITE_URLS", "{}")
+        urls = json.dumps(get_suite_urls_map())
         return Response(
             content    = f"window.__koreSuiteUrls = {urls};",
             media_type = "application/javascript",
@@ -52,6 +61,15 @@ def register_static_routes(
     @app.get("/static/style.css", include_in_schema=False)
     def serve_style_css():
         return FileResponse(str(web_dir / "style.css"), headers={"Cache-Control": "no-store"})
+
+    @app.get("/static/{asset_path:path}", include_in_schema=False)
+    def serve_static_asset(asset_path: str):
+        candidate = (web_dir / asset_path).resolve()
+        if candidate != web_dir and web_dir not in candidate.parents:
+            raise HTTPException(status_code=404, detail="Asset not found")
+        if not candidate.exists() or not candidate.is_file():
+            raise HTTPException(status_code=404, detail="Asset not found")
+        return FileResponse(str(candidate), headers={"Cache-Control": "no-store"})
 
     @app.get("/ui-elements/assets/{asset_path:path}", include_in_schema=False)
     def serve_ui_elements_asset(asset_path: str):

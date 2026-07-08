@@ -197,6 +197,13 @@ body.splitter-drag-h { user-select: none; cursor: row-resize; }
 #webskills-btn.webskills-on  { border-color: #1a7a8a; color: #40d0e8; background: rgba(20, 160, 190, 0.15); }
 #webskills-btn.webskills-off { border-color: #444;    color: #666;    background: transparent; }
 #direct-btn.direct-on  { border-color: #7a4a8a; color: #c080e0; background: rgba(140, 60, 180, 0.18); }
+.kcui-tag--skills-catalog {
+    border-color: #EAAA00;
+    color: #EAAA00;
+}
+.kcui-tag--skills-catalog:hover {
+    background: rgba(234, 170, 0, 0.15);
+}
 #wrap-btn-chat.is-on {
     color: var(--yellow); border-color: var(--yellow);
     background: rgba(240, 192, 96, 0.12);

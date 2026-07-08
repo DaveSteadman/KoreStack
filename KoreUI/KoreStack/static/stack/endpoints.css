@@ -186,6 +186,39 @@
   resize: vertical;
 }
 
+.runner-template {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.runner-template-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--dim, #8a93a4);
+  font-size: 12px;
+}
+
+.runner-template-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.template-body {
+  margin: 0;
+  border: 1px solid var(--border, #2f3541);
+  background: rgba(10, 12, 18, 0.72);
+  padding: 10px 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  min-height: 88px;
+  max-height: 220px;
+  overflow: auto;
+}
+
 .endpoint-body--runner {
   display: flex;
   flex-direction: column;

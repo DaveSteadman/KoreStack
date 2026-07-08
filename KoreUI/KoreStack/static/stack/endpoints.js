@@ -1,3 +1,5 @@
+import { createTemplateCatalog, templateForRoute } from './endpoints.templates.js';
+
 const SHELL_MODULE_URL = '/ui-elements/assets/js/chrome.js';
 
 function readBootstrap() {
@@ -14,6 +16,9 @@ const bootstrap = readBootstrap();
 let catalog = bootstrap.catalog || { services: [], stats: {} };
 let chromeApi = null;
 let selected = null;
+let templateCatalog = createTemplateCatalog(catalog);
+let selectedTemplateBody = '';
+let selectedTemplateText = '';
 
 function escHtml(value) {
   return String(value ?? '')
@@ -172,13 +177,26 @@ function renderParamHints(route) {
   $('param-hints').innerHTML = parts.join(' | ') || 'No declared parameters.';
 }
 
-function defaultBody(route) {
-  if (!route.body_params.length) return '';
-  const body = {};
-  for (const param of route.body_params) {
-    body[param.name] = param.default ?? '';
+function buildBodyTemplate(service, route) {
+  return templateForRoute(templateCatalog, service, route);
+}
+
+function renderBodyTemplate(template) {
+  selectedTemplateBody = template.bodyText || '';
+  selectedTemplateText = template.templateText || template.bodyText || '';
+  $('template-body').textContent = selectedTemplateText || 'No body template for this endpoint.';
+  $('template-meta').textContent = template.summary || 'No body parameters declared for this endpoint.';
+  $('template-reset').disabled = !selectedTemplateBody;
+}
+
+function withQueryParams(url, params) {
+  if (!params || typeof params !== 'object') return url;
+  const next = new URL(url, window.location.origin);
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value === null || value === '') continue;
+    next.searchParams.set(key, String(value));
   }
-  return JSON.stringify(body, null, 2);
+  return next.toString();
 }
 
 function selectRoute(service, route) {
@@ -189,19 +207,44 @@ function selectRoute(service, route) {
   };
   setMethodOptions(route.methods.length ? route.methods : ['GET']);
   $('request-method').value = route.methods[0] || 'GET';
-  $('request-url').value = routeUrl(service, route);
-  $('request-open').href = routeUrl(service, route);
+  const template = buildBodyTemplate(service, route);
+  const resolvedUrl = withQueryParams(routeUrl(service, route), template.queryParams);
+  $('request-url').value = resolvedUrl;
+  $('request-open').href = resolvedUrl;
   $('request-content-type').value = route.body_params.length ? 'application/json' : 'text/plain';
-  $('request-body').value = defaultBody(route);
+  $('request-body').value = template.bodyText;
+  renderBodyTemplate(template);
   $('selection-summary').textContent = `${service.label} ${route.methods.join(', ')} ${route.path}`;
   renderParamHints(route);
   renderCatalog();
+}
+
+async function copyTemplateToClipboard() {
+  if (!selectedTemplateText) return;
+  try {
+    await navigator.clipboard.writeText(selectedTemplateText);
+    $('template-meta').textContent = 'Template copied to clipboard.';
+  } catch (_error) {
+    $('template-meta').textContent = 'Copy failed. Clipboard access was denied.';
+  }
+}
+
+function resetBodyToTemplate() {
+  if (!selectedTemplateBody) {
+    $('template-meta').textContent = 'This endpoint template uses URL query params; no request body to reset.';
+    return;
+  }
+  $('request-body').value = selectedTemplateBody;
+  $('template-meta').textContent = selectedTemplateBody
+    ? 'Request body reset to template.'
+    : 'No body template for this endpoint.';
 }
 
 async function refreshCatalog() {
   const response = await fetch(bootstrap.catalogUrl || '/api/endpoints/catalog', { cache: 'no-store' });
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
   catalog = await response.json();
+  templateCatalog = createTemplateCatalog(catalog);
   renderCatalog();
 }
 
@@ -247,6 +290,8 @@ function wireEvents() {
     }
   });
   $('request-submit').addEventListener('click', submitRequest);
+  $('template-copy').addEventListener('click', copyTemplateToClipboard);
+  $('template-reset').addEventListener('click', resetBodyToTemplate);
   $('request-url').addEventListener('input', () => {
     $('request-open').href = $('request-url').value.trim() || '#';
   });

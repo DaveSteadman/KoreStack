@@ -165,6 +165,22 @@ def load_config(section: str, defaults: dict[str, Any]) -> dict[str, Any]:
 
 
 def get_suite_urls_map() -> dict[str, str]:
+    env_urls = os.environ.get("KORE_SUITE_URLS", "").strip()
+    if env_urls:
+        try:
+            parsed = json.loads(env_urls)
+            if isinstance(parsed, dict) and parsed:
+                normalized: dict[str, str] = {}
+                for key, value in parsed.items():
+                    name = str(key).strip().lower()
+                    url = str(value).strip()
+                    if name and url:
+                        normalized[name] = url
+                if normalized:
+                    return normalized
+        except Exception:
+            pass
+
     raw      = load_suite_config()
     host     = str(raw.get("network", {}).get("host") or "127.0.0.1").strip() or "127.0.0.1"
     services = raw.get("services", {}) if isinstance(raw.get("services"), dict) else {}

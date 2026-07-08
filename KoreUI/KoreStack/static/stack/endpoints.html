@@ -91,6 +91,17 @@
                 Request Body
                 <textarea id="request-body" class="kcui-input kcui-textarea" spellcheck="false" placeholder="{}"></textarea>
               </label>
+              <div class="runner-template">
+                <div class="runner-template-header">
+                  <span>Generated Template</span>
+                  <div class="runner-template-actions">
+                    <button id="template-copy" type="button" class="kcui-tag kcui-tag--dim">Copy</button>
+                    <button id="template-reset" type="button" class="kcui-tag kcui-tag--accent">Reset Body</button>
+                  </div>
+                </div>
+                <pre id="template-body" class="template-body">No body template for this endpoint.</pre>
+                <div id="template-meta" class="response-meta">Select an endpoint to generate a request body template.</div>
+              </div>
               <div id="response-meta" class="response-meta">No request sent yet.</div>
               <pre id="response-body" class="response-body"></pre>
             </div>

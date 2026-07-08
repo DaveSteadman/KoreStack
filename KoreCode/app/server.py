@@ -52,6 +52,7 @@ if _KORECOMMON_PARENT is not None and str(_KORECOMMON_PARENT) not in sys.path:
     sys.path.insert(0, str(_KORECOMMON_PARENT))
 
 from KoreCommon.endpoint_manifest import build_endpoint_manifest
+from KoreCommon.suite_paths import get_suite_urls_map
 
 try:
     from dotenv import load_dotenv
@@ -856,7 +857,7 @@ def root():
 
 @app.get('/suite-config.js', include_in_schema=False)
 def suite_config_js():
-    urls = os.environ.get('KORE_SUITE_URLS', '{}')
+    urls = json.dumps(get_suite_urls_map())
     return Response(content=f'window.__koreSuiteUrls = {urls};', media_type='application/javascript', headers={'Cache-Control': 'no-store'})
 
 
