@@ -99,6 +99,7 @@ from datasets import get_persisted_datasets_payload
 from datasets import hydrate_session_state
 from input_layer.korechat_proxy_routes import register_korechat_proxy_routes
 from scratchpad import get_store as get_scratch_store
+from skills_catalog_builder import build_tool_definitions
 from tool_selection_state import clear_session_tools_active
 from tool_selection_state import ALWAYS_ON_TOOL_NAMES
 from tool_selection_state import get_selected_tools
@@ -504,6 +505,83 @@ class SkillInvokeRequest(BaseModel):
     arguments: dict[str, Any] = {}
 
 
+def _schema_type(schema: dict[str, Any] | None) -> str:
+    if not isinstance(schema, dict):
+        return ""
+    schema_type = schema.get("type")
+    if isinstance(schema_type, list):
+        return str(schema_type[0] or "")
+    return str(schema_type or "")
+
+
+def _placeholder_from_name(name: str) -> Any:
+    lowered = str(name or "").strip().lower()
+    if "url" in lowered:
+        return "https://example.com"
+    if "path" in lowered or "file" in lowered:
+        return "path/to/file.txt"
+    if "query" in lowered or lowered == "q":
+        return "example search"
+    if "date" in lowered or "since" in lowered or "until" in lowered:
+        return "2026-01-01"
+    if "limit" in lowered or "count" in lowered or "max" in lowered or "offset" in lowered:
+        return 20
+    if "timeout" in lowered:
+        return 15
+    if lowered.startswith("is_") or lowered.startswith("has_") or "enabled" in lowered:
+        return True
+    if lowered.endswith("_ids") or lowered.endswith("_list") or lowered.endswith("_items"):
+        return ["example"]
+    return "example"
+
+
+def _example_from_schema(schema: dict[str, Any] | None, prop_name: str = "") -> Any:
+    if not isinstance(schema, dict):
+        return _placeholder_from_name(prop_name)
+
+    if "default" in schema and schema.get("default") is not None:
+        return schema.get("default")
+
+    enum_values = schema.get("enum")
+    if isinstance(enum_values, list) and enum_values:
+        return enum_values[0]
+
+    for branch_key in ("anyOf", "oneOf"):
+        branches = schema.get(branch_key)
+        if isinstance(branches, list) and branches:
+            for branch in branches:
+                if isinstance(branch, dict) and str(branch.get("type", "")).lower() not in {"null", "none"}:
+                    return _example_from_schema(branch, prop_name)
+            return _example_from_schema(branches[0], prop_name)
+
+    schema_type = _schema_type(schema).lower()
+    if schema_type == "object" or (not schema_type and isinstance(schema.get("properties"), dict)):
+        props = schema.get("properties")
+        out: dict[str, Any] = {}
+        if isinstance(props, dict):
+            for key, value in props.items():
+                out[str(key)] = _example_from_schema(value if isinstance(value, dict) else None, str(key))
+        return out
+    if schema_type == "array":
+        items_schema = schema.get("items")
+        return [_example_from_schema(items_schema if isinstance(items_schema, dict) else None, prop_name)]
+    if schema_type == "integer":
+        return 1
+    if schema_type == "number":
+        return 1.0
+    if schema_type == "boolean":
+        return True
+    if schema_type == "string":
+        schema_format = str(schema.get("format") or "").strip().lower()
+        if schema_format in {"uri", "url"}:
+            return "https://example.com"
+        if "date" in schema_format:
+            return "2026-01-01"
+        return _placeholder_from_name(prop_name)
+
+    return _placeholder_from_name(prop_name)
+
+
 def _get_skills_payload_or_raise() -> dict[str, Any]:
     if _config is None:
         raise HTTPException(status_code=503, detail="KoreAgent config is not initialized")
@@ -534,11 +612,19 @@ def _json_safe(value: Any) -> Any:
 
 @app.get("/api/skills/catalog")
 def skills_catalog_get() -> dict[str, Any]:
-    payload = _get_skills_payload_or_raise()
+    payload         = _get_skills_payload_or_raise()
+    local_tool_defs = build_tool_definitions(payload)
+    local_tool_map: dict[str, dict[str, Any]] = {}
+
+    for tool_def in local_tool_defs:
+        fn = tool_def.get("function", {}) if isinstance(tool_def, dict) else {}
+        tool_name = str(fn.get("name") or "").strip()
+        if tool_name:
+            local_tool_map[tool_name] = fn
 
     selected = set(get_selected_tools()) | set(ALWAYS_ON_TOOL_NAMES)
     mcp_defs = mcp_client.get_mcp_tool_definitions()
-    mcp_idx = mcp_client.get_mcp_tool_index()
+    mcp_idx  = mcp_client.get_mcp_tool_index()
 
     providers: dict[str, dict[str, Any]] = {}
     entries: list[dict[str, Any]] = []
@@ -554,34 +640,39 @@ def skills_catalog_get() -> dict[str, Any]:
         }
 
     for skill in payload.get("skills", []):
-        is_system = bool(skill.get("is_system_skill"))
-        provider_key = "local-system" if is_system else "local-user"
+        is_system      = bool(skill.get("is_system_skill"))
+        provider_key   = "local-system" if is_system else "local-user"
         provider_label = "KoreAgent System Skills" if is_system else "KoreAgent Skills"
         _ensure_provider(provider_key, provider_label, "local")
 
-        module_path = str(skill.get("module") or "").strip()
-        md_path = str(skill.get("relative_path") or "").strip()
-        skill_name = str(skill.get("skill_name") or "").strip()
-        purpose = str(skill.get("purpose") or "").strip()
+        module_path   = str(skill.get("module") or "").strip()
+        md_path       = str(skill.get("relative_path") or "").strip()
+        skill_name    = str(skill.get("skill_name") or "").strip()
+        purpose       = str(skill.get("purpose") or "").strip()
         function_sigs = skill.get("functions") or []
 
         for function_sig in function_sigs:
             tool_name = str(function_sig).split("(", 1)[0].strip()
             if not tool_name:
                 continue
+            tool_meta         = local_tool_map.get(tool_name, {})
+            parameters_schema = tool_meta.get("parameters") if isinstance(tool_meta.get("parameters"), dict) else None
             entry = {
-                "tool_name": tool_name,
+                "tool_name":           tool_name,
                 "function_signature": str(function_sig),
-                "skill_name": skill_name,
-                "purpose": purpose,
-                "origin": skill.get("origin", "local"),
-                "provider_key": provider_key,
-                "provider_label": provider_label,
-                "provider_type": "local",
-                "active": tool_name in selected,
-                "module_path": module_path,
-                "skill_md_path": md_path,
-                "call_type": "python" if module_path else "metadata",
+                "skill_name":          skill_name,
+                "purpose":             purpose,
+                "description":         str(tool_meta.get("description") or purpose),
+                "origin":              skill.get("origin", "local"),
+                "provider_key":        provider_key,
+                "provider_label":      provider_label,
+                "provider_type":       "local",
+                "active":              tool_name in selected,
+                "module_path":         module_path,
+                "skill_md_path":       md_path,
+                "call_type":           "python" if module_path else "metadata",
+                "parameters_schema":   parameters_schema,
+                "invoke_template":     _example_from_schema(parameters_schema, tool_name) if parameters_schema else {},
             }
             entries.append(entry)
             providers[provider_key]["count"] += 1
@@ -591,24 +682,29 @@ def skills_catalog_get() -> dict[str, Any]:
         tool_name = str(fn.get("name") or "").strip()
         if not tool_name:
             continue
-        meta = mcp_idx.get(tool_name, {}) if isinstance(mcp_idx.get(tool_name, {}), dict) else {}
+        meta           = mcp_idx.get(tool_name, {}) if isinstance(mcp_idx.get(tool_name, {}), dict) else {}
         provider_label = str(meta.get("connection") or meta.get("server") or meta.get("url") or "MCP")
-        provider_key = f"mcp:{provider_label}"
+        provider_key   = f"mcp:{provider_label}"
         _ensure_provider(provider_key, provider_label, "mcp")
 
+        parameters_schema = fn.get("parameters") if isinstance(fn.get("parameters"), dict) else None
+
         entry = {
-            "tool_name": tool_name,
+            "tool_name":           tool_name,
             "function_signature": f"{tool_name}(...)",
-            "skill_name": provider_label,
-            "purpose": str(fn.get("description") or meta.get("purpose") or ""),
-            "origin": "mcp",
-            "provider_key": provider_key,
-            "provider_label": provider_label,
-            "provider_type": "mcp",
-            "active": tool_name in selected,
-            "module_path": "",
-            "skill_md_path": "",
-            "call_type": "mcp",
+            "skill_name":          provider_label,
+            "purpose":             str(fn.get("description") or meta.get("purpose") or ""),
+            "description":         str(fn.get("description") or meta.get("purpose") or ""),
+            "origin":              "mcp",
+            "provider_key":        provider_key,
+            "provider_label":      provider_label,
+            "provider_type":       "mcp",
+            "active":              tool_name in selected,
+            "module_path":         "",
+            "skill_md_path":       "",
+            "call_type":           "mcp",
+            "parameters_schema":   parameters_schema,
+            "invoke_template":     _example_from_schema(parameters_schema, tool_name) if parameters_schema else {},
         }
         entries.append(entry)
         providers[provider_key]["count"] += 1

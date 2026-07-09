@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+from urllib.parse import quote
 from typing import Any
 
 
@@ -111,6 +112,66 @@ async def get_library_book_chunk(
             "has_more":     data.get("has_more"),
         }
     return data
+
+
+async def update_library_book(
+    client,
+    *,
+    book_id: str,
+    title: str | None = None,
+    body: str | None = None,
+    author: str | None = None,
+    year: int | None = None,
+    language: str | None = None,
+    genre: str | None = None,
+    notes: str | None = None,
+    source: str | None = None,
+    source_id: str | None = None,
+) -> dict:
+    if client is None:
+        return _service_not_ready_error()
+    payload: dict[str, Any] = {}
+    for key, value in (
+        ("title", title),
+        ("body", body),
+        ("author", author),
+        ("year", year),
+        ("language", language),
+        ("genre", genre),
+        ("notes", notes),
+        ("source", source),
+        ("source_id", source_id),
+    ):
+        if value is not None:
+            payload[key] = value
+    response = await client.patch(
+        f"/books/{quote(book_id, safe='')}",
+        json=payload,
+        timeout=15.0,
+    )
+    if response.status_code == 404:
+        return {"error": f"Library book not found: id={book_id}"}
+    if response.status_code != 200:
+        return {"error": f"HTTP {response.status_code}"}
+    return response.json()
+
+
+async def repair_library_book_anchors(
+    client,
+    *,
+    book_id: str,
+) -> dict:
+    if client is None:
+        return _service_not_ready_error()
+    response = await client.post(
+        f"/books/{quote(book_id, safe='')}/repair-anchors",
+        timeout=15.0,
+    )
+    if response.status_code == 404:
+        return {"error": f"Library book not found: id={book_id}"}
+    if response.status_code != 200:
+        return {"error": f"HTTP {response.status_code}"}
+    return response.json()
 
 
 async def search_library(

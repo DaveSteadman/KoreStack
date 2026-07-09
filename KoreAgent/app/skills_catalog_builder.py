@@ -27,11 +27,13 @@
 # MARK: IMPORTS
 # ====================================================================================================
 import argparse
+import ast
 import importlib.util
 import json
 import re
 import sys
 from pathlib import Path
+from typing import Any
 
 from llm_client import call_ollama
 from llm_client import ensure_ollama_running
@@ -49,6 +51,7 @@ DEFAULT_OUTPUT_FILE          = DEFAULT_SKILLS_ROOT / "skills_catalog.json"
 DEFAULT_SUMMARY_MODEL = "gpt-oss:20b"
 _LOADED_PAYLOAD_CACHE: dict[tuple[str, float, int], dict] = {}
 _TOOL_DEFS_CACHE: dict[str, list[dict]] = {}
+_TOOL_DEFS_OBJ_CACHE: dict[int, list[dict]] = {}
 
 
 def _classify_local_skill(skill_md_path: Path | str) -> dict[str, object]:
@@ -514,6 +517,19 @@ def load_skills_payload(catalog_path: Path) -> dict:
 # Quoted string defaults (date="") are allowed; see the positional-string guard in the parser.
 _CLEAN_SIG_RE = re.compile(r'^([A-Za-z_][A-Za-z0-9_]*)\(([^<>\\]*)\)$')
 _PARAM_RE     = re.compile(r'([A-Za-z_][A-Za-z0-9_]*)\s*(?::\s*([A-Za-z_][A-Za-z0-9_\[\]| ]*))?\s*(?:=\s*\S+)?')
+_DEFAULT_MISSING = object()
+
+
+def _parse_python_default_literal(raw_default: str) -> Any:
+    default_text = str(raw_default or "").strip()
+    if not default_text:
+        return _DEFAULT_MISSING
+    if default_text.lower() in {"none", "null"}:
+        return None
+    try:
+        return ast.literal_eval(default_text)
+    except (ValueError, SyntaxError):
+        return _DEFAULT_MISSING
 
 
 def _python_type_to_json_schema(ptype: str) -> dict:
@@ -569,7 +585,12 @@ def _parse_tool_signature(sig: str) -> tuple[str, list[dict]] | None:
             pname       = pm.group(1).strip()
             ptype       = (pm.group(2) or "str").strip()
             has_default = "=" in part
-            params.append({"name": pname, "type": ptype, "required": not has_default})
+            default_raw = part.split("=", 1)[1].strip() if has_default else ""
+            default_val = _parse_python_default_literal(default_raw) if has_default else _DEFAULT_MISSING
+            param_info  = {"name": pname, "type": ptype, "required": not has_default}
+            if default_val is not _DEFAULT_MISSING and default_val is not None:
+                param_info["default"] = default_val
+            params.append(param_info)
 
         # If params_str was non-empty but nothing parsed, the signature is a
         # placeholder like func(...) - treat it as an example and reject it so
@@ -587,9 +608,15 @@ def build_tool_definitions(skills_payload: dict) -> list[dict]:
     becomes one tool entry. Example-call entries in the functions list are silently skipped.
     Compatible with Ollama /v1/chat/completions, LM Studio, and OpenAI.
     """
+    obj_cache_key = id(skills_payload)
+    cached_obj = _TOOL_DEFS_OBJ_CACHE.get(obj_cache_key)
+    if cached_obj is not None:
+        return cached_obj
+
     payload_key = json.dumps(skills_payload, sort_keys=True, ensure_ascii=False)
     cached = _TOOL_DEFS_CACHE.get(payload_key)
     if cached is not None:
+        _TOOL_DEFS_OBJ_CACHE[obj_cache_key] = cached
         return cached
 
     tools:      list[dict] = []
@@ -640,6 +667,8 @@ def build_tool_definitions(skills_payload: dict) -> list[dict]:
                     **_python_type_to_json_schema(p["type"]),
                     "description": param_desc,
                 }
+                if "default" in p:
+                    properties[param_name]["default"] = p["default"]
                 if p["required"]:
                     required.append(param_name)
 
@@ -658,6 +687,8 @@ def build_tool_definitions(skills_payload: dict) -> list[dict]:
 
     _TOOL_DEFS_CACHE.clear()
     _TOOL_DEFS_CACHE[payload_key] = tools
+    _TOOL_DEFS_OBJ_CACHE.clear()
+    _TOOL_DEFS_OBJ_CACHE[obj_cache_key] = tools
     return tools
 
 

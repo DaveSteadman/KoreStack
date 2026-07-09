@@ -7,6 +7,8 @@
 
     <link rel="stylesheet" href="/ui-elements/assets/css/theme.css" />
     <link rel="stylesheet" href="/ui-elements/assets/css/chrome.css" />
+    <link rel="stylesheet" href="/ui-elements/assets/css/panels.css" />
+    <link rel="stylesheet" href="/ui-elements/assets/css/typography.css" />
     <link rel="stylesheet" href="/ui-elements/assets/css/workspace.css" />
     <link rel="stylesheet" href="/ui-elements/assets/css/forms.css" />
     <link rel="stylesheet" href="/static/skills_catalog.css" />
@@ -14,7 +16,7 @@
     <script src="/suite-config.js"></script>
     <script src="/ui-elements/assets/js/chrome.js"></script>
 </head>
-<body>
+<body class="kcui-shell-bg">
     <div id="layout" class="kcui-layout-shell">
         <div id="topbar"></div>
         <header id="app-bar" class="kcui-appbar">
@@ -23,30 +25,40 @@
             <button id="btn-refresh" class="kcui-btn" type="button">Refresh</button>
         </header>
 
-        <main id="catalog-shell">
-            <aside id="tool-list-panel" class="panel">
-                <div class="panel-title">All Skill Functions</div>
-                <input id="tool-filter" class="kcui-input" type="text" placeholder="Filter by function/provider" />
-                <div id="tool-list" class="tool-list"></div>
+        <main id="catalog-shell" class="kcui-main kcui-workspace kcui-workspace--stack-sm">
+            <aside id="tool-list-panel" class="kcui-panel kcui-panel--column kcui-workspace__region">
+                <div class="kcui-panel-header kcui-panel-header--start">All Skill Functions</div>
+                <div class="kcui-panel-body">
+                    <input id="tool-filter" class="kcui-input" type="text" placeholder="Filter by function/provider" />
+                </div>
+                <div id="tool-list" class="tool-list kcui-panel-body"></div>
             </aside>
 
-            <section id="details-panel" class="panel">
-                <div class="panel-title" id="detail-title">Select a skill function</div>
-                <div id="detail-meta" class="detail-meta"></div>
-
-                <div class="source-actions">
-                    <button id="btn-load-module" class="kcui-btn kcui-btn--sm" type="button">Load .py</button>
-                    <button id="btn-load-skillmd" class="kcui-btn kcui-btn--sm" type="button">Load skill.md</button>
+            <section id="details-panel" class="kcui-panel kcui-panel--column kcui-workspace__region">
+                <div class="kcui-panel-header kcui-panel-header--start detail-header">
+                    <span id="detail-title" class="detail-title">Select a skill function</span>
+                    <span id="detail-tags" class="detail-tags"></span>
                 </div>
-                <pre id="source-view" class="source-view">Select a function to inspect source.</pre>
+                <div class="kcui-panel-body details-body">
+                    <div id="detail-meta" class="detail-meta"></div>
+                    <div class="section-title">Parameters</div>
+                    <pre id="detail-schema" class="schema-view kcui-type-code">Select a function to inspect parameters.</pre>
 
-                <div class="invoke-title">Invoke Function</div>
-                <textarea id="invoke-args" class="invoke-args" spellcheck="false">{}</textarea>
-                <div class="invoke-actions">
-                    <button id="btn-run" class="kcui-btn" type="button">Run</button>
-                    <button id="btn-pretty" class="kcui-btn kcui-btn--sm" type="button">Format JSON</button>
+                    <div class="source-actions">
+                        <button id="btn-load-module" class="kcui-btn kcui-btn-sm" type="button">Load .py</button>
+                        <button id="btn-load-skillmd" class="kcui-btn kcui-btn-sm" type="button">Load skill.md</button>
+                    </div>
+                    <pre id="source-view" class="source-view kcui-type-code">Select a function to inspect source.</pre>
+
+                    <div class="section-title">Invoke Function</div>
+                    <div id="invoke-note" class="invoke-note"></div>
+                    <textarea id="invoke-args" class="invoke-args kcui-input kcui-type-code" spellcheck="false">{}</textarea>
+                    <div class="invoke-actions">
+                        <button id="btn-run" class="kcui-btn" type="button">Run</button>
+                        <button id="btn-pretty" class="kcui-btn kcui-btn-sm" type="button">Format JSON</button>
+                    </div>
+                    <pre id="invoke-result" class="result-view kcui-type-code">Run a function to view result.</pre>
                 </div>
-                <pre id="invoke-result" class="result-view">Run a function to view result.</pre>
             </section>
         </main>
     </div>

@@ -38,6 +38,7 @@ if str(CODE_DIR) not in sys.path:
 
 import datasets as datasets_module
 import tool_loop as tool_loop_module
+import tool_selection_state as tool_selection_state_module
 from conversation_state import decode_background_context
 from conversation_state import encode_background_context
 from skill_executor import execute_tool_call
@@ -72,6 +73,7 @@ from session_runtime import bind_session
 from skills_catalog_builder import build_tool_definitions
 from skills_catalog_builder import load_skills_payload
 from system_skills.FileAccess import file_access_skill as file_access_module
+from system_skills.ToolSelection import tool_selection_skill as tool_selection_skill_module
 from system_skills.FileAccess.file_access_skill import file_write
 from system_skills.FileAccess.file_access_skill import file_read
 from system_skills.FileAccess.file_access_skill import folder_create
@@ -141,6 +143,184 @@ class RegressionTests(unittest.TestCase):
         clear_session_datasets("dataset_load_session")
         delete_session_datasets("kc_conv_701")
         clear_session_datasets("kc_conv_701")
+
+    def test_skills_catalog_local_entries_include_schema_and_template(self) -> None:
+        fake_config = SimpleNamespace(skills_payload=self.skills_payload)
+
+        with patch.object(api_module, "_config", fake_config):
+            with patch.object(api_module, "get_selected_tools", return_value=[]):
+                with patch.object(api_module.mcp_client, "get_mcp_tool_definitions", return_value=[]):
+                    with patch.object(api_module.mcp_client, "get_mcp_tool_index", return_value={}):
+                        payload = api_module.skills_catalog_get()
+
+        entries = payload["entries"]
+        tools_active_add = next(item for item in entries if item["tool_name"] == "tools_active_add")
+        fetch_page_text = next(item for item in entries if item["tool_name"] == "fetch_page_text")
+        self.assertEqual(tools_active_add["call_type"], "python")
+        self.assertEqual(tools_active_add["parameters_schema"]["type"], "object")
+        self.assertEqual(tools_active_add["parameters_schema"]["properties"]["tool_names"]["type"], "array")
+        self.assertEqual(tools_active_add["invoke_template"]["tool_names"], ["example"])
+        self.assertEqual(fetch_page_text["parameters_schema"]["properties"]["max_words"]["default"], 2000)
+        self.assertEqual(fetch_page_text["parameters_schema"]["properties"]["timeout_seconds"]["default"], 15)
+        self.assertEqual(fetch_page_text["invoke_template"]["max_words"], 2000)
+        self.assertEqual(fetch_page_text["invoke_template"]["timeout_seconds"], 15)
+
+    def test_skills_catalog_mcp_entries_include_schema_and_template(self) -> None:
+        fake_config = SimpleNamespace(skills_payload=self.skills_payload)
+        mcp_defs = [
+            {
+                "type": "function",
+                "function": {
+                    "name": "demo_lookup",
+                    "description": "Look up a record.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "query": {"type": "string"},
+                            "limit": {"type": "integer", "default": 5},
+                            "domains": {"type": "array", "items": {"type": "string"}},
+                        },
+                        "required": ["query"],
+                    },
+                },
+            },
+        ]
+        mcp_idx = {
+            "demo_lookup": {
+                "connection": "Demo MCP",
+                "purpose":    "Demo lookup purpose.",
+            },
+        }
+
+        with patch.object(api_module, "_config", fake_config):
+            with patch.object(api_module, "get_selected_tools", return_value=[]):
+                with patch.object(api_module.mcp_client, "get_mcp_tool_definitions", return_value=mcp_defs):
+                    with patch.object(api_module.mcp_client, "get_mcp_tool_index", return_value=mcp_idx):
+                        payload = api_module.skills_catalog_get()
+
+        entry = next(item for item in payload["entries"] if item["tool_name"] == "demo_lookup")
+        self.assertEqual(entry["call_type"], "mcp")
+        self.assertEqual(entry["description"], "Look up a record.")
+        self.assertEqual(entry["parameters_schema"]["properties"]["limit"]["default"], 5)
+        self.assertEqual(
+            entry["invoke_template"],
+            {"query": "example search", "limit": 5, "domains": ["example"]},
+        )
+
+    def test_note_tool_used_promotes_in_memory_without_persisting(self) -> None:
+        conversation_entry = {"tools_active": ["tool_a", "tool_b", "tool_c"]}
+        patched_payloads: list[tuple[str, dict]] = []
+
+        with patch.object(tool_selection_state_module, "_kc_request_json", side_effect=lambda *args, **kwargs: patched_payloads.append((args[0], kwargs.get("payload") or {})) or None):
+            tool_selection_state_module.clear_session_tools_active("selection_cache_test")
+            tool_selection_state_module.note_tool_used(
+                "tool_c",
+                session_id="selection_cache_test",
+                conversation_entry=conversation_entry,
+            )
+            selected = tool_selection_state_module.get_selected_tools(
+                session_id="selection_cache_test",
+                conversation_entry=conversation_entry,
+            )
+
+        self.assertEqual(selected[:3], ["tool_c", "tool_a", "tool_b"])
+        self.assertEqual(conversation_entry["tools_active"][:3], ["tool_c", "tool_a", "tool_b"])
+        self.assertEqual(patched_payloads, [])
+
+    def test_tools_catalog_list_ranks_trigger_matches(self) -> None:
+        fake_payload = {
+            "skills": [
+                {
+                    "skill_name": "Dataset Tools",
+                    "purpose": "List saved datasets.",
+                    "module": "KoreAgent/app/system_skills/Datasets/datasets_skill.py",
+                    "functions": ["dataset_list()"],
+                    "param_descriptions": {},
+                    "triggers": ["list datasets", "dataset inventory"],
+                    "trigger_keyword": "datasets",
+                    "origin": "local",
+                    "availability": "configured",
+                    "role": "optional",
+                    "trust_boundary": "internal",
+                },
+                {
+                    "skill_name": "File Tools",
+                    "purpose": "List files from the workspace.",
+                    "module": "KoreAgent/app/system_skills/FileAccess/file_access_skill.py",
+                    "functions": ["file_find(keywords: list[str], search_root: str = \"\")"],
+                    "param_descriptions": {"file_find": {"keywords": "keywords", "search_root": "root"}},
+                    "triggers": ["find files"],
+                    "trigger_keyword": "files",
+                    "origin": "local",
+                    "availability": "configured",
+                    "role": "optional",
+                    "trust_boundary": "internal",
+                },
+            ],
+        }
+
+        with patch.object(tool_selection_skill_module, "load_skills_payload", return_value=fake_payload):
+            with patch.object(tool_selection_state_module, "get_selected_tools", return_value=[]):
+                with patch.object(tool_selection_state_module.mcp_client, "get_mcp_tool_index", return_value={}):
+                    with patch.object(tool_selection_state_module.mcp_client, "get_mcp_tool_definitions", return_value=[]):
+                        results = tool_selection_skill_module.tools_catalog_list(filter_text="list datasets", max_items=5, include_mcp=False)
+
+        self.assertGreaterEqual(len(results), 1)
+        self.assertEqual(results[0]["name"], "dataset_list")
+
+    def test_tool_selection_respects_web_skill_filter(self) -> None:
+        fake_payload = {
+            "skills": [
+                {
+                    "skill_name": "WebSearch",
+                    "purpose": "Search the web.",
+                    "module": "KoreAgent/app/skills/WebSearch/web_search_skill.py",
+                    "functions": ["search_web_text(query: str = \"\")"],
+                    "param_descriptions": {"search_web_text": {"query": "query"}},
+                    "triggers": ["search the web"],
+                    "trigger_keyword": "web",
+                    "origin": "local",
+                    "availability": "configured",
+                    "role": "optional",
+                    "trust_boundary": "internal",
+                },
+                {
+                    "skill_name": "Datasets",
+                    "purpose": "List datasets.",
+                    "module": "KoreAgent/app/system_skills/Datasets/datasets_skill.py",
+                    "functions": ["dataset_list()"],
+                    "param_descriptions": {},
+                    "triggers": ["list datasets"],
+                    "trigger_keyword": "datasets",
+                    "origin": "local",
+                    "availability": "configured",
+                    "role": "optional",
+                    "trust_boundary": "internal",
+                },
+            ],
+        }
+
+        with patch.object(tool_selection_skill_module, "load_skills_payload", return_value=fake_payload):
+            with patch.object(tool_selection_skill_module, "get_web_skills_enabled", return_value=False):
+                with patch.object(tool_selection_skill_module, "get_selected_tools", return_value=[]):
+                    with patch.object(
+                        tool_selection_skill_module,
+                        "promote_selected_tools",
+                        return_value={
+                            "added": ["dataset_list"],
+                            "promoted": [],
+                            "evicted": [],
+                            "active_tools": ["dataset_list"],
+                        },
+                    ):
+                        listed = tool_selection_skill_module.tools_catalog_list(filter_text="", max_items=20, include_mcp=False)
+                        added = tool_selection_skill_module.tools_active_add(["search_web_text", "dataset_list"])
+
+        listed_names = [entry["name"] for entry in listed]
+        self.assertIn("dataset_list", listed_names)
+        self.assertNotIn("search_web_text", listed_names)
+        self.assertIn("dataset_list", added["added"] + added["promoted"] + added["already_active_before_call"])
+        self.assertIn("search_web_text", added["unknown"])
 
     def test_write_file_writes_system_info_csv(self) -> None:
         user_data_dir = get_user_data_dir()

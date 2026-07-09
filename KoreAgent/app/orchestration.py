@@ -94,6 +94,7 @@ def set_sandbox_enabled(enabled: bool) -> None:
 # before tool definitions, the system prompt, and the catalog gate index are built.
 # The underlying skill modules remain loaded - only their exposure to the model is suppressed.
 _WEB_SKILLS_ENABLED: bool = True
+_WEB_SKILLS_FILTER_CACHE: dict[int, dict] = {}
 
 
 def get_web_skills_enabled() -> bool:
@@ -106,8 +107,15 @@ def set_web_skills_enabled(enabled: bool) -> None:
 
 
 def _filter_web_skills(payload: dict) -> dict:
+    cache_key = id(payload)
+    cached = _WEB_SKILLS_FILTER_CACHE.get(cache_key)
+    if cached is not None:
+        return cached
     filtered = [s for s in payload.get("skills", []) if not s.get("skill_name", "").startswith("Web")]
-    return {**payload, "skills": filtered}
+    result = {**payload, "skills": filtered}
+    _WEB_SKILLS_FILTER_CACHE.clear()
+    _WEB_SKILLS_FILTER_CACHE[cache_key] = result
+    return result
 
 
 # ====================================================================================================

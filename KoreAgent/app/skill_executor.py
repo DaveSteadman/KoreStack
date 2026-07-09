@@ -35,6 +35,7 @@ from utils.workspace_utils import normalize_module_path
 # Cache of already-loaded callables: (absolute_path_str, function_name) -> callable.
 # Avoids re-executing module-level code on every skill invocation within a session.
 _callable_cache: dict[tuple[str, str], object] = {}
+_catalog_gates_cache: dict[int, dict[str, tuple[str, str]]] = {}
 
 
 # ----------------------------------------------------------------------------------------------------
@@ -95,6 +96,11 @@ def build_catalog_gates(skills_payload: dict) -> dict[str, tuple[str, str]]:
     orchestration loop) should call this once and pass the result via the catalog_gates
     parameter to avoid rebuilding the index on every tool invocation.
     """
+    cache_key = id(skills_payload)
+    cached = _catalog_gates_cache.get(cache_key)
+    if cached is not None:
+        return cached
+
     index: dict[str, tuple[str, str]] = {}
 
     for skill in skills_payload.get("skills", []):
@@ -105,6 +111,8 @@ def build_catalog_gates(skills_payload: dict) -> dict[str, tuple[str, str]]:
             if module and function_name:
                 index[function_name] = (module, function_name)
 
+    _catalog_gates_cache.clear()
+    _catalog_gates_cache[cache_key] = index
     return index
 
 

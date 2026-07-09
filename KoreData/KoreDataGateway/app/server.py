@@ -60,6 +60,8 @@ from app.gateway_feed import get_feed_sentence as _gateway_get_feed_sentence
 from app.gateway_library import find_library_book as _gateway_find_library_book
 from app.gateway_library import get_library_book_chunk as _gateway_get_library_book_chunk
 from app.gateway_library import get_library_index as _gateway_get_library_index
+from app.gateway_library import repair_library_book_anchors as _gateway_repair_library_book_anchors
+from app.gateway_library import update_library_book as _gateway_update_library_book
 from app.gateway_rag import get_rag_chunk as _gateway_get_rag_chunk
 from app.gateway_reference import get_reference_article as _gateway_get_reference_article
 from app.gateway_reference import get_reference_sentence as _gateway_get_reference_sentence
@@ -388,7 +390,9 @@ _INSTR_LIBRARY = (
     f"Read a book chunk-by-chunk with koredata_get_library_book_chunk(book_id, offset_chars, length_chars={_CHUNK_SIZE}). "
     "Each call returns: chunk (the text slice), next_offset, has_more. "
     "Pass next_offset as offset_chars for the next call. Stop when has_more is false. "
-    "Never attempt to read a whole book in one call — always use chunks."
+    "Never attempt to read a whole book in one call — always use chunks. "
+    "When a book needs editing, use koredata_update_library_book(book_id, title=?, body=?, author=?, year=?, language=?, genre=?, notes=?, source=?, source_id=?) to patch metadata and/or body directly. "
+    "When the body only needs anchor cleanup after TOC or hyperlink repairs, use koredata_repair_library_book_anchors(book_id)."
 )
 
 _INSTR_RAG = (
@@ -1305,6 +1309,48 @@ async def koredata_get_library_book_chunk(
         book_id      = book_id,
         offset_chars = offset_chars,
         length_chars = length_chars,
+    )
+
+
+@_mcp.tool()
+async def koredata_update_library_book(
+    book_id: str,
+    title: Optional[str] = None,
+    body: Optional[str] = None,
+    author: Optional[str] = None,
+    year: Optional[int] = None,
+    language: Optional[str] = None,
+    genre: Optional[str] = None,
+    notes: Optional[str] = None,
+    source: Optional[str] = None,
+    source_id: Optional[str] = None,
+) -> dict:
+    """Patch a library book's metadata and/or body.
+
+    Use this for TOC fixes, hyperlink repairs, metadata cleanup, and any other direct book edit.
+    Pass only the fields that need changing; omitted fields are left untouched.
+    """
+    return await _gateway_update_library_book(
+        _lib_client,
+        book_id   = book_id,
+        title     = title,
+        body      = body,
+        author    = author,
+        year      = year,
+        language  = language,
+        genre     = genre,
+        notes     = notes,
+        source    = source,
+        source_id = source_id,
+    )
+
+
+@_mcp.tool()
+async def koredata_repair_library_book_anchors(book_id: str) -> dict:
+    """Repair stored anchor spans in a book body after TOC or hyperlink navigation fixes."""
+    return await _gateway_repair_library_book_anchors(
+        _lib_client,
+        book_id = book_id,
     )
 
 

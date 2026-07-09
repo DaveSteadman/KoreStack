@@ -394,4 +394,4 @@ RAG chunk content is stored compressed (zlib) in the database. It is decompresse
 
 - The gateway does **not** store any data of its own (no database, no persistent state beyond child process handles).
 - The gateway does **not** implement authentication or access control — it is an internal tool on a trusted network.
-- The gateway does **not** provide write access to data via the agent API — `POST /api/search` and all `GET` retrieval routes are read-only from the agent's perspective. Write operations (insert, update, delete) require direct UI interaction or explicit `POST`/`PATCH`/`DELETE` API calls.
+- The gateway keeps search as the default agent entry point, but it also exposes a narrow write surface for KoreLibrary book edits. `koredata_update_library_book(...)` patches book metadata and/or body, and `koredata_repair_library_book_anchors(book_id)` repairs anchor spans after TOC or hyperlink cleanup. Other write operations still require explicit UI/API routes.

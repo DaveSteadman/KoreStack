@@ -1,6 +1,7 @@
 import copy
 from difflib import SequenceMatcher
 import json
+import re
 import threading
 import urllib.error
 import urllib.parse
@@ -17,6 +18,8 @@ ALWAYS_ON_TOOL_NAMES = frozenset({"tools_catalog_list", "tools_active_add"})
 _KC_TIMEOUT = 8
 _SESSION_TOOLS_ACTIVE: dict[str, list[str]] = {}
 _SESSION_LOCK = threading.Lock()
+_ACTIVE_RUNTIME_CACHE: dict[tuple, dict[str, object]] = {}
+_CATALOG_CACHE: dict[tuple, list[dict]] = {}
 
 
 def _normalize_tool_names(tool_names: object) -> list[str]:
@@ -100,12 +103,18 @@ def _update_cache(session_id: str, tools_active: list[str]) -> None:
         _SESSION_TOOLS_ACTIVE[session_id] = list(tools_active)
 
 
+def _clear_runtime_caches() -> None:
+    _ACTIVE_RUNTIME_CACHE.clear()
+    _CATALOG_CACHE.clear()
+
+
 def clear_session_tools_active(session_id: str) -> None:
     cleaned = _resolve_session_id(session_id)
     if not cleaned:
         return
     with _SESSION_LOCK:
         _SESSION_TOOLS_ACTIVE.pop(cleaned, None)
+    _clear_runtime_caches()
 
 
 def get_selected_tools(session_id: str | None = None, conversation_entry: dict | None = None) -> list[str]:
@@ -130,27 +139,41 @@ def get_selected_tools(session_id: str | None = None, conversation_entry: dict |
     return list(tools_active)
 
 
-def set_selected_tools(tool_names: list[str], session_id: str | None = None, conversation_entry: dict | None = None) -> list[str]:
+def set_selected_tools(
+    tool_names: list[str],
+    session_id: str | None = None,
+    conversation_entry: dict | None = None,
+    *,
+    persist: bool = True,
+) -> list[str]:
     resolved_session_id = _resolve_session_id(session_id)
     normalized = _normalize_tool_names(tool_names)[:MAX_ACTIVE_TOOLS]
     _update_cache(resolved_session_id, normalized)
+    _clear_runtime_caches()
     if isinstance(conversation_entry, dict):
         conversation_entry["tools_active"] = list(normalized)
 
-    conv = _ensure_conversation_for_session(resolved_session_id) if resolved_session_id else None
-    if isinstance(conv, dict) and conv.get("id") is not None:
-        patched = _kc_request_json(
-            f"/conversations/{int(conv['id'])}",
-            method="PATCH",
-            payload={"tools_active": normalized},
-        )
-        if isinstance(patched, dict) and isinstance(conversation_entry, dict):
-            conversation_entry.update(patched)
-            conversation_entry["tools_active"] = _normalize_tool_names(patched.get("tools_active") or [])[:MAX_ACTIVE_TOOLS]
+    if persist:
+        conv = _ensure_conversation_for_session(resolved_session_id) if resolved_session_id else None
+        if isinstance(conv, dict) and conv.get("id") is not None:
+            patched = _kc_request_json(
+                f"/conversations/{int(conv['id'])}",
+                method="PATCH",
+                payload={"tools_active": normalized},
+            )
+            if isinstance(patched, dict) and isinstance(conversation_entry, dict):
+                conversation_entry.update(patched)
+                conversation_entry["tools_active"] = _normalize_tool_names(patched.get("tools_active") or [])[:MAX_ACTIVE_TOOLS]
     return list(normalized)
 
 
-def promote_selected_tools(tool_names: list[str], session_id: str | None = None, conversation_entry: dict | None = None) -> dict[str, list[str]]:
+def promote_selected_tools(
+    tool_names: list[str],
+    session_id: str | None = None,
+    conversation_entry: dict | None = None,
+    *,
+    persist: bool = True,
+) -> dict[str, list[str]]:
     requested = _normalize_tool_names(tool_names)
     current = get_selected_tools(session_id=session_id, conversation_entry=conversation_entry)
     current_set = set(current)
@@ -167,7 +190,7 @@ def promote_selected_tools(tool_names: list[str], session_id: str | None = None,
     merged = front + [name for name in current if name not in front]
     evicted = merged[MAX_ACTIVE_TOOLS:]
     merged = merged[:MAX_ACTIVE_TOOLS]
-    active_tools = set_selected_tools(merged, session_id=session_id, conversation_entry=conversation_entry)
+    active_tools = set_selected_tools(merged, session_id=session_id, conversation_entry=conversation_entry, persist=persist)
     return {
         "added": added,
         "promoted": promoted,
@@ -185,7 +208,7 @@ def note_tool_used(tool_name: str, session_id: str | None = None, conversation_e
         return
     if current and current[0] == name:
         return
-    promote_selected_tools([name], session_id=session_id, conversation_entry=conversation_entry)
+    promote_selected_tools([name], session_id=session_id, conversation_entry=conversation_entry, persist=False)
 
 
 def _first_sentence(text: str) -> str:
@@ -196,6 +219,64 @@ def _first_sentence(text: str) -> str:
         if separator in cleaned:
             return cleaned.split(separator, 1)[0].strip() + separator[0]
     return cleaned[:200]
+
+
+def _search_tokens(text: str) -> list[str]:
+    return re.findall(r"[a-z0-9_]+", str(text or "").lower())
+
+
+def _entry_search_parts(entry: dict) -> list[str]:
+    parts = [
+        entry.get("name", ""),
+        entry.get("description", ""),
+        entry.get("origin", ""),
+        entry.get("role", ""),
+        entry.get("skill_name", ""),
+    ]
+    parts.extend(entry.get("triggers", []) or [])
+    parts.extend(entry.get("param_names", []) or [])
+    return [str(part or "") for part in parts if str(part or "").strip()]
+
+
+def rank_tool_catalog_entries(entries: list[dict], filter_text: str) -> list[dict]:
+    needle = str(filter_text or "").strip().lower()
+    if not needle:
+        return list(entries)
+
+    needle_tokens = _search_tokens(needle)
+    ranked: list[tuple[float, dict]] = []
+    for entry in entries:
+        name = str(entry.get("name", "")).strip().lower()
+        parts = _entry_search_parts(entry)
+        haystack = " ".join(parts).lower()
+        if needle not in haystack and not any(token in haystack for token in needle_tokens):
+            continue
+
+        score = 0.0
+        if name == needle:
+            score += 500.0
+        elif needle in name:
+            score += 180.0
+        score += _score_tool_name_candidate(needle, name) * 10.0
+        if entry.get("active"):
+            score += 8.0
+
+        trigger_set = {str(item or "").strip().lower() for item in (entry.get("triggers") or []) if str(item or "").strip()}
+        param_set = {str(item or "").strip().lower() for item in (entry.get("param_names") or []) if str(item or "").strip()}
+        for token in needle_tokens:
+            if token in name.split("_"):
+                score += 35.0
+            if token in haystack:
+                score += 12.0
+            if token in trigger_set:
+                score += 20.0
+            if token in param_set:
+                score += 10.0
+
+        ranked.append((score, entry))
+
+    ranked.sort(key=lambda item: (-item[0], item[1].get("origin", ""), item[1].get("name", "")))
+    return [entry for _score, entry in ranked]
 
 
 def local_tool_names(skills_payload: dict) -> set[str]:
@@ -340,47 +421,75 @@ def build_all_tool_catalog(
 ) -> list[dict]:
     selected = get_selected_tools(session_id=session_id, conversation_entry=conversation_entry)
     active_names = set(selected) | set(ALWAYS_ON_TOOL_NAMES)
+    mcp_index = mcp_client.get_mcp_tool_index() if include_mcp else {}
+    mcp_defs = mcp_client.get_mcp_tool_definitions() if include_mcp else []
+    cache_key = (
+        id(skills_payload),
+        include_mcp,
+        tuple(selected),
+        tuple(sorted(mcp_index.keys())),
+    )
+    cached = _CATALOG_CACHE.get(cache_key)
+    if cached is not None:
+        return cached
+
     entries: list[dict] = []
     for skill in skills_payload.get("skills", []):
         description = _first_sentence(skill.get("purpose", ""))
+        triggers = [str(item or "").strip() for item in (skill.get("triggers") or []) if str(item or "").strip()]
+        trigger_keyword = str(skill.get("trigger_keyword") or "").strip()
+        if trigger_keyword and trigger_keyword not in triggers:
+            triggers.append(trigger_keyword)
+        param_descriptions = skill.get("param_descriptions", {}) if isinstance(skill.get("param_descriptions"), dict) else {}
         meta = {
-            "origin": skill.get("origin", "local"),
-            "availability": skill.get("availability", "configured"),
-            "role": skill.get("role", "optional"),
+            "origin":         skill.get("origin", "local"),
+            "availability":   skill.get("availability", "configured"),
+            "role":           skill.get("role", "optional"),
             "trust_boundary": skill.get("trust_boundary", "internal"),
+            "skill_name":     skill.get("skill_name", ""),
+            "triggers":       triggers,
         }
         for function_sig in skill.get("functions", []):
             name = str(function_sig).split("(", 1)[0].strip()
             if not name:
                 continue
+            func_param_descs = param_descriptions.get(name, {}) if isinstance(param_descriptions.get(name), dict) else {}
             entries.append(
                 {
-                    "name": name,
+                    "name":        name,
                     "description": description,
-                    "active": name in active_names,
+                    "active":      name in active_names,
+                    "param_names": sorted(str(param_name) for param_name in func_param_descs.keys()),
                     **meta,
                 }
             )
     if include_mcp:
-        mcp_index = mcp_client.get_mcp_tool_index()
-        for tool_def in mcp_client.get_mcp_tool_definitions():
+        for tool_def in mcp_defs:
             fn = tool_def.get("function", {})
             name = str(fn.get("name", "")).strip()
             if not name:
                 continue
             meta = mcp_index.get(name, {})
+            parameters = fn.get("parameters", {}) if isinstance(fn.get("parameters"), dict) else {}
+            properties = parameters.get("properties", {}) if isinstance(parameters.get("properties"), dict) else {}
             entries.append(
                 {
-                    "name": name,
-                    "description": _first_sentence(fn.get("description", "") or meta.get("purpose", "")),
-                    "origin": "mcp",
-                    "availability": "connected",
-                    "role": meta.get("connection", "remote"),
+                    "name":           name,
+                    "description":    _first_sentence(fn.get("description", "") or meta.get("purpose", "")),
+                    "origin":         "mcp",
+                    "availability":   "connected",
+                    "role":           meta.get("connection", "remote"),
                     "trust_boundary": "external",
-                    "active": name in active_names,
+                    "active":         name in active_names,
+                    "skill_name":     meta.get("connection", ""),
+                    "triggers":       [],
+                    "param_names":    sorted(str(param_name) for param_name in properties.keys()),
                 }
             )
-    return sorted(entries, key=lambda item: (item.get("origin", ""), item.get("name", "")))
+    result = sorted(entries, key=lambda item: (item.get("origin", ""), item.get("name", "")))
+    _CATALOG_CACHE.clear()
+    _CATALOG_CACHE[cache_key] = result
+    return result
 
 
 def derive_active_tool_runtime(
@@ -392,7 +501,7 @@ def derive_active_tool_runtime(
 ) -> dict[str, object]:
     resolved_session_id = _resolve_session_id(session_id)
     selected = get_selected_tools(session_id=resolved_session_id, conversation_entry=conversation_entry)
-    all_mcp_defs = mcp_client.get_mcp_tool_definitions()
+    all_mcp_defs  = mcp_client.get_mcp_tool_definitions()
     all_mcp_index = mcp_client.get_mcp_tool_index()
     source_payload = available_local_payload if available_local_payload is not None else full_local_payload
     all_known_names = local_tool_names(source_payload) | set(all_mcp_index.keys())
@@ -402,18 +511,36 @@ def derive_active_tool_runtime(
         selected = [name for name in selected if name in all_known_names]
         set_selected_tools(selected, session_id=resolved_session_id, conversation_entry=conversation_entry)
 
+    cache_key = (
+        id(source_payload),
+        tuple(selected),
+        tuple(sorted(all_mcp_index.keys())),
+    )
+    cached = _ACTIVE_RUNTIME_CACHE.get(cache_key)
+    if cached is not None:
+        if missing_selected:
+            cached_result = dict(cached)
+            cached_result["missing_selected"] = list(missing_selected)
+            cached_result["selected_tools"] = list(selected)
+            cached_result["all_known_tool_names"] = set(all_known_names)
+            return cached_result
+        return cached
+
     allowed_names = set(selected) | set(ALWAYS_ON_TOOL_NAMES)
     active_local_payload = filter_local_payload(source_payload, allowed_names)
     active_mcp_defs = [tool_def for tool_def in all_mcp_defs if tool_def.get("function", {}).get("name") in allowed_names]
     active_mcp_index = {name: info for name, info in all_mcp_index.items() if name in allowed_names}
     active_tool_names = local_tool_names(active_local_payload) | set(active_mcp_index.keys())
 
-    return {
-        "selected_tools": selected,
-        "active_tool_names": active_tool_names,
+    result = {
+        "selected_tools": list(selected),
+        "active_tool_names": set(active_tool_names),
         "active_local_payload": active_local_payload,
         "active_mcp_defs": active_mcp_defs,
         "active_mcp_index": active_mcp_index,
-        "missing_selected": missing_selected,
-        "all_known_tool_names": all_known_names,
+        "missing_selected": list(missing_selected),
+        "all_known_tool_names": set(all_known_names),
     }
+    _ACTIVE_RUNTIME_CACHE.clear()
+    _ACTIVE_RUNTIME_CACHE[cache_key] = result
+    return result

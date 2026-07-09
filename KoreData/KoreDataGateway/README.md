@@ -7,4 +7,4 @@ Provide a unified API gateway that routes requests to KoreFeed, KoreReference, a
 Handles content addition, management, and search across all services.
 
 ## Status
-Planned — not yet implemented.
+Implemented — the gateway exposes search/read tools plus a narrow KoreLibrary edit surface for book metadata/body updates and anchor repair.
