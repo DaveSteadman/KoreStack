@@ -69,7 +69,7 @@ function initServicePanelIcons() {
   if (!chromeApi?.resolveIcon || !chromeApi?.SUITE_ICONS) return;
   for (const row of document.querySelectorAll('[data-service-card]')) {
     const serviceKey = SERVICE_KEY_BY_SLUG[row.dataset.serviceCard];
-    const glyph = row.querySelector('.service-glyph');
+    const glyph = row.querySelector('.service-banner-icon');
     if (!serviceKey || !glyph) continue;
     const iconHtml = chromeApi.resolveIcon(chromeApi.SUITE_ICONS, serviceKey, SERVICES_PANEL_ICON_SIZE);
     if (iconHtml) glyph.innerHTML = iconHtml;
@@ -88,20 +88,27 @@ function initServiceActionIcons() {
 function updateCard(service) {
   const card = document.querySelector(`[data-service-card="${service.slug}"]`);
   if (!card) return;
+  const state = stateForService(service);
   card.classList.remove('up', 'starting', 'down');
-  card.classList.add(stateForService(service));
+  card.classList.add(state);
 
   const stateTag = card.querySelector('[data-field="state"]');
   setText(stateTag, stateLabel(service));
-  if (stateTag) {
-    stateTag.classList.remove('kcui-tag--accent', 'kcui-tag--success', 'kcui-tag--warning', 'kcui-tag--danger');
-    stateTag.classList.add(`kcui-tag--${STATE_COLOR[stateForService(service)] || 'dim'}`);
+  const stateBadge = card.querySelector('[data-field="status-badge"]');
+  if (stateBadge) {
+    stateBadge.classList.remove('service-badge--up', 'service-badge--starting', 'service-badge--down');
+    stateBadge.classList.add(`service-badge--${state}`);
   }
 
   const urlLink = card.querySelector('[data-field="url"]');
   if (urlLink) {
     urlLink.textContent = service.url;
     urlLink.href = service.url;
+  }
+
+  const host = card.querySelector('[data-field="host"]');
+  if (host) {
+    host.textContent = String(service.url || '').replace(/^https?:\/\//i, '');
   }
 }
 

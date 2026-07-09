@@ -22,6 +22,7 @@
   <link rel="icon" type="image/x-icon" href="/ui-elements/assets/icons/favicon.ico">
   <link rel="stylesheet" href="/ui-elements/assets/css/chrome.css">
   <link rel="stylesheet" href="/ui-elements/assets/css/workspace.css">
+  <link rel="stylesheet" href="/ui-elements/assets/css/service-cards.css">
   <link rel="stylesheet" href="/static/stack/stack.css">
 </head>
 <body class="kcui-shell-bg">
@@ -50,23 +51,33 @@
           <section class="panel kcui-panel services-panel">
             <div class="services-header kcui-panel-header">
               <p class="eyebrow">Services</p>
-              <p>Compact live rows with inline controls.</p>
+              <p>Unified panel cards with live status and controls.</p>
             </div>
             <div class="kcui-panel-body">
-              <section class="services-grid">
+              <section class="services-grid kcui-service-grid kcui-card-grid kcui-card-grid--tiles">
               {% for service in service_rows %}
-                <article class="service-row service-{{ service.slug }} {{ service.css_state }}" data-service-card="{{ service.slug }}">
-                  <div class="service-cell service-glyph" aria-hidden="true" data-suite-icon="{{ service.icon_key }}"></div>
-                  <div class="service-cell service-core">
-                    <p class="eyebrow">{{ service.slug_upper }}</p>
-                    <h2>{{ service.label }}</h2>
-                    <p class="service-copy">{{ service.description }}</p>
+                <article class="kcui-service-card kcui-card service-card service-{{ service.slug }} {{ service.css_state }}" data-service-card="{{ service.slug }}">
+                  <div class="kcui-service-banner service-banner">
+                    <span class="kcui-service-banner-icon service-banner-icon" aria-hidden="true" data-suite-icon="{{ service.icon_key }}"></span>
+                    <span class="kcui-service-banner-text">
+                      <span class="kcui-service-banner-overline">{{ service.slug_upper }}</span>
+                      <span class="kcui-service-banner-title">{{ service.label }}</span>
+                    </span>
                   </div>
-                  <div class="service-cell service-state">
-                    <span class="kcui-tag kcui-tag--{{ service.tag_color }}" data-field="state">{{ service.state_label }}</span>
+
+                  <div class="service-desc">{{ service.description }}</div>
+
+                  <div class="kcui-service-badge service-badge service-badge--{{ service.css_state }}" data-field="status-badge">
+                    <span class="dot"></span>
+                    <span data-field="state">{{ service.state_label }}</span>
+                    <span class="kcui-service-host" data-field="host">{{ service.url | replace('http://', '') }}</span>
                   </div>
-                  <div class="service-cell service-link"><a data-field="url" href="{{ service.url }}" target="_blank" rel="noreferrer">{{ service.url }}</a></div>
-                  <div class="service-cell service-actions actions">
+
+                  <div class="service-link-row">
+                    <a data-field="url" href="{{ service.url }}" target="_blank" rel="noreferrer">{{ service.url }}</a>
+                  </div>
+
+                  <div class="kcui-service-actions service-actions actions">
                     <button class="kcui-icon-button service-action service-action--start" type="button" data-service="{{ service.slug }}" data-action="start" title="Start" aria-label="Start {{ service.label }}">
                       <span class="service-action-icon" data-action-icon="start" aria-hidden="true"></span>
                     </button>
@@ -76,6 +87,7 @@
                     <button class="kcui-icon-button service-action service-action--restart" type="button" data-service="{{ service.slug }}" data-action="restart" title="Restart" aria-label="Restart {{ service.label }}">
                       <span class="service-action-icon" data-action-icon="restart" aria-hidden="true"></span>
                     </button>
+                    <span class="service-notice" data-field="notice"></span>
                   </div>
                 </article>
               {% endfor %}
