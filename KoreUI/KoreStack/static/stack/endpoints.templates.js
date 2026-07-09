@@ -24,6 +24,16 @@ function placeholderValueForType(typeName) {
   return 'example';
 }
 
+function placeholderValueForParamName(paramName) {
+  const name = String(paramName || '').toLowerCase();
+  if (!name) return 'example';
+  if (name === 'domain') return 'tech';
+  if (name.includes('id') || name.includes('count') || name.includes('offset') || name.includes('limit') || name.includes('page') || name.includes('year')) {
+    return 1;
+  }
+  return 'example';
+}
+
 function cloneTemplateValue(value) {
   if (value === null || value === undefined) return value;
   if (typeof structuredClone === 'function') return structuredClone(value);
@@ -159,13 +169,52 @@ function templateFromDeclaredQuery(route) {
   };
 }
 
+function templateFromDeclaredPath(route) {
+  const pathParams = safeArray(route?.path_params);
+  const inferredNames = [];
+  const matcher = /\{([^}]+)\}/g;
+  const pathText = String(route?.path || '');
+  let match = matcher.exec(pathText);
+  while (match) {
+    const token = String(match[1] || '').trim();
+    if (token) inferredNames.push(token);
+    match = matcher.exec(pathText);
+  }
+
+  if (!pathParams.length && !inferredNames.length) return null;
+
+  const path = {};
+  for (const param of pathParams) {
+    path[param.name] = !isUndefinedLike(param.default)
+      ? param.default
+      : placeholderValueForType(param.type);
+  }
+  for (const name of inferredNames) {
+    if (!Object.prototype.hasOwnProperty.call(path, name)) {
+      path[name] = placeholderValueForParamName(name);
+    }
+  }
+
+  return {
+    path,
+    summary: 'Max path template from declared path params.',
+  };
+}
+
 function buildTemplateForRoute(route, method) {
   const pathRule = pathRuleForRoute(route);
+  const declaredPath = templateFromDeclaredPath(route);
+
   if (isBodyMethod(method)) {
+    const pathParams = declaredPath?.path || null;
     if (pathRule?.body) {
       return {
         bodyText: JSON.stringify(pathRule.body, null, 2),
-        templateText: JSON.stringify(pathRule.body, null, 2),
+        templateText: JSON.stringify({
+          path_params: pathParams || {},
+          body: pathRule.body,
+        }, null, 2),
+        pathParams,
         queryParams: null,
         summary: pathRule.summary,
       };
@@ -174,41 +223,65 @@ function buildTemplateForRoute(route, method) {
     if (declaredBody?.body) {
       return {
         bodyText: JSON.stringify(declaredBody.body, null, 2),
-        templateText: JSON.stringify(declaredBody.body, null, 2),
+        templateText: JSON.stringify({
+          path_params: pathParams || {},
+          body: declaredBody.body,
+        }, null, 2),
+        pathParams,
         queryParams: null,
         summary: declaredBody.summary,
       };
     }
     return {
       bodyText: '{}',
-      templateText: JSON.stringify({ body: {} }, null, 2),
+      templateText: JSON.stringify({
+        path_params: pathParams || {},
+        body: {},
+      }, null, 2),
+      pathParams,
       queryParams: null,
       summary: 'No body parameters declared. Template uses an empty JSON object.',
     };
   }
 
+  let queryTemplate = null;
+  let summary = '';
   if (pathRule?.query) {
-    return {
-      bodyText: '',
-      templateText: JSON.stringify({ query_params: pathRule.query }, null, 2),
-      queryParams: cloneTemplateValue(pathRule.query),
-      summary: `${pathRule.summary} (query template)`,
-    };
+    queryTemplate = cloneTemplateValue(pathRule.query);
+    summary = `${pathRule.summary} (query template)`;
+  } else {
+    const declaredQuery = templateFromDeclaredQuery(route);
+    if (declaredQuery?.query) {
+      queryTemplate = declaredQuery.query;
+      summary = declaredQuery.summary;
+    }
   }
-  const declaredQuery = templateFromDeclaredQuery(route);
-  if (declaredQuery?.query) {
-    return {
-      bodyText: '',
-      templateText: JSON.stringify({ query_params: declaredQuery.query }, null, 2),
-      queryParams: declaredQuery.query,
-      summary: declaredQuery.summary,
-    };
+
+  const templateShape = {
+    path_params: declaredPath?.path || {},
+    query_params: queryTemplate || {},
+  };
+  const hasPath = Object.keys(templateShape.path_params).length > 0;
+  const hasQuery = Object.keys(templateShape.query_params).length > 0;
+
+  if (!summary) {
+    if (hasPath && hasQuery) {
+      summary = 'Template includes path and query params (body not used for this method).';
+    } else if (hasPath) {
+      summary = 'Template includes path params (body not used for this method).';
+    } else if (hasQuery) {
+      summary = 'Template includes query params (body not used for this method).';
+    } else {
+      summary = 'No query or path params declared. This endpoint can be called as-is.';
+    }
   }
+
   return {
     bodyText: '',
-    templateText: JSON.stringify({ query_params: {} }, null, 2),
-    queryParams: {},
-    summary: 'No query params declared. This endpoint can be called as-is.',
+    templateText: JSON.stringify(templateShape, null, 2),
+    pathParams: templateShape.path_params,
+    queryParams: templateShape.query_params,
+    summary,
   };
 }
 
@@ -217,6 +290,7 @@ function templateFromDefinition(definition) {
     return {
       bodyText: JSON.stringify(definition.body, null, 2),
       templateText: JSON.stringify(definition.body, null, 2),
+      pathParams: null,
       queryParams: null,
       summary: definition.summary || 'Max template preset.',
     };
@@ -225,6 +299,7 @@ function templateFromDefinition(definition) {
     return {
       bodyText: '',
       templateText: JSON.stringify({ query_params: definition.query }, null, 2),
+      pathParams: null,
       queryParams: cloneTemplateValue(definition.query),
       summary: definition.summary || 'Max query template preset.',
     };
@@ -232,6 +307,7 @@ function templateFromDefinition(definition) {
   return {
     bodyText: '',
     templateText: '',
+    pathParams: null,
     queryParams: null,
     summary: definition.summary || 'No template content defined.',
   };

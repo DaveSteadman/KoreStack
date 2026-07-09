@@ -199,6 +199,55 @@ function withQueryParams(url, params) {
   return next.toString();
 }
 
+function withPathParams(url, params) {
+  if (!params || typeof params !== 'object') return url;
+  let next = String(url);
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value === null || value === '') continue;
+    const token = `{${key}}`;
+    next = next.replaceAll(token, encodeURIComponent(String(value)));
+  }
+  // Manifest data can omit path param declarations; keep the URL runnable.
+  next = next.replace(/\{[^}]+\}/g, 'example');
+  return next;
+}
+
+function hasRequestBody(method) {
+  return method === 'POST' || method === 'PUT' || method === 'PATCH';
+}
+
+function parseBodyHints(bodyText) {
+  const raw = String(bodyText || '').trim();
+  if (!raw) return null;
+
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
+
+  const pathParams = parsed.path_params && typeof parsed.path_params === 'object' && !Array.isArray(parsed.path_params)
+    ? parsed.path_params
+    : null;
+  const queryParams = parsed.query_params && typeof parsed.query_params === 'object' && !Array.isArray(parsed.query_params)
+    ? parsed.query_params
+    : null;
+
+  if (!pathParams && !queryParams) return null;
+  return { pathParams, queryParams };
+}
+
+function urlWithBodyHints(url, bodyText, method) {
+  if (hasRequestBody(method)) return String(url || '');
+
+  const hints = parseBodyHints(bodyText);
+  if (!hints) return String(url || '');
+
+  return withQueryParams(withPathParams(String(url || ''), hints.pathParams), hints.queryParams);
+}
+
 function selectRoute(service, route) {
   selected = {
     key: `${service.key}|${route.path}|${route.methods.join(',')}`,
@@ -208,7 +257,8 @@ function selectRoute(service, route) {
   setMethodOptions(route.methods.length ? route.methods : ['GET']);
   $('request-method').value = route.methods[0] || 'GET';
   const template = buildBodyTemplate(service, route);
-  const resolvedUrl = withQueryParams(routeUrl(service, route), template.queryParams);
+  const pathResolvedUrl = withPathParams(routeUrl(service, route), template.pathParams);
+  const resolvedUrl = withQueryParams(pathResolvedUrl, template.queryParams);
   $('request-url').value = resolvedUrl;
   $('request-open').href = resolvedUrl;
   $('request-content-type').value = route.body_params.length ? 'application/json' : 'text/plain';
@@ -249,11 +299,28 @@ async function refreshCatalog() {
 }
 
 async function submitRequest() {
+  const method = $('request-method').value;
+  const bodyText = $('request-body').value;
+  const hints = parseBodyHints(bodyText);
+  const currentUrl = $('request-url').value.trim();
+
+  let resolvedUrl = currentUrl;
+  if (!hasRequestBody(method) && hints && selected?.service && selected?.route) {
+    // Build from the canonical route template so path params can always be reapplied.
+    const routeTemplateUrl = routeUrl(selected.service, selected.route);
+    resolvedUrl = withQueryParams(withPathParams(routeTemplateUrl, hints.pathParams), hints.queryParams);
+  } else {
+    resolvedUrl = urlWithBodyHints(currentUrl, bodyText, method);
+  }
+
+  $('request-url').value = resolvedUrl;
+  $('request-open').href = resolvedUrl || '#';
+
   const payload = {
-    method: $('request-method').value,
-    url: $('request-url').value.trim(),
+    method,
+    url: resolvedUrl,
     content_type: $('request-content-type').value.trim(),
-    body: $('request-body').value,
+    body: bodyText,
   };
 
   $('response-meta').textContent = 'Running...';
