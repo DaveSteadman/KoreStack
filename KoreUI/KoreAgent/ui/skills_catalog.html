@@ -14,7 +14,6 @@
     <link rel="stylesheet" href="/static/skills_catalog.css" />
 
     <script src="/suite-config.js"></script>
-    <script src="/ui-elements/assets/js/chrome.js"></script>
 </head>
 <body class="kcui-shell-bg">
     <div id="layout" class="kcui-layout-shell">
@@ -64,5 +63,10 @@
     </div>
 
     <script src="/static/skills_catalog.js"></script>
+    <script type="module">
+        import { initTopbar } from '/ui-elements/assets/js/chrome.js';
+
+        initTopbar({ currentService: 'koreagent', urls: window.__koreSuiteUrls || {} });
+    </script>
 </body>
 </html>
