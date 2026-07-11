@@ -12,7 +12,7 @@
 #
 # Use this when you land on a hub page (news front page, GitHub topic, forum index) and need
 # to see what links are available so you can decide which ones to follow. The output is
-# deliberately large enough to auto-park in the scratchpad, where scratch_query can then
+# deliberately large enough to auto-park in the scratchpad, where scratchpad_query can then
 # do semantic selection: "which of these links are about open source LLMs?"
 #
 # Related modules:
@@ -329,7 +329,7 @@ def get_page_links(
 
     filter_text: optional substring - only links whose anchor text or URL contains this
                  string (case-insensitive) are returned. Use for coarse pre-filtering
-                 when you know a keyword; use scratch_query for semantic filtering.
+                 when you know a keyword; use scratchpad_query for semantic filtering.
 
     Returns a list[dict]. Returns a single-entry error list on network/parse failure.
     """
@@ -364,7 +364,7 @@ def get_page_links_text(
     Page title is included in the header when the fetched HTML provides one.
     Designed for direct LLM consumption and scratchpad parking.
     When the result is large (typical for listing pages), it will be auto-parked by the
-    orchestration layer. Use scratch_query on the parked key for semantic filtering.
+    orchestration layer. Use scratchpad_query on the parked key for semantic filtering.
 
     Returns an error string (beginning with "Error:") on failure.
     """

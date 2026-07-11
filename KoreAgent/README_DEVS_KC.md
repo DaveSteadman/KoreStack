@@ -313,8 +313,8 @@ Only unsummarised messages appear in the `--- Conversation ---` block. Summarise
 ### Scratchpad Round-Trip
 
 Before the run:
-- `scratch_clear(session_id)` clears any leftover in-memory state for this session
-- Each key from `conv.scratchpad` is loaded via `scratch_save(key, value, session_id)`
+- `scratchpad_clear(session_id)` clears any leftover in-memory state for this session
+- Each key from `conv.scratchpad` is loaded via `scratchpad_save(key, value, session_id)`
 
 After the run:
 - `get_store(session_id)` returns the current in-memory scratchpad as a dict

@@ -20,8 +20,8 @@ without polluting the parent context with intermediate tool chatter.
 - `instructions` *(optional)* - extra steering prepended to the child prompt, e.g. "research thoroughly and return a concise answer with evidence".
 - `max_iterations` *(optional, default 3)* - maximum tool-calling rounds for the child run, 1-8 recommended.
 - `output_key` *(optional)* - scratchpad key name to save the child's final answer under automatically.
-  Mirrors `scratch_query`'s `save_result_key`. The parent can then use `scratch_query(output_key, ...)` or
-  `{scratch:output_key}` downstream without capturing the answer from the return dict inline.
+  Mirrors `scratchpad_query`'s `save_result_key`. The parent can then use `scratchpad_query(output_key, ...)` or
+  `{scratchpad:output_key}` downstream without capturing the answer from the return dict inline.
 - `scratchpad_visible_keys` *(optional)* - list of scratchpad key names the child can see in its system prompt.
   When omitted (default), the child sees **no** parent scratchpad keys — this prevents silent leakage of
   all auto-saved `_tc_*` noise into the child context.
@@ -32,7 +32,7 @@ without polluting the parent context with intermediate tool chatter.
   `scratchpad_prefix="_tc_r2"` passes all tool-call auto-saves from round 2 of the parent run.
 - `tools_allowlist` *(optional)* - list of function names the child is permitted to call.
   When provided, the child's tool set is restricted to only skills that expose those functions. Use to create
-  focused sub-loops: e.g. `["fetch_page_text", "scratch_save"]` for a child whose only job is to fetch and
+  focused sub-loops: e.g. `["fetch_page_text", "scratchpad_save"]` for a child whose only job is to fetch and
   store, or `["search_web", "lookup_wikipedia", "fetch_page_text"]` for a web-research-only child.
 
 ## Output

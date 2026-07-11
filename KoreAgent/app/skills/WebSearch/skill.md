@@ -40,8 +40,8 @@ Invoke this skill when the prompt contains any of these concepts or phrases:
 ## Tool selection guidance
 
 **Check the scratchpad before searching.**
-If relevant data from a prior step in this session is already stored, use `scratch_query` or
-`scratch_load` rather than issuing a new search. Only search the web when the data is
+If relevant data from a prior step in this session is already stored, use `scratchpad_query` or
+`scratchpad_load` rather than issuing a new search. Only search the web when the data is
 confirmed absent from the scratchpad.
 
 **Always call the search tool - never answer from training data.**
@@ -84,16 +84,16 @@ than substituting an answer from memory.
 
 The hub-page pattern - use `get_page_links_text` as an intermediate step when the search
 result is a listing page (HN, GitHub trending, news homepage, forum index) rather than a
-direct article. Get the links, park them, use `scratch_query` to select, then `fetch_page_text`
+direct article. Get the links, park them, use `scratchpad_query` to select, then `fetch_page_text`
 on the chosen items.
 
 ## Scratchpad integration
 Search results can be large.  When the result will be referenced in a later step (summarise,
-extract a field, write to file), park it immediately with `scratch_save` so the full text does
+extract a field, write to file), park it immediately with `scratchpad_save` so the full text does
 not have to be re-fetched or carried as an inline string through subsequent planning rounds.
 
-- `search_web_text("Python 3.14 release notes")` ? `scratch_save("searchresult", <output>)` ? use `{scratch:searchresult}` in downstream steps
-- `write_file("data/results.txt", "{scratch:searchresult}")` - write parked search result without an extra `scratch_load` call
+- `search_web_text("Python 3.14 release notes")` ? `scratchpad_save("searchresult", <output>)` ? use `{scratchpad:searchresult}` in downstream steps
+- `write_file("data/results.txt", "{scratchpad:searchresult}")` - write parked search result without an extra `scratchpad_load` call
 
 ## Examples
 - `search_web_text("Python 3.14 release notes", max_results=3)` - top 3 DuckDuckGo results as formatted text

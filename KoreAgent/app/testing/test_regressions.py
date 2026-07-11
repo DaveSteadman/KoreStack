@@ -16,7 +16,7 @@
 # Related modules:
 #   - testing/test_wrapper.py  -- wraps individual test files for /test execution
 #   - skill_executor.py        -- execute_tool_call
-#   - scratchpad.py            -- scratch_save, scratch_load
+#   - scratchpad.py            -- scratchpad_save, scratchpad_load
 # ====================================================================================================
 import json
 import os
@@ -64,11 +64,11 @@ from datasets import delete_session_datasets
 from datasets import get_persisted_datasets_payload
 from datasets import restore_persisted_datasets
 from prompt_builder import build_system_message
-from scratchpad import scratch_clear
+from scratchpad import scratchpad_clear
 from scratchpad import get_store
-from scratchpad import scratch_load
-from scratchpad import scratch_query
-from scratchpad import scratch_save
+from scratchpad import scratchpad_load
+from scratchpad import scratchpad_query
+from scratchpad import scratchpad_save
 from session_runtime import bind_session
 from skills_catalog_builder import build_tool_definitions
 from skills_catalog_builder import load_skills_payload
@@ -84,7 +84,7 @@ from skills.SystemInfo.system_info_skill import get_system_info_string
 from KoreDocs.app import korefile as koredocs_korefile
 from KoreCommon import datauser_fs as datauser_fs_module
 from tool_loop import normalize_tool_request
-from tool_loop import _derive_auto_scratch_key
+from tool_loop import _derive_auto_scratchpad_key
 from tool_loop import _extract_graph_connection_batch_from_text
 from tool_result import ToolCallResult
 from input_layer import server as api_module
@@ -99,7 +99,7 @@ from utils.workspace_utils import get_user_data_dir
 class RegressionTests(unittest.TestCase):
     def setUp(self) -> None:
         self.skills_payload = load_skills_payload(CODE_DIR / "skills" / "skills_catalog.json")
-        scratch_clear()
+        scratchpad_clear()
         delete_session_datasets("dataset_test")
         delete_session_datasets("dataset_restore")
         delete_session_datasets("dataset_prompt")
@@ -122,7 +122,7 @@ class RegressionTests(unittest.TestCase):
         clear_session_datasets("kc_conv_701")
 
     def tearDown(self) -> None:
-        scratch_clear()
+        scratchpad_clear()
         delete_session_datasets("dataset_test")
         delete_session_datasets("dataset_restore")
         delete_session_datasets("dataset_prompt")
@@ -1099,7 +1099,7 @@ class RegressionTests(unittest.TestCase):
 
     def test_load_session_rebuilds_history_from_korechat(self) -> None:
         session_id = "web_1775338532521"
-        scratch_clear(session_id)
+        scratchpad_clear(session_id)
 
         conversation = {
             "id": 7,
@@ -1129,7 +1129,7 @@ class RegressionTests(unittest.TestCase):
         )
         self.assertEqual(len(session_context.get_turns()), 1)
         self.assertEqual(session_context.get_turns()[0]["assistant_response"], "Prior summary")
-        self.assertEqual(scratch_load("topic", session_id), "alpha")
+        self.assertEqual(scratchpad_load("topic", session_id), "alpha")
 
     def test_load_session_restores_datasets_from_korechat_payload(self) -> None:
         session_id = "dataset_load_session"
@@ -1146,7 +1146,7 @@ class RegressionTests(unittest.TestCase):
         datasets_payload = get_persisted_datasets_payload(session_id)
 
         clear_session_datasets(session_id)
-        scratch_clear(session_id)
+        scratchpad_clear(session_id)
 
         conversation = {
             "id": 7,
@@ -1160,14 +1160,14 @@ class RegressionTests(unittest.TestCase):
                 history = api_module._load_session(session_id)
 
         self.assertEqual(history.as_list(), [])
-        self.assertEqual(scratch_load("topic", session_id), "alpha")
+        self.assertEqual(scratchpad_load("topic", session_id), "alpha")
         manifest = json.loads(dataset_inspect("feed_items_raw", session_id=session_id))
         self.assertEqual(manifest["source_tool"], "koredata_search")
         self.assertEqual(manifest["count"], 2)
 
     def test_save_session_promotes_named_items_and_persists_background_context(self) -> None:
         session_id = "web_named_memory"
-        scratch_clear(session_id)
+        scratchpad_clear(session_id)
 
         history = ConversationHistory()
         history.add(
@@ -1183,7 +1183,7 @@ class RegressionTests(unittest.TestCase):
                 session_context = api_module._create_session_context(session_id=session_id, persist_path=None)
                 api_module._save_session(session_id, history, session_context, 1000, 1024)
 
-        self.assertEqual(scratch_load("memory_favourite_colour", session_id), "cobalt blue")
+        self.assertEqual(scratchpad_load("memory_favourite_colour", session_id), "cobalt blue")
         self.assertTrue(any("background_context" in payload for _path, payload in patched_payloads))
 
     def test_koreconv_prompt_renders_datasets_separately(self) -> None:
@@ -1223,7 +1223,7 @@ class RegressionTests(unittest.TestCase):
         )
         datasets_payload = get_persisted_datasets_payload(session_id)
         clear_session_datasets(session_id)
-        scratch_clear(session_id)
+        scratchpad_clear(session_id)
 
         event = {
             "id": 91,
@@ -1408,7 +1408,7 @@ class RegressionTests(unittest.TestCase):
 
     def test_delete_session_state_deletes_korechat_record(self) -> None:
         session_id = "web_1775338532521"
-        scratch_save("topic", "alpha", session_id)
+        scratchpad_save("topic", "alpha", session_id)
 
         with patch.object(api_module, "_kc_get_conversation_for_session", return_value={"id": 7}):
             with patch.object(api_module, "_kc_delete") as mock_delete:
@@ -1748,8 +1748,8 @@ class RegressionTests(unittest.TestCase):
 
         self.assertIn("refusing to write suspicious placeholder content", result)
 
-    def test_dataset_get_uses_deterministic_scratch_key(self) -> None:
-        key = _derive_auto_scratch_key(
+    def test_dataset_get_uses_deterministic_scratchpad_key(self) -> None:
+        key = _derive_auto_scratchpad_key(
             "dataset_get",
             {"name": "drone_test_raw_5", "offset": 20, "limit": 10, "fields": ["id", "title"]},
             7,
@@ -1912,9 +1912,9 @@ class RegressionTests(unittest.TestCase):
     def test_system_prompt_steers_research_traverse_to_page_keys(self) -> None:
         system_message = build_system_message("", None, {"skills": []}, skill_guidance_enabled=False, sandbox_enabled=True)
 
-        self.assertIn("page scratch keys", system_message)
+        self.assertIn("page scratchpad keys", system_message)
         self.assertIn("research_page_*", system_message)
-        self.assertIn("instead of scratch_load on the entire combined research bundle", system_message)
+        self.assertIn("instead of scratchpad_load on the entire combined research bundle", system_message)
 
     def test_system_prompt_steers_article_harvests_away_from_hub_urls(self) -> None:
         system_message = build_system_message("", None, {"skills": []}, skill_guidance_enabled=False, sandbox_enabled=True)
@@ -2026,7 +2026,7 @@ class RegressionTests(unittest.TestCase):
             source_tool="koredata_search",
             session_id=session_id,
         )
-        scratch_save("_dataset_get_drone_test_raw_7_o0_l25", "cached rows", session_id=session_id)
+        scratchpad_save("_dataset_get_drone_test_raw_7_o0_l25", "cached rows", session_id=session_id)
 
         def fake_orchestrate_prompt(**kwargs):
             captured["child_functions"] = {
@@ -2113,16 +2113,16 @@ class RegressionTests(unittest.TestCase):
         self.assertEqual(result["visited_count"], 1)
         self.assertEqual(len(result["best_pages"]), 1)
         self.assertEqual(len(result["page_manifest"]), 1)
-        scratch_key = result["best_pages"][0]["scratch_key"]
-        self.assertEqual(scratch_key, result["page_manifest"][0]["scratch_key"])
-        self.assertTrue(scratch_key.startswith("research_page_"))
-        saved_page = scratch_load(scratch_key)
+        scratchpad_key = result["best_pages"][0]["scratchpad_key"]
+        self.assertEqual(scratchpad_key, result["page_manifest"][0]["scratchpad_key"])
+        self.assertTrue(scratchpad_key.startswith("research_page_"))
+        saved_page = scratchpad_load(scratchpad_key)
         self.assertIn("RESEARCH QUERY: Williams Imola wins", saved_page)
         self.assertIn("TITLE: Example Results", saved_page)
         self.assertIn("URL: https://example.com/results", saved_page)
         self.assertIn("PAGE EXTRACT:", saved_page)
         self.assertIn("Williams won at Imola in 1981 and 1982.", saved_page)
-        self.assertIn(f"SCRATCH_KEY: {scratch_key}", result["full_report"])
+        self.assertIn(f"SCRATCHPAD_KEY: {scratchpad_key}", result["full_report"])
         self.assertNotIn("EXTRACT:", result["full_report"])
 
     def test_test_wrapper_fails_single_prompt_on_no_results_output(self) -> None:
@@ -2144,7 +2144,7 @@ class RegressionTests(unittest.TestCase):
         self.assertFalse(passed)
         self.assertEqual(reason, "Search returned no results")
 
-    def test_scratch_query_rejects_exhaustive_answers_from_search_results(self) -> None:
+    def test_scratchpad_query_rejects_exhaustive_answers_from_search_results(self) -> None:
         search_results = (
             "Web search results for: Williams F1 wins at Imola\n\n"
             "[1] Imola - Wins - Stats F1\n"
@@ -2154,16 +2154,16 @@ class RegressionTests(unittest.TestCase):
             "    https://www.lightsoutblog.com/f1-team-form-imola/\n"
             "    Williams scored in all of the last six San Marino Grands Prix.\n"
         )
-        scratch_save("search_block", search_results)
+        scratchpad_save("search_block", search_results)
 
         with patch("llm_client.call_llm_chat") as llm_call:
-            result = scratch_query("search_block", "list all the Williams F1 team wins at Imola")
+            result = scratchpad_query("search_block", "list all the Williams F1 team wins at Imola")
 
         self.assertEqual(result, "Not found in content.")
         llm_call.assert_not_called()
 
-    def test_scratch_query_prompt_forbids_outside_knowledge(self) -> None:
-        scratch_save("race_rows", "1992 Ayrton Senna\n1993 Ayrton Senna")
+    def test_scratchpad_query_prompt_forbids_outside_knowledge(self) -> None:
+        scratchpad_save("race_rows", "1992 Ayrton Senna\n1993 Ayrton Senna")
 
         with patch("llm_client.get_active_model", return_value="gpt-oss:20b"):
             with patch("llm_client.get_active_num_ctx", return_value=131072):
@@ -2171,7 +2171,7 @@ class RegressionTests(unittest.TestCase):
                     "llm_client.call_llm_chat",
                     return_value=SimpleNamespace(response="1992 Ayrton Senna\n1993 Ayrton Senna"),
                 ) as llm_call:
-                    result = scratch_query("race_rows", "list all rows")
+                    result = scratchpad_query("race_rows", "list all rows")
 
         self.assertEqual(result, "1992 Ayrton Senna\n1993 Ayrton Senna")
         system_prompt = llm_call.call_args.kwargs["messages"][0]["content"]

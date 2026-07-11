@@ -43,9 +43,9 @@ class SessionService:
         conversation_history_cls,
         session_context_cls,
         hydrate_session_state,
-        scratch_clear,
-        scratch_restore_key,
-        get_scratch_store,
+        scratchpad_clear,
+        scratchpad_restore_key,
+        get_scratchpad_store,
         build_persisted_scratchpad_payload,
         get_persisted_datasets_payload,
         delete_persisted_session_datasets,
@@ -61,9 +61,9 @@ class SessionService:
         self._conversation_history_cls            = conversation_history_cls
         self._session_context_cls                 = session_context_cls
         self._hydrate_session_state               = hydrate_session_state
-        self._scratch_clear                       = scratch_clear
-        self._scratch_restore_key                 = scratch_restore_key
-        self._get_scratch_store                   = get_scratch_store
+        self._scratchpad_clear                       = scratchpad_clear
+        self._scratchpad_restore_key                 = scratchpad_restore_key
+        self._get_scratchpad_store                   = get_scratchpad_store
         self._build_persisted_scratchpad_payload  = build_persisted_scratchpad_payload
         self._get_persisted_datasets_payload      = get_persisted_datasets_payload
         self._delete_persisted_session_datasets   = delete_persisted_session_datasets
@@ -256,8 +256,8 @@ class SessionService:
             conv.get("scratchpad") or {},
             session_id,
             datasets_payload = conv.get("datasets") or {},
-            scratch_clearer  = self._scratch_clear,
-            scratch_restorer = self._scratch_restore_key,
+            scratchpad_clearer  = self._scratchpad_clear,
+            scratchpad_restorer = self._scratchpad_restore_key,
             warning_logger   = lambda message: print(f"[session] Warning: {message}", flush=True),
         )
 
@@ -302,7 +302,7 @@ class SessionService:
         if not named:
             return
         for key, value in named.items():
-            self._scratch_restore_key(key, value, session_id=session_id)
+            self._scratchpad_restore_key(key, value, session_id=session_id)
 
     def _archive_old_history(self, history, session_context, *, prompt_tokens: int, num_ctx: int) -> None:
         if num_ctx <= 0 or prompt_tokens <= 0:
@@ -344,7 +344,7 @@ class SessionService:
         try:
             named_scratch = {
                 key: value
-                for key, value in self._get_scratch_store(session_id).items()
+                for key, value in self._get_scratchpad_store(session_id).items()
                 if not key.startswith(("_tc_", "_cx_", "research_page_"))
             }
             archived_turns = session_context.get_turns()
@@ -371,7 +371,7 @@ class SessionService:
         try:
             named_scratch = {
                 key: value
-                for key, value in self._get_scratch_store(session_id).items()
+                for key, value in self._get_scratchpad_store(session_id).items()
                 if not key.startswith(("_tc_", "_cx_", "research_page_"))
             }
             self.kc_patch(
@@ -388,7 +388,7 @@ class SessionService:
                 self._kc_conv_cache.pop(session_id, None)
 
     def delete_session_state(self, session_id: str) -> None:
-        self._scratch_clear(session_id)
+        self._scratchpad_clear(session_id)
         self._delete_persisted_session_datasets(session_id)
         clear_session_tools_active(session_id)
         with self._kc_conv_cache_lock:

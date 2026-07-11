@@ -57,7 +57,7 @@ def compact_context(context_map: list[dict], messages: list[dict], idx: int, sav
 
     When *save_fn* is provided and the entry has no existing scratchpad key, the
     original content is saved to a generated '_cx_' key before being replaced so
-    the model can still retrieve it via scratch_load or scratch_query.
+    the model can still retrieve it via scratchpad_load or scratchpad_query.
     """
     if idx < 0 or idx >= len(context_map):
         return False

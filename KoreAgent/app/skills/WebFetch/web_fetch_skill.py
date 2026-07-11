@@ -76,7 +76,7 @@ def _format_query_fallback(page_title: str, body: str, max_words: int) -> str:
 
     When the isolated extractor cannot prove an answer, return a longer excerpt so the
     orchestration layer can auto-park it in the scratchpad and the model can inspect it
-    with scratch_query / scratch_peek instead of repeating shallow fetches.
+    with scratchpad_query / scratchpad_peek instead of repeating shallow fetches.
     """
     fallback_words = max(int(max_words), QUERY_FALLBACK_MIN_WORDS)
     return _format_raw_fallback(page_title, body, fallback_words)

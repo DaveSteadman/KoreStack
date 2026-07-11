@@ -35,11 +35,11 @@ This skill is designed to reduce orchestration thrash by owning the search front
 - `answer_confidence` - `high` when top page score >= 10, `medium` >= 5, `low` < 5. Score is driven by: title term match (+4.0), URL term match (+2.0), body term frequency (up to +3.0/term), multi-term bonus (+3.0). A focused article typically scores 10-20; shallow index/listing pages score 3-7.
 - `visited_count` - number of fetched pages
 - `seed_results` - initial search results used to seed the traversal
-- `best_pages` - compact list of the most relevant pages with URL, title, score, evidence snippets, and a per-page `scratch_key`
-- `page_manifest` - compact manifest of all useful pages, each with URL, score, depth, and per-page `scratch_key`
+- `best_pages` - compact list of the most relevant pages with URL, title, score, evidence snippets, and a per-page `scratchpad_key`
+- `page_manifest` - compact manifest of all useful pages, each with URL, score, depth, and per-page `scratchpad_key`
 - `exploration_log` - per-page log showing what was visited and why
 - `unvisited_candidates` - discovered but not visited URLs (up to 20 from the remaining frontier)
-- `full_report` - compact debug report listing the strongest pages and their `scratch_key` values
+- `full_report` - compact debug report listing the strongest pages and their `scratchpad_key` values
 
 ## Triggers
 Invoke this skill when the prompt contains any of these concepts or phrases:
@@ -61,7 +61,7 @@ Prefer a cheaper alternative whenever one of the following applies:
 
 | Situation | Prefer instead |
 |---|---|
-| Data already stored this session | `scratch_query` / `scratch_load` |
+| Data already stored this session | `scratchpad_query` / `scratchpad_load` |
 | Stable factual topic (person, place, concept) | `lookup_wikipedia` |
 | Answer likely on one known page | `fetch_page_text(url=..., query=...)` |
 | Answer likely on one unknown page | `search_web_text` + `fetch_page_text(query=...)` |
@@ -98,7 +98,7 @@ over which items are selected:
 
 ```
 1. get_page_links_text("https://news.ycombinator.com")   <- survey the listing
-2. scratch_query(key, "which links are about AI tools?")  <- semantic selection
+2. scratchpad_query(key, "which links are about AI tools?")  <- semantic selection
 3. fetch_page_text(url, query="what is this and how to use it?")  <- read chosen items
 4. write_file(path, content)                              <- store results
 ```
@@ -107,7 +107,7 @@ Reserve `research_traverse` for open-ended investigation where the set of source
 unknown upfront and automated frontier expansion is needed.
 
 **Check the scratchpad before researching.**
-If related content is already stored from an earlier step, use `scratch_query` to extract the
+If related content is already stored from an earlier step, use `scratchpad_query` to extract the
 specific answer rather than launching a fresh web investigation.
 
 ## Scratchpad integration
@@ -116,10 +116,10 @@ This skill stores each useful fetched page as its own scratchpad artifact under 
 
 Preferred follow-up pattern:
 1. call `research_traverse(...)`
-2. inspect `best_pages[*].scratch_key`
-3. run `scratch_query(key, question)` on one or more specific page artifacts
+2. inspect `best_pages[*].scratchpad_key`
+3. run `scratchpad_query(key, question)` on one or more specific page artifacts
 
-Avoid `scratch_load` on the entire combined `research_traverse` result unless you explicitly need
+Avoid `scratchpad_load` on the entire combined `research_traverse` result unless you explicitly need
 the raw manifest for debugging.
 
 ## Examples

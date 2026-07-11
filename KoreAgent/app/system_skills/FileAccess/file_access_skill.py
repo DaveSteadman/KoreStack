@@ -213,7 +213,7 @@ def folder_exists(path: str) -> str:
 
 
 # ----------------------------------------------------------------------------------------------------
-def file_write_from_scratch(scratch_key: str, path: str, skip_content_guard: bool = False) -> str:
+def file_write_from_scratchpad(scratchpad_key: str, path: str, skip_content_guard: bool = False) -> str:
     """Write the content stored in a scratchpad key to a file at path.
 
     Reads the auto-saved scratchpad key (e.g. _tc_r5_fetch_page_text shown in a truncation
@@ -224,11 +224,11 @@ def file_write_from_scratch(scratch_key: str, path: str, skip_content_guard: boo
     (e.g. a large page fetch that was auto-saved), to avoid putting large content into tool
     call arguments where JSON encoding can cause errors.
     """
-    from scratchpad import scratch_load as _scratch_load
+    from scratchpad import scratchpad_load as _scratchpad_load
 
-    content = _scratch_load(scratch_key)
+    content = _scratchpad_load(scratchpad_key)
     if "not found" in content.lower() and len(content) < 200:
-        return f"Error: scratchpad key {scratch_key!r} does not exist"
+        return f"Error: scratchpad key {scratchpad_key!r} does not exist"
     try:
         target_path = resolve_datauser_path(path)
     except DataUserPathError as err:
@@ -241,4 +241,4 @@ def file_write_from_scratch(scratch_key: str, path: str, skip_content_guard: boo
                 "Use dataset_write_koredoc or retrieve the real dataset records first."
             )
     target_path = write_text_file(target_path, content)
-    return f"Wrote {display_datauser_path(target_path)} ({len(content):,} chars from scratch key {scratch_key!r})"
+    return f"Wrote {display_datauser_path(target_path)} ({len(content):,} chars from scratchpad key {scratchpad_key!r})"

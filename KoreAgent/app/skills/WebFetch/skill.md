@@ -35,7 +35,7 @@ Returns a plain `str` containing:
 
 **Check the scratchpad before fetching.**
 If active scratchpad keys are listed in the system prompt, check whether the page content
-already exists there before making a network request. Use `scratch_query(key, question)` to
+already exists there before making a network request. Use `scratchpad_query(key, question)` to
 extract a specific answer from stored content without re-fetching.
 
 **This is Stage 3 in the web chain - use it on specific article/detail URLs.**
@@ -57,8 +57,8 @@ extract specific article/detail URLs first.
 **Prefer `query=` for narrow factual extraction, but switch to raw+scratchpad for completeness-sensitive pages.**
 
 Raw mode (no `query`) can return up to 4,000 words directly into the orchestration layer. Large
-results are auto-saved to the scratchpad, which lets you inspect them later with `scratch_query`
-or `scratch_peek` without repeating the network fetch.
+results are auto-saved to the scratchpad, which lets you inspect them later with `scratchpad_query`
+or `scratchpad_peek` without repeating the network fetch.
 
 Query mode runs an isolated throwaway LLM call and returns only a compact extracted answer when
 the question is narrow and page-local.
@@ -71,20 +71,20 @@ Use raw mode with a larger `max_words` value (typically 2000-4000) when any of t
 Rule of thumb:
 - Fetching a page to answer a question -> always use `query=`
 - Fetching a page to store for later inspection -> use raw mode with generous `max_words`
-- Exhaustive or history-sensitive extraction from a stats page -> use raw mode first, let it auto-save to scratchpad, then use `scratch_query`
+- Exhaustive or history-sensitive extraction from a stats page -> use raw mode first, let it auto-save to scratchpad, then use `scratchpad_query`
 
 Blocked-page rule of thumb:
 - If a fetch returns `Error: ... HTTP 401` or `Error: ... HTTP 403`, treat the page as blocked and move on to another candidate URL.
 - If a fetch returns only a bare title from a topic/search page, treat it as thin hub content rather than a substantive article.
 
 ## Scratchpad integration
-Page text can be large. Use `scratch_save` to store it under a key and reference it with `{scratch:key}` in follow-up steps rather than repeating the full text inline.
+Page text can be large. Use `scratchpad_save` to store it under a key and reference it with `{scratchpad:key}` in follow-up steps rather than repeating the full text inline.
 
 Example chain:
 1. `search_web("python asyncio tutorial")` - returns list of results with URLs
 2. `fetch_page_text("https://example.com/asyncio-guide", query="summarise the key asyncio concepts")` - returns extracted answer
-3. `scratch_save("asyncio_article", {result from step 2})` - stores text
-4. LLM synthesizes answer from `{scratch:asyncio_article}`
+3. `scratchpad_save("asyncio_article", {result from step 2})` - stores text
+4. LLM synthesizes answer from `{scratchpad:asyncio_article}`
 
 ## Examples
 
@@ -110,7 +110,7 @@ fetch_page_text("https://gpracingstats.com/circuits/imola/", max_words=3000)
 
 Then filter the auto-saved scratchpad content:
 ```
-scratch_query("_tc_r2_fetch_page_text", "List every Williams win at Imola with year and driver")
+scratchpad_query("_tc_r2_fetch_page_text", "List every Williams win at Imola with year and driver")
 ```
 
 Notes:

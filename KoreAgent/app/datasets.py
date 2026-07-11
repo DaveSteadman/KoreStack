@@ -452,30 +452,30 @@ def hydrate_session_state(
     session_id: str | None = None,
     *,
     datasets_payload: object = None,
-    scratch_clearer=None,
-    scratch_restorer=None,
+    scratchpad_clearer=None,
+    scratchpad_restorer=None,
     warning_logger=None,
 ) -> dict[str, object]:
     resolved = _resolve_session_id(session_id)
     named_scratch = coerce_persisted_scratchpad_payload(scratchpad_payload)
     persisted_datasets = coerce_persisted_datasets_payload(datasets_payload)
 
-    if scratch_clearer is not None:
-        scratch_clearer(session_id=resolved)
+    if scratchpad_clearer is not None:
+        scratchpad_clearer(session_id=resolved)
     clear_session_datasets(resolved)
     restore_persisted_datasets(persisted_datasets, resolved)
 
-    if scratch_restorer is None:
+    if scratchpad_restorer is None:
         return named_scratch
 
-    for scratch_key, scratch_value in named_scratch.items():
+    for scratchpad_key, scratchpad_value in named_scratch.items():
         try:
-            scratch_restorer(scratch_key, str(scratch_value), session_id=resolved)
+            scratchpad_restorer(scratchpad_key, str(scratchpad_value), session_id=resolved)
         except TypeError:
-            scratch_restorer(scratch_key, str(scratch_value), resolved)
+            scratchpad_restorer(scratchpad_key, str(scratchpad_value), resolved)
         except Exception as exc:
             if warning_logger is not None:
-                warning_logger(f"could not restore scratchpad key {scratch_key!r}: {exc}")
+                warning_logger(f"could not restore scratchpad key {scratchpad_key!r}: {exc}")
     return named_scratch
 
 

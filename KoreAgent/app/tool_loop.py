@@ -27,9 +27,9 @@ from pathlib import Path
 from context_manager import COMPACT_THRESHOLD
 from context_manager import assess_compact
 from datasets import auto_route_tool_result
-from scratchpad import scratch_save as scratch_auto_save
-from scratchpad import scratch_pin
-from scratchpad import scratch_unpin_all
+from scratchpad import scratchpad_save as scratchpad_auto_save
+from scratchpad import scratchpad_pin
+from scratchpad import scratchpad_unpin_all
 from skill_executor import execute_tool_call
 from tool_result import ToolCallResult
 from utils.workspace_utils import get_workspace_root
@@ -111,7 +111,7 @@ _COT_PLANNING_RE = re.compile(
 )
 _CONTENT_MARKER_RE = re.compile(r"(?:^|\n)(\*\*|#{1,3} |\| |\d+\. |- )")
 _WRITE_FILE_BLOCK_RE = re.compile(r"WRITE_FILE:\s*([^\n]+)\n---FILE_START---[ \t]*\n(.*?)\n?---FILE_END---", re.DOTALL)
-_SCRATCH_KEY_SAFE_RE = re.compile(r"[^a-z0-9_]+")
+_SCRATCHPAD_KEY_SAFE_RE = re.compile(r"[^a-z0-9_]+")
 _GRAPH_WRITE_INTENT_RE = re.compile(
     r"\b(?:add|create|insert|save|store|submit|write|load)\b.{0,80}\b(?:graph|koregraph|triple|triples|graph connection|graph connections)\b"
     r"|\b(?:graph|koregraph|triple|triples|graph connection|graph connections)\b.{0,80}\b(?:add|create|insert|save|store|submit|write|load)\b",
@@ -120,11 +120,11 @@ _GRAPH_WRITE_INTENT_RE = re.compile(
 
 
 def _safe_scratch_component(value: object, fallback: str = "x") -> str:
-    cleaned = _SCRATCH_KEY_SAFE_RE.sub("_", str(value or "").strip().lower()).strip("_")
+    cleaned = _SCRATCHPAD_KEY_SAFE_RE.sub("_", str(value or "").strip().lower()).strip("_")
     return cleaned[:40] or fallback
 
 
-def _derive_auto_scratch_key(func_name: str, arguments: dict, round_num: int, tool_ordinal: int) -> str:
+def _derive_auto_scratchpad_key(func_name: str, arguments: dict, round_num: int, tool_ordinal: int) -> str:
     normalized_name = str(func_name or "").strip().lower()
     if normalized_name == "dataset_get":
         dataset_name = _safe_scratch_component(arguments.get("name"), "dataset")
@@ -657,7 +657,7 @@ def run_tool_loop(
 
             _log_section(f"TOOL ROUND {round_num}")
             _log_file_only(f"[progress] Round {round_num}: calling model...")
-            thread_chars, compact_count = assess_compact(context_map, messages, round_num, config.num_ctx, save_fn=scratch_auto_save)
+            thread_chars, compact_count = assess_compact(context_map, messages, round_num, config.num_ctx, save_fn=scratchpad_auto_save)
             if compact_count:
                 _log_file_only(f"[context] compacted {compact_count} message(s) (threshold {COMPACT_THRESHOLD:.0%} exceeded)")
             _log_file_only(f"[context] thread: {thread_chars:,} chars (~{thread_chars // 4:,} tok est.) | window: {config.num_ctx:,} | remaining est.: ~{config.num_ctx - thread_chars // 4:,}")
@@ -670,7 +670,7 @@ def run_tool_loop(
                     correction = (
                         "Your previous tool call could not be executed because the argument JSON was truncated or malformed. "
                         "Do not embed large multi-line strings directly in a tool call argument. Instead: (1) build the content using "
-                        "code_execute and print() it, (2) save the output to the scratchpad with scratch_save, then (3) pass the scratchpad reference to write_file."
+                        "code_execute and print() it, (2) save the output to the scratchpad with scratchpad_save, then (3) pass the scratchpad reference to write_file."
                     )
                     _log(f"[error] Tool call JSON parse error in round {round_num} - injecting correction message.")
                     messages.append({"role": "user", "content": correction})
@@ -831,19 +831,19 @@ def run_tool_loop(
                     output = ToolCallResult(tool=func_name, function=func_name, module="", arguments=arguments, result=result_content, status="error", error=str(exc))
 
                 is_scratch_reader = func_name.lower().startswith("scratch_")
-                auto_scratch_key = None
+                auto_scratchpad_key = None
                 if not output.get("is_error") and not is_scratch_reader and isinstance(result_content, str) and len(result_content) >= TOOL_MSG_AUTO_SCRATCH_MIN and not auto_dataset_manifest:
-                    auto_scratch_key = _derive_auto_scratch_key(func_name, arguments, round_num, tc_idx + 1)
-                    scratch_auto_save(auto_scratch_key, result_content)
-                    scratch_pin(auto_scratch_key)
+                    auto_scratchpad_key = _derive_auto_scratchpad_key(func_name, arguments, round_num, tc_idx + 1)
+                    scratchpad_auto_save(auto_scratchpad_key, result_content)
+                    scratchpad_pin(auto_scratchpad_key)
 
                 # Build thread content: add provenance envelope for data tools, then truncate.
-                # The scratchpad copy (saved above) keeps the raw content for scratch_query use.
+                # The scratchpad copy (saved above) keeps the raw content for scratchpad_query use.
                 thread_content = _build_data_envelope(func_name, arguments, result_content) if not output.get("is_error") else result_content
-                if auto_scratch_key and func_name.lower() == "dataset_get":
-                    thread_content += f"\n[dataset_get scratch key: {auto_scratch_key}]"
-                if auto_scratch_key and len(thread_content) > TOOL_MSG_MAX_CHARS:
-                    thread_content = thread_content[:TOOL_MSG_MAX_CHARS] + f"\n... [truncated - full content auto-saved to scratchpad key: {auto_scratch_key}]"
+                if auto_scratchpad_key and func_name.lower() == "dataset_get":
+                    thread_content += f"\n[dataset_get scratchpad key: {auto_scratchpad_key}]"
+                if auto_scratchpad_key and len(thread_content) > TOOL_MSG_MAX_CHARS:
+                    thread_content = thread_content[:TOOL_MSG_MAX_CHARS] + f"\n... [truncated - full content auto-saved to scratchpad key: {auto_scratchpad_key}]"
 
                 _log(f"     {trunc(str(result_content), 120)}")
                 round_outputs.append(output)
@@ -855,7 +855,7 @@ def run_tool_loop(
                     except Exception as exc:
                         _log_file_only(f"[tool-selection] could not promote MRU tool '{func_name}': {exc}")
                 messages.append({"role": "tool", "tool_call_id": tc_id, "name": func_name, "content": thread_content})
-                context_map.append({"round": round_num, "role": "tool", "label": func_name, "chars": len(thread_content), "auto_key": auto_scratch_key, "msg_idx": len(messages) - 1})
+                context_map.append({"round": round_num, "role": "tool", "label": func_name, "chars": len(thread_content), "auto_key": auto_scratchpad_key, "msg_idx": len(messages) - 1})
 
             if round_recovery_events:
                 recovery_pending = dict(round_recovery_events[0])
@@ -897,5 +897,5 @@ def run_tool_loop(
             except Exception as error:
                 final_response = f"(synthesis failed: {error})"
     finally:
-        scratch_unpin_all()
+        scratchpad_unpin_all()
     return final_response, prompt_tokens, completion_tokens, run_success, final_tps, tool_outputs

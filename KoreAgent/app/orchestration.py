@@ -41,7 +41,7 @@ from llm_client import list_ollama_models
 from llm_client import log_to_session
 from llm_client import resolve_model_name
 from prompt_tokens import resolve_tokens
-from scratchpad import scratch_list as _scratch_list
+from scratchpad import scratchpad_list as _scratchpad_list
 from prompt_builder import build_system_message as _prompt_builder_build_system_message
 from session_runtime import bind_session
 from skill_executor import build_catalog_gates
@@ -593,7 +593,7 @@ def orchestrate_prompt(
             _log_section_file_only("CONTEXT MAP")
             _log_file_only(_context_manager_format_context_map(_context_map, config.num_ctx))
             _log_section_file_only("SCRATCHPAD STATE")
-            _log_file_only(_scratch_list())
+            _log_file_only(_scratchpad_list())
             _log(f"Total: {prompt_tokens:,} prompt tokens | {completion_tokens:,} completion tokens")
 
             store_last_run_state(_context_map, messages)

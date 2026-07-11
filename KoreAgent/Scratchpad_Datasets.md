@@ -26,10 +26,10 @@ Each step happens in a separate prompt, possibly across sessions.
 Scratchpad ([KoreAgent/app/scratchpad.py](app/scratchpad.py)) already provides:
 
 - session-scoped key/value storage
-- auto-save of large tool results under `_tc_*` keys via `scratch_auto_save` in
+- auto-save of large tool results under `_tc_*` keys via `scratchpad_auto_save` in
   [tool_loop.py](app/tool_loop.py)
-- isolated LLM calls over stored content via `scratch_query`
-- token substitution via `{scratch:key}`
+- isolated LLM calls over stored content via `scratchpad_query`
+- token substitution via `{scratchpad:key}`
 - KoreChat persistence of named (non-auto) keys through `_kc_patch` writing the
   `conversations.scratchpad` JSON column (see [KoreChat/app/database.py](../KoreChat/app/database.py))
 
@@ -170,7 +170,7 @@ Notes on each:
 - `dataset_map` always requires `save_as` because it changes record shape (one input -> one output).
   The output dataset's records are `{"input_id": ..., "output": ...}` unless the prompt produces
   structured fields.
-- `dataset_reduce` returns a string. The agent typically `scratch_save`s it under a named string key.
+- `dataset_reduce` returns a string. The agent typically `scratchpad_save`s it under a named string key.
 - `dataset_drop_where` accepts a small DSL for programmatic conditions so the LLM does not have to
   loop over records for trivial filters. Supported initially:
   - `"duplicate by <field>"`
@@ -182,13 +182,13 @@ Notes on each:
 - All operations are session-scoped. Cross-session access requires the same conversation.
 
 All LLM-driven operations (`dataset_filter`, `dataset_map`, `dataset_reduce`) reuse the same
-isolated-LLM-call surface as `scratch_query`. No new infrastructure.
+isolated-LLM-call surface as `scratchpad_query`. No new infrastructure.
 
 ---
 
 ## Auto-routing in `tool_loop.py`
 
-Today, [tool_loop.py](app/tool_loop.py) auto-saves large tool results via `scratch_auto_save` under
+Today, [tool_loop.py](app/tool_loop.py) auto-saves large tool results via `scratchpad_auto_save` under
 `_tc_*` keys. Extend that classifier with one branch:
 
 1. If the tool result parses as a list of dicts of length >= 5 with at least two stable id-like
@@ -257,7 +257,7 @@ no aliases, no runs.
 - Agent calls `dataset_reduce("feed_items_strong",
     prompt="Write a 600-word article on topic X using only these items as evidence. Cite by url.")`
   -> returns article string.
-- Agent calls `scratch_save("article_draft_v1", article)` and replies to the user.
+- Agent calls `scratchpad_save("article_draft_v1", article)` and replies to the user.
 
 Each named dataset persists across sessions through the existing KoreChat path. The agent navigates
 by names that match how the user describes the work. There is no separate workflow engine.
@@ -320,7 +320,7 @@ Phase 1, single PR:
 2. `KoreAgent/app/datasets_store.py` - SQLite spillover (one table, WAL, per-call `_conn`).
 3. Persist dataset manifests through the dedicated KoreChat `datasets` field so scratchpad and
   datasets remain distinct in storage, API payloads, and the inspector UI.
-4. Classifier branch in `KoreAgent/app/tool_loop.py` next to `scratch_auto_save`.
+4. Classifier branch in `KoreAgent/app/tool_loop.py` next to `scratchpad_auto_save`.
 5. New skill at `KoreAgent/app/system_skills/Datasets/` with `skill.md` and `datasets_skill.py`,
    following the existing `Scratchpad` skill layout.
 6. Two-sentence addition to the system prompt; skill block listing the verbs and auto-router.
@@ -348,7 +348,7 @@ Phase 3 is unspecified by design.
   rows persist in their own SQLite file. No KoreChat changes required.
 - **Ingestion.** Auto-route in `tool_loop.py` based on result shape. No `save_to=` parameters on
   remote MCP tools.
-- **Agent surface.** Ten narrow verbs. LLM operations reuse the `scratch_query` isolated-call path.
+- **Agent surface.** Ten narrow verbs. LLM operations reuse the `scratchpad_query` isolated-call path.
 - **Navigation.** Names. The dataset name *is* the stage and the alias.
 - **Out of scope.** Runs, alias tables, link tables, decision tables, retention classes, FTS,
   embeddings, MCP layer, KoreRAG promotion.

@@ -25,7 +25,7 @@ import time
 
 from datasets import get_prompt_dataset_manifests
 from scratchpad import get_store as get_scratchpad_store
-from scratchpad import scratch_save as scratch_auto_save
+from scratchpad import scratchpad_save as scratchpad_auto_save
 from session_runtime import get_active_session_id
 from utils.workspace_utils import trunc
 
@@ -71,7 +71,7 @@ def _detect_referenced_datasets(child_prompt: str) -> list[str]:
     return referenced
 
 
-def _matching_dataset_scratch_keys(dataset_names: list[str]) -> list[str]:
+def _matching_dataset_scratchpad_keys(dataset_names: list[str]) -> list[str]:
     if not dataset_names:
         return []
 
@@ -223,11 +223,11 @@ def run_delegate_subrun(
 
     # Default: child sees no parent scratchpad keys (prevents _tc_* noise leakage).
     # Caller must explicitly list the keys the child is allowed to see. When the child prompt
-    # explicitly references a known dataset, also expose matching dataset_get scratch keys so a
+    # explicitly references a known dataset, also expose matching dataset_get scratchpad keys so a
     # recent parent fetch can be reused without reloading from a truncated preview.
     child_visible_keys = list(scratchpad_visible_keys) if scratchpad_visible_keys is not None else []
     if referenced_datasets:
-        for key in _matching_dataset_scratch_keys(referenced_datasets):
+        for key in _matching_dataset_scratchpad_keys(referenced_datasets):
             if key not in child_visible_keys:
                 child_visible_keys.append(key)
 
@@ -264,18 +264,18 @@ def run_delegate_subrun(
     if output_key and status == "ok":
         try:
             out_key = str(output_key).strip()
-            scratch_auto_save(out_key, answer)
+            scratchpad_auto_save(out_key, answer)
             # Return only the save notification - full content is in the scratchpad.
             # This keeps large delegate outputs out of the parent tool-call message thread.
-            answer = f"[Result saved to scratchpad key '{out_key.lower()}'. Use scratch_load('{out_key.lower()}') or {{scratch:{out_key.lower()}}} to access it.]"
+            answer = f"[Result saved to scratchpad key '{out_key.lower()}'. Use scratchpad_load('{out_key.lower()}') or {{scratchpad:{out_key.lower()}}} to access it.]"
         except Exception as exc:
             logger.log_file_only(f"[delegate] Warning: could not save result to scratchpad key '{out_key}': {exc}")
     elif not output_key and status == "ok" and isinstance(answer, str) and len(answer) >= _DELEGATE_AUTO_SAVE_THRESHOLD:
         # No explicit output_key but answer is large - auto-save to keep parent thread compact.
         auto_key = f"_tc_delegate_d{depth + 1}"
         try:
-            scratch_auto_save(auto_key, answer)
-            answer = f"[Answer auto-saved to scratchpad key '{auto_key}' ({len(answer):,} chars). Use scratch_load('{auto_key}') or scratch_query('{auto_key}', ...) to access it.]"
+            scratchpad_auto_save(auto_key, answer)
+            answer = f"[Answer auto-saved to scratchpad key '{auto_key}' ({len(answer):,} chars). Use scratchpad_load('{auto_key}') or scratchpad_query('{auto_key}', ...) to access it.]"
         except Exception as exc:
             logger.log_file_only(f"[delegate] Warning: could not auto-save large result: {exc}")
 

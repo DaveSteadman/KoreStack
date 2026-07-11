@@ -189,7 +189,7 @@ from orchestration import orchestrate_prompt
 from orchestration import resolve_execution_model
 from conversation_state import build_background_turn
 from run_helpers import make_task_session
-from scratchpad import scratch_clear
+from scratchpad import scratchpad_clear
 from skills_catalog_builder import load_skills_payload
 import mcp_client as _mcp_client
 from utils.runtime_logger import create_log_file_path
@@ -375,7 +375,7 @@ def run_chat_sequence_mode(
         seq_ctx = SlashCommandContext(
             config           = config,
             output           = lambda text, level="info", _buf=slash_lines: _buf.append(text),
-            clear_history    = lambda: [history.clear(), session_ctx.clear(), scratch_clear(session_ctx.session_id)],
+            clear_history    = lambda: [history.clear(), session_ctx.clear(), scratchpad_clear(session_ctx.session_id)],
             session_context  = session_ctx,
             session_id       = session_ctx.session_id,
             compress_history = _compress_in_memory,

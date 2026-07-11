@@ -82,7 +82,7 @@ _SYSTEM_SKILL_GUIDANCE: list[str] = [
     "- When the user wants a faithful document export from a dataset, prefer dataset_write_koredoc instead of manually rewriting rows into file content.",
     "- When KoreData search results include artifact_ref, prefer koredata_get_full_text(refid) for follow-up retrieval instead of rebuilding domain-specific lookup arguments by hand.",
     "- When the user wants a full-text dataset from KoreData search results, prefer dataset_expand_full_text(...) over manual per-row fetch loops.",
-    "- When research_traverse stores page scratch keys such as research_page_*, query those page scratch keys instead of scratch_load on the entire combined research bundle.",
+    "- When research_traverse stores page scratchpad keys such as research_page_*, query those page scratchpad keys instead of scratchpad_load on the entire combined research bundle.",
     "- For article harvests, count only concrete article/detail pages. Do not count homepages, category pages, topic pages, search-result pages, or section fronts.",
     "- When harvesting article URLs from a hub page, use get_page_links or get_page_links_text first and prefer_article_urls=true when that option exists.",
 
@@ -239,7 +239,7 @@ def _build_korecode_workspace_menu_note(conversation_entry: dict | None) -> str:
         return ""
     return (
         "\nKoreCode workspace menu is preloaded in the active KoreChat scratchpad "
-        f"under key '{_KORECODE_WORKSPACE_MENU_KEY}'. Use scratch_load('{_KORECODE_WORKSPACE_MENU_KEY}') "
+        f"under key '{_KORECODE_WORKSPACE_MENU_KEY}'. Use scratchpad_load('{_KORECODE_WORKSPACE_MENU_KEY}') "
         "when you need the generated workspace file/function inventory."
     )
 
@@ -279,13 +279,13 @@ def build_system_message(
     if not sandbox_enabled:
         system_parts.append("\nPython execution sandbox: OFF - code snippets have unrestricted access to all modules and file I/O.")
 
-    scratch_store = get_scratchpad_store()
+    scratchpad_store = get_scratchpad_store()
     if scratchpad_visible_keys is not None:
-        scratch_store = {key: value for key, value in scratch_store.items() if key in scratchpad_visible_keys}
-    if scratch_store:
-        named_keys   = {k: v for k, v in scratch_store.items() if not k.startswith(("_tc_", "_cx_", "research_page_"))}
-        auto_keys    = {k: v for k, v in scratch_store.items() if k.startswith("_tc_") or k.startswith("research_page_")}
-        context_keys = {k: v for k, v in scratch_store.items() if k.startswith("_cx_")}
+        scratchpad_store = {key: value for key, value in scratchpad_store.items() if key in scratchpad_visible_keys}
+    if scratchpad_store:
+        named_keys   = {k: v for k, v in scratchpad_store.items() if not k.startswith(("_tc_", "_cx_", "research_page_"))}
+        auto_keys    = {k: v for k, v in scratchpad_store.items() if k.startswith("_tc_") or k.startswith("research_page_")}
+        context_keys = {k: v for k, v in scratchpad_store.items() if k.startswith("_cx_")}
         key_lines = []
         if named_keys:
             named_previews = []
@@ -304,9 +304,9 @@ def build_system_message(
             key_lines.append("Auto-saved:        " + ", ".join(f"{key} ({len(value):,} chars)" for key, value in sorted(auto_keys.items())))
         if context_keys:
             key_lines.append("Compacted-context: " + ", ".join(f"{key} ({len(value):,} chars)" for key, value in sorted(context_keys.items())))
-        suffix = "\nReference them in skill arguments using {scratch:key} or load them with scratch_load()."
+        suffix = "\nReference them in skill arguments using {scratchpad:key} or load them with scratchpad_load()."
         if context_keys:
-            suffix += " Compacted-context keys (_cx_*) hold earlier turn content saved during context compaction; use scratch_query to extract information from them."
+            suffix += " Compacted-context keys (_cx_*) hold earlier turn content saved during context compaction; use scratchpad_query to extract information from them."
         system_parts.append("\nHistorical context only - scratchpad keys currently stored:\n  " + "\n  ".join(key_lines) + suffix)
 
     dataset_manifests = get_prompt_dataset_manifests() if _payload_has_dataset_tools(skills_payload) else []

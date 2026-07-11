@@ -15,7 +15,7 @@ Extract all navigable hyperlinks from a web page and return them as a numbered l
 
 ### `get_page_links(url, filter_text = "", max_links = 30, timeout_seconds = 15)`
 - `url` *(required)* - full HTTP or HTTPS URL of the listing or hub page to extract links from.
-- `filter_text` *(optional)* - case-insensitive substring; only links whose anchor text or URL contains this string are returned. Use for coarse pre-filtering when you already know a keyword. For semantic filtering ("which links are about open source models?") use `scratch_query` on the parked result instead.
+- `filter_text` *(optional)* - case-insensitive substring; only links whose anchor text or URL contains this string are returned. Use for coarse pre-filtering when you already know a keyword. For semantic filtering ("which links are about open source models?") use `scratchpad_query` on the parked result instead.
 - `max_links` *(optional, default 30)* - maximum number of links to return, 1-100.
 - `timeout_seconds` *(optional, default 15)* - network timeout, 5-60.
 
@@ -56,7 +56,7 @@ STAGE 2 - Navigation (see what is on a listing/hub page)
   ? returns: numbered link list with anchor text and absolute URLs
   [result auto-parks in scratchpad if large]
 
-  scratch_query("_tc_r2_get_page_links_text", "which links are about open source AI tools?")
+  scratchpad_query("_tc_r2_get_page_links_text", "which links are about open source AI tools?")
   ? returns: "Items 3, 7, 14 look relevant - ..."
 
 STAGE 3 - Content (read selected pages)
@@ -79,18 +79,18 @@ STAGE 3 - Content (read selected pages)
 Step 1: get_page_links_text("https://news.ycombinator.com")
         ? result auto-parks to _tc_r1_get_page_links_text
 
-Step 2: scratch_query("_tc_r1_get_page_links_text",
+Step 2: scratchpad_query("_tc_r1_get_page_links_text",
         "which items mention AI, LLM, machine learning, or open source models?")
         ? returns a compact filtered list of matching item numbers
 
-Step 3: scratch_peek("_tc_r1_get_page_links_text", "Item 7")
+Step 3: scratchpad_peek("_tc_r1_get_page_links_text", "Item 7")
         ? returns the URL for that item
 
 Step 4: fetch_page_text(url, query="what is this project and how would a developer use it?")
 ```
 
 **Using filter_text for coarse pre-filtering:**
-If the listing page is very large (100+ links) and you already know a keyword, pass `filter_text="AI"` to trim the result before it parks. This keeps the parked content more focused for `scratch_query`. Do not over-filter - `scratch_query` handles semantic matching better than substring matching.
+If the listing page is very large (100+ links) and you already know a keyword, pass `filter_text="AI"` to trim the result before it parks. This keeps the parked content more focused for `scratchpad_query`. Do not over-filter - `scratchpad_query` handles semantic matching better than substring matching.
 
 Do not use placeholder values such as `"Skip"` or `"Next"` for `filter_text` unless you literally want links containing those words. Omitting `filter_text` is the correct default when surveying a hub page for article candidates.
 

@@ -85,7 +85,7 @@ The system is divided into two layers with a clean interface between them.
 - `orchestrate_prompt` is the single entry point; all execution modes call it.
 - The tool loop runs for at most `config.max_iterations` rounds; a final synthesis is forced if rounds are exhausted without a plain-text answer.
 - Each LLM call receives the full message thread including all prior tool results.
-- `resolve_tokens(user_prompt)` is applied once at the start of each run, resolving `{today}`, `{scratch:key}`, etc.
+- `resolve_tokens(user_prompt)` is applied once at the start of each run, resolving `{today}`, `{scratchpad:key}`, etc.
 - `ConversationHistory` is a rolling window capped at `max_turns` (default 10) complete turns; older turns are dropped silently.
 - `ConversationHistory.add()` asserts that the turn count is even before appending (parity check).
 - `OrchestratorConfig` is a dataclass; it is mutable by slash commands at runtime.
@@ -107,19 +107,19 @@ The system is divided into two layers with a clean interface between them.
 **Claims:**
 - Scratch values are stored in a module-level per-session map (`_SESSION_STORES`) and scoped by session ID.
 - Keys are validated: lowercased, alphanumeric and underscore only, non-empty.
-- `scratch_save` overwrites silently on duplicate key.
-- `scratch_query(key, query, save_result_key, instructions)` runs the query in an isolated single-turn LLM call (no tools, clean message thread). The raw stored content never enters the caller's context window.
+- `scratchpad_save` overwrites silently on duplicate key.
+- `scratchpad_query(key, query, save_result_key, instructions)` runs the query in an isolated single-turn LLM call (no tools, clean message thread). The raw stored content never enters the caller's context window.
 - When `instructions` is non-empty, it replaces the default "precise extractor" system prompt entirely, enabling synthesis and generation tasks.
 - When `save_result_key` is provided, the extracted answer is also saved to that key.
-- `scratch_peek(key, substring, context_chars)` returns a windowed view with `>>>match<<<` highlighting; it does not load the full value into the response.
+- `scratchpad_peek(key, substring, context_chars)` returns a windowed view with `>>>match<<<` highlighting; it does not load the full value into the response.
 - Large tool results (>= 600 chars) are automatically saved to `_tc_r{round}_{funcname}` keys by the orchestration loop; the message thread receives a truncated version with a key reference.
 - Auto-saved keys include `_tc_` tool-output keys and `research_page_` web-research page artifacts.
-- `scratch_clear()` is called at session reset; it removes all keys including auto-saved ones.
+- `scratchpad_clear()` is called at session reset; it removes all keys including auto-saved ones.
 
 ### Token substitution
 
 **Claims:**
-- `resolve_tokens(text)` resolves `{today}`, `{yesterday}`, `{longdate}`, `{month}`, `{year}`, `{week}`, and `{scratch:key}` in a single pass.
+- `resolve_tokens(text)` resolves `{today}`, `{yesterday}`, `{longdate}`, `{month}`, `{year}`, `{week}`, and `{scratchpad:key}` in a single pass.
 - Resolution is non-recursive: the substituted value is never re-scanned, preventing prompt injection via stored content.
 - Applied to the user prompt once per orchestration run, and to string skill arguments by `skill_executor` before each skill call.
 
@@ -186,7 +186,7 @@ MCP connections (configured external tool providers):
 **Claims:**
 - Each skill directory contains exactly one `skill.md` that defines its public interface for the catalog builder.
 - Skills do not import from each other directly; inter-skill data flows through the scratchpad.
-- Skill functions that take large values as arguments support `{scratch:key}` token substitution as an alternative to passing inline text.
+- Skill functions that take large values as arguments support `{scratchpad:key}` token substitution as an alternative to passing inline text.
 - MCP connections are declared in `config/korestack_config.json` under `mcp_connections`; the older `mcp_servers` key remains a backwards-compatible alias.
 - MCP connections can use `transport: "streamable_http"` (default) or `transport: "sse"` for classic MCP SSE endpoints.
 - MCP tool names are owned by the MCP server. The framework exposes the names returned by `list_tools()` unchanged, optionally validating them with `expected_prefix`.

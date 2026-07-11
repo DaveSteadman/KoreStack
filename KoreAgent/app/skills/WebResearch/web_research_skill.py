@@ -30,7 +30,7 @@ from collections import deque
 from llm_client import call_llm_chat as _call_llm_chat
 from llm_client import get_active_model as _get_active_model
 from llm_client import get_active_num_ctx as _get_active_num_ctx
-from scratchpad import scratch_save as _scratch_save
+from scratchpad import scratchpad_save as _scratchpad_save
 from utils.webpage_utils import extract_content as _extract_content
 from utils.webpage_utils import fetch_html as _fetch_html
 from utils.webpage_utils import truncate_to_words as _truncate_to_words
@@ -132,7 +132,7 @@ def _same_domain(url_a: str, url_b: str) -> bool:
 # MARK: SCRATCHPAD ARTIFACTS
 # ====================================================================================================
 
-def _build_page_scratch_key(query: str, url: str, ordinal: int) -> str:
+def _build_page_scratchpad_key(query: str, url: str, ordinal: int) -> str:
     digest = hashlib.sha1(f"{query}|{url}".encode("utf-8")).hexdigest()[:10]
     return f"research_page_{ordinal}_{digest}"
 
@@ -461,9 +461,9 @@ def research_traverse(
             page["evidence"] = llm_evidence
 
     for index, page in enumerate(useful_pages, start=1):
-        scratch_key = _build_page_scratch_key(query, page["url"], index)
-        _scratch_save(scratch_key, _build_page_artifact_content(query, page))
-        page["scratch_key"] = scratch_key
+        scratchpad_key = _build_page_scratchpad_key(query, page["url"], index)
+        _scratchpad_save(scratchpad_key, _build_page_artifact_content(query, page))
+        page["scratchpad_key"] = scratchpad_key
 
     best_pages = []
     for page in useful_pages[: min(5, len(useful_pages))]:
@@ -474,7 +474,7 @@ def research_traverse(
             "depth"         : page["depth"],
             "matched_terms" : page["matched_terms"],
             "evidence"      : page["evidence"],
-            "scratch_key"   : page["scratch_key"],
+            "scratchpad_key"   : page["scratchpad_key"],
         })
 
     page_manifest = []
@@ -484,7 +484,7 @@ def research_traverse(
             "url"         : page["url"],
             "score"       : page["score"],
             "depth"       : page["depth"],
-            "scratch_key" : page["scratch_key"],
+            "scratchpad_key" : page["scratchpad_key"],
         })
 
     if useful_pages:
@@ -519,7 +519,7 @@ def research_traverse(
         full_report_lines.append(f"TITLE: {page['title']}")
         full_report_lines.append(f"URL:   {page['url']}")
         full_report_lines.append(f"SCORE: {page['score']}")
-        full_report_lines.append(f"SCRATCH_KEY: {page['scratch_key']}")
+        full_report_lines.append(f"SCRATCHPAD_KEY: {page['scratchpad_key']}")
         if page["matched_terms"]:
             full_report_lines.append(f"MATCHED TERMS: {', '.join(page['matched_terms'])}")
         if page["evidence"]:

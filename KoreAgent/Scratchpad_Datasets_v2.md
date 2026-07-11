@@ -444,7 +444,7 @@ User asks for the article.
 
 - Agent inspects or gets the retained records from `feed_items_strong`
 - Agent writes the article using normal generation
-- Agent saves the draft with `scratch_save("article_draft_v1", article)`
+- Agent saves the draft with `scratchpad_save("article_draft_v1", article)`
 
 The storage feature ends once the structured retained set is stable. Final article generation is not a
 special dataset primitive in phase 1.
@@ -532,7 +532,7 @@ Phase 1, single focused implementation slice:
    Add a compact dataset manifest block to each turn.
 
 5. `KoreAgent/app/tool_loop.py`
-   Add the record-shaped auto-router branch next to existing `scratch_auto_save` behavior.
+   Add the record-shaped auto-router branch next to existing `scratchpad_auto_save` behavior.
 
 6. `KoreAgent/app/system_skills/Datasets/`
    Add `skill.md` and `datasets_skill.py` with the reduced phase 1 surface.

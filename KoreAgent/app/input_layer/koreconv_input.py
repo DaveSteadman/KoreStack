@@ -61,8 +61,8 @@ from orchestration import OrchestratorConfig
 from orchestration import orchestrate_prompt
 from run_helpers import make_task_session
 from scratchpad import get_store
-from scratchpad import scratch_clear
-from scratchpad import scratch_save
+from scratchpad import scratchpad_clear
+from scratchpad import scratchpad_save
 from utils.runtime_logger import SessionLogger
 from utils.workspace_utils import load_runtime_config
 
@@ -448,8 +448,8 @@ def _handle_event(
             conv.get("scratchpad") or {},
             session_id,
             datasets_payload=conv.get("datasets") or {},
-            scratch_clearer=scratch_clear,
-            scratch_restorer=scratch_save,
+            scratchpad_clearer=scratchpad_clear,
+            scratchpad_restorer=scratchpad_save,
             warning_logger=lambda message: push_log_line(f"[KORECHAT] Conv {conv_id}: {message}"),
         )
 

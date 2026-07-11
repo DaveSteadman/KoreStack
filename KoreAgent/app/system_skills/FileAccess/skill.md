@@ -11,7 +11,7 @@ Interface for generic file read, write, append, and search operations inside the
   - `file_write(path: str, content: str)`
   - `file_append(path: str, content: str)`
   - `file_read(path: str, max_chars: int = 8000)`
-  - `file_write_from_scratch(scratch_key: str, path: str)`
+  - `file_write_from_scratchpad(scratchpad_key: str, path: str)`
   - `file_find(keywords: list[str], search_root: str = "")`
   - `folder_find(keywords: list[str], search_root: str = "")`
   - `folder_create(path: str)`
@@ -19,8 +19,8 @@ Interface for generic file read, write, append, and search operations inside the
 
 ## Parameters
 
-### `file_write_from_scratch(scratch_key, path)`
-- `scratch_key` *(required)* - scratchpad key holding the content to write, e.g. `"_tc_r5_fetch_page_text"` (the key shown in a truncation notice). Reads the stored value directly without requiring a separate `scratch_load` call.
+### `file_write_from_scratchpad(scratchpad_key, path)`
+- `scratchpad_key` *(required)* - scratchpad key holding the content to write, e.g. `"_tc_r5_fetch_page_text"` (the key shown in a truncation notice). Reads the stored value directly without requiring a separate `scratchpad_load` call.
 - `path` *(required)* - destination path; same resolution rules as `file_write`.
 
 Use this when large content was auto-saved to a scratchpad key (e.g. a web page fetch that was truncated in the tool message). Avoids putting large content into tool call arguments where JSON encoding can fail.
@@ -34,11 +34,11 @@ Use this when large content was auto-saved to a scratchpad key (e.g. a web page 
 
 ### `file_write(path, content)`
 - `path` *(required)* - datauser-relative path. A bare name like `"x.txt"` resolves to `datauser/x.txt`. Legacy aliases like `"data/x.txt"`, `"datauser/x.txt"`, and `"KoreDocs/x.txt"` are accepted.
-- `content` *(required)* - content to write. Overwrites the file if it exists. Supports `{scratch:key}` token substitution - use `"{scratch:mykey}"` to write scratchpad content directly without calling `scratch_load` first.
+- `content` *(required)* - content to write. Overwrites the file if it exists. Supports `{scratchpad:key}` token substitution - use `"{scratchpad:mykey}"` to write scratchpad content directly without calling `scratchpad_load` first.
 
 ### `file_append(path, content)`
 - `path` *(required)* - same path rules as `file_write`.
-- `content` *(required)* - content to append. A newline is added automatically if missing. Supports `{scratch:key}` token substitution - use `"{scratch:mykey}"` to append scratchpad content directly.
+- `content` *(required)* - content to append. A newline is added automatically if missing. Supports `{scratchpad:key}` token substitution - use `"{scratchpad:mykey}"` to append scratchpad content directly.
 
 ### `file_read(path, max_chars = 8000)`
 - `path` *(required)* - same path rules as `file_write`.
@@ -58,7 +58,7 @@ Use this when large content was auto-saved to a scratchpad key (e.g. a web page 
 - `file_read(...)` - returns the file content as a string, or `"File not found: ..."` if the file does not exist.
 - `file_find(...)` - returns a newline-separated list of matching workspace-relative paths, or a `"No files found..."` message.
 - `folder_find(...)` - returns a newline-separated list of matching workspace-relative paths, or a `"No folders found..."` message.
-- `file_write_from_scratch(...)` - returns `"Wrote datauser/file.md (12345 chars from scratch key '_tc_r5_fetch_page_text')"` on success, or `"Error: ..."` on failure.
+- `file_write_from_scratchpad(...)` - returns `"Wrote datauser/file.md (12345 chars from scratchpad key '_tc_r5_fetch_page_text')"` on success, or `"Error: ..."` on failure.
 - `folder_create(...)` - returns `"Created folder: path"` or `"Folder already exists: path"`, or `"Error: ..."` on failure.
 - `folder_exists(...)` - returns `"yes"` or `"no"`.
 
@@ -82,12 +82,12 @@ Invoke this skill when the prompt contains any of these concepts or phrases:
 - `create folder`, `make folder`, `create directory`, `folder exists`, `does folder exist`
 
 ## Scratchpad integration
-The `content` argument of `file_write` and `file_append` supports `{scratch:key}` token substitution.
-This means you can park a large result (web search, code output, file content) with `scratch_save`,
-then write it to disk without a separate `scratch_load` call.
+The `content` argument of `file_write` and `file_append` supports `{scratchpad:key}` token substitution.
+This means you can park a large result (web search, code output, file content) with `scratchpad_save`,
+then write it to disk without a separate `scratchpad_load` call.
 
-- `file_write("exports/result.txt", "{scratch:searchresult}")` - writes the stored value directly
-- `file_append("logs/run.log", "{scratch:codeoutput}")` - appends the stored value directly
+- `file_write("exports/result.txt", "{scratchpad:searchresult}")` - writes the stored value directly
+- `file_append("logs/run.log", "{scratchpad:codeoutput}")` - appends the stored value directly
 
 ## Examples
 - `file_write("notes/meeting.txt", "Discuss project timeline")` - creates or overwrites the file

@@ -9,7 +9,7 @@
 #                                 {year}, and {week} in any string with their current values.
 #                                 {week} returns the ISO week number (ISO 8601, Monday-anchored,
 #                                 01-53, January 4th is always in week 1).
-#                                 Also resolves {scratch:key} to the current scratchpad value.
+#                                 Also resolves {scratchpad:key} to the current scratchpad value.
 #                                 Applied automatically to user prompts in orchestration.py
 #                                 and to string skill arguments in skill_executor.py.
 #
@@ -52,7 +52,7 @@ _TOKEN_RE = re.compile(
     re.IGNORECASE,
 )
 
-_SCRATCH_TOKEN_RE = re.compile(r"\{scratch:([a-zA-Z0-9_]+)\}", re.IGNORECASE)
+_SCRATCHPAD_TOKEN_RE = re.compile(r"\{scratchpad:([a-zA-Z0-9_]+)\}", re.IGNORECASE)
 
 
 def resolve_tokens(text: str) -> str:
@@ -71,8 +71,8 @@ def resolve_tokens(text: str) -> str:
     Tokens are resolved at call time so that stored/scheduled prompts and queries
     stay perpetually current without manual edits.
 
-    Also resolves {scratch:key} to the current scratchpad value for that key.  Unrecognised
-    scratch keys are left as-is.  Resolution is single-pass and non-recursive - the substituted
+    Also resolves {scratchpad:key} to the current scratchpad value for that key.  Unrecognised
+    scratchpad keys are left as-is.  Resolution is single-pass and non-recursive - the substituted
     value is never re-scanned, which prevents prompt-injection via stored content.
     """
     today     = _date.today()
@@ -97,13 +97,13 @@ def resolve_tokens(text: str) -> str:
     result = _TOKEN_RE.sub(_replace, text)
 
     # Single-pass scratch token resolution.
-    if "{scratch:" in result:
+    if "{scratchpad:" in result:
         store = _get_store()
         if store:
             def _replace_scratch(m: re.Match) -> str:
                 val = store.get(m.group(1).lower())
                 return val if val is not None else m.group(0)
-            result = _SCRATCH_TOKEN_RE.sub(_replace_scratch, result)
+            result = _SCRATCHPAD_TOKEN_RE.sub(_replace_scratch, result)
 
     return result
 

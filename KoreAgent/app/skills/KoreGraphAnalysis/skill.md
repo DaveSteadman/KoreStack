@@ -221,7 +221,7 @@ Call `koredata_get_library_book_chunk(book_id, offset_chars, length_chars=16000)
 Start with `offset_chars=0`.
 
 **Critical:** Analyze the `chunk` field text directly in your reasoning.
-Do NOT call `scratch_query` on the auto-saved key — it extracts only headings, not facts.
+Do NOT call `scratchpad_query` on the auto-saved key — it extracts only headings, not facts.
 
 ### 3. Extract connections from prose paragraphs
 Good nodes: named scientists (Pythagoras, Newton), named theories (heliocentrism),
@@ -244,7 +244,7 @@ Use `next_offset` for the next call. Repeat until `has_more` is false.
 
 ## Anti-patterns
 
-- **Do not** call `scratch_query` on chunk keys — it returns headings, not facts.
+- **Do not** call `scratchpad_query` on chunk keys — it returns headings, not facts.
 - **Do not** invent connections from training knowledge. Only extract what is stated in the text.
 - **Do not** create nodes for chapter headings, historical eras, or abstract category labels.
 - **Do not** use single `graph_connection_create` calls in a loop — batch always.

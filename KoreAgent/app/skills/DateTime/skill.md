@@ -41,7 +41,7 @@ Invoke this skill when the prompt contains any of these concepts or phrases:
 ## Scratchpad integration
 Not typically applicable - output is a small dict or a short string.  If this skill is one
 step in a multi-step plan that builds a larger composite string (e.g. a timestamped report),
-use `scratch_save` to park the date/time string alongside other collected values before
+use `scratchpad_save` to park the date/time string alongside other collected values before
 assembling the final output.
 
 ## Examples

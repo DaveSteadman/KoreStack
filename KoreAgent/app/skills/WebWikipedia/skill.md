@@ -36,7 +36,7 @@ reliable than scraping the HTML page. If the topic has a Wikipedia article, alwa
 
 **Check the scratchpad before calling Wikipedia.**
 If a Wikipedia article or related content was already fetched earlier in this session, it will
-be stored in the scratchpad. Use `scratch_query(key, question)` to extract the needed
+be stored in the scratchpad. Use `scratchpad_query(key, question)` to extract the needed
 information from the stored article rather than fetching again.
 
 **Prefer Wikipedia over WebSearch for stable reference topics.**
@@ -51,10 +51,10 @@ article - always try Wikipedia first before issuing a web search.
 
 ## Scratchpad integration
 Article extracts can be several hundred words.  When the content will be used in a downstream
-step (write to file, summarise, compare with another result), park it with `scratch_save` first.
+step (write to file, summarise, compare with another result), park it with `scratchpad_save` first.
 
-- `lookup_wikipedia("Python programming language")` ? `scratch_save("wikiarticle", <output>)` ? reference with `{scratch:wikiarticle}` in later steps
-- `write_file("data/article.txt", "{scratch:wikiarticle}")` - write parked article content without a separate `scratch_load`
+- `lookup_wikipedia("Python programming language")` ? `scratchpad_save("wikiarticle", <output>)` ? reference with `{scratchpad:wikiarticle}` in later steps
+- `write_file("data/article.txt", "{scratchpad:wikiarticle}")` - write parked article content without a separate `scratchpad_load`
 
 ## Examples
 - `lookup_wikipedia("Python programming language")` - returns the Wikipedia summary

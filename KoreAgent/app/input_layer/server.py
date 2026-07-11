@@ -98,13 +98,13 @@ from datasets import delete_session_datasets as delete_persisted_session_dataset
 from datasets import get_persisted_datasets_payload
 from datasets import hydrate_session_state
 from input_layer.korechat_proxy_routes import register_korechat_proxy_routes
-from scratchpad import get_store as get_scratch_store
+from scratchpad import get_store as get_scratchpad_store
 from skills_catalog_builder import build_tool_definitions
 from tool_selection_state import clear_session_tools_active
 from tool_selection_state import ALWAYS_ON_TOOL_NAMES
 from tool_selection_state import get_selected_tools
-from scratchpad import scratch_clear
-from scratchpad import scratch_save as scratch_restore_key
+from scratchpad import scratchpad_clear
+from scratchpad import scratchpad_save as scratchpad_restore_key
 from skill_executor import build_catalog_gates
 from skill_executor import execute_tool_call
 from input_layer.server_static import register_static_routes
@@ -900,9 +900,9 @@ _session_service = SessionService(
     conversation_history_cls            = ConversationHistory,
     session_context_cls                 = SessionContext,
     hydrate_session_state               = hydrate_session_state,
-    scratch_clear                       = scratch_clear,
-    scratch_restore_key                 = scratch_restore_key,
-    get_scratch_store                   = get_scratch_store,
+    scratchpad_clear                       = scratchpad_clear,
+    scratchpad_restore_key                 = scratchpad_restore_key,
+    get_scratchpad_store                   = get_scratchpad_store,
     build_persisted_scratchpad_payload  = build_persisted_scratchpad_payload,
     get_persisted_datasets_payload      = get_persisted_datasets_payload,
     delete_persisted_session_datasets   = delete_persisted_session_datasets,
@@ -987,7 +987,7 @@ register_session_routes(
     save_session=_session_service.save_session,
     flush_scratch_session=_session_service.flush_scratch_to_session,
     create_session_context=_session_service.create_session_context,
-    clear_session_scratch=scratch_clear,
+    clear_session_scratch=scratchpad_clear,
     make_slash_context=SlashCommandContext,
     handle_slash=handle_slash,
     push_log_line=push_log_line,
@@ -1045,7 +1045,7 @@ def _kc_get_conversation_for_session(session_id: str) -> dict | None:
 
 
 def _delete_session_state(session_id: str) -> None:
-    scratch_clear(session_id)
+    scratchpad_clear(session_id)
     delete_persisted_session_datasets(session_id)
     clear_session_tools_active(session_id)
     conv = _kc_get_conversation_for_session(session_id)

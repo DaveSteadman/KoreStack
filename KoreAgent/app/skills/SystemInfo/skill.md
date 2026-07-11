@@ -36,8 +36,8 @@ Invoke this skill when the prompt contains any of these concepts or phrases:
 ## Scratchpad integration
 Not typically applicable - output is a small dict.  If system info is one step in a larger
 report-building chain (e.g. fetch stats, compute headroom, write to file), park the formatted
-summary string with `scratch_save` so it can be included in the final assembled output via
-`{scratch:key}` without re-invoking the skill.
+summary string with `scratchpad_save` so it can be included in the final assembled output via
+`{scratchpad:key}` without re-invoking the skill.
 
 ## When NOT to call this tool
 System info (RAM, disk, OS, Python/Ollama versions) is injected into the system prompt

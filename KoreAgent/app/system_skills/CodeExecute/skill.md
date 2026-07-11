@@ -11,7 +11,7 @@
   import numpy as np
   print(np.array([1,2,3]).mean())
   ```
-- When paired with FileAccess, call this skill first to generate the content, then park the output with `scratch_save`, and pass `{scratch:key}` as the content argument to `file_write` - this avoids carrying the full output string as an inline argument through the tool-calling loop.
+- When paired with FileAccess, call this skill first to generate the content, then park the output with `scratchpad_save`, and pass `{scratchpad:key}` as the content argument to `file_write` - this avoids carrying the full output string as an inline argument through the tool-calling loop.
 - Code must use `print()` for all output. Favour simple linear code - avoid complex class hierarchies or deeply nested call stacks.
 
 ## Trigger keyword: calculate
@@ -66,13 +66,13 @@ When in doubt: write code and run it rather than recalling the answer.
 
 ## Scratchpad integration
 Code output can be large (generated tables, reports, CSV rows).  When the result will be
-used in a downstream step, park it with `scratch_save` immediately after execution, then pass
-`{scratch:key}` as the `content` argument to `file_write` or `file_append` - this avoids
+used in a downstream step, park it with `scratchpad_save` immediately after execution, then pass
+`{scratchpad:key}` as the `content` argument to `file_write` or `file_append` - this avoids
 carrying the full output string inline through subsequent tool-calling rounds.
 
-- `run_python_snippet(...)` ? `scratch_save("codeout", <output>)` ? `file_write("exports/result.txt", "{scratch:codeout}")`
+- `run_python_snippet(...)` ? `scratchpad_save("codeout", <output>)` ? `file_write("exports/result.txt", "{scratchpad:codeout}")`
 
 ## Examples
 - `run_python_snippet(code="import math\nfor i in range(1, 6):\n    print(i, math.factorial(i))")` - print factorials 1-5
   - Returns: `"1 1\n2 2\n3 6\n4 24\n5 120"`
-- `run_python_snippet(code="print('index,square')\nfor i in range(1, 6):\n    print(i, i*i)")` - generate CSV content; park with scratch_save then pass to file_write
+- `run_python_snippet(code="print('index,square')\nfor i in range(1, 6):\n    print(i, i*i)")` - generate CSV content; park with scratchpad_save then pass to file_write

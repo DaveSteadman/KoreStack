@@ -190,16 +190,16 @@
     function renderDetail() {
         const entry = selectedEntry();
         if (!entry) {
-            $("detail-title").textContent    = "Select a skill function";
-            $("detail-tags").innerHTML       = "";
+            $("detail-title").textContent     = "Select a skill function";
+            $("detail-tags").innerHTML        = "";
             $("detail-signature").textContent = "";
-            $("detail-meta").textContent     = "";
-            $("detail-schema").textContent   = "Select a function to inspect parameters.";
+            $("detail-meta").textContent      = "";
+            $("detail-schema").textContent    = "Select a function to inspect parameters.";
             resizeSchemaView();
-            $("invoke-note").textContent     = "";
-            $("source-view").textContent     = "Select a function to inspect source.";
-            $("btn-load-module").disabled    = true;
-            $("btn-load-skillmd").disabled   = true;
+            $("invoke-note").textContent      = "";
+            $("source-view").textContent      = "Select a function to inspect source.";
+            $("btn-load-module").disabled     = true;
+            $("btn-load-skillmd").disabled    = true;
             return;
         }
 
