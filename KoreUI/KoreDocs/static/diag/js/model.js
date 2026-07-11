@@ -26,8 +26,8 @@ export function newDiagram(title = 'Untitled') {
       defaultArrow: 'forward',
       showGrid: true,
       defaultNodeStyle: {
-        fillColor:   '#ffffff',
-        strokeColor: '#5a5a8a',
+        fillColor:   '#1f1f1f',
+        strokeColor: '#6f6f6f',
         strokeWidth: 1.5,
         fontSize:    13,
         bold:        false,
@@ -43,17 +43,44 @@ export function newDiagram(title = 'Untitled') {
 }
 
 export function newNode(type, x, y, w, h, label = '') {
+  const gx = toGridInt(x);
+  const gy = toGridInt(y);
+  const gw = Math.max(1, toGridInt(w));
+  const gh = Math.max(1, toGridInt(h));
   return {
     id: uuid(),
     type,           // 'rect' | 'ellipse' | 'waypoint'
     label,
-    x, y,           // grid units, relative to parent (or world if root)
-    width: w,
-    height: h,
+    x: gx, y: gy,   // grid units, relative to parent (or world if root)
+    width: gw,
+    height: gh,
     style: type === 'waypoint' ? { fillColor: 'transparent' } : {},
     meta: {},
     children: [],
   };
+}
+
+export function toGridInt(value) {
+  const num = Number(value);
+  return Number.isFinite(num) ? Math.round(num) : 0;
+}
+
+export function normalizeNodeGridInPlace(node) {
+  if (!node || typeof node !== 'object') return node;
+  node.x = toGridInt(node.x);
+  node.y = toGridInt(node.y);
+  node.width = Math.max(1, toGridInt(node.width));
+  node.height = Math.max(1, toGridInt(node.height));
+  if (!Array.isArray(node.children)) node.children = [];
+  for (const child of node.children) normalizeNodeGridInPlace(child);
+  return node;
+}
+
+export function normalizeDiagramGridInPlace(diagram) {
+  if (!diagram || typeof diagram !== 'object') return diagram;
+  if (!Array.isArray(diagram.nodes)) diagram.nodes = [];
+  for (const node of diagram.nodes) normalizeNodeGridInPlace(node);
+  return diagram;
 }
 
 export function newEdge(fromId, toId, fromPort = null, toPort = null) {

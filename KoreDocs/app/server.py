@@ -412,13 +412,13 @@ class _KfFolderCreate(BaseModel):
 class _KfFolderPatch(BaseModel):
     name: Optional[str] = None
     parent_id: Optional[int] = None
-    expected_revision: Optional[int] = None
+    expected_revision: Optional[int | str] = None
 
 
 class _KfFilePatch(BaseModel):
     name: Optional[str] = None
     folder_id: Optional[int] = None
-    expected_revision: Optional[int] = None
+    expected_revision: Optional[int | str] = None
 
 
 class _KfFileCreate(BaseModel):
@@ -431,7 +431,7 @@ class _KfFileCreate(BaseModel):
 class _KfFileUpdate(BaseModel):
     content: Optional[str] = None
     metadata: Optional[dict] = None
-    expected_revision: Optional[int] = None
+    expected_revision: Optional[int | str] = None
 
 
 class _KfSheetCellsWrite(BaseModel):
@@ -464,6 +464,19 @@ def _resolve_textedit_path(path_value: str) -> Path:
 
 def _textedit_revision_token(value: int | None) -> str | None:
     return None if value is None else str(value)
+
+
+def _korefile_revision_tokenize(file_row: dict | None) -> dict | None:
+    if file_row is None:
+        return None
+    row = dict(file_row)
+    if 'revision' in row:
+        row['revision'] = _textedit_revision_token(row.get('revision'))
+    return row
+
+
+def _korefile_revision_tokenize_many(rows: list[dict]) -> list[dict]:
+    return [(_korefile_revision_tokenize(row) or row) for row in rows]
 
 
 def _parse_textedit_expected_revision(value: int | str | None) -> int | None:
@@ -572,13 +585,15 @@ class _KfSheetClearRange(BaseModel):
 
 @app.get('/api/folders', summary='List all folders (flat, ordered by path)')
 def kf_list_folders():
-    return korefile.list_folders()
+    rows = korefile.list_folders()
+    return _korefile_revision_tokenize_many(rows)
 
 
 @app.post('/api/folders', status_code=201, summary='Create a folder')
 def kf_create_folder(body: _KfFolderCreate):
     try:
-        return korefile.create_folder(body.name, body.parent_id)
+        created = korefile.create_folder(body.name, body.parent_id)
+        return _korefile_revision_tokenize(created)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
@@ -590,11 +605,15 @@ def kf_create_folder(body: _KfFolderCreate):
 @app.delete('/api/folders/{folder_id}', summary='Delete a folder')
 def kf_delete_folder(
     folder_id: int,
-    expected_revision: Annotated[int | None, Query()] = None,
+    expected_revision: Annotated[int | str | None, Query()] = None,
     recursive: Annotated[bool, Query()] = False,
 ):
     try:
-        if not korefile.delete_folder(folder_id, expected_revision=expected_revision, recursive=recursive):
+        if not korefile.delete_folder(
+            folder_id,
+            expected_revision=_parse_textedit_expected_revision(expected_revision),
+            recursive=recursive,
+        ):
             raise HTTPException(status_code=404, detail='Folder not found')
     except HTTPException:
         raise
@@ -614,13 +633,13 @@ def kf_patch_folder(folder_id: int, body: _KfFolderPatch):
         raise HTTPException(status_code=400, detail='Provide name and/or parent_id')
     try:
         result = None
-        expected_revision = body.expected_revision
+        expected_revision = _parse_textedit_expected_revision(body.expected_revision)
         if body.name is not None:
             result = korefile.rename_folder(folder_id, body.name, expected_revision=expected_revision)
             expected_revision = result['revision'] if result else expected_revision
         if body.parent_id is not None:
             result = korefile.move_folder(folder_id, body.parent_id, expected_revision=expected_revision)
-        return result
+        return _korefile_revision_tokenize(result)
     except korefile.ConflictError:
         raise HTTPException(status_code=409, detail='Folder changed in the background; refresh and try again.')
     except ValueError as e:
@@ -641,7 +660,8 @@ def kf_list_files(
     name:        Annotated[str | None, Query()] = None,
     limit:       Annotated[int | None, Query(ge=1, le=500)] = None,
 ):
-    return korefile.list_files(folder_id=folder_id, folder_path=folder_path, ext=type, name=name, limit=limit)
+    rows = korefile.list_files(folder_id=folder_id, folder_path=folder_path, ext=type, name=name, limit=limit)
+    return _korefile_revision_tokenize_many(rows)
 
 
 @app.get('/api/files/{file_id}', summary='Get a file with full content')
@@ -649,15 +669,16 @@ def kf_get_file(file_id: int, include_content: Annotated[bool, Query()] = True):
     f = korefile.get_file(file_id, include_content=include_content)
     if f is None:
         raise HTTPException(status_code=404, detail='File not found')
-    return f
+    return _korefile_revision_tokenize(f)
 
 
 @app.post('/api/files', status_code=201, summary='Create a file')
 def kf_create_file(body: _KfFileCreate):
     try:
-        return korefile.create_file(
+        created = korefile.create_file(
             body.folder_id, body.name, body.content, body.metadata
         )
+        return _korefile_revision_tokenize(created)
     except Exception as e:
         if 'UNIQUE' in str(e):
             raise HTTPException(status_code=409, detail='A file with that name already exists in this folder')
@@ -667,10 +688,15 @@ def kf_create_file(body: _KfFileCreate):
 @app.put('/api/files/{file_id}', summary='Update a file')
 def kf_update_file(file_id: int, body: _KfFileUpdate):
     try:
-        updated = korefile.update_file(file_id, body.content, body.metadata, body.expected_revision)
+        updated = korefile.update_file(
+            file_id,
+            body.content,
+            body.metadata,
+            _parse_textedit_expected_revision(body.expected_revision),
+        )
         if updated is None:
             raise HTTPException(status_code=404, detail='File not found')
-        return updated
+        return _korefile_revision_tokenize(updated)
     except korefile.ConflictError:
         raise HTTPException(status_code=409, detail='File changed in the background; refreshing to the latest version.')
 
@@ -681,7 +707,7 @@ def kf_patch_file(file_id: int, body: _KfFilePatch):
         raise HTTPException(status_code=400, detail='Provide name and/or folder_id')
     try:
         result = None
-        expected_revision = body.expected_revision
+        expected_revision = _parse_textedit_expected_revision(body.expected_revision)
         if body.name is not None:
             result = korefile.rename_file(file_id, body.name, expected_revision=expected_revision)
             if result is None:
@@ -691,7 +717,7 @@ def kf_patch_file(file_id: int, body: _KfFilePatch):
             result = korefile.move_file(file_id, body.folder_id, expected_revision=expected_revision)
             if result is None:
                 raise HTTPException(status_code=404, detail='File not found')
-        return result
+        return _korefile_revision_tokenize(result)
     except HTTPException:
         raise
     except korefile.ConflictError:
@@ -705,9 +731,9 @@ def kf_patch_file(file_id: int, body: _KfFilePatch):
 
 
 @app.delete('/api/files/{file_id}', summary='Delete a file')
-def kf_delete_file(file_id: int, expected_revision: Annotated[int | None, Query()] = None):
+def kf_delete_file(file_id: int, expected_revision: Annotated[int | str | None, Query()] = None):
     try:
-        if not korefile.delete_file(file_id, expected_revision=expected_revision):
+        if not korefile.delete_file(file_id, expected_revision=_parse_textedit_expected_revision(expected_revision)):
             raise HTTPException(status_code=404, detail='File not found')
     except HTTPException:
         raise

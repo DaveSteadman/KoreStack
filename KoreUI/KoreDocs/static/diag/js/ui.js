@@ -86,7 +86,7 @@ export function initToolbar() {
 function renderDiagramProps(panel) {
   panel.innerHTML = '';
   const diagram = getDiagram();
-  const ns = { fillColor: '#ffffff', strokeColor: '#5a5a8a', strokeWidth: 1.5, fontSize: 13,
+  const ns = { fillColor: '#1f1f1f', strokeColor: '#6f6f6f', strokeWidth: 1.5, fontSize: 13,
                 bold: false, italic: false, labelHAlign: 'center', labelVAlign: 'middle',
                 ...(diagram.settings.defaultNodeStyle ?? {}) };
   const body = createPropertiesTabs(panel, {
@@ -224,13 +224,13 @@ function renderNodeProps(panel, node) {
       wInput.addEventListener('change', commitSize);
       hInput.addEventListener('change', commitSize);
 
-      addPropRow(body, 'Fill', 'color', effStyle.fillColor || '#ffffff', val => {
+      addPropRow(body, 'Fill', 'color', effStyle.fillColor || '#1f1f1f', val => {
         dispatch(cmdSetStyle(node.id, { fillColor: val })); draw();
       }, {}, node.style && 'fillColor' in node.style ? () => {
         dispatch({ apply(d) { const e = buildNodeMap(d.nodes).get(node.id); if (e) delete e.node.style.fillColor; return d; }, undo(d) { return d; } });
         draw(); refreshProperties();
       } : null);
-      addPropRow(body, 'Stroke', 'color', effStyle.strokeColor || '#5a5a8a', val => {
+      addPropRow(body, 'Stroke', 'color', effStyle.strokeColor || '#6f6f6f', val => {
         dispatch(cmdSetStyle(node.id, { strokeColor: val })); draw();
       }, {}, node.style && 'strokeColor' in node.style ? () => {
         dispatch({ apply(d) { const e = buildNodeMap(d.nodes).get(node.id); if (e) delete e.node.style.strokeColor; return d; }, undo(d) { return d; } });

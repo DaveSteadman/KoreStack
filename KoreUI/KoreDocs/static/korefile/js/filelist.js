@@ -341,9 +341,10 @@ function _startRename(row) {
     }
     const newName = newBase + ext;
     try {
+      const expectedRevision = row.dataset.revision || null;
       const updated = await api.patchFile(parseInt(row.dataset.id, 10), {
         name: newName,
-        expected_revision: parseInt(row.dataset.revision || '0', 10) || null,
+        expected_revision: expectedRevision,
       });
       row.dataset.name = updated.name;
       row.dataset.revision = String(updated.revision ?? row.dataset.revision ?? '');
@@ -369,7 +370,7 @@ async function _deleteFile(row) {
   try {
     await api.deleteFile(
       parseInt(row.dataset.id, 10),
-      parseInt(row.dataset.revision || '0', 10) || null,
+      row.dataset.revision || null,
     );
     _files = _files.filter(f => f.id !== parseInt(row.dataset.id, 10));
     _renderList();
@@ -384,9 +385,10 @@ async function _moveFile(row) {
   if (newFolderId == null) return;
   try {
     const fileId = parseInt(row.dataset.id, 10);
+    const expectedRevision = row.dataset.revision || null;
     await api.patchFile(fileId, {
       folder_id: newFolderId,
-      expected_revision: parseInt(row.dataset.revision || '0', 10) || null,
+      expected_revision: expectedRevision,
     });
     _files = _files.filter(f => f.id !== fileId);
     _renderList();
@@ -461,8 +463,8 @@ function _initialContent(name, ext) {
       defaultArrow: 'forward',
       showGrid: true,
       defaultNodeStyle: {
-        fillColor: '#ffffff',
-        strokeColor: '#5a5a8a',
+        fillColor: '#1f1f1f',
+        strokeColor: '#6f6f6f',
         strokeWidth: 1.5,
         fontSize: 13,
       },

@@ -276,7 +276,7 @@ def koredocs_file_delete(
 from . import koredoc_mcp as _koredoc_mcp  # noqa: E402, F401
 from . import koresheet_mcp as _koresheet_mcp  # noqa: E402, F401
 from . import koresheet_core as _koresheet_core  # noqa: E402, F401
-from . import kodiag_mcp as _korediag_mcp  # noqa: E402, F401
+from . import korediag_mcp as _korediag_mcp  # noqa: E402, F401
 
 # ── FORMAT_INFO — defined after sub-module imports so helpers are available ─
 

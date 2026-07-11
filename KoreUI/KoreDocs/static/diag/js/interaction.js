@@ -144,7 +144,6 @@ function handleSelectDown(sx, sy, e) {
       const hi = resizeHandleAt(id, sx, sy);
       if (hi >= 0) {
         const bounds = worldBounds(id, nodeMap);
-        _preDragSnapshot = deepClone(getDiagram());
         _dragState = { type: 'resize', id, handleIdx: hi, origBounds: { ...bounds }, sx, sy };
         return;
       }
@@ -167,7 +166,6 @@ function handleSelectDown(sx, sy, e) {
       }
     }
     const w = screenToWorld(sx, sy);
-    _preDragSnapshot = deepClone(getDiagram());
     _dragState = { type: 'move', moves, startWX: w.x, startWY: w.y, moved: false };
   } else {
     if (!e.shiftKey) selection.clear();
@@ -247,13 +245,14 @@ function onMouseMove(e) {
     const rawDX = w.x - _dragState.startWX;
     const rawDY = w.y - _dragState.startWY;
 
+    // Keep drag aligned to grid units so nodes/edges remain crisp and predictable.
     const dx = snapToGrid(rawDX);
     const dy = snapToGrid(rawDY);
 
     if (dx === (_dragState.liveDX ?? 0) && dy === (_dragState.liveDY ?? 0)) return;
 
-    // Revert to pre-drag snapshot then apply new delta for live preview
-    const nm = buildNodeMap(getDiagram().nodes);
+    if (!_preDragSnapshot) _preDragSnapshot = deepClone(getDiagram());
+
     // Directly nudge the in-memory diagram (not via undo stack) for live feel
     // We restore via _preDragSnapshot on mouseup
     const prevDX = _dragState.liveDX ?? 0;
@@ -277,6 +276,7 @@ function onMouseMove(e) {
   }
 
   if (_dragState.type === 'resize') {
+    if (!_preDragSnapshot) _preDragSnapshot = deepClone(getDiagram());
     const w = screenToWorld(sx, sy);
     updateResizeGhost(w.x, w.y);
     draw();
@@ -377,7 +377,7 @@ function onMouseUp(e) {
   }
 
   if (ds.type === 'draw-shape') {
-    commitDrawShape(ds);
+    commitDrawShape(ds, sx, sy);
     return;
   }
 
@@ -622,7 +622,17 @@ function commitRubberBand(ds, endSX, endSY) {
   notifySelectionChange();
 }
 
-function commitDrawShape(ds) {
+function commitDrawShape(ds, endSX, endSY) {
+  // Mousemove can be missed/coalesced on some systems; finalize from mouseup.
+  if (!ds.previewW || !ds.previewH) {
+    const w = screenToWorld(endSX, endSY);
+    const sx2 = snapToGrid(w.x), sy2 = snapToGrid(w.y);
+    ds.previewX = Math.min(ds.startW, sx2);
+    ds.previewY = Math.min(ds.startH, sy2);
+    ds.previewW = Math.abs(sx2 - ds.startW) || 1;
+    ds.previewH = Math.abs(sy2 - ds.startH) || 1;
+  }
+
   if (!ds.previewW || !ds.previewH) { draw(); return; }
   const node = newNode(ds.toolType, ds.previewX, ds.previewY, ds.previewW, ds.previewH);
   dispatch(cmdAddNode(node));

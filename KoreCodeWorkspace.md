@@ -2417,7 +2417,7 @@ and Python call signatures that may be imported or reused elsewhere.
 ### `KoreDocs/app/config.py`
 - L35 function: `def load() -> dict`
 
-### `KoreDocs/app/kodiag_mcp.py`
+### `KoreDocs/app/korediag_mcp.py`
 - L24 function: `def _normalize_node_for_editor(node: dict) -> dict`
 - L52 function: `def _normalize_edge_for_editor(edge: dict) -> dict`
 - L66 function: `def _normalize_diagram_for_editor(diagram: dict) -> dict`

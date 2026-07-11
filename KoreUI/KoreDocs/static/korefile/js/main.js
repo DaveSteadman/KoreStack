@@ -7,7 +7,7 @@
 
 import { initTopbar, initAppBar, initAppTabs, renderAppMenu, initAppMenuEvents } from '/ui-elements/assets/js/chrome.js';
 import * as tree     from './tree.js';
-import * as filelist from './filelist.js';
+import * as filelist from './filelist.js?v=20260711a';
 import * as api      from './api.js';
 
 const DOWNLOAD_SVG = `<svg viewBox="0 0 20 20" fill="none" width="14" height="14">

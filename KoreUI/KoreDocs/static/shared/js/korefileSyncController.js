@@ -28,6 +28,11 @@ export function createKorefileSyncController({
   let syncTimer = null;
   let loader = null;
 
+  function normaliseRevision(value) {
+    if (value === null || value === undefined) return null;
+    return String(value);
+  }
+
   function notify() {
     onChanged?.(currentName, dirty);
   }
@@ -62,7 +67,7 @@ export function createKorefileSyncController({
 
     currentId = file.id;
     currentName = file.name;
-    currentRevision = file.revision ?? null;
+    currentRevision = normaliseRevision(file.revision);
     resetPendingState();
     applyLoadedContent(content, file, loader);
     draft.clear();
@@ -96,9 +101,13 @@ export function createKorefileSyncController({
     if (syncTimer || currentId == null) return;
     syncTimer = setInterval(async () => {
       if (currentId == null) return;
+      // Local edits are either queued or being written; optimistic concurrency
+      // on save handles conflicts, so skip polling to avoid false self-conflicts.
+      if (saving || pendingText != null) return;
       try {
         const latest = await api.getFile(currentId, { includeContent: false });
-        if (currentRevision != null && latest.revision !== currentRevision) {
+        const latestRevision = normaliseRevision(latest.revision);
+        if (currentRevision != null && latestRevision !== currentRevision) {
           await reloadLatest();
         }
       } catch (err) {
@@ -163,7 +172,7 @@ export function createKorefileSyncController({
         ...options,
         expectedRevision: currentRevision,
       });
-      currentRevision = updated.revision ?? currentRevision;
+      currentRevision = normaliseRevision(updated.revision) ?? currentRevision;
       savedSeq = Math.max(savedSeq, seq);
       if (savedSeq === changeSeq && pendingText == null) {
         draft.clear();

@@ -89,8 +89,8 @@ def _diag_content(title: str, diagram: Optional[dict] = None) -> str:
         obj['settings'].setdefault('defaultArrow', 'forward')
         obj['settings'].setdefault('showGrid', True)
         obj['settings'].setdefault('defaultNodeStyle', {
-            'fillColor': '#ffffff',
-            'strokeColor': '#5a5a8a',
+            'fillColor': '#1f1f1f',
+            'strokeColor': '#6f6f6f',
             'strokeWidth': 1.5,
             'fontSize': 13,
         })
@@ -110,8 +110,8 @@ def _diag_content(title: str, diagram: Optional[dict] = None) -> str:
                 'defaultArrow': 'forward',
                 'showGrid': True,
                 'defaultNodeStyle': {
-                    'fillColor': '#ffffff',
-                    'strokeColor': '#5a5a8a',
+                  'fillColor': '#1f1f1f',
+                  'strokeColor': '#6f6f6f',
                     'strokeWidth': 1.5,
                     'fontSize': 13,
                 },
@@ -194,8 +194,8 @@ settings  (object, required)
 
     defaultNodeStyle  (object)
       Default visual style applied to all new nodes unless overridden per-node:
-        fillColor   (string)  Hex background colour. Default: "#ffffff"
-        strokeColor (string)  Hex border colour.     Default: "#5a5a8a"
+        fillColor   (string)  Hex background colour. Default: "#1f1f1f"
+        strokeColor (string)  Hex border colour.     Default: "#6f6f6f"
         strokeWidth (number)  Border thickness in pixels. Default: 1.5
         fontSize    (number)  Label text size in points.  Default: 13
 
@@ -276,8 +276,8 @@ Example minimal diagram JSON:
     "defaultArrow": "forward",
     "showGrid": true,
     "defaultNodeStyle": {
-      "fillColor": "#ffffff",
-      "strokeColor": "#5a5a8a",
+      "fillColor": "#1f1f1f",
+      "strokeColor": "#6f6f6f",
       "strokeWidth": 1.5,
       "fontSize": 13
     },

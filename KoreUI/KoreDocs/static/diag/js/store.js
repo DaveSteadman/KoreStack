@@ -5,7 +5,7 @@
  * Listeners subscribed via `on(event, fn)` get notified after each change.
  */
 
-import { deepClone, buildNodeMap, newDiagram } from './model.js';
+import { deepClone, buildNodeMap, newDiagram, normalizeDiagramGridInPlace } from './model.js';
 
 const MAX_UNDO = 200;
 
@@ -36,7 +36,7 @@ export function getNodeMap() { return buildNodeMap(_diagram.nodes); }
 
 // ── Replace entire diagram (load / new) ───────────────────────────────────
 export function loadDiagram(diagram) {
-  _diagram    = diagram;
+  _diagram    = normalizeDiagramGridInPlace(diagram);
   _undoStack  = [];
   _redoStack  = [];
   _dirty      = false;
@@ -47,7 +47,7 @@ export function loadDiagram(diagram) {
 
 /** Restore diagram silently (no view reset, no event) — used by live-drag revert */
 export function loadDiagramSilent(diagram) {
-  _diagram = diagram;
+  _diagram = normalizeDiagramGridInPlace(diagram);
 }
 
 // ── Command dispatch ───────────────────────────────────────────────────────
@@ -60,7 +60,7 @@ export function loadDiagramSilent(diagram) {
  */
 export function dispatch(command) {
   const before = deepClone(_diagram);
-  const after  = command.apply(deepClone(_diagram));
+  const after  = normalizeDiagramGridInPlace(command.apply(deepClone(_diagram)));
   _diagram     = after;
   after.modified = new Date().toISOString();
 

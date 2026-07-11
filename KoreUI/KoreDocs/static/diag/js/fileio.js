@@ -2,8 +2,8 @@
  * fileio.js — KoreFile-backed file state + autosave for KoreDiag, plus PNG export.
  */
 
-import { createKorefileSyncController } from '/static/shared/js/korefileSyncController.js';
-import { newDiagram } from './model.js';
+import { createKorefileSyncController } from '/static/shared/js/korefileSyncController.js?v=20260709a';
+import { newDiagram, toGridInt } from './model.js';
 import { getDiagram, isDirty, markDirty, markSaved } from './store.js';
 
 const _controller = createKorefileSyncController({
@@ -48,6 +48,10 @@ function normalizeNode(node) {
   if (typeof normalized.label === 'string') normalized.label = normalized.label.replace(/\\n/g, '\n');
   if (normalized.width == null && normalized.w != null) normalized.width = normalized.w;
   if (normalized.height == null && normalized.h != null) normalized.height = normalized.h;
+  normalized.x = toGridInt(normalized.x);
+  normalized.y = toGridInt(normalized.y);
+  normalized.width = Math.max(1, toGridInt(normalized.width));
+  normalized.height = Math.max(1, toGridInt(normalized.height));
   if (normalized.style) {
     normalized.style = { ...normalized.style };
     if (normalized.style.fillColor == null && normalized.style.fill != null) {

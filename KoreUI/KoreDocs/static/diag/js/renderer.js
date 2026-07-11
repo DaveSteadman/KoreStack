@@ -173,7 +173,7 @@ export function draw() {
       if (handles) {
         const nodeDefs = diagram.settings.defaultNodeStyle || {};
         const eff      = { strokeColor: nodeDefs.strokeColor, strokeWidth: nodeDefs.strokeWidth, ...selEdge.style };
-        drawEdgeEndpointHandles(ctx, handles.from, handles.to, eff.strokeColor || '#5a5a8a');
+        drawEdgeEndpointHandles(ctx, handles.from, handles.to, eff.strokeColor || '#6f6f6f');
       }
     }
   }
@@ -227,13 +227,13 @@ function drawNode(ctx, node, bounds) {
   const defaults    = getDiagram().settings.defaultNodeStyle || {};
   const style       = { ...defaults, ...node.style };
   const selected    = selection.has(node.id);
-  const strokeColor = style.strokeColor || '#5a5a8a';
+  const strokeColor = style.strokeColor || '#6f6f6f';
   const strokeWidth = style.strokeWidth || 1.5;
 
   ctx.save();
 
   // Fill
-  ctx.fillStyle = style.fillColor || '#ffffff';
+  ctx.fillStyle = style.fillColor || '#1f1f1f';
   if (node.type === 'ellipse') {
     ellipsePath(ctx, x, y, w, h);
     ctx.fill();
@@ -253,7 +253,7 @@ function drawNode(ctx, node, bounds) {
   // Label
   if (node.label) {
     const labelLayout = nodeLabelLayout(style, x, y, w, h);
-    ctx.fillStyle   = contrastColor(style.fillColor || '#ffffff');
+    ctx.fillStyle   = contrastColor(style.fillColor || '#1f1f1f');
     ctx.font        = labelFont(style, view.zoom);
     ctx.textAlign   = labelLayout.textAlign;
     ctx.textBaseline= labelLayout.textBaseline;
@@ -373,19 +373,17 @@ function drawEdge(ctx, edge, nodeMap) {
   // Resolve edge style: edge overrides → shared defaultNodeStyle stroke values
   const nodeDefaults = getDiagram().settings.defaultNodeStyle || {};
   const effEdgeStyle = { strokeColor: nodeDefaults.strokeColor, strokeWidth: nodeDefaults.strokeWidth, ...edge.style };
-  const edgeStroke   = effEdgeStyle.strokeColor || '#5a5a8a';
+  const edgeStroke   = effEdgeStyle.strokeColor || '#6f6f6f';
   const edgeWidth    = effEdgeStyle.strokeWidth  || 1.5;
 
   ctx.save();
   ctx.strokeStyle = edgeStroke;
-  ctx.lineWidth   = edgeWidth * (selected ? 2 : 1) * view.zoom;
-  if (selected) { ctx.shadowColor = edgeStroke; ctx.shadowBlur = 8; }
+  ctx.lineWidth   = edgeWidth * view.zoom;
 
   ctx.beginPath();
   ctx.moveTo(sp[0].x, sp[0].y);
   for (let i = 1; i < sp.length; i++) ctx.lineTo(sp[i].x, sp[i].y);
   ctx.stroke();
-  ctx.shadowBlur = 0;
 
   // Arrowhead at last point
   const arrow = edge.arrow ?? getDiagram().settings.defaultArrow;
