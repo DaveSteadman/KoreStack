@@ -41,8 +41,36 @@
         const el = $("invoke-args");
         if (!el) return;
 
+        const styles = window.getComputedStyle(el);
+        const lineHeight = parseFloat(styles.lineHeight) || 17.4;
+        const paddingY = (parseFloat(styles.paddingTop) || 0) + (parseFloat(styles.paddingBottom) || 0);
+        const borderY = (parseFloat(styles.borderTopWidth) || 0) + (parseFloat(styles.borderBottomWidth) || 0);
+        const minHeight = Math.ceil(lineHeight + paddingY + borderY);
+        const maxHeight = Math.ceil((lineHeight * 15) + paddingY + borderY);
+
         el.style.height = "auto";
-        el.style.height = `${Math.max(el.scrollHeight, 180)}px`;
+        const naturalHeight = Math.ceil(el.scrollHeight);
+        const nextHeight = Math.max(minHeight, Math.min(naturalHeight, maxHeight));
+        el.style.height = `${nextHeight}px`;
+        el.style.overflowY = naturalHeight > nextHeight ? "auto" : "hidden";
+    }
+
+    function resizeSchemaView() {
+        const el = $("detail-schema");
+        if (!el) return;
+
+        const styles = window.getComputedStyle(el);
+        const lineHeight = parseFloat(styles.lineHeight) || 17.4;
+        const paddingY = (parseFloat(styles.paddingTop) || 0) + (parseFloat(styles.paddingBottom) || 0);
+        const borderY = (parseFloat(styles.borderTopWidth) || 0) + (parseFloat(styles.borderBottomWidth) || 0);
+        const minHeight = Math.ceil(lineHeight + paddingY + borderY);
+        const maxHeight = Math.ceil((lineHeight * 15) + paddingY + borderY);
+
+        el.style.height = "auto";
+        const naturalHeight = Math.ceil(el.scrollHeight);
+        const targetHeight = Math.max(minHeight, Math.min(naturalHeight, maxHeight));
+        el.style.height = `${targetHeight}px`;
+        el.style.overflowY = naturalHeight > targetHeight ? "auto" : "hidden";
     }
 
     function selectedEntry() {
@@ -119,8 +147,19 @@
         return raw.length > 56 ? `${raw.slice(0, 53)}...` : raw;
     }
 
+    function classifyTagKind(label) {
+        const text = String(label || "").trim().toLowerCase();
+        if (text === "system skills") return "catalog-system";
+        if (text === "skills") return "catalog-skills";
+        if (text === "mcp") return "catalog-mcp";
+        if (text === "python") return "catalog-python";
+        if (text.includes("koredocs") || text.includes("koredata")) return "catalog-domain";
+        return "dim";
+    }
+
     function renderStats(stats) {
         $("stats").textContent = `${stats.entry_count} functions | ${stats.provider_count} providers | ${stats.active_count} active`;
+        $("tool-total").textContent = `Total:${stats.entry_count || 0}`;
     }
 
     function renderList() {
@@ -153,8 +192,10 @@
         if (!entry) {
             $("detail-title").textContent    = "Select a skill function";
             $("detail-tags").innerHTML       = "";
+            $("detail-signature").textContent = "";
             $("detail-meta").textContent     = "";
             $("detail-schema").textContent   = "Select a function to inspect parameters.";
+            resizeSchemaView();
             $("invoke-note").textContent     = "";
             $("source-view").textContent     = "Select a function to inspect source.";
             $("btn-load-module").disabled    = true;
@@ -166,12 +207,15 @@
         const canLoadSkillMd = Boolean(entry.skill_md_path);
         const providerLabel  = compactProviderLabel(entry);
         const tags = [
-            providerLabel ? { label: providerLabel, kind: "dim" } : null,
-            entry.call_type ? { label: String(entry.call_type).toUpperCase(), kind: "dim" } : null,
+            providerLabel ? { label: providerLabel, kind: classifyTagKind(providerLabel) } : null,
+            entry.call_type ? { label: entry.call_type === "python" ? "Python" : String(entry.call_type).toUpperCase(), kind: classifyTagKind(entry.call_type) } : null,
         ].filter(Boolean);
 
-        $("detail-title").textContent = entry.function_signature || entry.tool_name;
-        $("detail-tags").innerHTML = tags.map((tag) => `<span class="kcui-tag kcui-tag--${tag.kind}">${tag.label}</span>`).join("");
+        $("detail-title").textContent = entry.tool_name;
+        $("detail-tags").innerHTML = tags.map((tag) => `<span class="kcui-tag skills-catalog-tag skills-catalog-tag--${tag.kind}">${tag.label}</span>`).join("");
+        const signatureLine = entry.function_signature
+            ? `Signature: ${entry.function_signature}`
+            : `Signature: ${entry.tool_name}`;
         const lines = [
             providerLabel ? `Provider: ${providerLabel}` : "",
             `Type: ${entry.call_type}`,
@@ -179,8 +223,10 @@
             entry.module_path ? `Module: ${entry.module_path}` : "",
             entry.skill_md_path ? `Skill MD: ${entry.skill_md_path}` : "",
         ].filter(Boolean);
-        $("detail-meta").textContent   = lines.join("\n");
+        $("detail-signature").textContent = signatureLine;
+        $("detail-meta").textContent      = lines.join("\n");
         $("detail-schema").textContent = renderParameterSummary(entry.parameters_schema);
+        resizeSchemaView();
         $("invoke-note").textContent = entry.call_type === "python"
             ? "Direct execution: Run invokes the Python function locally through the backend. Any LLM calls would only happen if the skill implementation itself makes them."
             : "Direct execution: Run invokes the MCP tool through the backend without the chat orchestration loop.";
@@ -313,7 +359,9 @@
     function init() {
         initShell();
         wireEvents();
+        resizeSchemaView();
         window.addEventListener("resize", resizeInvokeArgs);
+        window.addEventListener("resize", resizeSchemaView);
         loadCatalog().catch((err) => {
             $("invoke-result").textContent = `Initial load failed: ${err.message}`;
         });

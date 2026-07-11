@@ -26,7 +26,11 @@
 
         <main id="catalog-shell" class="kcui-main kcui-workspace kcui-workspace--stack-sm">
             <aside id="tool-list-panel" class="kcui-panel kcui-panel--column kcui-workspace__region">
-                <div class="kcui-panel-header kcui-panel-header--start">All Skill Functions</div>
+                <div class="kcui-panel-header kcui-panel-header--start">
+                    <span>All Skill Functions</span>
+                    <span class="kcui-panel-spacer"></span>
+                    <span id="tool-total" class="kcui-tag kcui-tag--dim">Total:0</span>
+                </div>
                 <div class="kcui-panel-body">
                     <input id="tool-filter" class="kcui-input" type="text" placeholder="Filter by function/provider" />
                 </div>
@@ -39,6 +43,7 @@
                     <span id="detail-tags" class="detail-tags"></span>
                 </div>
                 <div class="kcui-panel-body details-body">
+                    <div id="detail-signature" class="detail-signature kcui-type-code"></div>
                     <div id="detail-meta" class="detail-meta"></div>
                     <div class="section-title">Parameters</div>
                     <pre id="detail-schema" class="schema-view kcui-type-code">Select a function to inspect parameters.</pre>
@@ -51,7 +56,7 @@
 
                     <div class="section-title">Invoke Function</div>
                     <div id="invoke-note" class="invoke-note"></div>
-                    <textarea id="invoke-args" class="invoke-args kcui-input kcui-type-code" spellcheck="false">{}</textarea>
+                    <textarea id="invoke-args" class="invoke-args kcui-input kcui-type-code" spellcheck="false" rows="1">{}</textarea>
                     <div class="invoke-actions">
                         <button id="btn-run" class="kcui-btn" type="button">Run</button>
                         <button id="btn-pretty" class="kcui-btn kcui-btn-sm" type="button">Format JSON</button>
@@ -62,7 +67,7 @@
         </main>
     </div>
 
-    <script src="/static/skills_catalog.js"></script>
+    <script src="/static/skills_catalog.js?v=20260711a"></script>
     <script type="module">
         import { initTopbar } from '/ui-elements/assets/js/chrome.js';
 
