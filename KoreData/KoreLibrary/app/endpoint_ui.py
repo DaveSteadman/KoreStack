@@ -11,14 +11,12 @@ from jinja2 import ChoiceLoader, FileSystemLoader
 from config import get_suite_urls_map
 
 from app.database import (
-    COMPLETENESS_FIELDS,
     add_book,
     delete_book,
     get_book,
     get_status,
     list_books,
     list_catalogs,
-    list_incomplete,
     move_book,
     search_books,
     update_book,
@@ -128,36 +126,8 @@ def register_library_ui(app: FastAPI) -> None:
                 "total":    status.get("total_books", len(books)),
                 "limit":    limit,
                 "offset":   offset,
-                "mode":     "all",
                 "catalog":  catalog or "",
                 "catalogs": catalogs,
-            },
-        )
-
-    @app.get("/ui/library/incomplete", response_class=HTMLResponse, include_in_schema=False)
-    def route_ui_library_incomplete(request: Request, fields: Optional[str] = None, catalog: Optional[str] = None):
-        parsed_fields = None
-        if fields:
-            parsed_fields = [f.strip() for f in fields.split(",") if f.strip() in COMPLETENESS_FIELDS]
-            if not parsed_fields:
-                raise HTTPException(status_code=400, detail=f"Valid fields are: {', '.join(COMPLETENESS_FIELDS)}")
-        try:
-            books    = list_incomplete(fields=parsed_fields, catalog=catalog)
-            catalogs = list_catalogs()
-        except ValueError as exc:
-            raise HTTPException(status_code=400, detail=str(exc)) from exc
-        return templates.TemplateResponse(
-            request,
-            "library_index.html",
-            {
-                "books":         books,
-                "total":         len(books),
-                "limit":         9999,
-                "offset":        0,
-                "mode":          "incomplete",
-                "filter_fields": fields,
-                "catalog":       catalog or "",
-                "catalogs":      catalogs,
             },
         )
 

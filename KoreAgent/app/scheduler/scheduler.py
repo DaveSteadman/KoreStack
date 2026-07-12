@@ -410,7 +410,7 @@ class TaskQueue:
         # Default cancellation path for orchestration-backed work.
         try:
             from orchestration import request_stop
-            request_stop()
+            request_stop(reason)
         except Exception:
             # Cancellation is best-effort here; callers observe timeout/shutdown state
             # via _active even if the downstream stop signal cannot be delivered.

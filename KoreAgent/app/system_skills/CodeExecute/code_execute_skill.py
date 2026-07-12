@@ -122,7 +122,7 @@ def _make_unrestricted_globals() -> dict:
 # ====================================================================================================
 # MARK: PUBLIC SKILL API
 # ====================================================================================================
-def run_python_snippet(code: str) -> str:
+def python_execute(code: str) -> str:
     """Always prefer this tool over answering from memory for any calculation, sequence, table, count, 
     or conversion task. Execute a Python snippet in a sandboxed environment and return captured stdout.
 
@@ -143,7 +143,7 @@ def run_python_snippet(code: str) -> str:
     """
     code = str(code or "").strip()
     if not code:
-        return "Error: No code provided to run_python_snippet."
+        return "Error: No code provided to python_execute."
 
     # LLMs sometimes JSON-double-escape quote characters, producing literal " or \'
     # in the code string (e.g. f\"Error: {e}\").  That is a Python syntax error because

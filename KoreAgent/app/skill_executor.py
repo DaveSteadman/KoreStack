@@ -116,6 +116,58 @@ def build_catalog_gates(skills_payload: dict) -> dict[str, tuple[str, str]]:
     return index
 
 
+# ----------------------------------------------------------------------------------------------------
+def _build_unknown_tool_error(
+    requested_tool_name: str,
+    skills_payload: dict,
+    active_tool_names: set[str] | None = None,
+) -> str:
+    requested = str(requested_tool_name or "").strip()
+    base_msg = f"Tool '{requested}' not found in skills catalog"
+    if not requested:
+        return base_msg
+
+    try:
+        from tool_selection_state import all_known_tool_names
+        from tool_selection_state import build_all_tool_catalog
+        from tool_selection_state import rank_tool_catalog_entries
+        from tool_selection_state import suggest_tool_name
+
+        known_names = all_known_tool_names(skills_payload)
+        suggestion  = suggest_tool_name(requested, known_names, max_candidates=5)
+        candidates  = suggestion.get("candidates") if isinstance(suggestion.get("candidates"), list) else []
+
+        if not candidates:
+            catalog_entries = build_all_tool_catalog(skills_payload, include_mcp=True)
+            ranked_entries  = rank_tool_catalog_entries(catalog_entries, requested)
+            candidates      = [{"name": str(item.get("name", "")).strip()} for item in ranked_entries[:5]]
+
+        candidate_names = []
+        seen            = set()
+        for candidate in candidates:
+            name = str(candidate.get("name", "")).strip()
+            if not name or name in seen:
+                continue
+            seen.add(name)
+            candidate_names.append(name)
+
+        if not candidate_names:
+            return base_msg
+
+        active_names      = set(active_tool_names or set())
+        inactive_names    = [name for name in candidate_names if name not in active_names]
+        alternatives_text = ", ".join(f"`{name}`" for name in candidate_names[:5])
+        if inactive_names:
+            activate_name = inactive_names[0]
+            return (
+                f"{base_msg}. Closest alternatives: {alternatives_text}. "
+                f"If needed, request activation with `tools_active_add([\"{activate_name}\"])`."
+            )
+        return f"{base_msg}. Closest alternatives: {alternatives_text}."
+    except Exception:
+        return base_msg
+
+
 # ====================================================================================================
 # MARK: ERROR DETECTION
 # ====================================================================================================
@@ -161,8 +213,6 @@ def execute_tool_call(
     """
     # MCP tools are dispatched to the remote server; they bypass the local allow-list.
     if _mcp_client.is_mcp_tool(tool_name):
-        if active_tool_names is not None and tool_name not in active_tool_names:
-            raise RuntimeError(f"Tool '{tool_name}' is not active for this conversation")
         resolved_args = {
             k: (resolve_tokens(v) if isinstance(v, str) else v)
             for k, v in arguments.items()
@@ -185,9 +235,7 @@ def execute_tool_call(
     # Resolve the tool name to its (module, function); fails fast for any unrecognised tool.
     resolved = tool_index.get(tool_name)
     if resolved is None:
-        raise RuntimeError(f"Tool '{tool_name}' not found in skills catalog")
-    if active_tool_names is not None and tool_name not in active_tool_names:
-        raise RuntimeError(f"Tool '{tool_name}' is not active for this conversation")
+        raise RuntimeError(_build_unknown_tool_error(tool_name, skills_payload, active_tool_names))
     module_path, function_name = resolved
 
     # Fill {{today}}, {{yesterday}} etc. in any string argument before passing to the function.

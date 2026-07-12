@@ -112,7 +112,7 @@ class SessionService:
         return self._session_context_cls(session_id=session_id, persist_path=persist_path)
 
     def handle_stoprun_immediate(self, run_id: str, run_q: queue.Queue) -> None:
-        self._request_stop()
+        self._request_stop("stoprun")
         cancelled_ids = self._task_queue.clear_pending()
         cancel_msg    = "Cancelled by /stoprun."
         for rid in cancelled_ids:

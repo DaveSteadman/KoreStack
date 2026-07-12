@@ -23,6 +23,7 @@
 # MARK: IMPORTS
 # ====================================================================================================
 import json
+import os
 import re
 import threading
 import time
@@ -39,7 +40,20 @@ from utils.workspace_utils import trunc
 DEFAULT_OLLAMAHOST    = "http://localhost:11434"
 OLLAMA_CLOUD_HOST     = "https://api.ollama.com"
 DEFAULT_LMSTUDIO_HOST = "http://localhost:1234"
-_DEFAULT_LLM_TIMEOUT: int = 600   # seconds; updated at runtime by /timeout slash command
+
+
+def _default_llm_timeout_from_env() -> int:
+    raw = str(os.environ.get("KORE_TEST_LLM_TIMEOUT", "")).strip()
+    if not raw:
+        return 600
+    try:
+        value = int(raw)
+    except ValueError:
+        return 600
+    return max(value, 1)
+
+
+_DEFAULT_LLM_TIMEOUT: int = _default_llm_timeout_from_env()   # seconds; updated at runtime by /timeout slash command
 
 # Active host and backend - set once at startup via configure_host() or configure_server().
 # Default to local Ollama; overridden by --llmhost / LLMHOST env var.

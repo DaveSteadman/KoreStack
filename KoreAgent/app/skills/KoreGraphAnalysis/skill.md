@@ -17,13 +17,13 @@ structured knowledge graph edges from its content.
 
 Books in KoreLibrary typically have 30–60 chunks. Processing them chunk-by-chunk
 with individual tool calls would require 60–120 rounds — far more than the round budget.
-**Use `run_python_snippet` to process the entire book in a single call.**
+**Use `python_execute` to process the entire book in a single call.**
 
 ### Step 1 — Find the book
 Call `koredata_find_library_book(title)`. Note the `book_id`.
 
 ### Step 2 — Run the extraction script
-Call `run_python_snippet` with this script, substituting `BOOK_ID`:
+Call `python_execute` with this script, substituting `BOOK_ID`:
 
 ```python
 import sys, subprocess

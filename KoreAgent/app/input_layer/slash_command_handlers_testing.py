@@ -180,14 +180,17 @@ def _run_one_test_file(candidate, ctx, wrapper, model: str, active_host: str, re
         import time as _time
 
         stopped_by_user = [False]
+        stop_reason     = [""]
         watcher_done = [False]
 
         def _watch(_proc=proc) -> None:
+            from orchestration import get_stop_reason
             from orchestration import is_stop_requested
 
             while not watcher_done[0]:
                 if is_stop_requested():
                     stopped_by_user[0] = True
+                    stop_reason[0] = get_stop_reason()
                     try:
                         _proc.terminate()
                     except Exception:
@@ -221,7 +224,15 @@ def _run_one_test_file(candidate, ctx, wrapper, model: str, active_host: str, re
             watcher.join(timeout=1.0)
 
         if stopped_by_user[0]:
-            ctx.output("[Test stopped by /stoprun]", "error")
+            reason = str(stop_reason[0] or "").strip().lower()
+            if reason == "stoprun":
+                ctx.output("[Test stopped by /stoprun]", "error")
+            elif reason == "timeout":
+                ctx.output("[Test stopped by scheduler timeout]", "error")
+            elif reason:
+                ctx.output(f"[Test stopped by cancellation request: {reason}]", "error")
+            else:
+                ctx.output("[Test stopped by external cancellation request]", "error")
             return {
                 "passed": 0,
                 "total": 0,

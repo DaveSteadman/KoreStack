@@ -11,13 +11,6 @@ from app.database import (
     add_chunk,
     delete_chunk,
     get_chunk,
-    get_debate,
-    get_debate_speeches,
-    get_member_by_id,
-    get_member_speeches,
-    get_members,
-    get_sittings,
-    get_sitting_debates,
     get_status,
     init_db,
     list_chunks,
@@ -25,6 +18,7 @@ from app.database import (
     search_chunks,
     update_chunk,
 )
+from app.navigation import get_navigation_type, has_navigation, provider_call, provider_supports
 from app.registry import get_descriptor, list_database_ids, list_databases, reload as _registry_reload
 
 
@@ -49,6 +43,33 @@ class DatabaseCreate(BaseModel):
 
 
 _DB_ID_RE = re.compile(r"^[a-z][a-z0-9_]{0,62}$")
+
+
+def _api_named_process_running(name: str, ingest_procs: dict[str, object]) -> bool:
+    candidates = [str(name or "").strip()]
+    descriptor = get_descriptor(name) or {}
+    ingestor   = str(descriptor.get("ingestor") or "").strip()
+    if ingestor and ingestor not in candidates:
+        candidates.append(ingestor)
+
+    for candidate in candidates:
+        proc = ingest_procs.get(candidate)
+        if proc is not None and getattr(proc, "poll")() is None:
+            return True
+    return False
+
+
+def _api_resolved_sync_status(sync: dict) -> str:
+    status = str(sync.get("status") or "").strip().lower()
+    if status != "running":
+        return status
+    last_run       = str(sync.get("last_run") or "").strip()
+    last_completed = str(sync.get("last_ingest_completed_at") or "").strip()
+    if last_run and (not last_completed or last_run > last_completed):
+        return "failed"
+    if last_completed:
+        return "complete"
+    return "idle"
 
 
 def register_rag_api(
@@ -110,7 +131,36 @@ def register_rag_api(
             status = get_status(db=name)
         except Exception:
             status = {"total_chunks": None, "db_size_bytes": None}
-        return {**descriptor, **{key: value for key, value in status.items() if key != "service"}}
+
+        navigation = descriptor.get("navigation")
+        if not navigation:
+            try:
+                if has_navigation(name):
+                    nav_type = get_navigation_type(name)
+                    if nav_type:
+                        navigation = {"type": nav_type}
+            except Exception:
+                navigation = descriptor.get("navigation")
+
+        sync = descriptor.get("sync") or {}
+        if status.get("total_chunks") is not None:
+            sync = {
+                **sync,
+                "current_total_chunks": status.get("total_chunks"),
+            }
+
+        if sync.get("status") == "running" and not _api_named_process_running(name, ingest_procs):
+            sync = {
+                **sync,
+                "status": _api_resolved_sync_status(sync),
+            }
+
+        return {
+            **descriptor,
+            **{key: value for key, value in status.items() if key != "service"},
+            "navigation": navigation,
+            "sync":       sync or None,
+        }
 
     @app.post("/api/admin/reload", summary="Re-scan databases/ directory and init any new databases")
     @app.post("/admin/reload", include_in_schema=False)
@@ -206,11 +256,13 @@ def register_rag_api(
         except Exception as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-    @app.get("/api/databases/{name}/sittings", summary="List sitting dates for a Hansard database")
+    @app.get("/api/databases/{name}/sittings", summary="List sitting dates for a navigation-capable database")
     @app.get("/databases/{name}/sittings", include_in_schema=False)
     def route_sittings(name: str):
+        if not provider_supports(name, "get_sittings"):
+            raise HTTPException(status_code=404, detail=f"Sittings not supported for database: {name!r}")
         try:
-            return get_sittings(db=name)
+            return provider_call(name, "get_sittings", db=name)
         except KeyError:
             raise HTTPException(status_code=404, detail=f"Unknown database: {name!r}")
         except Exception as exc:
@@ -219,8 +271,10 @@ def register_rag_api(
     @app.get("/api/databases/{name}/sittings/{date}/debates", summary="Debates for a sitting date")
     @app.get("/databases/{name}/sittings/{date}/debates", include_in_schema=False)
     def route_sitting_debates(name: str, date: str):
+        if not provider_supports(name, "get_sitting_debates"):
+            raise HTTPException(status_code=404, detail=f"Sitting debates not supported for database: {name!r}")
         try:
-            return get_sitting_debates(date=date, db=name)
+            return provider_call(name, "get_sitting_debates", date=date, db=name)
         except KeyError:
             raise HTTPException(status_code=404, detail=f"Unknown database: {name!r}")
         except Exception as exc:
@@ -229,8 +283,10 @@ def register_rag_api(
     @app.get("/api/databases/{name}/members", summary="Members with speech counts")
     @app.get("/databases/{name}/members", include_in_schema=False)
     def route_members(name: str):
+        if not provider_supports(name, "get_members"):
+            raise HTTPException(status_code=404, detail=f"Members not supported for database: {name!r}")
         try:
-            return get_members(db=name)
+            return provider_call(name, "get_members", db=name)
         except KeyError:
             raise HTTPException(status_code=404, detail=f"Unknown database: {name!r}")
         except Exception as exc:
@@ -239,8 +295,10 @@ def register_rag_api(
     @app.get("/api/databases/{name}/members/{member_id}", summary="Member metadata and bio")
     @app.get("/databases/{name}/members/{member_id}", include_in_schema=False)
     def route_member(name: str, member_id: int):
+        if not provider_supports(name, "get_member_by_id"):
+            raise HTTPException(status_code=404, detail=f"Members not supported for database: {name!r}")
         try:
-            member = get_member_by_id(member_id=member_id, db=name)
+            member = provider_call(name, "get_member_by_id", member_id=member_id, db=name)
         except KeyError:
             raise HTTPException(status_code=404, detail=f"Unknown database: {name!r}")
         except Exception as exc:
@@ -252,8 +310,10 @@ def register_rag_api(
     @app.get("/api/databases/{name}/members/{member_id}/speeches", summary="Speeches by a member")
     @app.get("/databases/{name}/members/{member_id}/speeches", include_in_schema=False)
     def route_member_speeches(name: str, member_id: int):
+        if not provider_supports(name, "get_member_speeches"):
+            raise HTTPException(status_code=404, detail=f"Member speeches not supported for database: {name!r}")
         try:
-            return get_member_speeches(member_id=member_id, db=name)
+            return provider_call(name, "get_member_speeches", member_id=member_id, db=name)
         except KeyError:
             raise HTTPException(status_code=404, detail=f"Unknown database: {name!r}")
         except Exception as exc:
@@ -262,8 +322,10 @@ def register_rag_api(
     @app.get("/api/databases/{name}/debates/{uuid}", summary="Debate metadata by UUID")
     @app.get("/databases/{name}/debates/{uuid}", include_in_schema=False)
     def route_debate(name: str, uuid: str):
+        if not provider_supports(name, "get_debate"):
+            raise HTTPException(status_code=404, detail=f"Debates not supported for database: {name!r}")
         try:
-            debate = get_debate(debate_uuid=uuid, db=name)
+            debate = provider_call(name, "get_debate", debate_uuid=uuid, db=name)
         except KeyError:
             raise HTTPException(status_code=404, detail=f"Unknown database: {name!r}")
         except Exception as exc:
@@ -275,8 +337,10 @@ def register_rag_api(
     @app.get("/api/databases/{name}/debates/{uuid}/speeches", summary="Speeches for a debate in order")
     @app.get("/databases/{name}/debates/{uuid}/speeches", include_in_schema=False)
     def route_debate_speeches(name: str, uuid: str):
+        if not provider_supports(name, "get_debate_speeches"):
+            raise HTTPException(status_code=404, detail=f"Debate speeches not supported for database: {name!r}")
         try:
-            return get_debate_speeches(debate_uuid=uuid, db=name)
+            return provider_call(name, "get_debate_speeches", debate_uuid=uuid, db=name)
         except KeyError:
             raise HTTPException(status_code=404, detail=f"Unknown database: {name!r}")
         except Exception as exc:

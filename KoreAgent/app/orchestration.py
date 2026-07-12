@@ -125,6 +125,8 @@ _delegate_tls = get_delegate_runtime_tls()
 
 # Stop event: set by /stoprun to request early termination of the active run.
 _stop_event: threading.Event = threading.Event()
+_stop_reason: str = ""
+_stop_reason_lock: threading.Lock = threading.Lock()
 
 # Per-session stop events registered by each orchestrate_prompt call.
 # Allows /stoprun to target only the active session rather than all concurrent runs.
@@ -133,7 +135,10 @@ _active_stop_events: dict[str, threading.Event] = {}
 _active_stop_lock:   threading.Lock             = threading.Lock()
 
 
-def request_stop() -> None:
+def request_stop(reason: str = "external") -> None:
+    global _stop_reason
+    with _stop_reason_lock:
+        _stop_reason = str(reason or "external").strip() or "external"
     _stop_event.set()
     with _active_stop_lock:
         for ev in _active_stop_events.values():
@@ -144,8 +149,16 @@ def is_stop_requested() -> bool:
     return _stop_event.is_set()
 
 
+def get_stop_reason() -> str:
+    with _stop_reason_lock:
+        return _stop_reason
+
+
 def clear_stop() -> None:
+    global _stop_reason
     _stop_event.clear()
+    with _stop_reason_lock:
+        _stop_reason = ""
 
 
 @dataclass

@@ -263,7 +263,7 @@ def _cmd_reskills(arg: str, ctx: SlashCommandContext) -> None:
 
 
 def _cmd_stoprun(arg: str, ctx: SlashCommandContext) -> None:
-    request_stop()
+    request_stop("stoprun")
     ctx.output("Stop requested. Active run will halt after its current LLM round.", "info")
 
 

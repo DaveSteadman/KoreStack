@@ -332,6 +332,7 @@ register_rag_api(
 register_rag_ui(
     app,
     launch_ingestor    = _launch_ingestor,
+    ingest_procs       = _ingest_procs,
     stop_ingestor      = _stop_ingestor,
     write_sync_status  = _write_sync_status,
     assign_to_job      = _assign_to_job,

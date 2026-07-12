@@ -582,7 +582,18 @@ class RegressionTests(unittest.TestCase):
         self.assertIsNotNone(result["result"])
         self.assertNotIn("error", str(result["result"]).lower())
 
-    def test_execute_tool_call_unknown_tool_not_masked_as_inactive(self) -> None:
+    def test_execute_tool_call_allows_known_inactive_tool(self) -> None:
+        result = execute_tool_call(
+            tool_name="get_datetime_data",
+            arguments={},
+            skills_payload=self.skills_payload,
+            active_tool_names={"tools_catalog_list", "tools_active_add"},
+        )
+
+        self.assertEqual(result["function"], "get_datetime_data")
+        self.assertIsNotNone(result["result"])
+
+    def test_execute_tool_call_unknown_tool_returns_alternatives(self) -> None:
         with self.assertRaises(RuntimeError) as ctx:
             execute_tool_call(
                 tool_name="koredec_table_read",
@@ -592,6 +603,8 @@ class RegressionTests(unittest.TestCase):
             )
 
         self.assertIn("not found in skills catalog", str(ctx.exception))
+        self.assertIn("Closest alternatives:", str(ctx.exception))
+        self.assertIn("tools_active_add", str(ctx.exception))
 
     def test_tool_loop_auto_activates_known_inactive_tool_and_blocks_dead_end_final(self) -> None:
         class _DummyLogger:

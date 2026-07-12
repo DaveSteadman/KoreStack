@@ -100,7 +100,6 @@
             <div class="kcui-service-stat"><span class="kcui-service-stat-key">entries</span><span class="kcui-service-stat-val">{{ svc.stats.get("total_entries", "-") }}</span></div>
           {% elif svc.slug == "library" %}
             <div class="kcui-service-stat"><span class="kcui-service-stat-key">books</span><span class="kcui-service-stat-val">{{ svc.stats.get("total_books", "-") }}</span></div>
-            <div class="kcui-service-stat"><span class="kcui-service-stat-key">incomplete</span><span class="kcui-service-stat-val">{{ svc.stats.get("incomplete_records", "-") }}</span></div>
           {% elif svc.slug == "reference" %}
             <div class="kcui-service-stat"><span class="kcui-service-stat-key">articles</span><span class="kcui-service-stat-val">{{ svc.stats.get("total_articles", "-") }}</span></div>
             <div class="kcui-service-stat"><span class="kcui-service-stat-key">redirects</span><span class="kcui-service-stat-val">{{ svc.stats.get("total_redirects", "-") }}</span></div>
@@ -619,7 +618,7 @@ document.addEventListener('DOMContentLoaded', restoreSearchState);
 
 const _SVC_STATS = {
   feeds:     [['domains','total_domains'],['feeds','total_feeds'],['entries','total_entries']],
-  library:   [['books','total_books'],['incomplete','incomplete_records']],
+  library:   [['books','total_books']],
   reference: [['articles','total_articles'],['redirects','total_redirects'],['links','total_links']],
   rag:       [['databases','databases'],['chunks','total_chunks']],
   scrape:    [['captures','captures'],['running','running_jobs'],['pages','pages']],

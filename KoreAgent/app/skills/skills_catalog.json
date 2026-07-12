@@ -378,14 +378,14 @@
         "from 1 to N"
       ],
       "functions": [
-        "run_python_snippet(code: str)"
+        "python_execute(code: str)"
       ],
       "inputs": [],
       "outputs": [
-        "`run_python_snippet(...)` - returns captured stdout as a plain string. Returns `\"Error: ...\"` if the snippet raises an exception, times out, or produces no output."
+        "`python_execute(...)` - returns captured stdout as a plain string. Returns `\"Error: ...\"` if the snippet raises an exception, times out, or produces no output."
       ],
       "param_descriptions": {
-        "run_python_snippet": {
+        "python_execute": {
           "code": "a complete, self-contained Python snippet as a string. Must use `print()` for all output."
         }
       },

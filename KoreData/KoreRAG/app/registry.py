@@ -20,15 +20,15 @@
 #
 # Descriptor JSON schema (all fields optional):
 #   {
-#     "display_name": "Hansard Debates",
-#     "description":  "UK Parliament Hansard debates 2015–present",
-#     "source_url":   "https://hansard.parliament.uk",
-#     "licence":      "Open Parliament Licence",
+#     "display_name": "Example Database",
+#     "description":  "Example structured source database",
+#     "source_url":   "https://example.invalid/source",
+#     "licence":      "Example licence",
 #     "managed_by":   "ingestor",          // "user" | "ingestor"
-#     "ingestor":     "hansard",           // ingestor module name
+#     "ingestor":     "example_source",    // ingestor module name
 #     "schedule":     "manual",           // "manual" | "daily" | "weekly" | "monthly"
-#     "chunk_types":  ["speech", "question", "answer"],
-#     "navigation":   {"type": "hansard"},
+#     "chunk_types":  ["record", "article", "inventory"],
+#     "navigation":   {"type": "custom"},
 #     "sync":         {"last_run": null, "status": "idle"}
 #   }
 #

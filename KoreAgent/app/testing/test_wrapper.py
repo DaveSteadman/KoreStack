@@ -65,6 +65,7 @@ MAIN_SCRIPT = _APP_DIR / "main.py"
 
 # Maximum time in seconds to wait for a single framework invocation before aborting.
 SUBPROCESS_TIMEOUT_SECONDS = 300
+TEST_LLM_TIMEOUT_SECONDS   = 86400
 
 CSV_FIELDS = ["timestamp", "source_file", "prompt", "exchange_name", "turn_index",
               "final_output", "assert_result", "passed", "failure_reason",
@@ -141,7 +142,11 @@ def invoke_exchange(
             text=True,
             encoding="utf-8",
             timeout=SUBPROCESS_TIMEOUT_SECONDS * len(turn_prompts),
-            env={**os.environ, "CHAT_SEQUENCE_FILE": tmp_path},
+            env={
+                **os.environ,
+                "CHAT_SEQUENCE_FILE":  tmp_path,
+                "KORE_TEST_LLM_TIMEOUT": str(TEST_LLM_TIMEOUT_SECONDS),
+            },
         )
     finally:
         Path(tmp_path).unlink(missing_ok=True)

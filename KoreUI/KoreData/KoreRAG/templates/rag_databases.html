@@ -4,6 +4,20 @@
 
 {% block content %}
 <div class="kcui-page kcui-page--narrow kcui-stack">
+<style>
+  .rag-actions-cell {
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  .rag-actions-row {
+    display: inline-flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 0.4rem;
+    width: 100%;
+  }
+</style>
 {% if processing_scripts %}
 <div class="panel kcui-panel">
   <div class="panel-header kcui-panel-header">
@@ -60,12 +74,12 @@
               </select>
             </form>
           </td>
-          <td id="script-{{ script.id }}-actions" style="text-align:right; white-space:nowrap;">
+          <td id="script-{{ script.id }}-actions" class="rag-actions-cell">
             <form id="script-run-{{ script.id }}" method="post" action="/ui/rag/processing/{{ script.id }}/run" style="display:none;"></form>
             <form id="script-reset-{{ script.id }}" method="post" action="/ui/rag/processing/{{ script.id }}/run" style="display:none;">
               <input type="hidden" name="reset" value="1">
             </form>
-            <span style="display:inline-flex; gap:0.4rem; align-items:center;">
+            <span class="rag-actions-row">
               {% if script.running %}
               <span class="kcui-tag kcui-tag--success">RUNNING</span>
               {% endif %}
@@ -162,11 +176,11 @@
           <td id="db-{{ d.id }}-size" class="meta" style="text-align:right; font-size:11px;">
             {% if d.get("db_size_bytes") is not none %}{{ "{:,.0f}".format(d.get("db_size_bytes") / 1024) }} KB{% else %}-{% endif %}
           </td>
-          <td id="db-{{ d.id }}-actions" style="text-align:right; white-space:nowrap;">
+          <td id="db-{{ d.id }}-actions" class="rag-actions-cell">
             <form id="db-delete-{{ d.id }}" method="post" action="/ui/rag/databases/{{ d.id }}/delete" style="display:none;"></form>
-            <span style="display:inline-flex; gap:0.4rem; align-items:center;">
+            <span class="rag-actions-row">
             {% if d.navigation %}<a class="kcui-tag kcui-tag--sm kcui-tag--accent" href="/ui/rag/explore/{{ d.id }}">EXPLORE</a>{% endif %}
-            <a class="kcui-tag kcui-tag--sm kcui-tag--warning" href="/ui/rag?db={{ d.id }}">BROWSE</a>
+            <a class="kcui-tag kcui-tag--sm kcui-tag--warning" href="/ui/rag?db={{ d.id }}{% if d.navigation %}&view=chunks{% endif %}">BROWSE</a>
             <a class="kcui-tag kcui-tag--sm kcui-tag--danger" href="#"
                onclick="event.preventDefault(); if(confirm('Delete database &quot;{{ d.id }}&quot; and all its data?\nThis cannot be undone.')) document.getElementById('db-delete-{{ d.id }}').submit();">DELETE</a>
             </span>
@@ -202,10 +216,10 @@
   }
 
   function renderDatabaseActions(d) {
-    let h = '<span style="display:inline-flex;gap:0.4rem;align-items:center;">';
+    let h = '<span class="rag-actions-row">';
     h = '<form id="db-delete-' + d.id + '" method="post" action="/ui/rag/databases/' + d.id + '/delete" style="display:none;"></form>' + h;
     if (d.navigation) h += '<a class="kcui-tag kcui-tag--sm kcui-tag--accent" href="/ui/rag/explore/' + d.id + '">EXPLORE</a>';
-    h += '<a class="kcui-tag kcui-tag--sm kcui-tag--warning" href="/ui/rag?db=' + d.id + '">BROWSE</a>';
+    h += '<a class="kcui-tag kcui-tag--sm kcui-tag--warning" href="/ui/rag?db=' + d.id + (d.navigation ? '&view=chunks' : '') + '">BROWSE</a>';
     h += '<a class="kcui-tag kcui-tag--sm kcui-tag--danger" href="#"'
        + ' onclick="event.preventDefault(); if(confirm(\'Delete database &quot;' + d.id + '&quot; and all its data?\\nThis cannot be undone.\')) document.getElementById(\'db-delete-' + d.id + '\').submit();">DELETE</a>';
     h += '</span>';
@@ -234,7 +248,7 @@
   }
 
   function renderScriptActions(script) {
-    let h = '<span style="display:inline-flex;gap:0.4rem;align-items:center;">';
+    let h = '<span class="rag-actions-row">';
     h = '<form id="script-run-' + script.id + '" method="post" action="/ui/rag/processing/' + script.id + '/run" style="display:none;"></form>'
       + '<form id="script-reset-' + script.id + '" method="post" action="/ui/rag/processing/' + script.id + '/run" style="display:none;"><input type="hidden" name="reset" value="1"></form>'
       + h;

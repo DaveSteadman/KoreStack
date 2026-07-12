@@ -19,11 +19,11 @@
 ## Interface
 - Module: `KoreAgent/app/system_skills/CodeExecute/code_execute_skill.py`
 - Functions:
-  - `run_python_snippet(code: str)`
+  - `python_execute(code: str)`
 
 ## Parameters
 
-### `run_python_snippet(code)`
+### `python_execute(code)`
 - `code` *(required)* - a complete, self-contained Python snippet as a string. Must use `print()` for all output.
   - Allowed stdlib imports: `math`, `itertools`, `collections`, `csv`, `io`, `json`, `re`, `random`, `statistics`, `datetime`, `decimal`, `fractions`, `functools`, `operator`, `string`, `textwrap`, `heapq`, `bisect`, `array`, `calendar`, `time`, `cmath`.
   - Blocked when sandbox is enabled (default): `os`, `sys`, `subprocess`, `open`, `eval`, `exec`, and all file I/O.
@@ -33,10 +33,10 @@
   - Execution timeout: 15 seconds. Sandbox state can be toggled at runtime with `/sandbox on|off`.
 
 ## Output
-- `run_python_snippet(...)` - returns captured stdout as a plain string. Returns `"Error: ..."` if the snippet raises an exception, times out, or produces no output.
+- `python_execute(...)` - returns captured stdout as a plain string. Returns `"Error: ..."` if the snippet raises an exception, times out, or produces no output.
 
 ## Triggers
-Use `run_python_snippet` by default whenever the task involves any of the following - do **not** answer from model knowledge when code can settle it:
+Use `python_execute` by default whenever the task involves any of the following - do **not** answer from model knowledge when code can settle it:
 
 **Arithmetic and maths**
 - Any calculation, formula, or numeric result: `calculate`, `compute`, `what is X`, `evaluate`
@@ -70,9 +70,9 @@ used in a downstream step, park it with `scratchpad_save` immediately after exec
 `{scratchpad:key}` as the `content` argument to `file_write` or `file_append` - this avoids
 carrying the full output string inline through subsequent tool-calling rounds.
 
-- `run_python_snippet(...)` ? `scratchpad_save("codeout", <output>)` ? `file_write("exports/result.txt", "{scratchpad:codeout}")`
+- `python_execute(...)` ? `scratchpad_save("codeout", <output>)` ? `file_write("exports/result.txt", "{scratchpad:codeout}")`
 
 ## Examples
-- `run_python_snippet(code="import math\nfor i in range(1, 6):\n    print(i, math.factorial(i))")` - print factorials 1-5
+- `python_execute(code="import math\nfor i in range(1, 6):\n    print(i, math.factorial(i))")` - print factorials 1-5
   - Returns: `"1 1\n2 2\n3 6\n4 24\n5 120"`
-- `run_python_snippet(code="print('index,square')\nfor i in range(1, 6):\n    print(i, i*i)")` - generate CSV content; park with scratchpad_save then pass to file_write
+- `python_execute(code="print('index,square')\nfor i in range(1, 6):\n    print(i, i*i)")` - generate CSV content; park with scratchpad_save then pass to file_write

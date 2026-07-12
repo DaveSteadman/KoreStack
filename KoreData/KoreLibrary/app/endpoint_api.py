@@ -14,7 +14,6 @@ from pydantic import BaseModel
 
 from app.config import cfg
 from app.database import (
-    COMPLETENESS_FIELDS,
     add_book,
     backfill_sentence_index,
     delete_book,
@@ -25,7 +24,6 @@ from app.database import (
     get_status,
     list_catalogs,
     list_books,
-    list_incomplete,
     move_book,
     rebuild_sentence_index,
     search_books,
@@ -483,20 +481,6 @@ def register_library_api(app: FastAPI) -> None:
             message = str(exc)
             status  = 404 if "not found" in message.lower() else 400
             raise HTTPException(status_code=status, detail=message) from exc
-
-    @app.get("/api/incomplete", summary="List books with missing metadata fields")
-    @app.get("/incomplete", include_in_schema=False)
-    def route_incomplete(fields: Optional[str] = None, catalog: Optional[str] = None, catalogs: Optional[str] = None):
-        parsed_fields = None
-        if fields:
-            parsed_fields = [f.strip() for f in fields.split(",") if f.strip() in COMPLETENESS_FIELDS]
-            if not parsed_fields:
-                raise HTTPException(status_code=400, detail=f"Valid fields are: {', '.join(COMPLETENESS_FIELDS)}")
-        parsed_catalogs = [value.strip() for value in (catalogs or "").split(",") if value.strip()] or None
-        try:
-            return list_incomplete(fields=parsed_fields, catalog=catalog, catalogs=parsed_catalogs)
-        except ValueError as exc:
-            raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     @app.get("/api/kiwix/inventory", summary="List available ZIM files from Kiwix OPDS catalog")
     @app.get("/kiwix/inventory", include_in_schema=False)

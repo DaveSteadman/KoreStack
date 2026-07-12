@@ -3,8 +3,7 @@
 # ====================================================================================================
 # Root launcher for KoreLibrary sub-service.
 #
-# Prints a startup banner showing total book count and incomplete entry count, then
-# starts the FastAPI app under uvicorn.
+# Starts the FastAPI app under uvicorn.
 #
 # Related modules:
 #   - app/server.py    -- FastAPI application and book catalog API routes

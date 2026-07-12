@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+{% block title %}Deagel Category{% endblock %}
+{% block main_class %}kcui-main{% endblock %}
+
+{% block content %}
+<div class="kcui-page kcui-page--narrow kcui-stack">
+<div id="sync-banner" class="kg-alert kg-alert--warn" style="display:none;">
+  <div class="kg-alert-title">Database Sync Running</div>
+  This RAG database is still ingesting content. Category item lists can be temporarily incomplete while sync is active.
+</div>
+
+<div id="load-banner" class="kg-alert kg-alert--warn">
+  <div class="kg-alert-title">Loading RAG Data</div>
+  The page shell is ready. Category items will populate as they arrive.
+</div>
+
+<div id="error-banner" class="kg-alert kg-alert--error" style="display:none;">
+  <div class="kg-alert-title">RAG Data Still Loading</div>
+  <div id="error-lines"></div>
+</div>
+
+<div id="timings" class="kg-inline-meta" style="display:none;"></div>
+
+<div class="panel kcui-panel">
+  <div class="panel-header kcui-panel-header">
+    <span id="category-title">CATEGORY &mdash; {{ category_id }}</span>
+    <span class="badge badge-dim" id="items-count" style="margin-left:0.5rem;">...</span>
+    <div style="margin-left:auto; display:flex; gap:0.5rem; align-items:center;">
+      <a class="btn btn-sm" href="/ui/rag/explore/{{ db_id }}">&#8592; LANDING PAGE</a>
+      <a class="btn btn-sm btn-yellow" href="/ui/rag/search?db={{ db_id }}">SEARCH</a>
+    </div>
+  </div>
+  <div class="kcui-panel-body" id="category-meta" style="border-bottom:1px solid var(--border, #23262e); display:none;"></div>
+  <div class="kcui-panel-body" id="group-toolbar" style="border-bottom:1px solid var(--border, #23262e); display:none; padding:0.75rem 1rem;">
+    <div style="display:flex; gap:0.75rem; align-items:center; flex-wrap:wrap;">
+      <label for="group-filter" class="meta" style="font-size:11px; min-width:56px;">Group</label>
+      <select id="group-filter" style="min-width:240px; max-width:420px;">
+        <option value="">All groups</option>
+      </select>
+      <span class="badge badge-dim" id="group-count">0</span>
+    </div>
+  </div>
+  <div class="panel-body kcui-panel-body" id="items-body" style="padding:0; overflow-x:auto;">
+    <p class="meta" style="padding:var(--kcui-gap-panel);">Loading items...</p>
+  </div>
+</div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  const endpoint = '/ui/rag/explore/{{ db_id }}/category/{{ category_id }}/json';
+  let currentPayload = null;
+
+  function escapeHtml(value) {
+    return String(value ?? '')
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;');
+  }
+
+  function renderTimings(items) {
+    if (!items || !items.length) return '';
+    return items.map(function (item) {
+      return '<span>' + escapeHtml(item.label) + ': ' + escapeHtml(item.elapsed_ms) + ' ms' + (item.ok ? '' : ' (failed)') + '</span>';
+    }).join(' | ');
+  }
+
+  function itemGroupValue(item) {
+    return String(item && item.group_name ? item.group_name : '').trim();
+  }
+
+  function selectedGroupValue() {
+    const el = document.getElementById('group-filter');
+    return el ? String(el.value || '') : '';
+  }
+
+  function filteredItems(payload) {
+    const items    = payload && payload.items ? payload.items : [];
+    const selected = selectedGroupValue();
+    if (!selected) return items;
+    return items.filter(function (item) { return itemGroupValue(item) === selected; });
+  }
+
+  function renderMeta(category) {
+    if (!category || !category.category_id) return '';
+    let h = '<div class="meta" style="font-size:11px; display:grid; gap:0.25rem;">';
+    if (category.item_count_text) h += '<div>Website listing: ' + escapeHtml(category.item_count_text) + '</div>';
+    if (category.category_url) h += '<div><a href="' + escapeHtml(category.category_url) + '" target="_blank" rel="noreferrer">Open source page</a></div>';
+    h += '</div>';
+    return h;
+  }
+
+  function renderGroupOptions(groups) {
+    const items = Array.isArray(groups) ? groups : [];
+    let h       = '<option value="">All groups</option>';
+    for (const group of items) {
+      const name = String(group.group_name || '').trim();
+      if (!name) continue;
+      h += '<option value="' + escapeHtml(name) + '">' + escapeHtml(name) + ' (' + escapeHtml(group.item_count || 0) + ')</option>';
+    }
+    return h;
+  }
+
+  function renderItems(items) {
+    if (!items || !items.length) return '<p class="meta" style="padding:var(--kcui-gap-panel);">No items found in this category.</p>';
+    let h = '<table><thead><tr><th>Item</th><th>Group</th><th>Status</th><th>Origin</th><th>Contractor</th><th style="width:70px;"></th></tr></thead><tbody>';
+    for (const item of items) {
+      const pageCode = encodeURIComponent(item.page_code || '');
+      const anchorId = encodeURIComponent(item.anchor_id || '');
+      const itemHref = item.page_code && item.anchor_id
+        ? '/ui/rag/explore/{{ db_id }}/item/' + pageCode + '/' + anchorId
+        : '';
+      h += '<tr>'
+         + '<td>' + (itemHref
+             ? '<a href="' + itemHref + '" style="font-weight:500;">' + escapeHtml(item.title || '(untitled)') + '</a>'
+             : '<span style="font-weight:500;">' + escapeHtml(item.title || '(untitled)') + '</span>') + '</td>'
+         + '<td class="meta" style="font-size:11px;">' + escapeHtml(item.group_name || '') + '</td>'
+         + '<td class="meta" style="font-size:11px;">' + escapeHtml(item.status || '') + '</td>'
+         + '<td class="meta" style="font-size:11px;">' + escapeHtml(item.origin_country || '') + '</td>'
+         + '<td class="meta" style="font-size:11px;">' + escapeHtml(item.contractor || '') + '</td>'
+         + '<td style="text-align:right;">' + (item.item_url ? '<a class="btn btn-sm" href="' + escapeHtml(item.item_url) + '" target="_blank" rel="noreferrer">SITE</a>' : '') + '</td>'
+         + '</tr>';
+    }
+    return h + '</tbody></table>';
+  }
+
+  function syncGroupToolbar(payload) {
+    const groups     = payload && payload.groups ? payload.groups : [];
+    const toolbarEl  = document.getElementById('group-toolbar');
+    const selectEl   = document.getElementById('group-filter');
+    const countEl    = document.getElementById('group-count');
+    const previous   = String(selectEl.value || '');
+    const groupNames = new Set(
+      groups
+        .map(function (group) { return String(group.group_name || '').trim(); })
+        .filter(Boolean)
+    );
+
+    selectEl.innerHTML      = renderGroupOptions(groups);
+    selectEl.value          = groupNames.has(previous) ? previous : '';
+    countEl.textContent     = String(groups.length);
+    toolbarEl.style.display = groups.length ? '' : 'none';
+  }
+
+  function renderFilteredState(payload) {
+    const items = filteredItems(payload);
+    document.getElementById('items-count').textContent = String(items.length);
+    document.getElementById('items-body').innerHTML    = renderItems(items);
+  }
+
+  function applyPayload(payload) {
+    currentPayload = payload || {};
+    const category = payload.category || {};
+    const dbInfo   = payload.db_info || {};
+    document.getElementById('category-title').innerHTML = 'CATEGORY &mdash; ' + escapeHtml(category.title || payload.category_id || '{{ category_id }}');
+    syncGroupToolbar(currentPayload);
+    renderFilteredState(currentPayload);
+
+    const metaHtml = renderMeta(category);
+    const metaEl   = document.getElementById('category-meta');
+    metaEl.innerHTML     = metaHtml;
+    metaEl.style.display = metaHtml ? '' : 'none';
+
+    document.getElementById('sync-banner').style.display = dbInfo.sync && dbInfo.sync.status === 'running' ? '' : 'none';
+    document.getElementById('load-banner').style.display = 'none';
+
+    const timingEl   = document.getElementById('timings');
+    const timingHtml = renderTimings(payload.timings || []);
+    timingEl.innerHTML     = timingHtml;
+    timingEl.style.display = timingHtml ? '' : 'none';
+
+    const errors       = payload.errors || [];
+    const errorEl      = document.getElementById('error-banner');
+    const errorLinesEl = document.getElementById('error-lines');
+    if (errors.length) {
+      errorLinesEl.innerHTML = errors.map(function (item) { return '<div>' + escapeHtml(item) + '</div>'; }).join('');
+      errorEl.style.display  = '';
+    } else {
+      errorEl.style.display  = 'none';
+      errorLinesEl.innerHTML = '';
+    }
+  }
+
+  function fetchPayload() {
+    fetch(endpoint)
+      .then(function (r) { return r.json(); })
+      .then(function (payload) {
+        applyPayload(payload);
+        if (payload.errors && payload.errors.length) window.setTimeout(fetchPayload, 3000);
+      })
+      .catch(function (err) {
+        document.getElementById('error-lines').innerHTML = '<div>' + escapeHtml(err && err.message ? err.message : err) + '</div>';
+        document.getElementById('error-banner').style.display = '';
+        window.setTimeout(fetchPayload, 3000);
+      });
+  }
+
+  document.getElementById('group-filter').addEventListener('change', function () {
+    if (currentPayload) renderFilteredState(currentPayload);
+  });
+
+  fetchPayload();
+})();
+</script>
+{% endblock %}

@@ -5,6 +5,7 @@ import subprocess
 import threading
 from pathlib import Path
 from typing import Any, Optional
+from urllib.parse import quote as _urlquote
 
 from fastapi import FastAPI, Form, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response
@@ -18,18 +19,18 @@ from app.database import (
     add_chunk,
     delete_chunk,
     get_chunk,
-    get_debate,
-    get_debate_speeches,
-    get_member_by_id,
-    get_member_speeches,
-    get_members,
-    get_sittings,
-    get_sitting_debates,
     get_status,
     init_db,
     list_chunks,
     search_chunks,
     update_chunk,
+)
+from app.navigation import (
+    get_navigation_type,
+    has_navigation,
+    provider_attribute,
+    provider_call,
+    provider_supports,
 )
 from app.registry import get_descriptor, list_database_ids, list_databases, reload as _registry_reload
 
@@ -63,6 +64,7 @@ _UI_ELEMENTS_ASSETS = Path(
 _RAG_SCRIPT_SCHEDULE_VALUES: set[str] = {"manual", "daily", "weekly", "monthly"}
 _rag_processing_jobs:        dict[str, subprocess.Popen] = {}
 _rag_processing_jobs_lock = threading.Lock()
+_ingest_procs_ref:          dict[str, object]           = {}
 
 _DB_ID_RE = re.compile(r"^[a-z][a-z0-9_]{0,62}$")
 
@@ -73,6 +75,39 @@ def _rag_runtime_root() -> Path:
 
 def _suite_redirect(path: str) -> RedirectResponse:
     return RedirectResponse(path, status_code=302)
+
+
+def _named_process_running(name: str) -> bool:
+    candidates = [str(name or "").strip()]
+    descriptor = get_descriptor(name) or {}
+    ingestor   = str(descriptor.get("ingestor") or "").strip()
+    if ingestor and ingestor not in candidates:
+        candidates.append(ingestor)
+
+    for candidate in candidates:
+        proc = _ingest_procs_ref.get(candidate)
+        if proc is not None and proc.poll() is None:
+            return True
+
+    with _rag_processing_jobs_lock:
+        for candidate in candidates:
+            proc = _rag_processing_jobs.get(candidate)
+            if proc is not None and proc.poll() is None:
+                return True
+    return False
+
+
+def _resolved_sync_status(sync: dict[str, Any]) -> str:
+    status = str(sync.get("status") or "").strip().lower()
+    if status != "running":
+        return status
+    last_run       = str(sync.get("last_run") or "").strip()
+    last_completed = str(sync.get("last_ingest_completed_at") or "").strip()
+    if last_run and (not last_completed or last_run > last_completed):
+        return "failed"
+    if last_completed:
+        return "complete"
+    return "idle"
 
 
 def _database_info(db_id: str) -> dict[str, Any]:
@@ -94,7 +129,37 @@ def _database_info(db_id: str) -> dict[str, Any]:
         status = get_status(db=db_id)
     except Exception:
         status = {"total_chunks": None, "db_size_bytes": None}
-    return {**descriptor, **{key: value for key, value in status.items() if key != "service"}}
+
+    navigation = descriptor.get("navigation")
+    if not navigation:
+        try:
+            if has_navigation(db_id):
+                nav_type = get_navigation_type(db_id)
+                if nav_type:
+                    navigation = {"type": nav_type}
+        except Exception:
+            navigation = descriptor.get("navigation")
+
+    sync = descriptor.get("sync") or {}
+    if status.get("total_chunks") is not None:
+        sync = {
+            **sync,
+            "current_total_chunks": status.get("total_chunks"),
+        }
+
+    if sync.get("status") == "running":
+        if not _named_process_running(db_id):
+            sync = {
+                **sync,
+                "status": _resolved_sync_status(sync),
+            }
+
+    return {
+        **descriptor,
+        **{key: value for key, value in status.items() if key != "service"},
+        "navigation": navigation,
+        "sync":       sync or None,
+    }
 
 
 def _rag_databases_enriched() -> list[dict[str, Any]]:
@@ -223,12 +288,24 @@ def _db_info_from_list(databases: list[dict[str, Any]], db_id: str) -> dict[str,
     return {}
 
 
+def _provider_payload(db_id: str, builder_name: str, **builder_kwargs: Any) -> dict[str, Any]:
+    databases = _rag_databases_enriched()
+    return provider_call(
+        db_id,
+        builder_name,
+        db_id,
+        databases = databases,
+        db_info   = _db_info_from_list(databases, db_id),
+        **builder_kwargs,
+    )
+
+
 def _rag_explore_payload(db_id: str) -> dict[str, Any]:
     databases = _rag_databases_enriched()
     return {
         "db_id":     db_id,
-        "sittings":  get_sittings(db=db_id),
-        "members":   get_members(db=db_id),
+        "sittings":  [],
+        "members":   [],
         "databases": databases,
         "db_info":   _db_info_from_list(databases, db_id),
         "errors":    [],
@@ -237,54 +314,36 @@ def _rag_explore_payload(db_id: str) -> dict[str, Any]:
 
 
 def _rag_explore_sitting_payload(db_id: str, date: str) -> dict[str, Any]:
-    databases = _rag_databases_enriched()
-    return {
-        "db_id":     db_id,
-        "date":      date,
-        "debates":   get_sitting_debates(date=date, db=db_id),
-        "databases": databases,
-        "db_info":   _db_info_from_list(databases, db_id),
-        "errors":    [],
-        "timings":   [],
-    }
+    return _provider_payload(db_id, "build_sitting_payload", date=date)
 
 
 def _rag_explore_debate_payload(db_id: str, uuid: str) -> dict[str, Any]:
-    databases = _rag_databases_enriched()
-    debate    = get_debate(debate_uuid=uuid, db=db_id) or {}
-    return {
-        "db_id":     db_id,
-        "debate":    debate,
-        "speeches":  get_debate_speeches(debate_uuid=uuid, db=db_id),
-        "databases": databases,
-        "db_info":   _db_info_from_list(databases, db_id),
-        "errors":    [],
-        "timings":   [],
-    }
+    return _provider_payload(db_id, "build_debate_payload", uuid=uuid)
 
 
 def _rag_explore_member_payload(db_id: str, member_id: int) -> dict[str, Any]:
-    databases = _rag_databases_enriched()
-    member    = get_member_by_id(member_id=member_id, db=db_id) or {}
-    return {
-        "db_id":     db_id,
-        "member":    member,
-        "speeches":  get_member_speeches(member_id=member_id, db=db_id),
-        "databases": databases,
-        "db_info":   _db_info_from_list(databases, db_id),
-        "errors":    [],
-        "timings":   [],
-    }
+    return _provider_payload(db_id, "build_member_payload", member_id=member_id)
+
+
+def _rag_navigation_explore_payload(db_id: str) -> dict[str, Any]:
+    return _provider_payload(db_id, "build_explore_payload")
+
+
+def _rag_navigation_category_payload(db_id: str, category_id: str) -> dict[str, Any]:
+    return _provider_payload(db_id, "build_category_payload", category_id=category_id)
 
 
 def register_rag_ui(
     app: FastAPI,
     *,
     launch_ingestor,
+    ingest_procs,
     stop_ingestor,
     write_sync_status,
     assign_to_job,
 ) -> None:
+    global _ingest_procs_ref
+    _ingest_procs_ref = ingest_procs
     @app.get("/suite-config.js", include_in_schema=False)
     def suite_config_js():
         urls = json.dumps(get_suite_urls_map())
@@ -312,7 +371,7 @@ def register_rag_ui(
         return _suite_redirect("/ui/rag/databases")
 
     @app.get("/ui/rag", response_class=HTMLResponse, include_in_schema=False)
-    def rag_index(request: Request, limit: int = 100, offset: int = 0, db: str = "default"):
+    def rag_index(request: Request, limit: int = 100, offset: int = 0, db: str = "default", view: str = ""):
         if "db" not in request.query_params:
             databases = list_databases()
             if databases:
@@ -335,6 +394,10 @@ def register_rag_ui(
                 qs         = "&".join(f"{key}={value}" for key, value in params.items())
                 return _suite_redirect(f"/ui/rag?{qs}")
 
+        db_info = _database_info(db)
+        if db_info.get("navigation") and str(view or "").strip().lower() != "chunks":
+            return _suite_redirect(f"/ui/rag/explore/{db}")
+
         chunks    = list_chunks(limit=limit, offset=offset, db=db)
         status    = get_status(db=db)
         databases = list_databases()
@@ -347,8 +410,9 @@ def register_rag_ui(
                 "limit":     limit,
                 "offset":    offset,
                 "db":        db,
+                "view":      view,
                 "databases": databases,
-                "has_nav":   bool((_db_info_from_list(databases, db) or {}).get("navigation")),
+                "has_nav":   bool(db_info.get("navigation")),
             },
         )
 
@@ -381,6 +445,11 @@ def register_rag_ui(
         if script is None:
             raise HTTPException(status_code=404, detail=f"Unknown processing script: {script_id!r}")
 
+        descriptor = _read_rag_processing_descriptor(script_id)
+        sync       = descriptor.get("sync") or {}
+        if str(sync.get("status") or "").strip().lower() == "running":
+            return RedirectResponse("/ui/rag/databases", status_code=303)
+
         with _rag_processing_jobs_lock:
             existing = _rag_processing_jobs.get(script_id)
             if existing is not None and existing.poll() is None:
@@ -398,7 +467,10 @@ def register_rag_ui(
             argv.append("--reset")
 
         log_path   = script_dir / "processing.log"
-        log_handle = open(log_path, "ab")
+        try:
+            log_handle = open(log_path, "ab")
+        except PermissionError:
+            return RedirectResponse("/ui/rag/databases", status_code=303)
         try:
             proc = subprocess.Popen(
                 argv,
@@ -656,10 +728,20 @@ def register_rag_ui(
 
     @app.get("/ui/rag/explore/{db_id}/json", include_in_schema=False)
     def rag_explore_json(db_id: str):
+        if provider_supports(db_id, "build_explore_payload"):
+            return JSONResponse(_rag_navigation_explore_payload(db_id))
         return JSONResponse(_rag_explore_payload(db_id))
 
     @app.get("/ui/rag/explore/{db_id}", response_class=HTMLResponse, include_in_schema=False)
     def rag_explore(request: Request, db_id: str):
+        if provider_supports(db_id, "build_explore_payload"):
+            template_name = provider_attribute(db_id, "EXPLORE_TEMPLATE", "rag_explore.html")
+            context       = {"db_id": db_id, **(provider_attribute(db_id, "EXPLORE_CONTEXT", {}) or {})}
+            return templates.TemplateResponse(
+                request,
+                template_name,
+                context,
+            )
         return templates.TemplateResponse(
             request,
             "rag_explore.html",
@@ -676,62 +758,74 @@ def register_rag_ui(
 
     @app.get("/ui/rag/explore/{db_id}/sitting/{date}/json", include_in_schema=False)
     def rag_explore_sitting_json(db_id: str, date: str):
+        if not provider_supports(db_id, "build_sitting_payload"):
+            raise HTTPException(status_code=404, detail="Sitting navigation not supported for this database")
         return JSONResponse(_rag_explore_sitting_payload(db_id, date))
 
     @app.get("/ui/rag/explore/{db_id}/sitting/{date}", response_class=HTMLResponse, include_in_schema=False)
     def rag_explore_sitting(request: Request, db_id: str, date: str):
+        if not provider_supports(db_id, "build_sitting_payload"):
+            raise HTTPException(status_code=404, detail="Sitting navigation not supported for this database")
         return templates.TemplateResponse(
             request,
-            "rag_explore_sitting.html",
-            {
-                "db_id":     db_id,
-                "date":      date,
-                "debates":   [],
-                "databases": [],
-                "db_info":   {},
-                "errors":    [],
-                "timings":   [],
-            },
+            provider_attribute(db_id, "SITTING_TEMPLATE", "rag_explore_sitting.html"),
+            {"db_id": db_id, "date": date, **(provider_attribute(db_id, "SITTING_CONTEXT", {}) or {})},
         )
 
     @app.get("/ui/rag/explore/{db_id}/debate/{uuid}/json", include_in_schema=False)
     def rag_explore_debate_json(db_id: str, uuid: str):
+        if not provider_supports(db_id, "build_debate_payload"):
+            raise HTTPException(status_code=404, detail="Debate navigation not supported for this database")
         return JSONResponse(_rag_explore_debate_payload(db_id, uuid))
 
     @app.get("/ui/rag/explore/{db_id}/debate/{uuid}", response_class=HTMLResponse, include_in_schema=False)
     def rag_explore_debate(request: Request, db_id: str, uuid: str):
+        if not provider_supports(db_id, "build_debate_payload"):
+            raise HTTPException(status_code=404, detail="Debate navigation not supported for this database")
         return templates.TemplateResponse(
             request,
-            "rag_explore_debate.html",
-            {
-                "db_id":     db_id,
-                "uuid":      uuid,
-                "debate":    {},
-                "speeches":  [],
-                "databases": [],
-                "db_info":   {},
-                "errors":    [],
-                "timings":   [],
-            },
+            provider_attribute(db_id, "DEBATE_TEMPLATE", "rag_explore_debate.html"),
+            {"db_id": db_id, "uuid": uuid, **(provider_attribute(db_id, "DEBATE_CONTEXT", {}) or {})},
         )
 
     @app.get("/ui/rag/explore/{db_id}/member/{member_id}/json", include_in_schema=False)
     def rag_explore_member_json(db_id: str, member_id: int):
+        if not provider_supports(db_id, "build_member_payload"):
+            raise HTTPException(status_code=404, detail="Member navigation not supported for this database")
         return JSONResponse(_rag_explore_member_payload(db_id, member_id))
 
     @app.get("/ui/rag/explore/{db_id}/member/{member_id}", response_class=HTMLResponse, include_in_schema=False)
     def rag_explore_member(request: Request, db_id: str, member_id: int):
+        if not provider_supports(db_id, "build_member_payload"):
+            raise HTTPException(status_code=404, detail="Member navigation not supported for this database")
         return templates.TemplateResponse(
             request,
-            "rag_explore_member.html",
-            {
-                "db_id":     db_id,
-                "member_id": member_id,
-                "member":    {},
-                "speeches":  [],
-                "databases": [],
-                "db_info":   {},
-                "errors":    [],
-                "timings":   [],
-            },
+            provider_attribute(db_id, "MEMBER_TEMPLATE", "rag_explore_member.html"),
+            {"db_id": db_id, "member_id": member_id, **(provider_attribute(db_id, "MEMBER_CONTEXT", {}) or {})},
         )
+
+    @app.get("/ui/rag/explore/{db_id}/category/{category_id}/json", include_in_schema=False)
+    def rag_explore_category_json(db_id: str, category_id: str):
+        if not provider_supports(db_id, "build_category_payload"):
+            raise HTTPException(status_code=404, detail="Category navigation not supported for this database")
+        return JSONResponse(_rag_navigation_category_payload(db_id, category_id))
+
+    @app.get("/ui/rag/explore/{db_id}/category/{category_id}", response_class=HTMLResponse, include_in_schema=False)
+    def rag_explore_category(request: Request, db_id: str, category_id: str):
+        if not provider_supports(db_id, "build_category_payload"):
+            raise HTTPException(status_code=404, detail="Category navigation not supported for this database")
+        return templates.TemplateResponse(
+            request,
+            provider_attribute(db_id, "CATEGORY_TEMPLATE"),
+            {"db_id": db_id, "category_id": category_id, **(provider_attribute(db_id, "CATEGORY_CONTEXT", {}) or {})},
+        )
+
+    @app.get("/ui/rag/explore/{db_id}/item/{page_code}/{anchor_id}", include_in_schema=False)
+    def rag_explore_item_redirect(db_id: str, page_code: str, anchor_id: str):
+        if not provider_supports(db_id, "resolve_item_chunk_id"):
+            raise HTTPException(status_code=404, detail="Item navigation not supported for this database")
+        chunk_id = provider_call(db_id, "resolve_item_chunk_id", db_id, page_code, anchor_id)
+        if not chunk_id:
+            raise HTTPException(status_code=404, detail="Downloaded content chunk not found")
+
+        return RedirectResponse(url=f"/ui/rag/{int(chunk_id)}?db={_urlquote(db_id)}", status_code=302)

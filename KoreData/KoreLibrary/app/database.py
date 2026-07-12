@@ -7,7 +7,6 @@
 #   books  -- book catalog entries with FTS5 full-text search across title and author
 #
 # Supports catalog:id format (e.g. "openlibrary:OL12345W") for cross-catalog deduplication.
-# Completeness checking flags entries missing key metadata fields.
 #
 # Related modules:
 #   - app/server.py    -- catalog read/write and search operations
@@ -38,9 +37,6 @@ _DB_PATH = DATA_DIR / "library.db"
 _BUNDLED_CATALOGS_DIR = Path(__file__).resolve().parents[1] / "catalogs"
 _DEFAULT_CATALOG = str(cfg.get("default_catalog", "local") or "local").strip() or "local"
 _CATALOG_ID_RE = re.compile(r"^[A-Za-z0-9_-]+$")
-
-# Fields that are checked for completeness (NULL or empty = incomplete)
-COMPLETENESS_FIELDS = ("author", "year", "language", "genre")
 
 _SENTENCE_SCHEMA_COLUMNS = sentence_schema_columns("book_id")
 
@@ -1135,80 +1131,33 @@ def _build_meta_filters(
     return filters, params
 
 
-# ---------------------------------------------------------------------------
-# Incomplete records
-# ---------------------------------------------------------------------------
-
-def list_incomplete(fields: Optional[list[str]] = None, catalog: Optional[str] = None, catalogs: Optional[list[str]] = None) -> list[dict]:
-    """Return books with NULL/empty values in completeness fields."""
-    check = [f for f in (fields or list(COMPLETENESS_FIELDS))
-             if f in COMPLETENESS_FIELDS]
-    if not check:
-        check = list(COMPLETENESS_FIELDS)
-
-    conditions = " OR ".join(
-        f"({f} IS NULL OR {f} = '')" for f in check
-    )
-    cols = ", ".join(_BOOK_COLS)
-    result = []
-    for catalog_id in _selected_catalog_ids(catalog=catalog, catalogs=catalogs):
-        with db_connection(catalog_id) as conn:
-            rows = conn.execute(
-                f"SELECT {cols} FROM books WHERE {conditions} ORDER BY title"
-            ).fetchall()
-        for row in rows:
-            d = _row_to_dict(row, include_body=False, catalog=catalog_id)
-            d["missing_fields"] = [
-                f for f in COMPLETENESS_FIELDS
-                if not row[f]
-            ]
-            result.append(d)
-    result.sort(key=lambda item: ((item.get("title") or "").lower(), item.get("catalog") or "", item.get("id") or 0))
-    return result
-
-
-# ---------------------------------------------------------------------------
-# Status
-# ---------------------------------------------------------------------------
-
 def get_status(catalog: Optional[str] = None, catalogs: Optional[list[str]] = None) -> dict:
     total = 0
-    incomplete = 0
     no_body = 0
     db_size = 0
     catalog_stats: list[dict] = []
     for catalog_id in _selected_catalog_ids(catalog=catalog, catalogs=catalogs):
         with db_connection(catalog_id) as conn:
             cat_total = conn.execute("SELECT COUNT(*) FROM books").fetchone()[0]
-            cat_incomplete = conn.execute(
-                "SELECT COUNT(*) FROM books WHERE "
-                "author IS NULL OR author = '' OR "
-                "year IS NULL OR "
-                "language IS NULL OR language = '' OR "
-                "genre IS NULL OR genre = ''"
-            ).fetchone()[0]
             cat_no_body = conn.execute(
                 "SELECT COUNT(*) FROM books WHERE body IS NULL OR body = ''"
             ).fetchone()[0]
         cat_path = get_db_path(catalog_id)
         cat_size = cat_path.stat().st_size if cat_path.exists() else 0
         catalog_stats.append({
-            "id": catalog_id,
-            "db_size_bytes": cat_size,
-            "total_books": cat_total,
-            "incomplete_records": cat_incomplete,
+            "id":                 catalog_id,
+            "db_size_bytes":      cat_size,
+            "total_books":        cat_total,
             "books_without_body": cat_no_body,
         })
-        total += cat_total
-        incomplete += cat_incomplete
+        total   += cat_total
         no_body += cat_no_body
         db_size += cat_size
     return {
-        "total_books": total,
-        "incomplete_records": incomplete,
+        "total_books":        total,
         "books_without_body": no_body,
-        "db_size_bytes": db_size,
-        "catalogs": catalog_stats,
+        "db_size_bytes":      db_size,
+        "catalogs":           catalog_stats,
     }
 
 

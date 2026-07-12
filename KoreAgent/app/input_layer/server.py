@@ -136,7 +136,7 @@ _SESSION_ID_RE = re.compile(r"^[A-Za-z0-9_-]+$")
 _LOG_FILE_RE      = re.compile(r"^Log file:\s*(.+)$")
 _TURN_AGENT_RE    = re.compile(r"^\[TURN\s+(\d+)\]\s+Agent:\s*(.*)$")
 _TURN_METRICS_RE  = re.compile(r"^\[TURN\s+(\d+)\]\s+tokens=(\d+)\s+tps=([0-9.]+)$")
-_TEST_COMPLETE_RE = re.compile(r"^\[(TEST COMPLETE|ALL TESTS COMPLETE)\]\s+(.+)$")
+_TEST_COMPLETE_RE = re.compile(r"^\[(TEST COMPLETE|ALL TESTS COMPLETE|TEST RUN STOPPED)\]\s+(.+)$")
 
 _LOG_DIR             = get_logs_dir()
 _WEB_DIR             = Path(

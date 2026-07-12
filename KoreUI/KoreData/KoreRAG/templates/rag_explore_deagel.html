@@ -1,0 +1,212 @@
+{% extends "base.html" %}
+{% block title %}Deagel Landing Page{% endblock %}
+{% block main_class %}kcui-main{% endblock %}
+
+{% block content %}
+<div class="kcui-page kcui-stack">
+<div class="panel kcui-panel" style="margin-bottom:1rem;">
+  <div class="panel-header kcui-panel-header">
+    <span id="explore-title">EXPLORE &mdash; {{ db_id }}</span>
+    <div style="margin-left:auto; display:flex; gap:0.5rem; align-items:center;">
+      <a class="btn btn-sm btn-yellow" href="/ui/rag/search?db={{ db_id }}">SEARCH</a>
+      <a class="btn btn-sm btn-warning" href="/ui/rag?db={{ db_id }}&view=chunks">BROWSE ALL</a>
+    </div>
+  </div>
+</div>
+
+<div class="panel kcui-panel" style="margin-bottom:1rem;">
+  <div class="panel-body kcui-panel-body" style="padding:0.7rem 1rem;">
+    <div class="meta" style="font-size:11px;">
+      This is the Deagel database landing page. Use it to navigate equipment categories, recent news,
+      country summaries, and report indexes rather than browsing raw chunks one row at a time.
+    </div>
+  </div>
+</div>
+
+<div id="sync-banner" class="kg-alert kg-alert--warn" style="display:none;">
+  <div class="kg-alert-title">Database Sync Running</div>
+  This RAG database is still ingesting content. Category lists and summaries can be temporarily incomplete while sync is active.
+</div>
+
+<div id="load-banner" class="kg-alert kg-alert--warn">
+  <div class="kg-alert-title">Loading RAG Data</div>
+  The page shell is ready. Category navigation will populate as it arrives.
+</div>
+
+<div id="error-banner" class="kg-alert kg-alert--error" style="display:none;">
+  <div class="kg-alert-title">RAG Data Still Loading</div>
+  <div id="error-lines"></div>
+</div>
+
+<div id="timings" class="kg-inline-meta" style="display:none;"></div>
+
+<div style="display:grid; grid-template-columns:1.15fr 0.85fr; gap:var(--kcui-gap-panel); align-items:start;">
+  <div class="panel kcui-panel">
+    <div class="panel-header kcui-panel-header">
+      CATEGORIES
+      <span class="badge badge-dim" id="categories-count" style="margin-left:0.5rem;">…</span>
+    </div>
+    <div class="panel-body kcui-panel-body" id="categories-body" style="padding:0; overflow-x:auto;">
+      <p class="meta" style="padding:var(--kcui-gap-panel);">Loading categories…</p>
+    </div>
+  </div>
+
+  <div style="display:grid; gap:var(--kcui-gap-panel); align-items:start;">
+    <div class="panel kcui-panel">
+      <div class="panel-header kcui-panel-header">
+        COUNTRIES
+        <span class="badge badge-dim" id="countries-count" style="margin-left:0.5rem;">…</span>
+      </div>
+      <div class="panel-body kcui-panel-body" id="countries-body" style="padding:0; overflow-x:auto;">
+        <p class="meta" style="padding:var(--kcui-gap-panel);">Loading countries…</p>
+      </div>
+    </div>
+
+    <div class="panel kcui-panel">
+      <div class="panel-header kcui-panel-header">
+        RECENT NEWS
+        <span class="badge badge-dim" id="news-count" style="margin-left:0.5rem;">…</span>
+      </div>
+      <div class="panel-body kcui-panel-body" id="news-body" style="padding:0; overflow-x:auto;">
+        <p class="meta" style="padding:var(--kcui-gap-panel);">Loading news…</p>
+      </div>
+    </div>
+
+    <div class="panel kcui-panel">
+      <div class="panel-header kcui-panel-header">
+        REPORTS
+        <span class="badge badge-dim" id="reports-count" style="margin-left:0.5rem;">…</span>
+      </div>
+      <div class="panel-body kcui-panel-body" id="reports-body" style="padding:0; overflow-x:auto;">
+        <p class="meta" style="padding:var(--kcui-gap-panel);">Loading reports…</p>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  const endpoint = '/ui/rag/explore/{{ db_id }}/json';
+
+  function escapeHtml(value) {
+    return String(value ?? '')
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;');
+  }
+
+  function renderTimings(items) {
+    if (!items || !items.length) return '';
+    return items.map(function (item) {
+      return '<span>' + escapeHtml(item.label) + ': ' + escapeHtml(item.elapsed_ms) + ' ms' + (item.ok ? '' : ' (failed)') + '</span>';
+    }).join(' · ');
+  }
+
+  function renderCategories(items) {
+    if (!items || !items.length) return '<p class="meta" style="padding:var(--kcui-gap-panel);">No categories found.</p>';
+    let h = '<table><thead><tr><th>Category</th><th style="width:90px; text-align:right;">Groups</th><th style="width:90px; text-align:right;">Items</th><th style="width:70px;"></th></tr></thead><tbody>';
+    for (const item of items) {
+      const id = encodeURIComponent(item.category_id || '');
+      h += '<tr>'
+         + '<td><a href="/ui/rag/explore/{{ db_id }}/category/' + id + '" style="font-weight:500;">' + escapeHtml(item.title || item.category_id || '(category)') + '</a>'
+         + '<div class="meta" style="font-size:11px; margin-top:0.15rem;">' + escapeHtml(item.item_count_text || '') + '</div></td>'
+         + '<td class="meta" style="text-align:right;">' + escapeHtml(item.group_count || 0) + '</td>'
+         + '<td class="meta" style="text-align:right;">' + escapeHtml(item.item_count || 0) + '</td>'
+         + '<td style="text-align:right;"><a class="btn btn-sm" href="/ui/rag/explore/{{ db_id }}/category/' + id + '">VIEW</a></td>'
+         + '</tr>';
+    }
+    return h + '</tbody></table>';
+  }
+
+  function renderCountries(items) {
+    if (!items || !items.length) return '<p class="meta" style="padding:var(--kcui-gap-panel);">No countries found.</p>';
+    let h = '<table><thead><tr><th>Country</th><th style="width:90px; text-align:right;">Rank</th><th style="width:70px;"></th></tr></thead><tbody>';
+    for (const item of items) {
+      h += '<tr>'
+         + '<td><span style="font-weight:500;">' + escapeHtml(item.title || '') + '</span>'
+         + '<div class="meta" style="font-size:11px; margin-top:0.15rem;">' + escapeHtml(item.year_text || '') + '</div></td>'
+         + '<td class="meta" style="text-align:right;">' + escapeHtml(item.ranking_order || '-') + '</td>'
+         + '<td style="text-align:right;">' + (item.country_url ? '<a class="btn btn-sm" href="' + escapeHtml(item.country_url) + '" target="_blank" rel="noreferrer">SITE</a>' : '') + '</td>'
+         + '</tr>';
+    }
+    return h + '</tbody></table>';
+  }
+
+  function renderNews(items) {
+    if (!items || !items.length) return '<p class="meta" style="padding:var(--kcui-gap-panel);">No news found.</p>';
+    let h = '<table><thead><tr><th>Headline</th><th style="width:110px;">Released</th></tr></thead><tbody>';
+    for (const item of items) {
+      h += '<tr>'
+         + '<td>' + (item.news_url ? '<a href="' + escapeHtml(item.news_url) + '" target="_blank" rel="noreferrer" style="font-weight:500;">' + escapeHtml(item.title || '(untitled)') + '</a>' : '<span style="font-weight:500;">' + escapeHtml(item.title || '(untitled)') + '</span>') + '</td>'
+         + '<td class="meta" style="font-size:11px;">' + escapeHtml(item.released_on_text || item.published_at || '') + '</td>'
+         + '</tr>';
+    }
+    return h + '</tbody></table>';
+  }
+
+  function renderReports(items) {
+    if (!items || !items.length) return '<p class="meta" style="padding:var(--kcui-gap-panel);">No reports found.</p>';
+    let h = '<table><thead><tr><th>Report</th><th style="width:100px;">Period</th></tr></thead><tbody>';
+    for (const item of items) {
+      h += '<tr>'
+         + '<td>' + (item.report_url ? '<a href="' + escapeHtml(item.report_url) + '" target="_blank" rel="noreferrer" style="font-weight:500;">' + escapeHtml(item.title || '(untitled)') + '</a>' : '<span style="font-weight:500;">' + escapeHtml(item.title || '(untitled)') + '</span>')
+         + '<div class="meta" style="font-size:11px; margin-top:0.15rem;">' + escapeHtml(item.report_group || '') + '</div></td>'
+         + '<td class="meta" style="font-size:11px;">' + escapeHtml(item.period_text || '') + '</td>'
+         + '</tr>';
+    }
+    return h + '</tbody></table>';
+  }
+
+  function applyPayload(payload) {
+    const dbInfo = payload.db_info || {};
+    document.getElementById('explore-title').innerHTML = 'LANDING PAGE &mdash; ' + escapeHtml(dbInfo.display_name || payload.db_id || '{{ db_id }}');
+    document.getElementById('categories-count').textContent = String((payload.categories || []).length);
+    document.getElementById('countries-count').textContent = String((payload.countries || []).length);
+    document.getElementById('reports-count').textContent = String((payload.reports || []).length);
+    document.getElementById('news-count').textContent = String((payload.news || []).length);
+    document.getElementById('categories-body').innerHTML = renderCategories(payload.categories || []);
+    document.getElementById('countries-body').innerHTML = renderCountries(payload.countries || []);
+    document.getElementById('reports-body').innerHTML = renderReports(payload.reports || []);
+    document.getElementById('news-body').innerHTML = renderNews(payload.news || []);
+    document.getElementById('sync-banner').style.display = dbInfo.sync && dbInfo.sync.status === 'running' ? '' : 'none';
+    document.getElementById('load-banner').style.display = 'none';
+
+    const timingEl = document.getElementById('timings');
+    const timingHtml = renderTimings(payload.timings || []);
+    timingEl.innerHTML = timingHtml;
+    timingEl.style.display = timingHtml ? '' : 'none';
+
+    const errors = payload.errors || [];
+    const errorEl = document.getElementById('error-banner');
+    const errorLinesEl = document.getElementById('error-lines');
+    if (errors.length) {
+      errorLinesEl.innerHTML = errors.map(function (item) { return '<div>' + escapeHtml(item) + '</div>'; }).join('');
+      errorEl.style.display = '';
+    } else {
+      errorEl.style.display = 'none';
+      errorLinesEl.innerHTML = '';
+    }
+  }
+
+  function fetchPayload(delayMs) {
+    fetch(endpoint)
+      .then(function (r) { return r.json(); })
+      .then(function (payload) {
+        applyPayload(payload);
+        if (payload.errors && payload.errors.length) window.setTimeout(function () { fetchPayload(3000); }, 3000);
+      })
+      .catch(function (err) {
+        document.getElementById('error-lines').innerHTML = '<div>' + escapeHtml(err && err.message ? err.message : err) + '</div>';
+        document.getElementById('error-banner').style.display = '';
+        window.setTimeout(function () { fetchPayload(3000); }, delayMs || 3000);
+      });
+  }
+
+  fetchPayload(3000);
+})();
+</script>
+{% endblock %}

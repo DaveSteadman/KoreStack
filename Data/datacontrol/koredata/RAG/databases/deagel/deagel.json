@@ -1,0 +1,75 @@
+{
+  "id": "deagel",
+  "display_name": "Deagel - Military Equipment and Aviation",
+  "description": "<News Has Low Credibility> Structured ingest of deagel.com categories, equipment items, country inventories, reports, and latest news.",
+  "source_url": "https://www.deagel.com/",
+  "licence": "Deagel website copyright; internal structured ingest",
+  "managed_by": "ingestor",
+  "ingestor": "deagel",
+  "schedule": "manual",
+  "navigation": {
+    "type": "deagel",
+    "tables": [
+      "d_categories",
+      "d_category_items",
+      "d_items",
+      "d_countries",
+      "d_news",
+      "d_reports"
+    ]
+  },
+  "chunk_types": [
+    {
+      "type": "item",
+      "required_tags": [
+        "source",
+        "type",
+        "category"
+      ]
+    },
+    {
+      "type": "country",
+      "required_tags": [
+        "source",
+        "type",
+        "country"
+      ]
+    },
+    {
+      "type": "inventory",
+      "required_tags": [
+        "source",
+        "type",
+        "country",
+        "branch"
+      ]
+    },
+    {
+      "type": "news",
+      "required_tags": [
+        "source",
+        "type",
+        "news_id"
+      ]
+    },
+    {
+      "type": "report",
+      "required_tags": [
+        "source",
+        "type",
+        "report_group"
+      ]
+    }
+  ],
+  "sync": {
+    "last_run": "2026-07-12 09:02:05",
+    "status": "complete",
+    "total_chunks": 64,
+    "last_ingest_completed_at": "2026-07-12 09:02:05",
+    "categories_processed": 1,
+    "items_processed": 2,
+    "countries_processed": 1,
+    "reports_processed": 19,
+    "news_processed": 2
+  }
+}
