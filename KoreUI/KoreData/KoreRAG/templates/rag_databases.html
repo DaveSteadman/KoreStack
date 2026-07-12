@@ -181,8 +181,7 @@
             <span class="rag-actions-row">
             {% if d.navigation %}<a class="kcui-tag kcui-tag--sm kcui-tag--accent" href="/ui/rag/explore/{{ d.id }}">EXPLORE</a>{% endif %}
             <a class="kcui-tag kcui-tag--sm kcui-tag--warning" href="/ui/rag?db={{ d.id }}{% if d.navigation %}&view=chunks{% endif %}">BROWSE</a>
-            <a class="kcui-tag kcui-tag--sm kcui-tag--danger" href="#"
-               onclick="event.preventDefault(); if(confirm('Delete database &quot;{{ d.id }}&quot; and all its data?\nThis cannot be undone.')) document.getElementById('db-delete-{{ d.id }}').submit();">DELETE</a>
+            <a class="kcui-tag kcui-tag--sm kcui-tag--danger js-db-delete" href="#" data-db-id="{{ d.id }}">DELETE</a>
             </span>
           </td>
         </tr>
@@ -220,8 +219,7 @@
     h = '<form id="db-delete-' + d.id + '" method="post" action="/ui/rag/databases/' + d.id + '/delete" style="display:none;"></form>' + h;
     if (d.navigation) h += '<a class="kcui-tag kcui-tag--sm kcui-tag--accent" href="/ui/rag/explore/' + d.id + '">EXPLORE</a>';
     h += '<a class="kcui-tag kcui-tag--sm kcui-tag--warning" href="/ui/rag?db=' + d.id + (d.navigation ? '&view=chunks' : '') + '">BROWSE</a>';
-    h += '<a class="kcui-tag kcui-tag--sm kcui-tag--danger" href="#"'
-       + ' onclick="event.preventDefault(); if(confirm(\'Delete database &quot;' + d.id + '&quot; and all its data?\\nThis cannot be undone.\')) document.getElementById(\'db-delete-' + d.id + '\').submit();">DELETE</a>';
+    h += '<a class="kcui-tag kcui-tag--sm kcui-tag--danger js-db-delete" href="#" data-db-id="' + d.id + '">DELETE</a>';
     h += '</span>';
     return h;
   }
@@ -295,6 +293,25 @@
 
     return anyRunning;
   }
+
+  document.addEventListener('click', async function (event) {
+    var deleteLink = event.target.closest('.js-db-delete');
+    if (!deleteLink) return;
+
+    event.preventDefault();
+    var dbId = deleteLink.getAttribute('data-db-id') || '';
+    if (!dbId) return;
+
+    var confirmed = await window.kcuiConfirm(
+      'Delete Database',
+      'Delete database "' + dbId + '" and all its data?\n\nThis cannot be undone.',
+      { confirmLabel: 'Delete' },
+    );
+    if (!confirmed) return;
+
+    var form = document.getElementById('db-delete-' + dbId);
+    if (form) form.submit();
+  });
 
   var _timer = null;
   function poll() {

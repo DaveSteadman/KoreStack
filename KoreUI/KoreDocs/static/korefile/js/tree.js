@@ -195,7 +195,7 @@ _treeEl.addEventListener('drop', async e => {
     await refresh();
     _emit('refresh', {});
   } catch (err) {
-    alert('Could not move folder: ' + err.message);
+    await dialogs.alert('Move Folder Failed', err.message || 'Could not move folder.');
   }
 });
 
@@ -211,7 +211,7 @@ document.getElementById('btn-new-folder').addEventListener('click', async () => 
     await refresh();
     _emit('refresh', {});
   } catch (err) {
-    alert('Could not create folder: ' + err.message);
+    await dialogs.alert('Create Folder Failed', err.message || 'Could not create folder.');
   }
 });
 
@@ -223,7 +223,7 @@ async function _renameFolder(folder) {
     await refresh();
     _emit('refresh', {});
   } catch (err) {
-    alert('Could not rename folder: ' + err.message);
+    await dialogs.alert('Rename Folder Failed', err.message || 'Could not rename folder.');
   }
 }
 
@@ -235,7 +235,7 @@ async function _moveFolder(folder) {
     await refresh();
     _emit('refresh', {});
   } catch (err) {
-    alert('Could not move folder: ' + err.message);
+    await dialogs.alert('Move Folder Failed', err.message || 'Could not move folder.');
   }
 }
 
@@ -251,7 +251,7 @@ async function _deleteFolder(folder) {
     await refresh();
     _emit('refresh', {});
   } catch (err) {
-    alert('Could not delete folder: ' + err.message);
+    await dialogs.alert('Delete Folder Failed', err.message || 'Could not delete folder.');
   }
 }
 

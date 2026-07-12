@@ -292,7 +292,7 @@ function _openFile(row) {
       _openFileAsText(row);
       return;
     }
-    alert('Unknown file type: ' + ext);
+    void dialogs.alert('Unknown File Type', `Unknown file type: ${ext}`);
     return;
   }
 
@@ -352,7 +352,7 @@ function _startRename(row) {
       const meta = typeof updated.metadata === 'object' ? updated.metadata : {};
       td.textContent = _esc(meta.title || newBase);
     } catch (err) {
-      alert('Rename failed: ' + err.message);
+      await dialogs.alert('Rename Failed', err.message || 'Rename failed.');
       await _refreshRow(row);
     }
   };
@@ -375,7 +375,7 @@ async function _deleteFile(row) {
     _files = _files.filter(f => f.id !== parseInt(row.dataset.id, 10));
     _renderList();
   } catch (err) {
-    alert('Delete failed: ' + err.message);
+    await dialogs.alert('Delete Failed', err.message || 'Delete failed.');
   }
 }
 
@@ -393,7 +393,7 @@ async function _moveFile(row) {
     _files = _files.filter(f => f.id !== fileId);
     _renderList();
   } catch (err) {
-    alert('Move failed: ' + err.message);
+    await dialogs.alert('Move Failed', err.message || 'Move failed.');
   }
 }
 
@@ -433,7 +433,7 @@ export async function createNewFile(folderId) {
     _files.push(created);
     _renderList();
   } catch (err) {
-    alert('Create failed: ' + err.message);
+    await dialogs.alert('Create Failed', err.message || 'Create failed.');
   }
 }
 

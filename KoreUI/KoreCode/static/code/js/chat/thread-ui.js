@@ -82,14 +82,15 @@ export function createThreadUI({ thread, insertFromChat = null, createEditPropos
         const prev = applyBtn.textContent;
         const fileList = [...new Set(structured.edits.map((e) => String(e?.file || '').trim()).filter(Boolean))];
         const prompt = `Create and apply proposal for ${structured.edits.length} edit(s) across ${fileList.length || 1} file(s)?`;
-        if (!window.confirm(prompt)) return;
+        const confirmed = await window.kcuiConfirm('Apply Proposal', prompt, { confirmLabel: 'Apply' });
+        if (!confirmed) return;
         applyBtn.disabled = true;
         try {
           const proposal = await createEditProposal(structured.edits);
           if (!proposal?.validation_ok) {
             const invalid = (proposal?.edits || []).find((edit) => !edit?.validation?.ok);
             applyBtn.textContent = 'proposal invalid';
-            window.alert(invalid?.validation?.errors?.[0] || 'proposal validation failed');
+            await window.kcuiAlert('Proposal Invalid', invalid?.validation?.errors?.[0] || 'proposal validation failed');
             return;
           }
           const result = await applyEditProposal(proposal.proposal_id);
@@ -99,7 +100,7 @@ export function createThreadUI({ thread, insertFromChat = null, createEditPropos
           } else {
             const firstError = Array.isArray(result?.apply_result?.errors) && result.apply_result.errors.length ? result.apply_result.errors[0] : 'apply failed';
             applyBtn.textContent = 'apply failed';
-            window.alert(firstError);
+            await window.kcuiAlert('Apply Failed', firstError);
           }
         } catch {
           applyBtn.textContent = 'apply failed';
@@ -118,24 +119,25 @@ export function createThreadUI({ thread, insertFromChat = null, createEditPropos
         applySaveBtn.className = 'kcui-tag kcui-tag--accent';
         applySaveBtn.textContent = 'apply proposal';
         applySaveBtn.addEventListener('click', async () => {
-          const prev = applySaveBtn.textContent;
+          const prev     = applySaveBtn.textContent;
           const fileList = [...new Set(structured.edits.map((e) => String(e?.file || '').trim()).filter(Boolean))];
-          const prompt = `Create, apply, and reload proposal for ${structured.edits.length} edit(s) across ${fileList.length || 1} file(s)?`;
-          if (!window.confirm(prompt)) return;
+          const prompt   = `Create, apply, and reload proposal for ${structured.edits.length} edit(s) across ${fileList.length || 1} file(s)?`;
+          const confirmed = await window.kcuiConfirm('Apply Proposal', prompt, { confirmLabel: 'Apply' });
+          if (!confirmed) return;
           applySaveBtn.disabled = true;
           try {
             const proposal = await createEditProposal(structured.edits);
             if (!proposal?.validation_ok) {
               const invalid = (proposal?.edits || []).find((edit) => !edit?.validation?.ok);
               applySaveBtn.textContent = 'proposal invalid';
-              window.alert(invalid?.validation?.errors?.[0] || 'proposal validation failed');
+              await window.kcuiAlert('Proposal Invalid', invalid?.validation?.errors?.[0] || 'proposal validation failed');
               return;
             }
             const applyResult = await applyEditProposal(proposal.proposal_id);
             if (!applyResult?.apply_result?.ok) {
               const firstApplyError = Array.isArray(applyResult?.apply_result?.errors) && applyResult.apply_result.errors.length ? applyResult.apply_result.errors[0] : 'apply failed';
               applySaveBtn.textContent = 'apply failed';
-              window.alert(firstApplyError);
+              await window.kcuiAlert('Apply Failed', firstApplyError);
               return;
             }
             const reloadResult = await reloadTabs?.(fileList);
@@ -144,7 +146,7 @@ export function createThreadUI({ thread, insertFromChat = null, createEditPropos
             } else {
               const firstSaveError = Array.isArray(reloadResult?.errors) && reloadResult.errors.length ? reloadResult.errors[0] : 'reload failed';
               applySaveBtn.textContent = 'reload failed';
-              window.alert(firstSaveError);
+              await window.kcuiAlert('Reload Failed', firstSaveError);
             }
           } catch {
             applySaveBtn.textContent = 'apply/save failed';

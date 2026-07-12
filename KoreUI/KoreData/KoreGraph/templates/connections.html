@@ -266,7 +266,7 @@ async function patchState(select) {
     updateRowForState(select.closest('tr'), updated.state);
   } catch (err) {
     select.value = String(previousState);
-    window.alert(err.message);
+    await window.kcuiAlert('Update Failed', err.message);
   } finally {
     select.disabled = false;
   }
@@ -282,7 +282,7 @@ async function activateConnection(src, cxn, tgt, rowEl) {
     updateRowForState(rowEl, updated.state);
   } catch (err) {
     if (btn) btn.disabled = false;
-    window.alert(err.message);
+    await window.kcuiAlert('Activate Failed', err.message);
   }
 }
 
@@ -303,12 +303,18 @@ async function saveScore(input) {
   try {
     await patchConnection(src, cxn, tgt, { score });
   } catch (err) {
-    window.alert(err.message);
+    await window.kcuiAlert('Score Update Failed', err.message);
   }
 }
 
 // ─── Delete connection ────────────────────────────────────────────────────
 async function deleteConnection(src, cxn, tgt, rowEl) {
+  const confirmed = await window.kcuiConfirm(
+    'Delete Connection',
+    'Delete this connection?',
+    { confirmLabel: 'Delete' },
+  );
+  if (!confirmed) return;
   const r = await fetch(window._kgPfx + '/api/connections', {
     method: 'DELETE',
     headers: { 'Content-Type': 'application/json' },
@@ -319,7 +325,7 @@ async function deleteConnection(src, cxn, tgt, rowEl) {
     return;
   }
   const d = await r.json().catch(() => ({}));
-  window.alert(d.detail || 'Delete failed');
+  await window.kcuiAlert('Delete Failed', d.detail || 'Delete failed');
 }
 
 // ─── Vocab search autocomplete ────────────────────────────────────────────

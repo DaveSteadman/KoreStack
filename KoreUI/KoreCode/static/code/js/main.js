@@ -1,4 +1,4 @@
-import { initAppBar, initTopbar } from '/ui-elements/assets/js/chrome.js';
+import { initAppBar, initDialogHost, initTopbar } from '/ui-elements/assets/js/chrome.js';
 import { initPanels } from '/ui-elements/assets/js/panels.js';
 import { createEditor } from './editor.js';
 import { initFind, runFind, runFindNext, runFindPrevious, closeFindBar, applyFindQuery, getCurrentFindQuery } from './find.js';
@@ -13,6 +13,7 @@ initAppBar({
   brandIcon: 'korecode',
   editorTabsSlot: 'kc-editor-tabs',
 });
+initDialogHost();
 
 const editorApi = createEditor({
   runFind,

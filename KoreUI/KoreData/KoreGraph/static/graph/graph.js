@@ -1200,7 +1200,12 @@
     try {
       if (_selection.kind === 'node') {
         const node = _selection.node;
-        if (!window.confirm(`Delete concept "${node.name}" and all touching relations?`)) return;
+        const confirmed = await window.kcuiConfirm(
+          'Delete Concept',
+          `Delete concept "${node.name}" and all touching relations?`,
+          { confirmLabel: 'Delete' },
+        );
+        if (!confirmed) return;
         const result = await apiJson(`${pfx}/api/concepts/${node.concept_id}`, { method: 'DELETE' });
         await _recoverDeletedNode(
           node,
@@ -1208,7 +1213,12 @@
         );
       } else {
         const edge = _selection.edge;
-        if (!window.confirm(`Delete connection "${edge.start_name} / ${edge.connection_name} / ${edge.end_name}"?`)) return;
+        const confirmed = await window.kcuiConfirm(
+          'Delete Connection',
+          `Delete connection "${edge.start_name} / ${edge.connection_name} / ${edge.end_name}"?`,
+          { confirmLabel: 'Delete' },
+        );
+        if (!confirmed) return;
         await apiJson(`${pfx}/api/connections`, {
           method: 'DELETE',
           headers: { 'Content-Type': 'application/json' },

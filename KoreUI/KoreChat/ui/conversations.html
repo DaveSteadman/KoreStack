@@ -158,7 +158,8 @@
 </div><!-- #layout -->
 
 <script type="module">
-    import { initAppBar, initTopbar } from '/ui-elements/assets/js/chrome.js';
+    import { initAppBar, initDialogHost, initTopbar } from '/ui-elements/assets/js/chrome.js';
+    initDialogHost();
     initTopbar({ currentService: 'korechat', urls: window.__koreSuiteUrls || {} });
     initAppBar({
         currentService: 'korechat',

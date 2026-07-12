@@ -25,8 +25,7 @@
         <a href="/ui/library/{{ book.route_id or book.id }}">
           <button type="button" style="font-size:11px; padding:3px 10px; background:transparent; border-color:var(--border); color:var(--dim);"> CANCEL</button>
         </a>
-        <form method="post" action="/ui/library/{{ book.route_id or book.id }}/delete" style="margin:0;"
-              onsubmit="return confirm('Permanently delete {{ book.title | replace("'","\\x27") }}?')">
+        <form id="delete-form" method="post" action="/ui/library/{{ book.route_id or book.id }}/delete" style="margin:0;">
           <button type="submit" style="background:rgba(255,95,95,0.15); border-color:var(--red); color:var(--red); font-size:11px; padding:3px 10px;"> DELETE</button>
         </form>
       </span>
@@ -132,13 +131,25 @@
 {% block scripts %}
 <script>
 (function () {
-  const form     = document.getElementById('edit-form');
-  const absInput = document.getElementById('e_year_abs');
-  const era      = document.getElementById('e_era');
-  const hidden   = document.getElementById('e_year');
+  const form       = document.getElementById('edit-form');
+  const deleteForm = document.getElementById('delete-form');
+  const absInput   = document.getElementById('e_year_abs');
+  const era        = document.getElementById('e_era');
+  const hidden     = document.getElementById('e_year');
+
   form.addEventListener('submit', function () {
     const v = parseInt(absInput.value, 10);
     hidden.value = (!isNaN(v) && v > 0) ? (era.value === 'BC' ? -v : v) : '';
+  });
+
+  deleteForm?.addEventListener('submit', async function (event) {
+    event.preventDefault();
+    const confirmed = await window.kcuiConfirm(
+      'Delete Book',
+      {{ ('Permanently delete ' ~ book.title ~ '?') | tojson }},
+      { confirmLabel: 'Delete' },
+    );
+    if (confirmed) deleteForm.submit();
   });
 })();
 </script>

@@ -383,7 +383,7 @@ async function onMetaTableClick(event) {
             await refreshAll();
         } catch (e) {
             console.error("toggleProtected:", e);
-            window.alert(`Protected toggle failed: ${e.message}`);
+            await window.kcuiAlert("Protected Toggle Failed", e.message);
         } finally {
             protectedBtn.disabled = false;
         }
@@ -409,7 +409,7 @@ async function onMetaTableClick(event) {
             await refreshAll();
         } catch (e) {
             console.error("renameConversation:", e);
-            window.alert(`Rename failed: ${e.message}`);
+            await window.kcuiAlert("Rename Failed", e.message);
         } finally {
             applyBtn.disabled = false;
         }
@@ -663,7 +663,7 @@ async function sendMessage() {
     try {
         if (isWebchat) {
             if (!MAF_BASE) {
-                window.alert("KoreAgent URL is not configured.");
+                await window.kcuiAlert("KoreAgent Unavailable", "KoreAgent URL is not configured.");
                 return;
             }
             const sessionId = _selectedExternalId.slice(wcPrefix.length);
@@ -733,7 +733,7 @@ async function agentResume() {
 
     const agentUrl = (window.__koreSuiteUrls || {}).koreagent;
     if (!agentUrl) {
-        window.alert("KoreAgent URL is not known. Is KoreStack running?");
+        await window.kcuiAlert("KoreAgent Unavailable", "KoreAgent URL is not known. Is KoreStack running?");
         return;
     }
 
@@ -744,7 +744,7 @@ async function agentResume() {
         || (externalId.startsWith("webchat_") ? externalId.slice("webchat_".length) : externalId)
         || "";
     if (!name) {
-        window.alert("This conversation has no name.");
+        await window.kcuiAlert("Resume Failed", "This conversation has no name.");
         return;
     }
 
@@ -767,7 +767,7 @@ async function agentResume() {
         window.location.href = agentUrl;
     } catch (e) {
         console.error("agentResume:", e);
-        window.alert(`Agent resume failed: ${e.message}`);
+        await window.kcuiAlert("Agent Resume Failed", e.message);
     } finally {
         btn.disabled = false;
     }
@@ -778,8 +778,10 @@ async function deleteConversation() {
 
     const id  = _selectedId;
     const btn = document.getElementById("delete-conv-btn");
-    const ok  = window.confirm(
-        `Delete conversation #${id}?\n\nThis permanently removes it from KoreChat.`
+    const ok  = await window.kcuiConfirm(
+        "Delete Conversation",
+        `Delete conversation #${id}?\n\nThis permanently removes it from KoreChat.`,
+        { confirmLabel: "Delete" },
     );
     if (!ok) return;
 
@@ -798,7 +800,7 @@ async function deleteConversation() {
         await loadConversations();
     } catch (e) {
         console.error("deleteConversation:", e);
-        window.alert(`Delete failed: ${e.message}`);
+        await window.kcuiAlert("Delete Failed", e.message);
     } finally {
         btn.disabled = false;
     }
@@ -845,7 +847,7 @@ async function createConversation() {
         await selectConversation(conv.id);
     } catch (e) {
         console.error("createConversation:", e);
-        window.alert(`Create failed: ${e.message}`);
+        await window.kcuiAlert("Create Failed", e.message);
     } finally {
         if (submitBtn) submitBtn.disabled = false;
     }
@@ -872,7 +874,7 @@ async function renameConversation() {
         await refreshAll();
     } catch (e) {
         console.error("renameConversation:", e);
-        window.alert(`Rename failed: ${e.message}`);
+        await window.kcuiAlert("Rename Failed", e.message);
     }
 }
 

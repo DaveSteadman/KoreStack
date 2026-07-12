@@ -9,6 +9,7 @@ import { initTopbar, initAppBar, initAppTabs, renderAppMenu, initAppMenuEvents }
 import * as tree     from './tree.js';
 import * as filelist from './filelist.js?v=20260711a';
 import * as api      from './api.js';
+import * as dialogs  from './dialogs.js';
 
 const DOWNLOAD_SVG = `<svg viewBox="0 0 20 20" fill="none" width="14" height="14">
   <path d="M10 3v10m0 0-3-3m3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -146,11 +147,14 @@ async function _importFs() {
   btn.textContent = 'Importing…';
   try {
     const result = await api.importFs();
-    alert(`Import complete.\nImported: ${result.imported}  Skipped: ${result.skipped}  Errors: ${result.errors}`);
+    await dialogs.alert(
+      'Import Complete',
+      `Imported: ${result.imported}  Skipped: ${result.skipped}  Errors: ${result.errors}`,
+    );
     if (_currentFolder) await filelist.loadFolder(_currentFolder.id);
     await tree.refresh();
   } catch (err) {
-    alert('Import failed: ' + err.message);
+    await dialogs.alert('Import Failed', err.message || 'Import failed.');
   } finally {
     btn.disabled = false;
     btn.innerHTML = `${DOWNLOAD_SVG} Import FS Files`;

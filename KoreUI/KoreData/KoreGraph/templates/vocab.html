@@ -353,7 +353,12 @@ async function renameVocabTerm(id) {
 
 // ── Delete term ─────────────────────────────────────────────────────────
 async function deleteVocabTerm(id, termText) {
-  if (!confirm(`Delete vocab term "${termText}"?`)) return;
+  const confirmed = await window.kcuiConfirm(
+    'Delete Vocab Term',
+    `Delete vocab term "${termText}"?`,
+    { confirmLabel: 'Delete' },
+  );
+  if (!confirmed) return;
   const r = await fetch(window._kgPfx + '/api/vocab/' + id, { method: 'DELETE' });
   if (r.ok) {
     _selectedId = null; _selectedTerm = null;
@@ -362,7 +367,7 @@ async function deleteVocabTerm(id, termText) {
     await loadVocab();
   } else {
     const d = await r.json();
-    alert(d.detail || 'Error');
+    await window.kcuiAlert('Delete Failed', d.detail || 'Error');
   }
 }
 
@@ -383,7 +388,7 @@ async function saveAddTerm() {
     selectTerm(d.id, d.term);
   } else {
     const d = await r.json();
-    alert(d.detail || 'Error');
+    await window.kcuiAlert('Create Failed', d.detail || 'Error');
   }
 }
 
@@ -446,7 +451,12 @@ async function doMerge(vocabId) {
     if (!items.length) { msg.textContent = 'Select a term from the list.'; return; }
     targetId = items[0].id;
   }
-  if (!confirm(`Add "${q}" as alias of "${_selectedTerm}"?\n\nAll connections for "${q}" will be merged into "${_selectedTerm}".`)) return;
+  const confirmed = await window.kcuiConfirm(
+    'Merge Alias',
+    `Add "${q}" as alias of "${_selectedTerm}"?\n\nAll connections for "${q}" will be merged into "${_selectedTerm}".`,
+    { confirmLabel: 'Merge' },
+  );
+  if (!confirmed) return;
   // targetId (typed term) becomes alias of vocabId (selected definitive term)
   const r = await fetch(window._kgPfx + '/api/vocab/' + targetId + '/merge', {
     method: 'POST',
@@ -475,7 +485,7 @@ async function doUnmerge(vocabId) {
     }
   } else {
     const d = await r.json().catch(() => ({}));
-    alert(d.detail || 'Error splitting term');
+    await window.kcuiAlert('Split Failed', d.detail || 'Error splitting term');
   }
 }
 

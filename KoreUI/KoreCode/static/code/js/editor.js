@@ -256,7 +256,7 @@ export function createEditor({ runFind, runFindNext, runFindPrevious, closeFindB
       });
       button.querySelector('.kappbar-editortab-close').addEventListener('click', (event) => {
         event.stopPropagation();
-        closeTab(tab.path);
+        void closeTab(tab.path);
       });
       tabsHost.appendChild(button);
     }
@@ -359,13 +359,20 @@ export function createEditor({ runFind, runFindNext, runFindPrevious, closeFindB
     onTabChange?.(path);
   }
 
-  function closeTab(path) {
+  async function closeTab(path) {
     const tab = state.openTabs.find((item) => item.path === path);
     if (!tab) {
       return;
     }
-    if (tab.dirty && !window.confirm(`Discard unsaved changes in ${tab.name}?`)) {
-      return;
+    if (tab.dirty) {
+      const confirmed = await window.kcuiConfirm(
+        'Discard Changes',
+        `Discard unsaved changes in ${tab.name}?`,
+        { confirmLabel: 'Discard' },
+      );
+      if (!confirmed) {
+        return;
+      }
     }
     clearDraft(path);
     state.openTabs = state.openTabs.filter((item) => item.path !== path);

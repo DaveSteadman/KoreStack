@@ -9,7 +9,7 @@
       CHUNK #{{ chunk.id }}
       <div class="kcui-actions kcui-row-end">
         <a class="kcui-tag kcui-tag--info" href="/ui/scrape/{{ chunk.capture_id }}">capture</a>
-        <form method="post" action="/ui/scrape/chunks/{{ chunk.id }}/delete" style="display:inline;" onsubmit="return confirm('Delete this extracted text entry?');">
+        <form id="delete-chunk-form" method="post" action="/ui/scrape/chunks/{{ chunk.id }}/delete" style="display:inline;">
           <input type="hidden" name="next" value="{{ next_url }}">
           <button type="submit" class="kcui-tag kcui-tag--red">delete</button>
         </form>
@@ -42,4 +42,21 @@
     </div>
   </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  const deleteForm = document.getElementById('delete-chunk-form');
+  deleteForm?.addEventListener('submit', async function (event) {
+    event.preventDefault();
+    const confirmed = await window.kcuiConfirm(
+      'Delete Chunk',
+      'Delete this extracted text entry?',
+      { confirmLabel: 'Delete' },
+    );
+    if (confirmed) deleteForm.submit();
+  });
+})();
+</script>
 {% endblock %}

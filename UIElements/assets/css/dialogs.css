@@ -1,0 +1,134 @@
+.kcui-dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  margin: 0;
+  transform: translate(-50%, -50%);
+  background: var(--surface);
+  border: 1px solid var(--border-2);
+  border-radius: 10px;
+  color: var(--text);
+  padding: 24px 28px;
+  min-width: 320px;
+  max-width: min(520px, calc(100vw - 2rem));
+  box-shadow: 0 16px 48px rgba(0,0,0,.7);
+  outline: none;
+}
+
+.kcui-dialog::backdrop {
+  background: rgba(0,0,0,.55);
+  backdrop-filter: blur(2px);
+}
+
+.kcui-dialog-form {
+  margin: 0;
+}
+
+.kcui-dialog-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin: 12px 0 4px;
+}
+
+.kcui-dialog-input,
+.kcui-dialog-select {
+  width: 100%;
+  padding: 7px 10px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font: 13px var(--font-ui);
+  outline: none;
+  transition: border-color 150ms;
+}
+
+.kcui-dialog-input:focus,
+.kcui-dialog-select:focus {
+  border-color: var(--accent);
+}
+
+.kcui-dialog-title {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.25;
+  margin: 0 0 16px;
+  color: var(--text);
+}
+
+.kcui-dialog-body {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-2);
+  white-space: pre-wrap;
+}
+
+.dlg-actions,
+.kcui-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.btn-primary,
+.kcui-dialog-btn--primary {
+  height: 32px;
+  padding: 0 18px;
+  background: var(--accent);
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  font: 13px/1 var(--font-ui);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 120ms;
+}
+
+.btn-primary:hover,
+.kcui-dialog-btn--primary:hover {
+  background: var(--accent-2);
+}
+
+.btn-ghost,
+.kcui-dialog-btn--ghost {
+  height: 32px;
+  padding: 0 14px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-2);
+  font: 13px/1 var(--font-ui);
+  cursor: pointer;
+  transition: background 120ms, color 120ms;
+}
+
+.btn-ghost:hover,
+.kcui-dialog-btn--ghost:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.btn-danger,
+.kcui-dialog-btn--danger {
+  height: 32px;
+  padding: 0 18px;
+  background: #7f1d1d;
+  border: 1px solid #b91c1c;
+  border-radius: 6px;
+  color: #fca5a5;
+  font: 13px/1 var(--font-ui);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 120ms;
+}
+
+.btn-danger:hover,
+.kcui-dialog-btn--danger:hover {
+  background: #991b1b;
+}

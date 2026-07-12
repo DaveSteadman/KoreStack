@@ -125,7 +125,7 @@ async function _createFile(dirPath) {
     renderTree();
     treeStatus.textContent = `Created ${newPath}`;
   } catch (err) {
-    alert('Could not create file: ' + err.message);
+    await window.kcuiAlert('Create File Failed', err.message || 'Could not create file.');
   }
 }
 
@@ -139,30 +139,40 @@ async function _createDir(dirPath) {
     await _invalidateDir(dirPath);
     renderTree();
   } catch (err) {
-    alert('Could not create folder: ' + err.message);
+    await window.kcuiAlert('Create Folder Failed', err.message || 'Could not create folder.');
   }
 }
 
 async function _deleteFileItem(filePath, fileName) {
-  if (!window.confirm(`Delete "${fileName}"?`)) return;
+  const confirmed = await window.kcuiConfirm(
+    'Delete File',
+    `Delete "${fileName}"?`,
+    { confirmLabel: 'Delete' },
+  );
+  if (!confirmed) return;
   try {
     await api(`/api/file?path=${encodeURIComponent(filePath)}`, { method: 'DELETE' });
     await _invalidateDir(_parentPath(filePath));
     renderTree();
   } catch (err) {
-    alert('Could not delete file: ' + err.message);
+    await window.kcuiAlert('Delete File Failed', err.message || 'Could not delete file.');
   }
 }
 
 async function _deleteDirItem(dirPath, dirLabel) {
-  if (!window.confirm(`Delete "${dirLabel}"? The folder must be empty.`)) return;
+  const confirmed = await window.kcuiConfirm(
+    'Delete Folder',
+    `Delete "${dirLabel}"?\n\nThe folder must already be empty.`,
+    { confirmLabel: 'Delete' },
+  );
+  if (!confirmed) return;
   try {
     await api(`/api/dir?path=${encodeURIComponent(dirPath)}`, { method: 'DELETE' });
     state.expanded.delete(dirPath);
     await _invalidateDir(_parentPath(dirPath));
     renderTree();
   } catch (err) {
-    alert('Could not delete folder: ' + err.message);
+    await window.kcuiAlert('Delete Folder Failed', err.message || 'Could not delete folder.');
   }
 }
 

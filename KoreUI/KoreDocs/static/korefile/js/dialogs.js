@@ -44,6 +44,10 @@ const _confirmOk    = document.getElementById('dlg-confirm-ok');
 const _confirmCancel= document.getElementById('dlg-confirm-cancel');
 
 export function confirm(title, message) {
+  if (typeof window.kcuiConfirm === 'function') {
+    return window.kcuiConfirm(title, message, { confirmLabel: 'Delete' });
+  }
+
   return new Promise(resolve => {
     _confirmTitle.textContent = title;
     _confirmMsg.textContent   = message;
@@ -64,6 +68,15 @@ export function confirm(title, message) {
     _confirmCancel.addEventListener('click', onCancel, { once: true });
     _dlgConfirm.addEventListener('close', onClose,  { once: true });
   });
+}
+
+export function alert(title, message) {
+  if (typeof window.kcuiAlert === 'function') {
+    return window.kcuiAlert(title, message);
+  }
+
+  window.alert(message || title || 'Notice');
+  return Promise.resolve(true);
 }
 
 // ── New file ───────────────────────────────────────────────────

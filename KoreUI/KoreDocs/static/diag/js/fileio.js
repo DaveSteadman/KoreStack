@@ -99,7 +99,7 @@ export function exportPng() {
   visitNodes(diagram.nodes);
 
   if (!isFinite(minX)) {
-    alert('Nothing to export.');
+    void window.kcuiAlert('Export PNG', 'Nothing to export.');
     return;
   }
 

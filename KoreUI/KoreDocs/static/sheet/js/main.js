@@ -7,7 +7,7 @@ import * as cell       from './cell.js';
 import * as properties from './properties.js';
 import * as fileio     from './fileio.js';
 import { colLetter, addrOf, evaluate } from './formula.js';
-import { initTopbar, initAppBar, initAppTabs, renderAppMenu, initAppMenuEvents } from '/ui-elements/assets/js/chrome.js';
+import { initTopbar, initAppBar, initAppTabs, renderAppMenu, initAppMenuEvents, initDialogHost } from '/ui-elements/assets/js/chrome.js';
 import { trackAppTab } from '/ui-elements/assets/js/chrome.js';
 import * as draft      from '/static/shared/js/draft.js';
 
@@ -70,6 +70,7 @@ initAppBar({
   editorTabsSlot: 'koredocs-tabs',
 });
 initAppTabs('koresheet', { mountId: 'koredocs-tabs', renderBrand: false });
+initDialogHost();
 
 // Auto-open from ?file= URL param, else start with a blank sheet
 const autoOpened = await fileio.autoOpenFromUrl(_refresh);
@@ -149,7 +150,10 @@ document.getElementById('toolbar').addEventListener('click', e => {
   const rangeEnd = grid.getRangeEnd();
 
   if (!rangeEnd) {
-    alert('Select a range first (Shift+click or Shift+Arrow), then click a formula button.');
+    await window.kcuiAlert(
+      'Select A Range',
+      'Select a range first (Shift+click or Shift+Arrow), then click a formula button.',
+    );
     return;
   }
 
