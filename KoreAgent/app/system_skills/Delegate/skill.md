@@ -1,76 +1,85 @@
 # Delegate Skill
 
 ## Purpose
-Create a fresh child orchestration context for a focused sub-task. The child gets its own
-isolated reasoning and tool-calling loop, runs independently, and returns a compact answer
-to the parent. Use this when a sub-problem would benefit from multi-step investigation
-without polluting the parent context with intermediate tool chatter.
+Spawn durable child tasks when a problem should be split into a controller step and one or more
+isolated worker steps. Each worker gets its own session, tool subset, and result record, then
+the parent can inspect or collect the result later.
+
+Use this when the task benefits from divide-and-conquer. Do not use it for trivial one-tool actions.
 
 ## Trigger keyword: delegate
 
 ## Interface
 - Module: `KoreAgent/app/system_skills/Delegate/delegate_skill.py`
 - Functions:
-  - `delegate(prompt: str, instructions: str = "", max_iterations: int = 3, output_key: str = "", scratchpad_visible_keys: list[str] | None = None, scratchpad_prefix: str | None = None, tools_allowlist: list[str] | None = None)`
+  - `delegate(task_in: str, data_in: dict | None = None, process: dict | None = None, data_out: dict | None = None)`
+  - `delegate_status(task_id: str)`
+  - `delegate_collect(task_id: str)`
 
 ## Parameters
 
-### `delegate(prompt, instructions = "", max_iterations = 3, output_key = "", scratchpad_visible_keys = None, scratchpad_prefix = None, tools_allowlist = None)`
-- `prompt` *(required)* - the child task to execute. Must be a complete, self-contained question or instruction.
-- `instructions` *(optional)* - extra steering prepended to the child prompt, e.g. "research thoroughly and return a concise answer with evidence".
-- `max_iterations` *(optional, default 3)* - maximum tool-calling rounds for the child run, 1-8 recommended.
-- `output_key` *(optional)* - scratchpad key name to save the child's final answer under automatically.
-  Mirrors `scratchpad_query`'s `save_result_key`. The parent can then use `scratchpad_query(output_key, ...)` or
-  `{scratchpad:output_key}` downstream without capturing the answer from the return dict inline.
-- `scratchpad_visible_keys` *(optional)* - list of scratchpad key names the child can see in its system prompt.
-  When omitted (default), the child sees **no** parent scratchpad keys — this prevents silent leakage of
-  all auto-saved `_tc_*` noise into the child context.
-  Pass an explicit list to hand the child exactly the data it needs: e.g. `["search_hits", "page_draft"]`.
-- `scratchpad_prefix` *(optional)* - pass all scratchpad keys whose names start with this string to the child.
-  Complements `scratchpad_visible_keys` — both lists are merged (deduped). Useful when auto-saved keys follow
-  a naming convention: e.g. `scratchpad_prefix="turn_3_"` passes every key saved during turn 3, or
-  `scratchpad_prefix="_tc_r2"` passes all tool-call auto-saves from round 2 of the parent run.
-- `tools_allowlist` *(optional)* - list of function names the child is permitted to call.
-  When provided, the child's tool set is restricted to only skills that expose those functions. Use to create
-  focused sub-loops: e.g. `["fetch_page_text", "scratchpad_save"]` for a child whose only job is to fetch and
-  store, or `["search_web", "lookup_wikipedia", "fetch_page_text"]` for a web-research-only child.
+### `delegate(task_in, data_in = None, process = None, data_out = None)`
+- `task_in` *(required)* - the exact child task to perform. This is the worker remit.
+- `data_in` *(optional)* - structured inputs for the worker.
+  Supported keys:
+  - `scratchpad_keys: list[str]` - parent scratchpad keys to copy into the child session.
+  - `datasets: list[str]` - parent datasets to copy into the child session.
+  - `files: list[str]` - file references to mention in the child prompt.
+  - `refs: list[str]` - arbitrary refs or IDs to mention in the child prompt.
+  - `text: str` - inline text guidance for the child prompt.
+- `process` *(required in practice)* - execution instructions for the worker.
+  Supported keys:
+  - `tools_allowlist: list[str]` - exact tool names the worker may use. Must contain at least one tool.
+  - `max_iterations: int` - child tool-loop budget. Clamped to `1-12`.
+  - `instructions: str` - extra procedural guidance for the worker.
+  - `constraints: list[str]` - hard constraints added as bullet points in the child prompt.
+  - `host_override: str` - optional LLM host override for the worker run.
+- `data_out` *(optional)* - result contract for the worker.
+  Supported keys:
+  - `result_target: str` - where the final answer should be saved.
+    Supported forms:
+    - `scratchpad:<key>`
+    - `dataset:<name>`
+    - `file:<path>`
+  - `result_format: str` - expected output form, e.g. `json array of records`, `bullet summary`, `csv text`.
+
+### `delegate_status(task_id)`
+- `task_id` *(required)* - delegated task id returned by `delegate(...)`.
+
+### `delegate_collect(task_id)`
+- `task_id` *(required)* - delegated task id returned by `delegate(...)`.
 
 ## Output
-Returns a dictionary with:
-- `status` - "ok" or "error"
-- `answer` - compact final answer from the child run
-- `delegate_prompt` - the child prompt actually used
-- `depth` - delegation depth of the child run
-- `max_iterations` - child iteration budget used
+- `delegate(...)` - returns queue metadata including `status`, `task_id`, `child_session_id`, `result_target`, and `tools_allowlist`.
+- `delegate_status(...)` - returns task lifecycle state such as `queued`, `running`, `completed`, or `failed`.
+- `delegate_collect(...)` - returns the stored task result, including summary text, saved targets, token usage, log path, and any error.
 
-## Planning strategy
+## Delegation pattern
+Treat delegation like a function call:
+- `task_in` - what the worker must do
+- `data_in` - what the worker receives
+- `process` - how the worker should operate
+- `data_out` - what the worker must return and where it should go
 
-Delegation is a divide-and-conquer primitive, not a reactive tool call.
-Decide the decomposition BEFORE calling any tools: identify the independent sub-problems,
-then fire one delegate per part and synthesise the results at the parent level.
-
-Prefer width over depth: multiple sibling delegates from the parent is safer and cleaner
-than a chain of delegates spawning delegates. Child delegates cannot spawn further delegates
-(Delegate is excluded from the child toolset by default). Only the top-level agent can delegate.
+The controller should:
+1. Break the problem into genuinely useful child remits.
+2. Spawn the child with a narrow tool allowlist.
+3. Poll with `delegate_status(...)` when needed.
+4. Read the final output with `delegate_collect(...)`.
+5. Synthesize the combined result at the parent level.
 
 ## Triggers
 Invoke this skill when:
-- the task contains a clear sub-problem that should be solved independently
-- intermediate tool chatter from the sub-problem would pollute the parent context
-- a sub-problem needs its own multi-step tool-calling loop (more than one tool in sequence)
-- you want a focused, isolated sub-investigation before final synthesis
+- the task naturally separates into controller and worker stages
+- a child needs its own tool loop and should not clutter the parent context
+- the child result should be written durably to scratchpad, dataset, or file
 
-Do NOT use for trivial one-step actions - prefer direct tool calls instead.
-If the subtask is a single `search`, `fetch`, or `lookup`, call that tool directly.
+## Avoid
+Do NOT use this skill when:
+- one direct tool call will do
+- the child task is too vague to define as a clear remit
+- the controller does not know what result target it actually wants
 
-## Critical: never describe a tool call as text
-Do NOT write the delegate call as a JSON literal in your response text, e.g.:
-  `{"tool": "delegate", "arguments": {"prompt": "..."}}`
-This is a hallucination - writing the action instead of doing it. Always invoke `delegate(...)` via
-the tool-call mechanism. If you intend to delegate, emit a tool call, not text.
-
-## List-processing workflows
-- Prefer one delegate over the whole batch when the child can iterate internally.
-- If you truly need parallel delegates, launch siblings from the parent only.
-- Do not ask a child delegate to spawn more delegates for each list item unless recursion is essential.
-- If the task is mostly `search -> fetch -> save`, direct tool calls in sequence are usually more reliable than per-item delegation.
+## Critical rule
+Never describe a delegate call as plain text or JSON in the chat response. If delegation is needed,
+emit the tool call directly.

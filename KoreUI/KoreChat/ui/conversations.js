@@ -755,7 +755,10 @@ async function agentResume() {
         const resp = await fetch(`${base}/sessions/request-switch`, {
             method:  "POST",
             headers: { "Content-Type": "application/json" },
-            body:    JSON.stringify({ name }),
+            body:    JSON.stringify({
+                name,
+                conversation_id: _selectedConv.id,
+            }),
         });
         if (!resp.ok) {
             const err = await resp.text();

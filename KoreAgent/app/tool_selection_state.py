@@ -13,7 +13,7 @@ from session_runtime import get_active_session_id
 
 
 MAX_ACTIVE_TOOLS = 32
-ALWAYS_ON_TOOL_NAMES = frozenset({"tools_catalog_list", "tools_active_add"})
+ALWAYS_ON_TOOL_NAMES = frozenset({"delegate", "tools_catalog_list", "tools_active_add"})
 
 _KC_TIMEOUT = 8
 _SESSION_TOOLS_ACTIVE: dict[str, list[str]] = {}

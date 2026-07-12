@@ -506,35 +506,37 @@
     {
       "skill_name": "Delegate Skill",
       "relative_path": "app/system_skills/Delegate/skill.md",
-      "purpose": "Create a fresh child orchestration context for a focused sub-task. The child gets its own\nisolated reasoning and tool-calling loop, runs independently, and returns a compact answer\nto the parent. Use this when a sub-problem would benefit from multi-step investigation\nwithout polluting the parent context with intermediate tool chatter.",
+      "purpose": "Spawn durable child tasks when a problem should be split into a controller step and one or more\nisolated worker steps. Each worker gets its own session, tool subset, and result record, then\nthe parent can inspect or collect the result later.\n\nUse this when the task benefits from divide-and-conquer. Do not use it for trivial one-tool actions.",
       "module": "KoreAgent/app/system_skills/Delegate/delegate_skill.py",
       "trigger_keyword": "delegate",
       "triggers": [
-        "the task contains a clear sub-problem that should be solved independently",
-        "intermediate tool chatter from the sub-problem would pollute the parent context",
-        "a sub-problem needs its own multi-step tool-calling loop (more than one tool in sequence)",
-        "you want a focused, isolated sub-investigation before final synthesis"
+        "the task naturally separates into controller and worker stages",
+        "a child needs its own tool loop and should not clutter the parent context",
+        "the child result should be written durably to scratchpad, dataset, or file"
       ],
       "functions": [
-        "delegate(prompt: str, instructions: str = \"\", max_iterations: int = 3, output_key: str = \"\", scratchpad_visible_keys: list[str] | None = None, scratchpad_prefix: str | None = None, tools_allowlist: list[str] | None = None)"
+        "delegate(task_in: str, data_in: dict | None = None, process: dict | None = None, data_out: dict | None = None)",
+        "delegate_status(task_id: str)",
+        "delegate_collect(task_id: str)"
       ],
       "inputs": [],
       "outputs": [
-        "`status` - \"ok\" or \"error\"",
-        "`answer` - compact final answer from the child run",
-        "`delegate_prompt` - the child prompt actually used",
-        "`depth` - delegation depth of the child run",
-        "`max_iterations` - child iteration budget used"
+        "`delegate(...)` - returns queue metadata including `status`, `task_id`, `child_session_id`, `result_target`, and `tools_allowlist`.",
+        "`delegate_status(...)` - returns task lifecycle state such as `queued`, `running`, `completed`, or `failed`.",
+        "`delegate_collect(...)` - returns the stored task result, including summary text, saved targets, token usage, log path, and any error."
       ],
       "param_descriptions": {
         "delegate": {
-          "prompt": "the child task to execute. Must be a complete, self-contained question or instruction.",
-          "instructions": "extra steering prepended to the child prompt, e.g. \"research thoroughly and return a concise answer with evidence\".",
-          "max_iterations": "maximum tool-calling rounds for the child run, 1-8 recommended.",
-          "output_key": "scratchpad key name to save the child's final answer under automatically.",
-          "scratchpad_visible_keys": "list of scratchpad key names the child can see in its system prompt.",
-          "scratchpad_prefix": "pass all scratchpad keys whose names start with this string to the child.",
-          "tools_allowlist": "list of function names the child is permitted to call."
+          "task_in": "the exact child task to perform. This is the worker remit.",
+          "data_in": "structured inputs for the worker.",
+          "process": "execution instructions for the worker.",
+          "data_out": "result contract for the worker."
+        },
+        "delegate_status": {
+          "task_id": "delegated task id returned by `delegate(...)`."
+        },
+        "delegate_collect": {
+          "task_id": "delegated task id returned by `delegate(...)`."
         }
       },
       "tool_selection_guidance": "",

@@ -252,7 +252,7 @@ def _extract_delegate_events(log_file: str) -> list[str]:
     events = []
     for line in text.splitlines():
         trimmed = line.strip()
-        if "[delegate:event]" in trimmed:
+        if "[delegate:event]" in trimmed or "[delegate2]" in trimmed:
             events.append(trimmed)
     return events
 

@@ -1,4 +1,10 @@
 
+# Version 0052 / 0.7+dev (Ollama v0.31.2)
+
+[ALL TESTS COMPLETE]  host=http://MONTBLANC:11434  model=gemma4:26b  elapsed=37m 31s  pass rate=87% (134/154)  prompt tokens=3,674,364  avg tok/s=97.8
+
+- Delegate is the cleanest total failure set, but I also have clear issues in context compression, file access, web search, and a couple of assertion mismatches where the agent output is actually acceptable but the test is brittle.
+
 # Version 0045 / 0.7+dev (Ollama v0.30.12)
 
 [ALL TESTS COMPLETE]  host=http://MONTBLANC:11434  model=gemma4:26b  elapsed=15m 0s  pass rate=98% (79/81)  prompt tokens=7,269,320  avg tok/s=101.5

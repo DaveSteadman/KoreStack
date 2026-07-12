@@ -791,7 +791,8 @@ def skills_invoke_post(body: SkillInvokeRequest) -> dict[str, Any]:
 # the KoreAgent browser UI picks it up on its regular poll cycle.
 
 class SessionSwitchRequest(BaseModel):
-    name: str
+    name: str = ""
+    conversation_id: int | None = None
 
 
 def _pop_pending_switch() -> dict | None:
@@ -813,16 +814,26 @@ def post_request_switch(body: SessionSwitchRequest):
         _display_name,
     )
     global _pending_switch
-    target = body.name.strip().lower()
     conversations = _list_all_conversations()
-    conv = next((c for c in conversations if _display_name(c).lower() == target), None)
-    if conv is None:
-        conv = next((c for c in conversations if target in _display_name(c).lower()), None)
-    if conv is None:
-        raise HTTPException(status_code=404, detail=f"No conversation named '{body.name}' found.")
+    conv = None
+
+    if body.conversation_id is not None:
+        conv = next((c for c in conversations if int(c.get("id") or 0) == int(body.conversation_id)), None)
+        if conv is None:
+            raise HTTPException(status_code=404, detail=f"No conversation with id '{body.conversation_id}' found.")
+    else:
+        target = body.name.strip().lower()
+        if not target:
+            raise HTTPException(status_code=400, detail="name or conversation_id is required.")
+        conv = next((c for c in conversations if _display_name(c).lower() == target), None)
+        if conv is None:
+            conv = next((c for c in conversations if target in _display_name(c).lower()), None)
+        if conv is None:
+            raise HTTPException(status_code=404, detail=f"No conversation named '{body.name}' found.")
+
     external_id  = str(conv.get("external_id") or "")
     channel_type = str(conv.get("channel_type") or "")
-    if external_id.startswith("webchat_") or channel_type == "webchat":
+    if external_id.startswith("webchat_"):
         session_id = _session_id_from_external_id(external_id)
     else:
         session_id = f"kc_conv_{conv['id']}"

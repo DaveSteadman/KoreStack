@@ -175,9 +175,9 @@ def normalize_tool_request(func_name: str, arguments: dict | None) -> tuple[str,
     if isinstance(nested_args, dict) and "id" in normalized_args and len(normalized_args) == 2:
         normalized_args = dict(nested_args)
         note_parts.append(f"{normalized_name}(id=..., arguments={{...}}) -> {normalized_name}(...)")
-    if normalized_name == "delegate" and "task" in normalized_args and "prompt" not in normalized_args:
-        normalized_args["prompt"] = normalized_args.pop("task")
-        note_parts.append("delegate(task=...) -> delegate(prompt=...)")
+    if normalized_name == "delegate" and "task" in normalized_args and "task_in" not in normalized_args:
+        normalized_args["task_in"] = normalized_args.pop("task")
+        note_parts.append("delegate(task=...) -> delegate(task_in=...)")
     return normalized_name, normalized_args, "; ".join(note_parts) if note_parts else None
 
 

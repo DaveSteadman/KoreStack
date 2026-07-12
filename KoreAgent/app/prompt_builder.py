@@ -70,7 +70,7 @@ _CORE_IDENTITY_PARTS: list[str] = [
 _SYSTEM_SKILL_GUIDANCE: list[str] = [
 
     # -- Delegate (system_skills/Delegate/) --------------------------------------------------
-    "- For complex requests with multiple independent sub-problems, decompose at planning time: decide the breakdown first, then fire delegate calls for each part and synthesise the results. Each delegate gets its own isolated context and tool budget.",
+    "- Use delegate only when staged child work is genuinely needed. Hand off a clear task_in, explicit data_in, a narrow process.tools_allowlist, and a concrete data_out target so the controller can collect durable results later.",
 
     # -- CodeExecute (system_skills/CodeExecute/) --------------------------------------------
     "- The python execution tool is more reliable for calculations than internal model arithmetic.",

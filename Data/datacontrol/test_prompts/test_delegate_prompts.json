@@ -1,7 +1,59 @@
 [
-    "I need to compare two things. First, delegate a sub-task to find out what Ollama is and what its latest version is. Then separately, delegate another sub-task to find out what llama.cpp is and what its latest version is. Then write me a short comparison of the two tools.",
-    "Delegate a focused investigation: what are the three most-discussed open source AI agent frameworks in Python right now? Search the web, read at least one result page, and return a concise summary. Then tell me which one looks most suitable for a solo developer.",
-    "I want a two-part answer. First delegate a sub-task to look up the Wikipedia article on the Turing Test and extract the key points. Then delegate a second sub-task to search the web for recent criticism of the Turing Test. Then synthesise both into a single balanced paragraph.",
-    "Delegate this research task: search for the current Python version release dates for Python 3.12 and 3.13, then tell me how long the gap was between those two releases. Return only the answer with the dates and gap in days.",
-    "I need a quick fact check. Delegate a sub-task to search the web and confirm: is DuckDuckGo still a US-based company and is it still independently owned? Return just the confirmed facts with source URLs."
+  {
+    "exchange": "delegate_gen2_scratchpad_roundtrip",
+    "turns": [
+      {
+        "user": "Use the Gen2 delegate tool with the exact argument names task_in, process, and data_out. Set task_in to return exactly the text DELEGATE_ALPHA_RESULT and nothing else. Set process.tools_allowlist to [\"scratchpad_load\"]. Set data_out.result_target to \"scratchpad:delegate_alpha_result\". In your answer, report the delegated task id only.",
+        "assert": "contains|dlg_"
+      },
+      {
+        "user": "Check the status of the delegated task you just created and answer with only the lifecycle status word.",
+        "assert": "regex|queued|running|completed|failed"
+      },
+      {
+        "user": "Collect the delegated task result and answer with only the collected summary text.",
+        "assert": "contains|DELEGATE_ALPHA_RESULT"
+      },
+      {
+        "user": "Load the parent scratchpad key delegate_alpha_result and answer with only its stored value.",
+        "assert": "contains|DELEGATE_ALPHA_RESULT"
+      }
+    ]
+  },
+  {
+    "exchange": "delegate_gen2_dataset_target",
+    "turns": [
+      {
+        "user": "Use the Gen2 delegate tool with the exact argument names task_in, process, and data_out. Set task_in to return valid JSON only: an array with exactly two objects [{\"name\":\"Mercury\",\"kind\":\"planet\"},{\"name\":\"Venus\",\"kind\":\"planet\"}]. Set process.tools_allowlist to [\"dataset_save\"]. Set data_out.result_target to \"dataset:delegate_planets\" and data_out.result_format to \"json array of objects\". In your answer, report the delegated task id only.",
+        "assert": "contains|dlg_"
+      },
+      {
+        "user": "Collect the delegated task result and answer with a short confirmation that includes the dataset name delegate_planets.",
+        "assert": "contains|delegate_planets"
+      },
+      {
+        "user": "Inspect the dataset delegate_planets and tell me the record count and the field names.",
+        "assert": "all_contains|2||name||kind"
+      }
+    ]
+  },
+  {
+    "exchange": "delegate_gen2_file_target",
+    "turns": [
+      {
+        "user": "Use the Gen2 delegate tool with the exact argument names task_in, process, and data_out. Set task_in to return exactly this two-line text and nothing else: first line DELEGATE_FILE_HEADER, second line DELEGATE_FILE_BODY. Set process.tools_allowlist to [\"file_write\"]. Set data_out.result_target to \"file:datauser/test_delegate/delegate_report.txt\". In your answer, report the delegated task id only.",
+        "assert": "contains|dlg_"
+      },
+      {
+        "user": "Collect the delegated task result and answer with a short confirmation that includes delegate_report.txt.",
+        "assert": "contains|delegate_report.txt"
+      },
+      {
+        "user": "Read datauser/test_delegate/delegate_report.txt and return its content.",
+        "assert": "all_contains|DELEGATE_FILE_HEADER||DELEGATE_FILE_BODY"
+      }
+    ]
+  },
+  "Use the delegate tool with exact fields task_in, process, and data_out. Set task_in to return exactly DELEGATE_SIMPLE_OK. Set process.tools_allowlist to [\"scratchpad_load\"]. Set data_out.result_target to \"scratchpad:delegate_simple_ok\". Then collect it and answer with only DELEGATE_SIMPLE_OK.",
+  "Use the delegate tool with exact fields task_in, process, and data_out. Set task_in to return valid JSON only: [{\"item\":\"alpha\",\"value\":1},{\"item\":\"beta\",\"value\":2}]. Set process.tools_allowlist to [\"dataset_save\"]. Set data_out.result_target to \"dataset:delegate_simple_dataset\". Then collect it and answer with the dataset name only."
 ]

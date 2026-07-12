@@ -69,9 +69,12 @@ from scratchpad import get_store
 from scratchpad import scratchpad_load
 from scratchpad import scratchpad_query
 from scratchpad import scratchpad_save
+from session_runtime import get_active_session_id
 from session_runtime import bind_session
 from skills_catalog_builder import build_tool_definitions
 from skills_catalog_builder import load_skills_payload
+from system_skills.Delegate import delegate_runtime as delegate_runtime_module
+from system_skills.Delegate import delegate_skill   as delegate_skill_module
 from system_skills.FileAccess import file_access_skill as file_access_module
 from system_skills.ToolSelection import tool_selection_skill as tool_selection_skill_module
 from system_skills.FileAccess.file_access_skill import file_write
@@ -88,7 +91,9 @@ from tool_loop import _derive_auto_scratchpad_key
 from tool_loop import _extract_graph_connection_batch_from_text
 from tool_result import ToolCallResult
 from input_layer import server as api_module
+from input_layer import slash_commands as slash_commands_module
 from input_layer import slash_command_handlers_sessions as session_handlers_module
+from input_layer.routes_sessions import _queue_timeout_for_prompt
 from input_layer.routes_sessions import _runtime_config_for_prompt
 from input_layer.slash_command_handlers_testing import _result_counts
 from testing import test_wrapper as test_wrapper_module
@@ -155,15 +160,129 @@ class RegressionTests(unittest.TestCase):
 
         entries = payload["entries"]
         tools_active_add = next(item for item in entries if item["tool_name"] == "tools_active_add")
+        delegate         = next(item for item in entries if item["tool_name"] == "delegate")
+        delegate_status  = next(item for item in entries if item["tool_name"] == "delegate_status")
         fetch_page_text = next(item for item in entries if item["tool_name"] == "fetch_page_text")
         self.assertEqual(tools_active_add["call_type"], "python")
         self.assertEqual(tools_active_add["parameters_schema"]["type"], "object")
         self.assertEqual(tools_active_add["parameters_schema"]["properties"]["tool_names"]["type"], "array")
         self.assertEqual(tools_active_add["invoke_template"]["tool_names"], ["example"])
+        self.assertEqual(delegate["parameters_schema"]["properties"]["task_in"]["type"], "string")
+        self.assertEqual(delegate["parameters_schema"]["properties"]["data_in"]["type"], "object")
+        self.assertEqual(delegate["parameters_schema"]["properties"]["process"]["type"], "object")
+        self.assertEqual(delegate_status["parameters_schema"]["properties"]["task_id"]["type"], "string")
         self.assertEqual(fetch_page_text["parameters_schema"]["properties"]["max_words"]["default"], 2000)
         self.assertEqual(fetch_page_text["parameters_schema"]["properties"]["timeout_seconds"]["default"], 15)
         self.assertEqual(fetch_page_text["invoke_template"]["max_words"], 2000)
         self.assertEqual(fetch_page_text["invoke_template"]["timeout_seconds"], 15)
+
+    def test_delegate_is_always_on(self) -> None:
+        self.assertIn("delegate", tool_selection_state_module.ALWAYS_ON_TOOL_NAMES)
+
+    def test_delegate_gen2_queues_child_and_collects_parent_result(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path     = Path(temp_dir)
+            control_dir   = temp_path / "controldata"
+            logs_dir      = temp_path / "logs"
+            parent_log    = logs_dir / "parent.log"
+            child_payload = {
+                "skills": [
+                    {
+                        "skill_name":         "Scratchpad",
+                        "purpose":            "Load scratchpad values.",
+                        "module":             "KoreAgent/app/system_skills/Scratchpad/scratchpad_skill.py",
+                        "functions":          ["scratchpad_load(key: str)"],
+                        "param_descriptions": {"scratchpad_load": {"key": "scratchpad key"}},
+                    },
+                ],
+            }
+            captured: dict[str, object] = {}
+
+            def _fake_enqueue(_name, _kind, callback, **_kwargs):
+                callback()
+                return True
+
+            def _fake_orchestrate_prompt(**kwargs):
+                captured["child_session_id"]   = get_active_session_id()
+                captured["child_prompt"]       = kwargs["user_prompt"]
+                captured["copied_parent_note"] = scratchpad_load("parent_note")
+                return ("child summary", 11, 7, True, 3.25)
+
+            previous_logger             = getattr(delegate_runtime_module._delegate_tls, "logger", None)
+            previous_config             = getattr(delegate_runtime_module._delegate_tls, "config", None)
+            previous_conversation_entry = getattr(delegate_runtime_module._delegate_tls, "conversation_entry", None)
+
+            try:
+                with delegate_runtime_module.SessionLogger(parent_log) as parent_logger:
+                    delegate_runtime_module._delegate_tls.logger             = parent_logger
+                    delegate_runtime_module._delegate_tls.config             = SimpleNamespace(resolved_model="test-model", num_ctx=4096)
+                    delegate_runtime_module._delegate_tls.conversation_entry = {"id": 321}
+
+                    with bind_session("delegate_parent_test"):
+                        scratchpad_save("parent_note", "alpha source note")
+
+                        with patch.object(delegate_runtime_module, "get_controldata_dir", return_value=control_dir):
+                            with patch.object(delegate_runtime_module, "get_logs_dir", return_value=logs_dir):
+                                with patch.object(delegate_runtime_module, "load_skills_payload", return_value=child_payload):
+                                    with patch("scheduler.scheduler.task_queue.enqueue", side_effect=_fake_enqueue):
+                                        with patch.object(delegate_runtime_module, "orchestrate_prompt", side_effect=_fake_orchestrate_prompt):
+                                            queued = delegate_skill_module.delegate(
+                                                task_in  = "Summarise the parent note.",
+                                                data_in  = {"scratchpad_keys": ["parent_note"]},
+                                                process  = {
+                                                    "tools_allowlist": ["scratchpad_load"],
+                                                    "max_iterations":  2,
+                                                },
+                                                data_out = {"result_target": "scratchpad:child_result"},
+                                            )
+
+                                            self.assertEqual(queued["status"], "queued")
+                                            self.assertTrue(str(queued["task_id"]).startswith("dlg_"))
+
+                                            status = delegate_skill_module.delegate_status(queued["task_id"])
+                                            result = delegate_skill_module.delegate_collect(queued["task_id"])
+                                            saved  = scratchpad_load("child_result")
+
+                self.assertEqual(status["status"], "completed")
+                self.assertTrue(result["ready"])
+                self.assertEqual(result["result"]["status"], "ok")
+                self.assertEqual(result["result"]["summary"], "child summary")
+                self.assertIn("child_result", result["result"]["saved_keys"])
+                self.assertEqual(saved, "child summary")
+                self.assertEqual(captured["copied_parent_note"], "alpha source note")
+                self.assertTrue(str(captured["child_session_id"]).startswith("delegate_task_dlg_"))
+                self.assertIn("Task In:", str(captured["child_prompt"]))
+                self.assertIn("Data Out:", str(captured["child_prompt"]))
+            finally:
+                delegate_runtime_module._delegate_tls.logger             = previous_logger
+                delegate_runtime_module._delegate_tls.config             = previous_config
+                delegate_runtime_module._delegate_tls.conversation_entry = previous_conversation_entry
+
+    def test_delegate_gen2_infers_dataset_target_from_alias_field(self) -> None:
+        task_in, data_in, process, data_out = delegate_runtime_module._coerce_task_contract(
+            task_in  = "Generate a JSON array and save it to a dataset named 'delegate_planets'.",
+            data_in  = None,
+            process  = {"tools_allowlist": ["dataset_save"]},
+            data_out = {"target_dataset": "delegate_planets"},
+        )
+
+        self.assertEqual(task_in, "Generate a JSON array and save it to a dataset named 'delegate_planets'.")
+        self.assertEqual(data_in["scratchpad_keys"], [])
+        self.assertEqual(process["tools_allowlist"], ["dataset_save"])
+        self.assertEqual(data_out["result_target"], "dataset:delegate_planets")
+
+    def test_test_wrapper_extracts_delegate2_log_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            log_path = Path(temp_dir) / "delegate.log"
+            log_path.write_text(
+                "[delegate2] queued task_id=dlg_20260712_220145_569ff5b3 child_session_id=delegate_task_dlg_20260712_220145_569ff5b3\n",
+                encoding="utf-8",
+            )
+
+            events = test_wrapper_module._extract_delegate_events(str(log_path))
+
+        self.assertEqual(len(events), 1)
+        self.assertIn("[delegate2] queued", events[0])
 
     def test_skills_catalog_mcp_entries_include_schema_and_template(self) -> None:
         fake_config = SimpleNamespace(skills_payload=self.skills_payload)
@@ -940,6 +1059,24 @@ class RegressionTests(unittest.TestCase):
         finally:
             api_module._pending_switch = previous
 
+    def test_request_switch_uses_conversation_id_for_new_webchat_conversation(self) -> None:
+        body = api_module.SessionSwitchRequest(name="", conversation_id=7)
+        previous = api_module._pending_switch
+        try:
+            api_module._pending_switch = None
+            with (
+                patch("input_layer.slash_command_handlers_sessions._list_all_conversations", return_value=[
+                    {"id": 7, "subject": "New conversation", "external_id": "", "channel_type": "webchat"},
+                ]),
+                patch("input_layer.slash_command_handlers_sessions._display_name", return_value="New conversation"),
+            ):
+                result = api_module.post_request_switch(body)
+
+            self.assertEqual(result, {"ok": True})
+            self.assertEqual(api_module._pending_switch, {"session_id": "kc_conv_7", "name": "New conversation"})
+        finally:
+            api_module._pending_switch = previous
+
     def test_suite_mcp_service_refs_resolve_urls(self) -> None:
         config = workspace_utils_module._flatten_suite_config({
             "network": {"host": "127.0.0.1"},
@@ -1045,16 +1182,16 @@ class RegressionTests(unittest.TestCase):
                 "name": "delegate",
                 "arguments": {
                     "task": "Find the latest advancements in quantum computing and provide a concise summary.",
-                    "max_iterations": 3,
+                    "process": {"tools_allowlist": ["search_web"]},
                 },
             },
         )
 
         self.assertEqual(func_name, "delegate")
-        self.assertIn("prompt", arguments)
+        self.assertIn("task_in", arguments)
         self.assertNotIn("task", arguments)
-        self.assertEqual(arguments["prompt"], "Find the latest advancements in quantum computing and provide a concise summary.")
-        self.assertEqual(arguments["max_iterations"], 3)
+        self.assertEqual(arguments["task_in"], "Find the latest advancements in quantum computing and provide a concise summary.")
+        self.assertEqual(arguments["process"], {"tools_allowlist": ["search_web"]})
         self.assertIn("assistant(...) -> delegate(...)", note or "")
 
     def test_fetch_page_text_query_mode_falls_back_to_raw_page_text(self) -> None:
@@ -2191,6 +2328,31 @@ class RegressionTests(unittest.TestCase):
         self.assertIn("never use outside knowledge", system_prompt)
         self.assertIn("Search result snippets, headlines, and summaries are not authoritative", system_prompt)
         self.assertIn("respond with exactly: Not found in content.", system_prompt)
+
+    def test_queue_timeout_for_prompt_disables_scheduler_timeout_only_for_test(self) -> None:
+        self.assertEqual(_queue_timeout_for_prompt("/test all"), 0)
+        self.assertEqual(_queue_timeout_for_prompt("   /test smoke   "), 0)
+        self.assertIsNone(_queue_timeout_for_prompt("/testtrend smoke"))
+        self.assertIsNone(_queue_timeout_for_prompt("normal prompt"))
+        self.assertIsNone(_queue_timeout_for_prompt(""))
+
+    def test_slash_command_outputs_use_ascii_arrows(self) -> None:
+        outputs: list[str] = []
+        ctx = SimpleNamespace(
+            config=SimpleNamespace(num_ctx=4096, max_iterations=4, resolved_model="test-model"),
+            output=lambda text, level="info": outputs.append(text),
+        )
+
+        with patch.object(slash_commands_module, "register_session_config"):
+            slash_commands_module._cmd_ctx("size 10000", ctx)
+        slash_commands_module._cmd_rounds("6", ctx)
+        with patch.object(slash_commands_module, "get_llm_timeout", return_value=30):
+            with patch.object(slash_commands_module, "set_llm_timeout"):
+                slash_commands_module._cmd_timeout("60", ctx)
+
+        joined = "\n".join(outputs)
+        self.assertIn("->", joined)
+        self.assertNotIn("\u2192", joined)
 
 if __name__ == "__main__":
     unittest.main()

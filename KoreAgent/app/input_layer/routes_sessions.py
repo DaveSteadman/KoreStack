@@ -45,6 +45,16 @@ def _runtime_config_for_prompt(config, prompt_text: str):
     return copy.deepcopy(config)
 
 
+def _queue_timeout_for_prompt(prompt_text: str) -> int | None:
+    stripped = (prompt_text or "").strip()
+    if not stripped:
+        return None
+    cmd = stripped.split(None, 1)[0].lower()
+    if cmd == "/test":
+        return 0
+    return None
+
+
 def register_session_routes(
     app,
     *,
@@ -240,7 +250,13 @@ def register_session_routes(
             finally:
                 finish_run_event_queue(run_id)
 
-        task_queue.enqueue(run_id, "api_chat", _run, label=prompt_text[:48])
+        task_queue.enqueue(
+            run_id,
+            "api_chat",
+            _run,
+            label            = prompt_text[:48],
+            timeout_seconds  = _queue_timeout_for_prompt(prompt_text),
+        )
         return {"run_id": run_id, "session_id": session_id, "queued": True}
 
     @app.get("/api/sessions/{session_id}/history")

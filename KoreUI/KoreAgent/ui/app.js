@@ -40,6 +40,9 @@ const _SESSION_SUBS = ["new", "name", "list", "resume", "resumecopy", "park", "d
 // Sub-commands for /llmserverconfig.
 const _LLMSERVERCFG_SUBS = ["model", "ctx"];
 
+// Sub-commands for /tools.
+const _TOOLS_SUBS = ["active", "all"];
+
 // Pre-compiled log line classification patterns.
 const RE_LOG_TOOL_ROUND = /^TOOL ROUND\s+\d+/i;
 const RE_LOG_ERROR      = /error|exception|failed/i;
@@ -1146,6 +1149,13 @@ function _parseSuggestContext(value) {
     if (cmd === "/task") {
         if (!rest.includes(" ")) {
             return { pool: _completions.task_names, prefix: rest.trimEnd(), base: "/task " };
+        }
+        return null;
+    }
+
+    if (cmd === "/tools") {
+        if (!rest.includes(" ")) {
+            return { pool: _TOOLS_SUBS, prefix: rest.trimEnd(), base: "/tools " };
         }
         return null;
     }

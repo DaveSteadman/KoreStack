@@ -121,7 +121,7 @@ def _cmd_ctx(arg: str, ctx: SlashCommandContext) -> None:
         old = ctx.config.num_ctx
         ctx.config.num_ctx = value
         register_session_config(ctx.config.resolved_model, value)
-        ctx.output(f"Context window size changed: {old:,} \u2192 {value:,}", "success")
+        ctx.output(f"Context window size changed: {old:,} -> {value:,}", "success")
         return
 
     if sub == "item":
@@ -182,7 +182,7 @@ def _cmd_rounds(arg: str, ctx: SlashCommandContext) -> None:
         return
     old = ctx.config.max_iterations
     ctx.config.max_iterations = value
-    ctx.output(f"Max tool rounds changed: {old} \u2192 {value}", "success")
+    ctx.output(f"Max tool rounds changed: {old} -> {value}", "success")
 
 
 def _cmd_timeout(arg: str, ctx: SlashCommandContext) -> None:
@@ -199,7 +199,7 @@ def _cmd_timeout(arg: str, ctx: SlashCommandContext) -> None:
         return
     old = get_llm_timeout()
     set_llm_timeout(value)
-    ctx.output(f"LLM timeout changed: {old}s \u2192 {value}s", "success")
+    ctx.output(f"LLM timeout changed: {old}s -> {value}s", "success")
 
 
 def _cmd_newchat(arg: str, ctx: SlashCommandContext) -> None:
