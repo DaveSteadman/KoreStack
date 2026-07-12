@@ -58,8 +58,8 @@
   resize: vertical;
 }
 
-.kcui-shell-bg button:not(.kcui-tag):not(.kcui-icon-button):not(.kcui-dialog-btn),
-.kcui-shell-bg .btn:not(.kcui-dialog-btn):not(.btn-primary):not(.btn-ghost):not(.btn-danger),
+.kcui-shell-bg button:not(.kcui-tag):not(.kcui-icon-button),
+.kcui-shell-bg .btn,
 .kcui-btn {
   padding: 0.4rem 1rem;
   border: 1px solid var(--accent);
@@ -74,7 +74,7 @@
   transition: background .12s;
 }
 
-.kcui-shell-bg a.btn:not(.btn-primary):not(.btn-ghost):not(.btn-danger),
+.kcui-shell-bg a.btn,
 a.kcui-btn {
   display: inline-flex;
   align-items: center;
@@ -82,8 +82,8 @@ a.kcui-btn {
   text-decoration: none;
 }
 
-.kcui-shell-bg button:not(.kcui-tag):not(.kcui-icon-button):not(.kcui-dialog-btn):hover,
-.kcui-shell-bg .btn:not(.kcui-dialog-btn):not(.btn-primary):not(.btn-ghost):not(.btn-danger):hover,
+.kcui-shell-bg button:not(.kcui-tag):hover,
+.kcui-shell-bg .btn:hover,
 .kcui-btn:hover {
   background: color-mix(in srgb, var(--accent) 10%, transparent);
 }
@@ -141,13 +141,13 @@ a.kcui-btn {
   cursor: default;
 }
 
-.kcui-shell-bg .btn-danger:not(.kcui-dialog-btn),
+.kcui-shell-bg .btn-danger,
 .kcui-btn-danger {
   color: var(--danger);
   border-color: var(--danger);
 }
 
-.kcui-shell-bg .btn-danger:not(.kcui-dialog-btn):hover,
+.kcui-shell-bg .btn-danger:hover,
 .kcui-btn-danger:hover {
   background: color-mix(in srgb, var(--danger) 10%, transparent);
 }
@@ -163,13 +163,13 @@ a.kcui-btn {
   background: color-mix(in srgb, var(--text-dim) 15%, transparent);
 }
 
-.kcui-shell-bg .btn-primary:not(.kcui-dialog-btn),
+.kcui-shell-bg .btn-primary,
 .kcui-btn-primary {
   color: var(--info);
   border-color: var(--info);
 }
 
-.kcui-shell-bg .btn-primary:not(.kcui-dialog-btn):hover,
+.kcui-shell-bg .btn-primary:hover,
 .kcui-btn-primary:hover {
   background: color-mix(in srgb, var(--info) 15%, transparent);
 }

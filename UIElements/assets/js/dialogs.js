@@ -27,7 +27,7 @@ function _buildDialogHost() {
         <h3 id="kcui-alert-title" class="kcui-dialog-title">Notice</h3>
         <p  id="kcui-alert-body"  class="kcui-dialog-body"></p>
         <div class="dlg-actions kcui-dialog-actions">
-          <button id="kcui-alert-ok" class="btn-primary kcui-dialog-btn kcui-dialog-btn--primary" value="ok">OK</button>
+          <button id="kcui-alert-ok" class="kcui-dialog-btn kcui-dialog-btn--primary" value="ok">OK</button>
         </div>
       </form>
     </dialog>
@@ -36,8 +36,8 @@ function _buildDialogHost() {
         <h3 id="kcui-confirm-title" class="kcui-dialog-title">Confirm</h3>
         <p  id="kcui-confirm-body"  class="kcui-dialog-body"></p>
         <div class="dlg-actions kcui-dialog-actions">
-          <button id="kcui-confirm-cancel" class="btn-ghost kcui-dialog-btn kcui-dialog-btn--ghost"  value="cancel">Cancel</button>
-          <button id="kcui-confirm-ok"     class="btn-danger kcui-dialog-btn kcui-dialog-btn--danger" value="ok">Confirm</button>
+          <button id="kcui-confirm-cancel" class="kcui-dialog-btn kcui-dialog-btn--ghost"  value="cancel">Cancel</button>
+          <button id="kcui-confirm-ok"     class="kcui-dialog-btn kcui-dialog-btn--danger" value="ok">Confirm</button>
         </div>
       </form>
     </dialog>

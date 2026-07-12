@@ -66,14 +66,14 @@
                 {% endif %}
               </td>
               <td>
-                <button class="btn-sm" title="Refresh now"
-                  style="color:var(--green); border-color:var(--green);"
+                <button class="kcui-tag kcui-tag--sm kcui-tag--success" title="Refresh now"
                   onclick="triggerRefresh(this, '/ui/feeds/{{ domain }}/feeds/{{ f.id }}/refresh')">&#x21bb;</button>
               </td>
               <td>
                 <form method="post" action="/ui/feeds/{{ domain }}/feeds/{{ f.id }}/delete" style="flex-direction:row;">
-                  <button class="btn-danger btn-sm" type="submit"
-                    onclick="return confirm('Remove {{ f.name }}?')">&#x2715;</button>
+                  <button class="kcui-tag kcui-tag--sm kcui-tag--danger" type="submit"
+                    data-feed-name="{{ f.name }}"
+                    onclick="event.preventDefault(); confirmDeleteFeed(this.dataset.feedName, this.form)">&#x2715;</button>
                 </form>
               </td>
             </tr>
@@ -216,8 +216,8 @@
               <option value="{{ f.name }}">{{ f.name }}</option>
               {% endfor %}
             </select>
-            <button class="btn-danger" type="button"
-              onclick="var n=document.getElementById('del_feed').options[document.getElementById('del_feed').selectedIndex].text; if(confirm('Delete ALL entries from '+n+'?')) document.getElementById('form-del-feed').submit()">
+            <button class="kcui-tag kcui-tag--danger" type="button"
+              onclick="confirmDeleteFeedEntries()">
               DELETE FEED ENTRIES
             </button>
           </div>
@@ -264,7 +264,7 @@
           <td class="meta">{{ e.feed_name }}</td>
           <td class="meta" style="white-space:nowrap;">{{ e.published[:16] if e.published else "-" }}</td>
           <td>
-            <button class="btn-danger btn-sm" title="Delete entry"
+            <button class="kcui-tag kcui-tag--sm kcui-tag--danger" title="Delete entry"
               onclick="deleteEntry(this, '/ui/feeds/{{ domain }}/entries/{{ e.id }}/delete')">&#x2715;</button>
           </td>
         </tr>
@@ -362,6 +362,30 @@ async function saveRate(input) {
   } catch (_) { input.value = input.dataset.prev || 60; }
 }
 document.querySelectorAll('.rate-input').forEach(i => i.dataset.prev = i.value);
+
+async function confirmDeleteFeedEntries() {
+  const select = document.getElementById('del_feed');
+  const form   = document.getElementById('form-del-feed');
+  if (!select || !form || select.selectedIndex < 0) return;
+
+  const feedName = select.options[select.selectedIndex].text;
+  const confirmed = await window.kcuiConfirm(
+    'Delete Feed Entries',
+    'Delete ALL entries from ' + feedName + '?',
+    { confirmLabel: 'Delete' },
+  );
+  if (confirmed) form.submit();
+}
+
+async function confirmDeleteFeed(feedName, form) {
+  if (!form) return;
+  const confirmed = await window.kcuiConfirm(
+    'Delete Feed',
+    'Remove ' + feedName + '?',
+    { confirmLabel: 'Delete' },
+  );
+  if (confirmed) form.submit();
+}
 
 async function deleteEntry(btn, url) {
   const row = btn.closest('tr');

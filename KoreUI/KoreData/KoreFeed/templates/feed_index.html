@@ -102,7 +102,7 @@
               <td class="kcui-text-right kcui-nowrap">
                 <form method="post" action="/ui/feeds/domains/{{ d.domain }}/delete"
                       class="kcui-inline-form">
-                  <button class="btn-danger btn-sm" type="submit"
+                  <button class="kcui-tag kcui-tag--sm kcui-tag--danger" type="submit"
                     onclick="event.stopPropagation(); event.preventDefault(); confirmDeleteDomain('{{ d.domain }}', this.form); return false;">DELETE</button>
                 </form>
               </td>
@@ -427,7 +427,7 @@ async function confirmDeleteDomain(domain, form) {
           '<td class="meta kcui-text-right"><span class="badge badge-dim">' + count + '</span></td>' +
           '<td class="kcui-text-right kcui-nowrap">' +
             '<form method="post" action="/ui/feeds/domains/' + domain + '/delete" class="kcui-inline-form">' +
-              '<button class="btn-danger btn-sm" type="submit" onclick="event.stopPropagation(); event.preventDefault(); confirmDeleteDomain(\'' + domain + '\', this.form); return false;">DELETE</button>' +
+              '<button class="kcui-tag kcui-tag--sm kcui-tag--danger" type="submit" onclick="event.stopPropagation(); event.preventDefault(); confirmDeleteDomain(\'' + domain + '\', this.form); return false;">DELETE</button>' +
             '</form>' +
           '</td>' +
         '</tr>';
