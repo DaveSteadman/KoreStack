@@ -10,76 +10,28 @@
 # Related modules:
 #   - KoreReference/main.py, KoreFeed/main.py, etc. -- each calls make_log_config() at startup
 # ====================================================================================================
-import logging
+import sys
 from pathlib import Path
 
-_MAX_LINES = 1000
-_TRIM_INTERVAL = 50  # only scan + rewrite the file every N log writes
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
+from KoreCommon.service_logging import LineCappedFileHandler
+from KoreCommon.service_logging import configure_service_logging as _common_configure_service_logging
+from KoreCommon.service_logging import get_service_log_path as _common_get_service_log_path
+from KoreCommon.service_logging import make_service_log_config as _common_make_service_log_config
 
 
-class LineCappedFileHandler(logging.FileHandler):
-    """FileHandler that trims the log file to the last _MAX_LINES lines periodically.
-
-    Trimming is deferred and only runs every _TRIM_INTERVAL emits to avoid a
-    full file read+write on every single log message.
-    """
-
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-        self._trim_counter = 0
-
-    def emit(self, record: logging.LogRecord) -> None:
-        super().emit(record)
-        self._trim_counter += 1
-        if self._trim_counter >= _TRIM_INTERVAL:
-            self._trim_counter = 0
-            self._trim()
-
-    def _trim(self) -> None:
-        path = Path(self.baseFilename)
-        try:
-            lines = path.read_text(encoding="utf-8", errors="replace").splitlines(keepends=True)
-        except OSError:
-            return
-        if len(lines) > _MAX_LINES:
-            path.write_text("".join(lines[-_MAX_LINES:]), encoding="utf-8")
+def configure_service_logging(service_name: str, log_level: str = "INFO") -> Path:
+    return _common_configure_service_logging(service_name=service_name, log_level=log_level)
 
 
-def make_log_config(log_path: str | Path) -> dict:
-    """Return a uvicorn log_config dict that writes to *log_path* with line capping."""
-    path = str(log_path)
-    return {
-        "version": 1,
-        "disable_existing_loggers": False,
-        "formatters": {
-            "default": {
-                "()": "uvicorn.logging.DefaultFormatter",
-                "fmt": "%(levelprefix)s %(message)s",
-                "use_colors": False,
-            },
-            "access": {
-                "()": "uvicorn.logging.AccessFormatter",
-                "fmt": '%(levelprefix)s %(client_addr)s - "%(request_line)s" %(status_code)s',
-                "use_colors": False,
-            },
-        },
-        "handlers": {
-            "default": {
-                "()": "logutil.LineCappedFileHandler",
-                "filename": path,
-                "formatter": "default",
-            },
-            "access": {
-                "()": "logutil.LineCappedFileHandler",
-                "filename": path,
-                "formatter": "access",
-            },
-        },
-        "loggers": {
-            "uvicorn":        {"handlers": ["default"], "level": "INFO",    "propagate": False},
-            "uvicorn.error":  {"handlers": ["default"], "level": "INFO",    "propagate": False},
-            "uvicorn.access": {"handlers": ["access"],  "level": "INFO",    "propagate": False},
-            "httpx":          {"handlers": ["default"], "level": "INFO",    "propagate": False},
-            "mcp":            {"handlers": ["default"], "level": "WARNING", "propagate": False},
-        },
-    }
+def get_service_log_path(service_name: str) -> Path:
+    return _common_get_service_log_path(service_name)
+
+
+def make_log_config(service_name_or_path: str | Path, log_level: str = "INFO") -> dict:
+    candidate    = Path(str(service_name_or_path))
+    service_name = candidate.stem if candidate.suffix.lower() == ".log" else str(service_name_or_path)
+    return _common_make_service_log_config(service_name=service_name, log_level=log_level)

@@ -13,6 +13,7 @@
 # so a crashed consumer cannot permanently block a conversation.
 # ====================================================================================================
 
+import asyncio
 import json
 import logging
 import os
@@ -40,6 +41,7 @@ from KoreCommon.suite_paths import get_suite_urls_map
 from app import database as db
 
 logger = logging.getLogger(__name__)
+service_logger = logging.getLogger("korechat.service")
 
 
 # ====================================================================================================
@@ -49,15 +51,11 @@ logger = logging.getLogger(__name__)
 def _reaper_loop(stop_event: threading.Event) -> None:
     while not stop_event.wait(60):
         try:
-            released = db.release_stale_claims()
-            if released:
-                logger.info("Reaper released %d stale claim(s)", released)
+            db.release_stale_claims()
         except Exception as exc:
             logger.warning("Reaper error: %s", exc)
         try:
-            cleared = db.clear_stale_outbound_ready()
-            if cleared:
-                logger.info("Reaper cleared %d stale outbound_ready event(s)", cleared)
+            db.clear_stale_outbound_ready()
         except Exception as exc:
             logger.warning("Reaper outbound_ready cleanup error: %s", exc)
 
@@ -102,10 +100,28 @@ _stop_reaper: threading.Event = threading.Event()
 async def lifespan(app: FastAPI):
     db.init_db()
     _stop_reaper.clear()
+    service_logger.info("starting")
+    loop = asyncio.get_running_loop()
+
+    def _exception_handler(loop_obj: asyncio.AbstractEventLoop, context: dict) -> None:
+        exc      = context.get("exception")
+        handle   = context.get("handle")
+        callback = getattr(handle, "_callback", None)
+        cb_name  = getattr(callback, "__qualname__", repr(callback))
+        if (
+            isinstance(exc, ConnectionResetError)
+            and getattr(exc, "winerror", None) == 10054
+            and "_call_connection_lost" in str(cb_name)
+        ):
+            return
+        loop_obj.default_exception_handler(context)
+
+    loop.set_exception_handler(_exception_handler)
     reaper = threading.Thread(target=_reaper_loop, args=(_stop_reaper,), daemon=True)
     reaper.start()
     yield
     _stop_reaper.set()
+    service_logger.info("stopped")
 
 
 # ====================================================================================================

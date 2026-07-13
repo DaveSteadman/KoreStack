@@ -12,6 +12,7 @@
 #   - CommonCode/      -- shared logutil, config
 # ====================================================================================================
 import sys
+import logging
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "CommonCode"))
 
@@ -19,7 +20,6 @@ import logutil
 import uvicorn
 from datetime import datetime
 from app.config import cfg
-from config import get_suite_datacontrol_dir
 
 _W = 80
 
@@ -54,15 +54,20 @@ def _print_banner() -> None:
 
 
 if __name__ == "__main__":
-    _DATA_DIR = Path(cfg["data_dir"])
-    _DATA_DIR.mkdir(parents=True, exist_ok=True)
-    _LOG_PATH = get_suite_datacontrol_dir() / "logs" / "koredata" / "library.log"
-    _LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
-    _print_banner()
-    uvicorn.run(
-        "app.server:app",
-        host=cfg["host"],
-        port=cfg["port"],
-        log_level=cfg["log_level"],
-        log_config=logutil.make_log_config(_LOG_PATH),
-    )
+    logutil.configure_service_logging("korelibrary", cfg["log_level"])
+    try:
+        _DATA_DIR = Path(cfg["data_dir"])
+        _DATA_DIR.mkdir(parents=True, exist_ok=True)
+        logging.getLogger("korelibrary.service").info("starting host=%s port=%s data_dir=%s", cfg["host"], cfg["port"], _DATA_DIR)
+        _print_banner()
+        uvicorn.run(
+            "app.server:app",
+            host       = cfg["host"],
+            port       = cfg["port"],
+            access_log = False,
+            log_level  = cfg["log_level"],
+            log_config = logutil.make_log_config("korelibrary", cfg["log_level"]),
+        )
+    except Exception:
+        logging.getLogger("korelibrary.service").exception("startup failed")
+        raise

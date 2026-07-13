@@ -11,11 +11,14 @@
 # ====================================================================================================
 
 from datetime import datetime
+import logging
 from pathlib import Path
 
 import uvicorn
 
 from app.config import cfg
+from app.logutil import configure_service_logging
+from app.logutil import get_service_log_path
 from app.logutil import make_log_config
 
 _W = 72
@@ -49,13 +52,19 @@ def _print_banner() -> None:
 
 # ----------------------------------------------------------------------------------------------------
 if __name__ == "__main__":
-    _log_path = Path(cfg["data_dir"]) / "korechat.log"
-    _log_path.parent.mkdir(parents=True, exist_ok=True)
-    _print_banner()
-    uvicorn.run(
-        "app.server:app",
-        host       = cfg["host"],
-        port       = int(cfg["port"]),
-        log_level  = cfg["log_level"],
-        log_config = make_log_config(_log_path),
-    )
+    configure_service_logging("korechat", cfg["log_level"])
+    try:
+        _log_path = get_service_log_path("korechat")
+        logging.getLogger("korechat.service").info("starting host=%s port=%s log=%s", cfg["host"], int(cfg["port"]), _log_path)
+        _print_banner()
+        uvicorn.run(
+            "app.server:app",
+            host       = cfg["host"],
+            port       = int(cfg["port"]),
+            access_log = False,
+            log_level  = cfg["log_level"],
+            log_config = make_log_config("korechat", cfg["log_level"]),
+        )
+    except Exception:
+        logging.getLogger("korechat.service").exception("startup failed")
+        raise

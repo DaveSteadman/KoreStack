@@ -22,6 +22,7 @@
 # MARK: IMPORTS
 # ====================================================================================================
 import asyncio
+import logging
 import socket
 import sys
 import threading
@@ -60,6 +61,7 @@ _LOG_DIR              = get_logs_dir()
 _SCHEDULER_POLL_SECS  = 30
 _DEFAULT_PORT         = 8000
 _DEFAULT_HOST         = "0.0.0.0"
+_SERVICE_LOG          = logging.getLogger("koreagent.service")
 
 
 # ====================================================================================================
@@ -102,6 +104,7 @@ def run_api_mode(
         message = f"[API] Startup aborted: {bind_reason} Close the existing server or use --agentport <port>."
         print(f"\n{message}", flush=True)
         logger.log_file_only(message)
+        _SERVICE_LOG.error(message)
         return
 
     shutdown = threading.Event()
@@ -262,6 +265,7 @@ def run_api_mode(
         background_thread.start()
 
     push_log_line(f"[API] Server starting on http://{host}:{port}")
+    _SERVICE_LOG.info("startup host=%s port=%s", host, port)
     update_startup_state(
         service_status = "starting",
         message        = "HTTP server accepting requests; dependency warmup continues in background",
@@ -313,6 +317,7 @@ def run_api_mode(
     except KeyboardInterrupt:
         print("\nShutting down...", flush=True)
         logger.log_file_only("[API] Shutdown requested.")
+        _SERVICE_LOG.info("shutdown requested")
         server.should_exit = True
     finally:
         shutdown.set()
@@ -332,3 +337,4 @@ def run_api_mode(
                 pass
         print("\nAPI server stopped.", flush=True)
         logger.log("[API] Server stopped.")
+        _SERVICE_LOG.info("stopped")

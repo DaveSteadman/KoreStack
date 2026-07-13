@@ -323,6 +323,22 @@ async def _lifespan(app: FastAPI):
     global _feed_client, _lib_client, _ref_client, _rag_client, _scrape_client, _graph_client
     print("\n  KoreDataGateway — starting child services")
     _set_gateway_status("starting", "Starting child services")
+    loop = asyncio.get_running_loop()
+
+    def _exception_handler(loop_obj: asyncio.AbstractEventLoop, context: dict) -> None:
+        exc      = context.get("exception")
+        handle   = context.get("handle")
+        callback = getattr(handle, "_callback", None)
+        cb_name  = getattr(callback, "__qualname__", repr(callback))
+        if (
+            isinstance(exc, ConnectionResetError)
+            and getattr(exc, "winerror", None) == 10054
+            and "_call_connection_lost" in str(cb_name)
+        ):
+            return
+        loop_obj.default_exception_handler(context)
+
+    loop.set_exception_handler(_exception_handler)
     _start_children()
     _feed_client   = httpx.AsyncClient(base_url=cfg["korefeed_url"],      timeout=15.0)
     _lib_client    = httpx.AsyncClient(base_url=cfg["korelibrary_url"],   timeout=15.0)

@@ -637,6 +637,102 @@
       "trust_boundary": "internal"
     },
     {
+      "skill_name": "RAGDatabaseTools Skill",
+      "relative_path": "app/system_skills/RAGDatabaseTools/skill.md",
+      "purpose": "- Manage live KoreRAG databases under the configured suite data path through a small set of explicit runtime tools.\n- Use this skill when the task is to create a live runtime RAG database, inspect it, or update its runtime descriptor.\n- Use this skill when the task is to create a live runtime RAG database, inspect it, update its runtime descriptor, or add and retrieve chunks.\n- This skill follows config-backed runtime data paths. It does not write repo-side ingestor source files.",
+      "module": "KoreAgent/app/system_skills/RAGDatabaseTools/rag_database_tools_skill.py",
+      "trigger_keyword": "rag",
+      "triggers": [
+        "create a rag database",
+        "create a live rag database",
+        "edit a rag database",
+        "add a rag entry",
+        "add a rag chunk",
+        "insert into rag",
+        "search rag",
+        "get rag chunk",
+        "descriptor json"
+      ],
+      "functions": [
+        "rag_database_list(include_runtime: bool = True)",
+        "rag_database_inspect(db_id: str)",
+        "rag_database_create(db_id: str, display_name: str = \"\", description: str = \"\")",
+        "rag_database_update_descriptor(db_id: str, display_name: str = \"\", description: str = \"\", source_url: str = \"\", licence: str = \"\", schedule: str = \"\", managed_by: str = \"\", ingestor: str = \"\", navigation_type: str = \"\", navigation_tables: list[str] | None = None, template_names: list[str] | None = None, runtime: bool = True)",
+        "rag_chunk_add(db_id: str, content: str, title: str = \"\", source: str = \"\", tags: str = \"\")",
+        "rag_chunk_get(db_id: str, chunk_id: int, include_content: bool = True)",
+        "rag_chunk_list(db_id: str, limit: int = 100, offset: int = 0)",
+        "rag_chunk_search(db_id: str, query: str, limit: int = 20, source: str = \"\", tags: str = \"\")"
+      ],
+      "inputs": [],
+      "outputs": [
+        "`rag_database_list(...)` - list of databases with source/runtime presence flags and template references.",
+        "`rag_database_inspect(...)` - resolved runtime paths and descriptor payload for one database.",
+        "`rag_database_create(...)` - runtime database paths and creation status.",
+        "`rag_database_update_descriptor(...)` - descriptor path and the full updated descriptor payload.",
+        "`rag_chunk_add(...)` - metadata for the newly added chunk.",
+        "`rag_chunk_get(...)` - one chunk, optionally with full content.",
+        "`rag_chunk_list(...)` - chunk metadata rows from one database.",
+        "`rag_chunk_search(...)` - full-text search results with snippets."
+      ],
+      "param_descriptions": {
+        "rag_database_list": {
+          "include_runtime": "include the configured runtime databases directory."
+        },
+        "rag_database_inspect": {
+          "db_id": "database identifier using `a-z`, `0-9`, and `_`, starting with a letter."
+        },
+        "rag_database_create": {
+          "db_id": "database identifier using `a-z`, `0-9`, and `_`, starting with a letter.",
+          "display_name": "human-readable display name written into the runtime descriptor.",
+          "description": "runtime descriptor summary text."
+        },
+        "rag_database_update_descriptor": {
+          "db_id": "database identifier using `a-z`, `0-9`, and `_`, starting with a letter.",
+          "display_name": "descriptor display name.",
+          "description": "descriptor description.",
+          "source_url": "primary upstream source URL.",
+          "licence": "source/licence statement.",
+          "schedule": "one of `manual`, `daily`, `weekly`, `monthly`.",
+          "managed_by": "one of `user`, `ingestor`.",
+          "ingestor": "ingestor identifier, usually the same as `db_id`.",
+          "navigation_type": "navigation type string to write into the descriptor.",
+          "navigation_tables": "list of navigation table names.",
+          "template_names": "list of template file names used by this database.",
+          "runtime": "must remain `true`; this tool only writes runtime descriptors in the configured suite data path."
+        },
+        "rag_chunk_add": {
+          "db_id": "runtime database identifier.",
+          "content": "full chunk body text.",
+          "title": "chunk title.",
+          "source": "source URL or origin label.",
+          "tags": "tag string stored with the chunk."
+        },
+        "rag_chunk_get": {
+          "db_id": "runtime database identifier.",
+          "chunk_id": "numeric chunk identifier.",
+          "include_content": "when `true`, return the full decompressed chunk content."
+        },
+        "rag_chunk_list": {
+          "db_id": "runtime database identifier.",
+          "limit": "number of chunk rows to return, clamped to `1-500`.",
+          "offset": "pagination offset."
+        },
+        "rag_chunk_search": {
+          "db_id": "runtime database identifier.",
+          "query": "full-text search string.",
+          "limit": "number of matches to return, clamped to `1-200`.",
+          "source": "optional source substring filter.",
+          "tags": "optional tags substring filter."
+        }
+      },
+      "tool_selection_guidance": "Use this skill for live runtime RAG databases in the configured suite data path.\n\nRecommended workflow:\n1. Call `rag_database_list(...)` or `rag_database_inspect(...)` to confirm the current state.\n2. Use `rag_database_create(...)` when the goal is a new live runtime RAG database.\n3. Use `rag_database_update_descriptor(...)` for runtime metadata updates.\n4. Use `rag_chunk_add(...)` to insert content into a runtime database.\n5. Use `rag_chunk_search(...)`, `rag_chunk_list(...)`, and `rag_chunk_get(...)` to inspect stored content.\n\nThis skill follows the configured suite data path and does not write repo-side ingestor source files.",
+      "is_system_skill": true,
+      "origin": "builtin",
+      "availability": "guaranteed",
+      "role": "core",
+      "trust_boundary": "internal"
+    },
+    {
       "skill_name": "Scratchpad Skill",
       "relative_path": "app/system_skills/Scratchpad/skill.md",
       "purpose": "Store and retrieve named working values within a session so that bulk data returned by other skills\n(web pages, file content, computation results) can be parked under a short key and referenced later\nwithout consuming context window space.  Use this skill whenever the plan involves multi-step tool\nchains where an intermediate result is needed again in a later step.",

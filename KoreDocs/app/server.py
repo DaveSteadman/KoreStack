@@ -29,7 +29,6 @@
 from __future__ import annotations
 
 import logging
-import logging.handlers
 import os
 import json
 import sys
@@ -50,6 +49,8 @@ if _KORECOMMON_PARENT is not None and str(_KORECOMMON_PARENT) not in sys.path:
     sys.path.insert(0, str(_KORECOMMON_PARENT))
 
 from KoreCommon.endpoint_manifest import build_endpoint_manifest
+from KoreCommon.service_logging import configure_service_logging
+from KoreCommon.service_logging import get_service_log_path
 from KoreCommon.suite_paths import get_suite_urls_map
 from KoreCommon.datauser_fs import DataUserConflictError
 from KoreCommon.datauser_fs import DataUserPathError
@@ -109,7 +110,7 @@ DATA_DIR.mkdir(parents=True, exist_ok=True)
 CONTROL_DIR = Path(os.environ.get('KOREDOCS_CONTROL_DIR', str(SUITE_DATACONTROL / 'koredocs')))
 CONTROL_DIR.mkdir(parents=True, exist_ok=True)
 DB_PATH  = CONTROL_DIR / 'korefile.db'
-LOG_PATH = SUITE_DATACONTROL / 'logs' / 'koredocs' / 'koredocs.log'
+LOG_PATH = get_service_log_path('koredocs')
 LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 korefile.configure(DATA_DIR, DB_PATH)
@@ -122,49 +123,8 @@ API_TOKEN = os.environ.get('KOREDOCS_API_TOKEN')
 
 # ── Logging ────────────────────────────────────────────────────────────────
 
-class _TailFileHandler(logging.FileHandler):
-    """File handler that keeps only the most recent *max_lines* lines.
-
-    Trims in batches (every max_lines + 100 emits) to avoid rewriting the
-    file on every log call.  Called from within logging's RLock so no extra
-    locking is needed.
-    """
-
-    def __init__(self, filename: str, max_lines: int = 1000) -> None:
-        self._max_lines = max_lines
-        self._line_count = 0
-        super().__init__(filename, mode='a', encoding='utf-8', delay=False)
-        try:
-            with open(self.baseFilename, encoding='utf-8', errors='replace') as fh:
-                self._line_count = sum(1 for _ in fh)
-        except FileNotFoundError:
-            pass
-
-    def emit(self, record: logging.LogRecord) -> None:
-        super().emit(record)
-        self._line_count += 1
-        if self._line_count >= self._max_lines + 100:
-            try:
-                self.flush()
-                with open(self.baseFilename, encoding='utf-8', errors='replace') as fh:
-                    lines = fh.readlines()
-                keep = lines[-self._max_lines:]
-                with open(self.baseFilename, 'w', encoding='utf-8') as fh:
-                    fh.writelines(keep)
-                self._line_count = self._max_lines
-            except Exception:
-                pass
-
-
 def _setup_logging() -> None:
-    handler = _TailFileHandler(str(LOG_PATH), max_lines=1000)
-    handler.setFormatter(logging.Formatter(
-        '%(asctime)s  %(levelname)-8s  %(name)-24s  %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S',
-    ))
-    root = logging.getLogger()
-    root.setLevel(logging.INFO)
-    root.addHandler(handler)
+    configure_service_logging('koredocs', 'INFO')
 
 
 # ── App ────────────────────────────────────────────────────────────────────
@@ -933,10 +893,11 @@ def main(argv: Optional[list[str]] = None) -> int:
         print(file=stream)
 
     _uvicorn_kwargs = dict(
-        app=app,
-        host=args.host,
-        port=args.port,
-        log_config=None,   # we own logging; don't let uvicorn override it
+        app        = app,
+        host       = args.host,
+        port       = args.port,
+        access_log = False,
+        log_config = None,   # we own logging; don't let uvicorn override it
     )
 
     if args.mcp_stdio:
@@ -967,4 +928,9 @@ def main(argv: Optional[list[str]] = None) -> int:
 
 
 if __name__ == '__main__':
-    raise SystemExit(main())
+    _setup_logging()
+    try:
+        raise SystemExit(main())
+    except Exception:
+        logging.getLogger('koredocs.service').exception('startup failed')
+        raise

@@ -22,6 +22,7 @@
 # ====================================================================================================
 import argparse
 import ctypes
+import logging
 import os
 import subprocess
 import sys
@@ -181,6 +182,7 @@ _maybe_reexec_into_project_venv()
 import llm_client as llm_client
 from input_layer.server_startup import run_api_mode
 from input_layer.server import update_startup_state
+from KoreCommon.service_logging import configure_service_logging
 from llm_client import format_running_model_report
 from llm_client import get_llm_timeout
 from llm_client import register_llm_call_logger
@@ -411,10 +413,20 @@ def run_chat_sequence_mode(
 # MARK: MAIN ENTRYPOINT
 # ====================================================================================================
 def main() -> None:
-    args     = parse_main_args()
-    log_path = create_log_file_path(log_dir=LOG_DIR)
-    with SessionLogger(log_path) as logger:
-        _run(args, logger, log_path)
+    service_log_path = configure_service_logging("koreagent", "INFO")
+    service_logger   = logging.getLogger("koreagent.service")
+    service_logger.info("starting")
+    try:
+        args     = parse_main_args()
+        log_path = create_log_file_path(log_dir=LOG_DIR)
+        with SessionLogger(log_path) as logger:
+            try:
+                _run(args, logger, log_path)
+            finally:
+                service_logger.info("stopping log=%s", service_log_path)
+    except Exception:
+        service_logger.exception("startup failed")
+        raise
 
 
 # ----------------------------------------------------------------------------------------------------
