@@ -2,6 +2,10 @@ export const STORAGE_TABS = 'korecode:open-tabs';
 export const STORAGE_ACTIVE = 'korecode:active-tab';
 export const STORAGE_DRAFTS = 'korecode:file-drafts';
 
+export function workspaceStorageKey(key, root = state.root) {
+  return root ? `${key}:${encodeURIComponent(root)}` : key;
+}
+
 export const state = {
   root: '',
   tree: new Map(),

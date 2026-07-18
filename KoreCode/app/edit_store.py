@@ -15,20 +15,18 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from KoreCommon.suite_paths import get_suite_datacontrol_dir
+
 
 def _utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
-
-
-def _suite_root() -> Path:
-    return Path(__file__).resolve().parents[2]
 
 
 def _proposals_root() -> Path:
     explicit = str(os.environ.get("KORECODE_EDIT_PROPOSALS_DIR", "") or "").strip()
     if explicit:
         return Path(explicit).expanduser().resolve()
-    return (_suite_root() / "datacontrol" / "korecode" / "edit_proposals").resolve()
+    return (get_suite_datacontrol_dir() / "korecode" / "edit_proposals").resolve()
 
 
 def _ensure_proposals_root() -> Path:

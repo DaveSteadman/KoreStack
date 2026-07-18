@@ -167,6 +167,62 @@
   display: none;
 }
 
+#chat-execution-contract {
+  flex-shrink: 0;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 5px 10px 6px;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+  color: var(--text-2);
+  font-size: 11px;
+}
+
+.chat-contract-label {
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+#chat-execution-contract-name {
+  color: var(--accent-2, var(--text));
+  font-weight: 700;
+}
+
+#code-main.is-chat-focus #editor-surface,
+#code-main.is-chat-focus #chat-splitter {
+  display: none;
+}
+
+#code-main.is-chat-focus #chat-panel {
+  width: auto !important;
+  flex: 1;
+  background: color-mix(in srgb, var(--surface) 92%, var(--bg));
+}
+
+#code-main.is-chat-focus #chat-thread {
+  max-width: 1100px;
+  width: 100%;
+  margin: 0 auto;
+  padding-top: 18px;
+}
+
+#code-main.is-chat-focus #chat-composer,
+#code-main.is-chat-focus #chat-toolbar,
+#code-main.is-chat-focus #chat-progress-note,
+#code-main.is-chat-focus #chat-linked-conversation,
+#code-main.is-chat-focus #chat-execution-contract {
+  padding-left: max(18px, calc((100% - 1100px) / 2));
+  padding-right: max(18px, calc((100% - 1100px) / 2));
+}
+
+#code-main.is-chat-focus .chat-msg--assistant .body,
+#code-main.is-chat-focus .chat-msg--user .bubble {
+  max-width: 900px;
+  font-size: 13px;
+}
+
 /* ── Thread ── */
 
 #chat-thread {

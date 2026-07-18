@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any
 
 
-MAX_AGENT_TOOL_TURNS   = 3
+MAX_AGENT_TOOL_TURNS   = 5
 POLL_INTERVAL_SECONDS  = 0.9
 DEFAULT_WAIT_TIMEOUT_S = 180.0
 
@@ -36,6 +36,7 @@ class ChatRunRequest:
     workspace_root:            Path
     workspace_context_enabled: bool
     conversation_external_id:  str | None = None
+    execution_contract:        dict[str, Any] | None = None
 
 
 @dataclass(slots=True)
@@ -61,6 +62,7 @@ class AgentRunServices:
     execute_tool_requests:                   Any
     append_tool_call:                        Any
     append_model_response:                   Any
+    apply_agent_edits:                       Any
     set_run_output:                          Any
     update_run:                              Any
 
@@ -115,7 +117,9 @@ def start_background_run(target, *args) -> None:
 
 
 def execute_chat_run(request: ChatRunRequest, services: AgentRunServices) -> None:
-    last_reply = ""
+    last_reply               = ""
+    accumulated_tool_results = []
+    completion_required      = False
     try:
         services.update_run(
             request.run_id,
@@ -181,11 +185,24 @@ def execute_chat_run(request: ChatRunRequest, services: AgentRunServices) -> Non
             requested_tools  = list(envelope.get("tool_requests") or []) if isinstance(envelope, dict) else []
             should_continue  = (
                 isinstance(envelope, dict)
-                and str(envelope.get("kind") or "") == "tool_requests"
                 and str(envelope.get("next") or "") == "continue"
                 and bool(requested_tools)
             )
             if not should_continue:
+                edit_application = None
+                if isinstance(envelope, dict) and str(envelope.get("kind") or "") == "edits":
+                    edit_application = services.apply_agent_edits(
+                        workspace_root = request.workspace_root,
+                        run_id         = request.run_id,
+                        active_path    = request.active_path,
+                        user_text      = request.user_text,
+                        edits          = list(envelope.get("edits") or []),
+                        summary        = str(envelope.get("summary") or ""),
+                        execution_contract = request.execution_contract,
+                    )
+                    if not bool((edit_application.get("apply_result") or {}).get("ok")):
+                        errors = "; ".join((edit_application.get("apply_result") or {}).get("errors") or [])
+                        raise RuntimeError(f"Agent edit application failed: {errors or 'unknown error'}")
                 services.set_run_output(
                     request.run_id,
                     output_text = last_reply,
@@ -194,6 +211,7 @@ def execute_chat_run(request: ChatRunRequest, services: AgentRunServices) -> Non
                         "thread_path":              request.thread_path,
                         "active_path":              request.active_path,
                         "conversation_external_id": conversation_id,
+                        "edit_application":         edit_application,
                     },
                 )
                 services.update_run(
@@ -202,7 +220,8 @@ def execute_chat_run(request: ChatRunRequest, services: AgentRunServices) -> Non
                     conversation_external_id = conversation_id,
                     event_type               = "agent_run_completed",
                     event_payload            = {
-                        "turn_count": turn_index + 1,
+                        "turn_count":       turn_index + 1,
+                        "edits_applied":    int((edit_application or {}).get("apply_result", {}).get("applied") or 0),
                     },
                 )
                 return
@@ -224,15 +243,23 @@ def execute_chat_run(request: ChatRunRequest, services: AgentRunServices) -> Non
                 tool_requests             = requested_tools,
                 active_path               = request.active_path if request.active_path not in {"", "."} else None,
                 workspace_context_enabled = request.workspace_context_enabled,
+                allowed_tools             = tuple((request.execution_contract or {}).get("allowed_tools") or ()),
             )
             _append_tool_results(request.run_id, requested_tools, tool_results, services)
+            accumulated_tool_results.extend(tool_results)
+            completion_required = completion_required or _active_file_read_succeeded(
+                tool_results,
+                request.active_path,
+            )
 
             followup_prompt = services.build_tool_followup_prompt(
                 mode              = request.mode,
                 path              = request.active_path,
                 user_text         = request.user_text,
                 previous_response = last_reply,
-                tool_results      = tool_results,
+                tool_results      = accumulated_tool_results,
+                execution_contract = request.execution_contract,
+                force_completion  = completion_required,
             )
             followed = services.append_internal_followup(
                 request.workspace_root,
@@ -392,6 +419,18 @@ def _append_tool_results(
             result        = item.get("result") if item.get("ok") else None,
             error         = item.get("error") if not item.get("ok") else None,
         )
+
+
+def _active_file_read_succeeded(tool_results: list[dict[str, Any]], active_path: str) -> bool:
+    expected_path = str(active_path or "").replace("\\", "/").strip()
+    if not expected_path or expected_path == ".":
+        return False
+    for item in tool_results:
+        result = item.get("result") if isinstance(item, dict) else None
+        result_path = str((result or {}).get("path") or "").replace("\\", "/").strip()
+        if item.get("ok") and str(item.get("tool") or "") == "read_file" and result_path == expected_path:
+            return True
+    return False
 
 
 def _assistant_signature(message: dict[str, Any] | None) -> str | None:

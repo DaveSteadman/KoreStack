@@ -33,7 +33,9 @@ import hashlib
 import json
 import logging
 import os
+import re
 import shutil
+import subprocess
 import sys
 import textwrap
 from functools import partial
@@ -65,6 +67,8 @@ from .config import cfg as _cfg
 from .edit_store import apply_edit_proposal
 from .edit_store import create_edit_proposal
 from .edit_store import get_edit_proposal
+from .agent_playbooks import list_playbooks
+from .agent_playbooks import route_task
 from .korechat_client import append_internal_followup
 from .korechat_client import append_visible_message_for_conversation
 from .korechat_client import delete_thread
@@ -94,6 +98,8 @@ from .slash_commands import handle as handle_slash_command
 from .slash_commands import initialize as initialize_slash_commands
 from .tool_api import execute_tool_requests
 from .tool_api import tool_guide_payload
+from .ui_state_store import get_active_workspace_root
+from .ui_state_store import set_active_workspace_root
 from .workspace_artifacts import read_workspace_artifact_status
 from .workspace_artifacts import rebuild_workspace_artifacts
 from .workspace_index import get_symbol_by_qualname
@@ -102,6 +108,11 @@ from .workspace_index import list_indexed_symbols
 from .workspace_index import list_symbol_callees
 from .workspace_index import list_symbol_callers
 from .workspace_menu import MENU_FILENAME, build_workspace_menu, read_workspace_menu
+from .work_item_store import attach_run
+from .work_item_store import create_work_item
+from .work_item_store import get_work_item
+from .work_item_store import list_work_items
+from .work_item_store import update_work_item
 
 
 BASE_DIR = Path(__file__).parent.parent.resolve()
@@ -152,7 +163,19 @@ TEXT_EXTENSIONS = {
 MAX_READ_BYTES = 1_500_000
 MAX_WORKSPACE_PATTERN_HITS = 18
 
-_ACTIVE_ROOT = SUITE_ROOT
+def _initial_workspace_root() -> Path:
+    saved_root = get_active_workspace_root()
+    if saved_root:
+        try:
+            candidate = Path(saved_root).expanduser().resolve()
+        except OSError:
+            candidate = SUITE_ROOT
+        if candidate.is_dir():
+            return candidate
+    return SUITE_ROOT
+
+
+_ACTIVE_ROOT = _initial_workspace_root()
 
 
 def _workspace_root() -> Path:
@@ -229,6 +252,7 @@ def _set_workspace_root(value: str) -> Path:
     if not candidate.is_dir():
         raise HTTPException(status_code=400, detail='Root must be a directory')
     _ACTIVE_ROOT = candidate
+    set_active_workspace_root(_ACTIVE_ROOT)
     return _ACTIVE_ROOT
 
 
@@ -339,6 +363,25 @@ class ChatRunCreateBody(BaseModel):
     workspace_context_enabled: bool = True
     max_mention_count:         int = 4
     max_mention_file_chars:    int = 7000
+    work_item_id:              str | None = None
+
+
+class WorkItemCreateBody(BaseModel):
+    title:       str
+    description: str = ""
+    scope:       list[str] = []
+    constraints: list[str] = []
+
+
+class WorkItemUpdateBody(BaseModel):
+    title:       str | None = None
+    description: str | None = None
+    status:      str | None = None
+    scope:       list[str] | None = None
+    constraints: list[str] | None = None
+    plan:        list | None = None
+    evidence:    list | None = None
+    outcome:     str | None = None
 
 
 class ContinueRunCreateBody(BaseModel):
@@ -373,6 +416,7 @@ class ChatToolFollowupPromptBody(BaseModel):
     user_text:         str
     previous_response: str
     tool_results:      list = []
+    execution_contract: dict | None = None
 
 
 class ChatToolExecuteBody(BaseModel):
@@ -380,6 +424,12 @@ class ChatToolExecuteBody(BaseModel):
     active_path:                str | None = None
     workspace_context_enabled:  bool = True
     run_id:                     str | None = None
+
+
+class PythonExecutionBody(BaseModel):
+    path:            str
+    mode:            str = "run"
+    timeout_seconds: int | None = None
 
 
 class EditProposalCreateBody(BaseModel):
@@ -607,6 +657,68 @@ def _validate_python_content(path: Path, content: str) -> None:
         ast.parse(content, filename=str(path))
     except SyntaxError as exc:
         raise HTTPException(status_code=400, detail=f'Python parse failed after edit: {exc.msg} at line {exc.lineno}') from exc
+
+
+def _run_python_tool(path: str, mode: str, timeout_seconds: int | None) -> dict:
+    candidate = _resolve_relative_path(path)
+    if candidate.suffix.lower() not in {'.py', '.pyi'}:
+        raise ValueError('Python execution requires a .py or .pyi file')
+    if not candidate.exists() or not candidate.is_file():
+        raise FileNotFoundError(f'Python file not found: {path}')
+
+    normalized_mode = str(mode or '').strip().lower()
+    if normalized_mode not in {'check', 'run'}:
+        raise ValueError(f'Unsupported Python execution mode: {mode}')
+
+    timeout = 15 if timeout_seconds is None else max(1, min(30, int(timeout_seconds)))
+    command = [sys.executable, '-m', 'py_compile', str(candidate)] if normalized_mode == 'check' else [sys.executable, str(candidate)]
+    creationflags = getattr(subprocess, 'CREATE_NEW_PROCESS_GROUP', 0)
+    process = subprocess.Popen(
+        command,
+        cwd             = _workspace_root(),
+        stdout          = subprocess.PIPE,
+        stderr          = subprocess.PIPE,
+        text            = True,
+        encoding        = 'utf-8',
+        errors          = 'replace',
+        shell           = False,
+        creationflags   = creationflags,
+    )
+    try:
+        raw_stdout, raw_stderr = process.communicate(timeout=timeout)
+        stdout = str(raw_stdout or '')[:12000]
+        stderr = str(raw_stderr or '')[:12000]
+        return {
+            'path':            _to_posix(candidate),
+            'mode':            normalized_mode,
+            'command':         command[:3] if normalized_mode == 'check' else command[:2],
+            'exit_code':       int(process.returncode),
+            'ok':              process.returncode == 0,
+            'stdout':          stdout,
+            'stderr':          stderr,
+            'output_truncated': len(str(raw_stdout or '')) > len(stdout) or len(str(raw_stderr or '')) > len(stderr),
+        }
+    except subprocess.TimeoutExpired:
+        # Terminate descendants too: a timed-out script must not leave servers running.
+        subprocess.run(
+            ['taskkill', '/PID', str(process.pid), '/T', '/F'],
+            capture_output = True,
+            check          = False,
+            shell          = False,
+        )
+        raw_stdout, raw_stderr = process.communicate()
+        stdout = str(raw_stdout or '')[:12000]
+        stderr = str(raw_stderr or '')[:12000]
+        return {
+            'path':            _to_posix(candidate),
+            'mode':            normalized_mode,
+            'exit_code':       None,
+            'ok':              False,
+            'timed_out':       True,
+            'timeout_seconds': timeout,
+            'stdout':          stdout,
+            'stderr':          stderr,
+        }
 
 
 def _python_function_summary(entry: dict, lines: list[str]) -> dict:
@@ -950,6 +1062,49 @@ def api_workspace_index_rebuild():
     return rebuild_workspace_artifacts(_workspace_root())
 
 
+@app.get('/api/work-items')
+def api_work_items(limit: int = 100):
+    return {'work_items': list_work_items(workspace_root=_workspace_root(), limit=limit)}
+
+
+@app.post('/api/work-items')
+def api_create_work_item(body: WorkItemCreateBody):
+    try:
+        return create_work_item(
+            title          = body.title,
+            description    = body.description,
+            scope          = body.scope,
+            constraints    = body.constraints,
+            workspace_root = _workspace_root(),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.get('/api/work-items/{work_item_id}')
+def api_get_work_item(work_item_id: str):
+    try:
+        item = get_work_item(work_item_id)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail='Work item not found') from exc
+    if item.get('workspace_root') != str(_workspace_root()):
+        raise HTTPException(status_code=404, detail='Work item not found in active workspace')
+    return item
+
+
+@app.patch('/api/work-items/{work_item_id}')
+def api_update_work_item(work_item_id: str, body: WorkItemUpdateBody):
+    try:
+        item = get_work_item(work_item_id)
+        if item.get('workspace_root') != str(_workspace_root()):
+            raise FileNotFoundError(work_item_id)
+        return update_work_item(work_item_id, **body.model_dump())
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail='Work item not found') from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
 @app.get('/api/workspace-index/status')
 def api_workspace_index_status():
     return read_workspace_artifact_status(_workspace_root())
@@ -1051,6 +1206,7 @@ def api_chat_tool_followup_prompt(body: ChatToolFollowupPromptBody):
         user_text         = str(body.user_text or ''),
         previous_response = str(body.previous_response or ''),
         tool_results      = list(body.tool_results or []),
+        execution_contract = body.execution_contract if isinstance(body.execution_contract, dict) else None,
     )
     return {'prompt': prompt}
 
@@ -1058,6 +1214,11 @@ def api_chat_tool_followup_prompt(body: ChatToolFollowupPromptBody):
 @app.post('/api/chat/runs')
 def api_chat_runs(body: ChatRunCreateBody):
     return {'run': _start_chat_backend_run(body)}
+
+
+@app.get('/api/agent/playbooks')
+def api_agent_playbooks():
+    return {'playbooks': list_playbooks()}
 
 
 @app.post('/api/chat/continue-runs')
@@ -1068,6 +1229,14 @@ def api_chat_continue_runs(body: ContinueRunCreateBody):
 @app.get('/api/chat/tools')
 def api_chat_tools():
     return {'tools': tool_guide_payload()}
+
+
+@app.post('/api/execution/python')
+def api_execution_python(body: PythonExecutionBody):
+    try:
+        return _run_python_tool(body.path, body.mode, body.timeout_seconds)
+    except (FileNotFoundError, ValueError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @app.post('/api/edit-proposals')
@@ -1250,6 +1419,79 @@ def _insert_python_function_proposal_payload(path: str, source: str, expected_ha
     return proposal
 
 
+def _apply_agent_edits(
+    *,
+    workspace_root: Path,
+    run_id: str,
+    active_path: str,
+    user_text: str,
+    edits: list[dict],
+    summary: str,
+    execution_contract: dict | None = None,
+) -> dict:
+    active_file   = str(active_path or "").strip()
+    allowed_paths = {active_file} if active_file and active_file != "." else set()
+    allowed_paths.update(_explicit_file_paths(user_text))
+    requested_paths = {str(edit.get("file") or "").strip() for edit in edits}
+    requested_paths.discard("")
+
+    def resolve_for_run(path: str) -> Path:
+        candidate = (workspace_root / str(path or "")).resolve()
+        try:
+            candidate.relative_to(workspace_root)
+        except ValueError as exc:
+            raise HTTPException(status_code=403, detail="Path escapes the workspace") from exc
+        return candidate
+
+    unexpected_paths = requested_paths - allowed_paths
+    allows_new_file  = str((execution_contract or {}).get("id") or "") == "create_file"
+    if unexpected_paths and not (
+        allows_new_file and all(not resolve_for_run(path).exists() for path in unexpected_paths)
+    ):
+        unexpected = ", ".join(sorted(unexpected_paths))
+        return {
+            "validation_ok": False,
+            "apply_result": {
+                "ok":      False,
+                "applied": 0,
+                "errors":  [f"Agent proposed edits outside the active or explicitly named files: {unexpected}"],
+                "paths":   [],
+            },
+        }
+
+    proposal = create_edit_proposal(
+        edits                  = edits,
+        workspace_root         = workspace_root,
+        resolve_relative_path  = resolve_for_run,
+        is_probably_text       = _is_probably_text,
+        read_text              = _read_text,
+        validate_python_content = _validate_python_content,
+        run_id                 = run_id,
+        source                 = "agent",
+        summary                = summary,
+    )
+    if not proposal.get("validation_ok"):
+        return proposal
+    return apply_edit_proposal(
+        proposal["proposal_id"],
+        resolve_relative_path   = resolve_for_run,
+        is_probably_text        = _is_probably_text,
+        read_text               = _read_text,
+        validate_python_content = _validate_python_content,
+    )
+
+
+def _explicit_file_paths(text: str) -> set[str]:
+    paths: set[str] = set()
+    pattern = r"(?<![\w/\\])(?:[\w.-]+[/\\])*[\w-]+\.[A-Za-z0-9]+"
+    for match in re.finditer(pattern, str(text or "")):
+        path = match.group(0).replace("\\", "/")
+        if path.startswith("/") or ".." in path:
+            continue
+        paths.add(path)
+    return paths
+
+
 def _make_agent_run_services() -> AgentRunServices:
     return AgentRunServices(
         append_visible_message_for_conversation = append_visible_message_for_conversation,
@@ -1262,11 +1504,13 @@ def _make_agent_run_services() -> AgentRunServices:
             read_context_fn                     = _api_context_payload,
             list_tree_fn                        = _list_directory,
             get_python_function_fn              = _api_python_function_payload,
+            run_python_fn                       = _run_python_tool,
             replace_python_function_proposal_fn = _replace_python_function_proposal_payload,
             insert_python_function_proposal_fn  = _insert_python_function_proposal_payload,
         ),
         append_tool_call      = append_tool_call,
         append_model_response = append_model_response,
+        apply_agent_edits     = _apply_agent_edits,
         set_run_output        = set_run_output,
         update_run            = update_run,
     )
@@ -1279,6 +1523,16 @@ def _start_chat_backend_run(body: ChatRunCreateBody) -> dict:
 
     thread_path = str(body.thread_path or "__workspace__").strip() or "__workspace__"
     active_path = str(body.active_path or ".").strip() or "."
+    work_item_id = str(body.work_item_id or "").strip() or None
+    playbook     = route_task(user_text=user_text, mode=body.mode)
+    execution_contract = playbook.payload()
+    if work_item_id:
+        try:
+            item = get_work_item(work_item_id)
+        except FileNotFoundError as exc:
+            raise HTTPException(status_code=404, detail="Work item not found") from exc
+        if item.get("workspace_root") != str(_workspace_root()):
+            raise HTTPException(status_code=400, detail="Work item belongs to a different workspace")
     prompt      = build_prompt_by_mode(
         mode                      = body.mode,
         user_text                 = user_text,
@@ -1293,6 +1547,7 @@ def _start_chat_backend_run(body: ChatRunCreateBody) -> dict:
         build_context_pack        = _build_context_pack,
         max_mention_count         = body.max_mention_count,
         max_mention_file_chars    = body.max_mention_file_chars,
+        execution_contract         = execution_contract,
     )
     run = create_run(
         run_kind                  = "chat_run",
@@ -1304,13 +1559,17 @@ def _start_chat_backend_run(body: ChatRunCreateBody) -> dict:
         workspace_root            = _workspace_root(),
         workspace_context_enabled = body.workspace_context_enabled,
         conversation_external_id  = body.conversation_external_id,
+        work_item_id              = work_item_id,
         context                   = {
             "transport":   "korechat",
             "active_path": active_path,
             "selection":   body.selection,
             "cursor":      body.cursor if isinstance(body.cursor, dict) else None,
+            "execution_contract": execution_contract,
         },
     )
+    if work_item_id:
+        attach_run(work_item_id, run["run_id"])
     request = ChatRunRequest(
         run_id                    = run["run_id"],
         mode                      = body.mode,
@@ -1323,6 +1582,7 @@ def _start_chat_backend_run(body: ChatRunCreateBody) -> dict:
         workspace_root            = _workspace_root(),
         workspace_context_enabled = body.workspace_context_enabled,
         conversation_external_id  = body.conversation_external_id,
+        execution_contract        = execution_contract,
     )
     start_background_run(execute_chat_run, request, _make_agent_run_services())
     return get_run(run["run_id"])
@@ -1369,6 +1629,10 @@ def _start_continue_backend_run(body: ContinueRunCreateBody) -> dict:
 
 @app.post('/api/chat/tools/execute')
 def api_chat_tools_execute(body: ChatToolExecuteBody):
+    run_id        = str(body.run_id or '').strip()
+    run           = get_run(run_id) if run_id else None
+    contract      = (run or {}).get("context", {}).get("execution_contract") or {}
+    allowed_tools = tuple(contract.get("allowed_tools") or ()) or None
     results = execute_tool_requests(
         tool_requests             = list(body.tool_requests or []),
         active_path               = body.active_path,
@@ -1377,10 +1641,11 @@ def api_chat_tools_execute(body: ChatToolExecuteBody):
         read_context_fn           = _api_context_payload,
         list_tree_fn              = _list_directory,
         get_python_function_fn    = _api_python_function_payload,
+        run_python_fn             = _run_python_tool,
         replace_python_function_proposal_fn = _replace_python_function_proposal_payload,
         insert_python_function_proposal_fn  = _insert_python_function_proposal_payload,
+        allowed_tools             = allowed_tools,
     )
-    run_id = str(body.run_id or '').strip()
     if run_id:
         for item in results:
             append_tool_call(
@@ -1401,17 +1666,31 @@ def api_chat_thread(
     conversation_external_id: str | None = Query(default=None),
     workspace_context_enabled: bool = True,
 ):
+    workspace_root = _workspace_root()
+    external_id    = str(conversation_external_id).strip() if isinstance(conversation_external_id, str) else None
+    if external_id is None:
+        latest = find_latest_run(
+            path           = path,
+            workspace_root = workspace_root,
+        )
+        # Gen1 keyed conversations by file. When upgrading to a project thread,
+        # retain the most recent project conversation instead of showing a blank chat.
+        if latest is None and path == '__workspace__':
+            latest = find_latest_run(workspace_root=workspace_root)
+        recovered_id = str((latest or {}).get('conversation_external_id') or '').strip()
+        external_id  = recovered_id or None
     payload = get_thread(
-        _workspace_root(),
+        workspace_root,
         path,
         create=False,
-        conversation_external_id=conversation_external_id,
+        conversation_external_id=external_id,
         workspace_context_enabled=workspace_context_enabled,
     )
     if not payload.get('pending_response'):
         latest = find_latest_run(
             conversation_external_id = payload.get('external_id'),
             path                     = payload.get('path'),
+            workspace_root           = workspace_root,
             statuses                 = {'created', 'queued', 'waiting_agent'},
         )
         if latest is not None and str(latest.get('run_kind') or '') in {'chat_send', 'chat_followup'}:

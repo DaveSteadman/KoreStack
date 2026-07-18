@@ -8,6 +8,7 @@
 import sys
 import tempfile
 import unittest
+import json
 from contextlib import contextmanager
 from pathlib import Path
 from unittest.mock import patch
@@ -29,6 +30,113 @@ class KoreCodeServerTests(unittest.TestCase):
             with patch.dict("os.environ", {"KORECODE_RUNS_DIR": tmp}, clear=False):
                 yield Path(tmp)
 
+    @contextmanager
+    def _temp_work_items_dir(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with patch.dict("os.environ", {"KORECODE_WORK_ITEMS_DIR": tmp}, clear=False):
+                yield Path(tmp)
+
+    def test_work_item_lifecycle_and_run_attachment(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp, self._temp_work_items_dir():
+            root = Path(tmp)
+            original_root       = server._ACTIVE_ROOT
+            server._ACTIVE_ROOT = root
+            try:
+                created = server.api_create_work_item(
+                    server.WorkItemCreateBody(
+                        title       = "Repair failing greeting test",
+                        description = "Find and correct the regression.",
+                        scope       = ["sample.py", "test_sample.py"],
+                    )
+                )
+                updated = server.api_update_work_item(
+                    created["work_item_id"],
+                    server.WorkItemUpdateBody(
+                        status = "investigating",
+                        plan   = ["Read the failing test", "Trace the production path"],
+                    ),
+                )
+                attached = server.attach_run(created["work_item_id"], "run-1")
+                listed   = server.api_work_items()
+            finally:
+                server._ACTIVE_ROOT = original_root
+
+        self.assertEqual(created["status"], "scoping")
+        self.assertEqual(updated["status"], "investigating")
+        self.assertEqual(updated["plan"], ["Read the failing test", "Trace the production path"])
+        self.assertEqual(attached["run_ids"], ["run-1"])
+        self.assertEqual(listed["work_items"][0]["work_item_id"], created["work_item_id"])
+
+    def test_work_item_rejects_unknown_status(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp, self._temp_work_items_dir():
+            original_root       = server._ACTIVE_ROOT
+            server._ACTIVE_ROOT = Path(tmp)
+            try:
+                created = server.api_create_work_item(server.WorkItemCreateBody(title="Check status validation"))
+                with self.assertRaises(HTTPException) as context:
+                    server.api_update_work_item(
+                        created["work_item_id"],
+                        server.WorkItemUpdateBody(status="whatever"),
+                    )
+            finally:
+                server._ACTIVE_ROOT = original_root
+
+        self.assertEqual(context.exception.status_code, 400)
+
+    def test_korecode_stores_use_suite_datacontrol_root(self) -> None:
+        from KoreCode.app import edit_store
+        from KoreCode.app import run_store
+        from KoreCode.app import work_item_store
+
+        with tempfile.TemporaryDirectory() as tmp:
+            datacontrol = Path(tmp) / "Data" / "datacontrol"
+            with patch("KoreCode.app.edit_store.get_suite_datacontrol_dir", return_value=datacontrol), \
+                 patch("KoreCode.app.run_store.get_suite_datacontrol_dir", return_value=datacontrol), \
+                 patch("KoreCode.app.work_item_store.get_suite_datacontrol_dir", return_value=datacontrol):
+                self.assertEqual(
+                    edit_store._proposals_root(),
+                    datacontrol / "korecode" / "edit_proposals",
+                )
+                self.assertEqual(
+                    run_store._runs_root(),
+                    datacontrol / "korecode" / "runs",
+                )
+                self.assertEqual(
+                    work_item_store._items_root(),
+                    datacontrol / "korecode" / "work_items",
+                )
+
+    def test_korechat_client_strips_ui_path_from_suite_url_map(self) -> None:
+        from KoreCode.app.korechat_client import korechat_base_url
+
+        urls = json.dumps({"korechat": "http://127.0.0.1:19602/ui"})
+        with patch.dict("os.environ", {"KORE_SUITE_URLS": urls}, clear=False):
+            self.assertEqual(korechat_base_url(), "http://127.0.0.1:19602")
+
+    def test_workspace_root_is_durable(self) -> None:
+        from KoreCode.app import ui_state_store
+
+        with tempfile.TemporaryDirectory() as tmp:
+            state_dir = Path(tmp)
+            root      = state_dir / "workspace"
+            root.mkdir()
+            with patch.dict("os.environ", {"KORECODE_UI_STATE_DIR": str(state_dir)}, clear=False):
+                ui_state_store.set_active_workspace_root(root)
+                self.assertEqual(ui_state_store.get_active_workspace_root(), str(root.resolve()))
+
+    def test_setting_workspace_root_persists_selection(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root          = Path(tmp)
+            original_root = server._ACTIVE_ROOT
+            try:
+                with patch("KoreCode.app.server.set_active_workspace_root") as persisted:
+                    selected = server._set_workspace_root(str(root))
+            finally:
+                server._ACTIVE_ROOT = original_root
+
+        self.assertEqual(selected, root)
+        persisted.assert_called_once_with(root)
+
     def test_api_chat_thread_reads_without_creating_conversation(self) -> None:
         with patch("KoreCode.app.server.get_thread", return_value={"ok": True}) as mocked, \
              patch("KoreCode.app.server.find_latest_run", return_value=None):
@@ -41,6 +149,89 @@ class KoreCodeServerTests(unittest.TestCase):
             conversation_external_id="conv-1",
             workspace_context_enabled=True,
         )
+
+    def test_api_chat_thread_recovers_latest_conversation_for_path(self) -> None:
+        workspace_root = server._workspace_root()
+        latest_run = {
+            "workspace_root":           str(workspace_root),
+            "path":                     "demo.py",
+            "conversation_external_id": "KoreChat_recover_me",
+        }
+        with patch("KoreCode.app.server.find_latest_run", side_effect=[latest_run, None]), \
+             patch("KoreCode.app.server.get_thread", return_value={"ok": True}) as mocked:
+            payload = server.api_chat_thread(path="demo.py")
+
+        self.assertTrue(payload["ok"])
+        mocked.assert_called_once_with(
+            workspace_root,
+            "demo.py",
+            create=False,
+            conversation_external_id="KoreChat_recover_me",
+            workspace_context_enabled=True,
+        )
+
+    def test_workspace_chat_recovers_latest_legacy_file_conversation(self) -> None:
+        workspace_root = server._workspace_root()
+        legacy_run = {
+            "workspace_root":           str(workspace_root),
+            "path":                     "legacy_file.py",
+            "conversation_external_id": "KoreChat_project_recovery",
+        }
+        with patch("KoreCode.app.server.find_latest_run", side_effect=[None, legacy_run, None]) as finder, \
+             patch("KoreCode.app.server.get_thread", return_value={"ok": True}) as mocked:
+            payload = server.api_chat_thread(path="__workspace__")
+
+        self.assertTrue(payload["ok"])
+        self.assertEqual(finder.call_count, 3)
+        mocked.assert_called_once_with(
+            workspace_root,
+            "__workspace__",
+            create=False,
+            conversation_external_id="KoreChat_project_recovery",
+            workspace_context_enabled=True,
+        )
+
+    def test_chat_run_stores_routed_execution_contract(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp, self._temp_runs_dir(), \
+             patch("KoreCode.app.server.start_background_run"):
+            original_root       = server._ACTIVE_ROOT
+            server._ACTIVE_ROOT = Path(tmp)
+            try:
+                payload = server.api_chat_runs(
+                    server.ChatRunCreateBody(
+                        user_text = "Create a new file main.py",
+                        mode      = "chat",
+                    )
+                )
+            finally:
+                server._ACTIVE_ROOT = original_root
+
+        contract = payload["run"]["context"]["execution_contract"]
+        self.assertEqual(contract["id"], "create_file")
+        self.assertEqual(
+            contract["allowed_tools"],
+            ["list_tree", "read_file", "read_context", "check_python", "run_python"],
+        )
+
+    def test_direct_tool_execution_honors_run_execution_contract(self) -> None:
+        run = {
+            "context": {
+                "execution_contract": {
+                    "allowed_tools": ["list_tree"],
+                },
+            },
+        }
+        with patch("KoreCode.app.server.get_run", return_value=run), \
+             patch("KoreCode.app.server.append_tool_call"):
+            payload = server.api_chat_tools_execute(
+                server.ChatToolExecuteBody(
+                    run_id        = "run-1",
+                    tool_requests = [{"tool": "read_file", "args": {"path": "main.py"}}],
+                )
+            )
+
+        self.assertFalse(payload["results"][0]["ok"])
+        self.assertIn("not active", payload["results"][0]["error"])
 
     def test_workspace_index_rebuild_creates_markdown_and_sqlite(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -636,6 +827,172 @@ class KoreCodeServerTests(unittest.TestCase):
         self.assertEqual(applied["status"], "applied")
         self.assertTrue(applied["apply_result"]["ok"])
         self.assertIn("return name.upper()", final_content)
+
+    def test_edit_proposal_can_create_and_apply_new_python_file(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            original_root       = server._ACTIVE_ROOT
+            server._ACTIVE_ROOT = root
+            try:
+                proposal = server.api_create_edit_proposal(
+                    server.EditProposalCreateBody(
+                        edits=[
+                            {
+                                "file": "main.py",
+                                "from": 1,
+                                "to":   1,
+                                "replacement": "print('hello world')\n",
+                                "reason": "Create a minimal executable entry point.",
+                            }
+                        ],
+                        source="assistant",
+                        summary="Create main.py",
+                    )
+                )
+                applied = server.api_apply_edit_proposal(proposal["proposal_id"])
+                final_content = (root / "main.py").read_text(encoding="utf-8")
+            finally:
+                server._ACTIVE_ROOT = original_root
+
+        self.assertTrue(proposal["validation_ok"])
+        self.assertTrue(applied["apply_result"]["ok"])
+        self.assertEqual(final_content, "print('hello world')\n")
+
+    def test_agent_edit_application_applies_validated_workspace_edit(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp, self._temp_runs_dir():
+            root = Path(tmp)
+            path = root / "main.py"
+            path.write_text('print("Hello, KoreCode!")\n', encoding="utf-8")
+
+            applied = server._apply_agent_edits(
+                workspace_root = root,
+                run_id         = "run-agent-edit",
+                active_path    = "main.py",
+                user_text      = "Add a file header.",
+                edits          = [
+                    {
+                        "file":        "main.py",
+                        "from":        1,
+                        "to":          1,
+                        "replacement": '"""Application entry point."""\n\nprint("Hello, KoreCode!")\n',
+                        "explanation": "Add the requested file header.",
+                    }
+                ],
+                summary = "Add a file header",
+            )
+
+            final_content = path.read_text(encoding="utf-8")
+
+        self.assertTrue(applied["apply_result"]["ok"])
+        self.assertEqual(applied["apply_result"]["applied"], 1)
+        self.assertTrue(final_content.startswith('"""Application entry point."""'))
+
+    def test_agent_edit_application_rejects_unrequested_file(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "main.py").write_text("print('main')\n", encoding="utf-8")
+            (root / "other.py").write_text("print('other')\n", encoding="utf-8")
+
+            result = server._apply_agent_edits(
+                workspace_root = root,
+                run_id         = "run-boundary",
+                active_path    = "main.py",
+                user_text      = "Add a greeting.",
+                edits          = [
+                    {
+                        "file":        "other.py",
+                        "from":        1,
+                        "to":          1,
+                        "replacement": "print('changed')\n",
+                    }
+                ],
+                summary = "Unexpected edit",
+            )
+
+        self.assertFalse(result["apply_result"]["ok"])
+        self.assertIn("outside the active or explicitly named files", result["apply_result"]["errors"][0])
+
+    def test_agent_edit_application_allows_explicitly_named_new_file(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            result = server._apply_agent_edits(
+                workspace_root = root,
+                run_id         = "run-create-file",
+                active_path    = "main.py",
+                user_text      = "Create a new file named string_utils.py.",
+                edits          = [
+                    {
+                        "file":        "string_utils.py",
+                        "from":        1,
+                        "to":          1,
+                        "replacement": "def matching_lines(lines, substring):\n    return [line for line in lines if substring in line]\n",
+                    }
+                ],
+                summary = "Create string utility",
+            )
+
+            created = (root / "string_utils.py").read_text(encoding="utf-8")
+
+        self.assertTrue(result["apply_result"]["ok"])
+        self.assertIn("matching_lines", created)
+
+    def test_agent_create_file_playbook_allows_a_new_agent_named_file(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            result = server._apply_agent_edits(
+                workspace_root      = root,
+                run_id              = "run-create-file-playbook",
+                active_path         = "main.py",
+                user_text           = "Create a utility that filters a list of strings by a substring.",
+                execution_contract  = {"id": "create_file"},
+                edits               = [
+                    {
+                        "file":        "string_utils.py",
+                        "from":        1,
+                        "to":          1,
+                        "replacement": "def matching_lines(lines, substring):\n    return [line for line in lines if substring in line]\n",
+                    }
+                ],
+                summary = "Create string utility",
+            )
+
+            created = (root / "string_utils.py").read_text(encoding="utf-8")
+
+        self.assertTrue(result["apply_result"]["ok"])
+        self.assertIn("matching_lines", created)
+
+    def test_python_runner_captures_script_output_and_syntax_failure(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "hello.py").write_text("print('hello from runner')\n", encoding="utf-8")
+            (root / "broken.py").write_text("def broken(:\n", encoding="utf-8")
+            original_root       = server._ACTIVE_ROOT
+            server._ACTIVE_ROOT = root
+            try:
+                executed = server._run_python_tool("hello.py", "run", 5)
+                checked  = server._run_python_tool("broken.py", "check", None)
+            finally:
+                server._ACTIVE_ROOT = original_root
+
+        self.assertTrue(executed["ok"])
+        self.assertIn("hello from runner", executed["stdout"])
+        self.assertFalse(checked["ok"])
+        self.assertIn("SyntaxError", checked["stderr"])
+
+    def test_direct_python_execution_endpoint_runs_workspace_file(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "hello.py").write_text("print('execution panel')\n", encoding="utf-8")
+            original_root       = server._ACTIVE_ROOT
+            server._ACTIVE_ROOT = root
+            try:
+                result = server.api_execution_python(server.PythonExecutionBody(path="hello.py"))
+            finally:
+                server._ACTIVE_ROOT = original_root
+
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["exit_code"], 0)
+        self.assertIn("execution panel", result["stdout"])
 
     def test_write_tool_returns_edit_proposal_not_direct_mutation(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

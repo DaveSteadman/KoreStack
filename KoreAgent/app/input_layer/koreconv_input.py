@@ -79,6 +79,17 @@ _SESSION_PREFIX    = "kc_conv_"
 _COMPRESS_THRESHOLD = 0.70
 
 
+def _latest_message(messages: list[dict]) -> dict | None:
+    """Return the newest message regardless of API ordering or list truncation."""
+    if not messages:
+        return None
+    return max(
+        (item for item in messages if isinstance(item, dict)),
+        key=lambda item: (str(item.get("created_at") or ""), int(item.get("id") or 0)),
+        default=None,
+    )
+
+
 # ====================================================================================================
 # MARK: CONFIG
 # ====================================================================================================
@@ -434,10 +445,11 @@ def _handle_event(
         # Fetch fresh messages here (rather than trusting the event payload snapshot) because
         # _kc_save_turn posts the outbound asynchronously - the payload may be stale.
         try:
-            fresh_messages = _http_get(base, f"/conversations/{conv_id}/messages?limit=10") or []
+            fresh_messages = _http_get(base, f"/conversations/{conv_id}/messages?limit=500") or []
         except Exception:
             fresh_messages = messages
-        if fresh_messages and (fresh_messages[-1].get("direction") or "") == "outbound":
+        latest_message = _latest_message(fresh_messages)
+        if latest_message and (latest_message.get("direction") or "") == "outbound":
             push_log_line(f"[KORECHAT] Conv {conv_id}: event {event_id} skipped - turn already answered by web API path")
             _complete_event(base, event_id, "completed", push_log_line, context=f"conv {conv_id}")
             return

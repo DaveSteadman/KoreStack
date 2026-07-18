@@ -29,7 +29,10 @@ if items:
 print("\n=== Current DB entries for des_mod domain ===")
 # find the domain used by ingest_web_feed for des.mod.uk
 import sqlite3, glob, os
-data_dir = r'C:\Util\GithubRepos\KoreStack\datacontrol\koredata\Feeds'
+
+from KoreCommon.suite_paths import get_suite_datacontrol_dir
+
+data_dir = str(get_suite_datacontrol_dir() / 'koredata' / 'Feeds')
 dbs = glob.glob(os.path.join(data_dir, '*.db'))
 print(f"DB files: {[os.path.basename(d) for d in dbs]}")
 for db_path in dbs:

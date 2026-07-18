@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="/static/code/css/explorer.css" />
   <link rel="stylesheet" href="/static/code/css/find.css" />
   <link rel="stylesheet" href="/static/code/css/editor.css" />
+  <link rel="stylesheet" href="/static/code/css/execution.css" />
   <link rel="stylesheet" href="/static/code/css/chat.css" />
   <script src="/suite-config.js"></script>
 </head>
@@ -42,8 +43,26 @@
           <button id="btn-find" class="kcui-tag kcui-tag--dim" type="button">Find</button>
           <button id="btn-save" class="kcui-tag kcui-tag--dim" type="button">Save</button>
           <button id="btn-wrap" class="kcui-tag kcui-tag--dim" type="button" title="Toggle line wrap">Wrap</button>
+          <button id="btn-run-active" class="kcui-tag kcui-tag--accent" type="button" title="Run active Python file">Run</button>
+          <button id="btn-check-active" class="kcui-tag kcui-tag--muted" type="button" title="Check active Python syntax">Check</button>
           <button id="btn-ai" class="kcui-tag kcui-tag--dim" type="button" title="Toggle AI chat (Alt+A)">AI</button>
         </div>
+      </div>
+      <div id="work-item-bar" aria-label="Active work item">
+        <span class="work-item-label">Work item</span>
+        <select id="work-item-select" class="work-item-select" aria-label="Active work item"></select>
+        <select id="work-item-status" class="work-item-status" aria-label="Work item status" disabled>
+          <option value="scoping">Scoping</option>
+          <option value="investigating">Investigating</option>
+          <option value="plan_ready">Plan ready</option>
+          <option value="awaiting_approval">Awaiting approval</option>
+          <option value="editing">Editing</option>
+          <option value="validating">Validating</option>
+          <option value="completed">Completed</option>
+          <option value="failed">Failed</option>
+        </select>
+        <button id="btn-refresh-work-items" class="kcui-tag kcui-tag--muted" type="button" title="Refresh work items">Refresh</button>
+        <button id="btn-new-work-item" class="kcui-tag kcui-tag--accent" type="button">New</button>
       </div>
       <div id="editor-body">
         <div id="editor-surface">
@@ -66,11 +85,16 @@
             <button id="btn-chat-retry" class="kcui-tag kcui-tag--muted" type="button" title="Regenerate last response">Retry</button>
             <button id="btn-chat-clear" class="kcui-tag kcui-tag--muted" type="button" title="Clear current file thread">Clear</button>
             <button id="btn-workspace-context" class="kcui-tag kcui-tag--accent" type="button" title="Toggle cross-file workspace context" aria-pressed="true">Workspace: On</button>
+            <button id="btn-chat-focus" class="kcui-tag kcui-tag--muted" type="button" title="Expand conversation into the centre canvas">Focus</button>
             <button id="btn-chat-stop" class="kcui-tag kcui-tag--warning" type="button" title="Stop generation" hidden>Stop</button>
           </div>
           <div id="chat-linked-conversation" hidden>
             <span class="chat-linked-label">Linked chat</span>
             <span id="chat-linked-conversation-name"></span>
+          </div>
+          <div id="chat-execution-contract" hidden>
+            <span class="chat-contract-label">Active playbook</span>
+            <span id="chat-execution-contract-name"></span>
           </div>
           <div id="chat-progress-note" hidden>Generating...</div>
           <div id="chat-thread"></div>
@@ -86,8 +110,51 @@
           </div>
         </div>
       </div>
+      <section id="execution-panel" aria-label="Execution output and call hierarchy">
+        <header id="execution-toolbar">
+          <div class="execution-title">Execution</div>
+          <span id="execution-summary">No run yet</span>
+          <button id="btn-clear-execution" class="kcui-tag kcui-tag--muted" type="button">Clear</button>
+          <button id="btn-toggle-execution" class="kcui-tag kcui-tag--muted" type="button" aria-pressed="true">Collapse</button>
+        </header>
+        <div id="execution-content">
+          <section class="execution-stream" aria-label="Program output">
+            <div class="execution-stream-label">Console</div>
+            <pre id="execution-output">Run the active Python file to capture stdout, stderr, and tracebacks.</pre>
+          </section>
+          <section id="call-hierarchy" aria-label="Static call hierarchy">
+            <div class="hierarchy-header">
+              <span>Call hierarchy</span>
+              <button id="btn-refresh-hierarchy" class="kcui-tag kcui-tag--muted" type="button">Refresh</button>
+            </div>
+            <div id="call-hierarchy-content">Place the cursor in an indexed Python symbol to inspect callers and callees.</div>
+          </section>
+        </div>
+      </section>
     </section>
   </main>
+  <dialog id="work-item-dialog" class="work-item-dialog" aria-labelledby="work-item-dialog-title">
+    <form id="work-item-form" method="dialog">
+      <header class="work-item-dialog-header">
+        <div>
+          <div class="work-item-label">KoreCode Gen2</div>
+          <h2 id="work-item-dialog-title">New work item</h2>
+        </div>
+        <button id="btn-cancel-work-item" class="kcui-tag kcui-tag--muted" type="button">Cancel</button>
+      </header>
+      <label class="work-item-field" for="work-item-title-input">
+        <span>Outcome</span>
+        <input id="work-item-title-input" name="title" required maxlength="160" placeholder="Diagnose and fix the failing test" />
+      </label>
+      <label class="work-item-field" for="work-item-description-input">
+        <span>Context</span>
+        <textarea id="work-item-description-input" name="description" rows="4" placeholder="What should be true when this work is complete?"></textarea>
+      </label>
+      <footer class="work-item-dialog-actions">
+        <button class="kcui-tag kcui-tag--accent" type="submit">Create work item</button>
+      </footer>
+    </form>
+  </dialog>
   <script type="module" src="/static/code/js/main.js"></script>
 </body>
 </html>

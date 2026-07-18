@@ -62,3 +62,4 @@ datacontrol/task_queue.json
 /Data/datacontrol/koredata/Scrape
 /Data/datauser
 *.log
+/Data/datacontrol/koredata

@@ -27,7 +27,9 @@ if str(_SUITE_ROOT) not in sys.path:
     sys.path.insert(0, str(_SUITE_ROOT))
 
 from KoreCommon.suite_config import load_service_config
-_DEFAULT_DATA_DIR = _SUITE_ROOT / "datacontrol" / "korecomms"
+from KoreCommon.suite_paths import get_suite_datacontrol_dir
+
+_DEFAULT_DATA_DIR = get_suite_datacontrol_dir() / "korecomms"
 
 _DEFAULTS: dict = {
     "host": os.environ.get("KORECOMMS_HOST", "0.0.0.0"),

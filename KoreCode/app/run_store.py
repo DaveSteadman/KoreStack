@@ -14,20 +14,18 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from KoreCommon.suite_paths import get_suite_datacontrol_dir
+
 
 def _utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
-
-
-def _suite_root() -> Path:
-    return Path(__file__).resolve().parents[2]
 
 
 def _runs_root() -> Path:
     explicit = str(os.environ.get("KORECODE_RUNS_DIR", "") or "").strip()
     if explicit:
         return Path(explicit).expanduser().resolve()
-    return (_suite_root() / "datacontrol" / "korecode" / "runs").resolve()
+    return (get_suite_datacontrol_dir() / "korecode" / "runs").resolve()
 
 
 def _ensure_runs_root() -> Path:
@@ -82,6 +80,7 @@ def create_run(
     workspace_context_enabled: bool,
     conversation_external_id: str | None = None,
     parent_run_id:            str | None = None,
+    work_item_id:             str | None = None,
     context:                  dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     now    = _utc_now()
@@ -97,6 +96,7 @@ def create_run(
         "conversation_external_id": str(conversation_external_id or "").strip() or None,
         "conversation_id":          None,
         "parent_run_id":            str(parent_run_id or "").strip() or None,
+        "work_item_id":             str(work_item_id or "").strip() or None,
         "input": {
             "text":            str(input_text or ""),
             "visible_text":    str(visible_text or ""),
@@ -136,16 +136,20 @@ def find_latest_run(
     *,
     conversation_external_id: str | None = None,
     path: str | None = None,
+    workspace_root: Path | str | None = None,
     statuses: set[str] | None = None,
 ) -> dict[str, Any] | None:
     target_external_id = str(conversation_external_id or "").strip() or None
     target_path        = str(path or "").strip() or None
+    target_root        = str(workspace_root or "").strip() or None
     wanted_statuses    = {str(item).strip() for item in (statuses or set()) if str(item).strip()}
 
     for item in list_runs(limit=200):
         if target_external_id is not None and item.get("conversation_external_id") != target_external_id:
             continue
         if target_path is not None and item.get("path") != target_path:
+            continue
+        if target_root is not None and item.get("workspace_root") != target_root:
             continue
         if wanted_statuses and str(item.get("status") or "").strip() not in wanted_statuses:
             continue

@@ -8,6 +8,8 @@ const CUSTOM_ROOT_VALUE = '__custom__';
 
 let _openFile = null;
 let _onRootChanged = null;
+let _beforeRootChanged = null;
+let _onWorkspaceRefresh = null;
 let _settingRoot = false;
 let _currentRootValue = '';
 let _rootPicker = null;
@@ -176,11 +178,13 @@ async function _deleteDirItem(dirPath, dirLabel) {
   }
 }
 
-export function initExplorer({ openFile, onRootChanged = null }) {
+export function initExplorer({ openFile, onRootChanged = null, beforeRootChanged = null, onWorkspaceRefresh = null }) {
   _openFile = openFile;
   _onRootChanged = onRootChanged;
+  _beforeRootChanged = beforeRootChanged;
+  _onWorkspaceRefresh = onWorkspaceRefresh;
   refreshTreeButton.addEventListener('click', () => {
-    void refreshTree();
+    void refreshTree().then(() => _onWorkspaceRefresh?.());
   });
   rootSelect?.addEventListener('change', () => {
     if (_settingRoot) return;
@@ -355,6 +359,7 @@ export async function switchRoot(rootValue) {
   treeStatus.textContent = 'Switching root…';
   try {
     _settingRoot = true;
+    await _beforeRootChanged?.();
     await api('/api/root', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -362,9 +367,9 @@ export async function switchRoot(rootValue) {
     });
     state.tree.clear();
     state.expanded.clear();
-    _onRootChanged?.();
     await loadRootOptions();
     await refreshTree();
+    await _onRootChanged?.();
     treeStatus.textContent = 'Root switched';
   } catch (err) {
     treeStatus.textContent = `Root switch failed: ${err.message || err}`;

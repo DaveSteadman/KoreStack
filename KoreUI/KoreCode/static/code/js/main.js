@@ -4,6 +4,9 @@ import { createEditor } from './editor.js';
 import { initFind, runFind, runFindNext, runFindPrevious, closeFindBar, applyFindQuery, getCurrentFindQuery } from './find.js';
 import { initExplorer, refreshTree, renderTree, expandAncestors } from './explorer.js';
 import { initChat } from './chat.js';
+import { initExecutionConsole } from './execution-console.js';
+import { state } from './state.js';
+import { initWorkItems } from './work-items.js';
 
 initTopbar({ currentService: 'korecode', urls: window.__koreSuiteUrls || {} });
 initAppBar({
@@ -33,6 +36,14 @@ window.__kcApplyStructuredEdits = async (edits) => editorApi.applyStructuredEdit
 window.__kcSaveTabs = async (paths) => editorApi.saveTabs(paths);
 window.__kcReloadTabs = async (paths) => editorApi.reloadTabs(paths);
 
+initExecutionConsole({
+  getActiveTab,
+  getCursorInfo: () => editorApi.getCursorInfo(),
+  openFile,
+  setActiveTab: editorApi.setActiveTab,
+});
+
+const workItems = initWorkItems();
 const chat = initChat({
   getActiveTab,
   getContinueContext: () => editorApi.getContinueContext(),
@@ -40,14 +51,26 @@ const chat = initChat({
   insertFromChat: (text) => editorApi.insertTextAtSelection(text),
   getEditorSelection: () => editorApi.getEditorSelection(),
   getCursorInfo: () => editorApi.getCursorInfo(),
+  getActiveWorkItemId: () => workItems.getActiveWorkItemId(),
+  getWorkspaceRoot: () => state.root,
 });
 
 initFind({ editorView, getActiveTab });
 initExplorer({
   openFile,
-  onRootChanged: () => {
-    editorApi.resetWorkspaceContext();
-    void chat.handleWorkspaceRootChanged();
+  beforeRootChanged: () => {
+    // State changes persist immediately; keep this hook for the focused tab at the boundary.
+    editorApi.renderTabs();
+  },
+  onRootChanged: async () => {
+    editorApi.resetWorkspaceContext({ persist: false });
+    await editorApi.restoreTabs();
+    await chat.handleWorkspaceRootChanged();
+    await workItems.refresh();
+  },
+  onWorkspaceRefresh: async () => {
+    const activePath = getActiveTab()?.path;
+    if (activePath) await editorApi.reloadTabs([activePath]);
   },
 });
 initPanels({
@@ -63,7 +86,13 @@ void boot();
 
 async function boot() {
   await refreshTree();
+  try {
+    await workItems.refresh();
+  } catch (error) {
+    console.error('Unable to load work items:', error);
+  }
   await restoreTabs();
+  await chat.handleWorkspaceRootChanged();
   renderTabs();
   renderMeta();
 }

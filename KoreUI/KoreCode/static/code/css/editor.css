@@ -46,6 +46,95 @@
   margin-left: auto;
 }
 
+#work-item-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 0 10px;
+  background: color-mix(in srgb, var(--surface) 78%, var(--bg-2));
+  border-bottom: 1px solid var(--border);
+}
+
+.work-item-label {
+  color: var(--text-dim);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.work-item-select,
+.work-item-status {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--bg);
+  color: var(--text);
+  font: 12px/1.4 var(--font-ui, sans-serif);
+  padding: 4px 7px;
+}
+
+.work-item-select { flex: 1; }
+.work-item-status { max-width: 150px; }
+
+.work-item-dialog {
+  width: min(520px, calc(100vw - 32px));
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border));
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 24px 80px color-mix(in srgb, black 64%, transparent);
+}
+
+.work-item-dialog::backdrop {
+  background: color-mix(in srgb, var(--bg) 58%, transparent);
+  backdrop-filter: blur(3px);
+}
+
+.work-item-dialog form { padding: 18px; }
+
+.work-item-dialog-header,
+.work-item-dialog-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.work-item-dialog-header { margin-bottom: 18px; }
+.work-item-dialog-header h2 { margin: 3px 0 0; font-size: 20px; }
+.work-item-dialog-actions { margin-top: 18px; justify-content: flex-end; }
+
+.work-item-field {
+  display: grid;
+  gap: 6px;
+  margin-top: 12px;
+  color: var(--text-2);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.work-item-field input,
+.work-item-field textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--bg);
+  color: var(--text);
+  font: 13px/1.5 var(--font-ui, sans-serif);
+  padding: 8px 9px;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.work-item-field textarea { resize: vertical; }
+.work-item-field input:focus,
+.work-item-field textarea:focus { outline: 1px solid var(--accent); border-color: var(--accent); }
+
 /* --- Editor surface --- */
 
 #editor-surface {

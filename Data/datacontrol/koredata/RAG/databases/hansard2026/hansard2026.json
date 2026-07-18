@@ -1,12 +1,12 @@
 {
   "id": "hansard2026",
-  "display_name": "Hansard \u2014 UK Parliament (hansard2026)",
+  "display_name": "Hansard — UK Parliament (hansard2026)",
   "description": "Official verbatim record of UK Parliamentary debates. Sourced from developer.parliament.uk and hansard.parliament.uk.",
   "source_url": "https://hansard.parliament.uk/",
   "licence": "Open Parliament Licence",
   "managed_by": "ingestor",
   "ingestor": "hansard2026",
-  "schedule": "daily",
+  "schedule": "weekly",
   "chunk_types": [
     {
       "type": "speech",
@@ -36,10 +36,10 @@
     ]
   },
   "sync": {
-    "last_run": "2026-07-01 00:02:18",
-    "last_ingest_completed_at": "2026-07-01 00:02:18",
-    "last_date_ingested": "2026-06-30",
+    "last_run": "2026-07-18 21:08:07",
+    "last_ingest_completed_at": "2026-07-18 21:08:07",
+    "last_date_ingested": "2026-07-17",
     "status": "complete",
-    "total_chunks": 3716
+    "total_chunks": 8658
   }
 }

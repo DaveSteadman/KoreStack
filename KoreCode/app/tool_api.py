@@ -21,6 +21,7 @@ class ToolDefinition:
     description:  str
     args:         dict[str, str]
     mutates_code: bool = False
+    risk:          str = "read_only"
 
 
 TOOL_DEFINITIONS: tuple[ToolDefinition, ...] = (
@@ -67,6 +68,23 @@ TOOL_DEFINITIONS: tuple[ToolDefinition, ...] = (
         },
     ),
     ToolDefinition(
+        name        = "check_python",
+        category    = "execution",
+        description = "Compile one workspace Python file and return syntax diagnostics without running it.",
+        args        = {"path": "workspace-relative Python file path"},
+        risk        = "process_execution",
+    ),
+    ToolDefinition(
+        name        = "run_python",
+        category    = "execution",
+        description = "Run one workspace Python script with no command-line arguments and capture stdout/stderr.",
+        args        = {
+            "path":            "workspace-relative Python file path",
+            "timeout_seconds": "optional integer from 1 to 30, default 15",
+        },
+        risk        = "process_execution",
+    ),
+    ToolDefinition(
         name         = "replace_python_function",
         category     = "write",
         description  = "Replace one full Python function or method in a file.",
@@ -77,6 +95,7 @@ TOOL_DEFINITIONS: tuple[ToolDefinition, ...] = (
             "replacement":   "full replacement source for that function or method",
         },
         mutates_code = True,
+        risk         = "staged_write",
     ),
     ToolDefinition(
         name         = "insert_python_function",
@@ -90,19 +109,23 @@ TOOL_DEFINITIONS: tuple[ToolDefinition, ...] = (
             "into_class":    "optional class name for inserting a new method",
         },
         mutates_code = True,
+        risk         = "staged_write",
     ),
 )
 
 
-def tool_guide_payload() -> dict[str, dict[str, Any]]:
+def tool_guide_payload(allowed_tools: tuple[str, ...] | list[str] | None = None) -> dict[str, dict[str, Any]]:
+    allowed = set(allowed_tools) if allowed_tools is not None else None
     return {
         tool.name: {
             "category":     tool.category,
             "description":  tool.description,
             "args":         dict(tool.args),
             "mutates_code": bool(tool.mutates_code),
+            "risk":         tool.risk,
         }
         for tool in TOOL_DEFINITIONS
+        if allowed is None or tool.name in allowed
     }
 
 
@@ -115,14 +138,23 @@ def execute_tool_requests(
     read_context_fn,
     list_tree_fn,
     get_python_function_fn,
+    run_python_fn,
     replace_python_function_proposal_fn,
     insert_python_function_proposal_fn,
+    allowed_tools: tuple[str, ...] | list[str] | None = None,
 ) -> list[dict[str, Any]]:
     requests = list(tool_requests or [])[:MAX_AGENT_TOOL_REQUESTS]
+    allowed  = set(allowed_tools) if allowed_tools is not None else None
     out: list[dict[str, Any]] = []
 
     def _effective_path(args: dict[str, Any]) -> str:
         return str(args.get("path") or active_path or "").strip()
+
+    def _active_python_path() -> str:
+        path = str(active_path or "").strip().replace("\\", "/")
+        if not path or path == "." or not path.lower().endswith((".py", ".pyi")):
+            raise ValueError("run_python requires an active Python file")
+        return path
 
     def _search_in_file(args: dict[str, Any]) -> dict[str, Any]:
         path        = _effective_path(args)
@@ -148,6 +180,8 @@ def execute_tool_requests(
         tool = str((request or {}).get("tool") or "").strip()
         args = request.get("args") if isinstance(request, dict) and isinstance(request.get("args"), dict) else {}
         try:
+            if allowed is not None and tool not in allowed:
+                raise ValueError(f"Tool is not active for this task: {tool}")
             if tool == "read_file":
                 path   = _effective_path(args)
                 if not path:
@@ -177,11 +211,24 @@ def execute_tool_requests(
                 if not symbol:
                     raise ValueError("get_python_function requires symbol")
                 result = get_python_function_fn(path, symbol)
+            elif tool == "check_python":
+                path = _effective_path(args)
+                if not path:
+                    raise ValueError("check_python requires path")
+                result = run_python_fn(path, "check", None)
+            elif tool == "run_python":
+                path = _effective_path(args)
+                timeout_seconds = max(1, min(30, int(args.get("timeout_seconds") or 15)))
+                if not path:
+                    raise ValueError("run_python requires path")
+                if path.replace("\\", "/") != _active_python_path():
+                    raise ValueError("run_python is limited to the active Python file")
+                result = run_python_fn(path, "run", timeout_seconds)
             elif tool == "replace_python_function":
                 path          = _effective_path(args)
-                symbol        = str(args.get("symbol") or "").strip()
+                symbol        = str(args.get("symbol") or args.get("function_name") or "").strip()
                 replacement   = str(args.get("replacement") or "")
-                expected_hash = str(args.get("expected_hash") or "").strip()
+                expected_hash = str(args.get("expected_hash") or args.get("content_hash") or "").strip()
                 if not path:
                     raise ValueError("replace_python_function requires path")
                 if not symbol:

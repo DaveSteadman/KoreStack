@@ -6,7 +6,7 @@
   "licence": "Deagel website copyright; internal structured ingest",
   "managed_by": "ingestor",
   "ingestor": "deagel",
-  "schedule": "manual",
+  "schedule": "weekly",
   "navigation": {
     "type": "deagel",
     "tables": [

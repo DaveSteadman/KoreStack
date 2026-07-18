@@ -1,0 +1,74 @@
+#execution-panel {
+  flex: 0 0 248px;
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg-2) 86%, black 14%);
+  overflow: hidden;
+}
+
+#execution-panel.is-collapsed { flex-basis: 34px; min-height: 34px; }
+#execution-panel.is-collapsed #execution-content { display: none; }
+
+#execution-toolbar,
+.hierarchy-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 0 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.execution-title,
+.execution-stream-label,
+.hierarchy-header > span {
+  color: var(--text-dim);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+#execution-summary {
+  flex: 1;
+  min-width: 0;
+  color: var(--text-2);
+  font: 11px var(--font-code);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#execution-content { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(220px, 0.8fr); }
+.execution-stream,
+#call-hierarchy { min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+.execution-stream { border-right: 1px solid var(--border); }
+.execution-stream-label { padding: 7px 10px 0; }
+
+#execution-output {
+  flex: 1;
+  margin: 0;
+  padding: 6px 10px 10px;
+  overflow: auto;
+  color: var(--text);
+  font: 12px/1.55 var(--font-code);
+  white-space: pre-wrap;
+}
+
+#call-hierarchy { overflow: hidden; }
+.hierarchy-header { justify-content: space-between; }
+#call-hierarchy-content { overflow: auto; padding: 7px 10px 10px; color: var(--text-2); font-size: 11px; line-height: 1.45; }
+.hierarchy-symbol { color: var(--accent-2, var(--accent)); font: 12px var(--font-code); margin-bottom: 8px; }
+.hierarchy-group { margin-top: 8px; }
+.hierarchy-group > strong { color: var(--text-dim); font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; }
+.hierarchy-item { display: block; width: 100%; margin-top: 3px; padding: 3px 4px; border: 0; background: transparent; color: var(--text-2); font: 11px var(--font-code); text-align: left; cursor: pointer; }
+.hierarchy-item:hover { background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--text); }
+
+@media (max-width: 760px) {
+  #execution-panel { flex-basis: 220px; }
+  #execution-content { grid-template-columns: 1fr; overflow: auto; }
+  .execution-stream { min-height: 115px; border-right: 0; border-bottom: 1px solid var(--border); }
+  #call-hierarchy { min-height: 130px; }
+}

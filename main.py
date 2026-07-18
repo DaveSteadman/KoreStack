@@ -1,4 +1,4 @@
-# ====================================================================================================
+from __future__ import annotations
 # MARK: OVERVIEW
 # ====================================================================================================
 # Root entry point for the entire KoreStack suite.
@@ -7,9 +7,8 @@
 # workspace root with:  python ./main.py
 #
 # Related modules:
-#   - KoreStack/main.py  -- orchestrates launching all services and the dashboard
+#   - KoreStak/main.py  -- orchestrates launching all services and the dashboard
 # ====================================================================================================
-from __future__ import annotations
 
 import runpy
 from pathlib import Path

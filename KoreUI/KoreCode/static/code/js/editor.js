@@ -28,14 +28,15 @@ import { json } from 'https://jspm.dev/@codemirror/lang-json';
 import { markdown } from 'https://jspm.dev/@codemirror/lang-markdown';
 import { html } from 'https://jspm.dev/@codemirror/lang-html';
 import { css } from 'https://jspm.dev/@codemirror/lang-css';
-import { state, api, STORAGE_TABS, STORAGE_ACTIVE, STORAGE_DRAFTS } from './state.js';
+import { state, api, STORAGE_TABS, STORAGE_ACTIVE, STORAGE_DRAFTS, workspaceStorageKey } from './state.js';
 import { fileIconForPath } from '/ui-elements/assets/js/icons.js';
 
 const STORAGE_LINE_WRAP = 'korecode:line-wrap';
 
 function _loadDrafts() {
   try {
-    const raw = JSON.parse(localStorage.getItem(STORAGE_DRAFTS) || '{}');
+    const key = workspaceStorageKey(STORAGE_DRAFTS);
+    const raw = JSON.parse(localStorage.getItem(key) || localStorage.getItem(STORAGE_DRAFTS) || '{}');
     if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
       return {};
     }
@@ -47,7 +48,7 @@ function _loadDrafts() {
 
 function _saveDrafts(drafts) {
   try {
-    localStorage.setItem(STORAGE_DRAFTS, JSON.stringify(drafts));
+    localStorage.setItem(workspaceStorageKey(STORAGE_DRAFTS), JSON.stringify(drafts));
   } catch {
     // Ignore localStorage quota or availability errors.
   }
@@ -157,7 +158,7 @@ export function createEditor({ runFind, runFindNext, runFindPrevious, closeFindB
   const readonlyCompartment = new Compartment();
   const wrapCompartment = new Compartment();
   let suppressEditorSync = false;
-  const drafts = _loadDrafts();
+  let drafts = {};
   let lineWrapEnabled = localStorage.getItem(STORAGE_LINE_WRAP) === '1';
 
   function updateWrapButton() {
@@ -220,11 +221,11 @@ export function createEditor({ runFind, runFindNext, runFindPrevious, closeFindB
 
   function persistTabs() {
     const payload = state.openTabs.map((tab) => ({ path: tab.path }));
-    localStorage.setItem(STORAGE_TABS, JSON.stringify(payload));
+    localStorage.setItem(workspaceStorageKey(STORAGE_TABS), JSON.stringify(payload));
     if (state.activePath) {
-      localStorage.setItem(STORAGE_ACTIVE, state.activePath);
+      localStorage.setItem(workspaceStorageKey(STORAGE_ACTIVE), state.activePath);
     } else {
-      localStorage.removeItem(STORAGE_ACTIVE);
+      localStorage.removeItem(workspaceStorageKey(STORAGE_ACTIVE));
     }
   }
 
@@ -387,10 +388,10 @@ export function createEditor({ runFind, runFindNext, runFindPrevious, closeFindB
     renderTree();
   }
 
-  function resetWorkspaceContext() {
+  function resetWorkspaceContext({ persist = true } = {}) {
     state.openTabs = [];
     state.activePath = null;
-    persistTabs();
+    if (persist) persistTabs();
     applyActiveTabToEditor();
     renderTabs();
     renderMeta();
@@ -493,10 +494,12 @@ export function createEditor({ runFind, runFindNext, runFindPrevious, closeFindB
   async function restoreTabs() {
     let savedTabs = [];
     try {
-      savedTabs = JSON.parse(localStorage.getItem(STORAGE_TABS) || '[]');
+      const key = workspaceStorageKey(STORAGE_TABS);
+      savedTabs = JSON.parse(localStorage.getItem(key) || localStorage.getItem(STORAGE_TABS) || '[]');
     } catch {
       savedTabs = [];
     }
+    drafts = _loadDrafts();
     for (const entry of savedTabs.slice(0, 8)) {
       if (!entry?.path) {
         continue;
@@ -507,7 +510,7 @@ export function createEditor({ runFind, runFindNext, runFindPrevious, closeFindB
         continue;
       }
     }
-    const desiredActive = localStorage.getItem(STORAGE_ACTIVE);
+    const desiredActive = localStorage.getItem(workspaceStorageKey(STORAGE_ACTIVE)) || localStorage.getItem(STORAGE_ACTIVE);
     if (desiredActive && state.openTabs.some((tab) => tab.path === desiredActive)) {
       setActiveTab(desiredActive);
       return;

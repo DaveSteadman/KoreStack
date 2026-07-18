@@ -5,7 +5,7 @@ import {
   extractStructuredEdits,
 } from './rendering.js';
 
-export function createThreadUI({ thread, insertFromChat = null, createEditProposal = null, applyEditProposal = null, reloadTabs = null, saveTabs = null }) {
+export function createThreadUI({ thread, insertFromChat = null, createEditProposal = null, applyEditProposal = null, reloadTabs = null }) {
   function scrollBottom() {
     thread.scrollTop = thread.scrollHeight;
   }
@@ -76,12 +76,12 @@ export function createThreadUI({ thread, insertFromChat = null, createEditPropos
     if (structured && Array.isArray(structured.edits) && typeof createEditProposal === 'function' && typeof applyEditProposal === 'function') {
       const applyBtn = document.createElement('button');
       applyBtn.type = 'button';
-      applyBtn.className = 'kcui-tag kcui-tag--warning';
-      applyBtn.textContent = 'apply proposal';
+      applyBtn.className = 'kcui-tag kcui-tag--accent';
+      applyBtn.textContent = 'apply manually';
       applyBtn.addEventListener('click', async () => {
-        const prev = applyBtn.textContent;
+        const prev     = applyBtn.textContent;
         const fileList = [...new Set(structured.edits.map((e) => String(e?.file || '').trim()).filter(Boolean))];
-        const prompt = `Create and apply proposal for ${structured.edits.length} edit(s) across ${fileList.length || 1} file(s)?`;
+        const prompt   = `Apply and reload ${structured.edits.length} proposed edit(s) across ${fileList.length || 1} file(s)?`;
         const confirmed = await window.kcuiConfirm('Apply Proposal', prompt, { confirmLabel: 'Apply' });
         if (!confirmed) return;
         applyBtn.disabled = true;
@@ -94,13 +94,19 @@ export function createThreadUI({ thread, insertFromChat = null, createEditPropos
             return;
           }
           const result = await applyEditProposal(proposal.proposal_id);
-          if (result?.apply_result?.ok) {
-            await reloadTabs?.(fileList);
-            applyBtn.textContent = `applied (${result.apply_result?.applied || 0})`;
-          } else {
+          if (!result?.apply_result?.ok) {
             const firstError = Array.isArray(result?.apply_result?.errors) && result.apply_result.errors.length ? result.apply_result.errors[0] : 'apply failed';
             applyBtn.textContent = 'apply failed';
             await window.kcuiAlert('Apply Failed', firstError);
+            return;
+          }
+          const reloadResult = await reloadTabs?.(fileList);
+          if (!reloadResult || reloadResult?.ok) {
+            applyBtn.textContent = `applied (${result.apply_result?.applied || 0})`;
+          } else {
+            const firstReloadError = Array.isArray(reloadResult?.errors) && reloadResult.errors.length ? reloadResult.errors[0] : 'reload failed';
+            applyBtn.textContent = 'reload failed';
+            await window.kcuiAlert('Reload Failed', firstReloadError);
           }
         } catch {
           applyBtn.textContent = 'apply failed';
@@ -112,53 +118,6 @@ export function createThreadUI({ thread, insertFromChat = null, createEditPropos
         }
       });
       row.appendChild(applyBtn);
-
-      if (typeof saveTabs === 'function') {
-        const applySaveBtn = document.createElement('button');
-        applySaveBtn.type = 'button';
-        applySaveBtn.className = 'kcui-tag kcui-tag--accent';
-        applySaveBtn.textContent = 'apply proposal';
-        applySaveBtn.addEventListener('click', async () => {
-          const prev     = applySaveBtn.textContent;
-          const fileList = [...new Set(structured.edits.map((e) => String(e?.file || '').trim()).filter(Boolean))];
-          const prompt   = `Create, apply, and reload proposal for ${structured.edits.length} edit(s) across ${fileList.length || 1} file(s)?`;
-          const confirmed = await window.kcuiConfirm('Apply Proposal', prompt, { confirmLabel: 'Apply' });
-          if (!confirmed) return;
-          applySaveBtn.disabled = true;
-          try {
-            const proposal = await createEditProposal(structured.edits);
-            if (!proposal?.validation_ok) {
-              const invalid = (proposal?.edits || []).find((edit) => !edit?.validation?.ok);
-              applySaveBtn.textContent = 'proposal invalid';
-              await window.kcuiAlert('Proposal Invalid', invalid?.validation?.errors?.[0] || 'proposal validation failed');
-              return;
-            }
-            const applyResult = await applyEditProposal(proposal.proposal_id);
-            if (!applyResult?.apply_result?.ok) {
-              const firstApplyError = Array.isArray(applyResult?.apply_result?.errors) && applyResult.apply_result.errors.length ? applyResult.apply_result.errors[0] : 'apply failed';
-              applySaveBtn.textContent = 'apply failed';
-              await window.kcuiAlert('Apply Failed', firstApplyError);
-              return;
-            }
-            const reloadResult = await reloadTabs?.(fileList);
-            if (!reloadResult || reloadResult?.ok) {
-              applySaveBtn.textContent = `applied (${applyResult.apply_result?.applied || 0})`;
-            } else {
-              const firstSaveError = Array.isArray(reloadResult?.errors) && reloadResult.errors.length ? reloadResult.errors[0] : 'reload failed';
-              applySaveBtn.textContent = 'reload failed';
-              await window.kcuiAlert('Reload Failed', firstSaveError);
-            }
-          } catch {
-            applySaveBtn.textContent = 'apply/save failed';
-          } finally {
-            setTimeout(() => {
-              applySaveBtn.disabled = false;
-              applySaveBtn.textContent = prev;
-            }, 1400);
-          }
-        });
-        row.appendChild(applySaveBtn);
-      }
     }
 
     return row;

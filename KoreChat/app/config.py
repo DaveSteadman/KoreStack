@@ -7,11 +7,9 @@
 # overrides the built-in default. Missing keys fall back to the defaults below so the service
 # starts with no config file present.
 #
-# data_dir defaults to <repo_root>/datacontrol/korechat so that all persisted data
+# data_dir defaults to the configured suite datacontrol/korechat directory so that all persisted data
 # (database, log) lands in the shared datacontrol folder alongside MiniAgentFramework data.
-# The repo root is inferred from this file's location:
-#   KoreChat/app/config.py  ->  parents[2]  ->  repo root
-# This is resilient to the working directory at launch time.
+# The suite path resolver keeps standalone and suite-managed launches consistent.
 # ====================================================================================================
 
 import os
@@ -23,12 +21,13 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from KoreCommon.suite_config import load_service_config
+from KoreCommon.suite_paths import get_suite_datacontrol_dir
 
 _DEFAULTS: dict = {
     "host":      os.environ.get("KORECHAT_HOST", "0.0.0.0"),
     "port":      None,
     "log_level": os.environ.get("KORECHAT_LOG_LEVEL", "info"),
-    "data_dir":  os.environ.get("KORECHAT_DATA_DIR", str(_REPO_ROOT / "datacontrol" / "korechat")),
+    "data_dir":  os.environ.get("KORECHAT_DATA_DIR", str(get_suite_datacontrol_dir() / "korechat")),
 }
 
 

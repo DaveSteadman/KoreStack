@@ -15,15 +15,19 @@ const _WORKSPACE_THREAD_KEY = '__workspace__';
 // In-memory chat state keyed by thread path.
 const _threads = new Map();
 
-function _saveState(open, mode, threads = {}, pendingRuns = {}, continueState = null, conversationExternalIds = {}, conversationTitles = {}) {
+function _workspaceStateKey(workspaceRoot) {
+  return workspaceRoot ? `${_STATE_KEY}:${encodeURIComponent(workspaceRoot)}` : _STATE_KEY;
+}
+
+function _saveState(storageKey, open, mode, threads = {}, pendingRuns = {}, continueState = null, conversationExternalIds = {}, conversationTitles = {}, focus = false) {
   try {
-    localStorage.setItem(_STATE_KEY, JSON.stringify({ open, mode, threads, pendingRuns, continueState, conversationExternalIds, conversationTitles }));
+    localStorage.setItem(storageKey, JSON.stringify({ open, mode, threads, pendingRuns, continueState, conversationExternalIds, conversationTitles, focus }));
   } catch (_) {}
 }
 
-function _loadState() {
+function _loadState(storageKey) {
   try {
-    const raw = localStorage.getItem(_STATE_KEY);
+    const raw = localStorage.getItem(storageKey);
     if (!raw) return null;
     return JSON.parse(raw);
   } catch (_) {
@@ -66,6 +70,8 @@ export function initChat({
   insertFromChat = null,
   getEditorSelection = null,
   getCursorInfo = null,
+  getActiveWorkItemId = null,
+  getWorkspaceRoot = () => '',
 }) {
   const panel = document.getElementById('chat-panel');
   const splitter = document.getElementById('chat-splitter');
@@ -83,8 +89,12 @@ export function initChat({
   const btnChatClear = document.getElementById('btn-chat-clear');
   const btnChatStop = document.getElementById('btn-chat-stop');
   const btnWorkspaceContext = document.getElementById('btn-workspace-context');
+  const btnChatFocus = document.getElementById('btn-chat-focus');
+  const codeMain = document.getElementById('code-main');
   const linkedConversation = document.getElementById('chat-linked-conversation');
   const linkedConversationName = document.getElementById('chat-linked-conversation-name');
+  const executionContract = document.getElementById('chat-execution-contract');
+  const executionContractName = document.getElementById('chat-execution-contract-name');
   const selectionChip = document.getElementById('chat-selection-chip');
   const selectionLabel = document.getElementById('chat-selection-label');
   const progressNote = document.getElementById('chat-progress-note');
@@ -95,6 +105,8 @@ export function initChat({
 
   let _mode = 'chat';
   let _panelOpen = false;
+  let _isFocused = false;
+  let _executionContract = null;
   let _dragStartX = null;
   let _dragStartW = null;
   const _pendingRuns = new Map(); // path -> runId
@@ -109,6 +121,8 @@ export function initChat({
   let _slashSuggestions = [];
   let _slashSuggestionIndex = -1;
   let _slashSuggestSeq = 0;
+  let _legacyState = null;
+  const _reportedAppliedRuns = new Set();
 
   const _threadUI = createThreadUI({
     thread,
@@ -139,7 +153,6 @@ export function initChat({
       return await resp.json();
     },
     reloadTabs: (paths) => window.__kcReloadTabs?.(paths),
-    saveTabs: (paths) => window.__kcSaveTabs?.(paths),
   });
 
   function _refreshCursorFromEditor() {
@@ -231,6 +244,24 @@ export function initChat({
       linkedConversationName.removeAttribute('title');
     }
     _save();
+  }
+
+  function _setExecutionContract(run) {
+    const contract = run?.context?.execution_contract;
+    _executionContract = contract && typeof contract === 'object' ? contract : null;
+    if (!executionContract || !executionContractName) return;
+    executionContract.hidden = !_executionContract;
+    if (_executionContract) {
+      const label = String(_executionContract.label || _executionContract.id || 'Constrained task');
+      const tools = Array.isArray(_executionContract.allowed_tools) ? _executionContract.allowed_tools.length : 0;
+      executionContractName.textContent = `${label} · ${tools} tools`;
+      executionContractName.title = Array.isArray(_executionContract.allowed_tools)
+        ? _executionContract.allowed_tools.join(', ')
+        : '';
+    } else {
+      executionContractName.textContent = '';
+      executionContractName.removeAttribute('title');
+    }
   }
 
   function _userPromptHistory() {
@@ -416,6 +447,7 @@ export function initChat({
     splitter.hidden = !_panelOpen;
     aiBtn.classList.toggle('is-active', _panelOpen);
     if (!_panelOpen) {
+      _setConversationFocus(false);
       _clearSlashSuggestions();
     }
     _save();
@@ -479,6 +511,7 @@ export function initChat({
     const threads = {};
     for (const [path, msgs] of _threads) threads[path] = msgs;
     _saveState(
+      _workspaceStateKey(getWorkspaceRoot()),
       _panelOpen,
       _mode,
       threads,
@@ -486,7 +519,16 @@ export function initChat({
       _continueControllerApi.stateSnapshot(),
       _conversationExternalIdsToObject(),
       _conversationTitlesToObject(),
+      _isFocused,
     );
+  }
+
+  function _setConversationFocus(focused) {
+    _isFocused = Boolean(focused) && _panelOpen;
+    codeMain?.classList.toggle('is-chat-focus', _isFocused);
+    btnChatFocus?.classList.toggle('is-active', _isFocused);
+    if (btnChatFocus) btnChatFocus.textContent = _isFocused ? 'Return to code' : 'Focus';
+    _save();
   }
 
   function _setPending(path, runId) {
@@ -594,6 +636,7 @@ export function initChat({
     _conversationExternalIds.clear();
     _conversationTitles.clear();
     _setConversationTitle(null);
+    _setExecutionContract(null);
     _resetPromptHistoryCursor();
     _manualStopRequested = false;
     _continueControllerApi.resetState?.();
@@ -723,7 +766,9 @@ export function initChat({
   }
 
   function currentThreadPath() {
-    return currentPath() || _WORKSPACE_THREAD_KEY;
+    // Conversations belong to the workspace. The active file remains request context,
+    // so one chat can reason about and edit multiple files in the same project.
+    return _WORKSPACE_THREAD_KEY;
   }
 
   function _delay(ms) {
@@ -733,7 +778,7 @@ export function initChat({
   function _isToolLoopAssistantText(text) {
     const envelope = extractAgentEnvelope(text);
     const requestedTools = Array.isArray(envelope?.tool_requests) ? envelope.tool_requests : [];
-    return envelope?.kind === 'tool_requests' && envelope?.next === 'continue' && requestedTools.length > 0;
+    return envelope?.next === 'continue' && requestedTools.length > 0;
   }
 
   function _filterVisibleMessages(messages) {
@@ -823,6 +868,7 @@ export function initChat({
         throw new DOMException('Polling aborted', 'AbortError');
       }
       const run = await _fetchRun(runId);
+      _setExecutionContract(run);
       if (typeof run?.conversation_external_id === 'string' && run.conversation_external_id) {
         _setConversationExternalId(run.conversation_external_id, path);
       }
@@ -951,6 +997,11 @@ export function initChat({
     void _runSlashCommand(currentThreadPath(), nextCommand).catch((err) => {
       _localAssistantMessage(currentThreadPath(), `Workspace command failed: ${_errorText(err)}`);
     });
+  });
+
+  btnChatFocus?.addEventListener('click', () => {
+    if (panel.hidden) _setPanelOpen(true);
+    _setConversationFocus(!_isFocused);
   });
 
   aiBtn.addEventListener('click', () => {
@@ -1093,6 +1144,8 @@ export function initChat({
         _hydrateThread(path, payload);
         renderThread(path);
       }
+      await _reportAppliedEdits(path, run);
+      _showExecutionFromRun(run);
       if (String(run?.status || '') === 'failed') {
         const errors = Array.isArray(run?.errors) ? run.errors : [];
         const lastError = errors.length ? errors[errors.length - 1] : null;
@@ -1124,7 +1177,7 @@ export function initChat({
     _refreshSelectionFromEditor();
     const text            = (overrideText ?? input.value).trim();
     const activePath      = currentPath();
-    const path            = activePath || _WORKSPACE_THREAD_KEY;
+    const path            = currentThreadPath();
     const selectionForRun = _currentSelection;
     const cursorForRun    = { ..._currentCursor };
     _clearSlashSuggestions();
@@ -1179,6 +1232,7 @@ export function initChat({
           mode:                     _mode,
           conversation_external_id: _conversationExternalIdForPath(path),
           workspace_context_enabled: _workspaceContextEnabled,
+          work_item_id:             getActiveWorkItemId?.() || null,
         }),
       });
       if (!startResp.ok) {
@@ -1187,6 +1241,7 @@ export function initChat({
 
       const payload = await startResp.json();
       const run = payload?.run || payload;
+      _setExecutionContract(run);
       _setPending(path, run?.run_id);
 
       const completedRun = await _waitForRun(run?.run_id, path);
@@ -1196,6 +1251,8 @@ export function initChat({
         _hydrateThread(path, threadPayload);
         renderThread(path);
       }
+      await _reportAppliedEdits(path, completedRun);
+      _showExecutionFromRun(completedRun);
       if (String(completedRun?.status || '') === 'failed') {
         const errors = Array.isArray(completedRun?.errors) ? completedRun.errors : [];
         const lastError = errors.length ? errors[errors.length - 1] : null;
@@ -1228,6 +1285,25 @@ export function initChat({
     _save();
   }
 
+  async function _reportAppliedEdits(path, run) {
+    const result = run?.output?.metadata?.edit_application?.apply_result;
+    const count  = Number(result?.applied || 0);
+    const runId  = String(run?.run_id || '');
+    if (!result?.ok || count < 1 || (runId && _reportedAppliedRuns.has(runId))) return;
+    if (runId) _reportedAppliedRuns.add(runId);
+    const paths = Array.isArray(result.paths) ? result.paths : [];
+    const reloadResult = await window.__kcReloadTabs?.(paths);
+    const reloaded = Number(reloadResult?.reloaded || 0);
+    const target = paths.length ? paths.join(', ') : 'the workspace';
+    _localAssistantMessage(path, `Applied ${count} agent edit${count === 1 ? '' : 's'} to ${target}; refreshed ${reloaded} open file${reloaded === 1 ? '' : 's'}.`);
+  }
+
+  function _showExecutionFromRun(run) {
+    const calls = Array.isArray(run?.tool_calls) ? run.tool_calls : [];
+    const execution = calls.find((item) => item?.tool === 'run_python' && item?.ok && item?.result);
+    if (execution?.result) window.__kcShowExecution?.(execution.result);
+  }
+
   function _autosize(el) {
     el.style.height = 'auto';
     el.style.height = `${Math.min(el.scrollHeight, 100)}px`;
@@ -1235,12 +1311,14 @@ export function initChat({
 
   _renderWorkspaceContextToggle();
 
-  (function _restore() {
-    _setPanelWidth(_readSavedWidth());
-    splitter.hidden = true;
-
-    const saved = _loadState();
-    if (!saved) return;
+  function _restoreState(saved, { clear = false } = {}) {
+    if (clear) {
+      _threads.clear();
+      _pendingRuns.clear();
+      _conversationExternalIds.clear();
+      _conversationTitles.clear();
+    }
+    if (!saved) return false;
 
     if (saved.threads && typeof saved.threads === 'object') {
       for (const [path, msgs] of Object.entries(saved.threads)) {
@@ -1286,6 +1364,10 @@ export function initChat({
       _setPanelOpen(true);
     }
 
+    if (saved.focus && saved.open) {
+      _setConversationFocus(true);
+    }
+
     if (['continue', 'chat', 'explain', 'bughunt', 'refactor', 'tests'].includes(saved.mode)) {
       setMode(saved.mode);
       if (saved.mode === 'continue' && _continueControllerApi.isInProgress()) {
@@ -1294,11 +1376,23 @@ export function initChat({
     }
 
     _setConversationTitle(_conversationTitleForPath(currentThreadPath()));
+    return true;
+  }
+
+  (function _restore() {
+    _setPanelWidth(_readSavedWidth());
+    splitter.hidden = true;
+    _legacyState = _loadState(_STATE_KEY);
+    _restoreState(_legacyState);
   })();
 
   return {
     async handleWorkspaceRootChanged() {
-      _resetConversationState();
+      const storageKey = _workspaceStateKey(getWorkspaceRoot());
+      const saved = _loadState(storageKey) || _legacyState;
+      const restored = _restoreState(saved, { clear: true });
+      _legacyState = null;
+      if (!restored || !localStorage.getItem(storageKey)) _save();
       if (!_workspaceContextEnabled) return;
       try {
         await _rebuildWorkspaceMenu({ quiet: true });
@@ -1307,10 +1401,10 @@ export function initChat({
     onTabChange(path) {
       if (panel.hidden) return;
       _refreshSelectionFromEditor();
-      _setConversationTitle(_conversationTitleForPath(path || _WORKSPACE_THREAD_KEY));
+      const threadPath = currentThreadPath();
+      _setConversationTitle(_conversationTitleForPath(threadPath));
       _syncThinkingNote();
       if (_mode !== 'continue') {
-        const threadPath = path || _WORKSPACE_THREAD_KEY;
         renderThread(threadPath);
         if (threadPath && _shouldFetchRemoteThread(threadPath)) {
           void _fetchThread(threadPath)

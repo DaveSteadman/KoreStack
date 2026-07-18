@@ -18,7 +18,7 @@ DEFAULT_MAX_MENTION_FILE_CHARS = 7000
 DEFAULT_MAX_MENTION_COUNT      = 4
 
 AGENT_OUTPUT_SCHEMA = {
-    "kind":         "analysis|plan|tool_requests|edits|final",
+    "kind":         "analysis|plan|tool_requests|capability_request|edits|final",
     "summary":      "short summary string",
     "findings":     [],
     "tool_requests": [
@@ -26,6 +26,12 @@ AGENT_OUTPUT_SCHEMA = {
             "tool":   "read_file|read_context|list_tree|search_in_file|get_python_function|replace_python_function|insert_python_function",
             "args":   {},
             "reason": "why this tool is needed",
+        },
+    ],
+    "capability_requests": [
+        {
+            "tool":   "requested capability name",
+            "reason": "why the active playbook cannot complete the task without it",
         },
     ],
     "edits": [
@@ -40,7 +46,13 @@ AGENT_OUTPUT_SCHEMA = {
     "next": "continue|done",
 }
 
-AGENT_TOOL_GUIDE = tool_guide_payload()
+
+def _output_schema(allowed_tools: tuple[str, ...] | list[str] | None = None) -> dict:
+    schema = dict(AGENT_OUTPUT_SCHEMA)
+    tool_item = dict(AGENT_OUTPUT_SCHEMA["tool_requests"][0])
+    tool_item["tool"] = "|".join(allowed_tools or tool_guide_payload().keys())
+    schema["tool_requests"] = [tool_item]
+    return schema
 
 
 def extract_file_mentions(text: str, max_mention_count: int = DEFAULT_MAX_MENTION_COUNT) -> list[str]:
@@ -123,7 +135,8 @@ def instruction_by_mode(mode: str) -> str:
     return contracts.get(str(mode or "").strip(), contracts["chat"])
 
 
-def build_agent_contract(mode: str) -> str:
+def build_agent_contract(mode: str, execution_contract: dict | None = None) -> str:
+    allowed_tools = set(execution_contract.get("allowed_tools") or []) if execution_contract else None
     lines = [
         "You are KoreCode Agent, a coding agent that can request tools before proposing changes.",
         instruction_by_mode(mode),
@@ -133,11 +146,36 @@ def build_agent_contract(mode: str) -> str:
         'When finished, set next="done" and use kind="analysis", "edits", or "final" as appropriate.',
         "When emitting edits, include line-based ranges with from/to inclusive.",
         "If creating a new file, use from=1 and to=1 and put full file content in replacement.",
-        "For Python files, prefer get_python_function before editing an existing function or method.",
-        "Before replace_python_function or insert_python_function, first obtain the current file content_hash.",
-        "Use replace_python_function when you can safely replace one whole Python function or method; it returns an edit proposal, not an applied write.",
-        "Use insert_python_function when adding a new Python function or class method; it returns an edit proposal, not an applied write.",
+        "For an edit to an existing file, request read_file for that file before emitting edits. Edits are not applied changes until the agent run validates and applies them. Direct coding requests apply validated edits automatically; do not claim success until tool evidence or the final application result confirms it.",
+        "After sufficient source evidence, emit one kind=edits response with next=done. Do not use a tool request to stage a write; the final edits response is the only autonomous write path.",
+        "For a normal edit request, modify only the active file. You may edit another file only when the user explicitly names that file in the request.",
     ]
+    if allowed_tools is None or "get_python_function" in allowed_tools:
+        lines.append("For Python files, prefer get_python_function before editing an existing function or method.")
+    if allowed_tools is None or {"replace_python_function", "insert_python_function"} & allowed_tools:
+        lines.append("Before a Python function edit, first obtain the current file content_hash.")
+    if allowed_tools is None or "replace_python_function" in allowed_tools:
+        lines.append("Use replace_python_function when you can safely replace one whole Python function or method; it returns an edit proposal, not an applied write.")
+    if allowed_tools is None or "insert_python_function" in allowed_tools:
+        lines.append("Use insert_python_function when adding a new Python function or class method; it returns an edit proposal, not an applied write.")
+    if allowed_tools is None or "check_python" in allowed_tools:
+        lines.append("Use check_python before running a changed Python file when syntax validation is needed.")
+    if allowed_tools is None or "run_python" in allowed_tools:
+        lines.append("Use run_python only for a user-requested script execution; it runs with no command-line arguments and returns captured output.")
+    if execution_contract:
+        lines.extend(
+            [
+                f"Active playbook: {execution_contract.get('label') or execution_contract.get('id')}",
+                f"Active tools: {', '.join(execution_contract.get('allowed_tools') or []) or 'none'}.",
+                "Do not request tools outside the active tools. Use kind=capability_request and next=done when a missing capability prevents completion.",
+                "Do not claim file contents, file state, or execution results unless they appear in a tool result from this run. For a request to review, debug, or run a file, your first response must be tool_requests.",
+                f"Required evidence: {'; '.join(execution_contract.get('required_evidence') or []) or 'none'}.",
+                f"Validation expectations: {'; '.join(execution_contract.get('validation') or []) or 'none'}.",
+                "Edits are permitted for this task." if execution_contract.get("permits_edits") else "Do not emit edits for this investigation-only task.",
+            ]
+        )
+        if execution_contract.get("id") == "create_file":
+            lines.append("Before proposing a new file, use list_tree to verify the target does not exist. If it exists, report the conflict and do not overwrite it as a create-file proposal.")
     return " ".join(lines)
 
 
@@ -148,10 +186,13 @@ def build_tool_followup_prompt(
     user_text: str,
     previous_response: str,
     tool_results: list[Any],
+    execution_contract: dict | None = None,
+    force_completion: bool = False,
 ) -> str:
+    allowed_tools = execution_contract.get("allowed_tools") if execution_contract else None
     return "\n".join(
         [
-            build_agent_contract(mode),
+            build_agent_contract(mode, execution_contract),
             "",
             "[ACTIVE_FILE]",
             str(path or "."),
@@ -170,10 +211,11 @@ def build_tool_followup_prompt(
             "[/TOOL_RESULTS]",
             "",
             "[OUTPUT_SCHEMA]",
-            json.dumps(AGENT_OUTPUT_SCHEMA, indent=2),
+            json.dumps(_output_schema(allowed_tools), indent=2),
             "[/OUTPUT_SCHEMA]",
             "",
-            "Return one JSON object now, based on tool results.",
+            "Return one JSON object now, based on tool results. If a successful read supplied enough source evidence for the requested edit, emit kind=edits and next=done now. Do not repeat a read or request a staged-write tool when that evidence is already present.",
+            "COMPLETION REQUIRED: The active file has been read and the accumulated source evidence is sufficient. Respond with kind=edits and next=done now; do not return tool_requests." if force_completion else "",
         ]
     )
 
@@ -193,6 +235,7 @@ def build_prompt_by_mode(
     build_context_pack,
     max_mention_count: int = DEFAULT_MAX_MENTION_COUNT,
     max_mention_file_chars: int = DEFAULT_MAX_MENTION_FILE_CHARS,
+    execution_contract: dict | None = None,
 ) -> str:
     active_path     = str(path or ".")
     has_active_file = bool(active_path.strip() and active_path != ".")
@@ -236,7 +279,8 @@ def build_prompt_by_mode(
             context_pack = None
 
     context_block  = f"\n\n[CONTEXT_PACK]\n{json.dumps(context_pack, indent=2)}\n[/CONTEXT_PACK]" if context_pack else ""
-    agent_contract = build_agent_contract(mode)
+    allowed_tools  = execution_contract.get("allowed_tools") if execution_contract else None
+    agent_contract = build_agent_contract(mode, execution_contract)
     return "\n".join(
         [
             agent_contract,
@@ -246,11 +290,11 @@ def build_prompt_by_mode(
             "[/ACTIVE_FILE]",
             "",
             "[AVAILABLE_TOOLS]",
-            json.dumps(AGENT_TOOL_GUIDE, indent=2),
+            json.dumps(tool_guide_payload(allowed_tools), indent=2),
             "[/AVAILABLE_TOOLS]",
             "",
             "[OUTPUT_SCHEMA]",
-            json.dumps(AGENT_OUTPUT_SCHEMA, indent=2),
+            json.dumps(_output_schema(allowed_tools), indent=2),
             "[/OUTPUT_SCHEMA]",
             "",
             "[USER_TASK]",

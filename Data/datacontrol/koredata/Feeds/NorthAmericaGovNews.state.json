@@ -1,33 +1,33 @@
 {
   "b61d2571-6675-5613-b8ec-3356f6d7bf02": {
-    "last_fetched_at": "2026-07-01T06:51:24",
+    "last_fetched_at": "2026-07-18T20:09:38",
     "last_status": "ok",
     "last_error": null,
-    "last_duration_s": 228.0,
-    "last_new_entries": 273,
+    "last_duration_s": 241.6,
+    "last_new_entries": 5,
     "content_status": "poor"
   },
   "92df63a2-fd65-56b5-b589-f2d0278db826": {
-    "last_fetched_at": "2026-07-01T06:51:50",
+    "last_fetched_at": "2026-07-18T20:11:51",
     "last_status": "ok",
     "last_error": null,
-    "last_duration_s": 26.4,
+    "last_duration_s": 132.4,
     "last_new_entries": 100,
     "content_status": "good"
   },
   "6f5ec29e-c3df-507b-938d-7ba8b683502c": {
     "last_fetched_at": "2026-07-01T06:56:55",
-    "last_status": "ok",
-    "last_error": null,
-    "last_duration_s": 2.3,
-    "last_new_entries": 25,
-    "content_status": "good"
+    "last_status": "error",
+    "last_error": "HTTPStatusError: Client error '404 Not Found' for url 'https://www.gov.bm/news/rss'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404",
+    "last_duration_s": 0.4,
+    "last_new_entries": 0,
+    "content_status": "none"
   },
   "3564b878-38c1-58dd-9749-0f40fb3a130a": {
-    "last_fetched_at": "2026-07-01T06:58:20",
+    "last_fetched_at": "2026-07-18T20:12:13",
     "last_status": "ok",
     "last_error": null,
-    "last_duration_s": 15.3,
+    "last_duration_s": 20.1,
     "last_new_entries": 10,
     "content_status": "good"
   }

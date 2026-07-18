@@ -51,6 +51,7 @@ if _KORECOMMON_PARENT is not None and str(_KORECOMMON_PARENT) not in sys.path:
 from KoreCommon.endpoint_manifest import build_endpoint_manifest
 from KoreCommon.service_logging import configure_service_logging
 from KoreCommon.service_logging import get_service_log_path
+from KoreCommon.suite_paths import get_suite_datacontrol_dir
 from KoreCommon.suite_paths import get_suite_urls_map
 from KoreCommon.datauser_fs import DataUserConflictError
 from KoreCommon.datauser_fs import DataUserPathError
@@ -94,12 +95,7 @@ STATIC   = Path(
     )
 ).resolve()
 SUITE_ROOT = Path(os.environ.get('KORE_SUITE_ROOT', str(BASE_DIR.parent))).resolve()
-SUITE_DATACONTROL = Path(
-    os.environ.get(
-        'KORE_SUITE_DATACONTROL',
-        str(SUITE_ROOT / 'datacontrol'),
-    )
-).resolve()
+SUITE_DATACONTROL = get_suite_datacontrol_dir()
 SUITE_DATAUSER = get_datauser_root()
 COMMONUI_ASSETS = Path(os.environ.get('KORE_UIELEMENTS_ASSETS_DIR', str(BASE_DIR.parent / 'UIElements' / 'assets')))
 if not COMMONUI_ASSETS.exists():

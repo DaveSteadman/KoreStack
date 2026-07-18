@@ -62,7 +62,8 @@ def _service_url(service_key: str) -> str:
 
 
 def korechat_base_url() -> str:
-    return _service_url("korechat")
+    # Suite URL maps use /ui for browser navigation; API clients need the service origin.
+    return _service_url("korechat").removesuffix("/ui")
 
 
 def _normalize_thread_path(thread_path: str | None) -> str:
@@ -93,7 +94,7 @@ def _json_request(method: str, url: str, payload: dict | None = None) -> dict | 
             return json.loads(raw)
     except urllib.error.HTTPError as exc:
         detail = exc.read().decode("utf-8", errors="replace")
-        raise RuntimeError(f"KoreChat HTTP {exc.code}: {detail[:240]}") from exc
+        raise RuntimeError(f"KoreChat HTTP {exc.code} for {method} {url}: {detail[:240]}") from exc
     except urllib.error.URLError as exc:
         raise RuntimeError(f"KoreChat unreachable: {exc.reason}") from exc
 
