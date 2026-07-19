@@ -74,7 +74,7 @@
       "ddg_enabled": false,
       "ollama_enabled": true,
       "ollama_web_search_url": "https://ollama.com/api/web_search",
-      "ollama_api_key": "c782223e931c470280a2da8c68a788bc.zrxJ8aBlrZCJ6jPI0TLbkmLM"
+      "ollama_api_key": "<API KEY HERE>"
     }
   },
   "mcp": {
