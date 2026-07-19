@@ -276,7 +276,13 @@ def build_system_message(
         if skill_guidance:
             system_parts.append(f"\n{skill_guidance}")
 
-    if not sandbox_enabled:
+    if sandbox_enabled:
+        system_parts.append(
+            "\nPython execution sandbox: ON - use pure computation and safe stdlib modules such as math, "
+            "statistics, datetime, json, re, and collections. os, sys, subprocess, open, file I/O, "
+            "and third-party imports are blocked. Use dedicated file and system tools instead."
+        )
+    else:
         system_parts.append("\nPython execution sandbox: OFF - code snippets have unrestricted access to all modules and file I/O.")
 
     scratchpad_store = get_scratchpad_store()

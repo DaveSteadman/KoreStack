@@ -326,7 +326,7 @@ class TaskQueue:
                         # Reset per-task search session state so that DDG success flags from a
                         # previous task do not carry over and trigger spurious retry delays.
                         try:
-                            from skills.WebSearch.web_search_skill import reset_search_session
+                            from KoreLiveWeb.app.web_search import reset_search_session
                             reset_search_session()
                         except Exception:
                             # Search-session reset is a hygiene step between tasks, not

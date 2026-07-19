@@ -47,7 +47,17 @@ from session_runtime import bind_session
 from skill_executor import build_catalog_gates
 from skills.SystemInfo.system_info_skill import get_static_system_info_string
 from skills_catalog_builder import build_tool_definitions
+from task_planning import create_task_plan
+from task_planning import advance_task_plan_phase
+from task_planning import format_task_plan_context
+from task_planning import get_last_planner_selection_trace
+from task_planning import get_task_plan_activation_tools
+from task_planning import get_task_plan_phase
+from task_planning import persist_task_plan
+from task_planning import record_task_plan_event
+from tool_selection_state import build_all_tool_catalog
 from tool_selection_state import derive_active_tool_runtime
+from tool_selection_state import promote_selected_tools
 from tool_loop import extract_result_fields as _tool_loop_extract_result_fields
 import mcp_client as _mcp_client
 from tool_loop import format_tool_outputs as _tool_loop_format_tool_outputs
@@ -55,6 +65,7 @@ from tool_loop import run_tool_loop as _tool_loop_run_tool_loop
 from tool_loop import write_file_blocks as _tool_loop_write_file_blocks
 from utils.runtime_logger import SessionLogger
 from utils.workspace_utils import trunc
+from web_tools_state import is_web_tool_name
 
 
 # ====================================================================================================
@@ -90,9 +101,9 @@ def set_sandbox_enabled(enabled: bool) -> None:
 # ====================================================================================================
 # MARK: WEB SKILLS FLAG
 # ====================================================================================================
-# When False, any skill whose skill_name starts with "Web" is stripped from the active payload
-# before tool definitions, the system prompt, and the catalog gate index are built.
-# The underlying skill modules remain loaded - only their exposure to the model is suppressed.
+# When False, KoreLiveWeb-backed tools are stripped from the active payload before tool
+# definitions, the system prompt, and the catalog gate index are built. The underlying
+# skill modules remain loaded - only their exposure to the model is suppressed.
 _WEB_SKILLS_ENABLED: bool = True
 _WEB_SKILLS_FILTER_CACHE: dict[int, dict] = {}
 
@@ -111,7 +122,36 @@ def _filter_web_skills(payload: dict) -> dict:
     cached = _WEB_SKILLS_FILTER_CACHE.get(cache_key)
     if cached is not None:
         return cached
-    filtered = [s for s in payload.get("skills", []) if not s.get("skill_name", "").startswith("Web")]
+    filtered: list[dict] = []
+    for skill in payload.get("skills", []):
+        skill_name = str(skill.get("skill_name", "") or "").strip()
+        if skill_name.startswith("Web"):
+            continue
+
+        functions = skill.get("functions") or []
+        if not isinstance(functions, list):
+            filtered.append(skill)
+            continue
+
+        kept_functions = [
+            function_sig
+            for function_sig in functions
+            if not is_web_tool_name(str(function_sig).split("(", 1)[0].strip())
+        ]
+        if functions and not kept_functions:
+            continue
+
+        copied = dict(skill)
+        copied["functions"] = kept_functions
+
+        param_descriptions = copied.get("param_descriptions")
+        if isinstance(param_descriptions, dict):
+            copied["param_descriptions"] = {
+                name: value
+                for name, value in param_descriptions.items()
+                if not is_web_tool_name(name)
+            }
+        filtered.append(copied)
     result = {**payload, "skills": filtered}
     _WEB_SKILLS_FILTER_CACHE.clear()
     _WEB_SKILLS_FILTER_CACHE[cache_key] = result
@@ -169,6 +209,8 @@ class OrchestratorConfig:
     skills_payload: dict
     skills_catalog_path: Path | None = None
     catalog_mtime: float = 0.0
+    task_planning_enabled: bool = True
+    task_plan_enforce_phase: bool = False
 
 
 # ====================================================================================================
@@ -506,6 +548,61 @@ def orchestrate_prompt(
         _log(ambient_system_info)
 
         available_local_payload = config.skills_payload if _WEB_SKILLS_ENABLED else _filter_web_skills(config.skills_payload)
+        capability_catalog = build_all_tool_catalog(
+            available_local_payload,
+            session_id         = active_session_id,
+            conversation_entry = conversation_entry,
+        )
+        known_tool_names = {str(item.get("name") or "") for item in capability_catalog if str(item.get("name") or "")}
+        if config.task_planning_enabled:
+            task_plan = create_task_plan(
+                user_prompt        = user_prompt,
+                capability_catalog = capability_catalog,
+                known_tool_names   = known_tool_names,
+                call_llm_chat      = call_llm_chat,
+                model_name         = config.resolved_model,
+                num_ctx            = config.num_ctx,
+            )
+            persist_task_plan(task_plan)
+            activation_tools = task_plan.activation_tools()
+            if activation_tools:
+                activation = promote_selected_tools(
+                    activation_tools,
+                    session_id         = active_session_id,
+                    conversation_entry = conversation_entry,
+                    persist            = False,
+                )
+            else:
+                activation = {"added": [], "promoted": [], "evicted": [], "active_tools": []}
+            _log_file_only(
+                f"[task-plan] status={task_plan.planner_status} phase={task_plan.current_phase} "
+                f"confidence={task_plan.confidence:.2f} phase_tools={','.join(task_plan.phase_tools) or 'none'} "
+                f"activation_tools={','.join(activation_tools) or 'none'}"
+            )
+            _log_file_only(
+                f"[task-plan] activation added={','.join(activation['added']) or 'none'} "
+                f"promoted={','.join(activation['promoted']) or 'none'} "
+                f"evicted={','.join(activation['evicted']) or 'none'}"
+            )
+            selection_trace = get_last_planner_selection_trace()
+            if selection_trace:
+                trace_tokens = ",".join(selection_trace.get("tokens") or []) or "none"
+                _log_file_only(
+                    f"[task-plan] selection tokens={trace_tokens} "
+                    f"selected={selection_trace.get('selected_count', 0)} "
+                    f"total={selection_trace.get('total_catalog', 0)} "
+                    f"fallback_all={bool(selection_trace.get('fallback_all'))}"
+                )
+                top_rows = selection_trace.get("top") if isinstance(selection_trace.get("top"), list) else []
+                for row in top_rows[:8]:
+                    _log_file_only(
+                        "[task-plan] selection-top "
+                        f"name={row.get('name', '')} score={row.get('score', 0)} "
+                        f"flags={','.join(row.get('flags') or []) or 'none'} "
+                        f"origin={row.get('origin', '')}"
+                    )
+        else:
+            task_plan = None
         initial_tool_runtime = derive_active_tool_runtime(
             config.skills_payload,
             available_local_payload=available_local_payload,
@@ -531,6 +628,8 @@ def orchestrate_prompt(
             user_prompt=user_prompt,
             token_pressure=token_pressure,
         )
+        if task_plan is not None:
+            system_message += "\n\n" + format_task_plan_context(task_plan)
 
         messages: list[dict] = [{"role": "system", "content": system_message}]
         _context_map: list[dict] = [
@@ -551,6 +650,19 @@ def orchestrate_prompt(
             conversation_entry=conversation_entry,
         )
         catalog_gates = build_catalog_gates(active_payload)
+
+        def _on_task_plan_tool_round(round_outputs=None) -> None:
+            outputs = list(round_outputs or [])
+            names   = [str(item.get("tool") or item.get("function") or "?") for item in outputs]
+            if task_plan is not None:
+                record_task_plan_event("tool_round", ", ".join(names) or "no tool calls")
+                phase_after_round = advance_task_plan_phase(outputs)
+                _log_file_only(
+                    f"[task-plan] tool-round phase={phase_after_round} "
+                    f"used={','.join(names) or 'none'}"
+                )
+            if on_tool_round_complete is not None:
+                on_tool_round_complete()
 
         def _build_tool_runtime() -> dict[str, object]:
             round_available_local_payload = config.skills_payload if _WEB_SKILLS_ENABLED else _filter_web_skills(config.skills_payload)
@@ -594,7 +706,12 @@ def orchestrate_prompt(
                 stop_requested = _run_stop_event.is_set,
                 clear_stop     = _run_stop_event.clear,
                 tool_runtime_provider = _build_tool_runtime,
-                on_tool_round_complete = on_tool_round_complete,
+                on_tool_round_complete = _on_task_plan_tool_round,
+                phase_tool_names_provider = (
+                    (lambda: set(get_task_plan_activation_tools()))
+                    if task_plan is not None and config.task_plan_enforce_phase
+                    else None
+                ),
             )
 
             _file_blocks_written = _tool_loop_write_file_blocks(final_response, log_to_session=log_to_session) if final_response else []
@@ -610,6 +727,14 @@ def orchestrate_prompt(
             _log(f"Total: {prompt_tokens:,} prompt tokens | {completion_tokens:,} completion tokens")
 
             store_last_run_state(_context_map, messages)
+
+            if task_plan is not None:
+                record_task_plan_event(
+                    "completed" if run_success else "failed",
+                    "Tool execution completed." if run_success else "Tool execution failed or was stopped.",
+                    phase  = "complete" if run_success else get_task_plan_phase(),
+                    status = "completed" if run_success else "failed",
+                )
 
             if session_context is not None and run_success and tool_outputs:
                 session_context.add_turn(

@@ -30,6 +30,7 @@ SERVICE_LABELS: dict[str, str] = {
     "korecomms":         "KoreComms",
     "koredocs":          "KoreDocs",
     "korecode":          "KoreCode",
+    "koreliveweb":       "KoreLiveWeb",
 }
 
 SERVICE_ORDER = [
@@ -46,6 +47,7 @@ SERVICE_ORDER = [
     "korecomms",
     "koredocs",
     "korecode",
+    "koreliveweb",
 ]
 
 

@@ -87,6 +87,7 @@ from llm_client import call_llm_chat
 from orchestration import ConversationHistory
 from orchestration import OrchestratorConfig
 from orchestration import SessionContext
+from orchestration import _filter_web_skills
 from orchestration import get_sandbox_enabled
 from orchestration import get_web_skills_enabled
 from orchestration import orchestrate_prompt
@@ -103,6 +104,7 @@ from skills_catalog_builder import build_tool_definitions
 from tool_selection_state import clear_session_tools_active
 from tool_selection_state import ALWAYS_ON_TOOL_NAMES
 from tool_selection_state import get_selected_tools
+from tool_selection_state import set_selected_tools
 from scratchpad import scratchpad_clear
 from scratchpad import scratchpad_save as scratchpad_restore_key
 from skill_executor import build_catalog_gates
@@ -125,6 +127,9 @@ from utils.workspace_utils import get_test_prompts_dir
 from utils.suite_version import SUITE_VERSION
 import koreconv_client as _kc_client
 import mcp_client
+from web_tools_state import WEB_TOOL_NAMES
+from web_tools_state import filter_mcp_tool_defs
+from web_tools_state import filter_mcp_tool_index
 
 
 # ====================================================================================================
@@ -464,6 +469,11 @@ def settings_webskills_get():
 def settings_webskills_post(enabled: bool):
     """Set the web skills enabled state."""
     set_web_skills_enabled(enabled)
+    if not enabled:
+        current  = get_selected_tools()
+        filtered = [name for name in current if name not in WEB_TOOL_NAMES]
+        if filtered != current:
+            set_selected_tools(filtered)
     return {"webskills": get_web_skills_enabled()}
 
 
@@ -613,6 +623,8 @@ def _json_safe(value: Any) -> Any:
 @app.get("/api/skills/catalog")
 def skills_catalog_get() -> dict[str, Any]:
     payload         = _get_skills_payload_or_raise()
+    if not get_web_skills_enabled():
+        payload = _filter_web_skills(payload)
     local_tool_defs = build_tool_definitions(payload)
     local_tool_map: dict[str, dict[str, Any]] = {}
 
@@ -623,8 +635,8 @@ def skills_catalog_get() -> dict[str, Any]:
             local_tool_map[tool_name] = fn
 
     selected = set(get_selected_tools()) | set(ALWAYS_ON_TOOL_NAMES)
-    mcp_defs = mcp_client.get_mcp_tool_definitions()
-    mcp_idx  = mcp_client.get_mcp_tool_index()
+    mcp_defs = filter_mcp_tool_defs(mcp_client.get_mcp_tool_definitions(), enabled=get_web_skills_enabled())
+    mcp_idx  = filter_mcp_tool_index(mcp_client.get_mcp_tool_index(), enabled=get_web_skills_enabled())
 
     providers: dict[str, dict[str, Any]] = {}
     entries: list[dict[str, Any]] = []

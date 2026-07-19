@@ -24,8 +24,8 @@ import threading as _threading
 import time
 import urllib.parse
 
-from utils.webpage_utils import fetch_html as _fetch_html
-from utils.webpage_utils import is_url_cached as _is_url_cached
+from .webpage_utils import fetch_html as _fetch_html
+from .webpage_utils import is_url_cached as _is_url_cached
 
 
 # ====================================================================================================

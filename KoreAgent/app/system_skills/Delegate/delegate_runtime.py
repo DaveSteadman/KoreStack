@@ -294,44 +294,81 @@ def _copy_inputs_to_child(record: dict) -> None:
         )
 
 
-def _apply_result_target(record: dict, answer: str) -> tuple[list[str], list[str], list[str], str]:
+def _normalise_delegate_answer(answer: str, result_format: str) -> str:
+    """Remove Markdown wrappers that would make an otherwise valid structured result unusable."""
+    text = str(answer or "").strip()
+    if "json" not in result_format.lower() or not text.startswith("```"):
+        return text
+    lines = text.splitlines()
+    if len(lines) >= 3 and lines[0].lstrip().startswith("```") and lines[-1].strip() == "```":
+        return "\n".join(lines[1:-1]).strip()
+    return text
+
+
+def _validate_delegate_result(answer: str, result_format: str, result_target: str) -> tuple[str, object | None, str]:
+    """Validate the parent-visible contract before a child task can be marked completed."""
+    normalized_format = str(result_format or "").strip().lower()
+    normalized_answer = _normalise_delegate_answer(answer, normalized_format)
+    needs_json        = result_target.startswith("dataset:") or "json" in normalized_format
+    if not normalized_answer:
+        return normalized_answer, None, "Error: delegate returned an empty result."
+    if not needs_json:
+        return normalized_answer, None, ""
+    try:
+        parsed = json.loads(normalized_answer)
+    except json.JSONDecodeError as exc:
+        return normalized_answer, None, f"Error: delegate result is not valid JSON: {exc.msg}."
+    if "array" in normalized_format or result_target.startswith("dataset:"):
+        if not isinstance(parsed, list) or not all(isinstance(item, dict) for item in parsed):
+            return normalized_answer, None, "Error: delegate result must be a JSON array of objects."
+    elif "object" in normalized_format and not isinstance(parsed, dict):
+        return normalized_answer, None, "Error: delegate result must be a JSON object."
+    return normalized_answer, parsed, ""
+
+
+def _apply_result_target(record: dict, answer: str) -> tuple[list[str], list[str], list[str], str, str]:
     data_out           = _normalize_mapping(record.get("data_out"))
     parent_session_id  = str(record.get("parent_session_id") or "").strip()
     task_id            = str(record.get("task_id") or "").strip()
     result_target      = str(data_out.get("result_target") or "").strip()
+    result_format      = str(data_out.get("result_format") or "").strip()
     saved_keys: list[str] = []
     datasets:   list[str] = []
     artifacts:  list[str] = []
     error_text = ""
 
+    normalized_answer, parsed_result, validation_error = _validate_delegate_result(answer, result_format, result_target)
+    if validation_error:
+        return saved_keys, datasets, artifacts, validation_error, normalized_answer
+
     if not result_target:
-        return saved_keys, datasets, artifacts, error_text
+        return saved_keys, datasets, artifacts, error_text, normalized_answer
 
     if result_target.startswith("scratchpad:"):
         key = result_target.split(":", 1)[1].strip()
         if key:
-            scratchpad_save(key, answer, session_id=parent_session_id)
+            scratchpad_save(key, normalized_answer, session_id=parent_session_id)
             saved_keys.append(key.lower())
-        return saved_keys, datasets, artifacts, error_text
+        return saved_keys, datasets, artifacts, error_text, normalized_answer
 
     if result_target.startswith("file:"):
         path = result_target.split(":", 1)[1].strip()
         if path:
-            result = file_write(path=path, content=answer, skip_content_guard=True)
+            result = file_write(path=path, content=normalized_answer, skip_content_guard=True)
             if str(result).startswith("Error:"):
                 error_text = str(result)
             else:
                 artifacts.append(path)
-        return saved_keys, datasets, artifacts, error_text
+        return saved_keys, datasets, artifacts, error_text, normalized_answer
 
     if result_target.startswith("dataset:"):
         dataset_name = result_target.split(":", 1)[1].strip()
         try:
-            parsed = json.loads(answer)
+            parsed = parsed_result if parsed_result is not None else json.loads(normalized_answer)
             if isinstance(parsed, dict):
                 parsed = [parsed]
-            if not isinstance(parsed, list):
-                raise ValueError("child output is not a JSON object or array of objects")
+            if not isinstance(parsed, list) or not all(isinstance(item, dict) for item in parsed):
+                raise ValueError("child output is not a JSON array of objects")
             save_result = dataset_save(
                 dataset_name,
                 parsed,
@@ -346,9 +383,9 @@ def _apply_result_target(record: dict, answer: str) -> tuple[list[str], list[str
                 datasets.append(dataset_name.lower())
         except Exception as exc:
             error_text = f"Error: could not save dataset target '{dataset_name}': {exc}"
-        return saved_keys, datasets, artifacts, error_text
+        return saved_keys, datasets, artifacts, error_text, normalized_answer
 
-    return saved_keys, datasets, artifacts, f"Error: unsupported result_target '{result_target}'."
+    return saved_keys, datasets, artifacts, f"Error: unsupported result_target '{result_target}'.", normalized_answer
 
 
 def _run_delegate_task(task_id: str) -> None:
@@ -399,11 +436,11 @@ def _run_delegate_task(task_id: str) -> None:
                     bound_session_id     = child_session_id,
                 )
 
-            saved_keys, datasets, artifacts, output_error = _apply_result_target(record, str(answer or ""))
+            saved_keys, datasets, artifacts, output_error, normalized_answer = _apply_result_target(record, str(answer or ""))
             final_status = _STATUS_COMPLETED if run_success and not output_error else _STATUS_FAILED
             result_payload = {
                 "status":            "ok" if final_status == _STATUS_COMPLETED else "error",
-                "summary":           str(answer or ""),
+                "summary":           normalized_answer,
                 "evidence":          [],
                 "artifacts":         artifacts,
                 "saved_keys":        saved_keys,

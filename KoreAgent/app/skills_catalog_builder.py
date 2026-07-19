@@ -437,9 +437,7 @@ def _rebuild_skills_catalog_if_stale(catalog_path: Path) -> None:
         needs_rebuild = True
     else:
         summary_mtime = catalog_path.stat().st_mtime
-        skill_files   = list(skills_root.rglob("skill.md"))
-        if DEFAULT_SYSTEM_SKILLS_ROOT.exists():
-            skill_files.extend(DEFAULT_SYSTEM_SKILLS_ROOT.rglob("skill.md"))
+        skill_files   = find_skill_files(skills_root)
 
         # Detect a count mismatch first - catches deleted skill folders where no
         # remaining file has a newer mtime than the catalog.

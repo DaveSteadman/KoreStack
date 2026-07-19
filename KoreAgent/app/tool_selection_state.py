@@ -10,6 +10,9 @@ import urllib.request
 import koreconv_client
 import mcp_client
 from session_runtime import get_active_session_id
+from web_tools_state import filter_mcp_tool_defs
+from web_tools_state import filter_mcp_tool_index
+from web_tools_state import filter_tool_names
 
 
 MAX_ACTIVE_TOOLS = 32
@@ -294,8 +297,13 @@ def all_known_tool_names(
     *,
     available_local_payload: dict | None = None,
 ) -> set[str]:
+    from orchestration import get_web_skills_enabled
+
     source_payload = available_local_payload if available_local_payload is not None else full_local_payload
-    return local_tool_names(source_payload) | set(mcp_client.get_mcp_tool_index().keys())
+    web_enabled = get_web_skills_enabled()
+    local_names = local_tool_names(source_payload)
+    mcp_names   = set(filter_mcp_tool_index(mcp_client.get_mcp_tool_index(), enabled=web_enabled).keys())
+    return filter_tool_names(local_names | mcp_names, enabled=web_enabled)
 
 
 def _tool_name_tokens(name: str) -> list[str]:
@@ -419,10 +427,13 @@ def build_all_tool_catalog(
     session_id: str | None = None,
     conversation_entry: dict | None = None,
 ) -> list[dict]:
+    from orchestration import get_web_skills_enabled
+
+    web_enabled = get_web_skills_enabled()
     selected = get_selected_tools(session_id=session_id, conversation_entry=conversation_entry)
     active_names = set(selected) | set(ALWAYS_ON_TOOL_NAMES)
-    mcp_index = mcp_client.get_mcp_tool_index() if include_mcp else {}
-    mcp_defs = mcp_client.get_mcp_tool_definitions() if include_mcp else []
+    mcp_index = filter_mcp_tool_index(mcp_client.get_mcp_tool_index(), enabled=web_enabled) if include_mcp else {}
+    mcp_defs = filter_mcp_tool_defs(mcp_client.get_mcp_tool_definitions(), enabled=web_enabled) if include_mcp else []
     cache_key = (
         id(skills_payload),
         include_mcp,
@@ -499,12 +510,15 @@ def derive_active_tool_runtime(
     session_id: str | None = None,
     conversation_entry: dict | None = None,
 ) -> dict[str, object]:
+    from orchestration import get_web_skills_enabled
+
+    web_enabled = get_web_skills_enabled()
     resolved_session_id = _resolve_session_id(session_id)
     selected = get_selected_tools(session_id=resolved_session_id, conversation_entry=conversation_entry)
-    all_mcp_defs  = mcp_client.get_mcp_tool_definitions()
-    all_mcp_index = mcp_client.get_mcp_tool_index()
+    all_mcp_defs  = filter_mcp_tool_defs(mcp_client.get_mcp_tool_definitions(), enabled=web_enabled)
+    all_mcp_index = filter_mcp_tool_index(mcp_client.get_mcp_tool_index(), enabled=web_enabled)
     source_payload = available_local_payload if available_local_payload is not None else full_local_payload
-    all_known_names = local_tool_names(source_payload) | set(all_mcp_index.keys())
+    all_known_names = filter_tool_names(local_tool_names(source_payload) | set(all_mcp_index.keys()), enabled=web_enabled)
 
     missing_selected = [name for name in selected if name not in all_known_names]
     if missing_selected:

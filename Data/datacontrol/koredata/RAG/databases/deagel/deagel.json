@@ -62,8 +62,8 @@
     }
   ],
   "sync": {
-    "last_run": "2026-07-12 09:02:05",
-    "status": "complete",
+    "last_run": "2026-07-18 21:54:28",
+    "status": "running",
     "total_chunks": 64,
     "last_ingest_completed_at": "2026-07-12 09:02:05",
     "categories_processed": 1,

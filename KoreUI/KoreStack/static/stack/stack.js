@@ -7,6 +7,7 @@ const SERVICE_KEY_BY_SLUG = {
   koredocs: 'koredocs',
   korecode: 'korecode',
   korecomms: 'korecomms',
+  koreliveweb: 'koreliveweb',
 };
 
 const STATE_COLOR = {

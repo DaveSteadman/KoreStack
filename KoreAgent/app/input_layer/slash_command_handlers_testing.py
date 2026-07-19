@@ -31,6 +31,17 @@ from utils.workspace_utils import get_test_prompts_dir
 from utils.workspace_utils import get_test_results_dir
 
 
+_POST_TEST_SMOKE_TARGETS: tuple[str, ...] = (
+    "testing.test_guardrail_smoke.GuardrailSmokeTests.test_test_wrapper_extracts_delegate2_log_evidence",
+    "testing.test_guardrail_smoke.GuardrailSmokeTests.test_test_wrapper_fails_single_prompt_on_no_results_output",
+    "testing.test_guardrail_smoke.GuardrailSmokeTests.test_test_wrapper_fails_exchange_on_search_failure_output",
+    "testing.test_guardrail_smoke.GuardrailSmokeTests.test_queue_timeout_for_prompt_disables_scheduler_timeout_only_for_test",
+    "testing.test_guardrail_smoke.GuardrailSmokeTests.test_slash_command_outputs_use_ascii_arrows",
+    "testing.test_guardrail_data.GuardrailDataTests.test_koreconv_prompt_renders_datasets_separately",
+    "testing.test_guardrail_data.GuardrailDataTests.test_koreconv_event_restores_datasets_before_orchestration",
+)
+
+
 def _count_test_items(candidate: Path) -> int:
     try:
         data = json.loads(candidate.read_text(encoding="utf-8"))
@@ -278,22 +289,48 @@ def _run_one_test_file(candidate, ctx, wrapper, model: str, active_host: str, re
 
 def _run_post_test_checks(ctx, csv_path, testcode_dir, subprocess_mod, sys_mod) -> None:
     ctx.output("--- Post-test checks ---", "dim")
-    for script_name in ("test_regressions.py", "test_thinking_strip.py"):
-        script = testcode_dir / script_name
-        ctx.output(f"  {script_name} ...", "dim")
-        try:
-            proc = subprocess_mod.run(
-                [sys_mod.executable, str(script)],
-                capture_output=True,
-                text=True,
-                encoding="utf-8",
-            )
-            combined = (proc.stdout + proc.stderr).strip()
-            for line in combined.splitlines():
-                ctx.output(f"    {line}", "dim" if proc.returncode == 0 else "error")
-            ctx.output(f"  [{script_name}: {'OK' if proc.returncode == 0 else 'FAILED'}]", "success" if proc.returncode == 0 else "error")
-        except Exception as exc:
-            ctx.output(f"  Error running {script_name}: {exc}", "error")
+    ctx.output("  guardrail smoke checks ...", "dim")
+    try:
+        proc = subprocess_mod.run(
+            [sys_mod.executable, "-m", "unittest", *_POST_TEST_SMOKE_TARGETS],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            cwd=str(testcode_dir.parent),
+        )
+        combined = (proc.stdout + proc.stderr).strip()
+        for line in combined.splitlines():
+            ctx.output(f"    {line}", "dim" if proc.returncode == 0 else "error")
+        ctx.output(
+            f"  [guardrail_smoke: {'OK' if proc.returncode == 0 else 'FAILED'}]",
+            "success" if proc.returncode == 0 else "error",
+        )
+    except Exception as exc:
+        ctx.output(f"  Error running guardrail smoke checks: {exc}", "error")
+
+    script = testcode_dir / "test_thinking_strip.py"
+    ctx.output("  test_thinking_strip.py ...", "dim")
+    try:
+        proc = subprocess_mod.run(
+            [sys_mod.executable, str(script)],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+        )
+        combined = (proc.stdout + proc.stderr).strip()
+        for line in combined.splitlines():
+            ctx.output(f"    {line}", "dim" if proc.returncode == 0 else "error")
+        ctx.output(
+            f"  [test_thinking_strip.py: {'OK' if proc.returncode == 0 else 'FAILED'}]",
+            "success" if proc.returncode == 0 else "error",
+        )
+    except Exception as exc:
+        ctx.output(f"  Error running test_thinking_strip.py: {exc}", "error")
+
+    ctx.output(
+        "  Full internal test suite is available for manual runs: python -m unittest discover -s testing -p 'test_guardrail*.py'",
+        "dim",
+    )
     if csv_path is not None and csv_path.exists():
         analyzer = testcode_dir / "test_analyzer.py"
         ctx.output(f"  test_analyzer on {csv_path.name} ...", "dim")

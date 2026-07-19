@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block title %}KoreLiveWeb - Live Monitor{% endblock %}
+{% block main_class %}kcui-main{% endblock %}
+
+{% block content %}
+<div class="kcui-page kcui-page--wide kcui-stack klw-page">
+  <section class="kcui-panel klw-hero">
+    <div class="kcui-panel-header">
+      <span>Live Web Monitor</span>
+      <span class="kcui-panel-spacer"></span>
+      <span class="kcui-tag kcui-tag--accent">MCP Active</span>
+    </div>
+    <div class="kcui-panel-body klw-hero-body">
+      <div>
+        <p class="klw-lead">KoreLiveWeb exposes the extracted web tools as an isolated MCP service and surfaces every observed search/query and outbound URL request in one place.</p>
+        <p class="kcui-meta">Latest entries render first. The log refreshes automatically and snaps back to the newest row when new traffic arrives.</p>
+      </div>
+      <div class="kcui-card-grid kcui-card-grid--stats klw-metrics" id="klw-metrics">
+        <article class="kcui-card kcui-card--metric">
+          <span class="kcui-card-label">Tools</span>
+          <strong class="kcui-card-value" id="metric-tools">{{ tool_rows | length }}</strong>
+          <span class="kcui-card-copy">MCP callable web operations</span>
+        </article>
+        <article class="kcui-card kcui-card--metric">
+          <span class="kcui-card-label">Entries</span>
+          <strong class="kcui-card-value" id="metric-entries">0</strong>
+          <span class="kcui-card-copy">Visible request log rows</span>
+        </article>
+        <article class="kcui-card kcui-card--metric">
+          <span class="kcui-card-label">Last Status</span>
+          <strong class="kcui-card-value" id="metric-status">idle</strong>
+          <span class="kcui-card-copy">Most recent response state</span>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="kcui-workspace kcui-workspace--stack-sm klw-workspace">
+    <div class="kcui-workspace__region klw-sidebar">
+      <section class="kcui-panel">
+        <div class="kcui-panel-header">
+          <span>Endpoints</span>
+        </div>
+        <div class="kcui-panel-body">
+          <div class="kcui-service-grid kcui-card-grid">
+            {% for endpoint in endpoint_rows %}
+            <article class="kcui-service-card kcui-card online">
+              <div class="kcui-service-banner">
+                <span class="kcui-service-banner-icon" aria-hidden="true" data-icon-key="koreliveweb"></span>
+                <span class="kcui-service-banner-text">
+                  <span class="kcui-service-banner-overline">Route</span>
+                  <span class="kcui-service-banner-title">{{ endpoint.label }}</span>
+                </span>
+              </div>
+              <div class="kcui-service-desc">{{ endpoint.summary }}</div>
+              <div class="kcui-service-stats">
+                <div class="kcui-service-stat">
+                  <span class="kcui-service-stat-key">path</span>
+                  <span class="kcui-service-stat-val"><code>{{ endpoint.path }}</code></span>
+                </div>
+              </div>
+              <div class="kcui-service-actions">
+                <a class="kcui-tag kcui-tag--info" href="{{ endpoint.path }}">open</a>
+              </div>
+            </article>
+            {% endfor %}
+          </div>
+        </div>
+      </section>
+
+      <section class="kcui-panel">
+        <div class="kcui-panel-header">
+          <span>Tools</span>
+        </div>
+        <div class="kcui-panel-body klw-tool-list">
+          {% for tool in tool_rows %}
+          <article class="kcui-card klw-tool-card">
+            <div class="klw-tool-head">
+              <code>{{ tool.name }}</code>
+              <span class="kcui-tag kcui-tag--dim">{{ tool.requestType }}</span>
+            </div>
+            <p class="kcui-card-copy">{{ tool.summary }}</p>
+          </article>
+          {% endfor %}
+        </div>
+      </section>
+    </div>
+
+    <div class="kcui-workspace__region klw-main">
+      <section class="kcui-panel klw-log-panel">
+        <div class="kcui-panel-header">
+          <span>Activity</span>
+          <span class="kcui-panel-spacer"></span>
+          <span class="kcui-tag kcui-tag--dim" id="klw-refresh-indicator">polling</span>
+        </div>
+        <div class="kcui-panel-body klw-log-shell">
+          <div class="klw-log-head">
+            <span>Time</span>
+            <span>Kind</span>
+            <span>Target</span>
+            <span>Status</span>
+            <span>Detail</span>
+          </div>
+          <div class="klw-log-list" id="klw-log-list" aria-live="polite">
+            {% if initial_entries %}
+              {% for entry in initial_entries %}
+              <div class="klw-log-row">
+                <div class="klw-log-time"   data-label="Time">{{ entry.ts_label }}</div>
+                <div class="klw-log-kind"   data-label="Kind">{{ entry.tool_name or entry.kind }}</div>
+                <div class="klw-log-target" data-label="Target"><code>{{ entry.target or '-' }}</code></div>
+                <div class="klw-log-status" data-label="Status">{{ entry.status }}</div>
+                <div class="klw-log-detail" data-label="Detail">
+                  {% if entry.message %}{{ entry.message }}{% endif %}
+                  {% if entry.final_url and entry.final_url != entry.target %}
+                    {% if entry.message %} | {% endif %}final {{ entry.final_url }}
+                  {% endif %}
+                  {% if not entry.message and (not entry.final_url or entry.final_url == entry.target) %}-{% endif %}
+                </div>
+              </div>
+              {% endfor %}
+            {% else %}
+            <div class="klw-log-empty">No requests observed yet.</div>
+            {% endif %}
+          </div>
+        </div>
+      </section>
+    </div>
+  </section>
+</div>
+
+<script id="klw-bootstrap" type="application/json">{{ bootstrap_json | safe }}</script>
+{% endblock %}

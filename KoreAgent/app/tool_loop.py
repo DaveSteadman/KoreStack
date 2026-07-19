@@ -317,7 +317,7 @@ def _compact_tool_name_list(tool_names: set[str] | list[str] | tuple[str, ...] |
 def _classify_tool_recovery(
     requested_tool_name: str,
     *,
-    active_tool_names: set[str] | None,
+    active_tool_names: set[str] | None = None,
     all_known_tool_names: set[str] | None,
 ) -> dict[str, object]:
     requested = str(requested_tool_name or "").strip()
@@ -595,7 +595,7 @@ def run_tool_loop(
     messages: list[dict],
     tool_defs: list[dict],
     catalog_gates: dict,
-    active_tool_names: set[str] | None,
+    active_tool_names: set[str] | None = None,
     context_map: list[dict],
     user_prompt: str,
     logger,
@@ -605,6 +605,7 @@ def run_tool_loop(
     clear_stop,
     tool_runtime_provider: object | None = None,
     on_tool_round_complete: object | None = None,
+    phase_tool_names_provider: object | None = None,
 ) -> tuple[str, int, int, bool, float, list[ToolCallResult]]:
     def _log(message: str = "") -> None:
         logger.log_file_only(message) if quiet else logger.log(message)
@@ -633,6 +634,7 @@ def run_tool_loop(
             current_catalog_gates = catalog_gates
             current_active_tool_names = set(active_tool_names or set()) if active_tool_names is not None else None
             current_all_known_tool_names = set(current_active_tool_names or set())
+            current_phase_tool_names: set[str] = set()
             if tool_runtime_provider is not None:
                 runtime = tool_runtime_provider() or {}
                 current_tool_defs = runtime.get("tool_defs", current_tool_defs)
@@ -648,6 +650,12 @@ def run_tool_loop(
                     )
                     messages.append({"role": "user", "content": correction})
                     context_map.append({"round": round_num, "role": "user", "label": "[missing tool correction]", "chars": len(correction), "auto_key": None, "msg_idx": len(messages) - 1})
+            if phase_tool_names_provider is not None:
+                try:
+                    current_phase_tool_names = set(phase_tool_names_provider() or set())
+                except Exception as exc:
+                    current_phase_tool_names = set()
+                    _log_file_only(f"[task-plan] phase tool provider failed: {exc}")
 
             if stop_requested():
                 clear_stop()
@@ -794,6 +802,26 @@ def run_tool_loop(
                 _log(f"  -> {func_name}({', '.join(f'{k}={v!r}' for k, v in arguments.items())})")
                 if normalization_note:
                     _log_file_only(f"[tool-normalize] {normalization_note}")
+                if current_phase_tool_names and func_name not in current_phase_tool_names:
+                    allowed = ", ".join(sorted(current_phase_tool_names))
+                    error_content = (
+                        f"[PLAN_GUARD] Tool '{func_name}' is not available in the current task phase. "
+                        f"Allowed tools: {allowed}. Complete the current phase or use the selected tools."
+                    )
+                    output = ToolCallResult(
+                        tool      = func_name,
+                        function  = func_name,
+                        module    = "",
+                        arguments = arguments,
+                        result    = error_content,
+                        status    = "error",
+                        error     = "tool is outside the active task-plan phase",
+                    )
+                    round_outputs.append(output)
+                    tool_outputs.append(output)
+                    messages.append({"role": "tool", "tool_call_id": tc_id, "name": func_name, "content": error_content})
+                    context_map.append({"round": round_num, "role": "tool", "label": func_name, "chars": len(error_content), "auto_key": None, "msg_idx": len(messages) - 1})
+                    continue
                 try:
                     output = execute_tool_call(func_name, arguments, config.skills_payload, user_prompt, current_catalog_gates, current_active_tool_names)
                     raw_result_content = output["result"]
@@ -840,6 +868,12 @@ def run_tool_loop(
                 # Build thread content: add provenance envelope for data tools, then truncate.
                 # The scratchpad copy (saved above) keeps the raw content for scratchpad_query use.
                 thread_content = _build_data_envelope(func_name, arguments, result_content) if not output.get("is_error") else result_content
+                if output.get("is_error"):
+                    lowered_error = result_content.lower()
+                    if "path escapes data directory" in lowered_error or "not allowed" in lowered_error:
+                        thread_content += "\n[TERMINAL_POLICY_DENIAL] Do not retry this path or search for a workaround. Explain the boundary and offer an allowed path only if useful."
+                    elif "blocked in the sandbox" in lowered_error or "open() is blocked" in lowered_error:
+                        thread_content += "\n[TERMINAL_SANDBOX_DENIAL] Do not retry the blocked import or file operation. Use a dedicated tool or a safe computation-only alternative."
                 if auto_scratchpad_key and func_name.lower() == "dataset_get":
                     thread_content += f"\n[dataset_get scratchpad key: {auto_scratchpad_key}]"
                 if auto_scratchpad_key and len(thread_content) > TOOL_MSG_MAX_CHARS:
@@ -869,6 +903,8 @@ def run_tool_loop(
 
             if on_tool_round_complete is not None:
                 try:
+                    on_tool_round_complete(round_outputs)
+                except TypeError:
                     on_tool_round_complete()
                 except Exception as exc:
                     _log_file_only(f"[error] on_tool_round_complete callback failed: {exc}")

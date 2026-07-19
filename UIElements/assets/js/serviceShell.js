@@ -158,3 +158,37 @@ export function initKoreCommsShell(options = {}) {
     appBarOptions,
   });
 }
+
+export function initKoreLiveWebShell(options = {}) {
+  const {
+    urls,
+    path,
+    section,
+    topbarOptions,
+    appBarOptions,
+  } = options;
+
+  return initServiceShell({
+    currentService: 'koreliveweb',
+    urls,
+    path,
+    section,
+    shellMeta: {
+      monitor: { brandLabel: 'KoreLiveWeb', overline: 'Live Web MCP', brandIcon: 'koreliveweb' },
+      mcp:     { brandLabel: 'KoreLiveWeb', overline: 'Live Web MCP', brandIcon: 'koreliveweb' },
+      status:  { brandLabel: 'KoreLiveWeb', overline: 'Live Web MCP', brandIcon: 'koreliveweb' },
+    },
+    shellTabs: [
+      { key: 'monitor', label: 'Monitor', href: '/ui' },
+      { key: 'mcp',     label: 'MCP',     href: '/mcp' },
+      { key: 'status',  label: 'Status',  href: '/status' },
+    ],
+    resolveSection(resolvedPath) {
+      return resolvedPath.startsWith('/mcp')    ? 'mcp'
+           : resolvedPath.startsWith('/status') ? 'status'
+           : 'monitor';
+    },
+    topbarOptions,
+    appBarOptions,
+  });
+}

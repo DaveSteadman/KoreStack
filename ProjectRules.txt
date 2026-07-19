@@ -5,3 +5,8 @@ Rules:
 
 Recommendations:
 - Vertically align code
+- Use-it-or-lose-it: No redundant code
+- No TODOs or recording of alternative ideas in comments
+
+
+

@@ -110,6 +110,15 @@ SERVICE_META: dict[str, dict[str, object]] = {
         "health_suffix": "/status",
         "description": "KoreComms UI and API for conversation and activity flows.",
     },
+    "koreliveweb": {
+        "label": "KoreLiveWeb",
+        "cwd": SUITE_ROOT / "KoreLiveWeb",
+        "script": "main.py",
+        "url_suffix": "/",
+        "health_suffix": "/status",
+        "port_arg": "--port",
+        "description": "Standalone live web MCP service for search, fetch, navigation, research, and Wikipedia lookup.",
+    },
 }
 
 SERVICE_ICON_KEYS: dict[str, str] = {
@@ -119,6 +128,7 @@ SERVICE_ICON_KEYS: dict[str, str] = {
     "koredocs":          "koredocs",
     "korecode":          "korecode",
     "korecomms":         "korecomms",
+    "koreliveweb":       "koreliveweb",
 }
 
 
@@ -326,7 +336,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--services",
         default="all",
-        help="Comma-separated service list. Valid values: all, korechat, koreagent, koredatagateway, koredocs, korecode, korecomms.",
+        help="Comma-separated service list. Valid values: all, korechat, koreagent, koredatagateway, koredocs, korecode, korecomms, koreliveweb.",
     )
     parser.add_argument("--host", default=None, help="KoreStack landing page bind address.")
     parser.add_argument("--ui-port", type=int, default=None, help="KoreStack landing page port.")
@@ -346,6 +356,7 @@ def resolve_services(raw: str, services: dict[str, ServiceSpec]) -> list[Service
             "koredocs",
             "korecode",
             "korecomms",
+            "koreliveweb",
         )
         return [services[key] for key in preferred_order if key in services]
 

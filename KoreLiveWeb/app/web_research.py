@@ -24,20 +24,27 @@
 import html as _html
 import hashlib
 import re
+import sys
 import urllib.parse
 from collections import deque
+from pathlib import Path
+
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+_AGENT_APP = _REPO_ROOT / "KoreAgent" / "app"
+if str(_AGENT_APP) not in sys.path:
+    sys.path.insert(0, str(_AGENT_APP))
 
 from llm_client import call_llm_chat as _call_llm_chat
 from llm_client import get_active_model as _get_active_model
 from llm_client import get_active_num_ctx as _get_active_num_ctx
 from scratchpad import scratchpad_save as _scratchpad_save
-from utils.webpage_utils import extract_content as _extract_content
-from utils.webpage_utils import fetch_html as _fetch_html
-from utils.webpage_utils import truncate_to_words as _truncate_to_words
+from .webpage_utils import extract_content as _extract_content
+from .webpage_utils import fetch_html as _fetch_html
+from .webpage_utils import truncate_to_words as _truncate_to_words
 
-# Cross-skill imports - work as namespace packages (Python 3.3+) once code/ is on sys.path.
-from skills.WebNavigate.web_navigate_skill import extract_urls_from_html as _extract_urls_from_html
-from skills.WebSearch.web_search_skill import search_web
+# Local KoreLiveWeb cross-skill imports.
+from .web_navigate import extract_urls_from_html as _extract_urls_from_html
+from .web_search   import search_web
 
 
 # ====================================================================================================

@@ -1,14 +1,15 @@
 {
   "comment": "KoreStack suite configuration.",
   "paths": {
-    "dataroot2":  "C:/Util/GithubRepos/KoreStack/Data",
-    "dataroot3":  "C:/Util/Dropbox/Misc/KoreStackData",
-    "dataroot":   "C:/Util/GithubRepos/KoreStack/Data",
-    "korechat":   "korechat",
-    "korecomms":  "korecomms",
-    "koredata":   "koredata",
-    "koreagent":  "koreagent",
-    "koredocs":   "koredocs"
+    "dataroot2":   "C:/Util/GithubRepos/KoreStack/Data",
+    "dataroot4":   "C:/Util/Dropbox/Misc/KoreStackData",
+    "dataroot":    "C:/Users/daves/Dropbox/Misc/KoreStackData",
+    "dataroot3":   "C:/Util/GithubRepos/KoreStack/Data",
+    "korechat":    "korechat",
+    "korecomms":   "korecomms",
+    "koredata":    "koredata",
+    "koreagent":   "koreagent",
+    "koredocs":    "koredocs"
   },
   "network": {
     "host": "127.0.0.1"
@@ -26,7 +27,8 @@
     "koregraph":         { "port": 19608, "enabled": true },
     "korecomms":         { "port": 19609, "enabled": true },
     "koredocs":          { "port": 19610, "enabled": true },
-    "korecode":          { "port": 19611, "enabled": true }
+    "korecode":          { "port": 19611, "enabled": true },
+    "koreliveweb":       { "port": 19613, "enabled": true }
   },
   "mcp": {
     "connections": [
@@ -45,6 +47,13 @@
         "enabled":         true,
         "purpose":         "document navigation, structured editing, and KoreFile authoring",
         "expected_prefix": "koredocs_"
+      },
+      {
+        "name":            "KoreLiveWeb",
+        "service":         "koreliveweb",
+        "path":            "/mcp",
+        "enabled":         true,
+        "purpose":         "live web search, page fetch, navigation, research traversal, and Wikipedia lookup"
       }
     ]
   }

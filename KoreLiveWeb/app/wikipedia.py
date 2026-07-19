@@ -28,8 +28,11 @@
 # MARK: IMPORTS
 # ====================================================================================================
 import json
+import urllib.error
 import urllib.parse
 import urllib.request
+
+from .activity_log import append_activity as _append_activity
 
 
 # ====================================================================================================
@@ -53,9 +56,40 @@ def _json_get(url: str, timeout: int) -> dict | list | None:
     req = urllib.request.Request(url=url, headers=_HEADERS, method="GET")
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
+            status_code = int(getattr(resp, "status", 200) or 200)
             raw = resp.read()
+            _append_activity(
+                kind      = "http",
+                target    = url,
+                status    = f"http-{status_code}",
+                message   = "ok",
+                final_url = getattr(resp, "url", url),
+            )
             return json.loads(raw.decode("utf-8", errors="replace"))
+    except urllib.error.HTTPError as exc:
+        _append_activity(
+            kind      = "http",
+            target    = url,
+            status    = f"http-{exc.code}",
+            message   = f"HTTP {exc.code}",
+            final_url = getattr(exc, "url", url),
+        )
+        return None
+    except urllib.error.URLError as exc:
+        _append_activity(
+            kind    = "http",
+            target  = url,
+            status  = "url-error",
+            message = str(getattr(exc, "reason", exc)),
+        )
+        return None
     except Exception:
+        _append_activity(
+            kind    = "http",
+            target  = url,
+            status  = "error",
+            message = "Wikipedia request failed",
+        )
         return None
 
 

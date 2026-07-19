@@ -15,7 +15,7 @@ export const ICON_SETS = SVG_ICON_SETS;
 export const ICON_FILES = Object.freeze({
   korestack: 'layer-group-svgrepo-com',
   koreagent: 'circuit-svgrepo-com',
-  koredata: 'globe-alt-svgrepo-com',
+  koredata: 'database-svgrepo-com',
   korefeed: 'square-rss-svgrepo-com',
   korelibrary: 'book-user-svgrepo-com',
   korereference: 'graduation-hat-alt-1-svgrepo-com',
@@ -26,6 +26,7 @@ export const ICON_FILES = Object.freeze({
   korecode: 'square-terminal-svgrepo-com',
   korecomms: 'send-alt-1-svgrepo-com',
   korechat: 'message-circle-chat-svgrepo-com',
+  koreliveweb: 'globe-alt-outline-svgrepo-com',
   koredoc: 'text-size-svgrepo-com',
   textedit: 'text-svgrepo-com',
   koresheet: 'table-list-alt-svgrepo-com',
@@ -56,6 +57,7 @@ export const KOREDOCS_ICON = makePackIcon(ICON_FILES.koredocs);
 export const KORECODE_ICON = makePackIcon(ICON_FILES.korecode);
 export const KORECOMMS_ICON = makePackIcon(ICON_FILES.korecomms);
 export const KORECHAT_ICON = makePackIcon(ICON_FILES.korechat);
+export const KORELIVEWEB_ICON = makePackIcon(ICON_FILES.koreliveweb);
 
 export const ACTION_ICONS = {
   start: makePackIcon('arrow-right-svgrepo-com'),
@@ -83,6 +85,7 @@ export const SUITE_ICONS = {
   korecode: KORECODE_ICON,
   korecomms: KORECOMMS_ICON,
   korechat: KORECHAT_ICON,
+  koreliveweb: KORELIVEWEB_ICON,
   koredoc: KOREDOC_FILE_ICON,
   textedit: TEXTEDIT_FILE_ICON,
   koresheet: KORESHEET_FILE_ICON,

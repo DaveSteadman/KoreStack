@@ -83,7 +83,7 @@ class TaskConversationTests(unittest.TestCase):
         self.assertEqual(result, created)
         post_mock.assert_called_once_with(
             "http://kc",
-            "/conversations",
+            "/api/conversations",
             {
                 "external_id":  "task:XXX",
                 "subject":      "XXX",

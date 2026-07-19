@@ -202,6 +202,7 @@ def get_suite_urls_map() -> dict[str, str]:
         "koredocs":        _port("koredocs"),
         "korecode":        _port("korecode"),
         "korecomms":       _port("korecomms"),
+        "koreliveweb":     _port("koreliveweb"),
         "korefeed":        _port("korefeed"),
         "korelibrary":     _port("korelibrary"),
         "korereference":   _port("korereference"),

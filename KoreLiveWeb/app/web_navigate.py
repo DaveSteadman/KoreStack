@@ -34,11 +34,11 @@ import urllib.parse
 from html.parser import HTMLParser
 from pathlib import Path
 
-_code_dir = str(Path(__file__).resolve().parents[3])
-if _code_dir not in sys.path:
-    sys.path.insert(0, _code_dir)
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
 
-from utils.webpage_utils import fetch_html as _fetch_html
+from .webpage_utils import fetch_html as _fetch_html
 
 
 # ====================================================================================================

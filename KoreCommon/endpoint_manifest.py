@@ -11,6 +11,7 @@ from typing import Any
 
 from fastapi import FastAPI
 from fastapi.routing import APIRoute
+from starlette.routing import Mount
 
 
 def _type_name(value: Any) -> str:
@@ -58,6 +59,8 @@ def _body_info(route: APIRoute) -> list[dict[str, Any]]:
 def _route_kind(path: str, methods: list[str], include_in_schema: bool) -> str:
     if path.startswith("/ui-elements/assets/") or path.startswith("/static/") or path == "/suite-config.js":
         return "asset"
+    if path == "/mcp" or path.startswith("/mcp/"):
+        return "api"
     if "STREAM" in methods or path.endswith("/stream"):
         return "stream"
     if path == "/status" or path.startswith("/status"):
@@ -75,6 +78,24 @@ def build_endpoint_manifest(app: FastAPI, *, service_key: str, service_label: st
 
     for route in app.routes:
         if not isinstance(route, APIRoute):
+            if isinstance(route, Mount):
+                mount_path = str(getattr(route, "path", "") or "")
+                mount_name = str(getattr(route, "name", "") or "")
+                methods    = ["MOUNT"]
+                routes.append(
+                    {
+                        "path":              mount_path,
+                        "methods":           methods,
+                        "name":              mount_name,
+                        "summary":           "Mounted sub-application",
+                        "description":       f"Mounted application at {mount_path}.",
+                        "include_in_schema": True,
+                        "kind":              _route_kind(mount_path, methods, True),
+                        "path_params":       [],
+                        "query_params":      [],
+                        "body_params":       [],
+                    }
+                )
             continue
 
         methods = sorted(method for method in (route.methods or set()) if method not in {"HEAD", "OPTIONS"})

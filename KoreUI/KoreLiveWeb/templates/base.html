@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}KoreLiveWeb{% endblock %}</title>
+  <link rel="icon" type="image/x-icon" href="/ui-elements/assets/icons/favicon.ico">
+  <link rel="stylesheet" href="/ui-elements/assets/css/chrome.css">
+  <link rel="stylesheet" href="/ui-elements/assets/css/workspace.css">
+  <link rel="stylesheet" href="/static/liveweb/liveweb.css">
+  <script src="/suite-config.js"></script>
+</head>
+<body class="kcui-shell-bg">
+  <div id="topbar"></div>
+  <div id="app-bar"></div>
+  <main class="{% block main_class %}{% endblock %}">
+    {% block content %}{% endblock %}
+  </main>
+  <script type="module" src="/static/liveweb/liveweb.js"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

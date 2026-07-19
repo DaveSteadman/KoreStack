@@ -1,0 +1,57 @@
+[
+  {
+    "exchange": "planning_dataset_evidence_pipeline",
+    "turns": [
+      {
+        "user": "Create a dataset named planning_source with exactly these records: [{\"id\":1,\"topic\":\"python\",\"score\":9},{\"id\":2,\"topic\":\"python\",\"score\":4},{\"id\":3,\"topic\":\"testing\",\"score\":8},{\"id\":4,\"topic\":\"python\",\"score\":9}]. Then inspect it and state its count and field names.",
+        "assert": "all_contains|4||id||topic||score"
+      },
+      {
+        "user": "From planning_source, create a dataset named planning_python_high containing only Python records with score at least 8. Inspect the result and state the count, schema, and why each retained record qualifies.",
+        "assert": "all_contains|planning_python_high||2||python"
+      },
+      {
+        "user": "Retrieve all records from planning_python_high, save a concise evidence summary to scratchpad key planning_evidence, then answer with only the scratchpad key name.",
+        "assert": "contains|planning_evidence"
+      },
+      {
+        "user": "Load planning_evidence. State the final conclusion and delete both planning_source and planning_python_high.",
+        "assert": "all_contains|python||9"
+      }
+    ]
+  },
+  {
+    "exchange": "planning_delegate_with_durable_result",
+    "turns": [
+      {
+        "user": "Delegate a bounded child task that returns valid JSON only: [{\"risk\":\"duplicate reads\",\"priority\":\"high\"},{\"risk\":\"missing validation\",\"priority\":\"high\"}]. Store its result in dataset:planning_delegate_risks and report only the delegated task id.",
+        "assert": "contains|dlg_"
+      },
+      {
+        "user": "Collect the delegated result, inspect planning_delegate_risks, and state the record count plus both risk names.",
+        "assert": "all_contains|2||duplicate reads||missing validation"
+      },
+      {
+        "user": "Delete planning_delegate_risks and confirm that the delegated analysis was collected before cleanup.",
+        "assert": "all_contains|deleted||collected"
+      }
+    ]
+  },
+  {
+    "exchange": "planning_recovery_and_validation",
+    "turns": [
+      {
+        "user": "Create a dataset named planning_validation_source with these records: [{\"name\":\"alpha\",\"enabled\":true},{\"name\":\"beta\",\"enabled\":false},{\"name\":\"gamma\",\"enabled\":true}]. Do not just describe the operation: inspect the created dataset and verify the count.",
+        "assert": "all_contains|planning_validation_source||3"
+      },
+      {
+        "user": "Create planning_validation_enabled from planning_validation_source with enabled records only. Retrieve the resulting records, validate that every returned record is enabled, then answer with their names only.",
+        "assert": "all_contains|alpha||gamma"
+      },
+      {
+        "user": "Delete planning_validation_source and planning_validation_enabled. Give a short completion report that distinguishes completed work from validation evidence.",
+        "assert": "all_contains|deleted||validated"
+      }
+    ]
+  }
+]

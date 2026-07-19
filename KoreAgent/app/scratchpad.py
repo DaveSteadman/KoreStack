@@ -47,10 +47,15 @@ _KEY_RE = re.compile(r"^[a-zA-Z0-9_]+$")
 # Named keys set by the user or skills are never evicted.
 MAX_AUTO_KEYS:         int            = 40
 _AUTO_KEY_PREFIXES:    tuple[str, ...] = ("_tc_", "research_page_")
+_INTERNAL_KEY_PREFIXES: tuple[str, ...] = ("__",)
 
 
 def _is_auto_key(key: str) -> bool:
     return any(key.startswith(prefix) for prefix in _AUTO_KEY_PREFIXES)
+
+
+def _is_internal_key(key: str) -> bool:
+    return any(key.startswith(prefix) for prefix in _INTERNAL_KEY_PREFIXES)
 
 
 # ====================================================================================================
@@ -176,9 +181,10 @@ def scratchpad_list(session_id: str | None = None) -> str:
     """Return a formatted list of all current scratchpad keys and their sizes."""
     store = _get_session_store(session_id)
     with _STORE_LOCK:
-        if not store:
+        visible_keys = [key for key in sorted(store) if not _is_internal_key(key)]
+        if not visible_keys:
             return "Scratchpad is empty."
-        lines = [f"  {key}  ({len(store[key])} chars)" for key in sorted(store)]
+        lines = [f"  {key}  ({len(store[key])} chars)" for key in visible_keys]
     return "Scratchpad keys:\n" + "\n".join(lines)
 
 
@@ -211,7 +217,11 @@ def scratchpad_search(substring: str, session_id: str | None = None) -> str:
     store = _get_session_store(session_id)
     needle = substring.lower()
     with _STORE_LOCK:
-        matches = [(key, len(val)) for key, val in store.items() if needle in val.lower()]
+        matches = [
+            (key, len(val))
+            for key, val in store.items()
+            if not _is_internal_key(key) and needle in val.lower()
+        ]
     if not matches:
         return f"No scratchpad keys contain the substring '{substring}'."
     lines = [f"  {key}  ({size} chars)" for key, size in sorted(matches)]
@@ -342,7 +352,7 @@ def get_store(session_id: str | None = None) -> dict[str, str]:
     """Return a shallow copy of the store dict.  Used by prompt_tokens for {scratchpad:key} resolution."""
     store = _get_session_store(session_id)
     with _STORE_LOCK:
-        return dict(store)
+        return {key: value for key, value in store.items() if not _is_internal_key(key)}
 
 
 # ----------------------------------------------------------------------------------------------------
@@ -350,4 +360,4 @@ def get_key_names(session_id: str | None = None) -> list[str]:
     """Return a sorted list of active key names.  Used by orchestration to inject into system prompt."""
     store = _get_session_store(session_id)
     with _STORE_LOCK:
-        return sorted(store.keys())
+        return sorted(key for key in store if not _is_internal_key(key))

@@ -36,6 +36,7 @@ def build_suite_urls(manager: Any, dashboard_url: str, service_icon_keys: dict[s
     """Return the topbar URL map keyed by topbar service key, such as 'koreagent'."""
     urls: dict[str, str] = {"korestack": dashboard_url}
     for service in manager.snapshot()["services"]:
+        urls[service["slug"]] = service["url"]
         topbar_key = service_icon_keys.get(service["slug"])
         if topbar_key:
             urls[topbar_key] = service["url"]
