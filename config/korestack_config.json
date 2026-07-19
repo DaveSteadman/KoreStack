@@ -1,59 +1,106 @@
 {
   "comment": "KoreStack suite configuration.",
   "paths": {
-    "dataroot2":   "C:/Util/GithubRepos/KoreStack/Data",
-    "dataroot4":   "C:/Util/Dropbox/Misc/KoreStackData",
-    "dataroot":    "C:/Users/daves/Dropbox/Misc/KoreStackData",
-    "dataroot3":   "C:/Util/GithubRepos/KoreStack/Data",
-    "korechat":    "korechat",
-    "korecomms":   "korecomms",
-    "koredata":    "koredata",
-    "koreagent":   "koreagent",
-    "koredocs":    "koredocs"
+    "dataroot2": "C:/Util/GithubRepos/KoreStack/Data",
+    "dataroot4": "C:/Util/Dropbox/Misc/KoreStackData",
+    "dataroot": "C:/Users/daves/Dropbox/Misc/KoreStackData",
+    "dataroot3": "C:/Util/GithubRepos/KoreStack/Data",
+    "korechat": "korechat",
+    "korecomms": "korecomms",
+    "koredata": "koredata",
+    "koreagent": "koreagent",
+    "koredocs": "koredocs"
   },
   "network": {
     "host": "127.0.0.1"
   },
   "services": {
-    "korestack":         { "port": 19600, "enabled": true },
-    "koreagent":         { "port": 19601, "enabled": true },
-    "korechat":          { "port": 19602, "enabled": true },
-    "koredatagateway":   { "port": 19603, "enabled": true },
-    "korefeed":          { "port": 19604, "enabled": true },
-    "korelibrary":       { "port": 19605, "enabled": true },
-    "korerag":           { "port": 19606, "enabled": true },
-    "korereference":     { "port": 19607, "enabled": true },
-    "korescrape":        { "port": 19612, "enabled": true },
-    "koregraph":         { "port": 19608, "enabled": true },
-    "korecomms":         { "port": 19609, "enabled": true },
-    "koredocs":          { "port": 19610, "enabled": true },
-    "korecode":          { "port": 19611, "enabled": true },
-    "koreliveweb":       { "port": 19613, "enabled": true }
+    "korestack": {
+      "port": 19600,
+      "enabled": true
+    },
+    "koreagent": {
+      "port": 19601,
+      "enabled": true
+    },
+    "korechat": {
+      "port": 19602,
+      "enabled": true
+    },
+    "koredatagateway": {
+      "port": 19603,
+      "enabled": true
+    },
+    "korefeed": {
+      "port": 19604,
+      "enabled": true
+    },
+    "korelibrary": {
+      "port": 19605,
+      "enabled": true
+    },
+    "korerag": {
+      "port": 19606,
+      "enabled": true
+    },
+    "korereference": {
+      "port": 19607,
+      "enabled": true
+    },
+    "korescrape": {
+      "port": 19612,
+      "enabled": true
+    },
+    "koregraph": {
+      "port": 19608,
+      "enabled": true
+    },
+    "korecomms": {
+      "port": 19609,
+      "enabled": true
+    },
+    "koredocs": {
+      "port": 19610,
+      "enabled": true
+    },
+    "korecode": {
+      "port": 19611,
+      "enabled": true
+    },
+    "koreliveweb": {
+      "port": 19613,
+      "enabled": true,
+      "search_provider": "ollama",
+      "ddg_enabled": false,
+      "ollama_enabled": true,
+      "ollama_web_search_url": "https://ollama.com/api/web_search",
+      "ollama_api_key": "c782223e931c470280a2da8c68a788bc.zrxJ8aBlrZCJ6jPI0TLbkmLM"
+    }
   },
   "mcp": {
     "connections": [
       {
-        "name":            "KoreData",
-        "service":         "koredatagateway",
-        "path":            "/mcp",
-        "enabled":         true,
-        "purpose":         "reference search and retrieval across feeds, encyclopedia, library, and internal documents",
+        "name": "KoreData",
+        "service": "koredatagateway",
+        "path": "/mcp",
+        "enabled": true,
+        "purpose": "reference search and retrieval across feeds, encyclopedia, library, and internal documents",
         "expected_prefix": "koredata_"
       },
       {
-        "name":            "KoreDocs",
-        "service":         "koredocs",
-        "path":            "/mcp",
-        "enabled":         true,
-        "purpose":         "document navigation, structured editing, and KoreFile authoring",
+        "name": "KoreDocs",
+        "service": "koredocs",
+        "path": "/mcp",
+        "enabled": true,
+        "purpose": "document navigation, structured editing, and KoreFile authoring",
         "expected_prefix": "koredocs_"
       },
       {
-        "name":            "KoreLiveWeb",
-        "service":         "koreliveweb",
-        "path":            "/mcp",
-        "enabled":         true,
-        "purpose":         "live web search, page fetch, navigation, research traversal, and Wikipedia lookup"
+        "name": "KoreLiveWeb",
+        "service": "koreliveweb",
+        "path": "/mcp",
+        "enabled": true,
+        "purpose": "live web search, page fetch, navigation, research traversal, and Wikipedia lookup"
       }
     ]
   }

@@ -90,6 +90,7 @@ from system_skills.FileAccess.file_access_skill import folder_create
 from KoreLiveWeb.app.web_fetch    import fetch_page_text
 from KoreLiveWeb.app.web_search   import search_web
 from KoreLiveWeb.app.web_research import research_traverse
+from tool_loop import _requires_web_evidence_guard
 from skills.SystemInfo.system_info_skill import get_system_info_string
 from KoreDocs.app import korefile as koredocs_korefile
 from KoreCommon import datauser_fs as datauser_fs_module
@@ -1139,6 +1140,45 @@ class GuardrailRuntimeTests(unittest.TestCase):
         body_words = result.split()[3:]
         self.assertEqual(result.split()[0:2], ["#", "Stats"])
         self.assertGreaterEqual(len(body_words), 2500)
+
+    def test_web_evidence_guard_requires_fetch_after_search_for_web_facts_prompt(self) -> None:
+        tool_outputs = [
+            ToolCallResult(
+                tool      = "search_web",
+                function  = "search_web",
+                module    = "mcp",
+                arguments = {"query": "facts about turtles"},
+                result    = [{"title": "Turtle facts", "url": "https://example.com", "snippet": "facts"}],
+                status    = "ok",
+                error     = "",
+            )
+        ]
+
+        self.assertTrue(_requires_web_evidence_guard("search the web for facts about turtles", tool_outputs))
+
+    def test_web_evidence_guard_allows_final_answer_after_fetch(self) -> None:
+        tool_outputs = [
+            ToolCallResult(
+                tool      = "search_web",
+                function  = "search_web",
+                module    = "mcp",
+                arguments = {"query": "facts about turtles"},
+                result    = [{"title": "Turtle facts", "url": "https://example.com", "snippet": "facts"}],
+                status    = "ok",
+                error     = "",
+            ),
+            ToolCallResult(
+                tool      = "fetch_page_text",
+                function  = "fetch_page_text",
+                module    = "mcp",
+                arguments = {"url": "https://example.com"},
+                result    = "Turtles are reptiles with shells.",
+                status    = "ok",
+                error     = "",
+            ),
+        ]
+
+        self.assertFalse(_requires_web_evidence_guard("search the web for facts about turtles", tool_outputs))
 
     def test_load_session_rebuilds_history_from_korechat(self) -> None:
         session_id = "web_1775338532521"

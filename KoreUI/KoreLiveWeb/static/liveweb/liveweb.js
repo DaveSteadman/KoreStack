@@ -7,8 +7,24 @@ const logList       = document.getElementById('klw-log-list');
 const metricEntries = document.getElementById('metric-entries');
 const metricStatus  = document.getElementById('metric-status');
 const indicator     = document.getElementById('klw-refresh-indicator');
+const settingsForm  = document.getElementById('klw-settings-form');
+const settingsState = document.getElementById('klw-settings-state');
+const settingsMeta  = document.getElementById('klw-settings-meta');
+const ddgEnabled    = document.getElementById('klw-ddg-enabled');
+const ollamaEnabled = document.getElementById('klw-ollama-enabled');
+const preferred     = document.getElementById('klw-preferred-provider');
+const apiKeyInput   = document.getElementById('klw-ollama-api-key');
+const clearKeyBtn   = document.getElementById('klw-settings-clear');
+const apiKeyState   = document.getElementById('klw-api-key-state');
+const saveBtn       = document.getElementById('klw-settings-save');
 
 let lastTopEntryId  = 0;
+let searchSettings  = bootstrap.searchSettings || null;
+let settingsDirty   = false;
+
+function setSettingsState(text) {
+  if (settingsState) settingsState.textContent = text;
+}
 
 function installIcons() {
   for (const node of document.querySelectorAll('[data-icon-key]')) {
@@ -84,6 +100,119 @@ function renderEntries(entries) {
   }
 }
 
+function describeSettings(settings) {
+  if (!settings) return 'Settings unavailable.';
+  const enabled = [];
+  if (settings.ddg_enabled) enabled.push('DDG');
+  if (settings.ollama_enabled) enabled.push('Ollama');
+  const enabledLabel = enabled.length ? enabled.join(', ') : 'none';
+  const keyLabel     = settings.ollama_has_api_key ? 'stored' : 'missing';
+  return `Active ${settings.active_label}. Enabled: ${enabledLabel}. Ollama key: ${keyLabel}.`;
+}
+
+function renderSearchSettings(settings) {
+  searchSettings = settings || null;
+  if (!settingsForm || !searchSettings) return;
+
+  ddgEnabled.checked    = Boolean(searchSettings.ddg_enabled);
+  ollamaEnabled.checked = Boolean(searchSettings.ollama_enabled);
+  preferred.value       = searchSettings.preferred_provider || 'ddg';
+  apiKeyInput.value     = '';
+  settingsDirty         = false;
+
+  if (settingsMeta)  settingsMeta.textContent  = describeSettings(searchSettings);
+  setSettingsState('saved');
+  if (apiKeyState)   apiKeyState.textContent   = searchSettings.ollama_has_api_key ? 'key stored' : 'key missing';
+
+  const hasKey = Boolean(searchSettings.ollama_has_api_key);
+  apiKeyInput.placeholder = hasKey
+    ? 'Stored key is hidden. Paste a new key to replace it.'
+    : 'Paste Ollama API key';
+}
+
+function currentSettingsDraft() {
+  return {
+    preferred_provider: preferred?.value || 'ddg',
+    ddg_enabled:        Boolean(ddgEnabled?.checked),
+    ollama_enabled:     Boolean(ollamaEnabled?.checked),
+    ollama_api_key:     String(apiKeyInput?.value || '').trim(),
+  };
+}
+
+function isSettingsDirty() {
+  if (!searchSettings) return false;
+  const draft = currentSettingsDraft();
+  if (draft.preferred_provider !== (searchSettings.preferred_provider || 'ddg')) return true;
+  if (draft.ddg_enabled        !== Boolean(searchSettings.ddg_enabled))          return true;
+  if (draft.ollama_enabled     !== Boolean(searchSettings.ollama_enabled))       return true;
+  if (draft.ollama_api_key) return true;
+  return false;
+}
+
+function syncDirtyState() {
+  settingsDirty = isSettingsDirty();
+  setSettingsState(settingsDirty ? 'unsaved' : 'saved');
+}
+
+function markSettingsUnsaved() {
+  settingsDirty = true;
+  setSettingsState('unsaved');
+}
+
+window.__klwMarkUnsaved = markSettingsUnsaved;
+
+async function refreshSearchSettings() {
+  try {
+    const response = await fetch('/api/settings/search-providers', { cache: 'no-store' });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    renderSearchSettings(await response.json());
+  } catch (error) {
+    if (settingsMeta) settingsMeta.textContent = `Settings load failed: ${error.message}`;
+    setSettingsState('error');
+  }
+}
+
+async function saveSearchSettings(clearApiKey = false) {
+  if (!settingsForm) return;
+
+  if (!ddgEnabled.checked && !ollamaEnabled.checked) {
+    if (settingsMeta) settingsMeta.textContent = 'At least one provider must remain enabled.';
+    if (settingsState) settingsState.textContent = 'blocked';
+    return;
+  }
+
+  settingsDirty = false;
+  if (settingsMeta)  settingsMeta.textContent  = clearApiKey ? 'Clearing stored API key...' : 'Saving search settings...';
+
+  const payload = {
+    preferred_provider: preferred.value || 'ddg',
+    ddg_enabled:        ddgEnabled.checked,
+    ollama_enabled:     ollamaEnabled.checked,
+    clear_ollama_api_key: clearApiKey,
+  };
+
+  const nextKey = String(apiKeyInput.value || '').trim();
+  if (nextKey && !clearApiKey) {
+    payload.ollama_api_key = nextKey;
+  }
+
+  try {
+    const response = await fetch('/api/settings/search-providers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.detail || `HTTP ${response.status}`);
+    renderSearchSettings(result);
+    if (settingsMeta) settingsMeta.textContent = clearApiKey ? 'Stored Ollama API key cleared from config/korestack_config.json.' : 'Search settings saved to config/korestack_config.json.';
+    setSettingsState('saved');
+  } catch (error) {
+    if (settingsMeta) settingsMeta.textContent = `Save failed: ${error.message}`;
+    setSettingsState('unsaved');
+  }
+}
+
 async function refreshEntries() {
   if (indicator) indicator.textContent = 'polling';
   try {
@@ -100,7 +229,9 @@ async function refreshEntries() {
 
 function startPolling() {
   renderEntries(Array.isArray(bootstrap.initialEntries) ? bootstrap.initialEntries : []);
+  renderSearchSettings(searchSettings);
   refreshEntries();
+  refreshSearchSettings();
   window.setInterval(refreshEntries, pollMs);
 }
 
@@ -136,5 +267,33 @@ const endpointsButton = document.getElementById('klw-endpoints-btn');
 if (endpointsButton) {
   endpointsButton.addEventListener('click', () => {
     window.location.href = bootstrap.endpointExplorer || '/endpoints';
+  });
+}
+
+if (settingsForm) {
+  settingsForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    return false;
+  });
+}
+
+for (const node of [ddgEnabled, ollamaEnabled, preferred, apiKeyInput]) {
+  if (!node) continue;
+  node.addEventListener('input',  markSettingsUnsaved);
+  node.addEventListener('change', markSettingsUnsaved);
+  node.addEventListener('click',  markSettingsUnsaved);
+}
+
+if (saveBtn) {
+  saveBtn.addEventListener('click', async () => {
+    await saveSearchSettings(false);
+  });
+}
+
+if (clearKeyBtn) {
+  clearKeyBtn.addEventListener('click', async () => {
+    apiKeyInput.value = '';
+    syncDirtyState();
+    await saveSearchSettings(true);
   });
 }

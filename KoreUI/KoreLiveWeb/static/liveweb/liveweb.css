@@ -31,6 +31,46 @@
   gap: var(--kcui-gap-panel);
 }
 
+.klw-settings-form {
+  gap: 12px;
+}
+
+.klw-settings-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.klw-check-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text);
+}
+
+.klw-check-row input[type="checkbox"] {
+  width: auto;
+  margin: 0;
+}
+
+.klw-settings-meta {
+  color: var(--text-dim);
+  font-size: var(--kcui-text-body-sm);
+  min-height: 1.25rem;
+}
+
+.klw-settings-inline-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.klw-settings-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 .klw-tool-list {
   display: grid;
   gap: 10px;

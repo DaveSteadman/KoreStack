@@ -117,6 +117,22 @@ _GRAPH_WRITE_INTENT_RE = re.compile(
     r"|\b(?:graph|koregraph|triple|triples|graph connection|graph connections)\b.{0,80}\b(?:add|create|insert|save|store|submit|write|load)\b",
     re.IGNORECASE | re.DOTALL,
 )
+_WEB_EVIDENCE_INTENT_RE = re.compile(
+    r"\b(?:search the web|search online|find on the internet|facts about|interesting facts|fact[s]?\s+about)\b",
+    re.IGNORECASE,
+)
+
+_DISCOVERY_TOOL_NAMES = frozenset({
+    "search_web",
+    "search_web_text",
+})
+
+_EVIDENCE_TOOL_NAMES = frozenset({
+    "fetch_page_text",
+    "fetch_page_text_text",
+    "research_traverse",
+    "lookup_wikipedia",
+})
 
 
 def _safe_scratch_component(value: object, fallback: str = "x") -> str:
@@ -541,6 +557,36 @@ def _build_graph_connection_create_many_call(connections: list[dict], round_num:
     }
 
 
+def _is_discovery_tool_name(name: str) -> bool:
+    normalized = str(name or "").strip().lower()
+    return normalized in _DISCOVERY_TOOL_NAMES or normalized.startswith("koredata_search")
+
+
+def _is_evidence_tool_name(name: str) -> bool:
+    normalized = str(name or "").strip().lower()
+    if normalized in _EVIDENCE_TOOL_NAMES:
+        return True
+    if normalized.startswith("koredata_get_"):
+        return True
+    return False
+
+
+def _requires_web_evidence_guard(user_prompt: str, tool_outputs: list[ToolCallResult]) -> bool:
+    if not _WEB_EVIDENCE_INTENT_RE.search(user_prompt or ""):
+        return False
+
+    used_discovery = False
+    used_evidence  = False
+    for output in tool_outputs:
+        tool_name = str(output.get("tool") or output.get("function") or "").strip()
+        if _is_discovery_tool_name(tool_name):
+            used_discovery = True
+        if _is_evidence_tool_name(tool_name):
+            used_evidence = True
+
+    return used_discovery and not used_evidence
+
+
 # ----------------------------------------------------------------------------------------------------
 def strip_cot_preamble(text: str) -> str:
     if not text:
@@ -626,6 +672,7 @@ def run_tool_loop(
     recovery_pending: dict[str, object] | None = None
     graph_write_guard_corrections = 0
     graph_write_guard_active = _is_graph_connection_write_request(user_prompt) and _tool_def_available(tool_defs, "graph_connection_create_many")
+    web_evidence_guard_corrections = 0
 
     clear_stop()
     try:
@@ -746,6 +793,27 @@ def run_tool_loop(
                         context_map.append({"round": round_num, "role": "user", "label": "[tool recovery reminder]", "chars": len(reminder), "auto_key": None, "msg_idx": len(messages) - 1})
                         continue
                     recovery_pending = None
+                elif _requires_web_evidence_guard(user_prompt, tool_outputs):
+                    if web_evidence_guard_corrections < 1:
+                        correction = (
+                            "Web-evidence guard: you have used search/discovery results but have not fetched any evidence-bearing source content yet. "
+                            "Do not answer from search snippets or internal knowledge. "
+                            "Call fetch_page_text on one of the returned URLs, or use research_traverse if multiple sources are needed, then continue."
+                        )
+                        web_evidence_guard_corrections += 1
+                        _log_file_only(f"[warn] Round {round_num}: model attempted final answer after discovery-only web search - injecting evidence-fetch correction.")
+                        messages.append({"role": "user", "content": correction})
+                        context_map.append({"round": round_num, "role": "user", "label": "[web evidence guard]", "chars": len(correction), "auto_key": None, "msg_idx": len(messages) - 1})
+                        continue
+                    final_response = (
+                        "I could not complete the web-grounded answer because no fetched source content was retrieved after the search step."
+                    )
+                    run_success = False
+                    _log(final_response)
+                    _log_file_only(f"[progress] Round {round_num}: web-evidence guard stopped final answer without a fetch.")
+                    messages.append({"role": "assistant", "content": final_response})
+                    context_map.append({"round": round_num, "role": "asst", "label": "web-evidence guard failure", "chars": len(final_response), "auto_key": None, "msg_idx": len(messages) - 1})
+                    break
                 else:
                     final_response = candidate
                     run_success = bool(final_response)

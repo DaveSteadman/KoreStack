@@ -44,6 +44,7 @@ from .webpage_utils import truncate_to_words as _truncate_to_words
 
 # Local KoreLiveWeb cross-skill imports.
 from .web_navigate import extract_urls_from_html as _extract_urls_from_html
+from .web_search   import get_search_provider
 from .web_search   import search_web
 
 
@@ -364,8 +365,11 @@ def research_traverse(
     max_words_per_page = max(80, min(int(max_words_per_page), _MAX_WORDS_PER_PAGE_CAP))
     max_evidence_quotes = max(1, min(int(max_evidence_quotes), _MAX_EVIDENCE_QUOTES_CAP))
 
-    # Capture the DuckDuckGo URL that will be used so it appears in the output for debugging.
-    _search_url = f"https://duckduckgo.com/html/?q={urllib.parse.quote_plus(query)}"
+    # Capture the active provider endpoint for debugging and traceability in the research bundle.
+    if get_search_provider() == "ollama":
+        _search_url = "https://ollama.com/api/web_search"
+    else:
+        _search_url = f"https://lite.duckduckgo.com/lite/?q={urllib.parse.quote_plus(query)}"
 
     seed_results = search_web(
         query           = query,

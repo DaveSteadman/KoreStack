@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}KoreLiveWeb{% endblock %}</title>
   <link rel="icon" type="image/x-icon" href="/ui-elements/assets/icons/favicon.ico">
-  <link rel="stylesheet" href="/ui-elements/assets/css/chrome.css">
-  <link rel="stylesheet" href="/ui-elements/assets/css/workspace.css">
-  <link rel="stylesheet" href="/static/liveweb/liveweb.css">
-  <script src="/suite-config.js"></script>
+  <link rel="stylesheet" href="/ui-elements/assets/css/chrome.css?v={{ asset_version }}">
+  <link rel="stylesheet" href="/ui-elements/assets/css/workspace.css?v={{ asset_version }}">
+  <link rel="stylesheet" href="/static/liveweb/liveweb.css?v={{ asset_version }}">
+  <script src="/suite-config.js?v={{ asset_version }}"></script>
 </head>
 <body class="kcui-shell-bg">
   <div id="topbar"></div>
@@ -16,7 +16,7 @@
   <main class="{% block main_class %}{% endblock %}">
     {% block content %}{% endblock %}
   </main>
-  <script type="module" src="/static/liveweb/liveweb.js"></script>
+  <script type="module" src="/static/liveweb/liveweb.js?v={{ asset_version }}"></script>
   {% block scripts %}{% endblock %}
 </body>
 </html>

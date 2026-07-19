@@ -119,6 +119,12 @@ _TOOL_ROUTING_FUDGE: list[str] = [
     "- When search_web returns a result titled 'Search failed', this is a connectivity failure - not a query mismatch. Do not retry the same endpoint. Make at most one attempt with KoreData MCP search as fallback when available, then report 'No results were found for [query].' and stop.",
     "- When a search returns empty results, you may try ONE alternative query phrasing. If the second attempt also returns empty, stop and report what you have.",
     "- When a web search or page-fetch tool returns no results, report that in a single short sentence only. Do not explain which tools you considered or why the tool failed.",
+    "- When any search or retrieval tool returns relevant results, that retrieved content has higher precedence than internal knowledge.",
+    "- Do not override, contradict, or dilute retrieved evidence with internal knowledge.",
+    "- Internal knowledge may supplement retrieved content only to fill minor gaps and only when it does not conflict with the retrieved material.",
+    "- If retrieved material appears incomplete for the user's request, prefer another targeted retrieval or page fetch before relying on internal knowledge.",
+    "- Search result snippets, headlines, and summaries are discovery aids, not authoritative evidence for factual synthesis.",
+    "- For substantive factual answers, prefer fetched or retrieved source content over search-result snippets alone.",
 
     # -- KoreData local-first routing (cross-cutting preference rule) ------------------------
     # Long-term fix: encode local-first preference in tool trigger/priority metadata so
