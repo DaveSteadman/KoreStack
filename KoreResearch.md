@@ -1,116 +1,157 @@
 # KoreResearch
-## Objective
-`KoreResearch` is a proposed long-running research and evidence-building service for KoreStack.
-It exists for work that is too large, too stateful, or too long-running for a normal interactive `KoreAgent` prompt/tool loop.
-Typical use cases:
-- many rounds of search, fetch, retrieval, filtering, and synthesis
-- hundreds of prompt/tool cycles
-- work that runs for hours or days
-- large datasets and multiple output documents
-- tasks that must pause, resume, retry, and stay inspectable
+## Problem
+`KoreAgent` is good at interactive execution.
+It is not a good home for research that is:
+- long-running
+- stateful
+- evidence-heavy
+- multi-stage
+- resumable
+- inspectable
+
+The failure mode is predictable.
+One chat session gets asked to:
+- plan the work
+- do the work
+- remember the work
+- branch the work
+- verify the work
+- resume the work later
+- publish the work
+
+That is too much responsibility for one interactive prompt/tool loop.
+
+## What KoreResearch Solves
+`KoreResearch` exists to solve one problem:
+
+- how to run research that is bigger than one agent conversation without losing structure, evidence, progress, or control
+
+It should make long-horizon work:
+- bounded
+- resumable
+- inspectable
+- evidence-backed
+- publishable
 
 ## Core Position
-`KoreResearch` is not another ordinary skill inside `KoreAgent`.
-It should be:
-- a separate service
-- a long-running run manager
-- a host for per-run pages and operational logs
-- a scheduler of bounded execution slices
-- a publisher of evidence, documents, and artifacts
-It should use `KoreAgent` as an execution engine through dedicated sessions.
+`KoreResearch` should not be another ordinary skill inside `KoreAgent`.
+It should be a separate subsystem that manages research runs as first-class objects.
+
+`KoreAgent` remains the execution engine.
+`KoreResearch` becomes the run manager.
 
 ## What It Is Not
-It should not be:
+`KoreResearch` is not:
 - a single huge prompt
-- a leaf tool
 - a hidden background thread in `KoreAgent`
+- a leaf tool
 - an unbounded delegate loop
-- a reimplementation of ordinary web search
+- a reimplementation of ordinary search
 
-## Why Separate It
-The split solves a real pressure problem in `KoreAgent`.
-Benefits:
-- `KoreAgent` stays focused on interactive execution
-- long-running work gets better isolation and observability
-- research runs gain first-class state, progress, and checkpointing
-- failures and resource spikes are easier to contain
-- the UI can be designed around runs, evidence, and outputs rather than chat
-The risk is duplication. `KoreResearch` will need planning, task tracking, guardrails, evidence policy, and continuation logic that already exists in or near `KoreAgent`.
-That duplication must be designed out.
+## Why The Split Matters
+The split keeps responsibilities clean.
 
-## Clean Split
-The separation should be by responsibility, not by copied code.
+`KoreAgent` should focus on:
+- one bounded task
+- one bounded train of thought
+- one prompt/tool execution slice
 
+`KoreResearch` should focus on:
+- what to do next
+- what evidence is required
+- whether the result was good enough
+- whether to continue, branch, retry, wait, or stop
+
+If those responsibilities stay mixed, the system drifts toward long, fragile, low-visibility sessions.
+
+## Clean Ownership
 ### `KoreAgent`
 Owns:
-- interactive chat/session runtime
-- prompt construction for execution turns
-- tool loop execution
-- tool catalog and activation mechanics
-- conversation state
-- immediate user-facing responses
-`KoreAgent` is the execution engine.
+- interactive session runtime
+- prompt construction for a single slice
+- tool calling
+- immediate execution behavior
+- bounded outputs
 
 ### `KoreResearch`
 Owns:
-- research run lifecycle
-- long-running task scheduling
-- checkpoints and resume state
-- per-run web pages
-- progress logs and operational visibility
-- run-level budgets and stop conditions
-- artifact publication for the run
-`KoreResearch` is the run manager.
+- run lifecycle
+- decomposition
+- branch selection
+- scheduling
+- checkpoints
+- progress visibility
+- result evaluation
+- artifact publication
 
-### Shared Orchestration Core
+### Shared orchestration
 Owns:
-- task-plan models
-- step state machines
-- guardrail evaluation
-- evidence precedence policy
-- retry and continuation rules
-- generic budget accounting
+- plan state
+- guardrails
+- retry rules
+- budget rules
 - stop / pause / blocked rules
-This shared core is where task-governance logic belongs.
+- evidence precedence rules
 
-## Duplication Dilemma
-If `KoreResearch` copies `KoreAgent` logic for planning and guardrails, the two systems will drift.
-That creates the worst outcome:
-- one fix has to be made twice
-- behavior differs by host
-- evidence policy becomes inconsistent
-- debugging becomes unclear
-The rule should be:
-- do not duplicate the intelligence rules
-- only separate the runtime boundary and service responsibilities
-Practical test:
-- if it governs how a task is reasoned about, constrained, resumed, or validated, it belongs in shared orchestration code
-- if it governs live chat execution and session behavior, it belongs in `KoreAgent`
-- if it governs long-running job ownership, run pages, scheduling, and checkpoints, it belongs in `KoreResearch`
+The rule is simple:
+- separate runtime responsibility
+- do not duplicate reasoning policy
 
 ## Relationship To KoreAgent
-`KoreResearch` should drive work by submitting prompts into dedicated `KoreAgent` sessions over time.
-That means:
-- `KoreResearch` decides what work should happen next
-- `KoreAgent` performs the prompt/tool execution slice
-- `KoreResearch` records the outcome, updates state, and decides whether to continue
-This keeps `KoreAgent` as the tool-using runtime while allowing `KoreResearch` to own long-horizon orchestration.
+`KoreResearch` should submit bounded work into dedicated `KoreAgent` sessions over time.
 
-## Meaningful Differentiation
-The split is only worth keeping if the two layers do genuinely different jobs.
-`KoreAgent` should answer: `how do I execute this turn well?`
-`KoreResearch` should answer:
-- `what is the next bounded task?`
-- `what evidence or output must come back?`
-- `what counts as success, failure, or insufficient progress?`
-- `should the run continue, branch, retry, wait, or stop?`
-So `KoreResearch` should not be another free-form agent brain.
-It should be a controller that frames bounded tasks for the execution layer and then evaluates the result.
+That means:
+- `KoreResearch` decides the next bounded task
+- `KoreAgent` executes it
+- `KoreResearch` records the outcome and decides what happens next
+
+This is the whole point of the subsystem.
+
+## Delegate Relocation
+When a real `KoreResearch` subsystem exists, the current durable `delegate` skill should move into it.
+
+Why:
+- durable delegation is a planning decision
+- decomposition is a planning decision
+- branch management is a planning decision
+- result integration is a planning decision
+
+If `delegate` stays as the main mechanism inside `KoreAgent`, the working agent has to:
+- decide whether to split the task
+- invent the subtasks
+- launch children
+- track children
+- merge the results
+
+That weakens focus.
+Moving durable delegation into `KoreResearch` lets `KoreAgent` stay focused on a single bounded train of thought.
+
+`KoreAgent` may still keep a lightweight inline delegate for narrow context-isolation cases.
+But long-horizon branching belongs in `KoreResearch`.
+
+## Execution Model
+`KoreResearch` should run in bounded slices, not one huge loop.
+
+Each slice should:
+1. read persisted run state
+2. choose the next step
+3. create an execution brief
+4. submit that brief to the run's `KoreAgent` session
+5. wait for the bounded result
+6. validate the result
+7. update run state
+8. schedule the next slice or stop
+
+This gives:
+- pause / resume
+- retry with backoff
+- checkpointing
+- crash recovery
+- time and token budgeting
 
 ## Execution Brief
-The handoff from `KoreResearch` to `KoreAgent` should be explicit.
-Rather than sending only a loose natural-language prompt, `KoreResearch` should create an execution brief for the next slice.
-That brief can then be rendered into the prompt that `KoreAgent` executes.
+The handoff to `KoreAgent` should be explicit.
+
 Suggested brief fields:
 - `step_id`
 - `objective`
@@ -121,76 +162,148 @@ Suggested brief fields:
 - `expected_output`
 - `completion_test`
 - `failure_test`
-- `follow_up_hint`
-This keeps the split clean:
+
+The brief exists to keep the split clean:
 - `KoreResearch` defines the task and criteria
-- `KoreAgent` interprets that brief and handles the actual prompt/tool execution
+- `KoreAgent` handles execution
 
-## Criteria Over Micro-Orchestration
-The main value of `KoreResearch` is not low-level execution control.
-Its value is:
-- selecting the next task
-- narrowing the scope for that task
-- asserting what evidence is required
-- deciding whether the result was good enough
-- deciding what happens next
-It should avoid owning:
-- detailed tool ordering inside a turn
-- prompt repair logic inside a turn
-- low-level tool activation behavior
-- the mechanics of the session runtime
-Those stay in `KoreAgent`.
+## Research Map
+`KoreResearch` should keep a research map.
+It should not just keep a chat transcript.
 
-## Session Ownership
-Each research run should have its own dedicated `KoreAgent` session.
-Recommended rule:
-- one research run
-- one dedicated session
-This avoids:
-- turn collisions with foreground user chat
-- context pollution
-- mixed logs
-- race conditions over tool state or prompt history
-The user can inspect the session, but the run owns it while active.
+The first version can be simple:
+- a run
+- a branch tree
+- a task queue
+- records produced by tasks
+- links to sources and artifacts
 
-## Service Shape
-The likely service shape is:
-1. `KoreResearch service`
-   Owns research runs, lifecycle state, scheduling, persistence, and UI/API.
-2. `KoreAgent bridge`
-   Creates sessions, submits prompts, reads outputs, and receives tool/prompt round summaries.
-3. `Shared stores`
-   Persist run records, checkpoints, logs, datasets, and output artifacts.
-4. `Output systems`
-   Write `KoreDocs`, summaries, evidence packs, and related files.
+The map is for:
+- decomposition
+- navigation
+- resumability
+- gap tracking
+- targeted retries
 
-## Run Model
-A research run is the core object.
-Suggested fields:
+## Memory Map vs RAG
+This memory map is not the same thing as a RAG database.
+
+RAG is mainly about:
+- storing chunks
+- retrieving chunks
+
+`KoreResearch` needs more:
+- run state
+- branch state
+- task state
+- output state
+- evidence state
+
+So:
+- source documents may be chunked for retrieval
+- chunks may support research records
+- but the core object in `KoreResearch` should not be "chunk"
+
+The memory map is an operational structure, not just a retrieval structure.
+
+## Avoid Overfitting The Schema
+The system should not assume all research looks like:
+- `Entity`
+- `Claim`
+- `Evidence`
+
+Those shapes are useful for some tasks, but not all tasks.
+
+Examples that may need different shapes:
+- literature review
+- market scan
+- troubleshooting investigation
+- design-option comparison
+- corpus enrichment
+
+So the stable schema should stay small.
+The research content should stay flexible.
+
+## Stable Envelope, Flexible Records
+Keep the operational envelope strict.
+Keep the research payload flexible.
+
+Useful stable fields:
 - `run_id`
-- `title`
-- `objective`
-- `scope`
-- `constraints`
-- `source_policy`
-- `deliverables`
-- `success_criteria`
+- `node_id`
+- `task_id`
+- `parent_id`
+- `kind`
 - `status`
-- `phase`
-- `session_id`
-- `plan`
-- `work_queue`
-- `completed_steps`
-- `failed_steps`
-- `datasets`
-- `artifacts`
-- `latest_output`
-- `metrics`
+- `objective`
+- `refs`
+- `payload`
 - `created_at`
 - `updated_at`
 
+The actual research record should usually live in JSON payloads.
+That avoids overfitting `KoreResearch` to one ontology too early.
+
+## Record Model
+A good default model is:
+- `Run`
+- `Node`
+- `Task`
+- `Source`
+- `Artifact`
+- `Record`
+
+Where `Record` is the flexible knowledge-bearing object.
+
+That allows one run to use:
+- catalogue-style factual records
+- comparison records
+- note records
+- synthesis records
+
+without forcing every run into one global table design.
+
+## Child Result Contract
+Sub-conversations should return structured contributions, not loose prose.
+
+The exact schema can vary by run, but every result should at least say:
+- what task it answered
+- what it produced
+- what sources it used
+- what remains unresolved
+- whether it passed its completion test
+
+A child saying "I found interesting sources" should not count as completion.
+
+## Session Ownership
+Each research run should own its own dedicated `KoreAgent` session.
+
+This avoids:
+- collisions with foreground chat
+- context pollution
+- mixed logs
+- race conditions over prompt history
+
+The user may inspect the session.
+But while active, the run owns it.
+
+## Observability
+Long-running work without visibility is not trustworthy.
+
+Each run should expose:
+- current status
+- current phase
+- current step
+- current execution brief summary
+- retries and failures
+- outputs and artifacts
+- last progress time
+- owning session id
+
+Every run should have its own page.
+
 ## Run States
-Suggested states:
+Useful states:
 - `queued`
 - `planning`
 - `researching`
@@ -201,175 +314,60 @@ Suggested states:
 - `failed`
 - `cancelled`
 
-Suggested phases:
-1. `intake`
-2. `plan`
-3. `collect`
-4. `refine`
-5. `synthesize`
-6. `publish`
-7. `review`
-
-## Execution Model
-`KoreResearch` should run in bounded slices, not as one huge loop.
-Each slice should:
-1. read current run state
-2. choose the next step
-3. create the execution brief for that step
-4. render or request the next prompt from that brief
-5. submit the prompt to the run's `KoreAgent` session
-6. wait for completion of that prompt/tool slice
-7. parse the result against the brief criteria
-8. update plan, datasets, artifacts, and metrics
-9. log the outcome
-10. schedule the next slice or stop
-
-This gives:
-- pause / resume
-- retry with backoff
-- crash recovery
-- checkpointing
-- supervision
-- time and token budgeting
-
-## Long-Running Responsibility
-The service must do more than just "keep going for a long time".
-It must:
-- preserve intent over many cycles
-- detect when evidence is missing
-- expand or refine the plan when gaps appear
-- avoid repeating the same weak searches
-- checkpoint enough state to survive restarts
-- publish useful partial outputs without pretending the run is complete
-- expose what it is doing in a way a user can audit
-That is the core operational responsibility of the service.
-
-## Inputs, Process, Outputs
-Each run should make three concerns explicit.
-### Inputs
-- original request
-- normalized objective
-- constraints
-- source preferences
-- output targets
-- stop conditions
-### Process
-- phases
-- subquestions
-- current plan
-- current execution brief
-- budgets
-- checkpoints
-- review rules
-### Outputs
-- evidence sets
-- datasets
-- draft findings
-- generated `KoreDocs`
-- final deliverables
-
-## Evidence Policy
-The evidence-precedence rule should carry through from the main guardrails:
-- when fresh retrieved evidence exists, it has higher precedence than model memory
-- when search only gives discovery snippets, the run should prefer fetch/retrieval before synthesis
-- when important gaps remain, the run should prefer more collection over unsupported finalization
-This applies across `KoreLiveWeb`, `KoreData`, and any future retrieval source.
-
 ## Guardrails
-Because runs can grow large, the service needs hard boundaries.
-Recommended controls:
-- maximum prompt/tool cycles per run
-- maximum cycles per phase
-- maximum retries per step
-- token and wall-clock budgets
-- dataset size limits
-- artifact count limits
-- duplicate-search suppression
-- evidence-before-finalization checks
-- blocked-state detection
-It should be possible for a run to stop cleanly as `blocked` or `waiting` rather than failing noisily or looping forever.
+`KoreResearch` needs hard boundaries.
 
-## Scheduling And Recovery
-`KoreResearch` should behave like a supervised worker, not like a fragile in-memory script.
-It should support:
-- queueing
-- deferred continuation
-- periodic wake-up
-- manual resume
-- cancellation
-- process restart recovery from checkpoint
-A slice should be restartable from persisted run state without relying on fragile in-memory context.
-
-## Observability
-The service should expose live operational detail.
 At minimum:
-- one-line log entries with timestamps
-- current phase and current step
-- current execution brief summary
-- prompt submission events
-- tool usage summaries
-- retries, failures, and backoff
-- output publication events
-- last progress time
-- current owning session id
-This is not optional. Long-running work without visibility becomes impossible to trust.
-
-## Run Page
-Each run should have its own page.
-Suggested layout:
-- `Input`
-  original request, objective, constraints, source policy, deliverables, stop conditions
-- `Process`
-  phase, current step, current execution brief, current working prompt, next intended action, hypotheses, retries, blockers
-- `Output`
-  draft answer, extracted findings, evidence summaries, datasets, produced `KoreDocs`, final outputs
-Surrounding controls and indicators:
-- run status badge
-- progress timeline
-- token and tool usage counts
-- artifact list
-- live log stream
-- pause / resume / cancel actions
-
-## API Shape
-Likely endpoints:
-- `POST /research/runs`
-- `GET /research/runs`
-- `GET /research/runs/{run_id}`
-- `GET /research/runs/{run_id}/events`
-- `POST /research/runs/{run_id}/pause`
-- `POST /research/runs/{run_id}/resume`
-- `POST /research/runs/{run_id}/cancel`
-- `GET /research/runs/{run_id}/artifacts`
-- `GET /research/runs/{run_id}/session`
+- max cycles per run
+- max retries per step
+- token and wall-clock budgets
+- evidence-before-finalization checks
+- duplicate-work suppression
+- clean `blocked` and `waiting` states
 
 ## Integrations
 `KoreResearch` should integrate with:
-- `KoreAgent`
-  execution of prompt/tool slices
-- `KoreLiveWeb`
-  web search/fetch visibility and provider-backed web work
-- `KoreData`
-  retrieval, datasets, and evidence persistence
-- `KoreDocs`
-  output documents
-- scheduling infrastructure
-  queueing, wake-ups, and resumable jobs
+- `KoreAgent` for execution
+- `KoreLiveWeb` for search/fetch visibility
+- `KoreData` for retrieval and persistence
+- `KoreDocs` for published outputs
 
-## Build Direction
-Start with:
-- one `KoreResearch` service
-- one run model
-- one per-run page
-- one bridge into dedicated `KoreAgent` sessions
-- shared orchestration modules for planning and guardrails
-- durable storage for checkpoints and outputs
+## First Vertical Slice
+The first version should stay narrow.
+
+Build:
+1. one research run type
+2. one persisted run model
+3. one branch tree
+4. one execution-brief format
+5. one bridge to dedicated `KoreAgent` sessions
+6. one run page
+7. one report output path
+
 Do not start with:
-- a new pile of ordinary skills in `KoreAgent`
-- a second independent planning / guardrail implementation
-- one mixed user-and-research session
-- a hidden background loop with weak visibility
+- arbitrary recursive branching
+- a full knowledge graph
+- broad permanent agent-role systems
+- a second copy of `KoreAgent` planning logic
+
+## Example Task Shape
+A good early use case is a corpus-style task:
+
+- build a list of hundreds of radar types
+- gather structured information for each
+- track missing fields
+- revisit weak records
+- publish the dataset and evidence pack
+
+This is exactly the sort of work that is awkward in one chat and natural in a persisted research run.
 
 ## Summary
-`KoreResearch` should be a separate long-running service that manages research runs as first-class objects.
-It should own scheduling, checkpoints, run pages, progress logs, and output publication, while relying on dedicated `KoreAgent` sessions for execution and shared orchestration modules for planning, guardrails, evidence rules, and continuation policy.
+`KoreResearch` exists to solve long-running research that does not fit cleanly inside one interactive agent conversation.
+
+It should:
+- manage runs
+- decompose work
+- relocate durable delegation upward
+- keep state and evidence durable
+- keep `KoreAgent` focused on bounded execution
+- make the work resumable, inspectable, and publishable
