@@ -15,18 +15,18 @@
 #
 # Related modules:
 #   - system_skills/Delegate/skill.py  -- the Delegate skill that calls run_delegate_subrun
-#   - orchestration.py                 -- orchestrate_prompt called by the sub-run
-#   - session_runtime.py               -- provides bind_session for session isolation
+#   - agent/orchestration/engine.py    -- orchestrate_prompt called by the sub-run
+#   - sessions/runtime.py              -- provides bind_session for session isolation
 # ====================================================================================================
 import copy
 import re
 import threading
 import time
 
-from datasets import get_prompt_dataset_manifests
+from datasets_pkg.models import get_prompt_dataset_manifests
 from scratchpad import get_store as get_scratchpad_store
 from scratchpad import scratchpad_save as scratchpad_auto_save
-from session_runtime import get_active_session_id
+from sessions.runtime import get_active_session_id
 from utils.workspace_utils import trunc
 
 
@@ -205,7 +205,7 @@ def run_delegate_subrun(
     # Check stop state before starting the child run - the parent may have been stopped
     # while this delegate was queued.
     try:
-        from orchestration import is_stop_requested as _is_stop_requested
+        from agent.orchestration.engine import is_stop_requested as _is_stop_requested
         if _is_stop_requested():
             _emit_delegate_event(logger, "task_aborted", branch_id, reason="stop_requested")
             return {

@@ -26,8 +26,8 @@
 import json
 import re
 
-from datasets import coerce_persisted_scratchpad_payload
-from datasets import get_prompt_dataset_manifests
+from datasets_pkg.hydration import coerce_persisted_scratchpad_payload
+from datasets_pkg.models import get_prompt_dataset_manifests
 from scratchpad import get_store as get_scratchpad_store
 from utils.workspace_utils import trunc
 

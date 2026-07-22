@@ -195,8 +195,8 @@ def _run_one_test_file(candidate, ctx, wrapper, model: str, active_host: str, re
         watcher_done = [False]
 
         def _watch(_proc=proc) -> None:
-            from orchestration import get_stop_reason
-            from orchestration import is_stop_requested
+            from agent.orchestration.engine import get_stop_reason
+            from agent.orchestration.engine import is_stop_requested
 
             while not watcher_done[0]:
                 if is_stop_requested():
@@ -351,7 +351,7 @@ def _cmd_test(arg: str, ctx: SlashCommandContext) -> None:
     import subprocess
     import sys
     import time
-    from orchestration import clear_stop
+    from agent.orchestration.engine import clear_stop
 
     test_prompts_dir = get_test_prompts_dir()
     wrapper = Path(__file__).resolve().parent.parent / "testing" / "test_wrapper.py"
@@ -377,7 +377,7 @@ def _cmd_test(arg: str, ctx: SlashCommandContext) -> None:
             return
 
         def _run_all(_files=list(all_files), _wrapper=wrapper, _ctx=ctx) -> None:
-            from orchestration import is_stop_requested
+            from agent.orchestration.engine import is_stop_requested
 
             model = _ctx.config.resolved_model
             host = get_active_host()

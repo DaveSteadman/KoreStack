@@ -27,18 +27,18 @@ from datetime import datetime
 from pathlib import Path
 from uuid import uuid4
 
-from datasets import _get_dataset
-from datasets import dataset_save
+from datasets_pkg.service import _get_dataset
+from datasets_pkg.models import dataset_save
 from llm_client import configure_host
-from orchestration import OrchestratorConfig
-from orchestration import orchestrate_prompt
+from agent.orchestration.engine import OrchestratorConfig
+from agent.orchestration.engine import orchestrate_prompt
 from scratchpad import scratchpad_load
 from scratchpad import scratchpad_save
-from session_runtime import bind_session
-from session_runtime import get_active_session_id
+from sessions.runtime import bind_session
+from sessions.runtime import get_active_session_id
 from system_skills.Delegate.delegate_runner import get_delegate_runtime_tls
 from system_skills.FileAccess.file_access_skill import file_write
-from tool_selection_state import set_selected_tools
+from sessions.tool_selection import set_selected_tools
 from skills_catalog_builder import load_skills_payload
 from utils.runtime_logger import SessionLogger
 from utils.runtime_logger import create_log_file_path

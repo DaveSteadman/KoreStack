@@ -40,35 +40,35 @@ CODE_DIR = Path(__file__).resolve().parents[1]
 if str(CODE_DIR) not in sys.path:
     sys.path.insert(0, str(CODE_DIR))
 
-import datasets as datasets_module
-import tool_loop as tool_loop_module
-import tool_selection_state as tool_selection_state_module
-import task_planning as task_planning_module
+import datasets_pkg as datasets_module
+from agent.tool_runtime import loop as tool_loop_module
+from sessions import tool_selection as tool_selection_state_module
+from agent.orchestration import planning as task_planning_module
 from conversation_state import decode_background_context
 from conversation_state import encode_background_context
 from skill_executor import execute_tool_call
-import datasets_store
+from datasets_pkg import store as datasets_store
 import mcp_client
-from orchestration import ConversationHistory
-from orchestration import _delegate_tls
-from orchestration import delegate_subrun
-from orchestration import OrchestratorConfig
-from orchestration import orchestrate_prompt
+from agent.orchestration.engine import ConversationHistory
+from agent.orchestration.engine import _delegate_tls
+from agent.orchestration.engine import delegate_subrun
+from agent.orchestration.engine import OrchestratorConfig
+from agent.orchestration.engine import orchestrate_prompt
 from input_layer import koreconv_input as koreconv_input_module
-from datasets import auto_route_tool_result
-from datasets import clear_session_datasets
-from datasets import dataset_drop_where
-from datasets import dataset_expand_full_text
-from datasets import dataset_filter
-from datasets import dataset_get
-from datasets import dataset_inspect
-from datasets import dataset_list
-from datasets import dataset_rename
-from datasets import dataset_save
-from datasets import dataset_write_koredoc
-from datasets import delete_session_datasets
-from datasets import get_persisted_datasets_payload
-from datasets import restore_persisted_datasets
+from datasets_pkg import auto_route_tool_result
+from datasets_pkg import clear_session_datasets
+from datasets_pkg import dataset_drop_where
+from datasets_pkg import dataset_expand_full_text
+from datasets_pkg import dataset_filter
+from datasets_pkg import dataset_get
+from datasets_pkg import dataset_inspect
+from datasets_pkg import dataset_list
+from datasets_pkg import dataset_rename
+from datasets_pkg import dataset_save
+from datasets_pkg import dataset_write_koredoc
+from datasets_pkg import delete_session_datasets
+from datasets_pkg import get_persisted_datasets_payload
+from datasets_pkg import restore_persisted_datasets
 from prompt_builder import build_system_message
 from scratchpad import scratchpad_clear
 from scratchpad import get_store
@@ -76,8 +76,8 @@ from scratchpad import scratchpad_load
 from scratchpad import scratchpad_list
 from scratchpad import scratchpad_query
 from scratchpad import scratchpad_save
-from session_runtime import get_active_session_id
-from session_runtime import bind_session
+from sessions.runtime import get_active_session_id
+from sessions.runtime import bind_session
 from skills_catalog_builder import build_tool_definitions
 from skills_catalog_builder import load_skills_payload
 from system_skills.Delegate import delegate_runtime as delegate_runtime_module
@@ -93,11 +93,11 @@ from KoreLiveWeb.app.web_research import research_traverse
 from skills.SystemInfo.system_info_skill import get_system_info_string
 from KoreDocs.app import korefile as koredocs_korefile
 from KoreCommon import datauser_fs as datauser_fs_module
-from tool_loop import normalize_tool_request
-from tool_loop import _derive_auto_scratchpad_key
-from tool_loop import _extract_graph_connection_batch_from_text
+from agent.tool_runtime.loop import normalize_tool_request
+from agent.tool_runtime.loop import _derive_auto_scratchpad_key
+from agent.tool_runtime.loop import _extract_graph_connection_batch_from_text
 from tool_result import ToolCallResult
-from input_layer import server as api_module
+from api import app as api_module
 from input_layer import slash_commands as slash_commands_module
 from input_layer import slash_command_handlers_sessions as session_handlers_module
 from input_layer.routes_sessions import _queue_timeout_for_prompt

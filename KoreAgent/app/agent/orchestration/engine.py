@@ -43,26 +43,26 @@ from llm_client import resolve_model_name
 from prompt_tokens import resolve_tokens
 from scratchpad import scratchpad_list as _scratchpad_list
 from prompt_builder import build_system_message as _prompt_builder_build_system_message
-from session_runtime import bind_session
+from sessions.runtime import bind_session
 from skill_executor import build_catalog_gates
 from skills.SystemInfo.system_info_skill import get_static_system_info_string
 from skills_catalog_builder import build_tool_definitions
-from task_planning import create_task_plan
-from task_planning import advance_task_plan_phase
-from task_planning import format_task_plan_context
-from task_planning import get_last_planner_selection_trace
-from task_planning import get_task_plan_activation_tools
-from task_planning import get_task_plan_phase
-from task_planning import persist_task_plan
-from task_planning import record_task_plan_event
-from tool_selection_state import build_all_tool_catalog
-from tool_selection_state import derive_active_tool_runtime
-from tool_selection_state import promote_selected_tools
-from tool_loop import extract_result_fields as _tool_loop_extract_result_fields
+from agent.orchestration.planning import create_task_plan
+from agent.orchestration.planning import advance_task_plan_phase
+from agent.orchestration.planning import format_task_plan_context
+from agent.orchestration.planning import get_last_planner_selection_trace
+from agent.orchestration.planning import get_task_plan_activation_tools
+from agent.orchestration.planning import get_task_plan_phase
+from agent.orchestration.planning import persist_task_plan
+from agent.orchestration.planning import record_task_plan_event
+from sessions.tool_selection import build_all_tool_catalog
+from sessions.tool_selection import derive_active_tool_runtime
+from sessions.tool_selection import promote_selected_tools
+from agent.tool_runtime.loop import extract_result_fields as _tool_loop_extract_result_fields
 import mcp_client as _mcp_client
-from tool_loop import format_tool_outputs as _tool_loop_format_tool_outputs
-from tool_loop import run_tool_loop as _tool_loop_run_tool_loop
-from tool_loop import write_file_blocks as _tool_loop_write_file_blocks
+from agent.tool_runtime.loop import format_tool_outputs as _tool_loop_format_tool_outputs
+from agent.tool_runtime.loop import run_tool_loop as _tool_loop_run_tool_loop
+from agent.tool_runtime.loop import write_file_blocks as _tool_loop_write_file_blocks
 from utils.runtime_logger import SessionLogger
 from utils.workspace_utils import trunc
 from web_tools_state import is_web_tool_name

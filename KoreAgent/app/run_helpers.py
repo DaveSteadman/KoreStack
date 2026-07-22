@@ -15,9 +15,9 @@
 from pathlib import Path
 from typing import Callable
 
-from orchestration import ConversationHistory
-from orchestration import SessionContext
-from orchestration import orchestrate_prompt
+from agent.orchestration.engine import ConversationHistory
+from agent.orchestration.engine import SessionContext
+from agent.orchestration.engine import orchestrate_prompt
 
 
 # ====================================================================================================

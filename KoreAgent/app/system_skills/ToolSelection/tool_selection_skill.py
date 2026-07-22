@@ -7,15 +7,15 @@
 # and pull a small subset into the active working set for the current conversation.
 # ====================================================================================================
 
-from orchestration import _filter_web_skills
-from orchestration import get_web_skills_enabled
+from agent.orchestration.engine import _filter_web_skills
+from agent.orchestration.engine import get_web_skills_enabled
 from skills_catalog_builder import DEFAULT_OUTPUT_FILE
 from skills_catalog_builder import load_skills_payload
-from tool_selection_state import all_known_tool_names
-from tool_selection_state import build_all_tool_catalog
-from tool_selection_state import get_selected_tools
-from tool_selection_state import promote_selected_tools
-from tool_selection_state import rank_tool_catalog_entries
+from sessions.tool_selection import all_known_tool_names
+from sessions.tool_selection import build_all_tool_catalog
+from sessions.tool_selection import get_selected_tools
+from sessions.tool_selection import promote_selected_tools
+from sessions.tool_selection import rank_tool_catalog_entries
 
 
 def _available_payload(payload: dict) -> dict:

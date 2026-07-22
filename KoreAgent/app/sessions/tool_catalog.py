@@ -1,217 +1,24 @@
 import copy
 from difflib import SequenceMatcher
-import json
 import re
-import threading
-import urllib.error
-import urllib.parse
-import urllib.request
 
-import koreconv_client
 import mcp_client
-from session_runtime import get_active_session_id
 from web_tools_state import filter_mcp_tool_defs
 from web_tools_state import filter_mcp_tool_index
 from web_tools_state import filter_tool_names
+from sessions.tool_state import ALWAYS_ON_TOOL_NAMES
+from sessions.tool_state import get_selected_tools
+from sessions.tool_state import set_selected_tools
+from sessions.tool_state import _resolve_session_id
 
 
-MAX_ACTIVE_TOOLS = 32
-ALWAYS_ON_TOOL_NAMES = frozenset({"delegate", "tools_catalog_list", "tools_active_add"})
-
-_KC_TIMEOUT = 8
-_SESSION_TOOLS_ACTIVE: dict[str, list[str]] = {}
-_SESSION_LOCK = threading.Lock()
 _ACTIVE_RUNTIME_CACHE: dict[tuple, dict[str, object]] = {}
 _CATALOG_CACHE: dict[tuple, list[dict]] = {}
 
 
-def _normalize_tool_names(tool_names: object) -> list[str]:
-    if not isinstance(tool_names, list):
-        return []
-    normalized: list[str] = []
-    seen: set[str] = set()
-    for item in tool_names:
-        name = str(item or "").strip()
-        if not name or name in seen:
-            continue
-        seen.add(name)
-        normalized.append(name)
-    return normalized
-
-
-def _resolve_session_id(session_id: str | None = None) -> str:
-    cleaned = str(session_id or "").strip()
-    return cleaned or get_active_session_id()
-
-
-def _session_external_id(session_id: str) -> str:
-    return f"webchat_{session_id}"
-
-
-def _kc_request_json(path: str, *, method: str = "GET", payload: dict | None = None) -> dict | list | None:
-    base = koreconv_client.get_base_url()
-    if not base:
-        return None
-    req = urllib.request.Request(
-        f"{base}{path}",
-        data=json.dumps(payload).encode("utf-8") if payload is not None else None,
-        method=method,
-        headers={"Accept": "application/json", "Content-Type": "application/json"},
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=_KC_TIMEOUT) as resp:
-            if resp.status == 204:
-                return None
-            raw = resp.read().decode("utf-8").strip()
-            return json.loads(raw) if raw else None
-    except (urllib.error.HTTPError, urllib.error.URLError, json.JSONDecodeError):
-        return None
-
-
-def _fetch_conversation_for_session(session_id: str) -> dict | None:
-    if not session_id:
-        return None
-    if session_id.startswith("kc_conv_"):
-        raw_id = session_id[len("kc_conv_"):].strip()
-        if raw_id.isdigit():
-            result = _kc_request_json(f"/conversations/{raw_id}")
-            return result if isinstance(result, dict) else None
-        return None
-    external_id = urllib.parse.quote(_session_external_id(session_id), safe="")
-    result = _kc_request_json(f"/conversations/by-external-id/{external_id}")
-    return result if isinstance(result, dict) else None
-
-
-def _ensure_conversation_for_session(session_id: str) -> dict | None:
-    existing = _fetch_conversation_for_session(session_id)
-    if existing is not None or not session_id or session_id.startswith("kc_conv_"):
-        return existing
-    created = _kc_request_json(
-        "/conversations",
-        method="POST",
-        payload={
-            "channel_type": "webchat",
-            "subject": f"Webchat {session_id}",
-            "protected": False,
-            "external_id": _session_external_id(session_id),
-        },
-    )
-    return created if isinstance(created, dict) else _fetch_conversation_for_session(session_id)
-
-
-def _update_cache(session_id: str, tools_active: list[str]) -> None:
-    if not session_id:
-        return
-    with _SESSION_LOCK:
-        _SESSION_TOOLS_ACTIVE[session_id] = list(tools_active)
-
-
-def _clear_runtime_caches() -> None:
+def clear_runtime_caches() -> None:
     _ACTIVE_RUNTIME_CACHE.clear()
     _CATALOG_CACHE.clear()
-
-
-def clear_session_tools_active(session_id: str) -> None:
-    cleaned = _resolve_session_id(session_id)
-    if not cleaned:
-        return
-    with _SESSION_LOCK:
-        _SESSION_TOOLS_ACTIVE.pop(cleaned, None)
-    _clear_runtime_caches()
-
-
-def get_selected_tools(session_id: str | None = None, conversation_entry: dict | None = None) -> list[str]:
-    resolved_session_id = _resolve_session_id(session_id)
-    if resolved_session_id:
-        with _SESSION_LOCK:
-            cached = _SESSION_TOOLS_ACTIVE.get(resolved_session_id)
-        if cached is not None:
-            return list(cached)
-
-    tools_active = []
-    if isinstance(conversation_entry, dict):
-        tools_active = _normalize_tool_names(conversation_entry.get("tools_active") or [])
-    if not tools_active and resolved_session_id:
-        conv = _fetch_conversation_for_session(resolved_session_id)
-        if isinstance(conv, dict):
-            tools_active = _normalize_tool_names(conv.get("tools_active") or [])
-    tools_active = tools_active[:MAX_ACTIVE_TOOLS]
-    _update_cache(resolved_session_id, tools_active)
-    if isinstance(conversation_entry, dict):
-        conversation_entry["tools_active"] = list(tools_active)
-    return list(tools_active)
-
-
-def set_selected_tools(
-    tool_names: list[str],
-    session_id: str | None = None,
-    conversation_entry: dict | None = None,
-    *,
-    persist: bool = True,
-) -> list[str]:
-    resolved_session_id = _resolve_session_id(session_id)
-    normalized = _normalize_tool_names(tool_names)[:MAX_ACTIVE_TOOLS]
-    _update_cache(resolved_session_id, normalized)
-    _clear_runtime_caches()
-    if isinstance(conversation_entry, dict):
-        conversation_entry["tools_active"] = list(normalized)
-
-    if persist:
-        conv = _ensure_conversation_for_session(resolved_session_id) if resolved_session_id else None
-        if isinstance(conv, dict) and conv.get("id") is not None:
-            patched = _kc_request_json(
-                f"/conversations/{int(conv['id'])}",
-                method="PATCH",
-                payload={"tools_active": normalized},
-            )
-            if isinstance(patched, dict) and isinstance(conversation_entry, dict):
-                conversation_entry.update(patched)
-                conversation_entry["tools_active"] = _normalize_tool_names(patched.get("tools_active") or [])[:MAX_ACTIVE_TOOLS]
-    return list(normalized)
-
-
-def promote_selected_tools(
-    tool_names: list[str],
-    session_id: str | None = None,
-    conversation_entry: dict | None = None,
-    *,
-    persist: bool = True,
-) -> dict[str, list[str]]:
-    requested = _normalize_tool_names(tool_names)
-    current = get_selected_tools(session_id=session_id, conversation_entry=conversation_entry)
-    current_set = set(current)
-    front: list[str] = []
-    added: list[str] = []
-    promoted: list[str] = []
-    for name in requested:
-        if name in current_set:
-            promoted.append(name)
-        else:
-            added.append(name)
-        if name not in front:
-            front.append(name)
-    merged = front + [name for name in current if name not in front]
-    evicted = merged[MAX_ACTIVE_TOOLS:]
-    merged = merged[:MAX_ACTIVE_TOOLS]
-    active_tools = set_selected_tools(merged, session_id=session_id, conversation_entry=conversation_entry, persist=persist)
-    return {
-        "added": added,
-        "promoted": promoted,
-        "evicted": evicted,
-        "active_tools": active_tools,
-    }
-
-
-def note_tool_used(tool_name: str, session_id: str | None = None, conversation_entry: dict | None = None) -> None:
-    name = str(tool_name or "").strip()
-    if not name or name in ALWAYS_ON_TOOL_NAMES:
-        return
-    current = get_selected_tools(session_id=session_id, conversation_entry=conversation_entry)
-    if name not in current:
-        return
-    if current and current[0] == name:
-        return
-    promote_selected_tools([name], session_id=session_id, conversation_entry=conversation_entry, persist=False)
 
 
 def _first_sentence(text: str) -> str:
@@ -297,12 +104,12 @@ def all_known_tool_names(
     *,
     available_local_payload: dict | None = None,
 ) -> set[str]:
-    from orchestration import get_web_skills_enabled
+    from agent.orchestration.engine import get_web_skills_enabled
 
     source_payload = available_local_payload if available_local_payload is not None else full_local_payload
     web_enabled = get_web_skills_enabled()
     local_names = local_tool_names(source_payload)
-    mcp_names   = set(filter_mcp_tool_index(mcp_client.get_mcp_tool_index(), enabled=web_enabled).keys())
+    mcp_names = set(filter_mcp_tool_index(mcp_client.get_mcp_tool_index(), enabled=web_enabled).keys())
     return filter_tool_names(local_names | mcp_names, enabled=web_enabled)
 
 
@@ -427,7 +234,7 @@ def build_all_tool_catalog(
     session_id: str | None = None,
     conversation_entry: dict | None = None,
 ) -> list[dict]:
-    from orchestration import get_web_skills_enabled
+    from agent.orchestration.engine import get_web_skills_enabled
 
     web_enabled = get_web_skills_enabled()
     selected = get_selected_tools(session_id=session_id, conversation_entry=conversation_entry)
@@ -453,12 +260,12 @@ def build_all_tool_catalog(
             triggers.append(trigger_keyword)
         param_descriptions = skill.get("param_descriptions", {}) if isinstance(skill.get("param_descriptions"), dict) else {}
         meta = {
-            "origin":         skill.get("origin", "local"),
-            "availability":   skill.get("availability", "configured"),
-            "role":           skill.get("role", "optional"),
+            "origin": skill.get("origin", "local"),
+            "availability": skill.get("availability", "configured"),
+            "role": skill.get("role", "optional"),
             "trust_boundary": skill.get("trust_boundary", "internal"),
-            "skill_name":     skill.get("skill_name", ""),
-            "triggers":       triggers,
+            "skill_name": skill.get("skill_name", ""),
+            "triggers": triggers,
         }
         for function_sig in skill.get("functions", []):
             name = str(function_sig).split("(", 1)[0].strip()
@@ -467,9 +274,9 @@ def build_all_tool_catalog(
             func_param_descs = param_descriptions.get(name, {}) if isinstance(param_descriptions.get(name), dict) else {}
             entries.append(
                 {
-                    "name":        name,
+                    "name": name,
                     "description": description,
-                    "active":      name in active_names,
+                    "active": name in active_names,
                     "param_names": sorted(str(param_name) for param_name in func_param_descs.keys()),
                     **meta,
                 }
@@ -485,16 +292,16 @@ def build_all_tool_catalog(
             properties = parameters.get("properties", {}) if isinstance(parameters.get("properties"), dict) else {}
             entries.append(
                 {
-                    "name":           name,
-                    "description":    _first_sentence(fn.get("description", "") or meta.get("purpose", "")),
-                    "origin":         "mcp",
-                    "availability":   "connected",
-                    "role":           meta.get("connection", "remote"),
+                    "name": name,
+                    "description": _first_sentence(fn.get("description", "") or meta.get("purpose", "")),
+                    "origin": "mcp",
+                    "availability": "connected",
+                    "role": meta.get("connection", "remote"),
                     "trust_boundary": "external",
-                    "active":         name in active_names,
-                    "skill_name":     meta.get("connection", ""),
-                    "triggers":       [],
-                    "param_names":    sorted(str(param_name) for param_name in properties.keys()),
+                    "active": name in active_names,
+                    "skill_name": meta.get("connection", ""),
+                    "triggers": [],
+                    "param_names": sorted(str(param_name) for param_name in properties.keys()),
                 }
             )
     result = sorted(entries, key=lambda item: (item.get("origin", ""), item.get("name", "")))
@@ -510,12 +317,12 @@ def derive_active_tool_runtime(
     session_id: str | None = None,
     conversation_entry: dict | None = None,
 ) -> dict[str, object]:
-    from orchestration import get_web_skills_enabled
+    from agent.orchestration.engine import get_web_skills_enabled
 
     web_enabled = get_web_skills_enabled()
     resolved_session_id = _resolve_session_id(session_id)
     selected = get_selected_tools(session_id=resolved_session_id, conversation_entry=conversation_entry)
-    all_mcp_defs  = filter_mcp_tool_defs(mcp_client.get_mcp_tool_definitions(), enabled=web_enabled)
+    all_mcp_defs = filter_mcp_tool_defs(mcp_client.get_mcp_tool_definitions(), enabled=web_enabled)
     all_mcp_index = filter_mcp_tool_index(mcp_client.get_mcp_tool_index(), enabled=web_enabled)
     source_payload = available_local_payload if available_local_payload is not None else full_local_payload
     all_known_names = filter_tool_names(local_tool_names(source_payload) | set(all_mcp_index.keys()), enabled=web_enabled)

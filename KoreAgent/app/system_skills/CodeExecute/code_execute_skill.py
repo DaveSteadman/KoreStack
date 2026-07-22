@@ -31,7 +31,7 @@ import io
 import sys
 import threading
 
-from orchestration import get_sandbox_enabled
+from agent.orchestration.engine import get_sandbox_enabled
 
 
 # ====================================================================================================

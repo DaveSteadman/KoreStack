@@ -7,16 +7,16 @@
 # skill catalog and normal tool-dispatch pipeline.
 # ====================================================================================================
 
-from datasets import dataset_delete
-from datasets import dataset_drop_where
-from datasets import dataset_expand_full_text
-from datasets import dataset_filter
-from datasets import dataset_get
-from datasets import dataset_inspect
-from datasets import dataset_list
-from datasets import dataset_rename
-from datasets import dataset_save
-from datasets import dataset_write_koredoc
+from datasets_pkg.models import dataset_delete
+from datasets_pkg.filtering import dataset_drop_where
+from datasets_pkg.full_text import dataset_expand_full_text
+from datasets_pkg.filtering import dataset_filter
+from datasets_pkg.models import dataset_get
+from datasets_pkg.models import dataset_inspect
+from datasets_pkg.models import dataset_list
+from datasets_pkg.models import dataset_rename
+from datasets_pkg.models import dataset_save
+from datasets_pkg.export import dataset_write_koredoc
 
 
 __all__ = [

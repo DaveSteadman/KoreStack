@@ -18,8 +18,8 @@ from uuid import uuid4
 
 import httpx
 
-import datasets_store
-from session_runtime import get_active_session_id
+from datasets_pkg import store as datasets_store
+from sessions.runtime import get_active_session_id
 from utils.workspace_utils import load_runtime_config
 
 

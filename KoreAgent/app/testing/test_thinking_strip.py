@@ -16,7 +16,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from tool_loop import strip_cot_preamble
+from agent.tool_runtime.loop import strip_cot_preamble
 
 # Case 1: multi-paragraph CoT, clean last para -> return last para only.
 deliberation = (

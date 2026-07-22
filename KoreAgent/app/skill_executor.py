@@ -128,10 +128,10 @@ def _build_unknown_tool_error(
         return base_msg
 
     try:
-        from tool_selection_state import all_known_tool_names
-        from tool_selection_state import build_all_tool_catalog
-        from tool_selection_state import rank_tool_catalog_entries
-        from tool_selection_state import suggest_tool_name
+        from sessions.tool_selection import all_known_tool_names
+        from sessions.tool_selection import build_all_tool_catalog
+        from sessions.tool_selection import rank_tool_catalog_entries
+        from sessions.tool_selection import suggest_tool_name
 
         known_names = all_known_tool_names(skills_payload)
         suggestion  = suggest_tool_name(requested, known_names, max_candidates=5)

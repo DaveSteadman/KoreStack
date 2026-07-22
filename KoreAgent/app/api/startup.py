@@ -10,10 +10,10 @@
 #   - Launches uvicorn to serve the FastAPI app
 #
 # Related modules:
-#   - server.py             -- FastAPI app, all endpoints, setup(), push_log_line()
+#   - api/app.py            -- FastAPI app, all endpoints, setup(), push_log_line()
 #   - main.py             -- creates config and calls run_api_mode()
 #   - scheduler.py        -- task_queue, load_schedules_dir, is_task_due
-#   - orchestration.py    -- orchestrate_prompt, OrchestratorConfig
+#   - agent/orchestration/engine.py -- orchestrate_prompt, OrchestratorConfig
 #   - runtime_logger.py   -- SessionLogger, create_log_file_path
 # ====================================================================================================
 
@@ -34,14 +34,14 @@ import llm_client as llm_client
 from run_helpers import run_prompt_batch
 from task_korechat import load_task_turns
 from task_korechat import save_task_turn
-from input_layer.server import app
-from input_layer.server import get_startup_state_snapshot
-from input_layer.server import push_log_line
-from input_layer.server import setup as api_setup
-from input_layer.server import set_startup_state_snapshot
-from input_layer.server import update_startup_state
+from api.app import app
+from api.app import get_startup_state_snapshot
+from api.app import push_log_line
+from api.app import setup as api_setup
+from api.app import set_startup_state_snapshot
+from api.app import update_startup_state
 from input_layer.koreconv_input import start_koreconv_loop
-from orchestration import OrchestratorConfig
+from agent.orchestration.engine import OrchestratorConfig
 from utils.runtime_logger import SessionLogger
 from utils.runtime_logger import create_log_file_path
 from scheduler.scheduler import initial_last_run

@@ -26,7 +26,7 @@ from pathlib import Path
 
 from context_manager import COMPACT_THRESHOLD
 from context_manager import assess_compact
-from datasets import auto_route_tool_result
+from datasets_pkg.service import auto_route_tool_result
 from scratchpad import scratchpad_save as scratchpad_auto_save
 from scratchpad import scratchpad_pin
 from scratchpad import scratchpad_unpin_all
@@ -350,7 +350,7 @@ def _classify_tool_recovery(
         }
 
     try:
-        from tool_selection_state import suggest_tool_name
+        from sessions.tool_selection import suggest_tool_name
 
         suggestion = suggest_tool_name(requested, known_names)
     except Exception:
@@ -912,7 +912,7 @@ def run_tool_loop(
                     )
                     if recovery_event.get("classification") == "inactive_known":
                         try:
-                            from tool_selection_state import promote_selected_tools
+                            from sessions.tool_selection import promote_selected_tools
 
                             promote_selected_tools([func_name])
                             recovery_event["auto_activated"] = True
@@ -952,7 +952,7 @@ def run_tool_loop(
                 tool_outputs.append(output)
                 if not output.get("is_error"):
                     try:
-                        from tool_selection_state import note_tool_used
+                        from sessions.tool_selection import note_tool_used
                         note_tool_used(func_name)
                     except Exception as exc:
                         _log_file_only(f"[tool-selection] could not promote MRU tool '{func_name}': {exc}")

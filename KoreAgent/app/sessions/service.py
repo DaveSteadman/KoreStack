@@ -31,7 +31,7 @@ from conversation_state import build_background_turn
 from conversation_state import decode_background_context
 from conversation_state import extract_named_items
 from conversation_state import encode_background_context
-from tool_selection_state import clear_session_tools_active
+from sessions.tool_selection import clear_session_tools_active
 
 
 class SessionService:

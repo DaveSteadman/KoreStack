@@ -5,12 +5,12 @@
 #
 # Starts the FastAPI server with the web UI and background scheduler.
 #
-# Core orchestration pipeline lives in orchestration.py.
-# Server startup lives in input_layer/server_startup.py.
+# Core orchestration pipeline lives in agent/orchestration/.
+# Server startup lives in api/startup.py.
 #
 # Related modules:
-#   - orchestration.py          -- OrchestratorConfig, orchestrate_prompt
-#   - input_layer/server_startup.py -- run_api_mode (FastAPI + uvicorn + scheduler)
+#   - agent/orchestration/engine.py -- OrchestratorConfig, orchestrate_prompt
+#   - api/startup.py               -- run_api_mode (FastAPI + uvicorn + scheduler)
 #   - llm_client.py              -- server management and LLM calls
 #   - skills_catalog_builder.py -- load_skills_payload, tool definitions
 #   - utils/runtime_logger.py   -- SessionLogger, create_log_file_path
@@ -180,15 +180,15 @@ def _attach_child_to_kill_on_close_job(pid: int):
 _maybe_reexec_into_project_venv()
 
 import llm_client as llm_client
-from input_layer.server_startup import run_api_mode
-from input_layer.server import update_startup_state
+from api.startup import run_api_mode
+from api.app import update_startup_state
 from KoreCommon.service_logging import configure_service_logging
 from llm_client import format_running_model_report
 from llm_client import get_llm_timeout
 from llm_client import register_llm_call_logger
-from orchestration import OrchestratorConfig
-from orchestration import orchestrate_prompt
-from orchestration import resolve_execution_model
+from agent.orchestration.engine import OrchestratorConfig
+from agent.orchestration.engine import orchestrate_prompt
+from agent.orchestration.engine import resolve_execution_model
 from conversation_state import build_background_turn
 from run_helpers import make_task_session
 from scratchpad import scratchpad_clear

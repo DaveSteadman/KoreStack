@@ -16,7 +16,7 @@
 # Related modules:
 #   - input_layer/slash_commands.py         -- registers all handlers
 #   - input_layer/slash_command_context.py  -- SlashCommandContext with session callbacks
-#   - koreconv_client.py                    -- KoreChat base URL
+#   - sessions/korechat_client.py           -- KoreChat base URL
 # ====================================================================================================
 import json
 import time
@@ -25,7 +25,7 @@ import urllib.parse
 import urllib.request
 from typing import Callable
 
-import koreconv_client as koreconv_client
+import sessions.korechat_client as koreconv_client
 from input_layer.slash_command_context import SlashCommandContext
 
 
