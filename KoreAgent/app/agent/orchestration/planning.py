@@ -23,6 +23,11 @@ MAX_ACTIVATION_TOOLS     = 16
 VALID_PHASES             = ("clarify", "inspect", "plan", "act", "validate", "complete")
 ALWAYS_ON_TOOL_NAMES     = frozenset({"delegate", "tools_catalog_list", "tools_active_add"})
 _TOKEN_RE                = re.compile(r"[a-z0-9_]{3,}", re.IGNORECASE)
+_GRAPH_WRITE_INTENT_RE   = re.compile(
+    r"\b(?:add|create|insert|save|store|submit|write|load)\b.{0,80}\b(?:graph|koregraph|triple|triples|graph connection|graph connections)\b"
+    r"|\b(?:graph|koregraph|triple|triples|graph connection|graph connections)\b.{0,80}\b(?:add|create|insert|save|store|submit|write|load)\b",
+    re.IGNORECASE | re.DOTALL,
+)
 
 # Task plans are controller state, not agent scratchpad data.  Keeping them here avoids an agent
 # reasoning over its own orchestration instructions through scratchpad tools.
@@ -287,6 +292,53 @@ def fallback_task_plan(*, user_prompt: str, reason: str) -> TaskPlan:
     )
 
 
+def _append_unique_tool_names(target: list[str], names: list[str], *, limit: int = MAX_PHASE_TOOLS) -> list[str]:
+    for name in names:
+        cleaned = str(name or "").strip()
+        if cleaned and cleaned not in target:
+            target.append(cleaned)
+        if len(target) >= limit:
+            break
+    return target
+
+
+def _apply_intent_overrides(plan: TaskPlan, *, user_prompt: str, known_tool_names: set[str]) -> TaskPlan:
+    override_phase_tools = list(plan.phase_tools)
+    override_phase_tool_map = {
+        str(phase or "").strip().lower(): [str(name or "").strip() for name in (tool_names or []) if str(name or "").strip()]
+        for phase, tool_names in plan.phase_tool_map.items()
+    }
+
+    if _GRAPH_WRITE_INTENT_RE.search(user_prompt or ""):
+        graph_tools = [name for name in known_tool_names if name.startswith("graph_connection_")]
+        graph_write_tools = [name for name in graph_tools if any(token in name for token in ("create", "add", "write", "save"))]
+        if graph_write_tools:
+            act_tools = list(override_phase_tool_map.get("act", []))
+            validate_tools = list(override_phase_tool_map.get("validate", []))
+            _append_unique_tool_names(act_tools, sorted(graph_write_tools))
+            _append_unique_tool_names(validate_tools, sorted(graph_tools))
+            override_phase_tool_map["act"] = act_tools
+            override_phase_tool_map["validate"] = validate_tools
+            if plan.current_phase in {"inspect", "plan"}:
+                _append_unique_tool_names(override_phase_tools, sorted(graph_write_tools))
+
+    return TaskPlan(
+        objective               = plan.objective,
+        task_class              = plan.task_class,
+        confidence              = plan.confidence,
+        current_phase           = plan.current_phase,
+        workflow                = list(plan.workflow),
+        phase_tools             = override_phase_tools,
+        phase_tool_map          = override_phase_tool_map,
+        required_artifacts      = list(plan.required_artifacts),
+        validation_requirements = list(plan.validation_requirements),
+        completion_contract     = plan.completion_contract,
+        rationale               = plan.rationale,
+        planner_status          = plan.planner_status,
+        created_at              = plan.created_at,
+    )
+
+
 def validate_task_plan(raw: dict[str, Any], *, known_tool_names: set[str]) -> TaskPlan:
     phase = str(raw.get("current_phase") or "inspect").strip().lower()
     if phase not in VALID_PHASES:
@@ -366,9 +418,10 @@ def create_task_plan(
             repaired_raw = _extract_json_object(getattr(repair, "response", ""))
             if repaired_raw is not None:
                 plan = validate_task_plan(repaired_raw, known_tool_names=known_tool_names)
-        return plan
+        return _apply_intent_overrides(plan, user_prompt=user_prompt, known_tool_names=known_tool_names)
     except Exception as exc:
-        return fallback_task_plan(user_prompt=user_prompt, reason=f"Planning unavailable: {exc}")
+        fallback = fallback_task_plan(user_prompt=user_prompt, reason=f"Planning unavailable: {exc}")
+        return _apply_intent_overrides(fallback, user_prompt=user_prompt, known_tool_names=known_tool_names)
 
 
 def persist_task_plan(plan: TaskPlan) -> None:

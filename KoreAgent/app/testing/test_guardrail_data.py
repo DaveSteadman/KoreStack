@@ -79,7 +79,6 @@ from scratchpad import scratchpad_save
 from sessions.runtime import get_active_session_id
 from sessions.runtime import bind_session
 from skills_catalog_builder import build_tool_definitions
-from skills_catalog_builder import load_skills_payload
 from system_skills.Delegate import delegate_runtime as delegate_runtime_module
 from system_skills.Delegate import delegate_skill   as delegate_skill_module
 from system_skills.FileAccess import file_access_skill as file_access_module
@@ -97,64 +96,26 @@ from agent.tool_runtime.loop import normalize_tool_request
 from agent.tool_runtime.loop import _derive_auto_scratchpad_key
 from agent.tool_runtime.loop import _extract_graph_connection_batch_from_text
 from tool_result import ToolCallResult
-from api import app as api_module
+import api.app as api_module
 from input_layer import slash_commands as slash_commands_module
 from input_layer import slash_command_handlers_sessions as session_handlers_module
 from input_layer.routes_sessions import _queue_timeout_for_prompt
 from input_layer.routes_sessions import _runtime_config_for_prompt
 from input_layer.slash_command_handlers_testing import _result_counts
 from testing import test_wrapper as test_wrapper_module
+from testing.guardrail_support import load_test_skills_payload
+from testing.guardrail_support import reset_guardrail_state
 from utils import workspace_utils as workspace_utils_module
 from utils.workspace_utils import get_user_data_dir
 
 
 class GuardrailDataTests(unittest.TestCase):
     def setUp(self) -> None:
-        self.skills_payload = load_skills_payload(CODE_DIR / "skills" / "skills_catalog.json")
-        scratchpad_clear()
-        delete_session_datasets("dataset_test")
-        delete_session_datasets("dataset_restore")
-        delete_session_datasets("dataset_prompt")
-        delete_session_datasets("dataset_filter")
-        delete_session_datasets("dataset_auto")
-        delete_session_datasets("dataset_paging")
-        delete_session_datasets("dataset_export")
-        delete_session_datasets("dataset_fulltext")
-        clear_session_datasets("dataset_test")
-        clear_session_datasets("dataset_restore")
-        clear_session_datasets("dataset_prompt")
-        clear_session_datasets("dataset_filter")
-        clear_session_datasets("dataset_auto")
-        clear_session_datasets("dataset_paging")
-        clear_session_datasets("dataset_export")
-        clear_session_datasets("dataset_fulltext")
-        delete_session_datasets("dataset_load_session")
-        clear_session_datasets("dataset_load_session")
-        delete_session_datasets("kc_conv_701")
-        clear_session_datasets("kc_conv_701")
+        self.skills_payload = load_test_skills_payload(CODE_DIR)
+        reset_guardrail_state()
 
     def tearDown(self) -> None:
-        scratchpad_clear()
-        delete_session_datasets("dataset_test")
-        delete_session_datasets("dataset_restore")
-        delete_session_datasets("dataset_prompt")
-        delete_session_datasets("dataset_filter")
-        delete_session_datasets("dataset_auto")
-        delete_session_datasets("dataset_paging")
-        delete_session_datasets("dataset_export")
-        delete_session_datasets("dataset_fulltext")
-        clear_session_datasets("dataset_test")
-        clear_session_datasets("dataset_restore")
-        clear_session_datasets("dataset_prompt")
-        clear_session_datasets("dataset_filter")
-        clear_session_datasets("dataset_auto")
-        clear_session_datasets("dataset_paging")
-        clear_session_datasets("dataset_export")
-        clear_session_datasets("dataset_fulltext")
-        delete_session_datasets("dataset_load_session")
-        clear_session_datasets("dataset_load_session")
-        delete_session_datasets("kc_conv_701")
-        clear_session_datasets("kc_conv_701")
+        reset_guardrail_state()
 
     def test_load_session_restores_datasets_from_korechat_payload(self) -> None:
         session_id = "dataset_load_session"
@@ -182,7 +143,7 @@ class GuardrailDataTests(unittest.TestCase):
 
         with patch.object(api_module._session_service, "kc_get_conversation_for_session", return_value=conversation):
             with patch.object(api_module._session_service, "kc_get", return_value=[]):
-                history = api_module._load_session(session_id)
+                history = api_module._session_service.load_session(session_id)
 
         self.assertEqual(history.as_list(), [])
         self.assertEqual(scratchpad_load("topic", session_id), "alpha")
@@ -205,8 +166,8 @@ class GuardrailDataTests(unittest.TestCase):
 
         with patch.object(api_module._session_service, "kc_get_conversation_for_session", return_value=conversation):
             with patch.object(api_module._session_service, "kc_patch", side_effect=lambda path, payload: patched_payloads.append((path, payload)) or conversation):
-                session_context = api_module._create_session_context(session_id=session_id, persist_path=None)
-                api_module._save_session(session_id, history, session_context, 1000, 1024)
+                session_context = api_module._session_service.create_session_context(session_id=session_id, persist_path=None)
+                api_module._session_service.save_session(session_id, history, session_context, 1000, 1024)
 
         self.assertEqual(scratchpad_load("memory_favourite_colour", session_id), "cobalt blue")
         self.assertTrue(any("background_context" in payload for _path, payload in patched_payloads))

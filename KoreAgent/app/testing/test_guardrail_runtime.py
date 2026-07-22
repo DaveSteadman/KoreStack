@@ -98,7 +98,7 @@ from agent.tool_runtime.loop import normalize_tool_request
 from agent.tool_runtime.loop import _derive_auto_scratchpad_key
 from agent.tool_runtime.loop import _extract_graph_connection_batch_from_text
 from tool_result import ToolCallResult
-from api import app as api_module
+import api.app as api_module
 from input_layer import slash_commands as slash_commands_module
 from input_layer import slash_command_handlers_sessions as session_handlers_module
 from input_layer.routes_sessions import _queue_timeout_for_prompt
@@ -106,6 +106,8 @@ from input_layer.routes_sessions import _runtime_config_for_prompt
 from input_layer.slash_command_handlers_testing import _result_counts
 from KoreStack import endpoint_explorer as endpoint_explorer_module
 from testing import test_wrapper as test_wrapper_module
+from testing.guardrail_support import load_test_skills_payload
+from testing.guardrail_support import reset_guardrail_state
 from KoreCommon import suite_paths as suite_paths_module
 from utils import workspace_utils as workspace_utils_module
 from utils.workspace_utils import get_user_data_dir
@@ -113,51 +115,11 @@ from utils.workspace_utils import get_user_data_dir
 
 class GuardrailRuntimeTests(unittest.TestCase):
     def setUp(self) -> None:
-        self.skills_payload = load_skills_payload(CODE_DIR / "skills" / "skills_catalog.json")
-        scratchpad_clear()
-        delete_session_datasets("dataset_test")
-        delete_session_datasets("dataset_restore")
-        delete_session_datasets("dataset_prompt")
-        delete_session_datasets("dataset_filter")
-        delete_session_datasets("dataset_auto")
-        delete_session_datasets("dataset_paging")
-        delete_session_datasets("dataset_export")
-        delete_session_datasets("dataset_fulltext")
-        clear_session_datasets("dataset_test")
-        clear_session_datasets("dataset_restore")
-        clear_session_datasets("dataset_prompt")
-        clear_session_datasets("dataset_filter")
-        clear_session_datasets("dataset_auto")
-        clear_session_datasets("dataset_paging")
-        clear_session_datasets("dataset_export")
-        clear_session_datasets("dataset_fulltext")
-        delete_session_datasets("dataset_load_session")
-        clear_session_datasets("dataset_load_session")
-        delete_session_datasets("kc_conv_701")
-        clear_session_datasets("kc_conv_701")
+        self.skills_payload = load_test_skills_payload(CODE_DIR)
+        reset_guardrail_state()
 
     def tearDown(self) -> None:
-        scratchpad_clear()
-        delete_session_datasets("dataset_test")
-        delete_session_datasets("dataset_restore")
-        delete_session_datasets("dataset_prompt")
-        delete_session_datasets("dataset_filter")
-        delete_session_datasets("dataset_auto")
-        delete_session_datasets("dataset_paging")
-        delete_session_datasets("dataset_export")
-        delete_session_datasets("dataset_fulltext")
-        clear_session_datasets("dataset_test")
-        clear_session_datasets("dataset_restore")
-        clear_session_datasets("dataset_prompt")
-        clear_session_datasets("dataset_filter")
-        clear_session_datasets("dataset_auto")
-        clear_session_datasets("dataset_paging")
-        clear_session_datasets("dataset_export")
-        clear_session_datasets("dataset_fulltext")
-        delete_session_datasets("dataset_load_session")
-        clear_session_datasets("dataset_load_session")
-        delete_session_datasets("kc_conv_701")
-        clear_session_datasets("kc_conv_701")
+        reset_guardrail_state()
 
     def test_delegate_rejects_invalid_json_result_before_dataset_persistence(self) -> None:
         record = {
@@ -183,7 +145,7 @@ class GuardrailRuntimeTests(unittest.TestCase):
     def test_skills_catalog_local_entries_include_schema_and_template(self) -> None:
         fake_config = SimpleNamespace(skills_payload=self.skills_payload)
 
-        with patch.object(api_module, "_config", fake_config):
+        with patch.object(api_module, "_get_config", return_value=fake_config):
             with patch.object(api_module, "get_selected_tools", return_value=[]):
                 with patch.object(api_module.mcp_client, "get_mcp_tool_definitions", return_value=[]):
                     with patch.object(api_module.mcp_client, "get_mcp_tool_index", return_value={}):
@@ -300,6 +262,74 @@ class GuardrailRuntimeTests(unittest.TestCase):
         self.assertEqual(process["tools_allowlist"], ["dataset_save"])
         self.assertEqual(data_out["result_target"], "dataset:delegate_planets")
 
+    def test_delegate_collect_syncs_completed_dataset_into_current_session(self) -> None:
+        session_parent = "delegate_parent_dataset_sync"
+        session_other  = "delegate_observer_dataset_sync"
+        task_id        = "dlg_dataset_sync"
+
+        reset_guardrail_state()
+        with bind_session(session_parent):
+            dataset_save(
+                "delegate_planets",
+                [{"name": "Mercury", "kind": "planet"}, {"name": "Venus", "kind": "planet"}],
+                source_tool = "delegate",
+                source_args = {"task_id": task_id},
+                replace     = False,
+                session_id  = session_parent,
+            )
+
+        delegate_runtime_module._write_task_record(
+            {
+                "task_id":           task_id,
+                "status":            "completed",
+                "task_in":           "Return delegate planets",
+                "created_at":        "2026-07-22T21:00:00",
+                "parent_session_id": session_parent,
+                "child_session_id":  "delegate_task_dlg_dataset_sync",
+                "data_out":          {"result_target": "dataset:delegate_planets"},
+                "result":            {"datasets": ["delegate_planets"], "status": "ok"},
+            }
+        )
+
+        try:
+            with bind_session(session_other):
+                payload = delegate_runtime_module.delegate_collect(task_id)
+                mirrored = json.loads(dataset_inspect("delegate_planets", session_id=session_other))
+
+            self.assertTrue(payload["ready"])
+            self.assertEqual(mirrored["count"], 2)
+            self.assertEqual(sorted(mirrored["schema"]), ["kind", "name"])
+        finally:
+            task_path = delegate_runtime_module._task_path(task_id)
+            task_path.unlink(missing_ok=True)
+
+    def test_delegate_apply_result_target_creates_dataset_when_missing(self) -> None:
+        session_parent = "delegate_parent_dataset_create"
+        task_id        = "dlg_dataset_create"
+        record = {
+            "task_id":           task_id,
+            "parent_session_id": session_parent,
+            "data_out": {
+                "result_target": "dataset:delegate_planets",
+                "result_format": "json array of objects",
+            },
+        }
+
+        reset_guardrail_state()
+        with bind_session(session_parent):
+            saved_keys, datasets, artifacts, error, normalized = delegate_runtime_module._apply_result_target(
+                record,
+                '[{"name":"Mercury","kind":"planet"},{"name":"Venus","kind":"planet"}]',
+            )
+            manifest = json.loads(dataset_inspect("delegate_planets", session_id=session_parent))
+
+        self.assertEqual(saved_keys, [])
+        self.assertEqual(artifacts, [])
+        self.assertEqual(error, "")
+        self.assertEqual(datasets, ["delegate_planets"])
+        self.assertEqual(normalized, '[{"name":"Mercury","kind":"planet"},{"name":"Venus","kind":"planet"}]')
+        self.assertEqual(manifest["count"], 2)
+
     def test_skills_catalog_mcp_entries_include_schema_and_template(self) -> None:
         fake_config = SimpleNamespace(skills_payload=self.skills_payload)
         mcp_defs = [
@@ -327,7 +357,7 @@ class GuardrailRuntimeTests(unittest.TestCase):
             },
         }
 
-        with patch.object(api_module, "_config", fake_config):
+        with patch.object(api_module, "_get_config", return_value=fake_config):
             with patch.object(api_module, "get_selected_tools", return_value=[]):
                 with patch.object(api_module.mcp_client, "get_mcp_tool_definitions", return_value=mcp_defs):
                     with patch.object(api_module.mcp_client, "get_mcp_tool_index", return_value=mcp_idx):
@@ -656,6 +686,57 @@ class GuardrailRuntimeTests(unittest.TestCase):
         self.assertEqual(len(tool_outputs), 1)
         self.assertEqual(calls[0][0], "graph_connection_create_many")
         self.assertEqual(calls[0][1], {"connections": [{"start": "A", "connection": "reports_to", "end": "B"}]})
+
+    def test_task_plan_graph_write_intent_exposes_graph_tools(self) -> None:
+        plan = task_planning_module.validate_task_plan(
+            {
+                "objective": "Add graph connections",
+                "task_class": "graph",
+                "confidence": 0.9,
+                "current_phase": "inspect",
+                "workflow": ["inspect", "act", "validate", "complete"],
+                "phase_tools": ["dataset_list"],
+                "phase_tool_map": {"inspect": ["dataset_list"]},
+                "required_artifacts": [],
+                "validation_requirements": [],
+                "completion_contract": "done",
+                "rationale": "test",
+            },
+            known_tool_names={"dataset_list", "graph_connection_create_many", "graph_connection_list"},
+        )
+
+        overridden = task_planning_module._apply_intent_overrides(
+            plan,
+            user_prompt="Assess this text and add the connections you identify to KoreGraph.",
+            known_tool_names={"dataset_list", "graph_connection_create_many", "graph_connection_list"},
+        )
+
+        self.assertIn("graph_connection_create_many", overridden.phase_tools)
+        self.assertIn("graph_connection_create_many", overridden.phase_tool_map["act"])
+        self.assertIn("graph_connection_list", overridden.phase_tool_map["validate"])
+
+    def test_exchange_pass_status_tolerates_validation_warning_when_asserts_pass(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            log_path = Path(tmp) / "run.log"
+            log_path.write_text("[warn] orchestration validation failed", encoding="utf-8")
+
+            passed, reason = test_wrapper_module._exchange_pass_status(
+                exit_code        = 0,
+                turn_outputs     = {1: "Context window size changed: 100000 -> 2048", 2: "Paris is the capital of France."},
+                any_assert_fail  = False,
+                log_file         = str(log_path),
+                allow_no_results = False,
+                assert_results   = ["PASS", "PASS"],
+            )
+
+        self.assertTrue(passed)
+        self.assertEqual(reason, "")
+
+    def test_evaluate_assert_normalizes_numeric_formatting(self) -> None:
+        self.assertEqual(
+            test_wrapper_module._evaluate_assert("contains|128,000", "Context window size changed: 100000 -> 128000", 0),
+            "PASS",
+        )
 
     def test_read_file_accepts_workspace_relative_data_prefix(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1198,8 +1279,8 @@ class GuardrailRuntimeTests(unittest.TestCase):
 
         with patch.object(api_module._session_service, "kc_get_conversation_for_session", return_value=conversation):
             with patch.object(api_module._session_service, "kc_get", return_value=messages):
-                history = api_module._load_session(session_id)
-                session_context = api_module._create_session_context(session_id=session_id, persist_path=None)
+                history = api_module._session_service.load_session(session_id)
+                session_context = api_module._session_service.create_session_context(session_id=session_id, persist_path=None)
 
         self.assertEqual(
             history.as_list(),

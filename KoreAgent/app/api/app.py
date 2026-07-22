@@ -292,7 +292,7 @@ _session_service = SessionService(
 )
 
 
-register_skills_routes(
+_skills_routes = register_skills_routes(
     app,
     config_getter=_get_config,
     workspace_root=_WORKSPACE_ROOT,
@@ -307,6 +307,10 @@ register_skills_routes(
     build_catalog_gates=build_catalog_gates,
     execute_tool_call=execute_tool_call,
 )
+
+skills_catalog_get = _skills_routes["skills_catalog_get"]
+skills_source_get  = _skills_routes["skills_source_get"]
+skills_invoke_post = _skills_routes["skills_invoke_post"]
 
 
 register_session_switch_routes(

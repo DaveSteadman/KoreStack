@@ -369,12 +369,17 @@ def _apply_result_target(record: dict, answer: str) -> tuple[list[str], list[str
                 parsed = [parsed]
             if not isinstance(parsed, list) or not all(isinstance(item, dict) for item in parsed):
                 raise ValueError("child output is not a JSON array of objects")
+            dataset_exists = True
+            try:
+                _get_dataset(dataset_name, session_id=parent_session_id)
+            except Exception:
+                dataset_exists = False
             save_result = dataset_save(
                 dataset_name,
                 parsed,
                 source_tool = "delegate",
                 source_args = {"task_id": task_id},
-                replace     = True,
+                replace     = dataset_exists,
                 session_id  = parent_session_id,
             )
             if str(save_result).startswith("Error:"):
@@ -386,6 +391,41 @@ def _apply_result_target(record: dict, answer: str) -> tuple[list[str], list[str
         return saved_keys, datasets, artifacts, error_text, normalized_answer
 
     return saved_keys, datasets, artifacts, f"Error: unsupported result_target '{result_target}'.", normalized_answer
+
+
+def _sync_parent_results_to_active_session(record: dict) -> None:
+    """Mirror parent-visible delegate results into the caller's current session when needed."""
+    parent_session_id = str(record.get("parent_session_id") or "").strip()
+    active_session_id = str(get_active_session_id() or "").strip()
+    if not parent_session_id or not active_session_id or active_session_id == parent_session_id:
+        return
+
+    result = _normalize_mapping(record.get("result"))
+    synced_dataset_names = _normalize_string_list(result.get("datasets"))
+    result_target = str((_normalize_mapping(record.get("data_out"))).get("result_target") or "").strip()
+    if result_target.startswith("dataset:"):
+        dataset_name = result_target.split(":", 1)[1].strip()
+        if dataset_name and dataset_name not in synced_dataset_names:
+            synced_dataset_names.append(dataset_name)
+
+    for dataset_name in synced_dataset_names:
+        try:
+            dataset = _get_dataset(dataset_name, session_id=parent_session_id)
+        except Exception:
+            continue
+        dataset_exists = True
+        try:
+            _get_dataset(dataset["name"], session_id=active_session_id)
+        except Exception:
+            dataset_exists = False
+        dataset_save(
+            dataset["name"],
+            dataset.get("records") or [],
+            source_tool = dataset.get("source_tool") or "delegate_parent_sync",
+            source_args = dataset.get("source_args") or {"task_id": str(record.get("task_id") or "").strip()},
+            replace     = dataset_exists,
+            session_id  = active_session_id,
+        )
 
 
 def _run_delegate_task(task_id: str) -> None:
@@ -589,5 +629,7 @@ def delegate_collect(task_id: str) -> dict:
     if payload["status"] not in {_STATUS_COMPLETED, _STATUS_FAILED}:
         payload["ready"] = False
         return payload
+    if payload["status"] == _STATUS_COMPLETED:
+        _sync_parent_results_to_active_session(record)
     payload["ready"] = True
     return payload

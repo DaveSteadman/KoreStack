@@ -102,7 +102,7 @@ def register_skills_routes(
     mcp_client_module,
     build_catalog_gates,
     execute_tool_call,
-) -> None:
+) -> dict[str, object]:
     def _get_skills_payload_or_raise() -> dict[str, Any]:
         config = config_getter()
         if config is None:
@@ -273,3 +273,9 @@ def register_skills_routes(
             return {"ok": True, "tool_name": tool_name, "output": _json_safe(result_payload)}
         except Exception as exc:
             return {"ok": False, "tool_name": tool_name, "error": f"{exc.__class__.__name__}: {exc}"}
+
+    return {
+        "skills_catalog_get": skills_catalog_get,
+        "skills_source_get":  skills_source_get,
+        "skills_invoke_post": skills_invoke_post,
+    }

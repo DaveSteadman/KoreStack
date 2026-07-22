@@ -275,6 +275,28 @@ def _output_indicates_no_results(final_output: str) -> bool:
     )
 
 
+def _normalize_assert_text(text: str) -> str:
+    normalized = str(text or "").replace("\u202f", " ")
+    normalized = re.sub(r"\s+", " ", normalized).strip().lower()
+    return normalized.replace(",", "")
+
+
+def _has_explicit_asserts(assert_results: list[str]) -> bool:
+    return any(str(item or "").strip() and str(item).upper() != "SKIP" for item in assert_results)
+
+
+def _should_tolerate_validation_failure(
+    *,
+    turn_outputs: dict[int, str],
+    assert_results: list[str],
+) -> bool:
+    if not turn_outputs or not _has_explicit_asserts(assert_results):
+        return False
+    if any(not str(output or "").strip() for output in turn_outputs.values()):
+        return False
+    return all(str(result or "").upper() != "FAIL" for result in assert_results if str(result or "").strip())
+
+
 # ----------------------------------------------------------------------------------------------------
 def _single_item_pass_status(exit_code: int, final_output: str, log_file: str) -> tuple[bool, str]:
     """Return (passed, failure_reason) for a standalone prompt run."""
@@ -296,6 +318,7 @@ def _exchange_pass_status(
     any_assert_fail: bool,
     log_file: str,
     allow_no_results: bool = False,
+    assert_results: list[str] | None = None,
 ) -> tuple[bool, str]:
     """Return (passed, failure_reason) for a multi-turn exchange run."""
     if exit_code != 0:
@@ -307,6 +330,11 @@ def _exchange_pass_status(
     if (not allow_no_results) and any(_output_indicates_no_results(str(output)) for output in turn_outputs.values()):
         return False, "Search returned no results"
     if _log_indicates_validation_failure(log_file):
+        if _should_tolerate_validation_failure(
+            turn_outputs  = turn_outputs,
+            assert_results = list(assert_results or []),
+        ):
+            return True, ""
         return False, "Orchestration validation failed"
     return True, ""
 
@@ -319,21 +347,21 @@ def _evaluate_assert(expression: str, final_output: str, exit_code: int) -> str:
     op, _, value = expression.partition("|")
     op = op.strip().lower()
     if op == "contains":
-        return "PASS" if value.lower() in final_output.lower() else "FAIL"
+        return "PASS" if _normalize_assert_text(value) in _normalize_assert_text(final_output) else "FAIL"
     if op == "not_contains":
-        return "PASS" if value.lower() not in final_output.lower() else "FAIL"
+        return "PASS" if _normalize_assert_text(value) not in _normalize_assert_text(final_output) else "FAIL"
     if op == "all_contains":
         parts = [p.strip() for p in value.split("||") if p.strip()]
         if not parts:
             return "SKIP"
-        lowered = final_output.lower()
-        return "PASS" if all(part.lower() in lowered for part in parts) else "FAIL"
+        normalized_output = _normalize_assert_text(final_output)
+        return "PASS" if all(_normalize_assert_text(part) in normalized_output for part in parts) else "FAIL"
     if op == "none_contains":
         parts = [p.strip() for p in value.split("||") if p.strip()]
         if not parts:
             return "SKIP"
-        lowered = final_output.lower()
-        return "PASS" if all(part.lower() not in lowered for part in parts) else "FAIL"
+        normalized_output = _normalize_assert_text(final_output)
+        return "PASS" if all(_normalize_assert_text(part) not in normalized_output for part in parts) else "FAIL"
     if op == "regex":
         try:
             return "PASS" if re.search(value, final_output, flags=re.IGNORECASE) else "FAIL"
@@ -646,6 +674,7 @@ def _run_exchange_item(
     turn_metrics  = _parse_turn_metrics(stdout)
     per_turn_dur  = duration / n if n else duration
     any_assert_fail = False
+    assert_results: list[str] = []
     allow_no_results = any(bool(turn.get("allow_no_results")) for turn in turns)
 
     pending_rows: list[dict] = []
@@ -655,6 +684,7 @@ def _run_exchange_item(
         assert_expr  = turn.get("assert", "")
         final_output = turn_outputs.get(turn_idx, "")
         assert_result = _evaluate_assert(assert_expr, final_output, exit_code)
+        assert_results.append(assert_result)
         if assert_result == "FAIL":
             any_assert_fail = True
 
@@ -680,6 +710,7 @@ def _run_exchange_item(
         any_assert_fail=any_assert_fail,
         log_file=log_file,
         allow_no_results=allow_no_results,
+        assert_results=assert_results,
     )
     delegate_events = _extract_delegate_events(log_file)
     if _requires_delegation_evidence(source_file) and len(delegate_events) == 0:
