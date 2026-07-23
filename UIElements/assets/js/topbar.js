@@ -5,6 +5,7 @@
 import { SUITE_ICONS, resolveIcon } from './icons.js';
 import { SUITE_VERSION } from './suiteMeta.js';
 import { applyTheme, themeFor } from './theme.js';
+import { KCUI_STORAGE_KEYS } from './constants.js';
 
 function currentHost() {
 	return (typeof window !== 'undefined' && window.location?.hostname) || '127.0.0.1';
@@ -12,7 +13,7 @@ function currentHost() {
 
 function cachedSuiteUrls() {
 	try {
-		return JSON.parse(localStorage.getItem('kore.suite-urls') || 'null');
+		return JSON.parse(localStorage.getItem(KCUI_STORAGE_KEYS.suiteUrls) || 'null');
 	} catch (_) {
 		return null;
 	}
@@ -101,7 +102,7 @@ function _seedUrlsFromKoreStack(koreStackUrl = null) {
 		.then((r) => (r.ok ? r.json() : null))
 		.then((data) => {
 			if (!data) return;
-			localStorage.setItem('kore.suite-urls', JSON.stringify(data));
+			localStorage.setItem(KCUI_STORAGE_KEYS.suiteUrls, JSON.stringify(data));
 			if (_lastTopbarOptions !== null) initTopbar(_lastTopbarOptions);
 		})
 		.catch(() => {});
@@ -129,7 +130,7 @@ export function initTopbar(options = {}) {
 	_lastTopbarOptions = options;
 
 	// If the URL registry is absent (fresh browser session), fetch from KoreStack once to seed it.
-	if (typeof window !== 'undefined' && !localStorage.getItem('kore.suite-urls')) {
+	if (typeof window !== 'undefined' && !localStorage.getItem(KCUI_STORAGE_KEYS.suiteUrls)) {
 		_seedUrlsFromKoreStack(urls.korestack || null);
 	}
 
@@ -168,7 +169,7 @@ export function topbarServiceDefaults() {
 //  so KoreStack's own _refreshTopbar bridge handles the same-tab case.)
 if (typeof window !== 'undefined') {
 	window.addEventListener('storage', (e) => {
-		if (e.key === 'kore.suite-urls' && _lastTopbarOptions !== null) {
+		if (e.key === KCUI_STORAGE_KEYS.suiteUrls && _lastTopbarOptions !== null) {
 			initTopbar(_lastTopbarOptions);
 		}
 	});

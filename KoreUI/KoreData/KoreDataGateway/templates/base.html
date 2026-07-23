@@ -15,21 +15,14 @@
   <main class="{% block main_class %}{% endblock %}">
     {% block content %}{% endblock %}
   </main>
-  <script>
-  function setNoOlderThan(input) {
-    const days = parseInt(input.value, 10);
-    if (isNaN(days) || days < 1) return;
-    const d = new Date();
-    d.setDate(d.getDate() - days);
-    const form = input.closest('form');
-    if (form) form.querySelector('[name=since]').value = d.toISOString().slice(0, 10);
-  }
-  </script>
   <script type="module">
-    import { initDialogHost, initKoreDataShell, installNumberStepperGlobals } from '/ui-elements/assets/js/chrome.js';
+    import { bindNavigateSelects, bindNumberStepperPairControls, initDialogHost, initKoreDataShell, installDateShortcutGlobals, installNumberStepperGlobals } from '/ui-elements/assets/js/chrome.js';
 
     initDialogHost();
     installNumberStepperGlobals();
+    installDateShortcutGlobals();
+    bindNumberStepperPairControls();
+    bindNavigateSelects();
 
     initKoreDataShell({
       path: {{ request.url.path | tojson }},

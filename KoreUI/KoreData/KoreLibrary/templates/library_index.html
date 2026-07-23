@@ -6,11 +6,9 @@
 <div class="kcui-page kcui-page--narrow kcui-stack">
 
 {% if catalogs and catalogs|length > 0 %}
-<div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:1rem;">
-  <label class="meta" style="font-size:11px; letter-spacing:0.06em; text-transform:uppercase; white-space:nowrap;">Catalog</label>
-  <select onchange="location.href=this.value"
-          style="font-family:var(--font-ui,monospace); font-size:12px; background:var(--bg-2,#1a1d23);
-                 border:1px solid var(--border,#23262e); color:var(--text,#e0e4ef); padding:3px 6px; cursor:pointer;">
+<div class="kcui-inline-actions kcui-mar-bottom-lg">
+  <label class="kcui-filter-label kcui-nowrap">Catalog</label>
+  <select class="kcui-field-md" data-kcui-navigate>
     <option value="/ui/library"{% if not catalog %} selected{% endif %}>ALL</option>
     {% for cat in catalogs %}
     <option value="/ui/library?catalog={{ cat.id }}"{% if catalog == cat.id %} selected{% endif %}>{{ cat.label|upper }}</option>
@@ -19,97 +17,94 @@
 </div>
 {% endif %}
 
-<div class="panel kcui-panel" style="margin-bottom:1.25rem;">
-  <div class="panel-header kcui-panel-header">
-    BOOKS
-    <span class="badge badge-dim" style="margin-left:0.5rem;">{{ total }}</span>
-    <span style="margin-left:auto; display:flex; gap:0.4rem; align-items:center;">
+<div class="kcui-panel kcui-panel--spaced">
+  <div class="kcui-panel-header">
+    <span>BOOKS <span class="kcui-tag kcui-tag--dim kcui-tag--sm">{{ total }}</span></span>
+    <span class="kcui-inline-actions">
       <a href="/ui/library/search{% if catalog %}?catalog={{ catalog }}{% endif %}" class="kcui-tag kcui-tag--sm kcui-tag--yellow">SEARCH</a>
       <a href="/ui/library/import" class="kcui-tag kcui-tag--sm kcui-tag--info">IMPORT</a>
     </span>
   </div>
-  <div class="panel-body kcui-panel-body" style="padding:0.5rem 1rem; border-bottom:1px solid var(--border);">
+  <div class="kcui-panel-body kcui-panel-body--compact">
     <form action="/ui/library/search" method="get">
-      <p class="meta" style="margin-bottom:0.4rem;">Bare terms use AND by default. Use quotes, OR or |, NOT, and parentheses for text search. Metadata fields can still be combined separately.</p>
-      <div style="display:flex; flex-direction:row; gap:0;">
-        <input type="search" name="q" placeholder="full-text search..." style="flex:1;">
-        <button class="btn btn-sm btn-yellow" type="submit">SEARCH</button>
+      <p class="kcui-meta kcui-mar-bottom-sm">Bare terms use AND by default. Use quotes, OR or |, NOT, and parentheses for text search. Metadata fields can still be combined separately.</p>
+      <div class="kcui-search-row">
+        <input type="search" name="q" placeholder="full-text search...">
+        <button class="kcui-btn kcui-btn-sm kcui-btn-yellow" type="submit">SEARCH</button>
       </div>
-      <div style="display:flex; flex-wrap:wrap; gap:var(--kcui-gap-panel); margin-top:0.6rem; align-items:center;">
-        <label style="display:flex; align-items:center; gap:0.35rem; font-size:12px; color:var(--dim);">
+      <div class="kcui-filter-row kcui-mar-top-md">
+        <label class="kcui-filter-label">
           Catalog
-          <select name="catalog"
-                  style="font-family:var(--font-ui,monospace); font-size:12px; background:var(--bg-2,#1a1d23);
-                         border:1px solid var(--border,#23262e); color:var(--text,#e0e4ef); padding:2px 5px;">
+          <select name="catalog" class="kcui-field-md">
             <option value=""{% if not catalog %} selected{% endif %}>all</option>
             {% for cat in (catalogs or []) %}
             <option value="{{ cat.id }}"{% if catalog == cat.id %} selected{% endif %}>{{ cat.label }}</option>
             {% endfor %}
           </select>
         </label>
-        <label style="display:flex; align-items:center; gap:0.35rem; font-size:12px; color:var(--dim);">
+        <label class="kcui-filter-label">
           Author
-          <input type="text" name="author" style="width:140px;">
+          <input type="text" name="author" class="kcui-field-md">
         </label>
-        <label style="display:flex; align-items:center; gap:0.35rem; font-size:12px; color:var(--dim);">
+        <label class="kcui-filter-label">
           Title
-          <input type="text" name="title" style="width:160px;">
+          <input type="text" name="title" class="kcui-field-md">
         </label>
-        <label style="display:flex; align-items:center; gap:0.35rem; font-size:12px; color:var(--dim);">
+        <label class="kcui-filter-label">
           Year
-          <div class="num-stepper">
-            <input type="number" name="year" min="1000" max="2100" style="width:62px;">
-            <div class="stepper-btns">
-              <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,1)">&#9650;</button>
-              <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,-1)">&#9660;</button>
+          <div class="kcui-num-stepper">
+            <input type="number" name="year" min="1000" max="2100" class="kcui-field-xs">
+            <div class="kcui-stepper-btns">
+              <button class="step-up" type="button" tabindex="-1">&#9650;</button>
+              <button class="step-dn" type="button" tabindex="-1">&#9660;</button>
             </div>
           </div>
         </label>
-        <label style="display:flex; align-items:center; gap:0.35rem; font-size:12px; color:var(--dim);">
+        <label class="kcui-filter-label">
           Language
-          <input type="text" name="language" style="width:55px;" placeholder="en">
+          <input type="text" name="language" class="kcui-field-xs" placeholder="en">
         </label>
-        <label style="display:flex; align-items:center; gap:0.35rem; font-size:12px; color:var(--dim);">
+        <label class="kcui-filter-label">
           Genre
-          <input type="text" name="genre" style="width:120px;">
+          <input type="text" name="genre" class="kcui-field-sm">
         </label>
-        <label style="display:flex; align-items:center; gap:0.35rem; font-size:12px; color:var(--dim);">
+        <label class="kcui-filter-label">
           Limit
-          <div class="num-stepper">
-            <input type="number" name="limit" value="50" min="1" max="500" style="width:52px;">
-            <div class="stepper-btns">
-              <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,1)">&#9650;</button>
-              <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,-1)">&#9660;</button>
+          <div class="kcui-num-stepper">
+            <input type="number" name="limit" value="50" min="1" max="500" class="kcui-field-2xs">
+            <div class="kcui-stepper-btns">
+              <button class="step-up" type="button" tabindex="-1">&#9650;</button>
+              <button class="step-dn" type="button" tabindex="-1">&#9660;</button>
             </div>
           </div>
         </label>
       </div>
     </form>
   </div>
-  <div class="panel-body kcui-panel-body" style="padding:0; overflow-x:auto;">
+  <div class="kcui-panel-body kcui-panel-body--flush kcui-table-scroll">
     {% if books %}
-    <table>
+    <table class="kcui-table">
       <thead>
         <tr>
-          <th style="width:90px;">ID</th>
+          <th class="kcui-field-sm">ID</th>
           <th>Title</th>
-          <th style="width:180px;">Author</th>
-          <th style="width:55px;">Year</th>
-          <th style="width:55px;">Lang</th>
-          <th style="width:120px;">Genre</th>
-          <th style="width:70px; text-align:right;">Words</th>
+          <th class="kcui-field-lg">Author</th>
+          <th class="kcui-field-2xs">Year</th>
+          <th class="kcui-field-2xs">Lang</th>
+          <th class="kcui-field-sm">Genre</th>
+          <th class="kcui-field-xs kcui-text-right">Words</th>
         </tr>
       </thead>
       <tbody>
         {% for b in books %}
         <tr>
-          <td class="meta"><a href="/ui/library/{{ b.route_id or b.id }}" style="color:inherit;">{{ b.route_id or b.id }}</a></td>
+          <td class="kcui-meta"><a class="kcui-muted-link" href="/ui/library/{{ b.route_id or b.id }}">{{ b.route_id or b.id }}</a></td>
           <td><a href="/ui/library/{{ b.route_id or b.id }}">{{ b.title }}</a></td>
-          <td class="meta">{{ b.author or "-" }}</td>
-          <td class="meta">{{ b.year or "-" }}</td>
-          <td class="meta">{{ b.language or "-" }}</td>
-          <td class="meta">{{ b.genre or "-" }}</td>
-          <td class="meta" style="text-align:right;">
+          <td class="kcui-meta">{{ b.author or "-" }}</td>
+          <td class="kcui-meta">{{ b.year or "-" }}</td>
+          <td class="kcui-meta">{{ b.language or "-" }}</td>
+          <td class="kcui-meta">{{ b.genre or "-" }}</td>
+          <td class="kcui-meta kcui-text-right">
             {% if b.word_count %}{{ "{:,}".format(b.word_count) }}{% else %}-{% endif %}
           </td>
         </tr>
@@ -117,13 +112,13 @@
       </tbody>
     </table>
     {% else %}
-    <p class="meta" style="padding:var(--kcui-gap-panel);">No books yet.</p>
+    <p class="kcui-meta kcui-result-empty">No books yet.</p>
     {% endif %}
   </div>
 </div>
 
 {% if offset + limit < total %}
-<div class="pagination">
+<div class="kcui-pagination">
   {% if offset > 0 %}
   <a href="/ui/library?limit={{ limit }}&offset={{ offset - limit }}"><- PREV</a>
   {% endif %}

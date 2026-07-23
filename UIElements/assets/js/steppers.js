@@ -39,6 +39,23 @@ export function installNumberStepperGlobals(globalName = 'stepNum') {
   window.kcuiStepNum = stepNumberInput;
 }
 
+export function setNoOlderThan(input) {
+  const days = parseInt(input?.value, 10);
+  if (Number.isNaN(days) || days < 1) return;
+  const date = new Date();
+  date.setDate(date.getDate() - days);
+  const form = input.closest('form');
+  const target = form?.querySelector?.('[name=since]');
+  if (target instanceof HTMLInputElement) {
+    target.value = date.toISOString().slice(0, 10);
+  }
+}
+
+export function installDateShortcutGlobals(globalName = 'setNoOlderThan') {
+  window[globalName] = setNoOlderThan;
+  window.kcuiSetNoOlderThan = setNoOlderThan;
+}
+
 export function bindNumberStepperPairControls(root = document) {
   root.querySelectorAll('.num-stepper, .kcui-num-stepper').forEach((wrapper) => {
     const input = wrapper.querySelector('input[type="number"]');
@@ -49,6 +66,16 @@ export function bindNumberStepperPairControls(root = document) {
     });
     wrapper.querySelector('.step-dn')?.addEventListener('click', () => {
       stepNumberInput(wrapper.querySelector('.step-dn'), -1);
+    });
+  });
+}
+
+export function bindNavigateSelects(root = document) {
+  root.querySelectorAll('select[data-kcui-navigate]').forEach((select) => {
+    if (select.dataset.kcuiNavigateBound === '1') return;
+    select.dataset.kcuiNavigateBound = '1';
+    select.addEventListener('change', () => {
+      if (select.value) window.location.href = select.value;
     });
   });
 }

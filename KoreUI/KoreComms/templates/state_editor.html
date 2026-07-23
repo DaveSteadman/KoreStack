@@ -4,13 +4,13 @@
 
 {% block content %}
 <div class="kcui-page kcui-page--narrow kcui-stack">
-<p class="meta" style="margin-bottom:1rem;">
+<p class="kcui-meta kcui-mar-bottom-lg">
   Manually override message status. Re-queuing a message puts it back on the agent queue.
 </p>
 
-<div class="panel">
-  <div class="panel-header">All Messages</div>
-  <table>
+<div class="kcui-panel">
+  <div class="kcui-panel-header">All Messages</div>
+  <table class="kcui-table">
     <thead>
       <tr>
         <th>ID</th><th>Interface</th><th>Direction</th><th>Subject / Sender</th>
@@ -20,29 +20,29 @@
     <tbody>
       {% for msg in messages %}
       <tr>
-        <td class="dim">{{ msg.id }}</td>
+        <td class="kcui-meta">{{ msg.id }}</td>
         <td>{{ msg.interface_name }}</td>
-        <td><span class="badge badge-{{ msg.direction }}">{{ msg.direction }}</span></td>
+        <td><span class="kcui-tag kcui-tag--dim">{{ msg.direction }}</span></td>
         <td>
           <div>{{ msg.subject or "(no subject)" }}</div>
-          {% if msg.sender %}<div class="dim" style="font-size:11px;">{{ msg.sender }}</div>{% endif %}
+          {% if msg.sender %}<div class="kcui-meta">{{ msg.sender }}</div>{% endif %}
         </td>
-        <td><span class="badge badge-{{ msg.status }}">{{ msg.status }}</span></td>
-        <td class="dim" style="font-size:11px;">{{ msg.received_at[:16] }}</td>
+        <td><span class="kcui-tag kcui-tag--dim">{{ msg.status }}</span></td>
+        <td class="kcui-meta">{{ msg.received_at[:16] }}</td>
         <td>
-          <div class="gap-row">
+          <div class="kcui-inline-actions">
             {% if msg.direction == 'inbound' and msg.status not in ('queued','processing') %}
-            <form method="POST" action="/state/{{ msg.id }}/requeue" style="display:inline">
-              <button class="btn btn-sm btn-primary" type="submit">Re-queue</button>
+            <form method="POST" action="/state/{{ msg.id }}/requeue" class="kcui-inline-form">
+              <button class="kcui-btn kcui-btn-sm kcui-btn-primary" type="submit">Re-queue</button>
             </form>
             {% endif %}
-            <form method="POST" action="/state/{{ msg.id }}/set-status" style="display:inline; display:flex; gap:0.4rem; align-items:center;">
-              <select name="new_status" style="width:110px; padding:0.2rem 0.4rem;">
+            <form method="POST" action="/state/{{ msg.id }}/set-status" class="kcui-inline-form">
+              <select name="new_status" class="kcui-field-sm">
                 {% for s in ('queued','processing','replied','ignored') %}
                 <option value="{{ s }}" {% if msg.status == s %}selected{% endif %}>{{ s }}</option>
                 {% endfor %}
               </select>
-              <button class="btn btn-sm" type="submit">Set</button>
+              <button class="kcui-btn kcui-btn-sm" type="submit">Set</button>
             </form>
           </div>
         </td>
@@ -53,9 +53,9 @@
 </div>
 
 {% if messages|length == 100 %}
-<div class="gap-row">
-  <a class="btn btn-sm" href="/state?offset={{ offset + 100 }}">Next page &gt;</a>
-  {% if offset > 0 %}<a class="btn btn-sm" href="/state?offset={{ offset - 100 }}">&lt; Previous</a>{% endif %}
+<div class="kcui-inline-actions">
+  <a class="kcui-btn kcui-btn-sm" href="/state?offset={{ offset + 100 }}">Next page &gt;</a>
+  {% if offset > 0 %}<a class="kcui-btn kcui-btn-sm" href="/state?offset={{ offset - 100 }}">&lt; Previous</a>{% endif %}
 </div>
 {% endif %}
 </div>

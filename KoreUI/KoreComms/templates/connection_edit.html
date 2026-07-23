@@ -5,9 +5,9 @@
 {% block content %}
 <div class="kcui-page kcui-page--narrow kcui-stack">
 
-<div class="panel" style="max-width:680px;">
-  <div class="panel-header">{{ iface_type|upper }} Settings</div>
-  <div class="panel-body">
+<div class="kcui-panel kcui-form-panel">
+  <div class="kcui-panel-header">{{ iface_type|upper }} Settings</div>
+  <div class="kcui-panel-body">
 
     <form method="POST" action="{% if iface %}/connections/{{ iface.id }}{% else %}/connections/new{% endif %}">
       {% if not iface %}
@@ -18,61 +18,61 @@
       <input type="text" id="name" name="name" value="{{ iface.name if iface else '' }}"
             placeholder="{% if iface_type == 'discord' %}My Discord Bot{% else %}My Gmail Account{% endif %}" required>
 
-          {% if iface_type == "discord" %}
-          <label for="bot_token" style="margin-top:0.6rem;">Discord Bot Token</label>
-          <input type="password" id="bot_token" name="bot_token"
-            value="" placeholder="{% if iface and config.bot_token %}(stored - paste to update){% else %}Paste your Discord bot token{% endif %}">
+      {% if iface_type == "discord" %}
+      <label for="bot_token">Discord Bot Token</label>
+      <input type="password" id="bot_token" name="bot_token"
+        value="" placeholder="{% if iface and config.bot_token %}(stored - paste to update){% else %}Paste your Discord bot token{% endif %}">
 
-          <label for="channel_ids" style="margin-top:0.4rem;">Watched Channel IDs</label>
-          <textarea id="channel_ids" name="channel_ids" rows="5"
-          placeholder="One channel or thread ID per line">{{ discord_channel_ids_text if iface else '' }}</textarea>
+      <label for="channel_ids">Watched Channel IDs</label>
+      <textarea id="channel_ids" name="channel_ids" rows="5"
+      placeholder="One channel or thread ID per line">{{ discord_channel_ids_text if iface else '' }}</textarea>
 
-          <p class="meta" style="margin-top:0.3rem;">
-       KoreComms polls these channels for new user messages and posts replies back to the same channel or thread.
-       Use a channel or thread ID as the recipient when calling <code>/api/send</code> for Discord.
-          </p>
-          {% endif %}
+      <p class="kcui-meta">
+        KoreComms polls these channels for new user messages and posts replies back to the same channel or thread.
+        Use a channel or thread ID as the recipient when calling <code>/api/send</code> for Discord.
+      </p>
+      {% endif %}
 
       {% if iface_type == "gmail" %}
-      <label for="client_id" style="margin-top:0.6rem;">Google OAuth Client ID</label>
+      <label for="client_id">Google OAuth Client ID</label>
       <input type="text" id="client_id" name="client_id"
              value="" placeholder="{% if iface and config.client_id %}(stored - paste to update){% else %}Paste from Google Cloud Console{% endif %}">
 
-      <label for="client_secret" style="margin-top:0.4rem;">Google OAuth Client Secret</label>
+      <label for="client_secret">Google OAuth Client Secret</label>
       <input type="password" id="client_secret" name="client_secret"
              value="" placeholder="{% if iface and config.client_secret %}(stored - paste to update){% else %}Paste from Google Cloud Console{% endif %}">
 
-      <p class="meta" style="margin-top:0.3rem;">
+      <p class="kcui-meta">
         Register redirect URI:
-        <code style="color:var(--amber)">{{ request.url.scheme }}://{{ request.url.hostname }}{% if request.url.port %}:{{ request.url.port }}{% endif %}/gmail-callback</code>
+        <code class="kcui-text-warning">{{ request.url.scheme }}://{{ request.url.hostname }}{% if request.url.port %}:{{ request.url.port }}{% endif %}/gmail-callback</code>
         in your Google Cloud Console OAuth credentials.
       </p>
       {% endif %}
 
-      <label for="poll_interval" style="margin-top:0.6rem;">Poll Interval (seconds)</label>
+      <label for="poll_interval">Poll Interval (seconds)</label>
       <input type="number" id="poll_interval" name="poll_interval"
-             value="{{ poll_interval }}" min="10" max="3600" style="width:120px;">
+             value="{{ poll_interval }}" min="10" max="3600" class="kcui-field-sm">
 
       {% if iface %}
-      <label style="margin-top:0.6rem; display:flex; gap:0.5rem; align-items:center; text-transform:none; font-size:13px; cursor:pointer;">
-        <input type="checkbox" name="enabled" value="on" {% if iface.enabled %}checked{% endif %} style="width:auto;">
+      <label class="kcui-checkbox-label">
+        <input type="checkbox" name="enabled" value="on" {% if iface.enabled %}checked{% endif %}>
         Enabled
       </label>
       {% endif %}
 
-      <div class="gap-row" style="margin-top:0.75rem;">
+      <div class="kcui-inline-actions kcui-mar-top-md">
         <button class="kcui-tag kcui-tag--accent" type="submit">{% if iface %}save changes{% else %}create connection{% endif %}</button>
         <a class="kcui-tag kcui-tag--dim" href="/connections">cancel</a>
       </div>
     </form>
 
     {% if iface and iface_type == "gmail" %}
-    <hr style="border:none; border-top:1px solid var(--border); margin:1.25rem 0;">
+    <hr class="kcui-hr">
     <div class="section-title">Gmail Authorisation</div>
     {% if gmail_authorized %}
-      <p class="meta" style="color:var(--green); margin-bottom:0.75rem;">Authorized - refresh token stored.</p>
+      <p class="kcui-meta kcui-text-success kcui-mar-bottom-lg">Authorized - refresh token stored.</p>
     {% else %}
-      <p class="meta" style="margin-bottom:0.75rem;">
+      <p class="kcui-meta kcui-mar-bottom-lg">
         Save your client credentials above first, then click Authorize to grant Gmail access.
       </p>
     {% endif %}

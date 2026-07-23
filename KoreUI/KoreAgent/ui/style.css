@@ -16,14 +16,14 @@
     --blue:         var(--info);
     --yellow:       var(--warning);
     /* Semantic color tokens - shared by log and chat panels */
-    --clr-body:       rgba(255,255,255,0.70);
-    --clr-title:      rgba(255,255,255,0.90);
-    --clr-sep:        rgba(96,165,250,0.40);
-    --clr-tool-round: #22d3ee;
-    --clr-progress:   rgba(250,204,21,0.88);
-    --clr-thinking:   rgba(255,255,255,0.22);
-    --clr-user:       #60a5fa;
-    --clr-agent:      #4ade80;
+    --clr-body:       var(--kcui-chat-body);
+    --clr-title:      var(--kcui-chat-title);
+    --clr-sep:        var(--kcui-chat-sep);
+    --clr-tool-round: var(--kcui-chat-tool);
+    --clr-progress:   var(--kcui-chat-progress);
+    --clr-thinking:   var(--kcui-chat-thinking);
+    --clr-user:       var(--kcui-chat-user);
+    --clr-agent:      var(--kcui-chat-agent);
     --font-mono:    var(--font-code);
     --radius:       2px;
     --gap:          12px;
@@ -74,7 +74,7 @@ html, body {
 }
 
 #header .brand-pre {
-    background:              linear-gradient(90deg, #60a5fa 0%, rgba(96,165,250,0.45) 100%);
+    background:              linear-gradient(90deg, var(--kcui-chat-user) 0%, color-mix(in srgb, var(--kcui-chat-user) 45%, transparent) 100%);
     -webkit-background-clip: text;
     background-clip:         text;
     -webkit-text-fill-color: transparent;

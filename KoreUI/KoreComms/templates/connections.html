@@ -6,12 +6,12 @@
 <div class="kcui-page kcui-page--narrow kcui-stack">
 
 {% if flash %}
-<div class="flash">{{ flash }}</div>
+<div class="kcui-flash">{{ flash }}</div>
 {% endif %}
 
-<div class="panel">
-  <div class="panel-header">Configured Interfaces</div>
-  <table>
+<div class="kcui-panel">
+  <div class="kcui-panel-header">Configured Interfaces</div>
+  <table class="kcui-table">
     <thead>
       <tr>
         <th>ID</th><th>Type</th><th>Name</th><th>Enabled</th><th>Created</th><th></th>
@@ -20,18 +20,19 @@
     <tbody>
       {% for iface in interfaces %}
       <tr>
-        <td class="dim">{{ iface.id }}</td>
+        <td class="kcui-meta">{{ iface.id }}</td>
         <td><span class="kcui-tag kcui-tag--info">{{ iface.type }}</span></td>
         <td>{{ iface.name }}</td>
-        <td>{% if iface.enabled %}<span style="color:var(--green)">&#9679;</span>{% else %}<span class="dim">&#9675;</span>{% endif %}</td>
-        <td class="dim">{{ iface.created_at[:16] }}</td>
+        <td>{% if iface.enabled %}<span class="kcui-status-dot">&#9679;</span>{% else %}<span class="kcui-status-dot kcui-status-dot--off">&#9675;</span>{% endif %}</td>
+        <td class="kcui-meta">{{ iface.created_at[:16] }}</td>
         <td>
-          <div class="gap-row">
+          <div class="kcui-inline-actions">
             <a class="kcui-tag kcui-tag--dim" href="/connections/{{ iface.id }}">edit</a>
             {% if iface.type != 'manual' %}
-            <form method="POST" action="/connections/{{ iface.id }}/delete" style="display:inline">
+            <form method="POST" action="/connections/{{ iface.id }}/delete" class="kcui-inline-form">
               <button class="kcui-tag kcui-tag--danger" type="submit"
-                onclick="return confirm('Delete connection {{ iface.name }}?')">delete</button>
+                data-kcui-confirm="Delete connection {{ iface.name }}?"
+                data-kcui-confirm-label="Delete">delete</button>
             </form>
             {% endif %}
           </div>
@@ -43,8 +44,8 @@
 </div>
 
 {% if available_types %}
-<div class="gap-row">
-  <span class="dim" style="font-size:12px;">Add connection:</span>
+<div class="kcui-inline-actions">
+  <span class="kcui-meta">Add connection:</span>
   {% for t in available_types %}
   <a class="kcui-tag kcui-tag--accent" href="/connections/new?type={{ t }}">+ {{ t }}</a>
   {% endfor %}

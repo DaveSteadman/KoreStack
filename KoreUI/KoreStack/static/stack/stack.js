@@ -16,9 +16,6 @@ const STATE_COLOR = {
   down: 'danger',
 };
 
-const SERVICES_PANEL_ICON_SIZE = 39;
-const SERVICE_ACTION_ICON_SIZE = 13;
-
 function readBootstrap() {
   const node = document.getElementById('stack-bootstrap');
   if (!node) return {};
@@ -34,6 +31,10 @@ let current = bootstrap.snapshot || { stack: { metrics: {} }, services: [] };
 let chromeApi = null;
 let refreshTimer = null;
 
+function suiteUrlsStorageKey() {
+  return chromeApi?.KCUI_STORAGE_KEYS?.suiteUrls || 'kore.suite-urls';
+}
+
 function setText(node, value) {
   if (node) node.textContent = value;
 }
@@ -44,7 +45,7 @@ function setValueById(id, value) {
 
 function setSuiteUrls(urls) {
   try {
-    localStorage.setItem('kore.suite-urls', JSON.stringify(urls));
+    localStorage.setItem(suiteUrlsStorageKey(), JSON.stringify(urls));
   } catch (_error) {
   }
 }
@@ -72,7 +73,7 @@ function initServicePanelIcons() {
     const serviceKey = SERVICE_KEY_BY_SLUG[row.dataset.serviceCard];
     const glyph = row.querySelector('.service-banner-icon');
     if (!serviceKey || !glyph) continue;
-    const iconHtml = chromeApi.resolveIcon(chromeApi.SUITE_ICONS, serviceKey, SERVICES_PANEL_ICON_SIZE);
+    const iconHtml = chromeApi.resolveIcon(chromeApi.SUITE_ICONS, serviceKey, chromeApi.KCUI_ICON_SIZE_LG);
     if (iconHtml) glyph.innerHTML = iconHtml;
   }
 }
@@ -81,7 +82,7 @@ function initServiceActionIcons() {
   if (!chromeApi?.resolveIcon || !chromeApi?.ACTION_ICONS) return;
   for (const iconNode of document.querySelectorAll('[data-action-icon]')) {
     const action = iconNode.dataset.actionIcon;
-    const iconHtml = chromeApi.resolveIcon(chromeApi.ACTION_ICONS, action, SERVICE_ACTION_ICON_SIZE);
+    const iconHtml = chromeApi.resolveIcon(chromeApi.ACTION_ICONS, action, chromeApi.KCUI_ICON_SIZE_SM);
     if (iconHtml) iconNode.innerHTML = iconHtml;
   }
 }
@@ -118,7 +119,7 @@ function applySnapshot(next) {
   const urls = suiteUrlsFromSnapshot(next);
   let previous = null;
   try {
-    previous = localStorage.getItem('kore.suite-urls');
+    previous = localStorage.getItem(suiteUrlsStorageKey());
   } catch (_error) {
   }
   setSuiteUrls(urls);
@@ -163,7 +164,7 @@ function showNotice(card, message, tone) {
   notice.dataset.tone = tone || '';
   notice.classList.add('is-visible');
   clearTimeout(notice._timer);
-  notice._timer = window.setTimeout(() => notice.classList.remove('is-visible'), 4000);
+  notice._timer = window.setTimeout(() => notice.classList.remove('is-visible'), chromeApi?.KCUI_TRANSIENT_NOTICE_MS || 4000);
 }
 
 async function serviceAction(service, action) {
@@ -186,7 +187,7 @@ async function serviceAction(service, action) {
   } catch (_error) {
     showNotice(card, 'Action failed', 'error');
   } finally {
-    window.setTimeout(() => buttons.forEach((button) => { button.disabled = false; }), 300);
+    window.setTimeout(() => buttons.forEach((button) => { button.disabled = false; }), chromeApi?.KCUI_SHORT_DELAY_MS || 300);
   }
 }
 
@@ -202,7 +203,7 @@ function startRefreshLoop() {
     if (document.visibilityState === 'visible') {
       refresh();
     }
-  }, 2000);
+  }, chromeApi?.KCUI_POLL_MS || 2000);
 }
 
 async function initChrome() {

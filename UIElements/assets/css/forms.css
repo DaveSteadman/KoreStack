@@ -22,6 +22,8 @@
 }
 
 .kcui-shell-bg input[type=text],
+.kcui-shell-bg input[type=email],
+.kcui-shell-bg input[type=password],
 .kcui-shell-bg input[type=url],
 .kcui-shell-bg input[type=number],
 .kcui-shell-bg input[type=search],

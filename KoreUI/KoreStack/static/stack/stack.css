@@ -9,24 +9,18 @@
   --stack-success: var(--success, #4af77a);
   --stack-warn: var(--warning, #f0c060);
   --stack-danger: var(--danger, #ff5f5f);
-  --stack-action-start: #5be38f;
-  --stack-action-stop: #ff7a7a;
-  --stack-action-restart: #7ab7ff;
-  --service-koreagent: #66f0c9;
-  --service-korechat: #59d7ff;
-  --service-koredatagateway: #a78bfa;
-  --service-koredocs: #ffd166;
-  --service-korecode: #7ee081;
-  --service-korecomms: #ff8fab;
+  --stack-action-start: var(--kcui-action-start);
+  --stack-action-stop: var(--kcui-action-stop);
+  --stack-action-restart: var(--kcui-action-restart);
+  --service-koreagent: var(--kcui-service-koreagent);
+  --service-korechat: var(--kcui-service-korechat);
+  --service-koredatagateway: var(--kcui-service-koredatagateway);
+  --service-koredocs: var(--kcui-service-koredocs);
+  --service-korecode: var(--kcui-service-korecode);
+  --service-korecomms: var(--kcui-service-korecomms);
 }
 
-* { box-sizing: border-box; }
-
 body {
-  margin: 0;
-  font-family: var(--font-ui, "Roboto Mono", Consolas, monospace);
-  color: var(--stack-ink);
-  background: var(--stack-bg);
   min-height: 100vh;
   overflow-x: hidden;
   overflow-y: auto;
@@ -34,45 +28,11 @@ body {
 
 a { color: inherit; }
 
-.kcui-page {
-  --kcui-page-max: 1320px;
-  width: min(var(--kcui-page-max), calc(100% - 24px));
-  margin: 0 auto;
-  padding: 12px 0;
-}
-
-.kcui-panel {
-  background: var(--stack-panel);
-  border: 1px solid var(--stack-line);
-  border-radius: 2px;
-  overflow: hidden;
-}
-
-.kcui-panel-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  min-height: 34px;
-  padding: 8px 12px 7px;
-  border-bottom: 1px solid var(--stack-line);
-  color: var(--stack-muted);
-}
-
-.kcui-panel-body {
-  padding: 12px;
-}
-
 .shell {
   display: grid;
   grid-template-rows: auto auto;
   gap: 12px;
   padding: 12px 0;
-}
-
-.panel {
-  background: var(--stack-panel);
-  border: 1px solid var(--stack-line);
-  border-radius: 2px;
 }
 
 .eyebrow {

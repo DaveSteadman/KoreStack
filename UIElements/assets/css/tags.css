@@ -17,7 +17,8 @@
 
 /* ─── Base ──────────────────────────────────────────────────────────── */
 
-.kcui-tag {
+.kcui-tag,
+.tag {
   --kcui-tag-color: var(--text-dim, #4e5466);
   display:        inline-flex;
   align-items:    center;

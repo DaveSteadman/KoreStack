@@ -1,3 +1,5 @@
+import { KCUI_STORAGE_KEYS } from "/ui-elements/assets/js/constants.js";
+
 export const DEFAULT_CHAT_AGE_STORAGE_KEY = "kc_max_default_chat_age_days";
 export const DEFAULT_CHAT_AGE_FALLBACK_DAYS = 7;
 export const DEFAULT_CHAT_AGE_CULL_MS     = 60 * 60 * 1000;
@@ -38,7 +40,7 @@ export function cacheGet(key) {
 
 export function cachedSuiteUrls() {
     try {
-        const raw = localStorage.getItem("kore.suite-urls");
+        const raw = localStorage.getItem(KCUI_STORAGE_KEYS.suiteUrls);
         return raw ? JSON.parse(raw) : null;
     } catch (_) {
         return null;

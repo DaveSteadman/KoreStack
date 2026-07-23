@@ -24,7 +24,7 @@
 {% endblock %}
 
 {% block content %}
-<div style="display:flex; flex-direction:column; flex:1 1 auto; min-height:0; overflow:hidden;">
+<div class="kcui-fill-column">
 
   <!-- ── chat sub-header ──────────────────────────── -->
   <div class="chat-header">
@@ -32,10 +32,11 @@
     <span class="chat-subj">{{ conv.korechat_id or "(no KoreChat ID)" }}</span>
     <span class="kcui-tag kcui-tag--info">{{ iface.name }}</span>
     <span class="kcui-tag kcui-tag--dim">{{ conv.conversation_name or ("kccomms:" ~ conv.id) }}</span>
-    <span class="kcui-tag kcui-tag--dim" style="margin-left:auto;">conv #{{ conv.id }}</span>
-    <form method="post" action="/conversation/{{ conv.id }}/delete"
-          onsubmit="return confirm('Delete this entire conversation and its agent memory? This cannot be undone.')">
-      <button type="submit" class="kcui-tag kcui-tag--danger">delete</button>
+    <span class="kcui-tag kcui-tag--dim kcui-row-end">conv #{{ conv.id }}</span>
+    <form method="post" action="/conversation/{{ conv.id }}/delete">
+      <button type="submit" class="kcui-tag kcui-tag--danger"
+              data-kcui-confirm="Delete this entire conversation and its agent memory? This cannot be undone."
+              data-kcui-confirm-label="Delete">delete</button>
     </form>
   </div>
 

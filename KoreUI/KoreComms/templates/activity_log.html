@@ -4,11 +4,11 @@
 
 {% block content %}
 <div class="kcui-page kcui-page--narrow kcui-stack">
-<p class="meta" style="margin-bottom:1rem;">Most recent 200 actions (newest first).</p>
+<p class="kcui-meta kcui-mar-bottom-lg">Most recent 200 actions (newest first).</p>
 
-<div class="panel">
-  <div class="panel-header">Log entries - {{ entries|length }}</div>
-  <table>
+<div class="kcui-panel">
+  <div class="kcui-panel-header">Log entries - {{ entries|length }}</div>
+  <table class="kcui-table">
     <thead>
       <tr><th>Time</th><th>Action</th><th>Detail</th></tr>
     </thead>
@@ -27,13 +27,13 @@
       } %}
       {% for e in entries %}
       <tr>
-        <td class="dim" style="font-size:11px; white-space:nowrap;">{{ e.logged_at[:19] }}</td>
+        <td class="kcui-meta kcui-nowrap">{{ e.logged_at[:19] }}</td>
         <td><span class="kcui-tag kcui-tag--pill kcui-tag--{{ action_colors.get(e.action, 'dim') }}">{{ e.action }}</span></td>
-        <td class="dim" style="font-size:12px;">{{ e.detail or '' }}</td>
+        <td class="kcui-meta">{{ e.detail or '' }}</td>
       </tr>
       {% endfor %}
       {% if not entries %}
-      <tr><td colspan="3" class="dim" style="text-align:center; padding:var(--kcui-gap-panel);">No activity yet.</td></tr>
+      <tr><td colspan="3" class="kcui-empty-cell">No activity yet.</td></tr>
       {% endif %}
     </tbody>
   </table>

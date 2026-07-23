@@ -1,8 +1,14 @@
-import { initKoreLiveWebShell, resolveIcon, SUITE_ICONS } from '/ui-elements/assets/js/chrome.js';
+import {
+  KCUI_ICON_SIZE_MD,
+  KCUI_POLL_MS,
+  initKoreLiveWebShell,
+  resolveIcon,
+  SUITE_ICONS,
+} from '/ui-elements/assets/js/chrome.js';
 
 const bootstrapNode = document.getElementById('klw-bootstrap');
 const bootstrap     = bootstrapNode ? JSON.parse(bootstrapNode.textContent || '{}') : {};
-const pollMs        = Number(bootstrap.pollMs || 2000);
+const pollMs        = Number(bootstrap.pollMs || KCUI_POLL_MS);
 const logList       = document.getElementById('klw-log-list');
 const metricEntries = document.getElementById('metric-entries');
 const metricStatus  = document.getElementById('metric-status');
@@ -30,7 +36,7 @@ function installIcons() {
   for (const node of document.querySelectorAll('[data-icon-key]')) {
     const key = node.getAttribute('data-icon-key');
     if (!key) continue;
-    node.innerHTML = resolveIcon(SUITE_ICONS, key, 18);
+    node.innerHTML = resolveIcon(SUITE_ICONS, key, KCUI_ICON_SIZE_MD);
   }
 }
 

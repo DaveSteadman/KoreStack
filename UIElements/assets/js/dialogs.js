@@ -87,3 +87,28 @@ export function kcuiConfirm(title, message = '', options = {}) {
   initDialogHost();
   return window.kcuiConfirm(title, message, options);
 }
+
+export function bindConfirmActions(root = document) {
+  initDialogHost();
+  root.querySelectorAll('[data-kcui-confirm]').forEach((node) => {
+    if (node.dataset.kcuiConfirmBound === '1') return;
+    node.dataset.kcuiConfirmBound = '1';
+    node.addEventListener('click', async (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const message = node.getAttribute('data-kcui-confirm') || 'Continue?';
+      const title = node.getAttribute('data-kcui-confirm-title') || 'Confirm';
+      const confirmLabel = node.getAttribute('data-kcui-confirm-label') || 'Confirm';
+      const ok = await kcuiConfirm(title, message, { confirmLabel });
+      if (!ok) return;
+      const form = node.closest('form');
+      if (form instanceof HTMLFormElement) {
+        form.requestSubmit(node instanceof HTMLButtonElement ? node : undefined);
+        return;
+      }
+      if (node instanceof HTMLAnchorElement && node.href) {
+        window.location.href = node.href;
+      }
+    });
+  });
+}

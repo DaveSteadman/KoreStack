@@ -5,6 +5,7 @@
 export * from './topbar.js';
 export * from './appbar.js';
 export * from './appMenu.js';
+export * from './constants.js';
 export * from './icons.js';
 export * from './svgicons.js';
 export * from './theme.js';

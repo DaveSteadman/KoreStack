@@ -50,21 +50,21 @@
           <span class="kcui-tag kcui-tag--dim" id="klw-settings-state">saved</span>
         </div>
         <div class="kcui-panel-body">
-          <form id="klw-settings-form" class="klw-settings-form" onsubmit="return false;">
+          <form id="klw-settings-form" class="klw-settings-form">
             <div class="klw-settings-grid">
               <label class="kcui-filter-label klw-check-row">
-                <input id="klw-ddg-enabled" type="checkbox" onchange="window.__klwMarkUnsaved && window.__klwMarkUnsaved()">
+                <input id="klw-ddg-enabled" type="checkbox">
                 <span>DuckDuckGo available</span>
               </label>
               <label class="kcui-filter-label klw-check-row">
-                <input id="klw-ollama-enabled" type="checkbox" onchange="window.__klwMarkUnsaved && window.__klwMarkUnsaved()">
+                <input id="klw-ollama-enabled" type="checkbox">
                 <span>Ollama available</span>
               </label>
             </div>
 
             <label>
               Preferred backend
-              <select id="klw-preferred-provider" class="kcui-input" onchange="window.__klwMarkUnsaved && window.__klwMarkUnsaved()">
+              <select id="klw-preferred-provider" class="kcui-input">
                 <option value="ddg">DuckDuckGo Lite</option>
                 <option value="ollama">Ollama Web Search</option>
               </select>
@@ -77,7 +77,6 @@
                 class="kcui-input"
                 type="password"
                 autocomplete="off"
-                oninput="window.__klwMarkUnsaved && window.__klwMarkUnsaved()"
                 placeholder="Stored key is hidden. Paste a new key to replace it.">
             </label>
 
@@ -89,8 +88,8 @@
             <div class="klw-settings-meta" id="klw-settings-meta">No changes pending.</div>
 
             <div class="klw-settings-actions">
-              <button id="klw-settings-save"  class="kcui-btn kcui-btn-primary" type="button" onclick="window.__klwSaveSettings && window.__klwSaveSettings(); return false;">Save</button>
-              <button id="klw-settings-clear" class="kcui-btn kcui-btn-quiet"   type="button" onclick="window.__klwClearApiKey && window.__klwClearApiKey(); return false;">Clear API Key</button>
+              <button id="klw-settings-save"  class="kcui-btn kcui-btn-primary" type="button">Save</button>
+              <button id="klw-settings-clear" class="kcui-btn kcui-btn-quiet"   type="button">Clear API Key</button>
             </div>
           </form>
         </div>
@@ -188,111 +187,4 @@
 </div>
 
 <script id="klw-bootstrap" type="application/json">{{ bootstrap_json | safe }}</script>
-<script>
-(() => {
-  const stateNode   = document.getElementById('klw-settings-state');
-  const metaNode    = document.getElementById('klw-settings-meta');
-  const keyState    = document.getElementById('klw-api-key-state');
-  const ddgNode     = document.getElementById('klw-ddg-enabled');
-  const ollamaNode  = document.getElementById('klw-ollama-enabled');
-  const preferNode  = document.getElementById('klw-preferred-provider');
-  const apiKeyNode  = document.getElementById('klw-ollama-api-key');
-  const bootstrapEl = document.getElementById('klw-bootstrap');
-  const bootstrap   = bootstrapEl ? JSON.parse(bootstrapEl.textContent || '{}') : {};
-
-  function setState(text) {
-    if (stateNode) stateNode.textContent = text;
-  }
-
-  function setMeta(text) {
-    if (metaNode) metaNode.textContent = text;
-  }
-
-  function applySettings(settings) {
-    if (!settings) return;
-    if (ddgNode)    ddgNode.checked    = Boolean(settings.ddg_enabled);
-    if (ollamaNode) ollamaNode.checked = Boolean(settings.ollama_enabled);
-    if (preferNode) preferNode.value   = settings.preferred_provider || 'ddg';
-    if (apiKeyNode) {
-      apiKeyNode.value       = '';
-      apiKeyNode.placeholder = settings.ollama_has_api_key
-        ? 'Stored key is hidden. Paste a new key to replace it.'
-        : 'Paste Ollama API key';
-    }
-    if (keyState) keyState.textContent = settings.ollama_has_api_key ? 'key stored' : 'key missing';
-    setState('saved');
-  }
-
-  window.__klwMarkUnsaved = function () {
-    setState('unsaved');
-  };
-
-  window.__klwSaveSettings = async function () {
-    if (!ddgNode || !ollamaNode || !preferNode || !apiKeyNode) return false;
-    if (!ddgNode.checked && !ollamaNode.checked) {
-      setMeta('At least one provider must remain enabled.');
-      setState('unsaved');
-      return false;
-    }
-
-    const payload = {
-      preferred_provider:    preferNode.value || 'ddg',
-      ddg_enabled:           ddgNode.checked,
-      ollama_enabled:        ollamaNode.checked,
-      clear_ollama_api_key:  false,
-    };
-
-    const apiKey = String(apiKeyNode.value || '').trim();
-    if (apiKey) payload.ollama_api_key = apiKey;
-
-    try {
-      const response = await fetch('/api/settings/search-providers', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify(payload),
-      });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.detail || `HTTP ${response.status}`);
-      applySettings(result);
-      setMeta('Search settings saved to config/korestack_config.json.');
-      return false;
-    } catch (error) {
-      setMeta(`Save failed: ${error.message}`);
-      setState('unsaved');
-      return false;
-    }
-  };
-
-  window.__klwClearApiKey = async function () {
-    if (apiKeyNode) apiKeyNode.value = '';
-    if (!ddgNode || !ollamaNode || !preferNode) return false;
-
-    const payload = {
-      preferred_provider:    preferNode.value || 'ddg',
-      ddg_enabled:           ddgNode.checked,
-      ollama_enabled:        ollamaNode.checked,
-      clear_ollama_api_key:  true,
-    };
-
-    try {
-      const response = await fetch('/api/settings/search-providers', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify(payload),
-      });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.detail || `HTTP ${response.status}`);
-      applySettings(result);
-      setMeta('Stored Ollama API key cleared from config/korestack_config.json.');
-      return false;
-    } catch (error) {
-      setMeta(`Clear failed: ${error.message}`);
-      setState('unsaved');
-      return false;
-    }
-  };
-
-  applySettings(bootstrap.searchSettings || null);
-})();
-</script>
 {% endblock %}

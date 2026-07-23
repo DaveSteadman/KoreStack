@@ -277,7 +277,8 @@
   border-radius: var(--kcui-radius-lg);
 }
 
-.kcui-panel {
+.kcui-panel,
+.panel {
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: var(--kcui-radius-md);
@@ -290,7 +291,8 @@
   min-height: 0;
 }
 
-.kcui-panel-header {
+.kcui-panel-header,
+.panel-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -309,8 +311,22 @@
   flex: 1 1 auto;
 }
 
-.kcui-panel-body {
+.kcui-panel-body,
+.panel-body {
   padding: var(--kcui-gap-panel);
+}
+
+.kcui-panel-body--flush {
+  padding: 0;
+}
+
+.kcui-panel-body--compact {
+  padding: 0.5rem 1rem;
+}
+
+.kcui-panel--spaced,
+.panel {
+  margin-bottom: 1.25rem;
 }
 
 .kcui-panel-body--fill {

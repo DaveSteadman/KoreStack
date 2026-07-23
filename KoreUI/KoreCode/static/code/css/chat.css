@@ -125,7 +125,7 @@
 }
 .continue-btn--dismiss:hover { color: var(--text); }
 
-.continue-status--accepted  { color: color-mix(in srgb, #4ade80 80%, var(--text)); }
+.continue-status--accepted  { color: color-mix(in srgb, var(--kcui-chat-agent) 80%, var(--text)); }
 .continue-status--cancelled { color: var(--text-dim); }
 .continue-status--error     { color: color-mix(in srgb, #f87171 80%, var(--text)); }
 

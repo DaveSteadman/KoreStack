@@ -44,6 +44,11 @@
   --kcui-radius-md: 2px;
   --kcui-radius-lg: 2px;
   --kcui-gap-panel: 12px;
+  --kcui-gap-xs: 4px;
+  --kcui-gap-sm: 6px;
+  --kcui-gap-md: 8px;
+  --kcui-gap-lg: 12px;
+  --kcui-border-width: 1px;
   --kcui-shadow-overlay: 0 12px 32px rgba(0, 0, 0, .45);
 
   --tab-h: var(--kcui-tab-h);
@@ -71,6 +76,31 @@
   --info: #6eb5ff;
   --purple: #b88cff;
   --yellow: #ffd84d;
+
+  --kcui-white-22: rgba(255, 255, 255, .22);
+  --kcui-white-70: rgba(255, 255, 255, .70);
+  --kcui-white-90: rgba(255, 255, 255, .90);
+
+  --kcui-chat-body:     var(--kcui-white-70);
+  --kcui-chat-title:    var(--kcui-white-90);
+  --kcui-chat-sep:      rgba(96, 165, 250, .40);
+  --kcui-chat-tool:     #22d3ee;
+  --kcui-chat-progress: rgba(250, 204, 21, .88);
+  --kcui-chat-thinking: var(--kcui-white-22);
+  --kcui-chat-user:     #60a5fa;
+  --kcui-chat-agent:    #4ade80;
+
+  --kcui-action-start:   #5be38f;
+  --kcui-action-stop:    #ff7a7a;
+  --kcui-action-restart: #7ab7ff;
+
+  --kcui-service-koreagent:       #66f0c9;
+  --kcui-service-korechat:        #59d7ff;
+  --kcui-service-koredatagateway: #a78bfa;
+  --kcui-service-koredocs:        #ffd166;
+  --kcui-service-korecode:        #7ee081;
+  --kcui-service-korecomms:       #ff8fab;
+  --kcui-service-koreliveweb:     #6eb5ff;
 
   /* Back-compat aliases for older templates still being migrated. */
   --green: var(--accent);
