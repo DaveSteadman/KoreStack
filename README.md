@@ -1,26 +1,24 @@
 # KoreStack
 
-KoreStack is a local-first AI agent suite. One command line starts the whole system: an agent you talk to, a document editor, a spreadsheet, a diagram tool, a code editor, a data library, web feeds, a reference encyclopedia, and a communications hub — all running locally, all inter-connected.
+KoreStack is a local-first AI agent suite. One command line starts the whole system: an agent you talk to, a document editor, a spreadsheet, a diagram tool, a code editor, a data library, web feeds, a reference encyclopedia, and a communications hub - all running locally, all inter-connected.
 
 It has no browser extensions, installed services or opaque config.
-
-![Kore Stack headline](korestack_screenshots_2026-08-17.gif)
 
 ## The Suite
 
 | Service | What it does |
 |---|---|
 | **KoreAgent** | The main interface. Chat with the agent, watch it work, manage scheduled tasks. |
-| **KoreChat** | Conversation management — inspect and control the agent's conversation history. |
+| **KoreChat** | Conversation management - inspect and control the agent's conversation history. |
 | **KoreData** | Data services: RSS feeds, a book library, a Wikipedia-scale reference encyclopedia, and a RAG chunk store. |
 | **KoreDocs** | Document tools: a markdown editor, spreadsheet, and diagram editor, backed by a file manager. |
 | **KoreCode** | A code editor for browsing and editing the workspace files directly in the browser. |
-| **KoreComms** | External messaging hub — route inbound messages from email and other channels to the agent. |
-| **KoreStack** | The control plane — start, stop, and monitor every service from one landing page. |
+| **KoreComms** | External messaging hub - route inbound messages from email and other channels to the agent. |
+| **KoreStack** | The control plane - start, stop, and monitor every service from one landing page. |
 
 ## Getting Started
 
-**First time setup** — create a virtual environment and install dependencies:
+**First time setup** - create a virtual environment and install dependencies:
 
 ```powershell
 python -m venv .venv
@@ -40,7 +38,7 @@ Then open the suite landing page:
 http://127.0.0.1:9600/
 ```
 
-All services start automatically. Each one has its own port and its own tab in the top bar — click any service to go straight to it.
+All services start automatically. Each one has its own port and its own tab in the top bar - click any service to go straight to it.
 
 ## Stopping and Restarting
 
@@ -62,16 +60,16 @@ To restart or stop individual services without taking down the whole suite, use 
 
 ## Workspace Layout
 
-- `KoreAgent/` — agent runtime, skills, and task scheduler
-- `KoreChat/` — conversation state and history
-- `KoreData/` — feeds, library, reference, and RAG
-- `KoreDocs/` — document, spreadsheet, and diagram editors
-- `KoreCode/` — in-browser code editor
-- `KoreComms/` — external messaging
-- `KoreStack/` — suite landing page and control plane
-- `config/` — suite configuration (`korestack_config.json` and `llm_config.json`)
-- `datacontrol/` — service-owned, structured runtime data (see below)
-- `datauser/` — unstructured user files; freely navigable by the agent's file access skill
+- `KoreAgent/` - agent runtime, skills, and task scheduler
+- `KoreChat/` - conversation state and history
+- `KoreData/` - feeds, library, reference, and RAG
+- `KoreDocs/` - document, spreadsheet, and diagram editors
+- `KoreCode/` - in-browser code editor
+- `KoreComms/` - external messaging
+- `KoreStack/` - suite landing page and control plane
+- `config/` - suite configuration (`korestack_config.json` and `llm_config.json`)
+- `datacontrol/` - service-owned, structured runtime data (see below)
+- `datauser/` - unstructured user files; freely navigable by the agent's file access skill
 
 ## Data Layout
 
@@ -89,4 +87,4 @@ KoreStack separates **structured service data** from **unstructured user files**
 | `datacontrol/logs/` | All services | rotating log files, one subfolder per service |
 | `datacontrol/schedules/` | KoreAgent | task schedule definitions |
 
-**`datauser/`** is unstructured and user-facing. It is the agent's writable workspace — notes, documents, spreadsheets, exports, and any files created or managed during a session. No service owns a specific subfolder here.
+**`datauser/`** is unstructured and user-facing. It is the agent's writable workspace - notes, documents, spreadsheets, exports, and any files created or managed during a session. No service owns a specific subfolder here.

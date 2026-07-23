@@ -1,3 +1,20 @@
+import { initPanels } from "/ui-elements/assets/js/panels.js";
+import {
+    AUTO_REFRESH_MS,
+    DEFAULT_CHAT_AGE_CULL_MS,
+    DEFAULT_CHAT_AGE_STORAGE_KEY,
+    PANEL_COLLAPSE_STORAGE_KEY,
+    SIDEBAR_WIDTH_STORAGE_KEY,
+    cacheGet,
+    cacheSet,
+    defaultKoreAgentBase,
+    escHtml,
+    formatDateTime,
+    getDisplayStatus,
+    normalizeChatAgeDays,
+    pill,
+} from "/ui/modules/helpers.js";
+
 // ====================================================================================================
 // KoreChat Debug UI - conversations.js
 // ====================================================================================================
@@ -21,49 +38,7 @@ let _selectedConv       = null;
 let _autoInterval       = null;
 let _sse                = null;   // EventSource for /stream push notifications
 let _allConversations   = [];
-let _dragStartX         = null;
-let _dragStartW         = null;
 let _defaultCullInterval = null;
-
-const DEFAULT_CHAT_AGE_STORAGE_KEY = "kc_max_default_chat_age_days";
-const DEFAULT_CHAT_AGE_FALLBACK_DAYS = 7;
-const DEFAULT_CHAT_AGE_CULL_MS = 60 * 60 * 1000;
-const AUTO_REFRESH_MS = 30_000;
-const PANEL_COLLAPSE_STORAGE_KEY = "kc_collapsed_panels";
-
-function _cachedSuiteUrls() {
-    try {
-        const raw = localStorage.getItem("kore.suite-urls");
-        return raw ? JSON.parse(raw) : null;
-    } catch (_) {
-        return null;
-    }
-}
-
-function _defaultKoreAgentBase() {
-    return (
-        window.__koreSuiteUrls?.koreagent
-        || _cachedSuiteUrls()?.koreagent
-        || null
-    );
-}
-
-// ====================================================================================================
-// CACHE HELPERS
-// ====================================================================================================
-// Persist the last-known API responses in localStorage so the page can render instantly
-// on load before the network response arrives (stale-while-revalidate pattern).
-
-function _cacheSet(key, value) {
-    try { localStorage.setItem(key, JSON.stringify(value)); } catch (_) {}
-}
-
-function _cacheGet(key) {
-    try {
-        const raw = localStorage.getItem(key);
-        return raw ? JSON.parse(raw) : null;
-    } catch (_) { return null; }
-}
 
 // ====================================================================================================
 // INIT
@@ -71,19 +46,26 @@ function _cacheGet(key) {
 
 document.addEventListener("DOMContentLoaded", () => {
     // Render from localStorage cache immediately - before any network request.
-    const cachedList = _cacheGet("kc_conv_list");
+    const cachedList = cacheGet("kc_conv_list");
     if (cachedList) { _allConversations = cachedList; renderConversationListState(); }
 
     const saved = parseInt(localStorage.getItem("kc_selected_id"), 10);
     if (saved && !isNaN(saved)) {
-        const cachedDetail = _cacheGet("kc_detail_" + saved);
+        const cachedDetail = cacheGet("kc_detail_" + saved);
         if (cachedDetail) { _renderDetail(cachedDetail); }
     }
 
     // Fetch fresh data in parallel - updates the display when it arrives.
     const loadDetail = (saved && !isNaN(saved)) ? selectConversation(saved) : Promise.resolve();
     Promise.all([loadStatus(), loadConversations(), loadDetail]);
-    initSplitter();
+    initPanels({
+        panelsEl:   document.getElementById("main-grid"),
+        leftEl:     document.getElementById("sidebar"),
+        splitterEl: document.getElementById("splitter"),
+        minLeft:    160,
+        maxLeft:    600,
+        storageKey: SIDEBAR_WIDTH_STORAGE_KEY,
+    });
     initPanelToggles();
 
     bindUiEvents();
@@ -163,7 +145,7 @@ async function loadConversations() {
         const r = await fetch("/api/conversations?limit=500");
         if (!r.ok) { throw new Error(`HTTP ${r.status}`); }
         _allConversations = await r.json();
-        _cacheSet("kc_conv_list", _allConversations);
+        cacheSet("kc_conv_list", _allConversations);
         renderConversationListState();
     } catch (e) {
         console.error("loadConversations:", e);
@@ -224,7 +206,7 @@ async function selectConversation(id) {
         const r = await fetch(`/api/conversations/${id}/detail`);
         if (!r.ok) return;
         const data = await r.json();
-        _cacheSet("kc_detail_" + id, data);
+        cacheSet("kc_detail_" + id, data);
         _renderDetail(data);
     } catch (e) {
         console.error("selectConversation:", e);
@@ -317,7 +299,7 @@ function _protectUntilLabel(conv) {
     if (isProtected) return "Protected";
     const lastActivity = conv.last_activity_at;
     if (!lastActivity) return "(unknown)";
-    const ageDays = _normalizeChatAgeDays(localStorage.getItem(DEFAULT_CHAT_AGE_STORAGE_KEY));
+    const ageDays = normalizeChatAgeDays(localStorage.getItem(DEFAULT_CHAT_AGE_STORAGE_KEY));
     const expiryMs = new Date(lastActivity).getTime() + ageDays * 86_400_000;
     if (isNaN(expiryMs)) return "(unknown)";
     return formatDateTime(new Date(expiryMs).toISOString());
@@ -656,7 +638,7 @@ async function sendMessage() {
 
     // Inbound messages for webchat conversations route through the MAF agent so the agent
     // processes them and writes the response back to KC - exactly like typing in the agent page.
-    const MAF_BASE     = String(_defaultKoreAgentBase() || "").replace(/\/$/, "");
+    const MAF_BASE     = String(defaultKoreAgentBase() || "").replace(/\/$/, "");
     const wcPrefix     = "webchat_";
     const isWebchat    = direction === "inbound" && _selectedExternalId && _selectedExternalId.startsWith(wcPrefix);
 
@@ -1007,7 +989,7 @@ function _connectSSE() {
             if (ev.type === "conv_deleted") {
                 // Remove from list; clear detail if it was selected.
                 _allConversations = _allConversations.filter(c => c.id !== cid);
-                _cacheSet("kc_conv_list", _allConversations);
+                cacheSet("kc_conv_list", _allConversations);
                 renderConversationListState();
                 if (_selectedId === cid) {
                     _selectedId         = null;
@@ -1051,25 +1033,19 @@ function toggleAuto() {
 // DEFAULT CHAT CULLING
 // ====================================================================================================
 
-function _normalizeChatAgeDays(raw) {
-    const n = Number.parseInt(String(raw ?? ""), 10);
-    if ([1, 3, 7, 30].includes(n)) return n;
-    return DEFAULT_CHAT_AGE_FALLBACK_DAYS;
-}
-
 function _selectedChatAgeDays() {
     const sel = document.getElementById("max-default-chat-age");
-    return _normalizeChatAgeDays(sel?.value);
+    return normalizeChatAgeDays(sel?.value);
 }
 
 function _setChatAgeSelect(days) {
     const sel = document.getElementById("max-default-chat-age");
     if (!sel) return;
-    sel.value = String(_normalizeChatAgeDays(days));
+    sel.value = String(normalizeChatAgeDays(days));
 }
 
 function initDefaultChatAgeCulling() {
-    const saved = _normalizeChatAgeDays(localStorage.getItem(DEFAULT_CHAT_AGE_STORAGE_KEY));
+    const saved = normalizeChatAgeDays(localStorage.getItem(DEFAULT_CHAT_AGE_STORAGE_KEY));
     _setChatAgeSelect(saved);
     void runDefaultChatCull(saved);
 
@@ -1091,7 +1067,7 @@ async function runDefaultChatCull(maxDefaultChatAgeDays) {
         const resp = await fetch("/maintenance/default-chat-cull", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ max_default_chat_age_days: _normalizeChatAgeDays(maxDefaultChatAgeDays) }),
+            body: JSON.stringify({ max_default_chat_age_days: normalizeChatAgeDays(maxDefaultChatAgeDays) }),
         });
         if (!resp.ok) {
             const err = await resp.text().catch(() => "");
@@ -1105,97 +1081,4 @@ async function runDefaultChatCull(maxDefaultChatAgeDays) {
     } catch (e) {
         console.warn("default chat cull failed:", e);
     }
-}
-
-// ====================================================================================================
-// DRAG SPLITTER
-// ====================================================================================================
-
-function initSplitter() {
-    const splitter = document.getElementById("splitter");
-    const sidebar  = document.getElementById("sidebar");
-    const grid     = document.getElementById("main-grid");
-
-    splitter.addEventListener("mousedown", e => {
-        _dragStartX = e.clientX;
-        _dragStartW = sidebar.getBoundingClientRect().width;
-        document.body.style.userSelect = "none";
-        document.body.style.cursor     = "col-resize";
-    });
-
-    document.addEventListener("mousemove", e => {
-        if (_dragStartX === null) return;
-        const delta = e.clientX - _dragStartX;
-        const newW  = Math.max(160, Math.min(600, _dragStartW + delta));
-        grid.style.gridTemplateColumns = `${newW}px 4px 1fr`;
-        document.documentElement.style.setProperty("--sidebar-w", `${newW}px`);
-    });
-
-    document.addEventListener("mouseup", () => {
-        if (_dragStartX === null) return;
-        _dragStartX = null;
-        _dragStartW = null;
-        document.body.style.userSelect = "";
-        document.body.style.cursor     = "";
-    });
-}
-
-// ====================================================================================================
-// HELPERS
-// ====================================================================================================
-
-function escHtml(s) {
-    if (s === null || s === undefined) return "";
-    return String(s)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;");
-}
-
-// Color map for kcui-tag — maps status/direction/role values to --color modifier
-const TAG_COLORS = {
-    // conversation status
-    awaiting_inbound: "accent",
-    active:           "accent",
-    waiting_agent:    "warning",
-    agent_processing: "info",
-    archived:         "dim",
-    deleted:          "danger",
-    // message direction
-    inbound:          "warning",
-    outbound:         "info",
-    // message/event status
-    pending:          "warning",
-    claimed:          "info",
-    completed:        "accent",
-    failed:           "danger",
-    // profile / role
-    admin:            "warning",
-    external:         "dim",
-    readonly:         "danger",
-};
-
-function pill(text, _unused) {
-    const color = TAG_COLORS[text] || "dim";
-    return `<span class="kcui-tag kcui-tag--pill kcui-tag--${color}">${escHtml(text)}</span>`;
-}
-
-function formatDateTime(iso) {
-    if (!iso) return "-";
-    try {
-        const d    = new Date(iso);
-        const date = d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" });
-        const time = d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-        return `${date} ${time}`;
-    } catch {
-        return iso;
-    }
-}
-
-function getDisplayStatus(status) {
-    if (status === "active") {
-        return { label: "awaiting_inbound", className: "awaiting_inbound" };
-    }
-    return { label: status || "-", className: status || "active" };
 }

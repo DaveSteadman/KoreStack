@@ -25,12 +25,12 @@ def register_status_routes(
     get_active_backend,
     get_ollama_ps_rows,
     get_startup_state,
-    version: str,
+    get_version_text,
 ) -> None:
     @app.get("/api/version")
     @app.get("/version", include_in_schema=False)
     def get_version():
-        return {"version": version}
+        return {"version": get_version_text()}
 
     @app.get("/api/status")
     @app.get("/status", include_in_schema=False)

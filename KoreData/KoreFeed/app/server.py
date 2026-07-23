@@ -27,19 +27,16 @@ import threading
 from pathlib import Path
 from typing import Optional
 
-import json
-
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exception_handlers import http_exception_handler
-from fastapi.responses import FileResponse, JSONResponse, Response
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, HttpUrl
 
 _KORECOMMON_PARENT = next((parent for parent in Path(__file__).resolve().parents if (parent / "KoreCommon").is_dir()), None)
 if _KORECOMMON_PARENT is not None and str(_KORECOMMON_PARENT) not in sys.path:
     sys.path.insert(0, str(_KORECOMMON_PARENT))
 
-from KoreCommon.endpoint_manifest import build_endpoint_manifest
-from config import get_suite_urls_map
+from KoreCommon.service_app import register_suite_shell_routes
 from app.endpoint_ui import register_feed_ui
 from app.database import (
     backfill_sentence_index,
@@ -120,28 +117,22 @@ app = FastAPI(
 
 register_feed_ui(app)
 
-
-@app.get("/__endpoint_manifest", include_in_schema=False)
-def endpoint_manifest() -> dict:
-    return build_endpoint_manifest(app, service_key="korefeed", service_label="KoreFeed")
-
 _UI_ELEMENTS_ASSETS = Path(
     os.environ.get(
         "KORE_UIELEMENTS_ASSETS_DIR",
         str(Path(__file__).resolve().parents[3] / "UIElements" / "assets"),
     )
 ).resolve()
+register_suite_shell_routes(
+    app,
+    service_key            = "korefeed",
+    service_label          = "KoreFeed",
+    ui_elements_assets_dir = _UI_ELEMENTS_ASSETS,
+)
 
 # ---------------------------------------------------------------------------
 # Exception handlers
 # ---------------------------------------------------------------------------
-
-
-@app.get("/suite-config.js", include_in_schema=False)
-def suite_config_js():
-    urls = json.dumps(get_suite_urls_map())
-    return Response(content=f"window.__koreSuiteUrls = {urls};", media_type="application/javascript", headers={"Cache-Control": "no-store"})
-
 
 @app.get("/status", tags=["meta"])
 def api_status():
@@ -155,16 +146,6 @@ def api_status():
         "total_entries": overview["total_entries"],
         "runtime":       get_runtime_status(),
     }
-
-
-@app.get("/ui-elements/assets/{asset_path:path}", include_in_schema=False)
-def serve_ui_elements_asset(asset_path: str):
-    candidate = (_UI_ELEMENTS_ASSETS / asset_path).resolve()
-    if candidate != _UI_ELEMENTS_ASSETS and _UI_ELEMENTS_ASSETS not in candidate.parents:
-        raise HTTPException(status_code=404, detail="Asset not found")
-    if not candidate.exists() or not candidate.is_file():
-        raise HTTPException(status_code=404, detail="Asset not found")
-    return FileResponse(str(candidate), headers={"Cache-Control": "no-store"})
 
 
 @app.exception_handler(HTTPException)

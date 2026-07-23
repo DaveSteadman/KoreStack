@@ -36,7 +36,7 @@ _KORECOMMON_PARENT = next((parent for parent in Path(__file__).resolve().parents
 if _KORECOMMON_PARENT is not None and str(_KORECOMMON_PARENT) not in sys.path:
     sys.path.insert(0, str(_KORECOMMON_PARENT))
 
-from KoreCommon.endpoint_manifest import build_endpoint_manifest
+from KoreCommon.service_app import register_endpoint_manifest
 from app.config import cfg
 from app.database import (
     backfill_sentence_index,
@@ -102,11 +102,7 @@ app = FastAPI(
 )
 
 register_reference_ui(app)
-
-
-@app.get("/__endpoint_manifest", include_in_schema=False)
-def endpoint_manifest() -> dict:
-    return build_endpoint_manifest(app, service_key="korereference", service_label="KoreReference")
+register_endpoint_manifest(app, service_key="korereference", service_label="KoreReference")
 
 
 # ---------------------------------------------------------------------------

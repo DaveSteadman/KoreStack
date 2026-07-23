@@ -128,7 +128,7 @@ def _parse_gutenberg_html(html: str) -> dict:
         tag = soup.find("title")
         if tag and tag.string:
             t = tag.string.strip()
-            t = _re.sub(r'\s*[\|\-â€”]\s*.{3,60}$', '', t).strip()
+            t = _re.sub(r'\s*[\|\-]\s*.{3,60}$', '', t).strip()
             if t:
                 title = t
 

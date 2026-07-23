@@ -5,23 +5,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>KoreStack</title>
     <link rel="icon" type="image/x-icon" href="/ui-elements/assets/icons/favicon.ico">
+    <link rel="stylesheet" href="/ui-elements/assets/css/tokens.css">
+    <link rel="stylesheet" href="/ui-elements/assets/css/typography.css">
     <link rel="stylesheet" href="/ui-elements/assets/css/chrome.css">
+    <link rel="stylesheet" href="/ui-elements/assets/css/panels.css">
+    <link rel="stylesheet" href="/ui-elements/assets/css/forms.css">
+    <link rel="stylesheet" href="/ui-elements/assets/css/tags.css">
+    <link rel="stylesheet" href="/ui-elements/assets/css/content.css">
     <link rel="stylesheet" href="/ui-elements/assets/css/workspace.css">
     <link rel="stylesheet" href="/ui/conversations.css">
     <script src="/suite-config.js"></script>
 </head>
-<body>
+<body class="kcui-shell-bg">
 <div id="layout">
     <div id="topbar"></div>
     <div id="app-bar"></div>
 
-    <!-- ================================================
-         MAIN GRID  (sidebar | detail)
-         ================================================ -->
-    <div id="main-grid">
-
-        <!-- Conversation list -->
-        <div id="sidebar" class="kcui-panel">
+    <div id="main-grid" class="kcui-panels">
+        <div id="sidebar" class="kcui-panel kcui-panel-left kcui-navpanel">
             <div class="section-header kcui-panel-header" data-panel-header>
                 Conversations
                 <span class="count-badge" id="conv-count">0</span>
@@ -30,28 +31,22 @@
             </div>
             <div id="new-conv-form" hidden>
                 <div id="new-conv-row">
-                    <input type="text" id="new-conv-name" placeholder="Conversation name…" autocomplete="off">
-                    <button class="kcui-tag kcui-tag--dim" id="new-conv-submit" type="button">create</button>
-                    <button class="kcui-tag kcui-tag--dim" id="new-conv-cancel" type="button">cancel</button>
+                    <input type="text" id="new-conv-name" class="kcui-input" placeholder="Conversation name..." autocomplete="off">
+                    <button class="kcui-btn kcui-btn-secondary kcui-btn-sm" id="new-conv-submit" type="button">Create</button>
+                    <button class="kcui-btn kcui-btn-secondary kcui-btn-sm" id="new-conv-cancel" type="button">Cancel</button>
                 </div>
             </div>
             <div id="conv-list"></div>
         </div>
 
-        <div id="splitter"></div>
+        <div id="splitter" class="kcui-splitter"></div>
 
-        <!-- Detail pane -->
-        <div id="detail-wrap" class="kcui-panel">
-
-            <!-- Placeholder shown when nothing is selected -->
+        <div id="detail-wrap" class="kcui-panel kcui-panel-right">
             <div id="detail-empty">
                 <span>Select a conversation to inspect it.</span>
             </div>
 
-            <!-- Conversation detail (hidden until selection) -->
             <div id="detail" hidden>
-
-                <!-- Conversation metadata -->
                 <section class="section kcui-panel" id="sec-meta">
                     <div class="section-header kcui-panel-header" data-panel-header>
                         <span class="section-icon">i</span> Metadata
@@ -71,7 +66,6 @@
                     <div id="tools-active-list" class="tools-active-list"></div>
                 </section>
 
-                <!-- Background context -->
                 <section class="section kcui-panel" id="sec-bg">
                     <div class="section-header kcui-panel-header" data-panel-header>
                         <span class="section-icon">B</span> Background Context
@@ -80,7 +74,6 @@
                     <pre class="text-block" id="bg-text"></pre>
                 </section>
 
-                <!-- Thread summary -->
                 <section class="section kcui-panel" id="sec-summary">
                     <div class="section-header kcui-panel-header" data-panel-header>
                         <span class="section-icon">S</span> Thread Summary
@@ -89,7 +82,6 @@
                     <pre class="text-block" id="summary-text"></pre>
                 </section>
 
-                <!-- Scratchpad -->
                 <section class="section kcui-panel" id="sec-scratchpad">
                     <div class="section-header kcui-panel-header" data-panel-header>
                         <span class="section-icon">P</span> Scratchpad
@@ -106,7 +98,6 @@
                     <div id="datasets-list" class="scratchpad-list datasets-list"></div>
                 </section>
 
-                <!-- Input history -->
                 <section class="section kcui-panel" id="sec-history">
                     <div class="section-header kcui-panel-header" data-panel-header>
                         <span class="section-icon">H</span> Input History
@@ -116,34 +107,31 @@
                     <ol id="history-list" class="history-list"></ol>
                 </section>
 
-                <!-- Send message -->
                 <section class="section kcui-panel" id="sec-compose">
                     <div class="section-header kcui-panel-header" data-panel-header>
                         <span class="section-icon">+</span> Send Inbound Message
                     </div>
                     <div id="compose-row">
-                        <select id="compose-direction">
+                        <select id="compose-direction" class="kcui-input">
                             <option value="inbound">inbound</option>
                             <option value="outbound">outbound</option>
                         </select>
-                        <input type="text" id="compose-text" placeholder="Type a message and press Enter or Send..." autocomplete="off">
-                        <button id="compose-btn" type="button">send</button>
+                        <input type="text" id="compose-text" class="kcui-input" placeholder="Type a message and press Enter or Send..." autocomplete="off">
+                        <button id="compose-btn" class="kcui-btn kcui-btn-primary" type="button">Send</button>
                     </div>
                 </section>
 
-                <!-- Messages -->
                 <section class="section kcui-panel" id="sec-messages">
                     <div class="section-header kcui-panel-header" data-panel-header>
                         <span class="section-icon">M</span> Messages
                         <span class="count-badge" id="msg-count">0</span>
                         <div class="flex-gap"></div>
-                        <label class="small-label">show summarised</label>
+                        <label class="small-label" for="chk-summarised">show summarised</label>
                         <input type="checkbox" id="chk-summarised">
                     </div>
                     <div id="messages-body"></div>
                 </section>
 
-                <!-- Events -->
                 <section class="section kcui-panel" id="sec-events">
                     <div class="section-header kcui-panel-header" data-panel-header>
                         <span class="section-icon">E</span> Events
@@ -151,11 +139,10 @@
                     </div>
                     <div id="events-body"></div>
                 </section>
-
-            </div><!-- #detail -->
-        </div><!-- #detail-wrap -->
-    </div><!-- #main-grid -->
-</div><!-- #layout -->
+            </div>
+        </div>
+    </div>
+</div>
 
 <script type="module">
     import { initAppBar, initDialogHost, initTopbar } from '/ui-elements/assets/js/chrome.js';
@@ -192,6 +179,6 @@
         ],
     });
 </script>
-<script src="/ui/conversations.js"></script>
+<script type="module" src="/ui/conversations.js"></script>
 </body>
 </html>

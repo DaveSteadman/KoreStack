@@ -24,6 +24,7 @@ import sys
 
 import mcp_client as _mcp_client
 from prompt_tokens import resolve_tokens
+from sessions.tool_aliases import canonical_tool_name
 from tool_result import ToolCallResult
 from utils.workspace_utils import get_workspace_root
 from utils.workspace_utils import normalize_module_path
@@ -211,6 +212,9 @@ def execute_tool_call(
     Pass a pre-built catalog_gates dict (from build_catalog_gates) to avoid rebuilding
     the index on every call when executing multiple tools in one round.
     """
+    requested_tool_name = str(tool_name or "").strip()
+    tool_name = canonical_tool_name(requested_tool_name, skills_payload)
+
     # MCP tools are dispatched to the remote server; they bypass the local allow-list.
     if _mcp_client.is_mcp_tool(tool_name):
         resolved_args = {
@@ -235,7 +239,7 @@ def execute_tool_call(
     # Resolve the tool name to its (module, function); fails fast for any unrecognised tool.
     resolved = tool_index.get(tool_name)
     if resolved is None:
-        raise RuntimeError(_build_unknown_tool_error(tool_name, skills_payload, active_tool_names))
+        raise RuntimeError(_build_unknown_tool_error(requested_tool_name or tool_name, skills_payload, active_tool_names))
     module_path, function_name = resolved
 
     # Fill {{today}}, {{yesterday}} etc. in any string argument before passing to the function.

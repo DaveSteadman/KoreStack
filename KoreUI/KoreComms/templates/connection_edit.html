@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}KoreComms â€” {% if iface %}Edit{% else %}New{% endif %} Connection{% endblock %}
+{% block title %}KoreComms - {% if iface %}Edit{% else %}New{% endif %} Connection{% endblock %}
 {% block main_class %}kcui-main{% endblock %}
 
 {% block content %}
@@ -21,7 +21,7 @@
           {% if iface_type == "discord" %}
           <label for="bot_token" style="margin-top:0.6rem;">Discord Bot Token</label>
           <input type="password" id="bot_token" name="bot_token"
-            value="" placeholder="{% if iface and config.bot_token %}(stored â€” paste to update){% else %}Paste your Discord bot token{% endif %}">
+            value="" placeholder="{% if iface and config.bot_token %}(stored - paste to update){% else %}Paste your Discord bot token{% endif %}">
 
           <label for="channel_ids" style="margin-top:0.4rem;">Watched Channel IDs</label>
           <textarea id="channel_ids" name="channel_ids" rows="5"
@@ -36,11 +36,11 @@
       {% if iface_type == "gmail" %}
       <label for="client_id" style="margin-top:0.6rem;">Google OAuth Client ID</label>
       <input type="text" id="client_id" name="client_id"
-             value="" placeholder="{% if iface and config.client_id %}(stored â€” paste to update){% else %}Paste from Google Cloud Console{% endif %}">
+             value="" placeholder="{% if iface and config.client_id %}(stored - paste to update){% else %}Paste from Google Cloud Console{% endif %}">
 
       <label for="client_secret" style="margin-top:0.4rem;">Google OAuth Client Secret</label>
       <input type="password" id="client_secret" name="client_secret"
-             value="" placeholder="{% if iface and config.client_secret %}(stored â€” paste to update){% else %}Paste from Google Cloud Console{% endif %}">
+             value="" placeholder="{% if iface and config.client_secret %}(stored - paste to update){% else %}Paste from Google Cloud Console{% endif %}">
 
       <p class="meta" style="margin-top:0.3rem;">
         Register redirect URI:
@@ -70,7 +70,7 @@
     <hr style="border:none; border-top:1px solid var(--border); margin:1.25rem 0;">
     <div class="section-title">Gmail Authorisation</div>
     {% if gmail_authorized %}
-      <p class="meta" style="color:var(--green); margin-bottom:0.75rem;">âœ“ Authorized â€” refresh token stored.</p>
+      <p class="meta" style="color:var(--green); margin-bottom:0.75rem;">Authorized - refresh token stored.</p>
     {% else %}
       <p class="meta" style="margin-bottom:0.75rem;">
         Save your client credentials above first, then click Authorize to grant Gmail access.

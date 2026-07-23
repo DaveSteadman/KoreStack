@@ -196,7 +196,7 @@ def fetch_html(url: str, timeout: float = _DEFAULT_TIMEOUT, no_cache: bool = Fal
             # Prefer strict UTF-8 decode when the raw bytes are valid UTF-8,
             # regardless of what the Content-Type header declares.  Many sites
             # serve UTF-8 content but label it as windows-1252 or latin-1,
-            # which causes the â€" / â€˜ corruption pattern when decoded naively.
+            # which causes dash / quote corruption patterns when decoded naively.
             # Only fall back to the declared charset when the bytes are not
             # valid UTF-8 (e.g. legacy Latin / CP1252 pages that really do use
             # single-byte encodings).

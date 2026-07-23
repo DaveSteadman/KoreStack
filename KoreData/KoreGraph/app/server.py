@@ -31,7 +31,6 @@
 #   - app/config.py     -- cfg (host, port, data_dir)
 #   - app/database.py   -- all DB operations
 # ====================================================================================================
-import json
 import logging
 import os
 import subprocess
@@ -43,7 +42,7 @@ from pathlib import Path
 from typing import Optional
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import FileResponse, RedirectResponse, Response
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from mcp.server.fastmcp import FastMCP
 from pydantic import BaseModel
@@ -52,8 +51,7 @@ _KORECOMMON_PARENT = next((parent for parent in Path(__file__).resolve().parents
 if _KORECOMMON_PARENT is not None and str(_KORECOMMON_PARENT) not in sys.path:
     sys.path.insert(0, str(_KORECOMMON_PARENT))
 
-from KoreCommon.endpoint_manifest import build_endpoint_manifest
-from config import get_suite_urls_map
+from KoreCommon.service_app import register_suite_shell_routes
 from app.config import cfg
 from app.csv_io import export_connections, import_connections
 from app.database import (
@@ -128,11 +126,12 @@ app = FastAPI(
     description="Concept / connection knowledge graph store for KoreData",
     lifespan=_lifespan,
 )
-
-
-@app.get("/__endpoint_manifest", include_in_schema=False)
-def endpoint_manifest() -> dict:
-    return build_endpoint_manifest(app, service_key="koregraph", service_label="KoreGraph")
+register_suite_shell_routes(
+    app,
+    service_key            = "koregraph",
+    service_label          = "KoreGraph",
+    ui_elements_assets_dir = _UI_ELEMENTS_ASSETS,
+)
 
 
 def _request_ui_prefix(request: Request) -> str:
@@ -265,30 +264,6 @@ def graph_connection_create_many(connections: list[dict]) -> dict:
 
 
 app.mount("/mcp", _mcp.streamable_http_app())
-
-
-# ---------------------------------------------------------------------------
-# MARK: Suite config + UIElements static files
-# ---------------------------------------------------------------------------
-
-@app.get("/suite-config.js", include_in_schema=False)
-def suite_config_js():
-    urls = json.dumps(get_suite_urls_map())
-    return Response(
-        content=f"window.__koreSuiteUrls = {urls};",
-        media_type="application/javascript",
-        headers={"Cache-Control": "no-store"},
-    )
-
-
-@app.get("/ui-elements/assets/{asset_path:path}", include_in_schema=False)
-def serve_ui_elements_asset(asset_path: str):
-    candidate = (_UI_ELEMENTS_ASSETS / asset_path).resolve()
-    if candidate != _UI_ELEMENTS_ASSETS and _UI_ELEMENTS_ASSETS not in candidate.parents:
-        raise HTTPException(status_code=404, detail="Asset not found")
-    if not candidate.exists() or not candidate.is_file():
-        raise HTTPException(status_code=404, detail="Asset not found")
-    return FileResponse(str(candidate), headers={"Cache-Control": "no-store"})
 
 
 @app.get("/static/{asset_path:path}", include_in_schema=False)

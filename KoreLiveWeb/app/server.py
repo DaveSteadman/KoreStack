@@ -12,8 +12,6 @@ from fastapi import Body
 from fastapi import HTTPException
 from fastapi import Query
 from fastapi import Request
-from fastapi import Response
-from fastapi.responses import FileResponse
 from fastapi.responses import HTMLResponse
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -26,7 +24,7 @@ if _KORECOMMON_PARENT is not None:
     if str(_KORECOMMON_PARENT) not in sys.path:
         sys.path.insert(0, str(_KORECOMMON_PARENT))
 
-from KoreCommon.endpoint_manifest import build_endpoint_manifest
+from KoreCommon.service_app import register_suite_shell_routes
 from KoreCommon.service_logging import configure_service_logging
 from KoreCommon.suite_paths import _load_paths_config
 from KoreCommon.suite_paths import get_suite_config_file
@@ -449,6 +447,12 @@ async def _lifespan(app: FastAPI):
 
 app = FastAPI(title="KoreLiveWeb", lifespan=_lifespan)
 app.mount("/static/liveweb", StaticFiles(directory=str(_STATIC_LIVEWEB_DIR)), name="koreliveweb-static")
+register_suite_shell_routes(
+    app,
+    service_key            = "koreliveweb",
+    service_label          = "KoreLiveWeb",
+    ui_elements_assets_dir = _UI_ELEMENTS_ASSETS,
+)
 
 
 def _home_context(request: Request) -> dict:
@@ -506,34 +510,9 @@ def _home_context(request: Request) -> dict:
     }
 
 
-@app.get("/__endpoint_manifest", include_in_schema=False)
-def endpoint_manifest() -> dict:
-    return build_endpoint_manifest(app, service_key="koreliveweb", service_label="KoreLiveWeb")
-
-
 @app.get("/status", include_in_schema=False)
 def status() -> dict:
     return {"status": "ok", "service": "koreliveweb"}
-
-
-@app.get("/suite-config.js", include_in_schema=False)
-def suite_config_js():
-    urls = json.dumps(get_suite_urls_map())
-    return Response(
-        content    = f"window.__koreSuiteUrls = {urls};",
-        media_type = "application/javascript",
-        headers    = {"Cache-Control": "no-store"},
-    )
-
-
-@app.get("/ui-elements/assets/{asset_path:path}", include_in_schema=False)
-def serve_ui_elements_asset(asset_path: str):
-    candidate = (_UI_ELEMENTS_ASSETS / asset_path).resolve()
-    if candidate != _UI_ELEMENTS_ASSETS and _UI_ELEMENTS_ASSETS not in candidate.parents:
-        raise HTTPException(status_code=404, detail="Asset not found")
-    if not candidate.exists() or not candidate.is_file():
-        raise HTTPException(status_code=404, detail="Asset not found")
-    return FileResponse(str(candidate), headers={"Cache-Control": "no-store"})
 
 
 @app.get("/ui", include_in_schema=False, response_class=HTMLResponse)

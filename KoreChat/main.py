@@ -58,7 +58,7 @@ if __name__ == "__main__":
         logging.getLogger("korechat.service").info("starting host=%s port=%s log=%s", cfg["host"], int(cfg["port"]), _log_path)
         _print_banner()
         uvicorn.run(
-            "app.server:app",
+            "app.api.app:app",
             host       = cfg["host"],
             port       = int(cfg["port"]),
             access_log = False,

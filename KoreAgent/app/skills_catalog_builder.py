@@ -236,6 +236,18 @@ def _parse_triggers(skill_text: str) -> list[str]:
     return triggers
 
 
+def _parse_tool_aliases(skill_text: str) -> dict[str, str]:
+    aliases: dict[str, str] = {}
+    block_match = re.search(r"##\s+Tool aliases\s*\n(.*?)(?=\n##\s|\Z)", skill_text, re.DOTALL | re.IGNORECASE)
+    if not block_match:
+        return aliases
+    for line in block_match.group(1).splitlines():
+        bullet_match = re.match(r"\s*-\s+`?([A-Za-z_][A-Za-z0-9_]*)`?\s*(?:->|=>|:)\s*`?([A-Za-z_][A-Za-z0-9_]*)`?", line)
+        if bullet_match:
+            aliases[bullet_match.group(1)] = bullet_match.group(2)
+    return aliases
+
+
 def _section_body(skill_text: str, heading: str) -> str:
     match = re.search(rf"##\s+{re.escape(heading)}\s*\n(.*?)(?=\n##\s|\Z)", skill_text, re.DOTALL | re.IGNORECASE)
     return match.group(1).strip() if match else ""
@@ -304,7 +316,8 @@ def summarize_locally(skill_md_path: Path) -> dict:
     if output_section:
         output_lines = [line.strip(" -") for line in output_section[0][0].splitlines() if line.strip().startswith("-")]
 
-    return {
+    tool_aliases = _parse_tool_aliases(skill_text)
+    summary = {
         "skill_name":              title,
         "relative_path":           skill_md_path.as_posix(),
         "purpose":                 purpose,
@@ -317,6 +330,9 @@ def summarize_locally(skill_md_path: Path) -> dict:
         "param_descriptions":      _parse_param_descriptions(skill_text),
         "tool_selection_guidance": _section_body(skill_text, "Tool selection guidance"),
     }
+    if tool_aliases:
+        summary["tool_aliases"] = tool_aliases
+    return summary
 
 
 # ----------------------------------------------------------------------------------------------------
@@ -338,6 +354,8 @@ def summarize_skill(skill_md_path: Path, use_llm: bool, model_name: str, num_ctx
         summary["param_descriptions"] = _parse_param_descriptions(skill_text)
         if "triggers" not in summary:
             summary["triggers"] = _parse_triggers(skill_text)
+        if "tool_aliases" not in summary:
+            summary["tool_aliases"] = _parse_tool_aliases(skill_text)
 
     return summary
 
@@ -361,6 +379,16 @@ def normalize_summary(summary: dict, skill_md_path: Path) -> dict:
     normalized.setdefault("triggers", [])
     normalized.setdefault("param_descriptions", {})
     normalized.setdefault("tool_selection_guidance", "")
+    if "tool_aliases" in normalized:
+        if not isinstance(normalized["tool_aliases"], dict):
+            normalized["tool_aliases"] = {}
+        normalized["tool_aliases"] = {
+            str(alias).strip(): str(canonical).strip()
+            for alias, canonical in normalized["tool_aliases"].items()
+            if str(alias).strip() and str(canonical).strip()
+        }
+        if not normalized["tool_aliases"]:
+            normalized.pop("tool_aliases", None)
     for field_name in ["functions", "inputs", "outputs"]:
         field_value = normalized.get(field_name, [])
         if isinstance(field_value, list):

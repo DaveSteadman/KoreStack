@@ -12,7 +12,6 @@ from __future__ import annotations
 # ====================================================================================================
 
 import os
-import json
 from pathlib import Path
 from typing import Callable
 
@@ -21,7 +20,8 @@ from fastapi.responses import FileResponse
 from fastapi.responses import HTMLResponse
 from fastapi.responses import RedirectResponse
 from fastapi.responses import Response
-from KoreCommon.suite_paths import get_suite_urls_map
+from KoreCommon.service_app import register_suite_config_js
+from KoreCommon.service_app import register_ui_elements_assets
 
 
 def register_static_routes(
@@ -31,6 +31,9 @@ def register_static_routes(
     ui_elements_assets: Path,
     get_korechat_base_url: Callable[[], str | None],
 ) -> None:
+    register_suite_config_js(app)
+    register_ui_elements_assets(app, ui_elements_assets)
+
     @app.get("/", include_in_schema=False)
     def serve_index():
         index = web_dir / "index.html"
@@ -45,15 +48,6 @@ def register_static_routes(
             return {"error": "Skills Catalog UI not found"}
         return FileResponse(str(page), headers={"Cache-Control": "no-store"})
 
-    @app.get("/suite-config.js", include_in_schema=False)
-    def suite_config_js():
-        urls = json.dumps(get_suite_urls_map())
-        return Response(
-            content    = f"window.__koreSuiteUrls = {urls};",
-            media_type = "application/javascript",
-            headers    = {"Cache-Control": "no-store"},
-        )
-
     @app.get("/static/app.js", include_in_schema=False)
     def serve_app_js():
         return FileResponse(str(web_dir / "app.js"), headers={"Cache-Control": "no-store"})
@@ -66,15 +60,6 @@ def register_static_routes(
     def serve_static_asset(asset_path: str):
         candidate = (web_dir / asset_path).resolve()
         if candidate != web_dir and web_dir not in candidate.parents:
-            raise HTTPException(status_code=404, detail="Asset not found")
-        if not candidate.exists() or not candidate.is_file():
-            raise HTTPException(status_code=404, detail="Asset not found")
-        return FileResponse(str(candidate), headers={"Cache-Control": "no-store"})
-
-    @app.get("/ui-elements/assets/{asset_path:path}", include_in_schema=False)
-    def serve_ui_elements_asset(asset_path: str):
-        candidate = (ui_elements_assets / asset_path).resolve()
-        if candidate != ui_elements_assets and ui_elements_assets not in candidate.parents:
             raise HTTPException(status_code=404, detail="Asset not found")
         if not candidate.exists() or not candidate.is_file():
             raise HTTPException(status_code=404, detail="Asset not found")

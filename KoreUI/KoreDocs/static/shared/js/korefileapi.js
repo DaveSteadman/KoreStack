@@ -47,8 +47,18 @@ export function listFiles({ type, folderId, folderPath, name, limit } = {}) {
 }
 
 export async function resolveLegacyFile(type, name) {
-  const files = await listFiles({ type, name, limit: 1 });
-  return files[0] ?? null;
+  const attempts = [];
+  const inferredExt = String(name || '').trim().toLowerCase().match(/\.([^.]+)$/)?.[1] ?? null;
+
+  if (type) attempts.push(type);
+  if (inferredExt && !attempts.includes(inferredExt)) attempts.push(inferredExt);
+  attempts.push(null);
+
+  for (const candidateType of attempts) {
+    const files = await listFiles({ type: candidateType || undefined, name, limit: 1 });
+    if (files[0]) return files[0];
+  }
+  return null;
 }
 
 export function updateFile(id, content, metadata, options = {}) {

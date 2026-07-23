@@ -136,7 +136,7 @@ formulaInput.addEventListener('keyup', _captureFormulaCaret);
 
 // ── Aggregate toolbar ──────────────────────────────────────────────────────
 
-document.getElementById('toolbar').addEventListener('click', e => {
+document.getElementById('toolbar').addEventListener('click', async e => {
   const decimalBtn = e.target.closest('[data-decimal-action]');
   if (decimalBtn) {
     _applyDecimalAction(decimalBtn.dataset.decimalAction);

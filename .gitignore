@@ -58,6 +58,10 @@ datacontrol/task_queue.json
 /datacontrol/korecode/runs
 /Data/datacontrol/korecode/edit_proposals
 *.db
+*.sqlite3
+KoreCodeWorkspace.sqlite3
+korestack_screenshots_*.gif
+KoreData/KoreFeed/actions.log
 /Data/datacontrol/korecode/runs
 /Data/datacontrol/koredata/Scrape
 /Data/datauser

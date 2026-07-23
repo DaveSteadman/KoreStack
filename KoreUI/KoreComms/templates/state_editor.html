@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}KoreComms â€” State Editor{% endblock %}
+{% block title %}KoreComms - State Editor{% endblock %}
 {% block main_class %}kcui-main{% endblock %}
 
 {% block content %}
@@ -54,8 +54,8 @@
 
 {% if messages|length == 100 %}
 <div class="gap-row">
-  <a class="btn btn-sm" href="/state?offset={{ offset + 100 }}">Next page â†’</a>
-  {% if offset > 0 %}<a class="btn btn-sm" href="/state?offset={{ offset - 100 }}">â† Previous</a>{% endif %}
+  <a class="btn btn-sm" href="/state?offset={{ offset + 100 }}">Next page &gt;</a>
+  {% if offset > 0 %}<a class="btn btn-sm" href="/state?offset={{ offset - 100 }}">&lt; Previous</a>{% endif %}
 </div>
 {% endif %}
 </div>

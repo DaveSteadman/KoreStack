@@ -47,8 +47,8 @@ import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, Form, HTTPException, Request, Response
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse
+from fastapi import FastAPI, Form, HTTPException, Request
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 
@@ -56,8 +56,9 @@ _KORECOMMON_PARENT = next((parent for parent in Path(__file__).resolve().parents
 if _KORECOMMON_PARENT is not None and str(_KORECOMMON_PARENT) not in sys.path:
     sys.path.insert(0, str(_KORECOMMON_PARENT))
 
-from KoreCommon.endpoint_manifest import build_endpoint_manifest
-from KoreCommon.suite_paths import get_suite_urls_map
+from KoreCommon.service_app import register_endpoint_manifest
+from KoreCommon.service_app import register_suite_config_js
+from KoreCommon.service_app import register_ui_elements_assets
 from app import crypto, database as db, kc_client, poller, queue_manager
 from app.config import cfg
 from app.interfaces.common.registry import REGISTRY, build_adapter
@@ -110,11 +111,9 @@ async def lifespan(app: FastAPI):
     poller.stop()
 
 app = FastAPI(title="KoreComms", lifespan=lifespan)
-
-
-@app.get("/__endpoint_manifest", include_in_schema=False)
-def endpoint_manifest() -> dict:
-    return build_endpoint_manifest(app, service_key="korecomms", service_label="KoreComms")
+register_endpoint_manifest(app, service_key="korecomms", service_label="KoreComms")
+register_suite_config_js(app)
+register_ui_elements_assets(app, _UI_ELEMENTS_ASSETS)
 
 
 # ---------------------------------------------------------------------------
@@ -135,24 +134,8 @@ def status():
     return {"status": "ok"}
 
 
-@app.get("/suite-config.js", include_in_schema=False)
-def suite_config_js():
-    urls = json.dumps(get_suite_urls_map())
-    return Response(content=f"window.__koreSuiteUrls = {urls};", media_type="application/javascript", headers={"Cache-Control": "no-store"})
-
-
-@app.get("/ui-elements/assets/{asset_path:path}", include_in_schema=False)
-def serve_ui_elements_asset(asset_path: str):
-    candidate = (_UI_ELEMENTS_ASSETS / asset_path).resolve()
-    if candidate != _UI_ELEMENTS_ASSETS and _UI_ELEMENTS_ASSETS not in candidate.parents:
-        raise HTTPException(status_code=404, detail="Asset not found")
-    if not candidate.exists() or not candidate.is_file():
-        raise HTTPException(status_code=404, detail="Asset not found")
-    return FileResponse(str(candidate), headers={"Cache-Control": "no-store"})
-
-
 # ---------------------------------------------------------------------------
-# KoreComms REST API â€” outbound trigger
+# KoreComms REST API - outbound trigger
 # ---------------------------------------------------------------------------
 
 
@@ -201,7 +184,7 @@ def api_send(req: SendRequest):
 
 
 # ---------------------------------------------------------------------------
-# WebUI â€” home (conversation list)
+# WebUI - home (conversation list)
 # ---------------------------------------------------------------------------
 
 
@@ -216,7 +199,7 @@ def ui_home(request: Request, offset: int = 0):
 
 
 # ---------------------------------------------------------------------------
-# WebUI â€” compose / inject manual message
+# WebUI - compose / inject manual message
 # ---------------------------------------------------------------------------
 
 
@@ -252,7 +235,7 @@ def ui_compose_submit(
 
 
 # ---------------------------------------------------------------------------
-# WebUI â€” connections (interface management)
+# WebUI - connections (interface management)
 # ---------------------------------------------------------------------------
 
 
@@ -418,7 +401,7 @@ def ui_gmail_callback(request: Request, code: str = "", state: str = "", error: 
 
 
 # ---------------------------------------------------------------------------
-# WebUI â€” activity log
+# WebUI - activity log
 # ---------------------------------------------------------------------------
 
 
@@ -429,7 +412,7 @@ def ui_activity(request: Request):
 
 
 # ---------------------------------------------------------------------------
-# WebUI â€” per-conversation chat view
+# WebUI - per-conversation chat view
 # ---------------------------------------------------------------------------
 
 
@@ -698,7 +681,7 @@ def ui_conversation_send(
     content: str = Form(...),
     if_missing: str = Form(default=""),
 ):
-    """Human sends a message in an existing conversation â€” forwarded to KC."""
+    """Human sends a message in an existing conversation - forwarded to KC."""
     conv = db.conversation_get(conv_id)
     if conv is None:
         raise HTTPException(404, "Conversation not found")

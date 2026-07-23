@@ -1,5 +1,5 @@
 ﻿/**
- * editor.js â€” ProseMirror WYSIWYG editor for KoreDoc.
+ * editor.js - ProseMirror WYSIWYG editor for KoreDoc.
  *
  * Stores the document as ProseMirror state; serialises to/from Markdown.
  * YAML frontmatter is stashed separately so ProseMirror only sees the body.

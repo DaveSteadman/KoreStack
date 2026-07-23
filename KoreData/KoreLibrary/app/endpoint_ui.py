@@ -1,14 +1,14 @@
 import os
 import re as _re
-import json
 from pathlib import Path
 from typing import Optional
 
 from fastapi import FastAPI, Form, HTTPException, Request
-from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from jinja2 import ChoiceLoader, FileSystemLoader
-from config import get_suite_urls_map
+from KoreCommon.service_app import register_suite_config_js
+from KoreCommon.service_app import register_ui_elements_assets
 
 from app.database import (
     add_book,
@@ -84,23 +84,8 @@ def repair_kore_anchors(body: str) -> str:
 
 
 def register_library_ui(app: FastAPI) -> None:
-    @app.get("/suite-config.js", include_in_schema=False)
-    def suite_config_js():
-        urls = json.dumps(get_suite_urls_map())
-        return Response(
-            content    = f"window.__koreSuiteUrls = {urls};",
-            media_type = "application/javascript",
-            headers    = {"Cache-Control": "no-store"},
-        )
-
-    @app.get("/ui-elements/assets/{asset_path:path}", include_in_schema=False)
-    def serve_ui_elements_asset(asset_path: str):
-        candidate = (_UI_ELEMENTS_ASSETS / asset_path).resolve()
-        if candidate != _UI_ELEMENTS_ASSETS and _UI_ELEMENTS_ASSETS not in candidate.parents:
-            raise HTTPException(status_code=404, detail="Asset not found")
-        if not candidate.exists() or not candidate.is_file():
-            raise HTTPException(status_code=404, detail="Asset not found")
-        return FileResponse(str(candidate), headers={"Cache-Control": "no-store"})
+    register_suite_config_js(app)
+    register_ui_elements_assets(app, _UI_ELEMENTS_ASSETS)
 
     @app.get("/", include_in_schema=False)
     def route_root():

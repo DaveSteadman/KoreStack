@@ -25,7 +25,7 @@ from fastapi import FastAPI
 from fastapi import HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-from KoreCommon.endpoint_manifest import build_endpoint_manifest
+from KoreCommon.service_app import register_endpoint_manifest
 from agent.orchestration.engine import ConversationHistory
 from agent.orchestration.engine import OrchestratorConfig
 from agent.orchestration.engine import SessionContext
@@ -100,6 +100,7 @@ from skills_catalog_builder import build_tool_definitions
 from utils.runtime_logger import SessionLogger
 from utils.runtime_logger import create_log_file_path
 from utils.suite_version import SUITE_VERSION
+from utils.suite_version import get_suite_version
 from utils.workspace_utils import get_logs_dir
 from utils.workspace_utils import get_test_prompts_dir
 import sessions.korechat_client as _kc_client
@@ -134,11 +135,7 @@ _LOG_TAIL_LINES = 200
 
 
 app = FastAPI(title="KoreAgent API", version=SUITE_VERSION)
-
-
-@app.get("/__endpoint_manifest", include_in_schema=False)
-def endpoint_manifest() -> dict:
-    return build_endpoint_manifest(app, service_key="koreagent", service_label="KoreAgent")
+register_endpoint_manifest(app, service_key="koreagent", service_label="KoreAgent")
 
 
 app.add_middleware(
@@ -190,7 +187,7 @@ register_status_routes(
     get_active_backend=get_active_backend,
     get_ollama_ps_rows=get_ollama_ps_rows,
     get_startup_state=get_startup_state_snapshot,
-    version=SUITE_VERSION,
+    get_version_text=get_suite_version,
 )
 
 

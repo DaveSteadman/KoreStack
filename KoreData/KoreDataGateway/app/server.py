@@ -23,7 +23,6 @@
 #   - KoreScrape/         -- website snapshot sub-service
 # ====================================================================================================
 import asyncio
-import json as _json
 import logging
 import math
 import os
@@ -43,7 +42,7 @@ from urllib.parse import quote, urlencode, unquote, urlsplit
 
 import httpx
 from fastapi import FastAPI, Form, HTTPException, Request
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from markupsafe import Markup, escape
 from mcp.server.fastmcp import FastMCP
@@ -53,7 +52,7 @@ _KORECOMMON_PARENT = next((parent for parent in Path(__file__).resolve().parents
 if _KORECOMMON_PARENT is not None and str(_KORECOMMON_PARENT) not in sys.path:
     sys.path.insert(0, str(_KORECOMMON_PARENT))
 
-from KoreCommon.endpoint_manifest import build_endpoint_manifest
+from KoreCommon.service_app import register_suite_shell_routes
 from app.config import cfg
 from app.gateway_feed import get_feed_entry as _gateway_get_feed_entry
 from app.gateway_feed import get_feed_sentence as _gateway_get_feed_sentence
@@ -70,7 +69,7 @@ from app.gateway_search import SEMANTIC_SEARCH_DOMAINS as _SEMANTIC_SEARCH_DOMAI
 from app.gateway_search import parse_artifact_ref as _parse_artifact_ref
 from app.gateway_search import parse_sentence_locator as _parse_sentence_locator
 from app.gateway_search import run_search as _run_search
-from config import get_koredata_dir, get_suite_urls_map
+from config import get_koredata_dir
 
 
 LOG = logging.getLogger("koredata.gateway")
@@ -418,10 +417,6 @@ _INSTR_RAG = (
 )
 
 
-@app.get("/__endpoint_manifest", include_in_schema=False)
-def endpoint_manifest() -> dict:
-    return build_endpoint_manifest(app, service_key="koredatagateway", service_label="KoreDataGateway")
-
 _INSTR_SCRAPE = (
     "KoreScrape — captured web pages indexed into extracted text chunks. "
     "Search with domains=[\"scrape\"]. "
@@ -475,15 +470,12 @@ _UI_ELEMENTS_ASSETS = Path(
         str(Path(__file__).resolve().parents[3] / "UIElements" / "assets"),
     )
 ).resolve()
-
-@app.get("/ui-elements/assets/{asset_path:path}", include_in_schema=False)
-def serve_ui_elements_asset(asset_path: str):
-    candidate = (_UI_ELEMENTS_ASSETS / asset_path).resolve()
-    if candidate != _UI_ELEMENTS_ASSETS and _UI_ELEMENTS_ASSETS not in candidate.parents:
-        raise HTTPException(status_code=404, detail="Asset not found")
-    if not candidate.exists() or not candidate.is_file():
-        raise HTTPException(status_code=404, detail="Asset not found")
-    return FileResponse(str(candidate), headers={"Cache-Control": "no-store"})
+register_suite_shell_routes(
+    app,
+    service_key            = "koredatagateway",
+    service_label          = "KoreDataGateway",
+    ui_elements_assets_dir = _UI_ELEMENTS_ASSETS,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -1471,12 +1463,6 @@ async def koredata_get_full_text(refid: str) -> dict:
 @app.get("/", include_in_schema=False)
 async def root_redirect():
     return RedirectResponse("/ui", status_code=302)
-
-
-@app.get("/suite-config.js", include_in_schema=False)
-def suite_config_js():
-    urls = _json.dumps(get_suite_urls_map())
-    return Response(content=f"window.__koreSuiteUrls = {urls};", media_type="application/javascript", headers={"Cache-Control": "no-store"})
 
 
 @app.get("/ui", response_class=HTMLResponse, include_in_schema=False)

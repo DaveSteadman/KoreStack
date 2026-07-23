@@ -16,6 +16,7 @@ from sessions.tool_selection import build_all_tool_catalog
 from sessions.tool_selection import get_selected_tools
 from sessions.tool_selection import promote_selected_tools
 from sessions.tool_selection import rank_tool_catalog_entries
+from sessions.tool_aliases import canonical_tool_name
 
 
 def _available_payload(payload: dict) -> dict:
@@ -39,9 +40,13 @@ def tools_active_add(tool_names: list[str]) -> dict:
     current = set(get_selected_tools())
     valid: list[str] = []
     unknown: list[str] = []
+    aliases: dict[str, str] = {}
     for name in requested:
-        if name in known_names:
-            valid.append(name)
+        canonical = canonical_tool_name(name, payload)
+        if canonical in known_names:
+            valid.append(canonical)
+            if canonical != name:
+                aliases[name] = canonical
         else:
             unknown.append(name)
     result = promote_selected_tools(valid)
@@ -49,6 +54,7 @@ def tools_active_add(tool_names: list[str]) -> dict:
         "added": result["added"],
         "promoted": result["promoted"],
         "unknown": unknown,
+        "aliases": aliases,
         "evicted": result["evicted"],
         "active_tools": result["active_tools"],
         "already_active_before_call": sorted(name for name in valid if name in current),

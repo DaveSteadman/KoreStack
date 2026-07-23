@@ -1,3 +1,6 @@
+import { initAppBar, initTopbar } from "/ui-elements/assets/js/chrome.js";
+import { initWorkspaceLayouts, resetWorkspaceLayout } from "/ui-elements/assets/js/workspace.js";
+
 // ============================================================
 // MiniAgentFramework Web UI - app.js
 // Vanilla JS - no build step, no dependencies.
@@ -80,7 +83,6 @@ const dom = {
     ollamaHost:   () => $("ollama-host"),
     ollamaModel:  () => $("ollama-model"),
     ollamaCtx:    () => $("ollama-ctx"),
-    versionChip:  () => $("version-chip"),
     timeline:     () => $("timeline-ticker"),
     timelineQueue: () => $("timeline-queue"),
     log:          () => $("log-body"),
@@ -329,13 +331,6 @@ function _applySessionSwitch(sessionId, name) {
     _loadCompletions();
 }
 
-// ----------------------------------------------------------------------------------------------------
-async function refreshVersion() {
-    const data = await apiFetch("/version");
-    if (!data) return;
-    dom.versionChip().textContent = data.version;
-}
-
 function _queueItemLabel(item) {
     if (item.label) return item.label.length > 40 ? item.label.slice(0, 40) + "..." : item.label;
     if (item.kind && item.kind !== "api_chat") return item.name;
@@ -437,12 +432,12 @@ async function refreshTimeline() {
 // MARK: PANEL SPLITTERS
 // ====================================================================================================
 function resetLayout() {
-    window.resetWorkspaceLayout?.("koreagent-main-v1");
+    resetWorkspaceLayout("koreagent-main-v1");
     refreshTimeline();
 }
 
 function initSplitters() {
-    window.initWorkspaceLayouts?.();
+    initWorkspaceLayouts();
 }
 
 
@@ -1335,7 +1330,6 @@ function _resizeTextarea() {
 // ====================================================================================================
 
 function startPolling() {
-    refreshVersion();
     refreshOllamaStatus();
     refreshQueue();
     refreshTimeline();
@@ -1354,6 +1348,23 @@ function startPolling() {
 // ====================================================================================================
 
 function init() {
+    initTopbar({ currentService: "koreagent", urls: window.__koreSuiteUrls || {} });
+    initAppBar({
+        currentService: "koreagent",
+        overline:       "Agent Control",
+        brandLabel:     "KoreAgent",
+        brandIcon:      "koreagent",
+        chips: [
+            { label: "Host",    value: "", valueId: "ollama-host",  tone: "info" },
+            { label: "Model",   value: "", valueId: "ollama-model", tone: "info" },
+            { label: "Context", value: "", valueId: "ollama-ctx",   tone: "info" },
+        ],
+        actions: [
+            { kind: "tag", id: "btn-skills-catalog", action: "skills-catalog", label: "skill catalog",  className: "kcui-tag kcui-tag--dim kcui-tag--skills-catalog" },
+            { kind: "tag", id: "btn-reset-layout",   action: "reset-layout",   label: "default layout", className: "kcui-tag kcui-tag--dim" },
+        ],
+    });
+
     _restoreSessionUiState();
     _persistActiveSession();
     _restoreWrapState();

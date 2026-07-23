@@ -873,6 +873,17 @@ class GuardrailRuntimeTests(unittest.TestCase):
         self.assertEqual(result["function"], "get_datetime_data")
         self.assertIsNotNone(result["result"])
 
+    def test_execute_tool_call_resolves_common_tool_alias(self) -> None:
+        result = execute_tool_call(
+            tool_name="python_execution",
+            arguments={"code": "print(2 + 2)"},
+            skills_payload=self.skills_payload,
+            active_tool_names={"tools_catalog_list", "tools_active_add"},
+        )
+
+        self.assertEqual(result["function"], "python_execute")
+        self.assertIn("4", str(result["result"]))
+
     def test_execute_tool_call_unknown_tool_returns_alternatives(self) -> None:
         with self.assertRaises(RuntimeError) as ctx:
             execute_tool_call(

@@ -6,6 +6,10 @@
     <title>KoreAgent</title>
     <link rel="icon" type="image/x-icon" href="/ui-elements/assets/icons/favicon.ico">
     <link rel="stylesheet" href="/ui-elements/assets/css/chrome.css">
+    <link rel="stylesheet" href="/ui-elements/assets/css/typography.css">
+    <link rel="stylesheet" href="/ui-elements/assets/css/panels.css">
+    <link rel="stylesheet" href="/ui-elements/assets/css/forms.css">
+    <link rel="stylesheet" href="/ui-elements/assets/css/tags.css">
     <link rel="stylesheet" href="/ui-elements/assets/css/workspace.css">
     <link rel="stylesheet" href="/static/style.css">
     <script src="/suite-config.js"></script>
@@ -99,12 +103,13 @@
             <div class="panel-body kcui-panel-body kcui-panel-body--fill">
                 <textarea
                     id="chat-input"
+                    class="kcui-input kcui-type-code"
                     rows="2"
                     placeholder="Type a prompt and press Enter (Shift+Enter for newline)..."
                     autocomplete="off"
                     spellcheck="false"
                 ></textarea>
-                <button id="send-btn">Send</button>
+                <button id="send-btn" class="kcui-btn" type="button">Send</button>
             </div>
         </div>
 
@@ -113,27 +118,6 @@
 
 <div id="slash-suggest" hidden></div>
 
-<script type="module">
-    import { initAppBar, initTopbar } from '/ui-elements/assets/js/chrome.js';
-    import { initWorkspaceLayouts } from '/ui-elements/assets/js/workspace.js';
-    initTopbar({ currentService: 'koreagent', urls: window.__koreSuiteUrls || {} });
-    initAppBar({
-        currentService: 'koreagent',
-        overline: 'Agent Control',
-        brandLabel: 'KoreAgent',
-        brandIcon: 'koreagent',
-        chips: [
-            { label: 'Host', value: '', valueId: 'ollama-host', tone: 'info' },
-            { label: 'Model', value: '', valueId: 'ollama-model', tone: 'info' },
-            { label: 'Context', value: '', valueId: 'ollama-ctx', tone: 'info' },
-        ],
-        actions: [
-            { kind: 'tag', id: 'btn-skills-catalog', action: 'skills-catalog', label: 'skill catalog', className: 'kcui-tag kcui-tag--dim kcui-tag--skills-catalog' },
-            { kind: 'tag', id: 'btn-reset-layout', action: 'reset-layout', label: 'default layout', className: 'kcui-tag kcui-tag--dim' },
-        ],
-    });
-    initWorkspaceLayouts();
-</script>
-<script src="/static/app.js?v=14"></script>
+<script type="module" src="/static/app.js"></script>
 </body>
 </html>
