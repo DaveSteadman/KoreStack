@@ -5,7 +5,7 @@ import {
   extractStructuredEdits,
 } from './rendering.js';
 
-export function createThreadUI({ thread, insertFromChat = null, createEditProposal = null, applyEditProposal = null, reloadTabs = null }) {
+export function createThreadUI({ thread, insertFromChat = null, createEditProposal = null, applyEditProposal = null, reloadTabs = null, manualApplyEnabled = false }) {
   function scrollBottom() {
     thread.scrollTop = thread.scrollHeight;
   }
@@ -35,7 +35,7 @@ export function createThreadUI({ thread, insertFromChat = null, createEditPropos
     }, 1000);
   }
 
-  function buildAssistantActions(codeText, structured = null) {
+  function buildAssistantActions(codeText, structured = null, proposalId = null) {
     const row = document.createElement('div');
     row.className = 'chat-msg-actions';
 
@@ -73,11 +73,11 @@ export function createThreadUI({ thread, insertFromChat = null, createEditPropos
     row.appendChild(copyBtn);
     row.appendChild(insertBtn);
 
-    if (structured && Array.isArray(structured.edits) && typeof createEditProposal === 'function' && typeof applyEditProposal === 'function') {
+    if (manualApplyEnabled && structured && Array.isArray(structured.edits) && typeof createEditProposal === 'function' && typeof applyEditProposal === 'function') {
       const applyBtn = document.createElement('button');
       applyBtn.type = 'button';
       applyBtn.className = 'kcui-tag kcui-tag--accent';
-      applyBtn.textContent = 'apply manually';
+      applyBtn.textContent = proposalId ? 'review & apply' : 'validate & apply';
       applyBtn.addEventListener('click', async () => {
         const prev     = applyBtn.textContent;
         const fileList = [...new Set(structured.edits.map((e) => String(e?.file || '').trim()).filter(Boolean))];
@@ -86,7 +86,9 @@ export function createThreadUI({ thread, insertFromChat = null, createEditPropos
         if (!confirmed) return;
         applyBtn.disabled = true;
         try {
-          const proposal = await createEditProposal(structured.edits);
+          const proposal = proposalId
+            ? { proposal_id: proposalId, validation_ok: true }
+            : await createEditProposal(structured.edits);
           if (!proposal?.validation_ok) {
             const invalid = (proposal?.edits || []).find((edit) => !edit?.validation?.ok);
             applyBtn.textContent = 'proposal invalid';
@@ -145,7 +147,7 @@ export function createThreadUI({ thread, insertFromChat = null, createEditPropos
       el.appendChild(avatar);
       el.appendChild(body);
       if (codeText || structured) {
-        el.appendChild(buildAssistantActions(codeText || JSON.stringify(structured, null, 2), structured));
+        el.appendChild(buildAssistantActions(codeText || JSON.stringify(structured, null, 2), structured, msg.proposal_id));
       }
     }
 

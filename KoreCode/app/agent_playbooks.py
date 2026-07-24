@@ -82,6 +82,15 @@ PLAYBOOKS: dict[str, PlaybookDefinition] = {
         validation        = ("syntax validation", "targeted test recommendation"),
         permits_edits     = True,
     ),
+    "workspace_change": PlaybookDefinition(
+        identifier        = "workspace_change",
+        label             = "Workspace implementation",
+        description       = "Implement one outcome across the files that genuinely need to change, with every change held for review.",
+        allowed_tools     = _IMPLEMENTATION_TOOLS,
+        required_evidence = ("affected code inspected", "each changed path justified", "bounded implementation plan"),
+        validation        = ("syntax validation", "targeted test recommendation", "review the complete change set"),
+        permits_edits     = True,
+    ),
     "refactor": PlaybookDefinition(
         identifier        = "refactor",
         label             = "Refactor",
@@ -117,8 +126,8 @@ def route_task(*, user_text: str, mode: str) -> PlaybookDefinition:
         return PLAYBOOKS["refactor"]
     if any(phrase in text for phrase in ("create file", "new file", "add file")) or re.search(r"\bcreate\s+[^\s]+\.[a-z0-9]+\b", text):
         return PLAYBOOKS["create_file"]
-    if any(phrase in text for phrase in ("fix ", "implement ", "add ", "change ", "update ")):
-        return PLAYBOOKS["bounded_change"]
+    if any(phrase in text for phrase in ("fix ", "implement ", "add ", "change ", "update ", "remove ", "delete ")):
+        return PLAYBOOKS["workspace_change"]
     return PLAYBOOKS["explore"]
 
 

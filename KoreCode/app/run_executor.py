@@ -119,7 +119,6 @@ def start_background_run(target, *args) -> None:
 def execute_chat_run(request: ChatRunRequest, services: AgentRunServices) -> None:
     last_reply               = ""
     accumulated_tool_results = []
-    completion_required      = False
     try:
         services.update_run(
             request.run_id,
@@ -202,7 +201,15 @@ def execute_chat_run(request: ChatRunRequest, services: AgentRunServices) -> Non
                     )
                     if not bool((edit_application.get("apply_result") or {}).get("ok")):
                         errors = "; ".join((edit_application.get("apply_result") or {}).get("errors") or [])
-                        raise RuntimeError(f"Agent edit application failed: {errors or 'unknown error'}")
+                        if not errors:
+                            errors = "; ".join(
+                                error
+                                for edit in list(edit_application.get("edits") or [])
+                                for error in list((edit.get("validation") or {}).get("errors") or [])
+                            )
+                        if not errors and str(edit_application.get("status") or "") == "proposed":
+                            errors = "Agent returned an unapplied proposal; restart KoreCode to load the current automatic-apply workflow"
+                        raise RuntimeError(f"Agent edit application failed: {errors or 'no application result returned'}")
                 services.set_run_output(
                     request.run_id,
                     output_text = last_reply,
@@ -247,11 +254,6 @@ def execute_chat_run(request: ChatRunRequest, services: AgentRunServices) -> Non
             )
             _append_tool_results(request.run_id, requested_tools, tool_results, services)
             accumulated_tool_results.extend(tool_results)
-            completion_required = completion_required or _active_file_read_succeeded(
-                tool_results,
-                request.active_path,
-            )
-
             followup_prompt = services.build_tool_followup_prompt(
                 mode              = request.mode,
                 path              = request.active_path,
@@ -259,7 +261,7 @@ def execute_chat_run(request: ChatRunRequest, services: AgentRunServices) -> Non
                 previous_response = last_reply,
                 tool_results      = accumulated_tool_results,
                 execution_contract = request.execution_contract,
-                force_completion  = completion_required,
+                force_completion  = False,
             )
             followed = services.append_internal_followup(
                 request.workspace_root,
@@ -419,18 +421,6 @@ def _append_tool_results(
             result        = item.get("result") if item.get("ok") else None,
             error         = item.get("error") if not item.get("ok") else None,
         )
-
-
-def _active_file_read_succeeded(tool_results: list[dict[str, Any]], active_path: str) -> bool:
-    expected_path = str(active_path or "").replace("\\", "/").strip()
-    if not expected_path or expected_path == ".":
-        return False
-    for item in tool_results:
-        result = item.get("result") if isinstance(item, dict) else None
-        result_path = str((result or {}).get("path") or "").replace("\\", "/").strip()
-        if item.get("ok") and str(item.get("tool") or "") == "read_file" and result_path == expected_path:
-            return True
-    return False
 
 
 def _assistant_signature(message: dict[str, Any] | None) -> str | None:

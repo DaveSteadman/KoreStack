@@ -99,6 +99,7 @@ def create_edit_proposal(
 
     for index, raw_edit in enumerate(list(edits or [])):
         rel_path     = str(raw_edit.get("file") or "").strip()
+        operation    = str(raw_edit.get("operation") or "edit").strip().lower()
         from_line    = int(raw_edit.get("from") or 1)
         to_line      = int(raw_edit.get("to") or from_line)
         replacement  = str(raw_edit.get("replacement") or "")
@@ -114,8 +115,12 @@ def create_edit_proposal(
         try:
             if not rel_path:
                 raise ValueError("Edit missing file path")
+            if operation not in {"edit", "delete"}:
+                raise ValueError(f"Unsupported edit operation: {operation}")
             candidate  = resolve_relative_path(rel_path)
             file_exists = candidate.exists()
+            if operation == "delete" and not file_exists:
+                raise ValueError("Cannot delete a file that does not exist")
             current_content = ""
             if file_exists:
                 if not candidate.is_file():
@@ -127,8 +132,8 @@ def create_edit_proposal(
                 if expected_hash and current_hash != expected_hash:
                     raise ValueError("File changed on disk (content hash mismatch)")
                 language = "python" if candidate.suffix.lower() in {".py", ".pyi"} else "text"
-            candidate_content = _replace_lines(current_content, from_line, to_line, replacement)
-            if language == "python":
+            candidate_content = "" if operation == "delete" else _replace_lines(current_content, from_line, to_line, replacement)
+            if language == "python" and operation != "delete":
                 validate_python_content(candidate, candidate_content)
 
             before_lines = current_content.split("\n") if current_content else []
@@ -146,6 +151,7 @@ def create_edit_proposal(
             {
                 "edit_id":       f"{proposal_id}:{index}",
                 "file":          rel_path,
+                "operation":     operation,
                 "from":          from_line,
                 "to":            to_line,
                 "replacement":   replacement,
@@ -186,20 +192,20 @@ def apply_edit_proposal(
     if str(proposal.get("status") or "").strip() == "applied":
         return proposal
 
-    edits   = list(proposal.get("edits") or [])
-    errors  = []
-    applied = 0
-    touched = []
-
+    edits       = list(proposal.get("edits") or [])
+    errors      = []
+    applied     = 0
+    touched     = []
+    edits_by_file: dict[str, list[dict[str, Any]]] = {}
     for edit in edits:
+        edits_by_file.setdefault(str(edit.get("file") or "").strip(), []).append(edit)
+
+    for rel_path, file_edits in edits_by_file.items():
         try:
-            if not bool((edit.get("validation") or {}).get("ok")):
+            if not rel_path:
+                raise ValueError("Edit missing file path")
+            if any(not bool((edit.get("validation") or {}).get("ok")) for edit in file_edits):
                 raise ValueError("Edit failed validation")
-            rel_path      = str(edit.get("file") or "").strip()
-            from_line     = int(edit.get("from") or 1)
-            to_line       = int(edit.get("to") or from_line)
-            replacement   = str(edit.get("replacement") or "")
-            expected_hash = str(edit.get("expected_hash") or "").strip() or None
             candidate     = resolve_relative_path(rel_path)
             current_content = ""
             if candidate.exists():
@@ -209,19 +215,38 @@ def apply_edit_proposal(
                     raise ValueError("Binary files are not supported")
                 current_content, _encoding = read_text(candidate)
                 current_hash = _content_hash(current_content)
-                if expected_hash and current_hash != expected_hash:
+                expected_hashes = {
+                    str(edit.get("expected_hash") or "").strip()
+                    for edit in file_edits
+                    if str(edit.get("expected_hash") or "").strip()
+                }
+                if any(expected_hash != current_hash for expected_hash in expected_hashes):
                     raise ValueError("File changed on disk (content hash mismatch)")
             else:
+                if any(str(edit.get("operation") or "edit").strip().lower() == "delete" for edit in file_edits):
+                    raise ValueError("Cannot delete a file that does not exist")
                 candidate.parent.mkdir(parents=True, exist_ok=True)
+            if any(str(edit.get("operation") or "edit").strip().lower() == "delete" for edit in file_edits):
+                if len(file_edits) != 1:
+                    raise ValueError("A delete operation cannot be combined with other edits for the same file")
+                candidate.unlink()
+                applied += 1
+                touched.append(rel_path)
+                continue
 
-            merged = _replace_lines(current_content, from_line, to_line, replacement)
+            merged = current_content
+            for edit in sorted(file_edits, key=lambda item: int(item.get("from") or 1), reverse=True):
+                from_line   = int(edit.get("from") or 1)
+                to_line     = int(edit.get("to") or from_line)
+                replacement = str(edit.get("replacement") or "")
+                merged = _replace_lines(merged, from_line, to_line, replacement)
             if candidate.suffix.lower() in {".py", ".pyi"}:
                 validate_python_content(candidate, merged)
             candidate.write_text(merged, encoding="utf-8", newline="")
-            applied += 1
+            applied += len(file_edits)
             touched.append(rel_path)
         except Exception as exc:
-            errors.append(f"{edit.get('file')}: {exc}")
+            errors.append(f"{rel_path or 'unknown file'}: {exc}")
 
     proposal["status"]     = "applied" if not errors else "failed"
     proposal["updated_at"] = _utc_now()

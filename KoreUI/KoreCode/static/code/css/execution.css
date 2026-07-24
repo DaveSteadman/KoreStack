@@ -8,6 +8,18 @@
   overflow: hidden;
 }
 
+#execution-splitter {
+  height: 4px;
+  flex: 0 0 4px;
+  background: var(--border);
+  cursor: row-resize;
+}
+
+#execution-splitter:hover,
+#execution-splitter.is-dragging { background: var(--accent); }
+
+#code-app.is-console-hidden #execution-splitter { display: none; }
+
 #execution-panel.is-collapsed { flex-basis: 34px; min-height: 34px; }
 #execution-panel.is-collapsed #execution-content { display: none; }
 

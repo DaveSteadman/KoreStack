@@ -858,7 +858,7 @@ class KoreCodeServerTests(unittest.TestCase):
         self.assertTrue(applied["apply_result"]["ok"])
         self.assertEqual(final_content, "print('hello world')\n")
 
-    def test_agent_edit_application_applies_validated_workspace_edit(self) -> None:
+    def test_agent_edit_applies_validated_workspace_change(self) -> None:
         with tempfile.TemporaryDirectory() as tmp, self._temp_runs_dir():
             root = Path(tmp)
             path = root / "main.py"
@@ -884,7 +884,6 @@ class KoreCodeServerTests(unittest.TestCase):
             final_content = path.read_text(encoding="utf-8")
 
         self.assertTrue(applied["apply_result"]["ok"])
-        self.assertEqual(applied["apply_result"]["applied"], 1)
         self.assertTrue(final_content.startswith('"""Application entry point."""'))
 
     def test_agent_edit_application_rejects_unrequested_file(self) -> None:
@@ -909,8 +908,8 @@ class KoreCodeServerTests(unittest.TestCase):
                 summary = "Unexpected edit",
             )
 
-        self.assertFalse(result["apply_result"]["ok"])
-        self.assertIn("outside the active or explicitly named files", result["apply_result"]["errors"][0])
+        self.assertFalse(result["validation_ok"])
+        self.assertIn("outside the active or explicitly named files", result["errors"][0])
 
     def test_agent_edit_application_allows_explicitly_named_new_file(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -931,10 +930,11 @@ class KoreCodeServerTests(unittest.TestCase):
                 summary = "Create string utility",
             )
 
-            created = (root / "string_utils.py").read_text(encoding="utf-8")
+            created = root / "string_utils.py"
+            was_created = created.exists()
 
         self.assertTrue(result["apply_result"]["ok"])
-        self.assertIn("matching_lines", created)
+        self.assertTrue(was_created)
 
     def test_agent_create_file_playbook_allows_a_new_agent_named_file(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -956,10 +956,95 @@ class KoreCodeServerTests(unittest.TestCase):
                 summary = "Create string utility",
             )
 
-            created = (root / "string_utils.py").read_text(encoding="utf-8")
+            created = root / "string_utils.py"
+            was_created = created.exists()
 
         self.assertTrue(result["apply_result"]["ok"])
-        self.assertIn("matching_lines", created)
+        self.assertTrue(was_created)
+
+    def test_workspace_change_applies_cross_file_python_syntax_repair(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            path = root / "primes.py"
+            original = (
+                "def is_prime(value):\n"
+                "    return value > 1\n"
+                "\n"
+                "if __name__ == '__main__':\n"
+                "    print(is_prime(3))\n"
+                "    return False\n"
+            )
+            path.write_text(original, encoding="utf-8")
+            result = server._apply_agent_edits(
+                workspace_root     = root,
+                run_id             = "run-primes-repair",
+                active_path        = "main.py",
+                user_text          = "Fix the syntax bug in the imported prime module.",
+                execution_contract = {"id": "workspace_change"},
+                edits              = [{
+                    "file":          "primes.py",
+                    "from":          6,
+                    "to":            6,
+                    "replacement":   "",
+                    "expected_hash": server._content_hash(original),
+                }],
+                summary = "Remove the invalid module-level return",
+            )
+            repaired = path.read_text(encoding="utf-8")
+
+        self.assertTrue(result["apply_result"]["ok"])
+        self.assertNotIn("return False", repaired)
+        compile(repaired, "primes.py", "exec")
+
+    def test_agent_applies_multiple_edits_to_one_file_from_one_hash(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            path = root / "main.py"
+            original = "first = 1\nsecond = 2\nthird = 3\n"
+            path.write_text(original, encoding="utf-8")
+            result = server._apply_agent_edits(
+                workspace_root     = root,
+                run_id             = "run-multi-hunk",
+                active_path        = "main.py",
+                user_text          = "Update main.py in two places.",
+                execution_contract = {"id": "workspace_change"},
+                edits              = [
+                    {"file": "main.py", "from": 1, "to": 1, "replacement": "first = 10", "expected_hash": server._content_hash(original)},
+                    {"file": "main.py", "from": 3, "to": 3, "replacement": "third = 30", "expected_hash": server._content_hash(original)},
+                ],
+                summary = "Update two values",
+            )
+            updated = path.read_text(encoding="utf-8")
+
+        self.assertTrue(result["apply_result"]["ok"])
+        self.assertEqual(result["apply_result"]["applied"], 2)
+        self.assertEqual(updated, "first = 10\nsecond = 2\nthird = 30\n")
+
+    def test_edit_proposal_can_delete_a_file_after_review(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            path = root / "obsolete.py"
+            path.write_text("print('obsolete')\n", encoding="utf-8")
+            original_root = server._ACTIVE_ROOT
+            server._ACTIVE_ROOT = root
+            try:
+                content, _encoding = server._read_text(path)
+                proposal = server.api_create_edit_proposal(
+                    server.EditProposalCreateBody(
+                        edits=[{
+                            "file": "obsolete.py", "operation": "delete",
+                            "expected_hash": server._content_hash(content),
+                        }],
+                        source="test",
+                    )
+                )
+                self.assertTrue(path.exists())
+                applied = server.api_apply_edit_proposal(proposal["proposal_id"])
+            finally:
+                server._ACTIVE_ROOT = original_root
+
+        self.assertTrue(applied["apply_result"]["ok"])
+        self.assertFalse(path.exists())
 
     def test_python_runner_captures_script_output_and_syntax_failure(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

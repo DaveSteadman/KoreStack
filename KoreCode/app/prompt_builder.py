@@ -37,10 +37,12 @@ AGENT_OUTPUT_SCHEMA = {
     "edits": [
         {
             "file":        "path/to/file",
+            "operation":   "edit|delete (default edit)",
             "from":        1,
             "to":          1,
             "replacement": "new text",
             "explanation": "why this change is needed",
+            "expected_hash": "content hash returned by read_file; required for an existing file",
         },
     ],
     "next": "continue|done",
@@ -146,9 +148,9 @@ def build_agent_contract(mode: str, execution_contract: dict | None = None) -> s
         'When finished, set next="done" and use kind="analysis", "edits", or "final" as appropriate.',
         "When emitting edits, include line-based ranges with from/to inclusive.",
         "If creating a new file, use from=1 and to=1 and put full file content in replacement.",
-        "For an edit to an existing file, request read_file for that file before emitting edits. Edits are not applied changes until the agent run validates and applies them. Direct coding requests apply validated edits automatically; do not claim success until tool evidence or the final application result confirms it.",
-        "After sufficient source evidence, emit one kind=edits response with next=done. Do not use a tool request to stage a write; the final edits response is the only autonomous write path.",
-        "For a normal edit request, modify only the active file. You may edit another file only when the user explicitly names that file in the request.",
+        "For an edit to an existing file, request read_file for that file before emitting edits and copy its content_hash into expected_hash. Validated edits are applied automatically when the run completes; report exactly which files changed.",
+        "After sufficient source evidence, emit one kind=edits response with next=done. Do not use a tool request to stage a write; the final edits response is the automatic write path.",
+        "For a workspace implementation, you may propose a coherent multi-file change set. Inspect every existing file before editing it, justify every touched path in the explanation, and keep all edits necessary to the requested outcome. Use operation=delete only when removing a file is necessary; deletion is also review-only.",
     ]
     if allowed_tools is None or "get_python_function" in allowed_tools:
         lines.append("For Python files, prefer get_python_function before editing an existing function or method.")
@@ -159,7 +161,7 @@ def build_agent_contract(mode: str, execution_contract: dict | None = None) -> s
     if allowed_tools is None or "insert_python_function" in allowed_tools:
         lines.append("Use insert_python_function when adding a new Python function or class method; it returns an edit proposal, not an applied write.")
     if allowed_tools is None or "check_python" in allowed_tools:
-        lines.append("Use check_python before running a changed Python file when syntax validation is needed.")
+        lines.append("Use check_python before running a changed Python file when syntax validation is needed. Before declaring an implementation complete, inspect and syntax-check relevant imported workspace Python modules as well as the active file.")
     if allowed_tools is None or "run_python" in allowed_tools:
         lines.append("Use run_python only for a user-requested script execution; it runs with no command-line arguments and returns captured output.")
     if execution_contract:
@@ -214,7 +216,7 @@ def build_tool_followup_prompt(
             json.dumps(_output_schema(allowed_tools), indent=2),
             "[/OUTPUT_SCHEMA]",
             "",
-            "Return one JSON object now, based on tool results. If a successful read supplied enough source evidence for the requested edit, emit kind=edits and next=done now. Do not repeat a read or request a staged-write tool when that evidence is already present.",
+            "Return one JSON object now, based on tool results. Continue requesting tools until both the source evidence and the active playbook validation expectations are met; a successful read of only the active file is not completion evidence when it depends on another workspace module. Then emit kind=edits or kind=analysis with next=done. Do not repeat a read or request a staged-write tool when the evidence is already present.",
             "COMPLETION REQUIRED: The active file has been read and the accumulated source evidence is sufficient. Respond with kind=edits and next=done now; do not return tool_requests." if force_completion else "",
         ]
     )

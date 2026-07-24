@@ -7,6 +7,8 @@ import { initChat } from './chat.js';
 import { initExecutionConsole } from './execution-console.js';
 import { state } from './state.js';
 import { initWorkItems } from './work-items.js';
+import { initWorkbenchLayout } from './workbench-layout.js';
+import { ACTION_ICONS } from '/ui-elements/assets/js/icons.js';
 
 initTopbar({ currentService: 'korecode', urls: window.__koreSuiteUrls || {} });
 initAppBar({
@@ -17,6 +19,7 @@ initAppBar({
   editorTabsSlot: 'kc-editor-tabs',
 });
 initDialogHost();
+document.getElementById('btn-run-active').innerHTML = ACTION_ICONS.start(14);
 
 const editorApi = createEditor({
   runFind,
@@ -73,6 +76,7 @@ initExplorer({
     if (activePath) await editorApi.reloadTabs([activePath]);
   },
 });
+initWorkbenchLayout({ onAssistantHidden: () => chat.setPanelVisible(false) });
 initPanels({
   panelsEl: document.getElementById('code-app'),
   leftEl: document.getElementById('code-sidebar'),

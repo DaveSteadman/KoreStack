@@ -7,6 +7,7 @@
   <link rel="icon" type="image/x-icon" href="/ui-elements/assets/icons/favicon.ico" />
   <link rel="stylesheet" href="/ui-elements/assets/css/chrome.css" />
   <link rel="stylesheet" href="/ui-elements/assets/css/panels.css" />
+  <link rel="stylesheet" href="/ui-elements/assets/css/forms.css" />
   <link rel="stylesheet" href="/static/code/css/base.css" />
   <link rel="stylesheet" href="/static/code/css/explorer.css" />
   <link rel="stylesheet" href="/static/code/css/find.css" />
@@ -41,10 +42,11 @@
         <div id="file-state" class="kcui-tag kcui-tag--dim">Read/write editor</div>
         <div id="editor-actions">
           <button id="btn-find" class="kcui-tag kcui-tag--dim" type="button">Find</button>
+          <button id="btn-layout" class="kcui-tag kcui-tag--dim" type="button" title="Show or move panels">Layout</button>
           <button id="btn-save" class="kcui-tag kcui-tag--dim" type="button">Save</button>
           <button id="btn-wrap" class="kcui-tag kcui-tag--dim" type="button" title="Toggle line wrap">Wrap</button>
-          <button id="btn-run-active" class="kcui-tag kcui-tag--accent" type="button" title="Run active Python file">Run</button>
-          <button id="btn-check-active" class="kcui-tag kcui-tag--muted" type="button" title="Check active Python syntax">Check</button>
+          <button id="btn-run-active" class="kcui-icon-button" type="button" title="Run active Python file" aria-label="Run active Python file"></button>
+          <button id="btn-check-active" class="kcui-tag kcui-tag--muted" type="button" title="Compile-check active Python file">Check</button>
           <button id="btn-ai" class="kcui-tag kcui-tag--dim" type="button" title="Toggle AI chat (Alt+A)">AI</button>
         </div>
       </div>
@@ -110,6 +112,7 @@
           </div>
         </div>
       </div>
+      <div id="execution-splitter" class="kcui-horizontal-splitter" aria-hidden="true"></div>
       <section id="execution-panel" aria-label="Execution output and call hierarchy">
         <header id="execution-toolbar">
           <div class="execution-title">Execution</div>
@@ -133,6 +136,15 @@
       </section>
     </section>
   </main>
+  <div id="layout-popover" hidden>
+    <div class="layout-popover-title">Workbench layout</div>
+    <label><input id="layout-explorer" type="checkbox" checked /> Explorer</label>
+    <label><input id="layout-assistant" type="checkbox" checked /> Assistant</label>
+    <label><input id="layout-console" type="checkbox" checked /> Console</label>
+    <label class="layout-dock">Assistant dock
+      <select id="layout-assistant-dock"><option value="right">Right</option><option value="left">Left</option></select>
+    </label>
+  </div>
   <dialog id="work-item-dialog" class="work-item-dialog" aria-labelledby="work-item-dialog-title">
     <form id="work-item-form" method="dialog">
       <header class="work-item-dialog-header">

@@ -2,6 +2,7 @@ import { api } from './state.js';
 
 export function initExecutionConsole({ getActiveTab, getCursorInfo, openFile, setActiveTab }) {
   const panel             = document.getElementById('execution-panel');
+  const splitter          = document.getElementById('execution-splitter');
   const output            = document.getElementById('execution-output');
   const summary           = document.getElementById('execution-summary');
   const hierarchy         = document.getElementById('call-hierarchy-content');
@@ -10,6 +11,49 @@ export function initExecutionConsole({ getActiveTab, getCursorInfo, openFile, se
   const clearButton       = document.getElementById('btn-clear-execution');
   const toggleButton      = document.getElementById('btn-toggle-execution');
   const refreshHierarchy  = document.getElementById('btn-refresh-hierarchy');
+  const heightStorageKey  = 'korecode:execution-height';
+  let dragStartY          = null;
+
+  function setPanelHeight(height, { persist = true } = {}) {
+    const maximum = Math.max(180, Math.round(document.getElementById('code-main').clientHeight * 0.72));
+    const next    = Math.max(120, Math.min(Math.round(height), maximum));
+    panel.style.flexBasis = `${next}px`;
+    if (persist) localStorage.setItem(heightStorageKey, String(next));
+  }
+
+  function restorePanelHeight() {
+    const saved = Number.parseInt(localStorage.getItem(heightStorageKey) || '', 10);
+    if (Number.isFinite(saved)) setPanelHeight(saved, { persist: false });
+  }
+
+  function stopResize() {
+    if (dragStartY === null) return;
+    dragStartY = null;
+    splitter.classList.remove('is-dragging');
+    document.body.style.userSelect = '';
+    document.body.style.cursor = '';
+  }
+
+  splitter.addEventListener('pointerdown', (event) => {
+    if (panel.classList.contains('is-collapsed')) return;
+    dragStartY = event.clientY;
+    splitter.setPointerCapture?.(event.pointerId);
+    splitter.classList.add('is-dragging');
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = 'row-resize';
+  });
+  splitter.addEventListener('pointermove', (event) => {
+    if (dragStartY === null) return;
+    const mainBottom = document.getElementById('code-main').getBoundingClientRect().bottom;
+    setPanelHeight(mainBottom - event.clientY);
+  });
+  splitter.addEventListener('pointerup', stopResize);
+  splitter.addEventListener('pointercancel', stopResize);
+  splitter.addEventListener('dblclick', () => {
+    panel.style.flexBasis = '';
+    localStorage.removeItem(heightStorageKey);
+  });
+  restorePanelHeight();
 
   function showResult(result) {
     const exit = result?.timed_out ? 'timed out' : `exit ${result?.exit_code ?? 'unknown'}`;

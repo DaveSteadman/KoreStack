@@ -1434,5 +1434,8 @@ export function initChat({
       }
       _updateSelectionChip();
     },
+    setPanelVisible(visible) {
+      _setPanelOpen(visible);
+    },
   };
 }

@@ -7,7 +7,7 @@ export function renderAssistantText(text) {
   if (structured) {
     const summary = String(structured.summary || 'Edit proposal ready.').trim();
     const files = [...new Set(structured.edits.map((edit) => String(edit?.file || '').trim()).filter(Boolean))];
-    const fileLabel = files.length ? `KoreCode validates and applies direct coding changes to ${files.join(', ')}.` : 'KoreCode validates and applies direct coding changes.';
+    const fileLabel = files.length ? `Applied changes: ${files.join(', ')}.` : 'Applied changes.';
     return `<p>${esc(summary)}</p><p>${esc(fileLabel)}</p>`;
   }
   return text

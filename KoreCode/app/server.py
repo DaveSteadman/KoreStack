@@ -703,20 +703,18 @@ def _apply_agent_edits(
             raise HTTPException(status_code=403, detail="Path escapes the workspace") from exc
         return candidate
 
+    execution_id     = str((execution_contract or {}).get("id") or "")
     unexpected_paths = requested_paths - allowed_paths
-    allows_new_file  = str((execution_contract or {}).get("id") or "") == "create_file"
-    if unexpected_paths and not (
+    allows_new_file  = execution_id == "create_file"
+    allows_workspace_change = execution_id == "workspace_change"
+    if unexpected_paths and not allows_workspace_change and not (
         allows_new_file and all(not resolve_for_run(path).exists() for path in unexpected_paths)
     ):
         unexpected = ", ".join(sorted(unexpected_paths))
         return {
             "validation_ok": False,
-            "apply_result": {
-                "ok":      False,
-                "applied": 0,
-                "errors":  [f"Agent proposed edits outside the active or explicitly named files: {unexpected}"],
-                "paths":   [],
-            },
+            "edits": [],
+            "errors": [f"Agent proposed edits outside the active or explicitly named files: {unexpected}"],
         }
 
     proposal = create_edit_proposal(
@@ -730,7 +728,29 @@ def _apply_agent_edits(
         source                 = "agent",
         summary                = summary,
     )
+    try:
+        append_edit_proposal(
+            run_id,
+            proposal_id   = proposal["proposal_id"],
+            source        = proposal["source"],
+            summary       = proposal.get("summary", ""),
+            validation_ok = bool(proposal.get("validation_ok")),
+            edits         = list(proposal.get("edits") or []),
+        )
+    except FileNotFoundError:
+        LOG.warning("Agent proposal %s has no corresponding run %s", proposal["proposal_id"], run_id)
     if not proposal.get("validation_ok"):
+        errors = [
+            error
+            for edit in list(proposal.get("edits") or [])
+            for error in list((edit.get("validation") or {}).get("errors") or [])
+        ]
+        proposal["apply_result"] = {
+            "ok":      False,
+            "applied": 0,
+            "errors":  errors or ["Agent edit proposal failed validation"],
+            "paths":   [],
+        }
         return proposal
     return apply_edit_proposal(
         proposal["proposal_id"],

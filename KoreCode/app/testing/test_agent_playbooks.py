@@ -45,6 +45,11 @@ class AgentPlaybookTests(unittest.TestCase):
         active_file_playbook = route_task(user_text="Run the file", mode="chat")
         self.assertEqual(active_file_playbook.identifier, "run_and_debug_python")
 
+    def test_router_selects_workspace_change_for_implementation(self) -> None:
+        playbook = route_task(user_text="Implement the new workspace workflow across the affected files", mode="chat")
+        self.assertEqual(playbook.identifier, "workspace_change")
+        self.assertTrue(playbook.permits_edits)
+
     def test_explore_prompt_only_advertises_active_tools(self) -> None:
         contract = route_task(user_text="Explain this subsystem", mode="explain").payload()
         prompt = build_prompt_by_mode(
@@ -66,7 +71,7 @@ class AgentPlaybookTests(unittest.TestCase):
         self.assertNotIn("replace_python_function", prompt)
         self.assertIn("Do not emit edits for this investigation-only task.", prompt)
         self.assertIn("capability_request", prompt)
-        self.assertIn("not applied changes", prompt)
+        self.assertIn("applied automatically", prompt)
         self.assertIn("Do not claim file contents", prompt)
 
     def test_create_file_prompt_requires_target_existence_check(self) -> None:
@@ -87,7 +92,7 @@ class AgentPlaybookTests(unittest.TestCase):
         )
         self.assertIn("verify the target does not exist", prompt)
 
-    def test_edit_prompt_requires_read_before_edit_and_reports_auto_apply(self) -> None:
+    def test_edit_prompt_requires_read_before_automatic_apply(self) -> None:
         contract = route_task(user_text="Add a file header", mode="chat").payload()
         prompt = build_prompt_by_mode(
             mode                      = "chat",
@@ -104,8 +109,8 @@ class AgentPlaybookTests(unittest.TestCase):
             execution_contract        = contract,
         )
         self.assertIn("request read_file for that file before emitting edits", prompt)
-        self.assertIn("apply validated edits automatically", prompt)
-        self.assertIn("final edits response is the only autonomous write path", prompt)
+        self.assertIn("copy its content_hash into expected_hash", prompt)
+        self.assertIn("Validated edits are applied automatically", prompt)
 
     def test_executor_rejects_inactive_tool(self) -> None:
         results = execute_tool_requests(

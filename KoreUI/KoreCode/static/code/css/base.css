@@ -94,6 +94,35 @@ body {
   color: var(--accent-2);
 }
 
+#layout-popover {
+  position: fixed;
+  z-index: 20;
+  top: calc(var(--topbar-h, 38px) + var(--appbar-h, 42px) + 8px);
+  right: 12px;
+  display: grid;
+  gap: 8px;
+  min-width: 178px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface) 96%, var(--bg));
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.28);
+  color: var(--text-2);
+  font-size: 12px;
+}
+#layout-popover[hidden] { display: none; }
+.layout-popover-title { color: var(--text-dim); font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+#layout-popover label { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+#layout-popover input { accent-color: var(--accent); }
+#layout-popover select { border: 1px solid var(--border); background: var(--bg); color: var(--text); font: inherit; }
+
+#code-app.is-explorer-hidden #code-sidebar,
+#code-app.is-explorer-hidden #code-splitter,
+#code-app.is-assistant-hidden #chat-panel,
+#code-app.is-assistant-hidden #chat-splitter,
+#code-app.is-console-hidden #execution-panel { display: none !important; }
+#code-app.is-chat-left #chat-panel { order: -2; }
+#code-app.is-chat-left #chat-splitter { order: -1; }
+
 .toolbar-btn.is-active {
   background: color-mix(in srgb, var(--accent) 16%, var(--surface-2));
   border-color: color-mix(in srgb, var(--accent) 42%, transparent);
