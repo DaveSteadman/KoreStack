@@ -77,6 +77,8 @@ def run_core_checks() -> bool:
                 "testing.unit.test_koreconv_input",
                 "testing.unit.test_suite_config_loader",
                 "testing.unit.test_task_conversations",
+                "testing.unit.test_datauser_fs",
+                "testing.unit.test_task_schedule",
             ],
             APP_DIR,
         ),

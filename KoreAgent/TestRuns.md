@@ -1,4 +1,8 @@
 
+# Version 0065 / 0.8+dev (Ollama v0.32.4)
+
+[ALL TESTS COMPLETE]  host=http://MONTBLANC:11434  model=gemma4:26b  elapsed=74m 13s  pass rate=92% (146/158)  prompt tokens=2,838,904  avg tok/s=88.3
+
 # Version 0058 / 0.8+dev (Ollama v0.32.2)
 
 [ALL TESTS COMPLETE]  host=http://MONTBLANC:11434  model=gemma4:26b  elapsed=69m 46s  pass rate=90% (142/158)  prompt tokens=2,683,021  avg tok/s=92.3
