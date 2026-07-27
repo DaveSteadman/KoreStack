@@ -79,7 +79,9 @@ def _add_next_mins(feeds: list[dict]) -> None:
             try:
                 nxt               = datetime.fromisoformat(last) + timedelta(minutes=int(feed.get("update_rate", 60)))
                 secs              = int((nxt - now).total_seconds())
-                feed["_next_secs"] = max(0, secs)
+                # Keep the signed, second-precision value for deterministic ordering.
+                # Negative values are already overdue and therefore belong first.
+                feed["_next_secs"] = secs
                 feed["_next_mins"] = secs // 60
             except Exception:
                 feed["_next_mins"] = None
@@ -141,8 +143,11 @@ def register_feed_ui(app: FastAPI) -> None:
         _add_next_mins(all_feeds)
         all_feeds.sort(
             key = lambda feed: (
-                0 if feed["_next_mins"] is None else (1 if feed["_next_mins"] <= 0 else 2),
-                feed["_next_mins"] if feed["_next_mins"] is not None else 0,
+                feed["_next_secs"] is None,
+                feed["_next_secs"] if feed["_next_secs"] is not None else 0,
+                str(feed.get("last_fetched_at") or ""),
+                str(feed.get("domain") or ""),
+                str(feed.get("id") or feed.get("name") or ""),
             )
         )
         return templates.TemplateResponse(

@@ -335,13 +335,38 @@ async function confirmDeleteDomain(domain, form) {
     return new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +(m[6] || 0)));
   }
 
-  function calcNextMins(feed, now) {
+  function scheduleValues(feed, now) {
     var last = parseUtcIso(feed.last_fetched_at);
-    if (!last) return null;
+    if (!last) return { nextSeconds: null, lastRunMs: null };
     var rate = parseInt(feed.update_rate || 60, 10);
     if (!Number.isFinite(rate) || rate < 1) rate = 60;
     var next = new Date(last.getTime() + rate * 60000);
-    return Math.floor((next.getTime() - now.getTime()) / 60000);
+    return {
+      nextSeconds: Math.floor((next.getTime() - now.getTime()) / 1000),
+      lastRunMs:   last.getTime()
+    };
+  }
+
+  function compareFeedSchedule(a, b) {
+    var aHasNext = a.nextSeconds != null;
+    var bHasNext = b.nextSeconds != null;
+    if (aHasNext !== bHasNext) return aHasNext ? -1 : 1;
+
+    if (aHasNext && a.nextSeconds !== b.nextSeconds) {
+      return a.nextSeconds - b.nextSeconds;
+    }
+
+    // An earlier last run means it has waited longer, so rank it higher.
+    var aLastRun = a.lastRunMs == null ? Number.NEGATIVE_INFINITY : a.lastRunMs;
+    var bLastRun = b.lastRunMs == null ? Number.NEGATIVE_INFINITY : b.lastRunMs;
+    if (aLastRun !== bLastRun) return aLastRun - bLastRun;
+
+    var aDomain = String(a.feed.domain || '');
+    var bDomain = String(b.feed.domain || '');
+    var byDomain = aDomain.localeCompare(bDomain);
+    if (byDomain !== 0) return byDomain;
+
+    return String(a.feed.id || a.feed.name || '').localeCompare(String(b.feed.id || b.feed.name || ''));
   }
 
   function statusCell(feed) {
@@ -437,20 +462,15 @@ async function confirmDeleteDomain(domain, form) {
   function renderFeeds(feeds) {
     var now = new Date();
     var enriched = feeds.map(function (f) {
-      return { feed: f, nextMins: calcNextMins(f, now) };
+      var schedule = scheduleValues(f, now);
+      return {
+        feed:        f,
+        nextSeconds: schedule.nextSeconds,
+        lastRunMs:   schedule.lastRunMs,
+        nextMins:    schedule.nextSeconds == null ? null : Math.floor(schedule.nextSeconds / 60)
+      };
     });
-    enriched.sort(function (a, b) {
-      function bucket(v) {
-        if (v == null) return 0;
-        return v <= 0 ? 1 : 2;
-      }
-      var ba = bucket(a.nextMins);
-      var bb = bucket(b.nextMins);
-      if (ba !== bb) return ba - bb;
-      var va = a.nextMins == null ? 0 : a.nextMins;
-      var vb = b.nextMins == null ? 0 : b.nextMins;
-      return va - vb;
-    });
+    enriched.sort(compareFeedSchedule);
 
     return enriched.map(function (row) {
       var f = row.feed;
