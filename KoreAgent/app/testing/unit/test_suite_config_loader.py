@@ -11,6 +11,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
@@ -38,16 +39,19 @@ class SuiteConfigLoaderTests(unittest.TestCase):
                 encoding="utf-8",
             )
 
-            os.environ["KORECODE_PORT"] = "9900"
-            try:
+            with patch.dict(
+                os.environ,
+                {
+                    "KORE_SUITE_CONFIG": str(cfg_dir / "korestack_config.json"),
+                    "KORECODE_PORT":       "9900",
+                },
+            ):
                 loaded = load_service_config(
                     service_key="korecode",
                     defaults={"host": "127.0.0.1", "port": 5600, "log_level": "info"},
                     suite_root=root,
                     env_overrides={"port": "KORECODE_PORT"},
                 )
-            finally:
-                os.environ.pop("KORECODE_PORT", None)
 
             self.assertEqual(loaded["host"], "192.168.1.50")
             self.assertEqual(loaded["port"], 9900)
@@ -69,12 +73,13 @@ class SuiteConfigLoaderTests(unittest.TestCase):
                 if value is not None:
                     result["korechat_url"] = value
 
-            loaded = load_service_config(
-                service_key="korecomms",
-                defaults={"korechat_url": "http://localhost:8630"},
-                suite_root=root,
-                raw_merger=merger,
-            )
+            with patch.dict(os.environ, {"KORE_SUITE_CONFIG": str(cfg_dir / "korestack_config.json")}):
+                loaded = load_service_config(
+                    service_key="korecomms",
+                    defaults={"korechat_url": "http://localhost:8630"},
+                    suite_root=root,
+                    raw_merger=merger,
+                )
 
             self.assertEqual(loaded["korechat_url"], "http://host-b:8630")
 
