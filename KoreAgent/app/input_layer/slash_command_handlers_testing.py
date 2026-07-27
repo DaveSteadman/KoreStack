@@ -4,9 +4,9 @@
 # Slash command handlers for test suite execution and result reporting.
 #
 # Commands handled:
-#   /test              -- list available test prompt files
-#   /test <file>       -- run a test prompt file and report pass/fail counts
-#   /test results      -- show the most recent test result summary
+#   /unittest          -- run fast deterministic Python checks
+#   /systemtest        -- list or run model-backed prompt suites
+#   /systemtesttrend   -- show historical prompt-suite results
 #
 # Delegates test execution to run_helpers.run_prompt_batch().  Reads raw CSV output and
 # emits [TEST COMPLETE] / [ALL TESTS COMPLETE] lines that routes_sessions.py captures
@@ -15,7 +15,7 @@
 # Related modules:
 #   - input_layer/slash_commands.py    -- registers all handlers
 #   - run_helpers.py                   -- run_prompt_batch (test execution)
-#   - testing/test_wrapper.py          -- the underlying test runner invoked per file
+#   - testing/system/runner.py         -- the underlying runner invoked per prompt suite
 #   - utils/workspace_utils.py         -- get_test_prompts_dir, get_test_results_dir
 # ====================================================================================================
 import csv
@@ -32,13 +32,13 @@ from utils.workspace_utils import get_test_results_dir
 
 
 _POST_TEST_SMOKE_TARGETS: tuple[str, ...] = (
-    "testing.test_guardrail_smoke.GuardrailSmokeTests.test_test_wrapper_extracts_delegate2_log_evidence",
-    "testing.test_guardrail_smoke.GuardrailSmokeTests.test_test_wrapper_fails_single_prompt_on_no_results_output",
-    "testing.test_guardrail_smoke.GuardrailSmokeTests.test_test_wrapper_fails_exchange_on_search_failure_output",
-    "testing.test_guardrail_smoke.GuardrailSmokeTests.test_queue_timeout_for_prompt_disables_scheduler_timeout_only_for_test",
-    "testing.test_guardrail_smoke.GuardrailSmokeTests.test_slash_command_outputs_use_ascii_arrows",
-    "testing.test_guardrail_data.GuardrailDataTests.test_koreconv_prompt_renders_datasets_separately",
-    "testing.test_guardrail_data.GuardrailDataTests.test_koreconv_event_restores_datasets_before_orchestration",
+    "testing.unit.test_guardrail_smoke.GuardrailSmokeTests.test_test_wrapper_extracts_delegate2_log_evidence",
+    "testing.unit.test_guardrail_smoke.GuardrailSmokeTests.test_test_wrapper_fails_single_prompt_on_no_results_output",
+    "testing.unit.test_guardrail_smoke.GuardrailSmokeTests.test_test_wrapper_fails_exchange_on_search_failure_output",
+    "testing.unit.test_guardrail_smoke.GuardrailSmokeTests.test_queue_timeout_for_prompt_disables_scheduler_timeout_only_for_test",
+    "testing.unit.test_guardrail_smoke.GuardrailSmokeTests.test_slash_command_outputs_use_ascii_arrows",
+    "testing.unit.test_guardrail_data.GuardrailDataTests.test_koreconv_prompt_renders_datasets_separately",
+    "testing.unit.test_guardrail_data.GuardrailDataTests.test_koreconv_event_restores_datasets_before_orchestration",
 )
 
 
@@ -309,7 +309,7 @@ def _run_post_test_checks(ctx, csv_path, testcode_dir, subprocess_mod, sys_mod) 
         ctx.output(f"  Error running guardrail smoke checks: {exc}", "error")
 
     script = testcode_dir / "test_thinking_strip.py"
-    ctx.output("  test_thinking_strip.py ...", "dim")
+    ctx.output("  system/test_thinking_strip.py ...", "dim")
     try:
         proc = subprocess_mod.run(
             [sys_mod.executable, str(script)],
@@ -321,18 +321,18 @@ def _run_post_test_checks(ctx, csv_path, testcode_dir, subprocess_mod, sys_mod) 
         for line in combined.splitlines():
             ctx.output(f"    {line}", "dim" if proc.returncode == 0 else "error")
         ctx.output(
-            f"  [test_thinking_strip.py: {'OK' if proc.returncode == 0 else 'FAILED'}]",
+            f"  [system test_thinking_strip.py: {'OK' if proc.returncode == 0 else 'FAILED'}]",
             "success" if proc.returncode == 0 else "error",
         )
     except Exception as exc:
-        ctx.output(f"  Error running test_thinking_strip.py: {exc}", "error")
+        ctx.output(f"  Error running system test_thinking_strip.py: {exc}", "error")
 
     ctx.output(
         "  Full internal test suite is available for manual runs: python -m unittest discover -s testing -p 'test_guardrail*.py'",
         "dim",
     )
     if csv_path is not None and csv_path.exists():
-        analyzer = testcode_dir / "test_analyzer.py"
+        analyzer = testcode_dir / "analyzer.py"
         ctx.output(f"  test_analyzer on {csv_path.name} ...", "dim")
         try:
             proc = subprocess_mod.run(
@@ -347,17 +347,17 @@ def _run_post_test_checks(ctx, csv_path, testcode_dir, subprocess_mod, sys_mod) 
             ctx.output(f"  Error running test_analyzer: {exc}", "error")
 
 
-def _cmd_test(arg: str, ctx: SlashCommandContext) -> None:
+def _cmd_systemtest(arg: str, ctx: SlashCommandContext) -> None:
     import subprocess
     import sys
     import time
     from agent.orchestration.engine import clear_stop
 
     test_prompts_dir = get_test_prompts_dir()
-    wrapper = Path(__file__).resolve().parent.parent / "testing" / "test_wrapper.py"
+    wrapper = Path(__file__).resolve().parent.parent / "testing" / "system" / "runner.py"
 
     if not arg:
-        ctx.output(f"Usage: /test <prompts-file|all>  (filename from {test_prompts_dir} or full path)", "dim")
+        ctx.output(f"Usage: /systemtest <prompts-file|all>  (filename from {test_prompts_dir} or full path)", "dim")
         if test_prompts_dir.exists():
             files = sorted(test_prompts_dir.glob("*.json"))
             if files:
@@ -489,7 +489,7 @@ def _cmd_test(arg: str, ctx: SlashCommandContext) -> None:
     _run_single()
 
 
-def _cmd_testtrend(arg: str, ctx: SlashCommandContext) -> None:
+def _cmd_systemtesttrend(arg: str, ctx: SlashCommandContext) -> None:
     results_root = get_test_results_dir()
     if not results_root.exists():
         ctx.output("No test results directory found.", "error")
@@ -588,11 +588,46 @@ def _cmd_testtrend(arg: str, ctx: SlashCommandContext) -> None:
             )
 
 
+def _cmd_unittest(arg: str, ctx: SlashCommandContext) -> None:
+    import subprocess
+    import sys
+
+    if arg.strip():
+        ctx.output("Usage: /unittest", "dim")
+        return
+
+    runner = Path(__file__).resolve().parent.parent / "testing" / "unit" / "runner.py"
+    ctx.output("Running deterministic unit checks (no LLM or live services)...", "info")
+    try:
+        process = subprocess.run(
+            [sys.executable, str(runner)],
+            capture_output = True,
+            text           = True,
+            encoding       = "utf-8",
+            cwd            = str(runner.parents[2]),
+        )
+    except OSError as exc:
+        ctx.output(f"Unable to run unit checks: {exc}", "error")
+        return
+
+    for line in (process.stdout + process.stderr).splitlines():
+        ctx.output(line, "dim" if process.returncode == 0 else "error")
+    level = "success" if process.returncode == 0 else "error"
+    ctx.output(f"[UNITTEST {'COMPLETE' if process.returncode == 0 else 'FAILED'}]", level)
+
+
 def register_testing_slash_commands(registry: dict[str, Callable], descriptions: dict[str, str]) -> None:
-    registry.update({"/test": _cmd_test, "/testtrend": _cmd_testtrend})
+    registry.update(
+        {
+            "/unittest":        _cmd_unittest,
+            "/systemtest":      _cmd_systemtest,
+            "/systemtesttrend": _cmd_systemtesttrend,
+        }
+    )
     descriptions.update(
         {
-            "/test": "<prompts-file|all>  Run test_wrapper on a prompts file (or all files); streams results live",
-            "/testtrend": "[prompts-file]  Show pass-rate trend across all historical test runs (filtered by prompts file if given)",
+            "/unittest":        "Run fast deterministic Python checks; no LLM or services required",
+            "/systemtest":      "<prompts-file|all>  Run model-backed prompt suites; streams results live",
+            "/systemtesttrend": "[prompts-file]  Show prompt-suite pass-rate trend",
         }
     )

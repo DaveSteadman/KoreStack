@@ -585,12 +585,19 @@ def main(argv: Optional[list[str]] = None) -> int:
     args = parser.parse_args(argv)
 
     configure_service_logging("koreliveweb", cfg["log_level"])
-    logging.getLogger("koreliveweb.service").info("starting host=%s port=%s", args.host, args.port)
-    uvicorn.run(
-        app,
-        host       = args.host,
-        port       = args.port,
-        access_log = False,
-        log_config = None,
-    )
+    logger = logging.getLogger("koreliveweb.service")
+    try:
+        logger.info("starting host=%s port=%s", args.host, args.port)
+        uvicorn.run(
+            app,
+            host       = args.host,
+            port       = args.port,
+            access_log = False,
+            log_config = None,
+        )
+    except Exception:
+        logger.exception("startup failed")
+        raise
+    finally:
+        logger.info("shutdown complete")
     return 0

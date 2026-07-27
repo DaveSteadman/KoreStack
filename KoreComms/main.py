@@ -16,12 +16,13 @@
 from __future__ import annotations
 
 from datetime import datetime
-from pathlib import Path
+import logging
 
 import uvicorn
 
 from app.config import cfg
-from app.logutil import make_log_config
+from KoreCommon.service_logging import configure_service_logging
+from KoreCommon.service_logging import make_service_log_config
 
 _W = 72
 
@@ -53,13 +54,20 @@ def _print_banner() -> None:
 
 
 if __name__ == "__main__":
-    _log_path = Path(cfg["data_dir"]) / "korecomms.log"
-    _log_path.parent.mkdir(parents=True, exist_ok=True)
-    _print_banner()
-    uvicorn.run(
-        "app.server:app",
-        host=cfg["host"],
-        port=int(cfg["port"]),
-        log_level=cfg["log_level"],
-        log_config=make_log_config(_log_path),
-    )
+    _log_path = configure_service_logging("korecomms", cfg["log_level"])
+    _logger = logging.getLogger("korecomms.service")
+    try:
+        _logger.info("starting host=%s port=%s log=%s", cfg["host"], cfg["port"], _log_path)
+        _print_banner()
+        uvicorn.run(
+            "app.server:app",
+            host=cfg["host"],
+            port=int(cfg["port"]),
+            log_level=cfg["log_level"],
+            log_config=make_service_log_config("korecomms", cfg["log_level"]),
+        )
+    except Exception:
+        _logger.exception("startup failed")
+        raise
+    finally:
+        _logger.info("shutdown complete")

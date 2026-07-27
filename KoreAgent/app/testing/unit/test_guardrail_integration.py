@@ -11,7 +11,7 @@
 #   - orchestration helpers (compact_context, assess_compact)
 #
 # Run manually via:
-#   python -m unittest testing.test_guardrail_integration
+#   python -m unittest testing.unit.test_guardrail_integration
 #   python -m pytest testing/test_guardrail_integration.py -v
 #
 # The /test slash flow runs prompt suites through testing/test_wrapper.py and then
@@ -34,8 +34,8 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-CODE_DIR = Path(__file__).resolve().parents[1]
+REPO_ROOT = Path(__file__).resolve().parents[3]
+CODE_DIR  = Path(__file__).resolve().parents[2]
 
 if str(CODE_DIR) not in sys.path:
     sys.path.insert(0, str(CODE_DIR))
@@ -103,9 +103,9 @@ from input_layer import slash_command_handlers_sessions as session_handlers_modu
 from input_layer.routes_sessions import _queue_timeout_for_prompt
 from input_layer.routes_sessions import _runtime_config_for_prompt
 from input_layer.slash_command_handlers_testing import _result_counts
-from testing import test_wrapper as test_wrapper_module
-from testing.guardrail_support import load_test_skills_payload
-from testing.guardrail_support import reset_guardrail_state
+from testing.system import runner as test_wrapper_module
+from testing.unit.guardrail_support import load_test_skills_payload
+from testing.unit.guardrail_support import reset_guardrail_state
 from utils import workspace_utils as workspace_utils_module
 from utils.workspace_utils import get_user_data_dir
 

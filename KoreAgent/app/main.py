@@ -427,6 +427,8 @@ def main() -> None:
     except Exception:
         service_logger.exception("startup failed")
         raise
+    finally:
+        service_logger.info("shutdown complete")
 
 
 # ----------------------------------------------------------------------------------------------------

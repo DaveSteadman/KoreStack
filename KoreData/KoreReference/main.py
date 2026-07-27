@@ -66,3 +66,5 @@ if __name__ == "__main__":
     except Exception:
         logging.getLogger("korereference.service").exception("startup failed")
         raise
+    finally:
+        logging.getLogger("korereference.service").info("shutdown complete")

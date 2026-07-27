@@ -12,7 +12,6 @@
 
 from datetime import datetime
 import logging
-from pathlib import Path
 
 import uvicorn
 
@@ -68,3 +67,5 @@ if __name__ == "__main__":
     except Exception:
         logging.getLogger("korechat.service").exception("startup failed")
         raise
+    finally:
+        logging.getLogger("korechat.service").info("shutdown complete")

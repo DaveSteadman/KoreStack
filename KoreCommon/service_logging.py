@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import logging
 import logging.config
+import sys
+import threading
 from datetime import datetime
 from pathlib import Path
 
@@ -10,6 +12,7 @@ from KoreCommon.suite_paths import get_suite_datacontrol_dir
 
 _MAX_LINES     = 2000
 _TRIM_INTERVAL = 50
+_UNHANDLED_EXCEPTION_HOOKS_INSTALLED = False
 
 
 class LineCappedFileHandler(logging.FileHandler):
@@ -87,4 +90,35 @@ def make_service_log_config(service_name: str, log_level: str = "INFO") -> dict:
 
 def configure_service_logging(service_name: str, log_level: str = "INFO") -> Path:
     logging.config.dictConfig(make_service_log_config(service_name=service_name, log_level=log_level))
-    return get_service_log_path(service_name)
+    _install_unhandled_exception_hooks(service_name)
+    path = get_service_log_path(service_name)
+    logging.getLogger(f"{service_name}.service").info("service log initialized path=%s", path)
+    return path
+
+
+def _install_unhandled_exception_hooks(service_name: str) -> None:
+    """Send otherwise lost main-thread and background-thread exceptions to the service log."""
+    global _UNHANDLED_EXCEPTION_HOOKS_INSTALLED
+    if _UNHANDLED_EXCEPTION_HOOKS_INSTALLED:
+        return
+    _UNHANDLED_EXCEPTION_HOOKS_INSTALLED = True
+    logger = logging.getLogger(f"{service_name}.unhandled")
+    previous_sys_hook = sys.excepthook
+    previous_thread_hook = threading.excepthook
+
+    def log_main_exception(exc_type, exc_value, traceback) -> None:
+        if issubclass(exc_type, KeyboardInterrupt):
+            previous_sys_hook(exc_type, exc_value, traceback)
+            return
+        logger.critical("unhandled main-thread exception", exc_info=(exc_type, exc_value, traceback))
+
+    def log_thread_exception(args: threading.ExceptHookArgs) -> None:
+        logger.critical(
+            "unhandled thread exception thread=%s",
+            getattr(args.thread, "name", "unknown"),
+            exc_info=(args.exc_type, args.exc_value, args.exc_traceback),
+        )
+        previous_thread_hook(args)
+
+    sys.excepthook       = log_main_exception
+    threading.excepthook = log_thread_exception

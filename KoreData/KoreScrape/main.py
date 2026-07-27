@@ -66,3 +66,5 @@ if __name__ == "__main__":
     except Exception:
         logging.getLogger("korescrape.service").exception("startup failed")
         raise
+    finally:
+        logging.getLogger("korescrape.service").info("shutdown complete")

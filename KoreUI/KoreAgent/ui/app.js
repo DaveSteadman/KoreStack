@@ -33,7 +33,7 @@ const _ALL_COMMANDS = [
     "/help", "/llmserver", "/llmserverconfig", "/ctx", "/rounds", "/timeout",
     "/stopmodel", "/stoprun",
     "/clearmemory", "/reskill", "/sandbox", "/tools",
-    "/deletelogs", "/test", "/testtrend", "/tasks", "/task",
+    "/deletelogs", "/unittest", "/systemtest", "/systemtesttrend", "/tasks", "/task",
     "/version", "/defaults", "/session", "/kccompress",
 ];
 
@@ -1134,9 +1134,9 @@ function _parseSuggestContext(value) {
         return null;
     }
 
-    if (cmd === "/test") {
+    if (cmd === "/systemtest") {
         if (!rest.includes(" ")) {
-            return { pool: ["all", ..._completions.test_files], prefix: rest.trimEnd(), base: "/test " };
+            return { pool: ["all", ..._completions.test_files], prefix: rest.trimEnd(), base: cmd + " " };
         }
         return null;
     }

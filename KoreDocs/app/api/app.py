@@ -170,3 +170,5 @@ if __name__ == '__main__':
     except Exception:
         logging.getLogger('koredocs.service').exception('startup failed')
         raise
+    finally:
+        logging.getLogger('koredocs.service').info('shutdown complete')

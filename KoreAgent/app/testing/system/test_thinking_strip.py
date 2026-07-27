@@ -9,12 +9,12 @@
 # preamble so only the actual answer reaches the user.
 #
 # These tests run without an LLM and complete in under a second.
-# Called automatically by _run_post_test_checks after every /test run.
+# Called automatically by post-run checks after every /systemtest run.
 # ====================================================================================================
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from agent.tool_runtime.loop import strip_cot_preamble
 

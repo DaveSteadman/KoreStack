@@ -74,3 +74,5 @@ if __name__ == "__main__":
     except Exception:
         logging.getLogger("koregraph.service").exception("startup failed")
         raise
+    finally:
+        logging.getLogger("koregraph.service").info("shutdown complete")

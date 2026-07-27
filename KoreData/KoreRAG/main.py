@@ -76,3 +76,5 @@ if __name__ == "__main__":
     except Exception:
         logging.getLogger("korerag.service").exception("startup failed")
         raise
+    finally:
+        logging.getLogger("korerag.service").info("shutdown complete")

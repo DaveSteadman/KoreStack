@@ -3,7 +3,7 @@
 # ====================================================================================================
 # Test results analyzer for KoreAgent.
 #
-# Reads a test results CSV produced by test_wrapper.py, then for each row parses the associated
+# Reads a test results CSV produced by system/runner.py, then for each row parses the associated
 # log file to extract structured information about:
 #   - Which skill functions the model called during tool rounds
 #   - Whether the model used tool calls or answered directly without tools
@@ -22,7 +22,7 @@
 #   <source>_gaps.txt       -- summary of inferred missing or weak skill coverage
 #
 # Usage:
-#   python code/testing/test_analyzer.py datacontrol/test_results/test_results_<timestamp>.csv
+#   python -m testing.system.analyzer datacontrol/test_results/test_results_<timestamp>.csv
 # ====================================================================================================
 
 
@@ -36,7 +36,7 @@ import sys
 from collections import Counter
 from pathlib import Path
 
-_APP_DIR = Path(__file__).resolve().parents[1]
+_APP_DIR = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(_APP_DIR))
 from utils.workspace_utils import trunc  # noqa: E402
 

@@ -3,7 +3,7 @@
 # ====================================================================================================
 # Test runner for KoreAgent.
 #
-# Invoked as a subprocess by the /test slash command in slash_commands.py.
+# Invoked as a subprocess by the /systemtest slash command.
 # Not intended for interactive use.
 #
 # Data flow:
@@ -51,7 +51,7 @@ from datetime import datetime
 from pathlib import Path
 
 # sys.path must include the app/ directory before project modules can be imported.
-_APP_DIR = Path(__file__).resolve().parents[1]
+_APP_DIR = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(_APP_DIR))
 
 from utils.workspace_utils import get_test_results_dir
@@ -742,7 +742,7 @@ def _run_exchange_item(
 # ====================================================================================================
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Test runner for KoreAgent - invoked by /test slash command."
+        description="System-test runner for KoreAgent - invoked by /systemtest."
     )
     parser.add_argument(
         "--prompts-file",

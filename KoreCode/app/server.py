@@ -24,6 +24,7 @@ if _KORECOMMON_PARENT is not None and str(_KORECOMMON_PARENT) not in sys.path:
 
 from KoreCommon.service_app import register_endpoint_manifest
 from KoreCommon.service_app import register_suite_config_js
+from KoreCommon.service_logging import configure_service_logging
 
 try:
     from dotenv import load_dotenv
@@ -1165,8 +1166,15 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
-    LOG.info('Starting KoreCode on %s:%s', args.host, args.port)
-    uvicorn.run('app.server:app', host=args.host, port=args.port, reload=args.reload)
+    log_path = configure_service_logging("korecode", _cfg.get("log_level", "INFO"))
+    LOG.info("starting host=%s port=%s reload=%s log=%s", args.host, args.port, args.reload, log_path)
+    try:
+        uvicorn.run("app.server:app", host=args.host, port=args.port, reload=args.reload)
+    except Exception:
+        LOG.exception("startup failed")
+        raise
+    finally:
+        LOG.info("shutdown complete")
     return 0
 
 

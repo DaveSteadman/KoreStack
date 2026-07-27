@@ -107,3 +107,5 @@ if __name__ == "__main__":
     except Exception:
         logging.getLogger("koredatagateway.service").exception("startup failed")
         raise
+    finally:
+        logging.getLogger("koredatagateway.service").info("shutdown complete")
