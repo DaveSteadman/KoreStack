@@ -1,66 +1,56 @@
 # KoreStack
 
-KoreStack is the coordinating service for the Kore system.
+KoreStack is the suite control plane. It resolves shared configuration, launches enabled services, exposes the landing page, and reports service health and routing information.
 
-It is responsible for:
+## Why it exists
 
-- starting and stopping the runnable Kore services
-- presenting the landing page when the system starts
-- surfacing service health, IPs, ports, and key runtime metrics
-- exposing the shared data-folder layout defined in top-level config
-- acting as the first resolver of suite-level config for cross-service startup
+Without KoreStack, each service would need to be started and diagnosed separately. KoreStack provides the operator entry point for the full suite and keeps service coordination in one place.
 
-Typical entrypoints:
+## What it does
+
+- Starts and stops runnable Kore services
+- Shows the landing page and service status dashboard
+- Resolves suite-level paths, ports, and URLs before child services launch
+- Supports partial-start and dry-run workflows for debugging
+
+## How to run it
+
+From the repo root:
 
 ```powershell
 python .\main.py
+```
+
+Or directly:
+
+```powershell
 python .\KoreStack\main.py
 ```
 
-## Startup
-
-Start the full suite from the workspace root:
-
-```powershell
-python .\main.py
-```
-
-Start only selected services behind KoreStack:
-
-```powershell
-python .\main.py --services conversation,docs
-python .\main.py --services docs,code
-```
-
-Start services without opening the landing page HTTP server:
-
-```powershell
-python .\main.py --services agent --no-dashboard
-```
-
-Show the resolved startup plan without launching anything:
+Useful variants:
 
 ```powershell
 python .\main.py --dry-run
-```
-
-Probe the current status view without starting services:
-
-```powershell
 python .\main.py status
+python .\main.py --services koreagent,korechat,koredocs
+python .\main.py --services korecode --no-dashboard
 ```
 
-## Shutdown
+## Install and configuration
 
-If KoreStack is running in the foreground terminal, stop the landing page and all child
-services with `Ctrl+C` in that same terminal.
+- Install shared dependencies from the repo root with `pip install -r requirements.txt`
+- KoreStack reads the suite config from `config/korestack_config.json`
+- The suite root, data root, and derived service locations resolve through `KoreCommon/suite_paths.py`
 
-If the landing page is running, you can also stop individual services from the service
-cards using the `Stop` action. KoreStack will keep running until you stop the main
-process.
+## Troubleshooting
 
-The intended operator flow is:
+| Problem | What to check |
+|---|---|
+| Startup exits before launching children | Run `python .\main.py --dry-run` to inspect the resolved plan |
+| One service blocks the suite | Start a narrower set with `--services ...` and isolate the failing subsystem |
+| Health probes stay red | Confirm the target service port is correct and the child process actually stayed alive |
+| Dashboard is not reachable | Check `services.korestack.port` and whether `--no-dashboard` was used |
 
-- start the suite from the workspace root with `python .\main.py`
-- manage individual services from the KoreStack landing page when needed
-- stop the full suite with `Ctrl+C` in the terminal that launched KoreStack
+## Related docs
+
+- Root overview: [../README.md](../README.md)

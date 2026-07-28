@@ -213,7 +213,7 @@ def get_completions():
     enabled_tasks, _ = _get_scheduler_snapshot()
     task_names = [t.get("name", "") for t in enabled_tasks if t.get("name")]
     try:
-        models = list_ollama_models()
+        models = list_ollama_models(start_if_needed=False)
     except Exception:
         models = []
     return {
@@ -371,6 +371,7 @@ register_session_routes(
     kc_save_turn=_session_service.kc_save_turn,
     get_session_turns=_session_service.get_session_turns,
     get_session_conversation=_session_service.kc_get_conversation_for_session,
+    ensure_session_conversation=_session_service.kc_ensure_conversation,
     kc_set_session_name=_session_service.kc_set_session_name,
     get_llm_direct_enabled=get_llm_direct_enabled,
     call_llm_chat=call_llm_chat,

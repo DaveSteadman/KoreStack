@@ -37,7 +37,15 @@ class KfFileCreate(BaseModel):
 class KfFileUpdate(BaseModel):
     content: str | None = None
     metadata: dict | None = None
+    metadata_patch: dict | None = None
     expected_revision: int | str | None = None
+
+
+class KfMetadataSearch(BaseModel):
+    metadata_filter: dict
+    type: str | None = None
+    folder_path: str | None = None
+    limit: int = 20
 
 
 def korefile_revision_tokenize(file_row: dict | None) -> dict | None:
@@ -151,6 +159,7 @@ def register_korefile_routes(app, *, data_dir) -> None:
                 file_id,
                 body.content,
                 body.metadata,
+                body.metadata_patch,
                 parse_expected_revision(body.expected_revision),
             )
             if updated is None:
@@ -209,6 +218,32 @@ def register_korefile_routes(app, *, data_dir) -> None:
             return korefile.search(q, ext=type, folder_path=folder_path, limit=limit)
         except Exception as exc:
             raise HTTPException(status_code=400, detail=str(exc))
+
+    @app.post('/api/search/metadata', summary='Structured metadata search across KoreFile documents')
+    def kf_metadata_search(body: KfMetadataSearch):
+        try:
+            return korefile.search_metadata(
+                body.metadata_filter,
+                ext=body.type,
+                folder_path=body.folder_path,
+                limit=body.limit,
+            )
+        except Exception as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+
+    @app.get('/api/files/{file_id}/history', summary='List immutable file revisions')
+    def kf_file_history(file_id: int, limit: Annotated[int, Query(ge=1, le=200)] = 50):
+        try:
+            return korefile.list_history(file_id, limit)
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=str(exc))
+
+    @app.get('/api/files/{file_id}/history/{revision}', summary='Get an immutable file revision')
+    def kf_file_history_revision(file_id: int, revision: str):
+        try:
+            return korefile.get_history_revision(file_id, revision)
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=str(exc))
 
     @app.post('/api/import-fs', summary='Import flat-FS files into KoreFile DB')
     def kf_import_fs():

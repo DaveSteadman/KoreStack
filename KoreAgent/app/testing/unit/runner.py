@@ -79,11 +79,13 @@ def run_core_checks() -> bool:
                 "testing.unit.test_task_conversations",
                 "testing.unit.test_datauser_fs",
                 "testing.unit.test_task_schedule",
+                "testing.unit.test_ollama_process_windows",
             ],
             APP_DIR,
         ),
         ([sys.executable, "-m", "unittest", *_AGENT_SMOKE_TARGETS], APP_DIR),
         ([sys.executable, "-m", "unittest", "KoreCode.app.testing.test_run_executor"], REPO_ROOT),
+        ([sys.executable, "-m", "unittest", "KoreDocs.app.testing.unit.test_korefile_metadata"], REPO_ROOT),
         ([sys.executable, "KoreData/KoreDataGateway/app/test_server_artifact_refs.py"], REPO_ROOT),
         ([sys.executable, "KoreData/KoreDataGateway/app/test_gateway_library_write.py"], REPO_ROOT),
     )

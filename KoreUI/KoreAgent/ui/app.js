@@ -143,6 +143,12 @@ function _setChatPanelTitle(title, { persist = true } = {}) {
     if (persist) _persistActiveSession();
 }
 
+function _resolveSessionTitle(sessionId, title) {
+    const resolved = String(title || "").trim();
+    if (resolved) return resolved;
+    return String(sessionId || "").trim();
+}
+
 // ====================================================================================================
 // MARK: PANEL AUTO-FOLLOW
 // ====================================================================================================
@@ -321,10 +327,11 @@ async function refreshQueue() {
 
 function _applySessionSwitch(sessionId, name) {
     _sessionId = sessionId;
-    _setChatPanelTitle(name);
+    const label = _resolveSessionTitle(sessionId, name);
+    _setChatPanelTitle(label);
     clearChatPanel();
-    if (name) {
-        appendChatMessage("agent", "\u2500\u2500\u2500 Session: " + name + " \u2500\u2500\u2500");
+    if (label) {
+        appendChatMessage("agent", "\u2500\u2500\u2500 Session: " + label + " \u2500\u2500\u2500");
     }
     _loadSessionHistory(sessionId);
     _loadHistory();
@@ -892,7 +899,7 @@ function listenRun(runId) {
                 apiFetch("/sessions/" + encodeURIComponent(_sessionId) + "/history").then(d => {
                     if (!d) return;
                     if (typeof d.title === "string") {
-                        _setChatPanelTitle(d.title);
+                        _setChatPanelTitle(_resolveSessionTitle(_sessionId, d.title));
                     }
                     if (Array.isArray(d.turns)) {
                         try { localStorage.setItem("maf_history_" + _sessionId, JSON.stringify(d.turns)); } catch (_) {}
@@ -904,11 +911,11 @@ function listenRun(runId) {
             } else if (ev.type === "rename_session") {
                 // Same chat, file renamed - update routing ID and title in-place; no history replay.
                 _sessionId = ev.session_id;
-                _setChatPanelTitle(ev.name || "");
+                _setChatPanelTitle(_resolveSessionTitle(ev.session_id, ev.name));
                 _loadCompletions();
             } else if (ev.type === "switch_session") {
                 _sessionId = ev.session_id;
-                const label = ev.name || "";
+                const label = _resolveSessionTitle(ev.session_id, ev.name);
                 _setChatPanelTitle(label);
                 clearChatPanel();
                 if (label) {
@@ -936,6 +943,7 @@ function listenRun(runId) {
 // ----------------------------------------------------------------------------------------------------
 
 async function _loadSessionHistory(sessionId) {
+    _setChatPanelTitle(_resolveSessionTitle(sessionId, _sessionTitle));
     // Render from cache immediately so the panel is populated before the network responds.
     const cacheKey = "maf_history_" + sessionId;
     const cached = (() => { try { const r = localStorage.getItem(cacheKey); return r ? JSON.parse(r) : null; } catch (_) { return null; } })();
@@ -951,7 +959,7 @@ async function _loadSessionHistory(sessionId) {
     const data = await apiFetch("/sessions/" + encodeURIComponent(sessionId) + "/history");
     if (!data) return;
     if (typeof data.title === "string") {
-        _setChatPanelTitle(data.title);
+        _setChatPanelTitle(_resolveSessionTitle(sessionId, data.title));
     }
     if (!Array.isArray(data.turns)) return;
     const turns = data.turns;

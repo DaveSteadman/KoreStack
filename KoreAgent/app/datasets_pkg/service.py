@@ -850,6 +850,28 @@ def dataset_write_koredoc(
     if write_result.startswith("Error:"):
         return write_result
 
+    # Dataset exports are reproducible intermediary artefacts.  Attach provenance
+    # through KoreDocs when that service is active; retaining the successful file
+    # write keeps this exporter usable in isolated FileAccess-only environments.
+    try:
+        from KoreDocs.app.documents.korefile import service as korefile
+
+        matches = korefile.list_files(folder_path=f'/{target_folder}' if target_folder else '/', name=target_name)
+        if matches:
+            korefile.update_file(
+                matches[0]['id'],
+                metadata={
+                    'artefact_type': 'dataset_export',
+                    'status':        'published',
+                    'producer':      {'service': 'KoreAgent', 'operation': 'dataset_write_koredoc'},
+                    'source_refs':   [{'kind': 'dataset', 'dataset_id': dataset['dataset_id'], 'name': dataset['name']}],
+                    'selection':     selection,
+                    'fields':        export_fields,
+                },
+            )
+    except Exception:
+        pass
+
     exported_range_start = selection["offset"] + 1 if selection["returned"] else 0
     exported_range_end = selection["offset"] + selection["returned"]
     return (

@@ -35,6 +35,13 @@ except ImportError:
 log: logging.Logger = logging.getLogger("korestack")
 
 
+def _hidden_windows_creation_flags() -> int:
+    """Prevent console windows when the service manager starts child services."""
+    if os.name != "nt":
+        return 0
+    return getattr(subprocess, "CREATE_NO_WINDOW", 0)
+
+
 SUITE_ROOT = Path(__file__).resolve().parent.parent
 STACK_ROOT = Path(__file__).resolve().parent
 STACK_STATIC_DIR = Path(
@@ -466,6 +473,7 @@ class StackManager:
             env=spawn_env,
             stdout=log_fh,
             stderr=subprocess.STDOUT,
+            creationflags=_hidden_windows_creation_flags(),
         )
         with self._lock:
             old_fh = self._log_handles.pop(slug, None)

@@ -1,0 +1,23 @@
+[
+  {
+    "exchange": "artefact_pipeline_primes_to_next_prime",
+    "turns": [
+      {
+        "user": "Using KoreDocs MCP tools, calculate every prime number from 2 through 100. Create /Tests/DataPipeline/primes-up-to-100.koredoc containing a Markdown table headed `Prime numbers through 100`, with one prime per row. Supply this exact metadata object when creating it: {\"artefact_type\":\"number_sequence\",\"tags\":[\"primes\",\"source\"],\"period\":{\"upper_bound\":100},\"status\":\"published\",\"producer\":{\"service\":\"KoreAgent\",\"operation\":\"prime_generation\"}}. Report the created file id and artifact_id.",
+        "assert": "all_contains|primes-up-to-100.koredoc||artifact_id"
+      },
+      {
+        "user": "Treat the previous KoreDoc as an intermediary artefact. Use koredocs_files_metadata_search, not filename or full-text search, to find .koredoc artefacts where tags contains `primes` and period.upper_bound is at least 100. Read the matched source document, calculate the first prime strictly greater than its largest listed prime, and create /Tests/DataPipeline/primes-next-after-100.koredoc. Its body must state `First prime after 100: 101`. Give it metadata with artefact_type `number_sequence_derivation`, tags [\"primes\", \"derived\"], status `published`, an input_refs array containing the source artifact_id, and producer.service `KoreAgent`. Report both artefact ids and the derived result.",
+        "assert": "all_contains|primes-next-after-100.koredoc||101"
+      },
+      {
+        "user": "Use koredocs_files_metadata_search to find the derived primes artefact by metadata only: artefact_type equals `number_sequence_derivation` and tags contains `derived`. Read it back and confirm it names the source artefact in input_refs and says `First prime after 100: 101`.",
+        "assert": "all_contains|input_refs||First prime after 100: 101"
+      },
+      {
+        "user": "Clean up this test run only: use koredocs_files_metadata_search with tags contains `primes` restricted to /Tests/DataPipeline, then delete every matched file using koredocs_file_delete. Report how many artefacts were deleted.",
+        "assert": "not_empty"
+      }
+    ]
+  }
+]

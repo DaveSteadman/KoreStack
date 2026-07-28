@@ -1,123 +1,68 @@
 # KoreData
 
-A collection of local data services for LLM agents.
+KoreData is the suite data layer. It presents a unified search and retrieval surface over several local data services so agents and browser tools can query one place instead of integrating each source independently.
 
-KoreData provides structured, searchable content across four domains — live news feeds, long-form books, encyclopedic reference articles, and RAG chunks — through a single unified API gateway. Agents query one endpoint and get a flat merged result list plus per-domain groupings from whichever services are relevant.
+## Why it exists
 
-![KoreData](/Progress/readme_banner.png)
+KoreStack needs local, inspectable data sources for research and retrieval. KoreData groups those sources behind a gateway and keeps the storage, scraping, indexing, and retrieval logic inside one subsystem.
 
-## Why this exists
+## What it includes
 
-- **Agent-first**: every service exposes a REST search API designed for LLM agent consumption, not just human browsing.
-- **Local and offline**: content is stored in local SQLite databases; no cloud search dependencies, no per-query API costs.
-- **Unified gateway**: a single `POST /api/search` call across KoreDataGateway reaches all four data domains simultaneously.
-- **Practical sources**: RSS feeds via trafilatura, ebooks via Project Gutenberg (Kiwix), and Wikipedia-scale reference articles via Kiwix ZIM files.
+| Component | Role | README |
+|---|---|---|
+| `KoreDataGateway/` | Main gateway and MCP-facing aggregation layer | [KoreDataGateway/README.md](KoreDataGateway/README.md) |
+| `KoreFeed/` | RSS ingestion, extraction, storage, and search | [KoreFeed/README.md](KoreFeed/README.md) |
+| `KoreLibrary/` | Long-form local library and document corpus | [KoreLibrary/README.md](KoreLibrary/README.md) |
+| `KoreReference/` | Reference and encyclopedia-style content service | [KoreReference/README.md](KoreReference/README.md) |
+| `KoreGraph/` | Graph-oriented concept connectivity and search expansion | [KoreGraph/README.md](KoreGraph/README.md) |
+| `KoreRAG/` | Retrieval-augmented generation support and chunk storage | code and design status only |
 
-## Services
+## How to run it
 
-| Service | Port Source | Status | Description |
-|---|---|---|---|
-| **KoreDataGateway** | `services.koredatagateway.port` | Working | Unified agent API; proxies and aggregates results from all child services |
-| **KoreFeed** | `services.korefeed.port` | Working | RSS ingest with full-text scraping and per-domain SQLite/FTS5 storage |
-| **KoreLibrary** | `services.korelibrary.port` | Working | Long-form ebook and document store with catalog-aware routing and provenance fields |
-| **KoreRAG** | `services.korerag.port` | In development | Vector chunk store for RAG; segments and embeds documents for semantic retrieval |
-| **KoreReference** | `services.korereference.port` | In development | Wikipedia-scale encyclopedic articles with wikilink traversal |
-
----
-
-## Get Running Fast
+Normally you start KoreData through the suite root:
 
 ```powershell
-git clone https://github.com/DaveSteadman/KoreData.git
-cd KoreData
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-python main.py
+python .\main.py
 ```
 
-`main.py` at the repo root launches KoreDataGateway, which starts and supervises all child services.
+To run only the data stack:
 
-Then open:
-
-```text
-http://<host>:<services.koredatagateway.port>/
+```powershell
+python .\KoreData\main.py
 ```
 
-The feed scheduler starts immediately. Configured feeds are fetched on their own intervals; a restart respects each feed's last-fetched timestamp so nothing is re-ingested unnecessarily.
+The gateway starts the child services it owns and exposes the primary browser and API entry points.
 
----
+## Install and configuration
 
-## First 10 Minutes
+- Install shared dependencies from the repo root with `pip install -r requirements.txt`
+- Ports, host binding, and enabled child services are defined in `config/korestack_config.json`
+- Shared data paths resolve through `KoreCommon/suite_paths.py`
+- Feed, library, reference, and graph data live under the configured suite data root, not necessarily inside the repo checkout
 
-Once KoreFeed is running, try a keyword search against the live database:
+## Planned data shape
 
-Use the gateway UI to search across domains:
+When new data sources are added, they should usually extend existing KoreData storage patterns instead of creating a new top-level service.
 
-```text
-http://<host>:<services.koredatagateway.port>/ui
-```
+- live and frequently refreshed web sources belong closer to the feed and web-retrieval path
+- long-form static text belongs closer to library storage
+- encyclopedic linked content belongs closer to reference storage
+- niche but queryable corpora can live as named databases under the RAG/chunk-store model when that keeps the service boundary simpler
 
-What you should see:
+One concrete planned example is Hansard-style parliamentary data: the intended direction is a curated named database inside the broader KoreData/RAG model, not a standalone KoreHansard service.
 
-- ranked results from all ingested feed entries, with title, source domain, published date, and a content snippet
-- entries link through to the full stored text so you can verify what the agent would receive
+## First places to look
 
-Browse by domain to see per-source coverage:
+- Gateway overview: [KoreDataGateway/README.md](KoreDataGateway/README.md)
+- Feed service details: [KoreFeed/README.md](KoreFeed/README.md)
+- Graph expansion details: [KoreGraph/README.md](KoreGraph/README.md)
 
-```text
-http://<host>:<services.korefeed.port>/
-```
+## Troubleshooting
 
-This is the core loop: feeds arrive on schedule, full page text is extracted, stored, and immediately searchable — by browser or by agent.
-
----
-
-## What You Can Do
-
-- Point an LLM agent at `POST /api/search` on KoreDataGateway and receive a merged flat result list plus `results_by_domain` groupings in one call.
-- Manage feed inventories — add, remove, or adjust domains and fetch intervals — via the REST API or the browser UI.
-- Import an ebook collection from a local Kiwix server running Project Gutenberg ZIM content into KoreLibrary.
-- Import Wikipedia (or any Kiwix-hosted wiki) into KoreReference and traverse inter-article links as part of an agent research workflow.
-- Date-filter feed search results so agents can ask for content published within a specific window.
-
----
-
-## Architecture
-
-```
-LLM Agent
-    │
-    ▼
-KoreDataGateway  : services.koredatagateway.port
-    ├── POST /api/search  ◄── primary agent endpoint
-    ├── /feeds/*          ──► KoreFeed      : services.korefeed.port
-    ├── /library/*        ──► KoreLibrary   : services.korelibrary.port
-    ├── /rag/*            ──► KoreRAG       : services.korerag.port
-    └── /reference/*      ──► KoreReference : services.korereference.port
-```
-
-KoreDataGateway launches and supervises the four child services as subprocesses, waits for each to become healthy, and proxies all UI and API requests through. The gateway's `POST /api/search` endpoint fans requests out to however many services are specified in the call, returns a merged `results` list for agent consumers, and keeps `results_by_domain` for grouped UI rendering.
-
-While KoreDataGateway is under development, each service can be started and used independently.
-
----
-
-## Works With
-
-KoreData is designed to be the data layer for [MiniAgentFramework](https://github.com/DaveSteadman/MiniAgentFramework), a local-first Ollama-based agent framework. Point MiniAgentFramework at `POST http://<host>:<services.koredatagateway.port>/api/search` to give agents access to live news, books, reference articles, and RAG content without any cloud search dependency.
-
----
-
-## Documentation
-
-| Document | Contents |
+| Problem | What to check |
 |---|---|
-| **This file** | Overview, quickstart, architecture |
-| [KoreDataGateway/DESIGN.md](KoreDataGateway/DESIGN.md) | Gateway API contract, proxy design, unified search schema |
-| [KoreFeed/DESIGN.md](KoreFeed/DESIGN.md) | Feed ingest pipeline, database schema, FTS search design |
-| [KoreLibrary/DESIGN.md](KoreLibrary/DESIGN.md) | Book storage schema, Kiwix import path, search API |
-| [KoreReference/DESIGN.md](KoreReference/DESIGN.md) | Article schema, wikilink model, Wikipedia-scale import design |
-| [DESIGN.md](DESIGN.md) | Top-level system purpose and service breakdown |
+| Gateway starts but child services do not respond | Verify the configured service ports are free and enabled |
+| Search returns no results | Confirm the underlying service has ingested or imported data |
+| Data appears to be missing after restart | Check that the configured data root points to the expected persistent location |
+| MCP or cross-service calls fail | Confirm the gateway URL and `/mcp` endpoint wiring in `config/korestack_config.json` |
 
----

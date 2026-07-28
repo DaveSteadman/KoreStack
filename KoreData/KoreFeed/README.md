@@ -54,6 +54,8 @@ On startup, the scheduler respects the last-fetched timestamp for every feed —
 
 Press `Ctrl+C` to stop.
 
+Feed source ideas and actual configured feeds should now be managed through the service configuration and UI rather than separate scratch markdown files.
+
 ---
 
 ## Browser UI

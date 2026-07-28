@@ -90,6 +90,7 @@ def register_session_routes(
     kc_save_turn,
     get_session_turns,
     get_session_conversation,
+    ensure_session_conversation,
     kc_set_session_name=None,
     get_llm_direct_enabled=None,
     call_llm_chat=None,
@@ -263,9 +264,11 @@ def register_session_routes(
     @app.get("/sessions/{session_id}/history", include_in_schema=False)
     def get_session_history(session_id: str):
         validate_session_id(session_id)
-        turns = get_session_turns(session_id)
         conv = get_session_conversation(session_id)
-        title = ""
+        if conv is None:
+            conv = ensure_session_conversation(session_id)
+        turns = get_session_turns(session_id)
+        title = session_id
         if isinstance(conv, dict):
             subject = str(conv.get("subject") or "").strip()
             external_id = str(conv.get("external_id") or "")

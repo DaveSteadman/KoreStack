@@ -18,6 +18,26 @@ to import individual files.
 **Rule:** No UIElement component should be duplicated inside an application's own CSS or JS. UIElements takes
 precedence. If an app needs a variant, it should be added here.
 
+## Consistency rules
+
+All browser pages in the suite should follow these baseline rules:
+
+- import shared shell behavior through `/ui-elements/assets/js/chrome.js`
+- use the shared shell CSS rather than redefining suite tokens locally
+- initialize the top bar and app bar through the shared entry points
+- pass shared suite URLs from `/suite-config.js` into the shell
+- prefer event listeners over inline HTML event handlers
+
+## Architecture summary
+
+UIElements owns the outer shell and shared interaction language for the suite.
+
+- shared: shell chrome, tabs, app bar, top bar, panels, workspace layout, token baseline, shell typography roles
+- not shared: domain-specific editors, grids, canvases, or app-specific result rendering
+
+Same shell, same tokens, same panel language. Different products keep their internals local.
+
+
 ---
 
 ## Asset Structure

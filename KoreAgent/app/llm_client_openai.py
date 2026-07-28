@@ -74,6 +74,16 @@ _ollama_health_lock:  threading.Lock   = threading.Lock()
 _OLLAMA_HEALTH_TTL_S: float = 30.0           # re-check if not confirmed healthy within this window
 
 
+def get_local_ollama_autostart_enabled() -> bool:
+    """Return True when local Ollama may be auto-started by the agent.
+
+    Default is disabled so Windows setups that already run Ollama as a service do
+    not get a second process manager hidden inside prompt execution.
+    """
+    raw = str(os.environ.get("KORE_OLLAMA_AUTOSTART", "")).strip().lower()
+    return raw in {"1", "true", "yes", "on"}
+
+
 # ====================================================================================================
 # MARK: TIMEOUT
 # ====================================================================================================

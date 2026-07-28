@@ -160,7 +160,7 @@ def _koredoc_file(file_id: int) -> dict:
 
 def _koredoc_split_frontmatter(content: str) -> dict:
     lines = content.splitlines(keepends=True)
-    if not lines or lines[0].strip() != '---':
+    if not lines or lines[0].strip() not in {'---', '---koredocs-json'}:
         return {'frontmatter': '', 'frontmatter_end_line': 0, 'body_start_line': 1}
     for index in range(1, len(lines)):
         if lines[index].strip() == '---':

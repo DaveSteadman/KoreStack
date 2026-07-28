@@ -17,6 +17,7 @@
 # MARK: IMPORTS
 # ====================================================================================================
 import json
+import os
 import re
 import subprocess
 import threading
@@ -37,6 +38,18 @@ _ollama_start_lock: threading.Lock = threading.Lock()
 _ollama_proc: subprocess.Popen | None = None
 
 
+def _windows_creation_flags(*, detach: bool = False) -> int:
+    """Return process flags that prevent transient console windows on Windows."""
+    if os.name != "nt":
+        return 0
+
+    flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+    if detach:
+        flags |= getattr(subprocess, "DETACHED_PROCESS", 0)
+        flags |= getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+    return flags
+
+
 def is_ollama_running(host: str | None = None) -> bool:
     host = host or _core.get_active_host()
     try:
@@ -49,12 +62,6 @@ def is_ollama_running(host: str | None = None) -> bool:
 # ----------------------------------------------------------------------------------------------------
 def start_ollama_server() -> None:
     global _ollama_proc
-    # Build platform-specific flags to fully detach the server process from this parent.
-    creation_flags = 0
-    if hasattr(subprocess, "DETACHED_PROCESS"):
-        creation_flags |= subprocess.DETACHED_PROCESS
-    if hasattr(subprocess, "CREATE_NEW_PROCESS_GROUP"):
-        creation_flags |= subprocess.CREATE_NEW_PROCESS_GROUP
 
     try:
         _ollama_proc = subprocess.Popen(
@@ -62,7 +69,7 @@ def start_ollama_server() -> None:
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             stdin=subprocess.DEVNULL,
-            creationflags=creation_flags,
+            creationflags=_windows_creation_flags(detach=True),
         )
     except FileNotFoundError:
         raise RuntimeError(
@@ -113,9 +120,12 @@ def ensure_ollama_running(
 # ====================================================================================================
 # MARK: MODEL LISTING
 # ====================================================================================================
-def list_ollama_models(host: str | None = None) -> list[str]:
+def list_ollama_models(host: str | None = None, *, start_if_needed: bool = True) -> list[str]:
     host = host or _core.get_active_host()
-    ensure_ollama_running(host=host, start_if_needed=True)
+    if start_if_needed:
+        ensure_ollama_running(host=host, start_if_needed=True)
+    elif not is_ollama_running(host=host):
+        return []
     body   = _core._request_json(url=f"{host.rstrip('/')}/api/tags", timeout=10.0)
     models = body.get("models", [])
     return [entry.get("model", "") for entry in models if entry.get("model")]
@@ -127,11 +137,9 @@ def list_ollama_models(host: str | None = None) -> list[str]:
 def get_ollama_ps_rows() -> list[dict[str, str]]:
     """Return currently running models as a list of dicts with at least a 'name' key.
 
-    For local Ollama: parses `ollama ps` subprocess output.
-    For remote/cloud Ollama: calls the /api/ps REST endpoint instead.
+    For both local and remote Ollama hosts, prefer the HTTP /api/ps endpoint so
+    passive UI status polling does not shell out to the local CLI.
     """
-    if _core._is_local_host(_core.get_active_host()):
-        return _get_ollama_ps_rows_local()
     return _get_ollama_ps_rows_remote(_core.get_active_host())
 
 
@@ -143,6 +151,7 @@ def _get_ollama_ps_rows_local() -> list[dict[str, str]]:
             text=True,
             check=False,
             timeout=10,
+            creationflags=_windows_creation_flags(),
         )
     except subprocess.TimeoutExpired as exc:
         raise RuntimeError("'ollama ps' did not respond within 10 s - is Ollama running?") from exc
@@ -281,8 +290,9 @@ def call_ollama_extended(
     timeout defaults to the module-level _DEFAULT_LLM_TIMEOUT (set via set_llm_timeout()).
     """
     host = host or _core.get_active_host()
-    # Check/start Ollama before each call; auto-start is suppressed for remote and Cloud hosts.
-    ensure_ollama_running(host=host, start_if_needed=True)
+    # The local Ollama route is manual by default. Auto-start remains opt-in via
+    # KORE_OLLAMA_AUTOSTART for environments that still want the old behavior.
+    ensure_ollama_running(host=host, start_if_needed=_core.get_local_ollama_autostart_enabled())
 
     preview = trunc(prompt.replace("\n", " "), 32)
     ctx_str = f"{num_ctx:,}" if num_ctx is not None else "default"
@@ -314,7 +324,7 @@ def call_ollama_extended(
         if error.code == 404 and "not found" in error_body.lower():
             available_models = []
             try:
-                available_models = list_ollama_models(host=host)
+                available_models = list_ollama_models(host=host, start_if_needed=False)
             except Exception:
                 pass
 

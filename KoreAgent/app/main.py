@@ -33,6 +33,13 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 
+def _hidden_windows_creation_flags() -> int:
+    """Prevent a console flash when re-executing with the project virtualenv."""
+    if os.name != "nt":
+        return 0
+    return getattr(subprocess, "CREATE_NO_WINDOW", 0)
+
+
 # ----------------------------------------------------------------------------------------------------
 def _maybe_reexec_into_project_venv() -> None:
     """Prefer the repository virtualenv interpreter when one exists.
@@ -72,7 +79,7 @@ def _maybe_reexec_into_project_venv() -> None:
     child_env["MAF_SKIP_AUTO_VENV"] = "1"
     cmd = [str(target_python), str(Path(__file__).resolve()), *sys.argv[1:]]
 
-    child = subprocess.Popen(cmd, env=child_env)
+    child = subprocess.Popen(cmd, env=child_env, creationflags=_hidden_windows_creation_flags())
 
     job_handle = None
     if sys.platform == "win32":
@@ -499,7 +506,7 @@ def _run(args, logger, log_path) -> None:
 
     if sequence_file_path:
         try:
-            llm_client.ensure_ollama_running(verbose=True)
+            llm_client.ensure_ollama_running(verbose=True, start_if_needed=llm_client.get_local_ollama_autostart_enabled())
         except RuntimeError as exc:
             print(f"Warning: {exc}  LLM calls will fail until the server is reachable.", flush=True)
         try:
@@ -570,9 +577,9 @@ def _run(args, logger, log_path) -> None:
             return "degraded" if any(status == "degraded" for status in dep_statuses.values()) else "ready"
 
         try:
-            llm_client.ensure_ollama_running(verbose=True)
+            llm_client.ensure_ollama_running(verbose=True, start_if_needed=False)
             _host_ok = llm_client.is_ollama_running() if llm_client.get_active_backend() == "ollama" else True
-            _known   = llm_client.list_ollama_models()
+            _known   = llm_client.list_ollama_models(start_if_needed=False)
             try:
                 resolved_model = resolve_execution_model(args.model)
             except Exception:

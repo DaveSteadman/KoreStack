@@ -28,24 +28,17 @@ def create_koredoc(
     folder_path: Annotated[str, 'Folder path in the shared KoreDocs/datauser tree, such as "/" or "/Projects". Missing folders are created.'],
     name: Annotated[str, 'Filename, with or without the .koredoc extension.'],
     markdown: Annotated[str, 'Markdown body for the document.'],
-    title: Annotated[Optional[str], 'Optional title. If provided, YAML frontmatter is added.'] = None,
-    tags: Annotated[Optional[list[str]], 'Optional tags to include in YAML frontmatter.'] = None,
+    title: Annotated[Optional[str], 'Optional title stored in the embedded KoreDocs JSON header.'] = None,
+    tags: Annotated[Optional[list[str]], 'Optional tags stored in the embedded KoreDocs JSON header.'] = None,
+    metadata: Annotated[Optional[dict], 'Optional artefact metadata, e.g. artefact_type, geography, period, provenance, and source_refs.'] = None,
 ) -> dict:
-    """Create a .koredoc document from Markdown, adding frontmatter when title or tags are supplied."""
-    content = markdown
-    metadata = None
-    if title or tags:
-        lines = ['---']
-        if title:
-            lines.append(f'title: {title}')
-        if tags:
-            lines.append('tags: ' + ', '.join(tags))
-        lines.extend(['---', '', markdown.lstrip('\n')])
-        content = '\n'.join(lines)
-        metadata = {'title': title or name.rsplit('.', 1)[0]}
-        if tags:
-            metadata['tags'] = tags
-    return _create_serialized_file(folder_path, name, 'koredoc', content, metadata)
+    """Create a self-contained .koredoc with metadata embedded in a JSON header."""
+    stored_metadata = dict(metadata or {})
+    if title:
+        stored_metadata['title'] = title or name.rsplit('.', 1)[0]
+    if tags:
+        stored_metadata['tags'] = tags
+    return _create_serialized_file(folder_path, name, 'koredoc', markdown, stored_metadata or None)
 
 
 @mcp.tool()
@@ -221,6 +214,7 @@ def koredocs_doc_create(
     markdown: Annotated[str, 'Markdown body for the document.'],
     title: Annotated[Optional[str], 'Optional title.'] = None,
     tags: Annotated[Optional[list[str]], 'Optional tags.'] = None,
+    metadata: Annotated[Optional[dict], 'Optional artefact metadata.'] = None,
 ) -> dict:
     """Canonical prefixed alias for create_koredoc."""
-    return create_koredoc(folder_path=folder_path, name=name, markdown=markdown, title=title, tags=tags)
+    return create_koredoc(folder_path=folder_path, name=name, markdown=markdown, title=title, tags=tags, metadata=metadata)

@@ -70,6 +70,24 @@ def search_files(
     )
 
 
+def search_files_by_metadata(
+    metadata_filter: Annotated[dict, 'Structured JSON filter. Use dotted paths and operators: eq, ne, contains, in, exists, gt, gte, lt, lte; combine with $and, $or, $not.'],
+    type: Annotated[Optional[KoreFileType], 'Optional document type filter.'] = None,
+    folder_path: Annotated[Optional[str], 'Optional folder path such as /Research.'] = None,
+    limit: Annotated[int, 'Maximum number of results, between 1 and 200.'] = 20,
+) -> list[dict]:
+    """Find artefacts by exact, nested, and range metadata criteria."""
+    ext = type.lstrip('.') if type else None
+    if ext and ext not in ALLOWED_EXTENSIONS:
+        raise ValueError(f'Unsupported type: {type}')
+    return korefile.search_metadata(
+        metadata_filter,
+        ext=ext,
+        folder_path=_normalise_folder_path(folder_path) if folder_path else None,
+        limit=limit,
+    )
+
+
 def get_file(id: int) -> dict:
     """Retrieve a KoreFile document by id, including full content."""
     file = korefile.get_file(id, include_content=True)
@@ -135,6 +153,7 @@ def update_file(
     id: Annotated[int, 'KoreDocs file id.'],
     content: Annotated[str, 'Complete replacement file content. For .koredoc use Markdown. For .koresheet and .korediag use JSON serialized as a string.'],
     metadata: Annotated[Optional[dict], 'Optional replacement metadata object. If omitted, KoreDocs extracts metadata from content where possible.'] = None,
+    metadata_patch: Annotated[Optional[dict], 'Optional deep merge patch for existing metadata. Cannot be combined with metadata.'] = None,
     expected_revision: Annotated[Optional[int], 'Optional optimistic concurrency check. When provided, the file must still be at this revision.'] = None,
 ) -> dict:
     """Overwrite a KoreDocs file's complete content.
@@ -144,7 +163,7 @@ def update_file(
     - .koresheet: JSON object {version, meta, cols, rows, cells}, serialized as a string.
     - .korediag: JSON object {koreDiag, id, title, settings, nodes, edges}, serialized as a string.
     """
-    updated = korefile.update_file(id, content, metadata, expected_revision=expected_revision)
+    updated = korefile.update_file(id, content, metadata, metadata_patch, expected_revision=expected_revision)
     if updated is None:
         raise ValueError(f'File not found: {id}')
     return updated
@@ -177,6 +196,35 @@ def koredocs_files_search(
 ) -> list[dict]:
     """Canonical prefixed alias for search_files."""
     return search_files(query=query, type=type, folder_path=folder_path, limit=limit)
+
+
+@mcp.tool()
+def koredocs_files_metadata_search(
+    metadata_filter: Annotated[dict, 'Structured JSON metadata filter. Example: {"artefact_type":"market_analysis","geography.country":"GB","period.year":{"gte":2025}}.'],
+    type: Annotated[Optional[KoreFileType], 'Optional document type filter.'] = None,
+    folder_path: Annotated[Optional[str], 'Optional folder path.'] = None,
+    limit: Annotated[int, 'Maximum results, between 1 and 200.'] = 20,
+) -> list[dict]:
+    """Search artefacts using structured metadata rather than filename or body words."""
+    return search_files_by_metadata(metadata_filter, type=type, folder_path=folder_path, limit=limit)
+
+
+@mcp.tool()
+def koredocs_file_history_list(
+    id: Annotated[int, 'KoreDocs file id.'],
+    limit: Annotated[int, 'Maximum revisions, between 1 and 200.'] = 50,
+) -> list[dict]:
+    """List immutable content-and-metadata revisions for an artefact."""
+    return korefile.list_history(id, limit)
+
+
+@mcp.tool()
+def koredocs_file_history_get(
+    id: Annotated[int, 'KoreDocs file id.'],
+    revision: Annotated[str, 'Revision token returned by koredocs_file_history_list.'],
+) -> dict:
+    """Retrieve a historical artefact snapshot, including content and metadata."""
+    return korefile.get_history_revision(id, revision)
 
 
 @mcp.tool()
@@ -256,10 +304,11 @@ def koredocs_file_update(
     id: Annotated[int, 'KoreDocs file id.'],
     content: Annotated[str, 'Complete replacement file content.'],
     metadata: Annotated[Optional[dict], 'Optional replacement metadata object.'] = None,
+    metadata_patch: Annotated[Optional[dict], 'Optional deep merge patch for existing metadata.'] = None,
     expected_revision: Annotated[Optional[int], 'Optional optimistic concurrency check.'] = None,
 ) -> dict:
     """Canonical prefixed alias for update_file."""
-    return update_file(id=id, content=content, metadata=metadata, expected_revision=expected_revision)
+    return update_file(id=id, content=content, metadata=metadata, metadata_patch=metadata_patch, expected_revision=expected_revision)
 
 
 @mcp.tool()

@@ -47,6 +47,7 @@ from llm_client_openai import get_active_host
 from llm_client_openai import get_active_backend
 from llm_client_openai import get_active_model
 from llm_client_openai import get_active_num_ctx
+from llm_client_openai import get_local_ollama_autostart_enabled
 from llm_client_openai import get_llm_timeout
 from llm_client_openai import set_llm_timeout
 from llm_client_openai import register_llm_call_logger
@@ -76,6 +77,7 @@ __all__ = [
     "get_active_backend",
     "get_active_model",
     "get_active_num_ctx",
+    "get_local_ollama_autostart_enabled",
     "get_llm_timeout",
     "set_llm_timeout",
     "register_llm_call_logger",
@@ -134,7 +136,7 @@ def ensure_ollama_running(
 
 
 # ----------------------------------------------------------------------------------------------------
-def list_ollama_models(host: str | None = None) -> list[str]:
+def list_ollama_models(host: str | None = None, *, start_if_needed: bool = True) -> list[str]:
     """Return the list of available model IDs from the active server.
 
     Routes to the backend-specific listing:
@@ -144,7 +146,7 @@ def list_ollama_models(host: str | None = None) -> list[str]:
     host = host or _openai.get_active_host()
     if _openai._is_lmstudio_host(host):
         return _lmstudio.list_lmstudio_models(host)
-    return _ollama.list_ollama_models(host=host)
+    return _ollama.list_ollama_models(host=host, start_if_needed=start_if_needed)
 
 
 # ----------------------------------------------------------------------------------------------------
@@ -176,8 +178,9 @@ def call_llm_chat(
     extensions 'options' block and is silently ignored by non-Ollama servers.
     """
     host = host or _openai.get_active_host()
-    # Check/start server before each call; routes to backend-specific health check.
-    ensure_ollama_running(host=host, start_if_needed=True)
+    # The local Ollama route is manual by default. Auto-start remains opt-in via
+    # KORE_OLLAMA_AUTOSTART for environments that still want the old behavior.
+    ensure_ollama_running(host=host, start_if_needed=get_local_ollama_autostart_enabled())
 
     last_user = next(
         (trunc(m.get("content", ""), 32) for m in reversed(messages) if m.get("role") == "user"),
@@ -212,7 +215,7 @@ def call_llm_chat(
         if error.code == 404 and "not found" in error_body.lower():
             available_models = []
             try:
-                available_models = list_ollama_models(host=host)
+                available_models = list_ollama_models(host=host, start_if_needed=False)
             except Exception:
                 pass
             if available_models:

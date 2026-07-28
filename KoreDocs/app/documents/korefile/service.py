@@ -18,6 +18,7 @@ import sqlite3
 import zlib
 from datetime import datetime, timezone
 from pathlib import Path
+from uuid import uuid4
 
 from KoreCommon.datauser_fs import create_folder as create_datauser_folder
 from KoreCommon.datauser_fs import datauser_relative_path
@@ -51,6 +52,12 @@ _TEXT_EXTENSIONS = frozenset({
     '.yml',
 })
 _VISIBLE_EXTENSIONS = _NATIVE_EXTENSIONS | _TEXT_EXTENSIONS
+_METADATA_STORE_NAME = '.koredocs_metadata.json'
+_METADATA_SIDECAR_SUFFIX = '.koremeta.json'
+_HISTORY_DIRECTORY_NAME = '.koredocs_history'
+_METADATA_SCHEMA_VERSION = 1
+_KOREDOC_JSON_HEADER_START = '---koredocs-json'
+_KOREDOC_HEADER_END        = '---'
 
 
 def configure(root_dir: Path, legacy_db_path: Path | None = None) -> None:
@@ -88,6 +95,302 @@ def _normalize_folder_path(path: str | None) -> str:
 
 def _relative_posix(path: Path) -> str:
     return datauser_relative_path(path, root_dir=_root_dir())
+
+
+def _metadata_store_path() -> Path:
+    return _root_dir() / _METADATA_STORE_NAME
+
+
+def _metadata_sidecar_path(path: Path) -> Path:
+    return path.with_name(f'.{path.name}{_METADATA_SIDECAR_SUFFIX}')
+
+
+def _history_directory() -> Path:
+    return _root_dir() / _HISTORY_DIRECTORY_NAME
+
+
+def _metadata_key(path: Path) -> str:
+    return _relative_posix(path)
+
+
+def _validate_metadata(metadata: dict) -> dict:
+    if not isinstance(metadata, dict):
+        raise ValueError('metadata must be a JSON object')
+    try:
+        return json.loads(json.dumps(metadata, ensure_ascii=False))
+    except (TypeError, ValueError) as exc:
+        raise ValueError('metadata must contain only JSON-compatible values') from exc
+
+
+def _merge_metadata(current: dict, patch: dict) -> dict:
+    result = _validate_metadata(current)
+    for key, value in _validate_metadata(patch).items():
+        if isinstance(value, dict) and isinstance(result.get(key), dict):
+            result[key] = _merge_metadata(result[key], value)
+        else:
+            result[key] = value
+    return result
+
+
+def _load_metadata_store() -> dict[str, dict]:
+    path = _metadata_store_path()
+    if not path.exists():
+        return {}
+    try:
+        raw = json.loads(path.read_text(encoding='utf-8'))
+    except (OSError, ValueError):
+        return {}
+    files = raw.get('files') if isinstance(raw, dict) else None
+    if not isinstance(files, dict):
+        return {}
+    return {
+        str(key): value
+        for key, value in files.items()
+        if isinstance(key, str) and isinstance(value, dict)
+    }
+
+
+def _load_sidecar(path: Path) -> dict | None:
+    sidecar = _metadata_sidecar_path(path)
+    if not sidecar.exists():
+        return None
+    try:
+        value = json.loads(sidecar.read_text(encoding='utf-8'))
+    except (OSError, ValueError):
+        return None
+    if not isinstance(value, dict) or not isinstance(value.get('metadata'), dict):
+        return None
+    return value
+
+
+def _save_sidecar(path: Path, record: dict) -> None:
+    write_text_file(
+        _metadata_sidecar_path(path),
+        json.dumps(record, ensure_ascii=False, indent=2, sort_keys=True) + '\n',
+        root_dir=_root_dir(),
+    )
+
+
+def _split_koredoc_json_header(content: str) -> tuple[dict | None, str]:
+    """Return the embedded artefact record and Markdown body for a .koredoc."""
+    lines = content.splitlines(keepends=True)
+    if not lines or lines[0].strip().lower() != _KOREDOC_JSON_HEADER_START:
+        return None, content
+    for index in range(1, len(lines)):
+        if lines[index].strip() != _KOREDOC_HEADER_END:
+            continue
+        try:
+            record = json.loads(''.join(lines[1:index]))
+        except ValueError:
+            return None, content
+        if not isinstance(record, dict) or not isinstance(record.get('metadata'), dict):
+            return None, content
+        return record, ''.join(lines[index + 1:])
+    return None, content
+
+
+def _koredoc_content_with_header(content: str, record: dict) -> str:
+    _, body = _split_koredoc_json_header(content)
+    header = json.dumps(record, ensure_ascii=False, indent=2, sort_keys=True)
+    return f'{_KOREDOC_JSON_HEADER_START}\n{header}\n{_KOREDOC_HEADER_END}\n{body.lstrip(chr(10))}'
+
+
+def _artifact_record(path: Path, content: str | None = None) -> dict:
+    source_content = read_text_file(path, root_dir=_root_dir()) if path.suffix.lower() == '.koredoc' else (content if content is not None else read_text_file(path, root_dir=_root_dir()))
+    if path.suffix.lower() == '.koredoc':
+        embedded, _ = _split_koredoc_json_header(source_content)
+        if embedded is not None:
+            return embedded
+    sidecar = _load_sidecar(path)
+    if sidecar is not None:
+        return sidecar
+    legacy = _load_metadata_store().get(_metadata_key(path))
+    metadata = _validate_metadata(legacy) if legacy is not None else _extract_metadata(path.name, source_content)
+    record = {
+        'schema_version': _METADATA_SCHEMA_VERSION,
+        'artifact_id':      str(uuid4()),
+        'created_at':       _iso_from_ts(getattr(path.stat(), 'st_ctime', path.stat().st_mtime)),
+        'metadata':         metadata,
+    }
+    if path.suffix.lower() == '.koredoc':
+        _write_artifact_record(
+            path,
+            metadata,
+            artifact_id=record['artifact_id'],
+            created_at=record['created_at'],
+        )
+    else:
+        _save_sidecar(path, record)
+    return record
+
+
+def _write_artifact_record(path: Path, metadata: dict, *, artifact_id: str | None = None, created_at: str | None = None) -> dict:
+    record = {
+        'schema_version': _METADATA_SCHEMA_VERSION,
+        'artifact_id':      artifact_id or str(uuid4()),
+        'created_at':       created_at or _now_iso(),
+        'metadata':         _validate_metadata(metadata),
+    }
+    if path.suffix.lower() == '.koredoc':
+        content = read_text_file(path, root_dir=_root_dir())
+        existing, _ = _split_koredoc_json_header(content)
+        if existing is not None:
+            record['artifact_id'] = artifact_id or existing.get('artifact_id') or record['artifact_id']
+            record['created_at']  = created_at or existing.get('created_at') or record['created_at']
+        write_text_file(path, _koredoc_content_with_header(content, record), root_dir=_root_dir())
+        sidecar = _metadata_sidecar_path(path)
+        if sidecar.exists():
+            delete_datauser_file(sidecar, root_dir=_root_dir())
+    else:
+        _save_sidecar(path, record)
+    files = _load_metadata_store()
+    if files.pop(_metadata_key(path), None) is not None:
+        _save_metadata_store(files)
+    return record
+
+
+def _now_iso() -> str:
+    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace('+00:00', 'Z')
+
+
+def _save_metadata_store(files: dict[str, dict]) -> None:
+    payload = {'version': 1, 'files': files}
+    write_text_file(
+        _metadata_store_path(),
+        json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + '\n',
+        root_dir=_root_dir(),
+    )
+
+
+def _stored_metadata(path: Path) -> dict | None:
+    if path.suffix.lower() == '.koredoc':
+        embedded, _ = _split_koredoc_json_header(read_text_file(path, root_dir=_root_dir()))
+        if embedded is not None:
+            return _validate_metadata(embedded['metadata'])
+    sidecar = _load_sidecar(path)
+    if sidecar is not None:
+        return _validate_metadata(sidecar['metadata'])
+    metadata = _load_metadata_store().get(_metadata_key(path))
+    return _validate_metadata(metadata) if metadata is not None else None
+
+
+def _set_stored_metadata(path: Path, metadata: dict) -> None:
+    existing = _artifact_record(path)
+    _write_artifact_record(
+        path,
+        metadata,
+        artifact_id=existing.get('artifact_id'),
+        created_at=existing.get('created_at'),
+    )
+
+
+def _delete_stored_metadata(path: Path) -> None:
+    files = _load_metadata_store()
+    if files.pop(_metadata_key(path), None) is not None:
+        _save_metadata_store(files)
+    sidecar = _metadata_sidecar_path(path)
+    if sidecar.exists():
+        delete_datauser_file(sidecar, root_dir=_root_dir())
+
+
+def _move_stored_metadata(source: Path, target: Path) -> None:
+    source_key = _metadata_key(source)
+    target_key = _metadata_key(target)
+    files = _load_metadata_store()
+    metadata = files.pop(source_key, None)
+    if metadata is not None:
+        files[target_key] = metadata
+        _save_metadata_store(files)
+    source_sidecar = _metadata_sidecar_path(source)
+    target_sidecar = _metadata_sidecar_path(target)
+    if source_sidecar.exists():
+        source_sidecar.rename(target_sidecar)
+
+
+def _move_stored_metadata_tree(source: Path, target: Path) -> None:
+    source_key = _metadata_key(source).rstrip('/')
+    target_key = _metadata_key(target).rstrip('/')
+    files = _load_metadata_store()
+    moved = {
+        target_key + key[len(source_key):]: metadata
+        for key, metadata in files.items()
+        if key == source_key or key.startswith(source_key + '/')
+    }
+    if not moved:
+        return
+    for key in list(files):
+        if key == source_key or key.startswith(source_key + '/'):
+            del files[key]
+    files.update(moved)
+    _save_metadata_store(files)
+    for sidecar in source.rglob(f'*{_METADATA_SIDECAR_SUFFIX}'):
+        relative = sidecar.relative_to(source)
+        target_sidecar = target / relative
+        target_sidecar.parent.mkdir(parents=True, exist_ok=True)
+        sidecar.rename(target_sidecar)
+
+
+def _delete_stored_metadata_tree(folder: Path) -> None:
+    folder_key = _metadata_key(folder).rstrip('/')
+    files = _load_metadata_store()
+    removed = [key for key in files if key == folder_key or key.startswith(folder_key + '/')]
+    if not removed:
+        return
+    for key in removed:
+        del files[key]
+    _save_metadata_store(files)
+
+
+def _write_history(path: Path, content: str, metadata: dict, *, action: str) -> None:
+    if path.suffix.lower() == '.koredoc':
+        content = read_text_file(path, root_dir=_root_dir())
+    artifact = _artifact_record(path, content)
+    body_content = content
+    if path.suffix.lower() == '.koredoc':
+        _, body_content = _split_koredoc_json_header(content)
+    artifact_id = artifact['artifact_id']
+    history_root = _history_directory() / artifact_id
+    history_root.mkdir(parents=True, exist_ok=True)
+    revision = f'{path.stat().st_mtime_ns}.json'
+    payload = {
+        'artifact_id': artifact_id,
+        'action':      action,
+        'recorded_at': _now_iso(),
+        'path':        _relative_posix(path),
+        'metadata':    metadata,
+        'content':     content,
+        'body_content': body_content,
+    }
+    write_text_file(history_root / revision, json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + '\n', root_dir=_root_dir())
+
+
+def list_history(file_id: int, limit: int = 50) -> list[dict]:
+    path = _resolve_file_abs_by_id(file_id)
+    if path is None:
+        raise ValueError(f'File not found: {file_id}')
+    artifact = _artifact_record(path)
+    history_root = _history_directory() / artifact['artifact_id']
+    if not history_root.exists():
+        return []
+    results = []
+    for item in sorted(history_root.glob('*.json'), reverse=True)[:limit]:
+        try:
+            snapshot = json.loads(item.read_text(encoding='utf-8'))
+        except (OSError, ValueError):
+            continue
+        results.append({key: value for key, value in snapshot.items() if key != 'content'} | {'revision': item.stem})
+    return results
+
+
+def get_history_revision(file_id: int, revision: str) -> dict:
+    path = _resolve_file_abs_by_id(file_id)
+    if path is None:
+        raise ValueError(f'File not found: {file_id}')
+    artifact = _artifact_record(path)
+    candidate = _history_directory() / artifact['artifact_id'] / f'{revision}.json'
+    if not candidate.exists() or '/' in revision or '\\' in revision:
+        raise ValueError(f'Revision not found: {revision}')
+    return json.loads(candidate.read_text(encoding='utf-8'))
 
 
 def _folder_path_to_abs(path: str | None) -> Path:
@@ -133,12 +436,18 @@ def _iter_folder_paths() -> list[Path]:
 
 def _iter_file_paths(root: Path | None = None) -> list[Path]:
     base = root.resolve() if root is not None else _root_dir()
-    return list_datauser_files(
+    return [
+        path
+        for path in list_datauser_files(
         search_root=_relative_posix(base),
         recursive=True,
         allowed_extensions=set(_VISIBLE_EXTENSIONS),
         root_dir=_root_dir(),
-    )
+        )
+        if path.name != _METADATA_STORE_NAME
+        and not path.name.endswith(_METADATA_SIDECAR_SUFFIX)
+        and _HISTORY_DIRECTORY_NAME not in path.parts
+    ]
 
 
 def _folder_record(path: Path) -> dict:
@@ -254,7 +563,11 @@ def validate_serialized_content(name: str, content: str) -> None:
 def _file_record(path: Path, *, include_content: bool) -> dict:
     content = read_text_file(path, root_dir=_root_dir())
     stat = path.stat()
-    metadata = _extract_metadata(path.name, content)
+    artifact = _artifact_record(path, content)
+    metadata = artifact['metadata']
+    body_content = content
+    if path.suffix.lower() == '.koredoc':
+        _, body_content = _split_koredoc_json_header(content)
     record = {
         'id': _file_id_for_abs(path),
         'folder_id': _folder_id_for_abs(path.parent),
@@ -263,13 +576,17 @@ def _file_record(path: Path, *, include_content: bool) -> dict:
         'name': path.name,
         'ext': path.suffix.lstrip('.'),
         'metadata': metadata,
-        'word_count': _word_count(content),
+        'artifact_id': artifact['artifact_id'],
+        'metadata_schema_version': artifact.get('schema_version', _METADATA_SCHEMA_VERSION),
+        'word_count': _word_count(body_content),
         'revision': int(stat.st_mtime_ns),
         'created_at': _iso_from_ts(getattr(stat, 'st_ctime', stat.st_mtime)),
         'modified_at': _iso_from_ts(stat.st_mtime),
     }
     if include_content:
         record['content'] = content
+        if path.suffix.lower() == '.koredoc':
+            record['body_content'] = body_content
     return record
 
 
@@ -396,6 +713,7 @@ def rename_folder(folder_id: int, new_name: str, *, expected_revision: int | Non
     if target.exists():
         raise ConflictError(f'Folder already exists: {_folder_abs_to_label(target)}')
     folder_abs.rename(target)
+    _move_stored_metadata_tree(folder_abs, target)
     return _folder_record(target)
 
 
@@ -417,6 +735,7 @@ def move_folder(folder_id: int, new_parent_id: int, *, expected_revision: int | 
     if target.exists():
         raise ConflictError(f'Folder already exists: {_folder_abs_to_label(target)}')
     folder_abs.rename(target)
+    _move_stored_metadata_tree(folder_abs, target)
     return _folder_record(target)
 
 
@@ -431,6 +750,7 @@ def delete_folder(folder_id: int, *, expected_revision: int | None = None, recur
         raise ConflictError(f'Folder {folder_id} revision mismatch: expected {expected_revision}, current {current_revision}')
     if recursive:
         shutil.rmtree(folder_abs)
+        _delete_stored_metadata_tree(folder_abs)
         return True
     folder_rel = _relative_posix(folder_abs)
     if list_datauser_files(search_root=folder_rel, recursive=False, root_dir=_root_dir()) or list_datauser_folders(search_root=folder_rel, recursive=False, root_dir=_root_dir()):
@@ -480,7 +800,6 @@ def get_file(file_id: int, include_content: bool = True) -> dict | None:
 
 
 def create_file(folder_id: int, name: str, content: str, metadata: dict | None = None) -> dict:
-    del metadata
     _validate_simple_name(name, kind='File', require_extension=True)
     _validate_serialized_content(name, content)
     folder_abs = _resolve_folder_abs_by_id(folder_id)
@@ -490,6 +809,8 @@ def create_file(folder_id: int, name: str, content: str, metadata: dict | None =
     if target.exists():
         raise ConflictError('UNIQUE constraint failed: files.folder_id, files.name')
     write_text_file(target, content, root_dir=_root_dir())
+    _write_artifact_record(target, metadata if metadata is not None else _extract_metadata(name, content))
+    _write_history(target, content, _stored_metadata(target) or {}, action='created')
     return _file_record(target, include_content=False)
 
 
@@ -500,7 +821,6 @@ def create_serialized_file(
     content: str,
     metadata: dict | None = None,
 ) -> dict:
-    del metadata
     normalized_name = name if name.endswith(f'.{ext}') else f'{name}.{ext}'
     _validate_simple_name(normalized_name, kind='File', require_extension=True)
     _validate_serialized_content(normalized_name, content)
@@ -519,16 +839,16 @@ def create_serialized_file(
         folder_id = parent_id
     else:
         folder_id = folder['id']
-    return create_file(folder_id, normalized_name, content)
+    return create_file(folder_id, normalized_name, content, metadata)
 
 
 def update_file(
     file_id: int,
     content: str | None = None,
     metadata: dict | None = None,
+    metadata_patch: dict | None = None,
     expected_revision: int | None = None,
 ) -> dict | None:
-    del metadata
     file_abs = _resolve_file_abs_by_id(file_id)
     if file_abs is None:
         return None
@@ -536,9 +856,25 @@ def update_file(
     if expected_revision is not None and current_revision != expected_revision:
         raise ConflictError(f'File {file_id} revision mismatch: expected {expected_revision}, current {current_revision}')
     current_content = read_text_file(file_abs, root_dir=_root_dir())
+    current_artifact = _artifact_record(file_abs, current_content)
     new_content = current_content if content is None else content
     _validate_serialized_content(file_abs.name, new_content)
+    if metadata is not None and metadata_patch is not None:
+        raise ValueError('Provide metadata or metadata_patch, not both')
+    next_metadata = metadata if metadata is not None else current_artifact['metadata']
+    if metadata_patch is not None:
+        next_metadata = _merge_metadata(current_artifact['metadata'], metadata_patch)
     write_text_file(file_abs, new_content, root_dir=_root_dir())
+    if file_abs.suffix.lower() == '.koredoc':
+        _write_artifact_record(
+            file_abs,
+            next_metadata,
+            artifact_id=current_artifact['artifact_id'],
+            created_at=current_artifact['created_at'],
+        )
+    elif metadata is not None or metadata_patch is not None:
+        _set_stored_metadata(file_abs, next_metadata)
+    _write_history(file_abs, new_content, _stored_metadata(file_abs) or _extract_metadata(file_abs.name, new_content), action='updated')
     return _file_record(file_abs, include_content=False)
 
 
@@ -556,6 +892,7 @@ def rename_file(file_id: int, new_name: str, expected_revision: int | None = Non
     if target.exists():
         raise ConflictError('UNIQUE constraint failed: files.folder_id, files.name')
     file_abs.rename(target)
+    _move_stored_metadata(file_abs, target)
     return _file_record(target, include_content=False)
 
 
@@ -573,6 +910,7 @@ def move_file(file_id: int, new_folder_id: int, expected_revision: int | None = 
     if target.exists():
         raise ConflictError('UNIQUE constraint failed: files.folder_id, files.name')
     file_abs.rename(target)
+    _move_stored_metadata(file_abs, target)
     return _file_record(target, include_content=False)
 
 
@@ -584,6 +922,7 @@ def delete_file(file_id: int, expected_revision: int | None = None) -> bool:
     if expected_revision is not None and current_revision != expected_revision:
         raise ConflictError(f'File {file_id} revision mismatch: expected {expected_revision}, current {current_revision}')
     delete_datauser_file(file_abs, root_dir=_root_dir())
+    _delete_stored_metadata(file_abs)
     return True
 
 
@@ -600,7 +939,9 @@ def search(query: str, ext: str | None = None, folder_path: str | None = None, l
         if ext is not None and path.suffix.lstrip('.') != ext:
             continue
         content = read_text_file(path, root_dir=_root_dir())
-        metadata = _extract_metadata(path.name, content)
+        metadata = _stored_metadata(path)
+        if metadata is None:
+            metadata = _extract_metadata(path.name, content)
         name_lower = path.name.lower()
         metadata_text = json.dumps(metadata, ensure_ascii=False).lower()
         content_lower = content.lower()
@@ -623,6 +964,99 @@ def search(query: str, ext: str | None = None, folder_path: str | None = None, l
 
     scored.sort(key=lambda item: (-item[0], item[1]['path']))
     return [record for _, record in scored[:limit]]
+
+
+def _metadata_value(metadata: dict, field: str):
+    value: object = metadata
+    for part in field.split('.'):
+        if not isinstance(value, dict) or part not in value:
+            return None
+        value = value[part]
+    return value
+
+
+def _matches_metadata_filter(metadata: dict, expression: dict) -> bool:
+    """Evaluate a compact JSON metadata filter.
+
+    Field values match exactly.  A field may instead use ``exists``, ``contains``,
+    ``in``, ``eq``, ``ne``, ``gt``, ``gte``, ``lt`` or ``lte``.  Nested values use
+    dotted paths; ``$and``, ``$or`` and ``$not`` compose expressions.
+    """
+    if not isinstance(expression, dict):
+        raise ValueError('metadata_filter must be a JSON object')
+    for field, expected in expression.items():
+        if field == '$and':
+            if not isinstance(expected, list) or not all(_matches_metadata_filter(metadata, item) for item in expected):
+                return False
+            continue
+        if field == '$or':
+            if not isinstance(expected, list) or not any(_matches_metadata_filter(metadata, item) for item in expected):
+                return False
+            continue
+        if field == '$not':
+            if not isinstance(expected, dict) or _matches_metadata_filter(metadata, expected):
+                return False
+            continue
+        actual = _metadata_value(metadata, field)
+        if not isinstance(expected, dict):
+            if actual != expected:
+                return False
+            continue
+        for operator, operand in expected.items():
+            if operator == 'exists':
+                if bool(actual is not None) != bool(operand):
+                    return False
+            elif operator == 'contains':
+                if not isinstance(actual, (str, list, dict)) or operand not in actual:
+                    return False
+            elif operator == 'in':
+                if not isinstance(operand, list) or actual not in operand:
+                    return False
+            elif operator == 'eq':
+                if actual != operand:
+                    return False
+            elif operator == 'ne':
+                if actual == operand:
+                    return False
+            elif operator in {'gt', 'gte', 'lt', 'lte'}:
+                if actual is None:
+                    return False
+                try:
+                    comparisons = {
+                        'gt':  actual > operand,
+                        'gte': actual >= operand,
+                        'lt':  actual < operand,
+                        'lte': actual <= operand,
+                    }
+                except TypeError:
+                    return False
+                if not comparisons[operator]:
+                    return False
+            else:
+                raise ValueError(f'Unsupported metadata operator: {operator}')
+    return True
+
+
+def search_metadata(
+    metadata_filter: dict,
+    *,
+    ext: str | None = None,
+    folder_path: str | None = None,
+    limit: int = 20,
+) -> list[dict]:
+    if limit < 1 or limit > 200:
+        raise ValueError('limit must be between 1 and 200')
+    base_folder = _folder_path_to_abs(folder_path) if folder_path else _root_dir()
+    if not base_folder.exists() or not base_folder.is_dir():
+        return []
+    matches = []
+    for path in _iter_file_paths(base_folder):
+        if ext is not None and path.suffix.lstrip('.') != ext:
+            continue
+        record = _file_record(path, include_content=False)
+        if _matches_metadata_filter(record['metadata'], metadata_filter):
+            matches.append(record)
+    return sorted(matches, key=lambda item: item['path'])[:limit]
 
 
 def import_from_fs(data_dir: Path) -> dict:
