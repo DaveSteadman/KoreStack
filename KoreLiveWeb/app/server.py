@@ -580,6 +580,14 @@ def save_search_provider_settings(payload: dict = Body(default={})) -> dict:
     )
 
 
+@app.post("/ui/settings/search-providers", include_in_schema=False)
+async def save_search_provider_settings_form(request: Request):
+    form    = await request.form()
+    payload = dict(form)
+    save_search_provider_settings(payload)
+    return RedirectResponse("/ui", status_code=303)
+
+
 @app.get("/", include_in_schema=False)
 def root():
     return RedirectResponse("/ui")

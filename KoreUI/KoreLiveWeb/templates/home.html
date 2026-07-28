@@ -50,21 +50,21 @@
           <span class="kcui-tag kcui-tag--dim" id="klw-settings-state">saved</span>
         </div>
         <div class="kcui-panel-body">
-          <form id="klw-settings-form" class="klw-settings-form">
+          <form id="klw-settings-form" class="klw-settings-form" action="/ui/settings/search-providers" method="post">
             <div class="klw-settings-grid">
               <label class="kcui-filter-label klw-check-row">
-                <input id="klw-ddg-enabled" type="checkbox"{% if search_settings.ddg_enabled %} checked{% endif %}>
+                <input id="klw-ddg-enabled" name="ddg_enabled" type="checkbox"{% if search_settings.ddg_enabled %} checked{% endif %}>
                 <span>DuckDuckGo available</span>
               </label>
               <label class="kcui-filter-label klw-check-row">
-                <input id="klw-ollama-enabled" type="checkbox"{% if search_settings.ollama_enabled %} checked{% endif %}>
+                <input id="klw-ollama-enabled" name="ollama_enabled" type="checkbox"{% if search_settings.ollama_enabled %} checked{% endif %}>
                 <span>Ollama available</span>
               </label>
             </div>
 
             <label>
               Preferred backend
-              <select id="klw-preferred-provider" class="kcui-input">
+              <select id="klw-preferred-provider" name="preferred_provider" class="kcui-input">
                 <option value="ddg"{% if search_settings.preferred_provider == "ddg" %} selected{% endif %}>DuckDuckGo Lite</option>
                 <option value="ollama"{% if search_settings.preferred_provider == "ollama" %} selected{% endif %}>Ollama Web Search</option>
               </select>
@@ -74,6 +74,7 @@
               Ollama search endpoint
               <input
                 id="klw-ollama-web-search-url"
+                name="ollama_web_search_url"
                 class="kcui-input"
                 type="url"
                 inputmode="url"
@@ -86,6 +87,7 @@
               Ollama API key
               <input
                 id="klw-ollama-api-key"
+                name="ollama_api_key"
                 class="kcui-input"
                 type="password"
                 autocomplete="off"
@@ -100,8 +102,8 @@
             <div class="klw-settings-meta" id="klw-settings-meta">Active {{ search_settings.active_label }}. Enabled: {% if search_settings.ddg_enabled %}DDG{% endif %}{% if search_settings.ddg_enabled and search_settings.ollama_enabled %}, {% endif %}{% if search_settings.ollama_enabled %}Ollama{% endif %}. Ollama key: {% if search_settings.ollama_has_api_key %}stored{% else %}missing{% endif %}.</div>
 
             <div class="klw-settings-actions">
-              <button id="klw-settings-save"  class="kcui-btn kcui-btn-primary" type="button">Save</button>
-              <button id="klw-settings-clear" class="kcui-btn kcui-btn-quiet"   type="button">Clear API Key</button>
+              <button id="klw-settings-save"  class="kcui-btn kcui-btn-primary" type="submit">Save</button>
+              <button id="klw-settings-clear" class="kcui-btn kcui-btn-quiet"   type="submit" name="clear_ollama_api_key" value="true">Clear API Key</button>
             </div>
           </form>
         </div>

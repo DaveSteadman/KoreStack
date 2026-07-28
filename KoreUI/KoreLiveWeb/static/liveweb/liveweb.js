@@ -296,13 +296,15 @@ for (const node of [ddgEnabled, ollamaEnabled, preferred, ollamaWebSearchUrl, ap
 }
 
 if (saveBtn) {
-  saveBtn.addEventListener('click', async () => {
+  saveBtn.addEventListener('click', async (event) => {
+    event.preventDefault();
     await saveSearchSettings(false);
   });
 }
 
 if (clearKeyBtn) {
-  clearKeyBtn.addEventListener('click', async () => {
+  clearKeyBtn.addEventListener('click', async (event) => {
+    event.preventDefault();
     apiKeyInput.value = '';
     syncDirtyState();
     await saveSearchSettings(true);
