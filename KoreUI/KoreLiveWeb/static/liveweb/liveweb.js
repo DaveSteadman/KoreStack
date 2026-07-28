@@ -19,10 +19,11 @@ const settingsMeta  = document.getElementById('klw-settings-meta');
 const ddgEnabled    = document.getElementById('klw-ddg-enabled');
 const ollamaEnabled = document.getElementById('klw-ollama-enabled');
 const preferred     = document.getElementById('klw-preferred-provider');
-const apiKeyInput   = document.getElementById('klw-ollama-api-key');
-const clearKeyBtn   = document.getElementById('klw-settings-clear');
-const apiKeyState   = document.getElementById('klw-api-key-state');
-const saveBtn       = document.getElementById('klw-settings-save');
+const ollamaWebSearchUrl = document.getElementById('klw-ollama-web-search-url');
+const apiKeyInput        = document.getElementById('klw-ollama-api-key');
+const clearKeyBtn        = document.getElementById('klw-settings-clear');
+const apiKeyState        = document.getElementById('klw-api-key-state');
+const saveBtn            = document.getElementById('klw-settings-save');
 
 let lastTopEntryId  = 0;
 let searchSettings  = bootstrap.searchSettings || null;
@@ -120,9 +121,10 @@ function renderSearchSettings(settings) {
   searchSettings = settings || null;
   if (!settingsForm || !searchSettings) return;
 
-  ddgEnabled.checked    = Boolean(searchSettings.ddg_enabled);
-  ollamaEnabled.checked = Boolean(searchSettings.ollama_enabled);
-  preferred.value       = searchSettings.preferred_provider || 'ddg';
+  ddgEnabled.checked       = Boolean(searchSettings.ddg_enabled);
+  ollamaEnabled.checked    = Boolean(searchSettings.ollama_enabled);
+  preferred.value          = searchSettings.preferred_provider || 'ddg';
+  ollamaWebSearchUrl.value = searchSettings.ollama_web_search_url || '';
   apiKeyInput.value     = '';
   settingsDirty         = false;
 
@@ -141,6 +143,7 @@ function currentSettingsDraft() {
     preferred_provider: preferred?.value || 'ddg',
     ddg_enabled:        Boolean(ddgEnabled?.checked),
     ollama_enabled:     Boolean(ollamaEnabled?.checked),
+    ollama_web_search_url: String(ollamaWebSearchUrl?.value || '').trim(),
     ollama_api_key:     String(apiKeyInput?.value || '').trim(),
   };
 }
@@ -151,6 +154,7 @@ function isSettingsDirty() {
   if (draft.preferred_provider !== (searchSettings.preferred_provider || 'ddg')) return true;
   if (draft.ddg_enabled        !== Boolean(searchSettings.ddg_enabled))          return true;
   if (draft.ollama_enabled     !== Boolean(searchSettings.ollama_enabled))       return true;
+  if (draft.ollama_web_search_url !== (searchSettings.ollama_web_search_url || '')) return true;
   if (draft.ollama_api_key) return true;
   return false;
 }
@@ -194,6 +198,7 @@ async function saveSearchSettings(clearApiKey = false) {
     preferred_provider: preferred.value || 'ddg',
     ddg_enabled:        ddgEnabled.checked,
     ollama_enabled:     ollamaEnabled.checked,
+    ollama_web_search_url: String(ollamaWebSearchUrl.value || '').trim(),
     clear_ollama_api_key: clearApiKey,
   };
 
@@ -283,7 +288,7 @@ if (settingsForm) {
   });
 }
 
-for (const node of [ddgEnabled, ollamaEnabled, preferred, apiKeyInput]) {
+for (const node of [ddgEnabled, ollamaEnabled, preferred, ollamaWebSearchUrl, apiKeyInput]) {
   if (!node) continue;
   node.addEventListener('input',  markSettingsUnsaved);
   node.addEventListener('change', markSettingsUnsaved);

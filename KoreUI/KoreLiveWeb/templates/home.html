@@ -53,11 +53,11 @@
           <form id="klw-settings-form" class="klw-settings-form">
             <div class="klw-settings-grid">
               <label class="kcui-filter-label klw-check-row">
-                <input id="klw-ddg-enabled" type="checkbox">
+                <input id="klw-ddg-enabled" type="checkbox"{% if search_settings.ddg_enabled %} checked{% endif %}>
                 <span>DuckDuckGo available</span>
               </label>
               <label class="kcui-filter-label klw-check-row">
-                <input id="klw-ollama-enabled" type="checkbox">
+                <input id="klw-ollama-enabled" type="checkbox"{% if search_settings.ollama_enabled %} checked{% endif %}>
                 <span>Ollama available</span>
               </label>
             </div>
@@ -65,9 +65,21 @@
             <label>
               Preferred backend
               <select id="klw-preferred-provider" class="kcui-input">
-                <option value="ddg">DuckDuckGo Lite</option>
-                <option value="ollama">Ollama Web Search</option>
+                <option value="ddg"{% if search_settings.preferred_provider == "ddg" %} selected{% endif %}>DuckDuckGo Lite</option>
+                <option value="ollama"{% if search_settings.preferred_provider == "ollama" %} selected{% endif %}>Ollama Web Search</option>
               </select>
+            </label>
+
+            <label>
+              Ollama search endpoint
+              <input
+                id="klw-ollama-web-search-url"
+                class="kcui-input"
+                type="url"
+                inputmode="url"
+                autocomplete="url"
+                spellcheck="false"
+                value="{{ search_settings.ollama_web_search_url }}">
             </label>
 
             <label>
@@ -77,15 +89,15 @@
                 class="kcui-input"
                 type="password"
                 autocomplete="off"
-                placeholder="Stored key is hidden. Paste a new key to replace it.">
+                placeholder="{% if search_settings.ollama_has_api_key %}Stored key is hidden. Paste a new key to replace it.{% else %}Paste Ollama API key{% endif %}">
             </label>
 
             <div class="klw-settings-inline-meta">
-              <span class="kcui-tag kcui-tag--dim" id="klw-api-key-state">key missing</span>
+              <span class="kcui-tag kcui-tag--dim" id="klw-api-key-state">{% if search_settings.ollama_has_api_key %}key stored{% else %}key missing{% endif %}</span>
               <span class="kcui-meta">The stored key is never rendered back into the page.</span>
             </div>
 
-            <div class="klw-settings-meta" id="klw-settings-meta">No changes pending.</div>
+            <div class="klw-settings-meta" id="klw-settings-meta">Active {{ search_settings.active_label }}. Enabled: {% if search_settings.ddg_enabled %}DDG{% endif %}{% if search_settings.ddg_enabled and search_settings.ollama_enabled %}, {% endif %}{% if search_settings.ollama_enabled %}Ollama{% endif %}. Ollama key: {% if search_settings.ollama_has_api_key %}stored{% else %}missing{% endif %}.</div>
 
             <div class="klw-settings-actions">
               <button id="klw-settings-save"  class="kcui-btn kcui-btn-primary" type="button">Save</button>

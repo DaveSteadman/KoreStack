@@ -137,11 +137,13 @@ def _apply_runtime_search_settings(
     preferred_provider: str,
     ddg_enabled: bool,
     ollama_enabled: bool,
+    ollama_web_search_url: str,
     ollama_api_key: str | None,
 ) -> None:
-    cfg["search_provider"] = preferred_provider
-    cfg["ddg_enabled"]     = ddg_enabled
-    cfg["ollama_enabled"]  = ollama_enabled
+    cfg["search_provider"]        = preferred_provider
+    cfg["ddg_enabled"]            = ddg_enabled
+    cfg["ollama_enabled"]         = ollama_enabled
+    cfg["ollama_web_search_url"]  = ollama_web_search_url
     if ollama_api_key is not None:
         cfg["ollama_api_key"] = ollama_api_key
 
@@ -151,6 +153,7 @@ def _persist_search_settings(
     preferred_provider: str,
     ddg_enabled: bool,
     ollama_enabled: bool,
+    ollama_web_search_url: str,
     ollama_api_key: str | None,
     clear_ollama_api_key: bool,
 ) -> dict:
@@ -162,9 +165,10 @@ def _persist_search_settings(
     if not isinstance(service_cfg, dict):
         raise HTTPException(status_code=500, detail="services.koreliveweb must be a JSON object")
 
-    service_cfg["search_provider"] = preferred_provider
-    service_cfg["ddg_enabled"]     = bool(ddg_enabled)
-    service_cfg["ollama_enabled"]  = bool(ollama_enabled)
+    service_cfg["search_provider"]        = preferred_provider
+    service_cfg["ddg_enabled"]            = bool(ddg_enabled)
+    service_cfg["ollama_enabled"]         = bool(ollama_enabled)
+    service_cfg["ollama_web_search_url"]  = ollama_web_search_url
 
     if clear_ollama_api_key:
         service_cfg["ollama_api_key"] = ""
@@ -174,10 +178,11 @@ def _persist_search_settings(
     _write_suite_config_json(path, raw)
 
     _apply_runtime_search_settings(
-        preferred_provider = preferred_provider,
-        ddg_enabled        = ddg_enabled,
-        ollama_enabled     = ollama_enabled,
-        ollama_api_key     = "" if clear_ollama_api_key else ollama_api_key,
+        preferred_provider       = preferred_provider,
+        ddg_enabled              = ddg_enabled,
+        ollama_enabled           = ollama_enabled,
+        ollama_web_search_url    = ollama_web_search_url,
+        ollama_api_key           = "" if clear_ollama_api_key else ollama_api_key,
     )
 
     load_suite_config.cache_clear()
@@ -189,7 +194,7 @@ def _persist_search_settings(
         status  = "saved",
         message = (
             f"preferred={preferred_provider} ddg={'on' if ddg_enabled else 'off'} "
-            f"ollama={'on' if ollama_enabled else 'off'} api_key="
+            f"ollama={'on' if ollama_enabled else 'off'} endpoint={ollama_web_search_url} api_key="
             f"{'cleared' if clear_ollama_api_key else ('updated' if ollama_api_key is not None and ollama_api_key != '' else 'unchanged')}"
         ),
     )
@@ -461,6 +466,7 @@ def _home_context(request: Request) -> dict:
     service_root    = str(suite_urls.get("koreliveweb") or "/").rstrip("/") or ""
     provider        = get_search_provider()
     provider_label  = get_search_provider_label()
+    search_settings = _search_settings_payload()
     tool_rows       = _build_tool_rows()
     initial_entries = list_activity(limit=120)
     endpoint_rows = [
@@ -493,7 +499,7 @@ def _home_context(request: Request) -> dict:
             "endpointExplorer": f"{stack_root}/endpoints" if stack_root else "/endpoints",
             "toolNames":        [row["name"] for row in tool_rows],
             "searchProvider":   provider,
-            "searchSettings":   _search_settings_payload(),
+            "searchSettings":   search_settings,
             "pollMs":           2000,
             "initialEntries":   initial_entries,
         }
@@ -503,6 +509,7 @@ def _home_context(request: Request) -> dict:
         "tool_rows":       tool_rows,
         "endpoint_rows":   endpoint_rows,
         "initial_entries": initial_entries,
+        "search_settings": search_settings,
         "bootstrap_json":  bootstrap_json,
         "provider":        provider,
         "provider_label":  provider_label,
@@ -538,14 +545,19 @@ def save_search_provider_settings(payload: dict = Body(default={})) -> dict:
     if preferred_provider not in {"ddg", "ollama"}:
         raise HTTPException(status_code=400, detail="preferred_provider must be 'ddg' or 'ollama'")
 
-    ddg_enabled         = _coerce_checkbox_bool(payload.get("ddg_enabled"))
-    ollama_enabled      = _coerce_checkbox_bool(payload.get("ollama_enabled"))
-    clear_ollama_api_key = _coerce_checkbox_bool(payload.get("clear_ollama_api_key"))
-    api_key_raw         = payload.get("ollama_api_key")
-    ollama_api_key      = None if api_key_raw is None else str(api_key_raw).strip()
+    ddg_enabled            = _coerce_checkbox_bool(payload.get("ddg_enabled"))
+    ollama_enabled         = _coerce_checkbox_bool(payload.get("ollama_enabled"))
+    ollama_web_search_url = str(
+        payload.get("ollama_web_search_url") or cfg.get("ollama_web_search_url") or ""
+    ).strip()
+    clear_ollama_api_key  = _coerce_checkbox_bool(payload.get("clear_ollama_api_key"))
+    api_key_raw           = payload.get("ollama_api_key")
+    ollama_api_key        = None if api_key_raw is None else str(api_key_raw).strip()
 
     if not ddg_enabled and not ollama_enabled:
         raise HTTPException(status_code=400, detail="At least one search provider must remain enabled")
+    if not ollama_web_search_url.startswith(("https://", "http://")):
+        raise HTTPException(status_code=400, detail="ollama_web_search_url must be an HTTP(S) URL")
 
     append_activity(
         kind    = "config",
@@ -553,17 +565,18 @@ def save_search_provider_settings(payload: dict = Body(default={})) -> dict:
         status  = "requested",
         message = (
             f"preferred={preferred_provider} ddg={'on' if ddg_enabled else 'off'} "
-            f"ollama={'on' if ollama_enabled else 'off'} api_key="
+            f"ollama={'on' if ollama_enabled else 'off'} endpoint={ollama_web_search_url} api_key="
             f"{'clear' if clear_ollama_api_key else ('provided' if ollama_api_key else 'empty')}"
         ),
     )
 
     return _persist_search_settings(
-        preferred_provider  = preferred_provider,
-        ddg_enabled         = ddg_enabled,
-        ollama_enabled      = ollama_enabled,
-        ollama_api_key      = ollama_api_key,
-        clear_ollama_api_key = clear_ollama_api_key,
+        preferred_provider       = preferred_provider,
+        ddg_enabled              = ddg_enabled,
+        ollama_enabled           = ollama_enabled,
+        ollama_web_search_url    = ollama_web_search_url,
+        ollama_api_key           = ollama_api_key,
+        clear_ollama_api_key     = clear_ollama_api_key,
     )
 
 
