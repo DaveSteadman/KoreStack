@@ -928,7 +928,8 @@ def run_tool_loop(
 
                 is_scratch_reader = func_name.lower().startswith("scratch_")
                 auto_scratchpad_key = None
-                if not output.get("is_error") and not is_scratch_reader and isinstance(result_content, str) and len(result_content) >= TOOL_MSG_AUTO_SCRATCH_MIN and not auto_dataset_manifest:
+                preserve_exact_python_output = func_name.lower() == "python_execute"
+                if not output.get("is_error") and not is_scratch_reader and isinstance(result_content, str) and (len(result_content) >= TOOL_MSG_AUTO_SCRATCH_MIN or preserve_exact_python_output) and not auto_dataset_manifest:
                     auto_scratchpad_key = _derive_auto_scratchpad_key(func_name, arguments, round_num, tc_idx + 1)
                     scratchpad_auto_save(auto_scratchpad_key, result_content)
                     scratchpad_pin(auto_scratchpad_key)
@@ -942,8 +943,11 @@ def run_tool_loop(
                         thread_content += "\n[TERMINAL_POLICY_DENIAL] Do not retry this path or search for a workaround. Explain the boundary and offer an allowed path only if useful."
                     elif "blocked in the sandbox" in lowered_error or "open() is blocked" in lowered_error:
                         thread_content += "\n[TERMINAL_SANDBOX_DENIAL] Do not retry the blocked import or file operation. Use a dedicated tool or a safe computation-only alternative."
-                if auto_scratchpad_key and func_name.lower() == "dataset_get":
-                    thread_content += f"\n[dataset_get scratchpad key: {auto_scratchpad_key}]"
+                if auto_scratchpad_key:
+                    thread_content += (
+                        f"\n[exact tool-result scratchpad key: {auto_scratchpad_key}; "
+                        f"pass {{scratchpad:{auto_scratchpad_key}}} to a destination tool to preserve this exact value]"
+                    )
                 if auto_scratchpad_key and len(thread_content) > TOOL_MSG_MAX_CHARS:
                     thread_content = thread_content[:TOOL_MSG_MAX_CHARS] + f"\n... [truncated - full content auto-saved to scratchpad key: {auto_scratchpad_key}]"
 

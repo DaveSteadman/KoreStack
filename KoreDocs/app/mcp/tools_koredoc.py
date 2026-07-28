@@ -218,3 +218,27 @@ def koredocs_doc_create(
 ) -> dict:
     """Canonical prefixed alias for create_koredoc."""
     return create_koredoc(folder_path=folder_path, name=name, markdown=markdown, title=title, tags=tags, metadata=metadata)
+
+
+@mcp.tool()
+def koredocs_doc_create_from_scratchpad(
+    folder_path: Annotated[str, 'Folder path for the new KoreDoc.'],
+    name: Annotated[str, 'Filename, with or without the .koredoc extension.'],
+    scratchpad_content: Annotated[str, 'Pass the exact token {scratchpad:key} shown after a prior tool result. KoreAgent resolves it before this tool runs, preserving generated text without model transcription.'],
+    metadata: Annotated[Optional[dict], 'Optional artefact metadata and provenance.'] = None,
+    title: Annotated[Optional[str], 'Optional title stored in the embedded KoreDocs JSON header.'] = None,
+    tags: Annotated[Optional[list[str]], 'Optional tags stored in the embedded KoreDocs JSON header.'] = None,
+) -> dict:
+    """Create a KoreDoc from an exact prior tool result held in the scratchpad.
+
+    Use after Python, retrieval, or transformation tools when copying their output
+    into a document could introduce transcription or encoding errors.
+    """
+    return create_koredoc(
+        folder_path=folder_path,
+        name=name,
+        markdown=scratchpad_content,
+        title=title,
+        tags=tags,
+        metadata=metadata,
+    )
