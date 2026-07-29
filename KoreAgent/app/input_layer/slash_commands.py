@@ -11,7 +11,6 @@
 # ====================================================================================================
 
 import json
-import time
 from datetime import date
 from datetime import timedelta
 from pathlib import Path
@@ -200,21 +199,6 @@ def _cmd_timeout(arg: str, ctx: SlashCommandContext) -> None:
     old = get_llm_timeout()
     set_llm_timeout(value)
     ctx.output(f"LLM timeout changed: {old}s -> {value}s", "success")
-
-
-def _cmd_newchat(arg: str, ctx: SlashCommandContext) -> None:
-    # Retired - use /session new [name] instead.
-    ctx.output("Note: /newchat is retired. Use '/session new [name]' instead.", "dim")
-    name = arg.strip()
-    new_session_id = f"web_{int(time.time() * 1000)}"
-    if ctx.switch_session:
-        ctx.switch_session(new_session_id, name)
-        label = f"'{name}'" if name else "a new chat"
-        ctx.output(f"Conversation history cleared - starting {label}.", "success")
-        return
-    ctx.clear_history()
-    ctx.output("Conversation history cleared - starting a new chat.", "success")
-
 
 
 def _cmd_reskills(arg: str, ctx: SlashCommandContext) -> None:
@@ -464,7 +448,6 @@ _REGISTRY: dict[str, Callable] = {
     "/rounds": _cmd_rounds,
     "/timeout": _cmd_timeout,
     "/stoprun": _cmd_stoprun,
-    "/newchat": _cmd_newchat,
     "/reskill": _cmd_reskills,
     "/version": _cmd_version,
     "/sandbox": _cmd_sandbox,
@@ -480,7 +463,6 @@ _DESCRIPTIONS: dict[str, str] = {
     "/rounds": "<n>  Set max tool-call rounds per prompt (e.g. /rounds 6)",
     "/timeout": "<seconds>  Set LLM generation timeout (e.g. /timeout 1800 for heavy analysis)",
     "/stoprun": "Cancel the active LLM run (after its current round) and clear all pending queued prompts",
-    "/newchat": "(retired - use /session new [name])",
     "/reskill": "[min|max]  Rebuild skills catalog and set system prompt guidance mode (default: min)",
     "/version": "Show framework version, active model, and context size",
     "/sandbox": "<on|off>  Enable/disable Python code execution sandbox (import whitelist + blocked builtins)",

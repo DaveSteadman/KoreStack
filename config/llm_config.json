@@ -1,5 +1,5 @@
 {
   "model": "gemma4:26b",
-  "ctx": 100000,
+  "ctx": 32768,
   "llmhost": "http://MONTBLANC:11434"
 }

@@ -257,6 +257,12 @@ def register_session_routes(
             _run,
             label            = prompt_text[:48],
             timeout_seconds  = _queue_timeout_for_prompt(prompt_text),
+            metadata         = {
+                "workflow":    "chat",
+                "chain_id":    run_id,
+                "chain_stage": "parent",
+                "session_id":  session_id,
+            },
         )
         return {"run_id": run_id, "session_id": session_id, "queued": True}
 

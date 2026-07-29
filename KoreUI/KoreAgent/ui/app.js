@@ -13,7 +13,7 @@ const API_BASE          = "";           // same origin
 const SESSION_STORAGE_KEY   = "maf.activeSession";
 const INPUT_DRAFT_KEY       = "maf.inputDraft";
 const WRAP_STATE_KEY        = "maf.wrapState";
-let   _sessionId        = _restoreSessionId();  // mutable: /session resume changes this
+let   _sessionId        = _restoreSessionId();  // mutable: /chat resume changes this
 const POLL_OLLAMA_MS    = 10_000;
 const POLL_QUEUE_MS     = 3_000;
 const POLL_TIMELINE_MS  = 30_000;
@@ -34,11 +34,11 @@ const _ALL_COMMANDS = [
     "/stopmodel", "/stoprun",
     "/clearmemory", "/reskill", "/sandbox", "/tools",
     "/deletelogs", "/unittest", "/systemtest", "/systemtesttrend", "/tasks", "/task",
-    "/version", "/defaults", "/session", "/kccompress",
+    "/version", "/defaults", "/chat", "/kccompress",
 ];
 
-// Sub-commands for /session.
-const _SESSION_SUBS = ["new", "name", "list", "resume", "resumecopy", "park", "delete", "info"];
+// Sub-commands for /chat.
+const _CHAT_SUBS = ["new", "name", "list", "resume", "resumecopy", "park", "delete", "info"];
 
 // Sub-commands for /llmserverconfig.
 const _LLMSERVERCFG_SUBS = ["model", "ctx"];
@@ -339,9 +339,41 @@ function _applySessionSwitch(sessionId, name) {
 }
 
 function _queueItemLabel(item) {
+    const metadata = item.metadata || {};
+    if (metadata.workflow === "worker_chat") {
+        const label = item.label || "Worker chat";
+        if (metadata.chain_stage === "parent") return "Parent: " + label;
+        return "Worker chat: " + (label.length > 28 ? label.slice(0, 28) + "..." : label);
+    }
+    if (metadata.workflow === "delegate") {
+        if (metadata.chain_stage === "parent") {
+            const label = item.label || "Parent prompt";
+            return "Parent: " + (label.length > 34 ? label.slice(0, 34) + "..." : label);
+        }
+        if (metadata.chain_stage === "child") {
+            const label = item.label || "Delegated task";
+            return "Delegate: " + (label.length > 32 ? label.slice(0, 32) + "..." : label);
+        }
+        if (metadata.chain_stage === "continuation") {
+            const label = metadata.parent_queue_label || item.label || "parent prompt";
+            return "Resume parent: " + (label.length > 28 ? label.slice(0, 28) + "..." : label);
+        }
+    }
     if (item.label) return item.label.length > 40 ? item.label.slice(0, 40) + "..." : item.label;
     if (item.kind && item.kind !== "api_chat") return item.name;
     return item.name.slice(-8);  // last 8 chars of run_id as fallback
+}
+
+function _queueItemTitle(item) {
+    const metadata = item.metadata || {};
+    if (metadata.workflow !== "delegate" && metadata.workflow !== "worker_chat") return "";
+    const taskLabel = metadata.workflow === "worker_chat" ? "Worker chat" : "Delegate task";
+    const details = [
+        metadata.delegate_task_id ? taskLabel + ": " + metadata.delegate_task_id : "",
+        metadata.child_session_id ? "Child chat: " + metadata.child_session_id : "",
+        metadata.parent_session_id ? "Parent chat: " + metadata.parent_session_id : "",
+    ].filter(Boolean);
+    return details.join("\n");
 }
 
 function _renderTimelineQueue(queueData) {
@@ -355,7 +387,7 @@ function _renderTimelineQueue(queueData) {
 
     const totalRow = document.createElement("div");
     totalRow.className   = "tl-sep";
-    totalRow.textContent = "Queued prompts: " + queuedTotal;
+    totalRow.textContent = "Queued tasks: " + queuedTotal;
     el.appendChild(totalRow);
 
     for (const item of nextPrompts) {
@@ -364,6 +396,7 @@ function _renderTimelineQueue(queueData) {
         row.textContent = item.state === "active"
             ? "\u25B6 " + _queueItemLabel(item)
             : "  \u00B7 " + _queueItemLabel(item);
+        row.title = _queueItemTitle(item);
         el.appendChild(row);
     }
 }
@@ -1093,17 +1126,17 @@ function _parseSuggestContext(value) {
         return { pool: _ALL_COMMANDS, prefix: value, base: "" };
     }
 
-    const cmd  = value.slice(0, firstSpace);   // e.g. "/session"
+    const cmd  = value.slice(0, firstSpace);   // e.g. "/chat"
     const rest = value.slice(firstSpace + 1);  // everything after first space
 
-    if (cmd === "/session") {
+    if (cmd === "/chat" || cmd === "/session") {
         const subSpace = rest.indexOf(" ");
         if (subSpace === -1) {
             // Slot 1: completing the sub-command.
-            return { pool: _SESSION_SUBS, prefix: rest, base: "/session " };
+            return { pool: _CHAT_SUBS, prefix: rest, base: `${cmd} ` };
         }
         const sub      = rest.slice(0, subSpace);
-        const arg1Base = value.slice(0, firstSpace + 1 + subSpace + 1);  // "/session sub "
+        const arg1Base = value.slice(0, firstSpace + 1 + subSpace + 1);  // "/chat sub "
         const arg1Text = value.slice(arg1Base.length);
 
         if (sub === "resume" || sub === "delete") {

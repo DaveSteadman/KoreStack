@@ -4,11 +4,11 @@
 # Slash command handlers for session and conversation management.
 #
 # Commands handled:
-#   /session list          -- list all KoreChat webchat conversations
-#   /session switch <name> -- switch to a named conversation (creating if absent)
-#   /session rename <name> -- rename the current conversation in KoreChat
-#   /session delete        -- delete the current conversation and clear local state
-#   /newchat [name]        -- start a fresh conversation (with optional display name)
+#   /chat list             -- list all KoreChat webchat conversations
+#   /chat resume <name>    -- resume a named conversation
+#   /chat name <name>      -- rename the current KoreChat conversation
+#   /chat delete <name>    -- delete a conversation and clear local state
+#   /chat new [name]       -- start a fresh conversation (with optional display name)
 #   /compress              -- compress old conversation history via LLM summarisation
 #
 # Talks to KoreChat via stdlib urllib (no extra dependencies).
@@ -226,7 +226,7 @@ def _clone_conversation(source: dict, new_name: str, session_id: str) -> dict:
     return _kc_get(f"/conversations/{created['id']}") or created
 
 
-def _cmd_session(arg: str, ctx: SlashCommandContext) -> None:
+def _cmd_chat(arg: str, ctx: SlashCommandContext) -> None:
     sub_parts = arg.strip().split(None, 1)
     sub = sub_parts[0].lower() if sub_parts else ""
     rest = sub_parts[1].strip() if len(sub_parts) > 1 else ""
@@ -245,7 +245,7 @@ def _cmd_session(arg: str, ctx: SlashCommandContext) -> None:
 
         if sub == "name":
             if not rest:
-                ctx.output("Usage: /session name <alias>", "dim")
+                ctx.output("Usage: /chat name <alias>", "dim")
                 return
             if not ctx.session_id:
                 ctx.output("Session naming is not available in this mode.", "error")
@@ -273,7 +273,7 @@ def _cmd_session(arg: str, ctx: SlashCommandContext) -> None:
 
         if sub == "resume":
             if not rest:
-                ctx.output("Usage: /session resume <name>", "dim")
+                ctx.output("Usage: /chat resume <name>", "dim")
                 return
             if not ctx.switch_session:
                 ctx.output("Session switching is not available in this mode.", "error")
@@ -291,7 +291,7 @@ def _cmd_session(arg: str, ctx: SlashCommandContext) -> None:
         if sub == "resumecopy":
             parts2 = rest.split(None, 1)
             if len(parts2) < 2:
-                ctx.output("Usage: /session resumecopy <oldname> <newname>", "dim")
+                ctx.output("Usage: /chat resumecopy <oldname> <newname>", "dim")
                 return
             if not ctx.switch_session:
                 ctx.output("Session switching is not available in this mode.", "error")
@@ -318,7 +318,7 @@ def _cmd_session(arg: str, ctx: SlashCommandContext) -> None:
 
         if sub == "delete":
             if not rest:
-                ctx.output("Usage: /session delete <name>  |  /session delete all", "dim")
+                ctx.output("Usage: /chat delete <name>  |  /chat delete all", "dim")
                 return
             conversations = _list_webchat_conversations()
             if rest.lower() == "all":
@@ -374,16 +374,16 @@ def _cmd_session(arg: str, ctx: SlashCommandContext) -> None:
         ctx.output(str(exc), "error")
         return
 
-    ctx.output("Usage: /session <new|name|list|resume|resumecopy|park|delete|info>", "dim")
-    ctx.output("  /session new [name]                  - clear history and start a fresh chat (optional name)", "item")
-    ctx.output("  /session name <alias>                - rename the current KoreChat", "item")
-    ctx.output("  /session list                        - list webchat KoreChats", "item")
-    ctx.output("  /session resume <name>               - switch to a named KoreChat", "item")
-    ctx.output("  /session resumecopy <old> <new>      - copy a KoreChat and resume the copy", "item")
-    ctx.output("  /session park                        - start a fresh webchat session", "item")
-    ctx.output("  /session delete <name>               - delete a KoreChat by name", "item")
-    ctx.output("  /session delete all                  - delete all webchat KoreChats", "item")
-    ctx.output("  /session info                        - show current KoreChat details", "item")
+    ctx.output("Usage: /chat <new|name|list|resume|resumecopy|park|delete|info>", "dim")
+    ctx.output("  /chat new [name]                     - clear history and start a fresh chat (optional name)", "item")
+    ctx.output("  /chat name <alias>                   - rename the current KoreChat", "item")
+    ctx.output("  /chat list                           - list webchat KoreChats", "item")
+    ctx.output("  /chat resume <name>                  - switch to a named KoreChat", "item")
+    ctx.output("  /chat resumecopy <old> <new>         - copy a KoreChat and resume the copy", "item")
+    ctx.output("  /chat park                           - start a fresh webchat conversation", "item")
+    ctx.output("  /chat delete <name>                  - delete a KoreChat by name", "item")
+    ctx.output("  /chat delete all                     - delete all webchat KoreChats", "item")
+    ctx.output("  /chat info                           - show current KoreChat details", "item")
 
 
 # ----------------------------------------------------------------------------------------------------
@@ -433,7 +433,8 @@ def _cmd_kccompress(arg: str, ctx: SlashCommandContext) -> None:
 
 
 def register_session_slash_commands(registry: dict[str, Callable], descriptions: dict[str, str]) -> None:
-    registry["/session"]    = _cmd_session
+    registry["/chat"]       = _cmd_chat
+    registry["/session"]    = _cmd_chat
     registry["/kccompress"] = _cmd_kccompress
-    descriptions["/session"]    = "new [name] | name <alias> | list | resume <name> | park | delete <name|all> | info  - manage sessions and KoreChat"
+    descriptions["/chat"]       = "new [name] | name <alias> | list | resume <name> | park | delete <name|all> | info  - manage KoreChat conversations"
     descriptions["/kccompress"] = "[<name>]  Queue a compress_needed event for the current (or named) KoreChat"

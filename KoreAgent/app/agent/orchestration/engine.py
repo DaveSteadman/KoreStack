@@ -30,10 +30,8 @@ from pathlib import Path
 
 from context_manager import format_context_map as _context_manager_format_context_map
 from context_manager import store_last_run_state
-from system_skills.Delegate.delegate_runner import get_delegate_runtime_tls
-from system_skills.Delegate.delegate_runner import pop_delegate_runtime
-from system_skills.Delegate.delegate_runner import push_delegate_runtime
-from system_skills.Delegate.delegate_runner import run_delegate_subrun
+from system_skills.WorkerChats.worker_chat_context import pop_worker_chat_runtime
+from system_skills.WorkerChats.worker_chat_context import push_worker_chat_runtime
 from llm_client import call_llm_chat
 from llm_client import get_active_backend
 from llm_client import is_explicit_model_name
@@ -161,8 +159,6 @@ def _filter_web_skills(payload: dict) -> dict:
 # ====================================================================================================
 # MARK: RUN STATE
 # ====================================================================================================
-_delegate_tls = get_delegate_runtime_tls()
-
 # Stop event: set by /stoprun to request early termination of the active run.
 _stop_event: threading.Event = threading.Event()
 _stop_reason: str = ""
@@ -643,9 +639,8 @@ def orchestrate_prompt(
         messages.append({"role": "user", "content": user_prompt})
         _context_map.append({"round": 0, "role": "user", "label": trunc(user_prompt, 50), "chars": len(user_prompt), "auto_key": None, "msg_idx": len(messages) - 1})
 
-        _prev_delegate_runtime = push_delegate_runtime(
+        _prev_worker_chat_runtime = push_worker_chat_runtime(
             logger=logger,
-            delegate_depth=delegate_depth,
             config=config,
             conversation_entry=conversation_entry,
         )
@@ -747,46 +742,7 @@ def orchestrate_prompt(
         finally:
             with _active_stop_lock:
                 _active_stop_events.pop(_run_id, None)
-            pop_delegate_runtime(_prev_delegate_runtime)
+            pop_worker_chat_runtime(_prev_worker_chat_runtime)
 
 
-# ====================================================================================================
-# MARK: DELEGATE SUBRUN
-# ====================================================================================================
-# Core implementation of the Delegate orchestration primitive.
-#
-# Creates an isolated child orchestration context for a focused sub-task, runs the normal
-# tool-calling pipeline inside it, and returns a compact result dict to the caller.
-#
-# Accessed by the Delegate skill wrapper (code/skills/Delegate/delegate_skill.py) and also
-# callable directly from orchestration code that needs to spawn a sub-run programmatically.
-#
-# Guard rails enforced here:
-#   - Maximum delegation depth: _MAX_DELEGATE_DEPTH
-#   - Child loses access to the Delegate tool by default (allow_recursive_delegate=False)
-#   - Child does not inherit parent conversation history or session context
-#   - Child iteration budget capped at 8 rounds
-
-# ----------------------------------------------------------------------------------------------------
-def delegate_subrun(
-    prompt: str,
-    instructions: str = "",
-    max_iterations: int = 3,
-    allow_recursive_delegate: bool = False,
-    output_key: str = "",
-    scratchpad_visible_keys: list[str] | None = None,
-    tools_allowlist: list[str] | None = None,
-) -> dict:
-    """Run a child orchestration context for one isolated sub-task."""
-    return run_delegate_subrun(
-        prompt=prompt,
-        instructions=instructions,
-        max_iterations=max_iterations,
-        allow_recursive_delegate=allow_recursive_delegate,
-        output_key=output_key,
-        scratchpad_visible_keys=scratchpad_visible_keys,
-        tools_allowlist=tools_allowlist,
-        orchestrate_prompt_fn=orchestrate_prompt,
-        config_cls=OrchestratorConfig,
-    )
 

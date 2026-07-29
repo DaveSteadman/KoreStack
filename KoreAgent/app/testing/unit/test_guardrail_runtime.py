@@ -82,6 +82,7 @@ from skills_catalog_builder import build_tool_definitions
 from skills_catalog_builder import load_skills_payload
 from system_skills.Delegate import delegate_runtime as delegate_runtime_module
 from system_skills.Delegate import delegate_skill   as delegate_skill_module
+from system_skills.WorkerChats import worker_chat_skill as worker_chat_skill_module
 from system_skills.FileAccess import file_access_skill as file_access_module
 from system_skills.ToolSelection import tool_selection_skill as tool_selection_skill_module
 from system_skills.FileAccess.file_access_skill import file_write
@@ -104,6 +105,7 @@ from input_layer import slash_command_handlers_sessions as session_handlers_modu
 from input_layer.routes_sessions import _queue_timeout_for_prompt
 from input_layer.routes_sessions import _runtime_config_for_prompt
 from input_layer.slash_command_handlers_testing import _result_counts
+from scheduler.scheduler import TaskQueue
 from KoreStack import endpoint_explorer as endpoint_explorer_module
 from testing.system import runner as test_wrapper_module
 from testing.unit.guardrail_support import load_test_skills_payload
@@ -153,22 +155,54 @@ class GuardrailRuntimeTests(unittest.TestCase):
 
         entries = payload["entries"]
         tools_active_add = next(item for item in entries if item["tool_name"] == "tools_active_add")
-        delegate         = next(item for item in entries if item["tool_name"] == "delegate")
-        delegate_status  = next(item for item in entries if item["tool_name"] == "delegate_status")
+        chat_spawn       = next(item for item in entries if item["tool_name"] == "chat_spawn")
+        chat_result      = next(item for item in entries if item["tool_name"] == "chat_result")
         file_read        = next(item for item in entries if item["tool_name"] == "file_read")
         self.assertEqual(tools_active_add["call_type"], "python")
         self.assertEqual(tools_active_add["parameters_schema"]["type"], "object")
         self.assertEqual(tools_active_add["parameters_schema"]["properties"]["tool_names"]["type"], "array")
         self.assertEqual(tools_active_add["invoke_template"]["tool_names"], ["example"])
-        self.assertEqual(delegate["parameters_schema"]["properties"]["task_in"]["type"], "string")
-        self.assertEqual(delegate["parameters_schema"]["properties"]["data_in"]["type"], "object")
-        self.assertEqual(delegate["parameters_schema"]["properties"]["process"]["type"], "object")
-        self.assertEqual(delegate_status["parameters_schema"]["properties"]["task_id"]["type"], "string")
+        self.assertEqual(chat_spawn["parameters_schema"]["properties"]["prompt"]["type"], "string")
+        self.assertEqual(chat_spawn["parameters_schema"]["properties"]["tools_allowlist"]["type"], "array")
+        self.assertEqual(chat_spawn["parameters_schema"]["properties"]["inputs"]["type"], "object")
+        self.assertEqual(chat_result["parameters_schema"]["properties"]["chat_id"]["type"], "string")
         self.assertEqual(file_read["parameters_schema"]["properties"]["max_chars"]["default"], 8000)
         self.assertEqual(file_read["invoke_template"]["max_chars"], 8000)
 
-    def test_delegate_is_always_on(self) -> None:
-        self.assertIn("delegate", tool_selection_state_module.ALWAYS_ON_TOOL_NAMES)
+    def test_worker_chat_tools_are_always_on(self) -> None:
+        self.assertIn("chat_spawn", tool_selection_state_module.ALWAYS_ON_TOOL_NAMES)
+
+    def test_worker_chat_surface_uses_an_isolated_result_contract(self) -> None:
+        self.assertEqual(
+            worker_chat_skill_module.__all__,
+            ["chat_spawn", "chat_status", "chat_result"],
+        )
+        self.assertNotIn("Delegate", worker_chat_skill_module.chat_spawn.__module__)
+
+    def test_task_queue_exposes_delegate_lineage_metadata(self) -> None:
+        with patch.object(TaskQueue, "_write_state"), patch.object(TaskQueue, "_delete_state"):
+            queue = TaskQueue()
+            queue.run_lock.acquire()
+            try:
+                queued = queue.enqueue(
+                    "delegate_test_child",
+                    "task_run",
+                    lambda: None,
+                    metadata = {
+                        "workflow":          "delegate",
+                        "chain_id":          "parent_run",
+                        "chain_stage":       "child",
+                        "delegate_task_id":  "dlg_test",
+                        "parent_session_id": "parent_session",
+                    },
+                )
+                self.assertTrue(queued)
+                item = queue.get_state()["next_prompts"][0]
+                self.assertEqual(item["metadata"]["chain_stage"], "child")
+                self.assertEqual(item["metadata"]["chain_id"], "parent_run")
+            finally:
+                queue.run_lock.release()
+                queue.stop()
 
     def test_delegate_gen2_queues_child_and_collects_parent_result(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -188,16 +222,21 @@ class GuardrailRuntimeTests(unittest.TestCase):
                 ],
             }
             captured: dict[str, object] = {}
+            prompts:  list[str]         = []
 
             def _fake_enqueue(_name, _kind, callback, **_kwargs):
                 callback()
                 return True
 
             def _fake_orchestrate_prompt(**kwargs):
-                captured["child_session_id"]   = get_active_session_id()
-                captured["child_prompt"]       = kwargs["user_prompt"]
-                captured["copied_parent_note"] = scratchpad_load("parent_note")
-                return ("child summary", 11, 7, True, 3.25)
+                prompts.append(kwargs["user_prompt"])
+                if len(prompts) == 1:
+                    captured["child_session_id"]   = get_active_session_id()
+                    captured["child_prompt"]       = kwargs["user_prompt"]
+                    captured["copied_parent_note"] = scratchpad_load("parent_note")
+                    return ("child summary", 11, 7, True, 3.25)
+                captured["continuation_session_id"] = get_active_session_id()
+                return ("planner moved to the next step", 13, 9, True, 4.5)
 
             previous_logger             = getattr(delegate_runtime_module._delegate_tls, "logger", None)
             previous_config             = getattr(delegate_runtime_module._delegate_tls, "config", None)
@@ -223,6 +262,12 @@ class GuardrailRuntimeTests(unittest.TestCase):
                                                 process  = {
                                                     "tools_allowlist": ["scratchpad_load"],
                                                     "max_iterations":  2,
+                                                    "continuation": {
+                                                        "enabled":        True,
+                                                        "prompt":         "Advance the durable plan by one step.",
+                                                        "tools_allowlist": ["scratchpad_load"],
+                                                        "max_iterations": 2,
+                                                    },
                                                 },
                                                 data_out = {"result_target": "scratchpad:child_result"},
                                             )
@@ -244,6 +289,12 @@ class GuardrailRuntimeTests(unittest.TestCase):
                 self.assertTrue(str(captured["child_session_id"]).startswith("delegate_task_dlg_"))
                 self.assertIn("Task In:", str(captured["child_prompt"]))
                 self.assertIn("Data Out:", str(captured["child_prompt"]))
+                self.assertEqual(captured["continuation_session_id"], "delegate_parent_test")
+                self.assertEqual(len(prompts), 2)
+                self.assertIn("Delegate task ID:", prompts[1])
+                self.assertIn("Advance the durable plan by one step.", prompts[1])
+                self.assertEqual(result["continuation"]["status"], "completed")
+                self.assertEqual(result["continuation"]["response"], "planner moved to the next step")
             finally:
                 delegate_runtime_module._delegate_tls.logger             = previous_logger
                 delegate_runtime_module._delegate_tls.config             = previous_config
@@ -261,6 +312,65 @@ class GuardrailRuntimeTests(unittest.TestCase):
         self.assertEqual(data_in["scratchpad_keys"], [])
         self.assertEqual(process["tools_allowlist"], ["dataset_save"])
         self.assertEqual(data_out["result_target"], "dataset:delegate_planets")
+
+    def test_delegate_preserves_structured_inputs_and_instruction_alias(self) -> None:
+        task_in, data_in, process, _data_out = delegate_runtime_module._coerce_task_contract(
+            task_in  = "Find documents and append the supplied marker.",
+            data_in  = {
+                "metadata_filter": {"testdata": True},
+                "append_text":     "This is test data",
+            },
+            process  = {
+                "tools_allowlist": ["koredocs_files_metadata_search", "koredocs_file_get", "koredocs_file_update"],
+                "instruction":     "Read each match and replace its content with the appended result.",
+            },
+            data_out = None,
+        )
+        prompt = delegate_runtime_module._build_child_prompt({
+            "task_in":  task_in,
+            "data_in":  data_in,
+            "process":  process,
+            "data_out": {},
+        })
+
+        self.assertEqual(process["instructions"], "Read each match and replace its content with the appended result.")
+        self.assertIn('"append_text": "This is test data"', prompt)
+        self.assertIn('"metadata_filter": {"testdata": true}', prompt)
+        self.assertIn("Additional Instructions:", prompt)
+
+    def test_delegate_defaults_to_a_parent_continuation(self) -> None:
+        _task_in, _data_in, process, _data_out = delegate_runtime_module._coerce_task_contract(
+            task_in  = "Perform the isolated child step.",
+            data_in  = None,
+            process  = {"tools_allowlist": ["python_execute"]},
+            data_out = None,
+        )
+
+        self.assertTrue(process["continuation"]["enabled"])
+
+    def test_delegate_task_record_retries_dropbox_file_lock(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            control_dir   = Path(temp_dir) / "controldata"
+            original_move = Path.replace
+            calls         = 0
+
+            def _replace_after_one_lock(source: Path, target: Path):
+                nonlocal calls
+                calls += 1
+                if calls == 1:
+                    raise PermissionError("Dropbox is indexing the task record")
+                return original_move(source, target)
+
+            record = {"task_id": "dlg_dropbox_retry", "status": "queued"}
+            with patch.object(delegate_runtime_module, "get_controldata_dir", return_value=control_dir):
+                with patch.object(delegate_runtime_module.time, "sleep") as sleep:
+                    with patch.object(Path, "replace", autospec=True, side_effect=_replace_after_one_lock):
+                        delegate_runtime_module._write_task_record(record)
+                    restored = delegate_runtime_module._read_task_record("dlg_dropbox_retry")
+
+            self.assertEqual(calls, 2)
+            sleep.assert_called_once_with(0.05)
+            self.assertEqual(restored, record)
 
     def test_delegate_collect_syncs_completed_dataset_into_current_session(self) -> None:
         session_parent = "delegate_parent_dataset_sync"

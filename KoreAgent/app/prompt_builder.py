@@ -69,8 +69,8 @@ _CORE_IDENTITY_PARTS: list[str] = [
 
 _SYSTEM_SKILL_GUIDANCE: list[str] = [
 
-    # -- Delegate (system_skills/Delegate/) --------------------------------------------------
-    "- Use delegate only when staged child work is genuinely needed. Hand off a clear task_in, explicit data_in, a narrow process.tools_allowlist, and a concrete data_out target so the controller can collect durable results later.",
+    # -- Worker Chats (system_skills/WorkerChats/) -------------------------------------------
+    "- Use chat_spawn only for genuinely isolated worker work. Give it a clear prompt, narrow tool allowlist, and explicit durable result contract; use chat_result as the boundary back into the controller.",
 
     # -- CodeExecute (system_skills/CodeExecute/) --------------------------------------------
     "- The python execution tool is more reliable for calculations than internal model arithmetic.",

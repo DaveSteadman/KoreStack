@@ -26,6 +26,7 @@ import logging
 import os
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -414,6 +415,27 @@ def run_chat_sequence_mode(
         logger.log_file_only(f"Agent: {final_response}")
         if not run_success:
             logger.log_file_only("[WARN] Orchestration validation failed for this turn.")
+
+    # A sequence turn can enqueue a Gen2 delegate and then return before its
+    # child or parent-continuation task has finished. Keep this subprocess alive
+    # until the local serial queue drains, otherwise teardown stops the worker
+    # and leaves a durable delegate record falsely marked as running.
+    from scheduler.scheduler import task_queue
+
+    drain_timeout_s = max(1, int(os.environ.get("KORE_TEST_QUEUE_DRAIN_SECONDS", "120")))
+    deadline        = time.monotonic() + drain_timeout_s
+    while True:
+        state = task_queue.get_state()
+        if int(state.get("queue_count") or 0) == 0:
+            logger.log_file_only("[chat-sequence] Background task queue drained.")
+            break
+        if time.monotonic() >= deadline:
+            logger.log_file_only(
+                f"[chat-sequence] Background task queue did not drain within {drain_timeout_s}s: {state}"
+            )
+            print(f"[CHAT_SEQUENCE_QUEUE_TIMEOUT] {state}", file=_sys.stderr)
+            break
+        time.sleep(0.1)
 
 
 # ====================================================================================================

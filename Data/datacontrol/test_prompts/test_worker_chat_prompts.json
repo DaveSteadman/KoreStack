@@ -1,0 +1,23 @@
+[
+  {
+    "exchange": "worker_chat_result_contract",
+    "turns": [
+      {
+        "user": "Create a worker chat with chat_spawn. Its prompt must calculate the sum of 17 and 25 and return only the number. Set tools_allowlist to [\"python_execute\"], result_target to \"scratchpad:worker_chat_sum\", and result_format to \"plain text\". Reply with only the worker chat id.",
+        "assert": "contains|chat_"
+      },
+      {
+        "user": "Check the worker chat created in this exchange using chat_status. Reply with only its lifecycle status.",
+        "assert": "regex|queued|running|completed|failed"
+      },
+      {
+        "user": "Read the worker chat's explicit result using chat_result. Reply with only its summary.",
+        "assert": "contains|42"
+      },
+      {
+        "user": "Load scratchpad key worker_chat_sum and reply with only its value.",
+        "assert": "contains|42"
+      }
+    ]
+  }
+]

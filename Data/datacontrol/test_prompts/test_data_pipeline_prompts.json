@@ -1,22 +1,22 @@
 [
   {
-    "exchange": "artefact_pipeline_primes_to_next_prime",
+    "exchange": "artefact_pipeline_random_primes_to_derivation",
     "turns": [
       {
         "user": "Preparation only: use koredocs_files_metadata_search with an empty metadata_filter restricted to /Tests/DataPipeline to list any previous test artefacts, then delete every returned file using koredocs_file_delete. Do not create a new document in this turn. Report how many prior artefacts were deleted.",
         "assert": "not_empty"
       },
       {
-        "user": "Using Python, calculate every prime number from 2 through 100 and format the exact Markdown table headed `Prime numbers through 100`, with one prime per row. Python results are automatically given an exact tool-result scratchpad key. Create /Tests/DataPipeline/primes-up-to-100.koredoc with koredocs_doc_create_from_scratchpad, passing the shown `{scratchpad:key}` token as scratchpad_content rather than manually copying the table. Supply this exact metadata object: {\"artefact_type\":\"number_sequence\",\"tags\":[\"primes\",\"source\"],\"period\":{\"upper_bound\":100},\"status\":\"published\",\"producer\":{\"service\":\"KoreAgent\",\"operation\":\"prime_generation\"}}. Report `File ID:` and `Artifact ID:` in the final answer.",
-        "assert": "all_contains|File ID:||Artifact ID:"
+        "user": "Using Python, choose a cryptographically random integer upper_bound from 50 through 100 inclusive, calculate every prime less than or equal to it, and format the exact Markdown document with the heading `# Random prime source`, a line `Upper bound: <upper_bound>`, and a one-column table headed `Prime`. Python results are automatically given an exact tool-result scratchpad key. Create /Tests/DataPipeline/random-prime-source.koredoc with koredocs_doc_create_from_scratchpad, passing that shown `{scratchpad:key}` token as scratchpad_content rather than manually copying the generated Markdown. Its metadata must record the actual generated upper_bound: {\"artefact_type\":\"number_sequence\",\"tags\":[\"random-primes\",\"source\"],\"period\":{\"upper_bound\":<actual generated upper_bound>},\"pipeline\":{\"stage\":\"source\"},\"status\":\"published\",\"producer\":{\"service\":\"KoreAgent\",\"operation\":\"random_prime_generation\"}}. Report `File ID:`, `Artifact ID:`, and `Upper bound:` in the final answer.",
+        "assert": "all_contains|File ID:||Artifact ID:||Upper bound:"
       },
       {
-        "user": "Treat the previous KoreDoc as an intermediary artefact. Use koredocs_files_metadata_search, not filename or full-text search, with this exact metadata_filter: {\"tags\":{\"contains\":\"primes\"},\"period.upper_bound\":{\"gte\":100}}. Read the matched source document, calculate the first prime strictly greater than its largest listed prime, and create /Tests/DataPipeline/primes-next-after-100.koredoc. Its body must state `First prime after 100: 101`. Give it metadata with artefact_type `number_sequence_derivation`, tags [\"primes\", \"derived\"], status `published`, an input_refs array containing the source artifact_id, and producer.service `KoreAgent`. Report `Source Artifact ID:`, `New Artifact ID:`, and `101` in the final answer.",
-        "assert": "all_contains|Source Artifact ID:||New Artifact ID:||101"
+        "user": "Treat a persisted KoreDoc as the only source of truth. Do not use a filename or full-text search, do not assume an upper bound or derived value, and do not rely on earlier conversation text. Use koredocs_files_metadata_search with this exact metadata_filter: {\"artefact_type\":\"number_sequence\",\"pipeline.stage\":\"source\",\"tags\":{\"contains\":\"random-primes\"},\"period.upper_bound\":{\"gte\":50}}. Read the matched source document. From its listed primes, calculate the first prime strictly greater than the largest listed prime. Create /Tests/DataPipeline/random-prime-derivation.koredoc. Its body must identify the discovered largest source prime and the computed next prime. Give it metadata with artefact_type `number_sequence_derivation`, tags [\"random-primes\", \"derived\"], pipeline.stage `derivation`, status `published`, an input_refs array containing the source artifact_id, and producer.service `KoreAgent`. Report `Source Artifact ID:`, `New Artifact ID:`, `Largest source prime:`, and `Computed next prime:` in the final answer.",
+        "assert": "all_contains|Source Artifact ID:||New Artifact ID:||Largest source prime:||Computed next prime:"
       },
       {
-        "user": "Use koredocs_files_metadata_search to find the derived primes artefact by metadata only, with this exact metadata_filter: {\"artefact_type\":\"number_sequence_derivation\",\"tags\":{\"contains\":\"derived\"}}. Read it back and confirm it names the source artefact in input_refs and says `First prime after 100: 101`. Leave both output documents in /Tests/DataPipeline for independent inspection. Report `Source Reference` and `First prime after 100: 101` in the final answer.",
-        "assert": "all_contains|Source Reference||First prime after 100: 101"
+        "user": "Use koredocs_files_metadata_search to find the derived artefact by metadata only, with this exact metadata_filter: {\"artefact_type\":\"number_sequence_derivation\",\"pipeline.stage\":\"derivation\",\"tags\":{\"contains\":\"derived\"}}. Read it back and confirm it has an input_refs source reference and records both the largest source prime and computed next prime. Leave both output documents in /Tests/DataPipeline for independent inspection. Report `Source Reference`, `Largest source prime:`, and `Computed next prime:` in the final answer.",
+        "assert": "all_contains|Source Reference||Largest source prime:||Computed next prime:"
       }
     ]
   }

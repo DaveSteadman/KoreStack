@@ -32,7 +32,6 @@ from utils.workspace_utils import get_test_results_dir
 
 
 _POST_TEST_SMOKE_TARGETS: tuple[str, ...] = (
-    "testing.unit.test_guardrail_smoke.GuardrailSmokeTests.test_test_wrapper_extracts_delegate2_log_evidence",
     "testing.unit.test_guardrail_smoke.GuardrailSmokeTests.test_test_wrapper_fails_single_prompt_on_no_results_output",
     "testing.unit.test_guardrail_smoke.GuardrailSmokeTests.test_test_wrapper_fails_exchange_on_search_failure_output",
     "testing.unit.test_guardrail_smoke.GuardrailSmokeTests.test_queue_timeout_for_prompt_disables_scheduler_timeout_only_for_test",

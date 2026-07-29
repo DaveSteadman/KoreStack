@@ -53,6 +53,17 @@ _TIMEOUT_POLL_SECS = 0.5
 _STALL_GRACE_SECS = 30
 
 
+def _safe_metadata(metadata: dict | None) -> dict:
+    """Return a detached JSON-safe metadata mapping for queue observability."""
+    if not isinstance(metadata, dict):
+        return {}
+    try:
+        value = json.loads(json.dumps(metadata))
+    except (TypeError, ValueError):
+        return {}
+    return value if isinstance(value, dict) else {}
+
+
 # ====================================================================================================
 # MARK: TASK QUEUE
 # ====================================================================================================
@@ -102,6 +113,7 @@ class TaskQueue:
         label: str = "",
         timeout_seconds: int | None = None,
         cancel_fn=None,
+        metadata: dict | None = None,
     ) -> bool:
         """Append *fn* to the execution queue.
 
@@ -120,6 +132,7 @@ class TaskQueue:
                 "fn":        fn,
                 "timeout_seconds": timeout_seconds,
                 "cancel_fn": cancel_fn,
+                "metadata": _safe_metadata(metadata),
             })
             self._queued_names.add(name)
         self._has_work.set()
@@ -145,6 +158,7 @@ class TaskQueue:
                     "label": item.get("label", ""),
                     "queued_at": item["queued_at"],
                     "timeout_seconds": item.get("timeout_seconds"),
+                    "metadata":        _safe_metadata(item.get("metadata")),
                 }
                 for item in pending_items
             ]
@@ -159,6 +173,7 @@ class TaskQueue:
                     "cancel_requested": bool(active.get("cancel_requested", False)),
                     "cancel_reason": active.get("cancel_reason"),
                     "timed_out": bool(active.get("timed_out", False)),
+                    "metadata": _safe_metadata(active.get("metadata")),
                     "state":      "active",
                 })
             next_prompts.extend([
@@ -168,6 +183,7 @@ class TaskQueue:
                     "label":     item.get("label", ""),
                     "queued_at": item["queued_at"],
                     "timeout_seconds": item.get("timeout_seconds"),
+                    "metadata":        _safe_metadata(item.get("metadata")),
                     "state":     "pending",
                 }
                 for item in pending_items
@@ -221,6 +237,41 @@ class TaskQueue:
             "stalled":               stalled,
             "updated_at":            datetime.now().isoformat(timespec="seconds"),
         }
+
+    # ----------------------------------------------------------------------------------------------------
+    def get_active_for_session(self, session_id: str) -> dict | None:
+        """Return the active queue item when it belongs to *session_id*.
+
+        Delegated work uses this small lineage lookup to attach its child and
+        continuation tasks to the prompt that created them.
+        """
+        with self._state_lock:
+            active = self._active
+            if not active:
+                return None
+            metadata = _safe_metadata(active.get("metadata"))
+            if metadata.get("session_id") != session_id:
+                return None
+            return {
+                "name":     active["name"],
+                "label":    active.get("label", ""),
+                "metadata": metadata,
+            }
+
+    # ----------------------------------------------------------------------------------------------------
+    def merge_active_metadata(self, name: str, metadata: dict | None) -> bool:
+        """Add JSON-safe observability metadata to the currently running item."""
+        additions = _safe_metadata(metadata)
+        if not additions:
+            return False
+        with self._state_lock:
+            if self._active is None or self._active.get("name") != name:
+                return False
+            current = _safe_metadata(self._active.get("metadata"))
+            current.update(additions)
+            self._active["metadata"] = current
+        self._write_state()
+        return True
 
     # ----------------------------------------------------------------------------------------------------
     def clear_pending(self) -> list[str]:
@@ -319,6 +370,7 @@ class TaskQueue:
                             "cancel_reason": None,
                             "cancel_requested_at": None,
                             "timed_out": False,
+                            "metadata": _safe_metadata(item.get("metadata")),
                         }
 
                     self._write_state()

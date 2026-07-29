@@ -257,49 +257,6 @@
       "trust_boundary": "internal"
     },
     {
-      "skill_name": "Delegate Skill",
-      "relative_path": "app/system_skills/Delegate/skill.md",
-      "purpose": "Spawn durable child tasks when a problem should be split into a controller step and one or more\nisolated worker steps. Each worker gets its own session, tool subset, and result record, then\nthe parent can inspect or collect the result later.\n\nUse this when the task benefits from divide-and-conquer. Do not use it for trivial one-tool actions.",
-      "module": "KoreAgent/app/system_skills/Delegate/delegate_skill.py",
-      "trigger_keyword": "delegate",
-      "triggers": [
-        "the task naturally separates into controller and worker stages",
-        "a child needs its own tool loop and should not clutter the parent context",
-        "the child result should be written durably to scratchpad, dataset, or file"
-      ],
-      "functions": [
-        "delegate(task_in: str, data_in: dict | None = None, process: dict | None = None, data_out: dict | None = None)",
-        "delegate_status(task_id: str)",
-        "delegate_collect(task_id: str)"
-      ],
-      "inputs": [],
-      "outputs": [
-        "`delegate(...)` - returns queue metadata including `status`, `task_id`, `child_session_id`, `result_target`, and `tools_allowlist`.",
-        "`delegate_status(...)` - returns task lifecycle state such as `queued`, `running`, `completed`, or `failed`.",
-        "`delegate_collect(...)` - returns the stored task result, including summary text, saved targets, token usage, log path, and any error."
-      ],
-      "param_descriptions": {
-        "delegate": {
-          "task_in": "the exact child task to perform. This is the worker remit.",
-          "data_in": "structured inputs for the worker.",
-          "process": "execution instructions for the worker.",
-          "data_out": "result contract for the worker."
-        },
-        "delegate_status": {
-          "task_id": "delegated task id returned by `delegate(...)`."
-        },
-        "delegate_collect": {
-          "task_id": "delegated task id returned by `delegate(...)`."
-        }
-      },
-      "tool_selection_guidance": "",
-      "is_system_skill": true,
-      "origin": "builtin",
-      "availability": "guaranteed",
-      "role": "core",
-      "trust_boundary": "internal"
-    },
-    {
       "skill_name": "FileAccess Skill",
       "relative_path": "app/system_skills/FileAccess/skill.md",
       "purpose": "Interface for generic file read, write, append, and search operations inside the shared `datauser/` tree. Bare relative paths resolve under `datauser/`. Legacy prefixes such as `data/...`, `datauser/...`, and `KoreDocs/...` are accepted for compatibility, but new calls should prefer plain datauser-relative paths like `notes/today.txt` or `RadarData/report.csv`.",
@@ -587,6 +544,28 @@
         }
       },
       "tool_selection_guidance": "Use this skill whenever the current active tool set does not contain the capability you need.\n\nWorkflow:\n1. Call `tools_catalog_list(...)` to inspect the larger catalog.\n2. Call `tools_active_add([...])` with the exact tool names you need.\n3. Then use those newly active tools in the next round.\n\nDo not guess tool names from memory when `tools_catalog_list(...)` can verify them.",
+      "is_system_skill": true,
+      "origin": "builtin",
+      "availability": "guaranteed",
+      "role": "core",
+      "trust_boundary": "internal"
+    },
+    {
+      "skill_name": "Worker Chats",
+      "relative_path": "app/system_skills/WorkerChats/skill.md",
+      "purpose": "Create a configured, isolated worker chat without switching away from the current chat. A worker\nchat has a durable lifecycle and one explicit result contract. Its history and scratchpad remain\navailable for inspection, but callers use `chat_result` rather than inheriting worker context.",
+      "module": "KoreAgent/app/system_skills/WorkerChats/worker_chat_skill.py",
+      "trigger_keyword": "worker chat",
+      "triggers": [],
+      "functions": [
+        "chat_spawn(prompt: str, tools_allowlist: list[str], result_target: str = \"\", result_format: str = \"\", max_iterations: int = 3, inputs: dict | None = None)",
+        "chat_status(chat_id: str)",
+        "chat_result(chat_id: str)"
+      ],
+      "inputs": [],
+      "outputs": [],
+      "param_descriptions": {},
+      "tool_selection_guidance": "",
       "is_system_skill": true,
       "origin": "builtin",
       "availability": "guaranteed",

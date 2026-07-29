@@ -12,8 +12,13 @@ class SlashCommandRegistryTests(unittest.TestCase):
         self.assertTrue(expected.issubset(slash_commands._REGISTRY))
         self.assertTrue(expected.issubset(slash_commands._DESCRIPTIONS))
 
-    def test_retired_test_commands_are_not_registered(self) -> None:
-        self.assertNotIn("/test", slash_commands._REGISTRY)
-        self.assertNotIn("/testtrend", slash_commands._REGISTRY)
-        self.assertNotIn("/test", slash_commands._DESCRIPTIONS)
-        self.assertNotIn("/testtrend", slash_commands._DESCRIPTIONS)
+    def test_retired_commands_are_not_registered(self) -> None:
+        for command in {"/test", "/testtrend", "/newchat"}:
+            self.assertNotIn(command, slash_commands._REGISTRY)
+            self.assertNotIn(command, slash_commands._DESCRIPTIONS)
+
+    def test_chat_is_canonical_and_session_remains_a_compatibility_alias(self) -> None:
+        self.assertIn("/chat", slash_commands._REGISTRY)
+        self.assertIn("/chat", slash_commands._DESCRIPTIONS)
+        self.assertIn("/session", slash_commands._REGISTRY)
+        self.assertNotIn("/session", slash_commands._DESCRIPTIONS)
