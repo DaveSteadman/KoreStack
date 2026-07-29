@@ -54,7 +54,6 @@ _DATA_TOOL_SOURCE: dict[str, str] = {
     "fetch_page_text_text": "WebFetch",
     "search_web": "WebSearch",
     "search_web_text": "WebSearch",
-    "research_traverse": "WebResearch",
 }
 
 
@@ -130,7 +129,6 @@ _DISCOVERY_TOOL_NAMES = frozenset({
 _EVIDENCE_TOOL_NAMES = frozenset({
     "fetch_page_text",
     "fetch_page_text_text",
-    "research_traverse",
     "lookup_wikipedia",
 })
 
@@ -795,7 +793,7 @@ def run_tool_loop(
                         correction = (
                             "Web-evidence guard: you have used search/discovery results but have not fetched any evidence-bearing source content yet. "
                             "Do not answer from search snippets or internal knowledge. "
-                            "Call fetch_page_text on one of the returned URLs, or use research_traverse if multiple sources are needed, then continue."
+                            "Call fetch_page_text on one of the returned URLs, then continue."
                         )
                         web_evidence_guard_corrections += 1
                         _log_file_only(f"[warn] Round {round_num}: model attempted final answer after discovery-only web search - injecting evidence-fetch correction.")

@@ -7,7 +7,6 @@ WEB_TOOL_NAMES = frozenset(
         "fetch_page_text",
         "get_page_links",
         "get_page_links_text",
-        "research_traverse",
         "lookup_wikipedia",
     }
 )

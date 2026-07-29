@@ -117,8 +117,7 @@ _DEFAULT_TIMEOUT = 15
 _RETRY_ON_STATUS  = frozenset({429, 500, 502, 503, 504})
 _MAX_FETCH_RETRIES = 1
 
-# In-process LRU URL cache - avoids re-fetching the same URL within a single session
-# (e.g. when a seed search result also appears as a hop target in research_traverse).
+# In-process LRU URL cache - avoids re-fetching the same URL within a single session.
 _HTML_CACHE_MAX  = 32
 _html_cache:      OrderedDict[str, tuple[str, str]] = OrderedDict()
 _html_cache_lock: threading.Lock = threading.Lock()

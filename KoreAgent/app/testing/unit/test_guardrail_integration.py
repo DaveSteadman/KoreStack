@@ -89,7 +89,6 @@ from system_skills.FileAccess.file_access_skill import file_read
 from system_skills.FileAccess.file_access_skill import folder_create
 from KoreLiveWeb.app.web_fetch    import fetch_page_text
 from KoreLiveWeb.app.web_search   import search_web
-from KoreLiveWeb.app.web_research import research_traverse
 from skills.SystemInfo.system_info_skill import get_system_info_string
 from KoreDocs.app import korefile as koredocs_korefile
 from KoreCommon import datauser_fs as datauser_fs_module
@@ -279,13 +278,6 @@ class GuardrailIntegrationTests(unittest.TestCase):
         self.assertIn("prefer dataset_expand_full_text", system_message)
         self.assertIn("For KoreDocs outputs, prefer dataset_write_koredoc", system_message)
 
-    def test_system_prompt_steers_research_traverse_to_page_keys(self) -> None:
-        system_message = build_system_message("", None, {"skills": []}, skill_guidance_enabled=False, sandbox_enabled=True)
-
-        self.assertIn("page scratchpad keys", system_message)
-        self.assertIn("research_page_*", system_message)
-        self.assertIn("instead of scratchpad_load on the entire combined research bundle", system_message)
-
     def test_system_prompt_steers_article_harvests_away_from_hub_urls(self) -> None:
         system_message = build_system_message("", None, {"skills": []}, skill_guidance_enabled=False, sandbox_enabled=True)
 
@@ -460,40 +452,6 @@ class GuardrailIntegrationTests(unittest.TestCase):
         self.assertEqual(results[0]["page_kind"], "article")
         self.assertEqual(results[1]["title"], "AI category")
         self.assertEqual(results[1]["page_kind"], "hub")
-
-    def test_research_traverse_saves_page_level_scratchpad_artifacts(self) -> None:
-        search_results = [
-            {
-                "rank": 1,
-                "title": "Example results page",
-                "url": "https://example.com/results",
-                "snippet": "Detailed results page.",
-            }
-        ]
-        html_text = "<html><body><p>unused</p></body></html>"
-        body_text = "Williams won at Imola in 1981 and 1982."
-
-        with patch("KoreLiveWeb.app.web_research.search_web", return_value=search_results):
-            with patch("KoreLiveWeb.app.web_research._fetch_html", return_value=(html_text, "https://example.com/results")):
-                with patch("KoreLiveWeb.app.web_research._extract_content", return_value=("Example Results", body_text)):
-                    with patch("KoreLiveWeb.app.web_research._extract_urls_from_html", return_value=[]):
-                        with patch("KoreLiveWeb.app.web_research._llm_reextract_evidence", return_value=["Williams won at Imola in 1981 and 1982."]):
-                            result = research_traverse("Williams Imola wins", max_pages=1, max_search_results=1)
-
-        self.assertEqual(result["visited_count"], 1)
-        self.assertEqual(len(result["best_pages"]), 1)
-        self.assertEqual(len(result["page_manifest"]), 1)
-        scratchpad_key = result["best_pages"][0]["scratchpad_key"]
-        self.assertEqual(scratchpad_key, result["page_manifest"][0]["scratchpad_key"])
-        self.assertTrue(scratchpad_key.startswith("research_page_"))
-        saved_page = scratchpad_load(scratchpad_key)
-        self.assertIn("RESEARCH QUERY: Williams Imola wins", saved_page)
-        self.assertIn("TITLE: Example Results", saved_page)
-        self.assertIn("URL: https://example.com/results", saved_page)
-        self.assertIn("PAGE EXTRACT:", saved_page)
-        self.assertIn("Williams won at Imola in 1981 and 1982.", saved_page)
-        self.assertIn(f"SCRATCHPAD_KEY: {scratchpad_key}", result["full_report"])
-        self.assertNotIn("EXTRACT:", result["full_report"])
 
     def test_scratchpad_query_rejects_exhaustive_answers_from_search_results(self) -> None:
         search_results = (

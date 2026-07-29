@@ -36,7 +36,6 @@ from .config          import cfg
 from .web_fetch       import fetch_page_text
 from .web_navigate    import get_page_links
 from .web_navigate    import get_page_links_text
-from .web_research    import research_traverse
 from .web_search      import get_enabled_search_providers
 from .web_search      import get_search_provider
 from .web_search      import get_search_provider_config
@@ -234,11 +233,6 @@ def _build_tool_rows() -> list[dict]:
             "requestType": "url",
         },
         {
-            "name":        "research_traverse",
-            "summary":     "Run multi-page search, fetch, and evidence-led traversal across sources.",
-            "requestType": "query",
-        },
-        {
             "name":        "lookup_wikipedia",
             "summary":     "Resolve a topic and fetch a Wikipedia summary.",
             "requestType": "topic",
@@ -301,7 +295,7 @@ def search_web_text_mcp(
     """Search the configured web provider and return a plain-text formatted result block.
 
     Result snippets are discovery-oriented summaries, not authoritative evidence. Prefer
-    fetch_page_text or research_traverse before making factual claims from web material.
+    fetch_page_text before making factual claims from web material.
     """
     append_activity(
         kind      = "tool",
@@ -390,41 +384,6 @@ def get_page_links_text_mcp(
         filter_text     = filter_text,
         max_links       = max_links,
         timeout_seconds = timeout_seconds,
-    )
-
-
-@_mcp.tool(name="research_traverse")
-def research_traverse_mcp(
-    query                    : str,
-    max_search_results       : int = 5,
-    max_pages                : int = 6,
-    max_hops                 : int = 1,
-    same_domain_only_for_hops: bool = True,
-    timeout_seconds          : int = 15,
-    max_words_per_page       : int = 450,
-    max_evidence_quotes      : int = 3,
-) -> dict:
-    """Search, fetch, and follow multiple pages to build an evidence-led research bundle.
-
-    Prefer this when the answer requires cross-source synthesis rather than a single search
-    result or snippet-led summary.
-    """
-    append_activity(
-        kind      = "tool",
-        tool_name = "research_traverse",
-        target    = query,
-        status    = "requested",
-        message   = f"search_results={max_search_results} max_pages={max_pages} max_hops={max_hops}",
-    )
-    return research_traverse(
-        query                     = query,
-        max_search_results        = max_search_results,
-        max_pages                 = max_pages,
-        max_hops                  = max_hops,
-        same_domain_only_for_hops = same_domain_only_for_hops,
-        timeout_seconds           = timeout_seconds,
-        max_words_per_page        = max_words_per_page,
-        max_evidence_quotes       = max_evidence_quotes,
     )
 
 

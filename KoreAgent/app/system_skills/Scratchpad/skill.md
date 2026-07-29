@@ -92,7 +92,6 @@ Tool selection hierarchy (prefer earlier options when they can provide the answe
 - `lookup_wikipedia` - stable factual reference, single fast call
 - `fetch_page_text(query=...)` - known URL, isolated extraction
 - `search_web_text` + `fetch_page_text(query=...)` - URL unknown, single page answer
-- `research_traverse` - multi-source investigation, most expensive; use only when simpler tools cannot settle the question
 
 ## Token substitution
 Any skill argument containing `{scratchpad:key}` is automatically resolved to the stored value

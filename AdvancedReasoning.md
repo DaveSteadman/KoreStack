@@ -2,90 +2,138 @@
 
 ## Purpose
 
-KoreStack already has many of the parts needed for work that takes longer than one
-chat turn: bounded tool execution, delegated workers, a session scratchpad,
-structured datasets, and KoreDocs that can hold embedded metadata and lineage.
-The missing part is a durable controller which makes the current objective,
-evidence, next action, and completion conditions explicit.
-
-The intended result is not an agent that is told to "keep going". It is a
-repeatable, inspectable objective loop:
+KoreStack can turn long work into an inspectable production line when task layers exchange
+durable artefacts rather than conversational memory. The objective is not an agent told to
+"keep going". It is a recoverable loop:
 
 ```text
-objective -> plan -> execute one bounded step -> verify evidence -> assess -> next step or finish
+objective -> plan -> one bounded action -> verify evidence -> assess -> next action or finish
 ```
 
-Every transition should be recoverable after a new chat, a restart, or a human
-review. A later agent must be able to discover what has already been produced
-without trusting a compressed conversation summary.
+A new chat, restart, or human reviewer must be able to establish what happened from the plan,
+attempt records, and referenced artefacts. A compressed chat summary is helpful navigation, not
+proof or the system of record.
 
-## Useful pieces already present
+## Long-running task control plane
 
-| Component | Current value | Limitation for long-running work |
+A long-running task is not simply a slow prompt. It is an objective whose progress cannot safely
+live only in one chat context. It needs a durable identity, bounded iterations, and explicit
+reasons to start, continue, wait, retry, or stop.
+
+```text
+task_id -> start criteria -> eligible iteration -> evidence -> assess -> next start or exit
+```
+
+Every task should have a control record, stored durably alongside its objective plan:
+
+```json
+{
+  "task_id": "task_...",
+  "plan_ref": "koredoc:...",
+  "objective": "Keep a market briefing current and evidence-backed.",
+  "state": "active",
+  "iteration": 7,
+  "start_criteria": {
+    "schedule": "weekly on Monday at 08:00 Europe/London",
+    "events": ["new source_register matching the task metadata"],
+    "manual_start_allowed": true,
+    "not_before": "2026-08-03T08:00:00+01:00"
+  },
+  "exit_criteria": {
+    "complete_when": ["All plan success criteria have verified evidence."],
+    "pause_when": ["A human decision or missing external input is required."],
+    "stop_after": {"max_iterations": 20, "max_failures": 3, "expires_at": "2026-12-31"}
+  },
+  "last_assessment_ref": "koredoc:...",
+  "next_eligible_at": "2026-08-03T08:00:00+01:00"
+}
+```
+
+`task_id` is stable across plan revisions and worker attempts. An iteration is one bounded pass
+through the runner, not an unbounded conversation. Start criteria determine when that pass may
+run: a schedule, an incoming artefact, a failed-worker retry window, a freshness deadline, or a
+human request. Exit criteria determine when it must finish, pause, or request review; they include
+success evidence, budget and retry limits, expiry, and authority boundaries.
+
+The task control record should use a specific state machine: `active`, `waiting_for_worker`,
+`waiting_for_input`, `retry_scheduled`, `needs_review`, `blocked`, `complete`, and `cancelled`.
+Each iteration appends an immutable event record with its attempt IDs, inputs, worker chat IDs,
+artefacts, assessment decision, and the computed `next_eligible_at`. The control record is the
+current state; the event journal explains how it got there.
+
+This turns indefinite work into governed recurrence. A task does not run merely because it exists:
+it runs only when its start criteria are met and it has not met its exit criteria.
+
+## Boundaries between the components
+
+| Component | Use it for | Do not use it for |
 | --- | --- | --- |
-| Scratchpad | Holds exact tool results under short keys; supports query, peek, and token substitution. | It is primarily session-scoped and is not a durable project record. A key alone is not meaningful to a later chat. |
-| Datasets | Preserve structured record sets, filters, manifests, and lineage within a session. | They need an explicit durable hand-off and stable project-level naming. |
-| KoreDocs | Provides human-readable artefacts, embedded JSON headers, metadata search, history, and `input_refs`. | It does not yet define a project plan, execution lease, validation contract, or semantic graph of dependent steps. |
-| Delegation | Gives a worker an isolated tool loop, narrow allowlist, explicit input/output contract, and a collectable result. | A controller still has to decide when to delegate, poll and collect the result, make it durable, and handle retries or disagreement. |
-| `/chat new` | Separates a later conversation from prior conversational knowledge. | The next chat needs a durable plan and artefact references; otherwise it starts without useful state. Chat-sequence testing does not yet support this transition. |
-| Planner and orchestration loop | Selects tools, constrains active tools, performs bounded tool rounds, and records activity. | It is turn-oriented. It has no durable, user-visible objective state machine across separate runs. |
+| Scratchpad | Exact intermediate tool values within one chat. | Hand-off between independent task layers. |
+| Datasets | Structured working sets and transformations within a session. | The sole record of a durable project stage. |
+| KoreDocs | Durable human-readable reports, embedded metadata, lineage, and metadata search. | Queue state or execution leases. |
+| WorkerChats | Isolated, constrained execution with a single explicit result. | Ordinary linear work that a current chat can do directly. |
+| Objective plan | Declaring steps, contracts, acceptance checks, and state. | Evidence that a step really completed. |
+| Assessment | Deciding whether recorded evidence satisfies a contract. | Broadening objectives or silently lowering standards. |
 
-These components should remain distinct. Scratchpad is fast temporary memory;
-datasets are structured working sets; KoreDocs are durable artefacts; delegates
-are bounded workers. A plan should refer to them rather than duplicate their
-contents.
+The durable interface between task layers is KoreDocs, KoreData, or another explicit stored
+artefact reference. Scratchpad and session datasets are chat-local conveniences; they are not
+the architecture for a long-running objective.
 
-## Observed delegate lifecycle
+## WorkerChats: isolated execution, not inherited context
 
-The current `delegate` implementation is a queue-native, asynchronous child
-run. Calling it creates a durable task record under
-`datacontrol/koreagent/delegate_tasks`, allocates an isolated session named
-`delegate_task_<task_id>`, and appends the child job to the shared serial LLM
-task queue. The call returns immediately with `status: "queued"` and a task ID.
-The queue then runs the child separately; its result and status are persisted in
-the task record. This is a separate orchestration session, not necessarily a
-user-visible chat created by `/chat new`.
+WorkerChats replaces the old Delegate skill. A parent can create a configured worker without
+switching away from its current conversation:
 
-By default, the parent does not automatically become a new queued continuation
-after the child finishes. Its current tool call receives the queued response,
-and a later controller action can use `delegate_status` and `delegate_collect`
-to observe and consume completion. For plan-runner chains, the delegate
-contract now supports an explicit `process.continuation` object. When enabled,
-the terminal child task queues one fresh parent-session orchestration run with
-the task ID, status, durable output target, child result, and the planner's
-continuation instruction. The continuation state and its response are recorded
-with the delegate task. It runs only after a successful child unless
-`run_on_failure` is explicitly set.
+```text
+Parent chat
+  └─ chat_spawn(...)
+       └─ Worker chat
+            ├─ own session and scratchpad
+            ├─ exact prompt and structured inputs
+            ├─ narrow tool allowlist
+            ├─ queued / running / completed / failed lifecycle
+            └─ one durable result object
+```
 
-The generic delegate contract currently permits session-local transfer:
-`data_in.scratchpad_keys` and `data_in.datasets` are copied from the parent
-session to the child, while result targets may write back to parent scratchpad
-or dataset storage. That is useful for one-chat delegation, but it is not an
-acceptable hand-off between durable task layers. The objective-plan runner
-should use a stricter delegate profile:
+The public interface is:
 
-- Inputs are durable KoreDoc or KoreData references, or metadata searches that
-  resolve to those references; no scratchpad keys, session datasets, or inline
-  copied source text.
-- Outputs are durable artefacts with `plan_id`, `step_id`, `attempt_id`, and
-  `input_refs` metadata; no scratchpad or session-dataset result target.
-- The runner persists the task ID in its attempt record, then polls, collects,
-  validates, and schedules the next eligible step as a separate operation.
+```text
+chat_spawn(prompt, tools_allowlist, result_target, result_format, max_iterations, inputs)
+chat_status(chat_id)
+chat_result(chat_id)
+```
 
-This preserves the useful isolation and queueing behaviour of `delegate` while
-keeping conversational working memory out of the interface between task layers.
+Each worker has a `chat_...` ID, an isolated `worker_chat_...` session, a queue entry, a log,
+and a durable record under `datacontrol/koreagent/worker_chats`. Its result has a concise summary,
+artefact references, saved keys/datasets, execution metadata, and an error field. The parent does
+not inherit the worker's private chat history or hidden reasoning. It reads `chat_result` just as
+it would read a KoreDoc result.
 
-## Proposed capability: an Objective Plan skill
+This distinction is intentional. A worker's context is an implementation detail useful for
+debugging; its explicit result contract is the inter-layer interface.
 
-Create a skill that authors and validates a JSON objective plan. The plan is a
-durable control document, ideally saved as a `.koredoc` whose embedded metadata
-marks it as `artefact_type: objective_plan`.
+### Appropriate WorkerChat use
 
-The skill should create a small plan before substantial work starts, revise it
-only through explicit patches, and expose a compact status view. It must not
-pretend that a plan is proof that work was done.
+- A bounded research or extraction stage with a clear output contract.
+- An isolated document or dataset generation step with a deliberately limited tool set.
+- Several independent analyses which may later be compared by a controller.
+- A plan step that benefits from separate context, a different model configuration, or queueing.
 
-### Plan shape
+### Inappropriate WorkerChat use
+
+- A direct calculation or single tool call.
+- A vague instruction such as "investigate this" without expected outputs or checks.
+- Passing private conversational knowledge as the worker's only input.
+- Replacing normal sequential prompts merely because a task has more than one step.
+
+For ordinary linear work, subsequent prompts in the same chat are simpler and more observable.
+WorkerChats are a job primitive, not pseudo-conversation branching.
+
+## Proposed Objective Plan skill
+
+An Objective Plan skill should author and validate a durable JSON plan, normally stored in a
+KoreDoc with metadata such as `artefact_type: objective_plan`. It should make the objective,
+inputs, outputs, success criteria, and step states explicit before substantial work begins.
 
 ```json
 {
@@ -94,23 +142,19 @@ pretend that a plan is proof that work was done.
   "objective": "Produce an evidence-backed UK product-market briefing.",
   "success_criteria": [
     "A published briefing KoreDoc exists.",
-    "Every material claim has a source artefact reference.",
-    "Market sizing assumptions and uncertainties are stated."
+    "Each material claim has source artefact references.",
+    "Market-sizing assumptions and uncertainty are stated."
   ],
   "inputs": [
-    {
-      "ref": "artifact:...",
-      "role": "brief",
-      "required": true
-    }
+    { "ref": "koredoc:...", "role": "brief", "required": true }
   ],
   "steps": [
     {
       "id": "collect_sources",
-      "purpose": "Collect a bounded set of relevant primary sources.",
+      "purpose": "Collect a bounded primary-source register.",
       "depends_on": [],
-      "process": {
-        "mode": "delegate",
+      "execution": {
+        "mode": "worker_chat",
         "tools_allowlist": ["search_web", "fetch_page_text", "koredocs_doc_create"],
         "max_iterations": 6
       },
@@ -125,20 +169,10 @@ pretend that a plan is proof that work was done.
         }
       ],
       "acceptance": [
-        "At least three sources are present.",
-        "Each source has a URL and retrieval date."
+        "At least three primary sources exist.",
+        "Every source records a URL and retrieval date."
       ],
       "state": "pending"
-    }
-  ],
-  "outputs": [
-    {
-      "role": "final_briefing",
-      "required_metadata": {
-        "artefact_type": "market_briefing",
-        "plan_id": "obj_...",
-        "status": "published"
-      }
     }
   ],
   "state": "active",
@@ -146,139 +180,93 @@ pretend that a plan is proof that work was done.
 }
 ```
 
-The schema should use references rather than copied text. A `ref` can identify a
-KoreDoc artefact ID, a metadata query, a dataset name and revision, or a named
-scratchpad key only when the work remains in the same session.
+Plans contain references, not copied source text. A durable reference should be a KoreDoc ID,
+metadata query, KoreData reference, or a versioned dataset artefact. Scratchpad keys are valid
+only for explicitly session-local steps.
 
 ### Required invariants
 
-- Each output declares who produced it, which plan and step produced it, and its
-  input artefact IDs.
-- A step can become `completed` only after recorded acceptance evidence exists.
-- A retry must create a new attempt record; it must not silently overwrite an
-  earlier output.
-- The plan revision and the resulting artefact IDs must be recorded together.
-- The plan's success criteria are stable unless a human or authorised assessor
-  records a revision rationale.
+- Outputs record `plan_id`, `step_id`, `attempt_id`, producer, and `input_refs` metadata.
+- A step becomes `completed` only when its recorded acceptance evidence is present.
+- Retries create new attempt records; they do not silently overwrite an earlier result.
+- Plan revision and produced artefact IDs are recorded together.
+- Success criteria change only through an explicit, attributable revision.
 
-## Proposed task runner
+## Task runner
 
-The runner executes one eligible plan step at a time. It is deliberately not a
-free-running "do everything" loop.
+The runner performs one eligible plan step at a time. It is deliberately not a free-running
+"do everything" loop.
 
-1. Load the plan KoreDoc and validate its schema.
-2. Find a `pending` or recoverable `failed` step whose dependencies are complete.
-3. Resolve inputs through KoreDoc metadata search and verify that required
-   artefacts exist.
-4. Create an immutable attempt record with timestamps, selected tools, model,
-   plan revision, and expected output contract.
-5. Execute locally for deterministic work, or call `delegate` for an isolated
-   bounded worker. Give the worker only durable references and a narrow tool
-   allowlist; persist the returned delegate task ID in the attempt record.
-6. In a later runner operation, poll and collect the worker result. Verify output
-   existence, metadata, lineage, and deterministic checks where possible.
-7. Patch the plan state to `completed`, `blocked`, `failed`, or `needs_review`.
-   Persist the patch and attempt record before returning control.
+1. Load and validate the plan KoreDoc.
+2. Select one pending or recoverable step whose dependencies are complete.
+3. Resolve and verify each required durable input.
+4. Create an immutable attempt record containing plan revision, selected tools, model, expected
+   outputs, acceptance checks, timestamps, and an idempotency key.
+5. Use direct execution for deterministic small work, or `chat_spawn` for an isolated worker.
+   The worker receives durable references and a narrow allowlist; persist its `chat_id` in the
+   attempt record.
+6. In a later runner operation, call `chat_status` / `chat_result`, validate the resulting
+   artefacts and metadata, and record the evidence.
+7. Patch the plan to `completed`, `failed`, `blocked`, or `needs_review` before returning.
 
-Delegation should be a mechanism inside the runner, not the plan itself. A plan
-declares the contract; the runner decides whether the current step warrants a
-worker. This keeps small deterministic steps cheap and makes expensive work
-explicitly budgeted.
+WorkerChats is an execution choice inside the runner, not a planning mode. The plan declares a
+contract; the runner chooses direct execution or a worker according to isolation, cost, and risk.
 
-The runner should require idempotency keys. For example, an attempt may write
-`plan_id`, `step_id`, and `attempt_id` into its output metadata. On recovery it
-can find an already-created valid output rather than produce duplicates.
+## Assessment skill
 
-## Proposed assessment skill
-
-After each completed or failed attempt, an assessment skill should inspect only
-the plan, attempt record, and referenced artefacts. It should return a structured
-decision, not free-form encouragement:
+After a terminal attempt, an assessor reads only the plan, attempt record, and referenced
+artefacts. It returns a structured decision:
 
 ```json
 {
   "decision": "continue",
-  "evidence": ["artifact:..."],
+  "evidence": ["koredoc:..."],
   "completed_steps": ["collect_sources"],
   "next_step": "synthesise_briefing",
-  "risks": ["Source coverage is weak for competitor pricing."],
+  "risks": ["Competitor-price coverage is weak."],
   "plan_patch": [],
   "human_decision_required": false
 }
 ```
 
-Permitted decisions are `continue`, `retry`, `replan`, `blocked`,
-`needs_review`, and `complete`. The assessor may recommend a patch, but should
-not broaden the objective, relax a success criterion, spend beyond a budget, or
-publish an external result without defined authority.
+Permitted decisions are `continue`, `retry`, `replan`, `blocked`, `needs_review`, and `complete`.
+The assessor may recommend a patch, but cannot broaden the objective, relax success criteria,
+spend beyond a budget, or publish externally without authority.
 
-Assessment needs both mechanical and judgement checks:
+Mechanical validation should dominate whenever possible: artefact existence, metadata, lineage,
+record counts, citations, and reproducible calculations. Model judgement remains valuable for
+relevance, contradictions, and whether the result answers the objective, but it is not independent
+verification.
 
-- Mechanical: required artefacts exist; metadata matches; lineage is complete;
-  citations or record counts meet a contract; a calculated value can be
-  independently recomputed.
-- Judgement: evidence is sufficiently relevant; contradictions are represented;
-  the output answers the stated objective rather than merely containing words
-  associated with it.
+## Where this works
 
-Mechanical checks should dominate whenever possible. The recent data-pipeline
-test showed why: a model can report success after a tool error or a weakened
-metadata query. A durable runner must record and surface those errors.
-
-## Where this model works
-
-This is well suited to bounded, artefact-centred tasks:
-
-- Research and briefing pipelines with explicit source registers and a final
-  report.
-- Market, product, company, or country analysis where intermediate data tables
-  and assumptions must survive later review.
-- Data cleaning, classification, extraction, and report generation where each
-  transformation has a record-shaped input and output.
-- Code or document workflows where a reviewer can validate tests, diffs, or
-  rendered output before the next step.
-- Work split among delegates when their remits, tools, and output targets can be
-  stated narrowly.
-
-It is especially valuable with lower-capability models: the plan and artefacts
-reduce the need to retain a large implicit mental model in one context window.
+- Research and briefing pipelines with source registers and final reports.
+- Market, product, company, and country analysis with reusable intermediate artefacts.
+- Data cleaning, extraction, classification, and report generation with record-shaped contracts.
+- Code or document workflows where tests, diffs, or rendered output can validate a stage.
+- Lower-capability models, where explicit plans and artefacts reduce reliance on one large context.
 
 ## Where it fails or becomes expensive
 
-- Vague objectives produce vague plans. A loop cannot manufacture a testable
-  definition of "make this good".
-- Metadata is only useful if values are disciplined. Inconsistent names,
-  arbitrary tags, or missing `input_refs` turn search into guesswork.
-- LLM judgement is not independent verification. Two model passes can repeat
-  the same mistaken premise.
-- External facts change. Time-sensitive sources need retrieval dates, expiry
-  rules, and a decision on whether a plan should rerun.
-- Delegates add latency, cost, and failure modes. They should not be used for a
-  task one direct tool call can complete.
-- Concurrent runners can duplicate work or overwrite state without leases and
-  compare-and-swap plan revisions.
-- A plan can become bureaucracy for a short task. Planning depth must be
-  proportional to risk, duration, and the number of independent artefacts.
-- A new chat only clears conversational context. It does not by itself establish
-  correct durable state; the plan and artefact references must be sufficient.
+- Vague objectives yield vague plans; no loop can manufacture a testable definition of quality.
+- Undisciplined metadata and missing lineage make durable search as unreliable as filenames.
+- Multiple model passes can repeat the same false premise; they are not independent evidence.
+- Changing external facts require retrieval dates, expiry rules, and rerun decisions.
+- WorkerChats add latency, cost, queue contention, and more failure states.
+- Concurrent runners need leases and compare-and-swap plan revisions to prevent duplicate work.
+- A plan can become bureaucracy for short, low-risk tasks.
+- A new chat clears conversational context but does not establish correct durable state by itself.
 
-## Suggested implementation sequence
+## Implementation sequence
 
-1. Define and validate the plan JSON schema, including references, step states,
-   acceptance evidence, and revision history.
-2. Add KoreDoc helpers to create, find, and patch `objective_plan` artefacts by
-   metadata.
-3. Build a read-only plan inspector before adding execution. It should explain
-   which step is eligible and why.
-4. Implement a single-step runner with deterministic output and lineage checks.
-5. Add delegated execution with attempt records, timeouts, and idempotency keys.
-6. Add the assessor with a constrained decision vocabulary and human-review
-   boundary.
-7. Add end-to-end tests that create an artefact in one chat and consume it from
-   a fresh chat or process. Test the saved files and tool logs, not only model
-   final text.
+1. Stabilise WorkerChats and test explicit result contracts across fresh chats/processes.
+2. Define and validate the objective-plan JSON schema and KoreDoc metadata conventions.
+3. Build read-only plan inspection explaining the next eligible step and why.
+4. Add a serial, single-step runner with idempotency and mechanical output checks.
+5. Add WorkerChat execution and durable attempt records to that runner.
+6. Add the constrained assessment skill and human-review boundary.
+7. Add end-to-end tests that inspect saved artefacts and queue/result records, not merely model prose.
 
-The first successful version should be narrow: one plan, serial steps, explicit
-human approval for re-planning and publication, and strong inspection tools.
-Parallel scheduling, autonomous replanning, and broad background execution can
-follow only after the artefact and validation contracts are dependable.
+The first useful version should be serial, bounded, and inspectable. Parallel workers, autonomous
+replanning, and broad background execution should follow only once the artefact and validation
+contracts are dependable.

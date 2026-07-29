@@ -82,7 +82,6 @@ _SYSTEM_SKILL_GUIDANCE: list[str] = [
     "- When the user wants a faithful document export from a dataset, prefer dataset_write_koredoc instead of manually rewriting rows into file content.",
     "- When KoreData search results include artifact_ref, prefer koredata_get_full_text(refid) for follow-up retrieval instead of rebuilding domain-specific lookup arguments by hand.",
     "- When the user wants a full-text dataset from KoreData search results, prefer dataset_expand_full_text(...) over manual per-row fetch loops.",
-    "- When research_traverse stores page scratchpad keys such as research_page_*, query those page scratchpad keys instead of scratchpad_load on the entire combined research bundle.",
     "- For article harvests, count only concrete article/detail pages. Do not count homepages, category pages, topic pages, search-result pages, or section fronts.",
     "- When harvesting article URLs from a hub page, use get_page_links or get_page_links_text first and prefer_article_urls=true when that option exists.",
 
@@ -131,11 +130,6 @@ _TOOL_ROUTING_FUDGE: list[str] = [
     # the orchestrator enforces it without a system-prompt override.
     "- For factual, reference, encyclopaedic, or biographical queries, use KoreData MCP search/retrieval tools first when they are available. Fall back to web tools only if KoreData returns empty results. Skip this and go directly to a web tool when the prompt explicitly says 'search the web', 'search online', or 'find on the internet'.",
     "- When using KoreData MCP search tools, only include facts that appear in content you retrieved. Do not use training knowledge to fill gaps. If KoreData returns no content for a topic, say so explicitly rather than writing from memory.",
-
-    # -- research_traverse: invocation trigger (cross-cutting; applies regardless of tools present)
-    # Long-term fix: add 'research / investigate / deep dive' to research_traverse trigger
-    # list in skill.md so skill-selection guidance handles dispatch without this override.
-    "- When a prompt says 'research', 'investigate', 'look into', 'find evidence', or 'deep dive into', you MUST call research_traverse. Never answer these prompts from training data.",
 
     # -- Date anchoring (cross-cutting; applies to any tool that returns time-sensitive data) -
     "- Treat words like 'latest', 'recent', 'today', 'current', and 'new' as date-sensitive. Anchor them to the current runtime date already provided in system context. Do not invent year ranges unless the user explicitly requests them.",
