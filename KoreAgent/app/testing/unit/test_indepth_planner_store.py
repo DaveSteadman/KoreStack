@@ -18,6 +18,54 @@ import indepth_planner_store as planner_store
 
 
 class InDepthPlannerStoreTests(unittest.TestCase):
+    def test_simple_plan_validation_rejects_missing_dependencies(self) -> None:
+        with self.assertRaisesRegex(RuntimeError, "dependency"):
+            planner_store._validate_simple_plan(
+                {"static": {"tasks": [{"id": "1", "depends_on": ["2"]}]}, "dynamic": {"tasks": {}}}
+            )
+
+    def test_clear_simple_task_data_retains_ran_flag(self) -> None:
+        plan = {
+            "static":  {"objective": "research", "tasks": [{"id": "1", "title": "Find", "description": "", "instruction": "Find", "depends_on": []}]},
+            "dynamic": {"tasks": {"1": {"ran": True, "data": {"source": "example"}}}},
+        }
+        with (
+            patch.object(planner_store, "get_simple_plan", return_value=plan),
+            patch.object(planner_store, "_save_simple_plan", side_effect=lambda saved, **_kwargs: saved),
+        ):
+            saved = planner_store.clear_simple_task_data(task_id="1")
+
+        self.assertTrue(saved["dynamic"]["tasks"]["1"]["ran"])
+        self.assertEqual(saved["dynamic"]["tasks"]["1"]["data"], {})
+
+    def test_reset_simple_task_run_retains_dynamic_data(self) -> None:
+        plan = {
+            "static":  {"objective": "research", "tasks": [{"id": "1", "title": "Find", "description": "", "instruction": "Find", "depends_on": []}]},
+            "dynamic": {"tasks": {"1": {"ran": True, "data": {"source": "example"}}}},
+        }
+        with (
+            patch.object(planner_store, "get_simple_plan", return_value=plan),
+            patch.object(planner_store, "_save_simple_plan", side_effect=lambda saved, **_kwargs: saved),
+        ):
+            saved = planner_store.reset_simple_task_run(task_id="1")
+
+        self.assertFalse(saved["dynamic"]["tasks"]["1"]["ran"])
+        self.assertEqual(saved["dynamic"]["tasks"]["1"]["data"], {"source": "example"})
+
+    def test_clear_simple_dynamic_preserves_static_plan(self) -> None:
+        plan = {
+            "static":  {"objective": "research", "tasks": [{"id": "1", "title": "Find", "description": "", "instruction": "Find", "depends_on": []}]},
+            "dynamic": {"tasks": {"1": {"ran": True, "data": {"source": "example"}}}},
+        }
+        with (
+            patch.object(planner_store, "get_simple_plan", return_value=plan),
+            patch.object(planner_store, "_save_simple_plan", side_effect=lambda saved, **_kwargs: saved),
+        ):
+            saved = planner_store.clear_simple_dynamic()
+
+        self.assertEqual(saved["static"]["tasks"][0]["id"], "1")
+        self.assertEqual(saved["dynamic"], {"tasks": {}})
+
     def test_plan_assigns_human_facing_sequential_task_ids(self) -> None:
         payload = planner_store.build_plan_payload(
             objective="research",
@@ -86,11 +134,11 @@ class InDepthPlannerStoreTests(unittest.TestCase):
                 session_id="session_71",
             )
 
-        self.assertEqual(saved["baseline"]["objective"], "new plan")
         self.assertEqual(saved["current"]["objective"], "new plan")
         self.assertEqual(len(saved["current"]["tasks"]), 1)
-        self.assertEqual(saved["current"]["revision"], 1)
         self.assertEqual(len(persisted), 1)
+        self.assertEqual(persisted[0]["static"]["objective"], "new plan")
+        self.assertIn("dynamic", persisted[0])
         self.assertNotIn("old plan", str(persisted[0]))
 
     def test_save_rejects_a_korechat_service_that_drops_plans(self) -> None:

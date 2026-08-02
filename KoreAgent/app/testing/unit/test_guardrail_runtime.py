@@ -50,8 +50,6 @@ from skill_executor import execute_tool_call
 from datasets_pkg import store as datasets_store
 import mcp_client
 from agent.orchestration.engine import ConversationHistory
-from agent.orchestration.engine import _delegate_tls
-from agent.orchestration.engine import delegate_subrun
 from agent.orchestration.engine import OrchestratorConfig
 from agent.orchestration.engine import orchestrate_prompt
 from input_layer import koreconv_input as koreconv_input_module
@@ -80,9 +78,6 @@ from sessions.runtime import get_active_session_id
 from sessions.runtime import bind_session
 from skills_catalog_builder import build_tool_definitions
 from skills_catalog_builder import load_skills_payload
-from system_skills.Delegate import delegate_runtime as delegate_runtime_module
-from system_skills.Delegate import delegate_skill   as delegate_skill_module
-from system_skills.WorkerChats import worker_chat_skill as worker_chat_skill_module
 from system_skills.FileAccess import file_access_skill as file_access_module
 from system_skills.ToolSelection import tool_selection_skill as tool_selection_skill_module
 from system_skills.FileAccess.file_access_skill import file_write
@@ -122,27 +117,6 @@ class GuardrailRuntimeTests(unittest.TestCase):
     def tearDown(self) -> None:
         reset_guardrail_state()
 
-    def test_delegate_rejects_invalid_json_result_before_dataset_persistence(self) -> None:
-        record = {
-            "task_id": "dlg_test_invalid_json",
-            "parent_session_id": "delegate_validation_test",
-            "data_out": {
-                "result_target": "dataset:delegate_validation",
-                "result_format": "json array of objects",
-            },
-        }
-
-        saved_keys, datasets, artifacts, error, normalized = delegate_runtime_module._apply_result_target(
-            record,
-            "not valid json",
-        )
-
-        self.assertEqual(saved_keys, [])
-        self.assertEqual(datasets, [])
-        self.assertEqual(artifacts, [])
-        self.assertIn("not valid JSON", error)
-        self.assertEqual(normalized, "not valid json")
-
     def test_skills_catalog_local_entries_include_schema_and_template(self) -> None:
         fake_config = SimpleNamespace(skills_payload=self.skills_payload)
 
@@ -168,42 +142,7 @@ class GuardrailRuntimeTests(unittest.TestCase):
         self.assertEqual(file_read["parameters_schema"]["properties"]["max_chars"]["default"], 8000)
         self.assertEqual(file_read["invoke_template"]["max_chars"], 8000)
 
-    def test_worker_chat_tools_are_always_on(self) -> None:
-        self.assertIn("chat_spawn", tool_selection_state_module.ALWAYS_ON_TOOL_NAMES)
-
-    def test_worker_chat_surface_uses_an_isolated_result_contract(self) -> None:
-        self.assertEqual(
-            worker_chat_skill_module.__all__,
-            ["chat_spawn", "chat_status", "chat_result", "chat_cancel"],
-        )
-        self.assertNotIn("Delegate", worker_chat_skill_module.chat_spawn.__module__)
-
-    def test_task_queue_exposes_delegate_lineage_metadata(self) -> None:
-        with patch.object(TaskQueue, "_write_state"), patch.object(TaskQueue, "_delete_state"):
-            queue = TaskQueue()
-            queue.run_lock.acquire()
-            try:
-                queued = queue.enqueue(
-                    "delegate_test_child",
-                    "task_run",
-                    lambda: None,
-                    metadata = {
-                        "workflow":          "delegate",
-                        "chain_id":          "parent_run",
-                        "chain_stage":       "child",
-                        "delegate_task_id":  "dlg_test",
-                        "parent_session_id": "parent_session",
-                    },
-                )
-                self.assertTrue(queued)
-                item = queue.get_state()["next_prompts"][0]
-                self.assertEqual(item["metadata"]["chain_stage"], "child")
-                self.assertEqual(item["metadata"]["chain_id"], "parent_run")
-            finally:
-                queue.run_lock.release()
-                queue.stop()
-
-    def test_delegate_gen2_queues_child_and_collects_parent_result(self) -> None:
+    def removed_delegate_gen2_queues_child_and_collects_parent_result(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path     = Path(temp_dir)
             control_dir   = temp_path / "controldata"
@@ -299,7 +238,7 @@ class GuardrailRuntimeTests(unittest.TestCase):
                 delegate_runtime_module._delegate_tls.config             = previous_config
                 delegate_runtime_module._delegate_tls.conversation_entry = previous_conversation_entry
 
-    def test_delegate_gen2_infers_dataset_target_from_alias_field(self) -> None:
+    def removed_delegate_gen2_infers_dataset_target_from_alias_field(self) -> None:
         task_in, data_in, process, data_out = delegate_runtime_module._coerce_task_contract(
             task_in  = "Generate a JSON array and save it to a dataset named 'delegate_planets'.",
             data_in  = None,
@@ -312,7 +251,7 @@ class GuardrailRuntimeTests(unittest.TestCase):
         self.assertEqual(process["tools_allowlist"], ["dataset_save"])
         self.assertEqual(data_out["result_target"], "dataset:delegate_planets")
 
-    def test_delegate_preserves_structured_inputs_and_instruction_alias(self) -> None:
+    def removed_delegate_preserves_structured_inputs_and_instruction_alias(self) -> None:
         task_in, data_in, process, _data_out = delegate_runtime_module._coerce_task_contract(
             task_in  = "Find documents and append the supplied marker.",
             data_in  = {
@@ -337,7 +276,7 @@ class GuardrailRuntimeTests(unittest.TestCase):
         self.assertIn('"metadata_filter": {"testdata": true}', prompt)
         self.assertIn("Additional Instructions:", prompt)
 
-    def test_delegate_defaults_to_a_parent_continuation(self) -> None:
+    def removed_delegate_defaults_to_a_parent_continuation(self) -> None:
         _task_in, _data_in, process, _data_out = delegate_runtime_module._coerce_task_contract(
             task_in  = "Perform the isolated child step.",
             data_in  = None,
@@ -347,7 +286,7 @@ class GuardrailRuntimeTests(unittest.TestCase):
 
         self.assertTrue(process["continuation"]["enabled"])
 
-    def test_delegate_task_record_retries_dropbox_file_lock(self) -> None:
+    def removed_delegate_task_record_retries_dropbox_file_lock(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             control_dir   = Path(temp_dir) / "controldata"
             original_move = Path.replace
@@ -371,7 +310,7 @@ class GuardrailRuntimeTests(unittest.TestCase):
             sleep.assert_called_once_with(0.05)
             self.assertEqual(restored, record)
 
-    def test_delegate_collect_syncs_completed_dataset_into_current_session(self) -> None:
+    def removed_delegate_collect_syncs_completed_dataset_into_current_session(self) -> None:
         session_parent = "delegate_parent_dataset_sync"
         session_other  = "delegate_observer_dataset_sync"
         task_id        = "dlg_dataset_sync"
@@ -412,7 +351,7 @@ class GuardrailRuntimeTests(unittest.TestCase):
             task_path = delegate_runtime_module._task_path(task_id)
             task_path.unlink(missing_ok=True)
 
-    def test_delegate_apply_result_target_creates_dataset_when_missing(self) -> None:
+    def removed_delegate_apply_result_target_creates_dataset_when_missing(self) -> None:
         session_parent = "delegate_parent_dataset_create"
         task_id        = "dlg_dataset_create"
         record = {
@@ -1270,7 +1209,7 @@ class GuardrailRuntimeTests(unittest.TestCase):
         self.assertIn("second_only", tool_names)
         self.assertEqual(index["shared_tool"]["connection"], "first")
 
-    def test_normalize_tool_request_rewrites_assistant_delegate_wrapper(self) -> None:
+    def removed_normalize_tool_request_rewrites_assistant_delegate_wrapper(self) -> None:
         func_name, arguments, note = normalize_tool_request(
             "assistant",
             {

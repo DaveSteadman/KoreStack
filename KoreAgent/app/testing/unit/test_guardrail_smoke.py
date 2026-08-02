@@ -50,8 +50,6 @@ from skill_executor import execute_tool_call
 from datasets_pkg import store as datasets_store
 import mcp_client
 from agent.orchestration.engine import ConversationHistory
-from agent.orchestration.engine import _delegate_tls
-from agent.orchestration.engine import delegate_subrun
 from agent.orchestration.engine import OrchestratorConfig
 from agent.orchestration.engine import orchestrate_prompt
 from input_layer import koreconv_input as koreconv_input_module
@@ -80,8 +78,6 @@ from sessions.runtime import get_active_session_id
 from sessions.runtime import bind_session
 from skills_catalog_builder import build_tool_definitions
 from skills_catalog_builder import load_skills_payload
-from system_skills.Delegate import delegate_runtime as delegate_runtime_module
-from system_skills.Delegate import delegate_skill   as delegate_skill_module
 from system_skills.FileAccess import file_access_skill as file_access_module
 from system_skills.ToolSelection import tool_selection_skill as tool_selection_skill_module
 from system_skills.FileAccess.file_access_skill import file_write
@@ -184,7 +180,7 @@ class GuardrailSmokeTests(unittest.TestCase):
                         "validate": ["file_read"],
                     },
                 },
-                known_tool_names={"file_read", "file_write", "tools_catalog_list", "tools_active_add", "delegate"},
+                known_tool_names={"file_read", "file_write", "tools_catalog_list", "tools_active_add"},
             )
             task_planning_module.persist_task_plan(plan)
 
@@ -210,7 +206,7 @@ class GuardrailSmokeTests(unittest.TestCase):
             self.assertIn("file_write", after_tools)
             self.assertIn("tools_catalog_list", after_tools)
             self.assertIn("tools_active_add", after_tools)
-            self.assertIn("delegate", after_tools)
+            self.assertNotIn("delegate", after_tools)
 
     def test_task_plan_holds_phase_when_phase_specific_criteria_not_met(self) -> None:
         with bind_session("task_plan_phase_hold"):
@@ -399,19 +395,6 @@ class GuardrailSmokeTests(unittest.TestCase):
             self.assertEqual(calls, ["file_read", "file_write", "file_read"])
             self.assertEqual(task_planning_module.get_task_plan_phase(), "complete")
 
-    def test_test_wrapper_extracts_delegate2_log_evidence(self) -> None:
-        with tempfile.TemporaryDirectory() as temp_dir:
-            log_path = Path(temp_dir) / "delegate.log"
-            log_path.write_text(
-                "[delegate2] queued task_id=dlg_20260712_220145_569ff5b3 child_session_id=delegate_task_dlg_20260712_220145_569ff5b3\n",
-                encoding="utf-8",
-            )
-
-            events = test_wrapper_module._extract_delegate_events(str(log_path))
-
-        self.assertEqual(len(events), 1)
-        self.assertIn("[delegate2] queued", events[0])
-
     def test_tool_loop_auto_activates_known_inactive_tool_and_blocks_dead_end_final(self) -> None:
         class _DummyLogger:
             def log(self, _message: str = "") -> None:
@@ -531,6 +514,88 @@ class GuardrailSmokeTests(unittest.TestCase):
         joined_messages = "\n".join(str(message.get("content", "")) for message in messages)
         self.assertIn("It has been added to the active tool set", joined_messages)
         self.assertIn("Recovery still required: do not answer yet. Retry `dataset_list` now", joined_messages)
+
+    def test_plan_run_to_completion_blocks_final_answer_until_remaining_task_is_ran(self) -> None:
+        class _DummyLogger:
+            def log(self, _message: str = "") -> None:
+                pass
+
+            def log_file_only(self, _message: str = "") -> None:
+                pass
+
+            def log_section(self, _title: str) -> None:
+                pass
+
+            def log_section_file_only(self, _title: str) -> None:
+                pass
+
+        class _FakeResult:
+            def __init__(self, response: str, tool_calls: list | None = None) -> None:
+                self.response           = response
+                self.message            = {"content": response}
+                self.prompt_tokens      = 10
+                self.completion_tokens  = 5
+                self.tokens_per_second  = 1.0
+                self.tool_calls         = tool_calls or []
+
+        def _tool_call(name: str, arguments: str = "{}") -> dict:
+            return {
+                "id":       f"tc_{name}",
+                "type":     "function",
+                "function": {"name": name, "arguments": arguments},
+            }
+
+        remaining = [{"id": "2", "static": {"instruction": "Collect the evidence."}, "dynamic": {"ran": False}}]
+        responses = [
+            _FakeResult("", [_tool_call("plan_run_to_completion")]),
+            _FakeResult("The plan is complete."),
+            _FakeResult("", [_tool_call("plan_mark_task_ran", '{"task_id":"2"}')]),
+            _FakeResult("The plan is complete."),
+        ]
+        calls: list[str] = []
+
+        def fake_call_llm_chat(**_kwargs):
+            return responses.pop(0)
+
+        def fake_execute_tool_call(func_name, arguments, *_args):
+            calls.append(func_name)
+            if func_name == "plan_mark_task_ran":
+                remaining.clear()
+            return ToolCallResult(
+                tool      = func_name,
+                function  = func_name,
+                module    = "InDepthPlanner",
+                arguments = arguments,
+                result    = "ok",
+            )
+
+        config = SimpleNamespace(resolved_model="test-model", max_iterations=5, num_ctx=8192, skills_payload={"skills": []})
+        messages = [{"role": "system", "content": "system"}, {"role": "user", "content": "run the plan"}]
+        context_map = [
+            {"round": 0, "role": "sys",  "label": "system", "chars": 6,  "auto_key": None, "msg_idx": 0},
+            {"round": 0, "role": "user", "label": "prompt", "chars": 12, "auto_key": None, "msg_idx": 1},
+        ]
+
+        with patch.object(tool_loop_module, "execute_tool_call", side_effect=fake_execute_tool_call):
+            final_response, _prompt_tokens, _completion_tokens, run_success, _tps, _outputs = tool_loop_module.run_tool_loop(
+                config                             = config,
+                messages                           = messages,
+                tool_defs                          = [],
+                catalog_gates                      = {},
+                context_map                        = context_map,
+                user_prompt                        = "run the plan",
+                logger                             = _DummyLogger(),
+                quiet                              = True,
+                call_llm_chat                      = fake_call_llm_chat,
+                stop_requested                     = lambda: False,
+                clear_stop                         = lambda: None,
+                run_to_completion_remaining_provider = lambda: remaining,
+            )
+
+        self.assertTrue(run_success)
+        self.assertEqual(final_response, "The plan is complete.")
+        self.assertEqual(calls, ["plan_run_to_completion", "plan_mark_task_ran"])
+        self.assertIn("Task 2 has not been run", "\n".join(str(item.get("content", "")) for item in messages))
 
     def test_tool_loop_suggests_corrected_tool_name_for_invalid_request(self) -> None:
         class _DummyLogger:

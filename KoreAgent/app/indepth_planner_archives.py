@@ -22,8 +22,8 @@ ARCHIVE_SUFFIX         = ".plan.json"
 _NAME_RE               = re.compile(r"[^a-z0-9]+")
 
 
-def _utc_now() -> str:
-    return datetime.now(timezone.utc).isoformat()
+def _exported_at_timestamp() -> str:
+    return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
 
 
 def _archive_name(path: Path) -> str:
@@ -70,7 +70,10 @@ def resolve_plan_archive(name: str) -> tuple[Path | None, list[Path]]:
 
 
 def export_plan_archive(*, name: str, plan: dict[str, Any], source_conversation_id: object = None) -> dict[str, Any]:
-    if not isinstance(plan, dict) or not plan.get("current"):
+    from indepth_planner_store import _to_persisted_plan
+
+    persisted_plan = _to_persisted_plan(plan) if isinstance(plan, dict) else {}
+    if not persisted_plan.get("static"):
         raise RuntimeError("There is no active plan to export.")
 
     path = _archive_path_for_name(name)
@@ -78,12 +81,8 @@ def export_plan_archive(*, name: str, plan: dict[str, Any], source_conversation_
     archive = {
         "format": ARCHIVE_FORMAT,
         "format_version": ARCHIVE_FORMAT_VERSION,
-        "exported_at": _utc_now(),
-        "source": {
-            "conversation_id": source_conversation_id,
-            "plan_revision": plan.get("current", {}).get("revision"),
-        },
-        "plan": plan,
+        "exported_at": _exported_at_timestamp(),
+        "plan": {"static": persisted_plan["static"]},
     }
     temporary = path.with_suffix(f"{path.suffix}.tmp")
     temporary.write_text(json.dumps(archive, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -110,6 +109,8 @@ def load_plan_archive(name: str) -> dict[str, Any]:
         format_version = 0
     if format_version != ARCHIVE_FORMAT_VERSION:
         raise RuntimeError(f"'{path.name}' uses unsupported plan archive format version.")
-    if not isinstance(archive.get("plan"), dict) or not archive["plan"].get("current"):
+    if not isinstance(archive.get("plan"), dict) or not isinstance(archive["plan"].get("static"), dict):
         raise RuntimeError(f"'{path.name}' does not contain a valid active plan.")
+    from indepth_planner_store import _validate_simple_plan
+    _validate_simple_plan({"static": archive["plan"]["static"], "dynamic": {"tasks": {}}})
     return {"name": _archive_name(path), "path": str(path), "archive": archive}

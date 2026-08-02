@@ -4,14 +4,10 @@
 # Slash command handlers for scheduled task management.
 #
 # Commands handled:
-#   /tasks              -- list all scheduled tasks with status and schedule
-#   /tasks add          -- create a new task schedule entry
-#   /tasks enable <n>   -- enable a task by name
-#   /tasks disable <n>  -- disable a task by name
-#   /tasks delete <n>   -- remove a task schedule entry
-#   /tasks edit <n>     -- open a task schedule in an editor
+#   /cronprompts              -- list all scheduled cron prompts
+#   /cronprompt <command>     -- manage one scheduled cron prompt
 #
-# Registered in slash_commands.py under the /tasks command.
+# Registered in slash_commands.py under /cronprompts and /cronprompt.
 #
 # Related modules:
 #   - input_layer/slash_commands.py         -- registers all handlers
@@ -112,14 +108,14 @@ def _task_save(json_path, data: dict) -> None:
 def _cmd_task(arg: str, ctx: SlashCommandContext) -> None:
     parts = arg.strip().split(None, 1)
     if not parts:
-        ctx.output("Usage: /task <enable|disable|add|delete|run> [args]  |  /tasks to list all tasks", "dim")
+        ctx.output("Usage: /cronprompt <enable|disable|add|delete|run> [args]  |  /cronprompts to list all cron prompts", "dim")
         return
 
     sub = parts[0].lower()
     rest = parts[1].strip() if len(parts) > 1 else ""
     if sub in ("enable", "disable"):
         if not rest:
-            ctx.output(f"Usage: /task {sub} <name>", "dim")
+            ctx.output(f"Usage: /cronprompt {sub} <name>", "dim")
             return
         found = _task_find(rest)
         if found is None:
@@ -133,7 +129,7 @@ def _cmd_task(arg: str, ctx: SlashCommandContext) -> None:
 
     if sub == "delete":
         if not rest:
-            ctx.output("Usage: /task delete <name>", "dim")
+            ctx.output("Usage: /cronprompt delete <name>", "dim")
             return
         found = _task_find(rest)
         if found is None:
@@ -152,7 +148,7 @@ def _cmd_task(arg: str, ctx: SlashCommandContext) -> None:
     if sub == "add":
         add_parts = rest.split(None, 2)
         if len(add_parts) < 3:
-            ctx.output("Usage: /task add <name> <minutes|HH:MM> <prompt>", "dim")
+            ctx.output("Usage: /cronprompt add <name> <minutes|HH:MM> <prompt>", "dim")
             ctx.output("  minutes  = interval schedule (e.g. 60)", "dim")
             ctx.output("  HH:MM    = daily schedule at that wall-clock time (e.g. 08:30)", "dim")
             return
@@ -182,7 +178,7 @@ def _cmd_task(arg: str, ctx: SlashCommandContext) -> None:
 
     if sub == "run":
         if not rest:
-            ctx.output("Usage: /task run <name>", "dim")
+            ctx.output("Usage: /cronprompt run <name>", "dim")
             return
         found = _task_find(rest)
         if found is None:
@@ -252,10 +248,10 @@ def _cmd_task(arg: str, ctx: SlashCommandContext) -> None:
 
 
 def register_task_slash_commands(registry: dict[str, Callable], descriptions: dict[str, str]) -> None:
-    registry.update({"/tasks": _cmd_tasks, "/task": _cmd_task})
+    registry.update({"/cronprompts": _cmd_tasks, "/cronprompt": _cmd_task})
     descriptions.update(
         {
-            "/tasks": "List all scheduled tasks with status, schedule, and first prompt",
-            "/task": "enable|disable|add|delete|run <name> [schedule] [prompt]  Manage scheduled tasks; /task run <name> executes a task immediately",
+            "/cronprompts": "List all scheduled cron prompts with status, schedule, and first prompt",
+            "/cronprompt": "enable|disable|add|delete|run <name> [schedule] [prompt]  Manage scheduled cron prompts; /cronprompt run <name> executes one immediately",
         }
     )

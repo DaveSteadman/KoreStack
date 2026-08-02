@@ -13,7 +13,7 @@ class SlashCommandRegistryTests(unittest.TestCase):
         self.assertTrue(expected.issubset(slash_commands._DESCRIPTIONS))
 
     def test_retired_commands_are_not_registered(self) -> None:
-        for command in {"/test", "/testtrend", "/newchat"}:
+        for command in {"/test", "/testtrend", "/newchat", "/task", "/tasks"}:
             self.assertNotIn(command, slash_commands._REGISTRY)
             self.assertNotIn(command, slash_commands._DESCRIPTIONS)
 
@@ -22,3 +22,15 @@ class SlashCommandRegistryTests(unittest.TestCase):
         self.assertIn("/chat", slash_commands._DESCRIPTIONS)
         self.assertIn("/session", slash_commands._REGISTRY)
         self.assertNotIn("/session", slash_commands._DESCRIPTIONS)
+
+    def test_plan_commands_are_registered_with_plans_as_listing_command(self) -> None:
+        self.assertIn("/plan", slash_commands._REGISTRY)
+        self.assertIn("/plan", slash_commands._DESCRIPTIONS)
+        self.assertIn("/plans", slash_commands._REGISTRY)
+        self.assertIn("/plans", slash_commands._DESCRIPTIONS)
+
+    def test_cronprompt_commands_are_canonical(self) -> None:
+        self.assertIn("/cronprompt", slash_commands._REGISTRY)
+        self.assertIn("/cronprompt", slash_commands._DESCRIPTIONS)
+        self.assertIn("/cronprompts", slash_commands._REGISTRY)
+        self.assertIn("/cronprompts", slash_commands._DESCRIPTIONS)

@@ -17,13 +17,10 @@ APP_DIR   = Path(__file__).resolve().parents[2]
 REPO_ROOT = Path(__file__).resolve().parents[4]
 
 _AGENT_SMOKE_TARGETS = (
-    "testing.unit.test_guardrail_smoke.GuardrailSmokeTests.test_test_wrapper_extracts_delegate2_log_evidence",
     "testing.unit.test_guardrail_smoke.GuardrailSmokeTests.test_test_wrapper_fails_single_prompt_on_no_results_output",
     "testing.unit.test_guardrail_smoke.GuardrailSmokeTests.test_test_wrapper_fails_exchange_on_search_failure_output",
     "testing.unit.test_guardrail_smoke.GuardrailSmokeTests.test_queue_timeout_for_prompt_disables_scheduler_timeout_only_for_test",
     "testing.unit.test_guardrail_smoke.GuardrailSmokeTests.test_slash_command_outputs_use_ascii_arrows",
-    "testing.unit.test_guardrail_data.GuardrailDataTests.test_koreconv_prompt_renders_datasets_separately",
-    "testing.unit.test_guardrail_data.GuardrailDataTests.test_koreconv_event_restores_datasets_before_orchestration",
 )
 
 

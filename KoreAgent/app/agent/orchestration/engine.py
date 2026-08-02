@@ -30,8 +30,6 @@ from pathlib import Path
 
 from context_manager import format_context_map as _context_manager_format_context_map
 from context_manager import store_last_run_state
-from system_skills.WorkerChats.worker_chat_context import pop_worker_chat_runtime
-from system_skills.WorkerChats.worker_chat_context import push_worker_chat_runtime
 from llm_client import call_llm_chat
 from llm_client import get_active_backend
 from llm_client import is_explicit_model_name
@@ -54,6 +52,7 @@ from agent.orchestration.planning import get_task_plan_phase
 from agent.orchestration.planning import persist_task_plan
 from agent.orchestration.planning import record_task_plan_event
 from indepth_planner_store import maybe_seed_indepth_plan_from_task_plan
+from indepth_planner_store import list_simple_tasks
 from indepth_planner_store import should_bootstrap_indepth_plan
 from sessions.tool_selection import build_all_tool_catalog
 from sessions.tool_selection import derive_active_tool_runtime
@@ -656,11 +655,6 @@ def orchestrate_prompt(
         messages.append({"role": "user", "content": user_prompt})
         _context_map.append({"round": 0, "role": "user", "label": trunc(user_prompt, 50), "chars": len(user_prompt), "auto_key": None, "msg_idx": len(messages) - 1})
 
-        _prev_worker_chat_runtime = push_worker_chat_runtime(
-            logger=logger,
-            config=config,
-            conversation_entry=conversation_entry,
-        )
         catalog_gates = build_catalog_gates(active_payload)
 
         def _on_task_plan_tool_round(round_outputs=None) -> None:
@@ -697,6 +691,13 @@ def orchestrate_prompt(
                 "all_known_tool_names": runtime["all_known_tool_names"],
             }
 
+        def _remaining_plan_tasks() -> list[dict]:
+            return [
+                task
+                for task in list_simple_tasks(session_id=active_session_id)
+                if not task.get("dynamic", {}).get("ran")
+            ]
+
         # Register a per-run stop event so that /stoprun only affects this session.
         _run_id         = f"{active_session_id}_{id(messages)}"
         _run_stop_event = threading.Event()
@@ -719,6 +720,7 @@ def orchestrate_prompt(
                 clear_stop     = _run_stop_event.clear,
                 tool_runtime_provider = _build_tool_runtime,
                 on_tool_round_complete = _on_task_plan_tool_round,
+                run_to_completion_remaining_provider = _remaining_plan_tasks,
                 phase_tool_names_provider = (
                     (lambda: set(get_task_plan_activation_tools()))
                     if task_plan is not None and config.task_plan_enforce_phase
@@ -759,7 +761,6 @@ def orchestrate_prompt(
         finally:
             with _active_stop_lock:
                 _active_stop_events.pop(_run_id, None)
-            pop_worker_chat_runtime(_prev_worker_chat_runtime)
 
 
 

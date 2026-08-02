@@ -50,8 +50,6 @@ from skill_executor import execute_tool_call
 from datasets_pkg import store as datasets_store
 import mcp_client
 from agent.orchestration.engine import ConversationHistory
-from agent.orchestration.engine import _delegate_tls
-from agent.orchestration.engine import delegate_subrun
 from agent.orchestration.engine import OrchestratorConfig
 from agent.orchestration.engine import orchestrate_prompt
 from input_layer import koreconv_input as koreconv_input_module
@@ -80,8 +78,6 @@ from sessions.runtime import get_active_session_id
 from sessions.runtime import bind_session
 from skills_catalog_builder import build_tool_definitions
 from skills_catalog_builder import load_skills_payload
-from system_skills.Delegate import delegate_runtime as delegate_runtime_module
-from system_skills.Delegate import delegate_skill   as delegate_skill_module
 from system_skills.FileAccess import file_access_skill as file_access_module
 from system_skills.ToolSelection import tool_selection_skill as tool_selection_skill_module
 from system_skills.FileAccess.file_access_skill import file_write
@@ -170,7 +166,7 @@ class GuardrailIntegrationTests(unittest.TestCase):
             conversation_entry={
                 "id": 7,
                 "channel_type": "webchat",
-                "subject": "Delegate parent",
+                "subject": "Parent conversation",
                 "background_context": "prior turn context goes here",
                 "scratchpad": {"topic": "alpha"},
                 "datasets": {
@@ -186,7 +182,7 @@ class GuardrailIntegrationTests(unittest.TestCase):
         )
 
         self.assertIn("Active KoreChat conversation entry", system_message)
-        self.assertIn('"subject": "Delegate parent"', system_message)
+        self.assertIn('"subject": "Parent conversation"', system_message)
         self.assertIn('"datasets": {', system_message)
         self.assertIn('"feed_items_raw"', system_message)
         self.assertIn('"names": [', system_message)
@@ -286,7 +282,7 @@ class GuardrailIntegrationTests(unittest.TestCase):
         self.assertIn("use get_page_links or get_page_links_text", system_message)
         self.assertIn("prefer_article_urls=true", system_message)
 
-    def test_delegate_subrun_restores_parent_depth_between_siblings(self) -> None:
+    def removed_delegate_subrun_restores_parent_depth_between_siblings(self) -> None:
         dummy_logger = SimpleNamespace(log_file_only=lambda *_args, **_kwargs: None)
         config = OrchestratorConfig(
             resolved_model="gpt-oss:20b",
@@ -323,7 +319,7 @@ class GuardrailIntegrationTests(unittest.TestCase):
         self.assertEqual(first["depth"], 1)
         self.assertEqual(second["depth"], 1)
 
-    def test_delegate_subrun_binds_child_to_parent_session(self) -> None:
+    def removed_delegate_subrun_binds_child_to_parent_session(self) -> None:
         dummy_logger = SimpleNamespace(log_file_only=lambda *_args, **_kwargs: None)
         config = OrchestratorConfig(
             resolved_model="gpt-oss:20b",
@@ -363,7 +359,7 @@ class GuardrailIntegrationTests(unittest.TestCase):
         self.assertEqual(captured["bound_session_id"], "parent_session")
         self.assertEqual(captured["conversation_entry"], {"id": 7, "subject": "Parent conversation"})
 
-    def test_delegate_subrun_auto_includes_dataset_access_for_named_dataset_tasks(self) -> None:
+    def removed_delegate_subrun_auto_includes_dataset_access_for_named_dataset_tasks(self) -> None:
         dummy_logger = SimpleNamespace(log_file_only=lambda *_args, **_kwargs: None)
         config = OrchestratorConfig(
             resolved_model="gpt-oss:20b",

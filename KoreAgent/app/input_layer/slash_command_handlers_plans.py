@@ -16,6 +16,19 @@ from indepth_planner_store import save_indepth_planner
 from input_layer.slash_command_context import SlashCommandContext
 
 
+def _plan_usage_lines() -> list[str]:
+    return [
+        "/plans",
+        "  List saved plan archives.",
+        "/plan export <name>",
+        "  Export the active plan to a named archive.",
+        "/plan import <name> [--replace]",
+        "  Import a saved plan archive. Name matching supports a unique substring.",
+        "/plan inspect <name>",
+        "  Show a compact summary for one saved plan archive.",
+    ]
+
+
 def _archive_list_lines() -> list[str]:
     archives = list_plan_archives()
     if not archives:
@@ -23,15 +36,25 @@ def _archive_list_lines() -> list[str]:
     return [f"{item['name']:<32} {item['modified_at']}" for item in archives]
 
 
+def _cmd_plans(arg: str, ctx: SlashCommandContext) -> None:
+    ctx.output("Saved plan archives:", "info")
+    for line in _archive_list_lines():
+        ctx.output(f"  {line}", "item")
+
+
 def _cmd_plan(arg: str, ctx: SlashCommandContext) -> None:
     parts = arg.split()
     action = parts[0].lower() if parts else ""
     name = " ".join(parts[1:]).strip()
 
-    if action in {"", "list"}:
-        ctx.output("Saved plan archives:", "info")
-        for line in _archive_list_lines():
-            ctx.output(f"  {line}", "item")
+    if action == "":
+        ctx.output("Plan archive commands:", "info")
+        for line in _plan_usage_lines():
+            ctx.output(line, "item" if not line.startswith("  ") else "dim")
+        return
+
+    if action == "list":
+        _cmd_plans(arg="", ctx=ctx)
         return
 
     if action == "export":
@@ -74,14 +97,17 @@ def _cmd_plan(arg: str, ctx: SlashCommandContext) -> None:
         except RuntimeError as exc:
             ctx.output(str(exc), "error")
             return
-        current = loaded["archive"]["plan"].get("current", {})
-        tasks = current.get("tasks") if isinstance(current.get("tasks"), list) else []
-        ctx.output(f"{loaded['name']}: {current.get('objective') or '(no objective)'} ({len(tasks)} task(s))", "item")
+        static = loaded["archive"]["plan"].get("static", {})
+        tasks = static.get("tasks") if isinstance(static.get("tasks"), list) else []
+        ctx.output(f"{loaded['name']}: {static.get('objective') or '(no objective)'} ({len(tasks)} task(s))", "item")
         return
 
-    ctx.output("Usage: /plan [list | export <name> | import <name> [--replace] | inspect <name>]", "dim")
+    ctx.output("Usage: /plan [export <name> | import <name> [--replace] | inspect <name>]", "dim")
+    ctx.output("Use /plans to list saved plan archives.", "dim")
 
 
 def register_plan_slash_commands(registry: dict[str, Callable], descriptions: dict[str, str]) -> None:
+    registry["/plans"] = _cmd_plans
     registry["/plan"] = _cmd_plan
-    descriptions["/plan"] = "[list | export <name> | import <name> [--replace] | inspect <name>]  Manage durable plan archives"
+    descriptions["/plans"] = "List saved durable plan archives"
+    descriptions["/plan"] = "[export <name> | import <name> [--replace] | inspect <name>]  Show plan archive subcommands or act on one archive"

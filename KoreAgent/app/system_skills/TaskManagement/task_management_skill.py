@@ -13,7 +13,7 @@
 # Related modules:
 #   - workspace_utils.py          -- get_schedules_dir()
 #   - code/scheduler.py           -- consumes the JSON files produced here
-#   - code/slash_commands.py      -- /task and /tasks commands share the same file convention
+#   - code/slash_commands.py      -- /cronprompt and /cronprompts commands share the same file convention
 # ====================================================================================================
 
 

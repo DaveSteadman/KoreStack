@@ -22,11 +22,11 @@ from sessions.runtime import get_active_session_id
 MAX_PHASE_TOOLS          = 12
 MAX_ACTIVATION_TOOLS     = 16
 VALID_PHASES             = ("clarify", "inspect", "plan", "act", "validate", "complete")
-ALWAYS_ON_TOOL_NAMES     = frozenset({"delegate", "tools_catalog_list", "tools_active_add"})
+ALWAYS_ON_TOOL_NAMES     = frozenset({"tools_catalog_list", "tools_active_add"})
 TASK_PLAN_SCRATCHPAD_KEY = "task_plan"
 _PLAN_TASK_EXECUTION_RE = re.compile(
     r"\b(?:run|execute|continue|rerun)\s+(?:the\s+)?(?:first|second|third|fourth|fifth|\d+(?:st|nd|rd|th)?)?\s*task\b.*\bplan\b"
-    r"|\b(?:run|execute|continue|rerun)\s+plan\s+task\b",
+    r"|\b(?:run|execute|continue|rerun)\s+(?:the\s+)?plan(?:\s+to\s+completion)?\b",
     re.IGNORECASE,
 )
 _TOKEN_RE                = re.compile(r"[a-z0-9_]{3,}", re.IGNORECASE)
@@ -343,10 +343,9 @@ def _apply_intent_overrides(plan: TaskPlan, *, user_prompt: str, known_tool_name
     if _PLAN_TASK_EXECUTION_RE.search(user_prompt or ""):
         lifecycle_tools = [
             "plan_get_task",
-            "plan_activate_task",
-            "plan_complete_task",
-            "plan_set_task_status",
-            "plan_attach_output",
+            "plan_set_task_data",
+            "plan_mark_task_ran",
+            "plan_run_to_completion",
             "plan_get_summary",
         ]
         lifecycle_tools = [name for name in lifecycle_tools if name in known_tool_names]
@@ -592,7 +591,7 @@ def _phase_transition_satisfied(phase: str, successful_tool_names: list[str]) ->
         return any(any(hint in name for hint in inspect_hints) for name in successful_tool_names)
 
     if phase == "plan":
-        plan_hints = ("tools_catalog", "tools_active", "task_", "delegate")
+        plan_hints = ("tools_catalog", "tools_active", "task_")
         return any(any(hint in name for hint in plan_hints) for name in successful_tool_names)
 
     if phase == "act":

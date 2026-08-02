@@ -142,10 +142,11 @@ def load_indepth_planner(session_id: str | None = None) -> tuple[dict, dict]:
 def save_indepth_planner(payload: dict[str, Any], *, session_id: str | None = None) -> dict:
     conversation = ensure_conversation_for_session(session_id)
     base = _get_korechat_base()
+    persisted_payload = _to_persisted_plan(payload) if payload else {}
     result = _http_patch(
         base,
         f"/api/conversations/{conversation['id']}",
-        {"indepth_planner": payload},
+        {"indepth_planner": persisted_payload},
     )
     if not isinstance(result, dict):
         raise RuntimeError("Failed to persist InDepthPlanner state.")
@@ -157,9 +158,9 @@ def save_indepth_planner(payload: dict[str, Any], *, session_id: str | None = No
     updated_payload = result.get("indepth_planner")
     if not isinstance(updated_payload, dict):
         raise RuntimeError("KoreChat returned an invalid InDepthPlanner payload after the update.")
-    if updated_payload != payload:
+    if updated_payload != persisted_payload:
         raise RuntimeError("KoreChat did not persist the requested InDepthPlanner state.")
-    return updated_payload
+    return _to_runtime_plan(updated_payload)
 
 
 def delete_indepth_planner(*, session_id: str | None = None) -> None:
@@ -217,6 +218,87 @@ def _next_revision(payload: dict) -> int:
 
 def _copy_plan(payload: dict) -> dict[str, Any]:
     return json.loads(json.dumps(payload or {}))
+
+
+def _to_persisted_plan(payload: dict[str, Any]) -> dict[str, Any]:
+    """Store only durable task definitions plus disposable runtime data."""
+    if isinstance(payload.get("static"), dict):
+        return {
+            "static":  _copy_plan(payload["static"]),
+            "dynamic": _copy_plan(payload.get("dynamic")) if isinstance(payload.get("dynamic"), dict) else {"tasks": {}},
+        }
+
+    current = payload.get("current") if isinstance(payload.get("current"), dict) else {}
+    static_tasks: list[dict[str, Any]] = []
+    dynamic_tasks: dict[str, dict[str, Any]] = {}
+    for index, raw_task in enumerate(current.get("tasks") or [], start=1):
+        definition = raw_task.get("definition") if isinstance(raw_task, dict) and isinstance(raw_task.get("definition"), dict) else {}
+        execution  = raw_task.get("execution")  if isinstance(raw_task, dict) and isinstance(raw_task.get("execution"),  dict) else {}
+        task_id    = str(raw_task.get("task_id") or index) if isinstance(raw_task, dict) else str(index)
+        static_tasks.append(
+            {
+                "id":          task_id,
+                "title":       str(definition.get("title") or "Untitled task"),
+                "description": str(definition.get("description") or ""),
+                "instruction": str(definition.get("task_statement") or definition.get("title") or ""),
+                "depends_on":  _as_string_list(definition.get("depends_on")),
+            }
+        )
+        task_data = {
+            key: value
+            for key, value in {
+                "input_refs":     definition.get("input_refs"),
+                "output_refs":    execution.get("output_refs"),
+                "result_summary": execution.get("result_summary"),
+            }.items()
+            if value
+        }
+        dynamic_tasks[task_id] = {
+            "ran":  str(execution.get("status") or "draft") != "draft",
+            "data": task_data,
+        }
+    return {
+        "static":  {"objective": str(current.get("objective") or ""), "tasks": static_tasks},
+        "dynamic": {"tasks": dynamic_tasks},
+    }
+
+
+def _to_runtime_plan(payload: dict[str, Any]) -> dict[str, Any]:
+    """Provide the legacy runtime view while all public tools are migrated."""
+    if not isinstance(payload.get("static"), dict):
+        return _copy_plan(payload)
+    static  = payload["static"]
+    dynamic = payload.get("dynamic") if isinstance(payload.get("dynamic"), dict) else {}
+    states  = dynamic.get("tasks") if isinstance(dynamic.get("tasks"), dict) else {}
+    tasks = []
+    for raw_task in static.get("tasks") or []:
+        if not isinstance(raw_task, dict):
+            continue
+        task_id = str(raw_task.get("id") or "")
+        state   = states.get(task_id) if isinstance(states.get(task_id), dict) else {}
+        data    = state.get("data") if isinstance(state.get("data"), dict) else {}
+        tasks.append(
+            {
+                "task_id": task_id,
+                "definition": {
+                    "title":          str(raw_task.get("title") or "Untitled task"),
+                    "description":    str(raw_task.get("description") or ""),
+                    "task_statement": str(raw_task.get("instruction") or raw_task.get("title") or ""),
+                    "depends_on":     _as_string_list(raw_task.get("depends_on")),
+                    "priority":       "normal",
+                    "owner":          {"kind": "assistant"},
+                    "input_refs":     _as_ref_list(data.get("input_refs")),
+                },
+                "execution": {
+                    "status":         "completed" if state.get("ran") else "draft",
+                    "status_history": [],
+                    "effort":         {},
+                    "output_refs":    _as_ref_list(data.get("output_refs")),
+                    "result_summary": str(data.get("result_summary") or ""),
+                },
+            }
+        )
+    return {"current": {"objective": str(static.get("objective") or ""), "tasks": tasks}}
 
 
 def _task_status_history(status: str) -> list[dict[str, Any]]:
@@ -488,7 +570,7 @@ def clear_plan(*, session_id: str | None = None) -> None:
 
 def get_plan(*, session_id: str | None = None) -> dict[str, Any]:
     _conversation, payload = load_indepth_planner(session_id)
-    return payload
+    return _to_runtime_plan(payload)
 
 
 def list_plan_tasks(*, session_id: str | None = None) -> list[dict[str, Any]]:
@@ -720,6 +802,165 @@ def reassess_plan(*, session_id: str | None = None) -> dict[str, Any]:
         proposal["proposed_changes"].append({"action": "review_failed_tasks"})
         proposal["reason"] = "Failed PlanTasks need review before continuing."
     return proposal
+
+
+# ====================================================================================================
+# MARK: SIMPLE STATIC / DYNAMIC PUBLIC MODEL
+# ====================================================================================================
+def get_simple_plan(*, session_id: str | None = None) -> dict[str, Any]:
+    _conversation, payload = load_indepth_planner(session_id)
+    return _to_persisted_plan(payload) if payload else {}
+
+
+def _save_simple_plan(payload: dict[str, Any], *, session_id: str | None = None) -> dict[str, Any]:
+    _validate_simple_plan(payload)
+    save_indepth_planner(payload, session_id=session_id)
+    return payload
+
+
+def _validate_simple_plan(plan: dict[str, Any]) -> None:
+    tasks = plan.get("static", {}).get("tasks", [])
+    if not isinstance(tasks, list):
+        raise RuntimeError("Plan static.tasks must be a list.")
+    ids = [str(task.get("id") or "") for task in tasks if isinstance(task, dict)]
+    if len(ids) != len(tasks) or not all(ids) or len(set(ids)) != len(ids):
+        raise RuntimeError("Plan task IDs must be present and unique.")
+    known = set(ids)
+    dependencies = {str(task["id"]): set(_as_string_list(task.get("depends_on"))) for task in tasks}
+    if any(not refs <= known for refs in dependencies.values()):
+        raise RuntimeError("Every task dependency must refer to a task in the plan.")
+    visited: set[str] = set()
+    visiting: set[str] = set()
+    def visit(task_id: str) -> None:
+        if task_id in visiting:
+            raise RuntimeError("Plan task dependencies cannot contain a cycle.")
+        if task_id not in visited:
+            visiting.add(task_id)
+            for dependency in dependencies[task_id]:
+                visit(dependency)
+            visiting.remove(task_id)
+            visited.add(task_id)
+    for task_id in dependencies:
+        visit(task_id)
+
+
+def create_simple_plan(*, objective: str, initial_tasks: list[object] | None = None, session_id: str | None = None) -> dict[str, Any]:
+    used_ids: set[str] = set()
+    tasks = []
+    for raw_task in initial_tasks or []:
+        task = _coerce_plan_task(raw_task, used_ids=used_ids)
+        definition = task["definition"]
+        tasks.append({"id": task["task_id"], "title": definition["title"], "description": definition["description"], "instruction": definition["task_statement"], "depends_on": definition["depends_on"]})
+    return _save_simple_plan({"static": {"objective": str(objective or "").strip(), "tasks": tasks}, "dynamic": {"tasks": {}}}, session_id=session_id)
+
+
+def add_simple_task(*, title: str, description: str = "", instruction: str = "", depends_on: list[str] | None = None, session_id: str | None = None) -> dict[str, Any]:
+    plan = get_simple_plan(session_id=session_id)
+    tasks = plan.setdefault("static", {}).setdefault("tasks", [])
+    task_id = _next_task_id({str(task.get("id")) for task in tasks if isinstance(task, dict)})
+    tasks.append({"id": task_id, "title": str(title).strip(), "description": str(description).strip(), "instruction": str(instruction or title).strip(), "depends_on": _as_string_list(depends_on)})
+    return _save_simple_plan(plan, session_id=session_id)
+
+
+def list_simple_tasks(*, session_id: str | None = None) -> list[dict[str, Any]]:
+    plan = get_simple_plan(session_id=session_id)
+    static = plan.get("static", {})
+    states = plan.get("dynamic", {}).get("tasks", {})
+    return [{"id": task.get("id"), "static": dict(task), "dynamic": dict(states.get(str(task.get("id")), {"ran": False, "data": {}}))} for task in static.get("tasks", []) if isinstance(task, dict)]
+
+
+def _simple_task(plan: dict[str, Any], task_id: str) -> dict[str, Any] | None:
+    target = str(task_id).strip()
+    tasks = plan.get("static", {}).get("tasks", [])
+    for index, task in enumerate(tasks, start=1):
+        if str(task.get("id")) == target or (target.isdecimal() and index == int(target)):
+            return task
+    return None
+
+
+def update_simple_task(*, task_id: str, title: str | None = None, description: str | None = None, instruction: str | None = None, depends_on: list[str] | None = None, session_id: str | None = None) -> dict[str, Any]:
+    plan = get_simple_plan(session_id=session_id)
+    task = _simple_task(plan, task_id)
+    if task is None:
+        raise RuntimeError(f"Task '{task_id}' not found.")
+    for key, value in (("title", title), ("description", description), ("instruction", instruction)):
+        if value is not None:
+            task[key] = str(value).strip()
+    if depends_on is not None:
+        task["depends_on"] = _as_string_list(depends_on)
+    return _save_simple_plan(plan, session_id=session_id)
+
+
+def set_simple_task_data(*, task_id: str, data: dict[str, Any], session_id: str | None = None) -> dict[str, Any]:
+    plan = get_simple_plan(session_id=session_id)
+    task = _simple_task(plan, task_id)
+    if task is None:
+        raise RuntimeError(f"Task '{task_id}' not found.")
+    states = plan.setdefault("dynamic", {}).setdefault("tasks", {})
+    state = states.setdefault(str(task["id"]), {"ran": False, "data": {}})
+    state.setdefault("data", {}).update(dict(data or {}))
+    return _save_simple_plan(plan, session_id=session_id)
+
+
+def clear_simple_task_data(*, task_id: str, session_id: str | None = None) -> dict[str, Any]:
+    """Discard only the run-specific data for one task, retaining its ran flag."""
+    plan = get_simple_plan(session_id=session_id)
+    task = _simple_task(plan, task_id)
+    if task is None:
+        raise RuntimeError(f"Task '{task_id}' not found.")
+    states = plan.setdefault("dynamic", {}).setdefault("tasks", {})
+    state = states.setdefault(str(task["id"]), {"ran": False, "data": {}})
+    state["data"] = {}
+    return _save_simple_plan(plan, session_id=session_id)
+
+
+def reset_simple_task_run(*, task_id: str, session_id: str | None = None) -> dict[str, Any]:
+    """Make one task eligible to run again, retaining any useful dynamic data."""
+    plan = get_simple_plan(session_id=session_id)
+    task = _simple_task(plan, task_id)
+    if task is None:
+        raise RuntimeError(f"Task '{task_id}' not found.")
+    states = plan.setdefault("dynamic", {}).setdefault("tasks", {})
+    state = states.setdefault(str(task["id"]), {"ran": False, "data": {}})
+    state["ran"] = False
+    return _save_simple_plan(plan, session_id=session_id)
+
+
+def clear_simple_dynamic(*, session_id: str | None = None) -> dict[str, Any]:
+    """Discard all run-specific state while preserving the static plan."""
+    plan = get_simple_plan(session_id=session_id)
+    if not plan:
+        raise RuntimeError("No active plan exists.")
+    plan["dynamic"] = {"tasks": {}}
+    return _save_simple_plan(plan, session_id=session_id)
+
+
+def mark_simple_task_ran(*, task_id: str, note: str = "", session_id: str | None = None) -> dict[str, Any]:
+    plan = get_simple_plan(session_id=session_id)
+    task = _simple_task(plan, task_id)
+    if task is None:
+        raise RuntimeError(f"Task '{task_id}' not found.")
+    states = plan.setdefault("dynamic", {}).setdefault("tasks", {})
+    state = states.setdefault(str(task["id"]), {"ran": False, "data": {}})
+    state["ran"] = True
+    if note:
+        state.setdefault("data", {})["note"] = str(note).strip()
+    return _save_simple_plan(plan, session_id=session_id)
+
+
+def simple_run_to_completion_context(*, session_id: str | None = None) -> dict[str, Any]:
+    """Return every remaining task in plan order; execution remains the caller's responsibility."""
+    plan = get_simple_plan(session_id=session_id)
+    remaining = [task for task in list_simple_tasks(session_id=session_id) if not task.get("dynamic", {}).get("ran")]
+    return {
+        "objective": plan.get("static", {}).get("objective", ""),
+        "remaining_tasks": remaining,
+        "instruction": (
+            "Run every remaining task in the listed order. For each task, carry out its full static instruction, "
+            "save useful instance data with plan_set_task_data, and call plan_mark_task_ran before moving to the next task. "
+            "Do not mark a task ran without actually attempting it."
+        ),
+    }
 
 
 def should_bootstrap_indepth_plan(user_prompt: str, task_plan: dict[str, Any] | None = None) -> bool:

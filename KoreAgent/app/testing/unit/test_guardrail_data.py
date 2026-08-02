@@ -50,8 +50,6 @@ from skill_executor import execute_tool_call
 from datasets_pkg import store as datasets_store
 import mcp_client
 from agent.orchestration.engine import ConversationHistory
-from agent.orchestration.engine import _delegate_tls
-from agent.orchestration.engine import delegate_subrun
 from agent.orchestration.engine import OrchestratorConfig
 from agent.orchestration.engine import orchestrate_prompt
 from input_layer import koreconv_input as koreconv_input_module
@@ -79,8 +77,6 @@ from scratchpad import scratchpad_save
 from sessions.runtime import get_active_session_id
 from sessions.runtime import bind_session
 from skills_catalog_builder import build_tool_definitions
-from system_skills.Delegate import delegate_runtime as delegate_runtime_module
-from system_skills.Delegate import delegate_skill   as delegate_skill_module
 from system_skills.FileAccess import file_access_skill as file_access_module
 from system_skills.ToolSelection import tool_selection_skill as tool_selection_skill_module
 from system_skills.FileAccess.file_access_skill import file_write

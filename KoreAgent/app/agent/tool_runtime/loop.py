@@ -647,6 +647,7 @@ def run_tool_loop(
     tool_runtime_provider: object | None = None,
     on_tool_round_complete: object | None = None,
     phase_tool_names_provider: object | None = None,
+    run_to_completion_remaining_provider: object | None = None,
 ) -> tuple[str, int, int, bool, float, list[ToolCallResult]]:
     def _log(message: str = "") -> None:
         logger.log_file_only(message) if quiet else logger.log(message)
@@ -668,6 +669,16 @@ def run_tool_loop(
     graph_write_guard_corrections = 0
     graph_write_guard_active = _is_graph_connection_write_request(user_prompt) and _tool_def_available(tool_defs, "graph_connection_create_many")
     web_evidence_guard_corrections = 0
+    plan_run_to_completion_requested = False
+
+    def _remaining_plan_tasks() -> list[dict]:
+        if not plan_run_to_completion_requested or run_to_completion_remaining_provider is None:
+            return []
+        try:
+            return list(run_to_completion_remaining_provider() or [])
+        except Exception as exc:
+            _log_file_only(f"[plan-run] Could not read remaining PlanTasks: {exc}")
+            return []
 
     clear_stop()
     try:
@@ -751,6 +762,21 @@ def run_tool_loop(
                 if _synthetic_tc is not None:
                     _log_file_only(f"[warn] Round {round_num}: model emitted raw JSON tool call instead of invoking - forcing re-invocation.")
                     tool_calls = [_synthetic_tc]
+                elif remaining_plan_tasks := _remaining_plan_tasks():
+                    next_task = remaining_plan_tasks[0]
+                    task_id   = str(next_task.get("id") or "?")
+                    static    = next_task.get("static") or {}
+                    instruction = str(static.get("instruction") or static.get("description") or static.get("title") or "").strip()
+                    correction = (
+                        f"Plan run-to-completion is active. Do not give a final answer yet: Task {task_id} has not been run. "
+                        f"Carry out its full static instruction now: {instruction!r} "
+                        "Then save useful run-specific data with plan_set_task_data and call plan_mark_task_ran. "
+                        "Continue through every remaining task in this same run."
+                    )
+                    _log_file_only(f"[plan-run] Round {round_num}: blocking final answer; remaining Task {task_id}.")
+                    messages.append({"role": "user", "content": correction})
+                    context_map.append({"round": round_num, "role": "user", "label": "[plan run-to-completion]", "chars": len(correction), "auto_key": None, "msg_idx": len(messages) - 1})
+                    continue
                 elif graph_write_guard_active and not _graph_connection_tool_already_called(tool_outputs):
                     connections = _extract_graph_connection_batch_from_text(candidate)
                     if connections:
@@ -976,9 +1002,27 @@ def run_tool_loop(
                 except Exception as exc:
                     _log_file_only(f"[error] on_tool_round_complete callback failed: {exc}")
 
+            if any(
+                str(item.get("tool") or item.get("function") or "") == "plan_run_to_completion"
+                and str(item.get("status") or "") != "error"
+                for item in round_outputs
+            ):
+                plan_run_to_completion_requested = True
+                _log_file_only("[plan-run] Host run-to-completion guard activated.")
+
             _log_file_only(f"TOOL ROUND {round_num} - EXECUTION FLOW")
             _log_file_only(format_tool_outputs(round_outputs))
         else:
+            remaining_plan_tasks = _remaining_plan_tasks()
+            if remaining_plan_tasks:
+                task_ids = ", ".join(str(task.get("id") or "?") for task in remaining_plan_tasks)
+                final_response = (
+                    "Plan run-to-completion stopped before all remaining tasks could be run. "
+                    f"Tasks still awaiting a run: {task_ids}."
+                )
+                run_success = False
+                _log_file_only(f"[plan-run] Tool-round limit reached with remaining tasks: {task_ids}")
+                return final_response, prompt_tokens, completion_tokens, run_success, final_tps, tool_outputs
             _log("[warn] Max tool rounds exhausted - requesting final synthesis.")
             try:
                 synthesis_messages = messages + [{"role": "user", "content": "Based on the tool results above, please answer my original question now."}]

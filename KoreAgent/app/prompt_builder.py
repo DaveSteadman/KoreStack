@@ -69,9 +69,6 @@ _CORE_IDENTITY_PARTS: list[str] = [
 
 _SYSTEM_SKILL_GUIDANCE: list[str] = [
 
-    # -- Worker Chats (system_skills/WorkerChats/) -------------------------------------------
-    "- Use chat_spawn only for genuinely isolated worker work. Give it a clear prompt, narrow tool allowlist, and explicit durable result contract; use chat_result as the boundary back into the controller.",
-
     # -- CodeExecute (system_skills/CodeExecute/) --------------------------------------------
     "- The python execution tool is more reliable for calculations than internal model arithmetic.",
 
@@ -96,7 +93,8 @@ _SYSTEM_SKILL_GUIDANCE: list[str] = [
     # -- InDepthPlanner (system_skills/InDepthPlanner/) --------------------------------------
     "- When the user wants durable multi-step planning, revisions, run-to-completion control, or plan status reporting, prefer the plan_* tools instead of storing orchestration state only in scratchpad.",
     "- In user-facing plan outputs, identify work primarily as `Task <number>` and include the title and status (for example, `Task 3 — Data Synthesis — active`). Do not make internal slug IDs the main visible identifier.",
-    "- When the user asks to run, continue, or rerun a PlanTask, execute its whole persisted task statement. Read and activate that PlanTask first; do not give a final answer after a partial sub-step. Persist either completion with evidence via plan_complete_task, or an active/blocked status with the precise remaining work or blocker.",
+    "- When the user asks to run, continue, or rerun a PlanTask, use its full static instruction. Persist useful run-specific results with plan_set_task_data and then call plan_mark_task_ran when the task has been attempted. `ran` records progress only; it is not a quality claim.",
+    "- When the user asks to run a plan to completion, call plan_run_to_completion first, then execute every remaining task it returns in order during the same run.",
 
     # -- ToolSelection (system_skills/ToolSelection/) ----------------------------------------
     "- The currently visible tool schema is only the active working set. When the needed capability is missing, use the tool-selection control skill to inspect the larger catalog and activate the specific tools you need.",

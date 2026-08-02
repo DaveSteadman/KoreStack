@@ -67,10 +67,11 @@ MAIN_SCRIPT = _APP_DIR / "main.py"
 SUBPROCESS_TIMEOUT_SECONDS = 300
 TEST_LLM_TIMEOUT_SECONDS   = 86400
 
-CSV_FIELDS = ["timestamp", "source_file", "prompt", "exchange_name", "turn_index",
-              "final_output", "assert_result", "passed", "failure_reason",
-              "duration_seconds", "exit_code", "log_file", "stderr",
-              "delegation_events", "delegation_evidence"]
+CSV_FIELDS = [
+    "timestamp", "source_file", "prompt", "exchange_name", "turn_index",
+    "final_output", "assert_result", "passed", "failure_reason",
+    "duration_seconds", "exit_code", "log_file", "stderr",
+]
 
 
 # ====================================================================================================
@@ -239,27 +240,6 @@ def _log_indicates_validation_failure(log_file: str) -> bool:
         "[warn] orchestration validation failed" in lowered
         or "validation failed" in lowered
     )
-
-
-def _extract_delegate_events(log_file: str) -> list[str]:
-    """Return machine-readable delegate event lines from the run log."""
-    if not log_file:
-        return []
-    try:
-        text = Path(log_file).read_text(encoding="utf-8", errors="replace")
-    except OSError:
-        return []
-    events = []
-    for line in text.splitlines():
-        trimmed = line.strip()
-        if "[delegate:event]" in trimmed or "[delegate2]" in trimmed:
-            events.append(trimmed)
-    return events
-
-
-def _requires_delegation_evidence(source_file: str) -> bool:
-    lowered = (source_file or "").lower()
-    return "delegate" in lowered
 
 
 # ----------------------------------------------------------------------------------------------------
@@ -437,8 +417,6 @@ def _base_row(run_timestamp: str, source_file: str, prompt: str, exchange_name: 
         "exit_code":        -1,
         "log_file":         "",
         "stderr":           "",
-        "delegation_events": "0",
-        "delegation_evidence": "",
     }
 
 
@@ -614,12 +592,6 @@ def _run_single_item(
         final_output=row["final_output"],
         log_file=str(row["log_file"]),
     )
-    delegate_events = _extract_delegate_events(str(row["log_file"]))
-    row["delegation_events"] = str(len(delegate_events))
-    row["delegation_evidence"] = " || ".join(delegate_events[:3])
-    if _requires_delegation_evidence(source_file) and len(delegate_events) == 0:
-        _passed = False
-        _failure_reason = "Delegation evidence missing"
     row["passed"] = "PASS" if _passed else "FAIL"
     row["failure_reason"] = _failure_reason
     append_csv_row(output_path=output_path, row=row)
@@ -712,13 +684,7 @@ def _run_exchange_item(
         allow_no_results=allow_no_results,
         assert_results=assert_results,
     )
-    delegate_events = _extract_delegate_events(log_file)
-    if _requires_delegation_evidence(source_file) and len(delegate_events) == 0:
-        _passed = False
-        _reason = "Delegation evidence missing"
     for row in pending_rows:
-        row["delegation_events"] = str(len(delegate_events))
-        row["delegation_evidence"] = " || ".join(delegate_events[:3])
         row["passed"] = "PASS" if _passed else "FAIL"
         row["failure_reason"] = _reason
         append_csv_row(output_path=output_path, row=row)

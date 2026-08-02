@@ -68,6 +68,7 @@ from datasets_pkg.hydration import build_persisted_scratchpad_payload
 from datasets_pkg.hydration import get_persisted_datasets_payload
 from datasets_pkg.hydration import hydrate_session_state
 from datasets_pkg.service import delete_session_datasets as delete_persisted_session_datasets
+from indepth_planner_archives import list_plan_archives
 from input_layer.korechat_proxy_routes import register_korechat_proxy_routes
 from input_layer.routes_logs import register_log_routes
 from input_layer.routes_sessions import register_session_routes
@@ -213,6 +214,10 @@ def get_completions():
     enabled_tasks, _ = _get_scheduler_snapshot()
     task_names = [t.get("name", "") for t in enabled_tasks if t.get("name")]
     try:
+        plan_names = [item.get("name", "") for item in list_plan_archives() if item.get("name")]
+    except Exception:
+        plan_names = []
+    try:
         models = list_ollama_models(start_if_needed=False)
     except Exception:
         models = []
@@ -220,6 +225,7 @@ def get_completions():
         "sessions": sessions,
         "test_files": test_files,
         "task_names": task_names,
+        "plan_names": plan_names,
         "models": models,
     }
 
