@@ -155,18 +155,24 @@ def main() -> None:
     total_speech_chunks = 0
     sitting_days_found  = 0
     last_date_ingested  = hansard.get_meta(conn, "last_date_ingested")
+    incomplete_reasons: list[str] = []
 
     max_deb   = args.max_debates if args.max_debates > 0 else 9999
     date_iter = [(range_start + timedelta(days=i)).isoformat() for i in range(num_days)]
 
     for check_date in date_iter:
-        n = hansard.ingest_sitting_day(
-            conn, check_date,
-            max_debates=max_deb,
-            max_speeches=args.max_speeches,
-            name_lookup=name_lookup,
-            house="Commons",
-        )
+        try:
+            n = hansard.ingest_sitting_day(
+                conn, check_date,
+                max_debates=max_deb,
+                max_speeches=args.max_speeches,
+                name_lookup=name_lookup,
+                house="Commons",
+            )
+        except hansard.SittingDayFetchError as exc:
+            incomplete_reasons.append(str(exc))
+            print(f"  STOPPING Commons scan: {exc}")
+            break
         hansard.set_meta(conn, "last_date_checked", check_date)
 
         if n > 0:
@@ -184,13 +190,18 @@ def main() -> None:
         print(f"\n  Scanning {lords_num_days} calendar day(s) for Lords: {lords_range_start} \u2192 {range_end}")
         lords_date_iter = [(lords_range_start + timedelta(days=i)).isoformat() for i in range(lords_num_days)]
         for check_date in lords_date_iter:
-            n = hansard.ingest_sitting_day(
-                conn, check_date,
-                max_debates=max_deb,
-                max_speeches=args.max_speeches,
-                name_lookup=name_lookup,
-                house="Lords",
-            )
+            try:
+                n = hansard.ingest_sitting_day(
+                    conn, check_date,
+                    max_debates=max_deb,
+                    max_speeches=args.max_speeches,
+                    name_lookup=name_lookup,
+                    house="Lords",
+                )
+            except hansard.SittingDayFetchError as exc:
+                incomplete_reasons.append(str(exc))
+                print(f"  STOPPING Lords scan: {exc}")
+                break
             hansard.set_meta(conn, "last_date_checked_lords", check_date)
 
             if n > 0:
@@ -228,7 +239,15 @@ def main() -> None:
     print("=" * 65)
 
     last_ingested = last_lords_date_ingested or last_date_ingested or ""
-    hansard.write_descriptor(_JSON_PATH, _DB_ID, total_chunks, last_ingested)
+    status = "incomplete" if incomplete_reasons else "complete"
+    hansard.write_descriptor(
+        _JSON_PATH,
+        _DB_ID,
+        total_chunks,
+        last_ingested,
+        status=status,
+        error="; ".join(incomplete_reasons),
+    )
     conn.close()
     print("  Done.\n")
 

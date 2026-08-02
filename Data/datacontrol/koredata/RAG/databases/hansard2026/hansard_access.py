@@ -73,6 +73,10 @@ _RETRY_STATUSES = {429, 503}
 _MAX_RETRIES    = 3
 
 
+class SittingDayFetchError(RuntimeError):
+    """A Hansard day page could not be verified; do not advance its checkpoint."""
+
+
 def _get(url: str, as_text: bool = True) -> Optional[str]:
     """GET with exponential-backoff retry on 429/503 and transient network errors."""
     delay = 5.0
@@ -376,15 +380,20 @@ def _extract_debates_from_html(html: str, sitting_date: str, house: str = "Commo
 
 
 def get_sitting_debates(sitting_date: str, max_debates: int = 25, house: str = "Commons") -> Optional[tuple]:
-    """Return (debates, sitting_info) or None if not a sitting day."""
+    """Return a verified sitting, None for a confirmed non-sitting day, or raise on an unverified response."""
     url  = f"{HANSARD_BASE}/{house}/{sitting_date}"
     html = _get(url)
     _sleep(0.5)
-    if not html or not _is_sitting_day(html):
+    if not html:
+        raise SittingDayFetchError(f"No response from Hansard for {house} {sitting_date}.")
+    if not _is_sitting_day(html):
         return None
     debates = _extract_debates_from_html(html, sitting_date, house=house)
     if not debates:
-        return None
+        low = html.lower()
+        if "just a moment" in low or "challenge" in low or "cf-chl" in low:
+            raise SittingDayFetchError(f"Cloudflare challenge returned for {house} {sitting_date}.")
+        raise SittingDayFetchError(f"No parseable Hansard debates found for {house} {sitting_date}.")
     vol_m  = re.search(r'Volume (\d+)', html)
     volume = int(vol_m.group(1)) if vol_m else None
     sitting_info = {"volume": volume, "total_debates": len(debates)}
@@ -601,6 +610,7 @@ def write_descriptor(
     total_chunks: int,
     last_date: str,
     status: str = "complete",
+    error: str = "",
 ) -> None:
     d = {
         "id":           db_id,
@@ -630,5 +640,7 @@ def write_descriptor(
             "total_chunks":             total_chunks,
         },
     }
+    if error:
+        d["sync"]["error"] = error
     json_path.write_text(json.dumps(d, indent=2), encoding="utf-8")
     print(f"\n  Wrote descriptor → {json_path.name}")
