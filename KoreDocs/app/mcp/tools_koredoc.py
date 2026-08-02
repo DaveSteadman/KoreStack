@@ -15,6 +15,8 @@
 # ====================================================================================================
 
 from __future__ import annotations
+import json
+from difflib import SequenceMatcher
 from typing import Optional, Annotated
 from ..documents.korefile import service as korefile
 from .shared import (
@@ -39,6 +41,144 @@ def create_koredoc(
     if tags:
         stored_metadata['tags'] = tags
     return _create_serialized_file(folder_path, name, 'koredoc', markdown, stored_metadata or None)
+
+
+def _metadata_paths(value: object, prefix: str = "") -> list[tuple[str, object]]:
+    """Return every metadata key path and scalar/list value without changing it."""
+    if isinstance(value, dict):
+        paths: list[tuple[str, object]] = []
+        for key, child in value.items():
+            path = f"{prefix}.{key}" if prefix else str(key)
+            paths.extend(_metadata_paths(child, path))
+        return paths
+    return [(prefix, value)] if prefix else []
+
+
+def _metadata_files(folder_path: str | None = None) -> list[dict]:
+    return korefile.list_files(folder_path=folder_path, ext="koredoc")
+
+
+@mcp.tool()
+def koredocs_metadata_inventory(
+    folder_path: Annotated[Optional[str], "Optional folder path to limit the inventory."] = None,
+    max_examples: Annotated[int, "Maximum example documents returned for each metadata path."] = 3,
+) -> dict:
+    """Inventory embedded KoreDoc metadata keys, values, counts, and example files."""
+    examples_limit = max(1, min(int(max_examples), 20))
+    fields: dict[str, dict] = {}
+    files = _metadata_files(folder_path)
+    for file in files:
+        metadata = file.get("metadata") if isinstance(file.get("metadata"), dict) else {}
+        for path, value in _metadata_paths(metadata):
+            entry = fields.setdefault(path, {"document_count": 0, "value_counts": {}, "examples": []})
+            entry["document_count"] += 1
+            encoded = json.dumps(value, ensure_ascii=False, sort_keys=True)
+            entry["value_counts"][encoded] = entry["value_counts"].get(encoded, 0) + 1
+            if len(entry["examples"]) < examples_limit:
+                entry["examples"].append({"id": file["id"], "path": file["path"], "value": value})
+    return {
+        "document_count": len(files),
+        "field_count": len(fields),
+        "fields": [
+            {
+                "path": path,
+                "document_count": entry["document_count"],
+                "value_counts": [
+                    {"value": json.loads(value), "count": count}
+                    for value, count in sorted(entry["value_counts"].items(), key=lambda item: (-item[1], item[0]))
+                ],
+                "examples": entry["examples"],
+            }
+            for path, entry in sorted(fields.items())
+        ],
+    }
+
+
+@mcp.tool()
+def koredocs_metadata_find_variants(
+    field_name: Annotated[str, "Field name or dotted field path to compare, for example artefact_type."],
+    folder_path: Annotated[Optional[str], "Optional folder path to limit the search."] = None,
+) -> dict:
+    """Find metadata field names that are close to a requested name, to expose naming drift."""
+    target = str(field_name or "").strip().lower().replace("-", "_")
+    if not target:
+        raise ValueError("field_name cannot be empty")
+    inventory = koredocs_metadata_inventory(folder_path=folder_path)
+    variants = []
+    for field in inventory["fields"]:
+        candidate = field["path"]
+        normalized = candidate.lower().replace("-", "_")
+        similarity = SequenceMatcher(None, target, normalized).ratio()
+        if target == normalized or target in normalized or normalized in target or similarity >= 0.78:
+            variants.append({**field, "similarity": round(similarity, 3)})
+    return {"field_name": field_name, "variant_count": len(variants), "variants": variants}
+
+
+def _metadata_migration_matches(
+    *,
+    folder_path: str | None,
+    field_name: str,
+    old_value: object = None,
+    require_value: bool = False,
+) -> list[dict]:
+    matches: list[dict] = []
+    for file in _metadata_files(folder_path):
+        metadata = file.get("metadata") if isinstance(file.get("metadata"), dict) else {}
+        if field_name not in metadata:
+            continue
+        if require_value and metadata[field_name] != old_value:
+            continue
+        matches.append(file)
+    return matches
+
+
+@mcp.tool()
+def koredocs_metadata_rename_field(
+    old_field: Annotated[str, "Exact top-level metadata field to rename."],
+    new_field: Annotated[str, "Replacement top-level metadata field name."],
+    folder_path: Annotated[Optional[str], "Optional folder path to limit the migration."] = None,
+    apply_changes: Annotated[bool, "False returns a dry run. True performs the listed exact changes."] = False,
+) -> dict:
+    """Rename one exact top-level metadata field while preserving content and unrelated metadata."""
+    old_field = str(old_field or "").strip()
+    new_field = str(new_field or "").strip()
+    if not old_field or not new_field:
+        raise ValueError("old_field and new_field cannot be empty")
+    if old_field == new_field:
+        raise ValueError("old_field and new_field must differ")
+    matches = _metadata_migration_matches(folder_path=folder_path, field_name=old_field)
+    conflicts = [file for file in matches if new_field in (file.get("metadata") or {})]
+    proposed = [{"id": file["id"], "path": file["path"]} for file in matches]
+    if conflicts:
+        return {"applied": False, "proposed": proposed, "conflicts": [{"id": file["id"], "path": file["path"]} for file in conflicts]}
+    if apply_changes:
+        for file in matches:
+            metadata = dict(file.get("metadata") or {})
+            metadata[new_field] = metadata.pop(old_field)
+            korefile.update_file(file["id"], metadata=metadata, expected_revision=file.get("revision"))
+    return {"applied": bool(apply_changes), "proposed": proposed, "changed_count": len(matches), "conflicts": []}
+
+
+@mcp.tool()
+def koredocs_metadata_replace_value(
+    field_name: Annotated[str, "Exact top-level metadata field whose value will be replaced."],
+    old_value: Annotated[object, "Exact JSON value to replace."],
+    new_value: Annotated[object, "Replacement JSON value."],
+    folder_path: Annotated[Optional[str], "Optional folder path to limit the migration."] = None,
+    apply_changes: Annotated[bool, "False returns a dry run. True performs the listed exact changes."] = False,
+) -> dict:
+    """Replace one exact top-level metadata value while preserving content and unrelated metadata."""
+    field_name = str(field_name or "").strip()
+    if not field_name:
+        raise ValueError("field_name cannot be empty")
+    matches = _metadata_migration_matches(folder_path=folder_path, field_name=field_name, old_value=old_value, require_value=True)
+    proposed = [{"id": file["id"], "path": file["path"], "old_value": old_value, "new_value": new_value} for file in matches]
+    if apply_changes:
+        for file in matches:
+            metadata = dict(file.get("metadata") or {})
+            metadata[field_name] = new_value
+            korefile.update_file(file["id"], metadata=metadata, expected_revision=file.get("revision"))
+    return {"applied": bool(apply_changes), "proposed": proposed, "changed_count": len(matches)}
 
 
 @mcp.tool()

@@ -53,6 +53,8 @@ from agent.orchestration.planning import get_task_plan_activation_tools
 from agent.orchestration.planning import get_task_plan_phase
 from agent.orchestration.planning import persist_task_plan
 from agent.orchestration.planning import record_task_plan_event
+from indepth_planner_store import maybe_seed_indepth_plan_from_task_plan
+from indepth_planner_store import should_bootstrap_indepth_plan
 from sessions.tool_selection import build_all_tool_catalog
 from sessions.tool_selection import derive_active_tool_runtime
 from sessions.tool_selection import promote_selected_tools
@@ -207,6 +209,7 @@ class OrchestratorConfig:
     catalog_mtime: float = 0.0
     task_planning_enabled: bool = True
     task_plan_enforce_phase: bool = False
+    planning_mode: str = "auto"
 
 
 # ====================================================================================================
@@ -538,6 +541,12 @@ def orchestrate_prompt(
         _log(f"Context window: {config.num_ctx:,} tokens")
         _log(f"Max rounds:     {config.max_iterations}")
         _log(f"Prompt:         {user_prompt[:300]}{' ...' if len(user_prompt) > 300 else ''}")
+        planning_mode = str(getattr(config, "planning_mode", "auto") or "auto").strip().lower()
+        if planning_mode not in {"off", "simple", "indepth", "auto"}:
+            planning_mode = "auto"
+        if not config.task_planning_enabled and planning_mode == "auto":
+            planning_mode = "off"
+        _log(f"Planning mode:  {planning_mode}")
 
         ambient_system_info = get_static_system_info_string()
         _log_section("AMBIENT SYSTEM INFO")
@@ -550,7 +559,7 @@ def orchestrate_prompt(
             conversation_entry = conversation_entry,
         )
         known_tool_names = {str(item.get("name") or "") for item in capability_catalog if str(item.get("name") or "")}
-        if config.task_planning_enabled:
+        if planning_mode != "off":
             task_plan = create_task_plan(
                 user_prompt        = user_prompt,
                 capability_catalog = capability_catalog,
@@ -597,6 +606,14 @@ def orchestrate_prompt(
                         f"flags={','.join(row.get('flags') or []) or 'none'} "
                         f"origin={row.get('origin', '')}"
                     )
+            if planning_mode == "indepth" or (planning_mode == "auto" and should_bootstrap_indepth_plan(user_prompt, task_plan.payload())):
+                try:
+                    maybe_seed_indepth_plan_from_task_plan(
+                        user_prompt = user_prompt,
+                        task_plan   = task_plan.payload(),
+                    )
+                except Exception as exc:
+                    _log_file_only(f"[indepth-planner] seed skipped: {exc}")
         else:
             task_plan = None
         initial_tool_runtime = derive_active_tool_runtime(

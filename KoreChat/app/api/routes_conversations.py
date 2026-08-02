@@ -101,6 +101,7 @@ def patch_conversation(conversation_id: int, req: ConversationPatchRequest):
         thread_summary     = req.thread_summary,
         scratchpad         = req.scratchpad,
         datasets           = req.datasets,
+        indepth_planner    = req.indepth_planner,
         tools_active       = req.tools_active,
         background_context = req.background_context,
         token_estimate     = req.token_estimate,

@@ -16,6 +16,7 @@ record-shaped working set that needs iterative filtering.
   - `dataset_inspect(name: str)`
   - `dataset_get(name: str, indices: list[int] = None, max_records: int = 0, fields: list[str] = None, offset: int = 0, limit: int = 0)`
   - `dataset_write_koredoc(name: str, folder_path: str, document_name: str = "", fields: list[str] = None, offset: int = 0, limit: int = 0)`
+  - `dataset_clear()`
   - `dataset_delete(name: str)`
   - `dataset_drop_where(name: str, predicate: str, save_as: str = "", replace: bool = False)`
   - `dataset_expand_full_text(name: str, save_as: str = "", replace: bool = False, offset: int = 0, limit: int = 0)`
@@ -59,6 +60,9 @@ No parameters.
 ### `dataset_delete(name)`
 - `name` *(required)* - dataset to remove.
 
+### `dataset_clear()`
+Deletes every dataset in the active session, including any spillover records.
+
 ### `dataset_drop_where(name, predicate, save_as = "", replace = False)`
 - `name` *(required)* - dataset to transform.
 - `predicate` *(required)* - deterministic drop rule such as `duplicate by url` or `missing field body`.
@@ -87,6 +91,7 @@ No parameters.
 - `dataset_inspect(...)` - JSON manifest with metadata, history tail, and sample records.
 - `dataset_get(...)` - JSON object with paging metadata plus the selected records under `records`.
 - `dataset_write_koredoc(...)` - deterministic export of real dataset rows to a KoreDocs `.koredoc` document.
+- `dataset_clear()` - confirmation including the number of removed datasets.
 - `dataset_delete(...)` - confirmation or not-found message.
 - `dataset_drop_where(...)` - confirmation describing the predicate and resulting counts.
 - `dataset_expand_full_text(...)` - confirmation describing how many rows were expanded through `artifact_ref` and how many were skipped.

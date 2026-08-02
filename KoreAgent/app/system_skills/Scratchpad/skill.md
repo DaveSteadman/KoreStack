@@ -16,6 +16,7 @@ chains where an intermediate result is needed again in a later step.
   - `scratchpad_list()`
   - `scratchpad_dump()`
   - `scratchpad_delete(key: str)`
+  - `scratchpad_clear()`
   - `scratchpad_search(substring: str)`
   - `scratchpad_peek(key: str, substring: str, context_chars: int = 250)`
   - `scratchpad_query(key: str, query: str, save_result_key: str = "", instructions: str = "")`
@@ -41,6 +42,9 @@ No parameters.  Returns the full content of every key - use this to inspect stor
 
 ### `scratchpad_delete(key)`
 - `key` *(required)* - the key to remove from the scratchpad.
+
+### `scratchpad_clear()`
+Removes every scratchpad key in the active session.
 
 ### `scratchpad_search(substring)`
 - `substring` *(required)* - case-insensitive text to search for within stored values. Returns all keys whose value contains the substring.
@@ -68,6 +72,7 @@ No parameters.  Returns the full content of every key - use this to inspect stor
 - `scratchpad_list()` - returns a formatted list of active keys and their sizes, or `"Scratchpad is empty."`.
 - `scratchpad_dump()` - returns every key followed by its full stored value. Use to inspect scratchpad contents for debugging.
 - `scratchpad_delete(...)` - returns confirmation or `"Scratchpad key '<key>' not found - nothing deleted."`.
+- `scratchpad_clear()` - returns the number of removed keys.
 - `scratchpad_search(...)` - returns a formatted list of matching key names and sizes, or `"No scratchpad keys contain the substring '<text>'."` when no match is found.
 - `scratchpad_peek(...)` - returns `[Match in 'key' at char N / M total]` followed by the surrounding text with `>>>match<<<` highlighting, or an error string when the key or substring is not found.
 - `scratchpad_query(...)` - returns the compact extracted answer from the isolated LLM call, or `"Not found in content."` when the query cannot be answered from the stored value.  When `save_result_key` is provided, prepends `[Result saved to '<key>']` to the output.

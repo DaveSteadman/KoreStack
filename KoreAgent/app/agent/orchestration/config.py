@@ -14,6 +14,7 @@ class OrchestratorConfig:
     catalog_mtime: float = 0.0
     task_planning_enabled: bool = True
     task_plan_enforce_phase: bool = False
+    planning_mode: str = "auto"
 
 
 __all__ = ["OrchestratorConfig"]

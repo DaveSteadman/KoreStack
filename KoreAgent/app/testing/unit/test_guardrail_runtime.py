@@ -162,7 +162,7 @@ class GuardrailRuntimeTests(unittest.TestCase):
         self.assertEqual(tools_active_add["parameters_schema"]["properties"]["tool_names"]["type"], "array")
         self.assertEqual(tools_active_add["invoke_template"]["tool_names"], ["example"])
         self.assertEqual(chat_spawn["parameters_schema"]["properties"]["prompt"]["type"], "string")
-        self.assertEqual(chat_spawn["parameters_schema"]["properties"]["tools_allowlist"]["type"], "array")
+        self.assertNotIn("tools_allowlist", chat_spawn["parameters_schema"]["properties"])
         self.assertEqual(chat_spawn["parameters_schema"]["properties"]["inputs"]["type"], "object")
         self.assertEqual(chat_result["parameters_schema"]["properties"]["chat_id"]["type"], "string")
         self.assertEqual(file_read["parameters_schema"]["properties"]["max_chars"]["default"], 8000)
@@ -174,7 +174,7 @@ class GuardrailRuntimeTests(unittest.TestCase):
     def test_worker_chat_surface_uses_an_isolated_result_contract(self) -> None:
         self.assertEqual(
             worker_chat_skill_module.__all__,
-            ["chat_spawn", "chat_status", "chat_result"],
+            ["chat_spawn", "chat_status", "chat_result", "chat_cancel"],
         )
         self.assertNotIn("Delegate", worker_chat_skill_module.chat_spawn.__module__)
 
@@ -896,8 +896,8 @@ class GuardrailRuntimeTests(unittest.TestCase):
     def test_workspace_utils_reads_folder_overrides_from_bootstrap_defaults(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_root = Path(tmp)
-            # Bootstrap file is config/llm_config.json (returned by get_bootstrap_defaults_file)
-            bootstrap = tmp_root / "config" / "llm_config.json"
+            # Bootstrap file is config/koreagent_config.json (returned by get_bootstrap_defaults_file)
+            bootstrap = tmp_root / "config" / "koreagent_config.json"
             bootstrap.parent.mkdir(parents=True, exist_ok=True)
             bootstrap.write_text(
                 '{\n'

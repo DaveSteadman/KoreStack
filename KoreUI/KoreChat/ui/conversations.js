@@ -228,6 +228,7 @@ function _renderDetail(data) {
         renderSummary(conv.thread_summary || "");
         renderScratchpad(conv.scratchpad);
         renderDatasets(conv.datasets);
+        renderInDepthPlanner(conv.indepth_planner);
         renderInputHistory(conv.input_history || []);
     }
     document.querySelectorAll(".conv-item").forEach(el => {
@@ -458,6 +459,25 @@ function renderDatasets(datasets) {
     }
 
     document.getElementById("datasets-list").innerHTML = keys.map(k =>
+        _renderScratchpadEntry(k, data[k])
+    ).join("");
+}
+
+function renderInDepthPlanner(indepthPlanner) {
+    let data = indepthPlanner;
+    if (typeof data === "string") {
+        try { data = JSON.parse(data); } catch { data = {}; }
+    }
+    data = data || {};
+    const keys = Object.keys(data);
+    document.getElementById("indepth-planner-empty").hidden = keys.length > 0;
+
+    if (keys.length === 0) {
+        document.getElementById("indepth-planner-list").innerHTML = "";
+        return;
+    }
+
+    document.getElementById("indepth-planner-list").innerHTML = keys.map(k =>
         _renderScratchpadEntry(k, data[k])
     ).join("");
 }

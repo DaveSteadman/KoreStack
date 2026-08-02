@@ -31,7 +31,7 @@ python .\KoreAgent\main.py
 ## Install and configuration
 
 - Install shared dependencies from the repo root with `pip install -r requirements.txt`
-- Review `config/llm_config.json` before first run and make sure the configured host and model are valid
+- Review `config/koreagent_config.json` before first run and make sure the configured host and model are valid
 - Review `config/korestack_config.json` for MCP connections and related service URLs
 - If you use Ollama or another local model host, make sure it is reachable before starting the agent
 - Local Ollama auto-start is off by default; set `KORE_OLLAMA_AUTOSTART=1` only if you want KoreAgent to launch a local Ollama process itself
@@ -51,7 +51,7 @@ Notes:
 
 - Smaller models can work, but multi-step tool use is less reliable
 - The skills catalog is also rebuilt automatically when `skill.md` inputs change, but a manual rebuild is a good first-run check
-- The active host and default model should match `config/llm_config.json`
+- The active host and default model should match `config/koreagent_config.json`
 
 ## Tool model
 

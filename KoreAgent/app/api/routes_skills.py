@@ -107,6 +107,18 @@ def register_skills_routes(
         config = config_getter()
         if config is None:
             raise HTTPException(status_code=503, detail="KoreAgent config is not initialized")
+
+        catalog_path = getattr(config, "skills_catalog_path", None)
+        if catalog_path and Path(catalog_path).exists():
+            # The catalog page is an inspection and invocation surface. It must
+            # reflect the current file even when no orchestration run has yet
+            # refreshed this long-lived API configuration object.
+            from skills_catalog_builder import load_skills_payload
+
+            current_mtime       = Path(catalog_path).stat().st_mtime
+            config.skills_payload = load_skills_payload(Path(catalog_path))
+            config.catalog_mtime  = current_mtime
+
         payload = config.skills_payload if isinstance(config.skills_payload, dict) else {}
         if not payload:
             raise HTTPException(status_code=503, detail="Skills payload is unavailable")

@@ -69,15 +69,28 @@ def _load_callable_from_module_path(module_path: str, function_name: str):
     # Generate a stable canonical module name so that if any other importer has already
     # loaded this file, both references share the same module object and module-level state.
     # Re-use an already-registered module rather than exec_module-ing a second copy.
-    if dynamic_module_name in sys.modules:
-        module = sys.modules[dynamic_module_name]
-    else:
+    module = sys.modules.get(dynamic_module_name)
+    # A failed earlier import can leave a partially initialised module in
+    # sys.modules. Never reuse it: retrying against that object turns the
+    # original import error into a misleading "function not found" error.
+    if module is not None and not hasattr(module, function_name):
+        sys.modules.pop(dynamic_module_name, None)
+        module = None
+
+    if module is None:
         spec   = importlib.util.spec_from_file_location(dynamic_module_name, absolute_module_path)
         if spec is None or spec.loader is None:
             raise RuntimeError(f"Unable to load module spec for: {module_path}")
         module = importlib.util.module_from_spec(spec)
         sys.modules[dynamic_module_name] = module
-        spec.loader.exec_module(module)
+        try:
+            spec.loader.exec_module(module)
+        except Exception:
+            # importlib does not remove a module registered before exec_module
+            # raises. Clean it up so a later tool call can load a repaired file.
+            if sys.modules.get(dynamic_module_name) is module:
+                sys.modules.pop(dynamic_module_name, None)
+            raise
 
     if not hasattr(module, function_name):
         raise RuntimeError(f"Function '{function_name}' not found in module '{module_path}'")

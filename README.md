@@ -34,7 +34,7 @@ This repository should be readable from the top down. The root README is the Git
 
 - Python 3.11 or newer
 - A writable data root referenced by `config/korestack_config.json`
-- For `KoreAgent`, either Ollama or another configured LLM endpoint reachable from `config/llm_config.json`
+- For `KoreAgent`, either Ollama or another configured LLM endpoint reachable from `config/koreagent_config.json`
 
 ### Install
 
@@ -49,7 +49,7 @@ pip install -r requirements.txt
 Check these files first:
 
 - `config/korestack_config.json` for ports, host binding, data-root paths, and MCP service wiring
-- `config/llm_config.json` for the agent model host and default model configuration
+- `config/koreagent_config.json` for the agent model host and default model configuration
 
 The checked-in config currently uses `paths.dataroot` as the backing location for `Data/datacontrol/` and `Data/datauser/`. If that path does not exist on your machine, update it before starting the suite.
 
@@ -132,7 +132,7 @@ In practice, the actual data root is resolved from `paths.dataroot` or the `KORE
 | `python .\main.py` fails immediately | Activate the virtual environment and rerun `pip install -r requirements.txt` |
 | Services fail to start or exit on boot | Run `python .\main.py --dry-run` and confirm the configured ports and service enablement flags |
 | Errors mention missing folders or databases | Verify `paths.dataroot` in `config/korestack_config.json` points to a valid writable location |
-| KoreAgent starts but model calls fail | Check `config/llm_config.json`, confirm the LLM host is reachable, and make sure the selected model exists |
+| KoreAgent starts but model calls fail | Check `config/koreagent_config.json`, confirm the LLM host is reachable, and make sure the selected model exists |
 | Browser UI loads without styling | Confirm `UIElements/` is present and that the app can serve shared assets from `/ui-elements/assets/` |
 | A single service is blocking the whole suite | Start a narrower set with `--services ...` and debug that subsystem in isolation |
 

@@ -30,7 +30,8 @@ python .\KoreLiveWeb\main.py
 ## Install and configuration
 
 - Install shared dependencies from the repo root with `pip install -r requirements.txt`
-- Review `services.koreliveweb` in `config/korestack_config.json` for port and provider settings
+- Review `services.koreliveweb` in `config/korestack_config.json` for the port and enabled flag
+- Review `config/koreliveweb_config.json` for KoreLiveWeb provider settings
 - Review the configured MCP connection in the same file if another subsystem needs to call KoreLiveWeb tools
 
 ## New user notes

@@ -652,6 +652,15 @@ def delete_session_datasets(session_id: str | None = None) -> None:
     datasets_store.delete_session_datasets(resolved)
 
 
+def dataset_clear(session_id: str | None = None) -> str:
+    """Delete every dataset, including spillover records, in one session."""
+    resolved = _resolve_session_id(session_id)
+    with _DATASET_LOCK:
+        count = len(_SESSION_DATASETS.get(resolved, {}))
+    delete_session_datasets(resolved)
+    return f"Cleared {count} dataset(s)."
+
+
 def _format_manifest_line(dataset: dict) -> str:
     fields = ",".join((dataset.get("schema") or [])[:5])
     last_history = (dataset.get("history") or [])[-1] if dataset.get("history") else {}

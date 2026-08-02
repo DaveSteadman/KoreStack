@@ -38,6 +38,16 @@ html, body {
   padding-bottom: 4px;
 }
 
+/* The shared nav-panel rule displays closed child groups as a grid.  The
+   KoreFile tree needs them removed from layout until their parent is open. */
+#kf-tree .tree-children {
+  display: none;
+}
+
+#kf-tree .tree-children.open {
+  display: block;
+}
+
 .tree-item .tree-toggle {
   transition: transform 120ms;
 }

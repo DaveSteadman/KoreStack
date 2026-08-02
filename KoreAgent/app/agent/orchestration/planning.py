@@ -15,6 +15,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
 
+from scratchpad import scratchpad_save
 from sessions.runtime import get_active_session_id
 
 
@@ -22,6 +23,12 @@ MAX_PHASE_TOOLS          = 12
 MAX_ACTIVATION_TOOLS     = 16
 VALID_PHASES             = ("clarify", "inspect", "plan", "act", "validate", "complete")
 ALWAYS_ON_TOOL_NAMES     = frozenset({"delegate", "tools_catalog_list", "tools_active_add"})
+TASK_PLAN_SCRATCHPAD_KEY = "task_plan"
+_PLAN_TASK_EXECUTION_RE = re.compile(
+    r"\b(?:run|execute|continue|rerun)\s+(?:the\s+)?(?:first|second|third|fourth|fifth|\d+(?:st|nd|rd|th)?)?\s*task\b.*\bplan\b"
+    r"|\b(?:run|execute|continue|rerun)\s+plan\s+task\b",
+    re.IGNORECASE,
+)
 _TOKEN_RE                = re.compile(r"[a-z0-9_]{3,}", re.IGNORECASE)
 _GRAPH_WRITE_INTENT_RE   = re.compile(
     r"\b(?:add|create|insert|save|store|submit|write|load)\b.{0,80}\b(?:graph|koregraph|triple|triples|graph connection|graph connections)\b"
@@ -29,8 +36,9 @@ _GRAPH_WRITE_INTENT_RE   = re.compile(
     re.IGNORECASE | re.DOTALL,
 )
 
-# Task plans are controller state, not agent scratchpad data.  Keeping them here avoids an agent
-# reasoning over its own orchestration instructions through scratchpad tools.
+# Task plans retain a controller cache for orchestration and are mirrored to the named
+# ``task_plan`` scratchpad entry. KoreChat persists named scratchpad entries with its
+# definitive conversation record at the end of a turn.
 _PLAN_STATE_BY_SESSION: dict[str, dict[str, Any]] = {}
 _PLANNER_SELECTION_TRACE_BY_SESSION: dict[str, dict[str, Any]] = {}
 _PLAN_STATE_LOCK                          = threading.RLock()
@@ -82,6 +90,16 @@ class TaskPlan:
 
 def _utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def _mirror_task_plan_to_scratchpad(payload: dict[str, Any]) -> None:
+    """Persist the current plan snapshot under its stable, user-visible scratchpad key."""
+    serialized_payload = json.dumps(
+        payload,
+        ensure_ascii = False,
+        separators    = (",", ":"),
+    )
+    scratchpad_save(TASK_PLAN_SCRATCHPAD_KEY, serialized_payload)
 
 
 def _as_string_list(value: object, *, limit: int = 12) -> list[str]:
@@ -322,6 +340,18 @@ def _apply_intent_overrides(plan: TaskPlan, *, user_prompt: str, known_tool_name
             if plan.current_phase in {"inspect", "plan"}:
                 _append_unique_tool_names(override_phase_tools, sorted(graph_write_tools))
 
+    if _PLAN_TASK_EXECUTION_RE.search(user_prompt or ""):
+        lifecycle_tools = [
+            "plan_get_task",
+            "plan_activate_task",
+            "plan_complete_task",
+            "plan_set_task_status",
+            "plan_attach_output",
+            "plan_get_summary",
+        ]
+        lifecycle_tools = [name for name in lifecycle_tools if name in known_tool_names]
+        _append_unique_tool_names(override_phase_tools, lifecycle_tools)
+
     return TaskPlan(
         objective               = plan.objective,
         task_class              = plan.task_class,
@@ -437,6 +467,7 @@ def persist_task_plan(plan: TaskPlan) -> None:
     }
     with _PLAN_STATE_LOCK:
         _PLAN_STATE_BY_SESSION[get_active_session_id()] = payload
+    _mirror_task_plan_to_scratchpad(payload)
 
 
 def record_task_plan_event(
@@ -461,6 +492,7 @@ def record_task_plan_event(
         if status:
             state["status"] = str(status)
         payload["state"] = state
+        _mirror_task_plan_to_scratchpad(payload)
 
 
 def get_last_planner_selection_trace() -> dict[str, Any]:
@@ -599,11 +631,13 @@ def advance_task_plan_phase(round_outputs: list[dict[str, Any]] | None = None) -
         if current_phase == "complete":
             state["phase"] = "complete"
             payload["state"] = state
+            _mirror_task_plan_to_scratchpad(payload)
             return "complete"
 
         if not has_success:
             state["phase"] = current_phase
             payload["state"] = state
+            _mirror_task_plan_to_scratchpad(payload)
             return current_phase
 
         if not _phase_transition_satisfied(current_phase, successful_tool_names):
@@ -618,6 +652,7 @@ def advance_task_plan_phase(round_outputs: list[dict[str, Any]] | None = None) -
             state["events"] = events
             state["phase"] = current_phase
             payload["state"] = state
+            _mirror_task_plan_to_scratchpad(payload)
             return current_phase
 
         workflow = payload.get("workflow") if isinstance(payload.get("workflow"), list) else []
@@ -637,6 +672,7 @@ def advance_task_plan_phase(round_outputs: list[dict[str, Any]] | None = None) -
             state["events"] = events
         state["phase"] = next_phase
         payload["state"] = state
+        _mirror_task_plan_to_scratchpad(payload)
         return next_phase
 
 

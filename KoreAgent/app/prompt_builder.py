@@ -90,8 +90,13 @@ _SYSTEM_SKILL_GUIDANCE: list[str] = [
     "- When the user asks to save something into KoreDocs or a `.koredoc`, treat that as a KoreDocs destination, not a generic file-access request.",
     "- Use file_write / file_append for ordinary workspace files. For KoreDocs outputs, prefer dataset_write_koredoc for faithful dataset exports and dedicated KoreDocs tools when editing an existing KoreDocs document.",
 
-    # -- TaskManagement (system_skills/TaskManagement/) --------------------------------------
-    "- Creating, listing, updating, or deleting scheduled tasks requires calling the task_* tools. Do not generate task JSON by hand.",
+    # -- CronPrompt (system_skills/CronPrompt/) ----------------------------------------------
+    "- Creating, listing, updating, or deleting scheduled cron prompts requires calling the cronprompt_* tools. Do not generate scheduler JSON by hand.",
+
+    # -- InDepthPlanner (system_skills/InDepthPlanner/) --------------------------------------
+    "- When the user wants durable multi-step planning, revisions, run-to-completion control, or plan status reporting, prefer the plan_* tools instead of storing orchestration state only in scratchpad.",
+    "- In user-facing plan outputs, identify work primarily as `Task <number>` and include the title and status (for example, `Task 3 — Data Synthesis — active`). Do not make internal slug IDs the main visible identifier.",
+    "- When the user asks to run, continue, or rerun a PlanTask, execute its whole persisted task statement. Read and activate that PlanTask first; do not give a final answer after a partial sub-step. Persist either completion with evidence via plan_complete_task, or an active/blocked status with the precise remaining work or blocker.",
 
     # -- ToolSelection (system_skills/ToolSelection/) ----------------------------------------
     "- The currently visible tool schema is only the active working set. When the needed capability is missing, use the tool-selection control skill to inspect the larger catalog and activate the specific tools you need.",

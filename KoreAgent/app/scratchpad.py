@@ -12,7 +12,7 @@
 #   scratchpad_load(key)         -- retrieve a stored value as a string
 #   scratchpad_list()            -- return a human-readable list of current keys
 #   scratchpad_delete(key)       -- remove one key
-#   scratchpad_clear()           -- remove all keys (called at session reset)
+#   scratchpad_clear()           -- remove all keys in the active session
 #   get_store()               -- return a shallow copy of the store dict (for token resolution)
 #   get_key_names()           -- return sorted list of active key names (for system prompt)
 #

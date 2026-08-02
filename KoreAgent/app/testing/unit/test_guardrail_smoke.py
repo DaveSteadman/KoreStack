@@ -155,15 +155,20 @@ class GuardrailSmokeTests(unittest.TestCase):
 
         self.assertEqual(plan.phase_tools, ["python_execute"])
 
-    def test_task_plan_is_not_exposed_through_the_scratchpad(self) -> None:
-        with bind_session("private_task_plan"):
+    def test_task_plan_is_mirrored_to_the_named_scratchpad(self) -> None:
+        with bind_session("named_task_plan"):
+            scratchpad_clear()
             task_planning_module.persist_task_plan(
                 task_planning_module.fallback_task_plan(user_prompt="Inspect the workspace.", reason="test")
             )
-            scratchpad_save("__internal_test", "controller state")
+            task_planning_module.record_task_plan_event("inspected", "planning.py")
 
-            self.assertEqual(scratchpad_list(), "Scratchpad is empty.")
-            self.assertNotIn("__internal_test", get_store())
+            payload = json.loads(scratchpad_load("task_plan"))
+
+            self.assertIn("task_plan", scratchpad_list())
+            self.assertIn("task_plan", get_store())
+            self.assertEqual(payload["objective"], "Inspect the workspace.")
+            self.assertEqual(payload["state"]["events"][-1]["type"], "inspected")
 
     def test_task_plan_advances_phase_and_refreshes_activation_tools(self) -> None:
         with bind_session("task_plan_phase_flow"):

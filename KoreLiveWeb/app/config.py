@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
@@ -8,6 +9,8 @@ if str(_SUITE_ROOT) not in sys.path:
     sys.path.insert(0, str(_SUITE_ROOT))
 
 from KoreCommon.suite_config import load_service_config
+
+_SERVICE_CONFIG_PATH = (_SUITE_ROOT / "config" / "koreliveweb_config.json").resolve()
 
 _DEFAULTS = {
     "port":                  None,
@@ -21,25 +24,39 @@ _DEFAULTS = {
 }
 
 
-def _merge_raw_service_config(result: dict, raw: dict) -> None:
-    service_cfg = raw.get("services", {}).get("koreliveweb", {})
-    if not isinstance(service_cfg, dict):
+def _merge_liveweb_settings(result: dict, source: dict) -> None:
+    if not isinstance(source, dict):
         return
 
-    if "search_provider" in service_cfg:
-        result["search_provider"] = str(service_cfg.get("search_provider") or "").strip() or result["search_provider"]
+    if "search_provider" in source:
+        result["search_provider"] = str(source.get("search_provider") or "").strip() or result["search_provider"]
 
-    if "ddg_enabled" in service_cfg:
-        result["ddg_enabled"] = bool(service_cfg.get("ddg_enabled"))
+    if "ddg_enabled" in source:
+        result["ddg_enabled"] = bool(source.get("ddg_enabled"))
 
-    if "ollama_enabled" in service_cfg:
-        result["ollama_enabled"] = bool(service_cfg.get("ollama_enabled"))
+    if "ollama_enabled" in source:
+        result["ollama_enabled"] = bool(source.get("ollama_enabled"))
 
-    if "ollama_web_search_url" in service_cfg:
-        result["ollama_web_search_url"] = str(service_cfg.get("ollama_web_search_url") or "").strip() or result["ollama_web_search_url"]
+    if "ollama_web_search_url" in source:
+        result["ollama_web_search_url"] = str(source.get("ollama_web_search_url") or "").strip() or result["ollama_web_search_url"]
 
-    if "ollama_api_key" in service_cfg:
-        result["ollama_api_key"] = str(service_cfg.get("ollama_api_key") or "").strip()
+    if "ollama_api_key" in source:
+        result["ollama_api_key"] = str(source.get("ollama_api_key") or "").strip()
+
+
+def _read_liveweb_config_file() -> dict:
+    if not _SERVICE_CONFIG_PATH.exists():
+        return {}
+
+    with _SERVICE_CONFIG_PATH.open(encoding="utf-8") as handle:
+        data = json.load(handle)
+    return data if isinstance(data, dict) else {}
+
+
+def _merge_raw_service_config(result: dict, raw: dict) -> None:
+    service_cfg = raw.get("services", {}).get("koreliveweb", {})
+    _merge_liveweb_settings(result, service_cfg)
+    _merge_liveweb_settings(result, _read_liveweb_config_file())
 
 
 def load() -> dict:

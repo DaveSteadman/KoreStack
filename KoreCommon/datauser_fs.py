@@ -45,7 +45,7 @@ def get_suite_config_file() -> Path:
 
 @lru_cache(maxsize=1)
 def get_bootstrap_defaults_file() -> Path:
-    return get_workspace_root() / "config" / "llm_config.json"
+    return get_workspace_root() / "config" / "koreagent_config.json"
 
 
 @lru_cache(maxsize=1)

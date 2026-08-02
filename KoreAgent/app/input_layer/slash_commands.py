@@ -33,6 +33,7 @@ from agent.orchestration.engine import set_sandbox_enabled
 from agent.orchestration.engine import set_skill_guidance_enabled
 from input_layer.slash_command_context import SlashCommandContext
 from input_layer.slash_command_handlers_models import register_model_slash_commands
+from input_layer.slash_command_handlers_plans import register_plan_slash_commands
 from input_layer.slash_command_handlers_sessions import register_session_slash_commands
 from input_layer.slash_command_handlers_tasks import register_task_slash_commands
 from input_layer.slash_command_handlers_testing import register_testing_slash_commands
@@ -442,6 +443,26 @@ def _cmd_mcp(arg: str, ctx: SlashCommandContext) -> None:
     ctx.output("Usage: /mcp [status | reconnect]", "dim")
 
 
+def _cmd_planning(arg: str, ctx: SlashCommandContext) -> None:
+    allowed = {"off", "simple", "indepth", "auto"}
+    current = str(getattr(ctx.config, "planning_mode", "auto") or "auto").strip().lower() or "auto"
+    if not arg.strip():
+        enabled = "on" if current != "off" else "off"
+        ctx.output(f"Planning mode: {current} ({enabled})", "info")
+        ctx.output("Usage: /planning <off|simple|indepth|auto>", "dim")
+        return
+
+    requested = arg.strip().lower()
+    if requested not in allowed:
+        ctx.output(f"Invalid planning mode '{requested}'. Use one of: off, simple, indepth, auto.", "error")
+        return
+
+    old_mode = current
+    ctx.config.planning_mode = requested
+    ctx.config.task_planning_enabled = requested != "off"
+    ctx.output(f"Planning mode changed: {old_mode} -> {requested}", "success")
+
+
 _REGISTRY: dict[str, Callable] = {
     "/help": _cmd_help,
     "/ctx": _cmd_ctx,
@@ -455,6 +476,7 @@ _REGISTRY: dict[str, Callable] = {
     "/deletelogs": _cmd_deletelogs,
     "/defaults": _cmd_defaults,
     "/mcp":      _cmd_mcp,
+    "/planning": _cmd_planning,
 }
 
 _DESCRIPTIONS: dict[str, str] = {
@@ -470,9 +492,11 @@ _DESCRIPTIONS: dict[str, str] = {
     "/deletelogs": "<days>  Delete log, chatsession, and test_results date-folders older than N days (e.g. /deletelogs 10)",
     "/defaults": "Show current bootstrap defaults and file path; /defaults set saves current model/ctx/host to the file",
     "/mcp":      "[status | reconnect]  Show MCP server status or re-enumerate tools from all configured servers",
+    "/planning": "<off|simple|indepth|auto>  Control whether prompts bypass planning, use the lightweight planner, or seed durable InDepthPlanner state",
 }
 
 register_model_slash_commands(_REGISTRY, _DESCRIPTIONS)
+register_plan_slash_commands(_REGISTRY, _DESCRIPTIONS)
 register_testing_slash_commands(_REGISTRY, _DESCRIPTIONS)
 register_task_slash_commands(_REGISTRY, _DESCRIPTIONS)
 register_session_slash_commands(_REGISTRY, _DESCRIPTIONS)

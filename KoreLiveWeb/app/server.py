@@ -27,9 +27,7 @@ if _KORECOMMON_PARENT is not None:
 from KoreCommon.service_app import register_suite_shell_routes
 from KoreCommon.service_logging import configure_service_logging
 from KoreCommon.suite_paths import _load_paths_config
-from KoreCommon.suite_paths import get_suite_config_file
 from KoreCommon.suite_paths import get_suite_urls_map
-from KoreCommon.suite_paths import load_suite_config
 from .activity_log    import append_activity
 from .activity_log    import list_activity
 from .config          import cfg
@@ -65,6 +63,7 @@ _UI_ELEMENTS_ASSETS = Path(
     )
 ).resolve()
 _templates          = Jinja2Templates(directory=str(_TEMPLATES_DIR))
+_KORELIVEWEB_CONFIG_PATH = (_SERVICE_ROOT / "config" / "koreliveweb_config.json").resolve()
 
 
 def _asset_version() -> str:
@@ -83,29 +82,29 @@ def _asset_version() -> str:
     return "-".join(stamps) if stamps else "1"
 
 
-def _read_suite_config_json() -> tuple[Path, dict]:
-    path = get_suite_config_file()
+def _read_koreliveweb_config_json() -> tuple[Path, dict]:
+    path = _KORELIVEWEB_CONFIG_PATH
     if not path.exists():
-        raise HTTPException(status_code=500, detail="Suite config file not found")
+        return path, {}
 
     try:
         with path.open(encoding="utf-8") as handle:
             raw = json.load(handle)
     except json.JSONDecodeError as exc:
-        raise HTTPException(status_code=500, detail=f"Suite config is invalid JSON: {exc}") from exc
+        raise HTTPException(status_code=500, detail=f"KoreLiveWeb config is invalid JSON: {exc}") from exc
     except OSError as exc:
-        raise HTTPException(status_code=500, detail=f"Failed to read suite config: {exc}") from exc
+        raise HTTPException(status_code=500, detail=f"Failed to read KoreLiveWeb config: {exc}") from exc
 
     if not isinstance(raw, dict):
-        raise HTTPException(status_code=500, detail="Suite config root must be a JSON object")
+        raise HTTPException(status_code=500, detail="KoreLiveWeb config root must be a JSON object")
     return path, raw
 
 
-def _write_suite_config_json(path: Path, payload: dict) -> None:
+def _write_koreliveweb_config_json(path: Path, payload: dict) -> None:
     try:
         path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
     except OSError as exc:
-        raise HTTPException(status_code=500, detail=f"Failed to write suite config: {exc}") from exc
+        raise HTTPException(status_code=500, detail=f"Failed to write KoreLiveWeb config: {exc}") from exc
 
 
 def _coerce_checkbox_bool(value) -> bool:
@@ -156,13 +155,7 @@ def _persist_search_settings(
     ollama_api_key: str | None,
     clear_ollama_api_key: bool,
 ) -> dict:
-    path, raw      = _read_suite_config_json()
-    services       = raw.setdefault("services", {})
-    if not isinstance(services, dict):
-        raise HTTPException(status_code=500, detail="Suite config services section must be a JSON object")
-    service_cfg    = services.setdefault("koreliveweb", {})
-    if not isinstance(service_cfg, dict):
-        raise HTTPException(status_code=500, detail="services.koreliveweb must be a JSON object")
+    path, service_cfg = _read_koreliveweb_config_json()
 
     service_cfg["search_provider"]        = preferred_provider
     service_cfg["ddg_enabled"]            = bool(ddg_enabled)
@@ -174,7 +167,7 @@ def _persist_search_settings(
     elif ollama_api_key is not None:
         service_cfg["ollama_api_key"] = ollama_api_key
 
-    _write_suite_config_json(path, raw)
+    _write_koreliveweb_config_json(path, service_cfg)
 
     _apply_runtime_search_settings(
         preferred_provider       = preferred_provider,
@@ -184,7 +177,6 @@ def _persist_search_settings(
         ollama_api_key           = "" if clear_ollama_api_key else ollama_api_key,
     )
 
-    load_suite_config.cache_clear()
     _load_paths_config.cache_clear()
 
     append_activity(

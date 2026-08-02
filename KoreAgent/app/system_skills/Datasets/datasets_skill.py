@@ -8,6 +8,7 @@
 # ====================================================================================================
 
 from datasets_pkg.models import dataset_delete
+from datasets_pkg.models import dataset_clear
 from datasets_pkg.filtering import dataset_drop_where
 from datasets_pkg.full_text import dataset_expand_full_text
 from datasets_pkg.filtering import dataset_filter
@@ -20,6 +21,7 @@ from datasets_pkg.export import dataset_write_koredoc
 
 
 __all__ = [
+    "dataset_clear",
     "dataset_delete",
     "dataset_drop_where",
     "dataset_expand_full_text",

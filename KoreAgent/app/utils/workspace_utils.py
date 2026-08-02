@@ -84,7 +84,7 @@ def get_suite_defaults_file() -> Path:
 @lru_cache(maxsize=1)
 def get_bootstrap_defaults_file() -> Path:
     """Return the agent LLM config file (model, ctx, llmhost, and agent-specific tuning)."""
-    return get_workspace_root() / "config" / "llm_config.json"
+    return get_workspace_root() / "config" / "koreagent_config.json"
 
 
 def _read_json_file(path: Path) -> dict:
@@ -275,6 +275,12 @@ def get_logs_dir() -> Path:
 def get_schedules_dir() -> Path:
     """Return the absolute path to the datacontrol/schedules/ directory."""
     return get_controldata_dir() / "schedules"
+
+
+@lru_cache(maxsize=1)
+def get_plans_dir() -> Path:
+    """Return the absolute path to the datacontrol/plans/ directory."""
+    return get_controldata_dir() / "plans"
 
 
 @lru_cache(maxsize=1)

@@ -1,6 +1,7 @@
 """Public dataset-facing operations and metadata helpers."""
 
 from datasets_pkg.service import (
+    dataset_clear,
     dataset_delete,
     dataset_get,
     dataset_inspect,
@@ -12,6 +13,7 @@ from datasets_pkg.service import (
 )
 
 __all__ = [
+    "dataset_clear",
     "dataset_delete",
     "dataset_get",
     "dataset_inspect",

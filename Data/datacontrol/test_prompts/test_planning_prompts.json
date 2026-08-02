@@ -21,19 +21,19 @@
     ]
   },
   {
-    "exchange": "planning_delegate_with_durable_result",
+    "exchange": "planning_worker_chat_with_durable_result",
     "turns": [
       {
-        "user": "Delegate a bounded child task that returns valid JSON only: [{\"risk\":\"duplicate reads\",\"priority\":\"high\"},{\"risk\":\"missing validation\",\"priority\":\"high\"}]. Store its result in dataset:planning_delegate_risks and report only the delegated task id.",
-        "assert": "contains|dlg_"
+        "user": "Use chat_spawn to create a bounded worker chat. Its worker prompt must use python_execute and return valid JSON only: [{\"risk\":\"duplicate reads\",\"priority\":\"high\"},{\"risk\":\"missing validation\",\"priority\":\"high\"}]. Set tools_allowlist to exactly [\"python_execute\"], result_target to dataset:planning_worker_chat_risks, result_format to JSON array of objects, and max_iterations to 3. Report only the worker chat id.",
+        "assert": "contains|chat_"
       },
       {
-        "user": "Collect the delegated result, inspect planning_delegate_risks, and state the record count plus both risk names.",
+        "user": "Use chat_result for the worker chat created in this exchange, inspect planning_worker_chat_risks, and state the record count plus both risk names.",
         "assert": "all_contains|2||duplicate reads||missing validation"
       },
       {
-        "user": "Delete planning_delegate_risks and confirm that the delegated analysis was collected before cleanup.",
-        "assert": "all_contains|deleted||collected"
+        "user": "Delete planning_worker_chat_risks and confirm that the worker result was collected before cleanup.",
+        "assert": "all_contains|deleted||worker"
       }
     ]
   },

@@ -27,6 +27,7 @@
 # MARK: IMPORTS
 # ====================================================================================================
 from scratchpad import scratchpad_delete
+from scratchpad import scratchpad_clear
 from scratchpad import scratchpad_dump
 from scratchpad import scratchpad_list
 from scratchpad import scratchpad_load
@@ -45,6 +46,7 @@ from scratchpad import scratchpad_search
 # No additional logic lives here - see code/scratchpad.py for implementation details.
 __all__ = [
     "scratchpad_delete",
+    "scratchpad_clear",
     "scratchpad_dump",
     "scratchpad_list",
     "scratchpad_load",

@@ -11,6 +11,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from KoreDocs.app.documents.korefile import service as korefile
+from KoreDocs.app.mcp import tools_koredoc
 
 
 class KoreFileMetadataTests(unittest.TestCase):
@@ -64,3 +65,33 @@ class KoreFileMetadataTests(unittest.TestCase):
         names = [file["name"] for file in korefile.list_files()]
 
         self.assertEqual(names, ["note.koredoc"])
+
+    def test_metadata_inventory_reports_nested_paths_and_values(self) -> None:
+        korefile.create_file(1, "one.koredoc", "# One", {"artefact_type": "brief", "producer": {"service": "KoreAgent"}})
+        korefile.create_file(1, "two.koredoc", "# Two", {"artifact_type": "brief", "producer": {"service": "KoreDocs"}})
+
+        inventory = tools_koredoc.koredocs_metadata_inventory()
+        fields = {field["path"]: field for field in inventory["fields"]}
+
+        self.assertEqual(inventory["document_count"], 2)
+        self.assertIn("artefact_type", fields)
+        self.assertIn("artifact_type", fields)
+        self.assertEqual(fields["producer.service"]["document_count"], 2)
+        variants = tools_koredoc.koredocs_metadata_find_variants("artefact_type")
+        self.assertEqual(variants["variant_count"], 2)
+
+    def test_metadata_migrations_dry_run_then_update_header_only(self) -> None:
+        created = korefile.create_file(1, "draft.koredoc", "# Original body", {"artifact_type": "brief", "status": "in progress"})
+
+        preview = tools_koredoc.koredocs_metadata_rename_field("artifact_type", "artefact_type")
+        self.assertFalse(preview["applied"])
+        self.assertEqual(korefile.get_file(created["id"])["metadata"]["artifact_type"], "brief")
+
+        applied = tools_koredoc.koredocs_metadata_rename_field("artifact_type", "artefact_type", apply_changes=True)
+        value_change = tools_koredoc.koredocs_metadata_replace_value("status", "in progress", "in_progress", apply_changes=True)
+        document = korefile.get_file(created["id"])
+
+        self.assertTrue(applied["applied"])
+        self.assertTrue(value_change["applied"])
+        self.assertEqual(document["body_content"], "# Original body")
+        self.assertEqual(document["metadata"], {"artefact_type": "brief", "status": "in_progress"})
