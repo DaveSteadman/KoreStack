@@ -48,7 +48,7 @@ def conversation_create(
             cur = connection.execute(
                 """
                 INSERT INTO conversations
-                    (channel_type, profile, status, subject, protected, external_id, thread_summary, scratchpad, datasets, indepth_planner,
+                    (channel_type, profile, status, subject, protected, external_id, thread_summary, scratchpad, datasets, workflow,
                      tools_active, background_context, token_estimate, turn_count,
                      last_activity_at, created_at, updated_at)
                 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
@@ -174,7 +174,7 @@ def conversation_update(
     thread_summary: str | None = None,
     scratchpad: dict | None = None,
     datasets: dict | None = None,
-    indepth_planner: dict | None = None,
+    workflow: dict | None = None,
     tools_active: list[str] | None = None,
     background_context: str | None = None,
     token_estimate: int | None = None,
@@ -203,9 +203,9 @@ def conversation_update(
     if datasets is not None:
         fields.append("datasets = ?")
         params.append(json.dumps(datasets))
-    if indepth_planner is not None:
-        fields.append("indepth_planner = ?")
-        params.append(json.dumps(indepth_planner))
+    if workflow is not None:
+        fields.append("workflow = ?")
+        params.append(json.dumps(workflow))
     if tools_active is not None:
         fields.append("tools_active = ?")
         params.append(json.dumps(tools_active))

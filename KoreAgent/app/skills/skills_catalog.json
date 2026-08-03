@@ -5,9 +5,20 @@
     {
       "skill_name": "DateTime Skill",
       "relative_path": "app/skills/DateTime/skill.md",
-      "purpose": "Return the current date, time, day name, and month name. Prefer `get_datetime_data()` in all cases - it returns both date and time in a single call. Use `get_day_name()` or `get_month_name()` only when you specifically need just that one value.",
+      "purpose": "Return the current date, time, day name, and month name. Prefer get_datetime_data() in all cases - it returns both date and time in a single call.",
       "module": "KoreAgent/app/skills/DateTime/datetime_skill.py",
-      "trigger_keyword": "current date, time, day of the week, or month name",
+      "functions": [
+        "get_datetime_data()",
+        "get_day_name()",
+        "get_month_name()"
+      ],
+      "inputs": [],
+      "outputs": [
+        "\"get_datetime_data()\" returns a dict with two string fields: 'date' (YYYY-MM-DD) and 'time' (HH:MM:SS).",
+        "\"get_day_name()\" returns the full name of the current day of the week, e.g. \"Saturday\".",
+        "\"get_month_name()\" returns the full name of the current month, e.g. \"March\"."
+      ],
+      "param_descriptions": {},
       "triggers": [
         "what is the date",
         "current date",
@@ -22,33 +33,27 @@
         "day of the week",
         "day name"
       ],
-      "functions": [
-        "get_datetime_data()",
-        "get_day_name()",
-        "get_month_name()"
-      ],
-      "inputs": [],
-      "outputs": [
-        "`get_datetime_data()` - returns a dict with two string fields:",
-        "`date` (str) - current date as `\"YYYY-MM-DD\"`",
-        "`time` (str) - current time as `\"HH:MM:SS\"`",
-        "`get_day_name()` - returns the full name of the current day of the week, e.g. `\"Saturday\"`",
-        "`get_month_name()` - returns the full name of the current month, e.g. `\"March\"`"
-      ],
-      "param_descriptions": {},
-      "tool_selection_guidance": "",
       "is_system_skill": false,
       "origin": "local",
       "availability": "configured",
       "role": "optional",
-      "trust_boundary": "internal"
+      "trust_boundary": "internal",
+      "trigger_keyword": "",
+      "tool_selection_guidance": ""
     },
     {
       "skill_name": "SystemInfo Skill",
       "relative_path": "app/skills/SystemInfo/skill.md",
-      "purpose": "Provide runtime system information including OS name, Python and Ollama versions, RAM usage, and disk usage. Use this for any prompt about the machine, hardware, runtime environment, available resources, or version details. Do not use this for web or file queries.",
+      "purpose": "Provide runtime system information including OS name, Python and Ollama versions, RAM usage, disk usage.",
       "module": "KoreAgent/app/skills/SystemInfo/system_info_skill.py",
-      "trigger_keyword": "system info, RAM or disk space, available memory, or OS and runtime version details",
+      "functions": [
+        "get_system_info_dict()"
+      ],
+      "inputs": [],
+      "outputs": [
+        "dict with fields: os (str), python_version (str), ollama_version (str), ram_used_gb (float), ram_available_gb (float), disk_used_gb (float), disk_available_gb (float)"
+      ],
+      "param_descriptions": {},
       "triggers": [
         "system info",
         "system health",
@@ -71,27 +76,13 @@
         "do we have enough",
         "is there enough space"
       ],
-      "functions": [
-        "get_system_info_dict()"
-      ],
-      "inputs": [],
-      "outputs": [
-        "`get_system_info_dict()` - returns a dict with individually addressable fields:",
-        "`os` (str) - OS name, e.g. `\"Windows\"`",
-        "`python_version` (str) - e.g. `\"3.10.11\"`",
-        "`ollama_version` (str) - e.g. `\"0.18.0\"`",
-        "`ram_used_gb` (float) - RAM in use in GiB",
-        "`ram_available_gb` (float) - RAM free in GiB",
-        "`disk_used_gb` (float) - disk used in GiB",
-        "`disk_available_gb` (float) - disk free in GiB"
-      ],
-      "param_descriptions": {},
-      "tool_selection_guidance": "",
       "is_system_skill": false,
       "origin": "local",
       "availability": "configured",
       "role": "optional",
-      "trust_boundary": "internal"
+      "trust_boundary": "internal",
+      "trigger_keyword": "",
+      "tool_selection_guidance": ""
     },
     {
       "skill_name": "CodeExecute Skill",
@@ -375,41 +366,6 @@
       "trust_boundary": "internal"
     },
     {
-      "skill_name": "InDepthPlanner Skill",
-      "relative_path": "app/system_skills/InDepthPlanner/skill.md",
-      "purpose": "",
-      "module": "",
-      "trigger_keyword": "",
-      "triggers": [],
-      "functions": [
-        "plan_create(objective, initial_tasks=None)",
-        "plan_get()",
-        "plan_get_summary()",
-        "plan_get_task(task_id)",
-        "plan_add_task(title, description=\"\", instruction=\"\", depends_on=None)",
-        "plan_update_task(task_id, title=None, description=None, instruction=None, depends_on=None)",
-        "plan_set_task_data(task_id, data)",
-        "plan_clear_task_data(task_id)",
-        "plan_reset_task_run(task_id)",
-        "plan_clear_dynamic()",
-        "plan_mark_task_ran(task_id, note=\"\")",
-        "plan_run_to_completion()",
-        "plan_clear()",
-        "plan_export(name)",
-        "plan_import(name, replace=False)",
-        "plan_list_archives()"
-      ],
-      "inputs": [],
-      "outputs": [],
-      "param_descriptions": {},
-      "tool_selection_guidance": "",
-      "is_system_skill": true,
-      "origin": "builtin",
-      "availability": "guaranteed",
-      "role": "core",
-      "trust_boundary": "internal"
-    },
-    {
       "skill_name": "Scratchpad Skill",
       "relative_path": "app/system_skills/Scratchpad/skill.md",
       "purpose": "Store and retrieve named working values within a session so that bulk data returned by other skills\n(web pages, file content, computation results) can be parked under a short key and referenced later\nwithout consuming context window space.  Use this skill whenever the plan involves multi-step tool\nchains where an intermediate result is needed again in a later step.",
@@ -534,6 +490,41 @@
         }
       },
       "tool_selection_guidance": "Use this skill whenever the current active tool set does not contain the capability you need.\n\nWorkflow:\n1. Call `tools_catalog_list(...)` to inspect the larger catalog.\n2. Call `tools_active_add([...])` with the exact tool names you need.\n3. Then use those newly active tools in the next round.\n\nDo not guess tool names from memory when `tools_catalog_list(...)` can verify them.",
+      "is_system_skill": true,
+      "origin": "builtin",
+      "availability": "guaranteed",
+      "role": "core",
+      "trust_boundary": "internal"
+    },
+    {
+      "skill_name": "Workflow Skill",
+      "relative_path": "app/system_skills/Workflow/skill.md",
+      "purpose": "",
+      "module": "KoreAgent/app/system_skills/Workflow/workflow_skill.py",
+      "trigger_keyword": "",
+      "triggers": [],
+      "functions": [
+        "workflow_create(objective, initial_tasks=None)",
+        "workflow_get()",
+        "workflow_get_summary()",
+        "workflow_get_task(task_id)",
+        "workflow_add_task(title, description=\"\", instruction=\"\", depends_on=None)",
+        "workflow_update_task(task_id, title=None, description=None, instruction=None, depends_on=None)",
+        "workflow_set_task_data(task_id, data)",
+        "workflow_clear_task_data(task_id)",
+        "workflow_reset_task_run(task_id)",
+        "workflow_clear_dynamic()",
+        "workflow_mark_task_ran(task_id, note=\"\")",
+        "workflow_run_to_completion()",
+        "workflow_clear()",
+        "workflow_export(name)",
+        "workflow_import(name, replace=False)",
+        "workflow_list_archives()"
+      ],
+      "inputs": [],
+      "outputs": [],
+      "param_descriptions": {},
+      "tool_selection_guidance": "",
       "is_system_skill": true,
       "origin": "builtin",
       "availability": "guaranteed",

@@ -51,8 +51,11 @@ from datasets_pkg import store as datasets_store
 import mcp_client
 from agent.orchestration.engine import ConversationHistory
 from agent.orchestration.engine import OrchestratorConfig
+from agent.orchestration.engine import _filter_workflow_tools
 from agent.orchestration.engine import orchestrate_prompt
 from input_layer import koreconv_input as koreconv_input_module
+from indepth_planner_store import should_bootstrap_workflow
+from system_skills.Workflow import workflow_skill as workflow_skill_module
 from datasets_pkg import auto_route_tool_result
 from datasets_pkg import clear_session_datasets
 from datasets_pkg import dataset_drop_where
@@ -113,6 +116,49 @@ class GuardrailSmokeTests(unittest.TestCase):
     def tearDown(self) -> None:
         reset_guardrail_state()
 
+    def test_ordinary_prompt_hides_persistent_plan_functions(self) -> None:
+        payload = {
+            "skills": [
+                {
+                    "skill_name": "Workflow",
+                    "functions": ["workflow_create()", "workflow_get_summary()", "workflow_import(name: str)"],
+                    "param_descriptions": {"workflow_create": {}, "workflow_get_summary": {}, "workflow_import": {"name": "Archive name."}},
+                },
+                {
+                    "skill_name": "Files",
+                    "functions": ["file_read(path: str)"],
+                    "param_descriptions": {"file_read": {"path": "Path to read."}},
+                },
+            ]
+        }
+
+        filtered = _filter_workflow_tools(payload, enabled=False, has_plan=False)
+
+        self.assertEqual(len(filtered["skills"]), 1)
+        self.assertEqual(filtered["skills"][0]["functions"], ["file_read(path: str)"])
+        self.assertNotIn("workflow_create", filtered["skills"][0]["param_descriptions"])
+
+        creation_only = _filter_workflow_tools(payload, enabled=True, has_plan=False)
+        workflow_skill = next(skill for skill in creation_only["skills"] if skill["skill_name"] == "Workflow")
+        self.assertEqual(workflow_skill["functions"], ["workflow_create()", "workflow_import(name: str)"])
+
+    def test_empty_korechat_rejects_existing_plan_operations(self) -> None:
+        with patch.object(workflow_skill_module, "get_simple_plan", return_value={}):
+            response = workflow_skill_module.workflow_get_summary()
+
+        self.assertIn("Use workflow_create or workflow_import first", response)
+
+    def test_lightweight_plan_workflow_does_not_bootstrap_a_persistent_plan(self) -> None:
+        lightweight_plan = {"workflow": ["inspect", "plan", "act", "validate", "complete"]}
+
+        self.assertFalse(
+            should_bootstrap_workflow(
+                "search KoreData reference for machine learning",
+                lightweight_plan,
+            )
+        )
+        self.assertTrue(should_bootstrap_workflow("create a Workflow for the migration"))
+
     def test_task_plan_activates_current_and_next_phase_tools(self) -> None:
         plan = task_planning_module.validate_task_plan(
             {
@@ -131,6 +177,62 @@ class GuardrailSmokeTests(unittest.TestCase):
 
         self.assertEqual(plan.phase_tools, ["file_read"])
         self.assertEqual(plan.activation_tools(), ["file_read", "file_write"])
+
+    def test_task_plan_preserves_multiple_typed_outputs_per_step(self) -> None:
+        plan = task_planning_module.validate_task_plan(
+            {
+                "objective": "Research and write outputs.",
+                "current_phase": "act",
+                "workflow": ["act", "validate", "complete"],
+                "phase_tools": ["file_write"],
+                "steps": [
+                    {
+                        "id": "write_outputs",
+                        "phase": "act",
+                        "action": "Write the requested research outputs.",
+                        "tools": ["file_write"],
+                        "outputs": [
+                            {"type": "file", "path": "plan_002/sources.txt", "minimum_bytes": 1},
+                            {"type": "file", "path": "plan_002/search_criteria.txt", "minimum_bytes": 1},
+                            {"type": "dataset", "name": "research_sources"},
+                        ],
+                        "completion_checks": ["All declared files exist."],
+                    }
+                ],
+            },
+            known_tool_names={"file_write"},
+        )
+
+        self.assertEqual(len(plan.steps), 1)
+        self.assertEqual(len(plan.steps[0]["outputs"]), 3)
+        self.assertEqual(plan.steps[0]["outputs"][0]["target"], "plan_002/sources.txt")
+        self.assertEqual(plan.steps[0]["outputs"][2]["type"], "dataset")
+
+    def test_task_plan_completion_gate_reports_missing_declared_file(self) -> None:
+        with bind_session("task_plan_completion_gate"):
+            plan = task_planning_module.validate_task_plan(
+                {
+                    "objective": "Write the requested output.",
+                    "current_phase": "act",
+                    "workflow": ["act", "validate", "complete"],
+                    "phase_tools": ["file_write"],
+                    "steps": [
+                        {
+                            "id": "write_output",
+                            "phase": "act",
+                            "action": "Write the requested output.",
+                            "tools": ["file_write"],
+                            "outputs": [{"type": "file", "target": "__missing_task_plan_output__.txt", "minimum_bytes": 1}],
+                            "completion_checks": ["The file exists."],
+                        }
+                    ],
+                },
+                known_tool_names={"file_write"},
+            )
+            task_planning_module.persist_task_plan(plan)
+            gaps = task_planning_module.get_task_plan_completion_gaps()
+
+        self.assertTrue(any("__missing_task_plan_output__.txt" in gap for gap in gaps))
 
     def test_task_plan_repairs_invalid_tool_names_with_a_second_planner_call(self) -> None:
         responses = iter(
@@ -547,9 +649,9 @@ class GuardrailSmokeTests(unittest.TestCase):
 
         remaining = [{"id": "2", "static": {"instruction": "Collect the evidence."}, "dynamic": {"ran": False}}]
         responses = [
-            _FakeResult("", [_tool_call("plan_run_to_completion")]),
+            _FakeResult("", [_tool_call("workflow_run_to_completion")]),
             _FakeResult("The plan is complete."),
-            _FakeResult("", [_tool_call("plan_mark_task_ran", '{"task_id":"2"}')]),
+            _FakeResult("", [_tool_call("workflow_mark_task_ran", '{"task_id":"2"}')]),
             _FakeResult("The plan is complete."),
         ]
         calls: list[str] = []
@@ -559,12 +661,12 @@ class GuardrailSmokeTests(unittest.TestCase):
 
         def fake_execute_tool_call(func_name, arguments, *_args):
             calls.append(func_name)
-            if func_name == "plan_mark_task_ran":
+            if func_name == "workflow_mark_task_ran":
                 remaining.clear()
             return ToolCallResult(
                 tool      = func_name,
                 function  = func_name,
-                module    = "InDepthPlanner",
+                module    = "Workflow",
                 arguments = arguments,
                 result    = "ok",
             )
@@ -594,7 +696,7 @@ class GuardrailSmokeTests(unittest.TestCase):
 
         self.assertTrue(run_success)
         self.assertEqual(final_response, "The plan is complete.")
-        self.assertEqual(calls, ["plan_run_to_completion", "plan_mark_task_ran"])
+        self.assertEqual(calls, ["workflow_run_to_completion", "workflow_mark_task_ran"])
         self.assertIn("Task 2 has not been run", "\n".join(str(item.get("content", "")) for item in messages))
 
     def test_tool_loop_suggests_corrected_tool_name_for_invalid_request(self) -> None:

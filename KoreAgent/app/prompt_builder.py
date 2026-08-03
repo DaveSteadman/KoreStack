@@ -90,11 +90,11 @@ _SYSTEM_SKILL_GUIDANCE: list[str] = [
     # -- CronPrompt (system_skills/CronPrompt/) ----------------------------------------------
     "- Creating, listing, updating, or deleting scheduled cron prompts requires calling the cronprompt_* tools. Do not generate scheduler JSON by hand.",
 
-    # -- InDepthPlanner (system_skills/InDepthPlanner/) --------------------------------------
-    "- When the user wants durable multi-step planning, revisions, run-to-completion control, or plan status reporting, prefer the plan_* tools instead of storing orchestration state only in scratchpad.",
+    # -- Workflow (system_skills/Workflow/) ---------------------------------------------------
+    "- When the user wants a durable Workflow, revisions, run-to-completion control, or Workflow status reporting, prefer the workflow_* tools instead of storing orchestration state only in scratchpad.",
     "- In user-facing plan outputs, identify work primarily as `Task <number>` and include the title and status (for example, `Task 3 — Data Synthesis — active`). Do not make internal slug IDs the main visible identifier.",
-    "- When the user asks to run, continue, or rerun a PlanTask, use its full static instruction. Persist useful run-specific results with plan_set_task_data and then call plan_mark_task_ran when the task has been attempted. `ran` records progress only; it is not a quality claim.",
-    "- When the user asks to run a plan to completion, call plan_run_to_completion first, then execute every remaining task it returns in order during the same run.",
+    "- When the user asks to run, continue, or rerun a Workflow task, use its full static instruction. Persist useful run-specific results with workflow_set_task_data and then call workflow_mark_task_ran when the task has been attempted. `ran` records progress only; it is not a quality claim.",
+    "- When the user asks to run a Workflow to completion, call workflow_run_to_completion first, then execute every remaining task it returns in order during the same run.",
 
     # -- ToolSelection (system_skills/ToolSelection/) ----------------------------------------
     "- The currently visible tool schema is only the active working set. When the needed capability is missing, use the tool-selection control skill to inspect the larger catalog and activate the specific tools you need.",

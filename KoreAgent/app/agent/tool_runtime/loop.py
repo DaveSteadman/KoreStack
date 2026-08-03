@@ -648,6 +648,7 @@ def run_tool_loop(
     on_tool_round_complete: object | None = None,
     phase_tool_names_provider: object | None = None,
     run_to_completion_remaining_provider: object | None = None,
+    completion_gaps_provider: object | None = None,
 ) -> tuple[str, int, int, bool, float, list[ToolCallResult]]:
     def _log(message: str = "") -> None:
         logger.log_file_only(message) if quiet else logger.log(message)
@@ -673,6 +674,15 @@ def run_tool_loop(
 
     def _remaining_plan_tasks() -> list[dict]:
         if not plan_run_to_completion_requested or run_to_completion_remaining_provider is None:
+            return []
+
+    def _completion_gaps() -> list[str]:
+        if completion_gaps_provider is None:
+            return []
+        try:
+            return [str(gap) for gap in completion_gaps_provider() or [] if str(gap).strip()]
+        except Exception as exc:
+            _log_file_only(f"[task-plan] Could not evaluate completion requirements: {exc}")
             return []
         try:
             return list(run_to_completion_remaining_provider() or [])
@@ -762,6 +772,16 @@ def run_tool_loop(
                 if _synthetic_tc is not None:
                     _log_file_only(f"[warn] Round {round_num}: model emitted raw JSON tool call instead of invoking - forcing re-invocation.")
                     tool_calls = [_synthetic_tc]
+                elif completion_gaps := _completion_gaps():
+                    correction = (
+                        "The lightweight execution plan is incomplete. Do not give a final answer yet. "
+                        "Address these unmet requirements: "
+                        + " ".join(f"- {gap}" for gap in completion_gaps)
+                    )
+                    _log_file_only(f"[task-plan] Round {round_num}: blocking final answer; {len(completion_gaps)} completion gap(s).")
+                    messages.append({"role": "user", "content": correction})
+                    context_map.append({"round": round_num, "role": "user", "label": "[task-plan completion gate]", "chars": len(correction), "auto_key": None, "msg_idx": len(messages) - 1})
+                    continue
                 elif remaining_plan_tasks := _remaining_plan_tasks():
                     next_task = remaining_plan_tasks[0]
                     task_id   = str(next_task.get("id") or "?")
@@ -770,7 +790,7 @@ def run_tool_loop(
                     correction = (
                         f"Plan run-to-completion is active. Do not give a final answer yet: Task {task_id} has not been run. "
                         f"Carry out its full static instruction now: {instruction!r} "
-                        "Then save useful run-specific data with plan_set_task_data and call plan_mark_task_ran. "
+                        "Then save useful run-specific data with workflow_set_task_data and call workflow_mark_task_ran. "
                         "Continue through every remaining task in this same run."
                     )
                     _log_file_only(f"[plan-run] Round {round_num}: blocking final answer; remaining Task {task_id}.")
@@ -1003,7 +1023,7 @@ def run_tool_loop(
                     _log_file_only(f"[error] on_tool_round_complete callback failed: {exc}")
 
             if any(
-                str(item.get("tool") or item.get("function") or "") == "plan_run_to_completion"
+                str(item.get("tool") or item.get("function") or "") == "workflow_run_to_completion"
                 and str(item.get("status") or "") != "error"
                 for item in round_outputs
             ):
@@ -1013,6 +1033,12 @@ def run_tool_loop(
             _log_file_only(f"TOOL ROUND {round_num} - EXECUTION FLOW")
             _log_file_only(format_tool_outputs(round_outputs))
         else:
+            completion_gaps = _completion_gaps()
+            if completion_gaps:
+                final_response = "The run stopped before its execution plan was complete: " + " ".join(completion_gaps)
+                run_success = False
+                _log_file_only(f"[task-plan] Tool-round limit reached with {len(completion_gaps)} completion gap(s).")
+                return final_response, prompt_tokens, completion_tokens, run_success, final_tps, tool_outputs
             remaining_plan_tasks = _remaining_plan_tasks()
             if remaining_plan_tasks:
                 task_ids = ", ".join(str(task.get("id") or "?") for task in remaining_plan_tasks)

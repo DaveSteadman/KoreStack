@@ -5,6 +5,7 @@
 # ====================================================================================================
 
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -15,9 +16,21 @@ if str(APP_ROOT) not in sys.path:
     sys.path.insert(0, str(APP_ROOT))
 
 import indepth_planner_store as planner_store
+from skills_catalog_builder import build_skills_payload
 
 
 class InDepthPlannerStoreTests(unittest.TestCase):
+    def test_catalog_rejects_function_bearing_skill_without_module(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            skill_dir = Path(temp_dir) / "BrokenSkill"
+            skill_dir.mkdir()
+            (skill_dir / "skill.md").write_text(
+                "# Broken Skill\n\n## Functions\n\n- `broken_tool()`\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(RuntimeError, "must declare a Module path"):
+                build_skills_payload(Path(temp_dir), use_llm=False)
+
     def test_simple_plan_validation_rejects_missing_dependencies(self) -> None:
         with self.assertRaisesRegex(RuntimeError, "dependency"):
             planner_store._validate_simple_plan(

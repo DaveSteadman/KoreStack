@@ -13,20 +13,26 @@ import threading
 from dataclasses import asdict
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
+from scratchpad import scratchpad_load
 from scratchpad import scratchpad_save
 from sessions.runtime import get_active_session_id
 
 
 MAX_PHASE_TOOLS          = 12
 MAX_ACTIVATION_TOOLS     = 16
+MAX_EXECUTION_STEPS       = 6
+MAX_STEP_OUTPUTS          = 6
+MAX_EXECUTION_PLAN_CHARS  = 12000
 VALID_PHASES             = ("clarify", "inspect", "plan", "act", "validate", "complete")
+VALID_OUTPUT_TYPES        = frozenset({"file", "dataset", "scratchpad"})
 ALWAYS_ON_TOOL_NAMES     = frozenset({"tools_catalog_list", "tools_active_add"})
 TASK_PLAN_SCRATCHPAD_KEY = "task_plan"
 _PLAN_TASK_EXECUTION_RE = re.compile(
-    r"\b(?:run|execute|continue|rerun)\s+(?:the\s+)?(?:first|second|third|fourth|fifth|\d+(?:st|nd|rd|th)?)?\s*task\b.*\bplan\b"
-    r"|\b(?:run|execute|continue|rerun)\s+(?:the\s+)?plan(?:\s+to\s+completion)?\b",
+    r"\b(?:run|execute|continue|rerun)\s+(?:the\s+)?(?:first|second|third|fourth|fifth|\d+(?:st|nd|rd|th)?)?\s*task\b.*\b(?:plan|workflow)\b"
+    r"|\b(?:run|execute|continue|rerun)\s+(?:the\s+)?(?:plan|workflow)(?:\s+to\s+completion)?\b",
     re.IGNORECASE,
 )
 _TOKEN_RE                = re.compile(r"[a-z0-9_]{3,}", re.IGNORECASE)
@@ -53,6 +59,7 @@ class TaskPlan:
     workflow:               list[str]
     phase_tools:            list[str]
     phase_tool_map:         dict[str, list[str]]
+    steps:                  list[dict[str, Any]]
     required_artifacts:     list[str]
     validation_requirements: list[str]
     completion_contract:    str
@@ -127,6 +134,71 @@ def _validated_phase_tool_map(raw: object, *, known_tool_names: set[str]) -> dic
         if selected:
             result[normalized_phase] = selected
     return result
+
+
+def _validated_execution_steps(raw: object, *, known_tool_names: set[str]) -> list[dict[str, Any]]:
+    """Keep the per-run execution outline bounded, typed, and safe to persist."""
+    if not isinstance(raw, list):
+        return []
+    steps: list[dict[str, Any]] = []
+    used_ids: set[str] = set()
+    for index, item in enumerate(raw[:MAX_EXECUTION_STEPS], start=1):
+        if not isinstance(item, dict):
+            continue
+        action = str(item.get("action") or "").strip()[:300]
+        if not action:
+            continue
+        step_id = str(item.get("id") or f"step_{index}").strip()[:80]
+        if not step_id or step_id in used_ids:
+            step_id = f"step_{index}"
+        used_ids.add(step_id)
+        phase = str(item.get("phase") or "act").strip().lower()
+        if phase not in VALID_PHASES:
+            phase = "act"
+        tools = [name for name in _as_string_list(item.get("tools"), limit=MAX_PHASE_TOOLS) if name in known_tool_names]
+        outputs: list[dict[str, Any]] = []
+        for output in item.get("outputs") if isinstance(item.get("outputs"), list) else []:
+            if not isinstance(output, dict) or len(outputs) >= MAX_STEP_OUTPUTS:
+                continue
+            output_type = str(output.get("type") or "artifact").strip().lower()[:80]
+            target = str(output.get("target") or output.get("path") or output.get("name") or output.get("key") or "").strip()[:240]
+            if output_type not in VALID_OUTPUT_TYPES or not target:
+                continue
+            normalized = {"type": output_type, "target": target}
+            description = str(output.get("description") or "").strip()[:160]
+            if description:
+                normalized["description"] = description
+            minimum_bytes = output.get("minimum_bytes")
+            if isinstance(minimum_bytes, int) and minimum_bytes >= 0:
+                normalized["minimum_bytes"] = minimum_bytes
+            minimum_items = output.get("minimum_items")
+            if isinstance(minimum_items, int) and minimum_items >= 0:
+                normalized["minimum_items"] = minimum_items
+            outputs.append(normalized)
+        steps.append(
+            {
+                "id":                step_id,
+                "phase":             phase,
+                "action":            action,
+                "tools":             tools,
+                "outputs":           outputs,
+                "completion_checks": _as_string_list(item.get("completion_checks"), limit=8),
+            }
+        )
+    return steps
+
+
+def _bounded_execution_steps(steps: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Avoid letting a planner response consume an unbounded amount of run context."""
+    bounded: list[dict[str, Any]] = []
+    used_chars = 0
+    for step in steps:
+        encoded = json.dumps(step, ensure_ascii=False, separators=(",", ":"))
+        if used_chars + len(encoded) > MAX_EXECUTION_PLAN_CHARS:
+            break
+        bounded.append(step)
+        used_chars += len(encoded)
+    return bounded
 
 
 def _extract_json_object(text: str) -> dict[str, Any] | None:
@@ -235,7 +307,7 @@ def select_planner_capabilities(
     return fallback_selected
 
 
-def build_planning_prompt(*, user_prompt: str, capability_catalog: list[dict[str, Any]]) -> tuple[str, dict[str, Any]]:
+def build_planning_prompt(*, user_prompt: str, capability_catalog: list[dict[str, Any]], planning_context: str = "") -> tuple[str, dict[str, Any]]:
     selected_catalog, selection_trace = select_planner_capabilities(
         user_prompt=user_prompt,
         capability_catalog=capability_catalog,
@@ -262,6 +334,16 @@ def build_planning_prompt(*, user_prompt: str, capability_catalog: list[dict[str
         "workflow": ["ordered phase names"],
         "phase_tools": ["tool names needed in the current phase only"],
         "phase_tool_map": {"inspect": ["evidence tools"], "act": ["action tools"], "validate": ["verification tools"]},
+        "steps": [
+            {
+                "id": "short_unique_identifier",
+                "phase": "inspect|plan|act|validate",
+                "action": "one concrete action required by this run",
+                "tools": ["exact catalog tool names"],
+                "outputs": [{"type": "file|dataset|scratchpad", "target": "path, name, or key", "minimum_bytes": 1, "minimum_items": 1}],
+                "completion_checks": ["objective checks for this action"],
+            }
+        ],
         "required_artifacts": ["evidence or durable artifacts needed"],
         "validation_requirements": ["checks needed before completion"],
         "completion_contract": "what must be true before reporting completion",
@@ -272,6 +354,7 @@ def build_planning_prompt(*, user_prompt: str, capability_catalog: list[dict[str
             "You are the KoreAgent task planner. Interpret the user's request semantically.",
             "Do not use keyword matching as a substitute for understanding the request.",
             "Choose only capabilities present in the catalog. phase_tools is for the current phase; phase_tool_map may name the immediate next phases needed to finish a short workflow.",
+            "For a substantive request, return a bounded ordered steps list (normally 2 to 6 items). Each step must describe one action, may declare multiple typed outputs of only file, dataset, or scratchpad, and must state its completion checks. For a simple answer with no work, steps may be empty.",
             "Never invent a tool name. If no capability is needed, return an empty list rather than a category such as 'catalog'.",
             "Use clarify only when the request cannot be safely interpreted from context.",
             "Use inspect before a file change when current source evidence is needed.",
@@ -288,6 +371,10 @@ def build_planning_prompt(*, user_prompt: str, capability_catalog: list[dict[str
             "[USER_REQUEST]",
             str(user_prompt or ""),
             "[/USER_REQUEST]",
+            "",
+            "[EXECUTION_CONTEXT]",
+            str(planning_context or "")[:6000],
+            "[/EXECUTION_CONTEXT]",
         ]
     ), selection_trace
 
@@ -301,6 +388,7 @@ def fallback_task_plan(*, user_prompt: str, reason: str) -> TaskPlan:
         workflow                = ["inspect", "plan", "act", "validate", "complete"],
         phase_tools             = ["tools_catalog_list", "tools_active_add"],
         phase_tool_map          = {"inspect": ["tools_catalog_list", "tools_active_add"]},
+        steps                   = [{"id": "inspect", "phase": "inspect", "action": "Identify the capabilities and evidence needed to complete the request.", "tools": ["tools_catalog_list", "tools_active_add"], "outputs": [], "completion_checks": ["Required capabilities are identified."]}],
         required_artifacts      = ["source-backed evidence"],
         validation_requirements = ["state what was verified"],
         completion_contract     = "Report grounded results or the precise blocker.",
@@ -342,11 +430,11 @@ def _apply_intent_overrides(plan: TaskPlan, *, user_prompt: str, known_tool_name
 
     if _PLAN_TASK_EXECUTION_RE.search(user_prompt or ""):
         lifecycle_tools = [
-            "plan_get_task",
-            "plan_set_task_data",
-            "plan_mark_task_ran",
-            "plan_run_to_completion",
-            "plan_get_summary",
+            "workflow_get_task",
+            "workflow_set_task_data",
+            "workflow_mark_task_ran",
+            "workflow_run_to_completion",
+            "workflow_get_summary",
         ]
         lifecycle_tools = [name for name in lifecycle_tools if name in known_tool_names]
         _append_unique_tool_names(override_phase_tools, lifecycle_tools)
@@ -359,6 +447,7 @@ def _apply_intent_overrides(plan: TaskPlan, *, user_prompt: str, known_tool_name
         workflow                = list(plan.workflow),
         phase_tools             = override_phase_tools,
         phase_tool_map          = override_phase_tool_map,
+        steps                   = [dict(step) for step in plan.steps],
         required_artifacts      = list(plan.required_artifacts),
         validation_requirements = list(plan.validation_requirements),
         completion_contract     = plan.completion_contract,
@@ -375,6 +464,7 @@ def validate_task_plan(raw: dict[str, Any], *, known_tool_names: set[str]) -> Ta
     requested_tools = _as_string_list(raw.get("phase_tools"), limit=MAX_PHASE_TOOLS)
     phase_tools     = [name for name in requested_tools if name in known_tool_names]
     phase_tool_map  = _validated_phase_tool_map(raw.get("phase_tool_map"), known_tool_names=known_tool_names)
+    steps           = _bounded_execution_steps(_validated_execution_steps(raw.get("steps"), known_tool_names=known_tool_names))
     objective       = str(raw.get("objective") or "").strip()[:500]
     if not objective:
         objective = "Understand and complete the request."
@@ -399,6 +489,7 @@ def validate_task_plan(raw: dict[str, Any], *, known_tool_names: set[str]) -> Ta
         workflow                = workflow,
         phase_tools             = phase_tools,
         phase_tool_map          = phase_tool_map,
+        steps                   = steps,
         required_artifacts      = _as_string_list(raw.get("required_artifacts")),
         validation_requirements = _as_string_list(raw.get("validation_requirements")),
         completion_contract     = str(raw.get("completion_contract") or "Report grounded results or the precise blocker.").strip()[:500],
@@ -411,13 +502,18 @@ def validate_task_plan(raw: dict[str, Any], *, known_tool_names: set[str]) -> Ta
 def create_task_plan(
     *,
     user_prompt: str,
+    planning_context: str = "",
     capability_catalog: list[dict[str, Any]],
     known_tool_names: set[str],
     call_llm_chat,
     model_name: str,
     num_ctx: int,
 ) -> TaskPlan:
-    prompt, selection_trace = build_planning_prompt(user_prompt=user_prompt, capability_catalog=capability_catalog)
+    prompt, selection_trace = build_planning_prompt(
+        user_prompt=user_prompt,
+        capability_catalog=capability_catalog,
+        planning_context=planning_context,
+    )
     planner_num_ctx = max(4096, int(num_ctx or 0))
     with _PLAN_STATE_LOCK:
         _PLANNER_SELECTION_TRACE_BY_SESSION[get_active_session_id()] = dict(selection_trace)
@@ -460,9 +556,10 @@ def persist_task_plan(plan: TaskPlan) -> None:
     if isinstance(selection_trace, dict):
         payload["selection_trace"] = selection_trace
     payload["state"] = {
-        "status": "running",
-        "phase":  plan.current_phase,
-        "events": [{"type": "planned", "at": _utc_now(), "detail": plan.rationale}],
+        "status":     "running",
+        "phase":      plan.current_phase,
+        "used_tools": [],
+        "events":     [{"type": "planned", "at": _utc_now(), "detail": plan.rationale}],
     }
     with _PLAN_STATE_LOCK:
         _PLAN_STATE_BY_SESSION[get_active_session_id()] = payload
@@ -538,6 +635,15 @@ def _phase_activation_tools(payload: dict[str, Any], phase: str) -> list[str]:
                 selected.append(normalized)
             if len(selected) >= MAX_ACTIVATION_TOOLS:
                 return selected
+        for step in payload.get("steps") or []:
+            if not isinstance(step, dict) or str(step.get("phase") or "").strip().lower() != phase_name:
+                continue
+            for tool_name in step.get("tools") or []:
+                normalized = str(tool_name or "").strip()
+                if normalized and normalized not in selected:
+                    selected.append(normalized)
+                if len(selected) >= MAX_ACTIVATION_TOOLS:
+                    return selected
     for tool_name in phase_tools:
         if tool_name and tool_name not in selected:
             selected.append(tool_name)
@@ -557,6 +663,57 @@ def get_task_plan_activation_tools() -> list[str]:
             if tool_name not in selected:
                 selected.append(tool_name)
         return selected
+
+
+def get_task_plan_completion_gaps() -> list[str]:
+    """Return objective unmet execution-plan requirements before a final answer is accepted."""
+    with _PLAN_STATE_LOCK:
+        payload = _PLAN_STATE_BY_SESSION.get(get_active_session_id())
+        if not isinstance(payload, dict):
+            return []
+        state      = dict(payload.get("state") or {})
+        steps      = [dict(step) for step in payload.get("steps") or [] if isinstance(step, dict)]
+        used_tools = {str(name or "").strip().lower() for name in state.get("used_tools") or []}
+
+    gaps: list[str] = []
+    for step in steps:
+        step_id = str(step.get("id") or "step")
+        step_tools = {str(name or "").strip().lower() for name in step.get("tools") or []}
+        if step_tools and not used_tools.intersection(step_tools):
+            gaps.append(f"Step '{step_id}' has not used any of its planned tools.")
+        for output in step.get("outputs") or []:
+            if not isinstance(output, dict):
+                continue
+            output_type = str(output.get("type") or "")
+            target      = str(output.get("target") or "")
+            if output_type == "file":
+                from utils.workspace_utils import get_user_data_dir
+                root = get_user_data_dir().resolve()
+                path = Path(target)
+                candidate = path.resolve() if path.is_absolute() else (root / path).resolve()
+                try:
+                    candidate.relative_to(root)
+                except ValueError:
+                    gaps.append(f"Output file '{target}' is outside the permitted data directory.")
+                    continue
+                minimum_bytes = int(output.get("minimum_bytes") or 1)
+                if not candidate.is_file() or candidate.stat().st_size < minimum_bytes:
+                    gaps.append(f"Required output file '{target}' is missing or smaller than {minimum_bytes} bytes.")
+            elif output_type == "scratchpad":
+                value = scratchpad_load(target)
+                minimum_bytes = int(output.get("minimum_bytes") or 1)
+                if not isinstance(value, str) or value.startswith("Error:") or len(value.encode("utf-8")) < minimum_bytes:
+                    gaps.append(f"Required scratchpad output '{target}' is missing or too small.")
+            elif output_type == "dataset":
+                try:
+                    from datasets_pkg import dataset_inspect
+                    inspected = json.loads(dataset_inspect(target))
+                    minimum_items = int(output.get("minimum_items") or 0)
+                    if not inspected.get("ok") or int(inspected.get("count") or 0) < minimum_items:
+                        gaps.append(f"Required dataset '{target}' is missing or has fewer than {minimum_items} items.")
+                except Exception:
+                    gaps.append(f"Required dataset '{target}' could not be verified.")
+    return list(dict.fromkeys(gaps))
 
 
 def _next_workflow_phase(workflow: list[str], phase: str) -> str | None:
@@ -605,6 +762,21 @@ def _phase_transition_satisfied(phase: str, successful_tool_names: list[str]) ->
     return True
 
 
+def _phase_steps_have_evidence(payload: dict[str, Any], state: dict[str, Any], phase: str) -> bool:
+    steps = [
+        step for step in payload.get("steps") or []
+        if isinstance(step, dict) and str(step.get("phase") or "").strip().lower() == phase
+    ]
+    if not steps:
+        return True
+    used_tools = {str(name or "").strip().lower() for name in state.get("used_tools") or []}
+    return all(
+        not step.get("tools")
+        or bool(used_tools.intersection(str(name or "").strip().lower() for name in step.get("tools") or []))
+        for step in steps
+    )
+
+
 def advance_task_plan_phase(round_outputs: list[dict[str, Any]] | None = None) -> str:
     """Advance through the declared workflow when phase-specific criteria are met."""
     outputs = list(round_outputs or [])
@@ -623,6 +795,11 @@ def advance_task_plan_phase(round_outputs: list[dict[str, Any]] | None = None) -
                 "phase": str(payload.get("current_phase") or "inspect"),
                 "events": [],
             }
+        used_tools = list(state.get("used_tools") or [])[-63:]
+        for tool_name in successful_tool_names:
+            if tool_name not in used_tools:
+                used_tools.append(tool_name)
+        state["used_tools"] = used_tools[-64:]
 
         current_phase = str(state.get("phase") or payload.get("current_phase") or "inspect").strip().lower()
         if current_phase not in VALID_PHASES:
@@ -639,7 +816,7 @@ def advance_task_plan_phase(round_outputs: list[dict[str, Any]] | None = None) -
             _mirror_task_plan_to_scratchpad(payload)
             return current_phase
 
-        if not _phase_transition_satisfied(current_phase, successful_tool_names):
+        if not _phase_transition_satisfied(current_phase, successful_tool_names) or not _phase_steps_have_evidence(payload, state, current_phase):
             events = list(state.get("events") or [])[-39:]
             events.append(
                 {
@@ -685,6 +862,7 @@ def format_task_plan_context(plan: TaskPlan) -> str:
             f"Workflow: {' -> '.join(plan.workflow)}",
             f"Phase tools: {', '.join(plan.phase_tools) or 'catalog discovery only'}",
             f"Activation tools: {', '.join(plan.activation_tools()) or 'none'}",
+            f"Execution steps: {json.dumps(plan.steps, ensure_ascii=False, separators=(',', ':'))}",
             f"Required artifacts: {'; '.join(plan.required_artifacts) or 'none'}",
             f"Validation: {'; '.join(plan.validation_requirements) or 'none'}",
             f"Completion contract: {plan.completion_contract}",

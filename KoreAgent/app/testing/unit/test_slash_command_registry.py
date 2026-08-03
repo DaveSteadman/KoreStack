@@ -23,11 +23,11 @@ class SlashCommandRegistryTests(unittest.TestCase):
         self.assertIn("/session", slash_commands._REGISTRY)
         self.assertNotIn("/session", slash_commands._DESCRIPTIONS)
 
-    def test_plan_commands_are_registered_with_plans_as_listing_command(self) -> None:
-        self.assertIn("/plan", slash_commands._REGISTRY)
-        self.assertIn("/plan", slash_commands._DESCRIPTIONS)
-        self.assertIn("/plans", slash_commands._REGISTRY)
-        self.assertIn("/plans", slash_commands._DESCRIPTIONS)
+    def test_workflow_commands_are_registered_with_workflows_as_listing_command(self) -> None:
+        self.assertIn("/workflow", slash_commands._REGISTRY)
+        self.assertIn("/workflow", slash_commands._DESCRIPTIONS)
+        self.assertIn("/workflows", slash_commands._REGISTRY)
+        self.assertIn("/workflows", slash_commands._DESCRIPTIONS)
 
     def test_cronprompt_commands_are_canonical(self) -> None:
         self.assertIn("/cronprompt", slash_commands._REGISTRY)

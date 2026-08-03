@@ -225,7 +225,7 @@ def get_completions():
         "sessions": sessions,
         "test_files": test_files,
         "task_names": task_names,
-        "plan_names": plan_names,
+        "workflow_names": plan_names,
         "models": models,
     }
 

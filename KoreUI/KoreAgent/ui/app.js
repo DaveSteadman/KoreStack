@@ -34,7 +34,7 @@ const _ALL_COMMANDS = [
     "/stopmodel", "/stoprun",
     "/clearmemory", "/reskill", "/sandbox", "/tools",
     "/deletelogs", "/unittest", "/systemtest", "/systemtesttrend", "/cronprompts", "/cronprompt",
-    "/plan", "/plans",
+    "/workflow", "/workflows",
     "/version", "/defaults", "/chat", "/kccompress",
 ];
 
@@ -47,8 +47,8 @@ const _LLMSERVERCFG_SUBS = ["model", "ctx"];
 // Sub-commands for /tools.
 const _TOOLS_SUBS = ["active", "all"];
 
-// Sub-commands for /plan.
-const _PLAN_SUBS = ["export", "import", "inspect"];
+// Sub-commands for /workflow.
+const _WORKFLOW_SUBS = ["export", "import", "inspect"];
 
 // Pre-compiled log line classification patterns.
 const RE_LOG_TOOL_ROUND = /^TOOL ROUND\s+\d+/i;
@@ -73,7 +73,7 @@ let _logLineLimit      = MAX_LOG_LINES_LIVE;
 let _sessionTitle      = "";
 
 // Tab-completion state.
-let _completions  = { sessions: [], test_files: [], task_names: [], plan_names: [], models: [] };
+let _completions  = { sessions: [], test_files: [], task_names: [], workflow_names: [], models: [] };
 let _suggestItems = [];   // current filtered candidate list
 let _suggestIdx   = -1;   // highlighted row index (-1 = none)
 let _suggestBase  = "";   // portion of input before the completion token
@@ -1193,16 +1193,16 @@ function _parseSuggestContext(value) {
         return null;
     }
 
-    if (cmd === "/plan") {
+    if (cmd === "/workflow") {
         const subSpace = rest.indexOf(" ");
         if (subSpace === -1) {
-            return { pool: _PLAN_SUBS, prefix: rest.trimEnd(), base: "/plan " };
+            return { pool: _WORKFLOW_SUBS, prefix: rest.trimEnd(), base: "/workflow " };
         }
         const sub = rest.slice(0, subSpace).toLowerCase();
         const arg1Base = value.slice(0, firstSpace + 1 + subSpace + 1);
         const arg1Text = value.slice(arg1Base.length);
         if ((sub === "import" || sub === "inspect") && !arg1Text.includes(" ")) {
-            return { pool: _completions.plan_names, prefix: arg1Text.trimEnd(), base: arg1Base };
+            return { pool: _completions.workflow_names, prefix: arg1Text.trimEnd(), base: arg1Base };
         }
         return null;
     }

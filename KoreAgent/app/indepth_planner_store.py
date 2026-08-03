@@ -12,7 +12,7 @@ from sessions.runtime import get_active_session_id
 from utils.workspace_utils import load_runtime_config
 
 _PLAN_TRIGGER_RE = re.compile(
-    r"\b(plan|steps|multi-step|multistep|phase|phases|roadmap|revisit|reopen|iterate|iteration|long term|long-term|run to completion|continue later|worker)\b",
+    r"\b(workflow|workflows|plan|steps|multi-step|multistep|phase|phases|roadmap|revisit|reopen|iterate|iteration|long term|long-term|run to completion|continue later|worker)\b",
     re.IGNORECASE,
 )
 _SLUG_RE = re.compile(r"[^a-z0-9]+")
@@ -133,38 +133,46 @@ def ensure_conversation_for_session(session_id: str | None = None) -> dict:
     return created
 
 
-def load_indepth_planner(session_id: str | None = None) -> tuple[dict, dict]:
+def load_workflow(session_id: str | None = None) -> tuple[dict, dict]:
     conversation = ensure_conversation_for_session(session_id)
-    payload = conversation.get("indepth_planner")
+    payload = conversation.get("workflow")
+    if not isinstance(payload, dict):
+        payload = conversation.get("indepth_planner")
     return conversation, payload if isinstance(payload, dict) else {}
 
 
-def save_indepth_planner(payload: dict[str, Any], *, session_id: str | None = None) -> dict:
+def save_workflow(payload: dict[str, Any], *, session_id: str | None = None) -> dict:
     conversation = ensure_conversation_for_session(session_id)
     base = _get_korechat_base()
     persisted_payload = _to_persisted_plan(payload) if payload else {}
     result = _http_patch(
         base,
         f"/api/conversations/{conversation['id']}",
-        {"indepth_planner": persisted_payload},
+        {"workflow": persisted_payload},
     )
     if not isinstance(result, dict):
-        raise RuntimeError("Failed to persist InDepthPlanner state.")
-    if "indepth_planner" not in result:
+        raise RuntimeError("Failed to persist Workflow state.")
+    if "workflow" not in result:
         raise RuntimeError(
-            "KoreChat did not return the indepth_planner field after the update. "
-            "The running KoreChat service may not support durable plan storage."
+            "KoreChat did not return the workflow field after the update. "
+            "The running KoreChat service may not support durable Workflow storage."
         )
-    updated_payload = result.get("indepth_planner")
+    updated_payload = result.get("workflow")
     if not isinstance(updated_payload, dict):
-        raise RuntimeError("KoreChat returned an invalid InDepthPlanner payload after the update.")
+        raise RuntimeError("KoreChat returned an invalid Workflow payload after the update.")
     if updated_payload != persisted_payload:
-        raise RuntimeError("KoreChat did not persist the requested InDepthPlanner state.")
+        raise RuntimeError("KoreChat did not persist the requested Workflow state.")
     return _to_runtime_plan(updated_payload)
 
 
-def delete_indepth_planner(*, session_id: str | None = None) -> None:
-    save_indepth_planner({}, session_id=session_id)
+def delete_workflow(*, session_id: str | None = None) -> None:
+    save_workflow({}, session_id=session_id)
+
+
+# Compatibility aliases for internal callers during the Workflow migration.
+load_indepth_planner   = load_workflow
+save_indepth_planner   = save_workflow
+delete_indepth_planner = delete_workflow
 
 
 def _slugify(value: str) -> str:
@@ -964,16 +972,11 @@ def simple_run_to_completion_context(*, session_id: str | None = None) -> dict[s
 
 
 def should_bootstrap_indepth_plan(user_prompt: str, task_plan: dict[str, Any] | None = None) -> bool:
+    """Return whether the user explicitly requested the persistent InDepth Planner."""
     prompt = str(user_prompt or "").strip()
     if not prompt:
         return False
-    if _PLAN_TRIGGER_RE.search(prompt):
-        return True
-    if isinstance(task_plan, dict):
-        workflow = task_plan.get("workflow")
-        if isinstance(workflow, list) and len(workflow) >= 4:
-            return True
-    return False
+    return bool(_PLAN_TRIGGER_RE.search(prompt))
 
 
 def maybe_seed_indepth_plan_from_task_plan(*, user_prompt: str, task_plan: dict[str, Any]) -> dict[str, Any]:
@@ -1006,3 +1009,11 @@ def maybe_seed_indepth_plan_from_task_plan(*, user_prompt: str, task_plan: dict[
         "validation_requirements": list(task_plan.get("validation_requirements") or []),
     }
     return save_indepth_planner(payload)
+
+
+# Workflow-facing names. Legacy implementation names remain private compatibility paths while
+# callers transition to the durable Workflow vocabulary.
+get_simple_workflow                 = get_simple_plan
+list_workflow_tasks                 = list_simple_tasks
+should_bootstrap_workflow           = should_bootstrap_indepth_plan
+maybe_seed_workflow_from_task_plan  = maybe_seed_indepth_plan_from_task_plan

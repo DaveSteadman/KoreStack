@@ -13,7 +13,7 @@ class OrchestratorConfig:
     skills_catalog_path: Path | None = None
     catalog_mtime: float = 0.0
     task_planning_enabled: bool = True
-    task_plan_enforce_phase: bool = False
+    task_plan_enforce_phase: bool = True
     planning_mode: str = "auto"
 
 

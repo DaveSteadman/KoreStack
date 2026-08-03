@@ -112,12 +112,12 @@ def _decode_session_state_fields(record: dict, *, label: str) -> None:
         record["datasets_raw"] = raw_datasets
         record["datasets_parse_error"] = datasets_error
 
-    raw_indepth_planner = str(record.get("indepth_planner") or "{}")
-    indepth_planner, indepth_planner_error = _decode_json_value(raw_indepth_planner, {}, label=f"{label} indepth_planner")
-    record["indepth_planner"] = indepth_planner if isinstance(indepth_planner, dict) else {}
-    if indepth_planner_error:
-        record["indepth_planner_raw"] = raw_indepth_planner
-        record["indepth_planner_parse_error"] = indepth_planner_error
+    raw_workflow = str(record.get("workflow") or "{}")
+    workflow, workflow_error = _decode_json_value(raw_workflow, {}, label=f"{label} workflow")
+    record["workflow"] = workflow if isinstance(workflow, dict) else {}
+    if workflow_error:
+        record["workflow_raw"] = raw_workflow
+        record["workflow_parse_error"] = workflow_error
 
     raw_tools_active = str(record.get("tools_active") or "[]")
     tools_active, _tools_active_error = _decode_json_value(raw_tools_active, [], label=f"{label} tools_active")

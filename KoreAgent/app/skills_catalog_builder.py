@@ -408,13 +408,35 @@ def build_skills_payload(
     num_ctx: int = 0,
 ) -> dict:
     skill_files = find_skill_files(skills_root)
-    summaries = [
-        normalize_summary(
+    summaries = []
+    unresolved_function_skills = []
+    for skill_file in skill_files:
+        summary = normalize_summary(
             summarize_skill(skill_file, use_llm=use_llm, model_name=model_name, num_ctx=num_ctx),
             skill_file,
         )
-        for skill_file in skill_files
+        declared_functions = _extract_function_signatures(
+            skill_file.read_text(encoding="utf-8-sig"),
+            "",
+        )
+        if declared_functions and not summary.get("functions"):
+            unresolved_function_skills.append(str(summary.get("relative_path") or skill_file))
+        summaries.append(summary)
+    missing_modules = [
+        str(summary.get("relative_path") or "<unknown skill>")
+        for summary in summaries
+        if summary.get("functions") and not str(summary.get("module") or "").strip()
     ]
+    if missing_modules:
+        raise RuntimeError(
+            "Skills that declare functions must declare a Module path: "
+            + ", ".join(missing_modules)
+        )
+    if unresolved_function_skills:
+        raise RuntimeError(
+            "Skill functions could not be resolved from their declared Module path: "
+            + ", ".join(unresolved_function_skills)
+        )
     return {
         "schema_version": SKILLS_SCHEMA_VERSION,
         "skills_root": to_workspace_relative_path(skills_root),

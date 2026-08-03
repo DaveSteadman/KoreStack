@@ -24,6 +24,7 @@
 # ====================================================================================================
 import json
 import os
+import re
 import threading
 from dataclasses import dataclass
 from pathlib import Path
@@ -47,13 +48,15 @@ from agent.orchestration.planning import create_task_plan
 from agent.orchestration.planning import advance_task_plan_phase
 from agent.orchestration.planning import format_task_plan_context
 from agent.orchestration.planning import get_last_planner_selection_trace
+from agent.orchestration.planning import get_task_plan_completion_gaps
 from agent.orchestration.planning import get_task_plan_activation_tools
 from agent.orchestration.planning import get_task_plan_phase
 from agent.orchestration.planning import persist_task_plan
 from agent.orchestration.planning import record_task_plan_event
-from indepth_planner_store import maybe_seed_indepth_plan_from_task_plan
-from indepth_planner_store import list_simple_tasks
-from indepth_planner_store import should_bootstrap_indepth_plan
+from indepth_planner_store import get_simple_workflow
+from indepth_planner_store import list_workflow_tasks
+from indepth_planner_store import maybe_seed_workflow_from_task_plan
+from indepth_planner_store import should_bootstrap_workflow
 from sessions.tool_selection import build_all_tool_catalog
 from sessions.tool_selection import derive_active_tool_runtime
 from sessions.tool_selection import promote_selected_tools
@@ -157,6 +160,40 @@ def _filter_web_skills(payload: dict) -> dict:
     return result
 
 
+def _filter_workflow_tools(payload: dict, *, enabled: bool, has_plan: bool) -> dict:
+    """Expose persistent Workflow functions only when their KoreChat lifecycle permits it."""
+    permitted = {"workflow_create", "workflow_import"} if enabled and not has_plan else None
+    filtered: list[dict] = []
+    for skill in payload.get("skills", []):
+        functions = skill.get("functions") or []
+        if not isinstance(functions, list):
+            filtered.append(skill)
+            continue
+
+        kept_functions = []
+        for function_sig in functions:
+            function_name = str(function_sig).split("(", 1)[0].strip()
+            if not function_name.startswith("workflow_"):
+                kept_functions.append(function_sig)
+            elif enabled and (has_plan or function_name in permitted):
+                kept_functions.append(function_sig)
+        if functions and not kept_functions:
+            continue
+
+        copied = dict(skill)
+        copied["functions"] = kept_functions
+        param_descriptions = copied.get("param_descriptions")
+        if isinstance(param_descriptions, dict):
+            copied["param_descriptions"] = {
+                name: value
+                for name, value in param_descriptions.items()
+                if not str(name).startswith("workflow_")
+                or (enabled and (has_plan or str(name) in permitted))
+            }
+        filtered.append(copied)
+    return {**payload, "skills": filtered}
+
+
 # ====================================================================================================
 # MARK: RUN STATE
 # ====================================================================================================
@@ -207,7 +244,7 @@ class OrchestratorConfig:
     skills_catalog_path: Path | None = None
     catalog_mtime: float = 0.0
     task_planning_enabled: bool = True
-    task_plan_enforce_phase: bool = False
+    task_plan_enforce_phase: bool = True
     planning_mode: str = "auto"
 
 
@@ -541,7 +578,7 @@ def orchestrate_prompt(
         _log(f"Max rounds:     {config.max_iterations}")
         _log(f"Prompt:         {user_prompt[:300]}{' ...' if len(user_prompt) > 300 else ''}")
         planning_mode = str(getattr(config, "planning_mode", "auto") or "auto").strip().lower()
-        if planning_mode not in {"off", "simple", "indepth", "auto"}:
+        if planning_mode not in {"off", "simple", "workflow", "auto"}:
             planning_mode = "auto"
         if not config.task_planning_enabled and planning_mode == "auto":
             planning_mode = "off"
@@ -551,7 +588,21 @@ def orchestrate_prompt(
         _log_section("AMBIENT SYSTEM INFO")
         _log(ambient_system_info)
 
+        workflow_enabled = (
+            planning_mode == "workflow"
+            or (planning_mode == "auto" and should_bootstrap_workflow(user_prompt))
+        )
+        try:
+            workflow_exists = bool(get_simple_workflow(session_id=active_session_id))
+        except Exception as exc:
+            workflow_exists = False
+            _log_file_only(f"[workflow] availability check failed: {exc}")
         available_local_payload = config.skills_payload if _WEB_SKILLS_ENABLED else _filter_web_skills(config.skills_payload)
+        available_local_payload = _filter_workflow_tools(
+            available_local_payload,
+            enabled  = workflow_enabled,
+            has_plan = workflow_exists,
+        )
         capability_catalog = build_all_tool_catalog(
             available_local_payload,
             session_id         = active_session_id,
@@ -559,8 +610,23 @@ def orchestrate_prompt(
         )
         known_tool_names = {str(item.get("name") or "") for item in capability_catalog if str(item.get("name") or "")}
         if planning_mode != "off":
+            planning_context = ""
+            task_match = re.search(r"\b(?:run|execute|continue|rerun)\s+(?:the\s+)?task\s+(\d+)\b", user_prompt, re.IGNORECASE)
+            if task_match:
+                task_position = int(task_match.group(1))
+                plan_tasks = list_workflow_tasks(session_id=active_session_id)
+                if 1 <= task_position <= len(plan_tasks):
+                    selected_task = plan_tasks[task_position - 1]
+                    planning_context = json.dumps(
+                        {
+                            "task_id": selected_task.get("id"),
+                            "static_instruction": selected_task.get("static"),
+                        },
+                        ensure_ascii=False,
+                    )
             task_plan = create_task_plan(
                 user_prompt        = user_prompt,
+                planning_context   = planning_context,
                 capability_catalog = capability_catalog,
                 known_tool_names   = known_tool_names,
                 call_llm_chat      = call_llm_chat,
@@ -568,6 +634,8 @@ def orchestrate_prompt(
                 num_ctx            = config.num_ctx,
             )
             persist_task_plan(task_plan)
+            _log_section_file_only("LIGHTWEIGHT TASK PLAN JSON")
+            _log_file_only(json.dumps(task_plan.payload(), indent=2, ensure_ascii=False))
             activation_tools = task_plan.activation_tools()
             if activation_tools:
                 activation = promote_selected_tools(
@@ -605,14 +673,14 @@ def orchestrate_prompt(
                         f"flags={','.join(row.get('flags') or []) or 'none'} "
                         f"origin={row.get('origin', '')}"
                     )
-            if planning_mode == "indepth" or (planning_mode == "auto" and should_bootstrap_indepth_plan(user_prompt, task_plan.payload())):
+            if workflow_enabled:
                 try:
-                    maybe_seed_indepth_plan_from_task_plan(
+                    maybe_seed_workflow_from_task_plan(
                         user_prompt = user_prompt,
                         task_plan   = task_plan.payload(),
                     )
                 except Exception as exc:
-                    _log_file_only(f"[indepth-planner] seed skipped: {exc}")
+                    _log_file_only(f"[workflow] seed skipped: {exc}")
         else:
             task_plan = None
         initial_tool_runtime = derive_active_tool_runtime(
@@ -672,6 +740,11 @@ def orchestrate_prompt(
 
         def _build_tool_runtime() -> dict[str, object]:
             round_available_local_payload = config.skills_payload if _WEB_SKILLS_ENABLED else _filter_web_skills(config.skills_payload)
+            round_available_local_payload = _filter_workflow_tools(
+                round_available_local_payload,
+                enabled  = workflow_enabled,
+                has_plan = workflow_exists,
+            )
             runtime = derive_active_tool_runtime(
                 config.skills_payload,
                 available_local_payload=round_available_local_payload,
@@ -694,7 +767,7 @@ def orchestrate_prompt(
         def _remaining_plan_tasks() -> list[dict]:
             return [
                 task
-                for task in list_simple_tasks(session_id=active_session_id)
+                for task in list_workflow_tasks(session_id=active_session_id)
                 if not task.get("dynamic", {}).get("ran")
             ]
 
@@ -721,6 +794,7 @@ def orchestrate_prompt(
                 tool_runtime_provider = _build_tool_runtime,
                 on_tool_round_complete = _on_task_plan_tool_round,
                 run_to_completion_remaining_provider = _remaining_plan_tasks,
+                completion_gaps_provider = get_task_plan_completion_gaps,
                 phase_tool_names_provider = (
                     (lambda: set(get_task_plan_activation_tools()))
                     if task_plan is not None and config.task_plan_enforce_phase

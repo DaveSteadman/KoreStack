@@ -1,0 +1,152 @@
+[
+  {
+    "exchange": "slash /cronprompts - list cron prompts",
+    "turns": [
+      { "user": "/cronprompts", "assert": "not_empty" }
+    ]
+  },
+
+  {
+    "exchange": "slash /cronprompt add interval then list",
+    "turns": [
+      { "user": "/cronprompt add TestIntervalCronPrompt 45 Check free RAM and report it", "assert": "contains|created" },
+      { "user": "/cronprompts", "assert": "contains|TestIntervalCronPrompt" },
+      { "user": "/cronprompt delete TestIntervalCronPrompt", "assert": "contains|deleted" }
+    ]
+  },
+
+  {
+    "exchange": "slash /cronprompt add daily then list",
+    "turns": [
+      { "user": "/cronprompt add TestDailyCronPrompt 03:30 Run a daily system health summary", "assert": "contains|created" },
+      { "user": "/cronprompts", "assert": "contains|TestDailyCronPrompt" },
+      { "user": "/cronprompt delete TestDailyCronPrompt", "assert": "contains|deleted" }
+    ]
+  },
+
+  {
+    "exchange": "slash /cronprompt disable then enable",
+    "turns": [
+      { "user": "/cronprompt add TestToggleCronPrompt 60 A cron prompt for toggle testing", "assert": "contains|created" },
+      { "user": "/cronprompt disable TestToggleCronPrompt", "assert": "contains|disabled" },
+      { "user": "/cronprompts", "assert": "contains|off" },
+      { "user": "/cronprompt enable TestToggleCronPrompt", "assert": "contains|enabled" },
+      { "user": "/cronprompts", "assert": "contains|on" },
+      { "user": "/cronprompt delete TestToggleCronPrompt", "assert": "contains|deleted" }
+    ]
+  },
+
+  {
+    "exchange": "slash /cronprompt delete",
+    "turns": [
+      { "user": "/cronprompt add TestDeleteCronPrompt 10 Temporary cron prompt for deletion test", "assert": "contains|created" },
+      { "user": "/cronprompt delete TestDeleteCronPrompt", "assert": "contains|deleted" },
+      { "user": "/cronprompts", "assert": "not_contains|TestDeleteCronPrompt" }
+    ]
+  },
+
+  {
+    "exchange": "slash /cronprompt add - bad schedule arg",
+    "turns": [
+      { "user": "/cronprompt add BadCronPrompt notanumber Do something", "assert": "contains|Invalid" }
+    ]
+  },
+
+  {
+    "exchange": "slash /cronprompt add - duplicate name rejected",
+    "turns": [
+      { "user": "/cronprompt add DupeCronPrompt 30 First version", "assert": "contains|created" },
+      { "user": "/cronprompt add DupeCronPrompt 30 Second version", "assert": "contains|already exists" },
+      { "user": "/cronprompt delete DupeCronPrompt", "assert": "contains|deleted" }
+    ]
+  },
+
+  {
+    "exchange": "slash /cronprompt enable - unknown cron prompt",
+    "turns": [
+      { "user": "/cronprompt enable NonExistentCronPrompt99", "assert": "contains|not found" }
+    ]
+  },
+
+  {
+    "exchange": "slash /cronprompt delete - unknown cron prompt",
+    "turns": [
+      { "user": "/cronprompt delete NonExistentCronPrompt99", "assert": "contains|not found" }
+    ]
+  },
+
+  {
+    "exchange": "chat - list cron prompts via natural language",
+    "turns": [
+      { "user": "/cronprompt add ChatListCronPrompt 60 A cron prompt created to test natural language listing", "assert": "contains|created" },
+      { "user": "list all my scheduled cron prompts", "assert": "contains|ChatListCronPrompt" },
+      { "user": "/cronprompt delete ChatListCronPrompt", "assert": "contains|deleted" }
+    ]
+  },
+
+  {
+    "exchange": "chat - get cron prompt details",
+    "turns": [
+      { "user": "/cronprompt add ChatGetCronPrompt 90 A cron prompt for details testing", "assert": "contains|created" },
+      { "user": "show me the details of the ChatGetCronPrompt cron prompt", "assert": "contains|ChatGetCronPrompt" },
+      { "user": "/cronprompt delete ChatGetCronPrompt", "assert": "contains|deleted" }
+    ]
+  },
+
+  {
+    "exchange": "chat - create interval cron prompt via natural language",
+    "turns": [
+      { "user": "create a scheduled cron prompt called ChatIntervalCronPrompt that runs every 60 minutes and checks available disk space", "assert": "contains|ChatIntervalCronPrompt" },
+      { "user": "/cronprompts", "assert": "contains|ChatIntervalCronPrompt" },
+      { "user": "/cronprompt delete ChatIntervalCronPrompt", "assert": "contains|deleted" }
+    ]
+  },
+
+  {
+    "exchange": "chat - create daily cron prompt via natural language",
+    "turns": [
+      { "user": "create a daily scheduled cron prompt called ChatDailyCronPrompt that runs at 07:00 and summarises the morning tech news", "assert": "contains|ChatDailyCronPrompt" },
+      { "user": "/cronprompts", "assert": "contains|ChatDailyCronPrompt" },
+      { "user": "/cronprompt delete ChatDailyCronPrompt", "assert": "contains|deleted" }
+    ]
+  },
+
+  {
+    "exchange": "chat - disable cron prompt via natural language",
+    "turns": [
+      { "user": "/cronprompt add ChatDisableCronPrompt 30 Cron prompt for chat-disable testing", "assert": "contains|created" },
+      { "user": "disable the ChatDisableCronPrompt cron prompt", "assert": "not_empty" },
+      { "user": "/cronprompts", "assert": "contains|off" },
+      { "user": "/cronprompt delete ChatDisableCronPrompt", "assert": "contains|deleted" }
+    ]
+  },
+
+  {
+    "exchange": "chat - change cron prompt schedule via natural language",
+    "turns": [
+      { "user": "/cronprompt add ChatRescheduleCronPrompt 60 Cron prompt for rescheduling test", "assert": "contains|created" },
+      { "user": "change the ChatRescheduleCronPrompt cron prompt to run every 15 minutes", "assert": "not_empty" },
+      { "user": "show me the details of ChatRescheduleCronPrompt", "assert": "contains|15" },
+      { "user": "/cronprompt delete ChatRescheduleCronPrompt", "assert": "contains|deleted" }
+    ]
+  },
+
+  {
+    "exchange": "chat - update cron prompt text via natural language",
+    "turns": [
+      { "user": "/cronprompt add ChatTextCronPrompt 60 Original prompt text here", "assert": "contains|created" },
+      { "user": "update the text for the ChatTextCronPrompt cron prompt to: check RAM and write the result to data/ramlog.txt", "assert": "not_empty" },
+      { "user": "show me the details of ChatTextCronPrompt", "assert": "contains|ramlog" },
+      { "user": "/cronprompt delete ChatTextCronPrompt", "assert": "contains|deleted" }
+    ]
+  },
+
+  {
+    "exchange": "chat - delete cron prompt via natural language",
+    "turns": [
+      { "user": "/cronprompt add ChatDeleteCronPrompt 20 Temporary cron prompt for natural language deletion", "assert": "contains|created" },
+      { "user": "delete the ChatDeleteCronPrompt scheduled cron prompt", "assert": "not_empty" },
+      { "user": "/cronprompts", "assert": "not_contains|ChatDeleteCronPrompt" }
+    ]
+  }
+]
