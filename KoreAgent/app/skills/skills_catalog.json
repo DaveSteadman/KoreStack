@@ -5,20 +5,9 @@
     {
       "skill_name": "DateTime Skill",
       "relative_path": "app/skills/DateTime/skill.md",
-      "purpose": "Return the current date, time, day name, and month name. Prefer get_datetime_data() in all cases - it returns both date and time in a single call.",
+      "purpose": "Return the current date, time, day name, and month name. Prefer `get_datetime_data()` in all cases - it returns both date and time in a single call. Use `get_day_name()` or `get_month_name()` only when you specifically need just that one value.",
       "module": "KoreAgent/app/skills/DateTime/datetime_skill.py",
-      "functions": [
-        "get_datetime_data()",
-        "get_day_name()",
-        "get_month_name()"
-      ],
-      "inputs": [],
-      "outputs": [
-        "\"get_datetime_data()\" returns a dict with two string fields: 'date' (YYYY-MM-DD) and 'time' (HH:MM:SS).",
-        "\"get_day_name()\" returns the full name of the current day of the week, e.g. \"Saturday\".",
-        "\"get_month_name()\" returns the full name of the current month, e.g. \"March\"."
-      ],
-      "param_descriptions": {},
+      "trigger_keyword": "current date, time, day of the week, or month name",
       "triggers": [
         "what is the date",
         "current date",
@@ -33,27 +22,33 @@
         "day of the week",
         "day name"
       ],
+      "functions": [
+        "get_datetime_data()",
+        "get_day_name()",
+        "get_month_name()"
+      ],
+      "inputs": [],
+      "outputs": [
+        "`get_datetime_data()` - returns a dict with two string fields:",
+        "`date` (str) - current date as `\"YYYY-MM-DD\"`",
+        "`time` (str) - current time as `\"HH:MM:SS\"`",
+        "`get_day_name()` - returns the full name of the current day of the week, e.g. `\"Saturday\"`",
+        "`get_month_name()` - returns the full name of the current month, e.g. `\"March\"`"
+      ],
+      "param_descriptions": {},
+      "tool_selection_guidance": "",
       "is_system_skill": false,
       "origin": "local",
       "availability": "configured",
       "role": "optional",
-      "trust_boundary": "internal",
-      "trigger_keyword": "",
-      "tool_selection_guidance": ""
+      "trust_boundary": "internal"
     },
     {
       "skill_name": "SystemInfo Skill",
       "relative_path": "app/skills/SystemInfo/skill.md",
-      "purpose": "Provide runtime system information including OS name, Python and Ollama versions, RAM usage, disk usage.",
+      "purpose": "Provide runtime system information including OS name, Python and Ollama versions, RAM usage, and disk usage. Use this for any prompt about the machine, hardware, runtime environment, available resources, or version details. Do not use this for web or file queries.",
       "module": "KoreAgent/app/skills/SystemInfo/system_info_skill.py",
-      "functions": [
-        "get_system_info_dict()"
-      ],
-      "inputs": [],
-      "outputs": [
-        "dict with fields: os (str), python_version (str), ollama_version (str), ram_used_gb (float), ram_available_gb (float), disk_used_gb (float), disk_available_gb (float)"
-      ],
-      "param_descriptions": {},
+      "trigger_keyword": "system info, RAM or disk space, available memory, or OS and runtime version details",
       "triggers": [
         "system info",
         "system health",
@@ -76,13 +71,27 @@
         "do we have enough",
         "is there enough space"
       ],
+      "functions": [
+        "get_system_info_dict()"
+      ],
+      "inputs": [],
+      "outputs": [
+        "`get_system_info_dict()` - returns a dict with individually addressable fields:",
+        "`os` (str) - OS name, e.g. `\"Windows\"`",
+        "`python_version` (str) - e.g. `\"3.10.11\"`",
+        "`ollama_version` (str) - e.g. `\"0.18.0\"`",
+        "`ram_used_gb` (float) - RAM in use in GiB",
+        "`ram_available_gb` (float) - RAM free in GiB",
+        "`disk_used_gb` (float) - disk used in GiB",
+        "`disk_available_gb` (float) - disk free in GiB"
+      ],
+      "param_descriptions": {},
+      "tool_selection_guidance": "",
       "is_system_skill": false,
       "origin": "local",
       "availability": "configured",
       "role": "optional",
-      "trust_boundary": "internal",
-      "trigger_keyword": "",
-      "tool_selection_guidance": ""
+      "trust_boundary": "internal"
     },
     {
       "skill_name": "CodeExecute Skill",
@@ -508,9 +517,11 @@
         "workflow_get()",
         "workflow_get_summary()",
         "workflow_get_task(task_id)",
-        "workflow_add_task(title, description=\"\", instruction=\"\", depends_on=None)",
-        "workflow_update_task(task_id, title=None, description=None, instruction=None, depends_on=None)",
+        "workflow_add_task(title, description=\"\", instruction=\"\", depends_on=None, outputs=None, evidence_requirements=None)",
+        "workflow_update_task(task_id, title=None, description=None, instruction=None, depends_on=None, outputs=None, evidence_requirements=None)",
         "workflow_set_task_data(task_id, data)",
+        "workflow_record_task_result(task_id, outputs=None, evidence=None, note=\"\")",
+        "workflow_check_task_contract(task_id)",
         "workflow_clear_task_data(task_id)",
         "workflow_reset_task_run(task_id)",
         "workflow_clear_dynamic()",

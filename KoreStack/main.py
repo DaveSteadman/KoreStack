@@ -21,6 +21,7 @@ import urllib.parse
 import urllib.request
 import webbrowser
 from dataclasses import dataclass
+from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
@@ -602,7 +603,8 @@ class StackManager:
                     spec = self._service_map.get(slug)
                     label = spec.label if spec else slug
                     log.info("auto-restarting %s (source changed)", label)
-                    print(f"[watcher] restarting {label} ...", flush=True)
+                    timestamp = datetime.now().strftime("%Y/%m/%d %H:%M:%S")
+                    print(f"[watcher] restarting {label} ({timestamp})...", flush=True)
                     try:
                         self.restart_service(slug)
                     except Exception as exc:

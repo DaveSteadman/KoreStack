@@ -54,6 +54,7 @@ from agent.orchestration.planning import get_task_plan_phase
 from agent.orchestration.planning import persist_task_plan
 from agent.orchestration.planning import record_task_plan_event
 from indepth_planner_store import get_simple_workflow
+from indepth_planner_store import evaluate_simple_task_contract
 from indepth_planner_store import list_workflow_tasks
 from indepth_planner_store import maybe_seed_workflow_from_task_plan
 from indepth_planner_store import should_bootstrap_workflow
@@ -588,9 +589,14 @@ def orchestrate_prompt(
         _log_section("AMBIENT SYSTEM INFO")
         _log(ambient_system_info)
 
+        workflow_task_match = re.search(
+            r"\b(?:run|execute|continue|rerun)\s+(?:the\s+)?task\s+(\d+)\b",
+            user_prompt,
+            re.IGNORECASE,
+        )
         workflow_enabled = (
             planning_mode == "workflow"
-            or (planning_mode == "auto" and should_bootstrap_workflow(user_prompt))
+            or (planning_mode == "auto" and (should_bootstrap_workflow(user_prompt) or workflow_task_match is not None))
         )
         try:
             workflow_exists = bool(get_simple_workflow(session_id=active_session_id))
@@ -609,24 +615,31 @@ def orchestrate_prompt(
             conversation_entry = conversation_entry,
         )
         known_tool_names = {str(item.get("name") or "") for item in capability_catalog if str(item.get("name") or "")}
+        workflow_task_contract: dict[str, object] | None = None
         if planning_mode != "off":
             planning_context = ""
-            task_match = re.search(r"\b(?:run|execute|continue|rerun)\s+(?:the\s+)?task\s+(\d+)\b", user_prompt, re.IGNORECASE)
-            if task_match:
-                task_position = int(task_match.group(1))
+            if workflow_task_match:
+                task_position = int(workflow_task_match.group(1))
                 plan_tasks = list_workflow_tasks(session_id=active_session_id)
                 if 1 <= task_position <= len(plan_tasks):
                     selected_task = plan_tasks[task_position - 1]
+                    static_task = selected_task.get("static") if isinstance(selected_task.get("static"), dict) else {}
+                    workflow_task_contract = {
+                        "task_id":               selected_task.get("id"),
+                        "instruction":           static_task.get("instruction"),
+                        "required_outputs":      static_task.get("outputs") or [],
+                        "evidence_requirements": static_task.get("evidence_requirements") or [],
+                    }
                     planning_context = json.dumps(
                         {
-                            "task_id": selected_task.get("id"),
-                            "static_instruction": selected_task.get("static"),
+                            "workflow_task_contract": workflow_task_contract,
                         },
                         ensure_ascii=False,
                     )
             task_plan = create_task_plan(
                 user_prompt        = user_prompt,
                 planning_context   = planning_context,
+                workflow_task_contract = workflow_task_contract,
                 capability_catalog = capability_catalog,
                 known_tool_names   = known_tool_names,
                 call_llm_chat      = call_llm_chat,
@@ -771,6 +784,20 @@ def orchestrate_prompt(
                 if not task.get("dynamic", {}).get("ran")
             ]
 
+        def _completion_gaps() -> list[str]:
+            gaps = list(get_task_plan_completion_gaps(
+                include_declared_outputs = workflow_task_contract is None,
+            ))
+            if workflow_task_contract is not None:
+                try:
+                    gaps.extend(evaluate_simple_task_contract(
+                        task_id    = str(workflow_task_contract["task_id"]),
+                        session_id = active_session_id,
+                    ))
+                except Exception as exc:
+                    gaps.append(f"Workflow Task {workflow_task_match.group(1)} contract could not be checked: {exc}")
+            return list(dict.fromkeys(gaps))
+
         # Register a per-run stop event so that /stoprun only affects this session.
         _run_id         = f"{active_session_id}_{id(messages)}"
         _run_stop_event = threading.Event()
@@ -794,9 +821,23 @@ def orchestrate_prompt(
                 tool_runtime_provider = _build_tool_runtime,
                 on_tool_round_complete = _on_task_plan_tool_round,
                 run_to_completion_remaining_provider = _remaining_plan_tasks,
-                completion_gaps_provider = get_task_plan_completion_gaps,
+                completion_gaps_provider = _completion_gaps,
                 phase_tool_names_provider = (
-                    (lambda: set(get_task_plan_activation_tools()))
+                    (
+                        lambda: set(get_task_plan_activation_tools()).union(
+                            {
+                                "workflow_get_task",
+                                "workflow_set_task_data",
+                                "workflow_record_task_result",
+                                "workflow_check_task_contract",
+                                "workflow_mark_task_ran",
+                                "workflow_run_to_completion",
+                                "workflow_get_summary",
+                            }
+                            if workflow_task_match is not None
+                            else set()
+                        )
+                    )
                     if task_plan is not None and config.task_plan_enforce_phase
                     else None
                 ),

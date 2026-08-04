@@ -40,7 +40,7 @@ class InDepthPlannerStoreTests(unittest.TestCase):
     def test_clear_simple_task_data_retains_ran_flag(self) -> None:
         plan = {
             "static":  {"objective": "research", "tasks": [{"id": "1", "title": "Find", "description": "", "instruction": "Find", "depends_on": []}]},
-            "dynamic": {"tasks": {"1": {"ran": True, "data": {"source": "example"}}}},
+            "dynamic": {"tasks": {"1": {"ran": True, "data": {"source": "example"}, "outputs": ["report.md"], "evidence": {"sources": 4}}}},
         }
         with (
             patch.object(planner_store, "get_simple_plan", return_value=plan),
@@ -50,6 +50,92 @@ class InDepthPlannerStoreTests(unittest.TestCase):
 
         self.assertTrue(saved["dynamic"]["tasks"]["1"]["ran"])
         self.assertEqual(saved["dynamic"]["tasks"]["1"]["data"], {})
+        self.assertEqual(saved["dynamic"]["tasks"]["1"]["outputs"], [])
+        self.assertEqual(saved["dynamic"]["tasks"]["1"]["evidence"], {})
+
+    def test_simple_task_preserves_static_output_and_evidence_contract(self) -> None:
+        saved: list[dict] = []
+
+        def save(plan: dict, **_kwargs: object) -> dict:
+            saved.append(plan)
+            return plan
+
+        with patch.object(planner_store, "_save_simple_plan", side_effect=save):
+            planner_store.create_simple_plan(
+                objective="Research",
+                initial_tasks=[
+                    {
+                        "title": "Collect evidence",
+                        "outputs": [
+                            {"type": "file", "path": "reports/sources.txt", "minimum_bytes": 20},
+                            {"type": "dataset", "name": "sources", "minimum_items": 10},
+                        ],
+                        "evidence_requirements": [
+                            {"type": "unique_field_count", "dataset": "sources", "field": "url", "minimum": 10},
+                        ],
+                    }
+                ],
+            )
+
+        task = saved[0]["static"]["tasks"][0]
+        self.assertEqual(task["outputs"][0]["target"], "reports/sources.txt")
+        self.assertEqual(task["outputs"][1]["target"], "sources")
+        self.assertEqual(task["evidence_requirements"][0]["field"], "url")
+
+    def test_record_task_result_is_dynamic_and_does_not_mark_task_ran(self) -> None:
+        plan = {
+            "static":  {"objective": "research", "tasks": [{"id": "1", "title": "Find", "description": "", "instruction": "Find", "depends_on": []}]},
+            "dynamic": {"tasks": {}},
+        }
+        with (
+            patch.object(planner_store, "get_simple_plan", return_value=plan),
+            patch.object(planner_store, "_save_simple_plan", side_effect=lambda saved, **_kwargs: saved),
+        ):
+            saved = planner_store.record_simple_task_result(
+                task_id="1",
+                outputs=[{"path": "reports/sources.txt"}],
+                evidence={"source_count": 12},
+                note="Discovery run completed.",
+            )
+
+        state = saved["dynamic"]["tasks"]["1"]
+        self.assertFalse(state["ran"])
+        self.assertEqual(state["outputs"], [{"path": "reports/sources.txt"}])
+        self.assertEqual(state["evidence"], {"source_count": 12})
+        self.assertEqual(state["data"]["note"], "Discovery run completed.")
+
+    def test_task_contract_checks_each_required_file_individually(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            reports = root / "reports"
+            reports.mkdir()
+            (reports / "sources.txt").write_text("source\n" * 8, encoding="utf-8")
+            plan = {
+                "static": {
+                    "objective": "research",
+                    "tasks": [
+                        {
+                            "id": "1",
+                            "title": "Report",
+                            "description": "",
+                            "instruction": "Write reports.",
+                            "depends_on": [],
+                            "outputs": [
+                                {"type": "file", "target": "reports/sources.txt", "minimum_bytes": 20},
+                                {"type": "file", "target": "reports/report.md", "minimum_bytes": 20},
+                            ],
+                        }
+                    ],
+                },
+                "dynamic": {"tasks": {}},
+            }
+            with (
+                patch.object(planner_store, "get_simple_plan", return_value=plan),
+                patch("utils.workspace_utils.get_user_data_dir", return_value=root),
+            ):
+                gaps = planner_store.evaluate_simple_task_contract(task_id="1")
+
+        self.assertEqual(gaps, ["Required output file 'reports/report.md' is missing or smaller than 20 bytes."])
 
     def test_reset_simple_task_run_retains_dynamic_data(self) -> None:
         plan = {
@@ -129,12 +215,12 @@ class InDepthPlannerStoreTests(unittest.TestCase):
         self.assertEqual(task["execution"]["output_refs"], [{"dataset": "koredata_search_1"}])
 
     def test_create_plan_replaces_the_entire_existing_plan(self) -> None:
-        conversation = {"id": 71, "indepth_planner": {"current": {"objective": "old plan"}}}
+        conversation = {"id": 71, "workflow": {"current": {"objective": "old plan"}}}
         persisted: list[dict] = []
 
         def patch_plan(_base: str, _path: str, payload: dict) -> dict:
-            persisted.append(payload["indepth_planner"])
-            return {"id": 71, "indepth_planner": payload["indepth_planner"]}
+            persisted.append(payload["workflow"])
+            return {"id": 71, "workflow": payload["workflow"]}
 
         with (
             patch.object(planner_store, "ensure_conversation_for_session", return_value=conversation),
@@ -160,15 +246,15 @@ class InDepthPlannerStoreTests(unittest.TestCase):
             patch.object(planner_store, "_get_korechat_base", return_value="http://korechat"),
             patch.object(planner_store, "_http_patch", return_value={"id": 71}),
         ):
-            with self.assertRaisesRegex(RuntimeError, "did not return the indepth_planner field"):
+            with self.assertRaisesRegex(RuntimeError, "did not return the workflow field"):
                 planner_store.save_indepth_planner({"current": {"objective": "new plan"}}, session_id="session_71")
 
     def test_clear_plan_replaces_the_persisted_plan_with_an_empty_object(self) -> None:
         persisted: list[dict] = []
 
         def patch_plan(_base: str, _path: str, payload: dict) -> dict:
-            persisted.append(payload["indepth_planner"])
-            return {"id": 71, "indepth_planner": payload["indepth_planner"]}
+            persisted.append(payload["workflow"])
+            return {"id": 71, "workflow": payload["workflow"]}
 
         with (
             patch.object(planner_store, "ensure_conversation_for_session", return_value={"id": 71}),

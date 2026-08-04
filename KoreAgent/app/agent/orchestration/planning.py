@@ -31,7 +31,7 @@ VALID_OUTPUT_TYPES        = frozenset({"file", "dataset", "scratchpad"})
 ALWAYS_ON_TOOL_NAMES     = frozenset({"tools_catalog_list", "tools_active_add"})
 TASK_PLAN_SCRATCHPAD_KEY = "task_plan"
 _PLAN_TASK_EXECUTION_RE = re.compile(
-    r"\b(?:run|execute|continue|rerun)\s+(?:the\s+)?(?:first|second|third|fourth|fifth|\d+(?:st|nd|rd|th)?)?\s*task\b.*\b(?:plan|workflow)\b"
+    r"\b(?:run|execute|continue|rerun)\s+(?:the\s+)?(?:first|second|third|fourth|fifth|\d+(?:st|nd|rd|th)?)?\s*task(?:\s+\d+)?\b"
     r"|\b(?:run|execute|continue|rerun)\s+(?:the\s+)?(?:plan|workflow)(?:\s+to\s+completion)?\b",
     re.IGNORECASE,
 )
@@ -164,6 +164,8 @@ def _validated_execution_steps(raw: object, *, known_tool_names: set[str]) -> li
             target = str(output.get("target") or output.get("path") or output.get("name") or output.get("key") or "").strip()[:240]
             if output_type not in VALID_OUTPUT_TYPES or not target:
                 continue
+            if output_type == "dataset" and Path(target).suffix:
+                output_type = "file"
             normalized = {"type": output_type, "target": target}
             description = str(output.get("description") or "").strip()[:160]
             if description:
@@ -199,6 +201,63 @@ def _bounded_execution_steps(steps: list[dict[str, Any]]) -> list[dict[str, Any]
         bounded.append(step)
         used_chars += len(encoded)
     return bounded
+
+
+def _add_dataset_access_tools(
+    *,
+    phase_tools: list[str],
+    phase_tool_map: dict[str, list[str]],
+    steps: list[dict[str, Any]],
+    current_phase: str,
+    known_tool_names: set[str],
+) -> tuple[list[str], dict[str, list[str]], list[dict[str, Any]]]:
+    """Keep a dataset-producing step able to read and verify the data it creates.
+
+    Search tools commonly place their full result in a named dataset.  A lightweight
+    plan which can search but cannot call dataset_get then cannot turn that evidence
+    into a file or report.  This is a required execution dependency, not a model
+    preference, so it is added by the host after validating the planner response.
+    """
+    access_tools = [
+        tool_name
+        for tool_name in ("dataset_get", "dataset_inspect")
+        if tool_name in known_tool_names
+    ]
+    if not access_tools:
+        return phase_tools, phase_tool_map, steps
+
+    required_phases: set[str] = set()
+    updated_steps: list[dict[str, Any]] = []
+    for step in steps:
+        updated = dict(step)
+        step_tools = list(updated.get("tools") or [])
+        produces_dataset = any(
+            isinstance(output, dict) and output.get("type") == "dataset"
+            for output in updated.get("outputs") or []
+        )
+        if "koredata_search" in step_tools or produces_dataset:
+            required_phases.add(str(updated.get("phase") or current_phase).strip().lower())
+            for tool_name in access_tools:
+                if tool_name not in step_tools and len(step_tools) < MAX_PHASE_TOOLS:
+                    step_tools.append(tool_name)
+            updated["tools"] = step_tools
+        updated_steps.append(updated)
+
+    updated_map = {phase: list(tools) for phase, tools in phase_tool_map.items()}
+    for phase in required_phases:
+        if phase not in VALID_PHASES:
+            continue
+        tools = updated_map.setdefault(phase, [])
+        for tool_name in access_tools:
+            if tool_name not in tools and len(tools) < MAX_PHASE_TOOLS:
+                tools.append(tool_name)
+
+    updated_phase_tools = list(phase_tools)
+    if current_phase in required_phases:
+        for tool_name in access_tools:
+            if tool_name not in updated_phase_tools and len(updated_phase_tools) < MAX_PHASE_TOOLS:
+                updated_phase_tools.append(tool_name)
+    return updated_phase_tools, updated_map, updated_steps
 
 
 def _extract_json_object(text: str) -> dict[str, Any] | None:
@@ -307,9 +366,16 @@ def select_planner_capabilities(
     return fallback_selected
 
 
-def build_planning_prompt(*, user_prompt: str, capability_catalog: list[dict[str, Any]], planning_context: str = "") -> tuple[str, dict[str, Any]]:
+def build_planning_prompt(
+    *,
+    user_prompt: str,
+    capability_catalog: list[dict[str, Any]],
+    planning_context: str = "",
+    workflow_task_contract: dict[str, Any] | None = None,
+) -> tuple[str, dict[str, Any]]:
+    contract_context = json.dumps(workflow_task_contract, ensure_ascii=False) if workflow_task_contract else ""
     selected_catalog, selection_trace = select_planner_capabilities(
-        user_prompt=user_prompt,
+        user_prompt=f"{user_prompt}\n{planning_context}\n{contract_context}",
         capability_catalog=capability_catalog,
         include_trace=True,
     )
@@ -354,7 +420,8 @@ def build_planning_prompt(*, user_prompt: str, capability_catalog: list[dict[str
             "You are the KoreAgent task planner. Interpret the user's request semantically.",
             "Do not use keyword matching as a substitute for understanding the request.",
             "Choose only capabilities present in the catalog. phase_tools is for the current phase; phase_tool_map may name the immediate next phases needed to finish a short workflow.",
-            "For a substantive request, return a bounded ordered steps list (normally 2 to 6 items). Each step must describe one action, may declare multiple typed outputs of only file, dataset, or scratchpad, and must state its completion checks. For a simple answer with no work, steps may be empty.",
+            "For a substantive request, return a bounded ordered steps list (normally 2 to 6 items). Each executable step must name every exact catalog tool needed to complete it, may declare multiple typed outputs of only file, dataset, or scratchpad, and must state its completion checks. A path ending in a file extension is a file output, not a dataset. When a search creates a dataset that a later file/report step must use, include dataset_get and dataset_inspect in the relevant phase. For a simple answer with no work, steps may be empty.",
+            "If WORKFLOW_TASK_CONTRACT is supplied, it is immutable. Use it as the sole definition of the task's required files, datasets, and evidence. Your step outputs may name only temporary scratchpad or working artefacts; never replace, rename, or add competing final deliverables.",
             "Never invent a tool name. If no capability is needed, return an empty list rather than a category such as 'catalog'.",
             "Use clarify only when the request cannot be safely interpreted from context.",
             "Use inspect before a file change when current source evidence is needed.",
@@ -375,6 +442,10 @@ def build_planning_prompt(*, user_prompt: str, capability_catalog: list[dict[str
             "[EXECUTION_CONTEXT]",
             str(planning_context or "")[:6000],
             "[/EXECUTION_CONTEXT]",
+            "",
+            "[WORKFLOW_TASK_CONTRACT]",
+            contract_context[:6000],
+            "[/WORKFLOW_TASK_CONTRACT]",
         ]
     ), selection_trace
 
@@ -432,6 +503,8 @@ def _apply_intent_overrides(plan: TaskPlan, *, user_prompt: str, known_tool_name
         lifecycle_tools = [
             "workflow_get_task",
             "workflow_set_task_data",
+            "workflow_record_task_result",
+            "workflow_check_task_contract",
             "workflow_mark_task_ran",
             "workflow_run_to_completion",
             "workflow_get_summary",
@@ -481,6 +554,13 @@ def validate_task_plan(raw: dict[str, Any], *, known_tool_names: set[str]) -> Ta
         workflow.insert(0, phase)
     if phase_tools and phase not in phase_tool_map:
         phase_tool_map[phase] = list(phase_tools)
+    phase_tools, phase_tool_map, steps = _add_dataset_access_tools(
+        phase_tools     = phase_tools,
+        phase_tool_map  = phase_tool_map,
+        steps           = steps,
+        current_phase   = phase,
+        known_tool_names = known_tool_names,
+    )
     return TaskPlan(
         objective               = objective,
         task_class              = str(raw.get("task_class") or "general").strip()[:120] or "general",
@@ -499,10 +579,19 @@ def validate_task_plan(raw: dict[str, Any], *, known_tool_names: set[str]) -> Ta
     )
 
 
+def _execution_steps_need_repair(plan: TaskPlan) -> bool:
+    """Reject a substantive execution outline that cannot perform its declared actions."""
+    return any(
+        step.get("phase") in {"act", "validate"} and not step.get("tools")
+        for step in plan.steps
+    )
+
+
 def create_task_plan(
     *,
     user_prompt: str,
     planning_context: str = "",
+    workflow_task_contract: dict[str, Any] | None = None,
     capability_catalog: list[dict[str, Any]],
     known_tool_names: set[str],
     call_llm_chat,
@@ -513,6 +602,7 @@ def create_task_plan(
         user_prompt=user_prompt,
         capability_catalog=capability_catalog,
         planning_context=planning_context,
+        workflow_task_contract=workflow_task_contract,
     )
     planner_num_ctx = max(4096, int(num_ctx or 0))
     with _PLAN_STATE_LOCK:
@@ -529,10 +619,11 @@ def create_task_plan(
             raise ValueError("planner did not return a JSON object")
         plan = validate_task_plan(raw, known_tool_names=known_tool_names)
         requested = _as_string_list(raw.get("phase_tools"), limit=MAX_PHASE_TOOLS)
-        if requested and not plan.phase_tools:
+        if (requested and not plan.phase_tools) or _execution_steps_need_repair(plan):
             repair_prompt = (
-                f"{prompt}\n\n[PLANNER_REPAIR]\nThe previous tool selection was invalid. "
-                "Return the same schema using only exact catalog capability names.\n[/PLANNER_REPAIR]"
+                f"{prompt}\n\n[PLANNER_REPAIR]\nThe previous execution outline omitted usable tools. "
+                "Every act or validate step must name one or more exact catalog capability names. "
+                "Use file outputs for paths with a filename extension. Return the same schema only.\n[/PLANNER_REPAIR]"
             )
             repair = call_llm_chat(
                 model_name = model_name,
@@ -665,7 +756,7 @@ def get_task_plan_activation_tools() -> list[str]:
         return selected
 
 
-def get_task_plan_completion_gaps() -> list[str]:
+def get_task_plan_completion_gaps(*, include_declared_outputs: bool = True) -> list[str]:
     """Return objective unmet execution-plan requirements before a final answer is accepted."""
     with _PLAN_STATE_LOCK:
         payload = _PLAN_STATE_BY_SESSION.get(get_active_session_id())
@@ -681,6 +772,8 @@ def get_task_plan_completion_gaps() -> list[str]:
         step_tools = {str(name or "").strip().lower() for name in step.get("tools") or []}
         if step_tools and not used_tools.intersection(step_tools):
             gaps.append(f"Step '{step_id}' has not used any of its planned tools.")
+        if not include_declared_outputs:
+            continue
         for output in step.get("outputs") or []:
             if not isinstance(output, dict):
                 continue
@@ -748,8 +841,10 @@ def _phase_transition_satisfied(phase: str, successful_tool_names: list[str]) ->
         return any(any(hint in name for hint in inspect_hints) for name in successful_tool_names)
 
     if phase == "plan":
-        plan_hints = ("tools_catalog", "tools_active", "task_")
-        return any(any(hint in name for hint in plan_hints) for name in successful_tool_names)
+        # A declared planning step can use any real planning capability (for example,
+        # a search or a scratchpad write).  The phase-specific evidence check below
+        # still requires that the plan's declared tools have actually been used.
+        return True
 
     if phase == "act":
         act_hints = ("write", "create", "delete", "update", "append", "execute", "run", "spawn", "save", "add", "set")

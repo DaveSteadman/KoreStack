@@ -675,6 +675,11 @@ def run_tool_loop(
     def _remaining_plan_tasks() -> list[dict]:
         if not plan_run_to_completion_requested or run_to_completion_remaining_provider is None:
             return []
+        try:
+            return list(run_to_completion_remaining_provider() or [])
+        except Exception as exc:
+            _log_file_only(f"[plan-run] Could not read remaining Workflow tasks: {exc}")
+            return []
 
     def _completion_gaps() -> list[str]:
         if completion_gaps_provider is None:
@@ -683,11 +688,6 @@ def run_tool_loop(
             return [str(gap) for gap in completion_gaps_provider() or [] if str(gap).strip()]
         except Exception as exc:
             _log_file_only(f"[task-plan] Could not evaluate completion requirements: {exc}")
-            return []
-        try:
-            return list(run_to_completion_remaining_provider() or [])
-        except Exception as exc:
-            _log_file_only(f"[plan-run] Could not read remaining PlanTasks: {exc}")
             return []
 
     clear_stop()
@@ -790,7 +790,8 @@ def run_tool_loop(
                     correction = (
                         f"Plan run-to-completion is active. Do not give a final answer yet: Task {task_id} has not been run. "
                         f"Carry out its full static instruction now: {instruction!r} "
-                        "Then save useful run-specific data with workflow_set_task_data and call workflow_mark_task_ran. "
+                        "Then record its outputs and evidence with workflow_record_task_result, save any other useful run-specific data, "
+                        "and call workflow_mark_task_ran. "
                         "Continue through every remaining task in this same run."
                     )
                     _log_file_only(f"[plan-run] Round {round_num}: blocking final answer; remaining Task {task_id}.")

@@ -4,10 +4,10 @@ import json
 from functools import wraps
 
 from indepth_planner_archives import export_plan_archive, list_plan_archives, load_plan_archive
-from indepth_planner_store import add_simple_task, clear_plan, create_simple_plan, get_simple_plan
+from indepth_planner_store import add_simple_task, clear_plan, create_simple_plan, evaluate_simple_task_contract, get_simple_plan
 from indepth_planner_store import clear_simple_dynamic, clear_simple_task_data
 from indepth_planner_store import list_simple_tasks, mark_simple_task_ran
-from indepth_planner_store import reset_simple_task_run
+from indepth_planner_store import record_simple_task_result, reset_simple_task_run
 from indepth_planner_store import simple_run_to_completion_context
 from indepth_planner_store import set_simple_task_data, update_simple_task
 
@@ -21,7 +21,15 @@ def _summary(plan: dict) -> dict:
     return {
         "objective": plan.get("static", {}).get("objective", ""),
         "tasks": [
-            {"id": task["id"], "title": task["static"].get("title", ""), "ran": bool(task["dynamic"].get("ran")), "data": task["dynamic"].get("data", {})}
+            {
+                "id":        task["id"],
+                "title":     task["static"].get("title", ""),
+                "ran":       bool(task["dynamic"].get("ran")),
+                "outputs":   task["dynamic"].get("outputs", []),
+                "evidence":  task["dynamic"].get("evidence", {}),
+                "attention": evaluate_simple_task_contract(task_id=str(task["id"])) if task["static"].get("outputs") or task["static"].get("evidence_requirements") else [],
+                "data":      task["dynamic"].get("data", {}),
+            }
             for task in tasks
         ],
     }
@@ -63,18 +71,28 @@ def workflow_get_task(task_id: str) -> str:
 
 
 @_requires_existing_workflow
-def workflow_add_task(title: str, description: str = "", instruction: str = "", depends_on: list[str] | None = None) -> str:
-    return _json(_summary(add_simple_task(title=title, description=description, instruction=instruction, depends_on=depends_on)))
+def workflow_add_task(title: str, description: str = "", instruction: str = "", depends_on: list[str] | None = None, outputs: list[object] | None = None, evidence_requirements: list[object] | None = None) -> str:
+    return _json(_summary(add_simple_task(title=title, description=description, instruction=instruction, depends_on=depends_on, outputs=outputs, evidence_requirements=evidence_requirements)))
 
 
 @_requires_existing_workflow
-def workflow_update_task(task_id: str, title: str | None = None, description: str | None = None, instruction: str | None = None, depends_on: list[str] | None = None) -> str:
-    return _json(_summary(update_simple_task(task_id=task_id, title=title, description=description, instruction=instruction, depends_on=depends_on)))
+def workflow_update_task(task_id: str, title: str | None = None, description: str | None = None, instruction: str | None = None, depends_on: list[str] | None = None, outputs: list[object] | None = None, evidence_requirements: list[object] | None = None) -> str:
+    return _json(_summary(update_simple_task(task_id=task_id, title=title, description=description, instruction=instruction, depends_on=depends_on, outputs=outputs, evidence_requirements=evidence_requirements)))
 
 
 @_requires_existing_workflow
 def workflow_set_task_data(task_id: str, data: dict) -> str:
     return _json(_summary(set_simple_task_data(task_id=task_id, data=data)))
+
+
+@_requires_existing_workflow
+def workflow_record_task_result(task_id: str, outputs: list[object] | None = None, evidence: dict | None = None, note: str = "") -> str:
+    return _json(_summary(record_simple_task_result(task_id=task_id, outputs=outputs, evidence=evidence, note=note)))
+
+
+@_requires_existing_workflow
+def workflow_check_task_contract(task_id: str) -> str:
+    return _json({"task_id": task_id, "gaps": evaluate_simple_task_contract(task_id=task_id)})
 
 
 @_requires_existing_workflow

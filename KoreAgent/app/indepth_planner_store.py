@@ -6,6 +6,7 @@ import urllib.parse
 import urllib.error
 import urllib.request
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
 from sessions.runtime import get_active_session_id
@@ -192,6 +193,52 @@ def _as_string_list(value: object) -> list[str]:
     return result
 
 
+def _normalise_task_outputs(value: object) -> list[dict[str, Any]]:
+    """Keep a durable, bounded output contract on a Workflow task."""
+    if not isinstance(value, list):
+        return []
+    outputs: list[dict[str, Any]] = []
+    for item in value[:12]:
+        if not isinstance(item, dict):
+            continue
+        output_type = str(item.get("type") or "file").strip().lower()
+        target = str(item.get("target") or item.get("path") or item.get("name") or "").strip()[:240]
+        if output_type not in {"file", "dataset", "scratchpad"} or not target:
+            continue
+        if output_type == "dataset" and Path(target).suffix:
+            output_type = "file"
+        normalized: dict[str, Any] = {"type": output_type, "target": target}
+        if isinstance(item.get("minimum_bytes"), int) and item["minimum_bytes"] >= 0:
+            normalized["minimum_bytes"] = item["minimum_bytes"]
+        if isinstance(item.get("minimum_items"), int) and item["minimum_items"] >= 0:
+            normalized["minimum_items"] = item["minimum_items"]
+        outputs.append(normalized)
+    return outputs
+
+
+def _normalise_evidence_requirements(value: object) -> list[dict[str, Any]]:
+    """Keep only verifiable evidence requirements in the static task definition."""
+    if not isinstance(value, list):
+        return []
+    requirements: list[dict[str, Any]] = []
+    for item in value[:12]:
+        if not isinstance(item, dict):
+            continue
+        requirement_type = str(item.get("type") or "").strip().lower()
+        minimum = item.get("minimum")
+        if requirement_type not in {"dataset_count", "unique_field_count"} or not isinstance(minimum, int) or minimum < 0:
+            continue
+        dataset = str(item.get("dataset") or "").strip()
+        field = str(item.get("field") or "").strip()
+        if not dataset or (requirement_type == "unique_field_count" and not field):
+            continue
+        normalized = {"type": requirement_type, "dataset": dataset, "minimum": minimum}
+        if field:
+            normalized["field"] = field
+        requirements.append(normalized)
+    return requirements
+
+
 def _as_ref_list(value: object) -> list[object]:
     if not isinstance(value, list):
         return []
@@ -250,6 +297,8 @@ def _to_persisted_plan(payload: dict[str, Any]) -> dict[str, Any]:
                 "description": str(definition.get("description") or ""),
                 "instruction": str(definition.get("task_statement") or definition.get("title") or ""),
                 "depends_on":  _as_string_list(definition.get("depends_on")),
+                "outputs":     _normalise_task_outputs(definition.get("outputs")),
+                "evidence_requirements": _normalise_evidence_requirements(definition.get("evidence_requirements")),
             }
         )
         task_data = {
@@ -264,6 +313,8 @@ def _to_persisted_plan(payload: dict[str, Any]) -> dict[str, Any]:
         dynamic_tasks[task_id] = {
             "ran":  str(execution.get("status") or "draft") != "draft",
             "data": task_data,
+            "outputs": _as_ref_list(execution.get("output_refs")),
+            "evidence": {},
         }
     return {
         "static":  {"objective": str(current.get("objective") or ""), "tasks": static_tasks},
@@ -293,6 +344,8 @@ def _to_runtime_plan(payload: dict[str, Any]) -> dict[str, Any]:
                     "description":    str(raw_task.get("description") or ""),
                     "task_statement": str(raw_task.get("instruction") or raw_task.get("title") or ""),
                     "depends_on":     _as_string_list(raw_task.get("depends_on")),
+                    "outputs":        _normalise_task_outputs(raw_task.get("outputs")),
+                    "evidence_requirements": _normalise_evidence_requirements(raw_task.get("evidence_requirements")),
                     "priority":       "normal",
                     "owner":          {"kind": "assistant"},
                     "input_refs":     _as_ref_list(data.get("input_refs")),
@@ -302,6 +355,8 @@ def _to_runtime_plan(payload: dict[str, Any]) -> dict[str, Any]:
                     "status_history": [],
                     "effort":         {},
                     "output_refs":    _as_ref_list(data.get("output_refs")),
+                    "workflow_outputs": _as_ref_list(state.get("outputs")),
+                    "workflow_evidence": _copy_plan(state.get("evidence")) if isinstance(state.get("evidence"), dict) else {},
                     "result_summary": str(data.get("result_summary") or ""),
                 },
             }
@@ -858,15 +913,35 @@ def create_simple_plan(*, objective: str, initial_tasks: list[object] | None = N
     for raw_task in initial_tasks or []:
         task = _coerce_plan_task(raw_task, used_ids=used_ids)
         definition = task["definition"]
-        tasks.append({"id": task["task_id"], "title": definition["title"], "description": definition["description"], "instruction": definition["task_statement"], "depends_on": definition["depends_on"]})
+        tasks.append(
+            {
+                "id":                    task["task_id"],
+                "title":                 definition["title"],
+                "description":           definition["description"],
+                "instruction":           definition["task_statement"],
+                "depends_on":            definition["depends_on"],
+                "outputs":               _normalise_task_outputs(raw_task.get("outputs") if isinstance(raw_task, dict) else None),
+                "evidence_requirements": _normalise_evidence_requirements(raw_task.get("evidence_requirements") if isinstance(raw_task, dict) else None),
+            }
+        )
     return _save_simple_plan({"static": {"objective": str(objective or "").strip(), "tasks": tasks}, "dynamic": {"tasks": {}}}, session_id=session_id)
 
 
-def add_simple_task(*, title: str, description: str = "", instruction: str = "", depends_on: list[str] | None = None, session_id: str | None = None) -> dict[str, Any]:
+def add_simple_task(*, title: str, description: str = "", instruction: str = "", depends_on: list[str] | None = None, outputs: list[object] | None = None, evidence_requirements: list[object] | None = None, session_id: str | None = None) -> dict[str, Any]:
     plan = get_simple_plan(session_id=session_id)
     tasks = plan.setdefault("static", {}).setdefault("tasks", [])
     task_id = _next_task_id({str(task.get("id")) for task in tasks if isinstance(task, dict)})
-    tasks.append({"id": task_id, "title": str(title).strip(), "description": str(description).strip(), "instruction": str(instruction or title).strip(), "depends_on": _as_string_list(depends_on)})
+    tasks.append(
+        {
+            "id":                    task_id,
+            "title":                 str(title).strip(),
+            "description":           str(description).strip(),
+            "instruction":           str(instruction or title).strip(),
+            "depends_on":            _as_string_list(depends_on),
+            "outputs":               _normalise_task_outputs(outputs),
+            "evidence_requirements": _normalise_evidence_requirements(evidence_requirements),
+        }
+    )
     return _save_simple_plan(plan, session_id=session_id)
 
 
@@ -874,11 +949,22 @@ def list_simple_tasks(*, session_id: str | None = None) -> list[dict[str, Any]]:
     plan = get_simple_plan(session_id=session_id)
     static = plan.get("static", {})
     states = plan.get("dynamic", {}).get("tasks", {})
-    return [{"id": task.get("id"), "static": dict(task), "dynamic": dict(states.get(str(task.get("id")), {"ran": False, "data": {}}))} for task in static.get("tasks", []) if isinstance(task, dict)]
+    return [
+        {
+            "id": task.get("id"),
+            "static": dict(task),
+            "dynamic": dict(states.get(str(task.get("id")), {"ran": False, "data": {}, "outputs": [], "evidence": {}})),
+        }
+        for task in static.get("tasks", [])
+        if isinstance(task, dict)
+    ]
 
 
 def _simple_task(plan: dict[str, Any], task_id: str) -> dict[str, Any] | None:
     target = str(task_id).strip()
+    labelled = re.match(r"^task\s+(\d+)\b", target, flags=re.IGNORECASE)
+    if labelled:
+        target = labelled.group(1)
     tasks = plan.get("static", {}).get("tasks", [])
     for index, task in enumerate(tasks, start=1):
         if str(task.get("id")) == target or (target.isdecimal() and index == int(target)):
@@ -886,7 +972,7 @@ def _simple_task(plan: dict[str, Any], task_id: str) -> dict[str, Any] | None:
     return None
 
 
-def update_simple_task(*, task_id: str, title: str | None = None, description: str | None = None, instruction: str | None = None, depends_on: list[str] | None = None, session_id: str | None = None) -> dict[str, Any]:
+def update_simple_task(*, task_id: str, title: str | None = None, description: str | None = None, instruction: str | None = None, depends_on: list[str] | None = None, outputs: list[object] | None = None, evidence_requirements: list[object] | None = None, session_id: str | None = None) -> dict[str, Any]:
     plan = get_simple_plan(session_id=session_id)
     task = _simple_task(plan, task_id)
     if task is None:
@@ -896,6 +982,10 @@ def update_simple_task(*, task_id: str, title: str | None = None, description: s
             task[key] = str(value).strip()
     if depends_on is not None:
         task["depends_on"] = _as_string_list(depends_on)
+    if outputs is not None:
+        task["outputs"] = _normalise_task_outputs(outputs)
+    if evidence_requirements is not None:
+        task["evidence_requirements"] = _normalise_evidence_requirements(evidence_requirements)
     return _save_simple_plan(plan, session_id=session_id)
 
 
@@ -905,20 +995,95 @@ def set_simple_task_data(*, task_id: str, data: dict[str, Any], session_id: str 
     if task is None:
         raise RuntimeError(f"Task '{task_id}' not found.")
     states = plan.setdefault("dynamic", {}).setdefault("tasks", {})
-    state = states.setdefault(str(task["id"]), {"ran": False, "data": {}})
+    state = states.setdefault(str(task["id"]), {"ran": False, "data": {}, "outputs": [], "evidence": {}})
     state.setdefault("data", {}).update(dict(data or {}))
     return _save_simple_plan(plan, session_id=session_id)
 
 
-def clear_simple_task_data(*, task_id: str, session_id: str | None = None) -> dict[str, Any]:
-    """Discard only the run-specific data for one task, retaining its ran flag."""
+def record_simple_task_result(*, task_id: str, outputs: list[object] | None = None, evidence: dict[str, Any] | None = None, note: str = "", session_id: str | None = None) -> dict[str, Any]:
+    """Record run-specific output references and evidence without changing the static task contract."""
     plan = get_simple_plan(session_id=session_id)
     task = _simple_task(plan, task_id)
     if task is None:
         raise RuntimeError(f"Task '{task_id}' not found.")
     states = plan.setdefault("dynamic", {}).setdefault("tasks", {})
-    state = states.setdefault(str(task["id"]), {"ran": False, "data": {}})
-    state["data"] = {}
+    state = states.setdefault(str(task["id"]), {"ran": False, "data": {}, "outputs": [], "evidence": {}})
+    if outputs is not None:
+        state["outputs"] = _as_ref_list(outputs)
+    if evidence is not None:
+        state["evidence"] = _copy_plan(evidence) if isinstance(evidence, dict) else {}
+    if note:
+        state.setdefault("data", {})["note"] = str(note).strip()
+    return _save_simple_plan(plan, session_id=session_id)
+
+
+def evaluate_simple_task_contract(*, task_id: str, session_id: str | None = None) -> list[str]:
+    """Verify the static output/evidence contract; `ran` remains an attempt marker, not a quality flag."""
+    plan = get_simple_plan(session_id=session_id)
+    task = _simple_task(plan, task_id)
+    if task is None:
+        raise RuntimeError(f"Task '{task_id}' not found.")
+    gaps: list[str] = []
+    for output in _normalise_task_outputs(task.get("outputs")):
+        output_type = output["type"]
+        target = output["target"]
+        if output_type == "file":
+            from utils.workspace_utils import get_user_data_dir
+            root = get_user_data_dir().resolve()
+            candidate = (root / target).resolve()
+            try:
+                candidate.relative_to(root)
+            except ValueError:
+                gaps.append(f"Output file '{target}' is outside the permitted data directory.")
+                continue
+            minimum_bytes = int(output.get("minimum_bytes") or 1)
+            if not candidate.is_file() or candidate.stat().st_size < minimum_bytes:
+                gaps.append(f"Required output file '{target}' is missing or smaller than {minimum_bytes} bytes.")
+        elif output_type == "dataset":
+            try:
+                from datasets_pkg import dataset_inspect
+                inspected = json.loads(dataset_inspect(target))
+                minimum_items = int(output.get("minimum_items") or 0)
+                if not inspected.get("ok") or int(inspected.get("count") or 0) < minimum_items:
+                    gaps.append(f"Required dataset '{target}' is missing or has fewer than {minimum_items} items.")
+            except Exception:
+                gaps.append(f"Required dataset '{target}' could not be verified.")
+        elif output_type == "scratchpad":
+            from scratchpad import scratchpad_load
+            value = scratchpad_load(target)
+            if not isinstance(value, str) or value.startswith("Error:") or len(value.encode("utf-8")) < int(output.get("minimum_bytes") or 1):
+                gaps.append(f"Required scratchpad output '{target}' is missing or too small.")
+    for requirement in _normalise_evidence_requirements(task.get("evidence_requirements")):
+        try:
+            from datasets_pkg import dataset_get, dataset_inspect
+            inspected = json.loads(dataset_inspect(requirement["dataset"]))
+            if not inspected.get("ok"):
+                gaps.append(f"Evidence dataset '{requirement['dataset']}' is unavailable.")
+                continue
+            if requirement["type"] == "dataset_count":
+                if int(inspected.get("count") or 0) < requirement["minimum"]:
+                    gaps.append(f"Evidence dataset '{requirement['dataset']}' has fewer than {requirement['minimum']} items.")
+            else:
+                records = json.loads(dataset_get(requirement["dataset"], max_records=0)).get("records") or []
+                values = {str(record.get(requirement["field"])) for record in records if isinstance(record, dict) and record.get(requirement["field"]) not in (None, "")}
+                if len(values) < requirement["minimum"]:
+                    gaps.append(f"Evidence dataset '{requirement['dataset']}' has fewer than {requirement['minimum']} unique '{requirement['field']}' values.")
+        except Exception:
+            gaps.append(f"Evidence requirement for dataset '{requirement['dataset']}' could not be verified.")
+    return gaps
+
+
+def clear_simple_task_data(*, task_id: str, session_id: str | None = None) -> dict[str, Any]:
+    """Discard all disposable run-specific state for one task, retaining its ran flag."""
+    plan = get_simple_plan(session_id=session_id)
+    task = _simple_task(plan, task_id)
+    if task is None:
+        raise RuntimeError(f"Task '{task_id}' not found.")
+    states = plan.setdefault("dynamic", {}).setdefault("tasks", {})
+    state = states.setdefault(str(task["id"]), {"ran": False, "data": {}, "outputs": [], "evidence": {}})
+    state["data"]     = {}
+    state["outputs"]  = []
+    state["evidence"] = {}
     return _save_simple_plan(plan, session_id=session_id)
 
 
@@ -929,7 +1094,7 @@ def reset_simple_task_run(*, task_id: str, session_id: str | None = None) -> dic
     if task is None:
         raise RuntimeError(f"Task '{task_id}' not found.")
     states = plan.setdefault("dynamic", {}).setdefault("tasks", {})
-    state = states.setdefault(str(task["id"]), {"ran": False, "data": {}})
+    state = states.setdefault(str(task["id"]), {"ran": False, "data": {}, "outputs": [], "evidence": {}})
     state["ran"] = False
     return _save_simple_plan(plan, session_id=session_id)
 
@@ -949,7 +1114,7 @@ def mark_simple_task_ran(*, task_id: str, note: str = "", session_id: str | None
     if task is None:
         raise RuntimeError(f"Task '{task_id}' not found.")
     states = plan.setdefault("dynamic", {}).setdefault("tasks", {})
-    state = states.setdefault(str(task["id"]), {"ran": False, "data": {}})
+    state = states.setdefault(str(task["id"]), {"ran": False, "data": {}, "outputs": [], "evidence": {}})
     state["ran"] = True
     if note:
         state.setdefault("data", {})["note"] = str(note).strip()
@@ -965,7 +1130,8 @@ def simple_run_to_completion_context(*, session_id: str | None = None) -> dict[s
         "remaining_tasks": remaining,
         "instruction": (
             "Run every remaining task in the listed order. For each task, carry out its full static instruction, "
-            "save useful instance data with plan_set_task_data, and call plan_mark_task_ran before moving to the next task. "
+            "record outputs and evidence with workflow_record_task_result, save other useful instance data with workflow_set_task_data, "
+            "and call workflow_mark_task_ran before moving to the next task. "
             "Do not mark a task ran without actually attempting it."
         ),
     }

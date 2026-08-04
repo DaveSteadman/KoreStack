@@ -42,6 +42,7 @@ if str(CODE_DIR) not in sys.path:
 
 import datasets_pkg as datasets_module
 from agent.tool_runtime import loop as tool_loop_module
+from agent.orchestration import engine as orchestration_module
 from sessions import tool_selection as tool_selection_state_module
 from agent.orchestration import planning as task_planning_module
 from conversation_state import decode_background_context
@@ -178,6 +179,19 @@ class GuardrailSmokeTests(unittest.TestCase):
         self.assertEqual(plan.phase_tools, ["file_read"])
         self.assertEqual(plan.activation_tools(), ["file_read", "file_write"])
 
+    def test_workflow_task_context_informs_lightweight_tool_selection(self) -> None:
+        _prompt, trace = task_planning_module.build_planning_prompt(
+            user_prompt        = "run task 1",
+            planning_context   = json.dumps({"static_instruction": {"instruction": "Search KoreData and write sources.txt."}}),
+            capability_catalog = [
+                {"name": "koredata_search", "description": "Search KoreData references.", "active": False},
+                {"name": "file_write", "description": "Write a file.", "active": False},
+            ],
+        )
+
+        self.assertIn("koredata", trace["tokens"])
+        self.assertEqual(trace["selected_count"], 2)
+
     def test_task_plan_preserves_multiple_typed_outputs_per_step(self) -> None:
         plan = task_planning_module.validate_task_plan(
             {
@@ -208,6 +222,32 @@ class GuardrailSmokeTests(unittest.TestCase):
         self.assertEqual(plan.steps[0]["outputs"][0]["target"], "plan_002/sources.txt")
         self.assertEqual(plan.steps[0]["outputs"][2]["type"], "dataset")
 
+    def test_koredata_search_plan_includes_dataset_reading_tools_in_its_phase(self) -> None:
+        plan = task_planning_module.validate_task_plan(
+            {
+                "objective": "Search KoreData and write a source list.",
+                "current_phase": "act",
+                "workflow": ["act", "complete"],
+                "phase_tools": ["koredata_search", "file_write"],
+                "phase_tool_map": {"act": ["koredata_search", "file_write"]},
+                "steps": [
+                    {
+                        "id": "search",
+                        "phase": "act",
+                        "action": "Search KoreData, then turn the returned records into a source list.",
+                        "tools": ["koredata_search", "file_write"],
+                        "outputs": [{"type": "file", "target": "sources.txt"}],
+                    }
+                ],
+            },
+            known_tool_names={"koredata_search", "dataset_get", "dataset_inspect", "file_write"},
+        )
+
+        self.assertIn("dataset_get", plan.phase_tool_map["act"])
+        self.assertIn("dataset_inspect", plan.phase_tool_map["act"])
+        self.assertIn("dataset_get", plan.steps[0]["tools"])
+        self.assertIn("dataset_inspect", plan.activation_tools())
+
     def test_task_plan_completion_gate_reports_missing_declared_file(self) -> None:
         with bind_session("task_plan_completion_gate"):
             plan = task_planning_module.validate_task_plan(
@@ -233,6 +273,30 @@ class GuardrailSmokeTests(unittest.TestCase):
             gaps = task_planning_module.get_task_plan_completion_gaps()
 
         self.assertTrue(any("__missing_task_plan_output__.txt" in gap for gap in gaps))
+
+    def test_workflow_task_run_ignores_planner_invented_final_output_paths(self) -> None:
+        with bind_session("workflow_task_contract_completion"):
+            plan = task_planning_module.validate_task_plan(
+                {
+                    "objective": "Write the durable report output.",
+                    "current_phase": "act",
+                    "workflow": ["act", "complete"],
+                    "steps": [
+                        {
+                            "id": "temporary_work",
+                            "phase": "act",
+                            "action": "Prepare temporary work.",
+                            "tools": [],
+                            "outputs": [{"type": "file", "target": "wrong-folder/report.md", "minimum_bytes": 1}],
+                        }
+                    ],
+                },
+                known_tool_names=set(),
+            )
+            task_planning_module.persist_task_plan(plan)
+
+            self.assertTrue(task_planning_module.get_task_plan_completion_gaps())
+            self.assertEqual(task_planning_module.get_task_plan_completion_gaps(include_declared_outputs=False), [])
 
     def test_task_plan_repairs_invalid_tool_names_with_a_second_planner_call(self) -> None:
         responses = iter(
@@ -340,6 +404,39 @@ class GuardrailSmokeTests(unittest.TestCase):
             )
 
             self.assertEqual(task_planning_module.get_task_plan_phase(), "inspect")
+
+    def test_task_plan_advances_plan_phase_after_its_declared_tool_runs(self) -> None:
+        with bind_session("task_plan_plan_phase_flow"):
+            plan = task_planning_module.validate_task_plan(
+                {
+                    "objective": "Search, then write a report.",
+                    "current_phase": "plan",
+                    "workflow": ["plan", "act", "validate", "complete"],
+                    "phase_tools": ["koredata_search"],
+                    "phase_tool_map": {
+                        "plan": ["koredata_search"],
+                        "act": ["file_write"],
+                        "validate": ["file_read"],
+                    },
+                    "steps": [{"phase": "plan", "tools": ["koredata_search"]}],
+                },
+                known_tool_names={"koredata_search", "file_write", "file_read"},
+            )
+            task_planning_module.persist_task_plan(plan)
+
+            task_planning_module.advance_task_plan_phase(
+                [
+                    ToolCallResult(
+                        tool="koredata_search",
+                        function="koredata_search",
+                        module="KoreData",
+                        arguments={"query": "evidence"},
+                        result="ok",
+                    )
+                ]
+            )
+
+            self.assertEqual(task_planning_module.get_task_plan_phase(), "act")
 
     def test_task_plan_records_planner_selection_trace(self) -> None:
         with bind_session("task_plan_selection_trace"):
@@ -479,7 +576,7 @@ class GuardrailSmokeTests(unittest.TestCase):
 
         with (
             bind_session("phase_enforcement_e2e"),
-            patch("orchestration.call_llm_chat", side_effect=fake_call_llm_chat),
+            patch.object(orchestration_module, "call_llm_chat", side_effect=fake_call_llm_chat),
             patch.object(tool_loop_module, "execute_tool_call", side_effect=fake_execute_tool_call),
         ):
             final_response, _prompt_tokens, _completion_tokens, run_success, _tps = orchestrate_prompt(
@@ -591,7 +688,7 @@ class GuardrailSmokeTests(unittest.TestCase):
 
         with (
             patch.object(tool_loop_module, "execute_tool_call", side_effect=fake_execute_tool_call),
-            patch("tool_selection_state.promote_selected_tools", side_effect=fake_promote_selected_tools),
+            patch.object(tool_selection_state_module, "promote_selected_tools", side_effect=fake_promote_selected_tools),
         ):
             final_response, _prompt_tokens, _completion_tokens, run_success, _tps, _tool_outputs = tool_loop_module.run_tool_loop(
                 config=config,
