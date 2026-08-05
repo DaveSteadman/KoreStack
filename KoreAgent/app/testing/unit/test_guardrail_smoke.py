@@ -189,8 +189,8 @@ class GuardrailSmokeTests(unittest.TestCase):
             ],
         )
 
-        self.assertIn("koredata", trace["tokens"])
         self.assertEqual(trace["selected_count"], 2)
+        self.assertEqual(trace["tokens"], [])
 
     def test_task_plan_preserves_multiple_typed_outputs_per_step(self) -> None:
         plan = task_planning_module.validate_task_plan(
@@ -297,6 +297,70 @@ class GuardrailSmokeTests(unittest.TestCase):
 
             self.assertTrue(task_planning_module.get_task_plan_completion_gaps())
             self.assertEqual(task_planning_module.get_task_plan_completion_gaps(include_declared_outputs=False), [])
+
+    def test_expected_skill_failure_counts_as_an_attempted_task_step(self) -> None:
+        with bind_session("task_plan_expected_file_error"):
+            plan = task_planning_module.validate_task_plan(
+                {
+                    "objective": "Attempt to read a missing file and report the outcome.",
+                    "current_phase": "act",
+                    "workflow": ["act", "complete"],
+                    "steps": [
+                        {
+                            "id": "attempt_read",
+                            "phase": "act",
+                            "action": "Attempt the requested read.",
+                            "tools": ["file_read"],
+                            "outputs": [],
+                        }
+                    ],
+                },
+                known_tool_names={"file_read"},
+            )
+            task_planning_module.persist_task_plan(plan)
+            task_planning_module.advance_task_plan_phase(
+                [
+                    ToolCallResult(
+                        tool="file_read",
+                        function="file_read",
+                        module="FileAccess",
+                        arguments={"path": "missing.txt"},
+                        result="File not found: datauser/missing.txt",
+                        status="error",
+                        error="File not found: datauser/missing.txt",
+                    )
+                ]
+            )
+
+            self.assertEqual(task_planning_module.get_task_plan_completion_gaps(), [])
+
+    def test_plan_guard_rejection_does_not_count_as_an_attempted_task_step(self) -> None:
+        with bind_session("task_plan_guard_is_not_attempt"):
+            plan = task_planning_module.validate_task_plan(
+                {
+                    "objective": "Read a file.",
+                    "current_phase": "act",
+                    "workflow": ["act", "complete"],
+                    "steps": [{"id": "read", "phase": "act", "action": "Read.", "tools": ["file_read"]}],
+                },
+                known_tool_names={"file_read"},
+            )
+            task_planning_module.persist_task_plan(plan)
+            task_planning_module.advance_task_plan_phase(
+                [
+                    ToolCallResult(
+                        tool="file_read",
+                        function="file_read",
+                        module="",
+                        arguments={"path": "x.txt"},
+                        result="[PLAN_GUARD] Tool 'file_read' is not available in the current task phase.",
+                        status="error",
+                        error="tool is outside the active task-plan phase",
+                    )
+                ]
+            )
+
+            self.assertTrue(any("Step 'read'" in gap for gap in task_planning_module.get_task_plan_completion_gaps()))
 
     def test_task_plan_repairs_invalid_tool_names_with_a_second_planner_call(self) -> None:
         responses = iter(

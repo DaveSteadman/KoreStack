@@ -8,7 +8,6 @@ from __future__ import annotations
 # ====================================================================================================
 
 import json
-import re
 import threading
 from dataclasses import asdict
 from dataclasses import dataclass
@@ -30,17 +29,7 @@ VALID_PHASES             = ("clarify", "inspect", "plan", "act", "validate", "co
 VALID_OUTPUT_TYPES        = frozenset({"file", "dataset", "scratchpad"})
 ALWAYS_ON_TOOL_NAMES     = frozenset({"tools_catalog_list", "tools_active_add"})
 TASK_PLAN_SCRATCHPAD_KEY = "task_plan"
-_PLAN_TASK_EXECUTION_RE = re.compile(
-    r"\b(?:run|execute|continue|rerun)\s+(?:the\s+)?(?:first|second|third|fourth|fifth|\d+(?:st|nd|rd|th)?)?\s*task(?:\s+\d+)?\b"
-    r"|\b(?:run|execute|continue|rerun)\s+(?:the\s+)?(?:plan|workflow)(?:\s+to\s+completion)?\b",
-    re.IGNORECASE,
-)
-_TOKEN_RE                = re.compile(r"[a-z0-9_]{3,}", re.IGNORECASE)
-_GRAPH_WRITE_INTENT_RE   = re.compile(
-    r"\b(?:add|create|insert|save|store|submit|write|load)\b.{0,80}\b(?:graph|koregraph|triple|triples|graph connection|graph connections)\b"
-    r"|\b(?:graph|koregraph|triple|triples|graph connection|graph connections)\b.{0,80}\b(?:add|create|insert|save|store|submit|write|load)\b",
-    re.IGNORECASE | re.DOTALL,
-)
+VALID_CAPABILITY_HINTS   = frozenset({"graph_write"})
 
 # Task plans retain a controller cache for orchestration and are mirrored to the named
 # ``task_plan`` scratchpad entry. KoreChat persists named scratchpad entries with its
@@ -60,6 +49,7 @@ class TaskPlan:
     phase_tools:            list[str]
     phase_tool_map:         dict[str, list[str]]
     steps:                  list[dict[str, Any]]
+    capability_hints:       list[str]
     required_artifacts:     list[str]
     validation_requirements: list[str]
     completion_contract:    str
@@ -107,6 +97,32 @@ def _mirror_task_plan_to_scratchpad(payload: dict[str, Any]) -> None:
         separators    = (",", ":"),
     )
     scratchpad_save(TASK_PLAN_SCRATCHPAD_KEY, serialized_payload)
+
+
+def _current_task_plan_payload() -> dict[str, Any] | None:
+    session_id = get_active_session_id()
+    with _PLAN_STATE_LOCK:
+        payload = _PLAN_STATE_BY_SESSION.get(session_id)
+        if isinstance(payload, dict):
+            return json.loads(json.dumps(payload))
+
+    serialized_payload = scratchpad_load(TASK_PLAN_SCRATCHPAD_KEY)
+    if not isinstance(serialized_payload, str) or serialized_payload.startswith("Error:"):
+        return None
+    try:
+        payload = json.loads(serialized_payload)
+    except json.JSONDecodeError:
+        return None
+    return payload if isinstance(payload, dict) else None
+
+
+def _has_active_task_plan() -> bool:
+    payload = _current_task_plan_payload()
+    if not isinstance(payload, dict):
+        return False
+    state = payload.get("state") if isinstance(payload.get("state"), dict) else {}
+    status = str(state.get("status") or payload.get("planner_status") or "").strip().lower()
+    return status not in {"", "completed", "failed", "cancelled"}
 
 
 def _as_string_list(value: object, *, limit: int = 12) -> list[str]:
@@ -273,97 +289,55 @@ def _extract_json_object(text: str) -> dict[str, Any] | None:
     return payload if isinstance(payload, dict) else None
 
 
-def _search_tokens(text: str) -> list[str]:
-    return [token.lower() for token in _TOKEN_RE.findall(str(text or ""))]
-
-
-def _entry_relevance(entry: dict[str, Any], tokens: list[str]) -> float:
-    if not tokens:
-        return 1.0
-    searchable_parts = [
-        str(entry.get("name") or ""),
-        str(entry.get("description") or ""),
-        str(entry.get("origin") or ""),
-        str(entry.get("skill_name") or ""),
-    ]
-    searchable_parts.extend(str(item or "") for item in (entry.get("triggers") or []))
-    searchable_parts.extend(str(item or "") for item in (entry.get("param_names") or []))
-    haystack = " ".join(searchable_parts).lower()
-    if not haystack:
-        return 0.0
-
-    score = 0.0
-    for token in tokens:
-        if token in haystack:
-            score += 1.0
-        if token and str(entry.get("name") or "").lower().startswith(token):
-            score += 1.0
-    return score
-
-
 def select_planner_capabilities(
     *,
     user_prompt: str,
     capability_catalog: list[dict[str, Any]],
     include_trace: bool = False,
 ) -> list[dict[str, Any]] | tuple[list[dict[str, Any]], dict[str, Any]]:
-    """Keep the planner prompt focused by removing clearly irrelevant tools.
+    """Pass the capability catalog through without host-side keyword scoring.
 
-    This intentionally avoids a fixed item cap. The selection is semantic-ish lexical
-    matching over tool metadata plus always-on/active tools to preserve control-plane access.
+    The LLM planner should interpret the user prompt semantically. Host code keeps the
+    full catalog available and only orders the entries to surface always-on and active
+    capabilities first in the prompt.
     """
-    tokens = _search_tokens(user_prompt)
-    scored: list[tuple[float, dict[str, Any]]] = []
+    ranked: list[tuple[int, str, str, dict[str, Any]]] = []
     trace_rows: list[dict[str, Any]] = []
     for entry in capability_catalog:
         name = str(entry.get("name") or "").strip()
         if not name:
             continue
-        score = _entry_relevance(entry, tokens)
         flags: list[str] = []
+        priority = 0
         if name in ALWAYS_ON_TOOL_NAMES:
-            score = max(score, 1000.0)
             flags.append("always_on")
+            priority = 2
         elif bool(entry.get("active")):
-            score = max(score, 100.0)
             flags.append("active")
-        scored.append((score, entry))
+            priority = 1
+        origin = str(entry.get("origin") or "")
+        ranked.append((-priority, origin, name, entry))
         if include_trace:
             trace_rows.append(
                 {
                     "name": name,
-                    "score": round(score, 3),
-                    "origin": str(entry.get("origin") or ""),
+                    "score": float(priority),
+                    "origin": origin,
                     "flags": flags,
                 }
             )
 
-    selected = [entry for score, entry in scored if score > 0.0]
-    if selected:
-        selected.sort(key=lambda item: (str(item.get("origin") or ""), str(item.get("name") or "")))
-        if include_trace:
-            trace_rows.sort(key=lambda item: (-float(item.get("score") or 0.0), str(item.get("name") or "")))
-            return selected, {
-                "tokens": tokens,
-                "total_catalog": len(scored),
-                "selected_count": len(selected),
-                "fallback_all": False,
-                "top": trace_rows[:25],
-            }
-        return selected
-
-    # If lexical matching fails, keep the full catalog rather than starving the planner.
-    fallback_selected = [entry for _score, entry in scored]
+    selected = [entry for _priority, _origin, _name, entry in sorted(ranked)]
     if include_trace:
         trace_rows.sort(key=lambda item: (-float(item.get("score") or 0.0), str(item.get("name") or "")))
-        return fallback_selected, {
-            "tokens": tokens,
-            "total_catalog": len(scored),
-            "selected_count": len(fallback_selected),
-            "fallback_all": True,
+        return selected, {
+            "tokens": [],
+            "total_catalog": len(ranked),
+            "selected_count": len(selected),
+            "fallback_all": False,
             "top": trace_rows[:25],
         }
-    return fallback_selected
+    return selected
 
 
 def build_planning_prompt(
@@ -400,6 +374,7 @@ def build_planning_prompt(
         "workflow": ["ordered phase names"],
         "phase_tools": ["tool names needed in the current phase only"],
         "phase_tool_map": {"inspect": ["evidence tools"], "act": ["action tools"], "validate": ["verification tools"]},
+        "capability_hints": ["optional host-validated hints such as graph_write"],
         "steps": [
             {
                 "id": "short_unique_identifier",
@@ -420,6 +395,7 @@ def build_planning_prompt(
             "You are the KoreAgent task planner. Interpret the user's request semantically.",
             "Do not use keyword matching as a substitute for understanding the request.",
             "Choose only capabilities present in the catalog. phase_tools is for the current phase; phase_tool_map may name the immediate next phases needed to finish a short workflow.",
+            "If the task requires a special capability family that must not be missed, declare it explicitly in capability_hints. Use only known hints such as graph_write.",
             "For a substantive request, return a bounded ordered steps list (normally 2 to 6 items). Each executable step must name every exact catalog tool needed to complete it, may declare multiple typed outputs of only file, dataset, or scratchpad, and must state its completion checks. A path ending in a file extension is a file output, not a dataset. When a search creates a dataset that a later file/report step must use, include dataset_get and dataset_inspect in the relevant phase. For a simple answer with no work, steps may be empty.",
             "If WORKFLOW_TASK_CONTRACT is supplied, it is immutable. Use it as the sole definition of the task's required files, datasets, and evidence. Your step outputs may name only temporary scratchpad or working artefacts; never replace, rename, or add competing final deliverables.",
             "Never invent a tool name. If no capability is needed, return an empty list rather than a category such as 'catalog'.",
@@ -460,6 +436,7 @@ def fallback_task_plan(*, user_prompt: str, reason: str) -> TaskPlan:
         phase_tools             = ["tools_catalog_list", "tools_active_add"],
         phase_tool_map          = {"inspect": ["tools_catalog_list", "tools_active_add"]},
         steps                   = [{"id": "inspect", "phase": "inspect", "action": "Identify the capabilities and evidence needed to complete the request.", "tools": ["tools_catalog_list", "tools_active_add"], "outputs": [], "completion_checks": ["Required capabilities are identified."]}],
+        capability_hints        = [],
         required_artifacts      = ["source-backed evidence"],
         validation_requirements = ["state what was verified"],
         completion_contract     = "Report grounded results or the precise blocker.",
@@ -479,6 +456,10 @@ def _append_unique_tool_names(target: list[str], names: list[str], *, limit: int
     return target
 
 
+def _validated_capability_hints(raw: object) -> list[str]:
+    return [hint for hint in _as_string_list(raw, limit=8) if hint in VALID_CAPABILITY_HINTS]
+
+
 def _apply_intent_overrides(plan: TaskPlan, *, user_prompt: str, known_tool_names: set[str]) -> TaskPlan:
     override_phase_tools = list(plan.phase_tools)
     override_phase_tool_map = {
@@ -486,7 +467,7 @@ def _apply_intent_overrides(plan: TaskPlan, *, user_prompt: str, known_tool_name
         for phase, tool_names in plan.phase_tool_map.items()
     }
 
-    if _GRAPH_WRITE_INTENT_RE.search(user_prompt or ""):
+    if "graph_write" in plan.capability_hints:
         graph_tools = [name for name in known_tool_names if name.startswith("graph_connection_")]
         graph_write_tools = [name for name in graph_tools if any(token in name for token in ("create", "add", "write", "save"))]
         if graph_write_tools:
@@ -499,7 +480,7 @@ def _apply_intent_overrides(plan: TaskPlan, *, user_prompt: str, known_tool_name
             if plan.current_phase in {"inspect", "plan"}:
                 _append_unique_tool_names(override_phase_tools, sorted(graph_write_tools))
 
-    if _PLAN_TASK_EXECUTION_RE.search(user_prompt or ""):
+    if _has_active_task_plan():
         lifecycle_tools = [
             "workflow_get_task",
             "workflow_set_task_data",
@@ -521,6 +502,7 @@ def _apply_intent_overrides(plan: TaskPlan, *, user_prompt: str, known_tool_name
         phase_tools             = override_phase_tools,
         phase_tool_map          = override_phase_tool_map,
         steps                   = [dict(step) for step in plan.steps],
+        capability_hints        = list(plan.capability_hints),
         required_artifacts      = list(plan.required_artifacts),
         validation_requirements = list(plan.validation_requirements),
         completion_contract     = plan.completion_contract,
@@ -570,6 +552,7 @@ def validate_task_plan(raw: dict[str, Any], *, known_tool_names: set[str]) -> Ta
         phase_tools             = phase_tools,
         phase_tool_map          = phase_tool_map,
         steps                   = steps,
+        capability_hints        = _validated_capability_hints(raw.get("capability_hints")),
         required_artifacts      = _as_string_list(raw.get("required_artifacts")),
         validation_requirements = _as_string_list(raw.get("validation_requirements")),
         completion_contract     = str(raw.get("completion_contract") or "Report grounded results or the precise blocker.").strip()[:500],
@@ -764,7 +747,9 @@ def get_task_plan_completion_gaps(*, include_declared_outputs: bool = True) -> l
             return []
         state      = dict(payload.get("state") or {})
         steps      = [dict(step) for step in payload.get("steps") or [] if isinstance(step, dict)]
-        used_tools = {str(name or "").strip().lower() for name in state.get("used_tools") or []}
+        attempted_tools = state.get("attempted_tools")
+        observed_tools  = attempted_tools if isinstance(attempted_tools, list) else state.get("used_tools") or []
+        used_tools      = {str(name or "").strip().lower() for name in observed_tools}
 
     gaps: list[str] = []
     for step in steps:
@@ -780,13 +765,10 @@ def get_task_plan_completion_gaps(*, include_declared_outputs: bool = True) -> l
             output_type = str(output.get("type") or "")
             target      = str(output.get("target") or "")
             if output_type == "file":
-                from utils.workspace_utils import get_user_data_dir
-                root = get_user_data_dir().resolve()
-                path = Path(target)
-                candidate = path.resolve() if path.is_absolute() else (root / path).resolve()
+                from KoreCommon.datauser_fs import DataUserPathError, resolve_datauser_path
                 try:
-                    candidate.relative_to(root)
-                except ValueError:
+                    candidate = resolve_datauser_path(target)
+                except DataUserPathError:
                     gaps.append(f"Output file '{target}' is outside the permitted data directory.")
                     continue
                 minimum_bytes = int(output.get("minimum_bytes") or 1)
@@ -825,6 +807,27 @@ def _successful_tool_names(round_outputs: list[dict[str, Any]]) -> list[str]:
     names: list[str] = []
     for item in round_outputs:
         if bool(item.get("is_error")):
+            continue
+        name = str(item.get("tool") or item.get("function") or "").strip().lower()
+        if name:
+            names.append(name)
+    return names
+
+
+def _attempted_tool_names(round_outputs: list[dict[str, Any]]) -> list[str]:
+    """Return tools that reached execution, including expected skill-level failures.
+
+    A failed file read can be the requested observation.  It must therefore count as
+    an attempted step, while a PLAN_GUARD rejection must not: the latter never invokes
+    the skill at all.
+    """
+    names: list[str] = []
+    for item in round_outputs:
+        error_text = " ".join(
+            str(item.get(key) or "")
+            for key in ("error", "result")
+        ).lower()
+        if "outside the active task-plan phase" in error_text or "[plan_guard]" in error_text:
             continue
         name = str(item.get("tool") or item.get("function") or "").strip().lower()
         if name:
@@ -876,6 +879,7 @@ def advance_task_plan_phase(round_outputs: list[dict[str, Any]] | None = None) -
     """Advance through the declared workflow when phase-specific criteria are met."""
     outputs = list(round_outputs or [])
     successful_tool_names = _successful_tool_names(outputs)
+    attempted_tool_names  = _attempted_tool_names(outputs)
     has_success = bool(successful_tool_names)
 
     with _PLAN_STATE_LOCK:
@@ -895,6 +899,11 @@ def advance_task_plan_phase(round_outputs: list[dict[str, Any]] | None = None) -
             if tool_name not in used_tools:
                 used_tools.append(tool_name)
         state["used_tools"] = used_tools[-64:]
+        attempted_tools = list(state.get("attempted_tools") or [])[-63:]
+        for tool_name in attempted_tool_names:
+            if tool_name not in attempted_tools:
+                attempted_tools.append(tool_name)
+        state["attempted_tools"] = attempted_tools[-64:]
 
         current_phase = str(state.get("phase") or payload.get("current_phase") or "inspect").strip().lower()
         if current_phase not in VALID_PHASES:

@@ -1028,12 +1028,10 @@ def evaluate_simple_task_contract(*, task_id: str, session_id: str | None = None
         output_type = output["type"]
         target = output["target"]
         if output_type == "file":
-            from utils.workspace_utils import get_user_data_dir
-            root = get_user_data_dir().resolve()
-            candidate = (root / target).resolve()
+            from KoreCommon.datauser_fs import DataUserPathError, resolve_datauser_path
             try:
-                candidate.relative_to(root)
-            except ValueError:
+                candidate = resolve_datauser_path(target)
+            except DataUserPathError:
                 gaps.append(f"Output file '{target}' is outside the permitted data directory.")
                 continue
             minimum_bytes = int(output.get("minimum_bytes") or 1)

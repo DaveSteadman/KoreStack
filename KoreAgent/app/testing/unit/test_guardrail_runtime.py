@@ -745,6 +745,7 @@ class GuardrailRuntimeTests(unittest.TestCase):
                 "workflow": ["inspect", "act", "validate", "complete"],
                 "phase_tools": ["dataset_list"],
                 "phase_tool_map": {"inspect": ["dataset_list"]},
+                "capability_hints": ["graph_write"],
                 "required_artifacts": [],
                 "validation_requirements": [],
                 "completion_contract": "done",
@@ -755,13 +756,78 @@ class GuardrailRuntimeTests(unittest.TestCase):
 
         overridden = task_planning_module._apply_intent_overrides(
             plan,
-            user_prompt="Assess this text and add the connections you identify to KoreGraph.",
+            user_prompt="Assess this text and summarize what should happen.",
             known_tool_names={"dataset_list", "graph_connection_create_many", "graph_connection_list"},
         )
 
         self.assertIn("graph_connection_create_many", overridden.phase_tools)
         self.assertIn("graph_connection_create_many", overridden.phase_tool_map["act"])
         self.assertIn("graph_connection_list", overridden.phase_tool_map["validate"])
+
+    def test_task_plan_active_state_exposes_workflow_tools_without_prompt_regex(self) -> None:
+        plan = task_planning_module.validate_task_plan(
+            {
+                "objective": "Continue the current work",
+                "task_class": "workflow",
+                "confidence": 0.9,
+                "current_phase": "inspect",
+                "workflow": ["inspect", "act", "validate", "complete"],
+                "phase_tools": ["dataset_list"],
+                "phase_tool_map": {"inspect": ["dataset_list"]},
+                "required_artifacts": [],
+                "validation_requirements": [],
+                "completion_contract": "done",
+                "rationale": "test",
+            },
+            known_tool_names={"dataset_list", "workflow_get_task", "workflow_mark_task_ran", "workflow_run_to_completion"},
+        )
+
+        with patch.object(task_planning_module, "get_active_session_id", return_value="task_plan_state_test"):
+            with patch.dict(
+                task_planning_module._PLAN_STATE_BY_SESSION,
+                {"task_plan_state_test": {"state": {"status": "running", "phase": "inspect"}}},
+                clear=False,
+            ):
+                overridden = task_planning_module._apply_intent_overrides(
+                    plan,
+                    user_prompt="Summarize current progress.",
+                    known_tool_names={"dataset_list", "workflow_get_task", "workflow_mark_task_ran", "workflow_run_to_completion"},
+                )
+
+        self.assertIn("workflow_get_task", overridden.phase_tools)
+        self.assertIn("workflow_mark_task_ran", overridden.phase_tools)
+        self.assertIn("workflow_run_to_completion", overridden.phase_tools)
+
+    def test_task_plan_prompt_phrase_alone_does_not_expose_workflow_tools(self) -> None:
+        plan = task_planning_module.validate_task_plan(
+            {
+                "objective": "Continue the current work",
+                "task_class": "workflow",
+                "confidence": 0.9,
+                "current_phase": "inspect",
+                "workflow": ["inspect", "act", "validate", "complete"],
+                "phase_tools": ["dataset_list"],
+                "phase_tool_map": {"inspect": ["dataset_list"]},
+                "required_artifacts": [],
+                "validation_requirements": [],
+                "completion_contract": "done",
+                "rationale": "test",
+            },
+            known_tool_names={"dataset_list", "workflow_get_task", "workflow_mark_task_ran", "workflow_run_to_completion"},
+        )
+
+        with patch.object(task_planning_module, "get_active_session_id", return_value="task_plan_state_test_empty"):
+            with patch.dict(task_planning_module._PLAN_STATE_BY_SESSION, {}, clear=True):
+                with patch.object(task_planning_module, "scratchpad_load", return_value="Error: missing key"):
+                    overridden = task_planning_module._apply_intent_overrides(
+                        plan,
+                        user_prompt="Run the plan to completion.",
+                        known_tool_names={"dataset_list", "workflow_get_task", "workflow_mark_task_ran", "workflow_run_to_completion"},
+                    )
+
+        self.assertNotIn("workflow_get_task", overridden.phase_tools)
+        self.assertNotIn("workflow_mark_task_ran", overridden.phase_tools)
+        self.assertNotIn("workflow_run_to_completion", overridden.phase_tools)
 
     def test_exchange_pass_status_tolerates_validation_warning_when_asserts_pass(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

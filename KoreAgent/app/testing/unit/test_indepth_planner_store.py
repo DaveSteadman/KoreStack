@@ -131,7 +131,7 @@ class InDepthPlannerStoreTests(unittest.TestCase):
             }
             with (
                 patch.object(planner_store, "get_simple_plan", return_value=plan),
-                patch("utils.workspace_utils.get_user_data_dir", return_value=root),
+                patch("KoreCommon.datauser_fs.resolve_datauser_path", side_effect=lambda target: root / target),
             ):
                 gaps = planner_store.evaluate_simple_task_contract(task_id="1")
 
