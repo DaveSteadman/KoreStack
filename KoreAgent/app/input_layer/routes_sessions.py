@@ -50,8 +50,6 @@ def _queue_timeout_for_prompt(prompt_text: str) -> int | None:
     if not stripped:
         return None
     cmd = stripped.split(None, 1)[0].lower()
-    if cmd == "/systemtest":
-        return 0
     return None
 
 

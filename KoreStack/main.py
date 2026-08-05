@@ -51,7 +51,7 @@ STACK_STATIC_DIR = Path(
         str(SUITE_ROOT / "KoreUI" / "KoreStack" / "static"),
     )
 ).resolve()
-UI_ELEMENTS_ASSETS = SUITE_ROOT / "UIElements" / "assets"
+UI_ELEMENTS_ASSETS = SUITE_ROOT / "KoreUI" / "UIElements" / "assets"
 SUITE_CONFIG_FILE = SUITE_ROOT / "config" / "korestack_config.json"
 
 
@@ -127,6 +127,12 @@ SERVICE_META: dict[str, dict[str, object]] = {
         "port_arg": "--port",
         "description": "Standalone live web MCP service for search, fetch, navigation, research, and Wikipedia lookup.",
     },
+    "koretest": {
+        "label": "KoreTest", "cwd": SUITE_ROOT / "KoreTest", "script": "main.py", "url_suffix": "/ui", "health_suffix": "/status", "description": "Test execution, TEST-chat provenance, versioned result history, and trends.",
+    },
+    "korecron": {
+        "label": "KoreCron", "cwd": SUITE_ROOT / "KoreCron", "script": "main.py", "url_suffix": "/ui", "health_suffix": "/status", "description": "Scheduled prompt sets that execute sequentially in named KoreChats.",
+    },
 }
 
 SERVICE_ICON_KEYS: dict[str, str] = {
@@ -137,6 +143,8 @@ SERVICE_ICON_KEYS: dict[str, str] = {
     "korecode":          "korecode",
     "korecomms":         "korecomms",
     "koreliveweb":       "koreliveweb",
+    "koretest":          "koretest",
+    "korecron":          "korecron",
 }
 
 
@@ -344,7 +352,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--services",
         default="all",
-        help="Comma-separated service list. Valid values: all, korechat, koreagent, koredatagateway, koredocs, korecode, korecomms, koreliveweb.",
+        help="Comma-separated service list. Valid values: all, korechat, koreagent, koredatagateway, koredocs, korecode, korecomms, koreliveweb, koretest, korecron.",
     )
     parser.add_argument("--host", default=None, help="KoreStack landing page bind address.")
     parser.add_argument("--ui-port", type=int, default=None, help="KoreStack landing page port.")
@@ -365,6 +373,8 @@ def resolve_services(raw: str, services: dict[str, ServiceSpec]) -> list[Service
             "korecode",
             "korecomms",
             "koreliveweb",
+            "koretest",
+            "korecron",
         )
         return [services[key] for key in preferred_order if key in services]
 
@@ -500,13 +510,7 @@ class StackManager:
             return False
 
         log.info("stopping %s pid=%s", slug, proc.pid)
-        proc.terminate()
-        try:
-            proc.wait(timeout=8)
-        except subprocess.TimeoutExpired:
-            log.warning("killing %s pid=%s (terminate timed out)", slug, proc.pid)
-            proc.kill()
-            proc.wait(timeout=5)
+        self._stop_process_tree(slug, proc)
         with self._lock:
             fh = self._log_handles.pop(slug, None)
         if fh is not None:
@@ -520,6 +524,41 @@ class StackManager:
         self.stop_service(slug)
         return self.start_service(slug)
 
+    @staticmethod
+    def _stop_process_tree(slug: str, proc: subprocess.Popen[bytes]) -> None:
+        """Stop one service and every child process it launched.
+
+        ``Popen.terminate`` only stops its direct child on Windows.  Several services
+        may in turn launch an application server or worker, which would otherwise be
+        orphaned when KoreStack receives Ctrl+C.  The PID is one KoreStack created, so
+        taskkill's tree scope remains limited to that service.
+        """
+        if os.name == "nt":
+            try:
+                result = subprocess.run(
+                    ["taskkill", "/PID", str(proc.pid), "/T", "/F"],
+                    stdout        = subprocess.DEVNULL,
+                    stderr        = subprocess.DEVNULL,
+                    check         = False,
+                    creationflags = _hidden_windows_creation_flags(),
+                )
+                if result.returncode == 0:
+                    try:
+                        proc.wait(timeout=5)
+                    except subprocess.TimeoutExpired:
+                        log.warning("service tree for %s pid=%s did not exit after taskkill", slug, proc.pid)
+                    return
+            except OSError as exc:
+                log.warning("taskkill failed for %s pid=%s: %s", slug, proc.pid, exc)
+
+        proc.terminate()
+        try:
+            proc.wait(timeout=8)
+        except subprocess.TimeoutExpired:
+            log.warning("killing %s pid=%s (terminate timed out)", slug, proc.pid)
+            proc.kill()
+            proc.wait(timeout=5)
+
     def stop(self) -> None:
         self._refresh_stop.set()
         with self._lock:
@@ -529,17 +568,7 @@ class StackManager:
             if proc.poll() is not None:
                 continue
             log.info("stopping %s pid=%s", slug, proc.pid)
-            proc.terminate()
-
-        for slug, proc in reversed(items):
-            if proc.poll() is not None:
-                continue
-            try:
-                proc.wait(timeout=8)
-            except subprocess.TimeoutExpired:
-                log.warning("killing %s pid=%s (terminate timed out)", slug, proc.pid)
-                proc.kill()
-                proc.wait(timeout=5)
+            self._stop_process_tree(slug, proc)
 
         with self._lock:
             handles = list(self._log_handles.values())

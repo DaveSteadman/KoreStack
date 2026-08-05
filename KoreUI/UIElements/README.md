@@ -43,7 +43,7 @@ Same shell, same tokens, same panel language. Different products keep their inte
 ## Asset Structure
 
 ```
-UIElements/assets/
+KoreUI/UIElements/assets/
   css/
     chrome.css        ← bundle: @imports all CSS below
     tokens.css        ← design tokens (colors, typography, spacing, radii)
@@ -71,7 +71,7 @@ UIElements/assets/
     dazzle-line/      ← imported external SVG pack(s)
     README.md         ← import + usage instructions
 
-UIElements/SVGicons/
+KoreUI/UIElements/SVGicons/
   dazzle-line/        ← downloaded icon source files + manifest
   README.md           ← source folder workflow
   fonts/
@@ -252,8 +252,8 @@ three-panel log / chat / input layout.
 Slide-out or dropdown menu anchored to the top bar. Provides cross-service navigation on smaller viewports.
 
 ### External Icon Packs
-External SVG packs are stored under `UIElements/SVGicons/<set-name>/` and mirrored to
-`UIElements/assets/icons/<set-name>/` for browser use.
+External SVG packs are stored under `KoreUI/UIElements/SVGicons/<set-name>/` and mirrored to
+`KoreUI/UIElements/assets/icons/<set-name>/` for browser use.
 
 JS helpers are exported by `svgicons.js` and re-exported from `chrome.js`:
 - `svgIconUrl(iconName, setName)`

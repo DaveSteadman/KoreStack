@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>KoreTest</title>
+  <link rel="icon" type="image/x-icon" href="/ui-elements/assets/icons/favicon.ico">
+  <link rel="stylesheet" href="/ui-elements/assets/css/chrome.css">
+  <script src="/suite-config.js"></script>
+</head>
+<body class="kcui-shell-bg">
+  <div id="topbar"></div>
+  <div id="app-bar"></div>
+  <main class="kcui-main">
+    <div class="kcui-page">
+      <section class="kcui-workspace">
+        <div class="kcui-workspace__region">
+          <section class="kcui-panel panel">
+            <div class="kcui-panel-header">
+              <p class="eyebrow">System Tests</p>
+              <p>Select a prompt suite, run it in the protected TEST chat, and inspect its history.</p>
+            </div>
+            <div class="kcui-panel-body">
+              <form id="system-test-form">
+                <label class="kcui-form-label" for="suite">Prompt suite</label>
+                <select id="suite" name="suite" required></select>
+                <div>
+                  <button id="run-suite" class="kcui-tag kcui-tag--accent kcui-tag--filled" type="submit">Run selected suite</button>
+                  <span id="run-status" class="kcui-tag kcui-tag--dim">Ready</span>
+                </div>
+              </form>
+            </div>
+          </section>
+        </div>
+
+        <div class="kcui-workspace__region">
+          <section class="kcui-panel panel">
+            <div class="kcui-panel-header">
+              <p class="eyebrow">Trend</p>
+              <p id="trend-summary">Loading selected-suite history.</p>
+            </div>
+            <div class="kcui-panel-body">
+              <div class="kcui-table-scroll">
+                <table class="kcui-table">
+                  <thead><tr><th>Run</th><th>Success</th><th>Elapsed</th><th>Prompt tokens</th></tr></thead>
+                  <tbody id="trend-rows"><tr><td colspan="4">No history loaded.</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <div class="kcui-workspace__region">
+          <section class="kcui-panel panel">
+            <div class="kcui-panel-header">
+              <p class="eyebrow">Latest run</p>
+              <p>Result from the most recent suite invocation.</p>
+            </div>
+            <div class="kcui-panel-body">
+              <output id="run-result" class="kcui-tag kcui-tag--dim">No run in this session.</output>
+            </div>
+          </section>
+        </div>
+      </section>
+    </div>
+  </main>
+  <script type="module" src="/static/test/app.js"></script>
+</body>
+</html>

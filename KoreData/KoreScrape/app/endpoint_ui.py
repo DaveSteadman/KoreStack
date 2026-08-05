@@ -39,7 +39,7 @@ templates.env.loader = ChoiceLoader([
 _UI_ELEMENTS_ASSETS = Path(
     os.environ.get(
         "KORE_UIELEMENTS_ASSETS_DIR",
-        str(Path(__file__).resolve().parents[3] / "UIElements" / "assets"),
+        str(Path(__file__).resolve().parents[3] / "KoreUI" / "UIElements" / "assets"),
     )
 ).resolve()
 _SCRAPE_DB_PATH = Path(cfg["data_dir"]) / "scrape_index.db"

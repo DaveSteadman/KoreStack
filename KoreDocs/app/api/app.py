@@ -39,7 +39,7 @@ STATIC = Path(
         str(BASE_DIR.parent / 'KoreUI' / 'KoreDocs' / 'static'),
     )
 ).resolve()
-COMMONUI_ASSETS = Path(os.environ.get('KORE_UIELEMENTS_ASSETS_DIR', str(BASE_DIR.parent / 'UIElements' / 'assets')))
+COMMONUI_ASSETS = Path(os.environ.get('KORE_UIELEMENTS_ASSETS_DIR', str(BASE_DIR.parent / 'KoreUI' / 'UIElements' / 'assets')))
 if not COMMONUI_ASSETS.exists():
     COMMONUI_ASSETS = STATIC / 'shared'
 DATA_DIR = Path(os.environ.get('KOREDOCS_DATA_DIR', str(get_suite_datauser_dir()))).resolve()

@@ -4,7 +4,7 @@ KoreUI is the shared frontend source tree for the suite's browser experiences. I
 
 ## Why it exists
 
-The suite uses a common shell from `UIElements/`, but each service still needs its own HTML templates, JavaScript modules, and CSS. KoreUI is where those service-owned frontend files live.
+The suite uses a common shell from `KoreUI/UIElements/`, but each service still needs its own HTML templates, JavaScript modules, and CSS. KoreUI owns both layers.
 
 ## What it includes
 
@@ -26,10 +26,10 @@ When changing browser behavior or HTML structure for a service, this folder is o
 | Problem | What to check |
 |---|---|
 | UI page renders without expected controls | Confirm the service is mounting the correct templates or static directory |
-| Styles appear inconsistent across services | Check whether the service is using `UIElements/` for shared chrome and `KoreUI/` for service-specific assets |
+| Styles appear inconsistent across services | Check whether the service is using `KoreUI/UIElements/` for shared chrome and its service folder for service-specific assets |
 | A frontend change has no visible effect | Verify you edited the service-owned file under `KoreUI/`, not an older duplicated asset elsewhere |
 
 ## Related docs
 
-- Shared shell and tokens: [../UIElements/README.md](../UIElements/README.md)
+- Shared shell and tokens: [UIElements/README.md](UIElements/README.md)
 - Root overview: [../README.md](../README.md)

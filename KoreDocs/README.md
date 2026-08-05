@@ -72,7 +72,7 @@ KoreDocs serves both the browser UI and the MCP endpoint from the same process.
 - Install shared dependencies from the repo root with `pip install -r requirements.txt`
 - KoreDocs reads suite-level paths from `config/korestack_config.json`
 - The live source of truth is the shared `datauser` tree under the configured data root
-- Shared UI assets are served from `UIElements/`; keep that folder present when running browser apps
+- Shared UI assets are served from `KoreUI/UIElements/`; keep that folder present when running browser apps
 
 ## New user notes
 
@@ -90,7 +90,7 @@ KoreDocs serves both the browser UI and the MCP endpoint from the same process.
 
 | Problem | What to check |
 |---|---|
-| UI loads but shared chrome is missing | Confirm `UIElements/` assets are available and mounted correctly |
+| UI loads but shared chrome is missing | Confirm `KoreUI/UIElements/` assets are available and mounted correctly |
 | Files do not appear where expected | Verify the configured `datauser` path under the suite data root |
 | MCP clients cannot connect | Check the configured `/mcp` endpoint and whether KoreDocs is running in HTTP or stdio mode |
 | Old data is missing | Confirm you are looking at the live filesystem-backed store, not the legacy migration database |

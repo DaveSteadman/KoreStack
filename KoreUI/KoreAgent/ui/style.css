@@ -123,7 +123,7 @@ html, body {
 
 #main-grid {
     display: grid;
-    grid-template-columns: 200px 5px 1fr 5px 1fr;
+    grid-template-columns: 1fr 5px 1fr;
     grid-template-rows: minmax(100px, 1fr) 5px auto;
     gap: 0;
     padding: var(--gap);
@@ -179,7 +179,7 @@ body.splitter-drag-h { user-select: none; cursor: row-resize; }
 }
 
 .splitter-h {
-    grid-column: 1 / 6;
+    grid-column: 1 / 4;
     cursor: row-resize;
     height: 5px;
 }
@@ -341,7 +341,7 @@ body.splitter-drag-h { user-select: none; cursor: row-resize; }
    ============================================================ */
 
 #panel-log {
-    grid-column: 3;
+    grid-column: 1;
     grid-row: 1;
 }
 
@@ -368,7 +368,7 @@ body.splitter-drag-h { user-select: none; cursor: row-resize; }
    ============================================================ */
 
 #panel-chat {
-    grid-column: 5;
+    grid-column: 3;
     grid-row: 1;
 }
 
@@ -456,7 +456,7 @@ body.splitter-drag-h { user-select: none; cursor: row-resize; }
    ============================================================ */
 
 #panel-input {
-    grid-column: 1 / 6;
+    grid-column: 1 / 4;
     grid-row: 3;
     display: flex;
     align-items: stretch;
@@ -561,7 +561,7 @@ body.splitter-drag-h { user-select: none; cursor: row-resize; }
 #send-btn:disabled      { opacity: 0.35; cursor: default; }
 
 /* ============================================================
-   RESPONSIVE COLLAPSE: narrow screens drop timeline
+   RESPONSIVE COLLAPSE: narrow screens stack the two panels
    ============================================================ */
 
 @media (max-width: 900px) {
@@ -569,8 +569,6 @@ body.splitter-drag-h { user-select: none; cursor: row-resize; }
         grid-template-columns: 1fr 5px 1fr;
         grid-template-rows: minmax(100px, 1fr) 5px auto;
     }
-    #panel-timeline { display: none; }
-    #splitter-v1    { display: none; }
     #splitter-v2    { grid-column: 2; }
     #panel-log      { grid-column: 1; }
     #panel-chat     { grid-column: 3; }
@@ -583,7 +581,6 @@ body.splitter-drag-h { user-select: none; cursor: row-resize; }
         grid-template-columns: 1fr;
         grid-template-rows: minmax(60px, 1fr) 5px minmax(60px, 1fr) 5px auto;
     }
-    #splitter-v1 { display: none; }
     #splitter-v2 { display: none; }
     #panel-log   { grid-column: 1; grid-row: 1; }
     #splitter-h1 { grid-column: 1; grid-row: 2; }

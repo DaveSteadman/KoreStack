@@ -92,7 +92,7 @@ _TEMPLATES = Path(
 _UI_ELEMENTS_ASSETS = Path(
     os.environ.get(
         "KORE_UIELEMENTS_ASSETS_DIR",
-        str(Path(__file__).resolve().parents[2] / "UIElements" / "assets"),
+        str(Path(__file__).resolve().parents[2] / "KoreUI" / "UIElements" / "assets"),
     )
 ).resolve()
 templates = Jinja2Templates(directory=str(_TEMPLATES))

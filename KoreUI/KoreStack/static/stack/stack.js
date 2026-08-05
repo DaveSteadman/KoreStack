@@ -8,6 +8,8 @@ const SERVICE_KEY_BY_SLUG = {
   korecode: 'korecode',
   korecomms: 'korecomms',
   koreliveweb: 'koreliveweb',
+  koretest: 'koretest',
+  korecron: 'korecron',
 };
 
 const STATE_COLOR = {

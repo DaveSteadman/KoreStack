@@ -5,7 +5,6 @@
 #
 # The command registry lives here, but domain handlers are split into clearly named modules:
 #   - slash_command_handlers_models.py
-#   - slash_command_handlers_testing.py
 #   - slash_command_handlers_tasks.py
 #   - slash_command_handlers_sessions.py
 # ====================================================================================================
@@ -35,8 +34,6 @@ from input_layer.slash_command_context import SlashCommandContext
 from input_layer.slash_command_handlers_models import register_model_slash_commands
 from input_layer.slash_command_handlers_plans import register_workflow_slash_commands
 from input_layer.slash_command_handlers_sessions import register_session_slash_commands
-from input_layer.slash_command_handlers_tasks import register_task_slash_commands
-from input_layer.slash_command_handlers_testing import register_testing_slash_commands
 import mcp_client
 from sessions.tool_selection import ALWAYS_ON_TOOL_NAMES
 from sessions.tool_selection import build_all_tool_catalog
@@ -497,6 +494,4 @@ _DESCRIPTIONS: dict[str, str] = {
 
 register_model_slash_commands(_REGISTRY, _DESCRIPTIONS)
 register_workflow_slash_commands(_REGISTRY, _DESCRIPTIONS)
-register_testing_slash_commands(_REGISTRY, _DESCRIPTIONS)
-register_task_slash_commands(_REGISTRY, _DESCRIPTIONS)
 register_session_slash_commands(_REGISTRY, _DESCRIPTIONS)

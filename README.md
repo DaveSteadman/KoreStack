@@ -25,7 +25,7 @@ This repository should be readable from the top down. The root README is the Git
 |---|---|
 | `KoreCommon/` | Shared path, config, logging, and service helpers used across the suite. See [KoreCommon/README.md](KoreCommon/README.md). |
 | `KoreUI/` | Service-specific UI templates and static frontend assets consumed by the browser apps. See [KoreUI/README.md](KoreUI/README.md). |
-| `UIElements/` | Shared UI shell, tokens, chrome, and assets used by the browser apps. See [UIElements/README.md](UIElements/README.md). |
+| `KoreUI/UIElements/` | Shared UI shell, tokens, chrome, and assets used by the browser apps. See [UIElements README](KoreUI/UIElements/README.md). |
 | `config/` | Checked-in suite configuration, including service ports and LLM bootstrap settings. See [config/README.md](config/README.md). |
 
 ## Quick start
@@ -94,7 +94,7 @@ The suite is intentionally a set of cooperating local services rather than one m
 - `KoreChat` owns canonical conversations and event history
 - `KoreComms` owns external-channel integration, not core agent state
 - `KoreData` and `KoreDocs` stay as domain services instead of becoming internal agent libraries
-- `UIElements` and `KoreUI` provide a shared browser shell and service-specific frontend assets
+- `KoreUI/UIElements` provides the shared browser shell alongside KoreUI's service-specific frontend assets
 
 ## Shared service contract
 
@@ -106,7 +106,7 @@ The suite is converging on one common HTTP shape for browser-facing services:
 - `/status` is the health probe used by KoreStack
 - `/mcp` is the MCP transport entry point where the service exposes tools
 
-Browser apps should use the shared `UIElements` shell and suite URL wiring rather than inventing service-local chrome patterns.
+Browser apps should use the shared `KoreUI/UIElements` shell and suite URL wiring rather than inventing service-local chrome patterns.
 
 ## Near-term direction
 
@@ -133,7 +133,7 @@ In practice, the actual data root is resolved from `paths.dataroot` or the `KORE
 | Services fail to start or exit on boot | Run `python .\main.py --dry-run` and confirm the configured ports and service enablement flags |
 | Errors mention missing folders or databases | Verify `paths.dataroot` in `config/korestack_config.json` points to a valid writable location |
 | KoreAgent starts but model calls fail | Check `config/koreagent_config.json`, confirm the LLM host is reachable, and make sure the selected model exists |
-| Browser UI loads without styling | Confirm `UIElements/` is present and that the app can serve shared assets from `/ui-elements/assets/` |
+| Browser UI loads without styling | Confirm `KoreUI/UIElements/` is present and that the app can serve shared assets from `/ui-elements/assets/` |
 | A single service is blocking the whole suite | Start a narrower set with `--services ...` and debug that subsystem in isolation |
 
 ## Documentation rule

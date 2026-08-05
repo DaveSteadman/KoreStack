@@ -59,7 +59,7 @@ _STATIC_LIVEWEB_DIR = (_STATIC_ROOT / "liveweb").resolve()
 _UI_ELEMENTS_ASSETS = Path(
     os.environ.get(
         "KORE_UIELEMENTS_ASSETS_DIR",
-        str(_SERVICE_ROOT / "UIElements" / "assets"),
+        str(_SERVICE_ROOT / "KoreUI" / "UIElements" / "assets"),
     )
 ).resolve()
 _templates          = Jinja2Templates(directory=str(_TEMPLATES_DIR))

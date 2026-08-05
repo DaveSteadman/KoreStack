@@ -58,4 +58,4 @@ Open the configured KoreChat UI at `/ui` on the configured port.
 | KoreChat will not bind | Confirm `services.korechat.port` is free in `config/korestack_config.json` |
 | Conversations appear missing | Verify the configured data root is the same one the rest of the suite is using |
 | Another service cannot reach KoreChat | Check the configured host and the KoreChat connection URL used by the caller |
-| UI loads but looks incomplete | Confirm shared assets from `UIElements/` are being served correctly |
+| UI loads but looks incomplete | Confirm shared assets from `KoreUI/UIElements/` are being served correctly |

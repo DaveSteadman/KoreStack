@@ -33,7 +33,7 @@ const _ALL_COMMANDS = [
     "/help", "/llmserver", "/llmserverconfig", "/ctx", "/rounds", "/timeout",
     "/stopmodel", "/stoprun",
     "/clearmemory", "/reskill", "/sandbox", "/tools",
-    "/deletelogs", "/unittest", "/systemtest", "/systemtesttrend", "/cronprompts", "/cronprompt",
+    "/deletelogs",
     "/workflow", "/workflows",
     "/version", "/defaults", "/chat", "/kccompress",
 ];
@@ -87,8 +87,6 @@ const dom = {
     ollamaHost:   () => $("ollama-host"),
     ollamaModel:  () => $("ollama-model"),
     ollamaCtx:    () => $("ollama-ctx"),
-    timeline:     () => $("timeline-ticker"),
-    timelineQueue: () => $("timeline-queue"),
     log:          () => $("log-body"),
     chat:         () => $("chat-body"),
     chatTitle:    () => $("chat-panel-title"),
@@ -322,8 +320,6 @@ async function refreshOllamaStatus() {
 async function refreshQueue() {
     const data = await apiFetch("/queue");
     if (!data) return;
-    _renderTimelineQueue(data);
-    _scheduleTimelineRefresh();
     if (data.pending_switch) {
         _applySessionSwitch(data.pending_switch.session_id, data.pending_switch.name || "");
     }
@@ -477,7 +473,6 @@ async function refreshTimeline() {
 // ====================================================================================================
 function resetLayout() {
     resetWorkspaceLayout("koreagent-main-v1");
-    refreshTimeline();
 }
 
 function initSplitters() {
@@ -1179,20 +1174,6 @@ function _parseSuggestContext(value) {
         return null;
     }
 
-    if (cmd === "/systemtest") {
-        if (!rest.includes(" ")) {
-            return { pool: ["all", ..._completions.test_files], prefix: rest.trimEnd(), base: cmd + " " };
-        }
-        return null;
-    }
-
-    if (cmd === "/cronprompt") {
-        if (!rest.includes(" ")) {
-            return { pool: _completions.task_names, prefix: rest.trimEnd(), base: "/cronprompt " };
-        }
-        return null;
-    }
-
     if (cmd === "/workflow") {
         const subSpace = rest.indexOf(" ");
         if (subSpace === -1) {
@@ -1391,13 +1372,11 @@ function _resizeTextarea() {
 function startPolling() {
     refreshOllamaStatus();
     refreshQueue();
-    refreshTimeline();
     refreshLatestLogFile();
     _loadCompletions();
 
     setInterval(refreshOllamaStatus,  POLL_OLLAMA_MS);
     setInterval(refreshQueue,         POLL_QUEUE_MS);
-    setInterval(refreshTimeline,      POLL_TIMELINE_MS);
     setInterval(refreshLatestLogFile, POLL_LATEST_LOG_MS);
     setInterval(_loadCompletions,     30_000);
 }
@@ -1481,22 +1460,11 @@ function init() {
     clearChatPanel();
     _loadSessionHistory(_sessionId);
 
-    // Recenter the schedule timeline whenever the queue subpanel changes height.
-    if (window.ResizeObserver) {
-        _queueResizeObserver = new ResizeObserver(() => {
-            _scheduleTimelineRefresh();
-        });
-        _queueResizeObserver.observe(dom.timelineQueue());
-
-    }
-
-    // Redraw timeline on resize so the row window recentres correctly.
     let _resizeTimer = null;
     window.addEventListener("resize", () => {
         clearTimeout(_resizeTimer);
         _resizeTimer = setTimeout(() => {
             _resizeTextarea();
-            refreshTimeline();
         }, 100);
     });
 

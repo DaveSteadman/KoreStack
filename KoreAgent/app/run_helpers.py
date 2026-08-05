@@ -8,7 +8,6 @@
 # creates a session context for a scheduled task run.
 #
 # Related modules:
-#   - input_layer/slash_command_handlers_testing.py  -- calls run_prompt_batch for /test
 #   - server_startup.py                              -- calls make_task_session for scheduled tasks
 #   - orchestration.py                               -- orchestrate_prompt
 # ====================================================================================================

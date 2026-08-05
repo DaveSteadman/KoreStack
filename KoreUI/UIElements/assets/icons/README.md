@@ -1,7 +1,7 @@
 # Icon Packs (Public Mirror)
 
 This folder hosts browser-served mirrors of external SVG icon packs.
-Source downloads are stored in `UIElements/SVGicons/`.
+Source downloads are stored in `KoreUI/UIElements/SVGicons/`.
 
 ## Dazzle Line Import
 
@@ -13,10 +13,10 @@ python tools/import_icon_pack.py --zip <path-to-zip> --set dazzle-line
 ```
 
 This creates:
-- `UIElements/SVGicons/dazzle-line/*.svg` (source)
-- `UIElements/SVGicons/dazzle-line/manifest.json` (source manifest)
-- `UIElements/assets/icons/dazzle-line/*.svg` (public mirror)
-- `UIElements/assets/icons/dazzle-line/manifest.json` (public manifest)
+- `KoreUI/UIElements/SVGicons/dazzle-line/*.svg` (source)
+- `KoreUI/UIElements/SVGicons/dazzle-line/manifest.json` (source manifest)
+- `KoreUI/UIElements/assets/icons/dazzle-line/*.svg` (public mirror)
+- `KoreUI/UIElements/assets/icons/dazzle-line/manifest.json` (public manifest)
 
 ## Usage
 

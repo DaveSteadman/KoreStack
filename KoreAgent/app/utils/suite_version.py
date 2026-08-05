@@ -3,7 +3,7 @@
 # ====================================================================================================
 # SUITE_VERSION constant loader for KoreAgent.
 #
-# Reads the SUITE_VERSION string from UIElements/assets/js/suiteMeta.js at import time
+# Reads the SUITE_VERSION string from KoreUI/UIElements/assets/js/suiteMeta.js at import time
 # via regex so the version is sourced from one authoritative location shared across all
 # services.  The result is LRU-cached so the file is only read once per process.
 #
@@ -27,7 +27,7 @@ def _suite_meta_path() -> Path:
     assets_dir = os.environ.get("KORE_UIELEMENTS_ASSETS_DIR")
     if assets_dir:
         return Path(assets_dir).resolve() / "js" / "suiteMeta.js"
-    return Path(__file__).resolve().parents[3] / "UIElements" / "assets" / "js" / "suiteMeta.js"
+    return Path(__file__).resolve().parents[3] / "KoreUI" / "UIElements" / "assets" / "js" / "suiteMeta.js"
 
 
 @lru_cache(maxsize=1)

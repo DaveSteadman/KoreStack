@@ -50,9 +50,11 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-# sys.path must include the app/ directory before project modules can be imported.
-_APP_DIR = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(_APP_DIR))
+# KoreTest owns the runner, while each test invocation deliberately starts the
+# KoreAgent entry point under test.
+REPO_ROOT     = Path(__file__).resolve().parents[3]
+AGENT_APP_DIR = REPO_ROOT / "KoreAgent" / "app"
+sys.path.insert(0, str(AGENT_APP_DIR))
 
 from utils.workspace_utils import get_test_results_dir
 
@@ -60,8 +62,7 @@ from utils.workspace_utils import get_test_results_dir
 # ====================================================================================================
 # MARK: CONSTANTS
 # ====================================================================================================
-REPO_ROOT = _APP_DIR.parents[1]
-MAIN_SCRIPT = _APP_DIR / "main.py"
+MAIN_SCRIPT = AGENT_APP_DIR / "main.py"
 
 # Maximum time in seconds to wait for a single framework invocation before aborting.
 SUBPROCESS_TIMEOUT_SECONDS = 300
@@ -70,7 +71,7 @@ TEST_LLM_TIMEOUT_SECONDS   = 86400
 CSV_FIELDS = [
     "timestamp", "source_file", "prompt", "exchange_name", "turn_index",
     "final_output", "assert_result", "passed", "failure_reason",
-    "duration_seconds", "exit_code", "log_file", "stderr",
+    "duration_seconds", "prompt_tokens", "exit_code", "log_file", "stderr",
 ]
 
 
@@ -414,6 +415,7 @@ def _base_row(run_timestamp: str, source_file: str, prompt: str, exchange_name: 
         "passed":           "",
         "failure_reason":   "",
         "duration_seconds": "0.000",
+        "prompt_tokens":    "0",
         "exit_code":        -1,
         "log_file":         "",
         "stderr":           "",
@@ -571,6 +573,7 @@ def _run_single_item(
         final_output = extract_final_output(stdout_text=stdout)
         turn_metrics = _parse_turn_metrics(stdout)
         row.update({"final_output": final_output, "duration_seconds": f"{duration:.3f}",
+                    "prompt_tokens": sum(tokens for tokens, _tps in turn_metrics.values()),
                     "exit_code": exit_code, "log_file": log_file, "stderr": stderr.strip()})
     except subprocess.TimeoutExpired as e:
         row.update({"duration_seconds": f"{SUBPROCESS_TIMEOUT_SECONDS}.000",
@@ -656,6 +659,7 @@ def _run_exchange_item(
         assert_expr  = turn.get("assert", "")
         final_output = turn_outputs.get(turn_idx, "")
         assert_result = _evaluate_assert(assert_expr, final_output, exit_code)
+        prompt_tokens, tps_str = turn_metrics.get(turn_idx, (0, "0"))
         assert_results.append(assert_result)
         if assert_result == "FAIL":
             any_assert_fail = True
@@ -665,13 +669,13 @@ def _run_exchange_item(
             "final_output":     final_output,
             "assert_result":    assert_result,
             "duration_seconds": f"{per_turn_dur:.3f}",
+            "prompt_tokens":    prompt_tokens,
             "exit_code":        exit_code,
             "log_file":         log_file,
             "stderr":           stderr.strip(),
         })
         pending_rows.append(row)
 
-        prompt_tokens, tps_str = turn_metrics.get(turn_idx, (0, "0"))
         status_label = "OK" if exit_code == 0 else "FAIL"
         assert_label = f"  assert={assert_result}" if assert_expr else ""
         pending_prints.append((turn_idx, str(prompt_tokens), tps_str, f"  [Turn {turn_idx}/{n}] [{status_label}]{assert_label}: {user_prompt!r}"))

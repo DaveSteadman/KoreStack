@@ -99,7 +99,7 @@ templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 _UI_ELEMENTS_ASSETS = Path(
     os.environ.get(
         "KORE_UIELEMENTS_ASSETS_DIR",
-        str(Path(__file__).resolve().parents[3] / "UIElements" / "assets"),
+        str(Path(__file__).resolve().parents[3] / "KoreUI" / "UIElements" / "assets"),
     )
 ).resolve()
 _STATIC_DIR = Path(

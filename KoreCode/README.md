@@ -41,7 +41,7 @@ python .\KoreCode\main.py
 
 - Install shared dependencies from the repo root with `pip install -r requirements.txt`
 - KoreCode expects the workspace root and related paths to resolve through the shared suite configuration
-- Browser shell assets come from `UIElements/`
+- Browser shell assets come from `KoreUI/UIElements/`
 
 ## New user notes
 
@@ -55,5 +55,5 @@ python .\KoreCode\main.py
 |---|---|
 | Files are missing from the browser tree | Confirm the resolved workspace root points at the expected checkout |
 | Syntax or symbol features look stale | Rebuild the workspace index from the UI or API |
-| Browser chrome is missing | Confirm shared assets from `UIElements/` are being served |
+| Browser chrome is missing | Confirm shared assets from `KoreUI/UIElements/` are being served |
 | AI-assisted flows fail | Check the configured agent or tool endpoint those flows depend on |

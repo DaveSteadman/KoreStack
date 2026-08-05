@@ -128,7 +128,7 @@ SUITE_ROOT = Path(os.environ.get('KORE_SUITE_ROOT', str(BASE_DIR.parent))).resol
 COMMONUI_ASSETS = Path(
     os.environ.get(
         'KORE_UIELEMENTS_ASSETS_DIR',
-        str(BASE_DIR.parent / 'UIElements' / 'assets'),
+        str(BASE_DIR.parent / 'KoreUI' / 'UIElements' / 'assets'),
     )
 ).resolve()
 LOG = logging.getLogger('korecode')

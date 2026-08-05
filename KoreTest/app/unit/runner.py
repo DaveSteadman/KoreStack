@@ -13,8 +13,8 @@ import sys
 from pathlib import Path
 
 
-APP_DIR   = Path(__file__).resolve().parents[2]
-REPO_ROOT = Path(__file__).resolve().parents[4]
+REPO_ROOT = Path(__file__).resolve().parents[3]
+APP_DIR   = REPO_ROOT / "KoreAgent" / "app"
 
 _AGENT_SMOKE_TARGETS = (
     "testing.unit.test_guardrail_smoke.GuardrailSmokeTests.test_test_wrapper_fails_single_prompt_on_no_results_output",
@@ -55,7 +55,7 @@ def run_core_checks() -> bool:
                     "KoreCommon/service_logging.py",
                     "KoreCode/app/server.py",
                     "KoreData/KoreDataGateway/app",
-                    "KoreAgent/app/input_layer/slash_command_handlers_testing.py",
+                    "KoreTest/main.py",
                 ],
                 cwd=REPO_ROOT,
             )

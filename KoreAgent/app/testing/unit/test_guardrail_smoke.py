@@ -101,7 +101,7 @@ from input_layer import slash_commands as slash_commands_module
 from input_layer import slash_command_handlers_sessions as session_handlers_module
 from input_layer.routes_sessions import _queue_timeout_for_prompt
 from input_layer.routes_sessions import _runtime_config_for_prompt
-from input_layer.slash_command_handlers_testing import _result_counts
+from KoreTest.app.history import result_counts as _result_counts
 from testing.system import runner as test_wrapper_module
 from testing.unit.guardrail_support import load_test_skills_payload
 from testing.unit.guardrail_support import reset_guardrail_state
@@ -985,8 +985,8 @@ class GuardrailSmokeTests(unittest.TestCase):
         self.assertEqual(reason, "Search returned no results")
 
     def test_queue_timeout_for_prompt_disables_scheduler_timeout_only_for_test(self) -> None:
-        self.assertEqual(_queue_timeout_for_prompt("/systemtest all"), 0)
-        self.assertEqual(_queue_timeout_for_prompt("   /systemtest smoke   "), 0)
+        self.assertIsNone(_queue_timeout_for_prompt("/systemtest all"))
+        self.assertIsNone(_queue_timeout_for_prompt("   /systemtest smoke   "))
         self.assertIsNone(_queue_timeout_for_prompt("/test all"))
         self.assertIsNone(_queue_timeout_for_prompt("   /test smoke   "))
         self.assertIsNone(_queue_timeout_for_prompt("/testtrend smoke"))
