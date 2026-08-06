@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+import threading
 from contextlib import contextmanager
 from datetime import datetime
 from datetime import timezone
@@ -46,10 +47,16 @@ _CLAIMABLE_EVENT_TYPES: dict[str, tuple[str, ...]] = {
 }
 
 _DB_PATH: Path | None = None
+_THREAD_LOCAL = threading.local()
 
 
 def reset_runtime_state() -> None:
     global _DB_PATH
+    connection = getattr(_THREAD_LOCAL, "connection", None)
+    if connection is not None:
+        connection.close()
+    _THREAD_LOCAL.connection      = None
+    _THREAD_LOCAL.connection_path = None
     _DB_PATH = None
 
 
@@ -64,20 +71,26 @@ def get_db_path() -> Path:
 
 @contextmanager
 def _conn() -> Generator[sqlite3.Connection, None, None]:
-    connection = sqlite3.connect(get_db_path())
-    connection.row_factory = sqlite3.Row
-    # Apply connection-local PRAGMAs every time; SQLite settings are scoped to the
-    # connection, so doing this here avoids fragile one-time global initialisation.
-    connection.execute("PRAGMA journal_mode=WAL")
-    connection.execute("PRAGMA foreign_keys=ON")
+    db_path = get_db_path()
+    connection = getattr(_THREAD_LOCAL, "connection", None)
+    if connection is None or getattr(_THREAD_LOCAL, "connection_path", None) != db_path:
+        if connection is not None:
+            connection.close()
+        connection = sqlite3.connect(db_path)
+        connection.row_factory = sqlite3.Row
+        # `journal_mode` is database-wide and is set once by init_db(). Reasserting it
+        # per request needs an exclusive lock, which can make lightweight /status
+        # requests wait behind ordinary conversation writes.
+        connection.execute("PRAGMA busy_timeout=5000")
+        connection.execute("PRAGMA foreign_keys=ON")
+        _THREAD_LOCAL.connection      = connection
+        _THREAD_LOCAL.connection_path = db_path
     try:
         yield connection
         connection.commit()
     except Exception:
         connection.rollback()
         raise
-    finally:
-        connection.close()
 
 
 def _now() -> str:

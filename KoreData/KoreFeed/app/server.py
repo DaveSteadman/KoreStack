@@ -65,7 +65,6 @@ from app.database import (
     set_domain_age_settings,
     update_entry_page_text,
 )
-from app.chroma_index import chroma_available, migrate_legacy_domain_stores, semantic_search
 from app.feed_manager import (
     add_feed,
     create_domain,
@@ -87,11 +86,15 @@ from app.overview import get_feed_overview, invalidate_feed_overview
 
 
 def _warm_feed_domains() -> None:
+    # Populate the small, mutable fetch-state cache before the dashboard needs it.
+    # On the Dropbox data volume a cold read can be slow even for tiny JSON files.
+    load_feeds()
     for _domain in list_domains():
         init_db(_domain)
     for _domain in list_feed_domains():
         sync_domain_spec(_domain)
     try:
+        from app.chroma_index import migrate_legacy_domain_stores
         migrate_legacy_domain_stores(batch_size=250)
     except Exception:
         pass
@@ -104,7 +107,11 @@ async def _lifespan(app: FastAPI):
         daemon = True,
         name   = "korefeed-startup-warm",
     ).start()
-    start_scheduler()
+    threading.Thread(
+        target = start_scheduler,
+        daemon = True,
+        name   = "korefeed-scheduler-startup",
+    ).start()
     yield
     stop_scheduler()
 
@@ -137,14 +144,10 @@ register_suite_shell_routes(
 @app.get("/status", tags=["meta"])
 def api_status():
     """Health check used by KoreDataGateway."""
-    overview = get_feed_overview()
     return {
-        "status":        "ok",
-        "service":       "KoreFeed",
-        "total_domains": overview["total_domains"],
-        "total_feeds":   overview["total_feeds"],
-        "total_entries": overview["total_entries"],
-        "runtime":       get_runtime_status(),
+        "status":  "ok",
+        "service": "KoreFeed",
+        "runtime": get_runtime_status(),
     }
 
 
@@ -441,6 +444,7 @@ def api_semantic_search(
     min_match: float = 0.4,
 ):
     """Semantic sentence search across the per-domain Chroma stores."""
+    from app.chroma_index import chroma_available, semantic_search
     if not chroma_available():
         raise HTTPException(status_code=503, detail="Semantic search unavailable: chromadb is not installed")
     return semantic_search(domain or None, q, limit=limit, min_match=min_match)

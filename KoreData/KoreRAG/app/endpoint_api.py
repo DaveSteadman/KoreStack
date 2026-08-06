@@ -106,26 +106,14 @@ def register_rag_api(
     @app.get("/api/databases", summary="List all registered databases")
     @app.get("/databases", include_in_schema=False)
     def route_list_databases():
-        _registry_reload()
         return list_databases()
 
     @app.get("/api/databases/{name}/info", summary="Descriptor + status for a single database")
     @app.get("/databases/{name}/info", include_in_schema=False)
     def route_database_info(name: str):
-        _registry_reload()
         descriptor = get_descriptor(name)
         if descriptor is None:
             raise HTTPException(status_code=404, detail=f"Unknown database: {name!r}")
-
-        ingestor_name = descriptor.get("ingestor") or name
-        json_path     = Path(cfg["data_dir"]) / "databases" / ingestor_name / f"{ingestor_name}.json"
-        if json_path.exists():
-            try:
-                data = json.loads(json_path.read_text(encoding="utf-8"))
-                if "sync" in data:
-                    descriptor = {**descriptor, "sync": data["sync"]}
-            except Exception:
-                pass
 
         try:
             status = get_status(db=name)

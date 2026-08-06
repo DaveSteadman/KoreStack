@@ -1,8 +1,8 @@
 # ====================================================================================================
 # MARK: OVERVIEW
 # ====================================================================================================
-# Versioned, portable snapshots of durable InDepthPlanner payloads.  Archives deliberately preserve
-# PlanTask references but do not copy transient session datasets or scratchpad contents.
+# Versioned, portable snapshots of durable Workflow payloads. Archives deliberately preserve
+# static task definitions but do not copy transient session datasets or scratchpad contents.
 # ====================================================================================================
 
 from __future__ import annotations
@@ -70,9 +70,9 @@ def resolve_plan_archive(name: str) -> tuple[Path | None, list[Path]]:
 
 
 def export_plan_archive(*, name: str, plan: dict[str, Any], source_conversation_id: object = None) -> dict[str, Any]:
-    from indepth_planner_store import _to_persisted_plan
+    from workflow_store import _normalise_workflow_payload
 
-    persisted_plan = _to_persisted_plan(plan) if isinstance(plan, dict) else {}
+    persisted_plan = _normalise_workflow_payload(plan) if isinstance(plan, dict) else {}
     if not persisted_plan.get("static"):
         raise RuntimeError("There is no active plan to export.")
 
@@ -111,6 +111,6 @@ def load_plan_archive(name: str) -> dict[str, Any]:
         raise RuntimeError(f"'{path.name}' uses unsupported plan archive format version.")
     if not isinstance(archive.get("plan"), dict) or not isinstance(archive["plan"].get("static"), dict):
         raise RuntimeError(f"'{path.name}' does not contain a valid active plan.")
-    from indepth_planner_store import _validate_simple_plan
+    from workflow_store import _validate_simple_plan
     _validate_simple_plan({"static": archive["plan"]["static"], "dynamic": {"tasks": {}}})
     return {"name": _archive_name(path), "path": str(path), "archive": archive}

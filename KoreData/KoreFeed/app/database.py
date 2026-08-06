@@ -37,6 +37,8 @@ from dbutil import fts_build_query
 
 DATA_DIR = Path(cfg["data_dir"])
 
+_connections: dict[Path, sqlite3.Connection] = {}
+_connections_lock = threading.RLock()
 _domains_ready: set[str] = set()
 _domains_lock = threading.Lock()
 
@@ -156,20 +158,25 @@ def get_db_path(domain: str) -> Path:
 
 @contextmanager
 def db_connection(domain: str):
-    conn = sqlite3.connect(str(get_db_path(domain)))
-    conn.row_factory = sqlite3.Row
-    try:
-        yield conn
-        conn.commit()
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        conn.close()
+    db_path = get_db_path(domain)
+    with _connections_lock:
+        conn = _connections.get(db_path)
+        if conn is None:
+            conn = sqlite3.connect(str(db_path), check_same_thread=False)
+            conn.row_factory = sqlite3.Row
+            conn.execute("PRAGMA busy_timeout = 5000")
+            _connections[db_path] = conn
+        try:
+            yield conn
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
 
 
 def init_db(domain: str) -> None:
     with db_connection(domain) as conn:
+        conn.execute("PRAGMA journal_mode = WAL")
         conn.execute("""
             CREATE TABLE IF NOT EXISTS entries (
                 id           INTEGER PRIMARY KEY AUTOINCREMENT,

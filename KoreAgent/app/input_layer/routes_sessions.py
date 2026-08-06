@@ -15,13 +15,12 @@
 # Key internals:
 #   _runtime_config_for_prompt()  -- deep-copies config for non-slash prompts
 #   _slash_output()               -- SSE output callback during slash command execution
-#   kc_test_summary_lines         -- captures [TEST COMPLETE] lines for KC summary writes
 #
 # Related modules:
 #   - input_layer/server.py  -- registers this group; provides all injected dependencies
 #   - orchestration.py       -- orchestrate_prompt, ConversationHistory
 #   - slash_commands.py      -- handle_slash dispatches the command to domain handlers
-#   - scheduler.py           -- task_queue for sequential prompt execution
+#   - execution_queue.py     -- task_queue for sequential prompt execution
 # ====================================================================================================
 import copy
 import queue
@@ -45,14 +44,6 @@ def _runtime_config_for_prompt(config, prompt_text: str):
     return copy.deepcopy(config)
 
 
-def _queue_timeout_for_prompt(prompt_text: str) -> int | None:
-    stripped = (prompt_text or "").strip()
-    if not stripped:
-        return None
-    cmd = stripped.split(None, 1)[0].lower()
-    return None
-
-
 def register_session_routes(
     app,
     *,
@@ -70,10 +61,6 @@ def register_session_routes(
     make_slash_context,
     handle_slash,
     push_log_line,
-    log_file_re,
-    turn_agent_re,
-    turn_metrics_re,
-    test_complete_re,
     set_latest_log_path,
     log_dir,
     create_log_file_path,
@@ -148,42 +135,12 @@ def register_session_routes(
                 # ------------------------------------------------------------------
                 elif _prompt.startswith("/"):
                     output_lines: list[str] = []
-                    # Collect only [TEST COMPLETE] / [ALL TESTS COMPLETE] lines for KC persistence.
-                    # Full per-turn output is never written to the conversation (too large).
-                    kc_test_summary_lines: list[str] = []
                     streamed_output = False
 
                     def _slash_output(text: str, level: str = "info") -> None:
                         nonlocal streamed_output
                         output_lines.append(text)
                         push_log_line(f"[slash] {text}")
-
-                        log_match = log_file_re.match(text.strip())
-                        if log_match:
-                            log_path = log_match.group(1).strip()
-                            set_latest_log_path(log_path)
-                            queue_run_event(run_q, {"type": "log_file", "run_id": run_id, "path": log_path}, priority=True)
-                            streamed_output = True
-                            return
-
-                        agent_match = turn_agent_re.match(text)
-                        if agent_match:
-                            queue_run_event(run_q, {"type": "test_agent_response", "run_id": run_id, "turn": int(agent_match.group(1)), "response": agent_match.group(2)}, priority=True)
-                            streamed_output = True
-                            return
-
-                        metrics_match = turn_metrics_re.match(text)
-                        if metrics_match:
-                            queue_run_event(run_q, {"type": "test_agent_metrics", "run_id": run_id, "turn": int(metrics_match.group(1)), "tokens": int(metrics_match.group(2)), "tps": metrics_match.group(3)}, priority=True)
-                            streamed_output = True
-                            return
-
-                        test_complete_match = test_complete_re.match(text)
-                        if test_complete_match:
-                            kc_test_summary_lines.append(text)
-                            queue_run_event(run_q, {"type": "test_complete", "run_id": run_id, "text": text, "level": level}, priority=True)
-                            streamed_output = True
-                            return
 
                         queue_run_event(run_q, {"type": "progress", "run_id": run_id, "text": text, "level": level})
                         streamed_output = True
@@ -210,14 +167,7 @@ def register_session_routes(
                     slash_response = "\n".join(output_lines) if output_lines else ("(done)" if handled else f"Unknown command: {_prompt.split()[0]}")
                     if not streamed_output:
                         queue_run_event(run_q, {"type": "response", "run_id": run_id, "response": slash_response, "tokens": 0, "tps": "0"}, priority=True)
-                    # Write to KoreChat: for test runs save only the compact result summary lines
-                    # (not the full per-turn output which can be hundreds of KB). For all other
-                    # slash commands save the normal response text.
-                    if kc_test_summary_lines:
-                        kc_agent_text = "\n".join(kc_test_summary_lines)
-                        threading.Thread(target=kc_save_turn, args=(session_id, _prompt, kc_agent_text), daemon=True).start()
-                    else:
-                        threading.Thread(target=kc_save_turn, args=(session_id, _prompt, slash_response), daemon=True).start()
+                    threading.Thread(target=kc_save_turn, args=(session_id, _prompt, slash_response), daemon=True).start()
                 else:
                     log_path = create_log_file_path(log_dir=log_dir)
                     set_latest_log_path(log_path)
@@ -254,7 +204,6 @@ def register_session_routes(
             "api_chat",
             _run,
             label            = prompt_text[:48],
-            timeout_seconds  = _queue_timeout_for_prompt(prompt_text),
             metadata         = {
                 "workflow":    "chat",
                 "chain_id":    run_id,

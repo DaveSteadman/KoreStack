@@ -14,6 +14,7 @@
 # ====================================================================================================
 import re
 import sqlite3
+import threading
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
@@ -37,6 +38,9 @@ _DB_PATH = DATA_DIR / "library.db"
 _BUNDLED_CATALOGS_DIR = Path(__file__).resolve().parents[1] / "catalogs"
 _DEFAULT_CATALOG = str(cfg.get("default_catalog", "local") or "local").strip() or "local"
 _CATALOG_ID_RE = re.compile(r"^[A-Za-z0-9_-]+$")
+
+_connections: dict[Path, sqlite3.Connection] = {}
+_connections_lock = threading.RLock()
 
 _SENTENCE_SCHEMA_COLUMNS = sentence_schema_columns("book_id")
 
@@ -196,18 +200,21 @@ def get_db_path(catalog: Optional[str] = None, create: bool = False) -> Path:
 
 @contextmanager
 def db_connection(catalog: Optional[str] = None, create: bool = False):
-    conn = sqlite3.connect(str(get_db_path(catalog, create=create)), check_same_thread=False)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL")
-    conn.execute("PRAGMA foreign_keys=ON")
-    try:
-        yield conn
-        conn.commit()
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        conn.close()
+    db_path = get_db_path(catalog, create=create)
+    with _connections_lock:
+        conn = _connections.get(db_path)
+        if conn is None:
+            conn = sqlite3.connect(str(db_path), check_same_thread=False)
+            conn.row_factory = sqlite3.Row
+            conn.execute("PRAGMA busy_timeout = 5000")
+            conn.execute("PRAGMA foreign_keys = ON")
+            _connections[db_path] = conn
+        try:
+            yield conn
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
 
 
 def _index_book_sentences(
@@ -393,6 +400,7 @@ def init_db() -> None:
         if catalog in initialized:
             continue
         with db_connection(catalog, create=True) as conn:
+            conn.execute("PRAGMA journal_mode = WAL")
             _ensure_schema(conn)
         initialized.add(catalog)
 

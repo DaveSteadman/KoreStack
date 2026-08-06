@@ -51,7 +51,6 @@ from api.state import get_latest_log_path
 from api.state import get_llm_direct_enabled
 from api.state import get_run_event_queues
 from api.state import get_run_queues_lock
-from api.state import get_scheduler_snapshot as _get_scheduler_snapshot
 from api.state import get_shutdown_event
 from api.state import get_startup_state_snapshot
 from api.state import make_run_event_queue
@@ -68,12 +67,12 @@ from datasets_pkg.hydration import build_persisted_scratchpad_payload
 from datasets_pkg.hydration import get_persisted_datasets_payload
 from datasets_pkg.hydration import hydrate_session_state
 from datasets_pkg.service import delete_session_datasets as delete_persisted_session_datasets
-from indepth_planner_archives import list_plan_archives
+from workflow_archives import list_plan_archives
 from input_layer.korechat_proxy_routes import register_korechat_proxy_routes
 from input_layer.routes_logs import register_log_routes
 from input_layer.routes_sessions import register_session_routes
 from input_layer.routes_status import register_status_routes
-from input_layer.routes_tasks import register_task_routes
+from input_layer.routes_queue import register_queue_routes
 from input_layer.server_static import register_static_routes
 from input_layer.slash_command_context import SlashCommandContext
 from input_layer.slash_commands import handle as handle_slash
@@ -85,8 +84,7 @@ from llm_client import get_active_num_ctx
 from llm_client import get_ollama_ps_rows
 from llm_client import list_ollama_models
 import mcp_client
-from scheduler.scheduler import is_task_due
-from scheduler.scheduler import task_queue
+from execution_queue import task_queue
 from scratchpad import get_store as get_scratchpad_store
 from scratchpad import scratchpad_clear
 from scratchpad import scratchpad_save as scratchpad_restore_key
@@ -103,17 +101,11 @@ from utils.runtime_logger import create_log_file_path
 from utils.suite_version import SUITE_VERSION
 from utils.suite_version import get_suite_version
 from utils.workspace_utils import get_logs_dir
-from utils.workspace_utils import get_test_prompts_dir
 import sessions.korechat_client as _kc_client
 from web_tools_state import WEB_TOOL_NAMES
 from web_tools_state import filter_mcp_tool_defs
 from web_tools_state import filter_mcp_tool_index
 
-
-_LOG_FILE_RE = re.compile(r"^Log file:\s*(.+)$")
-_TURN_AGENT_RE = re.compile(r"^\[TURN\s+(\d+)\]\s+Agent:\s*(.*)$")
-_TURN_METRICS_RE = re.compile(r"^\[TURN\s+(\d+)\]\s+tokens=(\d+)\s+tps=([0-9.]+)$")
-_TEST_COMPLETE_RE = re.compile(r"^\[(TEST COMPLETE|ALL TESTS COMPLETE|TEST RUN STOPPED)\]\s+(.+)$")
 
 _LOG_DIR = get_logs_dir()
 _WEB_DIR = Path(
@@ -209,10 +201,6 @@ def get_completions():
     except HTTPException:
         pass
 
-    test_dir = get_test_prompts_dir()
-    test_files = sorted(p.stem for p in test_dir.glob("*.json")) if test_dir.exists() else []
-    enabled_tasks, _ = _get_scheduler_snapshot()
-    task_names = [t.get("name", "") for t in enabled_tasks if t.get("name")]
     try:
         plan_names = [item.get("name", "") for item in list_plan_archives() if item.get("name")]
     except Exception:
@@ -223,8 +211,6 @@ def get_completions():
         models = []
     return {
         "sessions": sessions,
-        "test_files": test_files,
-        "task_names": task_names,
         "workflow_names": plan_names,
         "models": models,
     }
@@ -323,12 +309,8 @@ register_session_switch_routes(
 )
 
 
-register_task_routes(
+register_queue_routes(
     app,
-    get_enabled_tasks=lambda: _get_scheduler_snapshot()[0],
-    get_last_run=lambda: _get_scheduler_snapshot()[1],
-    get_scheduler_snapshot=_get_scheduler_snapshot,
-    is_task_due=is_task_due,
     task_queue=task_queue,
     queue_preview_limit=_QUEUE_PREVIEW_LIMIT,
     get_pending_switch=_pop_pending_switch,
@@ -359,10 +341,6 @@ register_session_routes(
     make_slash_context=SlashCommandContext,
     handle_slash=handle_slash,
     push_log_line=lambda line: push_log_line(line),
-    log_file_re=_LOG_FILE_RE,
-    turn_agent_re=_TURN_AGENT_RE,
-    turn_metrics_re=_TURN_METRICS_RE,
-    test_complete_re=_TEST_COMPLETE_RE,
     set_latest_log_path=_set_latest_log_path,
     log_dir=_LOG_DIR,
     create_log_file_path=create_log_file_path,

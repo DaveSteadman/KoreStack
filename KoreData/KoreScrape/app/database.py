@@ -6,6 +6,7 @@
 # ====================================================================================================
 
 import sqlite3
+import threading
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Optional
@@ -15,6 +16,8 @@ from dbutil import compute_word_count as _compute_word_count
 
 DATA_DIR = Path(cfg["data_dir"])
 DB_PATH  = DATA_DIR / "scrape_index.db"
+_CONNECTION: sqlite3.Connection | None = None
+_CONNECTION_LOCK = threading.RLock()
 
 
 def _fallback_snippet(text: str, q: str, context_chars: int = 300) -> str:
@@ -45,22 +48,24 @@ def _count_substring(text: str, q: str) -> int:
 
 @contextmanager
 def db_connection():
+    global _CONNECTION
     DATA_DIR.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL")
-    try:
-        yield conn
-        conn.commit()
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        conn.close()
+    with _CONNECTION_LOCK:
+        if _CONNECTION is None:
+            _CONNECTION = sqlite3.connect(str(DB_PATH), check_same_thread=False)
+            _CONNECTION.row_factory = sqlite3.Row
+            _CONNECTION.execute("PRAGMA busy_timeout=5000")
+        try:
+            yield _CONNECTION
+            _CONNECTION.commit()
+        except Exception:
+            _CONNECTION.rollback()
+            raise
 
 
 def init_db() -> None:
     with db_connection() as conn:
+        conn.execute("PRAGMA journal_mode=WAL")
         conn.execute("""
             CREATE TABLE IF NOT EXISTS scrape_chunks (
                 id            INTEGER PRIMARY KEY AUTOINCREMENT,

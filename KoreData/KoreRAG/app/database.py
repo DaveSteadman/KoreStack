@@ -15,6 +15,7 @@
 #   - CommonCode/dbutil.py    -- fts_build_query
 # ====================================================================================================
 import sqlite3
+import threading
 from contextlib import contextmanager
 from typing import Optional
 
@@ -23,24 +24,32 @@ from compress import compress as _compress, decompress as _decompress
 from dbutil import fts_build_query, compute_word_count as _compute_word_count
 
 
+_CONNECTIONS: dict[object, sqlite3.Connection] = {}
+_CONNECTION_LOCK = threading.RLock()
+
+
 @contextmanager
 def db_connection(db: str = "default"):
-    conn = sqlite3.connect(str(_registry_get_db_path(db)), check_same_thread=False)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL")
-    conn.execute("PRAGMA foreign_keys=ON")
-    try:
-        yield conn
-        conn.commit()
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        conn.close()
+    db_path = _registry_get_db_path(db)
+    with _CONNECTION_LOCK:
+        conn = _CONNECTIONS.get(db_path)
+        if conn is None:
+            conn = sqlite3.connect(str(db_path), check_same_thread=False)
+            conn.row_factory = sqlite3.Row
+            conn.execute("PRAGMA busy_timeout=5000")
+            conn.execute("PRAGMA foreign_keys=ON")
+            _CONNECTIONS[db_path] = conn
+        try:
+            yield conn
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
 
 
 def init_db(db: str = "default") -> None:
     with db_connection(db) as conn:
+        conn.execute("PRAGMA journal_mode=WAL")
         conn.execute(
             """
             CREATE TABLE IF NOT EXISTS chunks (

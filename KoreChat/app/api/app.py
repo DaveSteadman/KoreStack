@@ -1,3 +1,4 @@
+import asyncio
 import sys
 from pathlib import Path
 
@@ -21,12 +22,17 @@ register_endpoint_manifest(app, service_key="korechat", service_label="KoreChat"
 
 
 @app.get("/status")
-def status():
-    return {
-        "status": "ok",
-        "conversations": db.conversation_counts(),
-        "events": db.event_counts(),
-    }
+async def status():
+    # Keep the event loop free if SQLite briefly waits behind a conversation write.
+    # `to_thread` uses the loop's executor, independently of Starlette's workers
+    # used for ordinary synchronous routes and long-lived stream handling.
+    return await asyncio.to_thread(
+        lambda: {
+            "status":        "ok",
+            "conversations": db.conversation_counts(),
+            "events":        db.event_counts(),
+        }
+    )
 
 
 app.include_router(conversations_router)

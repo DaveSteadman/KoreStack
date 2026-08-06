@@ -646,9 +646,8 @@ def run_tool_loop(
     clear_stop,
     tool_runtime_provider: object | None = None,
     on_tool_round_complete: object | None = None,
-    phase_tool_names_provider: object | None = None,
     run_to_completion_remaining_provider: object | None = None,
-    completion_gaps_provider: object | None = None,
+    workflow_contract_gaps_provider: object | None = None,
 ) -> tuple[str, int, int, bool, float, list[ToolCallResult]]:
     def _log(message: str = "") -> None:
         logger.log_file_only(message) if quiet else logger.log(message)
@@ -681,13 +680,13 @@ def run_tool_loop(
             _log_file_only(f"[plan-run] Could not read remaining Workflow tasks: {exc}")
             return []
 
-    def _completion_gaps() -> list[str]:
-        if completion_gaps_provider is None:
+    def _workflow_contract_gaps() -> list[str]:
+        if workflow_contract_gaps_provider is None:
             return []
         try:
-            return [str(gap) for gap in completion_gaps_provider() or [] if str(gap).strip()]
+            return [str(gap) for gap in workflow_contract_gaps_provider() or [] if str(gap).strip()]
         except Exception as exc:
-            _log_file_only(f"[task-plan] Could not evaluate completion requirements: {exc}")
+            _log_file_only(f"[workflow] Could not evaluate the task contract: {exc}")
             return []
 
     clear_stop()
@@ -697,7 +696,6 @@ def run_tool_loop(
             current_catalog_gates = catalog_gates
             current_active_tool_names = set(active_tool_names or set()) if active_tool_names is not None else None
             current_all_known_tool_names = set(current_active_tool_names or set())
-            current_phase_tool_names: set[str] = set()
             if tool_runtime_provider is not None:
                 runtime = tool_runtime_provider() or {}
                 current_tool_defs = runtime.get("tool_defs", current_tool_defs)
@@ -713,13 +711,6 @@ def run_tool_loop(
                     )
                     messages.append({"role": "user", "content": correction})
                     context_map.append({"round": round_num, "role": "user", "label": "[missing tool correction]", "chars": len(correction), "auto_key": None, "msg_idx": len(messages) - 1})
-            if phase_tool_names_provider is not None:
-                try:
-                    current_phase_tool_names = set(phase_tool_names_provider() or set())
-                except Exception as exc:
-                    current_phase_tool_names = set()
-                    _log_file_only(f"[task-plan] phase tool provider failed: {exc}")
-
             if stop_requested():
                 clear_stop()
                 _log(f"[/stoprun] Stop requested - halting before round {round_num}.")
@@ -772,15 +763,15 @@ def run_tool_loop(
                 if _synthetic_tc is not None:
                     _log_file_only(f"[warn] Round {round_num}: model emitted raw JSON tool call instead of invoking - forcing re-invocation.")
                     tool_calls = [_synthetic_tc]
-                elif completion_gaps := _completion_gaps():
+                elif workflow_contract_gaps := _workflow_contract_gaps():
                     correction = (
-                        "The lightweight execution plan is incomplete. Do not give a final answer yet. "
+                        "The explicitly selected Workflow task contract is incomplete. Do not give a final answer yet. "
                         "Address these unmet requirements: "
-                        + " ".join(f"- {gap}" for gap in completion_gaps)
+                        + " ".join(f"- {gap}" for gap in workflow_contract_gaps)
                     )
-                    _log_file_only(f"[task-plan] Round {round_num}: blocking final answer; {len(completion_gaps)} completion gap(s).")
+                    _log_file_only(f"[workflow] Round {round_num}: blocking final answer; {len(workflow_contract_gaps)} contract gap(s).")
                     messages.append({"role": "user", "content": correction})
-                    context_map.append({"round": round_num, "role": "user", "label": "[task-plan completion gate]", "chars": len(correction), "auto_key": None, "msg_idx": len(messages) - 1})
+                    context_map.append({"round": round_num, "role": "user", "label": "[workflow contract gate]", "chars": len(correction), "auto_key": None, "msg_idx": len(messages) - 1})
                     continue
                 elif remaining_plan_tasks := _remaining_plan_tasks():
                     next_task = remaining_plan_tasks[0]
@@ -912,26 +903,6 @@ def run_tool_loop(
                 _log(f"  -> {func_name}({', '.join(f'{k}={v!r}' for k, v in arguments.items())})")
                 if normalization_note:
                     _log_file_only(f"[tool-normalize] {normalization_note}")
-                if current_phase_tool_names and func_name not in current_phase_tool_names:
-                    allowed = ", ".join(sorted(current_phase_tool_names))
-                    error_content = (
-                        f"[PLAN_GUARD] Tool '{func_name}' is not available in the current task phase. "
-                        f"Allowed tools: {allowed}. Complete the current phase or use the selected tools."
-                    )
-                    output = ToolCallResult(
-                        tool      = func_name,
-                        function  = func_name,
-                        module    = "",
-                        arguments = arguments,
-                        result    = error_content,
-                        status    = "error",
-                        error     = "tool is outside the active task-plan phase",
-                    )
-                    round_outputs.append(output)
-                    tool_outputs.append(output)
-                    messages.append({"role": "tool", "tool_call_id": tc_id, "name": func_name, "content": error_content})
-                    context_map.append({"round": round_num, "role": "tool", "label": func_name, "chars": len(error_content), "auto_key": None, "msg_idx": len(messages) - 1})
-                    continue
                 try:
                     output = execute_tool_call(func_name, arguments, config.skills_payload, user_prompt, current_catalog_gates, current_active_tool_names)
                     raw_result_content = output["result"]
@@ -1034,11 +1005,11 @@ def run_tool_loop(
             _log_file_only(f"TOOL ROUND {round_num} - EXECUTION FLOW")
             _log_file_only(format_tool_outputs(round_outputs))
         else:
-            completion_gaps = _completion_gaps()
-            if completion_gaps:
-                final_response = "The run stopped before its execution plan was complete: " + " ".join(completion_gaps)
+            workflow_contract_gaps = _workflow_contract_gaps()
+            if workflow_contract_gaps:
+                final_response = "The run stopped before the selected Workflow task contract was complete: " + " ".join(workflow_contract_gaps)
                 run_success = False
-                _log_file_only(f"[task-plan] Tool-round limit reached with {len(completion_gaps)} completion gap(s).")
+                _log_file_only(f"[workflow] Tool-round limit reached with {len(workflow_contract_gaps)} contract gap(s).")
                 return final_response, prompt_tokens, completion_tokens, run_success, final_tps, tool_outputs
             remaining_plan_tasks = _remaining_plan_tasks()
             if remaining_plan_tasks:

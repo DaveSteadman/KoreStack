@@ -28,6 +28,14 @@ class DataUserFilesystemTests(unittest.TestCase):
                 with self.assertRaises(DataUserPathError):
                     resolve_datauser_path(path, root_dir=root)
 
+    def test_dot_relative_path_resolves_inside_datauser(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory) / "datauser"
+
+            target = resolve_datauser_path("./CountryNews/2026-07/Malta.md", root_dir=root)
+
+            self.assertEqual(target, root / "CountryNews" / "2026-07" / "Malta.md")
+
     def test_write_and_delete_reject_stale_etags(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory) / "datauser"
@@ -63,4 +71,3 @@ class DataUserFilesystemTests(unittest.TestCase):
             )
             with self.assertRaises(DataUserPathError):
                 list_datauser_files(search_root="../outside", root_dir=root)
-

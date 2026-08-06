@@ -34,8 +34,8 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
-CODE_DIR  = Path(__file__).resolve().parents[2]
+REPO_ROOT = Path(__file__).resolve().parents[4]
+CODE_DIR  = REPO_ROOT / "KoreAgent" / "app"
 
 if str(CODE_DIR) not in sys.path:
     sys.path.insert(0, str(CODE_DIR))
@@ -95,12 +95,11 @@ from tool_result import ToolCallResult
 import api.app as api_module
 from input_layer import slash_commands as slash_commands_module
 from input_layer import slash_command_handlers_sessions as session_handlers_module
-from input_layer.routes_sessions import _queue_timeout_for_prompt
 from input_layer.routes_sessions import _runtime_config_for_prompt
 from KoreTest.app.history import result_counts as _result_counts
-from testing.system import runner as test_wrapper_module
-from testing.unit.guardrail_support import load_test_skills_payload
-from testing.unit.guardrail_support import reset_guardrail_state
+from KoreTest.app.system import runner as test_wrapper_module
+from KoreTest.app.agent_tests.unit.guardrail_support import load_test_skills_payload
+from KoreTest.app.agent_tests.unit.guardrail_support import reset_guardrail_state
 from utils import workspace_utils as workspace_utils_module
 from utils.workspace_utils import get_user_data_dir
 

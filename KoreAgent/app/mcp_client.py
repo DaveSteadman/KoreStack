@@ -12,7 +12,6 @@
 #
 # MCP connections are declared in the runtime config under "mcp_connections":
 #   [{"name": "KoreData", "url": "http://localhost:8800/mcp", "expected_prefix": "koredata_"}]
-# The older "mcp_servers" key is still accepted as a backwards-compatible alias.
 #
 # At start() the client connects to each server, calls list_tools(), and builds:
 #   - _mcp_tool_defs:  OpenAI-format tool definitions merged into the LLM tool list
@@ -389,12 +388,8 @@ def _load_server_config(config_path: Path) -> list[dict]:
     try:
         data    = json.loads(config_path.read_text(encoding="utf-8"))
         raw_connections = data.get("mcp_connections")
-        if raw_connections is None:
-            raw_connections = data.get("mcp_servers", [])
-        if raw_connections is None and isinstance(data.get("mcp"), dict):
-            raw_connections = data["mcp"].get("connections", [])
 
-        # If the bootstrap file has no connections, fall through to the merged suite config.
+        # If the Agent config file has no connections, fall through to the merged suite config.
         # This allows MCP connections to be declared in config/korestack_config.json (with service
         # references resolved against the suite's services block) rather than hardcoded here.
         if not isinstance(raw_connections, list) or not raw_connections:

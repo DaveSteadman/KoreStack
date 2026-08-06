@@ -88,6 +88,9 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_convs_external_id ON conversations(externa
 
 def init_db() -> None:
     with _conn() as connection:
+        # WAL is a database-wide setting. Configure it during startup, not on every
+        # short-lived request connection, so health probes remain lightweight.
+        connection.execute("PRAGMA journal_mode=WAL")
         cols = {row[1] for row in connection.execute("PRAGMA table_info(conversations)")}
         if cols and "external_id" not in cols:
             connection.execute("ALTER TABLE conversations ADD COLUMN external_id TEXT")

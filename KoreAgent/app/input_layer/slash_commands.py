@@ -38,10 +38,9 @@ import mcp_client
 from sessions.tool_selection import ALWAYS_ON_TOOL_NAMES
 from sessions.tool_selection import build_all_tool_catalog
 from sessions.tool_selection import derive_active_tool_runtime
-from utils.workspace_utils import get_bootstrap_defaults_file
+from utils.workspace_utils import get_agent_config_file
 from utils.workspace_utils import get_controldata_dir
 from utils.workspace_utils import get_logs_dir
-from utils.workspace_utils import get_test_results_dir
 from utils.suite_version import SUITE_VERSION
 
 
@@ -272,7 +271,7 @@ def _cmd_deletelogs(arg: str, ctx: SlashCommandContext) -> None:
     import shutil
 
     if not arg.strip():
-        ctx.output("Usage: /deletelogs <days>  |  delete log and test_results date-folders older than N days", "dim")
+        ctx.output("Usage: /deletelogs <days>  |  delete log date-folders older than N days", "dim")
         return
     try:
         days = int(arg.strip())
@@ -287,7 +286,7 @@ def _cmd_deletelogs(arg: str, ctx: SlashCommandContext) -> None:
     date_re = re.compile(r"^\d{4}-\d{2}-\d{2}$")
     deleted = []
     errors = []
-    for base_dir in (get_logs_dir(), get_test_results_dir()):
+    for base_dir in (get_logs_dir(),):
         if not base_dir.exists():
             continue
         for folder in sorted(base_dir.iterdir()):
@@ -306,7 +305,7 @@ def _cmd_deletelogs(arg: str, ctx: SlashCommandContext) -> None:
 
     stray_deleted = []
     stray_errors = []
-    for base_dir in (get_logs_dir(), get_test_results_dir()):
+    for base_dir in (get_logs_dir(),):
         if not base_dir.exists():
             continue
         for item in sorted(base_dir.iterdir()):
@@ -375,7 +374,7 @@ def _cmd_tools(arg: str, ctx: SlashCommandContext) -> None:
 
 
 def _cmd_defaults(arg: str, ctx: SlashCommandContext) -> None:
-    defaults_path = get_bootstrap_defaults_file()
+    defaults_path = get_agent_config_file()
 
     def _load() -> dict:
         try:
@@ -387,7 +386,7 @@ def _cmd_defaults(arg: str, ctx: SlashCommandContext) -> None:
     if sub == "set":
         existing = _load()
         new_cfg = {"model": ctx.config.resolved_model, "ctx": ctx.config.num_ctx, "llmhost": get_active_host()}
-        for key in ("agentport", "DataRootFolder", "ControlDataFolder", "UserDataFolder", "mcp_connections", "mcp_servers"):
+        for key in ("agentport", "DataRootFolder", "ControlDataFolder", "UserDataFolder", "mcp_connections"):
             if key in existing:
                 new_cfg[key] = existing[key]
         try:
@@ -486,8 +485,8 @@ _DESCRIPTIONS: dict[str, str] = {
     "/version": "Show framework version, active model, and context size",
     "/sandbox": "<on|off>  Enable/disable Python code execution sandbox (import whitelist + blocked builtins)",
     "/tools": "[all | active]  Show the full tool catalog or the active prompt-exposed tool set",
-    "/deletelogs": "<days>  Delete log, chatsession, and test_results date-folders older than N days (e.g. /deletelogs 10)",
-    "/defaults": "Show current bootstrap defaults and file path; /defaults set saves current model/ctx/host to the file",
+    "/deletelogs": "<days>  Delete log date-folders older than N days (e.g. /deletelogs 10)",
+    "/defaults": "Show current Agent configuration and file path; /defaults set saves current model/ctx/host to the file",
     "/mcp":      "[status | reconnect]  Show MCP server status or re-enumerate tools from all configured servers",
     "/planning": "<off|simple|workflow|auto>  Control whether prompts bypass planning, use the lightweight planner, or seed durable Workflow state",
 }

@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import os
 import sys
+import threading
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Optional
@@ -68,6 +69,11 @@ _mcp_http_app = mcp.http_app(path='/', transport='streamable-http')
 async def lifespan(app: FastAPI):
     async with _mcp_http_app.router.lifespan_context(_mcp_http_app):
         korefile.init_db()
+        threading.Thread(
+            target = korefile.warm_file_record_cache,
+            daemon = True,
+            name   = 'koredocs-file-record-warm',
+        ).start()
         yield
 
 

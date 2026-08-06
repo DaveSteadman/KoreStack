@@ -29,10 +29,10 @@
 #                       log_dir, session_logger_cls, shutdown)
 #
 # Related modules:
-#   - server_startup.py  -- calls start_koreconv_loop alongside _scheduler_loop
-#   - scheduler.py         -- task_queue singleton used for serialisation
+#   - api/startup.py     -- calls start_koreconv_loop during Agent startup
+#   - execution_queue.py   -- task_queue singleton used for serialisation
 #   - orchestration.py     -- orchestrate_prompt, OrchestratorConfig
-#   - run_helpers.py       -- make_task_session
+#   - sessions/session_factory.py -- make_task_session
 #   - koreconv_client.py   -- KoreChat URL accessor
 # ====================================================================================================
 
@@ -59,7 +59,7 @@ from datasets_pkg.hydration import get_persisted_datasets_payload
 from datasets_pkg.hydration import hydrate_session_state
 from agent.orchestration.engine import OrchestratorConfig
 from agent.orchestration.engine import orchestrate_prompt
-from run_helpers import make_task_session
+from sessions.session_factory import make_task_session
 from scratchpad import get_store
 from scratchpad import scratchpad_clear
 from scratchpad import scratchpad_save

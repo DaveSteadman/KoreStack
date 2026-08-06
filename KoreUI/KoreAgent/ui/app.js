@@ -73,7 +73,7 @@ let _logLineLimit      = MAX_LOG_LINES_LIVE;
 let _sessionTitle      = "";
 
 // Tab-completion state.
-let _completions  = { sessions: [], test_files: [], task_names: [], workflow_names: [], models: [] };
+let _completions  = { sessions: [], workflow_names: [], models: [] };
 let _suggestItems = [];   // current filtered candidate list
 let _suggestIdx   = -1;   // highlighted row index (-1 = none)
 let _suggestBase  = "";   // portion of input before the completion token
@@ -887,7 +887,6 @@ function listenRun(runId) {
     // Each run gets its own EventSource so concurrent in-flight requests
     // do not cancel each other.
     const es = new EventSource(API_BASE + "/runs/" + encodeURIComponent(runId) + "/stream");
-    const testTurnMessages = new Map();
     let progressWrap = null;
 
     es.onmessage = e => {
@@ -904,19 +903,6 @@ function listenRun(runId) {
                 if (_logScrollCtl && _logScrollCtl.live) {
                     _switchLogStream(ev.path);
                 }
-            } else if (ev.type === "test_agent_response") {
-                const wrap = appendChatMessage("agent", ev.response, "turn " + ev.turn);
-                testTurnMessages.set(String(ev.turn), wrap);
-            } else if (ev.type === "test_agent_metrics") {
-                const wrap = testTurnMessages.get(String(ev.turn));
-                const meta = "turn " + ev.turn + " | " + Number(ev.tokens).toLocaleString() + " ctx" + (ev.tps && ev.tps !== "0" ? " | " + ev.tps + " tok/s" : "");
-                if (wrap) {
-                    _setChatMessageMeta(wrap, meta);
-                } else {
-                    appendChatMessage("agent", "[Turn " + ev.turn + " metrics]", meta);
-                }
-            } else if (ev.type === "test_complete") {
-                appendChatMessage("agent", ev.text);
             } else if (ev.type === "progress") {
                 if (!progressWrap) {
                     progressWrap = appendChatMessage("agent", ev.text);

@@ -67,6 +67,9 @@ _rag_processing_jobs:        dict[str, subprocess.Popen] = {}
 _rag_processing_jobs_lock = threading.Lock()
 _ingest_procs_ref:          dict[str, object]           = {}
 
+_processing_script_cache:       list[dict[str, Any]] | None = None
+_processing_script_cache_lock = threading.Lock()
+
 _DB_ID_RE = re.compile(r"^[a-z][a-z0-9_]{0,62}$")
 
 
@@ -116,16 +119,6 @@ def _database_info(db_id: str) -> dict[str, Any]:
     if descriptor is None:
         raise HTTPException(status_code=404, detail=f"Unknown database: {db_id!r}")
 
-    ingestor_name = descriptor.get("ingestor") or db_id
-    json_path     = _rag_runtime_root() / ingestor_name / f"{ingestor_name}.json"
-    if json_path.exists():
-        try:
-            payload = json.loads(json_path.read_text(encoding="utf-8"))
-            if "sync" in payload:
-                descriptor = {**descriptor, "sync": payload["sync"]}
-        except Exception:
-            pass
-
     try:
         status = get_status(db=db_id)
     except Exception:
@@ -164,7 +157,6 @@ def _database_info(db_id: str) -> dict[str, Any]:
 
 
 def _rag_databases_enriched() -> list[dict[str, Any]]:
-    _registry_reload()
     results: list[dict[str, Any]] = []
     for item in list_databases():
         db_id = str(item.get("id") or "").strip()
@@ -240,7 +232,7 @@ def _rag_processing_is_running(script_id: str) -> bool:
         return False
 
 
-def _rag_processing_scripts(database_ids: set[str]) -> list[dict[str, Any]]:
+def _discover_rag_processing_scripts() -> list[dict[str, Any]]:
     runtime_root = _rag_runtime_root()
     results: list[dict[str, Any]] = []
     seen:    set[str]             = set()
@@ -265,14 +257,35 @@ def _rag_processing_scripts(database_ids: set[str]) -> list[dict[str, Any]]:
             "managed_by":   descriptor.get("managed_by") or "ingestor",
             "ingestor":     descriptor.get("ingestor") or script_id,
             "schedule":     _normalize_rag_processing_schedule(descriptor.get("schedule")),
-            "has_database": script_id in database_ids,
-            "running":      _rag_processing_is_running(script_id),
             "source_path":  str(subdir),
             "log_exists":   (subdir / "processing.log").exists(),
             "last_run":     sync.get("last_run"),
             "sync_status":  sync.get("status"),
         })
     return results
+
+
+def _rag_processing_scripts(database_ids: set[str]) -> list[dict[str, Any]]:
+    global _processing_script_cache
+    with _processing_script_cache_lock:
+        if _processing_script_cache is None:
+            _processing_script_cache = _discover_rag_processing_scripts()
+        cached = [dict(item) for item in _processing_script_cache]
+
+    return [
+        {
+            **item,
+            "has_database": item["id"] in database_ids,
+            "running":      _rag_processing_is_running(item["id"]),
+        }
+        for item in cached
+    ]
+
+
+def invalidate_rag_processing_scripts() -> None:
+    global _processing_script_cache
+    with _processing_script_cache_lock:
+        _processing_script_cache = None
 
 
 def _find_rag_processing_script(script_id: str) -> dict[str, Any] | None:

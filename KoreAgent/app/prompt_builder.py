@@ -87,8 +87,6 @@ _SYSTEM_SKILL_GUIDANCE: list[str] = [
     "- When the user asks to save something into KoreDocs or a `.koredoc`, treat that as a KoreDocs destination, not a generic file-access request.",
     "- Use file_write / file_append for ordinary workspace files. For KoreDocs outputs, prefer dataset_write_koredoc for faithful dataset exports and dedicated KoreDocs tools when editing an existing KoreDocs document.",
 
-    # -- CronPrompt (system_skills/CronPrompt/) ----------------------------------------------
-    "- Creating, listing, updating, or deleting scheduled cron prompts requires calling the cronprompt_* tools. Do not generate scheduler JSON by hand.",
 
     # -- Workflow (system_skills/Workflow/) ---------------------------------------------------
     "- When the user wants a durable Workflow, revisions, run-to-completion control, or Workflow status reporting, prefer the workflow_* tools instead of storing orchestration state only in scratchpad.",

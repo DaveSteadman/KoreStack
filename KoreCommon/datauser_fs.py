@@ -137,6 +137,12 @@ def normalize_datauser_relative_path(file_path: str | Path) -> str:
     if lowered.startswith("koredocs/"):
         return normalized[9:]
 
+    # Generic ``./`` is a spelling of a relative datauser path, not a request
+    # to write into the repository workspace.  Explicit absolute paths still
+    # pass through the containment check below.
+    if normalized.startswith("./"):
+        return normalized[2:]
+
     return normalized
 
 
@@ -144,14 +150,11 @@ def resolve_datauser_path(file_path: str | Path, *, root_dir: str | Path | None 
     root = ensure_datauser_root(root_dir)
     normalized = normalize_datauser_relative_path(file_path)
 
-    if normalized.startswith("./"):
-        candidate = (get_workspace_root() / normalized[2:]).resolve()
+    candidate_path = Path(normalized)
+    if candidate_path.is_absolute():
+        candidate = candidate_path.resolve()
     else:
-        candidate_path = Path(normalized)
-        if candidate_path.is_absolute():
-            candidate = candidate_path.resolve()
-        else:
-            candidate = (root / normalized).resolve()
+        candidate = (root / normalized).resolve()
 
     try:
         candidate.relative_to(root)

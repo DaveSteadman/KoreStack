@@ -19,6 +19,7 @@
 import json
 import re
 import sqlite3
+import threading
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
@@ -219,6 +220,9 @@ def _sentence_locator(sentence_id: int) -> str:
 DATA_DIR = Path(cfg["data_dir"])
 _DB_PATH = DATA_DIR / "reference.db"
 
+_connection: sqlite3.Connection | None = None
+_connection_lock = threading.RLock()
+
 
 def get_db_path() -> Path:
     DATA_DIR.mkdir(exist_ok=True)
@@ -227,19 +231,31 @@ def get_db_path() -> Path:
 
 @contextmanager
 def db_connection():
-    conn = sqlite3.connect(str(get_db_path()), check_same_thread=False, timeout=30)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL")
-    conn.execute("PRAGMA foreign_keys=ON")
-    conn.execute("PRAGMA busy_timeout=30000")
-    try:
-        yield conn
-        conn.commit()
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        conn.close()
+    global _connection
+    with _connection_lock:
+        if _connection is None:
+            _connection = sqlite3.connect(
+                str(get_db_path()),
+                check_same_thread = False,
+                timeout           = 30,
+            )
+            _connection.row_factory = sqlite3.Row
+            _connection.execute("PRAGMA foreign_keys = ON")
+            _connection.execute("PRAGMA busy_timeout = 30000")
+        try:
+            yield _connection
+            _connection.commit()
+        except Exception:
+            _connection.rollback()
+            raise
+
+
+def _close_connection() -> None:
+    global _connection
+    with _connection_lock:
+        if _connection is not None:
+            _connection.close()
+            _connection = None
 
 
 # ---------------------------------------------------------------------------
@@ -248,6 +264,7 @@ def db_connection():
 
 def init_db() -> None:
     with db_connection() as conn:
+        conn.execute("PRAGMA journal_mode = WAL")
         conn.execute("""
             CREATE TABLE IF NOT EXISTS articles (
                 id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -618,6 +635,7 @@ def delete_all_articles() -> int:
     except Exception:
         pass
     # VACUUM must run outside any transaction (autocommit mode)
+    _close_connection()
     conn = sqlite3.connect(str(get_db_path()), isolation_level=None)
     try:
         conn.execute("VACUUM")

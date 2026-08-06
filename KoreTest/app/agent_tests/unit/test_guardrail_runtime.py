@@ -34,8 +34,8 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
-CODE_DIR  = Path(__file__).resolve().parents[2]
+REPO_ROOT = Path(__file__).resolve().parents[4]
+CODE_DIR  = REPO_ROOT / "KoreAgent" / "app"
 
 if str(CODE_DIR) not in sys.path:
     sys.path.insert(0, str(CODE_DIR))
@@ -43,7 +43,6 @@ if str(CODE_DIR) not in sys.path:
 import datasets_pkg as datasets_module
 from agent.tool_runtime import loop as tool_loop_module
 from sessions import tool_selection as tool_selection_state_module
-from agent.orchestration import planning as task_planning_module
 from conversation_state import decode_background_context
 from conversation_state import encode_background_context
 from skill_executor import execute_tool_call
@@ -96,14 +95,13 @@ from tool_result import ToolCallResult
 import api.app as api_module
 from input_layer import slash_commands as slash_commands_module
 from input_layer import slash_command_handlers_sessions as session_handlers_module
-from input_layer.routes_sessions import _queue_timeout_for_prompt
 from input_layer.routes_sessions import _runtime_config_for_prompt
 from KoreTest.app.history import result_counts as _result_counts
-from scheduler.scheduler import TaskQueue
+from execution_queue import TaskQueue
 from KoreStack import endpoint_explorer as endpoint_explorer_module
-from testing.system import runner as test_wrapper_module
-from testing.unit.guardrail_support import load_test_skills_payload
-from testing.unit.guardrail_support import reset_guardrail_state
+from KoreTest.app.system import runner as test_wrapper_module
+from KoreTest.app.agent_tests.unit.guardrail_support import load_test_skills_payload
+from KoreTest.app.agent_tests.unit.guardrail_support import reset_guardrail_state
 from KoreCommon import suite_paths as suite_paths_module
 from utils import workspace_utils as workspace_utils_module
 from utils.workspace_utils import get_user_data_dir
@@ -192,7 +190,7 @@ class GuardrailRuntimeTests(unittest.TestCase):
                         with patch.object(delegate_runtime_module, "get_controldata_dir", return_value=control_dir):
                             with patch.object(delegate_runtime_module, "get_logs_dir", return_value=logs_dir):
                                 with patch.object(delegate_runtime_module, "load_skills_payload", return_value=child_payload):
-                                    with patch("scheduler.scheduler.task_queue.enqueue", side_effect=_fake_enqueue):
+                                    with patch("execution_queue.task_queue.enqueue", side_effect=_fake_enqueue):
                                         with patch.object(delegate_runtime_module, "orchestrate_prompt", side_effect=_fake_orchestrate_prompt):
                                             queued = delegate_skill_module.delegate(
                                                 task_in  = "Summarise the parent note.",
@@ -735,100 +733,6 @@ class GuardrailRuntimeTests(unittest.TestCase):
         self.assertEqual(calls[0][0], "graph_connection_create_many")
         self.assertEqual(calls[0][1], {"connections": [{"start": "A", "connection": "reports_to", "end": "B"}]})
 
-    def test_task_plan_graph_write_intent_exposes_graph_tools(self) -> None:
-        plan = task_planning_module.validate_task_plan(
-            {
-                "objective": "Add graph connections",
-                "task_class": "graph",
-                "confidence": 0.9,
-                "current_phase": "inspect",
-                "workflow": ["inspect", "act", "validate", "complete"],
-                "phase_tools": ["dataset_list"],
-                "phase_tool_map": {"inspect": ["dataset_list"]},
-                "capability_hints": ["graph_write"],
-                "required_artifacts": [],
-                "validation_requirements": [],
-                "completion_contract": "done",
-                "rationale": "test",
-            },
-            known_tool_names={"dataset_list", "graph_connection_create_many", "graph_connection_list"},
-        )
-
-        overridden = task_planning_module._apply_intent_overrides(
-            plan,
-            user_prompt="Assess this text and summarize what should happen.",
-            known_tool_names={"dataset_list", "graph_connection_create_many", "graph_connection_list"},
-        )
-
-        self.assertIn("graph_connection_create_many", overridden.phase_tools)
-        self.assertIn("graph_connection_create_many", overridden.phase_tool_map["act"])
-        self.assertIn("graph_connection_list", overridden.phase_tool_map["validate"])
-
-    def test_task_plan_active_state_exposes_workflow_tools_without_prompt_regex(self) -> None:
-        plan = task_planning_module.validate_task_plan(
-            {
-                "objective": "Continue the current work",
-                "task_class": "workflow",
-                "confidence": 0.9,
-                "current_phase": "inspect",
-                "workflow": ["inspect", "act", "validate", "complete"],
-                "phase_tools": ["dataset_list"],
-                "phase_tool_map": {"inspect": ["dataset_list"]},
-                "required_artifacts": [],
-                "validation_requirements": [],
-                "completion_contract": "done",
-                "rationale": "test",
-            },
-            known_tool_names={"dataset_list", "workflow_get_task", "workflow_mark_task_ran", "workflow_run_to_completion"},
-        )
-
-        with patch.object(task_planning_module, "get_active_session_id", return_value="task_plan_state_test"):
-            with patch.dict(
-                task_planning_module._PLAN_STATE_BY_SESSION,
-                {"task_plan_state_test": {"state": {"status": "running", "phase": "inspect"}}},
-                clear=False,
-            ):
-                overridden = task_planning_module._apply_intent_overrides(
-                    plan,
-                    user_prompt="Summarize current progress.",
-                    known_tool_names={"dataset_list", "workflow_get_task", "workflow_mark_task_ran", "workflow_run_to_completion"},
-                )
-
-        self.assertIn("workflow_get_task", overridden.phase_tools)
-        self.assertIn("workflow_mark_task_ran", overridden.phase_tools)
-        self.assertIn("workflow_run_to_completion", overridden.phase_tools)
-
-    def test_task_plan_prompt_phrase_alone_does_not_expose_workflow_tools(self) -> None:
-        plan = task_planning_module.validate_task_plan(
-            {
-                "objective": "Continue the current work",
-                "task_class": "workflow",
-                "confidence": 0.9,
-                "current_phase": "inspect",
-                "workflow": ["inspect", "act", "validate", "complete"],
-                "phase_tools": ["dataset_list"],
-                "phase_tool_map": {"inspect": ["dataset_list"]},
-                "required_artifacts": [],
-                "validation_requirements": [],
-                "completion_contract": "done",
-                "rationale": "test",
-            },
-            known_tool_names={"dataset_list", "workflow_get_task", "workflow_mark_task_ran", "workflow_run_to_completion"},
-        )
-
-        with patch.object(task_planning_module, "get_active_session_id", return_value="task_plan_state_test_empty"):
-            with patch.dict(task_planning_module._PLAN_STATE_BY_SESSION, {}, clear=True):
-                with patch.object(task_planning_module, "scratchpad_load", return_value="Error: missing key"):
-                    overridden = task_planning_module._apply_intent_overrides(
-                        plan,
-                        user_prompt="Run the plan to completion.",
-                        known_tool_names={"dataset_list", "workflow_get_task", "workflow_mark_task_ran", "workflow_run_to_completion"},
-                    )
-
-        self.assertNotIn("workflow_get_task", overridden.phase_tools)
-        self.assertNotIn("workflow_mark_task_ran", overridden.phase_tools)
-        self.assertNotIn("workflow_run_to_completion", overridden.phase_tools)
-
     def test_exchange_pass_status_tolerates_validation_warning_when_asserts_pass(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             log_path = Path(tmp) / "run.log"
@@ -898,20 +802,20 @@ class GuardrailRuntimeTests(unittest.TestCase):
             self.assertTrue(created.exists())
             self.assertEqual(result, "Created folder: data/2026-04-05")
 
-    def test_workspace_utils_reads_folder_overrides_from_bootstrap_defaults(self) -> None:
+    def test_workspace_utils_reads_folder_overrides_from_agent_config(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_root = Path(tmp)
-            # Bootstrap file is config/koreagent_config.json (returned by get_bootstrap_defaults_file)
-            bootstrap = tmp_root / "config" / "koreagent_config.json"
-            bootstrap.parent.mkdir(parents=True, exist_ok=True)
-            bootstrap.write_text(
+            # Agent configuration is config/koreagent_config.json.
+            agent_config = tmp_root / "config" / "koreagent_config.json"
+            agent_config.parent.mkdir(parents=True, exist_ok=True)
+            agent_config.write_text(
                 '{\n'
                 '  "DataRootFolder": "suite_data"\n'
                 '}\n',
                 encoding="utf-8",
             )
 
-            workspace_utils_module.get_bootstrap_defaults_file.cache_clear()
+            workspace_utils_module.get_agent_config_file.cache_clear()
             workspace_utils_module.load_runtime_config.cache_clear()
             workspace_utils_module._load_path_overrides.cache_clear()
             workspace_utils_module.get_controldata_dir.cache_clear()
@@ -922,7 +826,7 @@ class GuardrailRuntimeTests(unittest.TestCase):
                     self.assertEqual(workspace_utils_module.get_controldata_dir(), (tmp_root / "suite_data" / "datacontrol").resolve())
                     self.assertEqual(workspace_utils_module.get_user_data_dir(), (tmp_root / "suite_data" / "datauser").resolve())
             finally:
-                workspace_utils_module.get_bootstrap_defaults_file.cache_clear()
+                workspace_utils_module.get_agent_config_file.cache_clear()
                 workspace_utils_module.load_runtime_config.cache_clear()
                 workspace_utils_module._load_path_overrides.cache_clear()
                 workspace_utils_module.get_controldata_dir.cache_clear()
@@ -1043,9 +947,6 @@ class GuardrailRuntimeTests(unittest.TestCase):
             config_path = Path(tmp) / "korestack_config.json"
             config_path.write_text(
                 '{\n'
-                '  "mcp_servers": [\n'
-                '    {"name": "Legacy", "url": "http://legacy/mcp"}\n'
-                '  ],\n'
                 '  "mcp_connections": [\n'
                 '    {"name": "KoreData", "url": "http://data/mcp", "purpose": "reference", "expected_prefix": "koredata_", "allowed_tools": ["koredata_search"], "blocked_tools": ["koredata_delete"]},\n'
                 '    {"name": "KoreDocs", "url": "http://docs/mcp", "enabled": false}\n'
@@ -1063,24 +964,6 @@ class GuardrailRuntimeTests(unittest.TestCase):
         self.assertEqual(servers[0]["expected_prefix"], "koredata_")
         self.assertEqual(servers[0]["allowed_tools"], ["koredata_search"])
         self.assertEqual(servers[0]["blocked_tools"], ["koredata_delete"])
-
-    def test_mcp_connections_accept_legacy_mcp_servers_key(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            config_path = Path(tmp) / "korestack_config.json"
-            config_path.write_text(
-                '{\n'
-                '  "mcp_servers": [\n'
-                '    {"name": "Legacy", "url": "http://legacy/mcp", "tool_prefix": "legacy_"}\n'
-                '  ]\n'
-                '}\n',
-                encoding="utf-8",
-            )
-
-            servers = mcp_client._load_server_config(config_path)
-
-        self.assertEqual(len(servers), 1)
-        self.assertEqual(servers[0]["name"], "Legacy")
-        self.assertEqual(servers[0]["expected_prefix"], "legacy_")
 
     def test_mcp_connections_include_tool_classification_metadata(self) -> None:
         server = mcp_client._normalize_connection({"name": "KoreData", "url": "http://data/mcp"})

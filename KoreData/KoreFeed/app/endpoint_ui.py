@@ -31,7 +31,6 @@ from app.database import (
     set_domain_age_settings,
     update_entry_page_text,
 )
-from app.chroma_index import chroma_available, semantic_search
 from app.feed_manager import (
     add_feed,
     create_domain,
@@ -177,6 +176,7 @@ def register_feed_ui(app: FastAPI) -> None:
         search_error = ""
         if q.strip():
             if search_mode == "semantic":
+                from app.chroma_index import chroma_available, semantic_search
                 if not chroma_available():
                     search_error = "Semantic search is unavailable because chromadb is not installed in this service environment."
                 else:

@@ -7,7 +7,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 
-APP_ROOT = Path(__file__).resolve().parents[2]
+APP_ROOT = Path(__file__).resolve().parents[4] / "KoreAgent" / "app"
 if str(APP_ROOT) not in sys.path:
     sys.path.insert(0, str(APP_ROOT))
 

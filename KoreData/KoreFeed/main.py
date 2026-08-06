@@ -23,16 +23,11 @@ import logutil
 import uvicorn
 from datetime import datetime
 from app.config import cfg
-from app.feed_manager import load_feeds
 
 _W = 100  # banner width
 
 def _print_status() -> None:
     now = datetime.now().strftime("%H:%M:%S")
-    feeds = load_feeds()
-    n_feeds = len(feeds)
-    domains = sorted({f["domain"] for f in feeds})
-    n_domains = len(domains)
     host = cfg["host"]
     port = cfg["port"]
     data_dir = cfg["data_dir"]
@@ -52,8 +47,7 @@ def _print_status() -> None:
         row("Web UI:", f"http://localhost:{port}/"),
         row("Data dir:", data_dir),
         row("Log level:", log_level),
-        row("Domains:", str(n_domains) + (f"  ({', '.join(domains)})" if domains else "")),
-        row("Feeds:", str(n_feeds)),
+        row("Feed inventory:", "Loading in background; use /status after startup"),
         "",
         sep,
         "",

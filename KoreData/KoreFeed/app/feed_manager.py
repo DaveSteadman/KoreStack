@@ -15,7 +15,9 @@ import json
 import logging
 import os
 import re
+import threading
 import uuid
+from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
@@ -25,6 +27,9 @@ from app.database import get_domain_age_settings, init_db, rename_feed_entries, 
 
 FEEDS_DIR = Path(cfg["data_dir"])
 LOG       = logging.getLogger("korefeed.feed_manager")
+
+_state_cache: dict[Path, dict[str, dict]] = {}
+_state_cache_lock = threading.RLock()
 
 
 def _domain_file(domain: str) -> Path:
@@ -46,17 +51,29 @@ def _feed_identity(domain: str, name: str, url: str) -> str:
 
 def _load_domain_state(domain: str) -> dict[str, dict]:
     path = _state_file(domain)
+    with _state_cache_lock:
+        cached = _state_cache.get(path)
+        if cached is not None:
+            return deepcopy(cached)
+
     if not path.exists():
-        return {}
-    try:
-        with open(path, encoding="utf-8") as handle:
-            raw = json.load(handle)
-    except json.JSONDecodeError as exc:
-        LOG.warning("Ignoring unreadable feed state file %s: %s", path, exc)
-        return {}
-    if not isinstance(raw, dict):
-        return {}
-    return {str(k): v for k, v in raw.items() if isinstance(v, dict)}
+        state: dict[str, dict] = {}
+    else:
+        try:
+            with open(path, encoding="utf-8") as handle:
+                raw = json.load(handle)
+        except json.JSONDecodeError as exc:
+            LOG.warning("Ignoring unreadable feed state file %s: %s", path, exc)
+            raw = {}
+        state = {
+            str(key): value
+            for key, value in raw.items()
+            if isinstance(value, dict)
+        } if isinstance(raw, dict) else {}
+
+    with _state_cache_lock:
+        _state_cache[path] = state
+    return deepcopy(state)
 
 
 def _write_json_atomic(path: Path, payload: object) -> None:
@@ -71,7 +88,10 @@ def _write_json_atomic(path: Path, payload: object) -> None:
 
 def _save_domain_state(domain: str, state: dict[str, dict]) -> None:
     FEEDS_DIR.mkdir(exist_ok=True)
-    _write_json_atomic(_state_file(domain), state)
+    path = _state_file(domain)
+    _write_json_atomic(path, state)
+    with _state_cache_lock:
+        _state_cache[path] = deepcopy(state)
 
 
 def _normalise_age_settings(raw_age_settings: object) -> dict:
@@ -173,8 +193,7 @@ def _apply_domain_age_settings(domain: str, age_settings: dict) -> None:
 
 
 def _load_domain_file(domain: str) -> list[dict]:
-    raw_domain, raw_feeds, raw_age_settings, raw_enabled = _read_domain_spec(domain)
-    _apply_domain_age_settings(raw_domain, raw_age_settings)
+    raw_domain, raw_feeds, _raw_age_settings, raw_enabled = _read_domain_spec(domain)
 
     state = _load_domain_state(raw_domain)
     feeds: list[dict] = []
@@ -398,6 +417,8 @@ def delete_domain_feeds(domain: str) -> bool:
     state_path = _state_file(domain)
     if state_path.exists():
         state_path.unlink()
+    with _state_cache_lock:
+        _state_cache.pop(state_path, None)
     return True
 
 
@@ -495,6 +516,8 @@ def rename_domain_feeds(old: str, new: str) -> bool:
     old_state_path = _state_file(old)
     if old_state_path.exists():
         old_state_path.unlink()
+    with _state_cache_lock:
+        _state_cache.pop(old_state_path, None)
     return True
 
 

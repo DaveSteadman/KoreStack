@@ -398,6 +398,13 @@ def probe_http(url: str, timeout: float = 1.5) -> tuple[bool, str]:
         return False, exc.__class__.__name__
 
 
+def service_health_timeout(spec: ServiceSpec) -> float:
+    """Return the probe budget appropriate to each service's request model."""
+    # KoreChat holds long-lived event streams alongside its API. Allow enough
+    # time for a status response to reach the event loop under normal load.
+    return 12.0 if spec.slug == "korechat" else 1.5
+
+
 def probe_http_with_retry(url: str, attempts: int = 3, interval: float = 0.8) -> tuple[bool, str]:
     """Probe *url* up to *attempts* times, waiting *interval* seconds between tries."""
     detail = "not tried"
@@ -453,7 +460,7 @@ class StackManager:
             if existing is not None and existing.poll() is None:
                 return False
 
-        reachable, detail = probe_http(spec.health_url)
+        reachable, detail = probe_http(spec.health_url, timeout=service_health_timeout(spec))
         if reachable:
             log.info("reusing %s %s url=%s", spec.label, detail, spec.url)
             return False
@@ -669,7 +676,7 @@ class StackManager:
             processes = dict(self._processes)
 
         def _probe_one(spec: ServiceSpec) -> tuple[str, bool, str]:
-            reachable, detail = probe_http(spec.health_url)
+            reachable, detail = probe_http(spec.health_url, timeout=service_health_timeout(spec))
             return spec.slug, reachable, detail
 
         with ThreadPoolExecutor(max_workers=len(self._services) or 1) as pool:

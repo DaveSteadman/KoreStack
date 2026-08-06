@@ -15,7 +15,9 @@ import json
 import re
 import shutil
 import sqlite3
+import threading
 import zlib
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
@@ -59,12 +61,17 @@ _METADATA_SCHEMA_VERSION = 1
 _KOREDOC_JSON_HEADER_START = '---koredocs-json'
 _KOREDOC_HEADER_END        = '---'
 
+_file_record_cache: dict[Path, dict] = {}
+_file_record_cache_lock = threading.RLock()
+
 
 def configure(root_dir: Path, legacy_db_path: Path | None = None) -> None:
     global _ROOT_DIR, _LEGACY_DB_PATH
     _ROOT_DIR = Path(root_dir).resolve()
     ensure_datauser_root(_ROOT_DIR)
     _LEGACY_DB_PATH = Path(legacy_db_path).resolve() if legacy_db_path else None
+    with _file_record_cache_lock:
+        _file_record_cache.clear()
     if _LEGACY_DB_PATH is not None:
         _LEGACY_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
@@ -196,7 +203,7 @@ def _koredoc_content_with_header(content: str, record: dict) -> str:
 
 
 def _artifact_record(path: Path, content: str | None = None) -> dict:
-    source_content = read_text_file(path, root_dir=_root_dir()) if path.suffix.lower() == '.koredoc' else (content if content is not None else read_text_file(path, root_dir=_root_dir()))
+    source_content = content if content is not None else read_text_file(path, root_dir=_root_dir())
     if path.suffix.lower() == '.koredoc':
         embedded, _ = _split_koredoc_json_header(source_content)
         if embedded is not None:
@@ -434,15 +441,15 @@ def _iter_folder_paths() -> list[Path]:
     return folders
 
 
-def _iter_file_paths(root: Path | None = None) -> list[Path]:
+def _iter_file_paths(root: Path | None = None, *, recursive: bool = True) -> list[Path]:
     base = root.resolve() if root is not None else _root_dir()
     return [
         path
         for path in list_datauser_files(
-        search_root=_relative_posix(base),
-        recursive=True,
-        allowed_extensions=set(_VISIBLE_EXTENSIONS),
-        root_dir=_root_dir(),
+            search_root        = _relative_posix(base),
+            recursive          = recursive,
+            allowed_extensions = set(_VISIBLE_EXTENSIONS),
+            root_dir           = _root_dir(),
         )
         if path.name != _METADATA_STORE_NAME
         and not path.name.endswith(_METADATA_SIDECAR_SUFFIX)
@@ -561,6 +568,12 @@ def validate_serialized_content(name: str, content: str) -> None:
 
 
 def _file_record(path: Path, *, include_content: bool) -> dict:
+    if not include_content:
+        with _file_record_cache_lock:
+            cached = _file_record_cache.get(path)
+            if cached is not None:
+                return {**cached, 'metadata': dict(cached['metadata'])}
+
     content = read_text_file(path, root_dir=_root_dir())
     stat = path.stat()
     artifact = _artifact_record(path, content)
@@ -587,7 +600,23 @@ def _file_record(path: Path, *, include_content: bool) -> dict:
         record['content'] = content
         if path.suffix.lower() == '.koredoc':
             record['body_content'] = body_content
+    else:
+        with _file_record_cache_lock:
+            _file_record_cache[path] = record
     return record
+
+
+def _invalidate_file_record_cache(*paths: Path) -> None:
+    with _file_record_cache_lock:
+        for path in paths:
+            _file_record_cache.pop(path, None)
+
+
+def warm_file_record_cache() -> None:
+    """Warm direct-root file rows without delaying the KoreDocs web service."""
+    paths = _iter_file_paths(_root_dir(), recursive=False)
+    with ThreadPoolExecutor(max_workers=8, thread_name_prefix='koredocs-file-cache') as executor:
+        list(executor.map(lambda path: _file_record(path, include_content=False), paths))
 
 
 def _resolve_folder_abs_by_id(folder_id: int) -> Path | None:
@@ -777,7 +806,7 @@ def list_files(
     else:
         folder_abs = None
 
-    files = _iter_file_paths(folder_abs)
+    files = _iter_file_paths(folder_abs, recursive=folder_abs is None)
     results: list[dict] = []
     for path in files:
         if folder_abs is not None and path.parent != folder_abs:
@@ -811,6 +840,7 @@ def create_file(folder_id: int, name: str, content: str, metadata: dict | None =
     write_text_file(target, content, root_dir=_root_dir())
     _write_artifact_record(target, metadata if metadata is not None else _extract_metadata(name, content))
     _write_history(target, content, _stored_metadata(target) or {}, action='created')
+    _invalidate_file_record_cache(target)
     return _file_record(target, include_content=False)
 
 
@@ -875,6 +905,7 @@ def update_file(
     elif metadata is not None or metadata_patch is not None:
         _set_stored_metadata(file_abs, next_metadata)
     _write_history(file_abs, new_content, _stored_metadata(file_abs) or _extract_metadata(file_abs.name, new_content), action='updated')
+    _invalidate_file_record_cache(file_abs)
     return _file_record(file_abs, include_content=False)
 
 
@@ -893,6 +924,7 @@ def rename_file(file_id: int, new_name: str, expected_revision: int | None = Non
         raise ConflictError('UNIQUE constraint failed: files.folder_id, files.name')
     file_abs.rename(target)
     _move_stored_metadata(file_abs, target)
+    _invalidate_file_record_cache(file_abs, target)
     return _file_record(target, include_content=False)
 
 
@@ -911,6 +943,7 @@ def move_file(file_id: int, new_folder_id: int, expected_revision: int | None = 
         raise ConflictError('UNIQUE constraint failed: files.folder_id, files.name')
     file_abs.rename(target)
     _move_stored_metadata(file_abs, target)
+    _invalidate_file_record_cache(file_abs, target)
     return _file_record(target, include_content=False)
 
 
@@ -923,6 +956,7 @@ def delete_file(file_id: int, expected_revision: int | None = None) -> bool:
         raise ConflictError(f'File {file_id} revision mismatch: expected {expected_revision}, current {current_revision}')
     delete_datauser_file(file_abs, root_dir=_root_dir())
     _delete_stored_metadata(file_abs)
+    _invalidate_file_record_cache(file_abs)
     return True
 
 

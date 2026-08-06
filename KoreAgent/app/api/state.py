@@ -7,16 +7,12 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import HTTPException
-from scheduler.shared_state import SchedulerSharedState
 from agent.orchestration.engine import OrchestratorConfig
 
 
 _SESSION_ID_RE = re.compile(r"^[A-Za-z0-9_-]+$")
 
 _config: OrchestratorConfig | None = None
-_last_run: dict[str, datetime | None] = {}
-_enabled_tasks: list[dict] = []
-_scheduler_state: SchedulerSharedState | None = None
 _shutdown_event: threading.Event = threading.Event()
 
 _run_event_queues: dict[str, queue.Queue] = {}
@@ -44,27 +40,15 @@ _llm_direct_enabled: bool = False
 
 def setup(
     config: OrchestratorConfig,
-    enabled_tasks: list[dict],
-    last_run: dict[str, datetime | None],
     shutdown_event: threading.Event,
-    scheduler_state: SchedulerSharedState | None = None,
 ) -> None:
-    global _config, _enabled_tasks, _last_run, _shutdown_event, _scheduler_state
+    global _config, _shutdown_event
     _config = config
-    _enabled_tasks = enabled_tasks
-    _last_run = last_run
-    _scheduler_state = scheduler_state
     _shutdown_event = shutdown_event
 
 
 def get_config() -> OrchestratorConfig | None:
     return _config
-
-
-def get_scheduler_snapshot() -> tuple[list[dict], dict[str, datetime | None]]:
-    if _scheduler_state is not None:
-        return _scheduler_state.snapshot()
-    return list(_enabled_tasks), dict(_last_run)
 
 
 def get_shutdown_event() -> threading.Event:

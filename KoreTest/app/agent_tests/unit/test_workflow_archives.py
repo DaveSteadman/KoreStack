@@ -12,17 +12,17 @@ from pathlib import Path
 from unittest.mock import patch
 
 
-APP_ROOT = Path(__file__).resolve().parents[2]
+APP_ROOT = Path(__file__).resolve().parents[4] / "KoreAgent" / "app"
 if str(APP_ROOT) not in sys.path:
     sys.path.insert(0, str(APP_ROOT))
 
-import indepth_planner_archives as archives
-import indepth_planner_store as planner_store
+import workflow_archives as archives
+import workflow_store as planner_store
 
 
-class InDepthPlannerArchiveTests(unittest.TestCase):
+class WorkflowArchiveTests(unittest.TestCase):
     def test_export_and_unique_substring_lookup(self) -> None:
-        plan = planner_store.build_plan_payload(objective="Romanian defence research", initial_tasks=[{"title": "Discover"}])
+        plan = {"static": {"objective": "Romanian defence research", "tasks": []}, "dynamic": {"tasks": {}}}
         with tempfile.TemporaryDirectory() as temporary_dir:
             archive_dir = Path(temporary_dir) / "plans"
             with patch.object(archives, "get_plans_dir", return_value=archive_dir):
@@ -39,7 +39,7 @@ class InDepthPlannerArchiveTests(unittest.TestCase):
         self.assertNotIn("dynamic", loaded["archive"]["plan"])
 
     def test_ambiguous_substring_does_not_select_an_archive(self) -> None:
-        plan = planner_store.build_plan_payload(objective="Research", initial_tasks=[{"title": "Discover"}])
+        plan = {"static": {"objective": "Research", "tasks": []}, "dynamic": {"tasks": {}}}
         with tempfile.TemporaryDirectory() as temporary_dir:
             archive_dir = Path(temporary_dir) / "plans"
             with patch.object(archives, "get_plans_dir", return_value=archive_dir):

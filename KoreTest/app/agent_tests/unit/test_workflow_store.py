@@ -1,7 +1,7 @@
 # ====================================================================================================
 # MARK: OVERVIEW
 # ====================================================================================================
-# Regression tests for the durable KoreChat-backed InDepthPlanner lifecycle.
+# Regression tests for the durable KoreChat-backed Workflow lifecycle.
 # ====================================================================================================
 
 import sys
@@ -11,15 +11,15 @@ from pathlib import Path
 from unittest.mock import patch
 
 
-APP_ROOT = Path(__file__).resolve().parents[2]
+APP_ROOT = Path(__file__).resolve().parents[4] / "KoreAgent" / "app"
 if str(APP_ROOT) not in sys.path:
     sys.path.insert(0, str(APP_ROOT))
 
-import indepth_planner_store as planner_store
+import workflow_store as planner_store
 from skills_catalog_builder import build_skills_payload
 
 
-class InDepthPlannerStoreTests(unittest.TestCase):
+class WorkflowStoreTests(unittest.TestCase):
     def test_catalog_rejects_function_bearing_skill_without_module(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             skill_dir = Path(temp_dir) / "BrokenSkill"

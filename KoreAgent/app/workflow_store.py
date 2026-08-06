@@ -29,7 +29,7 @@ def _utc_now() -> str:
 def _active_session_id() -> str:
     session_id = str(get_active_session_id() or "").strip()
     if not session_id:
-        raise RuntimeError("No active session is bound for InDepthPlanner.")
+        raise RuntimeError("No active session is bound for Workflow.")
     return session_id
 
 
@@ -130,22 +130,20 @@ def ensure_conversation_for_session(session_id: str | None = None) -> dict:
         },
     )
     if not isinstance(created, dict):
-        raise RuntimeError("Failed to create KoreChat conversation for InDepthPlanner.")
+        raise RuntimeError("Failed to create KoreChat conversation for Workflow.")
     return created
 
 
 def load_workflow(session_id: str | None = None) -> tuple[dict, dict]:
     conversation = ensure_conversation_for_session(session_id)
     payload = conversation.get("workflow")
-    if not isinstance(payload, dict):
-        payload = conversation.get("indepth_planner")
     return conversation, payload if isinstance(payload, dict) else {}
 
 
 def save_workflow(payload: dict[str, Any], *, session_id: str | None = None) -> dict:
     conversation = ensure_conversation_for_session(session_id)
     base = _get_korechat_base()
-    persisted_payload = _to_persisted_plan(payload) if payload else {}
+    persisted_payload = _normalise_workflow_payload(payload) if payload else {}
     result = _http_patch(
         base,
         f"/api/conversations/{conversation['id']}",
@@ -163,17 +161,11 @@ def save_workflow(payload: dict[str, Any], *, session_id: str | None = None) -> 
         raise RuntimeError("KoreChat returned an invalid Workflow payload after the update.")
     if updated_payload != persisted_payload:
         raise RuntimeError("KoreChat did not persist the requested Workflow state.")
-    return _to_runtime_plan(updated_payload)
+    return _normalise_workflow_payload(updated_payload)
 
 
-def delete_workflow(*, session_id: str | None = None) -> None:
+def clear_workflow(*, session_id: str | None = None) -> None:
     save_workflow({}, session_id=session_id)
-
-
-# Compatibility aliases for internal callers during the Workflow migration.
-load_indepth_planner   = load_workflow
-save_indepth_planner   = save_workflow
-delete_indepth_planner = delete_workflow
 
 
 def _slugify(value: str) -> str:
@@ -275,50 +267,14 @@ def _copy_plan(payload: dict) -> dict[str, Any]:
     return json.loads(json.dumps(payload or {}))
 
 
-def _to_persisted_plan(payload: dict[str, Any]) -> dict[str, Any]:
-    """Store only durable task definitions plus disposable runtime data."""
-    if isinstance(payload.get("static"), dict):
-        return {
-            "static":  _copy_plan(payload["static"]),
-            "dynamic": _copy_plan(payload.get("dynamic")) if isinstance(payload.get("dynamic"), dict) else {"tasks": {}},
-        }
-
-    current = payload.get("current") if isinstance(payload.get("current"), dict) else {}
-    static_tasks: list[dict[str, Any]] = []
-    dynamic_tasks: dict[str, dict[str, Any]] = {}
-    for index, raw_task in enumerate(current.get("tasks") or [], start=1):
-        definition = raw_task.get("definition") if isinstance(raw_task, dict) and isinstance(raw_task.get("definition"), dict) else {}
-        execution  = raw_task.get("execution")  if isinstance(raw_task, dict) and isinstance(raw_task.get("execution"),  dict) else {}
-        task_id    = str(raw_task.get("task_id") or index) if isinstance(raw_task, dict) else str(index)
-        static_tasks.append(
-            {
-                "id":          task_id,
-                "title":       str(definition.get("title") or "Untitled task"),
-                "description": str(definition.get("description") or ""),
-                "instruction": str(definition.get("task_statement") or definition.get("title") or ""),
-                "depends_on":  _as_string_list(definition.get("depends_on")),
-                "outputs":     _normalise_task_outputs(definition.get("outputs")),
-                "evidence_requirements": _normalise_evidence_requirements(definition.get("evidence_requirements")),
-            }
-        )
-        task_data = {
-            key: value
-            for key, value in {
-                "input_refs":     definition.get("input_refs"),
-                "output_refs":    execution.get("output_refs"),
-                "result_summary": execution.get("result_summary"),
-            }.items()
-            if value
-        }
-        dynamic_tasks[task_id] = {
-            "ran":  str(execution.get("status") or "draft") != "draft",
-            "data": task_data,
-            "outputs": _as_ref_list(execution.get("output_refs")),
-            "evidence": {},
-        }
+def _normalise_workflow_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    """Return the sole durable Workflow shape used by KoreChat and archives."""
+    if not isinstance(payload, dict) or not isinstance(payload.get("static"), dict):
+        return {}
+    dynamic = payload.get("dynamic") if isinstance(payload.get("dynamic"), dict) else {}
     return {
-        "static":  {"objective": str(current.get("objective") or ""), "tasks": static_tasks},
-        "dynamic": {"tasks": dynamic_tasks},
+        "static":  _copy_plan(payload["static"]),
+        "dynamic": {"tasks": _copy_plan(dynamic.get("tasks")) if isinstance(dynamic.get("tasks"), dict) else {}},
     }
 
 
@@ -623,16 +579,16 @@ def create_plan(
         initial_tasks=initial_tasks,
         source="skill",
     )
-    return save_indepth_planner(payload, session_id=session_id)
+    return save_workflow(payload, session_id=session_id)
 
 
 def clear_plan(*, session_id: str | None = None) -> None:
     """Remove the active plan from the current KoreChat conversation."""
-    delete_indepth_planner(session_id=session_id)
+    clear_workflow(session_id=session_id)
 
 
 def get_plan(*, session_id: str | None = None) -> dict[str, Any]:
-    _conversation, payload = load_indepth_planner(session_id)
+    _conversation, payload = load_workflow(session_id)
     return _to_runtime_plan(payload)
 
 
@@ -651,7 +607,7 @@ def _save_with_revision(payload: dict[str, Any], *, reason: str, changes: list[o
     revisions = payload.setdefault("revisions", [])
     if isinstance(revisions, list):
         revisions.append(_new_revision_entry(revision=next_revision, reason=reason, changes=changes))
-    return save_indepth_planner(payload, session_id=session_id)
+    return save_workflow(payload, session_id=session_id)
 
 
 def add_plan_task(
@@ -667,7 +623,7 @@ def add_plan_task(
 ) -> dict[str, Any]:
     payload = get_plan(session_id=session_id)
     if not payload:
-        raise RuntimeError("No active InDepthPlanner plan exists for this conversation.")
+        raise RuntimeError("No active Workflow exists for this conversation.")
     tasks = _task_list_from_payload(payload)
     used_ids = {str(task.get("task_id") or "") for task in tasks}
     new_task = _coerce_plan_task(
@@ -871,13 +827,13 @@ def reassess_plan(*, session_id: str | None = None) -> dict[str, Any]:
 # MARK: SIMPLE STATIC / DYNAMIC PUBLIC MODEL
 # ====================================================================================================
 def get_simple_plan(*, session_id: str | None = None) -> dict[str, Any]:
-    _conversation, payload = load_indepth_planner(session_id)
-    return _to_persisted_plan(payload) if payload else {}
+    _conversation, payload = load_workflow(session_id)
+    return _normalise_workflow_payload(payload) if payload else {}
 
 
 def _save_simple_plan(payload: dict[str, Any], *, session_id: str | None = None) -> dict[str, Any]:
     _validate_simple_plan(payload)
-    save_indepth_planner(payload, session_id=session_id)
+    save_workflow(payload, session_id=session_id)
     return payload
 
 
@@ -1135,49 +1091,9 @@ def simple_run_to_completion_context(*, session_id: str | None = None) -> dict[s
     }
 
 
-def should_bootstrap_indepth_plan(user_prompt: str, task_plan: dict[str, Any] | None = None) -> bool:
-    """Return whether the user explicitly requested the persistent InDepth Planner."""
+def should_bootstrap_workflow(user_prompt: str, task_plan: dict[str, Any] | None = None) -> bool:
+    """Return whether the user explicitly requested a persistent Workflow."""
     prompt = str(user_prompt or "").strip()
     if not prompt:
         return False
     return bool(_PLAN_TRIGGER_RE.search(prompt))
-
-
-def maybe_seed_indepth_plan_from_task_plan(*, user_prompt: str, task_plan: dict[str, Any]) -> dict[str, Any]:
-    payload = get_plan()
-    current = payload.get("current") if isinstance(payload.get("current"), dict) else {}
-    if current:
-        return payload
-
-    objective = str(task_plan.get("objective") or user_prompt).strip() or "Planned work"
-    bootstrap_task = {
-        "title": str(task_plan.get("objective") or "Initial PlanTask").strip() or "Initial PlanTask",
-        "description": str(task_plan.get("rationale") or "Seeded from the lightweight task planner.").strip(),
-        "task_statement": str(user_prompt).strip(),
-        "priority": "normal",
-        "depends_on": [],
-        "input_refs": [],
-    }
-    payload = build_plan_payload(
-        objective=objective,
-        acceptance_criteria=[str(task_plan.get("completion_contract") or "Complete the requested work.").strip()],
-        constraints=[],
-        initial_tasks=[bootstrap_task],
-        source="orchestrator",
-    )
-    payload.setdefault("current", {})["status"] = "active"
-    payload["current"]["planner_hint"] = {
-        "task_class": str(task_plan.get("task_class") or "general"),
-        "current_phase": str(task_plan.get("current_phase") or "plan"),
-        "workflow": list(task_plan.get("workflow") or []),
-        "validation_requirements": list(task_plan.get("validation_requirements") or []),
-    }
-    return save_indepth_planner(payload)
-
-
-# Workflow-facing names. Legacy implementation names remain private compatibility paths while
-# callers transition to the durable Workflow vocabulary.
-get_simple_workflow                 = get_simple_plan
-list_workflow_tasks                 = list_simple_tasks
-should_bootstrap_workflow           = should_bootstrap_indepth_plan
-maybe_seed_workflow_from_task_plan  = maybe_seed_indepth_plan_from_task_plan

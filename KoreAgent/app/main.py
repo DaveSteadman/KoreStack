@@ -195,18 +195,12 @@ from llm_client import format_running_model_report
 from llm_client import get_llm_timeout
 from llm_client import register_llm_call_logger
 from agent.orchestration.engine import OrchestratorConfig
-from agent.orchestration.engine import orchestrate_prompt
 from agent.orchestration.engine import resolve_execution_model
-from conversation_state import build_background_turn
-from run_helpers import make_task_session
-from scratchpad import scratchpad_clear
 from skills_catalog_builder import load_skills_payload
 import mcp_client as _mcp_client
 from utils.runtime_logger import create_log_file_path
 from utils.runtime_logger import SessionLogger
-from input_layer.slash_commands import SlashCommandContext
-from input_layer.slash_commands import handle as handle_slash
-from utils.workspace_utils import get_bootstrap_defaults_file
+from utils.workspace_utils import get_agent_config_file
 from utils.workspace_utils import get_controldata_dir
 from utils.workspace_utils import get_logs_dir
 from utils.workspace_utils import get_user_data_dir
@@ -220,7 +214,7 @@ DEFAULT_NUM_CTX      = 131072
 MAX_ITERATIONS       = 25   # safety cap; model exits naturally via native tool calling
 SKILLS_CATALOG_PATH  = Path(__file__).resolve().parent / "skills" / "skills_catalog.json"
 LOG_DIR              = get_logs_dir()
-DEFAULTS_FILE        = get_bootstrap_defaults_file()
+DEFAULTS_FILE        = get_agent_config_file()
 
 # Keys accepted from the runtime defaults file - must match the argparse dest names exactly.
 _DEFAULTS_KEYS = {"model", "ctx", "agentport", "llmhost"}
@@ -234,7 +228,6 @@ _KNOWN_KEYS = _DEFAULTS_KEYS | {
     "ControlDataFolder",
     "UserDataFolder",
     "mcp_connections",
-    "mcp_servers",
 }
 
 
@@ -304,142 +297,7 @@ def parse_main_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-# ====================================================================================================
-# MARK: SESSION HELPERS
-# ====================================================================================================
-# MARK: CHAT SEQUENCE MODE
-# Used by test_wrapper.py via the CHAT_SEQUENCE_FILE environment variable (internal).
-# ====================================================================================================
-def run_chat_sequence_mode(
-    sequence_file: Path,
-    config: OrchestratorConfig,
-    logger: SessionLogger,
-    log_path: Path,
-) -> None:
-    """Run a pre-defined sequence of prompts through a shared ConversationHistory + SessionContext.
-
-    Used by the test wrapper to exercise multi-turn exchanges.  Outputs each turn in a
-    structured format that the wrapper can parse:
-
-        [TURN 1] User: <prompt>
-        [TURN 1] Agent: <response>
-        [TURN 1] tokens=<n> tps=<f>
-
-    Exits with code 1 if the sequence file cannot be read or is malformed.
-    """
-    import json as _json
-    import sys as _sys
-    # Ensure subprocess stdout accepts full Unicode - Windows defaults to cp1252 which
-    # can't encode characters the model commonly emits (e.g. \u202f, \u2011).
-    if hasattr(_sys.stdout, "reconfigure"):
-        _sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-    try:
-        turns_raw = _json.loads(sequence_file.read_text(encoding="utf-8"))
-        if not isinstance(turns_raw, list):
-            raise ValueError("sequence file must contain a JSON array")
-        prompts = [str(t) for t in turns_raw]
-    except Exception as exc:
-        print(f"[chat-sequence] Cannot load '{sequence_file}': {exc}", file=_sys.stderr)
-        _sys.exit(1)
-
-    history, session_ctx = make_task_session(
-        session_id   = log_path.stem,
-        persist_path = None,
-    )
-
-    def _compress_in_memory() -> str:
-        turns = []
-        raw   = history.as_list()
-        for index in range(0, len(raw) - 1, 2):
-            if raw[index]["role"] == "user" and raw[index + 1]["role"] == "assistant":
-                turns.append(
-                    {
-                        "user_prompt":        raw[index]["content"],
-                        "assistant_response": raw[index + 1]["content"],
-                    }
-                )
-        if not turns:
-            return "No conversation history to compress."
-        turn_count = len(turns)
-        with session_ctx._lock:
-            next_turn = len(session_ctx._turns)
-            for turn in turns:
-                next_turn += 1
-                session_ctx._turns.append(
-                    build_background_turn(
-                        turn               = next_turn,
-                        user_prompt        = turn["user_prompt"],
-                        assistant_response = turn["assistant_response"],
-                        skill_outputs      = [],
-                    )
-                )
-        history.clear()
-        return f"Compressed {turn_count} turn(s) into background context."
-
-    for turn_idx, user_prompt in enumerate(prompts, start=1):
-        print(f"[TURN {turn_idx}] User: {user_prompt}")
-        logger.log_section_file_only(f"SEQUENCE TURN {turn_idx}")
-        logger.log_file_only(f"User: {user_prompt}")
-
-        slash_lines: list[str] = []
-        seq_ctx = SlashCommandContext(
-            config           = config,
-            output           = lambda text, level="info", _buf=slash_lines: _buf.append(text),
-            clear_history    = lambda: [history.clear(), session_ctx.clear(), scratchpad_clear(session_ctx.session_id)],
-            session_context  = session_ctx,
-            session_id       = session_ctx.session_id,
-            compress_history = _compress_in_memory,
-        )
-        if handle_slash(user_prompt, seq_ctx):
-            slash_response = "\n".join(slash_lines)
-            print(f"[TURN {turn_idx}] Agent: {slash_response}")
-            print(f"[TURN {turn_idx}] tokens=0 tps=0")
-            logger.log_file_only(f"Agent: {slash_response}")
-            history.add(user_prompt, slash_response)
-            continue
-
-        final_response, p_tokens, _c, run_success, tps = orchestrate_prompt(
-            user_prompt=user_prompt,
-            config=config,
-            logger=logger,
-            conversation_history=history.as_list() or None,
-            session_context=session_ctx,
-            quiet=True,
-        )
-
-        history.add(user_prompt, final_response)
-        tps_str = f"{tps:.1f}" if tps > 0 else "0"
-        print(f"[TURN {turn_idx}] Agent: {final_response}")
-        print(f"[TURN {turn_idx}] tokens={p_tokens} tps={tps_str}")
-
-        logger.log_file_only(f"Agent: {final_response}")
-        if not run_success:
-            logger.log_file_only("[WARN] Orchestration validation failed for this turn.")
-
-    # A sequence turn can enqueue a Gen2 delegate and then return before its
-    # child or parent-continuation task has finished. Keep this subprocess alive
-    # until the local serial queue drains, otherwise teardown stops the worker
-    # and leaves a durable delegate record falsely marked as running.
-    from scheduler.scheduler import task_queue
-
-    drain_timeout_s = max(1, int(os.environ.get("KORE_TEST_QUEUE_DRAIN_SECONDS", "120")))
-    deadline        = time.monotonic() + drain_timeout_s
-    while True:
-        state = task_queue.get_state()
-        if int(state.get("queue_count") or 0) == 0:
-            logger.log_file_only("[chat-sequence] Background task queue drained.")
-            break
-        if time.monotonic() >= deadline:
-            logger.log_file_only(
-                f"[chat-sequence] Background task queue did not drain within {drain_timeout_s}s: {state}"
-            )
-            print(f"[CHAT_SEQUENCE_QUEUE_TIMEOUT] {state}", file=_sys.stderr)
-            break
-        time.sleep(0.1)
-
-
-# ====================================================================================================
-# MARK: MAIN ENTRYPOINT
+# ====================================================================================================`r`n# MARK: MAIN ENTRYPOINT
 # ====================================================================================================
 def main() -> None:
     service_log_path = configure_service_logging("koreagent", "INFO")
@@ -462,7 +320,7 @@ def main() -> None:
 
 # ----------------------------------------------------------------------------------------------------
 def _run(args, logger, log_path) -> None:
-    # When running as a subprocess (test_wrapper, pipe) Windows defaults stdout
+    # When running in batch mode Windows defaults stdout
     # to cp1252, which cannot encode the tick/cross characters printed in the
     # status block.  Reconfigure to UTF-8 early so all print() calls survive.
     if hasattr(sys.stdout, "reconfigure"):
@@ -517,65 +375,6 @@ def _run(args, logger, log_path) -> None:
             return True
         except Exception:
             return False
-
-    # Detect sequence mode early so sidecars are not started unnecessarily.
-    # In sequence mode we probe each MCP endpoint first: if it is reachable we
-    # connect (so the model has those tools), if not we skip it to avoid the
-    # per-server connect-timeout penalty on test runs without MCP services.
-    sequence_file_path = Path(os.environ["CHAT_SEQUENCE_FILE"]) if os.environ.get("CHAT_SEQUENCE_FILE") else None
-
-    _seq_mcp_started = False  # tracks whether _mcp_client was started in sequence mode
-
-    if sequence_file_path:
-        try:
-            llm_client.ensure_ollama_running(verbose=True, start_if_needed=llm_client.get_local_ollama_autostart_enabled())
-        except RuntimeError as exc:
-            print(f"Warning: {exc}  LLM calls will fail until the server is reachable.", flush=True)
-        try:
-            config.resolved_model = resolve_execution_model(args.model)
-            llm_client.register_session_config(config.resolved_model, args.ctx)
-        except Exception:
-            config.resolved_model = args.model
-        from urllib.parse import urlparse as _urlparse
-        _seq_mcp = _raw_defaults.get("mcp_connections") or _raw_defaults.get("mcp_servers") or []
-        # Probe each configured MCP server; connect if any are reachable.
-        _any_mcp_reachable = any(
-            _service_reachable(f"{_urlparse(_srv.get('url', '')).scheme}://{_urlparse(_srv.get('url', '')).netloc}")
-            for _srv in _seq_mcp
-        )
-        if _any_mcp_reachable:
-            _mcp_client.start(DEFAULTS_FILE)
-            _seq_mcp_started = True
-            _mcp_status = _mcp_client.get_server_status()
-            for _srv in _mcp_status:
-                _ok_str = f"({_srv['tool_count']} tool(s))" if _srv["ok"] else "(failed to connect)"
-                _purpose = f" - {_srv['purpose']}" if _srv.get("purpose") else ""
-                logger.log(f"MCP [{_srv['name']}]: {_srv['url']} {_ok_str} {_tick if _srv['ok'] else _cross}{_purpose}")
-        else:
-            for _srv in _seq_mcp:
-                _srv_name = _srv.get("name") or _srv.get("url", "?")
-                logger.log(f"MCP [{_srv_name}]: {_srv.get('url', '?')} (skipped in sequence mode)")
-            if not _seq_mcp:
-                logger.log("MCP connections: (none configured)")
-        logger.log(f"KoreChat:{_koreconv_url or '(not configured)'} (skipped in sequence mode)")
-    mode_label = (
-        f"chat-sequence:{sequence_file_path.name}" if sequence_file_path else
-        "api"
-    )
-    logger.log(f"Mode:            {mode_label}")
-    logger.log(f"ctx:             {args.ctx}")
-    logger.log(f"LLM timeout:     {get_llm_timeout()}s")
-    logger.log(f"Max iterations:  {MAX_ITERATIONS}")
-    logger.log("Model runtime status: pending background warmup")
-    logger.log(f"Log file:        {log_path.as_posix()}")
-
-    if sequence_file_path:
-        try:
-            run_chat_sequence_mode(sequence_file=sequence_file_path, config=config, logger=logger, log_path=log_path)
-        finally:
-            if _seq_mcp_started:
-                _mcp_client.stop()
-        return
 
     update_startup_state(
         service_status = "starting",

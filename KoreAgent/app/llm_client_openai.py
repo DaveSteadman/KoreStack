@@ -43,7 +43,7 @@ DEFAULT_LMSTUDIO_HOST = "http://localhost:1234"
 
 
 def _default_llm_timeout_from_env() -> int:
-    raw = str(os.environ.get("KORE_TEST_LLM_TIMEOUT", "")).strip()
+    raw = str(os.environ.get("KORE_LLM_TIMEOUT", "")).strip()
     if not raw:
         return 600
     try:

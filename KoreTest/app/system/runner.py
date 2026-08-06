@@ -8,7 +8,7 @@
 #
 # Data flow:
 #   1. load_prompts_file()   -- reads a JSON array of plain prompts or multi-turn exchanges
-#   2. invoke_exchange()     -- spawns main.py via CHAT_SEQUENCE_FILE env var and captures stdout
+#   2. invoke_exchange()     -- submits normal session prompts to the live KoreAgent API
 #   3. Output parsers        -- extract turn responses, token metrics, log file path, assert results
 #   4. CSV writers           -- append one row per turn to the shared results CSV
 #   5. run_tests()           -- dispatches each item to _run_single_item or _run_exchange_item
@@ -45,28 +45,22 @@ import os
 import re
 import subprocess
 import sys
-import tempfile
 import time
+import urllib.error
+import urllib.parse
+import urllib.request
+import uuid
 from datetime import datetime
 from pathlib import Path
 
-# KoreTest owns the runner, while each test invocation deliberately starts the
-# KoreAgent entry point under test.
 REPO_ROOT     = Path(__file__).resolve().parents[3]
-AGENT_APP_DIR = REPO_ROOT / "KoreAgent" / "app"
-sys.path.insert(0, str(AGENT_APP_DIR))
-
-from utils.workspace_utils import get_test_results_dir
 
 
 # ====================================================================================================
 # MARK: CONSTANTS
 # ====================================================================================================
-MAIN_SCRIPT = AGENT_APP_DIR / "main.py"
-
 # Maximum time in seconds to wait for a single framework invocation before aborting.
 SUBPROCESS_TIMEOUT_SECONDS = 300
-TEST_LLM_TIMEOUT_SECONDS   = 86400
 
 CSV_FIELDS = [
     "timestamp", "source_file", "prompt", "exchange_name", "turn_index",
@@ -121,40 +115,82 @@ def invoke_exchange(
     model: str | None = None,
     llmhost: str | None = None,
 ) -> tuple[float, int, str, str]:
-    # Writes prompts to a temp JSON file, passes the path to main.py via the
-    # CHAT_SEQUENCE_FILE environment variable, and returns (duration_secs, exit_code, stdout, stderr).
+    """Run prompts against the live KoreAgent API and collect its ordinary SSE events.
+
+    KoreTest owns the test protocol.  KoreAgent is treated strictly as the
+    system under test: it receives normal session prompts and has no test mode.
+    """
     start_time = time.monotonic()
-
-    with tempfile.NamedTemporaryFile(
-        mode="w", suffix=".json", delete=False, encoding="utf-8"
-    ) as tmp:
-        json.dump(turn_prompts, tmp, ensure_ascii=False)
-        tmp_path = tmp.name
-
+    session_id = f"koretest_{uuid.uuid4().hex}"
+    output: list[str] = []
+    errors: list[str] = []
+    exit_code = 0
     try:
-        cmd = [sys.executable, str(MAIN_SCRIPT)]
-        if model:
-            cmd += ["--model", model]
-        if llmhost:
-            cmd += ["--llmhost", llmhost]
-
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            timeout=SUBPROCESS_TIMEOUT_SECONDS * len(turn_prompts),
-            env={
-                **os.environ,
-                "CHAT_SEQUENCE_FILE":  tmp_path,
-                "KORE_TEST_LLM_TIMEOUT": str(TEST_LLM_TIMEOUT_SECONDS),
-            },
-        )
+        for turn_index, prompt in enumerate(turn_prompts, start=1):
+            output.append(f"[TURN {turn_index}] User: {prompt}")
+            result = _invoke_agent_turn(session_id, prompt)
+            output.append(f"Log file: {result['log_file']}") if result["log_file"] else None
+            output.append(f"[TURN {turn_index}] Agent: {result['response']}")
+            output.append(f"[TURN {turn_index}] tokens={result['tokens']} tps={result['tps']}")
+            if result["error"]:
+                errors.append(result["error"])
+                exit_code = 1
+                break
+    except (OSError, urllib.error.URLError, ValueError) as exc:
+        errors.append(str(exc))
+        exit_code = 1
     finally:
-        Path(tmp_path).unlink(missing_ok=True)
+        try:
+            _agent_request("DELETE", f"/api/sessions/{urllib.parse.quote(session_id, safe='')}")
+        except (OSError, urllib.error.URLError, ValueError):
+            pass
 
     duration = time.monotonic() - start_time
-    return duration, result.returncode, result.stdout, result.stderr
+    return duration, exit_code, "\n".join(output), "\n".join(errors)
+
+
+def _agent_base_url() -> str:
+    config = json.loads((REPO_ROOT / "config" / "korestack_config.json").read_text(encoding="utf-8"))
+    host   = str(config.get("network", {}).get("host", "127.0.0.1"))
+    port   = int(config["services"]["koreagent"]["port"])
+    return f"http://{host}:{port}"
+
+
+def _agent_request(method: str, path: str, payload: dict | None = None):
+    body    = json.dumps(payload).encode("utf-8") if payload is not None else None
+    request = urllib.request.Request(
+        _agent_base_url() + path,
+        data    = body,
+        method  = method,
+        headers = {"Content-Type": "application/json"},
+    )
+    with urllib.request.urlopen(request, timeout=SUBPROCESS_TIMEOUT_SECONDS) as response:
+        return json.loads(response.read().decode("utf-8"))
+
+
+def _invoke_agent_turn(session_id: str, prompt: str) -> dict:
+    submitted = _agent_request("POST", f"/api/sessions/{urllib.parse.quote(session_id, safe='')}/prompt", {"prompt": prompt})
+    run_id    = str(submitted["run_id"])
+    request   = urllib.request.Request(_agent_base_url() + f"/api/runs/{urllib.parse.quote(run_id, safe='')}/stream")
+    result    = {"response": "", "tokens": 0, "tps": "0", "log_file": "", "error": ""}
+    with urllib.request.urlopen(request, timeout=SUBPROCESS_TIMEOUT_SECONDS) as response:
+        for raw_line in response:
+            line = raw_line.decode("utf-8", errors="replace").strip()
+            if not line.startswith("data:"):
+                continue
+            event = json.loads(line.removeprefix("data:").strip())
+            event_type = event.get("type")
+            if event_type == "response":
+                result["response"] = str(event.get("response") or "")
+                result["tokens"]   = int(event.get("tokens") or 0)
+                result["tps"]      = str(event.get("tps") or "0")
+            elif event_type == "log_file":
+                result["log_file"] = str(event.get("path") or "")
+            elif event_type == "error":
+                result["error"] = str(event.get("message") or "Agent request failed")
+            elif event_type == "done":
+                break
+    return result
 
 
 # ====================================================================================================

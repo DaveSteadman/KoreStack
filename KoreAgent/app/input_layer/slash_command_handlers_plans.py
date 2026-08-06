@@ -8,11 +8,11 @@ from __future__ import annotations
 
 from typing import Callable
 
-from indepth_planner_archives import export_plan_archive
-from indepth_planner_archives import list_plan_archives
-from indepth_planner_archives import load_plan_archive
-from indepth_planner_store import get_plan
-from indepth_planner_store import save_workflow
+from workflow_archives import export_plan_archive
+from workflow_archives import list_plan_archives
+from workflow_archives import load_plan_archive
+from workflow_store import get_simple_plan
+from workflow_store import save_workflow
 from input_layer.slash_command_context import SlashCommandContext
 
 
@@ -62,7 +62,7 @@ def _cmd_workflow(arg: str, ctx: SlashCommandContext) -> None:
             ctx.output("Usage: /workflow export <name>", "dim")
             return
         try:
-            exported = export_plan_archive(name=name, plan=get_plan(session_id=ctx.session_id))
+            exported = export_plan_archive(name=name, plan=get_simple_plan(session_id=ctx.session_id))
         except RuntimeError as exc:
             ctx.output(str(exc), "error")
             return
@@ -75,7 +75,7 @@ def _cmd_workflow(arg: str, ctx: SlashCommandContext) -> None:
         if not archive_name:
             ctx.output("Usage: /workflow import <name> [--replace]", "dim")
             return
-        current = get_plan(session_id=ctx.session_id)
+        current = get_simple_plan(session_id=ctx.session_id)
         if current and not replace:
             ctx.output("An active Workflow exists. Use /workflow import <name> --replace to replace it.", "error")
             return

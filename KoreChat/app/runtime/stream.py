@@ -1,11 +1,11 @@
+import asyncio
 import json
-import queue
 import threading
 
 from fastapi.responses import StreamingResponse
 
 
-_subscribers: list[queue.Queue] = []
+_subscribers: list[tuple[asyncio.AbstractEventLoop, asyncio.Queue]] = []
 _subscribers_lock: threading.Lock = threading.Lock()
 
 
@@ -14,36 +14,39 @@ def push_event(event_type: str, conversation_id: int | None = None) -> None:
     if conversation_id is not None:
         item["conversation_id"] = conversation_id
     with _subscribers_lock:
-        dead: list[queue.Queue] = []
-        for subscriber in _subscribers:
-            try:
-                subscriber.put_nowait(item)
-            except queue.Full:
-                dead.append(subscriber)
-        for subscriber in dead:
-            try:
-                _subscribers.remove(subscriber)
-            except ValueError:
-                pass
+        subscribers = list(_subscribers)
+    for loop, subscriber in subscribers:
+        if loop.is_closed():
+            with _subscribers_lock:
+                if (loop, subscriber) in _subscribers:
+                    _subscribers.remove((loop, subscriber))
+            continue
+        loop.call_soon_threadsafe(_enqueue_event, subscriber, item)
 
 
-def event_stream_response() -> StreamingResponse:
-    subscriber: queue.Queue = queue.Queue(maxsize=64)
+def _enqueue_event(subscriber: asyncio.Queue, item: dict) -> None:
+    if not subscriber.full():
+        subscriber.put_nowait(item)
+
+
+async def event_stream_response() -> StreamingResponse:
+    subscriber: asyncio.Queue = asyncio.Queue(maxsize=64)
+    loop = asyncio.get_running_loop()
     with _subscribers_lock:
-        _subscribers.append(subscriber)
+        _subscribers.append((loop, subscriber))
 
-    def generate():
+    async def generate():
         try:
             while True:
                 try:
-                    item = subscriber.get(timeout=20)
+                    item = await asyncio.wait_for(subscriber.get(), timeout=20)
                     yield f"data: {json.dumps(item)}\n\n"
-                except queue.Empty:
+                except TimeoutError:
                     yield ": keepalive\n\n"
         finally:
             with _subscribers_lock:
                 try:
-                    _subscribers.remove(subscriber)
+                    _subscribers.remove((loop, subscriber))
                 except ValueError:
                     pass
 

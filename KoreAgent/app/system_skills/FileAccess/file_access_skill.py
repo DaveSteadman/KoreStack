@@ -7,7 +7,7 @@
 # sensible defaults for relative paths.
 #
 # Path behavior:
-#   - bare file name or relative path resolves under datauser/
+#   - bare file name, relative path, or ./relative path resolves under datauser/
 #   - paths that already begin with legacy prefixes like "data/", "datauser/", or "KoreDocs/"
 #     are accepted and normalized
 #   - absolute paths are allowed only when they resolve inside the datauser directory

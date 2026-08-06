@@ -56,22 +56,6 @@
         "path": "/mcp",
         "enabled": true,
         "purpose": "live web search, page fetch, navigation, research traversal, and Wikipedia lookup"
-      },
-      {
-        "name": "KoreTest",
-        "service": "koretest",
-        "path": "/mcp",
-        "enabled": true,
-        "purpose": "test-suite execution, TEST-chat provenance, and versioned test-run history",
-        "expected_prefix": "test_"
-      },
-      {
-        "name": "KoreCron",
-        "service": "korecron",
-        "path": "/mcp",
-        "enabled": true,
-        "purpose": "scheduled named-chat prompt sets and run control",
-        "expected_prefix": "cron_"
       }
     ]
   }

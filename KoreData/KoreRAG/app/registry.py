@@ -75,9 +75,10 @@ def _load_descriptor(db_id: str, db_path: Path) -> dict:
     }
 
 
-def reload() -> None:
-    """Re-scan data_dir for databases.  Safe to call at any time."""
-    _registry.clear()
+def reload() -> bool:
+    """Re-scan data_dir and return whether the registered descriptors changed."""
+    global _registry
+    registry: dict[str, dict] = {}
 
     # All databases live in databases/ subdirectory.
     if _DBS_DIR.exists():
@@ -85,22 +86,26 @@ def reload() -> None:
         for subdir in sorted(p for p in _DBS_DIR.iterdir() if p.is_dir()):
             name = subdir.name
             db_file = subdir / f"{name}.db"
-            if db_file.exists() and name not in _registry:
-                _registry[name] = _load_descriptor(name, db_file)
+            if db_file.exists() and name not in registry:
+                registry[name] = _load_descriptor(name, db_file)
 
         # Legacy fallback: flat .db files directly in databases/
         for db_file in sorted(_DBS_DIR.glob("*.db")):
             name = db_file.stem
-            if name not in _registry:
-                _registry[name] = _load_descriptor(name, db_file)
+            if name not in registry:
+                registry[name] = _load_descriptor(name, db_file)
 
         # Orphan descriptors without a matching .db are intentionally skipped.
         # They may describe a processing script, but they are not databases yet.
         for json_file in sorted(_DBS_DIR.glob("*.json")):
             name = json_file.stem
             expected_db = json_file.with_suffix(".db")
-            if expected_db.exists() and name not in _registry:
-                _registry[name] = _load_descriptor(name, expected_db)
+            if expected_db.exists() and name not in registry:
+                registry[name] = _load_descriptor(name, expected_db)
+
+    changed   = registry != _registry
+    _registry = registry
+    return changed
 
 
 reload()  # Auto-initialize at import time.

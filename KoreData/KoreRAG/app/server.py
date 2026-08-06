@@ -25,7 +25,11 @@ if _KORECOMMON_PARENT is not None and str(_KORECOMMON_PARENT) not in sys.path:
 from KoreCommon.service_app import register_endpoint_manifest
 from app.config import cfg
 from app.endpoint_api import register_rag_api
-from app.endpoint_ui import register_rag_ui
+from app.endpoint_ui import (
+    _rag_processing_scripts,
+    invalidate_rag_processing_scripts,
+    register_rag_ui,
+)
 from app.registry import get_descriptor, list_database_ids, reload as _registry_reload
 from app.database import init_db
 
@@ -198,6 +202,7 @@ def _launch_ingestor(name: str) -> dict:
         }
         json_path.write_text(json.dumps(descriptor_data, indent=2), encoding="utf-8")
     _registry_reload()
+    invalidate_rag_processing_scripts()
 
     proc = subprocess.Popen(
         [sys.executable, str(ingest_py)],
@@ -231,13 +236,15 @@ def _stop_ingestor(name: str) -> dict:
     if json_path.exists():
         _write_sync_status(json_path, "stopped")
     _registry_reload()
+    invalidate_rag_processing_scripts()
     return {"status": "stopped", "db": name}
 
 
 def _run_ingest_scheduler(stop_event: threading.Event) -> None:
     while not stop_event.wait(60):
         try:
-            _registry_reload()
+            if _registry_reload():
+                invalidate_rag_processing_scripts()
             _prune_finished_ingest_processes()
             today = date.today()
             for db_id in list_database_ids():
@@ -273,10 +280,13 @@ def _reset_stale_running() -> None:
         if json_path.exists():
             _write_sync_status(json_path, "stopped")
     _registry_reload()
+    invalidate_rag_processing_scripts()
 
 
 def _warm_registered_databases() -> None:
     _registry_reload()
+    invalidate_rag_processing_scripts()
+    _rag_processing_scripts(set(list_database_ids()))
     for db_id in list_database_ids():
         init_db(db=db_id)
     _reset_stale_running()

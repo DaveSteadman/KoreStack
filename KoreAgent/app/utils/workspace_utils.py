@@ -14,9 +14,6 @@
 #   get_workspace_root()       ->  <repo_root>/
 #   get_controldata_dir()      ->  <repo_root>/datacontrol/
 #   get_logs_dir()             ->  <repo_root>/datacontrol/logs/
-#   get_schedules_dir()        ->  <repo_root>/datacontrol/schedules/
-#   get_test_prompts_dir()     ->  <repo_root>/datacontrol/test_prompts/
-#   get_test_results_dir()     ->  <repo_root>/datacontrol/test_results/
 #   get_chatsessions_dir()       ->  <repo_root>/datacontrol/chatsessions/
 #   get_chatsessions_named_dir()  ->  <repo_root>/datacontrol/chatsessions/named/
 #   get_chatsessions_day_dir()    ->  <repo_root>/datacontrol/chatsessions/<YYYY-MM-DD>/
@@ -24,8 +21,7 @@
 # Related modules:
 #   - file_access_skill.py  -- uses get_workspace_root() for path-safety checks
 #   - skill_executor.py     -- uses get_workspace_root() to resolve skill module paths
-#   - main.py               -- uses get_logs_dir(), get_schedules_dir()
-#   - code/testing/test_wrapper.py -- uses get_test_results_dir()
+#   - main.py               -- uses get_logs_dir()
 # ====================================================================================================
 
 
@@ -79,10 +75,10 @@ def get_suite_defaults_file() -> Path:
 
 
 # ====================================================================================================
-# MARK: DEFAULTS BOOTSTRAP
+# MARK: AGENT CONFIGURATION
 # ====================================================================================================
 @lru_cache(maxsize=1)
-def get_bootstrap_defaults_file() -> Path:
+def get_agent_config_file() -> Path:
     """Return the agent LLM config file (model, ctx, llmhost, and agent-specific tuning)."""
     return get_workspace_root() / "config" / "koreagent_config.json"
 
@@ -188,8 +184,8 @@ def _resolve_mcp_service_refs(config: dict) -> None:
 
 @lru_cache(maxsize=1)
 def load_runtime_config() -> dict:
-    """Return merged runtime config from legacy agent defaults plus top-level suite config."""
-    merged = dict(_read_json_file(get_bootstrap_defaults_file()))
+    """Return runtime configuration merged from Agent and suite configuration files."""
+    merged = dict(_read_json_file(get_agent_config_file()))
 
     suite_config = get_suite_defaults_file()
     if suite_config.exists():
@@ -204,7 +200,7 @@ def load_runtime_config() -> dict:
 
 @lru_cache(maxsize=1)
 def _load_path_overrides() -> dict:
-    """Load dataroot overrides from env, bootstrap defaults, then suite config."""
+    """Load dataroot overrides from the environment, Agent configuration, then suite config."""
 
     overrides: dict[str, Path] = {}
     env_dr = os.environ.get("KORE_SUITE_DATAROOT", "").strip()
@@ -217,16 +213,16 @@ def _load_path_overrides() -> dict:
     if env_ud:
         overrides["UserDataFolder"] = Path(env_ud).resolve()
 
-    bootstrap_root = get_workspace_root().resolve()
-    bootstrap_raw = _read_json_file(get_bootstrap_defaults_file())
+    agent_root = get_workspace_root().resolve()
+    agent_config = _read_json_file(get_agent_config_file())
     for key in ("DataRootFolder", "ControlDataFolder", "UserDataFolder"):
         if key in overrides:
             continue
-        value = bootstrap_raw.get(key)
+        value = agent_config.get(key)
         if not isinstance(value, str) or not value.strip():
             continue
         path_value = Path(value.strip())
-        overrides[key] = path_value if path_value.is_absolute() else (bootstrap_root / path_value).resolve()
+        overrides[key] = path_value if path_value.is_absolute() else (agent_root / path_value).resolve()
 
     raw = load_runtime_config()
     for key in ("DataRootFolder", "ControlDataFolder", "UserDataFolder"):
@@ -272,27 +268,9 @@ def get_logs_dir() -> Path:
 
 
 @lru_cache(maxsize=1)
-def get_schedules_dir() -> Path:
-    """Return the absolute path to the datacontrol/schedules/ directory."""
-    return get_controldata_dir() / "schedules"
-
-
-@lru_cache(maxsize=1)
 def get_plans_dir() -> Path:
     """Return the absolute path to the datacontrol/plans/ directory."""
     return get_controldata_dir() / "plans"
-
-
-@lru_cache(maxsize=1)
-def get_test_prompts_dir() -> Path:
-    """Return the absolute path to the datacontrol/test_prompts/ directory."""
-    return get_controldata_dir() / "test_prompts"
-
-
-@lru_cache(maxsize=1)
-def get_test_results_dir() -> Path:
-    """Return the absolute path to the datacontrol/test_results/ directory."""
-    return get_controldata_dir() / "test_results"
 
 
 @lru_cache(maxsize=1)

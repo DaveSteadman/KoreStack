@@ -316,11 +316,54 @@ _rag_client:   httpx.AsyncClient | None = None
 _scrape_client: httpx.AsyncClient | None = None
 _graph_client: httpx.AsyncClient | None = None
 
+_ui_service_cards: list[dict] = []
+_ui_status_task:   asyncio.Task | None = None
+
+_UI_SERVICE_SPECS = (
+    ("KoreFeed",      "feeds",     "korefeed",      "_feed_client",   "korefeed_url"),
+    ("KoreLibrary",   "library",   "korelibrary",   "_lib_client",    "korelibrary_url"),
+    ("KoreReference", "reference", "korereference", "_ref_client",    "korereference_url"),
+    ("KoreRAG",       "rag",       "korerag",       "_rag_client",    "korerag_url"),
+    ("KoreScrape",    "scrape",    "korescrape",    "_scrape_client", "korescrape_url"),
+    ("KoreGraph",     "graph",     "koregraph",     "_graph_client",  "koregraph_url"),
+)
+
+
+def _unavailable_ui_service_cards() -> list[dict]:
+    unavailable = RuntimeError("Status check pending")
+    return [
+        _svc_ui(unavailable, label, slug, cfg[url_key], icon_key)
+        for label, slug, icon_key, _client_name, url_key in _UI_SERVICE_SPECS
+    ]
+
+
+async def _refresh_ui_service_cards() -> None:
+    global _ui_service_cards
+    clients = [globals()[client_name] for _label, _slug, _icon_key, client_name, _url_key in _UI_SERVICE_SPECS]
+    responses = await asyncio.gather(
+        *(client.get("/status", timeout=3.0) for client in clients if client is not None),
+        return_exceptions = True,
+    )
+    _ui_service_cards = [
+        _svc_ui(response, label, slug, cfg[url_key], icon_key)
+        for (label, slug, icon_key, _client_name, url_key), response in zip(_UI_SERVICE_SPECS, responses)
+    ]
+
+
+async def _refresh_ui_service_cards_loop() -> None:
+    while True:
+        try:
+            await _refresh_ui_service_cards()
+        except Exception:
+            pass
+        await asyncio.sleep(2.0)
+
 
 @asynccontextmanager
 async def _lifespan(app: FastAPI):
     global _child_readiness_task
     global _feed_client, _lib_client, _ref_client, _rag_client, _scrape_client, _graph_client
+    global _ui_status_task
     print("\n  KoreDataGateway — starting child services")
     _set_gateway_status("starting", "Starting child services")
     loop = asyncio.get_running_loop()
@@ -347,6 +390,7 @@ async def _lifespan(app: FastAPI):
     _scrape_client = httpx.AsyncClient(base_url=cfg["korescrape_url"],   timeout=30.0)
     _graph_client  = httpx.AsyncClient(base_url=cfg["koregraph_url"],     timeout=15.0)
     _child_readiness_task = asyncio.create_task(_wait_for_children_ready())
+    _ui_status_task       = asyncio.create_task(_refresh_ui_service_cards_loop())
     async with _mcp.session_manager.run():
         yield
     print("\n  KoreDataGateway — shutting down child services")
@@ -357,6 +401,13 @@ async def _lifespan(app: FastAPI):
         except asyncio.CancelledError:
             pass
         _child_readiness_task = None
+    if _ui_status_task is not None:
+        _ui_status_task.cancel()
+        try:
+            await _ui_status_task
+        except asyncio.CancelledError:
+            pass
+        _ui_status_task = None
     await _feed_client.aclose()
     await _lib_client.aclose()
     await _ref_client.aclose()
@@ -895,23 +946,7 @@ async def root_redirect():
 async def web_root(request: Request):
     if _feed_client is None:
         raise HTTPException(status_code=503, detail="Gateway is still starting up")
-    kf_r, kl_r, kr_r, krag_r, ks_r, kg_r = await asyncio.gather(
-        _feed_client.get("/status", timeout=3.0),
-        _lib_client.get("/status", timeout=3.0),
-        _ref_client.get("/status", timeout=3.0),
-        _rag_client.get("/status", timeout=3.0),
-        _scrape_client.get("/status", timeout=3.0),
-        _graph_client.get("/status", timeout=3.0),
-        return_exceptions=True,
-    )
-    services = [
-        _svc_ui(kf_r,   "KoreFeed",      "feeds",     cfg["korefeed_url"],      "korefeed"),
-        _svc_ui(kl_r,   "KoreLibrary",   "library",   cfg["korelibrary_url"],   "korelibrary"),
-        _svc_ui(kr_r,   "KoreReference", "reference", cfg["korereference_url"], "korereference"),
-        _svc_ui(krag_r, "KoreRAG",       "rag",       cfg["korerag_url"],       "korerag"),
-        _svc_ui(ks_r,   "KoreScrape",    "scrape",    cfg["korescrape_url"],    "korescrape"),
-        _svc_ui(kg_r,   "KoreGraph",     "graph",     cfg["koregraph_url"],     "koregraph"),
-    ]
+    services = _ui_service_cards or _unavailable_ui_service_cards()
     return templates.TemplateResponse(request, "home.html", {"services": services})
 
 

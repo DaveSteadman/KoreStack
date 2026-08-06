@@ -1,8 +1,4 @@
-"""Fast deterministic checks used by the KoreAgent ``/unittest`` command.
-
-This intentionally complements the prompt-driven system-test runner.  It does
-not call a model, start services, or write test-result CSV files.
-"""
+"""Fast deterministic checks owned and invoked by KoreTest."""
 
 from __future__ import annotations
 
@@ -17,10 +13,9 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 APP_DIR   = REPO_ROOT / "KoreAgent" / "app"
 
 _AGENT_SMOKE_TARGETS = (
-    "testing.unit.test_guardrail_smoke.GuardrailSmokeTests.test_test_wrapper_fails_single_prompt_on_no_results_output",
-    "testing.unit.test_guardrail_smoke.GuardrailSmokeTests.test_test_wrapper_fails_exchange_on_search_failure_output",
-    "testing.unit.test_guardrail_smoke.GuardrailSmokeTests.test_queue_timeout_for_prompt_disables_scheduler_timeout_only_for_test",
-    "testing.unit.test_guardrail_smoke.GuardrailSmokeTests.test_slash_command_outputs_use_ascii_arrows",
+    "KoreTest.app.agent_tests.unit.test_guardrail_smoke.GuardrailSmokeTests.test_test_wrapper_fails_single_prompt_on_no_results_output",
+    "KoreTest.app.agent_tests.unit.test_guardrail_smoke.GuardrailSmokeTests.test_test_wrapper_fails_exchange_on_search_failure_output",
+    "KoreTest.app.agent_tests.unit.test_guardrail_smoke.GuardrailSmokeTests.test_slash_command_outputs_use_ascii_arrows",
 )
 
 
@@ -69,18 +64,16 @@ def run_core_checks() -> bool:
                 sys.executable,
                 "-m",
                 "unittest",
-                "testing.unit.test_slash_command_registry",
-                "testing.unit.test_service_logging",
-                "testing.unit.test_koreconv_input",
-                "testing.unit.test_suite_config_loader",
-                "testing.unit.test_task_conversations",
-                "testing.unit.test_datauser_fs",
-                "testing.unit.test_task_schedule",
-                "testing.unit.test_ollama_process_windows",
+                "KoreTest.app.agent_tests.unit.test_slash_command_registry",
+                "KoreTest.app.agent_tests.unit.test_service_logging",
+                "KoreTest.app.agent_tests.unit.test_koreconv_input",
+                "KoreTest.app.agent_tests.unit.test_suite_config_loader",
+                "KoreTest.app.agent_tests.unit.test_datauser_fs",
+                "KoreTest.app.agent_tests.unit.test_ollama_process_windows",
             ],
-            APP_DIR,
+            REPO_ROOT,
         ),
-        ([sys.executable, "-m", "unittest", *_AGENT_SMOKE_TARGETS], APP_DIR),
+        ([sys.executable, "-m", "unittest", *_AGENT_SMOKE_TARGETS], REPO_ROOT),
         ([sys.executable, "-m", "unittest", "KoreCode.app.testing.test_run_executor"], REPO_ROOT),
         ([sys.executable, "-m", "unittest", "KoreDocs.app.testing.unit.test_korefile_metadata"], REPO_ROOT),
         ([sys.executable, "KoreData/KoreDataGateway/app/test_server_artifact_refs.py"], REPO_ROOT),

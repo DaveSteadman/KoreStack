@@ -3,13 +3,14 @@ from __future__ import annotations
 import json
 from functools import wraps
 
-from indepth_planner_archives import export_plan_archive, list_plan_archives, load_plan_archive
-from indepth_planner_store import add_simple_task, clear_plan, create_simple_plan, evaluate_simple_task_contract, get_simple_plan
-from indepth_planner_store import clear_simple_dynamic, clear_simple_task_data
-from indepth_planner_store import list_simple_tasks, mark_simple_task_ran
-from indepth_planner_store import record_simple_task_result, reset_simple_task_run
-from indepth_planner_store import simple_run_to_completion_context
-from indepth_planner_store import set_simple_task_data, update_simple_task
+from workflow_archives import export_plan_archive, list_plan_archives, load_plan_archive
+from workflow_store import add_simple_task, clear_workflow, create_simple_plan, evaluate_simple_task_contract, get_simple_plan
+from workflow_store import clear_simple_dynamic, clear_simple_task_data
+from workflow_store import list_simple_tasks, mark_simple_task_ran
+from workflow_store import record_simple_task_result, reset_simple_task_run
+from workflow_store import simple_run_to_completion_context
+from workflow_store import set_simple_task_data, update_simple_task
+from workflow_store import save_workflow
 
 
 def _json(value: object) -> str:
@@ -122,7 +123,7 @@ def workflow_run_to_completion() -> str:
 
 @_requires_existing_workflow
 def workflow_clear() -> str:
-    clear_plan()
+    clear_workflow()
     return _json({"message": "Workflow cleared."})
 
 
@@ -136,7 +137,6 @@ def workflow_import(name: str, replace: bool = False) -> str:
     if get_simple_plan() and not replace:
         return "Error: An active Workflow exists; use replace=true to replace it."
     loaded = load_plan_archive(name)
-    from indepth_planner_store import save_workflow
     save_workflow(loaded["archive"]["plan"])
     return _json(_summary(get_simple_plan()))
 

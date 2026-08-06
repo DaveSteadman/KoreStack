@@ -48,5 +48,5 @@ def serve_ui_module(module_path: str):
 
 
 @router.get("/stream", include_in_schema=False)
-def stream_events():
-    return event_stream_response()
+async def stream_events():
+    return await event_stream_response()

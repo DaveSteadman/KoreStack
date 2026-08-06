@@ -150,32 +150,6 @@
       "trust_boundary": "internal"
     },
     {
-      "skill_name": "CronPrompt Skill",
-      "relative_path": "app/system_skills/CronPrompt/skill.md",
-      "purpose": "Create, query, update, enable, disable, and delete scheduled cron prompts stored as JSON files in `controldata/schedules/`. Each CronPrompt defines a schedule and a prompt string that the scheduler runs automatically on each firing.",
-      "module": "KoreAgent/app/system_skills/CronPrompt/cronprompt_skill.py",
-      "trigger_keyword": "cron prompt",
-      "triggers": [],
-      "functions": [
-        "cronprompt_list()",
-        "cronprompt_get(name: str)",
-        "cronprompt_create(name: str, schedule: str, prompt: str, output_template: str = \"\")",
-        "cronprompt_set_enabled(name: str, enabled: bool)",
-        "cronprompt_set_schedule(name: str, schedule: str)",
-        "cronprompt_set_prompt(name: str, prompt: str, output_template: str = \"\")",
-        "cronprompt_delete(name: str)"
-      ],
-      "inputs": [],
-      "outputs": [],
-      "param_descriptions": {},
-      "tool_selection_guidance": "- Use this skill for scheduled automation prompts that run on a clock.\n- Prefer `cronprompt_list()` when the user asks what recurring automations are configured.\n- Prefer this skill over the overloaded word `task` when the thing being managed is a scheduled prompt rather than a PlanTask.",
-      "is_system_skill": true,
-      "origin": "builtin",
-      "availability": "guaranteed",
-      "role": "core",
-      "trust_boundary": "internal"
-    },
-    {
       "skill_name": "Datasets Skill",
       "relative_path": "app/system_skills/Datasets/skill.md",
       "purpose": "Store and refine structured record collections across prompts and sessions. Use datasets when a tool\nreturns a collection of objects such as feed items, search results, references, or any other\nrecord-shaped working set that needs iterative filtering.",
