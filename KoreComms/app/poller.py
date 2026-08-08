@@ -21,7 +21,9 @@
 # ====================================================================================================
 from __future__ import annotations
 
+import json
 import logging
+import math
 import threading
 import time
 
@@ -33,8 +35,35 @@ logger = logging.getLogger(__name__)
 
 _thread: threading.Thread | None = None
 _stop_event = threading.Event()
+_timing_lock = threading.Lock()
+_next_receive_polls: dict[int, float] = {}
+_next_send_polls: dict[int, float] = {}
 _OUTBOUND_EVENT_POLL_SECS = float(cfg.get("event_poll_interval", 1.0))
 _MISSING_KC_POLICY = str(cfg.get("missing_kc_conversation_policy", "recreate")).strip().lower()
+
+
+def get_poll_timing() -> dict[int, dict[str, int | None]]:
+    """Return remaining seconds until each configured interface poll is due."""
+    now = time.monotonic()
+    with _timing_lock:
+        receive_polls = dict(_next_receive_polls)
+        send_polls = dict(_next_send_polls)
+    interface_ids = set(receive_polls) | set(send_polls)
+    return {
+        interface_id: {
+            "receive": max(0, math.ceil(receive_polls[interface_id] - now)) if interface_id in receive_polls else None,
+            "send":    max(0, math.ceil(send_polls[interface_id] - now))    if interface_id in send_polls else None,
+        }
+        for interface_id in interface_ids
+    }
+
+
+def reset_poll_timing(interface_id: int, receive_interval: int, send_interval: int) -> None:
+    """Restart an interface's timing countdowns after its settings are saved."""
+    now = time.monotonic()
+    with _timing_lock:
+        _next_receive_polls[interface_id] = now + max(1, receive_interval)
+        _next_send_polls[interface_id]    = now + max(1, send_interval)
 
 
 def _conversation_name_for(local_conv: dict) -> str:
@@ -134,9 +163,19 @@ def _forward_message(iface_row: dict, msg: dict) -> None:
 
 def _poll_inbound() -> None:
     interfaces = db.interface_list()
+    now = time.monotonic()
     for row in interfaces:
         if not row["enabled"]:
             continue
+        settings = json.loads(row.get("config_json", "{}"))
+        interval = max(
+            1,
+            int(settings.get("receive_poll_interval", settings.get("poll_interval", cfg.get("poll_interval", 60)))),
+        )
+        with _timing_lock:
+            if now < _next_receive_polls.get(row["id"], 0.0):
+                continue
+            _next_receive_polls[row["id"]] = now + interval
         try:
             adapter  = build_adapter(row)
             messages = adapter.poll()
@@ -227,21 +266,10 @@ def _route_outbound_event(event: dict) -> None:
         logger.error("No local conversation linked for KC conv %s", kc_conv_id)
         return
 
-    try:
-        draft_messages = [
-            m for m in conversation.get("messages", [])
-            if m.get("direction") == "outbound" and m.get("status") == "draft"
-        ]
-        if not draft_messages:
-            messages = kc_client.get_messages(kc_conv_id, direction="outbound")
-            draft_messages = [m for m in messages if m.get("status") == "draft"]
-
-        if draft_messages:
-            _route_outbound_for_conversation(local_conv)
-        kc_client.complete_event(event["id"], status="completed")
-    except Exception as exc:
-        logger.error("Outbound event handling failed for KC conv %s: %s", kc_conv_id, exc)
-        kc_client.complete_event(event["id"], status="failed")
+    # The event acknowledges that a draft is ready.  Delivery itself is picked
+    # up by the per-interface send schedule, which honours each connection's
+    # configured send polling interval.
+    kc_client.complete_event(event["id"], status="completed")
 
 
 def _drain_outbound_events() -> None:
@@ -260,6 +288,24 @@ def _drain_outbound_events() -> None:
             logger.error("Unhandled outbound event error for event %s: %s", event.get("id"), exc)
 
 
+def _poll_outbound_scheduled() -> None:
+    """Route draft replies according to the connection's send polling interval."""
+    now = time.monotonic()
+    conversations = db.conversation_list_with_kc_id()
+    for iface in db.interface_list():
+        if not iface["enabled"]:
+            continue
+        settings = json.loads(iface.get("config_json", "{}"))
+        interval = max(1, int(settings.get("send_poll_interval", cfg.get("event_poll_interval", 1.0))))
+        with _timing_lock:
+            if now < _next_send_polls.get(iface["id"], 0.0):
+                continue
+            _next_send_polls[iface["id"]] = now + interval
+        for local_conv in conversations:
+            if local_conv["interface_id"] == iface["id"]:
+                _route_outbound_for_conversation(local_conv)
+
+
 # ---------------------------------------------------------------------------
 # Polling loop
 # ---------------------------------------------------------------------------
@@ -270,18 +316,14 @@ def _run(interval: int) -> None:
         interval,
         _OUTBOUND_EVENT_POLL_SECS,
     )
-    next_inbound_poll = 0.0
     while not _stop_event.is_set():
         try:
-            now = time.monotonic()
-            if now >= next_inbound_poll:
-                _poll_inbound()
-                next_inbound_poll = now + interval
+            _poll_inbound()
             _drain_outbound_events()
+            _poll_outbound_scheduled()
         except Exception as exc:
             logger.error("Unexpected poller error: %s", exc)
-        wait_for = max(0.1, min(_OUTBOUND_EVENT_POLL_SECS, next_inbound_poll - time.monotonic()))
-        _stop_event.wait(wait_for)
+        _stop_event.wait(_OUTBOUND_EVENT_POLL_SECS)
     logger.info("Poller stopped")
 
 
@@ -289,6 +331,9 @@ def start() -> None:
     global _thread
     if _thread is not None and _thread.is_alive():
         return
+    with _timing_lock:
+        _next_receive_polls.clear()
+        _next_send_polls.clear()
     _stop_event.clear()
     interval = int(cfg.get("poll_interval", 60))
     _thread = threading.Thread(target=_run, args=(interval,), daemon=True, name="poller")

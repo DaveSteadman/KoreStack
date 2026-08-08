@@ -20,12 +20,14 @@
 from __future__ import annotations
 
 from app.interfaces.common.base import BaseInterface
+from app.interfaces.classic_email import ClassicEmailInterface
 from app.interfaces.discord import DiscordInterface
 from app.interfaces.gmail import GmailInterface
 from app.interfaces.manual import ManualInterface
 
 REGISTRY: dict[str, type[BaseInterface]] = {
     "manual": ManualInterface,
+    "classic_email": ClassicEmailInterface,
     "discord": DiscordInterface,
     "gmail": GmailInterface,
 }

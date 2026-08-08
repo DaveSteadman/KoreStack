@@ -531,13 +531,17 @@ def _handle_event(
         # this turn plus the completion tokens (which become part of the thread next turn).
         new_token_estimate = estimate_next_turn_tokens(prompt_tokens, completion_tokens)
 
+        # External replies remain drafts until KoreComms has delivered them.
+        channel = conv.get("channel_type", "webchat")
+        outbound_status = "sent" if channel in {"webchat", "manual"} else "draft"
+
         # Write outbound message first - if this fails the event is not completed.
         try:
             _http_post(base, f"/conversations/{conv_id}/messages", {
                 "direction":      "outbound",
                 "content":        reply,
                 "sender_display": str(event_payload.get("outbound_sender_display") or "agent"),
-                "status":         "sent",
+                "status":         outbound_status,
             })
         except Exception as exc:
             push_log_line(f"[KORECHAT] Conv {conv_id}: failed to write outbound message: {exc}")
@@ -567,7 +571,6 @@ def _handle_event(
         _complete_event(base, event_id, "completed", push_log_line, context=f"conv {conv_id}")
 
         # Raise outbound_ready so KoreChat can signal KoreComms for non-webchat delivery.
-        channel = conv.get("channel_type", "webchat")
         if channel not in {"webchat", "manual"}:
             try:
                 _http_post(base, "/events", {

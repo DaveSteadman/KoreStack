@@ -14,7 +14,7 @@
   <table class="kcui-table">
     <thead>
       <tr>
-        <th>ID</th><th>Type</th><th>Name</th><th>Enabled</th><th>Created</th><th></th>
+        <th>ID</th><th>Type</th><th>Name</th><th>Enabled</th><th>Timing</th><th>Created</th><th></th>
       </tr>
     </thead>
     <tbody>
@@ -24,6 +24,12 @@
         <td><span class="kcui-tag kcui-tag--info">{{ iface.type }}</span></td>
         <td>{{ iface.name }}</td>
         <td>{% if iface.enabled %}<span class="kcui-status-dot">&#9679;</span>{% else %}<span class="kcui-status-dot kcui-status-dot--off">&#9675;</span>{% endif %}</td>
+        {% set timing = timings.get(iface.id) %}
+        <td class="kcui-timing" data-interface-id="{{ iface.id }}">
+          <span class="kcui-tag kcui-tag--dim" data-poll-receive>{% if timing and timing.receive is not none %}input {{ timing.receive }}s{% else %}input -{% endif %}</span>
+          /
+          <span class="kcui-tag kcui-tag--dim" data-poll-send>{% if timing and timing.send is not none %}output {{ timing.send }}s{% else %}output -{% endif %}</span>
+        </td>
         <td class="kcui-meta">{{ iface.created_at[:16] }}</td>
         <td>
           <div class="kcui-inline-actions">
@@ -46,10 +52,37 @@
 {% if available_types %}
 <div class="kcui-inline-actions">
   <span class="kcui-meta">Add connection:</span>
+  <a class="kcui-tag kcui-tag--accent" href="/connections/new?type=classic_email">+ Email</a>
   {% for t in available_types %}
+  {% if t != 'classic_email' %}
   <a class="kcui-tag kcui-tag--accent" href="/connections/new?type={{ t }}">+ {{ t }}</a>
+  {% endif %}
   {% endfor %}
 </div>
 {% endif %}
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  async function refreshConnectionTiming() {
+    try {
+      const response = await fetch('/api/connections/timing');
+      if (!response.ok) return;
+      const payload = await response.json();
+      document.querySelectorAll('[data-interface-id]').forEach((cell) => {
+        const timing = payload.timings[cell.dataset.interfaceId];
+        const receive = cell.querySelector('[data-poll-receive]');
+        const send = cell.querySelector('[data-poll-send]');
+        if (receive) receive.textContent = timing?.receive == null ? 'input -' : `input ${timing.receive}s`;
+        if (send) send.textContent = timing?.send == null ? 'output -' : `output ${timing.send}s`;
+      });
+    } catch (_) {
+      // Retain the most recently displayed values if the service is restarting.
+    }
+  }
+
+  refreshConnectionTiming();
+  window.setInterval(refreshConnectionTiming, 5000);
+</script>
 {% endblock %}

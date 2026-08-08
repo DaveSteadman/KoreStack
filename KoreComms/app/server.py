@@ -83,6 +83,27 @@ def _ids_to_text(value: object) -> str:
         return value
     return ""
 
+
+def _store_classic_email_config(config: dict, form: dict, *, preserve_passwords: bool = False) -> None:
+    for key in (
+        "incoming_protocol", "incoming_host", "incoming_port", "incoming_username", "incoming_mailbox",
+        "outgoing_host", "outgoing_port", "outgoing_username", "outgoing_from", "outgoing_security",
+        "receive_poll_interval", "send_poll_interval",
+    ):
+        config[key] = form[key]
+    for key in ("incoming_password", "outgoing_password"):
+        if form[key] or not preserve_passwords:
+            config[key] = crypto.encrypt(form[key]) if form[key] else ""
+    config["import_recent_read"] = form.get("import_recent_read") == "on"
+
+
+def _reset_connection_timing(iface_id: int, config: dict) -> None:
+    receive_interval = int(
+        config.get("receive_poll_interval", config.get("poll_interval", cfg.get("poll_interval", 60)))
+    )
+    send_interval    = int(config.get("send_poll_interval", cfg.get("event_poll_interval", 1.0)))
+    poller.reset_poll_timing(iface_id, receive_interval, send_interval)
+
 _TEMPLATES = Path(
     os.environ.get(
         "KORE_KORECOMMS_TEMPLATES_DIR",
@@ -246,8 +267,18 @@ def ui_connections(request: Request):
     return templates.TemplateResponse(
         request,
         "connections.html",
-        _ctx(interfaces=interfaces, available_types=available_types),
+        _ctx(
+            interfaces=interfaces,
+            available_types=available_types,
+            timings=poller.get_poll_timing(),
+        ),
     )
+
+
+@app.get("/api/connections/timing")
+def api_connections_timing():
+    """Return the remaining inbound and outbound poll times for each interface."""
+    return {"timings": poller.get_poll_timing()}
 
 
 @app.get("/connections/new", response_class=HTMLResponse)
@@ -271,6 +302,21 @@ def ui_connections_create(
     client_id:     str = Form(default=""),
     client_secret: str = Form(default=""),
     poll_interval: int = Form(default=60),
+    incoming_protocol: str = Form(default="imap"),
+    incoming_host: str = Form(default=""),
+    incoming_port: int = Form(default=993),
+    incoming_username: str = Form(default=""),
+    incoming_password: str = Form(default=""),
+    incoming_mailbox: str = Form(default="INBOX"),
+    import_recent_read: str = Form(default="off"),
+    outgoing_host: str = Form(default=""),
+    outgoing_port: int = Form(default=587),
+    outgoing_username: str = Form(default=""),
+    outgoing_password: str = Form(default=""),
+    outgoing_from: str = Form(default=""),
+    outgoing_security: str = Form(default="starttls"),
+    receive_poll_interval: int = Form(default=60),
+    send_poll_interval: int = Form(default=10),
 ):
     if iface_type not in REGISTRY or iface_type == "manual":
         raise HTTPException(400, "Unsupported interface type")
@@ -281,7 +327,10 @@ def ui_connections_create(
     if iface_type == "discord":
         config["bot_token"] = crypto.encrypt(bot_token) if bot_token else ""
         config["channel_ids"] = _parse_id_list(channel_ids)
+    if iface_type == "classic_email":
+        _store_classic_email_config(config, locals())
     iface_id = db.interface_create(iface_type, name, config)
+    _reset_connection_timing(iface_id, config)
     return RedirectResponse(f"/connections/{iface_id}", status_code=303)
 
 
@@ -301,6 +350,8 @@ def ui_connections_edit(request: Request, iface_id: int):
             poll_interval  = config.get("poll_interval", cfg.get("poll_interval", 60)),
             discord_channel_ids_text = _ids_to_text(config.get("channel_ids", [])),
             gmail_authorized = bool(config.get("refresh_token")),
+            receive_poll_interval = config.get("receive_poll_interval", config.get("poll_interval", 60)),
+            send_poll_interval = config.get("send_poll_interval", 10),
         ),
     )
 
@@ -315,6 +366,21 @@ def ui_connections_update(
     client_id:     str = Form(default=""),
     client_secret: str = Form(default=""),
     poll_interval: int = Form(default=60),
+    incoming_protocol: str = Form(default="imap"),
+    incoming_host: str = Form(default=""),
+    incoming_port: int = Form(default=993),
+    incoming_username: str = Form(default=""),
+    incoming_password: str = Form(default=""),
+    incoming_mailbox: str = Form(default="INBOX"),
+    import_recent_read: str = Form(default="off"),
+    outgoing_host: str = Form(default=""),
+    outgoing_port: int = Form(default=587),
+    outgoing_username: str = Form(default=""),
+    outgoing_password: str = Form(default=""),
+    outgoing_from: str = Form(default=""),
+    outgoing_security: str = Form(default="starttls"),
+    receive_poll_interval: int = Form(default=60),
+    send_poll_interval: int = Form(default=10),
     enabled:       str = Form(default="off"),
 ):
     iface = db.interface_get(iface_id)
@@ -331,7 +397,10 @@ def ui_connections_update(
         if bot_token:
             existing["bot_token"] = crypto.encrypt(bot_token)
         existing["channel_ids"] = _parse_id_list(channel_ids)
+    if iface["type"] == "classic_email":
+        _store_classic_email_config(existing, locals(), preserve_passwords=True)
     db.interface_update(iface_id, name, existing, enabled == "on")
+    _reset_connection_timing(iface_id, existing)
     return RedirectResponse("/connections", status_code=303)
 
 

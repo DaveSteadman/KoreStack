@@ -16,7 +16,7 @@
 
       <label for="name">Connection Name</label>
       <input type="text" id="name" name="name" value="{{ iface.name if iface else '' }}"
-            placeholder="{% if iface_type == 'discord' %}My Discord Bot{% else %}My Gmail Account{% endif %}" required>
+            placeholder="{% if iface_type == 'discord' %}My Discord Bot{% elif iface_type == 'classic_email' %}My Email Account{% else %}My Gmail Account{% endif %}" required>
 
       {% if iface_type == "discord" %}
       <label for="bot_token">Discord Bot Token</label>
@@ -31,6 +31,67 @@
         KoreComms polls these channels for new user messages and posts replies back to the same channel or thread.
         Use a channel or thread ID as the recipient when calling <code>/api/send</code> for Discord.
       </p>
+      {% endif %}
+
+      {% if iface_type == "classic_email" %}
+      <div class="section-title">Incoming email</div>
+      <label for="incoming_protocol">Protocol</label>
+      <select id="incoming_protocol" name="incoming_protocol">
+        <option value="imap" {% if config and config.incoming_protocol == 'imap' %}selected{% endif %}>IMAP</option>
+        <option value="pop3" {% if config and config.incoming_protocol == 'pop3' %}selected{% endif %}>POP3</option>
+      </select>
+      <label for="incoming_host">Server</label>
+      <input type="text" id="incoming_host" name="incoming_host" value="{{ config.incoming_host if config else '' }}" placeholder="imap.example.com" required>
+      <label for="incoming_port">Port</label>
+      <input type="number" id="incoming_port" name="incoming_port" value="{{ config.incoming_port if config else 993 }}" min="1" max="65535" class="kcui-field-sm" required>
+      <label for="incoming_username">Username</label>
+      <input type="text" id="incoming_username" name="incoming_username" value="{{ config.incoming_username if config else '' }}" autocomplete="username" required>
+      <label for="incoming_password">Password</label>
+      <input type="password" id="incoming_password" name="incoming_password" placeholder="{% if iface and config.incoming_password %}(stored - paste to update){% else %}Password or app password{% endif %}" autocomplete="current-password" {% if not iface %}required{% endif %}>
+      <label for="incoming_mailbox">Mailbox</label>
+      <input type="text" id="incoming_mailbox" name="incoming_mailbox" value="{{ config.incoming_mailbox if config else 'INBOX' }}">
+      <label class="kcui-checkbox-label">
+        <input type="checkbox" name="import_recent_read" value="on" {% if config and config.import_recent_read %}checked{% endif %}>
+        Import already-read IMAP messages received in the last 24 hours
+      </label>
+      <p class="kcui-meta">This option applies to IMAP only. Older read messages are never imported.</p>
+
+      <div class="section-title kcui-mar-top-md">Outgoing email (SMTP)</div>
+      <label for="outgoing_host">SMTP Server</label>
+      <input type="text" id="outgoing_host" name="outgoing_host" value="{{ config.outgoing_host if config else '' }}" placeholder="smtp.example.com" required>
+      <label for="outgoing_port">SMTP Port</label>
+      <input type="number" id="outgoing_port" name="outgoing_port" value="{{ config.outgoing_port if config else 587 }}" min="1" max="65535" class="kcui-field-sm" required>
+      <label for="outgoing_security">Security</label>
+      <select id="outgoing_security" name="outgoing_security">
+        <option value="starttls" {% if not config or config.outgoing_security == 'starttls' %}selected{% endif %}>STARTTLS</option>
+        <option value="ssl" {% if config and config.outgoing_security == 'ssl' %}selected{% endif %}>SSL/TLS</option>
+        <option value="none" {% if config and config.outgoing_security == 'none' %}selected{% endif %}>None</option>
+      </select>
+      <label for="outgoing_username">Username</label>
+      <input type="text" id="outgoing_username" name="outgoing_username" value="{{ config.outgoing_username if config else '' }}" autocomplete="username" required>
+      <label for="outgoing_password">Password</label>
+      <input type="password" id="outgoing_password" name="outgoing_password" placeholder="{% if iface and config.outgoing_password %}(stored - paste to update){% else %}Password or app password{% endif %}" autocomplete="current-password" {% if not iface %}required{% endif %}>
+      <label for="outgoing_from">From address (optional)</label>
+      <input type="email" id="outgoing_from" name="outgoing_from" value="{{ config.outgoing_from if config else '' }}" placeholder="name@example.com">
+
+      <label for="receive_poll_interval">Receive Polling Interval (seconds)</label>
+      <div class="num-stepper" style="align-self:flex-start; width:auto;">
+        <input id="receive_poll_interval" name="receive_poll_interval" type="number"
+               value="{{ receive_poll_interval if iface else 60 }}" min="10" max="3600" style="width:64px;">
+        <div class="stepper-btns">
+          <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,1)">&#9650;</button>
+          <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,-1)">&#9660;</button>
+        </div>
+      </div>
+      <label for="send_poll_interval">Send Polling Interval (seconds)</label>
+      <div class="num-stepper" style="align-self:flex-start; width:auto;">
+        <input id="send_poll_interval" name="send_poll_interval" type="number"
+               value="{{ send_poll_interval if iface else 10 }}" min="1" max="3600" style="width:64px;">
+        <div class="stepper-btns">
+          <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,1)">&#9650;</button>
+          <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,-1)">&#9660;</button>
+        </div>
+      </div>
       {% endif %}
 
       {% if iface_type == "gmail" %}
@@ -49,9 +110,10 @@
       </p>
       {% endif %}
 
-      <label for="poll_interval">Poll Interval (seconds)</label>
+      {% if iface_type != "classic_email" %}<label for="poll_interval">Poll Interval (seconds)</label>
       <input type="number" id="poll_interval" name="poll_interval"
              value="{{ poll_interval }}" min="10" max="3600" class="kcui-field-sm">
+      {% endif %}
 
       {% if iface %}
       <label class="kcui-checkbox-label">
