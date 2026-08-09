@@ -31,7 +31,8 @@ STATE_FILE   = STORE_DIR / "scheduler_state.json"
 UI_ROOT      = ROOT / "KoreUI" / "KoreCron"
 UI_ASSETS    = ROOT / "KoreUI" / "UIElements" / "assets"
 STOP         = threading.Event()
-NAME_RE      = re.compile(r"^[A-Za-z0-9_-]+$")
+NAME_RE      = re.compile(r"^(?=.{1,120}$)[A-Za-z0-9][A-Za-z0-9 _-]*$")
+SESSION_KEY_RE = re.compile(r"[^A-Za-z0-9_-]+")
 
 
 def _config() -> dict:
@@ -92,9 +93,19 @@ def _http(method: str, url: str, body: dict | None = None):
         return json.loads(response.read().decode("utf-8"))
 
 
+def _cron_session_key(chat_name: str) -> str:
+    normalized = SESSION_KEY_RE.sub("_", str(chat_name or "").strip())
+    normalized = re.sub(r"_+", "_", normalized).strip("_")
+    return f"cron_{normalized or 'chat'}"
+
+
+def _cron_external_id(chat_name: str) -> str:
+    return f"webchat_{_cron_session_key(chat_name)}"
+
+
 def _conversation(definition: dict) -> dict:
     chat_name   = str(definition["chat_name"])
-    external_id = f"webchat_cron_{chat_name}"
+    external_id = _cron_external_id(chat_name)
     base        = _service_url("korechat")
     try:
         return _http("GET", f"{base}/api/conversations/by-external-id/{urllib.parse.quote(external_id, safe='')}")
@@ -106,6 +117,9 @@ def _run(definition: dict) -> None:
     conversation = _conversation(definition)
     base         = _service_url("korechat")
     conversation_id = int(conversation["id"])
+    if definition.get("clear_working_data", True):
+        agent_base = _service_url("koreagent")
+        _http("POST", f"{agent_base}/api/conversations/{conversation_id}/workspace/clear")
     for prompt in definition.get("prompts", []):
         prompt_text = str(prompt.get("prompt", "")) if isinstance(prompt, dict) else str(prompt)
         if not prompt_text.strip():
@@ -198,12 +212,10 @@ def timeline():
     return {"items": sorted(items, key=lambda item: item["next_fire"]), "now": now.isoformat(timespec="seconds")}
 
 
-@app.post("/api/cronprompts")
-def create_cronprompt(payload: dict):
+def _cronprompt_definition(payload: dict) -> dict:
     name = str(payload.get("name", "")).strip()
-    if not NAME_RE.fullmatch(name): raise HTTPException(400, "Name must use letters, digits, hyphens, or underscores.")
-    definitions = _definitions()
-    if any(str(item.get("name", "")).lower() == name.lower() for item in definitions): raise HTTPException(409, "CronPrompt already exists.")
+    if not NAME_RE.fullmatch(name):
+        raise HTTPException(400, "Name must begin with a letter or digit and use up to 120 letters, digits, spaces, hyphens, or underscores.")
     try: schedule = _parse_schedule(str(payload.get("schedule", "")))
     except (ValueError, TypeError): raise HTTPException(400, "Schedule must be minutes or HH:MM.")
     chat_name = str(payload.get("chat_name") or name).strip()
@@ -219,9 +231,70 @@ def create_cronprompt(payload: dict):
             prompts.append({"prompt": text.strip()})
     if not prompts:
         raise HTTPException(400, "At least one non-empty prompt is required.")
-    definition = {"name": name, "chat_name": chat_name, "enabled": True, "schedule": schedule, "prompts": prompts}
+    return {
+        "name":               name,
+        "chat_name":          chat_name,
+        "enabled":            bool(payload.get("enabled", True)),
+        "clear_working_data": bool(payload.get("clear_working_data", True)),
+        "schedule":           schedule,
+        "prompts":            prompts,
+    }
+
+
+@app.post("/api/cronprompts")
+def create_cronprompt(payload: dict):
+    definition  = _cronprompt_definition(payload)
+    definitions = _definitions()
+    if any(str(item.get("name", "")).casefold() == definition["name"].casefold() for item in definitions):
+        raise HTTPException(409, "CronPrompt already exists.")
     definitions.append(definition); _save(definitions)
     return definition
+
+
+@app.put("/api/cronprompts/{name}")
+def update_cronprompt(name: str, payload: dict):
+    definitions = _definitions()
+    index = next((
+        i for i, item in enumerate(definitions)
+        if str(item.get("name", "")).casefold() == name.casefold()
+    ), None)
+    if index is None:
+        raise HTTPException(404, "CronPrompt not found.")
+    definition = _cronprompt_definition(payload)
+    if any(
+        i != index and str(item.get("name", "")).casefold() == definition["name"].casefold()
+        for i, item in enumerate(definitions)
+    ):
+        raise HTTPException(409, "CronPrompt already exists.")
+    old_name = str(definitions[index]["name"])
+    definitions[index] = definition
+    _save(definitions)
+    if old_name != definition["name"]:
+        state = _read(STATE_FILE, {})
+        if old_name in state:
+            state[definition["name"]] = state.pop(old_name)
+            _write(STATE_FILE, state)
+    return definition
+
+
+@app.delete("/api/cronprompts/{name}", status_code=204)
+def delete_cronprompt(name: str):
+    definitions = _definitions()
+    definition = next((
+        item for item in definitions
+        if str(item.get("name", "")).casefold() == name.casefold()
+    ), None)
+    if definition is None:
+        raise HTTPException(404, "CronPrompt not found.")
+    remaining = [
+        item for item in definitions
+        if str(item.get("name", "")).casefold() != name.casefold()
+    ]
+    _save(remaining)
+    state = _read(STATE_FILE, {})
+    state.pop(str(definition["name"]), None)
+    _write(STATE_FILE, state)
+    return None
 
 
 @app.post("/api/cronprompts/{name}/run")
@@ -230,6 +303,40 @@ def run_cronprompt(name: str):
     if not definition: raise HTTPException(404, "CronPrompt not found.")
     threading.Thread(target=_run, args=(definition,), daemon=True).start()
     return {"queued": True, "name": definition["name"], "chat_name": definition["chat_name"]}
+
+
+@app.post("/api/cronprompts/{name}/agent-resume")
+def resume_cronprompt_agent(name: str):
+    definition = next((item for item in _definitions() if item.get("name", "").lower() == name.lower()), None)
+    if not definition:
+        raise HTTPException(404, "CronPrompt not found.")
+
+    chat_name = str(definition.get("chat_name") or "").strip()
+    if not chat_name:
+        raise HTTPException(400, "CronPrompt has no chat name.")
+
+    agent_base = _service_url("koreagent")
+    try:
+        conversation = _conversation(definition)
+    except Exception as exc:
+        raise HTTPException(502, "Unable to create or load the KoreChat conversation.") from exc
+
+    try:
+        _http("POST", f"{agent_base}/sessions/request-switch", {
+            "name": chat_name,
+            "conversation_id": int(conversation.get("id") or 0),
+        })
+    except Exception as exc:
+        raise HTTPException(502, "KoreAgent refused the resume request.") from exc
+
+    external_id = str(conversation.get("external_id") or "")
+    if external_id.startswith("webchat_"):
+        session_id = external_id[len("webchat_"):]
+    else:
+        session_id = f"kc_conv_{int(conversation.get('id') or 0)}"
+    resume_name = str(conversation.get("subject") or chat_name).strip() or chat_name
+    redirect_url = f"{agent_base}/?session_id={urllib.parse.quote(session_id, safe='')}&name={urllib.parse.quote(resume_name, safe='')}"
+    return {"ok": True, "agent_url": agent_base, "session_id": session_id, "name": resume_name, "redirect_url": redirect_url}
 
 
 @app.get("/ui", include_in_schema=False)

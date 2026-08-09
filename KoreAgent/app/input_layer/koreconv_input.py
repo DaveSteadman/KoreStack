@@ -534,6 +534,7 @@ def _handle_event(
         # External replies remain drafts until KoreComms has delivered them.
         channel = conv.get("channel_type", "webchat")
         outbound_status = "sent" if channel in {"webchat", "manual"} else "draft"
+        delivery_eligible = not user_prompt.lstrip().startswith("/")
 
         # Write outbound message first - if this fails the event is not completed.
         try:
@@ -542,6 +543,7 @@ def _handle_event(
                 "content":        reply,
                 "sender_display": str(event_payload.get("outbound_sender_display") or "agent"),
                 "status":         outbound_status,
+                "delivery_eligible": delivery_eligible,
             })
         except Exception as exc:
             push_log_line(f"[KORECHAT] Conv {conv_id}: failed to write outbound message: {exc}")

@@ -298,9 +298,7 @@ def call_ollama_extended(
     ctx_str = f"{num_ctx:,}" if num_ctx is not None else "default"
     _core.log_to_session(f"[LLM call] {model_name} | ctx={ctx_str} | {preview!r}")
 
-    options = {}
-    if num_ctx is not None:
-        options["num_ctx"] = num_ctx
+    options = _core.get_ollama_request_options(num_ctx)
 
     payload = {
         "model":  model_name,

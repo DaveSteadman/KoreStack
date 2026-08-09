@@ -27,6 +27,7 @@ def append_message(conversation_id: int, req: MessageAppendRequest):
         content         = req.content,
         sender_display  = req.sender_display,
         status          = req.status,
+        delivery_eligible = req.delivery_eligible,
     )
     if req.direction == "inbound":
         db.ensure_response_needed_event(conversation_id, payload=req.response_payload or {})

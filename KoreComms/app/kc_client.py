@@ -182,6 +182,8 @@ def append_message(
     direction:          str,
     content:            str,
     sender_display:     str = "",
+    status:             str = "received",
+    delivery_eligible:  bool = True,
 ) -> dict:
     """Append a message to a KC conversation. Returns the new message record."""
     return _post(
@@ -190,6 +192,8 @@ def append_message(
             "direction":      direction,
             "content":        content,
             "sender_display": sender_display,
+            "status":         status,
+            "delivery_eligible": delivery_eligible,
         },
     )
 

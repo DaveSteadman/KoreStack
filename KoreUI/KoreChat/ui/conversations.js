@@ -906,8 +906,9 @@ function renderMessages(msgs) {
     }
 
     document.getElementById("messages-body").innerHTML = visible.map(m => {
-        const summarisedClass = m.summarised ? " summarised-row" : "";
-        const ts = formatDateTime(m.created_at);
+        const summarisedClass    = m.summarised ? " summarised-row" : "";
+        const deliveryIneligible = Number(m.delivery_eligible) === 0;
+        const ts                 = formatDateTime(m.created_at);
         return `
 <div class="msg-row${summarisedClass}">
     <span class="msg-id">#${m.id}</span>
@@ -918,6 +919,7 @@ function renderMessages(msgs) {
     <span class="msg-time">${ts}</span>
     <span class="msg-flags">
         ${pill(m.status)}
+        ${deliveryIneligible ? '<span class="kcui-tag kcui-tag--pill kcui-tag--dim">deliver ineligible</span>' : ""}
         ${m.summarised ? '<span class="kcui-tag kcui-tag--pill kcui-tag--dim">summ</span>' : ""}
     </span>
 </div>`;

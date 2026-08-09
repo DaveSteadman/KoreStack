@@ -213,6 +213,11 @@ def _route_outbound_for_conversation(local_conv: dict) -> None:
     adapter = build_adapter(iface_row)
 
     for msg in draft_messages:
+        if not msg.get("delivery_eligible", True):
+            kc_client.mark_message_sent(msg["id"])
+            db.log_activity("delivery_suppressed", f"kc_msg={msg['id']} is slash-command output")
+            logger.info("Suppressed delivery for internal KC message %d", msg["id"])
+            continue
         try:
             adapter.route_reply(local_conv["id"], msg["content"])
             kc_client.mark_message_sent(msg["id"])

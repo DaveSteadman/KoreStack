@@ -170,9 +170,10 @@ class SendRequest(BaseModel):
 
 class DeliveryBindingRequest(BaseModel):
     chat_name:            str
-    connection:           str
+    connection:           str = ""
     recipient:            str = ""
     distribution_list_id: int | None = None
+    distribution_list:    str = ""
     subject:              str = "KoreComms report"
     enabled:              bool = True
 
@@ -191,6 +192,24 @@ class DistributionListMemberRequest(BaseModel):
 class DistributionListUpdateRequest(BaseModel):
     name:        str
     description: str = ""
+
+
+def _find_distribution_list(interface_id: int | None, value: str) -> dict:
+    """Resolve a list name within an optional connection using exact then unique substring match."""
+    query = value.strip()
+    rows  = db.distribution_list_list(interface_id)
+    exact = [row for row in rows if row["name"].casefold() == query.casefold()]
+    matches = exact or [
+        row for row in rows
+        if query.casefold() in row["name"].casefold()
+    ]
+    if not matches:
+        scope = " on this connection" if interface_id is not None else ""
+        raise HTTPException(404, f"No distribution list matches '{query}'{scope}")
+    if len(matches) > 1:
+        names = ", ".join(row["name"] for row in matches)
+        raise HTTPException(409, f"Distribution list '{query}' is ambiguous: {names}")
+    return matches[0]
 
 
 def _api_send_one(iface_row: dict, recipient: str, subject: str, content: str) -> dict:
@@ -324,34 +343,43 @@ def api_delivery_bind(req: DeliveryBindingRequest):
     chat_name       = req.chat_name.strip()
     recipient       = req.recipient.strip()
     connection_name = req.connection.strip()
+    list_name       = req.distribution_list.strip()
     if not chat_name:
         raise HTTPException(400, "chat_name is required")
-    if bool(recipient) == bool(req.distribution_list_id):
-        raise HTTPException(400, "Specify exactly one of recipient or distribution_list_id")
-    if not connection_name:
-        raise HTTPException(400, "connection is required")
-
-    interfaces = db.interface_list()
-    exact       = [row for row in interfaces if row["name"].casefold() == connection_name.casefold()]
-    matches     = exact or [
-        row for row in interfaces
-        if connection_name.casefold() in row["name"].casefold()
-    ]
-    if not matches:
-        raise HTTPException(404, f"No connection matches '{connection_name}'")
-    if len(matches) > 1:
-        names = ", ".join(row["name"] for row in matches)
-        raise HTTPException(409, f"Connection '{connection_name}' is ambiguous: {names}")
-    iface = matches[0]
-    if not iface["enabled"]:
-        raise HTTPException(409, "Connection is disabled")
+    if req.distribution_list_id and list_name:
+        raise HTTPException(400, "Specify a distribution list by ID or name, not both")
+    if bool(recipient) == bool(req.distribution_list_id or list_name):
+        raise HTTPException(400, "Specify exactly one of recipient, distribution_list_id, or distribution_list")
+    iface = None
+    if connection_name:
+        interfaces = db.interface_list()
+        exact       = [row for row in interfaces if row["name"].casefold() == connection_name.casefold()]
+        matches     = exact or [
+            row for row in interfaces
+            if connection_name.casefold() in row["name"].casefold()
+        ]
+        if not matches:
+            raise HTTPException(404, f"No connection matches '{connection_name}'")
+        if len(matches) > 1:
+            names = ", ".join(row["name"] for row in matches)
+            raise HTTPException(409, f"Connection '{connection_name}' is ambiguous: {names}")
+        iface = matches[0]
     list_row = None
     if req.distribution_list_id:
         list_row = db.distribution_list_get(req.distribution_list_id)
         if list_row is None:
             raise HTTPException(404, "Distribution list not found")
-        if list_row["interface_id"] != iface["id"]:
+        if iface is not None and list_row["interface_id"] != iface["id"]:
             raise HTTPException(409, "Distribution list belongs to a different connection")
+    elif list_name:
+        list_row = _find_distribution_list(iface["id"] if iface else None, list_name)
+    if list_row is not None:
+        iface = db.interface_get(list_row["interface_id"])
+    if iface is None:
+        raise HTTPException(400, "connection is required when delivering to a single email address")
+    if not iface["enabled"]:
+        raise HTTPException(409, "Connection is disabled")
+    list_id = list_row["id"] if list_row else None
     subject = req.subject.strip() or "KoreComms report"
     try:
         conv_id, _ = db.conversation_bind_delivery(
@@ -359,7 +387,7 @@ def api_delivery_bind(req: DeliveryBindingRequest):
             chat_name       = chat_name,
             korechat_id     = req.subject.strip(),
             recipient       = recipient,
-            list_id         = req.distribution_list_id,
+            list_id         = list_id,
             subject         = subject,
             enabled         = req.enabled,
             activity_detail = f"conv via={iface['name']} to={list_row['name'] if list_row else recipient}",
@@ -381,7 +409,8 @@ def api_delivery_bind(req: DeliveryBindingRequest):
         "chat_name":            chat_name,
         "connection":           iface["name"],
         "recipient":            recipient or None,
-        "distribution_list_id": req.distribution_list_id,
+        "distribution_list_id": list_id,
+        "distribution_list":    list_row["name"] if list_row else None,
         "enabled":              req.enabled,
     }
 

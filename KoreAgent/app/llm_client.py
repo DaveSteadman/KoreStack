@@ -47,12 +47,15 @@ from llm_client_openai import get_active_host
 from llm_client_openai import get_active_backend
 from llm_client_openai import get_active_model
 from llm_client_openai import get_active_num_ctx
+from llm_client_openai import get_ollama_offload_mode
+from llm_client_openai import get_ollama_request_options
 from llm_client_openai import get_local_ollama_autostart_enabled
 from llm_client_openai import get_llm_timeout
 from llm_client_openai import set_llm_timeout
 from llm_client_openai import register_llm_call_logger
 from llm_client_openai import log_to_session
 from llm_client_openai import register_session_config
+from llm_client_openai import set_ollama_offload_mode
 from llm_client_openai import resolve_model_name
 from llm_client_openai import is_explicit_model_name
 from llm_client_ollama  import is_ollama_running
@@ -77,12 +80,15 @@ __all__ = [
     "get_active_backend",
     "get_active_model",
     "get_active_num_ctx",
+    "get_ollama_offload_mode",
+    "get_ollama_request_options",
     "get_local_ollama_autostart_enabled",
     "get_llm_timeout",
     "set_llm_timeout",
     "register_llm_call_logger",
     "log_to_session",
     "register_session_config",
+    "set_ollama_offload_mode",
     "resolve_model_name",
     "is_explicit_model_name",
     "is_ollama_running",
@@ -197,8 +203,9 @@ def call_llm_chat(
     }
     if tools:
         payload["tools"] = tools
-    if num_ctx is not None:
-        payload["options"] = {"num_ctx": num_ctx}
+    options = _openai.get_ollama_request_options(num_ctx)
+    if options:
+        payload["options"] = options
 
     effective_timeout = timeout if timeout is not None else _openai.get_llm_timeout()
     start_time        = time.monotonic()

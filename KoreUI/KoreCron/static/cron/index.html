@@ -14,48 +14,49 @@
   <div id="app-bar"></div>
   <main class="kcui-main">
     <div class="kcui-page">
-      <section class="kcui-workspace kcui-workspace--two-columns kcui-workspace--timeline-left kcui-workspace--stack-sm">
+      <section class="kcui-workspace kcui-workspace--two-columns kcui-workspace--stack-sm">
         <div class="kcui-workspace__region">
-          <div class="kcui-workspace kcui-workspace--stack-sm">
-            <div class="kcui-workspace__region">
-              <section class="kcui-panel panel">
-                <div class="kcui-panel-header"><p class="eyebrow">New Timed Event</p><p>Name the event, choose its destination chat and schedule, then add the prompts in execution order.</p></div>
-                <div class="kcui-panel-body">
-                  <form id="cronprompt-form">
-                    <label class="kcui-form-label" for="cron-name">Event name</label>
-                    <input id="cron-name" name="name" type="text" pattern="[A-Za-z0-9_-]+" placeholder="daily-research" required>
-                    <label class="kcui-form-label" for="chat-name">KoreChat name</label>
-                    <input id="chat-name" name="chat_name" type="text" placeholder="Daily Research">
-                    <label class="kcui-form-label" for="schedule">Schedule</label>
-                    <input id="schedule" name="schedule" type="text" placeholder="60 for every 60 minutes, or 08:30 for daily" required>
-                    <label class="kcui-form-label">Prompt sequence</label>
-                    <div id="prompt-list"></div>
-                    <div>
-                      <button id="add-prompt" class="kcui-tag kcui-tag--dim" type="button">Add prompt</button>
-                      <button id="save-cronprompt" class="kcui-tag kcui-tag--accent kcui-tag--filled" type="submit">Create timed event</button>
-                      <span id="form-status" class="kcui-tag kcui-tag--dim">Ready</span>
-                    </div>
-                  </form>
-                </div>
-              </section>
+          <section class="kcui-panel panel">
+            <div class="kcui-panel-header"><p class="eyebrow">Cron Prompts</p><p>Select a timed event on the left to load its schedule, destination chat, and prompt sequence into the editor.</p></div>
+            <div class="kcui-panel-body">
+              <div class="cronprompt-toolbar">
+                <button id="create-cronprompt" class="kcui-tag kcui-tag--accent kcui-tag--filled" type="button">New timed event</button>
+                <span id="list-status" class="kcui-tag kcui-tag--dim">Select a timed event</span>
+              </div>
+              <div id="cron-rows" class="cronprompt-list" role="list"><div class="cronprompt-list__empty">Loading...</div></div>
             </div>
-            <div class="kcui-workspace__region">
-              <section class="kcui-panel panel">
-                <div class="kcui-panel-header"><p class="eyebrow">Cron Prompts</p><p>Ordered prompt sets inject into their named KoreChat when due.</p></div>
-                <div class="kcui-panel-body"><div class="kcui-table-scroll"><table class="kcui-table"><thead><tr><th>Name</th><th>Chat</th><th>Schedule</th><th>Prompts</th><th>Last run</th><th></th></tr></thead><tbody id="cron-rows"><tr><td colspan="6">Loading...</td></tr></tbody></table></div></div>
-              </section>
-            </div>
-          </div>
+          </section>
         </div>
         <div class="kcui-workspace__region">
           <section class="kcui-panel panel">
-            <div class="kcui-panel-header"><p class="eyebrow">Schedule Timeline</p><p>Next scheduled firing for each enabled CronPrompt.</p></div>
-            <div class="kcui-panel-body"><div class="kcui-table-scroll"><table class="kcui-table"><thead><tr><th>Next fire</th><th>CronPrompt</th><th>Chat</th><th>Schedule</th></tr></thead><tbody id="timeline-rows"><tr><td colspan="4">Loading...</td></tr></tbody></table></div></div>
+            <div class="kcui-panel-header"><p id="editor-eyebrow" class="eyebrow">New Timed Event</p><p id="editor-blurb">Name the event, choose its destination chat and schedule, then add the prompts in execution order.</p></div>
+            <div class="kcui-panel-body">
+              <form id="cronprompt-form">
+                <label class="kcui-form-label" for="cron-name">Event name</label>
+                <input id="cron-name" name="name" type="text" maxlength="120" placeholder="Daily AI News" required>
+                <label class="kcui-form-label" for="chat-name">KoreChat name</label>
+                <div class="cronprompt-chat-row">
+                  <input id="chat-name" name="chat_name" type="text" placeholder="Daily Research">
+                  <button id="agent-resume-btn" class="kcui-tag kcui-tag--warning" type="button">agent resume</button>
+                </div>
+                <label class="kcui-form-label" for="schedule">Schedule</label>
+                <input id="schedule" name="schedule" type="text" placeholder="60 for every 60 minutes, or 08:30 for daily" required>
+                <label class="kcui-checkbox-label"><input id="clear-working-data" name="clear_working_data" type="checkbox" checked> Clear scratchpad, temporary datasets, and tool selection before each run</label>
+                <label class="kcui-form-label">Prompt sequence</label>
+                <div id="prompt-list"></div>
+                <div>
+                  <button id="add-prompt" class="kcui-tag kcui-tag--dim" type="button">Add prompt</button>
+                  <button id="cancel-edit" class="kcui-tag kcui-tag--dim" type="button" hidden>Clear selection</button>
+                  <button id="save-cronprompt" class="kcui-tag kcui-tag--accent kcui-tag--filled" type="submit">Create timed event</button>
+                  <span id="form-status" class="kcui-tag kcui-tag--dim">Ready</span>
+                </div>
+              </form>
+            </div>
           </section>
         </div>
       </section>
     </div>
   </main>
-  <script type="module" src="/static/cron/app.js"></script>
+  <script type="module" src="/static/cron/app.js?v=20260809-editor-safe"></script>
 </body>
 </html>

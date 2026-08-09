@@ -48,6 +48,7 @@ class MessageAppendRequest(BaseModel):
     content: str
     sender_display: str = ""
     status: str = "received"
+    delivery_eligible: bool = True
     response_payload: dict | None = None
 
 

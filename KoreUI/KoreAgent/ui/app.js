@@ -35,7 +35,7 @@ const _ALL_COMMANDS = [
     "/clearmemory", "/reskill", "/sandbox", "/tools",
     "/deletelogs",
     "/workflow", "/workflows",
-    "/version", "/defaults", "/chat", "/kccompress",
+    "/version", "/defaults", "/chat", "/kccompress", "/workspace",
     "/comms",
 ];
 
@@ -44,6 +44,8 @@ const _CHAT_SUBS = ["new", "name", "list", "resume", "resumecopy", "park", "dele
 
 // Sub-commands for /llmserverconfig.
 const _LLMSERVERCFG_SUBS = ["model", "ctx"];
+const _LLMSERVER_SUBS    = ["config", "ollama", "lmstudio"];
+const _LLMSERVER_CONFIGS = ["forcecpu", "forcegpu", "autogpu"];
 
 // Sub-commands for /tools.
 const _TOOLS_SUBS = ["active", "all"];
@@ -55,6 +57,7 @@ const _WORKFLOW_SUBS = ["export", "import", "inspect"];
 const _COMMS_SUBS          = ["delivery"];
 const _COMMS_DELIVERY_SUBS = ["bind"];
 const _COMMS_BIND_OPTIONS  = ["--connection", "--to", "--to-list", "--subject", "--chat"];
+const _WORKSPACE_SUBS      = ["clear"];
 
 // Pre-compiled log line classification patterns.
 const RE_LOG_TOOL_ROUND = /^TOOL ROUND\s+\d+/i;
@@ -155,6 +158,21 @@ function _resolveSessionTitle(sessionId, title) {
     const resolved = String(title || "").trim();
     if (resolved) return resolved;
     return String(sessionId || "").trim();
+}
+
+function _consumeRequestedSession() {
+    try {
+        const url = new URL(window.location.href);
+        const sessionId = (url.searchParams.get("session_id") || "").trim();
+        const name = (url.searchParams.get("name") || "").trim();
+        if (!sessionId) return null;
+        url.searchParams.delete("session_id");
+        url.searchParams.delete("name");
+        window.history.replaceState({}, "", url.toString());
+        return { sessionId, name };
+    } catch (_) {
+        return null;
+    }
 }
 
 // ====================================================================================================
@@ -1144,6 +1162,24 @@ function _parseSuggestContext(value) {
         return null;
     }
 
+    if (cmd === "/llmserver") {
+        const subSpace = rest.indexOf(" ");
+        if (subSpace === -1) {
+            return { pool: _LLMSERVER_SUBS, prefix: rest, base: "/llmserver " };
+        }
+        const sub      = rest.slice(0, subSpace).toLowerCase();
+        const arg1Base = value.slice(0, firstSpace + 1 + subSpace + 1);
+        const arg1Text = value.slice(arg1Base.length);
+        if (sub === "config" && !arg1Text.includes(" ")) {
+            return { pool: _LLMSERVER_CONFIGS, prefix: arg1Text.trimEnd(), base: arg1Base };
+        }
+        return null;
+    }
+
+    if (cmd === "/workspace") {
+        return { pool: _WORKSPACE_SUBS, prefix: rest, base: "/workspace " };
+    }
+
     if (cmd === "/llmserverconfig") {
         const subSpace = rest.indexOf(" ");
         if (subSpace === -1) {
@@ -1419,6 +1455,11 @@ function init() {
     });
 
     _restoreSessionUiState();
+    const requestedSession = _consumeRequestedSession();
+    if (requestedSession?.sessionId) {
+        _sessionId = requestedSession.sessionId;
+        _setChatPanelTitle(_resolveSessionTitle(requestedSession.sessionId, requestedSession.name), { persist: false });
+    }
     _persistActiveSession();
     _restoreWrapState();
 

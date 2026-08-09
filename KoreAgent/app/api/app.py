@@ -66,6 +66,7 @@ from api.state import validate_session_id as _validate_session_id
 from datasets_pkg.hydration import build_persisted_scratchpad_payload
 from datasets_pkg.hydration import get_persisted_datasets_payload
 from datasets_pkg.hydration import hydrate_session_state
+from datasets_pkg.service import dataset_clear
 from datasets_pkg.service import delete_session_datasets as delete_persisted_session_datasets
 from workflow_archives import list_plan_archives
 from input_layer.korechat_proxy_routes import register_korechat_proxy_routes
@@ -402,6 +403,25 @@ def _delete_session_state(session_id: str) -> None:
     conv = _kc_get_conversation_for_session(session_id)
     if conv is not None:
         _kc_delete(f"/conversations/{conv['id']}")
+
+
+@app.post("/api/conversations/{conversation_id}/workspace/clear")
+def clear_conversation_workspace(conversation_id: int):
+    """Clear run-scoped working data while retaining the KoreChat conversation history."""
+    conversation = _kc_get(f"/conversations/{conversation_id}")
+    if not isinstance(conversation, dict):
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    session_id     = f"kc_conv_{conversation_id}"
+    scratch_result = scratchpad_clear(session_id)
+    dataset_result = dataset_clear(session_id)
+    clear_session_tools_active(session_id)
+    _kc_patch(f"/conversations/{conversation_id}", {"scratchpad": {}, "datasets": {}, "tools_active": []})
+    return {
+        "conversation_id": conversation_id,
+        "scratchpad":      scratch_result,
+        "datasets":        dataset_result,
+        "tools_active":    "cleared",
+    }
 
 
 register_log_routes(

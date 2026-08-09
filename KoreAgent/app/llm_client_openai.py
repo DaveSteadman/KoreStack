@@ -66,6 +66,8 @@ _active_backend: str = "ollama"
 _active_model:   str = ""
 _active_num_ctx: int = 131072
 _active_state_lock: threading.RLock = threading.RLock()
+_ollama_offload_mode: str = "autogpu"
+_OLLAMA_OFFLOAD_MODES: frozenset[str] = frozenset({"forcecpu", "forcegpu", "autogpu"})
 
 # Cache of last successful server health-check time per host.
 # Avoids an HTTP round-trip on every LLM call (many calls/prompt = unnecessary health hits).
@@ -153,6 +155,38 @@ def get_active_model() -> str:
     """Return the currently active session model name."""
     with _active_state_lock:
         return _active_model
+
+
+def get_ollama_offload_mode() -> str:
+    """Return the requested Ollama CPU/GPU offload policy for new model loads."""
+    with _active_state_lock:
+        return _ollama_offload_mode
+
+
+def set_ollama_offload_mode(mode: str) -> None:
+    """Set the requested Ollama CPU/GPU offload policy."""
+    normalized = mode.strip().lower()
+    if normalized not in _OLLAMA_OFFLOAD_MODES:
+        raise ValueError(f"Unknown Ollama offload mode: {mode}")
+    global _ollama_offload_mode
+    with _active_state_lock:
+        _ollama_offload_mode = normalized
+
+
+def get_ollama_request_options(num_ctx: int | None = None) -> dict:
+    """Build Ollama-only request options for context and requested model offload."""
+    options: dict = {}
+    if num_ctx is not None:
+        options["num_ctx"] = num_ctx
+    if get_active_backend() != "ollama":
+        return options
+    mode = get_ollama_offload_mode()
+    if mode == "forcecpu":
+        options["num_gpu"] = 0
+    elif mode == "forcegpu":
+        # Ollama interprets a layer count larger than the model as all layers.
+        options["num_gpu"] = 999
+    return options
 
 
 def get_active_num_ctx() -> int:

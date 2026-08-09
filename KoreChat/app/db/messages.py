@@ -31,15 +31,16 @@ def message_append(
     content: str,
     sender_display: str = "",
     status: str = "received",
+    delivery_eligible: bool = True,
 ) -> dict:
     now = _now()
     with _conn() as connection:
         cur = connection.execute(
             """
-            INSERT INTO messages (conversation_id, direction, content, sender_display, status, summarised, created_at)
-            VALUES (?,?,?,?,?,0,?)
+            INSERT INTO messages (conversation_id, direction, content, sender_display, status, delivery_eligible, summarised, created_at)
+            VALUES (?,?,?,?,?,?,0,?)
             """,
-            (conversation_id, direction, content, sender_display, status, now),
+            (conversation_id, direction, content, sender_display, status, int(delivery_eligible), now),
         )
         row = connection.execute("SELECT * FROM messages WHERE id = ?", (cur.lastrowid,)).fetchone()
     return _row_to_dict(row)

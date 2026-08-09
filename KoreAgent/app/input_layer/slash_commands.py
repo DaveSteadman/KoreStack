@@ -33,6 +33,7 @@ from agent.orchestration.engine import request_stop
 from agent.orchestration.engine import get_sandbox_enabled
 from agent.orchestration.engine import set_sandbox_enabled
 from agent.orchestration.engine import set_skill_guidance_enabled
+from datasets_pkg.service import dataset_clear
 from input_layer.slash_command_context import SlashCommandContext
 from input_layer.slash_command_handlers_models import register_model_slash_commands
 from input_layer.slash_command_handlers_plans import register_workflow_slash_commands
@@ -46,6 +47,8 @@ from utils.workspace_utils import get_controldata_dir
 from utils.workspace_utils import get_logs_dir
 from utils.workspace_utils import get_suite_root
 from utils.suite_version import SUITE_VERSION
+from scratchpad import scratchpad_clear
+from sessions.tool_selection import clear_session_tools_active
 
 
 def handle(text: str, ctx: SlashCommandContext) -> bool:
@@ -451,8 +454,8 @@ def _cmd_comms(arg: str, ctx: SlashCommandContext) -> None:
         return
     if len(parts) < 2 or parts[0].lower() != "delivery" or parts[1].lower() != "bind":
         ctx.output(
-            "Usage: /comms delivery bind [--chat <name>] --connection <name> (--to <email> | --to-list <id>) --subject <text> "
-            "(connection accepts an exact or unique substring match)",
+            "Usage: /comms delivery bind [--chat <name>] [--connection <name>] (--to <email> | --to-list <name>) --subject <text> "
+            "(--connection is inferred from --to-list; connection and list accept an exact or unique substring match)",
             "dim",
         )
         return
@@ -465,9 +468,8 @@ def _cmd_comms(arg: str, ctx: SlashCommandContext) -> None:
             return
         values[key[2:]] = parts[index + 1]
         index += 2
-    required = {"connection", "subject"}
-    if not required.issubset(values) or bool(values.get("to")) == bool(values.get("to-list")):
-        ctx.output("Required: --connection, --subject, and exactly one of --to or --to-list. --chat defaults to the active chat.", "error")
+    if "subject" not in values or bool(values.get("to")) == bool(values.get("to-list")):
+        ctx.output("Required: --subject and exactly one of --to or --to-list. --connection is required for --to and inferred for --to-list. --chat defaults to the active chat.", "error")
         return
     chat_name = values.get("chat", "").strip()
     if not chat_name:
@@ -480,9 +482,9 @@ def _cmd_comms(arg: str, ctx: SlashCommandContext) -> None:
         port = int(suite_config["services"]["korecomms"]["port"])
         payload = json.dumps({
             "chat_name": chat_name,
-            "connection": values["connection"],
+            "connection": values.get("connection", ""),
             "recipient": values.get("to", ""),
-            "distribution_list_id": int(values["to-list"]) if values.get("to-list") else None,
+            "distribution_list": values.get("to-list", ""),
             "subject": values["subject"],
             "enabled": True,
         }).encode("utf-8")
@@ -499,7 +501,7 @@ def _cmd_comms(arg: str, ctx: SlashCommandContext) -> None:
         ctx.output(f"KoreComms delivery binding failed: {detail}", "error")
         return
     ctx.output(
-        f"Delivery bound: chat={result['chat_name']} via {result['connection']} to {result['recipient'] or ('list #' + str(result['distribution_list_id']))}",
+        f"Delivery bound: chat={result['chat_name']} via {result['connection']} to {result['recipient'] or result['distribution_list']}",
         "success",
     )
 
@@ -524,6 +526,19 @@ def _cmd_planning(arg: str, ctx: SlashCommandContext) -> None:
     ctx.output(f"Planning mode changed: {old_mode} -> {requested}", "success")
 
 
+def _cmd_workspace(arg: str, ctx: SlashCommandContext) -> None:
+    if arg.strip().lower() != "clear":
+        ctx.output("Usage: /workspace clear", "dim")
+        return
+    if not ctx.session_id:
+        ctx.output("No active chat workspace is available to clear.", "error")
+        return
+    scratch_result = scratchpad_clear(ctx.session_id)
+    dataset_result = dataset_clear(ctx.session_id)
+    clear_session_tools_active(ctx.session_id)
+    ctx.output(f"Workspace cleared: {scratch_result} {dataset_result} Active tool selection reset.", "success")
+
+
 _REGISTRY: dict[str, Callable] = {
     "/help": _cmd_help,
     "/ctx": _cmd_ctx,
@@ -539,6 +554,7 @@ _REGISTRY: dict[str, Callable] = {
     "/mcp":      _cmd_mcp,
     "/comms":    _cmd_comms,
     "/planning": _cmd_planning,
+    "/workspace": _cmd_workspace,
 }
 
 _DESCRIPTIONS: dict[str, str] = {
@@ -554,8 +570,9 @@ _DESCRIPTIONS: dict[str, str] = {
     "/deletelogs": "<days>  Delete log date-folders older than N days (e.g. /deletelogs 10)",
     "/defaults": "Show current Agent configuration and file path; /defaults set saves current model/ctx/host to the file",
     "/mcp":      "[status | reconnect]  Show MCP server status or re-enumerate tools from all configured servers",
-    "/comms":    "delivery bind [--chat <name>] --connection <name> (--to <email> | --to-list <id>) --subject <text>; connection accepts an exact or unique substring match; --chat defaults to the active chat",
+    "/comms":    "delivery bind [--chat <name>] [--connection <name>] (--to <email> | --to-list <name>) --subject <text>; connection is inferred from --to-list and required for --to; connection and list accept an exact or unique substring match; --chat defaults to the active chat",
     "/planning": "<off|simple|workflow|auto>  Control whether prompts bypass planning, use the lightweight planner, or seed durable Workflow state",
+    "/workspace": "clear  Clear this chat's scratchpad, temporary datasets, and active tool selection",
 }
 
 register_model_slash_commands(_REGISTRY, _DESCRIPTIONS)
