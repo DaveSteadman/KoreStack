@@ -31,7 +31,7 @@
     <a href="/" class="chat-back">← Messages</a>
     <span class="chat-subj">{{ conv.korechat_id or "(no KoreChat ID)" }}</span>
     <span class="kcui-tag kcui-tag--info">{{ iface.name }}</span>
-    <span class="kcui-tag kcui-tag--dim">{{ conv.conversation_name or ("kccomms:" ~ conv.id) }}</span>
+    <span class="kcui-tag kcui-tag--dim">{{ conv.chat_name or ("kccomms:" ~ conv.id) }}</span>
     <span class="kcui-tag kcui-tag--dim kcui-row-end">conv #{{ conv.id }}</span>
     <form method="post" action="/conversation/{{ conv.id }}/delete">
       <button type="submit" class="kcui-tag kcui-tag--danger"
@@ -39,6 +39,26 @@
               data-kcui-confirm-label="Delete">delete</button>
     </form>
   </div>
+
+  <form class="kcui-panel kcui-form-panel chat-delivery-panel" method="post" action="/conversation/{{ conv.id }}/delivery">
+    <div class="kcui-panel-header">Delivery target</div>
+    <div class="kcui-panel-body">
+      <p class="kcui-meta chat-delivery-connection">Connection: {{ iface.name }}</p>
+      <label for="delivery-recipient">Recipient</label>
+      <input id="delivery-recipient" name="recipient" type="email" value="{{ conv.delivery_recipient or '' }}" placeholder="person@example.com">
+      <label for="delivery-list">Or distribution list</label>
+      <select id="delivery-list" name="distribution_list_id">
+        <option value="">Select a list...</option>
+        {% for list in distribution_lists %}
+        <option value="{{ list.id }}" {% if conv.delivery_list_id == list.id %}selected{% endif %}>{{ list.name }} ({{ list.member_count }})</option>
+        {% endfor %}
+      </select>
+      <label for="delivery-subject">Subject</label>
+      <input id="delivery-subject" name="subject" type="text" value="{{ conv.delivery_subject or conv.korechat_id or 'KoreComms report' }}">
+      <label class="kcui-checkbox-label"><input name="enabled" type="checkbox" value="on" {% if conv.delivery_enabled %}checked{% endif %}> Send agent replies to this target</label>
+      <button class="kcui-tag kcui-tag--accent" type="submit">save delivery</button>
+    </div>
+  </form>
 
   <!-- ── messages ─────────────────────────────────── -->
   <div class="chat-messages" id="chat-messages">
@@ -84,6 +104,14 @@
   .chat-back { color: var(--dim); text-decoration: none; font-size: 12px; }
   .chat-back:hover { color: var(--text); }
   .chat-subj { font-weight: 600; font-size: 14px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .chat-delivery-panel {
+    width:      min(680px, calc(100% - (var(--kcui-gap-panel) * 2)));
+    max-width:  none;
+    margin:     var(--kcui-gap-panel) var(--kcui-gap-panel) 0;
+    box-sizing: border-box;
+  }
+  .chat-delivery-connection { margin: 0 0 0.75rem; }
 
   .chat-messages {
     flex: 1; overflow-y: auto;

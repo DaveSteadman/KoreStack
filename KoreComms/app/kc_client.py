@@ -133,6 +133,14 @@ def create_conversation(
     })
 
 
+def set_conversation_channel_type(kc_conversation_id: int, channel_type: str) -> dict:
+    """Set the delivery channel on an existing KoreChat conversation."""
+    return _patch(
+        f"/conversations/{kc_conversation_id}",
+        {"channel_type": channel_type},
+    )
+
+
 def find_or_create_conversation(
     external_id:  str,
     channel_type: str = "email",

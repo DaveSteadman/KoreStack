@@ -95,6 +95,7 @@ def get_conversation_detail(conversation_id: int):
 def patch_conversation(conversation_id: int, req: ConversationPatchRequest):
     result = db.conversation_update(
         conversation_id    = conversation_id,
+        channel_type       = req.channel_type,
         status             = req.status,
         subject            = req.subject,
         protected          = req.protected,

@@ -168,6 +168,7 @@ def conversation_list(
 
 def conversation_update(
     conversation_id: int,
+    channel_type: str | None = None,
     status: str | None = None,
     subject: str | None = None,
     protected: bool | None = None,
@@ -183,6 +184,9 @@ def conversation_update(
     now    = _now()
     fields = ["updated_at = ?", "last_activity_at = ?"]
     params = [now, now]
+    if channel_type is not None:
+        fields.append("channel_type = ?")
+        params.append(channel_type)
     if status is not None:
         fields.append("status = ?")
         params.append(status)

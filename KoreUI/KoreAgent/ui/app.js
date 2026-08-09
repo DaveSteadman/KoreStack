@@ -36,6 +36,7 @@ const _ALL_COMMANDS = [
     "/deletelogs",
     "/workflow", "/workflows",
     "/version", "/defaults", "/chat", "/kccompress",
+    "/comms",
 ];
 
 // Sub-commands for /chat.
@@ -49,6 +50,11 @@ const _TOOLS_SUBS = ["active", "all"];
 
 // Sub-commands for /workflow.
 const _WORKFLOW_SUBS = ["export", "import", "inspect"];
+
+// Sub-commands and options for /comms.
+const _COMMS_SUBS          = ["delivery"];
+const _COMMS_DELIVERY_SUBS = ["bind"];
+const _COMMS_BIND_OPTIONS  = ["--connection", "--to", "--to-list", "--subject", "--chat"];
 
 // Pre-compiled log line classification patterns.
 const RE_LOG_TOOL_ROUND = /^TOOL ROUND\s+\d+/i;
@@ -1179,6 +1185,29 @@ function _parseSuggestContext(value) {
             return { pool: _TOOLS_SUBS, prefix: rest.trimEnd(), base: "/tools " };
         }
         return null;
+    }
+
+    if (cmd === "/comms") {
+        const words = rest.trimStart().split(/\s+/);
+        if (!rest.trim()) {
+            return { pool: _COMMS_SUBS, prefix: "", base: "/comms " };
+        }
+        if (words.length === 1 && !rest.endsWith(" ")) {
+            return { pool: _COMMS_SUBS, prefix: words[0], base: "/comms " };
+        }
+        if (words[0] !== "delivery") return null;
+        if (words.length === 1 && rest.endsWith(" ")) {
+            return { pool: _COMMS_DELIVERY_SUBS, prefix: "", base: "/comms delivery " };
+        }
+        if (words.length === 2 && !rest.endsWith(" ")) {
+            return { pool: _COMMS_DELIVERY_SUBS, prefix: words[1], base: "/comms delivery " };
+        }
+        if (words[1] !== "bind") return null;
+        const usedOptions = new Set(words.filter((word) => word.startsWith("--")));
+        const pool = _COMMS_BIND_OPTIONS.filter((option) => !usedOptions.has(option));
+        const lastWord = rest.endsWith(" ") ? "" : words[words.length - 1];
+        const base = rest.endsWith(" ") ? `${value}` : value.slice(0, value.length - lastWord.length);
+        return { pool, prefix: lastWord, base };
     }
 
     return null;

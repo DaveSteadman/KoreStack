@@ -48,7 +48,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, Form, HTTPException, Request
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 
@@ -161,10 +161,67 @@ def status():
 
 
 class SendRequest(BaseModel):
+    interface_id:          int
+    recipient:             str = ""
+    distribution_list_id:  int | None = None
+    subject:               str
+    content:               str
+
+
+class DeliveryBindingRequest(BaseModel):
+    chat_name:            str
+    connection:           str
+    recipient:            str = ""
+    distribution_list_id: int | None = None
+    subject:              str = "KoreComms report"
+    enabled:              bool = True
+
+
+class DistributionListRequest(BaseModel):
     interface_id: int
-    recipient:    str
-    subject:      str
-    content:      str
+    name:         str
+    description:  str = ""
+
+
+class DistributionListMemberRequest(BaseModel):
+    email:        str
+    display_name: str = ""
+
+
+class DistributionListUpdateRequest(BaseModel):
+    name:        str
+    description: str = ""
+
+
+def _api_send_one(iface_row: dict, recipient: str, subject: str, content: str) -> dict:
+    adapter = build_adapter(iface_row)
+    routing = adapter.send_new(recipient, subject, content)
+
+    ext_thread_id = routing["external_thread_id"]
+    ext_msg_id    = routing.get("external_message_id", ext_thread_id)
+    local_conv_id = db.conversation_create(
+        interface_id       = iface_row["id"],
+        external_thread_id = ext_thread_id,
+        korechat_id        = subject,
+    )
+    local_conv = db.conversation_get(local_conv_id)
+    assert local_conv is not None
+    kc_conv = _resolve_kc_conversation(local_conv, if_missing="recreate")
+    kc_msg = kc_client.append_message(
+        kc_conversation_id = kc_conv["id"],
+        direction          = "outbound",
+        content            = content,
+        sender_display     = "KoreComms",
+    )
+    kc_client.mark_message_sent(kc_msg["id"])
+    db.external_message_create(local_conv_id, ext_msg_id, "outbound")
+    db.log_activity("send_new", f"via {iface_row['name']} to {recipient}")
+    return {
+        "recipient":          recipient,
+        "conversation_id":    local_conv_id,
+        "conversation_name":  local_conv["chat_name"],
+        "kc_conversation_id": kc_conv["id"],
+    }
 
 
 @app.post("/api/send")
@@ -173,34 +230,159 @@ def api_send(req: SendRequest):
     iface_row = db.interface_get(req.interface_id)
     if iface_row is None:
         raise HTTPException(404, "Interface not found")
+    recipient = req.recipient.strip()
+    if bool(recipient) == bool(req.distribution_list_id):
+        raise HTTPException(400, "Specify exactly one of recipient or distribution_list_id")
+    if recipient:
+        return _api_send_one(iface_row, recipient, req.subject, req.content)
 
-    adapter = build_adapter(iface_row)
-    routing = adapter.send_new(req.recipient, req.subject, req.content)
+    list_row = db.distribution_list_get(int(req.distribution_list_id))
+    if list_row is None:
+        raise HTTPException(404, "Distribution list not found")
+    if list_row["interface_id"] != iface_row["id"]:
+        raise HTTPException(409, "Distribution list belongs to a different connection")
+    members = db.distribution_list_members(int(req.distribution_list_id))
+    if not members:
+        raise HTTPException(409, "Distribution list has no members")
+    deliveries = [_api_send_one(iface_row, member["email"], req.subject, req.content) for member in members]
+    return {"distribution_list": list_row["name"], "deliveries": deliveries}
 
-    ext_thread_id = routing["external_thread_id"]
-    ext_msg_id    = routing.get("external_message_id", ext_thread_id)
 
-    local_conv_id = db.conversation_create(
-        interface_id=req.interface_id,
-        external_thread_id=ext_thread_id,
-        korechat_id=req.subject,
-    )
-    local_conv = db.conversation_get(local_conv_id)
-    assert local_conv is not None
-    kc_conv = _resolve_kc_conversation(local_conv, if_missing="recreate")
-    kc_msg = kc_client.append_message(
-        kc_conversation_id = kc_conv["id"],
-        direction          = "outbound",
-        content            = req.content,
-        sender_display     = "KoreComms",
-    )
-    kc_client.mark_message_sent(kc_msg["id"])
-    db.external_message_create(local_conv_id, ext_msg_id, "outbound")
-    db.log_activity("send_new", f"via {iface_row['name']} to {req.recipient}")
+@app.get("/api/distribution-lists")
+def api_distribution_list_list(interface_id: int | None = None):
+    return db.distribution_list_list(interface_id)
+
+
+@app.post("/api/distribution-lists", status_code=201)
+def api_distribution_list_create(req: DistributionListRequest):
+    if not req.name.strip():
+        raise HTTPException(400, "name is required")
+    if db.interface_get(req.interface_id) is None:
+        raise HTTPException(404, "Interface not found")
+    try:
+        list_id = db.distribution_list_create(req.interface_id, req.name, req.description)
+    except Exception as exc:
+        raise HTTPException(409, f"Could not create distribution list: {exc}") from exc
+    return db.distribution_list_get(list_id)
+
+
+@app.get("/api/distribution-lists/{list_id}")
+def api_distribution_list_get(list_id: int):
+    list_row = db.distribution_list_get(list_id)
+    if list_row is None:
+        raise HTTPException(404, "Distribution list not found")
+    return {**list_row, "members": db.distribution_list_members(list_id)}
+
+
+@app.post("/api/distribution-lists/{list_id}/members", status_code=201)
+def api_distribution_list_member_add(list_id: int, req: DistributionListMemberRequest):
+    if db.distribution_list_get(list_id) is None:
+        raise HTTPException(404, "Distribution list not found")
+    if not req.email.strip():
+        raise HTTPException(400, "email is required")
+    try:
+        member_id = db.distribution_list_member_add(list_id, req.email, req.display_name)
+    except Exception as exc:
+        raise HTTPException(409, f"Could not add distribution-list member: {exc}") from exc
+    return next(member for member in db.distribution_list_members(list_id) if member["id"] == member_id)
+
+
+@app.delete("/api/distribution-lists/{list_id}/members/{member_id}", status_code=204)
+def api_distribution_list_member_delete(list_id: int, member_id: int):
+    db.distribution_list_member_delete(list_id, member_id)
+    return Response(status_code=204)
+
+
+@app.delete("/api/distribution-lists/{list_id}", status_code=204)
+def api_distribution_list_delete(list_id: int):
+    db.distribution_list_delete(list_id)
+    return Response(status_code=204)
+
+
+@app.patch("/api/distribution-lists/{list_id}")
+def api_distribution_list_update(list_id: int, req: DistributionListUpdateRequest):
+    if db.distribution_list_get(list_id) is None:
+        raise HTTPException(404, "Distribution list not found")
+    if not req.name.strip():
+        raise HTTPException(400, "name is required")
+    db.distribution_list_update(list_id, req.name, req.description)
+    return db.distribution_list_get(list_id)
+
+
+@app.patch("/api/distribution-lists/{list_id}/members/{member_id}")
+def api_distribution_list_member_update(list_id: int, member_id: int, req: DistributionListMemberRequest):
+    if db.distribution_list_get(list_id) is None:
+        raise HTTPException(404, "Distribution list not found")
+    if not req.email.strip():
+        raise HTTPException(400, "email is required")
+    db.distribution_list_member_update(list_id, member_id, req.email, req.display_name)
+    return next(member for member in db.distribution_list_members(list_id) if member["id"] == member_id)
+
+
+@app.post("/api/delivery-bindings")
+def api_delivery_bind(req: DeliveryBindingRequest):
+    chat_name       = req.chat_name.strip()
+    recipient       = req.recipient.strip()
+    connection_name = req.connection.strip()
+    if not chat_name:
+        raise HTTPException(400, "chat_name is required")
+    if bool(recipient) == bool(req.distribution_list_id):
+        raise HTTPException(400, "Specify exactly one of recipient or distribution_list_id")
+    if not connection_name:
+        raise HTTPException(400, "connection is required")
+
+    interfaces = db.interface_list()
+    exact       = [row for row in interfaces if row["name"].casefold() == connection_name.casefold()]
+    matches     = exact or [
+        row for row in interfaces
+        if connection_name.casefold() in row["name"].casefold()
+    ]
+    if not matches:
+        raise HTTPException(404, f"No connection matches '{connection_name}'")
+    if len(matches) > 1:
+        names = ", ".join(row["name"] for row in matches)
+        raise HTTPException(409, f"Connection '{connection_name}' is ambiguous: {names}")
+    iface = matches[0]
+    if not iface["enabled"]:
+        raise HTTPException(409, "Connection is disabled")
+    list_row = None
+    if req.distribution_list_id:
+        list_row = db.distribution_list_get(req.distribution_list_id)
+        if list_row is None:
+            raise HTTPException(404, "Distribution list not found")
+        if list_row["interface_id"] != iface["id"]:
+            raise HTTPException(409, "Distribution list belongs to a different connection")
+    subject = req.subject.strip() or "KoreComms report"
+    try:
+        conv_id, _ = db.conversation_bind_delivery(
+            interface_id    = iface["id"],
+            chat_name       = chat_name,
+            korechat_id     = req.subject.strip(),
+            recipient       = recipient,
+            list_id         = req.distribution_list_id,
+            subject         = subject,
+            enabled         = req.enabled,
+            activity_detail = f"conv via={iface['name']} to={list_row['name'] if list_row else recipient}",
+        )
+    except ValueError:
+        raise HTTPException(409, "Chat is already bound to a different connection") from None
+    try:
+        kc_conv = kc_client.find_or_create_conversation(
+            external_id  = chat_name,
+            channel_type = iface["type"],
+            subject      = subject,
+        )
+        kc_client.set_conversation_channel_type(kc_conv["id"], iface["type"])
+        db.conversation_set_kc_id(conv_id, kc_conv["id"])
+    except RuntimeError as exc:
+        raise HTTPException(503, f"Could not attach delivery to KoreChat: {exc}") from exc
     return {
-        "conversation_id": local_conv_id,
-        "conversation_name": local_conv["conversation_name"],
-        "kc_conversation_id": kc_conv["id"],
+        "conversation_id":      conv_id,
+        "chat_name":            chat_name,
+        "connection":           iface["name"],
+        "recipient":            recipient or None,
+        "distribution_list_id": req.distribution_list_id,
+        "enabled":              req.enabled,
     }
 
 
@@ -279,6 +461,87 @@ def ui_connections(request: Request):
 def api_connections_timing():
     """Return the remaining inbound and outbound poll times for each interface."""
     return {"timings": poller.get_poll_timing()}
+
+
+@app.get("/distribution-lists", response_class=HTMLResponse)
+def ui_distribution_lists(request: Request, list_id: int | None = None):
+    lists = db.distribution_list_list()
+    selected_id = list_id or (lists[0]["id"] if lists else None)
+    selected = db.distribution_list_get(selected_id) if selected_id else None
+    if selected is not None:
+        selected["members"] = db.distribution_list_members(selected_id)
+    return templates.TemplateResponse(
+        request,
+        "distribution_lists.html",
+        _ctx(interfaces=db.interface_list(), lists=lists, selected=selected),
+    )
+
+
+@app.post("/distribution-lists")
+def ui_distribution_list_create(
+    interface_id: int = Form(...),
+    name: str = Form(...),
+    description: str = Form(default=""),
+):
+    if not name.strip():
+        raise HTTPException(400, "List name is required")
+    try:
+        db.distribution_list_create(interface_id, name, description)
+    except Exception as exc:
+        raise HTTPException(409, f"Could not create distribution list: {exc}") from exc
+    return RedirectResponse("/distribution-lists", status_code=303)
+
+
+@app.post("/distribution-lists/{list_id}")
+def ui_distribution_list_update(
+    list_id: int,
+    name: str = Form(...),
+    description: str = Form(default=""),
+):
+    if not name.strip():
+        raise HTTPException(400, "List name is required")
+    db.distribution_list_update(list_id, name, description)
+    return RedirectResponse(f"/distribution-lists?list_id={list_id}", status_code=303)
+
+
+@app.post("/distribution-lists/{list_id}/members")
+def ui_distribution_list_member_add(
+    list_id: int,
+    email: str = Form(...),
+    display_name: str = Form(default=""),
+):
+    if not email.strip():
+        raise HTTPException(400, "Email address is required")
+    try:
+        db.distribution_list_member_add(list_id, email, display_name)
+    except Exception as exc:
+        raise HTTPException(409, f"Could not add member: {exc}") from exc
+    return RedirectResponse(f"/distribution-lists?list_id={list_id}", status_code=303)
+
+
+@app.post("/distribution-lists/{list_id}/members/{member_id}")
+def ui_distribution_list_member_update(
+    list_id: int,
+    member_id: int,
+    email: str = Form(...),
+    display_name: str = Form(default=""),
+):
+    if not email.strip():
+        raise HTTPException(400, "Email address is required")
+    db.distribution_list_member_update(list_id, member_id, email, display_name)
+    return RedirectResponse(f"/distribution-lists?list_id={list_id}", status_code=303)
+
+
+@app.post("/distribution-lists/{list_id}/members/{member_id}/delete")
+def ui_distribution_list_member_delete(list_id: int, member_id: int):
+    db.distribution_list_member_delete(list_id, member_id)
+    return RedirectResponse(f"/distribution-lists?list_id={list_id}", status_code=303)
+
+
+@app.post("/distribution-lists/{list_id}/delete")
+def ui_distribution_list_delete(list_id: int):
+    db.distribution_list_delete(list_id)
+    return RedirectResponse("/distribution-lists", status_code=303)
 
 
 @app.get("/connections/new", response_class=HTMLResponse)
@@ -517,12 +780,12 @@ def _normalize_kc_events(kc_events: list[dict]) -> list[dict]:
 
 
 def _conversation_name_for(conv: dict) -> str:
-    name = (conv.get("conversation_name") or "").strip()
+    name = (conv.get("chat_name") or "").strip()
     if name:
         return name
     fallback = conv.get("external_thread_id") or f"kccomms:{conv['id']}"
     db.conversation_set_name(conv["id"], fallback)
-    conv["conversation_name"] = fallback
+    conv["chat_name"] = fallback
     return fallback
 
 
@@ -541,7 +804,7 @@ def _resolve_kc_conversation(conv: dict, *, if_missing: str | None = None) -> di
     kc_conv = kc_client.find_conversation_by_external_id(conversation_name)
     if kc_conv is None:
         db.conversation_set_kc_id(conv["id"], None)
-        conv["kc_conversation_id"] = None
+        conv["kc_chat_id"] = None
         policy = _missing_kc_policy(if_missing)
         if policy == "abort":
             raise MissingKoreChatError(
@@ -560,9 +823,9 @@ def _resolve_kc_conversation(conv: dict, *, if_missing: str | None = None) -> di
         )
 
     kc_id = kc_conv.get("id")
-    if conv.get("kc_conversation_id") != kc_id:
+    if conv.get("kc_chat_id") != kc_id:
         db.conversation_set_kc_id(conv["id"], kc_id)
-        conv["kc_conversation_id"] = kc_id
+        conv["kc_chat_id"] = kc_id
     return kc_conv
 
 
@@ -577,7 +840,7 @@ def _get_conversation_detail_payload(conv: dict) -> dict:
     kc_conv = kc_client.find_conversation_by_external_id(conversation_name)
     if kc_conv is None:
         db.conversation_set_kc_id(conv["id"], None)
-        conv["kc_conversation_id"] = None
+        conv["kc_chat_id"] = None
         return {
             **payload,
             "kc_conversation": None,
@@ -587,9 +850,9 @@ def _get_conversation_detail_payload(conv: dict) -> dict:
             "input_history": [],
         }
 
-    if conv.get("kc_conversation_id") != kc_conv.get("id"):
+    if conv.get("kc_chat_id") != kc_conv.get("id"):
         db.conversation_set_kc_id(conv["id"], kc_conv.get("id"))
-        conv["kc_conversation_id"] = kc_conv.get("id")
+        conv["kc_chat_id"] = kc_conv.get("id")
 
     kc_detail = kc_client.get_conversation_detail(kc_conv["id"])
     if kc_detail is None:
@@ -709,15 +972,46 @@ def ui_conversation(request: Request, conv_id: int):
         detail = _get_conversation_detail_payload(conv)
         kc_data = detail.get("kc_conversation") or {}
         thread  = detail.get("thread", [])
-        conv["conversation_name"] = detail.get("conversation_name", conv.get("conversation_name"))
+        conv["chat_name"] = detail.get("conversation_name", conv.get("chat_name"))
     except RuntimeError as exc:
         logger.warning("KC fetch failed for conv %d: %s", conv_id, exc)
 
     return templates.TemplateResponse(
         request,
         "chat.html",
-        _ctx(conv=conv, iface=iface, thread=thread, kc_conv=kc_data),
+        _ctx(
+            conv=conv,
+            iface=iface,
+            thread=thread,
+            kc_conv=kc_data,
+            distribution_lists=db.distribution_list_list(conv["interface_id"]),
+        ),
     )
+
+
+@app.post("/conversation/{conv_id}/delivery")
+def ui_conversation_delivery(
+    conv_id: int,
+    recipient: str = Form(default=""),
+    distribution_list_id: int = Form(default=0),
+    subject: str = Form(default=""),
+    enabled: str = Form(default="off"),
+):
+    conv = db.conversation_get(conv_id)
+    if conv is None:
+        raise HTTPException(404, "Conversation not found")
+    recipient = recipient.strip()
+    list_id = distribution_list_id or None
+    if enabled == "on" and bool(recipient) == bool(list_id):
+        raise HTTPException(400, "Choose exactly one recipient or distribution list when delivery is enabled")
+    if list_id:
+        list_row = db.distribution_list_get(list_id)
+        if list_row is None or list_row["interface_id"] != conv["interface_id"]:
+            raise HTTPException(400, "Distribution list does not belong to this connection")
+    db.conversation_set_delivery(conv_id, recipient, list_id, subject.strip(), enabled == "on")
+    destination = db.distribution_list_get(list_id)["name"] if list_id else recipient or "(disabled)"
+    db.log_activity("delivery_bound", f"conv={conv_id} to={destination}")
+    return RedirectResponse(f"/conversation/{conv_id}", status_code=303)
 
 
 @app.post("/conversation/{conv_id}/delete")

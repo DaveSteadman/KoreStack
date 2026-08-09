@@ -13,6 +13,7 @@ class ConversationCreateRequest(BaseModel):
 
 
 class ConversationPatchRequest(BaseModel):
+    channel_type: str | None = None
     status: str | None = None
     subject: str | None = None
     protected: bool | None = None

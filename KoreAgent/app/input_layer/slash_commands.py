@@ -10,6 +10,9 @@
 # ====================================================================================================
 
 import json
+import shlex
+import urllib.error
+import urllib.request
 from datetime import date
 from datetime import timedelta
 from pathlib import Path
@@ -41,6 +44,7 @@ from sessions.tool_selection import derive_active_tool_runtime
 from utils.workspace_utils import get_agent_config_file
 from utils.workspace_utils import get_controldata_dir
 from utils.workspace_utils import get_logs_dir
+from utils.workspace_utils import get_suite_root
 from utils.suite_version import SUITE_VERSION
 
 
@@ -439,6 +443,67 @@ def _cmd_mcp(arg: str, ctx: SlashCommandContext) -> None:
     ctx.output("Usage: /mcp [status | reconnect]", "dim")
 
 
+def _cmd_comms(arg: str, ctx: SlashCommandContext) -> None:
+    try:
+        parts = shlex.split(arg)
+    except ValueError as exc:
+        ctx.output(f"Invalid command syntax: {exc}", "error")
+        return
+    if len(parts) < 2 or parts[0].lower() != "delivery" or parts[1].lower() != "bind":
+        ctx.output(
+            "Usage: /comms delivery bind [--chat <name>] --connection <name> (--to <email> | --to-list <id>) --subject <text> "
+            "(connection accepts an exact or unique substring match)",
+            "dim",
+        )
+        return
+    values = {}
+    index = 2
+    while index < len(parts):
+        key = parts[index]
+        if not key.startswith("--") or index + 1 >= len(parts):
+            ctx.output("Use --chat, --connection, --to or --to-list, and --subject options.", "error")
+            return
+        values[key[2:]] = parts[index + 1]
+        index += 2
+    required = {"connection", "subject"}
+    if not required.issubset(values) or bool(values.get("to")) == bool(values.get("to-list")):
+        ctx.output("Required: --connection, --subject, and exactly one of --to or --to-list. --chat defaults to the active chat.", "error")
+        return
+    chat_name = values.get("chat", "").strip()
+    if not chat_name:
+        if not ctx.session_id:
+            ctx.output("No active chat. Use --chat <name> to bind a delivery target explicitly.", "error")
+            return
+        chat_name = f"webchat_{ctx.session_id}"
+    try:
+        suite_config = json.loads((get_suite_root() / "config" / "korestack_config.json").read_text(encoding="utf-8"))
+        port = int(suite_config["services"]["korecomms"]["port"])
+        payload = json.dumps({
+            "chat_name": chat_name,
+            "connection": values["connection"],
+            "recipient": values.get("to", ""),
+            "distribution_list_id": int(values["to-list"]) if values.get("to-list") else None,
+            "subject": values["subject"],
+            "enabled": True,
+        }).encode("utf-8")
+        request = urllib.request.Request(
+            f"http://127.0.0.1:{port}/api/delivery-bindings",
+            data=payload,
+            method="POST",
+            headers={"Content-Type": "application/json", "Accept": "application/json"},
+        )
+        with urllib.request.urlopen(request, timeout=10) as response:
+            result = json.loads(response.read())
+    except (OSError, ValueError, KeyError, urllib.error.HTTPError) as exc:
+        detail = exc.read().decode(errors="replace") if isinstance(exc, urllib.error.HTTPError) else str(exc)
+        ctx.output(f"KoreComms delivery binding failed: {detail}", "error")
+        return
+    ctx.output(
+        f"Delivery bound: chat={result['chat_name']} via {result['connection']} to {result['recipient'] or ('list #' + str(result['distribution_list_id']))}",
+        "success",
+    )
+
+
 def _cmd_planning(arg: str, ctx: SlashCommandContext) -> None:
     allowed = {"off", "simple", "workflow", "auto"}
     current = str(getattr(ctx.config, "planning_mode", "auto") or "auto").strip().lower() or "auto"
@@ -472,6 +537,7 @@ _REGISTRY: dict[str, Callable] = {
     "/deletelogs": _cmd_deletelogs,
     "/defaults": _cmd_defaults,
     "/mcp":      _cmd_mcp,
+    "/comms":    _cmd_comms,
     "/planning": _cmd_planning,
 }
 
@@ -488,6 +554,7 @@ _DESCRIPTIONS: dict[str, str] = {
     "/deletelogs": "<days>  Delete log date-folders older than N days (e.g. /deletelogs 10)",
     "/defaults": "Show current Agent configuration and file path; /defaults set saves current model/ctx/host to the file",
     "/mcp":      "[status | reconnect]  Show MCP server status or re-enumerate tools from all configured servers",
+    "/comms":    "delivery bind [--chat <name>] --connection <name> (--to <email> | --to-list <id>) --subject <text>; connection accepts an exact or unique substring match; --chat defaults to the active chat",
     "/planning": "<off|simple|workflow|auto>  Control whether prompts bypass planning, use the lightweight planner, or seed durable Workflow state",
 }
 

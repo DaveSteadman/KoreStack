@@ -2,10 +2,12 @@
 from __future__ import annotations
 
 import email
+import html
 import imaplib
 import json
 import logging
 import poplib
+import re
 import smtplib
 import ssl
 import time
@@ -19,6 +21,9 @@ from app.interfaces.common.base import BaseInterface
 logger = logging.getLogger(__name__)
 
 _SECRET_KEYS = ("incoming_password", "outgoing_password")
+_HTML_TAG_RE = re.compile(r"</?(?:article|blockquote|body|br|div|h[1-6]|html|li|ol|p|table|td|th|tr|ul)\b", re.IGNORECASE)
+_HTML_BREAK_RE = re.compile(r"</?(?:br|div|h[1-6]|li|p|tr)\b[^>]*>", re.IGNORECASE)
+_HTML_STRIP_RE = re.compile(r"<[^>]+>")
 
 
 class ClassicEmailInterface(BaseInterface):
@@ -43,6 +48,16 @@ class ClassicEmailInterface(BaseInterface):
             return ""
         return str(make_header(decode_header(value)))
 
+    @staticmethod
+    def _looks_like_html(content: str) -> bool:
+        return bool(_HTML_TAG_RE.search(content))
+
+    @staticmethod
+    def _html_to_text(content: str) -> str:
+        text = _HTML_BREAK_RE.sub("\n", content)
+        text = _HTML_STRIP_RE.sub("", text)
+        return html.unescape(text).strip()
+
     @classmethod
     def _body(cls, message: Message) -> str:
         if message.is_multipart():
@@ -65,6 +80,19 @@ class ClassicEmailInterface(BaseInterface):
             "content": ClassicEmailInterface._body(message),
             "channel_type": "email",
         }
+
+    @classmethod
+    def _is_self_sent(cls, message: Message, cfg: dict) -> bool:
+        """Ignore mail emitted by this connection to prevent mailbox feedback loops."""
+        if message.get("X-KoreComms-Auto-Reply") == "1":
+            return True
+        sender = parseaddr(cls._text(message.get("From")))[1].casefold()
+        own_addresses = {
+            str(cfg.get(key) or "").strip().casefold()
+            for key in ("incoming_username", "outgoing_username", "outgoing_from")
+        }
+        own_addresses.discard("")
+        return bool(sender and sender in own_addresses)
 
     def _imap_messages(self, cfg: dict) -> list[dict]:
         client = imaplib.IMAP4_SSL(cfg["incoming_host"], int(cfg["incoming_port"]))
@@ -94,6 +122,10 @@ class ClassicEmailInterface(BaseInterface):
                         continue
                 uid = metadata.decode(errors="replace").split()[2]
                 message_id = f"imap:{self.interface_id}:{uid}"
+                message = email.message_from_bytes(parts[0][1])
+                if self._is_self_sent(message, cfg):
+                    logger.info("Ignoring self-sent IMAP message %s", message_id)
+                    continue
                 if not db.external_message_exists(message_id):
                     messages.append(self._message_data(message_id, parts[0][1]))
             return messages
@@ -114,6 +146,9 @@ class ClassicEmailInterface(BaseInterface):
                 if db.external_message_exists(message_id):
                     continue
                 raw = b"\n".join(client.retr(int(number))[1]) + b"\n"
+                if self._is_self_sent(email.message_from_bytes(raw), cfg):
+                    logger.info("Ignoring self-sent POP3 message %s", message_id)
+                    continue
                 messages.append(self._message_data(message_id, raw))
             return messages
         finally:
@@ -143,10 +178,15 @@ class ClassicEmailInterface(BaseInterface):
         message["From"] = cfg.get("outgoing_from") or cfg["outgoing_username"]
         message["To"] = recipient
         message["Subject"] = subject
+        message["X-KoreComms-Auto-Reply"] = "1"
         if in_reply_to:
             message["In-Reply-To"] = in_reply_to
             message["References"] = in_reply_to
-        message.set_content(content)
+        if self._looks_like_html(content):
+            message.set_content(self._html_to_text(content))
+            message.add_alternative(content, subtype="html")
+        else:
+            message.set_content(content)
         context = ssl.create_default_context()
         if cfg.get("outgoing_security") == "ssl":
             client = smtplib.SMTP_SSL(cfg["outgoing_host"], int(cfg["outgoing_port"]), context=context, timeout=30)
@@ -166,7 +206,19 @@ class ClassicEmailInterface(BaseInterface):
     def route_reply(self, conversation_id: int, content: str) -> None:
         conv = db.conversation_get(conversation_id)
         inbound = db.external_message_get_last_inbound(conversation_id)
-        if conv is None or inbound is None:
+        if conv is None:
+            raise RuntimeError(f"Conversation {conversation_id} not found")
+        if conv.get("delivery_enabled") and conv.get("delivery_list_id"):
+            recipients = db.distribution_list_members(int(conv["delivery_list_id"]))
+            if not recipients:
+                raise RuntimeError("Delivery list has no recipients")
+            for recipient in recipients:
+                self._send(recipient["email"], conv.get("delivery_subject") or "KoreComms report", content)
+            return
+        if conv.get("delivery_enabled") and conv.get("delivery_recipient"):
+            self._send(conv["delivery_recipient"], conv.get("delivery_subject") or "KoreComms report", content)
+            return
+        if inbound is None:
             raise RuntimeError("Classic email reply has no inbound message to address")
         recipient = parseaddr(inbound["sender_display"])[1] or inbound["sender_display"]
         subject = conv.get("korechat_id") or "(no subject)"

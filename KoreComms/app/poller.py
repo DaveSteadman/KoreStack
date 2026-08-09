@@ -67,12 +67,12 @@ def reset_poll_timing(interface_id: int, receive_interval: int, send_interval: i
 
 
 def _conversation_name_for(local_conv: dict) -> str:
-    name = (local_conv.get("conversation_name") or "").strip()
+    name = (local_conv.get("chat_name") or "").strip()
     if name:
         return name
     fallback = local_conv.get("external_thread_id") or f"kccomms:{local_conv['id']}"
     db.conversation_set_name(local_conv["id"], fallback)
-    local_conv["conversation_name"] = fallback
+    local_conv["chat_name"] = fallback
     return fallback
 
 

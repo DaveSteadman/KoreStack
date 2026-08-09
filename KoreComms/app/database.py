@@ -20,7 +20,9 @@
 from __future__ import annotations
 
 import json
+import queue
 import sqlite3
+import threading
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
@@ -29,6 +31,9 @@ from typing import Any, Generator
 from app.config import cfg
 
 _DB_PATH: Path | None = None
+_SCHEMA_READY = False
+_SCHEMA_LOCK  = threading.Lock()
+_CONNECTION_POOL: queue.LifoQueue[sqlite3.Connection] = queue.LifoQueue(maxsize=8)
 
 
 def get_db_path() -> Path:
@@ -40,13 +45,21 @@ def get_db_path() -> Path:
     return _DB_PATH
 
 
+def _open_connection() -> sqlite3.Connection:
+    conn = sqlite3.connect(get_db_path(), check_same_thread=False, timeout=5)
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys=ON")
+    conn.execute("PRAGMA busy_timeout=5000")
+    return conn
+
+
 @contextmanager
 def get_db() -> Generator[sqlite3.Connection, None, None]:
-    conn = sqlite3.connect(get_db_path(), check_same_thread=False)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL")
-    conn.execute("PRAGMA foreign_keys=ON")
-    _ensure_schema(conn)
+    init_db()
+    try:
+        conn = _CONNECTION_POOL.get_nowait()
+    except queue.Empty:
+        conn = _open_connection()
     try:
         yield conn
         conn.commit()
@@ -54,7 +67,10 @@ def get_db() -> Generator[sqlite3.Connection, None, None]:
         conn.rollback()
         raise
     finally:
-        conn.close()
+        try:
+            _CONNECTION_POOL.put_nowait(conn)
+        except queue.Full:
+            conn.close()
 
 
 # ---------------------------------------------------------------------------
@@ -83,7 +99,29 @@ CREATE TABLE IF NOT EXISTS conversations (
     kc_chat_id INTEGER,
     external_thread_id TEXT,
     korechat_id TEXT,
+    delivery_recipient TEXT,
+    delivery_list_id INTEGER REFERENCES distribution_lists(id) ON DELETE SET NULL,
+    delivery_subject TEXT,
+    delivery_enabled INTEGER NOT NULL DEFAULT 0,
     created_at         TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS distribution_lists (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    interface_id INTEGER NOT NULL REFERENCES interfaces(id) ON DELETE CASCADE,
+    name         TEXT NOT NULL,
+    description  TEXT NOT NULL DEFAULT '',
+    created_at   TEXT NOT NULL,
+    UNIQUE(interface_id, name)
+);
+
+CREATE TABLE IF NOT EXISTS distribution_list_members (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    list_id     INTEGER NOT NULL REFERENCES distribution_lists(id) ON DELETE CASCADE,
+    email       TEXT NOT NULL,
+    display_name TEXT NOT NULL DEFAULT '',
+    created_at  TEXT NOT NULL,
+    UNIQUE(list_id, email)
 );
 
 CREATE TABLE IF NOT EXISTS external_messages (
@@ -110,6 +148,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_convs_thread_unique ON conversations(exter
 CREATE UNIQUE INDEX IF NOT EXISTS idx_convs_name  ON conversations(chat_name);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_ext_msg_id  ON external_messages(external_message_id);
 CREATE INDEX IF NOT EXISTS idx_ext_msg_conv       ON external_messages(conversation_id, direction);
+CREATE INDEX IF NOT EXISTS idx_dist_lists_iface   ON distribution_lists(interface_id);
+CREATE INDEX IF NOT EXISTS idx_dist_members_list  ON distribution_list_members(list_id);
 """
 
 
@@ -125,6 +165,14 @@ def _ensure_schema(conn: sqlite3.Connection) -> None:
         conv_cols = {r[1] for r in conn.execute("PRAGMA table_info(conversations)")}
     if conv_cols and "korechat_id" not in conv_cols:
         conn.execute("ALTER TABLE conversations ADD COLUMN korechat_id TEXT")
+    if conv_cols and "delivery_recipient" not in conv_cols:
+        conn.execute("ALTER TABLE conversations ADD COLUMN delivery_recipient TEXT")
+    if conv_cols and "delivery_list_id" not in conv_cols:
+        conn.execute("ALTER TABLE conversations ADD COLUMN delivery_list_id INTEGER")
+    if conv_cols and "delivery_subject" not in conv_cols:
+        conn.execute("ALTER TABLE conversations ADD COLUMN delivery_subject TEXT")
+    if conv_cols and "delivery_enabled" not in conv_cols:
+        conn.execute("ALTER TABLE conversations ADD COLUMN delivery_enabled INTEGER NOT NULL DEFAULT 0")
     conn.execute(
         "UPDATE conversations "
         "SET chat_name = COALESCE(NULLIF(external_thread_id, ''), 'kccomms:' || id) "
@@ -141,8 +189,27 @@ def _ensure_schema(conn: sqlite3.Connection) -> None:
 
 def init_db() -> None:
     """Create tables, run migrations, and seed the permanent Manual interface."""
-    with get_db():
+    global _SCHEMA_READY
+    if _SCHEMA_READY:
         return
+    with _SCHEMA_LOCK:
+        if _SCHEMA_READY:
+            return
+        conn = _open_connection()
+        try:
+            # WAL mode is durable database configuration, not per-request work.
+            conn.execute("PRAGMA journal_mode=WAL")
+            _ensure_schema(conn)
+            conn.commit()
+            _SCHEMA_READY = True
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            if _SCHEMA_READY:
+                _CONNECTION_POOL.put(conn)
+            else:
+                conn.close()
 
 
 # ---------------------------------------------------------------------------
@@ -372,6 +439,147 @@ def external_message_create(
             (conversation_id, external_message_id, direction, sender_display, _now()),
         )
     return cur.rowcount > 0
+
+
+def conversation_set_delivery(
+    conv_id: int,
+    recipient: str,
+    list_id: int | None,
+    subject: str,
+    enabled: bool,
+) -> None:
+    with get_db() as conn:
+        conn.execute(
+            "UPDATE conversations SET delivery_recipient=?, delivery_list_id=?, delivery_subject=?, delivery_enabled=? WHERE id=?",
+            (recipient, list_id, subject, int(enabled), conv_id),
+        )
+
+
+def conversation_bind_delivery(
+    interface_id:     int,
+    chat_name:        str,
+    korechat_id:      str,
+    recipient:        str,
+    list_id:          int | None,
+    subject:          str,
+    enabled:          bool,
+    activity_detail:  str,
+) -> tuple[int, bool]:
+    """Create or update a delivery-bound conversation in one database transaction.
+
+    Returns the local conversation ID and whether it was newly created.
+    """
+    with get_db() as conn:
+        row = conn.execute(
+            "SELECT id, interface_id FROM conversations WHERE chat_name=? LIMIT 1",
+            (chat_name,),
+        ).fetchone()
+        created = row is None
+        if created:
+            cur = conn.execute(
+                "INSERT INTO conversations "
+                "(interface_id, chat_name, korechat_id, created_at) VALUES (?,?,?,?)",
+                (interface_id, chat_name, korechat_id, _now()),
+            )
+            conv_id = int(cur.lastrowid)
+        else:
+            assert row is not None
+            conv_id = int(row["id"])
+            if int(row["interface_id"]) != interface_id:
+                raise ValueError("conversation belongs to a different connection")
+
+        conn.execute(
+            "UPDATE conversations SET delivery_recipient=?, delivery_list_id=?, delivery_subject=?, delivery_enabled=? WHERE id=?",
+            (recipient, list_id, subject, int(enabled), conv_id),
+        )
+        conn.execute(
+            "INSERT INTO activity_log (action, detail, logged_at) VALUES (?,?,?)",
+            ("delivery_bound", activity_detail, _now()),
+        )
+    return conv_id, created
+
+
+# ---------------------------------------------------------------------------
+# Distribution lists
+# ---------------------------------------------------------------------------
+
+def distribution_list_create(interface_id: int, name: str, description: str = "") -> int:
+    with get_db() as conn:
+        cur = conn.execute(
+            "INSERT INTO distribution_lists (interface_id, name, description, created_at) VALUES (?,?,?,?)",
+            (interface_id, name.strip(), description.strip(), _now()),
+        )
+    return int(cur.lastrowid)
+
+
+def distribution_list_list(interface_id: int | None = None) -> list[dict]:
+    query  = (
+        "SELECT dl.*, i.name AS interface_name, COUNT(dlm.id) AS member_count "
+        "FROM distribution_lists dl JOIN interfaces i ON i.id=dl.interface_id "
+        "LEFT JOIN distribution_list_members dlm ON dlm.list_id=dl.id "
+    )
+    params: tuple = ()
+    if interface_id is not None:
+        query += "WHERE dl.interface_id=? "
+        params = (interface_id,)
+    query += "GROUP BY dl.id ORDER BY i.name COLLATE NOCASE, dl.name COLLATE NOCASE"
+    with get_db() as conn:
+        rows = conn.execute(query, params).fetchall()
+    return [dict(row) for row in rows]
+
+
+def distribution_list_get(list_id: int) -> dict | None:
+    with get_db() as conn:
+        row = conn.execute(
+            "SELECT dl.*, i.name AS interface_name FROM distribution_lists dl "
+            "JOIN interfaces i ON i.id=dl.interface_id WHERE dl.id=?",
+            (list_id,),
+        ).fetchone()
+    return _row_to_dict(row)
+
+
+def distribution_list_delete(list_id: int) -> None:
+    with get_db() as conn:
+        conn.execute("DELETE FROM distribution_lists WHERE id=?", (list_id,))
+
+
+def distribution_list_update(list_id: int, name: str, description: str) -> None:
+    with get_db() as conn:
+        conn.execute(
+            "UPDATE distribution_lists SET name=?, description=? WHERE id=?",
+            (name.strip(), description.strip(), list_id),
+        )
+
+
+def distribution_list_members(list_id: int) -> list[dict]:
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT * FROM distribution_list_members WHERE list_id=? ORDER BY display_name COLLATE NOCASE, email COLLATE NOCASE",
+            (list_id,),
+        ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def distribution_list_member_add(list_id: int, email: str, display_name: str = "") -> int:
+    with get_db() as conn:
+        cur = conn.execute(
+            "INSERT INTO distribution_list_members (list_id, email, display_name, created_at) VALUES (?,?,?,?)",
+            (list_id, email.strip(), display_name.strip(), _now()),
+        )
+    return int(cur.lastrowid)
+
+
+def distribution_list_member_delete(list_id: int, member_id: int) -> None:
+    with get_db() as conn:
+        conn.execute("DELETE FROM distribution_list_members WHERE id=? AND list_id=?", (member_id, list_id))
+
+
+def distribution_list_member_update(list_id: int, member_id: int, email: str, display_name: str) -> None:
+    with get_db() as conn:
+        conn.execute(
+            "UPDATE distribution_list_members SET email=?, display_name=? WHERE id=? AND list_id=?",
+            (email.strip(), display_name.strip(), member_id, list_id),
+        )
 
 
 def external_message_get_last_inbound(conversation_id: int) -> dict | None:

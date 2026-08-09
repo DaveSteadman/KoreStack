@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}KoreComms - Distribution Lists{% endblock %}
+{% block main_class %}kcui-main{% endblock %}
+
+{% block content %}
+<div class="kcui-page kcui-page--wide kcui-stack">
+  <div class="kcui-inline-actions">
+    <a class="kcui-tag kcui-tag--dim" href="/connections">connections</a>
+    <span class="kcui-meta">Manage named recipient groups for a connection.</span>
+  </div>
+
+  <div class="distribution-workspace">
+    <aside class="kcui-panel distribution-selector">
+      <div class="kcui-panel-header">Distribution Lists</div>
+      <div class="kcui-panel-body distribution-list-links">
+        {% for list in lists %}
+        <a class="distribution-list-link {% if selected and selected.id == list.id %}is-selected{% endif %}" href="/distribution-lists?list_id={{ list.id }}">
+          <span>{{ list.name }}</span>
+          <span class="kcui-tag kcui-tag--dim">{{ list.member_count }}</span>
+          <small>{{ list.interface_name }}</small>
+        </a>
+        {% else %}<p class="kcui-meta">No lists yet.</p>{% endfor %}
+      </div>
+      <div class="kcui-panel-body distribution-create">
+        <form method="post" action="/distribution-lists">
+          <label for="list-interface">Connection</label>
+          <select id="list-interface" name="interface_id" required>
+            {% for iface in interfaces if iface.enabled and iface.type != 'manual' %}
+            <option value="{{ iface.id }}">{{ iface.name }}</option>
+            {% endfor %}
+          </select>
+          <label for="list-name">New list</label>
+          <input id="list-name" name="name" type="text" placeholder="AI news team" required>
+          <button class="kcui-tag kcui-tag--accent" type="submit">create list</button>
+        </form>
+      </div>
+    </aside>
+
+    <section class="kcui-panel distribution-detail">
+      {% if selected %}
+      <div class="kcui-panel-header">{{ selected.name }} <span class="kcui-tag kcui-tag--info">{{ selected.interface_name }}</span></div>
+      <div class="kcui-panel-body">
+        <form method="post" action="/distribution-lists/{{ selected.id }}" class="distribution-list-settings">
+          <div><label for="selected-list-name">List name</label><input id="selected-list-name" name="name" type="text" value="{{ selected.name }}" required></div>
+          <div><label for="selected-list-description">Description</label><input id="selected-list-description" name="description" type="text" value="{{ selected.description }}" placeholder="Optional"></div>
+          <button class="kcui-tag kcui-tag--accent" type="submit">save list</button>
+        </form>
+
+        <div class="distribution-member-heading"><span>Recipients</span><span class="kcui-meta">{{ selected.members|length }} addresses</span></div>
+        <div class="distribution-members">
+          {% for member in selected.members %}
+          <form method="post" action="/distribution-lists/{{ selected.id }}/members/{{ member.id }}" class="distribution-member-form">
+            <input name="display_name" type="text" value="{{ member.display_name }}" placeholder="Name">
+            <input name="email" type="email" value="{{ member.email }}" required>
+            <button class="kcui-tag kcui-tag--dim" type="submit">save</button>
+            <button class="kcui-tag kcui-tag--danger" type="submit" formaction="/distribution-lists/{{ selected.id }}/members/{{ member.id }}/delete" data-kcui-confirm="Remove {{ member.email }} from {{ selected.name }}?" data-kcui-confirm-label="Remove">remove</button>
+          </form>
+          {% else %}<p class="kcui-meta">No recipients yet.</p>{% endfor %}
+        </div>
+
+        <form method="post" action="/distribution-lists/{{ selected.id }}/members" class="distribution-member-form distribution-member-form--new">
+          <input name="display_name" type="text" placeholder="Name">
+          <input name="email" type="email" placeholder="person@example.com" required>
+          <button class="kcui-tag kcui-tag--accent" type="submit">add address</button>
+        </form>
+
+        <form method="post" action="/distribution-lists/{{ selected.id }}/delete" class="distribution-delete-list">
+          <button class="kcui-tag kcui-tag--danger" type="submit" data-kcui-confirm="Delete distribution list {{ selected.name }} and all its members?" data-kcui-confirm-label="Delete">delete list</button>
+        </form>
+      </div>
+      {% else %}
+      <div class="kcui-panel-header">Distribution Lists</div>
+      <div class="kcui-panel-body"><p class="kcui-meta">Create a list, then select it to manage its recipients.</p></div>
+      {% endif %}
+    </section>
+  </div>
+</div>
+
+<style>
+  .distribution-workspace { display: grid; grid-template-columns: minmax(200px, 0.35fr) minmax(0, 1fr); gap: var(--kcui-gap-panel); align-items: start; }
+  .distribution-list-links { padding: 0; }
+  .distribution-list-link { display: grid; grid-template-columns: 1fr auto; gap: 4px 8px; padding: 10px 12px; color: var(--text); text-decoration: none; border-bottom: 1px solid var(--border); }
+  .distribution-list-link small { grid-column: 1 / -1; color: var(--text-dim); }
+  .distribution-list-link:hover, .distribution-list-link.is-selected { background: rgba(96, 165, 250, 0.08); }
+  .distribution-create { border-top: 1px solid var(--border); }
+  .kcui-shell-bg .distribution-list-settings { display: grid; grid-template-columns: minmax(130px, 0.7fr) minmax(220px, 1.3fr) auto; gap: 8px; align-items: end; }
+  .kcui-shell-bg .distribution-member-form { display: grid; grid-template-columns: minmax(110px, 0.7fr) minmax(220px, 1.8fr) max-content max-content; gap: 8px; width: 100%; align-items: center; }
+  .distribution-member-form input { min-width: 0; }
+  .distribution-member-heading { display: flex; justify-content: space-between; margin: 20px 0 8px; color: var(--text-dim); font-size: var(--kcui-text-label); letter-spacing: var(--kcui-tracking-label); text-transform: uppercase; }
+  .distribution-members { border-top: 1px solid var(--border); }
+  .distribution-members .distribution-member-form { padding: 8px 10px; border-bottom: 1px solid var(--border); }
+  .distribution-member-form--new { margin-top: 10px; }
+  .distribution-delete-list { margin-top: 16px; }
+  @media (max-width: 760px) { .distribution-workspace { grid-template-columns: 1fr; } .kcui-shell-bg .distribution-list-settings, .kcui-shell-bg .distribution-member-form { grid-template-columns: 1fr; } }
+</style>
+{% endblock %}
