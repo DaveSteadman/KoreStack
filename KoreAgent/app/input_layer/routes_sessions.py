@@ -25,6 +25,7 @@
 import copy
 import queue
 import threading
+import time
 import uuid
 
 from fastapi import HTTPException
@@ -93,6 +94,7 @@ def register_session_routes(
         prompt_text = body.prompt.strip()
         run_id = f"api_{session_id}_{uuid.uuid4().hex}"
         run_q = make_run_event_queue(run_id)
+        submitted_at_ms = int(time.time() * 1000)
         if prompt_text.lower() == "/stoprun":
             handle_stoprun_immediate(run_id, run_q)
             return {"run_id": run_id, "session_id": session_id, "queued": True}
@@ -102,7 +104,32 @@ def register_session_routes(
             session_context = create_session_context(session_id=session_id, persist_path=None)
             history = load_session(session_id)
             conversation_entry = get_session_conversation(session_id)
-            queue_run_event(run_q, {"type": "start", "run_id": run_id, "prompt": _prompt}, priority=True)
+
+            def _response_event(response: str, tokens: int, tps: str) -> dict:
+                return {
+                    "type":       "response",
+                    "run_id":     run_id,
+                    "response":   response,
+                    "tokens":     tokens,
+                    "tps":        tps,
+                    "elapsed_ms": int(time.time() * 1000) - submitted_at_ms,
+                }
+
+            def _response_metadata(event: dict) -> dict:
+                return {
+                    "telemetry": {
+                        "context_tokens":    int(event.get("tokens") or 0),
+                        "tokens_per_second": str(event.get("tps") or "0"),
+                        "elapsed_ms":        int(event.get("elapsed_ms") or 0),
+                    },
+                }
+
+            queue_run_event(run_q, {
+                "type":            "start",
+                "run_id":          run_id,
+                "prompt":          _prompt,
+                "submitted_at_ms": submitted_at_ms,
+            }, priority=True)
             try:
                 # ------------------------------------------------------------------
                 # LLM Direct mode: straight to the LLM, no slash handling, no tools.
@@ -115,17 +142,30 @@ def register_session_routes(
                         queue_run_event(run_q, {"type": "error", "run_id": run_id, "message": "No model loaded"}, priority=True)
                         return
                     messages: list[dict] = [*history.as_list(), {"role": "user", "content": _prompt}]
-                    result = call_llm_chat(model_name=model, messages=messages, tools=None, num_ctx=num_ctx)
+                    result = call_llm_chat(
+                        model_name = model,
+                        messages   = messages,
+                        tools      = None,
+                        num_ctx    = num_ctx,
+                        on_token   = lambda text: queue_run_event(
+                            run_q,
+                            {"type": "token", "run_id": run_id, "text": text},
+                        ),
+                    )
                     response  = (result.response or "").strip()
                     p_tokens  = result.prompt_tokens or 0
                     c_tokens  = result.completion_tokens or 0
                     tps_val   = result.tokens_per_second or 0.0
                     history.add(_prompt, response)
-                    queue_run_event(run_q, {"type": "response", "run_id": run_id, "response": response, "tokens": p_tokens, "tps": f"{tps_val:.1f}" if tps_val > 0 else "0"}, priority=True)
+                    response_event = _response_event(response, p_tokens, f"{tps_val:.1f}" if tps_val > 0 else "0")
+                    queue_run_event(run_q, response_event, priority=True)
                     threading.Thread(
                         target=kc_save_turn,
                         args=(session_id, _prompt, response),
-                        kwargs={"token_estimate": estimate_next_turn_tokens(p_tokens, c_tokens)},
+                        kwargs={
+                            "token_estimate":   estimate_next_turn_tokens(p_tokens, c_tokens),
+                            "response_metadata": _response_metadata(response_event),
+                        },
                         daemon=True,
                     ).start()
                     # Pass prompt_tokens=0 to suppress compaction - LLM-Direct deliberately
@@ -166,8 +206,16 @@ def register_session_routes(
                     handled = handle_slash(_prompt, slash_ctx)
                     slash_response = "\n".join(output_lines) if output_lines else ("(done)" if handled else f"Unknown command: {_prompt.split()[0]}")
                     if not streamed_output:
-                        queue_run_event(run_q, {"type": "response", "run_id": run_id, "response": slash_response, "tokens": 0, "tps": "0"}, priority=True)
-                    threading.Thread(target=kc_save_turn, args=(session_id, _prompt, slash_response), daemon=True).start()
+                        response_event = _response_event(slash_response, 0, "0")
+                        queue_run_event(run_q, response_event, priority=True)
+                    else:
+                        response_event = _response_event(slash_response, 0, "0")
+                    threading.Thread(
+                        target=kc_save_turn,
+                        args=(session_id, _prompt, slash_response),
+                        kwargs={"response_metadata": _response_metadata(response_event)},
+                        daemon=True,
+                    ).start()
                 else:
                     log_path = create_log_file_path(log_dir=log_dir)
                     set_latest_log_path(log_path)
@@ -185,14 +233,27 @@ def register_session_routes(
                             on_tool_round_complete=lambda: threading.Thread(
                                 target=flush_scratch_session, args=(session_id,), daemon=True
                             ).start(),
+                            on_token=lambda text: queue_run_event(
+                                run_q,
+                                {"type": "token", "run_id": run_id, "text": text},
+                            ),
                         )
                         history.add(_prompt, response)
                         # Queue the response immediately so the client is not blocked by
                         # the post-turn compaction pass that may invoke the LLM.
-                        queue_run_event(run_q, {"type": "response", "run_id": run_id, "response": response, "tokens": p_tokens, "tps": f'{tps:.1f}' if tps > 0 else '0'}, priority=True)
+                        response_event = _response_event(response, p_tokens, f'{tps:.1f}' if tps > 0 else '0')
+                        queue_run_event(run_q, response_event, priority=True)
                         # Persist the turn to KC asynchronously - response is already queued.
                         _kc_token_est = estimate_next_turn_tokens(p_tokens, _completion_tokens)
-                        threading.Thread(target=kc_save_turn, args=(session_id, _prompt, response), kwargs={"token_estimate": _kc_token_est}, daemon=True).start()
+                        threading.Thread(
+                            target=kc_save_turn,
+                            args=(session_id, _prompt, response),
+                            kwargs={
+                                "token_estimate":   _kc_token_est,
+                                "response_metadata": _response_metadata(response_event),
+                            },
+                            daemon=True,
+                        ).start()
                         save_session(session_id, history, session_context, p_tokens, get_active_num_ctx())
             except Exception as exc:
                 queue_run_event(run_q, {"type": "error", "run_id": run_id, "message": str(exc)}, priority=True)

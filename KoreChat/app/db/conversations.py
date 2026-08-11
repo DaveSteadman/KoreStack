@@ -95,10 +95,17 @@ def conversation_get_turns_by_external_id(external_id: str) -> list[dict] | None
         if conv_row is None:
             return None
         msg_rows = connection.execute(
-            "SELECT direction, content FROM messages WHERE conversation_id = ? ORDER BY created_at ASC LIMIT 1000",
+            "SELECT direction, content, metadata FROM messages WHERE conversation_id = ? ORDER BY created_at ASC LIMIT 1000",
             (conv_row["id"],),
         ).fetchall()
-    return [{"direction": row["direction"], "content": row["content"]} for row in msg_rows]
+    return [
+        {
+            "direction": row["direction"],
+            "content":   row["content"],
+            "metadata":  row["metadata"],
+        }
+        for row in msg_rows
+    ]
 
 
 def conversation_get_detail(conversation_id: int) -> dict | None:

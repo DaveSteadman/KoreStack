@@ -53,6 +53,7 @@ def conversation_append_turn(
     inbound_sender: str = "",
     outbound_sender: str = "agent",
     token_estimate: int | None = None,
+    outbound_metadata: dict | None = None,
 ) -> dict | None:
     now = _now()
     with _conn() as connection:
@@ -66,17 +67,17 @@ def conversation_append_turn(
 
         connection.execute(
             """
-            INSERT INTO messages (conversation_id, direction, content, sender_display, status, summarised, created_at)
-            VALUES (?,?,?,?,?,0,?)
+            INSERT INTO messages (conversation_id, direction, content, sender_display, status, metadata, summarised, created_at)
+            VALUES (?,?,?,?,?,?,0,?)
             """,
-            (conversation_id, "inbound", inbound_content, inbound_sender, "received", now),
+            (conversation_id, "inbound", inbound_content, inbound_sender, "received", "{}", now),
         )
         connection.execute(
             """
-            INSERT INTO messages (conversation_id, direction, content, sender_display, status, summarised, created_at)
-            VALUES (?,?,?,?,?,0,?)
+            INSERT INTO messages (conversation_id, direction, content, sender_display, status, metadata, summarised, created_at)
+            VALUES (?,?,?,?,?,?,0,?)
             """,
-            (conversation_id, "outbound", outbound_content, outbound_sender, "sent", now),
+            (conversation_id, "outbound", outbound_content, outbound_sender, "sent", json.dumps(outbound_metadata or {}), now),
         )
 
         fields = ["turn_count = ?", "status = ?", "updated_at = ?", "last_activity_at = ?"]

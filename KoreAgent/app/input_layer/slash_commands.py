@@ -392,7 +392,12 @@ def _cmd_defaults(arg: str, ctx: SlashCommandContext) -> None:
     sub = arg.strip().lower()
     if sub == "set":
         existing = _load()
-        new_cfg = {"model": ctx.config.resolved_model, "ctx": ctx.config.num_ctx, "llmhost": get_active_host()}
+        new_cfg = {
+            "model":       ctx.config.resolved_model,
+            "ctx":         ctx.config.num_ctx,
+            "max_predict": getattr(ctx.config, "max_predict", 512),
+            "llmhost":     get_active_host(),
+        }
         for key in ("agentport", "DataRootFolder", "ControlDataFolder", "UserDataFolder", "mcp_connections"):
             if key in existing:
                 new_cfg[key] = existing[key]

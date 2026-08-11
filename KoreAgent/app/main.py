@@ -217,7 +217,7 @@ LOG_DIR              = get_logs_dir()
 DEFAULTS_FILE        = get_agent_config_file()
 
 # Keys accepted from the runtime defaults file - must match the argparse dest names exactly.
-_DEFAULTS_KEYS = {"model", "ctx", "agentport", "llmhost"}
+_DEFAULTS_KEYS = {"model", "ctx", "max_predict", "agentport", "llmhost"}
 
 # All valid keys in the runtime defaults file - superset of _DEFAULTS_KEYS.
 # Keys here that are not in _DEFAULTS_KEYS are read directly by skills or slash commands
@@ -274,6 +274,13 @@ def parse_main_args() -> argparse.Namespace:
         type=int,
         default=DEFAULT_NUM_CTX,
         help="Context window for LLM calls.",
+    )
+    parser.add_argument(
+        "--max-predict",
+        dest="max_predict",
+        type=int,
+        default=512,
+        help="Maximum completion tokens per LLM call.",
     )
     parser.add_argument(
         "--agentport",
@@ -337,13 +344,14 @@ def _run(args, logger, log_path) -> None:
     config = OrchestratorConfig(
         resolved_model      = args.model,
         num_ctx             = args.ctx,
+        max_predict         = args.max_predict,
         max_iterations      = MAX_ITERATIONS,
         skills_payload      = skills_payload,
         skills_catalog_path = SKILLS_CATALOG_PATH,
         catalog_mtime       = catalog_mtime,
     )
 
-    llm_client.register_session_config(config.resolved_model, args.ctx)
+    llm_client.register_session_config(config.resolved_model, args.ctx, args.max_predict)
 
     _host_ok      = False
     _model_ok     = False

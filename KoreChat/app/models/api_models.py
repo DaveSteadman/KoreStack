@@ -41,6 +41,7 @@ class TurnAppendRequest(BaseModel):
     inbound_sender: str = ""
     outbound_sender: str = "agent"
     token_estimate: int | None = None
+    outbound_metadata: dict | None = None
 
 
 class MessageAppendRequest(BaseModel):

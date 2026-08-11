@@ -54,6 +54,7 @@ def append_turn(conversation_id: int, req: TurnAppendRequest):
         inbound_sender   = req.inbound_sender,
         outbound_sender  = req.outbound_sender,
         token_estimate   = req.token_estimate,
+        outbound_metadata = req.outbound_metadata,
     )
     if result is None:
         raise HTTPException(status_code=404, detail="Conversation not found")

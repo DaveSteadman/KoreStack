@@ -649,6 +649,7 @@ def run_tool_loop(
     on_tool_round_complete: object | None = None,
     run_to_completion_remaining_provider: object | None = None,
     workflow_contract_gaps_provider: object | None = None,
+    on_token: object | None = None,
 ) -> tuple[str, int, int, bool, float, list[ToolCallResult]]:
     def _log(message: str = "") -> None:
         logger.log_file_only(message) if quiet else logger.log(message)
@@ -737,6 +738,7 @@ def run_tool_loop(
                     messages   = messages,
                     tools      = current_tool_defs if current_tool_defs else None,
                     num_ctx    = request_num_ctx,
+                    on_token  = on_token,
                 )
             except Exception as error:
                 error_str = str(error)

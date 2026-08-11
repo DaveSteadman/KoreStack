@@ -6,9 +6,8 @@
 # Provides a single import point for all LLM client functionality. Callers that import from
 # KoreAgent.llm_client do not need to know which sub-module owns a given function.
 #
-# Also contains call_llm_chat - the shared OpenAI-compatible /v1/chat/completions call - which
-# requires backend-routing ensure_ollama_running and list_ollama_models (both defined here
-# as routing wrappers that delegate to llm_client_ollama or llm_client_lmstudio).
+# Also contains call_llm_chat, which routes Ollama requests to its native /api/chat endpoint
+# and uses /v1/chat/completions for LM Studio and other OpenAI-compatible servers.
 #
 # Sub-modules:
 #   - llm_client_openai.py   -- Shared state, config, HTTP, data types
@@ -176,6 +175,7 @@ def call_llm_chat(
     host: str | None = None,
     num_ctx: int | None = None,
     timeout: int | None = None,
+    on_token = None,
 ) -> ChatCallResult:
     """Call /v1/chat/completions (OpenAI-compatible) and return a ChatCallResult.
 
@@ -184,6 +184,16 @@ def call_llm_chat(
     extensions 'options' block and is silently ignored by non-Ollama servers.
     """
     host = host or _openai.get_active_host()
+    if _openai.get_active_backend() == "ollama":
+        return _ollama.call_ollama_chat(
+            model_name = model_name,
+            messages   = messages,
+            tools      = tools,
+            host       = host,
+            num_ctx    = num_ctx,
+            timeout    = timeout,
+            on_token   = on_token,
+        )
     # The local Ollama route is manual by default. Auto-start remains opt-in via
     # KORE_OLLAMA_AUTOSTART for environments that still want the old behavior.
     ensure_ollama_running(host=host, start_if_needed=get_local_ollama_autostart_enabled())

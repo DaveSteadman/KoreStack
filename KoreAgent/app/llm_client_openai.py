@@ -63,8 +63,9 @@ _active_backend: str = "ollama"
 
 # Active session model and context window - set once at startup via register_session_config().
 # Skills use get_active_model() / get_active_num_ctx() instead of accepting these as parameters.
-_active_model:   str = ""
-_active_num_ctx: int = 131072
+_active_model:       str = ""
+_active_num_ctx:     int = 131072
+_active_max_predict: int = 512
 _active_state_lock: threading.RLock = threading.RLock()
 _ollama_offload_mode: str = "autogpu"
 _OLLAMA_OFFLOAD_MODES: frozenset[str] = frozenset({"forcecpu", "forcegpu", "autogpu"})
@@ -139,16 +140,18 @@ def log_to_session(message: str) -> None:
 # ====================================================================================================
 # MARK: SESSION CONFIG
 # ====================================================================================================
-def register_session_config(model: str, num_ctx: int) -> None:
+def register_session_config(model: str, num_ctx: int, max_predict: int | None = None) -> None:
     """Register the active session model and context window.
 
     Called once at startup (and again whenever /llmserverconfig model or ctx changes them) so that
     thick skills can read the ambient values without needing them passed as parameters.
     """
-    global _active_model, _active_num_ctx
+    global _active_model, _active_num_ctx, _active_max_predict
     with _active_state_lock:
-        _active_model = model
+        _active_model   = model
         _active_num_ctx = num_ctx
+        if max_predict is not None:
+            _active_max_predict = max(1, int(max_predict))
 
 
 def get_active_model() -> str:
@@ -178,6 +181,8 @@ def get_ollama_request_options(num_ctx: int | None = None) -> dict:
     options: dict = {}
     if num_ctx is not None:
         options["num_ctx"] = num_ctx
+    with _active_state_lock:
+        options["num_predict"] = _active_max_predict
     if get_active_backend() != "ollama":
         return options
     mode = get_ollama_offload_mode()

@@ -2,7 +2,7 @@
 # MARK: OVERVIEW
 # ====================================================================================================
 # Ollama-specific client: model management, process lifecycle, runtime status, and the
-# /api/generate legacy endpoint.
+# /api/generate legacy endpoint, and native /api/chat.
 #
 # All functions that require Ollama-specific APIs (/api/tags, /api/generate, /api/ps, ollama serve)
 # live here. The shared OpenAI-compatible call (call_llm_chat) lives in llm_client.py (the facade).
@@ -36,6 +36,16 @@ from utils.workspace_utils import trunc
 # is_ollama_running()==False and both invoke start_ollama_server().
 _ollama_start_lock: threading.Lock = threading.Lock()
 _ollama_proc: subprocess.Popen | None = None
+
+
+def _per_request_context_enabled() -> bool:
+    """Return whether native requests may replace Ollama's loaded runner context.
+
+    Disabled by default because the current Windows/ROCm runner crashes while
+    warming an 8k replacement context. Enable only after that runtime issue is
+    resolved and verified independently.
+    """
+    return str(os.environ.get("KORE_OLLAMA_PER_REQUEST_CONTEXT", "")).strip().lower() in {"1", "true", "yes", "on"}
 
 
 def _windows_creation_flags(*, detach: bool = False) -> int:
@@ -273,6 +283,177 @@ def stop_model(
         raise RuntimeError(f"Ollama HTTP error {error.code} stopping model: {error_body}") from error
     except urllib.error.URLError as error:
         raise RuntimeError(f"Unable to reach Ollama at {host}: {error.reason}") from error
+
+
+# ====================================================================================================
+# MARK: NATIVE CHAT
+# ====================================================================================================
+def _native_chat_messages(messages: list[dict]) -> list[dict]:
+    """Convert the framework's OpenAI-shaped tool history to Ollama's native form."""
+    native_messages: list[dict] = []
+    for message in messages:
+        converted = {key: value for key, value in message.items() if key not in {"tool_call_id", "name"}}
+        if converted.get("role") == "tool":
+            converted["tool_name"] = str(message.get("name") or "")
+
+        tool_calls = converted.get("tool_calls")
+        if isinstance(tool_calls, list):
+            converted_calls: list[dict] = []
+            for index, tool_call in enumerate(tool_calls):
+                function = tool_call.get("function") if isinstance(tool_call, dict) else {}
+                function = function if isinstance(function, dict) else {}
+                arguments = function.get("arguments", {})
+                if isinstance(arguments, str):
+                    try:
+                        arguments = json.loads(arguments)
+                    except json.JSONDecodeError:
+                        arguments = {}
+                converted_calls.append({
+                    "type": "function",
+                    "function": {
+                        "index":       index,
+                        "name":        str(function.get("name") or ""),
+                        "arguments":   arguments if isinstance(arguments, dict) else {},
+                    },
+                })
+            converted["tool_calls"] = converted_calls
+        native_messages.append(converted)
+    return native_messages
+
+
+def _openai_tool_calls(native_calls: object) -> list[dict]:
+    """Convert Ollama native tool calls to the framework's existing loop contract."""
+    converted: list[dict] = []
+    for index, tool_call in enumerate(native_calls if isinstance(native_calls, list) else []):
+        function = tool_call.get("function") if isinstance(tool_call, dict) else {}
+        function = function if isinstance(function, dict) else {}
+        arguments = function.get("arguments", {})
+        converted.append({
+            "id":   f"ollama-{index}",
+            "type": "function",
+            "function": {
+                "name":      str(function.get("name") or ""),
+                "arguments": json.dumps(arguments if isinstance(arguments, dict) else {}, ensure_ascii=False),
+            },
+        })
+    return converted
+
+
+def call_ollama_chat(
+    model_name: str,
+    messages: list[dict],
+    tools: list[dict] | None = None,
+    host: str | None = None,
+    num_ctx: int | None = None,
+    timeout: int | None = None,
+    on_token = None,
+) -> _core.ChatCallResult:
+    """Call Ollama's native chat API, preserving per-request runtime options."""
+    host = host or _core.get_active_host()
+    ensure_ollama_running(host=host, start_if_needed=_core.get_local_ollama_autostart_enabled())
+
+    last_user = next((trunc(message.get("content", ""), 32) for message in reversed(messages) if message.get("role") == "user"), "")
+    ctx_str   = f"{num_ctx:,}" if num_ctx is not None and _per_request_context_enabled() else "server default"
+    tool_str  = f" | {len(tools)} tools" if tools else ""
+    _core.log_to_session(f"[Ollama native chat] {model_name} | ctx={ctx_str}{tool_str} | {last_user!r}")
+
+    payload: dict = {
+        "model":    model_name,
+        "messages": _native_chat_messages(messages),
+        "stream":   on_token is not None,
+        # Nemotron exposes a separate reasoning channel.  Leaving its native
+        # default enabled makes ordinary chat and tool selection spend hundreds
+        # of invisible tokens before it emits either content or a tool call.
+        # KoreAgent does not consume that reasoning as an execution input, so
+        # request the same direct-answer mode used for responsive chat.
+        "think":    False,
+    }
+    if tools:
+        payload["tools"] = tools
+    requested_num_ctx = num_ctx if _per_request_context_enabled() else None
+    options = _core.get_ollama_request_options(requested_num_ctx)
+    if options:
+        payload["options"] = options
+
+    effective_timeout = timeout if timeout is not None else _core.get_llm_timeout()
+    started           = time.monotonic()
+    try:
+        if on_token is None:
+            body = _core._request_json(
+                url     = f"{host.rstrip('/')}/api/chat",
+                method  = "POST",
+                payload = payload,
+                timeout = effective_timeout,
+            )
+        else:
+            request = urllib.request.Request(
+                url     = f"{host.rstrip('/')}/api/chat",
+                data    = json.dumps(payload).encode("utf-8"),
+                headers = {"Content-Type": "application/json"},
+                method  = "POST",
+            )
+            text_parts: list[str] = []
+            thinking_parts: list[str] = []
+            tool_calls: list[dict] = []
+            body: dict = {}
+            with urllib.request.urlopen(request, timeout=effective_timeout) as response:
+                for raw_line in response:
+                    line = raw_line.decode("utf-8").strip()
+                    if not line:
+                        continue
+                    chunk = json.loads(line)
+                    if not isinstance(chunk, dict):
+                        continue
+                    message = chunk.get("message") if isinstance(chunk.get("message"), dict) else {}
+                    content = str(message.get("content") or "")
+                    thinking = str(message.get("thinking") or "")
+                    if content:
+                        text_parts.append(content)
+                        on_token(content)
+                    if thinking:
+                        thinking_parts.append(thinking)
+                    chunk_calls = message.get("tool_calls")
+                    if isinstance(chunk_calls, list):
+                        tool_calls.extend(chunk_calls)
+                    body = chunk
+            final_message = body.get("message") if isinstance(body.get("message"), dict) else {}
+            body["message"] = {
+                **final_message,
+                "role":       str(final_message.get("role") or "assistant"),
+                "content":    "".join(text_parts),
+                "thinking":   "".join(thinking_parts),
+                "tool_calls": tool_calls,
+            }
+    except urllib.error.HTTPError as error:
+        error_body = error.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"Ollama native chat HTTP error {error.code}: {error_body}") from error
+    except urllib.error.URLError as error:
+        raise RuntimeError(f"Unable to reach Ollama at {host}: {error.reason}") from error
+    except TimeoutError as error:
+        raise RuntimeError(f"Ollama native chat timed out after {effective_timeout}s") from error
+    except json.JSONDecodeError as error:
+        raise RuntimeError("Ollama native chat returned a non-JSON response") from error
+
+    message = body.get("message") if isinstance(body.get("message"), dict) else {}
+    if not message:
+        raise RuntimeError(f"Ollama native chat response missing message: {body}")
+    message = dict(message)
+    message["tool_calls"] = _openai_tool_calls(message.get("tool_calls"))
+    completion_tokens = int(body.get("eval_count") or 0)
+    eval_duration_ns  = int(body.get("eval_duration") or 0)
+    elapsed           = time.monotonic() - started
+    tokens_per_second = (
+        completion_tokens / (eval_duration_ns / 1_000_000_000)
+        if completion_tokens > 0 and eval_duration_ns > 0
+        else completion_tokens / elapsed if completion_tokens > 0 and elapsed > 0 else 0.0
+    )
+    return _core.ChatCallResult(
+        message           = message,
+        finish_reason     = str(body.get("done_reason") or ("tool_calls" if message["tool_calls"] else "stop")),
+        prompt_tokens     = int(body.get("prompt_eval_count") or 0),
+        completion_tokens = completion_tokens,
+        tokens_per_second = tokens_per_second,
+    )
 
 
 # ====================================================================================================

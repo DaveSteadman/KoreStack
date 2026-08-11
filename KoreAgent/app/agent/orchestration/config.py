@@ -8,6 +8,7 @@ from pathlib import Path
 class OrchestratorConfig:
     resolved_model: str
     num_ctx: int
+    max_predict: int
     max_iterations: int
     skills_payload: dict
     skills_catalog_path: Path | None = None

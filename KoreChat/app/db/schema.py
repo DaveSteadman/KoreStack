@@ -55,6 +55,7 @@ CREATE TABLE IF NOT EXISTS messages (
     status           TEXT    NOT NULL DEFAULT 'received'
                              CHECK(status IN ('received','draft','sent','failed')),
     delivery_eligible INTEGER NOT NULL DEFAULT 1,
+    metadata         TEXT    NOT NULL DEFAULT '{}',
     summarised       INTEGER NOT NULL DEFAULT 0,
     created_at       TEXT    NOT NULL
 );
@@ -122,6 +123,8 @@ def init_db() -> None:
         message_cols = {row[1] for row in connection.execute("PRAGMA table_info(messages)")}
         if message_cols and "delivery_eligible" not in message_cols:
             connection.execute("ALTER TABLE messages ADD COLUMN delivery_eligible INTEGER NOT NULL DEFAULT 1")
+        if message_cols and "metadata" not in message_cols:
+            connection.execute("ALTER TABLE messages ADD COLUMN metadata TEXT NOT NULL DEFAULT '{}'")
             if "indepth_planner" in cols:
                 connection.execute(
                     "UPDATE conversations SET workflow = indepth_planner "

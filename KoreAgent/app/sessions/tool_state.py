@@ -8,8 +8,13 @@ import sessions.korechat_client as koreconv_client
 from sessions.runtime import get_active_session_id
 
 
-MAX_ACTIVE_TOOLS = 32
-ALWAYS_ON_TOOL_NAMES = frozenset({"tools_catalog_list", "tools_active_add"})
+MAX_ACTIVE_TOOLS      = 32
+ALWAYS_ON_TOOL_NAMES = frozenset({
+    "get_datetime_data",
+    "tools_catalog_list",
+    "tools_active_add",
+    "workflow_create",
+})
 
 _KC_TIMEOUT = 8
 _SESSION_TOOLS_ACTIVE: dict[str, list[str]] = {}

@@ -13,6 +13,7 @@ const API_BASE          = "";           // same origin
 const SESSION_STORAGE_KEY   = "maf.activeSession";
 const INPUT_DRAFT_KEY       = "maf.inputDraft";
 const WRAP_STATE_KEY        = "maf.wrapState";
+const ACTIVE_RUN_STORAGE_KEY = "maf.activeRun";
 let   _sessionId        = _restoreSessionId();  // mutable: /chat resume changes this
 const POLL_OLLAMA_MS    = 10_000;
 const POLL_QUEUE_MS     = 3_000;
@@ -88,6 +89,7 @@ let _logScrollCtl      = null;
 let _chatScrollCtl     = null;
 let _logLineLimit      = MAX_LOG_LINES_LIVE;
 let _sessionTitle      = "";
+let _thinkingTimer     = null;
 
 // Tab-completion state.
 let _completions  = { sessions: [], workflow_names: [], models: [] };
@@ -143,6 +145,82 @@ function _restoreInputDraft() {
 
 function _clearInputDraft() {
     try { sessionStorage.removeItem(INPUT_DRAFT_KEY); } catch (_) { /* ignore */ }
+}
+
+function _loadActiveRun() {
+    try {
+        const raw = localStorage.getItem(ACTIVE_RUN_STORAGE_KEY);
+        const run = raw ? JSON.parse(raw) : null;
+        return run && typeof run.runId === "string" && typeof run.sessionId === "string" ? run : null;
+    } catch (_) {
+        return null;
+    }
+}
+
+function _saveActiveRun(run) {
+    try { localStorage.setItem(ACTIVE_RUN_STORAGE_KEY, JSON.stringify(run)); } catch (_) { /* ignore */ }
+}
+
+function _clearActiveRun(runId) {
+    const run = _loadActiveRun();
+    if (!run || run.runId !== runId) return;
+    try { localStorage.removeItem(ACTIVE_RUN_STORAGE_KEY); } catch (_) { /* ignore */ }
+}
+
+function _turnMetaStorageKey(sessionId) {
+    return "maf_turn_meta_" + sessionId;
+}
+
+function _turnMetaKey(prompt, response) {
+    return String(prompt || "") + "\u0000" + String(response || "");
+}
+
+function _loadTurnMeta(sessionId) {
+    try {
+        const raw = localStorage.getItem(_turnMetaStorageKey(sessionId));
+        const stored = raw ? JSON.parse(raw) : {};
+        return stored && typeof stored === "object" ? stored : {};
+    } catch (_) {
+        return {};
+    }
+}
+
+function _saveTurnMeta(sessionId, prompt, response, meta) {
+    if (!meta) return;
+    const stored = _loadTurnMeta(sessionId);
+    stored[_turnMetaKey(prompt, response)] = meta;
+    try { localStorage.setItem(_turnMetaStorageKey(sessionId), JSON.stringify(stored)); } catch (_) { /* ignore */ }
+}
+
+function _getTurnMeta(sessionId, prompt, response) {
+    return _loadTurnMeta(sessionId)[_turnMetaKey(prompt, response)] || "";
+}
+
+function _formatSavedTelemetry(telemetry) {
+    if (!telemetry || typeof telemetry !== "object") return "";
+    const tokens = Number(telemetry.context_tokens) || 0;
+    const tps    = String(telemetry.tokens_per_second || "0");
+    const elapsed = _formatElapsed(telemetry.elapsed_ms);
+    return tokens
+        ? tokens.toLocaleString() + " ctx" + (tps !== "0" ? " | " + tps + " tok/s" : "") + " | " + elapsed
+        : elapsed;
+}
+
+function _turnMetaText(sessionId, prompt, assistantTurn) {
+    return _formatSavedTelemetry(assistantTurn?.telemetry)
+        || _getTurnMeta(sessionId, prompt, assistantTurn?.content);
+}
+
+function _formatElapsed(elapsedMs) {
+    const seconds = Math.max(0, Number(elapsedMs) || 0) / 1000;
+    return seconds < 60 ? seconds.toFixed(1) + "s" : Math.floor(seconds / 60) + "m " + Math.floor(seconds % 60) + "s";
+}
+
+function _refreshThinkingTimers() {
+    const now = Date.now();
+    dom.chat().querySelectorAll(".chat-thinking[data-started-at-ms]").forEach(el => {
+        el.textContent = "thinking... " + _formatElapsed(now - Number(el.dataset.startedAtMs));
+    });
 }
 
 function _restoreSessionUiState() {
@@ -855,10 +933,11 @@ async function logNavStep(delta) {
 // MARK: CHAT
 // ====================================================================================================
 
-function appendChatMessage(role, text, meta) {
+function appendChatMessage(role, text, meta, runId = "") {
     const el    = dom.chat();
     const wrap  = document.createElement("div");
     wrap.className = "chat-msg " + role;
+    if (runId) wrap.setAttribute("data-run-id", runId);
 
     const label = document.createElement("div");
     label.className = "msg-role";
@@ -896,12 +975,34 @@ function appendChatLine(wrap, text) {
     if (_chatScrollCtl) _chatScrollCtl.followSoon();
 }
 
-function appendThinking(runId) {
+function appendChatToken(wrap, text) {
+    if (!wrap || !text) return;
+    const body = wrap.querySelector(".msg-text");
+    if (!body) return;
+    body.textContent += text;
+    if (_chatScrollCtl) _chatScrollCtl.followSoon();
+}
+
+function setChatMeta(wrap, meta) {
+    if (!wrap || !meta) return;
+    let el = wrap.querySelector(".msg-meta");
+    if (!el) {
+        el = document.createElement("div");
+        el.className = "msg-meta";
+        wrap.appendChild(el);
+    }
+    el.textContent = meta;
+}
+
+function appendThinking(runId, startedAtMs = Date.now()) {
     const el   = dom.chat();
+    const existing = el.querySelector(".chat-thinking[data-run-id='" + runId + "']");
+    if (existing) return existing;
     const wrap = document.createElement("div");
     wrap.className = "chat-thinking";
     wrap.setAttribute("data-run-id", runId);
-    wrap.textContent = "thinking...";
+    wrap.setAttribute("data-started-at-ms", String(startedAtMs));
+    wrap.textContent = "thinking... " + _formatElapsed(Date.now() - startedAtMs);
     el.appendChild(wrap);
     if (_chatScrollCtl) _chatScrollCtl.followSoon();
 }
@@ -915,21 +1016,26 @@ function removeThinking(runId) {
 // MARK: RUN STREAM (SSE per prompt)
 // ====================================================================================================
 
-function listenRun(runId) {
+function listenRun(runId, { startRendered = false } = {}) {
     // Each run gets its own EventSource so concurrent in-flight requests
     // do not cancel each other.
     const es = new EventSource(API_BASE + "/runs/" + encodeURIComponent(runId) + "/stream");
     let progressWrap = null;
+    let tokenWrap    = null;
+    let streamedText = "";
+    let startedAtMs  = Number(_loadActiveRun()?.startedAtMs) || Date.now();
 
     es.onmessage = e => {
         try {
             const ev = JSON.parse(e.data);
             if (ev.type === "start") {
-                appendChatMessage("user", ev.prompt);
+                startedAtMs = Number(ev.submitted_at_ms) || startedAtMs;
+                _saveActiveRun({ runId, sessionId: _sessionId, prompt: ev.prompt || "", startedAtMs });
+                if (!startRendered) appendChatMessage("user", ev.prompt, "", runId);
                 if (ev.prompt && ev.prompt.startsWith("/")) {
                     startLogStream();
                 }
-                appendThinking(runId);
+                appendThinking(runId, startedAtMs);
             } else if (ev.type === "log_file") {
                 // Only follow the new log file if live mode is active.
                 if (_logScrollCtl && _logScrollCtl.live) {
@@ -941,10 +1047,26 @@ function listenRun(runId) {
                 } else {
                     appendChatLine(progressWrap, ev.text);
                 }
+            } else if (ev.type === "token") {
+                removeThinking(runId);
+                if (!tokenWrap) tokenWrap = appendChatMessage("agent", "");
+                appendChatToken(tokenWrap, ev.text || "");
+                streamedText += ev.text || "";
             } else if (ev.type === "response") {
                 removeThinking(runId);
-                const meta = ev.tokens ? ev.tokens.toLocaleString() + " ctx" + (ev.tps && ev.tps !== "0" ? " | " + ev.tps + " tok/s" : "") : "";
-                appendChatMessage("agent", ev.response, meta);
+                const elapsedMs = Number(ev.elapsed_ms) || Date.now() - startedAtMs;
+                const meta = ev.tokens
+                    ? ev.tokens.toLocaleString() + " ctx" + (ev.tps && ev.tps !== "0" ? " | " + ev.tps + " tok/s" : "") + " | " + _formatElapsed(elapsedMs)
+                    : _formatElapsed(elapsedMs);
+                _saveTurnMeta(_sessionId, _loadActiveRun()?.prompt || "", ev.response, meta);
+                if (!tokenWrap) {
+                    appendChatMessage("agent", ev.response, meta);
+                } else {
+                    if ((ev.response || "").startsWith(streamedText)) {
+                        appendChatToken(tokenWrap, ev.response.slice(streamedText.length));
+                    }
+                    setChatMeta(tokenWrap, meta);
+                }
                 // Refresh the history cache silently so the next page load is instant.
                 apiFetch("/sessions/" + encodeURIComponent(_sessionId) + "/history").then(d => {
                     if (!d) return;
@@ -958,6 +1080,7 @@ function listenRun(runId) {
             } else if (ev.type === "error") {
                 removeThinking(runId);
                 appendChatMessage("agent", "[Error: " + ev.message + "]");
+                _clearActiveRun(runId);
             } else if (ev.type === "rename_session") {
                 // Same chat, file renamed - update routing ID and title in-place; no history replay.
                 _sessionId = ev.session_id;
@@ -976,6 +1099,7 @@ function listenRun(runId) {
                 _loadCompletions();
             } else if (ev.type === "done") {
                 removeThinking(runId);
+                _clearActiveRun(runId);
                 es.close();
                 refreshQueue();
             }
@@ -985,9 +1109,20 @@ function listenRun(runId) {
     };
 
     es.onerror = () => {
-        removeThinking(runId);
         es.close();
     };
+}
+
+function _resumePersistedRun(sessionId) {
+    const run = _loadActiveRun();
+    if (!run || run.sessionId !== sessionId) return;
+
+    const selector = ".chat-msg.user[data-run-id='" + run.runId + "']";
+    if (!dom.chat().querySelector(selector)) {
+        appendChatMessage("user", run.prompt || "", "", run.runId);
+    }
+    appendThinking(run.runId, Number(run.startedAtMs) || Date.now());
+    listenRun(run.runId, { startRendered: true });
 }
 
 // ----------------------------------------------------------------------------------------------------
@@ -1002,16 +1137,22 @@ async function _loadSessionHistory(sessionId) {
             const u = cached[i];
             const a = cached[i + 1];
             if (u && u.role === "user")      appendChatMessage("user",  u.content);
-            if (a && a.role === "assistant") appendChatMessage("agent", a.content);
+            if (a && a.role === "assistant") appendChatMessage("agent", a.content, _turnMetaText(sessionId, u?.content, a));
         }
     }
     // Fetch fresh data and update the panel.
     const data = await apiFetch("/sessions/" + encodeURIComponent(sessionId) + "/history");
-    if (!data) return;
+    if (!data) {
+        _resumePersistedRun(sessionId);
+        return;
+    }
     if (typeof data.title === "string") {
         _setChatPanelTitle(_resolveSessionTitle(sessionId, data.title));
     }
-    if (!Array.isArray(data.turns)) return;
+    if (!Array.isArray(data.turns)) {
+        _resumePersistedRun(sessionId);
+        return;
+    }
     const turns = data.turns;
     try { localStorage.setItem(cacheKey, JSON.stringify(turns)); } catch (_) {}
     // Only re-render if the content differs from what was already shown from cache.
@@ -1022,9 +1163,10 @@ async function _loadSessionHistory(sessionId) {
             const u = turns[i];
             const a = turns[i + 1];
             if (u && u.role === "user")      appendChatMessage("user",  u.content);
-            if (a && a.role === "assistant") appendChatMessage("agent", a.content);
+            if (a && a.role === "assistant") appendChatMessage("agent", a.content, _turnMetaText(sessionId, u?.content, a));
         }
     }
+    _resumePersistedRun(sessionId);
 }
 
 // ====================================================================================================
@@ -1096,6 +1238,13 @@ async function _dispatchPrompt(text) {
         appendChatMessage("agent", "[Error: could not reach API]");
         return;
     }
+    const activeRun = {
+        runId:       data.run_id,
+        sessionId:   _sessionId,
+        prompt:      text,
+        startedAtMs: Date.now(),
+    };
+    _saveActiveRun(activeRun);
     listenRun(data.run_id);
 }
 
@@ -1471,6 +1620,8 @@ function init() {
     }
     _persistActiveSession();
     _restoreWrapState();
+    _refreshThinkingTimers();
+    _thinkingTimer = window.setInterval(_refreshThinkingTimers, 1_000);
 
     // Initialise drag-resize splitters and apply stored layout.
     initSplitters();

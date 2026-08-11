@@ -50,7 +50,6 @@ from agent.orchestration.planning import persist_task_plan
 from workflow_store import get_simple_plan
 from workflow_store import evaluate_simple_task_contract
 from workflow_store import list_simple_tasks
-from workflow_store import should_bootstrap_workflow
 from sessions.tool_selection import build_all_tool_catalog
 from sessions.tool_selection import derive_active_tool_runtime
 from sessions.tool_selection import promote_selected_tools
@@ -68,18 +67,6 @@ from web_tools_state import is_web_tool_name
 # MARK: SKILL GUIDANCE FLAG
 # ====================================================================================================
 _SKILL_GUIDANCE_ENABLED: bool = False
-
-
-_CASUAL_CONVERSATION_PATTERN = re.compile(
-    r"(?:hi|hello|hey|hiya|good\s+(?:morning|afternoon|evening)|"
-    r"thanks?|thank\s+you|ok(?:ay)?|cool|great)[!.?\s]*",
-    re.IGNORECASE,
-)
-
-
-def _is_casual_conversation(prompt: str) -> bool:
-    """Return True only for messages that cannot reasonably require an agent tool."""
-    return bool(_CASUAL_CONVERSATION_PATTERN.fullmatch(str(prompt or "").strip()))
 
 
 def get_skill_guidance_enabled() -> bool:
@@ -245,6 +232,7 @@ def clear_stop() -> None:
 class OrchestratorConfig:
     resolved_model: str
     num_ctx: int
+    max_predict: int
     max_iterations: int
     skills_payload: dict
     skills_catalog_path: Path | None = None
@@ -537,6 +525,7 @@ def orchestrate_prompt(
     on_tool_round_complete: object | None = None,
     bound_session_id: str | None = None,
     token_pressure: float = 0.0,
+    on_token: object | None = None,
 ) -> tuple[str, int, int, bool, float]:
     """Run the tool-calling pipeline for one prompt.
 
@@ -588,10 +577,6 @@ def orchestrate_prompt(
         if not config.task_planning_enabled and planning_mode == "auto":
             planning_mode = "off"
         _log(f"Planning mode:  {planning_mode}")
-        casual_conversation = _is_casual_conversation(user_prompt)
-        if casual_conversation:
-            _log_file_only("[fast-path] Casual conversation: planner and tool schemas skipped.")
-
         ambient_system_info = get_static_system_info_string()
         _log_section("AMBIENT SYSTEM INFO")
         _log(ambient_system_info)
@@ -602,8 +587,7 @@ def orchestrate_prompt(
             re.IGNORECASE,
         )
         workflow_enabled = (
-            planning_mode == "workflow"
-            or (planning_mode == "auto" and (should_bootstrap_workflow(user_prompt) or workflow_task_match is not None))
+            planning_mode != "off"
         )
         try:
             workflow_exists = bool(get_simple_plan(session_id=active_session_id))
@@ -638,7 +622,7 @@ def orchestrate_prompt(
             if str(item.get("name") or "")
         }
         workflow_task_contract: dict[str, object] | None = None
-        if planning_mode != "off" and not casual_conversation:
+        if planning_mode in {"simple", "workflow"}:
             planning_context = ""
             if workflow_task_match:
                 task_position = int(workflow_task_match.group(1))
@@ -700,8 +684,8 @@ def orchestrate_prompt(
         )
         active_payload = initial_tool_runtime["active_local_payload"]
 
-        tool_defs = [] if casual_conversation else build_tool_definitions(active_payload)
-        initial_mcp_defs = [] if casual_conversation else list(initial_tool_runtime["active_mcp_defs"])
+        tool_defs = build_tool_definitions(active_payload)
+        initial_mcp_defs = list(initial_tool_runtime["active_mcp_defs"])
         if initial_mcp_defs:
             tool_defs = tool_defs + initial_mcp_defs
         _log_file_only(f"[progress] Tool definitions built: {len(tool_defs)} tools available.")
@@ -735,14 +719,6 @@ def orchestrate_prompt(
         catalog_gates = build_catalog_gates(active_payload)
 
         def _build_tool_runtime() -> dict[str, object]:
-            if casual_conversation:
-                return {
-                    "tool_defs":            [],
-                    "catalog_gates":        {},
-                    "active_tool_names":    set(),
-                    "missing_selected":     [],
-                    "all_known_tool_names": set(),
-                }
             round_available_local_payload = config.skills_payload if _WEB_SKILLS_ENABLED else _filter_web_skills(config.skills_payload)
             round_available_local_payload = _filter_workflow_tools(
                 round_available_local_payload,
@@ -810,6 +786,7 @@ def orchestrate_prompt(
                 on_tool_round_complete = on_tool_round_complete,
                 run_to_completion_remaining_provider = _remaining_plan_tasks,
                 workflow_contract_gaps_provider = _workflow_contract_gaps if workflow_task_contract is not None else None,
+                on_token = on_token,
             )
 
             _file_blocks_written = _tool_loop_write_file_blocks(final_response, log_to_session=log_to_session) if final_response else []

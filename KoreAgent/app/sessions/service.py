@@ -198,7 +198,15 @@ class SessionService:
                 pending_prompt = content
             elif direction == "outbound" and pending_prompt is not None:
                 turns.append({"role": "user", "content": pending_prompt})
-                turns.append({"role": "assistant", "content": content})
+                try:
+                    metadata = json.loads(message.get("metadata") or "{}")
+                except (TypeError, json.JSONDecodeError):
+                    metadata = {}
+                telemetry = metadata.get("telemetry") if isinstance(metadata, dict) else None
+                assistant_turn = {"role": "assistant", "content": content}
+                if isinstance(telemetry, dict):
+                    assistant_turn["telemetry"] = telemetry
+                turns.append(assistant_turn)
                 pending_prompt = None
         return turns
 
@@ -228,7 +236,14 @@ class SessionService:
             return conv
         return None
 
-    def kc_save_turn(self, session_id: str, user_text: str, agent_text: str, token_estimate: int | None = None) -> None:
+    def kc_save_turn(
+        self,
+        session_id: str,
+        user_text: str,
+        agent_text: str,
+        token_estimate: int | None = None,
+        response_metadata: dict | None = None,
+    ) -> None:
         conv = self.kc_ensure_conversation(session_id)
         if conv is None:
             return
@@ -240,6 +255,7 @@ class SessionService:
                 "inbound_sender":   session_id,
                 "outbound_sender":  "agent",
                 "token_estimate":   token_estimate,
+                "outbound_metadata": response_metadata or {},
             })
         except Exception:
             pass
