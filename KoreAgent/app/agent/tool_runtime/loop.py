@@ -24,6 +24,7 @@ import json
 import re
 from pathlib import Path
 
+from agent.orchestration.context_window import choose_context_window
 from context_manager import COMPACT_THRESHOLD
 from context_manager import assess_compact
 from datasets_pkg.service import auto_route_tool_result
@@ -725,7 +726,18 @@ def run_tool_loop(
             _log_file_only(f"[context] thread: {thread_chars:,} chars (~{thread_chars // 4:,} tok est.) | window: {config.num_ctx:,} | remaining est.: ~{config.num_ctx - thread_chars // 4:,}")
 
             try:
-                result = call_llm_chat(model_name=config.resolved_model, messages=messages, tools=current_tool_defs if current_tool_defs else None, num_ctx=config.num_ctx)
+                request_num_ctx = choose_context_window(
+                    config.num_ctx,
+                    messages,
+                    current_tool_defs if current_tool_defs else None,
+                )
+                _log_file_only(f"[context] request window: {request_num_ctx:,} / {config.num_ctx:,} tokens")
+                result = call_llm_chat(
+                    model_name = config.resolved_model,
+                    messages   = messages,
+                    tools      = current_tool_defs if current_tool_defs else None,
+                    num_ctx    = request_num_ctx,
+                )
             except Exception as error:
                 error_str = str(error)
                 if "error parsing tool call" in error_str:
@@ -1024,7 +1036,12 @@ def run_tool_loop(
             _log("[warn] Max tool rounds exhausted - requesting final synthesis.")
             try:
                 synthesis_messages = messages + [{"role": "user", "content": "Based on the tool results above, please answer my original question now."}]
-                result = call_llm_chat(model_name=config.resolved_model, messages=synthesis_messages, tools=None, num_ctx=config.num_ctx)
+                result = call_llm_chat(
+                    model_name = config.resolved_model,
+                    messages   = synthesis_messages,
+                    tools      = None,
+                    num_ctx    = choose_context_window(config.num_ctx, synthesis_messages),
+                )
                 final_response = strip_cot_preamble(result.response)
                 prompt_tokens += result.prompt_tokens
                 completion_tokens += result.completion_tokens

@@ -8,8 +8,7 @@
 #   /llmserverconfig model list       -- list models available on the active server
 #   /llmserverconfig model <name>     -- switch the active model (clears history)
 #   /llmserverconfig ctx <n>          -- set context window size
-#   /llmserverconfig host <url>       -- switch LLM server host
-#   /llmserverconfig stop             -- unload the current model from memory
+#   /llmserverconfig cpugpu <mode>    -- set Ollama CPU/GPU model placement
 #
 # Registered in slash_commands.py under the /llmserverconfig command.
 #
@@ -39,18 +38,47 @@ from input_layer.slash_command_context import SlashCommandContext
 from utils.workspace_utils import get_agent_config_file
 
 
+def _configure_ollama_offload(mode: str, ctx: SlashCommandContext) -> None:
+    if mode not in {"forcecpu", "forcegpu", "autogpu"}:
+        ctx.output("Usage: /llmserverconfig cpugpu <forcecpu | forcegpu | autogpu>", "error")
+        return
+    if get_active_backend() != "ollama":
+        ctx.output("LM Studio controls its own CPU/GPU allocation; no setting was changed.", "dim")
+        return
+
+    set_ollama_offload_mode(mode)
+    try:
+        running_names = [row.get("name", "") for row in get_ollama_ps_rows() if row.get("name")]
+        loaded_name   = resolve_model_name(ctx.config.resolved_model, running_names)
+        if loaded_name:
+            stop_model(loaded_name)
+            unload_note = " Active model unloaded; the setting applies on its next load."
+        else:
+            unload_note = " The setting applies the next time Ollama loads the model."
+    except Exception:
+        unload_note = " The setting applies the next time Ollama loads the model."
+
+    detail = {
+        "forcecpu": "CPU only (num_gpu=0).",
+        "forcegpu": "request all model layers on GPU (num_gpu=999).",
+        "autogpu":  "allow Ollama to choose CPU/GPU placement.",
+    }[mode]
+    ctx.output(f"Ollama offload: {mode} — {detail}{unload_note}", "success")
+
+
 def _cmd_llmserverconfig(arg: str, ctx: SlashCommandContext) -> None:
     # /llmserverconfig                  -> show current model + ctx + backend
     # /llmserverconfig model list       -> list models available on the active server
     # /llmserverconfig model <name>     -> switch active model; clears history
     # /llmserverconfig ctx <n>          -> set context window size
+    # /llmserverconfig cpugpu <mode>    -> set Ollama CPU/GPU model placement
     if not arg:
         ctx.output(
             f"Model: {ctx.config.resolved_model}  |  ctx: {ctx.config.num_ctx:,}  |  "
             f"backend: {get_active_backend()} @ {get_active_host()}",
             "info",
         )
-        ctx.output("Usage: /llmserverconfig model list | model <name> | ctx <n>", "dim")
+        ctx.output("Usage: /llmserverconfig model list | model <name> | ctx <n> | cpugpu <forcecpu|forcegpu|autogpu>", "dim")
         return
 
     parts = arg.strip().split(None, 1)
@@ -65,6 +93,10 @@ def _cmd_llmserverconfig(arg: str, ctx: SlashCommandContext) -> None:
         ctx.config.num_ctx = n
         register_session_config(ctx.config.resolved_model, n)
         ctx.output(f"Context window: {n:,} tokens", "success")
+        return
+
+    if first == "cpugpu":
+        _configure_ollama_offload(rest.lower(), ctx)
         return
 
     if first == "model":
@@ -114,7 +146,7 @@ def _cmd_llmserverconfig(arg: str, ctx: SlashCommandContext) -> None:
         return
 
     ctx.output(
-        f"Unknown subcommand '{first}'. Usage: /llmserverconfig model list | model <name> | ctx <n>",
+        f"Unknown subcommand '{first}'. Usage: /llmserverconfig model list | model <name> | ctx <n> | cpugpu <forcecpu|forcegpu|autogpu>",
         "error",
     )
 
@@ -154,7 +186,6 @@ def _cmd_stopmodel(arg: str, ctx: SlashCommandContext) -> None:
 
 def _cmd_llmserver(arg: str, ctx: SlashCommandContext) -> None:
     # /llmserver                      -> show current server
-    # /llmserver config <mode>        -> configure Ollama CPU/GPU offload mode
     # /llmserver ollama <host|url>    -> switch to Ollama at the given host/url
     # /llmserver lmstudio <host|url>  -> switch to LM Studio at the given host/url
     if not arg:
@@ -232,8 +263,8 @@ def register_model_slash_commands(registry: dict[str, Callable], descriptions: d
     )
     descriptions.update(
         {
-            "/llmserver":       "config <forcecpu|forcegpu|autogpu> | <ollama|lmstudio> [host]  Configure Ollama offload or switch model server",
-            "/llmserverconfig": "model list | model <name> | ctx <n>  Configure the active model and context window",
+            "/llmserver":       "<ollama|lmstudio> <host>  Switch model server",
+            "/llmserverconfig": "model list | model <name> | ctx <n> | cpugpu <forcecpu|forcegpu|autogpu>  Configure the active model, context window, and Ollama GPU use",
             "/stopmodel":       "[name]  Unload a running model from VRAM (Ollama only, defaults to active model)",
         }
     )

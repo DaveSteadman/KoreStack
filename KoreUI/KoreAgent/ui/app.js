@@ -43,9 +43,17 @@ const _ALL_COMMANDS = [
 const _CHAT_SUBS = ["new", "name", "list", "resume", "resumecopy", "park", "delete", "info"];
 
 // Sub-commands for /llmserverconfig.
-const _LLMSERVERCFG_SUBS = ["model", "ctx"];
-const _LLMSERVER_SUBS    = ["config", "ollama", "lmstudio"];
+const _LLMSERVERCFG_SUBS = ["model", "ctx", "cpugpu"];
+const _LLMSERVER_SUBS    = ["ollama", "lmstudio"];
 const _LLMSERVER_CONFIGS = ["forcecpu", "forcegpu", "autogpu"];
+const _SUGGEST_HINTS     = {
+    cpugpu:    "Set Ollama CPU/GPU model placement",
+    forcecpu:  "No GPU: run the model entirely on CPU",
+    forcegpu:  "Request all model layers on the GPU",
+    autogpu:   "Let Ollama choose CPU/GPU placement",
+    ollama:    "Use an Ollama server",
+    lmstudio:  "Use an LM Studio server",
+};
 
 // Sub-commands for /tools.
 const _TOOLS_SUBS = ["active", "all"];
@@ -1170,9 +1178,6 @@ function _parseSuggestContext(value) {
         const sub      = rest.slice(0, subSpace).toLowerCase();
         const arg1Base = value.slice(0, firstSpace + 1 + subSpace + 1);
         const arg1Text = value.slice(arg1Base.length);
-        if (sub === "config" && !arg1Text.includes(" ")) {
-            return { pool: _LLMSERVER_CONFIGS, prefix: arg1Text.trimEnd(), base: arg1Base };
-        }
         return null;
     }
 
@@ -1191,6 +1196,9 @@ function _parseSuggestContext(value) {
         const arg1Text = value.slice(arg1Base.length);
         if (sub === "model" && !arg1Text.includes(" ")) {
             return { pool: ["list", ..._completions.models], prefix: arg1Text.trimEnd(), base: arg1Base };
+        }
+        if (sub === "cpugpu" && !arg1Text.includes(" ")) {
+            return { pool: _LLMSERVER_CONFIGS, prefix: arg1Text.trimEnd(), base: arg1Base };
         }
         return null;
     }
@@ -1273,6 +1281,7 @@ function _renderSuggest() {
         const row = document.createElement("div");
         row.className  = "suggest-item" + (i === _suggestIdx ? " active" : "");
         row.textContent = item;
+        if (_SUGGEST_HINTS[item]) row.title = _SUGGEST_HINTS[item];
         row.addEventListener("mousedown", e => {
             e.preventDefault();   // prevent textarea from losing focus
             _selectSuggest(i);

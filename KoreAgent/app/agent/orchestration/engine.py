@@ -70,6 +70,18 @@ from web_tools_state import is_web_tool_name
 _SKILL_GUIDANCE_ENABLED: bool = False
 
 
+_CASUAL_CONVERSATION_PATTERN = re.compile(
+    r"(?:hi|hello|hey|hiya|good\s+(?:morning|afternoon|evening)|"
+    r"thanks?|thank\s+you|ok(?:ay)?|cool|great)[!.?\s]*",
+    re.IGNORECASE,
+)
+
+
+def _is_casual_conversation(prompt: str) -> bool:
+    """Return True only for messages that cannot reasonably require an agent tool."""
+    return bool(_CASUAL_CONVERSATION_PATTERN.fullmatch(str(prompt or "").strip()))
+
+
 def get_skill_guidance_enabled() -> bool:
     return _SKILL_GUIDANCE_ENABLED
 
@@ -576,6 +588,9 @@ def orchestrate_prompt(
         if not config.task_planning_enabled and planning_mode == "auto":
             planning_mode = "off"
         _log(f"Planning mode:  {planning_mode}")
+        casual_conversation = _is_casual_conversation(user_prompt)
+        if casual_conversation:
+            _log_file_only("[fast-path] Casual conversation: planner and tool schemas skipped.")
 
         ambient_system_info = get_static_system_info_string()
         _log_section("AMBIENT SYSTEM INFO")
@@ -623,7 +638,7 @@ def orchestrate_prompt(
             if str(item.get("name") or "")
         }
         workflow_task_contract: dict[str, object] | None = None
-        if planning_mode != "off":
+        if planning_mode != "off" and not casual_conversation:
             planning_context = ""
             if workflow_task_match:
                 task_position = int(workflow_task_match.group(1))
@@ -685,8 +700,8 @@ def orchestrate_prompt(
         )
         active_payload = initial_tool_runtime["active_local_payload"]
 
-        tool_defs = build_tool_definitions(active_payload)
-        initial_mcp_defs = list(initial_tool_runtime["active_mcp_defs"])
+        tool_defs = [] if casual_conversation else build_tool_definitions(active_payload)
+        initial_mcp_defs = [] if casual_conversation else list(initial_tool_runtime["active_mcp_defs"])
         if initial_mcp_defs:
             tool_defs = tool_defs + initial_mcp_defs
         _log_file_only(f"[progress] Tool definitions built: {len(tool_defs)} tools available.")
@@ -720,6 +735,14 @@ def orchestrate_prompt(
         catalog_gates = build_catalog_gates(active_payload)
 
         def _build_tool_runtime() -> dict[str, object]:
+            if casual_conversation:
+                return {
+                    "tool_defs":            [],
+                    "catalog_gates":        {},
+                    "active_tool_names":    set(),
+                    "missing_selected":     [],
+                    "all_known_tool_names": set(),
+                }
             round_available_local_payload = config.skills_payload if _WEB_SKILLS_ENABLED else _filter_web_skills(config.skills_payload)
             round_available_local_payload = _filter_workflow_tools(
                 round_available_local_payload,

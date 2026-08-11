@@ -15,6 +15,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
 
+from agent.orchestration.context_window import choose_context_window
 from scratchpad import scratchpad_save
 
 
@@ -215,7 +216,7 @@ def create_task_plan(
             model_name = model_name,
             messages   = [{"role": "user", "content": prompt}],
             tools      = None,
-            num_ctx    = max(4096, int(num_ctx or 0)),
+            num_ctx    = choose_context_window(num_ctx, [{"role": "user", "content": prompt}]),
         )
         raw = _extract_json_object(getattr(response, "response", ""))
         if raw is None:
