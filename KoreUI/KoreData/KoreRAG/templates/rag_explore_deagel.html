@@ -130,7 +130,7 @@
          + '<td><span style="font-weight:500;">' + escapeHtml(item.title || '') + '</span>'
          + '<div class="meta" style="font-size:11px; margin-top:0.15rem;">' + escapeHtml(item.year_text || '') + '</div></td>'
          + '<td class="meta" style="text-align:right;">' + escapeHtml(item.ranking_order || '-') + '</td>'
-         + '<td style="text-align:right;">' + (item.country_url ? '<a class="btn btn-sm" href="' + escapeHtml(item.country_url) + '" target="_blank" rel="noreferrer">SITE</a>' : '') + '</td>'
+         + '<td style="text-align:right;">' + (item.country_url ? '<a class="btn btn-sm" href="' + escapeHtml(item.country_url) + '">SITE</a>' : '') + '</td>'
          + '</tr>';
     }
     return h + '</tbody></table>';
@@ -141,7 +141,7 @@
     let h = '<table><thead><tr><th>Headline</th><th style="width:110px;">Released</th></tr></thead><tbody>';
     for (const item of items) {
       h += '<tr>'
-         + '<td>' + (item.news_url ? '<a href="' + escapeHtml(item.news_url) + '" target="_blank" rel="noreferrer" style="font-weight:500;">' + escapeHtml(item.title || '(untitled)') + '</a>' : '<span style="font-weight:500;">' + escapeHtml(item.title || '(untitled)') + '</span>') + '</td>'
+         + '<td>' + (item.news_url ? '<a href="' + escapeHtml(item.news_url) + '" style="font-weight:500;">' + escapeHtml(item.title || '(untitled)') + '</a>' : '<span style="font-weight:500;">' + escapeHtml(item.title || '(untitled)') + '</span>') + '</td>'
          + '<td class="meta" style="font-size:11px;">' + escapeHtml(item.released_on_text || item.published_at || '') + '</td>'
          + '</tr>';
     }
@@ -153,7 +153,7 @@
     let h = '<table><thead><tr><th>Report</th><th style="width:100px;">Period</th></tr></thead><tbody>';
     for (const item of items) {
       h += '<tr>'
-         + '<td>' + (item.report_url ? '<a href="' + escapeHtml(item.report_url) + '" target="_blank" rel="noreferrer" style="font-weight:500;">' + escapeHtml(item.title || '(untitled)') + '</a>' : '<span style="font-weight:500;">' + escapeHtml(item.title || '(untitled)') + '</span>')
+         + '<td>' + (item.report_url ? '<a href="' + escapeHtml(item.report_url) + '" style="font-weight:500;">' + escapeHtml(item.title || '(untitled)') + '</a>' : '<span style="font-weight:500;">' + escapeHtml(item.title || '(untitled)') + '</span>')
          + '<div class="meta" style="font-size:11px; margin-top:0.15rem;">' + escapeHtml(item.report_group || '') + '</div></td>'
          + '<td class="meta" style="font-size:11px;">' + escapeHtml(item.period_text || '') + '</td>'
          + '</tr>';

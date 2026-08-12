@@ -34,17 +34,28 @@
         data-kcui-disable-below="900"
     >
 
-        <!-- Log stream -->
-        <div class="panel kcui-panel kcui-panel--column kcui-workspace__region" id="panel-log">
-            <div class="panel-header kcui-panel-header kcui-panel-header--start">
-                <span id="log-panel-title">Log</span>
-                <span class="kcui-panel-spacer"></span>
-                <button class="kcui-tag kcui-tag--dim" id="log-btn-up" type="button">&#x2191;</button>
-                <button class="kcui-tag kcui-tag--dim" id="log-btn-down" type="button">&#x2193;</button>
-                <button class="kcui-tag kcui-tag--dim is-on" id="log-btn-live" type="button">live</button>
-                <button class="kcui-tag kcui-tag--dim" id="wrap-btn-log" type="button">wrap</button>
+        <div class="kcui-workspace__region" id="log-stack">
+            <!-- Log stream -->
+            <div class="panel kcui-panel kcui-panel--column" id="panel-log">
+                <div class="panel-header kcui-panel-header kcui-panel-header--start">
+                    <span id="log-panel-title">Log</span>
+                    <span class="kcui-panel-spacer"></span>
+                    <button class="kcui-tag kcui-tag--dim" id="log-btn-up" type="button">&#x2191;</button>
+                    <button class="kcui-tag kcui-tag--dim" id="log-btn-down" type="button">&#x2193;</button>
+                    <button class="kcui-tag kcui-tag--dim is-on" id="log-btn-live" type="button">live</button>
+                    <button class="kcui-tag kcui-tag--dim" id="wrap-btn-log" type="button">wrap</button>
+                </div>
+                <div class="panel-body kcui-panel-body kcui-panel-body--fill kcui-panel-body--scroll kcui-panel-body--mono kcui-panel-body--nowrap" id="log-body"></div>
             </div>
-            <div class="panel-body kcui-panel-body kcui-panel-body--fill kcui-panel-body--scroll kcui-panel-body--mono kcui-panel-body--nowrap" id="log-body"></div>
+
+            <div class="panel kcui-panel kcui-panel--column" id="panel-pending-prompts" hidden>
+                <div class="panel-header kcui-panel-header kcui-panel-header--start">
+                    <span>Prompts Pending</span>
+                    <span class="kcui-panel-spacer"></span>
+                    <span id="pending-prompts-count">0</span>
+                </div>
+                <div class="panel-body kcui-panel-body kcui-panel-body--mono" id="pending-prompts-list"></div>
+            </div>
         </div>
 
         <div

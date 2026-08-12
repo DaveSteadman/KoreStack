@@ -17,9 +17,8 @@ const ACTIVE_RUN_STORAGE_KEY = "maf.activeRun";
 let   _sessionId        = _restoreSessionId();  // mutable: /chat resume changes this
 const POLL_OLLAMA_MS    = 10_000;
 const POLL_QUEUE_MS     = 3_000;
-const POLL_TIMELINE_MS  = 30_000;
 const POLL_LATEST_LOG_MS = 15_000;   // fallback only - /logs/stream SSE handles normal case
-const MAX_QUEUE_ITEMS   = 10;
+const MAX_PENDING_PROMPTS = 5;
 const MAX_LOG_LINES_LIVE = 500;
 const MAX_CHAT_MESSAGES = 200;
 
@@ -82,8 +81,6 @@ let _inputHistory   = [];     // loaded per conversation from server on init or 
 let _historyIdx        = -1;     // -1 = not browsing history
 let _historyDraft      = null;   // unsent text preserved while browsing input history
 let _ollamaReachable   = true;   // updated by refreshOllamaStatus; used in submitPrompt
-let _timelineRefreshTimer = null;
-let _queueResizeObserver  = null;
 let _currentLogPath       = "";
 let _logScrollCtl      = null;
 let _chatScrollCtl     = null;
@@ -107,6 +104,9 @@ const dom = {
     ollamaModel:  () => $("ollama-model"),
     ollamaCtx:    () => $("ollama-ctx"),
     log:          () => $("log-body"),
+    pendingPromptsPanel: () => $("panel-pending-prompts"),
+    pendingPromptsCount: () => $("pending-prompts-count"),
+    pendingPromptsList:  () => $("pending-prompts-list"),
     chat:         () => $("chat-body"),
     chatTitle:    () => $("chat-panel-title"),
     input:        () => $("chat-input"),
@@ -430,6 +430,7 @@ async function refreshOllamaStatus() {
 async function refreshQueue() {
     const data = await apiFetch("/queue");
     if (!data) return;
+    _renderPendingPrompts(data);
     if (data.pending_switch) {
         _applySessionSwitch(data.pending_switch.session_id, data.pending_switch.name || "");
     }
@@ -448,133 +449,27 @@ function _applySessionSwitch(sessionId, name) {
     _loadCompletions();
 }
 
-function _queueItemLabel(item) {
-    const metadata = item.metadata || {};
-    if (metadata.workflow === "worker_chat") {
-        const label = item.label || "Worker chat";
-        if (metadata.chain_stage === "parent") return "Parent: " + label;
-        return "Worker chat: " + (label.length > 28 ? label.slice(0, 28) + "..." : label);
-    }
-    if (metadata.workflow === "delegate") {
-        if (metadata.chain_stage === "parent") {
-            const label = item.label || "Parent prompt";
-            return "Parent: " + (label.length > 34 ? label.slice(0, 34) + "..." : label);
-        }
-        if (metadata.chain_stage === "child") {
-            const label = item.label || "Delegated task";
-            return "Delegate: " + (label.length > 32 ? label.slice(0, 32) + "..." : label);
-        }
-        if (metadata.chain_stage === "continuation") {
-            const label = metadata.parent_queue_label || item.label || "parent prompt";
-            return "Resume parent: " + (label.length > 28 ? label.slice(0, 28) + "..." : label);
-        }
-    }
-    if (item.label) return item.label.length > 40 ? item.label.slice(0, 40) + "..." : item.label;
-    if (item.kind && item.kind !== "api_chat") return item.name;
-    return item.name.slice(-8);  // last 8 chars of run_id as fallback
-}
+function _renderPendingPrompts(queueData) {
+    const panel = dom.pendingPromptsPanel();
+    const list  = dom.pendingPromptsList();
+    const count = dom.pendingPromptsCount();
+    if (!panel || !list || !count) return;
 
-function _queueItemTitle(item) {
-    const metadata = item.metadata || {};
-    if (metadata.workflow !== "delegate" && metadata.workflow !== "worker_chat") return "";
-    const taskLabel = metadata.workflow === "worker_chat" ? "Worker chat" : "Delegate task";
-    const details = [
-        metadata.delegate_task_id ? taskLabel + ": " + metadata.delegate_task_id : "",
-        metadata.child_session_id ? "Child chat: " + metadata.child_session_id : "",
-        metadata.parent_session_id ? "Parent chat: " + metadata.parent_session_id : "",
-    ].filter(Boolean);
-    return details.join("\n");
-}
+    const pending = (queueData.next_prompts || [])
+        .filter(item => item.state === "pending")
+        .slice(0, MAX_PENDING_PROMPTS);
+    const pendingCount = Number(queueData.pending_count || 0);
+    panel.hidden = pendingCount === 0;
+    count.textContent = String(pendingCount);
+    list.innerHTML = "";
+    if (pendingCount === 0) return;
 
-function _renderTimelineQueue(queueData) {
-    const el           = dom.timelineQueue();
-    if (!el) return;
-    const nextPrompts  = queueData.next_prompts || [];
-    const queuedTotal  = queueData.queued_prompt_count !== undefined ? String(queueData.queued_prompt_count) : "?";
-    const previewLimit = queueData.next_prompts_limit !== undefined ? queueData.next_prompts_limit : MAX_QUEUE_ITEMS;
-    el.innerHTML       = "";
-    if (queuedTotal === "0" && nextPrompts.length === 0) return;
-
-    const totalRow = document.createElement("div");
-    totalRow.className   = "tl-sep";
-    totalRow.textContent = "Queued tasks: " + queuedTotal;
-    el.appendChild(totalRow);
-
-    for (const item of nextPrompts) {
+    for (const item of pending) {
         const row = document.createElement("div");
-        row.className   = item.state === "active" ? "tl-q-active" : "tl-q-pending";
-        row.textContent = item.state === "active"
-            ? "\u25B6 " + _queueItemLabel(item)
-            : "  \u00B7 " + _queueItemLabel(item);
-        row.title = _queueItemTitle(item);
-        el.appendChild(row);
-    }
-}
-
-// ----------------------------------------------------------------------------------------------------
-function _scheduleTimelineRefresh() {
-    clearTimeout(_timelineRefreshTimer);
-    _timelineRefreshTimer = setTimeout(() => {
-        refreshTimeline();
-    }, 50);
-}
-
-// ====================================================================================================
-// MARK: TIMELINE
-// ====================================================================================================
-
-// Row height matches .tl-row: font-size 11px * line-height 1.55 = ~17px.
-const TL_ROW_H = 17;
-
-function _buildTimelineRow(slot, activeTask) {
-    const row = document.createElement("div");
-    row.className = "tl-row" + (slot.is_now ? " tl-now" : "");
-    if (slot.task_name && slot.task_name === activeTask) row.classList.add("tl-active");
-
-    const marker = document.createElement("span");
-    marker.className   = "tl-marker";
-    marker.textContent = slot.is_now ? "\u25BA" : " ";
-
-    const time = document.createElement("span");
-    time.className   = "tl-time";
-    time.textContent = slot.hhmm;
-
-    row.appendChild(marker);
-    row.appendChild(time);
-
-    if (slot.task_name) {
-        const task = document.createElement("span");
-        task.className   = "tl-task";
-        task.textContent = slot.task_name;
-        row.appendChild(task);
-    }
-    return row;
-}
-
-async function refreshTimeline() {
-    const data = await apiFetch("/timeline");
-    if (!data) return;
-    const slots      = data.slots || [];
-    const activeTask = data.active_task || null;
-    const el         = dom.timeline();
-
-    // Find the NOW slot.
-    const nowIdx = slots.findIndex(s => s.is_now);
-    if (nowIdx < 0) { el.innerHTML = ""; return; }
-
-    // Calculate how many rows fit in the available height, then slice the window
-    // so NOW sits at the vertical midpoint - exactly like the TUI's h//2 logic.
-    // Use the measured height when available, otherwise fall back to a safe default.
-    const availH = el.offsetHeight > 0 ? el.offsetHeight - 8 : 300;  // 8px = 4px top+bottom padding
-    const nRows  = Math.max(1, Math.floor(availH / TL_ROW_H));
-    const half   = Math.floor(nRows / 2);
-    const start  = Math.max(0, nowIdx - half);
-    const end    = Math.min(slots.length, start + nRows);
-    const visible = slots.slice(start, end);
-
-    el.innerHTML = "";
-    for (const slot of visible) {
-        el.appendChild(_buildTimelineRow(slot, activeTask));
+        row.className   = "pending-prompt";
+        row.textContent = String(item.label || item.name || "").replace(/\s+/g, " ").trim();
+        row.title       = row.textContent;
+        list.appendChild(row);
     }
 }
 

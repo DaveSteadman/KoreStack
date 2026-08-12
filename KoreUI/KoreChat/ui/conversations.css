@@ -391,7 +391,7 @@ html, body {
 
 .msg-row {
     display: grid;
-    grid-template-columns: 80px 90px 1fr 120px 80px;
+    grid-template-columns: 80px minmax(90px, 180px) 1fr 120px 80px;
     align-items: start;
     gap: 0 8px;
     padding: 0.4rem 0.75rem;
@@ -402,6 +402,7 @@ html, body {
 .msg-row:nth-child(even) { background: var(--bg-row-alt); }
 .msg-row.summarised-row { opacity: 0.5; }
 .msg-id { color: var(--text-dim); font-size: var(--kcui-text-label); letter-spacing: var(--kcui-tracking-tight); }
+.msg-tags { display: flex; flex-wrap: wrap; gap: 4px; }
 .msg-content { color: var(--text); white-space: pre-wrap; word-break: break-word; }
 .msg-time { color: var(--text-dim); font-size: var(--kcui-text-body-sm); text-align: right; white-space: nowrap; }
 .msg-flags { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }

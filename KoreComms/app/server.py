@@ -789,6 +789,7 @@ def _normalize_kc_messages(kc_messages: list[dict]) -> list[dict]:
             "status":      m.get("status", ""),
         }
         for m in kc_messages
+        if not kc_client.has_internal_message_tag(m)
     ]
 
 

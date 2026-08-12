@@ -78,7 +78,7 @@ def update_startup_state(
     *,
     service_status: str | None = None,
     message: str | None = None,
-    dependencies: dict[str, dict[str, str]] | None = None,
+    dependencies: dict[str, dict[str, Any]] | None = None,
 ) -> None:
     with _startup_state_lock:
         if service_status is not None:

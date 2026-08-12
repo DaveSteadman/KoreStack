@@ -59,6 +59,7 @@ from datasets_pkg.hydration import get_persisted_datasets_payload
 from datasets_pkg.hydration import hydrate_session_state
 from agent.orchestration.engine import OrchestratorConfig
 from agent.orchestration.engine import orchestrate_prompt
+from input_layer.slash_processing import process_slash_prompt
 from sessions.session_factory import make_task_session
 from scratchpad import get_store
 from scratchpad import scratchpad_clear
@@ -465,6 +466,7 @@ def _handle_event(
             warning_logger=lambda message: push_log_line(f"[KORECHAT] Conv {conv_id}: {message}"),
         )
 
+        messages = fresh_messages
         user_prompt = str(event_payload.get("prompt_override") or "").strip()
         if not user_prompt:
             user_prompt = _build_prompt(conv, messages, push_log_line=push_log_line)
@@ -476,6 +478,50 @@ def _handle_event(
             persist_path = None,
             max_turns    = 10,
         )
+
+        latest_inbound = next(
+            (message for message in reversed(messages) if message.get("direction") == "inbound"),
+            None,
+        )
+        inbound_prompt = str((latest_inbound or {}).get("content") or "").strip()
+        if inbound_prompt.startswith("/"):
+            inbound_id = (latest_inbound or {}).get("id")
+            if inbound_id:
+                _http_patch(base, f"/messages/{inbound_id}", {"tags": ["slashcommand"]})
+
+            slash_response = process_slash_prompt(
+                inbound_prompt,
+                config          = config,
+                output          = lambda text, _level="info": push_log_line(f"[slash] {text}"),
+                clear_history   = lambda: (session_ctx.clear(), scratchpad_clear(session_id)),
+                session_context = session_ctx,
+                session_id      = session_id,
+                chat_name       = str(conv.get("external_id") or "").strip() or None,
+            )
+            current_scratchpad   = get_store(session_id=session_id)
+            persisted_scratchpad = build_persisted_scratchpad_payload(current_scratchpad)
+            persisted_datasets   = get_persisted_datasets_payload(session_id)
+            try:
+                _http_post(base, f"/conversations/{conv_id}/messages", {
+                    "direction":         "outbound",
+                    "content":           slash_response,
+                    "sender_display":    str(event_payload.get("outbound_sender_display") or "agent"),
+                    "status":            "sent",
+                    "delivery_eligible": False,
+                    "tags":              ["slashcommand_response"],
+                })
+                _http_patch(base, f"/conversations/{conv_id}", {
+                    "status":     "active",
+                    "turn_count": turn_count + 1,
+                    "scratchpad": persisted_scratchpad,
+                    "datasets":   persisted_datasets,
+                })
+            except Exception as exc:
+                push_log_line(f"[KORECHAT] Conv {conv_id}: failed to persist slash response: {exc}")
+                _complete_event(base, event_id, "failed", push_log_line, context=f"conv {conv_id}")
+                return
+            _complete_event(base, event_id, "completed", push_log_line, context=f"conv {conv_id}")
+            return
 
         # Item 4: Restore SessionContext from KoreChat background_context so the model
         # can reference prior fetched data across restarts and resume turns.

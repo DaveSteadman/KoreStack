@@ -35,13 +35,24 @@ def register_status_routes(
     @app.get("/api/status")
     @app.get("/status", include_in_schema=False)
     def get_service_status():
-        startup = get_startup_state() or {}
+        startup      = get_startup_state() or {}
+        dependencies = startup.get("dependencies") or {}
+        statuses     = [entry.get("status") for entry in dependencies.values() if isinstance(entry, dict)]
+        if any(status == "degraded" for status in statuses):
+            service_status = "degraded"
+            message        = "Running with degraded dependencies"
+        elif any(status == "pending" for status in statuses):
+            service_status = "starting"
+            message        = "Dependency warmup in progress"
+        else:
+            service_status = "ready"
+            message        = "Ready"
         return {
             "service":        "KoreAgent",
-            "status":         startup.get("service_status", "starting"),
-            "message":        startup.get("message", ""),
+            "status":         service_status,
+            "message":        message,
             "started_at":     startup.get("started_at"),
-            "dependencies":   startup.get("dependencies", {}),
+            "dependencies":   dependencies,
             "host":           get_active_host(),
             "model":          get_active_model(),
             "num_ctx":        get_active_num_ctx(),

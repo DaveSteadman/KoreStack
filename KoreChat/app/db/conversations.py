@@ -23,11 +23,18 @@ from datetime import timedelta
 from datetime import timezone
 
 from .common import _conn
+from .common import _decode_message_tags
 from .common import _decode_session_state_fields
 from .common import _default_profile
 from .common import _is_protected_subject
 from .common import _now
 from .common import _row_to_dict
+
+
+def _message_to_dict(row: sqlite3.Row) -> dict:
+    message = _row_to_dict(row)
+    _decode_message_tags(message)
+    return message
 
 
 def conversation_create(
@@ -125,7 +132,7 @@ def conversation_get_detail(conversation_id: int) -> dict | None:
         ).fetchall()
     return {
         "conversation": conv,
-        "messages":     [_row_to_dict(row) for row in msg_rows],
+        "messages":     [_message_to_dict(row) for row in msg_rows],
         "events":       [_row_to_dict(row) for row in evt_rows],
     }
 
@@ -143,7 +150,7 @@ def conversation_get_with_messages(conversation_id: int) -> dict | None:
             """,
             (conversation_id,),
         ).fetchall()
-    conv["messages"] = [_row_to_dict(row) for row in rows]
+    conv["messages"] = [_message_to_dict(row) for row in rows]
     return conv
 
 

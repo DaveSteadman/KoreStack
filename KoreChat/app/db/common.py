@@ -101,6 +101,15 @@ def _row_to_dict(row: sqlite3.Row) -> dict:
     return dict(row)
 
 
+def _decode_message_tags(record: dict) -> None:
+    raw_tags = record.get("tags") or "[]"
+    try:
+        tags = json.loads(raw_tags) if isinstance(raw_tags, str) else raw_tags
+    except json.JSONDecodeError:
+        tags = []
+    record["tags"] = tags if isinstance(tags, list) else []
+
+
 def _decode_json_value(raw_value: str, default: object, *, label: str) -> tuple[object, str | None]:
     try:
         return json.loads(raw_value or json.dumps(default)), None

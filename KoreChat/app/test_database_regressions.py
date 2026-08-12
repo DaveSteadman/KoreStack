@@ -15,6 +15,26 @@ from app import database as db
 
 
 class DatabaseRegressionTests(unittest.TestCase):
+    def test_message_tags_include_direction_and_supplied_values(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            temp_db_dir = Path(tmp)
+
+            try:
+                db.reset_runtime_state()
+                with patch.dict(db.cfg, {"data_dir": str(temp_db_dir)}):
+                    db.init_db()
+                    conversation = db.conversation_create("webchat", subject="Test")
+                    message = db.message_append(
+                        conversation_id = conversation["id"],
+                        direction       = "inbound",
+                        content         = "/help",
+                        tags            = ["slashcommand", "inbound", ""],
+                    )
+            finally:
+                db.reset_runtime_state()
+
+        self.assertEqual(message["tags"], ["inbound", "slashcommand"])
+
     def test_conversation_get_preserves_malformed_scratchpad_payload(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             temp_db_dir = Path(tmp)

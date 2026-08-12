@@ -230,119 +230,42 @@ body.splitter-drag-h { user-select: none; cursor: row-resize; }
 }
 
 /* ============================================================
-   TIMELINE PANEL  (col 1, rows 1)
-   ============================================================ */
-
-#panel-timeline {
-    grid-column: 1;
-    grid-row: 1;
-}
-
-/* Minute-ticker: fills available height, clipped with no scrollbar */
-#timeline-ticker {
-    flex:        1;
-    overflow:    hidden;
-    padding:     0;
-    font-family: var(--font-mono);
-    font-size:   11px;
-    min-height:  0;
-}
-
-/* Queue section: collapses to nothing when empty */
-#timeline-queue {
-    flex:        0 0 auto;
-    padding:     0;
-    font-family: var(--font-mono);
-    font-size:   11px;
-    max-height:  220px;
-    min-height:  0;
-    overflow-y:  auto;
-    overflow-x:  hidden;
-    scrollbar-width: thin;
-    scrollbar-color: var(--border) transparent;
-}
-
-#timeline-queue::-webkit-scrollbar       { width: 4px; }
-#timeline-queue::-webkit-scrollbar-track { background: transparent; }
-#timeline-queue::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-
-.tl-sep {
-    color:         var(--text-dim);
-    border-top:    1px solid var(--border);
-    padding-top:   3px;
-    margin-bottom: 2px;
-    font-size:     10px;
-    letter-spacing: 0.1em;
-}
-
-.tl-q-active {
-    color:       var(--yellow);
-    line-height: 1.55;
-    white-space: nowrap;
-    overflow:    hidden;
-    text-overflow: ellipsis;
-}
-
-.tl-q-pending {
-    color:       var(--green);
-    line-height: 1.55;
-    white-space: nowrap;
-    overflow:    hidden;
-    text-overflow: ellipsis;
-}
-
-.tl-q-more {
-    color:       var(--text-dim);
-    line-height: 1.55;
-    font-style:  italic;
-}
-
-/* Minute-ticker rows */
-.tl-row {
-    display:     flex;
-    align-items: baseline;
-    gap:         4px;
-    font-family: var(--font-mono);
-    font-size:   11px;
-    color:       var(--text-dim);
-    line-height: 1.55;
-    white-space: nowrap;
-}
-
-.tl-now {
-    color:       var(--text-hi);
-    background:  rgba(255, 255, 255, 0.04);
-}
-
-.tl-active .tl-task {
-    color: var(--yellow);
-}
-
-.tl-marker {
-    width:       10px;
-    flex-shrink: 0;
-    color:       var(--yellow);
-    text-align:  center;
-}
-
-.tl-time {
-    width:       36px;
-    flex-shrink: 0;
-}
-
-.tl-task {
-    color:        var(--text-hi);
-    overflow:     hidden;
-    text-overflow: ellipsis;
-}
-
-/* ============================================================
    LOG PANEL  (col 2, row 1)
    ============================================================ */
 
-#panel-log {
+#log-stack {
+    display: grid;
     grid-column: 1;
     grid-row: 1;
+    grid-template-rows: minmax(0, 1fr) auto;
+    gap: 5px;
+    min-height: 0;
+}
+
+#log-stack > .panel {
+    height:        auto;
+    margin-bottom: 0;
+}
+
+#panel-pending-prompts[hidden] {
+    display: none;
+}
+
+#log-stack:has(#panel-pending-prompts[hidden]) {
+    grid-template-rows: minmax(0, 1fr);
+}
+
+#pending-prompts-list {
+    min-height: 0;
+    padding: 0 var(--kcui-gap-panel);
+}
+
+.pending-prompt {
+    color:       var(--text-hi);
+    font-size:   11px;
+    line-height: 1.55;
+    overflow:    hidden;
+    white-space: nowrap;
 }
 
 .log-line {
@@ -570,7 +493,7 @@ body.splitter-drag-h { user-select: none; cursor: row-resize; }
         grid-template-rows: minmax(100px, 1fr) 5px auto;
     }
     #splitter-v2    { grid-column: 2; }
-    #panel-log      { grid-column: 1; }
+    #log-stack      { grid-column: 1; }
     #panel-chat     { grid-column: 3; }
     #panel-input    { grid-column: 1 / 4; }
     #splitter-h1    { grid-column: 1 / 4; }
@@ -582,7 +505,7 @@ body.splitter-drag-h { user-select: none; cursor: row-resize; }
         grid-template-rows: minmax(60px, 1fr) 5px minmax(60px, 1fr) 5px auto;
     }
     #splitter-v2 { display: none; }
-    #panel-log   { grid-column: 1; grid-row: 1; }
+    #log-stack   { grid-column: 1; grid-row: 1; }
     #splitter-h1 { grid-column: 1; grid-row: 2; }
     #panel-chat  { grid-column: 1; grid-row: 3; }
     #panel-input { grid-column: 1; grid-row: 5; }

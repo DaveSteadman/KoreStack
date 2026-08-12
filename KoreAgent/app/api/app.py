@@ -75,8 +75,6 @@ from input_layer.routes_sessions import register_session_routes
 from input_layer.routes_status import register_status_routes
 from input_layer.routes_queue import register_queue_routes
 from input_layer.server_static import register_static_routes
-from input_layer.slash_command_context import SlashCommandContext
-from input_layer.slash_commands import handle as handle_slash
 from llm_client import call_llm_chat
 from llm_client import get_active_backend
 from llm_client import get_active_host
@@ -339,8 +337,6 @@ register_session_routes(
     flush_scratch_session=_session_service.flush_scratch_to_session,
     create_session_context=_session_service.create_session_context,
     clear_session_scratch=scratchpad_clear,
-    make_slash_context=SlashCommandContext,
-    handle_slash=handle_slash,
     push_log_line=lambda line: push_log_line(line),
     set_latest_log_path=_set_latest_log_path,
     log_dir=_LOG_DIR,

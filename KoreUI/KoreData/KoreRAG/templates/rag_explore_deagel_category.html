@@ -88,7 +88,7 @@
     if (!category || !category.category_id) return '';
     let h = '<div class="meta" style="font-size:11px; display:grid; gap:0.25rem;">';
     if (category.item_count_text) h += '<div>Website listing: ' + escapeHtml(category.item_count_text) + '</div>';
-    if (category.category_url) h += '<div><a href="' + escapeHtml(category.category_url) + '" target="_blank" rel="noreferrer">Open source page</a></div>';
+    if (category.category_url) h += '<div><a href="' + escapeHtml(category.category_url) + '">Open source page</a></div>';
     h += '</div>';
     return h;
   }
@@ -121,7 +121,7 @@
          + '<td class="meta" style="font-size:11px;">' + escapeHtml(item.status || '') + '</td>'
          + '<td class="meta" style="font-size:11px;">' + escapeHtml(item.origin_country || '') + '</td>'
          + '<td class="meta" style="font-size:11px;">' + escapeHtml(item.contractor || '') + '</td>'
-         + '<td style="text-align:right;">' + (item.item_url ? '<a class="btn btn-sm" href="' + escapeHtml(item.item_url) + '" target="_blank" rel="noreferrer">SITE</a>' : '') + '</td>'
+         + '<td style="text-align:right;">' + (item.item_url ? '<a class="btn btn-sm" href="' + escapeHtml(item.item_url) + '">SITE</a>' : '') + '</td>'
          + '</tr>';
     }
     return h + '</tbody></table>';

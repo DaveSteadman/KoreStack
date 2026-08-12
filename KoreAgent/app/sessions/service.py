@@ -243,6 +243,8 @@ class SessionService:
         agent_text: str,
         token_estimate: int | None = None,
         response_metadata: dict | None = None,
+        inbound_tags: list[str] | None = None,
+        outbound_tags: list[str] | None = None,
     ) -> None:
         conv = self.kc_ensure_conversation(session_id)
         if conv is None:
@@ -256,6 +258,8 @@ class SessionService:
                 "outbound_sender":  "agent",
                 "token_estimate":   token_estimate,
                 "outbound_metadata": response_metadata or {},
+                "inbound_tags":     inbound_tags or [],
+                "outbound_tags":    outbound_tags or [],
             })
         except Exception:
             pass

@@ -28,6 +28,7 @@ def append_message(conversation_id: int, req: MessageAppendRequest):
         sender_display  = req.sender_display,
         status          = req.status,
         delivery_eligible = req.delivery_eligible,
+        tags            = req.tags,
     )
     if req.direction == "inbound":
         db.ensure_response_needed_event(conversation_id, payload=req.response_payload or {})
@@ -55,6 +56,8 @@ def append_turn(conversation_id: int, req: TurnAppendRequest):
         outbound_sender  = req.outbound_sender,
         token_estimate   = req.token_estimate,
         outbound_metadata = req.outbound_metadata,
+        inbound_tags     = req.inbound_tags,
+        outbound_tags    = req.outbound_tags,
     )
     if result is None:
         raise HTTPException(status_code=404, detail="Conversation not found")
@@ -87,6 +90,7 @@ def patch_message(message_id: int, req: MessagePatchRequest):
         message_id = message_id,
         status     = req.status,
         summarised = req.summarised,
+        tags       = req.tags,
     )
     if result is None:
         raise HTTPException(status_code=404, detail="Message not found")

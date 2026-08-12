@@ -50,11 +50,75 @@ _LOG_DIR              = get_logs_dir()
 _DEFAULT_PORT         = 8000
 _DEFAULT_HOST         = "0.0.0.0"
 _SERVICE_LOG          = logging.getLogger("koreagent.service")
+_LLM_HEALTH_INTERVAL_S  = 15.0
 
 
 # ====================================================================================================
 # MARK: SERVER STARTUP
 # ====================================================================================================
+
+def _monitor_llm_dependency(
+    *,
+    shutdown: threading.Event,
+    get_active_backend,
+    get_active_host,
+    get_active_model,
+    is_ollama_running,
+    list_ollama_models,
+) -> None:
+    """Keep the LLM dependency status current after the one-off startup check."""
+    consecutive_failures = 0
+    last_ready_at        = None
+
+    while not shutdown.is_set():
+        checked_at = datetime.now().isoformat(timespec="seconds")
+        backend    = get_active_backend()
+        host       = get_active_host()
+        model      = get_active_model()
+
+        if backend != "ollama":
+            update_startup_state(
+                dependencies = {"llm": {
+                    "status":               "ready",
+                    "detail":               f"{backend} backend at {host}",
+                    "last_checked_at":      checked_at,
+                    "consecutive_failures": 0,
+                }}
+            )
+            shutdown.wait(_LLM_HEALTH_INTERVAL_S)
+            continue
+
+        try:
+            if not is_ollama_running(host):
+                raise RuntimeError(f"Ollama is not reachable at {host}")
+            models = list_ollama_models(host, start_if_needed=False)
+            if model and model not in models:
+                raise RuntimeError(f"Configured model '{model}' is not available at {host}")
+        except Exception as exc:
+            consecutive_failures += 1
+            update_startup_state(
+                dependencies = {"llm": {
+                    "status":               "degraded",
+                    "detail":               str(exc),
+                    "last_checked_at":      checked_at,
+                    "last_ready_at":        last_ready_at,
+                    "consecutive_failures": consecutive_failures,
+                }}
+            )
+        else:
+            consecutive_failures = 0
+            last_ready_at        = checked_at
+            update_startup_state(
+                dependencies = {"llm": {
+                    "status":               "ready",
+                    "detail":               f"{model} on {host}",
+                    "last_checked_at":      checked_at,
+                    "last_ready_at":        last_ready_at,
+                    "consecutive_failures": 0,
+                }}
+            )
+
+        shutdown.wait(_LLM_HEALTH_INTERVAL_S)
 
 def _can_bind(host: str, port: int) -> tuple[bool, str]:
     """Return whether the TCP listen socket can be bound, plus an optional reason."""
@@ -129,6 +193,21 @@ def run_api_mode(
         session_logger_cls   = SessionLogger,
         shutdown             = shutdown,
     )
+
+    llm_monitor_thread = threading.Thread(
+        target = _monitor_llm_dependency,
+        kwargs = {
+            "shutdown":           shutdown,
+            "get_active_backend": llm_client.get_active_backend,
+            "get_active_host":    llm_client.get_active_host,
+            "get_active_model":   llm_client.get_active_model,
+            "is_ollama_running":  llm_client.is_ollama_running,
+            "list_ollama_models": llm_client.list_ollama_models,
+        },
+        daemon = True,
+        name   = "llm-dependency-monitor",
+    )
+    llm_monitor_thread.start()
 
     background_thread: threading.Thread | None = None
     if callable(background_startup):

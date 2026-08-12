@@ -909,12 +909,11 @@ function renderMessages(msgs) {
         const summarisedClass    = m.summarised ? " summarised-row" : "";
         const deliveryIneligible = Number(m.delivery_eligible) === 0;
         const ts                 = formatDateTime(m.created_at);
+        const tags               = _messageTags(m);
         return `
 <div class="msg-row${summarisedClass}">
     <span class="msg-id">#${m.id}</span>
-    <span>
-        ${pill(m.direction)}
-    </span>
+    <span class="msg-tags">${tags.map(pill).join("")}</span>
     <span class="msg-content">${escHtml(m.content)}</span>
     <span class="msg-time">${ts}</span>
     <span class="msg-flags">
@@ -924,6 +923,15 @@ function renderMessages(msgs) {
     </span>
 </div>`;
     }).join("");
+}
+
+function _messageTags(message) {
+    if (Array.isArray(message.tags)) return message.tags;
+    try {
+        const tags = JSON.parse(message.tags || "[]");
+        if (Array.isArray(tags)) return tags;
+    } catch (_) { /* fall through */ }
+    return message.direction ? [message.direction] : [];
 }
 
 // ====================================================================================================

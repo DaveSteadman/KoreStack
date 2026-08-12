@@ -42,6 +42,8 @@ class TurnAppendRequest(BaseModel):
     outbound_sender: str = "agent"
     token_estimate: int | None = None
     outbound_metadata: dict | None = None
+    inbound_tags: list[str] = Field(default_factory=list)
+    outbound_tags: list[str] = Field(default_factory=list)
 
 
 class MessageAppendRequest(BaseModel):
@@ -51,11 +53,13 @@ class MessageAppendRequest(BaseModel):
     status: str = "received"
     delivery_eligible: bool = True
     response_payload: dict | None = None
+    tags: list[str] = Field(default_factory=list)
 
 
 class MessagePatchRequest(BaseModel):
     status: str | None = None
     summarised: int | None = None
+    tags: list[str] | None = None
 
 
 class EventCreateRequest(BaseModel):

@@ -129,7 +129,7 @@ function renderCatalog() {
       const key = `${service.key}|${route.path}|${route.methods.join(',')}`;
       const selectedClass = selected?.key === key ? ' is-selected' : '';
       parts.push(`
-        <a class="endpoint-row${selectedClass}" data-route-key="${escHtml(key)}" href="${escHtml(routeUrl(service, route))}" target="_blank" rel="noreferrer">
+        <a class="endpoint-row${selectedClass}" data-route-key="${escHtml(key)}" href="${escHtml(routeUrl(service, route))}">
           <span class="endpoint-methods">${escHtml(route.methods.join(', '))}</span>
           <span class="endpoint-path">
             <span>${escHtml(route.path)}</span>

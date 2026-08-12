@@ -27,6 +27,9 @@ import urllib.request
 
 from app.config import cfg
 
+
+_INTERNAL_MESSAGE_TAGS = frozenset({"slashcommand", "slashcommand_response"})
+
 logger = logging.getLogger(__name__)
 
 _CLAIMED_BY = "korecomms"
@@ -184,6 +187,7 @@ def append_message(
     sender_display:     str = "",
     status:             str = "received",
     delivery_eligible:  bool = True,
+    tags:               list[str] | None = None,
 ) -> dict:
     """Append a message to a KC conversation. Returns the new message record."""
     return _post(
@@ -194,8 +198,22 @@ def append_message(
             "sender_display": sender_display,
             "status":         status,
             "delivery_eligible": delivery_eligible,
+            "tags":           tags or [],
         },
     )
+
+
+def has_internal_message_tag(message: dict) -> bool:
+    """Return whether a KoreChat message is internal-only to the suite UI."""
+    tags = message.get("tags") or []
+    if isinstance(tags, str):
+        try:
+            tags = json.loads(tags)
+        except json.JSONDecodeError:
+            tags = []
+    if not isinstance(tags, list):
+        return False
+    return any(str(tag).strip() in _INTERNAL_MESSAGE_TAGS for tag in tags)
 
 
 def get_messages(

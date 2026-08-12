@@ -20,9 +20,27 @@ import json
 import sqlite3
 
 from .common import _conn
+from .common import _decode_message_tags
 from .common import _now
 from .common import _row_to_dict
 from .conversations import conversation_get
+
+
+def _normalise_tags(tags: list[str] | None, direction: str) -> list[str]:
+    values = [direction]
+    values.extend(tags or [])
+    normalised: list[str] = []
+    for value in values:
+        tag = str(value or "").strip()
+        if tag and tag not in normalised:
+            normalised.append(tag)
+    return normalised
+
+
+def _message_to_dict(row: sqlite3.Row) -> dict:
+    message = _row_to_dict(row)
+    _decode_message_tags(message)
+    return message
 
 
 def message_append(
@@ -32,18 +50,19 @@ def message_append(
     sender_display: str = "",
     status: str = "received",
     delivery_eligible: bool = True,
+    tags: list[str] | None = None,
 ) -> dict:
     now = _now()
     with _conn() as connection:
         cur = connection.execute(
             """
-            INSERT INTO messages (conversation_id, direction, content, sender_display, status, delivery_eligible, summarised, created_at)
-            VALUES (?,?,?,?,?,?,0,?)
+            INSERT INTO messages (conversation_id, direction, content, sender_display, status, delivery_eligible, tags, summarised, created_at)
+            VALUES (?,?,?,?,?,?,?,0,?)
             """,
-            (conversation_id, direction, content, sender_display, status, int(delivery_eligible), now),
+            (conversation_id, direction, content, sender_display, status, int(delivery_eligible), json.dumps(_normalise_tags(tags, direction)), now),
         )
         row = connection.execute("SELECT * FROM messages WHERE id = ?", (cur.lastrowid,)).fetchone()
-    return _row_to_dict(row)
+    return _message_to_dict(row)
 
 
 def conversation_append_turn(
@@ -54,6 +73,8 @@ def conversation_append_turn(
     outbound_sender: str = "agent",
     token_estimate: int | None = None,
     outbound_metadata: dict | None = None,
+    inbound_tags: list[str] | None = None,
+    outbound_tags: list[str] | None = None,
 ) -> dict | None:
     now = _now()
     with _conn() as connection:
@@ -67,17 +88,17 @@ def conversation_append_turn(
 
         connection.execute(
             """
-            INSERT INTO messages (conversation_id, direction, content, sender_display, status, metadata, summarised, created_at)
-            VALUES (?,?,?,?,?,?,0,?)
+            INSERT INTO messages (conversation_id, direction, content, sender_display, status, metadata, tags, summarised, created_at)
+            VALUES (?,?,?,?,?,?,?,0,?)
             """,
-            (conversation_id, "inbound", inbound_content, inbound_sender, "received", "{}", now),
+            (conversation_id, "inbound", inbound_content, inbound_sender, "received", "{}", json.dumps(_normalise_tags(inbound_tags, "inbound")), now),
         )
         connection.execute(
             """
-            INSERT INTO messages (conversation_id, direction, content, sender_display, status, metadata, summarised, created_at)
-            VALUES (?,?,?,?,?,?,0,?)
+            INSERT INTO messages (conversation_id, direction, content, sender_display, status, metadata, tags, summarised, created_at)
+            VALUES (?,?,?,?,?,?,?,0,?)
             """,
-            (conversation_id, "outbound", outbound_content, outbound_sender, "sent", json.dumps(outbound_metadata or {}), now),
+            (conversation_id, "outbound", outbound_content, outbound_sender, "sent", json.dumps(outbound_metadata or {}), json.dumps(_normalise_tags(outbound_tags, "outbound")), now),
         )
 
         fields = ["turn_count = ?", "status = ?", "updated_at = ?", "last_activity_at = ?"]
@@ -192,10 +213,15 @@ def message_list(
     params.append(limit)
     with _conn() as connection:
         rows = connection.execute(query, params).fetchall()
-    return [_row_to_dict(row) for row in rows]
+    return [_message_to_dict(row) for row in rows]
 
 
-def message_update(message_id: int, status: str | None = None, summarised: int | None = None) -> dict | None:
+def message_update(
+    message_id: int,
+    status:     str | None = None,
+    summarised: int | None = None,
+    tags:       list[str] | None = None,
+) -> dict | None:
     fields = []
     params: list = []
     if status is not None:
@@ -204,10 +230,17 @@ def message_update(message_id: int, status: str | None = None, summarised: int |
     if summarised is not None:
         fields.append("summarised = ?")
         params.append(summarised)
+    if tags is not None:
+        with _conn() as connection:
+            row = connection.execute("SELECT direction FROM messages WHERE id = ?", (message_id,)).fetchone()
+        if row is None:
+            return None
+        fields.append("tags = ?")
+        params.append(json.dumps(_normalise_tags(tags, row["direction"])))
     if not fields:
         return None
     params.append(message_id)
     with _conn() as connection:
         connection.execute(f"UPDATE messages SET {', '.join(fields)} WHERE id = ?", params)
         row = connection.execute("SELECT * FROM messages WHERE id = ?", (message_id,)).fetchone()
-    return _row_to_dict(row) if row else None
+    return _message_to_dict(row) if row else None

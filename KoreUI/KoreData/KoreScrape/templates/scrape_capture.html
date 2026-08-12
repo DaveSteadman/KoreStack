@@ -17,7 +17,7 @@
   </div>
   <div class="panel-body kcui-panel-body">
     <div class="kv"><div class="kv-key">id</div><div class="kv-val">{{ capture.id }}</div></div>
-    <div class="kv"><div class="kv-key">url</div><div class="kv-val"><a href="{{ capture.url }}" target="_blank" rel="noreferrer">{{ capture.url }}</a></div></div>
+    <div class="kv"><div class="kv-key">url</div><div class="kv-val"><a href="{{ capture.url }}">{{ capture.url }}</a></div></div>
     <div class="kv"><div class="kv-key">status</div><div class="kv-val" id="scrape-status">{{ capture.status }}</div></div>
     <div class="kv"><div class="kv-key">depth</div><div class="kv-val">{{ capture.depth }}</div></div>
     <div class="kv"><div class="kv-key">created</div><div class="kv-val">{{ capture.created_at }}</div></div>
@@ -27,7 +27,7 @@
     <div class="kv"><div class="kv-key">indexed chunks</div><div class="kv-val" id="scrape-indexed-chunks">{{ capture.indexed_chunks or 0 }}</div></div>
     <div class="kcui-actions kcui-pad-top-md">
       {% if not capture.content_deleted %}
-      <a class="kcui-tag kcui-tag--info" href="/ui/scrape/files/{{ capture.id }}/{{ capture.local_root }}" target="_blank">open snapshot</a>
+      <a class="kcui-tag kcui-tag--info" href="/ui/scrape/files/{{ capture.id }}/{{ capture.local_root }}">open snapshot</a>
       {% else %}
       <span class="kcui-tag kcui-tag--dim">content deleted</span>
       {% endif %}
@@ -92,7 +92,7 @@
               {% if capture.content_deleted %}
               <span>{{ page.path }}</span>
               {% else %}
-              <a href="/ui/scrape/files/{{ capture.id }}/{{ page.path }}" target="_blank">{{ page.path }}</a>
+              <a href="/ui/scrape/files/{{ capture.id }}/{{ page.path }}">{{ page.path }}</a>
               {% endif %}
             </td>
             <td>{{ page.depth }}</td>
@@ -142,7 +142,7 @@
             {% if capture.content_deleted %}
             <span>{{ asset.path }}</span>
             {% else %}
-            <a href="/ui/scrape/files/{{ capture.id }}/{{ asset.path }}" target="_blank">{{ asset.path }}</a>
+              <a href="/ui/scrape/files/{{ capture.id }}/{{ asset.path }}">{{ asset.path }}</a>
             {% endif %}
           </td>
           <td>{{ asset.content_type or "-" }}</td>

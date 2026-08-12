@@ -36,7 +36,7 @@
       <span class="meta">Source</span>
       <span>
         {% if chunk.source and chunk.source.startswith("http") %}
-          <a href="{{ chunk.source }}" target="_blank" rel="noopener">{{ chunk.source }}</a>
+          <a href="{{ chunk.source }}">{{ chunk.source }}</a>
         {% else %}
           {{ chunk.source or "-" }}
         {% endif %}

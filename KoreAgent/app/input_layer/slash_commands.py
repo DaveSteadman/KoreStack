@@ -478,6 +478,8 @@ def _cmd_comms(arg: str, ctx: SlashCommandContext) -> None:
         return
     chat_name = values.get("chat", "").strip()
     if not chat_name:
+        chat_name = str(ctx.chat_name or "").strip()
+    if not chat_name:
         if not ctx.session_id:
             ctx.output("No active chat. Use --chat <name> to bind a delivery target explicitly.", "error")
             return

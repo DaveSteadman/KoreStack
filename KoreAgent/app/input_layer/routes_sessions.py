@@ -33,6 +33,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from conversation_state import estimate_next_turn_tokens
+from input_layer.slash_processing import process_slash_prompt
 
 
 class PromptRequest(BaseModel):
@@ -59,8 +60,6 @@ def register_session_routes(
     flush_scratch_session,
     create_session_context,
     clear_session_scratch,
-    make_slash_context,
-    handle_slash,
     push_log_line,
     set_latest_log_path,
     log_dir,
@@ -174,12 +173,10 @@ def register_session_routes(
                     return
                 # ------------------------------------------------------------------
                 elif _prompt.startswith("/"):
-                    output_lines: list[str] = []
                     streamed_output = False
 
                     def _slash_output(text: str, level: str = "info") -> None:
                         nonlocal streamed_output
-                        output_lines.append(text)
                         push_log_line(f"[slash] {text}")
 
                         queue_run_event(run_q, {"type": "progress", "run_id": run_id, "text": text, "level": level})
@@ -193,18 +190,17 @@ def register_session_routes(
                     def _do_rename_session(new_session_id: str, name: str) -> None:
                         queue_run_event(run_q, {"type": "rename_session", "run_id": run_id, "session_id": new_session_id, "name": name}, priority=True)
 
-                    slash_ctx = make_slash_context(
-                        config=run_config,
-                        output=_slash_output,
-                        clear_history=lambda: (history.clear(), session_context.clear(), clear_session_scratch(session_id), save_session(session_id, history, session_context, 0, 0)),
-                        session_context=session_context,
-                        session_id=session_id,
-                        switch_session=_do_switch_session,
-                        rename_session=_do_rename_session,
-                        delete_session_state=delete_session_state,
+                    slash_response = process_slash_prompt(
+                        _prompt,
+                        config               = run_config,
+                        output               = _slash_output,
+                        clear_history        = lambda: (history.clear(), session_context.clear(), clear_session_scratch(session_id), save_session(session_id, history, session_context, 0, 0)),
+                        session_context      = session_context,
+                        session_id           = session_id,
+                        switch_session       = _do_switch_session,
+                        rename_session       = _do_rename_session,
+                        delete_session_state = delete_session_state,
                     )
-                    handled = handle_slash(_prompt, slash_ctx)
-                    slash_response = "\n".join(output_lines) if output_lines else ("(done)" if handled else f"Unknown command: {_prompt.split()[0]}")
                     if not streamed_output:
                         response_event = _response_event(slash_response, 0, "0")
                         queue_run_event(run_q, response_event, priority=True)
@@ -213,7 +209,11 @@ def register_session_routes(
                     threading.Thread(
                         target=kc_save_turn,
                         args=(session_id, _prompt, slash_response),
-                        kwargs={"response_metadata": _response_metadata(response_event)},
+                        kwargs={
+                            "response_metadata": _response_metadata(response_event),
+                            "inbound_tags":     ["slashcommand"],
+                            "outbound_tags":    ["slashcommand_response"],
+                        },
                         daemon=True,
                     ).start()
                 else:
@@ -264,7 +264,7 @@ def register_session_routes(
             run_id,
             "api_chat",
             _run,
-            label            = prompt_text[:48],
+            label            = prompt_text,
             metadata         = {
                 "workflow":    "chat",
                 "chain_id":    run_id,

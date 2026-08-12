@@ -56,6 +56,7 @@ CREATE TABLE IF NOT EXISTS messages (
                              CHECK(status IN ('received','draft','sent','failed')),
     delivery_eligible INTEGER NOT NULL DEFAULT 1,
     metadata         TEXT    NOT NULL DEFAULT '{}',
+    tags             TEXT    NOT NULL DEFAULT '[]',
     summarised       INTEGER NOT NULL DEFAULT 0,
     created_at       TEXT    NOT NULL
 );
@@ -130,6 +131,8 @@ def init_db() -> None:
                     "UPDATE conversations SET workflow = indepth_planner "
                     "WHERE workflow = '{}' AND indepth_planner <> '{}'"
                 )
+        if message_cols and "tags" not in message_cols:
+            connection.execute("ALTER TABLE messages ADD COLUMN tags TEXT NOT NULL DEFAULT '[]'")
         if cols and "tools_active" not in cols:
             connection.execute("ALTER TABLE conversations ADD COLUMN tools_active TEXT NOT NULL DEFAULT '[]'")
         if cols and "protected" not in cols:
@@ -157,3 +160,7 @@ def init_db() -> None:
                 """
             )
         connection.executescript(_SCHEMA)
+        connection.execute(
+            "UPDATE messages SET tags = '[\"' || direction || '\"]' "
+            "WHERE tags IS NULL OR trim(tags) = '' OR tags = '[]'"
+        )

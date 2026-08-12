@@ -26,6 +26,7 @@ class SlashCommandContext:
     clear_history: Callable[[], None]
     session_context: object | None = None
     session_id: str | None = None
+    chat_name: str | None = None
     switch_session: Callable[[str, str], None] | None = None
     rename_session: Callable[[str, str], None] | None = None
     delete_session_state: Callable[[str], None] | None = None
