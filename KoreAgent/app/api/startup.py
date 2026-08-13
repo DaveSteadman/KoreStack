@@ -35,6 +35,7 @@ from api.app import push_log_line
 from api.app import setup as api_setup
 from api.app import set_startup_state_snapshot
 from api.app import update_startup_state
+from api.state import set_latest_log_path
 from input_layer.koreconv_input import start_koreconv_loop
 from agent.orchestration.engine import OrchestratorConfig
 from utils.runtime_logger import SessionLogger
@@ -189,6 +190,7 @@ def run_api_mode(
         push_log_line        = push_log_line,
         task_queue           = task_queue,
         create_log_file_path = create_log_file_path,
+        set_latest_log_path  = set_latest_log_path,
         log_dir              = _LOG_DIR,
         session_logger_cls   = SessionLogger,
         shutdown             = shutdown,

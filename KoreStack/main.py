@@ -245,6 +245,9 @@ def build_child_env(config: dict) -> dict[str, str]:
     connections = config.get("connections") if isinstance(config.get("connections"), dict) else {}
 
     env["PYTHONUTF8"] = "1"
+    suite_python_path = str(SUITE_ROOT)
+    existing_python_path = env.get("PYTHONPATH", "")
+    env["PYTHONPATH"] = os.pathsep.join(part for part in (suite_python_path, existing_python_path) if part)
     env["KORE_SUITE_ROOT"] = str(SUITE_ROOT)
     env["KORE_SUITE_CONFIG"] = str(SUITE_CONFIG_FILE)
     env["KORE_SUITE_DATAROOT"] = str(stack_paths["dataroot"])
@@ -357,7 +360,6 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--host", default=None, help="KoreStack landing page bind address.")
     parser.add_argument("--ui-port", type=int, default=None, help="KoreStack landing page port.")
     parser.add_argument("--open-browser", action="store_true", help="Open the KoreStack landing page after startup.")
-    parser.add_argument("--no-dashboard", action="store_true", help="Launch child services without starting the KoreStack landing page.")
     parser.add_argument("--dry-run", action="store_true", help="Show what would start without launching child processes.")
     return parser.parse_args()
 
@@ -474,6 +476,7 @@ class StackManager:
         spawn_port = parsed_url.port
         meta = SERVICE_META.get(slug, {})
         spawn_env = dict(self._child_env)
+        spawn_env["KORESTACK_SERVICE_NAME"] = slug
         port_env_key = meta.get("port_env")
         if port_env_key:
             spawn_env[str(port_env_key)] = str(spawn_port)
@@ -811,8 +814,6 @@ def main() -> int:
     log_dir = STACK_ROOT / "logs"
     setup_logging(log_dir)
 
-    manager = StackManager(services, child_env, stack_paths, log_dir)
-
     network_cfg = suite_config.get("network") if isinstance(suite_config.get("network"), dict) else {}
     stack_cfg = _get_stack_service_config(suite_config)
     dashboard_host = args.host or str(network_cfg.get("host") or "127.0.0.1")
@@ -820,6 +821,12 @@ def main() -> int:
     if dashboard_port is None:
         raise RuntimeError("Missing services.korestack.port in config/korestack_config.json")
     dashboard_port = int(dashboard_port)
+    watchdog_host = "127.0.0.1" if dashboard_host in {"0.0.0.0", "::"} else dashboard_host
+    child_env["KORESTACK_HEALTH_URL"]                 = f"http://{watchdog_host}:{dashboard_port}/health"
+    child_env["KORESTACK_WATCHDOG_INTERVAL_SECONDS"]  = "3"
+    child_env["KORESTACK_WATCHDOG_FAILURES"]          = "3"
+    child_env["KORESTACK_WATCHDOG_GRACE_SECONDS"]     = "30"
+    manager = StackManager(services, child_env, stack_paths, log_dir)
 
     if args.command == "status":
         print_snapshot(manager.snapshot())
@@ -829,32 +836,29 @@ def main() -> int:
         print("KoreStack dry run")
         for spec in services:
             print(f"  {spec.label:<6} {spec.cwd / spec.script} -> {spec.url}")
-        if not args.no_dashboard:
-            print(f"  korestack http://{dashboard_host}:{dashboard_port}/")
+        print(f"  korestack http://{dashboard_host}:{dashboard_port}/")
         return 0
+
+    stop_event = threading.Event()
+    dashboard_thread = threading.Thread(
+        target=serve_dashboard,
+        args=(manager, dashboard_host, dashboard_port, stop_event),
+        kwargs={
+            "stack_static_dir": STACK_STATIC_DIR,
+            "ui_assets_dir": get_ui_assets_dir(),
+            "service_icon_keys": SERVICE_ICON_KEYS,
+            "probe_http_with_retry": probe_http_with_retry,
+            "suite_config": suite_config,
+        },
+        daemon=True,
+    )
+    dashboard_thread.start()
 
     print("Starting...", flush=True)
     manager.start()
-
-    stop_event = threading.Event()
-    dashboard_thread: threading.Thread | None = None
-    if not args.no_dashboard:
-        dashboard_thread = threading.Thread(
-            target=serve_dashboard,
-            args=(manager, dashboard_host, dashboard_port, stop_event),
-            kwargs={
-                "stack_static_dir": STACK_STATIC_DIR,
-                "ui_assets_dir": get_ui_assets_dir(),
-                "service_icon_keys": SERVICE_ICON_KEYS,
-                "probe_http_with_retry": probe_http_with_retry,
-                "suite_config": suite_config,
-            },
-            daemon=True,
-        )
-        dashboard_thread.start()
-        print(f"\nKoreStack: http://{dashboard_host}:{dashboard_port}/\n", flush=True)
-        if args.open_browser:
-            webbrowser.open(f"http://{dashboard_host}:{dashboard_port}/")
+    print(f"\nKoreStack: http://{dashboard_host}:{dashboard_port}/\n", flush=True)
+    if args.open_browser:
+        webbrowser.open(f"http://{dashboard_host}:{dashboard_port}/")
 
     def _signal_handler(signum: int, _frame) -> None:
         stop_event.set()
@@ -865,11 +869,6 @@ def main() -> int:
 
     try:
         while not stop_event.is_set():
-            live = manager.get_live_processes()
-            if not live and args.no_dashboard:
-                break
-            if not live and dashboard_thread is None:
-                break
             time.sleep(0.5)
     except KeyboardInterrupt:
         stop_event.set()

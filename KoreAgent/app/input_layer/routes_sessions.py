@@ -103,6 +103,8 @@ def register_session_routes(
             session_context = create_session_context(session_id=session_id, persist_path=None)
             history = load_session(session_id)
             conversation_entry = get_session_conversation(session_id)
+            if _prompt.startswith("/") and conversation_entry is None:
+                conversation_entry = ensure_session_conversation(session_id)
 
             def _response_event(response: str, tokens: int, tps: str) -> dict:
                 return {

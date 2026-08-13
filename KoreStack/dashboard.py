@@ -183,6 +183,11 @@ def build_handler(
         def do_GET(self) -> None:  # noqa: N802
             request_path = urllib.parse.urlsplit(self.path).path
 
+            if request_path == "/health":
+                body = b'{"ok":true,"service":"KoreStack"}'
+                self._send_bytes(body, "application/json; charset=utf-8")
+                return
+
             if request_path in ("/", ""):
                 body = html_page(self.manager_ref, self.dashboard_ref, stack_static_dir, ui_assets_dir, service_icon_keys).encode("utf-8")
                 self._send_bytes(body, "text/html; charset=utf-8")

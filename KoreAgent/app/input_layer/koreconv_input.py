@@ -91,6 +91,17 @@ def _latest_message(messages: list[dict]) -> dict | None:
     )
 
 
+def _event_prompt_label(event: dict) -> str:
+    """Return the newest inbound prompt for queue observability."""
+    conversation = event.get("conversation") or {}
+    messages     = conversation.get("messages") or []
+    latest       = next(
+        (message for message in reversed(messages) if message.get("direction") == "inbound"),
+        None,
+    )
+    return str((latest or {}).get("content") or "").strip()
+
+
 # ====================================================================================================
 # MARK: CONFIG
 # ====================================================================================================
@@ -384,6 +395,7 @@ def _handle_event(
     log_dir:             Path,
     session_logger_cls,
     create_log_file_path,
+    set_latest_log_path,
     push_log_line,
 ) -> None:
     """Dispatch one KoreChat event to the appropriate handler."""
@@ -428,6 +440,8 @@ def _handle_event(
     push_log_line(f"[KORECHAT] Handling event {event_id} (conv {conv_id}, turn {turn_count + 1})")
 
     run_log_path = create_log_file_path(log_dir=log_dir)
+    set_latest_log_path(run_log_path)
+    push_log_line(f"[KORECHAT] Conv {conv_id}: live run log {run_log_path.name}")
     with session_logger_cls(run_log_path) as run_logger:
 
         # The event payload already includes unsummarised messages (from conversation_get_with_messages).
@@ -660,6 +674,7 @@ def start_koreconv_loop(
     push_log_line,
     task_queue,
     create_log_file_path,
+    set_latest_log_path,
     log_dir:             Path,
     session_logger_cls,
     shutdown:            threading.Event,
@@ -693,10 +708,22 @@ def start_koreconv_loop(
                             log_dir              = log_dir,
                             session_logger_cls   = session_logger_cls,
                             create_log_file_path = create_log_file_path,
+                            set_latest_log_path   = set_latest_log_path,
                             push_log_line        = push_log_line,
                         )
 
-                    queued = task_queue.enqueue(task_name, "koreconv", _run_event)
+                    prompt_label = _event_prompt_label(event)
+                    queued = task_queue.enqueue(
+                        task_name,
+                        "koreconv",
+                        _run_event,
+                        label    = prompt_label or f"KoreChat event {event_id}",
+                        metadata = {
+                            "conversation_id": conv_id,
+                            "event_id":        event_id,
+                            "source":          "KoreChat",
+                        },
+                    )
                     if queued:
                         push_log_line(f"[KORECHAT] Event {event_id} (conv {conv_id}) queued as '{task_name}'")
                     else:

@@ -73,7 +73,7 @@ http://127.0.0.1:19600/
 python .\main.py --dry-run
 python .\main.py status
 python .\main.py --services koreagent,korechat,koredocs
-python .\main.py --services korecode --no-dashboard
+python .\main.py --services korecode
 ```
 
 ## New user map

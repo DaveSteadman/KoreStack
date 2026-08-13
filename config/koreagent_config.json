@@ -1,6 +1,6 @@
 {
-  "model": "nemotron-3.5-lightning:latest",
+  "model": "meta/muse-glimmer",
   "ctx": 100000,
   "max_predict": 512,
-  "llmhost": "http://MONTBLANC:11434"
+  "llmhost": "http://localhost:1234"
 }

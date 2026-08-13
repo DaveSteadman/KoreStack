@@ -18,7 +18,7 @@
           <section class="kcui-panel panel">
             <div class="kcui-panel-header">
               <p class="eyebrow">System Tests</p>
-              <p>Select a prompt suite, run it in the protected TEST chat, and inspect its history.</p>
+              <p>Select a prompt suite or the complete collection, run it in the protected TEST chat, and inspect its history.</p>
             </div>
             <div class="kcui-panel-body">
               <form id="system-test-form">
@@ -54,16 +54,22 @@
           <section class="kcui-panel panel">
             <div class="kcui-panel-header">
               <p class="eyebrow">Latest run</p>
-              <p>Result from the most recent suite invocation.</p>
+              <p>Live progress for each prompt suite and completed exchange.</p>
             </div>
             <div class="kcui-panel-body">
               <output id="run-result" class="kcui-tag kcui-tag--dim">No run in this session.</output>
+              <div class="kcui-table-scroll">
+                <table class="kcui-table">
+                  <thead><tr><th>Prompt file</th><th>Progress</th><th>Pass</th><th>Status</th></tr></thead>
+                  <tbody id="run-details"><tr><td colspan="4">No active run.</td></tr></tbody>
+                </table>
+              </div>
             </div>
           </section>
         </div>
       </section>
     </div>
   </main>
-  <script type="module" src="/static/test/app.js"></script>
+  <script type="module" src="/static/test/app.js?v=release-run-3"></script>
 </body>
 </html>

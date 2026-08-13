@@ -9,6 +9,7 @@ APP_ROOT = Path(__file__).resolve().parents[4] / "KoreAgent" / "app"
 if str(APP_ROOT) not in sys.path:
     sys.path.insert(0, str(APP_ROOT))
 
+from input_layer.koreconv_input import _event_prompt_label
 from input_layer.koreconv_input import _latest_message
 
 
@@ -24,6 +25,19 @@ class KoreConvInputTests(unittest.TestCase):
         self.assertIsNotNone(latest)
         self.assertEqual(latest["id"], 179)
         self.assertEqual(latest["direction"], "inbound")
+
+    def test_event_prompt_label_uses_the_newest_inbound_message(self) -> None:
+        event = {
+            "conversation": {
+                "messages": [
+                    {"direction": "inbound",  "content": "first"},
+                    {"direction": "outbound", "content": "answer"},
+                    {"direction": "inbound",  "content": "latest prompt"},
+                ],
+            },
+        }
+
+        self.assertEqual(_event_prompt_label(event), "latest prompt")
 
 
 if __name__ == "__main__":

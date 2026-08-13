@@ -33,7 +33,7 @@ Useful variants:
 python .\main.py --dry-run
 python .\main.py status
 python .\main.py --services koreagent,korechat,koredocs
-python .\main.py --services korecode --no-dashboard
+python .\main.py --services korecode
 ```
 
 ## Install and configuration
@@ -49,7 +49,7 @@ python .\main.py --services korecode --no-dashboard
 | Startup exits before launching children | Run `python .\main.py --dry-run` to inspect the resolved plan |
 | One service blocks the suite | Start a narrower set with `--services ...` and isolate the failing subsystem |
 | Health probes stay red | Confirm the target service port is correct and the child process actually stayed alive |
-| Dashboard is not reachable | Check `services.korestack.port` and whether `--no-dashboard` was used |
+| Dashboard is not reachable | Check `services.korestack.port` and confirm the port is free |
 
 ## Related docs
 

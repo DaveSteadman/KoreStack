@@ -173,6 +173,7 @@ def _invoke_agent_turn(session_id: str, prompt: str) -> dict:
     run_id    = str(submitted["run_id"])
     request   = urllib.request.Request(_agent_base_url() + f"/api/runs/{urllib.parse.quote(run_id, safe='')}/stream")
     result    = {"response": "", "tokens": 0, "tps": "0", "log_file": "", "error": ""}
+    progress_lines: list[str] = []
     with urllib.request.urlopen(request, timeout=SUBPROCESS_TIMEOUT_SECONDS) as response:
         for raw_line in response:
             line = raw_line.decode("utf-8", errors="replace").strip()
@@ -188,8 +189,14 @@ def _invoke_agent_turn(session_id: str, prompt: str) -> dict:
                 result["log_file"] = str(event.get("path") or "")
             elif event_type == "error":
                 result["error"] = str(event.get("message") or "Agent request failed")
+            elif event_type == "progress":
+                text = str(event.get("text") or "").strip()
+                if text:
+                    progress_lines.append(text)
             elif event_type == "done":
                 break
+    if not result["response"] and progress_lines:
+        result["response"] = "\n".join(progress_lines)
     return result
 
 
