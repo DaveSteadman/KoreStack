@@ -7,7 +7,7 @@ from input_layer import slash_commands
 
 class SlashCommandRegistryTests(unittest.TestCase):
     def test_retired_commands_are_not_registered(self) -> None:
-        for command in {"/test", "/testtrend", "/newchat", "/task", "/tasks", "/cronprompt", "/cronprompts", "/unittest", "/systemtest", "/systemtesttrend"}:
+        for command in {"/test", "/testtrend", "/newchat", "/task", "/tasks", "/ctx", "/kccompress", "/cronprompt", "/cronprompts", "/unittest", "/systemtest", "/systemtesttrend"}:
             self.assertNotIn(command, slash_commands._REGISTRY)
             self.assertNotIn(command, slash_commands._DESCRIPTIONS)
 

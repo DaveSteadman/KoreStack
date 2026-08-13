@@ -30,12 +30,12 @@ const CSS_TAG_INACTIVE = "kcui-tag--inactive";
 
 // All registered slash commands - used for command-name tab completion.
 const _ALL_COMMANDS = [
-    "/help", "/llmserver", "/llmserverconfig", "/ctx", "/rounds", "/timeout",
+    "/help", "/llmserver", "/llmserverconfig", "/rounds", "/timeout",
     "/stopmodel", "/stoprun",
     "/clearmemory", "/reskill", "/sandbox", "/tools",
     "/deletelogs",
     "/workflow", "/workflows",
-    "/version", "/defaults", "/chat", "/kccompress", "/workspace",
+    "/version", "/defaults", "/chat", "/workspace",
     "/comms",
 ];
 

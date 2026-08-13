@@ -9,7 +9,6 @@
 #   /chat name <name>      -- rename the current KoreChat conversation
 #   /chat delete <name>    -- delete a conversation and clear local state
 #   /chat new [name]       -- start a fresh conversation (with optional display name)
-#   /compress              -- compress old conversation history via LLM summarisation
 #
 # Talks to KoreChat via stdlib urllib (no extra dependencies).
 #
@@ -386,55 +385,7 @@ def _cmd_chat(arg: str, ctx: SlashCommandContext) -> None:
     ctx.output("  /chat info                           - show current KoreChat details", "item")
 
 
-# ----------------------------------------------------------------------------------------------------
-def _cmd_kccompress(arg: str, ctx: SlashCommandContext) -> None:
-    # /kccompress          -> queue a compress_needed event for the current conversation
-    # /kccompress <name>   -> queue for a named conversation
-    try:
-        if arg.strip():
-            conv = _find_conversation_by_name(arg.strip())
-            if conv is None:
-                ctx.output(f"No conversation named '{arg.strip()}' found.", "error")
-                return
-        else:
-            if not ctx.session_id:
-                ctx.output("No active session.", "error")
-                return
-            conv = _find_conversation_by_session(ctx.session_id)
-            if conv is None:
-                ctx.output("No KoreChat found for the current session.", "error")
-                return
-
-        conv_id = conv.get("id")
-        unsummarised = _kc_get(f"/conversations/{conv_id}/messages?summarised=0&limit=1") or []
-        if not unsummarised:
-            ctx.output("No unsummarised messages - nothing to compress.", "dim")
-            return
-
-        _kc_post("/events", {
-            "conversation_id": conv_id,
-            "event_type":      "compress_needed",
-            "priority":        10,
-            "payload":         {},
-        })
-        ctx.output(
-            f"compress_needed event queued for '{_display_name(conv)}' (conv {conv_id}).",
-            "success",
-        )
-        ctx.output("Check the log panel - compression will run on the next agent poll.", "dim")
-    except RuntimeError as exc:
-        # If KoreChat is unavailable, fall back to the in-memory compression path
-        # when the caller has wired one up (e.g. CLI chat-sequence test mode).
-        if ctx.compress_history is not None:
-            result = ctx.compress_history()
-            ctx.output(result, "success")
-        else:
-            ctx.output(f"Cannot compress conversation: {exc}", "error")
-
-
 def register_session_slash_commands(registry: dict[str, Callable], descriptions: dict[str, str]) -> None:
     registry["/chat"]       = _cmd_chat
     registry["/session"]    = _cmd_chat
-    registry["/kccompress"] = _cmd_kccompress
     descriptions["/chat"]       = "new [name] | name <alias> | list | resume <name> | park | delete <name|all> | info  - manage KoreChat conversations"
-    descriptions["/kccompress"] = "[<name>]  Queue a compress_needed event for the current (or named) KoreChat"

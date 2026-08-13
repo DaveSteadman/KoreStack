@@ -176,9 +176,10 @@ def _live_progress(suite_name: str, result: dict) -> dict:
         total_tests = len(json.loads(_suite_path(suite_name).read_text(encoding="utf-8")))
     except Exception:
         total_tests = int(progress.get("total_tests") or 0)
-    csv_path = Path(str(result.get("csv") or ""))
+    csv_value = str(result.get("csv") or "").strip()
+    csv_path  = Path(csv_value) if csv_value else None
     exchanges: dict[str, bool] = {}
-    if csv_path.exists():
+    if csv_path is not None and csv_path.is_file():
         for row in csv.DictReader(csv_path.open(encoding="utf-8", newline="")):
             exchange = str(row.get("exchange_name") or "")
             exchanges[exchange] = str(row.get("passed") or "").upper() == "PASS"

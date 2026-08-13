@@ -26,6 +26,10 @@ function setTag(element, text, variant = 'dim') {
   element.className = `kcui-tag kcui-tag--${variant}`;
 }
 
+function setRunResult(text) {
+  runResult.textContent = text;
+}
+
 function setRunInProgress(running) {
   isRunInProgress    = running;
   runButton.disabled  = running;
@@ -107,16 +111,22 @@ async function loadRunState() {
   const payload = await response.json();
   const runs = payload.runs || [];
   const active = runs.find((run) => run.status === 'running' && run.suite !== 'all');
-  const latest = runs[0];
+  const newest = runs[0];
+  const latestCollection = newest?.collection_id
+    ? runs.find((run) => run.run_id === newest.collection_id && run.suite === 'all')
+    : null;
+  const latest = latestCollection?.result?.stats_line ? latestCollection : newest;
   const collectionRuns = active?.collection_id
     ? runs.filter((run) => run.collection_id === active.collection_id)
-    : active ? [active] : latest ? [latest] : [];
+    : active ? [active] : latest?.suite === 'all'
+      ? runs.filter((run) => run.collection_id === latest.collection_id)
+      : latest ? [latest] : [];
   renderRunDetails(collectionRuns.filter((run) => run.suite !== 'all'));
   if (active) {
     setRunInProgress(true);
     const progress = active.result?.progress || {};
     setTag(runStatus, `Running ${active.suite}: ${progress.completed_tests ?? 0}/${progress.total_tests ?? '—'}`, 'warning');
-    setTag(runResult, `${active.suite}: ${progress.passed_tests ?? 0}/${progress.completed_tests ?? 0} passed`, 'warning');
+    setRunResult(`${active.suite}: ${progress.passed_tests ?? 0}/${progress.completed_tests ?? 0} passed`);
   } else if (isRunInProgress) {
     setRunInProgress(false);
     setTag(runStatus, 'Ready', 'dim');
@@ -124,7 +134,7 @@ async function loadRunState() {
   if (!latest || active) return;
   const result = latest.result || {};
   const label = result.stats_line || `${latest.suite}: ${result.passed ?? '—'}/${result.total ?? '—'} · ${latest.status}`;
-  setTag(runResult, label, latest.status === 'passed' ? 'success' : latest.status === 'running' ? 'warning' : 'danger');
+  setRunResult(label);
 }
 
 suiteSelect.addEventListener('change', loadTrend);
@@ -142,12 +152,12 @@ form.addEventListener('submit', async (event) => {
     const result = await response.json();
     const success = response.ok && result.status === 'passed';
     setTag(runStatus, success ? 'Passed' : 'Failed', success ? 'success' : 'danger');
-    setTag(runResult, result.stats_line || `${result.suite}: ${result.passed}/${result.total}`, success ? 'success' : 'danger');
+    setRunResult(result.stats_line || `${result.suite}: ${result.passed}/${result.total}`);
     await loadTrend();
     await loadRunState();
   } catch (error) {
     setTag(runStatus, 'Request failed', 'danger');
-    setTag(runResult, String(error), 'danger');
+    setRunResult(String(error));
   } finally {
     setRunInProgress(false);
   }

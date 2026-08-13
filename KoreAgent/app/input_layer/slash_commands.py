@@ -20,12 +20,7 @@ from typing import Callable
 
 from llm_client import get_active_host
 from llm_client import get_llm_timeout
-from llm_client import register_session_config
 from llm_client import set_llm_timeout
-from context_manager import get_last_context_map
-from context_manager import get_last_messages
-from context_manager import compact_context
-from context_manager import format_context_map
 from agent.orchestration.engine import _filter_web_skills
 from agent.orchestration.engine import get_skill_guidance_enabled
 from agent.orchestration.engine import get_web_skills_enabled
@@ -73,102 +68,6 @@ def _cmd_help(arg: str, ctx: SlashCommandContext) -> None:
     ctx.output("Available slash commands:", "info")
     for name, description in sorted(_DESCRIPTIONS.items()):
         ctx.output(f"  {name:<16} {description}", "item")
-
-
-def _cmd_ctx(arg: str, ctx: SlashCommandContext) -> None:
-    def _get_map_and_messages():
-        return get_last_context_map(), get_last_messages()
-
-    def _show_map(context_map):
-        ctx.output(format_context_map(context_map, ctx.config.num_ctx), "item")
-
-    def _resolve_index(rest: str):
-        context_map, messages = _get_map_and_messages()
-        if not context_map:
-            ctx.output("No run context available - send a prompt first.", "error")
-            return None
-        try:
-            index = int(rest)
-        except ValueError:
-            ctx.output(f"Invalid index '{rest}' - must be an integer.", "error")
-            return None
-        if index < 0 or index >= len(context_map):
-            ctx.output(f"Index {index} out of range (0 - {len(context_map) - 1}).", "error")
-            return None
-        return context_map, messages, index
-
-    if not arg:
-        context_map, _ = _get_map_and_messages()
-        if context_map:
-            _show_map(context_map)
-            ctx.output("", "dim")
-        ctx.output(f"Context window size: {ctx.config.num_ctx:,} tokens", "info")
-        return
-
-    parts = arg.split(None, 1)
-    sub = parts[0].lower()
-    rest = parts[1].strip() if len(parts) > 1 else ""
-
-    if sub == "size":
-        if not rest:
-            ctx.output(f"Context window size: {ctx.config.num_ctx:,} tokens", "info")
-            return
-        try:
-            value = int(rest.replace(",", "").replace("_", ""))
-        except ValueError:
-            ctx.output(f"Invalid value '{rest}' - must be an integer (e.g. /ctx size 32768).", "error")
-            return
-        if value < 512:
-            ctx.output("Context size must be at least 512 tokens.", "error")
-            return
-        old = ctx.config.num_ctx
-        ctx.config.num_ctx = value
-        register_session_config(ctx.config.resolved_model, value)
-        ctx.output(f"Context window size changed: {old:,} -> {value:,}", "success")
-        return
-
-    if sub == "item":
-        if not rest:
-            ctx.output("Usage: /ctx item <index>", "dim")
-            return
-        resolved = _resolve_index(rest)
-        if resolved is None:
-            return
-        context_map, messages, index = resolved
-        entry = context_map[index]
-        msg_idx = entry.get("msg_idx")
-        ctx.output(f"Entry {index}: role={entry.get('role')}  label={entry.get('label')}  chars={entry.get('chars'):,}", "info")
-        if msg_idx is None:
-            ctx.output("(no associated message - not individually addressable)", "dim")
-            return
-        content = messages[msg_idx].get("content") or ""
-        ctx.output(content if content else "(empty)", "item")
-        return
-
-    if sub == "compact":
-        if not rest:
-            ctx.output("Usage: /ctx compact <index>", "dim")
-            return
-        resolved = _resolve_index(rest)
-        if resolved is None:
-            return
-        context_map, messages, index = resolved
-        entry = context_map[index]
-        if entry.get("msg_idx") is None:
-            ctx.output(f"Entry {index} ({entry.get('role')} / {entry.get('label')}) has no associated message - cannot compact.", "error")
-            return
-        ctx.output("Before:", "dim")
-        _show_map(context_map)
-        changed = compact_context(context_map, messages, index)
-        if not changed:
-            ctx.output(f"Entry {index} was already compacted.", "dim")
-            return
-        ctx.output("", "dim")
-        ctx.output("After:", "dim")
-        _show_map(context_map)
-        return
-
-    ctx.output("Unknown sub-command. Usage: /ctx | /ctx size [<n>] | /ctx item <n> | /ctx compact <n>", "error")
 
 
 def _cmd_rounds(arg: str, ctx: SlashCommandContext) -> None:
@@ -548,7 +447,6 @@ def _cmd_workspace(arg: str, ctx: SlashCommandContext) -> None:
 
 _REGISTRY: dict[str, Callable] = {
     "/help": _cmd_help,
-    "/ctx": _cmd_ctx,
     "/rounds": _cmd_rounds,
     "/timeout": _cmd_timeout,
     "/stoprun": _cmd_stoprun,
@@ -566,7 +464,6 @@ _REGISTRY: dict[str, Callable] = {
 
 _DESCRIPTIONS: dict[str, str] = {
     "/help": "List available slash commands",
-    "/ctx": "Show context map + window size; sub-cmds: size [<n>], item <n>, compact <n>",
     "/rounds": "<n>  Set max tool-call rounds per prompt (e.g. /rounds 6)",
     "/timeout": "<seconds>  Set LLM generation timeout (e.g. /timeout 1800 for heavy analysis)",
     "/stoprun": "Cancel the active LLM run (after its current round) and clear all pending queued prompts",

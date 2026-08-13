@@ -76,7 +76,7 @@ _DEFAULT_POLL_SECS = 3
 _DEFAULT_TIMEOUT   = 8
 _SESSION_PREFIX    = "kc_conv_"
 # Fraction of config.num_ctx at which a compress_needed event is raised.
-# Scales automatically when the user changes context size via /ctx size.
+# Scales automatically when the user changes context size via /llmserverconfig ctx.
 _COMPRESS_THRESHOLD = 0.70
 
 
@@ -645,7 +645,7 @@ def _handle_event(
                 push_log_line(f"[KORECHAT] Conv {conv_id}: outbound_ready event failed: {exc}")
 
         # Check whether the running token estimate has crossed the compression threshold.
-        # Uses config.num_ctx so /ctx size in the UI controls the trigger point directly.
+        # Uses config.num_ctx so /llmserverconfig ctx controls the trigger point directly.
         compress_at = int(config.num_ctx * _COMPRESS_THRESHOLD)
         if new_token_estimate >= compress_at:
             push_log_line(
