@@ -53,9 +53,10 @@
 <div class="kcui-inline-actions">
   <span class="kcui-meta">Add connection:</span>
   <a class="kcui-tag kcui-tag--accent" href="/connections/new?type=classic_email">+ Email</a>
+  <a class="kcui-tag kcui-tag--accent" href="/connections/new?type=sftp_file">+ SFTP file</a>
   <a class="kcui-tag kcui-tag--dim" href="/distribution-lists">distribution lists</a>
   {% for t in available_types %}
-  {% if t != 'classic_email' %}
+  {% if t != 'classic_email' and t != 'sftp_file' %}
   <a class="kcui-tag kcui-tag--accent" href="/connections/new?type={{ t }}">+ {{ t }}</a>
   {% endif %}
   {% endfor %}

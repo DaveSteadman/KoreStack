@@ -36,6 +36,7 @@ certifi>=2024.0
 
 # ── Google / Auth (KoreComms) ─────────────────────────────────────────────
 cryptography>=42.0.0
+paramiko>=3.4.0
 google-auth>=2.29.0
 google-auth-oauthlib>=1.2.0
 google-api-python-client>=2.126.0

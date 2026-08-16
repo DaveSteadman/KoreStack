@@ -242,6 +242,13 @@
   text-decoration: underline;
 }
 
+.rc-title--static,
+.rc-title--static:hover {
+  color:           var(--text);
+  cursor:          default;
+  text-decoration: none;
+}
+
 .kcui-result-meta,
 .rc-meta {
   margin-bottom: 0.35rem;

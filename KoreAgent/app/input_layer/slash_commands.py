@@ -356,10 +356,52 @@ def _cmd_comms(arg: str, ctx: SlashCommandContext) -> None:
     except ValueError as exc:
         ctx.output(f"Invalid command syntax: {exc}", "error")
         return
+    if len(parts) >= 2 and parts[0].lower() == "connection":
+        action = parts[1].lower()
+        if action not in {"pause", "resume", "publishprevious"}:
+            ctx.output("Usage: /comms connection <pause|resume|publishprevious> [--chat <name>]", "dim")
+            return
+        values = {}
+        index = 2
+        while index < len(parts):
+            if parts[index] != "--chat" or index + 1 >= len(parts):
+                ctx.output("Usage: /comms connection <pause|resume|publishprevious> [--chat <name>]", "error")
+                return
+            values["chat"] = parts[index + 1]
+            index += 2
+        chat_name = values.get("chat", "").strip() or str(ctx.chat_name or "").strip()
+        if not chat_name:
+            if not ctx.session_id:
+                ctx.output("No active chat. Use --chat <name>.", "error")
+                return
+            chat_name = f"webchat_{ctx.session_id}"
+        try:
+            suite_config = json.loads((get_suite_root() / "config" / "korestack_config.json").read_text(encoding="utf-8"))
+            port         = int(suite_config["services"]["korecomms"]["port"])
+            encoded_name = urllib.parse.quote(chat_name, safe="")
+            request      = urllib.request.Request(
+                f"http://127.0.0.1:{port}/api/delivery-bindings/{encoded_name}/{action}",
+                data    = b"{}",
+                method  = "POST",
+                headers = {"Content-Type": "application/json", "Accept": "application/json"},
+            )
+            with urllib.request.urlopen(request, timeout=20) as response:
+                result = json.loads(response.read())
+        except (OSError, ValueError, KeyError, urllib.error.HTTPError) as exc:
+            detail = exc.read().decode(errors="replace") if isinstance(exc, urllib.error.HTTPError) else str(exc)
+            ctx.output(f"KoreComms connection {action} failed: {detail}", "error")
+            return
+        if action == "publishprevious":
+            ctx.output(f"Published previous output: chat={result['chat_name']} via {result['connection']}", "success")
+        else:
+            state = "resumed" if result["active"] else "paused"
+            ctx.output(f"Connection delivery {state}: chat={result['chat_name']} via {result['connection']}", "success")
+        return
+
     if len(parts) < 2 or parts[0].lower() != "delivery" or parts[1].lower() != "bind":
         ctx.output(
-            "Usage: /comms delivery bind [--chat <name>] [--connection <name>] (--to <email> | --to-list <name>) --subject <text> "
-            "(--connection is inferred from --to-list; connection and list accept an exact or unique substring match)",
+            "Usage: /comms delivery bind [--chat <name>] --connection <name> [--to <email> | --to-list <name>] --subject <text> [--startpaused]. "
+            "An SFTP file connection needs no --to or --to-list; it writes to its configured file.",
             "dim",
         )
         return
@@ -367,13 +409,17 @@ def _cmd_comms(arg: str, ctx: SlashCommandContext) -> None:
     index = 2
     while index < len(parts):
         key = parts[index]
+        if key == "--startpaused":
+            values["startpaused"] = "true"
+            index += 1
+            continue
         if not key.startswith("--") or index + 1 >= len(parts):
-            ctx.output("Use --chat, --connection, --to or --to-list, and --subject options.", "error")
+            ctx.output("Use --chat, --connection, --to, --to-list, and --subject options.", "error")
             return
         values[key[2:]] = parts[index + 1]
         index += 2
-    if "subject" not in values or bool(values.get("to")) == bool(values.get("to-list")):
-        ctx.output("Required: --subject and exactly one of --to or --to-list. --connection is required for --to and inferred for --to-list. --chat defaults to the active chat.", "error")
+    if "subject" not in values or (values.get("to") and values.get("to-list")):
+        ctx.output("Required: --subject. Use at most one of --to or --to-list; omit both for an SFTP file connection. --chat defaults to the active chat.", "error")
         return
     chat_name = values.get("chat", "").strip()
     if not chat_name:
@@ -392,7 +438,7 @@ def _cmd_comms(arg: str, ctx: SlashCommandContext) -> None:
             "recipient": values.get("to", ""),
             "distribution_list": values.get("to-list", ""),
             "subject": values["subject"],
-            "enabled": True,
+            "enabled": "startpaused" not in values,
         }).encode("utf-8")
         request = urllib.request.Request(
             f"http://127.0.0.1:{port}/api/delivery-bindings",
@@ -474,7 +520,7 @@ _DESCRIPTIONS: dict[str, str] = {
     "/deletelogs": "<days>  Delete log date-folders older than N days (e.g. /deletelogs 10)",
     "/defaults": "Show current Agent configuration and file path; /defaults set saves current model/ctx/host to the file",
     "/mcp":      "[status | reconnect]  Show MCP server status or re-enumerate tools from all configured servers",
-    "/comms":    "delivery bind [--chat <name>] [--connection <name>] (--to <email> | --to-list <name>) --subject <text>; connection is inferred from --to-list and required for --to; connection and list accept an exact or unique substring match; --chat defaults to the active chat",
+    "/comms":    "delivery bind [--chat <name>] --connection <name> [--to <email>|--to-list <name>] --subject <text> [--startpaused]; connection pause|resume|publishprevious [--chat <name>]",
     "/planning": "<off|simple|workflow|auto>  Control whether prompts bypass planning, use the lightweight planner, or seed durable Workflow state",
     "/workspace": "clear  Clear this chat's scratchpad, temporary datasets, and active tool selection",
 }

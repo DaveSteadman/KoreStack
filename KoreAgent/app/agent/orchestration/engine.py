@@ -600,6 +600,23 @@ def orchestrate_prompt(
             enabled  = workflow_enabled,
             has_plan = workflow_exists,
         )
+        if re.search(r"\bsaved\s*search(?:es)?\b", user_prompt, re.IGNORECASE):
+            activation = promote_selected_tools(
+                [
+                    "koredata_savedsearch_run",
+                    "dataset_get",
+                    "dataset_inspect",
+                    "dataset_expand_full_text",
+                ],
+                session_id         = active_session_id,
+                conversation_entry = conversation_entry,
+                persist            = False,
+            )
+            _log_file_only(
+                "[savedsearch] activation "
+                f"added={','.join(activation['added']) or 'none'} "
+                f"promoted={','.join(activation['promoted']) or 'none'}"
+            )
         planner_tool_runtime = derive_active_tool_runtime(
             config.skills_payload,
             available_local_payload = available_local_payload,

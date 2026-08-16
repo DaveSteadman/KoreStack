@@ -331,6 +331,16 @@ def _next_task_id(used_ids: set[str]) -> str:
     return str(candidate)
 
 
+def _normalise_initial_tasks(value: object) -> list[object]:
+    """Accept tool arguments without ever treating a task string as characters."""
+    if isinstance(value, str):
+        tasks = [line.strip() for line in value.splitlines() if line.strip()]
+        return tasks or [value]
+    if isinstance(value, (list, tuple)):
+        return list(value)
+    return []
+
+
 def _coerce_plan_task(raw: object, *, used_ids: set[str] | None = None) -> dict[str, Any]:
     used_ids = used_ids if used_ids is not None else set()
     if isinstance(raw, str):
@@ -863,10 +873,10 @@ def _validate_simple_plan(plan: dict[str, Any]) -> None:
         visit(task_id)
 
 
-def create_simple_plan(*, objective: str, initial_tasks: list[object] | None = None, session_id: str | None = None) -> dict[str, Any]:
+def create_simple_plan(*, objective: str, initial_tasks: list[object] | str | None = None, session_id: str | None = None) -> dict[str, Any]:
     used_ids: set[str] = set()
     tasks = []
-    for raw_task in initial_tasks or []:
+    for raw_task in _normalise_initial_tasks(initial_tasks):
         task = _coerce_plan_task(raw_task, used_ids=used_ids)
         definition = task["definition"]
         tasks.append(

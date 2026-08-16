@@ -191,6 +191,8 @@ def _poll_inbound() -> None:
 
 def _route_outbound_for_conversation(local_conv: dict) -> None:
     """Check a KC conversation for draft outbound messages and route them."""
+    if not local_conv.get("delivery_enabled"):
+        return
     kc_conv = _resolve_kc_conversation(local_conv)
     if kc_conv is None:
         return
@@ -213,13 +215,19 @@ def _route_outbound_for_conversation(local_conv: dict) -> None:
     adapter = build_adapter(iface_row)
 
     for msg in draft_messages:
+        content = str(msg.get("content") or "")
+        if not content.strip():
+            kc_client.mark_message_sent(msg["id"])
+            db.log_activity("delivery_suppressed", f"kc_msg={msg['id']} has empty output")
+            logger.warning("Suppressed delivery for empty KC message %d", msg["id"])
+            continue
         if not msg.get("delivery_eligible", True) or kc_client.has_internal_message_tag(msg):
             kc_client.mark_message_sent(msg["id"])
             db.log_activity("delivery_suppressed", f"kc_msg={msg['id']} is internal-only output")
             logger.info("Suppressed delivery for internal KC message %d", msg["id"])
             continue
         try:
-            adapter.route_reply(local_conv["id"], msg["content"])
+            adapter.route_reply(local_conv["id"], content)
             kc_client.mark_message_sent(msg["id"])
             db.external_message_create(
                 conversation_id     = local_conv["id"],

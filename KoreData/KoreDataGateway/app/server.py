@@ -36,7 +36,7 @@ from typing import Any, Optional
 from urllib.parse import urlsplit
 
 import httpx
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from mcp.server.fastmcp import FastMCP
@@ -70,6 +70,10 @@ from app.gateway_api import FullTextRequest as _FullTextRequest
 from app.gateway_api import SearchRequest as _SearchRequest
 from app.gateway_api import SentenceRequest as _SentenceRequest
 from app.gateway_api import register_gateway_api_routes
+from app.saved_searches import delete_saved_searches as _delete_saved_searches
+from app.saved_searches import find_saved_search as _find_saved_search
+from app.saved_searches import load_saved_searches as _load_saved_searches
+from app.saved_searches import upsert_saved_search as _upsert_saved_search
 from config import get_koredata_dir
 
 
@@ -81,6 +85,8 @@ LOG = logging.getLogger("koredata.gateway")
 
 _BASE = Path(__file__).parent.parent.parent  # KoreData/ root
 _DATA = get_koredata_dir()
+_SAVED_SEARCHES_FILE       = _DATA / "SavedSearches.json"
+_LEGACY_SAVED_SEARCHES_FILE = _DATA / "OutputSets.json"
 
 
 def _scrape_data_root() -> Path:
@@ -433,6 +439,7 @@ _INSTR_SEARCH = (
     "Use koredata_search(query, domains) to search across services. "
     "Omit domains to search all at once. "
     "Results include a snippet field (first ~300 chars) and an artifact_ref for follow-up fetches. "
+    "For a preconfigured recurring search, call koredata_savedsearch_run(name). "
     "Base answers ONLY on content retrieved from the get_* tools — do not supplement with training knowledge."
 )
 
@@ -605,6 +612,22 @@ async def api_sentence_get(locator: str):
     return await koredata_get_sentence(locator)
 
 
+def _saved_search_payload(search: _SearchRequest) -> dict[str, object]:
+    return {
+        "query":     search.query,
+        "domains":   search.domains,
+        "since":     search.since,
+        "until":     search.until,
+        "mode":      search.mode,
+        "min_match": search.min_match,
+        "limit":     search.limit,
+    }
+
+
+class _SavedSearchRequest(_SearchRequest):
+    name: str
+
+
 # ===========================================================================
 # MCP tools
 # ===========================================================================
@@ -640,6 +663,28 @@ async def koredata_search(
         domains = [d.strip() for d in domains.split(",") if d.strip()]
     req = _SearchRequest(query=query, domains=domains or [], since=since, until=until, limit=limit)
     return await api_search(req)
+
+
+@_mcp.tool()
+async def koredata_savedsearch_list() -> dict[str, list[dict]]:
+    """List saved KoreData SavedSearch definitions."""
+    return {"saved_searches": _load_saved_searches(_SAVED_SEARCHES_FILE, _LEGACY_SAVED_SEARCHES_FILE)}
+
+
+@_mcp.tool()
+async def koredata_savedsearch_run(name: str) -> dict:
+    """Run a named, preconfigured KoreData SavedSearch.
+
+    SavedSearch definitions are saved gateway search definitions. Use koredata_savedsearch_list()
+    to discover available names, then call this tool for the selected set.
+    """
+    saved_search = _find_saved_search(_SAVED_SEARCHES_FILE, name, _LEGACY_SAVED_SEARCHES_FILE)
+    if saved_search is None:
+        return {"error": f"SavedSearch not found: {name}"}
+    search = saved_search.get("search")
+    if not isinstance(search, dict):
+        return {"error": f"SavedSearch is invalid: {saved_search.get('name', name)}"}
+    return await api_search(_SearchRequest(**search))
 
 
 @_mcp.tool()
@@ -931,6 +976,42 @@ register_gateway_api_routes(
     get_full_text = koredata_get_full_text,
     get_sentence  = koredata_get_sentence,
 )
+
+
+@app.get("/api/savedsearches")
+async def api_list_saved_searches() -> dict[str, list[dict]]:
+    """Return saved, named SavedSearch definitions."""
+    return {"saved_searches": _load_saved_searches(_SAVED_SEARCHES_FILE, _LEGACY_SAVED_SEARCHES_FILE)}
+
+
+@app.post("/api/savedsearches")
+async def api_save_saved_search(request: _SavedSearchRequest) -> dict:
+    """Create or replace a named SavedSearch definition."""
+    name = request.name.strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="SavedSearch name is required")
+    if len(name) > 120:
+        raise HTTPException(status_code=400, detail="SavedSearch name must be 120 characters or fewer")
+    saved_search = {"name": name, "search": _saved_search_payload(request)}
+    return {"saved_search": _upsert_saved_search(_SAVED_SEARCHES_FILE, saved_search, _LEGACY_SAVED_SEARCHES_FILE)}
+
+
+@app.delete("/api/savedsearches")
+async def api_delete_saved_searches(names: list[str] = Query()) -> dict[str, list[str]]:
+    """Delete the named SavedSearch definitions."""
+    return {"deleted": _delete_saved_searches(_SAVED_SEARCHES_FILE, names, _LEGACY_SAVED_SEARCHES_FILE)}
+
+
+@app.post("/api/savedsearches/{name}/run")
+async def api_run_saved_search(name: str) -> dict:
+    """Run one SavedSearch through the normal KoreData search pipeline."""
+    saved_search = _find_saved_search(_SAVED_SEARCHES_FILE, name, _LEGACY_SAVED_SEARCHES_FILE)
+    if saved_search is None:
+        raise HTTPException(status_code=404, detail=f"SavedSearch not found: {name}")
+    search = saved_search.get("search")
+    if not isinstance(search, dict):
+        raise HTTPException(status_code=422, detail=f"SavedSearch is invalid: {saved_search.get('name', name)}")
+    return await api_search(_SearchRequest(**search))
 
 
 # ===========================================================================

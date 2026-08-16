@@ -418,16 +418,22 @@ def resolve_model_name(requested_model: str, available_models: list[str]) -> str
         return exact_suffix_matches[0]
 
     # Substring match as a last resort - only accepted when exactly one model matches.
-    # Use word-boundary-aware matching so that "20b" doesn't match "120b" and vice-versa.
-    # The negative look-behind/ahead blocks numeric adjacency (e.g. "3" inside "qwen3-coder")
-    # but allows hyphen-separated words (e.g. "cascade" matches "nemotron-cascade-2").
-    token_matches = [
-        model_name
-        for model_name in available_models
-        if re.search(rf"(?<![0-9]){re.escape(requested_lower)}(?![0-9a-z])", model_name.lower())
-    ]
-    if len(token_matches) == 1:
-        return token_matches[0]
+    # Human-friendly abbreviations such as "light" should match "nemotron-3.5-lightning".
+    # Retain numeric boundaries for shortcuts such as "20b", so they cannot select "120b".
+    if requested_lower[0].isdigit() or requested_lower[-1].isdigit():
+        substring_matches = [
+            model_name
+            for model_name in available_models
+            if re.search(rf"(?<![0-9]){re.escape(requested_lower)}(?![0-9a-z])", model_name.lower())
+        ]
+    else:
+        substring_matches = [
+            model_name
+            for model_name in available_models
+            if requested_lower in model_name.lower()
+        ]
+    if len(substring_matches) == 1:
+        return substring_matches[0]
 
     return None
 

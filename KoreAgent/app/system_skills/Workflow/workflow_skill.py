@@ -49,7 +49,7 @@ def _requires_existing_workflow(function):
     return guarded
 
 
-def workflow_create(objective: str, initial_tasks: list[object] | None = None) -> str:
+def workflow_create(objective: str, initial_tasks: list[object] | str | None = None) -> str:
     return _json(_summary(create_simple_plan(objective=objective, initial_tasks=initial_tasks)))
 
 

@@ -249,6 +249,31 @@
 </div>
 <div class="panel kcui-panel">
   <div class="panel-header kcui-panel-header" style="font-size:11px; cursor:pointer;"
+       onclick="toggleSavedSearchesPanel(this)">
+    SAVEDSEARCHES
+    <span class="ss-arrow" style="margin-left:auto; color:var(--dim);"> show</span>
+  </div>
+  <div id="saved-searches-body" style="display:none;">
+    <div class="panel-body kcui-panel-body">
+      <p class="meta" style="margin-bottom:0.6rem;">Save the current Search fields as a named, reusable search definition.</p>
+      <div style="display:flex; gap:0; margin-bottom:0.75rem;">
+        <input id="ss-name" type="text" maxlength="120" placeholder="SavedSearch name" autocomplete="off" style="flex:1;">
+        <button class="kcui-tag kcui-tag--sm kcui-tag--yellow" type="button" onclick="saveCurrentSavedSearch()">SAVE CURRENT SEARCH</button>
+      </div>
+      <div style="display:flex; gap:var(--kcui-gap-panel); align-items:stretch;">
+        <select id="ss-list" multiple size="8" aria-label="SavedSearches" style="flex:1; min-width:0; overflow-y:auto;"
+                onchange="updateSavedSearchActions()"></select>
+        <div style="display:flex; flex-direction:column; gap:0.45rem; justify-content:flex-start;">
+          <button id="ss-run"     class="kcui-tag kcui-tag--sm kcui-tag--yellow" type="button" onclick="runSelectedSavedSearch()" disabled>RUN</button>
+          <button id="ss-delete"  class="kcui-tag kcui-tag--sm kcui-tag--warning" type="button" onclick="deleteSelectedSavedSearches()" disabled>DELETE</button>
+        </div>
+      </div>
+      <p id="ss-status" class="meta" style="margin-top:0.55rem; min-height:1.1em;"></p>
+    </div>
+  </div>
+</div>
+<div class="panel kcui-panel">
+  <div class="panel-header kcui-panel-header" style="font-size:11px; cursor:pointer;"
        onclick="const b=this.nextElementSibling; const arrow=this.querySelector('.sg-arrow'); const open=b.style.display!=='none'; b.style.display=open?'none':''; arrow.textContent=open?' show':' hide';">
     SEARCH GUIDE
     <span class="sg-arrow" style="margin-left:auto; color:var(--dim);"> show</span>
@@ -434,17 +459,13 @@ function renderCards(data) {
 function renderCard(r, searchQuery) {
   const title   = escHtml(decodeHtml(r.title || '(untitled)'));
   const snippet = escHtml(decodeHtml(r.snippet || r.summary || ''));
-  const feedBase = suiteBaseUrl((window.__koreSuiteUrls || {}).korefeed);
   let meta = '';
   let titleHref = r.url || '';
   if (r.type === 'feed_entry') {
     const src = r.source ? escHtml(decodeHtml(r.source)) : '';
     const ts  = r.published_at ? ` | ${escHtml(r.published_at.slice(0,10))}` : '';
     meta = `${src}${ts}`;
-    const feedDomain = r.feed_domain || r.domain;
-    if (feedDomain && r.id != null && feedBase) {
-      titleHref = `${feedBase}/ui/feeds/${encodeURIComponent(feedDomain)}/${encodeURIComponent(r.id)}`;
-    }
+    titleHref = '';
   } else if (r.type === 'reference_article') {
     meta = r.word_count ? `${r.word_count.toLocaleString()} words` : '';
   } else if (r.type === 'library_book') {
@@ -471,7 +492,7 @@ function renderCard(r, searchQuery) {
   const typeLabel = (r.type || '').replace(/_/g, ' ');
   const titleHtml = titleHref
     ? `<a class="rc-title" href="${escHtml(titleHref)}">${title}</a>`
-    : `<span class="rc-title">${title}</span>`;
+    : `<span class="rc-title rc-title--static">${title}</span>`;
   const sourceLink = r.type === 'feed_entry' && r.url
     ? ` <a href="${escHtml(r.url)}" style="color:var(--amber);">(source link)</a>`
     : '';
@@ -512,8 +533,35 @@ document.addEventListener('click', function(e) {
 });
 
 async function runSearch() {
+  const payload = getSearchPayload();
+  if (!payload) return;
+
+  document.getElementById('sq-spinner').style.display = '';
+  document.getElementById('sq-results-panel').style.display = 'none';
+
+  try {
+    const resp = await fetch('/api/search', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(payload),
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.detail || 'Search failed');
+    renderSearchResult(data, payload.mode);
+  } catch (e) {
+    document.getElementById('sq-results-meta').textContent = 'Error: ' + e.message;
+    document.getElementById('sq-results-panel').style.display = '';
+  } finally {
+    document.getElementById('sq-spinner').style.display = 'none';
+  }
+}
+
+function getSearchPayload() {
   const query = document.getElementById('sq-query').value.trim();
-  if (!query) { document.getElementById('sq-query').focus(); return; }
+  if (!query) {
+    document.getElementById('sq-query').focus();
+    return null;
+  }
 
   const domains   = [...document.querySelectorAll('.sq-domain:checked')].map(e => e.value);
   const since     = document.getElementById('sq-since').value;
@@ -527,36 +575,116 @@ async function runSearch() {
   if (until) payload.until = until;
   if (mode === 'semantic' && Number.isFinite(minMatch)) payload.min_match = minMatch;
 
-  document.getElementById('sq-spinner').style.display = '';
-  document.getElementById('sq-results-panel').style.display = 'none';
+  return payload;
+}
 
+function renderSearchResult(data, mode) {
+  const total       = Array.isArray(data.results) ? data.results.length : 0;
+  const searchMode  = data.mode || mode;
+  const warningText = Array.isArray(data.warnings) && data.warnings.length ? ` | ${data.warnings.join(' | ')}` : '';
+  document.getElementById('sq-results-meta').textContent =
+    `"${data.query}" | ${searchMode} | ${total} result${total !== 1 ? 's' : ''} across [${(data.domains_searched||[]).join(', ')}]${warningText}`;
+  document.getElementById('sq-json-pre').innerHTML = highlightJson(data);
+  renderCards(data);
+  saveSearchState(data);
+  document.getElementById('sq-results-panel').style.display = '';
+  showTab('cards');
+}
+
+function toggleSavedSearchesPanel(header) {
+  const body  = document.getElementById('saved-searches-body');
+  const arrow = header.querySelector('.ss-arrow');
+  const open  = body.style.display !== 'none';
+  body.style.display = open ? 'none' : '';
+  arrow.textContent  = open ? ' show' : ' hide';
+}
+
+function setSavedSearchStatus(text, isError = false) {
+  const status = document.getElementById('ss-status');
+  status.textContent = text;
+  status.style.color = isError ? 'var(--red)' : '';
+}
+
+function updateSavedSearchActions() {
+  const selected = [...document.getElementById('ss-list').selectedOptions];
+  document.getElementById('ss-run').disabled    = selected.length !== 1;
+  document.getElementById('ss-delete').disabled = selected.length === 0;
+}
+
+async function loadSavedSearches(selectedNames = []) {
+  const list = document.getElementById('ss-list');
+  const selected = new Set(selectedNames);
   try {
-    const resp = await fetch('/api/search', {
+    const resp = await fetch('/api/savedsearches');
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.detail || 'Could not load SavedSearches');
+    list.replaceChildren(...(data.saved_searches || []).map(item => {
+      const option = document.createElement('option');
+      option.value = item.name;
+      option.textContent = item.name;
+      option.selected = selected.has(item.name);
+      return option;
+    }));
+    updateSavedSearchActions();
+  } catch (e) {
+    setSavedSearchStatus('Error: ' + e.message, true);
+  }
+}
+
+async function saveCurrentSavedSearch() {
+  const name    = document.getElementById('ss-name').value.trim();
+  const payload = getSearchPayload();
+  if (!name || !payload) {
+    if (!name) document.getElementById('ss-name').focus();
+    return;
+  }
+  try {
+    const resp = await fetch('/api/savedsearches', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify(payload),
+      body:    JSON.stringify({ name, ...payload }),
     });
     const data = await resp.json();
+    if (!resp.ok) throw new Error(data.detail || 'Could not save SavedSearch');
+    await loadSavedSearches([data.saved_search.name]);
+    setSavedSearchStatus(`SavedSearch saved: ${data.saved_search.name}`);
+  } catch (e) {
+    setSavedSearchStatus('Error: ' + e.message, true);
+  }
+}
 
-    // meta line
-    const total = Array.isArray(data.results) ? data.results.length : 0;
-    const searchMode = data.mode || mode;
-    const warningText = Array.isArray(data.warnings) && data.warnings.length ? ` | ${data.warnings.join(' | ')}` : '';
-    document.getElementById('sq-results-meta').textContent =
-      `"${data.query}" | ${searchMode} | ${total} result${total !== 1 ? 's' : ''} across [${(data.domains_searched||[]).join(', ')}]${warningText}`;
+async function deleteSelectedSavedSearches() {
+  const names = [...document.getElementById('ss-list').selectedOptions].map(option => option.value);
+  if (!names.length) return;
+  try {
+    const query = new URLSearchParams(names.map(name => ['names', name]));
+    const resp  = await fetch(`/api/savedsearches?${query}`, { method: 'DELETE' });
+    const data  = await resp.json();
+    if (!resp.ok) throw new Error(data.detail || 'Could not delete SavedSearches');
+    await loadSavedSearches();
+    setSavedSearchStatus(`Deleted ${data.deleted.length} SavedSearch${data.deleted.length === 1 ? '' : 'es'}.`);
+  } catch (e) {
+    setSavedSearchStatus('Error: ' + e.message, true);
+  }
+}
 
-    // JSON view
-    document.getElementById('sq-json-pre').innerHTML = highlightJson(data);
-
-    // cards view
-    renderCards(data);
-    saveSearchState(data);
-
-    document.getElementById('sq-results-panel').style.display = '';
-    showTab('cards');
+async function runSelectedSavedSearch() {
+  const selected = [...document.getElementById('ss-list').selectedOptions];
+  if (selected.length !== 1) return;
+  const name = selected[0].value;
+  document.getElementById('sq-spinner').style.display = '';
+  document.getElementById('sq-results-panel').style.display = 'none';
+  setSavedSearchStatus(`Running SavedSearch: ${name}`);
+  try {
+    const resp = await fetch(`/api/savedsearches/${encodeURIComponent(name)}/run`, { method: 'POST' });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.detail || 'SavedSearch failed');
+    renderSearchResult(data, data.mode || 'keyword');
+    setSavedSearchStatus(`Completed SavedSearch: ${name}`);
   } catch (e) {
     document.getElementById('sq-results-meta').textContent = 'Error: ' + e.message;
     document.getElementById('sq-results-panel').style.display = '';
+    setSavedSearchStatus('Error: ' + e.message, true);
   } finally {
     document.getElementById('sq-spinner').style.display = 'none';
   }
@@ -614,7 +742,10 @@ function restoreSearchState() {
   } catch (_) {}
 }
 
-document.addEventListener('DOMContentLoaded', restoreSearchState);
+document.addEventListener('DOMContentLoaded', () => {
+  restoreSearchState();
+  loadSavedSearches();
+});
 
 const _SVC_STATS = {
   feeds:     [['domains','total_domains'],['feeds','total_feeds'],['entries','total_entries']],

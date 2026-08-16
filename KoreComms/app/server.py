@@ -97,6 +97,16 @@ def _store_classic_email_config(config: dict, form: dict, *, preserve_passwords:
     config["import_recent_read"] = form.get("import_recent_read") == "on"
 
 
+def _store_sftp_file_config(config: dict, form: dict, *, preserve_password: bool = False) -> None:
+    remote_path = str(form["sftp_remote_path"] or "").strip()
+    if not remote_path.startswith("/"):
+        raise HTTPException(400, "SFTP destination file must be an absolute remote path")
+    for key in ("sftp_host", "sftp_port", "sftp_username", "sftp_remote_path", "send_poll_interval"):
+        config[key.removeprefix("sftp_")] = form[key]
+    if form["sftp_password"] or not preserve_password:
+        config["password"] = crypto.encrypt(form["sftp_password"]) if form["sftp_password"] else ""
+
+
 def _reset_connection_timing(iface_id: int, config: dict) -> None:
     receive_interval = int(
         config.get("receive_poll_interval", config.get("poll_interval", cfg.get("poll_interval", 60)))
@@ -250,6 +260,10 @@ def api_send(req: SendRequest):
     if iface_row is None:
         raise HTTPException(404, "Interface not found")
     recipient = req.recipient.strip()
+    if iface_row["type"] == "sftp_file":
+        if recipient or req.distribution_list_id:
+            raise HTTPException(400, "SFTP file connections use their configured destination and accept no recipient")
+        return _api_send_one(iface_row, "configured SFTP file", req.subject, req.content)
     if bool(recipient) == bool(req.distribution_list_id):
         raise HTTPException(400, "Specify exactly one of recipient or distribution_list_id")
     if recipient:
@@ -348,8 +362,6 @@ def api_delivery_bind(req: DeliveryBindingRequest):
         raise HTTPException(400, "chat_name is required")
     if req.distribution_list_id and list_name:
         raise HTTPException(400, "Specify a distribution list by ID or name, not both")
-    if bool(recipient) == bool(req.distribution_list_id or list_name):
-        raise HTTPException(400, "Specify exactly one of recipient, distribution_list_id, or distribution_list")
     iface = None
     if connection_name:
         interfaces = db.interface_list()
@@ -364,6 +376,12 @@ def api_delivery_bind(req: DeliveryBindingRequest):
             names = ", ".join(row["name"] for row in matches)
             raise HTTPException(409, f"Connection '{connection_name}' is ambiguous: {names}")
         iface = matches[0]
+    is_sftp_file = iface is not None and iface["type"] == "sftp_file"
+    if is_sftp_file:
+        if recipient or req.distribution_list_id or list_name:
+            raise HTTPException(400, "SFTP file connections use their configured destination and accept no recipient")
+    elif bool(recipient) == bool(req.distribution_list_id or list_name):
+        raise HTTPException(400, "Specify exactly one of recipient, distribution_list_id, or distribution_list")
     list_row = None
     if req.distribution_list_id:
         list_row = db.distribution_list_get(req.distribution_list_id)
@@ -390,7 +408,7 @@ def api_delivery_bind(req: DeliveryBindingRequest):
             list_id         = list_id,
             subject         = subject,
             enabled         = req.enabled,
-            activity_detail = f"conv via={iface['name']} to={list_row['name'] if list_row else recipient}",
+            activity_detail = f"conv via={iface['name']} to={list_row['name'] if list_row else recipient or 'configured SFTP file'}",
         )
     except ValueError:
         raise HTTPException(409, "Chat is already bound to a different connection") from None
@@ -408,10 +426,89 @@ def api_delivery_bind(req: DeliveryBindingRequest):
         "conversation_id":      conv_id,
         "chat_name":            chat_name,
         "connection":           iface["name"],
-        "recipient":            recipient or None,
+        "recipient":            recipient or ("configured SFTP file" if is_sftp_file else None),
         "distribution_list_id": list_id,
         "distribution_list":    list_row["name"] if list_row else None,
         "enabled":              req.enabled,
+    }
+
+
+def _delivery_binding_conversation(chat_name: str) -> dict:
+    conversation = db.conversation_get_by_name(chat_name.strip())
+    if conversation is None:
+        raise HTTPException(404, f"No delivery binding exists for chat '{chat_name}'")
+    return conversation
+
+
+def _set_delivery_binding_active(chat_name: str, active: bool) -> dict:
+    conversation = _delivery_binding_conversation(chat_name)
+    db.conversation_set_delivery(
+        conversation["id"],
+        str(conversation.get("delivery_recipient") or ""),
+        conversation.get("delivery_list_id"),
+        str(conversation.get("delivery_subject") or ""),
+        active,
+    )
+    action = "delivery_resumed" if active else "delivery_paused"
+    db.log_activity(action, f"conv={conversation['id']} via={conversation['interface_name']}")
+    return {
+        "chat_name":  conversation["chat_name"],
+        "connection": conversation["interface_name"],
+        "active":     active,
+    }
+
+
+@app.post("/api/delivery-bindings/{chat_name}/pause")
+def api_delivery_pause(chat_name: str):
+    """Pause automatic outbound copying for one delivery-bound chat."""
+    return _set_delivery_binding_active(chat_name, False)
+
+
+@app.post("/api/delivery-bindings/{chat_name}/resume")
+def api_delivery_resume(chat_name: str):
+    """Resume automatic outbound copying for one delivery-bound chat."""
+    return _set_delivery_binding_active(chat_name, True)
+
+
+@app.post("/api/delivery-bindings/{chat_name}/publishprevious")
+def api_delivery_publish_previous(chat_name: str):
+    """Explicitly publish the newest eligible agent output, even while paused."""
+    conversation = _delivery_binding_conversation(chat_name)
+    if not conversation.get("kc_chat_id"):
+        raise HTTPException(409, "Delivery binding has no KoreChat conversation")
+    try:
+        outbound = kc_client.get_messages(int(conversation["kc_chat_id"]), direction="outbound")
+    except RuntimeError as exc:
+        raise HTTPException(503, f"Could not read KoreChat output: {exc}") from exc
+
+    eligible = [
+        message for message in outbound
+        if str(message.get("content") or "").strip()
+        and message.get("delivery_eligible", True)
+        and not kc_client.has_internal_message_tag(message)
+    ]
+    if not eligible:
+        raise HTTPException(409, "There is no eligible agent output to publish")
+    message   = next((item for item in reversed(eligible) if item.get("status") == "draft"), eligible[-1])
+    interface = db.interface_get(int(conversation["interface_id"]))
+    if interface is None:
+        raise HTTPException(404, "Connection not found")
+    try:
+        build_adapter(interface).route_reply(conversation["id"], str(message["content"]))
+        kc_client.mark_message_sent(message["id"])
+    except RuntimeError as exc:
+        raise HTTPException(502, f"Could not publish output: {exc}") from exc
+    db.external_message_create(
+        conversation_id     = conversation["id"],
+        external_message_id = f"kc:{message['id']}",
+        direction           = "outbound",
+    )
+    db.log_activity("delivery_published", f"conv={conversation['id']} kc_msg={message['id']} via={interface['name']}")
+    return {
+        "chat_name":  conversation["chat_name"],
+        "connection": interface["name"],
+        "message_id": message["id"],
+        "active":     bool(conversation.get("delivery_enabled")),
     }
 
 
@@ -609,6 +706,11 @@ def ui_connections_create(
     outgoing_security: str = Form(default="starttls"),
     receive_poll_interval: int = Form(default=60),
     send_poll_interval: int = Form(default=10),
+    sftp_host:       str = Form(default=""),
+    sftp_port:       int = Form(default=22),
+    sftp_username:   str = Form(default=""),
+    sftp_password:   str = Form(default=""),
+    sftp_remote_path: str = Form(default=""),
 ):
     if iface_type not in REGISTRY or iface_type == "manual":
         raise HTTPException(400, "Unsupported interface type")
@@ -621,6 +723,8 @@ def ui_connections_create(
         config["channel_ids"] = _parse_id_list(channel_ids)
     if iface_type == "classic_email":
         _store_classic_email_config(config, locals())
+    if iface_type == "sftp_file":
+        _store_sftp_file_config(config, locals())
     iface_id = db.interface_create(iface_type, name, config)
     _reset_connection_timing(iface_id, config)
     return RedirectResponse(f"/connections/{iface_id}", status_code=303)
@@ -673,6 +777,11 @@ def ui_connections_update(
     outgoing_security: str = Form(default="starttls"),
     receive_poll_interval: int = Form(default=60),
     send_poll_interval: int = Form(default=10),
+    sftp_host:       str = Form(default=""),
+    sftp_port:       int = Form(default=22),
+    sftp_username:   str = Form(default=""),
+    sftp_password:   str = Form(default=""),
+    sftp_remote_path: str = Form(default=""),
     enabled:       str = Form(default="off"),
 ):
     iface = db.interface_get(iface_id)
@@ -691,6 +800,8 @@ def ui_connections_update(
         existing["channel_ids"] = _parse_id_list(channel_ids)
     if iface["type"] == "classic_email":
         _store_classic_email_config(existing, locals(), preserve_passwords=True)
+    if iface["type"] == "sftp_file":
+        _store_sftp_file_config(existing, locals(), preserve_password=True)
     db.interface_update(iface_id, name, existing, enabled == "on")
     _reset_connection_timing(iface_id, existing)
     return RedirectResponse("/connections", status_code=303)
@@ -1012,6 +1123,7 @@ def ui_conversation(request: Request, conv_id: int):
         _ctx(
             conv=conv,
             iface=iface,
+            iface_config=json.loads(iface.get("config_json", "{}")) if iface else {},
             thread=thread,
             kc_conv=kc_data,
             distribution_lists=db.distribution_list_list(conv["interface_id"]),
@@ -1030,16 +1142,22 @@ def ui_conversation_delivery(
     conv = db.conversation_get(conv_id)
     if conv is None:
         raise HTTPException(404, "Conversation not found")
+    iface = db.interface_get(conv["interface_id"])
+    if iface is None:
+        raise HTTPException(404, "Interface not found")
     recipient = recipient.strip()
     list_id = distribution_list_id or None
-    if enabled == "on" and bool(recipient) == bool(list_id):
+    is_sftp_file = iface["type"] == "sftp_file"
+    if is_sftp_file and (recipient or list_id):
+        raise HTTPException(400, "SFTP file connections use their configured destination and accept no recipient")
+    if not is_sftp_file and enabled == "on" and bool(recipient) == bool(list_id):
         raise HTTPException(400, "Choose exactly one recipient or distribution list when delivery is enabled")
     if list_id:
         list_row = db.distribution_list_get(list_id)
         if list_row is None or list_row["interface_id"] != conv["interface_id"]:
             raise HTTPException(400, "Distribution list does not belong to this connection")
     db.conversation_set_delivery(conv_id, recipient, list_id, subject.strip(), enabled == "on")
-    destination = db.distribution_list_get(list_id)["name"] if list_id else recipient or "(disabled)"
+    destination = db.distribution_list_get(list_id)["name"] if list_id else recipient or ("configured SFTP file" if is_sftp_file else "(disabled)")
     db.log_activity("delivery_bound", f"conv={conv_id} to={destination}")
     return RedirectResponse(f"/conversation/{conv_id}", status_code=303)
 

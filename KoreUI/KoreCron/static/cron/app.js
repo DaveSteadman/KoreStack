@@ -132,6 +132,14 @@ cronPromptRowStyle.textContent = `
     min-width: 2.1rem;
     text-align: center;
   }
+  textarea.cronprompt-prompt {
+    box-sizing: border-box;
+    display: block;
+    min-height: 2.35rem;
+    overflow-y: hidden;
+    resize: vertical;
+    width: 100%;
+  }
 `;
 document.head.append(cronPromptRowStyle);
 
@@ -153,6 +161,13 @@ function updateEditorChrome() {
   agentResumeButton.disabled = !hasChatName;
 }
 
+
+function fitPromptTextarea(textarea) {
+  textarea.style.height = 'auto';
+  textarea.style.height = `${textarea.scrollHeight}px`;
+}
+
+
 function addPromptRow(value = '') {
   const row       = document.createElement('div');
   const label     = document.createElement('label');
@@ -163,10 +178,12 @@ function addPromptRow(value = '') {
 
   label.className   = 'kcui-form-label';
   label.textContent = `Prompt ${index}`;
-  textarea.rows     = 3;
+  textarea.className = 'cronprompt-prompt';
+  textarea.rows     = 1;
   textarea.value    = value;
   textarea.placeholder = 'Prompt to send after the previous prompt has completed.';
   textarea.dataset.prompt = 'true';
+  textarea.addEventListener('input', () => fitPromptTextarea(textarea));
   remove.type        = 'button';
   remove.className   = 'kcui-tag kcui-tag--danger';
   remove.textContent = 'Remove';
@@ -179,6 +196,7 @@ function addPromptRow(value = '') {
   controls.append(remove);
   row.append(label, textarea, controls);
   promptList.append(row);
+  fitPromptTextarea(textarea);
 }
 
 function renumberPrompts() {

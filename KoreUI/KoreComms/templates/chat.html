@@ -44,6 +44,9 @@
     <div class="kcui-panel-header">Delivery target</div>
     <div class="kcui-panel-body">
       <p class="kcui-meta chat-delivery-connection">Connection: {{ iface.name }}</p>
+      {% if iface.type == 'sftp_file' %}
+      <p class="kcui-meta">Destination: {{ iface_config.remote_path or '(not configured)' }}. Each delivery replaces this file.</p>
+      {% else %}
       <label for="delivery-recipient">Recipient</label>
       <input id="delivery-recipient" name="recipient" type="email" value="{{ conv.delivery_recipient or '' }}" placeholder="person@example.com">
       <label for="delivery-list">Or distribution list</label>
@@ -55,6 +58,7 @@
       </select>
       <label for="delivery-subject">Subject</label>
       <input id="delivery-subject" name="subject" type="text" value="{{ conv.delivery_subject or conv.korechat_id or 'KoreComms report' }}">
+      {% endif %}
       <label class="kcui-checkbox-label"><input name="enabled" type="checkbox" value="on" {% if conv.delivery_enabled %}checked{% endif %}> Send agent replies to this target</label>
       <button class="kcui-tag kcui-tag--accent" type="submit">save delivery</button>
     </div>
@@ -168,7 +172,7 @@
   .agent-thinking { color: var(--amber); animation: ag-pulse 1.1s ease-in-out infinite alternate; }
   @keyframes ag-pulse { from { opacity: .4; } to { opacity: 1; } }
 
-  .chat-compose {
+  #chat-form.chat-compose {
     border-top: 1px solid var(--border); background: var(--panel);
     padding: var(--kcui-gap-panel);
     display: flex; flex-direction: row; gap: 8px; align-items: stretch;

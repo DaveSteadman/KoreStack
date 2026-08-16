@@ -48,6 +48,8 @@ python .\KoreComms\main.py
 - Start with the manual interface first before wiring external providers
 - Add one connection at a time and confirm send and receive flows before enabling more channels
 - Treat external secrets and OAuth credentials as local environment state, not repository defaults
+- An SFTP file connection is output-only: every delivery replaces its configured absolute remote file.
+  Its server host key must be present in the service account's `known_hosts` file.
 
 ## Troubleshooting
 

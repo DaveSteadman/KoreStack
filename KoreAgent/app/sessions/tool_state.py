@@ -13,7 +13,6 @@ ALWAYS_ON_TOOL_NAMES = frozenset({
     "get_datetime_data",
     "tools_catalog_list",
     "tools_active_add",
-    "workflow_create",
 })
 
 _KC_TIMEOUT = 8

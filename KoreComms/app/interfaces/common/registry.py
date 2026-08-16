@@ -24,12 +24,14 @@ from app.interfaces.classic_email import ClassicEmailInterface
 from app.interfaces.discord import DiscordInterface
 from app.interfaces.gmail import GmailInterface
 from app.interfaces.manual import ManualInterface
+from app.interfaces.sftp_file import SftpFileInterface
 
 REGISTRY: dict[str, type[BaseInterface]] = {
     "manual": ManualInterface,
     "classic_email": ClassicEmailInterface,
     "discord": DiscordInterface,
     "gmail": GmailInterface,
+    "sftp_file": SftpFileInterface,
 }
 
 

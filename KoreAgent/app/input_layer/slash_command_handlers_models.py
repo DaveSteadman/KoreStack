@@ -8,6 +8,7 @@
 #   /llmserverconfig model list       -- list models available on the active server
 #   /llmserverconfig model <name>     -- switch the active model (clears history)
 #   /llmserverconfig ctx <n>          -- set context window size
+#   /llmserverconfig max_predict [n]  -- set/reset maximum completion tokens
 #   /llmserverconfig cpugpu <mode>    -- set Ollama CPU/GPU model placement
 #
 # Registered in slash_commands.py under the /llmserverconfig command.
@@ -71,14 +72,16 @@ def _cmd_llmserverconfig(arg: str, ctx: SlashCommandContext) -> None:
     # /llmserverconfig model list       -> list models available on the active server
     # /llmserverconfig model <name>     -> switch active model; clears history
     # /llmserverconfig ctx <n>          -> set context window size
+    # /llmserverconfig max_predict [n]  -> set/reset maximum completion tokens
     # /llmserverconfig cpugpu <mode>    -> set Ollama CPU/GPU model placement
     if not arg:
         ctx.output(
             f"Model: {ctx.config.resolved_model}  |  ctx: {ctx.config.num_ctx:,}  |  "
+            f"max_predict: {ctx.config.max_predict:,}  |  "
             f"backend: {get_active_backend()} @ {get_active_host()}",
             "info",
         )
-        ctx.output("Usage: /llmserverconfig model list | model <name> | ctx <n> | cpugpu <forcecpu|forcegpu|autogpu>", "dim")
+        ctx.output("Usage: /llmserverconfig model list | model <name> | ctx <n> | max_predict <n> | max_predict | cpugpu <forcecpu|forcegpu|autogpu>", "dim")
         return
 
     parts = arg.strip().split(None, 1)
@@ -93,6 +96,19 @@ def _cmd_llmserverconfig(arg: str, ctx: SlashCommandContext) -> None:
         ctx.config.num_ctx = n
         register_session_config(ctx.config.resolved_model, n)
         ctx.output(f"Context window: {n:,} tokens", "success")
+        return
+
+    if first == "max_predict":
+        if rest and not rest.isdigit():
+            ctx.output("Usage: /llmserverconfig max_predict <count>  |  /llmserverconfig max_predict resets to 512", "dim")
+            return
+        count = int(rest) if rest else 512
+        if count < 1:
+            ctx.output("max_predict must be at least 1.", "error")
+            return
+        ctx.config.max_predict = count
+        register_session_config(ctx.config.resolved_model, ctx.config.num_ctx, count)
+        ctx.output(f"Max prediction output: {count:,} tokens", "success")
         return
 
     if first == "cpugpu":
@@ -146,7 +162,7 @@ def _cmd_llmserverconfig(arg: str, ctx: SlashCommandContext) -> None:
         return
 
     ctx.output(
-        f"Unknown subcommand '{first}'. Usage: /llmserverconfig model list | model <name> | ctx <n> | cpugpu <forcecpu|forcegpu|autogpu>",
+        f"Unknown subcommand '{first}'. Usage: /llmserverconfig model list | model <name> | ctx <n> | max_predict <n> | max_predict | cpugpu <forcecpu|forcegpu|autogpu>",
         "error",
     )
 
@@ -264,7 +280,7 @@ def register_model_slash_commands(registry: dict[str, Callable], descriptions: d
     descriptions.update(
         {
             "/llmserver":       "<ollama|lmstudio> <host>  Switch model server",
-            "/llmserverconfig": "model list | model <name> | ctx <n> | cpugpu <forcecpu|forcegpu|autogpu>  Configure the active model, context window, and Ollama GPU use",
+            "/llmserverconfig": "model list | model <name> | ctx <n> | max_predict <n> | max_predict (reset 512) | cpugpu <forcecpu|forcegpu|autogpu>  Configure model, context, maximum output, and Ollama GPU use",
             "/stopmodel":       "[name]  Unload a running model from VRAM (Ollama only, defaults to active model)",
         }
     )

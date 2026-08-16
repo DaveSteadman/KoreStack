@@ -16,7 +16,7 @@
 
       <label for="name">Connection Name</label>
       <input type="text" id="name" name="name" value="{{ iface.name if iface else '' }}"
-            placeholder="{% if iface_type == 'discord' %}My Discord Bot{% elif iface_type == 'classic_email' %}My Email Account{% else %}My Gmail Account{% endif %}" required>
+            placeholder="{% if iface_type == 'discord' %}My Discord Bot{% elif iface_type == 'classic_email' %}My Email Account{% elif iface_type == 'sftp_file' %}Daily report file{% else %}My Gmail Account{% endif %}" required>
 
       {% if iface_type == "discord" %}
       <label for="bot_token">Discord Bot Token</label>
@@ -31,6 +31,23 @@
         KoreComms polls these channels for new user messages and posts replies back to the same channel or thread.
         Use a channel or thread ID as the recipient when calling <code>/api/send</code> for Discord.
       </p>
+      {% endif %}
+
+      {% if iface_type == "sftp_file" %}
+      <p class="kcui-meta">Each delivery replaces the entire configured remote file. This is an output-only connection.</p>
+      <label for="sftp_host">SFTP server</label>
+      <input type="text" id="sftp_host" name="sftp_host" value="{{ config.host if config else '' }}" placeholder="sftp.example.com" required>
+      <label for="sftp_port">SFTP port</label>
+      <input type="number" id="sftp_port" name="sftp_port" value="{{ config.port if config else 22 }}" min="1" max="65535" class="kcui-field-sm" required>
+      <label for="sftp_username">Username</label>
+      <input type="text" id="sftp_username" name="sftp_username" value="{{ config.username if config else '' }}" autocomplete="username" required>
+      <label for="sftp_password">Password</label>
+      <input type="password" id="sftp_password" name="sftp_password" placeholder="{% if iface and config.password %}(stored - paste to update){% else %}Password{% endif %}" autocomplete="current-password">
+      <label for="sftp_remote_path">Destination file</label>
+      <input type="text" id="sftp_remote_path" name="sftp_remote_path" value="{{ config.remote_path if config else '' }}" placeholder="/reports/ai-news.html" required>
+      <p class="kcui-meta">The remote host key must be present in the service account's known_hosts file.</p>
+      <label for="send_poll_interval">Send Polling Interval (seconds)</label>
+      <input id="send_poll_interval" name="send_poll_interval" type="number" value="{{ send_poll_interval if iface else 10 }}" min="1" max="3600" class="kcui-field-sm">
       {% endif %}
 
       {% if iface_type == "classic_email" %}
@@ -110,7 +127,7 @@
       </p>
       {% endif %}
 
-      {% if iface_type != "classic_email" %}<label for="poll_interval">Poll Interval (seconds)</label>
+      {% if iface_type != "classic_email" and iface_type != "sftp_file" %}<label for="poll_interval">Poll Interval (seconds)</label>
       <input type="number" id="poll_interval" name="poll_interval"
              value="{{ poll_interval }}" min="10" max="3600" class="kcui-field-sm">
       {% endif %}

@@ -43,14 +43,28 @@ const _ALL_COMMANDS = [
 const _CHAT_SUBS = ["new", "name", "list", "resume", "resumecopy", "park", "delete", "info"];
 
 // Sub-commands for /llmserverconfig.
-const _LLMSERVERCFG_SUBS = ["model", "ctx", "cpugpu"];
+const _LLMSERVERCFG_SUBS = ["model", "ctx", "max_predict", "cpugpu"];
 const _LLMSERVER_SUBS    = ["ollama", "lmstudio"];
 const _LLMSERVER_CONFIGS = ["forcecpu", "forcegpu", "autogpu"];
 const _SUGGEST_HINTS     = {
+    "/comms":   "Configure or control KoreComms delivery for this chat",
     cpugpu:    "Set Ollama CPU/GPU model placement",
+    max_predict: "Use /llmserverconfig max_predict <count>; use /llmserverconfig max_predict to reset to 512",
+    connection: "Pause, resume, or explicitly publish KoreComms output",
+    delivery:   "Bind this chat's agent output to a KoreComms connection",
     forcecpu:  "No GPU: run the model entirely on CPU",
     forcegpu:  "Request all model layers on the GPU",
     autogpu:   "Let Ollama choose CPU/GPU placement",
+    bind:       "Create or update the delivery target for this chat",
+    pause:      "Stop automatic copying of agent output to the connection",
+    resume:     "Resume automatic copying of pending and future agent output",
+    publishprevious: "Send the latest eligible agent output once, even while paused",
+    "--connection":  "Connection name; required for an individual recipient or an SFTP file",
+    "--to":          "Single email recipient",
+    "--to-list":     "Named KoreComms distribution list",
+    "--subject":     "Delivery subject; required when binding",
+    "--chat":        "Target another chat instead of the current chat",
+    "--startpaused": "Create the delivery binding paused; use connection resume to enable copying",
     ollama:    "Use an Ollama server",
     lmstudio:  "Use an LM Studio server",
 };
@@ -62,9 +76,11 @@ const _TOOLS_SUBS = ["active", "all"];
 const _WORKFLOW_SUBS = ["export", "import", "inspect"];
 
 // Sub-commands and options for /comms.
-const _COMMS_SUBS          = ["delivery"];
-const _COMMS_DELIVERY_SUBS = ["bind"];
-const _COMMS_BIND_OPTIONS  = ["--connection", "--to", "--to-list", "--subject", "--chat"];
+const _COMMS_SUBS             = ["delivery", "connection"];
+const _COMMS_DELIVERY_SUBS    = ["bind"];
+const _COMMS_CONNECTION_SUBS  = ["pause", "resume", "publishprevious"];
+const _COMMS_BIND_OPTIONS     = ["--connection", "--to", "--to-list", "--subject", "--chat", "--startpaused"];
+const _COMMS_CONNECTION_OPTIONS = ["--chat"];
 const _WORKSPACE_SUBS      = ["clear"];
 
 // Pre-compiled log line classification patterns.
@@ -1282,6 +1298,20 @@ function _parseSuggestContext(value) {
         }
         if (words.length === 1 && !rest.endsWith(" ")) {
             return { pool: _COMMS_SUBS, prefix: words[0], base: "/comms " };
+        }
+        if (words[0] === "connection") {
+            if (words.length === 1 && rest.endsWith(" ")) {
+                return { pool: _COMMS_CONNECTION_SUBS, prefix: "", base: "/comms connection " };
+            }
+            if (words.length === 2 && !rest.endsWith(" ")) {
+                return { pool: _COMMS_CONNECTION_SUBS, prefix: words[1], base: "/comms connection " };
+            }
+            if (!_COMMS_CONNECTION_SUBS.includes(words[1])) return null;
+            const usedOptions = new Set(words.filter((word) => word.startsWith("--")));
+            const pool = _COMMS_CONNECTION_OPTIONS.filter((option) => !usedOptions.has(option));
+            const lastWord = rest.endsWith(" ") ? "" : words[words.length - 1];
+            const base = rest.endsWith(" ") ? `${value}` : value.slice(0, value.length - lastWord.length);
+            return { pool, prefix: lastWord, base };
         }
         if (words[0] !== "delivery") return null;
         if (words.length === 1 && rest.endsWith(" ")) {

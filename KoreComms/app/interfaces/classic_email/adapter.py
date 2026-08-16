@@ -208,14 +208,14 @@ class ClassicEmailInterface(BaseInterface):
         inbound = db.external_message_get_last_inbound(conversation_id)
         if conv is None:
             raise RuntimeError(f"Conversation {conversation_id} not found")
-        if conv.get("delivery_enabled") and conv.get("delivery_list_id"):
+        if conv.get("delivery_list_id"):
             recipients = db.distribution_list_members(int(conv["delivery_list_id"]))
             if not recipients:
                 raise RuntimeError("Delivery list has no recipients")
             for recipient in recipients:
                 self._send(recipient["email"], conv.get("delivery_subject") or "KoreComms report", content)
             return
-        if conv.get("delivery_enabled") and conv.get("delivery_recipient"):
+        if conv.get("delivery_recipient"):
             self._send(conv["delivery_recipient"], conv.get("delivery_subject") or "KoreComms report", content)
             return
         if inbound is None:
