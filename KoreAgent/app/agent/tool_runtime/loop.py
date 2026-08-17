@@ -647,8 +647,6 @@ def run_tool_loop(
     clear_stop,
     tool_runtime_provider: object | None = None,
     on_tool_round_complete: object | None = None,
-    run_to_completion_remaining_provider: object | None = None,
-    workflow_contract_gaps_provider: object | None = None,
     on_token: object | None = None,
 ) -> tuple[str, int, int, bool, float, list[ToolCallResult]]:
     def _log(message: str = "") -> None:
@@ -671,26 +669,6 @@ def run_tool_loop(
     graph_write_guard_corrections = 0
     graph_write_guard_active = _is_graph_connection_write_request(user_prompt) and _tool_def_available(tool_defs, "graph_connection_create_many")
     web_evidence_guard_corrections = 0
-    plan_run_to_completion_requested = False
-
-    def _remaining_plan_tasks() -> list[dict]:
-        if not plan_run_to_completion_requested or run_to_completion_remaining_provider is None:
-            return []
-        try:
-            return list(run_to_completion_remaining_provider() or [])
-        except Exception as exc:
-            _log_file_only(f"[plan-run] Could not read remaining Workflow tasks: {exc}")
-            return []
-
-    def _workflow_contract_gaps() -> list[str]:
-        if workflow_contract_gaps_provider is None:
-            return []
-        try:
-            return [str(gap) for gap in workflow_contract_gaps_provider() or [] if str(gap).strip()]
-        except Exception as exc:
-            _log_file_only(f"[workflow] Could not evaluate the task contract: {exc}")
-            return []
-
     clear_stop()
     try:
         for round_num in range(1, config.max_iterations + 1):
@@ -777,32 +755,6 @@ def run_tool_loop(
                 if _synthetic_tc is not None:
                     _log_file_only(f"[warn] Round {round_num}: model emitted raw JSON tool call instead of invoking - forcing re-invocation.")
                     tool_calls = [_synthetic_tc]
-                elif workflow_contract_gaps := _workflow_contract_gaps():
-                    correction = (
-                        "The explicitly selected Workflow task contract is incomplete. Do not give a final answer yet. "
-                        "Address these unmet requirements: "
-                        + " ".join(f"- {gap}" for gap in workflow_contract_gaps)
-                    )
-                    _log_file_only(f"[workflow] Round {round_num}: blocking final answer; {len(workflow_contract_gaps)} contract gap(s).")
-                    messages.append({"role": "user", "content": correction})
-                    context_map.append({"round": round_num, "role": "user", "label": "[workflow contract gate]", "chars": len(correction), "auto_key": None, "msg_idx": len(messages) - 1})
-                    continue
-                elif remaining_plan_tasks := _remaining_plan_tasks():
-                    next_task = remaining_plan_tasks[0]
-                    task_id   = str(next_task.get("id") or "?")
-                    static    = next_task.get("static") or {}
-                    instruction = str(static.get("instruction") or static.get("description") or static.get("title") or "").strip()
-                    correction = (
-                        f"Plan run-to-completion is active. Do not give a final answer yet: Task {task_id} has not been run. "
-                        f"Carry out its full static instruction now: {instruction!r} "
-                        "Then record its outputs and evidence with workflow_record_task_result, save any other useful run-specific data, "
-                        "and call workflow_mark_task_ran. "
-                        "Continue through every remaining task in this same run."
-                    )
-                    _log_file_only(f"[plan-run] Round {round_num}: blocking final answer; remaining Task {task_id}.")
-                    messages.append({"role": "user", "content": correction})
-                    context_map.append({"round": round_num, "role": "user", "label": "[plan run-to-completion]", "chars": len(correction), "auto_key": None, "msg_idx": len(messages) - 1})
-                    continue
                 elif graph_write_guard_active and not _graph_connection_tool_already_called(tool_outputs):
                     connections = _extract_graph_connection_batch_from_text(candidate)
                     if connections:
@@ -917,20 +869,36 @@ def run_tool_loop(
                 _log(f"  -> {func_name}({', '.join(f'{k}={v!r}' for k, v in arguments.items())})")
                 if normalization_note:
                     _log_file_only(f"[tool-normalize] {normalization_note}")
+                output                = None
+                recovery_event        = None
+                auto_dataset_manifest = None
+                if func_name in current_all_known_tool_names and func_name not in set(current_active_tool_names or set()):
+                    try:
+                        from sessions.tool_selection import promote_selected_tools
+                        from sessions.tool_selection import related_tool_set
+
+                        related_tools = related_tool_set(
+                            func_name,
+                            known_tool_names=current_all_known_tool_names,
+                        ) or [func_name]
+                        promote_selected_tools(related_tools)
+                        current_active_tool_names = set(current_active_tool_names or set()) | set(related_tools)
+                        if tool_runtime_provider is not None:
+                            runtime = tool_runtime_provider() or {}
+                            current_catalog_gates = runtime.get("catalog_gates", current_catalog_gates)
+                            current_active_tool_names = set(
+                                runtime.get("active_tool_names", current_active_tool_names) or set()
+                            )
+                            current_all_known_tool_names = set(
+                                runtime.get("all_known_tool_names", current_all_known_tool_names) or set()
+                            )
+                        _log_file_only(
+                            f"[tool-activation] activated={','.join(related_tools)} requested={func_name}"
+                        )
+                    except Exception as activate_exc:
+                        _log_file_only(f"[tool-activation] could not activate '{func_name}': {activate_exc}")
                 try:
                     output = execute_tool_call(func_name, arguments, config.skills_payload, user_prompt, current_catalog_gates, current_active_tool_names)
-                    raw_result_content = output["result"]
-                    auto_dataset_manifest = None
-                    if not output.get("is_error"):
-                        try:
-                            auto_dataset_manifest = auto_route_tool_result(func_name, arguments, raw_result_content)
-                        except Exception as exc:
-                            _log_file_only(f"[dataset-auto-route] skipped for {func_name}: {exc}")
-                    result_content = auto_dataset_manifest or raw_result_content
-                    if not isinstance(result_content, str):
-                        result_content = json.dumps(result_content, default=str)
-                    if output.get("is_error"):
-                        result_content = f"[SKILL_ERROR] {result_content}"
                 except Exception as exc:
                     recovery_event = _classify_tool_recovery(
                         func_name,
@@ -940,18 +908,69 @@ def run_tool_loop(
                     if recovery_event.get("classification") == "inactive_known":
                         try:
                             from sessions.tool_selection import promote_selected_tools
+                            from sessions.tool_selection import related_tool_set
 
-                            promote_selected_tools([func_name])
+                            related_tools = related_tool_set(
+                                func_name,
+                                known_tool_names=current_all_known_tool_names,
+                            ) or [func_name]
+                            promote_selected_tools(related_tools)
                             recovery_event["auto_activated"] = True
-                            current_active_tool_names = set(current_active_tool_names or set()) | {func_name}
+                            current_active_tool_names = set(current_active_tool_names or set()) | set(related_tools)
                         except Exception as activate_exc:
                             recovery_event["auto_activated"] = False
                             _log_file_only(f"[tool-recovery] could not auto-activate '{func_name}': {activate_exc}")
-                    recovery_event["active_tool_names"] = sorted(current_active_tool_names or set())
-                    if recovery_event.get("classification") != "active_known":
-                        round_recovery_events.append(recovery_event)
-                    result_content = f"[SKILL_ERROR] Error executing {func_name}: {exc}"
-                    output = ToolCallResult(tool=func_name, function=func_name, module="", arguments=arguments, result=result_content, status="error", error=str(exc))
+                        else:
+                            if tool_runtime_provider is not None:
+                                runtime = tool_runtime_provider() or {}
+                                current_catalog_gates = runtime.get("catalog_gates", current_catalog_gates)
+                                current_active_tool_names = set(
+                                    runtime.get("active_tool_names", current_active_tool_names) or set()
+                                )
+                                current_all_known_tool_names = set(
+                                    runtime.get("all_known_tool_names", current_all_known_tool_names) or set()
+                                )
+
+                            # The call was syntactically valid and the tool is known.  Execute it
+                            # now that it is active instead of consuming a model round simply to
+                            # repeat an identical call.
+                            try:
+                                output = execute_tool_call(
+                                    func_name,
+                                    arguments,
+                                    config.skills_payload,
+                                    user_prompt,
+                                    current_catalog_gates,
+                                    current_active_tool_names,
+                                )
+                            except Exception as retry_exc:
+                                exc = retry_exc
+                                recovery_event = _classify_tool_recovery(
+                                    func_name,
+                                    active_tool_names=current_active_tool_names,
+                                    all_known_tool_names=current_all_known_tool_names,
+                                )
+                            else:
+                                recovery_event = None
+
+                    if recovery_event is not None:
+                        recovery_event["active_tool_names"] = sorted(current_active_tool_names or set())
+                        if recovery_event.get("classification") != "active_known":
+                            round_recovery_events.append(recovery_event)
+                        result_content = f"[SKILL_ERROR] Error executing {func_name}: {exc}"
+                        output = ToolCallResult(tool=func_name, function=func_name, module="", arguments=arguments, result=result_content, status="error", error=str(exc))
+
+                raw_result_content = output["result"]
+                if not output.get("is_error"):
+                    try:
+                        auto_dataset_manifest = auto_route_tool_result(func_name, arguments, raw_result_content)
+                    except Exception as exc:
+                        _log_file_only(f"[dataset-auto-route] skipped for {func_name}: {exc}")
+                result_content = auto_dataset_manifest or raw_result_content
+                if not isinstance(result_content, str):
+                    result_content = json.dumps(result_content, default=str)
+                if output.get("is_error"):
+                    result_content = f"[SKILL_ERROR] {result_content}"
 
                 is_scratch_reader = func_name.lower().startswith("scratch_")
                 auto_scratchpad_key = None
@@ -1008,33 +1027,9 @@ def run_tool_loop(
                 except Exception as exc:
                     _log_file_only(f"[error] on_tool_round_complete callback failed: {exc}")
 
-            if any(
-                str(item.get("tool") or item.get("function") or "") == "workflow_run_to_completion"
-                and str(item.get("status") or "") != "error"
-                for item in round_outputs
-            ):
-                plan_run_to_completion_requested = True
-                _log_file_only("[plan-run] Host run-to-completion guard activated.")
-
             _log_file_only(f"TOOL ROUND {round_num} - EXECUTION FLOW")
             _log_file_only(format_tool_outputs(round_outputs))
         else:
-            workflow_contract_gaps = _workflow_contract_gaps()
-            if workflow_contract_gaps:
-                final_response = "The run stopped before the selected Workflow task contract was complete: " + " ".join(workflow_contract_gaps)
-                run_success = False
-                _log_file_only(f"[workflow] Tool-round limit reached with {len(workflow_contract_gaps)} contract gap(s).")
-                return final_response, prompt_tokens, completion_tokens, run_success, final_tps, tool_outputs
-            remaining_plan_tasks = _remaining_plan_tasks()
-            if remaining_plan_tasks:
-                task_ids = ", ".join(str(task.get("id") or "?") for task in remaining_plan_tasks)
-                final_response = (
-                    "Plan run-to-completion stopped before all remaining tasks could be run. "
-                    f"Tasks still awaiting a run: {task_ids}."
-                )
-                run_success = False
-                _log_file_only(f"[plan-run] Tool-round limit reached with remaining tasks: {task_ids}")
-                return final_response, prompt_tokens, completion_tokens, run_success, final_tps, tool_outputs
             _log("[warn] Max tool rounds exhausted - requesting final synthesis.")
             try:
                 synthesis_messages = messages + [{"role": "user", "content": "Based on the tool results above, please answer my original question now."}]

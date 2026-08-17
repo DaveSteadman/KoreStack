@@ -7,7 +7,7 @@ from input_layer import slash_commands
 
 class SlashCommandRegistryTests(unittest.TestCase):
     def test_retired_commands_are_not_registered(self) -> None:
-        for command in {"/test", "/testtrend", "/newchat", "/task", "/tasks", "/ctx", "/kccompress", "/cronprompt", "/cronprompts", "/unittest", "/systemtest", "/systemtesttrend"}:
+        for command in {"/test", "/testtrend", "/newchat", "/task", "/tasks", "/ctx", "/kccompress", "/cronprompt", "/cronprompts", "/unittest", "/systemtest", "/systemtesttrend", "/planning", "/workflow", "/workflows"}:
             self.assertNotIn(command, slash_commands._REGISTRY)
             self.assertNotIn(command, slash_commands._DESCRIPTIONS)
 
@@ -16,9 +16,3 @@ class SlashCommandRegistryTests(unittest.TestCase):
         self.assertIn("/chat", slash_commands._DESCRIPTIONS)
         self.assertIn("/session", slash_commands._REGISTRY)
         self.assertNotIn("/session", slash_commands._DESCRIPTIONS)
-
-    def test_workflow_commands_are_registered_with_workflows_as_listing_command(self) -> None:
-        self.assertIn("/workflow", slash_commands._REGISTRY)
-        self.assertIn("/workflow", slash_commands._DESCRIPTIONS)
-        self.assertIn("/workflows", slash_commands._REGISTRY)
-        self.assertIn("/workflows", slash_commands._DESCRIPTIONS)

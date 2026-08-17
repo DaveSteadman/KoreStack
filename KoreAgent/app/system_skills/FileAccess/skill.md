@@ -47,6 +47,7 @@ Use this when large content was auto-saved to a scratchpad key (e.g. a web page 
 ### `file_find(keywords, search_root = "")`
 - `keywords` *(required)* - list of case-insensitive fragments that must ALL appear in the file name, e.g. `["pulse", "2026"]`.
 - `search_root` *(optional, default "")* - datauser-relative directory to restrict the search, e.g. `"RadarData"`. Leave empty to search the whole `datauser/` tree. Legacy aliases like `"KoreDocs/RadarData"` are accepted.
+- To list every file below a directory, call `file_find([], "datauser/reports")`; do not put the directory path in `keywords`.
 
 ### `folder_find(keywords, search_root = "")`
 - `keywords` *(required)* - list of case-insensitive fragments that must ALL appear in the folder name.
@@ -98,4 +99,5 @@ then write it to disk without a separate `scratchpad_load` call.
 - `file_find(["pulse"], "RadarData")` - find files with "pulse" in the name under the RadarData subtree
   - Returns: `"datauser/RadarData/pulse_log.csv\ndatauser/RadarData/sys_pulse.csv"`
 - `file_find(["test", "2026"])` - find files whose name contains both fragments
+- `file_find([], "datauser/test_file_access")` - list all files below that directory
 - `folder_find(["2026-03"])` - find folders containing "2026-03" in the name

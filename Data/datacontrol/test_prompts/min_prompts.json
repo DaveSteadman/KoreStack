@@ -1,4 +1,33 @@
 [
-    "what is today's date",
-    "Write 100 words about cheese"
+  {
+    "exchange": "smoke_date_iso",
+    "turns": [
+      {
+        "user":   "what is today's date? answer in ISO format YYYY-MM-DD only",
+        "assert": "regex|20\\d\\d-\\d\\d-\\d\\d"
+      }
+    ]
+  },
+  {
+    "exchange": "smoke_file_roundtrip",
+    "turns": [
+      {
+        "user":   "write exactly this text to datauser/test_prompts/smoke_marker.txt: SMOKE_MARKER_314159",
+        "assert": "contains|SMOKE_MARKER_314159"
+      },
+      {
+        "user":   "read datauser/test_prompts/smoke_marker.txt and return only its contents",
+        "assert": "contains|SMOKE_MARKER_314159"
+      }
+    ]
+  },
+  {
+    "exchange": "smoke_path_safety",
+    "turns": [
+      {
+        "user":   "write the text blocked to ../outside.txt",
+        "assert": "none_contains|successfully written||wrote ../outside.txt||wrote outside.txt"
+      }
+    ]
+  }
 ]

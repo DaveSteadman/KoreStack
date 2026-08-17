@@ -228,7 +228,6 @@ function _renderDetail(data) {
         renderSummary(conv.thread_summary || "");
         renderScratchpad(conv.scratchpad);
         renderDatasets(conv.datasets);
-        renderWorkflow(conv.workflow || conv.indepth_planner);
         renderInputHistory(conv.input_history || []);
     }
     document.querySelectorAll(".conv-item").forEach(el => {
@@ -459,25 +458,6 @@ function renderDatasets(datasets) {
     }
 
     document.getElementById("datasets-list").innerHTML = keys.map(k =>
-        _renderScratchpadEntry(k, data[k])
-    ).join("");
-}
-
-function renderWorkflow(workflow) {
-    let data = workflow;
-    if (typeof data === "string") {
-        try { data = JSON.parse(data); } catch { data = {}; }
-    }
-    data = data || {};
-    const keys = Object.keys(data);
-    document.getElementById("workflow-empty").hidden = keys.length > 0;
-
-    if (keys.length === 0) {
-        document.getElementById("workflow-list").innerHTML = "";
-        return;
-    }
-
-    document.getElementById("workflow-list").innerHTML = keys.map(k =>
         _renderScratchpadEntry(k, data[k])
     ).join("");
 }

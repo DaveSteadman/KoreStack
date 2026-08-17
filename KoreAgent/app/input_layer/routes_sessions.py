@@ -268,7 +268,7 @@ def register_session_routes(
             _run,
             label            = prompt_text,
             metadata         = {
-                "workflow":    "chat",
+                "run_kind":    "chat",
                 "chain_id":    run_id,
                 "chain_stage": "parent",
                 "session_id":  session_id,

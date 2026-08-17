@@ -434,8 +434,8 @@ class GuardrailRuntimeTests(unittest.TestCase):
                 conversation_entry=conversation_entry,
             )
 
-        self.assertEqual(selected[:3], ["tool_c", "tool_a", "tool_b"])
-        self.assertEqual(conversation_entry["tools_active"][:3], ["tool_c", "tool_a", "tool_b"])
+        self.assertEqual(selected[:3], ["tool_a", "tool_b", "tool_c"])
+        self.assertEqual(conversation_entry["tools_active"][:3], ["tool_a", "tool_b", "tool_c"])
         self.assertEqual(patched_payloads, [])
 
     def test_tools_catalog_list_ranks_trigger_matches(self) -> None:

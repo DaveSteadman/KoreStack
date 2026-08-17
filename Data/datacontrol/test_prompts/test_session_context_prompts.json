@@ -18,11 +18,11 @@
     "turns": [
       {
         "user": "Calculate compound interest: starting balance 5000, annual rate 4%, compounded yearly for 8 years. Show the final balance rounded to 2 decimal places.",
-        "assert": "not_empty"
+        "assert": "contains|6842.85"
       },
       {
         "user": "What was the final balance from the compound interest calculation you just did? Do not recalculate - just recall the result.",
-        "assert": "not_empty"
+        "assert": "contains|6842.85"
       }
     ]
   },
@@ -32,11 +32,11 @@
     "turns": [
       {
         "user": "Fetch the page at https://httpbin.org/uuid and tell me the UUID value from the response.",
-        "assert": "not_empty"
+        "assert": "regex|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
       },
       {
         "user": "What was the UUID value returned by that page? State it again without fetching the URL a second time.",
-        "assert": "not_empty"
+        "assert": "regex|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
       }
     ]
   },
@@ -87,12 +87,12 @@
     "exchange": "ctx_file_read_then_transform",
     "turns": [
       {
-        "user": "Read the file ./data/greeting.txt and tell me what it contains.",
-        "assert": "not_empty"
+        "user": "Write exactly this text to datauser/test_prompts/session_transform.txt: mixed Case Marker. Then read it back.",
+        "assert": "contains|mixed Case Marker"
       },
       {
         "user": "Take the content of that file you just read and convert every character to uppercase. Do not read the file again.",
-        "assert": "not_empty"
+        "assert": "contains|MIXED CASE MARKER"
       }
     ]
   },
@@ -102,11 +102,11 @@
     "turns": [
       {
         "user": "Fetch the page at https://httpbin.org/html and tell me what text headings are on the page.",
-        "assert": "not_empty"
+        "assert": "contains|Herman Melville"
       },
       {
         "user": "From the page you just fetched, what was the main heading? Answer from what you already retrieved, without fetching it again.",
-        "assert": "not_empty"
+        "assert": "contains|Herman Melville"
       }
     ]
   },

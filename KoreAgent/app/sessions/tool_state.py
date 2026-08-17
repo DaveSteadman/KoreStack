@@ -13,6 +13,8 @@ ALWAYS_ON_TOOL_NAMES = frozenset({
     "get_datetime_data",
     "tools_catalog_list",
     "tools_active_add",
+    "toolsets_list",
+    "toolsets_activate",
 })
 
 _KC_TIMEOUT = 8
@@ -168,7 +170,7 @@ def promote_selected_tools(
     requested = _normalize_tool_names(tool_names)
     current = get_selected_tools(session_id=session_id, conversation_entry=conversation_entry)
     current_set = set(current)
-    front: list[str] = []
+    refreshed: list[str] = []
     added: list[str] = []
     promoted: list[str] = []
     for name in requested:
@@ -176,11 +178,13 @@ def promote_selected_tools(
             promoted.append(name)
         else:
             added.append(name)
-        if name not in front:
-            front.append(name)
-    merged = front + [name for name in current if name not in front]
-    evicted = merged[MAX_ACTIVE_TOOLS:]
-    merged = merged[:MAX_ACTIVE_TOOLS]
+        if name not in refreshed:
+            refreshed.append(name)
+    # The selected list is a FIFO queue. Re-activation moves a tool to the
+    # newest position, so actively reused tools do not age out of the queue.
+    merged = [name for name in current if name not in refreshed] + refreshed
+    evicted = merged[:-MAX_ACTIVE_TOOLS] if len(merged) > MAX_ACTIVE_TOOLS else []
+    merged = merged[-MAX_ACTIVE_TOOLS:]
     active_tools = set_selected_tools(merged, session_id=session_id, conversation_entry=conversation_entry, persist=persist)
     return {
         "added": added,

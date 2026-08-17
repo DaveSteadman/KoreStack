@@ -11,7 +11,7 @@ KoreAgent should be able to reason and act without owning durable thread storage
 - Stores conversations, message history, and event streams
 - Exposes FastAPI endpoints for conversation, message, and event operations
 - Provides the browser UI used to inspect threads and activity
-- Acts as the coordination surface for message-driven workflows between the agent and comms layers
+- Acts as the coordination surface for message-driven work between the agent and comms layers
 
 ## Data and API shape
 

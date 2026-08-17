@@ -68,7 +68,6 @@ from datasets_pkg.hydration import get_persisted_datasets_payload
 from datasets_pkg.hydration import hydrate_session_state
 from datasets_pkg.service import dataset_clear
 from datasets_pkg.service import delete_session_datasets as delete_persisted_session_datasets
-from workflow_archives import list_plan_archives
 from input_layer.korechat_proxy_routes import register_korechat_proxy_routes
 from input_layer.routes_logs import register_log_routes
 from input_layer.routes_sessions import register_session_routes
@@ -201,16 +200,11 @@ def get_completions():
         pass
 
     try:
-        plan_names = [item.get("name", "") for item in list_plan_archives() if item.get("name")]
-    except Exception:
-        plan_names = []
-    try:
         models = list_ollama_models(start_if_needed=False)
     except Exception:
         models = []
     return {
         "sessions": sessions,
-        "workflow_names": plan_names,
         "models": models,
     }
 

@@ -279,7 +279,7 @@ def parse_main_args() -> argparse.Namespace:
         "--max-predict",
         dest="max_predict",
         type=int,
-        default=512,
+        default=1024,
         help="Maximum completion tokens per LLM call.",
     )
     parser.add_argument(

@@ -1,15 +1,115 @@
 [
-    "write hello world to file ./data/greeting.txt",
-    "write the current date and time to file ./data/timestamp.txt",
-    "write the system information to ./data/sysinfo.txt",
-    "write the system information to ./data/sysinfo.csv",
-    "append system check passed to file ./data/log.txt",
-    "append the current time to file ./data/log.txt",
-    "read file ./data/greeting.txt",
-    "read file ./data/sysinfo.csv",
-    "read file ./data/log.txt",
-    "list data files",
-    "create file notes.txt and write project notes go here into it",
-    "write test to file ../outside.txt",
-    "write summary to file ./data/summary.txt then read it back"
+  {
+    "exchange": "file_write_and_read_exact_marker",
+    "turns": [
+      {
+        "user":   "write exactly this text to datauser/test_file_access/greeting.txt: HELLO_FILE_ACCESS_123",
+        "assert": "contains|greeting.txt"
+      },
+      {
+        "user":   "read datauser/test_file_access/greeting.txt and return only the contents",
+        "assert": "contains|HELLO_FILE_ACCESS_123"
+      }
+    ]
+  },
+  {
+    "exchange": "file_append_and_tail_marker",
+    "turns": [
+      {
+        "user":   "write exactly this text to datauser/test_file_access/log.txt: FIRST_LINE",
+        "assert": "contains|FIRST_LINE"
+      },
+      {
+        "user":   "append exactly this line to datauser/test_file_access/log.txt: SECOND_LINE",
+        "assert": "contains|log.txt"
+      },
+      {
+        "user":   "read datauser/test_file_access/log.txt and tell me the last line only",
+        "assert": "contains|SECOND_LINE"
+      }
+    ]
+  },
+  {
+    "exchange": "file_sysinfo_keyvalue",
+    "turns": [
+      {
+        "user":   "write the system information to datauser/test_file_access/sysinfo.txt as key=value lines",
+        "assert": "contains|sysinfo.txt"
+      },
+      {
+        "user":   "read datauser/test_file_access/sysinfo.txt",
+        "assert": "all_contains|os=||python_version="
+      }
+    ]
+  },
+  {
+    "exchange": "file_csv_roundtrip",
+    "turns": [
+      {
+        "user":   "write exactly this CSV to datauser/test_file_access/sysinfo.csv: Name,Score\\nAlice,10\\nBob,12",
+        "assert": "contains|sysinfo.csv"
+      },
+      {
+        "user":   "read datauser/test_file_access/sysinfo.csv and return the contents",
+        "assert": "all_contains|Name,Score||Alice,10||Bob,12"
+      }
+    ]
+  },
+  {
+    "exchange": "file_list_created_files",
+    "turns": [
+      {
+        "user":   "list files under datauser/test_file_access",
+        "assert": "all_contains|greeting.txt||log.txt||sysinfo.txt||sysinfo.csv"
+      }
+    ]
+  },
+  {
+    "exchange": "folder_create_then_write",
+    "turns": [
+      {
+        "user":   "create the folder datauser/test_file_access/nested",
+        "assert": "contains|nested"
+      },
+      {
+        "user":   "write exactly this text to datauser/test_file_access/nested/notes.txt: nested note",
+        "assert": "contains|nested/notes.txt"
+      },
+      {
+        "user":   "read datauser/test_file_access/nested/notes.txt",
+        "assert": "contains|nested note"
+      }
+    ]
+  },
+  {
+    "exchange": "file_read_nonexistent",
+    "turns": [
+      {
+        "user":   "read datauser/test_file_access/does_not_exist.txt",
+        "assert": "regex|not found|does not exist|file not found"
+      }
+    ]
+  },
+  {
+    "exchange": "file_path_traversal_blocked",
+    "turns": [
+      {
+        "user":   "write test to file ../outside.txt",
+        "assert": "none_contains|successfully written||wrote ../outside.txt||wrote outside.txt"
+      }
+    ]
+  },
+  {
+    "exchange": "file_summary_write_then_read_back",
+    "turns": [
+      {
+        "user":   "write exactly this text to datauser/test_file_access/summary.txt: SUMMARY_MARKER_2026",
+        "assert": "contains|summary.txt"
+      },
+      {
+        "user":   "read datauser/test_file_access/summary.txt and confirm the marker",
+        "assert": "contains|SUMMARY_MARKER_2026"
+      }
+    ]
+  }
 ]

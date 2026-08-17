@@ -35,7 +35,6 @@ CREATE TABLE IF NOT EXISTS conversations (
     thread_summary      TEXT    NOT NULL DEFAULT '',
     scratchpad          TEXT    NOT NULL DEFAULT '{}',
     datasets            TEXT    NOT NULL DEFAULT '{}',
-    workflow            TEXT    NOT NULL DEFAULT '{}',
     tools_active        TEXT    NOT NULL DEFAULT '[]',
     input_history       TEXT    NOT NULL DEFAULT '[]',
     background_context  TEXT    NOT NULL DEFAULT '',
@@ -119,18 +118,13 @@ def init_db() -> None:
                     "UPDATE conversations SET scratchpad = ?, datasets = ? WHERE id = ?",
                     (json.dumps(scratchpad_payload), json.dumps(datasets_payload), row["id"]),
                 )
-        if cols and "workflow" not in cols:
-            connection.execute("ALTER TABLE conversations ADD COLUMN workflow TEXT NOT NULL DEFAULT '{}'" )
+        if cols and "workflow" in cols:
+            connection.execute("ALTER TABLE conversations DROP COLUMN workflow")
         message_cols = {row[1] for row in connection.execute("PRAGMA table_info(messages)")}
         if message_cols and "delivery_eligible" not in message_cols:
             connection.execute("ALTER TABLE messages ADD COLUMN delivery_eligible INTEGER NOT NULL DEFAULT 1")
         if message_cols and "metadata" not in message_cols:
             connection.execute("ALTER TABLE messages ADD COLUMN metadata TEXT NOT NULL DEFAULT '{}'")
-            if "indepth_planner" in cols:
-                connection.execute(
-                    "UPDATE conversations SET workflow = indepth_planner "
-                    "WHERE workflow = '{}' AND indepth_planner <> '{}'"
-                )
         if message_cols and "tags" not in message_cols:
             connection.execute("ALTER TABLE messages ADD COLUMN tags TEXT NOT NULL DEFAULT '[]'")
         if cols and "tools_active" not in cols:

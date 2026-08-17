@@ -20,6 +20,7 @@ from sessions.tool_state import note_tool_used as _note_tool_used
 from sessions.tool_state import promote_selected_tools as _promote_selected_tools
 from sessions.tool_state import set_selected_tools as _set_selected_tools
 from sessions.tool_state import update_cache as _update_cache
+from sessions.tool_sets import related_tool_set
 
 
 def clear_session_tools_active(session_id: str) -> None:
@@ -89,6 +90,7 @@ __all__ = [
     "note_tool_used",
     "promote_selected_tools",
     "rank_tool_catalog_entries",
+    "related_tool_set",
     "set_selected_tools",
     "suggest_tool_name",
 ]

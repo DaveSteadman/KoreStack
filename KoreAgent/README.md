@@ -11,7 +11,7 @@ KoreStack needs an agent that can reason over local tools and local data without
 - Runs the tool-calling orchestration pipeline
 - Integrates with configured LLM backends
 - Loads built-in skills, external skills, and MCP-exposed tool surfaces
-- Provides slash commands, scratchpad workflows, and delegated subruns
+- Provides slash commands, scratchpad state, and delegated subruns
 - Hosts the browser UI and scheduler for interactive and background work
 
 ## How to run it

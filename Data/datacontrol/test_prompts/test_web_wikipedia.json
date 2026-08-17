@@ -1,12 +1,92 @@
 [
-    "what is the Eiffel Tower",
-    "who is Ada Lovelace",
-    "tell me about quantum entanglement",
-    "look up Python programming language on Wikipedia",
-    "get me the Wikipedia article on the Roman Empire",
-    "definition of photosynthesis",
-    "definition of recursion in computer science",
-    "what is machine learning",
-    "what is a black hole",
-    "background on transformer architecture in AI"
+  {
+    "exchange": "wiki_eiffel_tower",
+    "turns": [
+      {
+        "user":   "what is the Eiffel Tower",
+        "assert": "contains|Paris"
+      }
+    ]
+  },
+  {
+    "exchange": "wiki_ada_lovelace",
+    "turns": [
+      {
+        "user":   "who is Ada Lovelace",
+        "assert": "all_contains|Ada Lovelace||Charles Babbage"
+      }
+    ]
+  },
+  {
+    "exchange": "wiki_quantum_entanglement",
+    "turns": [
+      {
+        "user":   "tell me about quantum entanglement",
+        "assert": "contains|quantum"
+      }
+    ]
+  },
+  {
+    "exchange": "wiki_python_language",
+    "turns": [
+      {
+        "user":   "look up Python programming language on Wikipedia",
+        "assert": "contains|Guido"
+      }
+    ]
+  },
+  {
+    "exchange": "wiki_roman_empire",
+    "turns": [
+      {
+        "user":   "get me the Wikipedia article on the Roman Empire",
+        "assert": "regex|ancient|mediterranean|rome"
+      }
+    ]
+  },
+  {
+    "exchange": "wiki_photosynthesis",
+    "turns": [
+      {
+        "user":   "definition of photosynthesis",
+        "assert": "contains|sunlight"
+      }
+    ]
+  },
+  {
+    "exchange": "wiki_recursion",
+    "turns": [
+      {
+        "user":   "definition of recursion in computer science",
+        "assert": "regex|itself|self-reference|function"
+      }
+    ]
+  },
+  {
+    "exchange": "wiki_machine_learning",
+    "turns": [
+      {
+        "user":   "what is machine learning",
+        "assert": "contains|artificial intelligence"
+      }
+    ]
+  },
+  {
+    "exchange": "wiki_black_hole",
+    "turns": [
+      {
+        "user":   "what is a black hole",
+        "assert": "contains|gravity"
+      }
+    ]
+  },
+  {
+    "exchange": "wiki_transformer_architecture",
+    "turns": [
+      {
+        "user":   "background on transformer architecture in AI",
+        "assert": "contains|attention"
+      }
+    ]
+  }
 ]

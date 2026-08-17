@@ -100,9 +100,9 @@ def _cmd_llmserverconfig(arg: str, ctx: SlashCommandContext) -> None:
 
     if first == "max_predict":
         if rest and not rest.isdigit():
-            ctx.output("Usage: /llmserverconfig max_predict <count>  |  /llmserverconfig max_predict resets to 512", "dim")
+            ctx.output("Usage: /llmserverconfig max_predict <count>  |  /llmserverconfig max_predict resets to 1024", "dim")
             return
-        count = int(rest) if rest else 512
+        count = int(rest) if rest else 1024
         if count < 1:
             ctx.output("max_predict must be at least 1.", "error")
             return
@@ -280,7 +280,7 @@ def register_model_slash_commands(registry: dict[str, Callable], descriptions: d
     descriptions.update(
         {
             "/llmserver":       "<ollama|lmstudio> <host>  Switch model server",
-            "/llmserverconfig": "model list | model <name> | ctx <n> | max_predict <n> | max_predict (reset 512) | cpugpu <forcecpu|forcegpu|autogpu>  Configure model, context, maximum output, and Ollama GPU use",
+            "/llmserverconfig": "model list | model <name> | ctx <n> | max_predict <n> | max_predict (reset 1024) | cpugpu <forcecpu|forcegpu|autogpu>  Configure model, context, maximum output, and Ollama GPU use",
             "/stopmodel":       "[name]  Unload a running model from VRAM (Ollama only, defaults to active model)",
         }
     )

@@ -20,7 +20,6 @@ class ConversationPatchRequest(BaseModel):
     thread_summary: str | None = None
     scratchpad: dict | None = None
     datasets: dict | None = None
-    workflow: dict | None = None
     tools_active: list[str] | None = None
     background_context: str | None = None
     token_estimate: int | None = None

@@ -19,6 +19,7 @@
 # ====================================================================================================
 import json
 import re
+from pathlib import Path
 
 from KoreCommon.datauser_fs import DataUserPathError
 from KoreCommon.datauser_fs import create_folder as create_datauser_folder
@@ -128,6 +129,21 @@ def _normalise_keywords(keywords: list[str] | str) -> list[str]:
 
 
 # ----------------------------------------------------------------------------------------------------
+def _normalise_find_arguments(keywords: list[str] | str, search_root: str) -> tuple[list[str], str]:
+    """Accept a directory mistakenly supplied as the sole filename keyword.
+
+    A request such as "list files under datauser/reports" naturally maps to
+    ``file_find(keywords="datauser/reports")`` for a model.  A slash cannot be
+    part of a filename search term, so treat that unambiguously as ``search_root``
+    and list every file below it.
+    """
+    keywords_clean = _normalise_keywords(keywords)
+    if not search_root and len(keywords_clean) == 1 and "/" in keywords_clean[0].replace("\\", "/"):
+        return [], keywords_clean[0]
+    return keywords_clean, search_root
+
+
+# ----------------------------------------------------------------------------------------------------
 def file_find(keywords: list[str], search_root: str = "") -> str:
     """Search the shared datauser tree for files whose name contains all keywords.
 
@@ -135,7 +151,7 @@ def file_find(keywords: list[str], search_root: str = "") -> str:
     Pass an empty list (or omit keywords) to list all files.
     Pass search_root (e.g. 'RadarData' or 'KoreDocs/RadarData') to restrict the search.
     """
-    keywords_clean = _normalise_keywords(keywords)
+    keywords_clean, search_root = _normalise_find_arguments(keywords, search_root)
 
     try:
         matches = [
@@ -163,7 +179,7 @@ def folder_find(keywords: list[str], search_root: str = "") -> str:
     Pass an empty list (or omit keywords) to list all folders.
     Pass search_root (e.g. 'RadarData' or 'KoreDocs/RadarData') to restrict the search.
     """
-    keywords_clean = _normalise_keywords(keywords)
+    keywords_clean, search_root = _normalise_find_arguments(keywords, search_root)
 
     try:
         matches = [

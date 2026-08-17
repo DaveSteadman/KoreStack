@@ -34,7 +34,6 @@ const _ALL_COMMANDS = [
     "/stopmodel", "/stoprun",
     "/clearmemory", "/reskill", "/sandbox", "/tools",
     "/deletelogs",
-    "/workflow", "/workflows",
     "/version", "/defaults", "/chat", "/workspace",
     "/comms",
 ];
@@ -49,13 +48,16 @@ const _LLMSERVER_CONFIGS = ["forcecpu", "forcegpu", "autogpu"];
 const _SUGGEST_HINTS     = {
     "/comms":   "Configure or control KoreComms delivery for this chat",
     cpugpu:    "Set Ollama CPU/GPU model placement",
-    max_predict: "Use /llmserverconfig max_predict <count>; use /llmserverconfig max_predict to reset to 512",
+    max_predict: "Use /llmserverconfig max_predict <count>; use /llmserverconfig max_predict to reset to 1024",
     connection: "Pause, resume, or explicitly publish KoreComms output",
     delivery:   "Bind this chat's agent output to a KoreComms connection",
     forcecpu:  "No GPU: run the model entirely on CPU",
     forcegpu:  "Request all model layers on the GPU",
     autogpu:   "Let Ollama choose CPU/GPU placement",
     bind:       "Create or update the delivery target for this chat",
+    groups:     "List, inspect, or re-evaluate named tool groups",
+    show:       "Show the member tools in a named tool group",
+    reevaluate: "Build complete named tool groups from the live tool inventory",
     pause:      "Stop automatic copying of agent output to the connection",
     resume:     "Resume automatic copying of pending and future agent output",
     publishprevious: "Send the latest eligible agent output once, even while paused",
@@ -70,10 +72,8 @@ const _SUGGEST_HINTS     = {
 };
 
 // Sub-commands for /tools.
-const _TOOLS_SUBS = ["active", "all"];
-
-// Sub-commands for /workflow.
-const _WORKFLOW_SUBS = ["export", "import", "inspect"];
+const _TOOLS_SUBS = ["active", "all", "groups"];
+const _TOOL_GROUPS_SUBS = ["show", "reevaluate"];
 
 // Sub-commands and options for /comms.
 const _COMMS_SUBS             = ["delivery", "connection"];
@@ -105,7 +105,7 @@ let _sessionTitle      = "";
 let _thinkingTimer     = null;
 
 // Tab-completion state.
-let _completions  = { sessions: [], workflow_names: [], models: [] };
+let _completions  = { sessions: [], models: [] };
 let _suggestItems = [];   // current filtered candidate list
 let _suggestIdx   = -1;   // highlighted row index (-1 = none)
 let _suggestBase  = "";   // portion of input before the completion token
@@ -1270,23 +1270,16 @@ function _parseSuggestContext(value) {
         return null;
     }
 
-    if (cmd === "/workflow") {
-        const subSpace = rest.indexOf(" ");
-        if (subSpace === -1) {
-            return { pool: _WORKFLOW_SUBS, prefix: rest.trimEnd(), base: "/workflow " };
-        }
-        const sub = rest.slice(0, subSpace).toLowerCase();
-        const arg1Base = value.slice(0, firstSpace + 1 + subSpace + 1);
-        const arg1Text = value.slice(arg1Base.length);
-        if ((sub === "import" || sub === "inspect") && !arg1Text.includes(" ")) {
-            return { pool: _completions.workflow_names, prefix: arg1Text.trimEnd(), base: arg1Base };
-        }
-        return null;
-    }
-
     if (cmd === "/tools") {
         if (!rest.includes(" ")) {
             return { pool: _TOOLS_SUBS, prefix: rest.trimEnd(), base: "/tools " };
+        }
+        const words = rest.trimStart().split(/\s+/);
+        if (words[0] === "groups" && words.length === 1 && rest.endsWith(" ")) {
+            return { pool: _TOOL_GROUPS_SUBS, prefix: "", base: "/tools groups " };
+        }
+        if (words[0] === "groups" && words.length === 2 && !rest.endsWith(" ")) {
+            return { pool: _TOOL_GROUPS_SUBS, prefix: words[1], base: "/tools groups " };
         }
         return null;
     }

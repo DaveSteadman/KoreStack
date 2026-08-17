@@ -266,6 +266,9 @@
             const corpus = `${entry.tool_name} ${entry.provider_label} ${entry.skill_name}`.toLowerCase();
             return corpus.includes(needle);
         });
+        $("tool-total").textContent = needle
+            ? `Showing: ${rows.length}/${state.entries.length}`
+            : `Total: ${rows.length}`;
 
         for (const entry of rows) {
             const btn = document.createElement("button");

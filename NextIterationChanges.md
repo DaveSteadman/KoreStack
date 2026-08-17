@@ -1,5 +1,8 @@
 # KoreStack Next Iteration
 
+> Status: the legacy planning and Workflow system was removed on 16 August
+> 2026. The remaining sections describe the next implementation stages.
+
 ## Objective
 
 Build a stronger agent framework: one that can take on broader prompts, use
@@ -27,38 +30,10 @@ Recent SavedSearch-to-email runs exposed several framework weaknesses:
 The answer is not a larger global prompt, nor a growing list of special rules
 for SavedSearches, news, emails, or any other individual use case.
 
-## Remove the Current Planning Layers
-
-The next iteration starts with subtraction.
-
-Remove the current high-level planning system:
-
-- Lightweight planner pass and `TaskPlan` scratchpad state.
-- `planning_mode` and the `off`, `simple`, `workflow`, and `auto` modes.
-- `/planning`.
-- Durable Workflow tools, task contracts, run-to-completion logic, and plan
-  archive operations.
-- `/workflow` and `/workflows` slash commands.
-- Workflow-specific loop guards, prompt guidance, UI autocomplete, and archive
-  listings.
-
-Retain:
-
-- Ordinary tool execution.
-- Sessions and conversation history.
-- Datasets and scratchpad artifacts.
-- Logging, run status, progress reporting, and stop controls.
-- The tool catalog and active-tool mechanism, which are a separate
-  capability-routing concern.
-
-Do not delete existing persisted Workflow data from KoreChat as part of this
-removal. The Agent should stop reading or writing it; a later explicit data
-migration can remove it safely.
-
 ## Capability Routing and Tool Arrangement
 
-The active-tool concept remains correct. The selection unit should change from
-individual functions to coherent capability bundles.
+The active-tool concept remains correct. The selection unit changes from
+individual functions to coherent, dynamically maintained tool groups.
 
 ### Tool hierarchy
 
@@ -73,14 +48,21 @@ Always-on control
        └─ Workflow management (future replacement, if needed)
 ```
 
-The model should normally see a small control plane, the capability bundle
-relevant to its current task, and the current task artifacts. It should not
-need to reason over the full function catalog.
+The model normally sees a small control plane and the current active list. It
+can list and activate a named group, or inspect the full catalogue and add an
+individual tool when no group fits. It does not need to reason over the full
+function catalogue on every prompt.
 
 ### Tool bundles
 
-For example, a SavedSearch should activate a temporary collection-research
-bundle together:
+Tool groups are generated manually with `/tools groups reevaluate`. The command
+builds the groups directly from the live local and MCP provider, skill, and
+function namespaces: whole subsystems where they fit, and resource-level
+subsystems where they do not. It validates complete coverage and the
+sixteen-tool cap before saving to `datacontrol/koreagent/ToolSets.json`. The
+file is used directly on later starts; no housekeeping prompt is required.
+
+For example, a SavedSearch group may contain:
 
 - Run or list SavedSearches.
 - Inspect a collection.
@@ -89,34 +71,20 @@ bundle together:
 - Select records into a derived collection.
 - Enrich selected records.
 
-After a selection exists, the active set should naturally change to a
-synthesis bundle. Delivery tools should appear only when delivery is requested
-and a valid deliverable exists.
-
-This is not a collection of rigid task templates. It is
-capability-and-state routing: broad reusable work patterns, driven by the
-request and the artifacts now available.
+Each group has one to sixteen members. Group activation appends members to the
+active FIFO list. Re-activating a tool moves it to the newest position, and an
+overflow evicts the oldest tools. Individual activation remains the fallback.
 
 ### Capability metadata
 
-Tools should declare metadata beyond their name, description, and parameters:
-
-- Inputs consumed and artifacts produced.
-- Capability bundle or family.
-- Read, write, external-send, and destructive classification.
-- Idempotency and retry behaviour.
-- Expected failure modes.
-- Cost and latency expectations.
-- Whether repeating the call is safe or useful.
-
-This supports structural handling of unavailable tools, retries, duplicate
-actions, and side effects. It is more robust than relying on the model to
-remember tool names or inspect a huge catalog mid-run.
+The first implementation does not change individual tool execution or require
+new contracts. The existing tool name, description, parameter metadata, and
+MCP discovery information are enough for group generation. Richer metadata can
+be introduced later only where it proves useful.
 
 ### Progressive disclosure
 
-The catalog should present capabilities before individual functions, for
-example:
+The catalogue presents named groups before individual functions, for example:
 
 ```text
 Research a collection
@@ -126,9 +94,10 @@ Deliver content
   Bind destination, pause/resume, validate and publish a draft
 ```
 
-An ambiguous request can use a compact routing pass to choose one or two
-candidate bundles. Individual functions are revealed only after the capability
-is selected.
+The normal agent can choose a group. Only the `/tools groups` slash command can
+create or alter groups. Dynamic server availability, approval states, and
+additional provenance are explicitly deferred until this first version is in
+use.
 
 Do not collapse every family into one giant multiplexed tool with an
 `operation` argument. That saves schema tokens but creates an error-prone
@@ -338,7 +307,7 @@ Track at least:
 ## Suggested Delivery Order
 
 ```text
-1. Remove the failed planning layers.
+1. Complete removal of the failed planning layers. Done.
 2. Introduce capability bundles and richer catalog metadata.
 3. Introduce typed task state and artifact lineage.
 4. Build the focused context assembler.
@@ -358,5 +327,3 @@ behaviour.
 - Do not encode an AI-news-specific workflow into the Agent.
 - Do not expose every individual tool to every model call.
 - Do not replace structured tool contracts with a giant multipurpose tool.
-- Do not delete existing Workflow data until an explicit migration decision is
-  made.

@@ -1,3 +1,6 @@
+# Version Build: 0081 / 0.9+dev (Ollama v0.32.10)
+
+[ALL TESTS COMPLETE] host=http://MONTBLANC:11434 model=nemotron-3.5-lightning:latest elapsed=0h 14m 54s pass rate=88% (113/129) prompt tokens=7,366,182 avg tok/s=185.6
 
 # Version 0077 / 0.8+dev (Ollama v0.32.10)
 

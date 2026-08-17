@@ -65,7 +65,7 @@ _active_backend: str = "ollama"
 # Skills use get_active_model() / get_active_num_ctx() instead of accepting these as parameters.
 _active_model:       str = ""
 _active_num_ctx:     int = 131072
-_active_max_predict: int = 512
+_active_max_predict: int = 1024
 _active_state_lock: threading.RLock = threading.RLock()
 _ollama_offload_mode: str = "autogpu"
 _OLLAMA_OFFLOAD_MODES: frozenset[str] = frozenset({"forcecpu", "forcegpu", "autogpu"})

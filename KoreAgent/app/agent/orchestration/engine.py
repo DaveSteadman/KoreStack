@@ -44,15 +44,10 @@ from sessions.runtime import bind_session
 from skill_executor import build_catalog_gates
 from skills.SystemInfo.system_info_skill import get_static_system_info_string
 from skills_catalog_builder import build_tool_definitions
-from agent.orchestration.planning import create_task_plan
-from agent.orchestration.planning import format_task_plan_context
-from agent.orchestration.planning import persist_task_plan
-from workflow_store import get_simple_plan
-from workflow_store import evaluate_simple_task_contract
-from workflow_store import list_simple_tasks
-from sessions.tool_selection import build_all_tool_catalog
+from sessions.tool_selection import all_known_tool_names
 from sessions.tool_selection import derive_active_tool_runtime
 from sessions.tool_selection import promote_selected_tools
+from sessions.tool_sets import relevant_tool_sets
 from agent.tool_runtime.loop import extract_result_fields as _tool_loop_extract_result_fields
 import mcp_client as _mcp_client
 from agent.tool_runtime.loop import format_tool_outputs as _tool_loop_format_tool_outputs
@@ -153,40 +148,6 @@ def _filter_web_skills(payload: dict) -> dict:
     return result
 
 
-def _filter_workflow_tools(payload: dict, *, enabled: bool, has_plan: bool) -> dict:
-    """Expose persistent Workflow functions only when their KoreChat lifecycle permits it."""
-    permitted = {"workflow_create", "workflow_import"} if enabled and not has_plan else None
-    filtered: list[dict] = []
-    for skill in payload.get("skills", []):
-        functions = skill.get("functions") or []
-        if not isinstance(functions, list):
-            filtered.append(skill)
-            continue
-
-        kept_functions = []
-        for function_sig in functions:
-            function_name = str(function_sig).split("(", 1)[0].strip()
-            if not function_name.startswith("workflow_"):
-                kept_functions.append(function_sig)
-            elif enabled and (has_plan or function_name in permitted):
-                kept_functions.append(function_sig)
-        if functions and not kept_functions:
-            continue
-
-        copied = dict(skill)
-        copied["functions"] = kept_functions
-        param_descriptions = copied.get("param_descriptions")
-        if isinstance(param_descriptions, dict):
-            copied["param_descriptions"] = {
-                name: value
-                for name, value in param_descriptions.items()
-                if not str(name).startswith("workflow_")
-                or (enabled and (has_plan or str(name) in permitted))
-            }
-        filtered.append(copied)
-    return {**payload, "skills": filtered}
-
-
 # ====================================================================================================
 # MARK: RUN STATE
 # ====================================================================================================
@@ -237,8 +198,6 @@ class OrchestratorConfig:
     skills_payload: dict
     skills_catalog_path: Path | None = None
     catalog_mtime: float = 0.0
-    task_planning_enabled: bool = True
-    planning_mode: str = "auto"
 
 
 # ====================================================================================================
@@ -571,35 +530,34 @@ def orchestrate_prompt(
         _log(f"Context window: {config.num_ctx:,} tokens")
         _log(f"Max rounds:     {config.max_iterations}")
         _log(f"Prompt:         {user_prompt[:300]}{' ...' if len(user_prompt) > 300 else ''}")
-        planning_mode = str(getattr(config, "planning_mode", "auto") or "auto").strip().lower()
-        if planning_mode not in {"off", "simple", "workflow", "auto"}:
-            planning_mode = "auto"
-        if not config.task_planning_enabled and planning_mode == "auto":
-            planning_mode = "off"
-        _log(f"Planning mode:  {planning_mode}")
         ambient_system_info = get_static_system_info_string()
         _log_section("AMBIENT SYSTEM INFO")
         _log(ambient_system_info)
 
-        workflow_task_match = re.search(
-            r"\b(?:run|execute|continue|rerun)\s+(?:the\s+)?task\s+(\d+)\b",
-            user_prompt,
-            re.IGNORECASE,
-        )
-        workflow_enabled = (
-            planning_mode != "off"
-        )
-        try:
-            workflow_exists = bool(get_simple_plan(session_id=active_session_id))
-        except Exception as exc:
-            workflow_exists = False
-            _log_file_only(f"[workflow] availability check failed: {exc}")
         available_local_payload = config.skills_payload if _WEB_SKILLS_ENABLED else _filter_web_skills(config.skills_payload)
-        available_local_payload = _filter_workflow_tools(
-            available_local_payload,
-            enabled  = workflow_enabled,
-            has_plan = workflow_exists,
+        known_tool_names = all_known_tool_names(
+            config.skills_payload,
+            available_local_payload=available_local_payload,
         )
+        prompt_tool_sets = relevant_tool_sets(user_prompt, known_tool_names=known_tool_names)
+        if prompt_tool_sets:
+            prompt_tools = [
+                tool_name
+                for tool_set in prompt_tool_sets
+                for tool_name in tool_set["tools"]
+            ]
+            activation = promote_selected_tools(
+                prompt_tools,
+                session_id         = active_session_id,
+                conversation_entry = conversation_entry,
+                persist            = False,
+            )
+            _log_file_only(
+                "[toolsets] initial activation "
+                f"sets={','.join(tool_set['name'] for tool_set in prompt_tool_sets)} "
+                f"added={','.join(activation['added']) or 'none'} "
+                f"promoted={','.join(activation['promoted']) or 'none'}"
+            )
         if re.search(r"\bsaved\s*search(?:es)?\b", user_prompt, re.IGNORECASE):
             activation = promote_selected_tools(
                 [
@@ -617,82 +575,6 @@ def orchestrate_prompt(
                 f"added={','.join(activation['added']) or 'none'} "
                 f"promoted={','.join(activation['promoted']) or 'none'}"
             )
-        planner_tool_runtime = derive_active_tool_runtime(
-            config.skills_payload,
-            available_local_payload = available_local_payload,
-            session_id              = active_session_id,
-            conversation_entry      = conversation_entry,
-        )
-        active_planner_tool_names = set(planner_tool_runtime["active_tool_names"])
-        capability_catalog = [
-            item
-            for item in build_all_tool_catalog(
-                available_local_payload,
-                session_id         = active_session_id,
-                conversation_entry = conversation_entry,
-            )
-            if str(item.get("name") or "") in active_planner_tool_names
-        ]
-        known_tool_names = {
-            str(item.get("name") or "")
-            for item in capability_catalog
-            if str(item.get("name") or "")
-        }
-        workflow_task_contract: dict[str, object] | None = None
-        if planning_mode in {"simple", "workflow"}:
-            planning_context = ""
-            if workflow_task_match:
-                task_position = int(workflow_task_match.group(1))
-                plan_tasks = list_simple_tasks(session_id=active_session_id)
-                if 1 <= task_position <= len(plan_tasks):
-                    selected_task = plan_tasks[task_position - 1]
-                    static_task = selected_task.get("static") if isinstance(selected_task.get("static"), dict) else {}
-                    workflow_task_contract = {
-                        "task_id":               selected_task.get("id"),
-                        "instruction":           static_task.get("instruction"),
-                        "required_outputs":      static_task.get("outputs") or [],
-                        "evidence_requirements": static_task.get("evidence_requirements") or [],
-                    }
-                    planning_context = json.dumps(
-                        {
-                            "workflow_task_contract": workflow_task_contract,
-                        },
-                        ensure_ascii=False,
-                    )
-            task_plan = create_task_plan(
-                user_prompt            = user_prompt,
-                planning_context       = planning_context,
-                workflow_task_contract = workflow_task_contract,
-                capability_catalog     = capability_catalog,
-                known_tool_names       = known_tool_names,
-                call_llm_chat          = call_llm_chat,
-                model_name             = config.resolved_model,
-                num_ctx                = config.num_ctx,
-            )
-            persist_task_plan(task_plan)
-            _log_section_file_only("LIGHTWEIGHT TASK PLAN JSON")
-            _log_file_only(json.dumps(task_plan.payload(), indent=2, ensure_ascii=False))
-            activation_tools = task_plan.activation_tools()
-            if activation_tools:
-                activation = promote_selected_tools(
-                    activation_tools,
-                    session_id         = active_session_id,
-                    conversation_entry = conversation_entry,
-                    persist            = False,
-                )
-            else:
-                activation = {"added": [], "promoted": [], "evicted": [], "active_tools": []}
-            _log_file_only(
-                f"[task-plan] status={task_plan.planner_status} actions={len(task_plan.actions)} "
-                f"tools={','.join(activation_tools) or 'none'}"
-            )
-            _log_file_only(
-                f"[task-plan] activation added={','.join(activation['added']) or 'none'} "
-                f"promoted={','.join(activation['promoted']) or 'none'} "
-                f"evicted={','.join(activation['evicted']) or 'none'}"
-            )
-        else:
-            task_plan = None
         initial_tool_runtime = derive_active_tool_runtime(
             config.skills_payload,
             available_local_payload=available_local_payload,
@@ -718,9 +600,6 @@ def orchestrate_prompt(
             user_prompt=user_prompt,
             token_pressure=token_pressure,
         )
-        if task_plan is not None:
-            system_message += "\n\n" + format_task_plan_context(task_plan)
-
         messages: list[dict] = [{"role": "system", "content": system_message}]
         _context_map: list[dict] = [
             {"round": 0, "role": "sys", "label": "system prompt", "chars": len(system_message), "auto_key": None, "msg_idx": 0},
@@ -737,11 +616,6 @@ def orchestrate_prompt(
 
         def _build_tool_runtime() -> dict[str, object]:
             round_available_local_payload = config.skills_payload if _WEB_SKILLS_ENABLED else _filter_web_skills(config.skills_payload)
-            round_available_local_payload = _filter_workflow_tools(
-                round_available_local_payload,
-                enabled  = workflow_enabled,
-                has_plan = workflow_exists,
-            )
             runtime = derive_active_tool_runtime(
                 config.skills_payload,
                 available_local_payload=round_available_local_payload,
@@ -760,24 +634,6 @@ def orchestrate_prompt(
                 "missing_selected": runtime["missing_selected"],
                 "all_known_tool_names": runtime["all_known_tool_names"],
             }
-
-        def _remaining_plan_tasks() -> list[dict]:
-            return [
-                task
-                for task in list_simple_tasks(session_id=active_session_id)
-                if not task.get("dynamic", {}).get("ran")
-            ]
-
-        def _workflow_contract_gaps() -> list[str]:
-            if workflow_task_contract is not None:
-                try:
-                    return evaluate_simple_task_contract(
-                        task_id    = str(workflow_task_contract["task_id"]),
-                        session_id = active_session_id,
-                    )
-                except Exception as exc:
-                    return [f"Workflow Task {workflow_task_match.group(1)} contract could not be checked: {exc}"]
-            return []
 
         # Register a per-run stop event so that /stoprun only affects this session.
         _run_id         = f"{active_session_id}_{id(messages)}"
@@ -801,8 +657,6 @@ def orchestrate_prompt(
                 clear_stop     = _run_stop_event.clear,
                 tool_runtime_provider = _build_tool_runtime,
                 on_tool_round_complete = on_tool_round_complete,
-                run_to_completion_remaining_provider = _remaining_plan_tasks,
-                workflow_contract_gaps_provider = _workflow_contract_gaps if workflow_task_contract is not None else None,
                 on_token = on_token,
             )
 
