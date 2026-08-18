@@ -23,6 +23,7 @@
 #   - scratchpad.py            -- scratchpad_save, scratchpad_load
 # ====================================================================================================
 import json
+import importlib
 import os
 import sqlite3
 import sys
@@ -869,6 +870,76 @@ class GuardrailRuntimeTests(unittest.TestCase):
         ]
 
         self.assertEqual(_result_counts(rows, Path("missing.csv")), (2, 1, 1, 0))
+
+    def test_trend_points_keep_ten_most_recent_runs(self) -> None:
+        koretest_main = importlib.import_module("KoreTest.main")
+
+        with tempfile.TemporaryDirectory() as tmp:
+            result_root = Path(tmp) / "test_results"
+            result_root.mkdir()
+
+            for month in range(1, 13):
+                csv_path = result_root / f"test_results_2026{month:02d}01_120000_test_koredata_search.csv"
+                csv_path.write_text(
+                    '"timestamp","passed","duration_seconds"\n'
+                    '"2026-01-01T12:00:00Z","PASS","1.5"\n',
+                    encoding="utf-8",
+                )
+
+            with patch.object(koretest_main, "get_suite_datacontrol_dir", return_value=Path(tmp)):
+                points = koretest_main._trend_points("test_koredata_search")
+
+        self.assertEqual(len(points), 10)
+        self.assertEqual(points[0]["label"], "20260301_120000_test_koredata_search")
+        self.assertEqual(points[-1]["label"], "20261201_120000_test_koredata_search")
+
+    def test_trend_points_for_all_use_recent_collection_runs_from_db(self) -> None:
+        koretest_main = importlib.import_module("KoreTest.main")
+
+        with tempfile.TemporaryDirectory() as tmp:
+            db_path = Path(tmp) / "runs.sqlite3"
+            original_db_path = koretest_main.DB_PATH
+            original_data_root = koretest_main.DATA_ROOT
+            koretest_main.DB_PATH = db_path
+            koretest_main.DATA_ROOT = Path(tmp)
+            try:
+                conn = koretest_main._db()
+                try:
+                    for month in range(1, 13):
+                        started = f"2026-{month:02d}-01T12:00:00+00:00"
+                        finished = f"2026-{month:02d}-01T12:10:00+00:00"
+                        result = {
+                            "suite": "all",
+                            "total": 100 + month,
+                            "passed": 80 + month,
+                            "prompt_tokens": 1000 + month,
+                        }
+                        conn.execute(
+                            "INSERT INTO test_runs (run_id, started_at, finished_at, suite, model, git_version, test_chat_id, collection_id, status, result_json) "
+                            "VALUES (?, ?, ?, 'all', '', 'test', NULL, ?, 'failed', ?)",
+                            (
+                                f"testcollection_2026{month:02d}01_120000_000000",
+                                started,
+                                finished,
+                                f"testcollection_2026{month:02d}01_120000_000000",
+                                json.dumps(result),
+                            ),
+                        )
+                    conn.commit()
+                finally:
+                    conn.close()
+
+                points = koretest_main._trend_points("all")
+            finally:
+                koretest_main.DB_PATH = original_db_path
+                koretest_main.DATA_ROOT = original_data_root
+
+        self.assertEqual(len(points), 10)
+        self.assertEqual(points[0]["label"], "20260301_120000_all")
+        self.assertEqual(points[-1]["label"], "20261201_120000_all")
+        self.assertEqual(points[-1]["total"], 112)
+        self.assertEqual(points[-1]["passed"], 92)
+        self.assertEqual(points[-1]["duration_seconds"], 600.0)
 
     def test_execute_tool_call_runs_datetime(self) -> None:
         result = execute_tool_call(

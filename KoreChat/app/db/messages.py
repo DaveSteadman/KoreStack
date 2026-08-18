@@ -75,6 +75,7 @@ def conversation_append_turn(
     outbound_metadata: dict | None = None,
     inbound_tags: list[str] | None = None,
     outbound_tags: list[str] | None = None,
+    outbound_delivery_eligible: bool = True,
 ) -> dict | None:
     now = _now()
     with _conn() as connection:
@@ -95,10 +96,10 @@ def conversation_append_turn(
         )
         connection.execute(
             """
-            INSERT INTO messages (conversation_id, direction, content, sender_display, status, metadata, tags, summarised, created_at)
-            VALUES (?,?,?,?,?,?,?,0,?)
+            INSERT INTO messages (conversation_id, direction, content, sender_display, status, delivery_eligible, metadata, tags, summarised, created_at)
+            VALUES (?,?,?,?,?,?,?,?,0,?)
             """,
-            (conversation_id, "outbound", outbound_content, outbound_sender, "sent", json.dumps(outbound_metadata or {}), json.dumps(_normalise_tags(outbound_tags, "outbound")), now),
+            (conversation_id, "outbound", outbound_content, outbound_sender, "sent", int(outbound_delivery_eligible), json.dumps(outbound_metadata or {}), json.dumps(_normalise_tags(outbound_tags, "outbound")), now),
         )
 
         fields = ["turn_count = ?", "status = ?", "updated_at = ?", "last_activity_at = ?"]

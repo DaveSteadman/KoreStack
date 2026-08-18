@@ -252,14 +252,15 @@ class SessionService:
         conv_id = conv["id"]
         try:
             self.kc_post(f"/conversations/{conv_id}/turns", {
-                "inbound_content":  user_text,
-                "outbound_content": agent_text,
-                "inbound_sender":   session_id,
-                "outbound_sender":  "agent",
-                "token_estimate":   token_estimate,
-                "outbound_metadata": response_metadata or {},
-                "inbound_tags":     inbound_tags or [],
-                "outbound_tags":    outbound_tags or [],
+                "inbound_content":             user_text,
+                "outbound_content":            agent_text,
+                "inbound_sender":              session_id,
+                "outbound_sender":             "agent",
+                "token_estimate":              token_estimate,
+                "outbound_metadata":           response_metadata or {},
+                "inbound_tags":                inbound_tags or [],
+                "outbound_tags":               outbound_tags or [],
+                "outbound_delivery_eligible": "slashcommand_response" not in (outbound_tags or []),
             })
         except Exception:
             pass

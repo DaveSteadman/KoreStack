@@ -2,7 +2,7 @@ import { initAppBar, initTopbar } from "/ui-elements/assets/js/chrome.js";
 import { initWorkspaceLayouts, resetWorkspaceLayout } from "/ui-elements/assets/js/workspace.js";
 
 // ============================================================
-// MiniAgentFramework Web UI - app.js
+// KoreAgent Web UI - app.js
 // Vanilla JS - no build step, no dependencies.
 // ============================================================
 

@@ -43,6 +43,7 @@ class TurnAppendRequest(BaseModel):
     outbound_metadata: dict | None = None
     inbound_tags: list[str] = Field(default_factory=list)
     outbound_tags: list[str] = Field(default_factory=list)
+    outbound_delivery_eligible: bool = True
 
 
 class MessageAppendRequest(BaseModel):

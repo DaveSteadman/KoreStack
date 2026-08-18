@@ -12,6 +12,7 @@ import json
 import logging
 import os
 import signal
+import socket
 import subprocess
 import sys
 import threading
@@ -407,6 +408,18 @@ def service_health_timeout(spec: ServiceSpec) -> float:
     return 12.0 if spec.slug == "korechat" else 1.5
 
 
+def port_accepts_tcp(host: str, port: int, timeout: float = 0.25) -> bool:
+    """Return True when *host:port* accepts TCP quickly enough to justify an HTTP probe."""
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        sock.settimeout(timeout)
+        return sock.connect_ex((host, port)) == 0
+    except OSError:
+        return False
+    finally:
+        sock.close()
+
+
 def probe_http_with_retry(url: str, attempts: int = 3, interval: float = 0.8) -> tuple[bool, str]:
     """Probe *url* up to *attempts* times, waiting *interval* seconds between tries."""
     detail = "not tried"
@@ -462,17 +475,20 @@ class StackManager:
             if existing is not None and existing.poll() is None:
                 return False
 
-        reachable, detail = probe_http(spec.health_url, timeout=service_health_timeout(spec))
-        if reachable:
-            log.info("reusing %s %s url=%s", spec.label, detail, spec.url)
-            return False
+        parsed_url = urllib.parse.urlparse(spec.health_url)
+        probe_host = parsed_url.hostname or ""
+        probe_port = parsed_url.port
+        if probe_host and probe_port and port_accepts_tcp(probe_host, probe_port):
+            reachable, detail = probe_http(spec.health_url, timeout=service_health_timeout(spec))
+            if reachable:
+                log.info("reusing %s %s url=%s", spec.label, detail, spec.url)
+                return False
 
         script_path = spec.cwd / spec.script
         if not script_path.exists():
             raise SystemExit(f"Missing service entrypoint: {script_path}")
 
         # Build the spawn command and env, injecting the current port fresh from the spec.
-        parsed_url = urllib.parse.urlparse(spec.health_url)
         spawn_port = parsed_url.port
         meta = SERVICE_META.get(slug, {})
         spawn_env = dict(self._child_env)

@@ -1,6 +1,6 @@
 {
-  "model": "nemotron-3.5-lightning:latest",
+  "model": "gemma4:26b",
   "ctx": 100000,
-  "max_predict": 1024,
-  "llmhost": "http://MONTBLANC:11434"
+  "max_predict": 4096,
+  "llmhost": "http://localhost:11434"
 }

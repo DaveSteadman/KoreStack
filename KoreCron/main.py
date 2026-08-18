@@ -33,6 +33,7 @@ UI_ASSETS    = ROOT / "KoreUI" / "UIElements" / "assets"
 STOP         = threading.Event()
 NAME_RE      = re.compile(r"^(?=.{1,120}$)[A-Za-z0-9][A-Za-z0-9 _-]*$")
 SESSION_KEY_RE = re.compile(r"[^A-Za-z0-9_-]+")
+BROKEN_OUTPUT_RE = re.compile(r"(?:<unused\d+>){4,}", re.IGNORECASE)
 
 
 def _config() -> dict:
@@ -113,6 +114,29 @@ def _conversation(definition: dict) -> dict:
         return _http("POST", f"{base}/api/conversations", {"channel_type": "webchat", "subject": chat_name, "external_id": external_id})
 
 
+def _message_is_broken(message: dict) -> str | None:
+    content = str(message.get("content") or "").strip()
+    if not content:
+        return "empty assistant response"
+    if BROKEN_OUTPUT_RE.search(content):
+        return "placeholder-token output"
+    if content.startswith("(LLM call failed:"):
+        return content.strip("()")
+    return None
+
+
+def _await_outbound_reply(base: str, conversation_id: int, prior_count: int, timeout_seconds: int = 1800) -> dict:
+    deadline = time.monotonic() + timeout_seconds
+    while time.monotonic() < deadline and not STOP.is_set():
+        messages = _http("GET", f"{base}/api/conversations/{conversation_id}/messages?limit=1000")
+        if isinstance(messages, list) and len(messages) > prior_count:
+            latest = messages[-1]
+            if latest.get("direction") == "outbound":
+                return latest
+        time.sleep(1)
+    raise TimeoutError(f"Timed out waiting for outbound reply in conversation {conversation_id}")
+
+
 def _run(definition: dict) -> None:
     conversation = _conversation(definition)
     base         = _service_url("korechat")
@@ -127,12 +151,12 @@ def _run(definition: dict) -> None:
         before = _http("GET", f"{base}/api/conversations/{conversation_id}/messages?limit=1000")
         prior_count = len(before) if isinstance(before, list) else 0
         _http("POST", f"{base}/api/conversations/{conversation_id}/messages", {"direction": "inbound", "content": prompt_text, "sender_display": "KoreCron", "status": "received"})
-        deadline = time.monotonic() + 1800
-        while time.monotonic() < deadline and not STOP.is_set():
-            messages = _http("GET", f"{base}/api/conversations/{conversation_id}/messages?limit=1000")
-            if isinstance(messages, list) and len(messages) > prior_count and messages[-1].get("direction") == "outbound":
-                break
-            time.sleep(1)
+        reply = _await_outbound_reply(base, conversation_id, prior_count)
+        broken_reason = _message_is_broken(reply)
+        if broken_reason:
+            raise RuntimeError(
+                f"CronPrompt '{definition.get('name', '')}' aborted after prompt {prompt_text[:80]!r}: {broken_reason}"
+            )
 
 
 def _due(definition: dict, last_run: str | None, now: datetime) -> bool:

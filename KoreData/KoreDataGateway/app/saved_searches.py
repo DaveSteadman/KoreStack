@@ -25,20 +25,15 @@ def save_saved_searches(path: Path, saved_searches: list[dict]) -> None:
     temporary.replace(path)
 
 
-def load_saved_searches(path: Path, legacy_path: Path | None = None) -> list[dict]:
-    """Return SavedSearch definitions and migrate the prior store on first use."""
-    if path.exists():
-        return _read_saved_searches(path, "saved_searches")
-    legacy = _read_saved_searches(legacy_path, "output_sets") if legacy_path else []
-    if legacy:
-        save_saved_searches(path, legacy)
-    return legacy
+def load_saved_searches(path: Path) -> list[dict]:
+    """Return SavedSearch definitions."""
+    return _read_saved_searches(path, "saved_searches")
 
 
-def upsert_saved_search(path: Path, saved_search: dict, legacy_path: Path | None = None) -> dict:
+def upsert_saved_search(path: Path, saved_search: dict) -> dict:
     """Create or replace one SavedSearch by case-insensitive name."""
     name        = str(saved_search["name"])
-    current     = load_saved_searches(path, legacy_path)
+    current     = load_saved_searches(path)
     replacement = [item for item in current if str(item.get("name", "")).casefold() != name.casefold()]
     replacement.append(saved_search)
     replacement.sort(key=lambda item: str(item.get("name", "")).casefold())
@@ -46,10 +41,10 @@ def upsert_saved_search(path: Path, saved_search: dict, legacy_path: Path | None
     return saved_search
 
 
-def delete_saved_searches(path: Path, names: list[str], legacy_path: Path | None = None) -> list[str]:
+def delete_saved_searches(path: Path, names: list[str]) -> list[str]:
     """Delete SavedSearch definitions matching names and return those removed."""
     requested = {str(name).casefold() for name in names}
-    current   = load_saved_searches(path, legacy_path)
+    current   = load_saved_searches(path)
     removed   = [str(item.get("name", "")) for item in current if str(item.get("name", "")).casefold() in requested]
     if removed:
         save_saved_searches(
@@ -59,10 +54,10 @@ def delete_saved_searches(path: Path, names: list[str], legacy_path: Path | None
     return removed
 
 
-def find_saved_search(path: Path, name: str, legacy_path: Path | None = None) -> dict | None:
+def find_saved_search(path: Path, name: str) -> dict | None:
     """Find one SavedSearch by case-insensitive name."""
     needle = str(name).casefold()
     return next(
-        (item for item in load_saved_searches(path, legacy_path) if str(item.get("name", "")).casefold() == needle),
+        (item for item in load_saved_searches(path) if str(item.get("name", "")).casefold() == needle),
         None,
     )

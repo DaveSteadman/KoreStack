@@ -85,8 +85,7 @@ LOG = logging.getLogger("koredata.gateway")
 
 _BASE = Path(__file__).parent.parent.parent  # KoreData/ root
 _DATA = get_koredata_dir()
-_SAVED_SEARCHES_FILE       = _DATA / "SavedSearches.json"
-_LEGACY_SAVED_SEARCHES_FILE = _DATA / "OutputSets.json"
+_SAVED_SEARCHES_FILE = _DATA / "SavedSearches.json"
 
 
 def _scrape_data_root() -> Path:
@@ -668,7 +667,7 @@ async def koredata_search(
 @_mcp.tool()
 async def koredata_savedsearch_list() -> dict[str, list[dict]]:
     """List saved KoreData SavedSearch definitions."""
-    return {"saved_searches": _load_saved_searches(_SAVED_SEARCHES_FILE, _LEGACY_SAVED_SEARCHES_FILE)}
+    return {"saved_searches": _load_saved_searches(_SAVED_SEARCHES_FILE)}
 
 
 @_mcp.tool()
@@ -678,7 +677,7 @@ async def koredata_savedsearch_run(name: str) -> dict:
     SavedSearch definitions are saved gateway search definitions. Use koredata_savedsearch_list()
     to discover available names, then call this tool for the selected set.
     """
-    saved_search = _find_saved_search(_SAVED_SEARCHES_FILE, name, _LEGACY_SAVED_SEARCHES_FILE)
+    saved_search = _find_saved_search(_SAVED_SEARCHES_FILE, name)
     if saved_search is None:
         return {"error": f"SavedSearch not found: {name}"}
     search = saved_search.get("search")
@@ -981,7 +980,7 @@ register_gateway_api_routes(
 @app.get("/api/savedsearches")
 async def api_list_saved_searches() -> dict[str, list[dict]]:
     """Return saved, named SavedSearch definitions."""
-    return {"saved_searches": _load_saved_searches(_SAVED_SEARCHES_FILE, _LEGACY_SAVED_SEARCHES_FILE)}
+    return {"saved_searches": _load_saved_searches(_SAVED_SEARCHES_FILE)}
 
 
 @app.post("/api/savedsearches")
@@ -993,19 +992,19 @@ async def api_save_saved_search(request: _SavedSearchRequest) -> dict:
     if len(name) > 120:
         raise HTTPException(status_code=400, detail="SavedSearch name must be 120 characters or fewer")
     saved_search = {"name": name, "search": _saved_search_payload(request)}
-    return {"saved_search": _upsert_saved_search(_SAVED_SEARCHES_FILE, saved_search, _LEGACY_SAVED_SEARCHES_FILE)}
+    return {"saved_search": _upsert_saved_search(_SAVED_SEARCHES_FILE, saved_search)}
 
 
 @app.delete("/api/savedsearches")
 async def api_delete_saved_searches(names: list[str] = Query()) -> dict[str, list[str]]:
     """Delete the named SavedSearch definitions."""
-    return {"deleted": _delete_saved_searches(_SAVED_SEARCHES_FILE, names, _LEGACY_SAVED_SEARCHES_FILE)}
+    return {"deleted": _delete_saved_searches(_SAVED_SEARCHES_FILE, names)}
 
 
 @app.post("/api/savedsearches/{name}/run")
 async def api_run_saved_search(name: str) -> dict:
     """Run one SavedSearch through the normal KoreData search pipeline."""
-    saved_search = _find_saved_search(_SAVED_SEARCHES_FILE, name, _LEGACY_SAVED_SEARCHES_FILE)
+    saved_search = _find_saved_search(_SAVED_SEARCHES_FILE, name)
     if saved_search is None:
         raise HTTPException(status_code=404, detail=f"SavedSearch not found: {name}")
     search = saved_search.get("search")

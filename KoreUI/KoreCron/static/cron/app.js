@@ -1,4 +1,5 @@
 import { initServiceShell } from '/ui-elements/assets/js/serviceShell.js';
+import { svgIconMask } from '/ui-elements/assets/js/svgicons.js';
 
 const workspace    = document.querySelector('.kcui-workspace');
 const form         = document.querySelector('#cronprompt-form');
@@ -132,6 +133,24 @@ cronPromptRowStyle.textContent = `
     min-width: 2.1rem;
     text-align: center;
   }
+  .cronprompt-prompt-row {
+    display: grid;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .cronprompt-prompt-row__actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .cronprompt-prompt-row__action--add {
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .cronprompt-prompt-row__action--remove {
+    --kcui-icon-button-color: var(--danger);
+  }
   textarea.cronprompt-prompt {
     box-sizing: border-box;
     display: block;
@@ -168,14 +187,31 @@ function fitPromptTextarea(textarea) {
 }
 
 
-function addPromptRow(value = '') {
+function createPromptActionButton({ title, label, modifier, contents }) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = `kcui-icon-button ${modifier}`.trim();
+  button.title = title;
+  button.setAttribute('aria-label', label);
+  if (typeof contents === 'string') button.innerHTML = contents;
+  return button;
+}
+
+
+function addPromptRow(value = '', { afterRow = null, focus = false } = {}) {
   const row       = document.createElement('div');
   const label     = document.createElement('label');
   const textarea  = document.createElement('textarea');
+  const addAfter  = createPromptActionButton({
+    title: 'Add prompt after this one',
+    label: 'Add prompt after this one',
+    modifier: 'cronprompt-prompt-row__action--add',
+  });
   const remove    = document.createElement('button');
   const controls  = document.createElement('div');
   const index     = promptList.children.length + 1;
 
+  row.className      = 'cronprompt-prompt-row';
   label.className   = 'kcui-form-label';
   label.textContent = `Prompt ${index}`;
   textarea.className = 'cronprompt-prompt';
@@ -184,24 +220,47 @@ function addPromptRow(value = '') {
   textarea.placeholder = 'Prompt to send after the previous prompt has completed.';
   textarea.dataset.prompt = 'true';
   textarea.addEventListener('input', () => fitPromptTextarea(textarea));
+  addAfter.textContent = '+';
+  addAfter.addEventListener('click', () => {
+    addPromptRow('', { afterRow: row, focus: true });
+    renumberPrompts();
+    editorDirty = true;
+  });
   remove.type        = 'button';
-  remove.className   = 'kcui-tag kcui-tag--danger';
-  remove.textContent = 'Remove';
+  remove.className   = 'kcui-icon-button cronprompt-prompt-row__action--remove';
+  remove.innerHTML   = svgIconMask('trash-svgrepo-com', { size: 14 });
+  remove.title       = 'Remove this prompt';
+  remove.setAttribute('aria-label', 'Remove this prompt');
   remove.addEventListener('click', () => {
     row.remove();
     renumberPrompts();
     editorDirty = true;
   });
 
+  controls.className = 'cronprompt-prompt-row__actions';
   controls.append(remove);
+  controls.prepend(addAfter);
   row.append(label, textarea, controls);
-  promptList.append(row);
+  if (afterRow && afterRow.parentElement === promptList) afterRow.after(row);
+  else promptList.append(row);
+  renumberPrompts();
   fitPromptTextarea(textarea);
+  if (focus) textarea.focus();
 }
 
 function renumberPrompts() {
   [...promptList.children].forEach((row, index) => {
     row.querySelector('label').textContent = `Prompt ${index + 1}`;
+    const addAfter = row.querySelector('.cronprompt-prompt-row__action--add');
+    const remove = row.querySelector('.cronprompt-prompt-row__action--remove');
+    if (addAfter) {
+      addAfter.title = `Add prompt after prompt ${index + 1}`;
+      addAfter.setAttribute('aria-label', `Add prompt after prompt ${index + 1}`);
+    }
+    if (remove) {
+      remove.title = `Remove prompt ${index + 1}`;
+      remove.setAttribute('aria-label', `Remove prompt ${index + 1}`);
+    }
   });
 }
 
@@ -260,8 +319,8 @@ function renderRows(items) {
       runNow(item.name, runAction);
     });
     deleteAction.type      = 'button';
-    deleteAction.className = 'kcui-tag kcui-tag--danger';
-    deleteAction.textContent = 'X';
+    deleteAction.className = 'kcui-icon-button cronprompt-prompt-row__action--remove';
+    deleteAction.innerHTML = svgIconMask('trash-svgrepo-com', { size: 14 });
     deleteAction.title = `Delete ${item.name}`;
     deleteAction.setAttribute('aria-label', `Delete ${item.name}`);
     deleteAction.classList.add('cronprompt-row__delete');

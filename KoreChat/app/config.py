@@ -8,7 +8,7 @@
 # starts with no config file present.
 #
 # data_dir defaults to the configured suite datacontrol/korechat directory so that all persisted data
-# (database, log) lands in the shared datacontrol folder alongside MiniAgentFramework data.
+# (database, log) lands in the shared datacontrol.
 # The suite path resolver keeps standalone and suite-managed launches consistent.
 # ====================================================================================================
 

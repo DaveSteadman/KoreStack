@@ -34,6 +34,7 @@ TEST_CHAT_EXTERNAL_ID = "koretest:TEST"
 UI_ROOT    = ROOT / "KoreUI" / "KoreTest"
 UI_ELEMENTS_ASSETS = ROOT / "KoreUI" / "UIElements" / "assets"
 _RUN_LOCK = threading.Lock()
+_TREND_RECENT_RUN_LIMIT = 10
 
 
 def _config() -> dict:
@@ -318,15 +319,84 @@ def _trend_lines(filter_name: str = "") -> list[str]:
     return ["Run                           Total  Pass%"] + [f"{point['label']:<29} {point['total']:>5}  {point['pass_rate']:>5.0f}%" for point in points]
 
 
-def _trend_points(filter_name: str = "") -> list[dict]:
+def _trend_point_sort_key(csv_path: Path) -> tuple[int, str, float]:
+    match = re.match(r"^test_results_(\d{8}_\d{6})(?:_|$)", csv_path.stem)
+    try:
+        mtime = csv_path.stat().st_mtime
+    except OSError:
+        mtime = 0.0
+    if match:
+        return (1, match.group(1), mtime)
+    return (0, "", mtime)
+
+
+def _trend_points_for_all_runs() -> list[dict]:
+    conn = _db()
+    try:
+        rows = conn.execute(
+            "SELECT started_at, finished_at, result_json FROM test_runs "
+            "WHERE suite = 'all' AND status != 'running' "
+            "ORDER BY started_at DESC LIMIT ?",
+            (_TREND_RECENT_RUN_LIMIT,),
+        ).fetchall()
+    finally:
+        conn.close()
+
     points: list[dict] = []
+    for row in reversed(rows):
+        try:
+            result = json.loads(str(row["result_json"] or "{}"))
+        except json.JSONDecodeError:
+            result = {}
+
+        started_at_raw = str(row["started_at"] or "")
+        finished_at_raw = str(row["finished_at"] or "")
+        try:
+            started_at = datetime.fromisoformat(started_at_raw)
+        except ValueError:
+            started_at = None
+        try:
+            finished_at = datetime.fromisoformat(finished_at_raw)
+        except ValueError:
+            finished_at = None
+
+        if started_at is not None:
+            label = started_at.astimezone().strftime("%Y%m%d_%H%M%S_all")
+        else:
+            label = str(result.get("collection_id") or result.get("run_id") or "all")
+
+        duration_seconds = 0.0
+        if started_at is not None and finished_at is not None:
+            duration_seconds = max(0.0, round((finished_at - started_at).total_seconds(), 1))
+
+        total = int(result.get("total") or 0)
+        passed = int(result.get("passed") or 0)
+        points.append(
+            {
+                "label": label,
+                "passed": passed,
+                "total": total,
+                "pass_rate": round(100 * passed / total, 1) if total else 0.0,
+                "duration_seconds": duration_seconds,
+                "prompt_tokens": result.get("prompt_tokens"),
+            }
+        )
+    return points
+
+
+def _trend_points(filter_name: str = "") -> list[dict]:
     normalized = filter_name.lower().replace(" ", "_").removesuffix(".json")
+    if normalized == "all":
+        return _trend_points_for_all_runs()
+
+    points: list[tuple[tuple[int, str, float], dict]] = []
     result_root = get_suite_datacontrol_dir() / "test_results"
     for csv_path in result_root.rglob("test_results_*.csv"):
         if "_analysis" in csv_path.stem or (normalized and normalized not in csv_path.stem.lower()):
             continue
         try:
-            rows = list(csv.DictReader(csv_path.open(encoding="utf-8", newline="")))
+            with csv_path.open(encoding="utf-8", newline="") as handle:
+                rows = list(csv.DictReader(handle))
         except OSError:
             continue
         total  = len(rows)
@@ -334,15 +404,19 @@ def _trend_points(filter_name: str = "") -> list[dict]:
         duration_seconds = sum(float(row.get("duration_seconds") or 0) for row in rows)
         has_token_data   = any(str(row.get("prompt_tokens", "")).strip() for row in rows)
         prompt_tokens    = sum(int(float(row.get("prompt_tokens") or 0)) for row in rows) if has_token_data else None
-        points.append({
-            "label":     csv_path.stem.removeprefix("test_results_"),
-            "passed":    passed,
-            "total":     total,
-            "pass_rate": round(100 * passed / total, 1) if total else 0.0,
-            "duration_seconds": round(duration_seconds, 1),
-            "prompt_tokens":    prompt_tokens,
-        })
-    return sorted(points, key=lambda point: point["label"])
+        points.append((
+            _trend_point_sort_key(csv_path),
+            {
+                "label":     csv_path.stem.removeprefix("test_results_"),
+                "passed":    passed,
+                "total":     total,
+                "pass_rate": round(100 * passed / total, 1) if total else 0.0,
+                "duration_seconds": round(duration_seconds, 1),
+                "prompt_tokens":    prompt_tokens,
+            },
+        ))
+    recent_points = sorted(points, key=lambda item: item[0], reverse=True)[:_TREND_RECENT_RUN_LIMIT]
+    return [point for _sort_key, point in sorted(recent_points, key=lambda item: item[0])]
 
 
 def _run_unit_checks() -> dict:

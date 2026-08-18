@@ -77,7 +77,7 @@ function renderTrend(points) {
     }));
     return;
   }
-  trendSummary.textContent = `${points.length} recorded run${points.length === 1 ? '' : 's'} for ${suiteSelect.value}.`;
+  trendSummary.textContent = `Showing ${points.length} recent run${points.length === 1 ? '' : 's'} for ${suiteSelect.value}.`;
   trendRows.replaceChildren(...points.map((point) => {
     const row = document.createElement('tr');
     const tokens = point.prompt_tokens === null ? '—' : point.prompt_tokens.toLocaleString();
