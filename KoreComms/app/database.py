@@ -529,16 +529,15 @@ def conversation_bind_delivery(
         else:
             assert row is not None
             conv_id = int(row["id"])
-            if int(row["interface_id"]) != interface_id:
-                raise ValueError("conversation belongs to a different connection")
 
         conn.execute(
-            "UPDATE conversations SET delivery_recipient=?, delivery_list_id=?, delivery_subject=?, delivery_enabled=? WHERE id=?",
-            (recipient, list_id, subject, int(enabled), conv_id),
+            "UPDATE conversations SET interface_id=?, korechat_id=?, delivery_recipient=?, delivery_list_id=?, "
+            "delivery_subject=?, delivery_enabled=? WHERE id=?",
+            (interface_id, korechat_id, recipient, list_id, subject, int(enabled), conv_id),
         )
         conn.execute(
             "INSERT INTO activity_log (action, detail, logged_at) VALUES (?,?,?)",
-            ("delivery_bound", activity_detail, _now()),
+            ("delivery_rebound" if not created else "delivery_bound", activity_detail, _now()),
         )
     return conv_id, created
 

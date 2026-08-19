@@ -164,10 +164,17 @@ def _store_classic_email_config(config: dict, form: dict, *, preserve_passwords:
 
 def _store_sftp_file_config(config: dict, form: dict, *, preserve_password: bool = False) -> None:
     remote_path = str(form["sftp_remote_path"] or "").strip()
+    host_key    = str(form.get("sftp_host_key") or "").strip()
+    trust_server = form.get("sftp_trust_server") == "on"
     if not remote_path.startswith("/"):
         raise HTTPException(400, "SFTP destination file must be an absolute remote path")
+    if not trust_server and not host_key and not (preserve_password and str(config.get("host_key") or "").strip()):
+        raise HTTPException(400, "A verified SFTP host public key is required")
     for key in ("sftp_host", "sftp_port", "sftp_username", "sftp_remote_path", "send_poll_interval"):
         config[key.removeprefix("sftp_")] = form[key]
+    if host_key:
+        config["host_key"] = host_key
+    config["trust_server"] = trust_server
     if form["sftp_password"] or not preserve_password:
         config["password"] = crypto.encrypt(form["sftp_password"]) if form["sftp_password"] else ""
 
@@ -427,9 +434,9 @@ def api_delivery_bind(req: DeliveryBindingRequest):
         raise HTTPException(400, "chat_name is required")
     if req.distribution_list_id and list_name:
         raise HTTPException(400, "Specify a distribution list by ID or name, not both")
-    iface = None
+    iface      = None
+    interfaces = db.interface_list()
     if connection_name:
-        interfaces = db.interface_list()
         exact       = [row for row in interfaces if row["name"].casefold() == connection_name.casefold()]
         matches     = exact or [
             row for row in interfaces
@@ -441,6 +448,16 @@ def api_delivery_bind(req: DeliveryBindingRequest):
             names = ", ".join(row["name"] for row in matches)
             raise HTTPException(409, f"Connection '{connection_name}' is ambiguous: {names}")
         iface = matches[0]
+    elif recipient:
+        # Backward-compatible shorthand: an unambiguous SFTP connection name in
+        # --to means "bind to this destination", not an email recipient.
+        sftp_matches = [
+            row for row in interfaces
+            if row["type"] == "sftp_file" and row["name"].casefold() == recipient.casefold()
+        ]
+        if len(sftp_matches) == 1:
+            iface     = sftp_matches[0]
+            recipient = ""
     is_sftp_file = iface is not None and iface["type"] == "sftp_file"
     if is_sftp_file:
         if recipient or req.distribution_list_id or list_name:
@@ -459,24 +476,24 @@ def api_delivery_bind(req: DeliveryBindingRequest):
     if list_row is not None:
         iface = db.interface_get(list_row["interface_id"])
     if iface is None:
-        raise HTTPException(400, "connection is required when delivering to a single email address")
+        raise HTTPException(
+            400,
+            "connection is required. Use --connection <name>; an SFTP connection needs no --to or --to-list.",
+        )
     if not iface["enabled"]:
         raise HTTPException(409, "Connection is disabled")
     list_id = list_row["id"] if list_row else None
     subject = req.subject.strip() or "KoreComms report"
-    try:
-        conv_id, _ = db.conversation_bind_delivery(
-            interface_id    = iface["id"],
-            chat_name       = chat_name,
-            korechat_id     = req.subject.strip(),
-            recipient       = recipient,
-            list_id         = list_id,
-            subject         = subject,
-            enabled         = req.enabled,
-            activity_detail = f"conv via={iface['name']} to={list_row['name'] if list_row else recipient or 'configured SFTP file'}",
-        )
-    except ValueError:
-        raise HTTPException(409, "Chat is already bound to a different connection") from None
+    conv_id, _ = db.conversation_bind_delivery(
+        interface_id    = iface["id"],
+        chat_name       = chat_name,
+        korechat_id     = req.subject.strip(),
+        recipient       = recipient,
+        list_id         = list_id,
+        subject         = subject,
+        enabled         = req.enabled,
+        activity_detail = f"conv via={iface['name']} to={list_row['name'] if list_row else recipient or 'configured SFTP file'}",
+    )
     try:
         kc_conv = kc_client.find_or_create_conversation(
             external_id  = chat_name,
@@ -554,14 +571,17 @@ def api_delivery_publish_previous(chat_name: str):
     ]
     if not eligible:
         raise HTTPException(409, "There is no eligible agent output to publish")
-    message   = next((item for item in reversed(eligible) if item.get("status") == "draft"), eligible[-1])
+    # "publish previous" means the most recent eligible agent result, regardless
+    # of whether it was published before.  Preferring an older draft can upload a
+    # stale response instead of the result immediately preceding this command.
+    message   = eligible[-1]
     interface = db.interface_get(int(conversation["interface_id"]))
     if interface is None:
         raise HTTPException(404, "Connection not found")
     try:
         build_adapter(interface).route_reply(conversation["id"], str(message["content"]))
         kc_client.mark_message_sent(message["id"])
-    except RuntimeError as exc:
+    except Exception as exc:
         raise HTTPException(502, f"Could not publish output: {exc}") from exc
     db.external_message_create(
         conversation_id     = conversation["id"],
@@ -776,6 +796,8 @@ def ui_connections_create(
     sftp_username:   str = Form(default=""),
     sftp_password:   str = Form(default=""),
     sftp_remote_path: str = Form(default=""),
+    sftp_host_key:   str = Form(default=""),
+    sftp_trust_server: str = Form(default="off"),
 ):
     if iface_type not in REGISTRY or iface_type == "manual":
         raise HTTPException(400, "Unsupported interface type")
@@ -847,6 +869,8 @@ def ui_connections_update(
     sftp_username:   str = Form(default=""),
     sftp_password:   str = Form(default=""),
     sftp_remote_path: str = Form(default=""),
+    sftp_host_key:   str = Form(default=""),
+    sftp_trust_server: str = Form(default="off"),
     enabled:       str = Form(default="off"),
 ):
     iface = db.interface_get(iface_id)

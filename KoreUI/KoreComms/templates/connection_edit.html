@@ -45,7 +45,11 @@
       <input type="password" id="sftp_password" name="sftp_password" placeholder="{% if iface and config.password %}(stored - paste to update){% else %}Password{% endif %}" autocomplete="current-password">
       <label for="sftp_remote_path">Destination file</label>
       <input type="text" id="sftp_remote_path" name="sftp_remote_path" value="{{ config.remote_path if config else '' }}" placeholder="/reports/ai-news.html" required>
-      <p class="kcui-meta">The remote host key must be present in the service account's known_hosts file.</p>
+      <label for="sftp_host_key">Verified SSH host public key</label>
+      <input type="text" id="sftp_host_key" name="sftp_host_key" value="{{ config.host_key if config else '' }}" placeholder="ssh-ed25519 AAAA...">
+      <p class="kcui-meta">Paste the server's verified OpenSSH public host key. It travels with this connection and is checked on every machine.</p>
+      <label class="kcui-check"><input type="checkbox" name="sftp_trust_server" {% if config and config.trust_server %}checked{% endif %}> Trust this SFTP server automatically</label>
+      <p class="kcui-meta">Disables host-identity verification for this connection. Use only where that trade-off is acceptable.</p>
       <label for="send_poll_interval">Send Polling Interval (seconds)</label>
       <input id="send_poll_interval" name="send_poll_interval" type="number" value="{{ send_poll_interval if iface else 10 }}" min="1" max="3600" class="kcui-field-sm">
       {% endif %}

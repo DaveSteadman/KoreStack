@@ -48,6 +48,7 @@
 # - _coerce_conversation_datasets: Implements the  coerce conversation datasets operation for this module.
 # - _build_prompt: Implements the  build prompt operation for this module.
 # - _invalid_model_response_reason: Returns the reason a model response cannot be persisted.
+# - _normalise_strict_json_response: Removes model prose from an explicitly JSON-only response.
 # - _handle_compress_needed: Implements the  handle compress needed operation for this module.
 # - _handle_event: Implements the  handle event operation for this module.
 # - start_koreconv_loop: Starts koreconv loop for this module.
@@ -97,6 +98,10 @@ _DEFAULT_TIMEOUT        = 8
 _SESSION_PREFIX         = "kc_conv_"
 _MAX_MODEL_ATTEMPTS     = 2
 _PLACEHOLDER_OUTPUT_RE  = re.compile(r"(?:<unused\d+>){4,}", re.IGNORECASE)
+_STRICT_JSON_REQUEST_RE = re.compile(
+    r"\b(?:just|only)\s+(?:the\s+)?json\b|\bno\s+(?:explanations|preamble|markdown)\b",
+    re.IGNORECASE,
+)
 # Fraction of config.num_ctx at which a compress_needed event is raised.
 # Scales automatically when the user changes context size via /llmserverconfig ctx.
 _COMPRESS_THRESHOLD = 0.70
@@ -110,6 +115,21 @@ def _invalid_model_response_reason(response: str) -> str | None:
     if _PLACEHOLDER_OUTPUT_RE.search(content):
         return "placeholder-token output"
     return None
+
+
+def _normalise_strict_json_response(prompt: str, response: str) -> str:
+    """Return JSON alone when the inbound prompt explicitly forbids surrounding prose."""
+    if not _STRICT_JSON_REQUEST_RE.search(prompt):
+        return response
+    match     = re.search(r"```(?:json)?\s*(.*?)\s*```", response, flags=re.IGNORECASE | re.DOTALL)
+    candidate = match.group(1) if match else response.strip()
+    try:
+        parsed = json.loads(candidate)
+    except json.JSONDecodeError:
+        return response
+    if not isinstance(parsed, (dict, list)):
+        return response
+    return json.dumps(parsed, ensure_ascii=False, indent=2)
 
 
 def _latest_message(messages: list[dict]) -> dict | None:
@@ -601,6 +621,10 @@ def _handle_event(
                 token_pressure       = token_pressure,
             )
             reply                   = response.strip()
+            normalised_reply        = _normalise_strict_json_response(inbound_prompt, reply)
+            if normalised_reply != reply:
+                push_log_line(f"[KORECHAT] Conv {conv_id}: removed prose around an explicitly JSON-only response")
+                reply = normalised_reply
             invalid_response_reason = _invalid_model_response_reason(reply)
             tps_str                 = f"{tps:.1f}" if tps > 0 else "0"
             push_log_line(
