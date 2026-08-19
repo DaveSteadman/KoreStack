@@ -5,6 +5,22 @@
 #
 # This file now owns service setup and ingest lifecycle management.
 # API endpoints live in app/endpoint_api.py and UI scaffolding lives in app/endpoint_ui.py.
+# MARK: FUNCTIONS
+# Function inventory:
+# - _init_job_object: Implements the  init job object operation for this module.
+# - _assign_to_job: Implements the  assign to job operation for this module.
+# - _write_sync_status: Implements the  write sync status operation for this module.
+# - _normalize_schedule: Implements the  normalize schedule operation for this module.
+# - _parse_last_run_date: Implements the  parse last run date operation for this module.
+# - _add_months: Implements the  add months operation for this module.
+# - _is_schedule_due: Implements the  is schedule due operation for this module.
+# - _prune_finished_ingest_processes: Implements the  prune finished ingest processes operation for this module.
+# - _launch_ingestor: Implements the  launch ingestor operation for this module.
+# - _stop_ingestor: Implements the  stop ingestor operation for this module.
+# - _run_ingest_scheduler: Implements the  run ingest scheduler operation for this module.
+# - _reset_stale_running: Implements the  reset stale running operation for this module.
+# - _warm_registered_databases: Implements the  warm registered databases operation for this module.
+# - _lifespan: Implements the  lifespan operation for this module.
 # ====================================================================================================
 from contextlib import asynccontextmanager
 from datetime import date

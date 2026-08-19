@@ -1,3 +1,13 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# api models module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Primary types: ConversationCreateRequest, ConversationPatchRequest, DefaultChatCullRequest, InputHistoryAppendRequest, TurnAppendRequest, MessageAppendRequest, MessagePatchRequest, EventCreateRequest, EventCompleteRequest.
+# Function inventory: this module exposes package or declarative configuration only.
+# ====================================================================================================
+
 from pydantic import BaseModel
 from pydantic import Field
 
@@ -35,14 +45,14 @@ class InputHistoryAppendRequest(BaseModel):
 
 
 class TurnAppendRequest(BaseModel):
-    inbound_content: str
-    outbound_content: str
-    inbound_sender: str = ""
-    outbound_sender: str = "agent"
-    token_estimate: int | None = None
-    outbound_metadata: dict | None = None
-    inbound_tags: list[str] = Field(default_factory=list)
-    outbound_tags: list[str] = Field(default_factory=list)
+    inbound_content:             str
+    outbound_content:            str
+    inbound_sender:              str = ""
+    outbound_sender:             str = "agent"
+    token_estimate:              int | None = None
+    outbound_metadata:           dict | None = None
+    inbound_tags:                list[str] = Field(default_factory=list)
+    outbound_tags:               list[str] = Field(default_factory=list)
     outbound_delivery_eligible: bool = True
 
 

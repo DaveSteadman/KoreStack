@@ -41,6 +41,19 @@ Endpoints:
 # ====================================================================================================
 # Import graph military helpers for datacontrol/koredata/Graph/processing.
 # Provides the focused helpers and module-level behaviour grouped into this file.
+# MARK: FUNCTIONS
+# Function inventory:
+# - _find_suite_root: Implements the  find suite root operation for this module.
+# - _load_suite_config: Implements the  load suite config operation for this module.
+# - _wikilinks_in: Implements the  wikilinks in operation for this module.
+# - _strip_wikilinks: Implements the  strip wikilinks operation for this module.
+# - _norm_key: Implements the  norm key operation for this module.
+# - _is_platform_candidate: Implements the  is platform candidate operation for this module.
+# - _is_confirmed_platform: Implements the  is confirmed platform operation for this module.
+# - extract_connections: Extracts connections for this module.
+# - _add: Implements the  add operation for this module.
+# - submit_batch: Implements the submit batch operation for this module.
+# - main: Starts this module's primary operation.
 # ====================================================================================================
 
 import argparse

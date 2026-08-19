@@ -1,3 +1,22 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Reusable SQLite support for services that index documents sentence by sentence. It defines the
+# normalised sentence schema, derives stable source offsets, migrates legacy tables, and tracks
+# indexing progress. Owner-specific services supply only their record identifier and backfill logic,
+# keeping sentence segmentation and schema repair consistent throughout KoreStack.
+# MARK: FUNCTIONS
+# Function inventory:
+# - sentence_schema_columns: Implements the sentence schema columns operation for this module.
+# - split_sentences: Implements the split sentences operation for this module.
+# - sentence_index_needs_rebuild: Implements the sentence index needs rebuild operation for this module.
+# - sentence_schema_needs_normalization: Implements the sentence schema needs normalization operation for this module.
+# - normalize_sentence_schema: Normalizes sentence schema for this module.
+# - extract_sentence_text: Extracts sentence text for this module.
+# - mark_sentences_indexed: Marks sentences indexed for this module.
+# - reset_sentence_indexed_at: Implements the reset sentence indexed at operation for this module.
+# ====================================================================================================
+
 from __future__ import annotations
 
 import sqlite3

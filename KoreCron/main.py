@@ -1,3 +1,43 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# main module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Function inventory:
+# - _config: Implements the  config operation for this module.
+# - _service_url: Implements the  service url operation for this module.
+# - _read: Implements the  read operation for this module.
+# - _write: Implements the  write operation for this module.
+# - _definitions: Implements the  definitions operation for this module.
+# - _save: Implements the  save operation for this module.
+# - _schedule_text: Implements the  schedule text operation for this module.
+# - _parse_schedule: Implements the  parse schedule operation for this module.
+# - _http: Implements the  http operation for this module.
+# - _cron_session_key: Implements the  cron session key operation for this module.
+# - _cron_external_id: Implements the  cron external id operation for this module.
+# - _conversation: Implements the  conversation operation for this module.
+# - _reply_error: Returns a central-agent error reported by an outbound message.
+# - _await_outbound_reply: Implements the  await outbound reply operation for this module.
+# - _run: Implements the  run operation for this module.
+# - _due: Implements the  due operation for this module.
+# - _next_fire: Implements the  next fire operation for this module.
+# - _scheduler: Implements the  scheduler operation for this module.
+# - lifespan: Implements the lifespan operation for this module.
+# - status: Implements the status operation for this module.
+# - list_cronprompts: Lists cronprompts for this module.
+# - timeline: Implements the timeline operation for this module.
+# - _cronprompt_definition: Implements the  cronprompt definition operation for this module.
+# - create_cronprompt: Creates cronprompt for this module.
+# - update_cronprompt: Updates cronprompt for this module.
+# - delete_cronprompt: Deletes cronprompt for this module.
+# - run_cronprompt: Runs cronprompt for this module.
+# - resume_cronprompt_agent: Implements the resume cronprompt agent operation for this module.
+# - ui: Implements the ui operation for this module.
+# - cron_list: Implements the cron list operation for this module.
+# - cron_run: Implements the cron run operation for this module.
+# ====================================================================================================
+
 from __future__ import annotations
 
 import json
@@ -33,7 +73,6 @@ UI_ASSETS    = ROOT / "KoreUI" / "UIElements" / "assets"
 STOP         = threading.Event()
 NAME_RE      = re.compile(r"^(?=.{1,120}$)[A-Za-z0-9][A-Za-z0-9 _-]*$")
 SESSION_KEY_RE = re.compile(r"[^A-Za-z0-9_-]+")
-BROKEN_OUTPUT_RE = re.compile(r"(?:<unused\d+>){4,}", re.IGNORECASE)
 
 
 def _config() -> dict:
@@ -114,14 +153,11 @@ def _conversation(definition: dict) -> dict:
         return _http("POST", f"{base}/api/conversations", {"channel_type": "webchat", "subject": chat_name, "external_id": external_id})
 
 
-def _message_is_broken(message: dict) -> str | None:
-    content = str(message.get("content") or "").strip()
-    if not content:
-        return "empty assistant response"
-    if BROKEN_OUTPUT_RE.search(content):
-        return "placeholder-token output"
-    if content.startswith("(LLM call failed:"):
-        return content.strip("()")
+def _reply_error(message: dict) -> str | None:
+    """Return a canonical agent execution error without reinterpreting model output."""
+    tags = {str(tag).strip().casefold() for tag in message.get("tags") or []}
+    if "agent_error" in tags:
+        return "agent could not produce a valid response"
     return None
 
 
@@ -152,10 +188,10 @@ def _run(definition: dict) -> None:
         prior_count = len(before) if isinstance(before, list) else 0
         _http("POST", f"{base}/api/conversations/{conversation_id}/messages", {"direction": "inbound", "content": prompt_text, "sender_display": "KoreCron", "status": "received"})
         reply = _await_outbound_reply(base, conversation_id, prior_count)
-        broken_reason = _message_is_broken(reply)
-        if broken_reason:
+        reply_error = _reply_error(reply)
+        if reply_error:
             raise RuntimeError(
-                f"CronPrompt '{definition.get('name', '')}' aborted after prompt {prompt_text[:80]!r}: {broken_reason}"
+                f"CronPrompt '{definition.get('name', '')}' aborted after prompt {prompt_text[:80]!r}: {reply_error}"
             )
 
 

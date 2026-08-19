@@ -16,6 +16,36 @@ from __future__ import annotations
 # Concurrency note:
 #   - _kc_conv_cache is only an optimisation.  Correctness comes from KoreChat as
 #     the source of truth, so cache misses or cache resets must remain recoverable.
+# MARK: FUNCTIONS
+# Primary types: SessionService.
+# Function inventory:
+# - __init__: Implements the   init   operation for this module.
+# - create_session_context: Creates session context for this module.
+# - _conversation_history_session_context: Implements the  conversation history session context operation for this module.
+# - handle_stoprun_immediate: Handles stoprun immediate for this module.
+# - kc_external_id_for_session: Implements the kc external id for session operation for this module.
+# - kc_conversation_id_for_session: Implements the kc conversation id for session operation for this module.
+# - kc_set_session_name: Implements the kc set session name operation for this module.
+# - kc_get_conversation_for_session: Implements the kc get conversation for session operation for this module.
+# - kc_submit_prompt: Appends a durable inbound prompt to a session conversation.
+# - get_session_turns: Returns session turns for this module.
+# - kc_ensure_conversation: Implements the kc ensure conversation operation for this module.
+# - kc_save_turn: Implements the kc save turn operation for this module.
+# - load_session: Loads session for this module.
+# - _history_turns: Implements the  history turns operation for this module.
+# - _promote_named_items: Implements the  promote named items operation for this module.
+# - _archive_old_history: Implements the  archive old history operation for this module.
+# - save_session: Saves session for this module.
+# - flush_scratch_to_session: Implements the flush scratch to session operation for this module.
+# - delete_session_state: Deletes session state for this module.
+# - kc_get: Implements the kc get operation for this module.
+# - kc_post: Implements the kc post operation for this module.
+# - kc_patch: Implements the kc patch operation for this module.
+# - kc_delete: Implements the kc delete operation for this module.
+# - _kc_write: Implements the  kc write operation for this module.
+# - kc_request_async: Implements the kc request async operation for this module.
+# - kc_get_async: Implements the kc get async operation for this module.
+# - kc_post_async: Implements the kc post async operation for this module.
 # ====================================================================================================
 
 import json
@@ -61,9 +91,9 @@ class SessionService:
         self._conversation_history_cls            = conversation_history_cls
         self._session_context_cls                 = session_context_cls
         self._hydrate_session_state               = hydrate_session_state
-        self._scratchpad_clear                       = scratchpad_clear
-        self._scratchpad_restore_key                 = scratchpad_restore_key
-        self._get_scratchpad_store                   = get_scratchpad_store
+        self._scratchpad_clear                    = scratchpad_clear
+        self._scratchpad_restore_key              = scratchpad_restore_key
+        self._get_scratchpad_store                = get_scratchpad_store
         self._build_persisted_scratchpad_payload  = build_persisted_scratchpad_payload
         self._get_persisted_datasets_payload      = get_persisted_datasets_payload
         self._delete_persisted_session_datasets   = delete_persisted_session_datasets
@@ -73,9 +103,9 @@ class SessionService:
         self._run_queues_lock                     = run_queues_lock
         self._queue_run_event                     = queue_run_event
         self._finish_run_event_queue              = finish_run_event_queue
-        self._kc_conv_cache: dict[str, dict]     = {}
+        self._kc_conv_cache: dict[str, dict]      = {}
         self._kc_conv_cache_lock                  = threading.Lock()
-        self._kc_session_names: dict[str, str]   = {}
+        self._kc_session_names: dict[str, str]    = {}
         self._kc_direct_session_prefix            = "kc_conv_"
         self._kc_timeout                          = 8
         self._max_recent_turns                    = 4
@@ -236,6 +266,21 @@ class SessionService:
             return conv
         return None
 
+    def kc_submit_prompt(self, session_id: str, content: str) -> dict | None:
+        """Append one inbound turn for the shared KoreChat Agent event worker."""
+        conv = self.kc_ensure_conversation(session_id)
+        if conv is None:
+            return None
+        message = self.kc_post(f"/conversations/{conv['id']}/messages", {
+            "direction":      "inbound",
+            "content":        content,
+            "sender_display": session_id,
+            "status":         "received",
+        })
+        if not isinstance(message, dict):
+            return None
+        return {"conversation_id": int(conv["id"]), "message_id": int(message["id"])}
+
     def kc_save_turn(
         self,
         session_id: str,
@@ -252,14 +297,14 @@ class SessionService:
         conv_id = conv["id"]
         try:
             self.kc_post(f"/conversations/{conv_id}/turns", {
-                "inbound_content":             user_text,
-                "outbound_content":            agent_text,
-                "inbound_sender":              session_id,
-                "outbound_sender":             "agent",
-                "token_estimate":              token_estimate,
-                "outbound_metadata":           response_metadata or {},
-                "inbound_tags":                inbound_tags or [],
-                "outbound_tags":               outbound_tags or [],
+                "inbound_content":                user_text,
+                "outbound_content":               agent_text,
+                "inbound_sender":                 session_id,
+                "outbound_sender":                "agent",
+                "token_estimate":                 token_estimate,
+                "outbound_metadata":              response_metadata or {},
+                "inbound_tags":                   inbound_tags or [],
+                "outbound_tags":                  outbound_tags or [],
                 "outbound_delivery_eligible": "slashcommand_response" not in (outbound_tags or []),
             })
         except Exception:

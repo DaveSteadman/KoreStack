@@ -3,6 +3,17 @@
 # ====================================================================================================
 # Conversation state helpers for KoreAgent/app.
 # Provides the focused helpers and module-level behaviour grouped into this file.
+# MARK: FUNCTIONS
+# Function inventory:
+# - estimate_next_turn_tokens: Implements the estimate next turn tokens operation for this module.
+# - estimate_summary_tokens: Implements the estimate summary tokens operation for this module.
+# - _memory_key: Implements the  memory key operation for this module.
+# - _normalize_turn: Implements the  normalize turn operation for this module.
+# - decode_background_context: Implements the decode background context operation for this module.
+# - encode_background_context: Implements the encode background context operation for this module.
+# - build_background_turn: Builds background turn for this module.
+# - merge_background_turns: Merges background turns for this module.
+# - extract_named_items: Extracts named items for this module.
 # ====================================================================================================
 
 import json

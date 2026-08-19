@@ -1,3 +1,41 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# endpoint ui module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Function inventory:
+# - _resolve_wikilinks_in_html: Implements the  resolve wikilinks in html operation for this module.
+# - _repl: Implements the  repl operation for this module.
+# - _process_inline: Implements the  process inline operation for this module.
+# - _render_list_lines: Implements the  render list lines operation for this module.
+# - _process_wikitext: Implements the  process wikitext operation for this module.
+# - _wikilinks_filter: Implements the  wikilinks filter operation for this module.
+# - _parse_wiki_links: Implements the  parse wiki links operation for this module.
+# - _parse_wiki_sections: Implements the  parse wiki sections operation for this module.
+# - _extract_summary: Implements the  extract summary operation for this module.
+# - _sections_to_edit_body: Implements the  sections to edit body operation for this module.
+# - _parse_article_form: Implements the  parse article form operation for this module.
+# - register_reference_ui: Registers reference ui for this module.
+# - route_root: Implements the route root operation for this module.
+# - route_ui: Implements the route ui operation for this module.
+# - ref_import: Implements the ref import operation for this module.
+# - ref_import_crawl: Implements the ref import crawl operation for this module.
+# - ref_import_status: Implements the ref import status operation for this module.
+# - ref_import_stop: Implements the ref import stop operation for this module.
+# - ref_import_throttle: Implements the ref import throttle operation for this module.
+# - ref_index: Implements the ref index operation for this module.
+# - ref_search: Implements the ref search operation for this module.
+# - ref_article_new: Implements the ref article new operation for this module.
+# - ref_article_new_post: Implements the ref article new post operation for this module.
+# - ref_article_edit: Implements the ref article edit operation for this module.
+# - ref_article_edit_post: Implements the ref article edit post operation for this module.
+# - ref_delete_all: Implements the ref delete all operation for this module.
+# - ref_article_delete: Implements the ref article delete operation for this module.
+# - ref_article_links_json: Implements the ref article links json operation for this module.
+# - ref_article: Implements the ref article operation for this module.
+# ====================================================================================================
+
 import os
 import re
 from pathlib import Path

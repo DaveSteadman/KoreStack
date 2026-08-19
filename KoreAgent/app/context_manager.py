@@ -17,6 +17,15 @@
 # Related modules:
 #   - tool_loop.py     -- calls assess_compact / store_last_run_state after each round
 #   - orchestration.py -- passes compact_context callback for mid-session compaction
+# MARK: FUNCTIONS
+# Function inventory:
+# - get_last_context_map: Returns last context map for this module.
+# - get_last_messages: Returns last messages for this module.
+# - store_last_run_state: Implements the store last run state operation for this module.
+# - estimate_thread_chars: Implements the estimate thread chars operation for this module.
+# - compact_context: Implements the compact context operation for this module.
+# - assess_compact: Implements the assess compact operation for this module.
+# - format_context_map: Formats context map for this module.
 # ====================================================================================================
 import re
 import threading

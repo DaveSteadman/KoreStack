@@ -3,6 +3,8 @@
 # ====================================================================================================
 # Export graph to csv helpers for datacontrol/koredata/Graph/processing.
 # Provides the focused helpers and module-level behaviour grouped into this file.
+# MARK: FUNCTIONS
+# Function inventory: this module exposes package or declarative configuration only.
 # ====================================================================================================
 
 import argparse

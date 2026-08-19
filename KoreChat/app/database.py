@@ -3,6 +3,8 @@
 # ====================================================================================================
 # Database helpers for KoreChat/app.
 # Owns persistence access patterns, schema-facing helpers, and storage utilities for this component.
+# MARK: FUNCTIONS
+# Function inventory: this module exposes package or declarative configuration only.
 # ====================================================================================================
 
 from app.config import cfg

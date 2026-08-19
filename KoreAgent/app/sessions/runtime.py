@@ -16,6 +16,12 @@
 #   - scratchpad.py      -- reads active session_id for per-session key namespacing
 #   - orchestration.py   -- sets session_id at the start of each orchestration run
 #   - delegate_runner.py -- uses get_active_session_id for scratchpad isolation
+# MARK: FUNCTIONS
+# Primary types: SessionBinding.
+# Function inventory:
+# - get_active_session_id: Returns active session id for this module.
+# - set_active_session_id: Sets active session id for this module.
+# - bind_session: Implements the bind session operation for this module.
 # ====================================================================================================
 from contextlib import contextmanager
 from contextvars import ContextVar

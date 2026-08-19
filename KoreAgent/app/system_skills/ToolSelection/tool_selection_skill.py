@@ -5,6 +5,13 @@
 #
 # Exposes the always-on control-plane functions that let the model inspect the larger tool catalog
 # and pull a small subset into the active working set for the current conversation.
+# MARK: FUNCTIONS
+# Function inventory:
+# - _available_payload: Implements the  available payload operation for this module.
+# - tools_catalog_list: Implements the tools catalog list operation for this module.
+# - tools_active_add: Implements the tools active add operation for this module.
+# - toolsets_list: Implements the toolsets list operation for this module.
+# - toolsets_activate: Implements the toolsets activate operation for this module.
 # ====================================================================================================
 
 from agent.orchestration.engine import _filter_web_skills

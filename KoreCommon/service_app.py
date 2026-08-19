@@ -9,6 +9,15 @@ from __future__ import annotations
 #   - /__endpoint_manifest
 #   - /suite-config.js
 #   - /ui-elements/assets/{asset_path:path}
+# MARK: FUNCTIONS
+# Function inventory:
+# - register_endpoint_manifest: Registers endpoint manifest for this module.
+# - endpoint_manifest: Implements the endpoint manifest operation for this module.
+# - register_suite_config_js: Registers suite config js for this module.
+# - suite_config_js: Implements the suite config js operation for this module.
+# - register_ui_elements_assets: Registers ui elements assets for this module.
+# - serve_ui_elements_asset: Serves ui elements asset for this module.
+# - register_suite_shell_routes: Registers suite shell routes for this module.
 # ====================================================================================================
 
 import json

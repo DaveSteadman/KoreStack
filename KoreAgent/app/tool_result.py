@@ -10,6 +10,14 @@
 # Related modules:
 #   - skill_executor.py  -- constructs ToolCallResult on every skill invocation
 #   - tool_loop.py       -- consumes ToolCallResult to build LLM tool-result messages
+# MARK: FUNCTIONS
+# Primary types: ToolCallResult.
+# Function inventory:
+# - is_error: Checks whether error is true.
+# - get: Returns this module's primary operation.
+# - __getitem__: Implements the   getitem   operation for this module.
+# - to_dict: Implements the to dict operation for this module.
+# - display_name: Implements the display name operation for this module.
 # ====================================================================================================
 from dataclasses import dataclass
 from pathlib import Path

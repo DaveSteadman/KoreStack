@@ -5,6 +5,39 @@ from __future__ import annotations
 # ====================================================================================================
 # Workspace index helpers for KoreCode/app.
 # Provides the focused helpers and module-level behaviour grouped into this file.
+# MARK: FUNCTIONS
+# Primary types: IndexedFile.
+# Function inventory:
+# - index_path_for: Implements the index path for operation for this module.
+# - build_workspace_index: Builds workspace index for this module.
+# - read_workspace_index_status: Reads workspace index status for this module.
+# - list_indexed_files: Lists indexed files for this module.
+# - list_indexed_symbols: Lists indexed symbols for this module.
+# - get_symbol_by_qualname: Returns symbol by qualname for this module.
+# - list_symbol_callees: Lists symbol callees for this module.
+# - list_symbol_callers: Lists symbol callers for this module.
+# - _connect_index: Implements the  connect index operation for this module.
+# - _rebuild_schema: Implements the  rebuild schema operation for this module.
+# - _write_metadata: Implements the  write metadata operation for this module.
+# - _counts: Implements the  counts operation for this module.
+# - _iter_indexed_files: Implements the  iter indexed files operation for this module.
+# - _insert_file: Implements the  insert file operation for this module.
+# - _insert_symbols: Implements the  insert symbols operation for this module.
+# - _insert_symbol_row: Implements the  insert symbol row operation for this module.
+# - _insert_imports: Implements the  insert imports operation for this module.
+# - _insert_calls: Implements the  insert calls operation for this module.
+# - _insert_call_rows_for_symbol: Implements the  insert call rows for symbol operation for this module.
+# - _resolve_call_target: Implements the  resolve call target operation for this module.
+# - _attribute_chain: Implements the  attribute chain operation for this module.
+# - _module_name_for: Implements the  module name for operation for this module.
+# - _decode_source: Implements the  decode source operation for this module.
+# - _should_skip: Implements the  should skip operation for this module.
+# - _rel_path: Implements the  rel path operation for this module.
+# - _format_class_signature: Implements the  format class signature operation for this module.
+# - _format_function_signature: Implements the  format function signature operation for this module.
+# - _format_method_signature: Implements the  format method signature operation for this module.
+# - _format_arg: Implements the  format arg operation for this module.
+# - _safe_unparse: Implements the  safe unparse operation for this module.
 # ====================================================================================================
 
 import ast

@@ -1,3 +1,19 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# adapter module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Primary types: SftpFileInterface.
+# Function inventory:
+# - _config: Implements the  config operation for this module.
+# - _remote_path: Implements the  remote path operation for this module.
+# - _write: Implements the  write operation for this module.
+# - poll: Implements the poll operation for this module.
+# - route_reply: Implements the route reply operation for this module.
+# - send_new: Implements the send new operation for this module.
+# ====================================================================================================
+
 """Write KoreComms output to one configured SFTP file."""
 from __future__ import annotations
 

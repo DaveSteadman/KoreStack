@@ -3,6 +3,30 @@
 # ====================================================================================================
 # Hansard access helpers for datacontrol/koredata/RAG/databases/hansard2025.
 # Provides the focused helpers and module-level behaviour grouped into this file.
+# MARK: FUNCTIONS
+# Function inventory:
+# - _compress: Implements the  compress operation for this module.
+# - _word_count: Implements the  word count operation for this module.
+# - _get: Implements the  get operation for this module.
+# - _sleep: Implements the  sleep operation for this module.
+# - get_conn: Returns conn for this module.
+# - init_db: Implements the init db operation for this module.
+# - get_meta: Returns meta for this module.
+# - set_meta: Sets meta for this module.
+# - _bare_name: Implements the  bare name operation for this module.
+# - build_name_lookup: Builds name lookup for this module.
+# - _match_member: Implements the  match member operation for this module.
+# - _member_bio: Implements the  member bio operation for this module.
+# - ingest_members: Implements the ingest members operation for this module.
+# - _is_sitting_day: Implements the  is sitting day operation for this module.
+# - _extract_debates_from_html: Implements the  extract debates from html operation for this module.
+# - get_sitting_debates: Returns sitting debates for this module.
+# - _looks_like_speaker: Implements the  looks like speaker operation for this module.
+# - parse_speeches: Parses speeches for this module.
+# - _flush: Implements the  flush operation for this module.
+# - ingest_debate: Implements the ingest debate operation for this module.
+# - ingest_sitting_day: Implements the ingest sitting day operation for this module.
+# - write_descriptor: Writes descriptor for this module.
 # ====================================================================================================
 
 # ====================================================================================================
@@ -71,6 +95,10 @@ def _word_count(text: str) -> int:
 
 _RETRY_STATUSES = {429, 503}
 _MAX_RETRIES    = 3
+
+
+class SittingDayFetchError(RuntimeError):
+    """A Hansard day page could not be verified; do not advance its checkpoint."""
 
 
 def _get(url: str, as_text: bool = True) -> Optional[str]:
@@ -376,15 +404,20 @@ def _extract_debates_from_html(html: str, sitting_date: str, house: str = "Commo
 
 
 def get_sitting_debates(sitting_date: str, max_debates: int = 25, house: str = "Commons") -> Optional[tuple]:
-    """Return (debates, sitting_info) or None if not a sitting day."""
+    """Return a verified sitting, None for a confirmed non-sitting day, or raise on an unverified response."""
     url  = f"{HANSARD_BASE}/{house}/{sitting_date}"
     html = _get(url)
     _sleep(0.5)
-    if not html or not _is_sitting_day(html):
+    if not html:
+        raise SittingDayFetchError(f"No response from Hansard for {house} {sitting_date}.")
+    if not _is_sitting_day(html):
         return None
     debates = _extract_debates_from_html(html, sitting_date, house=house)
     if not debates:
-        return None
+        low = html.lower()
+        if "just a moment" in low or "challenge" in low or "cf-chl" in low:
+            raise SittingDayFetchError(f"Cloudflare challenge returned for {house} {sitting_date}.")
+        raise SittingDayFetchError(f"No parseable Hansard debates found for {house} {sitting_date}.")
     vol_m  = re.search(r'Volume (\d+)', html)
     volume = int(vol_m.group(1)) if vol_m else None
     sitting_info = {"volume": volume, "total_debates": len(debates)}
@@ -601,6 +634,7 @@ def write_descriptor(
     total_chunks: int,
     last_date: str,
     status: str = "complete",
+    error: str = "",
 ) -> None:
     d = {
         "id":           db_id,
@@ -628,6 +662,7 @@ def write_descriptor(
             "last_date_ingested":       last_date,
             "status":                   status,
             "total_chunks":             total_chunks,
+            "error":                    error,
         },
     }
     json_path.write_text(json.dumps(d, indent=2), encoding="utf-8")

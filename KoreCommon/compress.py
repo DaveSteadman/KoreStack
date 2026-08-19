@@ -4,6 +4,10 @@ from __future__ import annotations
 # MARK: OVERVIEW
 # ====================================================================================================
 # Shared zlib compression helpers for text content stored in SQLite BLOBs.
+# MARK: FUNCTIONS
+# Function inventory:
+# - compress: Implements the compress operation for this module.
+# - decompress: Implements the decompress operation for this module.
 # ====================================================================================================
 
 import zlib

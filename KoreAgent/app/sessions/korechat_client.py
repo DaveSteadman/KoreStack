@@ -13,6 +13,11 @@
 #   - input_layer/server.py                    -- uses get_base_url() for API endpoints
 #   - input_layer/slash_command_handlers_sessions.py -- uses get_base_url() for session commands
 #   - workspace_utils.py                       -- flattens connections.korechat -> korechaturl
+# MARK: FUNCTIONS
+# Function inventory:
+# - _reachable: Implements the  reachable operation for this module.
+# - is_reachable: Checks whether reachable is true.
+# - get_base_url: Returns base url for this module.
 # ====================================================================================================
 
 import urllib.request

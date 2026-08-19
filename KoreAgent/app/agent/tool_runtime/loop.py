@@ -19,6 +19,36 @@
 #   - context_manager.py  -- assess_compact, compact_context, store_last_run_state
 #   - orchestration.py    -- calls run_tool_loop() for each conversation turn
 #   - scratchpad.py       -- auto-saves large tool results
+# MARK: FUNCTIONS
+# Function inventory:
+# - _build_data_envelope: Implements the  build data envelope operation for this module.
+# - _safe_scratch_component: Implements the  safe scratch component operation for this module.
+# - _derive_auto_scratchpad_key: Implements the  derive auto scratchpad key operation for this module.
+# - normalize_tool_request: Normalizes tool request for this module.
+# - extract_result_fields: Extracts result fields for this module.
+# - format_tool_outputs: Formats tool outputs for this module.
+# - build_fallback_answer: Builds fallback answer for this module.
+# - _extract_raw_json_tool_call: Implements the  extract raw json tool call operation for this module.
+# - _tool_def_available: Implements the  tool def available operation for this module.
+# - _compact_tool_name_list: Implements the  compact tool name list operation for this module.
+# - _classify_tool_recovery: Implements the  classify tool recovery operation for this module.
+# - _build_tool_recovery_message: Implements the  build tool recovery message operation for this module.
+# - _build_tool_recovery_reminder: Implements the  build tool recovery reminder operation for this module.
+# - _is_graph_connection_write_request: Implements the  is graph connection write request operation for this module.
+# - _coerce_graph_connection_item: Implements the  coerce graph connection item operation for this module.
+# - _coerce_graph_connection_batch: Implements the  coerce graph connection batch operation for this module.
+# - _extract_graph_connection_batch_from_text: Implements the  extract graph connection batch from text operation for this module.
+# - _graph_connection_tool_already_called: Implements the  graph connection tool already called operation for this module.
+# - _build_graph_connection_create_many_call: Implements the  build graph connection create many call operation for this module.
+# - _is_discovery_tool_name: Implements the  is discovery tool name operation for this module.
+# - _is_evidence_tool_name: Implements the  is evidence tool name operation for this module.
+# - _requires_web_evidence_guard: Implements the  requires web evidence guard operation for this module.
+# - strip_cot_preamble: Implements the strip cot preamble operation for this module.
+# - write_file_blocks: Writes file blocks for this module.
+# - run_tool_loop: Runs tool loop for this module.
+# - _log: Implements the  log operation for this module.
+# - _log_section: Implements the  log section operation for this module.
+# - _log_file_only: Implements the  log file only operation for this module.
 # ====================================================================================================
 import json
 import re

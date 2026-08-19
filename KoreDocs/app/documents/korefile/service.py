@@ -6,6 +6,81 @@
 # This module preserves the old korefile.py API surface, but the source of truth is now the real
 # filesystem rooted at the shared datauser directory. The legacy SQLite database is migrated once
 # at startup, then deleted.
+# MARK: FUNCTIONS
+# Primary types: ConflictError.
+# Function inventory:
+# - configure: Implements the configure operation for this module.
+# - _root_dir: Implements the  root dir operation for this module.
+# - _legacy_db_path: Implements the  legacy db path operation for this module.
+# - _normalize_folder_path: Implements the  normalize folder path operation for this module.
+# - _relative_posix: Implements the  relative posix operation for this module.
+# - _metadata_store_path: Implements the  metadata store path operation for this module.
+# - _metadata_sidecar_path: Implements the  metadata sidecar path operation for this module.
+# - _history_directory: Implements the  history directory operation for this module.
+# - _metadata_key: Implements the  metadata key operation for this module.
+# - _validate_metadata: Implements the  validate metadata operation for this module.
+# - _merge_metadata: Implements the  merge metadata operation for this module.
+# - _load_metadata_store: Implements the  load metadata store operation for this module.
+# - _load_sidecar: Implements the  load sidecar operation for this module.
+# - _save_sidecar: Implements the  save sidecar operation for this module.
+# - _split_koredoc_json_header: Implements the  split koredoc json header operation for this module.
+# - _koredoc_content_with_header: Implements the  koredoc content with header operation for this module.
+# - _artifact_record: Implements the  artifact record operation for this module.
+# - _write_artifact_record: Implements the  write artifact record operation for this module.
+# - _now_iso: Implements the  now iso operation for this module.
+# - _save_metadata_store: Implements the  save metadata store operation for this module.
+# - _stored_metadata: Implements the  stored metadata operation for this module.
+# - _set_stored_metadata: Implements the  set stored metadata operation for this module.
+# - _delete_stored_metadata: Implements the  delete stored metadata operation for this module.
+# - _move_stored_metadata: Implements the  move stored metadata operation for this module.
+# - _move_stored_metadata_tree: Implements the  move stored metadata tree operation for this module.
+# - _delete_stored_metadata_tree: Implements the  delete stored metadata tree operation for this module.
+# - _write_history: Implements the  write history operation for this module.
+# - list_history: Lists history for this module.
+# - get_history_revision: Returns history revision for this module.
+# - _folder_path_to_abs: Implements the  folder path to abs operation for this module.
+# - _folder_abs_to_label: Implements the  folder abs to label operation for this module.
+# - _iso_from_ts: Implements the  iso from ts operation for this module.
+# - _stable_id: Implements the  stable id operation for this module.
+# - _folder_id_for_abs: Implements the  folder id for abs operation for this module.
+# - _file_id_for_abs: Implements the  file id for abs operation for this module.
+# - _iter_folder_paths: Implements the  iter folder paths operation for this module.
+# - _iter_file_paths: Implements the  iter file paths operation for this module.
+# - _folder_record: Implements the  folder record operation for this module.
+# - _decompress_legacy: Implements the  decompress legacy operation for this module.
+# - _word_count: Implements the  word count operation for this module.
+# - _extract_metadata: Implements the  extract metadata operation for this module.
+# - _validate_simple_name: Implements the  validate simple name operation for this module.
+# - _validate_serialized_content: Implements the  validate serialized content operation for this module.
+# - validate_serialized_content: Validates serialized content for this module.
+# - _file_record: Implements the  file record operation for this module.
+# - _invalidate_file_record_cache: Implements the  invalidate file record cache operation for this module.
+# - warm_file_record_cache: Implements the warm file record cache operation for this module.
+# - _resolve_folder_abs_by_id: Implements the  resolve folder abs by id operation for this module.
+# - _resolve_file_abs_by_id: Implements the  resolve file abs by id operation for this module.
+# - _search_terms: Implements the  search terms operation for this module.
+# - _delete_legacy_db_files: Implements the  delete legacy db files operation for this module.
+# - _migrate_legacy_db_to_fs: Implements the  migrate legacy db to fs operation for this module.
+# - init_db: Implements the init db operation for this module.
+# - list_folders: Lists folders for this module.
+# - get_folder_by_path: Returns folder by path for this module.
+# - create_folder: Creates folder for this module.
+# - rename_folder: Implements the rename folder operation for this module.
+# - move_folder: Implements the move folder operation for this module.
+# - delete_folder: Deletes folder for this module.
+# - list_files: Lists files for this module.
+# - get_file: Returns file for this module.
+# - create_file: Creates file for this module.
+# - create_serialized_file: Creates serialized file for this module.
+# - update_file: Updates file for this module.
+# - rename_file: Implements the rename file operation for this module.
+# - move_file: Implements the move file operation for this module.
+# - delete_file: Deletes file for this module.
+# - search: Implements the search operation for this module.
+# - _metadata_value: Implements the  metadata value operation for this module.
+# - _matches_metadata_filter: Implements the  matches metadata filter operation for this module.
+# - search_metadata: Implements the search metadata operation for this module.
+# - import_from_fs: Implements the import from fs operation for this module.
 # ====================================================================================================
 
 from __future__ import annotations

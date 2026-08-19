@@ -3,6 +3,19 @@
 # ====================================================================================================
 # Database helpers for KoreData/KoreScrape/app.
 # Owns persistence access patterns, schema-facing helpers, and storage utilities for this component.
+# MARK: FUNCTIONS
+# Function inventory:
+# - _fallback_snippet: Implements the  fallback snippet operation for this module.
+# - _count_substring: Implements the  count substring operation for this module.
+# - db_connection: Implements the db connection operation for this module.
+# - init_db: Implements the init db operation for this module.
+# - replace_capture_chunks: Implements the replace capture chunks operation for this module.
+# - get_chunk: Returns chunk for this module.
+# - delete_chunk: Deletes chunk for this module.
+# - list_chunks: Lists chunks for this module.
+# - search_chunks: Implements the search chunks operation for this module.
+# - get_status: Returns status for this module.
+# - make_chunk_row: Implements the make chunk row operation for this module.
 # ====================================================================================================
 
 import sqlite3

@@ -1,3 +1,27 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# endpoint ui module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Function inventory:
+# - _parse_year: Implements the  parse year operation for this module.
+# - repair_kore_anchors: Implements the repair kore anchors operation for this module.
+# - register_library_ui: Registers library ui for this module.
+# - route_root: Implements the route root operation for this module.
+# - route_ui: Implements the route ui operation for this module.
+# - route_ui_library_index: Implements the route ui library index operation for this module.
+# - route_ui_library_search: Implements the route ui library search operation for this module.
+# - route_ui_library_import: Implements the route ui library import operation for this module.
+# - route_ui_library_import_manual: Implements the route ui library import manual operation for this module.
+# - route_ui_library_book_edit: Implements the route ui library book edit operation for this module.
+# - route_ui_library_book_edit_post: Implements the route ui library book edit post operation for this module.
+# - route_ui_library_book_delete: Implements the route ui library book delete operation for this module.
+# - route_ui_library_book_move: Implements the route ui library book move operation for this module.
+# - route_ui_library_repair_anchors: Implements the route ui library repair anchors operation for this module.
+# - route_ui_library_book: Implements the route ui library book operation for this module.
+# ====================================================================================================
+
 import os
 import re as _re
 from pathlib import Path

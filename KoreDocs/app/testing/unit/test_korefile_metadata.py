@@ -1,3 +1,20 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# test korefile metadata module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Primary types: KoreFileMetadataTests.
+# Function inventory:
+# - setUp: Implements the setUp operation for this module.
+# - tearDown: Implements the tearDown operation for this module.
+# - test_metadata_preserves_nested_json_and_is_independent_of_content: Implements the test metadata preserves nested json and is independent of content operation for this module.
+# - test_metadata_survives_file_rename_and_move: Implements the test metadata survives file rename and move operation for this module.
+# - test_metadata_registry_is_not_listed_as_a_document: Implements the test metadata registry is not listed as a document operation for this module.
+# - test_metadata_inventory_reports_nested_paths_and_values: Implements the test metadata inventory reports nested paths and values operation for this module.
+# - test_metadata_migrations_dry_run_then_update_header_only: Implements the test metadata migrations dry run then update header only operation for this module.
+# ====================================================================================================
+
 from __future__ import annotations
 
 import sys

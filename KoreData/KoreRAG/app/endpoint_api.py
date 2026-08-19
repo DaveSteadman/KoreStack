@@ -1,3 +1,40 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# endpoint api module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Primary types: ChunkCreate, ChunkUpdate, DatabaseCreate.
+# Function inventory:
+# - _api_named_process_running: Implements the  api named process running operation for this module.
+# - _api_resolved_sync_status: Implements the  api resolved sync status operation for this module.
+# - register_rag_api: Registers rag api for this module.
+# - route_status: Implements the route status operation for this module.
+# - route_list_databases: Implements the route list databases operation for this module.
+# - route_database_info: Implements the route database info operation for this module.
+# - route_admin_reload: Implements the route admin reload operation for this module.
+# - route_list_chunks: Implements the route list chunks operation for this module.
+# - route_get_chunk: Implements the route get chunk operation for this module.
+# - route_add_chunk: Implements the route add chunk operation for this module.
+# - route_update_chunk: Implements the route update chunk operation for this module.
+# - route_delete_chunk: Implements the route delete chunk operation for this module.
+# - route_search: Implements the route search operation for this module.
+# - route_search_all: Implements the route search all operation for this module.
+# - route_sittings: Implements the route sittings operation for this module.
+# - route_sitting_debates: Implements the route sitting debates operation for this module.
+# - route_members: Implements the route members operation for this module.
+# - route_member: Implements the route member operation for this module.
+# - route_member_speeches: Implements the route member speeches operation for this module.
+# - route_debate: Implements the route debate operation for this module.
+# - route_debate_speeches: Implements the route debate speeches operation for this module.
+# - route_create_database: Implements the route create database operation for this module.
+# - route_delete_database: Implements the route delete database operation for this module.
+# - _delete_runtime_artifacts: Implements the  delete runtime artifacts operation for this module.
+# - _reset_ingestor_descriptor: Implements the  reset ingestor descriptor operation for this module.
+# - route_sync: Implements the route sync operation for this module.
+# - route_stop: Implements the route stop operation for this module.
+# ====================================================================================================
+
 import json
 import re
 from pathlib import Path

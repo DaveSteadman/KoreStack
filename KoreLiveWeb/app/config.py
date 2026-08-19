@@ -1,3 +1,16 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# config module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Function inventory:
+# - _merge_liveweb_settings: Implements the  merge liveweb settings operation for this module.
+# - _read_liveweb_config_file: Implements the  read liveweb config file operation for this module.
+# - _merge_raw_service_config: Implements the  merge raw service config operation for this module.
+# - load: Loads this module's primary operation.
+# ====================================================================================================
+
 from __future__ import annotations
 
 import json

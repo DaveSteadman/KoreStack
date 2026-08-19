@@ -1,3 +1,24 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# test agent playbooks module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Primary types: AgentPlaybookTests.
+# Function inventory:
+# - test_router_selects_create_file_playbook: Implements the test router selects create file playbook operation for this module.
+# - test_router_selects_diagnose_failing_test_playbook: Implements the test router selects diagnose failing test playbook operation for this module.
+# - test_router_selects_python_debug_playbook: Implements the test router selects python debug playbook operation for this module.
+# - test_router_selects_workspace_change_for_implementation: Implements the test router selects workspace change for implementation operation for this module.
+# - test_explore_prompt_only_advertises_active_tools: Implements the test explore prompt only advertises active tools operation for this module.
+# - test_create_file_prompt_requires_target_existence_check: Implements the test create file prompt requires target existence check operation for this module.
+# - test_edit_prompt_requires_read_before_automatic_apply: Implements the test edit prompt requires read before automatic apply operation for this module.
+# - test_executor_rejects_inactive_tool: Implements the test executor rejects inactive tool operation for this module.
+# - test_executor_runs_active_python_tool: Implements the test executor runs active python tool operation for this module.
+# - test_executor_accepts_legacy_python_function_replacement_argument_names: Implements the test executor accepts legacy python function replacement argument names operation for this module.
+# - test_executor_rejects_running_a_non_active_python_file: Implements the test executor rejects running a non active python file operation for this module.
+# ====================================================================================================
+
 from __future__ import annotations
 
 import sys

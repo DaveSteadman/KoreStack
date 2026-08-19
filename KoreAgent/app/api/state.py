@@ -1,3 +1,31 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# state module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Function inventory:
+# - setup: Implements the setup operation for this module.
+# - get_config: Returns config for this module.
+# - get_shutdown_event: Returns shutdown event for this module.
+# - set_latest_log_path: Sets latest log path for this module.
+# - get_latest_log_path: Returns latest log path for this module.
+# - set_startup_state_snapshot: Sets startup state snapshot for this module.
+# - update_startup_state: Updates startup state for this module.
+# - get_startup_state_snapshot: Returns startup state snapshot for this module.
+# - make_run_event_queue: Implements the make run event queue operation for this module.
+# - queue_run_event: Implements the queue run event operation for this module.
+# - validate_session_id: Validates session id for this module.
+# - finish_run_event_queue: Implements the finish run event queue operation for this module.
+# - get_run_event_queues: Returns run event queues for this module.
+# - get_run_queues_lock: Returns run queues lock for this module.
+# - get_llm_direct_enabled: Returns llm direct enabled for this module.
+# - set_llm_direct_enabled: Sets llm direct enabled for this module.
+# - pop_pending_switch: Implements the pop pending switch operation for this module.
+# - set_pending_switch: Sets pending switch for this module.
+# - format_sse: Formats sse for this module.
+# ====================================================================================================
+
 import json
 import queue
 import re

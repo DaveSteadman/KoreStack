@@ -13,6 +13,9 @@
 # Related modules:
 #   - app/server.py        -- imports cfg, load()
 #   - KoreCommon/suite_config.py -- shared service config loader
+# MARK: FUNCTIONS
+# Function inventory:
+# - load: Loads this module's primary operation.
 # ====================================================================================================
 from __future__ import annotations
 

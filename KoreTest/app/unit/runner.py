@@ -1,3 +1,14 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# runner module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Function inventory:
+# - _run: Implements the  run operation for this module.
+# - run_core_checks: Runs core checks for this module.
+# ====================================================================================================
+
 """Fast deterministic checks owned and invoked by KoreTest."""
 
 from __future__ import annotations
@@ -17,7 +28,7 @@ _AGENT_SMOKE_TARGETS = (
     "KoreTest.app.agent_tests.unit.test_guardrail_smoke.GuardrailSmokeTests.test_test_wrapper_fails_exchange_on_search_failure_output",
     "KoreTest.app.agent_tests.unit.test_guardrail_smoke.GuardrailSmokeTests.test_slash_command_outputs_use_ascii_arrows",
 )
-
+ 
 
 def _run(command: list[str], *, cwd: Path) -> bool:
     print(f"[UNITTEST] {' '.join(command)}")

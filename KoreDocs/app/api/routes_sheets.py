@@ -1,3 +1,21 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# routes sheets module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Primary types: KfSheetCellsWrite, KfSheetRowsAppend, KfSheetRowsUpsert, KfSheetClearRange.
+# Function inventory:
+# - register_sheet_routes: Registers sheet routes for this module.
+# - kf_get_sheet: Implements the kf get sheet operation for this module.
+# - kf_read_sheet_range: Implements the kf read sheet range operation for this module.
+# - kf_read_sheet_table: Implements the kf read sheet table operation for this module.
+# - kf_write_sheet_cells: Implements the kf write sheet cells operation for this module.
+# - kf_append_sheet_rows: Implements the kf append sheet rows operation for this module.
+# - kf_upsert_sheet_rows: Implements the kf upsert sheet rows operation for this module.
+# - kf_clear_sheet_range: Implements the kf clear sheet range operation for this module.
+# ====================================================================================================
+
 from __future__ import annotations
 
 from typing import Annotated, Any

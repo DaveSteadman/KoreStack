@@ -8,6 +8,13 @@ from __future__ import annotations
 # These endpoints provide the web UI with just enough conversation/message access
 # to interact with KoreChat without embedding the full KoreChat API surface into
 # the input-layer server module.
+# MARK: FUNCTIONS
+# Primary types: KcSendRequest.
+# Function inventory:
+# - register_korechat_proxy_routes: Registers korechat proxy routes for this module.
+# - kc_send: Implements the kc send operation for this module.
+# - kc_get_messages: Implements the kc get messages operation for this module.
+# - kc_get_conversation: Implements the kc get conversation operation for this module.
 # ====================================================================================================
 
 import urllib.parse

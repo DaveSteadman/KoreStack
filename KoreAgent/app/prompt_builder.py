@@ -21,6 +21,13 @@
 # cannot sensibly live anywhere else. Tool-specific parameter guidance (fetch options,
 # article discrimination, KoreDocs sheet preferences, sysinfo suppression) belongs in
 # the relevant skill.md description instead. Delete entries here as skill.md files absorb them.
+# MARK: FUNCTIONS
+# Function inventory:
+# - build_skill_selection_guidance: Builds skill selection guidance for this module.
+# - _payload_has_dataset_tools: Implements the  payload has dataset tools operation for this module.
+# - _build_conversation_entry_block: Implements the  build conversation entry block operation for this module.
+# - _build_korecode_workspace_menu_note: Implements the  build korecode workspace menu note operation for this module.
+# - build_system_message: Builds system message for this module.
 # ====================================================================================================
 
 import json

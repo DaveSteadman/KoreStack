@@ -1,3 +1,16 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# web tools state module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Function inventory:
+# - is_web_tool_name: Checks whether web tool name is true.
+# - filter_tool_names: Filters tool names for this module.
+# - filter_mcp_tool_defs: Filters mcp tool defs for this module.
+# - filter_mcp_tool_index: Filters mcp tool index for this module.
+# ====================================================================================================
+
 from __future__ import annotations
 
 WEB_TOOL_NAMES = frozenset(

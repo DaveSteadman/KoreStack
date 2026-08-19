@@ -26,6 +26,13 @@
 #   - skills/KoreMine/...           -- imports resolve_tokens as _resolve_query_tokens
 #   - skills/KoreAnalysis/          -- imports parse_flexible_date as _parse_date
 #   - skills/WebResearchOutput/...  -- imports parse_flexible_date as _parse_date
+# MARK: FUNCTIONS
+# Function inventory:
+# - _longdate: Implements the  longdate operation for this module.
+# - resolve_tokens: Resolves tokens for this module.
+# - _replace: Implements the  replace operation for this module.
+# - _replace_scratch: Implements the  replace scratch operation for this module.
+# - parse_flexible_date: Parses flexible date for this module.
 # ====================================================================================================
 
 

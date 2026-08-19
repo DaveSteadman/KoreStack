@@ -5,6 +5,18 @@ from __future__ import annotations
 # ====================================================================================================
 # Endpoint explorer helpers for KoreStack.
 # Provides the focused helpers and module-level behaviour grouped into this file.
+# MARK: FUNCTIONS
+# Function inventory:
+# - _service_host: Implements the  service host operation for this module.
+# - _service_port: Implements the  service port operation for this module.
+# - _service_enabled: Implements the  service enabled operation for this module.
+# - service_targets: Implements the service targets operation for this module.
+# - korestack_manifest: Implements the korestack manifest operation for this module.
+# - _fetch_json: Implements the  fetch json operation for this module.
+# - build_catalog: Builds catalog for this module.
+# - _allowed_base_urls: Implements the  allowed base urls operation for this module.
+# - _is_allowed_url: Implements the  is allowed url operation for this module.
+# - proxy_request: Implements the proxy request operation for this module.
 # ====================================================================================================
 
 import json

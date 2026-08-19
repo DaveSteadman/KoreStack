@@ -5,6 +5,17 @@ from __future__ import annotations
 # ====================================================================================================
 # Run executor helpers for KoreCode/app.
 # Provides the focused helpers and module-level behaviour grouped into this file.
+# MARK: FUNCTIONS
+# Primary types: ChatRunRequest, ContinueRunRequest, AgentRunServices.
+# Function inventory:
+# - build_continue_prompt: Builds continue prompt for this module.
+# - extract_agent_envelope: Extracts agent envelope for this module.
+# - start_background_run: Starts background run for this module.
+# - execute_chat_run: Implements the execute chat run operation for this module.
+# - execute_continue_run: Implements the execute continue run operation for this module.
+# - _append_tool_results: Implements the  append tool results operation for this module.
+# - _assistant_signature: Implements the  assistant signature operation for this module.
+# - _wait_for_agent_turn: Implements the  wait for agent turn operation for this module.
 # ====================================================================================================
 
 import json

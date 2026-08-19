@@ -23,6 +23,21 @@
 #
 # Usage:
 #   python -m testing.system.analyzer datacontrol/test_results/test_results_<timestamp>.csv
+# MARK: FUNCTIONS
+# Function inventory:
+# - _split_log_sections: Implements the  split log sections operation for this module.
+# - _extract_tool_calls: Implements the  extract tool calls operation for this module.
+# - _count_iterations: Implements the  count iterations operation for this module.
+# - _detect_planner_mode: Implements the  detect planner mode operation for this module.
+# - _extract_validation_result: Implements the  extract validation result operation for this module.
+# - parse_log_file: Parses log file for this module.
+# - classify_outcome: Implements the classify outcome operation for this module.
+# - _prompt_quality_issues: Implements the  prompt quality issues operation for this module.
+# - build_gap_report: Builds gap report for this module.
+# - analyze_results_file: Implements the analyze results file operation for this module.
+# - print_summary: Implements the print summary operation for this module.
+# - run_analysis: Runs analysis for this module.
+# - _parse_cli_args: Implements the  parse cli args operation for this module.
 # ====================================================================================================
 
 

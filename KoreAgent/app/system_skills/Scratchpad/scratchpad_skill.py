@@ -20,6 +20,8 @@
 #   - code/prompt_tokens.py             -- resolves {scratchpad:key} tokens using get_store()
 #   - code/orchestration.py             -- injects active key names into the system prompt
 #   - code/system_skills/Scratchpad/skill.md   -- LLM-facing documentation and examples
+# MARK: FUNCTIONS
+# Function inventory: this module exposes package or declarative configuration only.
 # ====================================================================================================
 
 

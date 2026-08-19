@@ -1,3 +1,17 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# test sentence indexing module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Primary types: ReferenceSentenceIndexTests.
+# Function inventory:
+# - tearDown: Implements the tearDown operation for this module.
+# - test_upsert_article_indexes_summary_and_prose_only: Implements the test upsert article indexes summary and prose only operation for this module.
+# - test_rebuild_sentence_index_restores_missing_rows_for_article: Implements the test rebuild sentence index restores missing rows for article operation for this module.
+# - test_bulk_upsert_conn_path_removes_stale_semantic_rows: Implements the test bulk upsert conn path removes stale semantic rows operation for this module.
+# ====================================================================================================
+
 import os
 import sqlite3
 import sys

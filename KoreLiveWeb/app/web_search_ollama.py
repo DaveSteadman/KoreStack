@@ -5,6 +5,14 @@
 #
 # This uses Ollama's hosted web search API while preserving the same KoreLiveWeb
 # result shape used by the existing DuckDuckGo-backed tools.
+# MARK: FUNCTIONS
+# Function inventory:
+# - _coerce_provider_config: Implements the  coerce provider config operation for this module.
+# - _append_search_activity: Implements the  append search activity operation for this module.
+# - _normalise_result: Implements the  normalise result operation for this module.
+# - _perform_ollama_search: Implements the  perform ollama search operation for this module.
+# - search_web: Implements the search web operation for this module.
+# - search_web_text: Implements the search web text operation for this module.
 # ====================================================================================================
 
 from __future__ import annotations

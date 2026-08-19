@@ -15,6 +15,45 @@
 #   - app/feed_manager.py  -- loads feed configuration (URLs, domains, enabled state)
 #   - app/database.py      -- writes parsed articles to SQLite
 #   - app/config.py        -- cfg (poll_interval, retention_days)
+# MARK: FUNCTIONS
+# Primary types: _AnchorParser.
+# Function inventory:
+# - _log_init: Implements the  log init operation for this module.
+# - _trim_log_file_locked: Implements the  trim log file locked operation for this module.
+# - _log: Implements the  log operation for this module.
+# - _utc_now: Implements the  utc now operation for this module.
+# - _utc_now_iso: Implements the  utc now iso operation for this module.
+# - _touch_runtime: Implements the  touch runtime operation for this module.
+# - _set_runtime: Implements the  set runtime operation for this module.
+# - _age_seconds: Implements the  age seconds operation for this module.
+# - _normalise_feed_text: Implements the  normalise feed text operation for this module.
+# - _fetch_page_text: Implements the  fetch page text operation for this module.
+# - __init__: Implements the   init   operation for this module.
+# - hrefs: Implements the hrefs operation for this module.
+# - handle_starttag: Handles starttag for this module.
+# - handle_endtag: Handles endtag for this module.
+# - _extract_links: Implements the  extract links operation for this module.
+# - _parse_json_items: Implements the  parse json items operation for this module.
+# - _parse_date_flexible: Implements the  parse date flexible operation for this module.
+# - _try_json_listing: Implements the  try json listing operation for this module.
+# - _assess_html: Implements the  assess html operation for this module.
+# - ingest_web_feed: Implements the ingest web feed operation for this module.
+# - _try_save: Implements the  try save operation for this module.
+# - ingest_json_listing_feed: Implements the ingest json listing feed operation for this module.
+# - ingest_feed: Implements the ingest feed operation for this module.
+# - _enqueue: Implements the  enqueue operation for this module.
+# - _enqueue_due_feeds: Implements the  enqueue due feeds operation for this module.
+# - _worker: Implements the  worker operation for this module.
+# - _scheduler_keepalive: Implements the  scheduler keepalive operation for this module.
+# - _feed_job_id: Implements the  feed job id operation for this module.
+# - _watchdog: Implements the  watchdog operation for this module.
+# - schedule_feeds: Implements the schedule feeds operation for this module.
+# - trigger_immediate: Implements the trigger immediate operation for this module.
+# - _daily_prune: Implements the  daily prune operation for this module.
+# - _sentence_chroma_catchup: Implements the  sentence chroma catchup operation for this module.
+# - start_scheduler: Starts scheduler for this module.
+# - stop_scheduler: Stops scheduler for this module.
+# - get_runtime_status: Returns runtime status for this module.
 # ====================================================================================================
 import collections
 import html as _html

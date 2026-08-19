@@ -11,6 +11,56 @@
 # Related modules:
 #   - app/server.py    -- catalog read/write and search operations
 #   - CommonCode/dbutil.py  -- fts_build_query
+# MARK: FUNCTIONS
+# Function inventory:
+# - _now: Implements the  now operation for this module.
+# - _normalize_catalog_id: Implements the  normalize catalog id operation for this module.
+# - make_book_ref: Implements the make book ref operation for this module.
+# - parse_book_ref: Parses book ref for this module.
+# - _bundled_catalog_map: Implements the  bundled catalog map operation for this module.
+# - _user_catalog_map: Implements the  user catalog map operation for this module.
+# - list_catalogs: Lists catalogs for this module.
+# - _catalog_info: Implements the  catalog info operation for this module.
+# - _selected_catalog_ids: Implements the  selected catalog ids operation for this module.
+# - get_db_path: Returns db path for this module.
+# - db_connection: Implements the db connection operation for this module.
+# - _index_book_sentences: Implements the  index book sentences operation for this module.
+# - _backfill_book_sentences: Implements the  backfill book sentences operation for this module.
+# - _sentence_index_needs_rebuild: Implements the  sentence index needs rebuild operation for this module.
+# - _sentence_schema_needs_normalization: Implements the  sentence schema needs normalization operation for this module.
+# - _normalize_sentence_schema: Implements the  normalize sentence schema operation for this module.
+# - _extract_sentence_text: Implements the  extract sentence text operation for this module.
+# - _sentence_locator: Implements the  sentence locator operation for this module.
+# - _ensure_schema: Implements the  ensure schema operation for this module.
+# - init_db: Implements the init db operation for this module.
+# - _strip_page_markers: Implements the  strip page markers operation for this module.
+# - _make_body_snippet: Implements the  make body snippet operation for this module.
+# - _fts_delete: Implements the  fts delete operation for this module.
+# - _fts_insert: Implements the  fts insert operation for this module.
+# - _row_to_dict: Implements the  row to dict operation for this module.
+# - list_writable_catalogs: Lists writable catalogs for this module.
+# - _assert_catalog_writable: Implements the  assert catalog writable operation for this module.
+# - _merge_catalog_rows: Implements the  merge catalog rows operation for this module.
+# - get_book_sentences: Returns book sentences for this module.
+# - get_sentence: Returns sentence for this module.
+# - backfill_sentence_index: Implements the backfill sentence index operation for this module.
+# - rebuild_sentence_index: Implements the rebuild sentence index operation for this module.
+# - get_sentences_for_chroma: Returns sentences for chroma for this module.
+# - mark_sentences_chroma_indexed: Marks sentences chroma indexed for this module.
+# - reset_sentence_chroma_index: Implements the reset sentence chroma index operation for this module.
+# - set_sentence_deleted: Sets sentence deleted for this module.
+# - add_book: Implements the add book operation for this module.
+# - get_book: Returns book for this module.
+# - get_book_chunk: Returns book chunk for this module.
+# - update_book_body: Updates book body for this module.
+# - list_books: Lists books for this module.
+# - update_book: Updates book for this module.
+# - delete_book: Deletes book for this module.
+# - move_book: Implements the move book operation for this module.
+# - search_books: Implements the search books operation for this module.
+# - _build_meta_filters: Implements the  build meta filters operation for this module.
+# - get_status: Returns status for this module.
+# - title_exists: Implements the title exists operation for this module.
 # ====================================================================================================
 import re
 import sqlite3

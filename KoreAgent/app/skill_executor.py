@@ -13,6 +13,13 @@
 # Related modules:
 #   - orchestration.py           -- calls execute_tool_call inside the tool-calling loop
 #   - skills_catalog_builder.py  -- produces the skills_summary that drives the allow-list
+# MARK: FUNCTIONS
+# Function inventory:
+# - _load_callable_from_module_path: Implements the  load callable from module path operation for this module.
+# - build_catalog_gates: Builds catalog gates for this module.
+# - _build_unknown_tool_error: Implements the  build unknown tool error operation for this module.
+# - is_skill_error: Checks whether skill error is true.
+# - execute_tool_call: Implements the execute tool call operation for this module.
 # ====================================================================================================
 
 

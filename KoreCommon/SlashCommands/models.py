@@ -5,6 +5,10 @@ from __future__ import annotations
 # ====================================================================================================
 # Models for KoreCommon/SlashCommands.
 # Provides the focused helpers and module-level behaviour grouped into this file.
+# MARK: FUNCTIONS
+# Primary types: SlashCommandDefinition.
+# Function inventory:
+# - all_names: Implements the all names operation for this module.
 # ====================================================================================================
 
 from dataclasses import dataclass

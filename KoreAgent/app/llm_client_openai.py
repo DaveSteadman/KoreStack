@@ -16,6 +16,35 @@
 #   - llm_client_ollama.py   -- Ollama-specific: model management, process lifecycle, /api/generate
 #   - llm_client_lmstudio.py -- LM Studio-specific: health check, /v1/models listing, model report
 #   - llm_client.py          -- Routing facade: re-exports all public names + call_llm_chat
+# MARK: FUNCTIONS
+# Primary types: OllamaCallResult, ChatCallResult.
+# Function inventory:
+# - _default_llm_timeout_from_env: Implements the  default llm timeout from env operation for this module.
+# - get_local_ollama_autostart_enabled: Returns local ollama autostart enabled for this module.
+# - get_llm_timeout: Returns llm timeout for this module.
+# - set_llm_timeout: Sets llm timeout for this module.
+# - register_llm_call_logger: Registers llm call logger for this module.
+# - log_to_session: Implements the log to session operation for this module.
+# - register_session_config: Registers session config for this module.
+# - get_active_model: Returns active model for this module.
+# - get_ollama_offload_mode: Returns ollama offload mode for this module.
+# - set_ollama_offload_mode: Sets ollama offload mode for this module.
+# - get_ollama_request_options: Returns ollama request options for this module.
+# - get_active_num_ctx: Returns active num ctx for this module.
+# - mark_host_healthy: Marks host healthy for this module.
+# - is_host_health_cached: Checks whether host health cached is true.
+# - configure_host: Implements the configure host operation for this module.
+# - configure_server: Implements the configure server operation for this module.
+# - get_active_host: Returns active host for this module.
+# - get_active_backend: Returns active backend for this module.
+# - _is_local_host: Implements the  is local host operation for this module.
+# - _is_lmstudio_host: Implements the  is lmstudio host operation for this module.
+# - tokens_per_second: Implements the tokens per second operation for this module.
+# - response: Implements the response operation for this module.
+# - tool_calls: Implements the tool calls operation for this module.
+# - _request_json: Implements the  request json operation for this module.
+# - resolve_model_name: Resolves model name for this module.
+# - is_explicit_model_name: Checks whether explicit model name is true.
 # ====================================================================================================
 
 

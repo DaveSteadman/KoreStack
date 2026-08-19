@@ -5,6 +5,11 @@ from __future__ import annotations
 # ====================================================================================================
 # Suite configuration loading helpers.
 # Loads and normalises shared suite configuration used across multiple services.
+# MARK: FUNCTIONS
+# Function inventory:
+# - _coerce_env_value: Implements the  coerce env value operation for this module.
+# - _read_json: Implements the  read json operation for this module.
+# - load_service_config: Loads service config for this module.
 # ====================================================================================================
 
 import json

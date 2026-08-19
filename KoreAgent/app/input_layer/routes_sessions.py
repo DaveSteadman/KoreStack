@@ -8,7 +8,7 @@
 # registration time — this module has no direct imports from server.py.
 #
 # Endpoints:
-#   POST /sessions/{id}/prompt   -- submit a prompt; enqueues on task_queue, returns run_id
+#   POST /sessions/{id}/prompt   -- persist a prompt in KoreChat, returns an observer run_id
 #   GET  /sessions/{id}/history  -- full conversation history for a session (from KoreChat)
 #   GET  /runs/{id}/stream       -- SSE: stream events for a specific enqueued run
 #
@@ -20,7 +20,24 @@
 #   - input_layer/server.py  -- registers this group; provides all injected dependencies
 #   - orchestration.py       -- orchestrate_prompt, ConversationHistory
 #   - slash_commands.py      -- handle_slash dispatches the command to domain handlers
-#   - execution_queue.py     -- task_queue for sequential prompt execution
+#   - koreconv_input.py      -- shared KoreChat event worker that performs execution
+# MARK: FUNCTIONS
+# Primary types: PromptRequest.
+# Function inventory:
+# - _runtime_config_for_prompt: Implements the  runtime config for prompt operation for this module.
+# - register_session_routes: Registers session routes for this module.
+# - post_prompt: Implements the post prompt operation for this module.
+# - _observe_conversation_reply: Streams the shared worker's persisted reply to legacy callers.
+# - _run: Implements the  run operation for this module.
+# - _response_event: Implements the  response event operation for this module.
+# - _response_metadata: Implements the  response metadata operation for this module.
+# - _slash_output: Implements the  slash output operation for this module.
+# - _do_switch_session: Implements the  do switch session operation for this module.
+# - _do_rename_session: Implements the  do rename session operation for this module.
+# - get_session_history: Returns session history for this module.
+# - delete_session: Deletes session for this module.
+# - stream_run: Implements the stream run operation for this module.
+# - _generate: Implements the  generate operation for this module.
 # ====================================================================================================
 import copy
 import queue
@@ -76,6 +93,8 @@ def register_session_routes(
     get_session_turns,
     get_session_conversation,
     ensure_session_conversation,
+    kc_submit_prompt,
+    kc_get_messages,
     kc_set_session_name=None,
     get_llm_direct_enabled=None,
     call_llm_chat=None,
@@ -97,6 +116,56 @@ def register_session_routes(
         if prompt_text.lower() == "/stoprun":
             handle_stoprun_immediate(run_id, run_q)
             return {"run_id": run_id, "session_id": session_id, "queued": True}
+
+        # KoreChat is the one durable input boundary.  This compatibility endpoint
+        # contributes an inbound message and only observes the shared event worker;
+        # it never invokes the LLM itself.
+        submitted = kc_submit_prompt(session_id, prompt_text)
+        if not isinstance(submitted, dict):
+            raise HTTPException(status_code=503, detail="Could not record prompt in KoreChat")
+        conversation_id = int(submitted["conversation_id"])
+        message_id      = int(submitted["message_id"])
+        queue_run_event(run_q, {
+            "type":            "start",
+            "run_id":          run_id,
+            "prompt":          prompt_text,
+            "submitted_at_ms": submitted_at_ms,
+        }, priority=True)
+
+        def _observe_conversation_reply() -> None:
+            deadline = time.monotonic() + 1800
+            try:
+                while time.monotonic() < deadline:
+                    messages = kc_get_messages(conversation_id)
+                    if isinstance(messages, list):
+                        replies = [
+                            item for item in messages
+                            if item.get("direction") == "outbound" and int(item.get("id") or 0) > message_id
+                        ]
+                        if replies:
+                            reply = str(replies[-1].get("content") or "").strip()
+                            queue_run_event(run_q, {
+                                "type":       "response",
+                                "run_id":     run_id,
+                                "response":   reply,
+                                "tokens":     0,
+                                "tps":        "0",
+                                "elapsed_ms": int(time.time() * 1000) - submitted_at_ms,
+                            }, priority=True)
+                            return
+                    time.sleep(1)
+                queue_run_event(run_q, {
+                    "type":    "error",
+                    "run_id":  run_id,
+                    "message": "Timed out waiting for the shared Agent response",
+                }, priority=True)
+            except Exception as exc:
+                queue_run_event(run_q, {"type": "error", "run_id": run_id, "message": str(exc)}, priority=True)
+            finally:
+                finish_run_event_queue(run_id)
+
+        threading.Thread(target=_observe_conversation_reply, daemon=True).start()
+        return {"run_id": run_id, "session_id": session_id, "queued": True}
 
         def _run(_prompt=prompt_text) -> None:
             run_config = _runtime_config_for_prompt(config, _prompt)

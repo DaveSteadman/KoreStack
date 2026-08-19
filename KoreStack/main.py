@@ -5,6 +5,53 @@ from __future__ import annotations
 # ====================================================================================================
 # Entry point for KoreStack.
 # Bootstraps the package application or utility from the command line.
+# MARK: FUNCTIONS
+# Primary types: ServiceSpec, StackManager.
+# Function inventory:
+# - _hidden_windows_creation_flags: Implements the  hidden windows creation flags operation for this module.
+# - get_ui_assets_dir: Returns ui assets dir for this module.
+# - _service_cfg: Implements the  service cfg operation for this module.
+# - _require_service_port: Implements the  require service port operation for this module.
+# - is_service_enabled: Checks whether service enabled is true.
+# - _service_host: Implements the  service host operation for this module.
+# - _merge_dict: Implements the  merge dict operation for this module.
+# - load_suite_config: Loads suite config for this module.
+# - resolve_root_path: Resolves root path for this module.
+# - resolve_data_root: Resolves data root for this module.
+# - get_stack_paths: Returns stack paths for this module.
+# - _dc: Implements the  dc operation for this module.
+# - _du: Implements the  du operation for this module.
+# - build_child_env: Builds child env for this module.
+# - build_services: Builds services for this module.
+# - setup_logging: Implements the setup logging operation for this module.
+# - parse_args: Parses args for this module.
+# - resolve_services: Resolves services for this module.
+# - probe_http: Implements the probe http operation for this module.
+# - service_health_timeout: Implements the service health timeout operation for this module.
+# - port_accepts_tcp: Implements the port accepts tcp operation for this module.
+# - probe_http_with_retry: Implements the probe http with retry operation for this module.
+# - __init__: Implements the   init   operation for this module.
+# - get_service_spec: Returns service spec for this module.
+# - invalidate_snapshot_cache: Implements the invalidate snapshot cache operation for this module.
+# - get_live_processes: Returns live processes for this module.
+# - start: Starts this module's primary operation.
+# - start_service: Starts service for this module.
+# - stop_service: Stops service for this module.
+# - restart_service: Implements the restart service operation for this module.
+# - _stop_process_tree: Implements the  stop process tree operation for this module.
+# - stop: Stops this module's primary operation.
+# - _watch_loop: Implements the  watch loop operation for this module.
+# - _scan: Implements the  scan operation for this module.
+# - _slug_for: Implements the  slug for operation for this module.
+# - _refresh_loop: Implements the  refresh loop operation for this module.
+# - snapshot: Implements the snapshot operation for this module.
+# - _compute_snapshot: Implements the  compute snapshot operation for this module.
+# - _probe_one: Implements the  probe one operation for this module.
+# - print_snapshot: Implements the print snapshot operation for this module.
+# - _get_stack_service_config: Implements the  get stack service config operation for this module.
+# - _bootstrap_data_dirs: Implements the  bootstrap data dirs operation for this module.
+# - main: Starts this module's primary operation.
+# - _signal_handler: Implements the  signal handler operation for this module.
 # ====================================================================================================
 
 import argparse

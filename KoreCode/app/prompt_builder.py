@@ -5,6 +5,16 @@ from __future__ import annotations
 # ====================================================================================================
 # Prompt builder helpers for KoreCode/app.
 # Provides the focused helpers and module-level behaviour grouped into this file.
+# MARK: FUNCTIONS
+# Function inventory:
+# - _output_schema: Implements the  output schema operation for this module.
+# - extract_file_mentions: Extracts file mentions for this module.
+# - _read_mention_context: Implements the  read mention context operation for this module.
+# - _mention_context_block: Implements the  mention context block operation for this module.
+# - instruction_by_mode: Implements the instruction by mode operation for this module.
+# - build_agent_contract: Builds agent contract for this module.
+# - build_tool_followup_prompt: Builds tool followup prompt for this module.
+# - build_prompt_by_mode: Builds prompt by mode for this module.
 # ====================================================================================================
 
 import json

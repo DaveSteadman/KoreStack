@@ -1,3 +1,15 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# test service logging module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Primary types: ServiceLoggingTests.
+# Function inventory:
+# - test_service_log_config_normalises_name_and_level: Implements the test service log config normalises name and level operation for this module.
+# - test_service_log_config_uses_safe_defaults: Implements the test service log config uses safe defaults operation for this module.
+# ====================================================================================================
+
 from __future__ import annotations
 
 import sys

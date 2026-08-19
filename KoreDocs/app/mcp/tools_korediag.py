@@ -11,6 +11,15 @@
 #   - app/_mcp_shared.py    -- _create_serialized_file, _ensure_extension
 #   - app/koredocs_mcp.py   -- imports this module to register its tools
 #   - app/korefile.py       -- underlying virtual FS
+# MARK: FUNCTIONS
+# Function inventory:
+# - _normalize_node_for_editor: Implements the  normalize node for editor operation for this module.
+# - _normalize_edge_for_editor: Implements the  normalize edge for editor operation for this module.
+# - _normalize_diagram_for_editor: Implements the  normalize diagram for editor operation for this module.
+# - _diag_content: Implements the  diag content operation for this module.
+# - create_korediag: Creates korediag for this module.
+# - koredocs_diag_create: Implements the koredocs diag create operation for this module.
+# - koredocs_diag_spec_get: Implements the koredocs diag spec get operation for this module.
 # ====================================================================================================
 
 from __future__ import annotations

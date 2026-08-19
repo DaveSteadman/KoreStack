@@ -20,6 +20,19 @@ from __future__ import annotations
 # Test support:
 #   - reset_runtime_state() clears only module-level cached paths.  It exists so
 #     tests can point cfg["data_dir"] at fresh temporary directories.
+# MARK: FUNCTIONS
+# Function inventory:
+# - reset_runtime_state: Implements the reset runtime state operation for this module.
+# - get_db_path: Returns db path for this module.
+# - _conn: Implements the  conn operation for this module.
+# - _now: Implements the  now operation for this module.
+# - _row_to_dict: Implements the  row to dict operation for this module.
+# - _decode_message_tags: Implements the  decode message tags operation for this module.
+# - _decode_json_value: Implements the  decode json value operation for this module.
+# - _decode_session_state_fields: Implements the  decode session state fields operation for this module.
+# - _default_profile: Implements the  default profile operation for this module.
+# - _is_protected_subject: Implements the  is protected subject operation for this module.
+# - _claimable_event_types_for_consumer: Implements the  claimable event types for consumer operation for this module.
 # ====================================================================================================
 
 import json

@@ -1,3 +1,18 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# saved searches module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Function inventory:
+# - _read_saved_searches: Implements the  read saved searches operation for this module.
+# - save_saved_searches: Saves saved searches for this module.
+# - load_saved_searches: Loads saved searches for this module.
+# - upsert_saved_search: Implements the upsert saved search operation for this module.
+# - delete_saved_searches: Deletes saved searches for this module.
+# - find_saved_search: Finds saved search for this module.
+# ====================================================================================================
+
 """Named, persistent KoreData SavedSearch definitions."""
 from __future__ import annotations
 

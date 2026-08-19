@@ -21,6 +21,72 @@
 #   - testing/test_wrapper.py  -- wraps individual test files for /test execution
 #   - skill_executor.py        -- execute_tool_call
 #   - scratchpad.py            -- scratchpad_save, scratchpad_load
+# MARK: FUNCTIONS
+# Primary types: GuardrailRuntimeTests.
+# Function inventory:
+# - setUp: Implements the setUp operation for this module.
+# - tearDown: Implements the tearDown operation for this module.
+# - test_skills_catalog_local_entries_include_schema_and_template: Implements the test skills catalog local entries include schema and template operation for this module.
+# - removed_delegate_gen2_queues_child_and_collects_parent_result: Implements the removed delegate gen2 queues child and collects parent result operation for this module.
+# - _fake_enqueue: Implements the  fake enqueue operation for this module.
+# - _fake_orchestrate_prompt: Implements the  fake orchestrate prompt operation for this module.
+# - removed_delegate_gen2_infers_dataset_target_from_alias_field: Implements the removed delegate gen2 infers dataset target from alias field operation for this module.
+# - removed_delegate_preserves_structured_inputs_and_instruction_alias: Implements the removed delegate preserves structured inputs and instruction alias operation for this module.
+# - removed_delegate_defaults_to_a_parent_continuation: Implements the removed delegate defaults to a parent continuation operation for this module.
+# - removed_delegate_task_record_retries_dropbox_file_lock: Implements the removed delegate task record retries dropbox file lock operation for this module.
+# - _replace_after_one_lock: Implements the  replace after one lock operation for this module.
+# - removed_delegate_collect_syncs_completed_dataset_into_current_session: Implements the removed delegate collect syncs completed dataset into current session operation for this module.
+# - removed_delegate_apply_result_target_creates_dataset_when_missing: Implements the removed delegate apply result target creates dataset when missing operation for this module.
+# - test_skills_catalog_mcp_entries_include_schema_and_template: Implements the test skills catalog mcp entries include schema and template operation for this module.
+# - test_note_tool_used_promotes_in_memory_without_persisting: Implements the test note tool used promotes in memory without persisting operation for this module.
+# - test_tools_catalog_list_ranks_trigger_matches: Implements the test tools catalog list ranks trigger matches operation for this module.
+# - test_tool_selection_respects_web_skill_filter: Implements the test tool selection respects web skill filter operation for this module.
+# - test_tool_selection_respects_koreliveweb_mcp_filter: Implements the test tool selection respects koreliveweb mcp filter operation for this module.
+# - test_write_file_writes_system_info_csv: Implements the test write file writes system info csv operation for this module.
+# - test_extract_graph_connection_batch_from_final_answer: Implements the test extract graph connection batch from final answer operation for this module.
+# - test_graph_write_guard_forces_tool_call_for_printed_triples: Implements the test graph write guard forces tool call for printed triples operation for this module.
+# - log: Implements the log operation for this module.
+# - log_file_only: Implements the log file only operation for this module.
+# - log_section: Implements the log section operation for this module.
+# - log_section_file_only: Implements the log section file only operation for this module.
+# - __init__: Implements the   init   operation for this module.
+# - fake_call_llm_chat: Implements the fake call llm chat operation for this module.
+# - fake_execute_tool_call: Implements the fake execute tool call operation for this module.
+# - test_exchange_pass_status_tolerates_validation_warning_when_asserts_pass: Implements the test exchange pass status tolerates validation warning when asserts pass operation for this module.
+# - test_evaluate_assert_normalizes_numeric_formatting: Implements the test evaluate assert normalizes numeric formatting operation for this module.
+# - test_read_file_accepts_workspace_relative_data_prefix: Implements the test read file accepts workspace relative data prefix operation for this module.
+# - test_create_folder_accepts_workspace_relative_data_prefix: Implements the test create folder accepts workspace relative data prefix operation for this module.
+# - test_workspace_utils_reads_folder_overrides_from_agent_config: Implements the test workspace utils reads folder overrides from agent config operation for this module.
+# - test_web_slash_commands_mutate_shared_runtime_config: Implements the test web slash commands mutate shared runtime config operation for this module.
+# - test_testtrend_uses_summary_counts_for_legacy_csv: Implements the test testtrend uses summary counts for legacy csv operation for this module.
+# - test_testtrend_prefers_persisted_wrapper_outcome: Implements the test testtrend prefers persisted wrapper outcome operation for this module.
+# - test_trend_points_keep_ten_most_recent_runs: Implements the test trend points keep ten most recent runs operation for this module.
+# - test_trend_points_for_all_use_recent_collection_runs_from_db: Implements the test trend points for all use recent collection runs from db operation for this module.
+# - test_execute_tool_call_runs_datetime: Implements the test execute tool call runs datetime operation for this module.
+# - test_execute_tool_call_allows_known_inactive_tool: Implements the test execute tool call allows known inactive tool operation for this module.
+# - test_execute_tool_call_resolves_common_tool_alias: Implements the test execute tool call resolves common tool alias operation for this module.
+# - test_execute_tool_call_unknown_tool_returns_alternatives: Implements the test execute tool call unknown tool returns alternatives operation for this module.
+# - test_build_tool_definitions_has_entries: Implements the test build tool definitions has entries operation for this module.
+# - test_loaded_skills_payload_infers_tool_classification_metadata: Implements the test loaded skills payload infers tool classification metadata operation for this module.
+# - test_mcp_connections_prefer_new_config_and_skip_disabled_entries: Implements the test mcp connections prefer new config and skip disabled entries operation for this module.
+# - test_mcp_connections_include_tool_classification_metadata: Implements the test mcp connections include tool classification metadata operation for this module.
+# - test_kc_direct_session_id_maps_to_conversation_id: Implements the test kc direct session id maps to conversation id operation for this module.
+# - test_kc_get_conversation_for_direct_session_uses_conversation_endpoint: Implements the test kc get conversation for direct session uses conversation endpoint operation for this module.
+# - test_request_switch_uses_direct_session_for_non_webchat_conversation: Implements the test request switch uses direct session for non webchat conversation operation for this module.
+# - test_request_switch_uses_conversation_id_for_new_webchat_conversation: Implements the test request switch uses conversation id for new webchat conversation operation for this module.
+# - test_suite_mcp_service_refs_resolve_urls: Implements the test suite mcp service refs resolve urls operation for this module.
+# - test_runtime_config_merge_keeps_default_service_ports_for_mcp_refs: Implements the test runtime config merge keeps default service ports for mcp refs operation for this module.
+# - test_suite_urls_map_includes_koreliveweb: Implements the test suite urls map includes koreliveweb operation for this module.
+# - test_endpoint_explorer_targets_include_koreliveweb: Implements the test endpoint explorer targets include koreliveweb operation for this module.
+# - test_mcp_connection_error_formatter_unwraps_exception_groups: Implements the test mcp connection error formatter unwraps exception groups operation for this module.
+# - test_mcp_enumeration_ignores_duplicate_tool_names_from_later_connections: Implements the test mcp enumeration ignores duplicate tool names from later connections operation for this module.
+# - fake_list_tools: Implements the fake list tools operation for this module.
+# - removed_normalize_tool_request_rewrites_assistant_delegate_wrapper: Implements the removed normalize tool request rewrites assistant delegate wrapper operation for this module.
+# - test_fetch_page_text_query_mode_falls_back_to_raw_page_text: Implements the test fetch page text query mode falls back to raw page text operation for this module.
+# - test_fetch_page_text_query_miss_returns_large_raw_fallback: Implements the test fetch page text query miss returns large raw fallback operation for this module.
+# - test_web_evidence_guard_requires_fetch_after_search_for_web_facts_prompt: Implements the test web evidence guard requires fetch after search for web facts prompt operation for this module.
+# - test_web_evidence_guard_allows_final_answer_after_fetch: Implements the test web evidence guard allows final answer after fetch operation for this module.
+# - test_load_session_rebuilds_history_from_korechat: Implements the test load session rebuilds history from korechat operation for this module.
 # ====================================================================================================
 import json
 import importlib

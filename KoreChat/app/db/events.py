@@ -14,6 +14,15 @@ from __future__ import annotations
 # Boundary:
 #   - conversation/message CRUD stays in db_conversations.py and db_messages.py
 #   - this file focuses on queue semantics and consumer coordination.
+# MARK: FUNCTIONS
+# Function inventory:
+# - event_create: Implements the event create operation for this module.
+# - event_claim_next: Implements the event claim next operation for this module.
+# - event_complete: Implements the event complete operation for this module.
+# - release_stale_claims: Implements the release stale claims operation for this module.
+# - event_list: Implements the event list operation for this module.
+# - event_counts: Implements the event counts operation for this module.
+# - clear_stale_outbound_ready: Clears stale outbound ready for this module.
 # ====================================================================================================
 
 import json

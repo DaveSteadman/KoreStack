@@ -4,6 +4,12 @@ from __future__ import annotations
 # MARK: OVERVIEW
 # ====================================================================================================
 # Task routing and playbook definitions for KoreCode's constrained coding-agent execution model.
+# MARK: FUNCTIONS
+# Primary types: PlaybookDefinition.
+# Function inventory:
+# - payload: Implements the payload operation for this module.
+# - route_task: Implements the route task operation for this module.
+# - list_playbooks: Lists playbooks for this module.
 # ====================================================================================================
 
 from dataclasses import dataclass

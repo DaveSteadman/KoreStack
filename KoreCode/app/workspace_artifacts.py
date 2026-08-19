@@ -5,6 +5,10 @@ from __future__ import annotations
 # ====================================================================================================
 # Workspace artifacts helpers for KoreCode/app.
 # Provides the focused helpers and module-level behaviour grouped into this file.
+# MARK: FUNCTIONS
+# Function inventory:
+# - rebuild_workspace_artifacts: Implements the rebuild workspace artifacts operation for this module.
+# - read_workspace_artifact_status: Reads workspace artifact status for this module.
 # ====================================================================================================
 
 from pathlib import Path

@@ -3,6 +3,16 @@
 # ====================================================================================================
 # Test coverage for dbutil.
 # Exercises the expected behaviour and regression boundaries for this area.
+# MARK: FUNCTIONS
+# Primary types: DbUtilTests.
+# Function inventory:
+# - test_terms_default_to_and: Implements the test terms default to and operation for this module.
+# - test_phrase_and_term_mix: Implements the test phrase and term mix operation for this module.
+# - test_explicit_or_is_preserved: Implements the test explicit or is preserved operation for this module.
+# - test_pipe_is_or_shorthand: Implements the test pipe is or shorthand operation for this module.
+# - test_parentheses_and_not_are_preserved: Implements the test parentheses and not are preserved operation for this module.
+# - test_comma_remains_and_separator: Implements the test comma remains and separator operation for this module.
+# - test_trailing_operator_is_trimmed: Implements the test trailing operator is trimmed operation for this module.
 # ====================================================================================================
 
 import sys

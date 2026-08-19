@@ -10,6 +10,9 @@
 # data_dir defaults to the configured suite datacontrol/korechat directory so that all persisted data
 # (database, log) lands in the shared datacontrol.
 # The suite path resolver keeps standalone and suite-managed launches consistent.
+# MARK: FUNCTIONS
+# Function inventory:
+# - _load: Implements the  load operation for this module.
 # ====================================================================================================
 
 import os

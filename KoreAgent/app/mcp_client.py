@@ -21,6 +21,27 @@
 #   - skill_executor.py  -- calls is_mcp_tool() and call_mcp_tool() per invocation
 #   - orchestration.py   -- calls get_mcp_tool_definitions() to extend tool_defs
 #   - main.py            -- calls start() at application startup and stop() on exit
+# MARK: FUNCTIONS
+# Function inventory:
+# - _sanitize_schema: Implements the  sanitize schema operation for this module.
+# - _run_loop: Implements the  run loop operation for this module.
+# - start: Starts this module's primary operation.
+# - stop: Stops this module's primary operation.
+# - reconnect: Implements the reconnect operation for this module.
+# - is_mcp_tool: Checks whether mcp tool is true.
+# - get_mcp_tool_definitions: Returns mcp tool definitions for this module.
+# - get_mcp_tool_index: Returns mcp tool index for this module.
+# - get_server_status: Returns server status for this module.
+# - call_mcp_tool: Implements the call mcp tool operation for this module.
+# - _background_retry_loop: Implements the  background retry loop operation for this module.
+# - _load_server_config: Implements the  load server config operation for this module.
+# - _normalize_connection: Implements the  normalize connection operation for this module.
+# - _format_connection_error: Implements the  format connection error operation for this module.
+# - _open_transport: Implements the  open transport operation for this module.
+# - _ping_server_async: Implements the  ping server async operation for this module.
+# - _enumerate_all_servers: Implements the  enumerate all servers operation for this module.
+# - _list_tools_async: Implements the  list tools async operation for this module.
+# - _call_tool_async: Implements the  call tool async operation for this module.
 # ====================================================================================================
 
 

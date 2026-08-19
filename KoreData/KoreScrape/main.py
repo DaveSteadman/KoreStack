@@ -3,6 +3,10 @@
 # ====================================================================================================
 # Entry point for KoreData/KoreScrape.
 # Bootstraps the package application or utility from the command line.
+# MARK: FUNCTIONS
+# Function inventory:
+# - _print_banner: Implements the  print banner operation for this module.
+# - row: Implements the row operation for this module.
 # ====================================================================================================
 
 import sys

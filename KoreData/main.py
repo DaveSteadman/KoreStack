@@ -8,6 +8,8 @@
 #
 # Related modules:
 #   - KoreDataGateway/main.py  -- actual startup logic, banner, and uvicorn launch
+# MARK: FUNCTIONS
+# Function inventory: this module exposes package or declarative configuration only.
 # ====================================================================================================
 import sys, os, runpy
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "KoreDataGateway"))

@@ -5,6 +5,10 @@
 #
 # This file now owns only service setup and route registration.
 # UI endpoints live in app/endpoint_ui.py and API endpoints live in app/endpoint_api.py.
+# MARK: FUNCTIONS
+# Function inventory:
+# - _lifespan: Implements the  lifespan operation for this module.
+# - _warm_library: Implements the  warm library operation for this module.
 # ====================================================================================================
 import sys
 from contextlib import asynccontextmanager

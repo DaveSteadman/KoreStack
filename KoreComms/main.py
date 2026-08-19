@@ -12,6 +12,10 @@
 #   - app/server.py   -- FastAPI application and all routes
 #   - app/config.py   -- configuration loading
 #   - app/poller.py   -- starts the background polling thread
+# MARK: FUNCTIONS
+# Function inventory:
+# - _print_banner: Implements the  print banner operation for this module.
+# - row: Implements the row operation for this module.
 # ====================================================================================================
 from __future__ import annotations
 

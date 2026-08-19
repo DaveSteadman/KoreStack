@@ -1,3 +1,19 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Message and turn API for KoreChat conversations. Individual-message routes support asynchronous
+# input and output, whereas the turn route records a matched inbound/outbound pair atomically.
+# This is also the boundary that translates message direction into conversation state and queued
+# agent work, leaving event and message persistence to the database layer.
+# MARK: FUNCTIONS
+# Function inventory:
+# - _require_conversation: Implements the  require conversation operation for this module.
+# - append_message: Appends message for this module.
+# - append_turn: Appends turn for this module.
+# - list_messages: Lists messages for this module.
+# - patch_message: Implements the patch message operation for this module.
+# ====================================================================================================
+
 from fastapi import APIRouter
 from fastapi import HTTPException
 from fastapi import Query
@@ -49,15 +65,15 @@ def append_turn(conversation_id: int, req: TurnAppendRequest):
     if not inbound_content or not outbound_content:
         raise HTTPException(status_code=400, detail="Both inbound_content and outbound_content are required")
     result = db.conversation_append_turn(
-        conversation_id             = conversation_id,
-        inbound_content             = inbound_content,
-        outbound_content            = outbound_content,
-        inbound_sender              = req.inbound_sender,
-        outbound_sender             = req.outbound_sender,
-        token_estimate              = req.token_estimate,
-        outbound_metadata           = req.outbound_metadata,
-        inbound_tags                = req.inbound_tags,
-        outbound_tags               = req.outbound_tags,
+        conversation_id                = conversation_id,
+        inbound_content                = inbound_content,
+        outbound_content               = outbound_content,
+        inbound_sender                 = req.inbound_sender,
+        outbound_sender                = req.outbound_sender,
+        token_estimate                 = req.token_estimate,
+        outbound_metadata              = req.outbound_metadata,
+        inbound_tags                   = req.inbound_tags,
+        outbound_tags                  = req.outbound_tags,
         outbound_delivery_eligible = req.outbound_delivery_eligible,
     )
     if result is None:

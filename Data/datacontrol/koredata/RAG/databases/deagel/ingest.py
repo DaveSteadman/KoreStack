@@ -4,6 +4,10 @@
 # ====================================================================================================
 # Ingest helpers for datacontrol/koredata/RAG/databases/deagel.
 # Provides the focused helpers and module-level behaviour grouped into this file.
+# MARK: FUNCTIONS
+# Function inventory:
+# - _write_progress: Implements the  write progress operation for this module.
+# - main: Starts this module's primary operation.
 # ====================================================================================================
 import argparse
 import sys

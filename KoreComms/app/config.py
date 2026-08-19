@@ -17,6 +17,10 @@
 # Related modules:
 #   - app/server.py   -- imports cfg
 #   - app/poller.py   -- reads poll_interval from cfg
+# MARK: FUNCTIONS
+# Function inventory:
+# - _load: Implements the  load operation for this module.
+# - _merge_connections: Implements the  merge connections operation for this module.
 # ====================================================================================================
 import os
 import sys

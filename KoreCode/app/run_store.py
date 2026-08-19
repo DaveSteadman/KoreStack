@@ -5,6 +5,24 @@ from __future__ import annotations
 # ====================================================================================================
 # Run store helpers for KoreCode/app.
 # Provides the focused helpers and module-level behaviour grouped into this file.
+# MARK: FUNCTIONS
+# Function inventory:
+# - _utc_now: Implements the  utc now operation for this module.
+# - _runs_root: Implements the  runs root operation for this module.
+# - _ensure_runs_root: Implements the  ensure runs root operation for this module.
+# - _run_path: Implements the  run path operation for this module.
+# - _write_run: Implements the  write run operation for this module.
+# - _load_run: Implements the  load run operation for this module.
+# - _append_event: Implements the  append event operation for this module.
+# - create_run: Creates run for this module.
+# - get_run: Returns run for this module.
+# - list_runs: Lists runs for this module.
+# - find_latest_run: Finds latest run for this module.
+# - update_run: Updates run for this module.
+# - append_tool_call: Appends tool call for this module.
+# - append_edit_proposal: Appends edit proposal for this module.
+# - append_model_response: Appends model response for this module.
+# - set_run_output: Sets run output for this module.
 # ====================================================================================================
 
 import json

@@ -1,3 +1,26 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Conversation-resource API for KoreChat. This module owns validation and HTTP semantics for
+# conversation lifecycle, lookup, maintenance, and input history, while the database layer owns
+# persistence. It emits stream notifications only after successful mutations so UI consumers can
+# refresh without coupling the storage implementation to FastAPI.
+# MARK: FUNCTIONS
+# Function inventory:
+# - _require_conversation: Implements the  require conversation operation for this module.
+# - create_conversation: Creates conversation for this module.
+# - get_conversation_by_external_id: Returns conversation by external id for this module.
+# - get_conversation_turns_by_external_id: Returns conversation turns by external id for this module.
+# - list_conversations: Lists conversations for this module.
+# - get_conversation: Returns conversation for this module.
+# - get_conversation_detail: Returns conversation detail for this module.
+# - patch_conversation: Implements the patch conversation operation for this module.
+# - delete_conversation: Deletes conversation for this module.
+# - cull_default_chats: Implements the cull default chats operation for this module.
+# - get_conversation_input_history: Returns conversation input history for this module.
+# - patch_conversation_input_history: Implements the patch conversation input history operation for this module.
+# ====================================================================================================
+
 from fastapi import APIRouter
 from fastapi import HTTPException
 from fastapi import Query

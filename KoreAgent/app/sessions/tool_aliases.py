@@ -1,3 +1,14 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# tool aliases module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Function inventory:
+# - catalog_tool_aliases: Implements the catalog tool aliases operation for this module.
+# - canonical_tool_name: Implements the canonical tool name operation for this module.
+# ====================================================================================================
+
 EXTERNAL_TOOL_ALIASES: dict[str, str] = {
     "koredata_search_mcp": "koredata_search",
 }

@@ -9,6 +9,11 @@
 #
 # Related modules:
 #   - KoreReference/main.py, KoreFeed/main.py, etc. -- each calls make_log_config() at startup
+# MARK: FUNCTIONS
+# Function inventory:
+# - configure_service_logging: Implements the configure service logging operation for this module.
+# - get_service_log_path: Returns service log path for this module.
+# - make_log_config: Implements the make log config operation for this module.
 # ====================================================================================================
 import sys
 from pathlib import Path

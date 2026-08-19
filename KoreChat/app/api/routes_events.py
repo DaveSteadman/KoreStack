@@ -1,3 +1,18 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Work-queue API for durable KoreChat events. Producers create events, consumers atomically claim
+# the next item with their service identity, and completion records the terminal state. The route
+# adds conversation context to claimed events, preserving a compact queue schema while giving
+# workers the complete turn data they need.
+# MARK: FUNCTIONS
+# Function inventory:
+# - list_events: Lists events for this module.
+# - create_event: Creates event for this module.
+# - get_next_event: Returns next event for this module.
+# - complete_event: Implements the complete event operation for this module.
+# ====================================================================================================
+
 from fastapi import APIRouter
 from fastapi import HTTPException
 from fastapi import Query

@@ -5,6 +5,14 @@ from __future__ import annotations
 # ====================================================================================================
 # Tool api helpers for KoreCode/app.
 # Provides the focused helpers and module-level behaviour grouped into this file.
+# MARK: FUNCTIONS
+# Primary types: ToolDefinition.
+# Function inventory:
+# - tool_guide_payload: Implements the tool guide payload operation for this module.
+# - execute_tool_requests: Implements the execute tool requests operation for this module.
+# - _effective_path: Implements the  effective path operation for this module.
+# - _active_python_path: Implements the  active python path operation for this module.
+# - _search_in_file: Implements the  search in file operation for this module.
 # ====================================================================================================
 
 from dataclasses import dataclass

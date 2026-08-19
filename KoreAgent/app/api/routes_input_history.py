@@ -1,3 +1,16 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# routes input history module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Primary types: HistoryAppendRequest.
+# Function inventory:
+# - register_input_history_routes: Registers input history routes for this module.
+# - get_session_input_history: Returns session input history for this module.
+# - post_session_input_history: Implements the post session input history operation for this module.
+# ====================================================================================================
+
 from fastapi import HTTPException
 from pydantic import BaseModel
 

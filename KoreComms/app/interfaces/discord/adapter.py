@@ -21,6 +21,19 @@
 #   - app/interfaces/common/registry.py -- registered as type "discord"
 #   - app/crypto.py                     -- encrypt/decrypt bot token
 #   - app/database.py                   -- conversation routing records
+# MARK: FUNCTIONS
+# Primary types: DiscordInterface.
+# Function inventory:
+# - _decrypt_config: Implements the  decrypt config operation for this module.
+# - _normalize_channel_ids: Implements the  normalize channel ids operation for this module.
+# - _split_content: Implements the  split content operation for this module.
+# - _sender_name: Implements the  sender name operation for this module.
+# - _message_content: Implements the  message content operation for this module.
+# - _request: Implements the  request operation for this module.
+# - _send_message: Implements the  send message operation for this module.
+# - poll: Implements the poll operation for this module.
+# - route_reply: Implements the route reply operation for this module.
+# - send_new: Implements the send new operation for this module.
 # ====================================================================================================
 from __future__ import annotations
 

@@ -6,6 +6,69 @@
 # Datasets are session-scoped structured working sets stored alongside the existing string
 # scratchpad. Small datasets persist inline inside the KoreChat scratchpad JSON; larger ones spill
 # over to a local SQLite store while a compact manifest stays in the persisted session payload.
+# MARK: FUNCTIONS
+# Function inventory:
+# - _resolve_session_id: Implements the  resolve session id operation for this module.
+# - _utc_now: Implements the  utc now operation for this module.
+# - _validate_name: Implements the  validate name operation for this module.
+# - _session_map: Implements the  session map operation for this module.
+# - _coerce_records: Implements the  coerce records operation for this module.
+# - _get_koredata_gateway_base_url: Implements the  get koredata gateway base url operation for this module.
+# - _fetch_full_text_payload: Implements the  fetch full text payload operation for this module.
+# - _expand_records_with_full_text: Implements the  expand records with full text operation for this module.
+# - _infer_schema: Implements the  infer schema operation for this module.
+# - _new_dataset_id: Implements the  new dataset id operation for this module.
+# - _history_entry: Implements the  history entry operation for this module.
+# - _serialized_size: Implements the  serialized size operation for this module.
+# - _derive_storage_mode: Implements the  derive storage mode operation for this module.
+# - _manifest: Implements the  manifest operation for this module.
+# - _inline_entry: Implements the  inline entry operation for this module.
+# - _ensure_loaded: Implements the  ensure loaded operation for this module.
+# - _get_dataset: Implements the  get dataset operation for this module.
+# - _project_record: Implements the  project record operation for this module.
+# - _derive_name: Implements the  derive name operation for this module.
+# - _coerce_non_negative_int: Implements the  coerce non negative int operation for this module.
+# - _select_records: Implements the  select records operation for this module.
+# - _normalise_koredocs_folder: Implements the  normalise koredocs folder operation for this module.
+# - _normalise_koredoc_name: Implements the  normalise koredoc name operation for this module.
+# - _format_export_value: Implements the  format export value operation for this module.
+# - _dataset_records_to_markdown: Implements the  dataset records to markdown operation for this module.
+# - _auto_name: Implements the  auto name operation for this module.
+# - _coerce_source_args: Implements the  coerce source args operation for this module.
+# - coerce_persisted_scratchpad_payload: Coerces persisted scratchpad payload for this module.
+# - coerce_persisted_datasets_payload: Coerces persisted datasets payload for this module.
+# - hydrate_session_state: Implements the hydrate session state operation for this module.
+# - _write_dataset: Implements the  write dataset operation for this module.
+# - _save_dataset_internal: Implements the  save dataset internal operation for this module.
+# - get_prompt_dataset_manifests: Returns prompt dataset manifests for this module.
+# - get_persisted_datasets_payload: Returns persisted datasets payload for this module.
+# - build_persisted_scratchpad_payload: Builds persisted scratchpad payload for this module.
+# - _coerce_history_items: Implements the  coerce history items operation for this module.
+# - _coerce_schema: Implements the  coerce schema operation for this module.
+# - _restore_dataset_entry: Implements the  restore dataset entry operation for this module.
+# - restore_persisted_datasets: Implements the restore persisted datasets operation for this module.
+# - clear_session_datasets: Clears session datasets for this module.
+# - delete_session_datasets: Deletes session datasets for this module.
+# - dataset_clear: Implements the dataset clear operation for this module.
+# - _format_manifest_line: Implements the  format manifest line operation for this module.
+# - _missing_spillover_error: Implements the  missing spillover error operation for this module.
+# - _json_dataset_error: Implements the  json dataset error operation for this module.
+# - dataset_save: Implements the dataset save operation for this module.
+# - dataset_rename: Implements the dataset rename operation for this module.
+# - dataset_list: Implements the dataset list operation for this module.
+# - dataset_inspect: Implements the dataset inspect operation for this module.
+# - dataset_get: Implements the dataset get operation for this module.
+# - dataset_write_koredoc: Implements the dataset write koredoc operation for this module.
+# - dataset_expand_full_text: Implements the dataset expand full text operation for this module.
+# - dataset_delete: Implements the dataset delete operation for this module.
+# - _apply_drop_predicate: Implements the  apply drop predicate operation for this module.
+# - _compare: Implements the  compare operation for this module.
+# - dataset_drop_where: Implements the dataset drop where operation for this module.
+# - _extract_first_json_object: Implements the  extract first json object operation for this module.
+# - _call_filter_llm: Implements the  call filter llm operation for this module.
+# - dataset_filter: Implements the dataset filter operation for this module.
+# - ingest_auto_dataset: Implements the ingest auto dataset operation for this module.
+# - auto_route_tool_result: Implements the auto route tool result operation for this module.
 # ====================================================================================================
 
 import json

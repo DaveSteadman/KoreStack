@@ -1,3 +1,17 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# test sentence indexing module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Primary types: FeedSentenceIndexTests.
+# Function inventory:
+# - test_insert_entry_indexes_sentences: Implements the test insert entry indexes sentences operation for this module.
+# - test_deleted_entry_hides_sentences: Implements the test deleted entry hides sentences operation for this module.
+# - test_backfill_sentence_index_reports_zero_when_up_to_date: Implements the test backfill sentence index reports zero when up to date operation for this module.
+# - test_rebuild_sentence_index_restores_missing_rows_for_entry: Implements the test rebuild sentence index restores missing rows for entry operation for this module.
+# ====================================================================================================
+
 import os
 import sqlite3
 import sys

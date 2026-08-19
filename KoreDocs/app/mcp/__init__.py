@@ -1,3 +1,12 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+#   init   module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Function inventory: this module exposes package or declarative configuration only.
+# ====================================================================================================
+
 from .tools_common import FORMAT_INFO
 from .tools_common import append_sheet_rows
 from .tools_common import clear_sheet_range

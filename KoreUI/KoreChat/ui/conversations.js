@@ -636,52 +636,25 @@ async function sendMessage() {
     input.disabled = true;
     btn.disabled   = true;
 
-    // Inbound messages for webchat conversations route through the MAF agent so the agent
-    // processes them and writes the response back to KC - exactly like typing in the agent page.
-    const MAF_BASE     = String(defaultKoreAgentBase() || "").replace(/\/$/, "");
-    const wcPrefix     = "webchat_";
-    const isWebchat    = direction === "inbound" && _selectedExternalId && _selectedExternalId.startsWith(wcPrefix);
-
     try {
-        if (isWebchat) {
-            if (!MAF_BASE) {
-                await window.kcuiAlert("KoreAgent Unavailable", "KoreAgent URL is not configured.");
-                return;
-            }
-            const sessionId = _selectedExternalId.slice(wcPrefix.length);
-            const resp = await fetch(`${MAF_BASE}/sessions/${encodeURIComponent(sessionId)}/prompt`, {
-                method:  "POST",
-                headers: { "Content-Type": "application/json" },
-                body:    JSON.stringify({ prompt: text }),
-            });
-            if (!resp.ok) {
-                const err = await resp.text();
-                console.error("sendMessage (MAF) failed:", resp.status, err);
-                return;
-            }
-            const data = await resp.json();
-            input.value = "";
-            // Refresh immediately to show the inbound message, then again when the agent responds.
-            await refreshAll();
-            _listenForResponse(data.run_id, MAF_BASE);
-        } else {
-            const resp = await fetch(`/api/conversations/${_selectedId}/messages`, {
-                method:  "POST",
-                headers: { "Content-Type": "application/json" },
-                body:    JSON.stringify({
-                    direction,
-                    content:        text,
-                    sender_display: "debug-ui",
-                }),
-            });
-            if (!resp.ok) {
-                const err = await resp.text();
-                console.error("sendMessage (KC) failed:", resp.status, err);
-                return;
-            }
-            input.value = "";
-            await refreshAll();
+        // KoreChat is the sole durable input boundary.  Any inbound turn creates a
+        // response-needed event for the shared Agent worker, regardless of its UI source.
+        const resp = await fetch(`/api/conversations/${_selectedId}/messages`, {
+            method:  "POST",
+            headers: { "Content-Type": "application/json" },
+            body:    JSON.stringify({
+                direction,
+                content:        text,
+                sender_display: "debug-ui",
+            }),
+        });
+        if (!resp.ok) {
+            const err = await resp.text();
+            console.error("sendMessage (KC) failed:", resp.status, err);
+            return;
         }
+        input.value = "";
+        await refreshAll();
     } catch (e) {
         console.error("sendMessage:", e);
     } finally {
@@ -689,25 +662,6 @@ async function sendMessage() {
         btn.disabled   = false;
         input.focus();
     }
-}
-
-function _listenForResponse(runId, mafBase) {
-    // Subscribe to the MAF run SSE stream and refresh the conversations page when the
-    // agent finishes - so both the inbound message and the agent reply become visible.
-    const es = new EventSource(`${mafBase}/runs/${encodeURIComponent(runId)}/stream`);
-    const done = () => { try { es.close(); } catch (_) {} };
-    es.onmessage = async e => {
-        try {
-            const ev = JSON.parse(e.data);
-            if (ev.type === "response" || ev.type === "error") {
-                done();
-                await refreshAll();
-            }
-        } catch (_) {}
-    };
-    es.onerror = done;
-    // Safety net - close after 3 minutes regardless.
-    setTimeout(done, 180000);
 }
 
 async function agentResume() {

@@ -1,3 +1,14 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# gateway graph module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Function inventory:
+# - normalise_graph_query_literal: Implements the normalise graph query literal operation for this module.
+# - search_graph: Implements the search graph operation for this module.
+# ====================================================================================================
+
 from __future__ import annotations
 
 import asyncio

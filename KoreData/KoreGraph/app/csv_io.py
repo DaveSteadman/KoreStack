@@ -1,3 +1,16 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# csv io module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Function inventory:
+# - _parse_optional_int: Implements the  parse optional int operation for this module.
+# - _parse_optional_state: Implements the  parse optional state operation for this module.
+# - export_connections: Implements the export connections operation for this module.
+# - import_connections: Implements the import connections operation for this module.
+# ====================================================================================================
+
 from __future__ import annotations
 
 import csv

@@ -34,6 +34,25 @@
 #   - orchestration.py     -- orchestrate_prompt, OrchestratorConfig
 #   - sessions/session_factory.py -- make_task_session
 #   - koreconv_client.py   -- KoreChat URL accessor
+# MARK: FUNCTIONS
+# Function inventory:
+# - _latest_message: Implements the  latest message operation for this module.
+# - _event_prompt_label: Implements the  event prompt label operation for this module.
+# - _get_base_url: Implements the  get base url operation for this module.
+# - _http_get: Implements the  http get operation for this module.
+# - _http_post: Implements the  http post operation for this module.
+# - _http_patch: Implements the  http patch operation for this module.
+# - _complete_event: Implements the  complete event operation for this module.
+# - _merge_conv_facts: Implements the  merge conv facts operation for this module.
+# - _coerce_conversation_scratchpad: Implements the  coerce conversation scratchpad operation for this module.
+# - _coerce_conversation_datasets: Implements the  coerce conversation datasets operation for this module.
+# - _build_prompt: Implements the  build prompt operation for this module.
+# - _invalid_model_response_reason: Returns the reason a model response cannot be persisted.
+# - _handle_compress_needed: Implements the  handle compress needed operation for this module.
+# - _handle_event: Implements the  handle event operation for this module.
+# - start_koreconv_loop: Starts koreconv loop for this module.
+# - _loop: Implements the  loop operation for this module.
+# - _run_event: Implements the  run event operation for this module.
 # ====================================================================================================
 
 
@@ -41,6 +60,7 @@
 # MARK: IMPORTS
 # ====================================================================================================
 import json
+import re
 import threading
 import time
 import urllib.error
@@ -71,13 +91,25 @@ from utils.workspace_utils import load_runtime_config
 # ====================================================================================================
 # MARK: CONSTANTS
 # ====================================================================================================
-_CONFIG_KEY        = "korechaturl"
-_DEFAULT_POLL_SECS = 3
-_DEFAULT_TIMEOUT   = 8
-_SESSION_PREFIX    = "kc_conv_"
+_CONFIG_KEY             = "korechaturl"
+_DEFAULT_POLL_SECS      = 3
+_DEFAULT_TIMEOUT        = 8
+_SESSION_PREFIX         = "kc_conv_"
+_MAX_MODEL_ATTEMPTS     = 2
+_PLACEHOLDER_OUTPUT_RE  = re.compile(r"(?:<unused\d+>){4,}", re.IGNORECASE)
 # Fraction of config.num_ctx at which a compress_needed event is raised.
 # Scales automatically when the user changes context size via /llmserverconfig ctx.
 _COMPRESS_THRESHOLD = 0.70
+
+
+def _invalid_model_response_reason(response: str) -> str | None:
+    """Return the reason an LLM response must not become a conversation turn."""
+    content = str(response or "").strip()
+    if not content:
+        return "empty response"
+    if _PLACEHOLDER_OUTPUT_RE.search(content):
+        return "placeholder-token output"
+    return None
 
 
 def _latest_message(messages: list[dict]) -> dict | None:
@@ -556,23 +588,37 @@ def _handle_event(
         stored_token_estimate = conv.get("token_estimate") or 0
         token_pressure = (stored_token_estimate / config.num_ctx) if config.num_ctx > 0 else 0.0
 
-        response, prompt_tokens, completion_tokens, ok, tps = orchestrate_prompt(
-            user_prompt          = user_prompt,
-            config               = config,
-            logger               = run_logger,
-            conversation_history = None,
-            session_context      = session_ctx,
-            quiet                = True,
-            conversation_entry   = conv,
-            token_pressure       = token_pressure,
-        )
+        invalid_response_reason = None
+        for attempt in range(1, _MAX_MODEL_ATTEMPTS + 1):
+            response, prompt_tokens, completion_tokens, ok, tps = orchestrate_prompt(
+                user_prompt          = user_prompt,
+                config               = config,
+                logger               = run_logger,
+                conversation_history = None,
+                session_context      = session_ctx,
+                quiet                = True,
+                conversation_entry   = conv,
+                token_pressure       = token_pressure,
+            )
+            reply                   = response.strip()
+            invalid_response_reason = _invalid_model_response_reason(reply)
+            tps_str                 = f"{tps:.1f}" if tps > 0 else "0"
+            push_log_line(
+                f"[KORECHAT] Conv {conv_id}: attempt {attempt}/{_MAX_MODEL_ATTEMPTS} "
+                f"[{prompt_tokens:,} tok, {tps_str} tok/s, ok={ok}]"
+            )
+            if invalid_response_reason is None:
+                break
+            if attempt < _MAX_MODEL_ATTEMPTS:
+                push_log_line(
+                    f"[KORECHAT] Conv {conv_id}: rejected {invalid_response_reason}; retrying the shared agent path"
+                )
 
-        tps_str = f"{tps:.1f}" if tps > 0 else "0"
-        push_log_line(
-            f"[KORECHAT] Conv {conv_id}: [{prompt_tokens:,} tok, {tps_str} tok/s, ok={ok}]"
-        )
+        invalid_model_output = invalid_response_reason is not None
+        if invalid_model_output:
+            reply = "(Agent response unavailable: the local model returned an invalid response. Please retry.)"
+            push_log_line(f"[KORECHAT] Conv {conv_id}: persisted controlled agent-error response after retry.")
 
-        reply              = response.strip()
         current_scratchpad = get_store(session_id=session_id)
         fact_source_prompt = str(event_payload.get("visible_text") or "").strip() or user_prompt
         current_scratchpad = _merge_conv_facts(current_scratchpad, fact_source_prompt, turn_count)
@@ -595,6 +641,7 @@ def _handle_event(
         channel = conv.get("channel_type", "webchat")
         outbound_status = "sent" if channel in {"webchat", "manual"} else "draft"
         delivery_eligible = not user_prompt.lstrip().startswith("/")
+        outbound_tags     = ["agent_error", "invalid_model_output"] if invalid_model_output else []
 
         # Write outbound message first - if this fails the event is not completed.
         try:
@@ -604,6 +651,7 @@ def _handle_event(
                 "sender_display": str(event_payload.get("outbound_sender_display") or "agent"),
                 "status":         outbound_status,
                 "delivery_eligible": delivery_eligible,
+                "tags":           outbound_tags,
             })
         except Exception as exc:
             push_log_line(f"[KORECHAT] Conv {conv_id}: failed to write outbound message: {exc}")

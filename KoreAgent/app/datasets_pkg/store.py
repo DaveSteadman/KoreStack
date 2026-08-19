@@ -6,6 +6,15 @@
 # Stores large per-session datasets outside the KoreChat scratchpad JSON payload while keeping the
 # runtime API local to KoreAgent. Each public function opens its own connection so callers do not
 # need to manage connection lifetime.
+# MARK: FUNCTIONS
+# Function inventory:
+# - get_db_path: Returns db path for this module.
+# - _conn: Implements the  conn operation for this module.
+# - init_db: Implements the init db operation for this module.
+# - upsert_dataset: Implements the upsert dataset operation for this module.
+# - load_dataset: Loads dataset for this module.
+# - delete_dataset: Deletes dataset for this module.
+# - delete_session_datasets: Deletes session datasets for this module.
 # ====================================================================================================
 
 import json

@@ -3,6 +3,9 @@
 # ====================================================================================================
 # Import export csv nodes helpers for datacontrol/koredata/Graph/processing.
 # Provides the focused helpers and module-level behaviour grouped into this file.
+# MARK: FUNCTIONS
+# Function inventory:
+# - cid: Implements the cid operation for this module.
 # ====================================================================================================
 
 import argparse, csv, sqlite3

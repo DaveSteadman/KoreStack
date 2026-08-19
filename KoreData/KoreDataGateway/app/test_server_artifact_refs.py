@@ -3,6 +3,27 @@
 # ====================================================================================================
 # Test coverage for server artifact refs.
 # Exercises the expected behaviour and regression boundaries for this area.
+# MARK: FUNCTIONS
+# Primary types: ArtifactRefTests.
+# Function inventory:
+# - test_map_feed_entry_includes_artifact_ref: Implements the test map feed entry includes artifact ref operation for this module.
+# - test_parse_reference_artifact_ref_restores_title: Implements the test parse reference artifact ref restores title operation for this module.
+# - test_parse_sentence_locator_restores_parts: Implements the test parse sentence locator restores parts operation for this module.
+# - test_get_full_text_dispatches_feed_ref: Implements the test get full text dispatches feed ref operation for this module.
+# - fake_get_feed_entry: Implements the fake get feed entry operation for this module.
+# - test_get_full_text_rejects_library_book: Implements the test get full text rejects library book operation for this module.
+# - test_api_full_text_delegates_to_ref_dispatcher: Implements the test api full text delegates to ref dispatcher operation for this module.
+# - fake_get_full_text: Implements the fake get full text operation for this module.
+# - test_get_sentence_dispatches_feed_locator: Implements the test get sentence dispatches feed locator operation for this module.
+# - __init__: Implements the   init   operation for this module.
+# - json: Implements the json operation for this module.
+# - get: Returns this module's primary operation.
+# - test_api_sentence_delegates_to_sentence_dispatcher: Implements the test api sentence delegates to sentence dispatcher operation for this module.
+# - fake_get_sentence: Implements the fake get sentence operation for this module.
+# - test_rag_databases_enriched_preserves_base_navigation_on_partial_info: Implements the test rag databases enriched preserves base navigation on partial info operation for this module.
+# - test_rag_databases_enriched_falls_back_to_local_db_size: Implements the test rag databases enriched falls back to local db size operation for this module.
+# - test_rag_processing_scripts_include_schedule_and_last_run: Implements the test rag processing scripts include schedule and last run operation for this module.
+# - test_normalize_rag_processing_schedule_rejects_unknown_values: Implements the test normalize rag processing schedule rejects unknown values operation for this module.
 # ====================================================================================================
 
 import sys

@@ -15,6 +15,11 @@
 #   - app/database.py              -- stores encrypted config_json values
 #   - app/interfaces/discord/adapter.py  -- encrypts/decrypts bot tokens
 #   - app/interfaces/gmail/adapter.py    -- encrypts/decrypts OAuth credentials
+# MARK: FUNCTIONS
+# Function inventory:
+# - _get_fernet: Implements the  get fernet operation for this module.
+# - encrypt: Implements the encrypt operation for this module.
+# - decrypt: Implements the decrypt operation for this module.
 # ====================================================================================================
 from __future__ import annotations
 

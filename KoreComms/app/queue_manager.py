@@ -12,6 +12,10 @@
 #
 # Related modules:
 #   - app/server.py  -- may call bootstrap() at startup
+# MARK: FUNCTIONS
+# Function inventory:
+# - bootstrap: Implements the bootstrap operation for this module.
+# - queue_size: Implements the queue size operation for this module.
 # ====================================================================================================
 from __future__ import annotations
 

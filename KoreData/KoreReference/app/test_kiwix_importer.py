@@ -3,6 +3,12 @@
 # ====================================================================================================
 # Test coverage for kiwix importer.
 # Exercises the expected behaviour and regression boundaries for this area.
+# MARK: FUNCTIONS
+# Primary types: KiwixImporterTests.
+# Function inventory:
+# - _null_db_connection: Implements the  null db connection operation for this module.
+# - _null_http_client: Implements the  null http client operation for this module.
+# - test_resume_existing_seed_counts_as_done: Implements the test resume existing seed counts as done operation for this module.
 # ====================================================================================================
 
 import sys

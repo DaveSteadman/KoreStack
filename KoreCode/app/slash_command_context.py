@@ -5,6 +5,10 @@ from __future__ import annotations
 # ====================================================================================================
 # Slash command context helpers for KoreCode/app.
 # Provides the focused helpers and module-level behaviour grouped into this file.
+# MARK: FUNCTIONS
+# Primary types: KoreCodeSlashCommandContext.
+# Function inventory:
+# - add_action: Implements the add action operation for this module.
 # ====================================================================================================
 
 from dataclasses import dataclass

@@ -10,6 +10,8 @@
 # Related modules:
 #   - app/importers/kiwix.py  -- reads/writes import state during crawl
 #   - app/server.py           -- exposes import state via GET /api/import/status
+# MARK: FUNCTIONS
+# Function inventory: this module exposes package or declarative configuration only.
 # ====================================================================================================
 import threading
 

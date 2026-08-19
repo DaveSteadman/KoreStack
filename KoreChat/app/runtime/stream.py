@@ -1,3 +1,18 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# In-process server-sent-event fan-out for KoreChat UI updates. Mutating routes publish compact
+# conversation-scoped notifications; each connected browser owns a bounded queue and receives
+# keepalives until disconnected. The implementation intentionally carries invalidation signals,
+# not conversation data, so clients continue to read authoritative API resources.
+# MARK: FUNCTIONS
+# Function inventory:
+# - push_event: Implements the push event operation for this module.
+# - _enqueue_event: Implements the  enqueue event operation for this module.
+# - event_stream_response: Implements the event stream response operation for this module.
+# - generate: Implements the generate operation for this module.
+# ====================================================================================================
+
 import asyncio
 import json
 import threading

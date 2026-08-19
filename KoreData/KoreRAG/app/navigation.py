@@ -1,3 +1,21 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# navigation module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Function inventory:
+# - _provider_roots: Implements the  provider roots operation for this module.
+# - _provider_path: Implements the  provider path operation for this module.
+# - _load_provider_from_path: Implements the  load provider from path operation for this module.
+# - get_provider: Returns provider for this module.
+# - provider_supports: Implements the provider supports operation for this module.
+# - provider_attribute: Implements the provider attribute operation for this module.
+# - provider_call: Implements the provider call operation for this module.
+# - has_navigation: Checks whether navigation is true.
+# - get_navigation_type: Returns navigation type for this module.
+# ====================================================================================================
+
 import importlib.util
 import sys
 from functools import lru_cache

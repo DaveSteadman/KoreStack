@@ -12,6 +12,8 @@
 # Related modules:
 #   - KoreGraph/main.py       -- imports cfg at startup
 #   - KoreGraph/app/server.py -- imports cfg for uvicorn bind and data_dir
+# MARK: FUNCTIONS
+# Function inventory: this module exposes package or declarative configuration only.
 # ====================================================================================================
 import os
 from pathlib import Path

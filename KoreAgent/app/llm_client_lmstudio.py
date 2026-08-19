@@ -11,6 +11,11 @@
 #   - llm_client_openai.py -- Shared state, config, HTTP helpers, data types
 #   - llm_client_ollama.py -- Ollama-specific: process lifecycle, /api/tags, /api/generate
 #   - llm_client.py        -- Routing facade: re-exports all public names + call_llm_chat
+# MARK: FUNCTIONS
+# Function inventory:
+# - ensure_lmstudio_reachable: Ensures lmstudio reachable for this module.
+# - list_lmstudio_models: Lists lmstudio models for this module.
+# - format_lmstudio_model_report: Formats lmstudio model report for this module.
 # ====================================================================================================
 
 

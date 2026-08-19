@@ -17,6 +17,16 @@ Usage:
 # ====================================================================================================
 # Extract llm ollama helpers for datacontrol/koredata/Graph/processing.
 # Provides the focused helpers and module-level behaviour grouped into this file.
+# MARK: FUNCTIONS
+# Function inventory:
+# - _find_repo_root: Implements the  find repo root operation for this module.
+# - _load_suite_config: Implements the  load suite config operation for this module.
+# - _load_llm_config: Implements the  load llm config operation for this module.
+# - fetch_chunks: Implements the fetch chunks operation for this module.
+# - _parse_response: Implements the  parse response operation for this module.
+# - submit_batch: Implements the submit batch operation for this module.
+# - llm_extract: Implements the llm extract operation for this module.
+# - main: Starts this module's primary operation.
 # ====================================================================================================
 
 import re

@@ -1,3 +1,26 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# document ops module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Function inventory:
+# - create_sheet: Creates sheet for this module.
+# - get_sheet: Returns sheet for this module.
+# - append_sheet_rows: Appends sheet rows for this module.
+# - upsert_sheet_rows: Implements the upsert sheet rows operation for this module.
+# - get_sheet_headers: Returns sheet headers for this module.
+# - find_sheet_column: Finds sheet column for this module.
+# - preview_sheet: Implements the preview sheet operation for this module.
+# - describe_sheet: Implements the describe sheet operation for this module.
+# - find_sheet_rows: Finds sheet rows for this module.
+# - update_sheet_rows: Updates sheet rows for this module.
+# - set_sheet_headers: Sets sheet headers for this module.
+# - append_sheet_table_rows: Appends sheet table rows for this module.
+# - create_sheet_table: Creates sheet table for this module.
+# - create_compounding_schedule: Creates compounding schedule for this module.
+# ====================================================================================================
+
 from __future__ import annotations
 
 import json

@@ -10,6 +10,10 @@
 #   - app/config.py    -- cfg (host, port, data_dir)
 #   - app/database.py  -- book catalog storage (SQLite + FTS5); get_status()
 #   - CommonCode/      -- shared logutil, config
+# MARK: FUNCTIONS
+# Function inventory:
+# - _print_banner: Implements the  print banner operation for this module.
+# - row: Implements the row operation for this module.
 # ====================================================================================================
 import sys
 import logging

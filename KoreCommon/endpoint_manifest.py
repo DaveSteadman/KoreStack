@@ -5,6 +5,14 @@ from __future__ import annotations
 # ====================================================================================================
 # Endpoint manifest helpers for Kore services.
 # Builds the small metadata payloads used to describe service endpoints consistently across the suite.
+# MARK: FUNCTIONS
+# Function inventory:
+# - _type_name: Implements the  type name operation for this module.
+# - _json_safe: Implements the  json safe operation for this module.
+# - _param_info: Implements the  param info operation for this module.
+# - _body_info: Implements the  body info operation for this module.
+# - _route_kind: Implements the  route kind operation for this module.
+# - build_endpoint_manifest: Builds endpoint manifest for this module.
 # ====================================================================================================
 
 from typing import Any

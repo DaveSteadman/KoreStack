@@ -1,3 +1,70 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# endpoint ui module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Function inventory:
+# - _rag_runtime_root: Implements the  rag runtime root operation for this module.
+# - _suite_redirect: Implements the  suite redirect operation for this module.
+# - _named_process_running: Implements the  named process running operation for this module.
+# - _resolved_sync_status: Implements the  resolved sync status operation for this module.
+# - _database_info: Implements the  database info operation for this module.
+# - _rag_databases_enriched: Implements the  rag databases enriched operation for this module.
+# - _rag_processing_descriptor_path: Implements the  rag processing descriptor path operation for this module.
+# - _rag_database_file_path: Implements the  rag database file path operation for this module.
+# - _rag_database_size_bytes: Implements the  rag database size bytes operation for this module.
+# - _rag_database_with_local_fallbacks: Implements the  rag database with local fallbacks operation for this module.
+# - _read_rag_processing_descriptor: Implements the  read rag processing descriptor operation for this module.
+# - _write_rag_processing_descriptor: Implements the  write rag processing descriptor operation for this module.
+# - _normalize_rag_processing_schedule: Implements the  normalize rag processing schedule operation for this module.
+# - _rag_processing_is_running: Implements the  rag processing is running operation for this module.
+# - _discover_rag_processing_scripts: Implements the  discover rag processing scripts operation for this module.
+# - _rag_processing_scripts: Implements the  rag processing scripts operation for this module.
+# - invalidate_rag_processing_scripts: Implements the invalidate rag processing scripts operation for this module.
+# - _find_rag_processing_script: Implements the  find rag processing script operation for this module.
+# - _db_info_from_list: Implements the  db info from list operation for this module.
+# - _provider_payload: Implements the  provider payload operation for this module.
+# - _rag_explore_payload: Implements the  rag explore payload operation for this module.
+# - _rag_explore_sitting_payload: Implements the  rag explore sitting payload operation for this module.
+# - _rag_explore_debate_payload: Implements the  rag explore debate payload operation for this module.
+# - _rag_explore_member_payload: Implements the  rag explore member payload operation for this module.
+# - _rag_navigation_explore_payload: Implements the  rag navigation explore payload operation for this module.
+# - _rag_navigation_category_payload: Implements the  rag navigation category payload operation for this module.
+# - register_rag_ui: Registers rag ui for this module.
+# - route_root: Implements the route root operation for this module.
+# - route_ui: Implements the route ui operation for this module.
+# - rag_index: Implements the rag index operation for this module.
+# - rag_databases_json: Implements the rag databases json operation for this module.
+# - rag_databases: Implements the rag databases operation for this module.
+# - rag_database_sync: Implements the rag database sync operation for this module.
+# - rag_processing_run: Implements the rag processing run operation for this module.
+# - rag_processing_schedule: Implements the rag processing schedule operation for this module.
+# - rag_processing_log: Implements the rag processing log operation for this module.
+# - rag_database_stop: Implements the rag database stop operation for this module.
+# - rag_database_delete: Implements the rag database delete operation for this module.
+# - _delete_runtime_artifacts: Implements the  delete runtime artifacts operation for this module.
+# - _reset_ingestor_descriptor: Implements the  reset ingestor descriptor operation for this module.
+# - rag_database_create: Implements the rag database create operation for this module.
+# - rag_search: Implements the rag search operation for this module.
+# - rag_insert: Implements the rag insert operation for this module.
+# - rag_insert_post: Implements the rag insert post operation for this module.
+# - rag_chunk: Implements the rag chunk operation for this module.
+# - rag_chunk_edit: Implements the rag chunk edit operation for this module.
+# - rag_chunk_delete: Implements the rag chunk delete operation for this module.
+# - rag_explore_json: Implements the rag explore json operation for this module.
+# - rag_explore: Implements the rag explore operation for this module.
+# - rag_explore_sitting_json: Implements the rag explore sitting json operation for this module.
+# - rag_explore_sitting: Implements the rag explore sitting operation for this module.
+# - rag_explore_debate_json: Implements the rag explore debate json operation for this module.
+# - rag_explore_debate: Implements the rag explore debate operation for this module.
+# - rag_explore_member_json: Implements the rag explore member json operation for this module.
+# - rag_explore_member: Implements the rag explore member operation for this module.
+# - rag_explore_category_json: Implements the rag explore category json operation for this module.
+# - rag_explore_category: Implements the rag explore category operation for this module.
+# - rag_explore_item_redirect: Implements the rag explore item redirect operation for this module.
+# ====================================================================================================
+
 import json
 import os
 import re
@@ -495,6 +562,8 @@ def register_rag_ui(
         descriptor             = _read_rag_processing_descriptor(script_id)
         descriptor["schedule"] = _normalize_rag_processing_schedule(schedule)
         _write_rag_processing_descriptor(script_id, descriptor)
+        _registry_reload()
+        invalidate_rag_processing_scripts()
         return RedirectResponse("/ui/rag/databases", status_code=303)
 
     @app.get("/ui/rag/processing/{script_id}/log", response_class=HTMLResponse, include_in_schema=False)

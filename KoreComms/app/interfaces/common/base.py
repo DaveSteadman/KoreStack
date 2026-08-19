@@ -15,6 +15,13 @@
 # Related modules:
 #   - app/interfaces/common/registry.py    -- maps type strings to adapter classes
 #   - app/poller.py                        -- calls poll() and route_reply() in the loop
+# MARK: FUNCTIONS
+# Primary types: BaseInterface.
+# Function inventory:
+# - __init__: Implements the   init   operation for this module.
+# - poll: Implements the poll operation for this module.
+# - route_reply: Implements the route reply operation for this module.
+# - send_new: Implements the send new operation for this module.
 # ====================================================================================================
 from __future__ import annotations
 

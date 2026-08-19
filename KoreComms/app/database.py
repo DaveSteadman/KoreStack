@@ -16,6 +16,49 @@
 # Related modules:
 #   - app/server.py  -- read/write operations via this module
 #   - app/poller.py  -- read/write during inbound/outbound polling
+# MARK: FUNCTIONS
+# Function inventory:
+# - get_db_path: Returns db path for this module.
+# - _open_connection: Implements the  open connection operation for this module.
+# - get_db: Returns db for this module.
+# - _ensure_schema: Implements the  ensure schema operation for this module.
+# - init_db: Implements the init db operation for this module.
+# - _now: Implements the  now operation for this module.
+# - _row_to_dict: Implements the  row to dict operation for this module.
+# - config_get: Implements the config get operation for this module.
+# - config_set: Implements the config set operation for this module.
+# - interface_list: Implements the interface list operation for this module.
+# - interface_get: Implements the interface get operation for this module.
+# - interface_get_manual: Implements the interface get manual operation for this module.
+# - interface_create: Implements the interface create operation for this module.
+# - interface_update: Implements the interface update operation for this module.
+# - interface_delete: Implements the interface delete operation for this module.
+# - conversation_list: Implements the conversation list operation for this module.
+# - conversation_create: Implements the conversation create operation for this module.
+# - conversation_get: Implements the conversation get operation for this module.
+# - conversation_set_kc_id: Implements the conversation set kc id operation for this module.
+# - conversation_set_name: Implements the conversation set name operation for this module.
+# - conversation_get_by_external_thread: Implements the conversation get by external thread operation for this module.
+# - conversation_get_by_name: Implements the conversation get by name operation for this module.
+# - conversation_get_by_kc_id: Implements the conversation get by kc id operation for this module.
+# - conversation_list_with_kc_id: Implements the conversation list with kc id operation for this module.
+# - conversation_delete: Implements the conversation delete operation for this module.
+# - external_message_exists: Implements the external message exists operation for this module.
+# - external_message_create: Implements the external message create operation for this module.
+# - conversation_set_delivery: Implements the conversation set delivery operation for this module.
+# - conversation_bind_delivery: Implements the conversation bind delivery operation for this module.
+# - distribution_list_create: Implements the distribution list create operation for this module.
+# - distribution_list_list: Implements the distribution list list operation for this module.
+# - distribution_list_get: Implements the distribution list get operation for this module.
+# - distribution_list_delete: Implements the distribution list delete operation for this module.
+# - distribution_list_update: Implements the distribution list update operation for this module.
+# - distribution_list_members: Implements the distribution list members operation for this module.
+# - distribution_list_member_add: Implements the distribution list member add operation for this module.
+# - distribution_list_member_delete: Implements the distribution list member delete operation for this module.
+# - distribution_list_member_update: Implements the distribution list member update operation for this module.
+# - external_message_get_last_inbound: Implements the external message get last inbound operation for this module.
+# - log_activity: Implements the log activity operation for this module.
+# - activity_list: Implements the activity list operation for this module.
 # ====================================================================================================
 from __future__ import annotations
 
@@ -310,14 +353,15 @@ def conversation_create(
     external_thread_id: str | None = None,
     korechat_id:        str | None = None,
     chat_name:          str | None = None,
+    delivery_enabled:   bool = False,
 ) -> int:
     with get_db() as conn:
         try:
             cur = conn.execute(
                 "INSERT INTO conversations "
-                "(interface_id, chat_name, kc_chat_id, external_thread_id, korechat_id, created_at) "
-                "VALUES (?,?,?,?,?,?)",
-                (interface_id, chat_name, kc_chat_id, external_thread_id, korechat_id, _now()),
+                "(interface_id, chat_name, kc_chat_id, external_thread_id, korechat_id, delivery_enabled, created_at) "
+                "VALUES (?,?,?,?,?,?,?)",
+                (interface_id, chat_name, kc_chat_id, external_thread_id, korechat_id, int(delivery_enabled), _now()),
             )
             row_id = int(cur.lastrowid)
             if not chat_name:

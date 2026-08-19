@@ -1,3 +1,24 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# tool state module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Function inventory:
+# - _normalize_tool_names: Implements the  normalize tool names operation for this module.
+# - _resolve_session_id: Implements the  resolve session id operation for this module.
+# - _session_external_id: Implements the  session external id operation for this module.
+# - kc_request_json: Implements the kc request json operation for this module.
+# - fetch_conversation_for_session: Implements the fetch conversation for session operation for this module.
+# - ensure_conversation_for_session: Ensures conversation for session for this module.
+# - update_cache: Updates cache for this module.
+# - clear_session_tools_active: Clears session tools active for this module.
+# - get_selected_tools: Returns selected tools for this module.
+# - set_selected_tools: Sets selected tools for this module.
+# - promote_selected_tools: Implements the promote selected tools operation for this module.
+# - note_tool_used: Implements the note tool used operation for this module.
+# ====================================================================================================
+
 import json
 import threading
 import urllib.error

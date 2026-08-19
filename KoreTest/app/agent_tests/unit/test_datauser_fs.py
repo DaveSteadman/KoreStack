@@ -1,3 +1,17 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# test datauser fs module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Primary types: DataUserFilesystemTests.
+# Function inventory:
+# - test_resolve_rejects_absolute_and_traversal_paths: Implements the test resolve rejects absolute and traversal paths operation for this module.
+# - test_dot_relative_path_resolves_inside_datauser: Implements the test dot relative path resolves inside datauser operation for this module.
+# - test_write_and_delete_reject_stale_etags: Implements the test write and delete reject stale etags operation for this module.
+# - test_listing_stays_in_selected_root_and_applies_filters: Implements the test listing stays in selected root and applies filters operation for this module.
+# ====================================================================================================
+
 from __future__ import annotations
 
 import sys

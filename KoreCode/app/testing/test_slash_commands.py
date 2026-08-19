@@ -3,6 +3,17 @@
 # ====================================================================================================
 # Test coverage for slash commands.
 # Exercises the expected behaviour and regression boundaries for this area.
+# MARK: FUNCTIONS
+# Primary types: KoreCodeSlashCommandTests.
+# Function inventory:
+# - setUp: Implements the setUp operation for this module.
+# - test_help_lists_workspace_regen: Implements the test help lists workspace regen operation for this module.
+# - test_workspace_on_sets_state_and_rebuilds: Implements the test workspace on sets state and rebuilds operation for this module.
+# - test_workspace_regen_emits_no_state_action: Implements the test workspace regen emits no state action operation for this module.
+# - test_retry_without_last_message_returns_error: Implements the test retry without last message returns error operation for this module.
+# - test_mode_continue_requests_continue_action: Implements the test mode continue requests continue action operation for this module.
+# - test_complete_lists_matching_commands: Implements the test complete lists matching commands operation for this module.
+# - test_complete_lists_workspace_subcommands: Implements the test complete lists workspace subcommands operation for this module.
 # ====================================================================================================
 
 import sys

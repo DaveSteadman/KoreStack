@@ -34,6 +34,71 @@
 #   - app/poller.py        -- start() / stop() for the background polling thread
 #   - app/kc_client.py     -- KoreChat API calls
 #   - app/interfaces/      -- adapter registry and type-specific adapters
+# MARK: FUNCTIONS
+# Primary types: MissingKoreChatError, SendRequest, DeliveryBindingRequest, DistributionListRequest, DistributionListMemberRequest, DistributionListUpdateRequest, ConversationSendRequest.
+# Function inventory:
+# - _parse_id_list: Implements the  parse id list operation for this module.
+# - _ids_to_text: Implements the  ids to text operation for this module.
+# - _store_classic_email_config: Implements the  store classic email config operation for this module.
+# - _store_sftp_file_config: Implements the  store sftp file config operation for this module.
+# - _reset_connection_timing: Implements the  reset connection timing operation for this module.
+# - lifespan: Implements the lifespan operation for this module.
+# - _ctx: Implements the  ctx operation for this module.
+# - status: Implements the status operation for this module.
+# - _find_distribution_list: Implements the  find distribution list operation for this module.
+# - _api_send_one: Implements the  api send one operation for this module.
+# - api_send: Implements the api send operation for this module.
+# - api_distribution_list_list: Implements the api distribution list list operation for this module.
+# - api_distribution_list_create: Implements the api distribution list create operation for this module.
+# - api_distribution_list_get: Implements the api distribution list get operation for this module.
+# - api_distribution_list_member_add: Implements the api distribution list member add operation for this module.
+# - api_distribution_list_member_delete: Implements the api distribution list member delete operation for this module.
+# - api_distribution_list_delete: Implements the api distribution list delete operation for this module.
+# - api_distribution_list_update: Implements the api distribution list update operation for this module.
+# - api_distribution_list_member_update: Implements the api distribution list member update operation for this module.
+# - api_delivery_bind: Implements the api delivery bind operation for this module.
+# - _delivery_binding_conversation: Implements the  delivery binding conversation operation for this module.
+# - _set_delivery_binding_active: Implements the  set delivery binding active operation for this module.
+# - api_delivery_pause: Implements the api delivery pause operation for this module.
+# - api_delivery_resume: Implements the api delivery resume operation for this module.
+# - api_delivery_publish_previous: Implements the api delivery publish previous operation for this module.
+# - ui_home: Implements the ui home operation for this module.
+# - ui_compose_form: Implements the ui compose form operation for this module.
+# - ui_compose_submit: Implements the ui compose submit operation for this module.
+# - ui_connections: Implements the ui connections operation for this module.
+# - api_connections_timing: Implements the api connections timing operation for this module.
+# - ui_distribution_lists: Implements the ui distribution lists operation for this module.
+# - ui_distribution_list_create: Implements the ui distribution list create operation for this module.
+# - ui_distribution_list_update: Implements the ui distribution list update operation for this module.
+# - ui_distribution_list_member_add: Implements the ui distribution list member add operation for this module.
+# - ui_distribution_list_member_update: Implements the ui distribution list member update operation for this module.
+# - ui_distribution_list_member_delete: Implements the ui distribution list member delete operation for this module.
+# - ui_distribution_list_delete: Implements the ui distribution list delete operation for this module.
+# - ui_connections_new: Implements the ui connections new operation for this module.
+# - ui_connections_create: Implements the ui connections create operation for this module.
+# - ui_connections_edit: Implements the ui connections edit operation for this module.
+# - ui_connections_update: Implements the ui connections update operation for this module.
+# - ui_connections_delete: Implements the ui connections delete operation for this module.
+# - _gmail_redirect_uri: Implements the  gmail redirect uri operation for this module.
+# - ui_gmail_authorize: Implements the ui gmail authorize operation for this module.
+# - ui_gmail_callback: Implements the ui gmail callback operation for this module.
+# - ui_activity: Implements the ui activity operation for this module.
+# - _normalize_kc_messages: Implements the  normalize kc messages operation for this module.
+# - _normalize_kc_events: Implements the  normalize kc events operation for this module.
+# - _conversation_name_for: Implements the  conversation name for operation for this module.
+# - _missing_kc_policy: Implements the  missing kc policy operation for this module.
+# - _resolve_kc_conversation: Implements the  resolve kc conversation operation for this module.
+# - _get_conversation_detail_payload: Implements the  get conversation detail payload operation for this module.
+# - _ensure_kc_conv: Implements the  ensure kc conv operation for this module.
+# - api_conversation: Implements the api conversation operation for this module.
+# - api_conversation_detail: Implements the api conversation detail operation for this module.
+# - _stream_kc_events: Implements the  stream kc events operation for this module.
+# - api_events_stream: Implements the api events stream operation for this module.
+# - api_conversation_send: Implements the api conversation send operation for this module.
+# - ui_conversation: Implements the ui conversation operation for this module.
+# - ui_conversation_delivery: Implements the ui conversation delivery operation for this module.
+# - ui_conversation_delete: Implements the ui conversation delete operation for this module.
+# - ui_conversation_send: Implements the ui conversation send operation for this module.
 # ====================================================================================================
 from __future__ import annotations
 

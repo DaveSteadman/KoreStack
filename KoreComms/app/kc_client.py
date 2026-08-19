@@ -16,6 +16,29 @@
 # Related modules:
 #   - app/poller.py   -- calls kc_client to forward inbound messages and drain outbound queue
 #   - app/server.py   -- calls kc_client to list conversations and send replies
+# MARK: FUNCTIONS
+# Function inventory:
+# - _base: Implements the  base operation for this module.
+# - _post: Implements the  post operation for this module.
+# - _get: Implements the  get operation for this module.
+# - _patch: Implements the  patch operation for this module.
+# - _delete: Implements the  delete operation for this module.
+# - find_conversation_by_external_id: Finds conversation by external id for this module.
+# - create_conversation: Creates conversation for this module.
+# - set_conversation_channel_type: Sets conversation channel type for this module.
+# - find_or_create_conversation: Finds or create conversation for this module.
+# - get_conversation: Returns conversation for this module.
+# - get_conversation_detail: Returns conversation detail for this module.
+# - delete_conversation: Deletes conversation for this module.
+# - append_message: Appends message for this module.
+# - has_internal_message_tag: Checks whether internal message tag is true.
+# - get_messages: Returns messages for this module.
+# - get_input_history: Returns input history for this module.
+# - append_input_history: Appends input history for this module.
+# - mark_message_sent: Marks message sent for this module.
+# - create_event: Creates event for this module.
+# - claim_next_event: Claims next event for this module.
+# - complete_event: Implements the complete event operation for this module.
 # ====================================================================================================
 from __future__ import annotations
 

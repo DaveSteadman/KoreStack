@@ -4,6 +4,11 @@ from __future__ import annotations
 # MARK: OVERVIEW
 # ====================================================================================================
 # Shared SQLite/FTS utility helpers.
+# MARK: FUNCTIONS
+# Function inventory:
+# - fts_build_query: Implements the fts build query operation for this module.
+# - _quote_term: Implements the  quote term operation for this module.
+# - compute_word_count: Implements the compute word count operation for this module.
 # ====================================================================================================
 
 import re

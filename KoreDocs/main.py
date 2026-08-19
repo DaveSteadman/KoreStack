@@ -8,6 +8,8 @@
 #
 # Related modules:
 #   - app/server.py  -- main() starts the FastAPI app under uvicorn using the suite config port
+# MARK: FUNCTIONS
+# Function inventory: this module exposes package or declarative configuration only.
 # ====================================================================================================
 
 from __future__ import annotations

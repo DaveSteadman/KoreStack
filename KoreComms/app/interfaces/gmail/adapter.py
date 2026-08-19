@@ -19,6 +19,16 @@
 #   - app/interfaces/gmail/oauth.py     -- OAuth helpers for the WebUI authorization flow
 #   - app/crypto.py                     -- encrypt/decrypt OAuth credentials
 #   - app/database.py                   -- conversation routing and dedup records
+# MARK: FUNCTIONS
+# Primary types: GmailInterface.
+# Function inventory:
+# - _decrypt_config: Implements the  decrypt config operation for this module.
+# - _build_service: Implements the  build service operation for this module.
+# - _extract_body: Implements the  extract body operation for this module.
+# - _header_value: Implements the  header value operation for this module.
+# - poll: Implements the poll operation for this module.
+# - route_reply: Implements the route reply operation for this module.
+# - send_new: Implements the send new operation for this module.
 # ====================================================================================================
 from __future__ import annotations
 

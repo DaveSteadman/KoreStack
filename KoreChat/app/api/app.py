@@ -1,3 +1,15 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# KoreChat's application-composition module. It creates the FastAPI service, installs the suite
+# endpoint manifest, and assembles focused route modules around one shared lifespan. Keeping this
+# boundary thin makes route behaviour independently testable while this module remains the single
+# authoritative service entry point and status surface.
+# MARK: FUNCTIONS
+# Function inventory:
+# - status: Implements the status operation for this module.
+# ====================================================================================================
+
 import asyncio
 import sys
 from pathlib import Path

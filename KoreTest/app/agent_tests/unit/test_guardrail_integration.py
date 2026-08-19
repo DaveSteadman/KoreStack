@@ -21,6 +21,29 @@
 #   - testing/test_wrapper.py  -- wraps individual test files for /test execution
 #   - skill_executor.py        -- execute_tool_call
 #   - scratchpad.py            -- scratchpad_save, scratchpad_load
+# MARK: FUNCTIONS
+# Primary types: GuardrailIntegrationTests.
+# Function inventory:
+# - setUp: Implements the setUp operation for this module.
+# - tearDown: Implements the tearDown operation for this module.
+# - test_dataset_get_uses_deterministic_scratchpad_key: Implements the test dataset get uses deterministic scratchpad key operation for this module.
+# - test_system_prompt_lists_dataset_manifests: Implements the test system prompt lists dataset manifests operation for this module.
+# - test_system_prompt_hides_dataset_manifests_without_dataset_tools: Implements the test system prompt hides dataset manifests without dataset tools operation for this module.
+# - test_system_prompt_includes_korechat_conversation_snapshot: Implements the test system prompt includes korechat conversation snapshot operation for this module.
+# - test_auto_route_tool_result_saves_record_collections_as_dataset: Implements the test auto route tool result saves record collections as dataset operation for this module.
+# - test_auto_route_tool_result_parses_stringified_json_results: Implements the test auto route tool result parses stringified json results operation for this module.
+# - test_auto_route_tool_result_skips_dataset_get_payloads: Implements the test auto route tool result skips dataset get payloads operation for this module.
+# - test_dataset_save_accepts_results_envelope_dict: Implements the test dataset save accepts results envelope dict operation for this module.
+# - test_system_prompt_steers_exhaustive_fetches_into_scratchpad: Implements the test system prompt steers exhaustive fetches into scratchpad operation for this module.
+# - test_system_prompt_steers_article_harvests_away_from_hub_urls: Implements the test system prompt steers article harvests away from hub urls operation for this module.
+# - removed_delegate_subrun_restores_parent_depth_between_siblings: Implements the removed delegate subrun restores parent depth between siblings operation for this module.
+# - fake_orchestrate_prompt: Implements the fake orchestrate prompt operation for this module.
+# - removed_delegate_subrun_binds_child_to_parent_session: Implements the removed delegate subrun binds child to parent session operation for this module.
+# - removed_delegate_subrun_auto_includes_dataset_access_for_named_dataset_tasks: Implements the removed delegate subrun auto includes dataset access for named dataset tasks operation for this module.
+# - test_search_web_prefer_article_urls_promotes_article_results: Implements the test search web prefer article urls promotes article results operation for this module.
+# - test_search_web_extracts_results_when_ddg_attributes_are_reordered: Implements the test search web extracts results when ddg attributes are reordered operation for this module.
+# - test_scratchpad_query_rejects_exhaustive_answers_from_search_results: Implements the test scratchpad query rejects exhaustive answers from search results operation for this module.
+# - test_scratchpad_query_prompt_forbids_outside_knowledge: Implements the test scratchpad query prompt forbids outside knowledge operation for this module.
 # ====================================================================================================
 import json
 import os

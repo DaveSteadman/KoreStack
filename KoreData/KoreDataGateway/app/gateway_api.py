@@ -1,3 +1,18 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# gateway api module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Primary types: SearchRequest, FullTextRequest, SentenceRequest.
+# Function inventory:
+# - register_gateway_api_routes: Registers gateway api routes for this module.
+# - api_search: Implements the api search operation for this module.
+# - api_full_text: Implements the api full text operation for this module.
+# - api_sentence: Implements the api sentence operation for this module.
+# - api_sentence_get: Implements the api sentence get operation for this module.
+# ====================================================================================================
+
 """HTTP request models and route registration for KoreDataGateway.
 
 The gateway server owns process lifecycle and MCP tools.  This module owns the

@@ -1,3 +1,39 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# endpoint ui module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Function inventory:
+# - _add_next_mins: Implements the  add next mins operation for this module.
+# - _normalise_entry_text: Implements the  normalise entry text operation for this module.
+# - _normalise_entry_for_display: Implements the  normalise entry for display operation for this module.
+# - _filter_results_by_date: Implements the  filter results by date operation for this module.
+# - register_feed_ui: Registers feed ui for this module.
+# - route_root: Implements the route root operation for this module.
+# - route_ui: Implements the route ui operation for this module.
+# - web_index: Implements the web index operation for this module.
+# - web_search: Implements the web search operation for this module.
+# - web_domain: Implements the web domain operation for this module.
+# - web_entry: Implements the web entry operation for this module.
+# - web_update_entry_content: Implements the web update entry content operation for this module.
+# - web_set_sentence_deleted: Implements the web set sentence deleted operation for this module.
+# - web_create_domain: Implements the web create domain operation for this module.
+# - web_delete_domain: Implements the web delete domain operation for this module.
+# - web_rename_domain: Implements the web rename domain operation for this module.
+# - web_set_domain_enabled: Implements the web set domain enabled operation for this module.
+# - web_add_feed: Implements the web add feed operation for this module.
+# - web_delete_feed: Implements the web delete feed operation for this module.
+# - web_update_feed: Implements the web update feed operation for this module.
+# - web_refresh_feed: Implements the web refresh feed operation for this module.
+# - web_delete_entry: Implements the web delete entry operation for this module.
+# - web_delete_older_than: Implements the web delete older than operation for this module.
+# - web_delete_by_feed: Implements the web delete by feed operation for this module.
+# - web_bulk_delete_entries: Implements the web bulk delete entries operation for this module.
+# - web_set_age_mode: Implements the web set age mode operation for this module.
+# - web_delete_outside_calendar: Implements the web delete outside calendar operation for this module.
+# ====================================================================================================
+
 import json
 import html as _html
 import os
@@ -25,7 +61,6 @@ from app.database import (
     get_feed_counts,
     init_db,
     list_domains,
-    rename_domain_db,
     search_entries,
     set_sentence_deleted,
     set_domain_age_settings,
@@ -40,7 +75,7 @@ from app.feed_manager import (
     list_feed_domains,
     load_feeds,
     remove_feed,
-    rename_domain_feeds,
+    rename_domain,
     set_domain_enabled,
     sync_domain_spec,
     update_domain_age_settings_spec,
@@ -272,8 +307,12 @@ def register_feed_ui(app: FastAPI) -> None:
 
     @app.post("/ui/feeds/domains/{domain}/rename", include_in_schema=False)
     def web_rename_domain(domain: str, new_name: str = Form(...)):
-        rename_domain_feeds(domain, new_name)
-        rename_domain_db(domain, new_name)
+        try:
+            renamed = rename_domain(domain, new_name)
+        except (FileExistsError, ValueError) as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        if not renamed:
+            raise HTTPException(status_code=404, detail="Domain not found")
         invalidate_feed_overview()
         schedule_feeds()
         return RedirectResponse("/ui/feeds", status_code=303)

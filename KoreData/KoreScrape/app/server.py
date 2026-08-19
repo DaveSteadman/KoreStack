@@ -3,6 +3,53 @@
 # ====================================================================================================
 # Server routes and runtime wiring for KoreData/KoreScrape/app.
 # Hosts the service entrypoints, request handlers, and local runtime orchestration for this component.
+# MARK: FUNCTIONS
+# Primary types: CaptureRequest.
+# Function inventory:
+# - _utc_now: Implements the  utc now operation for this module.
+# - _iso_now: Implements the  iso now operation for this module.
+# - _normalise_url: Implements the  normalise url operation for this module.
+# - _sanitise_segment: Implements the  sanitise segment operation for this module.
+# - _host_dirname: Implements the  host dirname operation for this module.
+# - _capture_paths: Implements the  capture paths operation for this module.
+# - _rel_with_query: Implements the  rel with query operation for this module.
+# - _guess_suffix: Implements the  guess suffix operation for this module.
+# - _page_rel_path: Implements the  page rel path operation for this module.
+# - _asset_rel_path: Implements the  asset rel path operation for this module.
+# - _manifest_path: Implements the  manifest path operation for this module.
+# - _site_dir: Implements the  site dir operation for this module.
+# - _write_manifest: Implements the  write manifest operation for this module.
+# - _read_manifest: Implements the  read manifest operation for this module.
+# - _list_capture_manifests: Implements the  list capture manifests operation for this module.
+# - list_captures: Lists captures for this module.
+# - get_capture: Returns capture for this module.
+# - get_status: Returns status for this module.
+# - _same_origin: Implements the  same origin operation for this module.
+# - _should_follow_link: Implements the  should follow link operation for this module.
+# - _is_html_response: Implements the  is html response operation for this module.
+# - _save_bytes: Implements the  save bytes operation for this module.
+# - _relative_href: Implements the  relative href operation for this module.
+# - _page_link_replacement: Implements the  page link replacement operation for this module.
+# - _asset_link_replacement: Implements the  asset link replacement operation for this module.
+# - _clean_block_text: Implements the  clean block text operation for this module.
+# - _extract_text_blocks: Implements the  extract text blocks operation for this module.
+# - _build_text_chunks: Implements the  build text chunks operation for this module.
+# - _index_capture_pages: Implements the  index capture pages operation for this module.
+# - _crawl_capture: Implements the  crawl capture operation for this module.
+# - _start_capture: Implements the  start capture operation for this module.
+# - _reindex_existing_captures: Implements the  reindex existing captures operation for this module.
+# - _lifespan: Implements the  lifespan operation for this module.
+# - route_root: Implements the route root operation for this module.
+# - route_status: Implements the route status operation for this module.
+# - route_list_captures: Implements the route list captures operation for this module.
+# - route_get_capture: Implements the route get capture operation for this module.
+# - route_create_capture: Implements the route create capture operation for this module.
+# - route_list_chunks: Implements the route list chunks operation for this module.
+# - route_get_chunk: Implements the route get chunk operation for this module.
+# - route_delete_chunk: Implements the route delete chunk operation for this module.
+# - route_delete_chunk_post: Implements the route delete chunk post operation for this module.
+# - route_search: Implements the route search operation for this module.
+# - route_capture_file: Implements the route capture file operation for this module.
 # ====================================================================================================
 
 import hashlib

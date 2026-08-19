@@ -14,6 +14,20 @@
 #
 # Related modules:
 #   - llm_client.py  -- provides model listing, resolution, runtime reporting, and call_ollama
+# MARK: FUNCTIONS
+# Primary types: MemorySampler.
+# Function inventory:
+# - _parse_args: Implements the  parse args operation for this module.
+# - _bytes_to_gb: Implements the  bytes to gb operation for this module.
+# - _sample_ollama_rss_bytes: Implements the  sample ollama rss bytes operation for this module.
+# - _sample_system_used_bytes: Implements the  sample system used bytes operation for this module.
+# - __init__: Implements the   init   operation for this module.
+# - start: Starts this module's primary operation.
+# - stop: Stops this module's primary operation.
+# - _run: Implements the  run operation for this module.
+# - _summarize_memory: Implements the  summarize memory operation for this module.
+# - run_model_check: Runs model check for this module.
+# - main: Starts this module's primary operation.
 # ====================================================================================================
 
 

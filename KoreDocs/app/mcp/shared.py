@@ -22,6 +22,26 @@
 #   - app/koredoc_mcp.py     -- uses koredoc parser helpers
 #   - app/koresheet_mcp.py   -- uses _create_serialized_file, _ensure_extension
 #   - app/korediag_mcp.py      -- uses _create_serialized_file, _ensure_extension
+# MARK: FUNCTIONS
+# Function inventory:
+# - _normalise_folder_path: Implements the  normalise folder path operation for this module.
+# - _folder_tree: Implements the  folder tree operation for this module.
+# - _folder_tree_with_files: Implements the  folder tree with files operation for this module.
+# - attach_files: Implements the attach files operation for this module.
+# - _folder_id_for_path: Implements the  folder id for path operation for this module.
+# - _validate_name: Implements the  validate name operation for this module.
+# - _ensure_extension: Implements the  ensure extension operation for this module.
+# - _now_iso: Implements the  now iso operation for this module.
+# - _create_serialized_file: Implements the  create serialized file operation for this module.
+# - _file_summary: Implements the  file summary operation for this module.
+# - _koredoc_file: Implements the  koredoc file operation for this module.
+# - _koredoc_split_frontmatter: Implements the  koredoc split frontmatter operation for this module.
+# - _koredoc_parse: Implements the  koredoc parse operation for this module.
+# - _koredoc_path_label: Implements the  koredoc path label operation for this module.
+# - _koredoc_find_heading: Implements the  koredoc find heading operation for this module.
+# - _koredoc_extract_lines: Implements the  koredoc extract lines operation for this module.
+# - _koredoc_normalize_block: Implements the  koredoc normalize block operation for this module.
+# - _koredoc_splice: Implements the  koredoc splice operation for this module.
 # ====================================================================================================
 
 from __future__ import annotations

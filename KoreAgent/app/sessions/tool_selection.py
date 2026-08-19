@@ -1,3 +1,16 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# tool selection module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Function inventory:
+# - clear_session_tools_active: Clears session tools active for this module.
+# - set_selected_tools: Sets selected tools for this module.
+# - promote_selected_tools: Implements the promote selected tools operation for this module.
+# - note_tool_used: Implements the note tool used operation for this module.
+# ====================================================================================================
+
 from sessions.tool_catalog import all_known_tool_names
 from sessions.tool_catalog import build_all_tool_catalog
 from sessions.tool_catalog import clear_runtime_caches as _clear_runtime_caches
@@ -6,21 +19,21 @@ from sessions.tool_catalog import filter_local_payload
 from sessions.tool_catalog import local_tool_names
 from sessions.tool_catalog import rank_tool_catalog_entries
 from sessions.tool_catalog import suggest_tool_name
-from sessions.tool_state import ALWAYS_ON_TOOL_NAMES
-from sessions.tool_state import MAX_ACTIVE_TOOLS
-from sessions.tool_state import _normalize_tool_names
-from sessions.tool_state import _resolve_session_id
-from sessions.tool_state import _session_external_id
-from sessions.tool_state import clear_session_tools_active as _clear_session_tools_active
-from sessions.tool_state import ensure_conversation_for_session as _ensure_conversation_for_session
-from sessions.tool_state import fetch_conversation_for_session as _fetch_conversation_for_session
-from sessions.tool_state import get_selected_tools
-from sessions.tool_state import kc_request_json as _kc_request_json
-from sessions.tool_state import note_tool_used as _note_tool_used
-from sessions.tool_state import promote_selected_tools as _promote_selected_tools
-from sessions.tool_state import set_selected_tools as _set_selected_tools
-from sessions.tool_state import update_cache as _update_cache
-from sessions.tool_sets import related_tool_set
+from sessions.tool_state   import ALWAYS_ON_TOOL_NAMES
+from sessions.tool_state   import MAX_ACTIVE_TOOLS
+from sessions.tool_state   import _normalize_tool_names
+from sessions.tool_state   import _resolve_session_id
+from sessions.tool_state   import _session_external_id
+from sessions.tool_state   import clear_session_tools_active as _clear_session_tools_active
+from sessions.tool_state   import ensure_conversation_for_session as _ensure_conversation_for_session
+from sessions.tool_state   import fetch_conversation_for_session as _fetch_conversation_for_session
+from sessions.tool_state   import get_selected_tools
+from sessions.tool_state   import kc_request_json as _kc_request_json
+from sessions.tool_state   import note_tool_used as _note_tool_used
+from sessions.tool_state   import promote_selected_tools as _promote_selected_tools
+from sessions.tool_state   import set_selected_tools as _set_selected_tools
+from sessions.tool_state   import update_cache as _update_cache
+from sessions.tool_sets    import related_tool_set
 
 
 def clear_session_tools_active(session_id: str) -> None:

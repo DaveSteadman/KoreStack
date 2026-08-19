@@ -14,6 +14,18 @@
 #   - llm_client.py              -- server management and LLM calls
 #   - skills_catalog_builder.py -- load_skills_payload, tool definitions
 #   - utils/runtime_logger.py   -- SessionLogger, create_log_file_path
+# MARK: FUNCTIONS
+# Function inventory:
+# - _hidden_windows_creation_flags: Implements the  hidden windows creation flags operation for this module.
+# - _maybe_reexec_into_project_venv: Implements the  maybe reexec into project venv operation for this module.
+# - _attach_child_to_kill_on_close_job: Implements the  attach child to kill on close job operation for this module.
+# - _load_defaults: Implements the  load defaults operation for this module.
+# - parse_main_args: Parses main args for this module.
+# - main: Starts this module's primary operation.
+# - _run: Implements the  run operation for this module.
+# - _service_reachable: Implements the  service reachable operation for this module.
+# - _background_startup: Implements the  background startup operation for this module.
+# - _service_status: Implements the  service status operation for this module.
 # ====================================================================================================
 
 

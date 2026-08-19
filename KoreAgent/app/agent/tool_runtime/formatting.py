@@ -1,4 +1,17 @@
-"""Formatting helpers for tool-runtime output."""
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Presentation helpers for tool-runtime results and degraded model replies. The module converts
+# heterogeneous tool outputs into compact readable diagnostics, retains enough result detail for a
+# fallback answer, and removes detectable planning preambles from a final response. It formats data
+# only; tool execution and response policy remain in the runtime loop.
+# MARK: FUNCTIONS
+# Function inventory:
+# - extract_result_fields: Extracts result fields for this module.
+# - format_tool_outputs: Formats tool outputs for this module.
+# - build_fallback_answer: Builds fallback answer for this module.
+# - strip_cot_preamble: Implements the strip cot preamble operation for this module.
+# ====================================================================================================
 
 from pathlib import Path
 import re

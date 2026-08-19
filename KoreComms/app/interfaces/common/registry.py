@@ -16,6 +16,9 @@
 #   - app/interfaces/discord/adapter.py   -- Discord bot adapter
 #   - app/interfaces/gmail/adapter.py     -- Gmail OAuth adapter
 #   - app/poller.py                       -- calls build_adapter for each enabled interface
+# MARK: FUNCTIONS
+# Function inventory:
+# - build_adapter: Builds adapter for this module.
 # ====================================================================================================
 from __future__ import annotations
 

@@ -3,6 +3,12 @@
 # ====================================================================================================
 # Test coverage for suite config loader.
 # Exercises the expected behaviour and regression boundaries for this area.
+# MARK: FUNCTIONS
+# Primary types: SuiteConfigLoaderTests.
+# Function inventory:
+# - test_load_service_config_reads_suite_config_and_env: Implements the test load service config reads suite config and env operation for this module.
+# - test_load_service_config_applies_raw_merger: Implements the test load service config applies raw merger operation for this module.
+# - merger: Implements the merger operation for this module.
 # ====================================================================================================
 
 import json

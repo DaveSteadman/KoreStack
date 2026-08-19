@@ -1,3 +1,26 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# adapter module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Primary types: ClassicEmailInterface.
+# Function inventory:
+# - _config: Implements the  config operation for this module.
+# - _text: Implements the  text operation for this module.
+# - _looks_like_html: Implements the  looks like html operation for this module.
+# - _html_to_text: Implements the  html to text operation for this module.
+# - _body: Implements the  body operation for this module.
+# - _message_data: Implements the  message data operation for this module.
+# - _is_self_sent: Implements the  is self sent operation for this module.
+# - _imap_messages: Implements the  imap messages operation for this module.
+# - _pop3_messages: Implements the  pop3 messages operation for this module.
+# - poll: Implements the poll operation for this module.
+# - _send: Implements the  send operation for this module.
+# - route_reply: Implements the route reply operation for this module.
+# - send_new: Implements the send new operation for this module.
+# ====================================================================================================
+
 """Classic email adapter using IMAP or POP3 for inbound mail and SMTP for delivery."""
 from __future__ import annotations
 

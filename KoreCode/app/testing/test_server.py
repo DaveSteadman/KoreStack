@@ -3,6 +3,53 @@
 # ====================================================================================================
 # Test coverage for server.
 # Exercises the expected behaviour and regression boundaries for this area.
+# MARK: FUNCTIONS
+# Primary types: KoreCodeServerTests.
+# Function inventory:
+# - _temp_runs_dir: Implements the  temp runs dir operation for this module.
+# - _temp_work_items_dir: Implements the  temp work items dir operation for this module.
+# - test_work_item_lifecycle_and_run_attachment: Implements the test work item lifecycle and run attachment operation for this module.
+# - test_work_item_rejects_unknown_status: Implements the test work item rejects unknown status operation for this module.
+# - test_korecode_stores_use_suite_datacontrol_root: Implements the test korecode stores use suite datacontrol root operation for this module.
+# - test_korechat_client_strips_ui_path_from_suite_url_map: Implements the test korechat client strips ui path from suite url map operation for this module.
+# - test_workspace_root_is_durable: Implements the test workspace root is durable operation for this module.
+# - test_setting_workspace_root_persists_selection: Implements the test setting workspace root persists selection operation for this module.
+# - test_api_chat_thread_reads_without_creating_conversation: Implements the test api chat thread reads without creating conversation operation for this module.
+# - test_api_chat_thread_recovers_latest_conversation_for_path: Implements the test api chat thread recovers latest conversation for path operation for this module.
+# - test_workspace_chat_recovers_latest_legacy_file_conversation: Implements the test workspace chat recovers latest legacy file conversation operation for this module.
+# - test_chat_run_stores_routed_execution_contract: Implements the test chat run stores routed execution contract operation for this module.
+# - test_direct_tool_execution_honors_run_execution_contract: Implements the test direct tool execution honors run execution contract operation for this module.
+# - test_workspace_index_rebuild_creates_markdown_and_sqlite: Implements the test workspace index rebuild creates markdown and sqlite operation for this module.
+# - test_workspace_index_symbol_and_call_endpoints: Implements the test workspace index symbol and call endpoints operation for this module.
+# - test_api_slash_complete_returns_matching_items: Implements the test api slash complete returns matching items operation for this module.
+# - test_workspace_index_rebuild_allows_duplicate_symbol_names_across_files: Implements the test workspace index rebuild allows duplicate symbol names across files operation for this module.
+# - test_api_chat_followup_passes_outbound_sender_display: Implements the test api chat followup passes outbound sender display operation for this module.
+# - test_api_chat_workspace_context_passes_enabled_flag: Implements the test api chat workspace context passes enabled flag operation for this module.
+# - test_api_chat_send_creates_persisted_run: Implements the test api chat send creates persisted run operation for this module.
+# - test_api_chat_followup_creates_persisted_run: Implements the test api chat followup creates persisted run operation for this module.
+# - test_api_chat_thread_marks_waiting_run_completed_when_reply_observed: Implements the test api chat thread marks waiting run completed when reply observed operation for this module.
+# - test_api_chat_prompt_builds_backend_prompt_with_context_and_mentions: Implements the test api chat prompt builds backend prompt with context and mentions operation for this module.
+# - test_api_chat_tool_followup_prompt_builds_backend_prompt: Implements the test api chat tool followup prompt builds backend prompt operation for this module.
+# - test_api_chat_tools_lists_backend_tool_contract: Implements the test api chat tools lists backend tool contract operation for this module.
+# - test_api_chat_tools_execute_reads_file_and_logs_run_tool_call: Implements the test api chat tools execute reads file and logs run tool call operation for this module.
+# - test_api_chat_runs_executes_backend_loop_in_python: Implements the test api chat runs executes backend loop in python operation for this module.
+# - test_api_chat_runs_executes_tool_rounds_in_python: Implements the test api chat runs executes tool rounds in python operation for this module.
+# - test_api_chat_continue_runs_executes_backend_loop_in_python: Implements the test api chat continue runs executes backend loop in python operation for this module.
+# - test_api_create_and_apply_edit_proposal: Implements the test api create and apply edit proposal operation for this module.
+# - test_edit_proposal_can_create_and_apply_new_python_file: Implements the test edit proposal can create and apply new python file operation for this module.
+# - test_agent_edit_applies_validated_workspace_change: Implements the test agent edit applies validated workspace change operation for this module.
+# - test_agent_edit_application_rejects_unrequested_file: Implements the test agent edit application rejects unrequested file operation for this module.
+# - test_agent_edit_application_allows_explicitly_named_new_file: Implements the test agent edit application allows explicitly named new file operation for this module.
+# - test_agent_create_file_playbook_allows_a_new_agent_named_file: Implements the test agent create file playbook allows a new agent named file operation for this module.
+# - test_workspace_change_applies_cross_file_python_syntax_repair: Implements the test workspace change applies cross file python syntax repair operation for this module.
+# - test_agent_applies_multiple_edits_to_one_file_from_one_hash: Implements the test agent applies multiple edits to one file from one hash operation for this module.
+# - test_edit_proposal_can_delete_a_file_after_review: Implements the test edit proposal can delete a file after review operation for this module.
+# - test_python_runner_captures_script_output_and_syntax_failure: Implements the test python runner captures script output and syntax failure operation for this module.
+# - test_direct_python_execution_endpoint_runs_workspace_file: Implements the test direct python execution endpoint runs workspace file operation for this module.
+# - test_write_tool_returns_edit_proposal_not_direct_mutation: Implements the test write tool returns edit proposal not direct mutation operation for this module.
+# - test_replace_python_function_requires_matching_hash_and_valid_python: Implements the test replace python function requires matching hash and valid python operation for this module.
+# - test_insert_python_function_requires_matching_hash_and_valid_python: Implements the test insert python function requires matching hash and valid python operation for this module.
+# - test_insert_python_function_into_class_adds_method_inside_class: Implements the test insert python function into class adds method inside class operation for this module.
 # ====================================================================================================
 
 import sys

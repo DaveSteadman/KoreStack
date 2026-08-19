@@ -1,3 +1,43 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# endpoint api module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Primary types: BookCreate, BookUpdate, BookMoveRequest, SentenceToggleRequest, KiwixImportRequest, KiwixViewerImportRequest, KiwixViewerBatchRequest.
+# Function inventory:
+# - _parse_gutenberg_html: Implements the  parse gutenberg html operation for this module.
+# - _extract_link: Implements the  extract link operation for this module.
+# - _kiwix_search_url: Implements the  kiwix search url operation for this module.
+# - _fallback_title_from_url: Implements the  fallback title from url operation for this module.
+# - _fetch_and_import_viewer_url: Implements the  fetch and import viewer url operation for this module.
+# - register_library_api: Registers library api for this module.
+# - route_list_catalogs: Implements the route list catalogs operation for this module.
+# - route_list_books: Implements the route list books operation for this module.
+# - route_get_book_chunk: Implements the route get book chunk operation for this module.
+# - route_get_book: Implements the route get book operation for this module.
+# - route_add_book: Implements the route add book operation for this module.
+# - route_update_book: Implements the route update book operation for this module.
+# - route_repair_anchors: Implements the route repair anchors operation for this module.
+# - route_move_book: Implements the route move book operation for this module.
+# - route_delete_book: Implements the route delete book operation for this module.
+# - route_search: Implements the route search operation for this module.
+# - route_semantic_search: Implements the route semantic search operation for this module.
+# - route_book_sentences: Implements the route book sentences operation for this module.
+# - route_sentence: Implements the route sentence operation for this module.
+# - route_backfill_catalog_sentences: Implements the route backfill catalog sentences operation for this module.
+# - route_rebuild_catalog_sentences: Implements the route rebuild catalog sentences operation for this module.
+# - route_set_sentence_deleted: Implements the route set sentence deleted operation for this module.
+# - kiwix_inventory: Implements the kiwix inventory operation for this module.
+# - kiwix_search: Implements the kiwix search operation for this module.
+# - kiwix_suggest: Implements the kiwix suggest operation for this module.
+# - kiwix_catalog: Implements the kiwix catalog operation for this module.
+# - import_kiwix: Implements the import kiwix operation for this module.
+# - import_kiwix_viewer: Implements the import kiwix viewer operation for this module.
+# - import_kiwix_viewer_batch: Implements the import kiwix viewer batch operation for this module.
+# - route_status: Implements the route status operation for this module.
+# ====================================================================================================
+
 import html as _html
 import json as _json
 import re as _re

@@ -1,3 +1,17 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# ui state store module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Function inventory:
+# - _state_path: Implements the  state path operation for this module.
+# - _load_state: Implements the  load state operation for this module.
+# - _write_state: Implements the  write state operation for this module.
+# - get_active_workspace_root: Returns active workspace root for this module.
+# - set_active_workspace_root: Sets active workspace root for this module.
+# ====================================================================================================
+
 from __future__ import annotations
 
 # Durable KoreCode UI preferences that must survive a service restart.

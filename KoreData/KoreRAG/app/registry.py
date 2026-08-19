@@ -35,6 +35,17 @@
 # Related modules:
 #   - app/database.py  -- passes db id to db_connection()
 #   - app/server.py    -- /databases endpoints; init_db() for each registered db
+# MARK: FUNCTIONS
+# Function inventory:
+# - _load_descriptor: Implements the  load descriptor operation for this module.
+# - reload: Implements the reload operation for this module.
+# - _canonical_subdir_db_path: Implements the  canonical subdir db path operation for this module.
+# - _canonical_flat_db_path: Implements the  canonical flat db path operation for this module.
+# - _resolve_unregistered_db_path: Implements the  resolve unregistered db path operation for this module.
+# - get_db_path: Returns db path for this module.
+# - list_databases: Lists databases for this module.
+# - list_database_ids: Lists database ids for this module.
+# - get_descriptor: Returns descriptor for this module.
 # ====================================================================================================
 import json
 from pathlib import Path

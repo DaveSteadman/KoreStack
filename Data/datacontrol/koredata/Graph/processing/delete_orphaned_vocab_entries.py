@@ -7,6 +7,11 @@ from __future__ import annotations
 # ====================================================================================================
 # Delete orphaned vocab entries helpers for datacontrol/koredata/Graph/processing.
 # Provides the focused helpers and module-level behaviour grouped into this file.
+# MARK: FUNCTIONS
+# Function inventory:
+# - _find_suite_root: Implements the  find suite root operation for this module.
+# - _bootstrap_paths: Implements the  bootstrap paths operation for this module.
+# - main: Starts this module's primary operation.
 # ====================================================================================================
 
 import argparse

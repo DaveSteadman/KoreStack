@@ -1,3 +1,38 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Shared safe filesystem contract for the suite's datauser tree. This module resolves configurable
+# roots, normalises legacy path spellings, and rejects traversal outside the allowed boundary before
+# exposing list, read, write, delete, and folder operations. Its optional ETag checks provide a
+# simple optimistic-concurrency guard for services that edit the same user-visible files.
+# MARK: FUNCTIONS
+# Primary types: DataUserPathError, DataUserConflictError.
+# Function inventory:
+# - _read_json_file: Implements the  read json file operation for this module.
+# - get_workspace_root: Returns workspace root for this module.
+# - get_suite_root: Returns suite root for this module.
+# - get_suite_config_file: Returns suite config file for this module.
+# - get_bootstrap_defaults_file: Returns bootstrap defaults file for this module.
+# - _load_path_overrides: Implements the  load path overrides operation for this module.
+# - get_datauser_root: Returns datauser root for this module.
+# - _coerce_root_dir: Implements the  coerce root dir operation for this module.
+# - ensure_datauser_root: Ensures datauser root for this module.
+# - sanitize_input_path: Implements the sanitize input path operation for this module.
+# - normalize_datauser_relative_path: Normalizes datauser relative path for this module.
+# - resolve_datauser_path: Resolves datauser path for this module.
+# - resolve_datauser_directory: Resolves datauser directory for this module.
+# - datauser_relative_path: Implements the datauser relative path operation for this module.
+# - display_datauser_path: Implements the display datauser path operation for this module.
+# - file_etag: Implements the file etag operation for this module.
+# - list_datauser_files: Lists datauser files for this module.
+# - list_datauser_folders: Lists datauser folders for this module.
+# - read_text_file: Reads text file for this module.
+# - read_binary_file: Reads binary file for this module.
+# - write_text_file: Writes text file for this module.
+# - delete_file: Deletes file for this module.
+# - create_folder: Creates folder for this module.
+# ====================================================================================================
+
 from __future__ import annotations
 
 import json

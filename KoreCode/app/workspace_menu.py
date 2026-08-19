@@ -5,6 +5,24 @@ from __future__ import annotations
 # ====================================================================================================
 # Workspace menu helpers for KoreCode/app.
 # Provides the focused helpers and module-level behaviour grouped into this file.
+# MARK: FUNCTIONS
+# Primary types: SignatureEntry.
+# Function inventory:
+# - menu_path_for: Implements the menu path for operation for this module.
+# - build_workspace_menu: Builds workspace menu for this module.
+# - read_workspace_menu: Reads workspace menu for this module.
+# - _iter_directories: Implements the  iter directories operation for this module.
+# - _iter_files: Implements the  iter files operation for this module.
+# - _should_skip: Implements the  should skip operation for this module.
+# - _rel_path: Implements the  rel path operation for this module.
+# - _python_signatures: Implements the  python signatures operation for this module.
+# - _class_method_signatures: Implements the  class method signatures operation for this module.
+# - _format_class_signature: Implements the  format class signature operation for this module.
+# - _format_function_signature: Implements the  format function signature operation for this module.
+# - _format_method_signature: Implements the  format method signature operation for this module.
+# - _format_arg: Implements the  format arg operation for this module.
+# - _safe_unparse: Implements the  safe unparse operation for this module.
+# - _clip_signature: Implements the  clip signature operation for this module.
 # ====================================================================================================
 
 import ast

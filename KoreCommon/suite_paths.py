@@ -8,6 +8,23 @@ from __future__ import annotations
 # Centralises suite-root discovery, well-known suite data paths, and the
 # KoreData-specific service config/url resolution that was previously housed
 # under KoreData/CommonCode/config.py.
+# MARK: FUNCTIONS
+# Function inventory:
+# - get_workspace_root: Returns workspace root for this module.
+# - get_suite_root: Returns suite root for this module.
+# - get_suite_config_file: Returns suite config file for this module.
+# - _read_json_file: Implements the  read json file operation for this module.
+# - load_suite_config: Loads suite config for this module.
+# - _load_paths_config: Implements the  load paths config operation for this module.
+# - _resolve_configured_root: Implements the  resolve configured root operation for this module.
+# - get_suite_dataroot_dir: Returns suite dataroot dir for this module.
+# - get_suite_datacontrol_dir: Returns suite datacontrol dir for this module.
+# - get_suite_datauser_dir: Returns suite datauser dir for this module.
+# - get_koredata_dir: Returns koredata dir for this module.
+# - get_required_local_datacontrol_dir: Returns required local datacontrol dir for this module.
+# - load_config: Loads config for this module.
+# - get_suite_urls_map: Returns suite urls map for this module.
+# - _port: Implements the  port operation for this module.
 # ====================================================================================================
 
 import json

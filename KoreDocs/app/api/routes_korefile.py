@@ -1,3 +1,31 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# routes korefile module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Primary types: KfFolderCreate, KfFolderPatch, KfFilePatch, KfFileCreate, KfFileUpdate, KfMetadataSearch.
+# Function inventory:
+# - korefile_revision_tokenize: Implements the korefile revision tokenize operation for this module.
+# - korefile_revision_tokenize_many: Implements the korefile revision tokenize many operation for this module.
+# - register_korefile_routes: Registers korefile routes for this module.
+# - kf_list_folders: Implements the kf list folders operation for this module.
+# - kf_create_folder: Implements the kf create folder operation for this module.
+# - kf_delete_folder: Implements the kf delete folder operation for this module.
+# - kf_patch_folder: Implements the kf patch folder operation for this module.
+# - kf_list_files: Implements the kf list files operation for this module.
+# - kf_get_file: Implements the kf get file operation for this module.
+# - kf_create_file: Implements the kf create file operation for this module.
+# - kf_update_file: Implements the kf update file operation for this module.
+# - kf_patch_file: Implements the kf patch file operation for this module.
+# - kf_delete_file: Implements the kf delete file operation for this module.
+# - kf_search: Implements the kf search operation for this module.
+# - kf_metadata_search: Implements the kf metadata search operation for this module.
+# - kf_file_history: Implements the kf file history operation for this module.
+# - kf_file_history_revision: Implements the kf file history revision operation for this module.
+# - kf_import_fs: Implements the kf import fs operation for this module.
+# ====================================================================================================
+
 from __future__ import annotations
 
 from typing import Annotated

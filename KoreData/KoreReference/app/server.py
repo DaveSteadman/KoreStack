@@ -20,6 +20,36 @@
 #   - app/importers/kiwix.py        -- background Kiwix import
 #   - app/importers/state.py        -- thread-safe import progress state
 #   - app/config.py                 -- cfg (host, port, data_dir)
+# MARK: FUNCTIONS
+# Primary types: ArticleCreate, KiwixImportRequest, KiwixCrawlRequest, KiwixThrottleRequest, KiwixBackfillRequest.
+# Function inventory:
+# - _warm_reference_semantic_index: Implements the  warm reference semantic index operation for this module.
+# - _lifespan: Implements the  lifespan operation for this module.
+# - _require_article: Implements the  require article operation for this module.
+# - route_list_articles: Implements the route list articles operation for this module.
+# - route_random_article: Implements the route random article operation for this module.
+# - route_get_article: Implements the route get article operation for this module.
+# - route_get_summary: Implements the route get summary operation for this module.
+# - route_get_section: Implements the route get section operation for this module.
+# - route_get_links: Implements the route get links operation for this module.
+# - route_get_backlinks: Implements the route get backlinks operation for this module.
+# - route_article_sentences: Implements the route article sentences operation for this module.
+# - route_sentence: Implements the route sentence operation for this module.
+# - route_upsert_article: Implements the route upsert article operation for this module.
+# - route_delete_all_articles: Implements the route delete all articles operation for this module.
+# - route_delete_article: Implements the route delete article operation for this module.
+# - route_search: Implements the route search operation for this module.
+# - route_semantic_search: Implements the route semantic search operation for this module.
+# - route_backfill_sentence_index: Implements the route backfill sentence index operation for this module.
+# - route_rebuild_sentence_index: Implements the route rebuild sentence index operation for this module.
+# - route_import_kiwix: Implements the route import kiwix operation for this module.
+# - route_import_kiwix_crawl: Implements the route import kiwix crawl operation for this module.
+# - route_import_stop: Implements the route import stop operation for this module.
+# - route_import_throttle: Implements the route import throttle operation for this module.
+# - route_import_article: Implements the route import article operation for this module.
+# - route_import_kiwix_backfill: Implements the route import kiwix backfill operation for this module.
+# - route_import_status: Implements the route import status operation for this module.
+# - route_status: Implements the route status operation for this module.
 # ====================================================================================================
 from contextlib import asynccontextmanager
 from pathlib import Path

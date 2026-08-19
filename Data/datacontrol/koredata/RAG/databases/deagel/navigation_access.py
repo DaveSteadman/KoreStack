@@ -1,3 +1,26 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# navigation access module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Function inventory:
+# - _table_has_column: Implements the  table has column operation for this module.
+# - has_navigation: Checks whether navigation is true.
+# - get_categories: Returns categories for this module.
+# - get_category: Returns category for this module.
+# - get_category_items: Returns category items for this module.
+# - get_category_groups: Returns category groups for this module.
+# - get_countries: Returns countries for this module.
+# - get_item_by_page_anchor: Returns item by page anchor for this module.
+# - get_chunk_id_by_source: Returns chunk id by source for this module.
+# - get_reports: Returns reports for this module.
+# - get_news: Returns news for this module.
+# - build_explore_payload: Builds explore payload for this module.
+# - build_category_payload: Builds category payload for this module.
+# - resolve_item_chunk_id: Resolves item chunk id for this module.
+# ====================================================================================================
+
 import sqlite3
 from typing import Optional
 

@@ -1,4 +1,19 @@
-"""Mutable orchestration runtime flags."""
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Process-local feature switches for orchestration policy. The getters and setters centralise the
+# mutable toggles used by API controls, while filter_web_skills derives a cached non-web variant of
+# a skill payload. This isolates runtime policy from the static skill catalogue and model engine.
+# MARK: FUNCTIONS
+# Function inventory:
+# - get_skill_guidance_enabled: Returns skill guidance enabled for this module.
+# - set_skill_guidance_enabled: Sets skill guidance enabled for this module.
+# - get_sandbox_enabled: Returns sandbox enabled for this module.
+# - set_sandbox_enabled: Sets sandbox enabled for this module.
+# - get_web_skills_enabled: Returns web skills enabled for this module.
+# - set_web_skills_enabled: Sets web skills enabled for this module.
+# - filter_web_skills: Filters web skills for this module.
+# ====================================================================================================
 
 from web_tools_state import is_web_tool_name
 

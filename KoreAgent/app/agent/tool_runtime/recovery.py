@@ -1,4 +1,18 @@
-"""Tool-call recovery helpers."""
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Recovery policy for malformed, inactive, and misspelled tool requests. It normalises a few known
+# wrapper shapes, classifies the requested name against active and known tools, and produces precise
+# continuation instructions for the model. Tool activation itself remains with the caller, keeping
+# this module side-effect free and suitable for retry decisions.
+# MARK: FUNCTIONS
+# Function inventory:
+# - normalize_tool_request: Normalizes tool request for this module.
+# - _compact_tool_name_list: Implements the  compact tool name list operation for this module.
+# - classify_tool_recovery: Implements the classify tool recovery operation for this module.
+# - build_tool_recovery_message: Builds tool recovery message for this module.
+# - build_tool_recovery_reminder: Builds tool recovery reminder for this module.
+# ====================================================================================================
 
 
 def normalize_tool_request(func_name: str, arguments: dict | None) -> tuple[str, dict, str | None]:

@@ -32,6 +32,35 @@
 #       not_regex|<pattern>   -- output must not match regex pattern
 #       not_empty             -- output must be non-empty
 #       exit_code|<n>         -- subprocess exit code must equal n
+# MARK: FUNCTIONS
+# Function inventory:
+# - load_prompts_file: Loads prompts file for this module.
+# - invoke_framework: Implements the invoke framework operation for this module.
+# - invoke_exchange: Implements the invoke exchange operation for this module.
+# - _agent_base_url: Implements the  agent base url operation for this module.
+# - _agent_request: Implements the  agent request operation for this module.
+# - _invoke_agent_turn: Implements the  invoke agent turn operation for this module.
+# - extract_log_file: Extracts log file for this module.
+# - _parse_turn_outputs: Implements the  parse turn outputs operation for this module.
+# - _parse_turn_metrics: Implements the  parse turn metrics operation for this module.
+# - extract_final_output: Extracts final output for this module.
+# - _log_indicates_validation_failure: Implements the  log indicates validation failure operation for this module.
+# - _output_indicates_no_results: Implements the  output indicates no results operation for this module.
+# - _normalize_assert_text: Implements the  normalize assert text operation for this module.
+# - _has_explicit_asserts: Implements the  has explicit asserts operation for this module.
+# - _should_tolerate_validation_failure: Implements the  should tolerate validation failure operation for this module.
+# - _single_item_pass_status: Implements the  single item pass status operation for this module.
+# - _exchange_pass_status: Implements the  exchange pass status operation for this module.
+# - _evaluate_assert: Implements the  evaluate assert operation for this module.
+# - initialize_csv: Implements the initialize csv operation for this module.
+# - append_csv_row: Appends csv row for this module.
+# - _base_row: Implements the  base row operation for this module.
+# - _fmt_duration: Implements the  fmt duration operation for this module.
+# - _write_summary_md: Implements the  write summary md operation for this module.
+# - run_tests: Runs tests for this module.
+# - _run_single_item: Implements the  run single item operation for this module.
+# - _run_exchange_item: Implements the  run exchange item operation for this module.
+# - parse_args: Parses args for this module.
 # ====================================================================================================
 
 

@@ -1,3 +1,19 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# web search module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Function inventory:
+# - get_preferred_search_provider: Returns preferred search provider for this module.
+# - get_enabled_search_providers: Returns enabled search providers for this module.
+# - get_search_provider: Returns search provider for this module.
+# - get_search_provider_label: Returns search provider label for this module.
+# - get_search_provider_config: Returns search provider config for this module.
+# - search_web: Implements the search web operation for this module.
+# - search_web_text: Implements the search web text operation for this module.
+# ====================================================================================================
+
 from __future__ import annotations
 
 from .config             import cfg

@@ -21,6 +21,13 @@
 #   - skills_catalog_builder.py  -- reads skill.md; function signatures drive orchestrator tool defs
 #   - webpage_utils.py           -- HTTP_HEADERS used for fetch_html in other skills (not used here
 #                                   because the Wikipedia API returns JSON, not HTML)
+# MARK: FUNCTIONS
+# Function inventory:
+# - _json_get: Implements the  json get operation for this module.
+# - _opensearch_candidates: Implements the  opensearch candidates operation for this module.
+# - _fetch_summary: Implements the  fetch summary operation for this module.
+# - _truncate_words: Implements the  truncate words operation for this module.
+# - lookup_wikipedia: Implements the lookup wikipedia operation for this module.
 # ====================================================================================================
 
 

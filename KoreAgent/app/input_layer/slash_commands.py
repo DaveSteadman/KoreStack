@@ -7,6 +7,31 @@
 #   - slash_command_handlers_models.py
 #   - slash_command_handlers_tasks.py
 #   - slash_command_handlers_sessions.py
+# MARK: FUNCTIONS
+# Function inventory:
+# - handle: Handles this module's primary operation.
+# - _cmd_help: Implements the  cmd help operation for this module.
+# - _cmd_rounds: Implements the  cmd rounds operation for this module.
+# - _cmd_timeout: Implements the  cmd timeout operation for this module.
+# - _cmd_reskills: Implements the  cmd reskills operation for this module.
+# - _cmd_stoprun: Implements the  cmd stoprun operation for this module.
+# - _cmd_version: Implements the  cmd version operation for this module.
+# - _cmd_sandbox: Implements the  cmd sandbox operation for this module.
+# - _cmd_deletelogs: Implements the  cmd deletelogs operation for this module.
+# - _cmd_tools: Implements the  cmd tools operation for this module.
+# - _tool_set_inventory: Implements the  tool set inventory operation for this module.
+# - _tool_set_slug: Implements the  tool set slug operation for this module.
+# - _tool_set_subject: Implements the  tool set subject operation for this module.
+# - _tool_set_action: Implements the  tool set action operation for this module.
+# - _tool_set_group_details: Implements the  tool set group details operation for this module.
+# - _build_tool_sets: Implements the  build tool sets operation for this module.
+# - _reevaluate_tool_groups: Implements the  reevaluate tool groups operation for this module.
+# - _cmd_tool_groups: Implements the  cmd tool groups operation for this module.
+# - _cmd_defaults: Implements the  cmd defaults operation for this module.
+# - _load: Implements the  load operation for this module.
+# - _cmd_mcp: Implements the  cmd mcp operation for this module.
+# - _cmd_comms: Implements the  cmd comms operation for this module.
+# - _cmd_workspace: Implements the  cmd workspace operation for this module.
 # ====================================================================================================
 
 import json

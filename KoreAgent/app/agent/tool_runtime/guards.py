@@ -1,4 +1,17 @@
-"""Guard helpers for tool-runtime policy enforcement."""
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Input-normalisation guards for model-produced tool requests. These functions safely recognise a
+# raw JSON function call and recover structured graph-connection batches from imperfect text. The
+# narrow parsing boundary prevents the execution loop from treating arbitrary model output as a
+# trusted request while preserving useful recoverable formats.
+# MARK: FUNCTIONS
+# Function inventory:
+# - extract_raw_json_tool_call: Extracts raw json tool call for this module.
+# - _coerce_graph_connection_item: Implements the  coerce graph connection item operation for this module.
+# - _coerce_graph_connection_batch: Implements the  coerce graph connection batch operation for this module.
+# - extract_graph_connection_batch_from_text: Extracts graph connection batch from text for this module.
+# ====================================================================================================
 
 import json
 import re

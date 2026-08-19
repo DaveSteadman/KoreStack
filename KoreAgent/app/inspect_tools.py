@@ -15,6 +15,10 @@
 # Related modules:
 #   - skills_catalog_builder.py  -- catalog loading and tool definition building
 #   - orchestration.py           -- uses build_tool_definitions at runtime
+# MARK: FUNCTIONS
+# Function inventory:
+# - parse_args: Parses args for this module.
+# - main: Starts this module's primary operation.
 # ====================================================================================================
 
 

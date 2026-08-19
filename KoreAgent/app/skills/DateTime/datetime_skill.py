@@ -11,6 +11,11 @@
 # Related modules:
 #   - skill_executor.py         -- dynamically imports and calls functions from this module
 #   - skills_catalog_builder.py -- reads skill.md to build the catalog entry for this skill
+# MARK: FUNCTIONS
+# Function inventory:
+# - get_datetime_data: Returns datetime data for this module.
+# - get_day_name: Returns day name for this module.
+# - get_month_name: Returns month name for this module.
 # ====================================================================================================
 
 

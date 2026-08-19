@@ -1,3 +1,31 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# chroma index module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Function inventory:
+# - chroma_available: Implements the chroma available operation for this module.
+# - _distance_to_match_score: Implements the  distance to match score operation for this module.
+# - _domain_chroma_path: Implements the  domain chroma path operation for this module.
+# - _domain_schema_marker_path: Implements the  domain schema marker path operation for this module.
+# - _domain_store_is_current: Implements the  domain store is current operation for this module.
+# - _mark_domain_store_current: Implements the  mark domain store current operation for this module.
+# - _release_domain_client: Implements the  release domain client operation for this module.
+# - _get_collection: Implements the  get collection operation for this module.
+# - _upsert_rows: Implements the  upsert rows operation for this module.
+# - sync_entry_sentences: Implements the sync entry sentences operation for this module.
+# - sync_pending_sentences: Implements the sync pending sentences operation for this module.
+# - sync_all_domains_pending: Implements the sync all domains pending operation for this module.
+# - rebuild_domain_store: Implements the rebuild domain store operation for this module.
+# - rebuild_all_domain_stores: Implements the rebuild all domain stores operation for this module.
+# - migrate_legacy_domain_stores: Implements the migrate legacy domain stores operation for this module.
+# - semantic_search: Implements the semantic search operation for this module.
+# - delete_sentence_ids: Deletes sentence ids for this module.
+# - delete_domain_store: Deletes domain store for this module.
+# - rename_domain_store: Implements the rename domain store operation for this module.
+# ====================================================================================================
+
 import logging
 import shutil
 import threading

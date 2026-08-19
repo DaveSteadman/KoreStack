@@ -1,3 +1,24 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# test chroma index module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Primary types: _FakeCollection, _FakeClient, ChromaIndexTests.
+# Function inventory:
+# - __init__: Implements the   init   operation for this module.
+# - upsert: Implements the upsert operation for this module.
+# - delete: Deletes this module's primary operation.
+# - count: Implements the count operation for this module.
+# - query: Implements the query operation for this module.
+# - close: Implements the close operation for this module.
+# - test_sync_pending_sentences_marks_rows_indexed: Implements the test sync pending sentences marks rows indexed operation for this module.
+# - test_delete_sentence_ids_uses_domain_specific_locators: Implements the test delete sentence ids uses domain specific locators operation for this module.
+# - test_rename_domain_db_moves_parallel_chroma_store: Implements the test rename domain db moves parallel chroma store operation for this module.
+# - test_delete_domain_db_removes_parallel_chroma_store: Implements the test delete domain db removes parallel chroma store operation for this module.
+# - test_semantic_search_maps_chroma_hits_to_feed_results: Implements the test semantic search maps chroma hits to feed results operation for this module.
+# ====================================================================================================
+
 import os
 import sqlite3
 import sys

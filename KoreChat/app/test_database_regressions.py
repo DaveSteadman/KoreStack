@@ -3,6 +3,13 @@
 # ====================================================================================================
 # Test coverage for database regressions.
 # Exercises the expected behaviour and regression boundaries for this area.
+# MARK: FUNCTIONS
+# Primary types: DatabaseRegressionTests.
+# Function inventory:
+# - test_message_tags_include_direction_and_supplied_values: Implements the test message tags include direction and supplied values operation for this module.
+# - test_conversation_get_preserves_malformed_scratchpad_payload: Implements the test conversation get preserves malformed scratchpad payload operation for this module.
+# - test_conversation_get_preserves_malformed_datasets_payload: Implements the test conversation get preserves malformed datasets payload operation for this module.
+# - test_init_db_migrates_legacy_datasets_out_of_scratchpad: Implements the test init db migrates legacy datasets out of scratchpad operation for this module.
 # ====================================================================================================
 
 import sqlite3

@@ -9,6 +9,13 @@
 #
 # Related modules:
 #   - main.py         -- calls make_log_config() at startup
+# MARK: FUNCTIONS
+# Primary types: LineCappedFileHandler.
+# Function inventory:
+# - __init__: Implements the   init   operation for this module.
+# - emit: Implements the emit operation for this module.
+# - _trim: Implements the  trim operation for this module.
+# - make_log_config: Implements the make log config operation for this module.
 # ====================================================================================================
 import logging
 from pathlib import Path

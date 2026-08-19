@@ -17,6 +17,13 @@
 #   - input_layer/slash_commands.py         -- registers all handlers
 #   - input_layer/slash_command_context.py  -- SlashCommandContext passed to each handler
 #   - llm_client.py                         -- configure_host, list_ollama_models, stop_model
+# MARK: FUNCTIONS
+# Function inventory:
+# - _configure_ollama_offload: Implements the  configure ollama offload operation for this module.
+# - _cmd_llmserverconfig: Implements the  cmd llmserverconfig operation for this module.
+# - _cmd_stopmodel: Implements the  cmd stopmodel operation for this module.
+# - _cmd_llmserver: Implements the  cmd llmserver operation for this module.
+# - register_model_slash_commands: Registers model slash commands for this module.
 # ====================================================================================================
 import json
 import urllib.request

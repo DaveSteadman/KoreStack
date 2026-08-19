@@ -8,6 +8,10 @@
 #
 # Or via uvicorn directly, using the configured host and port from
 # config/korestack_config.json.
+# MARK: FUNCTIONS
+# Function inventory:
+# - _print_banner: Implements the  print banner operation for this module.
+# - row: Implements the row operation for this module.
 # ====================================================================================================
 
 from datetime import datetime

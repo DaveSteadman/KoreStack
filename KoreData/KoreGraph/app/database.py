@@ -17,6 +17,34 @@
 # Related modules:
 #   - app/server.py  -- all DB calls
 #   - app/config.py  -- cfg["data_dir"]
+# MARK: FUNCTIONS
+# Function inventory:
+# - db_connection: Implements the db connection operation for this module.
+# - _is_blacklisted: Implements the  is blacklisted operation for this module.
+# - init_db: Implements the init db operation for this module.
+# - _seed_predicates: Implements the  seed predicates operation for this module.
+# - get_status: Returns status for this module.
+# - _get_or_create_vocab_term: Implements the  get or create vocab term operation for this module.
+# - list_vocab: Lists vocab for this module.
+# - add_vocab_term: Implements the add vocab term operation for this module.
+# - delete_vocab_term: Deletes vocab term for this module.
+# - delete_concept: Deletes concept for this module.
+# - delete_orphaned_vocab_terms: Deletes orphaned vocab terms for this module.
+# - rename_vocab_term: Implements the rename vocab term operation for this module.
+# - get_vocab_detail: Returns vocab detail for this module.
+# - merge_vocab_term: Merges vocab term for this module.
+# - _r: Implements the  r operation for this module.
+# - unmerge_vocab_term: Implements the unmerge vocab term operation for this module.
+# - list_relations: Lists relations for this module.
+# - count_relations: Implements the count relations operation for this module.
+# - upsert_relation: Implements the upsert relation operation for this module.
+# - update_relation_state_score: Updates relation state score for this module.
+# - delete_relation: Deletes relation for this module.
+# - delete_connection_by_name: Deletes connection by name for this module.
+# - _lookup: Implements the  lookup operation for this module.
+# - expand_concept: Implements the expand concept operation for this module.
+# - expand_by_term: Implements the expand by term operation for this module.
+# - upsert_connection_by_name: Implements the upsert connection by name operation for this module.
 # ====================================================================================================
 import sqlite3
 from contextlib import contextmanager

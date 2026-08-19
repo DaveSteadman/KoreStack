@@ -21,6 +21,18 @@
 # Related modules:
 #   - skill_executor.py         -- dynamically imports and calls functions from this module
 #   - skills_catalog_builder.py -- reads skill.md to build the catalog entry for this skill
+# MARK: FUNCTIONS
+# Function inventory:
+# - _get_python_version: Implements the  get python version operation for this module.
+# - _get_os_name: Implements the  get os name operation for this module.
+# - _get_ollama_version: Implements the  get ollama version operation for this module.
+# - _format_bytes: Implements the  format bytes operation for this module.
+# - _get_memory_usage_bytes: Implements the  get memory usage bytes operation for this module.
+# - _get_disk_usage_bytes: Implements the  get disk usage bytes operation for this module.
+# - get_system_info_dict: Returns system info dict for this module.
+# - _to_gb: Implements the  to gb operation for this module.
+# - get_system_info_string: Returns system info string for this module.
+# - get_static_system_info_string: Returns static system info string for this module.
 # ====================================================================================================
 
 

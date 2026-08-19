@@ -5,6 +5,19 @@ from __future__ import annotations
 # ====================================================================================================
 # Durable local work items for KoreCode Gen2. A work item is the user-visible container for scope,
 # agent runs, planned work, and the eventual engineering outcome.
+# MARK: FUNCTIONS
+# Function inventory:
+# - _utc_now: Implements the  utc now operation for this module.
+# - _items_root: Implements the  items root operation for this module.
+# - _ensure_items_root: Implements the  ensure items root operation for this module.
+# - _item_path: Implements the  item path operation for this module.
+# - _write: Implements the  write operation for this module.
+# - _load: Implements the  load operation for this module.
+# - create_work_item: Creates work item for this module.
+# - get_work_item: Returns work item for this module.
+# - list_work_items: Lists work items for this module.
+# - update_work_item: Updates work item for this module.
+# - attach_run: Implements the attach run operation for this module.
 # ====================================================================================================
 
 import json

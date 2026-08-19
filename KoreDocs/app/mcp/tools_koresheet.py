@@ -5,6 +5,28 @@
 #
 # Keeps only the MCP-exposed wrappers and delegates all non-MCP behavior to the split
 # operation modules.
+# MARK: FUNCTIONS
+# Function inventory:
+# - koredocs_sheet_create: Implements the koredocs sheet create operation for this module.
+# - koredocs_sheet_table_create: Implements the koredocs sheet table create operation for this module.
+# - koredocs_sheet_get: Implements the koredocs sheet get operation for this module.
+# - koredocs_sheet_headers_get: Implements the koredocs sheet headers get operation for this module.
+# - koredocs_sheet_column_find: Implements the koredocs sheet column find operation for this module.
+# - koredocs_sheet_preview: Implements the koredocs sheet preview operation for this module.
+# - koredocs_sheet_describe: Implements the koredocs sheet describe operation for this module.
+# - koredocs_sheet_rows_find: Implements the koredocs sheet rows find operation for this module.
+# - koredocs_sheet_rows_update: Implements the koredocs sheet rows update operation for this module.
+# - koredocs_sheet_headers_set: Implements the koredocs sheet headers set operation for this module.
+# - koredocs_sheet_table_rows_append: Implements the koredocs sheet table rows append operation for this module.
+# - koredocs_sheet_labels_find: Implements the koredocs sheet labels find operation for this module.
+# - koredocs_sheet_named_value_get: Implements the koredocs sheet named value get operation for this module.
+# - koredocs_sheet_named_value_set: Implements the koredocs sheet named value set operation for this module.
+# - koredocs_sheet_range_read: Implements the koredocs sheet range read operation for this module.
+# - koredocs_sheet_cells_write: Implements the koredocs sheet cells write operation for this module.
+# - koredocs_sheet_table_read: Implements the koredocs sheet table read operation for this module.
+# - koredocs_sheet_rows_append: Implements the koredocs sheet rows append operation for this module.
+# - koredocs_sheet_rows_upsert: Implements the koredocs sheet rows upsert operation for this module.
+# - koredocs_sheet_range_clear: Implements the koredocs sheet range clear operation for this module.
 # ====================================================================================================
 
 from __future__ import annotations

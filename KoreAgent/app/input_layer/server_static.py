@@ -9,6 +9,17 @@ from __future__ import annotations
 # shared UIElements assets, and the KoreChat UI redirect.  The goal is to keep the
 # main input-layer server focused on runtime orchestration rather than static route
 # registration noise.
+# MARK: FUNCTIONS
+# Function inventory:
+# - register_static_routes: Registers static routes for this module.
+# - serve_index: Serves index for this module.
+# - serve_skills_catalog: Serves skills catalog for this module.
+# - serve_app_js: Serves app js for this module.
+# - serve_style_css: Serves style css for this module.
+# - serve_static_asset: Serves static asset for this module.
+# - redirect_to_korechat_ui: Implements the redirect to korechat ui operation for this module.
+# - serve_favicon: Serves favicon for this module.
+# - serve_readme: Serves readme for this module.
 # ====================================================================================================
 
 import os

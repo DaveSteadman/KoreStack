@@ -22,6 +22,28 @@
 #   - file_access_skill.py  -- uses get_workspace_root() for path-safety checks
 #   - skill_executor.py     -- uses get_workspace_root() to resolve skill module paths
 #   - main.py               -- uses get_logs_dir()
+# MARK: FUNCTIONS
+# Function inventory:
+# - get_workspace_root: Returns workspace root for this module.
+# - get_suite_root: Returns suite root for this module.
+# - get_suite_config_dir: Returns suite config dir for this module.
+# - get_suite_defaults_file: Returns suite defaults file for this module.
+# - get_agent_config_file: Returns agent config file for this module.
+# - _read_json_file: Implements the  read json file operation for this module.
+# - _flatten_suite_config: Implements the  flatten suite config operation for this module.
+# - _merge_runtime_config_layer: Implements the  merge runtime config layer operation for this module.
+# - _resolve_mcp_service_refs: Implements the  resolve mcp service refs operation for this module.
+# - load_runtime_config: Loads runtime config for this module.
+# - _load_path_overrides: Implements the  load path overrides operation for this module.
+# - get_controldata_dir: Returns controldata dir for this module.
+# - get_user_data_dir: Returns user data dir for this module.
+# - get_logs_dir: Returns logs dir for this module.
+# - get_plans_dir: Returns plans dir for this module.
+# - get_chatsessions_dir: Returns chatsessions dir for this module.
+# - get_chatsessions_named_dir: Returns chatsessions named dir for this module.
+# - get_chatsessions_day_dir: Returns chatsessions day dir for this module.
+# - normalize_module_path: Normalizes module path for this module.
+# - trunc: Implements the trunc operation for this module.
 # ====================================================================================================
 
 

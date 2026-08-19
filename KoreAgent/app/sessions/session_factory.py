@@ -8,6 +8,9 @@
 # Related modules:
 #   - input_layer/koreconv_input.py                  -- calls make_task_session
 #   - orchestration.py                               -- orchestrate_prompt
+# MARK: FUNCTIONS
+# Function inventory:
+# - make_task_session: Implements the make task session operation for this module.
 # ====================================================================================================
 from pathlib import Path
 

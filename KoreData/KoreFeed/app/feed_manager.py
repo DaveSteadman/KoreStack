@@ -10,6 +10,41 @@
 # Related modules:
 #   - app/ingest.py  -- reads feed config to drive the polling scheduler
 #   - app/server.py  -- CRUD operations on feeds via this module
+# MARK: FUNCTIONS
+# Function inventory:
+# - _domain_file: Implements the  domain file operation for this module.
+# - _state_file: Implements the  state file operation for this module.
+# - _feed_identity: Implements the  feed identity operation for this module.
+# - _load_domain_state: Implements the  load domain state operation for this module.
+# - _write_json_atomic: Implements the  write json atomic operation for this module.
+# - _save_domain_state: Implements the  save domain state operation for this module.
+# - _normalise_age_settings: Implements the  normalise age settings operation for this module.
+# - _normalise_domain_enabled: Implements the  normalise domain enabled operation for this module.
+# - _read_domain_spec: Implements the  read domain spec operation for this module.
+# - _apply_domain_age_settings: Implements the  apply domain age settings operation for this module.
+# - _load_domain_file: Implements the  load domain file operation for this module.
+# - _save_domain_file: Implements the  save domain file operation for this module.
+# - _build_export_feed: Implements the  build export feed operation for this module.
+# - _build_export_spec: Implements the  build export spec operation for this module.
+# - _clean_feed_for_import: Implements the  clean feed for import operation for this module.
+# - _normalise_import_feeds: Implements the  normalise import feeds operation for this module.
+# - load_feeds: Loads feeds for this module.
+# - load_feeds_for_domain: Loads feeds for domain for this module.
+# - list_feed_domains: Lists feed domains for this module.
+# - get_feed: Returns feed for this module.
+# - add_feed: Implements the add feed operation for this module.
+# - remove_feed: Implements the remove feed operation for this module.
+# - create_domain: Creates domain for this module.
+# - update_domain_age_settings_spec: Updates domain age settings spec for this module.
+# - sync_domain_spec: Implements the sync domain spec operation for this module.
+# - delete_domain_feeds: Deletes domain feeds for this module.
+# - update_feed_last_fetched: Updates feed last fetched for this module.
+# - update_feed_status: Updates feed status for this module.
+# - update_feed_rate: Updates feed rate for this module.
+# - update_feed: Updates feed for this module.
+# - rename_domain_feeds: Implements the rename domain feeds operation for this module.
+# - get_domain_enabled: Returns domain enabled for this module.
+# - set_domain_enabled: Sets domain enabled for this module.
 # ====================================================================================================
 import json
 import logging
@@ -23,13 +58,21 @@ from pathlib import Path
 from typing import Optional
 
 from app.config import cfg
-from app.database import get_domain_age_settings, init_db, rename_feed_entries, set_domain_age_settings
+from app.database import get_domain_age_settings, init_db, rename_domain_db, rename_feed_entries, set_domain_age_settings
 
 FEEDS_DIR = Path(cfg["data_dir"])
 LOG       = logging.getLogger("korefeed.feed_manager")
 
 _state_cache: dict[Path, dict[str, dict]] = {}
 _state_cache_lock = threading.RLock()
+
+
+def validate_domain_name(domain: str) -> str:
+    """Return a URL- and filesystem-safe domain identifier."""
+    name = str(domain or "").strip()
+    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]*", name):
+        raise ValueError("Domain names may contain only letters, digits, underscores, and hyphens")
+    return name
 
 
 def _domain_file(domain: str) -> Path:
@@ -502,22 +545,56 @@ def update_feed(feed_id: str, name: str, url: str, update_rate: int, feed_type: 
 
 def rename_domain_feeds(old: str, new: str) -> bool:
     """Rename a domain's feed file and update the domain field in every feed entry."""
+    old = validate_domain_name(old)
+    new = validate_domain_name(new)
+    if old == new:
+        return True
     old_path = _domain_file(old)
     if not old_path.exists():
         return False
+    new_path = _domain_file(new)
+    if new_path.exists():
+        raise FileExistsError(f"Domain '{new}' already exists")
     _, _, age_settings, enabled = _read_domain_spec(old)
     feeds = _load_domain_file(old)
     for f in feeds:
         f["domain"] = new
-    FEEDS_DIR.mkdir(exist_ok=True)
-    with open(_domain_file(new), "w", encoding="utf-8") as handle:
-        json.dump(_build_export_spec(new, feeds, age_settings, enabled), handle, indent=2)
-    old_path.unlink()
     old_state_path = _state_file(old)
-    if old_state_path.exists():
-        old_state_path.unlink()
+    new_state_path = _state_file(new)
+    if new_state_path.exists():
+        raise FileExistsError(f"Domain state for '{new}' already exists")
+
+    old_path.replace(new_path)
+    try:
+        _write_json_atomic(new_path, _build_export_spec(new, feeds, age_settings, enabled))
+        if old_state_path.exists():
+            old_state = _load_domain_state(old)
+            new_state = {
+                _feed_identity(new, feed["name"], feed["url"]): old_state.get(_feed_identity(old, feed["name"], feed["url"]), {})
+                for feed in feeds
+            }
+            _save_domain_state(new, new_state)
+            old_state_path.unlink()
+    except Exception:
+        if new_path.exists() and not old_path.exists():
+            new_path.replace(old_path)
+        raise
     with _state_cache_lock:
         _state_cache.pop(old_state_path, None)
+    return True
+
+
+def rename_domain(old: str, new: str) -> bool:
+    """Rename all feed-domain artifacts, restoring the feed specification on failure."""
+    old = validate_domain_name(old)
+    new = validate_domain_name(new)
+    if not rename_domain_feeds(old, new):
+        return False
+    try:
+        rename_domain_db(old, new)
+    except Exception:
+        rename_domain_feeds(new, old)
+        raise
     return True
 
 

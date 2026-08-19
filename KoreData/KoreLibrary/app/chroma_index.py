@@ -1,3 +1,29 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# chroma index module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Function inventory:
+# - chroma_available: Implements the chroma available operation for this module.
+# - _distance_to_match_score: Implements the  distance to match score operation for this module.
+# - _catalog_chroma_path: Implements the  catalog chroma path operation for this module.
+# - _catalog_schema_marker_path: Implements the  catalog schema marker path operation for this module.
+# - _catalog_store_is_current: Implements the  catalog store is current operation for this module.
+# - _mark_catalog_store_current: Implements the  mark catalog store current operation for this module.
+# - _release_catalog_client: Implements the  release catalog client operation for this module.
+# - _get_collection: Implements the  get collection operation for this module.
+# - _upsert_rows: Implements the  upsert rows operation for this module.
+# - sync_book_sentences: Implements the sync book sentences operation for this module.
+# - sync_pending_sentences: Implements the sync pending sentences operation for this module.
+# - sync_all_catalogs_pending: Implements the sync all catalogs pending operation for this module.
+# - rebuild_catalog_store: Implements the rebuild catalog store operation for this module.
+# - migrate_legacy_catalog_stores: Implements the migrate legacy catalog stores operation for this module.
+# - semantic_search: Implements the semantic search operation for this module.
+# - delete_sentence_ids: Deletes sentence ids for this module.
+# - delete_catalog_store: Deletes catalog store for this module.
+# ====================================================================================================
+
 import logging
 import shutil
 import threading

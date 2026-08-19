@@ -1,3 +1,15 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# middleware module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Primary types: NoCacheMiddleware, AuthMiddleware.
+# Function inventory:
+# - dispatch: Implements the dispatch operation for this module.
+# - __init__: Implements the   init   operation for this module.
+# ====================================================================================================
+
 from __future__ import annotations
 
 from starlette.middleware.base import BaseHTTPMiddleware

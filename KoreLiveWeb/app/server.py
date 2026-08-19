@@ -1,3 +1,36 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# server module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Function inventory:
+# - _asset_version: Implements the  asset version operation for this module.
+# - _read_koreliveweb_config_json: Implements the  read koreliveweb config json operation for this module.
+# - _write_koreliveweb_config_json: Implements the  write koreliveweb config json operation for this module.
+# - _coerce_checkbox_bool: Implements the  coerce checkbox bool operation for this module.
+# - _search_settings_payload: Implements the  search settings payload operation for this module.
+# - _apply_runtime_search_settings: Implements the  apply runtime search settings operation for this module.
+# - _persist_search_settings: Implements the  persist search settings operation for this module.
+# - _build_tool_rows: Implements the  build tool rows operation for this module.
+# - search_web_mcp: Implements the search web mcp operation for this module.
+# - search_web_text_mcp: Implements the search web text mcp operation for this module.
+# - fetch_page_text_mcp: Implements the fetch page text mcp operation for this module.
+# - get_page_links_mcp: Returns page links mcp for this module.
+# - get_page_links_text_mcp: Returns page links text mcp for this module.
+# - lookup_wikipedia_mcp: Implements the lookup wikipedia mcp operation for this module.
+# - _lifespan: Implements the  lifespan operation for this module.
+# - _home_context: Implements the  home context operation for this module.
+# - status: Implements the status operation for this module.
+# - ui_home: Implements the ui home operation for this module.
+# - activity: Implements the activity operation for this module.
+# - get_search_provider_settings: Returns search provider settings for this module.
+# - save_search_provider_settings: Saves search provider settings for this module.
+# - save_search_provider_settings_form: Saves search provider settings form for this module.
+# - root: Implements the root operation for this module.
+# - main: Starts this module's primary operation.
+# ====================================================================================================
+
 from __future__ import annotations
 
 import json

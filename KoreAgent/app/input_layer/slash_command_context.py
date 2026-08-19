@@ -12,6 +12,9 @@
 #   - input_layer/routes_sessions.py                   -- constructs the context per-prompt
 #   - input_layer/slash_command_handlers_models.py     -- reads config, calls output
 #   - input_layer/slash_command_handlers_sessions.py   -- calls switch_session, delete_session_state
+# MARK: FUNCTIONS
+# Primary types: SlashCommandContext.
+# Function inventory: this module exposes package or declarative configuration only.
 # ====================================================================================================
 from dataclasses import dataclass
 from typing import Callable

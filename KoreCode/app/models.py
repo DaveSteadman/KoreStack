@@ -1,3 +1,13 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# models module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Primary types: WriteBody, RootBody, SlashCommandBody, SlashCommandCompleteBody, ChatSendBody, ChatFollowupBody, ChatRunCreateBody, WorkItemCreateBody, WorkItemUpdateBody, ContinueRunCreateBody, ChatWorkspaceContextBody, ChatPromptBuildBody, ChatToolFollowupPromptBody, ChatToolExecuteBody, PythonExecutionBody, EditProposalCreateBody, PythonFunctionReplaceBody, PythonFunctionInsertBody.
+# Function inventory: this module exposes package or declarative configuration only.
+# ====================================================================================================
+
 from __future__ import annotations
 
 from pydantic import BaseModel

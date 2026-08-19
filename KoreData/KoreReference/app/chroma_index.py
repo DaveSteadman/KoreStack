@@ -1,3 +1,28 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# chroma index module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Function inventory:
+# - chroma_available: Implements the chroma available operation for this module.
+# - _distance_to_match_score: Implements the  distance to match score operation for this module.
+# - _store_path: Implements the  store path operation for this module.
+# - _schema_marker_path: Implements the  schema marker path operation for this module.
+# - _store_is_current: Implements the  store is current operation for this module.
+# - _mark_store_current: Implements the  mark store current operation for this module.
+# - _release_client: Implements the  release client operation for this module.
+# - close_client: Implements the close client operation for this module.
+# - _get_collection: Implements the  get collection operation for this module.
+# - _upsert_rows: Implements the  upsert rows operation for this module.
+# - sync_article_sentences: Implements the sync article sentences operation for this module.
+# - sync_pending_sentences: Implements the sync pending sentences operation for this module.
+# - rebuild_store: Implements the rebuild store operation for this module.
+# - semantic_search: Implements the semantic search operation for this module.
+# - delete_sentence_ids: Deletes sentence ids for this module.
+# - delete_store: Deletes store for this module.
+# ====================================================================================================
+
 import logging
 import shutil
 import threading

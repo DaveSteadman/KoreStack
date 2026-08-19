@@ -1,3 +1,13 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Centralised, immutable API configuration for KoreChat's UI delivery. These values resolve the
+# optional deployment overrides once at import time and are shared by UI routes, avoiding repeated
+# path construction and keeping cache and input-history policy consistent across endpoints.
+# MARK: FUNCTIONS
+# Function inventory: this module exposes package or declarative configuration only.
+# ====================================================================================================
+
 import os
 from pathlib import Path
 

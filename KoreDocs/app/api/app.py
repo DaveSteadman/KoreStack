@@ -1,3 +1,19 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# app module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Function inventory:
+# - setup_logging: Implements the setup logging operation for this module.
+# - lifespan: Implements the lifespan operation for this module.
+# - list_schemas: Lists schemas for this module.
+# - main: Starts this module's primary operation.
+# - mcp_tool_names: Implements the mcp tool names operation for this module.
+# - list_names: Lists names for this module.
+# - startup_report: Implements the startup report operation for this module.
+# ====================================================================================================
+
 from __future__ import annotations
 
 import logging

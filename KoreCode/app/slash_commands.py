@@ -5,6 +5,12 @@ from __future__ import annotations
 # ====================================================================================================
 # Slash commands helpers for KoreCode/app.
 # Provides the focused helpers and module-level behaviour grouped into this file.
+# MARK: FUNCTIONS
+# Function inventory:
+# - handle: Handles this module's primary operation.
+# - complete: Implements the complete operation for this module.
+# - _cmd_help: Implements the  cmd help operation for this module.
+# - initialize: Implements the initialize operation for this module.
 # ====================================================================================================
 
 from KoreCommon.SlashCommands import SlashCommandDefinition

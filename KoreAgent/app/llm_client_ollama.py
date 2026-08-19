@@ -10,6 +10,25 @@
 # Shared state and utilities are accessed via the llm_client_openai module imported as _core.
 # Module-level variables in _core are read at call time, so mutations via configure_host() etc.
 # are always reflected without needing to re-import.
+# MARK: FUNCTIONS
+# Function inventory:
+# - _per_request_context_enabled: Implements the  per request context enabled operation for this module.
+# - _windows_creation_flags: Implements the  windows creation flags operation for this module.
+# - is_ollama_running: Checks whether ollama running is true.
+# - start_ollama_server: Starts ollama server for this module.
+# - ensure_ollama_running: Ensures ollama running for this module.
+# - list_ollama_models: Lists ollama models for this module.
+# - get_ollama_ps_rows: Returns ollama ps rows for this module.
+# - _get_ollama_ps_rows_local: Implements the  get ollama ps rows local operation for this module.
+# - _get_ollama_ps_rows_remote: Implements the  get ollama ps rows remote operation for this module.
+# - get_running_model_row: Returns running model row for this module.
+# - format_running_model_report: Formats running model report for this module.
+# - stop_model: Stops model for this module.
+# - _native_chat_messages: Implements the  native chat messages operation for this module.
+# - _openai_tool_calls: Implements the  openai tool calls operation for this module.
+# - call_ollama_chat: Implements the call ollama chat operation for this module.
+# - call_ollama_extended: Implements the call ollama extended operation for this module.
+# - call_ollama: Implements the call ollama operation for this module.
 # ====================================================================================================
 
 

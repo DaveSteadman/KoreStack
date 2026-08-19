@@ -3,6 +3,50 @@
 # ====================================================================================================
 # Deagel access helpers for datacontrol/koredata/RAG/databases/deagel.
 # Provides schema init, parsing, upserts, chunk writes, and descriptor writing.
+# MARK: FUNCTIONS
+# Function inventory:
+# - _now: Implements the  now operation for this module.
+# - _compress: Implements the  compress operation for this module.
+# - _decompress: Implements the  decompress operation for this module.
+# - _word_count: Implements the  word count operation for this module.
+# - _clean_text: Implements the  clean text operation for this module.
+# - _clean_multiline_text: Implements the  clean multiline text operation for this module.
+# - _slugify: Implements the  slugify operation for this module.
+# - _absolute_url: Implements the  absolute url operation for this module.
+# - _page_code_from_url: Implements the  page code from url operation for this module.
+# - _hash_text: Implements the  hash text operation for this module.
+# - _get: Implements the  get operation for this module.
+# - _sleep: Implements the  sleep operation for this module.
+# - get_conn: Returns conn for this module.
+# - init_db: Implements the init db operation for this module.
+# - _ensure_column: Implements the  ensure column operation for this module.
+# - get_meta: Returns meta for this module.
+# - set_meta: Sets meta for this module.
+# - count_chunks: Implements the count chunks operation for this module.
+# - _fts_delete: Implements the  fts delete operation for this module.
+# - _fts_insert: Implements the  fts insert operation for this module.
+# - upsert_chunk: Implements the upsert chunk operation for this module.
+# - _parse_info_lines: Implements the  parse info lines operation for this module.
+# - _parse_generic_fact_rows: Implements the  parse generic fact rows operation for this module.
+# - parse_category_page: Parses category page for this module.
+# - parse_item_page: Parses item page for this module.
+# - parse_country_index: Parses country index for this module.
+# - parse_country_page: Parses country page for this module.
+# - parse_reports_page: Parses reports page for this module.
+# - discover_home_news_links: Implements the discover home news links operation for this module.
+# - parse_news_article: Parses news article for this module.
+# - _build_item_chunk: Implements the  build item chunk operation for this module.
+# - _build_country_chunk: Implements the  build country chunk operation for this module.
+# - _build_inventory_chunk: Implements the  build inventory chunk operation for this module.
+# - _build_news_chunk: Implements the  build news chunk operation for this module.
+# - _build_report_chunk: Implements the  build report chunk operation for this module.
+# - _tag_string: Implements the  tag string operation for this module.
+# - ingest_categories: Implements the ingest categories operation for this module.
+# - ingest_countries: Implements the ingest countries operation for this module.
+# - ingest_reports: Implements the ingest reports operation for this module.
+# - ingest_latest_news: Implements the ingest latest news operation for this module.
+# - write_descriptor: Writes descriptor for this module.
+# - write_failed_descriptor: Writes failed descriptor for this module.
 # ====================================================================================================
 import hashlib
 import json

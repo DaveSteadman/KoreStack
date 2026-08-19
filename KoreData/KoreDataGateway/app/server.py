@@ -1,4 +1,4 @@
-﻿# ====================================================================================================
+# ====================================================================================================
 # MARK: OVERVIEW
 # ====================================================================================================
 # FastAPI gateway for KoreData — proxy, web UI, child process lifecycle, and MCP federation.
@@ -21,6 +21,62 @@
 #   - KoreRAG/            -- RAG chunk store sub-service
 #   - KoreReference/      -- Wikipedia reference article sub-service
 #   - KoreScrape/         -- website snapshot sub-service
+# MARK: FUNCTIONS
+# Primary types: _SavedSearchRequest.
+# Function inventory:
+# - _scrape_data_root: Implements the  scrape data root operation for this module.
+# - _display_path: Implements the  display path operation for this module.
+# - _port_from_url: Implements the  port from url operation for this module.
+# - _listening_pids_on_port: Implements the  listening pids on port operation for this module.
+# - _terminate_pid: Implements the  terminate pid operation for this module.
+# - _clear_stale_child_listeners: Implements the  clear stale child listeners operation for this module.
+# - _start_children: Implements the  start children operation for this module.
+# - _stop_children: Implements the  stop children operation for this module.
+# - _wait_for: Implements the  wait for operation for this module.
+# - _set_child_status: Implements the  set child status operation for this module.
+# - _set_gateway_status: Implements the  set gateway status operation for this module.
+# - _get_gateway_startup_snapshot: Implements the  get gateway startup snapshot operation for this module.
+# - _wait_for_children_ready: Implements the  wait for children ready operation for this module.
+# - _probe: Implements the  probe operation for this module.
+# - _unavailable_ui_service_cards: Implements the  unavailable ui service cards operation for this module.
+# - _refresh_ui_service_cards: Implements the  refresh ui service cards operation for this module.
+# - _refresh_ui_service_cards_loop: Implements the  refresh ui service cards loop operation for this module.
+# - _lifespan: Implements the  lifespan operation for this module.
+# - _exception_handler: Implements the  exception handler operation for this module.
+# - _svc_ui: Implements the  svc ui operation for this module.
+# - _svc_status: Implements the  svc status operation for this module.
+# - _normalise_graph_query_literal: Implements the  normalise graph query literal operation for this module.
+# - _rag_databases_enriched: Implements the  rag databases enriched operation for this module.
+# - _rag_processing_scripts: Implements the  rag processing scripts operation for this module.
+# - _normalize_rag_processing_schedule: Implements the  normalize rag processing schedule operation for this module.
+# - _map_feed_entry: Implements the  map feed entry operation for this module.
+# - _map_ref_article: Implements the  map ref article operation for this module.
+# - api_search: Implements the api search operation for this module.
+# - api_full_text: Implements the api full text operation for this module.
+# - api_sentence: Implements the api sentence operation for this module.
+# - api_sentence_get: Implements the api sentence get operation for this module.
+# - _saved_search_payload: Implements the  saved search payload operation for this module.
+# - koredata_search: Implements the koredata search operation for this module.
+# - koredata_savedsearch_list: Implements the koredata savedsearch list operation for this module.
+# - koredata_savedsearch_run: Implements the koredata savedsearch run operation for this module.
+# - koredata_get_sentence: Implements the koredata get sentence operation for this module.
+# - koredata_get_feed_entry: Implements the koredata get feed entry operation for this module.
+# - koredata_get_reference_article: Implements the koredata get reference article operation for this module.
+# - koredata_find_library_book: Implements the koredata find library book operation for this module.
+# - koredata_get_library_index: Implements the koredata get library index operation for this module.
+# - koredata_get_library_book_chunk: Implements the koredata get library book chunk operation for this module.
+# - koredata_update_library_book: Implements the koredata update library book operation for this module.
+# - koredata_repair_library_book_anchors: Implements the koredata repair library book anchors operation for this module.
+# - koredata_get_rag_chunk: Implements the koredata get rag chunk operation for this module.
+# - koredata_get_scrape_chunk: Implements the koredata get scrape chunk operation for this module.
+# - koredata_get_full_text: Implements the koredata get full text operation for this module.
+# - api_list_saved_searches: Implements the api list saved searches operation for this module.
+# - api_save_saved_search: Implements the api save saved search operation for this module.
+# - api_delete_saved_searches: Implements the api delete saved searches operation for this module.
+# - api_run_saved_search: Implements the api run saved search operation for this module.
+# - root_redirect: Implements the root redirect operation for this module.
+# - web_root: Implements the web root operation for this module.
+# - gateway_status: Implements the gateway status operation for this module.
 # ====================================================================================================
 import asyncio
 import logging

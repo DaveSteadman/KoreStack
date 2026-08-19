@@ -3,6 +3,8 @@
 # ====================================================================================================
 # Package marker for KoreCommon/SlashCommands.
 # Keeps imports and package boundaries explicit for this package.
+# MARK: FUNCTIONS
+# Function inventory: this module exposes package or declarative configuration only.
 # ====================================================================================================
 
 from .context import SlashCommandContext

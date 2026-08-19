@@ -5,6 +5,31 @@ from __future__ import annotations
 # ====================================================================================================
 # Korechat client helpers for KoreCode/app.
 # Provides the focused helpers and module-level behaviour grouped into this file.
+# MARK: FUNCTIONS
+# Function inventory:
+# - _suite_root: Implements the  suite root operation for this module.
+# - _read_suite_config: Implements the  read suite config operation for this module.
+# - _service_url: Implements the  service url operation for this module.
+# - korechat_base_url: Implements the korechat base url operation for this module.
+# - _normalize_thread_path: Implements the  normalize thread path operation for this module.
+# - _new_conversation_name: Implements the  new conversation name operation for this module.
+# - _json_request: Implements the  json request operation for this module.
+# - _get_conversation_by_external_id: Implements the  get conversation by external id operation for this module.
+# - _create_conversation: Implements the  create conversation operation for this module.
+# - _patch_conversation: Implements the  patch conversation operation for this module.
+# - _scratchpad_dict: Implements the  scratchpad dict operation for this module.
+# - _seed_workspace_menu_scratchpad: Implements the  seed workspace menu scratchpad operation for this module.
+# - _remove_workspace_menu_scratchpad: Implements the  remove workspace menu scratchpad operation for this module.
+# - _sync_workspace_menu_scratchpad: Implements the  sync workspace menu scratchpad operation for this module.
+# - ensure_conversation: Ensures conversation for this module.
+# - set_workspace_context_enabled: Sets workspace context enabled for this module.
+# - _conversation_detail: Implements the  conversation detail operation for this module.
+# - _visible_messages_from_raw: Implements the  visible messages from raw operation for this module.
+# - _pending_response: Implements the  pending response operation for this module.
+# - get_thread: Returns thread for this module.
+# - append_visible_message_for_conversation: Appends visible message for conversation for this module.
+# - append_internal_followup: Appends internal followup for this module.
+# - delete_thread: Deletes thread for this module.
 # ====================================================================================================
 
 import hashlib

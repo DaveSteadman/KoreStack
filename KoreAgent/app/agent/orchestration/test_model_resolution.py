@@ -1,3 +1,15 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# test model resolution module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Function inventory:
+# - test_unique_non_token_substring_resolves_model: Implements the test unique non token substring resolves model operation for this module.
+# - test_ambiguous_substring_does_not_select_a_model: Implements the test ambiguous substring does not select a model operation for this module.
+# - test_numeric_substring_does_not_match_a_larger_number: Implements the test numeric substring does not match a larger number operation for this module.
+# ====================================================================================================
+
 from llm_client_openai import resolve_model_name
 
 

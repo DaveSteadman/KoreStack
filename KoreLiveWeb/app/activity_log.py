@@ -1,3 +1,18 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# activity log module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Function inventory:
+# - _activity_log_path: Implements the  activity log path operation for this module.
+# - _scan_last_id: Implements the  scan last id operation for this module.
+# - _next_id: Implements the  next id operation for this module.
+# - _trim_file: Implements the  trim file operation for this module.
+# - append_activity: Appends activity for this module.
+# - list_activity: Lists activity for this module.
+# ====================================================================================================
+
 from __future__ import annotations
 
 import json

@@ -1114,14 +1114,9 @@ function submitPrompt() {
     if (!text) return;
     _hideSuggest();
 
-    // Slash commands run locally and don't need Ollama - always allow.
-    // Real prompts are discarded with a message if Ollama is unreachable.
-    const isSlash = text.startsWith("/");
-    if (!isSlash && !_ollamaReachable) {
-        appendChatMessage("agent", "[Ollama is unreachable - prompt discarded]");
-        dom.input().value = "";
-        return;
-    }
+    // Every prompt is first recorded in KoreChat.  The shared Agent event worker
+    // then handles it when the model becomes available, instead of discarding work
+    // in this browser when the local-model status is temporarily unavailable.
 
     // Clear input and reset history cursor immediately so the user can keep typing.
     dom.input().value = "";
@@ -1135,28 +1130,24 @@ function submitPrompt() {
 }
 
 async function _dispatchPrompt(text) {
-    // All prompts - slash and regular - go through the session endpoint.
-    // The server handles KC conversation logging after orchestration completes.
-    const data = await apiFetch("/sessions/" + encodeURIComponent(_sessionId) + "/prompt", {
+    // KoreChat owns durable prompts and replies.  This UI contributes an inbound
+    // message, then observes the outbound result produced by the shared event worker.
+    const data = await apiFetch("/kc/send", {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ prompt: text }),
+        body:    JSON.stringify({ session_id: _sessionId, content: text }),
     });
     _pushHistory(text);
-    refreshQueue();
     if (!data) {
         appendChatMessage("user", text);
-        appendChatMessage("agent", "[Error: could not reach API]");
+        appendChatMessage("agent", "[Error: could not record the prompt in KoreChat]");
         return;
     }
-    const activeRun = {
-        runId:       data.run_id,
-        sessionId:   _sessionId,
-        prompt:      text,
-        startedAtMs: Date.now(),
-    };
-    _saveActiveRun(activeRun);
-    listenRun(data.run_id);
+    const thinkKey = "kc_" + data.conv_id + "_" + data.msg_id;
+    appendChatMessage("user", text, "", thinkKey);
+    appendThinking(thinkKey);
+    refreshQueue();
+    _pollKcReply(thinkKey, data.conv_id, data.msg_id);
 }
 
 async function _pollKcReply(thinkKey, convId, afterMsgId) {

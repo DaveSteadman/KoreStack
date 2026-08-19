@@ -1,3 +1,24 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# routes skills module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Primary types: SkillInvokeRequest.
+# Function inventory:
+# - _schema_type: Implements the  schema type operation for this module.
+# - _placeholder_from_name: Implements the  placeholder from name operation for this module.
+# - _example_from_schema: Implements the  example from schema operation for this module.
+# - _json_safe: Implements the  json safe operation for this module.
+# - register_skills_routes: Registers skills routes for this module.
+# - _get_skills_payload_or_raise: Implements the  get skills payload or raise operation for this module.
+# - _safe_read_workspace_file: Implements the  safe read workspace file operation for this module.
+# - skills_catalog_get: Implements the skills catalog get operation for this module.
+# - _ensure_provider: Implements the  ensure provider operation for this module.
+# - skills_source_get: Implements the skills source get operation for this module.
+# - skills_invoke_post: Implements the skills invoke post operation for this module.
+# ====================================================================================================
+
 from pathlib import Path
 import json
 from typing import Any

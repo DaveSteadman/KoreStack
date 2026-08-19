@@ -3,6 +3,31 @@
 # ====================================================================================================
 # Hansard access helpers for datacontrol/koredata/RAG/databases/hansard2026.
 # Provides the focused helpers and module-level behaviour grouped into this file.
+# MARK: FUNCTIONS
+# Primary types: SittingDayFetchError.
+# Function inventory:
+# - _compress: Implements the  compress operation for this module.
+# - _word_count: Implements the  word count operation for this module.
+# - _get: Implements the  get operation for this module.
+# - _sleep: Implements the  sleep operation for this module.
+# - get_conn: Returns conn for this module.
+# - init_db: Implements the init db operation for this module.
+# - get_meta: Returns meta for this module.
+# - set_meta: Sets meta for this module.
+# - _bare_name: Implements the  bare name operation for this module.
+# - build_name_lookup: Builds name lookup for this module.
+# - _match_member: Implements the  match member operation for this module.
+# - _member_bio: Implements the  member bio operation for this module.
+# - ingest_members: Implements the ingest members operation for this module.
+# - _is_sitting_day: Implements the  is sitting day operation for this module.
+# - _extract_debates_from_html: Implements the  extract debates from html operation for this module.
+# - get_sitting_debates: Returns sitting debates for this module.
+# - _looks_like_speaker: Implements the  looks like speaker operation for this module.
+# - parse_speeches: Parses speeches for this module.
+# - _flush: Implements the  flush operation for this module.
+# - ingest_debate: Implements the ingest debate operation for this module.
+# - ingest_sitting_day: Implements the ingest sitting day operation for this module.
+# - write_descriptor: Writes descriptor for this module.
 # ====================================================================================================
 
 # ====================================================================================================

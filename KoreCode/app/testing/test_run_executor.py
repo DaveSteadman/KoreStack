@@ -1,3 +1,15 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# test run executor module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Primary types: RunExecutorTests.
+# Function inventory:
+# - test_edit_envelope_applies_validated_changes: Implements the test edit envelope applies validated changes operation for this module.
+# - test_analysis_envelope_with_tool_requests_continues_the_agent_loop: Implements the test analysis envelope with tool requests continues the agent loop operation for this module.
+# ====================================================================================================
+
 """Regression tests for the server-side agent execution loop."""
 
 from __future__ import annotations

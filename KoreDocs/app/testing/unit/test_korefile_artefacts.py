@@ -1,3 +1,19 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# test korefile artefacts module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Primary types: KoreFileArtefactTests.
+# Function inventory:
+# - setUp: Implements the setUp operation for this module.
+# - tearDown: Implements the tearDown operation for this module.
+# - test_metadata_query_supports_nested_exact_array_and_range_conditions: Implements the test metadata query supports nested exact array and range conditions operation for this module.
+# - test_stable_artifact_id_and_history_survive_rename_and_update: Implements the test stable artifact id and history survive rename and update operation for this module.
+# - test_metadata_patch_merges_nested_fields_without_replacing_the_artefact: Implements the test metadata patch merges nested fields without replacing the artefact operation for this module.
+# - test_koredoc_embeds_json_header_without_a_metadata_sidecar: Implements the test koredoc embeds json header without a metadata sidecar operation for this module.
+# ====================================================================================================
+
 from __future__ import annotations
 
 import sys

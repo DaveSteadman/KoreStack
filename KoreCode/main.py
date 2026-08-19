@@ -8,6 +8,8 @@
 #
 # Related modules:
 #   - app/server.py  -- main() brings up the FastAPI app under uvicorn
+# MARK: FUNCTIONS
+# Function inventory: this module exposes package or declarative configuration only.
 # ====================================================================================================
 from __future__ import annotations
 

@@ -1,3 +1,20 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# tool sets module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Function inventory:
+# - get_tool_sets_path: Returns tool sets path for this module.
+# - _normalise_tool_names: Implements the  normalise tool names operation for this module.
+# - normalise_tool_sets: Implements the normalise tool sets operation for this module.
+# - load_tool_sets: Loads tool sets for this module.
+# - save_tool_sets: Saves tool sets for this module.
+# - resolve_tool_sets: Resolves tool sets for this module.
+# - related_tool_set: Implements the related tool set operation for this module.
+# - relevant_tool_sets: Implements the relevant tool sets operation for this module.
+# ====================================================================================================
+
 """Persisted, user-maintained groupings over the live tool inventory."""
 
 from __future__ import annotations

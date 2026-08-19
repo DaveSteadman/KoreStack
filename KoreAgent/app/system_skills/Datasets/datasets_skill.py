@@ -5,6 +5,8 @@
 #
 # Re-exports the dataset phase-1 functions from app/datasets.py so they are available through the
 # skill catalog and normal tool-dispatch pipeline.
+# MARK: FUNCTIONS
+# Function inventory: this module exposes package or declarative configuration only.
 # ====================================================================================================
 
 from datasets_pkg.models import dataset_delete

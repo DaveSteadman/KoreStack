@@ -14,6 +14,12 @@
 #   - app/interfaces/common/base.py     -- BaseInterface ABC
 #   - app/interfaces/common/registry.py -- registered as type "manual"
 #   - app/database.py                   -- conversation and routing record access
+# MARK: FUNCTIONS
+# Primary types: ManualInterface.
+# Function inventory:
+# - poll: Implements the poll operation for this module.
+# - route_reply: Implements the route reply operation for this module.
+# - send_new: Implements the send new operation for this module.
 # ====================================================================================================
 from __future__ import annotations
 

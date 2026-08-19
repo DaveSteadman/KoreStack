@@ -1,3 +1,17 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# test sentence indexing module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Primary types: LibrarySentenceIndexingTests.
+# Function inventory:
+# - setUp: Implements the setUp operation for this module.
+# - tearDown: Implements the tearDown operation for this module.
+# - test_add_book_indexes_sentences: Implements the test add book indexes sentences operation for this module.
+# - test_update_book_body_rebuilds_sentences: Implements the test update book body rebuilds sentences operation for this module.
+# ====================================================================================================
+
 import tempfile
 import unittest
 from pathlib import Path

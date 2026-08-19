@@ -14,6 +14,23 @@ from __future__ import annotations
 # Boundary:
 #   - message append / turn persistence lives in db_messages.py
 #   - event queue semantics live in db_events.py
+# MARK: FUNCTIONS
+# Function inventory:
+# - _message_to_dict: Implements the  message to dict operation for this module.
+# - conversation_create: Implements the conversation create operation for this module.
+# - conversation_get_by_external_id: Implements the conversation get by external id operation for this module.
+# - conversation_get: Implements the conversation get operation for this module.
+# - conversation_get_turns_by_external_id: Implements the conversation get turns by external id operation for this module.
+# - conversation_get_detail: Implements the conversation get detail operation for this module.
+# - conversation_get_with_messages: Implements the conversation get with messages operation for this module.
+# - conversation_list: Implements the conversation list operation for this module.
+# - conversation_update: Implements the conversation update operation for this module.
+# - conversation_get_input_history: Implements the conversation get input history operation for this module.
+# - conversation_set_input_history: Implements the conversation set input history operation for this module.
+# - conversation_append_input_history: Implements the conversation append input history operation for this module.
+# - conversation_delete: Implements the conversation delete operation for this module.
+# - conversation_cull_default_inactive: Implements the conversation cull default inactive operation for this module.
+# - conversation_counts: Implements the conversation counts operation for this module.
 # ====================================================================================================
 
 import json

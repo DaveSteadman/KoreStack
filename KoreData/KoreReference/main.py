@@ -11,6 +11,10 @@
 #   - app/config.py    -- cfg (host, port, data_dir)
 #   - app/database.py  -- init_db() and article storage
 #   - CommonCode/      -- shared logutil, config, compress, dbutil
+# MARK: FUNCTIONS
+# Function inventory:
+# - _print_banner: Implements the  print banner operation for this module.
+# - row: Implements the row operation for this module.
 # ====================================================================================================
 import sys
 import logging

@@ -5,6 +5,20 @@ from __future__ import annotations
 # ====================================================================================================
 # Registry helpers for KoreCommon/SlashCommands.
 # Provides the focused helpers and module-level behaviour grouped into this file.
+# MARK: FUNCTIONS
+# Primary types: SlashCommandRegistry.
+# Function inventory:
+# - __init__: Implements the   init   operation for this module.
+# - clear: Clears this module's primary operation.
+# - register: Registers this module's primary operation.
+# - get: Returns this module's primary operation.
+# - definitions: Implements the definitions operation for this module.
+# - dispatch: Implements the dispatch operation for this module.
+# - complete: Implements the complete operation for this module.
+# - _complete_command_name: Implements the  complete command name operation for this module.
+# - _normalize_name: Implements the  normalize name operation for this module.
+# - parse_slash_text: Parses slash text for this module.
+# - _normalize_completion_item: Implements the  normalize completion item operation for this module.
 # ====================================================================================================
 
 from dataclasses import replace

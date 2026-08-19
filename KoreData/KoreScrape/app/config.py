@@ -3,6 +3,9 @@
 # ====================================================================================================
 # Configuration helpers for KoreData/KoreScrape/app.
 # Centralises environment-derived settings and default values used by this component.
+# MARK: FUNCTIONS
+# Function inventory:
+# - _default_data_dir: Implements the  default data dir operation for this module.
 # ====================================================================================================
 
 from pathlib import Path

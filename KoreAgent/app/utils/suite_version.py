@@ -13,6 +13,10 @@
 #
 # Related modules:
 #   - input_layer/server.py  -- exposes SUITE_VERSION via GET /version
+# MARK: FUNCTIONS
+# Function inventory:
+# - _suite_meta_path: Implements the  suite meta path operation for this module.
+# - get_suite_version: Returns suite version for this module.
 # ====================================================================================================
 import os
 import re

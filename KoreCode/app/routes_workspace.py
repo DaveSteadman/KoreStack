@@ -1,3 +1,25 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# routes workspace module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Function inventory:
+# - register_workspace_routes: Registers workspace routes for this module.
+# - api_root_browse: Implements the api root browse operation for this module.
+# - api_tree: Implements the api tree operation for this module.
+# - api_read_file: Implements the api read file operation for this module.
+# - api_write_file: Implements the api write file operation for this module.
+# - api_context: Implements the api context operation for this module.
+# - api_python_function: Implements the api python function operation for this module.
+# - api_replace_python_function: Implements the api replace python function operation for this module.
+# - api_insert_python_function: Implements the api insert python function operation for this module.
+# - api_create_file: Implements the api create file operation for this module.
+# - api_delete_file: Implements the api delete file operation for this module.
+# - api_create_dir: Implements the api create dir operation for this module.
+# - api_delete_dir: Implements the api delete dir operation for this module.
+# ====================================================================================================
+
 from __future__ import annotations
 
 from fastapi import FastAPI

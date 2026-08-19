@@ -13,6 +13,21 @@
 #   - app/server.py         -- all read/write and search operations
 #   - CommonCode/compress.py  -- body storage compression
 #   - CommonCode/dbutil.py    -- fts_build_query
+# MARK: FUNCTIONS
+# Function inventory:
+# - db_connection: Implements the db connection operation for this module.
+# - init_db: Implements the init db operation for this module.
+# - _fts_delete: Implements the  fts delete operation for this module.
+# - _fts_insert: Implements the  fts insert operation for this module.
+# - _row_to_dict: Implements the  row to dict operation for this module.
+# - add_chunk: Implements the add chunk operation for this module.
+# - get_chunk: Returns chunk for this module.
+# - list_chunks: Lists chunks for this module.
+# - update_chunk: Updates chunk for this module.
+# - delete_chunk: Deletes chunk for this module.
+# - search_chunks: Implements the search chunks operation for this module.
+# - get_status: Returns status for this module.
+# - search_all_dbs: Implements the search all dbs operation for this module.
 # ====================================================================================================
 import sqlite3
 import threading

@@ -3,6 +3,8 @@
 # MARK: OVERVIEW
 # ====================================================================================================
 # Tests owned by KoreTest that exercise KoreAgent as the system under test.
+# MARK: FUNCTIONS
+# Function inventory: this module exposes package or declarative configuration only.
 # ====================================================================================================
 
 import sys

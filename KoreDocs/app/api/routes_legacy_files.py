@@ -1,3 +1,22 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# routes legacy files module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Primary types: WriteBody, CreateBody.
+# Function inventory:
+# - register_legacy_file_routes: Registers legacy file routes for this module.
+# - resolve_legacy_name: Resolves legacy name for this module.
+# - validate_flat_content: Validates flat content for this module.
+# - enforce_file_match: Implements the enforce file match operation for this module.
+# - list_files: Lists files for this module.
+# - read_file: Reads file for this module.
+# - write_file: Writes file for this module.
+# - delete_file: Deletes file for this module.
+# - create_file: Creates file for this module.
+# ====================================================================================================
+
 from __future__ import annotations
 
 from pathlib import Path

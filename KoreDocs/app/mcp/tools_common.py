@@ -20,6 +20,33 @@
 #   - app/koresheet_mcp.py  -- .koresheet spreadsheet tools
 #   - app/korediag_mcp.py     -- .korediag diagram tools
 #   - app/server.py         -- mounts mcp into the FastAPI app
+# MARK: FUNCTIONS
+# Function inventory:
+# - list_supported_types: Lists supported types for this module.
+# - search_files: Implements the search files operation for this module.
+# - search_files_by_metadata: Implements the search files by metadata operation for this module.
+# - get_file: Returns file for this module.
+# - list_files: Lists files for this module.
+# - list_folders: Lists folders for this module.
+# - get_folder_structure: Returns folder structure for this module.
+# - get_file_format_info: Returns file format info for this module.
+# - create_file: Creates file for this module.
+# - update_file: Updates file for this module.
+# - delete_file: Deletes file for this module.
+# - koredocs_types_list: Implements the koredocs types list operation for this module.
+# - koredocs_files_search: Implements the koredocs files search operation for this module.
+# - koredocs_files_metadata_search: Implements the koredocs files metadata search operation for this module.
+# - koredocs_file_history_list: Implements the koredocs file history list operation for this module.
+# - koredocs_file_history_get: Implements the koredocs file history get operation for this module.
+# - koredocs_file_get: Implements the koredocs file get operation for this module.
+# - koredocs_files_list: Implements the koredocs files list operation for this module.
+# - koredocs_folders_list: Implements the koredocs folders list operation for this module.
+# - koredocs_folder_structure_get: Implements the koredocs folder structure get operation for this module.
+# - koredocs_file_format_get: Implements the koredocs file format get operation for this module.
+# - koredocs_folder_create: Implements the koredocs folder create operation for this module.
+# - koredocs_file_create: Implements the koredocs file create operation for this module.
+# - koredocs_file_update: Implements the koredocs file update operation for this module.
+# - koredocs_file_delete: Implements the koredocs file delete operation for this module.
 # ====================================================================================================
 
 from __future__ import annotations

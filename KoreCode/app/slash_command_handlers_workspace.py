@@ -5,6 +5,17 @@ from __future__ import annotations
 # ====================================================================================================
 # Slash command handlers workspace helpers for KoreCode/app.
 # Provides the focused helpers and module-level behaviour grouped into this file.
+# MARK: FUNCTIONS
+# Function inventory:
+# - _cmd_clear: Implements the  cmd clear operation for this module.
+# - _cmd_retry: Implements the  cmd retry operation for this module.
+# - _cmd_workspace: Implements the  cmd workspace operation for this module.
+# - _cmd_mode: Implements the  cmd mode operation for this module.
+# - _cmd_mode_alias: Implements the  cmd mode alias operation for this module.
+# - _set_mode_action: Implements the  set mode action operation for this module.
+# - _complete_workspace: Implements the  complete workspace operation for this module.
+# - _complete_mode: Implements the  complete mode operation for this module.
+# - register_workspace_slash_commands: Registers workspace slash commands for this module.
 # ====================================================================================================
 
 from typing import Callable

@@ -1,3 +1,26 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# tool catalog module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Function inventory:
+# - clear_runtime_caches: Clears runtime caches for this module.
+# - _first_sentence: Implements the  first sentence operation for this module.
+# - _search_tokens: Implements the  search tokens operation for this module.
+# - _entry_search_parts: Implements the  entry search parts operation for this module.
+# - rank_tool_catalog_entries: Implements the rank tool catalog entries operation for this module.
+# - local_tool_names: Implements the local tool names operation for this module.
+# - all_known_tool_names: Implements the all known tool names operation for this module.
+# - _tool_name_tokens: Implements the  tool name tokens operation for this module.
+# - _score_tool_name_token: Implements the  score tool name token operation for this module.
+# - _score_tool_name_candidate: Implements the  score tool name candidate operation for this module.
+# - suggest_tool_name: Implements the suggest tool name operation for this module.
+# - filter_local_payload: Filters local payload for this module.
+# - build_all_tool_catalog: Builds all tool catalog for this module.
+# - derive_active_tool_runtime: Implements the derive active tool runtime operation for this module.
+# ====================================================================================================
+
 import copy
 from difflib import SequenceMatcher
 import re

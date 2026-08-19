@@ -12,6 +12,21 @@
 #   - skills/WebFetch/                 -- companion skill to fetch + extract page content
 #   - skills_catalog_builder.py        -- reads skill.md to build the catalog
 #   - webpage_utils.py                 -- HTTP fetch utility (shared)
+# MARK: FUNCTIONS
+# Function inventory:
+# - _record_ddg_success: Implements the  record ddg success operation for this module.
+# - _session_ever_succeeded: Implements the  session ever succeeded operation for this module.
+# - reset_search_session: Implements the reset search session operation for this module.
+# - _strip_html: Implements the  strip html operation for this module.
+# - _decode_ddg_url: Implements the  decode ddg url operation for this module.
+# - _is_ddg_ad: Implements the  is ddg ad operation for this module.
+# - _coerce_bool: Implements the  coerce bool operation for this module.
+# - _classify_result_url: Implements the  classify result url operation for this module.
+# - _result_kind_priority: Implements the  result kind priority operation for this module.
+# - _annotate_results: Implements the  annotate results operation for this module.
+# - _extract_ddg_results: Implements the  extract ddg results operation for this module.
+# - search_web: Implements the search web operation for this module.
+# - search_web_text: Implements the search web text operation for this module.
 # ====================================================================================================
 
 

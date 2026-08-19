@@ -19,6 +19,43 @@
 #   - app/ingest.py        -- background RSS polling scheduler
 #   - app/feed_manager.py  -- feed JSON configuration file I/O
 #   - app/config.py        -- cfg (host, port, data_dir)
+# MARK: FUNCTIONS
+# Primary types: FeedCreate, FeedUpdate, EntryContentBody, SentenceToggleBody, AgeSettingsBody.
+# Function inventory:
+# - _warm_feed_domains: Implements the  warm feed domains operation for this module.
+# - _lifespan: Implements the  lifespan operation for this module.
+# - api_status: Implements the api status operation for this module.
+# - _http_exception_handler: Implements the  http exception handler operation for this module.
+# - _generic_exception_handler: Implements the  generic exception handler operation for this module.
+# - api_list_feeds: Implements the api list feeds operation for this module.
+# - api_add_feed: Implements the api add feed operation for this module.
+# - api_remove_feed: Implements the api remove feed operation for this module.
+# - api_update_feed: Implements the api update feed operation for this module.
+# - api_list_domains: Implements the api list domains operation for this module.
+# - api_create_domain: Implements the api create domain operation for this module.
+# - api_delete_domain: Implements the api delete domain operation for this module.
+# - api_rename_domain: Implements the api rename domain operation for this module.
+# - api_set_domain_enabled: Implements the api set domain enabled operation for this module.
+# - api_get_entries: Implements the api get entries operation for this module.
+# - api_get_entry: Implements the api get entry operation for this module.
+# - api_get_entry_sentences: Implements the api get entry sentences operation for this module.
+# - api_get_sentence: Implements the api get sentence operation for this module.
+# - api_delete_entry: Implements the api delete entry operation for this module.
+# - api_update_entry_content: Implements the api update entry content operation for this module.
+# - api_set_sentence_deleted: Implements the api set sentence deleted operation for this module.
+# - api_delete_entries: Implements the api delete entries operation for this module.
+# - api_backfill_sentence_index: Implements the api backfill sentence index operation for this module.
+# - api_rebuild_sentence_index: Implements the api rebuild sentence index operation for this module.
+# - api_bulk_delete_entries: Implements the api bulk delete entries operation for this module.
+# - api_search: Implements the api search operation for this module.
+# - api_semantic_search: Implements the api semantic search operation for this module.
+# - api_recent: Implements the api recent operation for this module.
+# - api_update_feed_rate: Implements the api update feed rate operation for this module.
+# - api_trigger_feed: Implements the api trigger feed operation for this module.
+# - api_get_age_settings: Implements the api get age settings operation for this module.
+# - api_set_age_settings: Implements the api set age settings operation for this module.
+# - api_feed_counts: Implements the api feed counts operation for this module.
+# - api_purge_outside_calendar: Implements the api purge outside calendar operation for this module.
 # ====================================================================================================
 from contextlib import asynccontextmanager
 import os
@@ -58,7 +95,6 @@ from app.database import (
     init_db,
     list_domains,
     rebuild_sentence_index,
-    rename_domain_db,
     search_entries,
     search_entries_detailed,
     set_sentence_deleted,
@@ -74,7 +110,7 @@ from app.feed_manager import (
     list_feed_domains,
     load_feeds,
     remove_feed,
-    rename_domain_feeds,
+    rename_domain,
     set_domain_enabled,
     sync_domain_spec,
     update_feed,
@@ -250,8 +286,12 @@ def api_delete_domain(domain: str):
 @app.post("/api/domains/{domain}/rename", tags=["domains"])
 def api_rename_domain(domain: str, new_name: str):
     """Rename a domain."""
-    rename_domain_feeds(domain, new_name)
-    rename_domain_db(domain, new_name)
+    try:
+        renamed = rename_domain(domain, new_name)
+    except (FileExistsError, ValueError) as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    if not renamed:
+        raise HTTPException(status_code=404, detail="Domain not found")
     invalidate_feed_overview()
     schedule_feeds()
     return {"renamed": new_name}

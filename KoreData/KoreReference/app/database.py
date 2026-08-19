@@ -15,6 +15,52 @@
 #   - app/importers/kiwix.py         -- bulk article import
 #   - CommonCode/compress.py         -- body storage compression
 #   - CommonCode/dbutil.py           -- fts_build_query
+# MARK: FUNCTIONS
+# Function inventory:
+# - _body_for_fts: Implements the  body for fts operation for this module.
+# - _now: Implements the  now operation for this module.
+# - _normalize_heading_title: Implements the  normalize heading title operation for this module.
+# - _iter_body_blocks: Implements the  iter body blocks operation for this module.
+# - _block_is_table: Implements the  block is table operation for this module.
+# - _block_is_list: Implements the  block is list operation for this module.
+# - _iter_indexable_body_spans: Implements the  iter indexable body spans operation for this module.
+# - _index_article_sentences: Implements the  index article sentences operation for this module.
+# - _backfill_article_sentences: Implements the  backfill article sentences operation for this module.
+# - _sentence_index_needs_rebuild: Implements the  sentence index needs rebuild operation for this module.
+# - _sentence_schema_needs_normalization: Implements the  sentence schema needs normalization operation for this module.
+# - _normalize_sentence_schema: Implements the  normalize sentence schema operation for this module.
+# - _sentence_locator: Implements the  sentence locator operation for this module.
+# - get_db_path: Returns db path for this module.
+# - db_connection: Implements the db connection operation for this module.
+# - _close_connection: Implements the  close connection operation for this module.
+# - init_db: Implements the init db operation for this module.
+# - _word_count: Implements the  word count operation for this module.
+# - _parse_json_list: Implements the  parse json list operation for this module.
+# - body_to_sections: Implements the body to sections operation for this module.
+# - _row_to_dict: Implements the  row to dict operation for this module.
+# - _extract_sentence_text: Implements the  extract sentence text operation for this module.
+# - get_article_by_title: Returns article by title for this module.
+# - get_article_by_id: Returns article by id for this module.
+# - resolve_article: Resolves article for this module.
+# - list_articles: Lists articles for this module.
+# - upsert_article: Implements the upsert article operation for this module.
+# - _upsert: Implements the  upsert operation for this module.
+# - delete_article: Deletes article for this module.
+# - delete_all_articles: Deletes all articles for this module.
+# - get_random_article: Returns random article for this module.
+# - resolve_links: Resolves links for this module.
+# - get_unresolved_link_titles: Returns unresolved link titles for this module.
+# - get_links: Returns links for this module.
+# - get_backlinks: Returns backlinks for this module.
+# - get_article_sentences: Returns article sentences for this module.
+# - get_sentence: Returns sentence for this module.
+# - backfill_sentence_index: Implements the backfill sentence index operation for this module.
+# - rebuild_sentence_index: Implements the rebuild sentence index operation for this module.
+# - get_sentences_for_chroma: Returns sentences for chroma for this module.
+# - mark_sentences_chroma_indexed: Marks sentences chroma indexed for this module.
+# - reset_sentence_chroma_index: Implements the reset sentence chroma index operation for this module.
+# - search_articles: Implements the search articles operation for this module.
+# - get_status: Returns status for this module.
 # ====================================================================================================
 import json
 import re

@@ -1,3 +1,17 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# main module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Function inventory:
+# - _listening_pids_on_port: Implements the  listening pids on port operation for this module.
+# - _terminate_pid: Implements the  terminate pid operation for this module.
+# - _clear_stale_gateway_listener: Implements the  clear stale gateway listener operation for this module.
+# - _print_banner: Implements the  print banner operation for this module.
+# - row: Implements the row operation for this module.
+# ====================================================================================================
+
 import os
 import signal
 import subprocess

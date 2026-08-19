@@ -9,6 +9,9 @@
 # Related modules:
 #   - KoreDataGateway/main.py    -- imports cfg at startup
 #   - KoreDataGateway/app/server.py -- imports cfg and sub-service URLs
+# MARK: FUNCTIONS
+# Function inventory:
+# - load: Loads this module's primary operation.
 # ====================================================================================================
 import os
 

@@ -21,6 +21,26 @@
 #   - testing/test_wrapper.py  -- wraps individual test files for /test execution
 #   - skill_executor.py        -- execute_tool_call
 #   - scratchpad.py            -- scratchpad_save, scratchpad_load
+# MARK: FUNCTIONS
+# Primary types: GuardrailSmokeTests.
+# Function inventory:
+# - setUp: Implements the setUp operation for this module.
+# - tearDown: Implements the tearDown operation for this module.
+# - test_tool_loop_auto_activates_and_executes_known_inactive_tool: Implements the test tool loop auto activates and executes known inactive tool operation for this module.
+# - log: Implements the log operation for this module.
+# - log_file_only: Implements the log file only operation for this module.
+# - log_section: Implements the log section operation for this module.
+# - log_section_file_only: Implements the log section file only operation for this module.
+# - __init__: Implements the   init   operation for this module.
+# - _tool_call: Implements the  tool call operation for this module.
+# - fake_call_llm_chat: Implements the fake call llm chat operation for this module.
+# - fake_execute_tool_call: Implements the fake execute tool call operation for this module.
+# - fake_promote_selected_tools: Implements the fake promote selected tools operation for this module.
+# - fake_runtime_provider: Implements the fake runtime provider operation for this module.
+# - test_tool_loop_suggests_corrected_tool_name_for_invalid_request: Implements the test tool loop suggests corrected tool name for invalid request operation for this module.
+# - test_test_wrapper_fails_single_prompt_on_no_results_output: Implements the test test wrapper fails single prompt on no results output operation for this module.
+# - test_test_wrapper_fails_exchange_on_search_failure_output: Implements the test test wrapper fails exchange on search failure output operation for this module.
+# - test_slash_command_outputs_use_ascii_arrows: Implements the test slash command outputs use ascii arrows operation for this module.
 # ====================================================================================================
 import json
 import os

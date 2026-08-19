@@ -1,3 +1,45 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# main module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Function inventory:
+# - _config: Implements the  config operation for this module.
+# - _urls: Implements the  urls operation for this module.
+# - _db: Implements the  db operation for this module.
+# - _recover_interrupted_runs: Implements the  recover interrupted runs operation for this module.
+# - _http: Implements the  http operation for this module.
+# - _fresh_test_chat: Implements the  fresh test chat operation for this module.
+# - _git_version: Implements the  git version operation for this module.
+# - _suite_path: Implements the  suite path operation for this module.
+# - _run_suite: Implements the  run suite operation for this module.
+# - _live_progress: Implements the  live progress operation for this module.
+# - _format_elapsed: Implements the  format elapsed operation for this module.
+# - _collection_stats: Implements the  collection stats operation for this module.
+# - _start_collection_run: Implements the  start collection run operation for this module.
+# - _finish_collection_run: Implements the  finish collection run operation for this module.
+# - _run_requested_suite: Implements the  run requested suite operation for this module.
+# - _trend_lines: Implements the  trend lines operation for this module.
+# - _trend_point_sort_key: Implements the  trend point sort key operation for this module.
+# - _trend_points_for_all_runs: Implements the  trend points for all runs operation for this module.
+# - _trend_points: Implements the  trend points operation for this module.
+# - _run_unit_checks: Implements the  run unit checks operation for this module.
+# - recover_interrupted_runs: Implements the recover interrupted runs operation for this module.
+# - status: Implements the status operation for this module.
+# - suites: Implements the suites operation for this module.
+# - run_suite: Runs suite for this module.
+# - runs: Implements the runs operation for this module.
+# - trends: Implements the trends operation for this module.
+# - trend_points: Implements the trend points operation for this module.
+# - unit_runs: Implements the unit runs operation for this module.
+# - ui: Implements the ui operation for this module.
+# - test_list_suites: Implements the test list suites operation for this module.
+# - test_run_suite: Implements the test run suite operation for this module.
+# - test_list_runs: Implements the test list runs operation for this module.
+# - test_get_trend: Implements the test get trend operation for this module.
+# ====================================================================================================
+
 from __future__ import annotations
 
 import csv

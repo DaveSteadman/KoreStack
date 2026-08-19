@@ -18,6 +18,21 @@
 #   - app/kc_client.py             -- forwards messages to / polls events from KoreChat
 #   - app/database.py              -- reads/writes routing and dedup records
 #   - app/interfaces/              -- adapter .poll() and .route_reply() methods
+# MARK: FUNCTIONS
+# Function inventory:
+# - get_poll_timing: Returns poll timing for this module.
+# - reset_poll_timing: Implements the reset poll timing operation for this module.
+# - _conversation_name_for: Implements the  conversation name for operation for this module.
+# - _resolve_kc_conversation: Implements the  resolve kc conversation operation for this module.
+# - _forward_message: Implements the  forward message operation for this module.
+# - _poll_inbound: Implements the  poll inbound operation for this module.
+# - _route_outbound_for_conversation: Implements the  route outbound for conversation operation for this module.
+# - _route_outbound_event: Implements the  route outbound event operation for this module.
+# - _drain_outbound_events: Implements the  drain outbound events operation for this module.
+# - _poll_outbound_scheduled: Implements the  poll outbound scheduled operation for this module.
+# - _run: Implements the  run operation for this module.
+# - start: Starts this module's primary operation.
+# - stop: Stops this module's primary operation.
 # ====================================================================================================
 from __future__ import annotations
 
@@ -120,9 +135,10 @@ def _forward_message(iface_row: dict, msg: dict) -> None:
     local_conv = db.conversation_get_by_external_thread(ext_thread_id)
     if local_conv is None:
         local_conv_id = db.conversation_create(
-            interface_id=iface_row["id"],
-            external_thread_id=ext_thread_id,
-            korechat_id=msg.get("subject"),
+            interface_id       = iface_row["id"],
+            external_thread_id = ext_thread_id,
+            korechat_id        = msg.get("subject"),
+            delivery_enabled   = True,
         )
         local_conv = db.conversation_get(local_conv_id)
         assert local_conv is not None

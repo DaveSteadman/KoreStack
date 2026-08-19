@@ -1,3 +1,24 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Standard service logging configuration for the suite. It creates date-scoped, line-capped log
+# files; composes the shared file/console logger hierarchy; and installs one set of unhandled-
+# exception hooks for main and worker threads. Individual services supply only their name and level,
+# ensuring operational logs have a uniform location, format, and retention policy.
+# MARK: FUNCTIONS
+# Primary types: LineCappedFileHandler.
+# Function inventory:
+# - __init__: Implements the   init   operation for this module.
+# - emit: Implements the emit operation for this module.
+# - _trim: Implements the  trim operation for this module.
+# - get_service_log_path: Returns service log path for this module.
+# - make_service_log_config: Implements the make service log config operation for this module.
+# - configure_service_logging: Implements the configure service logging operation for this module.
+# - _install_unhandled_exception_hooks: Implements the  install unhandled exception hooks operation for this module.
+# - log_main_exception: Implements the log main exception operation for this module.
+# - log_thread_exception: Implements the log thread exception operation for this module.
+# ====================================================================================================
+
 from __future__ import annotations
 
 import logging

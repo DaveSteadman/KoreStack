@@ -20,6 +20,34 @@
 # Related modules:
 #   - llm_client.py    -- used for optional LLM-assisted summarisation
 #   - orchestration.py    -- calls build_tool_definitions at runtime; consumes the catalog
+# MARK: FUNCTIONS
+# Function inventory:
+# - _classify_local_skill: Implements the  classify local skill operation for this module.
+# - _workspace_abspath: Implements the  workspace abspath operation for this module.
+# - _load_module_from_path: Implements the  load module from path operation for this module.
+# - _existing_callable_signatures: Implements the  existing callable signatures operation for this module.
+# - parse_catalog_args: Parses catalog args for this module.
+# - find_skill_files: Finds skill files for this module.
+# - summarize_with_llm: Implements the summarize with llm operation for this module.
+# - _parse_param_descriptions: Implements the  parse param descriptions operation for this module.
+# - _parse_triggers: Implements the  parse triggers operation for this module.
+# - _parse_tool_aliases: Implements the  parse tool aliases operation for this module.
+# - _section_body: Implements the  section body operation for this module.
+# - _extract_function_signatures: Implements the  extract function signatures operation for this module.
+# - summarize_locally: Implements the summarize locally operation for this module.
+# - summarize_skill: Implements the summarize skill operation for this module.
+# - to_workspace_relative_path: Implements the to workspace relative path operation for this module.
+# - normalize_summary: Normalizes summary for this module.
+# - build_skills_payload: Builds skills payload for this module.
+# - extract_first_json_object: Extracts first json object for this module.
+# - _rebuild_skills_catalog_if_stale: Implements the  rebuild skills catalog if stale operation for this module.
+# - load_skills_payload: Loads skills payload for this module.
+# - _parse_python_default_literal: Implements the  parse python default literal operation for this module.
+# - _python_type_to_json_schema: Implements the  python type to json schema operation for this module.
+# - _parse_tool_signature: Implements the  parse tool signature operation for this module.
+# - build_tool_definitions: Builds tool definitions for this module.
+# - write_skills_catalog: Writes skills catalog for this module.
+# - main: Starts this module's primary operation.
 # ====================================================================================================
 
 

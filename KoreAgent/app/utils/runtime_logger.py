@@ -9,6 +9,18 @@
 #
 # Related modules:
 #   - main.py  -- creates a SessionLogger instance and logs all orchestration stages through it
+# MARK: FUNCTIONS
+# Primary types: SessionLogger.
+# Function inventory:
+# - __init__: Implements the   init   operation for this module.
+# - close: Implements the close operation for this module.
+# - __enter__: Implements the   enter   operation for this module.
+# - __exit__: Implements the   exit   operation for this module.
+# - log: Implements the log operation for this module.
+# - log_section: Implements the log section operation for this module.
+# - log_file_only: Implements the log file only operation for this module.
+# - log_section_file_only: Implements the log section file only operation for this module.
+# - create_log_file_path: Creates log file path for this module.
 # ====================================================================================================
 
 

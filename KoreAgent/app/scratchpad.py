@@ -25,6 +25,29 @@
 #   - code/skills/Scratchpad/scratchpad_skill.py  -- exposes these functions as tool calls
 #   - code/prompt_tokens.py                       -- resolves {scratchpad:key} in skill args
 #   - code/orchestration.py                       -- injects key names into system prompt
+# MARK: FUNCTIONS
+# Function inventory:
+# - _is_auto_key: Implements the  is auto key operation for this module.
+# - _is_internal_key: Implements the  is internal key operation for this module.
+# - _resolve_session_id: Implements the  resolve session id operation for this module.
+# - _get_session_store: Implements the  get session store operation for this module.
+# - _build_scratchpad_query_system_prompt: Implements the  build scratchpad query system prompt operation for this module.
+# - _looks_like_search_results: Implements the  looks like search results operation for this module.
+# - _query_demands_completeness: Implements the  query demands completeness operation for this module.
+# - _validate_key: Implements the  validate key operation for this module.
+# - scratchpad_save: Implements the scratchpad save operation for this module.
+# - scratchpad_pin: Implements the scratchpad pin operation for this module.
+# - scratchpad_unpin_all: Implements the scratchpad unpin all operation for this module.
+# - scratchpad_load: Implements the scratchpad load operation for this module.
+# - scratchpad_list: Implements the scratchpad list operation for this module.
+# - scratchpad_dump: Implements the scratchpad dump operation for this module.
+# - scratchpad_delete: Implements the scratchpad delete operation for this module.
+# - scratchpad_search: Implements the scratchpad search operation for this module.
+# - scratchpad_peek: Implements the scratchpad peek operation for this module.
+# - scratchpad_query: Implements the scratchpad query operation for this module.
+# - scratchpad_clear: Implements the scratchpad clear operation for this module.
+# - get_store: Returns store for this module.
+# - get_key_names: Returns key names for this module.
 # ====================================================================================================
 
 

@@ -1,4 +1,15 @@
-"""Adaptive per-request context-window selection."""
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Adaptive context-window sizing for one assembled model request. The estimator considers message
+# content and tool schemas, then selects the smallest usable power-of-two window without exceeding
+# the configured model limit. Keeping this policy separate from prompt construction makes token
+# budgeting deterministic and independently testable.
+# MARK: FUNCTIONS
+# Function inventory:
+# - estimate_payload_tokens: Implements the estimate payload tokens operation for this module.
+# - choose_context_window: Implements the choose context window operation for this module.
+# ====================================================================================================
 
 from __future__ import annotations
 

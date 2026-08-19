@@ -5,6 +5,24 @@
 # The app module now acts primarily as composition glue: shared state lives in
 # api/state.py, log fan-out helpers in api/log_state.py, and auxiliary route
 # groups in dedicated route modules.
+# MARK: FUNCTIONS
+# Function inventory:
+# - _get_korechat_base_url: Implements the  get korechat base url operation for this module.
+# - get_completions: Returns completions for this module.
+# - settings_sandbox_get: Implements the settings sandbox get operation for this module.
+# - settings_sandbox_post: Implements the settings sandbox post operation for this module.
+# - settings_webskills_get: Implements the settings webskills get operation for this module.
+# - settings_webskills_post: Implements the settings webskills post operation for this module.
+# - settings_llmdirect_get: Implements the settings llmdirect get operation for this module.
+# - settings_llmdirect_post: Implements the settings llmdirect post operation for this module.
+# - push_log_line: Implements the push log line operation for this module.
+# - _kc_get: Implements the  kc get operation for this module.
+# - _kc_patch: Implements the  kc patch operation for this module.
+# - _kc_delete: Implements the  kc delete operation for this module.
+# - _kc_conversation_id_for_session: Implements the  kc conversation id for session operation for this module.
+# - _kc_get_conversation_for_session: Implements the  kc get conversation for session operation for this module.
+# - _delete_session_state: Implements the  delete session state operation for this module.
+# - clear_conversation_workspace: Clears conversation workspace for this module.
 # ====================================================================================================
 
 import sys
@@ -347,6 +365,10 @@ register_session_routes(
     get_session_turns=_session_service.get_session_turns,
     get_session_conversation=_session_service.kc_get_conversation_for_session,
     ensure_session_conversation=_session_service.kc_ensure_conversation,
+    kc_submit_prompt=_session_service.kc_submit_prompt,
+    kc_get_messages=lambda conversation_id: _session_service.kc_get(
+        f"/conversations/{conversation_id}/messages?limit=1000"
+    ) or [],
     kc_set_session_name=_session_service.kc_set_session_name,
     get_llm_direct_enabled=get_llm_direct_enabled,
     call_llm_chat=call_llm_chat,

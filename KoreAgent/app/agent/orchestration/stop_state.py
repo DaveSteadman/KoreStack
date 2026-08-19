@@ -1,4 +1,18 @@
-"""Shared stop-state management for orchestration runs."""
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Thread-safe cancellation coordination for orchestration. A process-wide stop state records the
+# reason, while per-run events let active workers observe cancellation promptly. Registration is
+# explicit so run lifecycle owners control exactly which execution threads receive a stop request.
+# MARK: FUNCTIONS
+# Function inventory:
+# - request_stop: Implements the request stop operation for this module.
+# - is_stop_requested: Checks whether stop requested is true.
+# - get_stop_reason: Returns stop reason for this module.
+# - clear_stop: Clears stop for this module.
+# - register_run_stop_event: Registers run stop event for this module.
+# - unregister_run_stop_event: Implements the unregister run stop event operation for this module.
+# ====================================================================================================
 
 import threading
 

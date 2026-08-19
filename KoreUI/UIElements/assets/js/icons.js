@@ -13,27 +13,27 @@ export const ICON_SETS = SVG_ICON_SETS;
 
 // One icon file per app and per KoreDocs file type.
 export const ICON_FILES = Object.freeze({
-  korestack: 'layer-group-svgrepo-com',
-  koreagent: 'circuit-svgrepo-com',
-  koredata: 'database-svgrepo-com',
-  korefeed: 'square-rss-svgrepo-com',
-  korelibrary: 'book-user-svgrepo-com',
+  korestack:     'layer-group-svgrepo-com',
+  koreagent:     'circuit-svgrepo-com',
+  koredata:      'database-svgrepo-com',
+  korefeed:      'square-rss-svgrepo-com',
+  korelibrary:   'book-user-svgrepo-com',
   korereference: 'graduation-hat-alt-1-svgrepo-com',
-  korerag: 'truck-svgrepo-com',
-  korescrape: 'dna-svgrepo-com',
-  koregraph: 'chart-network-svgrepo-com',
-  koredocs: 'pen-square-svgrepo-com',
-  korecode: 'square-terminal-svgrepo-com',
-  korecomms: 'send-alt-1-svgrepo-com',
-  korechat: 'message-circle-chat-svgrepo-com',
-  koreliveweb: 'globe-alt-outline-svgrepo-com',
-  koretest: 'microscope-svgrepo-com',
-  korecron: 'alarm-clock-alt-svgrepo-com',
-  koredoc: 'text-size-svgrepo-com',
-  textedit: 'text-svgrepo-com',
-  koresheet: 'table-list-alt-svgrepo-com',
-  korediag: 'draw-square-svgrepo-com',
-  korefile: 'class-16-svgrepo-com',
+  korerag:       'truck-svgrepo-com',
+  korescrape:    'dna-svgrepo-com',
+  koregraph:     'chart-network-svgrepo-com',
+  koredocs:      'pen-square-svgrepo-com',
+  korecode:      'square-terminal-svgrepo-com',
+  korecomms:     'send-alt-1-svgrepo-com',
+  korechat:      'message-circle-chat-svgrepo-com',
+  koreliveweb:   'globe-alt-outline-svgrepo-com',
+  koretest:      'microscope-svgrepo-com',
+  korecron:      'alarm-clock-alt-svgrepo-com',
+  koredoc:       'text-size-svgrepo-com',
+  textedit:      'text-svgrepo-com',
+  koresheet:     'table-list-alt-svgrepo-com',
+  korediag:      'draw-square-svgrepo-com',
+  korefile:      'class-16-svgrepo-com',
 });
 
 function makePackIcon(iconName) {
@@ -46,22 +46,22 @@ function makePackIcon(iconName) {
   });
 }
 
-export const KORESTACK_ICON = makePackIcon(ICON_FILES.korestack);
-export const KOREAGENT_ICON = makePackIcon(ICON_FILES.koreagent);
-export const KOREDATA_ICON = makePackIcon(ICON_FILES.koredata);
-export const KOREFEED_ICON = makePackIcon(ICON_FILES.korefeed);
-export const KORELIBRARY_ICON = makePackIcon(ICON_FILES.korelibrary);
+export const KORESTACK_ICON     = makePackIcon(ICON_FILES.korestack);
+export const KOREAGENT_ICON     = makePackIcon(ICON_FILES.koreagent);
+export const KOREDATA_ICON      = makePackIcon(ICON_FILES.koredata);
+export const KOREFEED_ICON      = makePackIcon(ICON_FILES.korefeed);
+export const KORELIBRARY_ICON   = makePackIcon(ICON_FILES.korelibrary);
 export const KOREREFERENCE_ICON = makePackIcon(ICON_FILES.korereference);
-export const KORERAG_ICON = makePackIcon(ICON_FILES.korerag);
-export const KORESCRAPE_ICON = makePackIcon(ICON_FILES.korescrape);
-export const KOREGRAPH_ICON = makePackIcon(ICON_FILES.koregraph);
-export const KOREDOCS_ICON = makePackIcon(ICON_FILES.koredocs);
-export const KORECODE_ICON = makePackIcon(ICON_FILES.korecode);
-export const KORECOMMS_ICON = makePackIcon(ICON_FILES.korecomms);
-export const KORECHAT_ICON = makePackIcon(ICON_FILES.korechat);
-export const KORELIVEWEB_ICON = makePackIcon(ICON_FILES.koreliveweb);
-export const KORETEST_ICON = makePackIcon(ICON_FILES.koretest);
-export const KORECRON_ICON = makePackIcon(ICON_FILES.korecron);
+export const KORERAG_ICON       = makePackIcon(ICON_FILES.korerag);
+export const KORESCRAPE_ICON    = makePackIcon(ICON_FILES.korescrape);
+export const KOREGRAPH_ICON     = makePackIcon(ICON_FILES.koregraph);
+export const KOREDOCS_ICON      = makePackIcon(ICON_FILES.koredocs);
+export const KORECODE_ICON      = makePackIcon(ICON_FILES.korecode);
+export const KORECOMMS_ICON     = makePackIcon(ICON_FILES.korecomms);
+export const KORECHAT_ICON      = makePackIcon(ICON_FILES.korechat);
+export const KORELIVEWEB_ICON   = makePackIcon(ICON_FILES.koreliveweb);
+export const KORETEST_ICON      = makePackIcon(ICON_FILES.koretest);
+export const KORECRON_ICON      = makePackIcon(ICON_FILES.korecron);
 
 export const ACTION_ICONS = {
   start: makePackIcon('arrow-right-svgrepo-com'),
@@ -69,34 +69,34 @@ export const ACTION_ICONS = {
   restart: makePackIcon('refresh-cw-alt-svgrepo-com'),
 };
 
-export const KOREDOC_FILE_ICON = makePackIcon(ICON_FILES.koredoc);
-export const TEXTEDIT_FILE_ICON = makePackIcon(ICON_FILES.textedit);
+export const KOREDOC_FILE_ICON   = makePackIcon(ICON_FILES.koredoc);
+export const TEXTEDIT_FILE_ICON  = makePackIcon(ICON_FILES.textedit);
 export const KORESHEET_FILE_ICON = makePackIcon(ICON_FILES.koresheet);
-export const korediag_FILE_ICON = makePackIcon(ICON_FILES.korediag);
-export const KOREFILE_ICON = makePackIcon(ICON_FILES.korefile);
+export const korediag_FILE_ICON  = makePackIcon(ICON_FILES.korediag);
+export const KOREFILE_ICON       = makePackIcon(ICON_FILES.korefile);
 
 export const SUITE_ICONS = {
-  korestack: KORESTACK_ICON,
-  koreagent: KOREAGENT_ICON,
-  koredata: KOREDATA_ICON,
-  korefeed: KOREFEED_ICON,
-  korelibrary: KORELIBRARY_ICON,
+  korestack:     KORESTACK_ICON,
+  koreagent:     KOREAGENT_ICON,
+  koredata:      KOREDATA_ICON,
+  korefeed:      KOREFEED_ICON,
+  korelibrary:   KORELIBRARY_ICON,
   korereference: KOREREFERENCE_ICON,
-  korerag: KORERAG_ICON,
-  korescrape: KORESCRAPE_ICON,
-  koregraph: KOREGRAPH_ICON,
-  koredocs: KOREDOCS_ICON,
-  korecode: KORECODE_ICON,
-  korecomms: KORECOMMS_ICON,
-  korechat: KORECHAT_ICON,
-  koreliveweb: KORELIVEWEB_ICON,
-  koretest: KORETEST_ICON,
-  korecron: KORECRON_ICON,
-  koredoc: KOREDOC_FILE_ICON,
-  textedit: TEXTEDIT_FILE_ICON,
-  koresheet: KORESHEET_FILE_ICON,
-  korediag: korediag_FILE_ICON,
-  korefile: KOREFILE_ICON,
+  korerag:       KORERAG_ICON,
+  korescrape:    KORESCRAPE_ICON,
+  koregraph:     KOREGRAPH_ICON,
+  koredocs:      KOREDOCS_ICON,
+  korecode:      KORECODE_ICON,
+  korecomms:     KORECOMMS_ICON,
+  korechat:      KORECHAT_ICON,
+  koreliveweb:   KORELIVEWEB_ICON,
+  koretest:      KORETEST_ICON,
+  korecron:      KORECRON_ICON,
+  koredoc:       KOREDOC_FILE_ICON,
+  textedit:      TEXTEDIT_FILE_ICON,
+  koresheet:     KORESHEET_FILE_ICON,
+  korediag:      korediag_FILE_ICON,
+  korefile:      KOREFILE_ICON,
 };
 
 /**

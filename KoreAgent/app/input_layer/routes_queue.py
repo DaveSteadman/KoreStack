@@ -1,3 +1,14 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# routes queue module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Function inventory:
+# - register_queue_routes: Registers queue routes for this module.
+# - get_queue: Returns queue for this module.
+# ====================================================================================================
+
 """Queue observability route for interactive KoreAgent work."""
 
 

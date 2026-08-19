@@ -19,6 +19,15 @@
 #   - KoreAgent.orchestration  -- owns get_sandbox_enabled / set_sandbox_enabled
 #   - skill_executor.py         -- dynamically imports and calls functions from this module
 #   - skills_catalog_builder.py -- reads skill.md to build the catalog entry for this skill
+# MARK: FUNCTIONS
+# Function inventory:
+# - _make_safe_import: Implements the  make safe import operation for this module.
+# - _safe_import: Implements the  safe import operation for this module.
+# - _make_restricted_globals: Implements the  make restricted globals operation for this module.
+# - _no_open: Implements the  no open operation for this module.
+# - _make_unrestricted_globals: Implements the  make unrestricted globals operation for this module.
+# - python_execute: Implements the python execute operation for this module.
+# - _run: Implements the  run operation for this module.
 # ====================================================================================================
 
 

@@ -13,6 +13,23 @@
 #   - app/importers/shared.py  -- HTML table extraction and noise removal
 #   - app/database.py          -- upsert_article for storing each crawled article
 #   - app/server.py            -- POST /api/import/kiwix triggers this importer
+# MARK: FUNCTIONS
+# Function inventory:
+# - _http_client: Implements the  http client operation for this module.
+# - _is_excluded_wiki_title: Implements the  is excluded wiki title operation for this module.
+# - parse_seed_url: Parses seed url for this module.
+# - article_url: Implements the article url operation for this module.
+# - suggest_titles: Implements the suggest titles operation for this module.
+# - _resolve_href: Implements the  resolve href operation for this module.
+# - _redirect_target_from_location: Implements the  redirect target from location operation for this module.
+# - parse_kiwix_article: Parses kiwix article for this module.
+# - import_one: Implements the import one operation for this module.
+# - _flush_semantic_sync: Implements the  flush semantic sync operation for this module.
+# - run_kiwix_import: Runs kiwix import for this module.
+# - run_kiwix_backfill: Runs kiwix backfill for this module.
+# - run_kiwix_crawl: Runs kiwix crawl for this module.
+# - _pace: Implements the  pace operation for this module.
+# - _flush_periodically: Implements the  flush periodically operation for this module.
 # ====================================================================================================
 from collections import deque
 from typing import Optional

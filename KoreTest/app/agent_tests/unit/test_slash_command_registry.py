@@ -1,3 +1,15 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# test slash command registry module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Primary types: SlashCommandRegistryTests.
+# Function inventory:
+# - test_retired_commands_are_not_registered: Implements the test retired commands are not registered operation for this module.
+# - test_chat_is_canonical_and_session_remains_a_compatibility_alias: Implements the test chat is canonical and session remains a compatibility alias operation for this module.
+# ====================================================================================================
+
 from __future__ import annotations
 
 import unittest

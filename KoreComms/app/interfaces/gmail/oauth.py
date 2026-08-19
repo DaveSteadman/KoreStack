@@ -11,6 +11,10 @@
 #   - app/server.py                      -- /connections/{id}/gmail-authorize and /gmail-callback
 #   - app/interfaces/gmail/adapter.py    -- uses the stored refresh token for API polling
 #   - app/crypto.py                      -- refresh token is stored encrypted in the database
+# MARK: FUNCTIONS
+# Function inventory:
+# - build_auth_url: Builds auth url for this module.
+# - exchange_code: Implements the exchange code operation for this module.
 # ====================================================================================================
 from __future__ import annotations
 

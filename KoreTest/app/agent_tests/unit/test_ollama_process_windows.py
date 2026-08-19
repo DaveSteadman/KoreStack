@@ -1,3 +1,17 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# test ollama process windows module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Primary types: OllamaProcessWindowsTests.
+# Function inventory:
+# - test_server_start_hides_its_console_window: Implements the test server start hides its console window operation for this module.
+# - test_status_probe_prefers_http_api: Implements the test status probe prefers http api operation for this module.
+# - test_passive_model_listing_does_not_autostart: Implements the test passive model listing does not autostart operation for this module.
+# - test_prompt_call_does_not_autostart_by_default: Implements the test prompt call does not autostart by default operation for this module.
+# ====================================================================================================
+
 from __future__ import annotations
 
 import subprocess

@@ -1,3 +1,14 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# history module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Function inventory:
+# - row_outcome: Implements the row outcome operation for this module.
+# - result_counts: Implements the result counts operation for this module.
+# ====================================================================================================
+
 """Result-history helpers owned by KoreTest."""
 from pathlib import Path
 import re

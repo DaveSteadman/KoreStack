@@ -13,6 +13,10 @@
 #   - app/ingest.py       -- background RSS polling scheduler
 #   - app/feed_manager.py -- JSON feed configuration file I/O
 #   - CommonCode/         -- shared logutil, config, compress
+# MARK: FUNCTIONS
+# Function inventory:
+# - _print_status: Implements the  print status operation for this module.
+# - row: Implements the row operation for this module.
 # ====================================================================================================
 import sys
 import logging

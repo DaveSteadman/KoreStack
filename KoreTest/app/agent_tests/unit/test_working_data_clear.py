@@ -2,6 +2,11 @@
 # MARK: OVERVIEW
 # ====================================================================================================
 # Regression tests for session-scoped bulk scratchpad and dataset clearing.
+# MARK: FUNCTIONS
+# Primary types: WorkingDataClearTests.
+# Function inventory:
+# - test_scratchpad_clear_removes_every_key_in_the_session: Implements the test scratchpad clear removes every key in the session operation for this module.
+# - test_dataset_clear_removes_runtime_and_spillover_datasets: Implements the test dataset clear removes runtime and spillover datasets operation for this module.
 # ====================================================================================================
 
 import sys

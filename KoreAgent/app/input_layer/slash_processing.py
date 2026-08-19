@@ -2,6 +2,10 @@
 # MARK: OVERVIEW
 # ====================================================================================================
 # Shared slash-command dispatch for every Agent prompt source.
+# MARK: FUNCTIONS
+# Function inventory:
+# - process_slash_prompt: Implements the process slash prompt operation for this module.
+# - _output: Implements the  output operation for this module.
 # ====================================================================================================
 from input_layer.slash_command_context import SlashCommandContext
 from input_layer.slash_commands import handle as handle_slash

@@ -1,3 +1,15 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# gateway reference module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Function inventory:
+# - _service_not_ready_error: Implements the  service not ready error operation for this module.
+# - get_reference_article: Returns reference article for this module.
+# - get_reference_sentence: Returns reference sentence for this module.
+# ====================================================================================================
+
 from __future__ import annotations
 
 from urllib.parse import quote

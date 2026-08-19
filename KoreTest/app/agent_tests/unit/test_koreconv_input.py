@@ -1,3 +1,15 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# test koreconv input module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Primary types: KoreConvInputTests.
+# Function inventory:
+# - test_latest_message_uses_timestamp_instead_of_response_list_position: Implements the test latest message uses timestamp instead of response list position operation for this module.
+# - test_event_prompt_label_uses_the_newest_inbound_message: Implements the test event prompt label uses the newest inbound message operation for this module.
+# ====================================================================================================
+
 from __future__ import annotations
 
 import sys

@@ -14,6 +14,9 @@ from __future__ import annotations
 #
 # This file deliberately does not expose CRUD helpers.  It exists to keep schema
 # evolution separate from runtime read/write behaviour.
+# MARK: FUNCTIONS
+# Function inventory:
+# - init_db: Implements the init db operation for this module.
 # ====================================================================================================
 
 import json

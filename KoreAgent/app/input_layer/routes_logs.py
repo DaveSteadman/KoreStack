@@ -14,6 +14,15 @@
 #
 # Related modules:
 #   - input_layer/server.py  -- registers this group; provides push_log_line and subscriber lists
+# MARK: FUNCTIONS
+# Function inventory:
+# - register_log_routes: Registers log routes for this module.
+# - list_logs: Lists logs for this module.
+# - get_latest_log: Returns latest log for this module.
+# - get_log_file: Returns log file for this module.
+# - stream_logs: Implements the stream logs operation for this module.
+# - _generate: Implements the  generate operation for this module.
+# - stream_log_file: Implements the stream log file operation for this module.
 # ====================================================================================================
 import queue
 import time

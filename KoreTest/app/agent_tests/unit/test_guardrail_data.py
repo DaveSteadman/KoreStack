@@ -21,6 +21,40 @@
 #   - testing/test_wrapper.py  -- wraps individual test files for /test execution
 #   - skill_executor.py        -- execute_tool_call
 #   - scratchpad.py            -- scratchpad_save, scratchpad_load
+# MARK: FUNCTIONS
+# Primary types: GuardrailDataTests.
+# Function inventory:
+# - setUp: Implements the setUp operation for this module.
+# - tearDown: Implements the tearDown operation for this module.
+# - test_load_session_restores_datasets_from_korechat_payload: Implements the test load session restores datasets from korechat payload operation for this module.
+# - test_save_session_promotes_named_items_and_persists_background_context: Implements the test save session promotes named items and persists background context operation for this module.
+# - test_koreconv_prompt_renders_datasets_separately: Implements the test koreconv prompt renders datasets separately operation for this module.
+# - test_koreconv_event_restores_datasets_before_orchestration: Implements the test koreconv event restores datasets before orchestration operation for this module.
+# - __enter__: Implements the   enter   operation for this module.
+# - __exit__: Implements the   exit   operation for this module.
+# - __init__: Implements the   init   operation for this module.
+# - get_turns: Returns turns for this module.
+# - fake_orchestrate_prompt: Implements the fake orchestrate prompt operation for this module.
+# - test_background_context_round_trip_is_versioned: Implements the test background context round trip is versioned operation for this module.
+# - test_koreconv_event_marks_failed_when_outbound_write_fails: Implements the test koreconv event marks failed when outbound write fails operation for this module.
+# - fake_http_post: Implements the fake http post operation for this module.
+# - test_clone_conversation_resets_token_estimate_and_recomputes_turn_count: Implements the test clone conversation resets token estimate and recomputes turn count operation for this module.
+# - fake_post: Implements the fake post operation for this module.
+# - fake_get: Implements the fake get operation for this module.
+# - test_delete_session_state_deletes_korechat_record: Implements the test delete session state deletes korechat record operation for this module.
+# - test_dataset_rename_preserves_dataset_id: Implements the test dataset rename preserves dataset id operation for this module.
+# - test_dataset_drop_where_forks_by_default: Implements the test dataset drop where forks by default operation for this module.
+# - test_dataset_filter_uses_projected_records: Implements the test dataset filter uses projected records operation for this module.
+# - fake_call_llm_chat: Implements the fake call llm chat operation for this module.
+# - test_dataset_persistence_round_trip_handles_spillover: Implements the test dataset persistence round trip handles spillover operation for this module.
+# - test_dataset_reports_missing_spillover_row: Implements the test dataset reports missing spillover row operation for this module.
+# - test_dataset_get_returns_paged_envelope: Implements the test dataset get returns paged envelope operation for this module.
+# - test_dataset_write_koredoc_writes_real_dataset_rows: Implements the test dataset write koredoc writes real dataset rows operation for this module.
+# - test_file_write_strips_legacy_koredocs_prefix_to_datauser_root: Implements the test file write strips legacy koredocs prefix to datauser root operation for this module.
+# - test_koredocs_korefile_migrates_legacy_db_into_filesystem_root: Implements the test koredocs korefile migrates legacy db into filesystem root operation for this module.
+# - test_dataset_expand_full_text_creates_enriched_dataset: Implements the test dataset expand full text creates enriched dataset operation for this module.
+# - fake_fetch: Implements the fake fetch operation for this module.
+# - test_file_write_blocks_suspicious_placeholder_koredoc_content: Implements the test file write blocks suspicious placeholder koredoc content operation for this module.
 # ====================================================================================================
 import json
 import os

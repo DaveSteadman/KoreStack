@@ -30,6 +30,55 @@
 # Related modules:
 #   - app/config.py     -- cfg (host, port, data_dir)
 #   - app/database.py   -- all DB operations
+# MARK: FUNCTIONS
+# Primary types: VocabCreate, VocabRename, VocabMergeIn, ConnectionUpsert, ConnectionPatch, ConnectionKey, ConnectionByName, CsvImportBody, ProcessingRunBody.
+# Function inventory:
+# - _lifespan: Implements the  lifespan operation for this module.
+# - _request_ui_prefix: Implements the  request ui prefix operation for this module.
+# - graph_connection_search_vocab: Implements the graph connection search vocab operation for this module.
+# - graph_connection_expand_concept: Implements the graph connection expand concept operation for this module.
+# - graph_connection_expand_concept_by_term: Implements the graph connection expand concept by term operation for this module.
+# - graph_connection_create: Implements the graph connection create operation for this module.
+# - graph_connection_list: Implements the graph connection list operation for this module.
+# - graph_connection_delete: Implements the graph connection delete operation for this module.
+# - graph_connection_create_many: Implements the graph connection create many operation for this module.
+# - serve_local_static_asset: Serves local static asset for this module.
+# - route_status: Implements the route status operation for this module.
+# - route_root: Implements the route root operation for this module.
+# - route_ui: Implements the route ui operation for this module.
+# - route_ui_relations_redirect: Implements the route ui relations redirect operation for this module.
+# - route_ui_connections: Implements the route ui connections operation for this module.
+# - route_ui_graph: Implements the route ui graph operation for this module.
+# - route_ui_vocab: Implements the route ui vocab operation for this module.
+# - _get_csv_dir: Implements the  get csv dir operation for this module.
+# - _resolve_csv_path: Implements the  resolve csv path operation for this module.
+# - api_list_connections: Implements the api list connections operation for this module.
+# - api_upsert_connection: Implements the api upsert connection operation for this module.
+# - api_patch_connection: Implements the api patch connection operation for this module.
+# - api_delete_connection: Implements the api delete connection operation for this module.
+# - api_upsert_connection_by_name: Implements the api upsert connection by name operation for this module.
+# - api_batch_upsert_connection_by_name: Implements the api batch upsert connection by name operation for this module.
+# - api_csv_export: Implements the api csv export operation for this module.
+# - api_csv_import: Implements the api csv import operation for this module.
+# - api_search: Implements the api search operation for this module.
+# - api_expand: Implements the api expand operation for this module.
+# - api_expand_by_term: Implements the api expand by term operation for this module.
+# - api_list_vocab: Implements the api list vocab operation for this module.
+# - api_add_vocab: Implements the api add vocab operation for this module.
+# - api_rename_vocab: Implements the api rename vocab operation for this module.
+# - api_get_vocab: Implements the api get vocab operation for this module.
+# - api_delete_vocab: Implements the api delete vocab operation for this module.
+# - api_delete_concept: Implements the api delete concept operation for this module.
+# - api_merge_vocab: Implements the api merge vocab operation for this module.
+# - api_unmerge_vocab: Implements the api unmerge vocab operation for this module.
+# - _get_scripts_dir: Implements the  get scripts dir operation for this module.
+# - _list_processing_scripts: Implements the  list processing scripts operation for this module.
+# - route_ui_processing: Implements the route ui processing operation for this module.
+# - api_processing_scripts: Implements the api processing scripts operation for this module.
+# - api_processing_run: Implements the api processing run operation for this module.
+# - _monitor: Implements the  monitor operation for this module.
+# - api_processing_log: Implements the api processing log operation for this module.
+# - api_processing_stop: Implements the api processing stop operation for this module.
 # ====================================================================================================
 import logging
 import os

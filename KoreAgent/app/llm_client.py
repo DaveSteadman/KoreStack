@@ -19,6 +19,13 @@
 #   - orchestration.py          -- uses call_llm_chat for the tool-calling pipeline
 #   - skills_catalog_builder.py -- uses call_ollama for optional LLM skill summarisation
 #   - utils/system_check.py     -- uses model listing and call_ollama for diagnostics
+# MARK: FUNCTIONS
+# Function inventory:
+# - get_ollama_ps_rows: Returns ollama ps rows for this module.
+# - ensure_ollama_running: Ensures ollama running for this module.
+# - list_ollama_models: Lists ollama models for this module.
+# - format_running_model_report: Formats running model report for this module.
+# - call_llm_chat: Implements the call llm chat operation for this module.
 # ====================================================================================================
 
 

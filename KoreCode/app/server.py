@@ -1,3 +1,81 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# server module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Primary types: NoCacheMiddleware.
+# Function inventory:
+# - _workspace_root: Implements the  workspace root operation for this module.
+# - _root_options_payload: Implements the  root options payload operation for this module.
+# - _set_workspace_root: Implements the  set workspace root operation for this module.
+# - _resolve_relative_path: Implements the  resolve relative path operation for this module.
+# - _to_posix: Implements the  to posix operation for this module.
+# - _is_probably_text: Implements the  is probably text operation for this module.
+# - _read_text: Implements the  read text operation for this module.
+# - _content_hash: Implements the  content hash operation for this module.
+# - _ensure_expected_hash: Implements the  ensure expected hash operation for this module.
+# - _find_python_function: Implements the  find python function operation for this module.
+# - _validate_python_content: Implements the  validate python content operation for this module.
+# - _run_python_tool: Implements the  run python tool operation for this module.
+# - _python_function_summary: Implements the  python function summary operation for this module.
+# - _build_context_pack: Implements the  build context pack operation for this module.
+# - _list_directory: Implements the  list directory operation for this module.
+# - dispatch: Implements the dispatch operation for this module.
+# - root: Implements the root operation for this module.
+# - serve_ui: Serves ui for this module.
+# - serve_code_alias: Serves code alias for this module.
+# - status: Implements the status operation for this module.
+# - api_root_options: Implements the api root options operation for this module.
+# - api_set_root: Implements the api set root operation for this module.
+# - api_slash_command: Implements the api slash command operation for this module.
+# - _output: Implements the  output operation for this module.
+# - api_slash_command_complete: Implements the api slash command complete operation for this module.
+# - api_workspace_menu_rebuild: Implements the api workspace menu rebuild operation for this module.
+# - api_workspace_index_rebuild: Implements the api workspace index rebuild operation for this module.
+# - api_work_items: Implements the api work items operation for this module.
+# - api_create_work_item: Implements the api create work item operation for this module.
+# - api_get_work_item: Implements the api get work item operation for this module.
+# - api_update_work_item: Implements the api update work item operation for this module.
+# - api_workspace_index_status: Implements the api workspace index status operation for this module.
+# - api_workspace_index_files: Implements the api workspace index files operation for this module.
+# - api_workspace_index_symbols: Implements the api workspace index symbols operation for this module.
+# - api_workspace_index_symbol: Implements the api workspace index symbol operation for this module.
+# - api_workspace_index_callers: Implements the api workspace index callers operation for this module.
+# - api_workspace_index_callees: Implements the api workspace index callees operation for this module.
+# - api_chat_prompt: Implements the api chat prompt operation for this module.
+# - api_chat_tool_followup_prompt: Implements the api chat tool followup prompt operation for this module.
+# - api_chat_runs: Implements the api chat runs operation for this module.
+# - api_agent_playbooks: Implements the api agent playbooks operation for this module.
+# - api_chat_continue_runs: Implements the api chat continue runs operation for this module.
+# - api_chat_tools: Implements the api chat tools operation for this module.
+# - api_execution_python: Implements the api execution python operation for this module.
+# - api_create_edit_proposal: Implements the api create edit proposal operation for this module.
+# - api_get_edit_proposal: Implements the api get edit proposal operation for this module.
+# - api_apply_edit_proposal: Implements the api apply edit proposal operation for this module.
+# - _api_read_file_payload: Implements the  api read file payload operation for this module.
+# - _api_context_payload: Implements the  api context payload operation for this module.
+# - _api_python_function_payload: Implements the  api python function payload operation for this module.
+# - _replace_python_function_proposal_payload: Implements the  replace python function proposal payload operation for this module.
+# - _insert_python_function_proposal_payload: Implements the  insert python function proposal payload operation for this module.
+# - _apply_agent_edits: Implements the  apply agent edits operation for this module.
+# - resolve_for_run: Resolves for run for this module.
+# - _explicit_file_paths: Implements the  explicit file paths operation for this module.
+# - _make_agent_run_services: Implements the  make agent run services operation for this module.
+# - _start_chat_backend_run: Implements the  start chat backend run operation for this module.
+# - _start_continue_backend_run: Implements the  start continue backend run operation for this module.
+# - api_chat_tools_execute: Implements the api chat tools execute operation for this module.
+# - api_chat_thread: Implements the api chat thread operation for this module.
+# - api_chat_send: Implements the api chat send operation for this module.
+# - api_chat_followup: Implements the api chat followup operation for this module.
+# - api_runs: Implements the api runs operation for this module.
+# - api_run_detail: Implements the api run detail operation for this module.
+# - api_chat_workspace_context: Implements the api chat workspace context operation for this module.
+# - api_chat_delete_thread: Implements the api chat delete thread operation for this module.
+# - parse_args: Parses args for this module.
+# - main: Starts this module's primary operation.
+# ====================================================================================================
+
 """FastAPI entrypoint for KoreCode."""
 from __future__ import annotations
 

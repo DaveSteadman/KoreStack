@@ -8,6 +8,17 @@
 #
 # Related modules:
 #   - app/importers/kiwix.py  -- calls shared helpers during article crawl
+# MARK: FUNCTIONS
+# Function inventory:
+# - fix_spacing: Implements the fix spacing operation for this module.
+# - _clean_table: Implements the  clean table operation for this module.
+# - table_to_fts_text: Implements the table to fts text operation for this module.
+# - _inside_table: Implements the  inside table operation for this module.
+# - _inside_list: Implements the  inside list operation for this module.
+# - remove_noise: Implements the remove noise operation for this module.
+# - extract_facts: Extracts facts for this module.
+# - _serialize_list: Implements the  serialize list operation for this module.
+# - extract_article_html: Extracts article html for this module.
 # ====================================================================================================
 import re
 from copy import deepcopy

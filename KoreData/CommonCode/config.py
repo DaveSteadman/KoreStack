@@ -7,6 +7,8 @@
 # KoreCommon/suite_paths.py so non-KoreData services can import the same logic.
 # KoreData sub-services still import this local module for launch-time
 # compatibility.
+# MARK: FUNCTIONS
+# Function inventory: this module exposes package or declarative configuration only.
 # ====================================================================================================
 
 import sys

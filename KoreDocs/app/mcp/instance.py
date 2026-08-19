@@ -10,6 +10,8 @@
 #   - app/_mcp_shared.py    -- re-exports mcp; imports this
 #   - app/koredocs_mcp.py   -- imports mcp from this module
 #   - app/server.py         -- mounts this mcp instance
+# MARK: FUNCTIONS
+# Function inventory: this module exposes package or declarative configuration only.
 # ====================================================================================================
 
 from fastmcp import FastMCP

@@ -1,3 +1,20 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# gateway library module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Function inventory:
+# - _service_not_ready_error: Implements the  service not ready error operation for this module.
+# - find_library_book: Finds library book for this module.
+# - _rank: Implements the  rank operation for this module.
+# - get_library_index: Returns library index for this module.
+# - get_library_book_chunk: Returns library book chunk for this module.
+# - update_library_book: Updates library book for this module.
+# - repair_library_book_anchors: Implements the repair library book anchors operation for this module.
+# - search_library: Implements the search library operation for this module.
+# ====================================================================================================
+
 from __future__ import annotations
 
 import math

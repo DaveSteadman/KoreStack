@@ -1,3 +1,15 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# range ops module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Function inventory:
+# - read_sheet_range: Reads sheet range for this module.
+# - read_sheet_table: Reads sheet table for this module.
+# - clear_sheet_range: Clears sheet range for this module.
+# ====================================================================================================
+
 from __future__ import annotations
 
 from typing import Any, Optional

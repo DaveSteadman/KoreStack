@@ -16,6 +16,11 @@ Usage:
 # ====================================================================================================
 # Extract regex helpers for datacontrol/koredata/Graph/processing.
 # Provides the focused helpers and module-level behaviour grouped into this file.
+# MARK: FUNCTIONS
+# Function inventory:
+# - _find_repo_root: Implements the  find repo root operation for this module.
+# - _load_suite_config: Implements the  load suite config operation for this module.
+# - _extract: Implements the  extract operation for this module.
 # ====================================================================================================
 
 import re

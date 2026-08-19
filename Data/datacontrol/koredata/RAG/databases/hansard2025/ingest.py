@@ -4,6 +4,9 @@
 # ====================================================================================================
 # Ingest helpers for datacontrol/koredata/RAG/databases/hansard2025.
 # Provides the focused helpers and module-level behaviour grouped into this file.
+# MARK: FUNCTIONS
+# Function inventory:
+# - main: Starts this module's primary operation.
 # ====================================================================================================
 
 # ====================================================================================================
@@ -67,7 +70,8 @@ def main() -> None:
                     help="Delete and recreate the database before ingesting")
     args = ap.parse_args()
 
-    range_end = date.fromisoformat(args.to_date) if args.to_date else _YEAR_END
+    requested_end = date.fromisoformat(args.to_date) if args.to_date else _YEAR_END
+    range_end     = min(requested_end, _YEAR_END)
 
     print("=" * 65)
     print(f"  HANSARD {_YEAR} INGEST")
@@ -90,27 +94,48 @@ def main() -> None:
     print("  Tables ready")
 
     # ------------------------------------------------------------------
-    # Determine date range, honouring the checkpoint unless overridden
+    # Determine date range, honouring the checkpoint unless overridden.
+    #
+    # An older version treated an unavailable Hansard page as a non-sitting
+    # day and advanced the checkpoint.  That can leave a clean database with
+    # member records but no sittings at all.  Such a checkpoint is invalid:
+    # restart the year rather than silently skipping its debate backfill.
     # ------------------------------------------------------------------
     if args.from_date:
         range_start = date.fromisoformat(args.from_date)
         lords_range_start = range_start
         print(f"  Date range:   {range_start} \u2192 {range_end} (from --from-date)")
     else:
-        last_checked = hansard.get_meta(conn, "last_date_checked")
-        if last_checked:
-            range_start = date.fromisoformat(last_checked) + timedelta(days=1)
-            print(f"  Checkpoint:   resuming from {range_start} (last checked: {last_checked})")
-        else:
-            range_start = _YEAR_START
-            print(f"  No checkpoint; starting from {range_start} ({_YEAR} year start)")
-        last_checked_lords = hansard.get_meta(conn, "last_date_checked_lords")
-        if last_checked_lords:
-            lords_range_start = date.fromisoformat(last_checked_lords) + timedelta(days=1)
-            print(f"  Lords checkpoint: resuming from {lords_range_start} (last checked: {last_checked_lords})")
-        else:
+        has_sittings = conn.execute("SELECT 1 FROM h_sittings LIMIT 1").fetchone() is not None
+        if not has_sittings:
+            range_start       = _YEAR_START
             lords_range_start = _YEAR_START
-            print(f"  Lords: no checkpoint; starting from {lords_range_start}")
+            print(f"  No sittings recorded; starting {_YEAR} backfill from {_YEAR_START}")
+        else:
+            last_checked = hansard.get_meta(conn, "last_date_checked")
+            if last_checked:
+                last_checked_date = date.fromisoformat(last_checked)
+                if last_checked_date >= range_end:
+                    range_start = range_end
+                    print(f"  Checkpoint:   rechecking {range_start} (last checked: {last_checked})")
+                else:
+                    range_start = last_checked_date + timedelta(days=1)
+                    print(f"  Checkpoint:   resuming from {range_start} (last checked: {last_checked})")
+            else:
+                range_start = _YEAR_START
+                print(f"  No checkpoint; starting from {range_start} ({_YEAR} year start)")
+            last_checked_lords = hansard.get_meta(conn, "last_date_checked_lords")
+            if last_checked_lords:
+                last_checked_lords_date = date.fromisoformat(last_checked_lords)
+                if last_checked_lords_date >= range_end:
+                    lords_range_start = range_end
+                    print(f"  Lords checkpoint: rechecking {lords_range_start} (last checked: {last_checked_lords})")
+                else:
+                    lords_range_start = last_checked_lords_date + timedelta(days=1)
+                    print(f"  Lords checkpoint: resuming from {lords_range_start} (last checked: {last_checked_lords})")
+            else:
+                lords_range_start = _YEAR_START
+                print(f"  Lords: no checkpoint; starting from {lords_range_start}")
 
     num_days       = (range_end - range_start).days + 1
     lords_num_days = (range_end - lords_range_start).days + 1
@@ -147,18 +172,24 @@ def main() -> None:
     total_speech_chunks = 0
     sitting_days_found  = 0
     last_date_ingested  = hansard.get_meta(conn, "last_date_ingested")
+    incomplete_reasons: list[str] = []
 
     max_deb   = args.max_debates if args.max_debates > 0 else 9999
     date_iter = [(range_start + timedelta(days=i)).isoformat() for i in range(num_days)]
 
     for check_date in date_iter:
-        n = hansard.ingest_sitting_day(
-            conn, check_date,
-            max_debates=max_deb,
-            max_speeches=args.max_speeches,
-            name_lookup=name_lookup,
-            house="Commons",
-        )
+        try:
+            n = hansard.ingest_sitting_day(
+                conn, check_date,
+                max_debates=max_deb,
+                max_speeches=args.max_speeches,
+                name_lookup=name_lookup,
+                house="Commons",
+            )
+        except hansard.SittingDayFetchError as exc:
+            incomplete_reasons.append(str(exc))
+            print(f"  STOPPING Commons scan: {exc}")
+            break
         hansard.set_meta(conn, "last_date_checked", check_date)
 
         if n > 0:
@@ -176,13 +207,18 @@ def main() -> None:
         print(f"\n  Scanning {lords_num_days} calendar day(s) for Lords: {lords_range_start} \u2192 {range_end}")
         lords_date_iter = [(lords_range_start + timedelta(days=i)).isoformat() for i in range(lords_num_days)]
         for check_date in lords_date_iter:
-            n = hansard.ingest_sitting_day(
-                conn, check_date,
-                max_debates=max_deb,
-                max_speeches=args.max_speeches,
-                name_lookup=name_lookup,
-                house="Lords",
-            )
+            try:
+                n = hansard.ingest_sitting_day(
+                    conn, check_date,
+                    max_debates=max_deb,
+                    max_speeches=args.max_speeches,
+                    name_lookup=name_lookup,
+                    house="Lords",
+                )
+            except hansard.SittingDayFetchError as exc:
+                incomplete_reasons.append(str(exc))
+                print(f"  STOPPING Lords scan: {exc}")
+                break
             hansard.set_meta(conn, "last_date_checked_lords", check_date)
 
             if n > 0:
@@ -219,9 +255,16 @@ def main() -> None:
     print(f"  Total chunks in DB:              {total_chunks}")
     print("=" * 65)
 
-    ingest_status = "complete" if range_end >= _YEAR_END else "ok"
+    ingest_status = "incomplete" if incomplete_reasons else "complete"
     last_ingested = last_lords_date_ingested or last_date_ingested or ""
-    hansard.write_descriptor(_JSON_PATH, _DB_ID, total_chunks, last_ingested, status=ingest_status)
+    hansard.write_descriptor(
+        _JSON_PATH,
+        _DB_ID,
+        total_chunks,
+        last_ingested,
+        status=ingest_status,
+        error="; ".join(incomplete_reasons),
+    )
     conn.close()
     if ingest_status == "complete":
         print("  2025 dataset complete.\n")

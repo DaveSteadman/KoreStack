@@ -1,3 +1,17 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# log state module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Function inventory:
+# - get_log_subscribers: Returns log subscribers for this module.
+# - get_log_subscribers_lock: Returns log subscribers lock for this module.
+# - push_log_line: Implements the push log line operation for this module.
+# - get_latest_log_file: Returns latest log file for this module.
+# - get_log_backfill: Returns log backfill for this module.
+# ====================================================================================================
+
 import queue
 import threading
 from datetime import datetime

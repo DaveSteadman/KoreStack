@@ -5,6 +5,9 @@ from __future__ import annotations
 # ====================================================================================================
 # Context helpers for KoreCommon/SlashCommands.
 # Provides the focused helpers and module-level behaviour grouped into this file.
+# MARK: FUNCTIONS
+# Primary types: SlashCommandContext.
+# Function inventory: this module exposes package or declarative configuration only.
 # ====================================================================================================
 
 from dataclasses import dataclass

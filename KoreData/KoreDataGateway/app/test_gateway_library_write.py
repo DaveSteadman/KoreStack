@@ -3,6 +3,15 @@
 # ====================================================================================================
 # Tests for KoreLibrary write helpers in the KoreDataGateway.
 # Verifies the gateway issues the expected HTTP methods and payloads for book edits.
+# MARK: FUNCTIONS
+# Primary types: _Response, _Client, GatewayLibraryWriteTests.
+# Function inventory:
+# - __init__: Implements the   init   operation for this module.
+# - json: Implements the json operation for this module.
+# - patch: Implements the patch operation for this module.
+# - post: Implements the post operation for this module.
+# - test_update_library_book_sends_patch_payload: Implements the test update library book sends patch payload operation for this module.
+# - test_repair_library_book_anchors_sends_post: Implements the test repair library book anchors sends post operation for this module.
 # ====================================================================================================
 
 import sys

@@ -1,3 +1,12 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# hydration module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Function inventory: this module exposes package or declarative configuration only.
+# ====================================================================================================
+
 """Session hydration helpers for the datasets subsystem."""
 
 from datasets_pkg.service import (

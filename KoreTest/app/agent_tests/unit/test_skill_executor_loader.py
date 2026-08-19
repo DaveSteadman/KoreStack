@@ -2,6 +2,10 @@
 # MARK: OVERVIEW
 # ====================================================================================================
 # Regression tests for dynamic skill-module loading and recovery after import errors.
+# MARK: FUNCTIONS
+# Primary types: SkillExecutorLoaderTests.
+# Function inventory:
+# - test_failed_import_does_not_leave_a_partial_module_cached: Implements the test failed import does not leave a partial module cached operation for this module.
 # ====================================================================================================
 
 import sys

@@ -5,6 +5,19 @@ from __future__ import annotations
 # ====================================================================================================
 # Edit store helpers for KoreCode/app.
 # Provides the focused helpers and module-level behaviour grouped into this file.
+# MARK: FUNCTIONS
+# Function inventory:
+# - _utc_now: Implements the  utc now operation for this module.
+# - _proposals_root: Implements the  proposals root operation for this module.
+# - _ensure_proposals_root: Implements the  ensure proposals root operation for this module.
+# - _proposal_path: Implements the  proposal path operation for this module.
+# - _write_proposal: Implements the  write proposal operation for this module.
+# - get_edit_proposal: Returns edit proposal for this module.
+# - _content_hash: Implements the  content hash operation for this module.
+# - _replace_lines: Implements the  replace lines operation for this module.
+# - _line_window: Implements the  line window operation for this module.
+# - create_edit_proposal: Creates edit proposal for this module.
+# - apply_edit_proposal: Implements the apply edit proposal operation for this module.
 # ====================================================================================================
 
 import hashlib

@@ -1,3 +1,51 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# workspace service module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Primary types: WorkspaceService.
+# Function inventory:
+# - _initial_workspace_root: Implements the  initial workspace root operation for this module.
+# - __init__: Implements the   init   operation for this module.
+# - workspace_root: Implements the workspace root operation for this module.
+# - iter_default_roots: Implements the iter default roots operation for this module.
+# - root_label_for: Implements the root label for operation for this module.
+# - normalize_requested_root: Normalizes requested root for this module.
+# - root_options_payload: Implements the root options payload operation for this module.
+# - set_workspace_root: Sets workspace root for this module.
+# - list_browse_directories: Lists browse directories for this module.
+# - resolve_relative_path: Resolves relative path for this module.
+# - to_posix: Implements the to posix operation for this module.
+# - list_directory: Lists directory for this module.
+# - is_probably_text: Checks whether probably text is true.
+# - read_text: Reads text for this module.
+# - content_hash: Implements the content hash operation for this module.
+# - ensure_expected_hash: Ensures expected hash for this module.
+# - line_window: Implements the line window operation for this module.
+# - python_symbol_context: Implements the python symbol context operation for this module.
+# - iter_python_function_symbols: Implements the iter python function symbols operation for this module.
+# - visit_body: Implements the visit body operation for this module.
+# - parse_python_file: Parses python file for this module.
+# - find_python_function: Finds python function for this module.
+# - source_slice: Implements the source slice operation for this module.
+# - line_indent: Implements the line indent operation for this module.
+# - normalise_insert_source: Implements the normalise insert source operation for this module.
+# - replace_line_range: Implements the replace line range operation for this module.
+# - write_text_file: Writes text file for this module.
+# - validate_python_content: Validates python content for this module.
+# - run_python_tool: Runs python tool for this module.
+# - python_function_summary: Implements the python function summary operation for this module.
+# - insert_python_function: Implements the insert python function operation for this module.
+# - reference_hits: Implements the reference hits operation for this module.
+# - workspace_patterns_from_refs: Implements the workspace patterns from refs operation for this module.
+# - workspace_menu_excerpt: Implements the workspace menu excerpt operation for this module.
+# - build_context_pack: Builds context pack for this module.
+# - read_file_payload: Reads file payload for this module.
+# - context_payload: Implements the context payload operation for this module.
+# - python_function_payload: Implements the python function payload operation for this module.
+# ====================================================================================================
+
 from __future__ import annotations
 
 import ast

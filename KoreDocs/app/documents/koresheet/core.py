@@ -4,6 +4,61 @@
 # Shared helpers for KoreSheet document operations.
 #
 # Contains the non-MCP internals used by the document, range, and cell operation modules.
+# MARK: FUNCTIONS
+# Function inventory:
+# - _sheet_content: Implements the  sheet content operation for this module.
+# - _sheet_file: Implements the  sheet file operation for this module.
+# - _load_sheet_doc: Implements the  load sheet doc operation for this module.
+# - _sheet_normalize_cells: Implements the  sheet normalize cells operation for this module.
+# - _save_sheet_doc: Implements the  save sheet doc operation for this module.
+# - _sheet_col_to_index: Implements the  sheet col to index operation for this module.
+# - _sheet_index_to_col: Implements the  sheet index to col operation for this module.
+# - _sheet_parse_addr: Implements the  sheet parse addr operation for this module.
+# - _sheet_addr: Implements the  sheet addr operation for this module.
+# - _sheet_range_bounds: Implements the  sheet range bounds operation for this module.
+# - _sheet_cell_scalar: Implements the  sheet cell scalar operation for this module.
+# - _sheet_cell_in_bounds: Implements the  sheet cell in bounds operation for this module.
+# - _sheet_used_range: Implements the  sheet used range operation for this module.
+# - _sheet_summary: Implements the  sheet summary operation for this module.
+# - _sheet_header_map: Implements the  sheet header map operation for this module.
+# - _sheet_prune_cell: Implements the  sheet prune cell operation for this module.
+# - _sheet_apply_update: Implements the  sheet apply update operation for this module.
+# - _sheet_parse_number: Implements the  sheet parse number operation for this module.
+# - _sheet_round_number: Implements the  sheet round number operation for this module.
+# - _sheet_expand_range: Implements the  sheet expand range operation for this module.
+# - _sheet_tokenize_formula: Implements the  sheet tokenize formula operation for this module.
+# - _sheet_resolve_cell_value: Implements the  sheet resolve cell value operation for this module.
+# - _sheet_resolve_numeric_value: Implements the  sheet resolve numeric value operation for this module.
+# - _sheet_evaluate_formula: Implements the  sheet evaluate formula operation for this module.
+# - peek: Implements the peek operation for this module.
+# - advance: Implements the advance operation for this module.
+# - eat: Implements the eat operation for this module.
+# - expr: Implements the expr operation for this module.
+# - term: Implements the term operation for this module.
+# - power: Implements the power operation for this module.
+# - unary: Implements the unary operation for this module.
+# - aggregate: Implements the aggregate operation for this module.
+# - primary: Implements the primary operation for this module.
+# - _sheet_recompute_all: Implements the  sheet recompute all operation for this module.
+# - _sheet_unique_headers: Implements the  sheet unique headers operation for this module.
+# - _sheet_headers_for_range: Implements the  sheet headers for range operation for this module.
+# - _sheet_last_used_row: Implements the  sheet last used row operation for this module.
+# - _sheet_row_key: Implements the  sheet row key operation for this module.
+# - _sheet_ensure_headers: Implements the  sheet ensure headers operation for this module.
+# - _sheet_next_append_row: Implements the  sheet next append row operation for this module.
+# - _sheet_write_row_values: Implements the  sheet write row values operation for this module.
+# - _sheet_non_empty: Implements the  sheet non empty operation for this module.
+# - _sheet_effective_header_row: Implements the  sheet effective header row operation for this module.
+# - _sheet_table_bounds: Implements the  sheet table bounds operation for this module.
+# - _sheet_table_headers: Implements the  sheet table headers operation for this module.
+# - _sheet_table_rows: Implements the  sheet table rows operation for this module.
+# - _sheet_match_expected: Implements the  sheet match expected operation for this module.
+# - _sheet_row_matches: Implements the  sheet row matches operation for this module.
+# - _sheet_find_label_matches: Implements the  sheet find label matches operation for this module.
+# - _sheet_label_target: Implements the  sheet label target operation for this module.
+# - _sheet_write_headers: Implements the  sheet write headers operation for this module.
+# - _sheet_build_table_doc: Implements the  sheet build table doc operation for this module.
+# - _sheet_compounding_doc: Implements the  sheet compounding doc operation for this module.
 # ====================================================================================================
 
 from __future__ import annotations

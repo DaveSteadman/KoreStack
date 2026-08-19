@@ -10,6 +10,8 @@
 #
 # These tests run without an LLM and complete in under a second.
 # Called by KoreTest's deterministic checks.
+# MARK: FUNCTIONS
+# Function inventory: this module exposes package or declarative configuration only.
 # ====================================================================================================
 import sys
 from pathlib import Path

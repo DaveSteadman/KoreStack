@@ -11,6 +11,19 @@
 #   - paths that already begin with legacy prefixes like "data/", "datauser/", or "KoreDocs/"
 #     are accepted and normalized
 #   - absolute paths are allowed only when they resolve inside the datauser directory
+# MARK: FUNCTIONS
+# Function inventory:
+# - _suspicious_document_write_reason: Implements the  suspicious document write reason operation for this module.
+# - file_write: Implements the file write operation for this module.
+# - file_append: Implements the file append operation for this module.
+# - file_read: Implements the file read operation for this module.
+# - _normalise_keywords: Implements the  normalise keywords operation for this module.
+# - _normalise_find_arguments: Implements the  normalise find arguments operation for this module.
+# - file_find: Implements the file find operation for this module.
+# - folder_find: Implements the folder find operation for this module.
+# - folder_create: Implements the folder create operation for this module.
+# - folder_exists: Implements the folder exists operation for this module.
+# - file_write_from_scratchpad: Implements the file write from scratchpad operation for this module.
 # ====================================================================================================
 
 

@@ -16,6 +16,23 @@
 #   - input_layer/slash_commands.py         -- registers all handlers
 #   - input_layer/slash_command_context.py  -- SlashCommandContext with session callbacks
 #   - sessions/korechat_client.py           -- KoreChat base URL
+# MARK: FUNCTIONS
+# Function inventory:
+# - _kc_get: Implements the  kc get operation for this module.
+# - _kc_post: Implements the  kc post operation for this module.
+# - _kc_patch: Implements the  kc patch operation for this module.
+# - _kc_delete: Implements the  kc delete operation for this module.
+# - _external_id_for_session: Implements the  external id for session operation for this module.
+# - _session_id_from_external_id: Implements the  session id from external id operation for this module.
+# - _display_name: Implements the  display name operation for this module.
+# - _list_all_conversations: Implements the  list all conversations operation for this module.
+# - _list_webchat_conversations: Implements the  list webchat conversations operation for this module.
+# - _find_conversation_by_session: Implements the  find conversation by session operation for this module.
+# - _ensure_conversation_for_session: Implements the  ensure conversation for session operation for this module.
+# - _find_conversation_by_name: Implements the  find conversation by name operation for this module.
+# - _clone_conversation: Implements the  clone conversation operation for this module.
+# - _cmd_chat: Implements the  cmd chat operation for this module.
+# - register_session_slash_commands: Registers session slash commands for this module.
 # ====================================================================================================
 import json
 import time

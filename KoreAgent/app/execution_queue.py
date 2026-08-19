@@ -13,6 +13,23 @@
 # web UI and other tooling can observe pending and active tasks.
 #
 # Scheduled prompt definitions and their execution belong to KoreCron.
+# MARK: FUNCTIONS
+# Primary types: TaskQueue.
+# Function inventory:
+# - _safe_metadata: Implements the  safe metadata operation for this module.
+# - __init__: Implements the   init   operation for this module.
+# - run_lock: Runs lock for this module.
+# - enqueue: Implements the enqueue operation for this module.
+# - get_state: Returns state for this module.
+# - get_active_for_session: Returns active for session for this module.
+# - merge_active_metadata: Merges active metadata for this module.
+# - clear_pending: Clears pending for this module.
+# - stop: Stops this module's primary operation.
+# - _delete_state: Implements the  delete state operation for this module.
+# - _write_state: Implements the  write state operation for this module.
+# - _worker_loop: Implements the  worker loop operation for this module.
+# - _run_item: Implements the  run item operation for this module.
+# - _request_cancel: Implements the  request cancel operation for this module.
 # ====================================================================================================
 
 
@@ -380,10 +397,10 @@ class TaskQueue:
                         runner.start()
 
                         while not task_done.wait(_TIMEOUT_POLL_SECS):
-                            active = self._active or {}
-                            timeout_s = active.get("timeout_seconds")
+                            active     = self._active or {}
+                            timeout_s  = active.get("timeout_seconds")
                             started_ts = active.get("started_ts")
-                            elapsed_s = (time.time() - float(started_ts)) if isinstance(started_ts, (int, float)) else None
+                            elapsed_s  = (time.time() - float(started_ts)) if isinstance(started_ts, (int, float)) else None
 
                             if self._shutdown.is_set() and not cancel_requested:
                                 self._request_cancel(item, reason="shutdown")

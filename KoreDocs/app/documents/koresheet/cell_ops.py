@@ -1,3 +1,16 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# cell ops module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Function inventory:
+# - write_sheet_cells: Writes sheet cells for this module.
+# - find_labelled_cells: Finds labelled cells for this module.
+# - get_named_value: Returns named value for this module.
+# - set_named_value: Sets named value for this module.
+# ====================================================================================================
+
 from __future__ import annotations
 
 from typing import Any, Literal

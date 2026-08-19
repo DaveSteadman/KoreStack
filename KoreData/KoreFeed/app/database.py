@@ -13,6 +13,53 @@
 #   - app/server.py      -- article read operations
 #   - app/ingest.py      -- background ingest scheduler writes new entries
 #   - CommonCode/compress.py  -- article body compression (if enabled)
+# MARK: FUNCTIONS
+# Primary types: FeedDatabaseError.
+# Function inventory:
+# - _index_entry_sentences: Implements the  index entry sentences operation for this module.
+# - _rebuild_sentence_index: Implements the  rebuild sentence index operation for this module.
+# - _backfill_entry_sentences: Implements the  backfill entry sentences operation for this module.
+# - _sentence_index_needs_rebuild: Implements the  sentence index needs rebuild operation for this module.
+# - _sentence_schema_needs_normalization: Implements the  sentence schema needs normalization operation for this module.
+# - _normalize_sentence_schema: Implements the  normalize sentence schema operation for this module.
+# - _extract_sentence_text: Implements the  extract sentence text operation for this module.
+# - _sentence_locator: Implements the  sentence locator operation for this module.
+# - _parse_published: Implements the  parse published operation for this module.
+# - _sanitize_domain: Implements the  sanitize domain operation for this module.
+# - get_db_path: Returns db path for this module.
+# - db_connection: Implements the db connection operation for this module.
+# - init_db: Implements the init db operation for this module.
+# - backfill_sentence_index: Implements the backfill sentence index operation for this module.
+# - rebuild_sentence_index: Implements the rebuild sentence index operation for this module.
+# - _normalise_published: Implements the  normalise published operation for this module.
+# - insert_entry: Implements the insert entry operation for this module.
+# - get_entries: Returns entries for this module.
+# - get_entry: Returns entry for this module.
+# - get_entry_sentences: Returns entry sentences for this module.
+# - get_sentence: Returns sentence for this module.
+# - update_entry_page_text: Updates entry page text for this module.
+# - set_sentence_deleted: Sets sentence deleted for this module.
+# - get_sentences_for_chroma: Returns sentences for chroma for this module.
+# - mark_sentences_chroma_indexed: Marks sentences chroma indexed for this module.
+# - reset_sentence_chroma_index: Implements the reset sentence chroma index operation for this module.
+# - search_entries_detailed: Implements the search entries detailed operation for this module.
+# - search_entries: Implements the search entries operation for this module.
+# - get_recent_entries: Returns recent entries for this module.
+# - list_domains: Lists domains for this module.
+# - _tombstone: Implements the  tombstone operation for this module.
+# - delete_entry: Deletes entry for this module.
+# - delete_entries_by_feed: Deletes entries by feed for this module.
+# - delete_entries_older_than: Deletes entries older than for this module.
+# - delete_entries_by_ids: Deletes entries by ids for this module.
+# - get_entry_count: Returns entry count for this module.
+# - get_feed_counts: Returns feed counts for this module.
+# - get_domain_age_settings: Returns domain age settings for this module.
+# - set_domain_age_settings: Sets domain age settings for this module.
+# - delete_entries_outside_calendar: Deletes entries outside calendar for this module.
+# - apply_age_rule: Implements the apply age rule operation for this module.
+# - delete_domain_db: Deletes domain db for this module.
+# - rename_domain_db: Implements the rename domain db operation for this module.
+# - rename_feed_entries: Implements the rename feed entries operation for this module.
 # ====================================================================================================
 import sqlite3
 import json
@@ -1014,6 +1061,12 @@ def rename_domain_db(old: str, new: str) -> bool:
     renamed_db = False
     if old_path.exists():
         new_path = get_db_path(new)
+        if new_path.exists():
+            raise FileExistsError(f"Domain database '{new}' already exists")
+        with _connections_lock:
+            connection = _connections.pop(old_path, None)
+            if connection is not None:
+                connection.close()
         old_path.rename(new_path)
         renamed_db = True
     try:
@@ -1021,7 +1074,9 @@ def rename_domain_db(old: str, new: str) -> bool:
 
         rename_domain_store(old, new)
     except Exception:
-        pass
+        if renamed_db and new_path.exists() and not old_path.exists():
+            new_path.rename(old_path)
+        raise
     return renamed_db
 
 

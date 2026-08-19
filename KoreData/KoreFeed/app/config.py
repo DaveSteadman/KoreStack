@@ -9,6 +9,8 @@
 # Related modules:
 #   - KoreFeed/main.py      -- imports cfg at startup
 #   - KoreFeed/app/server.py -- imports cfg for uvicorn bind and data_dir
+# MARK: FUNCTIONS
+# Function inventory: this module exposes package or declarative configuration only.
 # ====================================================================================================
 from pathlib import Path
 

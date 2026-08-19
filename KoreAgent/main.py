@@ -13,6 +13,8 @@ from __future__ import annotations
 # ====================================================================================================
 # Entry point for KoreAgent.
 # Bootstraps the package application or utility from the command line.
+# MARK: FUNCTIONS
+# Function inventory: this module exposes package or declarative configuration only.
 # ====================================================================================================
 
 import os

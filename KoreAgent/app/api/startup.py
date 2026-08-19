@@ -14,6 +14,15 @@
 #   - execution_queue.py  -- task_queue
 #   - agent/orchestration/engine.py -- orchestrate_prompt, OrchestratorConfig
 #   - runtime_logger.py   -- SessionLogger, create_log_file_path
+# MARK: FUNCTIONS
+# Function inventory:
+# - _monitor_llm_dependency: Implements the  monitor llm dependency operation for this module.
+# - _can_bind: Implements the  can bind operation for this module.
+# - run_api_mode: Runs api mode for this module.
+# - _log_sink: Implements the  log sink operation for this module.
+# - _run_background_startup: Implements the  run background startup operation for this module.
+# - _serve_in_current_thread: Implements the  serve in current thread operation for this module.
+# - _exception_handler: Implements the  exception handler operation for this module.
 # ====================================================================================================
 
 

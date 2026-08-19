@@ -8,6 +8,8 @@ from __future__ import annotations
 #
 # Related modules:
 #   - KoreStak/main.py  -- orchestrates launching all services and the dashboard
+# MARK: FUNCTIONS
+# Function inventory: this module exposes package or declarative configuration only.
 # ====================================================================================================
 
 import runpy

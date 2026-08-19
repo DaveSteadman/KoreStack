@@ -1,3 +1,15 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# gateway scrape module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Function inventory:
+# - _service_not_ready_error: Implements the  service not ready error operation for this module.
+# - get_scrape_chunk: Returns scrape chunk for this module.
+# - search_scrape: Implements the search scrape operation for this module.
+# ====================================================================================================
+
 from __future__ import annotations
 
 from typing import Any

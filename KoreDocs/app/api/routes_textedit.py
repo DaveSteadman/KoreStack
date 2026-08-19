@@ -1,3 +1,19 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# routes textedit module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Primary types: TextEditSaveBody.
+# Function inventory:
+# - parse_expected_revision: Parses expected revision for this module.
+# - register_textedit_routes: Registers textedit routes for this module.
+# - resolve_textedit_path: Resolves textedit path for this module.
+# - textedit_revision_token: Implements the textedit revision token operation for this module.
+# - textedit_open: Implements the textedit open operation for this module.
+# - textedit_save: Implements the textedit save operation for this module.
+# ====================================================================================================
+
 from __future__ import annotations
 
 from pathlib import Path

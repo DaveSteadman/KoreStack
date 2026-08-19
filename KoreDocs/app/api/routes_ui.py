@@ -1,3 +1,20 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# routes ui module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Function inventory:
+# - register_ui_routes: Registers ui routes for this module.
+# - health: Implements the health operation for this module.
+# - serve_ui: Serves ui for this module.
+# - root: Implements the root operation for this module.
+# - serve_doc: Serves doc for this module.
+# - serve_sheet: Serves sheet for this module.
+# - serve_diag: Serves diag for this module.
+# - serve_textedit: Serves textedit for this module.
+# ====================================================================================================
+
 from __future__ import annotations
 
 from pathlib import Path

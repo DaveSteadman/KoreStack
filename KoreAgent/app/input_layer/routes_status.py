@@ -12,6 +12,12 @@
 # Related modules:
 #   - input_layer/server.py  -- registers this route group
 #   - llm_client.py          -- get_ollama_ps_rows, get_active_host/model/num_ctx/backend
+# MARK: FUNCTIONS
+# Function inventory:
+# - register_status_routes: Registers status routes for this module.
+# - get_version: Returns version for this module.
+# - get_service_status: Returns service status for this module.
+# - get_ollama_status: Returns ollama status for this module.
 # ====================================================================================================
 from datetime import datetime
 

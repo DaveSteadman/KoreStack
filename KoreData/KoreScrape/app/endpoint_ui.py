@@ -1,3 +1,34 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# endpoint ui module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Function inventory:
+# - _scrape_delete_chunk_local: Implements the  scrape delete chunk local operation for this module.
+# - _scrape_capture_manifest_path: Implements the  scrape capture manifest path operation for this module.
+# - _scrape_read_capture_manifest: Implements the  scrape read capture manifest operation for this module.
+# - _scrape_write_capture_manifest: Implements the  scrape write capture manifest operation for this module.
+# - _scrape_delete_capture_content_local: Implements the  scrape delete capture content local operation for this module.
+# - _scrape_delete_capture_chunks_local: Implements the  scrape delete capture chunks local operation for this module.
+# - _scrape_delete_capture_record_local: Implements the  scrape delete capture record local operation for this module.
+# - _scrape_capture_fully_deleted: Implements the  scrape capture fully deleted operation for this module.
+# - _annotate_scrape_capture_chunks: Implements the  annotate scrape capture chunks operation for this module.
+# - register_scrape_ui: Registers scrape ui for this module.
+# - route_ui: Implements the route ui operation for this module.
+# - scrape_index: Implements the scrape index operation for this module.
+# - scrape_start: Implements the scrape start operation for this module.
+# - scrape_capture: Implements the scrape capture operation for this module.
+# - scrape_capture_json: Implements the scrape capture json operation for this module.
+# - scrape_search: Implements the scrape search operation for this module.
+# - scrape_chunk: Implements the scrape chunk operation for this module.
+# - scrape_chunk_delete: Implements the scrape chunk delete operation for this module.
+# - scrape_chunk_delete_get: Implements the scrape chunk delete get operation for this module.
+# - scrape_capture_delete_content: Implements the scrape capture delete content operation for this module.
+# - scrape_capture_delete_chunks: Implements the scrape capture delete chunks operation for this module.
+# - scrape_capture_file: Implements the scrape capture file operation for this module.
+# ====================================================================================================
+
 import json
 import os
 import shutil

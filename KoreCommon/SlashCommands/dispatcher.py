@@ -5,6 +5,10 @@ from __future__ import annotations
 # ====================================================================================================
 # Dispatcher helpers for KoreCommon/SlashCommands.
 # Provides the focused helpers and module-level behaviour grouped into this file.
+# MARK: FUNCTIONS
+# Function inventory:
+# - handle_slash_command: Handles slash command for this module.
+# - write_help_lines: Writes help lines for this module.
 # ====================================================================================================
 
 from .context import SlashCommandContext

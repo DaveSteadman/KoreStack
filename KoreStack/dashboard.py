@@ -14,6 +14,26 @@
 #
 # Related modules:
 #   - KoreStack/main.py  -- starts the dashboard thread alongside all services
+# MARK: FUNCTIONS
+# Function inventory:
+# - build_suite_urls: Builds suite urls for this module.
+# - _service_state: Implements the  service state operation for this module.
+# - _service_row_view: Implements the  service row view operation for this module.
+# - _path_rows: Implements the  path rows operation for this module.
+# - _dashboard_bootstrap: Implements the  dashboard bootstrap operation for this module.
+# - _template_env: Implements the  template env operation for this module.
+# - html_page: Implements the html page operation for this module.
+# - endpoints_page: Implements the endpoints page operation for this module.
+# - _content_type_for: Implements the  content type for operation for this module.
+# - build_handler: Builds handler for this module.
+# - _send_bytes: Implements the  send bytes operation for this module.
+# - do_GET: Implements the do GET operation for this module.
+# - do_POST: Implements the do POST operation for this module.
+# - log_message: Implements the log message operation for this module.
+# - _serve_asset: Implements the  serve asset operation for this module.
+# - _handle_service_action: Implements the  handle service action operation for this module.
+# - _handle_endpoint_request: Implements the  handle endpoint request operation for this module.
+# - serve_dashboard: Serves dashboard for this module.
 # ====================================================================================================
 from __future__ import annotations
 

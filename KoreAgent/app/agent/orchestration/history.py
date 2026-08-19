@@ -1,4 +1,19 @@
-"""Conversation-history containers for orchestration."""
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# In-memory user/assistant turn-pair container used during orchestration. It enforces pair alignment
+# at mutation time and optionally trims whole historical turns, so prompt assembly never receives a
+# dangling user or assistant message. Persistent conversation storage remains outside this module.
+# MARK: FUNCTIONS
+# Primary types: ConversationHistory.
+# Function inventory:
+# - __init__: Implements the   init   operation for this module.
+# - add: Implements the add operation for this module.
+# - clear: Clears this module's primary operation.
+# - as_list: Implements the as list operation for this module.
+# - __len__: Implements the   len   operation for this module.
+# - __bool__: Implements the   bool   operation for this module.
+# ====================================================================================================
 
 
 class ConversationHistory:

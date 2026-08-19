@@ -1,3 +1,17 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# KoreChat service lifecycle coordinator. The lifespan initialises durable storage, installs the
+# Windows connection-reset suppression handler, and runs the periodic maintenance reaper. Long-lived
+# operational concerns live here rather than in route modules, keeping request handlers free of
+# process-start and shutdown coordination.
+# MARK: FUNCTIONS
+# Function inventory:
+# - _install_loop_exception_handler: Implements the  install loop exception handler operation for this module.
+# - _exception_handler: Implements the  exception handler operation for this module.
+# - lifespan: Implements the lifespan operation for this module.
+# ====================================================================================================
+
 import asyncio
 import logging
 import threading

@@ -14,6 +14,19 @@ from __future__ import annotations
 # Concurrency note:
 #   - the multi-row turn and event checks use BEGIN IMMEDIATE so the "latest
 #     message" view and the subsequent writes happen under one SQLite write lock.
+# MARK: FUNCTIONS
+# Function inventory:
+# - _normalise_tags: Implements the  normalise tags operation for this module.
+# - _message_to_dict: Implements the  message to dict operation for this module.
+# - message_append: Implements the message append operation for this module.
+# - conversation_append_turn: Implements the conversation append turn operation for this module.
+# - _latest_message_tx: Implements the  latest message tx operation for this module.
+# - _conversation_has_unanswered_inbound_tx: Implements the  conversation has unanswered inbound tx operation for this module.
+# - conversation_has_unanswered_inbound: Implements the conversation has unanswered inbound operation for this module.
+# - ensure_response_needed_event: Ensures response needed event for this module.
+# - clear_pending_response_needed_events: Clears pending response needed events for this module.
+# - message_list: Implements the message list operation for this module.
+# - message_update: Implements the message update operation for this module.
 # ====================================================================================================
 
 import json
@@ -66,15 +79,15 @@ def message_append(
 
 
 def conversation_append_turn(
-    conversation_id: int,
-    inbound_content: str,
-    outbound_content: str,
-    inbound_sender: str = "",
-    outbound_sender: str = "agent",
-    token_estimate: int | None = None,
-    outbound_metadata: dict | None = None,
-    inbound_tags: list[str] | None = None,
-    outbound_tags: list[str] | None = None,
+    conversation_id:                int,
+    inbound_content:                str,
+    outbound_content:               str,
+    inbound_sender:                 str = "",
+    outbound_sender:                str = "agent",
+    token_estimate:                 int | None = None,
+    outbound_metadata:              dict | None = None,
+    inbound_tags:                   list[str] | None = None,
+    outbound_tags:                  list[str] | None = None,
     outbound_delivery_eligible: bool = True,
 ) -> dict | None:
     now = _now()

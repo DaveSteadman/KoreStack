@@ -1,3 +1,20 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Browser-facing asset and stream routes for KoreChat. API resource routes stay separate from this
+# module so UI redirects, cache-control, static JavaScript, and the server-sent-event endpoint can
+# evolve without changing the conversation contract. Path validation confines module assets to the
+# configured UI directory.
+# MARK: FUNCTIONS
+# Function inventory:
+# - root: Implements the root operation for this module.
+# - serve_ui: Serves ui for this module.
+# - serve_ui_js: Serves ui js for this module.
+# - serve_ui_css: Serves ui css for this module.
+# - serve_ui_module: Serves ui module for this module.
+# - stream_events: Implements the stream events operation for this module.
+# ====================================================================================================
+
 from fastapi import APIRouter
 from fastapi import HTTPException
 from fastapi.responses import FileResponse

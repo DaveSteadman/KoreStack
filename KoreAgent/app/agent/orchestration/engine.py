@@ -16,6 +16,41 @@
 #   - skill_executor.py          -- execute_tool_call (executes individual skill calls)
 #   - skills_catalog_builder.py  -- build_tool_definitions (generates JSON Schema tool specs)
 #   - llm_client.py              -- call_llm_chat (/v1/chat/completions with tools support)
+# MARK: FUNCTIONS
+# Primary types: OrchestratorConfig, ConversationHistory, SessionContext.
+# Function inventory:
+# - get_skill_guidance_enabled: Returns skill guidance enabled for this module.
+# - set_skill_guidance_enabled: Sets skill guidance enabled for this module.
+# - get_sandbox_enabled: Returns sandbox enabled for this module.
+# - set_sandbox_enabled: Sets sandbox enabled for this module.
+# - get_web_skills_enabled: Returns web skills enabled for this module.
+# - set_web_skills_enabled: Sets web skills enabled for this module.
+# - _filter_web_skills: Implements the  filter web skills operation for this module.
+# - request_stop: Implements the request stop operation for this module.
+# - is_stop_requested: Checks whether stop requested is true.
+# - get_stop_reason: Returns stop reason for this module.
+# - clear_stop: Clears stop for this module.
+# - __init__: Implements the   init   operation for this module.
+# - add: Implements the add operation for this module.
+# - clear: Clears this module's primary operation.
+# - as_list: Implements the as list operation for this module.
+# - __len__: Implements the   len   operation for this module.
+# - __bool__: Implements the   bool   operation for this module.
+# - _truncate_words: Implements the  truncate words operation for this module.
+# - session_id: Implements the session id operation for this module.
+# - add_turn: Implements the add turn operation for this module.
+# - turn_count: Implements the turn count operation for this module.
+# - get_turns: Returns turns for this module.
+# - as_inject_block: Implements the as inject block operation for this module.
+# - _compact_output: Implements the  compact output operation for this module.
+# - _save: Implements the  save operation for this module.
+# - resolve_execution_model: Resolves execution model for this module.
+# - orchestrate_prompt: Implements the orchestrate prompt operation for this module.
+# - _log: Implements the  log operation for this module.
+# - _log_section: Implements the  log section operation for this module.
+# - _log_file_only: Implements the  log file only operation for this module.
+# - _log_section_file_only: Implements the  log section file only operation for this module.
+# - _build_tool_runtime: Implements the  build tool runtime operation for this module.
 # ====================================================================================================
 
 

@@ -1,3 +1,29 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# gateway search module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Function inventory:
+# - build_artifact_ref: Builds artifact ref for this module.
+# - parse_artifact_ref: Parses artifact ref for this module.
+# - parse_sentence_locator: Parses sentence locator for this module.
+# - _map_feed_entry: Implements the  map feed entry operation for this module.
+# - _map_reference_article: Implements the  map reference article operation for this module.
+# - _map_rag_chunk: Implements the  map rag chunk operation for this module.
+# - _search_query_terms: Implements the  search query terms operation for this module.
+# - _parse_search_timestamp: Implements the  parse search timestamp operation for this module.
+# - _result_match_score: Implements the  result match score operation for this module.
+# - _merge_search_results: Implements the  merge search results operation for this module.
+# - run_search: Runs search for this module.
+# - _feeds: Implements the  feeds operation for this module.
+# - _reference: Implements the  reference operation for this module.
+# - _library: Implements the  library operation for this module.
+# - _rag: Implements the  rag operation for this module.
+# - _scrape: Implements the  scrape operation for this module.
+# - _graph: Implements the  graph operation for this module.
+# ====================================================================================================
+
 from __future__ import annotations
 
 import asyncio

@@ -20,6 +20,12 @@
 #   - main.py                              -- orchestration entry point
 #   - skills_catalog_builder.py            -- reads skill.md to build the catalog
 #   - webpage_utils.py                     -- HTTP fetch, HTML extraction, text utilities (shared)
+# MARK: FUNCTIONS
+# Function inventory:
+# - _format_raw_fallback: Implements the  format raw fallback operation for this module.
+# - _format_query_fallback: Implements the  format query fallback operation for this module.
+# - _extract_query_from_text: Implements the  extract query from text operation for this module.
+# - fetch_page_text: Implements the fetch page text operation for this module.
 # ====================================================================================================
 
 

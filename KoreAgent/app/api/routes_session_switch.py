@@ -1,3 +1,15 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# routes session switch module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Primary types: SessionSwitchRequest.
+# Function inventory:
+# - register_session_switch_routes: Registers session switch routes for this module.
+# - post_request_switch: Implements the post request switch operation for this module.
+# ====================================================================================================
+
 from fastapi import HTTPException
 from pydantic import BaseModel
 

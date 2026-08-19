@@ -1,3 +1,22 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# test tool sets module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Primary types: ToolSetTests.
+# Function inventory:
+# - test_tool_set_builder_splits_koredocs_into_file_and_document_subsystems: Implements the test tool set builder splits koredocs into file and document subsystems operation for this module.
+# - test_active_tool_queue_evicts_oldest_and_reactivation_moves_to_newest: Implements the test active tool queue evicts oldest and reactivation moves to newest operation for this module.
+# - test_normalise_tool_sets_rejects_groups_larger_than_the_active_set_half_cap: Implements the test normalise tool sets rejects groups larger than the active set half cap operation for this module.
+# - test_save_and_resolve_tool_sets_uses_only_currently_available_tools: Implements the test save and resolve tool sets uses only currently available tools operation for this module.
+# - test_related_tool_set_reactivates_the_smallest_matching_group: Implements the test related tool set reactivates the smallest matching group operation for this module.
+# - test_relevant_tool_sets_require_a_distinctive_domain_term: Implements the test relevant tool sets require a distinctive domain term operation for this module.
+# - test_reevaluation_persists_complete_programmatic_grouping: Implements the test reevaluation persists complete programmatic grouping operation for this module.
+# - output: Implements the output operation for this module.
+# - fake_save: Implements the fake save operation for this module.
+# ====================================================================================================
+
 from __future__ import annotations
 
 import json

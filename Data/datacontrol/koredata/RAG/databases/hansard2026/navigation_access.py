@@ -1,3 +1,25 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# navigation access module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Function inventory:
+# - has_navigation: Checks whether navigation is true.
+# - get_sittings: Returns sittings for this module.
+# - get_sitting_debates: Returns sitting debates for this module.
+# - get_members: Returns members for this module.
+# - get_debate: Returns debate for this module.
+# - get_debate_speeches: Returns debate speeches for this module.
+# - _bare_name: Implements the  bare name operation for this module.
+# - get_member_by_id: Returns member by id for this module.
+# - get_member_speeches: Returns member speeches for this module.
+# - build_explore_payload: Builds explore payload for this module.
+# - build_sitting_payload: Builds sitting payload for this module.
+# - build_debate_payload: Builds debate payload for this module.
+# - build_member_payload: Builds member payload for this module.
+# ====================================================================================================
+
 import re
 from typing import Optional
 

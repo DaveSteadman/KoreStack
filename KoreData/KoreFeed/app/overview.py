@@ -1,3 +1,15 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# overview module. This file groups related implementation behind a focused module boundary;
+# callers use its types and functions instead of duplicating its local policy or mechanics.
+# MARK: FUNCTIONS
+# Function inventory:
+# - _compute_overview: Implements the  compute overview operation for this module.
+# - get_feed_overview: Returns feed overview for this module.
+# - invalidate_feed_overview: Implements the invalidate feed overview operation for this module.
+# ====================================================================================================
+
 from __future__ import annotations
 
 import copy

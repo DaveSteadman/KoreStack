@@ -20,6 +20,20 @@
 #   - skills/WebFetch/web_fetch_skill.py    -- downstream: reads chosen pages
 #   - system_skills/Scratchpad/scratchpad_skill.py -- semantic filtering of parked link lists
 #   - webpage_utils.py                      -- shared HTTP fetch utility
+# MARK: FUNCTIONS
+# Primary types: _LinkExtractor.
+# Function inventory:
+# - __init__: Implements the   init   operation for this module.
+# - handle_starttag: Handles starttag for this module.
+# - handle_endtag: Handles endtag for this module.
+# - handle_data: Handles data for this module.
+# - _resolve_url: Implements the  resolve url operation for this module.
+# - _is_noise_link: Implements the  is noise link operation for this module.
+# - _extract_links: Implements the  extract links operation for this module.
+# - extract_urls_from_html: Extracts urls from html for this module.
+# - _fetch_links_data: Implements the  fetch links data operation for this module.
+# - get_page_links: Returns page links for this module.
+# - get_page_links_text: Returns page links text for this module.
 # ====================================================================================================
 
 

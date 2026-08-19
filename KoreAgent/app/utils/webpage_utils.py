@@ -24,6 +24,25 @@
 # Related modules:
 #   code/utils/workspace_utils.py        -- workspace root path management
 #   code/skills/WebSearch/               -- uses fetch_html
+# MARK: FUNCTIONS
+# Primary types: _FallbackExtractor.
+# Function inventory:
+# - is_url_cached: Checks whether url cached is true.
+# - fetch_html: Implements the fetch html operation for this module.
+# - dedup_paragraphs: Implements the dedup paragraphs operation for this module.
+# - __init__: Implements the   init   operation for this module.
+# - handle_starttag: Handles starttag for this module.
+# - handle_endtag: Handles endtag for this module.
+# - handle_data: Handles data for this module.
+# - _flush: Implements the  flush operation for this module.
+# - get_text: Returns text for this module.
+# - _attrs_lower: Implements the  attrs lower operation for this module.
+# - _prune_noise_bs4: Implements the  prune noise bs4 operation for this module.
+# - _extract_structured_bs4: Implements the  extract structured bs4 operation for this module.
+# - _extract_with_bs4: Implements the  extract with bs4 operation for this module.
+# - _extract_with_stdlib: Implements the  extract with stdlib operation for this module.
+# - extract_content: Extracts content for this module.
+# - truncate_to_words: Implements the truncate to words operation for this module.
 # ====================================================================================================
 
 

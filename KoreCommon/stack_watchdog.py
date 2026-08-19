@@ -1,6 +1,17 @@
-from __future__ import annotations
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Optional process-liveness watchdog for services launched by the KoreStack supervisor. It reads
+# supervisor settings from the environment, polls the health endpoint in one daemon thread, and
+# terminates the child process after a bounded failure count. Directly launched services are left
+# untouched because the controlling health URL is absent.
+# MARK: FUNCTIONS
+# Function inventory:
+# - start_from_environment: Starts from environment for this module.
+# - _supervise: Implements the  supervise operation for this module.
+# ====================================================================================================
 
-"""Terminate a KoreStack-managed Python process when its supervisor disappears."""
+from __future__ import annotations
 
 import logging
 import os

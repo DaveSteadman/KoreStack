@@ -12,6 +12,23 @@
 #   - app/_mcp_shared.py    -- parser helpers (_koredoc_parse, _koredoc_find_heading, etc.)
 #   - app/koredocs_mcp.py   -- imports this module to register its tools
 #   - app/korefile.py       -- underlying virtual FS
+# MARK: FUNCTIONS
+# Function inventory:
+# - create_koredoc: Creates koredoc for this module.
+# - _metadata_paths: Implements the  metadata paths operation for this module.
+# - _metadata_files: Implements the  metadata files operation for this module.
+# - koredocs_metadata_inventory: Implements the koredocs metadata inventory operation for this module.
+# - koredocs_metadata_find_variants: Implements the koredocs metadata find variants operation for this module.
+# - _metadata_migration_matches: Implements the  metadata migration matches operation for this module.
+# - koredocs_metadata_rename_field: Implements the koredocs metadata rename field operation for this module.
+# - koredocs_metadata_replace_value: Implements the koredocs metadata replace value operation for this module.
+# - koredocs_doc_outline_get: Implements the koredocs doc outline get operation for this module.
+# - koredocs_doc_section_read: Implements the koredocs doc section read operation for this module.
+# - koredocs_doc_section_replace: Implements the koredocs doc section replace operation for this module.
+# - koredocs_doc_section_insert: Implements the koredocs doc section insert operation for this module.
+# - koredocs_doc_markdown_append: Implements the koredocs doc markdown append operation for this module.
+# - koredocs_doc_create: Implements the koredocs doc create operation for this module.
+# - koredocs_doc_create_from_scratchpad: Implements the koredocs doc create from scratchpad operation for this module.
 # ====================================================================================================
 
 from __future__ import annotations
