@@ -697,10 +697,10 @@ def ui_distribution_list_create(
     if not name.strip():
         raise HTTPException(400, "List name is required")
     try:
-        db.distribution_list_create(interface_id, name, description)
+        list_id = db.distribution_list_create(interface_id, name, description)
     except Exception as exc:
         raise HTTPException(409, f"Could not create distribution list: {exc}") from exc
-    return RedirectResponse("/distribution-lists", status_code=303)
+    return RedirectResponse(f"/distribution-lists?list_id={list_id}", status_code=303)
 
 
 @app.post("/distribution-lists/{list_id}")

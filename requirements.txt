@@ -1,9 +1,15 @@
 # KoreStack — consolidated Python dependencies
 #
-# Single virtual environment for the entire suite:
+# Single virtual environment for the entire suite (Windows):
 #   python -m venv .venv
 #   .venv\Scripts\Activate.ps1
 #   pip install -r requirements.txt
+#
+# Linux:
+#   python3 -m venv .venv
+#   source .venv/bin/activate
+#   pip install -r requirements.txt
+
 
 # ── Core web framework (all services) ─────────────────────────────────────
 fastapi>=0.111

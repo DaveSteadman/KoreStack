@@ -29,8 +29,10 @@
             <option value="{{ iface.id }}">{{ iface.name }}</option>
             {% endfor %}
           </select>
-          <label for="list-name">New list</label>
+          <label for="list-name">List name</label>
           <input id="list-name" name="name" type="text" placeholder="AI news team" required>
+          <label for="list-description">Description <span class="kcui-meta">(optional)</span></label>
+          <input id="list-description" name="description" type="text" placeholder="Weekly AI news recipients">
           <button class="kcui-tag kcui-tag--accent" type="submit">create list</button>
         </form>
       </div>
@@ -38,7 +40,12 @@
 
     <section class="kcui-panel distribution-detail">
       {% if selected %}
-      <div class="kcui-panel-header">{{ selected.name }} <span class="kcui-tag kcui-tag--info">{{ selected.interface_name }}</span></div>
+      <div class="kcui-panel-header">
+        <span class="distribution-detail-title">List details <span class="kcui-tag kcui-tag--info">{{ selected.interface_name }}</span></span>
+        <form method="post" action="/distribution-lists/{{ selected.id }}/delete" class="distribution-delete-list">
+          <button class="kcui-tag kcui-tag--danger" type="submit" data-kcui-confirm="Delete distribution list {{ selected.name }} and all its members? This cannot be undone." data-kcui-confirm-title="Delete distribution list" data-kcui-confirm-label="Delete">delete list</button>
+        </form>
+      </div>
       <div class="kcui-panel-body">
         <form method="post" action="/distribution-lists/{{ selected.id }}" class="distribution-list-settings">
           <div><label for="selected-list-name">List name</label><input id="selected-list-name" name="name" type="text" value="{{ selected.name }}" required></div>
@@ -64,9 +71,6 @@
           <button class="kcui-tag kcui-tag--accent" type="submit">add address</button>
         </form>
 
-        <form method="post" action="/distribution-lists/{{ selected.id }}/delete" class="distribution-delete-list">
-          <button class="kcui-tag kcui-tag--danger" type="submit" data-kcui-confirm="Delete distribution list {{ selected.name }} and all its members?" data-kcui-confirm-label="Delete">delete list</button>
-        </form>
       </div>
       {% else %}
       <div class="kcui-panel-header">Distribution Lists</div>
@@ -90,7 +94,8 @@
   .distribution-members { border-top: 1px solid var(--border); }
   .distribution-members .distribution-member-form { padding: 8px 10px; border-bottom: 1px solid var(--border); }
   .distribution-member-form--new { margin-top: 10px; }
-  .distribution-delete-list { margin-top: 16px; }
+  .distribution-detail-title { display: inline-flex; align-items: center; gap: 8px; }
+  .distribution-delete-list { margin: 0; }
   @media (max-width: 760px) { .distribution-workspace { grid-template-columns: 1fr; } .kcui-shell-bg .distribution-list-settings, .kcui-shell-bg .distribution-member-form { grid-template-columns: 1fr; } }
 </style>
 {% endblock %}

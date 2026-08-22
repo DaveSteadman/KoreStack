@@ -180,10 +180,14 @@ register_suite_shell_routes(
 @app.get("/status", tags=["meta"])
 def api_status():
     """Health check used by KoreDataGateway."""
+    overview = get_feed_overview()
     return {
-        "status":  "ok",
-        "service": "KoreFeed",
-        "runtime": get_runtime_status(),
+        "status":        "ok",
+        "service":       "KoreFeed",
+        "total_domains": overview["total_domains"],
+        "total_feeds":   overview["total_feeds"],
+        "total_entries": overview["total_entries"],
+        "runtime":       get_runtime_status(),
     }
 
 

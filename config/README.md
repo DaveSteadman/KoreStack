@@ -20,3 +20,4 @@ connection independently of the rest of the stack.
 Holds the live web provider selection and provider-specific settings used by KoreLiveWeb,
 including the preferred search provider, enabled providers, hosted search endpoint, and
 optional API key.
+
