@@ -9,6 +9,7 @@
 # - test_message_tags_include_direction_and_supplied_values: Implements the test message tags include direction and supplied values operation for this module.
 # - test_conversation_get_preserves_malformed_scratchpad_payload: Implements the test conversation get preserves malformed scratchpad payload operation for this module.
 # - test_conversation_get_preserves_malformed_datasets_payload: Implements the test conversation get preserves malformed datasets payload operation for this module.
+# - test_conversation_clear_history_resets_model_context: Implements conversation history reset coverage.
 # - test_init_db_migrates_legacy_datasets_out_of_scratchpad: Implements the test init db migrates legacy datasets out of scratchpad operation for this module.
 # ====================================================================================================
 
@@ -87,6 +88,42 @@ class DatabaseRegressionTests(unittest.TestCase):
         self.assertEqual(loaded["datasets"], {})
         self.assertEqual(loaded["datasets_raw"], '{"broken": ')
         self.assertIn("datasets JSON decode failed", loaded["datasets_parse_error"])
+
+    def test_conversation_clear_history_resets_model_context(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            temp_db_dir = Path(tmp)
+
+            try:
+                db.reset_runtime_state()
+                with patch.dict(db.cfg, {"data_dir": str(temp_db_dir)}):
+                    db.init_db()
+                    conversation = db.conversation_create("webchat", subject="Test")
+                    conversation_id = conversation["id"]
+                    db.message_append(conversation_id, "inbound", "Old prompt")
+                    db.conversation_update(
+                        conversation_id,
+                        thread_summary     = "Old summary",
+                        background_context = "Old tool context",
+                        token_estimate     = 1234,
+                        turn_count         = 7,
+                    )
+                    db.conversation_set_input_history(conversation_id, ["Old prompt"])
+
+                    cleared = db.conversation_clear_history(conversation_id)
+                    loaded  = db.conversation_get_with_messages(conversation_id)
+                    archived_messages = db.message_list(conversation_id)
+            finally:
+                db.reset_runtime_state()
+
+        self.assertTrue(cleared)
+        self.assertEqual(loaded["messages"], [])
+        self.assertEqual(len(archived_messages), 1)
+        self.assertEqual(archived_messages[0]["summarised"], 1)
+        self.assertEqual(loaded["thread_summary"], "")
+        self.assertEqual(loaded["background_context"], "")
+        self.assertEqual(loaded["input_history"], [])
+        self.assertEqual(loaded["token_estimate"], 0)
+        self.assertEqual(loaded["turn_count"], 0)
 
     def test_init_db_migrates_legacy_datasets_out_of_scratchpad(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

@@ -28,6 +28,7 @@ from __future__ import annotations
 # - conversation_get_input_history: Implements the conversation get input history operation for this module.
 # - conversation_set_input_history: Implements the conversation set input history operation for this module.
 # - conversation_append_input_history: Implements the conversation append input history operation for this module.
+# - conversation_clear_history: Clears persisted conversation history and context for this module.
 # - conversation_delete: Implements the conversation delete operation for this module.
 # - conversation_cull_default_inactive: Implements the conversation cull default inactive operation for this module.
 # - conversation_counts: Implements the conversation counts operation for this module.
@@ -299,6 +300,26 @@ def conversation_append_input_history(conversation_id: int, text: str, max_entri
         )
         connection.execute("COMMIT")
     return entries
+
+
+def conversation_clear_history(conversation_id: int) -> bool:
+    """Archive messages and reset all model-facing accumulated conversation context."""
+    now = _now()
+    with _conn() as connection:
+        row = connection.execute("SELECT 1 FROM conversations WHERE id = ?", (conversation_id,)).fetchone()
+        if row is None:
+            return False
+        connection.execute("UPDATE messages SET summarised = 1 WHERE conversation_id = ?", (conversation_id,))
+        connection.execute(
+            """
+            UPDATE conversations
+            SET thread_summary = '', background_context = '', input_history = '[]',
+                token_estimate = 0, turn_count = 0, updated_at = ?, last_activity_at = ?
+            WHERE id = ?
+            """,
+            (now, now, conversation_id),
+        )
+    return True
 
 
 def conversation_delete(conversation_id: int) -> bool:

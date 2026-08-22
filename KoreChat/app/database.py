@@ -12,6 +12,7 @@ from app.db import CLAIM_TIMEOUT_SECS
 from app.db import clear_pending_response_needed_events
 from app.db import clear_stale_outbound_ready
 from app.db import conversation_append_input_history
+from app.db import conversation_clear_history
 from app.db import conversation_append_turn
 from app.db import conversation_counts
 from app.db import conversation_create

@@ -229,6 +229,18 @@ def _http_patch(base: str, path: str, payload: dict, timeout: int = _DEFAULT_TIM
         raise RuntimeError(f"KC unreachable: {exc.reason}") from exc
 
 
+# ----------------------------------------------------------------------------------------------------
+def _http_delete(base: str, path: str, timeout: int = _DEFAULT_TIMEOUT) -> None:
+    req = urllib.request.Request(f"{base}{path}", method="DELETE")
+    try:
+        with urllib.request.urlopen(req, timeout=timeout):
+            return None
+    except urllib.error.HTTPError as exc:
+        raise RuntimeError(f"KC HTTP {exc.code}: {exc.read().decode('utf-8', errors='replace')[:120]}") from exc
+    except urllib.error.URLError as exc:
+        raise RuntimeError(f"KC unreachable: {exc.reason}") from exc
+
+
 def _complete_event(base: str, event_id: object, status: str, push_log_line, *, context: str = "") -> bool:
     if not event_id:
         return False
@@ -555,11 +567,20 @@ def _handle_event(
             if inbound_id:
                 _http_patch(base, f"/messages/{inbound_id}", {"tags": ["slashcommand"]})
 
+            history_cleared = False
+
+            def _clear_korechat_history() -> None:
+                nonlocal history_cleared
+                session_ctx.clear()
+                scratchpad_clear(session_id)
+                _http_delete(base, f"/conversations/{conv_id}/history")
+                history_cleared = True
+
             slash_response = process_slash_prompt(
                 inbound_prompt,
                 config          = config,
                 output          = lambda text, _level="info": push_log_line(f"[slash] {text}"),
-                clear_history   = lambda: (session_ctx.clear(), scratchpad_clear(session_id)),
+                clear_history   = _clear_korechat_history,
                 session_context = session_ctx,
                 session_id      = session_id,
                 chat_name       = str(conv.get("external_id") or "").strip() or None,
@@ -578,7 +599,7 @@ def _handle_event(
                 })
                 _http_patch(base, f"/conversations/{conv_id}", {
                     "status":     "active",
-                    "turn_count": turn_count + 1,
+                    "turn_count": 0 if history_cleared else turn_count + 1,
                     "scratchpad": persisted_scratchpad,
                     "datasets":   persisted_datasets,
                 })

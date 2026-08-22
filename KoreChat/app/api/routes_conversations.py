@@ -15,6 +15,7 @@
 # - get_conversation: Returns conversation for this module.
 # - get_conversation_detail: Returns conversation detail for this module.
 # - patch_conversation: Implements the patch conversation operation for this module.
+# - clear_conversation_history: Clears conversation history for this module.
 # - delete_conversation: Deletes conversation for this module.
 # - cull_default_chats: Implements the cull default chats operation for this module.
 # - get_conversation_input_history: Returns conversation input history for this module.
@@ -134,6 +135,15 @@ def patch_conversation(conversation_id: int, req: ConversationPatchRequest):
         raise HTTPException(status_code=404, detail="Conversation not found")
     push_event("conv_updated", conversation_id)
     return result
+
+
+@router.delete("/api/conversations/{conversation_id}/history", status_code=204)
+@router.delete("/conversations/{conversation_id}/history", status_code=204, include_in_schema=False)
+def clear_conversation_history(conversation_id: int):
+    if not db.conversation_clear_history(conversation_id):
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    push_event("conv_updated", conversation_id)
+    return Response(status_code=204)
 
 
 @router.delete("/api/conversations/{conversation_id}", status_code=204)

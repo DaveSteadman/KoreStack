@@ -419,7 +419,7 @@ def _delete_session_state(session_id: str) -> None:
 
 @app.post("/api/conversations/{conversation_id}/workspace/clear")
 def clear_conversation_workspace(conversation_id: int):
-    """Clear run-scoped working data while retaining the KoreChat conversation history."""
+    """Reset run-scoped working data and accumulated KoreChat conversation context."""
     conversation = _kc_get(f"/conversations/{conversation_id}")
     if not isinstance(conversation, dict):
         raise HTTPException(status_code=404, detail="Conversation not found")
@@ -427,12 +427,14 @@ def clear_conversation_workspace(conversation_id: int):
     scratch_result = scratchpad_clear(session_id)
     dataset_result = dataset_clear(session_id)
     clear_session_tools_active(session_id)
+    _kc_delete(f"/conversations/{conversation_id}/history")
     _kc_patch(f"/conversations/{conversation_id}", {"scratchpad": {}, "datasets": {}, "tools_active": []})
     return {
         "conversation_id": conversation_id,
         "scratchpad":      scratch_result,
         "datasets":        dataset_result,
         "tools_active":    "cleared",
+        "history":         "cleared",
     }
 
 

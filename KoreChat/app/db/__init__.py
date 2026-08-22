@@ -13,6 +13,7 @@ from .common import CLAIM_TIMEOUT_SECS
 from .common import get_db_path
 from .common import reset_runtime_state
 from .conversations import conversation_append_input_history
+from .conversations import conversation_clear_history
 from .conversations import conversation_counts
 from .conversations import conversation_create
 from .conversations import conversation_cull_default_inactive
@@ -59,6 +60,7 @@ __all__ = [
     "conversation_get_input_history",
     "conversation_set_input_history",
     "conversation_append_input_history",
+    "conversation_clear_history",
     "conversation_delete",
     "conversation_cull_default_inactive",
     "conversation_counts",

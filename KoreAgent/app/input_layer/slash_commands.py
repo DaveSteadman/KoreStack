@@ -663,7 +663,8 @@ def _cmd_workspace(arg: str, ctx: SlashCommandContext) -> None:
     scratch_result = scratchpad_clear(ctx.session_id)
     dataset_result = dataset_clear(ctx.session_id)
     clear_session_tools_active(ctx.session_id)
-    ctx.output(f"Workspace cleared: {scratch_result} {dataset_result} Active tool selection reset.", "success")
+    ctx.clear_history()
+    ctx.output(f"Workspace and conversation history cleared: {scratch_result} {dataset_result} Active tool selection reset.", "success")
 
 
 _REGISTRY: dict[str, Callable] = {
@@ -695,7 +696,7 @@ _DESCRIPTIONS: dict[str, str] = {
     "/defaults": "Show current Agent configuration and file path; /defaults set saves current model/ctx/host to the file",
     "/mcp":      "[status | reconnect]  Show MCP server status or re-enumerate tools from all configured servers",
     "/comms":    "delivery bind [--chat <name>] --connection <name> [--to <email>|--to-list <name>] --subject <text> [--startpaused]; connection pause|resume|publishprevious [--chat <name>]",
-    "/workspace": "clear  Clear this chat's scratchpad, temporary datasets, and active tool selection",
+    "/workspace": "clear  Reset this chat's history, scratchpad, temporary datasets, and active tool selection",
 }
 
 register_model_slash_commands(_REGISTRY, _DESCRIPTIONS)
