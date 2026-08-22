@@ -11,7 +11,7 @@
     <div class="panel kcui-panel">
       <div class="panel-header kcui-panel-header">
         FEEDS
-        <span class="badge badge-dim" style="margin-left:0.5rem;">{{ feeds|length }}</span>
+        <span id="feed-count" class="badge badge-dim" style="margin-left:0.5rem;">{{ feeds|length }}</span>
       </div>
       <div class="panel-body kcui-panel-body" style="padding:0;">
         {% if feeds %}
@@ -29,20 +29,20 @@
           </thead>
           <tbody id="feeds-tbody">
             {% for f in feeds %}
-            <tr style="cursor:pointer;" onclick="editFeed('{{ f.id }}','{{ f.name | replace("'","\\'") }}','{{ f.url }}','{{ f.get("type","rss") }}',{{ f.update_rate }})">
+            <tr data-feed-id="{{ f.id }}" style="cursor:pointer;" onclick="editFeed('{{ f.id }}','{{ f.name | replace("'","\\'") }}','{{ f.url }}','{{ f.get("type","rss") }}',{{ f.update_rate }})">
               <td>
                 {{ f.name }}
                 {% if f.get('type') == 'web' %}<span class="meta" style="font-size:10px; margin-left:0.4rem; border:1px solid var(--border); border-radius:3px; padding:0 3px;">WEB</span>{% endif %}
               </td>
               <td class="meta">{{ f.update_rate }}m</td>
-              <td class="meta" style="font-size:11px;">
+              <td class="meta" data-col="content" style="font-size:11px;">
                 {% set cs = f.get('content_status', 'good') %}
                 {% if cs == 'poor' %}<span style="color:var(--amber);">Poor Content</span>
                 {% elif cs == 'none' %}<span style="color:var(--red);">No Content Found</span>
                 {% else %}<span>Good Feed</span>
                 {% endif %}
               </td>
-              <td style="text-align:center;">
+              <td data-col="entries" style="text-align:center;">
                 {% set cnt = feed_counts.get(f.name, 0) %}
                 {% if cnt > 0 %}<span class="badge badge-dim">{{ cnt }}</span>
                 {% else %}<span class="meta" style="font-size:11px;">-</span>
@@ -60,10 +60,10 @@
                   onclick="triggerRefresh(this, '/ui/feeds/{{ domain }}/feeds/{{ f.id }}/refresh')">&#x21bb;</button>
               </td>
               <td>
-                <form method="post" action="/ui/feeds/{{ domain }}/feeds/{{ f.id }}/delete" style="flex-direction:row;">
+                <form method="post" action="/ui/feeds/{{ domain }}/feeds/{{ f.id }}/delete"
+                  data-feed-name="{{ f.name }}" onsubmit="return confirmDeleteFeed(this)">
                   <button class="kcui-tag kcui-tag--sm kcui-tag--danger" type="submit"
-                    data-feed-name="{{ f.name }}"
-                    onclick="event.preventDefault(); confirmDeleteFeed(this.dataset.feedName, this.form)">&#x2715;</button>
+                    onclick="event.stopPropagation()">&#x2715;</button>
                 </form>
               </td>
             </tr>
@@ -348,16 +348,6 @@ async function confirmDeleteFeedEntries() {
   if (confirmed) form.submit();
 }
 
-async function confirmDeleteFeed(feedName, form) {
-  if (!form) return;
-  const confirmed = await window.kcuiConfirm(
-    'Delete Feed',
-    'Remove ' + feedName + '?',
-    { confirmLabel: 'Delete' },
-  );
-  if (confirmed) form.submit();
-}
-
 async function deleteEntry(btn, url) {
   const row = btn.closest('tr');
   btn.disabled = true;
@@ -373,6 +363,20 @@ async function deleteEntry(btn, url) {
     } else { btn.disabled = false; }
   } catch (e) { btn.disabled = false; }
 }
+
+function confirmDeleteFeed(form) {
+  const feedName = form.dataset.feedName || 'this feed';
+  if (!window.confirm('Remove ' + feedName + '? Existing downloaded entries will be retained.')) return false;
+  sessionStorage.setItem('korefeed-scroll-y', String(window.scrollY));
+  return true;
+}
+
+window.addEventListener('load', function () {
+  const savedScrollY = sessionStorage.getItem('korefeed-scroll-y');
+  if (savedScrollY === null) return;
+  sessionStorage.removeItem('korefeed-scroll-y');
+  window.scrollTo(0, Number(savedScrollY));
+});
 
 function cancelAgeGate() {
   document.getElementById('age-mode-select').value = '{{ age_settings.mode }}';
@@ -422,11 +426,11 @@ function cancelAgeGate() {
 
 (function () {
   var DELAY = 5000;
-  var timer;
   var inflight = false;
 
   function canRefreshNow() {
     if (document.visibilityState !== 'visible') return false;
+    if (document.querySelector('dialog[open]')) return false;
     if (document.activeElement && (
       document.activeElement.matches('input, textarea, select') ||
       document.activeElement.closest('#form-edit')
@@ -441,11 +445,24 @@ function cancelAgeGate() {
       var resp = await fetch(location.href, { cache: 'no-store' });
       if (!resp.ok) return;
       var html = await resp.text();
+      if (!canRefreshNow()) return;
       var doc = new DOMParser().parseFromString(html, 'text/html');
 
-      var oldFeeds = document.getElementById('feeds-tbody');
-      var newFeeds = doc.getElementById('feeds-tbody');
-      if (oldFeeds && newFeeds) oldFeeds.innerHTML = newFeeds.innerHTML;
+      var freshFeeds = new Map();
+      doc.querySelectorAll('#feeds-tbody tr[data-feed-id]').forEach(function (row) {
+        freshFeeds.set(row.dataset.feedId, row);
+      });
+      document.querySelectorAll('#feeds-tbody tr[data-feed-id]').forEach(function (row) {
+        var freshRow = freshFeeds.get(row.dataset.feedId);
+        if (!freshRow) return;
+        ['content', 'entries', 'next'].forEach(function (column) {
+          var currentCell = row.querySelector('[data-col="' + column + '"]');
+          var freshCell = freshRow.querySelector('[data-col="' + column + '"]');
+          if (!currentCell || !freshCell) return;
+          currentCell.innerHTML = freshCell.innerHTML;
+          if (column === 'next') currentCell.dataset.nextSecs = freshCell.dataset.nextSecs || '';
+        });
+      });
 
       var oldEntries = document.getElementById('entries-tbody');
       var newEntries = doc.getElementById('entries-tbody');
@@ -462,18 +479,7 @@ function cancelAgeGate() {
     }
   }
 
-  function schedule() {
-    clearTimeout(timer);
-    timer = setTimeout(refreshInPlace, DELAY);
-  }
-  ['mousedown', 'keydown', 'touchstart'].forEach(function (evt) {
-    document.addEventListener(evt, schedule, { passive: true });
-  });
-  document.addEventListener('visibilitychange', function () {
-    if (document.visibilityState === 'visible') schedule();
-    else clearTimeout(timer);
-  });
-  schedule();
+  setInterval(refreshInPlace, DELAY);
 }());
 
 (function () {

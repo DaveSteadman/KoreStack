@@ -101,9 +101,10 @@
               <td class="meta kcui-text-right"><span class="badge badge-dim">{{ d.entry_count }}</span></td>
               <td class="kcui-text-right kcui-nowrap">
                 <form method="post" action="/ui/feeds/domains/{{ d.domain }}/delete"
-                      class="kcui-inline-form">
+                      class="kcui-inline-form" data-domain-name="{{ d.domain }}"
+                      onsubmit="event.stopPropagation(); return confirmDeleteDomain(this)">
                   <button class="kcui-tag kcui-tag--sm kcui-tag--danger" type="submit"
-                    onclick="event.stopPropagation(); event.preventDefault(); confirmDeleteDomain('{{ d.domain }}', this.form); return false;">DELETE</button>
+                    onclick="event.stopPropagation()">DELETE</button>
                 </form>
               </td>
             </tr>
@@ -299,18 +300,18 @@ async function toggleDomainEnabled(domain, input) {
   }
 }
 
-async function confirmDeleteDomain(domain, form) {
-  const ok = await window.kcuiConfirm(
-    'Delete Domain',
-    'Delete domain "' + domain + '" and all its data?'
-  );
-  if (ok) form.submit();
+function confirmDeleteDomain(form) {
+  const domain = form.dataset.domainName || 'this domain';
+  return window.confirm('Delete domain "' + domain + '" and all its data?');
 }
 
 (function () {
   var DELAY = 2000;
   var timer = null;
   var inflight = false;
+  var domainsSignature = JSON.stringify([
+    {% for d in domains %}[{{ d.domain | tojson }}, {{ 'true' if d.enabled else 'false' }}, {{ d.entry_count }}]{{ "," if not loop.last }}{% endfor %}
+  ]);
   var domainsTbody = document.getElementById('domains-tbody');
   var feedsTbody = document.getElementById('feeds-tbody');
   var feedRuntimeBadge = document.getElementById('feed-runtime-badge');
@@ -451,8 +452,8 @@ async function confirmDeleteDomain(domain, form) {
           '</td>' +
           '<td class="meta kcui-text-right"><span class="badge badge-dim">' + count + '</span></td>' +
           '<td class="kcui-text-right kcui-nowrap">' +
-            '<form method="post" action="/ui/feeds/domains/' + domain + '/delete" class="kcui-inline-form">' +
-              '<button class="kcui-tag kcui-tag--sm kcui-tag--danger" type="submit" onclick="event.stopPropagation(); event.preventDefault(); confirmDeleteDomain(\'' + domain + '\', this.form); return false;">DELETE</button>' +
+            '<form method="post" action="/ui/feeds/domains/' + domain + '/delete" class="kcui-inline-form" data-domain-name="' + domain + '" onsubmit="event.stopPropagation(); return confirmDeleteDomain(this)">' +
+              '<button class="kcui-tag kcui-tag--sm kcui-tag--danger" type="submit" onclick="event.stopPropagation()">DELETE</button>' +
             '</form>' +
           '</td>' +
         '</tr>';
@@ -513,8 +514,17 @@ async function confirmDeleteDomain(domain, form) {
       }
 
       if (domainsTbody) {
-        const html = renderDomains(domains);
-        if (domainsTbody.innerHTML !== html) domainsTbody.innerHTML = html;
+        // Only touch the DOM when the actual domain data changed. Comparing
+        // rendered HTML strings is unreliable (attribute order/whitespace
+        // never matches) and was rebuilding every row - including whatever
+        // button the user was about to click - on every poll tick.
+        const signature = JSON.stringify(domains.map(function (d) {
+          return [d.domain, d.enabled, d.entry_count];
+        }));
+        if (signature !== domainsSignature) {
+          domainsSignature = signature;
+          domainsTbody.innerHTML = renderDomains(domains);
+        }
       }
       if (domainCountBadge) {
         domainCountBadge.textContent = String(domains.length);

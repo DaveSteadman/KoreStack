@@ -609,6 +609,10 @@ function updateSavedSearchActions() {
   const selected = [...document.getElementById('ss-list').selectedOptions];
   document.getElementById('ss-run').disabled    = selected.length !== 1;
   document.getElementById('ss-delete').disabled = selected.length === 0;
+  if (selected.length === 1) {
+    document.getElementById('sq-query').value = selected[0].dataset.query || '';
+    document.getElementById('ss-name').value = selected[0].value;
+  }
 }
 
 async function loadSavedSearches(selectedNames = []) {
@@ -622,6 +626,7 @@ async function loadSavedSearches(selectedNames = []) {
       const option = document.createElement('option');
       option.value = item.name;
       option.textContent = item.name;
+      option.dataset.query = item.search?.query || '';
       option.selected = selected.has(item.name);
       return option;
     }));

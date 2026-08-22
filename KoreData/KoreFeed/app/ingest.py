@@ -775,7 +775,13 @@ def _worker() -> None:
                 _queued_feed_ids.discard(fid)
                 _current_feed_id = fid
         try:
-            ingest_feed(feed)
+            # Queue items are snapshots. A feed may have been edited or removed
+            # after it was queued, so resolve it again immediately before work.
+            current = get_feed(fid) if fid else None
+            if current is None:
+                _log(f"  Skipping removed feed {feed.get('name', fid or '?')}")
+            else:
+                ingest_feed(current)
         finally:
             if fid:
                 with _state_lock:
