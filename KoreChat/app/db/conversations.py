@@ -41,7 +41,7 @@ from datetime import timedelta
 from datetime import timezone
 
 from .common import _conn
-from .common import _decode_message_tags
+from .common import _decode_message_metadata
 from .common import _decode_session_state_fields
 from .common import _default_profile
 from .common import _is_protected_subject
@@ -51,7 +51,7 @@ from .common import _row_to_dict
 
 def _message_to_dict(row: sqlite3.Row) -> dict:
     message = _row_to_dict(row)
-    _decode_message_tags(message)
+    _decode_message_metadata(message)
     return message
 
 
@@ -120,17 +120,10 @@ def conversation_get_turns_by_external_id(external_id: str) -> list[dict] | None
         if conv_row is None:
             return None
         msg_rows = connection.execute(
-            "SELECT direction, content, metadata FROM messages WHERE conversation_id = ? ORDER BY created_at ASC LIMIT 1000",
+            "SELECT * FROM messages WHERE conversation_id = ? ORDER BY id ASC LIMIT 1000",
             (conv_row["id"],),
         ).fetchall()
-    return [
-        {
-            "direction": row["direction"],
-            "content":   row["content"],
-            "metadata":  row["metadata"],
-        }
-        for row in msg_rows
-    ]
+    return [_message_to_dict(row) for row in msg_rows]
 
 
 def conversation_get_detail(conversation_id: int) -> dict | None:
@@ -141,7 +134,7 @@ def conversation_get_detail(conversation_id: int) -> dict | None:
         conv = _row_to_dict(conv_row)
         _decode_session_state_fields(conv, label=f"conversation {conversation_id}")
         msg_rows = connection.execute(
-            "SELECT * FROM messages WHERE conversation_id = ? ORDER BY created_at ASC LIMIT 500",
+            "SELECT * FROM messages WHERE conversation_id = ? ORDER BY id ASC LIMIT 500",
             (conversation_id,),
         ).fetchall()
         evt_rows = connection.execute(
@@ -163,8 +156,8 @@ def conversation_get_with_messages(conversation_id: int) -> dict | None:
         rows = connection.execute(
             """
             SELECT * FROM messages
-            WHERE conversation_id = ? AND summarised = 0
-            ORDER BY created_at ASC
+            WHERE conversation_id = ?
+            ORDER BY id ASC
             """,
             (conversation_id,),
         ).fetchall()
@@ -303,13 +296,13 @@ def conversation_append_input_history(conversation_id: int, text: str, max_entri
 
 
 def conversation_clear_history(conversation_id: int) -> bool:
-    """Archive messages and reset all model-facing accumulated conversation context."""
+    """Delete message history and reset all model-facing accumulated context."""
     now = _now()
     with _conn() as connection:
         row = connection.execute("SELECT 1 FROM conversations WHERE id = ?", (conversation_id,)).fetchone()
         if row is None:
             return False
-        connection.execute("UPDATE messages SET summarised = 1 WHERE conversation_id = ?", (conversation_id,))
+        connection.execute("DELETE FROM messages WHERE conversation_id = ?", (conversation_id,))
         connection.execute(
             """
             UPDATE conversations

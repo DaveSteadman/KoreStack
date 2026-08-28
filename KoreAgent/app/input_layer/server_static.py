@@ -59,6 +59,13 @@ def register_static_routes(
             return {"error": "Skills Catalog UI not found"}
         return FileResponse(str(page), headers={"Cache-Control": "no-store"})
 
+    @app.get("/work-packet", include_in_schema=False)
+    def serve_work_packet():
+        page = web_dir / "work_packet.html"
+        if not page.exists():
+            return {"error": "Work Packet UI not found"}
+        return FileResponse(str(page), headers={"Cache-Control": "no-store"})
+
     @app.get("/static/app.js", include_in_schema=False)
     def serve_app_js():
         return FileResponse(str(web_dir / "app.js"), headers={"Cache-Control": "no-store"})

@@ -73,7 +73,11 @@ def register_korechat_proxy_routes(
         if not msg:
             raise HTTPException(status_code=502, detail="Failed to append message to KC conversation")
 
-        return {"conv_id": conv_id, "msg_id": msg.get("id")}
+        return {
+            "conv_id":    conv_id,
+            "msg_id":     msg.get("id"),
+            "created_at": msg.get("created_at"),
+        }
 
     @app.get("/api/kc/conversations/{conv_id}/messages")
     @app.get("/kc/conversations/{conv_id}/messages", include_in_schema=False)

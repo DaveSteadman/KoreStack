@@ -27,7 +27,7 @@ from __future__ import annotations
 # - _conn: Implements the  conn operation for this module.
 # - _now: Implements the  now operation for this module.
 # - _row_to_dict: Implements the  row to dict operation for this module.
-# - _decode_message_tags: Implements the  decode message tags operation for this module.
+# - _decode_message_metadata: Expands persisted message metadata for callers.
 # - _decode_json_value: Implements the  decode json value operation for this module.
 # - _decode_session_state_fields: Implements the  decode session state fields operation for this module.
 # - _default_profile: Implements the  default profile operation for this module.
@@ -114,12 +114,19 @@ def _row_to_dict(row: sqlite3.Row) -> dict:
     return dict(row)
 
 
-def _decode_message_tags(record: dict) -> None:
-    raw_tags = record.get("tags") or "[]"
+def _decode_message_metadata(record: dict) -> None:
+    """Keep message state in one JSON column while exposing its established fields."""
+    raw_metadata = record.get("metadata") or "{}"
     try:
-        tags = json.loads(raw_tags) if isinstance(raw_tags, str) else raw_tags
+        metadata = json.loads(raw_metadata) if isinstance(raw_metadata, str) else raw_metadata
     except json.JSONDecodeError:
-        tags = []
+        metadata = {}
+    metadata = metadata if isinstance(metadata, dict) else {}
+    record["metadata"] = json.dumps(metadata)
+    for key in ("direction", "sender_display", "status", "delivery_eligible", "created_at"):
+        if key in metadata:
+            record[key] = metadata[key]
+    tags = metadata.get("tags")
     record["tags"] = tags if isinstance(tags, list) else []
 
 

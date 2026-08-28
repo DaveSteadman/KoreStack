@@ -593,7 +593,9 @@ def orchestrate_prompt(
                 f"added={','.join(activation['added']) or 'none'} "
                 f"promoted={','.join(activation['promoted']) or 'none'}"
             )
-        if re.search(r"\bsaved\s*search(?:es)?\b", user_prompt, re.IGNORECASE):
+        saved_search_prompt = bool(re.search(r"\bsaved\s*search(?:es)?\b", user_prompt, re.IGNORECASE))
+        explicit_web_request = bool(re.search(r"\b(?:search|browse)\s+(?:the\s+)?web\b|\bsearch\s+online\b", user_prompt, re.IGNORECASE))
+        if saved_search_prompt:
             activation = promote_selected_tools(
                 [
                     "koredata_savedsearch_run",
@@ -622,6 +624,13 @@ def orchestrate_prompt(
         initial_mcp_defs = list(initial_tool_runtime["active_mcp_defs"])
         if initial_mcp_defs:
             tool_defs = tool_defs + initial_mcp_defs
+        if saved_search_prompt and not explicit_web_request:
+            blocked_search_tools = {"koredata_search", "search_web", "search_web_text"}
+            tool_defs = [
+                tool_def
+                for tool_def in tool_defs
+                if tool_def.get("function", {}).get("name") not in blocked_search_tools
+            ]
         _log_file_only(f"[progress] Tool definitions built: {len(tool_defs)} tools available.")
 
         system_message = _prompt_builder_build_system_message(
@@ -662,6 +671,12 @@ def orchestrate_prompt(
             round_mcp_defs = list(runtime["active_mcp_defs"])
             if round_mcp_defs:
                 round_tool_defs = round_tool_defs + round_mcp_defs
+            if saved_search_prompt and not explicit_web_request:
+                round_tool_defs = [
+                    tool_def
+                    for tool_def in round_tool_defs
+                    if tool_def.get("function", {}).get("name") not in blocked_search_tools
+                ]
             return {
                 "tool_defs": round_tool_defs,
                 "catalog_gates": build_catalog_gates(round_active_payload),
@@ -720,6 +735,4 @@ def orchestrate_prompt(
         finally:
             with _active_stop_lock:
                 _active_stop_events.pop(_run_id, None)
-
-
 

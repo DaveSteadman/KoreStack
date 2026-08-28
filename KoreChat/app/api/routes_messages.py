@@ -44,6 +44,7 @@ def append_message(conversation_id: int, req: MessageAppendRequest):
         sender_display  = req.sender_display,
         status          = req.status,
         delivery_eligible = req.delivery_eligible,
+        metadata        = req.metadata,
         tags            = req.tags,
     )
     if req.direction == "inbound":
@@ -87,14 +88,12 @@ def append_turn(conversation_id: int, req: TurnAppendRequest):
 @router.get("/conversations/{conversation_id}/messages", include_in_schema=False)
 def list_messages(
     conversation_id: int,
-    summarised: int | None = Query(default=None),
     direction: str | None = Query(default=None),
     limit: int = Query(default=200, ge=1, le=1000),
 ):
     _require_conversation(conversation_id)
     return db.message_list(
         conversation_id = conversation_id,
-        summarised      = summarised,
         direction       = direction,
         limit           = limit,
     )
@@ -106,7 +105,6 @@ def patch_message(message_id: int, req: MessagePatchRequest):
     result = db.message_update(
         message_id = message_id,
         status     = req.status,
-        summarised = req.summarised,
         tags       = req.tags,
     )
     if result is None:

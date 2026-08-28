@@ -1,0 +1,73 @@
+*, *::before, *::after { box-sizing: border-box; }
+html, body, #layout { height: 100%; }
+body { margin: 0; overflow: hidden; }
+#layout {
+    display: grid;
+    height: 100vh;
+    grid-template-rows: var(--topbar-h, 38px) 44px minmax(0, 1fr);
+}
+#topbar { grid-row: 1; }
+.work-packet-bar {
+    grid-row: 2;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    padding: 6px 12px;
+    border-bottom: 1px solid var(--border);
+}
+.work-packet-heading {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    min-width: 0;
+}
+.work-packet-title { color: var(--text-hi); font-weight: 700; white-space: nowrap; }
+.work-packet-subtitle {
+    color: var(--text-dim);
+    font-size: 0.72rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.work-packet-bar .kcui-panel-spacer { flex: 1 1 auto; }
+.work-packet-bar .kcui-btn { flex: 0 0 auto; }
+.work-packet-back { margin-right: 2px; }
+.work-packet-grid {
+    grid-row: 3;
+    box-sizing: border-box;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 12px;
+    height: 100%;
+    width: calc(100vw - 24px);
+    max-width: none;
+    justify-self: stretch;
+    padding: 12px;
+    overflow: hidden;
+}
+.kcui-shell-bg main.work-packet-grid {
+    padding: 12px 0;
+}
+.work-packet-grid > .kcui-panel { min-height: 0; }
+.packet-editor, .packet-response {
+    box-sizing: border-box;
+    flex: 1;
+    width: 100%;
+    min-height: 0;
+    margin: 0;
+    padding: 14px;
+    overflow: auto;
+    resize: none;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+.packet-editor { border: 0; border-radius: 0; background: transparent; }
+.packet-response { color: var(--text); }
+.response-meta { color: var(--text-dim); font-size: 0.78rem; }
+#input-status.is-error { color: #e08080; border-color: #7a2a2a; }
+#input-status.is-busy { color: #EAAA00; border-color: #EAAA00; }
+@media (max-width: 850px) {
+    .work-packet-grid { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
+    .work-packet-subtitle { display: none; }
+}

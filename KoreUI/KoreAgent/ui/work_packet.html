@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>KoreAgent Work Packet</title>
+    <link rel="stylesheet" href="/ui-elements/assets/css/theme.css" />
+    <link rel="stylesheet" href="/ui-elements/assets/css/chrome.css" />
+    <link rel="stylesheet" href="/ui-elements/assets/css/panels.css" />
+    <link rel="stylesheet" href="/ui-elements/assets/css/typography.css" />
+    <link rel="stylesheet" href="/ui-elements/assets/css/workspace.css" />
+    <link rel="stylesheet" href="/ui-elements/assets/css/forms.css" />
+    <link rel="stylesheet" href="/static/work_packet.css" />
+    <script src="/suite-config.js"></script>
+</head>
+<body class="kcui-shell-bg">
+    <div id="layout" class="kcui-layout-shell">
+        <div id="topbar"></div>
+        <header class="kcui-appbar work-packet-bar">
+            <button id="btn-back" class="kcui-btn kcui-btn-sm kcui-btn-quiet work-packet-back" type="button">← Agent</button>
+            <div class="work-packet-heading">
+                <div class="work-packet-title">Work Packet</div>
+                <div class="work-packet-subtitle">Raw JSON → active LLM. No agent, tools, history, or persistence.</div>
+            </div>
+            <span class="kcui-panel-spacer"></span>
+            <button id="btn-format" class="kcui-btn kcui-btn-sm kcui-btn-quiet" type="button">Format</button>
+            <button id="btn-send" class="kcui-btn kcui-btn-sm kcui-btn-primary" type="button">Run packet</button>
+        </header>
+        <main class="kcui-main kcui-workspace kcui-workspace--stack-sm work-packet-grid">
+            <section class="kcui-panel kcui-panel--column kcui-workspace__region">
+                <div class="kcui-panel-header"><span>JSON input</span><span id="input-status" class="kcui-tag kcui-tag--dim">Ready</span></div>
+                <textarea id="packet-input" class="kcui-input kcui-type-code packet-editor" spellcheck="false" placeholder='{"task": "Describe what the model should do"}'></textarea>
+            </section>
+            <section class="kcui-panel kcui-panel--column kcui-workspace__region">
+                <div class="kcui-panel-header"><span>LLM response</span><span id="response-meta" class="response-meta"></span></div>
+                <pre id="packet-response" class="kcui-type-code packet-response">The model response will appear here.</pre>
+            </section>
+        </main>
+    </div>
+    <script src="/static/work_packet.js"></script>
+    <script type="module">
+        import { initTopbar } from '/ui-elements/assets/js/chrome.js';
+        initTopbar({ currentService: 'koreagent', urls: window.__koreSuiteUrls || {} });
+    </script>
+</body>
+</html>

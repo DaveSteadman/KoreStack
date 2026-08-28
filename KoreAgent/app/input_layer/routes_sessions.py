@@ -143,14 +143,21 @@ def register_session_routes(
                             if item.get("direction") == "outbound" and int(item.get("id") or 0) > message_id
                         ]
                         if replies:
-                            reply = str(replies[-1].get("content") or "").strip()
+                            outbound = replies[-1]
+                            reply = str(outbound.get("content") or "").strip()
+                            try:
+                                metadata = json.loads(outbound.get("metadata") or "{}")
+                            except (TypeError, json.JSONDecodeError):
+                                metadata = {}
+                            telemetry = metadata.get("telemetry") if isinstance(metadata, dict) else {}
                             queue_run_event(run_q, {
                                 "type":       "response",
                                 "run_id":     run_id,
                                 "response":   reply,
-                                "tokens":     0,
-                                "tps":        "0",
-                                "elapsed_ms": int(time.time() * 1000) - submitted_at_ms,
+                                "tokens":     int(telemetry.get("context_tokens") or 0),
+                                "tps":        str(telemetry.get("tokens_per_second") or "0"),
+                                "elapsed_ms": int(telemetry.get("elapsed_ms") or (int(time.time() * 1000) - submitted_at_ms)),
+                                "created_at": outbound.get("created_at"),
                             }, priority=True)
                             return
                     time.sleep(1)

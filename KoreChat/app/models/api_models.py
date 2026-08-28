@@ -63,12 +63,12 @@ class MessageAppendRequest(BaseModel):
     status: str = "received"
     delivery_eligible: bool = True
     response_payload: dict | None = None
+    metadata: dict | None = None
     tags: list[str] = Field(default_factory=list)
 
 
 class MessagePatchRequest(BaseModel):
     status: str | None = None
-    summarised: int | None = None
     tags: list[str] | None = None
 
 

@@ -494,7 +494,8 @@ _INSTR_SEARCH = (
     "Use koredata_search(query, domains) to search across services. "
     "Omit domains to search all at once. "
     "Results include a snippet field (first ~300 chars) and an artifact_ref for follow-up fetches. "
-    "For a preconfigured recurring search, call koredata_savedsearch_run(name). "
+    "SavedSearch is a distinct named resource, not a content query. When a prompt names a SavedSearch, "
+    "call koredata_savedsearch_run(name) and never pass that name to koredata_search. "
     "Base answers ONLY on content retrieved from the get_* tools — do not supplement with training knowledge."
 )
 
@@ -730,8 +731,10 @@ async def koredata_savedsearch_list() -> dict[str, list[dict]]:
 async def koredata_savedsearch_run(name: str) -> dict:
     """Run a named, preconfigured KoreData SavedSearch.
 
-    SavedSearch definitions are saved gateway search definitions. Use koredata_savedsearch_list()
-    to discover available names, then call this tool for the selected set.
+    Use this tool whenever the user says "SavedSearch", names a saved search, or asks to fetch,
+    run, or load saved-search results. Pass the SavedSearch name exactly as the name argument.
+    Do not pass a SavedSearch name to koredata_search because that performs a content query.
+    Use koredata_savedsearch_list() only when the user has not supplied the name.
     """
     saved_search = _find_saved_search(_SAVED_SEARCHES_FILE, name)
     if saved_search is None:

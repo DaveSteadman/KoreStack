@@ -1,0 +1,67 @@
+{
+  "prompt": "Write a basic info block about a country: Monaco",
+
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "file_write",
+        "description": "Triggered by keyword 'file'. Interface for generic file read, write, append, and search operations inside the shared `datauser/` tree. Bare relative paths resolve under `datauser/`. Legacy prefixes such as `data/...`, `datauser/...`, and `KoreDocs/...` are accepted for compatibility, but new calls should prefer plain datauser-relative paths like `notes/today.txt` or `RadarData/report.csv`.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string",
+              "description": "datauser-relative path. A bare name like `\"x.txt\"` resolves to `datauser/x.txt`. Legacy aliases like `\"data/x.txt\"`, `\"datauser/x.txt\"`, and `\"KoreDocs/x.txt\"` are accepted."
+            },
+            "content": {
+              "type": "string",
+              "description": "content to write. Overwrites the file if it exists. Supports `{scratchpad:key}` token substitution - use `\"{scratchpad:mykey}\"` to write scratchpad content directly without calling `scratchpad_load` first."
+            }
+          },
+          "required": [
+            "path",
+            "content"
+          ]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "file_read",
+        "description": "Triggered by keyword 'file'. Interface for generic file read, write, append, and search operations inside the shared `datauser/` tree. Bare relative paths resolve under `datauser/`. Legacy prefixes such as `data/...`, `datauser/...`, and `KoreDocs/...` are accepted for compatibility, but new calls should prefer plain datauser-relative paths like `notes/today.txt` or `RadarData/report.csv`.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string",
+              "description": "same path rules as `file_write`."
+            },
+            "max_chars": {
+              "type": "integer",
+              "description": "maximum characters to return; content is truncated with `[truncated]` if exceeded.",
+              "default": 8000
+            }
+          },
+          "required": [
+            "path"
+          ]
+        }
+      }
+    }
+  ],
+
+  "requiredfields": [
+    "population",
+    "landarea_sqkm",
+    "capitol"
+  ],
+
+  "outputfile": "countries/Monaco.json",
+
+  "expected_output": {
+    "format": "JSON",
+    "description": "a JSON info block. No other output."
+  }
+}

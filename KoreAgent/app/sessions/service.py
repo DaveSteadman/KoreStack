@@ -218,22 +218,30 @@ class SessionService:
             return []
         messages = result.get("messages") or []
         turns: list[dict] = []
-        pending_prompt: str | None = None
+        pending_prompt: dict | None = None
         for message in messages:
             direction = message.get("direction")
             content   = (message.get("content") or "").strip()
             if not content:
                 continue
             if direction == "inbound":
-                pending_prompt = content
+                pending_prompt = {
+                    "role":       "user",
+                    "content":    content,
+                    "created_at": message.get("created_at"),
+                }
             elif direction == "outbound" and pending_prompt is not None:
-                turns.append({"role": "user", "content": pending_prompt})
+                turns.append(pending_prompt)
                 try:
                     metadata = json.loads(message.get("metadata") or "{}")
                 except (TypeError, json.JSONDecodeError):
                     metadata = {}
                 telemetry = metadata.get("telemetry") if isinstance(metadata, dict) else None
-                assistant_turn = {"role": "assistant", "content": content}
+                assistant_turn = {
+                    "role":       "assistant",
+                    "content":    content,
+                    "created_at": message.get("created_at"),
+                }
                 if isinstance(telemetry, dict):
                     assistant_turn["telemetry"] = telemetry
                 turns.append(assistant_turn)

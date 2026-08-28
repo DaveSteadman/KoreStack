@@ -102,9 +102,6 @@ _STRICT_JSON_REQUEST_RE = re.compile(
     r"\b(?:just|only)\s+(?:the\s+)?json\b|\bno\s+(?:explanations|preamble|markdown)\b",
     re.IGNORECASE,
 )
-# Fraction of config.num_ctx at which a compress_needed event is raised.
-# Scales automatically when the user changes context size via /llmserverconfig ctx.
-_COMPRESS_THRESHOLD = 0.70
 
 
 def _invalid_model_response_reason(response: str) -> str | None:
@@ -309,8 +306,8 @@ def _build_prompt(conv: dict, messages: list[dict], push_log_line=None) -> str:
     scratchpad = _coerce_conversation_scratchpad(conv, push_log_line=push_log_line)
     datasets_payload = _coerce_conversation_datasets(conv)
 
-    # Unsummarised messages only - summarised ones are already in thread_summary.
-    unsummarised = [m for m in messages if not m.get("summarised")]
+    # Message history remains intact until the replacement archival design exists.
+    visible_messages = messages
 
     parts: list[str] = []
 
@@ -331,9 +328,9 @@ def _build_prompt(conv: dict, messages: list[dict], push_log_line=None) -> str:
             lines.append(f"  {dataset_name}: {count} records{suffix}")
         parts.append("--- Datasets ---\n" + "\n".join(lines))
 
-    if unsummarised:
+    if visible_messages:
         lines: list[str] = []
-        for m in unsummarised:
+        for m in visible_messages:
             direction = m.get("direction", "?")
             sender    = (m.get("sender_display") or "").strip()
             content   = (m.get("content") or "").strip()
@@ -347,7 +344,7 @@ def _build_prompt(conv: dict, messages: list[dict], push_log_line=None) -> str:
 
     # The last inbound message is the one to respond to.
     last_inbound = next(
-        (m for m in reversed(unsummarised) if m.get("direction") == "inbound"),
+        (m for m in reversed(visible_messages) if m.get("direction") == "inbound"),
         None,
     )
     if last_inbound:
@@ -463,6 +460,7 @@ def _handle_event(
     push_log_line,
 ) -> None:
     """Dispatch one KoreChat event to the appropriate handler."""
+    started_at = time.monotonic()
     base    = _get_base_url()
     if not base:
         return
@@ -483,10 +481,8 @@ def _handle_event(
         event_payload = {}
 
     if event_type == "compress_needed":
-        _handle_compress_needed(
-            event         = event,
-            push_log_line = push_log_line,
-        )
+        push_log_line(f"[KORECHAT] Compression is suspended; completing event {event_id} without archiving messages")
+        _complete_event(base, event_id, "completed", push_log_line, context="compression suspended")
         return
 
     if event_type != "response_needed":
@@ -595,6 +591,13 @@ def _handle_event(
                     "sender_display":    str(event_payload.get("outbound_sender_display") or "agent"),
                     "status":            "sent",
                     "delivery_eligible": False,
+                    "metadata": {
+                        "telemetry": {
+                            "context_tokens": 0,
+                            "tokens_per_second": "0",
+                            "elapsed_ms": int((time.monotonic() - started_at) * 1000),
+                        },
+                    },
                     "tags":              ["slashcommand_response"],
                 })
                 _http_patch(base, f"/conversations/{conv_id}", {
@@ -696,6 +699,14 @@ def _handle_event(
                 "sender_display": str(event_payload.get("outbound_sender_display") or "agent"),
                 "status":         outbound_status,
                 "delivery_eligible": delivery_eligible,
+                "metadata": {
+                    "telemetry": {
+                        "context_tokens": prompt_tokens,
+                        "completion_tokens": completion_tokens,
+                        "tokens_per_second": tps_str,
+                        "elapsed_ms": int((time.monotonic() - started_at) * 1000),
+                    },
+                },
                 "tags":           outbound_tags,
             })
         except Exception as exc:
@@ -736,26 +747,6 @@ def _handle_event(
                 })
             except Exception as exc:
                 push_log_line(f"[KORECHAT] Conv {conv_id}: outbound_ready event failed: {exc}")
-
-        # Check whether the running token estimate has crossed the compression threshold.
-        # Uses config.num_ctx so /llmserverconfig ctx controls the trigger point directly.
-        compress_at = int(config.num_ctx * _COMPRESS_THRESHOLD)
-        if new_token_estimate >= compress_at:
-            push_log_line(
-                f"[KORECHAT] Conv {conv_id}: token_estimate {new_token_estimate:,} >= "
-                f"compress threshold {compress_at:,} (ctx {config.num_ctx:,} * {_COMPRESS_THRESHOLD}) "
-                f"- queuing compress_needed"
-            )
-            try:
-                _http_post(base, "/events", {
-                    "conversation_id": conv_id,
-                    "event_type":      "compress_needed",
-                    "priority":        10,
-                    "payload":         {},
-                })
-            except Exception as exc:
-                push_log_line(f"[KORECHAT] Conv {conv_id}: could not queue compress_needed: {exc}")
-
 
 # ====================================================================================================
 # MARK: BACKGROUND LOOP

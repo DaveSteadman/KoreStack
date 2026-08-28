@@ -217,14 +217,37 @@ function _formatSavedTelemetry(telemetry) {
     const tokens = Number(telemetry.context_tokens) || 0;
     const tps    = String(telemetry.tokens_per_second || "0");
     const elapsed = _formatElapsed(telemetry.elapsed_ms);
-    return tokens
-        ? tokens.toLocaleString() + " ctx" + (tps !== "0" ? " | " + tps + " tok/s" : "") + " | " + elapsed
-        : elapsed;
+    return tokens.toLocaleString() + " ctx | " + tps + " tok/s | " + elapsed;
+}
+
+function _formatMessageTime(value = Date.now()) {
+    const date = value instanceof Date ? value : new Date(value);
+    const valid = Number.isNaN(date.getTime()) ? new Date() : date;
+    return valid.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false,
+    });
+}
+
+function _withMessageTime(stats, createdAt) {
+    const time = _formatMessageTime(createdAt);
+    return stats ? time + " | " + stats : time;
+}
+
+function _messageMeta(message) {
+    let metadata = message?.metadata || {};
+    if (typeof metadata === "string") {
+        try { metadata = JSON.parse(metadata); } catch (_) { metadata = {}; }
+    }
+    return _withMessageTime(_formatSavedTelemetry(metadata?.telemetry), message?.created_at);
 }
 
 function _turnMetaText(sessionId, prompt, assistantTurn) {
-    return _formatSavedTelemetry(assistantTurn?.telemetry)
+    const stats = _formatSavedTelemetry(assistantTurn?.telemetry)
         || _getTurnMeta(sessionId, prompt, assistantTurn?.content);
+    return _withMessageTime(stats, assistantTurn?.created_at);
 }
 
 function _formatElapsed(elapsedMs) {
@@ -861,12 +884,10 @@ function appendChatMessage(role, text, meta, runId = "") {
     wrap.appendChild(label);
     wrap.appendChild(body);
 
-    if (meta) {
-        const m = document.createElement("div");
-        m.className = "msg-meta";
-        m.textContent = meta;
-        wrap.appendChild(m);
-    }
+    const m = document.createElement("div");
+    m.className = "msg-meta";
+    m.textContent = meta || _formatMessageTime();
+    wrap.appendChild(m);
 
     el.appendChild(wrap);
     if (_chatScrollCtl) _chatScrollCtl.followSoon();
@@ -942,7 +963,7 @@ function listenRun(runId, { startRendered = false } = {}) {
             if (ev.type === "start") {
                 startedAtMs = Number(ev.submitted_at_ms) || startedAtMs;
                 _saveActiveRun({ runId, sessionId: _sessionId, prompt: ev.prompt || "", startedAtMs });
-                if (!startRendered) appendChatMessage("user", ev.prompt, "", runId);
+                if (!startRendered) appendChatMessage("user", ev.prompt, _formatMessageTime(ev.submitted_at_ms), runId);
                 if (ev.prompt && ev.prompt.startsWith("/")) {
                     startLogStream();
                 }
@@ -966,10 +987,10 @@ function listenRun(runId, { startRendered = false } = {}) {
             } else if (ev.type === "response") {
                 removeThinking(runId);
                 const elapsedMs = Number(ev.elapsed_ms) || Date.now() - startedAtMs;
-                const meta = ev.tokens
-                    ? ev.tokens.toLocaleString() + " ctx" + (ev.tps && ev.tps !== "0" ? " | " + ev.tps + " tok/s" : "") + " | " + _formatElapsed(elapsedMs)
-                    : _formatElapsed(elapsedMs);
-                _saveTurnMeta(_sessionId, _loadActiveRun()?.prompt || "", ev.response, meta);
+                const stats = (Number(ev.tokens) || 0).toLocaleString() + " ctx | "
+                    + String(ev.tps || "0") + " tok/s | " + _formatElapsed(elapsedMs);
+                const meta = _withMessageTime(stats, ev.created_at);
+                _saveTurnMeta(_sessionId, _loadActiveRun()?.prompt || "", ev.response, stats);
                 if (!tokenWrap) {
                     appendChatMessage("agent", ev.response, meta);
                 } else {
@@ -1030,7 +1051,7 @@ function _resumePersistedRun(sessionId) {
 
     const selector = ".chat-msg.user[data-run-id='" + run.runId + "']";
     if (!dom.chat().querySelector(selector)) {
-        appendChatMessage("user", run.prompt || "", "", run.runId);
+        appendChatMessage("user", run.prompt || "", _formatMessageTime(run.startedAtMs), run.runId);
     }
     appendThinking(run.runId, Number(run.startedAtMs) || Date.now());
     listenRun(run.runId, { startRendered: true });
@@ -1047,7 +1068,7 @@ async function _loadSessionHistory(sessionId) {
         for (let i = 0; i + 1 < cached.length; i += 2) {
             const u = cached[i];
             const a = cached[i + 1];
-            if (u && u.role === "user")      appendChatMessage("user",  u.content);
+            if (u && u.role === "user")      appendChatMessage("user",  u.content, _formatMessageTime(u.created_at));
             if (a && a.role === "assistant") appendChatMessage("agent", a.content, _turnMetaText(sessionId, u?.content, a));
         }
     }
@@ -1073,7 +1094,7 @@ async function _loadSessionHistory(sessionId) {
         for (let i = 0; i + 1 < turns.length; i += 2) {
             const u = turns[i];
             const a = turns[i + 1];
-            if (u && u.role === "user")      appendChatMessage("user",  u.content);
+            if (u && u.role === "user")      appendChatMessage("user",  u.content, _formatMessageTime(u.created_at));
             if (a && a.role === "assistant") appendChatMessage("agent", a.content, _turnMetaText(sessionId, u?.content, a));
         }
     }
@@ -1144,7 +1165,7 @@ async function _dispatchPrompt(text) {
         return;
     }
     const thinkKey = "kc_" + data.conv_id + "_" + data.msg_id;
-    appendChatMessage("user", text, "", thinkKey);
+    appendChatMessage("user", text, _formatMessageTime(data.created_at), thinkKey);
     appendThinking(thinkKey);
     refreshQueue();
     _pollKcReply(thinkKey, data.conv_id, data.msg_id);
@@ -1161,7 +1182,7 @@ async function _pollKcReply(thinkKey, convId, afterMsgId) {
         if (replies.length > 0) {
             removeThinking(thinkKey);
             for (const m of replies) {
-                appendChatMessage("agent", m.content);
+                appendChatMessage("agent", m.content, _messageMeta(m));
             }
             return;
         }
@@ -1516,6 +1537,7 @@ function init() {
             { label: "Context", value: "", valueId: "ollama-ctx",   tone: "info" },
         ],
         actions: [
+            { kind: "tag", id: "btn-work-packet",    action: "work-packet",    label: "work packet",   className: "kcui-tag kcui-tag--dim kcui-tag--work-packet" },
             { kind: "tag", id: "btn-skills-catalog", action: "skills-catalog", label: "skill catalog",  className: "kcui-tag kcui-tag--dim kcui-tag--skills-catalog" },
             { kind: "tag", id: "btn-reset-layout",   action: "reset-layout",   label: "default layout", className: "kcui-tag kcui-tag--dim" },
         ],
@@ -1561,6 +1583,9 @@ function init() {
     $("wrap-btn-chat")?.addEventListener("click", () => { toggleWrap("chat-body", "wrap-btn-chat"); });
     $("btn-skills-catalog")?.addEventListener("click", () => {
         window.location.href = "/skills-catalog";
+    });
+    $("btn-work-packet")?.addEventListener("click", () => {
+        window.location.href = "/work-packet";
     });
     $("btn-reset-layout")?.addEventListener("click", resetLayout);
 

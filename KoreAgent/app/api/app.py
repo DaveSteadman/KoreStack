@@ -81,6 +81,7 @@ from api.state import set_startup_state_snapshot
 from api.state import setup
 from api.state import update_startup_state
 from api.state import validate_session_id as _validate_session_id
+from api.routes_work_packet import register_work_packet_routes
 from datasets_pkg.hydration import build_persisted_scratchpad_payload
 from datasets_pkg.hydration import get_persisted_datasets_payload
 from datasets_pkg.hydration import hydrate_session_state
@@ -311,6 +312,14 @@ _skills_routes = register_skills_routes(
 skills_catalog_get = _skills_routes["skills_catalog_get"]
 skills_source_get  = _skills_routes["skills_source_get"]
 skills_invoke_post = _skills_routes["skills_invoke_post"]
+
+
+register_work_packet_routes(
+    app,
+    call_llm_chat=call_llm_chat,
+    get_active_model=get_active_model,
+    get_active_num_ctx=get_active_num_ctx,
+)
 
 
 register_session_switch_routes(

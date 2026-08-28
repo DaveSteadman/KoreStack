@@ -17,6 +17,7 @@
 # - _cron_session_key: Implements the  cron session key operation for this module.
 # - _cron_external_id: Implements the  cron external id operation for this module.
 # - _conversation: Implements the  conversation operation for this module.
+# - _fresh_conversation: Deletes prior chats with the configured name and creates a new one.
 # - _reply_error: Returns a central-agent error reported by an outbound message.
 # - _await_outbound_reply: Implements the  await outbound reply operation for this module.
 # - _run: Implements the  run operation for this module.
@@ -130,7 +131,8 @@ def _http(method: str, url: str, body: dict | None = None):
     payload = json.dumps(body).encode("utf-8") if body is not None else None
     request = urllib.request.Request(url, data=payload, method=method, headers={"Content-Type": "application/json"})
     with urllib.request.urlopen(request, timeout=20) as response:
-        return json.loads(response.read().decode("utf-8"))
+        raw = response.read().decode("utf-8").strip()
+        return json.loads(raw) if raw else None
 
 
 def _cron_session_key(chat_name: str) -> str:
@@ -151,6 +153,45 @@ def _conversation(definition: dict) -> dict:
         return _http("GET", f"{base}/api/conversations/by-external-id/{urllib.parse.quote(external_id, safe='')}")
     except Exception:
         return _http("POST", f"{base}/api/conversations", {"channel_type": "webchat", "subject": chat_name, "external_id": external_id})
+
+
+def _fresh_conversation(definition: dict) -> dict:
+    """Replace every existing conversation with this CronPrompt's chat name."""
+    chat_name   = str(definition["chat_name"]).strip()
+    external_id = _cron_external_id(chat_name)
+    base        = _service_url("korechat")
+
+    conversations: list[dict] = []
+    offset = 0
+    while True:
+        page = _http("GET", f"{base}/api/conversations?limit=500&offset={offset}")
+        if not isinstance(page, list):
+            raise RuntimeError("KoreChat returned an invalid conversation list")
+        conversations.extend(item for item in page if isinstance(item, dict))
+        if len(page) < 500:
+            break
+        offset += len(page)
+
+    matching_ids = {
+        int(item["id"])
+        for item in conversations
+        if item.get("id") is not None
+        and (
+            str(item.get("subject") or "").strip().casefold() == chat_name.casefold()
+            or str(item.get("external_id") or "") == external_id
+        )
+    }
+    for conversation_id in sorted(matching_ids):
+        _http("DELETE", f"{base}/api/conversations/{conversation_id}")
+
+    created = _http("POST", f"{base}/api/conversations", {
+        "channel_type": "webchat",
+        "subject":      chat_name,
+        "external_id":  external_id,
+    })
+    if not isinstance(created, dict) or not created.get("id"):
+        raise RuntimeError("KoreChat did not return the fresh conversation")
+    return created
 
 
 def _reply_error(message: dict) -> str | None:
@@ -174,12 +215,9 @@ def _await_outbound_reply(base: str, conversation_id: int, prior_count: int, tim
 
 
 def _run(definition: dict) -> None:
-    conversation = _conversation(definition)
+    conversation = _fresh_conversation(definition)
     base         = _service_url("korechat")
     conversation_id = int(conversation["id"])
-    if definition.get("clear_working_data", True):
-        agent_base = _service_url("koreagent")
-        _http("POST", f"{agent_base}/api/conversations/{conversation_id}/workspace/clear")
     for prompt in definition.get("prompts", []):
         prompt_text = str(prompt.get("prompt", "")) if isinstance(prompt, dict) else str(prompt)
         if not prompt_text.strip():
@@ -295,7 +333,6 @@ def _cronprompt_definition(payload: dict) -> dict:
         "name":               name,
         "chat_name":          chat_name,
         "enabled":            bool(payload.get("enabled", True)),
-        "clear_working_data": bool(payload.get("clear_working_data", True)),
         "schedule":           schedule,
         "prompts":            prompts,
     }

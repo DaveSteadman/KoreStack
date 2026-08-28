@@ -99,7 +99,6 @@ function bindUiEvents() {
     document.getElementById("agent-resume-btn").addEventListener("click", agentResume);
     document.getElementById("delete-conv-btn").addEventListener("click", deleteConversation);
     document.getElementById("compose-btn").addEventListener("click", sendMessage);
-    document.getElementById("chk-summarised").addEventListener("change", reloadMessages);
     document.getElementById("chk-auto")?.addEventListener("change", toggleAuto);
     document.getElementById("meta-table")?.addEventListener("click", onMetaTableClick);
     document.addEventListener("click", onPanelHeaderClick);
@@ -828,24 +827,20 @@ async function reloadMessages() {
 }
 
 function renderMessages(msgs) {
-    const showSummarised = document.getElementById("chk-summarised").checked;
-    const visible        = showSummarised ? msgs : msgs.filter(m => !m.summarised);
-
     document.getElementById("msg-count").textContent = msgs.length;
 
-    if (visible.length === 0) {
+    if (msgs.length === 0) {
         document.getElementById("messages-body").innerHTML =
             "<div class='empty-note'>No messages.</div>";
         return;
     }
 
-    document.getElementById("messages-body").innerHTML = visible.map(m => {
-        const summarisedClass    = m.summarised ? " summarised-row" : "";
+    document.getElementById("messages-body").innerHTML = msgs.map(m => {
         const deliveryIneligible = Number(m.delivery_eligible) === 0;
         const ts                 = formatDateTime(m.created_at);
         const tags               = _messageTags(m);
         return `
-<div class="msg-row${summarisedClass}">
+<div class="msg-row">
     <span class="msg-id">#${m.id}</span>
     <span class="msg-tags">${tags.map(pill).join("")}</span>
     <span class="msg-content">${escHtml(m.content)}</span>
@@ -853,7 +848,6 @@ function renderMessages(msgs) {
     <span class="msg-flags">
         ${pill(m.status)}
         ${deliveryIneligible ? '<span class="kcui-tag kcui-tag--pill kcui-tag--dim">deliver ineligible</span>' : ""}
-        ${m.summarised ? '<span class="kcui-tag kcui-tag--pill kcui-tag--dim">summ</span>' : ""}
     </span>
 </div>`;
     }).join("");

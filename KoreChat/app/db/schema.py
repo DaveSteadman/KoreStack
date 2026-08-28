@@ -51,16 +51,8 @@ CREATE TABLE IF NOT EXISTS conversations (
 CREATE TABLE IF NOT EXISTS messages (
     id               INTEGER PRIMARY KEY AUTOINCREMENT,
     conversation_id  INTEGER NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
-    direction        TEXT    NOT NULL CHECK(direction IN ('inbound','outbound')),
     content          TEXT    NOT NULL,
-    sender_display   TEXT    NOT NULL DEFAULT '',
-    status           TEXT    NOT NULL DEFAULT 'received'
-                             CHECK(status IN ('received','draft','sent','failed')),
-    delivery_eligible INTEGER NOT NULL DEFAULT 1,
-    metadata         TEXT    NOT NULL DEFAULT '{}',
-    tags             TEXT    NOT NULL DEFAULT '[]',
-    summarised       INTEGER NOT NULL DEFAULT 0,
-    created_at       TEXT    NOT NULL
+    metadata         TEXT    NOT NULL DEFAULT '{}'
 );
 
 CREATE TABLE IF NOT EXISTS events (
@@ -82,7 +74,6 @@ CREATE TABLE IF NOT EXISTS events (
 );
 
 CREATE INDEX IF NOT EXISTS idx_messages_conv       ON messages(conversation_id);
-CREATE INDEX IF NOT EXISTS idx_messages_summarised ON messages(conversation_id, summarised);
 CREATE INDEX IF NOT EXISTS idx_events_status       ON events(status, priority, created_at);
 CREATE INDEX IF NOT EXISTS idx_events_conv         ON events(conversation_id);
 CREATE INDEX IF NOT EXISTS idx_convs_status        ON conversations(status, last_activity_at);
@@ -124,12 +115,43 @@ def init_db() -> None:
         if cols and "workflow" in cols:
             connection.execute("ALTER TABLE conversations DROP COLUMN workflow")
         message_cols = {row[1] for row in connection.execute("PRAGMA table_info(messages)")}
-        if message_cols and "delivery_eligible" not in message_cols:
-            connection.execute("ALTER TABLE messages ADD COLUMN delivery_eligible INTEGER NOT NULL DEFAULT 1")
-        if message_cols and "metadata" not in message_cols:
-            connection.execute("ALTER TABLE messages ADD COLUMN metadata TEXT NOT NULL DEFAULT '{}'")
-        if message_cols and "tags" not in message_cols:
-            connection.execute("ALTER TABLE messages ADD COLUMN tags TEXT NOT NULL DEFAULT '[]'")
+        canonical_message_cols = {"id", "conversation_id", "content", "metadata"}
+        if message_cols and message_cols != canonical_message_cols:
+            # Message lifecycle fields now live together in metadata. Rebuild rather
+            # than relying on SQLite's limited DROP COLUMN support, preserving ids
+            # and all existing message information in the process.
+            legacy_rows = connection.execute("SELECT * FROM messages ORDER BY id ASC").fetchall()
+            connection.execute("DROP INDEX IF EXISTS idx_messages_summarised")
+            connection.execute("ALTER TABLE messages RENAME TO messages_legacy")
+            connection.execute(
+                """
+                CREATE TABLE messages (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    conversation_id INTEGER NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+                    content TEXT NOT NULL,
+                    metadata TEXT NOT NULL DEFAULT '{}'
+                )
+                """
+            )
+            for row in legacy_rows:
+                try:
+                    metadata = json.loads(row["metadata"] or "{}")
+                except (TypeError, json.JSONDecodeError):
+                    metadata = {}
+                metadata = metadata if isinstance(metadata, dict) else {}
+                metadata.update({
+                    "direction": row["direction"],
+                    "sender_display": row["sender_display"],
+                    "status": row["status"],
+                    "delivery_eligible": bool(row["delivery_eligible"]),
+                    "tags": json.loads(row["tags"] or "[]"),
+                    "created_at": row["created_at"],
+                })
+                connection.execute(
+                    "INSERT INTO messages (id, conversation_id, content, metadata) VALUES (?,?,?,?)",
+                    (row["id"], row["conversation_id"], row["content"], json.dumps(metadata)),
+                )
+            connection.execute("DROP TABLE messages_legacy")
         if cols and "tools_active" not in cols:
             connection.execute("ALTER TABLE conversations ADD COLUMN tools_active TEXT NOT NULL DEFAULT '[]'")
         if cols and "protected" not in cols:
@@ -157,7 +179,3 @@ def init_db() -> None:
                 """
             )
         connection.executescript(_SCHEMA)
-        connection.execute(
-            "UPDATE messages SET tags = '[\"' || direction || '\"]' "
-            "WHERE tags IS NULL OR trim(tags) = '' OR tags = '[]'"
-        )

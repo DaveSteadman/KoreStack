@@ -204,6 +204,13 @@ body.splitter-drag-h { user-select: none; cursor: row-resize; }
 .kcui-tag--skills-catalog:hover {
     background: rgba(234, 170, 0, 0.15);
 }
+.kcui-tag--work-packet {
+    border-color: #51b7c8;
+    color: #51b7c8;
+}
+.kcui-tag--work-packet:hover {
+    background: rgba(81, 183, 200, 0.15);
+}
 #wrap-btn-chat.is-on {
     color: var(--yellow); border-color: var(--yellow);
     background: rgba(240, 192, 96, 0.12);

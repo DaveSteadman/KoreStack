@@ -5,7 +5,6 @@ const workspace    = document.querySelector('.kcui-workspace');
 const form         = document.querySelector('#cronprompt-form');
 const nameInput    = document.querySelector('#cron-name');
 const chatInput    = document.querySelector('#chat-name');
-const clearWorkingData = document.querySelector('#clear-working-data');
 const promptList   = document.querySelector('#prompt-list');
 const addPrompt    = document.querySelector('#add-prompt');
 const cancelEdit   = document.querySelector('#cancel-edit');
@@ -350,7 +349,6 @@ function startEdit(item, { scroll = true, updateStatus = true } = {}) {
   editorDirty       = false;
   nameInput.value   = item.name;
   chatInput.value   = item.chat_name;
-  clearWorkingData.checked = item.clear_working_data !== false;
   form.elements.schedule.value = item.schedule.type === 'daily'
     ? item.schedule.time
     : String(item.schedule.minutes);
@@ -362,15 +360,15 @@ function startEdit(item, { scroll = true, updateStatus = true } = {}) {
   if (scroll) form.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-async function load() {
+async function load({ refreshEditor = true } = {}) {
   const cronResponse = await fetch('/api/cronprompts');
   const cronPayload     = await cronResponse.json();
   cronPrompts = cronPayload.cronprompts || [];
   if (editingName) {
     const selected = cronPrompts.find((item) => item.name === editingName);
-    if (editorDirty) renderRows(cronPrompts);
-    else if (selected) startEdit(selected, { scroll: false, updateStatus: false });
-    else resetEditor({ preserveStatus: true });
+    if (!selected) resetEditor({ preserveStatus: true });
+    else if (refreshEditor && !editorDirty) startEdit(selected, { scroll: false, updateStatus: false });
+    else renderRows(cronPrompts);
   } else if (!selectionReady && cronPrompts.length) {
     selectionReady = true;
     startEdit(cronPrompts[0], { scroll: false, updateStatus: false });
@@ -459,7 +457,6 @@ form.addEventListener('submit', async (event) => {
       body: JSON.stringify({
         name:      nameInput.value.trim(),
         chat_name: chatInput.value.trim() || nameInput.value.trim(),
-        clear_working_data: clearWorkingData.checked,
         schedule:  form.elements.schedule.value.trim(),
         prompts,
       }),
@@ -481,4 +478,4 @@ form.addEventListener('submit', async (event) => {
 addPromptRow();
 updateEditorChrome();
 load().catch((error) => setTag(formStatus, error.message || 'Unable to load', 'danger'));
-window.setInterval(() => load().catch(() => {}), 15000);
+window.setInterval(() => load({ refreshEditor: false }).catch(() => {}), 15000);

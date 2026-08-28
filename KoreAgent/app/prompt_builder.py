@@ -133,6 +133,7 @@ _TOOL_ROUTING_FUDGE: list[str] = [
     # Long-term fix: encode local-first preference in tool trigger/priority metadata so
     # the orchestrator enforces it without a system-prompt override.
     "- For factual, reference, encyclopaedic, or biographical queries, use KoreData MCP search/retrieval tools first when they are available. Fall back to web tools only if KoreData returns empty results. Skip this and go directly to a web tool when the prompt explicitly says 'search the web', 'search online', or 'find on the internet'.",
+    "- A KoreData SavedSearch is a named stored search definition. When the user names a SavedSearch, call koredata_savedsearch_run with that name. Never reinterpret the SavedSearch name as a keyword query or web query unless the user explicitly requests a separate web search.",
     "- When using KoreData MCP search tools, only include facts that appear in content you retrieved. Do not use training knowledge to fill gaps. If KoreData returns no content for a topic, say so explicitly rather than writing from memory.",
 
     # -- Date anchoring (cross-cutting; applies to any tool that returns time-sensitive data) -

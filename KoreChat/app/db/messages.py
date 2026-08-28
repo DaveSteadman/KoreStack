@@ -33,7 +33,7 @@ import json
 import sqlite3
 
 from .common import _conn
-from .common import _decode_message_tags
+from .common import _decode_message_metadata
 from .common import _now
 from .common import _row_to_dict
 from .conversations import conversation_get
@@ -52,7 +52,7 @@ def _normalise_tags(tags: list[str] | None, direction: str) -> list[str]:
 
 def _message_to_dict(row: sqlite3.Row) -> dict:
     message = _row_to_dict(row)
-    _decode_message_tags(message)
+    _decode_message_metadata(message)
     return message
 
 
@@ -63,16 +63,26 @@ def message_append(
     sender_display: str = "",
     status: str = "received",
     delivery_eligible: bool = True,
+    metadata: dict | None = None,
     tags: list[str] | None = None,
 ) -> dict:
     now = _now()
+    message_metadata = {
+        **(metadata or {}),
+        "direction": direction,
+        "sender_display": sender_display,
+        "status": status,
+        "delivery_eligible": bool(delivery_eligible),
+        "tags": _normalise_tags(tags, direction),
+        "created_at": now,
+    }
     with _conn() as connection:
         cur = connection.execute(
             """
-            INSERT INTO messages (conversation_id, direction, content, sender_display, status, delivery_eligible, tags, summarised, created_at)
-            VALUES (?,?,?,?,?,?,?,0,?)
+            INSERT INTO messages (conversation_id, content, metadata)
+            VALUES (?,?,?)
             """,
-            (conversation_id, direction, content, sender_display, status, int(delivery_eligible), json.dumps(_normalise_tags(tags, direction)), now),
+            (conversation_id, content, json.dumps(message_metadata)),
         )
         row = connection.execute("SELECT * FROM messages WHERE id = ?", (cur.lastrowid,)).fetchone()
     return _message_to_dict(row)
@@ -100,19 +110,24 @@ def conversation_append_turn(
             connection.execute("COMMIT")
             return None
 
+        inbound_metadata = {
+            "direction": "inbound", "sender_display": inbound_sender,
+            "status": "received", "delivery_eligible": True,
+            "tags": _normalise_tags(inbound_tags, "inbound"), "created_at": now,
+        }
+        response_metadata = {
+            **(outbound_metadata or {}), "direction": "outbound",
+            "sender_display": outbound_sender, "status": "sent",
+            "delivery_eligible": bool(outbound_delivery_eligible),
+            "tags": _normalise_tags(outbound_tags, "outbound"), "created_at": now,
+        }
         connection.execute(
-            """
-            INSERT INTO messages (conversation_id, direction, content, sender_display, status, metadata, tags, summarised, created_at)
-            VALUES (?,?,?,?,?,?,?,0,?)
-            """,
-            (conversation_id, "inbound", inbound_content, inbound_sender, "received", "{}", json.dumps(_normalise_tags(inbound_tags, "inbound")), now),
+            "INSERT INTO messages (conversation_id, content, metadata) VALUES (?,?,?)",
+            (conversation_id, inbound_content, json.dumps(inbound_metadata)),
         )
         connection.execute(
-            """
-            INSERT INTO messages (conversation_id, direction, content, sender_display, status, delivery_eligible, metadata, tags, summarised, created_at)
-            VALUES (?,?,?,?,?,?,?,?,0,?)
-            """,
-            (conversation_id, "outbound", outbound_content, outbound_sender, "sent", int(outbound_delivery_eligible), json.dumps(outbound_metadata or {}), json.dumps(_normalise_tags(outbound_tags, "outbound")), now),
+            "INSERT INTO messages (conversation_id, content, metadata) VALUES (?,?,?)",
+            (conversation_id, outbound_content, json.dumps(response_metadata)),
         )
 
         fields = ["turn_count = ?", "status = ?", "updated_at = ?", "last_activity_at = ?"]
@@ -139,9 +154,9 @@ def conversation_append_turn(
 def _latest_message_tx(connection: sqlite3.Connection, conversation_id: int) -> sqlite3.Row | None:
     return connection.execute(
         """
-        SELECT id, direction, created_at FROM messages
+        SELECT id, metadata FROM messages
         WHERE conversation_id = ?
-        ORDER BY created_at DESC, id DESC
+        ORDER BY id DESC
         LIMIT 1
         """,
         (conversation_id,),
@@ -150,7 +165,7 @@ def _latest_message_tx(connection: sqlite3.Connection, conversation_id: int) -> 
 
 def _conversation_has_unanswered_inbound_tx(connection: sqlite3.Connection, conversation_id: int) -> bool:
     row = _latest_message_tx(connection, conversation_id)
-    return row is not None and row["direction"] == "inbound"
+    return row is not None and _message_to_dict(row).get("direction") == "inbound"
 
 
 def conversation_has_unanswered_inbound(conversation_id: int) -> bool:
@@ -165,7 +180,8 @@ def ensure_response_needed_event(conversation_id: int, payload: dict | None = No
         # the same transaction so concurrent writers do not enqueue duplicate work.
         connection.execute("BEGIN IMMEDIATE")
         latest = _latest_message_tx(connection, conversation_id)
-        if latest is None or latest["direction"] != "inbound":
+        latest_message = _message_to_dict(latest) if latest is not None else None
+        if latest_message is None or latest_message.get("direction") != "inbound":
             connection.execute("COMMIT")
             return False
         existing = connection.execute(
@@ -177,7 +193,7 @@ def ensure_response_needed_event(conversation_id: int, payload: dict | None = No
               AND created_at >= ?
             LIMIT 1
             """,
-            (conversation_id, latest["created_at"]),
+            (conversation_id, latest_message.get("created_at") or now),
         ).fetchone()
         if existing:
             connection.execute("COMMIT")
@@ -211,50 +227,37 @@ def clear_pending_response_needed_events(conversation_id: int) -> int:
 
 def message_list(
     conversation_id: int,
-    summarised: int | None = None,
     direction: str | None = None,
     limit: int = 200,
 ) -> list[dict]:
     query  = "SELECT * FROM messages WHERE conversation_id = ?"
     params: list = [conversation_id]
-    if summarised is not None:
-        query += " AND summarised = ?"
-        params.append(summarised)
-    if direction:
-        query += " AND direction = ?"
-        params.append(direction)
-    query += " ORDER BY created_at ASC LIMIT ?"
-    params.append(limit)
+    query += " ORDER BY id ASC"
     with _conn() as connection:
         rows = connection.execute(query, params).fetchall()
-    return [_message_to_dict(row) for row in rows]
+    messages = [_message_to_dict(row) for row in rows]
+    if direction:
+        messages = [message for message in messages if message.get("direction") == direction]
+    return messages[:limit]
 
 
 def message_update(
     message_id: int,
     status:     str | None = None,
-    summarised: int | None = None,
     tags:       list[str] | None = None,
 ) -> dict | None:
-    fields = []
-    params: list = []
-    if status is not None:
-        fields.append("status = ?")
-        params.append(status)
-    if summarised is not None:
-        fields.append("summarised = ?")
-        params.append(summarised)
-    if tags is not None:
-        with _conn() as connection:
-            row = connection.execute("SELECT direction FROM messages WHERE id = ?", (message_id,)).fetchone()
+    with _conn() as connection:
+        row = connection.execute("SELECT * FROM messages WHERE id = ?", (message_id,)).fetchone()
         if row is None:
             return None
-        fields.append("tags = ?")
-        params.append(json.dumps(_normalise_tags(tags, row["direction"])))
-    if not fields:
-        return None
-    params.append(message_id)
-    with _conn() as connection:
-        connection.execute(f"UPDATE messages SET {', '.join(fields)} WHERE id = ?", params)
+        message = _message_to_dict(row)
+        metadata = json.loads(message["metadata"])
+        if status is not None:
+            metadata["status"] = status
+        if tags is not None:
+            metadata["tags"] = _normalise_tags(tags, str(metadata.get("direction") or ""))
+        if status is None and tags is None:
+            return None
+        connection.execute("UPDATE messages SET metadata = ? WHERE id = ?", (json.dumps(metadata), message_id))
         row = connection.execute("SELECT * FROM messages WHERE id = ?", (message_id,)).fetchone()
     return _message_to_dict(row) if row else None

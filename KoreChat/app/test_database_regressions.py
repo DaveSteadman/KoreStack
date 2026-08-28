@@ -13,6 +13,7 @@
 # - test_init_db_migrates_legacy_datasets_out_of_scratchpad: Implements the test init db migrates legacy datasets out of scratchpad operation for this module.
 # ====================================================================================================
 
+import json
 import sqlite3
 import tempfile
 import unittest
@@ -23,6 +24,31 @@ from app import database as db
 
 
 class DatabaseRegressionTests(unittest.TestCase):
+    def test_message_append_persists_telemetry_metadata(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            try:
+                db.reset_runtime_state()
+                with patch.dict(db.cfg, {"data_dir": str(Path(tmp))}):
+                    db.init_db()
+                    conversation = db.conversation_create("webchat", subject="Test")
+                    message = db.message_append(
+                        conversation_id=conversation["id"],
+                        direction="outbound",
+                        content="Response",
+                        metadata={"telemetry": {"tokens_per_second": "12.5"}},
+                    )
+                    with db._conn() as connection:
+                        columns = [row["name"] for row in connection.execute("PRAGMA table_info(messages)")]
+            finally:
+                db.reset_runtime_state()
+
+        metadata = json.loads(message["metadata"])
+        self.assertEqual(metadata["telemetry"], {"tokens_per_second": "12.5"})
+        self.assertEqual(metadata["direction"], "outbound")
+        self.assertEqual(metadata["tags"], ["outbound"])
+        self.assertIn("created_at", metadata)
+        self.assertEqual(columns, ["id", "conversation_id", "content", "metadata"])
+
     def test_message_tags_include_direction_and_supplied_values(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             temp_db_dir = Path(tmp)
@@ -111,14 +137,13 @@ class DatabaseRegressionTests(unittest.TestCase):
 
                     cleared = db.conversation_clear_history(conversation_id)
                     loaded  = db.conversation_get_with_messages(conversation_id)
-                    archived_messages = db.message_list(conversation_id)
+                    remaining_messages = db.message_list(conversation_id)
             finally:
                 db.reset_runtime_state()
 
         self.assertTrue(cleared)
         self.assertEqual(loaded["messages"], [])
-        self.assertEqual(len(archived_messages), 1)
-        self.assertEqual(archived_messages[0]["summarised"], 1)
+        self.assertEqual(remaining_messages, [])
         self.assertEqual(loaded["thread_summary"], "")
         self.assertEqual(loaded["background_context"], "")
         self.assertEqual(loaded["input_history"], [])
@@ -174,17 +199,42 @@ class DatabaseRegressionTests(unittest.TestCase):
                                 "2026-05-30T00:00:00+00:00",
                             ),
                         )
+                        connection.execute(
+                            """
+                            CREATE TABLE messages (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                conversation_id INTEGER NOT NULL,
+                                direction TEXT NOT NULL,
+                                content TEXT NOT NULL,
+                                sender_display TEXT NOT NULL DEFAULT '',
+                                status TEXT NOT NULL DEFAULT 'received',
+                                delivery_eligible INTEGER NOT NULL DEFAULT 1,
+                                metadata TEXT NOT NULL DEFAULT '{}',
+                                tags TEXT NOT NULL DEFAULT '[]',
+                                summarised INTEGER NOT NULL DEFAULT 0,
+                                created_at TEXT NOT NULL
+                            )
+                            """
+                        )
+                        connection.execute(
+                            "INSERT INTO messages (conversation_id, direction, content, sender_display, status, delivery_eligible, metadata, tags, summarised, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                            (1, "outbound", "Legacy reply", "agent", "sent", 1, '{"telemetry":{"tokens_per_second":"9.5"}}', '["outbound","legacy"]', 0, "2026-05-30T00:01:00+00:00"),
+                        )
                         connection.commit()
                     finally:
                         connection.close()
 
                     db.init_db()
                     loaded = db.conversation_get(1)
+                    messages = db.message_list(1)
             finally:
                 db.reset_runtime_state()
 
         self.assertEqual(loaded["scratchpad"], {"topic": "alpha"})
         self.assertEqual(loaded["datasets"], {"feed_items_raw": {"dataset_id": "ds_1", "count": 2}})
+        self.assertEqual(messages[0]["direction"], "outbound")
+        self.assertEqual(messages[0]["tags"], ["outbound", "legacy"])
+        self.assertEqual(json.loads(messages[0]["metadata"])["telemetry"]["tokens_per_second"], "9.5")
 
 
 if __name__ == "__main__":
