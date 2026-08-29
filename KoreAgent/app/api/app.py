@@ -62,6 +62,7 @@ from api.log_state import push_log_line as _push_log_line
 from api.routes_input_history import register_input_history_routes
 from api.routes_session_switch import register_session_switch_routes
 from api.routes_skills import register_skills_routes
+from api.routes_skill_manager import register_skill_manager_routes
 from api.state import finish_run_event_queue
 from api.state import format_sse as _sse
 from api.state import get_config as _get_config
@@ -100,7 +101,6 @@ from llm_client import get_active_model
 from llm_client import get_active_num_ctx
 from llm_client import get_ollama_ps_rows
 from llm_client import list_ollama_models
-import mcp_client
 from execution_queue import task_queue
 from scratchpad import get_store as get_scratchpad_store
 from scratchpad import scratchpad_clear
@@ -113,6 +113,7 @@ from sessions.tool_selection import set_selected_tools
 from skill_executor import build_catalog_gates
 from skill_executor import execute_tool_call
 from skills_catalog_builder import build_tool_definitions
+from skill_manager import skill_manager
 from utils.runtime_logger import SessionLogger
 from utils.runtime_logger import create_log_file_path
 from utils.suite_version import SUITE_VERSION
@@ -120,8 +121,6 @@ from utils.suite_version import get_suite_version
 from utils.workspace_utils import get_logs_dir
 import sessions.korechat_client as _kc_client
 from web_tools_state import WEB_TOOL_NAMES
-from web_tools_state import filter_mcp_tool_defs
-from web_tools_state import filter_mcp_tool_index
 
 
 _LOG_DIR = get_logs_dir()
@@ -146,6 +145,8 @@ _LOG_TAIL_LINES = 200
 
 app = FastAPI(title="KoreAgent API", version=SUITE_VERSION)
 register_endpoint_manifest(app, service_key="koreagent", service_label="KoreAgent")
+register_skill_manager_routes(app, manager=skill_manager)
+skill_manager.start_catalog_exporter()
 
 
 app.add_middleware(
@@ -302,9 +303,7 @@ _skills_routes = register_skills_routes(
     build_tool_definitions=build_tool_definitions,
     get_selected_tools=get_selected_tools,
     always_on_tool_names=ALWAYS_ON_TOOL_NAMES,
-    filter_mcp_tool_defs=filter_mcp_tool_defs,
-    filter_mcp_tool_index=filter_mcp_tool_index,
-    mcp_client_module=mcp_client,
+    skill_manager=skill_manager,
     build_catalog_gates=build_catalog_gates,
     execute_tool_call=execute_tool_call,
 )

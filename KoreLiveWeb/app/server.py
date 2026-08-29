@@ -13,12 +13,12 @@
 # - _apply_runtime_search_settings: Implements the  apply runtime search settings operation for this module.
 # - _persist_search_settings: Implements the  persist search settings operation for this module.
 # - _build_tool_rows: Implements the  build tool rows operation for this module.
-# - search_web_mcp: Implements the search web mcp operation for this module.
-# - search_web_text_mcp: Implements the search web text mcp operation for this module.
-# - fetch_page_text_mcp: Implements the fetch page text mcp operation for this module.
-# - get_page_links_mcp: Returns page links mcp for this module.
-# - get_page_links_text_mcp: Returns page links text mcp for this module.
-# - lookup_wikipedia_mcp: Implements the lookup wikipedia mcp operation for this module.
+# - search_web_skill: Implements the search web skill operation for this module.
+# - search_web_text_skill: Implements the search web text skill operation for this module.
+# - fetch_page_text_skill: Implements the fetch page text skill operation for this module.
+# - get_page_links_skill: Returns page links for this module.
+# - get_page_links_text_skill: Returns page links text for this module.
+# - lookup_wikipedia_skill: Implements the Wikipedia lookup skill operation for this module.
 # - _lifespan: Implements the  lifespan operation for this module.
 # - _home_context: Implements the  home context operation for this module.
 # - status: Implements the status operation for this module.
@@ -49,7 +49,6 @@ from fastapi.responses import HTMLResponse
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from mcp.server.fastmcp import FastMCP
 
 _KORECOMMON_PARENT = next((parent for parent in Path(__file__).resolve().parents if (parent / "KoreCommon").is_dir()), None)
 if _KORECOMMON_PARENT is not None:
@@ -59,6 +58,8 @@ if _KORECOMMON_PARENT is not None:
 
 from KoreCommon.service_app import register_suite_shell_routes
 from KoreCommon.service_logging import configure_service_logging
+from KoreCommon.skill_registration import start_manifest_registration
+from KoreCommon.skill_service import register_skill_invocation_routes
 from KoreCommon.suite_paths import _load_paths_config
 from KoreCommon.suite_paths import get_suite_urls_map
 from .activity_log    import append_activity
@@ -76,6 +77,7 @@ from .web_search      import search_web_text
 from .wikipedia       import lookup_wikipedia
 
 _SERVICE_ROOT       = Path(__file__).resolve().parents[2]
+_SERVICE_PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 _TEMPLATES_DIR      = Path(
     os.environ.get(
         "KORE_KORELIVEWEB_TEMPLATES_DIR",
@@ -264,23 +266,7 @@ def _build_tool_rows() -> list[dict]:
         },
     ]
 
-_mcp = FastMCP(
-    "KoreLiveWeb",
-    instructions=(
-        "KoreLiveWeb provides live web discovery, page fetching, navigation, multi-page research, "
-        "and Wikipedia lookup tools. Use these tools for current or web-specific information rather "
-        "than relying on model memory. Search is provider-backed and may be routed through either "
-        "DuckDuckGo Lite or Ollama web search depending on suite configuration. Search results and "
-        "snippets are discovery aids; fetched page content and research traversal outputs are the "
-        "preferred evidence sources for factual answers."
-    ),
-    streamable_http_path="/",
-    stateless_http=True,
-)
-
-
-@_mcp.tool(name="search_web")
-def search_web_mcp(
+def search_web_skill(
     query              : str,
     max_results        : int = 5,
     timeout_seconds    : int = 15,
@@ -308,8 +294,7 @@ def search_web_mcp(
     )
 
 
-@_mcp.tool(name="search_web_text")
-def search_web_text_mcp(
+def search_web_text_skill(
     query               : str,
     max_results         : int = 5,
     timeout_seconds     : int = 15,
@@ -339,8 +324,7 @@ def search_web_text_mcp(
     )
 
 
-@_mcp.tool(name="fetch_page_text")
-def fetch_page_text_mcp(
+def fetch_page_text_skill(
     url            : str,
     max_words      : int = 2000,
     timeout_seconds: int = 15,
@@ -366,8 +350,7 @@ def fetch_page_text_mcp(
     )
 
 
-@_mcp.tool(name="get_page_links")
-def get_page_links_mcp(
+def get_page_links_skill(
     url            : str,
     filter_text    : str = "",
     max_links      : int = 30,
@@ -389,8 +372,7 @@ def get_page_links_mcp(
     )
 
 
-@_mcp.tool(name="get_page_links_text")
-def get_page_links_text_mcp(
+def get_page_links_text_skill(
     url            : str,
     filter_text    : str = "",
     max_links      : int = 30,
@@ -412,8 +394,7 @@ def get_page_links_text_mcp(
     )
 
 
-@_mcp.tool(name="lookup_wikipedia")
-def lookup_wikipedia_mcp(topic: str, timeout: int = 15) -> str:
+def lookup_wikipedia_skill(topic: str, timeout: int = 15) -> str:
     """Resolve and fetch a Wikipedia summary for a topic."""
     append_activity(
         kind      = "tool",
@@ -425,13 +406,14 @@ def lookup_wikipedia_mcp(topic: str, timeout: int = 15) -> str:
     return lookup_wikipedia(topic=topic, timeout=timeout)
 
 
-_mcp_http_app = _mcp.streamable_http_app()
-
-
 @asynccontextmanager
 async def _lifespan(app: FastAPI):
-    async with _mcp_http_app.router.lifespan_context(_mcp_http_app):
-        yield
+    start_manifest_registration(
+        _SERVICE_PACKAGE_ROOT / "skills" / "skills.json",
+        service_base_url=f"http://{cfg['host']}:{cfg['port']}",
+        logger_name=__name__,
+    )
+    yield
 
 
 app = FastAPI(title="KoreLiveWeb", lifespan=_lifespan)
@@ -441,6 +423,17 @@ register_suite_shell_routes(
     service_key            = "koreliveweb",
     service_label          = "KoreLiveWeb",
     ui_elements_assets_dir = _UI_ELEMENTS_ASSETS,
+)
+register_skill_invocation_routes(
+    app,
+    {
+        "search_web": search_web_skill,
+        "search_web_text": search_web_text_skill,
+        "fetch_page_text": fetch_page_text_skill,
+        "get_page_links": get_page_links_skill,
+        "get_page_links_text": get_page_links_text_skill,
+        "lookup_wikipedia": lookup_wikipedia_skill,
+    },
 )
 
 
@@ -468,11 +461,6 @@ def _home_context(request: Request) -> dict:
             "label":   "Activity API",
             "path":    "/api/activity",
             "summary": "Live request feed for MCP calls and outbound HTTP results.",
-        },
-        {
-            "label":   "MCP",
-            "path":    "/mcp",
-            "summary": "Mounted Streamable HTTP MCP endpoint for KoreAgent integration.",
         },
     ]
     bootstrap_json = json.dumps(
@@ -577,7 +565,6 @@ def root():
     return RedirectResponse("/ui")
 
 
-app.mount("/mcp", _mcp_http_app)
 
 
 def main(argv: Optional[list[str]] = None) -> int:

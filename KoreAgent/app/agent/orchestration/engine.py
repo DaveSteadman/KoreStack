@@ -79,12 +79,9 @@ from sessions.runtime import bind_session
 from skill_executor import build_catalog_gates
 from skills.SystemInfo.system_info_skill import get_static_system_info_string
 from skills_catalog_builder import build_tool_definitions
-from sessions.tool_selection import all_known_tool_names
 from sessions.tool_selection import derive_active_tool_runtime
-from sessions.tool_selection import promote_selected_tools
-from sessions.tool_sets import relevant_tool_sets
+from sessions.tool_selection import filter_local_payload
 from agent.tool_runtime.loop import extract_result_fields as _tool_loop_extract_result_fields
-import mcp_client as _mcp_client
 from agent.tool_runtime.loop import format_tool_outputs as _tool_loop_format_tool_outputs
 from agent.tool_runtime.loop import run_tool_loop as _tool_loop_run_tool_loop
 from agent.tool_runtime.loop import write_file_blocks as _tool_loop_write_file_blocks
@@ -97,6 +94,27 @@ from web_tools_state import is_web_tool_name
 # MARK: SKILL GUIDANCE FLAG
 # ====================================================================================================
 _SKILL_GUIDANCE_ENABLED: bool = False
+_FILESYSTEM_LISTING_INTENT_RE = re.compile(
+    r"\b(?:list|show|find|locate)\b[^\n]{0,80}\b(?:files?|folders?|directories|directory)\b"
+    r"|\b(?:files?|folders?|directories|directory)\b[^\n]{0,80}\b(?:list|show|find|locate)\b",
+    re.IGNORECASE,
+)
+_LOCAL_WORKSPACE_LISTING_INTENT_RE = re.compile(r"\blocal\s+(?:folder|directory)\b", re.IGNORECASE)
+
+
+def _apply_transient_intent_tools(runtime: dict[str, object], available_payload: dict, user_prompt: str) -> dict[str, object]:
+    """Expose FileAccess listing tools for one request without persisting a selection."""
+    if not _FILESYSTEM_LISTING_INTENT_RE.search(user_prompt or ""):
+        return runtime
+    active_names = set(runtime["active_tool_names"])
+    active_names.update({"file_find", "folder_find"})
+    if _LOCAL_WORKSPACE_LISTING_INTENT_RE.search(user_prompt or ""):
+        active_names.add("workspace_list")
+    return {
+        **runtime,
+        "active_local_payload": filter_local_payload(available_payload, active_names),
+        "active_tool_names": active_names,
+    }
 
 
 def get_skill_guidance_enabled() -> bool:
@@ -570,67 +588,21 @@ def orchestrate_prompt(
         _log(ambient_system_info)
 
         available_local_payload = config.skills_payload if _WEB_SKILLS_ENABLED else _filter_web_skills(config.skills_payload)
-        known_tool_names = all_known_tool_names(
-            config.skills_payload,
-            available_local_payload=available_local_payload,
-        )
-        prompt_tool_sets = relevant_tool_sets(user_prompt, known_tool_names=known_tool_names)
-        if prompt_tool_sets:
-            prompt_tools = [
-                tool_name
-                for tool_set in prompt_tool_sets
-                for tool_name in tool_set["tools"]
-            ]
-            activation = promote_selected_tools(
-                prompt_tools,
-                session_id         = active_session_id,
-                conversation_entry = conversation_entry,
-                persist            = False,
-            )
-            _log_file_only(
-                "[toolsets] initial activation "
-                f"sets={','.join(tool_set['name'] for tool_set in prompt_tool_sets)} "
-                f"added={','.join(activation['added']) or 'none'} "
-                f"promoted={','.join(activation['promoted']) or 'none'}"
-            )
-        saved_search_prompt = bool(re.search(r"\bsaved\s*search(?:es)?\b", user_prompt, re.IGNORECASE))
-        explicit_web_request = bool(re.search(r"\b(?:search|browse)\s+(?:the\s+)?web\b|\bsearch\s+online\b", user_prompt, re.IGNORECASE))
-        if saved_search_prompt:
-            activation = promote_selected_tools(
-                [
-                    "koredata_savedsearch_run",
-                    "dataset_get",
-                    "dataset_inspect",
-                    "dataset_expand_full_text",
-                ],
-                session_id         = active_session_id,
-                conversation_entry = conversation_entry,
-                persist            = False,
-            )
-            _log_file_only(
-                "[savedsearch] activation "
-                f"added={','.join(activation['added']) or 'none'} "
-                f"promoted={','.join(activation['promoted']) or 'none'}"
-            )
         initial_tool_runtime = derive_active_tool_runtime(
             config.skills_payload,
             available_local_payload=available_local_payload,
             session_id=active_session_id,
             conversation_entry=conversation_entry,
         )
+        initial_tool_runtime = _apply_transient_intent_tools(
+            initial_tool_runtime,
+            available_local_payload,
+            user_prompt,
+        )
         active_payload = initial_tool_runtime["active_local_payload"]
 
         tool_defs = build_tool_definitions(active_payload)
-        initial_mcp_defs = list(initial_tool_runtime["active_mcp_defs"])
-        if initial_mcp_defs:
-            tool_defs = tool_defs + initial_mcp_defs
-        if saved_search_prompt and not explicit_web_request:
-            blocked_search_tools = {"koredata_search", "search_web", "search_web_text"}
-            tool_defs = [
-                tool_def
-                for tool_def in tool_defs
-                if tool_def.get("function", {}).get("name") not in blocked_search_tools
-            ]
+        tool_defs = tool_defs + list(initial_tool_runtime["active_registered_defs"])
         _log_file_only(f"[progress] Tool definitions built: {len(tool_defs)} tools available.")
 
         system_message = _prompt_builder_build_system_message(
@@ -666,17 +638,14 @@ def orchestrate_prompt(
                 session_id=active_session_id,
                 conversation_entry=conversation_entry,
             )
+            runtime = _apply_transient_intent_tools(
+                runtime,
+                round_available_local_payload,
+                user_prompt,
+            )
             round_active_payload = runtime["active_local_payload"]
             round_tool_defs = build_tool_definitions(round_active_payload)
-            round_mcp_defs = list(runtime["active_mcp_defs"])
-            if round_mcp_defs:
-                round_tool_defs = round_tool_defs + round_mcp_defs
-            if saved_search_prompt and not explicit_web_request:
-                round_tool_defs = [
-                    tool_def
-                    for tool_def in round_tool_defs
-                    if tool_def.get("function", {}).get("name") not in blocked_search_tools
-                ]
+            round_tool_defs = round_tool_defs + list(runtime["active_registered_defs"])
             return {
                 "tool_defs": round_tool_defs,
                 "catalog_gates": build_catalog_gates(round_active_payload),
@@ -735,4 +704,3 @@ def orchestrate_prompt(
         finally:
             with _active_stop_lock:
                 _active_stop_events.pop(_run_id, None)
-

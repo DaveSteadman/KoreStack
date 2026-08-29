@@ -209,7 +209,6 @@ from llm_client import register_llm_call_logger
 from agent.orchestration.engine import OrchestratorConfig
 from agent.orchestration.engine import resolve_execution_model
 from skills_catalog_builder import load_skills_payload
-import mcp_client as _mcp_client
 from utils.runtime_logger import create_log_file_path
 from utils.runtime_logger import SessionLogger
 from utils.workspace_utils import get_agent_config_file
@@ -239,7 +238,6 @@ _KNOWN_KEYS = _DEFAULTS_KEYS | {
     "DataRootFolder",
     "ControlDataFolder",
     "UserDataFolder",
-    "mcp_connections",
 }
 
 
@@ -401,7 +399,6 @@ def _run(args, logger, log_path) -> None:
         message        = "Launching HTTP server",
         dependencies   = {
             "llm":      {"status": "pending", "detail": f"{_backend_label} warmup pending"},
-            "mcp":      {"status": "pending", "detail": "MCP discovery pending"},
             "korechat": {"status": "pending", "detail": "KoreChat reachability pending"},
         },
     )
@@ -410,7 +407,6 @@ def _run(args, logger, log_path) -> None:
         resolved_model = config.resolved_model
         dep_statuses   = {
             "llm":      "pending",
-            "mcp":      "pending",
             "korechat": "pending",
         }
 
@@ -454,39 +450,6 @@ def _run(args, logger, log_path) -> None:
             logger.log(f"Resolved model:  {resolved_model} {_cross}")
             print(f"Warning: {exc}  LLM calls will fail until the server is reachable.", flush=True)
 
-        try:
-            _mcp_client.start(DEFAULTS_FILE)
-            _mcp_status = _mcp_client.get_server_status()
-            for _srv in _mcp_status:
-                _ok_str  = f"({_srv['tool_count']} tool(s))" if _srv["ok"] else "(failed to connect)"
-                _purpose = f" - {_srv['purpose']}" if _srv.get("purpose") else ""
-                logger.log(f"MCP [{_srv['name']}]: {_srv['url']} {_ok_str} {_tick if _srv['ok'] else _cross}{_purpose}")
-            if not _mcp_status:
-                logger.log("MCP connections: (none configured)")
-            _mcp_ok = any(_srv["ok"] for _srv in _mcp_status) if _mcp_status else True
-            dep_statuses["mcp"] = "ready" if _mcp_ok else "degraded"
-            update_startup_state(
-                service_status = _service_status(),
-                dependencies   = {
-                    "mcp": {
-                        "status": "ready" if _mcp_ok else "degraded",
-                        "detail": f"{sum(1 for _srv in _mcp_status if _srv['ok'])}/{len(_mcp_status)} servers connected" if _mcp_status else "No MCP connections configured",
-                    }
-                },
-            )
-        except Exception as exc:
-            dep_statuses["mcp"] = "degraded"
-            update_startup_state(
-                service_status = "degraded",
-                dependencies   = {
-                    "mcp": {
-                        "status": "degraded",
-                        "detail": str(exc),
-                    }
-                },
-            )
-            logger.log(f"MCP startup failed: {exc}")
-
         _kc_ok = _service_reachable(_koreconv_url)
         logger.log(f"KoreChat:{_koreconv_url or '(not configured)'} {_tick if _kc_ok else _cross}")
         dep_statuses["korechat"] = "ready" if _kc_ok else ("disabled" if not _koreconv_url else "degraded")
@@ -505,17 +468,14 @@ def _run(args, logger, log_path) -> None:
         except Exception as exc:
             logger.log(f"Model runtime status: unavailable ({exc})")
 
-    try:
-        run_api_mode(
-            config             = config,
-            logger             = logger,
-            log_path           = log_path,
-            host               = "0.0.0.0",
-            port               = args.agentport,
-            background_startup = _background_startup,
-        )
-    finally:
-        _mcp_client.stop()
+    run_api_mode(
+        config             = config,
+        logger             = logger,
+        log_path           = log_path,
+        host               = "0.0.0.0",
+        port               = args.agentport,
+        background_startup = _background_startup,
+    )
 
 
 # ----------------------------------------------------------------------------------------------------

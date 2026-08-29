@@ -1,10 +1,9 @@
 # ====================================================================================================
 # MARK: OVERVIEW
 # ====================================================================================================
-# Recovery policy for malformed, inactive, and misspelled tool requests. It normalises a few known
-# wrapper shapes, classifies the requested name against active and known tools, and produces precise
-# continuation instructions for the model. Tool activation itself remains with the caller, keeping
-# this module side-effect free and suitable for retry decisions.
+# Recovery policy for malformed and inactive tool requests. It normalises known wrapper shapes,
+# classifies exact names against active and known tools, and directs the model to the complete
+# catalog or reviewed keyword map without fuzzy name matching.
 # MARK: FUNCTIONS
 # Function inventory:
 # - normalize_tool_request: Normalizes tool request for this module.
@@ -61,37 +60,9 @@ def classify_tool_recovery(
             "active_tool_names": sorted(active_names),
         }
 
-    try:
-        from sessions.tool_selection import suggest_tool_name
-
-        suggestion = suggest_tool_name(requested, known_names)
-    except Exception:
-        suggestion = {"status": "none", "requested_name": requested, "candidates": []}
-
-    status = str(suggestion.get("status") or "none")
-    corrected = str(suggestion.get("best_match") or "").strip()
-    candidates = suggestion.get("candidates") if isinstance(suggestion.get("candidates"), list) else []
-
-    if status == "corrected" and corrected:
-        return {
-            "classification": "corrected_active" if corrected in active_names else "corrected_inactive",
-            "requested_tool": requested,
-            "corrected_tool": corrected,
-            "candidates": candidates,
-            "active_tool_names": sorted(active_names),
-        }
-    if status == "ambiguous":
-        return {
-            "classification": "ambiguous_name",
-            "requested_tool": requested,
-            "corrected_tool": corrected,
-            "candidates": candidates,
-            "active_tool_names": sorted(active_names),
-        }
     return {
         "classification": "unknown_name",
         "requested_tool": requested,
-        "candidates": candidates,
         "active_tool_names": sorted(active_names),
     }
 
@@ -99,8 +70,6 @@ def classify_tool_recovery(
 def build_tool_recovery_message(event: dict[str, object]) -> str:
     classification = str(event.get("classification") or "unknown_name")
     requested = str(event.get("requested_tool") or "").strip()
-    corrected = str(event.get("corrected_tool") or "").strip()
-    candidates = event.get("candidates") if isinstance(event.get("candidates"), list) else []
     active_names = event.get("active_tool_names") if isinstance(event.get("active_tool_names"), list) else []
 
     if classification == "inactive_known":
@@ -108,28 +77,11 @@ def build_tool_recovery_message(event: dict[str, object]) -> str:
             f"The tool `{requested}` exists but is not currently active. "
             f"Activate it with `tools_active_add([\"{requested}\"])` and then continue."
         )
-    if classification == "corrected_active":
-        return (
-            f"The requested tool name `{requested}` was not exact. "
-            f"Use the active tool `{corrected}` instead."
-        )
-    if classification == "corrected_inactive":
-        return (
-            f"The requested tool name `{requested}` was not exact. "
-            f"The closest known tool is `{corrected}`, but it is not active. "
-            f"Activate it with `tools_active_add([\"{corrected}\"])` and continue."
-        )
-    if classification == "ambiguous_name":
-        candidate_text = ", ".join(f"`{name}`" for name in candidates[:8]) or "(no suggestions)"
-        return (
-            f"The requested tool name `{requested}` is ambiguous or not exact. "
-            f"Inspect the tool catalog with `tools_catalog_list(filter_text=\"{requested}\")` "
-            f"and choose one of: {candidate_text}."
-        )
     active_summary = _compact_tool_name_list(active_names)
     return (
         f"The requested tool `{requested}` is not available. "
-        f"Inspect the active catalog with `tools_catalog_list()` and select the exact tool name needed. "
+        "Inspect the full catalog with `tools_catalog_list()` or the reviewed map with "
+        "`tools_keywords_list()`, then select the exact capability needed. "
         f"Currently active tools: {active_summary}."
     )
 
@@ -137,16 +89,9 @@ def build_tool_recovery_message(event: dict[str, object]) -> str:
 def build_tool_recovery_reminder(event: dict[str, object]) -> str:
     classification = str(event.get("classification") or "unknown_name")
     requested = str(event.get("requested_tool") or "").strip()
-    corrected = str(event.get("corrected_tool") or "").strip()
     if classification == "inactive_known" and event.get("auto_activated"):
         return f"Recovery still required: do not answer yet. Retry `{requested}` now; it is already active for this conversation."
-    if classification == "corrected_active":
-        return f"Recovery still required: do not answer yet. Retry with the corrected active tool name `{corrected}` only."
-    if classification == "corrected_inactive":
-        return f"Recovery still required: do not answer yet. Activate `{corrected}` with `tools_active_add([\"{corrected}\"])`, then continue the task."
-    if classification == "ambiguous_name":
-        return f"Recovery still required: do not answer yet. Inspect the catalog with `tools_catalog_list(filter_text=\"{requested}\")` and choose an exact tool name."
-    return f"Recovery still required: do not answer yet. Inspect the tool catalog and choose the exact tool needed for `{requested}`."
+    return f"Recovery still required: do not answer yet. Inspect the full tool catalog or reviewed keyword map and choose the exact capability needed for `{requested}`."
 
 
 __all__ = [

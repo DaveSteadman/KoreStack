@@ -21,10 +21,6 @@
 - Functions:
   - `python_execute(code: str)`
 
-## Tool aliases
-- `python_execution` -> `python_execute`
-- `python_execution_sandbox` -> `python_execute`
-
 ## Parameters
 
 ### `python_execute(code)`

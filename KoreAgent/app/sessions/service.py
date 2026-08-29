@@ -246,6 +246,8 @@ class SessionService:
                     assistant_turn["telemetry"] = telemetry
                 turns.append(assistant_turn)
                 pending_prompt = None
+        if pending_prompt is not None:
+            turns.append(pending_prompt)
         return turns
 
     def kc_ensure_conversation(self, session_id: str) -> dict | None:

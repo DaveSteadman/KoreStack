@@ -29,32 +29,5 @@
     "koreliveweb":     { "port": 19613, "enabled": true },
     "koretest":        { "port": 19614, "enabled": true },
     "korecron":        { "port": 19615, "enabled": true }
-  },
-  "mcp": {
-    "connections": [
-      {
-        "name": "KoreData",
-        "service": "koredatagateway",
-        "path": "/mcp",
-        "enabled": true,
-        "purpose": "reference search and retrieval across feeds, encyclopedia, library, and internal documents",
-        "expected_prefix": "koredata_"
-      },
-      {
-        "name": "KoreDocs",
-        "service": "koredocs",
-        "path": "/mcp",
-        "enabled": true,
-        "purpose": "document navigation, structured editing, and KoreFile authoring",
-        "expected_prefix": "koredocs_"
-      },
-      {
-        "name": "KoreLiveWeb",
-        "service": "koreliveweb",
-        "path": "/mcp",
-        "enabled": true,
-        "purpose": "live web search, page fetch, navigation, research traversal, and Wikipedia lookup"
-      }
-    ]
   }
 }

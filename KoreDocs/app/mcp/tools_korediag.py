@@ -27,7 +27,7 @@ import json
 from typing import Optional, Annotated
 from uuid import uuid4
 from ..documents.korefile import service as korefile
-from .shared import mcp, _file_summary, _create_serialized_file, _ensure_extension, _now_iso
+from .shared import _file_summary, _create_serialized_file, _ensure_extension, _now_iso
 
 
 def _normalize_node_for_editor(node: dict) -> dict:
@@ -144,7 +144,6 @@ def create_korediag(
     return _create_serialized_file(folder_path, name, 'korediag', content, {'title': doc_title})
 
 
-@mcp.tool()
 def koredocs_diag_create(
   folder_path: Annotated[str, 'Folder path in the shared KoreDocs/datauser tree, such as "/" or "/Projects". Missing folders are created.'],
     name: Annotated[str, 'Filename, with or without the .korediag extension.'],
@@ -155,7 +154,6 @@ def koredocs_diag_create(
     return create_korediag(folder_path=folder_path, name=name, diagram=diagram, title=title)
 
 
-@mcp.tool()
 def koredocs_diag_spec_get() -> str:
     """Return a comprehensive description of the .korediag JSON format specification.
 

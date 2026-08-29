@@ -37,6 +37,7 @@ from pathlib import Path
 from KoreCommon.datauser_fs import DataUserPathError
 from KoreCommon.datauser_fs import create_folder as create_datauser_folder
 from KoreCommon.datauser_fs import display_datauser_path
+from KoreCommon.datauser_fs import get_workspace_root
 from KoreCommon.datauser_fs import list_datauser_files
 from KoreCommon.datauser_fs import list_datauser_folders
 from KoreCommon.datauser_fs import read_text_file
@@ -239,6 +240,31 @@ def folder_exists(path: str) -> str:
     except DataUserPathError as err:
         return f"Error: {err}"
     return "yes" if folder.exists() and folder.is_dir() else "no"
+
+
+# ----------------------------------------------------------------------------------------------------
+def workspace_list(path: str = "") -> str:
+    """List immediate visible entries inside the local KoreStack workspace."""
+    workspace_root = get_workspace_root().resolve()
+    candidate = (workspace_root / str(path or "").strip()).resolve()
+    try:
+        candidate.relative_to(workspace_root)
+    except ValueError:
+        return f"Error: path escapes workspace and is not allowed: {path}"
+    if not candidate.exists():
+        return f"Folder not found: {candidate.relative_to(workspace_root).as_posix() or '.'}"
+    if not candidate.is_dir():
+        return f"Not a folder: {candidate.relative_to(workspace_root).as_posix()}"
+
+    entries = [
+        ("folder" if item.is_dir() else "file", item.name)
+        for item in sorted(candidate.iterdir(), key=lambda item: (not item.is_dir(), item.name.lower()))
+        if not item.name.startswith(".")
+    ]
+    if not entries:
+        return "No files or folders found."
+    label = candidate.relative_to(workspace_root).as_posix() or "."
+    return "\n".join([f"Workspace: {label}", *(f"{kind}: {name}" for kind, name in entries)])
 
 
 # ----------------------------------------------------------------------------------------------------

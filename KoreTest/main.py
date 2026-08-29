@@ -59,7 +59,6 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from mcp.server.fastmcp import FastMCP
 import uvicorn
 
 
@@ -69,6 +68,8 @@ CONFIG     = ROOT / "config" / "korestack_config.json"
 sys.path.insert(0, str(ROOT))
 from KoreCommon.suite_paths import get_suite_datacontrol_dir
 from KoreCommon.service_app import register_suite_shell_routes
+from KoreCommon.skill_registration import start_manifest_registration
+from KoreCommon.skill_service import register_skill_invocation_routes
 
 DATA_ROOT  = Path(os.environ.get("KORE_TEST_DATA_DIR", str(get_suite_datacontrol_dir() / "koretest"))).resolve()
 DB_PATH    = DATA_ROOT / "runs.sqlite3"
@@ -77,6 +78,14 @@ UI_ROOT    = ROOT / "KoreUI" / "KoreTest"
 UI_ELEMENTS_ASSETS = ROOT / "KoreUI" / "UIElements" / "assets"
 _RUN_LOCK = threading.Lock()
 _TREND_RECENT_RUN_LIMIT = 10
+
+
+def _prompts_dir() -> Path:
+    return Path(os.environ.get("KORE_TEST_PROMPTS_DIR", str(DATA_ROOT / "test_prompts"))).resolve()
+
+
+def _results_dir() -> Path:
+    return Path(os.environ.get("KORE_TEST_RESULTS_DIR", str(DATA_ROOT / "test_results"))).resolve()
 
 
 def _config() -> dict:
@@ -148,7 +157,7 @@ def _git_version() -> str:
 
 
 def _suite_path(name: str) -> Path:
-    base = Path(os.environ.get("KORE_TEST_PROMPTS_DIR", str(get_suite_datacontrol_dir() / "test_prompts")))
+    base = _prompts_dir()
     if name.strip().lower() == "all":
         raise HTTPException(status_code=400, detail="'all' is a suite collection, not a suite path")
     candidate = (base / name).with_suffix(".json") if not name.endswith(".json") else base / name
@@ -168,7 +177,7 @@ def _run_suite(name: str, model: str | None = None, *, collection_id: str = "") 
     started = datetime.now(timezone.utc).isoformat()
     version = _git_version()
     prompts = json.loads(suite.read_text(encoding="utf-8"))
-    results_dir = get_suite_datacontrol_dir() / "test_results" / datetime.now().strftime("%Y-%m-%d")
+    results_dir = _results_dir() / datetime.now().strftime("%Y-%m-%d")
     results_dir.mkdir(parents=True, exist_ok=True)
     output = results_dir / f"test_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{suite.stem}.csv"
     initial_result = {
@@ -333,7 +342,7 @@ def _run_requested_suite(name: str, model: str | None = None) -> dict:
     try:
         if name.strip().lower() != "all":
             return _run_suite(name, model)
-        base = Path(os.environ.get("KORE_TEST_PROMPTS_DIR", str(get_suite_datacontrol_dir() / "test_prompts")))
+        base = _prompts_dir()
         started_at = time.monotonic()
         collection_id = f"testcollection_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S_%f')}"
         _start_collection_run(collection_id, model)
@@ -432,7 +441,7 @@ def _trend_points(filter_name: str = "") -> list[dict]:
         return _trend_points_for_all_runs()
 
     points: list[tuple[tuple[int, str, float], dict]] = []
-    result_root = get_suite_datacontrol_dir() / "test_results"
+    result_root = _results_dir()
     for csv_path in result_root.rglob("test_results_*.csv"):
         if "_analysis" in csv_path.stem or (normalized and normalized not in csv_path.stem.lower()):
             continue
@@ -468,7 +477,6 @@ def _run_unit_checks() -> dict:
 
 
 app = FastAPI(title="KoreTest")
-_mcp = FastMCP("KoreTest")
 register_suite_shell_routes(
     app,
     service_key            = "koretest",
@@ -485,6 +493,14 @@ def recover_interrupted_runs() -> None:
         _recover_interrupted_runs(conn)
     finally:
         conn.close()
+    config = _config()
+    host = str(config.get("network", {}).get("host") or "127.0.0.1")
+    port = int(config.get("services", {}).get("koretest", {}).get("port") or 19605)
+    start_manifest_registration(
+        ROOT / "KoreTest" / "skills" / "skills.json",
+        service_base_url=f"http://{host}:{port}",
+        logger_name=__name__,
+    )
 
 
 @app.get("/status")
@@ -493,7 +509,7 @@ def status(): return {"ok": True, "service": "KoreTest"}
 
 @app.get("/api/suites")
 def suites():
-    base = Path(os.environ.get("KORE_TEST_PROMPTS_DIR", str(get_suite_datacontrol_dir() / "test_prompts")))
+    base = _prompts_dir()
     return {"suites": [path.name for path in sorted(base.glob("*.json"))]}
 
 
@@ -536,20 +552,23 @@ def ui() -> FileResponse:
     return FileResponse(UI_ROOT / "static" / "test" / "index.html")
 
 
-@_mcp.tool()
 def test_list_suites() -> dict: return suites()
 
-@_mcp.tool()
 def test_run_suite(name: str, model: str = "") -> dict: return _run_requested_suite(name, model or None)
 
-@_mcp.tool()
 def test_list_runs(limit: int = 50) -> dict: return runs(limit)
 
-@_mcp.tool()
 def test_get_trend(name: str = "") -> dict: return {"lines": _trend_lines(name)}
 
-
-app.mount("/mcp", _mcp.streamable_http_app())
+register_skill_invocation_routes(
+    app,
+    {
+        "test_list_suites": test_list_suites,
+        "test_run_suite": test_run_suite,
+        "test_list_runs": test_list_runs,
+        "test_get_trend": test_get_trend,
+    },
+)
 
 if __name__ == "__main__":
     port = int(_config()["services"]["koretest"]["port"])

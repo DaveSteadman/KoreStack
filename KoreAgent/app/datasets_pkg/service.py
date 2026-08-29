@@ -81,9 +81,9 @@ from uuid import uuid4
 
 import httpx
 
+from KoreCommon.suite_paths import get_suite_urls_map
 from datasets_pkg import store as datasets_store
 from sessions.runtime import get_active_session_id
-from utils.workspace_utils import load_runtime_config
 
 
 _NAME_RE = re.compile(r"^[A-Za-z0-9_]+$")
@@ -150,23 +150,7 @@ def _coerce_records(records: object) -> list[dict]:
 
 @lru_cache(maxsize=1)
 def _get_koredata_gateway_base_url() -> str:
-    runtime_config = load_runtime_config()
-    connections = runtime_config.get("mcp_connections") if isinstance(runtime_config, dict) else None
-    if not isinstance(connections, list):
-        return ""
-
-    for connection in connections:
-        if not isinstance(connection, dict):
-            continue
-        expected_prefix = str(connection.get("expected_prefix") or "").strip().lower()
-        name = str(connection.get("name") or "").strip().lower()
-        url = str(connection.get("url") or "").strip()
-        if not url:
-            continue
-        if expected_prefix == "koredata_" or name == "koredata":
-            stripped = url.rstrip("/")
-            return stripped[:-4] if stripped.endswith("/mcp") else stripped
-    return ""
+    return str(get_suite_urls_map().get("koredatagateway") or "").strip().rstrip("/")
 
 
 def _fetch_full_text_payload(refid: str, *, client: httpx.Client | None = None, base_url: str = "") -> dict:

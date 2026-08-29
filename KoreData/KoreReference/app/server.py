@@ -67,6 +67,8 @@ if _KORECOMMON_PARENT is not None and str(_KORECOMMON_PARENT) not in sys.path:
     sys.path.insert(0, str(_KORECOMMON_PARENT))
 
 from KoreCommon.service_app import register_endpoint_manifest
+from KoreCommon.skill_registration import start_manifest_registration
+from KoreCommon.skill_service import register_skill_invocation_routes
 from app.config import cfg
 from app.database import (
     backfill_sentence_index,
@@ -119,6 +121,11 @@ async def _lifespan(app: FastAPI):
         daemon = True,
         name   = "korereference-startup-warm",
     ).start()
+    start_manifest_registration(
+        Path(__file__).resolve().parent.parent / "skills" / "skills.json",
+        service_base_url=f"http://{cfg['host']}:{cfg['port']}",
+        logger_name=__name__,
+    )
     try:
         yield
     finally:
@@ -474,3 +481,13 @@ def route_status():
         "service": "KoreReference",
         **get_status(),
     }
+
+
+register_skill_invocation_routes(
+    app,
+    {
+        "korereference_search": route_search,
+        "korereference_articles_list": route_list_articles,
+        "korereference_article_get": route_get_article,
+    },
+)

@@ -77,6 +77,8 @@ if _KORECOMMON_PARENT is not None and str(_KORECOMMON_PARENT) not in sys.path:
     sys.path.insert(0, str(_KORECOMMON_PARENT))
 
 from KoreCommon.service_app import register_endpoint_manifest
+from KoreCommon.skill_registration import start_manifest_registration
+from KoreCommon.skill_service import register_skill_invocation_routes
 from app.config import cfg
 from app.database import (
     delete_chunk as _db_delete_chunk,
@@ -726,6 +728,11 @@ async def _lifespan(app: FastAPI):
         daemon = True,
         name   = "korescrape-startup-reindex",
     ).start()
+    start_manifest_registration(
+        Path(__file__).resolve().parent.parent / "skills" / "skills.json",
+        service_base_url=f"http://{cfg['host']}:{cfg['port']}",
+        logger_name=__name__,
+    )
     yield
 
 
@@ -811,6 +818,16 @@ def route_delete_chunk_post(chunk_id: int):
 @app.get("/search", include_in_schema=False)
 def route_search(q: str, limit: int = 20, capture_id: Optional[str] = None):
     return _db_search_chunks(q=q, limit=limit, capture_id=capture_id)
+
+
+register_skill_invocation_routes(
+    app,
+    {
+        "korescrape_captures_list": route_list_captures,
+        "korescrape_search": route_search,
+        "korescrape_chunk_get": route_get_chunk,
+    },
+)
 
 
 @app.get("/captures/{capture_id}/files/{file_path:path}", include_in_schema=False)

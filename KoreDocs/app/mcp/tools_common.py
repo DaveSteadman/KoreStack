@@ -14,7 +14,6 @@
 # server.py imports mcp, FORMAT_INFO, and the sheet functions from this module.
 #
 # Related modules:
-#   - app/_mcp_instance.py  -- FastMCP singleton
 #   - app/_mcp_shared.py    -- shared folder/file helpers
 #   - app/koredoc_mcp.py    -- .koredoc document tools
 #   - app/koresheet_mcp.py  -- .koresheet spreadsheet tools
@@ -55,7 +54,6 @@ from typing import Any, Optional
 from typing import Annotated, Literal
 
 from ..documents.korefile import service as korefile
-from .instance import mcp  # noqa: F401 – re-exported for server.py
 from .shared import (
     ALLOWED_EXTENSIONS,
     _normalise_folder_path,
@@ -208,13 +206,11 @@ def delete_file(
 
 # ── Cross-type MCP tools ───────────────────────────────────────────────────
 
-@mcp.tool()
 def koredocs_types_list() -> list[dict]:
     """Canonical prefixed alias for list_supported_types."""
     return list_supported_types()
 
 
-@mcp.tool()
 def koredocs_files_search(
     query: Annotated[str, 'Search query. Supports words and quoted phrases.'],
     type: Annotated[Optional[KoreFileType], 'Optional document type filter.'] = None,
@@ -225,7 +221,6 @@ def koredocs_files_search(
     return search_files(query=query, type=type, folder_path=folder_path, limit=limit)
 
 
-@mcp.tool()
 def koredocs_files_metadata_search(
     metadata_filter: Annotated[dict, 'Structured JSON metadata filter. Example: {"artefact_type":"market_analysis","geography.country":"GB","period.year":{"gte":2025}}.'],
     type: Annotated[Optional[KoreFileType], 'Optional document type filter.'] = None,
@@ -236,7 +231,6 @@ def koredocs_files_metadata_search(
     return search_files_by_metadata(metadata_filter, type=type, folder_path=folder_path, limit=limit)
 
 
-@mcp.tool()
 def koredocs_file_history_list(
     id: Annotated[int, 'KoreDocs file id.'],
     limit: Annotated[int, 'Maximum revisions, between 1 and 200.'] = 50,
@@ -245,7 +239,6 @@ def koredocs_file_history_list(
     return korefile.list_history(id, limit)
 
 
-@mcp.tool()
 def koredocs_file_history_get(
     id: Annotated[int, 'KoreDocs file id.'],
     revision: Annotated[str, 'Revision token returned by koredocs_file_history_list.'],
@@ -254,13 +247,11 @@ def koredocs_file_history_get(
     return korefile.get_history_revision(id, revision)
 
 
-@mcp.tool()
 def koredocs_file_get(id: int) -> dict:
     """Canonical prefixed alias for get_file."""
     return get_file(id)
 
 
-@mcp.tool()
 def koredocs_files_list(
     folder_path: Optional[str] = None,
     type: Annotated[Optional[KoreFileType], 'Optional document type filter.'] = None,
@@ -269,19 +260,16 @@ def koredocs_files_list(
     return list_files(folder_path=folder_path, type=type)
 
 
-@mcp.tool()
 def koredocs_folders_list() -> list[dict]:
     """Canonical prefixed alias for list_folders."""
     return list_folders()
 
 
-@mcp.tool()
 def koredocs_folder_structure_get() -> list[dict]:
     """Canonical prefixed alias for get_folder_structure."""
     return get_folder_structure()
 
 
-@mcp.tool()
 def koredocs_file_format_get(
     type: Annotated[KoreFileType, 'Document type: koredoc, koresheet, or korediag.'],
 ) -> dict:
@@ -289,7 +277,6 @@ def koredocs_file_format_get(
     return get_file_format_info(type)
 
 
-@mcp.tool()
 def koredocs_folder_create(
     path: Annotated[str, 'Folder path in the shared KoreDocs/datauser tree, such as "/Projects/Calcs". Missing parents are created automatically.'],
 ) -> dict:
@@ -308,7 +295,6 @@ def koredocs_folder_create(
     return folder
 
 
-@mcp.tool()
 def koredocs_file_create(
     folder_path: Annotated[str, 'Folder path in the shared KoreDocs/datauser tree, such as "/" or "/Projects". Missing folders are created.'],
     name: Annotated[str, 'Filename ending in .koredoc, .koresheet, or .korediag.'],
@@ -326,7 +312,6 @@ def koredocs_file_create(
     return create_file(folder_path=folder_path, name=name, content=content, metadata=metadata)
 
 
-@mcp.tool()
 def koredocs_file_update(
     id: Annotated[int, 'KoreDocs file id.'],
     content: Annotated[str, 'Complete replacement file content.'],
@@ -338,7 +323,6 @@ def koredocs_file_update(
     return update_file(id=id, content=content, metadata=metadata, metadata_patch=metadata_patch, expected_revision=expected_revision)
 
 
-@mcp.tool()
 def koredocs_file_delete(
     id: Annotated[int, 'KoreDocs file id.'],
     expected_revision: Annotated[Optional[int], 'Optional optimistic concurrency check.'] = None,

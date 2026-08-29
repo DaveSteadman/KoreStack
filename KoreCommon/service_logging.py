@@ -103,7 +103,6 @@ def make_service_log_config(service_name: str, log_level: str = "INFO") -> dict:
             "uvicorn.error":  {"handlers": ["file", "console"], "level": level,     "propagate": False},
             "uvicorn.access": {"handlers": ["file", "console"], "level": "WARNING", "propagate": False},
             "httpx":          {"handlers": ["file", "console"], "level": "WARNING", "propagate": False},
-            "mcp":            {"handlers": ["file", "console"], "level": "WARNING", "propagate": False},
             "apscheduler":    {"handlers": ["file", "console"], "level": "WARNING", "propagate": False},
         },
     }

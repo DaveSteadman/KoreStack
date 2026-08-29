@@ -47,6 +47,7 @@
 # - _coerce_conversation_scratchpad: Implements the  coerce conversation scratchpad operation for this module.
 # - _coerce_conversation_datasets: Implements the  coerce conversation datasets operation for this module.
 # - _build_prompt: Implements the  build prompt operation for this module.
+# - _build_conversation_history: Builds bounded historical messages for the current turn.
 # - _invalid_model_response_reason: Returns the reason a model response cannot be persisted.
 # - _normalise_strict_json_response: Removes model prose from an explicitly JSON-only response.
 # - _handle_compress_needed: Implements the  handle compress needed operation for this module.
@@ -354,6 +355,36 @@ def _build_prompt(conv: dict, messages: list[dict], push_log_line=None) -> str:
     return "\n\n".join(parts)
 
 
+def _build_conversation_history(
+    messages: list[dict],
+    *,
+    current_inbound_id: object | None,
+    max_messages: int = 8,
+    max_chars_per_message: int = 2_000,
+) -> list[dict[str, str]]:
+    """Build a small context-only history that cannot become the current task.
+
+    KoreChat owns the durable transcript.  The agent must route and guard tools
+    from the newest inbound message only; earlier messages are supplied solely
+    as ordinary chat history for follow-up references.
+    """
+    prior: list[dict[str, str]] = []
+    for message in messages:
+        if current_inbound_id is not None and message.get("id") == current_inbound_id:
+            break
+        direction = str(message.get("direction") or "").strip()
+        content = str(message.get("content") or "").strip()
+        if direction not in {"inbound", "outbound"} or not content:
+            continue
+        prior.append(
+            {
+                "role": "user" if direction == "inbound" else "assistant",
+                "content": content[:max_chars_per_message],
+            }
+        )
+    return prior[-max_messages:]
+
+
 # ====================================================================================================
 # MARK: COMPRESSION
 # ====================================================================================================
@@ -541,9 +572,18 @@ def _handle_event(
         )
 
         messages = fresh_messages
-        user_prompt = str(event_payload.get("prompt_override") or "").strip()
+        latest_inbound = next(
+            (message for message in reversed(messages) if message.get("direction") == "inbound"),
+            None,
+        )
+        inbound_prompt = str((latest_inbound or {}).get("content") or "").strip()
+        user_prompt = str(event_payload.get("prompt_override") or "").strip() or inbound_prompt
         if not user_prompt:
             user_prompt = _build_prompt(conv, messages, push_log_line=push_log_line)
+        conversation_history = _build_conversation_history(
+            messages,
+            current_inbound_id=(latest_inbound or {}).get("id"),
+        )
 
         # KC owns the persisted conversation state. The agent keeps only transient
         # per-run session context in memory for this turn.
@@ -553,11 +593,6 @@ def _handle_event(
             max_turns    = 10,
         )
 
-        latest_inbound = next(
-            (message for message in reversed(messages) if message.get("direction") == "inbound"),
-            None,
-        )
-        inbound_prompt = str((latest_inbound or {}).get("content") or "").strip()
         if inbound_prompt.startswith("/"):
             inbound_id = (latest_inbound or {}).get("id")
             if inbound_id:
@@ -638,7 +673,7 @@ def _handle_event(
                 user_prompt          = user_prompt,
                 config               = config,
                 logger               = run_logger,
-                conversation_history = None,
+                conversation_history = conversation_history or None,
                 session_context      = session_ctx,
                 quiet                = True,
                 conversation_entry   = conv,

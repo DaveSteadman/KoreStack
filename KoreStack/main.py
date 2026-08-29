@@ -173,7 +173,7 @@ SERVICE_META: dict[str, dict[str, object]] = {
         "url_suffix": "/",
         "health_suffix": "/status",
         "port_arg": "--port",
-        "description": "Standalone live web MCP service for search, fetch, navigation, research, and Wikipedia lookup.",
+        "description": "Standalone live web skill service for search, fetch, navigation, research, and Wikipedia lookup.",
     },
     "koretest": {
         "label": "KoreTest", "cwd": SUITE_ROOT / "KoreTest", "script": "main.py", "url_suffix": "/ui", "health_suffix": "/status", "description": "Test execution, TEST-chat provenance, versioned result history, and trends.",
@@ -281,6 +281,8 @@ def get_stack_paths(config: dict) -> dict[str, Path]:
         "koredata_data":    _dc("koredata",  "koredata"),
         "koreagent_data":   _dc("koreagent", "koreagent"),
         "koredocs":         _dc("koredocs",  "koredocs"),
+        "koretest":         _dc("koretest",  "koretest"),
+        "korecron":         _dc("korecron",  "korecron"),
         "docs_data":        _du("docs_data", "KoreFiles"),
     }
 
@@ -844,8 +846,9 @@ def _bootstrap_data_dirs(stack_paths: dict[str, Path]) -> None:
         # Shared datacontrol tree
         dc / "logs",
         dc / "schedules",
-        dc / "test_prompts",
-        dc / "test_results",
+        stack_paths["koretest"] / "test_prompts",
+        stack_paths["koretest"] / "test_results",
+        stack_paths["korecron"],
         dc / "chatsessions",
         dc / "chatsessions" / "named",
         # User data

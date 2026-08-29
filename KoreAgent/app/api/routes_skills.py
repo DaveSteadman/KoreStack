@@ -118,9 +118,7 @@ def register_skills_routes(
     build_tool_definitions,
     get_selected_tools,
     always_on_tool_names,
-    filter_mcp_tool_defs,
-    filter_mcp_tool_index,
-    mcp_client_module,
+    skill_manager,
     build_catalog_gates,
     execute_tool_call,
 ) -> dict[str, object]:
@@ -173,9 +171,6 @@ def register_skills_routes(
                 local_tool_map[tool_name] = fn
 
         selected = set(get_selected_tools()) | set(always_on_tool_names)
-        mcp_defs = filter_mcp_tool_defs(mcp_client_module.get_mcp_tool_definitions(), enabled=get_web_skills_enabled())
-        mcp_idx = filter_mcp_tool_index(mcp_client_module.get_mcp_tool_index(), enabled=get_web_skills_enabled())
-
         providers: dict[str, dict[str, Any]] = {}
         entries: list[dict[str, Any]] = []
 
@@ -220,31 +215,29 @@ def register_skills_routes(
                 )
                 providers[provider_key]["count"] += 1
 
-        for tool_def in mcp_defs:
-            fn = tool_def.get("function", {}) if isinstance(tool_def, dict) else {}
-            tool_name = str(fn.get("name") or "").strip()
-            if not tool_name:
+        for registered in skill_manager.list_skills():
+            tool_name = str(registered.get("name") or "").strip()
+            if not tool_name or tool_name in local_tool_map:
                 continue
-            meta = mcp_idx.get(tool_name, {}) if isinstance(mcp_idx.get(tool_name, {}), dict) else {}
-            provider_label = str(meta.get("connection") or meta.get("server") or meta.get("url") or "MCP")
-            provider_key = f"mcp:{provider_label}"
-            _ensure_provider(provider_key, provider_label, "mcp")
-            parameters_schema = fn.get("parameters") if isinstance(fn.get("parameters"), dict) else None
+            provider_label = str(registered.get("service") or "service")
+            provider_key = f"service:{provider_label}"
+            _ensure_provider(provider_key, provider_label, "service")
+            parameters_schema = registered.get("parameters") if isinstance(registered.get("parameters"), dict) else None
             entries.append(
                 {
                     "tool_name": tool_name,
                     "function_signature": f"{tool_name}(...)",
                     "skill_name": provider_label,
-                    "purpose": str(fn.get("description") or meta.get("purpose") or ""),
-                    "description": str(fn.get("description") or meta.get("purpose") or ""),
-                    "origin": "mcp",
+                    "purpose": str(registered.get("purpose") or ""),
+                    "description": str(registered.get("purpose") or ""),
+                    "origin": "registered",
                     "provider_key": provider_key,
                     "provider_label": provider_label,
-                    "provider_type": "mcp",
+                    "provider_type": "service",
                     "active": tool_name in selected,
                     "module_path": "",
                     "skill_md_path": "",
-                    "call_type": "mcp",
+                    "call_type": "service",
                     "parameters_schema": parameters_schema,
                     "invoke_template": _example_from_schema(parameters_schema, tool_name) if parameters_schema else {},
                 }
@@ -292,7 +285,7 @@ def register_skills_routes(
 
         arguments = body.arguments if isinstance(body.arguments, dict) else {}
         catalog_gates = build_catalog_gates(payload)
-        active_all = set(catalog_gates.keys()) | set(mcp_client_module.get_mcp_tool_index().keys()) | set(always_on_tool_names)
+        active_all = set(catalog_gates.keys()) | {skill["name"] for skill in skill_manager.list_skills()} | set(always_on_tool_names)
         try:
             output = execute_tool_call(
                 tool_name=tool_name,

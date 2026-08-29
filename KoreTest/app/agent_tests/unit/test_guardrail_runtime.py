@@ -37,11 +37,9 @@
 # - _replace_after_one_lock: Implements the  replace after one lock operation for this module.
 # - removed_delegate_collect_syncs_completed_dataset_into_current_session: Implements the removed delegate collect syncs completed dataset into current session operation for this module.
 # - removed_delegate_apply_result_target_creates_dataset_when_missing: Implements the removed delegate apply result target creates dataset when missing operation for this module.
-# - test_skills_catalog_mcp_entries_include_schema_and_template: Implements the test skills catalog mcp entries include schema and template operation for this module.
 # - test_note_tool_used_promotes_in_memory_without_persisting: Implements the test note tool used promotes in memory without persisting operation for this module.
 # - test_tools_catalog_list_ranks_trigger_matches: Implements the test tools catalog list ranks trigger matches operation for this module.
 # - test_tool_selection_respects_web_skill_filter: Implements the test tool selection respects web skill filter operation for this module.
-# - test_tool_selection_respects_koreliveweb_mcp_filter: Implements the test tool selection respects koreliveweb mcp filter operation for this module.
 # - test_write_file_writes_system_info_csv: Implements the test write file writes system info csv operation for this module.
 # - test_extract_graph_connection_batch_from_final_answer: Implements the test extract graph connection batch from final answer operation for this module.
 # - test_graph_write_guard_forces_tool_call_for_printed_triples: Implements the test graph write guard forces tool call for printed triples operation for this module.
@@ -63,23 +61,18 @@
 # - test_trend_points_keep_ten_most_recent_runs: Implements the test trend points keep ten most recent runs operation for this module.
 # - test_trend_points_for_all_use_recent_collection_runs_from_db: Implements the test trend points for all use recent collection runs from db operation for this module.
 # - test_execute_tool_call_runs_datetime: Implements the test execute tool call runs datetime operation for this module.
-# - test_execute_tool_call_allows_known_inactive_tool: Implements the test execute tool call allows known inactive tool operation for this module.
-# - test_execute_tool_call_resolves_common_tool_alias: Implements the test execute tool call resolves common tool alias operation for this module.
+# - test_execute_tool_call_rejects_known_inactive_tool: Implements the test execute tool call rejects known inactive tool operation for this module.
+# - test_execute_tool_call_rejects_inactive_registered_tool_before_invocation: Implements the test execute tool call rejects inactive registered tool before invocation operation for this module.
+# - test_execute_tool_call_runs_active_tool: Implements the test execute tool call runs active tool operation for this module.
 # - test_execute_tool_call_unknown_tool_returns_alternatives: Implements the test execute tool call unknown tool returns alternatives operation for this module.
 # - test_build_tool_definitions_has_entries: Implements the test build tool definitions has entries operation for this module.
 # - test_loaded_skills_payload_infers_tool_classification_metadata: Implements the test loaded skills payload infers tool classification metadata operation for this module.
-# - test_mcp_connections_prefer_new_config_and_skip_disabled_entries: Implements the test mcp connections prefer new config and skip disabled entries operation for this module.
-# - test_mcp_connections_include_tool_classification_metadata: Implements the test mcp connections include tool classification metadata operation for this module.
 # - test_kc_direct_session_id_maps_to_conversation_id: Implements the test kc direct session id maps to conversation id operation for this module.
 # - test_kc_get_conversation_for_direct_session_uses_conversation_endpoint: Implements the test kc get conversation for direct session uses conversation endpoint operation for this module.
 # - test_request_switch_uses_direct_session_for_non_webchat_conversation: Implements the test request switch uses direct session for non webchat conversation operation for this module.
 # - test_request_switch_uses_conversation_id_for_new_webchat_conversation: Implements the test request switch uses conversation id for new webchat conversation operation for this module.
-# - test_suite_mcp_service_refs_resolve_urls: Implements the test suite mcp service refs resolve urls operation for this module.
-# - test_runtime_config_merge_keeps_default_service_ports_for_mcp_refs: Implements the test runtime config merge keeps default service ports for mcp refs operation for this module.
 # - test_suite_urls_map_includes_koreliveweb: Implements the test suite urls map includes koreliveweb operation for this module.
 # - test_endpoint_explorer_targets_include_koreliveweb: Implements the test endpoint explorer targets include koreliveweb operation for this module.
-# - test_mcp_connection_error_formatter_unwraps_exception_groups: Implements the test mcp connection error formatter unwraps exception groups operation for this module.
-# - test_mcp_enumeration_ignores_duplicate_tool_names_from_later_connections: Implements the test mcp enumeration ignores duplicate tool names from later connections operation for this module.
 # - fake_list_tools: Implements the fake list tools operation for this module.
 # - removed_normalize_tool_request_rewrites_assistant_delegate_wrapper: Implements the removed normalize tool request rewrites assistant delegate wrapper operation for this module.
 # - test_fetch_page_text_query_mode_falls_back_to_raw_page_text: Implements the test fetch page text query mode falls back to raw page text operation for this module.
@@ -114,7 +107,6 @@ from conversation_state import decode_background_context
 from conversation_state import encode_background_context
 from skill_executor import execute_tool_call
 from datasets_pkg import store as datasets_store
-import mcp_client
 from agent.orchestration.engine import ConversationHistory
 from agent.orchestration.engine import OrchestratorConfig
 from agent.orchestration.engine import orchestrate_prompt
@@ -134,6 +126,7 @@ from datasets_pkg import delete_session_datasets
 from datasets_pkg import get_persisted_datasets_payload
 from datasets_pkg import restore_persisted_datasets
 from prompt_builder import build_system_message
+from prompt_builder import build_registered_keyword_guidance
 from scratchpad import scratchpad_clear
 from scratchpad import get_store
 from scratchpad import scratchpad_load
@@ -187,9 +180,7 @@ class GuardrailRuntimeTests(unittest.TestCase):
 
         with patch.object(api_module, "_get_config", return_value=fake_config):
             with patch.object(api_module, "get_selected_tools", return_value=[]):
-                with patch.object(api_module.mcp_client, "get_mcp_tool_definitions", return_value=[]):
-                    with patch.object(api_module.mcp_client, "get_mcp_tool_index", return_value={}):
-                        payload = api_module.skills_catalog_get()
+                payload = api_module.skills_catalog_get()
 
         entries = payload["entries"]
         tools_active_add = next(item for item in entries if item["tool_name"] == "tools_active_add")
@@ -443,48 +434,6 @@ class GuardrailRuntimeTests(unittest.TestCase):
         self.assertEqual(normalized, '[{"name":"Mercury","kind":"planet"},{"name":"Venus","kind":"planet"}]')
         self.assertEqual(manifest["count"], 2)
 
-    def test_skills_catalog_mcp_entries_include_schema_and_template(self) -> None:
-        fake_config = SimpleNamespace(skills_payload=self.skills_payload)
-        mcp_defs = [
-            {
-                "type": "function",
-                "function": {
-                    "name": "demo_lookup",
-                    "description": "Look up a record.",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "query": {"type": "string"},
-                            "limit": {"type": "integer", "default": 5},
-                            "domains": {"type": "array", "items": {"type": "string"}},
-                        },
-                        "required": ["query"],
-                    },
-                },
-            },
-        ]
-        mcp_idx = {
-            "demo_lookup": {
-                "connection": "Demo MCP",
-                "purpose":    "Demo lookup purpose.",
-            },
-        }
-
-        with patch.object(api_module, "_get_config", return_value=fake_config):
-            with patch.object(api_module, "get_selected_tools", return_value=[]):
-                with patch.object(api_module.mcp_client, "get_mcp_tool_definitions", return_value=mcp_defs):
-                    with patch.object(api_module.mcp_client, "get_mcp_tool_index", return_value=mcp_idx):
-                        payload = api_module.skills_catalog_get()
-
-        entry = next(item for item in payload["entries"] if item["tool_name"] == "demo_lookup")
-        self.assertEqual(entry["call_type"], "mcp")
-        self.assertEqual(entry["description"], "Look up a record.")
-        self.assertEqual(entry["parameters_schema"]["properties"]["limit"]["default"], 5)
-        self.assertEqual(
-            entry["invoke_template"],
-            {"query": "example search", "limit": 5, "domains": ["example"]},
-        )
-
     def test_note_tool_used_promotes_in_memory_without_persisting(self) -> None:
         conversation_entry = {"tools_active": ["tool_a", "tool_b", "tool_c"]}
         patched_payloads: list[tuple[str, dict]] = []
@@ -539,12 +488,10 @@ class GuardrailRuntimeTests(unittest.TestCase):
 
         with patch.object(tool_selection_skill_module, "load_skills_payload", return_value=fake_payload):
             with patch.object(tool_selection_state_module, "get_selected_tools", return_value=[]):
-                with patch.object(tool_selection_state_module.mcp_client, "get_mcp_tool_index", return_value={}):
-                    with patch.object(tool_selection_state_module.mcp_client, "get_mcp_tool_definitions", return_value=[]):
-                        results = tool_selection_skill_module.tools_catalog_list(filter_text="list datasets", max_items=5, include_mcp=False)
+                results = tool_selection_skill_module.tools_catalog_list()
 
         self.assertGreaterEqual(len(results), 1)
-        self.assertEqual(results[0]["name"], "dataset_list")
+        self.assertIn("dataset_list", [entry["name"] for entry in results])
 
     def test_tool_selection_respects_web_skill_filter(self) -> None:
         fake_payload = {
@@ -591,72 +538,8 @@ class GuardrailRuntimeTests(unittest.TestCase):
                             "active_tools": ["dataset_list"],
                         },
                     ):
-                        listed = tool_selection_skill_module.tools_catalog_list(filter_text="", max_items=20, include_mcp=False)
+                        listed = tool_selection_skill_module.tools_catalog_list()
                         added = tool_selection_skill_module.tools_active_add(["search_web_text", "dataset_list"])
-
-        listed_names = [entry["name"] for entry in listed]
-        self.assertIn("dataset_list", listed_names)
-        self.assertNotIn("search_web_text", listed_names)
-        self.assertIn("dataset_list", added["added"] + added["promoted"] + added["already_active_before_call"])
-        self.assertIn("search_web_text", added["unknown"])
-
-    def test_tool_selection_respects_koreliveweb_mcp_filter(self) -> None:
-        fake_payload = {
-            "skills": [
-                {
-                    "skill_name": "Datasets",
-                    "purpose": "List datasets.",
-                    "module": "KoreAgent/app/system_skills/Datasets/datasets_skill.py",
-                    "functions": ["dataset_list()"],
-                    "param_descriptions": {},
-                    "triggers": ["list datasets"],
-                    "trigger_keyword": "datasets",
-                    "origin": "local",
-                    "availability": "configured",
-                    "role": "optional",
-                    "trust_boundary": "internal",
-                },
-            ],
-        }
-        mcp_defs = [
-            {
-                "type": "function",
-                "function": {
-                    "name": "search_web_text",
-                    "description": "Search the web.",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {"query": {"type": "string"}},
-                        "required": ["query"],
-                    },
-                },
-            },
-        ]
-        mcp_idx = {
-            "search_web_text": {
-                "connection": "KoreLiveWeb",
-                "purpose": "Live web search",
-            },
-        }
-
-        with patch.object(tool_selection_skill_module, "load_skills_payload", return_value=fake_payload):
-            with patch.object(tool_selection_skill_module, "get_web_skills_enabled", return_value=False):
-                with patch("orchestration.get_web_skills_enabled", return_value=False):
-                    with patch.object(tool_selection_skill_module, "get_selected_tools", return_value=[]):
-                        with patch.object(
-                            tool_selection_skill_module,
-                            "promote_selected_tools",
-                            return_value={
-                                "added": ["dataset_list"],
-                                "promoted": [],
-                                "evicted": [],
-                                "active_tools": ["dataset_list"],
-                            },
-                        ):
-                            with patch.object(tool_selection_state_module.mcp_client, "get_mcp_tool_index", return_value=mcp_idx):
-                                with patch.object(tool_selection_state_module.mcp_client, "get_mcp_tool_definitions", return_value=mcp_defs):
-                                    listed = tool_selection_skill_module.tools_catalog_list(filter_text="", max_items=20, include_mcp=True)
-                                    added = tool_selection_skill_module.tools_active_add(["search_web_text", "dataset_list"])
 
         listed_names = [entry["name"] for entry in listed]
         self.assertIn("dataset_list", listed_names)
@@ -749,7 +632,7 @@ class GuardrailRuntimeTests(unittest.TestCase):
             return ToolCallResult(
                 tool=func_name,
                 function=func_name,
-                module="mcp_client",
+                module="service:koregraph",
                 arguments=arguments,
                 result={"accepted": 1, "errors": []},
             )
@@ -799,6 +682,68 @@ class GuardrailRuntimeTests(unittest.TestCase):
         self.assertEqual(len(tool_outputs), 1)
         self.assertEqual(calls[0][0], "graph_connection_create_many")
         self.assertEqual(calls[0][1], {"connections": [{"start": "A", "connection": "reports_to", "end": "B"}]})
+
+    def test_local_directory_listing_returns_workspace_result_without_model_drift(self) -> None:
+        calls: list[tuple[str, dict]] = []
+
+        class _DummyLogger:
+            def log(self, _message: str = "") -> None:
+                pass
+
+            def log_file_only(self, _message: str = "") -> None:
+                pass
+
+            def log_section(self, _title: str) -> None:
+                pass
+
+            def log_section_file_only(self, _title: str) -> None:
+                pass
+
+        class _FakeResult:
+            response = "I will investigate something unrelated."
+            message = {"content": response}
+            finish_reason = "stop"
+            prompt_tokens = 10
+            completion_tokens = 5
+            tokens_per_second = 1.0
+            tool_calls: list = []
+
+        def fake_execute_tool_call(func_name, arguments, *_args):
+            calls.append((func_name, arguments))
+            return ToolCallResult(
+                tool=func_name,
+                function=func_name,
+                module="file_access_skill",
+                arguments=arguments,
+                result="Workspace: .\nfolder: KoreAgent\nfile: README.md",
+            )
+
+        config = SimpleNamespace(resolved_model="test-model", max_iterations=3, num_ctx=8192, skills_payload={"skills": []})
+        tool_defs = [{"type": "function", "function": {"name": "workspace_list", "description": "List workspace", "parameters": {"type": "object", "properties": {}}}}]
+        messages = [{"role": "system", "content": "system"}, {"role": "user", "content": "list files in the local directory"}]
+        context_map = [
+            {"round": 0, "role": "sys", "label": "system", "chars": 6, "auto_key": None, "msg_idx": 0},
+            {"round": 0, "role": "user", "label": "prompt", "chars": 33, "auto_key": None, "msg_idx": 1},
+        ]
+        with patch.object(tool_loop_module, "execute_tool_call", side_effect=fake_execute_tool_call):
+            final_response, _prompt_tokens, _completion_tokens, run_success, _tps, tool_outputs = tool_loop_module.run_tool_loop(
+                config=config,
+                messages=messages,
+                tool_defs=tool_defs,
+                catalog_gates={},
+                context_map=context_map,
+                user_prompt="list files in the local directory",
+                logger=_DummyLogger(),
+                quiet=True,
+                call_llm_chat=lambda **_kwargs: _FakeResult(),
+                stop_requested=lambda: False,
+                clear_stop=lambda: None,
+            )
+
+        self.assertTrue(run_success)
+        self.assertEqual(final_response, "Workspace: .\nfolder: KoreAgent\nfile: README.md")
+        self.assertEqual(calls, [("workspace_list", {})])
+        self.assertEqual(len(tool_outputs), 1)
 
     def test_exchange_pass_status_tolerates_validation_warning_when_asserts_pass(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1017,27 +962,45 @@ class GuardrailRuntimeTests(unittest.TestCase):
         self.assertIsNotNone(result["result"])
         self.assertNotIn("error", str(result["result"]).lower())
 
-    def test_execute_tool_call_allows_known_inactive_tool(self) -> None:
+    def test_execute_tool_call_rejects_known_inactive_tool(self) -> None:
+        with self.assertRaises(RuntimeError) as ctx:
+            execute_tool_call(
+                tool_name="get_datetime_data",
+                arguments={},
+                skills_payload=self.skills_payload,
+                active_tool_names={"tools_catalog_list", "tools_active_add"},
+            )
+
+        self.assertIn("not active for this conversation", str(ctx.exception))
+
+    def test_execute_tool_call_rejects_inactive_registered_tool_before_invocation(self) -> None:
+        registered = {
+            "name": "service_only_tool",
+            "service": "demo-service",
+            "parameters": {"type": "object", "properties": {}},
+        }
+        with patch("skill_executor.skill_manager.get_skill", return_value=registered) as get_skill:
+            with self.assertRaises(RuntimeError) as ctx:
+                execute_tool_call(
+                    tool_name="service_only_tool",
+                    arguments={},
+                    skills_payload=self.skills_payload,
+                    active_tool_names={"tools_catalog_list", "tools_active_add"},
+                )
+
+        self.assertIn("not active for this conversation", str(ctx.exception))
+        get_skill.assert_not_called()
+
+    def test_execute_tool_call_runs_active_tool(self) -> None:
         result = execute_tool_call(
             tool_name="get_datetime_data",
             arguments={},
             skills_payload=self.skills_payload,
-            active_tool_names={"tools_catalog_list", "tools_active_add"},
+            active_tool_names={"get_datetime_data"},
         )
 
         self.assertEqual(result["function"], "get_datetime_data")
         self.assertIsNotNone(result["result"])
-
-    def test_execute_tool_call_resolves_common_tool_alias(self) -> None:
-        result = execute_tool_call(
-            tool_name="python_execution",
-            arguments={"code": "print(2 + 2)"},
-            skills_payload=self.skills_payload,
-            active_tool_names={"tools_catalog_list", "tools_active_add"},
-        )
-
-        self.assertEqual(result["function"], "python_execute")
-        self.assertIn("4", str(result["result"]))
 
     def test_execute_tool_call_unknown_tool_returns_alternatives(self) -> None:
         with self.assertRaises(RuntimeError) as ctx:
@@ -1049,8 +1012,8 @@ class GuardrailRuntimeTests(unittest.TestCase):
             )
 
         self.assertIn("not found in skills catalog", str(ctx.exception))
-        self.assertIn("Closest alternatives:", str(ctx.exception))
-        self.assertIn("tools_active_add", str(ctx.exception))
+        self.assertIn("tools_catalog_list()", str(ctx.exception))
+        self.assertIn("tools_keywords_list()", str(ctx.exception))
 
     def test_build_tool_definitions_has_entries(self) -> None:
         tool_defs = build_tool_definitions(self.skills_payload)
@@ -1079,36 +1042,16 @@ class GuardrailRuntimeTests(unittest.TestCase):
         self.assertEqual(local_skill["role"], "optional")
         self.assertEqual(local_skill["trust_boundary"], "internal")
 
-    def test_mcp_connections_prefer_new_config_and_skip_disabled_entries(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            config_path = Path(tmp) / "korestack_config.json"
-            config_path.write_text(
-                '{\n'
-                '  "mcp_connections": [\n'
-                '    {"name": "KoreData", "url": "http://data/mcp", "purpose": "reference", "expected_prefix": "koredata_", "allowed_tools": ["koredata_search"], "blocked_tools": ["koredata_delete"]},\n'
-                '    {"name": "KoreDocs", "url": "http://docs/mcp", "enabled": false}\n'
-                '  ]\n'
-                '}\n',
-                encoding="utf-8",
-            )
+    def test_registered_keyword_guidance_requires_reviewed_registry_selection(self) -> None:
+        with patch("prompt_builder.skill_manager.keyword_map", return_value={
+            "dataset": ["koredata_savedsearch_run"],
+            "saved_search": ["koredata_savedsearch_run"],
+        }):
+            guidance = build_registered_keyword_guidance()
 
-            servers = mcp_client._load_server_config(config_path)
-
-        self.assertEqual(len(servers), 1)
-        self.assertEqual(servers[0]["name"], "KoreData")
-        self.assertEqual(servers[0]["url"], "http://data/mcp")
-        self.assertEqual(servers[0]["purpose"], "reference")
-        self.assertEqual(servers[0]["expected_prefix"], "koredata_")
-        self.assertEqual(servers[0]["allowed_tools"], ["koredata_search"])
-        self.assertEqual(servers[0]["blocked_tools"], ["koredata_delete"])
-
-    def test_mcp_connections_include_tool_classification_metadata(self) -> None:
-        server = mcp_client._normalize_connection({"name": "KoreData", "url": "http://data/mcp"})
-
-        self.assertEqual(server["origin"], "remote_mcp")
-        self.assertEqual(server["availability"], "discovered")
-        self.assertEqual(server["role"], "external")
-        self.assertEqual(server["trust_boundary"], "external")
+        self.assertIn("tools_keywords_list", guidance)
+        self.assertIn("select_tools_by_keyword", guidance)
+        self.assertNotIn("saved_search", guidance)
 
     def test_kc_direct_session_id_maps_to_conversation_id(self) -> None:
         self.assertEqual(api_module._kc_conversation_id_for_session("kc_conv_4"), 4)
@@ -1158,69 +1101,6 @@ class GuardrailRuntimeTests(unittest.TestCase):
         finally:
             api_module._pending_switch = previous
 
-    def test_suite_mcp_service_refs_resolve_urls(self) -> None:
-        config = workspace_utils_module._flatten_suite_config({
-            "network": {"host": "127.0.0.1"},
-            "services": {
-                "koredatagateway": {"port": 9603},
-                "koredocs": {"port": 9610},
-                "koregraph": {"port": 9608},
-            },
-            "mcp": {
-                "connections": [
-                    {"name": "KoreData", "service": "koredatagateway", "path": "/mcp", "expected_prefix": "koredata_"},
-                    {"name": "KoreDocs", "service": "koredocs", "path": "/mcp", "expected_prefix": "koredocs_"},
-                ]
-            },
-        })
-
-        workspace_utils_module._resolve_mcp_service_refs(config)
-
-        self.assertEqual(
-            config["mcp_connections"],
-            [
-                {"name": "KoreData", "service": "koredatagateway", "path": "/mcp", "expected_prefix": "koredata_", "url": "http://127.0.0.1:9603/mcp"},
-                {"name": "KoreDocs", "service": "koredocs", "path": "/mcp", "expected_prefix": "koredocs_", "url": "http://127.0.0.1:9610/mcp"},
-            ],
-        )
-
-    def test_runtime_config_merge_keeps_default_service_ports_for_mcp_refs(self) -> None:
-        merged: dict = {}
-        workspace_utils_module._merge_runtime_config_layer(
-            merged,
-            workspace_utils_module._flatten_suite_config({
-                "network": {"host": "127.0.0.1"},
-                "services": {
-                    "koredatagateway": {"port": 9603},
-                    "koredocs": {"port": 9610},
-                },
-                "mcp": {
-                    "connections": [
-                        {"name": "KoreData", "service": "koredatagateway", "path": "/mcp", "expected_prefix": "koredata_"},
-                        {"name": "KoreDocs", "service": "koredocs", "path": "/mcp", "expected_prefix": "koredocs_"},
-                    ]
-                },
-            }),
-        )
-        workspace_utils_module._merge_runtime_config_layer(
-            merged,
-            workspace_utils_module._flatten_suite_config({
-                "services": {
-                    "koreagent": {"port": 9601},
-                }
-            }),
-        )
-
-        workspace_utils_module._resolve_mcp_service_refs(merged)
-
-        self.assertEqual(
-            merged["mcp_connections"],
-            [
-                {"name": "KoreData", "service": "koredatagateway", "path": "/mcp", "expected_prefix": "koredata_", "url": "http://127.0.0.1:9603/mcp"},
-                {"name": "KoreDocs", "service": "koredocs", "path": "/mcp", "expected_prefix": "koredocs_", "url": "http://127.0.0.1:9610/mcp"},
-            ],
-        )
-
     def test_suite_urls_map_includes_koreliveweb(self) -> None:
         suite_paths_module.load_suite_config.cache_clear()
         with patch.object(
@@ -1259,41 +1139,6 @@ class GuardrailRuntimeTests(unittest.TestCase):
         liveweb = next(item for item in targets if item["key"] == "koreliveweb")
         self.assertEqual(liveweb["label"], "KoreLiveWeb")
         self.assertEqual(liveweb["base_url"], "http://127.0.0.1:9613")
-
-    def test_mcp_connection_error_formatter_unwraps_exception_groups(self) -> None:
-        inner = ConnectionRefusedError("connection refused")
-        outer = ExceptionGroup("unhandled errors in a TaskGroup", [inner])
-
-        message = mcp_client._format_connection_error(outer)
-
-        self.assertEqual(message, "connection refused")
-
-    def test_mcp_enumeration_ignores_duplicate_tool_names_from_later_connections(self) -> None:
-        async def fake_list_tools(server):
-            name = server["name"]
-            defs = [
-                {"type": "function", "function": {"name": "shared_tool", "description": name, "parameters": {"type": "object", "properties": {}}}},
-                {"type": "function", "function": {"name": f"{name}_only", "description": name, "parameters": {"type": "object", "properties": {}}}},
-            ]
-            index = {
-                "shared_tool": {"url": server["url"], "connection": name},
-                f"{name}_only": {"url": server["url"], "connection": name},
-            }
-            return defs, index
-
-        servers = [
-            {"name": "first", "url": "http://first/mcp"},
-            {"name": "second", "url": "http://second/mcp"},
-        ]
-
-        with patch.object(mcp_client, "_list_tools_async", side_effect=fake_list_tools):
-            defs, index = __import__("asyncio").run(mcp_client._enumerate_all_servers(servers))
-
-        tool_names = [tool["function"]["name"] for tool in defs]
-        self.assertEqual(tool_names.count("shared_tool"), 1)
-        self.assertIn("first_only", tool_names)
-        self.assertIn("second_only", tool_names)
-        self.assertEqual(index["shared_tool"]["connection"], "first")
 
     def removed_normalize_tool_request_rewrites_assistant_delegate_wrapper(self) -> None:
         func_name, arguments, note = normalize_tool_request(

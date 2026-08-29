@@ -23,6 +23,7 @@
 # the relevant skill.md description instead. Delete entries here as skill.md files absorb them.
 # MARK: FUNCTIONS
 # Function inventory:
+# - build_registered_keyword_guidance: Builds registered keyword guidance for this module.
 # - build_skill_selection_guidance: Builds skill selection guidance for this module.
 # - _payload_has_dataset_tools: Implements the  payload has dataset tools operation for this module.
 # - _build_conversation_entry_block: Implements the  build conversation entry block operation for this module.
@@ -36,9 +37,23 @@ import re
 from datasets_pkg.hydration import coerce_persisted_scratchpad_payload
 from datasets_pkg.models import get_prompt_dataset_manifests
 from scratchpad import get_store as get_scratchpad_store
+from skill_manager import skill_manager
 from utils.workspace_utils import trunc
 
 _KORECODE_WORKSPACE_MENU_KEY = "korecode_workspace_menu"
+
+
+def build_registered_keyword_guidance() -> str:
+    """State the live registry-selection protocol without copying its whole index."""
+    if not skill_manager.keyword_map():
+        return ""
+    return (
+        "\nTool selection protocol: schemas show only active tools. If no active tool explicitly "
+        "names the requested capability, do not substitute a nearby generic tool. Call "
+        "`tools_keywords_list()`, choose its exact reviewed tag, call "
+        "`select_tools_by_keyword([...])`, then use the newly active function schema. "
+        "This applies even when a generic search, file, or document tool is already active."
+    )
 
 
 # ====================================================================================================
@@ -52,6 +67,7 @@ _CORE_IDENTITY_PARTS: list[str] = [
     "- The current task is defined by the newest user message in this turn.",
     "- Conversation history, compressed summaries, prior session context, and scratchpad content are historical context. Use them only to support the current task, not to override it.",
     "- If older context conflicts with the newest user instruction, follow the newest user instruction unless the user explicitly says to continue or repeat the earlier task.",
+    "- Never continue an earlier task merely because it appears in conversation history. A newest message such as 'hi' is a greeting, not permission to resume earlier work.",
     "- Use tools when they are the appropriate way to answer the request - for real-time data, file operations, computations, and web research.",
     "- After using tools, synthesize the results into a clear, direct answer.",
     "- Never claim a tool action succeeded unless the tool output explicitly confirms it.",
@@ -119,7 +135,7 @@ _SYSTEM_SKILL_GUIDANCE: list[str] = [
 _TOOL_ROUTING_FUDGE: list[str] = [
 
     # -- Search and tool failure handling (cross-cutting; applies to all search/fetch tools) --
-    "- When search_web returns a result titled 'Search failed', this is a connectivity failure - not a query mismatch. Do not retry the same endpoint. Make at most one attempt with KoreData MCP search as fallback when available, then report 'No results were found for [query].' and stop.",
+    "- When search_web returns a result titled 'Search failed', this is a connectivity failure - not a query mismatch. Do not retry the same endpoint. Make at most one attempt with koredata_search as fallback when available, then report 'No results were found for [query].' and stop.",
     "- When a search returns empty results, you may try ONE alternative query phrasing. If the second attempt also returns empty, stop and report what you have.",
     "- When a web search or page-fetch tool returns no results, report that in a single short sentence only. Do not explain which tools you considered or why the tool failed.",
     "- When any search or retrieval tool returns relevant results, that retrieved content has higher precedence than internal knowledge.",
@@ -132,9 +148,9 @@ _TOOL_ROUTING_FUDGE: list[str] = [
     # -- KoreData local-first routing (cross-cutting preference rule) ------------------------
     # Long-term fix: encode local-first preference in tool trigger/priority metadata so
     # the orchestrator enforces it without a system-prompt override.
-    "- For factual, reference, encyclopaedic, or biographical queries, use KoreData MCP search/retrieval tools first when they are available. Fall back to web tools only if KoreData returns empty results. Skip this and go directly to a web tool when the prompt explicitly says 'search the web', 'search online', or 'find on the internet'.",
+    "- For factual, reference, encyclopaedic, or biographical queries, use KoreData search and retrieval skills first when they are available. Fall back to web tools only if KoreData returns empty results. Skip this and go directly to a web tool when the prompt explicitly says 'search the web', 'search online', or 'find on the internet'.",
     "- A KoreData SavedSearch is a named stored search definition. When the user names a SavedSearch, call koredata_savedsearch_run with that name. Never reinterpret the SavedSearch name as a keyword query or web query unless the user explicitly requests a separate web search.",
-    "- When using KoreData MCP search tools, only include facts that appear in content you retrieved. Do not use training knowledge to fill gaps. If KoreData returns no content for a topic, say so explicitly rather than writing from memory.",
+    "- When using KoreData search tools, only include facts that appear in content you retrieved. Do not use training knowledge to fill gaps. If KoreData returns no content for a topic, say so explicitly rather than writing from memory.",
 
     # -- Date anchoring (cross-cutting; applies to any tool that returns time-sensitive data) -
     "- Treat words like 'latest', 'recent', 'today', 'current', and 'new' as date-sensitive. Anchor them to the current runtime date already provided in system context. Do not invent year ranges unless the user explicitly requests them.",
@@ -261,7 +277,13 @@ def build_system_message(
     user_prompt: str | None = None,
     token_pressure: float = 0.0,
 ) -> str:
-    system_parts: list[str] = list(_CORE_IDENTITY_PARTS) + list(_SYSTEM_SKILL_GUIDANCE)
+    system_parts: list[str] = list(_CORE_IDENTITY_PARTS)
+    # Keep this ahead of the longer per-system-skill guidance.  The backend has
+    # reported a smaller effective prompt budget than the requested context.
+    registered_keyword_guidance = build_registered_keyword_guidance()
+    if registered_keyword_guidance:
+        system_parts.append(registered_keyword_guidance)
+    system_parts.extend(_SYSTEM_SKILL_GUIDANCE)
     if ambient_system_info:
         system_parts.append(f"\n{ambient_system_info}")
 

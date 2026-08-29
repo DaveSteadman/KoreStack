@@ -54,7 +54,6 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from mcp.server.fastmcp import FastMCP
 import uvicorn
 
 
@@ -62,11 +61,13 @@ ROOT = Path(__file__).resolve().parents[1]
 import sys
 sys.path.insert(0, str(ROOT))
 from KoreCommon.service_app import register_suite_shell_routes
+from KoreCommon.skill_registration import start_manifest_registration
+from KoreCommon.skill_service import register_skill_invocation_routes
 from KoreCommon.suite_paths import get_suite_datacontrol_dir
 
 
 CONFIG       = ROOT / "config" / "korestack_config.json"
-STORE_DIR    = get_suite_datacontrol_dir() / "cronprompts"
+STORE_DIR    = get_suite_datacontrol_dir() / "korecron"
 STORE_FILE   = STORE_DIR / "cronprompts.json"
 STATE_FILE   = STORE_DIR / "scheduler_state.json"
 UI_ROOT      = ROOT / "KoreUI" / "KoreCron"
@@ -279,6 +280,11 @@ def _scheduler() -> None:
 async def lifespan(_app):
     STOP.clear()
     threading.Thread(target=_scheduler, daemon=True, name="korecron-scheduler").start()
+    start_manifest_registration(
+        ROOT / "KoreCron" / "skills" / "skills.json",
+        service_base_url=_service_url("korecron"),
+        logger_name=__name__,
+    )
     yield
     STOP.set()
 
@@ -286,7 +292,6 @@ async def lifespan(_app):
 app = FastAPI(title="KoreCron", lifespan=lifespan)
 register_suite_shell_routes(app, service_key="korecron", service_label="KoreCron", ui_elements_assets_dir=UI_ASSETS)
 app.mount("/static", StaticFiles(directory=str(UI_ROOT / "static")), name="korecron-static")
-_mcp = FastMCP("KoreCron")
 
 
 @app.get("/status")
@@ -439,13 +444,11 @@ def resume_cronprompt_agent(name: str):
 @app.get("/ui", include_in_schema=False)
 def ui() -> FileResponse: return FileResponse(UI_ROOT / "static" / "cron" / "index.html")
 
-@_mcp.tool()
 def cron_list() -> dict: return list_cronprompts()
 
-@_mcp.tool()
 def cron_run(name: str) -> dict: return run_cronprompt(name)
 
-app.mount("/mcp", _mcp.streamable_http_app())
+register_skill_invocation_routes(app, {"cron_list": cron_list, "cron_run": cron_run})
 
 if __name__ == "__main__":
     uvicorn.run(app, host="127.0.0.1", port=int(_config()["services"]["korecron"]["port"]))

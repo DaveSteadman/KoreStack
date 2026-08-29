@@ -74,6 +74,9 @@ if _KORECOMMON_PARENT is not None and str(_KORECOMMON_PARENT) not in sys.path:
     sys.path.insert(0, str(_KORECOMMON_PARENT))
 
 from KoreCommon.service_app import register_suite_shell_routes
+from KoreCommon.skill_registration import start_manifest_registration
+from KoreCommon.skill_service import register_skill_invocation_routes
+from app.config import cfg
 from app.endpoint_ui import register_feed_ui
 from app.database import (
     backfill_sentence_index,
@@ -148,6 +151,11 @@ async def _lifespan(app: FastAPI):
         daemon = True,
         name   = "korefeed-scheduler-startup",
     ).start()
+    start_manifest_registration(
+        Path(__file__).resolve().parent.parent / "skills" / "skills.json",
+        service_base_url=f"http://{cfg['host']}:{cfg['port']}",
+        logger_name=__name__,
+    )
     yield
     stop_scheduler()
 
@@ -577,6 +585,25 @@ def api_purge_outside_calendar(domain: str, start_date: str, end_date: str):
     """Delete all entries published outside the given date range."""
     delete_entries_outside_calendar(domain, start_date, end_date)
     return {"ok": True}
+
+
+def korefeed_search(q: str, domain: Optional[str] = None, limit: int = 50) -> list[dict]:
+    results, _failed_domains = search_entries_detailed(
+        domain=domain or None,
+        query=q,
+        limit=limit,
+        include_body=False,
+    )
+    return results
+
+
+register_skill_invocation_routes(
+    app,
+    {
+        "korefeed_search": korefeed_search,
+        "korefeed_entries_list": api_get_entries,
+    },
+)
 
 
 # UI routes live in app/endpoint_ui.py.

@@ -57,7 +57,6 @@ _startup_state: dict[str, Any] = {
     "message": "HTTP server booting",
     "dependencies": {
         "llm": {"status": "pending", "detail": ""},
-        "mcp": {"status": "pending", "detail": ""},
         "korechat": {"status": "pending", "detail": ""},
     },
 }

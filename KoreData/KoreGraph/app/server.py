@@ -93,7 +93,6 @@ from typing import Optional
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
-from mcp.server.fastmcp import FastMCP
 from pydantic import BaseModel
 
 _KORECOMMON_PARENT = next((parent for parent in Path(__file__).resolve().parents if (parent / "KoreCommon").is_dir()), None)
@@ -101,6 +100,8 @@ if _KORECOMMON_PARENT is not None and str(_KORECOMMON_PARENT) not in sys.path:
     sys.path.insert(0, str(_KORECOMMON_PARENT))
 
 from KoreCommon.service_app import register_suite_shell_routes
+from KoreCommon.skill_registration import start_manifest_registration
+from KoreCommon.skill_service import register_skill_invocation_routes
 from app.config import cfg
 from app.csv_io import export_connections, import_connections
 from app.database import (
@@ -166,8 +167,12 @@ async def _lifespan(app: FastAPI):
         daemon = True,
         name   = "koregraph-startup-warm",
     ).start()
-    async with _mcp.session_manager.run():
-        yield
+    start_manifest_registration(
+        Path(__file__).resolve().parent.parent / "skills" / "skills.json",
+        service_base_url=f"http://{cfg['host']}:{cfg['port']}",
+        logger_name=__name__,
+    )
+    yield
 
 
 app = FastAPI(
@@ -191,26 +196,9 @@ def _request_ui_prefix(request: Request) -> str:
 
 
 # ---------------------------------------------------------------------------
-# MARK: MCP
+# MARK: REGISTERED SKILLS
 # ---------------------------------------------------------------------------
 
-_mcp = FastMCP(
-    "KoreGraph",
-    instructions=(
-        "Search and traverse the KoreGraph concept-connection knowledge graph.\n\n"
-        "All tools use plain string terms — no integer concept_ids required.\n\n"
-        "Canonical workflow:\n"
-        "1. Call graph_connection_search_vocab to find terms matching a keyword.\n"
-        "2. Call graph_connection_expand_concept_by_term with a string term to retrieve its neighbourhood.\n"
-        "3. Call graph_connection_create to add or reinforce a graph connection using three strings.\n\n"
-        "State filter: 0=proposed, 1=active, 2=deprecated, 3=rejected, 4=pasttense."
-    ),
-    streamable_http_path="/",
-    stateless_http=True,
-)
-
-
-@_mcp.tool(description="Search KoreGraph vocab for graph concepts matching a keyword.")
 def graph_connection_search_vocab(q: str, limit: int = 20) -> list[dict]:
     """Return matching vocab terms with concept_id, term, alias_count."""
     if not q or not q.strip():
@@ -218,32 +206,18 @@ def graph_connection_search_vocab(q: str, limit: int = 20) -> list[dict]:
     return list_vocab(q=q.strip(), limit=min(limit, 100))
 
 
-@_mcp.tool(description=(
-    "Expand a KoreGraph concept into its neighbourhood sub-graph. "
-    "Returns {nodes, edges} within the requested depth of hops."
-))
 def graph_connection_expand_concept(concept_id: int, depth: int = 1, min_score: int = 0) -> dict:
     """Return {nodes: [...], edges: [...]} for the sub-graph around concept_id."""
     depth = max(1, min(depth, 4))
     return expand_concept(concept_id, depth=depth, min_score=min_score)
 
 
-@_mcp.tool(description=(
-    "Expand a concept by string term into its neighbourhood sub-graph. "
-    "No concept_id needed — pass the term as a plain string. "
-    "Returns {query, matched, nodes, edges} with all names as strings."
-))
 def graph_connection_expand_concept_by_term(term: str, depth: int = 1, min_score: int = 0) -> dict:
     """String-based expand. Returns {query, matched, nodes, edges}."""
     depth = max(1, min(depth, 4))
     return expand_by_term(term=term, depth=depth, min_score=min_score)
 
 
-@_mcp.tool(description=(
-    "Create or reinforce a graph connection between two concepts using plain string names. "
-    "Vocab entries are created automatically if they do not exist. "
-    "Repeated calls with the same triple accumulate score (capped at 255)."
-))
 def graph_connection_create(
     start: str,
     connection: str,
@@ -257,12 +231,6 @@ def graph_connection_create(
     )
 
 
-@_mcp.tool(description=(
-    "List KoreGraph graph connections in batches using limit and offset. "
-    "Returns {total, items} where each item has start_name, connection_name, end_name, state, score. "
-    "Use limit/offset to step through all connections. "
-    "Optionally filter by state: 0=proposed, 1=active, 2=deprecated, 3=rejected, 4=pasttense."
-))
 
 def graph_connection_list(
     limit: int = 100,
@@ -276,23 +244,12 @@ def graph_connection_list(
     return {"total": total, "offset": offset, "limit": limit, "items": items}
 
 
-@_mcp.tool(description=(
-    "Delete a KoreGraph graph connection by the plain string names of its three concepts. "
-    "Returns {deleted: true} on success or {deleted: false} if the triple was not found. "
-    "Use graph_connection_list first to see current graph connections and their exact names."
-))
 def graph_connection_delete(start: str, connection: str, end: str) -> dict:
     """Delete a (start, connection, end) triple by string names."""
     ok = delete_connection_by_name(start=start, connection=connection, end=end)
     return {"deleted": ok, "start": start, "connection": connection, "end": end}
 
 
-@_mcp.tool(description=(
-    "Create or reinforce multiple graph connections in a single call. "
-    "Each item must have start, connection, end (strings). "
-    "state and score are optional per item (defaults: state=0, score=1). "
-    "Use this instead of repeated graph_connection_create calls."
-))
 def graph_connection_create_many(connections: list[dict]) -> dict:
     """Batch create/reinforce (start, connection, end) triples by string name."""
     accepted = []
@@ -312,7 +269,18 @@ def graph_connection_create_many(connections: list[dict]) -> dict:
     return {"accepted": len(accepted), "errors": errors, "connections": accepted}
 
 
-app.mount("/mcp", _mcp.streamable_http_app())
+register_skill_invocation_routes(
+    app,
+    {
+        "graph_connection_search_vocab": graph_connection_search_vocab,
+        "graph_connection_expand_concept": graph_connection_expand_concept,
+        "graph_connection_expand_concept_by_term": graph_connection_expand_concept_by_term,
+        "graph_connection_create": graph_connection_create,
+        "graph_connection_list": graph_connection_list,
+        "graph_connection_delete": graph_connection_delete,
+        "graph_connection_create_many": graph_connection_create_many,
+    },
+)
 
 
 @app.get("/static/{asset_path:path}", include_in_schema=False)
@@ -923,5 +891,3 @@ def api_processing_stop():
     except subprocess.TimeoutExpired:
         proc.kill()
     return {"ok": True}
-
-

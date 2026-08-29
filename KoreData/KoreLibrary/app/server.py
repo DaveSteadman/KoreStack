@@ -23,10 +23,17 @@ if _KORECOMMON_PARENT is not None and str(_KORECOMMON_PARENT) not in sys.path:
     sys.path.insert(0, str(_KORECOMMON_PARENT))
 
 from KoreCommon.service_app import register_endpoint_manifest
+from KoreCommon.skill_registration import start_manifest_registration
+from KoreCommon.skill_service import register_skill_invocation_routes
 from app.chroma_index import migrate_legacy_catalog_stores
-from app.database import init_db
+from app.config import cfg
+from app.database import init_db, list_books, search_books
 from app.endpoint_api import register_library_api
 from app.endpoint_ui import register_library_ui
+
+
+def korelibrary_search(q: str, limit: int = 50, catalog: str | None = None) -> list[dict]:
+    return search_books(q=q, limit=limit, catalog=catalog or None)
 
 
 @asynccontextmanager
@@ -43,6 +50,11 @@ async def _lifespan(app: FastAPI):
         daemon = True,
         name   = "korelibrary-startup-warm",
     ).start()
+    start_manifest_registration(
+        Path(__file__).resolve().parent.parent / "skills" / "skills.json",
+        service_base_url=f"http://{cfg['host']}:{cfg['port']}",
+        logger_name=__name__,
+    )
     yield
 
 
@@ -63,3 +75,10 @@ app.add_middleware(
 register_library_ui(app)
 register_library_api(app)
 register_endpoint_manifest(app, service_key="korelibrary", service_label="KoreLibrary")
+register_skill_invocation_routes(
+    app,
+    {
+        "korelibrary_search": korelibrary_search,
+        "korelibrary_books_list": list_books,
+    },
+)

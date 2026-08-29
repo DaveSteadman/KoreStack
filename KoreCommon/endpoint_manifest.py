@@ -67,8 +67,6 @@ def _body_info(route: APIRoute) -> list[dict[str, Any]]:
 def _route_kind(path: str, methods: list[str], include_in_schema: bool) -> str:
     if path.startswith("/ui-elements/assets/") or path.startswith("/static/") or path == "/suite-config.js":
         return "asset"
-    if path == "/mcp" or path.startswith("/mcp/"):
-        return "api"
     if "STREAM" in methods or path.endswith("/stream"):
         return "stream"
     if path == "/status" or path.startswith("/status"):

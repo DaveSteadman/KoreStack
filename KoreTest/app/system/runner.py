@@ -83,6 +83,7 @@ from datetime import datetime
 from pathlib import Path
 
 REPO_ROOT     = Path(__file__).resolve().parents[3]
+DEFAULT_RESULTS_DIR = REPO_ROOT / "Data" / "datacontrol" / "koretest" / "test_results"
 
 
 # ====================================================================================================
@@ -824,7 +825,8 @@ if __name__ == "__main__":
     args = parse_args()
     if args.output_file is None:
         _now = datetime.now()
-        _out_dir = get_test_results_dir() / _now.strftime("%Y-%m-%d")
+        _out_dir = Path(os.environ.get("KORE_TEST_RESULTS_DIR", str(DEFAULT_RESULTS_DIR))) / _now.strftime("%Y-%m-%d")
+        _out_dir.mkdir(parents=True, exist_ok=True)
         args.output_file = _out_dir / f"test_results_{_now.strftime('%Y%m%d_%H%M%S')}.csv"
     run_tests(
         prompts=load_prompts_file(args.prompts_file),

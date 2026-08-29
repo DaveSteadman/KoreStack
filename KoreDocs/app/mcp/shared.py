@@ -51,7 +51,6 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from ..documents.korefile import service as korefile
-from .instance import mcp  # re-export for sub-modules
 
 
 # ── Constants ──────────────────────────────────────────────────────────────

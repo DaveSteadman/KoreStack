@@ -95,13 +95,14 @@ import httpx
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
-from mcp.server.fastmcp import FastMCP
 
 _KORECOMMON_PARENT = next((parent for parent in Path(__file__).resolve().parents if (parent / "KoreCommon").is_dir()), None)
 if _KORECOMMON_PARENT is not None and str(_KORECOMMON_PARENT) not in sys.path:
     sys.path.insert(0, str(_KORECOMMON_PARENT))
 
 from KoreCommon.service_app import register_suite_shell_routes
+from KoreCommon.skill_registration import start_manifest_registration
+from KoreCommon.skill_service import register_skill_invocation_routes
 from app.config import cfg
 from app.gateway_feed import get_feed_entry as _gateway_get_feed_entry
 from app.gateway_feed import get_feed_sentence as _gateway_get_feed_sentence
@@ -452,8 +453,12 @@ async def _lifespan(app: FastAPI):
     _graph_client  = httpx.AsyncClient(base_url=cfg["koregraph_url"],     timeout=15.0)
     _child_readiness_task = asyncio.create_task(_wait_for_children_ready())
     _ui_status_task       = asyncio.create_task(_refresh_ui_service_cards_loop())
-    async with _mcp.session_manager.run():
-        yield
+    start_manifest_registration(
+        _BASE / "KoreDataGateway" / "skills" / "skills.json",
+        service_base_url=f"http://{cfg['host']}:{cfg['port']}",
+        logger_name=__name__,
+    )
+    yield
     print("\n  KoreDataGateway — shutting down child services")
     if _child_readiness_task is not None:
         _child_readiness_task.cancel()
@@ -485,7 +490,7 @@ app = FastAPI(
 )
 
 # ---------------------------------------------------------------------------
-# MCP server (mounted at /mcp — Streamable HTTP transport)
+# Registered skill functions
 # ---------------------------------------------------------------------------
 
 _CHUNK_SIZE = 8000  # default characters per library book chunk
@@ -549,21 +554,6 @@ _INSTR_GRAPH = (
     "wrote, disproved, succeeded, is_type_of. "
     "Nodes must be named entities — people, theories, instruments, places — not chapter headings, "
     "historical eras, or abstract topic labels."
-)
-
-_mcp = FastMCP(
-    "KoreDataGateway",
-    instructions="\n\n".join([
-        _INSTR_SEARCH,
-        _INSTR_FEEDS,
-        _INSTR_REFERENCE,
-        _INSTR_LIBRARY,
-        _INSTR_RAG,
-        _INSTR_SCRAPE,
-        _INSTR_GRAPH,
-    ]),
-    streamable_http_path="/",
-    stateless_http=True,
 )
 
 _GATEWAY_UI_ROOT = Path(
@@ -688,7 +678,6 @@ class _SavedSearchRequest(_SearchRequest):
 # MCP tools
 # ===========================================================================
 
-@_mcp.tool()
 async def koredata_search(
     query: str,
     domains: Optional[list[str]] = None,
@@ -721,13 +710,11 @@ async def koredata_search(
     return await api_search(req)
 
 
-@_mcp.tool()
 async def koredata_savedsearch_list() -> dict[str, list[dict]]:
     """List saved KoreData SavedSearch definitions."""
     return {"saved_searches": _load_saved_searches(_SAVED_SEARCHES_FILE)}
 
 
-@_mcp.tool()
 async def koredata_savedsearch_run(name: str) -> dict:
     """Run a named, preconfigured KoreData SavedSearch.
 
@@ -745,7 +732,6 @@ async def koredata_savedsearch_run(name: str) -> dict:
     return await api_search(_SearchRequest(**search))
 
 
-@_mcp.tool()
 async def koredata_get_sentence(locator: str) -> dict:
     """Fetch a single indexed sentence by semantic locator.
 
@@ -780,7 +766,6 @@ async def koredata_get_sentence(locator: str) -> dict:
 
 
 # MARK: KoreFeed Routines
-@_mcp.tool()
 async def koredata_get_feed_entry(domain: str, entry_id: int) -> dict:
     """Fetch the full content of a news feed entry.
 
@@ -798,7 +783,6 @@ async def koredata_get_feed_entry(domain: str, entry_id: int) -> dict:
 
 
 # MARK: KoreReference Routines
-@_mcp.tool()
 async def koredata_get_reference_article(title: str) -> dict:
     """Fetch the full content of a reference (wiki-style) article.
 
@@ -823,7 +807,6 @@ async def koredata_get_reference_article(title: str) -> dict:
 
 
 # MARK: KoreLibrary Routines
-@_mcp.tool()
 async def koredata_find_library_book(title: str) -> dict:
     """Find library books by title. Returns closest matches ranked by title similarity.
 
@@ -845,7 +828,6 @@ async def koredata_find_library_book(title: str) -> dict:
     )
 
 
-@_mcp.tool()
 async def koredata_get_library_index() -> dict:
     """Return a full index of all library books — title, author, catalog, genre, word_count,
     and chunk count (how many _CHUNK_SIZE-char chunks it takes to read the full text).
@@ -859,7 +841,6 @@ async def koredata_get_library_index() -> dict:
     )
 
 
-@_mcp.tool()
 async def koredata_get_library_book_chunk(
     book_id: str,
     offset_chars: int = 0,
@@ -892,7 +873,6 @@ async def koredata_get_library_book_chunk(
     )
 
 
-@_mcp.tool()
 async def koredata_update_library_book(
     book_id: str,
     title: Optional[str] = None,
@@ -925,7 +905,6 @@ async def koredata_update_library_book(
     )
 
 
-@_mcp.tool()
 async def koredata_repair_library_book_anchors(book_id: str) -> dict:
     """Repair stored anchor spans in a book body after TOC or hyperlink navigation fixes."""
     return await _gateway_repair_library_book_anchors(
@@ -935,7 +914,6 @@ async def koredata_repair_library_book_anchors(book_id: str) -> dict:
 
 
 # MARK: KoreRAG Routines
-@_mcp.tool()
 async def koredata_get_rag_chunk(chunk_id: int) -> dict:
     """Fetch the full content of a RAG (retrieval-augmented generation) chunk.
 
@@ -951,7 +929,6 @@ async def koredata_get_rag_chunk(chunk_id: int) -> dict:
 
 
 # MARK: KoreScrape Routines
-@_mcp.tool()
 async def koredata_get_scrape_chunk(chunk_id: int) -> dict:
     """Fetch the full content of a KoreScrape extracted text chunk."""
     return await _gateway_get_scrape_chunk(
@@ -960,7 +937,6 @@ async def koredata_get_scrape_chunk(chunk_id: int) -> dict:
     )
 
 
-@_mcp.tool()
 async def koredata_get_full_text(refid: str) -> dict:
     """Fetch the full content for a text-bearing search result via its artifact_ref.
 
@@ -1033,6 +1009,25 @@ register_gateway_api_routes(
     search        = api_search,
     get_full_text = koredata_get_full_text,
     get_sentence  = koredata_get_sentence,
+)
+register_skill_invocation_routes(
+    app,
+    {
+        "koredata_search": koredata_search,
+        "koredata_savedsearch_list": koredata_savedsearch_list,
+        "koredata_savedsearch_run": koredata_savedsearch_run,
+        "koredata_get_sentence": koredata_get_sentence,
+        "koredata_get_feed_entry": koredata_get_feed_entry,
+        "koredata_get_reference_article": koredata_get_reference_article,
+        "koredata_find_library_book": koredata_find_library_book,
+        "koredata_get_library_index": koredata_get_library_index,
+        "koredata_get_library_book_chunk": koredata_get_library_book_chunk,
+        "koredata_update_library_book": koredata_update_library_book,
+        "koredata_repair_library_book_anchors": koredata_repair_library_book_anchors,
+        "koredata_get_rag_chunk": koredata_get_rag_chunk,
+        "koredata_get_scrape_chunk": koredata_get_scrape_chunk,
+        "koredata_get_full_text": koredata_get_full_text,
+    },
 )
 
 
@@ -1134,7 +1129,3 @@ async def gateway_status():
 
 
 # ===========================================================================
-# MCP server mount
-# ===========================================================================
-
-app.mount("/mcp", _mcp.streamable_http_app())

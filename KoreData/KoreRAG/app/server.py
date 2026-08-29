@@ -39,6 +39,8 @@ if _KORECOMMON_PARENT is not None and str(_KORECOMMON_PARENT) not in sys.path:
     sys.path.insert(0, str(_KORECOMMON_PARENT))
 
 from KoreCommon.service_app import register_endpoint_manifest
+from KoreCommon.skill_registration import start_manifest_registration
+from KoreCommon.skill_service import register_skill_invocation_routes
 from app.config import cfg
 from app.endpoint_api import register_rag_api
 from app.endpoint_ui import (
@@ -48,6 +50,8 @@ from app.endpoint_ui import (
 )
 from app.registry import get_descriptor, list_database_ids, reload as _registry_reload
 from app.database import init_db
+from app.database import list_chunks
+from app.database import search_chunks
 
 
 _ingest_procs:           dict[str, "subprocess.Popen[bytes]"] = {}
@@ -326,6 +330,11 @@ async def _lifespan(app: FastAPI):
         name   = "korerag-ingest-scheduler",
     )
     _scheduler_thread.start()
+    start_manifest_registration(
+        Path(__file__).resolve().parent.parent / "skills" / "skills.json",
+        service_base_url=f"http://{cfg['host']}:{cfg['port']}",
+        logger_name=__name__,
+    )
     yield
     if _scheduler_stop_event is not None:
         _scheduler_stop_event.set()
@@ -364,3 +373,10 @@ register_rag_ui(
     assign_to_job      = _assign_to_job,
 )
 register_endpoint_manifest(app, service_key="korerag", service_label="KoreRAG")
+register_skill_invocation_routes(
+    app,
+    {
+        "korerag_search": search_chunks,
+        "korerag_chunks_list": list_chunks,
+    },
+)

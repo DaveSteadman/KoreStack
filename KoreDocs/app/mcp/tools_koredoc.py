@@ -37,7 +37,7 @@ from difflib import SequenceMatcher
 from typing import Optional, Annotated
 from ..documents.korefile import service as korefile
 from .shared import (
-    mcp, _file_summary, _koredoc_file, _koredoc_parse, _koredoc_find_heading,
+    _file_summary, _koredoc_file, _koredoc_parse, _koredoc_find_heading,
     _koredoc_extract_lines, _koredoc_normalize_block, _koredoc_splice,
     _create_serialized_file, _ensure_extension,
 )
@@ -75,7 +75,6 @@ def _metadata_files(folder_path: str | None = None) -> list[dict]:
     return korefile.list_files(folder_path=folder_path, ext="koredoc")
 
 
-@mcp.tool()
 def koredocs_metadata_inventory(
     folder_path: Annotated[Optional[str], "Optional folder path to limit the inventory."] = None,
     max_examples: Annotated[int, "Maximum example documents returned for each metadata path."] = 3,
@@ -111,7 +110,6 @@ def koredocs_metadata_inventory(
     }
 
 
-@mcp.tool()
 def koredocs_metadata_find_variants(
     field_name: Annotated[str, "Field name or dotted field path to compare, for example artefact_type."],
     folder_path: Annotated[Optional[str], "Optional folder path to limit the search."] = None,
@@ -149,7 +147,6 @@ def _metadata_migration_matches(
     return matches
 
 
-@mcp.tool()
 def koredocs_metadata_rename_field(
     old_field: Annotated[str, "Exact top-level metadata field to rename."],
     new_field: Annotated[str, "Replacement top-level metadata field name."],
@@ -176,7 +173,6 @@ def koredocs_metadata_rename_field(
     return {"applied": bool(apply_changes), "proposed": proposed, "changed_count": len(matches), "conflicts": []}
 
 
-@mcp.tool()
 def koredocs_metadata_replace_value(
     field_name: Annotated[str, "Exact top-level metadata field whose value will be replaced."],
     old_value: Annotated[object, "Exact JSON value to replace."],
@@ -198,7 +194,6 @@ def koredocs_metadata_replace_value(
     return {"applied": bool(apply_changes), "proposed": proposed, "changed_count": len(matches)}
 
 
-@mcp.tool()
 def koredocs_doc_outline_get(
     id: Annotated[int, 'KoreDoc file id.'],
 ) -> dict:
@@ -224,7 +219,6 @@ def koredocs_doc_outline_get(
     }
 
 
-@mcp.tool()
 def koredocs_doc_section_read(
     id: Annotated[int, 'KoreDoc file id.'],
     heading_path: Annotated[Optional[list[str]], 'Optional heading path such as ["Overview", "Risks"].'] = None,
@@ -269,7 +263,6 @@ def koredocs_doc_section_read(
     }
 
 
-@mcp.tool()
 def koredocs_doc_section_replace(
     id: Annotated[int, 'KoreDoc file id.'],
     heading_path: Annotated[list[str], 'Heading path identifying the section to replace.'],
@@ -293,7 +286,6 @@ def koredocs_doc_section_replace(
     }
 
 
-@mcp.tool()
 def koredocs_doc_section_insert(
     id: Annotated[int, 'KoreDoc file id.'],
     markdown: Annotated[str, 'Markdown block to insert. Typically starts with a heading line.'],
@@ -342,7 +334,6 @@ def koredocs_doc_section_insert(
     }
 
 
-@mcp.tool()
 def koredocs_doc_markdown_append(
     id: Annotated[int, 'KoreDoc file id.'],
     markdown: Annotated[str, 'Markdown block to append to the end of the document.'],
@@ -364,7 +355,6 @@ def koredocs_doc_markdown_append(
     }
 
 
-@mcp.tool()
 def koredocs_doc_create(
     folder_path: Annotated[str, 'Folder path in the shared KoreDocs/datauser tree, such as "/" or "/Projects". Missing folders are created.'],
     name: Annotated[str, 'Filename, with or without the .koredoc extension.'],
@@ -377,7 +367,6 @@ def koredocs_doc_create(
     return create_koredoc(folder_path=folder_path, name=name, markdown=markdown, title=title, tags=tags, metadata=metadata)
 
 
-@mcp.tool()
 def koredocs_doc_create_from_scratchpad(
     folder_path: Annotated[str, 'Folder path for the new KoreDoc.'],
     name: Annotated[str, 'Filename, with or without the .koredoc extension.'],

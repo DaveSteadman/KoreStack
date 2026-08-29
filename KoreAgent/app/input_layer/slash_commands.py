@@ -19,17 +19,8 @@
 # - _cmd_sandbox: Implements the  cmd sandbox operation for this module.
 # - _cmd_deletelogs: Implements the  cmd deletelogs operation for this module.
 # - _cmd_tools: Implements the  cmd tools operation for this module.
-# - _tool_set_inventory: Implements the  tool set inventory operation for this module.
-# - _tool_set_slug: Implements the  tool set slug operation for this module.
-# - _tool_set_subject: Implements the  tool set subject operation for this module.
-# - _tool_set_action: Implements the  tool set action operation for this module.
-# - _tool_set_group_details: Implements the  tool set group details operation for this module.
-# - _build_tool_sets: Implements the  build tool sets operation for this module.
-# - _reevaluate_tool_groups: Implements the  reevaluate tool groups operation for this module.
-# - _cmd_tool_groups: Implements the  cmd tool groups operation for this module.
 # - _cmd_defaults: Implements the  cmd defaults operation for this module.
 # - _load: Implements the  load operation for this module.
-# - _cmd_mcp: Implements the  cmd mcp operation for this module.
 # - _cmd_comms: Implements the  cmd comms operation for this module.
 # - _cmd_workspace: Implements the  cmd workspace operation for this module.
 # ====================================================================================================
@@ -58,14 +49,9 @@ from datasets_pkg.service import dataset_clear
 from input_layer.slash_command_context import SlashCommandContext
 from input_layer.slash_command_handlers_models import register_model_slash_commands
 from input_layer.slash_command_handlers_sessions import register_session_slash_commands
-import mcp_client
 from sessions.tool_selection import ALWAYS_ON_TOOL_NAMES
 from sessions.tool_selection import build_all_tool_catalog
 from sessions.tool_selection import derive_active_tool_runtime
-from sessions.tool_selection import all_known_tool_names
-from sessions.tool_sets import get_tool_sets_path
-from sessions.tool_sets import load_tool_sets
-from sessions.tool_sets import save_tool_sets
 from utils.workspace_utils import get_agent_config_file
 from utils.workspace_utils import get_controldata_dir
 from utils.workspace_utils import get_logs_dir
@@ -268,18 +254,14 @@ def _cmd_deletelogs(arg: str, ctx: SlashCommandContext) -> None:
 def _cmd_tools(arg: str, ctx: SlashCommandContext) -> None:
     sub = str(arg or "").strip().lower()
     if not sub:
-        ctx.output("Usage: /tools all  |  /tools active  |  /tools groups [show <name>|reevaluate]", "dim")
-        return
-    if sub == "groups" or sub.startswith("groups "):
-        _cmd_tool_groups(sub[6:].strip(), ctx)
+        ctx.output("Usage: /tools all  |  /tools active", "dim")
         return
     if sub == "all":
-        entries = build_all_tool_catalog(ctx.config.skills_payload, include_mcp=True, session_id=ctx.session_id)
+        entries = build_all_tool_catalog(ctx.config.skills_payload, session_id=ctx.session_id)
         if not entries:
             ctx.output("No tools available.", "dim")
             return
-        mcp_count = sum(1 for entry in entries if entry.get("origin") == "mcp")
-        ctx.output(f"{len(entries)} tool(s) available in the full catalog{f', {mcp_count} via MCP' if mcp_count else ''}:", "info")
+        ctx.output(f"{len(entries)} local tool(s) available in the full catalog:", "info")
         for entry in entries:
             active_marker = "active" if entry.get("active") else "idle"
             label = f"{entry.get('origin', 'local')}/{entry.get('role', 'tool')}/{entry.get('availability', 'unknown')}/{active_marker}"
@@ -297,182 +279,37 @@ def _cmd_tools(arg: str, ctx: SlashCommandContext) -> None:
             conversation_entry=None,
         )
         active_names = set(runtime["active_tool_names"])
-        selected_names = [name for name in runtime["selected_tools"] if name in active_names]
+        system_names = set(runtime.get("system_tool_names", []) or [])
+        selected_names = [
+            name for name in runtime["selected_tools"]
+            if name in active_names and name not in system_names and name not in ALWAYS_ON_TOOL_NAMES
+        ]
+        selected_slots = int(runtime.get("selectable_tool_slots", len(selected_names)))
+        system_count = int(runtime.get("system_tool_count", 0))
+        always_on_count = int(runtime.get("always_on_tool_count", 0))
         always_on_names = sorted(name for name in active_names if name in ALWAYS_ON_TOOL_NAMES)
         if not active_names:
             ctx.output("No active tools. Only the tool-selection control plane is available.", "dim")
             return
-        ctx.output(f"{len(active_names)} active tool(s) exposed to the model (cap 32 + always-on control tools):", "info")
+        ctx.output(
+            f"{len(active_names)} active tool(s) exposed to the model "
+            f"(64-schema budget: {system_count} system + {always_on_count} other always-on; "
+            f"{selected_slots} selectable slots):",
+            "info",
+        )
         for name in always_on_names:
             ctx.output(f"  [always-on] {name}", "item")
+        for name in sorted(system_names):
+            if name not in ALWAYS_ON_TOOL_NAMES:
+                ctx.output(f"  [system] {name}", "item")
         for position, name in enumerate(selected_names, start=1):
-            ctx.output(f"  [selected {position:>2}/32] {name}", "item")
+            ctx.output(f"  [selected {position:>2}/{selected_slots}] {name}", "item")
         missing = runtime.get("missing_selected", []) or []
         if missing:
             ctx.output(f"Pruned missing tools: {', '.join(missing)}", "dim")
         return
-    ctx.output("Usage: /tools all  |  /tools active  |  /tools groups [show <name>|reevaluate]", "dim")
+    ctx.output("Usage: /tools all  |  /tools active", "dim")
 
-
-def _tool_set_inventory(ctx: SlashCommandContext) -> tuple[list[dict], set[str]]:
-    available_payload = ctx.config.skills_payload if get_web_skills_enabled() else _filter_web_skills(ctx.config.skills_payload)
-    entries = build_all_tool_catalog(
-        available_payload,
-        include_mcp=True,
-        session_id=ctx.session_id,
-    )
-    return entries, all_known_tool_names(available_payload)
-
-
-def _tool_set_slug(value: str) -> str:
-    value = re.sub(r"(?<=[a-z0-9])(?=[A-Z])", "_", str(value or "")).lower()
-    value = re.sub(r"[^a-z0-9]+", "_", value).strip("_")
-    return re.sub(r"_skill$", "", value) or "tools"
-
-
-def _tool_set_subject(tool_name: str, source_prefix: str) -> str:
-    prefix = f"{source_prefix}_"
-    remainder = tool_name[len(prefix):] if tool_name.startswith(prefix) else tool_name
-    subject = remainder.split("_", 1)[0] or "operations"
-    if subject in {"file", "files", "folder", "folders"}:
-        return "files_and_folders"
-    if subject in {"diag", "types"}:
-        return "diagnostics_and_types"
-    return subject.rstrip("s") or "operations"
-
-
-def _tool_set_action(tool_name: str) -> str:
-    writing_terms = {"append", "clear", "create", "delete", "insert", "rename", "replace", "set", "update", "upsert", "write"}
-    return "writing" if writing_terms & set(tool_name.split("_")) else "reading"
-
-
-def _tool_set_group_details(source_slug: str, source: str, subject: str, action: str = "") -> tuple[str, str]:
-    if source_slug != "kore_docs":
-        suffix = f"_{action}" if action else ""
-        qualifier = f" {action}" if action else ""
-        return (
-            f"{source_slug}_{subject}{suffix}",
-            f"{source} {subject.replace('_', ' ')}{qualifier} operations.",
-        )
-
-    if subject == "files_and_folders":
-        return "kore_files", "KoreFiles file and folder operations."
-    if subject == "doc":
-        return "kore_documents", "KoreDocs document creation, reading, and editing operations."
-    if subject == "sheet":
-        return f"kore_sheets_{action}", f"KoreSheets {action} operations."
-    if subject == "metadata":
-        return "kore_docs_metadata", "KoreDocs metadata operations."
-    return "kore_docs_diagnostics", "KoreDocs diagnostic and type operations."
-
-
-def _build_tool_sets(inventory: list[dict]) -> dict:
-    """Create complete groups from the live tool source and function namespaces."""
-    by_source: dict[str, list[str]] = {}
-    for item in inventory:
-        source = str(item.get("source") or "Tools")
-        by_source.setdefault(source, []).append(str(item["name"]))
-
-    groups: list[dict] = []
-    for source, source_tools in sorted(by_source.items(), key=lambda item: _tool_set_slug(item[0])):
-        source_slug = _tool_set_slug(source)
-        source_tools = sorted(source_tools)
-        if len(source_tools) <= 16:
-            groups.append({
-                "name":        source_slug,
-                "description": f"Complete tool set for {source}.",
-                "tools":       source_tools,
-            })
-            continue
-
-        source_prefix = re.sub(r"[^a-z0-9]+", "", source.lower()).removesuffix("skill")
-        by_subject: dict[str, list[str]] = {}
-        for tool_name in source_tools:
-            by_subject.setdefault(_tool_set_subject(tool_name, source_prefix), []).append(tool_name)
-
-        for subject, subject_tools in sorted(by_subject.items()):
-            subject_tools = sorted(subject_tools)
-            if len(subject_tools) <= 16:
-                group_name, description = _tool_set_group_details(source_slug, source, subject)
-                groups.append({
-                    "name":        group_name,
-                    "description": description,
-                    "tools":       subject_tools,
-                })
-                continue
-
-            by_action: dict[str, list[str]] = {}
-            for tool_name in subject_tools:
-                by_action.setdefault(_tool_set_action(tool_name), []).append(tool_name)
-            for action, action_tools in sorted(by_action.items()):
-                group_name, description = _tool_set_group_details(source_slug, source, subject, action)
-                groups.append({
-                    "name":        group_name,
-                    "description": description,
-                    "tools":       sorted(action_tools),
-                })
-    return {"sets": groups}
-
-
-def _reevaluate_tool_groups(ctx: SlashCommandContext, inventory: list[dict], known_names: set[str]) -> None:
-    """Rebuild complete, bounded groups from the current live tool inventory."""
-    ctx.output(f"Re-evaluating {len(inventory)} available tool(s)…", "info")
-    try:
-        result = save_tool_sets(_build_tool_sets(inventory), known_tool_names=known_names)
-    except Exception as exc:
-        ctx.output(f"Tool-group re-evaluation failed: {exc}", "error")
-        return
-
-    ctx.output(f"Saved {len(result['sets'])} tool group(s) to: {result['path']}", "success")
-    for group in result["sets"]:
-        ctx.output(f"  {group['name']:<24} {len(group['tools']):>2} tools  {group['description']}", "item")
-
-
-def _cmd_tool_groups(arg: str, ctx: SlashCommandContext) -> None:
-    words = str(arg or "").split()
-    subcommand = words[0].lower() if words else ""
-    entries, known_names = _tool_set_inventory(ctx)
-
-    if not subcommand:
-        groups = load_tool_sets(known_tool_names=known_names)
-        path = get_tool_sets_path()
-        if not groups:
-            ctx.output(f"No tool groups are configured. Run /tools groups reevaluate to create {path}.", "dim")
-            return
-        ctx.output(f"{len(groups)} tool group(s) loaded from: {path}", "info")
-        for group in groups:
-            ctx.output(f"  {group['name']:<24} {len(group['tools']):>2} tools  {group['description']}", "item")
-        return
-
-    if subcommand == "show":
-        if len(words) != 2:
-            ctx.output("Usage: /tools groups show <name>", "dim")
-            return
-        group_name = words[1].lower()
-        group = next((item for item in load_tool_sets(known_tool_names=known_names) if item["name"] == group_name), None)
-        if group is None:
-            ctx.output(f"Tool group '{group_name}' was not found.", "error")
-            return
-        ctx.output(f"{group['name']}: {group['description']}", "info")
-        for tool_name in group["tools"]:
-            ctx.output(f"  {tool_name}", "item")
-        return
-
-    if subcommand != "reevaluate" or len(words) != 1:
-        ctx.output("Usage: /tools groups  |  /tools groups show <name>  |  /tools groups reevaluate", "dim")
-        return
-
-    inventory = [
-        {
-            "name":        entry["name"],
-            "description": entry.get("description", ""),
-            "source":      entry.get("skill_name") or entry.get("origin", ""),
-        }
-        for entry in entries
-        if entry.get("name") not in ALWAYS_ON_TOOL_NAMES
-    ]
-    _reevaluate_tool_groups(ctx, inventory, known_names)
-    return
 
 def _cmd_defaults(arg: str, ctx: SlashCommandContext) -> None:
     defaults_path = get_agent_config_file()
@@ -492,7 +329,7 @@ def _cmd_defaults(arg: str, ctx: SlashCommandContext) -> None:
             "max_predict": getattr(ctx.config, "max_predict", 1024),
             "llmhost":     get_active_host(),
         }
-        for key in ("agentport", "DataRootFolder", "ControlDataFolder", "UserDataFolder", "mcp_connections"):
+        for key in ("agentport", "DataRootFolder", "ControlDataFolder", "UserDataFolder"):
             if key in existing:
                 new_cfg[key] = existing[key]
         try:
@@ -517,32 +354,6 @@ def _cmd_defaults(arg: str, ctx: SlashCommandContext) -> None:
         return
 
     ctx.output("Usage: /defaults | /defaults set", "dim")
-
-
-# ----------------------------------------------------------------------------------------------------
-def _cmd_mcp(arg: str, ctx: SlashCommandContext) -> None:
-    sub = arg.strip().lower()
-
-    if sub in ("", "status"):
-        statuses = mcp_client.get_server_status()
-        if not statuses:
-            ctx.output("No MCP connections configured.", "dim")
-            return
-        for srv in statuses:
-            ok_str = f"({srv['tool_count']} tool(s))" if srv["ok"] else "(no tools - server may be down)"
-            purpose = f" - {srv['purpose']}" if srv.get("purpose") else ""
-            ctx.output(f"  {'OK  ' if srv['ok'] else 'FAIL'}  {srv['name']}  {srv['url']}  {ok_str}{purpose}", "item")
-        return
-
-    if sub == "reconnect":
-        ctx.output("Reconnecting to MCP servers...", "dim")
-        count, lines = mcp_client.reconnect()
-        for line in lines:
-            ctx.output(line, "info" if count > 0 else "error")
-        ctx.output(f"{count} MCP tool(s) now registered.", "success" if count > 0 else "error")
-        return
-
-    ctx.output("Usage: /mcp [status | reconnect]", "dim")
 
 
 def _cmd_comms(arg: str, ctx: SlashCommandContext) -> None:
@@ -678,7 +489,6 @@ _REGISTRY: dict[str, Callable] = {
     "/tools": _cmd_tools,
     "/deletelogs": _cmd_deletelogs,
     "/defaults": _cmd_defaults,
-    "/mcp":      _cmd_mcp,
     "/comms":    _cmd_comms,
     "/workspace": _cmd_workspace,
 }
@@ -691,10 +501,9 @@ _DESCRIPTIONS: dict[str, str] = {
     "/reskill": "[min|max]  Rebuild skills catalog and set system prompt guidance mode (default: min)",
     "/version": "Show framework version, active model, and context size",
     "/sandbox": "<on|off>  Enable/disable Python code execution sandbox (import whitelist + blocked builtins)",
-    "/tools": "[all | active | groups [show <name>|reevaluate]]  Inspect tools, active FIFO selection, or named tool groups",
+    "/tools": "[all | active]  Inspect the full local catalog or active tool set",
     "/deletelogs": "<days>  Delete log date-folders older than N days (e.g. /deletelogs 10)",
     "/defaults": "Show current Agent configuration and file path; /defaults set saves current model/ctx/host to the file",
-    "/mcp":      "[status | reconnect]  Show MCP server status or re-enumerate tools from all configured servers",
     "/comms":    "delivery bind [--chat <name>] --connection <name> [--to <email>|--to-list <name>] --subject <text> [--startpaused]; connection pause|resume|publishprevious [--chat <name>]",
     "/workspace": "clear  Reset this chat's history, scratchpad, temporary datasets, and active tool selection",
 }

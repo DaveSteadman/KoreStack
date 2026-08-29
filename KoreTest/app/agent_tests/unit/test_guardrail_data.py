@@ -81,7 +81,6 @@ from conversation_state import decode_background_context
 from conversation_state import encode_background_context
 from skill_executor import execute_tool_call
 from datasets_pkg import store as datasets_store
-import mcp_client
 from agent.orchestration.engine import ConversationHistory
 from agent.orchestration.engine import OrchestratorConfig
 from agent.orchestration.engine import orchestrate_prompt
@@ -222,6 +221,26 @@ class GuardrailDataTests(unittest.TestCase):
         self.assertIn("--- Datasets ---", prompt)
         self.assertIn("feed_items_raw: 2 records fields=[title, url]", prompt)
         self.assertNotIn("ds_example", prompt)
+
+    def test_koreconv_history_excludes_the_newest_inbound_message(self) -> None:
+        messages = [
+            {"id": 1, "direction": "inbound", "content": "list local files"},
+            {"id": 2, "direction": "outbound", "content": "Workspace: example"},
+            {"id": 3, "direction": "inbound", "content": "hi"},
+        ]
+
+        history = koreconv_input_module._build_conversation_history(
+            messages,
+            current_inbound_id=3,
+        )
+
+        self.assertEqual(
+            history,
+            [
+                {"role": "user", "content": "list local files"},
+                {"role": "assistant", "content": "Workspace: example"},
+            ],
+        )
 
     def test_koreconv_event_restores_datasets_before_orchestration(self) -> None:
         session_id = "kc_conv_701"

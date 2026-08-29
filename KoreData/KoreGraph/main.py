@@ -50,7 +50,7 @@ def _print_banner() -> None:
         row("Host:", f"http://{host}:{port}/"),
         row("Data dir:", data_dir),
         row("Log level:", log_level),
-        row("MCP endpoint:", f"http://{host}:{port}/mcp"),
+        row("Skills endpoint:", f"http://{host}:{port}/api/skills/<name>/invoke"),
         "",
         row("Graph status:", "Initialising in background"),
         "",

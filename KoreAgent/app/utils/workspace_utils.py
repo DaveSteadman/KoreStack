@@ -32,7 +32,6 @@
 # - _read_json_file: Implements the  read json file operation for this module.
 # - _flatten_suite_config: Implements the  flatten suite config operation for this module.
 # - _merge_runtime_config_layer: Implements the  merge runtime config layer operation for this module.
-# - _resolve_mcp_service_refs: Implements the  resolve mcp service refs operation for this module.
 # - load_runtime_config: Loads runtime config for this module.
 # - _load_path_overrides: Implements the  load path overrides operation for this module.
 # - get_controldata_dir: Returns controldata dir for this module.
@@ -137,71 +136,15 @@ def _flatten_suite_config(raw: dict) -> dict:
         if _kc_port is not None:
             flattened["korechaturl"] = f"http://{_kc_host}:{_kc_port}"
 
-    mcp = raw.get("mcp") if isinstance(raw.get("mcp"), dict) else {}
-    if isinstance(mcp.get("connections"), list):
-        flattened["mcp_connections"] = mcp["connections"]
-
-    # Stash services and host so load_runtime_config can resolve service-ref MCP URLs
-    # after all config layers (including local port overrides) have been merged.
-    if isinstance(raw.get("services"), dict):
-        flattened["_suite_services"] = raw["services"]
-    network = raw.get("network") if isinstance(raw.get("network"), dict) else {}
-    if isinstance(network.get("host"), str):
-        flattened["_suite_host"] = network["host"]
-
     return flattened
 
 
 def _merge_runtime_config_layer(merged: dict, layer: dict) -> None:
-    """Merge one flattened suite config layer into the runtime config.
-
-    Most keys are last-write-wins, but the private service map used for MCP
-    service-reference resolution must be merged so partial local overrides do
-    not discard the default suite service ports.
-    """
+    """Merge one flattened suite configuration layer into the runtime configuration."""
     if not isinstance(layer, dict):
         return
 
-    layer_copy = dict(layer)
-    layer_services = layer_copy.pop("_suite_services", None)
-    if isinstance(layer_services, dict):
-        merged_services = merged.get("_suite_services")
-        if isinstance(merged_services, dict):
-            merged["_suite_services"] = {**merged_services, **layer_services}
-        else:
-            merged["_suite_services"] = dict(layer_services)
-
-    if "_suite_host" in layer_copy:
-        merged["_suite_host"] = layer_copy.pop("_suite_host")
-
-    merged.update(layer_copy)
-
-
-def _resolve_mcp_service_refs(config: dict) -> None:
-    """Resolve service-reference MCP connections to full URLs and clean up private keys.
-
-    Connections that declare {"service": "docs", "path": "/mcp"} are resolved using
-    the final merged services ports and host. This means a port override in
-    korestack_config.json
-    flows through automatically without duplicating port numbers in the MCP connection list.
-
-    Mutates *config* in-place.  Removes the private "_suite_services" and "_suite_host"
-    keys after use so they are not visible to the rest of the application.
-    """
-    connections = config.get("mcp_connections")
-    services    = config.pop("_suite_services", {})
-    host        = config.pop("_suite_host", "127.0.0.1")
-    if not isinstance(connections, list):
-        return
-    for conn in connections:
-        if not isinstance(conn, dict):
-            continue
-        if "url" not in conn and "service" in conn:
-            svc  = services.get(conn["service"], {})
-            port = svc.get("port")
-            path = conn.get("path", "/mcp")
-            if port:
-                conn["url"] = f"http://{host}:{port}{path}"
+    merged.update(layer)
 
 
 @lru_cache(maxsize=1)
@@ -212,10 +155,6 @@ def load_runtime_config() -> dict:
     suite_config = get_suite_defaults_file()
     if suite_config.exists():
         _merge_runtime_config_layer(merged, _flatten_suite_config(_read_json_file(suite_config)))
-
-    # Resolve any MCP connections that use service references instead of hardcoded URLs.
-    # This runs after the suite config is merged so service port overrides are honoured.
-    _resolve_mcp_service_refs(merged)
 
     return merged
 

@@ -16,6 +16,7 @@ Interface for generic file read, write, append, and search operations inside the
   - `folder_find(keywords: list[str], search_root: str = "")`
   - `folder_create(path: str)`
   - `folder_exists(path: str)`
+  - `workspace_list(path: str = "")`
 
 ## Parameters
 
@@ -32,6 +33,10 @@ Use this when large content was auto-saved to a scratchpad key (e.g. a web page 
 - `path` *(required)* - datauser-relative path to check.
 - Returns `"yes"` or `"no"` so the model can branch on the result.
 
+### `workspace_list(path = "")`
+- `path` *(optional)* - workspace-relative folder path. Leave empty to list the local KoreStack workspace root.
+- Lists immediate visible files and folders only. It cannot access paths outside the workspace.
+
 ### `file_write(path, content)`
 - `path` *(required)* - datauser-relative path. A bare name like `"x.txt"` resolves to `datauser/x.txt`. Legacy aliases like `"data/x.txt"`, `"datauser/x.txt"`, and `"KoreDocs/x.txt"` are accepted.
 - `content` *(required)* - content to write. Overwrites the file if it exists. Supports `{scratchpad:key}` token substitution - use `"{scratchpad:mykey}"` to write scratchpad content directly without calling `scratchpad_load` first.
@@ -47,6 +52,7 @@ Use this when large content was auto-saved to a scratchpad key (e.g. a web page 
 ### `file_find(keywords, search_root = "")`
 - `keywords` *(required)* - list of case-insensitive fragments that must ALL appear in the file name, e.g. `["pulse", "2026"]`.
 - `search_root` *(optional, default "")* - datauser-relative directory to restrict the search, e.g. `"RadarData"`. Leave empty to search the whole `datauser/` tree. Legacy aliases like `"KoreDocs/RadarData"` are accepted.
+- For a request to list files in the local directory without a named path, call `file_find([])` to list files in the shared `datauser/` tree.
 - To list every file below a directory, call `file_find([], "datauser/reports")`; do not put the directory path in `keywords`.
 
 ### `folder_find(keywords, search_root = "")`
@@ -62,6 +68,7 @@ Use this when large content was auto-saved to a scratchpad key (e.g. a web page 
 - `file_write_from_scratchpad(...)` - returns `"Wrote datauser/file.md (12345 chars from scratchpad key '_tc_r5_fetch_page_text')"` on success, or `"Error: ..."` on failure.
 - `folder_create(...)` - returns `"Created folder: path"` or `"Folder already exists: path"`, or `"Error: ..."` on failure.
 - `folder_exists(...)` - returns `"yes"` or `"no"`.
+- `workspace_list(...)` - returns immediate visible files and folders in the local KoreStack workspace.
 
 ## KoreDocs relationship
 FileAccess is the canonical navigation and raw read/write layer for the shared `datauser/` tree. Use it for generic text and file operations, including `.txt`, `.csv`, logs, and simple exports.
@@ -79,7 +86,8 @@ Invoke this skill when the prompt contains any of these concepts or phrases:
 - `write page to file`, `save fetched content to file`, `write from scratch`, `write scratch to file`
 - `append to file`, `add to file`
 - `read file`, `show file`, `open file`, `contents of`
-- `find file`, `find folder`, `locate file`, `search for file`
+- `find file`, `find folder`, `locate file`, `search for file`, `list files`
+- `list directory`, `list folder`, `local directory`, `local folder`
 - `create folder`, `make folder`, `create directory`, `folder exists`, `does folder exist`
 
 ## Scratchpad integration

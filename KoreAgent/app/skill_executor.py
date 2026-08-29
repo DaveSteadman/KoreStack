@@ -29,9 +29,8 @@
 import importlib.util
 import sys
 
-import mcp_client as _mcp_client
 from prompt_tokens import resolve_tokens
-from sessions.tool_aliases import canonical_tool_name
+from skill_manager import skill_manager
 from tool_result import ToolCallResult
 from utils.workspace_utils import get_workspace_root
 from utils.workspace_utils import normalize_module_path
@@ -147,46 +146,20 @@ def _build_unknown_tool_error(
     base_msg = f"Tool '{requested}' not found in skills catalog"
     if not requested:
         return base_msg
+    return (
+        f"{base_msg}. Inspect `tools_catalog_list()` or `tools_keywords_list()` "
+        "and activate an exact tool name."
+    )
 
-    try:
-        from sessions.tool_selection import all_known_tool_names
-        from sessions.tool_selection import build_all_tool_catalog
-        from sessions.tool_selection import rank_tool_catalog_entries
-        from sessions.tool_selection import suggest_tool_name
 
-        known_names = all_known_tool_names(skills_payload)
-        suggestion  = suggest_tool_name(requested, known_names, max_candidates=5)
-        candidates  = suggestion.get("candidates") if isinstance(suggestion.get("candidates"), list) else []
-
-        if not candidates:
-            catalog_entries = build_all_tool_catalog(skills_payload, include_mcp=True)
-            ranked_entries  = rank_tool_catalog_entries(catalog_entries, requested)
-            candidates      = [{"name": str(item.get("name", "")).strip()} for item in ranked_entries[:5]]
-
-        candidate_names = []
-        seen            = set()
-        for candidate in candidates:
-            name = str(candidate.get("name", "")).strip()
-            if not name or name in seen:
-                continue
-            seen.add(name)
-            candidate_names.append(name)
-
-        if not candidate_names:
-            return base_msg
-
-        active_names      = set(active_tool_names or set())
-        inactive_names    = [name for name in candidate_names if name not in active_names]
-        alternatives_text = ", ".join(f"`{name}`" for name in candidate_names[:5])
-        if inactive_names:
-            activate_name = inactive_names[0]
-            return (
-                f"{base_msg}. Closest alternatives: {alternatives_text}. "
-                f"If needed, request activation with `tools_active_add([\"{activate_name}\"])`."
-            )
-        return f"{base_msg}. Closest alternatives: {alternatives_text}."
-    except Exception:
-        return base_msg
+def _build_inactive_tool_error(requested_tool_name: str) -> str:
+    """Return the recovery instruction for a catalogued but inactive tool."""
+    requested = str(requested_tool_name or "").strip()
+    return (
+        f"Tool '{requested}' is not active for this conversation. "
+        "Use `tools_catalog_list()` or `tools_keywords_list()`, then activate it "
+        "with `tools_active_add`."
+    )
 
 
 # ====================================================================================================
@@ -233,20 +206,26 @@ def execute_tool_call(
     the index on every call when executing multiple tools in one round.
     """
     requested_tool_name = str(tool_name or "").strip()
-    tool_name = canonical_tool_name(requested_tool_name, skills_payload)
+    tool_name = requested_tool_name
 
-    # MCP tools are dispatched to the remote server; they bypass the local allow-list.
-    if _mcp_client.is_mcp_tool(tool_name):
+    # The schema supplied to the model is deliberately conversation-specific.
+    # Enforce that same boundary at dispatch time so a hallucinated (or stale)
+    # registered tool name cannot bypass the enabled-tool list.
+    if active_tool_names is not None and tool_name not in active_tool_names:
+        raise RuntimeError(_build_inactive_tool_error(tool_name))
+
+    registered = skill_manager.get_skill(tool_name)
+    if registered is not None:
         resolved_args = {
             k: (resolve_tokens(v) if isinstance(v, str) else v)
             for k, v in arguments.items()
             if k != "" and v is not None and v != "None" and v != "null"
         }
-        result = _mcp_client.call_mcp_tool(tool_name, resolved_args)
+        result = skill_manager.invoke(tool_name, resolved_args)
         return ToolCallResult(
             tool      = tool_name,
             function  = tool_name,
-            module    = "mcp",
+            module    = f"service:{registered['service']}",
             arguments = resolved_args,
             result    = result,
             status    = "error" if is_skill_error(result) else "ok",

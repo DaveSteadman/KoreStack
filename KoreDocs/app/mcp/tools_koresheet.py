@@ -33,7 +33,6 @@ from __future__ import annotations
 
 from typing import Any, Optional, Annotated, Literal
 
-from .shared import mcp
 from ..documents.koresheet.cell_ops import (
     find_labelled_cells as _find_labelled_cells,
     get_named_value as _get_named_value,
@@ -61,7 +60,6 @@ from ..documents.koresheet.range_ops import (
     read_sheet_table as _read_sheet_table,
 )
 
-@mcp.tool()
 def koredocs_sheet_create(
     folder_path: Annotated[str, 'Folder path in the shared KoreDocs/datauser tree, such as "/" or "/Projects". Missing folders are created.'],
     name: Annotated[str, 'Filename, with or without the .koresheet extension.'],
@@ -74,7 +72,6 @@ def koredocs_sheet_create(
     return _create_sheet(folder_path=folder_path, name=name, cells=cells, title=title, cols=cols, rows=rows)
 
 
-@mcp.tool()
 def koredocs_sheet_table_create(
     folder_path: Annotated[str, 'Folder path in the shared KoreDocs/datauser tree, such as "/Projects/Calcs". Missing folders are created.'],
     name: Annotated[str, 'Filename, with or without the .koresheet extension.'],
@@ -96,7 +93,6 @@ def koredocs_sheet_table_create(
     )
 
 
-@mcp.tool()
 def koredocs_sheet_get(
     id: Annotated[int, 'KoreSheet file id.'],
     include_cells: Annotated[bool, 'When true, include the sparse cell map in the response.'] = False,
@@ -105,7 +101,6 @@ def koredocs_sheet_get(
     return _get_sheet(id=id, include_cells=include_cells)
 
 
-@mcp.tool()
 def koredocs_sheet_headers_get(
     id: Annotated[int, 'KoreSheet file id.'],
     header_row: Annotated[Optional[int], 'Optional header row. When omitted, KoreDocs will guess a likely header row.'] = None,
@@ -115,7 +110,6 @@ def koredocs_sheet_headers_get(
     return _get_sheet_headers(id=id, header_row=header_row, range_ref=range_ref)
 
 
-@mcp.tool()
 def koredocs_sheet_column_find(
     id: Annotated[int, 'KoreSheet file id.'],
     header_name: Annotated[str, 'Column header to locate.'],
@@ -126,7 +120,6 @@ def koredocs_sheet_column_find(
     return _find_sheet_column(id=id, header_name=header_name, header_row=header_row, match_mode=match_mode)
 
 
-@mcp.tool()
 def koredocs_sheet_preview(
     id: Annotated[int, 'KoreSheet file id.'],
     sample_rows: Annotated[int, 'Maximum number of table rows to preview.'] = 5,
@@ -137,7 +130,6 @@ def koredocs_sheet_preview(
     return _preview_sheet(id=id, sample_rows=sample_rows, header_row=header_row, range_ref=range_ref)
 
 
-@mcp.tool()
 def koredocs_sheet_describe(
     id: Annotated[int, 'KoreSheet file id.'],
     sample_rows: Annotated[int, 'Maximum number of table rows to preview.'] = 5,
@@ -148,7 +140,6 @@ def koredocs_sheet_describe(
     return _describe_sheet(id=id, sample_rows=sample_rows, header_row=header_row, range_ref=range_ref)
 
 
-@mcp.tool()
 def koredocs_sheet_rows_find(
     id: Annotated[int, 'KoreSheet file id.'],
     filters: Annotated[dict[str, Any], 'Header-keyed filters. Values may be scalars or objects like {contains: "foo"} or {gte: 10}.'],
@@ -160,7 +151,6 @@ def koredocs_sheet_rows_find(
     return _find_sheet_rows(id=id, filters=filters, header_row=header_row, range_ref=range_ref, match_mode=match_mode)
 
 
-@mcp.tool()
 def koredocs_sheet_rows_update(
     id: Annotated[int, 'KoreSheet file id.'],
     match: Annotated[dict[str, Any], 'Header-keyed filters selecting target rows.'],
@@ -184,7 +174,6 @@ def koredocs_sheet_rows_update(
     )
 
 
-@mcp.tool()
 def koredocs_sheet_headers_set(
     id: Annotated[int, 'KoreSheet file id.'],
     headers: Annotated[list[str], 'Header names to write into the sheet.'],
@@ -196,7 +185,6 @@ def koredocs_sheet_headers_set(
     return _set_sheet_headers(id=id, headers=headers, header_row=header_row, start_col=start_col, expected_revision=expected_revision)
 
 
-@mcp.tool()
 def koredocs_sheet_table_rows_append(
     id: Annotated[int, 'KoreSheet file id.'],
     rows: Annotated[list[Any], 'Rows to append. Each row may be a list of values or an object keyed by header names.'],
@@ -215,7 +203,6 @@ def koredocs_sheet_table_rows_append(
 
 
 
-@mcp.tool()
 def koredocs_sheet_labels_find(
     id: Annotated[int, 'KoreSheet file id.'],
     labels: Annotated[Optional[list[str]], 'Optional list of labels to search for. Omit to list likely label cells across the sheet.'] = None,
@@ -225,7 +212,6 @@ def koredocs_sheet_labels_find(
     return _find_labelled_cells(id=id, labels=labels, match_mode=match_mode)
 
 
-@mcp.tool()
 def koredocs_sheet_named_value_get(
     id: Annotated[int, 'KoreSheet file id.'],
     label: Annotated[str, 'Label to search for, such as "Interest Rate" or "Starting Balance".'],
@@ -235,7 +221,6 @@ def koredocs_sheet_named_value_get(
     return _get_named_value(id=id, label=label, direction=direction)
 
 
-@mcp.tool()
 def koredocs_sheet_named_value_set(
     id: Annotated[int, 'KoreSheet file id.'],
     label: Annotated[str, 'Label to search for, such as "Interest Rate" or "Starting Balance".'],
@@ -246,7 +231,6 @@ def koredocs_sheet_named_value_set(
     """Write a value cell next to a labelled cell."""
     return _set_named_value(id=id, label=label, value=value, direction=direction, expected_revision=expected_revision)
 
-@mcp.tool()
 def koredocs_sheet_range_read(
     id: Annotated[int, 'KoreSheet file id.'],
     range: Annotated[str, 'A1-style range such as A1:C10, A:A, or 2:4.'],
@@ -256,7 +240,6 @@ def koredocs_sheet_range_read(
     return _read_sheet_range(id=id, range=range, values_only=values_only)
 
 
-@mcp.tool()
 def koredocs_sheet_cells_write(
     id: Annotated[int, 'KoreSheet file id.'],
     cells: Annotated[dict[str, Any], 'Sparse cell updates keyed by A1 address.'],
@@ -266,7 +249,6 @@ def koredocs_sheet_cells_write(
     return _write_sheet_cells(id=id, cells=cells, expected_revision=expected_revision)
 
 
-@mcp.tool()
 def koredocs_sheet_table_read(
     id: Annotated[int, 'KoreSheet file id.'],
     header_row: Annotated[int, 'Row number containing column headers.'] = 1,
@@ -276,7 +258,6 @@ def koredocs_sheet_table_read(
     return _read_sheet_table(id=id, header_row=header_row, range_ref=range_ref)
 
 
-@mcp.tool()
 def koredocs_sheet_rows_append(
     id: Annotated[int, 'KoreSheet file id.'],
     rows: Annotated[list[Any], 'Rows to append.'],
@@ -288,7 +269,6 @@ def koredocs_sheet_rows_append(
     return _append_sheet_rows(id=id, rows=rows, start_col=start_col, header_row=header_row, expected_revision=expected_revision)
 
 
-@mcp.tool()
 def koredocs_sheet_rows_upsert(
     id: Annotated[int, 'KoreSheet file id.'],
     rows: Annotated[list[dict[str, Any]], 'Header-keyed rows to update or append.'],
@@ -308,7 +288,6 @@ def koredocs_sheet_rows_upsert(
     )
 
 
-@mcp.tool()
 def koredocs_sheet_range_clear(
     id: Annotated[int, 'KoreSheet file id.'],
     range: Annotated[str, 'A1-style range such as B2:D9, A:A, or 3:3.'],
@@ -316,5 +295,4 @@ def koredocs_sheet_range_clear(
 ) -> dict:
     """Canonical prefixed alias for clear_sheet_range."""
     return _clear_sheet_range(id=id, range=range, expected_revision=expected_revision)
-
 
