@@ -29,6 +29,11 @@ _ACTIVE_RUNTIME_CACHE: dict[tuple, dict[str, object]] = {}
 _CATALOG_CACHE: dict[tuple, list[dict]] = {}
 MAX_EXPOSED_TOOL_DEFINITIONS = 64
 MIN_SELECTED_TOOL_SLOTS = 16
+_LEGACY_WORKING_DATA_PREFIXES = ("dataset_", "scratchpad_")
+
+
+def _is_legacy_working_data_tool(name: str) -> bool:
+    return str(name or "").strip().lower().startswith(_LEGACY_WORKING_DATA_PREFIXES)
 
 
 def clear_runtime_caches() -> None:
@@ -49,6 +54,7 @@ def _first_sentence(text: str) -> str:
 def _registered_tool_description(skill: dict) -> str:
     """Keep an active service-tool schema self-describing without copying the catalogue."""
     purpose = str(skill.get("purpose") or "").strip()
+    selection_description = str(skill.get("selection_description") or "").strip()
     service = str(skill.get("service") or "").strip()
     keywords = ", ".join(str(value) for value in skill.get("keywords", []) if str(value).strip())
     returns = str(skill.get("returns") or "").strip()
@@ -59,7 +65,8 @@ def _registered_tool_description(skill: dict) -> str:
             f"returns={returns}" if returns else "",
         ) if part
     )
-    return f"{purpose}\n\n[{detail}]" if detail else purpose
+    summary = selection_description or purpose
+    return f"{summary}\n\n[{detail}]" if detail else summary
 
 
 def local_tool_names(skills_payload: dict) -> set[str]:
@@ -67,19 +74,21 @@ def local_tool_names(skills_payload: dict) -> set[str]:
     for skill in skills_payload.get("skills", []):
         for function_sig in skill.get("functions", []):
             name = str(function_sig).split("(", 1)[0].strip()
-            if name:
+            if name and not _is_legacy_working_data_tool(name):
                 names.add(name)
     return names
 
 
 def _system_tool_names(skills_payload: dict) -> set[str]:
-    return {
-        str(function_sig).split("(", 1)[0].strip()
-        for skill in skills_payload.get("skills", [])
-        if skill.get("is_system_skill")
-        for function_sig in skill.get("functions", [])
-        if str(function_sig).split("(", 1)[0].strip()
-    }
+    names: set[str] = set()
+    for skill in skills_payload.get("skills", []):
+        if not skill.get("is_system_skill"):
+            continue
+        for function_sig in skill.get("functions", []):
+            name = str(function_sig).split("(", 1)[0].strip()
+            if name and not _is_legacy_working_data_tool(name):
+                names.add(name)
+    return names
 
 
 def all_known_tool_names(
@@ -156,7 +165,7 @@ def build_all_tool_catalog(
         }
         for function_sig in skill.get("functions", []):
             name = str(function_sig).split("(", 1)[0].strip()
-            if not name:
+            if not name or _is_legacy_working_data_tool(name):
                 continue
             func_param_descs = param_descriptions.get(name, {}) if isinstance(param_descriptions.get(name), dict) else {}
             entries.append(
@@ -179,6 +188,7 @@ def build_all_tool_catalog(
             {
                 "name": name,
                 "description": _first_sentence(skill.get("purpose", "")),
+                "selection_description": str(skill.get("selection_description") or skill.get("purpose") or ""),
                 "origin": "registered",
                 "availability": "registered",
                 "role": "service",

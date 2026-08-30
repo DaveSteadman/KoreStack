@@ -104,7 +104,7 @@ from system_skills.FileAccess.file_access_skill import file_read
 from system_skills.FileAccess.file_access_skill import folder_create
 from KoreLiveWeb.app.web_fetch    import fetch_page_text
 from KoreLiveWeb.app.web_search   import search_web
-from skills.SystemInfo.system_info_skill import get_system_info_string
+from system_skills.SystemInfo.system_info_skill import get_system_info_string
 from KoreDocs.app import korefile as koredocs_korefile
 from KoreCommon import datauser_fs as datauser_fs_module
 from agent.tool_runtime.loop import normalize_tool_request

@@ -140,6 +140,13 @@ def _decode_json_value(raw_value: str, default: object, *, label: str) -> tuple[
 
 
 def _decode_session_state_fields(record: dict, *, label: str) -> None:
+    raw_working_data = str(record.get("working_data") or "{}")
+    working_data, working_data_error = _decode_json_value(raw_working_data, {}, label=f"{label} working_data")
+    record["working_data"] = working_data if isinstance(working_data, dict) else {}
+    if working_data_error:
+        record["working_data_raw"] = raw_working_data
+        record["working_data_parse_error"] = working_data_error
+
     raw_scratchpad = str(record.get("scratchpad") or "{}")
     scratchpad, scratchpad_error = _decode_json_value(raw_scratchpad, {}, label=f"{label} scratchpad")
     record["scratchpad"] = scratchpad if isinstance(scratchpad, dict) else {}

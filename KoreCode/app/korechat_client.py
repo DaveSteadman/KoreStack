@@ -160,14 +160,13 @@ def _patch_conversation(conversation_id: int, payload: dict) -> dict:
     return result
 
 
-def _scratchpad_dict(conversation: dict) -> dict:
-    scratchpad = conversation.get("scratchpad") or {}
-    if isinstance(scratchpad, dict):
-        return scratchpad
-    return {}
+def _working_data_values(conversation: dict) -> dict:
+    working_data = conversation.get("working_data") or {}
+    values = working_data.get("values") if isinstance(working_data, dict) else {}
+    return values if isinstance(values, dict) else {}
 
 
-def _seed_workspace_menu_scratchpad(workspace_root: Path, conversation: dict) -> dict:
+def _seed_workspace_menu_working_data(workspace_root: Path, conversation: dict) -> dict:
     menu_payload = read_workspace_menu(workspace_root)
     if not menu_payload:
         return conversation
@@ -178,38 +177,38 @@ def _seed_workspace_menu_scratchpad(workspace_root: Path, conversation: dict) ->
 
     menu_path = str(menu_payload.get("menu_path") or (workspace_root / MENU_FILENAME))
     menu_hash = hashlib.sha256(menu_content.encode("utf-8")).hexdigest()
-    scratchpad = _scratchpad_dict(conversation)
+    values = _working_data_values(conversation)
 
-    existing_meta = scratchpad.get(_WORKSPACE_MENU_META)
+    existing_meta = values.get(_WORKSPACE_MENU_META)
     if isinstance(existing_meta, dict) and str(existing_meta.get("content_hash") or "") == menu_hash:
         return conversation
 
-    updated_scratchpad = dict(scratchpad)
-    updated_scratchpad[_WORKSPACE_MENU_KEY] = menu_content
-    updated_scratchpad[_WORKSPACE_MENU_META] = {
+    updated_values = dict(values)
+    updated_values[_WORKSPACE_MENU_KEY] = menu_content
+    updated_values[_WORKSPACE_MENU_META] = {
         "file_name":    MENU_FILENAME,
         "menu_path":    menu_path,
         "content_hash": menu_hash,
         "chars":        len(menu_content),
     }
-    return _patch_conversation(int(conversation["id"]), {"scratchpad": updated_scratchpad})
+    return _patch_conversation(int(conversation["id"]), {"working_data": {"values": updated_values, "collections": {}}})
 
 
-def _remove_workspace_menu_scratchpad(conversation: dict) -> dict:
-    scratchpad = _scratchpad_dict(conversation)
-    if _WORKSPACE_MENU_KEY not in scratchpad and _WORKSPACE_MENU_META not in scratchpad:
+def _remove_workspace_menu_working_data(conversation: dict) -> dict:
+    values = _working_data_values(conversation)
+    if _WORKSPACE_MENU_KEY not in values and _WORKSPACE_MENU_META not in values:
         return conversation
 
-    updated_scratchpad = dict(scratchpad)
-    updated_scratchpad.pop(_WORKSPACE_MENU_KEY, None)
-    updated_scratchpad.pop(_WORKSPACE_MENU_META, None)
-    return _patch_conversation(int(conversation["id"]), {"scratchpad": updated_scratchpad})
+    updated_values = dict(values)
+    updated_values.pop(_WORKSPACE_MENU_KEY, None)
+    updated_values.pop(_WORKSPACE_MENU_META, None)
+    return _patch_conversation(int(conversation["id"]), {"working_data": {"values": updated_values, "collections": {}}})
 
 
-def _sync_workspace_menu_scratchpad(workspace_root: Path, conversation: dict, enabled: bool) -> dict:
+def _sync_workspace_menu_working_data(workspace_root: Path, conversation: dict, enabled: bool) -> dict:
     if enabled:
-        return _seed_workspace_menu_scratchpad(workspace_root, conversation)
-    return _remove_workspace_menu_scratchpad(conversation)
+        return _seed_workspace_menu_working_data(workspace_root, conversation)
+    return _remove_workspace_menu_working_data(conversation)
 
 
 def ensure_conversation(
@@ -223,13 +222,13 @@ def ensure_conversation(
     if requested_external_id:
         conversation = _get_conversation_by_external_id(requested_external_id)
         if conversation is not None:
-            return _sync_workspace_menu_scratchpad(workspace_root, conversation, workspace_context_enabled)
+            return _sync_workspace_menu_working_data(workspace_root, conversation, workspace_context_enabled)
         created = _create_conversation(requested_external_id, requested_external_id)
-        return _sync_workspace_menu_scratchpad(workspace_root, created, workspace_context_enabled)
+        return _sync_workspace_menu_working_data(workspace_root, created, workspace_context_enabled)
 
     conversation_name = _new_conversation_name()
     created = _create_conversation(conversation_name, conversation_name)
-    return _sync_workspace_menu_scratchpad(workspace_root, created, workspace_context_enabled)
+    return _sync_workspace_menu_working_data(workspace_root, created, workspace_context_enabled)
 
 
 def set_workspace_context_enabled(
@@ -243,7 +242,7 @@ def set_workspace_context_enabled(
     conversation = _get_conversation_by_external_id(external_id)
     if conversation is None:
         return None
-    return _sync_workspace_menu_scratchpad(workspace_root, conversation, enabled)
+    return _sync_workspace_menu_working_data(workspace_root, conversation, enabled)
 
 
 def _conversation_detail(conversation_id: int) -> dict:
@@ -314,7 +313,7 @@ def get_thread(
         )
         external_id = str(conversation.get("external_id") or external_id)
     else:
-        conversation = _sync_workspace_menu_scratchpad(workspace_root, conversation, workspace_context_enabled)
+        conversation = _sync_workspace_menu_working_data(workspace_root, conversation, workspace_context_enabled)
 
     detail       = _conversation_detail(int(conversation["id"]))
     conv_record  = detail.get("conversation") or conversation

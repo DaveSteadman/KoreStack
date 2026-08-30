@@ -9,7 +9,7 @@
 
 """Public dataset-facing operations and metadata helpers."""
 
-from datasets_pkg.service import (
+from system_skills.WorkingData.collections.service import (
     dataset_clear,
     dataset_delete,
     dataset_get,

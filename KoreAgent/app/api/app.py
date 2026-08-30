@@ -13,8 +13,6 @@
 # - settings_sandbox_post: Implements the settings sandbox post operation for this module.
 # - settings_webskills_get: Implements the settings webskills get operation for this module.
 # - settings_webskills_post: Implements the settings webskills post operation for this module.
-# - settings_llmdirect_get: Implements the settings llmdirect get operation for this module.
-# - settings_llmdirect_post: Implements the settings llmdirect post operation for this module.
 # - push_log_line: Implements the push log line operation for this module.
 # - _kc_get: Implements the  kc get operation for this module.
 # - _kc_patch: Implements the  kc patch operation for this module.
@@ -67,7 +65,6 @@ from api.state import finish_run_event_queue
 from api.state import format_sse as _sse
 from api.state import get_config as _get_config
 from api.state import get_latest_log_path
-from api.state import get_llm_direct_enabled
 from api.state import get_run_event_queues
 from api.state import get_run_queues_lock
 from api.state import get_shutdown_event
@@ -76,18 +73,12 @@ from api.state import make_run_event_queue
 from api.state import pop_pending_switch as _pop_pending_switch
 from api.state import queue_run_event
 from api.state import set_latest_log_path as _set_latest_log_path
-from api.state import set_llm_direct_enabled
 from api.state import set_pending_switch as _set_pending_switch
 from api.state import set_startup_state_snapshot
 from api.state import setup
 from api.state import update_startup_state
 from api.state import validate_session_id as _validate_session_id
 from api.routes_work_packet import register_work_packet_routes
-from datasets_pkg.hydration import build_persisted_scratchpad_payload
-from datasets_pkg.hydration import get_persisted_datasets_payload
-from datasets_pkg.hydration import hydrate_session_state
-from datasets_pkg.service import dataset_clear
-from datasets_pkg.service import delete_session_datasets as delete_persisted_session_datasets
 from input_layer.korechat_proxy_routes import register_korechat_proxy_routes
 from input_layer.routes_logs import register_log_routes
 from input_layer.routes_sessions import register_session_routes
@@ -102,9 +93,10 @@ from llm_client import get_active_num_ctx
 from llm_client import get_ollama_ps_rows
 from llm_client import list_ollama_models
 from execution_queue import task_queue
-from scratchpad import get_store as get_scratchpad_store
-from scratchpad import scratchpad_clear
-from scratchpad import scratchpad_save as scratchpad_restore_key
+from working_data import build_persisted_working_data_payload
+from working_data import hydrate_working_data
+from working_data import working_data_clear
+from working_data import working_data_save
 from sessions.service import SessionService
 from sessions.tool_selection import ALWAYS_ON_TOOL_NAMES
 from sessions.tool_selection import clear_session_tools_active
@@ -260,31 +252,15 @@ def settings_webskills_post(enabled: bool):
     return {"webskills": get_web_skills_enabled()}
 
 
-@app.get("/api/settings/llmdirect")
-@app.get("/settings/llmdirect", include_in_schema=False)
-def settings_llmdirect_get():
-    return {"llmdirect": get_llm_direct_enabled()}
-
-
-@app.post("/api/settings/llmdirect")
-@app.post("/settings/llmdirect", include_in_schema=False)
-def settings_llmdirect_post(enabled: bool):
-    set_llm_direct_enabled(enabled)
-    return {"llmdirect": get_llm_direct_enabled()}
-
-
 _session_service = SessionService(
     compact_fill_pct=_COMPACT_FILL_PCT,
     kc_client=_kc_client,
     conversation_history_cls=ConversationHistory,
     session_context_cls=SessionContext,
-    hydrate_session_state=hydrate_session_state,
-    scratchpad_clear=scratchpad_clear,
-    scratchpad_restore_key=scratchpad_restore_key,
-    get_scratchpad_store=get_scratchpad_store,
-    build_persisted_scratchpad_payload=build_persisted_scratchpad_payload,
-    get_persisted_datasets_payload=get_persisted_datasets_payload,
-    delete_persisted_session_datasets=delete_persisted_session_datasets,
+    hydrate_working_data=hydrate_working_data,
+    working_data_clear=working_data_clear,
+    working_data_save=working_data_save,
+    build_persisted_working_data_payload=build_persisted_working_data_payload,
     request_stop=request_stop,
     task_queue=task_queue,
     run_event_queues=get_run_event_queues(),
@@ -356,7 +332,7 @@ register_session_routes(
     save_session=_session_service.save_session,
     flush_scratch_session=_session_service.flush_scratch_to_session,
     create_session_context=_session_service.create_session_context,
-    clear_session_scratch=scratchpad_clear,
+    clear_session_scratch=working_data_clear,
     push_log_line=lambda line: push_log_line(line),
     set_latest_log_path=_set_latest_log_path,
     log_dir=_LOG_DIR,
@@ -378,8 +354,6 @@ register_session_routes(
         f"/conversations/{conversation_id}/messages?limit=1000"
     ) or [],
     kc_set_session_name=_session_service.kc_set_session_name,
-    get_llm_direct_enabled=get_llm_direct_enabled,
-    call_llm_chat=call_llm_chat,
 )
 
 
@@ -417,8 +391,7 @@ def _kc_get_conversation_for_session(session_id: str) -> dict | None:
 
 
 def _delete_session_state(session_id: str) -> None:
-    scratchpad_clear(session_id)
-    delete_persisted_session_datasets(session_id)
+    working_data_clear(session_id)
     clear_session_tools_active(session_id)
     conv = _kc_get_conversation_for_session(session_id)
     if conv is not None:
@@ -432,15 +405,13 @@ def clear_conversation_workspace(conversation_id: int):
     if not isinstance(conversation, dict):
         raise HTTPException(status_code=404, detail="Conversation not found")
     session_id     = f"kc_conv_{conversation_id}"
-    scratch_result = scratchpad_clear(session_id)
-    dataset_result = dataset_clear(session_id)
+    working_data_result = working_data_clear(session_id)
     clear_session_tools_active(session_id)
     _kc_delete(f"/conversations/{conversation_id}/history")
-    _kc_patch(f"/conversations/{conversation_id}", {"scratchpad": {}, "datasets": {}, "tools_active": []})
+    _kc_patch(f"/conversations/{conversation_id}", {"working_data": {}, "tools_active": []})
     return {
         "conversation_id": conversation_id,
-        "scratchpad":      scratch_result,
-        "datasets":        dataset_result,
+        "working_data":    working_data_result,
         "tools_active":    "cleared",
         "history":         "cleared",
     }

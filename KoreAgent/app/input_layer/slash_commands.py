@@ -45,7 +45,6 @@ from agent.orchestration.engine import request_stop
 from agent.orchestration.engine import get_sandbox_enabled
 from agent.orchestration.engine import set_sandbox_enabled
 from agent.orchestration.engine import set_skill_guidance_enabled
-from datasets_pkg.service import dataset_clear
 from input_layer.slash_command_context import SlashCommandContext
 from input_layer.slash_command_handlers_models import register_model_slash_commands
 from input_layer.slash_command_handlers_sessions import register_session_slash_commands
@@ -57,7 +56,7 @@ from utils.workspace_utils import get_controldata_dir
 from utils.workspace_utils import get_logs_dir
 from utils.workspace_utils import get_suite_root
 from utils.suite_version import SUITE_VERSION
-from scratchpad import scratchpad_clear
+from working_data import working_data_clear
 from sessions.tool_selection import clear_session_tools_active
 
 
@@ -471,11 +470,10 @@ def _cmd_workspace(arg: str, ctx: SlashCommandContext) -> None:
     if not ctx.session_id:
         ctx.output("No active chat workspace is available to clear.", "error")
         return
-    scratch_result = scratchpad_clear(ctx.session_id)
-    dataset_result = dataset_clear(ctx.session_id)
+    working_data_result = working_data_clear(ctx.session_id)
     clear_session_tools_active(ctx.session_id)
     ctx.clear_history()
-    ctx.output(f"Workspace and conversation history cleared: {scratch_result} {dataset_result} Active tool selection reset.", "success")
+    ctx.output(f"Workspace and conversation history cleared: {working_data_result} Active tool selection reset.", "success")
 
 
 _REGISTRY: dict[str, Callable] = {
@@ -505,7 +503,7 @@ _DESCRIPTIONS: dict[str, str] = {
     "/deletelogs": "<days>  Delete log date-folders older than N days (e.g. /deletelogs 10)",
     "/defaults": "Show current Agent configuration and file path; /defaults set saves current model/ctx/host to the file",
     "/comms":    "delivery bind [--chat <name>] --connection <name> [--to <email>|--to-list <name>] --subject <text> [--startpaused]; connection pause|resume|publishprevious [--chat <name>]",
-    "/workspace": "clear  Reset this chat's history, scratchpad, temporary datasets, and active tool selection",
+    "/workspace": "clear  Reset this chat's history, Working Data, and active tool selection",
 }
 
 register_model_slash_commands(_REGISTRY, _DESCRIPTIONS)

@@ -100,39 +100,21 @@ CODE_DIR  = REPO_ROOT / "KoreAgent" / "app"
 if str(CODE_DIR) not in sys.path:
     sys.path.insert(0, str(CODE_DIR))
 
-import datasets_pkg as datasets_module
+import system_skills.WorkingData.collections as datasets_module
 from agent.tool_runtime import loop as tool_loop_module
 from sessions import tool_selection as tool_selection_state_module
 from conversation_state import decode_background_context
 from conversation_state import encode_background_context
 from skill_executor import execute_tool_call
-from datasets_pkg import store as datasets_store
+from system_skills.WorkingData.collections import store as datasets_store
 from agent.orchestration.engine import ConversationHistory
 from agent.orchestration.engine import OrchestratorConfig
 from agent.orchestration.engine import orchestrate_prompt
 from input_layer import koreconv_input as koreconv_input_module
-from datasets_pkg import auto_route_tool_result
-from datasets_pkg import clear_session_datasets
-from datasets_pkg import dataset_drop_where
-from datasets_pkg import dataset_expand_full_text
-from datasets_pkg import dataset_filter
-from datasets_pkg import dataset_get
-from datasets_pkg import dataset_inspect
-from datasets_pkg import dataset_list
-from datasets_pkg import dataset_rename
-from datasets_pkg import dataset_save
-from datasets_pkg import dataset_write_koredoc
-from datasets_pkg import delete_session_datasets
-from datasets_pkg import get_persisted_datasets_payload
-from datasets_pkg import restore_persisted_datasets
+from system_skills.WorkingData.collections import auto_route_tool_result, clear_session_datasets, dataset_drop_where, dataset_expand_full_text, dataset_filter, dataset_get, dataset_inspect, dataset_list, dataset_rename, dataset_save, dataset_write_koredoc, delete_session_datasets, get_persisted_datasets_payload, restore_persisted_datasets
 from prompt_builder import build_system_message
 from prompt_builder import build_registered_keyword_guidance
-from scratchpad import scratchpad_clear
-from scratchpad import get_store
-from scratchpad import scratchpad_load
-from scratchpad import scratchpad_list
-from scratchpad import scratchpad_query
-from scratchpad import scratchpad_save
+from working_data import working_data_clear as scratchpad_clear, get_working_data_values as get_store, working_data_get as scratchpad_load, working_data_list as scratchpad_list, working_data_query as scratchpad_query, working_data_save as scratchpad_save
 from sessions.runtime import get_active_session_id
 from sessions.runtime import bind_session
 from skills_catalog_builder import build_tool_definitions
@@ -145,11 +127,11 @@ from system_skills.FileAccess.file_access_skill import folder_create
 from KoreLiveWeb.app.web_fetch    import fetch_page_text
 from KoreLiveWeb.app.web_search   import search_web
 from agent.tool_runtime.loop import _requires_web_evidence_guard
-from skills.SystemInfo.system_info_skill import get_system_info_string
+from system_skills.SystemInfo.system_info_skill import get_system_info_string
 from KoreDocs.app import korefile as koredocs_korefile
 from KoreCommon import datauser_fs as datauser_fs_module
 from agent.tool_runtime.loop import normalize_tool_request
-from agent.tool_runtime.loop import _derive_auto_scratchpad_key
+from agent.tool_runtime.loop import _derive_auto_working_data_key
 from agent.tool_runtime.loop import _extract_graph_connection_batch_from_text
 from tool_result import ToolCallResult
 import api.app as api_module
@@ -490,8 +472,7 @@ class GuardrailRuntimeTests(unittest.TestCase):
             with patch.object(tool_selection_state_module, "get_selected_tools", return_value=[]):
                 results = tool_selection_skill_module.tools_catalog_list()
 
-        self.assertGreaterEqual(len(results), 1)
-        self.assertIn("dataset_list", [entry["name"] for entry in results])
+        self.assertIn("dataset_list", results["tools"])
 
     def test_tool_selection_respects_web_skill_filter(self) -> None:
         fake_payload = {
@@ -499,7 +480,7 @@ class GuardrailRuntimeTests(unittest.TestCase):
                 {
                     "skill_name": "WebSearch",
                     "purpose": "Search the web.",
-                    "module": "KoreAgent/app/skills/WebSearch/web_search_skill.py",
+                    "module": "KoreAgent/app/system_skills/WebSearch/web_search_skill.py",
                     "functions": ["search_web_text(query: str = \"\")"],
                     "param_descriptions": {"search_web_text": {"query": "query"}},
                     "triggers": ["search the web"],
@@ -541,7 +522,7 @@ class GuardrailRuntimeTests(unittest.TestCase):
                         listed = tool_selection_skill_module.tools_catalog_list()
                         added = tool_selection_skill_module.tools_active_add(["search_web_text", "dataset_list"])
 
-        listed_names = [entry["name"] for entry in listed]
+        listed_names = listed["tools"]
         self.assertIn("dataset_list", listed_names)
         self.assertNotIn("search_web_text", listed_names)
         self.assertIn("dataset_list", added["added"] + added["promoted"] + added["already_active_before_call"])
@@ -962,16 +943,16 @@ class GuardrailRuntimeTests(unittest.TestCase):
         self.assertIsNotNone(result["result"])
         self.assertNotIn("error", str(result["result"]).lower())
 
-    def test_execute_tool_call_rejects_known_inactive_tool(self) -> None:
-        with self.assertRaises(RuntimeError) as ctx:
-            execute_tool_call(
-                tool_name="get_datetime_data",
-                arguments={},
-                skills_payload=self.skills_payload,
-                active_tool_names={"tools_catalog_list", "tools_active_add"},
-            )
+    def test_execute_tool_call_keeps_datetime_system_skill_active(self) -> None:
+        result = execute_tool_call(
+            tool_name="get_datetime_data",
+            arguments={},
+            skills_payload=self.skills_payload,
+            active_tool_names={"tools_catalog_list", "tools_active_add"},
+        )
 
-        self.assertIn("not active for this conversation", str(ctx.exception))
+        self.assertEqual(result["function"], "get_datetime_data")
+        self.assertIsNotNone(result["result"])
 
     def test_execute_tool_call_rejects_inactive_registered_tool_before_invocation(self) -> None:
         registered = {
@@ -1024,23 +1005,17 @@ class GuardrailRuntimeTests(unittest.TestCase):
             self.assertIn("parameters", tool["function"])
             self.assertEqual(tool["function"]["parameters"]["type"], "object")
 
-    def test_loaded_skills_payload_infers_tool_classification_metadata(self) -> None:
+    def test_loaded_skills_payload_marks_every_agent_local_skill_as_system(self) -> None:
         skills = self.skills_payload.get("skills", [])
         self.assertGreater(len(skills), 0)
 
-        system_skill = next((skill for skill in skills if skill.get("is_system_skill") is True), None)
-        local_skill  = next((skill for skill in skills if skill.get("is_system_skill") is False), None)
+        system_skill = skills[0]
 
-        self.assertIsNotNone(system_skill)
-        self.assertIsNotNone(local_skill)
+        self.assertTrue(all(skill.get("is_system_skill") is True for skill in skills))
         self.assertEqual(system_skill["origin"], "builtin")
         self.assertEqual(system_skill["availability"], "guaranteed")
         self.assertEqual(system_skill["role"], "core")
         self.assertEqual(system_skill["trust_boundary"], "internal")
-        self.assertEqual(local_skill["origin"], "local")
-        self.assertEqual(local_skill["availability"], "configured")
-        self.assertEqual(local_skill["role"], "optional")
-        self.assertEqual(local_skill["trust_boundary"], "internal")
 
     def test_registered_keyword_guidance_requires_reviewed_registry_selection(self) -> None:
         with patch("prompt_builder.skill_manager.keyword_map", return_value={

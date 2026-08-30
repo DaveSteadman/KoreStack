@@ -42,8 +42,7 @@ html, body {
 #sec-tools .section-header,
 #sec-bg .section-header,
 #sec-summary .section-header,
-#sec-scratchpad .section-header,
-#sec-datasets .section-header,
+#sec-working-data .section-header,
 #sec-history .section-header,
 #sec-compose .section-header,
 #sec-messages .section-header,
@@ -150,7 +149,13 @@ html, body {
     overflow: hidden;
 }
 
-.datasets-list { border-top: 0; }
+.working-data-group {
+    padding: 0.45rem 0.7rem;
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
 
 .section-header {
     display: flex;

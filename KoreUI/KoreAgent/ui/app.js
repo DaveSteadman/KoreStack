@@ -26,7 +26,6 @@ const MAX_CHAT_MESSAGES = 200;
 const CSS_NOWRAP       = "kcui-panel-body--nowrap";
 const CSS_LIVE_FOLLOW  = "kcui-panel-body--live-follow";
 const CSS_WRAP_ACTIVE  = "is-on";
-const CSS_TAG_INACTIVE = "kcui-tag--inactive";
 
 // All registered slash commands - used for command-name tab completion.
 const _ALL_COMMANDS = [
@@ -797,40 +796,6 @@ async function _initWebSkillsBtn() {
     if (data) _updateWebSkillsBtn(data.webskills);
 }
 
-// ----------------------------------------------------------------------------------------------------
-
-function _updateDirectBtn(directOn) {
-    const btn = $('direct-btn');
-    if (!btn) return;
-    if (directOn) {
-        btn.textContent = "LLM-DIRECT on";
-        btn.classList.remove("direct-off");
-        btn.classList.add("direct-on");
-    } else {
-        btn.textContent = "LLM-DIRECT";
-        btn.classList.remove("direct-on");
-        btn.classList.add("direct-off");
-    }
-    // Grey out settings that don't apply in direct mode.
-    $('sandbox-btn')?.classList.toggle(CSS_TAG_INACTIVE, directOn);
-    $('webskills-btn')?.classList.toggle(CSS_TAG_INACTIVE, directOn);
-}
-
-async function toggleDirect() {
-    const current = await apiFetch("/settings/llmdirect");
-    if (!current) return;
-    const next = !current.llmdirect;
-    const result = await apiFetch("/settings/llmdirect?enabled=" + next, { method: "POST" });
-    if (result) _updateDirectBtn(result.llmdirect);
-}
-
-async function _initDirectBtn() {
-    const data = await apiFetch("/settings/llmdirect");
-    if (data) _updateDirectBtn(data.llmdirect);
-}
-
-// ----------------------------------------------------------------------------------------------------
-
 async function logNavStep(delta) {
     // delta: -1 = older (up), +1 = newer (down).
     const data = await apiFetch("/logs");
@@ -1565,9 +1530,6 @@ function init() {
     // Read web skills state from server and reflect it in the button.
     _initWebSkillsBtn();
 
-    // Read LLM Direct state from server and reflect it in the button.
-    _initDirectBtn();
-
     // Wire up input events.
     dom.input().addEventListener("keydown", onInputKeydown);
     dom.input().addEventListener("input", () => { _historyIdx = -1; _historyDraft = null; _saveInputDraft(dom.input().value); onInputChange(); });
@@ -1578,7 +1540,6 @@ function init() {
     $("wrap-btn-log")?.addEventListener("click", () => { toggleWrap("log-body", "wrap-btn-log"); });
     $("sandbox-btn")?.addEventListener("click", toggleSandbox);
     $("webskills-btn")?.addEventListener("click", toggleWebSkills);
-    $("direct-btn")?.addEventListener("click", toggleDirect);
     $("wrap-btn-chat")?.addEventListener("click", () => { toggleWrap("chat-body", "wrap-btn-chat"); });
     $("btn-skills-catalog")?.addEventListener("click", () => {
         window.location.href = "/skills-catalog";

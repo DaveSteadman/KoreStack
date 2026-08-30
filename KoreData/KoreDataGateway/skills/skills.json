@@ -3,19 +3,390 @@
   "service": "koredatagateway",
   "service_label": "KoreDataGateway",
   "skills": [
-    {"name":"koredata_search","purpose":"Search across KoreData collections and return structured results.","keywords":["dataset","search","research","koredata"],"parameters":{"type":"object","properties":{"query":{"type":"string"},"domains":{"type":"array","items":{"type":"string"}},"since":{"type":"string"},"until":{"type":"string"},"limit":{"type":"integer","default":20}},"required":["query"]},"returns":"Cross-collection search results.","invoke_path":"/api/skills/koredata_search/invoke"},
-    {"name":"koredata_savedsearch_list","purpose":"List named KoreData saved searches.","keywords":["dataset","search","saved_search","koredata"],"parameters":{"type":"object","properties":{}},"returns":"Saved search definitions.","invoke_path":"/api/skills/koredata_savedsearch_list/invoke"},
-    {"name":"koredata_savedsearch_run","purpose":"Run a named KoreData saved search.","keywords":["dataset","search","saved_search","koredata"],"parameters":{"type":"object","properties":{"name":{"type":"string"}},"required":["name"]},"returns":"Saved search results.","invoke_path":"/api/skills/koredata_savedsearch_run/invoke"},
-    {"name":"koredata_get_sentence","purpose":"Fetch one indexed KoreData sentence by locator.","keywords":["dataset","sentence","read","koredata"],"parameters":{"type":"object","properties":{"locator":{"type":"string"}},"required":["locator"]},"returns":"Sentence text and provenance.","invoke_path":"/api/skills/koredata_get_sentence/invoke"},
-    {"name":"koredata_get_feed_entry","purpose":"Fetch a complete KoreFeed entry.","keywords":["dataset","feed","article","read","koredata"],"parameters":{"type":"object","properties":{"domain":{"type":"string"},"entry_id":{"type":"integer"}},"required":["domain","entry_id"]},"returns":"Complete feed entry.","invoke_path":"/api/skills/koredata_get_feed_entry/invoke"},
-    {"name":"koredata_get_reference_article","purpose":"Fetch a complete KoreReference article by title.","keywords":["dataset","reference","article","read","koredata"],"parameters":{"type":"object","properties":{"title":{"type":"string"}},"required":["title"]},"returns":"Complete reference article.","invoke_path":"/api/skills/koredata_get_reference_article/invoke"},
-    {"name":"koredata_find_library_book","purpose":"Find library books by title.","keywords":["dataset","library","book","search","koredata"],"parameters":{"type":"object","properties":{"title":{"type":"string"}},"required":["title"]},"returns":"Matching library books.","invoke_path":"/api/skills/koredata_find_library_book/invoke"},
-    {"name":"koredata_get_library_index","purpose":"List the complete KoreLibrary book index.","keywords":["dataset","library","book","list","koredata"],"parameters":{"type":"object","properties":{}},"returns":"Library book index.","invoke_path":"/api/skills/koredata_get_library_index/invoke"},
-    {"name":"koredata_get_library_book_chunk","purpose":"Read a chunk of a KoreLibrary book.","keywords":["dataset","library","book","read","koredata"],"parameters":{"type":"object","properties":{"book_id":{"type":"string"},"offset_chars":{"type":"integer","default":0},"length_chars":{"type":"integer","default":8000}},"required":["book_id"]},"returns":"Book text chunk and next offset.","invoke_path":"/api/skills/koredata_get_library_book_chunk/invoke"},
-    {"name":"koredata_update_library_book","purpose":"Update selected metadata or content fields of a KoreLibrary book.","keywords":["dataset","library","book","update","write","koredata"],"parameters":{"type":"object","properties":{"book_id":{"type":"string"},"title":{"type":"string"},"body":{"type":"string"},"author":{"type":"string"},"year":{"type":"integer"},"language":{"type":"string"},"genre":{"type":"string"},"notes":{"type":"string"},"source":{"type":"string"},"source_id":{"type":"string"}},"required":["book_id"]},"returns":"Updated library book.","invoke_path":"/api/skills/koredata_update_library_book/invoke"},
-    {"name":"koredata_repair_library_book_anchors","purpose":"Repair stored hyperlink anchor spans in a KoreLibrary book.","keywords":["dataset","library","book","repair","koredata"],"parameters":{"type":"object","properties":{"book_id":{"type":"string"}},"required":["book_id"]},"returns":"Anchor repair result.","invoke_path":"/api/skills/koredata_repair_library_book_anchors/invoke"},
-    {"name":"koredata_get_rag_chunk","purpose":"Fetch complete content of a KoreRAG chunk.","keywords":["dataset","rag","read","koredata"],"parameters":{"type":"object","properties":{"chunk_id":{"type":"integer"}},"required":["chunk_id"]},"returns":"Complete RAG chunk.","invoke_path":"/api/skills/koredata_get_rag_chunk/invoke"},
-    {"name":"koredata_get_scrape_chunk","purpose":"Fetch complete content of a KoreScrape chunk.","keywords":["dataset","scrape","read","koredata"],"parameters":{"type":"object","properties":{"chunk_id":{"type":"integer"}},"required":["chunk_id"]},"returns":"Complete scraped content chunk.","invoke_path":"/api/skills/koredata_get_scrape_chunk/invoke"},
-    {"name":"koredata_get_full_text","purpose":"Fetch full content from a KoreData search artifact reference.","keywords":["dataset","read","full_text","koredata"],"parameters":{"type":"object","properties":{"refid":{"type":"string"}},"required":["refid"]},"returns":"Full artifact content.","invoke_path":"/api/skills/koredata_get_full_text/invoke"}
+    {
+      "name": "koredata_search",
+      "purpose": "Search across KoreData collections and return structured results.",
+      "keywords": [
+        "dataset",
+        "search",
+        "research",
+        "koredata"
+      ],
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string"
+          },
+          "domains": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "since": {
+            "type": "string"
+          },
+          "until": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "integer",
+            "default": 20
+          }
+        },
+        "required": [
+          "query"
+        ]
+      },
+      "returns": "Cross-collection search results.",
+      "invoke_path": "/api/skills/koredata_search/invoke",
+      "selection_description": "Search across KoreData collections and return structured results."
+    },
+    {
+      "name": "koredata_savedsearch_list",
+      "purpose": "List named KoreData saved searches.",
+      "keywords": [
+        "dataset",
+        "search",
+        "saved_search",
+        "koredata"
+      ],
+      "parameters": {
+        "type": "object",
+        "properties": {}
+      },
+      "returns": "Saved search definitions.",
+      "invoke_path": "/api/skills/koredata_savedsearch_list/invoke",
+      "selection_description": "List the named stored KoreData search definitions before running one when its exact name is unknown."
+    },
+    {
+      "name": "koredata_savedsearch_run",
+      "purpose": "Run a named KoreData saved search.",
+      "keywords": [
+        "dataset",
+        "search",
+        "saved_search",
+        "koredata"
+      ],
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "returns": "Saved search results.",
+      "invoke_path": "/api/skills/koredata_savedsearch_run/invoke",
+      "selection_description": "Run a named saved KoreData search definition. Pass its saved name, such as AINews; do not use a free-text search query."
+    },
+    {
+      "name": "koredata_get_sentence",
+      "purpose": "Fetch one indexed KoreData sentence by locator.",
+      "keywords": [
+        "dataset",
+        "sentence",
+        "read",
+        "koredata"
+      ],
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "locator": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "locator"
+        ]
+      },
+      "returns": "Sentence text and provenance.",
+      "invoke_path": "/api/skills/koredata_get_sentence/invoke",
+      "selection_description": "Fetch one indexed KoreData sentence by locator."
+    },
+    {
+      "name": "koredata_get_feed_entry",
+      "purpose": "Fetch a complete KoreFeed entry.",
+      "keywords": [
+        "dataset",
+        "feed",
+        "article",
+        "read",
+        "koredata"
+      ],
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "domain": {
+            "type": "string"
+          },
+          "entry_id": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "domain",
+          "entry_id"
+        ]
+      },
+      "returns": "Complete feed entry.",
+      "invoke_path": "/api/skills/koredata_get_feed_entry/invoke",
+      "selection_description": "Read one KoreFeed entry only when you already have its domain and numeric entry_id; do not invent either value."
+    },
+    {
+      "name": "koredata_get_reference_article",
+      "purpose": "Fetch a complete KoreReference article by title.",
+      "keywords": [
+        "dataset",
+        "reference",
+        "article",
+        "read",
+        "koredata"
+      ],
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "title"
+        ]
+      },
+      "returns": "Complete reference article.",
+      "invoke_path": "/api/skills/koredata_get_reference_article/invoke",
+      "selection_description": "Fetch a complete KoreReference article by title."
+    },
+    {
+      "name": "koredata_find_library_book",
+      "purpose": "Find library books by title.",
+      "keywords": [
+        "dataset",
+        "library",
+        "book",
+        "search",
+        "koredata"
+      ],
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "title"
+        ]
+      },
+      "returns": "Matching library books.",
+      "invoke_path": "/api/skills/koredata_find_library_book/invoke",
+      "selection_description": "Find library books by title."
+    },
+    {
+      "name": "koredata_get_library_index",
+      "purpose": "List the complete KoreLibrary book index.",
+      "keywords": [
+        "dataset",
+        "library",
+        "book",
+        "list",
+        "koredata"
+      ],
+      "parameters": {
+        "type": "object",
+        "properties": {}
+      },
+      "returns": "Library book index.",
+      "invoke_path": "/api/skills/koredata_get_library_index/invoke",
+      "selection_description": "List the complete KoreLibrary book index."
+    },
+    {
+      "name": "koredata_get_library_book_chunk",
+      "purpose": "Read a chunk of a KoreLibrary book.",
+      "keywords": [
+        "dataset",
+        "library",
+        "book",
+        "read",
+        "koredata"
+      ],
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "book_id": {
+            "type": "string"
+          },
+          "offset_chars": {
+            "type": "integer",
+            "default": 0
+          },
+          "length_chars": {
+            "type": "integer",
+            "default": 8000
+          }
+        },
+        "required": [
+          "book_id"
+        ]
+      },
+      "returns": "Book text chunk and next offset.",
+      "invoke_path": "/api/skills/koredata_get_library_book_chunk/invoke",
+      "selection_description": "Read a chunk of a KoreLibrary book."
+    },
+    {
+      "name": "koredata_update_library_book",
+      "purpose": "Update selected metadata or content fields of a KoreLibrary book.",
+      "keywords": [
+        "dataset",
+        "library",
+        "book",
+        "update",
+        "write",
+        "koredata"
+      ],
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "book_id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "author": {
+            "type": "string"
+          },
+          "year": {
+            "type": "integer"
+          },
+          "language": {
+            "type": "string"
+          },
+          "genre": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "source_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "book_id"
+        ]
+      },
+      "returns": "Updated library book.",
+      "invoke_path": "/api/skills/koredata_update_library_book/invoke",
+      "selection_description": "Update selected metadata or content fields of a KoreLibrary book."
+    },
+    {
+      "name": "koredata_repair_library_book_anchors",
+      "purpose": "Repair stored hyperlink anchor spans in a KoreLibrary book.",
+      "keywords": [
+        "dataset",
+        "library",
+        "book",
+        "repair",
+        "koredata"
+      ],
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "book_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "book_id"
+        ]
+      },
+      "returns": "Anchor repair result.",
+      "invoke_path": "/api/skills/koredata_repair_library_book_anchors/invoke",
+      "selection_description": "Repair stored hyperlink anchor spans in a KoreLibrary book."
+    },
+    {
+      "name": "koredata_get_rag_chunk",
+      "purpose": "Fetch complete content of a KoreRAG chunk.",
+      "keywords": [
+        "dataset",
+        "rag",
+        "read",
+        "koredata"
+      ],
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "chunk_id": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "chunk_id"
+        ]
+      },
+      "returns": "Complete RAG chunk.",
+      "invoke_path": "/api/skills/koredata_get_rag_chunk/invoke",
+      "selection_description": "Fetch complete content of a KoreRAG chunk."
+    },
+    {
+      "name": "koredata_get_scrape_chunk",
+      "purpose": "Fetch complete content of a KoreScrape chunk.",
+      "keywords": [
+        "dataset",
+        "scrape",
+        "read",
+        "koredata"
+      ],
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "chunk_id": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "chunk_id"
+        ]
+      },
+      "returns": "Complete scraped content chunk.",
+      "invoke_path": "/api/skills/koredata_get_scrape_chunk/invoke",
+      "selection_description": "Fetch complete content of a KoreScrape chunk."
+    },
+    {
+      "name": "koredata_get_full_text",
+      "purpose": "Fetch full content from a KoreData search artifact reference.",
+      "keywords": [
+        "dataset",
+        "read",
+        "full_text",
+        "koredata"
+      ],
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "refid": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "refid"
+        ]
+      },
+      "returns": "Full artifact content.",
+      "invoke_path": "/api/skills/koredata_get_full_text/invoke",
+      "selection_description": "Fetch full content from a KoreData search artifact reference."
+    }
   ]
 }

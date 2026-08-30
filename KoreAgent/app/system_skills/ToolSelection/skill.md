@@ -18,7 +18,7 @@
 ## Parameters
 
 ### `tools_keywords_list()`
-- Lists the reviewed keyword tags, exact tool names, service, and compact purpose summaries for each tag.
+- Lists every reviewed keyword tag in a compact response guaranteed to fit in the model tool-result budget.
 - Local tags are maintained in `tool_keywords.json`; registered-service tags come from the live SkillManager registry. This does not inspect or infer keywords from the prompt.
 
 ### `select_tools_by_keyword(keywords)`
@@ -32,9 +32,9 @@
 - `tool_names` *(required)* - list of exact tool names to add to the active FIFO working set for the current conversation.
 
 ## Output
-- `tools_catalog_list()` - returns all local and registered tool records with name, origin, service, tags, parameter names, short description, and active state.
-- `tools_keywords_list()` - returns reviewed capability entries containing the exact keyword, tool names, count, service/purpose summary, and the activation instruction.
-- `select_tools_by_keyword(...)` - returns matched and unknown tags, activated tools, compact service/purpose/parameter details for each match, evictions, and the updated active-tool list.
+- `tools_catalog_list()` - returns all local and registered exact tool names. Activate one to receive its full schema.
+- `tools_keywords_list()` - returns every exact reviewed capability tag and the activation instruction.
+- `select_tools_by_keyword(...)` - returns matched and unknown tags, activated tools, each tool's reviewed selection description and parameter names, evictions, and the updated active-tool list.
 - `tools_active_add(...)` - returns a dict describing which exact names were added, promoted, unknown, or evicted, plus the updated active-tool list.
 
 ## Triggers

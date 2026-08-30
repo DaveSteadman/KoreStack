@@ -9,6 +9,6 @@
 
 """Export helpers for dataset records."""
 
-from datasets_pkg.service import dataset_write_koredoc
+from system_skills.WorkingData.collections.service import dataset_write_koredoc
 
 __all__ = ["dataset_write_koredoc"]

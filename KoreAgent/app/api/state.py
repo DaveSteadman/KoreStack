@@ -19,8 +19,6 @@
 # - finish_run_event_queue: Implements the finish run event queue operation for this module.
 # - get_run_event_queues: Returns run event queues for this module.
 # - get_run_queues_lock: Returns run queues lock for this module.
-# - get_llm_direct_enabled: Returns llm direct enabled for this module.
-# - set_llm_direct_enabled: Sets llm direct enabled for this module.
 # - pop_pending_switch: Implements the pop pending switch operation for this module.
 # - set_pending_switch: Sets pending switch for this module.
 # - format_sse: Formats sse for this module.
@@ -61,9 +59,6 @@ _startup_state: dict[str, Any] = {
     },
 }
 _startup_state_lock: threading.Lock = threading.Lock()
-
-_llm_direct_enabled: bool = False
-
 
 def setup(
     config: OrchestratorConfig,
@@ -184,15 +179,6 @@ def get_run_event_queues() -> dict[str, queue.Queue]:
 
 def get_run_queues_lock() -> threading.Lock:
     return _run_queues_lock
-
-
-def get_llm_direct_enabled() -> bool:
-    return _llm_direct_enabled
-
-
-def set_llm_direct_enabled(enabled: bool) -> None:
-    global _llm_direct_enabled
-    _llm_direct_enabled = bool(enabled)
 
 
 def pop_pending_switch() -> dict | None:

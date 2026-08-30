@@ -63,38 +63,20 @@ CODE_DIR  = REPO_ROOT / "KoreAgent" / "app"
 if str(CODE_DIR) not in sys.path:
     sys.path.insert(0, str(CODE_DIR))
 
-import datasets_pkg as datasets_module
+import system_skills.WorkingData.collections as datasets_module
 from agent.tool_runtime import loop as tool_loop_module
 from sessions import tool_selection as tool_selection_state_module
 from conversation_state import decode_background_context
 from conversation_state import encode_background_context
 from skill_executor import execute_tool_call
-from datasets_pkg import store as datasets_store
+from system_skills.WorkingData.collections import store as datasets_store
 from agent.orchestration.engine import ConversationHistory
 from agent.orchestration.engine import OrchestratorConfig
 from agent.orchestration.engine import orchestrate_prompt
 from input_layer import koreconv_input as koreconv_input_module
-from datasets_pkg import auto_route_tool_result
-from datasets_pkg import clear_session_datasets
-from datasets_pkg import dataset_drop_where
-from datasets_pkg import dataset_expand_full_text
-from datasets_pkg import dataset_filter
-from datasets_pkg import dataset_get
-from datasets_pkg import dataset_inspect
-from datasets_pkg import dataset_list
-from datasets_pkg import dataset_rename
-from datasets_pkg import dataset_save
-from datasets_pkg import dataset_write_koredoc
-from datasets_pkg import delete_session_datasets
-from datasets_pkg import get_persisted_datasets_payload
-from datasets_pkg import restore_persisted_datasets
+from system_skills.WorkingData.collections import auto_route_tool_result, clear_session_datasets, dataset_drop_where, dataset_expand_full_text, dataset_filter, dataset_get, dataset_inspect, dataset_list, dataset_rename, dataset_save, dataset_write_koredoc, delete_session_datasets, get_persisted_datasets_payload, restore_persisted_datasets
 from prompt_builder import build_system_message
-from scratchpad import scratchpad_clear
-from scratchpad import get_store
-from scratchpad import scratchpad_load
-from scratchpad import scratchpad_list
-from scratchpad import scratchpad_query
-from scratchpad import scratchpad_save
+from working_data import working_data_clear as scratchpad_clear, get_working_data_values as get_store, working_data_get as scratchpad_load, working_data_list as scratchpad_list, working_data_query as scratchpad_query, working_data_save as scratchpad_save
 from sessions.runtime import get_active_session_id
 from sessions.runtime import bind_session
 from skills_catalog_builder import build_tool_definitions
@@ -106,11 +88,11 @@ from system_skills.FileAccess.file_access_skill import file_read
 from system_skills.FileAccess.file_access_skill import folder_create
 from KoreLiveWeb.app.web_fetch    import fetch_page_text
 from KoreLiveWeb.app.web_search   import search_web
-from skills.SystemInfo.system_info_skill import get_system_info_string
+from system_skills.SystemInfo.system_info_skill import get_system_info_string
 from KoreDocs.app import korefile as koredocs_korefile
 from KoreCommon import datauser_fs as datauser_fs_module
 from agent.tool_runtime.loop import normalize_tool_request
-from agent.tool_runtime.loop import _derive_auto_scratchpad_key
+from agent.tool_runtime.loop import _derive_auto_working_data_key
 from agent.tool_runtime.loop import _extract_graph_connection_batch_from_text
 from tool_result import ToolCallResult
 import api.app as api_module
@@ -134,7 +116,7 @@ class GuardrailIntegrationTests(unittest.TestCase):
         reset_guardrail_state()
 
     def test_dataset_get_uses_deterministic_scratchpad_key(self) -> None:
-        key = _derive_auto_scratchpad_key(
+        key = _derive_auto_working_data_key(
             "dataset_get",
             {"name": "drone_test_raw_5", "offset": 20, "limit": 10, "fields": ["id", "title"]},
             7,

@@ -74,18 +74,14 @@ from conversation_state import encode_background_context
 from conversation_state import build_background_turn
 from conversation_state import estimate_next_turn_tokens
 from conversation_state import merge_background_turns
-from datasets_pkg.hydration import build_persisted_scratchpad_payload
-from datasets_pkg.hydration import coerce_persisted_datasets_payload
-from datasets_pkg.hydration import coerce_persisted_scratchpad_payload
-from datasets_pkg.hydration import get_persisted_datasets_payload
-from datasets_pkg.hydration import hydrate_session_state
 from agent.orchestration.engine import OrchestratorConfig
 from agent.orchestration.engine import orchestrate_prompt
 from input_layer.slash_processing import process_slash_prompt
 from sessions.session_factory import make_task_session
-from scratchpad import get_store
-from scratchpad import scratchpad_clear
-from scratchpad import scratchpad_save
+from working_data import build_persisted_working_data_payload
+from working_data import coerce_persisted_working_data_payload
+from working_data import hydrate_working_data
+from working_data import working_data_clear
 from utils.runtime_logger import SessionLogger
 from utils.workspace_utils import load_runtime_config
 
@@ -98,6 +94,7 @@ _DEFAULT_POLL_SECS      = 3
 _DEFAULT_TIMEOUT        = 8
 _SESSION_PREFIX         = "kc_conv_"
 _MAX_MODEL_ATTEMPTS     = 2
+_LLM_CONTEXT_OMITTED_TAG = "llm_context_omitted"
 _PLACEHOLDER_OUTPUT_RE  = re.compile(r"(?:<unused\d+>){4,}", re.IGNORECASE)
 _STRICT_JSON_REQUEST_RE = re.compile(
     r"\b(?:just|only)\s+(?:the\s+)?json\b|\bno\s+(?:explanations|preamble|markdown)\b",
@@ -139,6 +136,25 @@ def _latest_message(messages: list[dict]) -> dict | None:
         key=lambda item: (str(item.get("created_at") or ""), int(item.get("id") or 0)),
         default=None,
     )
+
+
+def _is_llm_context_omitted(message: dict) -> bool:
+    """Return whether a durable KoreChat message is retained for audit but hidden from LLM input."""
+    tags = message.get("tags")
+    if not isinstance(tags, list):
+        metadata = message.get("metadata")
+        if isinstance(metadata, str):
+            try:
+                metadata = json.loads(metadata)
+            except json.JSONDecodeError:
+                metadata = {}
+        tags = metadata.get("tags") if isinstance(metadata, dict) else []
+    if not isinstance(tags, list):
+        return False
+    return _LLM_CONTEXT_OMITTED_TAG in {
+        str(tag or "").strip().lower()
+        for tag in tags
+    }
 
 
 def _event_prompt_label(event: dict) -> str:
@@ -283,20 +299,18 @@ def _merge_conv_facts(scratchpad: dict, user_prompt: str, turn_count: int) -> di
     return updated
 
 
-def _coerce_conversation_scratchpad(conv: dict, push_log_line=None) -> dict[str, object]:
-    scratchpad = conv.get("scratchpad") or {}
-    if isinstance(scratchpad, str):
+def _coerce_conversation_working_data(conv: dict, push_log_line=None) -> dict[str, dict]:
+    working_data = conv.get("working_data") or {}
+    if isinstance(working_data, str):
         try:
-            scratchpad = json.loads(scratchpad)
+            working_data = json.loads(working_data)
         except Exception as exc:
             if push_log_line:
-                push_log_line(f"[KORECHAT] Conv {conv.get('id', '?')}: scratchpad JSON decode failed - prompt built without scratchpad: {exc}")
-            scratchpad = {}
-    return coerce_persisted_scratchpad_payload(scratchpad)
-
-
-def _coerce_conversation_datasets(conv: dict) -> dict[str, dict]:
-    return coerce_persisted_datasets_payload(conv.get("datasets") or {})
+                push_log_line(f"[KORECHAT] Conv {conv.get('id', '?')}: working_data JSON decode failed - prompt built without Working Data: {exc}")
+            working_data = {}
+    return coerce_persisted_working_data_payload(
+        working_data,
+    )
 
 
 # ----------------------------------------------------------------------------------------------------
@@ -304,30 +318,31 @@ def _build_prompt(conv: dict, messages: list[dict], push_log_line=None) -> str:
     """Build an LLM user prompt from a KoreChat conversation record and its messages."""
     background        = (conv.get("background_context") or "").strip()
     thread_summary    = (conv.get("thread_summary") or "").strip()
-    scratchpad = _coerce_conversation_scratchpad(conv, push_log_line=push_log_line)
-    datasets_payload = _coerce_conversation_datasets(conv)
+    working_data = _coerce_conversation_working_data(conv, push_log_line=push_log_line)
+    values_payload = working_data["values"]
+    collections_payload = working_data["collections"]
 
-    # Message history remains intact until the replacement archival design exists.
-    visible_messages = messages
+    # Omitted entries remain visible and auditable in KoreChat, but never become model input.
+    visible_messages = [message for message in messages if not _is_llm_context_omitted(message)]
 
     parts: list[str] = []
 
     if thread_summary and not background:
         parts.append(f"--- Prior conversation summary ---\n{thread_summary}")
 
-    if scratchpad:
-        kv = "\n".join(f"  {k}: {v}" for k, v in scratchpad.items())
-        parts.append(f"--- Scratchpad ---\n{kv}")
+    if values_payload:
+        kv = "\n".join(f"  {k}: {v}" for k, v in values_payload.items())
+        parts.append(f"--- Working Data values ---\n{kv}")
 
-    if datasets_payload:
+    if collections_payload:
         lines: list[str] = []
-        for dataset_name, manifest in sorted(datasets_payload.items()):
+        for dataset_name, manifest in sorted(collections_payload.items()):
             count = int(manifest.get("count", 0))
             schema = manifest.get("schema") or []
             fields = ", ".join(str(field) for field in schema[:5])
             suffix = f" fields=[{fields}]" if fields else ""
             lines.append(f"  {dataset_name}: {count} records{suffix}")
-        parts.append("--- Datasets ---\n" + "\n".join(lines))
+        parts.append("--- Working Data collections ---\n" + "\n".join(lines))
 
     if visible_messages:
         lines: list[str] = []
@@ -372,6 +387,8 @@ def _build_conversation_history(
     for message in messages:
         if current_inbound_id is not None and message.get("id") == current_inbound_id:
             break
+        if _is_llm_context_omitted(message):
+            continue
         direction = str(message.get("direction") or "").strip()
         content = str(message.get("content") or "").strip()
         if direction not in {"inbound", "outbound"} or not content:
@@ -416,10 +433,11 @@ def _handle_compress_needed(
         _complete_event(base, event_id, "completed", push_log_line, context=f"conv {conv_id}")
         return
 
+    context_messages = [message for message in raw if not _is_llm_context_omitted(message)]
     archived_turns: list[dict] = []
     pending_prompt: str | None = None
     input_chars                = 0
-    for message in raw:
+    for message in context_messages:
         content     = (message.get("content") or "").strip()
         direction   = message.get("direction")
         input_chars += len(content)
@@ -562,12 +580,11 @@ def _handle_event(
 
         # Restore persisted scratchpad state into the active session before orchestration
         # so scratchpad tool calls operate on the KC-backed conversation state.
-        hydrate_session_state(
-            conv.get("scratchpad") or {},
+        hydrate_working_data(
+            conv.get("working_data") or {},
             session_id,
-            datasets_payload=conv.get("datasets") or {},
-            scratchpad_clearer=scratchpad_clear,
-            scratchpad_restorer=scratchpad_save,
+            legacy_values=conv.get("scratchpad") or {},
+            legacy_collections=conv.get("datasets") or {},
             warning_logger=lambda message: push_log_line(f"[KORECHAT] Conv {conv_id}: {message}"),
         )
 
@@ -603,7 +620,7 @@ def _handle_event(
             def _clear_korechat_history() -> None:
                 nonlocal history_cleared
                 session_ctx.clear()
-                scratchpad_clear(session_id)
+                working_data_clear(session_id)
                 _http_delete(base, f"/conversations/{conv_id}/history")
                 history_cleared = True
 
@@ -616,9 +633,7 @@ def _handle_event(
                 session_id      = session_id,
                 chat_name       = str(conv.get("external_id") or "").strip() or None,
             )
-            current_scratchpad   = get_store(session_id=session_id)
-            persisted_scratchpad = build_persisted_scratchpad_payload(current_scratchpad)
-            persisted_datasets   = get_persisted_datasets_payload(session_id)
+            persisted_working_data = build_persisted_working_data_payload(session_id)
             try:
                 _http_post(base, f"/conversations/{conv_id}/messages", {
                     "direction":         "outbound",
@@ -638,8 +653,7 @@ def _handle_event(
                 _http_patch(base, f"/conversations/{conv_id}", {
                     "status":     "active",
                     "turn_count": 0 if history_cleared else turn_count + 1,
-                    "scratchpad": persisted_scratchpad,
-                    "datasets":   persisted_datasets,
+                    "working_data": persisted_working_data,
                 })
             except Exception as exc:
                 push_log_line(f"[KORECHAT] Conv {conv_id}: failed to persist slash response: {exc}")
@@ -702,11 +716,13 @@ def _handle_event(
             reply = "(Agent response unavailable: the local model returned an invalid response. Please retry.)"
             push_log_line(f"[KORECHAT] Conv {conv_id}: persisted controlled agent-error response after retry.")
 
-        current_scratchpad = get_store(session_id=session_id)
+        current_scratchpad = build_persisted_working_data_payload(session_id)["values"]
         fact_source_prompt = str(event_payload.get("visible_text") or "").strip() or user_prompt
         current_scratchpad = _merge_conv_facts(current_scratchpad, fact_source_prompt, turn_count)
-        persisted_scratchpad = build_persisted_scratchpad_payload(current_scratchpad)
-        persisted_datasets = get_persisted_datasets_payload(session_id)
+        persisted_working_data = {
+            "values": current_scratchpad,
+            "collections": build_persisted_working_data_payload(session_id)["collections"],
+        }
 
         # Item 4: Serialize session context turns for persistence in KoreChat background_context.
         # This lets the model reference prior fetched data after restarts or on resume.
@@ -757,8 +773,7 @@ def _handle_event(
                 "status":             "active",
                 "token_estimate":     new_token_estimate,
                 "turn_count":         turn_count + 1,
-                "scratchpad":         persisted_scratchpad,
-                "datasets":           persisted_datasets,
+                "working_data":       persisted_working_data,
                 "background_context": new_background_context,
             })
         except Exception as exc:

@@ -82,7 +82,7 @@ from uuid import uuid4
 import httpx
 
 from KoreCommon.suite_paths import get_suite_urls_map
-from datasets_pkg import store as datasets_store
+from system_skills.WorkingData.collections import store as datasets_store
 from sessions.runtime import get_active_session_id
 
 

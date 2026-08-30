@@ -162,6 +162,20 @@ def _build_inactive_tool_error(requested_tool_name: str) -> str:
     )
 
 
+def _is_local_system_tool(skills_payload: dict, tool_name: str) -> bool:
+    """Return whether a catalogued local function belongs to a permanent system skill."""
+    requested = str(tool_name or "").strip()
+    return any(
+        skill.get("is_system_skill") is True
+        and requested in {
+            str(signature).split("(", 1)[0].strip()
+            for signature in skill.get("functions", [])
+        }
+        for skill in skills_payload.get("skills", [])
+        if isinstance(skill, dict)
+    )
+
+
 # ====================================================================================================
 # MARK: ERROR DETECTION
 # ====================================================================================================
@@ -211,7 +225,11 @@ def execute_tool_call(
     # The schema supplied to the model is deliberately conversation-specific.
     # Enforce that same boundary at dispatch time so a hallucinated (or stale)
     # registered tool name cannot bypass the enabled-tool list.
-    if active_tool_names is not None and tool_name not in active_tool_names:
+    if (
+        active_tool_names is not None
+        and tool_name not in active_tool_names
+        and not _is_local_system_tool(skills_payload, tool_name)
+    ):
         raise RuntimeError(_build_inactive_tool_error(tool_name))
 
     registered = skill_manager.get_skill(tool_name)

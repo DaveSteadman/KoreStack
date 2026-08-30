@@ -162,6 +162,10 @@ def register_skills_routes(
         payload = _get_skills_payload_or_raise()
         if not get_web_skills_enabled():
             payload = filter_web_skills(payload)
+        from sessions.tool_catalog import filter_local_payload
+        from sessions.tool_catalog import local_tool_names
+
+        payload = filter_local_payload(payload, local_tool_names(payload))
         local_tool_defs = build_tool_definitions(payload)
         local_tool_map: dict[str, dict[str, Any]] = {}
         for tool_def in local_tool_defs:

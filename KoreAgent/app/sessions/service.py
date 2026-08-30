@@ -72,13 +72,10 @@ class SessionService:
         kc_client,
         conversation_history_cls,
         session_context_cls,
-        hydrate_session_state,
-        scratchpad_clear,
-        scratchpad_restore_key,
-        get_scratchpad_store,
-        build_persisted_scratchpad_payload,
-        get_persisted_datasets_payload,
-        delete_persisted_session_datasets,
+        hydrate_working_data,
+        working_data_clear,
+        working_data_save,
+        build_persisted_working_data_payload,
         request_stop,
         task_queue,
         run_event_queues: dict[str, queue.Queue],
@@ -90,13 +87,10 @@ class SessionService:
         self._kc_client                           = kc_client
         self._conversation_history_cls            = conversation_history_cls
         self._session_context_cls                 = session_context_cls
-        self._hydrate_session_state               = hydrate_session_state
-        self._scratchpad_clear                    = scratchpad_clear
-        self._scratchpad_restore_key              = scratchpad_restore_key
-        self._get_scratchpad_store                = get_scratchpad_store
-        self._build_persisted_scratchpad_payload  = build_persisted_scratchpad_payload
-        self._get_persisted_datasets_payload      = get_persisted_datasets_payload
-        self._delete_persisted_session_datasets   = delete_persisted_session_datasets
+        self._hydrate_working_data                = hydrate_working_data
+        self._working_data_clear                  = working_data_clear
+        self._working_data_save                   = working_data_save
+        self._build_persisted_working_data_payload = build_persisted_working_data_payload
         self._request_stop                        = request_stop
         self._task_queue                          = task_queue
         self._run_event_queues                    = run_event_queues
@@ -328,12 +322,11 @@ class SessionService:
         if conv is None:
             return history
 
-        self._hydrate_session_state(
-            conv.get("scratchpad") or {},
+        self._hydrate_working_data(
+            conv.get("working_data") or {},
             session_id,
-            datasets_payload = conv.get("datasets") or {},
-            scratchpad_clearer  = self._scratchpad_clear,
-            scratchpad_restorer = self._scratchpad_restore_key,
+            legacy_values=conv.get("scratchpad") or {},
+            legacy_collections=conv.get("datasets") or {},
             warning_logger   = lambda message: print(f"[session] Warning: {message}", flush=True),
         )
 
@@ -378,7 +371,7 @@ class SessionService:
         if not named:
             return
         for key, value in named.items():
-            self._scratchpad_restore_key(key, value, session_id=session_id)
+            self._working_data_save(key, value, session_id=session_id)
 
     def _archive_old_history(self, history, session_context, *, prompt_tokens: int, num_ctx: int) -> None:
         if num_ctx <= 0 or prompt_tokens <= 0:
@@ -418,11 +411,6 @@ class SessionService:
         if conv is None:
             return
         try:
-            named_scratch = {
-                key: value
-                for key, value in self._get_scratchpad_store(session_id).items()
-                if not key.startswith(("_tc_", "_cx_", "research_page_"))
-            }
             archived_turns = session_context.get_turns()
             persisted_background = (
                 encode_background_context(archived_turns, conv.get("background_context") or "")
@@ -432,8 +420,7 @@ class SessionService:
             self.kc_patch(
                 f"/conversations/{conv['id']}",
                 {
-                    "scratchpad":         self._build_persisted_scratchpad_payload(named_scratch),
-                    "datasets":           self._get_persisted_datasets_payload(session_id),
+                    "working_data":       self._build_persisted_working_data_payload(session_id),
                     "background_context": persisted_background,
                 },
             )
@@ -445,16 +432,10 @@ class SessionService:
         if conv is None:
             return
         try:
-            named_scratch = {
-                key: value
-                for key, value in self._get_scratchpad_store(session_id).items()
-                if not key.startswith(("_tc_", "_cx_", "research_page_"))
-            }
             self.kc_patch(
                 f"/conversations/{conv['id']}",
                 {
-                    "scratchpad": self._build_persisted_scratchpad_payload(named_scratch),
-                    "datasets":   self._get_persisted_datasets_payload(session_id),
+                    "working_data": self._build_persisted_working_data_payload(session_id),
                 },
             )
         except Exception as exc:
@@ -464,8 +445,7 @@ class SessionService:
                 self._kc_conv_cache.pop(session_id, None)
 
     def delete_session_state(self, session_id: str) -> None:
-        self._scratchpad_clear(session_id)
-        self._delete_persisted_session_datasets(session_id)
+        self._working_data_clear(session_id)
         clear_session_tools_active(session_id)
         with self._kc_conv_cache_lock:
             self._kc_conv_cache.pop(session_id, None)

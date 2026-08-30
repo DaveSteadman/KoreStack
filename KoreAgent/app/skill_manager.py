@@ -20,7 +20,7 @@ from utils.workspace_utils import get_controldata_dir
 REGISTRY_FILE = get_controldata_dir() / "koreagent" / "skill_registry.json"
 CATALOG_EXPORT_FILE = get_controldata_dir() / "koreagent" / "skill_manager_catalog.json"
 CATALOG_EXPORT_INTERVAL_SECONDS = 60
-LOCAL_SKILLS_CATALOG_FILE = Path(__file__).with_name("skills") / "skills_catalog.json"
+LOCAL_SKILLS_CATALOG_FILE = Path(__file__).parent / "system_skills" / "skills_catalog.json"
 LOCAL_TOOL_KEYWORDS_FILE = Path(__file__).parent / "system_skills" / "ToolSelection" / "tool_keywords.json"
 
 
@@ -60,11 +60,14 @@ class SkillManager:
             raise ValueError("each skill must be an object")
         name = str(raw.get("name") or "").strip()
         purpose = str(raw.get("purpose") or "").strip()
+        selection_description = str(raw.get("selection_description") or "").strip()
         invoke_url = str(raw.get("invoke_url") or "").strip()
         parameters = raw.get("parameters")
         keywords = raw.get("keywords")
-        if not name or not purpose or not invoke_url:
-            raise ValueError("each skill requires name, purpose, and invoke_url")
+        if not name or not purpose or not selection_description or not invoke_url:
+            raise ValueError("each skill requires name, purpose, selection_description, and invoke_url")
+        if len(selection_description) > 400:
+            raise ValueError(f"skill '{name}' selection_description must be at most 400 characters")
         if not isinstance(parameters, dict) or parameters.get("type") != "object":
             raise ValueError(f"skill '{name}' parameters must be a JSON-schema object")
         if not isinstance(keywords, list):
@@ -80,6 +83,7 @@ class SkillManager:
             "name": name,
             "service": service_id,
             "purpose": purpose,
+            "selection_description": selection_description,
             "parameters": parameters,
             "keywords": clean_keywords,
             "invoke_url": invoke_url,
@@ -169,6 +173,7 @@ class SkillManager:
                         "service": "koreagent",
                         "origin": "local",
                         "purpose": str(skill.get("purpose") or "").strip(),
+                        "selection_description": str(skill.get("purpose") or "").strip(),
                         "parameters": parameter_descriptions.get(name, {}),
                         "keywords": [str(keyword) for keyword in keywords if str(keyword).strip()],
                         "returns": list(skill.get("outputs") or []),

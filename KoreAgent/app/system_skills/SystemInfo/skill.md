@@ -6,7 +6,7 @@ Provide runtime system information including OS name, Python and Ollama versions
 ## Trigger keyword: system info, RAM or disk space, available memory, or OS and runtime version details
 
 ## Interface
-- Module: `KoreAgent/app/skills/SystemInfo/system_info_skill.py`
+- Module: `KoreAgent/app/system_skills/SystemInfo/system_info_skill.py`
 - Functions:
   - `get_system_info_dict()`
 

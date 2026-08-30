@@ -11,10 +11,10 @@
 
 from pathlib import Path
 
-from datasets_pkg import clear_session_datasets
-from datasets_pkg import delete_session_datasets
+from system_skills.WorkingData.collections import clear_session_datasets
+from system_skills.WorkingData.collections import delete_session_datasets
 from skills_catalog_builder import load_skills_payload
-from scratchpad import scratchpad_clear
+from working_data import working_data_clear as scratchpad_clear
 
 
 DATASET_SESSION_IDS: tuple[str, ...] = (
@@ -32,7 +32,7 @@ DATASET_SESSION_IDS: tuple[str, ...] = (
 
 
 def load_test_skills_payload(code_dir: Path) -> dict:
-    return load_skills_payload(code_dir / "skills" / "skills_catalog.json")
+    return load_skills_payload(code_dir / "system_skills" / "skills_catalog.json")
 
 
 def reset_guardrail_state() -> None:

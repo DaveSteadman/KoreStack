@@ -72,9 +72,9 @@ from utils.workspace_utils import normalize_module_path
 # MARK: CONSTANTS
 # ====================================================================================================
 SKILLS_SCHEMA_VERSION        = "1.0"
-DEFAULT_SKILLS_ROOT          = Path(__file__).resolve().parent / "skills"
 DEFAULT_SYSTEM_SKILLS_ROOT   = Path(__file__).resolve().parent / "system_skills"
-DEFAULT_OUTPUT_FILE          = DEFAULT_SKILLS_ROOT / "skills_catalog.json"
+DEFAULT_SKILLS_ROOT          = DEFAULT_SYSTEM_SKILLS_ROOT
+DEFAULT_OUTPUT_FILE          = DEFAULT_SYSTEM_SKILLS_ROOT / "skills_catalog.json"
 DEFAULT_SUMMARY_MODEL = "gpt-oss:20b"
 _LOADED_PAYLOAD_CACHE: dict[tuple[str, float, int], dict] = {}
 _TOOL_DEFS_CACHE: dict[str, list[dict]] = {}
@@ -126,7 +126,11 @@ def _load_module_from_path(module_path: str):
 
     module = importlib.util.module_from_spec(spec)
     sys.modules[dynamic_module_name] = module
-    spec.loader.exec_module(module)
+    try:
+        spec.loader.exec_module(module)
+    except Exception:
+        sys.modules.pop(dynamic_module_name, None)
+        return None
     return module
 
 
@@ -174,7 +178,7 @@ def find_skill_files(skills_root: Path) -> list[Path]:
     found = list(skills_root.rglob("skill.md"))
     if DEFAULT_SYSTEM_SKILLS_ROOT.exists() and DEFAULT_SYSTEM_SKILLS_ROOT.resolve() != skills_root.resolve():
         found.extend(DEFAULT_SYSTEM_SKILLS_ROOT.rglob("skill.md"))
-    return sorted(found)
+    return sorted(path for path in found if path.parent.name not in {"Datasets", "Scratchpad"})
 
 
 # ----------------------------------------------------------------------------------------------------

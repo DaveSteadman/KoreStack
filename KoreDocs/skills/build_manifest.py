@@ -23,6 +23,7 @@ _EXTRA_NATIVE_SKILLS = [
     {
         "name": "koredocs_search",
         "purpose": "Search the full text of KoreDocs files.",
+        "selection_description": "Search text inside stored KoreDocs files; use a document type or folder filter only when the user specifies one.",
         "keywords": ["document", "file_handling", "search", "full_text"],
         "parameters": {
             "type": "object",
@@ -130,6 +131,7 @@ def _skill(node: ast.FunctionDef | ast.AsyncFunctionDef, source_file: str) -> di
     return {
         "name": node.name,
         "purpose": _purpose(node.name, ast.get_docstring(node) or ""),
+        "selection_description": _purpose(node.name, ast.get_docstring(node) or ""),
         "keywords": _keywords(source_file, node.name),
         "parameters": parameters,
         "returns": "A KoreDocs operation result.",

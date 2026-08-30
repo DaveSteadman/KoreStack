@@ -6,6 +6,7 @@
     {
       "name": "koredocs_diag_create",
       "purpose": "KoreDocs: diagram create.",
+      "selection_description": "KoreDocs: diagram create.",
       "keywords": [
         "diagram",
         "document",
@@ -44,6 +45,7 @@
     {
       "name": "koredocs_diag_spec_get",
       "purpose": "Return a comprehensive description of the .korediag JSON format specification.",
+      "selection_description": "Return a comprehensive description of the .korediag JSON format specification.",
       "keywords": [
         "diagram",
         "document",
@@ -59,6 +61,7 @@
     {
       "name": "koredocs_doc_create",
       "purpose": "KoreDocs: document create.",
+      "selection_description": "KoreDocs: document create.",
       "keywords": [
         "document",
         "koredoc",
@@ -107,6 +110,7 @@
     {
       "name": "koredocs_doc_create_from_scratchpad",
       "purpose": "Create a KoreDoc from an exact prior tool result held in the scratchpad.",
+      "selection_description": "Create a KoreDoc from an exact prior tool result held in the scratchpad.",
       "keywords": [
         "document",
         "koredoc",
@@ -155,6 +159,7 @@
     {
       "name": "koredocs_doc_markdown_append",
       "purpose": "Append markdown to the end of a .koredoc document.",
+      "selection_description": "Append markdown to the end of a .koredoc document.",
       "keywords": [
         "document",
         "koredoc",
@@ -189,6 +194,7 @@
     {
       "name": "koredocs_doc_outline_get",
       "purpose": "Return the heading outline for a .koredoc document.",
+      "selection_description": "Return the heading outline for a .koredoc document.",
       "keywords": [
         "document",
         "koredoc",
@@ -213,6 +219,7 @@
     {
       "name": "koredocs_doc_section_insert",
       "purpose": "Insert a markdown block into a .koredoc document by section anchor.",
+      "selection_description": "Insert a markdown block into a .koredoc document by section anchor.",
       "keywords": [
         "document",
         "koredoc",
@@ -262,6 +269,7 @@
     {
       "name": "koredocs_doc_section_read",
       "purpose": "Read a full .koredoc document, one heading section, or an explicit line range.",
+      "selection_description": "Read a full .koredoc document, one heading section, or an explicit line range.",
       "keywords": [
         "document",
         "koredoc",
@@ -301,6 +309,7 @@
     {
       "name": "koredocs_doc_section_replace",
       "purpose": "Replace one heading section inside a .koredoc document.",
+      "selection_description": "Replace one heading section inside a .koredoc document.",
       "keywords": [
         "document",
         "koredoc",
@@ -340,6 +349,7 @@
     {
       "name": "koredocs_file_create",
       "purpose": "Create a file in the KoreDocs file tree.",
+      "selection_description": "Create a file in the KoreDocs file tree.",
       "keywords": [
         "document",
         "file_handling"
@@ -377,6 +387,7 @@
     {
       "name": "koredocs_file_delete",
       "purpose": "KoreDocs: file delete.",
+      "selection_description": "KoreDocs: file delete.",
       "keywords": [
         "document",
         "file_handling"
@@ -404,6 +415,7 @@
     {
       "name": "koredocs_file_format_get",
       "purpose": "KoreDocs: file format get.",
+      "selection_description": "KoreDocs: file format get.",
       "keywords": [
         "document",
         "file_handling",
@@ -427,6 +439,7 @@
     {
       "name": "koredocs_file_get",
       "purpose": "KoreDocs: file get.",
+      "selection_description": "KoreDocs: file get.",
       "keywords": [
         "document",
         "file_handling"
@@ -448,6 +461,7 @@
     {
       "name": "koredocs_file_history_get",
       "purpose": "Retrieve a historical artefact snapshot, including content and metadata.",
+      "selection_description": "Retrieve a historical artefact snapshot, including content and metadata.",
       "keywords": [
         "document",
         "file_handling",
@@ -476,6 +490,7 @@
     {
       "name": "koredocs_file_history_list",
       "purpose": "List immutable content-and-metadata revisions for an artefact.",
+      "selection_description": "List immutable content-and-metadata revisions for an artefact.",
       "keywords": [
         "document",
         "file_handling",
@@ -504,6 +519,7 @@
     {
       "name": "koredocs_file_update",
       "purpose": "KoreDocs: file update.",
+      "selection_description": "KoreDocs: file update.",
       "keywords": [
         "document",
         "file_handling"
@@ -546,6 +562,7 @@
     {
       "name": "koredocs_files_list",
       "purpose": "KoreDocs: files list.",
+      "selection_description": "KoreDocs: files list.",
       "keywords": [
         "document",
         "file_handling"
@@ -570,6 +587,7 @@
     {
       "name": "koredocs_files_metadata_search",
       "purpose": "Search artefacts using structured metadata rather than filename or body words.",
+      "selection_description": "Search artefacts using structured metadata rather than filename or body words.",
       "keywords": [
         "document",
         "file_handling",
@@ -608,6 +626,7 @@
     {
       "name": "koredocs_files_search",
       "purpose": "KoreDocs: files search.",
+      "selection_description": "KoreDocs: files search.",
       "keywords": [
         "document",
         "file_handling",
@@ -646,6 +665,7 @@
     {
       "name": "koredocs_folder_create",
       "purpose": "Create a folder in the KoreDocs file tree and return the resulting folder record.",
+      "selection_description": "Create a folder in the KoreDocs file tree and return the resulting folder record.",
       "keywords": [
         "document",
         "file_handling",
@@ -669,6 +689,7 @@
     {
       "name": "koredocs_folder_structure_get",
       "purpose": "KoreDocs: folder structure get.",
+      "selection_description": "KoreDocs: folder structure get.",
       "keywords": [
         "document",
         "file_handling",
@@ -684,6 +705,7 @@
     {
       "name": "koredocs_folders_list",
       "purpose": "KoreDocs: folders list.",
+      "selection_description": "KoreDocs: folders list.",
       "keywords": [
         "document",
         "file_handling",
@@ -699,6 +721,7 @@
     {
       "name": "koredocs_metadata_find_variants",
       "purpose": "Find metadata field names that are close to a requested name, to expose naming drift.",
+      "selection_description": "Find metadata field names that are close to a requested name, to expose naming drift.",
       "keywords": [
         "document",
         "koredoc",
@@ -728,6 +751,7 @@
     {
       "name": "koredocs_metadata_inventory",
       "purpose": "Inventory embedded KoreDoc metadata keys, values, counts, and example files.",
+      "selection_description": "Inventory embedded KoreDoc metadata keys, values, counts, and example files.",
       "keywords": [
         "document",
         "koredoc",
@@ -755,6 +779,7 @@
     {
       "name": "koredocs_metadata_rename_field",
       "purpose": "Rename one exact top-level metadata field while preserving content and unrelated metadata.",
+      "selection_description": "Rename one exact top-level metadata field while preserving content and unrelated metadata.",
       "keywords": [
         "document",
         "koredoc",
@@ -794,6 +819,7 @@
     {
       "name": "koredocs_metadata_replace_value",
       "purpose": "Replace one exact top-level metadata value while preserving content and unrelated metadata.",
+      "selection_description": "Replace one exact top-level metadata value while preserving content and unrelated metadata.",
       "keywords": [
         "document",
         "koredoc",
@@ -838,6 +864,7 @@
     {
       "name": "koredocs_search",
       "purpose": "Search the full text of KoreDocs files.",
+      "selection_description": "Search text inside stored KoreDocs files; use a document type or folder filter only when the user specifies one.",
       "keywords": [
         "document",
         "file_handling",
@@ -874,6 +901,7 @@
     {
       "name": "koredocs_sheet_cells_write",
       "purpose": "KoreDocs: spreadsheet cells write.",
+      "selection_description": "KoreDocs: spreadsheet cells write.",
       "keywords": [
         "spreadsheet",
         "dataset",
@@ -907,6 +935,7 @@
     {
       "name": "koredocs_sheet_column_find",
       "purpose": "Locate a sheet column by header name.",
+      "selection_description": "Locate a sheet column by header name.",
       "keywords": [
         "spreadsheet",
         "dataset",
@@ -945,6 +974,7 @@
     {
       "name": "koredocs_sheet_create",
       "purpose": "KoreDocs: spreadsheet create.",
+      "selection_description": "KoreDocs: spreadsheet create.",
       "keywords": [
         "spreadsheet",
         "dataset",
@@ -993,6 +1023,7 @@
     {
       "name": "koredocs_sheet_describe",
       "purpose": "Return a structural summary of a sheet, including guessed headers, sample rows, labels, and formulas.",
+      "selection_description": "Return a structural summary of a sheet, including guessed headers, sample rows, labels, and formulas.",
       "keywords": [
         "spreadsheet",
         "dataset",
@@ -1031,6 +1062,7 @@
     {
       "name": "koredocs_sheet_get",
       "purpose": "KoreDocs: spreadsheet get.",
+      "selection_description": "KoreDocs: spreadsheet get.",
       "keywords": [
         "spreadsheet",
         "dataset",
@@ -1059,6 +1091,7 @@
     {
       "name": "koredocs_sheet_headers_get",
       "purpose": "Return the detected column headers for a sheet, with an optional guessed header row.",
+      "selection_description": "Return the detected column headers for a sheet, with an optional guessed header row.",
       "keywords": [
         "spreadsheet",
         "dataset",
@@ -1092,6 +1125,7 @@
     {
       "name": "koredocs_sheet_headers_set",
       "purpose": "Write or replace a contiguous header row.",
+      "selection_description": "Write or replace a contiguous header row.",
       "keywords": [
         "spreadsheet",
         "dataset",
@@ -1135,6 +1169,7 @@
     {
       "name": "koredocs_sheet_labels_find",
       "purpose": "Find labelled cells and return adjacent right/below values for navigation.",
+      "selection_description": "Find labelled cells and return adjacent right/below values for navigation.",
       "keywords": [
         "spreadsheet",
         "dataset",
@@ -1168,6 +1203,7 @@
     {
       "name": "koredocs_sheet_named_value_get",
       "purpose": "Read a value cell next to a labelled cell.",
+      "selection_description": "Read a value cell next to a labelled cell.",
       "keywords": [
         "spreadsheet",
         "dataset",
@@ -1201,6 +1237,7 @@
     {
       "name": "koredocs_sheet_named_value_set",
       "purpose": "Write a value cell next to a labelled cell.",
+      "selection_description": "Write a value cell next to a labelled cell.",
       "keywords": [
         "spreadsheet",
         "dataset",
@@ -1244,6 +1281,7 @@
     {
       "name": "koredocs_sheet_preview",
       "purpose": "Return a compact preview of a sheet as header-keyed rows.",
+      "selection_description": "Return a compact preview of a sheet as header-keyed rows.",
       "keywords": [
         "spreadsheet",
         "dataset",
@@ -1282,6 +1320,7 @@
     {
       "name": "koredocs_sheet_range_clear",
       "purpose": "KoreDocs: spreadsheet range clear.",
+      "selection_description": "KoreDocs: spreadsheet range clear.",
       "keywords": [
         "spreadsheet",
         "dataset",
@@ -1315,6 +1354,7 @@
     {
       "name": "koredocs_sheet_range_read",
       "purpose": "KoreDocs: spreadsheet range read.",
+      "selection_description": "KoreDocs: spreadsheet range read.",
       "keywords": [
         "spreadsheet",
         "dataset",
@@ -1348,6 +1388,7 @@
     {
       "name": "koredocs_sheet_rows_append",
       "purpose": "KoreDocs: spreadsheet rows append.",
+      "selection_description": "KoreDocs: spreadsheet rows append.",
       "keywords": [
         "spreadsheet",
         "dataset",
@@ -1391,6 +1432,7 @@
     {
       "name": "koredocs_sheet_rows_find",
       "purpose": "Find table rows by header-keyed filters.",
+      "selection_description": "Find table rows by header-keyed filters.",
       "keywords": [
         "spreadsheet",
         "dataset",
@@ -1434,6 +1476,7 @@
     {
       "name": "koredocs_sheet_rows_update",
       "purpose": "Update all matched table rows using header-keyed values.",
+      "selection_description": "Update all matched table rows using header-keyed values.",
       "keywords": [
         "spreadsheet",
         "dataset",
@@ -1492,6 +1535,7 @@
     {
       "name": "koredocs_sheet_rows_upsert",
       "purpose": "KoreDocs: spreadsheet rows upsert.",
+      "selection_description": "KoreDocs: spreadsheet rows upsert.",
       "keywords": [
         "spreadsheet",
         "dataset",
@@ -1540,6 +1584,7 @@
     {
       "name": "koredocs_sheet_table_create",
       "purpose": "Create a spreadsheet from headers plus initial rows, using table semantics instead of raw cells.",
+      "selection_description": "Create a spreadsheet from headers plus initial rows, using table semantics instead of raw cells.",
       "keywords": [
         "spreadsheet",
         "dataset",
@@ -1593,6 +1638,7 @@
     {
       "name": "koredocs_sheet_table_read",
       "purpose": "KoreDocs: spreadsheet table read.",
+      "selection_description": "KoreDocs: spreadsheet table read.",
       "keywords": [
         "spreadsheet",
         "dataset",
@@ -1626,6 +1672,7 @@
     {
       "name": "koredocs_sheet_table_rows_append",
       "purpose": "Append rows using a table-first interface rather than raw cell addresses.",
+      "selection_description": "Append rows using a table-first interface rather than raw cell addresses.",
       "keywords": [
         "spreadsheet",
         "dataset",
@@ -1669,6 +1716,7 @@
     {
       "name": "koredocs_types_list",
       "purpose": "KoreDocs: types list.",
+      "selection_description": "KoreDocs: types list.",
       "keywords": [
         "document",
         "file_handling",

@@ -225,8 +225,7 @@ function _renderDetail(data) {
         renderToolsActive(conv.tools_active || []);
         renderBackground(conv.background_context || "");
         renderSummary(conv.thread_summary || "");
-        renderScratchpad(conv.scratchpad);
-        renderDatasets(conv.datasets);
+        renderWorkingData(conv.working_data || {});
         renderInputHistory(conv.input_history || []);
     }
     document.querySelectorAll(".conv-item").forEach(el => {
@@ -418,47 +417,31 @@ function renderSummary(text) {
 }
 
 // ====================================================================================================
-// SCRATCHPAD
+// WORKING DATA
 // ====================================================================================================
 
 const SCRATCHPAD_PREVIEW_LIMIT = 96;
 
-function renderScratchpad(scratchpad) {
-    let data = scratchpad;
+function renderWorkingData(workingData) {
+    let data = workingData;
     if (typeof data === "string") {
         try { data = JSON.parse(data); } catch { data = {}; }
     }
     data = data || {};
-    const keys = Object.keys(data);
-    document.getElementById("scratchpad-empty").hidden = keys.length > 0;
-
-    if (keys.length === 0) {
-        document.getElementById("scratchpad-list").innerHTML = "";
-        return;
+    const values = data.values && typeof data.values === "object" ? data.values : {};
+    const collections = data.collections && typeof data.collections === "object" ? data.collections : {};
+    const valueKeys = Object.keys(values);
+    const collectionKeys = Object.keys(collections);
+    const empty = valueKeys.length + collectionKeys.length === 0;
+    document.getElementById("working-data-empty").hidden = !empty;
+    const sections = [];
+    if (valueKeys.length) {
+        sections.push(`<div class="working-data-group">Values</div>` + valueKeys.map(k => _renderScratchpadEntry(k, values[k])).join(""));
     }
-
-    document.getElementById("scratchpad-list").innerHTML = keys.map(k =>
-        _renderScratchpadEntry(k, data[k])
-    ).join("");
-}
-
-function renderDatasets(datasets) {
-    let data = datasets;
-    if (typeof data === "string") {
-        try { data = JSON.parse(data); } catch { data = {}; }
+    if (collectionKeys.length) {
+        sections.push(`<div class="working-data-group">Collections</div>` + collectionKeys.map(k => _renderScratchpadEntry(k, collections[k])).join(""));
     }
-    data = data || {};
-    const keys = Object.keys(data);
-    document.getElementById("datasets-empty").hidden = keys.length > 0;
-
-    if (keys.length === 0) {
-        document.getElementById("datasets-list").innerHTML = "";
-        return;
-    }
-
-    document.getElementById("datasets-list").innerHTML = keys.map(k =>
-        _renderScratchpadEntry(k, data[k])
-    ).join("");
+    document.getElementById("working-data-list").innerHTML = sections.join("");
 }
 
 function _renderScratchpadEntry(key, value) {

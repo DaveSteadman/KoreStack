@@ -9,7 +9,7 @@
 
 """Session hydration helpers for the datasets subsystem."""
 
-from datasets_pkg.service import (
+from system_skills.WorkingData.collections.service import (
     build_persisted_scratchpad_payload,
     coerce_persisted_datasets_payload,
     coerce_persisted_scratchpad_payload,

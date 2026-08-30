@@ -43,7 +43,7 @@ import re
 from datetime import date as _date
 from datetime import timedelta as _timedelta
 
-from scratchpad import get_store as _get_store
+from working_data import get_working_data_value
 
 
 # ====================================================================================================
@@ -59,7 +59,7 @@ _TOKEN_RE = re.compile(
     re.IGNORECASE,
 )
 
-_SCRATCHPAD_TOKEN_RE = re.compile(r"\{scratchpad:([a-zA-Z0-9_]+)\}", re.IGNORECASE)
+_WORKING_DATA_TOKEN_RE = re.compile(r"\{working_data:([a-zA-Z0-9_]+)\}", re.IGNORECASE)
 
 
 def resolve_tokens(text: str) -> str:
@@ -78,8 +78,8 @@ def resolve_tokens(text: str) -> str:
     Tokens are resolved at call time so that stored/scheduled prompts and queries
     stay perpetually current without manual edits.
 
-    Also resolves {scratchpad:key} to the current scratchpad value for that key.  Unrecognised
-    scratchpad keys are left as-is.  Resolution is single-pass and non-recursive - the substituted
+    Also resolves {working_data:key} to the current Working Data value. Unrecognised
+    Working Data keys are left as-is. Resolution is single-pass and non-recursive - the substituted
     value is never re-scanned, which prevents prompt-injection via stored content.
     """
     today     = _date.today()
@@ -103,14 +103,12 @@ def resolve_tokens(text: str) -> str:
     # Single-pass date/time token resolution.
     result = _TOKEN_RE.sub(_replace, text)
 
-    # Single-pass scratch token resolution.
-    if "{scratchpad:" in result:
-        store = _get_store()
-        if store:
-            def _replace_scratch(m: re.Match) -> str:
-                val = store.get(m.group(1).lower())
-                return val if val is not None else m.group(0)
-            result = _SCRATCHPAD_TOKEN_RE.sub(_replace_scratch, result)
+    # Single-pass Working Data token resolution.
+    if "{working_data:" in result.lower():
+        def _replace_working_data(m: re.Match) -> str:
+            value = get_working_data_value(m.group(1))
+            return value if value is not None else m.group(0)
+        result = _WORKING_DATA_TOKEN_RE.sub(_replace_working_data, result)
 
     return result
 

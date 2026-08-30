@@ -95,7 +95,7 @@ def compact_context(context_map: list[dict], messages: list[dict], idx: int, sav
             except Exception:
                 pass  # non-fatal; compaction proceeds without the key
 
-    ref = f" -> scratchpad: {auto_key}" if auto_key else ""
+    ref = f" -> working_data: {auto_key}" if auto_key else ""
     placeholder = f"[compacted: rnd {round_n} {label} ({orig_chars:,} chars{ref})]"
 
     msg_idx_end = entry.get("msg_idx_end")

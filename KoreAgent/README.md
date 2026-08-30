@@ -115,4 +115,4 @@ The durable design goals from the deleted planning notes are now:
 
 ## Skill authoring
 
-New skills should follow the existing `skill.md` plus Python-module pattern already used under `app/skills/` and `app/system_skills/`.
+Agent-local skills should follow the existing `skill.md` plus Python-module pattern under `app/system_skills/`.

@@ -85,9 +85,8 @@ def _catalog_by_name(payload: dict) -> dict[str, dict]:
 
 
 def tools_keywords_list() -> dict:
-    """List reviewed capability tags with compact descriptions of what each tag unlocks."""
+    """List every exact reviewed capability tag in a model-sized response."""
     payload = _available_payload(load_skills_payload(DEFAULT_OUTPUT_FILE))
-    catalog = _catalog_by_name(payload)
     keywords_by_tool = _load_tool_keywords(local_tool_names(payload))
     for skill in skill_manager.list_skills():
         keywords_by_tool[str(skill["name"])] = list(skill["keywords"])
@@ -95,28 +94,12 @@ def tools_keywords_list() -> dict:
     for tool_name, keywords in keywords_by_tool.items():
         for keyword in keywords:
             tools_by_keyword.setdefault(keyword, []).append(tool_name)
-    keyword_rows: list[dict] = []
-    for keyword, tool_names in sorted(tools_by_keyword.items()):
-        names = sorted(tool_names)
-        examples = []
-        for name in names[:3]:
-            record = catalog.get(name, {})
-            service = str(record.get("skill_name") or "KoreAgent")
-            purpose = str(record.get("description") or "").strip()
-            examples.append(f"{service}/{name}: {purpose}".rstrip(":"))
-        keyword_rows.append({
-            "keyword": keyword,
-            "tool_count": len(names),
-            "tools": names,
-            "summary": " | ".join(examples),
-        })
     return {
         "instruction": (
-            "Choose an exact keyword for the requested capability, then call "
-            "select_tools_by_keyword with that keyword. The newly active tool schemas "
-            "contain the complete parameter definitions."
+            "Choose an exact tag, then call select_tools_by_keyword. The result and newly "
+            "active schemas provide the matching tool names, purposes, and parameters."
         ),
-        "keywords": keyword_rows,
+        "keywords": sorted(tools_by_keyword),
     }
 
 
@@ -151,7 +134,11 @@ def select_tools_by_keyword(keywords: list[str]) -> dict:
             {
                 "name": name,
                 "service": str(catalog.get(name, {}).get("skill_name") or "KoreAgent"),
-                "purpose": str(catalog.get(name, {}).get("description") or ""),
+                "selection_description": str(
+                    catalog.get(name, {}).get("selection_description")
+                    or catalog.get(name, {}).get("description")
+                    or ""
+                ),
                 "parameters": list(catalog.get(name, {}).get("param_names") or []),
             }
             for name in matched_tools
@@ -161,10 +148,16 @@ def select_tools_by_keyword(keywords: list[str]) -> dict:
     }
 
 
-def tools_catalog_list() -> list[dict]:
-    """List every local tool available for explicit activation in this runtime."""
+def tools_catalog_list() -> dict:
+    """List every exact tool name in a compact model-sized response."""
     payload = _available_payload(load_skills_payload(DEFAULT_OUTPUT_FILE))
-    return build_all_tool_catalog(payload)
+    return {
+        "instruction": (
+            "Choose an exact tool name and call tools_active_add with it. "
+            "The active schema then provides full parameter descriptions."
+        ),
+        "tools": sorted(_catalog_by_name(payload)),
+    }
 
 
 def tools_active_add(tool_names: list[str]) -> dict:

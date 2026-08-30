@@ -3,7 +3,45 @@
   "service": "korecron",
   "service_label": "KoreCron",
   "skills": [
-    {"name": "cron_list", "purpose": "List configured scheduled KoreCron prompts and their run state.", "keywords": ["schedule", "cron", "automation"], "parameters": {"type": "object", "properties": {}}, "returns": "Configured scheduled prompts.", "invoke_path": "/api/skills/cron_list/invoke"},
-    {"name": "cron_run", "purpose": "Run one configured KoreCron prompt immediately by name.", "keywords": ["schedule", "cron", "automation", "run"], "parameters": {"type": "object", "properties": {"name": {"type": "string"}}, "required": ["name"]}, "returns": "The queued scheduled prompt run.", "invoke_path": "/api/skills/cron_run/invoke"}
+    {
+      "name": "cron_list",
+      "purpose": "List configured scheduled KoreCron prompts and their run state.",
+      "keywords": [
+        "schedule",
+        "cron",
+        "automation"
+      ],
+      "parameters": {
+        "type": "object",
+        "properties": {}
+      },
+      "returns": "Configured scheduled prompts.",
+      "invoke_path": "/api/skills/cron_list/invoke",
+      "selection_description": "List configured scheduled KoreCron prompts and their run state."
+    },
+    {
+      "name": "cron_run",
+      "purpose": "Run one configured KoreCron prompt immediately by name.",
+      "keywords": [
+        "schedule",
+        "cron",
+        "automation",
+        "run"
+      ],
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "returns": "The queued scheduled prompt run.",
+      "invoke_path": "/api/skills/cron_run/invoke",
+      "selection_description": "Run one configured KoreCron prompt immediately by name."
+    }
   ]
 }

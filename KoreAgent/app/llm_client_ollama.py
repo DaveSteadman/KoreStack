@@ -60,11 +60,16 @@ _ollama_proc: subprocess.Popen | None = None
 def _per_request_context_enabled() -> bool:
     """Return whether native requests may replace Ollama's loaded runner context.
 
-    Disabled by default because the current Windows/ROCm runner crashes while
-    warming an 8k replacement context. Enable only after that runtime issue is
-    resolved and verified independently.
+    Linux runners must receive the requested context: without it, the server's
+    model default silently overrides KoreAgent's context policy.  Windows keeps
+    the conservative opt-in default because the Windows/ROCm runner has crashed
+    while warming a replacement context.  The environment variable always wins
+    on either platform.
     """
-    return str(os.environ.get("KORE_OLLAMA_PER_REQUEST_CONTEXT", "")).strip().lower() in {"1", "true", "yes", "on"}
+    configured = str(os.environ.get("KORE_OLLAMA_PER_REQUEST_CONTEXT", "")).strip().lower()
+    if configured:
+        return configured in {"1", "true", "yes", "on"}
+    return os.name != "nt"
 
 
 def _windows_creation_flags(*, detach: bool = False) -> int:

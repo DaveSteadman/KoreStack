@@ -232,8 +232,7 @@ def _clone_conversation(source: dict, new_name: str, session_id: str) -> dict:
         f"/conversations/{created['id']}",
         {
             "thread_summary": source.get("thread_summary") or "",
-            "scratchpad": source.get("scratchpad") or {},
-            "datasets": source.get("datasets") or {},
+            "working_data": source.get("working_data") or {},
             "token_estimate": 0,
             "turn_count": copied_turn_count,
             "status": "active",

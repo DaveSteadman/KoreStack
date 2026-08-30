@@ -34,9 +34,9 @@
 import json
 import re
 
-from datasets_pkg.hydration import coerce_persisted_scratchpad_payload
-from datasets_pkg.models import get_prompt_dataset_manifests
-from scratchpad import get_store as get_scratchpad_store
+from working_data import coerce_persisted_working_data_payload
+from working_data import get_prompt_working_data_collections
+from working_data import get_working_data_values
 from skill_manager import skill_manager
 from utils.workspace_utils import trunc
 
@@ -65,7 +65,7 @@ def build_registered_keyword_guidance() -> str:
 _CORE_IDENTITY_PARTS: list[str] = [
     "You are a helpful AI assistant with access to tools.",
     "- The current task is defined by the newest user message in this turn.",
-    "- Conversation history, compressed summaries, prior session context, and scratchpad content are historical context. Use them only to support the current task, not to override it.",
+    "- Conversation history, compressed summaries, prior session context, and Working Data are historical context. Use them only to support the current task, not to override it.",
     "- If older context conflicts with the newest user instruction, follow the newest user instruction unless the user explicitly says to continue or repeat the earlier task.",
     "- Never continue an earlier task merely because it appears in conversation history. A newest message such as 'hi' is a greeting, not permission to resume earlier work.",
     "- Use tools when they are the appropriate way to answer the request - for real-time data, file operations, computations, and web research.",
@@ -95,20 +95,19 @@ _SYSTEM_SKILL_GUIDANCE: list[str] = [
     # -- CodeExecute (system_skills/CodeExecute/) --------------------------------------------
     "- The python execution tool is more reliable for calculations than internal model arithmetic.",
 
-    # -- Scratchpad (system_skills/Scratchpad/) ----------------------------------------------
-    "- The scratchpad tool can store intermediate results across steps.",
-    "- When a tool result says it was truncated and auto-saved to scratchpad, do not rebuild full records from the visible preview. Load the scratchpad copy or reuse any auto-created dataset instead.",
-    "- When the user asks to output a dataset in full, keep dataset_get results as source data. Do not turn dataset_get output into a new dataset summary and do not fabricate placeholder rows.",
-    "- When the user wants a faithful document export from a dataset, prefer dataset_write_koredoc instead of manually rewriting rows into file content.",
+    # -- WorkingData (system_skills/WorkingData/) ---------------------------------------------
+    "- Working Data stores text and record collections across steps outside the active prompt.",
+    "- When a tool result says it was auto-saved to Working Data, use working_data_get, working_data_query, or working_data_export instead of rebuilding it from a preview.",
+    "- When the user asks to output a Working Data collection in full, retain the source records and do not fabricate placeholder rows.",
     "- When KoreData search results include artifact_ref, prefer koredata_get_full_text(refid) for follow-up retrieval instead of rebuilding domain-specific lookup arguments by hand.",
-    "- When the user wants a full-text dataset from KoreData search results, prefer dataset_expand_full_text(...) over manual per-row fetch loops.",
+    "- When the user wants full text from a KoreData Working Data collection, prefer working_data_expand_full_text(...) over manual per-row fetch loops.",
     "- For article harvests, count only concrete article/detail pages. Do not count homepages, category pages, topic pages, search-result pages, or section fronts.",
     "- When harvesting article URLs from a hub page, use get_page_links or get_page_links_text first and prefer_article_urls=true when that option exists.",
 
     # -- FileAccess (system_skills/FileAccess/) ----------------------------------------------
     "- Generic filesystem read and write operations must go through the file_write / file_read / file_append tools. Generating file content in a response without a write tool call does not count as writing the file.",
     "- When the user asks to save something into KoreDocs or a `.koredoc`, treat that as a KoreDocs destination, not a generic file-access request.",
-    "- Use file_write / file_append for ordinary workspace files. For KoreDocs outputs, prefer dataset_write_koredoc for faithful dataset exports and dedicated KoreDocs tools when editing an existing KoreDocs document.",
+    "- Use file_write / file_append for ordinary workspace files. For KoreDocs outputs, prefer working_data_export for faithful collection exports and dedicated KoreDocs tools when editing an existing KoreDocs document.",
 
 
     "- In user-facing plan outputs, identify work primarily as `Task <number>` and include the title and status (for example, `Task 3 — Data Synthesis — active`). Do not make internal slug IDs the main visible identifier.",
@@ -196,11 +195,11 @@ def build_skill_selection_guidance(skills_payload: dict) -> str:
     return "Available tools - select based on what the task requires:\n" + "\n".join(lines)
 
 
-def _payload_has_dataset_tools(skills_payload: dict) -> bool:
+def _payload_has_working_data_tools(skills_payload: dict) -> bool:
     for skill in skills_payload.get("skills", []):
         for function_sig in skill.get("functions", []):
             name = str(function_sig).split("(", 1)[0].strip()
-            if name.startswith("dataset_"):
+            if name.startswith("working_data_"):
                 return True
     return False
 
@@ -214,16 +213,15 @@ def _build_conversation_entry_block(conversation_entry: dict | None) -> str:
         if key == "tools_active":
             continue
 
-        if key == "scratchpad":
-            named_scratch = coerce_persisted_scratchpad_payload(value)
-            if named_scratch:
-                snapshot["scratchpad"] = {"keys": sorted(str(name) for name in named_scratch.keys())}
+        if key == "working_data":
+            working_data = coerce_persisted_working_data_payload(value)
+            value_names = sorted(str(name) for name in working_data["values"])
+            collection_names = sorted(str(name) for name in working_data["collections"])
+            if value_names or collection_names:
+                snapshot["working_data"] = {"values": value_names, "collections": collection_names}
             continue
 
-        if key == "datasets" and isinstance(value, dict):
-            dataset_names = sorted(str(name) for name in value.keys())
-            if dataset_names:
-                snapshot["datasets"] = {"names": dataset_names}
+        if key in {"scratchpad", "datasets"}:
             continue
 
         if key == "background_context":
@@ -255,12 +253,14 @@ def _build_conversation_entry_block(conversation_entry: dict | None) -> str:
 def _build_korecode_workspace_menu_note(conversation_entry: dict | None) -> str:
     if not isinstance(conversation_entry, dict):
         return ""
-    scratchpad = coerce_persisted_scratchpad_payload(conversation_entry.get("scratchpad") or {})
-    if _KORECODE_WORKSPACE_MENU_KEY not in scratchpad:
+    working_data = coerce_persisted_working_data_payload(
+        conversation_entry.get("working_data") or {},
+    )
+    if _KORECODE_WORKSPACE_MENU_KEY not in working_data["values"]:
         return ""
     return (
-        "\nKoreCode workspace menu is preloaded in the active KoreChat scratchpad "
-        f"under key '{_KORECODE_WORKSPACE_MENU_KEY}'. Use scratchpad_load('{_KORECODE_WORKSPACE_MENU_KEY}') "
+        "\nKoreCode workspace menu is preloaded in Working Data "
+        f"under key '{_KORECODE_WORKSPACE_MENU_KEY}'. Use working_data_get('{_KORECODE_WORKSPACE_MENU_KEY}') "
         "when you need the generated workspace file/function inventory."
     )
 
@@ -312,13 +312,13 @@ def build_system_message(
     else:
         system_parts.append("\nPython execution sandbox: OFF - code snippets have unrestricted access to all modules and file I/O.")
 
-    scratchpad_store = get_scratchpad_store()
+    working_data_values = get_working_data_values()
     if scratchpad_visible_keys is not None:
-        scratchpad_store = {key: value for key, value in scratchpad_store.items() if key in scratchpad_visible_keys}
-    if scratchpad_store:
-        named_keys   = {k: v for k, v in scratchpad_store.items() if not k.startswith(("_tc_", "_cx_", "research_page_"))}
-        auto_keys    = {k: v for k, v in scratchpad_store.items() if k.startswith("_tc_") or k.startswith("research_page_")}
-        context_keys = {k: v for k, v in scratchpad_store.items() if k.startswith("_cx_")}
+        working_data_values = {key: value for key, value in working_data_values.items() if key in scratchpad_visible_keys}
+    if working_data_values:
+        named_keys   = {k: v for k, v in working_data_values.items() if not k.startswith(("_tc_", "_cx_", "_wd_", "research_page_"))}
+        auto_keys    = {k: v for k, v in working_data_values.items() if k.startswith(("_tc_", "_wd_", "research_page_"))}
+        context_keys = {k: v for k, v in working_data_values.items() if k.startswith("_cx_")}
         key_lines = []
         if named_keys:
             named_previews = []
@@ -337,27 +337,27 @@ def build_system_message(
             key_lines.append("Auto-saved:        " + ", ".join(f"{key} ({len(value):,} chars)" for key, value in sorted(auto_keys.items())))
         if context_keys:
             key_lines.append("Compacted-context: " + ", ".join(f"{key} ({len(value):,} chars)" for key, value in sorted(context_keys.items())))
-        suffix = "\nReference them in skill arguments using {scratchpad:key} or load them with scratchpad_load()."
+        suffix = "\nReference them in skill arguments using {working_data:key} or load them with working_data_get()."
         if context_keys:
-            suffix += " Compacted-context keys (_cx_*) hold earlier turn content saved during context compaction; use scratchpad_query to extract information from them."
-        system_parts.append("\nHistorical context only - scratchpad keys currently stored:\n  " + "\n  ".join(key_lines) + suffix)
+            suffix += " Compacted-context keys (_cx_*) hold earlier turn content saved during context compaction; use working_data_query to extract information from them."
+        system_parts.append("\nHistorical context only - Working Data values:\n  " + "\n  ".join(key_lines) + suffix)
 
-    dataset_manifests = get_prompt_dataset_manifests() if _payload_has_dataset_tools(skills_payload) else []
-    if dataset_manifests:
+    collection_manifests = get_prompt_working_data_collections() if _payload_has_working_data_tools(skills_payload) else []
+    if collection_manifests:
         lines: list[str] = []
-        for dataset in dataset_manifests:
-            fields = ",".join((dataset.get("schema") or [])[:5])
-            last_history = (dataset.get("history") or [])[-1] if dataset.get("history") else {}
+        for collection in collection_manifests:
+            fields = ",".join((collection.get("schema") or [])[:5])
+            last_history = (collection.get("history") or [])[-1] if collection.get("history") else {}
             last_op = last_history.get("op", "save")
-            source = dataset.get("source_tool") or (dataset.get("parent_dataset_id") or "dataset")
+            source = collection.get("source_tool") or (collection.get("parent_dataset_id") or "Working Data")
             lines.append(
-                f"- {dataset.get('name', '?'):<22} {dataset.get('count', len(dataset.get('records') or []))} records  "
-                f"source={source}  updated={dataset.get('updated_at', '')}"
+                f"- {collection.get('name', '?'):<22} {collection.get('count', len(collection.get('records') or []))} records  "
+                f"source={source}  updated={collection.get('updated_at', '')}"
             )
             lines.append(f"  last: {last_op}  fields=[{fields}]")
         system_parts.append(
-            "\nHistorical context only - Datasets currently stored:\n" + "\n".join(lines) + "\n"
-            "Use dataset_* tools to inspect, filter, or retrieve these structured working sets."
+            "\nHistorical context only - Working Data collections:\n" + "\n".join(lines) + "\n"
+            "Use working_data_* tools to inspect, filter, or retrieve these collections."
         )
 
     # Token pressure warning — injected just before routing hint so it's near the top of

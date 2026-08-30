@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS conversations (
     thread_summary      TEXT    NOT NULL DEFAULT '',
     scratchpad          TEXT    NOT NULL DEFAULT '{}',
     datasets            TEXT    NOT NULL DEFAULT '{}',
+    working_data        TEXT    NOT NULL DEFAULT '{}',
     tools_active        TEXT    NOT NULL DEFAULT '[]',
     input_history       TEXT    NOT NULL DEFAULT '[]',
     background_context  TEXT    NOT NULL DEFAULT '',
@@ -111,6 +112,23 @@ def init_db() -> None:
                 connection.execute(
                     "UPDATE conversations SET scratchpad = ?, datasets = ? WHERE id = ?",
                     (json.dumps(scratchpad_payload), json.dumps(datasets_payload), row["id"]),
+                )
+        if cols and "working_data" not in cols:
+            connection.execute("ALTER TABLE conversations ADD COLUMN working_data TEXT NOT NULL DEFAULT '{}'")
+            rows = connection.execute("SELECT id, scratchpad, datasets FROM conversations").fetchall()
+            for row in rows:
+                try:
+                    values = json.loads(str(row["scratchpad"] or "{}"))
+                    collections = json.loads(str(row["datasets"] or "{}"))
+                except json.JSONDecodeError:
+                    continue
+                if not isinstance(values, dict):
+                    values = {}
+                if not isinstance(collections, dict):
+                    collections = {}
+                connection.execute(
+                    "UPDATE conversations SET working_data = ? WHERE id = ?",
+                    (json.dumps({"values": values, "collections": collections}), row["id"]),
                 )
         if cols and "workflow" in cols:
             connection.execute("ALTER TABLE conversations DROP COLUMN workflow")

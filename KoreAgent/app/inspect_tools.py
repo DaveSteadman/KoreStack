@@ -36,7 +36,7 @@ from skills_catalog_builder import load_skills_payload
 # ====================================================================================================
 # MARK: CONSTANTS
 # ====================================================================================================
-DEFAULT_SKILLS_CATALOG = Path(__file__).resolve().parent / "skills" / "skills_catalog.json"
+DEFAULT_SKILLS_CATALOG = Path(__file__).resolve().parent / "system_skills" / "skills_catalog.json"
 
 
 # ====================================================================================================
