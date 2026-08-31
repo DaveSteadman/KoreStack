@@ -409,7 +409,7 @@ def lookup_wikipedia_skill(topic: str, timeout: int = 15) -> str:
 @asynccontextmanager
 async def _lifespan(app: FastAPI):
     start_manifest_registration(
-        _SERVICE_PACKAGE_ROOT / "skills" / "skills.json",
+        _SERVICE_PACKAGE_ROOT / "skill_registration.json",
         service_base_url=f"http://{cfg['host']}:{cfg['port']}",
         logger_name=__name__,
     )

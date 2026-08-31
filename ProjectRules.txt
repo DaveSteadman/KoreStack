@@ -1,13 +1,28 @@
 KoreStack
 
+Purpose:
+    - A general purpose Agent framework, aimed at office tasks, and exploration into other areas like interfaces and coding.
+    - LocalLLM first
+
 Rules:
-- All functionality is dones in python, JS/HTML/Css are all "UI / Presentation Only" files.
+    - All functionality is dones in python, JS/HTML/Css are all "UI / Presentation Only" files.
 
 Recommendations:
-- Vertically align code
-- Use-it-or-lose-it: No redundant code
-- No TODOs or recording of alternative ideas in comments
-- Tab = 4 spaces, never a tab character anywhere.
-- No em-dashes anywhere, ever. Prohibited character.
+    - Vertically align code
+    - Use-it-or-lose-it: No redundant code
+    - No TODOs or recording of alternative ideas in comments
+    - Tab = 4 spaces, never a tab character anywhere.
+    - No em-dashes anywhere, ever. Prohibited character.
+
+Terms:
+    General:
+    - Skill: A grouping of functionality with its own functiona description and boundaries.
+    - Tool: An explict call or function with a larger skill grouping. Does not expose unecessary implementation.
+    UI
+    - Top Bar: The common tab bar across the top of all Web UI pages. 
+    - Application bar: The second bar at the top of a WebUI page, covering subsystem functional areas.
+
+
+
 
 

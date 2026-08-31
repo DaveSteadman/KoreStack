@@ -15,7 +15,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-OUTPUT = Path(__file__).with_name("skills.json")
+OUTPUT = ROOT / "skill_registration.json"
 
 # This native wrapper predates the former MCP surface and remains part of the
 # public REST contract alongside the reviewed `koredocs_*` wrappers below.
@@ -23,8 +23,6 @@ _EXTRA_NATIVE_SKILLS = [
     {
         "name": "koredocs_search",
         "purpose": "Search the full text of KoreDocs files.",
-        "selection_description": "Search text inside stored KoreDocs files; use a document type or folder filter only when the user specifies one.",
-        "keywords": ["document", "file_handling", "search", "full_text"],
         "parameters": {
             "type": "object",
             "properties": {
@@ -71,31 +69,6 @@ def _annotation_description(annotation: ast.expr | None) -> str:
     return ""
 
 
-def _keywords(source_file: str, name: str) -> list[str]:
-    """Reviewed, deliberately broad capability tags for the selection control."""
-    if source_file == "tools_koresheet.py":
-        return ["spreadsheet", "dataset", "file_handling"]
-    if source_file == "tools_korediag.py":
-        return ["diagram", "document", "file_handling"]
-    if source_file == "tools_koredoc.py":
-        tags = ["document", "koredoc", "file_handling"]
-        if "metadata" in name:
-            tags.append("metadata")
-        elif "section" in name or "markdown" in name or "outline" in name:
-            tags.append("document_editing")
-        return tags
-    tags = ["document", "file_handling"]
-    if "search" in name:
-        tags.append("search")
-    if "history" in name:
-        tags.append("revision_history")
-    if "folder" in name:
-        tags.append("folders")
-    if "format" in name or "types" in name:
-        tags.append("formats")
-    return tags
-
-
 def _purpose(name: str, docstring: str) -> str:
     first_line = docstring.strip().splitlines()[0] if docstring.strip() else ""
     if first_line and not first_line.startswith("Canonical prefixed alias"):
@@ -131,8 +104,6 @@ def _skill(node: ast.FunctionDef | ast.AsyncFunctionDef, source_file: str) -> di
     return {
         "name": node.name,
         "purpose": _purpose(node.name, ast.get_docstring(node) or ""),
-        "selection_description": _purpose(node.name, ast.get_docstring(node) or ""),
-        "keywords": _keywords(source_file, node.name),
         "parameters": parameters,
         "returns": "A KoreDocs operation result.",
         "invoke_path": f"/api/skills/{node.name}/invoke",
@@ -147,10 +118,15 @@ def build_manifest() -> dict:
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name.startswith("koredocs_"):
                 skills.append(_skill(node, source.name))
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "service": "koredocs",
         "service_label": "KoreDocs",
-        "skills": sorted(skills, key=lambda skill: skill["name"]),
+        "skills": [{
+            "name":                  "koredocs",
+            "purpose":               "KoreDocs tools.",
+            "selection_description": "Use KoreDocs document, spreadsheet, and diagram capabilities.",
+            "tools":                 sorted(skills, key=lambda skill: skill["name"]),
+        }],
     }
 
 

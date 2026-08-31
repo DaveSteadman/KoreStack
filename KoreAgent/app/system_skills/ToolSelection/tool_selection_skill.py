@@ -1,195 +1,104 @@
-# ====================================================================================================
-# MARK: OVERVIEW
-# ====================================================================================================
-# ToolSelection skill for KoreAgent.
-#
-# Exposes the always-on control-plane functions that let the model inspect the larger tool catalog
-# and pull a small subset into the active working set for the current conversation.
-# MARK: FUNCTIONS
-# Function inventory:
-# - _available_payload: Implements the  available payload operation for this module.
-# - tools_keywords_list: Lists the manually curated tool keyword map.
-# - select_tools_by_keyword: Activates local tools mapped to declared keywords.
-# - tools_catalog_list: Returns the complete local tool list.
-# - tools_active_add: Activates explicitly named local tools.
-# ====================================================================================================
+"""Model-callable controls for selecting complete Skills into the active tool list."""
 
 import json
 from pathlib import Path
 
 from agent.orchestration.engine import _filter_web_skills
 from agent.orchestration.engine import get_web_skills_enabled
-from skills_catalog_builder import DEFAULT_OUTPUT_FILE
-from skills_catalog_builder import load_skills_payload
-from sessions.tool_selection import build_all_tool_catalog
-from sessions.tool_selection import get_selected_tools
-from sessions.tool_selection import local_tool_names
-from sessions.tool_selection import promote_selected_tools
+from skills_catalog_builder import DEFAULT_OUTPUT_FILE, load_skills_payload
+from sessions.tool_selection import get_selected_tools, local_tool_names, promote_selected_tools
 from skill_manager import skill_manager
 
 
-TOOL_KEYWORDS_FILE = Path(__file__).with_name("tool_keywords.json")
-
-
-def _normalise_keyword(value: object) -> str:
-    return "_".join(str(value or "").strip().lower().replace("-", "_").split())
-
-
-def _load_tool_keywords(known_tool_names: set[str]) -> dict[str, list[str]]:
-    """Load reviewed local-tool keywords, discarding malformed or obsolete entries."""
-    try:
-        raw = json.loads(TOOL_KEYWORDS_FILE.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return {}
-
-    declared = raw.get("tools", {}) if isinstance(raw, dict) else {}
-    if not isinstance(declared, dict):
-        return {}
-
-    keywords_by_tool: dict[str, list[str]] = {}
-    for tool_name, values in declared.items():
-        name = str(tool_name or "").strip()
-        if name not in known_tool_names or not isinstance(values, list):
-            continue
-        keywords = list(dict.fromkeys(
-            keyword
-            for value in values
-            if (keyword := _normalise_keyword(value))
-        ))
-        if keywords:
-            keywords_by_tool[name] = keywords
-    return keywords_by_tool
+SYSTEM_SKILLS_MANIFEST = Path(__file__).resolve().parents[1] / "skill_registration.json"
 
 
 def _available_payload(payload: dict) -> dict:
     return payload if get_web_skills_enabled() else _filter_web_skills(payload)
 
 
-def _system_tool_names(payload: dict) -> set[str]:
-    return {
-        str(function_sig).split("(", 1)[0].strip()
+def _local_skills(payload: dict) -> dict[str, list[str]]:
+    skills = {
+        str(skill.get("skill_name") or "").strip(): [
+            str(signature).split("(", 1)[0].strip()
+            for signature in skill.get("functions", [])
+            if str(signature).split("(", 1)[0].strip()
+        ]
         for skill in payload.get("skills", [])
-        if skill.get("is_system_skill")
-        for function_sig in skill.get("functions", [])
-        if str(function_sig).split("(", 1)[0].strip()
+        if str(skill.get("skill_name") or "").strip() and not skill.get("is_system_skill")
     }
+    try:
+        system_group = json.loads(SYSTEM_SKILLS_MANIFEST.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        system_group = {}
+    declared_skills = system_group.get("skills") if isinstance(system_group, dict) else []
+    group = declared_skills[0] if isinstance(declared_skills, list) and declared_skills and isinstance(declared_skills[0], dict) else {}
+    group_name = str(group.get("name") or "").strip()
+    group_tools = group.get("tools") if isinstance(group, dict) else None
+    if group_name and isinstance(group_tools, list):
+        skills[group_name] = [
+            str(tool.get("name") or "").strip()
+            for tool in group_tools
+            if isinstance(tool, dict) and str(tool.get("name") or "").strip()
+        ]
+    return skills
 
 
-def _catalog_by_name(payload: dict) -> dict[str, dict]:
-    """Index compact reviewed tool records by their exact names."""
-    return {
-        str(record.get("name") or ""): record
-        for record in build_all_tool_catalog(payload)
-        if str(record.get("name") or "")
-    }
-
-
-def tools_keywords_list() -> dict:
-    """List every exact reviewed capability tag in a model-sized response."""
+def skills_list() -> dict:
+    """List exact Skill names.  Select a Skill to activate all of its tools."""
     payload = _available_payload(load_skills_payload(DEFAULT_OUTPUT_FILE))
-    keywords_by_tool = _load_tool_keywords(local_tool_names(payload))
-    for skill in skill_manager.list_skills():
-        keywords_by_tool[str(skill["name"])] = list(skill["keywords"])
-    tools_by_keyword: dict[str, list[str]] = {}
-    for tool_name, keywords in keywords_by_tool.items():
-        for keyword in keywords:
-            tools_by_keyword.setdefault(keyword, []).append(tool_name)
+    local = _local_skills(payload)
+    registered = [skill for skill in skill_manager.list_skills() if skill["name"] not in local]
     return {
-        "instruction": (
-            "Choose an exact tag, then call select_tools_by_keyword. The result and newly "
-            "active schemas provide the matching tool names, purposes, and parameters."
+        "instruction": "Choose exact skill names, then call select_skills. Each selected skill adds all of its tools to the active tool list.",
+        "skills": sorted(
+            [{"name": name, "tool_count": len(tools), "origin": "local", "default_active": name == "system_skills"} for name, tools in local.items()]
+            + [{"name": skill["name"], "tool_count": len(skill["tools"]), "origin": "registered", "description": skill["selection_description"]} for skill in registered],
+            key=lambda item: item["name"],
         ),
-        "keywords": sorted(tools_by_keyword),
     }
 
 
-def select_tools_by_keyword(keywords: list[str]) -> dict:
-    """Activate tools whose manually assigned keyword tags match the supplied keywords exactly."""
+def select_skills(skill_names: list[str]) -> dict:
+    """Activate every tool belonging to the requested exact Skill names."""
     payload = _available_payload(load_skills_payload(DEFAULT_OUTPUT_FILE))
-    catalog = _catalog_by_name(payload)
-    known_names = local_tool_names(payload) | {str(skill["name"]) for skill in skill_manager.list_skills()}
-    keywords_by_tool = _load_tool_keywords(known_names)
-    for skill in skill_manager.list_skills():
-        keywords_by_tool[str(skill["name"])] = list(skill["keywords"])
-    supplied_keywords = keywords if isinstance(keywords, list) else []
-    requested = list(dict.fromkeys(
-        keyword
-        for value in supplied_keywords
-        if (keyword := _normalise_keyword(value))
-    ))
-    available_keywords = {keyword for values in keywords_by_tool.values() for keyword in values}
-    matched_tools = sorted(
-        tool_name
-        for tool_name, tool_keywords in keywords_by_tool.items()
-        if set(requested).intersection(tool_keywords)
-    )
-    system_tools = _system_tool_names(payload)
-    activation = promote_selected_tools([name for name in matched_tools if name not in system_tools])
+    local = _local_skills(payload)
+    registered = {skill["name"]: skill for skill in skill_manager.list_skills()}
+    requested = list(dict.fromkeys(str(name or "").strip() for name in skill_names if str(name or "").strip()))
+    matched = [name for name in requested if name in local or name in registered]
+    unknown = [name for name in requested if name not in local and name not in registered]
+    tools = [tool for name in matched for tool in (local.get(name) or [item["name"] for item in registered[name]["tools"]])]
+    system_tools = set(local.get("system_skills") or [])
+    activation = promote_selected_tools([tool for tool in tools if tool not in system_tools])
     return {
-        "requested_keywords": requested,
-        "matched_keywords": [keyword for keyword in requested if keyword in available_keywords],
-        "unknown_keywords": [keyword for keyword in requested if keyword not in available_keywords],
-        "matched_tools": matched_tools,
-        "matched_tool_details": [
-            {
-                "name": name,
-                "service": str(catalog.get(name, {}).get("skill_name") or "KoreAgent"),
-                "selection_description": str(
-                    catalog.get(name, {}).get("selection_description")
-                    or catalog.get(name, {}).get("description")
-                    or ""
-                ),
-                "parameters": list(catalog.get(name, {}).get("param_names") or []),
-            }
-            for name in matched_tools
-        ],
-        "already_active_system_tools": [name for name in matched_tools if name in system_tools],
+        "selected_skills":     matched,
+        "unknown_skills":      unknown,
+        "activated_tools":     tools,
+        "already_active_tools": [tool for tool in tools if tool in system_tools],
         **activation,
     }
 
 
 def tools_catalog_list() -> dict:
-    """List every exact tool name in a compact model-sized response."""
+    """List exact individual tool names for direct activation."""
     payload = _available_payload(load_skills_payload(DEFAULT_OUTPUT_FILE))
-    return {
-        "instruction": (
-            "Choose an exact tool name and call tools_active_add with it. "
-            "The active schema then provides full parameter descriptions."
-        ),
-        "tools": sorted(_catalog_by_name(payload)),
-    }
+    return {"tools": sorted(local_tool_names(payload) | {tool["name"] for tool in skill_manager.list_tools()})}
 
 
 def tools_active_add(tool_names: list[str]) -> dict:
-    """Add tool names to the active FIFO working set for the current conversation."""
+    """Add exact individual tools to the active FIFO working set."""
     payload = _available_payload(load_skills_payload(DEFAULT_OUTPUT_FILE))
-    known_names = local_tool_names(payload) | {str(skill["name"]) for skill in skill_manager.list_skills()}
-    system_tools = _system_tool_names(payload)
+    known = local_tool_names(payload) | {tool["name"] for tool in skill_manager.list_tools()}
     requested = [str(name or "").strip() for name in tool_names if str(name or "").strip()]
-    current = set(get_selected_tools())
-    valid: list[str] = []
-    unknown: list[str] = []
-    for name in requested:
-        if name in known_names and name not in system_tools:
-            valid.append(name)
-        elif name in system_tools:
-            continue
-        else:
-            unknown.append(name)
-    result = promote_selected_tools(valid)
+    system_tools = set(_local_skills(payload).get("system_skills") or [])
+    valid = [name for name in requested if name in known and name not in system_tools]
+    activation = promote_selected_tools(valid)
     return {
-        "added": result["added"],
-        "promoted": result["promoted"],
-        "unknown": unknown,
-        "already_active_system_tools": [name for name in requested if name in system_tools],
-        "evicted": result["evicted"],
-        "active_tools": result["active_tools"],
-        "already_active_before_call": sorted(name for name in valid if name in current),
+        "unknown":        [name for name in requested if name not in known],
+        "already_active": [name for name in requested if name in system_tools],
+        **activation,
+        "active_tools":   get_selected_tools(),
     }
 
-__all__ = [
-    "tools_keywords_list",
-    "select_tools_by_keyword",
-    "tools_catalog_list",
-    "tools_active_add",
-]
+
+__all__ = ["skills_list", "select_skills", "tools_catalog_list", "tools_active_add"]

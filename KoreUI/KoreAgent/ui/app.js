@@ -832,11 +832,12 @@ async function logNavStep(delta) {
 // MARK: CHAT
 // ====================================================================================================
 
-function appendChatMessage(role, text, meta, runId = "") {
+function appendChatMessage(role, text, meta, runId = "", messageId = 0) {
     const el    = dom.chat();
     const wrap  = document.createElement("div");
     wrap.className = "chat-msg " + role;
     if (runId) wrap.setAttribute("data-run-id", runId);
+    if (Number(messageId) > 0) wrap.setAttribute("data-message-id", String(messageId));
 
     const label = document.createElement("div");
     label.className = "msg-role";
@@ -1014,6 +1015,18 @@ function _resumePersistedRun(sessionId) {
     const run = _loadActiveRun();
     if (!run || run.sessionId !== sessionId) return;
 
+    if (run.transport === "korechat") {
+        const convId     = Number(run.convId);
+        const afterMsgId = Number(run.afterMsgId);
+        if (!Number.isInteger(convId) || convId <= 0 || !Number.isInteger(afterMsgId) || afterMsgId <= 0) {
+            _clearActiveRun(run.runId);
+            return;
+        }
+        appendThinking(run.runId, Number(run.startedAtMs) || Date.now());
+        _pollKcReply(run.runId, convId, afterMsgId);
+        return;
+    }
+
     const selector = ".chat-msg.user[data-run-id='" + run.runId + "']";
     if (!dom.chat().querySelector(selector)) {
         appendChatMessage("user", run.prompt || "", _formatMessageTime(run.startedAtMs), run.runId);
@@ -1030,9 +1043,9 @@ function _renderSessionTurns(sessionId, turns) {
         if (!turn || typeof turn.content !== "string") continue;
         if (turn.role === "user") {
             userPrompt = turn.content;
-            appendChatMessage("user", turn.content, _formatMessageTime(turn.created_at));
+            appendChatMessage("user", turn.content, _formatMessageTime(turn.created_at), "", turn.message_id);
         } else if (turn.role === "assistant") {
-            appendChatMessage("agent", turn.content, _turnMetaText(sessionId, userPrompt, turn));
+            appendChatMessage("agent", turn.content, _turnMetaText(sessionId, userPrompt, turn), "", turn.message_id);
         }
     }
 }
@@ -1122,14 +1135,27 @@ async function _dispatchPrompt(text) {
         headers: { "Content-Type": "application/json" },
         body:    JSON.stringify({ session_id: _sessionId, content: text }),
     });
-    _pushHistory(text);
     if (!data) {
         appendChatMessage("user", text);
         appendChatMessage("agent", "[Error: could not record the prompt in KoreChat]");
         return;
     }
+    if (data.session_id && data.session_id !== _sessionId) {
+        _sessionId = data.session_id;
+        _persistActiveSession();
+    }
+    _pushHistory(text);
     const thinkKey = "kc_" + data.conv_id + "_" + data.msg_id;
-    appendChatMessage("user", text, _formatMessageTime(data.created_at), thinkKey);
+    _saveActiveRun({
+        runId:      thinkKey,
+        sessionId:  _sessionId,
+        prompt:     text,
+        startedAtMs: Date.now(),
+        transport:  "korechat",
+        convId:     data.conv_id,
+        afterMsgId: data.msg_id,
+    });
+    appendChatMessage("user", text, _formatMessageTime(data.created_at), thinkKey, data.msg_id);
     appendThinking(thinkKey);
     refreshQueue();
     _pollKcReply(thinkKey, data.conv_id, data.msg_id);
@@ -1142,17 +1168,23 @@ async function _pollKcReply(thinkKey, convId, afterMsgId) {
         await new Promise(r => setTimeout(r, POLL_MS));
         const messages = await apiFetch("/kc/conversations/" + convId + "/messages");
         if (!Array.isArray(messages)) continue;
-        const replies = messages.filter(m => m.direction === "outbound" && m.id > afterMsgId);
+        const replies = messages.filter(m => m.direction === "outbound" && Number(m.id) > afterMsgId);
         if (replies.length > 0) {
             removeThinking(thinkKey);
             for (const m of replies) {
-                appendChatMessage("agent", m.content, _messageMeta(m));
+                const replyId = Number(m.id);
+                const selector = ".chat-msg.agent[data-message-id='" + replyId + "']";
+                if (!dom.chat().querySelector(selector)) {
+                    appendChatMessage("agent", m.content, _messageMeta(m), "", replyId);
+                }
             }
+            _clearActiveRun(thinkKey);
             return;
         }
     }
     removeThinking(thinkKey);
     appendChatMessage("agent", "[No response received within timeout]");
+    _clearActiveRun(thinkKey);
 }
 
 // ====================================================================================================

@@ -23,7 +23,7 @@
 # the relevant skill.md description instead. Delete entries here as skill.md files absorb them.
 # MARK: FUNCTIONS
 # Function inventory:
-# - build_registered_keyword_guidance: Builds registered keyword guidance for this module.
+# - build_skill_selection_protocol_guidance: Builds Skill selection protocol guidance for this module.
 # - build_skill_selection_guidance: Builds skill selection guidance for this module.
 # - _payload_has_dataset_tools: Implements the  payload has dataset tools operation for this module.
 # - _build_conversation_entry_block: Implements the  build conversation entry block operation for this module.
@@ -43,15 +43,15 @@ from utils.workspace_utils import trunc
 _KORECODE_WORKSPACE_MENU_KEY = "korecode_workspace_menu"
 
 
-def build_registered_keyword_guidance() -> str:
-    """State the live registry-selection protocol without copying its whole index."""
-    if not skill_manager.keyword_map():
+def build_skill_selection_protocol_guidance() -> str:
+    """State the live Skill-selection protocol without copying its whole index."""
+    if not skill_manager.list_skills():
         return ""
     return (
         "\nTool selection protocol: schemas show only active tools. If no active tool explicitly "
         "names the requested capability, do not substitute a nearby generic tool. Call "
-        "`tools_keywords_list()`, choose its exact reviewed tag, call "
-        "`select_tools_by_keyword([...])`, then use the newly active function schema. "
+        "`skills_list()`, choose its exact Skill name, call "
+        "`select_skills([...])`, then use the newly active function schemas. "
         "This applies even when a generic search, file, or document tool is already active."
     )
 
@@ -93,21 +93,21 @@ _CORE_IDENTITY_PARTS: list[str] = [
 _SYSTEM_SKILL_GUIDANCE: list[str] = [
 
     # -- CodeExecute (system_skills/CodeExecute/) --------------------------------------------
-    "- The python execution tool is more reliable for calculations than internal model arithmetic.",
+    "- Use python execution only for deterministic computation, parsing, validation, or transformations that genuinely require code. Do not use it to draft, rank, or format a narrative response, report, email, summary, or other editorial output from supplied material.",
 
     # -- WorkingData (system_skills/WorkingData/) ---------------------------------------------
     "- Working Data stores text and record collections across steps outside the active prompt.",
-    "- When a tool result says it was auto-saved to Working Data, use working_data_get, working_data_query, or working_data_export instead of rebuilding it from a preview.",
+    "- When a tool result says it was auto-saved to Working Data, inspect it first, then use bounded working_data_get, working_data_rank, working_data_select, or working_data_fetch_full_text instead of rebuilding it from a preview.",
     "- When the user asks to output a Working Data collection in full, retain the source records and do not fabricate placeholder rows.",
     "- When KoreData search results include artifact_ref, prefer koredata_get_full_text(refid) for follow-up retrieval instead of rebuilding domain-specific lookup arguments by hand.",
-    "- When the user wants full text from a KoreData Working Data collection, prefer working_data_expand_full_text(...) over manual per-row fetch loops.",
+    "- For a report from a Working Data collection: inspect it, rank or select the relevant records, fetch full text only for that small subset, then write the final answer directly. Do not load an entire collection's full text unless the user explicitly asks for it.",
     "- For article harvests, count only concrete article/detail pages. Do not count homepages, category pages, topic pages, search-result pages, or section fronts.",
     "- When harvesting article URLs from a hub page, use get_page_links or get_page_links_text first and prefer_article_urls=true when that option exists.",
 
     # -- FileAccess (system_skills/FileAccess/) ----------------------------------------------
     "- Generic filesystem read and write operations must go through the file_write / file_read / file_append tools. Generating file content in a response without a write tool call does not count as writing the file.",
     "- When the user asks to save something into KoreDocs or a `.koredoc`, treat that as a KoreDocs destination, not a generic file-access request.",
-    "- Use file_write / file_append for ordinary workspace files. For KoreDocs outputs, prefer working_data_export for faithful collection exports and dedicated KoreDocs tools when editing an existing KoreDocs document.",
+    "- Use file_write / file_append for ordinary workspace files. For KoreDocs outputs, use dedicated KoreDocs tools when editing an existing KoreDocs document.",
 
 
     "- In user-facing plan outputs, identify work primarily as `Task <number>` and include the title and status (for example, `Task 3 — Data Synthesis — active`). Do not make internal slug IDs the main visible identifier.",
@@ -185,10 +185,7 @@ def build_skill_selection_guidance(skills_payload: dict) -> str:
             description = description[:157] + "..."
 
         func_label = " / ".join(f"`{name}`" for name in unique_funcs[:3])
-        triggers = [trigger for trigger in (skill.get("triggers") or []) if trigger]
-        when_str = ", ".join(f'"{trigger}"' for trigger in triggers[:5])
-        suffix = f" (use when: {when_str})" if when_str else ""
-        lines.append(f"- {func_label}: {description}{suffix}")
+        lines.append(f"- {func_label}: {description}")
 
     if not lines:
         return ""
@@ -280,9 +277,9 @@ def build_system_message(
     system_parts: list[str] = list(_CORE_IDENTITY_PARTS)
     # Keep this ahead of the longer per-system-skill guidance.  The backend has
     # reported a smaller effective prompt budget than the requested context.
-    registered_keyword_guidance = build_registered_keyword_guidance()
-    if registered_keyword_guidance:
-        system_parts.append(registered_keyword_guidance)
+    skill_selection_guidance = build_skill_selection_protocol_guidance()
+    if skill_selection_guidance:
+        system_parts.append(skill_selection_guidance)
     system_parts.extend(_SYSTEM_SKILL_GUIDANCE)
     if ambient_system_info:
         system_parts.append(f"\n{ambient_system_info}")

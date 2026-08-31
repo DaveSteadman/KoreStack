@@ -1,249 +1,289 @@
-# ====================================================================================================
-# MARK: OVERVIEW
-# ====================================================================================================
-# Persistent registry for KoreStack service skills.  Services own reviewed JSON manifests; this
-# manager validates their registrations, keeps the live aggregate, and invokes registered HTTP skills.
-# ====================================================================================================
+"""Persistent registry of named Skills and their callable Tools."""
 
 import json
 import threading
 import urllib.error
 import urllib.request
-from datetime import datetime
-from datetime import timezone
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 from utils.workspace_utils import get_controldata_dir
 
 
-REGISTRY_FILE = get_controldata_dir() / "koreagent" / "skill_registry.json"
-CATALOG_EXPORT_FILE = get_controldata_dir() / "koreagent" / "skill_manager_catalog.json"
+REGISTRY_FILE                   = get_controldata_dir() / "koreagent" / "skill_registry.json"
+CATALOG_EXPORT_FILE             = get_controldata_dir() / "koreagent" / "skill_manager_catalog.json"
 CATALOG_EXPORT_INTERVAL_SECONDS = 60
-LOCAL_SKILLS_CATALOG_FILE = Path(__file__).parent / "system_skills" / "skills_catalog.json"
-LOCAL_TOOL_KEYWORDS_FILE = Path(__file__).parent / "system_skills" / "ToolSelection" / "tool_keywords.json"
 
 
 class SkillManager:
-    """Own the live registered-skill aggregate for KoreAgent."""
+    """Own the live Skill -> Tool registry.  Tools, never skills, are invoked."""
 
     def __init__(self, registry_file: Path = REGISTRY_FILE) -> None:
-        self._path = registry_file
-        self._lock = threading.RLock()
-        self._services: dict[str, dict[str, Any]] = {}
+        self._path                  = registry_file
+        self._lock                  = threading.RLock()
+        self._skills: dict[str, dict[str, Any]] = {}
         self._catalog_export_thread: threading.Thread | None = None
         self._load()
+
+    @staticmethod
+    def _normalise_tool(service: str, skill_name: str, raw: object, *, transport: str) -> dict[str, Any]:
+        if not isinstance(raw, dict):
+            raise ValueError("each tool must be an object")
+        name       = str(raw.get("name") or "").strip()
+        invoke_url = str(raw.get("invoke_url") or "").strip()
+        module     = str(raw.get("module") or "").strip()
+        function   = str(raw.get("function") or "").strip()
+        parameters = raw.get("parameters") or {"type": "object", "properties": {}}
+        if not name:
+            raise ValueError("each tool requires a name")
+        if transport == "http" and not invoke_url:
+            raise ValueError(f"tool '{name}' requires invoke_url")
+        if transport == "builtin" and (not module or not function):
+            raise ValueError(f"built-in tool '{name}' requires module and function")
+        if not isinstance(parameters, dict) or parameters.get("type") != "object":
+            raise ValueError(f"tool '{name}' parameters must be a JSON-schema object")
+        return {
+            "name":       name,
+            "service":    service,
+            "skill_name": skill_name,
+            "purpose":    str(raw.get("purpose") or "").strip(),
+            "parameters": parameters,
+            "invoke_url": invoke_url,
+            "returns":    str(raw.get("returns") or "").strip(),
+            "transport":  transport,
+            "module":     module,
+            "function":   function,
+        }
+
+    @classmethod
+    def _normalise_skill(cls, raw: object, *, service: str, service_label: str = "", transport: str = "http") -> dict[str, Any]:
+        if not isinstance(raw, dict):
+            raise ValueError("each skill must be an object")
+        name                  = str(raw.get("name") or "").strip()
+        purpose               = str(raw.get("purpose") or "").strip()
+        selection_description = str(raw.get("selection_description") or "").strip()
+        tools                 = raw.get("tools")
+        if not name or not purpose or not selection_description:
+            raise ValueError("each skill requires name, purpose, and selection_description")
+        if len(selection_description) > 400:
+            raise ValueError(f"skill '{name}' selection_description must be at most 400 characters")
+        if not isinstance(tools, list):
+            raise ValueError(f"skill '{name}' tools must be a list")
+        clean_tools = [cls._normalise_tool(service, name, tool, transport=transport) for tool in tools]
+        if len({tool["name"] for tool in clean_tools}) != len(clean_tools):
+            raise ValueError(f"skill '{name}' contains duplicate tool names")
+        return {
+            "name":                  name,
+            "service":               service,
+            "service_label":         str(service_label or service).strip() or service,
+            "purpose":               purpose,
+            "selection_description": selection_description,
+            "tools":                 clean_tools,
+        }
 
     def _load(self) -> None:
         try:
             raw = json.loads(self._path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
-            raw = {}
-        services = raw.get("services", {}) if isinstance(raw, dict) else {}
-        if isinstance(services, dict):
-            self._services = {
-                str(service_id): value
-                for service_id, value in services.items()
-                if isinstance(value, dict)
-            }
+            return
+        for item in raw.get("skills", []) if isinstance(raw, dict) else []:
+            if not isinstance(item, dict):
+                continue
+            try:
+                service = str(item.get("service") or "").strip().lower()
+                tools = item.get("tools") if isinstance(item.get("tools"), list) else []
+                transport = str((tools[0] if tools else {}).get("transport") or "http")
+                skill = self._normalise_skill(item, service=service, service_label=str(item.get("service_label") or ""), transport=transport)
+            except ValueError:
+                continue
+            self._skills[skill["name"]] = skill
 
     def _save(self) -> None:
         self._path.parent.mkdir(parents=True, exist_ok=True)
-        payload = {"schema_version": 1, "services": self._services}
-        temporary = self._path.with_suffix(".tmp")
-        temporary.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-        temporary.replace(self._path)
+        temp = self._path.with_suffix(".tmp")
+        temp.write_text(json.dumps({"schema_version": 2, "skills": self.list_skills()}, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        temp.replace(self._path)
 
-    @staticmethod
-    def _normalise_skill(service_id: str, raw: object) -> dict[str, Any]:
-        if not isinstance(raw, dict):
-            raise ValueError("each skill must be an object")
-        name = str(raw.get("name") or "").strip()
-        purpose = str(raw.get("purpose") or "").strip()
-        selection_description = str(raw.get("selection_description") or "").strip()
-        invoke_url = str(raw.get("invoke_url") or "").strip()
-        parameters = raw.get("parameters")
-        keywords = raw.get("keywords")
-        if not name or not purpose or not selection_description or not invoke_url:
-            raise ValueError("each skill requires name, purpose, selection_description, and invoke_url")
-        if len(selection_description) > 400:
-            raise ValueError(f"skill '{name}' selection_description must be at most 400 characters")
-        if not isinstance(parameters, dict) or parameters.get("type") != "object":
-            raise ValueError(f"skill '{name}' parameters must be a JSON-schema object")
-        if not isinstance(keywords, list):
-            raise ValueError(f"skill '{name}' keywords must be a list")
-        clean_keywords = list(dict.fromkeys(
-            "_".join(str(keyword or "").strip().lower().replace("-", "_").split())
-            for keyword in keywords
-            if str(keyword or "").strip()
-        ))
-        if not clean_keywords:
-            raise ValueError(f"skill '{name}' needs at least one keyword")
-        return {
-            "name": name,
-            "service": service_id,
-            "purpose": purpose,
-            "selection_description": selection_description,
-            "parameters": parameters,
-            "keywords": clean_keywords,
-            "invoke_url": invoke_url,
-            "returns": str(raw.get("returns") or "").strip(),
-        }
+    def _remove_tool_names(self, names: set[str]) -> None:
+        for name, skill in list(self._skills.items()):
+            self._skills[name] = {**skill, "tools": [tool for tool in skill["tools"] if tool["name"] not in names]}
 
-    def register(self, service_id: str, skills: object, *, service_label: str = "") -> dict[str, Any]:
+    def register_skill(self, skill: object, *, service_id: str, service_label: str = "", transport: str = "http") -> dict[str, Any]:
         service = str(service_id or "").strip().lower()
         if not service:
             raise ValueError("service is required")
+        item = self._normalise_skill(skill, service=service, service_label=service_label, transport=transport)
+        with self._lock:
+            self._remove_tool_names({tool["name"] for tool in item["tools"]})
+            self._skills[item["name"]] = item
+            self._save()
+        return dict(item)
+
+    def register_tool(self, skill_name: str, tool: object) -> dict[str, Any]:
+        with self._lock:
+            skill = self._skills.get(str(skill_name or "").strip())
+            if skill is None:
+                raise KeyError(f"skill '{skill_name}' was not found")
+            transport = str((skill["tools"][0] if skill["tools"] else {}).get("transport") or "http")
+            item = self._normalise_tool(skill["service"], skill["name"], tool, transport=transport)
+            self._remove_tool_names({item["name"]})
+            refreshed = self._skills[skill["name"]]
+            self._skills[skill["name"]] = {**refreshed, "tools": refreshed["tools"] + [item]}
+            self._save()
+        return dict(item)
+
+    def register(self, service_id: str, skills: object, *, service_label: str = "", transport: str = "http") -> dict[str, Any]:
         if not isinstance(skills, list):
             raise ValueError("skills must be a list")
-        normalised = [self._normalise_skill(service, skill) for skill in skills]
-        names = [skill["name"] for skill in normalised]
-        if len(names) != len(set(names)):
-            raise ValueError("a service cannot register duplicate skill names")
+        registered = [self.register_skill(item, service_id=service_id, service_label=service_label, transport=transport) for item in skills]
+        return {"service": str(service_id).strip().lower(), "registered": [item["name"] for item in registered], "count": len(registered)}
+
+    def ingest_registration(
+        self,
+        registration: str | dict[str, Any],
+        *,
+        source_path: Path | None = None,
+    ) -> dict[str, Any]:
+        """Validate and apply one JSON registration message from a subsystem."""
+        if isinstance(registration, str):
+            try:
+                payload = json.loads(registration)
+            except json.JSONDecodeError as exc:
+                raise ValueError(f"invalid registration JSON: {exc}") from exc
+        else:
+            payload = registration
+        if not isinstance(payload, dict):
+            raise ValueError("registration message must be a JSON object")
+        indexed_skills = payload.get("skills")
+        if (
+            payload.get("registration_mode") == "builtin"
+            and isinstance(indexed_skills, list)
+            and indexed_skills
+            and all(isinstance(item, dict) and item.get("catalog_file") for item in indexed_skills)
+        ):
+            if source_path is None:
+                raise ValueError("a split catalog registration requires its source file path")
+            tool_records: list[dict[str, Any]] = []
+            for index_item in indexed_skills:
+                fragment_path = Path(source_path).parent / str(index_item["catalog_file"])
+                try:
+                    fragment = json.loads(fragment_path.read_text(encoding="utf-8"))
+                except (OSError, json.JSONDecodeError) as exc:
+                    raise ValueError(f"cannot read Skill catalog '{fragment_path}': {exc}") from exc
+                module = str(fragment.get("module") or "").strip()
+                for signature in fragment.get("functions", []):
+                    function = str(signature).split("(", 1)[0].strip()
+                    if function:
+                        tool_records.append({"name": function, "module": module, "function": function})
+            payload = {
+                "service":           str(payload.get("service") or "koreagent"),
+                "service_label":     str(payload.get("service_label") or "KoreAgent"),
+                "registration_mode": "builtin",
+                "skills": [{
+                    "name":                  str(payload.get("default_skill_name") or "system_skills"),
+                    "purpose":               str(payload.get("purpose") or "KoreAgent built-in tools."),
+                    "selection_description": str(payload.get("selection_description") or "Built-in tools available to every conversation by default."),
+                    "tools":                 tool_records,
+                }],
+            }
+        return self.register(
+            str(payload.get("service") or ""),
+            payload.get("skills"),
+            service_label=str(payload.get("service_label") or ""),
+            transport="builtin" if payload.get("registration_mode") == "builtin" else "http",
+        )
+
+    def register_manifest(self, manifest_path: Path) -> dict[str, Any]:
+        """Load one subsystem-owned startup registration manifest."""
+        try:
+            payload = json.loads(Path(manifest_path).read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            raise ValueError(f"invalid skill registration manifest '{manifest_path}': {exc}") from exc
+        if not isinstance(payload, dict):
+            raise ValueError(f"skill registration manifest '{manifest_path}' must be an object")
+        result = self.ingest_registration(payload, source_path=Path(manifest_path))
+        return {"manifest": str(manifest_path), **result}
+
+    def register_manifests(self, manifest_paths: list[Path]) -> list[dict[str, Any]]:
+        return [self.register_manifest(path) for path in sorted(manifest_paths)]
+
+    def remove_skill(self, name: str) -> bool:
         with self._lock:
-            conflicting = {
-                skill["name"]: owner
-                for owner, record in self._services.items()
-                if owner != service
-                for skill in record.get("skills", [])
-                if isinstance(skill, dict)
-            }
-            duplicate = next((name for name in names if name in conflicting), None)
-            if duplicate:
-                raise ValueError(f"skill '{duplicate}' is already registered by '{conflicting[duplicate]}'")
-            self._services[service] = {
-                "label": str(service_label or service).strip() or service,
-                "skills": normalised,
-            }
+            removed = self._skills.pop(str(name or "").strip(), None) is not None
+            if removed:
+                self._save()
+            return removed
+
+    def remove_tool(self, skill_name: str, tool_name: str) -> bool:
+        with self._lock:
+            skill = self._skills.get(str(skill_name or "").strip())
+            if skill is None:
+                return False
+            tools = [tool for tool in skill["tools"] if tool["name"] != str(tool_name or "").strip()]
+            if len(tools) == len(skill["tools"]):
+                return False
+            self._skills[skill["name"]] = {**skill, "tools": tools}
             self._save()
-        return {"service": service, "registered": names, "count": len(names)}
+            return True
 
     def unregister(self, service_id: str) -> bool:
         service = str(service_id or "").strip().lower()
         with self._lock:
-            if service not in self._services:
-                return False
-            self._services.pop(service)
-            self._save()
-            return True
+            names = [name for name, skill in self._skills.items() if skill["service"] == service]
+            for name in names:
+                self._skills.pop(name)
+            if names:
+                self._save()
+            return bool(names)
 
     def list_skills(self) -> list[dict[str, Any]]:
         with self._lock:
-            return sorted(
-                [dict(skill) for record in self._services.values() for skill in record.get("skills", []) if isinstance(skill, dict)],
-                key=lambda skill: skill["name"],
-            )
+            return sorted([{**skill, "tools": [dict(tool) for tool in skill["tools"]]} for skill in self._skills.values()], key=lambda item: item["name"])
+
+    def list_tools(self) -> list[dict[str, Any]]:
+        return sorted([dict(tool) for skill in self.list_skills() for tool in skill["tools"]], key=lambda item: item["name"])
 
     def get_skill(self, name: str) -> dict[str, Any] | None:
-        wanted = str(name or "").strip()
-        return next((skill for skill in self.list_skills() if skill["name"] == wanted), None)
+        return next((item for item in self.list_skills() if item["name"] == str(name or "").strip()), None)
 
-    def keyword_map(self) -> dict[str, list[str]]:
-        result: dict[str, list[str]] = {}
-        for skill in self.list_skills():
-            for keyword in skill["keywords"]:
-                result.setdefault(keyword, []).append(skill["name"])
-        return {keyword: sorted(names) for keyword, names in sorted(result.items())}
-
-    @staticmethod
-    def _local_tool_records() -> list[dict[str, Any]]:
-        """Read the reviewed local catalog so the export covers every Agent-visible tool."""
-        try:
-            catalog = json.loads(LOCAL_SKILLS_CATALOG_FILE.read_text(encoding="utf-8"))
-            keyword_config = json.loads(LOCAL_TOOL_KEYWORDS_FILE.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
-            return []
-        declared_keywords = keyword_config.get("tools", {}) if isinstance(keyword_config, dict) else {}
-        if not isinstance(declared_keywords, dict):
-            declared_keywords = {}
-
-        records: list[dict[str, Any]] = []
-        for skill in catalog.get("skills", []) if isinstance(catalog, dict) else []:
-            if not isinstance(skill, dict):
-                continue
-            parameter_descriptions = skill.get("param_descriptions") if isinstance(skill.get("param_descriptions"), dict) else {}
-            for function_sig in skill.get("functions", []) if isinstance(skill.get("functions"), list) else []:
-                name = str(function_sig).split("(", 1)[0].strip()
-                if not name:
-                    continue
-                keywords = declared_keywords.get(name, [])
-                records.append(
-                    {
-                        "name": name,
-                        "service": "koreagent",
-                        "origin": "local",
-                        "purpose": str(skill.get("purpose") or "").strip(),
-                        "selection_description": str(skill.get("purpose") or "").strip(),
-                        "parameters": parameter_descriptions.get(name, {}),
-                        "keywords": [str(keyword) for keyword in keywords if str(keyword).strip()],
-                        "returns": list(skill.get("outputs") or []),
-                    }
-                )
-        return records
+    def get_tool(self, name: str) -> dict[str, Any] | None:
+        return next((item for item in self.list_tools() if item["name"] == str(name or "").strip()), None)
 
     def write_catalog_export(self) -> Path:
-        """Write the current registered-tool list and complete reviewed keyword map for review."""
-        with self._lock:
-            local_tools = self._local_tool_records()
-            registered_tools = [{**skill, "origin": "registered"} for skill in self.list_skills()]
-            tools = sorted(local_tools + registered_tools, key=lambda skill: skill["name"])
-            keywords: dict[str, list[str]] = {}
-            for skill in tools:
-                for keyword in skill.get("keywords", []):
-                    keywords.setdefault(str(keyword), []).append(skill["name"])
-            payload = {
-                "generated_at": datetime.now(timezone.utc).isoformat(),
-                "tools": tools,
-                "keywords": {keyword: sorted(names) for keyword, names in sorted(keywords.items())},
-            }
+        payload = {"generated_at": datetime.now(timezone.utc).isoformat(), "skills": self.list_skills(), "tools": self.list_tools()}
         CATALOG_EXPORT_FILE.parent.mkdir(parents=True, exist_ok=True)
-        temporary = CATALOG_EXPORT_FILE.with_suffix(".tmp")
-        temporary.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-        temporary.replace(CATALOG_EXPORT_FILE)
+        temp = CATALOG_EXPORT_FILE.with_suffix(".tmp")
+        temp.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        temp.replace(CATALOG_EXPORT_FILE)
         return CATALOG_EXPORT_FILE
 
     def start_catalog_exporter(self) -> None:
-        """Keep a reviewable JSON view of the SkillManager catalog current once per minute."""
         with self._lock:
-            if self._catalog_export_thread is not None and self._catalog_export_thread.is_alive():
+            if self._catalog_export_thread and self._catalog_export_thread.is_alive():
                 return
-
-            def _export_loop() -> None:
+            def export_loop() -> None:
                 while True:
-                    try:
-                        self.write_catalog_export()
-                    except OSError:
-                        pass
+                    try: self.write_catalog_export()
+                    except OSError: pass
                     threading.Event().wait(CATALOG_EXPORT_INTERVAL_SECONDS)
-
-            self._catalog_export_thread = threading.Thread(
-                target=_export_loop,
-                name="skill-manager-catalog-exporter",
-                daemon=True,
-            )
+            self._catalog_export_thread = threading.Thread(target=export_loop, name="skill-manager-catalog-exporter", daemon=True)
             self._catalog_export_thread.start()
 
     def invoke(self, name: str, arguments: dict[str, Any], *, timeout: int = 30) -> object:
-        skill = self.get_skill(name)
-        if skill is None:
-            raise KeyError(f"registered skill '{name}' was not found")
-        request = urllib.request.Request(
-            skill["invoke_url"],
-            data=json.dumps({"arguments": arguments}).encode("utf-8"),
-            method="POST",
-            headers={"Content-Type": "application/json", "Accept": "application/json"},
-        )
+        tool = self.get_tool(name)
+        if tool is None:
+            raise KeyError(f"registered tool '{name}' was not found")
+        request = urllib.request.Request(tool["invoke_url"], data=json.dumps({"arguments": arguments}).encode("utf-8"), method="POST", headers={"Content-Type": "application/json", "Accept": "application/json"})
         try:
             with urllib.request.urlopen(request, timeout=timeout) as response:
                 raw = response.read().decode("utf-8")
         except (urllib.error.HTTPError, urllib.error.URLError) as exc:
-            raise RuntimeError(f"skill '{name}' invocation failed: {exc}") from exc
-        try:
-            payload = json.loads(raw)
-        except json.JSONDecodeError:
-            return raw
+            raise RuntimeError(f"tool '{name}' invocation failed: {exc}") from exc
+        try: payload = json.loads(raw)
+        except json.JSONDecodeError: return raw
         if isinstance(payload, dict) and payload.get("ok") is False:
-            raise RuntimeError(str(payload.get("error") or f"skill '{name}' returned an error"))
+            raise RuntimeError(str(payload.get("error") or f"tool '{name}' returned an error"))
         return payload.get("result") if isinstance(payload, dict) and "result" in payload else payload
 
 

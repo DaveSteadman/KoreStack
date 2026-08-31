@@ -1,0 +1,60 @@
+{
+    "schema_version":  2,
+    "service":  "korelibrary",
+    "service_label":  "KoreLibrary",
+    "skills":  [
+                   {
+                       "name":  "korelibrary",
+                       "purpose":  "KoreLibrary tools.",
+                       "selection_description":  "Use KoreLibrary capabilities.",
+                       "tools":  [
+                                     {
+                                         "name":  "korelibrary_search",
+                                         "purpose":  "Search KoreLibrary books by full text.",
+                                         "parameters":  {
+                                                            "type":  "object",
+                                                            "properties":  {
+                                                                               "q":  {
+                                                                                         "type":  "string"
+                                                                                     },
+                                                                               "limit":  {
+                                                                                             "type":  "integer",
+                                                                                             "default":  50
+                                                                                         },
+                                                                               "catalog":  {
+                                                                                               "type":  "string"
+                                                                                           }
+                                                                           },
+                                                            "required":  [
+                                                                             "q"
+                                                                         ]
+                                                        },
+                                         "returns":  "Matching book records.",
+                                         "invoke_path":  "/api/skills/korelibrary_search/invoke"
+                                     },
+                                     {
+                                         "name":  "korelibrary_books_list",
+                                         "purpose":  "List KoreLibrary book metadata.",
+                                         "parameters":  {
+                                                            "type":  "object",
+                                                            "properties":  {
+                                                                               "limit":  {
+                                                                                             "type":  "integer",
+                                                                                             "default":  100
+                                                                                         },
+                                                                               "offset":  {
+                                                                                              "type":  "integer",
+                                                                                              "default":  0
+                                                                                          },
+                                                                               "catalog":  {
+                                                                                               "type":  "string"
+                                                                                           }
+                                                                           }
+                                                        },
+                                         "returns":  "A page of book metadata.",
+                                         "invoke_path":  "/api/skills/korelibrary_books_list/invoke"
+                                     }
+                                 ]
+                   }
+               ]
+}

@@ -454,7 +454,7 @@ async def _lifespan(app: FastAPI):
     _child_readiness_task = asyncio.create_task(_wait_for_children_ready())
     _ui_status_task       = asyncio.create_task(_refresh_ui_service_cards_loop())
     start_manifest_registration(
-        _BASE / "KoreDataGateway" / "skills" / "skills.json",
+        _BASE / "KoreDataGateway" / "skill_registration.json",
         service_base_url=f"http://{cfg['host']}:{cfg['port']}",
         logger_name=__name__,
     )

@@ -1,0 +1,68 @@
+{
+    "schema_version":  2,
+    "service":  "korerag",
+    "service_label":  "KoreRAG",
+    "skills":  [
+                   {
+                       "name":  "korerag",
+                       "purpose":  "KoreRAG tools.",
+                       "selection_description":  "Use KoreRAG capabilities.",
+                       "tools":  [
+                                     {
+                                         "name":  "korerag_search",
+                                         "purpose":  "Search indexed KoreRAG chunks.",
+                                         "parameters":  {
+                                                            "type":  "object",
+                                                            "properties":  {
+                                                                               "q":  {
+                                                                                         "type":  "string"
+                                                                                     },
+                                                                               "limit":  {
+                                                                                             "type":  "integer",
+                                                                                             "default":  20
+                                                                                         },
+                                                                               "source":  {
+                                                                                              "type":  "string"
+                                                                                          },
+                                                                               "tags":  {
+                                                                                            "type":  "string"
+                                                                                        },
+                                                                               "db":  {
+                                                                                          "type":  "string",
+                                                                                          "default":  "default"
+                                                                                      }
+                                                                           },
+                                                            "required":  [
+                                                                             "q"
+                                                                         ]
+                                                        },
+                                         "returns":  "Matching RAG chunks.",
+                                         "invoke_path":  "/api/skills/korerag_search/invoke"
+                                     },
+                                     {
+                                         "name":  "korerag_chunks_list",
+                                         "purpose":  "List KoreRAG chunk metadata.",
+                                         "parameters":  {
+                                                            "type":  "object",
+                                                            "properties":  {
+                                                                               "limit":  {
+                                                                                             "type":  "integer",
+                                                                                             "default":  100
+                                                                                         },
+                                                                               "offset":  {
+                                                                                              "type":  "integer",
+                                                                                              "default":  0
+                                                                                          },
+                                                                               "db":  {
+                                                                                          "type":  "string",
+                                                                                          "default":  "default"
+                                                                                      }
+                                                                           }
+                                                        },
+                                         "returns":  "A page of RAG chunks.",
+                                         "invoke_path":  "/api/skills/korerag_chunks_list/invoke"
+                                     }
+                                 ]
+                   }
+               ]
+}

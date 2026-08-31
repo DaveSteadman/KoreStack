@@ -1,0 +1,43 @@
+{
+    "schema_version":  2,
+    "service":  "korecron",
+    "service_label":  "KoreCron",
+    "skills":  [
+                   {
+                       "name":  "korecron",
+                       "purpose":  "KoreCron tools.",
+                       "selection_description":  "Use KoreCron capabilities.",
+                       "tools":  [
+                                     {
+                                         "name":  "cron_list",
+                                         "purpose":  "List configured scheduled KoreCron prompts and their run state.",
+                                         "parameters":  {
+                                                            "type":  "object",
+                                                            "properties":  {
+
+                                                                           }
+                                                        },
+                                         "returns":  "Configured scheduled prompts.",
+                                         "invoke_path":  "/api/skills/cron_list/invoke"
+                                     },
+                                     {
+                                         "name":  "cron_run",
+                                         "purpose":  "Run one configured KoreCron prompt immediately by name.",
+                                         "parameters":  {
+                                                            "type":  "object",
+                                                            "properties":  {
+                                                                               "name":  {
+                                                                                            "type":  "string"
+                                                                                        }
+                                                                           },
+                                                            "required":  [
+                                                                             "name"
+                                                                         ]
+                                                        },
+                                         "returns":  "The queued scheduled prompt run.",
+                                         "invoke_path":  "/api/skills/cron_run/invoke"
+                                     }
+                                 ]
+                   }
+               ]
+}

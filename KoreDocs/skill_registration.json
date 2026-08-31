@@ -1,0 +1,1447 @@
+{
+  "schema_version": 2,
+  "service": "koredocs",
+  "service_label": "KoreDocs",
+  "skills": [
+    {
+      "name": "koredocs",
+      "purpose": "KoreDocs tools.",
+      "selection_description": "Use KoreDocs document, spreadsheet, and diagram capabilities.",
+      "tools": [
+        {
+          "name": "koredocs_diag_create",
+          "purpose": "KoreDocs: diagram create.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "folder_path": {
+                "type": "string",
+                "description": "Folder path in the shared KoreDocs/datauser tree, such as \"/\" or \"/Projects\". Missing folders are created."
+              },
+              "name": {
+                "type": "string",
+                "description": "Filename, with or without the .korediag extension."
+              },
+              "diagram": {
+                "type": "object",
+                "description": "Optional partial or complete diagram object.",
+                "default": null
+              },
+              "title": {
+                "type": "string",
+                "description": "Diagram title.",
+                "default": null
+              }
+            },
+            "required": [
+              "folder_path",
+              "name"
+            ]
+          },
+          "returns": "A KoreDocs operation result.",
+          "invoke_path": "/api/skills/koredocs_diag_create/invoke"
+        },
+        {
+          "name": "koredocs_diag_spec_get",
+          "purpose": "Return a comprehensive description of the .korediag JSON format specification.",
+          "parameters": {
+            "type": "object",
+            "properties": {}
+          },
+          "returns": "A KoreDocs operation result.",
+          "invoke_path": "/api/skills/koredocs_diag_spec_get/invoke"
+        },
+        {
+          "name": "koredocs_doc_create",
+          "purpose": "KoreDocs: document create.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "folder_path": {
+                "type": "string",
+                "description": "Folder path in the shared KoreDocs/datauser tree, such as \"/\" or \"/Projects\". Missing folders are created."
+              },
+              "name": {
+                "type": "string",
+                "description": "Filename, with or without the .koredoc extension."
+              },
+              "markdown": {
+                "type": "string",
+                "description": "Markdown body for the document."
+              },
+              "title": {
+                "type": "string",
+                "description": "Optional title.",
+                "default": null
+              },
+              "tags": {
+                "type": "array",
+                "description": "Optional tags.",
+                "default": null
+              },
+              "metadata": {
+                "type": "object",
+                "description": "Optional artefact metadata.",
+                "default": null
+              }
+            },
+            "required": [
+              "folder_path",
+              "name",
+              "markdown"
+            ]
+          },
+          "returns": "A KoreDocs operation result.",
+          "invoke_path": "/api/skills/koredocs_doc_create/invoke"
+        },
+        {
+          "name": "koredocs_doc_create_from_scratchpad",
+          "purpose": "Create a KoreDoc from an exact prior tool result held in the scratchpad.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "folder_path": {
+                "type": "string",
+                "description": "Folder path for the new KoreDoc."
+              },
+              "name": {
+                "type": "string",
+                "description": "Filename, with or without the .koredoc extension."
+              },
+              "scratchpad_content": {
+                "type": "string",
+                "description": "Pass the exact token {scratchpad:key} shown after a prior tool result. KoreAgent resolves it before this tool runs, preserving generated text without model transcription."
+              },
+              "metadata": {
+                "type": "object",
+                "description": "Optional artefact metadata and provenance.",
+                "default": null
+              },
+              "title": {
+                "type": "string",
+                "description": "Optional title stored in the embedded KoreDocs JSON header.",
+                "default": null
+              },
+              "tags": {
+                "type": "array",
+                "description": "Optional tags stored in the embedded KoreDocs JSON header.",
+                "default": null
+              }
+            },
+            "required": [
+              "folder_path",
+              "name",
+              "scratchpad_content"
+            ]
+          },
+          "returns": "A KoreDocs operation result.",
+          "invoke_path": "/api/skills/koredocs_doc_create_from_scratchpad/invoke"
+        },
+        {
+          "name": "koredocs_doc_markdown_append",
+          "purpose": "Append markdown to the end of a .koredoc document.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "description": "KoreDoc file id."
+              },
+              "markdown": {
+                "type": "string",
+                "description": "Markdown block to append to the end of the document."
+              },
+              "expected_revision": {
+                "type": "integer",
+                "description": "Optional optimistic concurrency check. When provided, the document must still be at this revision.",
+                "default": null
+              }
+            },
+            "required": [
+              "id",
+              "markdown"
+            ]
+          },
+          "returns": "A KoreDocs operation result.",
+          "invoke_path": "/api/skills/koredocs_doc_markdown_append/invoke"
+        },
+        {
+          "name": "koredocs_doc_outline_get",
+          "purpose": "Return the heading outline for a .koredoc document.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "description": "KoreDoc file id."
+              }
+            },
+            "required": [
+              "id"
+            ]
+          },
+          "returns": "A KoreDocs operation result.",
+          "invoke_path": "/api/skills/koredocs_doc_outline_get/invoke"
+        },
+        {
+          "name": "koredocs_doc_section_insert",
+          "purpose": "Insert a markdown block into a .koredoc document by section anchor.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "description": "KoreDoc file id."
+              },
+              "markdown": {
+                "type": "string",
+                "description": "Markdown block to insert. Typically starts with a heading line."
+              },
+              "after_heading_path": {
+                "type": "array",
+                "description": "Insert after the matching section.",
+                "default": null
+              },
+              "parent_heading_path": {
+                "type": "array",
+                "description": "Insert inside this parent section when after_heading_path is omitted.",
+                "default": null
+              },
+              "insert_at_start": {
+                "type": "boolean",
+                "description": "When parent_heading_path is used, insert immediately after the parent heading instead of at the end of the parent section.",
+                "default": false
+              },
+              "expected_revision": {
+                "type": "integer",
+                "description": "Optional optimistic concurrency check. When provided, the document must still be at this revision.",
+                "default": null
+              }
+            },
+            "required": [
+              "id",
+              "markdown"
+            ]
+          },
+          "returns": "A KoreDocs operation result.",
+          "invoke_path": "/api/skills/koredocs_doc_section_insert/invoke"
+        },
+        {
+          "name": "koredocs_doc_section_read",
+          "purpose": "Read a full .koredoc document, one heading section, or an explicit line range.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "description": "KoreDoc file id."
+              },
+              "heading_path": {
+                "type": "array",
+                "description": "Optional heading path such as [\"Overview\", \"Risks\"].",
+                "default": null
+              },
+              "start_line": {
+                "type": "integer",
+                "description": "Optional 1-based start line for direct line-range reads.",
+                "default": null
+              },
+              "end_line": {
+                "type": "integer",
+                "description": "Optional 1-based end line for direct line-range reads.",
+                "default": null
+              }
+            },
+            "required": [
+              "id"
+            ]
+          },
+          "returns": "A KoreDocs operation result.",
+          "invoke_path": "/api/skills/koredocs_doc_section_read/invoke"
+        },
+        {
+          "name": "koredocs_doc_section_replace",
+          "purpose": "Replace one heading section inside a .koredoc document.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "description": "KoreDoc file id."
+              },
+              "heading_path": {
+                "type": "array",
+                "description": "Heading path identifying the section to replace."
+              },
+              "markdown": {
+                "type": "string",
+                "description": "Complete replacement markdown for the section, including the heading line."
+              },
+              "expected_revision": {
+                "type": "integer",
+                "description": "Optional optimistic concurrency check. When provided, the document must still be at this revision.",
+                "default": null
+              }
+            },
+            "required": [
+              "id",
+              "heading_path",
+              "markdown"
+            ]
+          },
+          "returns": "A KoreDocs operation result.",
+          "invoke_path": "/api/skills/koredocs_doc_section_replace/invoke"
+        },
+        {
+          "name": "koredocs_file_create",
+          "purpose": "Create a file in the KoreDocs file tree.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "folder_path": {
+                "type": "string",
+                "description": "Folder path in the shared KoreDocs/datauser tree, such as \"/\" or \"/Projects\". Missing folders are created."
+              },
+              "name": {
+                "type": "string",
+                "description": "Filename ending in .koredoc, .koresheet, or .korediag."
+              },
+              "content": {
+                "type": "string",
+                "description": "Complete serialized file content."
+              },
+              "metadata": {
+                "type": "object",
+                "description": "Optional metadata object.",
+                "default": null
+              }
+            },
+            "required": [
+              "folder_path",
+              "name",
+              "content"
+            ]
+          },
+          "returns": "A KoreDocs operation result.",
+          "invoke_path": "/api/skills/koredocs_file_create/invoke"
+        },
+        {
+          "name": "koredocs_file_delete",
+          "purpose": "KoreDocs: file delete.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "description": "KoreDocs file id."
+              },
+              "expected_revision": {
+                "type": "integer",
+                "description": "Optional optimistic concurrency check.",
+                "default": null
+              }
+            },
+            "required": [
+              "id"
+            ]
+          },
+          "returns": "A KoreDocs operation result.",
+          "invoke_path": "/api/skills/koredocs_file_delete/invoke"
+        },
+        {
+          "name": "koredocs_file_format_get",
+          "purpose": "KoreDocs: file format get.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "description": "Document type: koredoc, koresheet, or korediag."
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "returns": "A KoreDocs operation result.",
+          "invoke_path": "/api/skills/koredocs_file_format_get/invoke"
+        },
+        {
+          "name": "koredocs_file_get",
+          "purpose": "KoreDocs: file get.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "id"
+            ]
+          },
+          "returns": "A KoreDocs operation result.",
+          "invoke_path": "/api/skills/koredocs_file_get/invoke"
+        },
+        {
+          "name": "koredocs_file_history_get",
+          "purpose": "Retrieve a historical artefact snapshot, including content and metadata.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "description": "KoreDocs file id."
+              },
+              "revision": {
+                "type": "string",
+                "description": "Revision token returned by koredocs_file_history_list."
+              }
+            },
+            "required": [
+              "id",
+              "revision"
+            ]
+          },
+          "returns": "A KoreDocs operation result.",
+          "invoke_path": "/api/skills/koredocs_file_history_get/invoke"
+        },
+        {
+          "name": "koredocs_file_history_list",
+          "purpose": "List immutable content-and-metadata revisions for an artefact.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "description": "KoreDocs file id."
+              },
+              "limit": {
+                "type": "integer",
+                "description": "Maximum revisions, between 1 and 200.",
+                "default": 50
+              }
+            },
+            "required": [
+              "id"
+            ]
+          },
+          "returns": "A KoreDocs operation result.",
+          "invoke_path": "/api/skills/koredocs_file_history_list/invoke"
+        },
+        {
+          "name": "koredocs_file_update",
+          "purpose": "KoreDocs: file update.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "description": "KoreDocs file id."
+              },
+              "content": {
+                "type": "string",
+                "description": "Complete replacement file content."
+              },
+              "metadata": {
+                "type": "object",
+                "description": "Optional replacement metadata object.",
+                "default": null
+              },
+              "metadata_patch": {
+                "type": "object",
+                "description": "Optional deep merge patch for existing metadata.",
+                "default": null
+              },
+              "expected_revision": {
+                "type": "integer",
+                "description": "Optional optimistic concurrency check.",
+                "default": null
+              }
+            },
+            "required": [
+              "id",
+              "content"
+            ]
+          },
+          "returns": "A KoreDocs operation result.",
+          "invoke_path": "/api/skills/koredocs_file_update/invoke"
+        },
+        {
+          "name": "koredocs_files_list",
+          "purpose": "KoreDocs: files list.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "folder_path": {
+                "type": "string",
+                "default": null
+              },
+              "type": {
+                "type": "string",
+                "description": "Optional document type filter.",
+                "default": null
+              }
+            }
+          },
+          "returns": "A KoreDocs operation result.",
+          "invoke_path": "/api/skills/koredocs_files_list/invoke"
+        },
+        {
+          "name": "koredocs_files_metadata_search",
+          "purpose": "Search artefacts using structured metadata rather than filename or body words.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "metadata_filter": {
+                "type": "object",
+                "description": "Structured JSON metadata filter. Example: {\"artefact_type\":\"market_analysis\",\"geography.country\":\"GB\",\"period.year\":{\"gte\":2025}}."
+              },
+              "type": {
+                "type": "string",
+                "description": "Optional document type filter.",
+                "default": null
+              },
+              "folder_path": {
+                "type": "string",
+                "description": "Optional folder path.",
+                "default": null
+              },
+              "limit": {
+                "type": "integer",
+                "description": "Maximum results, between 1 and 200.",
+                "default": 20
+              }
+            },
+            "required": [
+              "metadata_filter"
+            ]
+          },
+          "returns": "A KoreDocs operation result.",
+          "invoke_path": "/api/skills/koredocs_files_metadata_search/invoke"
+        },
+        {
+          "name": "koredocs_files_search",
+          "purpose": "KoreDocs: files search.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "query": {
+                "type": "string",
+                "description": "Search query. Supports words and quoted phrases."
+              },
+              "type": {
+                "type": "string",
+                "description": "Optional document type filter.",
+                "default": null
+              },
+              "folder_path": {
+                "type": "string",
+                "description": "Optional folder path such as \"/\" or \"/01-misc\".",
+                "default": null
+              },
+              "limit": {
+                "type": "integer",
+                "description": "Maximum number of results, between 1 and 200.",
+                "default": 20
+              }
+            },
+            "required": [
+              "query"
+            ]
+          },
+          "returns": "A KoreDocs operation result.",
+          "invoke_path": "/api/skills/koredocs_files_search/invoke"
+        },
+        {
+          "name": "koredocs_folder_create",
+          "purpose": "Create a folder in the KoreDocs file tree and return the resulting folder record.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string",
+                "description": "Folder path in the shared KoreDocs/datauser tree, such as \"/Projects/Calcs\". Missing parents are created automatically."
+              }
+            },
+            "required": [
+              "path"
+            ]
+          },
+          "returns": "A KoreDocs operation result.",
+          "invoke_path": "/api/skills/koredocs_folder_create/invoke"
+        },
+        {
+          "name": "koredocs_folder_structure_get",
+          "purpose": "KoreDocs: folder structure get.",
+          "parameters": {
+            "type": "object",
+            "properties": {}
+          },
+          "returns": "A KoreDocs operation result.",
+          "invoke_path": "/api/skills/koredocs_folder_structure_get/invoke"
+        },
+        {
+          "name": "koredocs_folders_list",
+          "purpose": "KoreDocs: folders list.",
+          "parameters": {
+            "type": "object",
+            "properties": {}
+          },
+          "returns": "A KoreDocs operation result.",
+          "invoke_path": "/api/skills/koredocs_folders_list/invoke"
+        },
+        {
+          "name": "koredocs_metadata_find_variants",
+          "purpose": "Find metadata field names that are close to a requested name, to expose naming drift.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "field_name": {
+                "type": "string",
+                "description": "Field name or dotted field path to compare, for example artefact_type."
+              },
+              "folder_path": {
+                "type": "string",
+                "description": "Optional folder path to limit the search.",
+                "default": null
+              }
+            },
+            "required": [
+              "field_name"
+            ]
+          },
+          "returns": "A KoreDocs operation result.",
+          "invoke_path": "/api/skills/koredocs_metadata_find_variants/invoke"
+        },
+        {
+          "name": "koredocs_metadata_inventory",
+          "purpose": "Inventory embedded KoreDoc metadata keys, values, counts, and example files.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "folder_path": {
+                "type": "string",
+                "description": "Optional folder path to limit the inventory.",
+                "default": null
+              },
+              "max_examples": {
+                "type": "integer",
+                "description": "Maximum example documents returned for each metadata path.",
+                "default": 3
+              }
+            }
+          },
+          "returns": "A KoreDocs operation result.",
+          "invoke_path": "/api/skills/koredocs_metadata_inventory/invoke"
+        },
+        {
+          "name": "koredocs_metadata_rename_field",
+          "purpose": "Rename one exact top-level metadata field while preserving content and unrelated metadata.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "old_field": {
+                "type": "string",
+                "description": "Exact top-level metadata field to rename."
+              },
+              "new_field": {
+                "type": "string",
+                "description": "Replacement top-level metadata field name."
+              },
+              "folder_path": {
+                "type": "string",
+                "description": "Optional folder path to limit the migration.",
+                "default": null
+              },
+              "apply_changes": {
+                "type": "boolean",
+                "description": "False returns a dry run. True performs the listed exact changes.",
+                "default": false
+              }
+            },
+            "required": [
+              "old_field",
+              "new_field"
+            ]
+          },
+          "returns": "A KoreDocs operation result.",
+          "invoke_path": "/api/skills/koredocs_metadata_rename_field/invoke"
+        },
+        {
+          "name": "koredocs_metadata_replace_value",
+          "purpose": "Replace one exact top-level metadata value while preserving content and unrelated metadata.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "field_name": {
+                "type": "string",
+                "description": "Exact top-level metadata field whose value will be replaced."
+              },
+              "old_value": {
+                "type": "object",
+                "description": "Exact JSON value to replace."
+              },
+              "new_value": {
+                "type": "object",
+                "description": "Replacement JSON value."
+              },
+              "folder_path": {
+                "type": "string",
+                "description": "Optional folder path to limit the migration.",
+                "default": null
+              },
+              "apply_changes": {
+                "type": "boolean",
+                "description": "False returns a dry run. True performs the listed exact changes.",
+                "default": false
+              }
+            },
+            "required": [
+              "field_name",
+              "old_value",
+              "new_value"
+            ]
+          },
+          "returns": "A KoreDocs operation result.",
+          "invoke_path": "/api/skills/koredocs_metadata_replace_value/invoke"
+        },
+        {
+          "name": "koredocs_search",
+          "purpose": "Search the full text of KoreDocs files.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "query": {
+                "type": "string",
+                "description": "Words or phrases to find."
+              },
+              "type": {
+                "type": "string",
+                "description": "Optional document type filter."
+              },
+              "folder_path": {
+                "type": "string",
+                "description": "Optional folder path filter."
+              },
+              "limit": {
+                "type": "integer",
+                "default": 20
+              }
+            },
+            "required": [
+              "query"
+            ]
+          },
+          "returns": "Matching document excerpts and metadata.",
+          "invoke_path": "/api/skills/koredocs_search/invoke"
+        },
+        {
+          "name": "koredocs_sheet_cells_write",
+          "purpose": "KoreDocs: spreadsheet cells write.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "description": "KoreSheet file id."
+              },
+              "cells": {
+                "type": "object",
+                "description": "Sparse cell updates keyed by A1 address."
+              },
+              "expected_revision": {
+                "type": "integer",
+                "description": "Optional optimistic concurrency check.",
+                "default": null
+              }
+            },
+            "required": [
+              "id",
+              "cells"
+            ]
+          },
+          "returns": "A KoreDocs operation result.",
+          "invoke_path": "/api/skills/koredocs_sheet_cells_write/invoke"
+        },
+        {
+          "name": "koredocs_sheet_column_find",
+          "purpose": "Locate a sheet column by header name.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "description": "KoreSheet file id."
+              },
+              "header_name": {
+                "type": "string",
+                "description": "Column header to locate."
+              },
+              "header_row": {
+                "type": "integer",
+                "description": "Optional header row. When omitted, KoreDocs will guess a likely header row.",
+                "default": null
+              },
+              "match_mode": {
+                "type": "string",
+                "description": "Header matching mode.",
+                "default": "exact"
+              }
+            },
+            "required": [
+              "id",
+              "header_name"
+            ]
+          },
+          "returns": "A KoreDocs operation result.",
+          "invoke_path": "/api/skills/koredocs_sheet_column_find/invoke"
+        },
+        {
+          "name": "koredocs_sheet_create",
+          "purpose": "KoreDocs: spreadsheet create.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "folder_path": {
+                "type": "string",
+                "description": "Folder path in the shared KoreDocs/datauser tree, such as \"/\" or \"/Projects\". Missing folders are created."
+              },
+              "name": {
+                "type": "string",
+                "description": "Filename, with or without the .koresheet extension."
+              },
+              "cells": {
+                "type": "object",
+                "description": "Sparse cell map keyed by A1 address.",
+                "default": null
+              },
+              "title": {
+                "type": "string",
+                "description": "Sheet title.",
+                "default": null
+              },
+              "cols": {
+                "type": "integer",
+                "description": "Number of columns. Defaults to 26.",
+                "default": 26
+              },
+              "rows": {
+                "type": "integer",
+                "description": "Number of rows. Defaults to 100.",
+                "default": 100
+              }
+            },
+            "required": [
+              "folder_path",
+              "name"
+            ]
+          },
+          "returns": "A KoreDocs operation result.",
+          "invoke_path": "/api/skills/koredocs_sheet_create/invoke"
+        },
+        {
+          "name": "koredocs_sheet_describe",
+          "purpose": "Return a structural summary of a sheet, including guessed headers, sample rows, labels, and formulas.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "description": "KoreSheet file id."
+              },
+              "sample_rows": {
+                "type": "integer",
+                "description": "Maximum number of table rows to preview.",
+                "default": 5
+              },
+              "header_row": {
+                "type": "integer",
+                "description": "Optional header row. When omitted, KoreDocs will guess a likely header row.",
+                "default": null
+              },
+              "range_ref": {
+                "type": "string",
+                "description": "Optional A1-style range constraining the structural description.",
+                "default": null
+              }
+            },
+            "required": [
+              "id"
+            ]
+          },
+          "returns": "A KoreDocs operation result.",
+          "invoke_path": "/api/skills/koredocs_sheet_describe/invoke"
+        },
+        {
+          "name": "koredocs_sheet_get",
+          "purpose": "KoreDocs: spreadsheet get.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "description": "KoreSheet file id."
+              },
+              "include_cells": {
+                "type": "boolean",
+                "description": "When true, include the sparse cell map in the response.",
+                "default": false
+              }
+            },
+            "required": [
+              "id"
+            ]
+          },
+          "returns": "A KoreDocs operation result.",
+          "invoke_path": "/api/skills/koredocs_sheet_get/invoke"
+        },
+        {
+          "name": "koredocs_sheet_headers_get",
+          "purpose": "Return the detected column headers for a sheet, with an optional guessed header row.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "description": "KoreSheet file id."
+              },
+              "header_row": {
+                "type": "integer",
+                "description": "Optional header row. When omitted, KoreDocs will guess a likely header row.",
+                "default": null
+              },
+              "range_ref": {
+                "type": "string",
+                "description": "Optional A1-style range constraining the header scan.",
+                "default": null
+              }
+            },
+            "required": [
+              "id"
+            ]
+          },
+          "returns": "A KoreDocs operation result.",
+          "invoke_path": "/api/skills/koredocs_sheet_headers_get/invoke"
+        },
+        {
+          "name": "koredocs_sheet_headers_set",
+          "purpose": "Write or replace a contiguous header row.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "description": "KoreSheet file id."
+              },
+              "headers": {
+                "type": "array",
+                "description": "Header names to write into the sheet."
+              },
+              "header_row": {
+                "type": "integer",
+                "description": "Row number where the headers should be written.",
+                "default": 1
+              },
+              "start_col": {
+                "type": "string",
+                "description": "Starting column for the first header.",
+                "default": "A"
+              },
+              "expected_revision": {
+                "type": "integer",
+                "description": "Optional optimistic concurrency check.",
+                "default": null
+              }
+            },
+            "required": [
+              "id",
+              "headers"
+            ]
+          },
+          "returns": "A KoreDocs operation result.",
+          "invoke_path": "/api/skills/koredocs_sheet_headers_set/invoke"
+        },
+        {
+          "name": "koredocs_sheet_labels_find",
+          "purpose": "Find labelled cells and return adjacent right/below values for navigation.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "description": "KoreSheet file id."
+              },
+              "labels": {
+                "type": "array",
+                "description": "Optional list of labels to search for. Omit to list likely label cells across the sheet.",
+                "default": null
+              },
+              "match_mode": {
+                "type": "string",
+                "description": "How labels should be matched.",
+                "default": "contains"
+              }
+            },
+            "required": [
+              "id"
+            ]
+          },
+          "returns": "A KoreDocs operation result.",
+          "invoke_path": "/api/skills/koredocs_sheet_labels_find/invoke"
+        },
+        {
+          "name": "koredocs_sheet_named_value_get",
+          "purpose": "Read a value cell next to a labelled cell.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "description": "KoreSheet file id."
+              },
+              "label": {
+                "type": "string",
+                "description": "Label to search for, such as \"Interest Rate\" or \"Starting Balance\"."
+              },
+              "direction": {
+                "type": "string",
+                "description": "Which neighboring cell should be treated as the value cell.",
+                "default": "right"
+              }
+            },
+            "required": [
+              "id",
+              "label"
+            ]
+          },
+          "returns": "A KoreDocs operation result.",
+          "invoke_path": "/api/skills/koredocs_sheet_named_value_get/invoke"
+        },
+        {
+          "name": "koredocs_sheet_named_value_set",
+          "purpose": "Write a value cell next to a labelled cell.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "description": "KoreSheet file id."
+              },
+              "label": {
+                "type": "string",
+                "description": "Label to search for, such as \"Interest Rate\" or \"Starting Balance\"."
+              },
+              "value": {
+                "type": "object",
+                "description": "New value to write into the neighboring value cell."
+              },
+              "direction": {
+                "type": "string",
+                "description": "Which neighboring cell should be treated as the value cell.",
+                "default": "right"
+              },
+              "expected_revision": {
+                "type": "integer",
+                "description": "Optional optimistic concurrency check.",
+                "default": null
+              }
+            },
+            "required": [
+              "id",
+              "label",
+              "value"
+            ]
+          },
+          "returns": "A KoreDocs operation result.",
+          "invoke_path": "/api/skills/koredocs_sheet_named_value_set/invoke"
+        },
+        {
+          "name": "koredocs_sheet_preview",
+          "purpose": "Return a compact preview of a sheet as header-keyed rows.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "description": "KoreSheet file id."
+              },
+              "sample_rows": {
+                "type": "integer",
+                "description": "Maximum number of table rows to preview.",
+                "default": 5
+              },
+              "header_row": {
+                "type": "integer",
+                "description": "Optional header row. When omitted, KoreDocs will guess a likely header row.",
+                "default": null
+              },
+              "range_ref": {
+                "type": "string",
+                "description": "Optional A1-style range constraining the preview.",
+                "default": null
+              }
+            },
+            "required": [
+              "id"
+            ]
+          },
+          "returns": "A KoreDocs operation result.",
+          "invoke_path": "/api/skills/koredocs_sheet_preview/invoke"
+        },
+        {
+          "name": "koredocs_sheet_range_clear",
+          "purpose": "KoreDocs: spreadsheet range clear.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "description": "KoreSheet file id."
+              },
+              "range": {
+                "type": "string",
+                "description": "A1-style range such as B2:D9, A:A, or 3:3."
+              },
+              "expected_revision": {
+                "type": "integer",
+                "description": "Optional optimistic concurrency check.",
+                "default": null
+              }
+            },
+            "required": [
+              "id",
+              "range"
+            ]
+          },
+          "returns": "A KoreDocs operation result.",
+          "invoke_path": "/api/skills/koredocs_sheet_range_clear/invoke"
+        },
+        {
+          "name": "koredocs_sheet_range_read",
+          "purpose": "KoreDocs: spreadsheet range read.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "description": "KoreSheet file id."
+              },
+              "range": {
+                "type": "string",
+                "description": "A1-style range such as A1:C10, A:A, or 2:4."
+              },
+              "values_only": {
+                "type": "boolean",
+                "description": "When true, return scalar values instead of full cell objects.",
+                "default": false
+              }
+            },
+            "required": [
+              "id",
+              "range"
+            ]
+          },
+          "returns": "A KoreDocs operation result.",
+          "invoke_path": "/api/skills/koredocs_sheet_range_read/invoke"
+        },
+        {
+          "name": "koredocs_sheet_rows_append",
+          "purpose": "KoreDocs: spreadsheet rows append.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "description": "KoreSheet file id."
+              },
+              "rows": {
+                "type": "array",
+                "description": "Rows to append."
+              },
+              "start_col": {
+                "type": "string",
+                "description": "Start column for list-style rows. Defaults to A.",
+                "default": "A"
+              },
+              "header_row": {
+                "type": "integer",
+                "description": "Header row to use when rows are objects keyed by column names.",
+                "default": null
+              },
+              "expected_revision": {
+                "type": "integer",
+                "description": "Optional optimistic concurrency check.",
+                "default": null
+              }
+            },
+            "required": [
+              "id",
+              "rows"
+            ]
+          },
+          "returns": "A KoreDocs operation result.",
+          "invoke_path": "/api/skills/koredocs_sheet_rows_append/invoke"
+        },
+        {
+          "name": "koredocs_sheet_rows_find",
+          "purpose": "Find table rows by header-keyed filters.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "description": "KoreSheet file id."
+              },
+              "filters": {
+                "type": "object",
+                "description": "Header-keyed filters. Values may be scalars or objects like {contains: \"foo\"} or {gte: 10}."
+              },
+              "header_row": {
+                "type": "integer",
+                "description": "Optional header row. When omitted, KoreDocs will guess a likely header row.",
+                "default": null
+              },
+              "range_ref": {
+                "type": "string",
+                "description": "Optional A1-style range constraining the search.",
+                "default": null
+              },
+              "match_mode": {
+                "type": "object",
+                "description": "Whether all filters must match or any filter may match.",
+                "default": "all"
+              }
+            },
+            "required": [
+              "id",
+              "filters"
+            ]
+          },
+          "returns": "A KoreDocs operation result.",
+          "invoke_path": "/api/skills/koredocs_sheet_rows_find/invoke"
+        },
+        {
+          "name": "koredocs_sheet_rows_update",
+          "purpose": "Update all matched table rows using header-keyed values.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "description": "KoreSheet file id."
+              },
+              "match": {
+                "type": "object",
+                "description": "Header-keyed filters selecting target rows."
+              },
+              "updates": {
+                "type": "object",
+                "description": "Header-keyed values to write into each matched row."
+              },
+              "header_row": {
+                "type": "integer",
+                "description": "Optional header row. When omitted, KoreDocs will guess a likely header row.",
+                "default": null
+              },
+              "range_ref": {
+                "type": "string",
+                "description": "Optional A1-style range constraining the search.",
+                "default": null
+              },
+              "match_mode": {
+                "type": "object",
+                "description": "Whether all filters must match or any filter may match.",
+                "default": "all"
+              },
+              "create_missing_columns": {
+                "type": "boolean",
+                "description": "When true, create columns for any missing update headers.",
+                "default": false
+              },
+              "expected_revision": {
+                "type": "integer",
+                "description": "Optional optimistic concurrency check.",
+                "default": null
+              }
+            },
+            "required": [
+              "id",
+              "match",
+              "updates"
+            ]
+          },
+          "returns": "A KoreDocs operation result.",
+          "invoke_path": "/api/skills/koredocs_sheet_rows_update/invoke"
+        },
+        {
+          "name": "koredocs_sheet_rows_upsert",
+          "purpose": "KoreDocs: spreadsheet rows upsert.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "description": "KoreSheet file id."
+              },
+              "rows": {
+                "type": "array",
+                "description": "Header-keyed rows to update or append."
+              },
+              "key_columns": {
+                "type": "array",
+                "description": "Header names that uniquely identify an existing row."
+              },
+              "header_row": {
+                "type": "integer",
+                "description": "Row number containing column headers.",
+                "default": 1
+              },
+              "create_missing_columns": {
+                "type": "boolean",
+                "description": "When true, create any missing header columns before writing.",
+                "default": false
+              },
+              "expected_revision": {
+                "type": "integer",
+                "description": "Optional optimistic concurrency check.",
+                "default": null
+              }
+            },
+            "required": [
+              "id",
+              "rows",
+              "key_columns"
+            ]
+          },
+          "returns": "A KoreDocs operation result.",
+          "invoke_path": "/api/skills/koredocs_sheet_rows_upsert/invoke"
+        },
+        {
+          "name": "koredocs_sheet_table_create",
+          "purpose": "Create a spreadsheet from headers plus initial rows, using table semantics instead of raw cells.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "folder_path": {
+                "type": "string",
+                "description": "Folder path in the shared KoreDocs/datauser tree, such as \"/Projects/Calcs\". Missing folders are created."
+              },
+              "name": {
+                "type": "string",
+                "description": "Filename, with or without the .koresheet extension."
+              },
+              "headers": {
+                "type": "array",
+                "description": "Ordered list of column headers."
+              },
+              "rows": {
+                "type": "array",
+                "description": "Optional initial rows. Each row may be a list of values or an object keyed by header names.",
+                "default": null
+              },
+              "header_row": {
+                "type": "integer",
+                "description": "Row number where the headers should be written.",
+                "default": 1
+              },
+              "start_col": {
+                "type": "string",
+                "description": "Starting column for the first header.",
+                "default": "A"
+              },
+              "title": {
+                "type": "string",
+                "description": "Optional sheet title. Defaults to the filename stem.",
+                "default": null
+              }
+            },
+            "required": [
+              "folder_path",
+              "name",
+              "headers"
+            ]
+          },
+          "returns": "A KoreDocs operation result.",
+          "invoke_path": "/api/skills/koredocs_sheet_table_create/invoke"
+        },
+        {
+          "name": "koredocs_sheet_table_read",
+          "purpose": "KoreDocs: spreadsheet table read.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "description": "KoreSheet file id."
+              },
+              "header_row": {
+                "type": "integer",
+                "description": "Row number containing column headers.",
+                "default": 1
+              },
+              "range_ref": {
+                "type": "string",
+                "description": "Optional A1-style range constraining the table view.",
+                "default": null
+              }
+            },
+            "required": [
+              "id"
+            ]
+          },
+          "returns": "A KoreDocs operation result.",
+          "invoke_path": "/api/skills/koredocs_sheet_table_read/invoke"
+        },
+        {
+          "name": "koredocs_sheet_table_rows_append",
+          "purpose": "Append rows using a table-first interface rather than raw cell addresses.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "description": "KoreSheet file id."
+              },
+              "rows": {
+                "type": "array",
+                "description": "Rows to append. Each row may be a list of values or an object keyed by header names."
+              },
+              "header_row": {
+                "type": "integer",
+                "description": "Optional header row. When omitted, KoreDocs will guess a likely header row.",
+                "default": null
+              },
+              "create_missing_columns": {
+                "type": "boolean",
+                "description": "When true, create any missing columns referenced by object-style rows.",
+                "default": false
+              },
+              "expected_revision": {
+                "type": "integer",
+                "description": "Optional optimistic concurrency check.",
+                "default": null
+              }
+            },
+            "required": [
+              "id",
+              "rows"
+            ]
+          },
+          "returns": "A KoreDocs operation result.",
+          "invoke_path": "/api/skills/koredocs_sheet_table_rows_append/invoke"
+        },
+        {
+          "name": "koredocs_types_list",
+          "purpose": "KoreDocs: types list.",
+          "parameters": {
+            "type": "object",
+            "properties": {}
+          },
+          "returns": "A KoreDocs operation result.",
+          "invoke_path": "/api/skills/koredocs_types_list/invoke"
+        }
+      ]
+    }
+  ]
+}

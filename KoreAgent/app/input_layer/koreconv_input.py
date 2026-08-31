@@ -43,7 +43,6 @@
 # - _http_post: Implements the  http post operation for this module.
 # - _http_patch: Implements the  http patch operation for this module.
 # - _complete_event: Implements the  complete event operation for this module.
-# - _merge_conv_facts: Implements the  merge conv facts operation for this module.
 # - _coerce_conversation_scratchpad: Implements the  coerce conversation scratchpad operation for this module.
 # - _coerce_conversation_datasets: Implements the  coerce conversation datasets operation for this module.
 # - _build_prompt: Implements the  build prompt operation for this module.
@@ -266,37 +265,6 @@ def _complete_event(base: str, event_id: object, status: str, push_log_line, *, 
         except Exception as exc:
             push_log_line(f"{context_prefix}Event {event_id} complete({status}) attempt {attempt}/3 failed: {exc}")
     return False
-
-
-# ====================================================================================================
-# MARK: PROMPT BUILDER
-# ====================================================================================================
-
-# ----------------------------------------------------------------------------------------------------
-def _merge_conv_facts(scratchpad: dict, user_prompt: str, turn_count: int) -> dict:
-    """Merge auto-extracted conversation facts into the scratchpad before persisting to KoreChat.
-
-    These reserved _kc_* keys give the model durable per-channel memory about the
-    conversation state without requiring explicit scratchpad tool calls.
-
-    Keys written:
-      _kc_last_asked  — the most recent user message (truncated to 200 chars)
-      _kc_turn        — current turn number (post-completion)
-    """
-    # Extract the most recent user message from the built prompt text.
-    last_asked = ""
-    for marker in ("--- Respond to this message ---\n", "--- Conversation ---\n"):
-        idx = user_prompt.rfind(marker)
-        if idx >= 0:
-            last_asked = user_prompt[idx + len(marker):].strip()[:200]
-            break
-    if not last_asked:
-        last_asked = user_prompt.strip()[:200]
-
-    updated = dict(scratchpad)
-    updated["_kc_last_asked"] = last_asked
-    updated["_kc_turn"] = str(turn_count + 1)
-    return updated
 
 
 def _coerce_conversation_working_data(conv: dict, push_log_line=None) -> dict[str, dict]:
@@ -717,8 +685,6 @@ def _handle_event(
             push_log_line(f"[KORECHAT] Conv {conv_id}: persisted controlled agent-error response after retry.")
 
         current_scratchpad = build_persisted_working_data_payload(session_id)["values"]
-        fact_source_prompt = str(event_payload.get("visible_text") or "").strip() or user_prompt
-        current_scratchpad = _merge_conv_facts(current_scratchpad, fact_source_prompt, turn_count)
         persisted_working_data = {
             "values": current_scratchpad,
             "collections": build_persisted_working_data_payload(session_id)["collections"],
@@ -836,15 +802,46 @@ def start_koreconv_loop(
                     task_name = f"kc_event_{event_id}"
 
                     def _run_event(_ev=event) -> None:
-                        _handle_event(
-                            event                = _ev,
-                            config               = config,
-                            log_dir              = log_dir,
-                            session_logger_cls   = session_logger_cls,
-                            create_log_file_path = create_log_file_path,
-                            set_latest_log_path   = set_latest_log_path,
-                            push_log_line        = push_log_line,
-                        )
+                        try:
+                            _handle_event(
+                                event                = _ev,
+                                config               = config,
+                                log_dir              = log_dir,
+                                session_logger_cls   = session_logger_cls,
+                                create_log_file_path = create_log_file_path,
+                                set_latest_log_path  = set_latest_log_path,
+                                push_log_line        = push_log_line,
+                            )
+                        except Exception as exc:
+                            failed_event_id = _ev.get("id")
+                            failed_conv_id  = (_ev.get("conversation") or {}).get("id")
+                            push_log_line(
+                                f"[KORECHAT] Event {failed_event_id} crashed: {exc}"
+                            )
+                            base_url = _get_base_url()
+                            if base_url and failed_conv_id:
+                                try:
+                                    _http_post(base_url, f"/conversations/{failed_conv_id}/messages", {
+                                        "direction":      "outbound",
+                                        "content":        "(Agent response unavailable due to an internal error. Please retry.)",
+                                        "sender_display": "agent",
+                                        "status":         "sent",
+                                        "delivery_eligible": False,
+                                        "tags":           ["agent_error"],
+                                    })
+                                    _http_patch(base_url, f"/conversations/{failed_conv_id}", {"status": "active"})
+                                except Exception as recovery_exc:
+                                    push_log_line(
+                                        f"[KORECHAT] Event {failed_event_id} recovery failed: {recovery_exc}"
+                                    )
+                            if base_url and failed_event_id:
+                                _complete_event(
+                                    base_url,
+                                    failed_event_id,
+                                    "failed",
+                                    push_log_line,
+                                    context=f"event {failed_event_id}",
+                                )
 
                     prompt_label = _event_prompt_label(event)
                     queued = task_queue.enqueue(

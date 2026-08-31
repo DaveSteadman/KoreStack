@@ -21,15 +21,15 @@ from sessions.tool_selection import promote_selected_tools
 MAX_SELECTED_PER_PROMPT = 6
 _SELECTOR_OUTPUT_RESERVE = 1_024
 
-_SELECTOR_INSTRUCTIONS = """You are the KoreAgent tool selector. Your sole job is to choose the minimum exact registered tool names needed to help answer the user's newest request. Do not answer the user, explain your choice, call tools, or select a tool merely because one of its words appears in the request. Choose no tools for ordinary conversation or when the catalogue has no suitable tool.
+_SELECTOR_INSTRUCTIONS = """You are the KoreAgent tool selector. Your sole job is to choose the minimum exact registered Skill names needed to help answer the user's newest request. Do not answer the user, explain your choice, call tools, or select a skill merely because one of its words appears in the request. Choose no skills for ordinary conversation or when the catalogue has no suitable skill.
 
 Return exactly one JSON object and nothing else:
-{"tool_names":["exact_registered_tool_name"]}
+{"skill_names":["exact_registered_skill_name"]}
 
 Rules:
-- tool_names must contain only names from the supplied catalogue.
-- Select at most 6 tools.
-- Read each selection_description and parameter list; do not infer identifiers, dates, domains, or other required arguments that the user did not provide.
+- skill_names must contain only names from the supplied catalogue.
+- Select at most 6 skills.
+- Read each selection_description and the included tool list; do not infer identifiers, dates, domains, or other required arguments that the user did not provide.
 - Prefer a specific end-user capability over a low-level administrative or inspection capability unless the user asks for administration or inspection."""
 
 
@@ -40,19 +40,16 @@ def build_selector_catalog(skills: list[dict[str, Any]] | None = None) -> list[d
         if not isinstance(skill, dict):
             continue
         name = str(skill.get("name") or "").strip()
-        if not name:
+        if not name or name == "system_skills" or str(skill.get("transport") or "").strip().lower() == "builtin":
             continue
-        parameters = skill.get("parameters")
-        properties = parameters.get("properties") if isinstance(parameters, dict) else {}
         records.append(
             {
                 "name": name,
                 "service": str(skill.get("service") or "").strip(),
-                "keywords": [str(value) for value in skill.get("keywords") or [] if str(value).strip()],
                 "selection_description": str(
                     skill.get("selection_description") or skill.get("purpose") or ""
                 ).strip(),
-                "parameters": sorted(str(parameter) for parameter in properties) if isinstance(properties, dict) else [],
+                "tools": [str(tool.get("name") or "") for tool in skill.get("tools", []) if str(tool.get("name") or "")],
             }
         )
     return sorted(records, key=lambda record: str(record["name"]))
@@ -68,7 +65,7 @@ def _parse_selected_names(response: str, valid_names: set[str]) -> list[str]:
         payload = json.loads(candidate)
     except json.JSONDecodeError:
         return []
-    raw_names = payload.get("tool_names") if isinstance(payload, dict) else None
+    raw_names = payload.get("skill_names") if isinstance(payload, dict) else None
     if not isinstance(raw_names, list):
         return []
     selected: list[str] = []
@@ -129,7 +126,8 @@ def select_registered_tools(
     selected = _parse_selected_names(getattr(result, "response", ""), {str(record["name"]) for record in catalog})
     if not selected:
         return {"selected": [], "activated": [], "catalog_size": len(catalog), "status": "no_selection"}
-    activation = promote(selected, session_id=session_id, conversation_entry=conversation_entry)
+    selected_tools = [tool for record in catalog if record["name"] in selected for tool in record["tools"]]
+    activation = promote(selected_tools, session_id=session_id, conversation_entry=conversation_entry)
     return {
         "selected": selected,
         "activated": list(activation.get("added") or []) + list(activation.get("promoted") or []),

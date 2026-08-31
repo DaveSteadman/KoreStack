@@ -47,6 +47,7 @@ import subprocess
 import sys
 import platform
 from pathlib import Path
+from functools import lru_cache
 
 from utils.suite_version import SUITE_VERSION as _FRAMEWORK_VERSION
 
@@ -85,6 +86,7 @@ def _get_os_name() -> str:
 
 
 # ----------------------------------------------------------------------------------------------------
+@lru_cache(maxsize=1)
 def _get_ollama_version() -> str:
     try:
         result = subprocess.run(["ollama", "--version"], capture_output=True, text=True, check=False)
@@ -176,8 +178,8 @@ def get_system_info_dict() -> dict:
     ram_used_bytes, ram_available_bytes   = _get_memory_usage_bytes()
     disk_used_bytes, disk_available_bytes = _get_disk_usage_bytes()
 
-    def _to_gb(b: int | None) -> float:
-        return round(b / (1024 ** 3), 2) if b is not None else 0.0
+    def _to_gb(b: int | None) -> float | None:
+        return round(b / (1024 ** 3), 2) if b is not None else None
 
     return {
         "framework_version": _FRAMEWORK_VERSION,

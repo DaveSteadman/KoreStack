@@ -281,7 +281,7 @@ async def lifespan(_app):
     STOP.clear()
     threading.Thread(target=_scheduler, daemon=True, name="korecron-scheduler").start()
     start_manifest_registration(
-        ROOT / "KoreCron" / "skills" / "skills.json",
+        ROOT / "KoreCron" / "skill_registration.json",
         service_base_url=_service_url("korecron"),
         logger_name=__name__,
     )

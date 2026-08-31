@@ -138,6 +138,7 @@ _LOG_TAIL_LINES = 200
 app = FastAPI(title="KoreAgent API", version=SUITE_VERSION)
 register_endpoint_manifest(app, service_key="koreagent", service_label="KoreAgent")
 register_skill_manager_routes(app, manager=skill_manager)
+skill_manager.register_manifest(_WORKSPACE_ROOT / "KoreAgent" / "app" / "system_skills" / "skills_catalog.json")
 skill_manager.start_catalog_exporter()
 
 

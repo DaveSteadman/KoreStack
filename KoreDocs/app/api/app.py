@@ -83,7 +83,7 @@ async def lifespan(app: FastAPI):
     korefile.init_db()
     from KoreCommon.skill_registration import start_manifest_registration
     start_manifest_registration(
-        BASE_DIR / 'skills' / 'skills.json',
+        BASE_DIR / 'skill_registration.json',
         service_base_url=f"http://{_cfg['host']}:{_cfg['port']}",
         logger_name=__name__,
     )

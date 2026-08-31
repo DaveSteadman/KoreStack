@@ -5,7 +5,7 @@ Extract factual knowledge graph connections from library book text and populate 
 Use this whenever the task involves reading a book or document from KoreLibrary and generating
 structured knowledge graph edges from its content.
 
-## Trigger keywords: book connections, library graph, book to graph, extract connections from book
+## Use when working with book connections, library graphs, or extracted relationships
 
 ## Interface
 - Module: (none — workflow skill)

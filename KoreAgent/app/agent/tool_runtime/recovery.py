@@ -81,7 +81,7 @@ def build_tool_recovery_message(event: dict[str, object]) -> str:
     return (
         f"The requested tool `{requested}` is not available. "
         "Inspect the full catalog with `tools_catalog_list()` or the reviewed map with "
-        "`tools_keywords_list()`, then select the exact capability needed. "
+        "`skills_list()`, then select the exact Skill needed. "
         f"Currently active tools: {active_summary}."
     )
 
@@ -91,7 +91,7 @@ def build_tool_recovery_reminder(event: dict[str, object]) -> str:
     requested = str(event.get("requested_tool") or "").strip()
     if classification == "inactive_known" and event.get("auto_activated"):
         return f"Recovery still required: do not answer yet. Retry `{requested}` now; it is already active for this conversation."
-    return f"Recovery still required: do not answer yet. Inspect the full tool catalog or reviewed keyword map and choose the exact capability needed for `{requested}`."
+    return f"Recovery still required: do not answer yet. Inspect the full tool catalog or Skill list and choose the exact capability needed for `{requested}`."
 
 
 __all__ = [

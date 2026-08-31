@@ -122,11 +122,30 @@ def _load_domain_state(domain: str) -> dict[str, dict]:
 def _write_json_atomic(path: Path, payload: object) -> None:
     path.parent.mkdir(exist_ok=True)
     temp_path = path.with_name(f"{path.name}.{uuid.uuid4().hex}.tmp")
-    with open(temp_path, "w", encoding="utf-8") as handle:
-        json.dump(payload, handle, indent=2)
-        handle.flush()
-        os.fsync(handle.fileno())
-    os.replace(temp_path, path)
+    try:
+        with open(temp_path, "w", encoding="utf-8") as handle:
+            json.dump(payload, handle, indent=2)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temp_path, path)
+    finally:
+        try:
+            temp_path.unlink(missing_ok=True)
+        except OSError as exc:
+            LOG.warning("Could not remove temporary feed file %s: %s", temp_path, exc)
+
+
+def remove_orphaned_temp_files() -> int:
+    """Remove stale atomic-write files left by an interrupted previous process."""
+    FEEDS_DIR.mkdir(exist_ok=True)
+    removed = 0
+    for temp_path in FEEDS_DIR.glob("*.tmp"):
+        try:
+            temp_path.unlink()
+            removed += 1
+        except OSError as exc:
+            LOG.warning("Could not remove stale temporary feed file %s: %s", temp_path, exc)
+    return removed
 
 
 def _save_domain_state(domain: str, state: dict[str, dict]) -> None:

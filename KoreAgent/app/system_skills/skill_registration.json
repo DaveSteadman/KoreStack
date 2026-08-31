@@ -1,0 +1,43 @@
+{
+  "service": "koreagent",
+  "service_label": "KoreAgent",
+  "registration_mode": "builtin",
+  "skills": [
+    {
+      "name": "system_skills",
+      "purpose": "KoreAgent's built-in control, workspace, data, file, code, date, and system tools.",
+      "selection_description": "Built-in tools available to every conversation by default.",
+      "default_active": true,
+      "tools": [
+        { "name": "python_execute", "module": "CodeExecute/code_execute_skill.py", "function": "python_execute" },
+        { "name": "get_datetime_data", "module": "DateTime/datetime_skill.py", "function": "get_datetime_data" },
+        { "name": "file_write", "module": "FileAccess/file_access_skill.py", "function": "file_write" },
+        { "name": "file_append", "module": "FileAccess/file_access_skill.py", "function": "file_append" },
+        { "name": "file_read", "module": "FileAccess/file_access_skill.py", "function": "file_read" },
+        { "name": "file_write_from_working_data", "module": "FileAccess/file_access_skill.py", "function": "file_write_from_working_data" },
+        { "name": "file_find", "module": "FileAccess/file_access_skill.py", "function": "file_find" },
+        { "name": "folder_find", "module": "FileAccess/file_access_skill.py", "function": "folder_find" },
+        { "name": "folder_create", "module": "FileAccess/file_access_skill.py", "function": "folder_create" },
+        { "name": "folder_exists", "module": "FileAccess/file_access_skill.py", "function": "folder_exists" },
+        { "name": "get_system_info_dict", "module": "SystemInfo/system_info_skill.py", "function": "get_system_info_dict" },
+        { "name": "skills_list", "module": "ToolSelection/tool_selection_skill.py", "function": "skills_list" },
+        { "name": "select_skills", "module": "ToolSelection/tool_selection_skill.py", "function": "select_skills" },
+        { "name": "tools_catalog_list", "module": "ToolSelection/tool_selection_skill.py", "function": "tools_catalog_list" },
+        { "name": "tools_active_add", "module": "ToolSelection/tool_selection_skill.py", "function": "tools_active_add" },
+        { "name": "working_data_save", "module": "WorkingData/working_data_skill.py", "function": "working_data_save" },
+        { "name": "working_data_get", "module": "WorkingData/working_data_skill.py", "function": "working_data_get" },
+        { "name": "working_data_list", "module": "WorkingData/working_data_skill.py", "function": "working_data_list" },
+        { "name": "working_data_inspect", "module": "WorkingData/working_data_skill.py", "function": "working_data_inspect" },
+        { "name": "working_data_delete", "module": "WorkingData/working_data_skill.py", "function": "working_data_delete" },
+        { "name": "working_data_clear", "module": "WorkingData/working_data_skill.py", "function": "working_data_clear" },
+        { "name": "working_data_search", "module": "WorkingData/working_data_skill.py", "function": "working_data_search" },
+        { "name": "working_data_peek", "module": "WorkingData/working_data_skill.py", "function": "working_data_peek" },
+        { "name": "working_data_query", "module": "WorkingData/working_data_skill.py", "function": "working_data_query" },
+        { "name": "working_data_rename", "module": "WorkingData/working_data_skill.py", "function": "working_data_rename" },
+        { "name": "working_data_rank", "module": "WorkingData/working_data_skill.py", "function": "working_data_rank" },
+        { "name": "working_data_select", "module": "WorkingData/working_data_skill.py", "function": "working_data_select" },
+        { "name": "working_data_fetch_full_text", "module": "WorkingData/working_data_skill.py", "function": "working_data_fetch_full_text" }
+      ]
+    }
+  ]
+}

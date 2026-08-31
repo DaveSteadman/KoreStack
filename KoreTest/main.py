@@ -497,7 +497,7 @@ def recover_interrupted_runs() -> None:
     host = str(config.get("network", {}).get("host") or "127.0.0.1")
     port = int(config.get("services", {}).get("koretest", {}).get("port") or 19605)
     start_manifest_registration(
-        ROOT / "KoreTest" / "skills" / "skills.json",
+        ROOT / "KoreTest" / "skill_registration.json",
         service_base_url=f"http://{host}:{port}",
         logger_name=__name__,
     )

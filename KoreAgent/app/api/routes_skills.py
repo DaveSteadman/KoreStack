@@ -219,11 +219,11 @@ def register_skills_routes(
                 )
                 providers[provider_key]["count"] += 1
 
-        for registered in skill_manager.list_skills():
+        for registered in skill_manager.list_tools():
             tool_name = str(registered.get("name") or "").strip()
             if not tool_name or tool_name in local_tool_map:
                 continue
-            provider_label = str(registered.get("service") or "service")
+            provider_label = str(registered.get("service_label") or registered.get("service") or "service")
             provider_key = f"service:{provider_label}"
             _ensure_provider(provider_key, provider_label, "service")
             parameters_schema = registered.get("parameters") if isinstance(registered.get("parameters"), dict) else None
@@ -231,7 +231,7 @@ def register_skills_routes(
                 {
                     "tool_name": tool_name,
                     "function_signature": f"{tool_name}(...)",
-                    "skill_name": provider_label,
+                    "skill_name": str(registered.get("skill_name") or ""),
                     "purpose": str(registered.get("purpose") or ""),
                     "description": str(registered.get("purpose") or ""),
                     "origin": "registered",
@@ -289,7 +289,7 @@ def register_skills_routes(
 
         arguments = body.arguments if isinstance(body.arguments, dict) else {}
         catalog_gates = build_catalog_gates(payload)
-        active_all = set(catalog_gates.keys()) | {skill["name"] for skill in skill_manager.list_skills()} | set(always_on_tool_names)
+        active_all = set(catalog_gates.keys()) | {tool["name"] for tool in skill_manager.list_tools()} | set(always_on_tool_names)
         try:
             output = execute_tool_call(
                 tool_name=tool_name,

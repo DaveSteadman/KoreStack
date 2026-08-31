@@ -3,8 +3,6 @@
 ## Purpose
 Interface for generic file read, write, append, and search operations inside the shared `datauser/` tree. Bare relative paths resolve under `datauser/`. Legacy prefixes such as `data/...`, `datauser/...`, and `KoreDocs/...` are accepted for compatibility, but new calls should prefer plain datauser-relative paths like `notes/today.txt` or `RadarData/report.csv`.
 
-## Trigger keyword: file
-
 ## Interface
 - Module: `KoreAgent/app/system_skills/FileAccess/file_access_skill.py`
 - Functions:
@@ -73,16 +71,6 @@ Use KoreDocs tools when you need document-aware or spreadsheet-aware behavior su
 - creating or editing structured `.koredoc`, `.koresheet`, or `.korediag` content semantically
 - working with KoreDocs file ids or folder ids
 - reading and updating sheets or document sections through typed operations
-
-## Triggers
-Invoke this skill when the prompt contains any of these concepts or phrases:
-- `write to file`, `create file`, `save to file`
-- `write page to file`, `save fetched content to file`, `write from scratch`, `write scratch to file`
-- `append to file`, `add to file`
-- `read file`, `show file`, `open file`, `contents of`
-- `find file`, `find folder`, `locate file`, `search for file`, `list files`
-- `list directory`, `list folder`, `local directory`, `local folder` (all within `datauser/`)
-- `create folder`, `make folder`, `create directory`, `folder exists`, `does folder exist`
 
 ## Working Data Integration
 The `content` argument of `file_write` and `file_append` supports `{working_data:key}` token substitution.

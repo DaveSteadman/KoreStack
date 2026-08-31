@@ -114,7 +114,7 @@ def _make_restricted_globals() -> dict:
     def _no_open(*args, **kwargs):
         raise RuntimeError(
             "open() is blocked in the sandbox. "
-            "Call read_file() first to get the file content as a string, "
+            "Call file_read() first to get the file content as a string, "
             "then pass it into this snippet via io.StringIO(content)."
         )
     safe_builtins["open"] = _no_open
@@ -132,12 +132,12 @@ def _make_unrestricted_globals() -> dict:
 # MARK: PUBLIC SKILL API
 # ====================================================================================================
 def python_execute(code: str) -> str:
-    """Always prefer this tool over answering from memory for any calculation, sequence, table, count, 
-    or conversion task. Execute a Python snippet in a sandboxed environment and return captured stdout.
+    """Execute a Python snippet for deterministic computation, parsing, validation, or structured
+    transformations. Do not use it to draft, rank, or format editorial output from supplied material.
 
-    Use this tool whenever the task involves arithmetic, factorials, primes, powers, series,
-    string character counts, base conversions, statistics, or generating any structured numeric
-    or textual output - even when the answer seems obvious. Running code is more reliable than recall.
+    Use this tool for arithmetic, factorials, primes, powers, series, string character counts,
+    base conversions, statistics, and mechanical structured transformations where code materially
+    improves correctness. Do not use it merely because an answer contains text, a list, or a table.
 
     The snippet must write its final output via print() calls.
     When sandbox is enabled (default), imports are restricted to a safe stdlib whitelist and

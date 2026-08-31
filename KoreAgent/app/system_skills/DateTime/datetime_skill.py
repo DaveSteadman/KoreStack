@@ -14,8 +14,6 @@
 # MARK: FUNCTIONS
 # Function inventory:
 # - get_datetime_data: Returns datetime data for this module.
-# - get_day_name: Returns day name for this module.
-# - get_month_name: Returns month name for this module.
 # ====================================================================================================
 
 
@@ -29,11 +27,13 @@ from datetime import datetime
 # MARK: PUBLIC SKILL API
 # ====================================================================================================
 def get_datetime_data() -> dict:
-    """Return the current local date and time as a dict with keys 'date' (YYYY-MM-DD) and 'time' (HH:MM:SS). Takes no arguments. When the user asks only for the time, report only the time field; when asked only for the date, report only the date field."""
+    """Return current local date, time, day name, and month name in one structured response."""
     current_local = datetime.now()
     return {
-        "date": current_local.strftime("%Y-%m-%d"),
-        "time": current_local.strftime("%H:%M:%S"),
+        "date":       current_local.strftime("%Y-%m-%d"),
+        "time":       current_local.strftime("%H:%M:%S"),
+        "day_name":   current_local.strftime("%A"),
+        "month_name": current_local.strftime("%B"),
     }
 
 

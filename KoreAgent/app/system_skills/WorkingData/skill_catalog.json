@@ -1,0 +1,23 @@
+{
+  "skill_name": "Working Data",
+  "relative_path": "app/system_skills/WorkingData/skill.md",
+  "purpose": "Store prompt-supporting material outside the active context window. A named Working Data item can\nbe a single statement, generated text, an object, or a list of structured records. Use it to retain\nlarge tool output across steps and retrieve only the relevant part later.",
+  "module": "KoreAgent/app/system_skills/WorkingData/working_data_skill.py",
+  "functions": [
+    "working_data_save(name: str, value: str | list[dict] | dict, source_tool: str = \"\", source_args: dict = None, replace: bool = False)",
+    "working_data_get(name: str, indices: list[int] = None, max_records: int = 0, fields: list[str] = None, offset: int = 0, limit: int = 0, excerpt_chars: int = 1200)",
+    "working_data_list()",
+    "working_data_inspect(name: str)",
+    "working_data_delete(name: str)",
+    "working_data_clear()",
+    "working_data_search(substring: str)",
+    "working_data_peek(name: str, substring: str, context_chars: int = 250)",
+    "working_data_query(name: str, query: str, save_result_name: str = \"\", instructions: str = \"\")",
+    "working_data_rename(name: str, new_name: str)",
+    "working_data_rank(name: str, criteria: str, count: int = 5, save_as: str = \"\", fields: list[str] = None, excerpt_chars: int = 700, offset: int = 0, limit: int = 30)",
+    "working_data_select(name: str, indices: list[int], save_as: str = \"\")",
+    "working_data_fetch_full_text(name: str, indices: list[int] = None, save_as: str = \"\")"
+  ],
+  "param_descriptions": {},
+  "is_system_skill": true
+}

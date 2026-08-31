@@ -112,6 +112,7 @@ from app.feed_manager import (
     get_domain_enabled,
     list_feed_domains,
     load_feeds,
+    remove_orphaned_temp_files,
     remove_feed,
     rename_domain,
     set_domain_enabled,
@@ -127,6 +128,9 @@ from app.overview import get_feed_overview, invalidate_feed_overview
 def _warm_feed_domains() -> None:
     # Populate the small, mutable fetch-state cache before the dashboard needs it.
     # On the Dropbox data volume a cold read can be slow even for tiny JSON files.
+    removed_temp_files = remove_orphaned_temp_files()
+    if removed_temp_files:
+        LOG.info("Removed %s stale feed temporary file(s)", removed_temp_files)
     load_feeds()
     for _domain in list_domains():
         init_db(_domain)
@@ -152,7 +156,7 @@ async def _lifespan(app: FastAPI):
         name   = "korefeed-scheduler-startup",
     ).start()
     start_manifest_registration(
-        Path(__file__).resolve().parent.parent / "skills" / "skills.json",
+        Path(__file__).resolve().parent.parent / "skill_registration.json",
         service_base_url=f"http://{cfg['host']}:{cfg['port']}",
         logger_name=__name__,
     )

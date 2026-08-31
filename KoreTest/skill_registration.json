@@ -1,0 +1,77 @@
+{
+    "schema_version":  2,
+    "service":  "koretest",
+    "service_label":  "KoreTest",
+    "skills":  [
+                   {
+                       "name":  "koretest",
+                       "purpose":  "KoreTest tools.",
+                       "selection_description":  "Use KoreTest capabilities.",
+                       "tools":  [
+                                     {
+                                         "name":  "test_list_suites",
+                                         "purpose":  "List the available KoreTest prompt suites.",
+                                         "parameters":  {
+                                                            "type":  "object",
+                                                            "properties":  {
+
+                                                                           }
+                                                        },
+                                         "returns":  "Available prompt-suite file names.",
+                                         "invoke_path":  "/api/skills/test_list_suites/invoke"
+                                     },
+                                     {
+                                         "name":  "test_run_suite",
+                                         "purpose":  "Run one KoreTest prompt suite, optionally with a specified model.",
+                                         "parameters":  {
+                                                            "type":  "object",
+                                                            "properties":  {
+                                                                               "name":  {
+                                                                                            "type":  "string"
+                                                                                        },
+                                                                               "model":  {
+                                                                                             "type":  "string",
+                                                                                             "default":  ""
+                                                                                         }
+                                                                           },
+                                                            "required":  [
+                                                                             "name"
+                                                                         ]
+                                                        },
+                                         "returns":  "The started test-run record.",
+                                         "invoke_path":  "/api/skills/test_run_suite/invoke"
+                                     },
+                                     {
+                                         "name":  "test_list_runs",
+                                         "purpose":  "List recent KoreTest test-run records.",
+                                         "parameters":  {
+                                                            "type":  "object",
+                                                            "properties":  {
+                                                                               "limit":  {
+                                                                                             "type":  "integer",
+                                                                                             "default":  50
+                                                                                         }
+                                                                           }
+                                                        },
+                                         "returns":  "Recent test-run records.",
+                                         "invoke_path":  "/api/skills/test_list_runs/invoke"
+                                     },
+                                     {
+                                         "name":  "test_get_trend",
+                                         "purpose":  "Read KoreTest pass-rate and token-use trends for a suite.",
+                                         "parameters":  {
+                                                            "type":  "object",
+                                                            "properties":  {
+                                                                               "name":  {
+                                                                                            "type":  "string",
+                                                                                            "default":  ""
+                                                                                        }
+                                                                           }
+                                                        },
+                                         "returns":  "Trend data for test results.",
+                                         "invoke_path":  "/api/skills/test_get_trend/invoke"
+                                     }
+                                 ]
+                   }
+               ]
+}

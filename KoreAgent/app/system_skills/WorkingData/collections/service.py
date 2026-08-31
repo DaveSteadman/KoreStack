@@ -95,6 +95,12 @@ _CMP_RE = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*)\s*([<>])\s*(.+)$")
 INLINE_THRESHOLD_BYTES = 50_000
 _MANIFEST_HISTORY_LIMIT = 10
 _FULL_TEXT_TIMEOUT_SECS = 60.0
+_DEFAULT_RECORD_LIMIT   = 5
+_DEFAULT_EXCERPT_CHARS  = 1_200
+_MAX_RANKED_RECORDS     = 10
+_MAX_FULL_TEXT_RECORDS  = 5
+_MAX_RANK_CANDIDATES    = 30
+_MAX_RANK_PAYLOAD_CHARS = 48_000
 _SESSION_DATASETS: dict[str, dict[str, dict]] = {}
 _DATASET_LOCK: threading.RLock = threading.RLock()
 
@@ -191,6 +197,9 @@ def _expand_records_with_full_text(
     failures: list[str] = []
 
     for index, record in enumerate(records, start=1):
+        if any(str(record.get(field) or "").strip() for field in ("page_text", "body", "content", "text")):
+            expanded.append(dict(record))
+            continue
         refid = str(record.get("artifact_ref") or "").strip()
         if not refid:
             failures.append(f"row {index} missing artifact_ref")
@@ -325,12 +334,22 @@ def _get_dataset(name: str, session_id: str | None = None) -> dict:
 def _project_record(record: dict, fields: list[str] | None, excerpt_chars: int) -> dict:
     excerpt_limit = max(0, int(excerpt_chars or 0))
     if fields:
-        projected = {field: record.get(field) for field in fields if field in record}
+        projected = {}
+        for field in fields:
+            if field not in record:
+                continue
+            value = record.get(field)
+            if isinstance(value, str) and excerpt_limit > 0:
+                value = value[:excerpt_limit]
+            projected[field] = value
     else:
         projected = {}
-        for field in ("title", "source", "published_at", "url", "snippet"):
+        for field in ("title", "source", "published_at", "url", "snippet", "artifact_ref"):
             if field in record:
-                projected[field] = record.get(field)
+                value = record.get(field)
+                if isinstance(value, str) and excerpt_limit > 0:
+                    value = value[:excerpt_limit]
+                projected[field] = value
         if not projected:
             for key in list(record.keys())[:5]:
                 projected[key] = record.get(key)
@@ -386,7 +405,7 @@ def _select_records(
         }
 
     start = _coerce_non_negative_int(offset)
-    page_size = _coerce_non_negative_int(limit) or _coerce_non_negative_int(max_records) or 20
+    page_size = _coerce_non_negative_int(limit) or _coerce_non_negative_int(max_records) or _DEFAULT_RECORD_LIMIT
     end = min(total, start + page_size)
     selected = records[start:end]
     has_more = end < total
@@ -839,9 +858,10 @@ def dataset_get(
     fields: list[str] = None,
     offset: int = 0,
     limit: int = 0,
+    excerpt_chars: int = _DEFAULT_EXCERPT_CHARS,
     session_id: str | None = None,
 ) -> str:
-    """Return specific records or a bounded slice from a dataset."""
+    """Return a bounded, projected slice from a dataset; large text fields are excerpted."""
     try:
         dataset = _get_dataset(name, session_id)
     except ValueError as exc:
@@ -853,14 +873,14 @@ def dataset_get(
 
     records = dataset.get("records") or []
     selected, selection = _select_records(records, indices=indices, offset=offset, limit=limit, max_records=max_records)
-    if fields:
-        selected = [{field: record.get(field) for field in fields if field in record} for record in selected]
+    selected = [_project_record(record, fields, excerpt_chars) for record in selected]
     payload = {
         "ok": True,
         "dataset_id": dataset["dataset_id"],
         "name": dataset["name"],
         "total_count": len(records),
         "fields": list(fields or []),
+        "excerpt_chars": max(0, int(excerpt_chars or 0)),
         **selection,
         "records": selected,
     }
@@ -934,6 +954,121 @@ def dataset_write_koredoc(
         f"Exported dataset '{dataset['name']}' records {exported_range_start}-{exported_range_end} "
         f"of {len(records)} to KoreDocs document '{target_name}' at '{target_path}'."
     )
+
+
+def dataset_select(
+    name: str,
+    indices: list[int],
+    save_as: str = "",
+    session_id: str | None = None,
+) -> str:
+    """Create a named dataset containing only explicitly selected source records."""
+    try:
+        dataset = _get_dataset(name, session_id)
+    except ValueError as exc:
+        return f"Error: {exc}"
+    except LookupError:
+        return f"Dataset '{_validate_name(name)}' not found."
+    except FileNotFoundError as exc:
+        return _missing_spillover_error(_validate_name(name), str(exc))
+
+    selected, selection = _select_records(dataset.get("records") or [], indices=indices)
+    if not selected:
+        return f"Error: dataset '{dataset['name']}' selection is empty."
+
+    target_name = save_as.strip().lower() if save_as else _derive_name(dataset["name"], "selected", session_id)
+    history = list(dataset.get("history") or [])
+    history.append(
+        _history_entry(
+            op="select",
+            prompt=f"indices={selection['indices']}",
+            kept=len(selected),
+            dropped=len(dataset.get("records") or []) - len(selected),
+        )
+    )
+    saved = _save_dataset_internal(
+        name=target_name,
+        records=selected,
+        source_tool=dataset.get("source_tool") or "",
+        source_args=dataset.get("source_args"),
+        parent_dataset_id=dataset["dataset_id"],
+        history=history,
+        replace=False,
+        session_id=session_id,
+    )
+    return (
+        f"Created dataset '{saved['name']}' from '{dataset['name']}' with "
+        f"{len(selected)} selected record(s), source indices={selection['indices']}."
+    )
+
+
+def dataset_fetch_full_text(
+    name: str,
+    indices: list[int] = None,
+    save_as: str = "",
+    session_id: str | None = None,
+) -> str:
+    """Fetch full text for at most five selected source records and save the enriched dataset."""
+    try:
+        dataset = _get_dataset(name, session_id)
+    except ValueError as exc:
+        return f"Error: {exc}"
+    except LookupError:
+        return f"Dataset '{_validate_name(name)}' not found."
+    except FileNotFoundError as exc:
+        return _missing_spillover_error(_validate_name(name), str(exc))
+
+    records = dataset.get("records") or []
+    if indices is None:
+        if len(records) > _MAX_FULL_TEXT_RECORDS:
+            return (
+                f"Error: dataset '{dataset['name']}' has {len(records)} records. "
+                f"Pass up to {_MAX_FULL_TEXT_RECORDS} explicit indices, or select a smaller dataset first."
+            )
+        indices = list(range(len(records)))
+    selected, selection = _select_records(records, indices=indices)
+    if not selected:
+        return f"Error: dataset '{dataset['name']}' selection is empty."
+    if len(selected) > _MAX_FULL_TEXT_RECORDS:
+        return f"Error: select at most {_MAX_FULL_TEXT_RECORDS} records for full-text retrieval."
+
+    try:
+        with httpx.Client(timeout=_FULL_TEXT_TIMEOUT_SECS) as client:
+            expanded_records, failures = _expand_records_with_full_text(selected, client=client)
+    except Exception as exc:
+        return f"Error during full-text retrieval: {exc}"
+    if not expanded_records:
+        detail = f" First failure: {failures[0]}." if failures else ""
+        return f"Error during full-text retrieval: no records were retrieved.{detail}"
+
+    target_name = save_as.strip().lower() if save_as else _derive_name(dataset["name"], "fulltext", session_id)
+    history = list(dataset.get("history") or [])
+    history.append(
+        _history_entry(
+            op="fetch_full_text",
+            prompt=f"indices={selection['indices']}",
+            kept=len(expanded_records),
+            dropped=len(selected) - len(expanded_records),
+            fields=["artifact_ref"],
+        )
+    )
+    saved = _save_dataset_internal(
+        name=target_name,
+        records=expanded_records,
+        source_tool="dataset_fetch_full_text",
+        source_args={"from_dataset": dataset["name"], "indices": selection["indices"]},
+        parent_dataset_id=dataset["dataset_id"],
+        history=history,
+        replace=False,
+        session_id=session_id,
+    )
+    message = (
+        f"Created dataset '{saved['name']}' from '{dataset['name']}' with full text for "
+        f"{len(expanded_records)}/{len(selected)} selected record(s)."
+    )
+    if failures:
+        message += f" Skipped {len(failures)} record(s): {'; '.join(failures[:3])}"
+    return message
 
 
 def dataset_expand_full_text(
@@ -1255,6 +1390,133 @@ def dataset_filter(
     )
     action = "Replaced" if replace else "Created"
     return f"{action} dataset '{saved['name']}' from '{dataset['name']}' via filter - kept {len(kept_records)}/{len(dataset.get('records') or [])} records."
+
+
+def dataset_rank(
+    name: str,
+    criteria: str,
+    count: int = 5,
+    save_as: str = "",
+    fields: list[str] = None,
+    excerpt_chars: int = 700,
+    offset: int = 0,
+    limit: int = _MAX_RANK_CANDIDATES,
+    session_id: str | None = None,
+) -> str:
+    """Use one isolated LLM pass to rank records and save the top bounded subset."""
+    if not str(criteria or "").strip():
+        return "Error: criteria cannot be empty."
+    requested_count = _coerce_non_negative_int(count)
+    if not 1 <= requested_count <= _MAX_RANKED_RECORDS:
+        return f"Error: count must be between 1 and {_MAX_RANKED_RECORDS}."
+    try:
+        dataset = _get_dataset(name, session_id)
+    except ValueError as exc:
+        return f"Error: {exc}"
+    except LookupError:
+        return f"Dataset '{_validate_name(name)}' not found."
+    except FileNotFoundError as exc:
+        return _missing_spillover_error(_validate_name(name), str(exc))
+
+    records = dataset.get("records") or []
+    if not records:
+        return f"Error: dataset '{dataset['name']}' is empty."
+    start = _coerce_non_negative_int(offset)
+    candidate_limit = _coerce_non_negative_int(limit) or _MAX_RANK_CANDIDATES
+    candidate_limit = min(candidate_limit, _MAX_RANK_CANDIDATES)
+    candidate_slice, selection = _select_records(records, offset=start, limit=candidate_limit)
+    if not candidate_slice:
+        return f"Error: dataset '{dataset['name']}' ranking selection is empty."
+    if requested_count > len(candidate_slice):
+        return f"Error: count {requested_count} exceeds the {len(candidate_slice)} records in this ranking selection."
+
+    candidate_records = []
+    safe_excerpt_chars = min(max(0, _coerce_non_negative_int(excerpt_chars)), 700)
+    for index, record in enumerate(candidate_slice, start=selection["offset"]):
+        projected = _project_record(record, fields, safe_excerpt_chars)
+        candidate_records.append({"index": index, **projected})
+    candidate_payload = json.dumps(candidate_records, ensure_ascii=False)
+    if len(candidate_payload) > _MAX_RANK_PAYLOAD_CHARS:
+        return (
+            f"Error: ranking selection is {len(candidate_payload):,} characters. Narrow fields or use a smaller "
+            f"offset/limit page (maximum {_MAX_RANK_CANDIDATES} candidates)."
+        )
+
+    try:
+        from llm_client import call_llm_chat as _call_llm_chat
+        from llm_client import get_active_model as _get_active_model
+        from llm_client import get_active_num_ctx as _get_active_num_ctx
+
+        model = _get_active_model()
+        if not model:
+            return "Error: no active model available. Run a prompt first."
+        messages = [
+            {
+                "role": "system",
+                "content": (
+                    "You rank source records for an editorial task. Return JSON only with an indices array "
+                    "containing the requested number of distinct record indices, ordered most significant first. "
+                    "Use only the supplied records; do not call tools, write prose, or include facts not present."
+                ),
+            },
+            {
+                "role": "user",
+                "content": (
+                    f"Criteria: {str(criteria).strip()}\n"
+                    f"Select exactly {requested_count} records.\n"
+                    f"Records:\n{candidate_payload}"
+                ),
+            },
+        ]
+        result = _call_llm_chat(
+            model_name=model,
+            messages=messages,
+            tools=None,
+            num_ctx=min(_get_active_num_ctx(), 16_384),
+        )
+        parsed = json.loads(_extract_first_json_object(str(result.response or "")))
+    except Exception as exc:
+        return f"Error during dataset ranking: {exc}"
+
+    raw_indices = parsed.get("indices") if isinstance(parsed, dict) else None
+    if not isinstance(raw_indices, list):
+        return "Error during dataset ranking: response did not include an indices array."
+    ranked_indices: list[int] = []
+    for raw_index in raw_indices:
+        if isinstance(raw_index, int) and 0 <= raw_index < len(records) and raw_index not in ranked_indices:
+            ranked_indices.append(raw_index)
+        if len(ranked_indices) >= requested_count:
+            break
+    required_count = requested_count
+    if len(ranked_indices) != required_count:
+        return f"Error during dataset ranking: expected {required_count} valid distinct indices, got {len(ranked_indices)}."
+
+    selected = [records[index] for index in ranked_indices]
+    target_name = save_as.strip().lower() if save_as else _derive_name(dataset["name"], "ranked", session_id)
+    history = list(dataset.get("history") or [])
+    history.append(
+        _history_entry(
+            op="rank",
+            prompt=str(criteria).strip(),
+            kept=len(selected),
+            dropped=len(records) - len(selected),
+            fields=list(fields or []),
+        )
+    )
+    saved = _save_dataset_internal(
+        name=target_name,
+        records=selected,
+        source_tool="dataset_rank",
+        source_args={"from_dataset": dataset["name"], "criteria": str(criteria).strip(), "indices": ranked_indices},
+        parent_dataset_id=dataset["dataset_id"],
+        history=history,
+        replace=False,
+        session_id=session_id,
+    )
+    return (
+        f"Created ranked dataset '{saved['name']}' from '{dataset['name']}' with "
+        f"{len(selected)} record(s), source indices={ranked_indices}."
+    )
 
 
 def ingest_auto_dataset(source_tool: str, source_args: dict, records: list[dict], session_id: str | None = None) -> str:

@@ -1,0 +1,49 @@
+{
+  "skill_name": "FileAccess Skill",
+  "relative_path": "app/system_skills/FileAccess/skill.md",
+  "purpose": "Interface for generic file read, write, append, and search operations inside the shared `datauser/` tree. Bare relative paths resolve under `datauser/`. Legacy prefixes such as `data/...`, `datauser/...`, and `KoreDocs/...` are accepted for compatibility, but new calls should prefer plain datauser-relative paths like `notes/today.txt` or `RadarData/report.csv`.",
+  "module": "KoreAgent/app/system_skills/FileAccess/file_access_skill.py",
+  "functions": [
+    "file_write(path: str, content: str)",
+    "file_append(path: str, content: str)",
+    "file_read(path: str, max_chars: int = 8000)",
+    "file_write_from_working_data(working_data_name: str, path: str)",
+    "file_find(keywords: list[str], search_root: str = \"\")",
+    "folder_find(keywords: list[str], search_root: str = \"\")",
+    "folder_create(path: str)",
+    "folder_exists(path: str)"
+  ],
+  "param_descriptions": {
+    "file_write_from_working_data": {
+      "working_data_name": "Working Data item holding the content to write, e.g. `\"_wd_r5_fetch_page_text\"`. Reads the stored value directly without requiring a separate `working_data_get` call.",
+      "path": "destination path; same resolution rules as `file_write`."
+    },
+    "folder_create": {
+      "path": "path of the directory to create, resolved under `datauser/`, e.g. `\"webresearch/01-Mine/2026-03-22\"`. Creates all missing parent directories. Safe to call if the folder already exists."
+    },
+    "folder_exists": {
+      "path": "datauser-relative path to check."
+    },
+    "file_write": {
+      "path": "datauser-relative path. A bare name like `\"x.txt\"` resolves to `datauser/x.txt`. Legacy aliases like `\"data/x.txt\"`, `\"datauser/x.txt\"`, and `\"KoreDocs/x.txt\"` are accepted.",
+      "content": "content to write. Overwrites the file if it exists. Supports `{working_data:key}` token substitution."
+    },
+    "file_append": {
+      "path": "same path rules as `file_write`.",
+      "content": "content to append. A newline is added automatically if missing. Supports `{working_data:key}` token substitution."
+    },
+    "file_read": {
+      "path": "same path rules as `file_write`.",
+      "max_chars": "maximum characters to return; content is truncated with `[truncated]` if exceeded."
+    },
+    "file_find": {
+      "keywords": "list of case-insensitive fragments that must ALL appear in the file name, e.g. `[\"pulse\", \"2026\"]`.",
+      "search_root": "datauser-relative directory to restrict the search, e.g. `\"RadarData\"`. Leave empty to search the whole `datauser/` tree. Legacy aliases like `\"KoreDocs/RadarData\"` are accepted."
+    },
+    "folder_find": {
+      "keywords": "list of case-insensitive fragments that must ALL appear in the folder name.",
+      "search_root": "datauser-relative directory to restrict the search. Leave empty to search the whole `datauser/` tree. Legacy aliases like `\"KoreDocs/RadarData\"` are accepted."
+    }
+  },
+  "is_system_skill": true
+}

@@ -1,0 +1,15 @@
+{
+  "skill_name": "CodeExecute Skill",
+  "relative_path": "app/system_skills/CodeExecute/skill.md",
+  "purpose": "- Execute a self-contained Python code snippet and return the captured stdout.\n- Use code only for deterministic calculations, parsing, validation, or structured transformations where it materially improves correctness.\n- Do not use code to draft, rank, or format a narrative response, report, email, summary, or other editorial output from supplied material. Write that output directly.\n- Do not create or read files merely to run code. Use FileAccess only when the user explicitly asks to create, modify, or inspect a file.\n- Only Python stdlib is available; third-party packages (numpy, pandas, sympy) are not.\n- When sandbox is off (`/sandbox off`), all modules are accessible. To install and use a third-party package, use `subprocess` to pip-install it first, then import normally:\n  ```python\n  import subprocess, sys\n  subprocess.run([sys.executable, \"-m\", \"pip\", \"install\", \"numpy\"], check=True)\n  import numpy as np\n  print(np.array([1,2,3]).mean())\n  ```\n- When the user explicitly requests a generated file, code output may be saved to Working Data and passed to `file_write`.\n- Code must use `print()` for all output. Favour simple linear code - avoid complex class hierarchies or deeply nested call stacks.",
+  "module": "KoreAgent/app/system_skills/CodeExecute/code_execute_skill.py",
+  "functions": [
+    "python_execute(code: str)"
+  ],
+  "param_descriptions": {
+    "python_execute": {
+      "code": "a complete, self-contained Python snippet as a string. Must use `print()` for all output."
+    }
+  },
+  "is_system_skill": true
+}

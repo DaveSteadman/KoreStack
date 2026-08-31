@@ -80,11 +80,12 @@ def _suspicious_document_write_reason(target_path: Path, content: str) -> str:
 
 # ----------------------------------------------------------------------------------------------------
 def file_write(path: str, content: str, skip_content_guard: bool = False) -> str:
+    """Overwrite one datauser-relative text file. Call only when a file write was requested."""
     try:
         target_path = resolve_datauser_path(path)
     except DataUserPathError as err:
         return f"Error: {err}"
-    text_to_write = str(content).replace("\\n", "\n")  # unescape literal \n from model output
+    text_to_write = str(content)
     if not skip_content_guard:
         reason = _suspicious_document_write_reason(target_path, text_to_write)
         if reason:
@@ -98,17 +99,19 @@ def file_write(path: str, content: str, skip_content_guard: bool = False) -> str
 
 # ----------------------------------------------------------------------------------------------------
 def file_append(path: str, content: str) -> str:
+    """Append text to one datauser-relative file. Call only when an append was requested."""
     try:
         target_path = resolve_datauser_path(path)
     except DataUserPathError as err:
         return f"Error: {err}"
-    text_to_write = str(content).replace("\\n", "\n")  # unescape literal \n from model output
+    text_to_write = str(content)
     target_path = write_text_file(target_path, text_to_write, append=True, ensure_trailing_newline=True)
     return f"Appended {display_datauser_path(target_path)}"
 
 
 # ----------------------------------------------------------------------------------------------------
 def file_read(path: str, max_chars: int = 8000) -> str:
+    """Read one datauser-relative text file, returning at most max_chars characters."""
     try:
         target_path = resolve_datauser_path(path)
     except DataUserPathError as err:
@@ -246,11 +249,11 @@ def folder_exists(path: str) -> str:
 def file_write_from_working_data(working_data_name: str, path: str, skip_content_guard: bool = False) -> str:
     """Write the content stored in a Working Data item to a file at path.
 
-    Reads the auto-saved scratchpad key (e.g. _tc_r5_fetch_page_text shown in a truncation
+    Reads the named Working Data item (e.g. _wd_r5_fetch_page_text shown in a truncation
     notice) and writes it to the given path. The path follows the same resolution rules as
-    write_file. Creates parent directories automatically.
+    file_write. Creates parent directories automatically.
 
-    Use this instead of write_file when the content to write is already in the scratchpad
+    Use this instead of file_write when the content to write is already in Working Data
     (e.g. a large page fetch that was auto-saved), to avoid putting large content into tool
     call arguments where JSON encoding can cause errors.
     """

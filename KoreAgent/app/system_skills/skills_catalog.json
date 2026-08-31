@@ -1,136 +1,32 @@
 {
   "schema_version": "1.0",
   "skills_root": "app/system_skills",
+  "service": "koreagent",
+  "service_label": "KoreAgent",
+  "registration_mode": "builtin",
+  "default_skill_name": "system_skills",
+  "purpose": "KoreAgent built-in tools.",
+  "selection_description": "Built-in tools available to every conversation by default.",
   "skills": [
     {
       "skill_name": "CodeExecute Skill",
-      "relative_path": "app/system_skills/CodeExecute/skill.md",
-      "purpose": "- Execute a self-contained Python code snippet and return the captured stdout.\n- **Always prefer code over a direct answer for any calculation, sequence, table, string operation, or data generation task** - even when the answer seems obvious from training knowledge. Running code is more reliable and verifiable than recall.\n- Only Python stdlib is available; third-party packages (numpy, pandas, sympy) are not.\n- When sandbox is off (`/sandbox off`), all modules are accessible. To install and use a third-party package, use `subprocess` to pip-install it first, then import normally:\n  ```python\n  import subprocess, sys\n  subprocess.run([sys.executable, \"-m\", \"pip\", \"install\", \"numpy\"], check=True)\n  import numpy as np\n  print(np.array([1,2,3]).mean())\n  ```\n- When paired with FileAccess, call this skill first to generate the content, then park the output with `working_data_save`, and pass `{working_data:key}` as the content argument to `file_write`.\n- Code must use `print()` for all output. Favour simple linear code - avoid complex class hierarchies or deeply nested call stacks.",
-      "module": "KoreAgent/app/system_skills/CodeExecute/code_execute_skill.py",
-      "trigger_keyword": "calculate",
-      "triggers": [
-        "calculate",
-        "compute",
-        "what is X",
-        "evaluate",
-        "Powers, factorials, primes, fibonacci, sequences, series",
-        "Sum, product, average, mean, median, mode, standard deviation",
-        "Compound interest, percentage, ratio, conversion between units",
-        "Multiplication tables, squares/cubes tables, truth tables, lookup tables",
-        "print a table",
-        "generate a list",
-        "produce a list",
-        "list all X",
-        "first N of",
-        "Identity matrix, Pascal's triangle, any structured numeric output",
-        "how many times",
-        "count the",
-        "Reverse, sort, check for palindromes, anagram detection",
-        "Any prompt asking to inspect or transform a string value",
-        "convert X to binary/hex/octal/decimal",
-        "ASCII codes, encoding lookups",
-        "Collatz sequence, any recurrence relation",
-        "first N",
-        "up to N",
-        "for each",
-        "from 1 to N"
-      ],
+      "purpose": "- Execute a self-contained Python code snippet and return the captured stdout.",
       "functions": [
         "python_execute(code: str)"
       ],
-      "inputs": [],
-      "outputs": [
-        "`python_execute(...)` - returns captured stdout as a plain string. Returns `\"Error: ...\"` if the snippet raises an exception, times out, or produces no output."
-      ],
-      "param_descriptions": {
-        "python_execute": {
-          "code": "a complete, self-contained Python snippet as a string. Must use `print()` for all output."
-        }
-      },
-      "tool_selection_guidance": "",
-      "is_system_skill": true,
-      "origin": "builtin",
-      "availability": "guaranteed",
-      "role": "core",
-      "trust_boundary": "internal"
+      "catalog_file": "CodeExecute/skill_catalog.json"
     },
     {
       "skill_name": "DateTime Skill",
-      "relative_path": "app/system_skills/DateTime/skill.md",
-      "purpose": "Return the current date, time, day name, and month name. Prefer `get_datetime_data()` in all cases - it returns both date and time in a single call. Use `get_day_name()` or `get_month_name()` only when you specifically need just that one value.",
-      "module": "KoreAgent/app/system_skills/DateTime/datetime_skill.py",
-      "trigger_keyword": "current date, time, day of the week, or month name",
-      "triggers": [
-        "what is the date",
-        "current date",
-        "today's date",
-        "what time is it",
-        "current time",
-        "what day is it",
-        "what year is it",
-        "what month is it",
-        "current month",
-        "month name",
-        "day of the week",
-        "day name"
-      ],
+      "purpose": "Return the current local date and time in one structured response.",
       "functions": [
-        "get_datetime_data()",
-        "get_day_name()",
-        "get_month_name()"
+        "get_datetime_data()"
       ],
-      "inputs": [],
-      "outputs": [
-        "`get_datetime_data()` - returns a dict with two string fields:",
-        "`date` (str) - current date as `\"YYYY-MM-DD\"`",
-        "`time` (str) - current time as `\"HH:MM:SS\"`",
-        "`get_day_name()` - returns the full name of the current day of the week, e.g. `\"Saturday\"`",
-        "`get_month_name()` - returns the full name of the current month, e.g. `\"March\"`"
-      ],
-      "param_descriptions": {},
-      "tool_selection_guidance": "",
-      "is_system_skill": true,
-      "origin": "builtin",
-      "availability": "guaranteed",
-      "role": "core",
-      "trust_boundary": "internal"
+      "catalog_file": "DateTime/skill_catalog.json"
     },
     {
       "skill_name": "FileAccess Skill",
-      "relative_path": "app/system_skills/FileAccess/skill.md",
-      "purpose": "Interface for generic file read, write, append, and search operations inside the shared `datauser/` tree. Bare relative paths resolve under `datauser/`. Legacy prefixes such as `data/...`, `datauser/...`, and `KoreDocs/...` are accepted for compatibility, but new calls should prefer plain datauser-relative paths like `notes/today.txt` or `RadarData/report.csv`.",
-      "module": "KoreAgent/app/system_skills/FileAccess/file_access_skill.py",
-      "trigger_keyword": "file",
-      "triggers": [
-        "write to file",
-        "create file",
-        "save to file",
-        "write page to file",
-        "save fetched content to file",
-        "write from scratch",
-        "write scratch to file",
-        "append to file",
-        "add to file",
-        "read file",
-        "show file",
-        "open file",
-        "contents of",
-        "find file",
-        "find folder",
-        "locate file",
-        "search for file",
-        "list files",
-        "list directory",
-        "list folder",
-        "local directory",
-        "local folder",
-        "datauser/",
-        "create folder",
-        "make folder",
-        "create directory",
-        "folder exists",
-        "does folder exist"
-      ],
+      "purpose": "Interface for generic file read, write, append, and search operations inside the shared `datauser/` tree. Bare relative paths resolve under `datauser/`. Legacy prefixes such as `data/...`, `datauser/...`, and `KoreDocs/...` are accepted for",
       "functions": [
         "file_write(path: str, content: str)",
         "file_append(path: str, content: str)",
@@ -141,160 +37,33 @@
         "folder_create(path: str)",
         "folder_exists(path: str)"
       ],
-      "inputs": [],
-      "outputs": [
-        "`file_write(...)` - returns `\"Wrote datauser/filename.txt\"` on success, or `\"Error: ...\"` on failure.",
-        "`file_append(...)` - returns `\"Appended datauser/filename.txt\"` on success, or `\"Error: ...\"` on failure.",
-        "`file_read(...)` - returns the file content as a string, or `\"File not found: ...\"` if the file does not exist.",
-        "`file_find(...)` - returns a newline-separated list of matching workspace-relative paths, or a `\"No files found...\"` message.",
-        "`folder_find(...)` - returns a newline-separated list of matching workspace-relative paths, or a `\"No folders found...\"` message.",
-        "`file_write_from_working_data(...)` - writes content from a named Working Data item.",
-        "`folder_create(...)` - returns `\"Created folder: path\"` or `\"Folder already exists: path\"`, or `\"Error: ...\"` on failure.",
-        "`folder_exists(...)` - returns `\"yes\"` or `\"no\"`."
-      ],
-      "param_descriptions": {
-        "file_write_from_working_data": {
-          "working_data_name": "Working Data item holding the content to write, e.g. `\"_wd_r5_fetch_page_text\"`. Reads the stored value directly without requiring a separate `working_data_get` call.",
-          "path": "destination path; same resolution rules as `file_write`."
-        },
-        "folder_create": {
-          "path": "path of the directory to create, resolved under `datauser/`, e.g. `\"webresearch/01-Mine/2026-03-22\"`. Creates all missing parent directories. Safe to call if the folder already exists."
-        },
-        "folder_exists": {
-          "path": "datauser-relative path to check."
-        },
-        "file_write": {
-          "path": "datauser-relative path. A bare name like `\"x.txt\"` resolves to `datauser/x.txt`. Legacy aliases like `\"data/x.txt\"`, `\"datauser/x.txt\"`, and `\"KoreDocs/x.txt\"` are accepted.",
-          "content": "content to write. Overwrites the file if it exists. Supports `{working_data:key}` token substitution."
-        },
-        "file_append": {
-          "path": "same path rules as `file_write`.",
-          "content": "content to append. A newline is added automatically if missing. Supports `{working_data:key}` token substitution."
-        },
-        "file_read": {
-          "path": "same path rules as `file_write`.",
-          "max_chars": "maximum characters to return; content is truncated with `[truncated]` if exceeded."
-        },
-        "file_find": {
-          "keywords": "list of case-insensitive fragments that must ALL appear in the file name, e.g. `[\"pulse\", \"2026\"]`.",
-          "search_root": "datauser-relative directory to restrict the search, e.g. `\"RadarData\"`. Leave empty to search the whole `datauser/` tree. Legacy aliases like `\"KoreDocs/RadarData\"` are accepted."
-        },
-        "folder_find": {
-          "keywords": "list of case-insensitive fragments that must ALL appear in the folder name.",
-          "search_root": "datauser-relative directory to restrict the search. Leave empty to search the whole `datauser/` tree. Legacy aliases like `\"KoreDocs/RadarData\"` are accepted."
-        }
-      },
-      "tool_selection_guidance": "",
-      "is_system_skill": true,
-      "origin": "builtin",
-      "availability": "guaranteed",
-      "role": "core",
-      "trust_boundary": "internal"
+      "catalog_file": "FileAccess/skill_catalog.json"
     },
     {
       "skill_name": "SystemInfo Skill",
-      "relative_path": "app/system_skills/SystemInfo/skill.md",
-      "purpose": "Provide runtime system information including OS name, Python and Ollama versions, RAM usage, and disk usage. Use this for any prompt about the machine, hardware, runtime environment, available resources, or version details. Do not use this for web or file queries.",
-      "module": "KoreAgent/app/system_skills/SystemInfo/system_info_skill.py",
-      "trigger_keyword": "system info, RAM or disk space, available memory, or OS and runtime version details",
-      "triggers": [
-        "system info",
-        "system health",
-        "machine info",
-        "specs",
-        "resource usage",
-        "RAM",
-        "memory usage",
-        "available memory",
-        "how much RAM",
-        "disk space",
-        "free space",
-        "disk available",
-        "storage",
-        "Python version",
-        "Ollama version",
-        "what OS",
-        "operating system",
-        "can we fit",
-        "do we have enough",
-        "is there enough space"
-      ],
+      "purpose": "Provide runtime system information including OS name, Python and Ollama versions, RAM usage, and disk usage. Use it for a current machine, hardware, runtime, or resource reading. Do not use it for web or file queries.",
       "functions": [
         "get_system_info_dict()"
       ],
-      "inputs": [],
-      "outputs": [
-        "`get_system_info_dict()` - returns a dict with individually addressable fields:",
-        "`os` (str) - OS name, e.g. `\"Windows\"`",
-        "`python_version` (str) - e.g. `\"3.10.11\"`",
-        "`ollama_version` (str) - e.g. `\"0.18.0\"`",
-        "`ram_used_gb` (float) - RAM in use in GiB",
-        "`ram_available_gb` (float) - RAM free in GiB",
-        "`disk_used_gb` (float) - disk used in GiB",
-        "`disk_available_gb` (float) - disk free in GiB"
-      ],
-      "param_descriptions": {},
-      "tool_selection_guidance": "",
-      "is_system_skill": true,
-      "origin": "builtin",
-      "availability": "guaranteed",
-      "role": "core",
-      "trust_boundary": "internal"
+      "catalog_file": "SystemInfo/skill_catalog.json"
     },
     {
-      "skill_name": "ToolSelection Skill",
-      "relative_path": "app/system_skills/ToolSelection/skill.md",
-      "purpose": "- Inspect the full runtime tool catalog and activate additional tools for the current conversation without exposing the entire tool surface in every prompt.\n- Use this when the currently active tool set is too small for the task and you need to pull in a specific tool from the larger local and registered-service inventory.\n- This is the control-plane skill for prompt-surface throttling. Prefer it over guessing tool names or asking for unavailable tools directly.",
-      "module": "KoreAgent/app/system_skills/ToolSelection/tool_selection_skill.py",
-      "trigger_keyword": "tools",
-      "triggers": [
-        "show available tools",
-        "list tools",
-        "what tools do we have",
-        "find the right tool",
-        "activate a tool",
-        "add this tool",
-        "tool catalog",
-        "selected tools"
-      ],
+      "skill_name": "Tool Selection",
+      "purpose": "",
       "functions": [
-        "tools_keywords_list()",
-        "select_tools_by_keyword(keywords: list[str])",
+        "skills_list()",
+        "select_skills(skill_names: list[str])",
         "tools_catalog_list()",
         "tools_active_add(tool_names: list[str])"
       ],
-      "inputs": [],
-      "outputs": [
-        "`tools_catalog_list()` - returns all local and registered exact tool names. Activate one to receive its full schema.",
-        "`tools_keywords_list()` - returns every exact reviewed capability tag and the activation instruction.",
-        "`select_tools_by_keyword(...)` - returns matched and unknown tags, activated tools, each tool's reviewed selection description and parameter names, evictions, and the updated active-tool list.",
-        "`tools_active_add(...)` - returns a dict describing which exact names were added, promoted, unknown, or evicted, plus the updated active-tool list."
-      ],
-      "param_descriptions": {
-        "select_tools_by_keyword": {
-          "keywords": "exact reviewed keyword tags, for example `[\"file_handling\"]`, `[\"spreadsheet\"]`, or `[\"dataset\"]`."
-        },
-        "tools_active_add": {
-          "tool_names": "list of exact tool names to add to the active FIFO working set for the current conversation."
-        }
-      },
-      "tool_selection_guidance": "Use this skill whenever the current active tool set does not contain the capability you need.\n\nWorkflow:\n1. Call `tools_keywords_list()` if you need to see the reviewed capability tags.\n2. Call `select_tools_by_keyword([...])` when one or more reviewed tags describe the capability required. This is exact tag matching, not prompt keyword matching.\n3. Use `tools_catalog_list()` when you need a specific named tool or no reviewed tag fits.\n4. Call `tools_active_add([...])` with exact individual names only when keyword selection is too broad or needs supplementing.\n\nDo not guess tool names from memory when `tools_catalog_list()` can verify them.",
-      "is_system_skill": true,
-      "origin": "builtin",
-      "availability": "guaranteed",
-      "role": "core",
-      "trust_boundary": "internal"
+      "catalog_file": "ToolSelection/skill_catalog.json"
     },
     {
       "skill_name": "Working Data",
-      "relative_path": "app/system_skills/WorkingData/skill.md",
-      "purpose": "Store prompt-supporting material outside the active context window. A named Working Data item can\nbe a single statement, generated text, an object, or a list of structured records. Use it to retain\nlarge tool output across steps and retrieve only the relevant part later.",
-      "module": "KoreAgent/app/system_skills/WorkingData/working_data_skill.py",
-      "trigger_keyword": "working data",
-      "triggers": [],
+      "purpose": "Store prompt-supporting material outside the active context window. A named Working Data item can",
       "functions": [
         "working_data_save(name: str, value: str | list[dict] | dict, source_tool: str = \"\", source_args: dict = None, replace: bool = False)",
-        "working_data_get(name: str, indices: list[int] = None, max_records: int = 0, fields: list[str] = None, offset: int = 0, limit: int = 0)",
+        "working_data_get(name: str, indices: list[int] = None, max_records: int = 0, fields: list[str] = None, offset: int = 0, limit: int = 0, excerpt_chars: int = 1200)",
         "working_data_list()",
         "working_data_inspect(name: str)",
         "working_data_delete(name: str)",
@@ -303,20 +72,11 @@
         "working_data_peek(name: str, substring: str, context_chars: int = 250)",
         "working_data_query(name: str, query: str, save_result_name: str = \"\", instructions: str = \"\")",
         "working_data_rename(name: str, new_name: str)",
-        "working_data_filter(name: str, prompt: str, save_as: str = \"\", replace: bool = False, fields: list[str] = None, excerpt_chars: int = 300)",
-        "working_data_drop_where(name: str, predicate: str, save_as: str = \"\", replace: bool = False)",
-        "working_data_expand_full_text(name: str, save_as: str = \"\", replace: bool = False, offset: int = 0, limit: int = 0)",
-        "working_data_export(name: str, folder_path: str, document_name: str = \"\", fields: list[str] = None, offset: int = 0, limit: int = 0)"
+        "working_data_rank(name: str, criteria: str, count: int = 5, save_as: str = \"\", fields: list[str] = None, excerpt_chars: int = 700, offset: int = 0, limit: int = 30)",
+        "working_data_select(name: str, indices: list[int], save_as: str = \"\")",
+        "working_data_fetch_full_text(name: str, indices: list[int] = None, save_as: str = \"\")"
       ],
-      "inputs": [],
-      "outputs": [],
-      "param_descriptions": {},
-      "tool_selection_guidance": "Use Working Data whenever useful material must survive more than one tool call without repeatedly\nentering the main prompt. Check `working_data_list` before re-fetching information. Do not use it for\nthe final answer unless the final answer itself needs to be retained for a later operation.",
-      "is_system_skill": true,
-      "origin": "builtin",
-      "availability": "guaranteed",
-      "role": "core",
-      "trust_boundary": "internal"
+      "catalog_file": "WorkingData/skill_catalog.json"
     }
   ]
 }

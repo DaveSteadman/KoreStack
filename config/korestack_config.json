@@ -2,7 +2,7 @@
   "comment": "KoreStack suite configuration.",
   "paths": {
     "dataroot2":  "/home/dave/KoreStackProject/KoreStackData",
-    "dataroot":  "/home/dave/Dropbox/Misc/KoreStackData",
+    "dataroot":  "C:/Users/daves/Dropbox/Misc/KoreStackData",
     "korechat":  "korechat",
     "korecomms": "korecomms",
     "koredata":  "koredata",

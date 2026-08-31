@@ -23,6 +23,9 @@ from fastapi import HTTPException
 from pydantic import BaseModel
 
 
+_DIRECT_CONVERSATION_SESSION_PREFIX = "kc_conv_"
+
+
 class KcSendRequest(BaseModel):
     session_id: str
     content:    str
@@ -43,26 +46,40 @@ def register_korechat_proxy_routes(
         if not content:
             raise HTTPException(status_code=400, detail="content cannot be empty")
 
-        external_id = f"webchat_{body.session_id}"
-        conv_id: int | None = None
-        try:
-            existing = await kc_get_async(f"/conversations/by-external-id/{urllib.parse.quote(external_id, safe='')}")
-            if isinstance(existing, dict) and existing.get("id"):
-                conv_id = int(existing["id"])
-        except HTTPException as exc:
-            if exc.status_code != 404:
-                raise
+        # KoreChat-selected sessions use kc_conv_<id>; retain that identity instead
+        # of creating a second webchat_<session_id> conversation for the same chat.
+        direct_id = body.session_id.removeprefix(_DIRECT_CONVERSATION_SESSION_PREFIX)
+        conv_id: int | None = int(direct_id) if direct_id.isdigit() else None
+        if conv_id is not None:
+            try:
+                existing = await kc_get_async(f"/conversations/{conv_id}")
+            except HTTPException as exc:
+                if exc.status_code != 404:
+                    raise
+                existing = None
+            if not isinstance(existing, dict) or not existing.get("id"):
+                conv_id = None
 
         if conv_id is None:
-            new_conv = await kc_post_async("/conversations", {
-                "channel_type": "webchat",
-                "subject":      f"Webchat {body.session_id}",
-                "protected":    False,
-                "external_id":  external_id,
-            })
-            if not new_conv:
-                raise HTTPException(status_code=502, detail="Failed to create KC conversation")
-            conv_id = new_conv["id"]
+            external_id = f"webchat_{body.session_id}"
+            try:
+                existing = await kc_get_async(f"/conversations/by-external-id/{urllib.parse.quote(external_id, safe='')}")
+                if isinstance(existing, dict) and existing.get("id"):
+                    conv_id = int(existing["id"])
+            except HTTPException as exc:
+                if exc.status_code != 404:
+                    raise
+
+            if conv_id is None:
+                new_conv = await kc_post_async("/conversations", {
+                    "channel_type": "webchat",
+                    "subject":      f"Webchat {body.session_id}",
+                    "protected":    False,
+                    "external_id":  external_id,
+                })
+                if not new_conv:
+                    raise HTTPException(status_code=502, detail="Failed to create KC conversation")
+                conv_id = new_conv["id"]
 
         msg = await kc_post_async(f"/conversations/{conv_id}/messages", {
             "direction":      "inbound",
@@ -74,9 +91,10 @@ def register_korechat_proxy_routes(
             raise HTTPException(status_code=502, detail="Failed to append message to KC conversation")
 
         return {
-            "conv_id":    conv_id,
-            "msg_id":     msg.get("id"),
-            "created_at": msg.get("created_at"),
+            "conv_id":     conv_id,
+            "msg_id":      msg.get("id"),
+            "created_at":  msg.get("created_at"),
+            "session_id":  f"{_DIRECT_CONVERSATION_SESSION_PREFIX}{conv_id}" if direct_id.isdigit() else body.session_id,
         }
 
     @app.get("/api/kc/conversations/{conv_id}/messages")

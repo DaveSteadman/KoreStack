@@ -223,6 +223,7 @@ class SessionService:
                     "role":       "user",
                     "content":    content,
                     "created_at": message.get("created_at"),
+                    "message_id": message.get("id"),
                 }
             elif direction == "outbound" and pending_prompt is not None:
                 turns.append(pending_prompt)
@@ -235,6 +236,7 @@ class SessionService:
                     "role":       "assistant",
                     "content":    content,
                     "created_at": message.get("created_at"),
+                    "message_id": message.get("id"),
                 }
                 if isinstance(telemetry, dict):
                     assistant_turn["telemetry"] = telemetry

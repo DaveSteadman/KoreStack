@@ -1,0 +1,11 @@
+{
+  "skill_name": "DateTime Skill",
+  "relative_path": "app/system_skills/DateTime/skill.md",
+  "purpose": "Return the current local date and time in one structured response.",
+  "module": "KoreAgent/app/system_skills/DateTime/datetime_skill.py",
+  "functions": [
+    "get_datetime_data()"
+  ],
+  "param_descriptions": {},
+  "is_system_skill": true
+}

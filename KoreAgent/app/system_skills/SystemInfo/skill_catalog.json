@@ -1,0 +1,11 @@
+{
+  "skill_name": "SystemInfo Skill",
+  "relative_path": "app/system_skills/SystemInfo/skill.md",
+  "purpose": "Provide runtime system information including OS name, Python and Ollama versions, RAM usage, and disk usage. Use it for a current machine, hardware, runtime, or resource reading. Do not use it for web or file queries.",
+  "module": "KoreAgent/app/system_skills/SystemInfo/system_info_skill.py",
+  "functions": [
+    "get_system_info_dict()"
+  ],
+  "param_descriptions": {},
+  "is_system_skill": true
+}

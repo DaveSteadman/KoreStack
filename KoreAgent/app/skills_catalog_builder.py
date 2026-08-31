@@ -90,13 +90,7 @@ def _classify_local_skill(skill_md_path: Path | str) -> dict[str, object]:
     except ValueError:
         is_system = False
 
-    return {
-        "is_system_skill": is_system,
-        "origin":          "builtin" if is_system else "local",
-        "availability":    "guaranteed" if is_system else "configured",
-        "role":            "core" if is_system else "optional",
-        "trust_boundary":  "internal",
-    }
+    return {"is_system_skill": is_system}
 
 
 def _workspace_abspath(module_path: str) -> Path:
@@ -340,13 +334,8 @@ def summarize_locally(skill_md_path: Path) -> dict:
         "relative_path":           skill_md_path.as_posix(),
         "purpose":                 purpose,
         "module":                  module,
-        "trigger_keyword":         trigger_keyword,
-        "triggers":                _parse_triggers(skill_text),
         "functions":               functions,
-        "inputs":                  input_lines,
-        "outputs":                 output_lines,
         "param_descriptions":      _parse_param_descriptions(skill_text),
-        "tool_selection_guidance": _section_body(skill_text, "Tool selection guidance"),
     }
     return summary
 
@@ -389,11 +378,8 @@ def normalize_summary(summary: dict, skill_md_path: Path) -> dict:
     normalized["relative_path"] = to_workspace_relative_path(skill_md_path)
     normalized.update(_classify_local_skill(skill_md_path))
 
-    normalized.setdefault("trigger_keyword", "")
-    normalized.setdefault("triggers", [])
     normalized.setdefault("param_descriptions", {})
-    normalized.setdefault("tool_selection_guidance", "")
-    for field_name in ["functions", "inputs", "outputs"]:
+    for field_name in ["functions"]:
         field_value = normalized.get(field_name, [])
         if isinstance(field_value, list):
             normalized[field_name] = list(dict.fromkeys(str(item).strip() for item in field_value if str(item).strip()))
@@ -546,6 +532,12 @@ def load_skills_payload(catalog_path: Path) -> dict:
     if cached is not None:
         return cached
     payload = json.loads(catalog_path.read_text(encoding="utf-8-sig"))
+    indexed_skills = payload.get("skills", []) if isinstance(payload, dict) else []
+    if indexed_skills and all(isinstance(item, dict) and item.get("catalog_file") for item in indexed_skills):
+        payload["skills"] = [
+            json.loads((catalog_path.parent / str(item["catalog_file"])).read_text(encoding="utf-8-sig"))
+            for item in indexed_skills
+        ]
     workspace_root = Path(__file__).resolve().parent.parent
     for skill in payload.get("skills", []):
         relative_path = str(skill.get("relative_path", "")).strip()
@@ -676,9 +668,7 @@ def build_tool_definitions(skills_payload: dict) -> list[dict]:
 
     for skill in skills_payload.get("skills", []):
         purpose         = skill.get("purpose", "")
-        trigger_kw      = skill.get("trigger_keyword", "").strip()
-        description     = f"Triggered by keyword '{trigger_kw}'. {purpose}" if trigger_kw else purpose
-        sel_guidance    = (skill.get("tool_selection_guidance") or "").strip()
+        description     = purpose
 
         skill_module = None
         skill_module_path = str(skill.get("module", "")).strip()
@@ -697,16 +687,12 @@ def build_tool_definitions(skills_payload: dict) -> list[dict]:
             seen_names.add(func_name)
 
             # Prefer a per-function docstring over the skill-level description.
-            # Append tool selection guidance (from skill.md ## Tool selection guidance)
-            # so the model sees routing and usage rules inline in the tool schema.
             func_description = description
             if skill_module:
                 func_obj = getattr(skill_module, func_name, None)
                 if func_obj and getattr(func_obj, "__doc__", None):
                     first_para = func_obj.__doc__.strip().split("\n\n")[0]
                     func_description = " ".join(first_para.split())
-            if sel_guidance:
-                func_description = func_description.rstrip() + "\n\n" + sel_guidance
 
             properties: dict = {}
             required:   list = []
@@ -746,8 +732,32 @@ def build_tool_definitions(skills_payload: dict) -> list[dict]:
 
 # ----------------------------------------------------------------------------------------------------
 def write_skills_catalog(payload: dict, output_path: Path) -> None:
+    """Write a compact index and one inspectable catalog file per Skill."""
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    indexed_skills: list[dict[str, str]] = []
+    for skill in payload.get("skills", []):
+        relative_path = Path(str(skill.get("relative_path") or ""))
+        skill_dir = output_path.parent / relative_path.parent.name
+        skill_file = skill_dir / "skill_catalog.json"
+        skill_dir.mkdir(parents=True, exist_ok=True)
+        skill_file.write_text(json.dumps(skill, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        indexed_skills.append(
+            {
+                "skill_name":   str(skill.get("skill_name") or ""),
+                "purpose":      str(skill.get("purpose") or "").strip().splitlines()[0][:240] if str(skill.get("purpose") or "").strip() else "",
+                "functions":    list(skill.get("functions") or []),
+                "catalog_file": skill_file.relative_to(output_path.parent).as_posix(),
+            }
+        )
+    index = {key: value for key, value in payload.items() if key != "skills"}
+    index["service"]               = "koreagent"
+    index["service_label"]         = "KoreAgent"
+    index["registration_mode"]     = "builtin"
+    index["default_skill_name"]    = "system_skills"
+    index["purpose"]               = "KoreAgent built-in tools."
+    index["selection_description"] = "Built-in tools available to every conversation by default."
+    index["skills"] = indexed_skills
+    output_path.write_text(json.dumps(index, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
 
 # ----------------------------------------------------------------------------------------------------

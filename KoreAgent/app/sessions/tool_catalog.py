@@ -51,21 +51,18 @@ def _first_sentence(text: str) -> str:
     return cleaned[:200]
 
 
-def _registered_tool_description(skill: dict) -> str:
+def _registered_tool_description(tool: dict) -> str:
     """Keep an active service-tool schema self-describing without copying the catalogue."""
-    purpose = str(skill.get("purpose") or "").strip()
-    selection_description = str(skill.get("selection_description") or "").strip()
-    service = str(skill.get("service") or "").strip()
-    keywords = ", ".join(str(value) for value in skill.get("keywords", []) if str(value).strip())
-    returns = str(skill.get("returns") or "").strip()
+    purpose = str(tool.get("purpose") or "").strip()
+    service = str(tool.get("service") or "").strip()
+    returns = str(tool.get("returns") or "").strip()
     detail = "; ".join(
         part for part in (
             f"service={service}" if service else "",
-            f"capabilities={keywords}" if keywords else "",
             f"returns={returns}" if returns else "",
         ) if part
     )
-    summary = selection_description or purpose
+    summary = purpose
     return f"{summary}\n\n[{detail}]" if detail else summary
 
 
@@ -101,7 +98,7 @@ def all_known_tool_names(
     source_payload = available_local_payload if available_local_payload is not None else full_local_payload
     web_enabled = get_web_skills_enabled()
     local_names = local_tool_names(source_payload)
-    registered_names = {str(skill.get("name") or "").strip() for skill in skill_manager.list_skills()}
+    registered_names = {str(tool.get("name") or "").strip() for tool in skill_manager.list_tools() if tool.get("transport") == "http"}
     return filter_tool_names(local_names | registered_names, enabled=web_enabled)
 
 
@@ -137,7 +134,7 @@ def build_all_tool_catalog(
     web_enabled = get_web_skills_enabled()
     selected = get_selected_tools(session_id=session_id, conversation_entry=conversation_entry)
     active_names = set(selected) | set(ALWAYS_ON_TOOL_NAMES) | _system_tool_names(skills_payload)
-    registered_names = tuple(sorted(str(skill.get("name") or "") for skill in skill_manager.list_skills()))
+    registered_names = tuple(sorted(str(tool.get("name") or "") for tool in skill_manager.list_tools() if tool.get("transport") == "http"))
     cache_key = (
         id(skills_payload),
         tuple(selected),
@@ -178,24 +175,24 @@ def build_all_tool_catalog(
                 }
             )
     local_names = {str(entry.get("name") or "") for entry in entries}
-    for skill in skill_manager.list_skills():
-        name = str(skill.get("name") or "").strip()
+    for tool in (tool for tool in skill_manager.list_tools() if tool.get("transport") == "http"):
+        name = str(tool.get("name") or "").strip()
         if not name or name in local_names:
             continue
-        parameters = skill.get("parameters") if isinstance(skill.get("parameters"), dict) else {}
+        parameters = tool.get("parameters") if isinstance(tool.get("parameters"), dict) else {}
         properties = parameters.get("properties") if isinstance(parameters.get("properties"), dict) else {}
         entries.append(
             {
                 "name": name,
-                "description": _first_sentence(skill.get("purpose", "")),
-                "selection_description": str(skill.get("selection_description") or skill.get("purpose") or ""),
+                "description": _first_sentence(tool.get("purpose", "")),
+                "selection_description": str(tool.get("purpose") or ""),
                 "origin": "registered",
                 "availability": "registered",
                 "role": "service",
                 "trust_boundary": "internal",
                 "active": name in active_names,
-                "skill_name": str(skill.get("service") or ""),
-                "triggers": list(skill.get("keywords") or []),
+                "skill_name": str(tool.get("skill_name") or ""),
+                "triggers": [],
                 "param_names": sorted(str(param_name) for param_name in properties.keys()),
             }
         )
@@ -217,10 +214,10 @@ def derive_active_tool_runtime(
     web_enabled = get_web_skills_enabled()
     resolved_session_id = _resolve_session_id(session_id)
     selected = get_selected_tools(session_id=resolved_session_id, conversation_entry=conversation_entry)
-    registered_skills = skill_manager.list_skills()
+    registered_tools = [tool for tool in skill_manager.list_tools() if tool.get("transport") == "http"]
     source_payload = available_local_payload if available_local_payload is not None else full_local_payload
     all_known_names = filter_tool_names(
-        local_tool_names(source_payload) | {str(skill.get("name") or "") for skill in registered_skills},
+        local_tool_names(source_payload) | {str(tool.get("name") or "") for tool in registered_tools},
         enabled=web_enabled,
     )
 
@@ -248,7 +245,7 @@ def derive_active_tool_runtime(
     cache_key = (
         id(source_payload),
         tuple(selected),
-        tuple(sorted(skill["name"] for skill in registered_skills)),
+        tuple(sorted(tool["name"] for tool in registered_tools)),
     )
     cached = _ACTIVE_RUNTIME_CACHE.get(cache_key)
     if cached is not None:
@@ -267,13 +264,13 @@ def derive_active_tool_runtime(
         {
             "type": "function",
             "function": {
-                "name": skill["name"],
-                "description": _registered_tool_description(skill),
-                "parameters": skill["parameters"],
+                "name": tool["name"],
+                "description": _registered_tool_description(tool),
+                "parameters": tool["parameters"],
             },
         }
-        for skill in registered_skills
-        if skill.get("name") in allowed_names
+        for tool in registered_tools
+        if tool.get("name") in allowed_names
     ]
     active_tool_names |= {tool_def["function"]["name"] for tool_def in active_registered_defs}
 

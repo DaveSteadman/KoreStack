@@ -416,7 +416,7 @@ def _build_tool_recovery_message(event: dict[str, object]) -> str:
         f"Recovery required: requested tool `{requested}` is not a valid tool name in this runtime.\n"
         "Do not answer the user yet.\n"
         "Use ToolSelection now.\n"
-        "Call `tools_catalog_list()`, then activate the correct tool or select its reviewed keyword and continue the task.\n"
+        "Call `skills_list()` and select the correct Skill, or activate the exact tool, then continue the task.\n"
         f"Currently active tools: {active_summary}"
     )
 
@@ -426,7 +426,7 @@ def _build_tool_recovery_reminder(event: dict[str, object]) -> str:
     requested = str(event.get("requested_tool") or "").strip()
     if classification == "inactive_known" and event.get("auto_activated"):
         return f"Recovery still required: do not answer yet. Retry `{requested}` now; it is already active for this conversation."
-    return f"Recovery still required: do not answer yet. Inspect the full tool catalog or the reviewed keyword map and choose the exact capability needed for `{requested}`."
+    return f"Recovery still required: do not answer yet. Inspect the full tool catalog or Skill list and choose the exact capability needed for `{requested}`."
 
 
 def _is_graph_connection_write_request(user_prompt: str) -> bool:

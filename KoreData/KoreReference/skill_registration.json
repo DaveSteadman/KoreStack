@@ -1,0 +1,75 @@
+{
+    "schema_version":  2,
+    "service":  "korereference",
+    "service_label":  "KoreReference",
+    "skills":  [
+                   {
+                       "name":  "korereference",
+                       "purpose":  "KoreReference tools.",
+                       "selection_description":  "Use KoreReference capabilities.",
+                       "tools":  [
+                                     {
+                                         "name":  "korereference_search",
+                                         "purpose":  "Search KoreReference articles.",
+                                         "parameters":  {
+                                                            "type":  "object",
+                                                            "properties":  {
+                                                                               "q":  {
+                                                                                         "type":  "string"
+                                                                                     },
+                                                                               "title":  {
+                                                                                             "type":  "string"
+                                                                                         },
+                                                                               "limit":  {
+                                                                                             "type":  "integer",
+                                                                                             "default":  20
+                                                                                         },
+                                                                               "offset":  {
+                                                                                              "type":  "integer",
+                                                                                              "default":  0
+                                                                                          }
+                                                                           }
+                                                        },
+                                         "returns":  "Matching reference articles.",
+                                         "invoke_path":  "/api/skills/korereference_search/invoke"
+                                     },
+                                     {
+                                         "name":  "korereference_articles_list",
+                                         "purpose":  "List KoreReference article metadata.",
+                                         "parameters":  {
+                                                            "type":  "object",
+                                                            "properties":  {
+                                                                               "limit":  {
+                                                                                             "type":  "integer",
+                                                                                             "default":  100
+                                                                                         },
+                                                                               "offset":  {
+                                                                                              "type":  "integer",
+                                                                                              "default":  0
+                                                                                          }
+                                                                           }
+                                                        },
+                                         "returns":  "A page of reference article metadata.",
+                                         "invoke_path":  "/api/skills/korereference_articles_list/invoke"
+                                     },
+                                     {
+                                         "name":  "korereference_article_get",
+                                         "purpose":  "Get a KoreReference article by title.",
+                                         "parameters":  {
+                                                            "type":  "object",
+                                                            "properties":  {
+                                                                               "title":  {
+                                                                                             "type":  "string"
+                                                                                         }
+                                                                           },
+                                                            "required":  [
+                                                                             "title"
+                                                                         ]
+                                                        },
+                                         "returns":  "The requested reference article.",
+                                         "invoke_path":  "/api/skills/korereference_article_get/invoke"
+                                     }
+                                 ]
+                   }
+               ]
+}

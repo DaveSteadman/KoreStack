@@ -32,8 +32,8 @@ from sessions.runtime import get_active_session_id
 MAX_ACTIVE_TOOLS      = 32
 ALWAYS_ON_TOOL_NAMES = frozenset({
     "get_datetime_data",
-    "tools_keywords_list",
-    "select_tools_by_keyword",
+    "skills_list",
+    "select_skills",
     "tools_catalog_list",
     "tools_active_add",
 })

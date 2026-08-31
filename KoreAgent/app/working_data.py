@@ -16,9 +16,12 @@ from system_skills.WorkingData.collections.service import dataset_clear
 from system_skills.WorkingData.collections.service import dataset_delete
 from system_skills.WorkingData.collections.service import dataset_drop_where
 from system_skills.WorkingData.collections.service import dataset_expand_full_text
+from system_skills.WorkingData.collections.service import dataset_fetch_full_text
 from system_skills.WorkingData.collections.service import dataset_filter
 from system_skills.WorkingData.collections.service import dataset_get
 from system_skills.WorkingData.collections.service import dataset_inspect
+from system_skills.WorkingData.collections.service import dataset_rank
+from system_skills.WorkingData.collections.service import dataset_select
 from system_skills.WorkingData.collections.service import dataset_list
 from system_skills.WorkingData.collections.service import dataset_rename
 from system_skills.WorkingData.collections.service import dataset_save
@@ -201,13 +204,14 @@ def working_data_get(
     fields: list[str] = None,
     offset: int = 0,
     limit: int = 0,
+    excerpt_chars: int = 1200,
     session_id: str | None = None,
 ) -> str:
-    """Retrieve a named statement or a selected page of records from Working Data."""
+    """Retrieve a named statement or bounded, excerpted records from Working Data."""
     normalized = _normalise_name(name)
     if normalized in _get_values(session_id):
         return _get_value(normalized, session_id=session_id)
-    return dataset_get(normalized, indices, max_records, fields, offset, limit, session_id)
+    return dataset_get(normalized, indices, max_records, fields, offset, limit, excerpt_chars, session_id)
 
 
 def working_data_list(session_id: str | None = None) -> str:
@@ -272,6 +276,21 @@ def working_data_rename(name: str, new_name: str, session_id: str | None = None)
 def working_data_filter(name: str, prompt: str, save_as: str = "", replace: bool = False, fields: list[str] = None, excerpt_chars: int = 300, session_id: str | None = None) -> str:
     """Use an isolated LLM pass to retain relevant records from a Working Data collection."""
     return dataset_filter(name, prompt, save_as, replace, fields, excerpt_chars, session_id)
+
+
+def working_data_rank(name: str, criteria: str, count: int = 5, save_as: str = "", fields: list[str] = None, excerpt_chars: int = 700, offset: int = 0, limit: int = 30, session_id: str | None = None) -> str:
+    """Rank records in one isolated pass and save the top subset for a report or synthesis."""
+    return dataset_rank(name, criteria, count, save_as, fields, excerpt_chars, offset, limit, session_id)
+
+
+def working_data_select(name: str, indices: list[int], save_as: str = "", session_id: str | None = None) -> str:
+    """Save explicitly selected source records as a smaller Working Data collection."""
+    return dataset_select(name, indices, save_as, session_id)
+
+
+def working_data_fetch_full_text(name: str, indices: list[int] = None, save_as: str = "", session_id: str | None = None) -> str:
+    """Fetch full text for no more than five selected records into a new collection."""
+    return dataset_fetch_full_text(name, indices, save_as, session_id)
 
 
 def working_data_drop_where(name: str, predicate: str, save_as: str = "", replace: bool = False, session_id: str | None = None) -> str:

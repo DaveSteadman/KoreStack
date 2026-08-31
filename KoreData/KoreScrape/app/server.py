@@ -729,7 +729,7 @@ async def _lifespan(app: FastAPI):
         name   = "korescrape-startup-reindex",
     ).start()
     start_manifest_registration(
-        Path(__file__).resolve().parent.parent / "skills" / "skills.json",
+        Path(__file__).resolve().parent.parent / "skill_registration.json",
         service_base_url=f"http://{cfg['host']}:{cfg['port']}",
         logger_name=__name__,
     )
