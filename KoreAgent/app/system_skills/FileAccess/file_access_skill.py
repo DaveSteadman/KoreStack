@@ -36,6 +36,7 @@ from pathlib import Path
 
 from KoreCommon.datauser_fs import DataUserPathError
 from KoreCommon.datauser_fs import create_folder as create_datauser_folder
+from KoreCommon.datauser_fs import datauser_relative_path
 from KoreCommon.datauser_fs import display_datauser_path
 from KoreCommon.datauser_fs import list_datauser_files
 from KoreCommon.datauser_fs import list_datauser_folders
@@ -43,6 +44,8 @@ from KoreCommon.datauser_fs import read_text_file
 from KoreCommon.datauser_fs import resolve_datauser_directory
 from KoreCommon.datauser_fs import resolve_datauser_path
 from KoreCommon.datauser_fs import write_text_file
+from sessions.tool_state import get_file_cwd
+from sessions.tool_state import set_file_cwd
 
 
 # ====================================================================================================
@@ -52,6 +55,35 @@ _REMAINING_RECORDS_RE = re.compile(r"\bremaining\s+\d+\s+records?\b", re.IGNOREC
 _SAME_SCHEMA_RE = re.compile(r"\bfollow\s+the\s+same\s+schema\b|\bsame\s+schema\b", re.IGNORECASE)
 _SAMPLE_SNIPPET_RE = re.compile(r"\bsample\s+snippet\b|\bexample\s+snippet\b", re.IGNORECASE)
 _PLACEHOLDER_RE = re.compile(r"\bplaceholder\b", re.IGNORECASE)
+
+
+def _is_datauser_rooted_path(path: str) -> bool:
+    cleaned = str(path or "").strip().replace("\\", "/")
+    lowered = cleaned.lower()
+    return (
+        Path(cleaned).is_absolute()
+        or lowered in {"data", "datauser", "koredocs"}
+        or lowered.startswith(("data/", "datauser/", "koredocs/", "./data/", "./datauser/", "./koredocs/"))
+    )
+
+
+def _path_from_cwd(path: str) -> str:
+    """Resolve an unqualified path relative to this conversation's virtual directory."""
+    cleaned = str(path or "").strip()
+    if not cleaned or _is_datauser_rooted_path(cleaned):
+        return cleaned
+    cwd = get_file_cwd()
+    if cleaned == ".":
+        return cwd
+    return f"{cwd}/{cleaned}" if cwd else cleaned
+
+
+def _resolve_file_path(path: str) -> Path:
+    return resolve_datauser_path(_path_from_cwd(path))
+
+
+def _resolve_directory_path(path: str = "") -> Path:
+    return resolve_datauser_directory(_path_from_cwd(path))
 
 
 
@@ -82,7 +114,7 @@ def _suspicious_document_write_reason(target_path: Path, content: str) -> str:
 def file_write(path: str, content: str, skip_content_guard: bool = False) -> str:
     """Overwrite one datauser-relative text file. Call only when a file write was requested."""
     try:
-        target_path = resolve_datauser_path(path)
+        target_path = _resolve_file_path(path)
     except DataUserPathError as err:
         return f"Error: {err}"
     text_to_write = str(content)
@@ -101,7 +133,7 @@ def file_write(path: str, content: str, skip_content_guard: bool = False) -> str
 def file_append(path: str, content: str) -> str:
     """Append text to one datauser-relative file. Call only when an append was requested."""
     try:
-        target_path = resolve_datauser_path(path)
+        target_path = _resolve_file_path(path)
     except DataUserPathError as err:
         return f"Error: {err}"
     text_to_write = str(content)
@@ -113,7 +145,7 @@ def file_append(path: str, content: str) -> str:
 def file_read(path: str, max_chars: int = 8000) -> str:
     """Read one datauser-relative text file, returning at most max_chars characters."""
     try:
-        target_path = resolve_datauser_path(path)
+        target_path = _resolve_file_path(path)
     except DataUserPathError as err:
         return f"Error: {err}"
     if not target_path.exists():
@@ -125,6 +157,51 @@ def file_read(path: str, max_chars: int = 8000) -> str:
         max_chars = 8000
 
     return read_text_file(target_path, max_chars=max_chars)
+
+
+# ----------------------------------------------------------------------------------------------------
+def file_pwd() -> str:
+    """Return the current datauser-relative virtual directory for this conversation."""
+    cwd = get_file_cwd()
+    return f"datauser/{cwd}" if cwd else "datauser"
+
+
+# ----------------------------------------------------------------------------------------------------
+def file_cd(path: str) -> str:
+    """Change this conversation's virtual directory inside datauser, like a safe cd command."""
+    try:
+        folder = _resolve_directory_path(path)
+    except DataUserPathError as err:
+        return f"Error: {err}"
+    if not folder.exists() or not folder.is_dir():
+        return f"Directory not found: {display_datauser_path(folder)}"
+    try:
+        set_file_cwd(datauser_relative_path(folder))
+    except (DataUserPathError, RuntimeError) as err:
+        return f"Error: {err}"
+    return f"Current directory: {display_datauser_path(folder)}"
+
+
+# ----------------------------------------------------------------------------------------------------
+def file_ls(path: str = "") -> str:
+    """List immediate files and folders in the current directory, like a non-recursive ls command."""
+    try:
+        folder = resolve_datauser_directory(get_file_cwd()) if not str(path or "").strip() else _resolve_directory_path(path)
+    except DataUserPathError as err:
+        return f"Error: {err}"
+    if not folder.exists() or not folder.is_dir():
+        return f"Directory not found: {display_datauser_path(folder)}"
+
+    entries = sorted(folder.iterdir(), key=lambda entry: (not entry.is_dir(), entry.name.casefold()))
+    if not entries:
+        return f"Empty directory: {display_datauser_path(folder)}"
+    listing = [
+        f"{display_datauser_path(entry)}{'/' if entry.is_dir() else ''}"
+        for entry in entries[:200]
+    ]
+    if len(entries) > 200:
+        listing.append("[truncated: 200 entries shown]")
+    return "\n".join(listing)
 
 
 # ----------------------------------------------------------------------------------------------------
@@ -168,11 +245,12 @@ def file_find(keywords: list[str], search_root: str = "") -> str:
     Pass search_root (e.g. 'RadarData' or 'KoreDocs/RadarData') to restrict the search.
     """
     keywords_clean, search_root = _normalise_find_arguments(keywords, search_root)
+    resolved_search_root = _path_from_cwd(search_root) if search_root else get_file_cwd()
 
     try:
         matches = [
             display_datauser_path(path)
-            for path in list_datauser_files(search_root=search_root, keywords=keywords_clean)
+            for path in list_datauser_files(search_root=resolved_search_root, keywords=keywords_clean)
         ]
     except DataUserPathError as err:
         return f"Error: {err}"
@@ -196,11 +274,12 @@ def folder_find(keywords: list[str], search_root: str = "") -> str:
     Pass search_root (e.g. 'RadarData' or 'KoreDocs/RadarData') to restrict the search.
     """
     keywords_clean, search_root = _normalise_find_arguments(keywords, search_root)
+    resolved_search_root = _path_from_cwd(search_root) if search_root else get_file_cwd()
 
     try:
         matches = [
             display_datauser_path(path)
-            for path in list_datauser_folders(search_root=search_root, keywords=keywords_clean)
+            for path in list_datauser_folders(search_root=resolved_search_root, keywords=keywords_clean)
         ]
     except DataUserPathError as err:
         return f"Error: {err}"
@@ -222,11 +301,11 @@ def folder_create(path: str) -> str:
     Safe to call when the directory already exists - returns a success message either way.
     """
     try:
-        folder = resolve_datauser_directory(path)
+        folder = _resolve_directory_path(path)
     except DataUserPathError as err:
         return f"Error: {err}"
     existed = folder.exists()
-    folder = create_datauser_folder(path)
+    folder = create_datauser_folder(_path_from_cwd(path))
     rel = display_datauser_path(folder)
     return f"Folder already exists: {rel}" if existed else f"Created folder: {rel}"
 
@@ -238,7 +317,7 @@ def folder_exists(path: str) -> str:
     Returns 'yes' or 'no' so the model can branch on the result directly.
     """
     try:
-        folder = resolve_datauser_directory(path)
+        folder = _resolve_directory_path(path)
     except DataUserPathError as err:
         return f"Error: {err}"
     return "yes" if folder.exists() and folder.is_dir() else "no"
@@ -263,7 +342,7 @@ def file_write_from_working_data(working_data_name: str, path: str, skip_content
     if "not found" in content.lower() and len(content) < 200:
         return f"Error: Working Data item {working_data_name!r} does not exist"
     try:
-        target_path = resolve_datauser_path(path)
+        target_path = _resolve_file_path(path)
     except DataUserPathError as err:
         return f"Error: {err}"
     if not skip_content_guard:

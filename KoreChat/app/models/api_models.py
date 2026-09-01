@@ -32,6 +32,7 @@ class ConversationPatchRequest(BaseModel):
     datasets: dict | None = None
     working_data: dict | None = None
     tools_active: list[str] | None = None
+    file_cwd: str | None = None
     background_context: str | None = None
     token_estimate: int | None = None
     turn_count: int | None = None

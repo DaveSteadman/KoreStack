@@ -1286,6 +1286,28 @@ def _extract_first_json_object(text: str) -> str:
     raise ValueError("Incomplete JSON object")
 
 
+def _extract_rank_indices(text: str) -> list[object]:
+    """Read the ranking indices from JSON or a concise labelled fallback response."""
+    response = str(text or "").strip()
+    try:
+        parsed = json.loads(_extract_first_json_object(response))
+        raw_indices = parsed.get("indices") if isinstance(parsed, dict) else None
+        if isinstance(raw_indices, list):
+            return raw_indices
+    except (TypeError, ValueError, json.JSONDecodeError):
+        pass
+
+    labelled = re.search(r"\bindices\s*[:=]\s*(\[[^\]]*\])", response, flags=re.IGNORECASE)
+    if labelled:
+        try:
+            raw_indices = json.loads(labelled.group(1))
+            if isinstance(raw_indices, list):
+                return raw_indices
+        except json.JSONDecodeError:
+            pass
+    raise ValueError("response did not include a JSON indices array")
+
+
 def _call_filter_llm(filter_prompt: str, projected_record: dict) -> tuple[bool, str]:
     try:
         from llm_client import call_llm_chat as _call_llm_chat
@@ -1403,7 +1425,7 @@ def dataset_rank(
     limit: int = _MAX_RANK_CANDIDATES,
     session_id: str | None = None,
 ) -> str:
-    """Use one isolated LLM pass to rank records and save the top bounded subset."""
+    """Rank records and save the top bounded subset; score uses direct numeric ordering."""
     if not str(criteria or "").strip():
         return "Error: criteria cannot be empty."
     requested_count = _coerce_non_negative_int(count)
@@ -1430,6 +1452,24 @@ def dataset_rank(
     if requested_count > len(candidate_slice):
         return f"Error: count {requested_count} exceeds the {len(candidate_slice)} records in this ranking selection."
 
+    ranking_criteria = str(criteria).strip().lower()
+    ranked_indices: list[int] = []
+    if ranking_criteria == "score":
+        try:
+            ranked_indices = [
+                index
+                for index, _ in sorted(
+                    (
+                        (index, float(record["score"]))
+                        for index, record in enumerate(candidate_slice, start=selection["offset"])
+                    ),
+                    key     = lambda item: item[1],
+                    reverse = True,
+                )[:requested_count]
+            ]
+        except (KeyError, TypeError, ValueError):
+            ranked_indices = []
+
     candidate_records = []
     safe_excerpt_chars = min(max(0, _coerce_non_negative_int(excerpt_chars)), 700)
     for index, record in enumerate(candidate_slice, start=selection["offset"]):
@@ -1442,51 +1482,49 @@ def dataset_rank(
             f"offset/limit page (maximum {_MAX_RANK_CANDIDATES} candidates)."
         )
 
-    try:
-        from llm_client import call_llm_chat as _call_llm_chat
-        from llm_client import get_active_model as _get_active_model
-        from llm_client import get_active_num_ctx as _get_active_num_ctx
+    if not ranked_indices:
+        try:
+            from llm_client import call_llm_chat as _call_llm_chat
+            from llm_client import get_active_model as _get_active_model
+            from llm_client import get_active_num_ctx as _get_active_num_ctx
 
-        model = _get_active_model()
-        if not model:
-            return "Error: no active model available. Run a prompt first."
-        messages = [
-            {
-                "role": "system",
-                "content": (
-                    "You rank source records for an editorial task. Return JSON only with an indices array "
-                    "containing the requested number of distinct record indices, ordered most significant first. "
-                    "Use only the supplied records; do not call tools, write prose, or include facts not present."
-                ),
-            },
-            {
-                "role": "user",
-                "content": (
-                    f"Criteria: {str(criteria).strip()}\n"
-                    f"Select exactly {requested_count} records.\n"
-                    f"Records:\n{candidate_payload}"
-                ),
-            },
-        ]
-        result = _call_llm_chat(
-            model_name=model,
-            messages=messages,
-            tools=None,
-            num_ctx=min(_get_active_num_ctx(), 16_384),
-        )
-        parsed = json.loads(_extract_first_json_object(str(result.response or "")))
-    except Exception as exc:
-        return f"Error during dataset ranking: {exc}"
+            model = _get_active_model()
+            if not model:
+                return "Error: no active model available. Run a prompt first."
+            messages = [
+                {
+                    "role": "system",
+                    "content": (
+                        "Rank the supplied source records. Reply with exactly one JSON object in this form: "
+                        "{\"indices\":[0,1]}. The array must contain the requested number of distinct source "
+                        "indices ordered most significant first. Do not write prose, Markdown, explanations, "
+                        "or facts not present in the records."
+                    ),
+                },
+                {
+                    "role": "user",
+                    "content": (
+                        f"Criteria: {str(criteria).strip()}\n"
+                        f"Select exactly {requested_count} records.\n"
+                        f"Records:\n{candidate_payload}"
+                    ),
+                },
+            ]
+            result = _call_llm_chat(
+                model_name=model,
+                messages=messages,
+                tools=None,
+                num_ctx=min(_get_active_num_ctx(), 16_384),
+            )
+            raw_indices = _extract_rank_indices(str(result.response or ""))
+        except Exception as exc:
+            return f"Error during dataset ranking: {exc}"
 
-    raw_indices = parsed.get("indices") if isinstance(parsed, dict) else None
-    if not isinstance(raw_indices, list):
-        return "Error during dataset ranking: response did not include an indices array."
-    ranked_indices: list[int] = []
-    for raw_index in raw_indices:
-        if isinstance(raw_index, int) and 0 <= raw_index < len(records) and raw_index not in ranked_indices:
-            ranked_indices.append(raw_index)
-        if len(ranked_indices) >= requested_count:
-            break
+        for raw_index in raw_indices:
+            if isinstance(raw_index, int) and 0 <= raw_index < len(records) and raw_index not in ranked_indices:
+                ranked_indices.append(raw_index)
+            if len(ranked_indices) >= requested_count:
+                break
     required_count = requested_count
     if len(ranked_indices) != required_count:
         return f"Error during dataset ranking: expected {required_count} valid distinct indices, got {len(ranked_indices)}."

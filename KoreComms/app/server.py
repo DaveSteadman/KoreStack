@@ -102,14 +102,17 @@
 # ====================================================================================================
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import os
+import re
 import sys
 import urllib.error
 import urllib.request
 import uuid
 from contextlib import asynccontextmanager
+from html.parser import HTMLParser
 from pathlib import Path
 
 from fastapi import FastAPI, Form, HTTPException, Request
@@ -124,6 +127,8 @@ if _KORECOMMON_PARENT is not None and str(_KORECOMMON_PARENT) not in sys.path:
 from KoreCommon.service_app import register_endpoint_manifest
 from KoreCommon.service_app import register_suite_config_js
 from KoreCommon.service_app import register_ui_elements_assets
+from KoreCommon.skill_registration import start_manifest_registration
+from KoreCommon.skill_service import register_skill_invocation_routes
 from app import crypto, database as db, kc_client, poller, queue_manager
 from app.config import cfg
 from app.interfaces.common.registry import REGISTRY, build_adapter
@@ -210,6 +215,11 @@ async def lifespan(app: FastAPI):
     db.init_db()
     queue_manager.bootstrap()
     poller.start()
+    start_manifest_registration(
+        Path(__file__).resolve().parents[1] / "skill_registration.json",
+        service_base_url = f"http://127.0.0.1:{cfg['port']}",
+        logger_name      = __name__,
+    )
     yield
     poller.stop()
 
@@ -258,6 +268,47 @@ class DeliveryBindingRequest(BaseModel):
     distribution_list:    str = ""
     subject:              str = "KoreComms report"
     enabled:              bool = True
+
+
+class _EmailHTMLStructure(HTMLParser):
+    """Collect enough structure to distinguish readable HTML from a status message."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.tags: dict[str, int] = {}
+        self.text: list[str]      = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        name = tag.lower()
+        self.tags[name] = self.tags.get(name, 0) + 1
+
+    def handle_data(self, data: str) -> None:
+        self.text.append(data)
+
+
+def _validate_delivery_html(html_body: str) -> str:
+    """Reject status messages and empty markup before a direct email publication."""
+    body = str(html_body or "").strip()
+    if not body:
+        raise ValueError("html_body is required")
+
+    parser = _EmailHTMLStructure()
+    try:
+        parser.feed(body)
+        parser.close()
+    except Exception as exc:
+        raise ValueError(f"html_body could not be parsed: {exc}") from exc
+
+    words = re.findall(r"[A-Za-z0-9][A-Za-z0-9'’-]*", " ".join(parser.text))
+    readable_tags = {
+        "article", "blockquote", "div", "h1", "h2", "h3", "h4", "h5", "h6",
+        "li", "ol", "p", "section", "table", "td", "th", "ul",
+    }
+    if not readable_tags.intersection(parser.tags):
+        raise ValueError("html_body must contain a readable HTML content element")
+    if not " ".join(parser.text).strip():
+        raise ValueError("html_body must contain visible text")
+    return body
 
 
 class DistributionListRequest(BaseModel):
@@ -595,6 +646,67 @@ def api_delivery_publish_previous(chat_name: str):
         "message_id": message["id"],
         "active":     bool(conversation.get("delivery_enabled")),
     }
+
+
+def delivery_publish_html(chat_name: str, html_body: str) -> dict:
+    """Send the exact validated HTML body through an existing delivery binding."""
+    body         = _validate_delivery_html(html_body)
+    conversation = _delivery_binding_conversation(chat_name)
+    interface    = db.interface_get(int(conversation["interface_id"]))
+    if interface is None:
+        raise ValueError("Connection not found")
+    if not interface["enabled"]:
+        raise ValueError("Connection is disabled")
+
+    body_digest = hashlib.sha256(body.encode("utf-8")).hexdigest()
+    message_id  = f"direct-html:{conversation['id']}:{body_digest}"
+    if db.external_message_exists(message_id):
+        return {
+            "chat_name":  conversation["chat_name"],
+            "connection": interface["name"],
+            "message_id": message_id,
+            "published":  False,
+            "reason":     "This exact HTML body was already published.",
+        }
+
+    try:
+        build_adapter(interface).route_reply(conversation["id"], body)
+    except Exception as exc:
+        raise ValueError(f"Could not publish HTML output: {exc}") from exc
+
+    if conversation.get("kc_chat_id"):
+        try:
+            audit_message = kc_client.append_message(
+                kc_conversation_id = int(conversation["kc_chat_id"]),
+                direction          = "outbound",
+                content            = body,
+                sender_display     = "KoreComms",
+                status             = "sent",
+                delivery_eligible  = False,
+                tags               = ["delivery_published_html"],
+            )
+            kc_client.mark_message_sent(audit_message["id"])
+        except RuntimeError as exc:
+            logger.warning("Published HTML could not be copied to KoreChat audit: %s", exc)
+
+    db.external_message_create(
+        conversation_id     = conversation["id"],
+        external_message_id = message_id,
+        direction           = "outbound",
+    )
+    db.log_activity(
+        "delivery_html_published",
+        f"conv={conversation['id']} sha256={body_digest[:12]} via={interface['name']}",
+    )
+    return {
+        "chat_name":  conversation["chat_name"],
+        "connection": interface["name"],
+        "message_id": message_id,
+        "published":  True,
+    }
+
+
+register_skill_invocation_routes(app, {"delivery_publish_html": delivery_publish_html})
 
 
 # ---------------------------------------------------------------------------

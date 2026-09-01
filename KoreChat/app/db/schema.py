@@ -40,6 +40,7 @@ CREATE TABLE IF NOT EXISTS conversations (
     datasets            TEXT    NOT NULL DEFAULT '{}',
     working_data        TEXT    NOT NULL DEFAULT '{}',
     tools_active        TEXT    NOT NULL DEFAULT '[]',
+    file_cwd            TEXT    NOT NULL DEFAULT '',
     input_history       TEXT    NOT NULL DEFAULT '[]',
     background_context  TEXT    NOT NULL DEFAULT '',
     token_estimate      INTEGER NOT NULL DEFAULT 0,
@@ -172,6 +173,8 @@ def init_db() -> None:
             connection.execute("DROP TABLE messages_legacy")
         if cols and "tools_active" not in cols:
             connection.execute("ALTER TABLE conversations ADD COLUMN tools_active TEXT NOT NULL DEFAULT '[]'")
+        if cols and "file_cwd" not in cols:
+            connection.execute("ALTER TABLE conversations ADD COLUMN file_cwd TEXT NOT NULL DEFAULT ''")
         if cols and "protected" not in cols:
             connection.execute("ALTER TABLE conversations ADD COLUMN protected INTEGER NOT NULL DEFAULT 0")
             if "has_explicit_name" in cols:

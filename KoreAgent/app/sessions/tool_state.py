@@ -40,6 +40,8 @@ ALWAYS_ON_TOOL_NAMES = frozenset({
 
 _KC_TIMEOUT = 8
 _SESSION_TOOLS_ACTIVE: dict[str, list[str]] = {}
+_SESSION_FILE_CWD:     dict[str, str]       = {}
+_FILE_CWD_FETCHED:     set[str]             = set()
 _SESSION_LOCK = threading.Lock()
 
 
@@ -130,6 +132,49 @@ def clear_session_tools_active(session_id: str) -> None:
         return
     with _SESSION_LOCK:
         _SESSION_TOOLS_ACTIVE.pop(cleaned, None)
+        _SESSION_FILE_CWD.pop(cleaned, None)
+        _FILE_CWD_FETCHED.discard(cleaned)
+
+
+def get_file_cwd(session_id: str | None = None) -> str:
+    """Return this conversation's persisted datauser-relative virtual directory."""
+    resolved_session_id = _resolve_session_id(session_id)
+    if not resolved_session_id:
+        return ""
+    with _SESSION_LOCK:
+        if resolved_session_id in _FILE_CWD_FETCHED:
+            return _SESSION_FILE_CWD.get(resolved_session_id, "")
+
+    cwd = ""
+    conversation = fetch_conversation_for_session(resolved_session_id)
+    if isinstance(conversation, dict):
+        cwd = str(conversation.get("file_cwd") or "").strip().replace("\\", "/").strip("/")
+    with _SESSION_LOCK:
+        _SESSION_FILE_CWD[resolved_session_id] = cwd
+        _FILE_CWD_FETCHED.add(resolved_session_id)
+    return cwd
+
+
+def set_file_cwd(path: str, session_id: str | None = None) -> str:
+    """Persist one validated datauser-relative virtual directory for this conversation."""
+    resolved_session_id = _resolve_session_id(session_id)
+    cwd                 = str(path or "").strip().replace("\\", "/").strip("/")
+    if not resolved_session_id:
+        return cwd
+    with _SESSION_LOCK:
+        _SESSION_FILE_CWD[resolved_session_id] = cwd
+        _FILE_CWD_FETCHED.add(resolved_session_id)
+
+    conversation = ensure_conversation_for_session(resolved_session_id)
+    if isinstance(conversation, dict) and conversation.get("id") is not None:
+        patched = kc_request_json(
+            f"/conversations/{int(conversation['id'])}",
+            method  = "PATCH",
+            payload = {"file_cwd": cwd},
+        )
+        if not isinstance(patched, dict):
+            raise RuntimeError("could not persist the current directory in KoreChat")
+    return cwd
 
 
 def get_selected_tools(session_id: str | None = None, conversation_entry: dict | None = None) -> list[str]:

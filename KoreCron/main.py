@@ -30,6 +30,7 @@
 # - timeline: Implements the timeline operation for this module.
 # - _cronprompt_definition: Implements the  cronprompt definition operation for this module.
 # - create_cronprompt: Creates cronprompt for this module.
+# - clone_cronprompt: Clones cronprompt for this module.
 # - update_cronprompt: Updates cronprompt for this module.
 # - delete_cronprompt: Deletes cronprompt for this module.
 # - run_cronprompt: Runs cronprompt for this module.
@@ -343,6 +344,17 @@ def _cronprompt_definition(payload: dict) -> dict:
     }
 
 
+def _next_clone_name(source_name: str, existing_names: set[str]) -> str:
+    base = str(source_name or "CronPrompt").strip()
+    index = 1
+    while True:
+        suffix = " copy" if index == 1 else f" copy {index}"
+        candidate = f"{base[:120 - len(suffix)].rstrip()}{suffix}"
+        if candidate.casefold() not in existing_names:
+            return candidate
+        index += 1
+
+
 @app.post("/api/cronprompts")
 def create_cronprompt(payload: dict):
     definition  = _cronprompt_definition(payload)
@@ -351,6 +363,31 @@ def create_cronprompt(payload: dict):
         raise HTTPException(409, "CronPrompt already exists.")
     definitions.append(definition); _save(definitions)
     return definition
+
+
+@app.post("/api/cronprompts/{name}/clone")
+def clone_cronprompt(name: str):
+    definitions = _definitions()
+    source = next((
+        item for item in definitions
+        if str(item.get("name", "")).casefold() == name.casefold()
+    ), None)
+    if source is None:
+        raise HTTPException(404, "CronPrompt not found.")
+
+    existing_names = {str(item.get("name", "")).casefold() for item in definitions}
+    existing_chats = {str(item.get("chat_name", "")).casefold() for item in definitions}
+    clone_name = _next_clone_name(str(source.get("name") or ""), existing_names)
+    clone = {
+        "name":      clone_name,
+        "chat_name": _next_clone_name(str(source.get("chat_name") or source.get("name") or ""), existing_chats),
+        "enabled":   False,
+        "schedule":  dict(source.get("schedule") or {}),
+        "prompts":   [dict(item) for item in source.get("prompts") or []],
+    }
+    definitions.append(clone)
+    _save(definitions)
+    return clone
 
 
 @app.put("/api/cronprompts/{name}")

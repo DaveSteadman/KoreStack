@@ -93,14 +93,14 @@ _CORE_IDENTITY_PARTS: list[str] = [
 _SYSTEM_SKILL_GUIDANCE: list[str] = [
 
     # -- CodeExecute (system_skills/CodeExecute/) --------------------------------------------
-    "- Use python execution only for deterministic computation, parsing, validation, or transformations that genuinely require code. Do not use it to draft, rank, or format a narrative response, report, email, summary, or other editorial output from supplied material.",
+    "- Use python execution only for an essential deterministic computation or algorithm. Never use it to reconstruct, inspect, rank, select, or format Working Data, or to draft a report, email, summary, HTML, bullets, or other editorial output.",
 
     # -- WorkingData (system_skills/WorkingData/) ---------------------------------------------
     "- Working Data stores text and record collections across steps outside the active prompt.",
-    "- When a tool result says it was auto-saved to Working Data, inspect it first, then use bounded working_data_get, working_data_rank, working_data_select, or working_data_fetch_full_text instead of rebuilding it from a preview.",
+    "- When a tool result says it was auto-saved to Working Data, inspect it first, then use bounded working_data_get, working_data_rank, working_data_select, or working_data_fetch_full_text instead of rebuilding or parsing its preview in Python.",
     "- When the user asks to output a Working Data collection in full, retain the source records and do not fabricate placeholder rows.",
     "- When KoreData search results include artifact_ref, prefer koredata_get_full_text(refid) for follow-up retrieval instead of rebuilding domain-specific lookup arguments by hand.",
-    "- For a report from a Working Data collection: inspect it, rank or select the relevant records, fetch full text only for that small subset, then write the final answer directly. Do not load an entire collection's full text unless the user explicitly asks for it.",
+    "- For a report from a Working Data collection: inspect it, rank or select the exact requested number of records, fetch full text only for that subset, then write the final answer directly. If records have a score, use working_data_rank(criteria='score') before editorial ranking. Do not load an entire collection's full text unless the user explicitly asks for it.",
     "- For article harvests, count only concrete article/detail pages. Do not count homepages, category pages, topic pages, search-result pages, or section fronts.",
     "- When harvesting article URLs from a hub page, use get_page_links or get_page_links_text first and prefer_article_urls=true when that option exists.",
 

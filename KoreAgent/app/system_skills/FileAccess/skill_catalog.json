@@ -1,12 +1,15 @@
 {
   "skill_name": "FileAccess Skill",
   "relative_path": "app/system_skills/FileAccess/skill.md",
-  "purpose": "Interface for generic file read, write, append, and search operations inside the shared `datauser/` tree. Bare relative paths resolve under `datauser/`. Legacy prefixes such as `data/...`, `datauser/...`, and `KoreDocs/...` are accepted for compatibility, but new calls should prefer plain datauser-relative paths like `notes/today.txt` or `RadarData/report.csv`.",
+  "purpose": "Interface for generic file read, write, append, navigation, and search operations inside the shared `datauser/` tree. Each conversation starts in `datauser/`; bare relative paths resolve from its current virtual directory. Legacy prefixes such as `data/...`, `datauser/...`, and `KoreDocs/...` are accepted for compatibility.",
   "module": "KoreAgent/app/system_skills/FileAccess/file_access_skill.py",
   "functions": [
     "file_write(path: str, content: str)",
     "file_append(path: str, content: str)",
     "file_read(path: str, max_chars: int = 8000)",
+    "file_pwd()",
+    "file_cd(path: str)",
+    "file_ls(path: str = \"\")",
     "file_write_from_working_data(working_data_name: str, path: str)",
     "file_find(keywords: list[str], search_root: str = \"\")",
     "folder_find(keywords: list[str], search_root: str = \"\")",
@@ -25,7 +28,7 @@
       "path": "datauser-relative path to check."
     },
     "file_write": {
-      "path": "datauser-relative path. A bare name like `\"x.txt\"` resolves to `datauser/x.txt`. Legacy aliases like `\"data/x.txt\"`, `\"datauser/x.txt\"`, and `\"KoreDocs/x.txt\"` are accepted.",
+      "path": "relative to the current virtual directory. A bare name like `\"x.txt\"` resolves there; explicit `datauser/x.txt` remains rooted at `datauser/`.",
       "content": "content to write. Overwrites the file if it exists. Supports `{working_data:key}` token substitution."
     },
     "file_append": {

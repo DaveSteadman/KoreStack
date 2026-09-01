@@ -32,13 +32,16 @@ large tool output across steps and retrieve only the relevant part later.
 - `working_data_get` returns at most five records by default and excerpts text fields. Pass explicit
   `indices`, `fields`, `limit`, and `excerpt_chars` when a different bounded view is needed.
 - `working_data_rank` makes one isolated ranking pass over compact record views and saves the selected
-  subset. It ranks at most 30 candidates at once; use `offset` and `limit` to process a larger
-  collection in pages before ranking the finalists.
+  subset. Use `criteria="score"` when records already carry a relevance score; this is a direct
+  deterministic ranking. It ranks at most 30 candidates at once; use `offset` and `limit` to process
+  a larger collection in pages before ranking the finalists.
 - `working_data_select` saves known record indices as a subset. `working_data_fetch_full_text` retrieves
   full text only for that subset (at most five records).
 
 ## Tool selection guidance
 
 Use Working Data whenever useful material must survive more than one tool call without repeatedly
-entering the main prompt. For a report: inspect, rank or select, fetch targeted full text, then write
-the final answer directly. Check `working_data_list` before re-fetching information.
+entering the main prompt. An inspect result is a compact preview, not material to copy into Python.
+For a report with an exact number of items: inspect; rank or select that exact number of records;
+fetch full text for that same subset; then write the final answer directly. Check `working_data_list`
+before re-fetching information. Do not use Python for any part of this workflow.

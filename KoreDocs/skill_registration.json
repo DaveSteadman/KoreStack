@@ -5,8 +5,8 @@
   "skills": [
     {
       "name": "koredocs",
-      "purpose": "KoreDocs tools.",
-      "selection_description": "Use KoreDocs document, spreadsheet, and diagram capabilities.",
+      "purpose": "Create, edit, search, or inspect persistent KoreDocs documents, spreadsheets, and diagrams.",
+      "selection_description": "Use only when the user asks to create, edit, search, inspect, or save a KoreDocs document, spreadsheet, or diagram. Do not select for an ordinary report, email, HTML response, or Working Data synthesis that does not need a KoreDocs file.",
       "tools": [
         {
           "name": "koredocs_diag_create",

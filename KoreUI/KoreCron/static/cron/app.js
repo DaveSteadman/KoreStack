@@ -5,6 +5,7 @@ const workspace    = document.querySelector('.kcui-workspace');
 const form         = document.querySelector('#cronprompt-form');
 const nameInput    = document.querySelector('#cron-name');
 const chatInput    = document.querySelector('#chat-name');
+const enabledInput = document.querySelector('#cron-enabled');
 const promptList   = document.querySelector('#prompt-list');
 const addPrompt    = document.querySelector('#add-prompt');
 const cancelEdit   = document.querySelector('#cancel-edit');
@@ -64,6 +65,11 @@ cronPromptRowStyle.textContent = `
   }
   .cronprompt-chat-row > button:disabled {
     opacity: 0.52;
+  }
+  .cronprompt-enabled {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
   }
   .cronprompt-list__empty {
     padding: 14px 16px;
@@ -283,6 +289,7 @@ function renderRows(items) {
     const lastRun   = document.createElement('span');
     const actions   = document.createElement('div');
     const runAction  = document.createElement('button');
+    const cloneAction = document.createElement('button');
     const deleteAction = document.createElement('button');
     row.className   = 'cronprompt-row';
     if (item.name === editingName) row.classList.add('is-selected');
@@ -317,6 +324,14 @@ function renderRows(items) {
       event.stopPropagation();
       runNow(item.name, runAction);
     });
+    cloneAction.type      = 'button';
+    cloneAction.className = 'kcui-tag kcui-tag--dim';
+    cloneAction.textContent = 'Clone';
+    cloneAction.title = `Clone ${item.name} as a disabled copy`;
+    cloneAction.addEventListener('click', (event) => {
+      event.stopPropagation();
+      cloneCronPrompt(item.name, cloneAction);
+    });
     deleteAction.type      = 'button';
     deleteAction.className = 'kcui-icon-button cronprompt-prompt-row__action--remove';
     deleteAction.innerHTML = svgIconMask('trash-svgrepo-com', { size: 14 });
@@ -327,7 +342,7 @@ function renderRows(items) {
       event.stopPropagation();
       deleteCronPrompt(item.name);
     });
-    actions.append(runAction, deleteAction);
+    actions.append(runAction, cloneAction, deleteAction);
     row.append(summary, actions);
     return row;
   }));
@@ -349,6 +364,7 @@ function startEdit(item, { scroll = true, updateStatus = true } = {}) {
   editorDirty       = false;
   nameInput.value   = item.name;
   chatInput.value   = item.chat_name;
+  enabledInput.checked = item.enabled !== false;
   form.elements.schedule.value = item.schedule.type === 'daily'
     ? item.schedule.time
     : String(item.schedule.minutes);
@@ -405,6 +421,24 @@ async function deleteCronPrompt(name) {
   }
 }
 
+async function cloneCronPrompt(name, button) {
+  button.disabled = true;
+  button.textContent = 'Cloning';
+  try {
+    const response = await fetch(`/api/cronprompts/${encodeURIComponent(name)}/clone`, { method: 'POST' });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.detail || 'Unable to clone timed event.');
+    editingName = result.name;
+    selectionReady = true;
+    await load();
+    setTag(formStatus, `Cloned ${name} as ${result.name}. The copy is disabled until you enable it.`, 'success');
+  } catch (error) {
+    setTag(formStatus, error.message || 'Unable to clone timed event.', 'danger');
+    button.disabled = false;
+    button.textContent = 'Clone';
+  }
+}
+
 async function agentResume() {
   if (!editingName) {
     window.alert('Select a CronPrompt first.');
@@ -443,6 +477,7 @@ nameInput.addEventListener('input', () => {
   if (!chatInput.value.trim()) chatInput.placeholder = nameInput.value.trim() || 'Named KoreChat';
 });
 chatInput.addEventListener('input', updateEditorChrome);
+enabledInput.addEventListener('input', () => { editorDirty = true; });
 form.addEventListener('input', () => { editorDirty = true; });
 
 form.addEventListener('submit', async (event) => {
@@ -457,6 +492,7 @@ form.addEventListener('submit', async (event) => {
       body: JSON.stringify({
         name:      nameInput.value.trim(),
         chat_name: chatInput.value.trim() || nameInput.value.trim(),
+        enabled:   enabledInput.checked,
         schedule:  form.elements.schedule.value.trim(),
         prompts,
       }),

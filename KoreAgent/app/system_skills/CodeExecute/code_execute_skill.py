@@ -133,11 +133,14 @@ def _make_unrestricted_globals() -> dict:
 # ====================================================================================================
 def python_execute(code: str) -> str:
     """Execute a Python snippet for deterministic computation, parsing, validation, or structured
-    transformations. Do not use it to draft, rank, or format editorial output from supplied material.
+    transformations. Never use it to reconstruct, inspect, rank, select, or format Working Data.
+    Do not use it to draft or format editorial output from supplied material.
 
     Use this tool for arithmetic, factorials, primes, powers, series, string character counts,
     base conversions, statistics, and mechanical structured transformations where code materially
-    improves correctness. Do not use it merely because an answer contains text, a list, or a table.
+    improves correctness. Do not use it merely because an answer contains text, a list, a target
+    item count, or a table. For reports, emails, summaries, and HTML, use Working Data retrieval
+    tools for source material and write the output directly.
 
     The snippet must write its final output via print() calls.
     When sandbox is enabled (default), imports are restricted to a safe stdlib whitelist and

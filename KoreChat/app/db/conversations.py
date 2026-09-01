@@ -202,6 +202,7 @@ def conversation_update(
     datasets: dict | None = None,
     working_data: dict | None = None,
     tools_active: list[str] | None = None,
+    file_cwd: str | None = None,
     background_context: str | None = None,
     token_estimate: int | None = None,
     turn_count: int | None = None,
@@ -238,6 +239,9 @@ def conversation_update(
     if tools_active is not None:
         fields.append("tools_active = ?")
         params.append(json.dumps(tools_active))
+    if file_cwd is not None:
+        fields.append("file_cwd = ?")
+        params.append(str(file_cwd).strip())
     if background_context is not None:
         fields.append("background_context = ?")
         params.append(background_context)

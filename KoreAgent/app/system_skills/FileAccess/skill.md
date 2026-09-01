@@ -1,7 +1,7 @@
 # FileAccess Skill
 
 ## Purpose
-Interface for generic file read, write, append, and search operations inside the shared `datauser/` tree. Bare relative paths resolve under `datauser/`. Legacy prefixes such as `data/...`, `datauser/...`, and `KoreDocs/...` are accepted for compatibility, but new calls should prefer plain datauser-relative paths like `notes/today.txt` or `RadarData/report.csv`.
+Interface for generic file read, write, append, navigation, and search operations inside the shared `datauser/` tree. Each conversation starts in `datauser/`; bare relative paths resolve from its current virtual directory. Legacy prefixes such as `data/...`, `datauser/...`, and `KoreDocs/...` are accepted for compatibility.
 
 ## Interface
 - Module: `KoreAgent/app/system_skills/FileAccess/file_access_skill.py`
@@ -9,6 +9,9 @@ Interface for generic file read, write, append, and search operations inside the
   - `file_write(path: str, content: str)`
   - `file_append(path: str, content: str)`
   - `file_read(path: str, max_chars: int = 8000)`
+  - `file_pwd()`
+  - `file_cd(path: str)`
+  - `file_ls(path: str = "")`
   - `file_write_from_working_data(working_data_name: str, path: str)`
   - `file_find(keywords: list[str], search_root: str = "")`
   - `folder_find(keywords: list[str], search_root: str = "")`
@@ -31,7 +34,7 @@ Use this when large content was auto-saved to Working Data (e.g. a web page fetc
 - Returns `"yes"` or `"no"` so the model can branch on the result.
 
 ### `file_write(path, content)`
-- `path` *(required)* - datauser-relative path. A bare name like `"x.txt"` resolves to `datauser/x.txt`. Legacy aliases like `"data/x.txt"`, `"datauser/x.txt"`, and `"KoreDocs/x.txt"` are accepted.
+- `path` *(required)* - relative to the current virtual directory. A bare name like `"x.txt"` resolves there; explicit `datauser/x.txt` remains rooted at `datauser/`.
 - `content` *(required)* - content to write. Overwrites the file if it exists. Supports `{working_data:key}` token substitution.
 
 ### `file_append(path, content)`
@@ -42,10 +45,18 @@ Use this when large content was auto-saved to Working Data (e.g. a web page fetc
 - `path` *(required)* - same path rules as `file_write`.
 - `max_chars` *(optional, default 8000)* - maximum characters to return; content is truncated with `[truncated]` if exceeded.
 
+### Navigation: `file_pwd()`, `file_cd(path)`, and `file_ls(path = "")`
+
+- Every conversation starts in `datauser/`. Its current directory is persisted with the conversation, so it survives page navigation and service restart.
+- `file_cd(path)` changes the current directory. Relative paths are resolved from the current directory; `..` moves up, but cannot escape `datauser/`.
+- `file_ls()` lists only the immediate files and folders in the current directory. Pass a path to list another directory without changing the current directory.
+- `file_pwd()` reports the current directory.
+- After `file_cd("reports")`, bare paths in `file_read`, `file_write`, `file_append`, `folder_create`, and `folder_exists` resolve beneath `datauser/reports/`. Explicit `datauser/...` paths remain rooted at `datauser/`.
+
 ### `file_find(keywords, search_root = "")`
 - `keywords` *(required)* - list of case-insensitive fragments that must ALL appear in the file name, e.g. `["pulse", "2026"]`.
 - `search_root` *(optional, default "")* - datauser-relative directory to restrict the search, e.g. `"RadarData"`. Leave empty to search the whole `datauser/` tree. Legacy aliases like `"KoreDocs/RadarData"` are accepted.
-- For a request to list files in the local directory without a named path, call `file_find([])` to list files in the shared `datauser/` tree.
+- For a request to list immediate files and folders in the local directory, use `file_ls()`. `file_find([])` remains a recursive search beneath the current directory.
 - To list every file below a directory, call `file_find([], "datauser/reports")`; do not put the directory path in `keywords`.
 
 ### `folder_find(keywords, search_root = "")`

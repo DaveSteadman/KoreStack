@@ -128,6 +128,7 @@ def patch_conversation(conversation_id: int, req: ConversationPatchRequest):
         datasets           = req.datasets,
         working_data       = req.working_data,
         tools_active       = req.tools_active,
+        file_cwd           = req.file_cwd,
         background_context = req.background_context,
         token_estimate     = req.token_estimate,
         turn_count         = req.turn_count,

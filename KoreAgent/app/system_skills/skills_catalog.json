@@ -10,7 +10,7 @@
   "skills": [
     {
       "skill_name": "CodeExecute Skill",
-      "purpose": "- Execute a self-contained Python code snippet and return the captured stdout.",
+      "purpose": "- Execute a small, self-contained Python calculation and return its stdout.",
       "functions": [
         "python_execute(code: str)"
       ],
@@ -26,11 +26,14 @@
     },
     {
       "skill_name": "FileAccess Skill",
-      "purpose": "Interface for generic file read, write, append, and search operations inside the shared `datauser/` tree. Bare relative paths resolve under `datauser/`. Legacy prefixes such as `data/...`, `datauser/...`, and `KoreDocs/...` are accepted for",
+      "purpose": "Interface for generic file read, write, append, navigation, and search operations inside the shared `datauser/` tree. Each conversation starts in `datauser/`; bare relative paths resolve from its current virtual directory. Legacy prefixes s",
       "functions": [
         "file_write(path: str, content: str)",
         "file_append(path: str, content: str)",
         "file_read(path: str, max_chars: int = 8000)",
+        "file_pwd()",
+        "file_cd(path: str)",
+        "file_ls(path: str = \"\")",
         "file_write_from_working_data(working_data_name: str, path: str)",
         "file_find(keywords: list[str], search_root: str = \"\")",
         "folder_find(keywords: list[str], search_root: str = \"\")",

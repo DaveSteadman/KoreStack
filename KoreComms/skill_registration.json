@@ -1,0 +1,34 @@
+{
+  "schema_version": 2,
+  "service": "korecomms",
+  "service_label": "KoreComms",
+  "skills": [
+    {
+      "name": "korecomms",
+      "purpose": "Publish a complete HTML email through an existing KoreComms delivery binding.",
+      "selection_description": "Use to send a finished HTML email through the current chat's configured delivery binding.",
+      "tools": [
+        {
+          "name": "delivery_publish_html",
+          "purpose": "Publish one complete HTML email. Use only after composing the finished body; never send a status message, file path, code, or draft.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "chat_name": {
+                "type": "string",
+                "description": "The delivery-bound chat name returned by the earlier delivery-bind command."
+              },
+              "html_body": {
+                "type": "string",
+                "description": "The complete email-safe HTML body. It may use any reasonable readable HTML structure, such as headings, paragraphs, lists, tables, or sections."
+              }
+            },
+            "required": ["chat_name", "html_body"]
+          },
+          "returns": "The delivery confirmation, including the sent message identifier.",
+          "invoke_path": "/api/skills/delivery_publish_html/invoke"
+        }
+      ]
+    }
+  ]
+}
