@@ -154,6 +154,7 @@ def register_session_routes(
                                 "run_id":     run_id,
                                 "response":   reply,
                                 "tokens":     int(telemetry.get("context_tokens") or 0),
+                                "context_window": int(telemetry.get("context_window") or 0),
                                 "tps":        str(telemetry.get("tokens_per_second") or "0"),
                                 "elapsed_ms": int(telemetry.get("elapsed_ms") or (int(time.time() * 1000) - submitted_at_ms)),
                                 "created_at": outbound.get("created_at"),

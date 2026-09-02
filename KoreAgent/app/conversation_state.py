@@ -20,7 +20,7 @@ import json
 import re
 
 
-_BACKGROUND_CONTEXT_VERSION = 1
+_BACKGROUND_CONTEXT_VERSION = 2
 _MAX_PERSISTED_TURNS = 8
 _MAX_PERSISTED_SKILL_OUTPUTS = 4
 _REQUIRED_TURN_KEYS = ("turn", "user_prompt", "assistant_response", "skill_outputs")
@@ -56,21 +56,35 @@ def _normalize_turn(turn: object) -> dict | None:
     }
 
 
-def decode_background_context(background_context: str | None) -> tuple[list[dict], str | None]:
+def _decode_background_payload(background_context: str | None) -> tuple[dict | None, str | None]:
     raw = (background_context or "").strip()
     if not raw:
-        return [], None
+        return None, None
     try:
         parsed = json.loads(raw)
     except Exception as exc:
-        return [], f"background_context JSON decode failed: {exc}"
+        return None, f"background_context JSON decode failed: {exc}"
 
-    turns_payload: object = parsed
-    if isinstance(parsed, dict):
+    if isinstance(parsed, list):
+        return {"version": 1, "turns": parsed}, None
+    if not isinstance(parsed, dict):
+        return None, "background_context payload is not an object or turn list"
+
+    try:
         version = int(parsed.get("version") or 0)
-        if version != _BACKGROUND_CONTEXT_VERSION:
-            return [], f"background_context version {version} is unsupported"
-        turns_payload = parsed.get("turns")
+    except (TypeError, ValueError):
+        return None, "background_context version is invalid"
+    if version not in {1, _BACKGROUND_CONTEXT_VERSION}:
+        return None, f"background_context version {version} is unsupported"
+    return parsed, None
+
+
+def decode_background_context(background_context: str | None) -> tuple[list[dict], str | None]:
+    parsed, warning = _decode_background_payload(background_context)
+    if parsed is None:
+        return [], warning
+
+    turns_payload = parsed.get("turns")
 
     if not isinstance(turns_payload, list):
         return [], "background_context payload is not a turn list"
@@ -78,10 +92,22 @@ def decode_background_context(background_context: str | None) -> tuple[list[dict
     normalized = [_normalize_turn(turn) for turn in turns_payload]
     valid_turns = [turn for turn in normalized if turn is not None]
     if not valid_turns:
+        if int(parsed.get("version") or 0) == _BACKGROUND_CONTEXT_VERSION:
+            return [], None
         return [], "background_context contained no valid turns"
     if len(valid_turns) != len(turns_payload):
         return valid_turns, "background_context contained invalid turn entries"
     return valid_turns, None
+
+
+def decode_semantic_summary(background_context: str | None) -> tuple[str, dict]:
+    """Return the durable rolling summary and its metadata, if this is a v2 payload."""
+    parsed, _warning = _decode_background_payload(background_context)
+    if not parsed or parsed.get("version") != _BACKGROUND_CONTEXT_VERSION:
+        return "", {}
+    summary  = str(parsed.get("semantic_summary") or "").strip()
+    metadata = parsed.get("summary_metadata")
+    return summary, dict(metadata) if isinstance(metadata, dict) else {}
 
 
 def encode_background_context(turns: list[dict], existing_background_context: str | None = "") -> str:
@@ -106,13 +132,31 @@ def encode_background_context(turns: list[dict], existing_background_context: st
             }
         )
 
-    return json.dumps(
-        {
-            "version": _BACKGROUND_CONTEXT_VERSION,
-            "turns": compact_turns,
-        },
-        ensure_ascii=False,
-    )
+    summary, metadata = decode_semantic_summary(existing_background_context)
+    payload = {
+        "version": _BACKGROUND_CONTEXT_VERSION if summary else 1,
+        "turns":   compact_turns,
+    }
+    if summary:
+        payload["semantic_summary"] = summary
+        payload["summary_metadata"] = metadata
+    return json.dumps(payload, ensure_ascii=False)
+
+
+def encode_semantic_summary(
+    existing_background_context: str | None,
+    semantic_summary: str,
+    summary_metadata: dict | None = None,
+) -> str:
+    """Persist a rolling semantic summary without discarding SessionContext turns."""
+    existing_turns, _warning = decode_background_context(existing_background_context)
+    payload = {
+        "version":          _BACKGROUND_CONTEXT_VERSION,
+        "turns":            existing_turns[-_MAX_PERSISTED_TURNS:],
+        "semantic_summary": str(semantic_summary or "").strip(),
+        "summary_metadata": dict(summary_metadata or {}),
+    }
+    return json.dumps(payload, ensure_ascii=False)
 
 
 def build_background_turn(
@@ -150,7 +194,7 @@ def merge_background_turns(
         normalized["turn"] = next_turn
         merged.append(normalized)
 
-    return encode_background_context(merged)
+    return encode_background_context(merged, existing_background_context)
 
 
 def extract_named_items(user_prompt: str, assistant_response: str = "") -> dict[str, str]:

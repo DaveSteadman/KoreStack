@@ -169,6 +169,19 @@ def _cmd_stoprun(arg: str, ctx: SlashCommandContext) -> None:
     ctx.output("Stop requested. Active run will halt after its current LLM round.", "info")
 
 
+def _cmd_compact(arg: str, ctx: SlashCommandContext) -> None:
+    if arg:
+        ctx.output("Usage: /compact", "dim")
+        return
+    if ctx.compress_history is None:
+        ctx.output("Context compaction is unavailable for this input source.", "error")
+        return
+    try:
+        ctx.output(ctx.compress_history(), "success")
+    except Exception as exc:
+        ctx.output(f"Could not queue context compaction: {exc}", "error")
+
+
 def _cmd_version(arg: str, ctx: SlashCommandContext) -> None:
     ctx.output(f"KoreAgent {SUITE_VERSION}", "info")
 
@@ -483,6 +496,7 @@ _REGISTRY: dict[str, Callable] = {
     "/rounds": _cmd_rounds,
     "/timeout": _cmd_timeout,
     "/stoprun": _cmd_stoprun,
+    "/compact": _cmd_compact,
     "/reskill": _cmd_reskills,
     "/version": _cmd_version,
     "/sandbox": _cmd_sandbox,
@@ -498,6 +512,7 @@ _DESCRIPTIONS: dict[str, str] = {
     "/rounds": "<n>  Set max tool-call rounds per prompt (e.g. /rounds 6)",
     "/timeout": "<seconds>  Set LLM generation timeout (e.g. /timeout 1800 for heavy analysis)",
     "/stoprun": "Cancel the active LLM run (after its current round) and clear all pending queued prompts",
+    "/compact": "Run immediate semantic compaction of this conversation's older context",
     "/reskill": "[min|max]  Rebuild skills catalog and set system prompt guidance mode (default: min)",
     "/version": "Show framework version, active model, and context size",
     "/sandbox": "<on|off>  Enable/disable Python code execution sandbox (import whitelist + blocked builtins)",

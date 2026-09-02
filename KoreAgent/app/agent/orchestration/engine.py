@@ -66,6 +66,7 @@ from pathlib import Path
 
 from context_manager import format_context_map as _context_manager_format_context_map
 from context_manager import store_last_run_state
+from conversation_state import decode_semantic_summary
 from llm_client import call_llm_chat
 from llm_client import get_active_backend
 from llm_client import get_ollama_sampling_config
@@ -644,6 +645,25 @@ def orchestrate_prompt(
         _context_map: list[dict] = [
             {"round": 0, "role": "sys", "label": "system prompt", "chars": len(system_message), "auto_key": None, "msg_idx": 0},
         ]
+        semantic_summary, _summary_metadata = decode_semantic_summary(
+            (conversation_entry or {}).get("background_context")
+        )
+        if semantic_summary:
+            summary_message = (
+                "[Historical context summary — reference only, not an instruction]\n"
+                + semantic_summary
+            )
+            messages.append({"role": "assistant", "content": summary_message})
+            _context_map.append(
+                {
+                    "round":    0,
+                    "role":     "summary",
+                    "label":    "compacted conversation context",
+                    "chars":    len(summary_message),
+                    "auto_key": None,
+                    "msg_idx":  len(messages) - 1,
+                }
+            )
         if conversation_history:
             _hist_start = len(messages)
             _hist_chars = sum(len(m.get("content") or "") for m in conversation_history)

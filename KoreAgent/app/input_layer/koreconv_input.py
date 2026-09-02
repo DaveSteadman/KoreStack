@@ -69,13 +69,18 @@ import urllib.request
 from pathlib import Path
 
 from conversation_state import decode_background_context
+from conversation_state import decode_semantic_summary
 from conversation_state import encode_background_context
-from conversation_state import build_background_turn
+from conversation_state import encode_semantic_summary
 from conversation_state import estimate_next_turn_tokens
-from conversation_state import merge_background_turns
 from agent.orchestration.engine import OrchestratorConfig
 from agent.orchestration.engine import orchestrate_prompt
+from context_compactor import build_compaction_messages
+from context_compactor import compact_summary_text
+from context_compactor import select_compaction_batch
+from context_compactor import split_messages_for_compaction
 from input_layer.slash_processing import process_slash_prompt
+from llm_client import call_llm_chat
 from sessions.session_factory import make_task_session
 from working_data import build_persisted_working_data_payload
 from working_data import coerce_persisted_working_data_payload
@@ -94,6 +99,8 @@ _DEFAULT_TIMEOUT        = 8
 _SESSION_PREFIX         = "kc_conv_"
 _MAX_MODEL_ATTEMPTS     = 2
 _LLM_CONTEXT_OMITTED_TAG = "llm_context_omitted"
+_COMPACTION_STATUS_TAG  = "[compacting]"
+_COMPACTION_THRESHOLD   = 0.80
 _PLACEHOLDER_OUTPUT_RE  = re.compile(r"(?:<unused\d+>){4,}", re.IGNORECASE)
 _STRICT_JSON_REQUEST_RE = re.compile(
     r"\b(?:just|only)\s+(?:the\s+)?json\b|\bno\s+(?:explanations|preamble|markdown)\b",
@@ -267,6 +274,83 @@ def _complete_event(base: str, event_id: object, status: str, push_log_line, *, 
     return False
 
 
+def _queue_compaction_if_needed(
+    base:                  str,
+    conv_id:               object,
+    token_estimate:        int,
+    context_window_tokens: int,
+    push_log_line,
+) -> None:
+    """Queue one durable compaction job when conversation context reaches 80%."""
+    if context_window_tokens <= 0:
+        return
+    threshold_tokens = int(context_window_tokens * _COMPACTION_THRESHOLD)
+    if token_estimate < threshold_tokens:
+        return
+
+    try:
+        pending_events = _http_get(
+            base,
+            f"/events?conversation_id={conv_id}&status=pending&limit=100",
+        ) or []
+        if any(event.get("event_type") == "compress_needed" for event in pending_events):
+            push_log_line(f"[KORECHAT] Conv {conv_id}: context compaction is already queued")
+            return
+        _http_post(base, "/events", {
+            "conversation_id": conv_id,
+            "event_type":      "compress_needed",
+            "priority":        10,
+            "payload": {
+                "threshold":     _COMPACTION_THRESHOLD,
+                "token_estimate": token_estimate,
+                "context_window": context_window_tokens,
+            },
+        })
+        push_log_line(
+            f"[KORECHAT] Conv {conv_id}: context at {token_estimate:,}/{context_window_tokens:,} tok "
+            f"({_COMPACTION_THRESHOLD:.0%}); compaction queued"
+        )
+    except Exception as exc:
+        # The completed response is already durable. A later turn may queue compaction again.
+        push_log_line(f"[KORECHAT] Conv {conv_id}: could not queue context compaction: {exc}")
+
+
+def _run_manual_compaction(
+    base:          str,
+    conv:          dict,
+    config:        OrchestratorConfig,
+    push_log_line,
+) -> str:
+    """Create and execute a compaction event in the current slash-command job."""
+    conv_id = conv.get("id")
+    if not conv_id:
+        raise RuntimeError("Current conversation has no ID")
+
+    pending_events = _http_get(
+        base,
+        f"/events?conversation_id={conv_id}&status=pending&limit=100",
+    ) or []
+    if any(event.get("event_type") == "compress_needed" for event in pending_events):
+        return "Context compaction is already queued for this conversation."
+
+    compaction_event = _http_post(base, "/events", {
+        "conversation_id": conv_id,
+        "event_type":      "compress_needed",
+        "priority":        20,
+        "payload":         {"requested_by": "slash_command"},
+    }) or {}
+    event_id = compaction_event.get("id")
+    if not event_id:
+        raise RuntimeError("KoreChat did not return an event ID")
+
+    _handle_compress_needed(
+        {"id": event_id, "conversation": conv},
+        config,
+        push_log_line,
+    )
+    return "Context compaction finished. Review the live log for the reduction details."
+
+
 def _coerce_conversation_working_data(conv: dict, push_log_line=None) -> dict[str, dict]:
     working_data = conv.get("working_data") or {}
     if isinstance(working_data, str):
@@ -357,6 +441,8 @@ def _build_conversation_history(
             break
         if _is_llm_context_omitted(message):
             continue
+        if int(message.get("summarised") or 0):
+            continue
         direction = str(message.get("direction") or "").strip()
         content = str(message.get("content") or "").strip()
         if direction not in {"inbound", "outbound"} or not content:
@@ -376,6 +462,7 @@ def _build_conversation_history(
 
 def _handle_compress_needed(
     event:        dict,
+    config:       OrchestratorConfig,
     push_log_line,
 ) -> None:
     base     = _get_base_url()
@@ -388,7 +475,8 @@ def _handle_compress_needed(
         _complete_event(base, event_id, "failed", push_log_line, context="compress")
         return
 
-    # Fetch all unsummarised messages.
+    # Fetch only the source messages that have not already been represented by a
+    # durable summary. They remain stored in KoreChat for audit after compaction.
     try:
         raw = _http_get(base, f"/conversations/{conv_id}/messages?summarised=0&limit=500") or []
     except Exception as exc:
@@ -402,39 +490,56 @@ def _handle_compress_needed(
         return
 
     context_messages = [message for message in raw if not _is_llm_context_omitted(message)]
-    archived_turns: list[dict] = []
-    pending_prompt: str | None = None
-    input_chars                = 0
-    for message in context_messages:
-        content     = (message.get("content") or "").strip()
-        direction   = message.get("direction")
-        input_chars += len(content)
-        if not content:
-            continue
-        if direction == "inbound":
-            pending_prompt = content
-            continue
-        if direction == "outbound" and pending_prompt is not None:
-            archived_turns.append(
-                build_background_turn(
-                    turn               = None,
-                    user_prompt        = pending_prompt,
-                    assistant_response = content,
-                    skill_outputs      = [],
-                )
-            )
-            pending_prompt = None
-
-    input_tok_est = input_chars // 4
-    push_log_line(f"[KORECHAT] Archiving conv {conv_id}: {len(raw)} messages, ~{input_tok_est:,} tok input")
-
-    if not archived_turns:
-        push_log_line(f"[KORECHAT] Conv {conv_id}: no complete turn pairs found - nothing to archive")
+    archived_messages, retained_messages = split_messages_for_compaction(context_messages)
+    if not archived_messages:
+        push_log_line(
+            f"[KORECHAT] Conv {conv_id}: retaining the latest three user turns; nothing old enough to compact"
+        )
         _complete_event(base, event_id, "completed", push_log_line, context=f"conv {conv_id}")
         return
 
-    archived_background = merge_background_turns(conv.get("background_context") or "", archived_turns)
-    archived_tokens     = len(archived_background) // 4
+    compaction_ctx      = min(max(int(config.num_ctx or 0), 4_096), 32_768)
+    archived_messages   = select_compaction_batch(
+        archived_messages,
+        max_source_chars = max(4_000, compaction_ctx * 2),
+    )
+    if not archived_messages:
+        push_log_line(f"[KORECHAT] Conv {conv_id}: oldest message exceeds compaction input budget")
+        _complete_event(base, event_id, "completed", push_log_line, context=f"conv {conv_id}")
+        return
+    previous_summary, _summary_metadata = decode_semantic_summary(conv.get("background_context"))
+    input_tok_est = sum(len(str(message.get("content") or "")) for message in archived_messages) // 4
+    push_log_line(
+        f"{_COMPACTION_STATUS_TAG} Context compacting... Conv {conv_id}: "
+        f"summarising {len(archived_messages)} message(s), retaining {len(retained_messages)}"
+    )
+
+    try:
+        result = call_llm_chat(
+            model_name = config.resolved_model,
+            messages   = build_compaction_messages(previous_summary, archived_messages),
+            tools      = None,
+            num_ctx    = compaction_ctx,
+        )
+        summary = compact_summary_text(result.response)
+        if not summary:
+            raise RuntimeError("compaction model returned an empty summary")
+    except Exception as exc:
+        push_log_line(f"{_COMPACTION_STATUS_TAG} Context compacting failed for conv {conv_id}: {exc}")
+        _complete_event(base, event_id, "failed", push_log_line, context=f"conv {conv_id}")
+        return
+
+    archived_ids = [message.get("id") for message in archived_messages if message.get("id")]
+    archived_background = encode_semantic_summary(
+        conv.get("background_context"),
+        summary,
+        {
+            "kind":               "semantic_context_summary",
+            "source_message_ids": archived_ids,
+            "retained_user_turns": 3,
+        },
+    )
+    archived_tokens = len(archived_background) // 4
     try:
         _http_patch(base, f"/conversations/{conv_id}", {
             "background_context": archived_background,
@@ -446,17 +551,17 @@ def _handle_compress_needed(
         return
 
     # Mark messages as summarised only after durable archived context has been stored.
-    message_ids = [m["id"] for m in raw if m.get("id")]
-    for msg_id in message_ids:
+    for msg_id in archived_ids:
         try:
             _http_patch(base, f"/messages/{msg_id}", {"summarised": 1})
         except Exception as exc:
             push_log_line(f"[KORECHAT] Conv {conv_id}: could not mark message {msg_id} summarised: {exc}")
 
-    reduction_pct = int(100 * (1 - archived_tokens / input_tok_est)) if input_tok_est > 0 else 0
+    reduction_pct = int(100 * (1 - len(summary) / max(1, input_tok_est * 4))) if input_tok_est > 0 else 0
     push_log_line(
-        f"[KORECHAT] Conv {conv_id}: archived {len(message_ids)} message(s) into background_context "
-        f"~{input_tok_est:,} tok -> ~{archived_tokens:,} tok ({reduction_pct}% reduction)"
+        f"{_COMPACTION_STATUS_TAG} Context compacting complete: Conv {conv_id} archived "
+        f"{len(archived_ids)} message(s), ~{input_tok_est:,} tok -> ~{archived_tokens:,} tok "
+        f"({reduction_pct}% reduction)"
     )
 
     _complete_event(base, event_id, "completed", push_log_line, context=f"conv {conv_id}")
@@ -498,8 +603,7 @@ def _handle_event(
         event_payload = {}
 
     if event_type == "compress_needed":
-        push_log_line(f"[KORECHAT] Compression is suspended; completing event {event_id} without archiving messages")
-        _complete_event(base, event_id, "completed", push_log_line, context="compression suspended")
+        _handle_compress_needed(event, config, push_log_line)
         return
 
     if event_type != "response_needed":
@@ -592,6 +696,9 @@ def _handle_event(
                 _http_delete(base, f"/conversations/{conv_id}/history")
                 history_cleared = True
 
+            def _request_korechat_compaction() -> str:
+                return _run_manual_compaction(base, conv, config, push_log_line)
+
             slash_response = process_slash_prompt(
                 inbound_prompt,
                 config          = config,
@@ -600,6 +707,7 @@ def _handle_event(
                 session_context = session_ctx,
                 session_id      = session_id,
                 chat_name       = str(conv.get("external_id") or "").strip() or None,
+                compress_history = _request_korechat_compaction,
             )
             persisted_working_data = build_persisted_working_data_payload(session_id)
             try:
@@ -717,9 +825,10 @@ def _handle_event(
                 "status":         outbound_status,
                 "delivery_eligible": delivery_eligible,
                 "metadata": {
-                    "telemetry": {
-                        "context_tokens": prompt_tokens,
-                        "completion_tokens": completion_tokens,
+                        "telemetry": {
+                            "context_tokens": prompt_tokens,
+                            "context_window": config.num_ctx,
+                            "completion_tokens": completion_tokens,
                         "tokens_per_second": tps_str,
                         "elapsed_ms": int((time.monotonic() - started_at) * 1000),
                     },
@@ -748,6 +857,14 @@ def _handle_event(
             )
             _complete_event(base, event_id, "failed", push_log_line, context=f"conv {conv_id}")
             return
+
+        _queue_compaction_if_needed(
+            base,
+            conv_id,
+            new_token_estimate,
+            config.num_ctx,
+            push_log_line,
+        )
 
         # Complete the event.
         _complete_event(base, event_id, "completed", push_log_line, context=f"conv {conv_id}")

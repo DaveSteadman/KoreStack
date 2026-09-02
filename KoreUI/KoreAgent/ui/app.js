@@ -30,7 +30,7 @@ const CSS_WRAP_ACTIVE  = "is-on";
 // All registered slash commands - used for command-name tab completion.
 const _ALL_COMMANDS = [
     "/help", "/llmserver", "/llmserverconfig", "/rounds", "/timeout",
-    "/stopmodel", "/stoprun",
+    "/stopmodel", "/stoprun", "/compact",
     "/clearmemory", "/reskill", "/sandbox", "/tools",
     "/deletelogs",
     "/version", "/defaults", "/chat", "/workspace",
@@ -45,6 +45,8 @@ const _LLMSERVERCFG_SUBS = ["model", "ctx", "max_predict", "cpugpu"];
 const _LLMSERVER_SUBS    = ["ollama", "lmstudio"];
 const _LLMSERVER_CONFIGS = ["forcecpu", "forcegpu", "autogpu"];
 const _SUGGEST_HINTS     = {
+    "/help":    "List every available slash command and its usage",
+    "/compact": "Run immediate semantic compaction of this conversation's older context",
     "/comms":   "Configure or control KoreComms delivery for this chat",
     cpugpu:    "Set Ollama CPU/GPU model placement",
     max_predict: "Use /llmserverconfig max_predict <count>; use /llmserverconfig max_predict to reset to 1024",
@@ -102,6 +104,7 @@ let _chatScrollCtl     = null;
 let _logLineLimit      = MAX_LOG_LINES_LIVE;
 let _sessionTitle      = "";
 let _thinkingTimer     = null;
+let _activeNumCtx      = 0;
 
 // Tab-completion state.
 let _completions  = { sessions: [], models: [] };
@@ -213,10 +216,18 @@ function _getTurnMeta(sessionId, prompt, response) {
 
 function _formatSavedTelemetry(telemetry) {
     if (!telemetry || typeof telemetry !== "object") return "";
-    const tokens = Number(telemetry.context_tokens) || 0;
-    const tps    = String(telemetry.tokens_per_second || "0");
-    const elapsed = _formatElapsed(telemetry.elapsed_ms);
-    return tokens.toLocaleString() + " ctx | " + tps + " tok/s | " + elapsed;
+    return _formatContextStats(
+        Number(telemetry.context_tokens) || 0,
+        String(telemetry.tokens_per_second || "0"),
+        telemetry.elapsed_ms,
+        Number(telemetry.context_window) || _activeNumCtx,
+    );
+}
+
+function _formatContextStats(tokens, tps, elapsedMs, contextWindow = _activeNumCtx) {
+    const percentage = contextWindow > 0 ? " (" + Math.round((tokens / contextWindow) * 100) + "%)" : "";
+    return Number(tokens || 0).toLocaleString() + " ctx" + percentage + " | "
+        + String(tps || "0") + " tok/s | " + _formatElapsed(elapsedMs);
 }
 
 function _formatMessageTime(value = Date.now()) {
@@ -455,6 +466,7 @@ async function refreshOllamaStatus() {
     // be read via API, so label it "local ctx" to make the distinction clear.
     const ctxLabel  = isLMStudio ? "local ctx" : "ctx";
     const ctxVal    = data.num_ctx ? data.num_ctx.toLocaleString() + " " + ctxLabel : "";
+    _activeNumCtx = Number(data.num_ctx) || 0;
     dom.ollamaHost().textContent  = (data.host || "") + " (" + backend + ")";
     dom.ollamaModel().textContent = modelName;
     dom.ollamaCtx().textContent   = ctxVal;
@@ -604,6 +616,7 @@ function _logLineClass(text) {
     }
     if (t.startsWith("[progress]"))            return "log-progress";
     if (t.startsWith("[thinking]") || t.startsWith("[/thinking]")) return "log-thinking";
+    if (t.startsWith("[compacting]"))          return "log-compacting";
     if (t.includes("[SCHEDULER]"))             return "sched";
     if (RE_LOG_ERROR.test(t))                  return "error";
     if (RE_LOG_OK.test(t))                     return "success";
@@ -953,8 +966,12 @@ function listenRun(runId, { startRendered = false } = {}) {
             } else if (ev.type === "response") {
                 removeThinking(runId);
                 const elapsedMs = Number(ev.elapsed_ms) || Date.now() - startedAtMs;
-                const stats = (Number(ev.tokens) || 0).toLocaleString() + " ctx | "
-                    + String(ev.tps || "0") + " tok/s | " + _formatElapsed(elapsedMs);
+                const stats = _formatContextStats(
+                    Number(ev.tokens) || 0,
+                    String(ev.tps || "0"),
+                    elapsedMs,
+                    Number(ev.context_window) || _activeNumCtx,
+                );
                 const meta = _withMessageTime(stats, ev.created_at);
                 _saveTurnMeta(_sessionId, _loadActiveRun()?.prompt || "", ev.response, stats);
                 if (!tokenWrap) {

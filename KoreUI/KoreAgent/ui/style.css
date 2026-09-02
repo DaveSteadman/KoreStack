@@ -288,6 +288,7 @@ body.splitter-drag-h { user-select: none; cursor: row-resize; }
 .log-line.log-tool-round { color: var(--clr-tool-round); font-weight: 600; }
 .log-line.log-progress   { color: var(--clr-progress); }
 .log-line.log-thinking   { color: var(--clr-thinking); font-style: italic; }
+.log-line.log-compacting { color: var(--yellow); font-style: italic; }
 .log-line.error          { color: var(--red); }
 .log-line.success        { color: var(--green); }
 .log-line.sched          { color: var(--yellow); }

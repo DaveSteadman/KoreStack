@@ -24,6 +24,7 @@ def process_slash_prompt(
     switch_session           = None,
     rename_session           = None,
     delete_session_state     = None,
+    compress_history         = None,
 ) -> str:
     """Dispatch a slash prompt and return the complete human-readable response."""
     output_lines: list[str] = []
@@ -42,6 +43,7 @@ def process_slash_prompt(
         switch_session       = switch_session,
         rename_session       = rename_session,
         delete_session_state = delete_session_state,
+        compress_history     = compress_history,
     )
     handled = handle_slash(prompt, context)
     return "\n".join(output_lines) if output_lines else ("(done)" if handled else f"Unknown command: {prompt.split()[0]}")
