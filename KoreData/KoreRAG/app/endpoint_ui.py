@@ -85,6 +85,7 @@ from KoreCommon.service_app import register_ui_elements_assets
 from app.config import cfg
 from app.database import (
     add_chunk,
+    close_db_connection,
     delete_chunk,
     get_chunk,
     get_status,
@@ -616,6 +617,7 @@ def register_rag_ui(
             raise HTTPException(status_code=404, detail=f"Unknown database: {name!r}")
 
         stop_ingestor(name)
+        close_db_connection(name)
 
         def _delete_runtime_artifacts(base_dir: Path, db_id: str) -> None:
             for candidate in (

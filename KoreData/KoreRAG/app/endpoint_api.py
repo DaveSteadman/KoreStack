@@ -46,6 +46,7 @@ from pydantic import BaseModel
 from app.config import cfg
 from app.database import (
     add_chunk,
+    close_db_connection,
     delete_chunk,
     get_chunk,
     get_status,
@@ -407,6 +408,7 @@ def register_rag_api(
         if descriptor is None:
             raise HTTPException(status_code=404, detail=f"Unknown database: {name!r}")
 
+        close_db_connection(name)
         proc = ingest_procs.pop(name, None)
         if proc is not None and getattr(proc, "poll")() is None:
             try:

@@ -16,6 +16,7 @@
 # MARK: FUNCTIONS
 # Function inventory:
 # - db_connection: Implements the db connection operation for this module.
+# - close_db_connection: Closes the cached SQLite connection for one database.
 # - init_db: Implements the init db operation for this module.
 # - _fts_delete: Implements the  fts delete operation for this module.
 # - _fts_insert: Implements the  fts insert operation for this module.
@@ -60,6 +61,15 @@ def db_connection(db: str = "default"):
         except Exception:
             conn.rollback()
             raise
+
+
+def close_db_connection(db: str) -> None:
+    """Close KoreRAG's cached SQLite handle so the database files can be removed."""
+    db_path = _registry_get_db_path(db)
+    with _CONNECTION_LOCK:
+        conn = _CONNECTIONS.pop(db_path, None)
+        if conn is not None:
+            conn.close()
 
 
 def init_db(db: str = "default") -> None:
