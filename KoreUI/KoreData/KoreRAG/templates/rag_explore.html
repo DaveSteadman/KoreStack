@@ -4,7 +4,7 @@
 
 {% block content %}
 <div class="kcui-page kcui-stack">
-<div class="panel kcui-panel" style="margin-bottom:1rem;">
+<div class="panel kcui-panel">
   <div class="panel-header kcui-panel-header">
     <span id="explore-title">EXPLORE &mdash; {{ db_id }}</span>
     <div style="margin-left:auto; display:flex; gap:0.5rem; align-items:center;">
@@ -108,9 +108,14 @@
     const dbInfo = payload.db_info || {};
     document.getElementById('explore-title').innerHTML = 'EXPLORE &mdash; ' + escapeHtml(dbInfo.display_name || payload.db_id || '{{ db_id }}');
     document.getElementById('sittings-count').textContent = String((payload.sittings || []).length);
-    document.getElementById('members-count').textContent  = String((payload.members || []).length);
+    const members       = payload.members || [];
+    const memberCount   = payload.member_count ?? members.length;
+    const memberSummary = memberCount > members.length
+      ? memberCount + ' (top ' + members.length + ')'
+      : String(memberCount);
+    document.getElementById('members-count').textContent  = memberSummary;
     document.getElementById('sittings-body').innerHTML    = renderSittings(payload.sittings || []);
-    document.getElementById('members-body').innerHTML     = renderMembers(payload.members || []);
+    document.getElementById('members-body').innerHTML     = renderMembers(members);
     document.getElementById('sync-banner').style.display  = dbInfo.sync && dbInfo.sync.status === 'running' ? '' : 'none';
     document.getElementById('load-banner').style.display  = 'none';
 

@@ -64,7 +64,7 @@ def _provider_path(db_id: str) -> Optional[Path]:
 
 
 @lru_cache(maxsize=None)
-def _load_provider_from_path(path_str: str) -> ModuleType:
+def _load_provider_from_path(path_str: str, modified_ns: int) -> ModuleType:
     path = Path(path_str)
     spec = importlib.util.spec_from_file_location(f"korerag_nav_{path.parent.name}", path)
     if spec is None or spec.loader is None:
@@ -79,7 +79,7 @@ def get_provider(db_id: str) -> Optional[ModuleType]:
     path = _provider_path(db_id)
     if path is None:
         return None
-    return _load_provider_from_path(str(path.resolve()))
+    return _load_provider_from_path(str(path.resolve()), path.stat().st_mtime_ns)
 
 
 def provider_supports(db_id: str, attribute_name: str) -> bool:
