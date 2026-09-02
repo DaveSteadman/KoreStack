@@ -143,8 +143,6 @@ export function draw() {
     ctx.fillStyle   = 'rgba(230,230,255,0.95)';
     ctx.strokeStyle = '#ffffff';
     ctx.lineWidth   = 2;
-    ctx.shadowColor = '#ffffff';
-    ctx.shadowBlur  = 6;
     ctx.beginPath();
     ctx.arc(_activePortHint.x, _activePortHint.y, PORT_RADIUS * 1.7, 0, Math.PI * 2);
     ctx.fill();
@@ -313,7 +311,7 @@ function drawMultilineText(ctx, text, layout, style) {
 }
 
 function drawWaypoint(ctx, node, bounds) {
-  const sc = worldToScreen(bounds.x + 0.5, bounds.y + 0.5); // centre of 1×1 waypoint
+  const sc = worldToScreen(bounds.x, bounds.y);
   const selected = selection.has(node.id);
   ctx.save();
   ctx.fillStyle   = selected ? 'rgba(180,180,220,0.9)' : 'rgba(150,150,180,0.4)';
@@ -355,7 +353,7 @@ function drawEdge(ctx, edge, nodeMap) {
   const viaPoints = [];
   for (const wid of (edge.via || [])) {
     const wb = worldBounds(wid, nodeMap);
-    if (wb) viaPoints.push({ x: wb.x + wb.width / 2, y: wb.y + wb.height / 2 });
+    if (wb) viaPoints.push(waypointPosition(wb));
   }
 
   // Compute anchor endpoint for each end
@@ -448,6 +446,9 @@ function drawArrow(ctx, from, to, color, lw) {
  */
 function edgeEndpoint(nodeId, bounds, nodeMap, portKey, directionPt) {
   const nodeType = nodeMap.get(nodeId)?.node?.type;
+  if (nodeType === 'waypoint') {
+    return waypointPosition(bounds);
+  }
   if (nodeType === 'ellipse') {
     return ellipseBoundaryPoint(bounds, directionPt);
   }
@@ -479,6 +480,10 @@ function ellipsePath(ctx, x, y, w, h) {
 
 function centre(bounds) {
   return { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 };
+}
+
+function waypointPosition(bounds) {
+  return { x: bounds.x, y: bounds.y };
 }
 
 function contrastColor(hex) {
@@ -517,7 +522,7 @@ export function hitTest(sx, sy) {
     if (!bounds) continue;
     const s = boundsToScreen(bounds);
     if (node.type === 'waypoint') {
-      const sc = worldToScreen(bounds.x + 0.5, bounds.y + 0.5);
+      const sc = worldToScreen(bounds.x, bounds.y);
       if (Math.hypot(sx - sc.x, sy - sc.y) <= WAYPOINT_RADIUS + 3) return node.id;
     } else {
       if (sx >= s.x && sx <= s.x + s.w && sy >= s.y && sy <= s.y + s.h) return node.id;
@@ -603,6 +608,10 @@ export function nearestScreenPort(nodeId, sx, sy) {
   const nodeMap = getNodeMap();
   const bounds  = worldBounds(nodeId, nodeMap);
   if (!bounds) return null;
+  if (nodeMap.get(nodeId)?.node?.type === 'waypoint') {
+    const world = waypointPosition(bounds);
+    return { key: 'centre', screen: worldToScreen(world.x, world.y), world };
+  }
   const ports = getPorts(bounds);
   let best = null, bestDist = Infinity;
   for (const [key, wp] of Object.entries(ports)) {
@@ -628,7 +637,7 @@ export function getEdgeEndpointHandles(edgeId) {
   const viaPoints = [];
   for (const wid of (edge.via || [])) {
     const wb = worldBounds(wid, nodeMap);
-    if (wb) viaPoints.push({ x: wb.x + wb.width / 2, y: wb.y + wb.height / 2 });
+    if (wb) viaPoints.push(waypointPosition(wb));
   }
   const startW = edgeEndpoint(edge.from, fromBounds, nodeMap,
     edge.fromPort, viaPoints.length > 0 ? viaPoints[0] : centre(toBounds));

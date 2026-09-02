@@ -610,9 +610,34 @@ function updateSavedSearchActions() {
   document.getElementById('ss-run').disabled    = selected.length !== 1;
   document.getElementById('ss-delete').disabled = selected.length === 0;
   if (selected.length === 1) {
-    document.getElementById('sq-query').value = selected[0].dataset.query || '';
+    applySavedSearchToForm(savedSearchFromOption(selected[0]));
     document.getElementById('ss-name').value = selected[0].value;
   }
+}
+
+function savedSearchFromOption(option) {
+  try {
+    return JSON.parse(option.dataset.search || '{}');
+  } catch (_) {
+    return { query: option.dataset.query || '' };
+  }
+}
+
+function applySavedSearchToForm(search) {
+  document.getElementById('sq-query').value = search.query || '';
+
+  const domains = Array.isArray(search.domains) && search.domains.length
+    ? new Set(search.domains)
+    : null;
+  document.querySelectorAll('.sq-domain').forEach(checkbox => {
+    checkbox.checked = domains ? domains.has(checkbox.value) : true;
+  });
+
+  document.getElementById('sq-since').value = search.since || '';
+  document.getElementById('sq-until').value = search.until || '';
+  toggleGatewaySearchMode(search.mode || 'keyword');
+  document.getElementById('sq-min-match').value = search.min_match ?? '0.40';
+  document.getElementById('sq-limit').value = search.limit ?? 20;
 }
 
 async function loadSavedSearches(selectedNames = []) {
@@ -627,6 +652,7 @@ async function loadSavedSearches(selectedNames = []) {
       option.value = item.name;
       option.textContent = item.name;
       option.dataset.query = item.search?.query || '';
+      option.dataset.search = JSON.stringify(item.search || {});
       option.selected = selected.has(item.name);
       return option;
     }));
@@ -677,6 +703,7 @@ async function runSelectedSavedSearch() {
   const selected = [...document.getElementById('ss-list').selectedOptions];
   if (selected.length !== 1) return;
   const name = selected[0].value;
+  applySavedSearchToForm(savedSearchFromOption(selected[0]));
   document.getElementById('sq-spinner').style.display = '';
   document.getElementById('sq-results-panel').style.display = 'none';
   setSavedSearchStatus(`Running SavedSearch: ${name}`);

@@ -140,7 +140,7 @@ function handleSelectDown(sx, sy, e) {
   if (selection.size === 1) {
     const [id] = selection;
     const nodeMap = getNodeMap();
-    if (nodeMap.has(id)) {
+    if (nodeMap.has(id) && nodeMap.get(id).node.type !== 'waypoint') {
       const hi = resizeHandleAt(id, sx, sy);
       if (hi >= 0) {
         const bounds = worldBounds(id, nodeMap);
