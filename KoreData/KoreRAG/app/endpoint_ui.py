@@ -336,8 +336,9 @@ def _discover_rag_processing_scripts() -> list[dict[str, Any]]:
 def _rag_processing_scripts(database_ids: set[str]) -> list[dict[str, Any]]:
     global _processing_script_cache
     with _processing_script_cache_lock:
-        if _processing_script_cache is None:
-            _processing_script_cache = _discover_rag_processing_scripts()
+        discovered = _discover_rag_processing_scripts()
+        if _processing_script_cache != discovered:
+            _processing_script_cache = discovered
         cached = [dict(item) for item in _processing_script_cache]
 
     return [

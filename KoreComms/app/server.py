@@ -591,6 +591,29 @@ def _set_delivery_binding_active(chat_name: str, active: bool) -> dict:
     }
 
 
+def _store_email_publication(conversation: dict, interface: dict, body: str, deliveries: object) -> None:
+    """Persist classic-email newsletter content once, with per-recipient routing IDs."""
+    if interface.get("type") != "classic_email":
+        return
+    if not (conversation.get("delivery_recipient") or conversation.get("delivery_list_id")):
+        return
+    if not isinstance(deliveries, list):
+        return
+    settings = json.loads(interface.get("config_json", "{}"))
+    try:
+        reply_window_days = int(settings.get("newsletter_reply_window_days", 7))
+    except (TypeError, ValueError):
+        reply_window_days = 7
+    db.email_publication_create(
+        source_conversation_id = conversation["id"],
+        interface_id           = interface["id"],
+        subject                = str(conversation.get("delivery_subject") or conversation.get("korechat_id") or "KoreComms report"),
+        body                   = body,
+        deliveries             = deliveries,
+        reply_window_days      = reply_window_days,
+    )
+
+
 @app.post("/api/delivery-bindings/{chat_name}/pause")
 def api_delivery_pause(chat_name: str):
     """Pause automatic outbound copying for one delivery-bound chat."""
@@ -629,11 +652,13 @@ def api_delivery_publish_previous(chat_name: str):
     interface = db.interface_get(int(conversation["interface_id"]))
     if interface is None:
         raise HTTPException(404, "Connection not found")
+    body = str(message["content"])
     try:
-        build_adapter(interface).route_reply(conversation["id"], str(message["content"]))
+        deliveries = build_adapter(interface).route_reply(conversation["id"], body)
         kc_client.mark_message_sent(message["id"])
     except Exception as exc:
         raise HTTPException(502, f"Could not publish output: {exc}") from exc
+    _store_email_publication(conversation, interface, body, deliveries)
     db.external_message_create(
         conversation_id     = conversation["id"],
         external_message_id = f"kc:{message['id']}",
@@ -670,9 +695,11 @@ def delivery_publish_html(chat_name: str, html_body: str) -> dict:
         }
 
     try:
-        build_adapter(interface).route_reply(conversation["id"], body)
+        deliveries = build_adapter(interface).route_reply(conversation["id"], body)
     except Exception as exc:
         raise ValueError(f"Could not publish HTML output: {exc}") from exc
+
+    _store_email_publication(conversation, interface, body, deliveries)
 
     if conversation.get("kc_chat_id"):
         try:

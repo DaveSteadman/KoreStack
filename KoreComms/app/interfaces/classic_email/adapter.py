@@ -47,6 +47,7 @@ _SECRET_KEYS = ("incoming_password", "outgoing_password")
 _HTML_TAG_RE = re.compile(r"</?(?:article|blockquote|body|br|div|h[1-6]|html|li|ol|p|table|td|th|tr|ul)\b", re.IGNORECASE)
 _HTML_BREAK_RE = re.compile(r"</?(?:br|div|h[1-6]|li|p|tr)\b[^>]*>", re.IGNORECASE)
 _HTML_STRIP_RE = re.compile(r"<[^>]+>")
+_MESSAGE_ID_RE = re.compile(r"<[^>]+>")
 
 
 class ClassicEmailInterface(BaseInterface):
@@ -87,17 +88,28 @@ class ClassicEmailInterface(BaseInterface):
             for part in message.walk():
                 if part.get_content_type() == "text/plain" and not part.get_filename():
                     return cls._body(part)
+            for part in message.walk():
+                if part.get_content_type() == "text/html" and not part.get_filename():
+                    return cls._html_to_text(cls._body(part))
             return ""
         payload = message.get_payload(decode=True) or b""
-        return payload.decode(message.get_content_charset() or "utf-8", errors="replace").strip()
+        content = payload.decode(message.get_content_charset() or "utf-8", errors="replace").strip()
+        return cls._html_to_text(content) if message.get_content_type() == "text/html" else content
 
     @staticmethod
     def _message_data(message_id: str, raw: bytes) -> dict:
         message = email.message_from_bytes(raw)
         sender = ClassicEmailInterface._text(message.get("From"))
+        references = []
+        for header_name in ("References", "In-Reply-To"):
+            references.extend(_MESSAGE_ID_RE.findall(message.get(header_name, "")))
+        # The oldest referenced message identifies the email thread.  A reply
+        # may list several IDs; retain them all for newsletter delivery lookup.
+        external_thread_id = references[0] if references else (message.get("Message-ID") or message_id)
         return {
             "external_message_id": message_id,
-            "external_thread_id": message.get("Message-ID") or message_id,
+            "external_thread_id": external_thread_id,
+            "reply_references": references,
             "sender": sender,
             "subject": ClassicEmailInterface._text(message.get("Subject")) or "(no subject)",
             "content": ClassicEmailInterface._body(message),
@@ -226,7 +238,7 @@ class ClassicEmailInterface(BaseInterface):
             client.quit()
         return message["Message-ID"] or "smtp:sent"
 
-    def route_reply(self, conversation_id: int, content: str) -> None:
+    def route_reply(self, conversation_id: int, content: str) -> list[dict]:
         conv = db.conversation_get(conversation_id)
         inbound = db.external_message_get_last_inbound(conversation_id)
         if conv is None:
@@ -235,17 +247,30 @@ class ClassicEmailInterface(BaseInterface):
             recipients = db.distribution_list_members(int(conv["delivery_list_id"]))
             if not recipients:
                 raise RuntimeError("Delivery list has no recipients")
-            for recipient in recipients:
-                self._send(recipient["email"], conv.get("delivery_subject") or "KoreComms report", content)
-            return
+            return [
+                {
+                    "recipient":  recipient["email"],
+                    "message_id": self._send(recipient["email"], conv.get("delivery_subject") or "KoreComms report", content),
+                }
+                for recipient in recipients
+            ]
         if conv.get("delivery_recipient"):
-            self._send(conv["delivery_recipient"], conv.get("delivery_subject") or "KoreComms report", content)
-            return
+            recipient = conv["delivery_recipient"]
+            return [{
+                "recipient":  recipient,
+                "message_id": self._send(recipient, conv.get("delivery_subject") or "KoreComms report", content),
+            }]
         if inbound is None:
             raise RuntimeError("Classic email reply has no inbound message to address")
         recipient = parseaddr(inbound["sender_display"])[1] or inbound["sender_display"]
         subject = conv.get("korechat_id") or "(no subject)"
-        self._send(recipient, subject if subject.lower().startswith("re:") else f"Re: {subject}", content, in_reply_to=conv.get("external_thread_id") or "")
+        message_id = self._send(
+            recipient,
+            subject if subject.lower().startswith("re:") else f"Re: {subject}",
+            content,
+            in_reply_to=db.email_reply_anchor(conversation_id) or conv.get("external_thread_id") or "",
+        )
+        return [{"recipient": recipient, "message_id": message_id}]
 
     def send_new(self, recipient: str, subject: str, content: str) -> dict:
         message_id = self._send(recipient, subject, content)

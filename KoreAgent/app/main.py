@@ -234,6 +234,10 @@ _DEFAULTS_KEYS = {"model", "ctx", "max_predict", "agentport", "llmhost"}
 # Keys here that are not in _DEFAULTS_KEYS are read directly by skills or slash commands
 # and are not passed through argparse.
 _KNOWN_KEYS = _DEFAULTS_KEYS | {
+    "temperature",
+    "temperature_enabled",
+    "seed",
+    "seed_enabled",
     "korechaturl",
     "DataRootFolder",
     "ControlDataFolder",
@@ -347,6 +351,13 @@ def _run(args, logger, log_path) -> None:
 
     # Set the active host once; all subsequent LLM calls use this value.
     llm_client.configure_host(args.llmhost)
+    runtime_config = load_runtime_config()
+    llm_client.configure_ollama_sampling_options(
+        temperature         = runtime_config.get("temperature", 0.8),
+        temperature_enabled = runtime_config.get("temperature_enabled", False),
+        seed                = runtime_config.get("seed", 0),
+        seed_enabled        = runtime_config.get("seed_enabled", False),
+    )
 
     skills_payload = load_skills_payload(SKILLS_CATALOG_PATH)
     catalog_mtime  = SKILLS_CATALOG_PATH.stat().st_mtime if SKILLS_CATALOG_PATH.exists() else 0.0

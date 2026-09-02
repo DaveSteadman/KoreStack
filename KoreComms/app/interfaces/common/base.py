@@ -10,7 +10,7 @@
 #
 # Abstract methods:
 #   poll(db_path, kc_base_url) -> None     -- check for new inbound messages
-#   route_reply(conversation, message_text) -> None  -- send an outbound reply
+#   route_reply(conversation, message_text) -> list[dict]|None  -- send an outbound reply
 #
 # Related modules:
 #   - app/interfaces/common/registry.py    -- maps type strings to adapter classes
@@ -54,12 +54,13 @@ class BaseInterface(ABC):
         ...
 
     @abstractmethod
-    def route_reply(self, conversation_id: int, content: str) -> None:
+    def route_reply(self, conversation_id: int, content: str) -> list[dict] | None:
         """Deliver *content* as a reply through this channel.
 
         *conversation_id* is the local KoreComms conversation ID. The adapter
         may read routing metadata (external thread ID, recipient, etc.) from
-        the database, but must not write message content.
+        the database, but must not write message content.  Adapters may return
+        per-recipient delivery receipts when the channel provides them.
         """
         ...
 

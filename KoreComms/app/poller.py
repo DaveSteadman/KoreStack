@@ -41,6 +41,7 @@ import logging
 import math
 import threading
 import time
+from email.utils import parseaddr
 
 from app import database as db, kc_client
 from app.config import cfg
@@ -55,6 +56,31 @@ _next_receive_polls: dict[int, float] = {}
 _next_send_polls: dict[int, float] = {}
 _OUTBOUND_EVENT_POLL_SECS = float(cfg.get("event_poll_interval", 1.0))
 _MISSING_KC_POLICY = str(cfg.get("missing_kc_conversation_policy", "recreate")).strip().lower()
+
+
+def _record_newsletter_publication(local_conv: dict, iface_row: dict, content: str, deliveries: object) -> None:
+    """Persist one newsletter body and per-recipient SMTP reply-routing rows."""
+    if iface_row.get("type") != "classic_email":
+        return
+    if not (local_conv.get("delivery_recipient") or local_conv.get("delivery_list_id")):
+        return
+    if not isinstance(deliveries, list):
+        return
+    settings = json.loads(iface_row.get("config_json", "{}"))
+    try:
+        reply_window_days = int(settings.get("newsletter_reply_window_days", 7))
+    except (TypeError, ValueError):
+        reply_window_days = 7
+    publication_id = db.email_publication_create(
+        source_conversation_id = local_conv["id"],
+        interface_id           = iface_row["id"],
+        subject                = str(local_conv.get("delivery_subject") or local_conv.get("korechat_id") or "KoreComms report"),
+        body                   = content,
+        deliveries             = deliveries,
+        reply_window_days      = reply_window_days,
+    )
+    if publication_id is not None:
+        db.log_activity("newsletter_published", f"publication={publication_id} deliveries={len(deliveries)}")
 
 
 def get_poll_timing() -> dict[int, dict[str, int | None]]:
@@ -130,20 +156,34 @@ def _forward_message(iface_row: dict, msg: dict) -> None:
     """Store routing metadata locally and push the message to KoreChat."""
     ext_msg_id    = msg["external_message_id"]
     ext_thread_id = msg["external_thread_id"]
+    delivery = db.email_delivery_find_by_references(
+        iface_row["id"],
+        list(msg.get("reply_references") or []),
+    )
 
-    # Find or create the local routing entry.
-    local_conv = db.conversation_get_by_external_thread(ext_thread_id)
-    if local_conv is None:
-        local_conv_id = db.conversation_create(
-            interface_id       = iface_row["id"],
-            external_thread_id = ext_thread_id,
-            korechat_id        = msg.get("subject"),
-            delivery_enabled   = True,
+    seeded_newsletter = False
+    if delivery is not None:
+        sender_address = parseaddr(str(msg.get("sender") or ""))[1] or str(msg.get("sender") or "")
+        local_conv, seeded_newsletter = db.email_reply_conversation_get_or_create(
+            iface_row["id"],
+            delivery,
+            sender_address,
         )
-        local_conv = db.conversation_get(local_conv_id)
-        assert local_conv is not None
-    else:
         local_conv_id = local_conv["id"]
+    else:
+        # Find or create the local routing entry for a non-newsletter email thread.
+        local_conv = db.conversation_get_by_external_thread(ext_thread_id)
+        if local_conv is None:
+            local_conv_id = db.conversation_create(
+                interface_id       = iface_row["id"],
+                external_thread_id = ext_thread_id,
+                korechat_id        = msg.get("subject"),
+                delivery_enabled   = True,
+            )
+            local_conv = db.conversation_get(local_conv_id)
+            assert local_conv is not None
+        else:
+            local_conv_id = local_conv["id"]
 
     local_conv["interface_type"] = iface_row["type"]
     kc_conv = _resolve_kc_conversation(local_conv)
@@ -165,6 +205,22 @@ def _forward_message(iface_row: dict, msg: dict) -> None:
     )
     if not inserted:
         return
+
+    if not str(msg.get("content") or "").strip():
+        db.log_activity("empty_inbound", f"ext={ext_msg_id} conv={local_conv_id}")
+        logger.warning("Stored empty inbound message %s without invoking KoreAgent", ext_msg_id)
+        return
+
+    if seeded_newsletter and delivery is not None:
+        kc_client.append_message(
+            kc_conversation_id = kc_conv["id"],
+            direction          = "outbound",
+            content            = delivery["body"],
+            sender_display     = "Newsletter",
+            status             = "sent",
+            delivery_eligible  = False,
+            tags               = ["newsletter_context"],
+        )
 
     # Append to KoreChat. The newer KC API raises response_needed itself.
     kc_client.append_message(
@@ -243,7 +299,8 @@ def _route_outbound_for_conversation(local_conv: dict) -> None:
             logger.info("Suppressed delivery for internal KC message %d", msg["id"])
             continue
         try:
-            adapter.route_reply(local_conv["id"], content)
+            deliveries = adapter.route_reply(local_conv["id"], content)
+            _record_newsletter_publication(local_conv, iface_row, content, deliveries)
             kc_client.mark_message_sent(msg["id"])
             db.external_message_create(
                 conversation_id     = local_conv["id"],

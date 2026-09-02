@@ -52,6 +52,7 @@
 # MARK: IMPORTS
 # ====================================================================================================
 import json
+import math
 import os
 import re
 import threading
@@ -95,6 +96,10 @@ _active_backend: str = "ollama"
 _active_model:       str = ""
 _active_num_ctx:     int = 131072
 _active_max_predict: int = 1024
+_ollama_temperature:         float = 0.8
+_ollama_temperature_enabled: bool = False
+_ollama_seed:                int = 0
+_ollama_seed_enabled:        bool = False
 _active_state_lock: threading.RLock = threading.RLock()
 _ollama_offload_mode: str = "autogpu"
 _OLLAMA_OFFLOAD_MODES: frozenset[str] = frozenset({"forcecpu", "forcegpu", "autogpu"})
@@ -205,8 +210,52 @@ def set_ollama_offload_mode(mode: str) -> None:
         _ollama_offload_mode = normalized
 
 
+def _coerce_config_bool(value: object) -> bool:
+    """Return a predictable Boolean for JSON configuration values."""
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "on"}
+    return bool(value)
+
+
+def configure_ollama_sampling_options(
+    temperature: object = 0.8,
+    temperature_enabled: object = False,
+    seed: object = 0,
+    seed_enabled: object = False,
+) -> None:
+    """Set config-file-controlled Ollama sampling options for future requests."""
+    global _ollama_temperature, _ollama_temperature_enabled, _ollama_seed, _ollama_seed_enabled
+    try:
+        normalized_temperature = float(temperature)
+    except (TypeError, ValueError):
+        normalized_temperature = 0.8
+    if not math.isfinite(normalized_temperature):
+        normalized_temperature = 0.8
+    try:
+        normalized_seed = int(seed)
+    except (TypeError, ValueError):
+        normalized_seed = 0
+
+    with _active_state_lock:
+        _ollama_temperature         = normalized_temperature
+        _ollama_temperature_enabled = _coerce_config_bool(temperature_enabled)
+        _ollama_seed                = normalized_seed
+        _ollama_seed_enabled        = _coerce_config_bool(seed_enabled)
+
+
+def get_ollama_sampling_config() -> dict:
+    """Return the Ollama sampling values persisted by ``/defaults set``."""
+    with _active_state_lock:
+        return {
+            "temperature":         _ollama_temperature,
+            "temperature_enabled": _ollama_temperature_enabled,
+            "seed":                _ollama_seed,
+            "seed_enabled":        _ollama_seed_enabled,
+        }
+
+
 def get_ollama_request_options(num_ctx: int | None = None) -> dict:
-    """Build Ollama-only request options for context and requested model offload."""
+    """Build Ollama-only request options for context, sampling, and model offload."""
     options: dict = {}
     if num_ctx is not None:
         options["num_ctx"] = num_ctx
@@ -214,6 +263,11 @@ def get_ollama_request_options(num_ctx: int | None = None) -> dict:
         options["num_predict"] = _active_max_predict
     if get_active_backend() != "ollama":
         return options
+    with _active_state_lock:
+        if _ollama_temperature_enabled:
+            options["temperature"] = _ollama_temperature
+        if _ollama_seed_enabled:
+            options["seed"] = _ollama_seed
     mode = get_ollama_offload_mode()
     if mode == "forcecpu":
         options["num_gpu"] = 0

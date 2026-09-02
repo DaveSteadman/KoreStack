@@ -63,11 +63,13 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import queue
 import sqlite3
 import threading
 from contextlib import contextmanager
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+from email.utils import parseaddr
 from pathlib import Path
 from typing import Any, Generator
 
@@ -176,6 +178,33 @@ CREATE TABLE IF NOT EXISTS external_messages (
     received_at          TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS email_publications (
+    id                     INTEGER PRIMARY KEY AUTOINCREMENT,
+    source_conversation_id INTEGER NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+    interface_id           INTEGER NOT NULL REFERENCES interfaces(id) ON DELETE CASCADE,
+    subject                TEXT NOT NULL,
+    body                   TEXT NOT NULL,
+    created_at             TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS email_delivery_recipients (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    publication_id  INTEGER NOT NULL REFERENCES email_publications(id) ON DELETE CASCADE,
+    recipient_email TEXT NOT NULL,
+    message_id      TEXT NOT NULL UNIQUE,
+    expires_at      TEXT NOT NULL,
+    created_at      TEXT NOT NULL,
+    UNIQUE(publication_id, recipient_email)
+);
+
+CREATE TABLE IF NOT EXISTS email_reply_threads (
+    publication_id INTEGER NOT NULL REFERENCES email_publications(id) ON DELETE CASCADE,
+    sender_email   TEXT NOT NULL,
+    conversation_id INTEGER NOT NULL UNIQUE REFERENCES conversations(id) ON DELETE CASCADE,
+    created_at     TEXT NOT NULL,
+    PRIMARY KEY (publication_id, sender_email)
+);
+
 CREATE TABLE IF NOT EXISTS activity_log (
     id        INTEGER PRIMARY KEY AUTOINCREMENT,
     action    TEXT NOT NULL,
@@ -191,6 +220,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_convs_thread_unique ON conversations(exter
 CREATE UNIQUE INDEX IF NOT EXISTS idx_convs_name  ON conversations(chat_name);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_ext_msg_id  ON external_messages(external_message_id);
 CREATE INDEX IF NOT EXISTS idx_ext_msg_conv       ON external_messages(conversation_id, direction);
+CREATE INDEX IF NOT EXISTS idx_email_delivery_lookup ON email_delivery_recipients(message_id, expires_at);
+CREATE INDEX IF NOT EXISTS idx_email_reply_thread_conv ON email_reply_threads(conversation_id);
 CREATE INDEX IF NOT EXISTS idx_dist_lists_iface   ON distribution_lists(interface_id);
 CREATE INDEX IF NOT EXISTS idx_dist_members_list  ON distribution_list_members(list_id);
 """
@@ -483,6 +514,144 @@ def external_message_create(
             (conversation_id, external_message_id, direction, sender_display, _now()),
         )
     return cur.rowcount > 0
+
+
+def _normalise_email_address(value: str) -> str:
+    raw = str(value or "").strip()
+    return (parseaddr(raw)[1] or raw).casefold()
+
+
+def _normalise_message_id(value: str) -> str:
+    return str(value or "").strip().strip("<>").casefold()
+
+
+def email_publication_create(
+    source_conversation_id: int,
+    interface_id: int,
+    subject: str,
+    body: str,
+    deliveries: list[dict],
+    reply_window_days: int = 7,
+) -> int | None:
+    """Store one newsletter body and lightweight recipient reply-routing rows."""
+    normalised_deliveries = [
+        {
+            "recipient": _normalise_email_address(delivery.get("recipient", "")),
+            "message_id": _normalise_message_id(delivery.get("message_id", "")),
+        }
+        for delivery in deliveries
+    ]
+    normalised_deliveries = [
+        delivery for delivery in normalised_deliveries
+        if delivery["recipient"] and delivery["message_id"]
+    ]
+    if not normalised_deliveries:
+        return None
+
+    now        = datetime.now(timezone.utc)
+    expires_at = (now + timedelta(days=max(1, int(reply_window_days)))).isoformat()
+    with get_db() as conn:
+        cur = conn.execute(
+            "INSERT INTO email_publications "
+            "(source_conversation_id, interface_id, subject, body, created_at) VALUES (?,?,?,?,?)",
+            (source_conversation_id, interface_id, subject, body, now.isoformat()),
+        )
+        publication_id = int(cur.lastrowid)
+        for delivery in normalised_deliveries:
+            conn.execute(
+                "INSERT OR IGNORE INTO email_delivery_recipients "
+                "(publication_id, recipient_email, message_id, expires_at, created_at) VALUES (?,?,?,?,?)",
+                (
+                    publication_id,
+                    delivery["recipient"],
+                    delivery["message_id"],
+                    expires_at,
+                    now.isoformat(),
+                ),
+            )
+    return publication_id
+
+
+def email_delivery_find_by_references(interface_id: int, references: list[str]) -> dict | None:
+    """Find an active recipient delivery whose SMTP Message-ID appears in ``references``."""
+    message_ids = sorted({_normalise_message_id(reference) for reference in references if reference})
+    if not message_ids:
+        return None
+    placeholders = ", ".join("?" for _ in message_ids)
+    with get_db() as conn:
+        row = conn.execute(
+            "SELECT edr.*, ep.subject, ep.body, ep.source_conversation_id "
+            "FROM email_delivery_recipients edr "
+            "JOIN email_publications ep ON ep.id=edr.publication_id "
+            f"WHERE ep.interface_id=? AND edr.message_id IN ({placeholders}) AND edr.expires_at>? "
+            "ORDER BY edr.created_at DESC LIMIT 1",
+            (interface_id, *message_ids, _now()),
+        ).fetchone()
+    return _row_to_dict(row)
+
+
+def email_reply_conversation_get_or_create(
+    interface_id: int,
+    delivery: dict,
+    sender_email: str,
+) -> tuple[dict, bool]:
+    """Return the lazy per-sender conversation for a newsletter delivery."""
+    publication_id = int(delivery["publication_id"])
+    sender         = _normalise_email_address(sender_email)
+    if not sender:
+        raise ValueError("Email reply has no sender address")
+
+    with get_db() as conn:
+        row = conn.execute(
+            "SELECT c.*, i.name AS interface_name, i.type AS interface_type "
+            "FROM email_reply_threads ert "
+            "JOIN conversations c ON c.id=ert.conversation_id "
+            "JOIN interfaces i ON i.id=c.interface_id "
+            "WHERE ert.publication_id=? AND ert.sender_email=? LIMIT 1",
+            (publication_id, sender),
+        ).fetchone()
+        if row is not None:
+            return dict(row), False
+
+        chat_name = f"newsletter:{publication_id}:{hashlib.sha256(sender.encode('utf-8')).hexdigest()[:16]}"
+        cur = conn.execute(
+            "INSERT INTO conversations "
+            "(interface_id, chat_name, external_thread_id, korechat_id, delivery_enabled, created_at) "
+            "VALUES (?,?,?,?,?,?)",
+            (
+                interface_id,
+                chat_name,
+                f"newsletter-thread:{publication_id}:{hashlib.sha256(sender.encode('utf-8')).hexdigest()[:16]}",
+                delivery["subject"],
+                1,
+                _now(),
+            ),
+        )
+        conversation_id = int(cur.lastrowid)
+        conn.execute(
+            "INSERT INTO email_reply_threads (publication_id, sender_email, conversation_id, created_at) VALUES (?,?,?,?)",
+            (publication_id, sender, conversation_id, _now()),
+        )
+        row = conn.execute(
+            "SELECT c.*, i.name AS interface_name, i.type AS interface_type "
+            "FROM conversations c JOIN interfaces i ON i.id=c.interface_id WHERE c.id=?",
+            (conversation_id,),
+        ).fetchone()
+    assert row is not None
+    return dict(row), True
+
+
+def email_reply_anchor(conversation_id: int) -> str | None:
+    """Return the original delivered SMTP Message-ID for a reply conversation."""
+    with get_db() as conn:
+        row = conn.execute(
+            "SELECT edr.message_id FROM email_reply_threads ert "
+            "JOIN email_delivery_recipients edr "
+            "ON edr.publication_id=ert.publication_id AND edr.recipient_email=ert.sender_email "
+            "WHERE ert.conversation_id=? LIMIT 1",
+            (conversation_id,),
+        ).fetchone()
+    return f"<{row['message_id']}>" if row else None
 
 
 def conversation_set_delivery(

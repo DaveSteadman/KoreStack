@@ -68,6 +68,7 @@ from context_manager import format_context_map as _context_manager_format_contex
 from context_manager import store_last_run_state
 from llm_client import call_llm_chat
 from llm_client import get_active_backend
+from llm_client import get_ollama_sampling_config
 from llm_client import is_explicit_model_name
 from llm_client import list_ollama_models
 from llm_client import log_to_session
@@ -520,6 +521,14 @@ def resolve_execution_model(requested_model: str) -> str:
 # MARK: ORCHESTRATION PIPELINE
 # ====================================================================================================
 
+def _format_ollama_sampling_parameters() -> str:
+    """Format config-controlled Ollama sampling values for the orchestration log."""
+    sampling_config = get_ollama_sampling_config()
+    temperature = sampling_config["temperature"] if sampling_config["temperature_enabled"] else "unset"
+    seed        = sampling_config["seed"]        if sampling_config["seed_enabled"]        else "unset"
+    return f"temp: {temperature} | seed: {seed}"
+
+
 def orchestrate_prompt(
     user_prompt: str,
     config: OrchestratorConfig,
@@ -578,6 +587,7 @@ def orchestrate_prompt(
         _log(f"Model:          {config.resolved_model}")
         _log(f"Context window: {config.num_ctx:,} tokens")
         _log(f"Max rounds:     {config.max_iterations}")
+        _log(f"Parameters:     {_format_ollama_sampling_parameters()}")
         _log(f"Prompt:         {user_prompt[:300]}{' ...' if len(user_prompt) > 300 else ''}")
         ambient_system_info = get_static_system_info_string()
         _log_section("AMBIENT SYSTEM INFO")

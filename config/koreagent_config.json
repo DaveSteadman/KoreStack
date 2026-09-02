@@ -2,5 +2,9 @@
   "model": "nemotron-3.5-lightning:latest",
   "ctx": 100000,
   "max_predict": 4096,
-  "llmhost": "http://localhost:11434"
+  "llmhost": "http://localhost:11434",
+  "temperature": 0.8,
+  "temperature_enabled": false,
+  "seed": 0,
+  "seed_enabled": false
 }

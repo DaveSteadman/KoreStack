@@ -37,6 +37,7 @@ from typing import Callable
 
 from llm_client import get_active_host
 from llm_client import get_llm_timeout
+from llm_client import get_ollama_sampling_config
 from llm_client import set_llm_timeout
 from agent.orchestration.engine import _filter_web_skills
 from agent.orchestration.engine import get_skill_guidance_enabled
@@ -327,6 +328,7 @@ def _cmd_defaults(arg: str, ctx: SlashCommandContext) -> None:
             "ctx":         ctx.config.num_ctx,
             "max_predict": getattr(ctx.config, "max_predict", 1024),
             "llmhost":     get_active_host(),
+            **get_ollama_sampling_config(),
         }
         for key in ("agentport", "DataRootFolder", "ControlDataFolder", "UserDataFolder"):
             if key in existing:

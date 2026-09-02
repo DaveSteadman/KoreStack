@@ -48,12 +48,14 @@ from llm_client_openai import HOST_ALIASES
 from llm_client_openai import OllamaCallResult
 from llm_client_openai import ChatCallResult
 from llm_client_openai import configure_host
+from llm_client_openai import configure_ollama_sampling_options
 from llm_client_openai import configure_server
 from llm_client_openai import get_active_host
 from llm_client_openai import get_active_backend
 from llm_client_openai import get_active_model
 from llm_client_openai import get_active_num_ctx
 from llm_client_openai import get_ollama_offload_mode
+from llm_client_openai import get_ollama_sampling_config
 from llm_client_openai import get_ollama_request_options
 from llm_client_openai import get_local_ollama_autostart_enabled
 from llm_client_openai import get_llm_timeout
@@ -81,12 +83,14 @@ __all__ = [
     "OllamaCallResult",
     "ChatCallResult",
     "configure_host",
+    "configure_ollama_sampling_options",
     "configure_server",
     "get_active_host",
     "get_active_backend",
     "get_active_model",
     "get_active_num_ctx",
     "get_ollama_offload_mode",
+    "get_ollama_sampling_config",
     "get_ollama_request_options",
     "get_local_ollama_autostart_enabled",
     "get_llm_timeout",
