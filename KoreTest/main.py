@@ -517,6 +517,23 @@ def suites():
 def run_suite(payload: dict): return _run_requested_suite(str(payload.get("suite") or ""), str(payload.get("model") or "") or None)
 
 
+@app.post("/api/runs/queue")
+def queue_run_suite(payload: dict):
+    suite = str(payload.get("suite") or "").strip()
+    model = str(payload.get("model") or "").strip() or None
+    if suite.lower() != "all":
+        raise HTTPException(400, "Only the full 'all' test suite may be queued.")
+    if _RUN_LOCK.locked():
+        raise HTTPException(409, "A KoreTest run is already in progress.")
+    threading.Thread(
+        target = _run_requested_suite,
+        args   = (suite, model),
+        daemon = True,
+        name   = "koretest-full-suite",
+    ).start()
+    return {"queued": True, "suite": "all"}
+
+
 @app.get("/api/runs")
 def runs(limit: int = 50):
     conn = _db()

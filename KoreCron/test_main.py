@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import unittest
+from tempfile import TemporaryDirectory
+from pathlib import Path
 from unittest.mock import patch
 
 from KoreCron import main
@@ -57,6 +59,39 @@ class FreshConversationTests(unittest.TestCase):
             main._fresh_conversation({"chat_name": "Daily"})
 
         self.assertEqual(deleted, ["http://chat/api/conversations/5"])
+
+
+class ScheduledTestRunTests(unittest.TestCase):
+    def test_test_run_definition_accepts_only_a_daily_time(self) -> None:
+        definition = main._test_run_definition({"time": "09:30"})
+
+        self.assertEqual(definition["id"], "test_run:09:30")
+        self.assertEqual(definition["kind"], "test_run")
+        self.assertEqual(definition["schedule"], {"type": "daily", "time": "09:30"})
+
+        with self.assertRaises(Exception):
+            main._test_run_definition({"time": "30"})
+
+    def test_test_run_queues_the_full_koretest_suite(self) -> None:
+        with patch.object(main, "_service_url", return_value="http://test"), patch.object(main, "_http") as http:
+            main._run({"kind": "test_run", "id": "test_run:09:30"})
+
+        http.assert_called_once_with("POST", "http://test/api/runs/queue", {"suite": "all"})
+
+    def test_test_runs_are_stored_separately_from_cronprompts(self) -> None:
+        with TemporaryDirectory() as temp_dir:
+            store_file = Path(temp_dir) / "cronprompts.json"
+            state_file = Path(temp_dir) / "scheduler_state.json"
+            with patch.object(main, "STORE_FILE", store_file), patch.object(main, "STATE_FILE", state_file):
+                created = main.create_test_run({"time": "09:30"})
+                listed = main.list_test_runs()
+
+                self.assertEqual(created["id"], "test_run:09:30")
+                self.assertEqual([item["id"] for item in listed["test_runs"]], ["test_run:09:30"])
+                self.assertEqual(main._definitions(), [])
+
+                main.delete_test_run("test_run:09:30")
+                self.assertEqual(main.list_test_runs()["test_runs"], [])
 
 
 if __name__ == "__main__":

@@ -20,10 +20,17 @@
             <div class="kcui-panel-header"><p class="eyebrow">Cron Prompts</p><p>Select a timed event on the left to load its schedule, destination chat, and prompt sequence into the editor.</p></div>
             <div class="kcui-panel-body">
               <div class="cronprompt-toolbar">
-                <button id="create-cronprompt" class="kcui-tag kcui-tag--accent kcui-tag--filled" type="button">New timed event</button>
+                <div class="cronprompt-toolbar__actions">
+                  <button id="create-cronprompt" class="kcui-tag kcui-tag--accent kcui-tag--filled" type="button">New timed event</button>
+                  <button id="create-test-run" class="kcui-tag kcui-tag--warning" type="button">New test run</button>
+                </div>
                 <span id="list-status" class="kcui-tag kcui-tag--dim">Select a timed event</span>
               </div>
               <div id="cron-rows" class="cronprompt-list" role="list"><div class="cronprompt-list__empty">Loading...</div></div>
+              <div class="cronprompt-test-runs">
+                <p class="eyebrow">Scheduled full test runs</p>
+                <div id="test-run-rows" class="cronprompt-list" role="list"></div>
+              </div>
             </div>
           </section>
         </div>
@@ -57,6 +64,18 @@
       </section>
     </div>
   </main>
-  <script type="module" src="/static/cron/app.js?v=20260831-clone"></script>
+  <dialog id="test-run-dialog" class="cronprompt-test-run-dialog">
+    <form id="test-run-form" method="dialog">
+      <p class="eyebrow">New Test Run</p>
+      <p>Schedule the complete KoreTest suite on the KoreCron timetable.</p>
+      <label class="kcui-form-label" for="test-run-time">Time</label>
+      <input id="test-run-time" name="time" type="time" required>
+      <div class="cronprompt-test-run-dialog__actions">
+        <button class="kcui-tag kcui-tag--dim" type="button" value="cancel">Cancel</button>
+        <button class="kcui-tag kcui-tag--accent kcui-tag--filled" type="submit">Schedule test run</button>
+      </div>
+    </form>
+  </dialog>
+  <script type="module" src="/static/cron/app.js?v=20260902-test-runs"></script>
 </body>
 </html>

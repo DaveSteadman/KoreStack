@@ -14,11 +14,17 @@ const agentResumeButton = document.querySelector('#agent-resume-btn');
 const formStatus   = document.querySelector('#form-status');
 const listStatus   = document.querySelector('#list-status');
 const createButton = document.querySelector('#create-cronprompt');
+const createTestRunButton = document.querySelector('#create-test-run');
 const editorEyebrow = document.querySelector('#editor-eyebrow');
 const editorBlurb  = document.querySelector('#editor-blurb');
 const rows         = document.querySelector('#cron-rows');
+const testRunRows  = document.querySelector('#test-run-rows');
+const testRunDialog = document.querySelector('#test-run-dialog');
+const testRunForm  = document.querySelector('#test-run-form');
+const testRunTime  = document.querySelector('#test-run-time');
 let editingName    = null;
 let cronPrompts    = [];
+let testRuns       = [];
 let selectionReady = false;
 let editorDirty    = false;
 
@@ -42,9 +48,54 @@ cronPromptRowStyle.textContent = `
     margin-bottom: 12px;
     flex-wrap: wrap;
   }
+  .cronprompt-toolbar__actions {
+    display: inline-flex;
+    gap: 8px;
+  }
   .cronprompt-list {
     display: grid;
     gap: 10px;
+  }
+  .cronprompt-test-runs {
+    display: grid;
+    gap: 8px;
+    margin-top: 22px;
+  }
+  .cronprompt-test-runs > .eyebrow {
+    margin: 0;
+  }
+  .cronprompt-test-run-row {
+    align-items: center;
+    background: rgba(250, 204, 21, 0.06);
+    border: 1px solid rgba(250, 204, 21, 0.22);
+    border-radius: var(--kcui-radius-md, 2px);
+    display: flex;
+    gap: 12px;
+    justify-content: space-between;
+    padding: 10px 12px;
+  }
+  .cronprompt-test-run-dialog {
+    background: var(--panel, #18202d);
+    border: 1px solid var(--border, rgba(255, 255, 255, 0.16));
+    border-radius: var(--kcui-radius-md, 2px);
+    color: var(--text, #fff);
+    max-width: 26rem;
+    padding: 20px;
+  }
+  .cronprompt-test-run-dialog::backdrop {
+    background: rgba(0, 0, 0, 0.58);
+  }
+  .cronprompt-test-run-dialog form {
+    display: grid;
+    gap: 12px;
+  }
+  .cronprompt-test-run-dialog p {
+    margin: 0;
+  }
+  .cronprompt-test-run-dialog__actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
   }
   .cronprompt-chat-row {
     position: relative;
@@ -348,6 +399,38 @@ function renderRows(items) {
   }));
 }
 
+function renderTestRuns(items) {
+  if (!items.length) {
+    const empty = document.createElement('div');
+    empty.className = 'cronprompt-list__empty';
+    empty.textContent = 'No full test runs scheduled.';
+    testRunRows.replaceChildren(empty);
+    return;
+  }
+  testRunRows.replaceChildren(...items.map((item) => {
+    const row = document.createElement('div');
+    const summary = document.createElement('div');
+    const schedule = document.createElement('span');
+    const lastRun = document.createElement('div');
+    const deleteAction = document.createElement('button');
+    row.className = 'cronprompt-test-run-row';
+    summary.textContent = 'KoreTest full suite';
+    schedule.className = 'kcui-tag kcui-tag--warning';
+    schedule.textContent = item.schedule_text;
+    lastRun.textContent = `Last run: ${item.last_run || 'Never'}`;
+    lastRun.className = 'cronprompt-row__meta';
+    summary.append(document.createElement('br'), schedule, document.createElement('br'), lastRun);
+    deleteAction.type = 'button';
+    deleteAction.className = 'kcui-icon-button cronprompt-prompt-row__action--remove';
+    deleteAction.innerHTML = svgIconMask('trash-svgrepo-com', { size: 14 });
+    deleteAction.title = `Delete ${item.name}`;
+    deleteAction.setAttribute('aria-label', `Delete ${item.name}`);
+    deleteAction.addEventListener('click', () => deleteTestRun(item.id));
+    row.append(summary, deleteAction);
+    return row;
+  }));
+}
+
 function resetEditor({ preserveStatus = false } = {}) {
   editingName = null;
   editorDirty = false;
@@ -377,9 +460,13 @@ function startEdit(item, { scroll = true, updateStatus = true } = {}) {
 }
 
 async function load({ refreshEditor = true } = {}) {
-  const cronResponse = await fetch('/api/cronprompts');
+  const cronResponse    = await fetch('/api/cronprompts');
+  const testRunResponse = await fetch('/api/test-runs');
   const cronPayload     = await cronResponse.json();
+  const testRunPayload  = await testRunResponse.json();
   cronPrompts = cronPayload.cronprompts || [];
+  testRuns    = testRunPayload.test_runs || [];
+  renderTestRuns(testRuns);
   if (editingName) {
     const selected = cronPrompts.find((item) => item.name === editingName);
     if (!selected) resetEditor({ preserveStatus: true });
@@ -418,6 +505,18 @@ async function deleteCronPrompt(name) {
     await load();
   } catch (error) {
     setTag(formStatus, error.message || 'Unable to delete event.', 'danger');
+  }
+}
+
+async function deleteTestRun(runId) {
+  if (!window.confirm('Delete this scheduled full test run?')) return;
+  try {
+    const response = await fetch(`/api/test-runs/${encodeURIComponent(runId)}`, { method: 'DELETE' });
+    if (!response.ok) throw new Error((await response.json()).detail || 'Unable to delete test run.');
+    setTag(formStatus, 'Deleted scheduled test run', 'success');
+    await load();
+  } catch (error) {
+    setTag(formStatus, error.message || 'Unable to delete test run.', 'danger');
   }
 }
 
@@ -471,6 +570,29 @@ createButton.addEventListener('click', () => {
   selectionReady = true;
   resetEditor();
   nameInput.focus();
+});
+createTestRunButton.addEventListener('click', () => {
+  testRunForm.reset();
+  testRunDialog.showModal();
+  testRunTime.focus();
+});
+testRunDialog.querySelector('[value="cancel"]').addEventListener('click', () => testRunDialog.close());
+testRunForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  try {
+    const response = await fetch('/api/test-runs', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ time: testRunTime.value }),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.detail || 'Unable to schedule test run.');
+    testRunDialog.close();
+    setTag(formStatus, `Scheduled full test run at ${result.schedule.time}`, 'success');
+    await load();
+  } catch (error) {
+    setTag(formStatus, error.message || 'Unable to schedule test run.', 'danger');
+  }
 });
 agentResumeButton.addEventListener('click', agentResume);
 nameInput.addEventListener('input', () => {

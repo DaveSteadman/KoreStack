@@ -102,12 +102,29 @@ def _write(path: Path, value) -> None:
 
 
 def _definitions() -> list[dict]:
-    data = _read(STORE_FILE, {"cronprompts": []})
+    data = _read(STORE_FILE, {"cronprompts": [], "test_runs": []})
     return data.get("cronprompts", []) if isinstance(data, dict) else []
 
 
 def _save(definitions: list[dict]) -> None:
-    _write(STORE_FILE, {"cronprompts": definitions})
+    data = _read(STORE_FILE, {"cronprompts": [], "test_runs": []})
+    _write(STORE_FILE, {
+        "cronprompts": definitions,
+        "test_runs":   data.get("test_runs", []) if isinstance(data, dict) else [],
+    })
+
+
+def _test_run_definitions() -> list[dict]:
+    data = _read(STORE_FILE, {"cronprompts": [], "test_runs": []})
+    return data.get("test_runs", []) if isinstance(data, dict) else []
+
+
+def _save_test_run_definitions(definitions: list[dict]) -> None:
+    data = _read(STORE_FILE, {"cronprompts": [], "test_runs": []})
+    _write(STORE_FILE, {
+        "cronprompts": data.get("cronprompts", []) if isinstance(data, dict) else [],
+        "test_runs":   definitions,
+    })
 
 
 def _schedule_text(schedule: dict) -> str:
@@ -217,6 +234,10 @@ def _await_outbound_reply(base: str, conversation_id: int, prior_count: int, tim
 
 
 def _run(definition: dict) -> None:
+    if definition.get("kind") == "test_run":
+        _http("POST", f"{_service_url('koretest')}/api/runs/queue", {"suite": "all"})
+        return
+
     conversation = _fresh_conversation(definition)
     base         = _service_url("korechat")
     conversation_id = int(conversation["id"])
@@ -265,10 +286,10 @@ def _scheduler() -> None:
     while not STOP.is_set():
         state = _read(STATE_FILE, {})
         now = datetime.now()
-        for definition in _definitions():
-            name = str(definition.get("name", ""))
-            if definition.get("enabled", True) and _due(definition, state.get(name), now):
-                state[name] = now.isoformat(timespec="seconds")
+        for definition in [*_definitions(), *_test_run_definitions()]:
+            state_key = str(definition.get("id") or definition.get("name") or "")
+            if definition.get("enabled", True) and _due(definition, state.get(state_key), now):
+                state[state_key] = now.isoformat(timespec="seconds")
                 _write(STATE_FILE, state)
                 try:
                     _run(definition)
@@ -305,14 +326,44 @@ def list_cronprompts():
     return {"cronprompts": [{**item, "schedule_text": _schedule_text(item.get("schedule", {})), "last_run": state.get(item.get("name"))} for item in _definitions()]}
 
 
+@app.get("/api/test-runs")
+def list_test_runs():
+    state = _read(STATE_FILE, {})
+    return {
+        "test_runs": [
+            {
+                **item,
+                "schedule_text": _schedule_text(item.get("schedule", {})),
+                "last_run":      state.get(str(item.get("id") or "")),
+            }
+            for item in _test_run_definitions()
+        ],
+    }
+
+
 @app.get("/api/timeline")
 def timeline():
     now = datetime.now()
     state = _read(STATE_FILE, {})
     items = [
-        {"name": item.get("name"), "chat_name": item.get("chat_name"), "next_fire": _next_fire(item, state.get(item.get("name")), now), "schedule_text": _schedule_text(item.get("schedule", {}))}
+        {
+            "name":          item.get("name"),
+            "chat_name":     item.get("chat_name"),
+            "next_fire":     _next_fire(item, state.get(item.get("name")), now),
+            "schedule_text": _schedule_text(item.get("schedule", {})),
+            "kind":          "cronprompt",
+        }
         for item in _definitions() if item.get("enabled", True)
     ]
+    items.extend(
+        {
+            "name":          item.get("name"),
+            "next_fire":     _next_fire(item, state.get(str(item.get("id") or "")), now),
+            "schedule_text": _schedule_text(item.get("schedule", {})),
+            "kind":          "test_run",
+        }
+        for item in _test_run_definitions() if item.get("enabled", True)
+    )
     return {"items": sorted(items, key=lambda item: item["next_fire"]), "now": now.isoformat(timespec="seconds")}
 
 
@@ -344,6 +395,23 @@ def _cronprompt_definition(payload: dict) -> dict:
     }
 
 
+def _test_run_definition(payload: dict) -> dict:
+    time_value = str(payload.get("time", "")).strip()
+    try:
+        schedule = _parse_schedule(time_value)
+    except (TypeError, ValueError) as exc:
+        raise HTTPException(400, "Test run time must be HH:MM.") from exc
+    if schedule.get("type") != "daily":
+        raise HTTPException(400, "Test runs require a daily HH:MM time.")
+    return {
+        "id":       f"test_run:{schedule['time']}",
+        "kind":     "test_run",
+        "name":     f"KoreTest full run @ {schedule['time']}",
+        "enabled":  True,
+        "schedule": schedule,
+    }
+
+
 def _next_clone_name(source_name: str, existing_names: set[str]) -> str:
     base = str(source_name or "CronPrompt").strip()
     index = 1
@@ -363,6 +431,30 @@ def create_cronprompt(payload: dict):
         raise HTTPException(409, "CronPrompt already exists.")
     definitions.append(definition); _save(definitions)
     return definition
+
+
+@app.post("/api/test-runs")
+def create_test_run(payload: dict):
+    definition  = _test_run_definition(payload)
+    definitions = _test_run_definitions()
+    if any(item.get("id") == definition["id"] for item in definitions):
+        raise HTTPException(409, "A full test run is already scheduled for this time.")
+    definitions.append(definition)
+    _save_test_run_definitions(definitions)
+    return definition
+
+
+@app.delete("/api/test-runs/{run_id}", status_code=204)
+def delete_test_run(run_id: str):
+    definitions = _test_run_definitions()
+    remaining = [item for item in definitions if str(item.get("id") or "") != run_id]
+    if len(remaining) == len(definitions):
+        raise HTTPException(404, "Scheduled test run not found.")
+    _save_test_run_definitions(remaining)
+    state = _read(STATE_FILE, {})
+    state.pop(run_id, None)
+    _write(STATE_FILE, state)
+    return None
 
 
 @app.post("/api/cronprompts/{name}/clone")
