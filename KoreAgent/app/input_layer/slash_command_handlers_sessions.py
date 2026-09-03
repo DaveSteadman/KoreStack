@@ -251,6 +251,9 @@ def _cmd_chat(arg: str, ctx: SlashCommandContext) -> None:
             new_session_id = f"web_{int(time.time() * 1000)}"
             name = rest.strip()
             if ctx.switch_session:
+                if name:
+                    conversation = _ensure_conversation_for_session(new_session_id)
+                    _kc_patch(f"/conversations/{conversation['id']}", {"subject": name, "protected": True})
                 ctx.switch_session(new_session_id, name)
                 label = f"'{name}'" if name else "a new chat"
                 ctx.output(f"Conversation history cleared - starting {label}.", "success")

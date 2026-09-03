@@ -144,11 +144,20 @@ def register_session_routes(
                         if replies:
                             outbound = replies[-1]
                             reply = str(outbound.get("content") or "").strip()
-                            try:
-                                metadata = json.loads(outbound.get("metadata") or "{}")
-                            except (TypeError, json.JSONDecodeError):
+                            raw_metadata = outbound.get("metadata")
+                            if isinstance(raw_metadata, dict):
+                                metadata = raw_metadata
+                            elif isinstance(raw_metadata, str):
+                                try:
+                                    metadata = json.loads(raw_metadata) if raw_metadata.strip() else {}
+                                except json.JSONDecodeError:
+                                    metadata = {}
+                            else:
                                 metadata = {}
                             telemetry = metadata.get("telemetry") if isinstance(metadata, dict) else {}
+                            session_switch = metadata.get("session_switch") if isinstance(metadata, dict) else None
+                            if not isinstance(session_switch, dict):
+                                session_switch = None
                             queue_run_event(run_q, {
                                 "type":       "response",
                                 "run_id":     run_id,
@@ -158,6 +167,7 @@ def register_session_routes(
                                 "tps":        str(telemetry.get("tokens_per_second") or "0"),
                                 "elapsed_ms": int(telemetry.get("elapsed_ms") or (int(time.time() * 1000) - submitted_at_ms)),
                                 "created_at": outbound.get("created_at"),
+                                "session_switch": session_switch,
                             }, priority=True)
                             return
                     time.sleep(1)

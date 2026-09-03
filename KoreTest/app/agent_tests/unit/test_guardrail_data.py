@@ -84,7 +84,6 @@ from datasets_pkg import store as datasets_store
 from agent.orchestration.engine import ConversationHistory
 from agent.orchestration.engine import OrchestratorConfig
 from agent.orchestration.engine import orchestrate_prompt
-from agent.orchestration.tool_selector import select_registered_tools
 from input_layer import koreconv_input as koreconv_input_module
 from datasets_pkg import auto_route_tool_result
 from datasets_pkg import clear_session_datasets
@@ -122,7 +121,6 @@ from KoreDocs.app import korefile as koredocs_korefile
 from KoreCommon import datauser_fs as datauser_fs_module
 from agent.tool_runtime.loop import normalize_tool_request
 from agent.tool_runtime.loop import _derive_auto_scratchpad_key
-from agent.tool_runtime.loop import _extract_graph_connection_batch_from_text
 from tool_result import ToolCallResult
 import api.app as api_module
 from input_layer import slash_commands as slash_commands_module
@@ -256,46 +254,6 @@ class GuardrailDataTests(unittest.TestCase):
         self.assertEqual(history, [{"role": "assistant", "content": "visible answer"}])
         self.assertNotIn("private audit entry", prompt)
         self.assertIn("current request", prompt)
-
-    def test_ephemeral_selector_uses_description_and_activates_only_valid_names(self) -> None:
-        calls: dict[str, object] = {}
-
-        class _Result:
-            response = '{"tool_names":["koredocs_search","unknown_tool","koredocs_search"]}'
-
-        def fake_call_llm(**kwargs):
-            calls["messages"] = kwargs["messages"]
-            calls["num_ctx"] = kwargs["num_ctx"]
-            return _Result()
-
-        def fake_promote(tool_names, **kwargs):
-            calls["promoted"] = (tool_names, kwargs)
-            return {"added": tool_names, "promoted": [], "evicted": [], "active_tools": tool_names}
-
-        selection = select_registered_tools(
-            "Find contracts mentioning renewal.",
-            model_name="test-model",
-            maximum_context_tokens=8192,
-            session_id="selector_test",
-            conversation_entry={"id": 1},
-            call_llm=fake_call_llm,
-            skills=[
-                {
-                    "name": "koredocs_search",
-                    "service": "koredocs",
-                    "keywords": ["documents", "search"],
-                    "selection_description": "Search text inside stored KoreDocs files.",
-                    "parameters": {"type": "object", "properties": {"query": {"type": "string"}}},
-                }
-            ],
-            promote=fake_promote,
-        )
-
-        self.assertEqual(selection["selected"], ["koredocs_search"])
-        self.assertEqual(calls["promoted"][0], ["koredocs_search"])
-        selector_catalog_message = calls["messages"][1]["content"]
-        self.assertIn("Search text inside stored KoreDocs files.", selector_catalog_message)
-        self.assertLessEqual(calls["num_ctx"], 8192)
 
     def test_koreconv_event_restores_datasets_before_orchestration(self) -> None:
         session_id = "kc_conv_701"

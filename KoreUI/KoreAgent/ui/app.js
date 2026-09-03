@@ -965,6 +965,10 @@ function listenRun(runId, { startRendered = false } = {}) {
                 streamedText += ev.text || "";
             } else if (ev.type === "response") {
                 removeThinking(runId);
+                const sessionSwitch = ev.session_switch;
+                if (sessionSwitch && typeof sessionSwitch.session_id === "string" && sessionSwitch.session_id.trim()) {
+                    _applySessionSwitch(sessionSwitch.session_id.trim(), String(sessionSwitch.name || "").trim());
+                }
                 const elapsedMs = Number(ev.elapsed_ms) || Date.now() - startedAtMs;
                 const stats = _formatContextStats(
                     Number(ev.tokens) || 0,
@@ -1189,6 +1193,16 @@ async function _pollKcReply(thinkKey, convId, afterMsgId) {
         if (replies.length > 0) {
             removeThinking(thinkKey);
             for (const m of replies) {
+                let metadata = {};
+                if (m.metadata && typeof m.metadata === "object") {
+                    metadata = m.metadata;
+                } else if (typeof m.metadata === "string" && m.metadata.trim()) {
+                    try { metadata = JSON.parse(m.metadata); } catch (_) { metadata = {}; }
+                }
+                const sessionSwitch = metadata.session_switch;
+                if (sessionSwitch && typeof sessionSwitch.session_id === "string" && sessionSwitch.session_id.trim()) {
+                    _applySessionSwitch(sessionSwitch.session_id.trim(), String(sessionSwitch.name || "").trim());
+                }
                 const replyId = Number(m.id);
                 const selector = ".chat-msg.agent[data-message-id='" + replyId + "']";
                 if (!dom.chat().querySelector(selector)) {

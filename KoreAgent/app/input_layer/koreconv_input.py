@@ -97,6 +97,7 @@ _CONFIG_KEY             = "korechaturl"
 _DEFAULT_POLL_SECS      = 3
 _DEFAULT_TIMEOUT        = 8
 _SESSION_PREFIX         = "kc_conv_"
+_WEBCHAT_PREFIX         = "webchat_"
 _MAX_MODEL_ATTEMPTS     = 2
 _LLM_CONTEXT_OMITTED_TAG = "llm_context_omitted"
 _COMPACTION_STATUS_TAG  = "[compacting]"
@@ -616,7 +617,9 @@ def _handle_event(
         _complete_event(base, event_id, "failed", push_log_line, context="response_needed")
         return
 
-    session_id = f"{_SESSION_PREFIX}{conv_id}"
+    external_id     = str(conv.get("external_id") or "").strip()
+    session_id      = f"{_SESSION_PREFIX}{conv_id}"
+    chat_session_id = external_id[len(_WEBCHAT_PREFIX):] if external_id.startswith(_WEBCHAT_PREFIX) else session_id
     turn_count = conv.get("turn_count", 0)
     push_log_line(f"[KORECHAT] Handling event {event_id} (conv {conv_id}, turn {turn_count + 1})")
 
@@ -699,14 +702,21 @@ def _handle_event(
             def _request_korechat_compaction() -> str:
                 return _run_manual_compaction(base, conv, config, push_log_line)
 
+            requested_session_switch: dict[str, str] | None = None
+
+            def _switch_session(new_session_id: str, name: str) -> None:
+                nonlocal requested_session_switch
+                requested_session_switch = {"session_id": new_session_id, "name": name}
+
             slash_response = process_slash_prompt(
                 inbound_prompt,
                 config          = config,
                 output          = lambda text, _level="info": push_log_line(f"[slash] {text}"),
                 clear_history   = _clear_korechat_history,
                 session_context = session_ctx,
-                session_id      = session_id,
+                session_id      = chat_session_id,
                 chat_name       = str(conv.get("external_id") or "").strip() or None,
+                switch_session  = _switch_session,
                 compress_history = _request_korechat_compaction,
             )
             persisted_working_data = build_persisted_working_data_payload(session_id)
@@ -723,6 +733,7 @@ def _handle_event(
                             "tokens_per_second": "0",
                             "elapsed_ms": int((time.monotonic() - started_at) * 1000),
                         },
+                        "session_switch": requested_session_switch,
                     },
                     "tags":              ["slashcommand_response"],
                 })

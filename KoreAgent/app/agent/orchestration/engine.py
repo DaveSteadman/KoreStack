@@ -59,7 +59,6 @@
 # ====================================================================================================
 import json
 import os
-import re
 import threading
 from dataclasses import dataclass
 from pathlib import Path
@@ -86,8 +85,6 @@ from sessions.tool_selection import filter_local_payload
 from agent.tool_runtime.loop import extract_result_fields as _tool_loop_extract_result_fields
 from agent.tool_runtime.loop import format_tool_outputs as _tool_loop_format_tool_outputs
 from agent.tool_runtime.loop import run_tool_loop as _tool_loop_run_tool_loop
-from agent.tool_runtime.loop import write_file_blocks as _tool_loop_write_file_blocks
-from agent.orchestration.tool_selector import select_registered_tools
 from utils.runtime_logger import SessionLogger
 from utils.workspace_utils import trunc
 from web_tools_state import is_web_tool_name
@@ -97,23 +94,6 @@ from web_tools_state import is_web_tool_name
 # MARK: SKILL GUIDANCE FLAG
 # ====================================================================================================
 _SKILL_GUIDANCE_ENABLED: bool = False
-_FILESYSTEM_LISTING_INTENT_RE = re.compile(
-    r"\b(?:list|show|find|locate)\b[^\n]{0,80}\b(?:files?|folders?|directories|directory)\b"
-    r"|\b(?:files?|folders?|directories|directory)\b[^\n]{0,80}\b(?:list|show|find|locate)\b",
-    re.IGNORECASE,
-)
-def _apply_transient_intent_tools(runtime: dict[str, object], available_payload: dict, user_prompt: str) -> dict[str, object]:
-    """Expose FileAccess listing tools for one request without persisting a selection."""
-    if not _FILESYSTEM_LISTING_INTENT_RE.search(user_prompt or ""):
-        return runtime
-    active_names = set(runtime["active_tool_names"])
-    active_names.update({"file_find", "folder_find"})
-    return {
-        **runtime,
-        "active_local_payload": filter_local_payload(available_payload, active_names),
-        "active_tool_names": active_names,
-    }
-
 
 def get_skill_guidance_enabled() -> bool:
     return _SKILL_GUIDANCE_ENABLED
@@ -594,35 +574,12 @@ def orchestrate_prompt(
         _log_section("AMBIENT SYSTEM INFO")
         _log(ambient_system_info)
 
-        # Run selection in a separate, one-shot context.  The full SkillManager catalogue is
-        # intentionally never appended to `messages`, so it cannot be re-ingested by the main
-        # tool loop or become part of KoreChat's durable transcript.
-        if delegate_depth == 0:
-            selection = select_registered_tools(
-                user_prompt,
-                model_name=config.resolved_model,
-                maximum_context_tokens=config.num_ctx,
-                session_id=active_session_id,
-                conversation_entry=conversation_entry,
-                call_llm=call_llm_chat,
-            )
-            _log_file_only(
-                "[tool-selector] "
-                f"status={selection['status']} catalog={selection['catalog_size']} "
-                f"selected={selection['selected']} activated={selection['activated']}"
-            )
-
         available_local_payload = config.skills_payload if _WEB_SKILLS_ENABLED else _filter_web_skills(config.skills_payload)
         initial_tool_runtime = derive_active_tool_runtime(
             config.skills_payload,
             available_local_payload=available_local_payload,
             session_id=active_session_id,
             conversation_entry=conversation_entry,
-        )
-        initial_tool_runtime = _apply_transient_intent_tools(
-            initial_tool_runtime,
-            available_local_payload,
-            user_prompt,
         )
         active_payload = initial_tool_runtime["active_local_payload"]
 
@@ -682,11 +639,6 @@ def orchestrate_prompt(
                 session_id=active_session_id,
                 conversation_entry=conversation_entry,
             )
-            runtime = _apply_transient_intent_tools(
-                runtime,
-                round_available_local_payload,
-                user_prompt,
-            )
             round_active_payload = runtime["active_local_payload"]
             round_tool_defs = build_tool_definitions(round_active_payload)
             round_tool_defs = round_tool_defs + list(runtime["active_registered_defs"])
@@ -722,10 +674,6 @@ def orchestrate_prompt(
                 on_tool_round_complete = on_tool_round_complete,
                 on_token = on_token,
             )
-
-            _file_blocks_written = _tool_loop_write_file_blocks(final_response, log_to_session=log_to_session) if final_response else []
-            if _file_blocks_written:
-                _log_file_only(f"[file-blocks] Wrote {len(_file_blocks_written)} file(s): {', '.join(_file_blocks_written)}")
 
             _log_section_file_only("TOOL CALL SUMMARY")
             _log_file_only(_tool_loop_format_tool_outputs(tool_outputs))

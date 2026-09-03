@@ -28,23 +28,12 @@
 # - extract_result_fields: Extracts result fields for this module.
 # - format_tool_outputs: Formats tool outputs for this module.
 # - build_fallback_answer: Builds fallback answer for this module.
-# - _extract_raw_json_tool_call: Implements the  extract raw json tool call operation for this module.
-# - _tool_def_available: Implements the  tool def available operation for this module.
+# - _is_textual_tool_call_attempt: Detects textual tool call attempts for this module.
 # - _compact_tool_name_list: Implements the  compact tool name list operation for this module.
 # - _classify_tool_recovery: Implements the  classify tool recovery operation for this module.
 # - _build_tool_recovery_message: Implements the  build tool recovery message operation for this module.
 # - _build_tool_recovery_reminder: Implements the  build tool recovery reminder operation for this module.
-# - _is_graph_connection_write_request: Implements the  is graph connection write request operation for this module.
-# - _coerce_graph_connection_item: Implements the  coerce graph connection item operation for this module.
-# - _coerce_graph_connection_batch: Implements the  coerce graph connection batch operation for this module.
-# - _extract_graph_connection_batch_from_text: Implements the  extract graph connection batch from text operation for this module.
-# - _graph_connection_tool_already_called: Implements the  graph connection tool already called operation for this module.
-# - _build_graph_connection_create_many_call: Implements the  build graph connection create many call operation for this module.
-# - _is_discovery_tool_name: Implements the  is discovery tool name operation for this module.
-# - _is_evidence_tool_name: Implements the  is evidence tool name operation for this module.
-# - _requires_web_evidence_guard: Implements the  requires web evidence guard operation for this module.
 # - strip_cot_preamble: Implements the strip cot preamble operation for this module.
-# - write_file_blocks: Writes file blocks for this module.
 # - run_tool_loop: Runs tool loop for this module.
 # - _log: Implements the  log operation for this module.
 # - _log_section: Implements the  log section operation for this module.
@@ -52,7 +41,6 @@
 # ====================================================================================================
 import json
 import re
-from pathlib import Path
 
 from agent.orchestration.context_window import choose_context_window
 from context_manager import COMPACT_THRESHOLD
@@ -63,7 +51,6 @@ from working_data import working_data_pin
 from working_data import working_data_unpin_all
 from skill_executor import execute_tool_call
 from tool_result import ToolCallResult
-from utils.workspace_utils import get_workspace_root
 from utils.workspace_utils import trunc
 
 
@@ -86,14 +73,6 @@ _DATA_TOOL_SOURCE: dict[str, str] = {
     "search_web": "WebSearch",
     "search_web_text": "WebSearch",
 }
-
-_FILESYSTEM_LISTING_INTENT_RE = re.compile(
-    r"\b(?:list|show|find|locate)\b[^\n]{0,80}\b(?:files?|folders?|directories|directory)\b"
-    r"|\b(?:files?|folders?|directories|directory)\b[^\n]{0,80}\b(?:list|show|find|locate)\b",
-    re.IGNORECASE,
-)
-_LOCAL_WORKSPACE_LISTING_INTENT_RE = re.compile(r"\blocal\s+(?:folder|directory)\b", re.IGNORECASE)
-
 
 def _build_data_envelope(func_name: str, arguments: dict, result_content: str) -> str:
     """Prepend a compact structured header to results from known data-sourcing tools.
@@ -147,29 +126,7 @@ _COT_PLANNING_RE = re.compile(
     re.IGNORECASE,
 )
 _CONTENT_MARKER_RE = re.compile(r"(?:^|\n)(\*\*|#{1,3} |\| |\d+\. |- )")
-_WRITE_FILE_BLOCK_RE = re.compile(r"WRITE_FILE:\s*([^\n]+)\n---FILE_START---[ \t]*\n(.*?)\n?---FILE_END---", re.DOTALL)
 _WORKING_DATA_KEY_SAFE_RE = re.compile(r"[^a-z0-9_]+")
-_GRAPH_WRITE_INTENT_RE = re.compile(
-    r"\b(?:add|create|insert|save|store|submit|write|load)\b.{0,80}\b(?:graph|koregraph|triple|triples|graph connection|graph connections)\b"
-    r"|\b(?:graph|koregraph|triple|triples|graph connection|graph connections)\b.{0,80}\b(?:add|create|insert|save|store|submit|write|load)\b",
-    re.IGNORECASE | re.DOTALL,
-)
-_WEB_EVIDENCE_INTENT_RE = re.compile(
-    r"\b(?:search the web|search online|find on the internet|facts about|interesting facts|fact[s]?\s+about)\b",
-    re.IGNORECASE,
-)
-
-_DISCOVERY_TOOL_NAMES = frozenset({
-    "search_web",
-    "search_web_text",
-})
-
-_EVIDENCE_TOOL_NAMES = frozenset({
-    "fetch_page_text",
-    "fetch_page_text_text",
-    "lookup_wikipedia",
-})
-
 
 def _safe_working_data_component(value: object, fallback: str = "x") -> str:
     cleaned = _WORKING_DATA_KEY_SAFE_RE.sub("_", str(value or "").strip().lower()).strip("_")
@@ -315,43 +272,28 @@ def build_fallback_answer(user_prompt: str, tool_outputs: list[ToolCallResult]) 
     return "\n".join(lines).strip()
 
 
-def _extract_raw_json_tool_call(text: str) -> dict | None:
-    # Returns a synthetic tool_calls entry if the text is a bare JSON tool-call object,
-    # i.e. {"tool": "<name>", "arguments": {...}} or {"name": "<name>", "arguments": {...}}.
-    # Returns None for all other text (normal final answers).
+def _is_textual_tool_call_attempt(text: str, active_tool_names: set[str]) -> bool:
+    """Return True for a whole-message attempt to express an active tool call as text.
+
+    This deliberately identifies the bad protocol without interpreting it.  Tool calls
+    must arrive in the provider's native structured ``tool_calls`` field; free-form
+    model output is never converted into an executable request.
+    """
     stripped = (text or "").strip()
-    if not stripped.startswith("{"):
-        return None
-    try:
-        obj = json.loads(stripped)
-    except (json.JSONDecodeError, ValueError):
-        return None
-    if not isinstance(obj, dict):
-        return None
-    tool_name = obj.get("tool") or obj.get("name") or obj.get("function")
-    arguments  = obj.get("arguments") or obj.get("parameters") or obj.get("args") or {}
-    if not tool_name or not isinstance(tool_name, str):
-        return None
-    if not isinstance(arguments, dict):
-        return None
-    # Must look like an intentional tool invocation: name must be non-trivial and alphanumeric.
-    if not re.match(r"^[A-Za-z_][A-Za-z0-9_]*$", tool_name):
-        return None
-    return {
-        "id":       f"raw_json_{tool_name}",
-        "type":     "function",
-        "function": {
-            "name":      tool_name,
-            "arguments": json.dumps(arguments),
-        },
-    }
+    if not stripped:
+        return False
 
+    function_match = re.fullmatch(r"([A-Za-z_][A-Za-z0-9_]*)\s*\([\s\S]*\)", stripped)
+    if function_match and function_match.group(1) in active_tool_names:
+        return True
 
-def _tool_def_available(tool_defs: list[dict], tool_name: str) -> bool:
-    for tool_def in tool_defs:
-        if tool_def.get("function", {}).get("name") == tool_name:
-            return True
-    return False
+    # Do not parse or trust the JSON.  This is only a narrow protocol-violation
+    # detector for the usual {"tool": "name", ...} / {"name": "name", ...} form.
+    json_match = re.fullmatch(
+        r'\{\s*"(?:tool|name|function)"\s*:\s*"([A-Za-z_][A-Za-z0-9_]*)"[\s\S]*\}',
+        stripped,
+    )
+    return bool(json_match and json_match.group(1) in active_tool_names)
 
 
 def _compact_tool_name_list(tool_names: set[str] | list[str] | tuple[str, ...] | None, *, limit: int = 10) -> str:
@@ -429,149 +371,6 @@ def _build_tool_recovery_reminder(event: dict[str, object]) -> str:
     return f"Recovery still required: do not answer yet. Inspect the full tool catalog or Skill list and choose the exact capability needed for `{requested}`."
 
 
-def _is_graph_connection_write_request(user_prompt: str) -> bool:
-    return bool(_GRAPH_WRITE_INTENT_RE.search(user_prompt or ""))
-
-
-def _coerce_graph_connection_item(item: object) -> dict | None:
-    if isinstance(item, (list, tuple)) and len(item) >= 3:
-        start, connection, end = item[0], item[1], item[2]
-        if str(start).strip() and str(connection).strip() and str(end).strip():
-            result = {"start": str(start), "connection": str(connection), "end": str(end)}
-            if len(item) >= 4 and isinstance(item[3], int):
-                result["state"] = item[3]
-            if len(item) >= 5 and isinstance(item[4], int):
-                result["score"] = item[4]
-            return result
-    if isinstance(item, dict):
-        start = item.get("start") or item.get("subject") or item.get("source")
-        connection = item.get("connection") or item.get("predicate") or item.get("relation") or item.get("relationship")
-        end = item.get("end") or item.get("object") or item.get("target")
-        if str(start or "").strip() and str(connection or "").strip() and str(end or "").strip():
-            result = {"start": str(start), "connection": str(connection), "end": str(end)}
-            if isinstance(item.get("state"), int):
-                result["state"] = item["state"]
-            if isinstance(item.get("score"), int):
-                result["score"] = item["score"]
-            return result
-    return None
-
-
-def _coerce_graph_connection_batch(value: object) -> list[dict]:
-    if isinstance(value, dict):
-        for key in ("connections", "triples", "items", "records", "data"):
-            nested = value.get(key)
-            if isinstance(nested, list):
-                return _coerce_graph_connection_batch(nested)
-        single = _coerce_graph_connection_item(value)
-        return [single] if single else []
-    if isinstance(value, list):
-        connections: list[dict] = []
-        for item in value:
-            connection = _coerce_graph_connection_item(item)
-            if connection is not None:
-                connections.append(connection)
-        return connections
-    return []
-
-
-def _extract_graph_connection_batch_from_text(text: str) -> list[dict]:
-    stripped = (text or "").strip()
-    if not stripped:
-        return []
-
-    try:
-        parsed = json.loads(stripped)
-        connections = _coerce_graph_connection_batch(parsed)
-        if connections:
-            return connections
-    except (json.JSONDecodeError, ValueError, TypeError):
-        pass
-
-    decoder = json.JSONDecoder()
-    for index, char in enumerate(stripped):
-        if char not in "[{":
-            continue
-        try:
-            parsed, _end = decoder.raw_decode(stripped[index:])
-        except (json.JSONDecodeError, ValueError):
-            continue
-        connections = _coerce_graph_connection_batch(parsed)
-        if connections:
-            return connections
-    return []
-
-
-def _graph_connection_tool_already_called(tool_outputs: list[ToolCallResult]) -> bool:
-    for output in tool_outputs:
-        name = str(output.get("tool") or output.get("function") or "")
-        if name.startswith("graph_connection_"):
-            return True
-    return False
-
-
-def _build_graph_connection_create_many_call(connections: list[dict], round_num: int) -> dict:
-    return {
-        "id": f"forced_graph_connection_create_many_{round_num}",
-        "type": "function",
-        "function": {
-            "name": "graph_connection_create_many",
-            "arguments": json.dumps({"connections": connections}),
-        },
-    }
-
-
-def _is_discovery_tool_name(name: str) -> bool:
-    normalized = str(name or "").strip().lower()
-    return normalized in _DISCOVERY_TOOL_NAMES or normalized.startswith("koredata_search")
-
-
-def _is_evidence_tool_name(name: str) -> bool:
-    normalized = str(name or "").strip().lower()
-    if normalized in _EVIDENCE_TOOL_NAMES:
-        return True
-    if normalized.startswith("koredata_get_"):
-        return True
-    return False
-
-
-def _requires_web_evidence_guard(user_prompt: str, tool_outputs: list[ToolCallResult]) -> bool:
-    if not _WEB_EVIDENCE_INTENT_RE.search(user_prompt or ""):
-        return False
-
-    used_discovery = False
-    used_evidence  = False
-    for output in tool_outputs:
-        tool_name = str(output.get("tool") or output.get("function") or "").strip()
-        if _is_discovery_tool_name(tool_name):
-            used_discovery = True
-        if _is_evidence_tool_name(tool_name):
-            used_evidence = True
-
-    return used_discovery and not used_evidence
-
-
-def _is_filesystem_listing_request(user_prompt: str) -> bool:
-    return bool(_FILESYSTEM_LISTING_INTENT_RE.search(user_prompt or ""))
-
-
-def _filesystem_listing_tool_already_called(tool_outputs: list[ToolCallResult]) -> bool:
-    return any(
-        str(output.get("tool") or output.get("function") or "").strip() in {"file_find", "folder_find", "workspace_list"}
-        for output in tool_outputs
-    )
-
-
-def _build_filesystem_listing_call(user_prompt: str, round_num: int) -> dict:
-    tool_name = "workspace_list" if _LOCAL_WORKSPACE_LISTING_INTENT_RE.search(user_prompt or "") else "file_find"
-    arguments = {} if tool_name == "workspace_list" else {"keywords": []}
-    return {
-        "id": f"forced_{tool_name}_{round_num}",
-        "type": "function",
-        "function": {"name": tool_name, "arguments": json.dumps(arguments)},
-    }
-
-
 # ----------------------------------------------------------------------------------------------------
 def strip_cot_preamble(text: str) -> str:
     if not text:
@@ -595,29 +394,6 @@ def strip_cot_preamble(text: str) -> str:
     if preamble.strip() and _COT_PLANNING_RE.search(preamble):
         return text[split_pos:].lstrip("\n")
     return text
-
-
-def write_file_blocks(response: str, *, log_to_session) -> list[str]:
-    workspace_root = get_workspace_root()
-    data_dir       = (workspace_root / "data").resolve()
-    written: list[str] = []
-    for match in _WRITE_FILE_BLOCK_RE.finditer(response):
-        raw_path = match.group(1).strip()
-        content = match.group(2)
-        normalized = raw_path.replace("\\", "/")
-        if normalized.startswith("data/"):
-            normalized = normalized[5:]
-        candidate = Path(normalized)
-        target = (data_dir / normalized).resolve() if not candidate.is_absolute() else candidate.resolve()
-        try:
-            target.relative_to(data_dir)
-        except ValueError:
-            log_to_session(f"[file-blocks] Skipping unsafe path: {raw_path!r}")
-            continue
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(content, encoding="utf-8")
-        written.append(target.relative_to(workspace_root).as_posix())
-    return written
 
 
 def run_tool_loop(
@@ -655,11 +431,7 @@ def run_tool_loop(
     final_response = ""
     prev_round_tc_fingerprints: frozenset = frozenset()
     recovery_pending: dict[str, object] | None = None
-    graph_write_guard_corrections = 0
-    graph_write_guard_active = _is_graph_connection_write_request(user_prompt) and _tool_def_available(tool_defs, "graph_connection_create_many")
-    filesystem_listing_tool = "workspace_list" if _LOCAL_WORKSPACE_LISTING_INTENT_RE.search(user_prompt or "") else "file_find"
-    filesystem_listing_guard_active = _is_filesystem_listing_request(user_prompt) and _tool_def_available(tool_defs, filesystem_listing_tool)
-    web_evidence_guard_corrections = 0
+    textual_tool_call_corrections = 0
     clear_stop()
     try:
         for round_num in range(1, config.max_iterations + 1):
@@ -738,45 +510,29 @@ def run_tool_loop(
 
             if not tool_calls:
                 candidate = strip_cot_preamble(result.response)
-                # Guard: detect the "describing a tool call instead of invoking it" hallucination.
-                # Some models emit the raw JSON object {"tool": "...", "arguments": {...}} as text
-                # when they should have used the native tool-call mechanism.  Detect this pattern
-                # and synthesize a synthetic tool call so the round proceeds normally.
-                _synthetic_tc = _extract_raw_json_tool_call(candidate)
-                if _synthetic_tc is not None:
-                    _log_file_only(f"[warn] Round {round_num}: model emitted raw JSON tool call instead of invoking - forcing re-invocation.")
-                    tool_calls = [_synthetic_tc]
-                elif graph_write_guard_active and not _graph_connection_tool_already_called(tool_outputs):
-                    connections = _extract_graph_connection_batch_from_text(candidate)
-                    if connections:
-                        _log_file_only(
-                            f"[warn] Round {round_num}: model answered a graph-write request without tools - forcing graph_connection_create_many({len(connections)} connection(s))."
-                        )
-                        tool_calls = [_build_graph_connection_create_many_call(connections, round_num)]
-                    elif graph_write_guard_corrections < 1:
+                active_names = {
+                    str(tool_def.get("function", {}).get("name") or "").strip()
+                    for tool_def in current_tool_defs
+                }
+                active_names.discard("")
+                if _is_textual_tool_call_attempt(candidate, active_names):
+                    if textual_tool_call_corrections < 1:
                         correction = (
-                            "The user asked to add graph connections. This is a write operation. "
-                            "You must call graph_connection_create_many with the triples from the conversation or scratchpad before giving a final answer. "
-                            "Do not merely print the triples or claim they were added."
+                            "You attempted to express a tool call as ordinary text. That did not execute anything. "
+                            "Do not print JSON or function-call syntax. Use the native structured tool-call interface for the required active tool now."
                         )
-                        graph_write_guard_corrections += 1
-                        _log_file_only(f"[warn] Round {round_num}: graph-write request produced no tool call and no parseable triples - injecting correction.")
+                        textual_tool_call_corrections += 1
+                        _log_file_only(f"[warn] Round {round_num}: rejected textual tool-call attempt; requesting a native structured call.")
                         messages.append({"role": "user", "content": correction})
-                        context_map.append({"round": round_num, "role": "user", "label": "[graph-write tool correction]", "chars": len(correction), "auto_key": None, "msg_idx": len(messages) - 1})
+                        context_map.append({"round": round_num, "role": "user", "label": "[native tool-call correction]", "chars": len(correction), "auto_key": None, "msg_idx": len(messages) - 1})
                         continue
-                    else:
-                        final_response = "I could not add the graph connections because no parseable triples were available to submit."
-                        run_success = False
-                        _log(final_response)
-                        _log_file_only(f"[progress] Round {round_num}: graph-write guard stopped final answer without a tool call.")
-                        messages.append({"role": "assistant", "content": final_response})
-                        context_map.append({"round": round_num, "role": "asst", "label": "graph-write guard failure", "chars": len(final_response), "auto_key": None, "msg_idx": len(messages) - 1})
-                        break
-                elif filesystem_listing_guard_active and not _filesystem_listing_tool_already_called(tool_outputs):
-                    _log_file_only(
-                        f"[warn] Round {round_num}: filesystem-list request produced no FileAccess call - forcing {filesystem_listing_tool}()."
-                    )
-                    tool_calls = [_build_filesystem_listing_call(user_prompt, round_num)]
+                    final_response = "I could not complete that action because the model did not issue a valid native tool call."
+                    run_success = False
+                    _log(final_response)
+                    _log_file_only(f"[progress] Round {round_num}: stopped after repeated textual tool-call attempt.")
+                    messages.append({"role": "assistant", "content": final_response})
+                    context_map.append({"round": round_num, "role": "asst", "label": "native tool-call protocol failure", "chars": len(final_response), "auto_key": None, "msg_idx": len(messages) - 1})
+                    break
                 elif recovery_pending is not None:
                     reminders_sent = int(recovery_pending.get("reminders_sent") or 0)
                     if reminders_sent < 1:
@@ -788,27 +544,6 @@ def run_tool_loop(
                         context_map.append({"round": round_num, "role": "user", "label": "[tool recovery reminder]", "chars": len(reminder), "auto_key": None, "msg_idx": len(messages) - 1})
                         continue
                     recovery_pending = None
-                elif _requires_web_evidence_guard(user_prompt, tool_outputs):
-                    if web_evidence_guard_corrections < 1:
-                        correction = (
-                            "Web-evidence guard: you have used search/discovery results but have not fetched any evidence-bearing source content yet. "
-                            "Do not answer from search snippets or internal knowledge. "
-                            "Call fetch_page_text on one of the returned URLs, then continue."
-                        )
-                        web_evidence_guard_corrections += 1
-                        _log_file_only(f"[warn] Round {round_num}: model attempted final answer after discovery-only web search - injecting evidence-fetch correction.")
-                        messages.append({"role": "user", "content": correction})
-                        context_map.append({"round": round_num, "role": "user", "label": "[web evidence guard]", "chars": len(correction), "auto_key": None, "msg_idx": len(messages) - 1})
-                        continue
-                    final_response = (
-                        "I could not complete the web-grounded answer because no fetched source content was retrieved after the search step."
-                    )
-                    run_success = False
-                    _log(final_response)
-                    _log_file_only(f"[progress] Round {round_num}: web-evidence guard stopped final answer without a fetch.")
-                    messages.append({"role": "assistant", "content": final_response})
-                    context_map.append({"round": round_num, "role": "asst", "label": "web-evidence guard failure", "chars": len(final_response), "auto_key": None, "msg_idx": len(messages) - 1})
-                    break
                 else:
                     final_response = candidate
                     run_success = bool(final_response)
@@ -952,25 +687,6 @@ def run_tool_loop(
 
             _log_file_only(f"TOOL ROUND {round_num} - EXECUTION FLOW")
             _log_file_only(format_tool_outputs(round_outputs))
-            if filesystem_listing_guard_active:
-                listing_result = next(
-                    (
-                        output
-                        for output in round_outputs
-                        if str(output.get("tool") or output.get("function") or "").strip() == filesystem_listing_tool
-                        and not output.get("is_error")
-                    ),
-                    None,
-                )
-                if listing_result is not None:
-                    final_response = str(listing_result["result"])
-                    run_success = bool(final_response)
-                    _log_file_only(
-                        f"[progress] Round {round_num}: returning verified {filesystem_listing_tool} result without further model calls."
-                    )
-                    messages.append({"role": "assistant", "content": final_response})
-                    context_map.append({"round": round_num, "role": "asst", "label": "filesystem listing result", "chars": len(final_response), "auto_key": None, "msg_idx": len(messages) - 1})
-                    break
         else:
             _log("[warn] Max tool rounds exhausted - requesting final synthesis.")
             try:

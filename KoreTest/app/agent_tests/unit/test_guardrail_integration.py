@@ -93,7 +93,6 @@ from KoreDocs.app import korefile as koredocs_korefile
 from KoreCommon import datauser_fs as datauser_fs_module
 from agent.tool_runtime.loop import normalize_tool_request
 from agent.tool_runtime.loop import _derive_auto_working_data_key
-from agent.tool_runtime.loop import _extract_graph_connection_batch_from_text
 from tool_result import ToolCallResult
 import api.app as api_module
 from input_layer import slash_commands as slash_commands_module

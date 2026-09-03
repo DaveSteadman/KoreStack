@@ -1,50 +1,16 @@
 # ====================================================================================================
 # MARK: OVERVIEW
 # ====================================================================================================
-# Input-normalisation guards for model-produced tool requests. These functions safely recognise a
-# raw JSON function call and recover structured graph-connection batches from imperfect text. The
-# narrow parsing boundary prevents the execution loop from treating arbitrary model output as a
-# trusted request while preserving useful recoverable formats.
+# Input-normalisation helpers for graph-connection data. Tool execution only accepts provider-native
+# structured tool calls; this module does not recover executable requests from model text.
 # MARK: FUNCTIONS
 # Function inventory:
-# - extract_raw_json_tool_call: Extracts raw json tool call for this module.
 # - _coerce_graph_connection_item: Implements the  coerce graph connection item operation for this module.
 # - _coerce_graph_connection_batch: Implements the  coerce graph connection batch operation for this module.
 # - extract_graph_connection_batch_from_text: Extracts graph connection batch from text for this module.
 # ====================================================================================================
 
 import json
-import re
-
-
-def extract_raw_json_tool_call(text: str) -> dict | None:
-    stripped = (text or "").strip()
-    if not stripped.startswith("{"):
-        return None
-    try:
-        obj = json.loads(stripped)
-    except (json.JSONDecodeError, ValueError):
-        return None
-    if not isinstance(obj, dict):
-        return None
-    tool_name = obj.get("tool") or obj.get("name") or obj.get("function")
-    arguments = obj.get("arguments") or obj.get("parameters") or obj.get("args") or {}
-    if not tool_name or not isinstance(tool_name, str):
-        return None
-    if not isinstance(arguments, dict):
-        return None
-    if not re.match(r"^[A-Za-z_][A-Za-z0-9_]*$", tool_name):
-        return None
-    return {
-        "id": f"raw_json_{tool_name}",
-        "type": "function",
-        "function": {
-            "name": tool_name,
-            "arguments": json.dumps(arguments),
-        },
-    }
-
-
 def _coerce_graph_connection_item(item: object) -> dict | None:
     if isinstance(item, (list, tuple)) and len(item) >= 3:
         start, connection, end = item[0], item[1], item[2]
@@ -114,4 +80,4 @@ def extract_graph_connection_batch_from_text(text: str) -> list[dict]:
     return []
 
 
-__all__ = ["extract_graph_connection_batch_from_text", "extract_raw_json_tool_call"]
+__all__ = ["extract_graph_connection_batch_from_text"]
