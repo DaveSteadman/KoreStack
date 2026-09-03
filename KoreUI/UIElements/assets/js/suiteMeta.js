@@ -1,2 +1,2 @@
 // Version Number String
-export const SUITE_VERSION = 'Build: 0088 / 0.9+dev';
+export const SUITE_VERSION = 'Build: 0089 / 0.9+dev';
