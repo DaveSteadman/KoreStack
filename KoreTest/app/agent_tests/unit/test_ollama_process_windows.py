@@ -10,10 +10,14 @@
 # - test_status_probe_prefers_http_api: Implements the test status probe prefers http api operation for this module.
 # - test_passive_model_listing_does_not_autostart: Implements the test passive model listing does not autostart operation for this module.
 # - test_prompt_call_does_not_autostart_by_default: Implements the test prompt call does not autostart by default operation for this module.
+# - test_native_chat_retries_after_runner_crash: Implements the native chat retries after runner crash operation for this module.
+# - test_runtime_recovery_restarts_a_stopped_local_daemon: Implements the runtime recovery restarts a stopped local daemon operation for this module.
+# - test_repeated_runner_crash_falls_back_to_cpu: Implements the repeated runner crash falls back to cpu operation for this module.
 # ====================================================================================================
 
 from __future__ import annotations
 
+import io
 import subprocess
 import sys
 import unittest
@@ -69,3 +73,65 @@ class OllamaProcessWindowsTests(unittest.TestCase):
 
         self.assertEqual(result.response, "ok")
         ensure_running.assert_called_once_with(host="http://localhost:11434", start_if_needed=False)
+
+    def test_native_chat_retries_after_runner_crash(self) -> None:
+        runner_crash = llm_client_ollama.urllib.error.HTTPError(
+            url="http://localhost:11434/api/chat",
+            code=500,
+            msg="Internal Server Error",
+            hdrs=None,
+            fp=io.BytesIO(b'{"error":"llama-server process has terminated: ROCm error"}'),
+        )
+        response = {
+            "message": {"role": "assistant", "content": "Recovered."},
+            "done_reason": "stop",
+        }
+        with patch.object(llm_client_ollama._core, "get_active_host", return_value="http://localhost:11434"), \
+             patch.object(llm_client_ollama._core, "get_local_ollama_autostart_enabled", return_value=False), \
+             patch.object(llm_client_ollama, "ensure_ollama_running"), \
+             patch.object(llm_client_ollama, "_retry_after_runtime_failure", return_value=True) as recover, \
+             patch.object(llm_client_ollama._core, "_request_json", side_effect=[runner_crash, response]), \
+             patch.object(llm_client_ollama._core, "log_to_session"):
+            result = llm_client_ollama.call_ollama_chat(
+                model_name="test-model",
+                messages=[{"role": "user", "content": "hi"}],
+            )
+
+        self.assertEqual(result.response, "Recovered.")
+        recover.assert_called_once()
+
+    def test_runtime_recovery_restarts_a_stopped_local_daemon(self) -> None:
+        with patch.object(llm_client_ollama._core, "invalidate_host_health") as invalidate, \
+             patch.object(llm_client_ollama._core, "log_to_session"), \
+             patch.object(llm_client_ollama._core, "_is_local_host", return_value=True), \
+             patch.object(llm_client_ollama, "is_ollama_running", return_value=False), \
+             patch.object(llm_client_ollama, "ensure_ollama_running") as ensure, \
+             patch.object(llm_client_ollama.time, "sleep"):
+            llm_client_ollama.recover_ollama_runtime(
+                "http://localhost:11434",
+                attempt=0,
+                detail="llama-server process has terminated: ROCm error",
+            )
+
+        invalidate.assert_called_once_with("http://localhost:11434")
+        ensure.assert_called_once_with(
+            host="http://localhost:11434",
+            start_if_needed=True,
+            wait_seconds=30.0,
+        )
+
+    def test_repeated_runner_crash_falls_back_to_cpu(self) -> None:
+        with patch.object(llm_client_ollama._core, "invalidate_host_health"), \
+             patch.object(llm_client_ollama._core, "log_to_session"), \
+             patch.object(llm_client_ollama._core, "_is_local_host", return_value=True), \
+             patch.object(llm_client_ollama._core, "get_ollama_offload_mode", return_value="autogpu"), \
+             patch.object(llm_client_ollama._core, "set_ollama_offload_mode") as set_offload, \
+             patch.object(llm_client_ollama, "is_ollama_running", return_value=True), \
+             patch.object(llm_client_ollama.time, "sleep"):
+            llm_client_ollama.recover_ollama_runtime(
+                "http://localhost:11434",
+                attempt=1,
+                detail="llama-server process has terminated: ROCm error",
+            )
+
+        set_offload.assert_called_once_with("forcecpu")

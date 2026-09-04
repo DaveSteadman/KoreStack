@@ -1,7 +1,10 @@
 """Persistent registry of named Skills and their callable Tools."""
 
 import json
+import os
+import tempfile
 import threading
+import time
 import urllib.error
 import urllib.request
 from datetime import datetime, timezone
@@ -14,6 +17,7 @@ from utils.workspace_utils import get_controldata_dir
 REGISTRY_FILE                   = get_controldata_dir() / "koreagent" / "skill_registry.json"
 CATALOG_EXPORT_FILE             = get_controldata_dir() / "koreagent" / "skill_manager_catalog.json"
 CATALOG_EXPORT_INTERVAL_SECONDS = 60
+_PERSIST_RETRY_DELAYS_SECONDS   = (0.05, 0.1, 0.2, 0.4, 0.8)
 
 
 class SkillManager:
@@ -23,6 +27,7 @@ class SkillManager:
         self._path                  = registry_file
         self._lock                  = threading.RLock()
         self._skills: dict[str, dict[str, Any]] = {}
+        self._dirty                 = False
         self._catalog_export_thread: threading.Thread | None = None
         self._load()
 
@@ -101,9 +106,40 @@ class SkillManager:
 
     def _save(self) -> None:
         self._path.parent.mkdir(parents=True, exist_ok=True)
-        temp = self._path.with_suffix(".tmp")
-        temp.write_text(json.dumps({"schema_version": 2, "skills": self.list_skills()}, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-        temp.replace(self._path)
+        payload = json.dumps(
+            {"schema_version": 2, "skills": self.list_skills()},
+            indent=2,
+            ensure_ascii=False,
+        ) + "\n"
+        temp_path: Path | None = None
+        try:
+            with tempfile.NamedTemporaryFile(
+                mode="w",
+                encoding="utf-8",
+                dir=self._path.parent,
+                prefix=f".{self._path.stem}.",
+                suffix=".tmp",
+                delete=False,
+            ) as temp_file:
+                temp_file.write(payload)
+                temp_file.flush()
+                os.fsync(temp_file.fileno())
+                temp_path = Path(temp_file.name)
+            for delay in (*_PERSIST_RETRY_DELAYS_SECONDS, None):
+                try:
+                    os.replace(temp_path, self._path)
+                    self._dirty = False
+                    return
+                except PermissionError:
+                    if delay is None:
+                        raise
+                    time.sleep(delay)
+        finally:
+            if temp_path is not None:
+                try:
+                    temp_path.unlink(missing_ok=True)
+                except OSError:
+                    pass
 
     def _remove_tool_names(self, names: set[str]) -> None:
         for name, skill in list(self._skills.items()):
@@ -115,8 +151,13 @@ class SkillManager:
             raise ValueError("service is required")
         item = self._normalise_skill(skill, service=service, service_label=service_label, transport=transport)
         with self._lock:
+            if self._skills.get(item["name"]) == item:
+                if self._dirty:
+                    self._save()
+                return dict(item)
             self._remove_tool_names({tool["name"] for tool in item["tools"]})
             self._skills[item["name"]] = item
+            self._dirty = True
             self._save()
         return dict(item)
 
@@ -130,6 +171,7 @@ class SkillManager:
             self._remove_tool_names({item["name"]})
             refreshed = self._skills[skill["name"]]
             self._skills[skill["name"]] = {**refreshed, "tools": refreshed["tools"] + [item]}
+            self._dirty = True
             self._save()
         return dict(item)
 
@@ -212,6 +254,7 @@ class SkillManager:
         with self._lock:
             removed = self._skills.pop(str(name or "").strip(), None) is not None
             if removed:
+                self._dirty = True
                 self._save()
             return removed
 
@@ -224,6 +267,7 @@ class SkillManager:
             if len(tools) == len(skill["tools"]):
                 return False
             self._skills[skill["name"]] = {**skill, "tools": tools}
+            self._dirty = True
             self._save()
             return True
 
@@ -234,6 +278,7 @@ class SkillManager:
             for name in names:
                 self._skills.pop(name)
             if names:
+                self._dirty = True
                 self._save()
             return bool(names)
 

@@ -185,6 +185,7 @@ def _is_local_system_tool(skills_payload: dict, tool_name: str) -> bool:
 _SKILL_ERROR_PREFIXES: tuple[str, ...] = (
     "Error:",
     "File not found:",
+    "Directory not found:",
     "Could not extract",
     "No file path found",
     "Unable to parse",

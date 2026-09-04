@@ -110,8 +110,14 @@ def decode_semantic_summary(background_context: str | None) -> tuple[str, dict]:
     return summary, dict(metadata) if isinstance(metadata, dict) else {}
 
 
-def encode_background_context(turns: list[dict], existing_background_context: str | None = "") -> str:
-    if not turns:
+def encode_background_context(
+    turns: list[dict],
+    existing_background_context: str | None = "",
+    *,
+    replace: bool = False,
+) -> str:
+    """Encode context turns, optionally replacing previously persisted turns with none."""
+    if not turns and not replace:
         return (existing_background_context or "").strip()
 
     compact_turns: list[dict] = []

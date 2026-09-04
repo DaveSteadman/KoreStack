@@ -12,6 +12,7 @@
 
 from __future__ import annotations
 
+import json
 import sys
 import unittest
 from pathlib import Path
@@ -31,7 +32,9 @@ from input_layer.koreconv_input import _queue_compaction_if_needed
 from input_layer.koreconv_input import _run_manual_compaction
 from input_layer import koreconv_input as koreconv_input_module
 from conversation_state import decode_semantic_summary
+from conversation_state import decode_background_context
 from conversation_state import encode_background_context
+from agent.orchestration.engine import SessionContext
 from context_compactor import split_messages_for_compaction
 from input_layer.slash_processing import process_slash_prompt
 
@@ -90,6 +93,32 @@ class KoreConvInputTests(unittest.TestCase):
         )
 
         self.assertEqual(history, [{"role": "user", "content": "recent request"}])
+
+    def test_history_omits_completed_korecode_tool_followup(self) -> None:
+        history = _build_conversation_history(
+            [
+                {"id": 1, "direction": "inbound", "content": "run main.py"},
+                {"id": 2, "direction": "outbound", "content": "requesting run_python"},
+                {
+                    "id": 3,
+                    "direction": "inbound",
+                    "sender_display": "__korecode_internal__",
+                    "content": "[TOOL_RESULTS]\nstdout: lemon\n[/TOOL_RESULTS]",
+                },
+                {"id": 4, "direction": "outbound", "content": "main.py returned lemon"},
+                {"id": 5, "direction": "inbound", "content": "now explain main.py"},
+            ],
+            current_inbound_id=5,
+        )
+
+        self.assertEqual(
+            history,
+            [
+                {"role": "user", "content": "run main.py"},
+                {"role": "assistant", "content": "requesting run_python"},
+                {"role": "assistant", "content": "main.py returned lemon"},
+            ],
+        )
 
     def test_context_threshold_queues_one_high_priority_compaction_event(self) -> None:
         posts: list[tuple[str, dict]] = []
@@ -194,6 +223,42 @@ class KoreConvInputTests(unittest.TestCase):
         self.assertEqual(message_patches, ["/messages/1", "/messages/2"])
         self.assertTrue(any(line.startswith("[compacting] Context compacting...") for line in logs))
         self.assertEqual(completed, [{"status": "completed"}])
+
+    def test_session_context_discards_prior_tool_results(self) -> None:
+        context = SessionContext("test_tool_context")
+        context.add_turn(
+            user_prompt="cd abd",
+            assistant_response="Changed directory to /abd",
+            skill_outputs=[{"skill": "terminal", "summary": "Changed directory to /abd"}],
+        )
+
+        removed = context.clear_tool_output_turns()
+
+        self.assertEqual(removed, 1)
+        self.assertEqual(context.get_turns(), [])
+        self.assertEqual(context.as_inject_block(), "")
+
+    def test_replacing_tool_context_preserves_semantic_summary(self) -> None:
+        existing = json.dumps({
+            "version": 2,
+            "turns": [{
+                "turn": 1,
+                "user_prompt": "cd abd",
+                "assistant_response": "Changed directory to /abd",
+                "skill_outputs": [{"skill": "terminal", "summary": "Changed directory to /abd"}],
+            }],
+            "semantic_summary": "The user is configuring their workspace.",
+            "summary_metadata": {"kind": "semantic_context_summary"},
+        })
+
+        replaced = encode_background_context([], existing, replace=True)
+        turns, warning = decode_background_context(replaced)
+        summary, metadata = decode_semantic_summary(replaced)
+
+        self.assertIsNone(warning)
+        self.assertEqual(turns, [])
+        self.assertEqual(summary, "The user is configuring their workspace.")
+        self.assertEqual(metadata["kind"], "semantic_context_summary")
 
 
 if __name__ == "__main__":

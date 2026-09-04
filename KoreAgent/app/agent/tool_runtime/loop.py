@@ -41,6 +41,7 @@
 # ====================================================================================================
 import json
 import re
+from pathlib import Path
 
 from agent.orchestration.context_window import choose_context_window
 from context_manager import COMPACT_THRESHOLD
@@ -413,6 +414,7 @@ def run_tool_loop(
     tool_runtime_provider: object | None = None,
     on_tool_round_complete: object | None = None,
     on_token: object | None = None,
+    required_publication_chat_name: str = "",
 ) -> tuple[str, int, int, bool, float, list[ToolCallResult]]:
     def _log(message: str = "") -> None:
         logger.log_file_only(message) if quiet else logger.log(message)
@@ -432,6 +434,9 @@ def run_tool_loop(
     prev_round_tc_fingerprints: frozenset = frozenset()
     recovery_pending: dict[str, object] | None = None
     textual_tool_call_corrections = 0
+    publication_reminders = 0
+    publication_confirmed = False
+    publication_chat_name = str(required_publication_chat_name or "").strip()
     clear_stop()
     try:
         for round_num in range(1, config.max_iterations + 1):
@@ -533,6 +538,25 @@ def run_tool_loop(
                     messages.append({"role": "assistant", "content": final_response})
                     context_map.append({"round": round_num, "role": "asst", "label": "native tool-call protocol failure", "chars": len(final_response), "auto_key": None, "msg_idx": len(messages) - 1})
                     break
+                elif publication_chat_name and not publication_confirmed:
+                    if publication_reminders < 1:
+                        publication_reminders += 1
+                        correction = (
+                            "Publication is still required for this scheduled email conversation. "
+                            "Do not answer yet. Compose the finished report as valid HTML and call "
+                            f"delivery_publish_html(chat_name={publication_chat_name!r}, html_body=...) now. "
+                            "Automatic delivery is paused, but this explicit publication call sends the email."
+                        )
+                        _log_file_only("[delivery] Model attempted to finish before explicit HTML publication; retrying.")
+                        messages.append({"role": "user", "content": correction})
+                        context_map.append({"round": round_num, "role": "user", "label": "[delivery publication required]", "chars": len(correction), "auto_key": None, "msg_idx": len(messages) - 1})
+                        continue
+                    final_response = (
+                        "I could not publish the scheduled email because delivery_publish_html did not confirm delivery."
+                    )
+                    run_success = False
+                    _log(final_response)
+                    break
                 elif recovery_pending is not None:
                     reminders_sent = int(recovery_pending.get("reminders_sent") or 0)
                     if reminders_sent < 1:
@@ -619,6 +643,18 @@ def run_tool_loop(
                         output = ToolCallResult(tool=func_name, function=func_name, module="", arguments=arguments, result=result_content, status="error", error=str(exc))
 
                 raw_result_content = output["result"]
+                if (
+                    func_name == "delivery_publish_html"
+                    and str(arguments.get("chat_name") or "").strip() == publication_chat_name
+                    and not output.get("is_error")
+                    and isinstance(raw_result_content, dict)
+                    and (
+                        raw_result_content.get("published") is True
+                        or "already published" in str(raw_result_content.get("reason") or "").lower()
+                    )
+                ):
+                    publication_confirmed = True
+                    _log_file_only(f"[delivery] Explicit HTML publication confirmed for {publication_chat_name}.")
                 if not output.get("is_error"):
                     try:
                         auto_dataset_manifest = auto_route_working_data_result(func_name, arguments, raw_result_content)
@@ -681,12 +717,18 @@ def run_tool_loop(
                 try:
                     on_tool_round_complete(round_outputs)
                 except TypeError:
-                    on_tool_round_complete()
+                    try:
+                        on_tool_round_complete()
+                    except Exception as exc:
+                        _log_file_only(f"[error] on_tool_round_complete callback failed: {exc}")
                 except Exception as exc:
                     _log_file_only(f"[error] on_tool_round_complete callback failed: {exc}")
 
             _log_file_only(f"TOOL ROUND {round_num} - EXECUTION FLOW")
-            _log_file_only(format_tool_outputs(round_outputs))
+            try:
+                _log_file_only(format_tool_outputs(round_outputs))
+            except Exception as exc:
+                _log_file_only(f"[error] Could not format tool-round diagnostics: {exc}")
         else:
             _log("[warn] Max tool rounds exhausted - requesting final synthesis.")
             try:
@@ -713,6 +755,14 @@ def run_tool_loop(
                 run_success = bool(final_response)
             except Exception as error:
                 final_response = f"(synthesis failed: {error})"
+    except Exception as error:
+        _log_file_only(f"[error] Unhandled tool-loop error: {type(error).__name__}: {error}")
+        final_response = (
+            build_fallback_answer(user_prompt, tool_outputs)
+            if tool_outputs
+            else "(Agent workflow failed before it could produce a response. Please retry.)"
+        )
+        run_success = False
     finally:
         working_data_unpin_all()
     return final_response, prompt_tokens, completion_tokens, run_success, final_tps, tool_outputs

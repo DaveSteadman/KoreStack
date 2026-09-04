@@ -39,6 +39,7 @@ from __future__ import annotations
 
 import json
 import logging
+import sys
 import threading
 import urllib.parse
 from http import HTTPStatus
@@ -50,6 +51,19 @@ from typing import Any, Callable, ClassVar
 from endpoint_explorer import build_catalog, proxy_request
 
 log: logging.Logger = logging.getLogger("korestack")
+
+
+class ResilientThreadingHTTPServer(ThreadingHTTPServer):
+    """Threaded dashboard server that tolerates clients disconnecting mid-request."""
+
+    daemon_threads = True
+
+    def handle_error(self, request: Any, client_address: Any) -> None:
+        error = sys.exception()
+        if isinstance(error, (BrokenPipeError, ConnectionAbortedError, ConnectionResetError)):
+            log.debug("Dashboard client %s disconnected: %s", client_address, error)
+            return
+        log.exception("Unhandled dashboard request error from %s", client_address)
 
 
 def build_suite_urls(manager: Any, dashboard_url: str, service_icon_keys: dict[str, str]) -> dict[str, str]:
@@ -397,7 +411,7 @@ def serve_dashboard(
         probe_http_with_retry=probe_http_with_retry,
         suite_config=suite_config,
     )
-    httpd = ThreadingHTTPServer((host, port), handler)
+    httpd = ResilientThreadingHTTPServer((host, port), handler)
     httpd.timeout = 0.5
     log.info("KoreStack  %s  (logs -> KoreStack/logs/)", dashboard_url)
     log.info("landing page %s", dashboard_url)

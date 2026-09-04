@@ -32,6 +32,7 @@
 # - get_ollama_request_options: Returns ollama request options for this module.
 # - get_active_num_ctx: Returns active num ctx for this module.
 # - mark_host_healthy: Marks host healthy for this module.
+# - invalidate_host_health: Invalidates host health for this module.
 # - is_host_health_cached: Checks whether host health cached is true.
 # - configure_host: Implements the configure host operation for this module.
 # - configure_server: Implements the configure server operation for this module.
@@ -290,6 +291,12 @@ def mark_host_healthy(host: str) -> None:
     """Record that host was reachable and responding at the current monotonic time."""
     with _ollama_health_lock:
         _ollama_health_cache[host] = time.monotonic()
+
+
+def invalidate_host_health(host: str) -> None:
+    """Require a fresh health check before the next request to *host*."""
+    with _ollama_health_lock:
+        _ollama_health_cache.pop(host, None)
 
 
 def is_host_health_cached(host: str) -> bool:

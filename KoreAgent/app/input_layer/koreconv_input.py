@@ -64,6 +64,7 @@ import json
 import re
 import threading
 import time
+import traceback
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -100,6 +101,7 @@ _SESSION_PREFIX         = "kc_conv_"
 _WEBCHAT_PREFIX         = "webchat_"
 _MAX_MODEL_ATTEMPTS     = 2
 _LLM_CONTEXT_OMITTED_TAG = "llm_context_omitted"
+_KORECODE_INTERNAL_SENDER = "__korecode_internal__"
 _COMPACTION_STATUS_TAG  = "[compacting]"
 _COMPACTION_THRESHOLD   = 0.80
 _PLACEHOLDER_OUTPUT_RE  = re.compile(r"(?:<unused\d+>){4,}", re.IGNORECASE)
@@ -147,6 +149,9 @@ def _latest_message(messages: list[dict]) -> dict | None:
 
 def _is_llm_context_omitted(message: dict) -> bool:
     """Return whether a durable KoreChat message is retained for audit but hidden from LLM input."""
+    if str(message.get("sender_display") or "").strip() == _KORECODE_INTERNAL_SENDER:
+        return True
+
     tags = message.get("tags")
     if not isinstance(tags, list):
         metadata = message.get("metadata")
@@ -749,8 +754,8 @@ def _handle_event(
             _complete_event(base, event_id, "completed", push_log_line, context=f"conv {conv_id}")
             return
 
-        # Item 4: Restore SessionContext from KoreChat background_context so the model
-        # can reference prior fetched data across restarts and resume turns.
+        # Restore only durable semantic summaries. Tool results remain available while a
+        # turn is running, but must never be carried into a later prompt.
         background_ctx = (conv.get("background_context") or "").strip()
         if background_ctx:
             restored_turns, background_warning = decode_background_context(background_ctx)
@@ -809,13 +814,14 @@ def _handle_event(
             "collections": build_persisted_working_data_payload(session_id)["collections"],
         }
 
-        # Item 4: Serialize session context turns for persistence in KoreChat background_context.
-        # This lets the model reference prior fetched data after restarts or on resume.
+        # Replace legacy tool-output context with the cleaned session context. Semantic
+        # summaries remain preserved by encode_background_context().
         sc_turns = session_ctx.get_turns()
-        if sc_turns:
-            new_background_context = encode_background_context(sc_turns, background_ctx)
-        else:
-            new_background_context = background_ctx  # keep existing if this turn had no tool calls
+        new_background_context = encode_background_context(
+            sc_turns,
+            background_ctx,
+            replace=True,
+        )
 
         # token_estimate reflects what the next turn will start from: prompt consumed
         # this turn plus the completion tokens (which become part of the thread next turn).
@@ -944,7 +950,8 @@ def start_koreconv_loop(
                             failed_event_id = _ev.get("id")
                             failed_conv_id  = (_ev.get("conversation") or {}).get("id")
                             push_log_line(
-                                f"[KORECHAT] Event {failed_event_id} crashed: {exc}"
+                                f"[KORECHAT] Event {failed_event_id} crashed: {type(exc).__name__}: {exc}\n"
+                                f"{traceback.format_exc()}"
                             )
                             base_url = _get_base_url()
                             if base_url and failed_conv_id:

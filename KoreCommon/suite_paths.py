@@ -120,7 +120,7 @@ def get_suite_datauser_dir() -> Path:
     env_path = os.environ.get("KORE_SUITE_DATAUSER", "").strip()
     if env_path:
         return Path(env_path).resolve()
-    return (get_suite_dataroot_dir() / "datauser").resolve()
+    return (get_suite_datacontrol_dir() / "datauser").resolve()
 
 
 def get_koredata_dir() -> Path:

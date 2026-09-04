@@ -17,6 +17,7 @@
 # - is_ollama_running: Checks whether ollama running is true.
 # - start_ollama_server: Starts ollama server for this module.
 # - ensure_ollama_running: Ensures ollama running for this module.
+# - recover_ollama_runtime: Recovers ollama runtime for this module.
 # - list_ollama_models: Lists ollama models for this module.
 # - get_ollama_ps_rows: Returns ollama ps rows for this module.
 # - _get_ollama_ps_rows_local: Implements the  get ollama ps rows local operation for this module.
@@ -54,7 +55,22 @@ from utils.workspace_utils import trunc
 # Serialises the check-then-start sequence so concurrent callers cannot both see
 # is_ollama_running()==False and both invoke start_ollama_server().
 _ollama_start_lock: threading.Lock = threading.Lock()
+_ollama_recovery_lock: threading.Lock = threading.Lock()
 _ollama_proc: subprocess.Popen | None = None
+
+_RUNNER_RECOVERY_ATTEMPTS: int = 2
+_RUNNER_CRASH_MARKERS: tuple[str, ...] = (
+    "llama-server process has terminated",
+    "rocm error",
+    "unspecified launch failure",
+    "stack-based buffer",
+)
+
+
+def _cpu_fallback_enabled() -> bool:
+    """Return whether repeated local GPU runner crashes may fall back to CPU."""
+    configured = str(os.environ.get("KORE_OLLAMA_CPU_FALLBACK", "")).strip().lower()
+    return configured not in {"0", "false", "no", "off"}
 
 
 def _per_request_context_enabled() -> bool:
@@ -149,6 +165,66 @@ def ensure_ollama_running(
         time.sleep(0.5)
 
     raise RuntimeError(f"Ollama did not become ready at {host} within {wait_seconds:.0f}s")
+
+
+def _is_runner_crash(detail: str) -> bool:
+    normalized = detail.lower()
+    return any(marker in normalized for marker in _RUNNER_CRASH_MARKERS)
+
+
+def recover_ollama_runtime(host: str, *, attempt: int, detail: str) -> None:
+    """Recover a failed local Ollama runtime before retrying one interrupted request.
+
+    A runner crash can leave the Ollama HTTP daemon alive, in which case the next
+    request reloads the model. If the daemon has also exited, start a replacement
+    only for a local host. Recovery is serialised to prevent concurrent requests
+    from spawning duplicate daemons.
+    """
+    _core.invalidate_host_health(host)
+    delay_seconds = min(4.0, float(attempt + 1))
+    _core.log_to_session(
+        f"[Ollama recovery] Attempt {attempt + 1}/{_RUNNER_RECOVERY_ATTEMPTS}: "
+        f"{trunc(detail, 180)}"
+    )
+    if (
+        attempt > 0
+        and _is_runner_crash(detail)
+        and _core._is_local_host(host)
+        and _cpu_fallback_enabled()
+        and _core.get_ollama_offload_mode() == "autogpu"
+    ):
+        _core.set_ollama_offload_mode("forcecpu")
+        _core.log_to_session(
+            "[Ollama recovery] Repeated GPU runner crash; retrying with CPU offload. "
+            "Set KORE_OLLAMA_CPU_FALLBACK=0 to disable this fallback."
+        )
+    time.sleep(delay_seconds)
+
+    with _ollama_recovery_lock:
+        if is_ollama_running(host):
+            _core.mark_host_healthy(host)
+            _core.log_to_session("[Ollama recovery] Daemon is healthy; retrying so Ollama reloads the runner.")
+            return
+        if not _core._is_local_host(host):
+            _core.log_to_session("[Ollama recovery] Remote daemon is unavailable; it cannot be restarted locally.")
+            return
+        ensure_ollama_running(host=host, start_if_needed=True, wait_seconds=30.0)
+        _core.log_to_session("[Ollama recovery] Local Ollama daemon restarted.")
+
+
+def _retry_after_runtime_failure(
+    *,
+    host: str,
+    detail: str,
+    recovery_attempt: int,
+) -> bool:
+    """Recover a known transient runtime failure and report whether to retry."""
+    if recovery_attempt >= _RUNNER_RECOVERY_ATTEMPTS:
+        return False
+    if not _is_runner_crash(detail) and is_ollama_running(host):
+        return False
+    recover_ollama_runtime(host, attempt=recovery_attempt, detail=detail)
+    return True
 
 
 # ====================================================================================================
@@ -371,6 +447,7 @@ def call_ollama_chat(
     num_ctx: int | None = None,
     timeout: int | None = None,
     on_token = None,
+    _recovery_attempt: int = 0,
 ) -> _core.ChatCallResult:
     """Call Ollama's native chat API, preserving per-request runtime options."""
     host = host or _core.get_active_host()
@@ -450,9 +527,42 @@ def call_ollama_chat(
             }
     except urllib.error.HTTPError as error:
         error_body = error.read().decode("utf-8", errors="replace")
-        raise RuntimeError(f"Ollama native chat HTTP error {error.code}: {error_body}") from error
+        error.close()
+        detail = f"Ollama native chat HTTP error {error.code}: {error_body}"
+        if _retry_after_runtime_failure(
+            host=host,
+            detail=detail,
+            recovery_attempt=_recovery_attempt,
+        ):
+            return call_ollama_chat(
+                model_name=model_name,
+                messages=messages,
+                tools=tools,
+                host=host,
+                num_ctx=num_ctx,
+                timeout=timeout,
+                on_token=on_token,
+                _recovery_attempt=_recovery_attempt + 1,
+            )
+        raise RuntimeError(detail) from error
     except urllib.error.URLError as error:
-        raise RuntimeError(f"Unable to reach Ollama at {host}: {error.reason}") from error
+        detail = f"Unable to reach Ollama at {host}: {error.reason}"
+        if _retry_after_runtime_failure(
+            host=host,
+            detail=detail,
+            recovery_attempt=_recovery_attempt,
+        ):
+            return call_ollama_chat(
+                model_name=model_name,
+                messages=messages,
+                tools=tools,
+                host=host,
+                num_ctx=num_ctx,
+                timeout=timeout,
+                on_token=on_token,
+                _recovery_attempt=_recovery_attempt + 1,
+            )
+        raise RuntimeError(detail) from error
     except TimeoutError as error:
         raise RuntimeError(f"Ollama native chat timed out after {effective_timeout}s") from error
     except json.JSONDecodeError as error:

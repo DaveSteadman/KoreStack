@@ -67,6 +67,7 @@ from llm_client_openai import set_ollama_offload_mode
 from llm_client_openai import resolve_model_name
 from llm_client_openai import is_explicit_model_name
 from llm_client_ollama  import is_ollama_running
+from llm_client_ollama  import recover_ollama_runtime
 from llm_client_ollama  import start_ollama_server
 from llm_client_ollama  import stop_model
 from llm_client_ollama  import call_ollama_extended
@@ -102,6 +103,7 @@ __all__ = [
     "resolve_model_name",
     "is_explicit_model_name",
     "is_ollama_running",
+    "recover_ollama_runtime",
     "start_ollama_server",
     "stop_model",
     "call_ollama_extended",

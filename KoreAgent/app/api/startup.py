@@ -75,6 +75,7 @@ def _monitor_llm_dependency(
     get_active_model,
     is_ollama_running,
     list_ollama_models,
+    ensure_ollama_running,
 ) -> None:
     """Keep the LLM dependency status current after the one-off startup check."""
     consecutive_failures = 0
@@ -100,7 +101,7 @@ def _monitor_llm_dependency(
 
         try:
             if not is_ollama_running(host):
-                raise RuntimeError(f"Ollama is not reachable at {host}")
+                ensure_ollama_running(host=host, start_if_needed=True, wait_seconds=30.0)
             models = list_ollama_models(host, start_if_needed=False)
             if model and model not in models:
                 raise RuntimeError(f"Configured model '{model}' is not available at {host}")
@@ -214,6 +215,7 @@ def run_api_mode(
             "get_active_model":   llm_client.get_active_model,
             "is_ollama_running":  llm_client.is_ollama_running,
             "list_ollama_models": llm_client.list_ollama_models,
+            "ensure_ollama_running": llm_client.ensure_ollama_running,
         },
         daemon = True,
         name   = "llm-dependency-monitor",

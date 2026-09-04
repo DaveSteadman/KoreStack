@@ -218,7 +218,7 @@ def get_user_data_dir() -> Path:
     if "UserDataFolder" in overrides:
         return overrides["UserDataFolder"]
     if "DataRootFolder" in overrides:
-        return overrides["DataRootFolder"] / "datauser"
+        return overrides["DataRootFolder"] / "datacontrol" / "datauser"
     return _get_suite_datauser_dir_common()
 
 

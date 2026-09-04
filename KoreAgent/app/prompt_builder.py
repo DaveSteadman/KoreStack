@@ -43,6 +43,30 @@ from utils.workspace_utils import trunc
 _KORECODE_WORKSPACE_MENU_KEY = "korecode_workspace_menu"
 
 
+def get_explicit_delivery_publication_chat_name(conversation_entry: dict | None) -> str:
+    """Return the delivery-binding name for a scheduled email run that must publish explicitly."""
+    if not isinstance(conversation_entry, dict):
+        return ""
+    channel_type = str(conversation_entry.get("channel_type") or "").strip().casefold()
+    chat_name    = str(conversation_entry.get("external_id") or "").strip()
+    if channel_type == "classic_email" and chat_name.startswith("webchat_cron_"):
+        return chat_name
+    return ""
+
+
+def _build_explicit_delivery_publication_instruction(conversation_entry: dict | None) -> str:
+    chat_name = get_explicit_delivery_publication_chat_name(conversation_entry)
+    if not chat_name:
+        return ""
+    return (
+        "\nScheduled email publication is mandatory for this conversation. After completing the requested work, "
+        "compose the finished report as valid HTML and call "
+        f"`delivery_publish_html(chat_name={chat_name!r}, html_body=...)`. "
+        "This is an explicit publication and sends even while automatic delivery is paused. "
+        "Do not give a final answer until that tool confirms publication. If the tool is not active, select its Skill first."
+    )
+
+
 def build_skill_selection_protocol_guidance() -> str:
     """State the live Skill-selection protocol without copying its whole index."""
     if not skill_manager.list_skills():
@@ -223,12 +247,8 @@ def _build_conversation_entry_block(conversation_entry: dict | None) -> str:
             continue
 
         if key == "background_context":
-            text = str(value or "").strip()
-            if text:
-                snapshot["background_context"] = {
-                    "chars": len(text),
-                    "preview": trunc(text, 500),
-                }
+            # The engine injects the decoded semantic summary as a separate
+            # historical-context message, so avoid duplicating its raw payload.
             continue
 
         if key == "messages" and isinstance(value, list):
@@ -288,6 +308,9 @@ def build_system_message(
     conversation_entry_block = _build_conversation_entry_block(conversation_entry)
     if conversation_entry_block:
         system_parts.append(conversation_entry_block)
+    delivery_publication_instruction = _build_explicit_delivery_publication_instruction(conversation_entry)
+    if delivery_publication_instruction:
+        system_parts.append(delivery_publication_instruction)
     workspace_menu_note = _build_korecode_workspace_menu_note(conversation_entry)
     if workspace_menu_note:
         system_parts.append(workspace_menu_note)

@@ -76,6 +76,7 @@ from llm_client import resolve_model_name
 from prompt_tokens import resolve_tokens
 from working_data import working_data_list as _working_data_list
 from prompt_builder import build_system_message as _prompt_builder_build_system_message
+from prompt_builder import get_explicit_delivery_publication_chat_name
 from sessions.runtime import bind_session
 from skill_executor import build_catalog_gates
 from system_skills.SystemInfo.system_info_skill import get_static_system_info_string
@@ -284,12 +285,11 @@ def _truncate_words(text: str, max_words: int) -> str:
 
 
 class SessionContext:
-    """Structured per-session cache of skill outputs for cross-turn context injection.
+    """Structured per-session context retained for compact conversation summaries.
 
-    After each orchestration turn the raw skill outputs are distilled into a compact,
-    token-efficient form and stored here.  On subsequent turns the last N turns' summaries
-    are automatically injected into the final synthesis prompt so the LLM can reference
-    prior fetched data (web pages, code output, file content) without re-running the skills.
+    Tool outputs are intentionally limited to their originating run. Older persisted
+    tool-output turns are removed before a new prompt is built, preventing incidental
+    command results from becoming instructions for later turns.
 
     Optionally persisted to a JSON file (e.g. in progress/) so state survives restarts
     and scheduled tasks can optionally cross-load each other's context.
@@ -368,6 +368,18 @@ class SessionContext:
 
     # --------------------------------------------------------------------------
 
+    def clear_tool_output_turns(self) -> int:
+        """Discard legacy cross-turn tool context and return the number of turns removed."""
+        with self._lock:
+            retained = [turn for turn in self._turns if not turn["skill_outputs"]]
+            removed  = len(self._turns) - len(retained)
+            if removed:
+                self._turns = retained
+                self._save()
+            return removed
+
+    # --------------------------------------------------------------------------
+
     def as_inject_block(self, max_turns: int | None = None) -> str:
         """Return a text block for injection into the synthesis prompt.
 
@@ -382,6 +394,8 @@ class SessionContext:
 
         parts = []
         for t in recent:
+            if not t["skill_outputs"]:
+                continue
             lines = [f"Turn {t['turn']} | user: {trunc(t['user_prompt'], 100)}"]
             for o in t["skill_outputs"]:
                 skill   = o.get("skill", "?")
@@ -556,6 +570,13 @@ def orchestrate_prompt(
     )
 
     with bind_session(active_session_id):
+        if session_context is not None:
+            discarded_tool_turns = session_context.clear_tool_output_turns()
+            if discarded_tool_turns:
+                _log_file_only(
+                    f"[session_context] Cleared {discarded_tool_turns} prior tool-output turn(s)."
+                )
+
         # -- Auto-reload catalog if the runtime JSON catalog has been updated since last load --
         if config.skills_catalog_path and config.skills_catalog_path.exists():
             current_mtime = config.skills_catalog_path.stat().st_mtime
@@ -630,8 +651,21 @@ def orchestrate_prompt(
         _context_map.append({"round": 0, "role": "user", "label": trunc(user_prompt, 50), "chars": len(user_prompt), "auto_key": None, "msg_idx": len(messages) - 1})
 
         catalog_gates = build_catalog_gates(active_payload)
+        initial_runtime = {
+            "tool_defs": tool_defs,
+            "catalog_gates": catalog_gates,
+            "active_tool_names": initial_tool_runtime["active_tool_names"],
+            "missing_selected": initial_tool_runtime["missing_selected"],
+            "all_known_tool_names": initial_tool_runtime["all_known_tool_names"],
+        }
+        first_tool_round = True
 
         def _build_tool_runtime() -> dict[str, object]:
+            nonlocal first_tool_round
+            if first_tool_round:
+                first_tool_round = False
+                return initial_runtime
+
             round_available_local_payload = config.skills_payload if _WEB_SKILLS_ENABLED else _filter_web_skills(config.skills_payload)
             runtime = derive_active_tool_runtime(
                 config.skills_payload,
@@ -673,6 +707,7 @@ def orchestrate_prompt(
                 tool_runtime_provider = _build_tool_runtime,
                 on_tool_round_complete = on_tool_round_complete,
                 on_token = on_token,
+                required_publication_chat_name = get_explicit_delivery_publication_chat_name(conversation_entry),
             )
 
             _log_section_file_only("TOOL CALL SUMMARY")
@@ -685,11 +720,9 @@ def orchestrate_prompt(
 
             store_last_run_state(_context_map, messages)
 
-            if session_context is not None and run_success and tool_outputs:
-                session_context.add_turn(
-                    user_prompt=user_prompt,
-                    assistant_response=final_response,
-                    skill_outputs=tool_outputs,
+            if tool_outputs:
+                _log_file_only(
+                    "[session_context] Tool outputs were retained for this run only and not persisted."
                 )
 
             return final_response, prompt_tokens, completion_tokens, run_success, final_tps
