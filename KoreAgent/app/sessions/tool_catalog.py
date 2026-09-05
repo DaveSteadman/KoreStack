@@ -15,6 +15,7 @@
 # ====================================================================================================
 
 import copy
+import json
 
 from skill_manager import skill_manager
 from web_tools_state import filter_tool_names
@@ -134,11 +135,11 @@ def build_all_tool_catalog(
     web_enabled = get_web_skills_enabled()
     selected = get_selected_tools(session_id=session_id, conversation_entry=conversation_entry)
     active_names = set(selected) | set(ALWAYS_ON_TOOL_NAMES) | _system_tool_names(skills_payload)
-    registered_names = tuple(sorted(str(tool.get("name") or "") for tool in skill_manager.list_tools() if tool.get("transport") == "http"))
+    registered_tools = [tool for tool in skill_manager.list_tools() if tool.get("transport") == "http"]
     cache_key = (
-        id(skills_payload),
+        json.dumps(skills_payload, sort_keys=True),
         tuple(selected),
-        registered_names,
+        json.dumps(registered_tools, sort_keys=True),
     )
     cached = _CATALOG_CACHE.get(cache_key)
     if cached is not None:
@@ -175,7 +176,7 @@ def build_all_tool_catalog(
                 }
             )
     local_names = {str(entry.get("name") or "") for entry in entries}
-    for tool in (tool for tool in skill_manager.list_tools() if tool.get("transport") == "http"):
+    for tool in registered_tools:
         name = str(tool.get("name") or "").strip()
         if not name or name in local_names:
             continue
@@ -243,9 +244,10 @@ def derive_active_tool_runtime(
         set_selected_tools(selected, session_id=resolved_session_id, conversation_entry=conversation_entry)
 
     cache_key = (
-        id(source_payload),
+        json.dumps(source_payload, sort_keys=True),
         tuple(selected),
-        tuple(sorted(tool["name"] for tool in registered_tools)),
+        json.dumps(registered_tools, sort_keys=True),
+        web_enabled,
     )
     cached = _ACTIVE_RUNTIME_CACHE.get(cache_key)
     if cached is not None:

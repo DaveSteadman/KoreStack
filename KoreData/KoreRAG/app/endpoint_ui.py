@@ -546,6 +546,7 @@ def register_rag_ui(
                 stdout = log_handle,
                 stderr = subprocess.STDOUT,
                 env    = {**os.environ, "PYTHONUNBUFFERED": "1", "PYTHONUTF8": "1"},
+                creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0) if os.name == "nt" else 0,
             )
         finally:
             log_handle.close()

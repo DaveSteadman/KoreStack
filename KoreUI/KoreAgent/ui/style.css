@@ -469,26 +469,11 @@ body.splitter-drag-h { user-select: none; cursor: row-resize; }
 }
 
 #send-btn {
-    background: transparent;
-    color: var(--text-dim);
-    border: 1px solid var(--border-hi);
-    border-radius: var(--radius);
-    padding: 0 20px;
-    font-size: 11px;
-    letter-spacing: 0.22em;
-    text-transform: uppercase;
-    cursor: pointer;
-    font-family: var(--font-mono);
-    font-weight: 600;
-    transition: background 0.15s, color 0.15s;
     flex-shrink: 0;
     align-self: stretch;
     min-height: 48px;
+    padding-inline: 20px;
 }
-
-#send-btn:hover,
-#send-btn:focus-visible { background: var(--accent-dim); color: var(--text-hi); outline: 1px solid var(--border-hi); outline-offset: 2px; }
-#send-btn:disabled      { opacity: 0.35; cursor: default; }
 
 /* ============================================================
    RESPONSIVE COLLAPSE: narrow screens stack the two panels

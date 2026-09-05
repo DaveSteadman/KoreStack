@@ -1,17 +1,4 @@
-# ====================================================================================================
-# MARK: OVERVIEW
-# ====================================================================================================
-# Presentation helpers for tool-runtime results and degraded model replies. The module converts
-# heterogeneous tool outputs into compact readable diagnostics, retains enough result detail for a
-# fallback answer, and removes detectable planning preambles from a final response. It formats data
-# only; tool execution and response policy remain in the runtime loop.
-# MARK: FUNCTIONS
-# Function inventory:
-# - extract_result_fields: Extracts result fields for this module.
-# - format_tool_outputs: Formats tool outputs for this module.
-# - build_fallback_answer: Builds fallback answer for this module.
-# - strip_cot_preamble: Implements the strip cot preamble operation for this module.
-# ====================================================================================================
+"""Formatting for tool results and degraded model replies."""
 
 from pathlib import Path
 import re
@@ -93,17 +80,23 @@ def build_fallback_answer(user_prompt: str, tool_outputs: list[ToolCallResult]) 
                 if isinstance(item, dict):
                     title, url, snippet = extract_result_fields(item)
                     if title:
-                        lines.append(f"- {title}")
+                        lines.append(f"  - {title}")
                     if url:
-                        lines.append(f"  {url}")
+                        lines.append(f"    {url}")
                     if snippet:
-                        lines.append(f"  {trunc(snippet, 180)}")
+                        lines.append(f"    {trunc(str(snippet), 200)}")
                 else:
-                    lines.append(f"- {trunc(str(item), 180)}")
+                    lines.append(f"  {trunc(str(item), 200)}")
         elif isinstance(result, dict):
-            lines.append(trunc(str(result), 400))
-        else:
-            lines.append(trunc(str(result), 400))
+            for key, value in result.items():
+                lines.append(f"  {key}: {trunc(str(value), 200)}")
+        elif isinstance(result, str):
+            for line in result.splitlines()[:20]:
+                lines.append(f"  {line}")
+            if result.count("\n") >= 20:
+                lines.append("  ...")
+        elif result is not None:
+            lines.append(f"  {trunc(str(result), 400)}")
         lines.append("")
     return "\n".join(lines).strip()
 

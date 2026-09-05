@@ -1,49 +1,18 @@
-# ====================================================================================================
-# MARK: OVERVIEW
-# ====================================================================================================
-# Tool-calling loop: drives the multi-turn LLM <-> skill conversation for one orchestration round.
-#
-# The main entry point is run_tool_loop(), called by orchestration.py.  Each iteration:
-#   1. Builds the user message from conversation history and scratchpad context
-#   2. Calls the LLM (call_llm_chat) with available tool definitions
-#   3. Parses any tool_calls from the response
-#   4. Validates and executes each call via skill_executor.execute_tool_call()
-#   5. Injects tool results back into the message thread
-#   6. Loops until the model returns a plain text response (no tool calls)
-#
-# Large tool results are auto-saved to scratchpad and truncated in the thread.
-# Compaction is assessed after each round and triggered when context fill is high.
-#
-# Related modules:
-#   - skill_executor.py   -- execute_tool_call dispatches to the correct skill function
-#   - context_manager.py  -- assess_compact, compact_context, store_last_run_state
-#   - orchestration.py    -- calls run_tool_loop() for each conversation turn
-#   - scratchpad.py       -- auto-saves large tool results
-# MARK: FUNCTIONS
-# Function inventory:
-# - _build_data_envelope: Implements the  build data envelope operation for this module.
-# - _safe_scratch_component: Implements the  safe scratch component operation for this module.
-# - _derive_auto_scratchpad_key: Implements the  derive auto scratchpad key operation for this module.
-# - normalize_tool_request: Normalizes tool request for this module.
-# - extract_result_fields: Extracts result fields for this module.
-# - format_tool_outputs: Formats tool outputs for this module.
-# - build_fallback_answer: Builds fallback answer for this module.
-# - _is_textual_tool_call_attempt: Detects textual tool call attempts for this module.
-# - _compact_tool_name_list: Implements the  compact tool name list operation for this module.
-# - _classify_tool_recovery: Implements the  classify tool recovery operation for this module.
-# - _build_tool_recovery_message: Implements the  build tool recovery message operation for this module.
-# - _build_tool_recovery_reminder: Implements the  build tool recovery reminder operation for this module.
-# - strip_cot_preamble: Implements the strip cot preamble operation for this module.
-# - run_tool_loop: Runs tool loop for this module.
-# - _log: Implements the  log operation for this module.
-# - _log_section: Implements the  log section operation for this module.
-# - _log_file_only: Implements the  log file only operation for this module.
-# ====================================================================================================
+"""Bounded LLM/tool execution with runtime validation and recovery."""
+
 import json
 import re
-from pathlib import Path
 
 from agent.orchestration.context_window import choose_context_window
+from agent.tool_runtime.formatting import build_fallback_answer
+from agent.tool_runtime.formatting import extract_result_fields
+from agent.tool_runtime.formatting import format_tool_outputs
+from agent.tool_runtime.formatting import strip_cot_preamble
+from agent.tool_runtime.recovery import build_tool_recovery_message as _build_tool_recovery_message
+from agent.tool_runtime.recovery import build_tool_recovery_reminder as _build_tool_recovery_reminder
+from agent.tool_runtime.recovery import classify_tool_recovery as _classify_tool_recovery
+from agent.tool_runtime.recovery import normalize_tool_request
+from agent.tool_runtime.recovery import tool_call_fingerprint
 from context_manager import COMPACT_THRESHOLD
 from context_manager import assess_compact
 from working_data import auto_route_working_data_result
@@ -119,14 +88,6 @@ def _build_data_envelope(func_name: str, arguments: dict, result_content: str) -
     return header + result_content
 
 
-_COT_PLANNING_RE = re.compile(
-    r"\b(?:we should|we can|we need|we will|we could|we\'ll|we\'re|we must|"
-    r"let me|let\'s|let us|thus we|so we|now we|next we|i need|i should|i will|i\'ll|"
-    r"provide an?\b|provide the\b|need to |should |we want|we are going|"
-    r"maybe |perhaps )",
-    re.IGNORECASE,
-)
-_CONTENT_MARKER_RE = re.compile(r"(?:^|\n)(\*\*|#{1,3} |\| |\d+\. |- )")
 _WORKING_DATA_KEY_SAFE_RE = re.compile(r"[^a-z0-9_]+")
 
 def _safe_working_data_component(value: object, fallback: str = "x") -> str:
@@ -168,111 +129,6 @@ def _derive_auto_working_data_key(func_name: str, arguments: dict, round_num: in
     return f"_wd_r{round_num}_{tool_ordinal}_{safe_name}"
 
 
-def normalize_tool_request(func_name: str, arguments: dict | None) -> tuple[str, dict, str | None]:
-    normalized_args = dict(arguments or {})
-    normalized_name = func_name
-    note_parts: list[str] = []
-    if normalized_name == "assistant":
-        nested_name = str(normalized_args.get("name") or "").strip()
-        nested_args = normalized_args.get("arguments")
-        if nested_name and isinstance(nested_args, dict):
-            normalized_name = nested_name
-            normalized_args = dict(nested_args)
-            note_parts.append(f"assistant(...) -> {nested_name}(...)")
-    # Handle model wrapping a tool call in its own function-call envelope:
-    # e.g. get_page_links(id='functions.get_page_links', arguments={...})
-    nested_args = normalized_args.get("arguments")
-    if isinstance(nested_args, dict) and "id" in normalized_args and len(normalized_args) == 2:
-        normalized_args = dict(nested_args)
-        note_parts.append(f"{normalized_name}(id=..., arguments={{...}}) -> {normalized_name}(...)")
-    return normalized_name, normalized_args, "; ".join(note_parts) if note_parts else None
-
-
-def extract_result_fields(item: dict) -> tuple[str, str, str]:
-    return item.get("title", ""), item.get("url", ""), item.get("snippet") or item.get("body", "")
-
-
-def format_tool_outputs(tool_outputs: list[ToolCallResult]) -> str:
-    if not tool_outputs:
-        return "(no tool calls executed)"
-    lines: list[str] = []
-    for output in tool_outputs:
-        tool_name = output.get("tool", "")
-        module = Path(output.get("module", "")).stem
-        function = output.get("function", "?")
-        args = output.get("arguments", {}) or {}
-        result = output.get("result")
-        heading = f"{tool_name} -> {module}.{function}()" if tool_name else f"{module}.{function}()"
-        lines.append(heading)
-        for key, value in args.items():
-            lines.append(f"  {key} = {trunc(repr(value), 120)}")
-        if result is None:
-            lines.append("  -> None")
-        elif isinstance(result, str):
-            stripped = result.strip()
-            preview_lines = stripped.splitlines()[:50]
-            total_lines = stripped.count("\n") + 1
-            lines.append(f"  -> str  {len(result)} chars / {total_lines} lines")
-            for line in preview_lines:
-                lines.append(f"  {trunc(line, 110)}")
-            if total_lines > 50:
-                lines.append(f"  ... ({total_lines - 50} more lines)")
-        elif isinstance(result, dict):
-            lines.append(f"  -> dict  [{', '.join(str(key) for key in result.keys())}]")
-        elif isinstance(result, list):
-            lines.append(f"  -> list  len={len(result)}")
-            for item in result:
-                if isinstance(item, dict):
-                    title, url, snippet = extract_result_fields(item)
-                    if title:
-                        lines.append(f"  {trunc(title, 80)}")
-                    if url:
-                        lines.append(f"    {url}")
-                    if snippet:
-                        lines.append(f"    {trunc(snippet, 110)}")
-        else:
-            lines.append(f"  -> {type(result).__name__}: {trunc(str(result), 110)}")
-        lines.append("")
-    return "\n".join(lines)
-
-
-def build_fallback_answer(user_prompt: str, tool_outputs: list[ToolCallResult]) -> str:
-    lines = [
-        f"(Note: the model did not produce a synthesized answer for: \"{trunc(user_prompt, 80)}\")",
-        "Raw tool results follow:",
-        "",
-    ]
-    for output in tool_outputs:
-        tool_name = output.get("tool", "") or output.get("function", "unknown")
-        args = output.get("arguments", {}) or {}
-        result = output.get("result")
-        lines.append(f"[{tool_name}({', '.join(f'{k}={v!r}' for k, v in args.items())})]")
-        if isinstance(result, list):
-            for item in result:
-                if isinstance(item, dict):
-                    title, url, snippet = extract_result_fields(item)
-                    if title:
-                        lines.append(f"  - {title}")
-                    if url:
-                        lines.append(f"    {url}")
-                    if snippet:
-                        lines.append(f"    {trunc(str(snippet), 200)}")
-                else:
-                    lines.append(f"  {trunc(str(item), 200)}")
-        elif isinstance(result, dict):
-            for key, value in result.items():
-                lines.append(f"  {key}: {trunc(str(value), 200)}")
-        elif isinstance(result, str):
-            for line in result.splitlines()[:20]:
-                lines.append(f"  {line}")
-            if result.count("\n") >= 20:
-                lines.append("  ...")
-        elif result is not None:
-            lines.append(f"  {trunc(str(result), 400)}")
-        lines.append("")
-    return "\n".join(lines).strip()
-
-
 def _is_textual_tool_call_attempt(text: str, active_tool_names: set[str]) -> bool:
     """Return True for a whole-message attempt to express an active tool call as text.
 
@@ -297,104 +153,7 @@ def _is_textual_tool_call_attempt(text: str, active_tool_names: set[str]) -> boo
     return bool(json_match and json_match.group(1) in active_tool_names)
 
 
-def _compact_tool_name_list(tool_names: set[str] | list[str] | tuple[str, ...] | None, *, limit: int = 10) -> str:
-    names = sorted({str(name or "").strip() for name in (tool_names or []) if str(name or "").strip()})
-    if not names:
-        return "(none)"
-    if len(names) <= limit:
-        return ", ".join(names)
-    return ", ".join(names[:limit]) + f", ... (+{len(names) - limit} more)"
-
-
-def _classify_tool_recovery(
-    requested_tool_name: str,
-    *,
-    active_tool_names: set[str] | None = None,
-    all_known_tool_names: set[str] | None,
-) -> dict[str, object]:
-    requested = str(requested_tool_name or "").strip()
-    active_names = set(active_tool_names or set())
-    known_names = set(all_known_tool_names or set())
-    if not requested:
-        return {"classification": "unknown_name", "requested_tool": requested, "active_tool_names": sorted(active_names)}
-
-    if requested in known_names:
-        return {
-            "classification": "active_known" if requested in active_names else "inactive_known",
-            "requested_tool": requested,
-            "active_tool_names": sorted(active_names),
-        }
-
-    return {
-        "classification": "unknown_name",
-        "requested_tool": requested,
-        "active_tool_names": sorted(active_names),
-    }
-
-
-def _build_tool_recovery_message(event: dict[str, object]) -> str:
-    classification = str(event.get("classification") or "unknown_name")
-    requested = str(event.get("requested_tool") or "").strip()
-    active_names = event.get("active_tool_names")
-    active_summary = _compact_tool_name_list(active_names if isinstance(active_names, list) else [])
-
-    if classification == "inactive_known":
-        if event.get("auto_activated"):
-            return (
-                f"Recovery required: tool `{requested}` exists in the runtime catalog but was not active for this conversation.\n"
-                f"It has been added to the active tool set for this conversation.\n"
-                "Do not answer the user yet.\n"
-                f"Retry the same tool name now: `{requested}`.\n"
-                f"Currently active tools: {active_summary}"
-            )
-        return (
-            f"Recovery required: tool `{requested}` exists in the runtime catalog but is not active for this conversation.\n"
-            "Do not answer the user yet.\n"
-            "Use ToolSelection now.\n"
-            f"Call `tools_active_add([\"{requested}\"])`, then continue the task.\n"
-            f"Currently active tools: {active_summary}"
-        )
-
-    return (
-        f"Recovery required: requested tool `{requested}` is not a valid tool name in this runtime.\n"
-        "Do not answer the user yet.\n"
-        "Use ToolSelection now.\n"
-        "Call `skills_list()` and select the correct Skill, or activate the exact tool, then continue the task.\n"
-        f"Currently active tools: {active_summary}"
-    )
-
-
-def _build_tool_recovery_reminder(event: dict[str, object]) -> str:
-    classification = str(event.get("classification") or "unknown_name")
-    requested = str(event.get("requested_tool") or "").strip()
-    if classification == "inactive_known" and event.get("auto_activated"):
-        return f"Recovery still required: do not answer yet. Retry `{requested}` now; it is already active for this conversation."
-    return f"Recovery still required: do not answer yet. Inspect the full tool catalog or Skill list and choose the exact capability needed for `{requested}`."
-
-
 # ----------------------------------------------------------------------------------------------------
-def strip_cot_preamble(text: str) -> str:
-    if not text:
-        return text
-    stripped_start = text.lstrip("\n")
-    if stripped_start[:2] in ("**", "# ", "##", "| ") or (stripped_start and stripped_start[0] in "#|"):
-        return text
-    marker = _CONTENT_MARKER_RE.search(text)
-    if not marker:
-        paragraphs = [part.strip() for part in re.split(r"\n\s*\n", text.strip()) if part.strip()]
-        if len(paragraphs) >= 2:
-            last_para = paragraphs[-1]
-            prior_text = "\n\n".join(paragraphs[:-1])
-            if _COT_PLANNING_RE.search(prior_text) and not _COT_PLANNING_RE.search(last_para):
-                return last_para
-        return text
-    split_pos = marker.start()
-    if text[split_pos] == "\n":
-        split_pos += 1
-    preamble = text[:split_pos]
-    if preamble.strip() and _COT_PLANNING_RE.search(preamble):
-        return text[split_pos:].lstrip("\n")
-    return text
 
 
 def run_tool_loop(
@@ -567,7 +326,9 @@ def run_tool_loop(
                         messages.append({"role": "user", "content": reminder})
                         context_map.append({"round": round_num, "role": "user", "label": "[tool recovery reminder]", "chars": len(reminder), "auto_key": None, "msg_idx": len(messages) - 1})
                         continue
-                    recovery_pending = None
+                    final_response = "I could not complete the task because the required tool recovery did not succeed."
+                    _log(final_response)
+                    break
                 else:
                     final_response = candidate
                     run_success = bool(final_response)
@@ -579,9 +340,10 @@ def run_tool_loop(
 
             _log(f"Round {round_num}: model requested {len(tool_calls)} tool call(s).")
             _log_file_only("[progress] Executing tool calls...")
-            if recovery_pending is not None:
-                recovery_pending = None
-            current_tc_fingerprints = frozenset((tc.get("function", {}).get("name", ""), tc.get("function", {}).get("arguments", "{}")) for tc in tool_calls)
+            current_tc_fingerprints = frozenset(
+                tool_call_fingerprint(tc)
+                for tc in tool_calls
+            )
             if current_tc_fingerprints and current_tc_fingerprints == prev_round_tc_fingerprints:
                 correction = (
                     "You have requested the exact same tool call(s) as the previous round. "
@@ -594,6 +356,7 @@ def run_tool_loop(
                 prev_round_tc_fingerprints = frozenset()
                 continue
             prev_round_tc_fingerprints = current_tc_fingerprints
+            recovery_pending = None
 
             # Strip planning text when tool calls are present - the spec allows empty content
             # alongside tool_calls, and the planning prose adds tokens to every subsequent round
@@ -610,8 +373,10 @@ def run_tool_loop(
                 func_name = tc_func.get("name", "")
                 raw_args = tc_func.get("arguments", "{}")
                 try:
-                    arguments = json.loads(raw_args) if isinstance(raw_args, str) else dict(raw_args)
-                except json.JSONDecodeError as exc:
+                    arguments = json.loads(raw_args) if isinstance(raw_args, str) else raw_args
+                    if not isinstance(arguments, dict):
+                        raise ValueError("Tool arguments must be a JSON object")
+                except (ValueError, TypeError) as exc:
                     _log(f"  [warn] Could not parse arguments for {func_name}: {exc} - raw: {raw_args!r}")
                     error_content = f"[SKILL_ERROR] Malformed tool call - could not parse JSON arguments for {func_name}: {exc}"
                     error_output = ToolCallResult(tool=func_name, function=func_name, module="", arguments={}, result=error_content, status="error", error=str(exc))
@@ -635,12 +400,10 @@ def run_tool_loop(
                         active_tool_names=current_active_tool_names,
                         all_known_tool_names=current_all_known_tool_names,
                     )
-                    if recovery_event is not None:
-                        recovery_event["active_tool_names"] = sorted(current_active_tool_names or set())
-                        if recovery_event.get("classification") != "active_known":
-                            round_recovery_events.append(recovery_event)
-                        result_content = f"[SKILL_ERROR] Error executing {func_name}: {exc}"
-                        output = ToolCallResult(tool=func_name, function=func_name, module="", arguments=arguments, result=result_content, status="error", error=str(exc))
+                    if recovery_event.get("classification") != "active_known":
+                        round_recovery_events.append(recovery_event)
+                    result_content = f"Error executing {func_name}: {exc}"
+                    output = ToolCallResult(tool=func_name, function=func_name, module="", arguments=arguments, result=result_content, status="error", error=str(exc))
 
                 raw_result_content = output["result"]
                 if (
@@ -765,4 +528,10 @@ def run_tool_loop(
         run_success = False
     finally:
         working_data_unpin_all()
+    if recovery_pending is not None and run_success:
+        run_success = False
+        final_response = "I could not complete the task because the required tool recovery did not succeed."
+    if publication_chat_name and not publication_confirmed:
+        run_success = False
+        final_response = "I could not publish the scheduled email because delivery_publish_html did not confirm delivery."
     return final_response, prompt_tokens, completion_tokens, run_success, final_tps, tool_outputs

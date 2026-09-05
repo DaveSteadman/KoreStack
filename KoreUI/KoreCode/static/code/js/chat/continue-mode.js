@@ -74,8 +74,8 @@ export function createContinueModeController({
     } else if (state === 'preview') {
       el.className = 'continue-status continue-status--preview';
       el.innerHTML =
-        '<button id="btn-continue-accept" class="continue-btn continue-btn--accept">Accept</button>' +
-        '<button id="btn-continue-cancel" class="continue-btn continue-btn--dismiss">Dismiss</button>';
+        '<button id="btn-continue-accept" class="kcui-btn kcui-btn-sm kcui-btn-filled">Accept</button>' +
+        '<button id="btn-continue-cancel" class="kcui-btn kcui-btn-sm kcui-btn-quiet">Dismiss</button>';
     } else if (state === 'accepted') {
       el.className   = 'continue-status continue-status--accepted';
       el.textContent = `Accepted. ${extra ?? ''}`;

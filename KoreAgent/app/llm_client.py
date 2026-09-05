@@ -142,7 +142,7 @@ def ensure_ollama_running(
     - LM Studio: checks /v1/models; no auto-start (must be started manually).
     """
     host = host or _openai.get_active_host()
-    if _openai._is_lmstudio_host(host):
+    if _openai.get_active_backend() == "lmstudio":
         _lmstudio.ensure_lmstudio_reachable(host)
         return
     _ollama.ensure_ollama_running(
@@ -162,7 +162,7 @@ def list_ollama_models(host: str | None = None, *, start_if_needed: bool = True)
     - LM Studio: calls /v1/models.
     """
     host = host or _openai.get_active_host()
-    if _openai._is_lmstudio_host(host):
+    if _openai.get_active_backend() == "lmstudio":
         return _lmstudio.list_lmstudio_models(host)
     return _ollama.list_ollama_models(host=host, start_if_needed=start_if_needed)
 
@@ -173,7 +173,7 @@ def format_running_model_report(model_name: str) -> str:
 
     Routes to the backend-specific implementation.
     """
-    if _openai._is_lmstudio_host(_openai.get_active_host()):
+    if _openai.get_active_backend() == "lmstudio":
         return _lmstudio.format_lmstudio_model_report(model_name)
     return _ollama.format_running_model_report(model_name)
 

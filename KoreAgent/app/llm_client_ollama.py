@@ -433,7 +433,7 @@ def _openai_tool_calls(native_calls: object) -> list[dict]:
             "type": "function",
             "function": {
                 "name":      str(function.get("name") or ""),
-                "arguments": json.dumps(arguments if isinstance(arguments, dict) else {}, ensure_ascii=False),
+                "arguments": arguments if isinstance(arguments, str) else json.dumps(arguments, ensure_ascii=False),
             },
         })
     return converted
@@ -504,7 +504,9 @@ def call_ollama_chat(
                         continue
                     chunk = json.loads(line)
                     if not isinstance(chunk, dict):
-                        continue
+                        raise RuntimeError("Ollama native chat returned an invalid stream chunk")
+                    if chunk.get("error"):
+                        raise RuntimeError(f"Ollama native chat stream error: {chunk['error']}")
                     message = chunk.get("message") if isinstance(chunk.get("message"), dict) else {}
                     content = str(message.get("content") or "")
                     thinking = str(message.get("thinking") or "")
@@ -517,6 +519,10 @@ def call_ollama_chat(
                     if isinstance(chunk_calls, list):
                         tool_calls.extend(chunk_calls)
                     body = chunk
+                    if chunk.get("done") is True:
+                        break
+            if body.get("done") is not True:
+                raise RuntimeError("Ollama native chat stream ended before completion")
             final_message = body.get("message") if isinstance(body.get("message"), dict) else {}
             body["message"] = {
                 **final_message,

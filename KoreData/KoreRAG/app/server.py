@@ -228,6 +228,7 @@ def _launch_ingestor(name: str) -> dict:
         [sys.executable, str(ingest_py)],
         stdout = subprocess.DEVNULL,
         stderr = subprocess.DEVNULL,
+        creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0) if os.name == "nt" else 0,
     )
     _ingest_procs[name] = proc
     _assign_to_job(proc)

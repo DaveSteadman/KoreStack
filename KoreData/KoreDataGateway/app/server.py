@@ -173,6 +173,10 @@ _gateway_startup_state: dict[str, Any] = {
 _child_readiness_task: asyncio.Task | None = None
 
 
+def _hidden_windows_creation_flags() -> int:
+    return getattr(subprocess, "CREATE_NO_WINDOW", 0) if os.name == "nt" else 0
+
+
 def _display_path(path: Path) -> Path:
     try:
         return path.relative_to(_BASE.parent)
@@ -186,7 +190,13 @@ def _port_from_url(url: str) -> int:
 
 def _listening_pids_on_port(port: int) -> list[int]:
     try:
-        output = subprocess.check_output(["netstat", "-ano"], text=True, encoding="utf-8", errors="ignore")
+        output = subprocess.check_output(
+            ["netstat", "-ano"],
+            text=True,
+            encoding="utf-8",
+            errors="ignore",
+            creationflags=_hidden_windows_creation_flags(),
+        )
     except Exception:
         return []
     pids: list[int] = []
@@ -218,7 +228,12 @@ def _terminate_pid(pid: int, label: str) -> None:
     print(f"  [stale] Clearing {label} listener  (pid {pid})")
     try:
         if os.name == "nt":
-            subprocess.run(["taskkill", "/PID", str(pid), "/T", "/F"], check=False, capture_output=True)
+            subprocess.run(
+                ["taskkill", "/PID", str(pid), "/T", "/F"],
+                check=False,
+                capture_output=True,
+                creationflags=_hidden_windows_creation_flags(),
+            )
         else:
             os.kill(pid, signal.SIGTERM)
     except Exception:
@@ -253,6 +268,7 @@ def _start_children() -> None:
             stdout=log_file,
             stderr=log_file,
             env=os.environ.copy(),
+            creationflags=_hidden_windows_creation_flags(),
         )
         with _children_lock:
             _children.append((proc, label, log_file))

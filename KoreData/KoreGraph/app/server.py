@@ -802,6 +802,7 @@ def api_processing_run(body: ProcessingRunBody):
                 stdout=lf,
                 stderr=subprocess.STDOUT,
                 env=env,
+                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0) if os.name == "nt" else 0,
             )
 
         _proc_job.update({

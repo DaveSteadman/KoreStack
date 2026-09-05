@@ -477,6 +477,7 @@ def run_python_tool(workspace: WorkspaceService, path: str, mode: str, timeout_s
 
     timeout = 15 if timeout_seconds is None else max(1, min(30, int(timeout_seconds)))
     command = [sys.executable, '-m', 'py_compile', str(candidate)] if normalized_mode == 'check' else [sys.executable, str(candidate)]
+    creationflags = getattr(subprocess, 'CREATE_NO_WINDOW', 0) if os.name == 'nt' else 0
     try:
         proc = subprocess.run(
             command,
@@ -485,6 +486,7 @@ def run_python_tool(workspace: WorkspaceService, path: str, mode: str, timeout_s
             capture_output  = True,
             timeout         = timeout,
             check           = False,
+            creationflags   = creationflags,
         )
     except subprocess.TimeoutExpired as exc:
         return {

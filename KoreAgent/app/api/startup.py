@@ -87,21 +87,13 @@ def _monitor_llm_dependency(
         host       = get_active_host()
         model      = get_active_model()
 
-        if backend != "ollama":
-            update_startup_state(
-                dependencies = {"llm": {
-                    "status":               "ready",
-                    "detail":               f"{backend} backend at {host}",
-                    "last_checked_at":      checked_at,
-                    "consecutive_failures": 0,
-                }}
-            )
-            shutdown.wait(_LLM_HEALTH_INTERVAL_S)
-            continue
-
         try:
-            if not is_ollama_running(host):
-                ensure_ollama_running(host=host, start_if_needed=True, wait_seconds=30.0)
+            if backend == "ollama" and not is_ollama_running(host):
+                ensure_ollama_running(
+                    host            = host,
+                    start_if_needed = llm_client.get_local_ollama_autostart_enabled(),
+                    wait_seconds    = 30.0,
+                )
             models = list_ollama_models(host, start_if_needed=False)
             if model and model not in models:
                 raise RuntimeError(f"Configured model '{model}' is not available at {host}")

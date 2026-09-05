@@ -422,22 +422,8 @@ class ChatCallResult:
 
     @property
     def response(self) -> str:
-        """Text content of the assistant message. Empty when the model issued tool_calls instead.
-
-        Falls back to the 'thinking' field (Ollama 0.18+ reasoning models) when 'content' is
-        absent, stripping the surrounding <think>...</think> wrapper so callers see plain text.
-        """
-        content = (self.message.get("content") or "").strip()
-        if content:
-            return content
-        thinking = (self.message.get("thinking") or self.message.get("reasoning") or "").strip()
-        if thinking:
-            # Strip <think>...</think> wrapper if present, then return the raw reasoning as
-            # a last-resort answer so the caller always gets something actionable.
-            thinking = re.sub(r"^<think>\s*", "", thinking, flags=re.IGNORECASE)
-            thinking = re.sub(r"\s*</think>$", "", thinking, flags=re.IGNORECASE)
-            return thinking.strip()
-        return ""
+        """Return answer content; reasoning is diagnostic output, not a completed answer."""
+        return (self.message.get("content") or "").strip()
 
     @property
     def tool_calls(self) -> list[dict]:

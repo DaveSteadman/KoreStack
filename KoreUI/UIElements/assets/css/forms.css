@@ -60,16 +60,17 @@
   resize: vertical;
 }
 
-.kcui-shell-bg button:not(.kcui-tag):not(.kcui-icon-button),
+:where(.kcui-shell-bg) button:where(:not(.kcui-tag):not(.kcui-icon-button):not(.kcui-btn-icon)),
 .kcui-shell-bg .btn,
 .kcui-btn {
   padding: 0.4rem 1rem;
   border: 1px solid var(--accent);
+  border-radius: var(--kcui-radius-sm);
   background: transparent;
   color: var(--accent);
   cursor: pointer;
   white-space: nowrap;
-  font-family: inherit;
+  font-family: var(--kcui-font-ui);
   font-size: var(--kcui-text-body-sm);
   letter-spacing: var(--kcui-tracking-label);
   text-transform: uppercase;
@@ -84,9 +85,9 @@ a.kcui-btn {
   text-decoration: none;
 }
 
-.kcui-shell-bg button:not(.kcui-tag):hover,
-.kcui-shell-bg .btn:hover,
-.kcui-btn:hover {
+:where(.kcui-shell-bg) button:where(:not(.kcui-tag):not(.kcui-icon-button):not(.kcui-btn-icon)):hover:where(:not(:disabled)),
+.kcui-shell-bg .btn:hover:where(:not(:disabled)),
+.kcui-btn:hover:where(:not(:disabled)) {
   background: color-mix(in srgb, var(--accent) 10%, transparent);
 }
 
@@ -202,6 +203,62 @@ a.kcui-btn {
 .kcui-btn-sm {
   padding: 0.2rem 0.5rem;
   font-size: var(--kcui-text-label);
+}
+
+:where(.kcui-shell-bg) button:focus-visible,
+.kcui-btn:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+:where(.kcui-shell-bg) button:disabled,
+.kcui-btn:disabled {
+  opacity: 0.52;
+  cursor: default;
+  pointer-events: none;
+}
+
+.kcui-btn-toolbar {
+  height: 32px;
+  padding: 0 12px;
+  font-size: var(--kcui-text-label);
+}
+
+.kcui-btn-surface {
+  color: var(--text);
+  border-color: var(--border);
+  background: var(--surface-2);
+}
+
+.kcui-btn-surface:hover {
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface-2));
+}
+
+.kcui-btn-success {
+  color: var(--success);
+  border-color: var(--success);
+}
+
+.kcui-btn-success:hover {
+  background: color-mix(in srgb, var(--success) 15%, transparent);
+}
+
+.kcui-btn-filled {
+  background: var(--accent);
+  color: var(--bg);
+}
+
+.kcui-btn-filled:hover {
+  background: var(--accent-2);
+}
+
+.kcui-btn-filled.kcui-btn-danger {
+  background: color-mix(in srgb, var(--danger) 35%, var(--bg));
+  color: color-mix(in srgb, var(--danger) 45%, white);
+}
+
+.kcui-btn-filled.kcui-btn-danger:hover {
+  background: color-mix(in srgb, var(--danger) 45%, var(--bg));
 }
 
 .rate-stepper {

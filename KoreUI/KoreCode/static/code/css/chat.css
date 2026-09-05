@@ -10,23 +10,6 @@
   background: var(--bg-2);
 }
 
-.chat-mode-btn {
-  flex: 1 1 calc(33.33% - 4px);
-  min-width: 72px;
-  padding: 4px 0;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  background: transparent;
-  color: var(--text-2);
-  font-size: 11.5px;
-  cursor: pointer;
-}
-
-.chat-mode-btn:hover {
-  background: var(--surface-2);
-  color: var(--text);
-}
-
 #chat-progress-note {
   flex-shrink: 0;
   padding: 6px 10px;
@@ -77,12 +60,6 @@
   text-overflow: ellipsis;
 }
 
-.chat-mode-btn.is-active {
-  background: color-mix(in srgb, var(--accent) 18%, var(--surface));
-  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
-  color: var(--text);
-}
-
 /* ── Continue status ── */
 
 .continue-status {
@@ -104,26 +81,6 @@
   gap: 8px;
   align-items: center;
 }
-
-.continue-btn {
-  padding: 4px 14px;
-  border-radius: 4px;
-  font-size: 12px;
-  cursor: pointer;
-  border: 1px solid var(--border);
-  line-height: 1.4;
-}
-.continue-btn--accept {
-  background: var(--accent);
-  color: var(--bg);
-  border-color: var(--accent);
-}
-.continue-btn--accept:hover { opacity: 0.88; }
-.continue-btn--dismiss {
-  background: transparent;
-  color: var(--text-dim);
-}
-.continue-btn--dismiss:hover { color: var(--text); }
 
 .continue-status--accepted  { color: color-mix(in srgb, var(--kcui-chat-agent) 80%, var(--text)); }
 .continue-status--cancelled { color: var(--text-dim); }
@@ -443,21 +400,6 @@
   flex-wrap: wrap;
   gap: 6px;
   margin-bottom: 6px;
-}
-
-.chat-quick-btn {
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--surface-2);
-  color: var(--text-2);
-  padding: 3px 10px;
-  font-size: 11px;
-  cursor: pointer;
-}
-
-.chat-quick-btn:hover {
-  background: color-mix(in srgb, var(--accent) 15%, var(--surface-2));
-  color: var(--text);
 }
 
 #chat-input-row {

@@ -194,7 +194,14 @@ _SKILL_ERROR_PREFIXES: tuple[str, ...] = (
 
 # ----------------------------------------------------------------------------------------------------
 def is_skill_error(result: object) -> bool:
-    """Return True when result is a plain-string skill error message."""
+    """Recognise explicit structured failures as well as legacy text errors."""
+    if isinstance(result, dict):
+        return (
+            result.get("status") == "error"
+            or result.get("isError") is True
+            or result.get("is_error") is True
+            or result.get("success") is False
+        )
     if not isinstance(result, str):
         return False
     return result.strip().startswith(_SKILL_ERROR_PREFIXES)

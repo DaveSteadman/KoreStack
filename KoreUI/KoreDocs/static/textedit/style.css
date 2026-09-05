@@ -40,16 +40,6 @@ body {
   border-radius: 0;
 }
 
-#te-toolbar .btn {
-  border-radius: 0;
-}
-
-#te-open:disabled,
-#te-save:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
 #te-status {
   grid-column: 1 / -1;
   font-size: 12px;
@@ -69,15 +59,6 @@ body {
   font-family: var(--font-code);
   font-size: 13px;
   line-height: 1.45;
-}
-
-.te-btn-success {
-  color: var(--success);
-  border-color: var(--success);
-}
-
-.te-btn-success:hover {
-  background: color-mix(in srgb, var(--success) 15%, transparent);
 }
 
 @media (max-width: 880px) {
