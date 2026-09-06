@@ -1,3 +1,15 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Builds the reviewed KoreDocs skill manifest from public REST-wrapper source. The committed output
+# is later registered by the service; runtime registration never introspects arbitrary source.
+#
+# Public API:
+#   - build_manifest() -- returns the complete reviewed registration payload.
+#
+# Private helpers interpret annotations and docstrings while translating public wrapper functions
+# into manifest tools.
+# ====================================================================================================
 """Generate the reviewed KoreDocs skill manifest from its public REST wrappers.
 
 Run this intentionally when a public `koredocs_*` wrapper is added or changed:
@@ -7,6 +19,9 @@ The generated JSON is committed/reviewed before the service registers it.  This
 keeps the manifest complete without making runtime registration inspect source.
 """
 
+# ====================================================================================================
+# MARK: IMPORTS
+# ====================================================================================================
 from __future__ import annotations
 
 import ast
@@ -14,6 +29,9 @@ import json
 from pathlib import Path
 
 
+# ====================================================================================================
+# MARK: OUTPUT CONFIGURATION
+# ====================================================================================================
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "skill_registration.json"
 
@@ -39,6 +57,9 @@ _EXTRA_NATIVE_SKILLS = [
 ]
 
 
+# ====================================================================================================
+# MARK: SOURCE ANALYSIS (PRIVATE)
+# ====================================================================================================
 def _annotation_type(annotation: ast.expr | None) -> str:
     """Convert the outer type of a typed wrapper argument to JSON Schema."""
     if annotation is None:
@@ -110,6 +131,9 @@ def _skill(node: ast.FunctionDef | ast.AsyncFunctionDef, source_file: str) -> di
     }
 
 
+# ====================================================================================================
+# MARK: MANIFEST CONSTRUCTION (PUBLIC)
+# ====================================================================================================
 def build_manifest() -> dict:
     skills: list[dict] = list(_EXTRA_NATIVE_SKILLS)
     for source in sorted((ROOT / "app" / "mcp").glob("tools_*.py")):

@@ -20,6 +20,7 @@ if str(APP_ROOT) not in sys.path:
     sys.path.insert(0, str(APP_ROOT))
 
 import llm_client_openai
+import llm_client_ollama
 from agent.orchestration import engine
 from input_layer import slash_commands
 
@@ -27,35 +28,35 @@ from input_layer import slash_commands
 class OllamaSamplingOptionsTests(unittest.TestCase):
     def setUp(self) -> None:
         llm_client_openai.configure_server("ollama", "http://localhost:11434")
-        llm_client_openai.configure_ollama_sampling_options()
+        llm_client_ollama.configure_ollama_sampling_options()
 
     def test_disabled_sampling_options_are_not_sent(self) -> None:
-        llm_client_openai.configure_ollama_sampling_options(
+        llm_client_ollama.configure_ollama_sampling_options(
             temperature         = 0.2,
             temperature_enabled = False,
             seed                = 42,
             seed_enabled        = False,
         )
 
-        options = llm_client_openai.get_ollama_request_options()
+        options = llm_client_ollama.get_ollama_request_options()
 
         self.assertNotIn("temperature", options)
         self.assertNotIn("seed", options)
 
     def test_enabled_sampling_options_are_sent_and_round_trip(self) -> None:
-        llm_client_openai.configure_ollama_sampling_options(
+        llm_client_ollama.configure_ollama_sampling_options(
             temperature         = 0.2,
             temperature_enabled = True,
             seed                = 42,
             seed_enabled        = True,
         )
 
-        options = llm_client_openai.get_ollama_request_options()
+        options = llm_client_ollama.get_ollama_request_options()
 
         self.assertEqual(options["temperature"], 0.2)
         self.assertEqual(options["seed"], 42)
         self.assertEqual(
-            llm_client_openai.get_ollama_sampling_config(),
+            llm_client_ollama.get_ollama_sampling_config(),
             {
                 "temperature":         0.2,
                 "temperature_enabled": True,
@@ -65,7 +66,7 @@ class OllamaSamplingOptionsTests(unittest.TestCase):
         )
 
     def test_defaults_set_preserves_sampling_options(self) -> None:
-        llm_client_openai.configure_ollama_sampling_options(0.3, True, 101, True)
+        llm_client_ollama.configure_ollama_sampling_options(0.3, True, 101, True)
         context = SimpleNamespace(
             config = SimpleNamespace(resolved_model="model", num_ctx=4096, max_predict=512),
             output = lambda *_args: None,
@@ -85,7 +86,7 @@ class OllamaSamplingOptionsTests(unittest.TestCase):
         self.assertTrue(saved["seed_enabled"])
 
     def test_orchestration_header_formats_unset_sampling_options(self) -> None:
-        llm_client_openai.configure_ollama_sampling_options(0.8, True, 0, False)
+        llm_client_ollama.configure_ollama_sampling_options(0.8, True, 0, False)
 
         parameters = engine._format_ollama_sampling_parameters()
 

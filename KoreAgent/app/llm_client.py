@@ -41,31 +41,31 @@ import llm_client_openai   as _openai
 import llm_client_ollama   as _ollama
 import llm_client_lmstudio as _lmstudio
 
-from llm_client_openai import DEFAULT_OLLAMAHOST
 from llm_client_openai import DEFAULT_LMSTUDIO_HOST
-from llm_client_openai import OLLAMA_CLOUD_HOST
 from llm_client_openai import HOST_ALIASES
-from llm_client_openai import OllamaCallResult
 from llm_client_openai import ChatCallResult
 from llm_client_openai import configure_host
-from llm_client_openai import configure_ollama_sampling_options
 from llm_client_openai import configure_server
 from llm_client_openai import get_active_host
 from llm_client_openai import get_active_backend
 from llm_client_openai import get_active_model
 from llm_client_openai import get_active_num_ctx
-from llm_client_openai import get_ollama_offload_mode
-from llm_client_openai import get_ollama_sampling_config
-from llm_client_openai import get_ollama_request_options
-from llm_client_openai import get_local_ollama_autostart_enabled
 from llm_client_openai import get_llm_timeout
 from llm_client_openai import set_llm_timeout
 from llm_client_openai import register_llm_call_logger
 from llm_client_openai import log_to_session
 from llm_client_openai import register_session_config
-from llm_client_openai import set_ollama_offload_mode
 from llm_client_openai import resolve_model_name
 from llm_client_openai import is_explicit_model_name
+from llm_client_ollama  import DEFAULT_OLLAMAHOST
+from llm_client_ollama  import OLLAMA_CLOUD_HOST
+from llm_client_ollama  import OllamaCallResult
+from llm_client_ollama  import configure_ollama_sampling_options
+from llm_client_ollama  import get_ollama_offload_mode
+from llm_client_ollama  import get_ollama_sampling_config
+from llm_client_ollama  import get_ollama_request_options
+from llm_client_ollama  import get_local_ollama_autostart_enabled
+from llm_client_ollama  import set_ollama_offload_mode
 from llm_client_ollama  import is_ollama_running
 from llm_client_ollama  import recover_ollama_runtime
 from llm_client_ollama  import start_ollama_server
@@ -154,8 +154,8 @@ def ensure_ollama_running(
 
 
 # ----------------------------------------------------------------------------------------------------
-def list_ollama_models(host: str | None = None, *, start_if_needed: bool = True) -> list[str]:
-    """Return the list of available model IDs from the active server.
+def list_ollama_models(host: str | None = None, *, start_if_needed: bool = False) -> list[str]:
+    """Return the list of available model IDs from the active server without starting it.
 
     Routes to the backend-specific listing:
     - Ollama: calls /api/tags.
@@ -226,7 +226,7 @@ def call_llm_chat(
     }
     if tools:
         payload["tools"] = tools
-    options = _openai.get_ollama_request_options(num_ctx)
+    options = _ollama.get_ollama_request_options(num_ctx)
     if options:
         payload["options"] = options
 

@@ -1,4 +1,21 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Shared FastAPI adapter that exposes reviewed, manifest-registered skill handlers through the
+# SkillManager invocation contract.
+#
+# Public API:
+#   - register_skill_invocation_routes() -- binds the generic invocation route to an application.
+#
+# The nested route function is intentionally private to the registration function: it has no
+# meaning outside the application instance to which it is bound.
+# ====================================================================================================
 """Small native HTTP adapter for manifest-registered KoreStack skills."""
+
+
+# ====================================================================================================
+# MARK: IMPORTS
+# ====================================================================================================
 
 import inspect
 from typing import Any
@@ -9,10 +26,16 @@ from pydantic import BaseModel
 from pydantic import Field
 
 
+# ====================================================================================================
+# MARK: REQUEST MODEL
+# ====================================================================================================
 class SkillInvocation(BaseModel):
     arguments: dict[str, Any] = Field(default_factory=dict)
 
 
+# ====================================================================================================
+# MARK: ROUTE REGISTRATION (PUBLIC)
+# ====================================================================================================
 def register_skill_invocation_routes(app, handlers: dict[str, Callable[..., Any]]) -> None:
     """Expose named service functions through the shared SkillManager invocation contract."""
     @app.post("/api/skills/{skill_name}/invoke")

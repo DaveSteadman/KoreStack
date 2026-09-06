@@ -44,7 +44,7 @@ import json
 from typing import Optional
 from urllib.parse import quote
 
-from fastapi import BackgroundTasks, FastAPI, Form, HTTPException, Request
+from fastapi import FastAPI, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from jinja2 import ChoiceLoader, FileSystemLoader
@@ -69,7 +69,7 @@ from app.database import (
 )
 from app.chroma_index import chroma_available, semantic_search
 from app.importers.kiwix import parse_seed_url, run_kiwix_crawl
-from app.importers.state import import_lock, import_state, import_stop_event
+from app.importers.state import import_state, import_stop_event, start_import_worker, state_lock
 
 
 _REFERENCE_UI_ROOT = Path(
@@ -296,39 +296,34 @@ def register_reference_ui(app: FastAPI) -> None:
 
     @app.get("/ui/reference/import", response_class=HTMLResponse, include_in_schema=False)
     def ref_import(request: Request):
-        return templates.TemplateResponse(request, "reference_import.html", {"status": dict(import_state)})
+        with state_lock:
+            status = dict(import_state)
+        return templates.TemplateResponse(request, "reference_import.html", {"status": status})
 
     @app.post("/ui/reference/import/crawl", include_in_schema=False)
-    async def ref_import_crawl(request: Request, background_tasks: BackgroundTasks):
+    async def ref_import_crawl(request: Request):
         payload        = await request.json()
         seed_url       = str(payload.get("seed_url") or "").strip()
         max_depth      = int(payload.get("max_depth") or 1)
         limit          = int(payload.get("limit") or 200)
         delay_seconds  = float(payload.get("delay_seconds") or 1.0)
         resume         = bool(payload.get("resume", True))
-        if not import_lock.acquire(blocking=False):
-            raise HTTPException(status_code=409, detail="Import already running")
-        import_stop_event.clear()
         try:
             _, _, _, start_title = parse_seed_url(seed_url)
         except ValueError as exc:
-            import_lock.release()
             raise HTTPException(status_code=422, detail=str(exc))
-        import_state.update({
-            "running":           True,
-            "done":              0,
-            "total":             1,
-            "errors":            0,
-            "last_error":        None,
-            "mode":              "crawl",
-            "seed":              start_title,
-            "delay_seconds":     delay_seconds,
-            "redirects_stored":  0,
-            "last_redirect":     None,
-            "limit":             limit,
-        })
-        import_lock.release()
-        background_tasks.add_task(run_kiwix_crawl, seed_url, max_depth, limit, delay_seconds, resume)
+        started = start_import_worker(
+            target = run_kiwix_crawl,
+            args   = (seed_url, max_depth, limit, delay_seconds, resume),
+            name   = "korereference-import-crawl",
+            initial_state = {
+                "done": 0, "total": 1, "errors": 0, "last_error": None,
+                "mode": "crawl", "seed": start_title, "delay_seconds": delay_seconds,
+                "redirects_stored": 0, "last_redirect": None, "limit": limit,
+            },
+        )
+        if not started:
+            raise HTTPException(status_code=409, detail="Import already running")
         return JSONResponse(
             {
                 "started":       True,
@@ -342,12 +337,16 @@ def register_reference_ui(app: FastAPI) -> None:
 
     @app.get("/ui/reference/import/status", include_in_schema=False)
     def ref_import_status():
-        return JSONResponse(dict(import_state))
+        with state_lock:
+            return JSONResponse(dict(import_state))
 
     @app.post("/ui/reference/import/stop", include_in_schema=False)
     def ref_import_stop():
-        if import_state.get("running"):
-            import_state["running"] = False
+        with state_lock:
+            running = bool(import_state.get("running"))
+            if running:
+                import_state["running"] = False
+        if running:
             import_stop_event.set()
             return JSONResponse({"stopped": True})
         return JSONResponse({"stopped": False, "detail": "No import was running"})
@@ -356,11 +355,13 @@ def register_reference_ui(app: FastAPI) -> None:
     async def ref_import_throttle(request: Request):
         payload = await request.json()
         delay   = float(payload.get("delay_seconds") or 0.0)
-        import_state["delay_seconds"] = delay
+        with state_lock:
+            import_state["delay_seconds"] = delay
+            running = bool(import_state.get("running"))
         return JSONResponse(
             {
-                "running":       bool(import_state.get("running")),
-                "delay_seconds": float(import_state.get("delay_seconds") or 0.0),
+                "running":       running,
+                "delay_seconds": delay,
             }
         )
 

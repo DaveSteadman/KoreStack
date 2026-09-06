@@ -78,8 +78,8 @@ from KoreCommon.sentence_index import sentence_index_needs_rebuild as _sentence_
 from KoreCommon.sentence_index import sentence_schema_columns
 from KoreCommon.sentence_index import sentence_schema_needs_normalization as _sentence_schema_needs_normalization_common
 from KoreCommon.sentence_index import split_sentences
+from KoreCommon.compress import compress as _compress, decompress as _decompress
 from app.config import cfg
-from compress import compress as _compress, decompress as _decompress
 from dbutil import fts_build_query, compute_word_count as _compute_word_count
 
 

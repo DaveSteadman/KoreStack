@@ -1,4 +1,23 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Implements the model-callable interface for listing and selecting Skills and their tools for the
+# active conversation. Selection state is owned by sessions.tool_selection, not this module.
+#
+# Public API:
+#   - skills_list()        -- lists selectable skills.
+#   - select_skills()      -- selects complete skills.
+#   - tools_catalog_list() -- lists every catalogue tool.
+#   - tools_active_add()   -- activates exact tool names for the current session.
+#
+# Private helpers filter unavailable web skills and merge permanent local system tools.
+# ====================================================================================================
 """Model-callable controls for selecting complete Skills into the active tool list."""
+
+
+# ====================================================================================================
+# MARK: IMPORTS
+# ====================================================================================================
 
 import json
 from pathlib import Path
@@ -10,9 +29,15 @@ from sessions.tool_selection import get_selected_tools, local_tool_names, promot
 from skill_manager import skill_manager
 
 
+# ====================================================================================================
+# MARK: CATALOG CONFIGURATION
+# ====================================================================================================
 SYSTEM_SKILLS_MANIFEST = Path(__file__).resolve().parents[1] / "skill_registration.json"
 
 
+# ====================================================================================================
+# MARK: CATALOG FILTERING (PRIVATE)
+# ====================================================================================================
 def _available_payload(payload: dict) -> dict:
     return payload if get_web_skills_enabled() else _filter_web_skills(payload)
 
@@ -44,6 +69,9 @@ def _local_skills(payload: dict) -> dict[str, list[str]]:
     return skills
 
 
+# ====================================================================================================
+# MARK: MODEL-CALLABLE SELECTION TOOLS (PUBLIC)
+# ====================================================================================================
 def skills_list() -> dict:
     """List exact Skill names.  Select a Skill to activate all of its tools."""
     payload = _available_payload(load_skills_payload(DEFAULT_OUTPUT_FILE))

@@ -125,7 +125,7 @@ def _cmd_llmserverconfig(arg: str, ctx: SlashCommandContext) -> None:
     if first == "model":
         if not rest or rest == "list":
             try:
-                available = list_ollama_models()
+                available = list_ollama_models(start_if_needed=False)
                 host      = get_active_host()
                 backend   = get_active_backend()
                 label     = "model(s) installed on"
@@ -139,7 +139,7 @@ def _cmd_llmserverconfig(arg: str, ctx: SlashCommandContext) -> None:
 
         model_arg = rest
         try:
-            available = list_ollama_models()
+            available = list_ollama_models(start_if_needed=False)
             resolved  = resolve_model_name(model_arg, available) if available else None
             if resolved is None:
                 if is_explicit_model_name(model_arg):
@@ -257,7 +257,7 @@ def _cmd_llmserver(arg: str, ctx: SlashCommandContext) -> None:
         configure_server(token, host_arg)
 
         new_host = get_active_host()
-        models   = list_ollama_models()
+        models   = list_ollama_models(start_if_needed=False)
         # Sync the session model to a valid choice on the new server.
         # If the currently configured model isn't in the new server's list, pick the first available.
         current_model = ctx.config.resolved_model

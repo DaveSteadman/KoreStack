@@ -1,3 +1,20 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Registers the stateless work-packet endpoint. The endpoint validates caller-supplied JSON and
+# forwards the packet to the active model without persisting a conversation.
+#
+# Public API:
+#   - register_work_packet_routes() -- binds the work-packet route to an application instance.
+#
+# The nested submit_work_packet route is intentionally scoped to registration because it closes
+# over the injected LLM and active-model providers.
+# ====================================================================================================
+
+
+# ====================================================================================================
+# MARK: IMPORTS
+# ====================================================================================================
 from __future__ import annotations
 
 import json
@@ -6,10 +23,16 @@ from fastapi import HTTPException
 from pydantic import BaseModel
 
 
+# ====================================================================================================
+# MARK: REQUEST MODEL
+# ====================================================================================================
 class WorkPacketRequest(BaseModel):
     json_text: str
 
 
+# ====================================================================================================
+# MARK: ROUTE REGISTRATION (PUBLIC)
+# ====================================================================================================
 def register_work_packet_routes(
     app,
     *,

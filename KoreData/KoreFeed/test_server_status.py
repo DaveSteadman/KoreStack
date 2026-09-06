@@ -1,4 +1,14 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Regression coverage for the KoreFeed status payload consumed by KoreDataGateway.
+# ====================================================================================================
 """Regression coverage for the KoreFeed status contract consumed by KoreDataGateway."""
+
+
+# ====================================================================================================
+# MARK: IMPORTS AND TEST ENVIRONMENT
+# ====================================================================================================
 
 from __future__ import annotations
 
@@ -24,6 +34,9 @@ os.environ["KOREDATA_DATA_DIR"] = _TMP_DIR.name
 from app import server
 
 
+# ====================================================================================================
+# MARK: STATUS CONTRACT TESTS
+# ====================================================================================================
 class FeedStatusTests(unittest.TestCase):
     def test_status_includes_gateway_card_totals(self) -> None:
         overview = {

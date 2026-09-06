@@ -9,7 +9,7 @@
 #     explicit backend targeting.
 #   - Health-check cache helpers used by both backends.
 #   - The _request_json HTTP helper (thread-safe, hard timeout enforcement).
-#   - OllamaCallResult and ChatCallResult data structures.
+#   - The backend-neutral ChatCallResult data structure.
 #   - Model name resolution utilities (resolve_model_name, is_explicit_model_name).
 #
 # Related modules:
@@ -17,20 +17,17 @@
 #   - llm_client_lmstudio.py -- LM Studio-specific: health check, /v1/models listing, model report
 #   - llm_client.py          -- Routing facade: re-exports all public names + call_llm_chat
 # MARK: FUNCTIONS
-# Primary types: OllamaCallResult, ChatCallResult.
+# Primary types: ChatCallResult.
 # Function inventory:
 # - _default_llm_timeout_from_env: Implements the  default llm timeout from env operation for this module.
-# - get_local_ollama_autostart_enabled: Returns local ollama autostart enabled for this module.
 # - get_llm_timeout: Returns llm timeout for this module.
 # - set_llm_timeout: Sets llm timeout for this module.
 # - register_llm_call_logger: Registers llm call logger for this module.
 # - log_to_session: Implements the log to session operation for this module.
 # - register_session_config: Registers session config for this module.
 # - get_active_model: Returns active model for this module.
-# - get_ollama_offload_mode: Returns ollama offload mode for this module.
-# - set_ollama_offload_mode: Sets ollama offload mode for this module.
-# - get_ollama_request_options: Returns ollama request options for this module.
 # - get_active_num_ctx: Returns active num ctx for this module.
+# - get_active_max_predict: Returns active max predict for this module.
 # - mark_host_healthy: Marks host healthy for this module.
 # - invalidate_host_health: Invalidates host health for this module.
 # - is_host_health_cached: Checks whether host health cached is true.
@@ -53,7 +50,6 @@
 # MARK: IMPORTS
 # ====================================================================================================
 import json
-import math
 import os
 import re
 import threading
@@ -68,8 +64,7 @@ from utils.workspace_utils import trunc
 # ====================================================================================================
 # MARK: CONSTANTS
 # ====================================================================================================
-DEFAULT_OLLAMAHOST    = "http://localhost:11434"
-OLLAMA_CLOUD_HOST     = "https://api.ollama.com"
+DEFAULT_LOCAL_LLM_HOST = "http://localhost:11434"
 DEFAULT_LMSTUDIO_HOST = "http://localhost:1234"
 
 
@@ -87,9 +82,8 @@ def _default_llm_timeout_from_env() -> int:
 _DEFAULT_LLM_TIMEOUT: int = _default_llm_timeout_from_env()   # seconds; updated at runtime by /timeout slash command
 
 # Active host and backend - set once at startup via configure_host() or configure_server().
-# Default to local Ollama; overridden by --llmhost / LLMHOST env var.
-# backend is "ollama" or "lmstudio".
-_active_host:    str = DEFAULT_OLLAMAHOST
+# Default to the local native backend; overridden by --llmhost / LLMHOST env var.
+_active_host:    str = DEFAULT_LOCAL_LLM_HOST
 _active_backend: str = "ollama"
 
 # Active session model and context window - set once at startup via register_session_config().
@@ -97,29 +91,13 @@ _active_backend: str = "ollama"
 _active_model:       str = ""
 _active_num_ctx:     int = 131072
 _active_max_predict: int = 1024
-_ollama_temperature:         float = 0.8
-_ollama_temperature_enabled: bool = False
-_ollama_seed:                int = 0
-_ollama_seed_enabled:        bool = False
 _active_state_lock: threading.RLock = threading.RLock()
-_ollama_offload_mode: str = "autogpu"
-_OLLAMA_OFFLOAD_MODES: frozenset[str] = frozenset({"forcecpu", "forcegpu", "autogpu"})
 
 # Cache of last successful server health-check time per host.
 # Avoids an HTTP round-trip on every LLM call (many calls/prompt = unnecessary health hits).
-_ollama_health_cache: dict[str, float] = {}  # host -> monotonic time of last healthy check
-_ollama_health_lock:  threading.Lock   = threading.Lock()
-_OLLAMA_HEALTH_TTL_S: float = 30.0           # re-check if not confirmed healthy within this window
-
-
-def get_local_ollama_autostart_enabled() -> bool:
-    """Return True when local Ollama may be auto-started by the agent.
-
-    Default is disabled so Windows setups that already run Ollama as a service do
-    not get a second process manager hidden inside prompt execution.
-    """
-    raw = str(os.environ.get("KORE_OLLAMA_AUTOSTART", "")).strip().lower()
-    return raw in {"1", "true", "yes", "on"}
+_host_health_cache: dict[str, float] = {}  # host -> monotonic time of last healthy check
+_host_health_lock:  threading.Lock   = threading.Lock()
+_HOST_HEALTH_TTL_S: float = 30.0           # re-check if not confirmed healthy within this window
 
 
 # ====================================================================================================
@@ -195,93 +173,16 @@ def get_active_model() -> str:
         return _active_model
 
 
-def get_ollama_offload_mode() -> str:
-    """Return the requested Ollama CPU/GPU offload policy for new model loads."""
-    with _active_state_lock:
-        return _ollama_offload_mode
-
-
-def set_ollama_offload_mode(mode: str) -> None:
-    """Set the requested Ollama CPU/GPU offload policy."""
-    normalized = mode.strip().lower()
-    if normalized not in _OLLAMA_OFFLOAD_MODES:
-        raise ValueError(f"Unknown Ollama offload mode: {mode}")
-    global _ollama_offload_mode
-    with _active_state_lock:
-        _ollama_offload_mode = normalized
-
-
-def _coerce_config_bool(value: object) -> bool:
-    """Return a predictable Boolean for JSON configuration values."""
-    if isinstance(value, str):
-        return value.strip().lower() in {"1", "true", "yes", "on"}
-    return bool(value)
-
-
-def configure_ollama_sampling_options(
-    temperature: object = 0.8,
-    temperature_enabled: object = False,
-    seed: object = 0,
-    seed_enabled: object = False,
-) -> None:
-    """Set config-file-controlled Ollama sampling options for future requests."""
-    global _ollama_temperature, _ollama_temperature_enabled, _ollama_seed, _ollama_seed_enabled
-    try:
-        normalized_temperature = float(temperature)
-    except (TypeError, ValueError):
-        normalized_temperature = 0.8
-    if not math.isfinite(normalized_temperature):
-        normalized_temperature = 0.8
-    try:
-        normalized_seed = int(seed)
-    except (TypeError, ValueError):
-        normalized_seed = 0
-
-    with _active_state_lock:
-        _ollama_temperature         = normalized_temperature
-        _ollama_temperature_enabled = _coerce_config_bool(temperature_enabled)
-        _ollama_seed                = normalized_seed
-        _ollama_seed_enabled        = _coerce_config_bool(seed_enabled)
-
-
-def get_ollama_sampling_config() -> dict:
-    """Return the Ollama sampling values persisted by ``/defaults set``."""
-    with _active_state_lock:
-        return {
-            "temperature":         _ollama_temperature,
-            "temperature_enabled": _ollama_temperature_enabled,
-            "seed":                _ollama_seed,
-            "seed_enabled":        _ollama_seed_enabled,
-        }
-
-
-def get_ollama_request_options(num_ctx: int | None = None) -> dict:
-    """Build Ollama-only request options for context, sampling, and model offload."""
-    options: dict = {}
-    if num_ctx is not None:
-        options["num_ctx"] = num_ctx
-    with _active_state_lock:
-        options["num_predict"] = _active_max_predict
-    if get_active_backend() != "ollama":
-        return options
-    with _active_state_lock:
-        if _ollama_temperature_enabled:
-            options["temperature"] = _ollama_temperature
-        if _ollama_seed_enabled:
-            options["seed"] = _ollama_seed
-    mode = get_ollama_offload_mode()
-    if mode == "forcecpu":
-        options["num_gpu"] = 0
-    elif mode == "forcegpu":
-        # Ollama interprets a layer count larger than the model as all layers.
-        options["num_gpu"] = 999
-    return options
-
-
 def get_active_num_ctx() -> int:
     """Return the currently active session context window in tokens."""
     with _active_state_lock:
         return _active_num_ctx
+
+
+def get_active_max_predict() -> int:
+    """Return the configured maximum number of generated tokens."""
+    with _active_state_lock:
+        return _active_max_predict
 
 
 # ====================================================================================================
@@ -289,20 +190,20 @@ def get_active_num_ctx() -> int:
 # ====================================================================================================
 def mark_host_healthy(host: str) -> None:
     """Record that host was reachable and responding at the current monotonic time."""
-    with _ollama_health_lock:
-        _ollama_health_cache[host] = time.monotonic()
+    with _host_health_lock:
+        _host_health_cache[host] = time.monotonic()
 
 
 def invalidate_host_health(host: str) -> None:
     """Require a fresh health check before the next request to *host*."""
-    with _ollama_health_lock:
-        _ollama_health_cache.pop(host, None)
+    with _host_health_lock:
+        _host_health_cache.pop(host, None)
 
 
 def is_host_health_cached(host: str) -> bool:
     """Return True when host was confirmed healthy within the cache TTL window."""
-    with _ollama_health_lock:
-        return time.monotonic() - _ollama_health_cache.get(host, 0.0) < _OLLAMA_HEALTH_TTL_S
+    with _host_health_lock:
+        return time.monotonic() - _host_health_cache.get(host, 0.0) < _HOST_HEALTH_TTL_S
 
 
 # ====================================================================================================
@@ -311,8 +212,8 @@ def is_host_health_cached(host: str) -> bool:
 
 # Well-known host aliases accepted by configure_host() and the --llmhost CLI flag.
 HOST_ALIASES: dict[str, str] = {
-    "local":      DEFAULT_OLLAMAHOST,
-    "localhost":  DEFAULT_OLLAMAHOST,
+    "local":      DEFAULT_LOCAL_LLM_HOST,
+    "localhost":  DEFAULT_LOCAL_LLM_HOST,
     "lmstudio":   DEFAULT_LMSTUDIO_HOST,
 }
 
@@ -348,7 +249,7 @@ def configure_server(backend: str, host: str | None = None) -> None:
     if backend not in ("ollama", "lmstudio"):
         raise ValueError(f"Unknown backend '{backend}'. Use 'ollama' or 'lmstudio'.")
     if host is None:
-        resolved = DEFAULT_LMSTUDIO_HOST if backend == "lmstudio" else DEFAULT_OLLAMAHOST
+        resolved = DEFAULT_LMSTUDIO_HOST if backend == "lmstudio" else DEFAULT_LOCAL_LLM_HOST
     else:
         host = host.strip()
         if "://" not in host:
@@ -392,25 +293,6 @@ def _is_lmstudio_host(host: str) -> bool:
 # ====================================================================================================
 # MARK: DATA TYPES
 # ====================================================================================================
-@dataclass
-class OllamaCallResult:
-    """Structured return from call_ollama_extended, including token usage and throughput."""
-    response:                str
-    prompt_tokens:           int
-    completion_tokens:       int
-    total_tokens:            int
-    eval_duration_ns:        int = 0   # nanoseconds the model spent generating completion tokens
-    prompt_eval_duration_ns: int = 0   # nanoseconds the model spent evaluating the prompt
-
-    @property
-    def tokens_per_second(self) -> float:
-        """Completion token generation rate (tok/s). Returns 0.0 when timing is unavailable."""
-        if self.eval_duration_ns <= 0 or self.completion_tokens <= 0:
-            return 0.0
-        return self.completion_tokens / (self.eval_duration_ns / 1_000_000_000)
-
-
-# ----------------------------------------------------------------------------------------------------
 @dataclass
 class ChatCallResult:
     """Structured return from call_llm_chat, covering token usage and optional tool calls."""

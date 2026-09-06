@@ -1,3 +1,20 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Provides the unified, session-scoped Working Data boundary for text values and record collections
+# held outside the active model context.
+#
+# Public API:
+#   - Persistence and prompt helpers: coerce_persisted_working_data_payload(), hydrate_working_data(),
+#     build_persisted_working_data_payload(), get_working_data_values(), and
+#     get_prompt_working_data_collections().
+#   - Tool-loop support: auto_route_working_data_result(), working_data_pin(), and
+#     working_data_unpin_all().
+#   - LLM tools: the working_data_* functions that save, retrieve, transform, and export items.
+#
+# Private helpers maintain the legacy text-value store; record collections are delegated to the
+# WorkingData collections service.
+# ====================================================================================================
 """Session-scoped Working Data for material held outside the active prompt context.
 
 This is the public boundary for prompt-supporting data.  A named item is either a
@@ -6,6 +23,9 @@ scratchpad or dataset subsystem.  The legacy stores remain private implementatio
 details while existing conversations are migrated to the unified payload.
 """
 
+# ====================================================================================================
+# MARK: IMPORTS
+# ====================================================================================================
 from __future__ import annotations
 
 import json
@@ -32,6 +52,9 @@ from system_skills.WorkingData.collections.service import hydrate_session_state
 from sessions.runtime import get_active_session_id
 
 
+# ====================================================================================================
+# MARK: LEGACY TEXT-VALUE COMPATIBILITY (PRIVATE)
+# ====================================================================================================
 _VALUES: dict[str, dict[str, str]] = {}
 _PINS: dict[str, set[str]] = {}
 
@@ -97,6 +120,9 @@ def _collection_names(session_id: str | None = None) -> set[str]:
     return {str(item.get("name") or "").lower() for item in get_prompt_dataset_manifests(session_id)}
 
 
+# ====================================================================================================
+# MARK: SESSION PERSISTENCE AND PROMPT STATE (PUBLIC)
+# ====================================================================================================
 def coerce_persisted_working_data_payload(
     payload: object,
     *,
@@ -163,6 +189,9 @@ def get_prompt_working_data_collections(session_id: str | None = None) -> list[d
     return get_prompt_dataset_manifests(session_id)
 
 
+# ====================================================================================================
+# MARK: TOOL-LOOP INTEGRATION (PUBLIC)
+# ====================================================================================================
 def auto_route_working_data_result(func_name: str, arguments: dict, result: object) -> str | None:
     """Store record-shaped tool results as Working Data collections when appropriate."""
     return _auto_route_tool_result(func_name, arguments, result)
@@ -178,6 +207,9 @@ def working_data_unpin_all(session_id: str | None = None) -> None:
     _PINS.pop(_resolved_session(session_id), None)
 
 
+# ====================================================================================================
+# MARK: LLM-CALLABLE WORKING DATA TOOLS (PUBLIC)
+# ====================================================================================================
 def working_data_save(
     name: str,
     value: str | list[dict] | dict,

@@ -11,7 +11,7 @@
 #
 # Related modules:
 #   - app/server.py         -- all read/write and search operations
-#   - CommonCode/compress.py  -- body storage compression
+#   - KoreCommon/compress.py  -- body storage compression
 #   - CommonCode/dbutil.py    -- fts_build_query
 # MARK: FUNCTIONS
 # Function inventory:
@@ -35,8 +35,8 @@ import threading
 from contextlib import contextmanager
 from typing import Optional
 
+from KoreCommon.compress import compress as _compress, decompress as _decompress
 from app.registry import get_db_path as _registry_get_db_path
-from compress import compress as _compress, decompress as _decompress
 from dbutil import fts_build_query, compute_word_count as _compute_word_count
 
 

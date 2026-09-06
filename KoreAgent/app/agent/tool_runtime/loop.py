@@ -1,4 +1,21 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Runs the bounded model/tool loop: validates tool requests, dispatches allow-listed calls, stores
+# large results as Working Data, tracks recovery attempts, and returns the final conversation state.
+#
+# Public API:
+#   - run_tool_loop() -- executes one bounded tool-calling round sequence for orchestration.
+#
+# The private helpers construct safe Working Data references and identify textual attempts to bypass
+# native tool calling. Formatting and recovery policy live in sibling modules.
+# ====================================================================================================
 """Bounded LLM/tool execution with runtime validation and recovery."""
+
+
+# ====================================================================================================
+# MARK: IMPORTS
+# ====================================================================================================
 
 import json
 import re
@@ -24,6 +41,9 @@ from tool_result import ToolCallResult
 from utils.workspace_utils import trunc
 
 
+# ====================================================================================================
+# MARK: TOOL-LOOP LIMITS AND WORKING DATA MAPPING
+# ====================================================================================================
 # Cap for tool result content in messages; longer content is auto-saved to scratchpad and truncated in the message with a reference note
 TOOL_MSG_MAX_CHARS: int = 4096
 
@@ -44,6 +64,9 @@ _DATA_TOOL_SOURCE: dict[str, str] = {
     "search_web_text": "WebSearch",
 }
 
+# ====================================================================================================
+# MARK: WORKING DATA HELPERS (PRIVATE)
+# ====================================================================================================
 def _build_data_envelope(func_name: str, arguments: dict, result_content: str) -> str:
     """Prepend a compact structured header to results from known data-sourcing tools.
 
@@ -156,6 +179,9 @@ def _is_textual_tool_call_attempt(text: str, active_tool_names: set[str]) -> boo
 # ----------------------------------------------------------------------------------------------------
 
 
+# ====================================================================================================
+# MARK: BOUNDED TOOL EXECUTION (PUBLIC)
+# ====================================================================================================
 def run_tool_loop(
     *,
     config,

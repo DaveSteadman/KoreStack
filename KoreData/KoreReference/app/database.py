@@ -8,12 +8,12 @@
 #                backlink resolution, and extracted table data
 #
 # FTS5 content is kept in sync with every write.  WAL mode is enabled.
-# Body content is compressed via CommonCode/compress.py.
+# Body content is compressed via KoreCommon.compress.
 #
 # Related modules:
 #   - app/server.py                  -- all read/write operations
 #   - app/importers/kiwix.py         -- bulk article import
-#   - CommonCode/compress.py         -- body storage compression
+#   - KoreCommon/compress.py         -- body storage compression
 #   - CommonCode/dbutil.py           -- fts_build_query
 # MARK: FUNCTIONS
 # Function inventory:
@@ -32,7 +32,6 @@
 # - _sentence_locator: Implements the  sentence locator operation for this module.
 # - get_db_path: Returns db path for this module.
 # - db_connection: Implements the db connection operation for this module.
-# - _close_connection: Implements the  close connection operation for this module.
 # - init_db: Implements the init db operation for this module.
 # - _word_count: Implements the  word count operation for this module.
 # - _parse_json_list: Implements the  parse json list operation for this module.
@@ -65,7 +64,6 @@
 import json
 import re
 import sqlite3
-import threading
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
@@ -79,9 +77,9 @@ from KoreCommon.sentence_index import sentence_index_needs_rebuild as _sentence_
 from KoreCommon.sentence_index import sentence_schema_columns
 from KoreCommon.sentence_index import sentence_schema_needs_normalization as _sentence_schema_needs_normalization_common
 from KoreCommon.sentence_index import split_sentences
+from KoreCommon.compress import compress as _compress, decompress as _decompress
 from app.importers.shared import TABLE_OPEN, TABLE_CLOSE, table_to_fts_text
 from app.config import cfg
-from compress import compress as _compress, decompress as _decompress
 from dbutil import fts_build_query
 
 _TABLE_MARKER_RE = re.compile(rf'{re.escape(TABLE_OPEN)}(.*?){re.escape(TABLE_CLOSE)}', re.DOTALL)
@@ -266,10 +264,6 @@ def _sentence_locator(sentence_id: int) -> str:
 DATA_DIR = Path(cfg["data_dir"])
 _DB_PATH = DATA_DIR / "reference.db"
 
-_connection: sqlite3.Connection | None = None
-_connection_lock = threading.RLock()
-
-
 def get_db_path() -> Path:
     DATA_DIR.mkdir(exist_ok=True)
     return _DB_PATH
@@ -277,31 +271,28 @@ def get_db_path() -> Path:
 
 @contextmanager
 def db_connection():
-    global _connection
-    with _connection_lock:
-        if _connection is None:
-            _connection = sqlite3.connect(
-                str(get_db_path()),
-                check_same_thread = False,
-                timeout           = 30,
-            )
-            _connection.row_factory = sqlite3.Row
-            _connection.execute("PRAGMA foreign_keys = ON")
-            _connection.execute("PRAGMA busy_timeout = 30000")
-        try:
-            yield _connection
-            _connection.commit()
-        except Exception:
-            _connection.rollback()
-            raise
+    """Open an independent, short-lived SQLite connection.
 
-
-def _close_connection() -> None:
-    global _connection
-    with _connection_lock:
-        if _connection is not None:
-            _connection.close()
-            _connection = None
+    WAL permits a reader to retain a consistent committed snapshot while the
+    importer writes.  A shared connection guarded by one Python lock defeats
+    that property, and previously made every Reference read wait for a crawl.
+    """
+    conn = sqlite3.connect(
+        str(get_db_path()),
+        check_same_thread = False,
+        timeout           = 30,
+    )
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys = ON")
+    conn.execute("PRAGMA busy_timeout = 30000")
+    try:
+        yield conn
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
 
 
 # ---------------------------------------------------------------------------
@@ -680,8 +671,7 @@ def delete_all_articles() -> int:
         delete_store()
     except Exception:
         pass
-    # VACUUM must run outside any transaction (autocommit mode)
-    _close_connection()
+    # VACUUM must run outside any transaction (autocommit mode).
     conn = sqlite3.connect(str(get_db_path()), isolation_level=None)
     try:
         conn.execute("VACUUM")

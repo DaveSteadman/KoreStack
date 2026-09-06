@@ -400,19 +400,22 @@ def run_kiwix_import(
                     pending_sync_article_ids     = pending_sync_article_ids,
                 )
                 if wrote:
+                    # Do not carry a SQLite write transaction across the next
+                    # network request.  In WAL mode this makes each completed
+                    # article immediately visible to independent API readers.
+                    write_conn.commit()
                     writes_since_commit += 1
                     if writes_since_commit >= 25:
-                        write_conn.commit()
                         _flush_semantic_sync(pending_deleted_sentence_ids, pending_sync_article_ids)
                         writes_since_commit = 0
                 with state_lock:
                     import_state["done"] += 1
             except Exception as exc:
+                write_conn.rollback()
                 with state_lock:
                     import_state["errors"] += 1
                 import_state["last_error"] = f"{title}: {exc}"
         if writes_since_commit > 0:
-            write_conn.commit()
             _flush_semantic_sync(pending_deleted_sentence_ids, pending_sync_article_ids)
 
     import_state["running"] = False
@@ -459,14 +462,17 @@ def run_kiwix_backfill(zim_name: str, kiwix_url: str, limit: int) -> None:
                     pending_sync_article_ids     = pending_sync_article_ids,
                 )
                 if wrote:
+                    # Keep the write window to one completed article; HTTP
+                    # fetches and parsing must never retain a SQLite write lock.
+                    write_conn.commit()
                     writes_since_commit += 1
                     if writes_since_commit >= 25:
-                        write_conn.commit()
                         _flush_semantic_sync(pending_deleted_sentence_ids, pending_sync_article_ids)
                         writes_since_commit = 0
                 with state_lock:
                     import_state["done"] += 1
             except httpx.HTTPStatusError as exc:
+                write_conn.rollback()
                 if exc.response.status_code == 404:
                     with state_lock:
                         import_state["done"] += 1  # title not in this ZIM — skip quietly
@@ -475,11 +481,11 @@ def run_kiwix_backfill(zim_name: str, kiwix_url: str, limit: int) -> None:
                         import_state["errors"] += 1
                     import_state["last_error"] = f"{title}: HTTP {exc.response.status_code}"
             except Exception as exc:
+                write_conn.rollback()
                 with state_lock:
                     import_state["errors"] += 1
                 import_state["last_error"] = f"{title}: {exc}"
         if writes_since_commit > 0:
-            write_conn.commit()
             _flush_semantic_sync(pending_deleted_sentence_ids, pending_sync_article_ids)
 
     import_state["running"] = False
@@ -518,9 +524,11 @@ def run_kiwix_crawl(seed_url: str, max_depth: int, limit: int, delay_seconds: fl
 
         def _flush_periodically() -> None:
             nonlocal writes_since_commit
+            # The importer owns its connection, but not the database: commit
+            # before returning to the crawler so WAL readers stay independent.
+            write_conn.commit()
             writes_since_commit += 1
             if writes_since_commit >= 25:
-                write_conn.commit()
                 _flush_semantic_sync(pending_deleted_sentence_ids, pending_sync_article_ids)
                 writes_since_commit = 0
 
@@ -627,12 +635,12 @@ def run_kiwix_crawl(seed_url: str, max_depth: int, limit: int, delay_seconds: fl
                 _pace()
 
             except Exception as exc:
+                write_conn.rollback()
                 with state_lock:
                     import_state["errors"] += 1
                 import_state["last_error"] = f"{title}: {exc}"
                 _pace()
         if writes_since_commit > 0:
-            write_conn.commit()
             _flush_semantic_sync(pending_deleted_sentence_ids, pending_sync_article_ids)
 
     import_state["running"] = False

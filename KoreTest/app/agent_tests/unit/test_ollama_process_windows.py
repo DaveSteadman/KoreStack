@@ -40,8 +40,10 @@ class OllamaProcessWindowsTests(unittest.TestCase):
 
         flags = popen.call_args.kwargs["creationflags"]
         self.assertNotEqual(flags & subprocess.CREATE_NO_WINDOW, 0)
-        self.assertNotEqual(flags & subprocess.DETACHED_PROCESS, 0)
         self.assertNotEqual(flags & subprocess.CREATE_NEW_PROCESS_GROUP, 0)
+        self.assertEqual(flags & subprocess.DETACHED_PROCESS, 0)
+        startupinfo = popen.call_args.kwargs["startupinfo"]
+        self.assertEqual(startupinfo.wShowWindow, subprocess.SW_HIDE)
 
     def test_status_probe_prefers_http_api(self) -> None:
         payload = {"models": [{"name": "gemma4:26b", "size": 0, "size_vram": 0, "digest": "abc", "details": {}}]}
@@ -56,7 +58,7 @@ class OllamaProcessWindowsTests(unittest.TestCase):
         with patch.object(llm_client_ollama, "is_ollama_running", return_value=False) as is_running, \
              patch.object(llm_client_ollama, "ensure_ollama_running") as ensure_running, \
              patch.object(llm_client_ollama._core, "_request_json") as request_json:
-            models = llm_client_ollama.list_ollama_models(start_if_needed=False)
+            models = llm_client_ollama.list_ollama_models()
 
         self.assertEqual(models, [])
         is_running.assert_called_once()
@@ -65,7 +67,7 @@ class OllamaProcessWindowsTests(unittest.TestCase):
 
     def test_prompt_call_does_not_autostart_by_default(self) -> None:
         with patch.object(llm_client_ollama._core, "get_active_host", return_value="http://localhost:11434"), \
-             patch.object(llm_client_ollama._core, "get_local_ollama_autostart_enabled", return_value=False), \
+             patch.object(llm_client_ollama, "get_local_ollama_autostart_enabled", return_value=False), \
              patch.object(llm_client_ollama, "ensure_ollama_running") as ensure_running, \
              patch.object(llm_client_ollama._core, "_request_json", return_value={"response": "ok"}), \
              patch.object(llm_client_ollama._core, "log_to_session"):
@@ -87,7 +89,7 @@ class OllamaProcessWindowsTests(unittest.TestCase):
             "done_reason": "stop",
         }
         with patch.object(llm_client_ollama._core, "get_active_host", return_value="http://localhost:11434"), \
-             patch.object(llm_client_ollama._core, "get_local_ollama_autostart_enabled", return_value=False), \
+             patch.object(llm_client_ollama, "get_local_ollama_autostart_enabled", return_value=False), \
              patch.object(llm_client_ollama, "ensure_ollama_running"), \
              patch.object(llm_client_ollama, "_retry_after_runtime_failure", return_value=True) as recover, \
              patch.object(llm_client_ollama._core, "_request_json", side_effect=[runner_crash, response]), \
@@ -124,8 +126,8 @@ class OllamaProcessWindowsTests(unittest.TestCase):
         with patch.object(llm_client_ollama._core, "invalidate_host_health"), \
              patch.object(llm_client_ollama._core, "log_to_session"), \
              patch.object(llm_client_ollama._core, "_is_local_host", return_value=True), \
-             patch.object(llm_client_ollama._core, "get_ollama_offload_mode", return_value="autogpu"), \
-             patch.object(llm_client_ollama._core, "set_ollama_offload_mode") as set_offload, \
+             patch.object(llm_client_ollama, "get_ollama_offload_mode", return_value="autogpu"), \
+             patch.object(llm_client_ollama, "set_ollama_offload_mode") as set_offload, \
              patch.object(llm_client_ollama, "is_ollama_running", return_value=True), \
              patch.object(llm_client_ollama.time, "sleep"):
             llm_client_ollama.recover_ollama_runtime(

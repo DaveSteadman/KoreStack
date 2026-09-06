@@ -58,7 +58,7 @@ import threading
 from typing import Optional
 
 import httpx
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
@@ -99,7 +99,7 @@ from app.importers.kiwix import (
     run_kiwix_crawl,
     run_kiwix_import,
 )
-from app.importers.state import import_lock, import_state, import_stop_event
+from app.importers.state import import_state, import_stop_event, start_import_worker, state_lock
 from app.endpoint_ui import register_reference_ui
 
 
@@ -347,43 +347,41 @@ def route_rebuild_sentence_index(article_id: Optional[int] = None):
 
 @app.post("/api/import/kiwix", summary="Trigger import from configured Kiwix server")
 @app.post("/import/kiwix", include_in_schema=False)
-def route_import_kiwix(req: KiwixImportRequest, background_tasks: BackgroundTasks):
-    if not import_lock.acquire(blocking=False):
-        raise HTTPException(status_code=409, detail="Import already running")
-    import_stop_event.clear()
-    import_state.update({
-        "running": True, "done": 0, "total": 0,
-        "errors": 0, "last_error": None, "mode": "prefix", "seed": None,
-        "redirects_stored": 0, "last_redirect": None,
-    })
-    import_lock.release()
-    background_tasks.add_task(
-        run_kiwix_import, req.zim_name, req.kiwix_url, req.titles, req.prefix, req.limit, req.resume
+def route_import_kiwix(req: KiwixImportRequest):
+    started = start_import_worker(
+        target = run_kiwix_import,
+        args   = (req.zim_name, req.kiwix_url, req.titles, req.prefix, req.limit, req.resume),
+        name   = "korereference-import-prefix",
+        initial_state = {
+            "done": 0, "total": 0, "errors": 0, "last_error": None,
+            "mode": "prefix", "seed": None, "redirects_stored": 0,
+            "last_redirect": None,
+        },
     )
+    if not started:
+        raise HTTPException(status_code=409, detail="Import already running")
     return {"started": True, "zim_name": req.zim_name}
 
 
 @app.post("/api/import/kiwix/crawl", status_code=202, summary="BFS crawl from a Kiwix or Wikipedia article URL")
 @app.post("/import/kiwix/crawl", status_code=202, include_in_schema=False)
-def route_import_kiwix_crawl(req: KiwixCrawlRequest, background_tasks: BackgroundTasks):
-    if not import_lock.acquire(blocking=False):
-        raise HTTPException(status_code=409, detail="Import already running")
-    import_stop_event.clear()
+def route_import_kiwix_crawl(req: KiwixCrawlRequest):
     try:
         _, _, _, start_title = parse_seed_url(req.seed_url)
     except ValueError as exc:
-        import_lock.release()
         raise HTTPException(status_code=422, detail=str(exc))
-    import_state.update({
-        "running": True, "done": 0, "total": 1,
-        "errors": 0, "last_error": None, "mode": "crawl", "seed": start_title,
-        "delay_seconds": req.delay_seconds,
-        "redirects_stored": 0, "last_redirect": None,
-    })
-    import_lock.release()
-    background_tasks.add_task(
-        run_kiwix_crawl, req.seed_url, req.max_depth, req.limit, req.delay_seconds, req.resume
+    started = start_import_worker(
+        target = run_kiwix_crawl,
+        args   = (req.seed_url, req.max_depth, req.limit, req.delay_seconds, req.resume),
+        name   = "korereference-import-crawl",
+        initial_state = {
+            "done": 0, "total": 1, "errors": 0, "last_error": None,
+            "mode": "crawl", "seed": start_title, "delay_seconds": req.delay_seconds,
+            "redirects_stored": 0, "last_redirect": None,
+        },
     )
+    if not started:
+        raise HTTPException(status_code=409, detail="Import already running")
     return {
         "started": True,
         "seed": start_title,
@@ -397,8 +395,11 @@ def route_import_kiwix_crawl(req: KiwixCrawlRequest, background_tasks: Backgroun
 @app.post("/api/import/stop", summary="Abort in-progress import or crawl")
 @app.post("/import/stop", include_in_schema=False)
 def route_import_stop():
-    if import_state.get("running"):
-        import_state["running"] = False
+    with state_lock:
+        running = bool(import_state.get("running"))
+        if running:
+            import_state["running"] = False
+    if running:
         import_stop_event.set()
         return {"stopped": True}
     return {"stopped": False, "detail": "No import was running"}
@@ -407,10 +408,12 @@ def route_import_stop():
 @app.post("/api/import/throttle", summary="Adjust crawl delay while import is running")
 @app.post("/import/throttle", include_in_schema=False)
 def route_import_throttle(req: KiwixThrottleRequest):
-    import_state["delay_seconds"] = req.delay_seconds
+    with state_lock:
+        import_state["delay_seconds"] = req.delay_seconds
+        running = bool(import_state.get("running"))
     return {
-        "running": bool(import_state.get("running")),
-        "delay_seconds": float(import_state.get("delay_seconds") or 0.0),
+        "running": running,
+        "delay_seconds": float(req.delay_seconds),
     }
 
 
@@ -441,7 +444,7 @@ class KiwixBackfillRequest(BaseModel):
 
 @app.post("/api/import/kiwix/backfill", status_code=202, summary="Fetch unresolved link targets from Kiwix")
 @app.post("/import/kiwix/backfill", status_code=202, include_in_schema=False)
-def route_import_kiwix_backfill(req: KiwixBackfillRequest, background_tasks: BackgroundTasks):
+def route_import_kiwix_backfill(req: KiwixBackfillRequest):
     """Fetch every link target that exists in the links table but has no article row.
 
     This repairs the historical gap where redirect pages were silently dropped during
@@ -449,26 +452,29 @@ def route_import_kiwix_backfill(req: KiwixBackfillRequest, background_tasks: Bac
     but were never imported; this endpoint fetches each one and stores it — either as
     a redirect row or as a full article if it turns out to be a real page.
     """
-    if not import_lock.acquire(blocking=False):
-        raise HTTPException(status_code=409, detail="Import already running")
     pending = get_unresolved_link_titles(limit=req.limit)
     if not pending:
-        import_lock.release()
         return {"started": False, "detail": "No unresolved link targets found"}
-    import_state.update({
-        "running": True, "done": 0, "total": len(pending),
-        "errors": 0, "last_error": None, "mode": "backfill", "seed": None,
-        "redirects_stored": 0, "last_redirect": None,
-    })
-    import_lock.release()
-    background_tasks.add_task(run_kiwix_backfill, req.zim_name, req.kiwix_url, req.limit)
+    started = start_import_worker(
+        target = run_kiwix_backfill,
+        args   = (req.zim_name, req.kiwix_url, req.limit),
+        name   = "korereference-import-backfill",
+        initial_state = {
+            "done": 0, "total": len(pending), "errors": 0, "last_error": None,
+            "mode": "backfill", "seed": None, "redirects_stored": 0,
+            "last_redirect": None,
+        },
+    )
+    if not started:
+        raise HTTPException(status_code=409, detail="Import already running")
     return {"started": True, "pending": len(pending), "zim_name": req.zim_name}
 
 
 @app.get("/api/import/status", summary="Progress of in-progress import")
 @app.get("/import/status", include_in_schema=False)
 def route_import_status():
-    return dict(import_state)
+    with state_lock:
+        return dict(import_state)
 
 
 # ---------------------------------------------------------------------------

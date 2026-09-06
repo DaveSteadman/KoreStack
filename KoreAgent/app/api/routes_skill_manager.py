@@ -1,3 +1,20 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Registers the REST boundary for the persistent SkillManager. Routes deliberately delegate all
+# registry mutation, validation, persistence, and invocation concerns to the injected manager.
+#
+# Public API:
+#   - register_skill_manager_routes() -- binds the complete skill and tool management route group.
+#
+# Request models describe the three supported mutation shapes: a whole service registration, one
+# skill, or one tool. Nested route functions are private to the bound application.
+# ====================================================================================================
+
+
+# ====================================================================================================
+# MARK: IMPORTS
+# ====================================================================================================
 from typing import Any
 
 from fastapi import Body
@@ -5,6 +22,9 @@ from fastapi import HTTPException
 from pydantic import BaseModel
 
 
+# ====================================================================================================
+# MARK: REQUEST MODELS
+# ====================================================================================================
 class SkillRegistration(BaseModel):
     service: str
     service_label: str = ""
@@ -21,6 +41,9 @@ class SkillItemRegistration(BaseModel):
     skill: dict[str, Any]
 
 
+# ====================================================================================================
+# MARK: ROUTE REGISTRATION (PUBLIC)
+# ====================================================================================================
 def register_skill_manager_routes(app, *, manager) -> None:
     @app.get("/api/skill-manager/skills")
     def skill_manager_skills_get() -> dict[str, Any]:

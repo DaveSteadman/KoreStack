@@ -1,8 +1,29 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Normalises malformed model tool requests and produces recovery guidance that preserves the exact
+# tool-name contract. This module classifies recovery events; the execution loop applies them.
+#
+# Public API:
+#   - tool_call_fingerprint()       -- gives equivalent provider calls a stable identity.
+#   - normalize_tool_request()      -- unwraps recognised model call envelopes.
+#   - classify_tool_recovery()      -- converts a failed request into a structured recovery event.
+#   - build_tool_recovery_message() -- formats the immediate model-facing correction.
+#   - build_tool_recovery_reminder() -- formats the repeated-failure reminder.
+# ====================================================================================================
 """Exact-name tool recovery shared by the execution loop."""
+
+
+# ====================================================================================================
+# MARK: IMPORTS
+# ====================================================================================================
 
 import json
 
 
+# ====================================================================================================
+# MARK: REQUEST NORMALISATION (PUBLIC)
+# ====================================================================================================
 def tool_call_fingerprint(tool_call: dict) -> tuple[str, str]:
     """Compare argument values rather than provider-specific JSON formatting."""
     function  = tool_call.get("function", {})
@@ -35,6 +56,9 @@ def normalize_tool_request(func_name: str, arguments: dict | None) -> tuple[str,
     return normalized_name, normalized_args, "; ".join(note_parts) if note_parts else None
 
 
+# ====================================================================================================
+# MARK: RECOVERY CLASSIFICATION
+# ====================================================================================================
 def _compact_tool_name_list(tool_names: set[str] | list[str] | tuple[str, ...] | None, *, limit: int = 10) -> str:
     names = sorted({str(name or "").strip() for name in (tool_names or []) if str(name or "").strip()})
     if not names:
@@ -70,6 +94,9 @@ def classify_tool_recovery(
     }
 
 
+# ====================================================================================================
+# MARK: RECOVERY MESSAGE FORMATTING (PUBLIC)
+# ====================================================================================================
 def build_tool_recovery_message(event: dict[str, object]) -> str:
     classification = str(event.get("classification") or "unknown_name")
     requested = str(event.get("requested_tool") or "").strip()

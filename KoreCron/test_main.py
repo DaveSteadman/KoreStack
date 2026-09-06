@@ -1,3 +1,14 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Regression coverage for KoreCron's fresh-conversation lifecycle and scheduled KoreTest-run
+# definitions. The test classes follow those two product responsibilities.
+# ====================================================================================================
+
+
+# ====================================================================================================
+# MARK: IMPORTS
+# ====================================================================================================
 from __future__ import annotations
 
 import unittest
@@ -8,6 +19,9 @@ from unittest.mock import patch
 from KoreCron import main
 
 
+# ====================================================================================================
+# MARK: FRESH CONVERSATION TESTS
+# ====================================================================================================
 class FreshConversationTests(unittest.TestCase):
     def test_deletes_all_name_matches_before_creating(self) -> None:
         calls: list[tuple[str, str, dict | None]] = []
@@ -61,6 +75,9 @@ class FreshConversationTests(unittest.TestCase):
         self.assertEqual(deleted, ["http://chat/api/conversations/5"])
 
 
+# ====================================================================================================
+# MARK: SCHEDULED TEST-RUN TESTS
+# ====================================================================================================
 class ScheduledTestRunTests(unittest.TestCase):
     def test_test_run_definition_accepts_only_a_daily_time(self) -> None:
         definition = main._test_run_definition({"time": "09:30"})

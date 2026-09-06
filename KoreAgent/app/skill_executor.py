@@ -10,15 +10,24 @@
 #
 # Also resolves {{token}} placeholders in string arguments before each function call.
 #
+# Public API:
+#   - build_catalog_gates() -- builds the allow-listed Python tool index.
+#   - execute_tool_call()  -- enforces that index and invokes one tool.
+#
+# Everything else in this module is a private implementation detail grouped as
+# catalog guards, dynamic module loading, and result/error classification.
+#
 # Related modules:
 #   - orchestration.py           -- calls execute_tool_call inside the tool-calling loop
 #   - skills_catalog_builder.py  -- produces the skills_summary that drives the allow-list
 # MARK: FUNCTIONS
 # Function inventory:
-# - _load_callable_from_module_path: Implements the  load callable from module path operation for this module.
 # - build_catalog_gates: Builds catalog gates for this module.
+# - _load_callable_from_module_path: Implements the load callable from module path operation for this module.
 # - _build_unknown_tool_error: Implements the  build unknown tool error operation for this module.
-# - is_skill_error: Checks whether skill error is true.
+# - _build_inactive_tool_error: Implements the build inactive tool error operation for this module.
+# - _is_local_system_tool: Checks whether local system tool is true.
+# - _is_skill_error: Checks whether skill error is true.
 # - execute_tool_call: Implements the execute tool call operation for this module.
 # ====================================================================================================
 
@@ -37,15 +46,49 @@ from utils.workspace_utils import normalize_module_path
 
 
 # ====================================================================================================
-# MARK: MODULE LOADER
+# MARK: CATALOG GATE CONSTRUCTION (PUBLIC)
 # ====================================================================================================
-# Cache of already-loaded callables: (absolute_path_str, function_name) -> callable.
-# Avoids re-executing module-level code on every skill invocation within a session.
-_callable_cache: dict[tuple[str, str], object] = {}
 _catalog_gates_cache: dict[int, dict[str, tuple[str, str]]] = {}
 
 
 # ----------------------------------------------------------------------------------------------------
+def build_catalog_gates(skills_payload: dict) -> dict[str, tuple[str, str]]:
+    """Build the tool-name dispatch index in a single pass over the catalog.
+
+    Returns a dict mapping tool_name -> (module_path, function_name).
+    This index lookup is the security gate: unknown names are rejected before any import.
+    Callers that invoke execute_tool_call multiple times for the same payload (e.g. the
+    orchestration loop) should call this once and pass the result via the catalog_gates
+    parameter to avoid rebuilding the index on every tool invocation.
+    """
+    cache_key = id(skills_payload)
+    cached = _catalog_gates_cache.get(cache_key)
+    if cached is not None:
+        return cached
+
+    index: dict[str, tuple[str, str]] = {}
+
+    for skill in skills_payload.get("skills", []):
+        module = normalize_module_path(skill.get("module", ""))
+
+        for function_sig in skill.get("functions", []):
+            function_name = str(function_sig).split("(")[0].strip()
+            if module and function_name:
+                index[function_name] = (module, function_name)
+
+    _catalog_gates_cache.clear()
+    _catalog_gates_cache[cache_key] = index
+    return index
+
+
+# ====================================================================================================
+# MARK: DYNAMIC MODULE LOADING (PRIVATE)
+# ====================================================================================================
+# Cache of already-loaded callables: (absolute_path_str, function_name, mtime_ns) -> callable.
+# Avoids re-executing module-level code on every skill invocation within a session.
+_callable_cache: dict[tuple[str, str, int], object] = {}
+
+
 def _load_callable_from_module_path(module_path: str, function_name: str):
     workspace_root        = get_workspace_root()
 
@@ -65,8 +108,8 @@ def _load_callable_from_module_path(module_path: str, function_name: str):
     dynamic_module_name = f"skill_module_{absolute_module_path.stem}_{abs(hash(str(absolute_module_path)))}"
     stale_keys = [k for k in _callable_cache if k[0] == str(absolute_module_path) and k[2] != mtime_ns]
     if stale_keys:
-        for sk in stale_keys:
-            _callable_cache.pop(sk, None)
+        for stale_key in stale_keys:
+            _callable_cache.pop(stale_key, None)
         sys.modules.pop(dynamic_module_name, None)
 
     if cache_key in _callable_cache:
@@ -106,37 +149,9 @@ def _load_callable_from_module_path(module_path: str, function_name: str):
     return fn
 
 
-# ----------------------------------------------------------------------------------------------------
-def build_catalog_gates(skills_payload: dict) -> dict[str, tuple[str, str]]:
-    """Build the tool-name dispatch index in a single pass over the catalog.
-
-    Returns a dict mapping tool_name -> (module_path, function_name).
-    This index lookup is the security gate: unknown names are rejected before any import.
-    Callers that invoke execute_tool_call multiple times for the same payload (e.g. the
-    orchestration loop) should call this once and pass the result via the catalog_gates
-    parameter to avoid rebuilding the index on every tool invocation.
-    """
-    cache_key = id(skills_payload)
-    cached = _catalog_gates_cache.get(cache_key)
-    if cached is not None:
-        return cached
-
-    index: dict[str, tuple[str, str]] = {}
-
-    for skill in skills_payload.get("skills", []):
-        module = normalize_module_path(skill.get("module", ""))
-
-        for function_sig in skill.get("functions", []):
-            function_name = str(function_sig).split("(")[0].strip()
-            if module and function_name:
-                index[function_name] = (module, function_name)
-
-    _catalog_gates_cache.clear()
-    _catalog_gates_cache[cache_key] = index
-    return index
-
-
-# ----------------------------------------------------------------------------------------------------
+# ====================================================================================================
+# MARK: CATALOG MEMBERSHIP AND ERROR MESSAGES (PRIVATE)
+# ====================================================================================================
 def _build_unknown_tool_error(
     requested_tool_name: str,
     skills_payload: dict,
@@ -177,7 +192,7 @@ def _is_local_system_tool(skills_payload: dict, tool_name: str) -> bool:
 
 
 # ====================================================================================================
-# MARK: ERROR DETECTION
+# MARK: RESULT CLASSIFICATION (PRIVATE)
 # ====================================================================================================
 # String prefixes that skill functions use to signal a failure.  Any result whose stripped text
 # starts with one of these is flagged as is_error=True in the execute_tool_call return dict so
@@ -193,7 +208,7 @@ _SKILL_ERROR_PREFIXES: tuple[str, ...] = (
 
 
 # ----------------------------------------------------------------------------------------------------
-def is_skill_error(result: object) -> bool:
+def _is_skill_error(result: object) -> bool:
     """Recognise explicit structured failures as well as legacy text errors."""
     if isinstance(result, dict):
         return (
@@ -208,7 +223,7 @@ def is_skill_error(result: object) -> bool:
 
 
 # ====================================================================================================
-# MARK: EXECUTION
+# MARK: EXECUTION (PUBLIC)
 # ====================================================================================================
 
 def execute_tool_call(
@@ -254,8 +269,8 @@ def execute_tool_call(
             module    = f"service:{registered['service']}",
             arguments = resolved_args,
             result    = result,
-            status    = "error" if is_skill_error(result) else "ok",
-            error     = str(result) if is_skill_error(result) else "",
+            status    = "error" if _is_skill_error(result) else "ok",
+            error     = str(result) if _is_skill_error(result) else "",
         )
 
     # Use pre-built index when provided; otherwise build it from the payload.
@@ -280,11 +295,11 @@ def execute_tool_call(
     result = fn(**resolved_args)
 
     return ToolCallResult(
-        tool=tool_name,
-        function=function_name,
-        module=module_path,
-        arguments=resolved_args,
-        result=result,
-        status="error" if is_skill_error(result) else "ok",
-        error=str(result) if is_skill_error(result) else "",
+        tool      = tool_name,
+        function  = function_name,
+        module    = module_path,
+        arguments = resolved_args,
+        result    = result,
+        status    = "error" if _is_skill_error(result) else "ok",
+        error     = str(result) if _is_skill_error(result) else "",
     )

@@ -1,4 +1,19 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Adapts KoreDocs document and MCP operations to the shared manifest-registered skill invocation
+# route. Individual koredocs_* wrappers are private implementation adapters; registration is the
+# only module-level entry point.
+#
+# Public API:
+#   - register_skill_routes() -- binds every reviewed KoreDocs skill to the application.
+# ====================================================================================================
 """Native REST invocation routes for every reviewed KoreDocs skill."""
+
+
+# ====================================================================================================
+# MARK: IMPORTS
+# ====================================================================================================
 
 from typing import Any
 
@@ -11,6 +26,9 @@ from ..mcp import tools_koredoc
 from ..mcp import tools_koresheet
 
 
+# ====================================================================================================
+# MARK: KORE_DOCS TOOL ADAPTERS (PRIVATE)
+# ====================================================================================================
 def _koredocs_files_list(
     folder_path: str | None = None,
     type: str | None = None,
@@ -64,5 +82,8 @@ def _handlers() -> dict[str, object]:
     return handlers
 
 
+# ====================================================================================================
+# MARK: ROUTE REGISTRATION (PUBLIC)
+# ====================================================================================================
 def register_skill_routes(app) -> None:
     register_skill_invocation_routes(app, _handlers())

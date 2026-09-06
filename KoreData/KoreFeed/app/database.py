@@ -12,7 +12,7 @@
 # Related modules:
 #   - app/server.py      -- article read operations
 #   - app/ingest.py      -- background ingest scheduler writes new entries
-#   - CommonCode/compress.py  -- article body compression (if enabled)
+#   - KoreCommon/compress.py  -- article body compression (if enabled)
 # MARK: FUNCTIONS
 # Primary types: FeedDatabaseError.
 # Function inventory:

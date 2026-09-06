@@ -1,4 +1,22 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Owns the persistent registry of named Skills and their callable Tools. Skills are discoverable
+# groupings; tools are the only executable units.
+#
+# Public API:
+#   - SkillManager -- normalises, persists, registers, removes, lists, exports, and invokes tools.
+#   - skill_manager -- process-wide registry used by API routes and the tool executor.
+#
+# The class is arranged as configuration, validation/persistence, registration mutation, query and
+# removal, catalog export, then HTTP invocation. Underscored methods are internal invariants.
+# ====================================================================================================
 """Persistent registry of named Skills and their callable Tools."""
+
+
+# ====================================================================================================
+# MARK: IMPORTS
+# ====================================================================================================
 
 import json
 import os
@@ -14,14 +32,24 @@ from typing import Any
 from utils.workspace_utils import get_controldata_dir
 
 
+# ====================================================================================================
+# MARK: PERSISTENCE CONFIGURATION
+# ====================================================================================================
 REGISTRY_FILE                   = get_controldata_dir() / "koreagent" / "skill_registry.json"
 CATALOG_EXPORT_FILE             = get_controldata_dir() / "koreagent" / "skill_manager_catalog.json"
 CATALOG_EXPORT_INTERVAL_SECONDS = 60
 _PERSIST_RETRY_DELAYS_SECONDS   = (0.05, 0.1, 0.2, 0.4, 0.8)
 
 
+# ====================================================================================================
+# MARK: SKILL AND TOOL REGISTRY (PUBLIC)
+# ====================================================================================================
 class SkillManager:
-    """Own the live Skill -> Tool registry.  Tools, never skills, are invoked."""
+    """Own the live Skill -> Tool registry. Tools, never skills, are invoked.
+
+    Method order: construction and normalisation; durable storage; registration and removal;
+    read/query access; catalog publication; finally HTTP tool invocation.
+    """
 
     def __init__(self, registry_file: Path = REGISTRY_FILE) -> None:
         self._path                  = registry_file

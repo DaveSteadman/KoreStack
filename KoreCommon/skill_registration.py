@@ -1,4 +1,22 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Registers a service-owned, reviewed skill manifest with KoreAgent and keeps that registration
+# fresh in the background.
+#
+# Public API:
+#   - register_manifest()          -- performs one registration attempt with bounded retries.
+#   - start_manifest_registration() -- starts the periodic registration worker.
+#
+# Private helpers resolve the target URL and translate a service manifest into SkillManager's
+# transport-neutral registration format.
+# ====================================================================================================
 """Manifest-backed registration client for KoreStack services."""
+
+
+# ====================================================================================================
+# MARK: IMPORTS
+# ====================================================================================================
 
 import json
 import logging
@@ -12,9 +30,15 @@ from typing import Any
 from KoreCommon.suite_paths import load_suite_config
 
 
+# ====================================================================================================
+# MARK: CONFIGURATION
+# ====================================================================================================
 REGISTRATION_REFRESH_SECONDS = 30
 
 
+# ====================================================================================================
+# MARK: MANIFEST TRANSLATION (PRIVATE)
+# ====================================================================================================
 def _agent_registration_url() -> str:
     config = load_suite_config()
     host = str(config.get("network", {}).get("host") or "127.0.0.1")
@@ -53,6 +77,9 @@ def _build_registration(raw: dict[str, Any], *, manifest_path: Path, service_bas
     return {"service": service, "service_label": service_label, "skills": payload_skills}
 
 
+# ====================================================================================================
+# MARK: REGISTRATION (PUBLIC)
+# ====================================================================================================
 def register_manifest(manifest_path: Path, *, service_base_url: str, attempts: int = 6) -> dict[str, Any]:
     """Submit one service's reviewed manifest to SkillManager, retrying while Agent starts."""
     raw = json.loads(manifest_path.read_text(encoding="utf-8"))

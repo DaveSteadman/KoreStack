@@ -7,11 +7,17 @@
 # All functions that require Ollama-specific APIs (/api/tags, /api/generate, /api/ps, ollama serve)
 # live here. The shared OpenAI-compatible call (call_llm_chat) lives in llm_client.py (the facade).
 #
-# Shared state and utilities are accessed via the llm_client_openai module imported as _core.
-# Module-level variables in _core are read at call time, so mutations via configure_host() etc.
-# are always reflected without needing to re-import.
+# Backend-neutral state and utilities are accessed via llm_client_openai as _core.
+# Ollama-owned settings, health state, and response structures remain in this module.
 # MARK: FUNCTIONS
+# Primary types: OllamaCallResult.
 # Function inventory:
+# - get_local_ollama_autostart_enabled: Returns local ollama autostart enabled for this module.
+# - configure_ollama_sampling_options: Configures ollama sampling options for this module.
+# - get_ollama_sampling_config: Returns ollama sampling config for this module.
+# - get_ollama_offload_mode: Returns ollama offload mode for this module.
+# - set_ollama_offload_mode: Sets ollama offload mode for this module.
+# - get_ollama_request_options: Returns ollama request options for this module.
 # - _per_request_context_enabled: Implements the  per request context enabled operation for this module.
 # - _windows_creation_flags: Implements the  windows creation flags operation for this module.
 # - is_ollama_running: Checks whether ollama running is true.
@@ -37,6 +43,7 @@
 # MARK: IMPORTS
 # ====================================================================================================
 import json
+import math
 import os
 import re
 import subprocess
@@ -44,6 +51,7 @@ import threading
 import time
 import urllib.error
 import urllib.request
+from dataclasses import dataclass
 
 import llm_client_openai as _core
 from utils.workspace_utils import trunc
@@ -58,6 +66,17 @@ _ollama_start_lock: threading.Lock = threading.Lock()
 _ollama_recovery_lock: threading.Lock = threading.Lock()
 _ollama_proc: subprocess.Popen | None = None
 
+DEFAULT_OLLAMAHOST = _core.DEFAULT_LOCAL_LLM_HOST
+OLLAMA_CLOUD_HOST  = "https://api.ollama.com"
+
+_ollama_temperature:         float = 0.8
+_ollama_temperature_enabled: bool  = False
+_ollama_seed:                int   = 0
+_ollama_seed_enabled:        bool  = False
+_ollama_offload_mode:        str   = "autogpu"
+_OLLAMA_OFFLOAD_MODES: frozenset[str] = frozenset({"forcecpu", "forcegpu", "autogpu"})
+_ollama_settings_lock: threading.RLock = threading.RLock()
+
 _RUNNER_RECOVERY_ATTEMPTS: int = 2
 _RUNNER_CRASH_MARKERS: tuple[str, ...] = (
     "llama-server process has terminated",
@@ -65,6 +84,111 @@ _RUNNER_CRASH_MARKERS: tuple[str, ...] = (
     "unspecified launch failure",
     "stack-based buffer",
 )
+
+
+@dataclass
+class OllamaCallResult:
+    """Structured return from call_ollama_extended, including token usage and throughput."""
+    response:                str
+    prompt_tokens:           int
+    completion_tokens:       int
+    total_tokens:            int
+    eval_duration_ns:        int = 0
+    prompt_eval_duration_ns: int = 0
+
+    @property
+    def tokens_per_second(self) -> float:
+        """Return completion throughput in tokens per second."""
+        if self.eval_duration_ns <= 0 or self.completion_tokens <= 0:
+            return 0.0
+        return self.completion_tokens / (self.eval_duration_ns / 1_000_000_000)
+
+
+def get_local_ollama_autostart_enabled() -> bool:
+    """Return whether local Ollama may be auto-started by the agent."""
+    raw = str(os.environ.get("KORE_OLLAMA_AUTOSTART", "")).strip().lower()
+    return raw in {"1", "true", "yes", "on"}
+
+
+def _coerce_config_bool(value: object) -> bool:
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "on"}
+    return bool(value)
+
+
+def configure_ollama_sampling_options(
+    temperature: object = 0.8,
+    temperature_enabled: object = False,
+    seed: object = 0,
+    seed_enabled: object = False,
+) -> None:
+    """Set config-file-controlled Ollama sampling options for future requests."""
+    global _ollama_temperature, _ollama_temperature_enabled, _ollama_seed, _ollama_seed_enabled
+    try:
+        normalized_temperature = float(temperature)
+    except (TypeError, ValueError):
+        normalized_temperature = 0.8
+    if not math.isfinite(normalized_temperature):
+        normalized_temperature = 0.8
+    try:
+        normalized_seed = int(seed)
+    except (TypeError, ValueError):
+        normalized_seed = 0
+
+    with _ollama_settings_lock:
+        _ollama_temperature         = normalized_temperature
+        _ollama_temperature_enabled = _coerce_config_bool(temperature_enabled)
+        _ollama_seed                = normalized_seed
+        _ollama_seed_enabled        = _coerce_config_bool(seed_enabled)
+
+
+def get_ollama_sampling_config() -> dict:
+    """Return the Ollama sampling values persisted by ``/defaults set``."""
+    with _ollama_settings_lock:
+        return {
+            "temperature":         _ollama_temperature,
+            "temperature_enabled": _ollama_temperature_enabled,
+            "seed":                _ollama_seed,
+            "seed_enabled":        _ollama_seed_enabled,
+        }
+
+
+def get_ollama_offload_mode() -> str:
+    """Return the requested Ollama CPU/GPU offload policy."""
+    with _ollama_settings_lock:
+        return _ollama_offload_mode
+
+
+def set_ollama_offload_mode(mode: str) -> None:
+    """Set the requested Ollama CPU/GPU offload policy."""
+    normalized = mode.strip().lower()
+    if normalized not in _OLLAMA_OFFLOAD_MODES:
+        raise ValueError(f"Unknown Ollama offload mode: {mode}")
+    global _ollama_offload_mode
+    with _ollama_settings_lock:
+        _ollama_offload_mode = normalized
+
+
+def get_ollama_request_options(num_ctx: int | None = None) -> dict:
+    """Build native Ollama request options for sampling and offload."""
+    options = {"num_predict": _core.get_active_max_predict()}
+    if num_ctx is not None:
+        options["num_ctx"] = num_ctx
+    with _ollama_settings_lock:
+        temperature_enabled = _ollama_temperature_enabled
+        temperature         = _ollama_temperature
+        seed_enabled        = _ollama_seed_enabled
+        seed                = _ollama_seed
+        offload_mode        = _ollama_offload_mode
+    if temperature_enabled:
+        options["temperature"] = temperature
+    if seed_enabled:
+        options["seed"] = seed
+    if offload_mode == "forcecpu":
+        options["num_gpu"] = 0
+    elif offload_mode == "forcegpu":
+        options["num_gpu"] = 999
+    return options
 
 
 def _cpu_fallback_enabled() -> bool:
@@ -88,16 +212,31 @@ def _per_request_context_enabled() -> bool:
     return os.name != "nt"
 
 
-def _windows_creation_flags(*, detach: bool = False) -> int:
-    """Return process flags that prevent transient console windows on Windows."""
+def _windows_creation_flags() -> int:
+    """Return process flags that prevent transient console windows on Windows.
+
+    CREATE_NO_WINDOW must not be combined with DETACHED_PROCESS: Windows ignores the former when
+    the latter is set. The Ollama daemon has no terminal interaction, so a separate console is
+    neither required nor desirable.
+    """
     if os.name != "nt":
         return 0
 
-    flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
-    if detach:
-        flags |= getattr(subprocess, "DETACHED_PROCESS", 0)
-        flags |= getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
-    return flags
+    return (
+        getattr(subprocess, "CREATE_NO_WINDOW", 0)
+        | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+    )
+
+
+def _hidden_windows_startupinfo():
+    """Return an explicit hidden-window startup configuration on Windows."""
+    if os.name != "nt":
+        return None
+
+    startupinfo = subprocess.STARTUPINFO()
+    startupinfo.dwFlags   |= subprocess.STARTF_USESHOWWINDOW
+    startupinfo.wShowWindow = subprocess.SW_HIDE
+    return startupinfo
 
 
 def is_ollama_running(host: str | None = None) -> bool:
@@ -119,7 +258,8 @@ def start_ollama_server() -> None:
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             stdin=subprocess.DEVNULL,
-            creationflags=_windows_creation_flags(detach=True),
+            creationflags=_windows_creation_flags(),
+            startupinfo=_hidden_windows_startupinfo(),
         )
     except FileNotFoundError:
         raise RuntimeError(
@@ -191,9 +331,9 @@ def recover_ollama_runtime(host: str, *, attempt: int, detail: str) -> None:
         and _is_runner_crash(detail)
         and _core._is_local_host(host)
         and _cpu_fallback_enabled()
-        and _core.get_ollama_offload_mode() == "autogpu"
+        and get_ollama_offload_mode() == "autogpu"
     ):
-        _core.set_ollama_offload_mode("forcecpu")
+        set_ollama_offload_mode("forcecpu")
         _core.log_to_session(
             "[Ollama recovery] Repeated GPU runner crash; retrying with CPU offload. "
             "Set KORE_OLLAMA_CPU_FALLBACK=0 to disable this fallback."
@@ -230,7 +370,8 @@ def _retry_after_runtime_failure(
 # ====================================================================================================
 # MARK: MODEL LISTING
 # ====================================================================================================
-def list_ollama_models(host: str | None = None, *, start_if_needed: bool = True) -> list[str]:
+def list_ollama_models(host: str | None = None, *, start_if_needed: bool = False) -> list[str]:
+    """List installed model IDs without starting a local Ollama daemon by default."""
     host = host or _core.get_active_host()
     if start_if_needed:
         ensure_ollama_running(host=host, start_if_needed=True)
@@ -451,7 +592,7 @@ def call_ollama_chat(
 ) -> _core.ChatCallResult:
     """Call Ollama's native chat API, preserving per-request runtime options."""
     host = host or _core.get_active_host()
-    ensure_ollama_running(host=host, start_if_needed=_core.get_local_ollama_autostart_enabled())
+    ensure_ollama_running(host=host, start_if_needed=get_local_ollama_autostart_enabled())
 
     last_user = next((trunc(message.get("content", ""), 32) for message in reversed(messages) if message.get("role") == "user"), "")
     ctx_str   = f"{num_ctx:,}" if num_ctx is not None and _per_request_context_enabled() else "server default"
@@ -472,7 +613,7 @@ def call_ollama_chat(
     if tools:
         payload["tools"] = tools
     requested_num_ctx = num_ctx if _per_request_context_enabled() else None
-    options = _core.get_ollama_request_options(requested_num_ctx)
+    options = get_ollama_request_options(requested_num_ctx)
     if options:
         payload["options"] = options
 
@@ -605,7 +746,7 @@ def call_ollama_extended(
     host: str | None = None,
     num_ctx: int | None = None,
     timeout: int | None = None,
-) -> _core.OllamaCallResult:
+) -> OllamaCallResult:
     """Call the Ollama generate endpoint and return the response with token usage counts.
 
     timeout defaults to the module-level _DEFAULT_LLM_TIMEOUT (set via set_llm_timeout()).
@@ -613,13 +754,13 @@ def call_ollama_extended(
     host = host or _core.get_active_host()
     # The local Ollama route is manual by default. Auto-start remains opt-in via
     # KORE_OLLAMA_AUTOSTART for environments that still want the old behavior.
-    ensure_ollama_running(host=host, start_if_needed=_core.get_local_ollama_autostart_enabled())
+    ensure_ollama_running(host=host, start_if_needed=get_local_ollama_autostart_enabled())
 
     preview = trunc(prompt.replace("\n", " "), 32)
     ctx_str = f"{num_ctx:,}" if num_ctx is not None else "default"
     _core.log_to_session(f"[LLM call] {model_name} | ctx={ctx_str} | {preview!r}")
 
-    options = _core.get_ollama_request_options(num_ctx)
+    options = get_ollama_request_options(num_ctx)
 
     payload = {
         "model":  model_name,
@@ -668,7 +809,7 @@ def call_ollama_extended(
     completion_tokens       = body.get("eval_count", 0)
     eval_duration_ns        = body.get("eval_duration", 0)
     prompt_eval_duration_ns = body.get("prompt_eval_duration", 0)
-    return _core.OllamaCallResult(
+    return OllamaCallResult(
         response=body["response"],
         prompt_tokens=prompt_tokens,
         completion_tokens=completion_tokens,

@@ -72,4 +72,4 @@ class SkillManagerPersistenceTests(unittest.TestCase):
             save.assert_not_called()
 
     def test_directory_not_found_is_a_tool_error(self) -> None:
-        self.assertTrue(skill_executor.is_skill_error("Directory not found: datauser/qwqw"))
+        self.assertTrue(skill_executor._is_skill_error("Directory not found: datauser/qwqw"))

@@ -1,3 +1,15 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Cross-cutting regression coverage for agent orchestration, tool invocation, Working Data,
+# persistence, web extraction, and the conversation bridge. Individual test names are the detailed
+# contract; this module intentionally groups end-to-end compatibility checks in one suite.
+# ====================================================================================================
+
+
+# ====================================================================================================
+# MARK: IMPORTS AND TEST BOOTSTRAP
+# ====================================================================================================
 import json
 import sys
 import tempfile
@@ -63,6 +75,9 @@ from testing import test_wrapper as test_wrapper_module
 from utils import workspace_utils as workspace_utils_module
 from utils.workspace_utils import get_user_data_dir
 
+# ====================================================================================================
+# MARK: REGRESSION CONTRACTS
+# ====================================================================================================
 class RegressionTests(unittest.TestCase):
 
     def setUp(self) -> None:

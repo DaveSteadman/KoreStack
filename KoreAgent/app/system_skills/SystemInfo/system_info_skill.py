@@ -86,10 +86,22 @@ def _get_os_name() -> str:
 
 
 # ----------------------------------------------------------------------------------------------------
+def _hidden_windows_creation_flags() -> int:
+    """Suppress a transient console when a system-information probe runs on Windows."""
+    return getattr(subprocess, "CREATE_NO_WINDOW", 0) if os.name == "nt" else 0
+
+
+# ----------------------------------------------------------------------------------------------------
 @lru_cache(maxsize=1)
 def _get_ollama_version() -> str:
     try:
-        result = subprocess.run(["ollama", "--version"], capture_output=True, text=True, check=False)
+        result = subprocess.run(
+            ["ollama", "--version"],
+            capture_output = True,
+            text           = True,
+            check          = False,
+            creationflags  = _hidden_windows_creation_flags(),
+        )
         raw_output = f"{result.stdout} {result.stderr}".strip()
         if result.returncode != 0:
             return "unknown"

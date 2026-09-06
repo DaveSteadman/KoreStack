@@ -153,6 +153,84 @@
 - build_category_payload
 - resolve_item_chunk_id
 
+### Data/datacontrol/koredata/RAG/databases/hansard2025api/hansard_access.py
+- _compress
+- _word_count
+- _get
+- _get_json
+- _sleep
+- get_conn
+- init_db
+- get_meta
+- set_meta
+- _bare_name
+- build_name_lookup
+- _match_member
+- _member_bio
+- ingest_members
+- _is_sitting_day
+- _extract_debates_from_html
+- get_sitting_debates
+- _looks_like_speaker
+- parse_speeches
+- ingest_debate
+- ingest_sitting_day
+- write_descriptor
+- _flush
+
+### Data/datacontrol/koredata/RAG/databases/hansard2025api/ingest.py
+- _first_unchecked_date
+- main
+
+### Data/datacontrol/koredata/RAG/databases/hansard2025api/navigation_access.py
+- _connection
+- _content
+- _payload_base
+- has_navigation
+- build_explore_payload
+- build_sitting_payload
+- build_debate_payload
+- build_member_payload
+
+### Data/datacontrol/koredata/RAG/databases/hansard2026api/hansard_access.py
+- _compress
+- _word_count
+- _get
+- _get_json
+- _sleep
+- get_conn
+- init_db
+- get_meta
+- set_meta
+- _bare_name
+- build_name_lookup
+- _match_member
+- _member_bio
+- ingest_members
+- _is_sitting_day
+- _extract_debates_from_html
+- get_sitting_debates
+- _looks_like_speaker
+- parse_speeches
+- ingest_debate
+- ingest_sitting_day
+- write_descriptor
+- _flush
+
+### Data/datacontrol/koredata/RAG/databases/hansard2026api/ingest.py
+- _first_unchecked_date
+- main
+
+### Data/datacontrol/koredata/RAG/databases/hansard2026api/navigation_access.py
+- _connection
+- _content
+- _payload_base
+- has_navigation
+- build_explore_payload
+- build_sitting_payload
+- build_debate_payload
+- build_member_payload
+
 ### KoreAgent/main.py
 
 ### KoreAgent/app/context_compactor.py
@@ -217,9 +295,17 @@
 - format_lmstudio_model_report
 
 ### KoreAgent/app/llm_client_ollama.py
+- get_local_ollama_autostart_enabled
+- _coerce_config_bool
+- configure_ollama_sampling_options
+- get_ollama_sampling_config
+- get_ollama_offload_mode
+- set_ollama_offload_mode
+- get_ollama_request_options
 - _cpu_fallback_enabled
 - _per_request_context_enabled
 - _windows_creation_flags
+- _hidden_windows_startupinfo
 - is_ollama_running
 - start_ollama_server
 - ensure_ollama_running
@@ -238,23 +324,18 @@
 - call_ollama_chat
 - call_ollama_extended
 - call_ollama
+- tokens_per_second
 
 ### KoreAgent/app/llm_client_openai.py
 - _default_llm_timeout_from_env
-- get_local_ollama_autostart_enabled
 - get_llm_timeout
 - set_llm_timeout
 - register_llm_call_logger
 - log_to_session
 - register_session_config
 - get_active_model
-- get_ollama_offload_mode
-- set_ollama_offload_mode
-- _coerce_config_bool
-- configure_ollama_sampling_options
-- get_ollama_sampling_config
-- get_ollama_request_options
 - get_active_num_ctx
+- get_active_max_predict
 - mark_host_healthy
 - invalidate_host_health
 - is_host_health_cached
@@ -267,7 +348,6 @@
 - _request_json
 - resolve_model_name
 - is_explicit_model_name
-- tokens_per_second
 - response
 - tool_calls
 
@@ -328,12 +408,12 @@
 - main
 
 ### KoreAgent/app/skill_executor.py
-- _load_callable_from_module_path
 - build_catalog_gates
+- _load_callable_from_module_path
 - _build_unknown_tool_error
 - _build_inactive_tool_error
 - _is_local_system_tool
-- is_skill_error
+- _is_skill_error
 - execute_tool_call
 
 ### KoreAgent/app/skill_manager.py
@@ -618,6 +698,9 @@
 
 ### KoreAgent/app/input_layer/korechat_proxy_routes.py
 - register_korechat_proxy_routes
+- kc_send
+- kc_get_messages
+- kc_get_conversation
 
 ### KoreAgent/app/input_layer/koreconv_input.py
 - _invalid_model_response_reason
@@ -777,6 +860,9 @@
 - kc_patch
 - kc_delete
 - _kc_write
+- kc_request_async
+- kc_get_async
+- kc_post_async
 
 ### KoreAgent/app/sessions/session_factory.py
 - make_task_session
@@ -854,6 +940,7 @@
 ### KoreAgent/app/system_skills/SystemInfo/system_info_skill.py
 - _get_python_version
 - _get_os_name
+- _hidden_windows_creation_flags
 - _get_ollama_version
 - _format_bytes
 - _get_memory_usage_bytes
@@ -1019,6 +1106,7 @@
 - test_scratch_query_prompt_forbids_outside_knowledge
 - fake_call_llm_chat
 - fake_execute_tool_call
+- fake_list_tools
 - fake_orchestrate_prompt
 - fake_http_post
 - fake_post
@@ -1136,6 +1224,7 @@
 ### KoreChat/app/__init__.py
 
 ### KoreChat/app/api/app.py
+- status
 
 ### KoreChat/app/api/routes_conversations.py
 - _require_conversation
@@ -1171,9 +1260,11 @@
 - serve_ui_js
 - serve_ui_css
 - serve_ui_module
+- stream_events
 
 ### KoreChat/app/api/startup.py
 - _install_loop_exception_handler
+- lifespan
 - _exception_handler
 
 ### KoreChat/app/api/state.py
@@ -1248,6 +1339,8 @@
 ### KoreChat/app/runtime/stream.py
 - push_event
 - _enqueue_event
+- event_stream_response
+- generate
 
 ### KoreChat/app/runtime/__init__.py
 
@@ -1420,6 +1513,7 @@
 - api_chat_delete_thread
 - parse_args
 - main
+- dispatch
 - _output
 - resolve_for_run
 
@@ -1721,6 +1815,7 @@
 
 ### KoreCommon/skill_service.py
 - register_skill_invocation_routes
+- invoke_skill
 
 ### KoreCommon/stack_watchdog.py
 - start_from_environment
@@ -1891,6 +1986,7 @@
 - _store_classic_email_config
 - _store_sftp_file_config
 - _reset_connection_timing
+- lifespan
 - _ctx
 - status
 - _validate_delivery_html
@@ -2056,6 +2152,7 @@
 - _due
 - _next_fire
 - _scheduler
+- lifespan
 - status
 - list_cronprompts
 - list_test_runs
@@ -2085,8 +2182,6 @@
 - fake_http
 
 ### KoreData/main.py
-
-### KoreData/CommonCode/compress.py
 
 ### KoreData/CommonCode/config.py
 
@@ -2118,27 +2213,46 @@
 
 ### KoreData/KoreDataGateway/app/gateway_api.py
 - register_gateway_api_routes
+- api_search
+- api_full_text
+- api_sentence
+- api_sentence_get
 
 ### KoreData/KoreDataGateway/app/gateway_feed.py
 - _service_not_ready_error
+- get_feed_entry
+- get_feed_sentence
 
 ### KoreData/KoreDataGateway/app/gateway_graph.py
 - normalise_graph_query_literal
+- search_graph
 
 ### KoreData/KoreDataGateway/app/gateway_library.py
 - _service_not_ready_error
+- find_library_book
+- get_library_index
+- get_library_book_chunk
+- update_library_book
+- repair_library_book_anchors
+- search_library
 - _rank
 
 ### KoreData/KoreDataGateway/app/gateway_rag.py
 - _service_not_ready_error
+- get_rag_chunk
 - normalise_processing_schedule
+- enrich_databases
 - list_processing_scripts
 
 ### KoreData/KoreDataGateway/app/gateway_reference.py
 - _service_not_ready_error
+- get_reference_article
+- get_reference_sentence
 
 ### KoreData/KoreDataGateway/app/gateway_scrape.py
 - _service_not_ready_error
+- get_scrape_chunk
+- search_scrape
 
 ### KoreData/KoreDataGateway/app/gateway_search.py
 - build_artifact_ref
@@ -2151,6 +2265,13 @@
 - _parse_search_timestamp
 - _result_match_score
 - _merge_search_results
+- run_search
+- _feeds
+- _reference
+- _library
+- _rag
+- _scrape
+- _graph
 
 ### KoreData/KoreDataGateway/app/saved_searches.py
 - _read_saved_searches
@@ -2170,37 +2291,86 @@
 - _clear_stale_child_listeners
 - _start_children
 - _stop_children
+- _wait_for
 - _set_child_status
 - _set_gateway_status
 - _get_gateway_startup_snapshot
+- _wait_for_children_ready
 - _unavailable_ui_service_cards
+- _refresh_ui_service_cards
+- _refresh_ui_service_cards_loop
+- _lifespan
 - _svc_ui
 - _svc_status
 - _normalise_graph_query_literal
+- _rag_databases_enriched
 - _rag_processing_scripts
 - _normalize_rag_processing_schedule
 - _map_feed_entry
 - _map_ref_article
+- api_search
+- api_full_text
+- api_sentence
+- api_sentence_get
 - _saved_search_payload
+- koredata_search
+- koredata_savedsearch_list
+- koredata_savedsearch_run
+- koredata_get_sentence
+- koredata_get_feed_entry
+- koredata_get_reference_article
+- koredata_find_library_book
+- koredata_get_library_index
+- koredata_get_library_book_chunk
+- koredata_update_library_book
+- koredata_repair_library_book_anchors
+- koredata_get_rag_chunk
+- koredata_get_scrape_chunk
+- koredata_get_full_text
+- api_list_saved_searches
+- api_save_saved_search
+- api_delete_saved_searches
+- api_run_saved_search
+- root_redirect
+- web_root
+- gateway_status
+- _probe
 - _exception_handler
 
 ### KoreData/KoreDataGateway/app/test_gateway_library_write.py
 - __init__
 - json
 - __init__
+- patch
+- post
+- test_update_library_book_sends_patch_payload
+- test_repair_library_book_anchors_sends_post
 
 ### KoreData/KoreDataGateway/app/test_server_artifact_refs.py
 - test_map_feed_entry_includes_artifact_ref
 - test_parse_reference_artifact_ref_restores_title
 - test_parse_sentence_locator_restores_parts
+- test_get_full_text_dispatches_feed_ref
+- test_get_full_text_rejects_library_book
+- test_api_full_text_delegates_to_ref_dispatcher
+- test_get_sentence_dispatches_feed_locator
+- test_api_sentence_delegates_to_sentence_dispatcher
+- test_rag_databases_enriched_preserves_base_navigation_on_partial_info
+- test_rag_databases_enriched_falls_back_to_local_db_size
 - test_rag_processing_scripts_include_schedule_and_last_run
 - test_normalize_rag_processing_schedule_rejects_unknown_values
+- fake_get_feed_entry
+- fake_get_full_text
+- fake_get_sentence
 - __init__
 - json
+- get
 - __init__
 - json
+- get
 - __init__
 - json
+- get
 
 ### KoreData/KoreDataGateway/app/__init__.py
 
@@ -2412,7 +2582,10 @@
 
 ### KoreData/KoreFeed/app/server.py
 - _warm_feed_domains
+- _lifespan
 - api_status
+- _http_exception_handler
+- _generic_exception_handler
 - api_list_feeds
 - api_add_feed
 - api_remove_feed
@@ -2487,6 +2660,7 @@
 - _lookup
 
 ### KoreData/KoreGraph/app/server.py
+- _lifespan
 - _request_ui_prefix
 - graph_connection_search_vocab
 - graph_connection_expand_concept
@@ -2619,7 +2793,9 @@
 ### KoreData/KoreLibrary/app/endpoint_api.py
 - _parse_gutenberg_html
 - _extract_link
+- _kiwix_search_url
 - _fallback_title_from_url
+- _fetch_and_import_viewer_url
 - register_library_api
 - route_list_catalogs
 - route_list_books
@@ -2637,6 +2813,13 @@
 - route_backfill_catalog_sentences
 - route_rebuild_catalog_sentences
 - route_set_sentence_deleted
+- kiwix_inventory
+- kiwix_search
+- kiwix_suggest
+- kiwix_catalog
+- import_kiwix
+- import_kiwix_viewer
+- import_kiwix_viewer_batch
 - route_status
 
 ### KoreData/KoreLibrary/app/endpoint_ui.py
@@ -2658,6 +2841,7 @@
 
 ### KoreData/KoreLibrary/app/server.py
 - korelibrary_search
+- _lifespan
 - _warm_library
 
 ### KoreData/KoreLibrary/app/__init__.py
@@ -2809,6 +2993,7 @@
 - _run_ingest_scheduler
 - _reset_stale_running
 - _warm_registered_databases
+- _lifespan
 
 ### KoreData/KoreRAG/app/__init__.py
 
@@ -2858,7 +3043,6 @@
 - _sentence_locator
 - get_db_path
 - db_connection
-- _close_connection
 - init_db
 - _word_count
 - _parse_json_list
@@ -2904,8 +3088,10 @@
 - route_root
 - route_ui
 - ref_import
+- ref_import_crawl
 - ref_import_status
 - ref_import_stop
+- ref_import_throttle
 - ref_index
 - ref_search
 - ref_article_new
@@ -2919,6 +3105,7 @@
 
 ### KoreData/KoreReference/app/server.py
 - _warm_reference_semantic_index
+- _lifespan
 - _require_article
 - route_list_articles
 - route_random_article
@@ -2944,6 +3131,13 @@
 - route_import_kiwix_backfill
 - route_import_status
 - route_status
+
+### KoreData/KoreReference/app/test_database_concurrency.py
+- test_reader_observes_committed_snapshot_while_writer_is_open
+
+### KoreData/KoreReference/app/test_import_worker.py
+- test_admission_lock_is_held_until_worker_finishes
+- worker
 
 ### KoreData/KoreReference/app/test_kiwix_importer.py
 - _null_db_connection
@@ -2981,6 +3175,8 @@
 - extract_article_html
 
 ### KoreData/KoreReference/app/importers/state.py
+- start_import_worker
+- _run
 
 ### KoreData/KoreReference/app/importers/__init__.py
 
@@ -3061,6 +3257,7 @@
 - _crawl_capture
 - _start_capture
 - _reindex_existing_captures
+- _lifespan
 - route_root
 - route_status
 - route_list_captures
@@ -3082,12 +3279,15 @@
 
 ### KoreDocs/app/api/app.py
 - setup_logging
+- lifespan
 - list_schemas
 - main
 - startup_report
 
 ### KoreDocs/app/api/middleware.py
+- dispatch
 - __init__
+- dispatch
 
 ### KoreDocs/app/api/routes_korefile.py
 - korefile_revision_tokenize
@@ -3478,12 +3678,14 @@
 - get_page_links_skill
 - get_page_links_text_skill
 - lookup_wikipedia_skill
+- _lifespan
 - _home_context
 - status
 - ui_home
 - activity
 - get_search_provider_settings
 - save_search_provider_settings
+- save_search_provider_settings_form
 - root
 - main
 

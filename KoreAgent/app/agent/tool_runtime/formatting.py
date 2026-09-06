@@ -1,4 +1,21 @@
+# ====================================================================================================
+# MARK: OVERVIEW
+# ====================================================================================================
+# Pure presentation helpers for tool output and degraded model replies. This module does not invoke
+# tools or mutate conversation state.
+#
+# Public API:
+#   - extract_result_fields() -- normalises a search-like result record.
+#   - format_tool_outputs()   -- renders completed tool calls for the model.
+#   - build_fallback_answer() -- creates a useful response when model generation degrades.
+#   - strip_cot_preamble()    -- removes an accidental planning preamble from a reply.
+# ====================================================================================================
 """Formatting for tool results and degraded model replies."""
+
+
+# ====================================================================================================
+# MARK: IMPORTS
+# ====================================================================================================
 
 from pathlib import Path
 import re
@@ -6,6 +23,9 @@ import re
 from tool_result import ToolCallResult
 from utils.workspace_utils import trunc
 
+# ====================================================================================================
+# MARK: FORMATTING PATTERNS
+# ====================================================================================================
 _COT_PLANNING_RE = re.compile(
     r"\b(?:we should|we can|we need|we will|we could|we\'ll|we\'re|we must|"
     r"let me|let\'s|let us|thus we|so we|now we|next we|i need|i should|i will|i\'ll|"
@@ -16,6 +36,9 @@ _COT_PLANNING_RE = re.compile(
 _CONTENT_MARKER_RE = re.compile(r"(?:^|\n)(\*\*|#{1,3} |\| |\d+\. |- )")
 
 
+# ====================================================================================================
+# MARK: TOOL OUTPUT FORMATTING (PUBLIC)
+# ====================================================================================================
 def extract_result_fields(item: dict) -> tuple[str, str, str]:
     return item.get("title", ""), item.get("url", ""), item.get("snippet") or item.get("body", "")
 
@@ -64,6 +87,9 @@ def format_tool_outputs(tool_outputs: list[ToolCallResult]) -> str:
     return "\n".join(lines)
 
 
+# ====================================================================================================
+# MARK: DEGRADED RESPONSE FORMATTING (PUBLIC)
+# ====================================================================================================
 def build_fallback_answer(user_prompt: str, tool_outputs: list[ToolCallResult]) -> str:
     lines = [
         f"(Note: the model did not produce a synthesized answer for: \"{trunc(user_prompt, 80)}\")",
