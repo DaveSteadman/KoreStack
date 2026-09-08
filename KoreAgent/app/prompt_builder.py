@@ -93,7 +93,7 @@ def build_skill_selection_protocol_guidance() -> str:
     return (
         "\nTool selection protocol: schemas show only active tools. If no active tool explicitly "
         "names the requested capability, do not substitute a nearby generic tool. Call "
-        "`skills_list()`, choose its exact Skill name, call "
+        "`skills_search(query)` for focused discovery (or `skills_list()` for the full index), choose its exact Skill name, call "
         "`select_skills([...])`, then use the newly active function schemas. "
         "This applies even when a generic search, file, or document tool is already active."
     )

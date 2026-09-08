@@ -8,6 +8,7 @@
 # - clear_session_tools_active: Clears session tools active for this module.
 # - set_selected_tools: Sets selected tools for this module.
 # - promote_selected_tools: Implements the promote selected tools operation for this module.
+# - get_tool_schema_revision: Returns the active-tool schema revision for this module.
 # - note_tool_used: Implements the note tool used operation for this module.
 # ====================================================================================================
 
@@ -26,6 +27,7 @@ from sessions.tool_state   import clear_session_tools_active as _clear_session_t
 from sessions.tool_state   import ensure_conversation_for_session as _ensure_conversation_for_session
 from sessions.tool_state   import fetch_conversation_for_session as _fetch_conversation_for_session
 from sessions.tool_state   import get_selected_tools
+from sessions.tool_state   import get_tool_schema_revision as _get_tool_schema_revision
 from sessions.tool_state   import kc_request_json as _kc_request_json
 from sessions.tool_state   import note_tool_used as _note_tool_used
 from sessions.tool_state   import promote_selected_tools as _promote_selected_tools
@@ -53,6 +55,14 @@ def set_selected_tools(
     )
     _clear_runtime_caches()
     return result
+
+
+def get_tool_schema_revision(
+    session_id: str | None = None,
+    conversation_entry: dict | None = None,
+) -> int:
+    """Return the revision for active-tool membership, excluding FIFO reordering."""
+    return _get_tool_schema_revision(session_id=session_id, conversation_entry=conversation_entry)
 
 
 def promote_selected_tools(
@@ -95,6 +105,7 @@ __all__ = [
     "clear_session_tools_active",
     "derive_active_tool_runtime",
     "filter_local_payload",
+    "get_tool_schema_revision",
     "get_selected_tools",
     "local_tool_names",
     "note_tool_used",

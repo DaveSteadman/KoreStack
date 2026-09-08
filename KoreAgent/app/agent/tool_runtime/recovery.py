@@ -116,7 +116,7 @@ def build_tool_recovery_message(event: dict[str, object]) -> str:
         f"Recovery required: requested tool `{requested}` is not a valid tool name in this runtime.\n"
         "Do not answer the user yet.\n"
         "Use ToolSelection now.\n"
-        "Call `skills_list()` and select the correct Skill, or activate the exact tool, then continue the task.\n"
+        f"Call `skills_search(query={requested!r})` and select the correct Skill, or activate the exact tool, then continue the task.\n"
         f"Currently active tools: {active_summary}"
     )
 

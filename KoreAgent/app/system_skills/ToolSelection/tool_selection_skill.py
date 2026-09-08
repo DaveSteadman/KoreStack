@@ -6,6 +6,7 @@
 #
 # Public API:
 #   - skills_list()        -- lists selectable skills.
+#   - skills_search()      -- finds selectable Skills relevant to a task.
 #   - select_skills()      -- selects complete skills.
 #   - tools_catalog_list() -- lists every catalogue tool.
 #   - tools_active_add()   -- activates exact tool names for the current session.
@@ -69,6 +70,67 @@ def _local_skills(payload: dict) -> dict[str, list[str]]:
     return skills
 
 
+def _skill_search_records(payload: dict) -> list[dict[str, object]]:
+    records: list[dict[str, object]] = []
+    local_skill_names: set[str] = set()
+    for skill in payload.get("skills", []):
+        name = str(skill.get("skill_name") or "").strip()
+        if not name or skill.get("is_system_skill"):
+            continue
+        local_skill_names.add(name)
+        tools = [
+            str(signature).split("(", 1)[0].strip()
+            for signature in skill.get("functions", [])
+            if str(signature).split("(", 1)[0].strip()
+        ]
+        records.append(
+            {
+                "name":        name,
+                "origin":      "local",
+                "description": str(skill.get("purpose") or "").strip(),
+                "tools":       tools,
+                "search_text": " ".join(
+                    [
+                        name,
+                        str(skill.get("purpose") or ""),
+                        " ".join(str(item or "") for item in skill.get("triggers", [])),
+                        " ".join(tools),
+                    ]
+                ).lower(),
+            }
+        )
+    for skill in skill_manager.list_skills():
+        if skill["name"] in local_skill_names or skill["name"] == "system_skills":
+            continue
+        records.append(
+            {
+                "name":        skill["name"],
+                "origin":      "registered",
+                "description": skill["selection_description"],
+                "tools":       [tool["name"] for tool in skill["tools"]],
+                "search_text": " ".join(
+                    [
+                        skill["name"],
+                        skill["selection_description"],
+                        skill.get("purpose", ""),
+                        " ".join(tool["name"] for tool in skill["tools"]),
+                    ]
+                ).lower(),
+            }
+        )
+    return records
+
+
+def _eviction_notice(evicted_tools: list[str]) -> str:
+    if not evicted_tools:
+        return ""
+    names = ", ".join(f"`{name}`" for name in evicted_tools)
+    return (
+        f"Tool capacity evicted {names}. Those tools are no longer callable in this conversation; "
+        "reactivate them explicitly if they are needed again."
+    )
+
+
 # ====================================================================================================
 # MARK: MODEL-CALLABLE SELECTION TOOLS (PUBLIC)
 # ====================================================================================================
@@ -84,6 +146,44 @@ def skills_list() -> dict:
             + [{"name": skill["name"], "tool_count": len(skill["tools"]), "origin": "registered", "description": skill["selection_description"]} for skill in registered],
             key=lambda item: item["name"],
         ),
+    }
+
+
+def skills_search(query: str, limit: int = 8) -> dict:
+    """Find relevant selectable Skills without returning the entire catalog."""
+    payload          = _available_payload(load_skills_payload(DEFAULT_OUTPUT_FILE))
+    normalized_query = " ".join(str(query or "").lower().split())
+    terms            = [term for term in normalized_query.split() if len(term) > 1]
+    try:
+        requested_limit = int(limit or 8)
+    except (TypeError, ValueError):
+        requested_limit = 8
+    bounded_limit = max(1, min(requested_limit, 12))
+    matches: list[tuple[int, dict[str, object]]] = []
+    for record in _skill_search_records(payload):
+        name       = str(record["name"]).lower()
+        searchable = str(record["search_text"])
+        score      = 0
+        if normalized_query and normalized_query in name:
+            score += 100
+        elif normalized_query and normalized_query in searchable:
+            score += 40
+        score += sum(20 if term in name else 5 for term in terms if term in searchable)
+        if score:
+            matches.append((score, record))
+    selected = sorted(matches, key=lambda item: (-item[0], str(item[1]["name"])))[:bounded_limit]
+    return {
+        "instruction": "Call select_skills with one or more exact names from these matches.",
+        "query": normalized_query,
+        "skills": [
+            {
+                "name":        record["name"],
+                "origin":      record["origin"],
+                "description": record["description"],
+                "tool_count":  len(record["tools"]),
+            }
+            for _score, record in selected
+        ],
     }
 
 
@@ -104,6 +204,7 @@ def select_skills(skill_names: list[str]) -> dict:
         "activated_tools":     tools,
         "already_active_tools": [tool for tool in tools if tool in system_tools],
         **activation,
+        "eviction_notice": _eviction_notice(activation["evicted"]),
     }
 
 
@@ -126,7 +227,8 @@ def tools_active_add(tool_names: list[str]) -> dict:
         "already_active": [name for name in requested if name in system_tools],
         **activation,
         "active_tools":   get_selected_tools(),
+        "eviction_notice": _eviction_notice(activation["evicted"]),
     }
 
 
-__all__ = ["skills_list", "select_skills", "tools_catalog_list", "tools_active_add"]
+__all__ = ["skills_list", "skills_search", "select_skills", "tools_catalog_list", "tools_active_add"]

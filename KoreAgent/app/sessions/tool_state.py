@@ -14,6 +14,7 @@
 # - update_cache: Updates cache for this module.
 # - clear_session_tools_active: Clears session tools active for this module.
 # - get_selected_tools: Returns selected tools for this module.
+# - get_tool_schema_revision: Returns the active-tool schema revision for this module.
 # - set_selected_tools: Sets selected tools for this module.
 # - promote_selected_tools: Implements the promote selected tools operation for this module.
 # - note_tool_used: Implements the note tool used operation for this module.
@@ -33,6 +34,7 @@ MAX_ACTIVE_TOOLS      = 32
 ALWAYS_ON_TOOL_NAMES = frozenset({
     "get_datetime_data",
     "skills_list",
+    "skills_search",
     "select_skills",
     "tools_catalog_list",
     "tools_active_add",
@@ -40,6 +42,7 @@ ALWAYS_ON_TOOL_NAMES = frozenset({
 
 _KC_TIMEOUT = 8
 _SESSION_TOOLS_ACTIVE: dict[str, list[str]] = {}
+_SESSION_TOOL_SCHEMA_REVISIONS: dict[str, int] = {}
 _SESSION_FILE_CWD:     dict[str, str]       = {}
 _FILE_CWD_FETCHED:     set[str]             = set()
 _SESSION_LOCK = threading.Lock()
@@ -122,8 +125,12 @@ def ensure_conversation_for_session(session_id: str) -> dict | None:
 def update_cache(session_id: str, tools_active: list[str]) -> None:
     if not session_id:
         return
+    normalized = _normalize_tool_names(tools_active)[:MAX_ACTIVE_TOOLS]
     with _SESSION_LOCK:
-        _SESSION_TOOLS_ACTIVE[session_id] = list(tools_active)
+        previous = _SESSION_TOOLS_ACTIVE.get(session_id)
+        _SESSION_TOOLS_ACTIVE[session_id] = list(normalized)
+        if previous is None or set(previous) != set(normalized):
+            _SESSION_TOOL_SCHEMA_REVISIONS[session_id] = _SESSION_TOOL_SCHEMA_REVISIONS.get(session_id, 0) + 1
 
 
 def clear_session_tools_active(session_id: str) -> None:
@@ -132,6 +139,7 @@ def clear_session_tools_active(session_id: str) -> None:
         return
     with _SESSION_LOCK:
         _SESSION_TOOLS_ACTIVE.pop(cleaned, None)
+        _SESSION_TOOL_SCHEMA_REVISIONS[cleaned] = _SESSION_TOOL_SCHEMA_REVISIONS.get(cleaned, 0) + 1
         _SESSION_FILE_CWD.pop(cleaned, None)
         _FILE_CWD_FETCHED.discard(cleaned)
 
@@ -197,6 +205,16 @@ def get_selected_tools(session_id: str | None = None, conversation_entry: dict |
     if isinstance(conversation_entry, dict):
         conversation_entry["tools_active"] = list(tools_active)
     return list(tools_active)
+
+
+def get_tool_schema_revision(session_id: str | None = None, conversation_entry: dict | None = None) -> int:
+    """Return a revision that changes only when active tool membership changes."""
+    resolved_session_id = _resolve_session_id(session_id)
+    if not resolved_session_id:
+        return 0
+    get_selected_tools(session_id=resolved_session_id, conversation_entry=conversation_entry)
+    with _SESSION_LOCK:
+        return _SESSION_TOOL_SCHEMA_REVISIONS.get(resolved_session_id, 0)
 
 
 def set_selected_tools(

@@ -162,7 +162,7 @@ def _build_unknown_tool_error(
     if not requested:
         return base_msg
     return (
-        f"{base_msg}. Inspect `tools_catalog_list()` or `skills_list()` "
+        f"{base_msg}. Inspect `tools_catalog_list()` or use `skills_search(query=...)` "
         "and activate an exact tool name."
     )
 
@@ -172,7 +172,7 @@ def _build_inactive_tool_error(requested_tool_name: str) -> str:
     requested = str(requested_tool_name or "").strip()
     return (
         f"Tool '{requested}' is not active for this conversation. "
-        "Use `tools_catalog_list()` or `skills_list()`, then activate it "
+        "Use `tools_catalog_list()` or `skills_search(query=...)`, then activate it "
         "with `tools_active_add`."
     )
 

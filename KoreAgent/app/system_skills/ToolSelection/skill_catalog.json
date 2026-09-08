@@ -5,6 +5,7 @@
   "module": "KoreAgent/app/system_skills/ToolSelection/tool_selection_skill.py",
   "functions": [
     "skills_list()",
+    "skills_search(query: str, limit: int = 8)",
     "select_skills(skill_names: list[str])",
     "tools_catalog_list()",
     "tools_active_add(tool_names: list[str])"

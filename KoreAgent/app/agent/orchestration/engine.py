@@ -83,6 +83,7 @@ from system_skills.SystemInfo.system_info_skill import get_static_system_info_st
 from skills_catalog_builder import build_tool_definitions
 from sessions.tool_selection import derive_active_tool_runtime
 from sessions.tool_selection import filter_local_payload
+from sessions.tool_selection import get_tool_schema_revision
 from sessions.tool_selection import promote_selected_tools
 from agent.tool_runtime.loop import extract_result_fields as _tool_loop_extract_result_fields
 from agent.tool_runtime.loop import format_tool_outputs as _tool_loop_format_tool_outputs
@@ -670,13 +671,20 @@ def orchestrate_prompt(
             "missing_selected": initial_tool_runtime["missing_selected"],
             "all_known_tool_names": initial_tool_runtime["all_known_tool_names"],
         }
-        first_tool_round = True
+        runtime_revision = get_tool_schema_revision(
+            session_id         = active_session_id,
+            conversation_entry = conversation_entry,
+        )
+        cached_runtime = initial_runtime
 
         def _build_tool_runtime() -> dict[str, object]:
-            nonlocal first_tool_round
-            if first_tool_round:
-                first_tool_round = False
-                return initial_runtime
+            nonlocal cached_runtime, runtime_revision
+            current_revision = get_tool_schema_revision(
+                session_id         = active_session_id,
+                conversation_entry = conversation_entry,
+            )
+            if current_revision == runtime_revision:
+                return cached_runtime
 
             round_available_local_payload = config.skills_payload if _WEB_SKILLS_ENABLED else _filter_web_skills(config.skills_payload)
             runtime = derive_active_tool_runtime(
@@ -688,13 +696,18 @@ def orchestrate_prompt(
             round_active_payload = runtime["active_local_payload"]
             round_tool_defs = build_tool_definitions(round_active_payload)
             round_tool_defs = round_tool_defs + list(runtime["active_registered_defs"])
-            return {
+            cached_runtime = {
                 "tool_defs": round_tool_defs,
                 "catalog_gates": build_catalog_gates(round_active_payload),
                 "active_tool_names": runtime["active_tool_names"],
                 "missing_selected": runtime["missing_selected"],
                 "all_known_tool_names": runtime["all_known_tool_names"],
             }
+            runtime_revision = get_tool_schema_revision(
+                session_id         = active_session_id,
+                conversation_entry = conversation_entry,
+            )
+            return cached_runtime
 
         # Register a per-run stop event so that /stoprun only affects this session.
         _run_id         = f"{active_session_id}_{id(messages)}"

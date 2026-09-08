@@ -9,10 +9,12 @@ independently.
 - Module: `KoreAgent/app/system_skills/ToolSelection/tool_selection_skill.py`
 - Functions:
   - `skills_list()` — list exact Skill names and tool counts.
+  - `skills_search(query: str, limit: int = 8)` — find relevant Skills without returning the full catalog.
   - `select_skills(skill_names: list[str])` — add every tool belonging to each named Skill.
   - `tools_catalog_list()` — list exact individual tool names.
   - `tools_active_add(tool_names: list[str])` — add individual tools when needed.
 
-Use `skills_list()` followed by `select_skills(...)` as the normal route. System tools are already
+Use `skills_search(...)` followed by `select_skills(...)` as the normal route; use `skills_list()` when
+the task needs the complete index. System tools are already
 active and are not listed as selectable Skills. Use direct tool activation only when selecting the
 whole Skill would be inappropriate.

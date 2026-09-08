@@ -9,6 +9,7 @@ large tool output across steps and retrieve only the relevant part later.
 ## Interface
 
 - Module: `KoreAgent/app/system_skills/WorkingData/working_data_skill.py`
+- Stable facade: `KoreAgent/app/working_data.py`
 - Functions:
   - `working_data_save(name: str, value: str | list[dict] | dict, source_tool: str = "", source_args: dict = None, replace: bool = False)`
   - `working_data_get(name: str, indices: list[int] = None, max_records: int = 0, fields: list[str] = None, offset: int = 0, limit: int = 0, excerpt_chars: int = 1200)`
@@ -20,9 +21,34 @@ large tool output across steps and retrieve only the relevant part later.
   - `working_data_peek(name: str, substring: str, context_chars: int = 250)`
   - `working_data_query(name: str, query: str, save_result_name: str = "", instructions: str = "")`
   - `working_data_rename(name: str, new_name: str)`
+  - `working_data_filter(name: str, prompt: str, save_as: str = "", replace: bool = False, fields: list[str] = None, excerpt_chars: int = 300)`
   - `working_data_rank(name: str, criteria: str, count: int = 5, save_as: str = "", fields: list[str] = None, excerpt_chars: int = 700, offset: int = 0, limit: int = 30)`
   - `working_data_select(name: str, indices: list[int], save_as: str = "")`
   - `working_data_fetch_full_text(name: str, indices: list[int] = None, save_as: str = "")`
+  - `working_data_drop_where(name: str, predicate: str, save_as: str = "", replace: bool = False)`
+  - `working_data_expand_full_text(name: str, save_as: str = "", replace: bool = False, offset: int = 0, limit: int = 0)`
+  - `working_data_export(name: str, folder_path: str, document_name: str = "", fields: list[str] = None, offset: int = 0, limit: int = 0)`
+
+## Subsystem map
+
+```text
+WorkingData/
+  skill.md                 Agent-facing capability contract (this file)
+  working_data_skill.py    Model-callable function exports only
+  ../../working_data.py     Stable facade: routing, migration, and persistence envelope
+  values/service.py         Session-scoped named text values
+  collections/              Structured-record operations and persistence
+    service.py              Collection lifecycle and bounded retrieval
+    filtering.py             Isolated filter/rank helpers
+    full_text.py             Full-text expansion helpers
+    export.py                KoreDocs export helpers
+    store.py                 SQLite spillover storage
+```
+
+The facade decides the item kind: string input is stored as a value; an object or list of objects is
+stored as a collection. `values` and `collections` must not import the agent-facing Skill module.
+Legacy conversation state is accepted only at the facade migration boundary and is persisted as the
+canonical `{"values": ..., "collections": ...}` envelope.
 
 ## Parameters
 

@@ -24,6 +24,7 @@
         { "name": "folder_exists", "module": "FileAccess/file_access_skill.py", "function": "folder_exists" },
         { "name": "get_system_info_dict", "module": "SystemInfo/system_info_skill.py", "function": "get_system_info_dict" },
         { "name": "skills_list", "module": "ToolSelection/tool_selection_skill.py", "function": "skills_list" },
+        { "name": "skills_search", "module": "ToolSelection/tool_selection_skill.py", "function": "skills_search" },
         { "name": "select_skills", "module": "ToolSelection/tool_selection_skill.py", "function": "select_skills" },
         { "name": "tools_catalog_list", "module": "ToolSelection/tool_selection_skill.py", "function": "tools_catalog_list" },
         { "name": "tools_active_add", "module": "ToolSelection/tool_selection_skill.py", "function": "tools_active_add" },

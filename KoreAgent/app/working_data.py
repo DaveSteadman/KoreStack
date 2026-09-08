@@ -12,15 +12,14 @@
 #     working_data_unpin_all().
 #   - LLM tools: the working_data_* functions that save, retrieve, transform, and export items.
 #
-# Private helpers maintain the legacy text-value store; record collections are delegated to the
-# WorkingData collections service.
+# Value and collection storage are delegated to their own WorkingData services; this module owns
+# only the public unified boundary and routing policy.
 # ====================================================================================================
 """Session-scoped Working Data for material held outside the active prompt context.
 
-This is the public boundary for prompt-supporting data.  A named item is either a
-text value or a structured collection; callers do not need to choose a separate
-scratchpad or dataset subsystem.  The legacy stores remain private implementation
-details while existing conversations are migrated to the unified payload.
+This is the public boundary for prompt-supporting data. A named item is either a
+text value or a structured collection; callers do not need to choose a storage
+subsystem. Existing conversations are migrated to the unified payload.
 """
 
 # ====================================================================================================
@@ -49,71 +48,19 @@ from system_skills.WorkingData.collections.service import dataset_write_koredoc
 from system_skills.WorkingData.collections.service import get_persisted_datasets_payload
 from system_skills.WorkingData.collections.service import get_prompt_dataset_manifests
 from system_skills.WorkingData.collections.service import hydrate_session_state
-from sessions.runtime import get_active_session_id
-
-
-# ====================================================================================================
-# MARK: LEGACY TEXT-VALUE COMPATIBILITY (PRIVATE)
-# ====================================================================================================
-_VALUES: dict[str, dict[str, str]] = {}
-_PINS: dict[str, set[str]] = {}
-
-
-def _resolved_session(session_id: str | None = None) -> str:
-    return str(session_id or get_active_session_id() or "default").strip() or "default"
-
-
-def _get_values(session_id: str | None = None) -> dict[str, str]:
-    return _VALUES.setdefault(_resolved_session(session_id), {})
-
-
-def _clear_values(session_id: str | None = None) -> str:
-    count = len(_get_values(session_id))
-    _get_values(session_id).clear()
-    return f"Cleared {count} Working Data value(s)."
-
-
-def _save_value(name: str, value: str, session_id: str | None = None) -> str:
-    _get_values(session_id)[_normalise_name(name)] = str(value)
-    return f"Saved Working Data item '{_normalise_name(name)}' ({len(str(value))} chars)."
-
-
-def _get_value(name: str, session_id: str | None = None) -> str:
-    value = _get_values(session_id).get(_normalise_name(name))
-    return value if value is not None else f"Working Data item '{_normalise_name(name)}' not found."
-
-
-def _delete_value(name: str, session_id: str | None = None) -> str:
-    key = _normalise_name(name)
-    return f"Deleted Working Data item '{key}'." if _get_values(session_id).pop(key, None) is not None else f"Working Data item '{key}' not found."
-
-
-def _list_values(session_id: str | None = None) -> str:
-    values = _get_values(session_id)
-    return "Working Data values are empty." if not values else "Working Data values:\n" + "\n".join(f"  {key} ({len(value)} chars)" for key, value in sorted(values.items()))
-
-
-def _search_values(substring: str, session_id: str | None = None) -> str:
-    needle = str(substring or "").lower()
-    matches = [key for key, value in _get_values(session_id).items() if needle in value.lower()]
-    return "\n".join(matches) if matches else "No Working Data values matched."
-
-
-def _peek_value(name: str, substring: str, context_chars: int = 250, session_id: str | None = None) -> str:
-    value = _get_value(name, session_id)
-    index = value.lower().find(str(substring or "").lower())
-    return "Not found in Working Data." if index < 0 else value[max(0, index - context_chars):index + len(str(substring)) + context_chars]
-
-
-def _query_value(name: str, query: str, save_result_name: str = "", instructions: str = "", session_id: str | None = None) -> str:
-    result = _peek_value(name, query, session_id=session_id)
-    if save_result_name and not result.startswith("Not found"):
-        _save_value(save_result_name, result, session_id)
-    return result
-
-
-def _normalise_name(name: str) -> str:
-    return str(name or "").strip().lower()
+from system_skills.WorkingData.values.service import build_persisted_values as _build_persisted_values
+from system_skills.WorkingData.values.service import clear_values as _clear_values
+from system_skills.WorkingData.values.service import delete_value as _delete_value
+from system_skills.WorkingData.values.service import get_value as _get_value
+from system_skills.WorkingData.values.service import get_values as _get_values
+from system_skills.WorkingData.values.service import list_values as _list_values
+from system_skills.WorkingData.values.service import normalise_name as _normalise_name
+from system_skills.WorkingData.values.service import peek_value as _peek_value
+from system_skills.WorkingData.values.service import pin_value as _pin_value
+from system_skills.WorkingData.values.service import query_value as _query_value
+from system_skills.WorkingData.values.service import save_value as _save_value
+from system_skills.WorkingData.values.service import search_values as _search_values
+from system_skills.WorkingData.values.service import unpin_all_values as _unpin_all_values
 
 
 def _collection_names(session_id: str | None = None) -> set[str]:
@@ -157,8 +104,8 @@ def hydrate_working_data(
         state["values"],
         session_id,
         datasets_payload=state["collections"],
-        scratchpad_clearer=_clear_values,
-        scratchpad_restorer=_save_value,
+        scratchpad_clearer  = _clear_values,
+        scratchpad_restorer = _save_value,
         warning_logger=warning_logger,
     )
     return state
@@ -166,12 +113,10 @@ def hydrate_working_data(
 
 def build_persisted_working_data_payload(session_id: str | None = None) -> dict[str, dict]:
     """Build the canonical persistable envelope, excluding transient tool-loop values."""
-    values = {
-        key: value
-        for key, value in _get_values(session_id).items()
-        if not key.startswith(("_tc_", "_cx_", "_wd_", "research_page_"))
+    return {
+        "values":      _build_persisted_values(session_id),
+        "collections": get_persisted_datasets_payload(session_id),
     }
-    return {"values": values, "collections": get_persisted_datasets_payload(session_id)}
 
 
 def get_working_data_values(session_id: str | None = None) -> dict[str, str]:
@@ -199,12 +144,12 @@ def auto_route_working_data_result(func_name: str, arguments: dict, result: obje
 
 def working_data_pin(name: str, session_id: str | None = None) -> None:
     """Keep a transient Working Data item available until the current run ends."""
-    _PINS.setdefault(_resolved_session(session_id), set()).add(_normalise_name(name))
+    _pin_value(name, session_id=session_id)
 
 
 def working_data_unpin_all(session_id: str | None = None) -> None:
     """Release transient Working Data item pins after a run."""
-    _PINS.pop(_resolved_session(session_id), None)
+    _unpin_all_values(session_id=session_id)
 
 
 # ====================================================================================================
@@ -226,7 +171,7 @@ def working_data_save(
         return dataset_save(normalized, records, source_tool, source_args, replace, session_id)
     if normalized in _collection_names(session_id):
         dataset_delete(normalized, session_id=session_id)
-    return _save_value(normalized, str(value), session_id=session_id).replace("scratchpad key", "working-data item")
+    return _save_value(normalized, str(value), session_id=session_id)
 
 
 def working_data_get(
@@ -248,7 +193,7 @@ def working_data_get(
 
 def working_data_list(session_id: str | None = None) -> str:
     """List all stored statements and record collections with compact size manifests."""
-    values = _list_values(session_id=session_id).replace("Scratchpad", "Working-data values").replace("scratchpad", "working data")
+    values = _list_values(session_id=session_id)
     collections = dataset_list(session_id=session_id).replace("Datasets", "Working-data collections").replace("datasets", "collections")
     return f"Working Data:\n{values}\n{collections}"
 
@@ -266,7 +211,7 @@ def working_data_delete(name: str, session_id: str | None = None) -> str:
     """Delete one named statement or record collection from Working Data."""
     normalized = _normalise_name(name)
     if normalized in _get_values(session_id):
-        return _delete_value(normalized, session_id=session_id).replace("Scratchpad key", "Working-data item").replace("scratchpad key", "working-data item")
+        return _delete_value(normalized, session_id=session_id)
     return dataset_delete(normalized, session_id=session_id)
 
 
@@ -281,17 +226,17 @@ def working_data_clear(session_id: str | None = None) -> str:
 
 def working_data_search(substring: str, session_id: str | None = None) -> str:
     """Find text-bearing Working Data values containing a phrase without loading them all."""
-    return _search_values(substring, session_id=session_id).replace("Scratchpad", "Working Data").replace("scratchpad", "working data")
+    return _search_values(substring, session_id=session_id)
 
 
 def working_data_peek(name: str, substring: str, context_chars: int = 250, session_id: str | None = None) -> str:
     """Show a small excerpt around matching text in one stored statement."""
-    return _peek_value(name, substring, context_chars, session_id=session_id).replace("scratchpad key", "working-data item")
+    return _peek_value(name, substring, context_chars, session_id=session_id)
 
 
 def working_data_query(name: str, query: str, save_result_name: str = "", instructions: str = "", session_id: str | None = None) -> str:
     """Ask an isolated LLM to extract a compact answer from one large stored statement."""
-    return _query_value(name, query, save_result_name, instructions, session_id=session_id).replace("scratchpad", "working data")
+    return _query_value(name, query, save_result_name, instructions, session_id=session_id)
 
 
 def working_data_rename(name: str, new_name: str, session_id: str | None = None) -> str:

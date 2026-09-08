@@ -453,17 +453,6 @@
 - filter_tool_names
 
 ### KoreAgent/app/working_data.py
-- _resolved_session
-- _get_values
-- _clear_values
-- _save_value
-- _get_value
-- _delete_value
-- _list_values
-- _search_values
-- _peek_value
-- _query_value
-- _normalise_name
 - _collection_names
 - coerce_persisted_working_data_payload
 - hydrate_working_data
@@ -882,6 +871,7 @@
 ### KoreAgent/app/sessions/tool_selection.py
 - clear_session_tools_active
 - set_selected_tools
+- get_tool_schema_revision
 - promote_selected_tools
 - note_tool_used
 
@@ -897,6 +887,7 @@
 - get_file_cwd
 - set_file_cwd
 - get_selected_tools
+- get_tool_schema_revision
 - set_selected_tools
 - promote_selected_tools
 - note_tool_used
@@ -953,7 +944,10 @@
 ### KoreAgent/app/system_skills/ToolSelection/tool_selection_skill.py
 - _available_payload
 - _local_skills
+- _skill_search_records
+- _eviction_notice
 - skills_list
+- skills_search
 - select_skills
 - tools_catalog_list
 - tools_active_add
@@ -1047,6 +1041,24 @@
 - delete_session_datasets
 
 ### KoreAgent/app/system_skills/WorkingData/collections/__init__.py
+
+### KoreAgent/app/system_skills/WorkingData/values/service.py
+- normalise_name
+- resolved_session
+- get_values
+- clear_values
+- save_value
+- get_value
+- delete_value
+- list_values
+- search_values
+- peek_value
+- query_value
+- build_persisted_values
+- pin_value
+- unpin_all_values
+
+### KoreAgent/app/system_skills/WorkingData/values/__init__.py
 
 ### KoreAgent/app/testing/test_regressions.py
 - setUp
@@ -4080,6 +4092,11 @@
 - test_load_service_config_applies_raw_merger
 - merger
 
+### KoreTest/app/agent_tests/unit/test_tool_selection_p1.py
+- test_tool_schema_revision_ignores_fifo_reordering
+- test_skills_search_returns_focused_exact_matches
+- test_catalog_freshness_check_is_cached_between_tool_selections
+
 ### KoreTest/app/agent_tests/unit/test_tool_sets.py
 - test_tool_set_builder_splits_koredocs_into_file_and_document_subsystems
 - test_active_tool_queue_evicts_oldest_and_reactivation_moves_to_newest
@@ -4094,6 +4111,7 @@
 ### KoreTest/app/agent_tests/unit/test_working_data_clear.py
 - test_working_data_clear_removes_every_value_in_the_session
 - test_working_data_clear_removes_collections
+- test_hydrate_working_data_migrates_legacy_values_through_the_value_service
 
 ### KoreTest/app/agent_tests/unit/__init__.py
 

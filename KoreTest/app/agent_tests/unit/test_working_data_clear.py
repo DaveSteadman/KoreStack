@@ -7,6 +7,7 @@
 # Function inventory:
 # - test_working_data_clear_removes_every_value_in_the_session: Implements the Working Data value clear operation.
 # - test_working_data_clear_removes_collections: Implements the Working Data collection clear operation.
+# - test_hydrate_working_data_migrates_legacy_values_through_the_value_service: Implements the hydrate working data migrates legacy values through the value service operation for this module.
 # ====================================================================================================
 
 import sys
@@ -19,6 +20,7 @@ if str(APP_ROOT) not in sys.path:
     sys.path.insert(0, str(APP_ROOT))
 
 from working_data import build_persisted_working_data_payload
+from working_data import hydrate_working_data
 from working_data import working_data_clear
 from working_data import working_data_get
 from working_data import working_data_save
@@ -44,6 +46,16 @@ class WorkingDataClearTests(unittest.TestCase):
 
         self.assertEqual(result, "Cleared Working Data (0 value(s), 2 collection(s) removed).")
         self.assertEqual(build_persisted_working_data_payload(session_id)["collections"], {})
+
+    def test_hydrate_working_data_migrates_legacy_values_through_the_value_service(self) -> None:
+        session_id = "working_data_legacy_values_test"
+        hydrate_working_data(None, session_id=session_id, legacy_values={"Note": "retained"})
+
+        persisted = build_persisted_working_data_payload(session_id)
+
+        self.assertEqual(working_data_get("note", session_id=session_id), "retained")
+        self.assertEqual(persisted["values"], {"note": "retained"})
+        working_data_clear(session_id=session_id)
 
 
 if __name__ == "__main__":

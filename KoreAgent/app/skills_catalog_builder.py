@@ -59,6 +59,7 @@ import importlib.util
 import json
 import re
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
@@ -79,6 +80,8 @@ DEFAULT_SUMMARY_MODEL = "gpt-oss:20b"
 _LOADED_PAYLOAD_CACHE: dict[tuple[str, float, int], dict] = {}
 _TOOL_DEFS_CACHE: dict[str, list[dict]] = {}
 _TOOL_DEFS_OBJ_CACHE: dict[int, list[dict]] = {}
+_FRESHNESS_CHECK_CACHE: dict[str, tuple[float, float, int]] = {}
+_FRESHNESS_CHECK_INTERVAL_SECONDS = 30.0
 
 
 def _classify_local_skill(skill_md_path: Path | str) -> dict[str, object]:
@@ -473,6 +476,20 @@ def extract_first_json_object(text: str) -> str:
 def _rebuild_skills_catalog_if_stale(catalog_path: Path) -> None:
     """Rebuild the runtime JSON catalog when any skill.md is newer than the catalog."""
     skills_root = catalog_path.parent
+    cache_path  = str(catalog_path.resolve())
+    now         = time.monotonic()
+    try:
+        catalog_stat = catalog_path.stat()
+        cached       = _FRESHNESS_CHECK_CACHE.get(cache_path)
+        if (
+            cached is not None
+            and now - cached[0] < _FRESHNESS_CHECK_INTERVAL_SECONDS
+            and cached[1:] == (catalog_stat.st_mtime, catalog_stat.st_size)
+        ):
+            return
+    except OSError:
+        pass
+
     if not catalog_path.exists():
         needs_rebuild = True
     else:
@@ -512,10 +529,14 @@ def _rebuild_skills_catalog_if_stale(catalog_path: Path) -> None:
                     break
 
     if not needs_rebuild:
+        stat = catalog_path.stat()
+        _FRESHNESS_CHECK_CACHE[cache_path] = (now, stat.st_mtime, stat.st_size)
         return
 
     payload = build_skills_payload(skills_root, use_llm=False, model_name="", num_ctx=0)
     write_skills_catalog(payload, catalog_path)
+    stat = catalog_path.stat()
+    _FRESHNESS_CHECK_CACHE[cache_path] = (now, stat.st_mtime, stat.st_size)
 
 
 # ----------------------------------------------------------------------------------------------------
