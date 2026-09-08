@@ -29,6 +29,8 @@
 import logging
 import shutil
 import threading
+from collections import OrderedDict
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Optional
 
@@ -56,8 +58,9 @@ _COLLECTION_NAME         = "sentences"
 _COLLECTION_CONFIGURATION = {"hnsw": {"space": "cosine"}}
 _STORE_SCHEMA_VERSION    = "cosine-v2"
 _STORE_SCHEMA_FILE       = ".schema"
-_CLIENT_LOCK             = threading.Lock()
-_CLIENTS: dict[str, Any] = {}
+_MAX_CACHED_CLIENTS      = 3
+_CLIENT_LOCK             = threading.RLock()
+_CLIENTS: OrderedDict[str, Any] = OrderedDict()
 
 
 def chroma_available() -> bool:
@@ -94,10 +97,8 @@ def _mark_domain_store_current(domain: str) -> None:
     marker_path.write_text(_STORE_SCHEMA_VERSION, encoding="utf-8")
 
 
-def _release_domain_client(domain: str) -> None:
-    safe_domain = _sanitize_domain(domain)
-    with _CLIENT_LOCK:
-        client = _CLIENTS.pop(safe_domain, None)
+def _close_client(client: Any) -> None:
+    """Release one embedded Chroma client without allowing a close error to leak."""
     if client is None:
         return
     try:
@@ -112,6 +113,25 @@ def _release_domain_client(domain: str) -> None:
         pass
 
 
+def _release_domain_client_locked(domain: str) -> None:
+    safe_domain = _sanitize_domain(domain)
+    _close_client(_CLIENTS.pop(safe_domain, None))
+
+
+def _release_domain_client(domain: str) -> None:
+    """Close and forget one domain client after any active Chroma operation completes."""
+    with _CLIENT_LOCK:
+        _release_domain_client_locked(domain)
+
+
+def release_all_domain_clients() -> None:
+    """Release every cached embedded Chroma client during service shutdown."""
+    with _CLIENT_LOCK:
+        while _CLIENTS:
+            _safe_domain, client = _CLIENTS.popitem(last=False)
+            _close_client(client)
+
+
 def _get_collection(domain: str):
     if chromadb is None:
         raise RuntimeError("chromadb is not installed")
@@ -119,10 +139,15 @@ def _get_collection(domain: str):
     with _CLIENT_LOCK:
         client = _CLIENTS.get(safe_domain)
         if client is None:
+            while len(_CLIENTS) >= _MAX_CACHED_CLIENTS:
+                _evicted_domain, evicted_client = _CLIENTS.popitem(last=False)
+                _close_client(evicted_client)
             path = _domain_chroma_path(domain)
             path.mkdir(parents=True, exist_ok=True)
             client = chromadb.PersistentClient(path=str(path))
             _CLIENTS[safe_domain] = client
+        else:
+            _CLIENTS.move_to_end(safe_domain)
         collection = client.get_or_create_collection(
             name          = _COLLECTION_NAME,
             configuration = _COLLECTION_CONFIGURATION,
@@ -132,12 +157,18 @@ def _get_collection(domain: str):
         return collection
 
 
+@contextmanager
+def _collection_session(domain: str):
+    """Keep a client alive while its collection is in use, then permit LRU eviction."""
+    with _CLIENT_LOCK:
+        yield _get_collection(domain)
+
+
 def _upsert_rows(domain: str, rows: list[dict]) -> int:
     if chromadb is None:
         return 0
     if not rows:
         return 0
-    collection = _get_collection(domain)
     ids: list[str] = []
     documents: list[str] = []
     metadatas: list[dict] = []
@@ -171,7 +202,8 @@ def _upsert_rows(domain: str, rows: list[dict]) -> int:
     if not ids:
         return 0
 
-    collection.upsert(ids=ids, documents=documents, metadatas=metadatas)
+    with _collection_session(domain) as collection:
+        collection.upsert(ids=ids, documents=documents, metadatas=metadatas)
     mark_sentences_chroma_indexed(domain, sentence_ids)
     return len(sentence_ids)
 
@@ -231,7 +263,8 @@ def rebuild_domain_store(domain: str, batch_size: int = 250) -> dict[str, Any]:
 
     delete_domain_store(domain)
     reset_sentence_chroma_index(domain)
-    _get_collection(domain)
+    with _collection_session(domain):
+        pass
     indexed = sync_pending_sentences(domain, batch_size=max(1, int(batch_size)))
     return {
         "domain":  domain,
@@ -308,13 +341,13 @@ def semantic_search(
         if not path.exists():
             continue
         try:
-            collection = _get_collection(current_domain)
-            if collection.count() <= 0:
-                continue
-            response = collection.query(
-                query_texts=[text],
-                n_results=per_domain_limit,
-            )
+            with _collection_session(current_domain) as collection:
+                if collection.count() <= 0:
+                    continue
+                response = collection.query(
+                    query_texts=[text],
+                    n_results=per_domain_limit,
+                )
         except Exception as exc:
             LOG.warning("Semantic search failed for domain %s: %s", current_domain, exc)
             continue
@@ -373,9 +406,9 @@ def delete_sentence_ids(domain: str, sentence_ids: list[int]) -> int:
         return 0
     if not sentence_ids:
         return 0
-    collection = _get_collection(domain)
     locators = [f"feeds/{domain}/{int(sentence_id)}" for sentence_id in sentence_ids]
-    collection.delete(ids=locators)
+    with _collection_session(domain) as collection:
+        collection.delete(ids=locators)
     return len(locators)
 
 

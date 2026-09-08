@@ -162,6 +162,14 @@ async def _lifespan(app: FastAPI):
     )
     yield
     stop_scheduler()
+    try:
+        from app.chroma_index import release_all_domain_clients
+        from app.database import release_all_cached_connections
+
+        release_all_domain_clients()
+        release_all_cached_connections()
+    except Exception:
+        LOG.exception("Could not release cached Chroma clients during shutdown")
 
 
 app = FastAPI(

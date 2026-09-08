@@ -2147,6 +2147,7 @@
 - _conversation
 - _fresh_conversation
 - _reply_error
+- _record_run
 - _await_outbound_reply
 - _run
 - _due
@@ -2178,6 +2179,7 @@
 - test_test_run_definition_accepts_only_a_daily_time
 - test_test_run_queues_the_full_koretest_suite
 - test_test_runs_are_stored_separately_from_cronprompts
+- test_records_a_failed_attempt_with_its_error
 - fake_http
 - fake_http
 
@@ -2385,18 +2387,25 @@
 - count
 - query
 - __init__
+- get_or_create_collection
 - close
+- tearDownClass
+- test_client_cache_evicts_least_recently_used_domain
 - test_sync_pending_sentences_marks_rows_indexed
 - test_delete_sentence_ids_uses_domain_specific_locators
 - test_rename_domain_db_moves_parallel_chroma_store
 - test_delete_domain_db_removes_parallel_chroma_store
 - test_semantic_search_maps_chroma_hits_to_feed_results
+- PersistentClient
 
 ### KoreData/KoreFeed/test_sentence_indexing.py
+- tearDownClass
+- test_connection_cache_lock_is_not_held_during_database_work
 - test_insert_entry_indexes_sentences
 - test_deleted_entry_hides_sentences
 - test_backfill_sentence_index_reports_zero_when_up_to_date
 - test_rebuild_sentence_index_restores_missing_rows_for_entry
+- acquire_cache_lock
 
 ### KoreData/KoreFeed/test_server_status.py
 - test_status_includes_gateway_card_totals
@@ -2408,8 +2417,12 @@
 - _domain_schema_marker_path
 - _domain_store_is_current
 - _mark_domain_store_current
+- _close_client
+- _release_domain_client_locked
 - _release_domain_client
+- release_all_domain_clients
 - _get_collection
+- _collection_session
 - _upsert_rows
 - sync_entry_sentences
 - sync_pending_sentences
@@ -2437,6 +2450,8 @@
 - _sanitize_domain
 - get_db_path
 - db_connection
+- _close_cached_connection
+- release_all_cached_connections
 - init_db
 - backfill_sentence_index
 - rebuild_sentence_index
@@ -3913,6 +3928,8 @@
 - __init__
 - test_scheduled_email_prompt_requires_explicit_publication
 - test_non_scheduled_email_does_not_require_publication
+- test_preparatory_cron_prompt_does_not_require_publication
+- test_publish_cron_prompt_requires_publication
 - test_tool_loop_requires_confirmed_html_publication_before_completion
 - test_tool_output_formatter_handles_a_result
 - call_llm_chat

@@ -39,6 +39,7 @@ _TMP_DIR = tempfile.TemporaryDirectory()
 os.environ["KOREDATA_DATA_DIR"] = _TMP_DIR.name
 
 from app import chroma_index
+from app import database
 from app.database import delete_domain_db, get_db_path, insert_entry, init_db, rename_domain_db
 
 
@@ -71,12 +72,51 @@ class _FakeCollection:
 class _FakeClient:
     def __init__(self) -> None:
         self.closed = False
+        self.collection = _FakeCollection()
+
+    def get_or_create_collection(self, **_kwargs) -> _FakeCollection:
+        return self.collection
 
     def close(self) -> None:
         self.closed = True
 
 
 class ChromaIndexTests(unittest.TestCase):
+    @classmethod
+    def tearDownClass(cls) -> None:
+        chroma_index.release_all_domain_clients()
+        database.release_all_cached_connections()
+
+    def test_client_cache_evicts_least_recently_used_domain(self) -> None:
+        original_chromadb    = chroma_index.chromadb
+        original_max_clients = chroma_index._MAX_CACHED_CLIENTS
+        original_clients     = chroma_index._CLIENTS
+        clients: list[_FakeClient] = []
+
+        class _FakeChroma:
+            @staticmethod
+            def PersistentClient(**_kwargs) -> _FakeClient:
+                client = _FakeClient()
+                clients.append(client)
+                return client
+
+        chroma_index.chromadb           = _FakeChroma()
+        chroma_index._MAX_CACHED_CLIENTS = 2
+        chroma_index._CLIENTS            = type(original_clients)()
+        try:
+            chroma_index._get_collection("first")
+            chroma_index._get_collection("second")
+            chroma_index._get_collection("third")
+        finally:
+            chroma_index.release_all_domain_clients()
+            chroma_index._CLIENTS            = original_clients
+            chroma_index._MAX_CACHED_CLIENTS = original_max_clients
+            chroma_index.chromadb            = original_chromadb
+
+        self.assertTrue(clients[0].closed)
+        self.assertTrue(clients[1].closed)
+        self.assertTrue(clients[2].closed)
+
     def test_sync_pending_sentences_marks_rows_indexed(self) -> None:
         domain = "chroma_domain"
         init_db(domain)

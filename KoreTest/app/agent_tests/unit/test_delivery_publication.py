@@ -76,6 +76,39 @@ class DeliveryPublicationTests(unittest.TestCase):
 
         self.assertEqual("", get_explicit_delivery_publication_chat_name(conversation))
 
+    def test_preparatory_cron_prompt_does_not_require_publication(self) -> None:
+        conversation = {
+            "channel_type": "classic_email",
+            "external_id":  "webchat_cron_daily_ai_news",
+        }
+
+        prompt = build_system_message(
+            "",
+            None,
+            {"skills": []},
+            skill_guidance_enabled=False,
+            sandbox_enabled=True,
+            conversation_entry=conversation,
+            user_prompt="Fetch the AINews saved search into a dataset for further processing.",
+        )
+
+        self.assertEqual("", get_explicit_delivery_publication_chat_name(conversation, "Fetch the AINews saved search into a dataset for further processing."))
+        self.assertNotIn("Scheduled email publication is mandatory", prompt)
+
+    def test_publish_cron_prompt_requires_publication(self) -> None:
+        conversation = {
+            "channel_type": "classic_email",
+            "external_id":  "webchat_cron_daily_ai_news",
+        }
+
+        self.assertEqual(
+            "webchat_cron_daily_ai_news",
+            get_explicit_delivery_publication_chat_name(
+                conversation,
+                "Create and publish the completed HTML email.",
+            ),
+        )
+
     def test_tool_loop_requires_confirmed_html_publication_before_completion(self) -> None:
         publication_call = {
             "id":   "publish_1",

@@ -66,6 +66,7 @@ import json
 import re
 import threading
 from contextlib import contextmanager
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from email.utils import parsedate as _rfc_parsedate
 from pathlib import Path
@@ -84,7 +85,13 @@ from dbutil import fts_build_query
 
 DATA_DIR = Path(cfg["data_dir"])
 
-_connections: dict[Path, sqlite3.Connection] = {}
+@dataclass
+class _ConnectionEntry:
+    connection: sqlite3.Connection
+    lock:       threading.RLock
+
+
+_connections: dict[Path, _ConnectionEntry] = {}
 _connections_lock = threading.RLock()
 _domains_ready: set[str] = set()
 _domains_lock = threading.Lock()
@@ -207,18 +214,42 @@ def get_db_path(domain: str) -> Path:
 def db_connection(domain: str):
     db_path = get_db_path(domain)
     with _connections_lock:
-        conn = _connections.get(db_path)
-        if conn is None:
+        entry = _connections.get(db_path)
+        if entry is None:
             conn = sqlite3.connect(str(db_path), check_same_thread=False)
             conn.row_factory = sqlite3.Row
             conn.execute("PRAGMA busy_timeout = 5000")
-            _connections[db_path] = conn
+            entry = _ConnectionEntry(connection=conn, lock=threading.RLock())
+            _connections[db_path] = entry
+    # SQLite permits different databases to proceed independently, but one shared
+    # connection still needs serial access.  Do not turn an operation on one domain
+    # into a global stop-the-world lock for the entire service.
+    with entry.lock:
         try:
-            yield conn
-            conn.commit()
+            yield entry.connection
+            entry.connection.commit()
         except Exception:
-            conn.rollback()
+            entry.connection.rollback()
             raise
+
+
+def _close_cached_connection(path: Path) -> None:
+    """Close one cached connection after any in-flight operation using it has finished."""
+    with _connections_lock:
+        entry = _connections.pop(path, None)
+    if entry is not None:
+        with entry.lock:
+            entry.connection.close()
+
+
+def release_all_cached_connections() -> None:
+    """Close cached SQLite handles during controlled service shutdown."""
+    with _connections_lock:
+        entries = list(_connections.values())
+        _connections.clear()
+    for entry in entries:
+        with entry.lock:
+            entry.connection.close()
 
 
 def init_db(domain: str) -> None:
@@ -1044,6 +1075,7 @@ def delete_domain_db(domain: str) -> bool:
     path = get_db_path(domain)
     deleted_db = False
     if path.exists():
+        _close_cached_connection(path)
         path.unlink()
         deleted_db = True
     try:
@@ -1063,10 +1095,7 @@ def rename_domain_db(old: str, new: str) -> bool:
         new_path = get_db_path(new)
         if new_path.exists():
             raise FileExistsError(f"Domain database '{new}' already exists")
-        with _connections_lock:
-            connection = _connections.pop(old_path, None)
-            if connection is not None:
-                connection.close()
+        _close_cached_connection(old_path)
         old_path.rename(new_path)
         renamed_db = True
     try:

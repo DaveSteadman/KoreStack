@@ -43,19 +43,38 @@ from utils.workspace_utils import trunc
 _KORECODE_WORKSPACE_MENU_KEY = "korecode_workspace_menu"
 
 
-def get_explicit_delivery_publication_chat_name(conversation_entry: dict | None) -> str:
-    """Return the delivery-binding name for a scheduled email run that must publish explicitly."""
+def get_explicit_delivery_publication_chat_name(
+    conversation_entry: dict | None,
+    user_prompt: str | None = None,
+) -> str:
+    """Return the delivery-binding name only for a cron prompt that asks to publish."""
     if not isinstance(conversation_entry, dict):
         return ""
     channel_type = str(conversation_entry.get("channel_type") or "").strip().casefold()
     chat_name    = str(conversation_entry.get("external_id") or "").strip()
-    if channel_type == "classic_email" and chat_name.startswith("webchat_cron_"):
+    if channel_type != "classic_email" or not chat_name.startswith("webchat_cron_"):
+        return ""
+    if user_prompt is None:
+        return chat_name
+
+    prompt = user_prompt.casefold()
+    is_explicit_publish = "delivery_publish_html" in prompt or bool(
+        re.search(r"\b(?:publish|deliver)\b", prompt)
+        and re.search(r"\b(?:email|html|newsletter|report)\b", prompt)
+    )
+    is_explicitly_deferred = bool(
+        re.search(r"\b(?:do not|don't|without)\s+(?:publish|deliver)\b", prompt)
+    )
+    if is_explicit_publish and not is_explicitly_deferred:
         return chat_name
     return ""
 
 
-def _build_explicit_delivery_publication_instruction(conversation_entry: dict | None) -> str:
-    chat_name = get_explicit_delivery_publication_chat_name(conversation_entry)
+def _build_explicit_delivery_publication_instruction(
+    conversation_entry: dict | None,
+    user_prompt: str | None = None,
+) -> str:
+    chat_name = get_explicit_delivery_publication_chat_name(conversation_entry, user_prompt)
     if not chat_name:
         return ""
     return (
@@ -308,7 +327,10 @@ def build_system_message(
     conversation_entry_block = _build_conversation_entry_block(conversation_entry)
     if conversation_entry_block:
         system_parts.append(conversation_entry_block)
-    delivery_publication_instruction = _build_explicit_delivery_publication_instruction(conversation_entry)
+    delivery_publication_instruction = _build_explicit_delivery_publication_instruction(
+        conversation_entry,
+        user_prompt,
+    )
     if delivery_publication_instruction:
         system_parts.append(delivery_publication_instruction)
     workspace_menu_note = _build_korecode_workspace_menu_note(conversation_entry)

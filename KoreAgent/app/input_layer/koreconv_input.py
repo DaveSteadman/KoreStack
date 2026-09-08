@@ -831,7 +831,12 @@ def _handle_event(
         channel = conv.get("channel_type", "webchat")
         outbound_status = "sent" if channel in {"webchat", "manual"} else "draft"
         delivery_eligible = not user_prompt.lstrip().startswith("/")
-        outbound_tags     = ["agent_error", "invalid_model_output"] if invalid_model_output else []
+        agent_workflow_failed = not ok
+        outbound_tags         = []
+        if agent_workflow_failed:
+            outbound_tags.extend(["agent_error", "agent_workflow_failed"])
+        if invalid_model_output:
+            outbound_tags.append("invalid_model_output")
 
         # Write outbound message first - if this fails the event is not completed.
         try:
@@ -842,7 +847,10 @@ def _handle_event(
                 "status":         outbound_status,
                 "delivery_eligible": delivery_eligible,
                 "metadata": {
-                        "telemetry": {
+                    "agent_run": {
+                        "success": bool(ok),
+                    },
+                    "telemetry": {
                             "context_tokens": prompt_tokens,
                             "context_window": config.num_ctx,
                             "completion_tokens": completion_tokens,

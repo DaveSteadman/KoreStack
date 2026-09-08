@@ -111,5 +111,25 @@ class ScheduledTestRunTests(unittest.TestCase):
                 self.assertEqual(main.list_test_runs()["test_runs"], [])
 
 
+class SchedulerRunHistoryTests(unittest.TestCase):
+    def test_records_a_failed_attempt_with_its_error(self) -> None:
+        with TemporaryDirectory() as temp_dir:
+            history_file = Path(temp_dir) / "scheduler_run_history.json"
+            definition   = {"id": "daily-news", "name": "Daily News"}
+            attempted_at = main.datetime(2026, 9, 7, 7, 20)
+            with patch.object(main, "RUN_HISTORY_FILE", history_file):
+                main._record_run(
+                    definition,
+                    attempted_at=attempted_at,
+                    succeeded=False,
+                    error="agent could not produce a valid response",
+                )
+
+            recorded = main._read(history_file, {})["daily-news"][-1]
+            self.assertEqual("2026-09-07T07:20:00", recorded["attempted_at"])
+            self.assertFalse(recorded["succeeded"])
+            self.assertEqual("agent could not produce a valid response", recorded["error"])
+
+
 if __name__ == "__main__":
     unittest.main()

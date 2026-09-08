@@ -67,14 +67,15 @@ from KoreCommon.skill_service import register_skill_invocation_routes
 from KoreCommon.suite_paths import get_suite_datacontrol_dir
 
 
-CONFIG       = ROOT / "config" / "korestack_config.json"
-STORE_DIR    = get_suite_datacontrol_dir() / "korecron"
-STORE_FILE   = STORE_DIR / "cronprompts.json"
-STATE_FILE   = STORE_DIR / "scheduler_state.json"
-UI_ROOT      = ROOT / "KoreUI" / "KoreCron"
-UI_ASSETS    = ROOT / "KoreUI" / "UIElements" / "assets"
-STOP         = threading.Event()
-NAME_RE      = re.compile(r"^(?=.{1,120}$)[A-Za-z0-9][A-Za-z0-9 _-]*$")
+CONFIG            = ROOT / "config" / "korestack_config.json"
+STORE_DIR         = get_suite_datacontrol_dir() / "korecron"
+STORE_FILE        = STORE_DIR / "cronprompts.json"
+STATE_FILE        = STORE_DIR / "scheduler_state.json"
+RUN_HISTORY_FILE  = STORE_DIR / "scheduler_run_history.json"
+UI_ROOT           = ROOT / "KoreUI" / "KoreCron"
+UI_ASSETS         = ROOT / "KoreUI" / "UIElements" / "assets"
+STOP              = threading.Event()
+NAME_RE           = re.compile(r"^(?=.{1,120}$)[A-Za-z0-9][A-Za-z0-9 _-]*$")
 SESSION_KEY_RE = re.compile(r"[^A-Za-z0-9_-]+")
 
 
@@ -221,6 +222,24 @@ def _reply_error(message: dict) -> str | None:
     return None
 
 
+def _record_run(definition: dict, *, attempted_at: datetime, succeeded: bool, error: str = "") -> None:
+    """Persist a bounded audit trail so a scheduled attempt is not mistaken for success."""
+    history = _read(RUN_HISTORY_FILE, {})
+    if not isinstance(history, dict):
+        history = {}
+    state_key = str(definition.get("id") or definition.get("name") or "")
+    entries = history.get(state_key, [])
+    if not isinstance(entries, list):
+        entries = []
+    entries.append({
+        "attempted_at": attempted_at.isoformat(timespec="seconds"),
+        "succeeded":    succeeded,
+        "error":        error,
+    })
+    history[state_key] = entries[-50:]
+    _write(RUN_HISTORY_FILE, history)
+
+
 def _await_outbound_reply(base: str, conversation_id: int, prior_count: int, timeout_seconds: int = 1800) -> dict:
     deadline = time.monotonic() + timeout_seconds
     while time.monotonic() < deadline and not STOP.is_set():
@@ -293,8 +312,10 @@ def _scheduler() -> None:
                 _write(STATE_FILE, state)
                 try:
                     _run(definition)
-                except Exception:
-                    pass
+                    _record_run(definition, attempted_at=now, succeeded=True)
+                except Exception as error:
+                    _record_run(definition, attempted_at=now, succeeded=False, error=str(error))
+                    print(f"[KoreCron] {state_key} failed: {error}", flush=True)
         STOP.wait(20)
 
 
@@ -323,18 +344,26 @@ def status(): return {"ok": True, "service": "KoreCron"}
 @app.get("/api/cronprompts")
 def list_cronprompts():
     state = _read(STATE_FILE, {})
-    return {"cronprompts": [{**item, "schedule_text": _schedule_text(item.get("schedule", {})), "last_run": state.get(item.get("name"))} for item in _definitions()]}
+    history = _read(RUN_HISTORY_FILE, {})
+    return {"cronprompts": [{
+        **item,
+        "schedule_text": _schedule_text(item.get("schedule", {})),
+        "last_run":      state.get(item.get("name")),
+        "last_outcome":  (history.get(str(item.get("id") or item.get("name") or "")) or [None])[-1],
+    } for item in _definitions()]}
 
 
 @app.get("/api/test-runs")
 def list_test_runs():
     state = _read(STATE_FILE, {})
+    history = _read(RUN_HISTORY_FILE, {})
     return {
         "test_runs": [
             {
                 **item,
                 "schedule_text": _schedule_text(item.get("schedule", {})),
                 "last_run":      state.get(str(item.get("id") or "")),
+                "last_outcome":  (history.get(str(item.get("id") or "")) or [None])[-1],
             }
             for item in _test_run_definitions()
         ],

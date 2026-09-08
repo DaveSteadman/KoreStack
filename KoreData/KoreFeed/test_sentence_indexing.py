@@ -16,6 +16,7 @@ import os
 import sqlite3
 import sys
 import tempfile
+import threading
 import unittest
 from pathlib import Path
 
@@ -41,10 +42,34 @@ from app.database import (
     insert_entry,
     rebuild_sentence_index,
 )
+from app import database
 from app import chroma_index
 
 
 class FeedSentenceIndexTests(unittest.TestCase):
+    @classmethod
+    def tearDownClass(cls) -> None:
+        chroma_index.release_all_domain_clients()
+        database.release_all_cached_connections()
+
+    def test_connection_cache_lock_is_not_held_during_database_work(self) -> None:
+        domain = "connection_lock_domain"
+        init_db(domain)
+        result: dict[str, bool] = {}
+
+        def acquire_cache_lock() -> None:
+            acquired = database._connections_lock.acquire(timeout=0.5)
+            result["acquired"] = acquired
+            if acquired:
+                database._connections_lock.release()
+
+        with database.db_connection(domain):
+            thread = threading.Thread(target=acquire_cache_lock)
+            thread.start()
+            thread.join()
+
+        self.assertTrue(result.get("acquired"))
+
     def test_insert_entry_indexes_sentences(self) -> None:
         domain = "sentence_index_domain"
         init_db(domain)

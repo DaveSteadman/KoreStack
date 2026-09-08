@@ -83,6 +83,7 @@ from system_skills.SystemInfo.system_info_skill import get_static_system_info_st
 from skills_catalog_builder import build_tool_definitions
 from sessions.tool_selection import derive_active_tool_runtime
 from sessions.tool_selection import filter_local_payload
+from sessions.tool_selection import promote_selected_tools
 from agent.tool_runtime.loop import extract_result_fields as _tool_loop_extract_result_fields
 from agent.tool_runtime.loop import format_tool_outputs as _tool_loop_format_tool_outputs
 from agent.tool_runtime.loop import run_tool_loop as _tool_loop_run_tool_loop
@@ -595,6 +596,17 @@ def orchestrate_prompt(
         _log_section("AMBIENT SYSTEM INFO")
         _log(ambient_system_info)
 
+        publication_chat_name = get_explicit_delivery_publication_chat_name(
+            conversation_entry,
+            user_prompt,
+        )
+        if publication_chat_name:
+            promote_selected_tools(
+                ["delivery_publish_html"],
+                session_id         = active_session_id,
+                conversation_entry = conversation_entry,
+            )
+
         available_local_payload = config.skills_payload if _WEB_SKILLS_ENABLED else _filter_web_skills(config.skills_payload)
         initial_tool_runtime = derive_active_tool_runtime(
             config.skills_payload,
@@ -707,7 +719,7 @@ def orchestrate_prompt(
                 tool_runtime_provider = _build_tool_runtime,
                 on_tool_round_complete = on_tool_round_complete,
                 on_token = on_token,
-                required_publication_chat_name = get_explicit_delivery_publication_chat_name(conversation_entry),
+                required_publication_chat_name = publication_chat_name,
             )
 
             _log_section_file_only("TOOL CALL SUMMARY")
