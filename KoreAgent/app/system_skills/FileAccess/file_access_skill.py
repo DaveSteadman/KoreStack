@@ -17,6 +17,7 @@
 # - file_write: Implements the file write operation for this module.
 # - file_append: Implements the file append operation for this module.
 # - file_read: Implements the file read operation for this module.
+# - folder_ls: Implements the folder ls operation for this module.
 # - _normalise_keywords: Implements the  normalise keywords operation for this module.
 # - _normalise_find_arguments: Implements the  normalise find arguments operation for this module.
 # - file_find: Implements the file find operation for this module.
@@ -201,6 +202,57 @@ def file_ls(path: str = "") -> str:
     ]
     if len(entries) > 200:
         listing.append("[truncated: 200 entries shown]")
+    return "\n".join(listing)
+
+
+# ----------------------------------------------------------------------------------------------------
+def folder_ls(
+    path: str = "",
+    include_hidden: bool = True,
+    offset: int = 0,
+    limit: int = 100,
+) -> str:
+    """List all immediate subfolders with a count and an explicit next page when required."""
+    try:
+        folder = resolve_datauser_directory(get_file_cwd()) if not str(path or "").strip() else _resolve_directory_path(path)
+    except DataUserPathError as err:
+        return f"Error: {err}"
+    if not folder.exists() or not folder.is_dir():
+        return f"Directory not found: {display_datauser_path(folder)}"
+
+    try:
+        page_offset = max(0, int(offset))
+    except (TypeError, ValueError):
+        page_offset = 0
+    try:
+        page_limit = min(200, max(1, int(limit)))
+    except (TypeError, ValueError):
+        page_limit = 100
+
+    folders = sorted(
+        (
+            entry
+            for entry in folder.iterdir()
+            if entry.is_dir() and (include_hidden or not entry.name.startswith("."))
+        ),
+        key=lambda entry: entry.name.casefold(),
+    )
+    total = len(folders)
+    if not total:
+        return f"No subfolders in {display_datauser_path(folder)}."
+    if page_offset >= total:
+        return f"No subfolders at offset {page_offset}; {total} subfolder(s) are available."
+
+    page = folders[page_offset:page_offset + page_limit]
+    start = page_offset + 1
+    end   = page_offset + len(page)
+    listing = [
+        f"Subfolders in {display_datauser_path(folder)} ({total} total; showing {start}-{end}):",
+        *[f"{display_datauser_path(entry)}/" for entry in page],
+    ]
+    next_offset = page_offset + len(page)
+    if next_offset < total:
+        listing.append(f"More subfolders are available: call folder_ls(path={path!r}, offset={next_offset}).")
     return "\n".join(listing)
 
 

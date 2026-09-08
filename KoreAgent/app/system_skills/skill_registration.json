@@ -17,6 +17,7 @@
         { "name": "file_pwd", "module": "FileAccess/file_access_skill.py", "function": "file_pwd" },
         { "name": "file_cd", "module": "FileAccess/file_access_skill.py", "function": "file_cd" },
         { "name": "file_ls", "module": "FileAccess/file_access_skill.py", "function": "file_ls" },
+        { "name": "folder_ls", "module": "FileAccess/file_access_skill.py", "function": "folder_ls" },
         { "name": "file_write_from_working_data", "module": "FileAccess/file_access_skill.py", "function": "file_write_from_working_data" },
         { "name": "file_find", "module": "FileAccess/file_access_skill.py", "function": "file_find" },
         { "name": "folder_find", "module": "FileAccess/file_access_skill.py", "function": "folder_find" },

@@ -920,6 +920,7 @@
 - file_pwd
 - file_cd
 - file_ls
+- folder_ls
 - _normalise_keywords
 - _normalise_find_arguments
 - file_find
@@ -3946,6 +3947,9 @@
 - test_tool_output_formatter_handles_a_result
 - call_llm_chat
 - execute_tool_call
+
+### KoreTest/app/agent_tests/unit/test_folder_ls.py
+- test_folder_ls_lists_visible_immediate_folders_with_paging
 
 ### KoreTest/app/agent_tests/unit/test_guardrail_data.py
 - setUp

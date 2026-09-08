@@ -12,6 +12,7 @@ Interface for generic file read, write, append, navigation, and search operation
   - `file_pwd()`
   - `file_cd(path: str)`
   - `file_ls(path: str = "")`
+  - `folder_ls(path: str = "", include_hidden: bool = True, offset: int = 0, limit: int = 100)`
   - `file_write_from_working_data(working_data_name: str, path: str)`
   - `file_find(keywords: list[str], search_root: str = "")`
   - `folder_find(keywords: list[str], search_root: str = "")`
@@ -45,11 +46,13 @@ Use this when large content was auto-saved to Working Data (e.g. a web page fetc
 - `path` *(required)* - same path rules as `file_write`.
 - `max_chars` *(optional, default 8000)* - maximum characters to return; content is truncated with `[truncated]` if exceeded.
 
-### Navigation: `file_pwd()`, `file_cd(path)`, and `file_ls(path = "")`
+### Navigation: `file_pwd()`, `file_cd(path)`, `file_ls(path = "")`, and `folder_ls(...)`
 
 - Every conversation starts in `datauser/`. Its current directory is persisted with the conversation, so it survives page navigation and service restart.
 - `file_cd(path)` changes the current directory. Relative paths are resolved from the current directory; `..` moves up, but cannot escape `datauser/`.
 - `file_ls()` lists only the immediate files and folders in the current directory. Pass a path to list another directory without changing the current directory.
+- `folder_ls()` lists all immediate subfolders only. It returns the total folder count, including dot-prefixed folders, so “all subfolders” is literal. Use it when the user asks to list subfolders; do not infer them from a mixed `file_ls()` result.
+- Use `offset` and `limit` with `folder_ls()` when its response says more folders are available. Pass `include_hidden=False` only when visible folders were explicitly requested.
 - `file_pwd()` reports the current directory.
 - After `file_cd("reports")`, bare paths in `file_read`, `file_write`, `file_append`, `folder_create`, and `folder_exists` resolve beneath `datauser/reports/`. Explicit `datauser/...` paths remain rooted at `datauser/`.
 
@@ -62,12 +65,14 @@ Use this when large content was auto-saved to Working Data (e.g. a web page fetc
 ### `folder_find(keywords, search_root = "")`
 - `keywords` *(required)* - list of case-insensitive fragments that must ALL appear in the folder name.
 - `search_root` *(optional, default "")* - datauser-relative directory to restrict the search. Leave empty to search the whole `datauser/` tree. Legacy aliases like `"KoreDocs/RadarData"` are accepted.
+- This is recursive search. To list only the immediate subfolders of one directory, use `folder_ls()` instead.
 
 ## Output
 - `file_write(...)` - returns `"Wrote datauser/filename.txt"` on success, or `"Error: ..."` on failure.
 - `file_append(...)` - returns `"Appended datauser/filename.txt"` on success, or `"Error: ..."` on failure.
 - `file_read(...)` - returns the file content as a string, or `"File not found: ..."` if the file does not exist.
 - `file_find(...)` - returns a newline-separated list of matching workspace-relative paths, or a `"No files found..."` message.
+- `folder_ls(...)` - returns all immediate subfolders, a total count, and a next-page instruction when needed.
 - `folder_find(...)` - returns a newline-separated list of matching workspace-relative paths, or a `"No folders found..."` message.
 - `file_write_from_working_data(...)` - writes content from a named Working Data item.
 - `folder_create(...)` - returns `"Created folder: path"` or `"Folder already exists: path"`, or `"Error: ..."` on failure.
@@ -100,4 +105,5 @@ This means you can park a large result with `working_data_save`, then write it t
   - Returns: `"datauser/RadarData/pulse_log.csv\ndatauser/RadarData/sys_pulse.csv"`
 - `file_find(["test", "2026"])` - find files whose name contains both fragments
 - `file_find([], "datauser/test_file_access")` - list all files below that directory
+- `folder_ls("datauser")` - list immediate visible subfolders with a count
 - `folder_find(["2026-03"])` - find folders containing "2026-03" in the name

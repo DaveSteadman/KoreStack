@@ -34,6 +34,7 @@
         "file_pwd()",
         "file_cd(path: str)",
         "file_ls(path: str = \"\")",
+        "folder_ls(path: str = \"\", include_hidden: bool = True, offset: int = 0, limit: int = 100)",
         "file_write_from_working_data(working_data_name: str, path: str)",
         "file_find(keywords: list[str], search_root: str = \"\")",
         "folder_find(keywords: list[str], search_root: str = \"\")",
