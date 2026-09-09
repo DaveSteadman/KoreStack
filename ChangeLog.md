@@ -6,6 +6,19 @@ For future entries, place the newest date first. State the problem, the change m
 
 The project favours simple, clear code and small, cohesive changes. Prefer removing duplication and unnecessary mechanisms. Verify changes using existing checks or transient checks where appropriate, without retaining working or temporary test files.
 
+## v0.10 release summary: 9 September 2026
+
+- Reworked KoreAgent around clearer orchestration, input, session, and tool-runtime boundaries; retired superseded planning, workflow, MCP, scratchpad, and dataset implementations.
+- Added persistent skill management, service skill manifests, and more selective tool discovery so the agent can expose and choose current capabilities reliably.
+- Strengthened model and tool execution across OpenAI, Ollama, and LM Studio, including argument validation, stream-completion handling, schema refresh, duplicate-call guards, and delivery-aware outcomes.
+- Added context compaction and improved runtime configuration handling to support longer conversations without losing the active task context.
+- Expanded KoreData Gateway search with stable artifact references, partial-result reporting, semantic search controls, and persistent named SavedSearches.
+- SavedSearch loading now restores Days limit, Since, Until, result limit, search mode, and semantic minimum-match settings in the gateway UI.
+- Improved KoreFeed storage and domain lifecycle management: reduced memory growth, added per-domain semantic sentence indexing, and made malformed legacy `.db` / `_db` artifacts safely removable without allowing them to ingest again.
+- Advanced KoreRAG, KoreLibrary, KoreReference, KoreGraph, and KoreScrape data operations with database administration, processing scripts, import/export, sentence indexing, and retrieval improvements.
+- Extended KoreComms with more robust conversation and email processing, Gmail/Discord integration refinements, and SFTP file connections; continued KoreChat, KoreCode, and KoreDocs service/API maturation.
+- Improved operational quality across the suite with KoreCron scheduling work, broader focused regression coverage, shared UI consistency updates, service manifests, logging, and dashboard metadata improvements.
+
 ## UI consistency and tool-runtime cleanup: 5 September 2026
 
 ### Implemented changes
