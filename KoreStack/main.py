@@ -263,7 +263,7 @@ def get_stack_paths(config: dict) -> dict[str, Path]:
     paths = config.get("paths") if isinstance(config.get("paths"), dict) else {}
     dataroot    = resolve_data_root(config)
     datacontrol = (dataroot / "datacontrol").resolve()
-    datauser    = (datacontrol / "datauser").resolve()
+    datauser    = (dataroot / "datauser").resolve()
 
     def _dc(key: str, default: str) -> Path:
         return (datacontrol / str(paths.get(key) or default)).resolve()
