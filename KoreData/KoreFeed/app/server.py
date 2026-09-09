@@ -120,6 +120,7 @@ from app.feed_manager import (
     update_feed,
     update_feed_rate,
     update_domain_age_settings_spec,
+    validate_domain_name,
 )
 from app.ingest import get_runtime_status, schedule_feeds, start_scheduler, stop_scheduler, trigger_immediate
 from app.overview import get_feed_overview, invalidate_feed_overview
@@ -135,6 +136,10 @@ def _warm_feed_domains() -> None:
     for _domain in list_domains():
         init_db(_domain)
     for _domain in list_feed_domains():
+        try:
+            validate_domain_name(_domain)
+        except ValueError:
+            continue
         sync_domain_spec(_domain)
     try:
         from app.chroma_index import migrate_legacy_domain_stores
@@ -246,8 +251,12 @@ def api_list_feeds():
 @app.post("/api/feeds", status_code=201, tags=["feeds"])
 def api_add_feed(body: FeedCreate):
     """Add a new RSS feed to the inventory."""
-    feed = add_feed(body.domain, body.name, str(body.url), body.update_rate, feed_type=body.feed_type)
-    init_db(body.domain)
+    try:
+        domain = validate_domain_name(body.domain)
+        feed   = add_feed(domain, body.name, str(body.url), body.update_rate, feed_type=body.feed_type)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    init_db(domain)
     invalidate_feed_overview()
     schedule_feeds()
     trigger_immediate(feed)
@@ -291,7 +300,13 @@ def api_list_domains():
 @app.post("/api/domains", status_code=201, tags=["domains"])
 def api_create_domain(domain: str):
     """Create a new empty domain."""
-    create_domain(domain)
+    try:
+        domain = validate_domain_name(domain)
+        created = create_domain(domain)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    if not created:
+        raise HTTPException(status_code=409, detail="Domain already exists")
     init_db(domain)
     invalidate_feed_overview()
     return {"domain": domain}
@@ -300,8 +315,15 @@ def api_create_domain(domain: str):
 @app.delete("/api/domains/{domain}", tags=["domains"])
 def api_delete_domain(domain: str):
     """Delete a domain, its feed list, and its database."""
-    delete_domain_feeds(domain)
-    delete_domain_db(domain)
+    try:
+        if domain not in {".db", "_db"}:
+            domain = validate_domain_name(domain)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    deleted_feeds = delete_domain_feeds(domain)
+    deleted_db    = delete_domain_db(domain)
+    if not deleted_feeds and not deleted_db:
+        raise HTTPException(status_code=404, detail="Domain not found")
     invalidate_feed_overview()
     schedule_feeds()
     return {"deleted": domain}
@@ -324,7 +346,11 @@ def api_rename_domain(domain: str, new_name: str):
 @app.post("/api/domains/{domain}/enabled", tags=["domains"])
 def api_set_domain_enabled(domain: str, enabled: bool):
     """Enable or disable all feed processing for a domain."""
-    if not set_domain_enabled(domain, enabled):
+    try:
+        updated = set_domain_enabled(domain, enabled)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    if not updated:
         raise HTTPException(status_code=404, detail="Domain not found")
     invalidate_feed_overview()
     schedule_feeds()

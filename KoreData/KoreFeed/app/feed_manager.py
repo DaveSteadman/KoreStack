@@ -344,6 +344,8 @@ def load_feeds() -> list[dict]:
     for path in sorted(FEEDS_DIR.glob("*.json")):
         if path.name.endswith(".state.json"):
             continue
+        if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]*", path.stem):
+            continue
         result.extend(_load_domain_file(path.stem))
     return result
 
@@ -359,6 +361,7 @@ def list_feed_domains() -> list[str]:
         p.stem
         for p in sorted(FEEDS_DIR.glob("*.json"))
         if not p.name.endswith(".state.json")
+        and (p.stem == "_db" or re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]*", p.stem))
     ]
 
 
@@ -367,6 +370,7 @@ def get_feed(feed_id: str) -> Optional[dict]:
 
 
 def add_feed(domain: str, name: str, url: str, update_rate: int, feed_type: str = "rss") -> dict:
+    domain = validate_domain_name(domain)
     feeds = _load_domain_file(domain)
     feed = {
         "domain":      domain,
@@ -403,6 +407,7 @@ def remove_feed(feed_id: str) -> bool:
 
 def create_domain(domain: str) -> bool:
     """Create an empty feed file for a new domain. Returns False if it already exists."""
+    domain = validate_domain_name(domain)
     path = _domain_file(domain)
     FEEDS_DIR.mkdir(exist_ok=True)
     if path.exists():
@@ -472,11 +477,23 @@ def sync_domain_spec(domain: str) -> None:
 
 def delete_domain_feeds(domain: str) -> bool:
     """Delete the feed file for a domain. Returns False if it didn't exist."""
-    path = _domain_file(domain)
+    if domain == "_db":
+        # Older sanitisation turned a rejected ``.db`` name into this exact
+        # filename. It must be removable but must never become a new domain.
+        path       = FEEDS_DIR / "_db.json"
+        state_path = FEEDS_DIR / "_db.state.json"
+    else:
+        try:
+            domain = validate_domain_name(domain)
+        except ValueError:
+            # Do not turn a malformed legacy display name such as ``.db`` into
+            # a different, valid-looking filename such as ``_db.json``.
+            return False
+        path       = _domain_file(domain)
+        state_path = _state_file(domain)
     if not path.exists():
         return False
     path.unlink()
-    state_path = _state_file(domain)
     if state_path.exists():
         state_path.unlink()
     with _state_cache_lock:
@@ -623,8 +640,11 @@ def get_domain_enabled(domain: str) -> bool:
 
 
 def set_domain_enabled(domain: str, enabled: bool) -> bool:
+    domain = validate_domain_name(domain)
     spec_domain, raw_feeds, age_settings, _ = _read_domain_spec(domain)
     path = _domain_file(domain)
+    if not path.exists():
+        return False
     FEEDS_DIR.mkdir(exist_ok=True)
     with open(path, "w", encoding="utf-8") as handle:
         json.dump(

@@ -207,7 +207,18 @@ def _sanitize_domain(domain: str) -> str:
 
 def get_db_path(domain: str) -> Path:
     DATA_DIR.mkdir(exist_ok=True)
-    return DATA_DIR / f"{_sanitize_domain(domain)}.db"
+    # Older versions allowed an empty domain.  SQLite then created a literal
+    # ``.db`` file, which was displayed as a domain but could not be deleted:
+    # sanitising the displayed name produced ``_db.db`` instead.  Keep this
+    # exact mapping solely so the legacy artifact remains removable.
+    name = str(domain or "").strip()
+    if name == ".db":
+        return DATA_DIR / name
+    if name == "_db":
+        return DATA_DIR / f"{name}.db"
+    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]*", name):
+        raise FeedDatabaseError("Domain names may contain only letters, digits, underscores, and hyphens")
+    return DATA_DIR / f"{name}.db"
 
 
 @contextmanager
@@ -853,7 +864,12 @@ def get_recent_entries(
 
 def list_domains() -> list[str]:
     DATA_DIR.mkdir(exist_ok=True)
-    return [f.stem for f in sorted(DATA_DIR.glob("*.db"))]
+    domains: list[str] = []
+    for path in sorted(DATA_DIR.glob("*.db")):
+        domain = ".db" if path.name == ".db" else path.stem
+        if domain in {".db", "_db"} or re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]*", domain):
+            domains.append(domain)
+    return domains
 
 
 def _tombstone(domain: str, conn: sqlite3.Connection, where: str, params: list) -> int:
@@ -1078,12 +1094,20 @@ def delete_domain_db(domain: str) -> bool:
         _close_cached_connection(path)
         path.unlink()
         deleted_db = True
+    for sidecar_path in (Path(f"{path}-wal"), Path(f"{path}-shm")):
+        if sidecar_path.exists():
+            sidecar_path.unlink()
     try:
         from app.chroma_index import delete_domain_store
 
-        delete_domain_store(domain)
+        if domain != ".db":
+            delete_domain_store(domain)
     except Exception:
         pass
+    with _domains_lock:
+        _domains_ready.discard(domain)
+        if domain == ".db":
+            _domains_ready.discard("")
     return deleted_db
 
 

@@ -43,6 +43,7 @@
 # - ingest_feed: Implements the ingest feed operation for this module.
 # - _enqueue: Implements the  enqueue operation for this module.
 # - _enqueue_due_feeds: Implements the  enqueue due feeds operation for this module.
+# - _feed_is_current: Implements the  feed is current operation for this module.
 # - _worker: Implements the  worker operation for this module.
 # - _scheduler_keepalive: Implements the  scheduler keepalive operation for this module.
 # - _feed_job_id: Implements the  feed job id operation for this module.
@@ -472,7 +473,7 @@ def ingest_web_feed(feed: dict) -> None:
         is_art, title, text, published, meta = _assess_html(html, url)
         if is_art:
             pages_with_content += 1
-            if insert_entry(
+            if _feed_is_current(feed) and insert_entry(
                 domain=feed["domain"], feed_name=feed["name"],
                 headline=title or url, url=url,
                 published=published, metadata=meta, page_text=text,
@@ -586,7 +587,7 @@ def ingest_json_listing_feed(feed: dict) -> None:
             published = _parse_date_flexible(json_date)
         if text:
             pages_with_content += 1
-            if insert_entry(
+            if _feed_is_current(feed) and insert_entry(
                 domain=feed["domain"], feed_name=feed["name"],
                 headline=title or abs_url, url=abs_url,
                 published=published, metadata=meta, page_text=text,
@@ -673,7 +674,7 @@ def ingest_feed(feed: dict) -> None:
             page_text = _fetch_page_text(url) if url else ""
             if page_text:
                 pages_with_content += 1
-            inserted = insert_entry(
+            inserted = _feed_is_current(feed) and insert_entry(
                 domain=feed["domain"],
                 feed_name=feed["name"],
                 headline=headline,
@@ -758,6 +759,13 @@ def _enqueue_due_feeds(reason: str = "watchdog", max_count: int | None = None) -
         last_due_scan_enqueued = enqueued,
     )
     return enqueued
+
+
+def _feed_is_current(feed: dict) -> bool:
+    """Return whether a queued feed still exists in the same domain."""
+    feed_id = str(feed.get("id") or "")
+    current = get_feed(feed_id) if feed_id else None
+    return current is not None and current.get("domain") == feed.get("domain")
 
 
 def _worker() -> None:

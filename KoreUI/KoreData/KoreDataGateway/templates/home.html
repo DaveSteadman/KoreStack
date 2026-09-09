@@ -212,8 +212,8 @@
       <label style="display:flex; align-items:center; gap:0.35rem; font-size:12px; color:var(--dim);">
         No Older Than
         <div class="num-stepper">
-          <input type="number" min="1" max="3650" style="width:52px;"
-                 oninput="const _d=parseInt(this.value);if(_d>=1){const d=new Date();d.setDate(d.getDate()-_d);document.getElementById('sq-since').value=d.toISOString().slice(0,10);}else if(!this.value){document.getElementById('sq-since').value='';}">
+          <input id="sq-days-limit" type="number" min="1" max="3650" style="width:52px;"
+                 oninput="syncDaysLimit(this.value)">
           <div class="stepper-btns">
             <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,1)">&#9650;</button>
             <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,-1)">&#9660;</button>
@@ -566,6 +566,7 @@ function getSearchPayload() {
   const domains   = [...document.querySelectorAll('.sq-domain:checked')].map(e => e.value);
   const since     = document.getElementById('sq-since').value;
   const until     = document.getElementById('sq-until').value;
+  const daysLimit = parseInt(document.getElementById('sq-days-limit').value, 10);
   const mode      = document.getElementById('sq-mode').value || 'keyword';
   const limit     = parseInt(document.getElementById('sq-limit').value, 10) || 20;
   const minMatch  = parseFloat(document.getElementById('sq-min-match').value);
@@ -573,6 +574,7 @@ function getSearchPayload() {
   const payload = { query, domains, mode, limit };
   if (since) payload.since = since;
   if (until) payload.until = until;
+  if (Number.isInteger(daysLimit) && daysLimit >= 1) payload.days_limit = daysLimit;
   if (mode === 'semantic' && Number.isFinite(minMatch)) payload.min_match = minMatch;
 
   return payload;
@@ -615,6 +617,18 @@ function updateSavedSearchActions() {
   }
 }
 
+function syncDaysLimit(value) {
+  const daysLimit = parseInt(value, 10);
+  const since     = document.getElementById('sq-since');
+  if (daysLimit >= 1) {
+    const date = new Date();
+    date.setDate(date.getDate() - daysLimit);
+    since.value = date.toISOString().slice(0, 10);
+  } else if (!value) {
+    since.value = '';
+  }
+}
+
 function savedSearchFromOption(option) {
   try {
     return JSON.parse(option.dataset.search || '{}');
@@ -635,6 +649,7 @@ function applySavedSearchToForm(search) {
 
   document.getElementById('sq-since').value = search.since || '';
   document.getElementById('sq-until').value = search.until || '';
+  document.getElementById('sq-days-limit').value = search.days_limit ?? '';
   toggleGatewaySearchMode(search.mode || 'keyword');
   document.getElementById('sq-min-match').value = search.min_match ?? '0.40';
   document.getElementById('sq-limit').value = search.limit ?? 20;
@@ -728,6 +743,7 @@ function saveSearchState(data) {
     domains:    [...document.querySelectorAll('.sq-domain')].map(e => ({ value: e.value, checked: e.checked })),
     since:      document.getElementById('sq-since').value,
     until:      document.getElementById('sq-until').value,
+    days_limit: document.getElementById('sq-days-limit').value,
     mode:       document.getElementById('sq-mode').value,
     min_match:  document.getElementById('sq-min-match').value,
     limit:      document.getElementById('sq-limit').value,
@@ -758,6 +774,7 @@ function restoreSearchState() {
     }
     if (state.since) document.getElementById('sq-since').value = state.since;
     if (state.until) document.getElementById('sq-until').value = state.until;
+    if (state.days_limit) document.getElementById('sq-days-limit').value = state.days_limit;
     if (state.mode)  toggleGatewaySearchMode(state.mode);
     if (state.min_match) document.getElementById('sq-min-match').value = state.min_match;
     if (state.limit) document.getElementById('sq-limit').value = state.limit;

@@ -33,6 +33,7 @@ class SearchRequest(BaseModel):
     domains:   list[str] = Field(default_factory=list)
     since:     str | None = None
     until:     str | None = None
+    days_limit: int | None = Field(default=None, ge=1, le=3650)
     mode:      str = "keyword"
     min_match: float = Field(default=0.4, ge=0.0, le=1.0)
     limit:     int = Field(default=20, ge=1, le=200)

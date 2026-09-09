@@ -680,6 +680,7 @@ def _saved_search_payload(search: _SearchRequest) -> dict[str, object]:
         "domains":   search.domains,
         "since":     search.since,
         "until":     search.until,
+        "days_limit": search.days_limit,
         "mode":      search.mode,
         "min_match": search.min_match,
         "limit":     search.limit,

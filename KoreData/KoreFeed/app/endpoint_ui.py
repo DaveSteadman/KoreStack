@@ -80,6 +80,7 @@ from app.feed_manager import (
     sync_domain_spec,
     update_domain_age_settings_spec,
     update_feed,
+    validate_domain_name,
 )
 from app.ingest import get_runtime_status, schedule_feeds, trigger_immediate
 from app.overview import get_feed_overview, invalidate_feed_overview
@@ -292,15 +293,28 @@ def register_feed_ui(app: FastAPI) -> None:
 
     @app.post("/ui/feeds/domains/create", include_in_schema=False)
     def web_create_domain(domain: str = Form(...)):
-        create_domain(domain)
+        try:
+            domain = validate_domain_name(domain)
+            created = create_domain(domain)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        if not created:
+            raise HTTPException(status_code=409, detail="Domain already exists")
         init_db(domain)
         invalidate_feed_overview()
         return RedirectResponse("/ui/feeds", status_code=303)
 
     @app.post("/ui/feeds/domains/{domain}/delete", include_in_schema=False)
     def web_delete_domain(domain: str):
-        delete_domain_feeds(domain)
-        delete_domain_db(domain)
+        try:
+            if domain not in {".db", "_db"}:
+                domain = validate_domain_name(domain)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        deleted_feeds = delete_domain_feeds(domain)
+        deleted_db    = delete_domain_db(domain)
+        if not deleted_feeds and not deleted_db:
+            raise HTTPException(status_code=404, detail="Domain not found")
         invalidate_feed_overview()
         schedule_feeds()
         return RedirectResponse("/ui/feeds", status_code=303)
@@ -320,7 +334,11 @@ def register_feed_ui(app: FastAPI) -> None:
     @app.post("/ui/feeds/domains/{domain}/enabled", include_in_schema=False)
     def web_set_domain_enabled(domain: str, enabled: str = Form("true")):
         is_enabled = str(enabled).strip().lower() in {"1", "true", "yes", "on"}
-        if not set_domain_enabled(domain, is_enabled):
+        try:
+            updated = set_domain_enabled(domain, is_enabled)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        if not updated:
             raise HTTPException(status_code=404, detail="Domain not found")
         invalidate_feed_overview()
         schedule_feeds()
@@ -334,7 +352,11 @@ def register_feed_ui(app: FastAPI) -> None:
         update_rate: int = Form(60),
         feed_type:   str = Form("rss"),
     ):
-        feed = add_feed(domain, name, url, update_rate, feed_type=feed_type)
+        try:
+            domain = validate_domain_name(domain)
+            feed   = add_feed(domain, name, url, update_rate, feed_type=feed_type)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
         init_db(domain)
         invalidate_feed_overview()
         schedule_feeds()
