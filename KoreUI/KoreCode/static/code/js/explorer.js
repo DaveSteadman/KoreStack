@@ -1,4 +1,5 @@
 import { state, api } from './state.js';
+import { kcuiPrompt } from '/ui-elements/assets/js/dialogs.js';
 
 const treeHost = document.getElementById('code-tree');
 const treeStatus = document.getElementById('tree-status');
@@ -64,55 +65,9 @@ async function _invalidateDir(dirPath) {
 }
 
 function _askName(title, placeholder = 'Name') {
-  return new Promise((resolve) => {
-    const overlay = document.createElement('div');
-    overlay.className = 'name-prompt-overlay';
-    overlay.innerHTML = `
-      <div class="name-prompt-dialog" role="dialog" aria-modal="true" aria-label="${title}">
-        <div class="name-prompt-title">${title}</div>
-        <input class="name-prompt-input" type="text" spellcheck="false" placeholder="${placeholder}" />
-        <div class="name-prompt-actions">
-          <button type="button" class="kcui-tag kcui-tag--muted name-prompt-cancel">Cancel</button>
-          <button type="button" class="kcui-tag kcui-tag--accent name-prompt-ok">Create</button>
-        </div>
-      </div>
-    `;
-    document.body.appendChild(overlay);
-
-    const input = overlay.querySelector('.name-prompt-input');
-    const cancelBtn = overlay.querySelector('.name-prompt-cancel');
-    const okBtn = overlay.querySelector('.name-prompt-ok');
-
-    let done = false;
-    const close = (value = null) => {
-      if (done) return;
-      done = true;
-      overlay.remove();
-      resolve(value);
-    };
-
-    cancelBtn.addEventListener('click', () => close(null));
-    okBtn.addEventListener('click', () => {
-      const value = String(input.value || '').trim();
-      if (!value) return;
-      close(value);
-    });
-    input.addEventListener('keydown', (event) => {
-      if (event.key === 'Enter') {
-        event.preventDefault();
-        okBtn.click();
-      }
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        close(null);
-      }
-    });
-    overlay.addEventListener('click', (event) => {
-      if (event.target === overlay) close(null);
-    });
-
-    input.focus();
-    input.select();
+  return kcuiPrompt(title, {
+    placeholder,
+    confirmLabel: 'Create',
   });
 }
 

@@ -24,14 +24,14 @@ function _onEditorChange(markdown) {
   fileio.queueAutosave(markdown);
   _draftSave(markdown);
   _updateStatus();
-  properties.refresh(markdown, fileio.currentName());
+  _refreshProperties(markdown);
 }
 fileio.init(_onStateChange);
 
 // Auto-open from ?file= URL param, else start with a blank document
 const autoOpened = await fileio.autoOpenFromUrl(v => {
   editor.setValue(v);
-  properties.refresh(v, fileio.currentName());
+  _refreshProperties(v);
 });
 if (!autoOpened) {
   location.replace('/ui');
@@ -42,7 +42,7 @@ const _savedDraft = draft.load();
 if (_savedDraft !== null) {
   editor.setValue(_savedDraft);
   fileio.markDirty();
-  properties.refresh(_savedDraft, fileio.currentName());
+  _refreshProperties(_savedDraft);
 }
 
 // ── Dirty tracking ─────────────────────────────────────────────────────────
@@ -92,8 +92,19 @@ function _onStateChange(name, dirty) {
   document.getElementById('doc-dirty').classList.toggle('hidden', !dirty);
   document.title = (dirty ? '● ' : '') + (name ?? 'Untitled') + ' — KoreDoc';
   _updateStatus();
-  properties.refresh(editor.getValue(), name);
+  _refreshProperties(editor.getValue(), true);
   if (name) trackAppTab(name, 'koredoc', fileio.currentId());
+}
+
+function _refreshProperties(markdown, includeHistory = false) {
+  properties.refresh(markdown, fileio.currentName(), {
+    metadata: fileio.currentMetadata(),
+    revision: fileio.currentRevision(),
+  });
+  if (!includeHistory || fileio.currentId() == null) return;
+  fileio.getHistory()
+    .then(history => properties.setHistory(history))
+    .catch(err => console.warn('[KoreDoc] failed to load revision history', err));
 }
 
 function _updateStatus() {

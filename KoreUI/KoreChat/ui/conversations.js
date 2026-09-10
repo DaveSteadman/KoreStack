@@ -775,7 +775,10 @@ async function renameConversation() {
     if (_selectedId === null) return;
 
     const current = _allConversations.find(c => c.id === _selectedId);
-    const nextSubject = window.prompt("Rename conversation:", current?.subject || "");
+    const nextSubject = await window.kcuiPrompt('Rename conversation', {
+        initial:  current?.subject || "",
+        required: false,
+    });
     if (nextSubject === null) return;
 
     try {

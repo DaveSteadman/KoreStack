@@ -96,15 +96,14 @@
     {% if search_error %}
     <p class="meta kcui-result-empty" style="color:var(--danger);">{{ search_error }}</p>
     {% elif results %}
-    <form method="post" action="/ui/feeds/entries/bulk-delete">
+    <form method="post" action="/ui/feeds/entries/bulk-delete" onsubmit="return confirmBulkDelete(this)">
       <div class="kcui-filter-row" style="padding:0.4rem 0.75rem; border-bottom:1px solid var(--border);">
         <label class="kcui-filter-label" style="cursor:pointer;">
           <input type="checkbox" id="select-all"
                  onchange="document.querySelectorAll('.row-check').forEach(cb => cb.checked = this.checked)">
           select all
         </label>
-        <button class="btn-danger btn-sm" type="submit" style="margin-left:auto;"
-                onclick="if(!document.querySelector('.row-check:checked')){alert('Select at least one entry.');return false;}return confirm('Delete selected entries?')">
+        <button class="btn-danger btn-sm" type="submit" style="margin-left:auto;">
           DELETE SELECTED
         </button>
       </div>
@@ -172,6 +171,27 @@ function toggleSearchMode(mode) {
   semantic.checked = false;
   hidden.value = 'keyword';
   hint.textContent = 'Bare terms use AND by default. Use quotes for phrases, OR or | for alternatives, NOT to exclude, and parentheses to group.';
+}
+
+function confirmBulkDelete(form) {
+  if (form.dataset.kcuiConfirmed === '1') {
+    delete form.dataset.kcuiConfirmed;
+    return true;
+  }
+  if (!form.querySelector('.row-check:checked')) {
+    void window.kcuiAlert('No entries selected', 'Select at least one entry.');
+    return false;
+  }
+  void window.kcuiConfirm(
+    'Delete selected entries',
+    'Delete selected entries?',
+    { confirmLabel: 'Delete' },
+  ).then(confirmed => {
+    if (!confirmed) return;
+    form.dataset.kcuiConfirmed = '1';
+    form.requestSubmit();
+  });
+  return false;
 }
 </script>
 {% endblock %}

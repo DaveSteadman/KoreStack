@@ -95,8 +95,8 @@
           "invoke_path": "/api/skills/koredocs_doc_create/invoke"
         },
         {
-          "name": "koredocs_doc_create_from_scratchpad",
-          "purpose": "Create a KoreDoc from an exact prior tool result held in the scratchpad.",
+          "name": "koredocs_doc_create_from_working_data",
+          "purpose": "Create a KoreDoc from an exact prior tool result held in Working Data.",
           "parameters": {
             "type": "object",
             "properties": {
@@ -108,9 +108,9 @@
                 "type": "string",
                 "description": "Filename, with or without the .koredoc extension."
               },
-              "scratchpad_content": {
+              "working_data_content": {
                 "type": "string",
-                "description": "Pass the exact token {scratchpad:key} shown after a prior tool result. KoreAgent resolves it before this tool runs, preserving generated text without model transcription."
+                "description": "Pass the exact token {working_data:key} shown after a prior tool result. KoreAgent resolves it before this tool runs, preserving generated text without model transcription."
               },
               "metadata": {
                 "type": "object",
@@ -131,11 +131,11 @@
             "required": [
               "folder_path",
               "name",
-              "scratchpad_content"
+              "working_data_content"
             ]
           },
           "returns": "A KoreDocs operation result.",
-          "invoke_path": "/api/skills/koredocs_doc_create_from_scratchpad/invoke"
+          "invoke_path": "/api/skills/koredocs_doc_create_from_working_data/invoke"
         },
         {
           "name": "koredocs_doc_markdown_append",

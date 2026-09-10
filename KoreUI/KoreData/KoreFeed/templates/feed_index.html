@@ -301,8 +301,21 @@ async function toggleDomainEnabled(domain, input) {
 }
 
 function confirmDeleteDomain(form) {
+  if (form.dataset.kcuiConfirmed === '1') {
+    delete form.dataset.kcuiConfirmed;
+    return true;
+  }
   const domain = form.dataset.domainName || 'this domain';
-  return window.confirm('Delete domain "' + domain + '" and all its data?');
+  void window.kcuiConfirm(
+    'Delete domain',
+    'Delete domain "' + domain + '" and all its data?',
+    { confirmLabel: 'Delete' },
+  ).then(confirmed => {
+    if (!confirmed) return;
+    form.dataset.kcuiConfirmed = '1';
+    form.requestSubmit();
+  });
+  return false;
 }
 
 (function () {

@@ -64,9 +64,9 @@ def estimate_thread_chars(messages: list[dict]) -> int:
 def compact_context(context_map: list[dict], messages: list[dict], idx: int, save_fn=None) -> bool:
     """Replace a context entry's message content with a compact placeholder.
 
-    When *save_fn* is provided and the entry has no existing scratchpad key, the
+    When *save_fn* is provided and the entry has no existing Working Data key, the
     original content is saved to a generated '_cx_' key before being replaced so
-    the model can still retrieve it via scratchpad_load or scratchpad_query.
+    the model can still retrieve it through the Working Data tools.
     """
     if idx < 0 or idx >= len(context_map):
         return False
@@ -80,7 +80,7 @@ def compact_context(context_map: list[dict], messages: list[dict], idx: int, sav
     label = entry.get("label") or entry.get("role", "?")
     round_n = entry.get("round", 0)
 
-    # Preserve content to scratchpad before discarding it, so the model can
+    # Preserve content to Working Data before discarding it, so the model can
     # recover it later.  Only applies when there is no existing auto_key reference
     # and the message holds real content (not already a placeholder or empty).
     if not auto_key and save_fn is not None and msg_idx < len(messages):
@@ -140,8 +140,8 @@ def assess_compact(context_map: list[dict], messages: list[dict], round_num: int
         and entry.get("msg_idx") is not None
         and not entry.get("compacted")
     ]
-    # Prefer large auto-key entries first (content already in scratchpad, cheap to drop),
-    # then large non-auto entries (content will be saved to scratchpad via save_fn).
+    # Prefer large auto-key entries first (content already in Working Data, cheap to drop),
+    # then large non-auto entries (content will be saved to Working Data via save_fn).
     candidates.sort(key=lambda item: (0 if item[1].get("auto_key") else 1, -item[1].get("chars", 0)))
 
     history_candidates = [

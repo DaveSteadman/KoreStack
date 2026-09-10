@@ -35,14 +35,13 @@
 # - _dataset_records_to_markdown: Implements the  dataset records to markdown operation for this module.
 # - _auto_name: Implements the  auto name operation for this module.
 # - _coerce_source_args: Implements the  coerce source args operation for this module.
-# - coerce_persisted_scratchpad_payload: Coerces persisted scratchpad payload for this module.
-# - coerce_persisted_datasets_payload: Coerces persisted datasets payload for this module.
-# - hydrate_session_state: Implements the hydrate session state operation for this module.
+# - coerce_persisted_values_payload: Coerces persisted Working Data values for this module.
+# - coerce_persisted_collections_payload: Coerces persisted Working Data collections for this module.
+# - hydrate_working_data_state: Restores persisted Working Data into its runtime stores.
 # - _write_dataset: Implements the  write dataset operation for this module.
 # - _save_dataset_internal: Implements the  save dataset internal operation for this module.
-# - get_prompt_dataset_manifests: Returns prompt dataset manifests for this module.
-# - get_persisted_datasets_payload: Returns persisted datasets payload for this module.
-# - build_persisted_scratchpad_payload: Builds persisted scratchpad payload for this module.
+# - get_prompt_collection_manifests: Returns prompt Working Data collection manifests for this module.
+# - get_persisted_collections_payload: Returns persisted Working Data collections for this module.
 # - _coerce_history_items: Implements the  coerce history items operation for this module.
 # - _coerce_schema: Implements the  coerce schema operation for this module.
 # - _restore_dataset_entry: Implements the  restore dataset entry operation for this module.
@@ -493,7 +492,7 @@ def _coerce_source_args(source_args: object) -> object:
     return source_args
 
 
-def coerce_persisted_scratchpad_payload(payload: object) -> dict[str, object]:
+def coerce_persisted_values_payload(payload: object) -> dict[str, object]:
     if not isinstance(payload, dict):
         return {}
     named_scratch: dict[str, object] = {}
@@ -503,7 +502,7 @@ def coerce_persisted_scratchpad_payload(payload: object) -> dict[str, object]:
     return named_scratch
 
 
-def coerce_persisted_datasets_payload(payload: object) -> dict[str, dict]:
+def coerce_persisted_collections_payload(payload: object) -> dict[str, dict]:
     if not isinstance(payload, dict):
         return {}
     return {
@@ -513,36 +512,36 @@ def coerce_persisted_datasets_payload(payload: object) -> dict[str, dict]:
     }
 
 
-def hydrate_session_state(
-    scratchpad_payload: object,
+def hydrate_working_data_state(
+    values_payload: object,
     session_id: str | None = None,
     *,
-    datasets_payload: object = None,
-    scratchpad_clearer=None,
-    scratchpad_restorer=None,
+    collections_payload: object = None,
+    values_clearer=None,
+    values_restorer=None,
     warning_logger=None,
 ) -> dict[str, object]:
     resolved = _resolve_session_id(session_id)
-    named_scratch = coerce_persisted_scratchpad_payload(scratchpad_payload)
-    persisted_datasets = coerce_persisted_datasets_payload(datasets_payload)
+    named_values          = coerce_persisted_values_payload(values_payload)
+    persisted_collections = coerce_persisted_collections_payload(collections_payload)
 
-    if scratchpad_clearer is not None:
-        scratchpad_clearer(session_id=resolved)
+    if values_clearer is not None:
+        values_clearer(session_id=resolved)
     clear_session_datasets(resolved)
-    restore_persisted_datasets(persisted_datasets, resolved)
+    restore_persisted_datasets(persisted_collections, resolved)
 
-    if scratchpad_restorer is None:
-        return named_scratch
+    if values_restorer is None:
+        return named_values
 
-    for scratchpad_key, scratchpad_value in named_scratch.items():
+    for value_name, value in named_values.items():
         try:
-            scratchpad_restorer(scratchpad_key, str(scratchpad_value), session_id=resolved)
+            values_restorer(value_name, str(value), session_id=resolved)
         except TypeError:
-            scratchpad_restorer(scratchpad_key, str(scratchpad_value), resolved)
+            values_restorer(value_name, str(value), resolved)
         except Exception as exc:
             if warning_logger is not None:
-                warning_logger(f"could not restore scratchpad key {scratchpad_key!r}: {exc}")
-    return named_scratch
+                warning_logger(f"could not restore Working Data value {value_name!r}: {exc}")
+    return named_values
 
 
 def _write_dataset(dataset: dict, session_id: str | None = None) -> None:
@@ -608,7 +607,8 @@ def _save_dataset_internal(
     return dataset
 
 
-def get_prompt_dataset_manifests(session_id: str | None = None) -> list[dict]:
+def get_prompt_collection_manifests(session_id: str | None = None) -> list[dict]:
+    """Return compact Working Data collection manifests for prompt construction."""
     resolved = _resolve_session_id(session_id)
     with _DATASET_LOCK:
         store = _SESSION_DATASETS.get(resolved, {})
@@ -622,9 +622,14 @@ def get_prompt_dataset_manifests(session_id: str | None = None) -> list[dict]:
     return sorted(datasets, key=lambda item: item.get("name", ""))
 
 
-def get_persisted_datasets_payload(session_id: str | None = None) -> dict:
+def get_prompt_dataset_manifests(session_id: str | None = None) -> list[dict]:
+    """Compatibility alias for the former collection-manifest helper name."""
+    return get_prompt_collection_manifests(session_id)
+
+
+def get_persisted_collections_payload(session_id: str | None = None) -> dict:
     payload: dict[str, dict] = {}
-    for dataset in get_prompt_dataset_manifests(session_id):
+    for dataset in get_prompt_collection_manifests(session_id):
         if dataset.get("storage_mode") == "inline":
             payload[dataset["name"]] = _inline_entry(dataset)
             continue
@@ -635,10 +640,6 @@ def get_persisted_datasets_payload(session_id: str | None = None) -> dict:
                 print(f"[dataset] Warning: could not refresh spillover row '{dataset['name']}': {exc}", flush=True)
         payload[dataset["name"]] = _manifest(dataset)
     return payload
-
-
-def build_persisted_scratchpad_payload(named_scratch: dict[str, str]) -> dict:
-    return dict(named_scratch)
 
 
 def _coerce_history_items(value: object) -> list[dict]:
@@ -817,7 +818,7 @@ def dataset_rename(name: str, new_name: str, session_id: str | None = None) -> s
 
 def dataset_list(session_id: str | None = None) -> str:
     """List active dataset manifests for the session."""
-    manifests = get_prompt_dataset_manifests(session_id)
+    manifests = get_prompt_collection_manifests(session_id)
     if not manifests:
         return "No datasets stored."
     return "Datasets:\n" + "\n".join(_format_manifest_line(item) for item in manifests)

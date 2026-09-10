@@ -46,6 +46,10 @@ export function listFiles({ type, folderId, folderPath, name, limit } = {}) {
   return _req('GET', '/files' + (qs ? `?${qs}` : ''));
 }
 
+export function getFileHistory(id, { limit = 10 } = {}) {
+  return _req('GET', `/files/${id}/history?limit=${encodeURIComponent(limit)}`);
+}
+
 export async function resolveLegacyFile(type, name) {
   const attempts = [];
   const inferredExt = String(name || '').trim().toLowerCase().match(/\.([^.]+)$/)?.[1] ?? null;

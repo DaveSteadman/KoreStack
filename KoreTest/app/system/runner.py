@@ -144,6 +144,7 @@ def invoke_exchange(
     turn_prompts: list[str],
     model: str | None = None,
     llmhost: str | None = None,
+    _retrying: bool = False,
 ) -> tuple[float, int, str, str]:
     """Run prompts against the live KoreAgent API and collect its ordinary SSE events.
 
@@ -170,13 +171,21 @@ def invoke_exchange(
         errors.append(str(exc))
         exit_code = 1
     finally:
-        try:
-            _agent_request("DELETE", f"/api/sessions/{urllib.parse.quote(session_id, safe='')}")
-        except (OSError, urllib.error.URLError, ValueError):
-            pass
+        if not errors:
+            try:
+                _agent_request("DELETE", f"/api/sessions/{urllib.parse.quote(session_id, safe='')}")
+            except (OSError, urllib.error.URLError, ValueError):
+                pass
 
     duration = time.monotonic() - start_time
-    return duration, exit_code, "\n".join(output), "\n".join(errors)
+    stderr = "\n".join(errors)
+    if exit_code and not _retrying and _is_infrastructure_error(stderr):
+        retry_duration, retry_code, retry_stdout, retry_stderr = invoke_exchange(
+            turn_prompts, model=model, llmhost=llmhost, _retrying=True,
+        )
+        retry_note = f"Retried after infrastructure failure: {stderr}"
+        return duration + retry_duration, retry_code, retry_stdout, "\n".join(filter(None, [retry_note, retry_stderr]))
+    return duration, exit_code, "\n".join(output), stderr
 
 
 def _agent_base_url() -> str:
@@ -352,9 +361,24 @@ def _should_tolerate_validation_failure(
 
 
 # ----------------------------------------------------------------------------------------------------
-def _single_item_pass_status(exit_code: int, final_output: str, log_file: str) -> tuple[bool, str]:
+def _is_infrastructure_error(stderr: str) -> bool:
+    text = str(stderr or "").casefold()
+    return any(marker in text for marker in (
+        "timed out",
+        "http error 500",
+        "http error 502",
+        "http error 503",
+        "http error 504",
+        "korechat unreachable",
+    ))
+
+
+# ----------------------------------------------------------------------------------------------------
+def _single_item_pass_status(exit_code: int, final_output: str, log_file: str, stderr: str = "") -> tuple[bool, str]:
     """Return (passed, failure_reason) for a standalone prompt run."""
     if exit_code != 0:
+        if _is_infrastructure_error(stderr):
+            return False, f"Infrastructure failure: {stderr}"
         return False, f"Exit code {exit_code}"
     if not final_output.strip():
         return False, "Empty final output"
@@ -373,9 +397,12 @@ def _exchange_pass_status(
     log_file: str,
     allow_no_results: bool = False,
     assert_results: list[str] | None = None,
+    stderr: str = "",
 ) -> tuple[bool, str]:
     """Return (passed, failure_reason) for a multi-turn exchange run."""
     if exit_code != 0:
+        if _is_infrastructure_error(stderr):
+            return False, f"Infrastructure failure: {stderr}"
         return False, f"Exit code {exit_code}"
     if any_assert_fail:
         return False, "Assert failed"
@@ -667,6 +694,7 @@ def _run_single_item(
         exit_code=int(row["exit_code"]),
         final_output=row["final_output"],
         log_file=str(row["log_file"]),
+        stderr=str(row["stderr"]),
     )
     row["passed"] = "PASS" if _passed else "FAIL"
     row["failure_reason"] = _failure_reason
@@ -760,6 +788,7 @@ def _run_exchange_item(
         log_file=log_file,
         allow_no_results=allow_no_results,
         assert_results=assert_results,
+        stderr=stderr,
     )
     for row in pending_rows:
         row["passed"] = "PASS" if _passed else "FAIL"

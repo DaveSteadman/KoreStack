@@ -74,38 +74,38 @@ CODE_DIR  = REPO_ROOT / "KoreAgent" / "app"
 if str(CODE_DIR) not in sys.path:
     sys.path.insert(0, str(CODE_DIR))
 
-import datasets_pkg as datasets_module
+import system_skills.WorkingData.collections.service as datasets_module
 from agent.tool_runtime import loop as tool_loop_module
 from sessions import tool_selection as tool_selection_state_module
 from conversation_state import decode_background_context
 from conversation_state import encode_background_context
 from skill_executor import execute_tool_call
-from datasets_pkg import store as datasets_store
+from system_skills.WorkingData.collections import store as datasets_store
 from agent.orchestration.engine import ConversationHistory
 from agent.orchestration.engine import OrchestratorConfig
 from agent.orchestration.engine import orchestrate_prompt
 from input_layer import koreconv_input as koreconv_input_module
-from datasets_pkg import auto_route_tool_result
-from datasets_pkg import clear_session_datasets
-from datasets_pkg import dataset_drop_where
-from datasets_pkg import dataset_expand_full_text
-from datasets_pkg import dataset_filter
-from datasets_pkg import dataset_get
-from datasets_pkg import dataset_inspect
-from datasets_pkg import dataset_list
-from datasets_pkg import dataset_rename
-from datasets_pkg import dataset_save
-from datasets_pkg import dataset_write_koredoc
-from datasets_pkg import delete_session_datasets
-from datasets_pkg import get_persisted_datasets_payload
-from datasets_pkg import restore_persisted_datasets
+from system_skills.WorkingData.collections import auto_route_tool_result
+from system_skills.WorkingData.collections import clear_session_datasets
+from system_skills.WorkingData.collections import dataset_drop_where
+from system_skills.WorkingData.collections import dataset_expand_full_text
+from system_skills.WorkingData.collections import dataset_filter
+from system_skills.WorkingData.collections import dataset_get
+from system_skills.WorkingData.collections import dataset_inspect
+from system_skills.WorkingData.collections import dataset_list
+from system_skills.WorkingData.collections import dataset_rename
+from system_skills.WorkingData.collections import dataset_save
+from system_skills.WorkingData.collections import dataset_write_koredoc
+from system_skills.WorkingData.collections import delete_session_datasets
+from system_skills.WorkingData.collections import get_persisted_collections_payload as get_persisted_datasets_payload
+from system_skills.WorkingData.collections import restore_persisted_datasets
 from prompt_builder import build_system_message
-from scratchpad import scratchpad_clear
-from scratchpad import get_store
-from scratchpad import scratchpad_load
-from scratchpad import scratchpad_list
-from scratchpad import scratchpad_query
-from scratchpad import scratchpad_save
+from system_skills.WorkingData.values.service import clear_values as scratchpad_clear
+from system_skills.WorkingData.values.service import get_values as get_store
+from system_skills.WorkingData.values.service import get_value as scratchpad_load
+from system_skills.WorkingData.values.service import list_values as scratchpad_list
+from system_skills.WorkingData.values.service import query_value as scratchpad_query
+from system_skills.WorkingData.values.service import save_value as scratchpad_save
 from sessions.runtime import get_active_session_id
 from sessions.runtime import bind_session
 from skills_catalog_builder import build_tool_definitions
@@ -120,7 +120,7 @@ from system_skills.SystemInfo.system_info_skill import get_system_info_string
 from KoreDocs.app import korefile as koredocs_korefile
 from KoreCommon import datauser_fs as datauser_fs_module
 from agent.tool_runtime.loop import normalize_tool_request
-from agent.tool_runtime.loop import _derive_auto_scratchpad_key
+from agent.tool_runtime.loop import _derive_auto_working_data_key as _derive_auto_scratchpad_key
 from tool_result import ToolCallResult
 import api.app as api_module
 from input_layer import slash_commands as slash_commands_module

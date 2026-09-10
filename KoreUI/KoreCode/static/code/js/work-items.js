@@ -1,4 +1,5 @@
 import { api } from './state.js';
+import { kcuiForm } from '/ui-elements/assets/js/dialogs.js';
 
 const _ACTIVE_WORK_ITEM_KEY = 'korecode:active-work-item';
 
@@ -7,11 +8,6 @@ export function initWorkItems() {
   const status        = document.getElementById('work-item-status');
   const newButton     = document.getElementById('btn-new-work-item');
   const refreshButton = document.getElementById('btn-refresh-work-items');
-  const dialog         = document.getElementById('work-item-dialog');
-  const form           = document.getElementById('work-item-form');
-  const titleInput     = document.getElementById('work-item-title-input');
-  const descriptionInput = document.getElementById('work-item-description-input');
-  const cancelButton  = document.getElementById('btn-cancel-work-item');
   let items           = [];
   let activeItemId    = _loadActiveId();
 
@@ -103,19 +99,33 @@ export function initWorkItems() {
     }
   });
 
-  newButton.addEventListener('click', () => {
-    form.reset();
-    dialog.showModal();
-    titleInput.focus();
-  });
-  cancelButton.addEventListener('click', () => dialog.close());
-  form.addEventListener('submit', (event) => {
-    event.preventDefault();
-    const title = titleInput.value.trim();
-    if (!title) return;
-    void create(title, descriptionInput.value)
-      .then(() => dialog.close())
-      .catch(_showError);
+  newButton.addEventListener('click', async () => {
+    const values = await kcuiForm('New work item', {
+      message: 'Describe the outcome and the context needed to complete it.',
+      confirmLabel: 'Create work item',
+      fields: [
+        {
+          name:      'title',
+          label:     'Outcome',
+          required:  true,
+          maxLength: 160,
+          placeholder: 'Diagnose and fix the failing test',
+        },
+        {
+          name:        'description',
+          label:       'Context',
+          type:        'textarea',
+          rows:        4,
+          placeholder: 'What should be true when this work is complete?',
+        },
+      ],
+    });
+    if (!values) return;
+    try {
+      await create(values.title, values.description);
+    } catch (error) {
+      _showError(error);
+    }
   });
   refreshButton.addEventListener('click', () => { void refresh().catch(_showError); });
 

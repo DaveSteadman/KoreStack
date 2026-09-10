@@ -30,7 +30,7 @@
       </a>
       {% if article %}
       <form method="post" action="/ui/reference/{{ article.title | urlencode }}/delete" style="margin:0;"
-            onsubmit="return confirm('Permanently delete \'{{ article.title | replace("'","\\x27") }}\'?')">
+            data-reference-title="{{ article.title }}" onsubmit="return confirmDeleteArticle(this)">
         <button type="submit" style="background:rgba(255,95,95,0.15); border-color:var(--red); color:var(--red); font-size:11px; padding:3px 10px;"> DELETE</button>
       </form>
       {% endif %}
@@ -146,6 +146,24 @@ function copyBody() {
     btn.textContent = ' COPIED';
     setTimeout(() => btn.textContent = orig, 1500);
   });
+}
+
+function confirmDeleteArticle(form) {
+  if (form.dataset.kcuiConfirmed === '1') {
+    delete form.dataset.kcuiConfirmed;
+    return true;
+  }
+  const title = form.dataset.referenceTitle || 'this article';
+  void window.kcuiConfirm(
+    'Permanently delete article',
+    'Permanently delete "' + title + '"?',
+    { confirmLabel: 'Delete' },
+  ).then(confirmed => {
+    if (!confirmed) return;
+    form.dataset.kcuiConfirmed = '1';
+    form.requestSubmit();
+  });
+  return false;
 }
 </script>
 {% endblock %}

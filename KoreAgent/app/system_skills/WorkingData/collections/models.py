@@ -20,7 +20,7 @@ from system_skills.WorkingData.collections.service import (
     dataset_rename,
     dataset_save,
     dataset_select,
-    get_prompt_dataset_manifests,
+    get_prompt_collection_manifests,
     ingest_auto_dataset,
 )
 
@@ -35,6 +35,6 @@ __all__ = [
     "dataset_rename",
     "dataset_save",
     "dataset_select",
-    "get_prompt_dataset_manifests",
+    "get_prompt_collection_manifests",
     "ingest_auto_dataset",
 ]

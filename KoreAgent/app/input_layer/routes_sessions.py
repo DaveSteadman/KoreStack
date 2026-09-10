@@ -75,9 +75,9 @@ def register_session_routes(
     handle_stoprun_immediate,
     load_session,
     save_session,
-    flush_scratch_session,
+    flush_working_data_session,
     create_session_context,
-    clear_session_scratch,
+    clear_session_working_data,
     push_log_line,
     set_latest_log_path,
     log_dir,
@@ -133,9 +133,15 @@ def register_session_routes(
 
         def _observe_conversation_reply() -> None:
             deadline = time.monotonic() + 1800
+            last_error = ""
             try:
                 while time.monotonic() < deadline:
-                    messages = kc_get_messages(conversation_id)
+                    try:
+                        messages = kc_get_messages(conversation_id)
+                    except Exception as exc:
+                        last_error = str(exc)
+                        time.sleep(1)
+                        continue
                     if isinstance(messages, list):
                         replies = [
                             item for item in messages
@@ -174,7 +180,7 @@ def register_session_routes(
                 queue_run_event(run_q, {
                     "type":    "error",
                     "run_id":  run_id,
-                    "message": "Timed out waiting for the shared Agent response",
+                    "message": f"Timed out waiting for the shared Agent response: {last_error}".rstrip(": "),
                 }, priority=True)
             except Exception as exc:
                 queue_run_event(run_q, {"type": "error", "run_id": run_id, "message": str(exc)}, priority=True)
@@ -240,7 +246,7 @@ def register_session_routes(
                         _prompt,
                         config               = run_config,
                         output               = _slash_output,
-                        clear_history        = lambda: (history.clear(), session_context.clear(), clear_session_scratch(session_id), save_session(session_id, history, session_context, 0, 0)),
+                        clear_history        = lambda: (history.clear(), session_context.clear(), clear_session_working_data(session_id), save_session(session_id, history, session_context, 0, 0)),
                         session_context      = session_context,
                         session_id           = session_id,
                         switch_session       = _do_switch_session,
@@ -277,7 +283,7 @@ def register_session_routes(
                             quiet=True,
                             conversation_entry=conversation_entry,
                             on_tool_round_complete=lambda: threading.Thread(
-                                target=flush_scratch_session, args=(session_id,), daemon=True
+                                target=flush_working_data_session, args=(session_id,), daemon=True
                             ).start(),
                             on_token=lambda text: queue_run_event(
                                 run_q,

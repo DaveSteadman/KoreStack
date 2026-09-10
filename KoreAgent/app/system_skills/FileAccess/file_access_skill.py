@@ -24,7 +24,7 @@
 # - folder_find: Implements the folder find operation for this module.
 # - folder_create: Implements the folder create operation for this module.
 # - folder_exists: Implements the folder exists operation for this module.
-# - file_write_from_scratchpad: Implements the file write from scratchpad operation for this module.
+# - file_write_from_working_data: Implements the file write from Working Data operation for this module.
 # ====================================================================================================
 
 
@@ -124,7 +124,7 @@ def file_write(path: str, content: str, skip_content_guard: bool = False) -> str
         if reason:
             return (
                 f"Error: refusing to write suspicious placeholder content to {display_datauser_path(target_path)}; {reason}. "
-                "Use dataset_write_koredoc or retrieve the real dataset records first."
+                "Use working_data_export or retrieve the real Working Data records first."
             )
     target_path = write_text_file(target_path, text_to_write, ensure_trailing_newline=True)
     return f"Wrote {display_datauser_path(target_path)}"
@@ -402,7 +402,7 @@ def file_write_from_working_data(working_data_name: str, path: str, skip_content
         if reason:
             return (
                 f"Error: refusing to write suspicious placeholder content to {display_datauser_path(target_path)}; {reason}. "
-                "Use dataset_write_koredoc or retrieve the real dataset records first."
+                "Use working_data_export or retrieve the real Working Data records first."
             )
     target_path = write_text_file(target_path, content)
     return f"Wrote {display_datauser_path(target_path)} ({len(content):,} chars from Working Data item {working_data_name!r})"

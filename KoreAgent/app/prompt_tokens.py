@@ -9,7 +9,7 @@
 #                                 {year}, and {week} in any string with their current values.
 #                                 {week} returns the ISO week number (ISO 8601, Monday-anchored,
 #                                 01-53, January 4th is always in week 1).
-#                                 Also resolves {scratchpad:key} to the current scratchpad value.
+#                                 Also resolves {working_data:key} to the current Working Data value.
 #                                 Applied automatically to user prompts in orchestration.py
 #                                 and to string skill arguments in skill_executor.py.
 #

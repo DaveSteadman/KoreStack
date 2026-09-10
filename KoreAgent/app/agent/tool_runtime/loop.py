@@ -44,10 +44,10 @@ from utils.workspace_utils import trunc
 # ====================================================================================================
 # MARK: TOOL-LOOP LIMITS AND WORKING DATA MAPPING
 # ====================================================================================================
-# Cap for tool result content in messages; longer content is auto-saved to scratchpad and truncated in the message with a reference note
+# Cap for tool result content in messages; longer content is auto-saved to Working Data and truncated in the message with a reference note
 TOOL_MSG_MAX_CHARS: int = 4096
 
-# Tool results at or above this length are auto-saved to scratchpad before being injected
+# Tool results at or above this length are auto-saved to Working Data before being injected
 # into the thread.  Keeping this low means more results are available for later retrieval
 # even after their thread message is compacted.
 TOOL_MSG_AUTO_WORKING_DATA_MIN: int = 200
@@ -417,7 +417,7 @@ def run_tool_loop(
                     _log_file_only(f"[tool-normalize] {normalization_note}")
                 output                = None
                 recovery_event        = None
-                auto_dataset_manifest = None
+                auto_collection_manifest = None
                 try:
                     output = execute_tool_call(func_name, arguments, config.skills_payload, user_prompt, current_catalog_gates, current_active_tool_names)
                 except Exception as exc:
@@ -446,10 +446,10 @@ def run_tool_loop(
                     _log_file_only(f"[delivery] Explicit HTML publication confirmed for {publication_chat_name}.")
                 if not output.get("is_error"):
                     try:
-                        auto_dataset_manifest = auto_route_working_data_result(func_name, arguments, raw_result_content)
+                        auto_collection_manifest = auto_route_working_data_result(func_name, arguments, raw_result_content)
                     except Exception as exc:
-                        _log_file_only(f"[dataset-auto-route] skipped for {func_name}: {exc}")
-                result_content = auto_dataset_manifest or raw_result_content
+                        _log_file_only(f"[working-data-auto-route] skipped for {func_name}: {exc}")
+                result_content = auto_collection_manifest or raw_result_content
                 if not isinstance(result_content, str):
                     result_content = json.dumps(result_content, default=str)
                 if output.get("is_error"):
@@ -458,7 +458,7 @@ def run_tool_loop(
                 is_working_data_reader = func_name.lower().startswith("working_data_")
                 auto_working_data_key = None
                 preserve_exact_python_output = func_name.lower() == "python_execute"
-                if not output.get("is_error") and not is_working_data_reader and isinstance(result_content, str) and (len(result_content) >= TOOL_MSG_AUTO_WORKING_DATA_MIN or preserve_exact_python_output) and not auto_dataset_manifest:
+                if not output.get("is_error") and not is_working_data_reader and isinstance(result_content, str) and (len(result_content) >= TOOL_MSG_AUTO_WORKING_DATA_MIN or preserve_exact_python_output) and not auto_collection_manifest:
                     auto_working_data_key = _derive_auto_working_data_key(func_name, arguments, round_num, tc_idx + 1)
                     working_data_auto_save(auto_working_data_key, result_content)
                     working_data_pin(auto_working_data_key)

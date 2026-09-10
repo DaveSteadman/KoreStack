@@ -74,7 +74,7 @@ from agent.orchestration.engine import ConversationHistory
 from agent.orchestration.engine import OrchestratorConfig
 from agent.orchestration.engine import orchestrate_prompt
 from input_layer import koreconv_input as koreconv_input_module
-from system_skills.WorkingData.collections import auto_route_tool_result, clear_session_datasets, dataset_drop_where, dataset_expand_full_text, dataset_filter, dataset_get, dataset_inspect, dataset_list, dataset_rename, dataset_save, dataset_write_koredoc, delete_session_datasets, get_persisted_datasets_payload, restore_persisted_datasets
+from system_skills.WorkingData.collections import auto_route_tool_result, clear_session_datasets, dataset_drop_where, dataset_expand_full_text, dataset_filter, dataset_get, dataset_inspect, dataset_list, dataset_rename, dataset_save, dataset_write_koredoc, delete_session_datasets, get_persisted_collections_payload as get_persisted_datasets_payload, restore_persisted_datasets
 from prompt_builder import build_system_message
 from working_data import working_data_clear as scratchpad_clear, get_working_data_values as get_store, working_data_get as scratchpad_load, working_data_list as scratchpad_list, working_data_query as scratchpad_query, working_data_save as scratchpad_save
 from sessions.runtime import get_active_session_id
@@ -122,7 +122,7 @@ class GuardrailIntegrationTests(unittest.TestCase):
             1,
         )
 
-        self.assertEqual(key, "_dataset_get_drone_test_raw_5_o20_l10_fid_title")
+        self.assertEqual(key, "_working_data_get_drone_test_raw_5_o20_l10_fid_title")
 
     def test_system_prompt_lists_dataset_manifests(self) -> None:
         session_id = "dataset_prompt"

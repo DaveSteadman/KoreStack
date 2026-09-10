@@ -24,7 +24,7 @@
       <button type="button" class="btn btn-sm btn-primary" id="btn-edit"
               onclick="document.getElementById('edit-panel').classList.toggle('open');this.textContent=document.getElementById('edit-panel').classList.contains('open')?'CANCEL':'EDIT';">EDIT</button>
       <form action="/ui/rag/{{ chunk.id }}/delete?db={{ db }}" method="post" style="display:inline;"
-            onsubmit="return confirm('Delete this chunk?');">
+            onsubmit="return confirmDeleteChunk(this);">
         <button type="submit" class="btn btn-sm btn-danger">DELETE</button>
       </form>
     </div>
@@ -92,4 +92,21 @@
   </div>
 </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function confirmDeleteChunk(form) {
+  if (form.dataset.kcuiConfirmed === '1') {
+    delete form.dataset.kcuiConfirmed;
+    return true;
+  }
+  void window.kcuiConfirm('Delete chunk', 'Delete this chunk?', { confirmLabel: 'Delete' }).then(confirmed => {
+    if (!confirmed) return;
+    form.dataset.kcuiConfirmed = '1';
+    form.requestSubmit();
+  });
+  return false;
+}
+</script>
 {% endblock %}

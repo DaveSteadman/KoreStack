@@ -11,10 +11,10 @@
 #
 # Conversation lifecycle per run:
 #   1. Claim event (GET /events/next) - returns event + full conversation
-#   2. Build prompt from background_context + unsummarised messages + scratchpad
+#   2. Build prompt from background_context + unsummarised messages + Working Data
 #   3. Run orchestrate_prompt
 #   4. POST /conversations/{id}/messages  (outbound reply)
-#   5. PATCH /conversations/{id}          (updated background_context, scratchpad, token_estimate, turn_count)
+#   5. PATCH /conversations/{id}          (updated background_context, Working Data, token_estimate, turn_count)
 #   6. POST /events/{event_id}/complete   {status: "completed"}
 #   7. POST /events                       {event_type: "outbound_ready"}  (for KoreComms if needed)
 #
@@ -43,8 +43,7 @@
 # - _http_post: Implements the  http post operation for this module.
 # - _http_patch: Implements the  http patch operation for this module.
 # - _complete_event: Implements the  complete event operation for this module.
-# - _coerce_conversation_scratchpad: Implements the  coerce conversation scratchpad operation for this module.
-# - _coerce_conversation_datasets: Implements the  coerce conversation datasets operation for this module.
+# - _coerce_persisted_working_data: Coerces persisted Working Data for this module.
 # - _build_prompt: Implements the  build prompt operation for this module.
 # - _build_conversation_history: Builds bounded historical messages for the current turn.
 # - _invalid_model_response_reason: Returns the reason a model response cannot be persisted.
@@ -658,13 +657,10 @@ def _handle_event(
             _complete_event(base, event_id, "completed", push_log_line, context=f"conv {conv_id}")
             return
 
-        # Restore persisted scratchpad state into the active session before orchestration
-        # so scratchpad tool calls operate on the KC-backed conversation state.
+        # Restore persisted Working Data into the active session before orchestration.
         hydrate_working_data(
             conv.get("working_data") or {},
             session_id,
-            legacy_values=conv.get("scratchpad") or {},
-            legacy_collections=conv.get("datasets") or {},
             warning_logger=lambda message: push_log_line(f"[KORECHAT] Conv {conv_id}: {message}"),
         )
 
@@ -808,11 +804,7 @@ def _handle_event(
             reply = "(Agent response unavailable: the local model returned an invalid response. Please retry.)"
             push_log_line(f"[KORECHAT] Conv {conv_id}: persisted controlled agent-error response after retry.")
 
-        current_scratchpad = build_persisted_working_data_payload(session_id)["values"]
-        persisted_working_data = {
-            "values": current_scratchpad,
-            "collections": build_persisted_working_data_payload(session_id)["collections"],
-        }
+        persisted_working_data = build_persisted_working_data_payload(session_id)
 
         # Replace legacy tool-output context with the cleaned session context. Semantic
         # summaries remain preserved by encode_background_context().
@@ -865,7 +857,7 @@ def _handle_event(
             _complete_event(base, event_id, "failed", push_log_line, context=f"conv {conv_id}")
             return
 
-        # Patch conversation metadata including scratchpad.
+        # Patch conversation metadata including Working Data.
         # This is the durable write - we log failures loudly but still complete the event
         # so the conversation does not stay in agent_processing indefinitely.
         try:
@@ -878,7 +870,7 @@ def _handle_event(
             })
         except Exception as exc:
             push_log_line(
-                f"[KORECHAT] Conv {conv_id}: WARN - conversation patch failed (scratchpad may be stale): {exc}"
+                f"[KORECHAT] Conv {conv_id}: WARN - conversation patch failed (Working Data may be stale): {exc}"
             )
             _complete_event(base, event_id, "failed", push_log_line, context=f"conv {conv_id}")
             return

@@ -42,7 +42,7 @@ class ToolSetTests(unittest.TestCase):
     def test_tool_set_builder_splits_koredocs_into_file_and_document_subsystems(self) -> None:
         inventory = [
             {"name": "koredocs_doc_create",                 "source": "KoreDocs"},
-            {"name": "koredocs_doc_create_from_scratchpad", "source": "KoreDocs"},
+            {"name": "koredocs_doc_create_from_working_data", "source": "KoreDocs"},
             {"name": "koredocs_doc_markdown_append",        "source": "KoreDocs"},
             {"name": "koredocs_doc_outline_get",            "source": "KoreDocs"},
             {"name": "koredocs_doc_section_insert",         "source": "KoreDocs"},
@@ -64,7 +64,7 @@ class ToolSetTests(unittest.TestCase):
         by_name = {group["name"]: set(group["tools"]) for group in groups}
 
         self.assertIn("koredocs_doc_create", by_name["kore_documents"])
-        self.assertIn("koredocs_doc_create_from_scratchpad", by_name["kore_documents"])
+        self.assertIn("koredocs_doc_create_from_working_data", by_name["kore_documents"])
         self.assertIn("koredocs_file_create", by_name["kore_files"])
         self.assertIn("koredocs_folder_create", by_name["kore_files"])
 

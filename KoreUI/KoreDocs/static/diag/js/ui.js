@@ -12,7 +12,7 @@ import {
 import { worldBounds, buildNodeMap } from './model.js';
 import { draw } from './renderer.js';
 import { setTool, reparentNode } from './interaction.js';
-import { initAppMenuEvents } from '/ui-elements/assets/js/chrome.js';
+import { initAppMenuEvents, kcuiPrompt } from '/ui-elements/assets/js/chrome.js';
 
 const CUSTOM_COLOR_MIGRATION_KEY = 'korediag.customColors.v1';
 const CUSTOM_COLOR_LIMIT = 7;
@@ -25,8 +25,8 @@ export function initMenus() {
 
   // Diagram title rename (double-click)
   const titleEl = document.getElementById('diag-title');
-  titleEl.addEventListener('dblclick', () => {
-    const val = prompt('Diagram title:', getDiagram().title);
+  titleEl.addEventListener('dblclick', async () => {
+    const val = await kcuiPrompt('Diagram title', { initial: getDiagram().title });
     if (val !== null && val.trim()) {
       dispatch({
         apply(d) { d.title = val.trim(); return d; },

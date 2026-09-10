@@ -9,8 +9,20 @@ import { parseFrontmatter } from './editor.js';
 
 const _panel = document.getElementById('props-content');
 const _map   = document.getElementById('map-content');
+let _lastText = '';
+let _lastName = null;
+let _artefact = { metadata: {}, revision: null, history: [] };
 
-export function refresh(text, currentName) {
+export function refresh(text, currentName, artefact = {}) {
+  _lastText = text;
+  _lastName = currentName;
+  _artefact = {
+    ..._artefact,
+    ...artefact,
+    metadata: artefact.metadata && typeof artefact.metadata === 'object'
+      ? artefact.metadata
+      : _artefact.metadata,
+  };
   const { meta } = parseFrontmatter(text);
   const lines    = text.split('\n').length;
   const words    = text.trim() ? text.trim().split(/\s+/).length : 0;
@@ -21,19 +33,51 @@ export function refresh(text, currentName) {
       `<div class="prop-row"><label>${_esc(k)}</label><span class="hint">${_esc(v)}</span></div>`
     ).join('');
 
+  const provenanceRows = _provenanceRows(_artefact.metadata, _artefact.revision, _artefact.history);
+
   _panel.innerHTML = `
     <div class="prop-row">
       <label>File</label>
       <span class="hint">${_esc(currentName ?? 'Unsaved')}</span>
     </div>
     ${metaRows}
+    ${provenanceRows}
     <div class="prop-row">
       <label>Stats</label>
-      <span class="hint">${lines} lines · ${words} words · ${chars} chars</span>
+      <span class="hint">${lines} lines &middot; ${words} words &middot; ${chars} chars</span>
     </div>
   `;
 
   _refreshMap(text);
+}
+
+export function setHistory(history) {
+  _artefact = { ..._artefact, history: Array.isArray(history) ? history : [] };
+  refresh(_lastText, _lastName);
+}
+
+function _provenanceRows(metadata, revision, history) {
+  const producer = metadata?.producer?.service || metadata?.producer || '';
+  const sourceRefs = Array.isArray(metadata?.source_refs) ? metadata.source_refs : [];
+  const latest = history[0] || null;
+  const rows = [];
+
+  if (producer) rows.push(_row('Produced by', typeof producer === 'string' ? producer : JSON.stringify(producer)));
+  if (sourceRefs.length) rows.push(_row('Sources', `${sourceRefs.length} linked artefact${sourceRefs.length === 1 ? '' : 's'}`));
+  if (revision) rows.push(_row('Revision', revision));
+  if (latest) rows.push(_row('Latest change', `${latest.action || 'update'} | ${_formatDate(latest.recorded_at)}`));
+  if (history.length) rows.push(_row('History', `${history.length} revision${history.length === 1 ? '' : 's'} available`));
+  return rows.join('');
+}
+
+function _row(label, value) {
+  return `<div class="prop-row"><label>${_esc(label)}</label><span class="hint">${_esc(value)}</span></div>`;
+}
+
+function _formatDate(value) {
+  if (!value) return 'unknown time';
+  const date = new Date(value);
+  return Number.isNaN(date.valueOf()) ? String(value) : date.toLocaleString();
 }
 
 // ── Document map ────────────────────────────────────────────────────────────

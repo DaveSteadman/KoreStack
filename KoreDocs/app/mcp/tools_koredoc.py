@@ -28,7 +28,7 @@
 # - koredocs_doc_section_insert: Implements the koredocs doc section insert operation for this module.
 # - koredocs_doc_markdown_append: Implements the koredocs doc markdown append operation for this module.
 # - koredocs_doc_create: Implements the koredocs doc create operation for this module.
-# - koredocs_doc_create_from_scratchpad: Implements the koredocs doc create from scratchpad operation for this module.
+# - koredocs_doc_create_from_working_data: Creates a KoreDoc from exact Working Data content.
 # ====================================================================================================
 
 from __future__ import annotations
@@ -367,15 +367,15 @@ def koredocs_doc_create(
     return create_koredoc(folder_path=folder_path, name=name, markdown=markdown, title=title, tags=tags, metadata=metadata)
 
 
-def koredocs_doc_create_from_scratchpad(
+def koredocs_doc_create_from_working_data(
     folder_path: Annotated[str, 'Folder path for the new KoreDoc.'],
     name: Annotated[str, 'Filename, with or without the .koredoc extension.'],
-    scratchpad_content: Annotated[str, 'Pass the exact token {scratchpad:key} shown after a prior tool result. KoreAgent resolves it before this tool runs, preserving generated text without model transcription.'],
+    working_data_content: Annotated[str, 'Pass the exact token {working_data:key} shown after a prior tool result. KoreAgent resolves it before this tool runs, preserving generated text without model transcription.'],
     metadata: Annotated[Optional[dict], 'Optional artefact metadata and provenance.'] = None,
     title: Annotated[Optional[str], 'Optional title stored in the embedded KoreDocs JSON header.'] = None,
     tags: Annotated[Optional[list[str]], 'Optional tags stored in the embedded KoreDocs JSON header.'] = None,
 ) -> dict:
-    """Create a KoreDoc from an exact prior tool result held in the scratchpad.
+    """Create a KoreDoc from an exact prior tool result held in Working Data.
 
     Use after Python, retrieval, or transformation tools when copying their output
     into a document could introduce transcription or encoding errors.
@@ -383,7 +383,7 @@ def koredocs_doc_create_from_scratchpad(
     return create_koredoc(
         folder_path=folder_path,
         name=name,
-        markdown=scratchpad_content,
+        markdown=working_data_content,
         title=title,
         tags=tags,
         metadata=metadata,

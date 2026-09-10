@@ -3619,7 +3619,7 @@
 - koredocs_doc_section_insert
 - koredocs_doc_markdown_append
 - koredocs_doc_create
-- koredocs_doc_create_from_scratchpad
+- koredocs_doc_create_from_working_data
 
 ### KoreDocs/app/mcp/tools_koresheet.py
 - koredocs_sheet_create

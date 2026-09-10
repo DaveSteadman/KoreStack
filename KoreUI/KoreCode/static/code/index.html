@@ -145,28 +145,6 @@
       <select id="layout-assistant-dock"><option value="right">Right</option><option value="left">Left</option></select>
     </label>
   </div>
-  <dialog id="work-item-dialog" class="work-item-dialog" aria-labelledby="work-item-dialog-title">
-    <form id="work-item-form" method="dialog">
-      <header class="work-item-dialog-header">
-        <div>
-          <div class="work-item-label">KoreCode Gen2</div>
-          <h2 id="work-item-dialog-title">New work item</h2>
-        </div>
-        <button id="btn-cancel-work-item" class="kcui-tag kcui-tag--muted" type="button">Cancel</button>
-      </header>
-      <label class="work-item-field" for="work-item-title-input">
-        <span>Outcome</span>
-        <input id="work-item-title-input" name="title" required maxlength="160" placeholder="Diagnose and fix the failing test" />
-      </label>
-      <label class="work-item-field" for="work-item-description-input">
-        <span>Context</span>
-        <textarea id="work-item-description-input" name="description" rows="4" placeholder="What should be true when this work is complete?"></textarea>
-      </label>
-      <footer class="work-item-dialog-actions">
-        <button class="kcui-tag kcui-tag--accent" type="submit">Create work item</button>
-      </footer>
-    </form>
-  </dialog>
   <script type="module" src="/static/code/js/main.js"></script>
 </body>
 </html>

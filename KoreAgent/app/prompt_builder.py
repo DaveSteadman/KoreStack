@@ -6,7 +6,7 @@
 #   _CORE_IDENTITY_PARTS      -- who the agent is and how it behaves (stable, tool-agnostic)
 #   _SYSTEM_SKILL_GUIDANCE    -- behavioral notes contributed by each system skill
 #   _TOOL_ROUTING_FUDGE       -- cross-cutting routing rules (unconditional; tool-specific guidance belongs in skill.md)
-#   dynamic blocks            -- memory, conversation summary, scratchpad, skill guidance
+#   dynamic blocks            -- memory, conversation summary, Working Data, skill guidance
 #
 # _SYSTEM_SKILL_GUIDANCE is the proper home for any rule that names a system skill by
 # capability. Ideally each entry would live in its skill module and be collected here
@@ -310,7 +310,7 @@ def build_system_message(
     skill_guidance_enabled: bool,
     sandbox_enabled: bool,
     conversation_entry: dict | None = None,
-    scratchpad_visible_keys: list[str] | None = None,
+    working_data_visible_keys: list[str] | None = None,
     user_prompt: str | None = None,
     token_pressure: float = 0.0,
 ) -> str:
@@ -356,8 +356,8 @@ def build_system_message(
         system_parts.append("\nPython execution sandbox: OFF - code snippets have unrestricted access to all modules and file I/O.")
 
     working_data_values = get_working_data_values()
-    if scratchpad_visible_keys is not None:
-        working_data_values = {key: value for key, value in working_data_values.items() if key in scratchpad_visible_keys}
+    if working_data_visible_keys is not None:
+        working_data_values = {key: value for key, value in working_data_values.items() if key in working_data_visible_keys}
     if working_data_values:
         named_keys   = {k: v for k, v in working_data_values.items() if not k.startswith(("_tc_", "_cx_", "_wd_", "research_page_"))}
         auto_keys    = {k: v for k, v in working_data_values.items() if k.startswith(("_tc_", "_wd_", "research_page_"))}

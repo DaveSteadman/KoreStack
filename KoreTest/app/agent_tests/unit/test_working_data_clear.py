@@ -7,7 +7,9 @@
 # Function inventory:
 # - test_working_data_clear_removes_every_value_in_the_session: Implements the Working Data value clear operation.
 # - test_working_data_clear_removes_collections: Implements the Working Data collection clear operation.
-# - test_hydrate_working_data_migrates_legacy_values_through_the_value_service: Implements the hydrate working data migrates legacy values through the value service operation for this module.
+# - test_hydrate_working_data_restores_only_canonical_values: Implements the canonical Working Data hydration operation.
+# - test_hydration_discards_cross_kind_name_collisions: Implements persisted Working Data collision protection.
+# - test_working_data_rename_rejects_cross_kind_name_collisions: Implements Working Data collision protection.
 # ====================================================================================================
 
 import sys
@@ -47,14 +49,41 @@ class WorkingDataClearTests(unittest.TestCase):
         self.assertEqual(result, "Cleared Working Data (0 value(s), 2 collection(s) removed).")
         self.assertEqual(build_persisted_working_data_payload(session_id)["collections"], {})
 
-    def test_hydrate_working_data_migrates_legacy_values_through_the_value_service(self) -> None:
-        session_id = "working_data_legacy_values_test"
-        hydrate_working_data(None, session_id=session_id, legacy_values={"Note": "retained"})
+    def test_hydrate_working_data_restores_only_canonical_values(self) -> None:
+        session_id = "working_data_canonical_values_test"
+        hydrate_working_data({"values": {"Note": "retained"}}, session_id=session_id)
 
         persisted = build_persisted_working_data_payload(session_id)
 
         self.assertEqual(working_data_get("note", session_id=session_id), "retained")
         self.assertEqual(persisted["values"], {"note": "retained"})
+        working_data_clear(session_id=session_id)
+
+    def test_hydration_discards_cross_kind_name_collisions(self) -> None:
+        session_id = "working_data_hydration_collision_test"
+        state = hydrate_working_data(
+            {
+                "values": {"shared": "retained"},
+                "collections": {"shared": {"inline": True, "records": [{"value": 1}]}},
+            },
+            session_id=session_id,
+        )
+
+        self.assertEqual(state["collections"], {})
+        self.assertEqual(working_data_get("shared", session_id=session_id), "retained")
+        working_data_clear(session_id=session_id)
+
+    def test_working_data_rename_rejects_cross_kind_name_collisions(self) -> None:
+        session_id = "working_data_rename_collision_test"
+        working_data_save("note", "retained", session_id=session_id)
+        working_data_save("records", [{"value": 1}], session_id=session_id)
+
+        from working_data import working_data_rename
+
+        self.assertIn("already exists", working_data_rename("note", "records", session_id=session_id))
+        self.assertIn("already exists", working_data_rename("records", "note", session_id=session_id))
+        self.assertEqual(working_data_get("note", session_id=session_id), "retained")
+        self.assertIn('"value": 1', working_data_get("records", session_id=session_id))
         working_data_clear(session_id=session_id)
 
 

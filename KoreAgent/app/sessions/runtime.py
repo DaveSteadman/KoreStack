@@ -4,7 +4,7 @@
 # Active session ID context variable and binding helper.
 #
 # Provides a ContextVar that tracks the current session_id per-thread/async-task so that
-# modules deep in the call stack (e.g. scratchpad.py) can identify the active session
+# modules deep in the call stack (e.g. Working Data) can identify the active session
 # without explicit parameter threading.
 #
 # Public API:
@@ -13,9 +13,9 @@
 #   bind_session(session_id)   -- context manager that sets and restores the session
 #
 # Related modules:
-#   - scratchpad.py      -- reads active session_id for per-session key namespacing
+#   - working_data.py    -- reads active session_id for per-session key namespacing
 #   - orchestration.py   -- sets session_id at the start of each orchestration run
-#   - delegate_runner.py -- uses get_active_session_id for scratchpad isolation
+#   - delegation paths   -- use get_active_session_id for Working Data isolation
 # MARK: FUNCTIONS
 # Primary types: SessionBinding.
 # Function inventory:

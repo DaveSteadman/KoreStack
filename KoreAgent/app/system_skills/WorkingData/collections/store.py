@@ -1,9 +1,9 @@
 # ====================================================================================================
 # MARK: OVERVIEW
 # ====================================================================================================
-# SQLite spillover store for Scratchpad Datasets.
+# SQLite spillover store for Working Data collections.
 #
-# Stores large per-session datasets outside the KoreChat scratchpad JSON payload while keeping the
+# Stores large per-session collections outside the KoreChat Working Data JSON payload while keeping the
 # runtime API local to KoreAgent. Each public function opens its own connection so callers do not
 # need to manage connection lifetime.
 # MARK: FUNCTIONS

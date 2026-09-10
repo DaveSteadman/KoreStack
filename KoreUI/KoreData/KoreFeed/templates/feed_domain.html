@@ -365,10 +365,22 @@ async function deleteEntry(btn, url) {
 }
 
 function confirmDeleteFeed(form) {
+  if (form.dataset.kcuiConfirmed === '1') {
+    delete form.dataset.kcuiConfirmed;
+    return true;
+  }
   const feedName = form.dataset.feedName || 'this feed';
-  if (!window.confirm('Remove ' + feedName + '? Existing downloaded entries will be retained.')) return false;
-  sessionStorage.setItem('korefeed-scroll-y', String(window.scrollY));
-  return true;
+  void window.kcuiConfirm(
+    'Remove feed',
+    'Remove ' + feedName + '? Existing downloaded entries will be retained.',
+    { confirmLabel: 'Remove' },
+  ).then(confirmed => {
+    if (!confirmed) return;
+    sessionStorage.setItem('korefeed-scroll-y', String(window.scrollY));
+    form.dataset.kcuiConfirmed = '1';
+    form.requestSubmit();
+  });
+  return false;
 }
 
 window.addEventListener('load', function () {

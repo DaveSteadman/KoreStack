@@ -93,7 +93,7 @@
               <a class="kcui-tag kcui-tag--success" href="#"
                  onclick="event.preventDefault(); document.getElementById('script-run-{{ script.id }}').submit();">RUN</a>
               <a class="kcui-tag kcui-tag--warning" href="#"
-                 onclick="event.preventDefault(); if(confirm('Reset and rebuild {{ script.id }} from scratch?')) document.getElementById('script-reset-{{ script.id }}').submit();">RESET</a>
+                 onclick="return confirmResetScript('{{ script.id }}')">RESET</a>
               {% endif %}
             </span>
           </td>
@@ -200,6 +200,17 @@
 {% endif %}
 
 <script>
+  function confirmResetScript(scriptId) {
+    void window.kcuiConfirm(
+      'Reset and rebuild',
+      'Reset and rebuild ' + scriptId + ' from scratch?',
+      { confirmLabel: 'Reset' },
+    ).then(confirmed => {
+      if (confirmed) document.getElementById('script-reset-' + scriptId).submit();
+    });
+    return false;
+  }
+
 (function () {
   function fmtNum(n) {
     return (n !== null && n !== undefined && n !== '') ? Number(n).toLocaleString() : '-';
@@ -261,7 +272,7 @@
       h += '<a class="kcui-tag kcui-tag--success" href="#"'
          + ' onclick="event.preventDefault(); document.getElementById(\'script-run-' + script.id + '\').submit();">RUN</a>';
       h += '<a class="kcui-tag kcui-tag--warning" href="#"'
-         + ' onclick="event.preventDefault(); if(confirm(\'Reset and rebuild ' + script.id + ' from scratch?\')) document.getElementById(\'script-reset-' + script.id + '\').submit();">RESET</a>';
+         + ' onclick="return confirmResetScript(\'' + script.id + '\')">RESET</a>';
     }
     h += '</span>';
     return h;

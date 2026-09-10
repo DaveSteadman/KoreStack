@@ -9,7 +9,7 @@ from __future__ import annotations
 # Responsibilities:
 #   - map web session ids to KoreChat conversations
 #   - cache KoreChat conversation lookups behind a dedicated lock
-#   - persist turns, scratchpad state, datasets, and compaction outputs
+#   - persist turns, Working Data, and compaction outputs
 #   - coordinate /stoprun behaviour with the shared task queue and per-run event
 #     queues exposed by the input layer
 #
@@ -36,7 +36,7 @@ from __future__ import annotations
 # - _promote_named_items: Implements the  promote named items operation for this module.
 # - _archive_old_history: Implements the  archive old history operation for this module.
 # - save_session: Saves session for this module.
-# - flush_scratch_to_session: Implements the flush scratch to session operation for this module.
+# - flush_working_data_to_session: Persists Working Data for this module.
 # - delete_session_state: Deletes session state for this module.
 # - kc_get: Implements the kc get operation for this module.
 # - kc_post: Implements the kc post operation for this module.
@@ -327,8 +327,6 @@ class SessionService:
         self._hydrate_working_data(
             conv.get("working_data") or {},
             session_id,
-            legacy_values=conv.get("scratchpad") or {},
-            legacy_collections=conv.get("datasets") or {},
             warning_logger   = lambda message: print(f"[session] Warning: {message}", flush=True),
         )
 
@@ -407,7 +405,7 @@ class SessionService:
     def save_session(self, session_id: str, history, session_context, prompt_tokens: int, num_ctx: int) -> None:
         self._promote_named_items(session_id, history)
         self._archive_old_history(history, session_context, prompt_tokens=prompt_tokens, num_ctx=num_ctx)
-        self.flush_scratch_to_session(session_id)
+        self.flush_working_data_to_session(session_id)
 
         conv = self.kc_get_conversation_for_session(session_id)
         if conv is None:
@@ -429,7 +427,7 @@ class SessionService:
         except Exception as exc:
             print(f"[session] Warning: could not persist background_context for session '{session_id}': {exc}", flush=True)
 
-    def flush_scratch_to_session(self, session_id: str) -> None:
+    def flush_working_data_to_session(self, session_id: str) -> None:
         conv = self.kc_get_conversation_for_session(session_id)
         if conv is None:
             return
@@ -441,7 +439,7 @@ class SessionService:
                 },
             )
         except Exception as exc:
-            print(f"[session] Warning: could not flush scratchpad to KoreChat for session '{session_id}': {exc}", flush=True)
+            print(f"[session] Warning: could not flush Working Data to KoreChat for session '{session_id}': {exc}", flush=True)
         finally:
             with self._kc_conv_cache_lock:
                 self._kc_conv_cache.pop(session_id, None)
@@ -460,13 +458,13 @@ class SessionService:
             if exc.status_code != 404:
                 raise
 
-    def kc_get(self, path: str) -> dict | list | None:
+    def kc_get(self, path: str, *, timeout: float | None = None) -> dict | list | None:
         base = self._kc_client.get_base_url()
         if not base:
             raise HTTPException(status_code=503, detail="KoreChat not configured")
         req = urllib.request.Request(f"{base}{path}", headers={"Accept": "application/json"})
         try:
-            with urllib.request.urlopen(req, timeout=self._kc_timeout) as resp:
+            with urllib.request.urlopen(req, timeout=timeout if timeout is not None else self._kc_timeout) as resp:
                 if resp.status == 204:
                     return None
                 return json.loads(resp.read().decode("utf-8"))

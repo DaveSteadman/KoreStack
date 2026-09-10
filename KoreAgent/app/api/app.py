@@ -331,9 +331,9 @@ register_session_routes(
     handle_stoprun_immediate=_session_service.handle_stoprun_immediate,
     load_session=_session_service.load_session,
     save_session=_session_service.save_session,
-    flush_scratch_session=_session_service.flush_scratch_to_session,
+    flush_working_data_session=_session_service.flush_working_data_to_session,
     create_session_context=_session_service.create_session_context,
-    clear_session_scratch=working_data_clear,
+    clear_session_working_data=working_data_clear,
     push_log_line=lambda line: push_log_line(line),
     set_latest_log_path=_set_latest_log_path,
     log_dir=_LOG_DIR,
@@ -352,7 +352,7 @@ register_session_routes(
     ensure_session_conversation=_session_service.kc_ensure_conversation,
     kc_submit_prompt=_session_service.kc_submit_prompt,
     kc_get_messages=lambda conversation_id: _session_service.kc_get(
-        f"/conversations/{conversation_id}/messages?limit=1000"
+        f"/conversations/{conversation_id}/messages?limit=1000", timeout=30
     ) or [],
     kc_set_session_name=_session_service.kc_set_session_name,
 )

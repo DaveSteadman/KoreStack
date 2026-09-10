@@ -74,50 +74,6 @@
 
   <!-- ── Dialogs ─────────────────────────────────────────────── -->
 
-  <!-- Generic prompt dialog -->
-  <dialog id="dlg-prompt" class="kcui-dialog">
-    <form method="dialog" class="kcui-dialog-form">
-      <h3 id="dlg-prompt-title">Prompt</h3>
-      <input id="dlg-prompt-input" class="kcui-dialog-input" type="text" autocomplete="off" />
-      <div class="dlg-actions kcui-dialog-actions">
-        <button type="button" id="dlg-prompt-cancel" class="kcui-btn kcui-btn-toolbar kcui-btn-quiet">Cancel</button>
-        <button type="submit" id="dlg-prompt-ok" class="kcui-btn kcui-btn-toolbar kcui-btn-filled">OK</button>
-      </div>
-    </form>
-  </dialog>
-
-  <!-- New file dialog -->
-  <dialog id="dlg-new-file" class="kcui-dialog">
-    <form method="dialog" class="kcui-dialog-form">
-      <h3>New File</h3>
-      <label class="kcui-dialog-label">Name</label>
-      <input id="new-file-name" class="kcui-dialog-input" type="text" placeholder="my-doc.koredoc" autocomplete="off" />
-      <label class="kcui-dialog-label">Type</label>
-      <select id="new-file-type" class="kcui-dialog-select">
-        <option value="koredoc">KoreDoc (.koredoc)</option>
-        <option value="koresheet">KoreSheet (.koresheet)</option>
-        <option value="korediag">KoreDiag (.korediag)</option>
-      </select>
-      <div class="dlg-actions kcui-dialog-actions">
-        <button type="button" id="new-file-cancel" class="kcui-btn kcui-btn-toolbar kcui-btn-quiet">Cancel</button>
-        <button type="submit" id="new-file-ok" class="kcui-btn kcui-btn-toolbar kcui-btn-filled">Create</button>
-      </div>
-    </form>
-  </dialog>
-
-  <!-- Move file/folder dialog -->
-  <dialog id="dlg-move" class="kcui-dialog">
-    <form method="dialog" class="kcui-dialog-form">
-      <h3 id="dlg-move-title">Move</h3>
-      <label class="kcui-dialog-label">Destination folder</label>
-      <select id="move-folder-select" class="kcui-dialog-select"></select>
-      <div class="dlg-actions kcui-dialog-actions">
-        <button type="button" id="move-cancel" class="kcui-btn kcui-btn-toolbar kcui-btn-quiet">Cancel</button>
-        <button type="submit" id="move-ok" class="kcui-btn kcui-btn-toolbar kcui-btn-filled">Move</button>
-      </div>
-    </form>
-  </dialog>
-
   <!-- Context menu -->
   <ul id="ctx-menu">
     <li data-action="open">Open</li>

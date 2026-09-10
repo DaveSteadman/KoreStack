@@ -7,22 +7,20 @@
 # Function inventory: this module exposes package or declarative configuration only.
 # ====================================================================================================
 
-"""Session hydration helpers for the datasets subsystem."""
+"""Session hydration helpers for Working Data collections."""
 
 from system_skills.WorkingData.collections.service import (
-    build_persisted_scratchpad_payload,
-    coerce_persisted_datasets_payload,
-    coerce_persisted_scratchpad_payload,
-    get_persisted_datasets_payload,
-    hydrate_session_state,
+    coerce_persisted_collections_payload,
+    coerce_persisted_values_payload,
+    get_persisted_collections_payload,
+    hydrate_working_data_state,
     restore_persisted_datasets,
 )
 
 __all__ = [
-    "build_persisted_scratchpad_payload",
-    "coerce_persisted_datasets_payload",
-    "coerce_persisted_scratchpad_payload",
-    "get_persisted_datasets_payload",
-    "hydrate_session_state",
+    "coerce_persisted_collections_payload",
+    "coerce_persisted_values_payload",
+    "get_persisted_collections_payload",
+    "hydrate_working_data_state",
     "restore_persisted_datasets",
 ]

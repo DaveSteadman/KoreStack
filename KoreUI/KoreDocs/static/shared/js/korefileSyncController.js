@@ -1,5 +1,6 @@
 import * as api from '/static/shared/js/korefileapi.js';
 import * as draft from '/static/shared/js/draft.js';
+import { kcuiChoice, kcuiConfirm } from '/ui-elements/assets/js/dialogs.js';
 
 export function createKorefileSyncController({
   logLabel,
@@ -27,6 +28,7 @@ export function createKorefileSyncController({
   let savedSeq = 0;
   let syncTimer = null;
   let loader = null;
+  let currentMetadata = {};
 
   function normaliseRevision(value) {
     if (value === null || value === undefined) return null;
@@ -59,7 +61,47 @@ export function createKorefileSyncController({
     }
   }
 
-  function applyRemoteFile(file) {
+  async function chooseRemoteChange(file, localContent) {
+    return kcuiChoice(
+      `${alertLabel} changed in the background`,
+      'Choose which version to keep. Comparing does not discard either version.',
+      {
+        cancelValue: 'load',
+        choices: [
+          { value: 'load', label: 'Load remote', quiet: true },
+          { value: 'keep', label: 'Keep mine' },
+        ],
+        details: [
+          { label: 'Your local changes', content: localContent },
+          { label: 'Latest server version', content: file.content || '' },
+        ],
+      },
+    );
+  }
+
+  async function preserveLocalChanges(file) {
+    const replacedLocalChanges = dirty || pendingText != null || Boolean(hasExternalUnsavedChanges?.());
+    if (!replacedLocalChanges || currentId == null) return false;
+
+    const localContent = pendingText ?? draft.load();
+    const choice = await chooseRemoteChange(file, localContent ?? '');
+    if (choice !== 'keep') return false;
+
+    if (localContent != null) {
+      pendingText = localContent;
+      draft.save(localContent);
+    }
+    currentName     = file.name;
+    currentRevision = normaliseRevision(file.revision);
+    currentMetadata = file.metadata && typeof file.metadata === 'object' ? file.metadata : {};
+    markDirty();
+    armAutosave();
+    return true;
+  }
+
+  async function applyRemoteFile(file) {
+    if (await preserveLocalChanges(file)) return;
+
     const replacedLocalChanges = dirty || pendingText != null || Boolean(hasExternalUnsavedChanges?.());
     const content = (file.content || '').trim()
       ? file.content
@@ -68,22 +110,19 @@ export function createKorefileSyncController({
     currentId = file.id;
     currentName = file.name;
     currentRevision = normaliseRevision(file.revision);
+    currentMetadata = file.metadata && typeof file.metadata === 'object' ? file.metadata : {};
     resetPendingState();
     applyLoadedContent(content, file, loader);
     draft.clear();
     markSaved();
     onAfterApplyRemote?.({ file, replacedLocalChanges });
-
-    if (replacedLocalChanges) {
-      alert(`${alertLabel} changed in the background. The latest server version has been loaded.`);
-    }
   }
 
   async function reloadLatest() {
     if (currentId == null) return;
     try {
       const latest = await api.getFile(currentId);
-      applyRemoteFile(latest);
+      await applyRemoteFile(latest);
     } catch (err) {
       console.warn(`[${logLabel}] failed to reload latest version for`, currentName, err);
     }
@@ -141,7 +180,7 @@ export function createKorefileSyncController({
     try {
       loader = nextLoader;
       const file = await api.getFile(parseInt(id, 10));
-      applyRemoteFile(file);
+      await applyRemoteFile(file);
       startRemoteSync();
       return true;
     } catch (err) {
@@ -181,6 +220,8 @@ export function createKorefileSyncController({
       }
     } catch (err) {
       if (String(err?.message || err).includes('changed in the background')) {
+        pendingText = text;
+        markDirty();
         await reloadLatest();
         return;
       }
@@ -202,12 +243,18 @@ export function createKorefileSyncController({
     currentId: () => currentId,
     currentName: () => currentName,
     currentRevision: () => currentRevision,
+    currentMetadata: () => ({ ...currentMetadata }),
+    getHistory: () => currentId == null ? Promise.resolve([]) : api.getFileHistory(currentId),
     isDirty: () => dirty,
     markDirty,
     markSaved,
     guardUnsaved() {
       if (!dirty) return true;
-      return confirm('You have unsaved changes. Continue and discard them?');
+      return kcuiConfirm(
+        'Discard unsaved changes',
+        'You have unsaved changes. Continue and discard them?',
+        { confirmLabel: 'Discard' },
+      );
     },
     autoOpenFromUrl,
     queueAutosave,

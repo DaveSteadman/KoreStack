@@ -1,3 +1,5 @@
+import { kcuiPrompt } from '/ui-elements/assets/js/dialogs.js';
+
 const TOKEN_KEY = 'koredocs:api-token';
 
 export function getAuthToken() {
@@ -31,11 +33,14 @@ export async function fetchWithAuth(url, opts = {}, { retryOnAuth = true } = {})
   }
 
   let response = await fetch(url, request);
-  if (response.status !== 401 || !retryOnAuth || typeof window === 'undefined' || typeof window.prompt !== 'function') {
+  if (response.status !== 401 || !retryOnAuth || typeof window === 'undefined') {
     return response;
   }
 
-  const entered = window.prompt('KoreDocs API token');
+  const entered = await kcuiPrompt('KoreDocs API token', {
+    type:         'password',
+    autocomplete: 'off',
+  });
   if (!entered) return response;
 
   setAuthToken(entered);

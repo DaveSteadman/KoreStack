@@ -1,4 +1,5 @@
 import { initServiceShell } from '/ui-elements/assets/js/serviceShell.js';
+import { initDialogHost, kcuiAlert, kcuiConfirm, kcuiForm } from '/ui-elements/assets/js/dialogs.js';
 import { svgIconMask } from '/ui-elements/assets/js/svgicons.js';
 
 const workspace    = document.querySelector('.kcui-workspace');
@@ -19,9 +20,6 @@ const editorEyebrow = document.querySelector('#editor-eyebrow');
 const editorBlurb  = document.querySelector('#editor-blurb');
 const rows         = document.querySelector('#cron-rows');
 const testRunRows  = document.querySelector('#test-run-rows');
-const testRunDialog = document.querySelector('#test-run-dialog');
-const testRunForm  = document.querySelector('#test-run-form');
-const testRunTime  = document.querySelector('#test-run-time');
 let editingName    = null;
 let cronPrompts    = [];
 let testRuns       = [];
@@ -37,6 +35,7 @@ initServiceShell({
   shellMeta:      { cron: { brandLabel: 'KoreCron', overline: 'Scheduled Chat Prompts', brandIcon: 'korecron' } },
   shellTabs:      [{ key: 'cron', label: 'Cron Prompts', href: '/ui' }],
 });
+initDialogHost();
 
 const cronPromptRowStyle = document.createElement('style');
 cronPromptRowStyle.textContent = `
@@ -73,29 +72,6 @@ cronPromptRowStyle.textContent = `
     gap: 12px;
     justify-content: space-between;
     padding: 10px 12px;
-  }
-  .cronprompt-test-run-dialog {
-    background: var(--panel, #18202d);
-    border: 1px solid var(--border, rgba(255, 255, 255, 0.16));
-    border-radius: var(--kcui-radius-md, 2px);
-    color: var(--text, #fff);
-    max-width: 26rem;
-    padding: 20px;
-  }
-  .cronprompt-test-run-dialog::backdrop {
-    background: rgba(0, 0, 0, 0.58);
-  }
-  .cronprompt-test-run-dialog form {
-    display: grid;
-    gap: 12px;
-  }
-  .cronprompt-test-run-dialog p {
-    margin: 0;
-  }
-  .cronprompt-test-run-dialog__actions {
-    display: flex;
-    gap: 8px;
-    justify-content: flex-end;
   }
   .cronprompt-chat-row {
     position: relative;
@@ -496,7 +472,7 @@ async function runNow(name, button) {
 }
 
 async function deleteCronPrompt(name) {
-  if (!window.confirm(`Delete CronPrompt "${name}"?`)) return;
+  if (!await kcuiConfirm('Delete timed event', `Delete CronPrompt "${name}"?`, { confirmLabel: 'Delete' })) return;
   try {
     const response = await fetch(`/api/cronprompts/${encodeURIComponent(name)}`, { method: 'DELETE' });
     if (!response.ok) throw new Error((await response.json()).detail || 'Unable to delete event.');
@@ -509,7 +485,11 @@ async function deleteCronPrompt(name) {
 }
 
 async function deleteTestRun(runId) {
-  if (!window.confirm('Delete this scheduled full test run?')) return;
+  if (!await kcuiConfirm(
+    'Delete scheduled test run',
+    'Delete this scheduled full test run?',
+    { confirmLabel: 'Delete' },
+  )) return;
   try {
     const response = await fetch(`/api/test-runs/${encodeURIComponent(runId)}`, { method: 'DELETE' });
     if (!response.ok) throw new Error((await response.json()).detail || 'Unable to delete test run.');
@@ -540,7 +520,7 @@ async function cloneCronPrompt(name, button) {
 
 async function agentResume() {
   if (!editingName) {
-    window.alert('Select a CronPrompt first.');
+    await kcuiAlert('Select a timed event', 'Select a CronPrompt first.');
     return;
   }
 
@@ -571,23 +551,26 @@ createButton.addEventListener('click', () => {
   resetEditor();
   nameInput.focus();
 });
-createTestRunButton.addEventListener('click', () => {
-  testRunForm.reset();
-  testRunDialog.showModal();
-  testRunTime.focus();
-});
-testRunDialog.querySelector('[value="cancel"]').addEventListener('click', () => testRunDialog.close());
-testRunForm.addEventListener('submit', async (event) => {
-  event.preventDefault();
+createTestRunButton.addEventListener('click', async () => {
+  const values = await kcuiForm('New Test Run', {
+    message: 'Schedule the complete KoreTest suite on the KoreCron timetable.',
+    confirmLabel: 'Schedule test run',
+    fields: [{
+      name:     'time',
+      label:    'Time',
+      type:     'time',
+      required: true,
+    }],
+  });
+  if (!values) return;
   try {
     const response = await fetch('/api/test-runs', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ time: testRunTime.value }),
+      body:    JSON.stringify({ time: values.time }),
     });
     const result = await response.json();
     if (!response.ok) throw new Error(result.detail || 'Unable to schedule test run.');
-    testRunDialog.close();
     setTag(formStatus, `Scheduled full test run at ${result.schedule.time}`, 'success');
     await load();
   } catch (error) {

@@ -348,11 +348,19 @@ class SkillManager:
         if tool is None:
             raise KeyError(f"registered tool '{name}' was not found")
         request = urllib.request.Request(tool["invoke_url"], data=json.dumps({"arguments": arguments}).encode("utf-8"), method="POST", headers={"Content-Type": "application/json", "Accept": "application/json"})
-        try:
-            with urllib.request.urlopen(request, timeout=timeout) as response:
-                raw = response.read().decode("utf-8")
-        except (urllib.error.HTTPError, urllib.error.URLError) as exc:
-            raise RuntimeError(f"tool '{name}' invocation failed: {exc}") from exc
+        attempts = 2 if name == "koredocs_files_metadata_search" else 1
+        for attempt in range(attempts):
+            try:
+                with urllib.request.urlopen(request, timeout=timeout) as response:
+                    raw = response.read().decode("utf-8")
+                break
+            except urllib.error.URLError as exc:
+                if attempt + 1 < attempts and "timed out" in str(exc.reason).casefold():
+                    time.sleep(0.5)
+                    continue
+                raise RuntimeError(f"tool '{name}' invocation failed: {exc}") from exc
+            except urllib.error.HTTPError as exc:
+                raise RuntimeError(f"tool '{name}' invocation failed: {exc}") from exc
         try: payload = json.loads(raw)
         except json.JSONDecodeError: return raw
         if isinstance(payload, dict) and payload.get("ok") is False:
