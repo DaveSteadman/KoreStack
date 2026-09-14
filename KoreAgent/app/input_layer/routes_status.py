@@ -7,7 +7,7 @@
 #
 # Endpoints:
 #   GET /version       -- return the suite version string
-#   GET /status/ollama -- active host, model, num_ctx, backend, and 'ollama ps' row list
+#   GET /status/ollama -- active runtime settings and 'ollama ps' row list
 #
 # Related modules:
 #   - input_layer/server.py  -- registers this route group
@@ -28,7 +28,13 @@ def register_status_routes(
     get_active_host,
     get_active_model,
     get_active_num_ctx,
+    get_active_max_predict,
     get_active_backend,
+    get_ollama_sampling_config,
+    get_ollama_offload_mode,
+    is_llm_running,
+    get_sandbox_enabled,
+    get_web_skills_enabled,
     get_ollama_ps_rows,
     get_startup_state,
     get_version_text,
@@ -62,7 +68,13 @@ def register_status_routes(
             "host":           get_active_host(),
             "model":          get_active_model(),
             "num_ctx":        get_active_num_ctx(),
+            "max_predict":    get_active_max_predict(),
             "backend":        get_active_backend(),
+            "llm_running":    is_llm_running(),
+            "sampling":       get_ollama_sampling_config(),
+            "offload_mode":   get_ollama_offload_mode(),
+            "sandbox":        get_sandbox_enabled(),
+            "webskills":      get_web_skills_enabled(),
             "ts":             datetime.now().isoformat(timespec="seconds"),
         }
 
@@ -74,10 +86,16 @@ def register_status_routes(
         except Exception:
             rows = []
         return {
-            "host":    get_active_host(),
-            "model":   get_active_model(),
-            "num_ctx": get_active_num_ctx(),
-            "backend": get_active_backend(),
-            "rows":    rows,
-            "ts":      datetime.now().isoformat(timespec="seconds"),
+            "host":         get_active_host(),
+            "model":        get_active_model(),
+            "num_ctx":      get_active_num_ctx(),
+            "max_predict":  get_active_max_predict(),
+            "backend":      get_active_backend(),
+            "llm_running":  is_llm_running(),
+            "sampling":     get_ollama_sampling_config(),
+            "offload_mode": get_ollama_offload_mode(),
+            "sandbox":      get_sandbox_enabled(),
+            "webskills":    get_web_skills_enabled(),
+            "rows":         rows,
+            "ts":           datetime.now().isoformat(timespec="seconds"),
         }

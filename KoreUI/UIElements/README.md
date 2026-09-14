@@ -91,7 +91,7 @@ All layout measurements, colors, and typography are defined as CSS custom proper
 | Surfaces | `--bg`, `--bg-2`, `--panel`, `--surface`, `--surface-2` |
 | Borders | `--border` (#1e2233), `--border-2` (#2b3148) |
 | Text | `--text`, `--text-2`, `--text-dim` |
-| Semantic colors | `--accent` (#4af77a), `--success`, `--warning` (#f0c060), `--danger` (#ff5f5f), `--info` (#6eb5ff) |
+| Semantic colors | `--accent` (#4af77a), `--success`, `--warning` (#f08a24), `--danger` (#ff5f5f), `--info` (#6eb5ff) |
 | Typography | `--kcui-text-body` (13px), `--kcui-text-label` (11px), `--kcui-text-caption` (10px) |
 | Font stacks | `--kcui-font-ui`, `--kcui-font-code`, `--kcui-font-topbar` (all Roboto Mono → Cascadia Code → monospace) |
 
@@ -186,7 +186,7 @@ updateTag(tag, { color: 'dim', active: false });
 |---|---|
 | `kcui-tag--accent` | Green (#4af77a) |
 | `kcui-tag--success` | Green (#4af77a) |
-| `kcui-tag--warning` | Yellow (#f0c060) |
+| `kcui-tag--warning` | Orange (#f08a24) |
 | `kcui-tag--danger` | Red (#ff5f5f) |
 | `kcui-tag--info` | Blue (#6eb5ff) |
 | `kcui-tag--dim` | Muted (#4e5466) |

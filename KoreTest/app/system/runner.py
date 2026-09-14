@@ -39,6 +39,7 @@
 # - invoke_exchange: Implements the invoke exchange operation for this module.
 # - _agent_base_url: Implements the  agent base url operation for this module.
 # - _agent_request: Implements the  agent request operation for this module.
+# - _require_llm_available: Aborts tests when the live agent has no available LLM.
 # - _invoke_agent_turn: Implements the  invoke agent turn operation for this module.
 # - extract_log_file: Extracts log file for this module.
 # - _parse_turn_outputs: Implements the  parse turn outputs operation for this module.
@@ -97,6 +98,10 @@ CSV_FIELDS = [
     "final_output", "assert_result", "passed", "failure_reason",
     "duration_seconds", "prompt_tokens", "exit_code", "log_file", "stderr",
 ]
+
+
+class LlmUnavailableError(RuntimeError):
+    """Raised when KoreAgent has no reachable, served LLM before a test run."""
 
 
 # ====================================================================================================
@@ -205,6 +210,23 @@ def _agent_request(method: str, path: str, payload: dict | None = None):
     )
     with urllib.request.urlopen(request, timeout=SUBPROCESS_TIMEOUT_SECONDS) as response:
         return json.loads(response.read().decode("utf-8"))
+
+
+# ----------------------------------------------------------------------------------------------------
+def _require_llm_available() -> None:
+    """Fail fast unless the live KoreAgent reports an available LLM backend."""
+    try:
+        status = _agent_request("GET", "/api/status")
+    except (OSError, urllib.error.URLError, ValueError, KeyError) as exc:
+        raise LlmUnavailableError(f"Unable to verify KoreAgent LLM availability: {exc}") from exc
+
+    if status.get("llm_running") is True:
+        return
+
+    backend = str(status.get("backend") or "LLM backend")
+    host    = str(status.get("host") or "the configured host")
+    model   = str(status.get("model") or "the configured model")
+    raise LlmUnavailableError(f"LLM unavailable: {backend} at {host} is not serving {model}.")
 
 
 def _invoke_agent_turn(session_id: str, prompt: str) -> dict:
@@ -615,6 +637,11 @@ def run_tests(
     model_label = f" (model: {model})" if model else ""
     host_label  = f" (host: {llmhost})" if llmhost else ""
     print(f"Results file initialized: {output_path}{model_label}{host_label}")
+    try:
+        _require_llm_available()
+    except LlmUnavailableError as exc:
+        print(f"[TEST_ABORTED] {exc}", file=sys.stderr)
+        raise
 
     total_items  = len(prompts)
     tests_run    = 0

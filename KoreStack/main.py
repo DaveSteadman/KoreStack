@@ -77,9 +77,11 @@ from typing import IO
 
 try:
     from .dashboard import serve_dashboard
+    from .ollama_control import OllamaControl
 except ImportError:
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     from dashboard import serve_dashboard
+    from ollama_control import OllamaControl
 
 log: logging.Logger = logging.getLogger("korestack")
 
@@ -893,6 +895,13 @@ def main() -> int:
     child_env["KORESTACK_WATCHDOG_FAILURES"]          = "3"
     child_env["KORESTACK_WATCHDOG_GRACE_SECONDS"]     = "30"
     manager = StackManager(services, child_env, stack_paths, log_dir)
+    agent_spec       = all_services.get("koreagent")
+    agent_status_url = (
+        f"{agent_spec.url.rstrip('/')}/api/status/ollama"
+        if agent_spec is not None
+        else "http://127.0.0.1:11434/api/status/ollama"
+    )
+    ollama_control   = OllamaControl(agent_status_url, log_dir)
 
     if args.command == "status":
         print_snapshot(manager.snapshot())
@@ -915,6 +924,7 @@ def main() -> int:
             "service_icon_keys": SERVICE_ICON_KEYS,
             "probe_http_with_retry": probe_http_with_retry,
             "suite_config": suite_config,
+            "ollama_control": ollama_control,
         },
         daemon=True,
     )
@@ -940,6 +950,7 @@ def main() -> int:
         stop_event.set()
     finally:
         stop_event.set()
+        ollama_control.close()
         manager.stop()
         if dashboard_thread is not None:
             dashboard_thread.join(timeout=2)

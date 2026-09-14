@@ -320,6 +320,26 @@ class RegressionTests(unittest.TestCase):
         self.assertEqual(arguments['max_iterations'], 3)
         self.assertIn('assistant(...) -> delegate(...)', note or '')
 
+    def test_normalize_tool_request_adapts_saved_search_name_alias(self) -> None:
+        func_name, arguments, note = normalize_tool_request('koredata_savedsearch_run', {'saved_search_name': 'AINews'})
+        self.assertEqual(func_name, 'koredata_savedsearch_run')
+        self.assertEqual(arguments, {'name': 'AINews'})
+        self.assertIn('`saved_search_name` -> `name`', note or '')
+
+    def test_normalize_tool_request_keeps_canonical_saved_search_name(self) -> None:
+        _, arguments, note = normalize_tool_request('koredata_savedsearch_run', {'name': 'AINews'})
+        self.assertEqual(arguments, {'name': 'AINews'})
+        self.assertIsNone(note)
+
+    def test_normalize_tool_request_rejects_conflicting_saved_search_names(self) -> None:
+        with self.assertRaisesRegex(ValueError, 'conflicting `name` and `saved_search_name`'):
+            normalize_tool_request('koredata_savedsearch_run', {'name': 'AINews', 'saved_search_name': 'DevNews'})
+
+    def test_normalize_tool_request_leaves_unmapped_tool_arguments_untouched(self) -> None:
+        _, arguments, note = normalize_tool_request('koredata_search', {'saved_search_name': 'AINews'})
+        self.assertEqual(arguments, {'saved_search_name': 'AINews'})
+        self.assertIsNone(note)
+
     def test_fetch_page_text_query_mode_falls_back_to_raw_page_text(self) -> None:
         html_text = '<html><body>unused</body></html>'
         body_text = '# BBC News\n\n### First headline from the page\n\nA paragraph with enough words to survive extraction and give the caller usable page content.\n\n### Second headline from the page\n\nAnother paragraph with enough words to survive extraction and keep the page useful.'

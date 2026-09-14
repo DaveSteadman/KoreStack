@@ -347,7 +347,13 @@ def _find_distribution_list(interface_id: int | None, value: str) -> dict:
 
 def _api_send_one(iface_row: dict, recipient: str, subject: str, content: str) -> dict:
     adapter = build_adapter(iface_row)
-    routing = adapter.send_new(recipient, subject, content)
+    try:
+        routing = adapter.send_new(recipient, subject, content)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Delivery through '{iface_row['name']}' failed: {exc}",
+        ) from exc
 
     ext_thread_id = routing["external_thread_id"]
     ext_msg_id    = routing.get("external_message_id", ext_thread_id)
@@ -811,6 +817,20 @@ def ui_connections(request: Request):
 def api_connections_timing():
     """Return the remaining inbound and outbound poll times for each interface."""
     return {"timings": poller.get_poll_timing()}
+
+
+@app.get("/api/interfaces")
+def api_interfaces():
+    """List safe connection metadata for trusted local automation clients."""
+    return [
+        {
+            "id":      row["id"],
+            "name":    row["name"],
+            "type":    row["type"],
+            "enabled": bool(row["enabled"]),
+        }
+        for row in db.interface_list()
+    ]
 
 
 @app.get("/distribution-lists", response_class=HTMLResponse)

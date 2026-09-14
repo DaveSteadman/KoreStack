@@ -12,11 +12,13 @@
 from __future__ import annotations
 
 import unittest
+from datetime import date
 from tempfile import TemporaryDirectory
 from pathlib import Path
 from unittest.mock import patch
 
 from KoreCron import main
+from KoreCron.output_contracts import OutputContractResult, validate_output_contract
 
 
 # ====================================================================================================
@@ -74,7 +76,6 @@ class FreshConversationTests(unittest.TestCase):
 
         self.assertEqual(deleted, ["http://chat/api/conversations/5"])
 
-
 # ====================================================================================================
 # MARK: SCHEDULED TEST-RUN TESTS
 # ====================================================================================================
@@ -130,6 +131,121 @@ class SchedulerRunHistoryTests(unittest.TestCase):
             self.assertFalse(recorded["succeeded"])
             self.assertEqual("agent could not produce a valid response", recorded["error"])
 
+    def test_marks_a_failed_run_command_as_a_failed_cron_prompt(self) -> None:
+        with self.assertRaisesRegex(RuntimeError, "script command failed"):
+            main._require_successful_reply(
+                {"name": "AI News"},
+                "/run ./scripts/ainews_articles.py",
+                {"content": "/run failed: ainews_articles.py exited with code 1."},
+            )
+
+
+# ====================================================================================================
+# MARK: OUTPUT CONTRACT TESTS
+# ====================================================================================================
+class OutputContractTests(unittest.TestCase):
+    def test_markdown_contract_counts_each_topic_not_the_whole_file(self) -> None:
+        topic_body = " ".join(["evidence"] * 200)
+        content    = "# AI News Update - 2026-09-12\n\n" + "\n\n".join(
+            f"## Topic {index}\n\n{topic_body}"
+            for index in range(1, 7)
+        )
+        with TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "briefing.md"
+            path.write_text(content, encoding="utf-8")
+            with patch("KoreCron.output_contracts.resolve_datauser_path", return_value=path):
+                result = validate_output_contract({
+                    "type":                "markdown_sections",
+                    "path":                "AINewsFile/{date}.md",
+                    "required_title":      "AI News Update -",
+                    "min_items":           6,
+                    "max_items":           8,
+                    "min_words_per_item":  200,
+                    "max_words_per_item":  300,
+                }, run_date=date(2026, 9, 12))
+
+        self.assertTrue(result.ok, result.errors)
+
+    def test_markdown_contract_reports_underlength_topic(self) -> None:
+        with TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "briefing.md"
+            path.write_text("# AI News Update - 2026-09-12\n\n## Short topic\n\nOnly a few words.", encoding="utf-8")
+            with patch("KoreCron.output_contracts.resolve_datauser_path", return_value=path):
+                result = validate_output_contract({
+                    "type":               "markdown_sections",
+                    "path":               "AINewsFile/{date}.md",
+                    "min_items":          6,
+                    "max_items":          8,
+                    "min_words_per_item": 200,
+                }, run_date=date(2026, 9, 12))
+
+        self.assertFalse(result.ok)
+        self.assertIn("Markdown topics count is 1; expected 6 to 8.", result.errors)
+        self.assertIn("Topic 'Short topic' has 4 words; requires at least 200.", result.errors)
+
+    def test_json_contract_rejects_wrong_schema_and_short_content(self) -> None:
+        content = '[{"title": "Topic", "summary": "brief", "content": "too short", "tags": []}]'
+        with TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "briefing.json"
+            path.write_text(content, encoding="utf-8")
+            with patch("KoreCron.output_contracts.resolve_datauser_path", return_value=path):
+                result = validate_output_contract({
+                    "type":               "json_topics",
+                    "path":               "AINewsFile/{date}.json",
+                    "min_items":          1,
+                    "max_items":          1,
+                    "min_words_per_item": 200,
+                    "min_summary_words":  60,
+                    "required_fields":    ["title", "summary", "content", "tags"],
+                }, run_date=date(2026, 9, 12))
+
+        self.assertFalse(result.ok)
+        self.assertIn("JSON topic 1 content has 2 words; requires at least 200.", result.errors)
+        self.assertIn("JSON topic 1 summary has 1 word; requires at least 60.", result.errors)
+        self.assertIn("JSON topic 1 tags must be an array of non-empty strings.", result.errors)
+
+    def test_cron_retries_a_failed_contract_before_advancing(self) -> None:
+        contract = {
+            "type":                "markdown_sections",
+            "path":                "AINewsFile/{date}.md",
+            "min_items":           6,
+            "max_items":           8,
+            "min_words_per_item":  200,
+            "max_repair_attempts": 1,
+        }
+        results = iter([
+            OutputContractResult(path=Path("briefing.md"), errors=("Topic 'One' has 40 words; requires at least 200.",)),
+            OutputContractResult(path=Path("briefing.md"), errors=()),
+        ])
+        definition = {"name": "AINewsFile", "chat_name": "AINewsFile", "prompts": [{"prompt": "Write briefing", "output_contract": contract}]}
+
+        with patch.object(main, "_fresh_conversation", return_value={"id": 1}), \
+             patch.object(main, "_service_url", return_value="http://chat"), \
+             patch.object(main, "_send_prompt", return_value={"tags": []}) as send_prompt, \
+             patch.object(main, "validate_output_contract", side_effect=results):
+            main._run(definition, run_date=date(2026, 9, 12))
+
+        self.assertEqual(send_prompt.call_count, 2)
+        self.assertEqual(send_prompt.call_args_list[0].args[2], "Write briefing")
+        self.assertIn("did not pass validation", send_prompt.call_args_list[1].args[2])
+
+    def test_definition_preserves_valid_output_contract(self) -> None:
+        definition = main._cronprompt_definition({
+            "name":      "Briefing",
+            "chat_name": "Briefing",
+            "schedule":  "08:00",
+            "prompts": [{
+                "prompt": "Write a briefing.",
+                "output_contract": {
+                    "type":      "markdown_sections",
+                    "path":      "Briefings/{date}.md",
+                    "min_items": 1,
+                    "max_items": 3,
+                },
+            }],
+        })
+
+        self.assertEqual(definition["prompts"][0]["output_contract"]["path"], "Briefings/{date}.md")
 
 if __name__ == "__main__":
     unittest.main()

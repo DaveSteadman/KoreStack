@@ -12,16 +12,13 @@
 # MARK: FUNCTIONS
 # Primary types: OllamaCallResult.
 # Function inventory:
-# - get_local_ollama_autostart_enabled: Returns local ollama autostart enabled for this module.
 # - configure_ollama_sampling_options: Configures ollama sampling options for this module.
 # - get_ollama_sampling_config: Returns ollama sampling config for this module.
 # - get_ollama_offload_mode: Returns ollama offload mode for this module.
 # - set_ollama_offload_mode: Sets ollama offload mode for this module.
 # - get_ollama_request_options: Returns ollama request options for this module.
 # - _per_request_context_enabled: Implements the  per request context enabled operation for this module.
-# - _windows_creation_flags: Implements the  windows creation flags operation for this module.
 # - is_ollama_running: Checks whether ollama running is true.
-# - start_ollama_server: Starts ollama server for this module.
 # - ensure_ollama_running: Ensures ollama running for this module.
 # - recover_ollama_runtime: Recovers ollama runtime for this module.
 # - list_ollama_models: Lists ollama models for this module.
@@ -46,7 +43,6 @@ import json
 import math
 import os
 import re
-import subprocess
 import threading
 import time
 import urllib.error
@@ -60,11 +56,7 @@ from utils.workspace_utils import trunc
 # ====================================================================================================
 # MARK: HEALTH CHECK
 # ====================================================================================================
-# Serialises the check-then-start sequence so concurrent callers cannot both see
-# is_ollama_running()==False and both invoke start_ollama_server().
-_ollama_start_lock: threading.Lock = threading.Lock()
 _ollama_recovery_lock: threading.Lock = threading.Lock()
-_ollama_proc: subprocess.Popen | None = None
 
 DEFAULT_OLLAMAHOST = _core.DEFAULT_LOCAL_LLM_HOST
 OLLAMA_CLOUD_HOST  = "https://api.ollama.com"
@@ -102,12 +94,6 @@ class OllamaCallResult:
         if self.eval_duration_ns <= 0 or self.completion_tokens <= 0:
             return 0.0
         return self.completion_tokens / (self.eval_duration_ns / 1_000_000_000)
-
-
-def get_local_ollama_autostart_enabled() -> bool:
-    """Return whether local Ollama may be auto-started by the agent."""
-    raw = str(os.environ.get("KORE_OLLAMA_AUTOSTART", "")).strip().lower()
-    return raw in {"1", "true", "yes", "on"}
 
 
 def _coerce_config_bool(value: object) -> bool:
@@ -212,33 +198,6 @@ def _per_request_context_enabled() -> bool:
     return os.name != "nt"
 
 
-def _windows_creation_flags() -> int:
-    """Return process flags that prevent transient console windows on Windows.
-
-    CREATE_NO_WINDOW must not be combined with DETACHED_PROCESS: Windows ignores the former when
-    the latter is set. The Ollama daemon has no terminal interaction, so a separate console is
-    neither required nor desirable.
-    """
-    if os.name != "nt":
-        return 0
-
-    return (
-        getattr(subprocess, "CREATE_NO_WINDOW", 0)
-        | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
-    )
-
-
-def _hidden_windows_startupinfo():
-    """Return an explicit hidden-window startup configuration on Windows."""
-    if os.name != "nt":
-        return None
-
-    startupinfo = subprocess.STARTUPINFO()
-    startupinfo.dwFlags   |= subprocess.STARTF_USESHOWWINDOW
-    startupinfo.wShowWindow = subprocess.SW_HIDE
-    return startupinfo
-
-
 def is_ollama_running(host: str | None = None) -> bool:
     host = host or _core.get_active_host()
     try:
@@ -249,62 +208,31 @@ def is_ollama_running(host: str | None = None) -> bool:
 
 
 # ----------------------------------------------------------------------------------------------------
-def start_ollama_server() -> None:
-    global _ollama_proc
-
-    try:
-        _ollama_proc = subprocess.Popen(
-            ["ollama", "serve"],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            stdin=subprocess.DEVNULL,
-            creationflags=_windows_creation_flags(),
-            startupinfo=_hidden_windows_startupinfo(),
-        )
-    except FileNotFoundError:
-        raise RuntimeError(
-            "'ollama' executable not found on PATH. "
-            "Please install Ollama (https://ollama.com) and ensure it is on your PATH."
-        ) from None
-
-
-# ----------------------------------------------------------------------------------------------------
 def ensure_ollama_running(
     host: str | None = None,
     start_if_needed: bool = True,
     wait_seconds: float = 20.0,
     verbose: bool = False,
 ) -> None:
+    """Passively require an already-running Ollama server.
+
+    KoreStack owns the local Ollama lifecycle.  This client never starts or
+    restarts a daemon, regardless of the legacy ``start_if_needed`` value.
+    """
     host = host or _core.get_active_host()
 
     # Skip the health-check HTTP round-trip if this host was confirmed healthy recently.
     if _core.is_host_health_cached(host):
         return
 
-    with _ollama_start_lock:
-        # Re-check inside the lock - another thread may have just started it.
-        if is_ollama_running(host=host):
-            _core.mark_host_healthy(host)
-            return
+    if is_ollama_running(host=host):
+        _core.mark_host_healthy(host)
+        return
 
-        if not start_if_needed or not _core._is_local_host(host):
-            raise RuntimeError(f"Ollama is not reachable at {host}")
-
-        if verbose:
-            print(f"Starting Ollama at {host}...", flush=True)
-        start_ollama_server()
-
-    # Poll outside the lock so other threads can proceed with their own health checks.
-    deadline = time.time() + wait_seconds
-    while time.time() < deadline:
-        if is_ollama_running(host=host):
-            _core.mark_host_healthy(host)
-            if verbose:
-                print("Ollama is ready.", flush=True)
-            return
-        time.sleep(0.5)
-
-    raise RuntimeError(f"Ollama did not become ready at {host} within {wait_seconds:.0f}s")
+    del start_if_needed, wait_seconds
+    if verbose:
+        print(f"Ollama is not reachable at {host}. Start it from the KoreStack landing page.", flush=True)
+    raise RuntimeError(f"Ollama is not reachable at {host}. Start it from the KoreStack landing page.")
 
 
 def _is_runner_crash(detail: str) -> bool:
@@ -312,13 +240,12 @@ def _is_runner_crash(detail: str) -> bool:
     return any(marker in normalized for marker in _RUNNER_CRASH_MARKERS)
 
 
-def recover_ollama_runtime(host: str, *, attempt: int, detail: str) -> None:
+def recover_ollama_runtime(host: str, *, attempt: int, detail: str) -> bool:
     """Recover a failed local Ollama runtime before retrying one interrupted request.
 
     A runner crash can leave the Ollama HTTP daemon alive, in which case the next
-    request reloads the model. If the daemon has also exited, start a replacement
-    only for a local host. Recovery is serialised to prevent concurrent requests
-    from spawning duplicate daemons.
+    request reloads the model. If the daemon has exited, KoreStack must start it
+    from the landing page; this client deliberately does not launch processes.
     """
     _core.invalidate_host_health(host)
     delay_seconds = min(4.0, float(attempt + 1))
@@ -344,12 +271,9 @@ def recover_ollama_runtime(host: str, *, attempt: int, detail: str) -> None:
         if is_ollama_running(host):
             _core.mark_host_healthy(host)
             _core.log_to_session("[Ollama recovery] Daemon is healthy; retrying so Ollama reloads the runner.")
-            return
-        if not _core._is_local_host(host):
-            _core.log_to_session("[Ollama recovery] Remote daemon is unavailable; it cannot be restarted locally.")
-            return
-        ensure_ollama_running(host=host, start_if_needed=True, wait_seconds=30.0)
-        _core.log_to_session("[Ollama recovery] Local Ollama daemon restarted.")
+            return True
+        _core.log_to_session("[Ollama recovery] Daemon is unavailable. Start Ollama from the KoreStack landing page.")
+        return False
 
 
 def _retry_after_runtime_failure(
@@ -363,8 +287,7 @@ def _retry_after_runtime_failure(
         return False
     if not _is_runner_crash(detail) and is_ollama_running(host):
         return False
-    recover_ollama_runtime(host, attempt=recovery_attempt, detail=detail)
-    return True
+    return recover_ollama_runtime(host, attempt=recovery_attempt, detail=detail)
 
 
 # ====================================================================================================
@@ -373,9 +296,8 @@ def _retry_after_runtime_failure(
 def list_ollama_models(host: str | None = None, *, start_if_needed: bool = False) -> list[str]:
     """List installed model IDs without starting a local Ollama daemon by default."""
     host = host or _core.get_active_host()
-    if start_if_needed:
-        ensure_ollama_running(host=host, start_if_needed=True)
-    elif not is_ollama_running(host=host):
+    del start_if_needed
+    if not is_ollama_running(host=host):
         return []
     body   = _core._request_json(url=f"{host.rstrip('/')}/api/tags", timeout=10.0)
     models = body.get("models", [])
@@ -592,7 +514,7 @@ def call_ollama_chat(
 ) -> _core.ChatCallResult:
     """Call Ollama's native chat API, preserving per-request runtime options."""
     host = host or _core.get_active_host()
-    ensure_ollama_running(host=host, start_if_needed=get_local_ollama_autostart_enabled())
+    ensure_ollama_running(host=host, start_if_needed=False)
 
     last_user = next((trunc(message.get("content", ""), 32) for message in reversed(messages) if message.get("role") == "user"), "")
     ctx_str   = f"{num_ctx:,}" if num_ctx is not None and _per_request_context_enabled() else "server default"
@@ -752,9 +674,7 @@ def call_ollama_extended(
     timeout defaults to the module-level _DEFAULT_LLM_TIMEOUT (set via set_llm_timeout()).
     """
     host = host or _core.get_active_host()
-    # The local Ollama route is manual by default. Auto-start remains opt-in via
-    # KORE_OLLAMA_AUTOSTART for environments that still want the old behavior.
-    ensure_ollama_running(host=host, start_if_needed=get_local_ollama_autostart_enabled())
+    ensure_ollama_running(host=host, start_if_needed=False)
 
     preview = trunc(prompt.replace("\n", " "), 32)
     ctx_str = f"{num_ctx:,}" if num_ctx is not None else "default"

@@ -14,6 +14,7 @@ const SESSION_STORAGE_KEY   = "maf.activeSession";
 const INPUT_DRAFT_KEY       = "maf.inputDraft";
 const WRAP_STATE_KEY        = "maf.wrapState";
 const ACTIVE_RUN_STORAGE_KEY = "maf.activeRun";
+const AGENT_BOOTSTRAP    = _readAgentBootstrap();
 let   _sessionId        = _restoreSessionId();  // mutable: /chat resume changes this
 const POLL_OLLAMA_MS    = 10_000;
 const POLL_QUEUE_MS     = 3_000;
@@ -33,6 +34,7 @@ const _ALL_COMMANDS = [
     "/stopmodel", "/stoprun", "/compact",
     "/clearmemory", "/reskill", "/sandbox", "/tools",
     "/deletelogs",
+    "/run",
     "/version", "/defaults", "/chat", "/workspace",
     "/comms",
 ];
@@ -48,6 +50,7 @@ const _SUGGEST_HINTS     = {
     "/help":    "List every available slash command and its usage",
     "/compact": "Run immediate semantic compaction of this conversation's older context",
     "/comms":   "Configure or control KoreComms delivery for this chat",
+    "/run":     "Run a trusted Python file below datauser/scripts",
     cpugpu:    "Set Ollama CPU/GPU model placement",
     max_predict: "Use /llmserverconfig max_predict <count>; use /llmserverconfig max_predict to reset to 1024",
     connection: "Pause, resume, or explicitly publish KoreComms output",
@@ -118,10 +121,10 @@ let _suggestBase  = "";   // portion of input before the completion token
 const $ = id => document.getElementById(id);
 
 const dom = {
-    ollamaHost:   () => $("ollama-host"),
-    ollamaModel:  () => $("ollama-model"),
-    ollamaCtx:    () => $("ollama-ctx"),
-    log:          () => $("log-body"),
+    ollamaHost:       () => $("ollama-host"),
+    ollamaModel:      () => $("ollama-model"),
+    ollamaCtx:        () => $("ollama-ctx"),
+    log:              () => $("log-body"),
     pendingPromptsPanel: () => $("panel-pending-prompts"),
     pendingPromptsCount: () => $("pending-prompts-count"),
     pendingPromptsList:  () => $("pending-prompts-list"),
@@ -130,6 +133,42 @@ const dom = {
     input:        () => $("chat-input"),
     sendBtn:      () => $("send-btn"),
 };
+
+function _readAgentBootstrap() {
+    const node = document.getElementById("koreagent-bootstrap");
+    if (!node?.textContent) return {};
+    try {
+        const parsed = JSON.parse(node.textContent);
+        return parsed && typeof parsed === "object" ? parsed : {};
+    } catch (error) {
+        console.warn("Invalid KoreAgent bootstrap state", error);
+        return {};
+    }
+}
+
+function _applyBootstrapRuntimeState() {
+    const runtime = AGENT_BOOTSTRAP.runtime;
+    if (!runtime || typeof runtime !== "object") return;
+
+    const backend = String(runtime.backend || "ollama");
+    const host    = String(runtime.host || "");
+    const model   = String(runtime.model || "");
+    const numCtx  = Number(runtime.num_ctx) || 0;
+
+    dom.ollamaHost().textContent  = host ? `${host} (${backend})` : backend;
+    dom.ollamaModel().textContent = model;
+    dom.ollamaCtx().textContent   = numCtx
+        ? `${numCtx.toLocaleString()} ${backend === "lmstudio" ? "local ctx" : "ctx"}`
+        : "";
+    _activeNumCtx = numCtx;
+
+    _applyRuntimeSettings(runtime);
+}
+
+function _applyRuntimeSettings(runtime) {
+    if (typeof runtime.sandbox === "boolean") _updateSandboxBtn(runtime.sandbox);
+    if (typeof runtime.webskills === "boolean") _updateWebSkillsBtn(runtime.webskills);
+}
 
 function _restoreSessionId() {
     try {
@@ -449,8 +488,6 @@ async function refreshOllamaStatus() {
     const data = await apiFetch("/status/ollama");
     if (!data) {
         dom.ollamaHost().textContent  = "unreachable";
-        dom.ollamaModel().textContent = "";
-        dom.ollamaCtx().textContent   = "";
         _ollamaReachable = false;
         return;
     }
@@ -470,6 +507,7 @@ async function refreshOllamaStatus() {
     dom.ollamaHost().textContent  = (data.host || "") + " (" + backend + ")";
     dom.ollamaModel().textContent = modelName;
     dom.ollamaCtx().textContent   = ctxVal;
+    _applyRuntimeSettings(data);
     _ollamaReachable = true;
 }
 
@@ -1569,6 +1607,7 @@ function init() {
             { kind: "tag", id: "btn-reset-layout",   action: "reset-layout",   label: "default layout", className: "kcui-tag kcui-tag--dim" },
         ],
     });
+    _applyBootstrapRuntimeState();
 
     _restoreSessionUiState();
     const requestedSession = _consumeRequestedSession();

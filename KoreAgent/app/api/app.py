@@ -89,8 +89,12 @@ from llm_client import call_llm_chat
 from llm_client import get_active_backend
 from llm_client import get_active_host
 from llm_client import get_active_model
+from llm_client import get_active_max_predict
 from llm_client import get_active_num_ctx
+from llm_client import get_ollama_offload_mode
+from llm_client import get_ollama_sampling_config
 from llm_client import get_ollama_ps_rows
+from llm_client import is_llm_running
 from llm_client import list_ollama_models
 from execution_queue import task_queue
 from working_data import build_persisted_working_data_payload
@@ -175,11 +179,29 @@ def _get_korechat_base_url() -> str | None:
     return f"http://{host}:{int(port)}"
 
 
+def _get_agent_ui_bootstrap() -> dict:
+    """Return the current settings that must be visible on the first paint."""
+    return {
+        "runtime": {
+            "host":         get_active_host(),
+            "backend":      get_active_backend(),
+            "model":        get_active_model(),
+            "num_ctx":      get_active_num_ctx(),
+            "max_predict":  get_active_max_predict(),
+            "sampling":     get_ollama_sampling_config(),
+            "offload_mode": get_ollama_offload_mode(),
+            "sandbox":      get_sandbox_enabled(),
+            "webskills":    get_web_skills_enabled(),
+        },
+    }
+
+
 register_static_routes(
     app,
     web_dir=_WEB_DIR,
     ui_elements_assets=_UI_ELEMENTS_ASSETS,
     get_korechat_base_url=_get_korechat_base_url,
+    get_ui_bootstrap=_get_agent_ui_bootstrap,
 )
 
 
@@ -188,7 +210,13 @@ register_status_routes(
     get_active_host=get_active_host,
     get_active_model=get_active_model,
     get_active_num_ctx=get_active_num_ctx,
+    get_active_max_predict=get_active_max_predict,
     get_active_backend=get_active_backend,
+    get_ollama_sampling_config=get_ollama_sampling_config,
+    get_ollama_offload_mode=get_ollama_offload_mode,
+    is_llm_running=is_llm_running,
+    get_sandbox_enabled=get_sandbox_enabled,
+    get_web_skills_enabled=get_web_skills_enabled,
     get_ollama_ps_rows=get_ollama_ps_rows,
     get_startup_state=get_startup_state_snapshot,
     get_version_text=get_suite_version,

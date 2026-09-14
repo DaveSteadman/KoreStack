@@ -22,7 +22,6 @@
   <link rel="icon" type="image/x-icon" href="/ui-elements/assets/icons/favicon.ico">
   <link rel="stylesheet" href="/ui-elements/assets/css/chrome.css">
   <link rel="stylesheet" href="/ui-elements/assets/css/workspace.css">
-  <link rel="stylesheet" href="/ui-elements/assets/css/service-cards.css">
   <link rel="stylesheet" href="/static/stack/stack.css">
 </head>
 <body class="kcui-shell-bg">
@@ -43,6 +42,39 @@
                 <span><b>{{ row.label }}</b><code>{{ row.path }}</code></span>
               {% endfor %}
               </p>
+            </div>
+          </section>
+        </div>
+
+        <div class="kcui-workspace__region stack-region">
+          <section class="panel kcui-panel ollama-panel" data-ollama-panel>
+            <div class="ollama-header kcui-panel-header">
+              <div>
+                <p class="eyebrow">Ollama State</p>
+                <p>Local model runtime, managed by KoreStack.</p>
+              </div>
+              <span class="ollama-state ollama-state--{{ 'up' if ollama.server_running else 'down' }}" data-ollama-state>
+                <span class="dot"></span>
+                <span data-ollama-field="state">{{ 'Running' if ollama.server_running else 'Stopped' }}</span>
+              </span>
+            </div>
+            <div class="kcui-panel-body ollama-body">
+              <dl class="ollama-details">
+                <div><dt>Loaded model</dt><dd data-ollama-field="loaded-model">{{ ollama.loaded_models | join(', ') if ollama.loaded_models else 'No model loaded' }}</dd></div>
+                <div><dt>Configured model</dt><dd data-ollama-field="configured-model">{{ ollama.configured_model or 'Not available' }}</dd></div>
+                <div><dt>Backend</dt><dd data-ollama-field="backend">{{ ollama.backend or 'ollama' }}</dd></div>
+                <div><dt>Host</dt><dd data-ollama-field="host">{{ ollama.host }}</dd></div>
+                <div><dt>Context</dt><dd data-ollama-field="num-ctx">{{ ollama.num_ctx if ollama.num_ctx is not none else 'Not available' }}</dd></div>
+                <div><dt>Max output</dt><dd data-ollama-field="max-predict">{{ ollama.max_predict if ollama.max_predict is not none else 'Not available' }}</dd></div>
+                <div><dt>Offload</dt><dd data-ollama-field="offload">{{ ollama.offload_mode or 'Not available' }}</dd></div>
+                <div><dt>Sampling</dt><dd data-ollama-field="sampling">{{ ollama.sampling_summary or 'Not available' }}</dd></div>
+                <div><dt>Management</dt><dd data-ollama-field="management">{{ ollama.management }}</dd></div>
+              </dl>
+              <div class="ollama-actions" aria-label="Ollama controls">
+                <button class="kcui-btn ollama-action ollama-action--start" type="button" data-ollama-action="start">Start Ollama</button>
+                <button class="kcui-btn ollama-action ollama-action--stop" type="button" data-ollama-action="stop">Stop Ollama</button>
+                <span class="ollama-notice" data-ollama-field="notice" aria-live="polite"></span>
+              </div>
             </div>
           </section>
         </div>

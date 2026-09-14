@@ -24,6 +24,19 @@ import json
 # ====================================================================================================
 # MARK: REQUEST NORMALISATION (PUBLIC)
 # ====================================================================================================
+class ToolRequestNormalizationError(ValueError):
+    """A narrow request adaptation could not be applied without changing intent."""
+
+
+_TOOL_ARGUMENT_ALIASES: dict[str, dict[str, str]] = {
+    # SavedSearch historically appears in agent prompts as "saved search name".  The
+    # service contract intentionally remains strict and accepts only ``name``.
+    "koredata_savedsearch_run": {
+        "saved_search_name": "name",
+    },
+}
+
+
 def tool_call_fingerprint(tool_call: dict) -> tuple[str, str]:
     """Compare argument values rather than provider-specific JSON formatting."""
     function  = tool_call.get("function", {})
@@ -34,6 +47,30 @@ def tool_call_fingerprint(tool_call: dict) -> tuple[str, str]:
         except json.JSONDecodeError:
             pass
     return function.get("name", ""), json.dumps(arguments, sort_keys=True, ensure_ascii=False)
+
+
+def _normalize_tool_argument_aliases(func_name: str, arguments: dict, note_parts: list[str]) -> dict:
+    """Translate only documented, unambiguous aliases at the runtime boundary."""
+    normalized_args = dict(arguments)
+    for alias, canonical in _TOOL_ARGUMENT_ALIASES.get(func_name, {}).items():
+        if alias not in normalized_args:
+            continue
+
+        alias_value = normalized_args[alias]
+        if canonical in normalized_args:
+            if normalized_args[canonical] != alias_value:
+                raise ToolRequestNormalizationError(
+                    f"{func_name} received conflicting `{canonical}` and `{alias}` values. "
+                    f"Use only the canonical `{canonical}` argument."
+                )
+            del normalized_args[alias]
+            note_parts.append(f"{func_name}: removed redundant `{alias}` alias for `{canonical}`")
+            continue
+
+        normalized_args[canonical] = normalized_args.pop(alias)
+        note_parts.append(f"{func_name}: `{alias}` -> `{canonical}`")
+
+    return normalized_args
 
 
 def normalize_tool_request(func_name: str, arguments: dict | None) -> tuple[str, dict, str | None]:
@@ -53,6 +90,7 @@ def normalize_tool_request(func_name: str, arguments: dict | None) -> tuple[str,
     if isinstance(nested_args, dict) and "id" in normalized_args and len(normalized_args) == 2:
         normalized_args = dict(nested_args)
         note_parts.append(f"{normalized_name}(id=..., arguments={{...}}) -> {normalized_name}(...)")
+    normalized_args = _normalize_tool_argument_aliases(normalized_name, normalized_args, note_parts)
     return normalized_name, normalized_args, "; ".join(note_parts) if note_parts else None
 
 

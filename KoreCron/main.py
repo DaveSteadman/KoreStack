@@ -49,7 +49,7 @@ import time
 import urllib.parse
 import urllib.request
 from contextlib import asynccontextmanager
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
@@ -65,6 +65,7 @@ from KoreCommon.service_app import register_suite_shell_routes
 from KoreCommon.skill_registration import start_manifest_registration
 from KoreCommon.skill_service import register_skill_invocation_routes
 from KoreCommon.suite_paths import get_suite_datacontrol_dir
+from KoreCron.output_contracts import normalize_output_contract, validate_output_contract
 
 
 CONFIG            = ROOT / "config" / "korestack_config.json"
@@ -252,26 +253,100 @@ def _await_outbound_reply(base: str, conversation_id: int, prior_count: int, tim
     raise TimeoutError(f"Timed out waiting for outbound reply in conversation {conversation_id}")
 
 
-def _run(definition: dict) -> None:
+def _send_prompt(
+    base: str,
+    conversation_id: int,
+    prompt_text: str,
+    *,
+    timeout_seconds: int = 1800,
+) -> dict:
+    """Send one CronPrompt instruction and return its terminal agent reply."""
+    before      = _http("GET", f"{base}/api/conversations/{conversation_id}/messages?limit=1000")
+    prior_count = len(before) if isinstance(before, list) else 0
+    _http("POST", f"{base}/api/conversations/{conversation_id}/messages", {
+        "direction":      "inbound",
+        "content":        prompt_text,
+        "sender_display": "KoreCron",
+        "status":         "received",
+    })
+    return _await_outbound_reply(base, conversation_id, prior_count, timeout_seconds=timeout_seconds)
+
+
+def _require_successful_reply(definition: dict, prompt_text: str, reply: dict) -> None:
+    reply_error = _reply_error(reply)
+    if reply_error:
+        raise RuntimeError(
+            f"CronPrompt '{definition.get('name', '')}' aborted after prompt {prompt_text[:80]!r}: {reply_error}"
+        )
+    command = prompt_text.strip().split(maxsplit=1)[0].casefold() if prompt_text.strip() else ""
+    content = str(reply.get("content") or "").lstrip()
+    if command == "/run" and content.casefold().startswith("/run failed:"):
+        raise RuntimeError(
+            f"CronPrompt '{definition.get('name', '')}' script command failed: {content}"
+        )
+
+
+def _repair_prompt(result, attempt: int, attempts: int) -> str:
+    failures = "\n".join(f"- {error}" for error in result.errors)
+    return (
+        f"The output contract for `{result.path.name}` did not pass validation (repair {attempt} of {attempts}):\n"
+        f"{failures}\n\n"
+        "Repair the existing output file now using file tools. Keep every claim grounded in the supplied Working Data. "
+        "Do not merely describe the repair or claim it is complete: read the repaired file after writing, then reply only when it is compliant."
+    )
+
+
+def _enforce_output_contract(
+    definition: dict,
+    base: str,
+    conversation_id: int,
+    contract: dict,
+    *,
+    run_date: date,
+) -> None:
+    """Validate a prompt's file output, asking the agent for bounded repairs when needed."""
+    normalized = normalize_output_contract(contract)
+    result     = validate_output_contract(normalized, run_date=run_date)
+    attempts   = normalized["max_repair_attempts"]
+    for attempt in range(1, attempts + 1):
+        if result.ok:
+            return
+        repair  = _repair_prompt(result, attempt, attempts)
+        reply   = _send_prompt(base, conversation_id, repair)
+        _require_successful_reply(definition, repair, reply)
+        result = validate_output_contract(normalized, run_date=run_date)
+
+    if result.ok:
+        return
+    failures = "; ".join(result.errors)
+    raise RuntimeError(
+        f"CronPrompt '{definition.get('name', '')}' output contract failed for {result.path.name}: {failures}"
+    )
+
+
+def _run(definition: dict, *, run_date: date | None = None) -> None:
     if definition.get("kind") == "test_run":
         _http("POST", f"{_service_url('koretest')}/api/runs/queue", {"suite": "all"})
         return
 
-    conversation = _fresh_conversation(definition)
-    base         = _service_url("korechat")
+    conversation    = _fresh_conversation(definition)
+    base            = _service_url("korechat")
     conversation_id = int(conversation["id"])
+    output_date     = run_date or datetime.now().date()
     for prompt in definition.get("prompts", []):
         prompt_text = str(prompt.get("prompt", "")) if isinstance(prompt, dict) else str(prompt)
         if not prompt_text.strip():
             continue
-        before = _http("GET", f"{base}/api/conversations/{conversation_id}/messages?limit=1000")
-        prior_count = len(before) if isinstance(before, list) else 0
-        _http("POST", f"{base}/api/conversations/{conversation_id}/messages", {"direction": "inbound", "content": prompt_text, "sender_display": "KoreCron", "status": "received"})
-        reply = _await_outbound_reply(base, conversation_id, prior_count)
-        reply_error = _reply_error(reply)
-        if reply_error:
-            raise RuntimeError(
-                f"CronPrompt '{definition.get('name', '')}' aborted after prompt {prompt_text[:80]!r}: {reply_error}"
+        command_timeout = 2100 if prompt_text.strip().casefold().startswith("/run") else 1800
+        reply = _send_prompt(base, conversation_id, prompt_text, timeout_seconds=command_timeout)
+        _require_successful_reply(definition, prompt_text, reply)
+        if isinstance(prompt, dict) and prompt.get("output_contract"):
+            _enforce_output_contract(
+                definition,
+                base,
+                conversation_id,
+                prompt["output_contract"],
+                run_date=output_date,
             )
 
 
@@ -412,7 +487,13 @@ def _cronprompt_definition(payload: dict) -> dict:
     for item in prompt_items:
         text = str(item.get("prompt", "")) if isinstance(item, dict) else str(item)
         if text.strip():
-            prompts.append({"prompt": text.strip()})
+            prompt = {"prompt": text.strip()}
+            if isinstance(item, dict) and item.get("output_contract") is not None:
+                try:
+                    prompt["output_contract"] = normalize_output_contract(item["output_contract"])
+                except ValueError as exc:
+                    raise HTTPException(400, str(exc)) from exc
+            prompts.append(prompt)
     if not prompts:
         raise HTTPException(400, "At least one non-empty prompt is required.")
     return {

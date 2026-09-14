@@ -4,7 +4,7 @@
 
 import { toggleMark, setBlockType }         from 'https://esm.sh/prosemirror-commands@1';
 import { wrapInList, liftListItem }         from 'https://esm.sh/prosemirror-schema-list@1';
-import { schema, getView, indentBlock, outdentBlock } from './editor.js';
+import { schema, getView, indentBlock, outdentBlock } from './editor.js?v=20260911a';
 
 export function init() {
   document.getElementById('toolbar').addEventListener('mousedown', e => {

@@ -1,4 +1,4 @@
-import { initTopbar, initAppBar, initAppTabs, renderAppMenu, initAppMenuEvents, trackAppTab } from '/ui-elements/assets/js/chrome.js';
+import { initAppMenuEvents, initKoreDocsShell, renderAppMenu, trackAppTab } from '/ui-elements/assets/js/chrome.js';
 import { fetchWithAuth } from '/static/shared/js/auth.js';
 import * as draft from '/static/shared/js/draft.js';
 
@@ -40,22 +40,18 @@ initAppMenuEvents(action => {
   if (action === 'save-target') saveTarget();
 });
 
-initTopbar({ currentService: 'koredocs', urls: window.__koreSuiteUrls || {} });
-initAppBar({
-  mountId: 'tab-bar',
-  currentService: 'koredocs',
+initKoreDocsShell({
+  app:        'textedit',
   overline: 'Plain Text Inspector',
   brandLabel: 'TextEdit',
   brandIcon: 'textedit',
-  editorTabsSlot: 'koredocs-tabs',
-});
-initAppTabs('textedit', {
-  mountId: 'koredocs-tabs',
-  renderBrand: false,
-  typeUrl: { textedit: '/textedit' },
-  titleNormalizer(name) {
-    if (name && name.startsWith('__new_')) return 'Untitled';
-    return String(name || '').replace(/\.[^.]+$/, '');
+  urls:       window.__koreSuiteUrls || {},
+  appTabsOptions: {
+    typeUrl: { textedit: '/textedit' },
+    titleNormalizer(name) {
+      if (name && name.startsWith('__new_')) return 'Untitled';
+      return String(name || '').replace(/\.[^.]+$/, '');
+    },
   },
 });
 

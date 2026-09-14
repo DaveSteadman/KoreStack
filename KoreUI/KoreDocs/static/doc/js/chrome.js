@@ -1,14 +1,12 @@
-import { initTopbar, initAppBar, initAppTabs, renderAppMenu } from '/ui-elements/assets/js/chrome.js';
+import { initKoreDocsShell, renderAppMenu } from '/ui-elements/assets/js/chrome.js';
 
 export function initChrome() {
-  initTopbar({ currentService: 'koredocs', urls: window.__koreSuiteUrls || {} });
-  initAppBar({
-    mountId: 'tab-bar',
-    currentService: 'koredocs',
+  initKoreDocsShell({
+    app:        'koredoc',
     overline: 'Document Editor',
     brandLabel: 'KoreDoc',
     brandIcon: 'koredoc',
-    editorTabsSlot: 'koredocs-tabs',
+    urls:       window.__koreSuiteUrls || {},
   });
 
   renderAppMenu({
@@ -39,6 +37,4 @@ export function initChrome() {
       },
     ],
   });
-
-  initAppTabs('koredoc', { mountId: 'koredocs-tabs', renderBrand: false });
 }

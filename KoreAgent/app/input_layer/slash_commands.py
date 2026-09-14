@@ -5,6 +5,7 @@
 #
 # The command registry lives here, but domain handlers are split into clearly named modules:
 #   - slash_command_handlers_models.py
+#   - slash_command_handlers_scripts.py
 #   - slash_command_handlers_tasks.py
 #   - slash_command_handlers_sessions.py
 # MARK: FUNCTIONS
@@ -48,6 +49,7 @@ from agent.orchestration.engine import set_sandbox_enabled
 from agent.orchestration.engine import set_skill_guidance_enabled
 from input_layer.slash_command_context import SlashCommandContext
 from input_layer.slash_command_handlers_models import register_model_slash_commands
+from input_layer.slash_command_handlers_scripts import register_script_slash_commands
 from input_layer.slash_command_handlers_sessions import register_session_slash_commands
 from sessions.tool_selection import ALWAYS_ON_TOOL_NAMES
 from sessions.tool_selection import build_all_tool_catalog
@@ -524,4 +526,5 @@ _DESCRIPTIONS: dict[str, str] = {
 }
 
 register_model_slash_commands(_REGISTRY, _DESCRIPTIONS)
+register_script_slash_commands(_REGISTRY, _DESCRIPTIONS)
 register_session_slash_commands(_REGISTRY, _DESCRIPTIONS)

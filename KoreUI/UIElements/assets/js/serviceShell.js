@@ -1,5 +1,5 @@
 import { initTopbar } from './topbar.js';
-import { initAppBar } from './appbar.js';
+import { initAppBar, initAppTabs } from './appbar.js';
 
 function shellUrls(urls) {
   return urls || (typeof window !== 'undefined' ? (window.__koreSuiteUrls || {}) : {});
@@ -190,5 +190,52 @@ export function initKoreLiveWebShell(options = {}) {
     },
     topbarOptions,
     appBarOptions,
+  });
+}
+
+/**
+ * Initialise the common KoreDocs chrome used by each document editor.
+ *
+ * Individual editors own their workspace and menu actions; this helper owns
+ * the suite navigation, branded application bar, and shared document tabs.
+ */
+export function initKoreDocsShell(options = {}) {
+  const {
+    app,
+    overline,
+    brandLabel,
+    brandIcon = app,
+    urls,
+    topbarOptions = {},
+    appBarOptions = {},
+    appTabsOptions = {},
+  } = options;
+
+  if (!app) throw new Error('initKoreDocsShell requires an app key.');
+
+  const suiteUrls = shellUrls(urls);
+  const mountId   = appBarOptions.mountId || 'tab-bar';
+  const tabsSlot  = appBarOptions.editorTabsSlot || 'koredocs-tabs';
+
+  initTopbar({
+    currentService: 'koredocs',
+    urls:           suiteUrls,
+    ...topbarOptions,
+  });
+
+  initAppBar({
+    mountId,
+    currentService: 'koredocs',
+    overline,
+    brandLabel,
+    brandIcon,
+    editorTabsSlot: tabsSlot,
+    ...appBarOptions,
+  });
+
+  return initAppTabs(app, {
+    mountId:     tabsSlot,
+    renderBrand: false,
+    ...appTabsOptions,
   });
 }

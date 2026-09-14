@@ -8,8 +8,7 @@ import * as renderer    from './renderer.js';
 import * as interaction from './interaction.js';
 import * as ui          from './ui.js';
 import * as fileio      from './fileio.js';
-import { initTopbar, initAppBar, initAppTabs, renderAppMenu, initDialogHost } from '/ui-elements/assets/js/chrome.js';
-import { trackAppTab } from '/ui-elements/assets/js/chrome.js';
+import { initDialogHost, initKoreDocsShell, renderAppMenu, trackAppTab } from '/ui-elements/assets/js/chrome.js';
 import * as draft       from '/static/shared/js/draft.js';
 
 const _draftSave = draft.makeSaver();
@@ -100,16 +99,13 @@ interaction.init(canvas);
 ui.initMenus();
 ui.initToolbar();
 ui.initHierarchy();
-initTopbar({ currentService: 'koredocs', urls: window.__koreSuiteUrls || {} });
-initAppBar({
-  mountId: 'tab-bar',
-  currentService: 'koredocs',
+initKoreDocsShell({
+  app:        'korediag',
   overline: 'Diagram Editor',
   brandLabel: 'KoreDiag',
   brandIcon: 'korediag',
-  editorTabsSlot: 'koredocs-tabs',
+  urls:       window.__koreSuiteUrls || {},
 });
-initAppTabs('korediag', { mountId: 'koredocs-tabs', renderBrand: false });
 initDialogHost();
 
 const autoOpened = await fileio.autoOpenFromUrl(diagram => {

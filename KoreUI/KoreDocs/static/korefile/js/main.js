@@ -5,7 +5,7 @@
  * search box, and import button.
  */
 
-import { initTopbar, initAppBar, initAppTabs, renderAppMenu, initAppMenuEvents } from '/ui-elements/assets/js/chrome.js';
+import { initAppMenuEvents, initKoreDocsShell, renderAppMenu } from '/ui-elements/assets/js/chrome.js';
 import * as tree     from './tree.js';
 import * as filelist from './filelist.js?v=20260711a';
 import * as api      from './api.js';
@@ -46,16 +46,13 @@ initAppMenuEvents(action => {
 
 // ── Tab bar ─────────────────────────────────────────────────────
 
-initTopbar({ currentService: 'koredocs', urls: window.__koreSuiteUrls || {} });
-initAppBar({
-  mountId: 'tab-bar',
-  currentService: 'koredocs',
+initKoreDocsShell({
+  app:        'korefile',
   overline: 'File Manager',
   brandLabel: 'KoreFile',
   brandIcon: 'korefile',
-  editorTabsSlot: 'koredocs-tabs',
+  urls:       window.__koreSuiteUrls || {},
 });
-initAppTabs('korefile', { mountId: 'koredocs-tabs', renderBrand: false });
 
 // ── State ───────────────────────────────────────────────────────
 

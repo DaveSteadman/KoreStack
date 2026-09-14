@@ -18,7 +18,6 @@
 from __future__ import annotations
 
 import io
-import subprocess
 import sys
 import unittest
 from pathlib import Path
@@ -32,18 +31,12 @@ if str(APP_ROOT) not in sys.path:
 import llm_client_ollama
 
 
-@unittest.skipUnless(hasattr(subprocess, "CREATE_NO_WINDOW"), "Windows process flags are unavailable")
 class OllamaProcessWindowsTests(unittest.TestCase):
-    def test_server_start_hides_its_console_window(self) -> None:
-        with patch.object(llm_client_ollama.subprocess, "Popen") as popen:
-            llm_client_ollama.start_ollama_server()
-
-        flags = popen.call_args.kwargs["creationflags"]
-        self.assertNotEqual(flags & subprocess.CREATE_NO_WINDOW, 0)
-        self.assertNotEqual(flags & subprocess.CREATE_NEW_PROCESS_GROUP, 0)
-        self.assertEqual(flags & subprocess.DETACHED_PROCESS, 0)
-        startupinfo = popen.call_args.kwargs["startupinfo"]
-        self.assertEqual(startupinfo.wShowWindow, subprocess.SW_HIDE)
+    def test_client_does_not_start_an_unavailable_server(self) -> None:
+        with patch.object(llm_client_ollama._core, "get_active_host", return_value="http://localhost:11434"), \
+             patch.object(llm_client_ollama, "is_ollama_running", return_value=False):
+            with self.assertRaisesRegex(RuntimeError, "KoreStack landing page"):
+                llm_client_ollama.ensure_ollama_running(start_if_needed=True)
 
     def test_status_probe_prefers_http_api(self) -> None:
         payload = {"models": [{"name": "gemma4:26b", "size": 0, "size_vram": 0, "digest": "abc", "details": {}}]}
@@ -67,7 +60,6 @@ class OllamaProcessWindowsTests(unittest.TestCase):
 
     def test_prompt_call_does_not_autostart_by_default(self) -> None:
         with patch.object(llm_client_ollama._core, "get_active_host", return_value="http://localhost:11434"), \
-             patch.object(llm_client_ollama, "get_local_ollama_autostart_enabled", return_value=False), \
              patch.object(llm_client_ollama, "ensure_ollama_running") as ensure_running, \
              patch.object(llm_client_ollama._core, "_request_json", return_value={"response": "ok"}), \
              patch.object(llm_client_ollama._core, "log_to_session"):
@@ -89,7 +81,6 @@ class OllamaProcessWindowsTests(unittest.TestCase):
             "done_reason": "stop",
         }
         with patch.object(llm_client_ollama._core, "get_active_host", return_value="http://localhost:11434"), \
-             patch.object(llm_client_ollama, "get_local_ollama_autostart_enabled", return_value=False), \
              patch.object(llm_client_ollama, "ensure_ollama_running"), \
              patch.object(llm_client_ollama, "_retry_after_runtime_failure", return_value=True) as recover, \
              patch.object(llm_client_ollama._core, "_request_json", side_effect=[runner_crash, response]), \
@@ -102,25 +93,20 @@ class OllamaProcessWindowsTests(unittest.TestCase):
         self.assertEqual(result.response, "Recovered.")
         recover.assert_called_once()
 
-    def test_runtime_recovery_restarts_a_stopped_local_daemon(self) -> None:
+    def test_runtime_recovery_does_not_restart_a_stopped_local_daemon(self) -> None:
         with patch.object(llm_client_ollama._core, "invalidate_host_health") as invalidate, \
-             patch.object(llm_client_ollama._core, "log_to_session"), \
-             patch.object(llm_client_ollama._core, "_is_local_host", return_value=True), \
+             patch.object(llm_client_ollama._core, "log_to_session") as log_to_session, \
              patch.object(llm_client_ollama, "is_ollama_running", return_value=False), \
-             patch.object(llm_client_ollama, "ensure_ollama_running") as ensure, \
              patch.object(llm_client_ollama.time, "sleep"):
-            llm_client_ollama.recover_ollama_runtime(
+            recovered = llm_client_ollama.recover_ollama_runtime(
                 "http://localhost:11434",
                 attempt=0,
                 detail="llama-server process has terminated: ROCm error",
             )
 
         invalidate.assert_called_once_with("http://localhost:11434")
-        ensure.assert_called_once_with(
-            host="http://localhost:11434",
-            start_if_needed=True,
-            wait_seconds=30.0,
-        )
+        self.assertFalse(recovered)
+        self.assertTrue(any("KoreStack landing page" in str(call) for call in log_to_session.call_args_list))
 
     def test_repeated_runner_crash_falls_back_to_cpu(self) -> None:
         with patch.object(llm_client_ollama._core, "invalidate_host_health"), \
@@ -130,10 +116,11 @@ class OllamaProcessWindowsTests(unittest.TestCase):
              patch.object(llm_client_ollama, "set_ollama_offload_mode") as set_offload, \
              patch.object(llm_client_ollama, "is_ollama_running", return_value=True), \
              patch.object(llm_client_ollama.time, "sleep"):
-            llm_client_ollama.recover_ollama_runtime(
+            recovered = llm_client_ollama.recover_ollama_runtime(
                 "http://localhost:11434",
                 attempt=1,
                 detail="llama-server process has terminated: ROCm error",
             )
 
         set_offload.assert_called_once_with("forcecpu")
+        self.assertTrue(recovered)

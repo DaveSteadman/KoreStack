@@ -17,6 +17,7 @@
 # - _live_progress: Implements the  live progress operation for this module.
 # - _format_elapsed: Implements the  format elapsed operation for this module.
 # - _collection_stats: Implements the  collection stats operation for this module.
+# - _prune_result_logs: Removes expired and superseded result artefacts.
 # - _start_collection_run: Implements the  start collection run operation for this module.
 # - _finish_collection_run: Implements the  finish collection run operation for this module.
 # - _run_requested_suite: Implements the  run requested suite operation for this module.
@@ -70,6 +71,7 @@ from KoreCommon.suite_paths import get_suite_datacontrol_dir
 from KoreCommon.service_app import register_suite_shell_routes
 from KoreCommon.skill_registration import start_manifest_registration
 from KoreCommon.skill_service import register_skill_invocation_routes
+from KoreTest.app.result_retention import prune_test_results
 
 DATA_ROOT  = Path(os.environ.get("KORE_TEST_DATA_DIR", str(get_suite_datacontrol_dir() / "koretest"))).resolve()
 DB_PATH    = DATA_ROOT / "runs.sqlite3"
@@ -199,7 +201,19 @@ def _run_suite(name: str, model: str | None = None, *, collection_id: str = "") 
     proc = subprocess.run(command, cwd=APP_ROOT, text=True, capture_output=True)
     rows = list(csv.DictReader(output.open(encoding="utf-8", newline=""))) if output.exists() else []
     passed = sum(row.get("passed", "").upper() in {"PASS", "TRUE"} for row in rows)
-    result = {"run_id": run_id, "suite": suite.name, "exit_code": proc.returncode, "total": len(rows), "passed": passed, "failed": len(rows) - passed, "csv": str(output), "stdout": proc.stdout[-12000:], "stderr": proc.stderr[-4000:]}
+    aborted = "[TEST_ABORTED]" in proc.stderr
+    result = {
+        "run_id":    run_id,
+        "suite":     suite.name,
+        "exit_code": proc.returncode,
+        "total":     len(rows),
+        "passed":    passed,
+        "failed":    len(rows) - passed,
+        "csv":       str(output),
+        "stdout":    proc.stdout[-12000:],
+        "stderr":    proc.stderr[-4000:],
+        "aborted":   aborted,
+    }
     result["progress"] = _live_progress(suite.name, result)
     archive_error = ""
     korechat, _agent = _urls()
@@ -303,6 +317,22 @@ def _collection_stats(suite_results: list[dict], *, elapsed_seconds: float, mode
     }
 
 
+def _prune_result_logs() -> dict:
+    """Apply the KoreTest result retention policy after a completed test run."""
+    report = prune_test_results(_results_dir())
+    if report["deleted"]:
+        reclaimed_kib = report["bytes_reclaimed"] / 1024
+        print(
+            f"[retention] Deleted {report['deleted']} old result artefact(s); "
+            f"reclaimed {reclaimed_kib:.1f} KiB.",
+            flush=True,
+        )
+    return {
+        "deleted":         report["deleted"],
+        "bytes_reclaimed": report["bytes_reclaimed"],
+    }
+
+
 def _start_collection_run(collection_id: str, model: str | None) -> None:
     conn = _db()
     try:
@@ -341,22 +371,31 @@ def _run_requested_suite(name: str, model: str | None = None) -> dict:
         raise HTTPException(status_code=409, detail="A KoreTest run is already in progress.")
     try:
         if name.strip().lower() != "all":
-            return _run_suite(name, model)
+            result = _run_suite(name, model)
+            result["retention"] = _prune_result_logs()
+            return result
         base = _prompts_dir()
         started_at = time.monotonic()
         collection_id = f"testcollection_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S_%f')}"
         _start_collection_run(collection_id, model)
-        suite_results = [_run_suite(path.name, model, collection_id=collection_id) for path in sorted(base.glob("*.json"))]
+        suite_results = []
+        for path in sorted(base.glob("*.json")):
+            suite_result = _run_suite(path.name, model, collection_id=collection_id)
+            suite_results.append(suite_result)
+            if suite_result.get("aborted"):
+                break
         stats = _collection_stats(suite_results, elapsed_seconds=time.monotonic() - started_at, model=model)
         print(stats["stats_line"], flush=True)
         result = {
             "suite": "all",
             "status": "passed" if stats["total"] and stats["passed"] == stats["total"] else "failed",
+            "aborted": any(run.get("aborted") for run in suite_results),
             **stats,
             "runs": suite_results,
             "collection_id": collection_id,
             "console": "\n".join([*(str(result.get("console", "")) for result in suite_results), stats["stats_line"]]),
         }
+        result["retention"] = _prune_result_logs()
         _finish_collection_run(collection_id, result)
         return result
     finally:

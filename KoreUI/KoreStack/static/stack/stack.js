@@ -30,6 +30,7 @@ function readBootstrap() {
 
 const bootstrap = readBootstrap();
 let current = bootstrap.snapshot || { stack: { metrics: {} }, services: [] };
+let ollamaState = bootstrap.ollama || {};
 let chromeApi = null;
 let refreshTimer = null;
 
@@ -144,13 +145,108 @@ function applySnapshot(next) {
   }
 }
 
+function formatOllamaValue(value, fallback = 'Not available') {
+  if (value === null || value === undefined || value === '') return fallback;
+  return String(value);
+}
+
+function ollamaStateLabel(state) {
+  if (!state.server_running) return 'Stopped';
+  if (!state.server_ready) return 'Starting';
+  return (state.loaded_models || []).length ? 'Model loaded' : 'Running';
+}
+
+function samplingSummary(sampling) {
+  if (!sampling || typeof sampling !== 'object') return '';
+  return Object.entries(sampling)
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([key, value]) => `${key}=${value}`)
+    .join(', ');
+  return Object.entries(sampling)
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([key, value]) => `${key}=${value}`)
+    .join(' · ');
+}
+
+function updateOllamaField(name, value, fallback) {
+  setText(document.querySelector(`[data-ollama-field="${name}"]`), formatOllamaValue(value, fallback));
+}
+
+function applyOllamaState(next) {
+  ollamaState = next || {};
+  const loadedModels = Array.isArray(ollamaState.loaded_models) ? ollamaState.loaded_models : [];
+  const stateNode = document.querySelector('[data-ollama-state]');
+  if (stateNode) {
+    stateNode.classList.toggle('ollama-state--up', Boolean(ollamaState.server_running));
+    stateNode.classList.toggle('ollama-state--down', !ollamaState.server_running);
+    setText(stateNode.querySelector('[data-ollama-field="state"]'), ollamaStateLabel(ollamaState));
+  }
+
+  updateOllamaField('loaded-model', loadedModels.join(', '), 'No model loaded');
+  updateOllamaField('configured-model', ollamaState.configured_model);
+  updateOllamaField('backend', ollamaState.backend, 'ollama');
+  updateOllamaField('host', ollamaState.host);
+  updateOllamaField('num-ctx', ollamaState.num_ctx);
+  updateOllamaField('max-predict', ollamaState.max_predict);
+  updateOllamaField('offload', ollamaState.offload_mode);
+  updateOllamaField('sampling', ollamaState.sampling_summary || samplingSummary(ollamaState.sampling));
+  updateOllamaField('management', ollamaState.management, 'none');
+
+  const start = document.querySelector('[data-ollama-action="start"]');
+  const stop = document.querySelector('[data-ollama-action="stop"]');
+  const controllable = Boolean(ollamaState.controllable);
+  if (start) start.disabled = !controllable || Boolean(ollamaState.server_running);
+  if (stop) stop.disabled = !controllable || !ollamaState.server_running;
+}
+
+function showOllamaNotice(message, tone = '') {
+  const notice = document.querySelector('[data-ollama-field="notice"]');
+  if (!notice) return;
+  notice.textContent = message;
+  notice.dataset.tone = tone;
+  notice.classList.add('is-visible');
+  clearTimeout(notice._timer);
+  notice._timer = window.setTimeout(() => notice.classList.remove('is-visible'), chromeApi?.KCUI_TRANSIENT_NOTICE_MS || 4000);
+}
+
+async function refreshOllama() {
+  try {
+    const response = await fetch('/api/ollama/status', { cache: 'no-store' });
+    if (!response.ok) return;
+    applyOllamaState(await response.json());
+  } catch (_error) {
+    console.warn('[KoreStack] Ollama state refresh failed.');
+  }
+}
+
 async function refresh() {
   try {
     const response = await fetch('/status', { cache: 'no-store' });
     if (!response.ok) return;
     applySnapshot(await response.json());
+    await refreshOllama();
   } catch (_error) {
     console.warn('[KoreStack] Status refresh failed.');
+  }
+}
+
+async function ollamaAction(action) {
+  const buttons = document.querySelectorAll('[data-ollama-action]');
+  buttons.forEach((button) => { button.disabled = true; });
+  try {
+    const response = await fetch(`/api/ollama/${action}`, { method: 'POST' });
+    const result = await response.json().catch(() => null);
+    if (!response.ok) {
+      showOllamaNotice(result?.error || `Action failed (${response.status})`, 'error');
+      return;
+    }
+    applyOllamaState(result?.state || ollamaState);
+    showOllamaNotice(result?.message || 'Ollama state updated.', result?.changed ? 'ok' : 'warn');
+    window.setTimeout(() => { void refreshOllama(); }, chromeApi?.KCUI_SHORT_DELAY_MS || 300);
+  } catch (_error) {
+    showOllamaNotice('Action failed', 'error');
+  } finally {
+    window.setTimeout(() => applyOllamaState(ollamaState), chromeApi?.KCUI_SHORT_DELAY_MS || 300);
   }
 }
 
@@ -197,6 +293,9 @@ function wireControls() {
   for (const button of document.querySelectorAll('[data-service][data-action]')) {
     button.addEventListener('click', () => serviceAction(button.dataset.service, button.dataset.action));
   }
+  for (const button of document.querySelectorAll('[data-ollama-action]')) {
+    button.addEventListener('click', () => ollamaAction(button.dataset.ollamaAction));
+  }
 }
 
 function startRefreshLoop() {
@@ -234,6 +333,7 @@ async function initChrome() {
 
 wireControls();
 applySnapshot(current);
+applyOllamaState(ollamaState);
 startRefreshLoop();
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') {

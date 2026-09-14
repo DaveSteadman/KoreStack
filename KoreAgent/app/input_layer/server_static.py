@@ -23,6 +23,7 @@ from __future__ import annotations
 # ====================================================================================================
 
 import os
+import json
 from pathlib import Path
 from typing import Callable
 
@@ -35,12 +36,37 @@ from KoreCommon.service_app import register_suite_config_js
 from KoreCommon.service_app import register_ui_elements_assets
 
 
+_AGENT_BOOTSTRAP_MARKER = "<!-- KORE_AGENT_BOOTSTRAP -->"
+
+
+def render_agent_index(web_dir: Path, get_ui_bootstrap: Callable[[], dict] | None = None) -> str:
+    """Render the agent page with current runtime settings embedded as JSON.
+
+    The UI consumes this synchronously before its first status poll, avoiding an
+    empty application bar while it waits for the LLM status endpoint.
+    """
+    index_html = (web_dir / "index.html").read_text(encoding="utf-8")
+    bootstrap  = get_ui_bootstrap() if get_ui_bootstrap else {}
+    serialized = json.dumps(bootstrap, separators=(",", ":"), ensure_ascii=False)
+    safe_json  = (
+        serialized
+        .replace("<", "\\u003c")
+        .replace(">", "\\u003e")
+        .replace("&", "\\u0026")
+        .replace("\u2028", "\\u2028")
+        .replace("\u2029", "\\u2029")
+    )
+    bootstrap_tag = f'<script id="koreagent-bootstrap" type="application/json">{safe_json}</script>'
+    return index_html.replace(_AGENT_BOOTSTRAP_MARKER, bootstrap_tag)
+
+
 def register_static_routes(
     app,
     *,
     web_dir: Path,
     ui_elements_assets: Path,
     get_korechat_base_url: Callable[[], str | None],
+    get_ui_bootstrap: Callable[[], dict] | None = None,
 ) -> None:
     register_suite_config_js(app)
     register_ui_elements_assets(app, ui_elements_assets)
@@ -50,7 +76,10 @@ def register_static_routes(
         index = web_dir / "index.html"
         if not index.exists():
             return {"error": "Web UI not found"}
-        return FileResponse(str(index), headers={"Cache-Control": "no-store"})
+        return HTMLResponse(
+            content=render_agent_index(web_dir, get_ui_bootstrap),
+            headers={"Cache-Control": "no-store"},
+        )
 
     @app.get("/skills-catalog", include_in_schema=False)
     def serve_skills_catalog():

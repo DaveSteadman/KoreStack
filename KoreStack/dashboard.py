@@ -113,11 +113,17 @@ def _path_rows(paths: dict[str, object]) -> list[dict[str, str]]:
     return items
 
 
-def _dashboard_bootstrap(snapshot: dict[str, object], suite_urls: dict[str, str], dashboard_url: str) -> dict[str, object]:
+def _dashboard_bootstrap(
+    snapshot: dict[str, object],
+    suite_urls: dict[str, str],
+    dashboard_url: str,
+    ollama_state: dict[str, object],
+) -> dict[str, object]:
     stack = snapshot["stack"]
     metrics = stack["metrics"]
     return {
         "snapshot": snapshot,
+        "ollama": ollama_state,
         "suiteUrls": suite_urls,
         "chips": [
             {"label": "Running", "value": f"{metrics['running']} / {metrics['selected']}", "valueId": "stack-running-value", "tone": "accent"},
@@ -135,11 +141,19 @@ def _template_env(stack_static_dir: Path) -> Environment:
     )
 
 
-def html_page(manager: Any, dashboard_url: str, stack_static_dir: Path, ui_assets_dir: Path, service_icon_keys: dict[str, str]) -> str:
+def html_page(
+    manager: Any,
+    dashboard_url: str,
+    stack_static_dir: Path,
+    ui_assets_dir: Path,
+    service_icon_keys: dict[str, str],
+    ollama_control: Any,
+) -> str:
     snapshot       = manager.snapshot()
     stack          = snapshot["stack"]
     suite_urls     = build_suite_urls(manager, dashboard_url, service_icon_keys)
-    bootstrap_json = json.dumps(_dashboard_bootstrap(snapshot, suite_urls, dashboard_url)).replace("</", "<\\/")
+    ollama_state   = ollama_control.snapshot()
+    bootstrap_json = json.dumps(_dashboard_bootstrap(snapshot, suite_urls, dashboard_url, ollama_state)).replace("</", "<\\/")
     root_command   = f"python .\\main.py --services {','.join(stack['services'])}"
     template       = _template_env(stack_static_dir).get_template("index.html")
     return template.render(
@@ -147,6 +161,7 @@ def html_page(manager: Any, dashboard_url: str, stack_static_dir: Path, ui_asset
         service_rows   = [_service_row_view(service) for service in snapshot["services"]],
         root_command   = root_command,
         bootstrap_json = bootstrap_json,
+        ollama         = ollama_state,
     )
 
 
@@ -199,6 +214,7 @@ def build_handler(
     service_icon_keys: dict[str, str],
     probe_http_with_retry: Callable[[str], tuple[bool, str]],
     suite_config: dict[str, Any],
+    ollama_control: Any,
 ):
     class StackHandler(BaseHTTPRequestHandler):
         manager_ref: ClassVar[Any] = manager
@@ -223,7 +239,7 @@ def build_handler(
                 return
 
             if request_path in ("/", ""):
-                body = html_page(self.manager_ref, self.dashboard_ref, stack_static_dir, ui_assets_dir, service_icon_keys).encode("utf-8")
+                body = html_page(self.manager_ref, self.dashboard_ref, stack_static_dir, ui_assets_dir, service_icon_keys, ollama_control).encode("utf-8")
                 self._send_bytes(body, "text/html; charset=utf-8")
                 return
 
@@ -265,6 +281,10 @@ def build_handler(
                     return
                 return
 
+            if request_path == "/api/ollama/status":
+                self._send_json(ollama_control.snapshot())
+                return
+
             if request_path == "/api/endpoints/catalog":
                 body = json.dumps(build_catalog(suite_config, self.dashboard_ref)).encode("utf-8")
                 self.send_response(HTTPStatus.OK)
@@ -301,10 +321,25 @@ def build_handler(
                 _, _, slug, action = parts
                 self._handle_service_action(slug, action)
                 return
+            if request_path in {"/api/ollama/start", "/api/ollama/stop"}:
+                self._handle_ollama_action(request_path.rsplit("/", 1)[-1])
+                return
             self.send_error(HTTPStatus.NOT_FOUND, "Not found")
 
         def log_message(self, format: str, *args: object) -> None:
             return
+
+        def _send_json(self, payload: dict[str, Any], status: HTTPStatus = HTTPStatus.OK) -> None:
+            body = json.dumps(payload).encode("utf-8")
+            self.send_response(status)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            try:
+                self.wfile.write(body)
+            except OSError:
+                return
 
         def _serve_asset(self, assets_dir: Path, relative_path: str) -> None:
             asset_path = (assets_dir / relative_path).resolve()
@@ -353,6 +388,14 @@ def build_handler(
             except OSError:
                 return
 
+        def _handle_ollama_action(self, action: str) -> None:
+            try:
+                result = ollama_control.start() if action == "start" else ollama_control.stop()
+            except RuntimeError as exc:
+                self._send_json({"ok": False, "error": str(exc), "state": ollama_control.snapshot()}, HTTPStatus.CONFLICT)
+                return
+            self._send_json({"ok": True, **result})
+
         def _handle_endpoint_request(self) -> None:
             raw_length = self.headers.get("Content-Length", "0")
             try:
@@ -400,6 +443,7 @@ def serve_dashboard(
     service_icon_keys: dict[str, str],
     probe_http_with_retry: Callable[[str], tuple[bool, str]],
     suite_config: dict[str, Any],
+    ollama_control: Any,
 ) -> None:
     dashboard_url = f"http://{host}:{port}/"
     handler = build_handler(
@@ -410,6 +454,7 @@ def serve_dashboard(
         service_icon_keys=service_icon_keys,
         probe_http_with_retry=probe_http_with_retry,
         suite_config=suite_config,
+        ollama_control=ollama_control,
     )
     httpd = ResilientThreadingHTTPServer((host, port), handler)
     httpd.timeout = 0.5

@@ -5,11 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>KoreStack</title>
   <link rel="icon" type="image/x-icon" href="/ui-elements/assets/icons/favicon.ico" />
-  <link rel="stylesheet" href="/static/doc/style.css" />
+  <link rel="stylesheet" href="/static/doc/style.css?v=20260911b" />
   <link rel="stylesheet" href="/ui-elements/assets/css/chrome.css" />
   <script src="/suite-config.js"></script>
 </head>
-<body>
+<body class="kcui-shell-bg">
 
   <div id="topbar"></div>
 
@@ -35,6 +35,8 @@
     <button class="tb-btn" data-insert="ol" title="Numbered List">1.</button>
     <button class="tb-btn" data-insert="code-block" title="Code Block">```</button>
     <button class="tb-btn" data-insert="hr" title="Horizontal Rule">—</button>
+    <button id="btn-toggle-sidebar" class="kcui-tag kcui-tag--dim" type="button"
+            aria-controls="right-sidebar" aria-pressed="true">details</button>
   </div>
 
   <!-- ── Main ─────────────────────────────────────────────────── -->
@@ -64,6 +66,6 @@
     <span id="status-counts"></span>
   </div>
 
-  <script type="module" src="/static/doc/js/main.js"></script>
+  <script type="module" src="/static/doc/js/main.js?v=20260911a"></script>
 </body>
 </html>

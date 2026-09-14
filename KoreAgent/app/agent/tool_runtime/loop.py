@@ -29,6 +29,7 @@ from agent.tool_runtime.recovery import build_tool_recovery_message as _build_to
 from agent.tool_runtime.recovery import build_tool_recovery_reminder as _build_tool_recovery_reminder
 from agent.tool_runtime.recovery import classify_tool_recovery as _classify_tool_recovery
 from agent.tool_runtime.recovery import normalize_tool_request
+from agent.tool_runtime.recovery import ToolRequestNormalizationError
 from agent.tool_runtime.recovery import tool_call_fingerprint
 from context_manager import COMPACT_THRESHOLD
 from context_manager import assess_compact
@@ -411,7 +412,17 @@ def run_tool_loop(
                     messages.append({"role": "tool", "tool_call_id": tc_id, "name": func_name, "content": error_content})
                     context_map.append({"round": round_num, "role": "tool", "label": func_name, "chars": len(error_content), "auto_key": None, "msg_idx": len(messages) - 1})
                     continue
-                func_name, arguments, normalization_note = normalize_tool_request(func_name, arguments)
+                try:
+                    func_name, arguments, normalization_note = normalize_tool_request(func_name, arguments)
+                except ToolRequestNormalizationError as exc:
+                    _log(f"  [warn] Invalid arguments for {func_name}: {exc}")
+                    error_content = f"[SKILL_ERROR] Invalid tool call for {func_name}: {exc}"
+                    error_output = ToolCallResult(tool=func_name, function=func_name, module="", arguments=arguments, result=error_content, status="error", error=str(exc))
+                    round_outputs.append(error_output)
+                    tool_outputs.append(error_output)
+                    messages.append({"role": "tool", "tool_call_id": tc_id, "name": func_name, "content": error_content})
+                    context_map.append({"round": round_num, "role": "tool", "label": func_name, "chars": len(error_content), "auto_key": None, "msg_idx": len(messages) - 1})
+                    continue
                 _log(f"  -> {func_name}({', '.join(f'{k}={v!r}' for k, v in arguments.items())})")
                 if normalization_note:
                     _log_file_only(f"[tool-normalize] {normalization_note}")

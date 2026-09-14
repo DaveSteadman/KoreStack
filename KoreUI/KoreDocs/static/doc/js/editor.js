@@ -2,7 +2,7 @@
  * editor.js - ProseMirror WYSIWYG editor for KoreDoc.
  *
  * Stores the document as ProseMirror state; serialises to/from Markdown.
- * YAML frontmatter is stashed separately so ProseMirror only sees the body.
+ * Document metadata headers are stashed separately so ProseMirror only sees the body.
  */
 
 import { Schema }        from 'https://esm.sh/prosemirror-model@1';
@@ -75,13 +75,18 @@ export function init(hostEl, onUpdate) {
 /** Return the full document as Markdown (frontmatter + body). */
 export function getValue() {
   if (!_view) return _fm;
-  const body = defaultMarkdownSerializer.serialize(_view.state.doc).trimEnd();
+  const body = getBodyValue();
   return _fm ? `${_fm}\n\n${body}` : body;
+}
+
+/** Return only the Markdown body visible in the rendered editor. */
+export function getBodyValue() {
+  return _view ? defaultMarkdownSerializer.serialize(_view.state.doc).trimEnd() : '';
 }
 
 /**
  * Replace editor content from a Markdown string.
- * Strips and stashes YAML frontmatter; resets undo history.
+ * Strips and stashes YAML or KoreDocs JSON metadata; resets undo history.
  */
 export function setValue(markdown) {
   if (!_view) return;
@@ -160,6 +165,18 @@ function _shiftIndent(state, dispatch, delta) {
 // ── Internal ───────────────────────────────────────────────────────────────
 
 function _splitFm(text) {
+  const jsonHeader = text.match(/^---koredocs-json\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/i);
+  if (jsonHeader) {
+    try {
+      const record = JSON.parse(jsonHeader[1]);
+      if (record && typeof record === 'object' && typeof record.metadata === 'object') {
+        return { fmText: jsonHeader[0].trimEnd(), bodyStart: jsonHeader[0].length };
+      }
+    } catch {
+      // Leave malformed headers visible so they can be corrected in the text editor.
+    }
+  }
+
   const m = text.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?/);
   return m
     ? { fmText: m[0].trimEnd(), bodyStart: m[0].length }

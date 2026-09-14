@@ -5,7 +5,7 @@
  * and a live heading outline (document map) for navigating the document.
  */
 
-import { parseFrontmatter } from './editor.js';
+import { parseFrontmatter } from './editor.js?v=20260911a';
 
 const _panel = document.getElementById('props-content');
 const _map   = document.getElementById('map-content');
@@ -24,9 +24,10 @@ export function refresh(text, currentName, artefact = {}) {
       : _artefact.metadata,
   };
   const { meta } = parseFrontmatter(text);
-  const lines    = text.split('\n').length;
-  const words    = text.trim() ? text.trim().split(/\s+/).length : 0;
-  const chars    = text.length;
+  const bodyText = typeof _artefact.bodyText === 'string' ? _artefact.bodyText : text;
+  const lines    = bodyText.split('\n').length;
+  const words    = bodyText.trim() ? bodyText.trim().split(/\s+/).length : 0;
+  const chars    = bodyText.length;
 
   const metaRows = Object.entries(meta)
     .map(([k, v]) =>
@@ -48,7 +49,7 @@ export function refresh(text, currentName, artefact = {}) {
     </div>
   `;
 
-  _refreshMap(text);
+  _refreshMap(bodyText);
 }
 
 export function setHistory(history) {

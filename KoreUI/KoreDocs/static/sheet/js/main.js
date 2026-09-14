@@ -7,8 +7,7 @@ import * as cell       from './cell.js';
 import * as properties from './properties.js';
 import * as fileio     from './fileio.js';
 import { colLetter, addrOf, evaluate } from './formula.js';
-import { initTopbar, initAppBar, initAppTabs, renderAppMenu, initAppMenuEvents, initDialogHost } from '/ui-elements/assets/js/chrome.js';
-import { trackAppTab } from '/ui-elements/assets/js/chrome.js';
+import { initAppMenuEvents, initDialogHost, initKoreDocsShell, renderAppMenu, trackAppTab } from '/ui-elements/assets/js/chrome.js';
 import * as draft      from '/static/shared/js/draft.js';
 
 const canvas      = document.getElementById('grid');
@@ -60,16 +59,13 @@ renderAppMenu({
 
 grid.init(canvas, container, cellEditor, _onCommit, _onSelect, _beginFormulaReferenceEdit);
 fileio.init(_onStateChange);
-initTopbar({ currentService: 'koredocs', urls: window.__koreSuiteUrls || {} });
-initAppBar({
-  mountId: 'tab-bar',
-  currentService: 'koredocs',
+initKoreDocsShell({
+  app:        'koresheet',
   overline: 'Spreadsheet',
   brandLabel: 'KoreSheet',
   brandIcon: 'koresheet',
-  editorTabsSlot: 'koredocs-tabs',
+  urls:       window.__koreSuiteUrls || {},
 });
-initAppTabs('koresheet', { mountId: 'koredocs-tabs', renderBrand: false });
 initDialogHost();
 
 // Auto-open from ?file= URL param, else start with a blank sheet

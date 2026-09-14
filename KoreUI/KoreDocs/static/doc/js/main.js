@@ -3,9 +3,9 @@
  * Wires together editor, toolbar, properties panel, file I/O, and the menu bar.
  */
 
-import * as editor     from './editor.js';
+import * as editor     from './editor.js?v=20260911a';
 import * as toolbar    from './toolbar.js';
-import * as properties from './properties.js';
+import * as properties from './properties.js?v=20260911a';
 import * as fileio     from './fileio.js';
 import { trackAppTab, initAppMenuEvents } from '/ui-elements/assets/js/chrome.js';
 import { initChrome } from './chrome.js';
@@ -18,6 +18,7 @@ const _draftSave = draft.makeSaver();
 initChrome();
 editor.init(document.getElementById('editor-host'), _onEditorChange);
 toolbar.init();
+_initSidebarToggle();
 
 function _onEditorChange(markdown) {
   if (!fileio.isDirty()) fileio.markDirty();
@@ -100,6 +101,7 @@ function _refreshProperties(markdown, includeHistory = false) {
   properties.refresh(markdown, fileio.currentName(), {
     metadata: fileio.currentMetadata(),
     revision: fileio.currentRevision(),
+    bodyText: editor.getBodyValue(),
   });
   if (!includeHistory || fileio.currentId() == null) return;
   fileio.getHistory()
@@ -108,11 +110,30 @@ function _refreshProperties(markdown, includeHistory = false) {
 }
 
 function _updateStatus() {
-  const text = editor.getValue();
+  const text = editor.getBodyValue();
   const lines = text.split('\n').length;
   const words = text.trim() ? text.trim().split(/\s+/).length : 0;
   document.getElementById('status-file').textContent   = fileio.currentName() ?? 'Untitled.koredoc';
   document.getElementById('status-counts').textContent = `${lines} lines · ${words} words`;
+}
+
+function _initSidebarToggle() {
+  const key = 'koredoc:sidebar-visible';
+  const button = document.getElementById('btn-toggle-sidebar');
+  if (!button) return;
+
+  const apply = visible => {
+    document.body.classList.toggle('kd-sidebar-hidden', !visible);
+    button.setAttribute('aria-pressed', String(visible));
+    button.textContent = visible ? 'details' : 'show details';
+  };
+
+  apply(localStorage.getItem(key) !== 'false');
+  button.addEventListener('click', () => {
+    const visible = document.body.classList.contains('kd-sidebar-hidden');
+    apply(visible);
+    localStorage.setItem(key, String(visible));
+  });
 }
 
 

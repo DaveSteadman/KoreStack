@@ -28,3 +28,7 @@ class SlashCommandRegistryTests(unittest.TestCase):
         self.assertIn("/chat", slash_commands._DESCRIPTIONS)
         self.assertIn("/session", slash_commands._REGISTRY)
         self.assertNotIn("/session", slash_commands._DESCRIPTIONS)
+
+    def test_run_is_registered_as_a_slash_command(self) -> None:
+        self.assertIn("/run", slash_commands._REGISTRY)
+        self.assertIn("/run", slash_commands._DESCRIPTIONS)

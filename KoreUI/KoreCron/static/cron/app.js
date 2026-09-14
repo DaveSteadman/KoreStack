@@ -230,7 +230,7 @@ function createPromptActionButton({ title, label, modifier, contents }) {
 }
 
 
-function addPromptRow(value = '', { afterRow = null, focus = false } = {}) {
+function addPromptRow(value = '', { afterRow = null, focus = false, outputContract = null } = {}) {
   const row       = document.createElement('div');
   const label     = document.createElement('label');
   const textarea  = document.createElement('textarea');
@@ -251,6 +251,7 @@ function addPromptRow(value = '', { afterRow = null, focus = false } = {}) {
   textarea.value    = value;
   textarea.placeholder = 'Prompt to send after the previous prompt has completed.';
   textarea.dataset.prompt = 'true';
+  if (outputContract) textarea.dataset.outputContract = JSON.stringify(outputContract);
   textarea.addEventListener('input', () => fitPromptTextarea(textarea));
   addAfter.textContent = '+';
   addAfter.addEventListener('click', () => {
@@ -428,7 +429,7 @@ function startEdit(item, { scroll = true, updateStatus = true } = {}) {
     ? item.schedule.time
     : String(item.schedule.minutes);
   promptList.replaceChildren();
-  item.prompts.forEach((prompt) => addPromptRow(prompt.prompt || ''));
+  item.prompts.forEach((prompt) => addPromptRow(prompt.prompt || '', { outputContract: prompt.output_contract || null }));
   updateEditorChrome();
   renderRows(cronPrompts);
   if (updateStatus) setTag(formStatus, `Editing ${item.name}`, 'warning');
@@ -587,7 +588,14 @@ form.addEventListener('input', () => { editorDirty = true; });
 
 form.addEventListener('submit', async (event) => {
   event.preventDefault();
-  const prompts = [...promptList.querySelectorAll('[data-prompt]')].map((input) => input.value.trim()).filter(Boolean);
+  const prompts = [...promptList.querySelectorAll('[data-prompt]')]
+    .map((input) => {
+      const prompt = input.value.trim();
+      if (!prompt) return null;
+      const outputContract = input.dataset.outputContract ? JSON.parse(input.dataset.outputContract) : null;
+      return outputContract ? { prompt, output_contract: outputContract } : prompt;
+    })
+    .filter(Boolean);
   saveButton.disabled = true;
   setTag(formStatus, editingName ? 'Saving' : 'Creating', 'warning');
   try {

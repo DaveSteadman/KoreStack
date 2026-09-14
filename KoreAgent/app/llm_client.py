@@ -22,6 +22,7 @@
 # MARK: FUNCTIONS
 # Function inventory:
 # - get_ollama_ps_rows: Returns ollama ps rows for this module.
+# - is_llm_running: Reports whether the active LLM backend is ready to serve requests.
 # - ensure_ollama_running: Ensures ollama running for this module.
 # - list_ollama_models: Lists ollama models for this module.
 # - format_running_model_report: Formats running model report for this module.
@@ -50,6 +51,7 @@ from llm_client_openai import get_active_host
 from llm_client_openai import get_active_backend
 from llm_client_openai import get_active_model
 from llm_client_openai import get_active_num_ctx
+from llm_client_openai import get_active_max_predict
 from llm_client_openai import get_llm_timeout
 from llm_client_openai import set_llm_timeout
 from llm_client_openai import register_llm_call_logger
@@ -64,11 +66,9 @@ from llm_client_ollama  import configure_ollama_sampling_options
 from llm_client_ollama  import get_ollama_offload_mode
 from llm_client_ollama  import get_ollama_sampling_config
 from llm_client_ollama  import get_ollama_request_options
-from llm_client_ollama  import get_local_ollama_autostart_enabled
 from llm_client_ollama  import set_ollama_offload_mode
 from llm_client_ollama  import is_ollama_running
 from llm_client_ollama  import recover_ollama_runtime
-from llm_client_ollama  import start_ollama_server
 from llm_client_ollama  import stop_model
 from llm_client_ollama  import call_ollama_extended
 from llm_client_ollama  import call_ollama
@@ -90,10 +90,10 @@ __all__ = [
     "get_active_backend",
     "get_active_model",
     "get_active_num_ctx",
+    "get_active_max_predict",
     "get_ollama_offload_mode",
     "get_ollama_sampling_config",
     "get_ollama_request_options",
-    "get_local_ollama_autostart_enabled",
     "get_llm_timeout",
     "set_llm_timeout",
     "register_llm_call_logger",
@@ -104,12 +104,12 @@ __all__ = [
     "is_explicit_model_name",
     "is_ollama_running",
     "recover_ollama_runtime",
-    "start_ollama_server",
     "stop_model",
     "call_ollama_extended",
     "call_ollama",
     "get_running_model_row",
     "get_ollama_ps_rows",
+    "is_llm_running",
     "ensure_ollama_running",
     "list_ollama_models",
     "format_running_model_report",
@@ -129,17 +129,37 @@ def get_ollama_ps_rows() -> list[dict]:
     if _openai.get_active_backend() == "lmstudio":
         return []
     return _ollama.get_ollama_ps_rows()
+
+
+# ----------------------------------------------------------------------------------------------------
+def is_llm_running(host: str | None = None) -> bool:
+    """Return whether the active LLM backend is reachable and able to serve a model.
+
+    This passive probe never starts a local server.  Ollama is ready when its native
+    API responds; LM Studio is ready only when its OpenAI-compatible model endpoint
+    responds with at least one served model.
+    """
+    host = host or _openai.get_active_host()
+    try:
+        if _openai.get_active_backend() == "lmstudio":
+            return bool(_lmstudio.list_lmstudio_models(host))
+        return _ollama.is_ollama_running(host)
+    except Exception:
+        return False
+
+
+# ----------------------------------------------------------------------------------------------------
 def ensure_ollama_running(
     host: str | None = None,
     start_if_needed: bool = True,
     wait_seconds: float = 20.0,
     verbose: bool = False,
 ) -> None:
-    """Ensure the configured server is reachable; auto-start Ollama locally when needed.
+    """Ensure the configured server is reachable without starting it.
 
     Routes to the backend-specific health check based on the active backend:
-    - Ollama: checks /api/tags, starts local server if needed.
-    - LM Studio: checks /v1/models; no auto-start (must be started manually).
+    - Ollama: checks /api/tags; KoreStack owns the local server lifecycle.
+    - LM Studio: checks /v1/models; it is managed outside this client.
     """
     host = host or _openai.get_active_host()
     if _openai.get_active_backend() == "lmstudio":
@@ -207,9 +227,7 @@ def call_llm_chat(
             timeout    = timeout,
             on_token   = on_token,
         )
-    # The local Ollama route is manual by default. Auto-start remains opt-in via
-    # KORE_OLLAMA_AUTOSTART for environments that still want the old behavior.
-    ensure_ollama_running(host=host, start_if_needed=get_local_ollama_autostart_enabled())
+    ensure_ollama_running(host=host, start_if_needed=False)
 
     last_user = next(
         (trunc(m.get("content", ""), 32) for m in reversed(messages) if m.get("role") == "user"),
