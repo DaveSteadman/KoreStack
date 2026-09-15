@@ -161,6 +161,11 @@ cronPromptRowStyle.textContent = `
     gap: 8px;
     flex: 0 0 auto;
   }
+  .cronprompt-row__actions button:disabled {
+    cursor: wait;
+    filter: grayscale(1);
+    opacity: 0.52;
+  }
   .cronprompt-row__delete {
     min-width: 2.1rem;
     text-align: center;
@@ -199,8 +204,14 @@ function setTag(element, text, variant = 'dim') {
   element.className   = `kcui-tag kcui-tag--${variant}`;
 }
 
+function isRunActive(item) {
+  return ['queued', 'running'].includes(item.run_status?.status);
+}
+
 function updateEditorChrome() {
   const isEditing = Boolean(editingName);
+  const selected = cronPrompts.find((item) => item.name === editingName);
+  const isRunning = Boolean(selected && isRunActive(selected));
   const hasChatName = Boolean(chatInput.value.trim());
   editorEyebrow.textContent = isEditing ? 'Selected Timed Event' : 'New Timed Event';
   editorBlurb.textContent = isEditing
@@ -209,7 +220,9 @@ function updateEditorChrome() {
   saveButton.textContent = isEditing ? 'Save changes' : 'Create timed event';
   cancelEdit.hidden = !isEditing;
   listStatus.textContent = isEditing ? `Selected: ${editingName}` : 'Select a timed event';
-  agentResumeButton.disabled = !hasChatName;
+  agentResumeButton.disabled = !hasChatName || isRunning;
+  saveButton.disabled        = isRunning;
+  if (isRunning) setTag(formStatus, selected.run_status.detail || `Running ${editingName}`, 'warning');
 }
 
 
@@ -315,6 +328,7 @@ function renderRows(items) {
     const chat      = document.createElement('span');
     const promptCount = document.createElement('span');
     const lastRun   = document.createElement('span');
+    const runStatus = document.createElement('span');
     const actions   = document.createElement('div');
     const runAction  = document.createElement('button');
     const cloneAction = document.createElement('button');
@@ -341,13 +355,22 @@ function renderRows(items) {
     chat.textContent = `Chat: ${item.chat_name}`;
     promptCount.textContent = `${item.prompts.length} prompt${item.prompts.length === 1 ? '' : 's'}`;
     lastRun.textContent = `Last run: ${item.last_run || 'Never'}`;
+    if (isRunActive(item)) {
+      runStatus.className = 'kcui-tag kcui-tag--warning';
+      runStatus.textContent = item.run_status.status === 'queued'
+        ? 'QUEUED'
+        : `RUNNING${item.run_status.prompt_count ? ` ${item.run_status.prompt_index}/${item.run_status.prompt_count}` : ''}`;
+      runStatus.title = item.run_status.detail || 'CronPrompt is running.';
+    }
     titleLine.append(title, schedule);
+    if (isRunActive(item)) titleLine.append(runStatus);
     meta.append(chat, promptCount, lastRun);
     summary.append(titleLine, meta);
     actions.className = 'cronprompt-row__actions';
     runAction.type      = 'button';
     runAction.className = 'kcui-tag kcui-tag--dim';
-    runAction.textContent = 'Run';
+    runAction.disabled  = isRunActive(item);
+    runAction.textContent = isRunActive(item) ? 'Running' : 'Run';
     runAction.addEventListener('click', (event) => {
       event.stopPropagation();
       runNow(item.name, runAction);
@@ -355,6 +378,7 @@ function renderRows(items) {
     cloneAction.type      = 'button';
     cloneAction.className = 'kcui-tag kcui-tag--dim';
     cloneAction.textContent = 'Clone';
+    cloneAction.disabled = isRunActive(item);
     cloneAction.title = `Clone ${item.name} as a disabled copy`;
     cloneAction.addEventListener('click', (event) => {
       event.stopPropagation();
@@ -366,6 +390,7 @@ function renderRows(items) {
     deleteAction.title = `Delete ${item.name}`;
     deleteAction.setAttribute('aria-label', `Delete ${item.name}`);
     deleteAction.classList.add('cronprompt-row__delete');
+    deleteAction.disabled = isRunActive(item);
     deleteAction.addEventListener('click', (event) => {
       event.stopPropagation();
       deleteCronPrompt(item.name);
@@ -627,4 +652,4 @@ form.addEventListener('submit', async (event) => {
 addPromptRow();
 updateEditorChrome();
 load().catch((error) => setTag(formStatus, error.message || 'Unable to load', 'danger'));
-window.setInterval(() => load({ refreshEditor: false }).catch(() => {}), 15000);
+window.setInterval(() => load({ refreshEditor: false }).catch(() => {}), 3000);

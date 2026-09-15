@@ -141,6 +141,39 @@ class SchedulerRunHistoryTests(unittest.TestCase):
 
 
 # ====================================================================================================
+# MARK: RUN STATUS TESTS
+# ====================================================================================================
+class RunStatusTests(unittest.TestCase):
+    def setUp(self) -> None:
+        main.RUN_STATUSES.clear()
+
+    def tearDown(self) -> None:
+        main.RUN_STATUSES.clear()
+
+    def test_tracks_a_running_prompt_and_releases_it_when_finished(self) -> None:
+        definition = {"name": "Daily AI News"}
+
+        self.assertTrue(main._start_run_status(definition))
+        self.assertFalse(main._start_run_status(definition))
+        self.assertEqual(main._run_status(definition)["status"], "queued")
+
+        main._update_run_status(
+            definition,
+            detail="Waiting for prompt 1 of 2 to complete.",
+            prompt_index=1,
+            prompt_count=2,
+        )
+        active = main._run_status(definition)
+        self.assertEqual(active["status"], "running")
+        self.assertEqual(active["prompt_index"], 1)
+        self.assertEqual(active["prompt_count"], 2)
+
+        main._finish_run_status(definition, succeeded=True)
+        self.assertEqual(main._run_status(definition)["status"], "succeeded")
+        self.assertTrue(main._start_run_status(definition))
+
+
+# ====================================================================================================
 # MARK: OUTPUT CONTRACT TESTS
 # ====================================================================================================
 class OutputContractTests(unittest.TestCase):

@@ -77,7 +77,10 @@ UI_ROOT           = ROOT / "KoreUI" / "KoreCron"
 UI_ASSETS         = ROOT / "KoreUI" / "UIElements" / "assets"
 STOP              = threading.Event()
 NAME_RE           = re.compile(r"^(?=.{1,120}$)[A-Za-z0-9][A-Za-z0-9 _-]*$")
-SESSION_KEY_RE = re.compile(r"[^A-Za-z0-9_-]+")
+SESSION_KEY_RE    = re.compile(r"[^A-Za-z0-9_-]+")
+RUN_STATUS_LOCK   = threading.Lock()
+RUN_STATUSES: dict[str, dict] = {}
+ACTIVE_RUN_STATUSES = {"queued", "running"}
 
 
 def _config() -> dict:
@@ -164,6 +167,60 @@ def _cron_session_key(chat_name: str) -> str:
 
 def _cron_external_id(chat_name: str) -> str:
     return f"webchat_{_cron_session_key(chat_name)}"
+
+
+def _run_state_key(definition: dict) -> str:
+    return str(definition.get("id") or definition.get("name") or "")
+
+
+def _start_run_status(definition: dict) -> bool:
+    """Start a tracked run unless this event already has an active execution."""
+    state_key = _run_state_key(definition)
+    now       = datetime.now().isoformat(timespec="seconds")
+    with RUN_STATUS_LOCK:
+        current = RUN_STATUSES.get(state_key, {})
+        if current.get("status") in ACTIVE_RUN_STATUSES:
+            return False
+        RUN_STATUSES[state_key] = {
+            "status":     "queued",
+            "started_at": now,
+            "updated_at": now,
+            "detail":     "Waiting for the CronPrompt worker.",
+        }
+    return True
+
+
+def _update_run_status(definition: dict, *, detail: str, prompt_index: int = 0, prompt_count: int = 0) -> None:
+    state_key = _run_state_key(definition)
+    now       = datetime.now().isoformat(timespec="seconds")
+    with RUN_STATUS_LOCK:
+        current = RUN_STATUSES.setdefault(state_key, {"started_at": now})
+        current.update({
+            "status":       "running",
+            "updated_at":   now,
+            "detail":       detail,
+            "prompt_index": prompt_index,
+            "prompt_count": prompt_count,
+        })
+
+
+def _finish_run_status(definition: dict, *, succeeded: bool, error: str = "") -> None:
+    state_key = _run_state_key(definition)
+    now       = datetime.now().isoformat(timespec="seconds")
+    with RUN_STATUS_LOCK:
+        current = RUN_STATUSES.setdefault(state_key, {"started_at": now})
+        current.update({
+            "status":     "succeeded" if succeeded else "failed",
+            "updated_at": now,
+            "finished_at": now,
+            "detail":     "Completed." if succeeded else error,
+        })
+
+
+def _run_status(definition: dict) -> dict:
+    state_key = _run_state_key(definition)
+    with RUN_STATUS_LOCK:
+        return dict(RUN_STATUSES.get(state_key, {"status": "idle"}))
 
 
 def _conversation(definition: dict) -> dict:
@@ -325,29 +382,56 @@ def _enforce_output_contract(
 
 
 def _run(definition: dict, *, run_date: date | None = None) -> None:
-    if definition.get("kind") == "test_run":
-        _http("POST", f"{_service_url('koretest')}/api/runs/queue", {"suite": "all"})
-        return
+    if not _start_run_status(definition):
+        _update_run_status(definition, detail="Running in the CronPrompt worker.")
+    try:
+        if definition.get("kind") == "test_run":
+            _update_run_status(definition, detail="Queuing the full KoreTest suite.")
+            _http("POST", f"{_service_url('koretest')}/api/runs/queue", {"suite": "all"})
+        else:
+            _update_run_status(definition, detail="Preparing the scheduled conversation.")
+            conversation    = _fresh_conversation(definition)
+            base            = _service_url("korechat")
+            conversation_id = int(conversation["id"])
+            output_date     = run_date or datetime.now().date()
+            prompts         = definition.get("prompts", [])
+            prompt_count    = len(prompts)
+            for prompt_index, prompt in enumerate(prompts, start=1):
+                prompt_text = str(prompt.get("prompt", "")) if isinstance(prompt, dict) else str(prompt)
+                if not prompt_text.strip():
+                    continue
+                _update_run_status(
+                    definition,
+                    detail=f"Waiting for prompt {prompt_index} of {prompt_count} to complete.",
+                    prompt_index=prompt_index,
+                    prompt_count=prompt_count,
+                )
+                command_timeout = 2100 if prompt_text.strip().casefold().startswith("/run") else 1800
+                reply = _send_prompt(base, conversation_id, prompt_text, timeout_seconds=command_timeout)
+                _require_successful_reply(definition, prompt_text, reply)
+                if isinstance(prompt, dict) and prompt.get("output_contract"):
+                    _enforce_output_contract(
+                        definition,
+                        base,
+                        conversation_id,
+                        prompt["output_contract"],
+                        run_date=output_date,
+                    )
+    except Exception as error:
+        _finish_run_status(definition, succeeded=False, error=str(error))
+        raise
+    _finish_run_status(definition, succeeded=True)
 
-    conversation    = _fresh_conversation(definition)
-    base            = _service_url("korechat")
-    conversation_id = int(conversation["id"])
-    output_date     = run_date or datetime.now().date()
-    for prompt in definition.get("prompts", []):
-        prompt_text = str(prompt.get("prompt", "")) if isinstance(prompt, dict) else str(prompt)
-        if not prompt_text.strip():
-            continue
-        command_timeout = 2100 if prompt_text.strip().casefold().startswith("/run") else 1800
-        reply = _send_prompt(base, conversation_id, prompt_text, timeout_seconds=command_timeout)
-        _require_successful_reply(definition, prompt_text, reply)
-        if isinstance(prompt, dict) and prompt.get("output_contract"):
-            _enforce_output_contract(
-                definition,
-                base,
-                conversation_id,
-                prompt["output_contract"],
-                run_date=output_date,
-            )
+
+def _run_cronprompt(definition: dict) -> None:
+    """Run a manual request in the background and retain its terminal outcome."""
+    attempted_at = datetime.now()
+    try:
+        _run(definition)
+        _record_run(definition, attempted_at=attempted_at, succeeded=True)
+    except Exception as error:
+        _record_run(definition, attempted_at=attempted_at, succeeded=False, error=str(error))
+        print(f"[KoreCron] {_run_state_key(definition)} failed: {error}", flush=True)
 
 
 def _due(definition: dict, last_run: str | None, now: datetime) -> bool:
@@ -425,6 +509,7 @@ def list_cronprompts():
         "schedule_text": _schedule_text(item.get("schedule", {})),
         "last_run":      state.get(item.get("name")),
         "last_outcome":  (history.get(str(item.get("id") or item.get("name") or "")) or [None])[-1],
+        "run_status":    _run_status(item),
     } for item in _definitions()]}
 
 
@@ -642,7 +727,9 @@ def delete_cronprompt(name: str):
 def run_cronprompt(name: str):
     definition = next((item for item in _definitions() if item.get("name", "").lower() == name.lower()), None)
     if not definition: raise HTTPException(404, "CronPrompt not found.")
-    threading.Thread(target=_run, args=(definition,), daemon=True).start()
+    if not _start_run_status(definition):
+        raise HTTPException(409, "CronPrompt is already running.")
+    threading.Thread(target=_run_cronprompt, args=(definition,), daemon=True).start()
     return {"queued": True, "name": definition["name"], "chat_name": definition["chat_name"]}
 
 
