@@ -439,40 +439,36 @@ def update_domain_age_settings_spec(
         "end_date":   end_date,
     })
     FEEDS_DIR.mkdir(exist_ok=True)
-    with open(_domain_file(domain), "w", encoding="utf-8") as handle:
-        json.dump(
-            {
-                "domain":       domain,
-                "enabled":      enabled,
-                "age_settings": age_settings,
-                "feeds":        [
-                    _build_export_feed(feed)
-                    for feed in raw_feeds
-                    if isinstance(feed, dict)
-                    and str(feed.get("name") or "").strip()
-                    and str(feed.get("url") or "").strip()
-                ],
-            },
-            handle,
-            indent=2,
-        )
+    _write_json_atomic(
+        _domain_file(domain),
+        {
+            "domain":       domain,
+            "enabled":      enabled,
+            "age_settings": age_settings,
+            "feeds":        [
+                _build_export_feed(feed)
+                for feed in raw_feeds
+                if isinstance(feed, dict)
+                and str(feed.get("name") or "").strip()
+                and str(feed.get("url") or "").strip()
+            ],
+        },
+    )
 
 
 def sync_domain_spec(domain: str) -> None:
     spec_domain, raw_feeds, age_settings, enabled = _read_domain_spec(domain)
     _apply_domain_age_settings(spec_domain, age_settings)
     FEEDS_DIR.mkdir(exist_ok=True)
-    with open(_domain_file(spec_domain), "w", encoding="utf-8") as handle:
-        json.dump(
-            _build_export_spec(
-                spec_domain,
-                _normalise_import_feeds(raw_feeds, spec_domain),
-                get_domain_age_settings(spec_domain),
-                enabled,
-            ),
-            handle,
-            indent=2,
+    _write_json_atomic(
+        _domain_file(spec_domain),
+        _build_export_spec(
+            spec_domain,
+            _normalise_import_feeds(raw_feeds, spec_domain),
+            get_domain_age_settings(spec_domain),
+            enabled,
         )
+    )
 
 
 def delete_domain_feeds(domain: str) -> bool:
@@ -646,15 +642,13 @@ def set_domain_enabled(domain: str, enabled: bool) -> bool:
     if not path.exists():
         return False
     FEEDS_DIR.mkdir(exist_ok=True)
-    with open(path, "w", encoding="utf-8") as handle:
-        json.dump(
-            _build_export_spec(
-                spec_domain,
-                _normalise_import_feeds(raw_feeds, spec_domain),
-                age_settings,
-                enabled,
-            ),
-            handle,
-            indent=2,
-        )
+    _write_json_atomic(
+        path,
+        _build_export_spec(
+            spec_domain,
+            _normalise_import_feeds(raw_feeds, spec_domain),
+            age_settings,
+            enabled,
+        ),
+    )
     return True

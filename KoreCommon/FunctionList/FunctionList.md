@@ -2481,7 +2481,6 @@
 - reset_sentence_chroma_index
 - search_entries_detailed
 - search_entries
-- get_recent_entries
 - list_domains
 - _tombstone
 - delete_entry
@@ -2636,7 +2635,6 @@
 - api_bulk_delete_entries
 - api_search
 - api_semantic_search
-- api_recent
 - api_update_feed_rate
 - api_trigger_feed
 - api_get_age_settings

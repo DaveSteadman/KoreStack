@@ -911,9 +911,8 @@ def start_scheduler() -> None:
     _watchdog_thread = threading.Thread(target=_watchdog, daemon=True, name="ingest-watchdog")
     _watchdog_thread.start()
 
-    # Run startup prune/index catchup in background so uvicorn can respond immediately
+    # Run startup pruning in the background so uvicorn can respond immediately.
     threading.Thread(target=_daily_prune, daemon=True, name="startup-prune").start()
-    threading.Thread(target=_sentence_chroma_catchup, daemon=True, name="startup-chroma-catchup").start()
 
     schedule_feeds()
 
@@ -923,14 +922,6 @@ def start_scheduler() -> None:
         "interval",
         hours=1,
         id="daily_prune",
-        replace_existing=True,
-    )
-
-    scheduler.add_job(
-        _sentence_chroma_catchup,
-        "interval",
-        minutes=10,
-        id="sentence_chroma_catchup",
         replace_existing=True,
     )
 

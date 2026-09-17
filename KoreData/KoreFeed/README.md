@@ -170,13 +170,6 @@ curl "http://<host>:<services.korefeed.port>/api/search?q=artificial+intelligenc
 
 Search uses SQLite FTS5 with a `unicode61` tokenizer and BM25 ranking — results match whole words only, not substrings.
 
-### Recent entries
-
-```http
-GET /api/recent                            Entries ingested in the last 24 h (all domains)
-GET /api/recent?domain={domain}&hours=48   Scoped by domain or time window
-```
-
 ---
 
 ## How ingestion works

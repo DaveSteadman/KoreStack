@@ -49,7 +49,6 @@
 # - api_bulk_delete_entries: Implements the api bulk delete entries operation for this module.
 # - api_search: Implements the api search operation for this module.
 # - api_semantic_search: Implements the api semantic search operation for this module.
-# - api_recent: Implements the api recent operation for this module.
 # - api_update_feed_rate: Implements the api update feed rate operation for this module.
 # - api_trigger_feed: Implements the api trigger feed operation for this module.
 # - api_get_age_settings: Implements the api get age settings operation for this module.
@@ -58,6 +57,7 @@
 # - api_purge_outside_calendar: Implements the api purge outside calendar operation for this module.
 # ====================================================================================================
 from contextlib import asynccontextmanager
+import logging
 import os
 import sys
 import threading
@@ -93,7 +93,6 @@ from app.database import (
     get_entry,
     get_entry_count,
     get_feed_counts,
-    get_recent_entries,
     get_sentence,
     init_db,
     list_domains,
@@ -126,26 +125,20 @@ from app.ingest import get_runtime_status, schedule_feeds, start_scheduler, stop
 from app.overview import get_feed_overview, invalidate_feed_overview
 
 
+LOG = logging.getLogger("korefeed.server")
+
+
 def _warm_feed_domains() -> None:
-    # Populate the small, mutable fetch-state cache before the dashboard needs it.
-    # On the Dropbox data volume a cold read can be slow even for tiny JSON files.
     removed_temp_files = remove_orphaned_temp_files()
     if removed_temp_files:
         LOG.info("Removed %s stale feed temporary file(s)", removed_temp_files)
     load_feeds()
-    for _domain in list_domains():
-        init_db(_domain)
     for _domain in list_feed_domains():
         try:
             validate_domain_name(_domain)
         except ValueError:
             continue
         sync_domain_spec(_domain)
-    try:
-        from app.chroma_index import migrate_legacy_domain_stores
-        migrate_legacy_domain_stores(batch_size=250)
-    except Exception:
-        pass
 
 
 @asynccontextmanager
@@ -534,21 +527,12 @@ def api_semantic_search(
     min_match: float = 0.4,
 ):
     """Semantic sentence search across the per-domain Chroma stores."""
+    if not cfg.get("semantic_search_enabled", False):
+        raise HTTPException(status_code=503, detail="Semantic search is temporarily disabled")
     from app.chroma_index import chroma_available, semantic_search
     if not chroma_available():
         raise HTTPException(status_code=503, detail="Semantic search unavailable: chromadb is not installed")
     return semantic_search(domain or None, q, limit=limit, min_match=min_match)
-
-
-@app.get("/api/recent", tags=["content"])
-def api_recent(domain: Optional[str] = None, hours: float = 24.0, limit: int = 50):
-    """Return entries ingested within the last N hours, newest first.
-
-    Searches all domains unless domain is specified.
-    """
-    if hours <= 0:
-        raise HTTPException(status_code=400, detail="hours must be greater than 0")
-    return get_recent_entries(domain or None, hours=hours, limit=limit)
 
 
 # ---------------------------------------------------------------------------
