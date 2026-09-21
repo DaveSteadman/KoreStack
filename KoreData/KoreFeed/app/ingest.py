@@ -790,6 +790,10 @@ def _worker() -> None:
                 _log(f"  Skipping removed feed {feed.get('name', fid or '?')}")
             else:
                 ingest_feed(current)
+        except Exception as exc:
+            # A transient filesystem failure (for example a Dropbox lock on a
+            # feed-state file) must not kill the sole ingest worker.
+            _log(f"  Unexpected failure for {feed.get('name', fid or '?')}: {type(exc).__name__}: {exc}")
         finally:
             if fid:
                 with _state_lock:

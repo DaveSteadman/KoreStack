@@ -27,17 +27,32 @@
 # ====================================================================================================
 
 import logging
+import os
 import shutil
+import sys
 import threading
 from collections import OrderedDict
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Optional
 
-try:
-    import chromadb
-except ModuleNotFoundError:
-    chromadb = None
+_CHROMA_DISABLED_REASON: str | None = None
+
+# Chroma 1.5.9's native bindings currently crash the entire Python 3.14
+# process during HNSW compaction (Windows access violation), rather than
+# raising an exception we can recover from.  KoreFeed must remain available
+# for RSS ingestion and keyword search when semantic indexing is unavailable.
+# Set KORE_FEED_ENABLE_UNSAFE_CHROMA=1 only after a compatible Chroma release
+# has been verified on this interpreter.
+if sys.version_info >= (3, 14) and os.environ.get("KORE_FEED_ENABLE_UNSAFE_CHROMA") != "1":
+    chromadb                = None
+    _CHROMA_DISABLED_REASON = "disabled on Python 3.14+ to prevent native Chroma crashes"
+else:
+    try:
+        import chromadb
+    except ModuleNotFoundError:
+        chromadb                = None
+        _CHROMA_DISABLED_REASON = "chromadb is not installed"
 
 from app.database import (
     _sanitize_domain,
@@ -52,6 +67,9 @@ from app.config import cfg
 
 
 LOG = logging.getLogger("korefeed.chroma")
+
+if _CHROMA_DISABLED_REASON:
+    LOG.warning("Semantic indexing unavailable: %s", _CHROMA_DISABLED_REASON)
 
 _CHROMA_ROOT             = Path(cfg["data_dir"]) / "_chroma"
 _COLLECTION_NAME         = "sentences"

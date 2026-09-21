@@ -51,6 +51,7 @@ import logging
 import os
 import re
 import threading
+import time
 import uuid
 from copy import deepcopy
 from datetime import datetime
@@ -65,6 +66,8 @@ LOG       = logging.getLogger("korefeed.feed_manager")
 
 _state_cache: dict[Path, dict[str, dict]] = {}
 _state_cache_lock = threading.RLock()
+_ATOMIC_REPLACE_ATTEMPTS = 5
+_ATOMIC_REPLACE_DELAY_S  = 0.1
 
 
 def validate_domain_name(domain: str) -> str:
@@ -127,7 +130,16 @@ def _write_json_atomic(path: Path, payload: object) -> None:
             json.dump(payload, handle, indent=2)
             handle.flush()
             os.fsync(handle.fileno())
-        os.replace(temp_path, path)
+        for attempt in range(_ATOMIC_REPLACE_ATTEMPTS):
+            try:
+                os.replace(temp_path, path)
+                break
+            except PermissionError:
+                if attempt + 1 >= _ATOMIC_REPLACE_ATTEMPTS:
+                    raise
+                # Dropbox can briefly hold the destination open while syncing.
+                # Keep the atomic write, but give its file handle time to close.
+                time.sleep(_ATOMIC_REPLACE_DELAY_S * (2 ** attempt))
     finally:
         try:
             temp_path.unlink(missing_ok=True)

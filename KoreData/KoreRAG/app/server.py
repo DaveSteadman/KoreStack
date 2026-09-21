@@ -27,6 +27,8 @@ from datetime import date
 from datetime import datetime
 from datetime import timedelta
 import json
+import logging
+import os
 import subprocess
 import sys
 import threading
@@ -58,6 +60,7 @@ _ingest_procs:           dict[str, "subprocess.Popen[bytes]"] = {}
 _scheduler_stop_event:   threading.Event  | None = None
 _scheduler_thread:       threading.Thread | None = None
 _job_handle:             int              | None = None
+LOG                      = logging.getLogger("korerag.scheduler")
 
 
 def _init_job_object() -> None:
@@ -179,9 +182,27 @@ def _is_schedule_due(schedule: str, last_run: date | None, today: date) -> bool:
 
 
 def _prune_finished_ingest_processes() -> None:
+    data_dbs_dir = Path(cfg["data_dir"]) / "databases"
+    descriptors_changed = False
     for name, proc in list(_ingest_procs.items()):
-        if proc.poll() is not None:
-            _ingest_procs.pop(name, None)
+        exit_code = proc.poll()
+        if exit_code is None:
+            continue
+        _ingest_procs.pop(name, None)
+        descriptor = get_descriptor(name)
+        if descriptor is None:
+            continue
+        ingestor_name = descriptor.get("ingestor") or name
+        json_path     = data_dbs_dir / ingestor_name / f"{ingestor_name}.json"
+        if not json_path.exists():
+            continue
+        status = "complete" if exit_code == 0 else "failed"
+        _write_sync_status(json_path, status)
+        descriptors_changed = True
+        LOG.info("Ingestor %s finished with exit code %s (%s)", name, exit_code, status)
+    if descriptors_changed:
+        _registry_reload()
+        invalidate_rag_processing_scripts()
 
 
 def _launch_ingestor(name: str) -> dict:
@@ -224,12 +245,19 @@ def _launch_ingestor(name: str) -> dict:
     _registry_reload()
     invalidate_rag_processing_scripts()
 
-    proc = subprocess.Popen(
-        [sys.executable, str(ingest_py)],
-        stdout = subprocess.DEVNULL,
-        stderr = subprocess.DEVNULL,
-        creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0) if os.name == "nt" else 0,
-    )
+    try:
+        proc = subprocess.Popen(
+            [sys.executable, str(ingest_py)],
+            stdout = subprocess.DEVNULL,
+            stderr = subprocess.DEVNULL,
+            creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0) if os.name == "nt" else 0,
+        )
+    except Exception:
+        if json_path.exists():
+            _write_sync_status(json_path, "failed")
+        _registry_reload()
+        invalidate_rag_processing_scripts()
+        raise
     _ingest_procs[name] = proc
     _assign_to_job(proc)
     return {"status": "started", "db": name, "ingestor": ingestor_name, "pid": proc.pid}
@@ -282,8 +310,10 @@ def _run_ingest_scheduler(stop_event: threading.Event) -> None:
                 try:
                     _launch_ingestor(db_id)
                 except Exception:
+                    LOG.exception("Timed ingest launch failed for %s", db_id)
                     continue
         except Exception:
+            LOG.exception("Timed ingest scheduler cycle failed")
             continue
 
 

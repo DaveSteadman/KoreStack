@@ -77,7 +77,9 @@ class DomainManagementTests(unittest.TestCase):
                 database.get_db_path(invalid_name)
 
         self.assertEqual(list(feed_manager.FEEDS_DIR.glob("*.json")), [])
-        self.assertEqual(list(database.DATA_DIR.glob("*.db")), [])
+        # Other test modules share this configured temporary data root, so
+        # assert only that an invalid name did not create its legacy alias.
+        self.assertFalse((database.DATA_DIR / "_db.db").exists())
 
     def test_legacy_underscore_domain_artifacts_are_deletable(self) -> None:
         feed_path  = feed_manager.FEEDS_DIR / "_db.json"
@@ -100,6 +102,17 @@ class DomainManagementTests(unittest.TestCase):
         feed = {"id": "removed-feed", "domain": "DeleteMe"}
         with patch.object(ingest, "get_feed", return_value=None):
             self.assertFalse(ingest._feed_is_current(feed))
+
+    def test_atomic_feed_write_retries_a_transient_dropbox_lock(self) -> None:
+        target = feed_manager.FEEDS_DIR / "retry-state.json"
+        with (
+            patch.object(feed_manager.os, "replace", side_effect=[PermissionError("locked"), None]) as replace,
+            patch.object(feed_manager.time, "sleep") as sleep,
+        ):
+            feed_manager._write_json_atomic(target, {"ok": True})
+
+        self.assertEqual(replace.call_count, 2)
+        sleep.assert_called_once_with(feed_manager._ATOMIC_REPLACE_DELAY_S)
 
 
 if __name__ == "__main__":

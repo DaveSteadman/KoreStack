@@ -87,6 +87,18 @@ class ChromaIndexTests(unittest.TestCase):
         chroma_index.release_all_domain_clients()
         database.release_all_cached_connections()
 
+    def setUp(self) -> None:
+        # The production safeguard disables the unstable native client on
+        # Python 3.14.  These tests replace all native calls with doubles, so
+        # retain coverage of KoreFeed's own indexing behaviour.
+        self._native_chromadb = chroma_index.chromadb
+        if chroma_index.chromadb is None:
+            chroma_index.chromadb = object()
+
+    def tearDown(self) -> None:
+        chroma_index.release_all_domain_clients()
+        chroma_index.chromadb = self._native_chromadb
+
     def test_client_cache_evicts_least_recently_used_domain(self) -> None:
         original_chromadb    = chroma_index.chromadb
         original_max_clients = chroma_index._MAX_CACHED_CLIENTS
@@ -116,6 +128,10 @@ class ChromaIndexTests(unittest.TestCase):
         self.assertTrue(clients[0].closed)
         self.assertTrue(clients[1].closed)
         self.assertTrue(clients[2].closed)
+
+    @unittest.skipIf(sys.version_info < (3, 14), "Python 3.14 safeguard only")
+    def test_native_chroma_is_disabled_on_python_314_or_newer(self) -> None:
+        self.assertIsNone(self._native_chromadb)
 
     def test_sync_pending_sentences_marks_rows_indexed(self) -> None:
         domain = "chroma_domain"
