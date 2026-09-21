@@ -23,6 +23,7 @@ _DEFAULTS = {
     "host": "0.0.0.0",
     "data_dir": str(get_koredata_dir() / "Feeds"),
     "log_level": "info",
+    "semantic_search_enabled": False,
 }
 
 cfg = load_config(_SECTION, _DEFAULTS)

@@ -44,7 +44,6 @@
 # - reset_sentence_chroma_index: Implements the reset sentence chroma index operation for this module.
 # - search_entries_detailed: Implements the search entries detailed operation for this module.
 # - search_entries: Implements the search entries operation for this module.
-# - get_recent_entries: Returns recent entries for this module.
 # - list_domains: Lists domains for this module.
 # - _tombstone: Implements the  tombstone operation for this module.
 # - delete_entry: Deletes entry for this module.
@@ -831,35 +830,6 @@ def search_entries(
         until=until,
     )
     return results
-
-
-def get_recent_entries(
-    domain: Optional[str],
-    hours: float = 24.0,
-    limit: int = 50,
-) -> list[dict]:
-    modifier       = f"-{hours} hours"
-    domains        = [domain] if domain else list_domains()
-    per_domain_cap = max(limit, 20)
-    results: list[dict] = []
-    for d in domains:
-        try:
-            with db_connection(d) as conn:
-                rows = conn.execute(
-                    """
-                    SELECT id, feed_name, headline, url, published, ingested_at,
-                           ? AS domain
-                    FROM entries
-                    WHERE deleted = 0 AND ingested_at >= datetime('now', ?)
-                    ORDER BY published DESC LIMIT ?
-                    """,
-                    (d, modifier, per_domain_cap),
-                ).fetchall()
-                results.extend([dict(r) for r in rows])
-        except Exception:
-            pass
-    results.sort(key=lambda r: r.get("published") or "", reverse=True)
-    return results[:limit]
 
 
 def list_domains() -> list[str]:
