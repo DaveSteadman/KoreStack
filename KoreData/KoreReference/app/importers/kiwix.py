@@ -344,14 +344,6 @@ def _flush_semantic_sync(
 ) -> None:
     if not pending_deleted_sentence_ids and not pending_sync_article_ids:
         return
-    try:
-        from app.chroma_index import delete_sentence_ids, sync_article_sentences
-        if pending_deleted_sentence_ids:
-            delete_sentence_ids(sorted(pending_deleted_sentence_ids))
-        for article_id in sorted(pending_sync_article_ids):
-            sync_article_sentences(int(article_id))
-    except Exception:
-        return
     pending_deleted_sentence_ids.clear()
     pending_sync_article_ids.clear()
 
@@ -420,11 +412,6 @@ def run_kiwix_import(
 
     import_state["running"] = False
     resolve_links()
-    try:
-        from app.chroma_index import sync_pending_sentences
-        sync_pending_sentences(batch_size=250)
-    except Exception:
-        pass
 
 
 def run_kiwix_backfill(zim_name: str, kiwix_url: str, limit: int) -> None:
@@ -490,11 +477,6 @@ def run_kiwix_backfill(zim_name: str, kiwix_url: str, limit: int) -> None:
 
     import_state["running"] = False
     resolve_links()
-    try:
-        from app.chroma_index import sync_pending_sentences
-        sync_pending_sentences(batch_size=250)
-    except Exception:
-        pass
 
 
 def run_kiwix_crawl(seed_url: str, max_depth: int, limit: int, delay_seconds: float, resume: bool) -> None:
@@ -645,8 +627,3 @@ def run_kiwix_crawl(seed_url: str, max_depth: int, limit: int, delay_seconds: fl
 
     import_state["running"] = False
     resolve_links()
-    try:
-        from app.chroma_index import sync_pending_sentences
-        sync_pending_sentences(batch_size=250)
-    except Exception:
-        pass

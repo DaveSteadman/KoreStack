@@ -1,7 +1,7 @@
 {
   "comment": "KoreStack suite configuration.",
   "paths": {
-    "dataroot":  "C:/Util/Dropbox/Misc/KoreStackData",
+    "dataroot":  "C:/Util/KoreStackData",
     "korechat":  "korechat",
     "korecomms": "korecomms",
     "koredata":  "koredata",
@@ -12,21 +12,21 @@
     "host": "127.0.0.1"
   },
   "services": {
-    "korestack":       { "port": 19600, "enabled": true },
-    "koreagent":       { "port": 19601, "enabled": true },
-    "korechat":        { "port": 19602, "enabled": true },
-    "koredatagateway": { "port": 19603, "enabled": true },
-    "korefeed":        { "port": 19604, "enabled": true },
-    "korelibrary":     { "port": 19605, "enabled": true },
-    "korerag":         { "port": 19606, "enabled": true },
-    "korereference":   { "port": 19607, "enabled": true },
-    "korescrape":      { "port": 19612, "enabled": true },
-    "koregraph":       { "port": 19608, "enabled": true },
-    "korecomms":       { "port": 19609, "enabled": true },
-    "koredocs":        { "port": 19610, "enabled": true },
-    "korecode":        { "port": 19611, "enabled": true },
-    "koreliveweb":     { "port": 19613, "enabled": true },
-    "koretest":        { "port": 19614, "enabled": true },
-    "korecron":        { "port": 19615, "enabled": true }
+    "korestack":       { "port": 29600, "enabled": true },
+    "koreagent":       { "port": 29601, "enabled": true },
+    "korechat":        { "port": 29602, "enabled": true },
+    "koredatagateway": { "port": 29603, "enabled": true },
+    "korefeed":        { "port": 29604, "enabled": true },
+    "korelibrary":     { "port": 29605, "enabled": true },
+    "korerag":         { "port": 29606, "enabled": true },
+    "korereference":   { "port": 29607, "enabled": true },
+    "korescrape":      { "port": 29612, "enabled": true },
+    "koregraph":       { "port": 29608, "enabled": true },
+    "korecomms":       { "port": 29609, "enabled": true },
+    "koredocs":        { "port": 29610, "enabled": true },
+    "korecode":        { "port": 29611, "enabled": true },
+    "koreliveweb":     { "port": 29613, "enabled": true },
+    "koretest":        { "port": 29614, "enabled": true },
+    "korecron":        { "port": 29615, "enabled": true }
   }
 }

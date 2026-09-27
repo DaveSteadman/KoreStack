@@ -22,7 +22,6 @@
 # - route_move_book: Implements the route move book operation for this module.
 # - route_delete_book: Implements the route delete book operation for this module.
 # - route_search: Implements the route search operation for this module.
-# - route_semantic_search: Implements the route semantic search operation for this module.
 # - route_book_sentences: Implements the route book sentences operation for this module.
 # - route_sentence: Implements the route sentence operation for this module.
 # - route_backfill_catalog_sentences: Implements the route backfill catalog sentences operation for this module.
@@ -72,7 +71,6 @@ from app.database import (
     update_book,
     update_book_body,
 )
-from app.chroma_index import chroma_available, semantic_search
 from app.endpoint_ui import repair_kore_anchors
 
 
@@ -430,7 +428,6 @@ def register_library_api(app: FastAPI) -> None:
         catalogs: Optional[str]  = None,
         scope: Optional[str]     = None,
         mode: str                = "keyword",
-        min_match: float         = 0.4,
     ):
         if not any([q, author, title, year, language, genre]):
             raise HTTPException(
@@ -439,22 +436,6 @@ def register_library_api(app: FastAPI) -> None:
             )
         parsed_catalogs = [value.strip() for value in (catalogs or "").split(",") if value.strip()] or None
         try:
-            search_mode = "semantic" if str(mode).strip().lower() == "semantic" else "keyword"
-            if search_mode == "semantic":
-                if not q:
-                    raise HTTPException(status_code=400, detail="Semantic search requires q")
-                results = semantic_search(catalog, q, limit=limit + offset, min_match=min_match)
-                if author:
-                    results = [item for item in results if author.lower() in str(item.get("author") or "").lower()]
-                if title:
-                    results = [item for item in results if title.lower() in str(item.get("title") or "").lower()]
-                if year is not None:
-                    results = [item for item in results if item.get("year") == year]
-                if language:
-                    results = [item for item in results if str(item.get("language") or "").lower() == language.lower()]
-                if genre:
-                    results = [item for item in results if genre.lower() in str(item.get("genre") or "").lower()]
-                return results[offset: offset + limit]
             return search_books(
                 q         = q,
                 author    = author,
@@ -468,15 +449,6 @@ def register_library_api(app: FastAPI) -> None:
                 catalogs  = parsed_catalogs,
                 fts_scope = scope if scope in ("all", "metadata") else "all",
             )
-        except ValueError as exc:
-            raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-    @app.get("/api/semantic-search", summary="Semantic search across indexed library sentences")
-    def route_semantic_search(q: str, catalog: Optional[str] = None, limit: int = 50, min_match: float = 0.4):
-        try:
-            if not chroma_available():
-                raise HTTPException(status_code=503, detail="Semantic search unavailable: chromadb is not installed")
-            return semantic_search(catalog, q, limit=limit, min_match=min_match)
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
 

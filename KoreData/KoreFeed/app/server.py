@@ -48,7 +48,6 @@
 # - api_rebuild_sentence_index: Implements the api rebuild sentence index operation for this module.
 # - api_bulk_delete_entries: Implements the api bulk delete entries operation for this module.
 # - api_search: Implements the api search operation for this module.
-# - api_semantic_search: Implements the api semantic search operation for this module.
 # - api_update_feed_rate: Implements the api update feed rate operation for this module.
 # - api_trigger_feed: Implements the api trigger feed operation for this module.
 # - api_get_age_settings: Implements the api get age settings operation for this module.
@@ -160,14 +159,8 @@ async def _lifespan(app: FastAPI):
     )
     yield
     stop_scheduler()
-    try:
-        from app.chroma_index import release_all_domain_clients
-        from app.database import release_all_cached_connections
-
-        release_all_domain_clients()
-        release_all_cached_connections()
-    except Exception:
-        LOG.exception("Could not release cached Chroma clients during shutdown")
+    from app.database import release_all_cached_connections
+    release_all_cached_connections()
 
 
 app = FastAPI(
@@ -517,22 +510,6 @@ def api_search(
         headers["X-Kore-Failed-Domain-Count"] = str(len(failed_domains))
         headers["X-Kore-Failed-Domains"]      = ",".join(failed_names)
     return JSONResponse(content=results, headers=headers)
-
-
-@app.get("/api/semantic-search", tags=["content"])
-def api_semantic_search(
-    q: str,
-    domain: Optional[str] = None,
-    limit: int = 50,
-    min_match: float = 0.4,
-):
-    """Semantic sentence search across the per-domain Chroma stores."""
-    if not cfg.get("semantic_search_enabled", False):
-        raise HTTPException(status_code=503, detail="Semantic search is temporarily disabled")
-    from app.chroma_index import chroma_available, semantic_search
-    if not chroma_available():
-        raise HTTPException(status_code=503, detail="Semantic search unavailable: chromadb is not installed")
-    return semantic_search(domain or None, q, limit=limit, min_match=min_match)
 
 
 # ---------------------------------------------------------------------------

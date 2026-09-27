@@ -31,7 +31,7 @@ def sentence_schema_columns(owner_column: str) -> tuple[str, ...]:
         "source_field",
         "char_start",
         "char_end",
-        "chroma_indexed_at",
+        "indexed_at",
         "deleted",
     )
 
@@ -119,7 +119,7 @@ def normalize_sentence_schema(
             source_field      TEXT NOT NULL,
             char_start        INTEGER NOT NULL,
             char_end          INTEGER NOT NULL,
-            chroma_indexed_at TEXT,
+            indexed_at TEXT,
             deleted           INTEGER NOT NULL DEFAULT 0,
             UNIQUE({owner_column}, sentence_index)
         )
@@ -130,7 +130,7 @@ def normalize_sentence_schema(
         conn.execute(
             f"""
             INSERT INTO sentences_new
-                (id, {owner_column}, sentence_index, source_field, char_start, char_end, chroma_indexed_at, deleted)
+                (id, {owner_column}, sentence_index, source_field, char_start, char_end, indexed_at, deleted)
             SELECT
                 id,
                 {owner_column},
@@ -138,7 +138,7 @@ def normalize_sentence_schema(
                 source_field,
                 char_start,
                 char_end,
-                chroma_indexed_at,
+                indexed_at,
                 deleted
             FROM sentences
             """
@@ -147,7 +147,7 @@ def normalize_sentence_schema(
     conn.execute("DROP TABLE sentences")
     conn.execute("ALTER TABLE sentences_new RENAME TO sentences")
     conn.execute(f"CREATE INDEX IF NOT EXISTS idx_sentences_{owner_column} ON sentences({owner_column})")
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_sentences_chroma_indexed_at ON sentences(chroma_indexed_at)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_sentences_indexed_at ON sentences(indexed_at)")
 
     if not compatible:
         backfill_callback(conn)
@@ -185,7 +185,7 @@ def mark_sentences_indexed(
     placeholders = ",".join("?" for _ in validated)
     where_clause = f"WHERE {'deleted = 0 AND ' if deleted_filter else ''}id IN ({placeholders})"
     cur = conn.execute(
-        f"UPDATE sentences SET chroma_indexed_at = ? {where_clause}",
+        f"UPDATE sentences SET indexed_at = ? {where_clause}",
         [indexed_at, *validated],
     )
     return int(cur.rowcount or 0)
@@ -207,7 +207,7 @@ def reset_sentence_indexed_at(
         params.append(int(owner_id))
     where_sql = f" WHERE {' AND '.join(clauses)}" if clauses else ""
     cur = conn.execute(
-        f"UPDATE sentences SET chroma_indexed_at = NULL{where_sql}",
+        f"UPDATE sentences SET indexed_at = NULL{where_sql}",
         params,
     )
     return int(cur.rowcount or 0)

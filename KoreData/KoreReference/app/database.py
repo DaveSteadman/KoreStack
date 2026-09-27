@@ -55,9 +55,6 @@
 # - get_sentence: Returns sentence for this module.
 # - backfill_sentence_index: Implements the backfill sentence index operation for this module.
 # - rebuild_sentence_index: Implements the rebuild sentence index operation for this module.
-# - get_sentences_for_chroma: Returns sentences for chroma for this module.
-# - mark_sentences_chroma_indexed: Marks sentences chroma indexed for this module.
-# - reset_sentence_chroma_index: Implements the reset sentence chroma index operation for this module.
 # - search_articles: Implements the search articles operation for this module.
 # - get_status: Returns status for this module.
 # ====================================================================================================
@@ -329,7 +326,7 @@ def init_db() -> None:
         conn.execute("CREATE INDEX IF NOT EXISTS idx_links_to   ON links (to_id)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_links_to_title ON links (to_title)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_articles_title_lower ON articles (lower(title))")
-        # FTS: contentless — body is stored compressed so triggers can't index it.
+        # FTS: contentless â€” body is stored compressed so triggers can't index it.
         # Python code in upsert/delete manages FTS explicitly with plain text.
         conn.execute("""
             CREATE VIRTUAL TABLE IF NOT EXISTS articles_fts USING fts5(
@@ -390,7 +387,7 @@ def init_db() -> None:
                 source_field      TEXT NOT NULL,
                 char_start        INTEGER NOT NULL,
                 char_end          INTEGER NOT NULL,
-                chroma_indexed_at TEXT,
+                indexed_at TEXT,
                 deleted           INTEGER NOT NULL DEFAULT 0,
                 UNIQUE(article_id, sentence_index)
             )
@@ -398,12 +395,12 @@ def init_db() -> None:
         sentence_cols = {row[1] for row in conn.execute("PRAGMA table_info(sentences)").fetchall()}
         if "deleted" not in sentence_cols:
             conn.execute("ALTER TABLE sentences ADD COLUMN deleted INTEGER NOT NULL DEFAULT 0")
-        if "chroma_indexed_at" not in sentence_cols:
-            conn.execute("ALTER TABLE sentences ADD COLUMN chroma_indexed_at TEXT")
+        if "indexed_at" not in sentence_cols:
+            conn.execute("ALTER TABLE sentences ADD COLUMN indexed_at TEXT")
         if _sentence_schema_needs_normalization(conn):
             _normalize_sentence_schema(conn)
         conn.execute("CREATE INDEX IF NOT EXISTS idx_sentences_article_id ON sentences(article_id)")
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_sentences_chroma_indexed_at ON sentences(chroma_indexed_at)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_sentences_indexed_at ON sentences(indexed_at)")
         if _sentence_index_needs_rebuild(conn):
             conn.execute("DELETE FROM sentences")
             _backfill_article_sentences(conn)
@@ -611,17 +608,6 @@ def upsert_article(
     if conn is None:
         with db_connection() as owned_conn:
             article_id, previous_sentence_ids = _upsert(owned_conn)
-        if previous_sentence_ids:
-            try:
-                from app.chroma_index import delete_sentence_ids
-                delete_sentence_ids(previous_sentence_ids)
-            except Exception:
-                pass
-        try:
-            from app.chroma_index import sync_article_sentences
-            sync_article_sentences(int(article_id))
-        except Exception:
-            pass
         return get_article_by_id(article_id, full=False)
 
     article_id, previous_sentence_ids = _upsert(conn)
@@ -649,12 +635,6 @@ def delete_article(title: str) -> bool:
         )
         conn.execute("DELETE FROM sentences WHERE article_id = ?", (int(row["id"]),))
         conn.execute("DELETE FROM articles WHERE id=?", (row["id"],))
-    if sentence_ids:
-        try:
-            from app.chroma_index import delete_sentence_ids
-            delete_sentence_ids(sentence_ids)
-        except Exception:
-            pass
     return True
 
 
@@ -666,11 +646,6 @@ def delete_all_articles() -> int:
         conn.execute("DELETE FROM sentences")
         conn.execute("DELETE FROM articles")
         conn.execute("DELETE FROM articles_fts")
-    try:
-        from app.chroma_index import delete_store
-        delete_store()
-    except Exception:
-        pass
     # VACUUM must run outside any transaction (autocommit mode).
     conn = sqlite3.connect(str(get_db_path()), isolation_level=None)
     try:
@@ -718,7 +693,7 @@ def resolve_links(batch_size: int = 500) -> int:
 def get_unresolved_link_titles(limit: int = 10_000) -> list[str]:
     """Return distinct to_title values in links that have no matching articles row.
 
-    These are the titles that were linked to but never imported — likely redirects
+    These are the titles that were linked to but never imported â€” likely redirects
     or articles just outside the crawl boundary.
     """
     with db_connection() as conn:
@@ -764,7 +739,7 @@ def get_backlinks(title: str, limit: int = 50, offset: int = 0) -> list[dict]:
 
 
 def get_article_sentences(article_id: int, include_deleted: bool = False) -> list[dict]:
-    cols = "s.id, s.article_id, s.sentence_index, s.source_field, s.char_start, s.char_end, s.chroma_indexed_at, s.deleted, a.title, a.summary, a.body"
+    cols = "s.id, s.article_id, s.sentence_index, s.source_field, s.char_start, s.char_end, s.indexed_at, s.deleted, a.title, a.summary, a.body"
     where = "WHERE s.article_id = ?"
     if not include_deleted:
         where += " AND s.deleted = 0"
@@ -794,7 +769,7 @@ def get_sentence(sentence_id: int) -> Optional[dict]:
         row = conn.execute(
             """
             SELECT s.id, s.article_id, s.sentence_index, s.source_field, s.char_start, s.char_end,
-                   s.chroma_indexed_at, s.deleted, a.title, a.summary, a.body, a.word_count
+                   s.indexed_at, s.deleted, a.title, a.summary, a.body, a.word_count
             FROM sentences s
             JOIN articles a ON a.id = s.article_id
             WHERE s.id = ?
@@ -862,92 +837,12 @@ def rebuild_sentence_index(article_id: Optional[int] = None) -> dict:
                 (int(article_id),),
             ).fetchone()[0])
 
-    if deleted_sentence_ids:
-        try:
-            from app.chroma_index import delete_sentence_ids
-            delete_sentence_ids(deleted_sentence_ids)
-        except Exception:
-            pass
-
-    try:
-        from app.chroma_index import sync_article_sentences, sync_pending_sentences
-        if article_id is None:
-            sync_pending_sentences(batch_size=250)
-        else:
-            sync_article_sentences(int(article_id))
-    except Exception:
-        pass
-
     return {
         "article_id":           int(article_id) if article_id is not None else None,
         "rebuilt_sentences":    rebuilt_sentences,
         "deleted_sentence_ids": len(deleted_sentence_ids),
     }
 
-
-def get_sentences_for_chroma(
-    limit: int = 250,
-    only_unindexed: bool = False,
-    sentence_ids: Optional[list[int]] = None,
-) -> list[dict]:
-    with db_connection() as conn:
-        clauses = ["s.deleted = 0"]
-        params: list[object] = []
-        if sentence_ids:
-            validated    = [int(item) for item in sentence_ids]
-            placeholders = ",".join("?" for _ in validated)
-            clauses.append(f"s.id IN ({placeholders})")
-            params.extend(validated)
-        if only_unindexed:
-            clauses.append("(s.chroma_indexed_at IS NULL OR s.chroma_indexed_at = '')")
-        params.append(max(1, int(limit)))
-        rows = conn.execute(
-            f"""
-            SELECT s.id, s.article_id, s.sentence_index, s.source_field, s.char_start, s.char_end,
-                   s.chroma_indexed_at, a.title, a.summary, a.body, a.word_count
-            FROM sentences s
-            JOIN articles a ON a.id = s.article_id
-            WHERE {" AND ".join(clauses)}
-            ORDER BY s.id ASC
-            LIMIT ?
-            """,
-            params,
-        ).fetchall()
-    results: list[dict] = []
-    for row in rows:
-        item = dict(row)
-        item["sentence_text"] = _extract_sentence_text(row, row)
-        item["locator"]       = _sentence_locator(int(item["id"]))
-        item.pop("body", None)
-        results.append(item)
-    return results
-
-
-def mark_sentences_chroma_indexed(sentence_ids: list[int]) -> int:
-    if not sentence_ids:
-        return 0
-    with db_connection() as conn:
-        return mark_sentences_indexed(
-            conn,
-            sentence_ids   = sentence_ids,
-            indexed_at     = _now(),
-            deleted_filter = False,
-        )
-
-
-def reset_sentence_chroma_index(article_id: Optional[int] = None) -> int:
-    with db_connection() as conn:
-        return reset_sentence_indexed_at(
-            conn,
-            owner_column   = "article_id",
-            owner_id       = article_id,
-            deleted_filter = False,
-        )
-
-
-# ---------------------------------------------------------------------------
-# Search
-# ---------------------------------------------------------------------------
 
 def search_articles(
     q: Optional[str] = None,

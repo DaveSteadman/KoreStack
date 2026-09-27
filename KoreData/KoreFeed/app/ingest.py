@@ -51,7 +51,6 @@
 # - schedule_feeds: Implements the schedule feeds operation for this module.
 # - trigger_immediate: Implements the trigger immediate operation for this module.
 # - _daily_prune: Implements the  daily prune operation for this module.
-# - _sentence_chroma_catchup: Implements the  sentence chroma catchup operation for this module.
 # - start_scheduler: Starts scheduler for this module.
 # - stop_scheduler: Stops scheduler for this module.
 # - get_runtime_status: Returns runtime status for this module.
@@ -884,19 +883,6 @@ def _daily_prune() -> None:
         n = apply_age_rule(domain)
         if n:
             _log(f"Daily prune: {domain} - {n} entries removed")
-
-
-def _sentence_chroma_catchup() -> None:
-    """Backfill any feed sentences not yet indexed into the per-domain Chroma stores."""
-    try:
-        from app.chroma_index import sync_all_domains_pending
-
-        counts = sync_all_domains_pending(batch_size=250, max_batches_per_domain=20)
-        for domain, count in counts.items():
-            if count:
-                _log(f"Sentence Chroma catchup: {domain} - {count} sentence(s) indexed")
-    except Exception as exc:
-        _log(f"Sentence Chroma catchup failed: {type(exc).__name__}: {exc}")
 
 
 def start_scheduler() -> None:

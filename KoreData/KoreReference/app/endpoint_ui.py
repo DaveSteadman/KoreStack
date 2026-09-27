@@ -67,7 +67,6 @@ from app.database import (
     search_articles,
     upsert_article,
 )
-from app.chroma_index import chroma_available, semantic_search
 from app.importers.kiwix import parse_seed_url, run_kiwix_crawl
 from app.importers.state import import_state, import_stop_event, start_import_worker, state_lock
 
@@ -392,15 +391,9 @@ def register_reference_ui(app: FastAPI) -> None:
         results      = []
         searched     = bool(q)
         search_error = ""
-        search_mode  = "semantic" if str(mode).strip().lower() == "semantic" else "keyword"
+        search_mode  = "keyword"
         if searched:
-            if search_mode == "semantic":
-                if not chroma_available():
-                    search_error = "Semantic search is unavailable because chromadb is not installed in this service environment."
-                else:
-                    results = semantic_search(q or "", limit=limit + offset, min_match=min_match)[offset: offset + limit]
-            else:
-                results = search_articles(q=q, title=None, limit=limit, offset=offset)
+            results = search_articles(q=q, title=None, limit=limit, offset=offset)
         return templates.TemplateResponse(
             request,
             "reference_search.html",

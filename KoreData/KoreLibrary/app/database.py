@@ -45,9 +45,6 @@
 # - get_sentence: Returns sentence for this module.
 # - backfill_sentence_index: Implements the backfill sentence index operation for this module.
 # - rebuild_sentence_index: Implements the rebuild sentence index operation for this module.
-# - get_sentences_for_chroma: Returns sentences for chroma for this module.
-# - mark_sentences_chroma_indexed: Marks sentences chroma indexed for this module.
-# - reset_sentence_chroma_index: Implements the reset sentence chroma index operation for this module.
 # - set_sentence_deleted: Sets sentence deleted for this module.
 # - add_book: Implements the add book operation for this module.
 # - get_book: Returns book for this module.
@@ -383,7 +380,7 @@ def _ensure_schema(conn: sqlite3.Connection) -> None:
             # Migrating from content FTS: rebuild as contentless and compress body
             conn.execute("DROP TABLE IF EXISTS books_fts")
 
-        # FTS: contentless — body stored compressed so triggers can't index it.
+        # FTS: contentless â€” body stored compressed so triggers can't index it.
         # Python CRUD code manages FTS explicitly with plain text.
         conn.execute("""
             CREATE VIRTUAL TABLE IF NOT EXISTS books_fts USING fts5(
@@ -420,7 +417,7 @@ def _ensure_schema(conn: sqlite3.Connection) -> None:
                 source_field      TEXT NOT NULL,
                 char_start        INTEGER NOT NULL,
                 char_end          INTEGER NOT NULL,
-                chroma_indexed_at TEXT,
+                indexed_at TEXT,
                 deleted           INTEGER NOT NULL DEFAULT 0,
                 UNIQUE(book_id, sentence_index)
             )
@@ -428,12 +425,12 @@ def _ensure_schema(conn: sqlite3.Connection) -> None:
         sentence_cols = {row[1] for row in conn.execute("PRAGMA table_info(sentences)").fetchall()}
         if "deleted" not in sentence_cols:
             conn.execute("ALTER TABLE sentences ADD COLUMN deleted INTEGER NOT NULL DEFAULT 0")
-        if "chroma_indexed_at" not in sentence_cols:
-            conn.execute("ALTER TABLE sentences ADD COLUMN chroma_indexed_at TEXT")
+        if "indexed_at" not in sentence_cols:
+            conn.execute("ALTER TABLE sentences ADD COLUMN indexed_at TEXT")
         if _sentence_schema_needs_normalization(conn):
             _normalize_sentence_schema(conn)
         conn.execute("CREATE INDEX IF NOT EXISTS idx_sentences_book_id ON sentences(book_id)")
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_sentences_chroma_indexed_at ON sentences(chroma_indexed_at)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_sentences_indexed_at ON sentences(indexed_at)")
         if _sentence_index_needs_rebuild(conn):
             conn.execute("DELETE FROM sentences")
             _backfill_book_sentences(conn)
@@ -555,7 +552,7 @@ def _merge_catalog_rows(row_sets: list[list[dict]], limit: int, offset: int) -> 
 
 def get_book_sentences(book_id: str | int, include_deleted: bool = False, catalog: Optional[str] = None) -> list[dict]:
     catalog_id, local_id = parse_book_ref(book_id, catalog=catalog)
-    cols = "s.id, s.book_id, s.sentence_index, s.source_field, s.char_start, s.char_end, s.chroma_indexed_at, s.deleted, b.title, b.body"
+    cols = "s.id, s.book_id, s.sentence_index, s.source_field, s.char_start, s.char_end, s.indexed_at, s.deleted, b.title, b.body"
     where = "WHERE s.book_id = ?"
     if not include_deleted:
         where += " AND s.deleted = 0"
@@ -588,7 +585,7 @@ def get_sentence(catalog: str, sentence_id: int) -> Optional[dict]:
         row = conn.execute(
             """
             SELECT s.id, s.book_id, s.sentence_index, s.source_field, s.char_start, s.char_end,
-                   s.chroma_indexed_at, s.deleted, b.title, b.author, b.year, b.language,
+                   s.indexed_at, s.deleted, b.title, b.author, b.year, b.language,
                    b.genre, b.body
             FROM sentences s
             JOIN books b ON b.id = s.book_id
@@ -663,97 +660,12 @@ def rebuild_sentence_index(catalog: str, book_id: Optional[str | int] = None) ->
                 (local_id,),
             ).fetchone()[0])
 
-    if deleted_sentence_ids:
-        try:
-            from app.chroma_index import delete_sentence_ids
-            delete_sentence_ids(catalog_id, deleted_sentence_ids)
-        except Exception:
-            pass
-
-    try:
-        from app.chroma_index import sync_book_sentences, sync_pending_sentences
-        if local_id is None:
-            sync_pending_sentences(catalog_id, batch_size=250)
-        else:
-            sync_book_sentences(catalog_id, local_id)
-    except Exception:
-        pass
-
     return {
         "catalog":              catalog_id,
         "book_id":              local_id,
         "rebuilt_sentences":    rebuilt_sentences,
         "deleted_sentence_ids": len(deleted_sentence_ids),
     }
-
-
-def get_sentences_for_chroma(
-    catalog: str,
-    limit: int = 250,
-    only_unindexed: bool = False,
-    sentence_ids: Optional[list[int]] = None,
-) -> list[dict]:
-    catalog_id = _normalize_catalog_id(catalog)
-    with db_connection(catalog_id) as conn:
-        clauses = ["s.deleted = 0"]
-        params: list[object] = []
-        if sentence_ids:
-            validated = [int(item) for item in sentence_ids]
-            placeholders = ",".join("?" for _ in validated)
-            clauses.append(f"s.id IN ({placeholders})")
-            params.extend(validated)
-        if only_unindexed:
-            clauses.append("(s.chroma_indexed_at IS NULL OR s.chroma_indexed_at = '')")
-        params.append(max(1, int(limit)))
-        rows = conn.execute(
-            f"""
-            SELECT s.id, s.book_id, s.sentence_index, s.source_field, s.char_start, s.char_end,
-                   s.chroma_indexed_at, b.title, b.author, b.year, b.language, b.genre, b.body
-            FROM sentences s
-            JOIN books b ON b.id = s.book_id
-            WHERE {" AND ".join(clauses)}
-            ORDER BY s.id ASC
-            LIMIT ?
-            """,
-            params,
-        ).fetchall()
-    results: list[dict] = []
-    for row in rows:
-        item = dict(row)
-        item["sentence_text"] = _extract_sentence_text(row, row)
-        item["catalog"]       = catalog_id
-        item["route_id"]      = make_book_ref(catalog_id, int(item["book_id"]))
-        item["locator"]       = _sentence_locator(catalog_id, int(item["id"]))
-        item.pop("body", None)
-        results.append(item)
-    return results
-
-
-def mark_sentences_chroma_indexed(catalog: str, sentence_ids: list[int]) -> int:
-    if not sentence_ids:
-        return 0
-    catalog_id = _normalize_catalog_id(catalog)
-    with db_connection(catalog_id, create=True) as conn:
-        return mark_sentences_indexed(
-            conn,
-            sentence_ids   = sentence_ids,
-            indexed_at     = _now(),
-            deleted_filter = False,
-        )
-
-
-def reset_sentence_chroma_index(catalog: str, book_id: Optional[str | int] = None) -> int:
-    catalog_id = _normalize_catalog_id(catalog)
-    local_id: Optional[int] = None
-    if book_id is not None:
-        _, local_id = parse_book_ref(book_id, catalog=catalog_id)
-    with db_connection(catalog_id, create=True) as conn:
-        return reset_sentence_indexed_at(
-            conn,
-            owner_column   = "book_id",
-            owner_id       = local_id,
-            deleted_filter = False,
-        )
 
 
 def set_sentence_deleted(catalog: str, sentence_id: int, deleted: bool) -> dict:
@@ -768,17 +680,9 @@ def set_sentence_deleted(catalog: str, sentence_id: int, deleted: bool) -> dict:
             raise ValueError(f"Sentence {sentence_id} not found in catalog '{catalog_id}'.")
         entry_book_id = int(row["book_id"])
         conn.execute(
-            "UPDATE sentences SET deleted = ?, chroma_indexed_at = CASE WHEN ? = 0 THEN NULL ELSE chroma_indexed_at END WHERE id = ?",
+            "UPDATE sentences SET deleted = ?, indexed_at = CASE WHEN ? = 0 THEN NULL ELSE indexed_at END WHERE id = ?",
             (1 if deleted else 0, 1 if deleted else 0, int(sentence_id)),
         )
-    try:
-        from app.chroma_index import delete_sentence_ids, sync_book_sentences
-        if deleted:
-            delete_sentence_ids(catalog_id, [int(sentence_id)])
-        elif entry_book_id is not None:
-            sync_book_sentences(catalog_id, entry_book_id)
-    except Exception:
-        pass
     sentence = get_sentence(catalog_id, int(sentence_id))
     return {
         "catalog":     catalog_id,
@@ -826,11 +730,6 @@ def add_book(
         _index_book_sentences(conn, int(book_id), title or "", cleaned_body or "")
         cols = ", ".join(_BOOK_COLS)
         row = conn.execute(f"SELECT {cols} FROM books WHERE id = ?", (book_id,)).fetchone()
-    try:
-        from app.chroma_index import sync_book_sentences
-        sync_book_sentences(catalog_id, int(book_id))
-    except Exception:
-        pass
     return _row_to_dict(row, include_body=False, catalog=catalog_id)
 
 
@@ -910,17 +809,6 @@ def update_book_body(book_id: str | int, body: str, catalog: Optional[str] = Non
             _fts_insert(conn, local_id, cur_row["title"] or "", cur_row["author"] or "", cleaned or "")
             conn.execute("DELETE FROM sentences WHERE book_id = ?", (local_id,))
             _index_book_sentences(conn, local_id, title_text, cleaned or "")
-    if previous_sentence_ids:
-        try:
-            from app.chroma_index import delete_sentence_ids
-            delete_sentence_ids(catalog_id, previous_sentence_ids)
-        except Exception:
-            pass
-    try:
-        from app.chroma_index import sync_book_sentences
-        sync_book_sentences(catalog_id, local_id)
-    except Exception:
-        pass
     return get_book(local_id, include_body=False, catalog=catalog_id)
 
 
@@ -995,18 +883,6 @@ def update_book(book_id: str | int, fields: dict, catalog: Optional[str] = None)
                             _decompress(upd_row["body"]) or "")
                 conn.execute("DELETE FROM sentences WHERE book_id = ?", (local_id,))
                 _index_book_sentences(conn, local_id, upd_row["title"] or "", _decompress(upd_row["body"]) or "")
-    if fts_affected and previous_sentence_ids:
-        try:
-            from app.chroma_index import delete_sentence_ids
-            delete_sentence_ids(catalog_id, previous_sentence_ids)
-        except Exception:
-            pass
-    if fts_affected:
-        try:
-            from app.chroma_index import sync_book_sentences
-            sync_book_sentences(catalog_id, local_id)
-        except Exception:
-            pass
     return get_book(local_id, include_body=False, catalog=catalog_id)
 
 
@@ -1031,12 +907,6 @@ def delete_book(book_id: str | int, catalog: Optional[str] = None) -> bool:
                     _decompress(row["body"]) or "")
         conn.execute("DELETE FROM sentences WHERE book_id = ?", (local_id,))
         conn.execute("DELETE FROM books WHERE id = ?", (local_id,))
-    if sentence_ids:
-        try:
-            from app.chroma_index import delete_sentence_ids
-            delete_sentence_ids(catalog_id, sentence_ids)
-        except Exception:
-            pass
     return True
 
 

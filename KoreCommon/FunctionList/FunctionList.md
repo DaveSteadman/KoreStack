@@ -284,6 +284,7 @@
 
 ### KoreAgent/app/llm_client.py
 - get_ollama_ps_rows
+- is_llm_running
 - ensure_ollama_running
 - list_ollama_models
 - format_running_model_report
@@ -295,7 +296,6 @@
 - format_lmstudio_model_report
 
 ### KoreAgent/app/llm_client_ollama.py
-- get_local_ollama_autostart_enabled
 - _coerce_config_bool
 - configure_ollama_sampling_options
 - get_ollama_sampling_config
@@ -304,10 +304,7 @@
 - get_ollama_request_options
 - _cpu_fallback_enabled
 - _per_request_context_enabled
-- _windows_creation_flags
-- _hidden_windows_startupinfo
 - is_ollama_running
-- start_ollama_server
 - ensure_ollama_running
 - _is_runner_crash
 - recover_ollama_runtime
@@ -454,6 +451,7 @@
 
 ### KoreAgent/app/working_data.py
 - _collection_names
+- _name_is_taken
 - coerce_persisted_working_data_payload
 - hydrate_working_data
 - build_persisted_working_data_payload
@@ -586,6 +584,7 @@
 
 ### KoreAgent/app/agent/tool_runtime/recovery.py
 - tool_call_fingerprint
+- _normalize_tool_argument_aliases
 - normalize_tool_request
 - _compact_tool_name_list
 - classify_tool_recovery
@@ -596,6 +595,7 @@
 
 ### KoreAgent/app/api/app.py
 - _get_korechat_base_url
+- _get_agent_ui_bootstrap
 - get_completions
 - settings_sandbox_get
 - settings_sandbox_post
@@ -754,6 +754,7 @@
 - get_ollama_status
 
 ### KoreAgent/app/input_layer/server_static.py
+- render_agent_index
 - register_static_routes
 - serve_index
 - serve_skills_catalog
@@ -790,6 +791,10 @@
 - _cmd_stopmodel
 - _cmd_llmserver
 - register_model_slash_commands
+
+### KoreAgent/app/input_layer/slash_command_handlers_scripts.py
+- _cmd_run
+- register_script_slash_commands
 
 ### KoreAgent/app/input_layer/slash_command_handlers_sessions.py
 - _kc_get
@@ -842,7 +847,7 @@
 - _promote_named_items
 - _archive_old_history
 - save_session
-- flush_scratch_to_session
+- flush_working_data_to_session
 - delete_session_state
 - kc_get
 - kc_post
@@ -993,14 +998,14 @@
 - _dataset_records_to_markdown
 - _auto_name
 - _coerce_source_args
-- coerce_persisted_scratchpad_payload
-- coerce_persisted_datasets_payload
-- hydrate_session_state
+- coerce_persisted_values_payload
+- coerce_persisted_collections_payload
+- hydrate_working_data_state
 - _write_dataset
 - _save_dataset_internal
+- get_prompt_collection_manifests
 - get_prompt_dataset_manifests
-- get_persisted_datasets_payload
-- build_persisted_scratchpad_payload
+- get_persisted_collections_payload
 - _coerce_history_items
 - _coerce_schema
 - _restore_dataset_entry
@@ -1081,6 +1086,10 @@
 - test_mcp_connection_error_formatter_unwraps_exception_groups
 - test_mcp_enumeration_ignores_duplicate_tool_names_from_later_connections
 - test_normalize_tool_request_rewrites_assistant_delegate_wrapper
+- test_normalize_tool_request_adapts_saved_search_name_alias
+- test_normalize_tool_request_keeps_canonical_saved_search_name
+- test_normalize_tool_request_rejects_conflicting_saved_search_names
+- test_normalize_tool_request_leaves_unmapped_tool_arguments_untouched
 - test_fetch_page_text_query_mode_falls_back_to_raw_page_text
 - test_fetch_page_text_query_miss_returns_large_raw_fallback
 - test_load_session_rebuilds_history_from_korechat
@@ -1776,6 +1785,11 @@
 - delete_file
 - create_folder
 
+### KoreCommon/datauser_script_runner.py
+- _trim_output
+- resolve_datauser_script
+- run_datauser_script
+
 ### KoreCommon/dbutil.py
 - fts_build_query
 - compute_word_count
@@ -2027,6 +2041,7 @@
 - ui_compose_submit
 - ui_connections
 - api_connections_timing
+- api_interfaces
 - ui_distribution_lists
 - ui_distribution_list_create
 - ui_distribution_list_update
@@ -2157,12 +2172,22 @@
 - _http
 - _cron_session_key
 - _cron_external_id
+- _run_state_key
+- _start_run_status
+- _update_run_status
+- _finish_run_status
+- _run_status
 - _conversation
 - _fresh_conversation
 - _reply_error
 - _record_run
 - _await_outbound_reply
+- _send_prompt
+- _require_successful_reply
+- _repair_prompt
+- _enforce_output_contract
 - _run
+- _run_cronprompt
 - _due
 - _next_fire
 - _scheduler
@@ -2186,6 +2211,19 @@
 - cron_list
 - cron_run
 
+### KoreCron/output_contracts.py
+- normalize_output_contract
+- _bounded_int
+- validate_output_contract
+- _validate_markdown_sections
+- _validate_json_topics
+- _validate_item_count
+- _validate_word_count
+- _validate_summary_word_count
+- _word_count
+- _word_quantity
+- ok
+
 ### KoreCron/test_main.py
 - test_deletes_all_name_matches_before_creating
 - test_deletes_stale_external_id_even_if_chat_was_renamed
@@ -2193,6 +2231,15 @@
 - test_test_run_queues_the_full_koretest_suite
 - test_test_runs_are_stored_separately_from_cronprompts
 - test_records_a_failed_attempt_with_its_error
+- test_marks_a_failed_run_command_as_a_failed_cron_prompt
+- setUp
+- tearDown
+- test_tracks_a_running_prompt_and_releases_it_when_finished
+- test_markdown_contract_counts_each_topic_not_the_whole_file
+- test_markdown_contract_reports_underlength_topic
+- test_json_contract_rejects_wrong_schema_and_short_content
+- test_cron_retries_a_failed_contract_before_advancing
+- test_definition_preserves_valid_output_contract
 - fake_http
 - fake_http
 
@@ -2222,6 +2269,11 @@
 - _clear_stale_gateway_listener
 - _print_banner
 - row
+
+### KoreData/KoreDataGateway/test_saved_search_fields.py
+- tearDownClass
+- test_saved_payload_preserves_all_search_filter_fields
+- test_saved_search_ui_restores_all_filter_controls
 
 ### KoreData/KoreDataGateway/app/config.py
 - load
@@ -2393,60 +2445,18 @@
 - _print_status
 - row
 
-### KoreData/KoreFeed/test_chroma_index.py
-- __init__
-- upsert
-- delete
-- count
-- query
-- __init__
-- get_or_create_collection
-- close
+### KoreData/KoreFeed/test_domain_management.py
 - tearDownClass
-- test_client_cache_evicts_least_recently_used_domain
-- test_sync_pending_sentences_marks_rows_indexed
-- test_delete_sentence_ids_uses_domain_specific_locators
-- test_rename_domain_db_moves_parallel_chroma_store
-- test_delete_domain_db_removes_parallel_chroma_store
-- test_semantic_search_maps_chroma_hits_to_feed_results
-- PersistentClient
-
-### KoreData/KoreFeed/test_sentence_indexing.py
-- tearDownClass
-- test_connection_cache_lock_is_not_held_during_database_work
-- test_insert_entry_indexes_sentences
-- test_deleted_entry_hides_sentences
-- test_backfill_sentence_index_reports_zero_when_up_to_date
-- test_rebuild_sentence_index_restores_missing_rows_for_entry
-- acquire_cache_lock
+- setUp
+- test_legacy_dot_db_deletion_does_not_delete_underscore_db
+- test_domain_deletion_removes_sqlite_sidecars_and_ready_state
+- test_invalid_domain_names_cannot_create_domain_artifacts
+- test_legacy_underscore_domain_artifacts_are_deletable
+- test_inflight_ingest_does_not_write_after_feed_removal
+- test_atomic_feed_write_retries_a_transient_dropbox_lock
 
 ### KoreData/KoreFeed/test_server_status.py
 - test_status_includes_gateway_card_totals
-
-### KoreData/KoreFeed/app/chroma_index.py
-- chroma_available
-- _distance_to_match_score
-- _domain_chroma_path
-- _domain_schema_marker_path
-- _domain_store_is_current
-- _mark_domain_store_current
-- _close_client
-- _release_domain_client_locked
-- _release_domain_client
-- release_all_domain_clients
-- _get_collection
-- _collection_session
-- _upsert_rows
-- sync_entry_sentences
-- sync_pending_sentences
-- sync_all_domains_pending
-- rebuild_domain_store
-- rebuild_all_domain_stores
-- migrate_legacy_domain_stores
-- semantic_search
-- delete_sentence_ids
-- delete_domain_store
-- rename_domain_store
 
 ### KoreData/KoreFeed/app/config.py
 
@@ -2476,9 +2486,6 @@
 - get_sentence
 - update_entry_page_text
 - set_sentence_deleted
-- get_sentences_for_chroma
-- mark_sentences_chroma_indexed
-- reset_sentence_chroma_index
 - search_entries_detailed
 - search_entries
 - list_domains
@@ -2585,6 +2592,7 @@
 - ingest_feed
 - _enqueue
 - _enqueue_due_feeds
+- _feed_is_current
 - _worker
 - _scheduler_keepalive
 - _feed_job_id
@@ -2592,7 +2600,6 @@
 - schedule_feeds
 - trigger_immediate
 - _daily_prune
-- _sentence_chroma_catchup
 - start_scheduler
 - stop_scheduler
 - get_runtime_status
@@ -2634,7 +2641,6 @@
 - api_rebuild_sentence_index
 - api_bulk_delete_entries
 - api_search
-- api_semantic_search
 - api_update_feed_rate
 - api_trigger_feed
 - api_get_age_settings
@@ -2739,31 +2745,6 @@
 - _print_banner
 - row
 
-### KoreData/KoreLibrary/test_sentence_indexing.py
-- setUp
-- tearDown
-- test_add_book_indexes_sentences
-- test_update_book_body_rebuilds_sentences
-
-### KoreData/KoreLibrary/app/chroma_index.py
-- chroma_available
-- _distance_to_match_score
-- _catalog_chroma_path
-- _catalog_schema_marker_path
-- _catalog_store_is_current
-- _mark_catalog_store_current
-- _release_catalog_client
-- _get_collection
-- _upsert_rows
-- sync_book_sentences
-- sync_pending_sentences
-- sync_all_catalogs_pending
-- rebuild_catalog_store
-- migrate_legacy_catalog_stores
-- semantic_search
-- delete_sentence_ids
-- delete_catalog_store
-
 ### KoreData/KoreLibrary/app/config.py
 
 ### KoreData/KoreLibrary/app/database.py
@@ -2799,9 +2780,6 @@
 - get_sentence
 - backfill_sentence_index
 - rebuild_sentence_index
-- get_sentences_for_chroma
-- mark_sentences_chroma_indexed
-- reset_sentence_chroma_index
 - set_sentence_deleted
 - add_book
 - get_book
@@ -2833,7 +2811,6 @@
 - route_move_book
 - route_delete_book
 - route_search
-- route_semantic_search
 - route_book_sentences
 - route_sentence
 - route_backfill_catalog_sentences
@@ -2875,6 +2852,16 @@
 ### KoreData/KoreRAG/main.py
 - _print_banner
 - row
+
+### KoreData/KoreRAG/test_ingest_scheduler.py
+- __init__
+- wait
+- test_daily_weekly_and_manual_due_rules
+- test_scheduler_launches_only_due_timed_ingestors
+- test_launch_ingestor_starts_a_manual_or_timed_run
+- test_launch_failure_marks_the_descriptor_failed
+- today
+- poll
 
 ### KoreData/KoreRAG/app/config.py
 
@@ -3027,30 +3014,6 @@
 - _print_banner
 - row
 
-### KoreData/KoreReference/test_sentence_indexing.py
-- tearDown
-- test_upsert_article_indexes_summary_and_prose_only
-- test_rebuild_sentence_index_restores_missing_rows_for_article
-- test_bulk_upsert_conn_path_removes_stale_semantic_rows
-
-### KoreData/KoreReference/app/chroma_index.py
-- chroma_available
-- _distance_to_match_score
-- _store_path
-- _schema_marker_path
-- _store_is_current
-- _mark_store_current
-- _release_client
-- close_client
-- _get_collection
-- _upsert_rows
-- sync_article_sentences
-- sync_pending_sentences
-- rebuild_store
-- semantic_search
-- delete_sentence_ids
-- delete_store
-
 ### KoreData/KoreReference/app/config.py
 
 ### KoreData/KoreReference/app/database.py
@@ -3091,9 +3054,6 @@
 - get_sentence
 - backfill_sentence_index
 - rebuild_sentence_index
-- get_sentences_for_chroma
-- mark_sentences_chroma_indexed
-- reset_sentence_chroma_index
 - search_articles
 - get_status
 - _upsert
@@ -3130,7 +3090,6 @@
 - ref_article
 
 ### KoreData/KoreReference/app/server.py
-- _warm_reference_semantic_index
 - _lifespan
 - _require_article
 - route_list_articles
@@ -3146,7 +3105,6 @@
 - route_delete_all_articles
 - route_delete_article
 - route_search
-- route_semantic_search
 - route_backfill_sentence_index
 - route_rebuild_sentence_index
 - route_import_kiwix
@@ -3811,8 +3769,10 @@
 - do_GET
 - do_POST
 - log_message
+- _send_json
 - _serve_asset
 - _handle_service_action
+- _handle_ollama_action
 - _handle_endpoint_request
 
 ### KoreStack/endpoint_explorer.py
@@ -3873,6 +3833,26 @@
 - _slug_for
 - _probe_one
 
+### KoreStack/ollama_control.py
+- _hidden_windows_creation_flags
+- _read_json
+- _local_ollama_host
+- _ollama_api_url
+- _ollama_executable
+- _sampling_summary
+- __init__
+- snapshot
+- start
+- stop
+- close
+- _close_log_handle
+- _stop_process_tree
+
+### KoreStack/test_ollama_control.py
+- test_snapshot_combines_agent_configuration_and_loaded_model
+- test_snapshot_keeps_owned_process_visible_while_server_starts
+- poll
+
 ### KoreTest/main.py
 - _prompts_dir
 - _results_dir
@@ -3888,6 +3868,7 @@
 - _live_progress
 - _format_elapsed
 - _collection_stats
+- _prune_result_logs
 - _start_collection_run
 - _finish_collection_run
 - _run_requested_suite
@@ -3915,6 +3896,11 @@
 - row_outcome
 - result_counts
 
+### KoreTest/app/result_retention.py
+- prune_test_results
+- _remove_empty_date_directories
+- _report
+
 ### KoreTest/app/agent_tests/__init__.py
 
 ### KoreTest/app/agent_tests/system/test_thinking_strip.py
@@ -3930,6 +3916,10 @@
 - test_dot_relative_path_resolves_inside_datauser
 - test_write_and_delete_reject_stale_etags
 - test_listing_stays_in_selected_root_and_applies_filters
+
+### KoreTest/app/agent_tests/unit/test_datauser_script_runner.py
+- test_runs_a_python_script_below_datauser_scripts
+- test_rejects_a_script_outside_datauser_scripts
 
 ### KoreTest/app/agent_tests/unit/test_delivery_publication.py
 - log
@@ -4055,13 +4045,19 @@
 - test_replacing_tool_context_preserves_semantic_summary
 - fake_post
 
+### KoreTest/app/agent_tests/unit/test_llm_client_availability.py
+- tearDown
+- test_ollama_probe_uses_the_native_health_check
+- test_lmstudio_requires_a_served_model
+- test_probe_returns_false_when_the_backend_request_raises
+
 ### KoreTest/app/agent_tests/unit/test_ollama_process_windows.py
-- test_server_start_hides_its_console_window
+- test_client_does_not_start_an_unavailable_server
 - test_status_probe_prefers_http_api
 - test_passive_model_listing_does_not_autostart
 - test_prompt_call_does_not_autostart_by_default
 - test_native_chat_retries_after_runner_crash
-- test_runtime_recovery_restarts_a_stopped_local_daemon
+- test_runtime_recovery_does_not_restart_a_stopped_local_daemon
 - test_repeated_runner_crash_falls_back_to_cpu
 
 ### KoreTest/app/agent_tests/unit/test_ollama_sampling_options.py
@@ -4070,6 +4066,10 @@
 - test_enabled_sampling_options_are_sent_and_round_trip
 - test_defaults_set_preserves_sampling_options
 - test_orchestration_header_formats_unset_sampling_options
+
+### KoreTest/app/agent_tests/unit/test_result_retention.py
+- test_prunes_old_runs_and_runs_outside_the_per_suite_limit
+- test_rejects_an_invalid_run_limit
 
 ### KoreTest/app/agent_tests/unit/test_service_logging.py
 - test_service_log_config_normalises_name_and_level
@@ -4088,6 +4088,7 @@
 ### KoreTest/app/agent_tests/unit/test_slash_command_registry.py
 - test_retired_commands_are_not_registered
 - test_chat_is_canonical_and_session_remains_a_compatibility_alias
+- test_run_is_registered_as_a_slash_command
 
 ### KoreTest/app/agent_tests/unit/test_suite_config_loader.py
 - test_load_service_config_reads_suite_config_and_env
@@ -4113,7 +4114,9 @@
 ### KoreTest/app/agent_tests/unit/test_working_data_clear.py
 - test_working_data_clear_removes_every_value_in_the_session
 - test_working_data_clear_removes_collections
-- test_hydrate_working_data_migrates_legacy_values_through_the_value_service
+- test_hydrate_working_data_restores_only_canonical_values
+- test_hydration_discards_cross_kind_name_collisions
+- test_working_data_rename_rejects_cross_kind_name_collisions
 
 ### KoreTest/app/agent_tests/unit/__init__.py
 
@@ -4138,6 +4141,7 @@
 - invoke_exchange
 - _agent_base_url
 - _agent_request
+- _require_llm_available
 - _invoke_agent_turn
 - extract_log_file
 - _parse_turn_outputs
@@ -4148,6 +4152,7 @@
 - _normalize_assert_text
 - _has_explicit_asserts
 - _should_tolerate_validation_failure
+- _is_infrastructure_error
 - _single_item_pass_status
 - _exchange_pass_status
 - _evaluate_assert

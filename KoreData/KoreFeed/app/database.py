@@ -39,9 +39,6 @@
 # - get_sentence: Returns sentence for this module.
 # - update_entry_page_text: Updates entry page text for this module.
 # - set_sentence_deleted: Sets sentence deleted for this module.
-# - get_sentences_for_chroma: Returns sentences for chroma for this module.
-# - mark_sentences_chroma_indexed: Marks sentences chroma indexed for this module.
-# - reset_sentence_chroma_index: Implements the reset sentence chroma index operation for this module.
 # - search_entries_detailed: Implements the search entries detailed operation for this module.
 # - search_entries: Implements the search entries operation for this module.
 # - list_domains: Lists domains for this module.
@@ -286,7 +283,7 @@ def init_db(domain: str) -> None:
                 source_field   TEXT NOT NULL,
                 char_start     INTEGER NOT NULL,
                 char_end       INTEGER NOT NULL,
-                chroma_indexed_at TEXT,
+                indexed_at TEXT,
                 deleted        INTEGER NOT NULL DEFAULT 0,
                 UNIQUE(entry_id, sentence_index)
             )
@@ -304,15 +301,15 @@ def init_db(domain: str) -> None:
         sentence_cols = {row[1] for row in conn.execute("PRAGMA table_info(sentences)").fetchall()}
         if "deleted" not in sentence_cols:
             conn.execute("ALTER TABLE sentences ADD COLUMN deleted INTEGER NOT NULL DEFAULT 0")
-        if "chroma_indexed_at" not in sentence_cols:
-            conn.execute("ALTER TABLE sentences ADD COLUMN chroma_indexed_at TEXT")
+        if "indexed_at" not in sentence_cols:
+            conn.execute("ALTER TABLE sentences ADD COLUMN indexed_at TEXT")
         if _sentence_schema_needs_normalization(conn):
             _normalize_sentence_schema(conn)
         conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_sentences_entry_id ON sentences(entry_id)"
         )
         conn.execute(
-            "CREATE INDEX IF NOT EXISTS idx_sentences_chroma_indexed_at ON sentences(chroma_indexed_at)"
+            "CREATE INDEX IF NOT EXISTS idx_sentences_indexed_at ON sentences(indexed_at)"
         )
         # normalise any published values not yet in UTC YYYY-MM-DD HH:MM:SS
         _normalise_published(conn)
@@ -406,22 +403,6 @@ def rebuild_sentence_index(domain: str, entry_id: Optional[int] = None) -> dict:
                 (entry_id,),
             ).fetchone()[0])
 
-    if deleted_sentence_ids:
-        try:
-            from app.chroma_index import delete_sentence_ids
-            delete_sentence_ids(domain, deleted_sentence_ids)
-        except Exception:
-            pass
-
-    try:
-        from app.chroma_index import sync_entry_sentences, sync_pending_sentences
-        if entry_id is None:
-            sync_pending_sentences(domain, batch_size=250)
-        else:
-            sync_entry_sentences(domain, int(entry_id))
-    except Exception:
-        pass
-
     return {
         "domain":               domain,
         "mode":                 "rebuild",
@@ -483,12 +464,6 @@ def insert_entry(
             inserted_entry_id = int(cur.lastrowid)
     if inserted_entry_id is None:
         return False
-    try:
-        from app.chroma_index import sync_entry_sentences
-
-        sync_entry_sentences(domain, inserted_entry_id)
-    except Exception:
-        pass
     return True
 
 
@@ -618,19 +593,6 @@ def update_entry_page_text(domain: str, entry_id: int, page_text: str) -> dict:
             (entry_id,),
         ).fetchone()[0])
 
-    if previous_sentence_ids:
-        try:
-            from app.chroma_index import delete_sentence_ids
-            delete_sentence_ids(domain, previous_sentence_ids)
-        except Exception:
-            pass
-
-    try:
-        from app.chroma_index import sync_entry_sentences
-        sync_entry_sentences(domain, entry_id)
-    except Exception:
-        pass
-
     return {
         "domain":         domain,
         "entry_id":       entry_id,
@@ -656,18 +618,10 @@ def set_sentence_deleted(domain: str, sentence_id: int, deleted: bool) -> dict:
             raise FeedDatabaseError(f"Sentence {sentence_id} not found in domain '{domain}'.")
         entry_id = int(row["entry_id"])
         conn.execute(
-            "UPDATE sentences SET deleted = ?, chroma_indexed_at = CASE WHEN ? = 0 THEN NULL ELSE chroma_indexed_at END WHERE id = ?",
+            "UPDATE sentences SET deleted = ?, indexed_at = CASE WHEN ? = 0 THEN NULL ELSE indexed_at END WHERE id = ?",
             (1 if deleted else 0, 1 if deleted else 0, sentence_id),
         )
 
-    try:
-        from app.chroma_index import delete_sentence_ids, sync_entry_sentences
-        if deleted:
-            delete_sentence_ids(domain, [sentence_id])
-        elif entry_id is not None:
-            sync_entry_sentences(domain, entry_id)
-    except Exception:
-        pass
 
     sentence = get_sentence(domain, sentence_id)
     if sentence is None and deleted:
@@ -683,80 +637,6 @@ def set_sentence_deleted(domain: str, sentence_id: int, deleted: bool) -> dict:
         "deleted":     deleted,
         "sentence":    sentence,
     }
-
-
-def get_sentences_for_chroma(
-    domain: str,
-    limit: int = 250,
-    sentence_ids: Optional[list[int]] = None,
-    only_unindexed: bool = False,
-) -> list[dict]:
-    try:
-        with db_connection(domain) as conn:
-            clauses = ["s.deleted = 0", "e.deleted = 0"]
-            params: list[object] = []
-            if sentence_ids:
-                validated = [int(i) for i in sentence_ids]
-                placeholders = ",".join("?" * len(validated))
-                clauses.append(f"s.id IN ({placeholders})")
-                params.extend(validated)
-            if only_unindexed:
-                clauses.append("(s.chroma_indexed_at IS NULL OR s.chroma_indexed_at = '')")
-            params.append(max(1, int(limit)))
-            rows = conn.execute(
-                f"""
-                SELECT s.id, s.entry_id, s.sentence_index, s.source_field,
-                       s.char_start, s.char_end, s.chroma_indexed_at,
-                       e.feed_name, e.headline, e.page_text, e.url, e.published, e.ingested_at
-                FROM sentences s
-                JOIN entries e ON e.id = s.entry_id
-                WHERE {' AND '.join(clauses)}
-                ORDER BY s.id ASC
-                LIMIT ?
-                """,
-                params,
-            ).fetchall()
-            results: list[dict] = []
-            for row in rows:
-                item = dict(row)
-                item["sentence_text"] = _extract_sentence_text(item, item)
-                item["locator"] = _sentence_locator(domain, int(item["id"]))
-                item.pop("page_text", None)
-                results.append(item)
-            return results
-    except Exception as exc:
-        raise FeedDatabaseError(
-            f"Could not load sentences for Chroma sync in domain '{domain}': {exc}"
-        ) from exc
-
-
-def mark_sentences_chroma_indexed(domain: str, sentence_ids: list[int]) -> int:
-    if not sentence_ids:
-        return 0
-    timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
-    try:
-        with db_connection(domain) as conn:
-            return mark_sentences_indexed(
-                conn,
-                sentence_ids   = sentence_ids,
-                indexed_at     = timestamp,
-                deleted_filter = True,
-            )
-    except Exception:
-        return 0
-
-
-def reset_sentence_chroma_index(domain: str, entry_id: Optional[int] = None) -> int:
-    try:
-        with db_connection(domain) as conn:
-            return reset_sentence_indexed_at(
-                conn,
-                owner_column   = "entry_id",
-                owner_id       = entry_id,
-                deleted_filter = True,
-            )
-    except Exception:
-        return 0
 
 
 def search_entries_detailed(
@@ -872,13 +752,6 @@ def _tombstone(domain: str, conn: sqlite3.Connection, where: str, params: list) 
         )
     for id_ in ids:
         conn.execute("DELETE FROM entries_fts WHERE rowid=?", (id_,))
-    if sentence_ids:
-        try:
-            from app.chroma_index import delete_sentence_ids
-
-            delete_sentence_ids(domain, sentence_ids)
-        except Exception:
-            pass
     return cur.rowcount
 
 
@@ -962,7 +835,7 @@ def get_domain_age_settings(domain: str) -> dict:
                 "WHERE key IN ('age_mode','age_days','age_start','age_end','max_age_days')"
             ).fetchall()
             s = {r["key"]: r["value"] for r in rows}
-            # backwards compat: migrate legacy max_age_days → days_previous
+            # backwards compat: migrate legacy max_age_days â†’ days_previous
             if "age_mode" not in s and s.get("max_age_days"):
                 return {
                     "mode": "days_previous",
@@ -1067,13 +940,6 @@ def delete_domain_db(domain: str) -> bool:
     for sidecar_path in (Path(f"{path}-wal"), Path(f"{path}-shm")):
         if sidecar_path.exists():
             sidecar_path.unlink()
-    try:
-        from app.chroma_index import delete_domain_store
-
-        if domain != ".db":
-            delete_domain_store(domain)
-    except Exception:
-        pass
     with _domains_lock:
         _domains_ready.discard(domain)
         if domain == ".db":
@@ -1092,14 +958,6 @@ def rename_domain_db(old: str, new: str) -> bool:
         _close_cached_connection(old_path)
         old_path.rename(new_path)
         renamed_db = True
-    try:
-        from app.chroma_index import rename_domain_store
-
-        rename_domain_store(old, new)
-    except Exception:
-        if renamed_db and new_path.exists() and not old_path.exists():
-            new_path.rename(old_path)
-        raise
     return renamed_db
 
 

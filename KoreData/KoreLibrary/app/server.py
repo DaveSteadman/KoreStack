@@ -25,7 +25,6 @@ if _KORECOMMON_PARENT is not None and str(_KORECOMMON_PARENT) not in sys.path:
 from KoreCommon.service_app import register_endpoint_manifest
 from KoreCommon.skill_registration import start_manifest_registration
 from KoreCommon.skill_service import register_skill_invocation_routes
-from app.chroma_index import migrate_legacy_catalog_stores
 from app.config import cfg
 from app.database import init_db, list_books, search_books
 from app.endpoint_api import register_library_api
@@ -40,10 +39,6 @@ def korelibrary_search(q: str, limit: int = 50, catalog: str | None = None) -> l
 async def _lifespan(app: FastAPI):
     def _warm_library() -> None:
         init_db()
-        try:
-            migrate_legacy_catalog_stores(batch_size=250)
-        except Exception:
-            pass
 
     threading.Thread(
         target = _warm_library,

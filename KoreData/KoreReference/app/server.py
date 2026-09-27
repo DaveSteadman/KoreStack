@@ -39,7 +39,6 @@
 # - route_delete_all_articles: Implements the route delete all articles operation for this module.
 # - route_delete_article: Implements the route delete article operation for this module.
 # - route_search: Implements the route search operation for this module.
-# - route_semantic_search: Implements the route semantic search operation for this module.
 # - route_backfill_sentence_index: Implements the route backfill sentence index operation for this module.
 # - route_rebuild_sentence_index: Implements the route rebuild sentence index operation for this module.
 # - route_import_kiwix: Implements the route import kiwix operation for this module.
@@ -90,7 +89,6 @@ from app.database import (
     search_articles,
     upsert_article,
 )
-from app.chroma_index import chroma_available, close_client, semantic_search, sync_pending_sentences
 from app.importers.kiwix import (
     _http_client,
     import_one,
@@ -103,33 +101,14 @@ from app.importers.state import import_state, import_stop_event, start_import_wo
 from app.endpoint_ui import register_reference_ui
 
 
-def _warm_reference_semantic_index() -> None:
-    try:
-        init_db()
-    except Exception:
-        return
-    try:
-        sync_pending_sentences(batch_size=250)
-    except Exception:
-        pass
-
-
 @asynccontextmanager
 async def _lifespan(app: FastAPI):
-    threading.Thread(
-        target = _warm_reference_semantic_index,
-        daemon = True,
-        name   = "korereference-startup-warm",
-    ).start()
     start_manifest_registration(
         Path(__file__).resolve().parent.parent / "skill_registration.json",
         service_base_url=f"http://{cfg['host']}:{cfg['port']}",
         logger_name=__name__,
     )
-    try:
-        yield
-    finally:
-        close_client()
+    yield
 
 
 app = FastAPI(
@@ -322,13 +301,6 @@ def route_search(
             detail="Provide at least one of: q, title",
         )
     return search_articles(q=q, title=title, limit=limit, offset=offset)
-
-
-@app.get("/api/semantic-search", summary="Semantic search across indexed reference sentences")
-def route_semantic_search(q: str, limit: int = 50, min_match: float = 0.4):
-    if not chroma_available():
-        raise HTTPException(status_code=503, detail="Semantic search unavailable: chromadb is not installed")
-    return semantic_search(q, limit=limit, min_match=min_match)
 
 
 @app.post("/api/sentences/backfill", summary="Create sentence rows for articles that do not yet have them")
