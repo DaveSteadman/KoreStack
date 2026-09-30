@@ -1,93 +1,60 @@
 # ====================================================================================================
 # MARK: OVERVIEW
 # ====================================================================================================
-# Routing facade for the llm_client_*.py sub-modules.
+# Public Ollama client facade.
 #
-# Provides a single import point for all LLM client functionality. Callers that import from
-# KoreAgent.llm_client do not need to know which sub-module owns a given function.
-#
-# Also contains call_llm_chat, which routes Ollama requests to its native /api/chat endpoint
-# and uses /v1/chat/completions for LM Studio and other OpenAI-compatible servers.
-#
-# Sub-modules:
-#   - llm_client_openai.py   -- Shared state, config, HTTP, data types
-#   - llm_client_ollama.py   -- Ollama: /api/tags, /api/generate, /api/ps, process lifecycle
-#   - llm_client_lmstudio.py -- LM Studio: health check, /v1/models listing, model report
-#
-# Related callers:
-#   - main.py                   -- calls configure_host(), ensure_ollama_running(), model utilities
-#   - orchestration.py          -- uses call_llm_chat for the tool-calling pipeline
-#   - skills_catalog_builder.py -- uses call_ollama for optional LLM skill summarisation
-#   - utils/system_check.py     -- uses model listing and call_ollama for diagnostics
-# MARK: FUNCTIONS
-# Function inventory:
-# - get_ollama_ps_rows: Returns ollama ps rows for this module.
-# - is_llm_running: Reports whether the active LLM backend is ready to serve requests.
-# - ensure_ollama_running: Ensures ollama running for this module.
-# - list_ollama_models: Lists ollama models for this module.
-# - format_running_model_report: Formats running model report for this module.
-# - call_llm_chat: Implements the call llm chat operation for this module.
+# KoreAgent uses Ollama's native API for model discovery, runtime management, and
+# chat with tools. This module provides the stable import surface used throughout
+# the application; implementation remains in the focused core and Ollama modules.
 # ====================================================================================================
 
 
 # ====================================================================================================
 # MARK: IMPORTS
 # ====================================================================================================
-import json
-import time
-import urllib.error
-import urllib.request
+import llm_client_ollama as _ollama
 
-import llm_client_openai   as _openai
-import llm_client_ollama   as _ollama
-import llm_client_lmstudio as _lmstudio
-
-from llm_client_openai import DEFAULT_LMSTUDIO_HOST
-from llm_client_openai import HOST_ALIASES
-from llm_client_openai import ChatCallResult
-from llm_client_openai import configure_host
-from llm_client_openai import configure_server
-from llm_client_openai import get_active_host
-from llm_client_openai import get_active_backend
-from llm_client_openai import get_active_model
-from llm_client_openai import get_active_num_ctx
-from llm_client_openai import get_active_max_predict
-from llm_client_openai import get_llm_timeout
-from llm_client_openai import set_llm_timeout
-from llm_client_openai import register_llm_call_logger
-from llm_client_openai import log_to_session
-from llm_client_openai import register_session_config
-from llm_client_openai import resolve_model_name
-from llm_client_openai import is_explicit_model_name
-from llm_client_ollama  import DEFAULT_OLLAMAHOST
-from llm_client_ollama  import OLLAMA_CLOUD_HOST
-from llm_client_ollama  import OllamaCallResult
-from llm_client_ollama  import configure_ollama_sampling_options
-from llm_client_ollama  import get_ollama_offload_mode
-from llm_client_ollama  import get_ollama_sampling_config
-from llm_client_ollama  import get_ollama_request_options
-from llm_client_ollama  import set_ollama_offload_mode
-from llm_client_ollama  import is_ollama_running
-from llm_client_ollama  import recover_ollama_runtime
-from llm_client_ollama  import stop_model
-from llm_client_ollama  import call_ollama_extended
-from llm_client_ollama  import call_ollama
-from llm_client_ollama  import get_running_model_row
-from utils.workspace_utils         import trunc
+from llm_client_core import ChatCallResult
+from llm_client_core import configure_host
+from llm_client_core import get_active_host
+from llm_client_core import get_active_max_predict
+from llm_client_core import get_active_model
+from llm_client_core import get_active_num_ctx
+from llm_client_core import get_llm_timeout
+from llm_client_core import is_explicit_model_name
+from llm_client_core import log_to_session
+from llm_client_core import register_llm_call_logger
+from llm_client_core import register_session_config
+from llm_client_core import resolve_model_name
+from llm_client_core import set_llm_timeout
+from llm_client_ollama import DEFAULT_OLLAMAHOST
+from llm_client_ollama import OLLAMA_CLOUD_HOST
+from llm_client_ollama import OllamaCallResult
+from llm_client_ollama import call_ollama
+from llm_client_ollama import call_ollama_extended
+from llm_client_ollama import configure_ollama_sampling_options
+from llm_client_ollama import ensure_ollama_running
+from llm_client_ollama import format_running_model_report
+from llm_client_ollama import get_ollama_offload_mode
+from llm_client_ollama import get_ollama_ps_rows
+from llm_client_ollama import get_ollama_request_options
+from llm_client_ollama import get_ollama_sampling_config
+from llm_client_ollama import get_running_model_row
+from llm_client_ollama import is_ollama_running
+from llm_client_ollama import list_ollama_models
+from llm_client_ollama import recover_ollama_runtime
+from llm_client_ollama import set_ollama_offload_mode
+from llm_client_ollama import stop_model
 
 
 __all__ = [
     "DEFAULT_OLLAMAHOST",
-    "DEFAULT_LMSTUDIO_HOST",
     "OLLAMA_CLOUD_HOST",
-    "HOST_ALIASES",
     "OllamaCallResult",
     "ChatCallResult",
     "configure_host",
     "configure_ollama_sampling_options",
-    "configure_server",
     "get_active_host",
-    "get_active_backend",
     "get_active_model",
     "get_active_num_ctx",
     "get_active_max_predict",
@@ -118,89 +85,16 @@ __all__ = [
 
 
 # ====================================================================================================
-# MARK: ROUTING
+# MARK: PUBLIC OPERATIONS
 # ====================================================================================================
-def get_ollama_ps_rows() -> list[dict]:
-    """Return currently running models. Routes by active backend.
-
-    - Ollama: parses `ollama ps` (local) or calls /api/ps (remote).
-    - LM Studio: returns [] — no equivalent endpoint exists.
-    """
-    if _openai.get_active_backend() == "lmstudio":
-        return []
-    return _ollama.get_ollama_ps_rows()
-
-
-# ----------------------------------------------------------------------------------------------------
 def is_llm_running(host: str | None = None) -> bool:
-    """Return whether the active LLM backend is reachable and able to serve a model.
-
-    This passive probe never starts a local server.  Ollama is ready when its native
-    API responds; LM Studio is ready only when its OpenAI-compatible model endpoint
-    responds with at least one served model.
-    """
-    host = host or _openai.get_active_host()
+    """Return whether the configured Ollama server is reachable."""
     try:
-        if _openai.get_active_backend() == "lmstudio":
-            return bool(_lmstudio.list_lmstudio_models(host))
-        return _ollama.is_ollama_running(host)
+        return _ollama.is_ollama_running(host or get_active_host())
     except Exception:
         return False
 
 
-# ----------------------------------------------------------------------------------------------------
-def ensure_ollama_running(
-    host: str | None = None,
-    start_if_needed: bool = True,
-    wait_seconds: float = 20.0,
-    verbose: bool = False,
-) -> None:
-    """Ensure the configured server is reachable without starting it.
-
-    Routes to the backend-specific health check based on the active backend:
-    - Ollama: checks /api/tags; KoreStack owns the local server lifecycle.
-    - LM Studio: checks /v1/models; it is managed outside this client.
-    """
-    host = host or _openai.get_active_host()
-    if _openai.get_active_backend() == "lmstudio":
-        _lmstudio.ensure_lmstudio_reachable(host)
-        return
-    _ollama.ensure_ollama_running(
-        host=host,
-        start_if_needed=start_if_needed,
-        wait_seconds=wait_seconds,
-        verbose=verbose,
-    )
-
-
-# ----------------------------------------------------------------------------------------------------
-def list_ollama_models(host: str | None = None, *, start_if_needed: bool = False) -> list[str]:
-    """Return the list of available model IDs from the active server without starting it.
-
-    Routes to the backend-specific listing:
-    - Ollama: calls /api/tags.
-    - LM Studio: calls /v1/models.
-    """
-    host = host or _openai.get_active_host()
-    if _openai.get_active_backend() == "lmstudio":
-        return _lmstudio.list_lmstudio_models(host)
-    return _ollama.list_ollama_models(host=host, start_if_needed=start_if_needed)
-
-
-# ----------------------------------------------------------------------------------------------------
-def format_running_model_report(model_name: str) -> str:
-    """Return a one-line runtime status string for the given model name.
-
-    Routes to the backend-specific implementation.
-    """
-    if _openai.get_active_backend() == "lmstudio":
-        return _lmstudio.format_lmstudio_model_report(model_name)
-    return _ollama.format_running_model_report(model_name)
-
-
-# ====================================================================================================
-# MARK: CHAT WITH TOOLS
-# ====================================================================================================
 def call_llm_chat(
     model_name: str,
     messages: list[dict],
@@ -210,99 +104,13 @@ def call_llm_chat(
     timeout: int | None = None,
     on_token = None,
 ) -> ChatCallResult:
-    """Call /v1/chat/completions (OpenAI-compatible) and return a ChatCallResult.
-
-    Supports optional tool definitions for native tool calling. Compatible with Ollama,
-    LM Studio, and any OpenAI-format server. The num_ctx value is passed in an Ollama
-    extensions 'options' block and is silently ignored by non-Ollama servers.
-    """
-    host = host or _openai.get_active_host()
-    if _openai.get_active_backend() == "ollama":
-        return _ollama.call_ollama_chat(
-            model_name = model_name,
-            messages   = messages,
-            tools      = tools,
-            host       = host,
-            num_ctx    = num_ctx,
-            timeout    = timeout,
-            on_token   = on_token,
-        )
-    ensure_ollama_running(host=host, start_if_needed=False)
-
-    last_user = next(
-        (trunc(m.get("content", ""), 32) for m in reversed(messages) if m.get("role") == "user"),
-        "",
-    )
-    ctx_str  = f"{num_ctx:,}" if num_ctx is not None else "default"
-    tool_str = f" | {len(tools)} tools" if tools else ""
-    log_to_session(f"[LLM chat] {model_name} | ctx={ctx_str}{tool_str} | {last_user!r}")
-
-    payload: dict = {
-        "model":    model_name,
-        "messages": messages,
-        "stream":   False,
-    }
-    if tools:
-        payload["tools"] = tools
-    options = _ollama.get_ollama_request_options(num_ctx)
-    if options:
-        payload["options"] = options
-
-    effective_timeout = timeout if timeout is not None else _openai.get_llm_timeout()
-    start_time        = time.monotonic()
-
-    try:
-        body = _openai._request_json(
-            url=f"{host.rstrip('/')}/v1/chat/completions",
-            method="POST",
-            payload=payload,
-            timeout=effective_timeout,
-        )
-    except urllib.error.HTTPError as error:
-        error_body = error.read().decode("utf-8", errors="replace")
-        if error.code == 404 and "not found" in error_body.lower():
-            available_models = []
-            try:
-                available_models = list_ollama_models(host=host, start_if_needed=False)
-            except Exception:
-                pass
-            if available_models:
-                raise RuntimeError(
-                    f"Model '{model_name}' not found. Installed models: {', '.join(available_models)}"
-                ) from error
-        raise RuntimeError(f"LLM chat HTTP error {error.code}: {error_body}") from error
-    except urllib.error.URLError as error:
-        raise RuntimeError(f"Unable to reach server at {host}: {error.reason}") from error
-    except TimeoutError as error:
-        raise RuntimeError(f"LLM chat timed out after {effective_timeout}s") from error
-    except json.JSONDecodeError as error:
-        raise RuntimeError("LLM chat returned a non-JSON response") from error
-
-    elapsed = time.monotonic() - start_time
-
-    choices = body.get("choices") or []
-    if not choices:
-        raise RuntimeError(f"LLM chat response has no choices: {body}")
-
-    choice        = choices[0]
-    message       = choice.get("message") or {}
-    finish_reason = choice.get("finish_reason") or "stop"
-
-    # Debug: log unexpected empty-content responses so we can see the raw message structure.
-    if not (message.get("content") or "").strip() and not (message.get("tool_calls") or []):
-        log_to_session(f"[debug] empty content - message keys: {list(message.keys())!r}; "
-                       f"finish_reason={finish_reason!r}; "
-                       f"thinking_preview={trunc(str(message.get('thinking', '')), 120)!r}")
-
-    usage             = body.get("usage") or {}
-    prompt_tokens     = usage.get("prompt_tokens", 0)
-    completion_tokens = usage.get("completion_tokens", 0)
-    tps               = completion_tokens / elapsed if elapsed > 0 and completion_tokens > 0 else 0.0
-
-    return ChatCallResult(
-        message=message,
-        finish_reason=finish_reason,
-        prompt_tokens=prompt_tokens,
-        completion_tokens=completion_tokens,
-        tokens_per_second=tps,
+    """Call Ollama's native ``/api/chat`` endpoint with optional tools."""
+    return _ollama.call_ollama_chat(
+        model_name = model_name,
+        messages   = messages,
+        tools      = tools,
+        host       = host,
+        num_ctx    = num_ctx,
+        timeout    = timeout,
+        on_token   = on_token,
     )

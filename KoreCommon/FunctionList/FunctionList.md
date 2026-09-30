@@ -283,17 +283,30 @@
 - main
 
 ### KoreAgent/app/llm_client.py
-- get_ollama_ps_rows
 - is_llm_running
-- ensure_ollama_running
-- list_ollama_models
-- format_running_model_report
 - call_llm_chat
 
-### KoreAgent/app/llm_client_lmstudio.py
-- ensure_lmstudio_reachable
-- list_lmstudio_models
-- format_lmstudio_model_report
+### KoreAgent/app/llm_client_core.py
+- _default_llm_timeout_from_env
+- get_llm_timeout
+- set_llm_timeout
+- register_llm_call_logger
+- log_to_session
+- register_session_config
+- get_active_model
+- get_active_num_ctx
+- get_active_max_predict
+- mark_host_healthy
+- invalidate_host_health
+- is_host_health_cached
+- configure_host
+- get_active_host
+- _is_local_host
+- _request_json
+- resolve_model_name
+- is_explicit_model_name
+- response
+- tool_calls
 
 ### KoreAgent/app/llm_client_ollama.py
 - _coerce_config_bool
@@ -322,31 +335,6 @@
 - call_ollama_extended
 - call_ollama
 - tokens_per_second
-
-### KoreAgent/app/llm_client_openai.py
-- _default_llm_timeout_from_env
-- get_llm_timeout
-- set_llm_timeout
-- register_llm_call_logger
-- log_to_session
-- register_session_config
-- get_active_model
-- get_active_num_ctx
-- get_active_max_predict
-- mark_host_healthy
-- invalidate_host_health
-- is_host_health_cached
-- configure_host
-- configure_server
-- get_active_host
-- get_active_backend
-- _is_local_host
-- _is_lmstudio_host
-- _request_json
-- resolve_model_name
-- is_explicit_model_name
-- response
-- tool_calls
 
 ### KoreAgent/app/main.py
 - _hidden_windows_creation_flags
@@ -4048,7 +4036,6 @@
 ### KoreTest/app/agent_tests/unit/test_llm_client_availability.py
 - tearDown
 - test_ollama_probe_uses_the_native_health_check
-- test_lmstudio_requires_a_served_model
 - test_probe_returns_false_when_the_backend_request_raises
 
 ### KoreTest/app/agent_tests/unit/test_ollama_process_windows.py

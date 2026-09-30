@@ -86,7 +86,6 @@ from input_layer.routes_status import register_status_routes
 from input_layer.routes_queue import register_queue_routes
 from input_layer.server_static import register_static_routes
 from llm_client import call_llm_chat
-from llm_client import get_active_backend
 from llm_client import get_active_host
 from llm_client import get_active_model
 from llm_client import get_active_max_predict
@@ -184,7 +183,6 @@ def _get_agent_ui_bootstrap() -> dict:
     return {
         "runtime": {
             "host":         get_active_host(),
-            "backend":      get_active_backend(),
             "model":        get_active_model(),
             "num_ctx":      get_active_num_ctx(),
             "max_predict":  get_active_max_predict(),
@@ -211,7 +209,6 @@ register_status_routes(
     get_active_model=get_active_model,
     get_active_num_ctx=get_active_num_ctx,
     get_active_max_predict=get_active_max_predict,
-    get_active_backend=get_active_backend,
     get_ollama_sampling_config=get_ollama_sampling_config,
     get_ollama_offload_mode=get_ollama_offload_mode,
     is_llm_running=is_llm_running,

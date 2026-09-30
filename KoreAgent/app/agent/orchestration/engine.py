@@ -15,7 +15,7 @@
 #   - input_layer/server_startup.py -- run_api_mode
 #   - skill_executor.py          -- execute_tool_call (executes individual skill calls)
 #   - skills_catalog_builder.py  -- build_tool_definitions (generates JSON Schema tool specs)
-#   - llm_client.py              -- call_llm_chat (/v1/chat/completions with tools support)
+#   - llm_client.py              -- native Ollama chat with tools support
 # MARK: FUNCTIONS
 # Primary types: OrchestratorConfig, ConversationHistory, SessionContext.
 # Function inventory:
@@ -67,7 +67,6 @@ from context_manager import format_context_map as _context_manager_format_contex
 from context_manager import store_last_run_state
 from conversation_state import decode_semantic_summary
 from llm_client import call_llm_chat
-from llm_client import get_active_backend
 from llm_client import get_ollama_sampling_config
 from llm_client import is_explicit_model_name
 from llm_client import list_ollama_models
@@ -482,9 +481,7 @@ class SessionContext:
 def resolve_execution_model(requested_model: str) -> str:
     """Resolve a short alias or tag to a fully-qualified model name available on the active server.
 
-    For Ollama: matches against all installed models and prints a warning on fallback.
-    For LM Studio: matches against the currently-served model(s). When no alias matches
-    (the common case, since LM Studio uses verbose IDs), silently adopts the served model.
+    Matches against models installed in Ollama and prints a warning on fallback.
 
     If the requested name is already fully-qualified (contains ':' with no whitespace)
     it is returned as-is without querying the host.
@@ -500,15 +497,10 @@ def resolve_execution_model(requested_model: str) -> str:
     resolved = resolve_model_name(requested_model, available_models)
     if resolved is None:
         fallback = available_models[0]
-        if get_active_backend() == "lmstudio":
-            # LM Studio serves whatever is loaded in the UI; alias matching is not meaningful.
-            # Silently adopt the served model so startup is clean.
-            print(f"[model] LM Studio is serving: '{fallback}' - using that.")
-        else:
-            print(
-                f"[model] '{requested_model}' not found - falling back to '{fallback}'.\n"
-                f"        Available: {', '.join(available_models)}"
-            )
+        print(
+            f"[model] '{requested_model}' not found - falling back to '{fallback}'.\n"
+            f"        Available: {', '.join(available_models)}"
+        )
         return fallback
 
     return resolved
@@ -543,7 +535,7 @@ def orchestrate_prompt(
 ) -> tuple[str, int, int, bool, float]:
     """Run the tool-calling pipeline for one prompt.
 
-    Sends the user message to /v1/chat/completions with JSON Schema tool definitions
+    Sends the user message to Ollama's native chat API with JSON Schema tool definitions
     derived from the skills catalog. The model selects and calls tools; each result is
     fed back into the message thread until the model produces a plain-text final answer.
 

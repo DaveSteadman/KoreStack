@@ -44,7 +44,6 @@ const _CHAT_SUBS = ["new", "name", "list", "resume", "resumecopy", "park", "dele
 
 // Sub-commands for /llmserverconfig.
 const _LLMSERVERCFG_SUBS = ["model", "ctx", "max_predict", "cpugpu"];
-const _LLMSERVER_SUBS    = ["ollama", "lmstudio"];
 const _LLMSERVER_CONFIGS = ["forcecpu", "forcegpu", "autogpu"];
 const _SUGGEST_HINTS     = {
     "/help":    "List every available slash command and its usage",
@@ -71,8 +70,6 @@ const _SUGGEST_HINTS     = {
     "--subject":     "Delivery subject; required when binding",
     "--chat":        "Target another chat instead of the current chat",
     "--startpaused": "Create the delivery binding paused; use connection resume to enable copying",
-    ollama:    "Use an Ollama server",
-    lmstudio:  "Use an LM Studio server",
 };
 
 // Sub-commands for /tools.
@@ -150,15 +147,14 @@ function _applyBootstrapRuntimeState() {
     const runtime = AGENT_BOOTSTRAP.runtime;
     if (!runtime || typeof runtime !== "object") return;
 
-    const backend = String(runtime.backend || "ollama");
     const host    = String(runtime.host || "");
     const model   = String(runtime.model || "");
     const numCtx  = Number(runtime.num_ctx) || 0;
 
-    dom.ollamaHost().textContent  = host ? `${host} (${backend})` : backend;
+    dom.ollamaHost().textContent  = host || "Ollama";
     dom.ollamaModel().textContent = model;
     dom.ollamaCtx().textContent   = numCtx
-        ? `${numCtx.toLocaleString()} ${backend === "lmstudio" ? "local ctx" : "ctx"}`
+        ? `${numCtx.toLocaleString()} ctx`
         : "";
     _activeNumCtx = numCtx;
 
@@ -492,19 +488,12 @@ async function refreshOllamaStatus() {
         return;
     }
     // Update text BEFORE dot so the two are never mismatched.
-    const backend   = data.backend || "ollama";
-    const isLMStudio = backend === "lmstudio";
-    const rows  = data.rows || [];
-    const first = rows[0] || {};
-    // For Ollama: prefer the running model name from `ollama ps`.
-    // For LM Studio: `ollama ps` is unavailable; use the configured model name.
-    const modelName = isLMStudio ? (data.model || "") : ((first.name || "").trim() || data.model || "");
-    // For LM Studio the context window is set inside the LM Studio UI and cannot
-    // be read via API, so label it "local ctx" to make the distinction clear.
-    const ctxLabel  = isLMStudio ? "local ctx" : "ctx";
-    const ctxVal    = data.num_ctx ? data.num_ctx.toLocaleString() + " " + ctxLabel : "";
+    const rows      = data.rows || [];
+    const first     = rows[0] || {};
+    const modelName = (first.name || "").trim() || data.model || "";
+    const ctxVal    = data.num_ctx ? data.num_ctx.toLocaleString() + " ctx" : "";
     _activeNumCtx = Number(data.num_ctx) || 0;
-    dom.ollamaHost().textContent  = (data.host || "") + " (" + backend + ")";
+    dom.ollamaHost().textContent  = data.host || "Ollama";
     dom.ollamaModel().textContent = modelName;
     dom.ollamaCtx().textContent   = ctxVal;
     _applyRuntimeSettings(data);
@@ -1304,17 +1293,6 @@ function _parseSuggestContext(value) {
             // Second arg is a new name - no completion.
             return null;
         }
-        return null;
-    }
-
-    if (cmd === "/llmserver") {
-        const subSpace = rest.indexOf(" ");
-        if (subSpace === -1) {
-            return { pool: _LLMSERVER_SUBS, prefix: rest, base: "/llmserver " };
-        }
-        const sub      = rest.slice(0, subSpace).toLowerCase();
-        const arg1Base = value.slice(0, firstSpace + 1 + subSpace + 1);
-        const arg1Text = value.slice(arg1Base.length);
         return null;
     }
 

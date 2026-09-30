@@ -308,8 +308,8 @@ def parse_main_args() -> argparse.Namespace:
         type=str,
         default=os.environ.get("LLMHOST", os.environ.get("OLLAMAHOST", llm_client.DEFAULT_OLLAMAHOST)),
         metavar="URL",
-        help="Inference server host URL or alias. Aliases: 'lmstudio' (http://localhost:1234), "
-             "'local' (http://localhost:11434). Also read from LLMHOST env var.",
+        help="Ollama server host URL or alias ('local' is http://localhost:11434). "
+             "Also read from LLMHOST or OLLAMAHOST.",
     )
     # Apply file defaults between factory defaults and CLI; set_defaults() is overridden
     # by any explicit CLI value but overrides argparse's own default= values.
@@ -381,7 +381,7 @@ def _run(args, logger, log_path) -> None:
     _tick = chr(0x2713)
     _cross = chr(0x2717)
 
-    _backend_label = "LM Studio host" if llm_client.get_active_backend() == "lmstudio" else "Ollama host"
+    _backend_label = "Ollama host"
     logger.log_section("SYSTEM STATUS")
     logger.log(f"{_backend_label}:   {llm_client.get_active_host()} (pending)")
     logger.log(f"Requested model: {args.model}")
@@ -426,7 +426,7 @@ def _run(args, logger, log_path) -> None:
 
         try:
             llm_client.ensure_ollama_running(verbose=True, start_if_needed=False)
-            _host_ok = llm_client.is_ollama_running() if llm_client.get_active_backend() == "ollama" else True
+            _host_ok = llm_client.is_ollama_running()
             _known   = llm_client.list_ollama_models(start_if_needed=False)
             try:
                 resolved_model = resolve_execution_model(args.model)

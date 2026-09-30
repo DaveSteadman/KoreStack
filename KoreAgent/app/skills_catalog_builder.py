@@ -6,7 +6,7 @@
 # Scans the skills directory recursively for skill.md files, summarises each one into a structured
 # JSON record (skill name, module path, functions, inputs, outputs), then writes the full catalog
 # as a machine-readable JSON file for runtime use. The orchestration layer uses the JSON catalog to
-# build JSON Schema tool definitions sent to the model via /v1/chat/completions.
+# build JSON Schema tool definitions sent to Ollama via /api/chat.
 #
 # Supports two summarisation modes:
 #   - LLM-assisted: sends the skill.md text to an Ollama model and parses the JSON response.
@@ -671,7 +671,7 @@ def build_tool_definitions(skills_payload: dict) -> list[dict]:
 
     Each clean function signature (e.g. 'get_datetime_data()' or 'set_task_prompt(name: str, ...)')
     becomes one tool entry. Example-call entries in the functions list are silently skipped.
-    Compatible with Ollama /v1/chat/completions, LM Studio, and OpenAI.
+    Compatible with Ollama's native tool schema.
     """
     obj_cache_key = id(skills_payload)
     cached_obj = _TOOL_DEFS_OBJ_CACHE.get(obj_cache_key)

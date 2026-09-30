@@ -5,10 +5,8 @@
 # /api/generate legacy endpoint, and native /api/chat.
 #
 # All functions that require Ollama-specific APIs (/api/tags, /api/generate, /api/ps, ollama serve)
-# live here. The shared OpenAI-compatible call (call_llm_chat) lives in llm_client.py (the facade).
-#
-# Backend-neutral state and utilities are accessed via llm_client_openai as _core.
-# Ollama-owned settings, health state, and response structures remain in this module.
+# live here. Shared host, logging, and request utilities are accessed through
+# llm_client_core as _core.
 # MARK: FUNCTIONS
 # Primary types: OllamaCallResult.
 # Function inventory:
@@ -49,7 +47,7 @@ import urllib.error
 import urllib.request
 from dataclasses import dataclass
 
-import llm_client_openai as _core
+import llm_client_core as _core
 from utils.workspace_utils import trunc
 
 
@@ -58,7 +56,7 @@ from utils.workspace_utils import trunc
 # ====================================================================================================
 _ollama_recovery_lock: threading.Lock = threading.Lock()
 
-DEFAULT_OLLAMAHOST = _core.DEFAULT_LOCAL_LLM_HOST
+DEFAULT_OLLAMAHOST = _core.DEFAULT_OLLAMAHOST
 OLLAMA_CLOUD_HOST  = "https://api.ollama.com"
 
 _ollama_temperature:         float = 0.8
@@ -70,6 +68,7 @@ _OLLAMA_OFFLOAD_MODES: frozenset[str] = frozenset({"forcecpu", "forcegpu", "auto
 _ollama_settings_lock: threading.RLock = threading.RLock()
 
 _RUNNER_RECOVERY_ATTEMPTS: int = 2
+_KEEP_ALIVE_FOREVER:      int = -1
 _RUNNER_CRASH_MARKERS: tuple[str, ...] = (
     "llama-server process has terminated",
     "rocm error",
@@ -522,9 +521,11 @@ def call_ollama_chat(
     _core.log_to_session(f"[Ollama native chat] {model_name} | ctx={ctx_str}{tool_str} | {last_user!r}")
 
     payload: dict = {
-        "model":    model_name,
-        "messages": _native_chat_messages(messages),
-        "stream":   on_token is not None,
+        "model":      model_name,
+        "messages":   _native_chat_messages(messages),
+        "stream":     on_token is not None,
+        # Avoid idle eviction; /stopmodel or Ollama memory pressure can still unload it.
+        "keep_alive": _KEEP_ALIVE_FOREVER,
         # Nemotron exposes a separate reasoning channel.  Leaving its native
         # default enabled makes ordinary chat and tool selection spend hundreds
         # of invisible tokens before it emits either content or a tool call.
@@ -683,9 +684,11 @@ def call_ollama_extended(
     options = get_ollama_request_options(num_ctx)
 
     payload = {
-        "model":  model_name,
-        "prompt": prompt,
-        "stream": False,
+        "model":      model_name,
+        "prompt":     prompt,
+        "stream":     False,
+        # Match chat: request residency until stopped or memory pressure requires eviction.
+        "keep_alive": _KEEP_ALIVE_FOREVER,
     }
     if options:
         payload["options"] = options

@@ -11,7 +11,7 @@
 #
 # Related modules:
 #   - input_layer/server.py  -- registers this route group
-#   - llm_client.py          -- get_ollama_ps_rows, get_active_host/model/num_ctx/backend
+#   - llm_client.py          -- get_ollama_ps_rows, get_active_host/model/num_ctx
 # MARK: FUNCTIONS
 # Function inventory:
 # - register_status_routes: Registers status routes for this module.
@@ -29,7 +29,6 @@ def register_status_routes(
     get_active_model,
     get_active_num_ctx,
     get_active_max_predict,
-    get_active_backend,
     get_ollama_sampling_config,
     get_ollama_offload_mode,
     is_llm_running,
@@ -69,7 +68,6 @@ def register_status_routes(
             "model":          get_active_model(),
             "num_ctx":        get_active_num_ctx(),
             "max_predict":    get_active_max_predict(),
-            "backend":        get_active_backend(),
             "llm_running":    is_llm_running(),
             "sampling":       get_ollama_sampling_config(),
             "offload_mode":   get_ollama_offload_mode(),
@@ -90,7 +88,6 @@ def register_status_routes(
             "model":        get_active_model(),
             "num_ctx":      get_active_num_ctx(),
             "max_predict":  get_active_max_predict(),
-            "backend":      get_active_backend(),
             "llm_running":  is_llm_running(),
             "sampling":     get_ollama_sampling_config(),
             "offload_mode": get_ollama_offload_mode(),

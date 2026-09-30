@@ -1,21 +1,19 @@
 # ====================================================================================================
 # MARK: OVERVIEW
 # ====================================================================================================
-# Shared state and OpenAI-compatible core for the llm_client_*.py sub-modules.
+# Shared state and HTTP utilities for the Ollama client core.
 #
-# Contains everything that is not backend-proprietary:
+# Contains shared Ollama-client state and utilities:
 #   - Module-level connection state and all accessor/mutator functions.
-#   - Host configuration and backend detection utilities, including configure_server() for
-#     explicit backend targeting.
-#   - Health-check cache helpers used by both backends.
+#   - Ollama-host configuration.
+#   - Health-check cache helpers.
 #   - The _request_json HTTP helper (thread-safe, hard timeout enforcement).
-#   - The backend-neutral ChatCallResult data structure.
+#   - The chat-result data structure.
 #   - Model name resolution utilities (resolve_model_name, is_explicit_model_name).
 #
 # Related modules:
 #   - llm_client_ollama.py   -- Ollama-specific: model management, process lifecycle, /api/generate
-#   - llm_client_lmstudio.py -- LM Studio-specific: health check, /v1/models listing, model report
-#   - llm_client.py          -- Routing facade: re-exports all public names + call_llm_chat
+#   - llm_client.py        -- public facade and native chat entry point
 # MARK: FUNCTIONS
 # Primary types: ChatCallResult.
 # Function inventory:
@@ -32,11 +30,8 @@
 # - invalidate_host_health: Invalidates host health for this module.
 # - is_host_health_cached: Checks whether host health cached is true.
 # - configure_host: Implements the configure host operation for this module.
-# - configure_server: Implements the configure server operation for this module.
 # - get_active_host: Returns active host for this module.
-# - get_active_backend: Returns active backend for this module.
 # - _is_local_host: Implements the  is local host operation for this module.
-# - _is_lmstudio_host: Implements the  is lmstudio host operation for this module.
 # - tokens_per_second: Implements the tokens per second operation for this module.
 # - response: Implements the response operation for this module.
 # - tool_calls: Implements the tool calls operation for this module.
@@ -64,8 +59,7 @@ from utils.workspace_utils import trunc
 # ====================================================================================================
 # MARK: CONSTANTS
 # ====================================================================================================
-DEFAULT_LOCAL_LLM_HOST = "http://localhost:11434"
-DEFAULT_LMSTUDIO_HOST = "http://localhost:1234"
+DEFAULT_OLLAMAHOST = "http://localhost:11434"
 
 
 def _default_llm_timeout_from_env() -> int:
@@ -81,10 +75,9 @@ def _default_llm_timeout_from_env() -> int:
 
 _DEFAULT_LLM_TIMEOUT: int = _default_llm_timeout_from_env()   # seconds; updated at runtime by /timeout slash command
 
-# Active host and backend - set once at startup via configure_host() or configure_server().
-# Default to the local native backend; overridden by --llmhost / LLMHOST env var.
-_active_host:    str = DEFAULT_LOCAL_LLM_HOST
-_active_backend: str = "ollama"
+# Active Ollama host. Set once at startup via configure_host() and overridden by
+# --llmhost / LLMHOST.
+_active_host: str = DEFAULT_OLLAMAHOST
 
 # Active session model and context window - set once at startup via register_session_config().
 # Skills use get_active_model() / get_active_num_ctx() instead of accepting these as parameters.
@@ -210,84 +203,31 @@ def is_host_health_cached(host: str) -> bool:
 # MARK: CONFIGURATION
 # ====================================================================================================
 
-# Well-known host aliases accepted by configure_host() and the --llmhost CLI flag.
-HOST_ALIASES: dict[str, str] = {
-    "local":      DEFAULT_LOCAL_LLM_HOST,
-    "localhost":  DEFAULT_LOCAL_LLM_HOST,
-    "lmstudio":   DEFAULT_LMSTUDIO_HOST,
-}
-
-
 def configure_host(host: str) -> None:
-    """Set the active host and backend for all subsequent LLM calls.
+    """Set the Ollama host used for all subsequent model calls.
 
-    Accepts well-known aliases ('local', 'localhost', 'lmstudio') and bare hostnames/IPs;
-    bare values (no '://') are expanded to http://<host>:11434 automatically.
-    The 'lmstudio' alias resolves to http://localhost:1234 and selects the LM Studio backend.
-
-    Stored as module-level state; mirrors the pattern used by set_llm_timeout().
+    Bare hostnames are expanded to ``http://<host>:11434``. A URL keeps its
+    supplied scheme and port, allowing a remote Ollama server to be used.
     """
-    global _active_host, _active_backend
-    resolved = HOST_ALIASES.get(host.strip().lower(), host.strip())
+    global _active_host
+    resolved = host.strip()
+    if resolved.lower() == "local":
+        resolved = DEFAULT_OLLAMAHOST
     if "://" not in resolved:
-        resolved = f"http://{resolved}:11434"
+        resolved = f"http://{resolved}" if ":" in resolved else f"http://{resolved}:11434"
     with _active_state_lock:
         _active_host = resolved.rstrip("/")
-        _active_backend = "lmstudio" if _is_lmstudio_host(_active_host) else "ollama"
-
-
-# ----------------------------------------------------------------------------------------------------
-def configure_server(backend: str, host: str | None = None) -> None:
-    """Configure the active server with an explicit backend type and optional host override.
-
-    backend: "ollama" or "lmstudio"
-    host:    optional URL or bare hostname; defaults to the backend's standard local address.
-             Bare hostnames (no '://') are expanded using the backend's default port.
-    """
-    global _active_host, _active_backend
-    backend = backend.lower().strip()
-    if backend not in ("ollama", "lmstudio"):
-        raise ValueError(f"Unknown backend '{backend}'. Use 'ollama' or 'lmstudio'.")
-    if host is None:
-        resolved = DEFAULT_LMSTUDIO_HOST if backend == "lmstudio" else DEFAULT_LOCAL_LLM_HOST
-    else:
-        host = host.strip()
-        if "://" not in host:
-            # Only append the default port when no port is already present.
-            # "MONTBLANC:1234" already has a port; "MONTBLANC" does not.
-            if ":" not in host:
-                default_port = "1234" if backend == "lmstudio" else "11434"
-                resolved     = f"http://{host}:{default_port}"
-            else:
-                resolved = f"http://{host}"
-        else:
-            resolved = host
-    with _active_state_lock:
-        _active_host = resolved.rstrip("/")
-        _active_backend = backend
 
 
 # ----------------------------------------------------------------------------------------------------
 def get_active_host() -> str:
-    """Return the currently configured server host URL."""
+    """Return the currently configured Ollama host URL."""
     with _active_state_lock:
         return _active_host
 
 
-def get_active_backend() -> str:
-    """Return the currently configured backend: 'ollama' or 'lmstudio'."""
-    with _active_state_lock:
-        return _active_backend
-
-
-# ----------------------------------------------------------------------------------------------------
 def _is_local_host(host: str) -> bool:
     return "localhost" in host or "127.0.0.1" in host or "0.0.0.0" in host
-
-
-def _is_lmstudio_host(host: str) -> bool:
-    # Detected by port 1234 - LM Studio's default and conventional port.
-    return ":1234" in host
 
 
 # ====================================================================================================

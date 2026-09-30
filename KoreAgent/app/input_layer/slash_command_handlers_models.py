@@ -1,57 +1,25 @@
 # ====================================================================================================
 # MARK: OVERVIEW
 # ====================================================================================================
-# Slash command handlers for LLM server and model configuration.
-#
-# Commands handled:
-#   /llmserverconfig                  -- show current model, ctx, and backend
-#   /llmserverconfig model list       -- list models available on the active server
-#   /llmserverconfig model <name>     -- switch the active model (clears history)
-#   /llmserverconfig ctx <n>          -- set context window size
-#   /llmserverconfig max_predict [n]  -- set/reset maximum completion tokens
-#   /llmserverconfig cpugpu <mode>    -- set Ollama CPU/GPU model placement
-#
-# Registered in slash_commands.py under the /llmserverconfig command.
-#
-# Related modules:
-#   - input_layer/slash_commands.py         -- registers all handlers
-#   - input_layer/slash_command_context.py  -- SlashCommandContext passed to each handler
-#   - llm_client.py                         -- configure_host, list_ollama_models, stop_model
-# MARK: FUNCTIONS
-# Function inventory:
-# - _configure_ollama_offload: Implements the  configure ollama offload operation for this module.
-# - _cmd_llmserverconfig: Implements the  cmd llmserverconfig operation for this module.
-# - _cmd_stopmodel: Implements the  cmd stopmodel operation for this module.
-# - _cmd_llmserver: Implements the  cmd llmserver operation for this module.
-# - register_model_slash_commands: Registers model slash commands for this module.
+# Slash command handlers for the Ollama server and model configuration.
 # ====================================================================================================
-import json
-import urllib.request
 from typing import Callable
 
 from llm_client import configure_host
-from llm_client import configure_server
-from llm_client import get_active_backend
 from llm_client import get_active_host
-from llm_client import get_active_num_ctx
-from llm_client import get_ollama_offload_mode
 from llm_client import get_ollama_ps_rows
 from llm_client import is_explicit_model_name
 from llm_client import list_ollama_models
 from llm_client import register_session_config
 from llm_client import resolve_model_name
-from llm_client import stop_model
 from llm_client import set_ollama_offload_mode
+from llm_client import stop_model
 from input_layer.slash_command_context import SlashCommandContext
-from utils.workspace_utils import get_agent_config_file
 
 
 def _configure_ollama_offload(mode: str, ctx: SlashCommandContext) -> None:
     if mode not in {"forcecpu", "forcegpu", "autogpu"}:
         ctx.output("Usage: /llmserverconfig cpugpu <forcecpu | forcegpu | autogpu>", "error")
-        return
-    if get_active_backend() != "ollama":
-        ctx.output("LM Studio controls its own CPU/GPU allocation; no setting was changed.", "dim")
         return
 
     set_ollama_offload_mode(mode)
@@ -75,20 +43,18 @@ def _configure_ollama_offload(mode: str, ctx: SlashCommandContext) -> None:
 
 
 def _cmd_llmserverconfig(arg: str, ctx: SlashCommandContext) -> None:
-    # /llmserverconfig                  -> show current model + ctx + backend
-    # /llmserverconfig model list       -> list models available on the active server
-    # /llmserverconfig model <name>     -> switch active model; clears history
-    # /llmserverconfig ctx <n>          -> set context window size
-    # /llmserverconfig max_predict [n]  -> set/reset maximum completion tokens
-    # /llmserverconfig cpugpu <mode>    -> set Ollama CPU/GPU model placement
+    """Inspect or update the active Ollama model and request parameters."""
     if not arg:
         ctx.output(
             f"Model: {ctx.config.resolved_model}  |  ctx: {ctx.config.num_ctx:,}  |  "
-            f"max_predict: {ctx.config.max_predict:,}  |  "
-            f"backend: {get_active_backend()} @ {get_active_host()}",
+            f"max_predict: {ctx.config.max_predict:,}  |  Ollama: {get_active_host()}",
             "info",
         )
-        ctx.output("Usage: /llmserverconfig model list | model <name> | ctx <n> | max_predict <n> | max_predict | cpugpu <forcecpu|forcegpu|autogpu>", "dim")
+        ctx.output(
+            "Usage: /llmserverconfig model list | model <name> | ctx <n> | "
+            "max_predict <n> | max_predict | cpugpu <forcecpu|forcegpu|autogpu>",
+            "dim",
+        )
         return
 
     parts = arg.strip().split(None, 1)
@@ -96,18 +62,17 @@ def _cmd_llmserverconfig(arg: str, ctx: SlashCommandContext) -> None:
     rest  = parts[1].strip() if len(parts) > 1 else ""
 
     if first == "ctx":
-        if not rest or not rest.strip().isdigit():
+        if not rest or not rest.isdigit():
             ctx.output(f"Usage: /llmserverconfig ctx <n>  |  current: {ctx.config.num_ctx:,}", "dim")
             return
-        n = int(rest.strip())
-        ctx.config.num_ctx = n
-        register_session_config(ctx.config.resolved_model, n)
-        ctx.output(f"Context window: {n:,} tokens", "success")
+        ctx.config.num_ctx = int(rest)
+        register_session_config(ctx.config.resolved_model, ctx.config.num_ctx)
+        ctx.output(f"Context window: {ctx.config.num_ctx:,} tokens", "success")
         return
 
     if first == "max_predict":
         if rest and not rest.isdigit():
-            ctx.output("Usage: /llmserverconfig max_predict <count>  |  /llmserverconfig max_predict resets to 1024", "dim")
+            ctx.output("Usage: /llmserverconfig max_predict <count>", "dim")
             return
         count = int(rest) if rest else 1024
         if count < 1:
@@ -123,64 +88,45 @@ def _cmd_llmserverconfig(arg: str, ctx: SlashCommandContext) -> None:
         return
 
     if first == "model":
-        if not rest or rest == "list":
-            try:
-                available = list_ollama_models(start_if_needed=False)
-                host      = get_active_host()
-                backend   = get_active_backend()
-                label     = "model(s) installed on"
-                ctx.output(f"{len(available)} {label}: {host}", "info")
-                for model_name in available:
-                    marker = ">" if model_name == ctx.config.resolved_model else " "
-                    ctx.output(f"  {marker} {model_name}", "item")
-            except Exception as exc:
-                ctx.output(f"Error listing models: {exc}", "error")
-            return
-
-        model_arg = rest
         try:
             available = list_ollama_models(start_if_needed=False)
-            resolved  = resolve_model_name(model_arg, available) if available else None
-            if resolved is None:
-                if is_explicit_model_name(model_arg):
-                    resolved = model_arg.strip()
-                    ctx.output(
-                        f"Model '{resolved}' not in listed models; using as explicit override.",
-                        "dim",
-                    )
-                elif get_active_backend() == "lmstudio":
-                    # LM Studio model IDs (e.g. openai/gpt-oss-20b) may not contain ':'
-                    # but the server routes to the correct model via the name in the payload.
-                    resolved = model_arg.strip()
-                else:
-                    if not available:
-                        ctx.output("No models available on the inference server.", "error")
-                        return
-                    ctx.output(f"Model '{model_arg}' not found. Available: {', '.join(available)}", "error")
-                    return
-            old = ctx.config.resolved_model
-            ctx.config.resolved_model = resolved
-            register_session_config(resolved, ctx.config.num_ctx)
-            ctx.clear_history()
-            ctx.output(f"Model switched: {old} -> {resolved}", "success")
-            ctx.output("(conversation history cleared)", "dim")
         except Exception as exc:
-            ctx.output(f"Error: {exc}", "error")
+            ctx.output(f"Error listing models: {exc}", "error")
+            return
+
+        if not rest or rest == "list":
+            ctx.output(f"{len(available)} model(s) installed on: {get_active_host()}", "info")
+            for model_name in available:
+                marker = ">" if model_name == ctx.config.resolved_model else " "
+                ctx.output(f"  {marker} {model_name}", "item")
+            return
+
+        resolved = resolve_model_name(rest, available) if available else None
+        if resolved is None:
+            if is_explicit_model_name(rest):
+                resolved = rest.strip()
+                ctx.output(f"Model '{resolved}' not listed; using it as an explicit override.", "dim")
+            elif not available:
+                ctx.output("No models available on the Ollama server.", "error")
+                return
+            else:
+                ctx.output(f"Model '{rest}' not found. Available: {', '.join(available)}", "error")
+                return
+
+        old_model                 = ctx.config.resolved_model
+        ctx.config.resolved_model = resolved
+        register_session_config(resolved, ctx.config.num_ctx)
+        ctx.clear_history()
+        ctx.output(f"Model switched: {old_model} -> {resolved}", "success")
+        ctx.output("(conversation history cleared)", "dim")
         return
 
-    ctx.output(
-        f"Unknown subcommand '{first}'. Usage: /llmserverconfig model list | model <name> | ctx <n> | max_predict <n> | max_predict | cpugpu <forcecpu|forcegpu|autogpu>",
-        "error",
-    )
+    ctx.output(f"Unknown model configuration command: {first}", "error")
 
 
 def _cmd_stopmodel(arg: str, ctx: SlashCommandContext) -> None:
-    if get_active_backend() == "lmstudio":
-        ctx.output("Model unloading is not supported via LM Studio's API.", "dim")
-        ctx.output("Use the LM Studio UI to change or unload the served model.", "dim")
-        return
-
-    target_name = arg.strip() if arg.strip() else ctx.config.resolved_model
+    """Unload one currently running Ollama model."""
+    target_name = arg.strip() or ctx.config.resolved_model
     try:
         running_rows = get_ollama_ps_rows()
     except Exception as exc:
@@ -194,10 +140,7 @@ def _cmd_stopmodel(arg: str, ctx: SlashCommandContext) -> None:
 
     resolved = resolve_model_name(target_name, running_names)
     if resolved is None:
-        ctx.output(
-            f"Model '{target_name}' is not currently loaded.  Running: {', '.join(running_names)}",
-            "error",
-        )
+        ctx.output(f"Model '{target_name}' is not loaded. Running: {', '.join(running_names)}", "error")
         return
 
     try:
@@ -208,64 +151,21 @@ def _cmd_stopmodel(arg: str, ctx: SlashCommandContext) -> None:
 
 
 def _cmd_llmserver(arg: str, ctx: SlashCommandContext) -> None:
-    # /llmserver                      -> show current server
-    # /llmserver ollama <host|url>    -> switch to Ollama at the given host/url
-    # /llmserver lmstudio <host|url>  -> switch to LM Studio at the given host/url
+    """Switch to another Ollama server and reset the conversation."""
     if not arg:
-        ctx.output(f"Current server: {get_active_host()} ({get_active_backend()})", "info")
+        ctx.output(f"Current Ollama server: {get_active_host()}", "info")
         return
 
-    parts = arg.strip().split(None, 1)
-    token = parts[0].lower()
-
-    if token == "config":
-        mode = parts[1].strip().lower() if len(parts) > 1 else ""
-        if mode not in {"forcecpu", "forcegpu", "autogpu"}:
-            ctx.output("Usage: /llmserver config <forcecpu | forcegpu | autogpu>", "error")
-            return
-        if get_active_backend() != "ollama":
-            ctx.output("LM Studio controls its own CPU/GPU allocation; no setting was changed.", "dim")
-            return
-        set_ollama_offload_mode(mode)
-        try:
-            running_names = [row.get("name", "") for row in get_ollama_ps_rows() if row.get("name")]
-            loaded_name   = resolve_model_name(ctx.config.resolved_model, running_names)
-            if loaded_name:
-                stop_model(loaded_name)
-                unload_note = " Active model unloaded; the setting applies on its next load."
-            else:
-                unload_note = " The setting applies the next time Ollama loads the model."
-        except Exception:
-            unload_note = " The setting applies the next time Ollama loads the model."
-        detail = {
-            "forcecpu": "CPU only (num_gpu=0).",
-            "forcegpu": "request all model layers on GPU (num_gpu=999).",
-            "autogpu":  "allow Ollama to choose CPU/GPU placement.",
-        }[mode]
-        ctx.output(f"Ollama offload: {mode} — {detail}{unload_note}", "success")
-        return
-
-    if token not in ("ollama", "lmstudio") or len(parts) < 2:
-        ctx.output("Usage: /llmserver config <forcecpu | forcegpu | autogpu> | /llmserver <ollama|lmstudio> <host|url>", "error")
-        ctx.output(f"Current: {get_active_host()} ({get_active_backend()})", "dim")
-        return
-
-    host_arg = parts[1].strip()
     old_host = get_active_host()
-
     try:
-        configure_server(token, host_arg)
-
+        configure_host(arg)
         new_host = get_active_host()
         models   = list_ollama_models(start_if_needed=False)
-        # Sync the session model to a valid choice on the new server.
-        # If the currently configured model isn't in the new server's list, pick the first available.
-        current_model = ctx.config.resolved_model
-        if models and current_model not in models:
+        if models and ctx.config.resolved_model not in models:
             ctx.config.resolved_model = models[0]
         register_session_config(ctx.config.resolved_model, ctx.config.num_ctx)
         ctx.clear_history()
-        ctx.output(f"Server: {old_host} -> {new_host} ({get_active_backend()})", "success")
+        ctx.output(f"Ollama server: {old_host} -> {new_host}", "success")
         if models:
             ctx.output(f"  {len(models)} model(s): {', '.join(models)}", "item")
         ctx.output("(conversation history cleared)", "dim")
@@ -273,7 +173,7 @@ def _cmd_llmserver(arg: str, ctx: SlashCommandContext) -> None:
         new_host = get_active_host()
         configure_host(old_host)
         ctx.output(f"Cannot reach '{new_host}': {exc}", "error")
-        ctx.output(f"Still using: {old_host} ({get_active_backend()})", "dim")
+        ctx.output(f"Still using Ollama at: {old_host}", "dim")
 
 
 def register_model_slash_commands(registry: dict[str, Callable], descriptions: dict[str, str]) -> None:
@@ -286,9 +186,8 @@ def register_model_slash_commands(registry: dict[str, Callable], descriptions: d
     )
     descriptions.update(
         {
-            "/llmserver":       "<ollama|lmstudio> <host>  Switch model server",
-            "/llmserverconfig": "model list | model <name> | ctx <n> | max_predict <n> | max_predict (reset 1024) | cpugpu <forcecpu|forcegpu|autogpu>  Configure model, context, maximum output, and Ollama GPU use",
-            "/stopmodel":       "[name]  Unload a running model from VRAM (Ollama only, defaults to active model)",
+            "/llmserver":       "<host>  Switch Ollama server",
+            "/llmserverconfig": "model list | model <name> | ctx <n> | max_predict <n> | cpugpu <forcecpu|forcegpu|autogpu>",
+            "/stopmodel":       "[name]  Unload a running Ollama model from VRAM",
         }
     )
-

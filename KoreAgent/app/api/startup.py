@@ -70,7 +70,6 @@ _LLM_HEALTH_INTERVAL_S  = 15.0
 def _monitor_llm_dependency(
     *,
     shutdown: threading.Event,
-    get_active_backend,
     get_active_host,
     get_active_model,
     is_ollama_running,
@@ -82,12 +81,11 @@ def _monitor_llm_dependency(
 
     while not shutdown.is_set():
         checked_at = datetime.now().isoformat(timespec="seconds")
-        backend    = get_active_backend()
         host       = get_active_host()
         model      = get_active_model()
 
         try:
-            if backend == "ollama" and not is_ollama_running(host):
+            if not is_ollama_running(host):
                 raise RuntimeError(f"Ollama is not reachable at {host}. Start it from the KoreStack landing page.")
             models = list_ollama_models(host, start_if_needed=False)
             if model and model not in models:
@@ -197,7 +195,6 @@ def run_api_mode(
         target = _monitor_llm_dependency,
         kwargs = {
             "shutdown":           shutdown,
-            "get_active_backend": llm_client.get_active_backend,
             "get_active_host":    llm_client.get_active_host,
             "get_active_model":   llm_client.get_active_model,
             "is_ollama_running":  llm_client.is_ollama_running,

@@ -4,7 +4,7 @@
 # Standalone CLI tool that shows the tool definitions derived from the current skills catalog.
 #
 # Loads the runtime skills_catalog.json catalog and prints the JSON Schema tool definitions that are sent to
-# the model via /v1/chat/completions. Useful for debugging which tools are visible to the model and
+# the model via Ollama's native /api/chat endpoint. Useful for debugging which tools are visible to the model and
 # verifying that skill signatures are parsed correctly.
 #
 # Usage:

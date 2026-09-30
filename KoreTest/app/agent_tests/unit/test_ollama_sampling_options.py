@@ -19,7 +19,7 @@ APP_ROOT = Path(__file__).resolve().parents[4] / "KoreAgent" / "app"
 if str(APP_ROOT) not in sys.path:
     sys.path.insert(0, str(APP_ROOT))
 
-import llm_client_openai
+import llm_client_core
 import llm_client_ollama
 from agent.orchestration import engine
 from input_layer import slash_commands
@@ -27,7 +27,7 @@ from input_layer import slash_commands
 
 class OllamaSamplingOptionsTests(unittest.TestCase):
     def setUp(self) -> None:
-        llm_client_openai.configure_server("ollama", "http://localhost:11434")
+        llm_client_core.configure_host("http://localhost:11434")
         llm_client_ollama.configure_ollama_sampling_options()
 
     def test_disabled_sampling_options_are_not_sent(self) -> None:

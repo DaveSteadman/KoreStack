@@ -10,7 +10,7 @@
 # - test_numeric_substring_does_not_match_a_larger_number: Implements the test numeric substring does not match a larger number operation for this module.
 # ====================================================================================================
 
-from llm_client_openai import resolve_model_name
+from llm_client import resolve_model_name
 
 
 _MODELS = [

@@ -61,12 +61,13 @@ class OllamaProcessWindowsTests(unittest.TestCase):
     def test_prompt_call_does_not_autostart_by_default(self) -> None:
         with patch.object(llm_client_ollama._core, "get_active_host", return_value="http://localhost:11434"), \
              patch.object(llm_client_ollama, "ensure_ollama_running") as ensure_running, \
-             patch.object(llm_client_ollama._core, "_request_json", return_value={"response": "ok"}), \
+             patch.object(llm_client_ollama._core, "_request_json", return_value={"response": "ok"}) as request_json, \
              patch.object(llm_client_ollama._core, "log_to_session"):
             result = llm_client_ollama.call_ollama_extended(model_name="gemma4:26b", prompt="ping")
 
         self.assertEqual(result.response, "ok")
         ensure_running.assert_called_once_with(host="http://localhost:11434", start_if_needed=False)
+        self.assertEqual(request_json.call_args.kwargs["payload"]["keep_alive"], -1)
 
     def test_native_chat_retries_after_runner_crash(self) -> None:
         runner_crash = llm_client_ollama.urllib.error.HTTPError(
@@ -83,7 +84,7 @@ class OllamaProcessWindowsTests(unittest.TestCase):
         with patch.object(llm_client_ollama._core, "get_active_host", return_value="http://localhost:11434"), \
              patch.object(llm_client_ollama, "ensure_ollama_running"), \
              patch.object(llm_client_ollama, "_retry_after_runtime_failure", return_value=True) as recover, \
-             patch.object(llm_client_ollama._core, "_request_json", side_effect=[runner_crash, response]), \
+             patch.object(llm_client_ollama._core, "_request_json", side_effect=[runner_crash, response]) as request_json, \
              patch.object(llm_client_ollama._core, "log_to_session"):
             result = llm_client_ollama.call_ollama_chat(
                 model_name="test-model",
@@ -92,6 +93,7 @@ class OllamaProcessWindowsTests(unittest.TestCase):
 
         self.assertEqual(result.response, "Recovered.")
         recover.assert_called_once()
+        self.assertTrue(all(call.kwargs["payload"]["keep_alive"] == -1 for call in request_json.call_args_list))
 
     def test_runtime_recovery_does_not_restart_a_stopped_local_daemon(self) -> None:
         with patch.object(llm_client_ollama._core, "invalidate_host_health") as invalidate, \

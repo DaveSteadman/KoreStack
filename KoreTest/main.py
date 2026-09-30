@@ -80,6 +80,7 @@ UI_ROOT    = ROOT / "KoreUI" / "KoreTest"
 UI_ELEMENTS_ASSETS = ROOT / "KoreUI" / "UIElements" / "assets"
 _RUN_LOCK = threading.Lock()
 _TREND_RECENT_RUN_LIMIT = 10
+FULL_SUITE_TIME_LIMIT_SECONDS = int(os.environ.get("KORETEST_FULL_SUITE_TIME_LIMIT_SECONDS", "3600"))
 
 
 def _prompts_dir() -> Path:
@@ -172,7 +173,13 @@ def _suite_path(name: str) -> Path:
     return candidate
 
 
-def _run_suite(name: str, model: str | None = None, *, collection_id: str = "") -> dict:
+def _run_suite(
+    name: str,
+    model: str | None = None,
+    *,
+    collection_id: str = "",
+    timeout_seconds: float | None = None,
+) -> dict:
     suite = _suite_path(name)
     run_id = f"testrun_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S_%f')}"
     chat_id = _fresh_test_chat()
@@ -198,7 +205,27 @@ def _run_suite(name: str, model: str | None = None, *, collection_id: str = "") 
     command = [sys.executable, str(ROOT / "KoreTest" / "app" / "system" / "runner.py"), "--prompts-file", str(suite), "--output-file", str(output), "--source-file", suite.name]
     if model:
         command.extend(["--model", model])
-    proc = subprocess.run(command, cwd=APP_ROOT, text=True, capture_output=True)
+    try:
+        proc = subprocess.run(
+            command,
+            cwd            = APP_ROOT,
+            text           = True,
+            capture_output = True,
+            timeout        = timeout_seconds,
+        )
+    except subprocess.TimeoutExpired as exc:
+        stdout = exc.stdout or ""
+        stderr = exc.stderr or ""
+        if isinstance(stdout, bytes):
+            stdout = stdout.decode("utf-8", errors="replace")
+        if isinstance(stderr, bytes):
+            stderr = stderr.decode("utf-8", errors="replace")
+        proc = subprocess.CompletedProcess(
+            command,
+            124,
+            stdout,
+            f"{stderr}\n[TEST_ABORTED] Full test-suite time limit of {FULL_SUITE_TIME_LIMIT_SECONDS}s reached.",
+        )
     rows = list(csv.DictReader(output.open(encoding="utf-8", newline=""))) if output.exists() else []
     passed = sum(row.get("passed", "").upper() in {"PASS", "TRUE"} for row in rows)
     aborted = "[TEST_ABORTED]" in proc.stderr
@@ -379,8 +406,19 @@ def _run_requested_suite(name: str, model: str | None = None) -> dict:
         collection_id = f"testcollection_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S_%f')}"
         _start_collection_run(collection_id, model)
         suite_results = []
+        timed_out     = False
+        deadline      = started_at + FULL_SUITE_TIME_LIMIT_SECONDS
         for path in sorted(base.glob("*.json")):
-            suite_result = _run_suite(path.name, model, collection_id=collection_id)
+            remaining_seconds = deadline - time.monotonic()
+            if remaining_seconds <= 0:
+                timed_out = True
+                break
+            suite_result = _run_suite(
+                path.name,
+                model,
+                collection_id  = collection_id,
+                timeout_seconds = remaining_seconds,
+            )
             suite_results.append(suite_result)
             if suite_result.get("aborted"):
                 break
@@ -388,8 +426,10 @@ def _run_requested_suite(name: str, model: str | None = None) -> dict:
         print(stats["stats_line"], flush=True)
         result = {
             "suite": "all",
-            "status": "passed" if stats["total"] and stats["passed"] == stats["total"] else "failed",
-            "aborted": any(run.get("aborted") for run in suite_results),
+            "status": "passed" if not timed_out and stats["total"] and stats["passed"] == stats["total"] else "failed",
+            "aborted": timed_out or any(run.get("aborted") for run in suite_results),
+            "time_limit_seconds": FULL_SUITE_TIME_LIMIT_SECONDS,
+            "timed_out": timed_out,
             **stats,
             "runs": suite_results,
             "collection_id": collection_id,
