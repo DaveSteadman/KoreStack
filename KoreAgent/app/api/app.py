@@ -86,6 +86,7 @@ from input_layer.routes_status import register_status_routes
 from input_layer.routes_queue import register_queue_routes
 from input_layer.server_static import register_static_routes
 from llm_client import call_llm_chat
+from llm_client import call_system_one
 from llm_client import get_active_host
 from llm_client import get_active_model
 from llm_client import get_active_system_one_model
@@ -323,6 +324,8 @@ register_work_packet_routes(
     call_llm_chat=call_llm_chat,
     get_active_model=get_active_model,
     get_active_num_ctx=get_active_num_ctx,
+    call_system_one=call_system_one,
+    get_active_system_one_model=get_active_system_one_model,
 )
 
 
