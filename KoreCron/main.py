@@ -386,8 +386,10 @@ def _run(definition: dict, *, run_date: date | None = None) -> None:
         _update_run_status(definition, detail="Running in the CronPrompt worker.")
     try:
         if definition.get("kind") == "test_run":
-            _update_run_status(definition, detail="Queuing the full KoreTest suite.")
-            _http("POST", f"{_service_url('koretest')}/api/runs/queue", {"suite": "all"})
+            _update_run_status(definition, detail="Starting the KoreTest2 incremental session.")
+            started = _http("POST", f"{_service_url('koretest2')}/api/sessions")
+            if not started.get("started"):
+                raise RuntimeError(str(started.get("detail") or "KoreTest2 session is already running."))
         else:
             _update_run_status(definition, detail="Preparing the scheduled conversation.")
             conversation    = _fresh_conversation(definition)

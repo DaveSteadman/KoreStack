@@ -62,7 +62,9 @@
               <dl class="ollama-details">
                 <div><dt>Loaded model</dt><dd data-ollama-field="loaded-model">{{ ollama.loaded_models | join(', ') if ollama.loaded_models else 'No model loaded' }}</dd></div>
                 <div><dt>Configured model</dt><dd data-ollama-field="configured-model">{{ ollama.configured_model or 'Not available' }}</dd></div>
-                <div><dt>Backend</dt><dd data-ollama-field="backend">{{ ollama.backend or 'ollama' }}</dd></div>
+                <div><dt>System One model</dt><dd data-ollama-field="system-one-model">{{ ollama.system_one_model or 'Not available' }}</dd></div>
+                <div><dt>System One stats</dt><dd data-ollama-field="system-one-stats">{{ ollama.system_one_stats or 'Not available' }}</dd></div>
+                <div><dt>Backend</dt><dd data-ollama-field="backend">{{ ollama.backend or 'ollama' }}{{ ' v' ~ ollama.version if ollama.version else '' }}</dd></div>
                 <div><dt>Host</dt><dd data-ollama-field="host">{{ ollama.host }}</dd></div>
                 <div><dt>Context</dt><dd data-ollama-field="num-ctx">{{ ollama.num_ctx if ollama.num_ctx is not none else 'Not available' }}</dd></div>
                 <div><dt>Max output</dt><dd data-ollama-field="max-predict">{{ ollama.max_predict if ollama.max_predict is not none else 'Not available' }}</dd></div>
@@ -75,6 +77,27 @@
                 <button class="kcui-btn ollama-action ollama-action--stop" type="button" data-ollama-action="stop">Stop Ollama</button>
                 <span class="ollama-notice" data-ollama-field="notice" aria-live="polite"></span>
               </div>
+            </div>
+          </section>
+        </div>
+
+        <div class="kcui-workspace__region stack-region">
+          <section class="panel kcui-panel koretest2-panel" data-koretest2-panel>
+            <div class="koretest2-header kcui-panel-header">
+              <div>
+                <p class="eyebrow">KoreTest2</p>
+                <p>Incremental, build-keyed prompt-test coverage.</p>
+              </div>
+              <span class="kcui-tag kcui-tag--dim" data-koretest2-field="state">Loading</span>
+            </div>
+            <div class="kcui-panel-body koretest2-body">
+              <dl class="koretest2-details">
+                <div><dt>Build</dt><dd data-koretest2-field="build">Not available</dd></div>
+                <div><dt>Passed</dt><dd data-koretest2-field="passed">—</dd></div>
+                <div><dt>Failed</dt><dd data-koretest2-field="failed">—</dd></div>
+                <div><dt>Pending</dt><dd data-koretest2-field="pending">—</dd></div>
+              </dl>
+              <a class="kcui-tag kcui-tag--accent" href="{{ koretest2_url }}" data-koretest2-link>Open results grid</a>
             </div>
           </section>
         </div>

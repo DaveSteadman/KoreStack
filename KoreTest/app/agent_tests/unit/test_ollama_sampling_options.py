@@ -68,7 +68,12 @@ class OllamaSamplingOptionsTests(unittest.TestCase):
     def test_defaults_set_preserves_sampling_options(self) -> None:
         llm_client_ollama.configure_ollama_sampling_options(0.3, True, 101, True)
         context = SimpleNamespace(
-            config = SimpleNamespace(resolved_model="model", num_ctx=4096, max_predict=512),
+            config = SimpleNamespace(
+                resolved_model   = "chat-model",
+                system_one_model = "clef:27b",
+                num_ctx          = 4096,
+                max_predict      = 512,
+            ),
             output = lambda *_args: None,
         )
 
@@ -81,6 +86,8 @@ class OllamaSamplingOptionsTests(unittest.TestCase):
             saved = json.loads(defaults_path.read_text(encoding="utf-8"))
 
         self.assertEqual(saved["temperature"], 0.3)
+        self.assertEqual(saved["model"], "chat-model")
+        self.assertEqual(saved["system_one_model"], "clef:27b")
         self.assertTrue(saved["temperature_enabled"])
         self.assertEqual(saved["seed"], 101)
         self.assertTrue(saved["seed_enabled"])

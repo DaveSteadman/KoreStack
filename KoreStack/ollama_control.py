@@ -70,6 +70,35 @@ def _sampling_summary(sampling: dict[str, Any]) -> str:
     return ", ".join(f"{key}={value}" for key, value in sorted(sampling.items()))
 
 
+def _same_model(name: str, wanted: str) -> bool:
+    name, wanted = name.strip().lower(), wanted.strip().lower()
+    return name == wanted or name == f"{wanted}:latest" or wanted == f"{name}:latest"
+
+
+def _format_bytes(value: Any) -> str:
+    if not isinstance(value, (int, float)) or value <= 0:
+        return ""
+    return f"{value / (1024 ** 3):.1f} GB"
+
+
+def _system_one_stats(row: dict[str, Any] | None, model: str) -> str:
+    if not model:
+        return "Not configured"
+    if row is None:
+        return "Not loaded"
+    details = row.get("details") if isinstance(row.get("details"), dict) else {}
+    size, vram = row.get("size"), row.get("size_vram")
+    parts = [_format_bytes(size) and f"size {_format_bytes(size)}"]
+    if isinstance(size, (int, float)) and size > 0 and isinstance(vram, (int, float)):
+        parts.append(f"GPU {round(100 * vram / size)}%")
+    if row.get("context_length"):
+        parts.append(f"ctx {row['context_length']}")
+    parts.append(str(details.get("parameter_size") or ""))
+    parts.append(str(details.get("quantization_level") or ""))
+    parts.append(f"expires {row['expires_at']}" if row.get("expires_at") else "")
+    return ", ".join(part for part in parts if part) or "Loaded"
+
+
 # ====================================================================================================
 # MARK: OLLAMA LIFECYCLE (PUBLIC)
 # ====================================================================================================
@@ -89,11 +118,19 @@ class OllamaControl:
         backend   = str(agent.get("backend") or "ollama").strip().lower()
         api_state = _read_json(_ollama_api_url(host, "/api/ps")) if backend == "ollama" else None
         rows      = api_state.get("models", []) if isinstance(api_state, dict) else []
+        version_state = _read_json(_ollama_api_url(host, "/api/version")) if backend == "ollama" else None
+        version       = str((version_state or {}).get("version") or "").strip()
         loaded_models = [
             str(row.get("name") or "").strip()
             for row in rows
             if isinstance(row, dict) and str(row.get("name") or "").strip()
         ]
+        system_one_model = str(agent.get("system_one_model") or "").strip()
+        system_one_row   = next(
+            (row for row in rows if isinstance(row, dict) and system_one_model
+             and _same_model(str(row.get("name") or row.get("model") or ""), system_one_model)),
+            None,
+        )
         with self._lock:
             owned_running    = self._proc is not None and self._proc.poll() is None
             owned_pid        = self._proc.pid if owned_running and self._proc is not None else None
@@ -111,8 +148,12 @@ class OllamaControl:
             "returncode":       owned_returncode,
             "host":             host,
             "backend":          backend,
+            "version":          version,
             "configured_model": str(agent.get("model") or "").strip(),
             "loaded_models":    loaded_models,
+            "system_one_model": system_one_model,
+            "system_one_loaded": system_one_row is not None,
+            "system_one_stats": _system_one_stats(system_one_row, system_one_model),
             "num_ctx":          agent.get("num_ctx"),
             "max_predict":      agent.get("max_predict"),
             "sampling":         sampling,

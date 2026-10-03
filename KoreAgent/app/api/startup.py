@@ -72,6 +72,7 @@ def _monitor_llm_dependency(
     shutdown: threading.Event,
     get_active_host,
     get_active_model,
+    get_active_system_one_model,
     is_ollama_running,
     list_ollama_models,
 ) -> None:
@@ -82,7 +83,8 @@ def _monitor_llm_dependency(
     while not shutdown.is_set():
         checked_at = datetime.now().isoformat(timespec="seconds")
         host       = get_active_host()
-        model      = get_active_model()
+        model            = get_active_model()
+        system_one_model = get_active_system_one_model()
 
         try:
             if not is_ollama_running(host):
@@ -90,6 +92,8 @@ def _monitor_llm_dependency(
             models = list_ollama_models(host, start_if_needed=False)
             if model and model not in models:
                 raise RuntimeError(f"Configured model '{model}' is not available at {host}")
+            if system_one_model and system_one_model not in models:
+                raise RuntimeError(f"Configured System One model '{system_one_model}' is not available at {host}")
         except Exception as exc:
             consecutive_failures += 1
             update_startup_state(
@@ -107,7 +111,7 @@ def _monitor_llm_dependency(
             update_startup_state(
                 dependencies = {"llm": {
                     "status":               "ready",
-                    "detail":               f"{model} on {host}",
+                    "detail":               f"chat={model}; system_one={system_one_model} on {host}",
                     "last_checked_at":      checked_at,
                     "last_ready_at":        last_ready_at,
                     "consecutive_failures": 0,
@@ -197,6 +201,7 @@ def run_api_mode(
             "shutdown":           shutdown,
             "get_active_host":    llm_client.get_active_host,
             "get_active_model":   llm_client.get_active_model,
+            "get_active_system_one_model": llm_client.get_active_system_one_model,
             "is_ollama_running":  llm_client.is_ollama_running,
             "list_ollama_models": llm_client.list_ollama_models,
         },

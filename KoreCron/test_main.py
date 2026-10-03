@@ -90,11 +90,11 @@ class ScheduledTestRunTests(unittest.TestCase):
         with self.assertRaises(Exception):
             main._test_run_definition({"time": "30"})
 
-    def test_test_run_queues_the_full_koretest_suite(self) -> None:
-        with patch.object(main, "_service_url", return_value="http://test"), patch.object(main, "_http") as http:
+    def test_test_run_starts_a_koretest2_session(self) -> None:
+        with patch.object(main, "_service_url", return_value="http://test"), patch.object(main, "_http", return_value={"started": True}) as http:
             main._run({"kind": "test_run", "id": "test_run:09:30"})
 
-        http.assert_called_once_with("POST", "http://test/api/runs/queue", {"suite": "all"})
+        http.assert_called_once_with("POST", "http://test/api/sessions")
 
     def test_test_runs_are_stored_separately_from_cronprompts(self) -> None:
         with TemporaryDirectory() as temp_dir:

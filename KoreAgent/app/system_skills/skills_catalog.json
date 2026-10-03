@@ -52,6 +52,14 @@
       "catalog_file": "SystemInfo/skill_catalog.json"
     },
     {
+      "skill_name": "System One Decision Skill",
+      "purpose": "Use the separately loaded Ollama System One model for structured decisions over text, JSON, or optional base64 images. This is a decision interface, not a chat model: provide named typed questions and use its probabilities or scores to supp",
+      "functions": [
+        "system_one_decide(state: str | dict | list[object], questions: dict, images: list[str] = None)"
+      ],
+      "catalog_file": "SystemOne/skill_catalog.json"
+    },
+    {
       "skill_name": "Tool Selection",
       "purpose": "",
       "functions": [

@@ -20,6 +20,7 @@
 # - ensure_ollama_running: Ensures ollama running for this module.
 # - recover_ollama_runtime: Recovers ollama runtime for this module.
 # - list_ollama_models: Lists ollama models for this module.
+# - preload_ollama_model: Loads ollama model for this module.
 # - get_ollama_ps_rows: Returns ollama ps rows for this module.
 # - _get_ollama_ps_rows_local: Implements the  get ollama ps rows local operation for this module.
 # - _get_ollama_ps_rows_remote: Implements the  get ollama ps rows remote operation for this module.
@@ -301,6 +302,55 @@ def list_ollama_models(host: str | None = None, *, start_if_needed: bool = False
     body   = _core._request_json(url=f"{host.rstrip('/')}/api/tags", timeout=10.0)
     models = body.get("models", [])
     return [entry.get("model", "") for entry in models if entry.get("model")]
+
+
+# ----------------------------------------------------------------------------------------------------
+def preload_ollama_model(
+    model_name: str,
+    host: str | None = None,
+    num_ctx: int | None = None,
+    timeout: int | None = None,
+) -> None:
+    """Load an Ollama model without generating text and keep it resident.
+
+    Ollama accepts a model-only generate request as a preload. Keeping the
+    request non-streaming makes startup wait until the runner is ready.
+    """
+    model_name = model_name.strip()
+    if not model_name:
+        return
+
+    host = host or _core.get_active_host()
+    ensure_ollama_running(host=host, start_if_needed=False)
+    _core.log_to_session(f"[Ollama preload] {model_name}")
+
+    payload: dict = {
+        "model":      model_name,
+        "stream":     False,
+        "keep_alive": _KEEP_ALIVE_FOREVER,
+    }
+    requested_num_ctx = num_ctx if _per_request_context_enabled() else None
+    options = get_ollama_request_options(requested_num_ctx)
+    if options:
+        payload["options"] = options
+
+    effective_timeout = timeout if timeout is not None else _core.get_llm_timeout()
+    try:
+        _core._request_json(
+            url     = f"{host.rstrip('/')}/api/generate",
+            method  = "POST",
+            payload = payload,
+            timeout = effective_timeout,
+        )
+    except urllib.error.HTTPError as error:
+        error_body = error.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"Ollama preload HTTP error {error.code}: {error_body}") from error
+    except urllib.error.URLError as error:
+        raise RuntimeError(f"Unable to reach Ollama at {host}: {error.reason}") from error
+    except TimeoutError as error:
+        raise RuntimeError(f"Ollama preload timed out after {effective_timeout}s") from error
+    except json.JSONDecodeError as error:
+        raise RuntimeError("Ollama preload returned a non-JSON response") from error
 
 
 # ====================================================================================================

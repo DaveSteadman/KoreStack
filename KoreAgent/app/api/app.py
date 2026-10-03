@@ -88,6 +88,7 @@ from input_layer.server_static import register_static_routes
 from llm_client import call_llm_chat
 from llm_client import get_active_host
 from llm_client import get_active_model
+from llm_client import get_active_system_one_model
 from llm_client import get_active_max_predict
 from llm_client import get_active_num_ctx
 from llm_client import get_ollama_offload_mode
@@ -184,6 +185,7 @@ def _get_agent_ui_bootstrap() -> dict:
         "runtime": {
             "host":         get_active_host(),
             "model":        get_active_model(),
+            "system_one_model": get_active_system_one_model(),
             "num_ctx":      get_active_num_ctx(),
             "max_predict":  get_active_max_predict(),
             "sampling":     get_ollama_sampling_config(),
@@ -207,6 +209,7 @@ register_status_routes(
     app,
     get_active_host=get_active_host,
     get_active_model=get_active_model,
+    get_active_system_one_model=get_active_system_one_model,
     get_active_num_ctx=get_active_num_ctx,
     get_active_max_predict=get_active_max_predict,
     get_ollama_sampling_config=get_ollama_sampling_config,

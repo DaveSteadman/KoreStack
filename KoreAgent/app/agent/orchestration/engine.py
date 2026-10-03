@@ -231,6 +231,7 @@ class OrchestratorConfig:
     skills_payload: dict
     skills_catalog_path: Path | None = None
     catalog_mtime: float = 0.0
+    system_one_model: str = "clef:27b"
 
 
 # ====================================================================================================

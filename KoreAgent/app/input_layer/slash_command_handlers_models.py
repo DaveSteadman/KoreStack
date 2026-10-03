@@ -7,10 +7,14 @@ from typing import Callable
 
 from llm_client import configure_host
 from llm_client import get_active_host
+from llm_client import get_active_system_one_model
 from llm_client import get_ollama_ps_rows
+from llm_client import format_running_model_report
 from llm_client import is_explicit_model_name
 from llm_client import list_ollama_models
+from llm_client import preload_system_one_model
 from llm_client import register_session_config
+from llm_client import register_system_one_model
 from llm_client import resolve_model_name
 from llm_client import set_ollama_offload_mode
 from llm_client import stop_model
@@ -46,13 +50,14 @@ def _cmd_llmserverconfig(arg: str, ctx: SlashCommandContext) -> None:
     """Inspect or update the active Ollama model and request parameters."""
     if not arg:
         ctx.output(
-            f"Model: {ctx.config.resolved_model}  |  ctx: {ctx.config.num_ctx:,}  |  "
-            f"max_predict: {ctx.config.max_predict:,}  |  Ollama: {get_active_host()}",
+            f"Chat model: {ctx.config.resolved_model}  |  System One: {ctx.config.system_one_model}  |  "
+            f"ctx: {ctx.config.num_ctx:,}  |  max_predict: {ctx.config.max_predict:,}  |  Ollama: {get_active_host()}",
             "info",
         )
         ctx.output(
             "Usage: /llmserverconfig model list | model <name> | ctx <n> | "
-            "max_predict <n> | max_predict | cpugpu <forcecpu|forcegpu|autogpu>",
+            "max_predict <n> | cpugpu <forcecpu|forcegpu|autogpu> | "
+            "systemone [status|model list|model <name>]",
             "dim",
         )
         return
@@ -85,6 +90,10 @@ def _cmd_llmserverconfig(arg: str, ctx: SlashCommandContext) -> None:
 
     if first == "cpugpu":
         _configure_ollama_offload(rest.lower(), ctx)
+        return
+
+    if first == "systemone":
+        _cmd_systemone(rest, ctx)
         return
 
     if first == "model":
@@ -122,6 +131,63 @@ def _cmd_llmserverconfig(arg: str, ctx: SlashCommandContext) -> None:
         return
 
     ctx.output(f"Unknown model configuration command: {first}", "error")
+
+
+def _cmd_systemone(arg: str, ctx: SlashCommandContext) -> None:
+    """Inspect or select the independent Ollama System One decision model."""
+    parts = arg.strip().split(None, 1) if arg.strip() else []
+    first = parts[0].lower() if parts else "status"
+    rest  = parts[1].strip() if len(parts) > 1 else ""
+
+    if first == "status":
+        configured = get_active_system_one_model()
+        ctx.output(f"System One model: {configured}  |  Ollama: {get_active_host()}", "info")
+        try:
+            ctx.output(format_running_model_report(configured), "item")
+        except Exception as exc:
+            ctx.output(f"System One runtime status unavailable: {exc}", "dim")
+        return
+
+    if first != "model":
+        ctx.output("Usage: /systemone [status|model list|model <name>]", "dim")
+        return
+
+    try:
+        available = list_ollama_models(start_if_needed=False)
+    except Exception as exc:
+        ctx.output(f"Error listing models: {exc}", "error")
+        return
+
+    if not rest or rest.lower() == "list":
+        ctx.output(f"{len(available)} model(s) installed on: {get_active_host()}", "info")
+        for model_name in available:
+            marker = ">" if model_name == ctx.config.system_one_model else " "
+            ctx.output(f"  {marker} {model_name}", "item")
+        return
+
+    resolved = resolve_model_name(rest, available) if available else None
+    if resolved is None:
+        if is_explicit_model_name(rest):
+            resolved = rest.strip()
+            ctx.output(f"Model '{resolved}' not listed; using it as an explicit override.", "dim")
+        elif not available:
+            ctx.output("No models available on the Ollama server.", "error")
+            return
+        else:
+            ctx.output(f"Model '{rest}' not found. Available: {', '.join(available)}", "error")
+            return
+
+    old_model                   = ctx.config.system_one_model
+    ctx.config.system_one_model = resolved
+    register_system_one_model(resolved)
+    try:
+        preload_system_one_model(resolved)
+    except Exception as exc:
+        ctx.config.system_one_model = old_model
+        register_system_one_model(old_model)
+        ctx.output(f"System One model switched: {old_model} -> {resolved}; warmup failed: {exc}", "error")
+        return
+    ctx.output(f"System One model switched and loaded: {old_model} -> {resolved}", "success")
 
 
 def _cmd_stopmodel(arg: str, ctx: SlashCommandContext) -> None:
@@ -181,13 +247,15 @@ def register_model_slash_commands(registry: dict[str, Callable], descriptions: d
         {
             "/llmserver":       _cmd_llmserver,
             "/llmserverconfig": _cmd_llmserverconfig,
+            "/systemone":       _cmd_systemone,
             "/stopmodel":       _cmd_stopmodel,
         }
     )
     descriptions.update(
         {
             "/llmserver":       "<host>  Switch Ollama server",
-            "/llmserverconfig": "model list | model <name> | ctx <n> | max_predict <n> | cpugpu <forcecpu|forcegpu|autogpu>",
+            "/llmserverconfig": "model list | model <name> | ctx <n> | max_predict <n> | cpugpu <forcecpu|forcegpu|autogpu> | systemone ...",
+            "/systemone":       "[status | model list | model <name>]  Configure the System One decision model",
             "/stopmodel":       "[name]  Unload a running Ollama model from VRAM",
         }
     )

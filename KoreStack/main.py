@@ -183,6 +183,9 @@ SERVICE_META: dict[str, dict[str, object]] = {
     "korecron": {
         "label": "KoreCron", "cwd": SUITE_ROOT / "KoreCron", "script": "main.py", "url_suffix": "/ui", "health_suffix": "/status", "description": "Scheduled prompt sets that execute sequentially in named KoreChats.",
     },
+    "koretest2": {
+        "label": "KoreTest2", "cwd": SUITE_ROOT / "KoreTest2", "script": "main.py", "url_suffix": "/ui", "health_suffix": "/status", "description": "Incremental build-keyed prompt testing, results, and analysis logs.",
+    },
 }
 
 SERVICE_ICON_KEYS: dict[str, str] = {
@@ -195,6 +198,7 @@ SERVICE_ICON_KEYS: dict[str, str] = {
     "koreliveweb":       "koreliveweb",
     "koretest":          "koretest",
     "korecron":          "korecron",
+    "koretest2":         "koretest",
 }
 
 
@@ -285,6 +289,7 @@ def get_stack_paths(config: dict) -> dict[str, Path]:
         "koredocs":         _dc("koredocs",  "koredocs"),
         "koretest":         _dc("koretest",  "koretest"),
         "korecron":         _dc("korecron",  "korecron"),
+        "koretest2":        _dc("koretest2", "koretest2"),
         "docs_data":        _du("docs_data", "KoreFiles"),
     }
 
@@ -407,7 +412,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--services",
         default="all",
-        help="Comma-separated service list. Valid values: all, korechat, koreagent, koredatagateway, koredocs, korecode, korecomms, koreliveweb, koretest, korecron.",
+        help="Comma-separated service list. Valid values: all, korechat, koreagent, koredatagateway, koredocs, korecode, korecomms, koreliveweb, koretest, korecron, koretest2.",
     )
     parser.add_argument("--host", default=None, help="KoreStack landing page bind address.")
     parser.add_argument("--ui-port", type=int, default=None, help="KoreStack landing page port.")
@@ -428,6 +433,7 @@ def resolve_services(raw: str, services: dict[str, ServiceSpec]) -> list[Service
             "korecomms",
             "koreliveweb",
             "koretest",
+            "koretest2",
             "korecron",
         )
         return [services[key] for key in preferred_order if key in services]
@@ -851,6 +857,7 @@ def _bootstrap_data_dirs(stack_paths: dict[str, Path]) -> None:
         stack_paths["koretest"] / "test_prompts",
         stack_paths["koretest"] / "test_results",
         stack_paths["korecron"],
+        stack_paths["koretest2"],
         dc / "chatsessions",
         dc / "chatsessions" / "named",
         # User data

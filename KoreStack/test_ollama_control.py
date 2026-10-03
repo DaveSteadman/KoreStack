@@ -22,9 +22,10 @@ class OllamaControlTests(unittest.TestCase):
         }
         api_state = {"models": [{"name": "nemotron-3.5-lightning:latest"}]}
 
-        with patch("KoreStack.ollama_control._read_json", side_effect=[agent, api_state]):
+        with patch("KoreStack.ollama_control._read_json", side_effect=[agent, api_state, {"version": "0.35.1"}]):
             state = control.snapshot()
 
+        self.assertEqual(state["version"], "0.35.1")
         self.assertTrue(state["server_running"])
         self.assertTrue(state["server_ready"])
         self.assertTrue(state["controllable"])

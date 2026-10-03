@@ -19,12 +19,14 @@ from llm_client_core import configure_host
 from llm_client_core import get_active_host
 from llm_client_core import get_active_max_predict
 from llm_client_core import get_active_model
+from llm_client_core import get_active_system_one_model
 from llm_client_core import get_active_num_ctx
 from llm_client_core import get_llm_timeout
 from llm_client_core import is_explicit_model_name
 from llm_client_core import log_to_session
 from llm_client_core import register_llm_call_logger
 from llm_client_core import register_session_config
+from llm_client_core import register_system_one_model
 from llm_client_core import resolve_model_name
 from llm_client_core import set_llm_timeout
 from llm_client_ollama import DEFAULT_OLLAMAHOST
@@ -42,9 +44,13 @@ from llm_client_ollama import get_ollama_sampling_config
 from llm_client_ollama import get_running_model_row
 from llm_client_ollama import is_ollama_running
 from llm_client_ollama import list_ollama_models
+from llm_client_ollama import preload_ollama_model
 from llm_client_ollama import recover_ollama_runtime
 from llm_client_ollama import set_ollama_offload_mode
 from llm_client_ollama import stop_model
+from llm_client_system_one import SystemOneCallResult
+from llm_client_system_one import call_system_one
+from llm_client_system_one import preload_system_one_model
 
 
 __all__ = [
@@ -56,6 +62,7 @@ __all__ = [
     "configure_ollama_sampling_options",
     "get_active_host",
     "get_active_model",
+    "get_active_system_one_model",
     "get_active_num_ctx",
     "get_active_max_predict",
     "get_ollama_offload_mode",
@@ -66,6 +73,7 @@ __all__ = [
     "register_llm_call_logger",
     "log_to_session",
     "register_session_config",
+    "register_system_one_model",
     "set_ollama_offload_mode",
     "resolve_model_name",
     "is_explicit_model_name",
@@ -79,8 +87,12 @@ __all__ = [
     "is_llm_running",
     "ensure_ollama_running",
     "list_ollama_models",
+    "preload_ollama_model",
     "format_running_model_report",
     "call_llm_chat",
+    "SystemOneCallResult",
+    "call_system_one",
+    "preload_system_one_model",
 ]
 
 

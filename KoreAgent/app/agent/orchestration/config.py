@@ -17,12 +17,13 @@ from pathlib import Path
 @dataclass
 class OrchestratorConfig:
     resolved_model: str
-    num_ctx: int
-    max_predict: int
+    num_ctx:        int
+    max_predict:    int
     max_iterations: int
     skills_payload: dict
     skills_catalog_path: Path | None = None
     catalog_mtime: float = 0.0
+    system_one_model: str = "clef:27b"
 
 
 __all__ = ["OrchestratorConfig"]

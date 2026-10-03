@@ -120,6 +120,7 @@ const $ = id => document.getElementById(id);
 const dom = {
     ollamaHost:       () => $("ollama-host"),
     ollamaModel:      () => $("ollama-model"),
+    systemOneModel:   () => $("system-one-model"),
     ollamaCtx:        () => $("ollama-ctx"),
     log:              () => $("log-body"),
     pendingPromptsPanel: () => $("panel-pending-prompts"),
@@ -147,13 +148,15 @@ function _applyBootstrapRuntimeState() {
     const runtime = AGENT_BOOTSTRAP.runtime;
     if (!runtime || typeof runtime !== "object") return;
 
-    const host    = String(runtime.host || "");
-    const model   = String(runtime.model || "");
-    const numCtx  = Number(runtime.num_ctx) || 0;
+    const host           = String(runtime.host || "");
+    const model          = String(runtime.model || "");
+    const systemOneModel = String(runtime.system_one_model || "");
+    const numCtx         = Number(runtime.num_ctx) || 0;
 
-    dom.ollamaHost().textContent  = host || "Ollama";
-    dom.ollamaModel().textContent = model;
-    dom.ollamaCtx().textContent   = numCtx
+    dom.ollamaHost().textContent     = host || "Ollama";
+    dom.ollamaModel().textContent    = model;
+    dom.systemOneModel().textContent = systemOneModel;
+    dom.ollamaCtx().textContent      = numCtx
         ? `${numCtx.toLocaleString()} ctx`
         : "";
     _activeNumCtx = numCtx;
@@ -488,14 +491,16 @@ async function refreshOllamaStatus() {
         return;
     }
     // Update text BEFORE dot so the two are never mismatched.
-    const rows      = data.rows || [];
-    const first     = rows[0] || {};
-    const modelName = (first.name || "").trim() || data.model || "";
-    const ctxVal    = data.num_ctx ? data.num_ctx.toLocaleString() + " ctx" : "";
+    const rows           = data.rows || [];
+    const first          = rows[0] || {};
+    const modelName      = String(data.model || "").trim() || (first.name || "").trim();
+    const systemOneModel = String(data.system_one_model || "");
+    const ctxVal         = data.num_ctx ? data.num_ctx.toLocaleString() + " ctx" : "";
     _activeNumCtx = Number(data.num_ctx) || 0;
-    dom.ollamaHost().textContent  = data.host || "Ollama";
-    dom.ollamaModel().textContent = modelName;
-    dom.ollamaCtx().textContent   = ctxVal;
+    dom.ollamaHost().textContent     = data.host || "Ollama";
+    dom.ollamaModel().textContent    = modelName;
+    dom.systemOneModel().textContent = systemOneModel;
+    dom.ollamaCtx().textContent      = ctxVal;
     _applyRuntimeSettings(data);
     _ollamaReachable = true;
 }
@@ -1575,9 +1580,10 @@ function init() {
         brandLabel:     "KoreAgent",
         brandIcon:      "koreagent",
         chips: [
-            { label: "Host",    value: "", valueId: "ollama-host",  tone: "info" },
-            { label: "Model",   value: "", valueId: "ollama-model", tone: "info" },
-            { label: "Context", value: "", valueId: "ollama-ctx",   tone: "info" },
+            { label: "Host",     value: "", valueId: "ollama-host",      tone: "info" },
+            { label: "Model",    value: "", valueId: "ollama-model",     tone: "info" },
+            { label: "Decision", value: "", valueId: "system-one-model", tone: "info" },
+            { label: "Context",  value: "", valueId: "ollama-ctx",       tone: "info" },
         ],
         actions: [
             { kind: "tag", id: "btn-work-packet",    action: "work-packet",    label: "work packet",   className: "kcui-tag kcui-tag--dim kcui-tag--work-packet" },

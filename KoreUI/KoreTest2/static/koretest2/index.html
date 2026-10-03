@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>KoreTest2</title>
+  <link rel="icon" href="/ui-elements/assets/icons/favicon.ico">
+  <link rel="stylesheet" href="/ui-elements/assets/css/chrome.css">
+  <link rel="stylesheet" href="/ui-elements/assets/css/workspace.css">
+  <script src="/suite-config.js"></script>
+  <style>
+    .koretest2-grid { border-collapse: collapse; width: 100%; }
+    .koretest2-grid th, .koretest2-grid td { border-bottom: 1px solid var(--kcui-border, #334155); padding: .45rem; text-align: center; }
+    .koretest2-grid th:first-child, .koretest2-grid td:first-child { text-align: left; white-space: nowrap; }
+    .koretest2-grid-wrap { overflow-x: auto; }
+    .koretest2-dot { min-width: 2rem; padding-inline: .4rem; }
+  </style>
+</head>
+<body class="kcui-shell-bg">
+  <div id="topbar"></div>
+  <div id="app-bar"></div>
+  <main class="kcui-main">
+    <div class="kcui-page">
+      <section class="kcui-panel panel">
+        <div class="kcui-panel-header">
+          <p class="eyebrow">KoreTest2</p>
+          <p>One run per test and build. A scheduled session uses at most one hour.</p>
+        </div>
+        <div class="kcui-panel-body">
+          <p id="koretest2-status" class="kcui-tag kcui-tag--dim">Loading results…</p>
+          <div id="koretest2-grid" class="koretest2-grid-wrap">Loading…</div>
+        </div>
+      </section>
+    </div>
+  </main>
+  <script type="module" src="/static/koretest2/app.js"></script>
+</body>
+</html>

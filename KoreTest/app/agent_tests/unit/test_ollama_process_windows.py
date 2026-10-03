@@ -58,6 +58,19 @@ class OllamaProcessWindowsTests(unittest.TestCase):
         ensure_running.assert_not_called()
         request_json.assert_not_called()
 
+    def test_preload_loads_the_configured_model_without_generation(self) -> None:
+        with patch.object(llm_client_ollama._core, "get_active_host", return_value="http://localhost:11434"), \
+             patch.object(llm_client_ollama, "ensure_ollama_running") as ensure_running, \
+             patch.object(llm_client_ollama._core, "_request_json", return_value={}) as request_json, \
+             patch.object(llm_client_ollama._core, "log_to_session"):
+            llm_client_ollama.preload_ollama_model("gemma4:26b", num_ctx=8192)
+
+        ensure_running.assert_called_once_with(host="http://localhost:11434", start_if_needed=False)
+        payload = request_json.call_args.kwargs["payload"]
+        self.assertEqual(payload["model"], "gemma4:26b")
+        self.assertFalse(payload["stream"])
+        self.assertEqual(payload["keep_alive"], -1)
+
     def test_prompt_call_does_not_autostart_by_default(self) -> None:
         with patch.object(llm_client_ollama._core, "get_active_host", return_value="http://localhost:11434"), \
              patch.object(llm_client_ollama, "ensure_ollama_running") as ensure_running, \

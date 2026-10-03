@@ -1,0 +1,17 @@
+{
+  "skill_name": "System One Decision Skill",
+  "relative_path": "app/system_skills/SystemOne/skill.md",
+  "purpose": "Use the separately loaded Ollama System One model for structured decisions over text, JSON, or optional base64 images. This is a decision interface, not a chat model: provide named typed questions and use its probabilities or scores to support the normal chat model's response.",
+  "module": "KoreAgent/app/system_skills/SystemOne/system_one_skill.py",
+  "functions": [
+    "system_one_decide(state: str | dict | list[object], questions: dict, images: list[str] = None)"
+  ],
+  "param_descriptions": {
+    "system_one_decide": {
+      "state": "Text, JSON object, or JSON array that the decision model should judge.",
+      "questions": "One to 64 named question objects. Every question requires `type` (`choice`, `noul`, or `score`) and `instructions`. `choice` needs a criteria object, `score` needs a lowest-to-highest criteria array, and `noul` may optionally describe true and false criteria.",
+      "images": "Optional base64-encoded PNG, JPEG, or WebP images. Do not pass URLs or data URLs."
+    }
+  },
+  "is_system_skill": true
+}

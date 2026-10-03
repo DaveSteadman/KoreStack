@@ -416,7 +416,7 @@ function renderTestRuns(items) {
     const lastRun = document.createElement('div');
     const deleteAction = document.createElement('button');
     row.className = 'cronprompt-test-run-row';
-    summary.textContent = 'KoreTest full suite';
+    summary.textContent = 'KoreTest2 daily session';
     schedule.className = 'kcui-tag kcui-tag--warning';
     schedule.textContent = item.schedule_text;
     lastRun.textContent = `Last run: ${item.last_run || 'Never'}`;
@@ -579,7 +579,7 @@ createButton.addEventListener('click', () => {
 });
 createTestRunButton.addEventListener('click', async () => {
   const values = await kcuiForm('New Test Run', {
-    message: 'Schedule the complete KoreTest suite on the KoreCron timetable.',
+    message: 'Schedule KoreTest2 to run pending tests for up to one hour each day.',
     confirmLabel: 'Schedule test run',
     fields: [{
       name:     'time',
@@ -597,7 +597,7 @@ createTestRunButton.addEventListener('click', async () => {
     });
     const result = await response.json();
     if (!response.ok) throw new Error(result.detail || 'Unable to schedule test run.');
-    setTag(formStatus, `Scheduled full test run at ${result.schedule.time}`, 'success');
+    setTag(formStatus, `Scheduled KoreTest2 session at ${result.schedule.time}`, 'success');
     await load();
   } catch (error) {
     setTag(formStatus, error.message || 'Unable to schedule test run.', 'danger');

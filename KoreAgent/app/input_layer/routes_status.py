@@ -27,6 +27,7 @@ def register_status_routes(
     *,
     get_active_host,
     get_active_model,
+    get_active_system_one_model,
     get_active_num_ctx,
     get_active_max_predict,
     get_ollama_sampling_config,
@@ -66,6 +67,7 @@ def register_status_routes(
             "dependencies":   dependencies,
             "host":           get_active_host(),
             "model":          get_active_model(),
+            "system_one_model": get_active_system_one_model(),
             "num_ctx":        get_active_num_ctx(),
             "max_predict":    get_active_max_predict(),
             "llm_running":    is_llm_running(),
@@ -86,6 +88,7 @@ def register_status_routes(
         return {
             "host":         get_active_host(),
             "model":        get_active_model(),
+            "system_one_model": get_active_system_one_model(),
             "num_ctx":      get_active_num_ctx(),
             "max_predict":  get_active_max_predict(),
             "llm_running":  is_llm_running(),

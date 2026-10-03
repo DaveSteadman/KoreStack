@@ -228,7 +228,7 @@ LOG_DIR              = get_logs_dir()
 DEFAULTS_FILE        = get_agent_config_file()
 
 # Keys accepted from the runtime defaults file - must match the argparse dest names exactly.
-_DEFAULTS_KEYS = {"model", "ctx", "max_predict", "agentport", "llmhost"}
+_DEFAULTS_KEYS = {"model", "system_one_model", "ctx", "max_predict", "agentport", "llmhost"}
 
 # All valid keys in the runtime defaults file - superset of _DEFAULTS_KEYS.
 # Keys here that are not in _DEFAULTS_KEYS are read directly by skills or slash commands
@@ -282,6 +282,13 @@ def parse_main_args() -> argparse.Namespace:
         type=str,
         default="20b",
         help="Ollama model alias or tag to use (e.g. '20b', 'llama3:8b').",
+    )
+    parser.add_argument(
+        "--system-one-model",
+        dest="system_one_model",
+        type=str,
+        default="clef:27b",
+        help="Ollama System One decision model to keep loaded beside the chat model.",
     )
     parser.add_argument(
         "--ctx",
@@ -364,6 +371,7 @@ def _run(args, logger, log_path) -> None:
 
     config = OrchestratorConfig(
         resolved_model      = args.model,
+        system_one_model    = args.system_one_model,
         num_ctx             = args.ctx,
         max_predict         = args.max_predict,
         max_iterations      = MAX_ITERATIONS,
@@ -373,6 +381,7 @@ def _run(args, logger, log_path) -> None:
     )
 
     llm_client.register_session_config(config.resolved_model, args.ctx, args.max_predict)
+    llm_client.register_system_one_model(config.system_one_model)
 
     _host_ok      = False
     _model_ok     = False
@@ -386,6 +395,7 @@ def _run(args, logger, log_path) -> None:
     logger.log(f"{_backend_label}:   {llm_client.get_active_host()} (pending)")
     logger.log(f"Requested model: {args.model}")
     logger.log(f"Resolved model:  {config.resolved_model} (pending)")
+    logger.log(f"System One:      {config.system_one_model} (pending)")
     print(f"Control data:    {_cd} {_tick if _cd.exists() else _cross}", flush=True)
     print(f"User data:       {_ud} {_tick if _ud.exists() else _cross}", flush=True)
 
@@ -415,7 +425,8 @@ def _run(args, logger, log_path) -> None:
     )
 
     def _background_startup() -> None:
-        resolved_model = config.resolved_model
+        resolved_model   = config.resolved_model
+        system_one_model = config.system_one_model
         dep_statuses   = {
             "llm":      "pending",
             "korechat": "pending",
@@ -435,17 +446,27 @@ def _run(args, logger, log_path) -> None:
             config.resolved_model = resolved_model
             llm_client.register_session_config(resolved_model, args.ctx)
             _model_ok = resolved_model in _known
+            _system_one_ok = system_one_model in _known
+            if _model_ok:
+                llm_client.preload_ollama_model(resolved_model, num_ctx=args.ctx)
+            if _system_one_ok:
+                llm_client.preload_system_one_model(system_one_model)
             update_startup_state(
                 dependencies = {
                     "llm": {
-                        "status": "ready" if _host_ok and _model_ok else "degraded",
-                        "detail": f"{resolved_model} on {llm_client.get_active_host()}",
+                        "status": "ready" if _host_ok and _model_ok and _system_one_ok else "degraded",
+                        "detail": f"chat={resolved_model}; system_one={system_one_model} on {llm_client.get_active_host()}",
                     }
                 }
             )
-            dep_statuses["llm"] = "ready" if _host_ok and _model_ok else "degraded"
+            dep_statuses["llm"] = "ready" if _host_ok and _model_ok and _system_one_ok else "degraded"
             logger.log(f"{_backend_label}:   {llm_client.get_active_host()} {_tick if _host_ok else _cross}")
             logger.log(f"Resolved model:  {resolved_model} {_tick if _model_ok else _cross}")
+            logger.log(f"System One:      {system_one_model} {_tick if _system_one_ok else _cross}")
+            if _model_ok:
+                logger.log(f"Preloaded model:  {resolved_model} {_tick}")
+            if _system_one_ok:
+                logger.log(f"Preloaded System One model: {system_one_model} {_tick}")
         except RuntimeError as exc:
             dep_statuses["llm"] = "degraded"
             update_startup_state(

@@ -323,6 +323,7 @@
 - recover_ollama_runtime
 - _retry_after_runtime_failure
 - list_ollama_models
+- preload_ollama_model
 - get_ollama_ps_rows
 - _get_ollama_ps_rows_local
 - _get_ollama_ps_rows_remote
@@ -2216,7 +2217,7 @@
 - test_deletes_all_name_matches_before_creating
 - test_deletes_stale_external_id_even_if_chat_was_renamed
 - test_test_run_definition_accepts_only_a_daily_time
-- test_test_run_queues_the_full_koretest_suite
+- test_test_run_starts_a_koretest2_session
 - test_test_runs_are_stored_separately_from_cronprompts
 - test_records_a_failed_attempt_with_its_error
 - test_marks_a_failed_run_command_as_a_failed_cron_prompt
@@ -3746,6 +3747,7 @@
 - _service_row_view
 - _path_rows
 - _dashboard_bootstrap
+- koretest2_summary
 - _template_env
 - html_page
 - endpoints_page
@@ -4042,6 +4044,7 @@
 - test_client_does_not_start_an_unavailable_server
 - test_status_probe_prefers_http_api
 - test_passive_model_listing_does_not_autostart
+- test_preload_loads_the_configured_model_without_generation
 - test_prompt_call_does_not_autostart_by_default
 - test_native_chat_retries_after_runner_crash
 - test_runtime_recovery_does_not_restart_a_stopped_local_daemon
@@ -4166,4 +4169,41 @@
 - test_newsletter_replies_create_one_conversation_per_sender
 - test_first_reply_seeds_original_newsletter_once
 - append_message
+
+### KoreTest2/main.py
+- _config
+- status
+- start_session
+- grid
+- run_detail
+- ui
+
+### KoreTest2/service.py
+- build_id
+- _db
+- cases
+- _bootstrap_legacy_cases
+- _agent_base
+- _request
+- _invoke
+- _evaluate
+- _evaluate_assert
+- _log_path
+- _write_log
+- _run_case
+- start_session
+- grid
+- summary
+- run_detail
+- worker
+
+### KoreTest2/test_service.py
+- test_discovers_one_case_per_file
+- test_result_is_keyed_by_test_and_build
+- test_grid_keeps_build_history
+- test_builtin_assertions_match_legacy_cases
+- test_summary_counts_the_current_build
+- test_bootstrap_copies_legacy_exchange_to_an_individual_case
+
+### KoreTest2/__init__.py
 

@@ -79,11 +79,12 @@ _DEFAULT_LLM_TIMEOUT: int = _default_llm_timeout_from_env()   # seconds; updated
 # --llmhost / LLMHOST.
 _active_host: str = DEFAULT_OLLAMAHOST
 
-# Active session model and context window - set once at startup via register_session_config().
-# Skills use get_active_model() / get_active_num_ctx() instead of accepting these as parameters.
-_active_model:       str = ""
-_active_num_ctx:     int = 131072
-_active_max_predict: int = 1024
+# Active chat and System One model state. The models are independently configurable
+# because Ollama can keep both resident at the same time.
+_active_model:            str = ""
+_active_system_one_model: str = "clef:27b"
+_active_num_ctx:          int = 131072
+_active_max_predict:      int = 1024
 _active_state_lock: threading.RLock = threading.RLock()
 
 # Cache of last successful server health-check time per host.
@@ -164,6 +165,22 @@ def get_active_model() -> str:
     """Return the currently active session model name."""
     with _active_state_lock:
         return _active_model
+
+
+def register_system_one_model(model: str) -> None:
+    """Register the System One decision model for future decision calls."""
+    normalized = str(model or "").strip()
+    if not normalized:
+        raise ValueError("System One model name cannot be blank")
+    global _active_system_one_model
+    with _active_state_lock:
+        _active_system_one_model = normalized
+
+
+def get_active_system_one_model() -> str:
+    """Return the configured Ollama System One decision model name."""
+    with _active_state_lock:
+        return _active_system_one_model
 
 
 def get_active_num_ctx() -> int:

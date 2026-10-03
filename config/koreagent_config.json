@@ -1,5 +1,6 @@
 {
   "model": "nemotron-3.5-lightning:latest",
+  "system_one_model": "clef:latest",
   "ctx": 100000,
   "max_predict": 4096,
   "llmhost": "http://localhost:11434",

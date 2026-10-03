@@ -27,6 +27,7 @@
     "korecode":        { "port": 29611, "enabled": true },
     "koreliveweb":     { "port": 29613, "enabled": true },
     "koretest":        { "port": 29614, "enabled": true },
-    "korecron":        { "port": 29615, "enabled": true }
+    "korecron":        { "port": 29615, "enabled": true },
+    "koretest2":       { "port": 29616, "enabled": true }
   }
 }

@@ -339,10 +339,11 @@ def _cmd_defaults(arg: str, ctx: SlashCommandContext) -> None:
     if sub == "set":
         existing = _load()
         new_cfg = {
-            "model":       ctx.config.resolved_model,
-            "ctx":         ctx.config.num_ctx,
-            "max_predict": getattr(ctx.config, "max_predict", 1024),
-            "llmhost":     get_active_host(),
+            "model":            ctx.config.resolved_model,
+            "system_one_model": getattr(ctx.config, "system_one_model", "clef:27b"),
+            "ctx":              ctx.config.num_ctx,
+            "max_predict":      getattr(ctx.config, "max_predict", 1024),
+            "llmhost":          get_active_host(),
             **get_ollama_sampling_config(),
         }
         for key in ("agentport", "DataRootFolder", "ControlDataFolder", "UserDataFolder"):
@@ -520,7 +521,7 @@ _DESCRIPTIONS: dict[str, str] = {
     "/sandbox": "<on|off>  Enable/disable Python code execution sandbox (import whitelist + blocked builtins)",
     "/tools": "[all | active]  Inspect the full local catalog or active tool set",
     "/deletelogs": "<days>  Delete log date-folders older than N days (e.g. /deletelogs 10)",
-    "/defaults": "Show current Agent configuration and file path; /defaults set saves current model/ctx/host to the file",
+    "/defaults": "Show current Agent configuration and file path; /defaults set saves chat model, System One model, ctx, and host",
     "/comms":    "delivery bind [--chat <name>] --connection <name> [--to <email>|--to-list <name>] --subject <text> [--startpaused]; connection pause|resume|publishprevious [--chat <name>]",
     "/workspace": "clear  Reset this chat's history, Working Data, and active tool selection",
 }

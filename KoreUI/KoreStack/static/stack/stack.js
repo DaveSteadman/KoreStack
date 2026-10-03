@@ -10,6 +10,7 @@ const SERVICE_KEY_BY_SLUG = {
   koreliveweb: 'koreliveweb',
   koretest: 'koretest',
   korecron: 'korecron',
+  koretest2: 'koretest2',
 };
 
 const STATE_COLOR = {
@@ -184,7 +185,9 @@ function applyOllamaState(next) {
 
   updateOllamaField('loaded-model', loadedModels.join(', '), 'No model loaded');
   updateOllamaField('configured-model', ollamaState.configured_model);
-  updateOllamaField('backend', ollamaState.backend, 'ollama');
+  updateOllamaField('system-one-model', ollamaState.system_one_model);
+  updateOllamaField('system-one-stats', ollamaState.system_one_stats);
+  updateOllamaField('backend', `${ollamaState.backend || 'ollama'}${ollamaState.version ? ` v${ollamaState.version}` : ''}`);
   updateOllamaField('host', ollamaState.host);
   updateOllamaField('num-ctx', ollamaState.num_ctx);
   updateOllamaField('max-predict', ollamaState.max_predict);
@@ -197,6 +200,27 @@ function applyOllamaState(next) {
   const controllable = Boolean(ollamaState.controllable);
   if (start) start.disabled = !controllable || Boolean(ollamaState.server_running);
   if (stop) stop.disabled = !controllable || !ollamaState.server_running;
+}
+
+function applyKoreTest2Summary(summary) {
+  const panel = document.querySelector('[data-koretest2-panel]');
+  if (!panel) return;
+  const state = panel.querySelector('[data-koretest2-field="state"]');
+  if (!summary?.available) {
+    setText(state, 'Unavailable');
+    state?.classList.remove('kcui-tag--success', 'kcui-tag--warning');
+    state?.classList.add('kcui-tag--danger');
+    setText(panel.querySelector('[data-koretest2-field="build"]'), summary?.detail || 'KoreTest2 unavailable');
+    return;
+  }
+  setText(state, summary.active ? 'Session running' : 'Ready');
+  state?.classList.remove('kcui-tag--danger');
+  state?.classList.toggle('kcui-tag--warning', Boolean(summary.active));
+  state?.classList.toggle('kcui-tag--success', !summary.active);
+  setText(panel.querySelector('[data-koretest2-field="build"]'), summary.build_id || 'Unknown build');
+  setText(panel.querySelector('[data-koretest2-field="passed"]'), `${summary.passed} / ${summary.total}`);
+  setText(panel.querySelector('[data-koretest2-field="failed"]'), String(summary.failed));
+  setText(panel.querySelector('[data-koretest2-field="pending"]'), String(summary.pending));
 }
 
 function showOllamaNotice(message, tone = '') {
@@ -219,12 +243,23 @@ async function refreshOllama() {
   }
 }
 
+async function refreshKoreTest2() {
+  try {
+    const response = await fetch('/api/koretest2/summary', { cache: 'no-store' });
+    if (!response.ok) return;
+    applyKoreTest2Summary(await response.json());
+  } catch (_error) {
+    applyKoreTest2Summary({ available: false, detail: 'KoreTest2 status could not be loaded.' });
+  }
+}
+
 async function refresh() {
   try {
     const response = await fetch('/status', { cache: 'no-store' });
     if (!response.ok) return;
     applySnapshot(await response.json());
     await refreshOllama();
+    await refreshKoreTest2();
   } catch (_error) {
     console.warn('[KoreStack] Status refresh failed.');
   }
@@ -334,6 +369,7 @@ async function initChrome() {
 wireControls();
 applySnapshot(current);
 applyOllamaState(ollamaState);
+void refreshKoreTest2();
 startRefreshLoop();
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') {
