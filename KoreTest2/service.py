@@ -106,6 +106,7 @@ def _request(method: str, path: str, payload: dict | None = None, timeout: int =
 def _invoke(prompts: list[str], timeout_seconds: int, events: list[dict]) -> dict:
     session_id = f"koretest2_{uuid.uuid4().hex}"
     run_ids, response_texts = [], []
+    tokens, tps_values = 0, []
     deadline = time.monotonic() + timeout_seconds
     try:
         for prompt in prompts:
@@ -126,6 +127,13 @@ def _invoke(prompts: list[str], timeout_seconds: int, events: list[dict]) -> dic
                     events.append({"at": datetime.now(timezone.utc).isoformat(), "event": event})
                     if event.get("type") == "response":
                         response_text = str(event.get("response") or "")
+                        tokens += int(event.get("tokens") or 0)
+                        try:
+                            tps = float(event.get("tps") or 0)
+                        except (TypeError, ValueError):
+                            tps = 0.0
+                        if tps > 0:
+                            tps_values.append(tps)
                     if event.get("type") == "error":
                         error = str(event.get("message") or "Agent error")
                     if event.get("type") == "done":
@@ -138,7 +146,10 @@ def _invoke(prompts: list[str], timeout_seconds: int, events: list[dict]) -> dic
             _request("DELETE", f"/api/sessions/{urllib.parse.quote(session_id, safe='')}")
         except Exception:
             pass
-    return {"response": response_texts[-1], "responses": response_texts, "run_ids": run_ids}
+    return {
+        "response": response_texts[-1], "responses": response_texts, "run_ids": run_ids,
+        "tokens": tokens, "tps": round(sum(tps_values) / len(tps_values), 1) if tps_values else 0.0,
+    }
 
 
 def _evaluate(case: dict, output: str, responses: list[str] | None = None) -> tuple[bool, dict]:
@@ -410,19 +421,43 @@ def grid() -> dict:
     }
 
 
-def summary() -> dict:
+def summary(build: str | None = None) -> dict:
     result = grid()
+    selected = build or result["build_id"]
     statuses = [
-        test["results"].get(result["build_id"], {}).get("status", "pending")
+        test["results"].get(selected, {}).get("status", "pending")
         for test in result["tests"]
     ]
+    conn = _db()
+    try:
+        rows = conn.execute("SELECT summary_json, elapsed_seconds FROM results WHERE build_id=?", (selected,)).fetchall()
+    finally:
+        conn.close()
+    tokens, tps_values, elapsed = 0, [], 0.0
+    for row in rows:
+        data = json.loads(row["summary_json"] or "{}")
+        tokens += int(data.get("tokens") or 0)
+        if float(data.get("tps") or 0) > 0:
+            tps_values.append(float(data["tps"]))
+        elapsed += float(row["elapsed_seconds"] or 0)
+    passed = statuses.count("passed")
+    finished = len(statuses) - statuses.count("pending")
     return {
-        "build_id": result["build_id"],
+        "build_id": selected,
         "active":   result["active"],
         "total":    len(statuses),
-        "passed":   statuses.count("passed"),
+        "passed":   passed,
         "failed":   statuses.count("failed") + statuses.count("error") + statuses.count("timeout"),
         "pending":  statuses.count("pending"),
+        "pass_rate": round(100 * passed / finished) if finished else 0,
+        "tokens":   tokens,
+        "avg_tps":  round(sum(tps_values) / len(tps_values), 1) if tps_values else 0.0,
+        "elapsed_seconds": round(elapsed),
+        "line": (
+            f"[ALL TESTS COMPLETE] elapsed={int(elapsed // 3600)}h {int(elapsed % 3600 // 60)}m {int(elapsed % 60)}s "
+            f"pass rate={round(100 * passed / finished) if finished else 0}% ({passed}/{finished}) "
+            f"tokens={tokens:,} avg tok/s={round(sum(tps_values) / len(tps_values), 1) if tps_values else 0.0}"
+        ),
     }
 
 

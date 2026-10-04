@@ -2,6 +2,8 @@ import { initServiceShell } from '/ui-elements/assets/js/serviceShell.js';
 
 const gridNode   = document.querySelector('#koretest2-grid');
 const statusNode = document.querySelector('#koretest2-status');
+const runNode    = document.querySelector('#koretest2-run');
+const summaryNode = document.querySelector('#koretest2-summary');
 
 function statusTone(status) {
   if (status === 'passed') return 'success';
@@ -67,10 +69,26 @@ function renderGrid(payload) {
   gridNode.replaceChildren(table);
 }
 
+runNode.addEventListener('click', async () => {
+  runNode.disabled = true;
+  try {
+    const response = await fetch('/api/sessions', { method: 'POST' });
+    if (!response.ok) throw new Error(`Unable to start run (${response.status})`);
+    await refresh();
+  } catch (error) {
+    statusNode.textContent = error.message;
+    statusNode.className = 'kcui-tag kcui-tag--danger';
+  } finally {
+    runNode.disabled = false;
+  }
+});
+
 async function refresh() {
   const response = await fetch('/api/grid', { cache: 'no-store' });
   if (!response.ok) throw new Error(`Unable to load results (${response.status})`);
   renderGrid(await response.json());
+  const status = await (await fetch('/status', { cache: 'no-store' })).json();
+  summaryNode.textContent = status.line || '';
 }
 
 initServiceShell({

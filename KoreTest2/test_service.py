@@ -101,7 +101,7 @@ class KoreTest2ServiceTests(unittest.TestCase):
             ],
         }):
             result = service.summary()
-        self.assertEqual(result, {"build_id": "Build 1", "active": True, "total": 3, "passed": 1, "failed": 1, "pending": 1})
+        self.assertEqual({k: result[k] for k in ("build_id", "active", "total", "passed", "failed", "pending")}, {"build_id": "Build 1", "active": True, "total": 3, "passed": 1, "failed": 1, "pending": 1})
 
     def test_bootstrap_copies_legacy_exchange_to_an_individual_case(self) -> None:
         with TemporaryDirectory() as temp_dir:
