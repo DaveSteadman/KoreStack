@@ -1,0 +1,12 @@
+{
+  "title": "fetch_httpbin_html_heading",
+  "prompt": "fetch https://httpbin.org/html and tell me the main heading on the page",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "contains|Herman Melville",
+      "judge|answers"
+    ]
+  }
+}

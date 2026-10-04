@@ -1,0 +1,13 @@
+{
+  "title": "kd_status",
+  "prompt": "check the KoreData status and tell me which services are available",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "not_contains|not configured",
+      "judge|answers",
+      "judge|not_error"
+    ]
+  }
+}

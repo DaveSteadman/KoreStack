@@ -10,6 +10,7 @@ import urllib.parse
 import urllib.request
 import uuid
 from datetime import datetime, timezone
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
 from KoreCommon.suite_paths import get_suite_datacontrol_dir
@@ -50,15 +51,14 @@ def _db() -> sqlite3.Connection:
 def cases() -> list[dict]:
     CASES_DIR.mkdir(parents=True, exist_ok=True)
     found = []
-    for path in sorted(CASES_DIR.glob("*.md")):
-        text = path.read_text(encoding="utf-8")
-        match = re.search(r"```json\s*(\{.*?\})\s*```", text, re.DOTALL)
-        if not match:
-            continue
-        spec = json.loads(match.group(1))
-        prompt = text[:match.start()].strip()
-        if prompt.startswith("#"):
-            prompt = "\n".join(prompt.splitlines()[1:]).strip()
+    for path in sorted(CASES_DIR.glob("*.json")):
+        spec = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(spec, dict):
+            raise ValueError(f"{path.name} must contain a JSON object")
+        spec = dict(spec)
+        prompt = str(spec.pop("prompt", "") or "").strip()
+        if not prompt and isinstance(spec.get("prompts"), list):
+            prompt = "\n\n".join(str(item) for item in spec["prompts"])
         found.append({"id": path.stem, "prompt": prompt, "spec": spec, "path": path})
     return found
 
@@ -66,7 +66,7 @@ def cases() -> list[dict]:
 def _bootstrap_legacy_cases() -> None:
     """Create one KoreTest2 case file for each legacy named exchange once."""
     CASES_DIR.mkdir(parents=True, exist_ok=True)
-    if any(CASES_DIR.glob("*.md")):
+    if any(CASES_DIR.glob("*.json")):
         return
     for source in sorted(LEGACY_CASES_DIR.glob("*.json")):
         content = json.loads(source.read_text(encoding="utf-8"))
@@ -83,15 +83,12 @@ def _bootstrap_legacy_cases() -> None:
             test_id = f"Kore{prefix}_{index:03d}"
             title = str(exchange.get("exchange") or test_id)
             spec = {
+                "title": title,
                 "prompts": prompts,
                 "timeout_seconds": DEFAULT_TIMEOUT_SECONDS,
                 "evaluation": {"type": "python", "assertions": assertions},
             }
-            body = "\n\n".join(f"Turn {turn}:\n\n{prompt}" for turn, prompt in enumerate(prompts, start=1))
-            (CASES_DIR / f"{test_id}.md").write_text(
-                f"# {test_id} — {title}\n\n{body}\n\n```json\n{json.dumps(spec, indent=2)}\n```\n",
-                encoding="utf-8",
-            )
+            (CASES_DIR / f"{test_id}.json").write_text(json.dumps(spec, indent=2) + "\n", encoding="utf-8")
 
 
 def _agent_base() -> str:
@@ -154,22 +151,113 @@ def _evaluate(case: dict, output: str, responses: list[str] | None = None) -> tu
             return bool(verdict), {"type": "python", "evidence": str(verdict)}
         assertions = evaluation.get("assertions")
         if isinstance(assertions, list):
+            prompts = list(case["spec"].get("prompts") or [case["prompt"]])
             checked = [
-                {"assert": str(assertion), "passed": _evaluate_assert(str(assertion), response)}
-                for assertion, response in zip(assertions, responses or [])
+                _check_turn(assertion, response, prompt)
+                for assertion, response, prompt in zip(assertions, responses or [], prompts)
             ]
             return len(checked) == len(assertions) and all(item["passed"] for item in checked), {
                 "type": "python",
                 "assertions": checked,
             }
-        assertion = str(evaluation.get("assert") or "not_empty")
-        passed = _evaluate_assert(assertion, output)
-        return passed, {"type": "python", "assert": assertion}
+        asserts = evaluation.get("asserts")
+        if asserts is None:
+            asserts = [evaluation.get("assert") or "not_empty"]
+        if not isinstance(asserts, list) or not asserts:
+            raise ValueError("evaluation 'asserts' must be a non-empty list")
+        prompt = list(case["spec"].get("prompts") or [case["prompt"]])[-1]
+        checked = [_check_assert(str(assertion), output, prompt) for assertion in asserts]
+        return all(item["passed"] for item in checked), {"type": "python", "asserts": checked}
     raise ValueError("evaluation must be a Python evaluator with module/function or a supported builtin assert")
+
+
+# ====================================================================================================
+# MARK: JUDGE ASSERTIONS
+# ====================================================================================================
+JUDGE_DEFAULT_PROBABILITY = 0.7
+JUDGE_QUESTIONS = {
+    "answers": "Does the response directly and sensibly answer the prompt?",
+    "not_error": "Is the response free of error messages, tracebacks, and statements that the task could not be completed?",
+}
+
+
+def _judge(question: str, prompt: str, response: str) -> float:
+    """Ask the System One decision model (via KoreAgent's work-packet route) for P(question is true)."""
+    packet = {
+        "route": "system_one",
+        "state": {"prompt": prompt, "response": response},
+        "questions": {"verdict": {"type": "noul", "instructions": question}},
+    }
+    result = _request("POST", "/api/work-packet", {"json_text": json.dumps(packet)}, timeout=300)
+    answers = json.loads(result["response"])
+    return float(answers["verdict"]["noul"])
+
+
+def _check_turn(assertion: str | list, response: str, prompt: str) -> dict:
+    """One turn's check: a single assertion string, or a list that must all pass."""
+    if not isinstance(assertion, list):
+        return _check_assert(str(assertion), response, prompt)
+    checks = [_check_assert(str(item), response, prompt) for item in assertion]
+    return {"assert": [str(item) for item in assertion], "passed": all(check["passed"] for check in checks), "checks": checks}
+
+
+def _check_assert(expression: str, output: str, prompt: str) -> dict:
+    operation, _, value = expression.partition("|")
+    if operation != "judge":
+        return {"assert": expression, "passed": _evaluate_assert(expression, output)}
+    name, _, threshold_text = value.partition("||")
+    name = name.strip()
+    question = JUDGE_QUESTIONS.get(name, name)
+    if not question:
+        raise ValueError("judge requires a question or one of: " + ", ".join(JUDGE_QUESTIONS))
+    threshold = float(threshold_text) if threshold_text.strip() else JUDGE_DEFAULT_PROBABILITY
+    probability = _judge(question, prompt, output)
+    return {"assert": expression, "passed": probability >= threshold, "probability": probability, "threshold": threshold}
+
+
+_NUMBER_RE = re.compile(
+    r"(?<![\w.])[-+]?(?:\d{1,3}(?:[,_]\d{3})+|\d+)(?:\.\d+)?(?:[eE][-+]?\d+)?"
+    r"|(?<![\w.])[-+]?\.\d+(?:[eE][-+]?\d+)?"
+)
+
+
+def extract_numbers(text: str) -> list[Decimal]:
+    """Return every number in text, accepting 1,234 / 1_234 / 1.5e3 / 12.0 style formats."""
+    numbers = []
+    for token in _NUMBER_RE.findall(text):
+        try:
+            numbers.append(Decimal(token.replace(",", "").replace("_", "")))
+        except InvalidOperation:
+            continue
+    return numbers
+
+
+def numbers_equal(left: object, right: object, tolerance: object = 0) -> bool:
+    """Compare two numbers given in any supported format, within an absolute tolerance."""
+    try:
+        a = left if isinstance(left, Decimal) else extract_numbers(str(left))[0]
+        b = right if isinstance(right, Decimal) else extract_numbers(str(right))[0]
+        return abs(a - b) <= Decimal(str(tolerance))
+    except (IndexError, InvalidOperation):
+        return False
+
+
+def _evaluate_numeric(operation: str, value: str, output: str) -> bool:
+    """number_equals|expected[||tolerance] or all_numbers|a||b||c — any number in the output may match."""
+    parts = [part.strip() for part in value.split("||") if part.strip()]
+    if not parts:
+        raise ValueError(f"{operation} requires one or more numbers")
+    found = extract_numbers(output)
+    if operation == "number_equals":
+        tolerance = parts[1] if len(parts) > 1 else 0
+        return any(numbers_equal(number, parts[0], tolerance) for number in found)
+    return all(any(numbers_equal(number, expected) for number in found) for expected in parts)
 
 
 def _evaluate_assert(expression: str, output: str) -> bool:
     operation, _, value = expression.partition("|")
+    if operation in {"number_equals", "all_numbers"}:
+        return _evaluate_numeric(operation, value, output)
     normalized_output = output.casefold()
     normalized_value = value.casefold()
     if operation == "contains":

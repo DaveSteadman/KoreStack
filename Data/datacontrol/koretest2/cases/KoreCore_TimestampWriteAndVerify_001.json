@@ -1,0 +1,15 @@
+{
+  "title": "timestamp_write_and_verify",
+  "prompts": [
+    "write the current date and time to datauser/test_prompts/timestamp.txt",
+    "read datauser/test_prompts/timestamp.txt and confirm it contains a year starting with 20"
+  ],
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "assertions": [
+      "contains|timestamp.txt",
+      "contains|20"
+    ]
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "title": "kg_propose_multi",
+  "prompt": "Read this passage and store all concept relationships you can identify in KoreGraph. For each connection added, tell me what you stored.\n\nPassage: 'The Nvidia H100 is a GPU designed for AI training. OpenAI uses H100 GPUs to train its large language models. The H100 is manufactured by Nvidia and is built on the Hopper architecture.'",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "not_contains|unable to connect",
+      "judge|answers",
+      "judge|not_error"
+    ]
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "prompt": "Calculate the first 10 Fibonacci numbers starting from 0, 1 and list them.",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "assert": "all_numbers|0||1||13||21||34"
+  }
+}

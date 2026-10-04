@@ -1,0 +1,13 @@
+{
+  "title": "kd_multihop_ai",
+  "prompt": "find the latest AI stories in KoreData from the last 6 hours, pick the most interesting one, and give me a detailed summary of that article",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "none_contains|not configured||no results were found",
+      "judge|answers",
+      "judge|not_error"
+    ]
+  }
+}

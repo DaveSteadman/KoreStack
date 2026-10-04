@@ -1,0 +1,11 @@
+{
+  "title": "codeexec_pascals_triangle_8",
+  "prompt": "generate the first 8 rows of Pascal's triangle",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "contains|1 7 21 35 35 21 7 1"
+    ]
+  }
+}

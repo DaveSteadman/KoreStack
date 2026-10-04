@@ -1,0 +1,11 @@
+{
+  "title": "kd_no_results",
+  "prompt": "search KoreData for xyzqqqabcnomatch99 and tell me what you get",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "contains|No results were found"
+    ]
+  }
+}

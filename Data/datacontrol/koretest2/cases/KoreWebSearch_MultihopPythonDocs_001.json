@@ -1,0 +1,12 @@
+{
+  "title": "multihop_python_docs",
+  "prompt": "search for the Python documentation home page, then fetch it, then tell me whether it mentions tutorial and library reference",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "all_contains|tutorial||library",
+      "judge|answers"
+    ]
+  }
+}

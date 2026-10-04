@@ -1,0 +1,11 @@
+{
+  "title": "codeexec_collatz_27",
+  "prompt": "print the first 15 terms of the Collatz sequence starting at 27",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "all_contains|27||82||41||124||62"
+    ]
+  }
+}

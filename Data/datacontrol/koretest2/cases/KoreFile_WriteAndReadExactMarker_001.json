@@ -1,0 +1,15 @@
+{
+  "title": "file_write_and_read_exact_marker",
+  "prompts": [
+    "write exactly this text to datauser/test_file_access/greeting.txt: HELLO_FILE_ACCESS_123",
+    "read datauser/test_file_access/greeting.txt and return only the contents"
+  ],
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "assertions": [
+      "contains|greeting.txt",
+      "contains|HELLO_FILE_ACCESS_123"
+    ]
+  }
+}

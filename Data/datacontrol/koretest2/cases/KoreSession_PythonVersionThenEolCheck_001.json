@@ -1,0 +1,21 @@
+{
+  "title": "ctx_python_version_then_eol_check",
+  "prompts": [
+    "Get the Python version currently installed on this system.",
+    "Using the Python version you just looked up, search the web to find when that specific Python version reaches end-of-life."
+  ],
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "assertions": [
+      [
+        "judge|answers",
+        "judge|not_error"
+      ],
+      [
+        "judge|answers",
+        "judge|not_error"
+      ]
+    ]
+  }
+}

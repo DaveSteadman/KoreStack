@@ -1,0 +1,23 @@
+{
+  "title": "koredocs_update_koredoc_with_frontmatter",
+  "prompts": [
+    "Using KoreDocs MCP: create a koredoc in folder /Tests/UpdateTests, filename frontmatter-test.koredoc, with content:\n---\ntitle: Original Title\ntags: test\n---\n\n# Original Title\n\nOriginal body text.",
+    "Using koredocs_file_update with that file's id, replace the content with:\n---\ntitle: Updated Title\ntags: test, updated\n---\n\n# Updated Title\n\nRevised body text with new information. Confirm the update was accepted.",
+    "Read the file back and confirm the title in the frontmatter is now 'Updated Title' and not 'Original Title'."
+  ],
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "assertions": [
+      [
+        "judge|answers",
+        "judge|not_error"
+      ],
+      [
+        "judge|answers",
+        "judge|not_error"
+      ],
+      "contains|Updated Title"
+    ]
+  }
+}

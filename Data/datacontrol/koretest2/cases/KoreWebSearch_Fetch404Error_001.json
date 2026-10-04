@@ -1,0 +1,12 @@
+{
+  "title": "fetch_404_error",
+  "prompt": "fetch the page at https://httpbin.org/status/404 and tell me what you get",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "regex|404|error",
+      "judge|answers"
+    ]
+  }
+}

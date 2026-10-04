@@ -1,0 +1,8 @@
+{
+  "prompt": "Generate a list of the first 20 prime numbers.",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "assert": "all_numbers|2||3||5||47||71"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "title": "kg_propose_technology",
+  "prompt": "Assess this technology passage and add all concept relationships to KoreGraph.\n\nPassage: 'Python is a high-level programming language created by Guido van Rossum. It is widely used for machine learning and data science. PyTorch is a machine learning framework developed by Meta that uses Python as its primary interface.'",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "not_contains|unable to connect",
+      "judge|answers",
+      "judge|not_error"
+    ]
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "title": "datetime_three_formats",
+  "prompt": "get the current date and time and give it to me in three formats: ISO 8601, UK date format (DD/MM/YYYY HH:MM), and a natural English sentence.",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "all_contains|T||/||:"
+    ]
+  }
+}

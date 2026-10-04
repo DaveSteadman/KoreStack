@@ -1,0 +1,11 @@
+{
+  "title": "sysinfo_markdown_table",
+  "prompt": "get the system info and present it as a markdown table with two columns: Property and Value. Include at least OS, Python version, total RAM, free RAM, and free disk space.",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "all_contains|Property||Value||Python"
+    ]
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "title": "codeexec_identity_matrix",
+  "prompt": "print a 5x5 identity matrix",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "all_contains|1 0 0 0 0||0 1 0 0 0||0 0 0 0 1"
+    ]
+  }
+}

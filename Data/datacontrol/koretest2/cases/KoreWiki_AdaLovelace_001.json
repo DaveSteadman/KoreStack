@@ -1,0 +1,12 @@
+{
+  "title": "wiki_ada_lovelace",
+  "prompt": "who is Ada Lovelace",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "all_contains|Ada Lovelace||Charles Babbage",
+      "judge|answers"
+    ]
+  }
+}

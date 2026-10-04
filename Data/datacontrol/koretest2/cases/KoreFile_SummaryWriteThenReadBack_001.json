@@ -1,0 +1,15 @@
+{
+  "title": "file_summary_write_then_read_back",
+  "prompts": [
+    "write exactly this text to datauser/test_file_access/summary.txt: SUMMARY_MARKER_2026",
+    "read datauser/test_file_access/summary.txt and confirm the marker"
+  ],
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "assertions": [
+      "contains|summary.txt",
+      "contains|SUMMARY_MARKER_2026"
+    ]
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "title": "csv_multiturn_generate_then_analyse",
+  "prompts": [
+    "use Python to create a CSV at datauser/test_spreadsheet/random_data.csv with 20 rows and columns ID, X, Y where X is random floats between 0 and 10 and Y = 2*X + noise (random noise between -1 and 1). Round to 2 decimal places.",
+    "now read that file and calculate the mean and standard deviation of X and Y columns, then report them"
+  ],
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "assertions": [
+      [
+        "judge|answers",
+        "judge|not_error"
+      ],
+      [
+        "judge|answers",
+        "judge|not_error"
+      ]
+    ]
+  }
+}

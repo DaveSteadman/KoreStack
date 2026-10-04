@@ -1,0 +1,15 @@
+{
+  "title": "smoke_file_roundtrip",
+  "prompts": [
+    "write exactly this text to datauser/test_prompts/smoke_marker.txt: SMOKE_MARKER_314159",
+    "read datauser/test_prompts/smoke_marker.txt and return only its contents"
+  ],
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "assertions": [
+      "contains|SMOKE_MARKER_314159",
+      "contains|SMOKE_MARKER_314159"
+    ]
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "title": "csv_fibonacci",
+  "prompt": "use Python to generate a CSV of the first 20 Fibonacci numbers. Columns: N, Fibonacci, LogFibonacci (log base 10, rounded to 4 decimal places). Show the result.",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "contains|Fibonacci"
+    ]
+  }
+}

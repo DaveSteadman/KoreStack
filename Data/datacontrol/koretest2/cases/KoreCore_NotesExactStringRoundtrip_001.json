@@ -1,0 +1,15 @@
+{
+  "title": "notes_exact_string_roundtrip",
+  "prompts": [
+    "write exactly this text to datauser/test_prompts/notes.txt: Framework self-check complete",
+    "read datauser/test_prompts/notes.txt and tell me verbatim what it contains"
+  ],
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "assertions": [
+      "contains|Framework self-check complete",
+      "contains|Framework self-check complete"
+    ]
+  }
+}

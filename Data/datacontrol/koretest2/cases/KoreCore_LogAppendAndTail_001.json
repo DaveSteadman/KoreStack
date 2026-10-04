@@ -1,0 +1,15 @@
+{
+  "title": "log_append_and_tail",
+  "prompts": [
+    "append the line 'default_prompts test: OK' to datauser/test_prompts/log.txt",
+    "read datauser/test_prompts/log.txt and tell me what the last line says"
+  ],
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "assertions": [
+      "contains|log.txt",
+      "contains|default_prompts test: OK"
+    ]
+  }
+}

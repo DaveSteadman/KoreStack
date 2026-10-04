@@ -1,0 +1,15 @@
+{
+  "title": "file_sysinfo_keyvalue",
+  "prompts": [
+    "write the system information to datauser/test_file_access/sysinfo.txt as key=value lines",
+    "read datauser/test_file_access/sysinfo.txt"
+  ],
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "assertions": [
+      "contains|sysinfo.txt",
+      "all_contains|os=||python_version="
+    ]
+  }
+}

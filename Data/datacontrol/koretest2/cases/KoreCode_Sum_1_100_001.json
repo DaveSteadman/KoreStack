@@ -1,0 +1,8 @@
+{
+  "prompt": "What is the sum of all integers from 1 to 100?",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "assert": "number_equals|5050"
+  }
+}

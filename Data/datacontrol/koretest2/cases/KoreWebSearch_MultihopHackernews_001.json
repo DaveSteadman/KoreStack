@@ -1,0 +1,13 @@
+{
+  "title": "multihop_hackernews",
+  "prompt": "search for the Hacker News front page URL, then get the links from it, then fetch the top story and summarise it",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "none_contains|search failed||timed out",
+      "judge|answers",
+      "judge|not_error"
+    ]
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "title": "ctx_file_read_then_transform",
+  "prompts": [
+    "Write exactly this text to datauser/test_prompts/session_transform.txt: mixed Case Marker. Then read it back.",
+    "Take the content of that file you just read and convert every character to uppercase. Do not read the file again."
+  ],
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "assertions": [
+      "contains|mixed Case Marker",
+      "contains|MIXED CASE MARKER"
+    ]
+  }
+}

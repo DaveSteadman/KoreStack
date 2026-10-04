@@ -1,0 +1,15 @@
+{
+  "title": "os_context_followup",
+  "prompts": [
+    "what operating system is this machine running?",
+    "given the OS you just reported, what is the typical default file system format used on that platform?"
+  ],
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "assertions": [
+      "regex|windows|linux|mac|darwin",
+      "regex|ntfs|ext4|apfs"
+    ]
+  }
+}

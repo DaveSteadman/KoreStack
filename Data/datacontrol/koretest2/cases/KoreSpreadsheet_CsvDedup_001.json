@@ -1,0 +1,12 @@
+{
+  "title": "csv_dedup",
+  "prompt": "find and remove duplicate rows from this CSV, keeping only the first occurrence, and show the deduplicated result:\nName,Score\nAlice,85\nBob,90\nAlice,85\nCarol,78\nBob,90\nDave,92",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "judge|answers",
+      "judge|not_error"
+    ]
+  }
+}

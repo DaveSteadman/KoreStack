@@ -1,0 +1,13 @@
+{
+  "title": "kd_get_article",
+  "prompt": "search KoreData reference for transformer architecture and fetch the full article text for the top result",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "none_contains|not configured||no results were found",
+      "judge|answers",
+      "judge|not_error"
+    ]
+  }
+}

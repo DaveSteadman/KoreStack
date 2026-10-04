@@ -1,0 +1,13 @@
+{
+  "title": "kd_search_nvidia",
+  "prompt": "search KoreData for Nvidia and summarise what you find",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "none_contains|not configured||no results were found",
+      "judge|answers",
+      "judge|not_error"
+    ]
+  }
+}

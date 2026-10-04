@@ -1,0 +1,12 @@
+{
+  "title": "csv_create_temperatures",
+  "prompt": "create a CSV file at datauser/test_spreadsheet/temperatures.csv with columns City, Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec. Add average monthly temperatures in Celsius for London, Paris, and Cairo.",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "judge|answers",
+      "judge|not_error"
+    ]
+  }
+}

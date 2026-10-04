@@ -1,0 +1,11 @@
+{
+  "title": "file_list_created_files",
+  "prompt": "list files under datauser/test_file_access",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "all_contains|greeting.txt||log.txt||sysinfo.txt||sysinfo.csv"
+    ]
+  }
+}

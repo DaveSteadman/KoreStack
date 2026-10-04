@@ -1,0 +1,17 @@
+{
+  "title": "file_append_and_tail_marker",
+  "prompts": [
+    "write exactly this text to datauser/test_file_access/log.txt: FIRST_LINE",
+    "append exactly this line to datauser/test_file_access/log.txt: SECOND_LINE",
+    "read datauser/test_file_access/log.txt and tell me the last line only"
+  ],
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "assertions": [
+      "contains|FIRST_LINE",
+      "contains|log.txt",
+      "contains|SECOND_LINE"
+    ]
+  }
+}

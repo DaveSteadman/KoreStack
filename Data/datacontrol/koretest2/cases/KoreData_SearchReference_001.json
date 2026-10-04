@@ -1,0 +1,13 @@
+{
+  "title": "kd_search_reference",
+  "prompt": "search KoreData reference for machine learning and tell me what articles are available",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "none_contains|not configured||no results were found",
+      "judge|answers",
+      "judge|not_error"
+    ]
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "title": "kg_review_and_propose",
+  "prompt": "Check what concepts are currently in KoreGraph by searching for 'Aircraft', then review this text and propose and store any connections that would extend the graph.\n\nText: 'The Eurofighter Typhoon is a multirole combat aircraft produced by a European consortium. It is operated by the Royal Air Force and uses two EJ200 engines.'",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "not_contains|unable to connect",
+      "judge|answers",
+      "judge|not_error"
+    ]
+  }
+}

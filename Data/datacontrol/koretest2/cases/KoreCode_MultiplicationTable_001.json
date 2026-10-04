@@ -1,0 +1,8 @@
+{
+  "prompt": "Print the multiplication table for 7 up to 12.",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "assert": "all_contains|7 x 1 = 7||7 x 6 = 42||7 x 12 = 84"
+  }
+}

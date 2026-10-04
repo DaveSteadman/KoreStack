@@ -1,0 +1,21 @@
+{
+  "title": "ctx_sysinfo_then_derived_question",
+  "prompts": [
+    "Get the current system info and report the total RAM in GB.",
+    "Based on the total RAM figure you just fetched, how many 512MB virtual machines could theoretically fit into that RAM? Use the number you already have - no need to fetch again."
+  ],
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "assertions": [
+      [
+        "judge|answers",
+        "judge|not_error"
+      ],
+      [
+        "judge|answers",
+        "judge|not_error"
+      ]
+    ]
+  }
+}

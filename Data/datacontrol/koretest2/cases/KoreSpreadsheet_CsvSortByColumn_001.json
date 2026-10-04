@@ -1,0 +1,12 @@
+{
+  "title": "csv_sort_by_column",
+  "prompt": "sort the following CSV by Revenue descending and show the result:\nMonth,Region,Revenue\nJan,North,12000\nJan,South,8000\nFeb,North,13500\nFeb,South,9200\nMar,North,11000\nMar,South,10400",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "judge|answers",
+      "judge|not_error"
+    ]
+  }
+}

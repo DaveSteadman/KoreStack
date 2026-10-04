@@ -1,0 +1,12 @@
+{
+  "title": "wiki_machine_learning",
+  "prompt": "what is machine learning",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "contains|artificial intelligence",
+      "judge|answers"
+    ]
+  }
+}

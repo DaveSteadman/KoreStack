@@ -1,0 +1,12 @@
+{
+  "title": "csv_prime_sieve",
+  "prompt": "use Python to generate a CSV of all prime numbers up to 200. Columns: Index, Prime. Save to datauser/test_spreadsheet/primes.csv and report how many primes there are.",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "judge|answers",
+      "judge|not_error"
+    ]
+  }
+}

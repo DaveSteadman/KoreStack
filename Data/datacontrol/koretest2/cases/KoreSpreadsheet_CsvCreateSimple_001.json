@@ -1,0 +1,12 @@
+{
+  "title": "csv_create_simple",
+  "prompt": "create a CSV file at datauser/test_spreadsheet/people.csv with columns Name, Age, City. Add 5 rows of made-up data.",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "judge|answers",
+      "judge|not_error"
+    ]
+  }
+}

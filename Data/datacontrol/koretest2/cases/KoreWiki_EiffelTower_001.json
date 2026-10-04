@@ -1,0 +1,12 @@
+{
+  "title": "wiki_eiffel_tower",
+  "prompt": "what is the Eiffel Tower",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "contains|Paris",
+      "judge|answers"
+    ]
+  }
+}

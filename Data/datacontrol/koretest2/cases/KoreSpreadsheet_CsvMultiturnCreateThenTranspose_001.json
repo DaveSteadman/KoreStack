@@ -1,0 +1,21 @@
+{
+  "title": "csv_multiturn_create_then_transpose",
+  "prompts": [
+    "create a CSV at datauser/test_spreadsheet/scores.csv with columns Student, Maths, Science, English, History - 5 students with scores out of 100",
+    "now transpose that file so subjects are rows and students are columns, save as datauser/test_spreadsheet/scores_transposed.csv"
+  ],
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "assertions": [
+      [
+        "judge|answers",
+        "judge|not_error"
+      ],
+      [
+        "judge|answers",
+        "judge|not_error"
+      ]
+    ]
+  }
+}

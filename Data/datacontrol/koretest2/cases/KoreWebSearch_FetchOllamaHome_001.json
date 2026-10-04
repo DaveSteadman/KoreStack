@@ -1,0 +1,12 @@
+{
+  "title": "fetch_ollama_home",
+  "prompt": "read the content at https://ollama.com and summarise what the product is in two sentences",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "contains|Ollama",
+      "judge|answers"
+    ]
+  }
+}

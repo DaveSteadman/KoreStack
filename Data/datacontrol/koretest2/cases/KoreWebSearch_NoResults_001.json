@@ -1,0 +1,12 @@
+{
+  "title": "search_no_results",
+  "prompt": "search for ajksdhakjsdhkajshd2025zxqppp and tell me what the search returns",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "contains|No results were found",
+      "judge|answers"
+    ]
+  }
+}

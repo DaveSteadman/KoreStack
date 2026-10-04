@@ -1,0 +1,11 @@
+{
+  "title": "status_report_multifield",
+  "prompt": "get the current date, free RAM, and free disk space. Write a single status line to datauser/test_prompts/log.txt in the format: [DATE] RAM=Xgb FREE DISK=Ygb. Then read it back to confirm.",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "all_contains|RAM=||FREE DISK="
+    ]
+  }
+}

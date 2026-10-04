@@ -1,0 +1,13 @@
+{
+  "title": "kd_multihop_defence",
+  "prompt": "search KoreData for defence news, find the most recent result, fetch its full text, then summarise it in three bullet points",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "none_contains|not configured||no results were found",
+      "judge|answers",
+      "judge|not_error"
+    ]
+  }
+}

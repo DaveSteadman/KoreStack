@@ -1,0 +1,12 @@
+{
+  "title": "csv_transpose_file",
+  "prompt": "create a CSV at datauser/test_spreadsheet/temps_source.csv with columns City, Jan, Feb, Mar containing temperature data for London, Paris, and Cairo. Then transpose it so months become rows and cities become columns, and save the result to datauser/test_spreadsheet/temps_transposed.csv",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "judge|answers",
+      "judge|not_error"
+    ]
+  }
+}

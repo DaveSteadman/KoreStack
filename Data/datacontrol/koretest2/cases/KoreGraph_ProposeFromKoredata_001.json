@@ -1,0 +1,13 @@
+{
+  "title": "kg_propose_from_koredata",
+  "prompt": "Search KoreData for F-35 news, read the top result, then identify and store any concept connections you find in KoreGraph. Report each connection you add.",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "not_contains|unable to connect",
+      "judge|answers",
+      "judge|not_error"
+    ]
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "title": "wiki_photosynthesis",
+  "prompt": "definition of photosynthesis",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "contains|sunlight",
+      "judge|answers"
+    ]
+  }
+}

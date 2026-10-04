@@ -1,0 +1,12 @@
+{
+  "title": "wiki_recursion",
+  "prompt": "definition of recursion in computer science",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "regex|itself|self-reference|function",
+      "judge|answers"
+    ]
+  }
+}

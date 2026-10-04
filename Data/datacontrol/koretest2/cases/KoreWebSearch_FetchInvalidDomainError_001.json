@@ -1,0 +1,12 @@
+{
+  "title": "fetch_invalid_domain_error",
+  "prompt": "fetch https://not-a-real-domain-xyz-abc.com and report the error",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "regex|error|failed|not found",
+      "judge|answers"
+    ]
+  }
+}

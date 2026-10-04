@@ -1,0 +1,15 @@
+{
+  "title": "file_csv_roundtrip",
+  "prompts": [
+    "write exactly this CSV to datauser/test_file_access/sysinfo.csv: Name,Score\\nAlice,10\\nBob,12",
+    "read datauser/test_file_access/sysinfo.csv and return the contents"
+  ],
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "assertions": [
+      "contains|sysinfo.csv",
+      "all_contains|Name,Score||Alice,10||Bob,12"
+    ]
+  }
+}

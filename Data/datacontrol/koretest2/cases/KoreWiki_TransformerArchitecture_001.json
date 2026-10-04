@@ -1,0 +1,12 @@
+{
+  "title": "wiki_transformer_architecture",
+  "prompt": "background on transformer architecture in AI",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "contains|attention",
+      "judge|answers"
+    ]
+  }
+}

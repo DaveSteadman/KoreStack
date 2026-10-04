@@ -1,0 +1,12 @@
+{
+  "title": "links_hackernews",
+  "prompt": "what links are on the front page of https://news.ycombinator.com",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "regex|https?://|news\\.ycombinator\\.com",
+      "judge|answers"
+    ]
+  }
+}

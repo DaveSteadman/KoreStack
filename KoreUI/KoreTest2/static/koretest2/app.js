@@ -37,7 +37,8 @@ function renderGrid(payload) {
   header.append(testHeader);
   for (const build of payload.builds || []) {
     const cell = document.createElement('th');
-    cell.textContent = build;
+    cell.textContent = String(build).replace(/^Build:\s*/i, '').match(/^\S+/)?.[0] || build;
+    cell.title = build;
     header.append(cell);
   }
   table.append(header);

@@ -1,0 +1,12 @@
+{
+  "title": "csv_sum_column",
+  "prompt": "read datauser/test_spreadsheet/sales.csv, add a new column called CumulativeRevenue that is a running total of the Revenue column, and save the result back to the same file",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "judge|answers",
+      "judge|not_error"
+    ]
+  }
+}

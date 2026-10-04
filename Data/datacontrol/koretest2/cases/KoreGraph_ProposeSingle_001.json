@@ -1,0 +1,13 @@
+{
+  "title": "kg_propose_single",
+  "prompt": "Assess the following text and add any concept connections you identify to KoreGraph.\n\nText: 'The F-22 Raptor is a stealth fighter aircraft manufactured by Lockheed Martin and operated by the United States Air Force.'",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "not_contains|unable to connect",
+      "judge|answers",
+      "judge|not_error"
+    ]
+  }
+}

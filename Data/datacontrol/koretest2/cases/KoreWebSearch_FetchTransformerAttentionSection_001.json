@@ -1,0 +1,12 @@
+{
+  "title": "fetch_transformer_attention_section",
+  "prompt": "read https://en.wikipedia.org/wiki/Transformer_(deep_learning_architecture) and extract only the section about attention mechanism",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "contains|attention",
+      "judge|answers"
+    ]
+  }
+}

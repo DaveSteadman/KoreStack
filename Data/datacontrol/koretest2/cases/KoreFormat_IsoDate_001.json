@@ -1,0 +1,8 @@
+{
+  "prompt": "What is today's date? Answer in ISO format YYYY-MM-DD only.",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "assert": "regex|20\\d\\d-\\d\\d-\\d\\d"
+  }
+}

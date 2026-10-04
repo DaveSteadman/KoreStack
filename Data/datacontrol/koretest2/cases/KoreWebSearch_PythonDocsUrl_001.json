@@ -1,0 +1,12 @@
+{
+  "title": "search_python_docs_url",
+  "prompt": "find the official Python documentation site and give me just the URL",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "regex|https?://docs\\.python\\.org",
+      "judge|answers"
+    ]
+  }
+}

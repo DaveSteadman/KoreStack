@@ -1,0 +1,12 @@
+{
+  "title": "csv_find_extra_column",
+  "prompt": "here is a CSV - identify any rows that have a different number of columns than the header:\nProduct,Price,Stock\nApple,1.20,50\nBanana,0.80\nCherry,2.50,120,Organic\nDate,3.00,30",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "judge|answers",
+      "judge|not_error"
+    ]
+  }
+}

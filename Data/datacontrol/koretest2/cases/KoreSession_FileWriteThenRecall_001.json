@@ -1,0 +1,15 @@
+{
+  "title": "ctx_file_write_then_recall",
+  "prompts": [
+    "write exactly this text to ./data/session_ctx_test.txt: SESSION_CONTEXT_MARKER_77 and then read it back to confirm",
+    "What did the file ./data/session_ctx_test.txt contain? Tell me without reading it again."
+  ],
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "assertions": [
+      "contains|SESSION_CONTEXT_MARKER_77",
+      "contains|SESSION_CONTEXT_MARKER_77"
+    ]
+  }
+}

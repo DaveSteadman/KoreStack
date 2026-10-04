@@ -1,0 +1,12 @@
+{
+  "title": "csv_find_mixed_errors",
+  "prompt": "audit this CSV for formatting problems - wrong column count, blank fields, or non-numeric values in numeric columns:\nItem,Qty,Price\nWidget,10,4.99\nGadget,,12.50\nDoohickey,5,free\nThingamajig 3 7.00\nWhatsit,2,1.25",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "judge|answers",
+      "judge|not_error"
+    ]
+  }
+}

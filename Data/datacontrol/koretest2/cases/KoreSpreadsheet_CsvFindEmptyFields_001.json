@@ -1,0 +1,12 @@
+{
+  "title": "csv_find_empty_fields",
+  "prompt": "given this CSV data, find all rows with empty or missing fields and report which row and column each problem is in:\nID,Name,Email,Phone\n1,Alice,alice@example.com,555-1234\n2,Bob,,555-5678\n3,,carol@example.com,\n4,Dave,dave@example.com,555-9999",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "judge|answers",
+      "judge|not_error"
+    ]
+  }
+}

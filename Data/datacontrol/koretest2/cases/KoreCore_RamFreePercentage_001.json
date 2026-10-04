@@ -1,0 +1,11 @@
+{
+  "title": "ram_free_percentage",
+  "prompt": "get the system RAM info. Calculate what percentage of total RAM is currently free, rounded to one decimal place. Show the working and the final percentage.",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "regex|\\d+(\\.\\d)?%"
+    ]
+  }
+}

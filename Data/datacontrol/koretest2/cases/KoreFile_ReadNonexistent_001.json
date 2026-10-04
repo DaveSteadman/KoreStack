@@ -1,0 +1,12 @@
+{
+  "title": "file_read_nonexistent",
+  "prompt": "read datauser/test_file_access/does_not_exist.txt",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "regex|not found|does not exist|file not found",
+      "judge|Does the response report that the file does not exist, rather than inventing contents?"
+    ]
+  }
+}

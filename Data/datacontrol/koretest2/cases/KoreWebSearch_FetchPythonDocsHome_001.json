@@ -1,0 +1,12 @@
+{
+  "title": "fetch_python_docs_home",
+  "prompt": "fetch the page at https://docs.python.org/3/ and summarise what kind of site it is in one sentence",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "contains|Python",
+      "judge|answers"
+    ]
+  }
+}

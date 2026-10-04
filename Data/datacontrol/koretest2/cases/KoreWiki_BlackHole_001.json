@@ -1,0 +1,12 @@
+{
+  "title": "wiki_black_hole",
+  "prompt": "what is a black hole",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "contains|gravity",
+      "judge|answers"
+    ]
+  }
+}

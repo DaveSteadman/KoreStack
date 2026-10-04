@@ -1,0 +1,13 @@
+{
+  "title": "kd_briefing_ai",
+  "prompt": "give me a morning briefing on AI news from KoreData - summarise the top stories from the last 24 hours",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "none_contains|not configured||no results were found",
+      "judge|answers",
+      "judge|not_error"
+    ]
+  }
+}

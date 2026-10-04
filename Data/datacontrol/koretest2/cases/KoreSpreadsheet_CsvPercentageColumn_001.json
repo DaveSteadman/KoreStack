@@ -1,0 +1,11 @@
+{
+  "title": "csv_percentage_column",
+  "prompt": "given this CSV, add a column called SharePct showing each row's Revenue as a percentage of the total Revenue across all rows, rounded to 1 decimal place:\nRegion,Revenue\nNorth,45000\nSouth,30000\nEast,15000\nWest,10000",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "contains|SharePct"
+    ]
+  }
+}

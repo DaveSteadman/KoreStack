@@ -1,0 +1,17 @@
+{
+  "title": "folder_create_then_write",
+  "prompts": [
+    "create the folder datauser/test_file_access/nested",
+    "write exactly this text to datauser/test_file_access/nested/notes.txt: nested note",
+    "read datauser/test_file_access/nested/notes.txt"
+  ],
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "assertions": [
+      "contains|nested",
+      "contains|nested/notes.txt",
+      "contains|nested note"
+    ]
+  }
+}

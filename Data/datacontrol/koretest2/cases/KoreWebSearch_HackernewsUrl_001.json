@@ -1,0 +1,12 @@
+{
+  "title": "search_hackernews_url",
+  "prompt": "search for Hacker News and tell me the URL of the front page",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "regex|https?://news\\.ycombinator\\.com",
+      "judge|answers"
+    ]
+  }
+}

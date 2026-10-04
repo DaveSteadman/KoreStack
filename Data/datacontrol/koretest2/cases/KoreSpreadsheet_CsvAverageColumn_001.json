@@ -1,0 +1,12 @@
+{
+  "title": "csv_average_column",
+  "prompt": "read datauser/test_spreadsheet/sales.csv, add an AverageMonthlyRevenue column (Revenue divided by Units, rounded to 2 decimal places), and show the updated table",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "judge|answers",
+      "judge|not_error"
+    ]
+  }
+}

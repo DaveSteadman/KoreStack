@@ -1,0 +1,13 @@
+{
+  "title": "kg_propose_with_expand",
+  "prompt": "First check what connections already exist in KoreGraph for 'Lockheed Martin', then assess this text and add any new connections that are not already present.\n\nText: 'Lockheed Martin produces the F-35 Lightning II, a multirole fighter aircraft. The F-35 is operated by NATO member states and is powered by a Pratt and Whitney F135 engine.'",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "not_contains|unable to connect",
+      "judge|answers",
+      "judge|not_error"
+    ]
+  }
+}

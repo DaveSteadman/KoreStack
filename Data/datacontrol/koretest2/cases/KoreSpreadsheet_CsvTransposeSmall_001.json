@@ -1,0 +1,12 @@
+{
+  "title": "csv_transpose_small",
+  "prompt": "transpose this CSV so rows become columns and columns become rows, and show the result:\nName,Jan,Feb,Mar\nAlice,100,110,120\nBob,90,95,105\nCarol,80,85,88",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "judge|answers",
+      "judge|not_error"
+    ]
+  }
+}

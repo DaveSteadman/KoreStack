@@ -12,8 +12,8 @@ class KoreTest2ServiceTests(unittest.TestCase):
     def test_discovers_one_case_per_file(self) -> None:
         with TemporaryDirectory() as temp_dir:
             cases_dir = Path(temp_dir)
-            (cases_dir / "KoreData_FeedTest_001.md").write_text(
-                "# KoreData_FeedTest_001\n\nFind feed items.\n\n```json\n{\"evaluation\": {\"type\": \"python\", \"assert\": \"not_empty\"}}\n```\n",
+            (cases_dir / "KoreData_FeedTest_001.json").write_text(
+                '{"prompt": "Find feed items.", "evaluation": {"type": "python", "assert": "not_empty"}}',
                 encoding="utf-8",
             )
             with patch.object(service, "CASES_DIR", cases_dir):
@@ -38,9 +38,8 @@ class KoreTest2ServiceTests(unittest.TestCase):
             root = Path(temp_dir)
             cases_dir = root / "cases"
             cases_dir.mkdir()
-            (cases_dir / "KoreData_FeedTest_001.md").write_text(
-                "# KoreData_FeedTest_001\n\nprompt\n\n```json\n"
-                '{"evaluation": {"type": "python", "assert": "not_empty"}}\n```\n',
+            (cases_dir / "KoreData_FeedTest_001.json").write_text(
+                '{"prompt": "prompt", "evaluation": {"type": "python", "assert": "not_empty"}}',
                 encoding="utf-8",
             )
             with (
@@ -63,6 +62,33 @@ class KoreTest2ServiceTests(unittest.TestCase):
         self.assertTrue(service._evaluate_assert("none_contains|error||failed", "The result passed"))
         self.assertTrue(service._evaluate_assert("not_regex|error", "The result passed"))
         self.assertFalse(service._evaluate_assert("not_contains|error", "An error occurred"))
+
+    def test_numeric_comparison_accepts_any_number_format(self) -> None:
+        for text in ("12! = 479,001,600", "**479001600**", "4.79001600e8", "479001600.0", "479_001_600"):
+            self.assertTrue(service._evaluate_assert("number_equals|479001600", text), text)
+        self.assertFalse(service._evaluate_assert("number_equals|479001600", "The answer is 479001601"))
+        self.assertTrue(service._evaluate_assert("number_equals|3.14||0.01", "pi is about 3.141"))
+        self.assertTrue(service._evaluate_assert("all_numbers|0||1||13", "0, 1, 1, 2, 3, 5, 8, 13"))
+        self.assertFalse(service._evaluate_assert("all_numbers|0||21", "0, 1, 1, 2"))
+        self.assertTrue(service.numbers_equal("1,000", "1e3"))
+        self.assertEqual(service.extract_numbers("2026-10-03"), [2026, 10, 3])
+
+    def test_asserts_list_requires_every_assert_to_pass(self) -> None:
+        case = {"id": "x", "prompt": "What is 2+2?", "spec": {"evaluation": {"type": "python", "asserts": ["number_equals|4", "not_contains|error"]}}}
+        self.assertTrue(service._evaluate(case, "The answer is 4")[0])
+        passed, detail = service._evaluate(case, "4 error")
+        self.assertFalse(passed)
+        self.assertEqual([item["passed"] for item in detail["asserts"]], [True, False])
+
+    def test_judge_assert_uses_probability_threshold(self) -> None:
+        case = {"id": "x", "prompt": "Capital of France?", "spec": {"evaluation": {"type": "python", "asserts": ["judge|answers", "judge|not_error||0.9"]}}}
+        with patch.object(service, "_judge", side_effect=[0.95, 0.8]) as judge:
+            passed, detail = service._evaluate(case, "Paris")
+        self.assertFalse(passed)
+        self.assertEqual([item["passed"] for item in detail["asserts"]], [True, False])
+        self.assertEqual(detail["asserts"][1]["probability"], 0.8)
+        self.assertIn("answer the prompt", judge.call_args_list[0].args[0])
+        self.assertEqual(judge.call_args_list[0].args[1:], ("Capital of France?", "Paris"))
 
     def test_summary_counts_the_current_build(self) -> None:
         with patch.object(service, "grid", return_value={

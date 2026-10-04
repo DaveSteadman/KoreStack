@@ -1,0 +1,12 @@
+{
+  "title": "fetch_timeout_error",
+  "prompt": "fetch https://httpbin.org/delay/60 with timeout_seconds=5 and report what happens",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "regex|timeout|timed out|error",
+      "judge|answers"
+    ]
+  }
+}

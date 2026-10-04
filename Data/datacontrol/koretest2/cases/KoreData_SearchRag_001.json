@@ -1,0 +1,13 @@
+{
+  "title": "kd_search_rag",
+  "prompt": "search KoreData internal documents for any project notes or process documents and summarise what you find",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "none_contains|not configured||no results were found",
+      "judge|answers",
+      "judge|not_error"
+    ]
+  }
+}

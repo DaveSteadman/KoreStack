@@ -1,0 +1,15 @@
+{
+  "title": "ctx_uuid_fetch_then_recall",
+  "prompts": [
+    "Fetch the page at https://httpbin.org/uuid and tell me the UUID value from the response.",
+    "What was the UUID value returned by that page? State it again without fetching the URL a second time."
+  ],
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "assertions": [
+      "regex|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}",
+      "regex|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+    ]
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "title": "koredocs_update_cleanup",
+  "prompt": "Using KoreDocs MCP tools: list all files in folder /Tests/UpdateTests. For each file found, delete it using koredocs_file_delete with its id. Report how many files were deleted.",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "judge|answers",
+      "judge|not_error"
+    ]
+  }
+}

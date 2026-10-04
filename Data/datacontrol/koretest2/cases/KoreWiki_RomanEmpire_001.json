@@ -1,0 +1,12 @@
+{
+  "title": "wiki_roman_empire",
+  "prompt": "get me the Wikipedia article on the Roman Empire",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "regex|ancient|mediterranean|rome",
+      "judge|answers"
+    ]
+  }
+}

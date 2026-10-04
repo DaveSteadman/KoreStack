@@ -1,0 +1,11 @@
+{
+  "title": "csv_compound_interest",
+  "prompt": "use Python to generate a CSV showing compound interest growth. Columns: Year, Balance. Starting balance 1000, annual rate 5%, for 20 years. Round Balance to 2 decimal places. Show the result.",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "contains|Balance"
+    ]
+  }
+}

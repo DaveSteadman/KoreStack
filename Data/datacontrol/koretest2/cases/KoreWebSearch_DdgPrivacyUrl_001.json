@@ -1,0 +1,12 @@
+{
+  "title": "search_ddg_privacy_url",
+  "prompt": "search the web for DuckDuckGo privacy policy and return the top result URL",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "regex|duckduckgo\\.com",
+      "judge|answers"
+    ]
+  }
+}

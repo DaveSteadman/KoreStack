@@ -1,0 +1,12 @@
+{
+  "title": "csv_find_missing_comma",
+  "prompt": "here is a CSV fragment - find the formatting errors:\nName,Age,City\nAlice,30,London\nBob 25,Manchester\nCarol,28,Bristol\nDave,31\nEve,27,Leeds",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "judge|answers",
+      "judge|not_error"
+    ]
+  }
+}

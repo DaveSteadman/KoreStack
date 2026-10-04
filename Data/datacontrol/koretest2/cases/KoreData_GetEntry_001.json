@@ -1,0 +1,13 @@
+{
+  "title": "kd_get_entry",
+  "prompt": "search KoreData feeds for OpenAI news, then read the full text of the most recent result",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "none_contains|not configured||no results were found",
+      "judge|answers",
+      "judge|not_error"
+    ]
+  }
+}

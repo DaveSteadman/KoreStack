@@ -1,0 +1,12 @@
+{
+  "title": "links_docs_python",
+  "prompt": "list the links on https://docs.python.org/3/ up to 20 links",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "regex|https?://",
+      "judge|answers"
+    ]
+  }
+}

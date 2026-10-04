@@ -1,0 +1,8 @@
+{
+  "prompt": "Calculate the factorial of 12.",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "assert": "number_equals|479001600"
+  }
+}

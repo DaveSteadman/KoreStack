@@ -1,0 +1,11 @@
+{
+  "title": "codeexec_compound_interest",
+  "prompt": "calculate compound interest on 10000 at 5 percent per year for 10 years and give the final balance rounded to 2 decimal places",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "number_equals|16288.95"
+    ]
+  }
+}

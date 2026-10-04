@@ -1,0 +1,12 @@
+{
+  "title": "wiki_quantum_entanglement",
+  "prompt": "tell me about quantum entanglement",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "contains|quantum",
+      "judge|answers"
+    ]
+  }
+}

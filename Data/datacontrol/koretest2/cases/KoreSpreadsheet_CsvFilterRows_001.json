@@ -1,0 +1,11 @@
+{
+  "title": "csv_filter_rows",
+  "prompt": "filter the following CSV to show only rows where Units is greater than 100:\nProduct,Units,Price\nApple,150,1.20\nBanana,80,0.80\nCherry,200,2.50\nDate,30,3.00\nElder,110,1.80",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "all_contains|Apple,150,1.20||Cherry,200,2.50||Elder,110,1.80"
+    ]
+  }
+}

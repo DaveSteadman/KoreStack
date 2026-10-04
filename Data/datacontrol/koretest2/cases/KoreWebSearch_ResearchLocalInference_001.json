@@ -1,0 +1,13 @@
+{
+  "title": "research_local_inference",
+  "prompt": "investigate the current state of local AI inference tools and tell me the main options",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "none_contains|search failed||timed out",
+      "judge|answers",
+      "judge|not_error"
+    ]
+  }
+}

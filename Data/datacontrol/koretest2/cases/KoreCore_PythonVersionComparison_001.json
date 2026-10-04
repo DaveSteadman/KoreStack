@@ -1,0 +1,11 @@
+{
+  "title": "python_version_comparison",
+  "prompt": "get the Python version currently installed on this system. Is it newer than Python 3.11? Answer yes or no, and state the exact version number.",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "regex|\\b(yes|no)\\b"
+    ]
+  }
+}

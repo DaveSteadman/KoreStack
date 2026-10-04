@@ -1,0 +1,22 @@
+{
+  "title": "ctx_koredata_recall_headlines",
+  "prompts": [
+    "Search KoreData feeds for AI news and list the top 3 headlines you find.",
+    "What were the three headlines you just found from KoreData? List them again from your session context without searching again."
+  ],
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "assertions": [
+      [
+        "none_contains|not configured||no results were found",
+        "judge|answers",
+        "judge|not_error"
+      ],
+      [
+        "judge|answers",
+        "judge|not_error"
+      ]
+    ]
+  }
+}

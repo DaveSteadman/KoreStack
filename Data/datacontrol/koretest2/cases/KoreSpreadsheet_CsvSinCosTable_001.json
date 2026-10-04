@@ -1,0 +1,11 @@
+{
+  "title": "csv_sin_cos_table",
+  "prompt": "use Python to generate a CSV table of sin and cos values for angles 0 to 360 degrees in steps of 15 degrees. Columns: Degrees, Radians, Sin, Cos. Round Sin and Cos to 4 decimal places. Save to datauser/test_spreadsheet/sin_cos.csv and show the first 10 rows.",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "all_contains|sin_cos.csv||Degrees||Radians||Sin||Cos"
+    ]
+  }
+}

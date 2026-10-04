@@ -1,0 +1,13 @@
+{
+  "title": "kd_briefing_combined",
+  "prompt": "give me a combined briefing from KoreData: top AI news and top defence news from today",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "none_contains|not configured||no results were found",
+      "judge|answers",
+      "judge|not_error"
+    ]
+  }
+}

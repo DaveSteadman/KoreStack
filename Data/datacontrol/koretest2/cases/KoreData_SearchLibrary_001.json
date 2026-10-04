@@ -1,0 +1,13 @@
+{
+  "title": "kd_search_library",
+  "prompt": "search KoreData library for Python programming and list any books found",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "none_contains|not configured||no results were found",
+      "judge|answers",
+      "judge|not_error"
+    ]
+  }
+}

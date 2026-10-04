@@ -1,0 +1,12 @@
+{
+  "title": "csv_create_sales",
+  "prompt": "create a CSV file at datauser/test_spreadsheet/sales.csv with columns Month, Region, Units, Revenue. Add 12 rows covering Jan-Dec for two regions (North and South) with plausible figures.",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "judge|answers",
+      "judge|not_error"
+    ]
+  }
+}

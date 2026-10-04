@@ -1,0 +1,13 @@
+{
+  "title": "kd_search_defence",
+  "prompt": "search KoreData feeds for defence news and list the headlines",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "none_contains|not configured||no results were found",
+      "judge|answers",
+      "judge|not_error"
+    ]
+  }
+}

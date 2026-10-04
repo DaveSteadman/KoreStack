@@ -1,0 +1,13 @@
+{
+  "title": "kd_search_all",
+  "prompt": "search KoreData for artificial intelligence and summarise the top results across all services",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "none_contains|not configured||no results were found",
+      "judge|answers",
+      "judge|not_error"
+    ]
+  }
+}

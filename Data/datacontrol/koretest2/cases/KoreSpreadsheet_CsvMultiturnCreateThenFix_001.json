@@ -1,0 +1,15 @@
+{
+  "title": "csv_multiturn_create_then_fix",
+  "prompts": [
+    "create a CSV with columns Product, Q1, Q2, Q3, Q4 and 4 rows of made-up quarterly sales figures. Save to datauser/test_spreadsheet/quarterly.csv",
+    "now read that file and add a YearTotal column that sums Q1 through Q4 for each row, then save it back"
+  ],
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "assertions": [
+      "contains|datauser/test_spreadsheet/quarterly.csv",
+      "all_contains|YearTotal||datauser/test_spreadsheet/quarterly.csv"
+    ]
+  }
+}

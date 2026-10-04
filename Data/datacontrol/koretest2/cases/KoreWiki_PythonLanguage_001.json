@@ -1,0 +1,12 @@
+{
+  "title": "wiki_python_language",
+  "prompt": "look up Python programming language on Wikipedia",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "contains|Guido",
+      "judge|answers"
+    ]
+  }
+}

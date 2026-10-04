@@ -1,0 +1,12 @@
+{
+  "title": "research_ollama_vs_llama",
+  "prompt": "research the differences between Ollama, llama.cpp, and LM Studio",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "all_contains|Ollama||llama.cpp||LM Studio",
+      "judge|answers"
+    ]
+  }
+}

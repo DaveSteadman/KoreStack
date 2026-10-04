@@ -1,0 +1,11 @@
+{
+  "title": "codeexec_letter_count",
+  "prompt": "count how many times the letter e appears in the word accelerate. answer as e=<count>",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "contains|e=3"
+    ]
+  }
+}

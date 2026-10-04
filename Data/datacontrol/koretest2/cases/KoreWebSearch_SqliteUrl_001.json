@@ -1,0 +1,12 @@
+{
+  "title": "search_sqlite_url",
+  "prompt": "find the official SQLite website and give me just the URL",
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "asserts": [
+      "regex|https?://www?\\.sqlite\\.org",
+      "judge|answers"
+    ]
+  }
+}

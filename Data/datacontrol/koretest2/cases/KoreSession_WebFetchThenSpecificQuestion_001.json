@@ -1,0 +1,15 @@
+{
+  "title": "ctx_web_fetch_then_specific_question",
+  "prompts": [
+    "Fetch the page at https://httpbin.org/html and tell me what text headings are on the page.",
+    "From the page you just fetched, what was the main heading? Answer from what you already retrieved, without fetching it again."
+  ],
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "assertions": [
+      "contains|Herman Melville",
+      "contains|Herman Melville"
+    ]
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "title": "ctx_calculation_recall",
+  "prompts": [
+    "Calculate compound interest: starting balance 5000, annual rate 4%, compounded yearly for 8 years. Show the final balance rounded to 2 decimal places.",
+    "What was the final balance from the compound interest calculation you just did? Do not recalculate - just recall the result."
+  ],
+  "timeout_seconds": 1200,
+  "evaluation": {
+    "type": "python",
+    "assertions": [
+      "number_equals|6842.85",
+      "number_equals|6842.85"
+    ]
+  }
+}
