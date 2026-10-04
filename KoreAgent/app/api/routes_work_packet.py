@@ -46,6 +46,8 @@ def register_work_packet_routes(
 
     A top-level ``"route": "system_one"`` sends the packet to the System One decision API
     (``state``, ``questions``, optional ``images`` and ``model``); anything else goes to chat.
+    Chat packets may optionally provide ``prompt`` and ``model`` to override the default prompt text
+    and active chat model.
     """
 
     @app.post("/api/work-packet")
@@ -88,14 +90,15 @@ def register_work_packet_routes(
                 "tokens_per_second": 0,
             }
 
-        model = get_active_model()
+        model = str(packet.get("model") or get_active_model()).strip() if isinstance(packet, dict) else str(get_active_model()).strip()
         if not model:
             raise HTTPException(status_code=503, detail="No model is configured")
+        prompt_text = str(packet.get("prompt") or "") if isinstance(packet, dict) and "prompt" in packet else packet_text
 
         try:
             result = call_llm_chat(
                 model_name=model,
-                messages=[{"role": "user", "content": packet_text}],
+                messages=[{"role": "user", "content": prompt_text}],
                 tools=None,
                 num_ctx=get_active_num_ctx(),
             )

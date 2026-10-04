@@ -186,6 +186,9 @@ SERVICE_META: dict[str, dict[str, object]] = {
     "koretest2": {
         "label": "KoreTest2", "cwd": SUITE_ROOT / "KoreTest2", "script": "main.py", "url_suffix": "/ui", "health_suffix": "/status", "description": "Incremental build-keyed prompt testing, results, and analysis logs.",
     },
+    "koreagentnetwork": {
+        "label": "KoreAgentNetwork", "cwd": SUITE_ROOT / "KoreAgentNetwork", "script": "main.py", "url_suffix": "/ui", "health_suffix": "/status", "description": "Visual processing networks with named data ports and bounded Python execution.",
+    },
 }
 
 SERVICE_ICON_KEYS: dict[str, str] = {
@@ -199,6 +202,7 @@ SERVICE_ICON_KEYS: dict[str, str] = {
     "koretest":          "koretest",
     "korecron":          "korecron",
     "koretest2":         "koretest",
+    "koreagentnetwork":  "koreagent",
 }
 
 
@@ -412,7 +416,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--services",
         default="all",
-        help="Comma-separated service list. Valid values: all, korechat, koreagent, koredatagateway, koredocs, korecode, korecomms, koreliveweb, koretest, korecron, koretest2.",
+        help="Comma-separated service list. Valid values: all, korechat, koreagent, koredatagateway, koredocs, korecode, korecomms, koreliveweb, koretest, korecron, koretest2, koreagentnetwork.",
     )
     parser.add_argument("--host", default=None, help="KoreStack landing page bind address.")
     parser.add_argument("--ui-port", type=int, default=None, help="KoreStack landing page port.")
@@ -435,6 +439,7 @@ def resolve_services(raw: str, services: dict[str, ServiceSpec]) -> list[Service
             "koretest",
             "koretest2",
             "korecron",
+            "koreagentnetwork",
         )
         return [services[key] for key in preferred_order if key in services]
 

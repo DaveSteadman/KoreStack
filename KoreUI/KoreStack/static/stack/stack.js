@@ -11,6 +11,7 @@ const SERVICE_KEY_BY_SLUG = {
   koretest: 'koretest',
   korecron: 'korecron',
   koretest2: 'koretest2',
+  koreagentnetwork: 'koreagent',
 };
 
 const STATE_COLOR = {
@@ -223,6 +224,23 @@ function applyKoreTest2Summary(summary) {
   setText(panel.querySelector('[data-koretest2-field="pending"]'), String(summary.pending));
 }
 
+function applyKoreAgentNetworkSummary(summary) {
+  const panel = document.querySelector('[data-koreagentnetwork-panel]');
+  if (!panel) return;
+  const state = panel.querySelector('[data-koreagentnetwork-field="state"]');
+  if (!summary?.available) {
+    setText(state, 'Unavailable');
+    state?.classList.remove('kcui-tag--success', 'kcui-tag--warning');
+    state?.classList.add('kcui-tag--danger');
+    setText(panel.querySelector('[data-koreagentnetwork-field="networks"]'), summary?.detail || 'Not available');
+    return;
+  }
+  setText(state, 'Ready');
+  state?.classList.remove('kcui-tag--danger', 'kcui-tag--warning');
+  state?.classList.add('kcui-tag--success');
+  setText(panel.querySelector('[data-koreagentnetwork-field="networks"]'), String(summary.networks ?? 0));
+}
+
 function showOllamaNotice(message, tone = '') {
   const notice = document.querySelector('[data-ollama-field="notice"]');
   if (!notice) return;
@@ -253,6 +271,16 @@ async function refreshKoreTest2() {
   }
 }
 
+async function refreshKoreAgentNetwork() {
+  try {
+    const response = await fetch('/api/koreagentnetwork/summary', { cache: 'no-store' });
+    if (!response.ok) return;
+    applyKoreAgentNetworkSummary(await response.json());
+  } catch (_error) {
+    applyKoreAgentNetworkSummary({ available: false, detail: 'KoreAgentNetwork status could not be loaded.' });
+  }
+}
+
 async function refresh() {
   try {
     const response = await fetch('/status', { cache: 'no-store' });
@@ -260,6 +288,7 @@ async function refresh() {
     applySnapshot(await response.json());
     await refreshOllama();
     await refreshKoreTest2();
+    await refreshKoreAgentNetwork();
   } catch (_error) {
     console.warn('[KoreStack] Status refresh failed.');
   }
@@ -370,6 +399,7 @@ wireControls();
 applySnapshot(current);
 applyOllamaState(ollamaState);
 void refreshKoreTest2();
+void refreshKoreAgentNetwork();
 startRefreshLoop();
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') {

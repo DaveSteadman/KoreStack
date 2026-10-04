@@ -1,0 +1,117 @@
+:root {
+  --kan-border: #293043;
+  --kan-panel: #111622;
+  --kan-panel-soft: #171d2a;
+  --kan-text: #dde4f2;
+  --kan-dim: #93a0b8;
+  --kan-blue: #70abff;
+  --kan-green: #56d89a;
+  --kan-red: #f27a85;
+}
+
+* { box-sizing: border-box; }
+html { height: 100%; }
+body {
+  color: var(--kan-text);
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  height: 100vh;
+  height: 100dvh;
+  margin: 0;
+  max-width: 100vw;
+  overflow: hidden;
+  overflow-x: hidden;
+}
+#topbar, #appbar { min-height: 0; }
+button, input, textarea { font: inherit; }
+
+.kan-layout {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  display: grid;
+  grid-template-columns: clamp(260px, 22vw, 340px) minmax(0, 1fr) clamp(300px, 26vw, 420px);
+  height: 100%;
+  min-height: 0;
+  max-width: 100%;
+  min-width: 0;
+}
+.kan-library, .kan-inspector { background: var(--kan-panel); }
+.kan-left { border-right: 1px solid var(--kan-border); display: flex; flex-direction: column; min-height: 0; min-width: 0; overflow: hidden; }
+.kan-library { border-bottom: 1px solid var(--kan-border); display: flex; flex-direction: column; flex: 0 0 auto; max-height: 34%; min-width: 0; }
+.kan-library .kan-network-list { min-height: 40px; }
+.kan-data { background: var(--kan-panel); border-left: 1px solid var(--kan-border); min-height: 0; min-width: 0; overflow: auto; padding-bottom: 24px; }
+.kan-data form { padding: 13px; }
+.kan-data-status { color: var(--kan-dim); font-size: 12px; margin: 0 0 4px; }
+.kan-data-status.failed, .kan-data-status.blocked, .kan-data-status.skipped { color: var(--kan-red); }.kan-data-status.completed { color: var(--kan-green); }
+.kan-data-list { display: flex; flex-direction: column; gap: 10px; }
+.kan-data-item { border: 1px solid var(--kan-border); border-radius: 5px; padding: 8px; }
+.kan-data-name { color: var(--kan-blue); font-size: 12px; font-weight: 700; }
+.kan-data-name small { color: var(--kan-dim); font-weight: 400; margin-left: 6px; }
+.kan-data-item label { color: var(--kan-dim); display: block; font-size: 11px; margin-top: 6px; }
+.kan-data-item textarea, .kan-data-item pre { background: #0e1420; border: 1px solid var(--kan-border); border-radius: 4px; color: var(--kan-text); display: block; font-family: Consolas, "Cascadia Code", monospace; font-size: 12px; line-height: 1.4; margin: 3px 0 0; max-height: 220px; overflow: auto; padding: 6px; resize: vertical; white-space: pre-wrap; width: 100%; }
+.kan-data-item pre.kan-data-empty { color: var(--kan-dim); }
+.kan-data button[type=submit] { margin-top: 12px; }
+.kan-inspector { flex: 1; min-height: 0; overflow: auto; padding-bottom: 24px; }
+.kan-section-head { align-items: center; border-bottom: 1px solid var(--kan-border); display: flex; font-size: 12px; font-weight: 700; justify-content: space-between; letter-spacing: .08em; min-height: 43px; padding: 0 13px; text-transform: uppercase; }
+.kan-icon-button { background: transparent; border: 1px solid var(--kan-border); border-radius: 4px; color: var(--kan-text); cursor: pointer; font-size: 20px; height: 25px; line-height: 19px; width: 25px; }
+.kan-network-list { flex: 1; overflow: auto; padding: 8px; }
+.kan-network-item { background: transparent; border: 1px solid transparent; border-radius: 5px; color: var(--kan-text); cursor: pointer; display: block; margin-bottom: 4px; padding: 9px; text-align: left; width: 100%; }
+.kan-network-item:hover, .kan-network-item.active { background: var(--kan-panel-soft); border-color: var(--kan-border); }
+.kan-network-item small { color: var(--kan-dim); display: block; margin-top: 3px; }
+.kan-sidebar-actions { border-top: 1px solid var(--kan-border); display: flex; gap: 8px; padding: 12px; }
+.kan-sidebar-actions button { flex: 1; }
+.kan-help { display: none; border-top: 1px solid var(--kan-border); color: var(--kan-dim); font-size: 12px; line-height: 1.45; padding: 14px; }
+.kan-help p { margin: 6px 0 0; }
+
+.kan-workspace { display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+.kan-toolbar { align-items: center; background: var(--kan-panel); border-bottom: 1px solid var(--kan-border); display: flex; gap: 9px; min-height: 51px; padding: 8px 12px; }
+.kan-title { background: transparent; border: 0; color: var(--kan-text); font-size: 16px; font-weight: 650; min-width: 120px; outline: 0; padding: 5px; width: min(44%, 380px); }
+.kan-title:focus { background: var(--kan-panel-soft); border-radius: 4px; }
+.kan-toolbar-select { background: #0e1420; border: 1px solid var(--kan-border); border-radius: 4px; color: var(--kan-text); min-width: 100px; padding: 6px 8px; }
+.kan-run-status { color: var(--kan-dim); font-size: 12px; margin-left: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kan-run-status.running { color: #f2c66f; }.kan-run-status.ok { color: var(--kan-green); }.kan-run-status.error { color: var(--kan-red); }
+.kan-graph-stage { background-color: #0b0f17; background-image: radial-gradient(#283143 1px, transparent 1px); background-size: 20px 20px; flex: 1; min-height: 0; overflow: auto; position: relative; }
+.kan-edges, .kan-nodes { height: max(100%, 1600px); left: 0; min-width: max(100%, 1800px); pointer-events: none; position: absolute; top: 0; width: max(100%, 1800px); }
+.kan-edges { overflow: visible; }.kan-edges path { fill: none; stroke: #6685b8; stroke-width: 2.3; }.kan-edges path.kan-edge-selected { stroke: var(--kan-green); stroke-width: 3; }
+.kan-nodes { pointer-events: none; }
+.kan-node { background: #141c2a; border: 1px solid #42516d; border-radius: 7px; box-shadow: 0 6px 18px #0005; min-height: 126px; pointer-events: auto; position: absolute; width: 220px; }
+.kan-node.selected { border-color: var(--kan-blue); box-shadow: 0 0 0 2px #70abff33, 0 6px 18px #0005; }.kan-node.completed { border-color: #378565; }.kan-node.failed, .kan-node.blocked, .kan-node.skipped { border-color: #a54d58; }
+.kan-node-head { align-items: center; background: #1c2739; border-bottom: 1px solid #35435c; border-radius: 6px 6px 0 0; cursor: grab; display: flex; font-size: 13px; font-weight: 650; min-height: 36px; padding: 7px 10px; user-select: none; }.kan-node-head:active { cursor: grabbing; }
+.kan-node-id { color: var(--kan-dim); font-size: 10px; font-weight: 500; margin-left: auto; max-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kan-port-lines { display: grid; grid-template-columns: 1fr 1fr; min-height: 78px; padding: 7px 0; }.kan-port-column { display: flex; flex-direction: column; gap: 4px; }.kan-port-column:last-child { align-items: flex-end; }.kan-port { align-items: center; background: transparent; border: 0; color: var(--kan-dim); cursor: pointer; display: flex; font-size: 11px; gap: 5px; max-width: 106px; padding: 2px 8px; }.kan-port:hover, .kan-port.pending { color: var(--kan-text); }.kan-port-dot { background: #6c7890; border: 2px solid #a5b3cc; border-radius: 50%; height: 11px; width: 11px; }.kan-port--output .kan-port-dot { background: #356fae; border-color: #70abff; }.kan-port.pending .kan-port-dot { background: #f3c96e; border-color: #ffe59d; box-shadow: 0 0 10px #f3c96e; }
+.kan-canvas-hint { color: #7e8ba3; font-size: 14px; left: 50%; pointer-events: none; position: absolute; text-align: center; top: 48%; transform: translate(-50%, -50%); width: min(340px, 80%); }.kan-canvas-hint[hidden] { display: none; }
+
+.kan-empty-inspector { color: var(--kan-dim); font-size: 13px; line-height: 1.5; padding: 14px; }.kan-inspector form { padding: 13px; }.kan-inspector label { color: var(--kan-dim); display: block; font-size: 12px; margin-bottom: 12px; }.kan-inspector input, .kan-inspector textarea, .kan-inspector select { background: #0e1420; border: 1px solid var(--kan-border); border-radius: 4px; color: var(--kan-text); display: block; margin-top: 5px; padding: 7px; resize: vertical; width: 100%; }.kan-inspector textarea { font-family: Consolas, "Cascadia Code", monospace; font-size: 12px; line-height: 1.45; }.kan-ports-head { align-items: center; display: flex; font-size: 12px; font-weight: 700; justify-content: space-between; margin: 12px 0 6px; }.kan-ports-head button { background: transparent; border: 0; color: var(--kan-blue); cursor: pointer; font-size: 12px; }.kan-port-editor { display: flex; flex-direction: column; gap: 5px; }.kan-port-row { display: grid; gap: 5px; grid-template-columns: 1fr 28px; }.kan-port-row input { margin: 0; }.kan-port-row button { background: #38202a; border: 1px solid #75414c; border-radius: 4px; color: #f5b3bc; cursor: pointer; }.kan-code-help { color: var(--kan-dim); font-size: 11px; line-height: 1.4; }.kan-result-panel { border-top: 1px solid var(--kan-border); margin-top: 5px; padding: 9px 13px; }.kan-result-panel pre { color: #b8c5da; font-size: 11px; line-height: 1.4; margin: 0; overflow: auto; white-space: pre-wrap; }
+code { color: #a5c8ff; }
+@media (max-width: 980px) {
+  .kan-layout {
+  margin: 0;
+  padding: 0;
+  width: 100%; grid-template-columns: 190px minmax(0, 1fr); }
+  .kan-inspector { display: none; }
+}
+
+@media (max-width: 720px) {
+  .kan-layout {
+  margin: 0;
+  padding: 0;
+  width: 100%; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
+  .kan-left { border-right: 0; max-height: 45vh; }
+  .kan-library { border-bottom: 1px solid var(--kan-border); border-right: 0; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; max-height: 116px; }
+  .kan-library .kan-section-head { border-bottom: 0; border-right: 1px solid var(--kan-border); min-width: 120px; }
+  .kan-network-list { display: flex; gap: 6px; overflow-x: auto; padding: 8px; }
+  .kan-network-item { flex: 0 0 160px; margin: 0; }
+  .kan-sidebar-actions { border-left: 1px solid var(--kan-border); border-top: 0; padding: 8px; }
+  .kan-help { display: none; }
+}
+
+@media (max-width: 520px) {
+  .kan-toolbar { align-items: center; flex-wrap: wrap; }
+  .kan-title { flex: 1 1 170px; width: auto; }
+  .kan-run-status { flex-basis: 100%; margin-left: 0; }
+}
+
+.kan-node-play { color: var(--kan-green); flex: 0 0 auto; font-size: 11px; height: 22px; line-height: 18px; margin-right: 8px; width: 22px; }
+.kan-data-actions { display: flex; gap: 8px; margin-top: 4px; }
+.kan-data-actions button { background: transparent; border: 0; color: var(--kan-blue); cursor: pointer; font-size: 11px; padding: 0; }

@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>KoreAgentNetwork</title>
+  <link rel="icon" href="/ui-elements/assets/icons/favicon.ico">
+  <link rel="stylesheet" href="/ui-elements/assets/css/chrome.css">
+  <link rel="stylesheet" href="/static/koreagentnetwork/app.css?v=1791154255">
+  <script src="/suite-config.js"></script>
+</head>
+<body class="kcui-shell-bg">
+  <div id="topbar"></div>
+  <div id="appbar"></div>
+  <main class="kcui-main kan-layout">
+    <div class="kan-left">
+    <aside class="kan-library">
+      <div class="kan-section-head">
+        <span>Networks</span>
+        <button id="new-network" class="kan-icon-button" type="button" title="New network">+</button>
+      </div>
+      <div id="network-list" class="kan-network-list"></div>
+      <div class="kan-sidebar-actions">
+        <button id="save-network" class="btn btn-primary" type="button">Save</button>
+        <button id="delete-network" class="btn btn-secondary" type="button">Delete</button>
+      </div>
+      <div class="kan-help">
+        <strong>Connect ports</strong>
+        <p>Click an output dot, then an input dot. A node receives its values in <code>inputs</code> and publishes values through <code>outputs</code>.</p>
+      </div>
+    </aside>
+
+    <aside class="kan-inspector">
+      <div class="kan-section-head">Block inspector</div>
+      <div id="empty-inspector" class="kan-empty-inspector">Select a block to edit its name, ports, and execution type.</div>
+      <form id="node-form" hidden>
+        <label>Label<input id="node-label" type="text"></label>
+        <label>Block id<input id="node-id" type="text" pattern="[-A-Za-z0-9_]{1,100}"></label>
+        <label>Block type
+          <select id="node-kind">
+            <option value="python">Python</option>
+            <option value="llm">LLM</option>
+            <option value="judge">Decide</option>
+          </select>
+        </label>
+        <div class="kan-ports-head"><span>Inputs</span><button id="add-input" type="button">+ Port</button></div>
+        <div id="input-ports" class="kan-port-editor"></div>
+        <div class="kan-ports-head"><span>Outputs</span><button id="add-output" type="button">+ Port</button></div>
+        <div id="output-ports" class="kan-port-editor"></div>
+        <div id="field-python">
+          <label>Python
+            <textarea id="node-code" spellcheck="false" rows="16" placeholder="outputs['result'] = inputs['value']"></textarea>
+          </label>
+        </div>
+        <div id="field-llm" hidden>
+          <label>Prompt template
+            <textarea id="node-prompt-template" spellcheck="false" rows="8" placeholder="Summarise this status: {status}"></textarea>
+          </label>
+          <label>Model override (optional)<input id="node-llm-model" type="text" placeholder="Leave blank to use the active model"></label>
+        </div>
+        <div id="field-judge" hidden>
+          <label>Decision question
+            <textarea id="node-question" spellcheck="false" rows="7" placeholder="Does {response} directly and sensibly answer {prompt}?"></textarea>
+          </label>
+          <label>Pass threshold<input id="node-threshold" type="number" min="0" max="1" step="0.05"></label>
+          <label>System One model override (optional)<input id="node-judge-model" type="text" placeholder="Leave blank to use the active System One model"></label>
+        </div>
+        <p id="node-help" class="kan-code-help"></p>
+        <button id="apply-node" class="btn btn-primary" type="submit">Apply block changes</button>
+      </form>
+      <section id="result-panel" class="kan-result-panel" hidden>
+        <div class="kan-ports-head"><span>Last run</span></div>
+        <pre id="node-result"></pre>
+      </section>
+    </aside>
+    </div>
+
+    <section class="kan-workspace">
+      <div class="kan-toolbar">
+        <input id="network-title" class="kan-title" aria-label="Network title" value="Untitled network">
+        <select id="new-node-kind" class="kan-toolbar-select" aria-label="New block type">
+          <option value="python">Python</option>
+          <option value="llm">LLM</option>
+          <option value="judge">Decide</option>
+        </select>
+        <button id="add-node" class="btn btn-secondary" type="button">+ Block</button>
+        <button id="step-network" class="btn btn-secondary" type="button" title="Run the next block that has not completed">Step &#9654;</button>
+        <button id="run-network" class="btn btn-primary" type="button">Run network</button>
+        <span id="run-status" class="kan-run-status">Ready</span>
+      </div>
+      <div id="graph-stage" class="kan-graph-stage" aria-label="Processing network canvas">
+        <svg id="edges" class="kan-edges" aria-hidden="true"></svg>
+        <div id="nodes" class="kan-nodes"></div>
+        <div id="canvas-hint" class="kan-canvas-hint">Add a block, configure its named ports, then connect its output to another block’s input.</div>
+      </div>
+    </section>
+
+    <aside class="kan-data">
+      <div class="kan-section-head">Block data</div>
+      <div id="empty-data" class="kan-empty-inspector">Select a block to see and edit its values. Run the network to see live inputs and outputs.</div>
+      <form id="data-form" hidden>
+        <p id="data-status" class="kan-data-status"></p>
+        <div class="kan-ports-head"><span>Inputs</span></div>
+        <div id="data-inputs" class="kan-data-list"></div>
+        <div class="kan-ports-head"><span>Outputs (last run)</span></div>
+        <div id="data-outputs" class="kan-data-list"></div>
+        <button id="play-selected" class="btn btn-primary" type="button">&#9654; Run this block</button>
+      </form>
+    </aside>
+  </main>
+  <script type="module" src="/static/koreagentnetwork/app.js?v=1791154255"></script>
+</body>
+</html>

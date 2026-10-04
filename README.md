@@ -18,6 +18,7 @@ This repository should be readable from the top down. The root README is the Git
 | `KoreCode/` | Browser-based workspace code editor and AI-assisted coding surface | [KoreCode/README.md](KoreCode/README.md) |
 | `KoreComms/` | External-channel bridge for Discord, Gmail, manual messages, and agent replies | [KoreComms/README.md](KoreComms/README.md) |
 | `KoreLiveWeb/` | Isolated web-search, fetch, navigation, research, and Wikipedia MCP service | [KoreLiveWeb/README.md](KoreLiveWeb/README.md) |
+| `KoreAgentNetwork/` | Visual, executable processing networks with named data ports | [KoreAgentNetwork/README.md](KoreAgentNetwork/README.md) |
 
 ## Shared support components
 

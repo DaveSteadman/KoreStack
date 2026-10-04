@@ -103,6 +103,26 @@
         </div>
 
         <div class="kcui-workspace__region stack-region">
+          <section class="panel kcui-panel koreagentnetwork-panel" data-koreagentnetwork-panel>
+            <div class="koreagentnetwork-header kcui-panel-header">
+              <div>
+                <p class="eyebrow">KoreAgentNetwork</p>
+                <p>Visual processing flows with named data ports and executable blocks.</p>
+              </div>
+              <span class="kcui-tag kcui-tag--dim" data-koreagentnetwork-field="state">Loading</span>
+            </div>
+            <div class="kcui-panel-body koreagentnetwork-body">
+              <dl class="koreagentnetwork-details">
+                <div><dt>Saved networks</dt><dd data-koreagentnetwork-field="networks">â€”</dd></div>
+                <div><dt>Execution</dt><dd>Bounded local Python</dd></div>
+                <div><dt>API access</dt><dd>Named KoreStack services</dd></div>
+              </dl>
+              <a class="kcui-tag kcui-tag--accent" href="{{ koreagentnetwork_url }}" data-koreagentnetwork-link>Open network editor</a>
+            </div>
+          </section>
+        </div>
+
+        <div class="kcui-workspace__region stack-region">
           <section class="panel kcui-panel services-panel">
             <div class="services-header kcui-panel-header">
               <p class="eyebrow">Services</p>
