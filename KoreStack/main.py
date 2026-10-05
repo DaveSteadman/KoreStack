@@ -349,7 +349,7 @@ def build_child_env(config: dict) -> dict[str, str]:
         _host = _service_host(config, _slug)
         _url  = f"http://{_host}:{_port}{_meta['url_suffix']}"
         _key  = SERVICE_ICON_KEYS.get(_slug)
-        if _key:
+        if _key and (_key == _slug or _key not in SERVICE_META):  # an alias must never overwrite another service
             _suite_urls[_key] = _url
         _suite_urls[_slug] = _url
 

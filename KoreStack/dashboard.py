@@ -71,10 +71,13 @@ class ResilientThreadingHTTPServer(ThreadingHTTPServer):
 def build_suite_urls(manager: Any, dashboard_url: str, service_icon_keys: dict[str, str]) -> dict[str, str]:
     """Return the topbar URL map keyed by topbar service key, such as 'koreagent'."""
     urls: dict[str, str] = {"korestack": dashboard_url}
-    for service in manager.snapshot()["services"]:
+    services = manager.snapshot()["services"]
+    slugs = {service["slug"] for service in services}
+    for service in services:
         urls[service["slug"]] = service["url"]
         topbar_key = service_icon_keys.get(service["slug"])
-        if topbar_key:
+        # An alias must never overwrite another service's own entry (e.g. koreagentnetwork -> koreagent)
+        if topbar_key and (topbar_key == service["slug"] or topbar_key not in slugs):
             urls[topbar_key] = service["url"]
     return urls
 

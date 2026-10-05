@@ -24,14 +24,14 @@ initServiceShell({
 function id() { return `node_${crypto.randomUUID().replaceAll('-', '').slice(0, 10)}`; }
 function escapeHtml(value) { const el = document.createElement('span'); el.textContent = String(value); return el.innerHTML; }
 function currentNode() { return state.network?.nodes.find((node) => node.id === state.selectedNodeId) || null; }
-function nodeHeight(node) { return Math.max(126, 58 + Math.max(node.inputs.length, node.outputs.length, 1) * 25); }
+function nodeHeight(node) { return 47 + Math.max(node.inputs.length, node.outputs.length, 1) * 20; }
 function defaultNode(kind = 'python', index = 0) {
   const nodeId = id();
   const base = {
     id: nodeId,
     kind,
     config: {},
-    position: { x: 110 + index * 34, y: 90 + index * 34 },
+    position: { x: 60 + (index % 4) * 280, y: 70 + Math.floor(index / 4) * 230 },
   };
   if (kind === 'llm') {
     return { ...base, label: 'Prompt model', inputs: [{ name: 'prompt' }], outputs: [{ name: 'response' }], code: '', config: { prompt_template: '{prompt}', model: '' } };
@@ -83,7 +83,7 @@ function showKindFields(kind) {
 function portPosition(node, portName, output) {
   const ports = output ? node.outputs : node.inputs;
   const index = ports.findIndex((port) => port.name === portName);
-  return { x: node.position.x + (output ? 220 : 0), y: node.position.y + 59 + Math.max(index, 0) * 25 };
+  return { x: node.position.x + (output ? 220 : 0), y: node.position.y + 45 + Math.max(index, 0) * 20 };
 }
 
 async function request(path, options = {}) {
@@ -96,8 +96,14 @@ async function request(path, options = {}) {
 async function loadList() {
   const { networks } = await request('/api/networks');
   const list = $('#network-list');
-  list.innerHTML = networks.map((network) => `<button class="kan-network-item ${network.id === state.network?.id ? 'active' : ''}" data-id="${escapeHtml(network.id)}"><strong>${escapeHtml(network.title)}</strong><small>${network.node_count} blocks</small></button>`).join('');
-  list.querySelectorAll('[data-id]').forEach((button) => button.addEventListener('click', () => loadNetwork(button.dataset.id)));
+  list.innerHTML = networks.map((network) => {
+    const active = network.id === state.network?.id;
+    const name = active ? `<input class="kan-network-name" aria-label="Network name" value="${escapeHtml(state.network.title)}">` : `<strong>${escapeHtml(network.title)}</strong>`;
+    return `<div class="kan-network-item ${active ? 'active' : ''}" data-id="${escapeHtml(network.id)}" role="button" tabindex="0">${name}<small>${network.node_count} blocks</small></div>`;
+  }).join('');
+  list.querySelectorAll('[data-id]').forEach((item) => item.addEventListener('click', () => { if (item.dataset.id !== state.network?.id) loadNetwork(item.dataset.id); }));
+  list.querySelector('.kan-network-name')?.addEventListener('input', (event) => { state.network.title = event.target.value; $('#network-title').value = event.target.value; });
+  list.querySelector('.kan-network-name')?.addEventListener('change', () => persist({ refreshList: true }));
   return networks;
 }
 
@@ -114,7 +120,7 @@ async function loadNetwork(networkId) {
   await loadList();
 }
 
-function render() {
+function render({ inspector = true } = {}) {
   const network = state.network;
   if (!network) return;
   network.nodes.forEach(ensureNodeShape);
@@ -124,7 +130,7 @@ function render() {
   edgeLayer.innerHTML = '';
   network.nodes.forEach(renderNode);
   drawEdges();
-  renderInspector();
+  if (inspector) renderInspector();
   renderData();
 }
 
@@ -134,7 +140,7 @@ function dotCenter(node, portName, output) {
   if (!port) return portPosition(node, portName, output);
   const origin = nodeLayer.getBoundingClientRect();
   const box    = port.getBoundingClientRect();
-  return { x: box.left + box.width / 2 - origin.left, y: box.top + box.height / 2 - origin.top };
+  return { x: (box.left + box.width / 2 - origin.left) / zoom, y: (box.top + box.height / 2 - origin.top) / zoom };
 }
 
 function drawEdges() {
@@ -144,23 +150,47 @@ function drawEdges() {
     if (!fromNode || !toNode) return;
     const from = dotCenter(fromNode, edge.source_port, true);
     const to   = dotCenter(toNode, edge.target_port, false);
-    const mid  = Math.max(45, Math.abs(to.x - from.x) * .5);
     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    path.setAttribute('d', `M ${from.x} ${from.y} C ${from.x + mid} ${from.y}, ${to.x - mid} ${to.y}, ${to.x} ${to.y}`);
-    path.setAttribute('title', `${edge.source_node}.${edge.source_port} ? ${edge.target_node}.${edge.target_port}`);
+    path.setAttribute('d', `M ${from.x} ${from.y} L ${to.x} ${to.y}`);
+    path.setAttribute('title', `${fromNode.label}.${edge.source_port} → ${toNode.label}.${edge.target_port}`);
+    if (state.run?.nodes?.[edge.source_node]?.status === 'completed') path.classList.add('kan-edge-live');
     edgeLayer.append(path);
   });
+}
+
+function preview(value) {
+  const text = value === undefined ? '—' : typeof value === 'string' ? value : JSON.stringify(value);
+  const flat = String(text).replace(/\s+/g, ' ');
+  return flat.length > 40 ? `${flat.slice(0, 40)}…` : flat;
+}
+
+function ioPreview(node, result) {
+  if (!result) return '';
+  const inputs = resolveInputs(node);
+  const outputs = outputValues(node.id);
+  const row = (dir, port, value) => `<div class="kan-io-row kan-io-row--${dir}" title="${escapeHtml(pretty(value))}"><b>${dir === 'in' ? '&rarr;' : '&larr;'} ${escapeHtml(port.name)}</b><span>${escapeHtml(preview(value))}</span></div>`;
+  const error = result.error ? `<div class="kan-io-error">${escapeHtml(preview(result.error))}</div>` : '';
+  return `<div class="kan-io">${node.inputs.map((port) => row('in', port, inputs[port.name])).join('')}${node.outputs.map((port) => row('out', port, outputs[port.name])).join('')}${error}</div>`;
+}
+
+function portValue(value, result) {
+  if (!result) return '';
+  const text = preview(value);
+  return `<em class="${text.length > 6 ? 'long' : ''}" title="${escapeHtml(pretty(value))}">${escapeHtml(text)}</em>`;
 }
 
 function renderNode(node) {
   const result = state.run?.nodes?.[node.id];
   const element = document.createElement('article');
-  element.className = `kan-node ${node.id === state.selectedNodeId ? 'selected' : ''} ${result?.status || ''}`;
+  element.className = `kan-node ${node.id === state.selectedNodeId ? 'selected' : ''} ${result?.status || ''} ${node.id === state.activeNodeId ? 'active' : ''} kan-node--${node.kind || 'python'}`;
+  const seq = executionOrder().indexOf(node.id) + 1;
+  const inValues = result ? resolveInputs(node) : {};
+  const outValues = result ? outputValues(node.id) : {};
   element.dataset.nodeId = node.id;
   element.style.left = `${node.position.x}px`;
   element.style.top  = `${node.position.y}px`;
   element.style.minHeight = `${nodeHeight(node)}px`;
-  element.innerHTML = `<div class="kan-node-head"><button type="button" class="kan-icon-button kan-node-play" title="Run this block with its current inputs">&#9654;</button><span>${escapeHtml(node.label)}</span><span class="kan-node-id">${escapeHtml(node.id)}</span></div><div class="kan-port-lines"><div class="kan-port-column">${node.inputs.map((port) => `<button type="button" class="kan-port kan-port--input" data-port="${escapeHtml(port.name)}"><i class="kan-port-dot"></i>${escapeHtml(port.name)}</button>`).join('')}</div><div class="kan-port-column">${node.outputs.map((port) => `<button type="button" class="kan-port kan-port--output ${state.pendingOutput?.nodeId === node.id && state.pendingOutput?.portName === port.name ? 'pending' : ''}" data-port="${escapeHtml(port.name)}">${escapeHtml(port.name)}<i class="kan-port-dot"></i></button>`).join('')}</div></div>`;
+  element.innerHTML = `<div class="kan-node-head"><button type="button" class="kcui-icon-button kan-node-play" title="Run this block with its current inputs">&#9654;</button><span class="kan-node-seq" title="Execution order">${seq || '-'}</span><span>${escapeHtml(node.label)}</span></div><div class="kan-port-lines"><div class="kan-port-column">${node.inputs.map((port) => `<button type="button" class="kan-port kan-port--input" data-port="${escapeHtml(port.name)}"><i class="kan-port-dot"></i><span class="kan-port-text">${escapeHtml(port.name)}${portValue(inValues[port.name], result)}</span></button>`).join('')}</div><div class="kan-port-column">${node.outputs.map((port) => `<button type="button" class="kan-port kan-port--output ${state.pendingOutput?.nodeId === node.id && state.pendingOutput?.portName === port.name ? 'pending' : ''}" data-port="${escapeHtml(port.name)}"><span class="kan-port-text">${escapeHtml(port.name)}${portValue(outValues[port.name], result)}</span><i class="kan-port-dot"></i></button>`).join('')}</div></div>${result?.error ? `<div class="kan-io-error">${escapeHtml(preview(result.error))}</div>` : ''}`;
   const play = element.querySelector('.kan-node-play');
   play.addEventListener('pointerdown', (event) => event.stopPropagation());
   play.addEventListener('click', (event) => { event.stopPropagation(); state.selectedNodeId = node.id; playNode(node.id); });
@@ -171,43 +201,116 @@ function renderNode(node) {
   nodeLayer.append(element);
 }
 
-function selectNode(nodeId) { state.selectedNodeId = nodeId; render(); }
+function showTab(name) {
+  document.querySelectorAll('.kan-tab').forEach((tab) => tab.classList.toggle('active', tab.dataset.tab === name));
+  $('#tab-networks').hidden = name !== 'networks';
+  $('#tab-nodes').hidden = name !== 'nodes';
+}
+document.querySelectorAll('.kan-tab').forEach((tab) => tab.addEventListener('click', () => showTab(tab.dataset.tab)));
+function selectNode(nodeId) { state.selectedNodeId = nodeId; render(); showTab('nodes'); }
+// Drop edges whose ports no longer exist, and keep a single connection per input
+function pruneEdges() {
+  const network = state.network;
+  const seen = new Set();
+  const before = network.edges.length;
+  network.edges = network.edges.filter((edge) => {
+    const from = network.nodes.find((node) => node.id === edge.source_node);
+    const to   = network.nodes.find((node) => node.id === edge.target_node);
+    if (!from?.outputs.some((port) => port.name === edge.source_port) || !to?.inputs.some((port) => port.name === edge.target_port)) return false;
+    const key = `${edge.target_node}\u0000${edge.target_port}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  if (network.edges.length !== before) render({ inspector: false });
+}
+
 function connectInput(targetNode, targetPort) {
   if (!state.pendingOutput) { setStatus('Choose an output first.', 'error'); return; }
   const source = state.pendingOutput;
   if (source.nodeId === targetNode) { setStatus('A block cannot feed itself.', 'error'); return; }
-  state.network.edges = state.network.edges.filter((edge) => !(edge.target_node === targetNode && edge.target_port === targetPort));
+  const existing = state.network.edges.find((edge) => edge.target_node === targetNode && edge.target_port === targetPort);
+  const same     = existing && existing.source_node === source.nodeId && existing.source_port === source.portName;
+  state.network.edges = state.network.edges.filter((edge) => edge !== existing);
+  if (same) {
+    state.pendingOutput = null;
+    render();
+    persist();
+    setStatus('Connection cleared.', 'ok');
+    return;
+  }
   state.network.edges.push({ id: `edge_${crypto.randomUUID().replaceAll('-', '').slice(0, 10)}`, source_node: source.nodeId, source_port: source.portName, target_node: targetNode, target_port: targetPort });
   state.pendingOutput = null;
   render();
-  setStatus('Ports connected. Save the network to persist it.', 'ok');
+  persist();
+  setStatus('Ports connected.', 'ok');
 }
+
+let zoom = 1;
+const zoomLabel = document.createElement('div');
+zoomLabel.className = 'kan-zoom-label';
+$('.kan-workspace').append(zoomLabel);
+function applyZoom() {
+  nodeLayer.style.transform = edgeLayer.style.transform = `scale(${zoom})`;
+  zoomLabel.textContent = `${Math.round(zoom * 100)}%`;
+}
+applyZoom();
+graphStage.addEventListener('wheel', (event) => {
+  if (!event.ctrlKey) return;
+  event.preventDefault();
+  const next = Math.min(2, Math.max(0.25, Math.round(zoom * (event.deltaY < 0 ? 1.1 : 1 / 1.1) * 100) / 100));
+  if (next === zoom) return;
+  const bounds = graphStage.getBoundingClientRect();
+  const px = event.clientX - bounds.left, py = event.clientY - bounds.top;
+  const wx = (px + graphStage.scrollLeft) / zoom, wy = (py + graphStage.scrollTop) / zoom;
+  zoom = next;
+  applyZoom();
+  graphStage.scrollLeft = wx * zoom - px;
+  graphStage.scrollTop  = wy * zoom - py;
+}, { passive: false });
+
+graphStage.addEventListener('pointerdown', (event) => {
+  if (event.button !== 0 || event.target !== graphStage) return;
+  event.preventDefault();
+  const start = { x: event.clientX, y: event.clientY, left: graphStage.scrollLeft, top: graphStage.scrollTop };
+  graphStage.classList.add('kan-panning');
+  const move = (e) => {
+    graphStage.scrollLeft = start.left - (e.clientX - start.x);
+    graphStage.scrollTop  = start.top - (e.clientY - start.y);
+  };
+  const up = () => {
+    graphStage.classList.remove('kan-panning');
+    window.removeEventListener('pointermove', move);
+  };
+  window.addEventListener('pointermove', move);
+  window.addEventListener('pointerup', up, { once: true });
+});
 
 function beginDrag(event, node) {
   event.preventDefault();
   const bounds = graphStage.getBoundingClientRect();
-  state.dragging = { node, offsetX: event.clientX - bounds.left + graphStage.scrollLeft - node.position.x, offsetY: event.clientY - bounds.top + graphStage.scrollTop - node.position.y };
+  state.dragging = { node, offsetX: (event.clientX - bounds.left + graphStage.scrollLeft) / zoom - node.position.x, offsetY: (event.clientY - bounds.top + graphStage.scrollTop) / zoom - node.position.y };
   window.addEventListener('pointermove', moveDrag);
   window.addEventListener('pointerup', endDrag, { once: true });
 }
 function moveDrag(event) {
   if (!state.dragging) return;
   const bounds = graphStage.getBoundingClientRect();
-  state.dragging.node.position.x = Math.max(10, Math.round(event.clientX - bounds.left + graphStage.scrollLeft - state.dragging.offsetX));
-  state.dragging.node.position.y = Math.max(10, Math.round(event.clientY - bounds.top + graphStage.scrollTop - state.dragging.offsetY));
+  state.dragging.node.position.x = Math.max(10, Math.round((event.clientX - bounds.left + graphStage.scrollLeft) / zoom - state.dragging.offsetX));
+  state.dragging.node.position.y = Math.max(10, Math.round((event.clientY - bounds.top + graphStage.scrollTop) / zoom - state.dragging.offsetY));
   render();
 }
-function endDrag() { state.dragging = null; window.removeEventListener('pointermove', moveDrag); }
+function endDrag() { if (state.dragging) persist(); state.dragging = null; window.removeEventListener('pointermove', moveDrag); }
 
 function renderInspector() {
   const node = currentNode();
   $('#empty-inspector').hidden = Boolean(node);
   $('#node-form').hidden       = !node;
+  $('#node-actions').hidden    = !node;
   $('#result-panel').hidden    = !node || !state.run?.nodes?.[node.id];
   if (!node) return;
   ensureNodeShape(node);
   $('#node-label').value = node.label;
-  $('#node-id').value    = node.id;
   $('#node-kind').value = node.kind;
   $('#node-code').value  = node.code;
   $('#node-prompt-template').value = node.config.prompt_template || '';
@@ -222,8 +325,8 @@ function renderInspector() {
   if (result) $('#node-result').textContent = JSON.stringify(result, null, 2);
 }
 function renderPorts(container, ports, isInput) {
-  container.innerHTML = ports.map((port, index) => `<div class="kan-port-row"><input data-index="${index}" value="${escapeHtml(port.name)}" aria-label="${isInput ? 'Input' : 'Output'} port name"><button type="button" data-remove="${index}" title="Remove port">×</button></div>`).join('');
-  container.querySelectorAll('[data-remove]').forEach((button) => button.addEventListener('click', () => { ports.splice(Number(button.dataset.remove), 1); state.network.edges = state.network.edges.filter((edge) => isInput ? !(edge.target_node === currentNode().id && edge.target_port === button.parentElement.querySelector('input').value) : !(edge.source_node === currentNode().id && edge.source_port === button.parentElement.querySelector('input').value)); render(); }));
+  container.innerHTML = ports.map((port, index) => `<div class="kan-port-row"><input data-index="${index}" value="${escapeHtml(port.name)}" aria-label="${isInput ? 'Input' : 'Output'} port name"><button type="button" class="kcui-icon-button kan-port-remove" data-remove="${index}" title="Remove port">×</button></div>`).join('');
+  container.querySelectorAll('[data-remove]').forEach((button) => button.addEventListener('click', () => { ports.splice(Number(button.dataset.remove), 1); state.network.edges = state.network.edges.filter((edge) => isInput ? !(edge.target_node === currentNode().id && edge.target_port === button.parentElement.querySelector('input').value) : !(edge.source_node === currentNode().id && edge.source_port === button.parentElement.querySelector('input').value)); persist(); render(); }));
 }
 
 const pretty = (value) => value === undefined ? '' : JSON.stringify(value, null, 2);
@@ -249,14 +352,16 @@ async function playNode(nodeId) {
   if (!node) return false;
   try {
     setStatus(`Running ${node.label}…`, 'running');
+    state.activeNodeId = node.id; render({ inspector: false });
     const { result } = await request('/api/run-node', { method: 'POST', body: JSON.stringify({ node, inputs: resolveInputs(node) }) });
     state.run ||= { nodes: {} };
     state.run.nodes[node.id] = result;
+    state.activeNodeId = null;
     if (state.edits[node.id]) state.edits[node.id].outputs = {};
     render();
     setStatus(result.status === 'completed' ? `${node.label} completed in ${result.elapsed_seconds}s` : `${node.label} failed: ${result.error}`, result.status === 'completed' ? 'ok' : 'error');
     return result.status === 'completed';
-  } catch (error) { setStatus(error.message, 'error'); return false; }
+  } catch (error) { state.activeNodeId = null; render({ inspector: false }); setStatus(error.message, 'error'); return false; }
 }
 
 function executionOrder() {
@@ -303,7 +408,7 @@ function renderData() {
   const inputs = resolveInputs(node);
   $('#data-inputs').innerHTML = node.inputs.map((port) => {
     const edge = state.network.edges.find((item) => item.target_node === node.id && item.target_port === port.name);
-    return dataCard('inputs', port, inputs[port.name], edge ? `← ${edge.source_node}.${edge.source_port}` : 'unconnected', hasOwn(edits.inputs, port.name));
+    return dataCard('inputs', port, inputs[port.name], edge ? `← ${state.network.nodes.find((n) => n.id === edge.source_node)?.label || edge.source_node} · ${edge.source_port}` : 'unconnected', hasOwn(edits.inputs, port.name));
   }).join('') || '<div class="kan-data-empty">No inputs.</div>';
   const outputs = outputValues(node.id);
   $('#data-outputs').innerHTML = node.outputs.map((port) => dataCard('outputs', port, outputs[port.name], 'feeds downstream blocks', hasOwn(edits.outputs, port.name))).join('') || '<div class="kan-data-empty">No outputs.</div>';
@@ -328,7 +433,7 @@ $('#data-form').addEventListener('click', (event) => {
   if (!node || !button) return;
   if (button.dataset.default) {
     const port = node.inputs.find((item) => item.name === button.dataset.default);
-    if (port) { port.default = resolveInputs(node)[port.name]; setStatus('Saved as the default. Save the network to persist.', 'ok'); }
+    if (port) { port.default = resolveInputs(node)[port.name]; persist(); setStatus('Saved as the default.', 'ok'); }
   } else {
     const [kind, name] = button.dataset.reset.split(':');
     delete editsFor(node.id)[kind][name];
@@ -341,16 +446,16 @@ $('#step-network').addEventListener('click', stepNetwork);
 
 function setStatus(text, kind = '') { const status = $('#run-status'); status.textContent = text; status.className = `kan-run-status ${kind}`; }
 
-$('#node-form').addEventListener('submit', (event) => {
-  event.preventDefault();
+$('#node-form').addEventListener('submit', (event) => event.preventDefault());
+$('#node-form').addEventListener('change', applyNode);
+
+function applyNode() {
   const node = currentNode();
   if (!node) return;
   const originalId = node.id;
-  const nextId = $('#node-id').value.trim();
+  const originalKind = node.kind;
+  const nextId = originalId;
   const nextKind = $('#node-kind').value;
-  if (!/^[A-Za-z0-9_-]+$/.test(nextId)) { setStatus('Block id may contain letters, numbers, _ or -.', 'error'); return; }
-  if (nextId !== originalId && state.network.nodes.some((item) => item.id === nextId)) { setStatus('Block id must be unique.', 'error'); return; }
-  node.id = nextId;
   node.kind = nextKind;
   node.label = $('#node-label').value.trim() || nextId;
   node.code = $('#node-code').value;
@@ -374,20 +479,77 @@ $('#node-form').addEventListener('submit', (event) => {
   }
   if (nextId !== originalId) state.network.edges.forEach((edge) => { if (edge.source_node === originalId) edge.source_node = nextId; if (edge.target_node === originalId) edge.target_node = nextId; });
   state.selectedNodeId = nextId;
-  render(); setStatus('Block changes applied. Save to persist.', 'ok');
-});
+  // Rebuild the inspector only when the port rows no longer match, so focus and clicks on other fields are not lost
+  const kindChanged = originalKind !== node.kind;
+  const rowNames = (container) => Array.from(container.querySelectorAll('input')).map((input) => input.value.trim()).join('|');
+  const inspectorStale = rowNames($('#input-ports')) !== node.inputs.map((port) => port.name).join('|') || rowNames($('#output-ports')) !== node.outputs.map((port) => port.name).join('|') || nextId !== originalId;
+  if (inspectorStale || kindChanged) { render({ inspector: inspectorStale }); }
+  else {
+    // Patch in place: rebuilding the canvas on blur would swallow the click that caused the blur
+    const article = nodeLayer.querySelector(`[data-node-id="${CSS.escape(node.id)}"]`);
+    const label = article?.querySelector('.kan-node-head > span:nth-of-type(2)');
+    if (label) label.textContent = node.label;
+  }
+  pruneEdges();
+  persist();
+  setStatus('Block updated.', 'ok');
+}
 $('#node-kind').addEventListener('change', (event) => showKindFields(event.target.value));
-$('#add-input').addEventListener('click', () => { const node = currentNode(); if (node) { node.inputs.push({ name: `input_${node.inputs.length + 1}` }); render(); } });
-$('#add-output').addEventListener('click', () => { const node = currentNode(); if (node) { node.outputs.push({ name: `output_${node.outputs.length + 1}` }); render(); } });
-$('#add-node').addEventListener('click', () => { const node = defaultNode($('#new-node-kind').value, state.network.nodes.length); state.network.nodes.push(node); selectNode(node.id); });
-$('#network-title').addEventListener('input', (event) => { if (state.network) state.network.title = event.target.value; });
-$('#save-network').addEventListener('click', async () => { try { const { network } = await request(`/api/networks/${encodeURIComponent(state.network.id)}`, { method: 'PUT', body: JSON.stringify({ network: state.network }) }); state.network = network; await loadList(); setStatus('Network saved.', 'ok'); } catch (error) { setStatus(error.message, 'error'); } });
+$('#add-input').addEventListener('click', () => { const node = currentNode(); if (node) { node.inputs.push({ name: `input_${node.inputs.length + 1}` }); persist(); render(); } });
+$('#add-output').addEventListener('click', () => { const node = currentNode(); if (node) { node.outputs.push({ name: `output_${node.outputs.length + 1}` }); persist(); render(); } });
+$('#add-node').addEventListener('click', () => { const node = defaultNode($('#new-node-kind').value, state.network.nodes.length); state.network.nodes.push(node); persist(); selectNode(node.id); });
+$('#network-title').addEventListener('input', (event) => { if (!state.network) return; state.network.title = event.target.value; const name = document.querySelector('.kan-network-name'); if (name) name.value = event.target.value; });
+$('#network-title').addEventListener('change', () => persist({ refreshList: true }));
+let saveChain = Promise.resolve();
+function persist({ refreshList = false } = {}) {
+  if (!state.network) return saveChain;
+  const body = JSON.stringify({ network: state.network });
+  const id = state.network.id;
+  saveChain = saveChain.then(async () => {
+    try {
+      await request(`/api/networks/${encodeURIComponent(id)}`, { method: 'PUT', body });
+      if (refreshList) await loadList();
+    } catch (error) { setStatus(`Auto-save failed: ${error.message}`, 'error'); }
+  });
+  return saveChain;
+}
 $('#new-network').addEventListener('click', async () => { try { const { network } = await request('/api/networks', { method: 'POST', body: JSON.stringify({ title: 'Untitled network' }) }); state.network = network; state.selectedNodeId = null; render(); await loadList(); setStatus('New network created. Rename it in the title field.', 'ok'); } catch (error) { setStatus(error.message, 'error'); } });
 $('#delete-network').addEventListener('click', async () => { if (!state.network || !window.confirm(`Delete ${state.network.title}?`)) return; try { await request(`/api/networks/${encodeURIComponent(state.network.id)}`, { method: 'DELETE' }); state.network = null; const networks = await loadList(); if (networks[0]) await loadNetwork(networks[0].id); } catch (error) { setStatus(error.message, 'error'); } });
-$('#run-network').addEventListener('click', async () => { if (!state.network) return; try { setStatus('Running network…', 'running'); const { run } = await request(`/api/networks/${encodeURIComponent(state.network.id)}/run`, { method: 'POST' }); state.run = run; state.edits = {}; render(); setStatus(run.ok ? `Completed in ${run.elapsed_seconds}s` : `Stopped after ${run.elapsed_seconds}s; inspect failed block`, run.ok ? 'ok' : 'error'); } catch (error) { setStatus(error.message, 'error'); } });
+$('#run-network').addEventListener('click', async () => {
+  if (!state.network || state.running) return;
+  const started = performance.now();
+  state.run = { nodes: {} };
+  state.edits = {};
+  state.running = true;
+  render();
+  let ok = true;
+  for (const nodeId of executionOrder()) {
+    state.selectedNodeId = nodeId;
+    ok = await playNode(nodeId);
+    if (!ok) break;
+    await new Promise((resolve) => setTimeout(resolve, 400));
+  }
+  state.running = false;
+  render();
+  const seconds = ((performance.now() - started) / 1000).toFixed(1);
+  setStatus(ok ? `Network completed in ${seconds}s` : `Stopped after ${seconds}s; inspect the failed block`, ok ? 'ok' : 'error');
+});
 
 loadList().then((networks) => networks[0] ? loadNetwork(networks[0].id) : null).catch((error) => setStatus(error.message, 'error'));
 
 // Fonts and window size change port positions after the first render
 document.fonts?.ready.then(() => state.network && render());
 window.addEventListener('resize', () => state.network && render());
+
+$('#delete-node').addEventListener('click', () => {
+  const node = currentNode();
+  if (!node || !window.confirm(`Delete ${node.label}?`)) return;
+  const network = state.network;
+  network.nodes = network.nodes.filter((item) => item.id !== node.id);
+  network.edges = network.edges.filter((edge) => edge.source_node !== node.id && edge.target_node !== node.id);
+  if (state.run?.nodes) delete state.run.nodes[node.id];
+  delete state.edits?.[node.id];
+  state.selectedNodeId = null;
+  render();
+  persist();
+});

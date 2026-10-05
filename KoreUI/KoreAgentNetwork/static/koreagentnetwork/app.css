@@ -22,7 +22,6 @@ body {
   overflow: hidden;
   overflow-x: hidden;
 }
-#topbar, #appbar { min-height: 0; }
 button, input, textarea { font: inherit; }
 
 .kan-layout {
@@ -54,7 +53,6 @@ button, input, textarea { font: inherit; }
 .kan-data button[type=submit] { margin-top: 12px; }
 .kan-inspector { flex: 1; min-height: 0; overflow: auto; padding-bottom: 24px; }
 .kan-section-head { align-items: center; border-bottom: 1px solid var(--kan-border); display: flex; font-size: 12px; font-weight: 700; justify-content: space-between; letter-spacing: .08em; min-height: 43px; padding: 0 13px; text-transform: uppercase; }
-.kan-icon-button { background: transparent; border: 1px solid var(--kan-border); border-radius: 4px; color: var(--kan-text); cursor: pointer; font-size: 20px; height: 25px; line-height: 19px; width: 25px; }
 .kan-network-list { flex: 1; overflow: auto; padding: 8px; }
 .kan-network-item { background: transparent; border: 1px solid transparent; border-radius: 5px; color: var(--kan-text); cursor: pointer; display: block; margin-bottom: 4px; padding: 9px; text-align: left; width: 100%; }
 .kan-network-item:hover, .kan-network-item.active { background: var(--kan-panel-soft); border-color: var(--kan-border); }
@@ -112,6 +110,54 @@ code { color: #a5c8ff; }
   .kan-run-status { flex-basis: 100%; margin-left: 0; }
 }
 
+.kan-node-seq { background: #0e1420; border-radius: 9px; color: #9fb0cc; flex: 0 0 auto; font-size: 11px; line-height: 18px; margin-right: 8px; min-width: 18px; padding: 0 5px; text-align: center; }
+.kan-node--python .kan-node-head { background: #1f3a5c; border-left: 4px solid #4c9aff; }
+.kan-node--llm .kan-node-head { background: #3f2a5c; border-left: 4px solid #b07cff; }
+.kan-node--judge .kan-node-head { background: #5c4a1f; border-left: 4px solid #f0b840; }
 .kan-node-play { color: var(--kan-green); flex: 0 0 auto; font-size: 11px; height: 22px; line-height: 18px; margin-right: 8px; width: 22px; }
 .kan-data-actions { display: flex; gap: 8px; margin-top: 4px; }
 .kan-data-actions button { background: transparent; border: 0; color: var(--kan-blue); cursor: pointer; font-size: 11px; padding: 0; }
+.kan-node.active { border-color: #f2c66f; box-shadow: 0 0 0 2px #f2c66f55, 0 6px 18px #0005; }
+.kan-edges path.kan-edge-live { stroke: var(--kan-green); stroke-width: 3; }
+.kan-io { border-top: 1px solid #2a3750; display: flex; flex-direction: column; font-size: 11px; gap: 2px; padding: 6px 10px 8px; }
+.kan-io-row { display: flex; gap: 6px; overflow: hidden; white-space: nowrap; }
+.kan-io-row b { color: var(--kan-dim); flex: 0 0 auto; font-weight: 600; }
+.kan-io-row--out b { color: #70abff; }
+.kan-io-row span { color: var(--kan-text); font-family: Consolas, monospace; overflow: hidden; text-overflow: ellipsis; }
+.kan-io-error { color: var(--kan-red); }
+.kan-run-status { flex: 0 0 260px; min-width: 0; text-align: right; }
+.kan-network-name { background: #0e1420; border: 1px solid var(--kan-border); border-radius: 4px; color: var(--kan-text); font-size: 13px; font-weight: 700; padding: 3px 6px; width: 100%; }
+.kan-left > [hidden] { display: none; }
+.kan-tabs { border-bottom: 1px solid var(--kan-border); display: flex; flex: 0 0 auto; }
+.kan-tab { background: transparent; border: 0; border-bottom: 2px solid transparent; color: var(--kan-dim); cursor: pointer; flex: 1; font-size: 12px; font-weight: 700; letter-spacing: .08em; padding: 11px 0; text-transform: uppercase; }
+.kan-tab.active { border-bottom-color: var(--kan-blue); color: var(--kan-text); }
+.kan-left .kan-library { border-bottom: 0; flex: 1; max-height: none; min-height: 0; }
+.kan-node { min-height: 0; }
+.kan-node-head { box-sizing: border-box; height: 30px; min-height: 0; padding: 0 8px; }
+.kan-node-play { height: 20px; width: 20px; line-height: 16px; margin-right: 6px; }
+.kan-port-lines { min-height: 0; padding: 4px 0; }
+.kan-port-column { gap: 0; min-width: 0; }
+.kan-port { box-sizing: border-box; height: 20px; max-width: 110px; padding: 0 6px; }
+.kan-port em { color: var(--kan-text); font-family: Consolas, monospace; font-style: normal; max-width: 44px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kan-io-error { border-top: 1px solid #2a3750; font-size: 11px; padding: 3px 8px; }
+.kan-edges { z-index: 2; }
+.kan-nodes { z-index: 1; }
+.kan-edges path { stroke-linecap: butt; }
+.kan-node, .kan-node-head, .kan-node-play, .kan-node-seq { border-radius: 0; }
+.kan-node { min-height: 0; }
+.kan-port { height: auto; min-height: 20px; max-width: 120px; }
+.kan-port-dot { flex: 0 0 11px; }
+.kan-port-text { min-width: 0; }
+.kan-port-text em { margin-left: 6px; }
+.kan-port-text em.long { display: block; margin: 0; max-width: 100px; overflow: hidden; text-overflow: ellipsis; }
+.kan-port--output .kan-port-text { text-align: right; }
+.kan-nodes, .kan-edges { transform-origin: 0 0; }
+.kan-zoom-label { bottom: 22px; color: #7e8ba3; font-size: 12px; pointer-events: none; position: absolute; right: 24px; user-select: none; z-index: 50; }
+
+.kan-workspace { position: relative; }
+.kan-graph-stage { cursor: grab; }
+.kan-graph-stage.kan-panning { cursor: grabbing; }
+.kan-node-actions { background: var(--kan-panel); border-top: 1px solid var(--kan-border); bottom: -24px; margin-top: 12px; position: sticky; }
+.kcui-shell-bg button.kcui-icon-button { width: 25px; height: 25px; min-width: 25px; min-height: 25px; font-size: 18px; }
+.kcui-shell-bg button.kcui-icon-button.kan-node-play { --kcui-icon-button-color: var(--kan-green); border-color: transparent; font-size: 11px; height: 20px; margin-right: 6px; min-height: 20px; min-width: 20px; width: 20px; }
+.kcui-shell-bg button.kcui-icon-button.kan-port-remove { --kcui-icon-button-color: #f5b3bc; background: #38202a; border-color: #75414c; font-size: 14px; height: 100%; min-height: 0; width: 28px; }

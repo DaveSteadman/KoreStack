@@ -222,6 +222,8 @@ def list_networks() -> list[dict]:
     for path in sorted(NETWORKS_DIR.glob("*.json")):
         try:
             network = json.loads(path.read_text(encoding="utf-8"))
+            if not isinstance(network, dict) or not isinstance(network.get("id"), str):
+                continue
             networks.append({
                 "id":         network.get("id"),
                 "title":      network.get("title"),

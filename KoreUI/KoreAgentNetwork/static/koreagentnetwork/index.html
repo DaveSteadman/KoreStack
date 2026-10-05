@@ -6,7 +6,7 @@
   <title>KoreAgentNetwork</title>
   <link rel="icon" href="/ui-elements/assets/icons/favicon.ico">
   <link rel="stylesheet" href="/ui-elements/assets/css/chrome.css">
-  <link rel="stylesheet" href="/static/koreagentnetwork/app.css?v=1791154255">
+  <link rel="stylesheet" href="/static/koreagentnetwork/app.css?v=1791240900">
   <script src="/suite-config.js"></script>
 </head>
 <body class="kcui-shell-bg">
@@ -14,14 +14,14 @@
   <div id="appbar"></div>
   <main class="kcui-main kan-layout">
     <div class="kan-left">
-    <aside class="kan-library">
+    <div class="kan-tabs" role="tablist"><button type="button" class="kan-tab active" data-tab="networks" role="tab">Networks</button><button type="button" class="kan-tab" data-tab="nodes" role="tab">Nodes</button></div>
+    <aside class="kan-library" id="tab-networks">
       <div class="kan-section-head">
         <span>Networks</span>
-        <button id="new-network" class="kan-icon-button" type="button" title="New network">+</button>
+        <button id="new-network" class="kcui-icon-button" type="button" title="New network">+</button>
       </div>
       <div id="network-list" class="kan-network-list"></div>
       <div class="kan-sidebar-actions">
-        <button id="save-network" class="btn btn-primary" type="button">Save</button>
         <button id="delete-network" class="btn btn-secondary" type="button">Delete</button>
       </div>
       <div class="kan-help">
@@ -30,12 +30,11 @@
       </div>
     </aside>
 
-    <aside class="kan-inspector">
-      <div class="kan-section-head">Block inspector</div>
+    <aside class="kan-inspector" id="tab-nodes" hidden>
+      <div class="kan-section-head">Selected node</div>
       <div id="empty-inspector" class="kan-empty-inspector">Select a block to edit its name, ports, and execution type.</div>
       <form id="node-form" hidden>
         <label>Label<input id="node-label" type="text"></label>
-        <label>Block id<input id="node-id" type="text" pattern="[-A-Za-z0-9_]{1,100}"></label>
         <label>Block type
           <select id="node-kind">
             <option value="python">Python</option>
@@ -66,12 +65,14 @@
           <label>System One model override (optional)<input id="node-judge-model" type="text" placeholder="Leave blank to use the active System One model"></label>
         </div>
         <p id="node-help" class="kan-code-help"></p>
-        <button id="apply-node" class="btn btn-primary" type="submit">Apply block changes</button>
       </form>
       <section id="result-panel" class="kan-result-panel" hidden>
         <div class="kan-ports-head"><span>Last run</span></div>
         <pre id="node-result"></pre>
       </section>
+      <div id="node-actions" class="kan-sidebar-actions kan-node-actions" hidden>
+        <button id="delete-node" class="btn btn-secondary" type="button">Delete</button>
+      </div>
     </aside>
     </div>
 
@@ -91,7 +92,7 @@
       <div id="graph-stage" class="kan-graph-stage" aria-label="Processing network canvas">
         <svg id="edges" class="kan-edges" aria-hidden="true"></svg>
         <div id="nodes" class="kan-nodes"></div>
-        <div id="canvas-hint" class="kan-canvas-hint">Add a block, configure its named ports, then connect its output to another block’s input.</div>
+        <div id="canvas-hint" class="kan-canvas-hint">Add a block, configure its named ports, then connect its output to another block&rsquo;s input.</div>
       </div>
     </section>
 
@@ -108,6 +109,6 @@
       </form>
     </aside>
   </main>
-  <script type="module" src="/static/koreagentnetwork/app.js?v=1791154255"></script>
+  <script type="module" src="/static/koreagentnetwork/app.js?v=1791240900"></script>
 </body>
 </html>

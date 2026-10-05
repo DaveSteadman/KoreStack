@@ -59,7 +59,8 @@ function suiteUrlsFromSnapshot(snapshot) {
   const urls = { korestack: `${window.location.origin}/` };
   for (const service of snapshot.services || []) {
     const key = SERVICE_KEY_BY_SLUG[service.slug];
-    if (key) urls[key] = service.url;
+    urls[service.slug] = service.url;
+    if (key && (key === service.slug || !(snapshot.services || []).some((other) => other.slug === key))) urls[key] = service.url;
   }
   return urls;
 }
