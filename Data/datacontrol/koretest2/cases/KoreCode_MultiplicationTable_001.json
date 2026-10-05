@@ -1,8 +1,12 @@
 {
-  "prompt": "Print the multiplication table for 7 up to 12.",
-  "timeout_seconds": 1200,
-  "evaluation": {
-    "type": "python",
-    "assert": "all_contains|7 x 1 = 7||7 x 6 = 42||7 x 12 = 84"
-  }
+    "prompt":  "Print the multiplication table for 7 up to 12.",
+    "timeout_seconds":  1200,
+    "evaluation":  {
+                       "type":  "python",
+                       "asserts":  [
+                                      "regex|7\\s*[x×*]\\s*1\\s*=\\s*7\\b",
+                                      "regex|7\\s*[x×*]\\s*6\\s*=\\s*42\\b",
+                                      "regex|7\\s*[x×*]\\s*12\\s*=\\s*84\\b"
+                                  ]
+                   }
 }
