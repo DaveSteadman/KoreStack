@@ -603,7 +603,7 @@ def _test_run_definition(payload: dict) -> dict:
     return {
         "id":       f"test_run:{schedule['time']}",
         "kind":     "test_run",
-        "name":     f"KoreTest full run @ {schedule['time']}",
+        "name":     f"KoreTest2 full run @ {schedule['time']}",
         "enabled":  True,
         "schedule": schedule,
     }

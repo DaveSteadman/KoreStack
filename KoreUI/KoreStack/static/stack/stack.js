@@ -8,9 +8,9 @@ const SERVICE_KEY_BY_SLUG = {
   korecode: 'korecode',
   korecomms: 'korecomms',
   koreliveweb: 'koreliveweb',
-  koretest: 'koretest',
   korecron: 'korecron',
-  koretest2: 'koretest2',
+  koretest2: 'koretest',
+  koreunittest: 'koretest',
   koreagentnetwork: 'koreagent',
 };
 
@@ -204,44 +204,6 @@ function applyOllamaState(next) {
   if (stop) stop.disabled = !controllable || !ollamaState.server_running;
 }
 
-function applyKoreTest2Summary(summary) {
-  const panel = document.querySelector('[data-koretest2-panel]');
-  if (!panel) return;
-  const state = panel.querySelector('[data-koretest2-field="state"]');
-  if (!summary?.available) {
-    setText(state, 'Unavailable');
-    state?.classList.remove('kcui-tag--success', 'kcui-tag--warning');
-    state?.classList.add('kcui-tag--danger');
-    setText(panel.querySelector('[data-koretest2-field="build"]'), summary?.detail || 'KoreTest2 unavailable');
-    return;
-  }
-  setText(state, summary.active ? 'Session running' : 'Ready');
-  state?.classList.remove('kcui-tag--danger');
-  state?.classList.toggle('kcui-tag--warning', Boolean(summary.active));
-  state?.classList.toggle('kcui-tag--success', !summary.active);
-  setText(panel.querySelector('[data-koretest2-field="build"]'), summary.build_id || 'Unknown build');
-  setText(panel.querySelector('[data-koretest2-field="passed"]'), `${summary.passed} / ${summary.total}`);
-  setText(panel.querySelector('[data-koretest2-field="failed"]'), String(summary.failed));
-  setText(panel.querySelector('[data-koretest2-field="pending"]'), String(summary.pending));
-}
-
-function applyKoreAgentNetworkSummary(summary) {
-  const panel = document.querySelector('[data-koreagentnetwork-panel]');
-  if (!panel) return;
-  const state = panel.querySelector('[data-koreagentnetwork-field="state"]');
-  if (!summary?.available) {
-    setText(state, 'Unavailable');
-    state?.classList.remove('kcui-tag--success', 'kcui-tag--warning');
-    state?.classList.add('kcui-tag--danger');
-    setText(panel.querySelector('[data-koreagentnetwork-field="networks"]'), summary?.detail || 'Not available');
-    return;
-  }
-  setText(state, 'Ready');
-  state?.classList.remove('kcui-tag--danger', 'kcui-tag--warning');
-  state?.classList.add('kcui-tag--success');
-  setText(panel.querySelector('[data-koreagentnetwork-field="networks"]'), String(summary.networks ?? 0));
-}
-
 function showOllamaNotice(message, tone = '') {
   const notice = document.querySelector('[data-ollama-field="notice"]');
   if (!notice) return;
@@ -262,34 +224,12 @@ async function refreshOllama() {
   }
 }
 
-async function refreshKoreTest2() {
-  try {
-    const response = await fetch('/api/koretest2/summary', { cache: 'no-store' });
-    if (!response.ok) return;
-    applyKoreTest2Summary(await response.json());
-  } catch (_error) {
-    applyKoreTest2Summary({ available: false, detail: 'KoreTest2 status could not be loaded.' });
-  }
-}
-
-async function refreshKoreAgentNetwork() {
-  try {
-    const response = await fetch('/api/koreagentnetwork/summary', { cache: 'no-store' });
-    if (!response.ok) return;
-    applyKoreAgentNetworkSummary(await response.json());
-  } catch (_error) {
-    applyKoreAgentNetworkSummary({ available: false, detail: 'KoreAgentNetwork status could not be loaded.' });
-  }
-}
-
 async function refresh() {
   try {
     const response = await fetch('/status', { cache: 'no-store' });
     if (!response.ok) return;
     applySnapshot(await response.json());
     await refreshOllama();
-    await refreshKoreTest2();
-    await refreshKoreAgentNetwork();
   } catch (_error) {
     console.warn('[KoreStack] Status refresh failed.');
   }
@@ -399,8 +339,6 @@ async function initChrome() {
 wireControls();
 applySnapshot(current);
 applyOllamaState(ollamaState);
-void refreshKoreTest2();
-void refreshKoreAgentNetwork();
 startRefreshLoop();
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') {

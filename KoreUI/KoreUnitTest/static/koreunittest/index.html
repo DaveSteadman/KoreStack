@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>KoreUnitTest</title>
+  <link rel="icon" href="/ui-elements/assets/icons/favicon.ico">
+  <link rel="stylesheet" href="/ui-elements/assets/css/chrome.css">
+  <link rel="stylesheet" href="/ui-elements/assets/css/workspace.css">
+  <script src="/suite-config.js"></script>
+  <style>
+    .kcui-page { --kcui-page-max: 100vw; }    .koreunittest-grid { border-collapse: collapse; width: 100%; }
+    .koreunittest-grid th, .koreunittest-grid td { border-bottom: 1px solid var(--kcui-border, #334155); padding: .45rem; text-align: center; }
+    .koreunittest-grid th:first-child, .koreunittest-grid td:first-child { text-align: left; white-space: nowrap; }
+    .koreunittest-grid-wrap { overflow-x: auto; }
+    .koreunittest-dot { min-width: 2rem; padding-inline: .4rem; }
+  </style>
+</head>
+<body class="kcui-shell-bg">
+  <div id="topbar"></div>
+  <div id="app-bar"></div>
+  <main class="kcui-main">
+    <div class="kcui-page">
+      <section class="kcui-panel panel">
+        <div class="kcui-panel-header">
+          <p class="eyebrow">KoreUnitTest</p>
+          <p>One run per test file and build. Each file in KoreUnitTest/tests runs in its own process when a new build is first seen, or on demand.</p>
+        </div>
+        <div class="kcui-panel-body">
+          <p>
+            <button id="koreunittest-run" type="button" class="kcui-tag kcui-tag--accent">RUN</button>
+            <span id="koreunittest-status" class="kcui-tag kcui-tag--dim">Loading results…</span>
+          </p>
+          <p id="koreunittest-summary" class="kcui-tag kcui-tag--dim"></p>
+          <div id="koreunittest-grid" class="koreunittest-grid-wrap">Loading…</div>
+        </div>
+      </section>
+    </div>
+  </main>
+  <script type="module" src="/static/koreunittest/app.js"></script>
+</body>
+</html>

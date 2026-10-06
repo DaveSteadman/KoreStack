@@ -177,14 +177,14 @@ SERVICE_META: dict[str, dict[str, object]] = {
         "port_arg": "--port",
         "description": "Standalone live web skill service for search, fetch, navigation, research, and Wikipedia lookup.",
     },
-    "koretest": {
-        "label": "KoreTest", "cwd": SUITE_ROOT / "KoreTest", "script": "main.py", "url_suffix": "/ui", "health_suffix": "/status", "description": "Test execution, TEST-chat provenance, versioned result history, and trends.",
-    },
     "korecron": {
         "label": "KoreCron", "cwd": SUITE_ROOT / "KoreCron", "script": "main.py", "url_suffix": "/ui", "health_suffix": "/status", "description": "Scheduled prompt sets that execute sequentially in named KoreChats.",
     },
     "koretest2": {
         "label": "KoreTest2", "cwd": SUITE_ROOT / "KoreTest2", "script": "main.py", "url_suffix": "/ui", "health_suffix": "/status", "description": "Incremental build-keyed prompt testing, results, and analysis logs.",
+    },
+    "koreunittest": {
+        "label": "KoreUnitTest", "cwd": SUITE_ROOT / "KoreUnitTest", "script": "main.py", "url_suffix": "/ui", "health_suffix": "/status", "description": "Build-keyed unit tests, one Python file per test, with results and output logs.",
     },
     "koreagentnetwork": {
         "label": "KoreAgentNetwork", "cwd": SUITE_ROOT / "KoreAgentNetwork", "script": "main.py", "url_suffix": "/ui", "health_suffix": "/status", "description": "Visual processing networks with named data ports and bounded Python execution.",
@@ -199,9 +199,9 @@ SERVICE_ICON_KEYS: dict[str, str] = {
     "korecode":          "korecode",
     "korecomms":         "korecomms",
     "koreliveweb":       "koreliveweb",
-    "koretest":          "koretest",
     "korecron":          "korecron",
     "koretest2":         "koretest",
+    "koreunittest":      "koretest",
     "koreagentnetwork":  "koreagent",
 }
 
@@ -291,9 +291,9 @@ def get_stack_paths(config: dict) -> dict[str, Path]:
         "koredata_data":    _dc("koredata",  "koredata"),
         "koreagent_data":   _dc("koreagent", "koreagent"),
         "koredocs":         _dc("koredocs",  "koredocs"),
-        "koretest":         _dc("koretest",  "koretest"),
         "korecron":         _dc("korecron",  "korecron"),
         "koretest2":        _dc("koretest2", "koretest2"),
+        "koreunittest":    _dc("koreunittest", "koreunittest"),
         "docs_data":        _du("docs_data", "KoreFiles"),
     }
 
@@ -416,7 +416,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--services",
         default="all",
-        help="Comma-separated service list. Valid values: all, korechat, koreagent, koredatagateway, koredocs, korecode, korecomms, koreliveweb, koretest, korecron, koretest2, koreagentnetwork.",
+        help="Comma-separated service list. Valid values: all, korechat, koreagent, koredatagateway, koredocs, korecode, korecomms, koreliveweb, korecron, koretest2, koreunittest, koreagentnetwork.",
     )
     parser.add_argument("--host", default=None, help="KoreStack landing page bind address.")
     parser.add_argument("--ui-port", type=int, default=None, help="KoreStack landing page port.")
@@ -436,8 +436,8 @@ def resolve_services(raw: str, services: dict[str, ServiceSpec]) -> list[Service
             "korecode",
             "korecomms",
             "koreliveweb",
-            "koretest",
             "koretest2",
+            "koreunittest",
             "korecron",
             "koreagentnetwork",
         )
@@ -859,10 +859,9 @@ def _bootstrap_data_dirs(stack_paths: dict[str, Path]) -> None:
         # Shared datacontrol tree
         dc / "logs",
         dc / "schedules",
-        stack_paths["koretest"] / "test_prompts",
-        stack_paths["koretest"] / "test_results",
         stack_paths["korecron"],
         stack_paths["koretest2"],
+        stack_paths["koreunittest"],
         dc / "chatsessions",
         dc / "chatsessions" / "named",
         # User data

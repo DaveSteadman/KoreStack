@@ -6,13 +6,14 @@
   <title>KoreAgentNetwork</title>
   <link rel="icon" href="/ui-elements/assets/icons/favicon.ico">
   <link rel="stylesheet" href="/ui-elements/assets/css/chrome.css">
-  <link rel="stylesheet" href="/static/koreagentnetwork/app.css?v=1791240900">
+  <link rel="stylesheet" href="/ui-elements/assets/css/workspace.css">
+  <link rel="stylesheet" href="/static/koreagentnetwork/app.css?v=1791330400">
   <script src="/suite-config.js"></script>
 </head>
 <body class="kcui-shell-bg">
   <div id="topbar"></div>
   <div id="appbar"></div>
-  <main class="kcui-main kan-layout">
+  <main class="kcui-main kan-layout" data-kcui-workspace data-kcui-layout-key="koreagentnetwork-main-v1" data-kcui-columns="0,2,4" data-kcui-columns-min="200,360,240" data-kcui-disable-below="981">
     <div class="kan-left">
     <div class="kan-tabs" role="tablist"><button type="button" class="kan-tab active" data-tab="networks" role="tab">Networks</button><button type="button" class="kan-tab" data-tab="nodes" role="tab">Nodes</button></div>
     <aside class="kan-library" id="tab-networks">
@@ -31,18 +32,17 @@
     </aside>
 
     <aside class="kan-inspector" id="tab-nodes" hidden>
-      <div class="kan-section-head">Selected node</div>
+      <div class="kan-section-head">Label &amp; Type</div>
       <div id="empty-inspector" class="kan-empty-inspector">Select a block to edit its name, ports, and execution type.</div>
       <form id="node-form" hidden>
-        <label>Label<input id="node-label" type="text"></label>
-        <label>Block type
-          <select id="node-kind">
+        <div class="kan-label-type">
+          <input id="node-label" type="text" aria-label="Label" placeholder="Label">
+          <select id="node-kind" aria-label="Block type">
             <option value="python">Python</option>
             <option value="llm">LLM</option>
             <option value="judge">Decide</option>
           </select>
-        </label>
-        <div class="kan-ports-head"><span>Inputs</span><button id="add-input" type="button">+ Port</button></div>
+        </div>        <div class="kan-ports-head"><span>Inputs</span><button id="add-input" type="button">+ Port</button></div>
         <div id="input-ports" class="kan-port-editor"></div>
         <div class="kan-ports-head"><span>Outputs</span><button id="add-output" type="button">+ Port</button></div>
         <div id="output-ports" class="kan-port-editor"></div>
@@ -76,6 +76,7 @@
     </aside>
     </div>
 
+    <div class="kcui-workspace__splitter kcui-workspace__splitter--v kan-splitter" data-kcui-splitter data-kcui-axis="columns" data-kcui-before="0" data-kcui-after="2" aria-hidden="true"></div>
     <section class="kan-workspace">
       <div class="kan-toolbar">
         <input id="network-title" class="kan-title" aria-label="Network title" value="Untitled network">
@@ -96,6 +97,7 @@
       </div>
     </section>
 
+    <div class="kcui-workspace__splitter kcui-workspace__splitter--v kan-splitter" data-kcui-splitter data-kcui-axis="columns" data-kcui-before="2" data-kcui-after="4" aria-hidden="true"></div>
     <aside class="kan-data">
       <div class="kan-section-head">Block data</div>
       <div id="empty-data" class="kan-empty-inspector">Select a block to see and edit its values. Run the network to see live inputs and outputs.</div>
@@ -109,6 +111,6 @@
       </form>
     </aside>
   </main>
-  <script type="module" src="/static/koreagentnetwork/app.js?v=1791240900"></script>
+  <script type="module" src="/static/koreagentnetwork/app.js?v=1791330400"></script>
 </body>
 </html>

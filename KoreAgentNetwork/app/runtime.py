@@ -5,17 +5,19 @@ import os
 import re
 import subprocess
 import sys
-import tempfile
 import time
 import urllib.error
 import urllib.request
 from collections import defaultdict, deque
 from typing import Any
 
+from KoreCommon.datauser_fs import get_datauser_root
+
 from .config import NODE_TIMEOUT_SECONDS, RUN_TIMEOUT_SECONDS, suite_services
 
 
 _RUNNER = r'''
+import ast
 import json
 import math
 import re
@@ -65,6 +67,58 @@ def decide(question, state=None, model="", timeout=60):
 
 judge = decide
 
+import pathlib
+
+ROOT = pathlib.Path(payload["root"]).resolve()
+
+def _path(name):
+    target = (ROOT / str(name)).resolve()
+    if target != ROOT and ROOT not in target.parents:
+        raise ValueError("Path escapes the datauser folder: " + str(name))
+    return target
+
+def safe_open(name, mode="r", encoding="utf-8", **kwargs):
+    target = _path(name)
+    if any(flag in mode for flag in "wax+"):
+        target.parent.mkdir(parents=True, exist_ok=True)
+    if "b" in mode:
+        encoding = None
+    return open(target, mode, encoding=encoding, **kwargs)
+
+def read_text(name):
+    return _path(name).read_text(encoding="utf-8-sig")
+
+def write_text(name, text):
+    target = _path(name)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(str(text), encoding="utf-8")
+
+def append_text(name, text):
+    with safe_open(name, "a") as handle:
+        handle.write(str(text))
+
+def read_json(name, default=None):
+    target = _path(name)
+    if not target.exists() and default is not None:
+        return default
+    return json.loads(target.read_text(encoding="utf-8-sig"))
+
+def write_json(name, value):
+    write_text(name, json.dumps(value, indent=2, ensure_ascii=False))
+
+def exists(name):
+    return _path(name).exists()
+
+def list_files(pattern="*", folder="."):
+    base = _path(folder)
+    return sorted(str(item.relative_to(ROOT)).replace("\\", "/") for item in base.glob(pattern) if item.is_file())
+
+def delete_file(name):
+    target = _path(name)
+    if target.is_file():
+        target.unlink()
+        return True
+    return False
 safe_builtins = {
     "abs": abs, "all": all, "any": any, "bool": bool, "dict": dict, "enumerate": enumerate,
     "Exception": Exception, "TypeError": TypeError, "ValueError": ValueError,
@@ -75,6 +129,8 @@ safe_builtins = {
 namespace = {
     "__builtins__": safe_builtins,
     "api_get": api_get,
+    "open": safe_open, "read_text": read_text, "write_text": write_text, "append_text": append_text,
+    "read_json": read_json, "write_json": write_json, "exists": exists, "list_files": list_files, "delete_file": delete_file,
     "api_post": api_post,
     "decide": decide,
     "inputs": payload["inputs"],
@@ -82,12 +138,18 @@ namespace = {
     "llm": llm,
     "llm_result": llm_result,
     "outputs": {},
+    "NoValue": None,
     "json": json,
     "math": math,
     "re": re,
 }
 try:
-    exec(compile(payload["code"], "<KoreAgentNetwork node>", "exec"), namespace, namespace)
+    tree = ast.parse(payload["code"], "<KoreAgentNetwork node>")
+    wrapper = ast.parse("def __node__():\n    pass")
+    wrapper.body[0].body = tree.body or [ast.Pass()]
+    ast.fix_missing_locations(wrapper)
+    exec(compile(wrapper, "<KoreAgentNetwork node>", "exec"), namespace, namespace)
+    namespace["__node__"]()
     outputs = namespace["outputs"]
     if not isinstance(outputs, dict):
         raise TypeError("outputs must remain a dictionary")
@@ -247,18 +309,19 @@ def _execute_node(node: dict, inputs: dict, timeout: float) -> dict:
         return _execute_llm_node(node, inputs, timeout)
     if kind == "judge":
         return _execute_judge_node(node, inputs, timeout)
-    payload = {"code": node["code"], "inputs": inputs, "services": suite_services()}
-    with tempfile.TemporaryDirectory(prefix="koreagentnetwork-") as work_dir:
-        completed = subprocess.run(
-            [sys.executable, "-I", "-c", _RUNNER],
-            input           = json.dumps(payload),
-            text            = True,
-            capture_output  = True,
-            timeout         = max(1, timeout),
-            cwd             = work_dir,
-            env             = _child_environment(),
-            check           = False,
-        )
+    root = get_datauser_root()
+    root.mkdir(parents=True, exist_ok=True)
+    payload = {"code": node["code"], "inputs": inputs, "services": suite_services(), "root": str(root)}
+    completed = subprocess.run(
+        [sys.executable, "-I", "-c", _RUNNER],
+        input           = json.dumps(payload),
+        text            = True,
+        capture_output  = True,
+        timeout         = max(1, timeout),
+        cwd             = root,
+        env             = _child_environment(),
+        check           = False,
+    )
     try:
         result = json.loads(completed.stdout.strip())
     except json.JSONDecodeError:

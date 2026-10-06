@@ -139,38 +139,6 @@ def _dashboard_bootstrap(
     }
 
 
-def koretest2_summary(manager: Any) -> dict[str, object]:
-    """Return the current-build KoreTest2 totals without cross-origin browser calls."""
-    service = next(
-        (item for item in manager.snapshot()["services"] if item.get("slug") == "koretest2"),
-        None,
-    )
-    if not service:
-        return {"available": False, "detail": "KoreTest2 is not configured."}
-    try:
-        request = urllib.request.Request(f"{service['url'].rstrip('/')}/status")
-        with urllib.request.urlopen(request, timeout=1.5) as response:
-            return json.loads(response.read().decode("utf-8"))
-    except (OSError, urllib.error.URLError, urllib.error.HTTPError, json.JSONDecodeError) as exc:
-        return {"available": False, "detail": f"KoreTest2 is unavailable: {exc}"}
-
-
-def koreagentnetwork_summary(manager: Any) -> dict[str, object]:
-    """Return KoreAgentNetwork status without a browser cross-origin request."""
-    service = next(
-        (item for item in manager.snapshot()["services"] if item.get("slug") == "koreagentnetwork"),
-        None,
-    )
-    if not service:
-        return {"available": False, "detail": "KoreAgentNetwork is not configured."}
-    try:
-        request = urllib.request.Request(f"{service['url'].rstrip('/')}/status")
-        with urllib.request.urlopen(request, timeout=1.5) as response:
-            return json.loads(response.read().decode("utf-8"))
-    except (OSError, urllib.error.URLError, urllib.error.HTTPError, json.JSONDecodeError) as exc:
-        return {"available": False, "detail": f"KoreAgentNetwork is unavailable: {exc}"}
-
-
 def _template_env(stack_static_dir: Path) -> Environment:
     return Environment(
         loader     = FileSystemLoader(str(stack_static_dir / "stack")),
@@ -199,8 +167,6 @@ def html_page(
         root_command   = root_command,
         bootstrap_json = bootstrap_json,
         ollama         = ollama_state,
-        koretest2_url  = suite_urls.get("koretest2", "#"),
-        koreagentnetwork_url = suite_urls.get("koreagentnetwork", "#"),
     )
 
 
@@ -322,14 +288,6 @@ def build_handler(
 
             if request_path == "/api/ollama/status":
                 self._send_json(ollama_control.snapshot())
-                return
-
-            if request_path == "/api/koretest2/summary":
-                self._send_json(koretest2_summary(self.manager_ref))
-                return
-
-            if request_path == "/api/koreagentnetwork/summary":
-                self._send_json(koreagentnetwork_summary(self.manager_ref))
                 return
 
             if request_path == "/api/endpoints/catalog":

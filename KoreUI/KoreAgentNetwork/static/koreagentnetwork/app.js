@@ -1,4 +1,5 @@
 import { initServiceShell } from '/ui-elements/assets/js/chrome.js';
+import { initWorkspaceLayouts } from '/ui-elements/assets/js/workspace.js';
 
 const state = { network: null, selectedNodeId: null, pendingOutput: null, run: null, edits: {}, dragging: null };
 const $ = (selector) => document.querySelector(selector);
@@ -7,7 +8,7 @@ const nodeLayer  = $('#nodes');
 const edgeLayer  = $('#edges');
 const TEMPLATE_RE = /\{([A-Za-z0-9_-]+)\}/g;
 const BLOCK_HELP = {
-  python: 'Available: inputs, outputs, api_get, api_post, llm, llm_result, decide, judge, json, math, re.',
+  python: 'Available: inputs, outputs, NoValue (None), top-level return to stop early, api_get, api_post, llm, llm_result, decide, judge, json, math, re. Files (cwd and root = datauser folder): open, read_text, write_text, append_text, read_json, write_json, exists, list_files, delete_file.',
   llm: 'Use {input_name} placeholders in the prompt. Inputs are merged into the prompt, and this block can output response, prompt, model, prompt_tokens, completion_tokens, and tokens_per_second.',
   judge: 'Use {input_name} placeholders in the question. All inputs are sent to System One as the decision state, and this block can output verdict, probability, threshold, question, and model.',
 };
@@ -553,3 +554,5 @@ $('#delete-node').addEventListener('click', () => {
   render();
   persist();
 });
+
+initWorkspaceLayouts();

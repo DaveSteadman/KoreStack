@@ -29,7 +29,7 @@ button, input, textarea { font: inherit; }
   padding: 0;
   width: 100%;
   display: grid;
-  grid-template-columns: clamp(260px, 22vw, 340px) minmax(0, 1fr) clamp(300px, 26vw, 420px);
+  grid-template-columns: clamp(260px, 22vw, 340px) 6px minmax(0, 1fr) 6px clamp(300px, 26vw, 420px);
   height: 100%;
   min-height: 0;
   max-width: 100%;
@@ -88,6 +88,7 @@ code { color: #a5c8ff; }
   padding: 0;
   width: 100%; grid-template-columns: 190px minmax(0, 1fr); }
   .kan-inspector { display: none; }
+  .kan-splitter { display: none; }
 }
 
 @media (max-width: 720px) {
@@ -102,6 +103,7 @@ code { color: #a5c8ff; }
   .kan-network-item { flex: 0 0 160px; margin: 0; }
   .kan-sidebar-actions { border-left: 1px solid var(--kan-border); border-top: 0; padding: 8px; }
   .kan-help { display: none; }
+  .kan-splitter { display: none; }
 }
 
 @media (max-width: 520px) {
@@ -161,3 +163,16 @@ code { color: #a5c8ff; }
 .kcui-shell-bg button.kcui-icon-button { width: 25px; height: 25px; min-width: 25px; min-height: 25px; font-size: 18px; }
 .kcui-shell-bg button.kcui-icon-button.kan-node-play { --kcui-icon-button-color: var(--kan-green); border-color: transparent; font-size: 11px; height: 20px; margin-right: 6px; min-height: 20px; min-width: 20px; width: 20px; }
 .kcui-shell-bg button.kcui-icon-button.kan-port-remove { --kcui-icon-button-color: #f5b3bc; background: #38202a; border-color: #75414c; font-size: 14px; height: 100%; min-height: 0; width: 28px; }
+.kan-splitter { background: var(--kan-border); min-height: 0; }
+.kan-splitter:hover, .kan-splitter.is-dragging { background: var(--kan-blue); }
+.kan-inspector form { padding: 8px 10px; }
+.kan-inspector label { margin-bottom: 6px; }
+.kan-inspector input, .kan-inspector textarea, .kan-inspector select { padding: 4px 6px; margin-top: 3px; }
+.kan-label-type { display: grid; gap: 6px; grid-template-columns: minmax(0, 1fr) 96px; margin-bottom: 6px; }
+.kan-label-type input, .kan-label-type select { margin-top: 0; }
+.kan-inspector .kan-ports-head { margin: 6px 0 3px; }
+.kan-port-editor { gap: 3px; }
+.kan-port-row { gap: 4px; grid-template-columns: 1fr 22px; }
+.kan-port-row input { padding: 2px 6px; }
+.kan-port-row .kan-port-remove { height: 22px; width: 22px; }
+.kan-code-help { margin: 4px 0 0; }
