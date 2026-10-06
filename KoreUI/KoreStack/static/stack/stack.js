@@ -177,7 +177,6 @@ function updateOllamaField(name, value, fallback) {
 
 function applyOllamaState(next) {
   ollamaState = next || {};
-  const loadedModels = Array.isArray(ollamaState.loaded_models) ? ollamaState.loaded_models : [];
   const stateNode = document.querySelector('[data-ollama-state]');
   if (stateNode) {
     stateNode.classList.toggle('ollama-state--up', Boolean(ollamaState.server_running));
@@ -185,7 +184,6 @@ function applyOllamaState(next) {
     setText(stateNode.querySelector('[data-ollama-field="state"]'), ollamaStateLabel(ollamaState));
   }
 
-  updateOllamaField('loaded-model', loadedModels.join(', '), 'No model loaded');
   updateOllamaField('configured-model', ollamaState.configured_model);
   updateOllamaField('system-one-model', ollamaState.system_one_model);
   updateOllamaField('system-one-stats', ollamaState.system_one_stats);

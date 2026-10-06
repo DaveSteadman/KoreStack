@@ -13,9 +13,10 @@ Handles content addition, management, and search across all services.
 - Proxies or coordinates service-owned data operations behind one URL surface
 - Hosts the KoreData MCP-facing tool boundary where configured
 
-## How to run it
 
-Normally this starts as part of `python .\main.py` or `python .\KoreData\main.py`.
+## Role in the suite
+
+Port 29603. KoreStack starts it with the other KoreData services. KoreAgent reaches it through `/mcp`, and the browser UI offers cross-domain search with persistent named SavedSearches.
 
 ## Troubleshooting
 

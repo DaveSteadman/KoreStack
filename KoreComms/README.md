@@ -14,6 +14,20 @@ The agent should not talk directly to Gmail, Discord, or other external systems.
 - Delivers outbound messages once the agent marks them ready
 - Provides browser pages for conversations, connections, compose, and activity
 
+## Role in the suite
+
+KoreComms (port 29609) is the only service that talks to Discord, Gmail, SFTP, and similar channels. Inbound traffic becomes KoreChat conversations and events that KoreAgent processes; replies the agent marks ready are delivered back out. KoreStack starts it with the rest of the suite.
+
+## Architecture
+
+| Element | Role |
+|---|---|
+| `interfaces/` | One adapter per channel (manual, Discord, Gmail, SFTP file) |
+| Poller and queue manager | Background polling and ordered delivery |
+| Database and crypto | Local interface state, conversation metadata, encrypted credentials |
+| KoreChat client | Bridges messages into the canonical thread record |
+| Browser pages | Conversations, connections, compose, and activity |
+
 ## Service contract
 
 KoreComms owns transport adapters and delivery state, while KoreChat remains the canonical thread record.
@@ -22,23 +36,9 @@ KoreComms owns transport adapters and delivery state, while KoreChat remains the
 - outbound delivery happens only after the agent writes a draft and marks it ready
 - browser pages exist for operators to inspect conversations, configure interfaces, and inject manual messages
 
-## How to run it
-
-Normally you start KoreComms through the suite root:
-
-```powershell
-python .\main.py
-```
-
-To run KoreComms on its own:
-
-```powershell
-python .\KoreComms\main.py
-```
 
 ## Install and configuration
 
-- Install shared dependencies from the repo root with `pip install -r requirements.txt`
 - KoreComms reads host, port, and related service URLs from `config/korestack_config.json`
 - Interface-specific credentials are configured through the subsystem itself and stored locally
 - KoreComms depends on KoreChat for canonical thread history and event coordination

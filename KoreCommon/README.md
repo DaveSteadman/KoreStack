@@ -8,14 +8,20 @@ Without KoreCommon, each subsystem would duplicate the same suite-level plumbing
 
 ## What it includes
 
-- Shared suite path and config helpers
-- Logging and service-app utilities
-- Common data and indexing helpers
-- Shared slash-command support modules where appropriate
+| Module | Role |
+|---|---|
+| `suite_paths.py`, `suite_config.py` | Suite root, data root, datacontrol and datauser paths, and the shared config loader |
+| `datauser_fs.py`, `datauser_script_runner.py` | User-space file access and script running |
+| `service_app.py`, `service_logging.py` | Common FastAPI app setup, `/status`, and logging |
+| `endpoint_manifest.py`, `skill_service.py`, `skill_registration.py` | Endpoint and skill manifests that services publish to KoreAgent |
+| `stack_watchdog.py` | Supervision helper used by KoreStack |
+| `dbutil.py`, `sentence_index.py`, `compress.py` | Database, indexing, and compression helpers |
+
+Because every service imports it, KoreCommon is what makes the separate processes behave as one system: they agree on paths, ports, and the HTTP contract here.
 
 ## How to use it
 
-There is no direct startup command. KoreCommon is imported by the runnable services.
+KoreCommon is imported by the services and is never started itself.
 
 When troubleshooting a path, config, or shared-service issue, this is often the first place to inspect.
 

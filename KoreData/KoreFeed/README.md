@@ -1,60 +1,17 @@
-# MiniFeed
+# KoreFeed
 
-An RSS ingest server for LLM agents. MiniFeed continuously fetches RSS feeds, extracts full page text via trafilatura, and stores everything in per-domain SQLite databases with FTS5 full-text search. A REST API and browser UI let you manage feeds, search content, and control how far back entries are kept.
+KoreFeed is the RSS ingestion service inside KoreData. It continuously fetches RSS feeds, extracts full page text via trafilatura, and stores entries in per-domain SQLite databases with FTS5 full-text search. A REST API and browser UI manage feeds, search content, and control how far back entries are kept.
 
-![MiniFeed Web UI](progress/2026-04-06-WebUI.jpeg)
-
----
-
-## Quickstart
-
-### Prerequisites
-
-- Python 3.11 or newer
-- pip
-
-### 1. Clone and enter the directory
-
-```sh
-git clone https://github.com/your-org/MiniFeed.git
-cd MiniFeed
-```
-
-### 2. Create a virtual environment
-
-```sh
-python -m venv .venv
-```
-
-Activate it:
-
-| Platform | Command |
-|---|---|
-| Windows (PowerShell) | `.venv\Scripts\Activate.ps1` |
-| Windows (CMD) | `.venv\Scripts\activate.bat` |
-| macOS / Linux | `source .venv/bin/activate` |
-
-### 3. Install dependencies
-
-```sh
-pip install -r requirements.txt
-```
+![KoreFeed Web UI](progress/2026-04-06-WebUI.jpeg)
 
 ---
 
-## Starting the server
 
-```sh
-python main.py
-```
+## Role in the suite
 
-The server starts on the configured KoreFeed URL from `config/korestack_config.json`.
+KoreFeed is the live, frequently refreshed source of news and web content in KoreData. KoreDataGateway aggregates its search with the other KoreData services, so agents and browsers query one surface. KoreStack starts it as part of the stack; its port is `services.korefeed.port` in `config/korestack_config.json`.
 
-On startup, the scheduler respects the last-fetched timestamp for every feed — feeds that were fetched recently are skipped until they are next due, so a restart never causes an unnecessary flood of re-ingests.
-
-Press `Ctrl+C` to stop.
-
-Feed source ideas and actual configured feeds should now be managed through the service configuration and UI rather than separate scratch markdown files.
+On startup the scheduler respects each feed's last-fetched timestamp, so a restart never floods re-ingests. Feeds are managed through the service UI and configuration.
 
 ---
 
@@ -205,7 +162,7 @@ Deletions are **soft deletes** — the URL is preserved for deduplication but co
 ## Project layout
 
 ```
-MiniFeed/
+KoreFeed/
 ├── main.py                  Entry point — starts uvicorn
 ├── requirements.txt         Python dependencies
 ├── config/                  Server config (host, port, paths)
@@ -224,182 +181,4 @@ MiniFeed/
         ├── domain.html      Domain view (feeds + entries + management)
         ├── entry.html       Single entry view
         └── search.html      Search results
-```
-
-
----
-
-## Quickstart
-
-### Prerequisites
-
-- Python 3.11 or newer
-- pip
-
-### 1. Clone and enter the directory
-
-```sh
-git clone https://github.com/your-org/MiniFeed.git
-cd MiniFeed
-```
-
-### 2. Create a virtual environment
-
-```sh
-python -m venv .venv
-```
-
-Activate it:
-
-| Platform | Command |
-|---|---|
-| Windows (PowerShell) | `.venv\Scripts\Activate.ps1` |
-| Windows (CMD) | `.venv\Scripts\activate.bat` |
-| macOS / Linux | `source .venv/bin/activate` |
-
-### 3. Install dependencies
-
-```sh
-pip install -r requirements.txt
-```
-
----
-
-## Starting the server
-
-```sh
-python main.py
-```
-
-The server starts on the configured KoreFeed URL from `config/korestack_config.json`.
-
-On first startup, all previously configured feeds are ingested immediately in the background. Each feed then runs on its own schedule.
-
-To stop the server press `Ctrl+C`.
-
----
-
-## Interacting with MiniFeed
-
-### Browser UI
-
-| URL | Purpose |
-|---|---|
-| `http://<host>:<services.korefeed.port>/` | Home — manage feeds, view all domains |
-| `http://<host>:<services.korefeed.port>/web/{domain}` | Paginated list of entries for a domain |
-| `http://<host>:<services.korefeed.port>/web/{domain}/{id}` | Full entry including extracted page text |
-| `http://<host>:<services.korefeed.port>/web/search?q=your+query` | Search across all feeds |
-| `http://<host>:<services.korefeed.port>/api/docs` | Interactive Swagger API documentation |
-
-#### Adding a feed
-
-1. Open `http://<host>:<services.korefeed.port>/`.
-2. Fill in the **Add Feed** form on the right:
-   - **Feed name** — a human-readable label (e.g. `TechCrunch`)
-   - **Domain** — a short slug used to group feeds (e.g. `tech`)
-   - **RSS URL** — the full RSS/Atom feed URL
-   - **Update rate** — how often to re-check the feed, in minutes (default: 60)
-3. Click **Add Feed**. The feed is fetched immediately in the background.
-
-#### Removing a feed
-
-On the home page, click the **✕** button next to any feed in the configured feeds table.
-
----
-
-### REST API
-
-The full interactive reference is at `http://<host>:<services.korefeed.port>/api/docs`.
-
-#### Feed management
-
-```http
-GET    /api/feeds                  List all configured feeds
-POST   /api/feeds                  Add a new feed
-DELETE /api/feeds/{feed_id}        Remove a feed
-```
-
-**Add a feed (POST /api/feeds)**
-
-```sh
-curl -X POST http://<host>:<services.korefeed.port>/api/feeds \
-  -H "Content-Type: application/json" \
-  -d '{
-    "domain": "tech",
-    "name": "TechCrunch",
-    "url": "https://techcrunch.com/feed/",
-    "update_rate": 30
-  }'
-```
-
-**Remove a feed (DELETE /api/feeds/{feed_id})**
-
-```sh
-curl -X DELETE http://<host>:<services.korefeed.port>/api/feeds/<feed_id>
-```
-
-#### Browsing content
-
-```http
-GET /api/domains                              List all domains with entry counts
-GET /api/domains/{domain}/entries             Paginated entries (limit, offset params)
-GET /api/domains/{domain}/entries/{entry_id}  Single entry with full content
-```
-
-**List domains**
-
-```sh
-curl http://<host>:<services.korefeed.port>/api/domains
-```
-
-**Get entries for a domain (50 at a time)**
-
-```sh
-curl "http://<host>:<services.korefeed.port>/api/domains/tech/entries?limit=50&offset=0"
-```
-
-**Get a single entry**
-
-```sh
-curl http://<host>:<services.korefeed.port>/api/domains/tech/entries/42
-```
-
-#### Search
-
-```http
-GET /api/search?q={query}                     Search all domains
-GET /api/search?q={query}&domain={domain}     Search within one domain
-```
-
-```sh
-curl "http://<host>:<services.korefeed.port>/api/search?q=artificial+intelligence&domain=tech"
-```
-
----
-
-## Data storage
-
-| Path | Contents |
-|---|---|
-| `feeds.json` | Feed inventory (auto-created) |
-| `data/{domain}.db` | SQLite database for each domain (auto-created) |
-
-Each domain database holds: entry ID, feed name, headline, URL, published date, author/tags/summary metadata, and extracted full-page text.
-
----
-
-## Project layout
-
-```
-MiniFeed/
-├── main.py              Entry point — starts the server
-├── requirements.txt     Python dependencies
-├── feeds.json           Feed inventory (auto-created)
-├── data/                SQLite databases, one per domain (auto-created)
-└── app/
-    ├── api.py           FastAPI routes (REST + web UI)
-    ├── database.py      SQLite read/write helpers
-    ├── feed_manager.py  feeds.json management
-    ├── ingest.py        RSS fetching, page text extraction, scheduler
-    └── templates/       Jinja2 HTML templates
 ```

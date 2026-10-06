@@ -15,27 +15,16 @@ KoreStack needs local, inspectable data sources for research and retrieval. Kore
 | `KoreLibrary/` | Long-form local library and document corpus | [KoreLibrary/README.md](KoreLibrary/README.md) |
 | `KoreReference/` | Reference and encyclopedia-style content service | [KoreReference/README.md](KoreReference/README.md) |
 | `KoreGraph/` | Graph-oriented concept connectivity and search expansion | [KoreGraph/README.md](KoreGraph/README.md) |
+| `KoreScrape/` | Page scraping used to feed the other stores | code only |
 | `KoreRAG/` | Retrieval-augmented generation support and chunk storage | code and design status only |
 
-## How to run it
 
-Normally you start KoreData through the suite root:
+## Role in the suite
 
-```powershell
-python .\main.py
-```
-
-To run only the data stack:
-
-```powershell
-python .\KoreData\main.py
-```
-
-The gateway starts the child services it owns and exposes the primary browser and API entry points.
+KoreDataGateway (port 29603) is the single door to local data. KoreAgent calls it through its `/mcp` tools, and browser UIs use its search page. The child services (feed 29604, library 29605, RAG 29606, reference 29607, graph 29608, scrape 29612) are started by KoreStack alongside the gateway and are normally reached through it.
 
 ## Install and configuration
 
-- Install shared dependencies from the repo root with `pip install -r requirements.txt`
 - Ports, host binding, and enabled child services are defined in `config/korestack_config.json`
 - Shared data paths resolve through `KoreCommon/suite_paths.py`
 - Feed, library, reference, and graph data live under the configured suite data root, not necessarily inside the repo checkout

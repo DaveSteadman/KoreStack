@@ -12,7 +12,9 @@ The suite uses a common shell from `KoreUI/UIElements/`, but each service still 
 - `KoreCode/` static editor UI files
 - `KoreComms/` templates for conversations, connections, and activity
 - `KoreLiveWeb/` templates and static assets for the live web tool UI
-- `KoreStack/` dashboard and endpoint explorer frontend files
+- `KoreStack/` landing page and endpoint explorer frontend files
+- `KoreCron/`, `KoreTest2/`, `KoreUnitTest/`, and `KoreAgentNetwork/` UIs, including the KoreTest2 and KoreUnitTest build grids and the network editor
+- `KoreChat/` and `KoreDocs/` browser assets
 - Service-specific UI folders under `KoreData/` where needed
 
 ## How to use it

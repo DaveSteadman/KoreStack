@@ -1,142 +1,115 @@
 # KoreStack
 
-KoreStack is a local-first AI workspace made up of cooperating Python services: an agent runtime, a conversation store, a document suite, a code editor, a data gateway, a communications hub, and a suite dashboard that starts and monitors them together.
+KoreStack is a local-first AI workspace built from cooperating Python services: an agent runtime, a conversation store, a data layer, document and code editors, an external communications hub, visual agent networks, scheduling, and two test subsystems. It is started, supervised, and used as **one system**; you never launch a subsystem on its own.
 
 ![KoreStack animated screenshots](korestack_screenshots_2026-08-17.gif)
 
-This repository should be readable from the top down. The root README is the GitHub entry point. Each major subsystem now has its own README for purpose, setup, and troubleshooting. Detailed design documents still exist where they add engineering value, but product-overview and setup guidance is now meant to live in these primary READMEs.
-
-## What is in the suite
-
-| Subsystem | Role | README |
-|---|---|---|
-| `KoreStack/` | Launches services, shows health, and acts as the suite dashboard | [KoreStack/README.md](KoreStack/README.md) |
-| `KoreAgent/` | Local agent runtime, tool orchestration, scheduling, and session workflows | [KoreAgent/README.md](KoreAgent/README.md) |
-| `KoreChat/` | Canonical conversation, message, and event store used by the agent and comms layers | [KoreChat/README.md](KoreChat/README.md) |
-| `KoreData/` | Unified data gateway over feeds, library, reference, graph, and RAG services | [KoreData/README.md](KoreData/README.md) |
-| `KoreDocs/` | Browser-based document, spreadsheet, and diagram tools plus MCP endpoints | [KoreDocs/README.md](KoreDocs/README.md) |
-| `KoreCode/` | Browser-based workspace code editor and AI-assisted coding surface | [KoreCode/README.md](KoreCode/README.md) |
-| `KoreComms/` | External-channel bridge for Discord, Gmail, manual messages, and agent replies | [KoreComms/README.md](KoreComms/README.md) |
-| `KoreLiveWeb/` | Isolated web-search, fetch, navigation, research, and Wikipedia MCP service | [KoreLiveWeb/README.md](KoreLiveWeb/README.md) |
-| `KoreAgentNetwork/` | Visual, executable processing networks with named data ports | [KoreAgentNetwork/README.md](KoreAgentNetwork/README.md) |
-
-## Shared support components
-
-| Folder | Why it exists |
-|---|---|
-| `KoreCommon/` | Shared path, config, logging, and service helpers used across the suite. See [KoreCommon/README.md](KoreCommon/README.md). |
-| `KoreUI/` | Service-specific UI templates and static frontend assets consumed by the browser apps. See [KoreUI/README.md](KoreUI/README.md). |
-| `KoreUI/UIElements/` | Shared UI shell, tokens, chrome, and assets used by the browser apps. See [UIElements README](KoreUI/UIElements/README.md). |
-| `config/` | Checked-in suite configuration, including service ports and LLM bootstrap settings. See [config/README.md](config/README.md). |
-
 ## Quick start
 
-### Prerequisites
-
-- Python 3.11 or newer
-- A writable data root referenced by `config/korestack_config.json`
-- For `KoreAgent`, either Ollama or another configured LLM endpoint reachable from `config/koreagent_config.json`
-
-### Install
+Requirements: Python 3.11+, a writable data root, and an Ollama host (or other configured LLM endpoint).
 
 ```powershell
 python -m venv .venv
 .venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-```
-
-### Review configuration before first run
-
-Check these files first:
-
-- `config/korestack_config.json` for ports, host binding, data-root paths, and MCP service wiring
-- `config/koreagent_config.json` for the agent model host and default model configuration
-
-The checked-in config currently uses `paths.dataroot` as the backing location for `Data/datacontrol/` and `Data/datauser/`. If that path does not exist on your machine, update it before starting the suite.
-
-### Start the suite
-
-```powershell
 python .\main.py
 ```
 
-That command delegates to `KoreStack/main.py`, which launches the enabled child services and the suite dashboard.
+Then open the landing page at `http://127.0.0.1:29600/`. It lists every service with its health, and links to each subsystem UI.
 
-Open the dashboard at the configured KoreStack URL. In the checked-in config this is:
+Before the first run review `config/korestack_config.json` (ports, `paths.dataroot`) and `config/koreagent_config.json` (LLM host and models). See [config/README.md](config/README.md).
+
+## Command line
+
+This is the only place the suite's command line is documented. The root `main.py` runs `KoreStack/main.py`.
+
+| Command | Effect |
+|---|---|
+| `python .\main.py` | Start every enabled service plus the landing page (same as `start`) |
+| `python .\main.py status` | Report the health of the running services |
+| `python .\main.py --dry-run` | Print the resolved start plan without launching anything |
+| `python .\main.py --services a,b` | Start only the named services (`all` by default) |
+| `python .\main.py --host H --ui-port P` | Override the bind host and landing-page port |
+| `python .\main.py --open-browser` | Open the landing page once started |
+
+Valid service names: `korechat`, `koreagent`, `koredatagateway`, `koredocs`, `korecode`, `korecomms`, `koreliveweb`, `korecron`, `koretest2`, `koreunittest`, `koreagentnetwork`.
+
+## The subsystems
+
+| Subsystem | Port | What it does | How it contributes |
+|---|---|---|---|
+| [KoreStack](KoreStack/README.md) | 29600 | Supervisor and landing page | Starts, probes, and links every other service; shows Ollama state |
+| [KoreAgent](KoreAgent/README.md) | 29601 | Agent runtime: sessions, tool loop, skills, slash commands, System One | The brain; every other service that needs an LLM calls its API |
+| [KoreChat](KoreChat/README.md) | 29602 | Canonical conversation, message, and event store | Shared thread record for the agent and the comms layer |
+| [KoreData](KoreData/README.md) | 29603 + children | Gateway over feed, library, RAG, reference, graph, and scrape services | One search and retrieval surface for agents and browsers |
+| [KoreDocs](KoreDocs/README.md) | 29610 | Documents, spreadsheets, and diagrams on the user filesystem | Agent-editable user content, via UI and MCP |
+| [KoreCode](KoreCode/README.md) | 29611 | Browser code workspace with indexing and AI edit flows | Coding surface scoped to the repository |
+| [KoreComms](KoreComms/README.md) | 29609 | Discord, Gmail, SFTP, and manual message bridges | Isolates external channels from the agent |
+| [KoreLiveWeb](KoreLiveWeb/README.md) | 29613 | Web search, fetch, navigation, and Wikipedia MCP tools | Live web evidence, kept apart from local data |
+| [KoreCron](KoreCron/README.md) | 29615 | Scheduled prompts and scheduled test runs | Time-based driver for KoreAgent and KoreTest2 |
+| [KoreTest2](KoreTest2/README.md) | 29616 | System tests: prompts and commands run against the live interfaces | Per-build regression of the whole stack |
+| [KoreUnitTest](KoreUnitTest/README.md) | 29618 | Python unit tests, one file per test | Per-build regression of internal code |
+| [KoreAgentNetwork](KoreAgentNetwork/README.md) | 29617 | Visual, executable networks of Python, LLM, and Decision blocks | Composable automation that calls other services |
+
+Shared support:
+
+| Folder | Role |
+|---|---|
+| [KoreCommon/](KoreCommon/README.md) | Path, config, logging, and service helpers imported by every service |
+| [KoreUI/](KoreUI/README.md) | Service-specific templates and static assets; [UIElements](KoreUI/UIElements/README.md) is the shared shell and top bar |
+| [config/](config/README.md) | Checked-in suite configuration |
+
+## Architecture
 
 ```text
-http://127.0.0.1:19600/
+                     KoreStack (29600) supervisor + landing page
+                                   | starts / probes /status
+   +-----------+-----------+-------+-------+-----------+------------+
+ KoreChat   KoreAgent    KoreData     KoreDocs/Code   KoreComms   KoreLiveWeb
+ threads    LLM + tools  gateway      user content    channels    web tools
+     ^         ^   ^         ^
+     |         |   +---------+---- MCP tools, skills
+     |         |
+ KoreCron -> KoreAgent prompts      KoreAgentNetwork -> /api/work-packet
+ KoreCron -> KoreTest2 sessions     KoreTest2 judge  -> /api/work-packet
+                                    KoreUnitTest     -> runs repo test files
 ```
 
-### Useful startup variants
+- **Control plane**: KoreStack resolves config, launches services, and polls each `/status`.
+- **Agent runtime**: KoreAgent owns orchestration and tools. KoreChat owns durable conversation state. KoreComms owns external channels.
+- **Data services**: KoreData and KoreDocs stay domain services that the agent reaches through MCP and HTTP, never internal libraries.
+- **LLM models**: a chat model plus an Ollama System One decision model (typed questions scored with probabilities). KoreAgent's `/api/work-packet` exposes both to the rest of the suite.
+- **Automation and testing**: KoreCron drives time-based work; KoreAgentNetwork builds visual pipelines; KoreTest2 and KoreUnitTest verify each new build.
 
-```powershell
-python .\main.py --dry-run
-python .\main.py status
-python .\main.py --services koreagent,korechat,koredocs
-python .\main.py --services korecode
-```
+### Shared service contract
 
-## New user map
+- `/` or `/ui`: browser shell
+- `/api/...`: JSON API
+- `/status`: health probe used by KoreStack
+- `/mcp`: MCP tools, where a service exposes them
 
-If you are new to the repo, start in this order:
-
-1. Read this file for the suite overview.
-2. Read [KoreStack/README.md](KoreStack/README.md) to understand how the services are launched.
-3. Read the README for the subsystem you want to work on first.
-4. Treat other markdown files as exceptional rather than normal; if a workflow matters, it should be described from a README.
-
-## Architecture principles
-
-The suite is intentionally a set of cooperating local services rather than one monolith.
-
-- `KoreStack` is the operator-facing control plane and launcher
-- `KoreAgent` owns orchestration and tool use, not durable conversation storage
-- `KoreChat` owns canonical conversations and event history
-- `KoreComms` owns external-channel integration, not core agent state
-- `KoreData` and `KoreDocs` stay as domain services instead of becoming internal agent libraries
-- `KoreUI/UIElements` provides the shared browser shell alongside KoreUI's service-specific frontend assets
-
-## Shared service contract
-
-The suite is converging on one common HTTP shape for browser-facing services:
-
-- `/` redirects or lands on the main browser entry
-- `/ui` is the stable browser shell entry where the service uses that pattern
-- `/api/...` is the JSON or action API surface
-- `/status` is the health probe used by KoreStack
-- `/mcp` is the MCP transport entry point where the service exposes tools
-
-Browser apps should use the shared `KoreUI/UIElements` shell and suite URL wiring rather than inventing service-local chrome patterns.
-
-## Near-term direction
-
-- The agent runtime is moving toward tighter planning, validation, and work-item control rather than looser chat-driven tool loops
-- Long-running research is intended to become a first-class managed workflow layered above bounded agent runs, rather than staying as ad hoc conversation state
-- New data sources should normally land inside existing subsystem boundaries instead of creating one-off services
+Browser pages share the `KoreUI/UIElements` shell and top bar, which links all suite UIs.
 
 ## Data layout
 
-KoreStack separates service-owned runtime state from user-owned content.
-
 | Location | Purpose |
 |---|---|
-| `Data/datacontrol/` | Structured service data such as SQLite databases, schedules, logs, and runtime state |
-| `Data/datauser/` | User-facing files such as notes, sheets, documents, diagrams, exports, and working files |
+| `<dataroot>/datacontrol/` | Service-owned state: databases, schedules, logs, test cases and results |
+| `<dataroot>/datauser/` | User content: documents, sheets, diagrams, files that networks and agents read and write |
 
-In practice, the actual data root is resolved from `paths.dataroot` or the `KORE_SUITE_DATAROOT` environment variable. The `Data/` folder in the repo is useful as a reference layout, but your live data may be located elsewhere.
+`<dataroot>` is `paths.dataroot` in `config/korestack_config.json`, overridden by `KORE_SUITE_DATAROOT`. The repo `Data/` folder is a reference layout only.
 
 ## Troubleshooting
 
 | Problem | What to check |
 |---|---|
-| `python .\main.py` fails immediately | Activate the virtual environment and rerun `pip install -r requirements.txt` |
-| Services fail to start or exit on boot | Run `python .\main.py --dry-run` and confirm the configured ports and service enablement flags |
-| Errors mention missing folders or databases | Verify `paths.dataroot` in `config/korestack_config.json` points to a valid writable location |
-| KoreAgent starts but model calls fail | Check `config/koreagent_config.json`, confirm the LLM host is reachable, and make sure the selected model exists |
-| Browser UI loads without styling | Confirm `KoreUI/UIElements/` is present and that the app can serve shared assets from `/ui-elements/assets/` |
-| A single service is blocking the whole suite | Start a narrower set with `--services ...` and debug that subsystem in isolation |
+| Start fails immediately | Activate the venv and rerun `pip install -r requirements.txt` |
+| A service is red on the landing page | `python .\main.py --dry-run` for ports and enablement, then that service's log in `<dataroot>/datacontrol/logs` |
+| Missing folders or databases | `paths.dataroot` must point to a writable location |
+| Model calls fail | Check `config/koreagent_config.json` and that the Ollama host and models exist |
+| Unstyled pages | `KoreUI/UIElements/` must be present |
+| One service blocks the rest | Start fewer with `--services ...` |
 
 ## Documentation rule
 
-Primary operator and developer orientation should now live in the root and subsystem READMEs. One-off planning notes, scratch docs, generated inventories, and superseded setup guides should be treated as cleanup candidates rather than long-lived documentation.
+Primary documentation lives in the root and subsystem READMEs. [ChangeLog.md](ChangeLog.md) records dated changes.

@@ -13,23 +13,23 @@ Current web retrieval has different constraints from local document and data acc
 - Tracks tool usage and outbound requests through a browser UI
 - Supports configurable search providers through suite configuration
 
-## How to run it
 
-Normally you start KoreLiveWeb through the suite root:
+## Role in the suite
 
-```powershell
-python .\main.py
-```
+KoreLiveWeb (port 29613) gives the agent live web evidence without mixing it into the local KoreData stores. KoreAgent reaches it through its `/mcp` endpoint. KoreStack starts it with the suite.
 
-To run KoreLiveWeb on its own:
+## Architecture
 
-```powershell
-python .\KoreLiveWeb\main.py
-```
+| Module (`app/`) | Role |
+|---|---|
+| `server.py` | Mounted routes and MCP tool registration |
+| `web_search*.py` | Search providers (DuckDuckGo, Ollama hosted search) |
+| `web_fetch.py`, `web_navigate.py`, `webpage_utils.py` | Page fetch, text extraction, and link navigation |
+| `wikipedia.py` | Wikipedia lookup |
+| `activity_log.py` | Request log shown in the UI |
 
 ## Install and configuration
 
-- Install shared dependencies from the repo root with `pip install -r requirements.txt`
 - Review `services.koreliveweb` in `config/korestack_config.json` for the port and enabled flag
 - Review `config/koreliveweb_config.json` for KoreLiveWeb provider settings
 - Review the configured MCP connection in the same file if another subsystem needs to call KoreLiveWeb tools

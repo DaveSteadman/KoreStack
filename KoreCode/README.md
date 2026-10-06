@@ -13,6 +13,20 @@ KoreStack needs a code surface that is aware of the local repository, easy to in
 - Exposes browser flows for work items, edit proposals, and chat-driven coding actions
 - Provides a local API for code reads, writes, and targeted Python-aware edits
 
+## Role in the suite
+
+KoreCode (port 29611) is started and linked by KoreStack like every other service. It serves its own browser UI and API (`/ui`, `/api/...`) and exposes tools the agent can use. Its AI flows call KoreAgent, and chat threads live in KoreChat.
+
+## Architecture
+
+| Element | Role |
+|---|---|
+| Workspace service and index | File tree, files, and symbols for the repository |
+| Edit store and Python-aware edits | Targeted edits and proposals before they are applied |
+| Work items and runs | Task records and the executor that drives agent coding runs |
+| Slash commands | Workspace commands in the editor chat |
+| Tool API | HTTP and tool surface for reads, writes, and edits |
+
 ## UI and workflow
 
 KoreCode uses the shared suite shell and a split workspace layout.
@@ -23,23 +37,9 @@ KoreCode uses the shared suite shell and a split workspace layout.
 
 The intended direction is task-centric coding rather than a plain file editor: inspect, propose, edit, validate, and review inside one browser workspace.
 
-## How to run it
-
-Normally you start KoreCode through the suite root:
-
-```powershell
-python .\main.py
-```
-
-To run KoreCode on its own:
-
-```powershell
-python .\KoreCode\main.py
-```
 
 ## Install and configuration
 
-- Install shared dependencies from the repo root with `pip install -r requirements.txt`
 - KoreCode expects the workspace root and related paths to resolve through the shared suite configuration
 - Browser shell assets come from `KoreUI/UIElements/`
 

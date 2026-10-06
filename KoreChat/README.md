@@ -1,61 +1,39 @@
 # KoreChat
 
-KoreChat is the suite conversation-state service. It is the canonical store for conversations, messages, and run events shared across KoreAgent and KoreComms.
+KoreChat is the conversation-state service. It is the canonical durable store of conversations, messages, and events shared by KoreAgent and KoreComms.
 
-## Why it exists
+## Role in the suite
 
-KoreAgent should be able to reason and act without owning durable thread storage itself. KoreChat separates long-lived session history from the agent runtime and provides a stable local API for the rest of the suite.
+KoreAgent reasons and acts without owning thread storage. KoreComms turns external messages into KoreChat conversations and events, and delivers replies the agent has marked ready. KoreCron and the browser UIs also read and write threads here.
 
-## What it does
+## Architecture
 
-- Stores conversations, message history, and event streams
-- Exposes FastAPI endpoints for conversation, message, and event operations
-- Provides the browser UI used to inspect threads and activity
-- Acts as the coordination surface for message-driven work between the agent and comms layers
+| Element | Responsibility |
+|---|---|
+| Conversations | Metadata, external-id lookup, input history, session fields |
+| Messages | Append-only history per conversation |
+| Events | Queue-style records that cooperating services claim and complete |
+| Browser UI | Thread and activity inspection, with a live `/stream` |
 
-## Data and API shape
+## Key API
 
-KoreChat is the canonical durable store for:
+| Endpoint | Purpose |
+|---|---|
+| `/api/conversations` | Create, list, get, update, delete; `/by-external-id/{id}` lookup |
+| `/api/conversations/{id}/messages`, `/turns` | Append and read messages |
+| `/api/events`, `/api/events/next`, `/api/events/{id}/complete` | Event post, claim, and completion |
+| `/status`, `/ui` | Health and browser UI |
 
-- conversation metadata
-- append-only message history
-- event-queue style coordination records between services
-- conversation-scoped session fields such as scratchpad-style state and input history
+Routes without the `/api` prefix are retained for older callers.
 
-Its main service contract is:
+## Data
 
-- conversation CRUD and lookup
-- message append and history access
-- event claim and completion flow for cooperating services
-- `/status` for health and `/ui` for inspection
-
-## How to run it
-
-Normally you start KoreChat through the suite root:
-
-```powershell
-python .\main.py
-```
-
-To run KoreChat on its own:
-
-```powershell
-python .\KoreChat\main.py
-```
-
-Open the configured KoreChat UI at `/ui` on the configured port.
-
-## Install and configuration
-
-- Install shared dependencies once from the repo root with `pip install -r requirements.txt`
-- KoreChat uses suite configuration from `config/korestack_config.json`
-- Shared paths resolve through `KoreCommon/suite_paths.py`, so the configured data root must exist and be writable
+SQLite store under `<dataroot>/datacontrol/korechat`.
 
 ## Troubleshooting
 
 | Problem | What to check |
 |---|---|
-| KoreChat will not bind | Confirm `services.korechat.port` is free in `config/korestack_config.json` |
-| Conversations appear missing | Verify the configured data root is the same one the rest of the suite is using |
-| Another service cannot reach KoreChat | Check the configured host and the KoreChat connection URL used by the caller |
-| UI loads but looks incomplete | Confirm shared assets from `KoreUI/UIElements/` are being served correctly |
+| Agent history missing | KoreAgent and KoreChat use the same data root |
+| Events never complete | The consumer is claiming through `/api/events/next` and completing them |
+| UI shows nothing | KoreChat is healthy on the landing page |

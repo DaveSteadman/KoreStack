@@ -1,56 +1,41 @@
-# KoreStack
+# KoreStack (control plane)
 
-KoreStack is the suite control plane. It resolves shared configuration, launches enabled services, exposes the landing page, and reports service health and routing information.
+KoreStack is the supervisor of the suite. It resolves shared configuration, launches every enabled service, probes their health, and serves the landing page that ties the suite together. The command line is documented in the [root README](../README.md).
 
-## Why it exists
+## Role in the suite
 
-Without KoreStack, each service would need to be started and diagnosed separately. KoreStack provides the operator entry point for the full suite and keeps service coordination in one place.
+Every other subsystem is a separate process with its own port. KoreStack is the only thing the operator starts: it builds the start plan from `config/korestack_config.json`, spawns the services, and keeps the shared URL map so the top bar of every UI can link to every other UI.
 
-## What it does
+## Architecture
 
-- Starts and stops runnable Kore services
-- Shows the landing page and service status dashboard
-- Resolves suite-level paths, ports, and URLs before child services launch
-- Supports partial-start and dry-run workflows for debugging
+| Module | Responsibility |
+|---|---|
+| `main.py` | Argument parsing, service specs (name, command, port, health URL), start, status, dry-run |
+| `dashboard.py` | Landing-page server: `/api/services`, suite URL map (`build_suite_urls`), Ollama endpoints |
+| `ollama_control.py` | Talks to Ollama: version, loaded and configured models, System One model and stats |
+| `endpoint_explorer.py` | Browser explorer of the HTTP endpoints exposed by the services |
 
-## How to run it
+UI assets are in `KoreUI/KoreStack/` and are served live, so there is no build step.
 
-From the repo root:
+## Landing page
 
-```powershell
-python .\main.py
-```
+- **Paths**: suite root, data root, and the datacontrol and datauser folders in use
+- **Ollama State**: Ollama version, the configured and loaded chat model, the System One model and its statistics
+- **Services**: one card per service with health, port, and a link to its UI
 
-Or directly:
+## Health contract
 
-```powershell
-python .\KoreStack\main.py
-```
+A service is running when its `/status` returns success. Each service spec declares its own health URL, and the dashboard uses that URL rather than deriving one. A URL alias never replaces a real service entry in the suite URL map.
 
-Useful variants:
+## Configuration
 
-```powershell
-python .\main.py --dry-run
-python .\main.py status
-python .\main.py --services koreagent,korechat,koredocs
-python .\main.py --services korecode
-```
-
-## Install and configuration
-
-- Install shared dependencies from the repo root with `pip install -r requirements.txt`
-- KoreStack reads the suite config from `config/korestack_config.json`
-- The suite root, data root, and derived service locations resolve through `KoreCommon/suite_paths.py`
+Ports, hosts, and enablement come from `config/korestack_config.json` (`services.<name>`), resolved through `KoreCommon/suite_paths.py`.
 
 ## Troubleshooting
 
 | Problem | What to check |
 |---|---|
-| Startup exits before launching children | Run `python .\main.py --dry-run` to inspect the resolved plan |
-| One service blocks the suite | Start a narrower set with `--services ...` and isolate the failing subsystem |
-| Health probes stay red | Confirm the target service port is correct and the child process actually stayed alive |
-| Dashboard is not reachable | Check `services.korestack.port` and confirm the port is free |
-
-## Related docs
-
-- Root overview: [../README.md](../README.md)
+| Startup exits before launching children | Run with `--dry-run` to inspect the plan |
+| Health stays red | The service port is wrong or the child exited; check its log |
+| Dashboard unreachable | `services.korestack.port` (29600) is busy |
+| Ollama panel is empty | The Ollama host in `config/koreagent_config.json` is unreachable |

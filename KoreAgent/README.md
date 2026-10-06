@@ -1,118 +1,68 @@
 # KoreAgent
 
-KoreAgent is the local agent runtime for the suite. It owns prompt orchestration, tool calling, slash commands, task scheduling, and the browser interface used to interact with the model.
+KoreAgent is the agent runtime of the suite. It runs the LLM tool-calling loop, owns skills and slash commands, serves the chat UI, and exposes the LLM and System One decision models to every other subsystem.
 
-## Why it exists
+## Role in the suite
 
-KoreStack needs an agent that can reason over local tools and local data without depending on a hosted orchestration layer. KoreAgent provides that runtime while keeping durable conversation state and other subsystem concerns outside the core orchestration loop.
+- **KoreChat** stores the durable threads; KoreAgent reasons and acts on them.
+- **KoreCron** posts scheduled prompts to it; **KoreComms** messages reach it through KoreChat events.
+- **KoreTest2** (prompt tests and the `judge` assert) and **KoreAgentNetwork** (LLM and Decision blocks) call `POST /api/work-packet`.
+- It reaches **KoreData**, **KoreDocs**, **KoreCode**, and **KoreLiveWeb** as tools, over MCP and HTTP.
+- KoreStack's Ollama State panel reads the model information it reports.
 
-## What it does
+## Architecture
 
-- Runs the tool-calling orchestration pipeline
-- Integrates with configured LLM backends
-- Loads built-in skills, external skills, and MCP-exposed tool surfaces
-- Provides slash commands, scratchpad state, and delegated subruns
-- Hosts the browser UI and scheduler for interactive and background work
+| Layer | Location (`app/`) | Responsibility |
+|---|---|---|
+| Input layer | `input_layer/` | HTTP routes: sessions, prompts, history, queue, logs, status, KoreChat proxy, slash commands |
+| Orchestration | `agent/orchestration/` | Engine, sessions, context window, history, stop state |
+| Tool runtime | `agent/tool_runtime/` | Tool loop, guards, recovery, formatting, tool selection and catalog |
+| LLM clients | `llm_client*.py` | Ollama, OpenAI-compatible and LM Studio chat; `llm_client_system_one.py` for System One |
+| Skills | `system_skills/`, `skill_manager.py` | Built-in skills (`skill.md` plus a Python module), service skill manifests, the skills catalog |
+| Context | `context_compactor.py`, `context_manager.py` | Compaction for long conversations |
+| Scheduler | `scheduler/` | Background and scheduled prompt execution |
+| Datasets | `datasets_pkg/`, `working_data.py` | Record-shaped working sets for multi-step tasks |
 
-## How to run it
+## Two kinds of model
 
-Normally you start KoreAgent through the suite root:
+- **Chat model**: the normal tool-calling model.
+- **System One model**: a decision model, not a chat model. It scores named, typed questions (`choice`, `noul`, `score`) over text, JSON, or images through Ollama's `/v1/systemone` endpoint, returning probabilities. The `SystemOne` skill makes it available to the chat model.
 
-```powershell
-python .\main.py
-```
+Switch models at runtime with slash commands such as `/systemone model <name>`. Defaults come from `config/koreagent_config.json`.
 
-To run KoreAgent on its own:
+## Key API
 
-```powershell
-python .\KoreAgent\main.py
-```
-
-## Install and configuration
-
-- Install shared dependencies from the repo root with `pip install -r requirements.txt`
-- Review `config/koreagent_config.json` before first run and make sure the configured host and model are valid
-- Review `config/korestack_config.json` for MCP connections and related service URLs
-- If you use Ollama or another local model host, make sure it is reachable before starting the agent
-- Local Ollama auto-start is off by default; set `KORE_OLLAMA_AUTOSTART=1` only if you want KoreAgent to launch a local Ollama process itself
-
-### Agent-specific first run
-
-For a local Ollama-backed setup:
-
-```powershell
-ollama list
-ollama pull gemma3:27b
-python .\KoreAgent\app\skills_catalog_builder.py
-python .\KoreAgent\main.py
-```
-
-Notes:
-
-- Smaller models can work, but multi-step tool use is less reliable
-- The skills catalog is also rebuilt automatically when `skill.md` inputs change, but a manual rebuild is a good first-run check
-- The active host and default model should match `config/koreagent_config.json`
+| Endpoint | Purpose |
+|---|---|
+| `POST /api/sessions/{id}/prompt` | Submit a prompt to a session; stream results via `GET /api/runs/{run_id}/stream` |
+| `GET /api/sessions/{id}/history` | Session history |
+| `POST /api/work-packet` | One-shot LLM or System One decision call used by other subsystems |
+| `GET /api/skills/catalog`, `POST /api/skills/invoke` | Skill discovery and invocation |
+| `/api/skill-manager/...` | Register and manage skills and tools |
+| `GET /api/status`, `/api/status/ollama`, `/api/version` | Health, Ollama and build information |
+| `GET /api/logs...`, `GET /api/queue` | Run logs and the execution queue |
+| `/api/kc/...` | Proxy to KoreChat conversations |
 
 ## Tool model
 
-KoreAgent treats tools as one internal contract even when they come from different places.
+Local Python skills, system skills, and remote MCP tools share one internal contract. Results stay structured and keep provenance. The runtime enforces guardrails: it corrects or blocks invalid, inactive, or repeated tool calls, requires fetched evidence for web-grounded answers, and prevents false-success claims about actions never performed. Only a narrow selection of tools is exposed per turn.
 
-- Local Python tools, built-in system skills, and remote MCP tools should look the same to orchestration
-- MCP is the preferred remote-service transport, but it is not the internal source of truth
-- Tool results should stay structured as long as possible and preserve provenance
-- Read-only and mutating tools should remain clearly distinguishable in code and logs
+## Configuration
 
-## Guardrails and runtime control
+- `config/koreagent_config.json`: LLM host, chat model, System One model, context window
+- `config/korestack_config.json`: MCP connections and service URLs
+- Local Ollama auto-start is off; set `KORE_OLLAMA_AUTOSTART=1` to let KoreAgent launch it
 
-The current runtime direction relies on host-side guardrails as well as prompt policy.
+## Skill authoring
 
-- web-grounded answers should not stop at search snippets when fetched evidence is required
-- invalid, inactive, or repeated tool calls should be corrected or blocked by the runtime
-- plan phases can restrict which tools are legal at a given stage
-- the host should prevent false-success answers that claim writes or external actions never performed
-
-## Execution direction
-
-The current design direction is toward a tighter execution loop:
-
-- explicit task planning before broader tool use
-- bounded inspection, action, and validation phases
-- more durable work-item state for substantial tasks
-- better host-side repair of common tool-call mistakes
-- cleaner separation between bounded agent execution and future long-running research management
-
-## Developer orientation
-
-The subsystem is best understood in four layers:
-
-- orchestration and tool runtime
-- API and browser input layer
-- session-state integrations through KoreChat
-- skill and MCP tool exposure
-
-The durable design goals from the deleted planning notes are now:
-
-- keep one internal tool model regardless of local or MCP origin
-- keep selected or active tool exposure narrower than the full attached tool universe
-- support durable record-shaped working sets for multi-step filtering and reporting tasks
-- move larger decomposition and long-horizon research control out of the casual chat loop
-
-## New user notes
-
-- Use this README as the subsystem entry point
-- Use the code and tests directly for implementation detail; this README is now the primary written entry point
+Add a folder under `app/system_skills/` with a `skill.md` and a Python module. The catalog is rebuilt when skill inputs change.
 
 ## Troubleshooting
 
 | Problem | What to check |
 |---|---|
-| Agent UI starts but model calls fail | Confirm the configured LLM host is reachable and the model name resolves |
-| Tools do not appear | Check the skill catalog inputs and the configured MCP connections |
-| The tool list looks stale after editing skills | Run `python .\KoreAgent\app\skills_catalog_builder.py` and restart the service |
-| Scheduled tasks do not run | Verify the schedule files and the configured `datacontrol` path |
-| Small models behave erratically on tool tasks | Use a stronger installed model and verify the resolved model name |
-| Session history looks inconsistent | Confirm KoreChat and any shared storage paths point at the same suite data root |
-
-## Skill authoring
-
-Agent-local skills should follow the existing `skill.md` plus Python-module pattern under `app/system_skills/`.
+| Model calls fail | The LLM host is reachable and the configured model exists |
+| System One calls fail with 404 | The Ollama build lacks `/v1/systemone`, or the configured model is not a System One model |
+| Tools do not appear | Skill catalog inputs and MCP connections |
+| Scheduled prompts do not run | KoreCron is running and the schedule files exist in datacontrol |
+| Session history looks inconsistent | KoreChat and KoreAgent share the same data root |

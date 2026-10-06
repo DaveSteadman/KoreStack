@@ -24,4 +24,4 @@ KoreReference is the KoreData home for linked reference material where navigatio
 | Linked navigation is missing | Check whether the source content includes the expected relationship structure |
 
 ## Status
-Planned — not yet implemented.
+In development.

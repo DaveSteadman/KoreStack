@@ -14,6 +14,19 @@ KoreStack needs native tools for prose, tables, and diagrams that remain local, 
 | `KoreSheet` | Sparse-cell spreadsheets and model sheets | `.koresheet` |
 | `KoreDiag` | Diagram editing for node and edge layouts | `.korediag` |
 
+## Role in the suite
+
+KoreDocs (port 29610) holds the user-facing documents the agent and the person both edit. It stores everything in the `datauser` tree, the same space KoreAgentNetwork file helpers use, and its `/mcp` tools let KoreAgent create and edit documents. KoreStack starts and links it.
+
+## Architecture
+
+| Element (`app/`) | Role |
+|---|---|
+| `documents/` | Format handling for `.koredoc`, `.koresheet`, `.korediag` |
+| `api/` | HTTP editing surface |
+| `mcp/` | Typed tools for agents |
+| `static/` and `KoreUI/UIElements` | The three browser editors |
+
 ## Service contract
 
 KoreDocs serves both browser editing and programmatic document access.
@@ -51,25 +64,9 @@ field matches, dotted paths, `contains`, `in`, `exists`, and `gt`/`gte`/`lt`/`lt
 operators, plus `$and`, `$or`, and `$not`. File history is available through
 `/api/files/{id}/history` and the corresponding MCP tools.
 
-## How to run it
-
-Normally you start KoreDocs through the suite root:
-
-```powershell
-python .\main.py
-```
-
-To run only KoreDocs:
-
-```powershell
-python .\KoreDocs\main.py
-```
-
-KoreDocs serves both the browser UI and the MCP endpoint from the same process.
 
 ## Install and configuration
 
-- Install shared dependencies from the repo root with `pip install -r requirements.txt`
 - KoreDocs reads suite-level paths from `config/korestack_config.json`
 - The live source of truth is the shared `datauser` tree under the configured data root
 - Shared UI assets are served from `KoreUI/UIElements/`; keep that folder present when running browser apps

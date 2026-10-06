@@ -231,6 +231,462 @@
 - build_debate_payload
 - build_member_payload
 
+### Data/datacontrol/koreunittest/tests/KoreAgent/test_context_window.py
+- test_short_prompt_uses_minimum_working_context
+- test_context_grows_with_payload_but_never_exceeds_maximum
+
+### Data/datacontrol/koreunittest/tests/KoreAgent/test_datauser_fs.py
+- test_resolve_rejects_absolute_and_traversal_paths
+- test_dot_relative_path_resolves_inside_datauser
+- test_write_and_delete_reject_stale_etags
+- test_listing_stays_in_selected_root_and_applies_filters
+
+### Data/datacontrol/koreunittest/tests/KoreAgent/test_datauser_script_runner.py
+- test_runs_a_python_script_below_datauser_scripts
+- test_rejects_a_script_outside_datauser_scripts
+
+### Data/datacontrol/koreunittest/tests/KoreAgent/test_delivery_publication.py
+- log
+- log_file_only
+- log_section
+- log_section_file_only
+- __init__
+- test_scheduled_email_prompt_requires_explicit_publication
+- test_non_scheduled_email_does_not_require_publication
+- test_preparatory_cron_prompt_does_not_require_publication
+- test_publish_cron_prompt_requires_publication
+- test_tool_loop_requires_confirmed_html_publication_before_completion
+- test_tool_output_formatter_handles_a_result
+- call_llm_chat
+- execute_tool_call
+
+### Data/datacontrol/koreunittest/tests/KoreAgent/test_folder_ls.py
+- test_folder_ls_lists_visible_immediate_folders_with_paging
+
+### Data/datacontrol/koreunittest/tests/KoreAgent/test_koreconv_input.py
+- test_latest_message_uses_timestamp_instead_of_response_list_position
+- test_event_prompt_label_uses_the_newest_inbound_message
+- test_compaction_retains_latest_three_user_turns
+- test_history_omits_messages_represented_by_compacted_summary
+- test_history_omits_completed_korecode_tool_followup
+- test_context_threshold_queues_one_high_priority_compaction_event
+- test_context_threshold_does_not_duplicate_pending_compaction
+- test_compact_slash_executes_its_compaction_event_immediately
+- test_compact_slash_command_uses_compaction_callback
+- test_compaction_persists_semantic_summary_before_marking_sources
+- test_session_context_discards_prior_tool_results
+- test_replacing_tool_context_preserves_semantic_summary
+- fake_post
+
+### Data/datacontrol/koreunittest/tests/KoreAgent/test_llm_client_availability.py
+- tearDown
+- test_ollama_probe_uses_the_native_health_check
+- test_probe_returns_false_when_the_backend_request_raises
+
+### Data/datacontrol/koreunittest/tests/KoreAgent/test_model_resolution.py
+- test_unique_non_token_substring_resolves_model
+- test_ambiguous_substring_does_not_select_a_model
+- test_numeric_substring_does_not_match_a_larger_number
+
+### Data/datacontrol/koreunittest/tests/KoreAgent/test_ollama_process_windows.py
+- test_client_does_not_start_an_unavailable_server
+- test_status_probe_prefers_http_api
+- test_passive_model_listing_does_not_autostart
+- test_preload_loads_the_configured_model_without_generation
+- test_prompt_call_does_not_autostart_by_default
+- test_native_chat_retries_after_runner_crash
+- test_runtime_recovery_does_not_restart_a_stopped_local_daemon
+- test_repeated_runner_crash_falls_back_to_cpu
+
+### Data/datacontrol/koreunittest/tests/KoreAgent/test_ollama_sampling_options.py
+- setUp
+- test_disabled_sampling_options_are_not_sent
+- test_enabled_sampling_options_are_sent_and_round_trip
+- test_defaults_set_preserves_sampling_options
+- test_orchestration_header_formats_unset_sampling_options
+
+### Data/datacontrol/koreunittest/tests/KoreAgent/test_regressions.py
+- setUp
+- tearDown
+- test_write_file_writes_system_info_csv
+- test_extract_graph_connection_batch_from_final_answer
+- test_graph_write_guard_forces_tool_call_for_printed_triples
+- test_read_file_accepts_workspace_relative_data_prefix
+- test_create_folder_accepts_workspace_relative_data_prefix
+- test_web_slash_commands_mutate_shared_runtime_config
+- test_testtrend_uses_summary_counts_for_legacy_csv
+- test_testtrend_prefers_persisted_wrapper_outcome
+- test_execute_tool_call_runs_datetime
+- test_build_tool_definitions_has_entries
+- test_mcp_connections_prefer_new_config_and_skip_disabled_entries
+- test_mcp_connections_accept_legacy_mcp_servers_key
+- test_suite_mcp_service_refs_resolve_urls
+- test_runtime_config_merge_keeps_default_service_ports_for_mcp_refs
+- test_mcp_connection_error_formatter_unwraps_exception_groups
+- test_mcp_enumeration_ignores_duplicate_tool_names_from_later_connections
+- test_normalize_tool_request_rewrites_assistant_delegate_wrapper
+- test_normalize_tool_request_adapts_saved_search_name_alias
+- test_normalize_tool_request_keeps_canonical_saved_search_name
+- test_normalize_tool_request_rejects_conflicting_saved_search_names
+- test_normalize_tool_request_leaves_unmapped_tool_arguments_untouched
+- test_fetch_page_text_query_mode_falls_back_to_raw_page_text
+- test_fetch_page_text_query_miss_returns_large_raw_fallback
+- test_load_session_rebuilds_history_from_korechat
+- test_load_session_restores_datasets_from_korechat_payload
+- test_koreconv_prompt_renders_datasets_separately
+- test_koreconv_event_restores_datasets_before_orchestration
+- test_background_context_round_trip_is_versioned
+- test_koreconv_event_marks_failed_when_outbound_write_fails
+- test_clone_conversation_resets_token_estimate_and_recomputes_turn_count
+- test_delete_session_state_deletes_korechat_record
+- test_dataset_rename_preserves_dataset_id
+- test_dataset_drop_where_forks_by_default
+- test_dataset_filter_uses_projected_records
+- test_dataset_persistence_round_trip_handles_spillover
+- test_dataset_reports_missing_spillover_row
+- test_dataset_get_returns_paged_envelope
+- test_dataset_write_koredoc_writes_real_dataset_rows
+- test_dataset_expand_full_text_creates_enriched_dataset
+- test_file_write_blocks_suspicious_placeholder_koredoc_content
+- test_dataset_get_uses_deterministic_scratch_key
+- test_system_prompt_hides_dataset_manifests_without_dataset_tools
+- test_system_prompt_includes_korechat_conversation_snapshot
+- test_auto_route_tool_result_saves_record_collections_as_dataset
+- test_auto_route_tool_result_parses_stringified_json_results
+- test_auto_route_tool_result_skips_dataset_get_payloads
+- test_dataset_save_accepts_results_envelope_dict
+- test_system_prompt_steers_exhaustive_fetches_into_scratchpad
+- test_delegate_subrun_restores_parent_depth_between_siblings
+- test_delegate_subrun_binds_child_to_parent_session
+- test_delegate_subrun_auto_includes_dataset_access_for_named_dataset_tasks
+- test_search_web_prefer_article_urls_promotes_article_results
+- test_search_web_extracts_results_when_ddg_attributes_are_reordered
+- test_research_traverse_saves_page_level_scratchpad_artifacts
+- test_test_wrapper_fails_single_prompt_on_no_results_output
+- test_test_wrapper_fails_exchange_on_search_failure_output
+- test_scratch_query_prompt_forbids_outside_knowledge
+- fake_call_llm_chat
+- fake_execute_tool_call
+- fake_list_tools
+- fake_orchestrate_prompt
+- fake_http_post
+- fake_post
+- fake_get
+- fake_call_llm_chat
+- fake_fetch
+- fake_orchestrate_prompt
+- fake_orchestrate_prompt
+- fake_orchestrate_prompt
+- log
+- log_file_only
+- log_section
+- log_section_file_only
+- __init__
+- __enter__
+- __exit__
+- __init__
+- get_turns
+- __enter__
+- __exit__
+- __init__
+- get_turns
+
+### Data/datacontrol/koreunittest/tests/KoreAgent/test_service_logging.py
+- test_service_log_config_normalises_name_and_level
+- test_service_log_config_uses_safe_defaults
+
+### Data/datacontrol/koreunittest/tests/KoreAgent/test_skill_executor_loader.py
+- test_failed_import_does_not_leave_a_partial_module_cached
+
+### Data/datacontrol/koreunittest/tests/KoreAgent/test_skill_manager_persistence.py
+- _skill
+- test_save_retries_a_transient_windows_file_lock
+- test_identical_registration_does_not_rewrite_a_clean_registry
+- test_directory_not_found_is_a_tool_error
+- replace
+
+### Data/datacontrol/koreunittest/tests/KoreAgent/test_slash_command_registry.py
+- test_retired_commands_are_not_registered
+- test_chat_is_canonical_and_session_remains_a_compatibility_alias
+- test_run_is_registered_as_a_slash_command
+
+### Data/datacontrol/koreunittest/tests/KoreAgent/test_suite_config_loader.py
+- test_load_service_config_reads_suite_config_and_env
+- test_load_service_config_applies_raw_merger
+- merger
+
+### Data/datacontrol/koreunittest/tests/KoreAgent/test_system_one_client.py
+- test_call_posts_typed_request_and_normalises_usage
+- test_rejects_a_question_without_instructions
+- test_system_one_slash_command_selects_and_warms_model
+
+### Data/datacontrol/koreunittest/tests/KoreAgent/test_thinking_strip.py
+- test_strip_cot_preamble
+
+### Data/datacontrol/koreunittest/tests/KoreAgent/test_tool_selection_p1.py
+- test_tool_schema_revision_ignores_fifo_reordering
+- test_skills_search_returns_focused_exact_matches
+- test_catalog_freshness_check_is_cached_between_tool_selections
+
+### Data/datacontrol/koreunittest/tests/KoreAgent/test_tool_sets.py
+- test_tool_set_builder_splits_koredocs_into_file_and_document_subsystems
+- test_active_tool_queue_evicts_oldest_and_reactivation_moves_to_newest
+- test_normalise_tool_sets_rejects_groups_larger_than_the_active_set_half_cap
+- test_save_and_resolve_tool_sets_uses_only_currently_available_tools
+- test_related_tool_set_reactivates_the_smallest_matching_group
+- test_relevant_tool_sets_require_a_distinctive_domain_term
+- test_reevaluation_persists_complete_programmatic_grouping
+- fake_save
+- output
+
+### Data/datacontrol/koreunittest/tests/KoreAgent/test_working_data_clear.py
+- test_working_data_clear_removes_every_value_in_the_session
+- test_working_data_clear_removes_collections
+- test_hydrate_working_data_restores_only_canonical_values
+- test_hydration_discards_cross_kind_name_collisions
+- test_working_data_rename_rejects_cross_kind_name_collisions
+
+### Data/datacontrol/koreunittest/tests/KoreAgentNetwork/test_store_runtime.py
+- test_network_rejects_duplicate_input_connection
+- test_runtime_passes_output_to_named_input
+- test_runtime_rejects_cycles
+- test_network_api_creates_saves_and_runs_a_network
+- test_single_block_runs_with_custom_inputs
+- test_llm_block_renders_prompt_template
+- test_judge_block_converts_probability_to_verdict
+- test_python_block_helpers_can_call_llm_and_judge
+- test_python_block_file_helpers_use_datauser_root
+- test_python_block_supports_early_return_and_novalue
+- do_POST
+- log_message
+
+### Data/datacontrol/koreunittest/tests/KoreChat/test_database_regressions.py
+- test_message_append_persists_telemetry_metadata
+- test_message_tags_include_direction_and_supplied_values
+- test_conversation_get_preserves_malformed_scratchpad_payload
+- test_conversation_get_preserves_malformed_datasets_payload
+- test_conversation_clear_history_resets_model_context
+- test_init_db_migrates_legacy_datasets_out_of_scratchpad
+
+### Data/datacontrol/koreunittest/tests/KoreCode/test_agent_playbooks.py
+- test_router_selects_create_file_playbook
+- test_router_selects_diagnose_failing_test_playbook
+- test_router_selects_python_debug_playbook
+- test_router_selects_workspace_change_for_implementation
+- test_explore_prompt_only_advertises_active_tools
+- test_create_file_prompt_requires_target_existence_check
+- test_edit_prompt_requires_read_before_automatic_apply
+- test_executor_rejects_inactive_tool
+- test_executor_runs_active_python_tool
+- test_executor_accepts_legacy_python_function_replacement_argument_names
+- test_executor_rejects_running_a_non_active_python_file
+
+### Data/datacontrol/koreunittest/tests/KoreCode/test_run_executor.py
+- test_edit_envelope_applies_validated_changes
+- test_analysis_envelope_with_tool_requests_continues_the_agent_loop
+
+### Data/datacontrol/koreunittest/tests/KoreCode/test_server.py
+- _temp_runs_dir
+- _temp_work_items_dir
+- test_work_item_lifecycle_and_run_attachment
+- test_work_item_rejects_unknown_status
+- test_korecode_stores_use_suite_datacontrol_root
+- test_korechat_client_strips_ui_path_from_suite_url_map
+- test_workspace_root_is_durable
+- test_setting_workspace_root_persists_selection
+- test_api_chat_thread_reads_without_creating_conversation
+- test_api_chat_thread_recovers_latest_conversation_for_path
+- test_workspace_chat_recovers_latest_legacy_file_conversation
+- test_chat_run_stores_routed_execution_contract
+- test_direct_tool_execution_honors_run_execution_contract
+- test_workspace_index_rebuild_creates_markdown_and_sqlite
+- test_workspace_index_symbol_and_call_endpoints
+- test_api_slash_complete_returns_matching_items
+- test_workspace_index_rebuild_allows_duplicate_symbol_names_across_files
+- test_api_chat_followup_passes_outbound_sender_display
+- test_api_chat_workspace_context_passes_enabled_flag
+- test_api_chat_send_creates_persisted_run
+- test_api_chat_followup_creates_persisted_run
+- test_api_chat_thread_marks_waiting_run_completed_when_reply_observed
+- test_api_chat_prompt_builds_backend_prompt_with_context_and_mentions
+- test_api_chat_tool_followup_prompt_builds_backend_prompt
+- test_api_chat_tools_lists_backend_tool_contract
+- test_api_chat_tools_execute_reads_file_and_logs_run_tool_call
+- test_api_chat_runs_executes_backend_loop_in_python
+- test_api_chat_runs_executes_tool_rounds_in_python
+- test_api_chat_continue_runs_executes_backend_loop_in_python
+- test_api_create_and_apply_edit_proposal
+- test_edit_proposal_can_create_and_apply_new_python_file
+- test_agent_edit_applies_validated_workspace_change
+- test_agent_edit_application_rejects_unrequested_file
+- test_agent_edit_application_allows_explicitly_named_new_file
+- test_agent_create_file_playbook_allows_a_new_agent_named_file
+- test_workspace_change_applies_cross_file_python_syntax_repair
+- test_agent_applies_multiple_edits_to_one_file_from_one_hash
+- test_edit_proposal_can_delete_a_file_after_review
+- test_python_runner_captures_script_output_and_syntax_failure
+- test_direct_python_execution_endpoint_runs_workspace_file
+- test_write_tool_returns_edit_proposal_not_direct_mutation
+- test_replace_python_function_requires_matching_hash_and_valid_python
+- test_insert_python_function_requires_matching_hash_and_valid_python
+- test_insert_python_function_into_class_adds_method_inside_class
+
+### Data/datacontrol/koreunittest/tests/KoreCode/test_slash_commands.py
+- setUp
+- test_help_lists_workspace_regen
+- test_workspace_on_sets_state_and_rebuilds
+- test_workspace_regen_emits_no_state_action
+- test_retry_without_last_message_returns_error
+- test_mode_continue_requests_continue_action
+- test_complete_lists_matching_commands
+- test_complete_lists_workspace_subcommands
+
+### Data/datacontrol/koreunittest/tests/KoreComms/test_korecomms_email_threads.py
+- _close_pool
+- setUp
+- tearDown
+- test_html_only_email_body_is_used
+- test_reply_reference_keeps_the_original_thread_identifier
+- test_newsletter_replies_create_one_conversation_per_sender
+- test_first_reply_seeds_original_newsletter_once
+- append_message
+
+### Data/datacontrol/koreunittest/tests/KoreCron/test_main.py
+- test_deletes_all_name_matches_before_creating
+- test_deletes_stale_external_id_even_if_chat_was_renamed
+- test_test_run_definition_accepts_only_a_daily_time
+- test_test_run_starts_a_koretest2_session
+- test_test_runs_are_stored_separately_from_cronprompts
+- test_records_a_failed_attempt_with_its_error
+- test_marks_a_failed_run_command_as_a_failed_cron_prompt
+- setUp
+- tearDown
+- test_tracks_a_running_prompt_and_releases_it_when_finished
+- test_markdown_contract_counts_each_topic_not_the_whole_file
+- test_markdown_contract_reports_underlength_topic
+- test_json_contract_rejects_wrong_schema_and_short_content
+- test_cron_retries_a_failed_contract_before_advancing
+- test_definition_preserves_valid_output_contract
+- fake_http
+- fake_http
+
+### Data/datacontrol/koreunittest/tests/KoreData/test_database_concurrency.py
+- test_reader_observes_committed_snapshot_while_writer_is_open
+
+### Data/datacontrol/koreunittest/tests/KoreData/test_dbutil.py
+- test_terms_default_to_and
+- test_phrase_and_term_mix
+- test_explicit_or_is_preserved
+- test_pipe_is_or_shorthand
+- test_parentheses_and_not_are_preserved
+- test_comma_remains_and_separator
+- test_trailing_operator_is_trimmed
+
+### Data/datacontrol/koreunittest/tests/KoreData/test_domain_management.py
+- tearDownClass
+- setUp
+- test_legacy_dot_db_deletion_does_not_delete_underscore_db
+- test_domain_deletion_removes_sqlite_sidecars_and_ready_state
+- test_invalid_domain_names_cannot_create_domain_artifacts
+- test_legacy_underscore_domain_artifacts_are_deletable
+- test_inflight_ingest_does_not_write_after_feed_removal
+- test_atomic_feed_write_retries_a_transient_dropbox_lock
+
+### Data/datacontrol/koreunittest/tests/KoreData/test_gateway_library_write.py
+- __init__
+- json
+- __init__
+- patch
+- post
+- test_update_library_book_sends_patch_payload
+- test_repair_library_book_anchors_sends_post
+
+### Data/datacontrol/koreunittest/tests/KoreData/test_import_worker.py
+- test_admission_lock_is_held_until_worker_finishes
+- worker
+
+### Data/datacontrol/koreunittest/tests/KoreData/test_ingest_scheduler.py
+- __init__
+- wait
+- test_daily_weekly_and_manual_due_rules
+- test_scheduler_launches_only_due_timed_ingestors
+- test_launch_ingestor_starts_a_manual_or_timed_run
+- test_launch_failure_marks_the_descriptor_failed
+- today
+- poll
+
+### Data/datacontrol/koreunittest/tests/KoreData/test_kiwix_importer.py
+- _null_db_connection
+- _null_http_client
+- test_resume_existing_seed_counts_as_done
+
+### Data/datacontrol/koreunittest/tests/KoreData/test_saved_search_fields.py
+- tearDownClass
+- test_saved_payload_preserves_all_search_filter_fields
+- test_saved_search_ui_restores_all_filter_controls
+
+### Data/datacontrol/koreunittest/tests/KoreData/test_server_artifact_refs.py
+- test_map_feed_entry_includes_artifact_ref
+- test_parse_reference_artifact_ref_restores_title
+- test_parse_sentence_locator_restores_parts
+- test_get_full_text_dispatches_feed_ref
+- test_get_full_text_rejects_library_book
+- test_api_full_text_delegates_to_ref_dispatcher
+- test_get_sentence_dispatches_feed_locator
+- test_api_sentence_delegates_to_sentence_dispatcher
+- test_rag_databases_enriched_preserves_base_navigation_on_partial_info
+- test_rag_databases_enriched_falls_back_to_local_db_size
+- test_rag_processing_scripts_include_schedule_and_last_run
+- test_normalize_rag_processing_schedule_rejects_unknown_values
+- fake_get_feed_entry
+- fake_get_full_text
+- fake_get_sentence
+- __init__
+- json
+- get
+- __init__
+- json
+- get
+- __init__
+- json
+- get
+
+### Data/datacontrol/koreunittest/tests/KoreData/test_server_status.py
+- test_status_includes_gateway_card_totals
+
+### Data/datacontrol/koreunittest/tests/KoreDocs/test_korefile_artefacts.py
+- setUp
+- tearDown
+- test_metadata_query_supports_nested_exact_array_and_range_conditions
+- test_stable_artifact_id_and_history_survive_rename_and_update
+- test_metadata_patch_merges_nested_fields_without_replacing_the_artefact
+- test_koredoc_embeds_json_header_without_a_metadata_sidecar
+
+### Data/datacontrol/koreunittest/tests/KoreDocs/test_korefile_metadata.py
+- setUp
+- tearDown
+- test_metadata_preserves_nested_json_and_is_independent_of_content
+- test_metadata_survives_file_rename_and_move
+- test_metadata_registry_is_not_listed_as_a_document
+- test_metadata_inventory_reports_nested_paths_and_values
+- test_metadata_migrations_dry_run_then_update_header_only
+
+### Data/datacontrol/koreunittest/tests/KoreStack/test_ollama_control.py
+- test_snapshot_combines_agent_configuration_and_loaded_model
+- test_snapshot_keeps_owned_process_visible_while_server_starts
+- poll
+
+### Data/datacontrol/koreunittest/tests/KoreTest2/test_service.py
+- test_discovers_one_case_per_file
+- test_result_is_keyed_by_test_and_build
+- test_grid_keeps_build_history
+- test_builtin_assertions_match_legacy_cases
+- test_numeric_comparison_accepts_any_number_format
+- test_asserts_list_requires_every_assert_to_pass
+- test_judge_assert_uses_probability_threshold
+- test_summary_counts_the_current_build
+- test_bootstrap_copies_legacy_exchange_to_an_individual_case
+
 ### KoreAgent/main.py
 
 ### KoreAgent/app/context_compactor.py
@@ -294,6 +750,8 @@
 - log_to_session
 - register_session_config
 - get_active_model
+- register_system_one_model
+- get_active_system_one_model
 - get_active_num_ctx
 - get_active_max_predict
 - mark_host_healthy
@@ -336,6 +794,13 @@
 - call_ollama_extended
 - call_ollama
 - tokens_per_second
+
+### KoreAgent/app/llm_client_system_one.py
+- _validate_questions
+- call_system_one
+- preload_system_one_model
+- usage
+- as_dict
 
 ### KoreAgent/app/main.py
 - _hidden_windows_creation_flags
@@ -538,15 +1003,6 @@
 - clear_stop
 - register_run_stop_event
 - unregister_run_stop_event
-
-### KoreAgent/app/agent/orchestration/test_context_window.py
-- test_short_prompt_uses_minimum_working_context
-- test_context_grows_with_payload_but_never_exceeds_maximum
-
-### KoreAgent/app/agent/orchestration/test_model_resolution.py
-- test_unique_non_token_substring_resolves_model
-- test_ambiguous_substring_does_not_select_a_model
-- test_numeric_substring_does_not_match_a_larger_number
 
 ### KoreAgent/app/agent/orchestration/__init__.py
 
@@ -777,6 +1233,7 @@
 ### KoreAgent/app/input_layer/slash_command_handlers_models.py
 - _configure_ollama_offload
 - _cmd_llmserverconfig
+- _cmd_systemone
 - _cmd_stopmodel
 - _cmd_llmserver
 - register_model_slash_commands
@@ -936,6 +1393,9 @@
 - get_static_system_info_string
 - _to_gb
 
+### KoreAgent/app/system_skills/SystemOne/system_one_skill.py
+- system_one_decide
+
 ### KoreAgent/app/system_skills/ToolSelection/tool_selection_skill.py
 - _available_payload
 - _local_skills
@@ -1055,92 +1515,6 @@
 
 ### KoreAgent/app/system_skills/WorkingData/values/__init__.py
 
-### KoreAgent/app/testing/test_regressions.py
-- setUp
-- tearDown
-- test_write_file_writes_system_info_csv
-- test_extract_graph_connection_batch_from_final_answer
-- test_graph_write_guard_forces_tool_call_for_printed_triples
-- test_read_file_accepts_workspace_relative_data_prefix
-- test_create_folder_accepts_workspace_relative_data_prefix
-- test_web_slash_commands_mutate_shared_runtime_config
-- test_testtrend_uses_summary_counts_for_legacy_csv
-- test_testtrend_prefers_persisted_wrapper_outcome
-- test_execute_tool_call_runs_datetime
-- test_build_tool_definitions_has_entries
-- test_mcp_connections_prefer_new_config_and_skip_disabled_entries
-- test_mcp_connections_accept_legacy_mcp_servers_key
-- test_suite_mcp_service_refs_resolve_urls
-- test_runtime_config_merge_keeps_default_service_ports_for_mcp_refs
-- test_mcp_connection_error_formatter_unwraps_exception_groups
-- test_mcp_enumeration_ignores_duplicate_tool_names_from_later_connections
-- test_normalize_tool_request_rewrites_assistant_delegate_wrapper
-- test_normalize_tool_request_adapts_saved_search_name_alias
-- test_normalize_tool_request_keeps_canonical_saved_search_name
-- test_normalize_tool_request_rejects_conflicting_saved_search_names
-- test_normalize_tool_request_leaves_unmapped_tool_arguments_untouched
-- test_fetch_page_text_query_mode_falls_back_to_raw_page_text
-- test_fetch_page_text_query_miss_returns_large_raw_fallback
-- test_load_session_rebuilds_history_from_korechat
-- test_load_session_restores_datasets_from_korechat_payload
-- test_koreconv_prompt_renders_datasets_separately
-- test_koreconv_event_restores_datasets_before_orchestration
-- test_background_context_round_trip_is_versioned
-- test_koreconv_event_marks_failed_when_outbound_write_fails
-- test_clone_conversation_resets_token_estimate_and_recomputes_turn_count
-- test_delete_session_state_deletes_korechat_record
-- test_dataset_rename_preserves_dataset_id
-- test_dataset_drop_where_forks_by_default
-- test_dataset_filter_uses_projected_records
-- test_dataset_persistence_round_trip_handles_spillover
-- test_dataset_reports_missing_spillover_row
-- test_dataset_get_returns_paged_envelope
-- test_dataset_write_koredoc_writes_real_dataset_rows
-- test_dataset_expand_full_text_creates_enriched_dataset
-- test_file_write_blocks_suspicious_placeholder_koredoc_content
-- test_dataset_get_uses_deterministic_scratch_key
-- test_system_prompt_hides_dataset_manifests_without_dataset_tools
-- test_system_prompt_includes_korechat_conversation_snapshot
-- test_auto_route_tool_result_saves_record_collections_as_dataset
-- test_auto_route_tool_result_parses_stringified_json_results
-- test_auto_route_tool_result_skips_dataset_get_payloads
-- test_dataset_save_accepts_results_envelope_dict
-- test_system_prompt_steers_exhaustive_fetches_into_scratchpad
-- test_delegate_subrun_restores_parent_depth_between_siblings
-- test_delegate_subrun_binds_child_to_parent_session
-- test_delegate_subrun_auto_includes_dataset_access_for_named_dataset_tasks
-- test_search_web_prefer_article_urls_promotes_article_results
-- test_search_web_extracts_results_when_ddg_attributes_are_reordered
-- test_research_traverse_saves_page_level_scratchpad_artifacts
-- test_test_wrapper_fails_single_prompt_on_no_results_output
-- test_test_wrapper_fails_exchange_on_search_failure_output
-- test_scratch_query_prompt_forbids_outside_knowledge
-- fake_call_llm_chat
-- fake_execute_tool_call
-- fake_list_tools
-- fake_orchestrate_prompt
-- fake_http_post
-- fake_post
-- fake_get
-- fake_call_llm_chat
-- fake_fetch
-- fake_orchestrate_prompt
-- fake_orchestrate_prompt
-- fake_orchestrate_prompt
-- log
-- log_file_only
-- log_section
-- log_section_file_only
-- __init__
-- __enter__
-- __exit__
-- __init__
-- get_turns
-- __enter__
-- __exit__
-- __init__
-- get_turns
-
 ### KoreAgent/app/utils/runtime_logger.py
 - create_log_file_path
 - __init__
@@ -1210,6 +1584,56 @@
 
 ### KoreAgent/app/utils/__init__.py
 
+### KoreAgentNetwork/main.py
+
+### KoreAgentNetwork/app/config.py
+- service_config
+- suite_services
+
+### KoreAgentNetwork/app/runtime.py
+- _execution_order
+- _node_inputs
+- _child_environment
+- _render_template
+- _service_url
+- _post_service_json
+- _call_llm
+- _call_decision
+- _execute_llm_node
+- _execute_judge_node
+- _execute_node
+- run_node
+- run_network
+- _replace
+
+### KoreAgentNetwork/app/server.py
+- status
+- ui
+- api_list_networks
+- api_create_network
+- api_get_network
+- api_save_network
+- api_delete_network
+- api_run_network
+- api_run_node
+
+### KoreAgentNetwork/app/store.py
+- _utc_now
+- _new_id
+- default_network
+- _path
+- _validate_port_list
+- _validate_node_config
+- validate_node
+- validate_network
+- list_networks
+- load_network
+- save_network
+- create_network
+- delete_network
+
+### KoreAgentNetwork/app/__init__.py
+
 ### KoreChat/main.py
 - _print_banner
 - row
@@ -1223,14 +1647,6 @@
 - configure_service_logging
 - get_service_log_path
 - make_log_config
-
-### KoreChat/app/test_database_regressions.py
-- test_message_append_persists_telemetry_metadata
-- test_message_tags_include_direction_and_supplied_values
-- test_conversation_get_preserves_malformed_scratchpad_payload
-- test_conversation_get_preserves_malformed_datasets_payload
-- test_conversation_clear_history_resets_model_context
-- test_init_db_migrates_legacy_datasets_out_of_scratchpad
 
 ### KoreChat/app/__init__.py
 
@@ -1669,79 +2085,6 @@
 - attach_run
 
 ### KoreCode/app/__init__.py
-
-### KoreCode/app/testing/test_agent_playbooks.py
-- test_router_selects_create_file_playbook
-- test_router_selects_diagnose_failing_test_playbook
-- test_router_selects_python_debug_playbook
-- test_router_selects_workspace_change_for_implementation
-- test_explore_prompt_only_advertises_active_tools
-- test_create_file_prompt_requires_target_existence_check
-- test_edit_prompt_requires_read_before_automatic_apply
-- test_executor_rejects_inactive_tool
-- test_executor_runs_active_python_tool
-- test_executor_accepts_legacy_python_function_replacement_argument_names
-- test_executor_rejects_running_a_non_active_python_file
-
-### KoreCode/app/testing/test_run_executor.py
-- test_edit_envelope_applies_validated_changes
-- test_analysis_envelope_with_tool_requests_continues_the_agent_loop
-
-### KoreCode/app/testing/test_server.py
-- _temp_runs_dir
-- _temp_work_items_dir
-- test_work_item_lifecycle_and_run_attachment
-- test_work_item_rejects_unknown_status
-- test_korecode_stores_use_suite_datacontrol_root
-- test_korechat_client_strips_ui_path_from_suite_url_map
-- test_workspace_root_is_durable
-- test_setting_workspace_root_persists_selection
-- test_api_chat_thread_reads_without_creating_conversation
-- test_api_chat_thread_recovers_latest_conversation_for_path
-- test_workspace_chat_recovers_latest_legacy_file_conversation
-- test_chat_run_stores_routed_execution_contract
-- test_direct_tool_execution_honors_run_execution_contract
-- test_workspace_index_rebuild_creates_markdown_and_sqlite
-- test_workspace_index_symbol_and_call_endpoints
-- test_api_slash_complete_returns_matching_items
-- test_workspace_index_rebuild_allows_duplicate_symbol_names_across_files
-- test_api_chat_followup_passes_outbound_sender_display
-- test_api_chat_workspace_context_passes_enabled_flag
-- test_api_chat_send_creates_persisted_run
-- test_api_chat_followup_creates_persisted_run
-- test_api_chat_thread_marks_waiting_run_completed_when_reply_observed
-- test_api_chat_prompt_builds_backend_prompt_with_context_and_mentions
-- test_api_chat_tool_followup_prompt_builds_backend_prompt
-- test_api_chat_tools_lists_backend_tool_contract
-- test_api_chat_tools_execute_reads_file_and_logs_run_tool_call
-- test_api_chat_runs_executes_backend_loop_in_python
-- test_api_chat_runs_executes_tool_rounds_in_python
-- test_api_chat_continue_runs_executes_backend_loop_in_python
-- test_api_create_and_apply_edit_proposal
-- test_edit_proposal_can_create_and_apply_new_python_file
-- test_agent_edit_applies_validated_workspace_change
-- test_agent_edit_application_rejects_unrequested_file
-- test_agent_edit_application_allows_explicitly_named_new_file
-- test_agent_create_file_playbook_allows_a_new_agent_named_file
-- test_workspace_change_applies_cross_file_python_syntax_repair
-- test_agent_applies_multiple_edits_to_one_file_from_one_hash
-- test_edit_proposal_can_delete_a_file_after_review
-- test_python_runner_captures_script_output_and_syntax_failure
-- test_direct_python_execution_endpoint_runs_workspace_file
-- test_write_tool_returns_edit_proposal_not_direct_mutation
-- test_replace_python_function_requires_matching_hash_and_valid_python
-- test_insert_python_function_requires_matching_hash_and_valid_python
-- test_insert_python_function_into_class_adds_method_inside_class
-
-### KoreCode/app/testing/test_slash_commands.py
-- setUp
-- test_help_lists_workspace_regen
-- test_workspace_on_sets_state_and_rebuilds
-- test_workspace_regen_emits_no_state_action
-- test_retry_without_last_message_returns_error
-- test_mode_continue_requests_continue_action
-- test_complete_lists_matching_commands
-- test_complete_lists_workspace_subcommands
 
 ### KoreCode/app/testing/__init__.py
 
@@ -2213,25 +2556,6 @@
 - _word_quantity
 - ok
 
-### KoreCron/test_main.py
-- test_deletes_all_name_matches_before_creating
-- test_deletes_stale_external_id_even_if_chat_was_renamed
-- test_test_run_definition_accepts_only_a_daily_time
-- test_test_run_starts_a_koretest2_session
-- test_test_runs_are_stored_separately_from_cronprompts
-- test_records_a_failed_attempt_with_its_error
-- test_marks_a_failed_run_command_as_a_failed_cron_prompt
-- setUp
-- tearDown
-- test_tracks_a_running_prompt_and_releases_it_when_finished
-- test_markdown_contract_counts_each_topic_not_the_whole_file
-- test_markdown_contract_reports_underlength_topic
-- test_json_contract_rejects_wrong_schema_and_short_content
-- test_cron_retries_a_failed_contract_before_advancing
-- test_definition_preserves_valid_output_contract
-- fake_http
-- fake_http
-
 ### KoreData/main.py
 
 ### KoreData/CommonCode/config.py
@@ -2243,26 +2567,12 @@
 - get_service_log_path
 - make_log_config
 
-### KoreData/CommonCode/test_dbutil.py
-- test_terms_default_to_and
-- test_phrase_and_term_mix
-- test_explicit_or_is_preserved
-- test_pipe_is_or_shorthand
-- test_parentheses_and_not_are_preserved
-- test_comma_remains_and_separator
-- test_trailing_operator_is_trimmed
-
 ### KoreData/KoreDataGateway/main.py
 - _listening_pids_on_port
 - _terminate_pid
 - _clear_stale_gateway_listener
 - _print_banner
 - row
-
-### KoreData/KoreDataGateway/test_saved_search_fields.py
-- tearDownClass
-- test_saved_payload_preserves_all_search_filter_fields
-- test_saved_search_ui_restores_all_filter_controls
 
 ### KoreData/KoreDataGateway/app/config.py
 - load
@@ -2393,59 +2703,11 @@
 - _probe
 - _exception_handler
 
-### KoreData/KoreDataGateway/app/test_gateway_library_write.py
-- __init__
-- json
-- __init__
-- patch
-- post
-- test_update_library_book_sends_patch_payload
-- test_repair_library_book_anchors_sends_post
-
-### KoreData/KoreDataGateway/app/test_server_artifact_refs.py
-- test_map_feed_entry_includes_artifact_ref
-- test_parse_reference_artifact_ref_restores_title
-- test_parse_sentence_locator_restores_parts
-- test_get_full_text_dispatches_feed_ref
-- test_get_full_text_rejects_library_book
-- test_api_full_text_delegates_to_ref_dispatcher
-- test_get_sentence_dispatches_feed_locator
-- test_api_sentence_delegates_to_sentence_dispatcher
-- test_rag_databases_enriched_preserves_base_navigation_on_partial_info
-- test_rag_databases_enriched_falls_back_to_local_db_size
-- test_rag_processing_scripts_include_schedule_and_last_run
-- test_normalize_rag_processing_schedule_rejects_unknown_values
-- fake_get_feed_entry
-- fake_get_full_text
-- fake_get_sentence
-- __init__
-- json
-- get
-- __init__
-- json
-- get
-- __init__
-- json
-- get
-
 ### KoreData/KoreDataGateway/app/__init__.py
 
 ### KoreData/KoreFeed/main.py
 - _print_status
 - row
-
-### KoreData/KoreFeed/test_domain_management.py
-- tearDownClass
-- setUp
-- test_legacy_dot_db_deletion_does_not_delete_underscore_db
-- test_domain_deletion_removes_sqlite_sidecars_and_ready_state
-- test_invalid_domain_names_cannot_create_domain_artifacts
-- test_legacy_underscore_domain_artifacts_are_deletable
-- test_inflight_ingest_does_not_write_after_feed_removal
-- test_atomic_feed_write_retries_a_transient_dropbox_lock
-
-### KoreData/KoreFeed/test_server_status.py
-- test_status_includes_gateway_card_totals
 
 ### KoreData/KoreFeed/app/config.py
 
@@ -2842,16 +3104,6 @@
 - _print_banner
 - row
 
-### KoreData/KoreRAG/test_ingest_scheduler.py
-- __init__
-- wait
-- test_daily_weekly_and_manual_due_rules
-- test_scheduler_launches_only_due_timed_ingestors
-- test_launch_ingestor_starts_a_manual_or_timed_run
-- test_launch_failure_marks_the_descriptor_failed
-- today
-- poll
-
 ### KoreData/KoreRAG/app/config.py
 
 ### KoreData/KoreRAG/app/database.py
@@ -3104,18 +3356,6 @@
 - route_import_kiwix_backfill
 - route_import_status
 - route_status
-
-### KoreData/KoreReference/app/test_database_concurrency.py
-- test_reader_observes_committed_snapshot_while_writer_is_open
-
-### KoreData/KoreReference/app/test_import_worker.py
-- test_admission_lock_is_held_until_worker_finishes
-- worker
-
-### KoreData/KoreReference/app/test_kiwix_importer.py
-- _null_db_connection
-- _null_http_client
-- test_resume_existing_seed_counts_as_done
 
 ### KoreData/KoreReference/app/__init__.py
 
@@ -3592,23 +3832,6 @@
 
 ### KoreDocs/app/testing/__init__.py
 
-### KoreDocs/app/testing/unit/test_korefile_artefacts.py
-- setUp
-- tearDown
-- test_metadata_query_supports_nested_exact_array_and_range_conditions
-- test_stable_artifact_id_and_history_survive_rename_and_update
-- test_metadata_patch_merges_nested_fields_without_replacing_the_artefact
-- test_koredoc_embeds_json_header_without_a_metadata_sidecar
-
-### KoreDocs/app/testing/unit/test_korefile_metadata.py
-- setUp
-- tearDown
-- test_metadata_preserves_nested_json_and_is_independent_of_content
-- test_metadata_survives_file_rename_and_move
-- test_metadata_registry_is_not_listed_as_a_document
-- test_metadata_inventory_reports_nested_paths_and_values
-- test_metadata_migrations_dry_run_then_update_header_only
-
 ### KoreDocs/app/testing/unit/__init__.py
 
 ### KoreDocs/skills/build_manifest.py
@@ -3747,7 +3970,6 @@
 - _service_row_view
 - _path_rows
 - _dashboard_bootstrap
-- koretest2_summary
 - _template_env
 - html_page
 - endpoints_page
@@ -3830,6 +4052,9 @@
 - _ollama_api_url
 - _ollama_executable
 - _sampling_summary
+- _same_model
+- _format_bytes
+- _system_one_stats
 - __init__
 - snapshot
 - start
@@ -3837,338 +4062,6 @@
 - close
 - _close_log_handle
 - _stop_process_tree
-
-### KoreStack/test_ollama_control.py
-- test_snapshot_combines_agent_configuration_and_loaded_model
-- test_snapshot_keeps_owned_process_visible_while_server_starts
-- poll
-
-### KoreTest/main.py
-- _prompts_dir
-- _results_dir
-- _config
-- _urls
-- _db
-- _recover_interrupted_runs
-- _http
-- _fresh_test_chat
-- _git_version
-- _suite_path
-- _run_suite
-- _live_progress
-- _format_elapsed
-- _collection_stats
-- _prune_result_logs
-- _start_collection_run
-- _finish_collection_run
-- _run_requested_suite
-- _trend_lines
-- _trend_point_sort_key
-- _trend_points_for_all_runs
-- _trend_points
-- _run_unit_checks
-- recover_interrupted_runs
-- status
-- suites
-- run_suite
-- queue_run_suite
-- runs
-- trends
-- trend_points
-- unit_runs
-- ui
-- test_list_suites
-- test_run_suite
-- test_list_runs
-- test_get_trend
-
-### KoreTest/app/history.py
-- row_outcome
-- result_counts
-
-### KoreTest/app/result_retention.py
-- prune_test_results
-- _remove_empty_date_directories
-- _report
-
-### KoreTest/app/agent_tests/__init__.py
-
-### KoreTest/app/agent_tests/system/test_thinking_strip.py
-
-### KoreTest/app/agent_tests/system/__init__.py
-
-### KoreTest/app/agent_tests/unit/guardrail_support.py
-- load_test_skills_payload
-- reset_guardrail_state
-
-### KoreTest/app/agent_tests/unit/test_datauser_fs.py
-- test_resolve_rejects_absolute_and_traversal_paths
-- test_dot_relative_path_resolves_inside_datauser
-- test_write_and_delete_reject_stale_etags
-- test_listing_stays_in_selected_root_and_applies_filters
-
-### KoreTest/app/agent_tests/unit/test_datauser_script_runner.py
-- test_runs_a_python_script_below_datauser_scripts
-- test_rejects_a_script_outside_datauser_scripts
-
-### KoreTest/app/agent_tests/unit/test_delivery_publication.py
-- log
-- log_file_only
-- log_section
-- log_section_file_only
-- __init__
-- test_scheduled_email_prompt_requires_explicit_publication
-- test_non_scheduled_email_does_not_require_publication
-- test_preparatory_cron_prompt_does_not_require_publication
-- test_publish_cron_prompt_requires_publication
-- test_tool_loop_requires_confirmed_html_publication_before_completion
-- test_tool_output_formatter_handles_a_result
-- call_llm_chat
-- execute_tool_call
-
-### KoreTest/app/agent_tests/unit/test_folder_ls.py
-- test_folder_ls_lists_visible_immediate_folders_with_paging
-
-### KoreTest/app/agent_tests/unit/test_guardrail_data.py
-- setUp
-- tearDown
-- test_load_session_restores_datasets_from_korechat_payload
-- test_save_session_promotes_named_items_and_persists_background_context
-- test_koreconv_prompt_renders_datasets_separately
-- test_koreconv_history_excludes_the_newest_inbound_message
-- test_koreconv_history_excludes_llm_context_omitted_messages
-- test_koreconv_event_restores_datasets_before_orchestration
-- test_background_context_round_trip_is_versioned
-- test_koreconv_event_marks_failed_when_outbound_write_fails
-- test_clone_conversation_resets_token_estimate_and_recomputes_turn_count
-- test_delete_session_state_deletes_korechat_record
-- test_dataset_rename_preserves_dataset_id
-- test_dataset_drop_where_forks_by_default
-- test_dataset_filter_uses_projected_records
-- test_dataset_persistence_round_trip_handles_spillover
-- test_dataset_reports_missing_spillover_row
-- test_dataset_get_returns_paged_envelope
-- test_dataset_write_koredoc_writes_real_dataset_rows
-- test_file_write_strips_legacy_koredocs_prefix_to_datauser_root
-- test_koredocs_korefile_migrates_legacy_db_into_filesystem_root
-- test_dataset_expand_full_text_creates_enriched_dataset
-- test_file_write_blocks_suspicious_placeholder_koredoc_content
-- fake_orchestrate_prompt
-- fake_http_post
-- fake_post
-- fake_get
-- fake_call_llm_chat
-- fake_fetch
-- __enter__
-- __exit__
-- __init__
-- get_turns
-- __enter__
-- __exit__
-- __init__
-- get_turns
-
-### KoreTest/app/agent_tests/unit/test_guardrail_integration.py
-- setUp
-- tearDown
-- test_dataset_get_uses_deterministic_scratchpad_key
-- test_system_prompt_lists_dataset_manifests
-- test_system_prompt_hides_dataset_manifests_without_dataset_tools
-- test_system_prompt_includes_korechat_conversation_snapshot
-- test_auto_route_tool_result_saves_record_collections_as_dataset
-- test_auto_route_tool_result_parses_stringified_json_results
-- test_auto_route_tool_result_skips_dataset_get_payloads
-- test_dataset_save_accepts_results_envelope_dict
-- test_system_prompt_steers_exhaustive_fetches_into_scratchpad
-- test_system_prompt_steers_article_harvests_away_from_hub_urls
-- removed_delegate_subrun_restores_parent_depth_between_siblings
-- removed_delegate_subrun_binds_child_to_parent_session
-- removed_delegate_subrun_auto_includes_dataset_access_for_named_dataset_tasks
-- test_search_web_prefer_article_urls_promotes_article_results
-- test_search_web_extracts_results_when_ddg_attributes_are_reordered
-- test_scratchpad_query_rejects_exhaustive_answers_from_search_results
-- test_scratchpad_query_prompt_forbids_outside_knowledge
-- fake_orchestrate_prompt
-- fake_orchestrate_prompt
-- fake_orchestrate_prompt
-
-### KoreTest/app/agent_tests/unit/test_guardrail_smoke.py
-- setUp
-- tearDown
-- test_tool_loop_auto_activates_and_executes_known_inactive_tool
-- test_tool_loop_suggests_corrected_tool_name_for_invalid_request
-- test_test_wrapper_fails_single_prompt_on_no_results_output
-- test_test_wrapper_fails_exchange_on_search_failure_output
-- test_slash_command_outputs_use_ascii_arrows
-- _tool_call
-- fake_call_llm_chat
-- fake_execute_tool_call
-- fake_promote_selected_tools
-- fake_runtime_provider
-- _tool_call
-- fake_call_llm_chat
-- fake_execute_tool_call
-- fake_runtime_provider
-- log
-- log_file_only
-- log_section
-- log_section_file_only
-- __init__
-- log
-- log_file_only
-- log_section
-- log_section_file_only
-- __init__
-
-### KoreTest/app/agent_tests/unit/test_koreconv_input.py
-- test_latest_message_uses_timestamp_instead_of_response_list_position
-- test_event_prompt_label_uses_the_newest_inbound_message
-- test_compaction_retains_latest_three_user_turns
-- test_history_omits_messages_represented_by_compacted_summary
-- test_history_omits_completed_korecode_tool_followup
-- test_context_threshold_queues_one_high_priority_compaction_event
-- test_context_threshold_does_not_duplicate_pending_compaction
-- test_compact_slash_executes_its_compaction_event_immediately
-- test_compact_slash_command_uses_compaction_callback
-- test_compaction_persists_semantic_summary_before_marking_sources
-- test_session_context_discards_prior_tool_results
-- test_replacing_tool_context_preserves_semantic_summary
-- fake_post
-
-### KoreTest/app/agent_tests/unit/test_llm_client_availability.py
-- tearDown
-- test_ollama_probe_uses_the_native_health_check
-- test_probe_returns_false_when_the_backend_request_raises
-
-### KoreTest/app/agent_tests/unit/test_ollama_process_windows.py
-- test_client_does_not_start_an_unavailable_server
-- test_status_probe_prefers_http_api
-- test_passive_model_listing_does_not_autostart
-- test_preload_loads_the_configured_model_without_generation
-- test_prompt_call_does_not_autostart_by_default
-- test_native_chat_retries_after_runner_crash
-- test_runtime_recovery_does_not_restart_a_stopped_local_daemon
-- test_repeated_runner_crash_falls_back_to_cpu
-
-### KoreTest/app/agent_tests/unit/test_ollama_sampling_options.py
-- setUp
-- test_disabled_sampling_options_are_not_sent
-- test_enabled_sampling_options_are_sent_and_round_trip
-- test_defaults_set_preserves_sampling_options
-- test_orchestration_header_formats_unset_sampling_options
-
-### KoreTest/app/agent_tests/unit/test_result_retention.py
-- test_prunes_old_runs_and_runs_outside_the_per_suite_limit
-- test_rejects_an_invalid_run_limit
-
-### KoreTest/app/agent_tests/unit/test_service_logging.py
-- test_service_log_config_normalises_name_and_level
-- test_service_log_config_uses_safe_defaults
-
-### KoreTest/app/agent_tests/unit/test_skill_executor_loader.py
-- test_failed_import_does_not_leave_a_partial_module_cached
-
-### KoreTest/app/agent_tests/unit/test_skill_manager_persistence.py
-- _skill
-- test_save_retries_a_transient_windows_file_lock
-- test_identical_registration_does_not_rewrite_a_clean_registry
-- test_directory_not_found_is_a_tool_error
-- replace
-
-### KoreTest/app/agent_tests/unit/test_slash_command_registry.py
-- test_retired_commands_are_not_registered
-- test_chat_is_canonical_and_session_remains_a_compatibility_alias
-- test_run_is_registered_as_a_slash_command
-
-### KoreTest/app/agent_tests/unit/test_suite_config_loader.py
-- test_load_service_config_reads_suite_config_and_env
-- test_load_service_config_applies_raw_merger
-- merger
-
-### KoreTest/app/agent_tests/unit/test_tool_selection_p1.py
-- test_tool_schema_revision_ignores_fifo_reordering
-- test_skills_search_returns_focused_exact_matches
-- test_catalog_freshness_check_is_cached_between_tool_selections
-
-### KoreTest/app/agent_tests/unit/test_tool_sets.py
-- test_tool_set_builder_splits_koredocs_into_file_and_document_subsystems
-- test_active_tool_queue_evicts_oldest_and_reactivation_moves_to_newest
-- test_normalise_tool_sets_rejects_groups_larger_than_the_active_set_half_cap
-- test_save_and_resolve_tool_sets_uses_only_currently_available_tools
-- test_related_tool_set_reactivates_the_smallest_matching_group
-- test_relevant_tool_sets_require_a_distinctive_domain_term
-- test_reevaluation_persists_complete_programmatic_grouping
-- fake_save
-- output
-
-### KoreTest/app/agent_tests/unit/test_working_data_clear.py
-- test_working_data_clear_removes_every_value_in_the_session
-- test_working_data_clear_removes_collections
-- test_hydrate_working_data_restores_only_canonical_values
-- test_hydration_discards_cross_kind_name_collisions
-- test_working_data_rename_rejects_cross_kind_name_collisions
-
-### KoreTest/app/agent_tests/unit/__init__.py
-
-### KoreTest/app/system/analyzer.py
-- _split_log_sections
-- _extract_tool_calls
-- _count_iterations
-- _detect_planner_mode
-- _extract_validation_result
-- parse_log_file
-- classify_outcome
-- _prompt_quality_issues
-- build_gap_report
-- analyze_results_file
-- print_summary
-- run_analysis
-- _parse_cli_args
-
-### KoreTest/app/system/runner.py
-- load_prompts_file
-- invoke_framework
-- invoke_exchange
-- _agent_base_url
-- _agent_request
-- _require_llm_available
-- _invoke_agent_turn
-- extract_log_file
-- _parse_turn_outputs
-- _parse_turn_metrics
-- extract_final_output
-- _log_indicates_validation_failure
-- _output_indicates_no_results
-- _normalize_assert_text
-- _has_explicit_asserts
-- _should_tolerate_validation_failure
-- _is_infrastructure_error
-- _single_item_pass_status
-- _exchange_pass_status
-- _evaluate_assert
-- initialize_csv
-- append_csv_row
-- _base_row
-- _fmt_duration
-- _write_summary_md
-- run_tests
-- _run_single_item
-- _run_exchange_item
-- parse_args
-
-### KoreTest/app/unit/runner.py
-- _run
-- run_core_checks
-
-### KoreTest/app/unit/test_korecomms_email_threads.py
-- _close_pool
-- setUp
-- tearDown
-- test_html_only_email_body_is_used
-- test_reply_reference_keeps_the_original_thread_identifier
-- test_newsletter_replies_create_one_conversation_per_sender
-- test_first_reply_seeds_original_newsletter_once
-- append_message
 
 ### KoreTest2/main.py
 - _config
@@ -4187,6 +4080,12 @@
 - _request
 - _invoke
 - _evaluate
+- _judge
+- _check_turn
+- _check_assert
+- extract_numbers
+- numbers_equal
+- _evaluate_numeric
 - _evaluate_assert
 - _log_path
 - _write_log
@@ -4197,13 +4096,36 @@
 - run_detail
 - worker
 
-### KoreTest2/test_service.py
-- test_discovers_one_case_per_file
-- test_result_is_keyed_by_test_and_build
-- test_grid_keeps_build_history
-- test_builtin_assertions_match_legacy_cases
-- test_summary_counts_the_current_build
-- test_bootstrap_copies_legacy_exchange_to_an_individual_case
-
 ### KoreTest2/__init__.py
+
+### KoreUnitTest/main.py
+- _config
+- status
+- start_session
+- grid
+- run_detail
+- ui
+- _auto_run
+
+### KoreUnitTest/run_file.py
+- main
+
+### KoreUnitTest/service.py
+- build_id
+- _db
+- cases
+- _log_path
+- _clip
+- _execute
+- _run_case
+- _pending
+- start_session
+- auto_run_if_new_build
+- grid
+- summary
+- run_detail
+- worker
+- launch
+
+### KoreUnitTest/__init__.py
 

@@ -187,6 +187,11 @@ def _cmd_systemone(arg: str, ctx: SlashCommandContext) -> None:
         register_system_one_model(old_model)
         ctx.output(f"System One model switched: {old_model} -> {resolved}; warmup failed: {exc}", "error")
         return
+    if old_model and old_model != resolved:
+        try:
+            stop_model(old_model)
+        except Exception:
+            pass
     ctx.output(f"System One model switched and loaded: {old_model} -> {resolved}", "success")
 
 
