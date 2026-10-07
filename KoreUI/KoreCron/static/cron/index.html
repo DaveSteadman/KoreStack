@@ -17,44 +17,33 @@
       <section class="kcui-workspace kcui-workspace--two-columns kcui-workspace--stack-sm">
         <div class="kcui-workspace__region">
           <section class="kcui-panel panel">
-            <div class="kcui-panel-header"><p class="eyebrow">Cron Prompts</p><p>Select a timed event on the left to load its schedule, destination chat, and prompt sequence into the editor.</p></div>
+            <div class="kcui-panel-header"><p class="eyebrow">Triggers</p><p>Select a trigger to see its details. KoreCron only starts the target; the target does the work.</p></div>
             <div class="kcui-panel-body">
-              <div class="cronprompt-toolbar">
-                <div class="cronprompt-toolbar__actions">
-                  <button id="create-cronprompt" class="kcui-tag kcui-tag--accent kcui-tag--filled" type="button">New timed event</button>
-                  <button id="create-test-run" class="kcui-tag kcui-tag--warning" type="button">New test run</button>
-                </div>
-                <span id="list-status" class="kcui-tag kcui-tag--dim">Select a timed event</span>
+              <div class="cron-toolbar">
+                <button id="new-trigger" class="kcui-tag kcui-tag--accent kcui-tag--filled" type="button">New trigger</button>
               </div>
-              <div id="cron-rows" class="cronprompt-list" role="list"><div class="cronprompt-list__empty">Loading...</div></div>
-              <div class="cronprompt-test-runs">
-                <p class="eyebrow">Scheduled full test runs</p>
-                <div id="test-run-rows" class="cronprompt-list" role="list"></div>
-              </div>
+              <div id="trigger-rows" class="cron-list" role="list"><div class="cron-list__empty">Loading...</div></div>
             </div>
           </section>
         </div>
         <div class="kcui-workspace__region">
           <section class="kcui-panel panel">
-            <div class="kcui-panel-header"><p id="editor-eyebrow" class="eyebrow">New Timed Event</p><p id="editor-blurb">Name the event, choose its destination chat and schedule, then add the prompts in execution order.</p></div>
+            <div class="kcui-panel-header"><p id="detail-eyebrow" class="eyebrow">Details</p><p id="detail-blurb">Select a trigger on the left, or create a new one.</p></div>
             <div class="kcui-panel-body">
-              <form id="cronprompt-form">
-                <label class="kcui-form-label" for="cron-name">Event name</label>
-                <input id="cron-name" name="name" type="text" maxlength="120" placeholder="Daily AI News" required>
-                <label class="kcui-form-label" for="chat-name">KoreChat name</label>
-                <div class="cronprompt-chat-row">
-                  <input id="chat-name" name="chat_name" type="text" placeholder="Daily Research">
-                  <button id="agent-resume-btn" class="kcui-tag kcui-tag--warning" type="button">agent resume</button>
-                </div>
-                <label class="kcui-form-label" for="schedule">Schedule</label>
-                <input id="schedule" name="schedule" type="text" placeholder="60 for every 60 minutes, or 08:30 for daily" required>
-                <label class="kcui-form-label cronprompt-enabled"><input id="cron-enabled" name="enabled" type="checkbox" checked> Enable this timed event</label>
-                <label class="kcui-form-label">Prompt sequence</label>
-                <div id="prompt-list"></div>
-                <div>
-                  <button id="add-prompt" class="kcui-tag kcui-tag--dim" type="button">Add prompt</button>
-                  <button id="cancel-edit" class="kcui-tag kcui-tag--dim" type="button" hidden>Clear selection</button>
-                  <button id="save-cronprompt" class="kcui-tag kcui-tag--accent kcui-tag--filled" type="submit">Create timed event</button>
+              <div id="detail-empty" class="cron-list__empty">No trigger selected.</div>
+              <form id="trigger-form" hidden>
+                <label class="kcui-form-label" for="trigger-name">Name</label>
+                <input id="trigger-name" type="text" maxlength="120" placeholder="Nightly tests" required>
+                <label class="kcui-form-label" for="trigger-target">Target</label>
+                <select id="trigger-target"></select>
+                <label class="kcui-form-label" for="trigger-schedule">Schedule</label>
+                <input id="trigger-schedule" type="text" placeholder="60 for every 60 minutes, or 08:30 for daily" required>
+                <label class="kcui-form-label cron-enabled"><input id="trigger-enabled" type="checkbox" checked> Enabled</label>
+                <dl id="trigger-info" class="cron-info"></dl>
+                <div class="cron-actions">
+                  <button id="trigger-save" class="kcui-tag kcui-tag--accent kcui-tag--filled" type="submit">Create trigger</button>
+                  <button id="trigger-run" class="kcui-tag kcui-tag--warning" type="button">Run now</button>
+                  <button id="trigger-delete" class="kcui-tag kcui-tag--dim" type="button">Delete</button>
                   <span id="form-status" class="kcui-tag kcui-tag--dim">Ready</span>
                 </div>
               </form>
@@ -64,6 +53,6 @@
       </section>
     </div>
   </main>
-  <script type="module" src="/static/cron/app.js?v=20260915-running-status"></script>
+  <script type="module" src="/static/cron/app.js?v=1791355700"></script>
 </body>
 </html>

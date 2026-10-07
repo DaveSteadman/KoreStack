@@ -5,7 +5,7 @@ KoreAgent is the agent runtime of the suite. It runs the LLM tool-calling loop, 
 ## Role in the suite
 
 - **KoreChat** stores the durable threads; KoreAgent reasons and acts on them.
-- **KoreCron** posts scheduled prompts to it; **KoreComms** messages reach it through KoreChat events.
+- **KoreComms** messages reach it through KoreChat events.
 - **KoreTest2** (prompt tests and the `judge` assert) and **KoreAgentNetwork** (LLM and Decision blocks) call `POST /api/work-packet`.
 - It reaches **KoreData**, **KoreDocs**, **KoreCode**, and **KoreLiveWeb** as tools, over MCP and HTTP.
 - KoreStack's Ollama State panel reads the model information it reports.
@@ -64,5 +64,5 @@ Add a folder under `app/system_skills/` with a `skill.md` and a Python module. T
 | Model calls fail | The LLM host is reachable and the configured model exists |
 | System One calls fail with 404 | The Ollama build lacks `/v1/systemone`, or the configured model is not a System One model |
 | Tools do not appear | Skill catalog inputs and MCP connections |
-| Scheduled prompts do not run | KoreCron is running and the schedule files exist in datacontrol |
+| Scheduled work does not run | KoreCron is running and its trigger targets a running service |
 | Session history looks inconsistent | KoreChat and KoreAgent share the same data root |

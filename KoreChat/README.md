@@ -4,7 +4,7 @@ KoreChat is the conversation-state service. It is the canonical durable store of
 
 ## Role in the suite
 
-KoreAgent reasons and acts without owning thread storage. KoreComms turns external messages into KoreChat conversations and events, and delivers replies the agent has marked ready. KoreCron and the browser UIs also read and write threads here.
+KoreAgent reasons and acts without owning thread storage. KoreComms turns external messages into KoreChat conversations and events, and delivers replies the agent has marked ready. The browser UIs also read and write threads here.
 
 ## Architecture
 

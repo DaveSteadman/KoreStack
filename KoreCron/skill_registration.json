@@ -10,19 +10,19 @@
                        "tools":  [
                                      {
                                          "name":  "cron_list",
-                                         "purpose":  "List configured scheduled KoreCron prompts and their run state.",
+                                         "purpose":  "List KoreCron schedule triggers and their run state.",
                                          "parameters":  {
                                                             "type":  "object",
                                                             "properties":  {
 
                                                                            }
                                                         },
-                                         "returns":  "Configured scheduled prompts.",
+                                         "returns":  "Configured triggers.",
                                          "invoke_path":  "/api/skills/cron_list/invoke"
                                      },
                                      {
                                          "name":  "cron_run",
-                                         "purpose":  "Run one configured KoreCron prompt immediately by name.",
+                                         "purpose":  "Fire one KoreCron trigger (system tests, unit tests, or a network) immediately by name.",
                                          "parameters":  {
                                                             "type":  "object",
                                                             "properties":  {
@@ -34,7 +34,7 @@
                                                                              "name"
                                                                          ]
                                                         },
-                                         "returns":  "The queued scheduled prompt run.",
+                                         "returns":  "The queued trigger run.",
                                          "invoke_path":  "/api/skills/cron_run/invoke"
                                      }
                                  ]

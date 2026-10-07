@@ -6,6 +6,10 @@ For future entries, place the newest date first. State the problem, the change m
 
 The project favours simple, clear code and small, cohesive changes. Prefer removing duplication and unnecessary mechanisms. Verify changes using existing checks or transient checks where appropriate, without retaining working or temporary test files.
 
+## KoreCron retargeted as a trigger scheduler: 7 October 2026
+### Implemented changes
+- KoreCron no longer sends prompts or hosts prompt editors. A trigger is a schedule plus a target: system tests, unit tests, or a named KoreAgentNetwork network. Old `cronprompts.json` data and output contracts were removed.
+
 ## KoreAgentNetwork run-state persistence: 7 October 2026
 ### Implemented changes
 - Block results and edited port values persist per network under datacontrol and reload with the page.

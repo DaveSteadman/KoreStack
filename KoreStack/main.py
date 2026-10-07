@@ -178,7 +178,7 @@ SERVICE_META: dict[str, dict[str, object]] = {
         "description": "Standalone live web skill service for search, fetch, navigation, research, and Wikipedia lookup.",
     },
     "korecron": {
-        "label": "KoreCron", "cwd": SUITE_ROOT / "KoreCron", "script": "main.py", "url_suffix": "/ui", "health_suffix": "/status", "description": "Scheduled prompt sets that execute sequentially in named KoreChats.",
+        "label": "KoreCron", "cwd": SUITE_ROOT / "KoreCron", "script": "main.py", "url_suffix": "/ui", "health_suffix": "/status", "description": "Schedules that trigger system tests, unit tests, or a named KoreAgentNetwork network.",
     },
     "koretest2": {
         "label": "KoreTest2", "cwd": SUITE_ROOT / "KoreTest2", "script": "main.py", "url_suffix": "/ui", "health_suffix": "/status", "description": "Incremental build-keyed prompt testing, results, and analysis logs.",

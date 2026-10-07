@@ -46,7 +46,7 @@ Valid service names: `korechat`, `koreagent`, `koredatagateway`, `koredocs`, `ko
 | [KoreCode](KoreCode/README.md) | 29611 | Browser code workspace with indexing and AI edit flows | Coding surface scoped to the repository |
 | [KoreComms](KoreComms/README.md) | 29609 | Discord, Gmail, SFTP, and manual message bridges | Isolates external channels from the agent |
 | [KoreLiveWeb](KoreLiveWeb/README.md) | 29613 | Web search, fetch, navigation, and Wikipedia MCP tools | Live web evidence, kept apart from local data |
-| [KoreCron](KoreCron/README.md) | 29615 | Scheduled prompts and scheduled test runs | Time-based driver for KoreAgent and KoreTest2 |
+| [KoreCron](KoreCron/README.md) | 29615 | Scheduled triggers | Time-based starter for tests and named networks |
 | [KoreTest2](KoreTest2/README.md) | 29616 | System tests: prompts and commands run against the live interfaces | Per-build regression of the whole stack |
 | [KoreUnitTest](KoreUnitTest/README.md) | 29618 | Python unit tests, one file per test | Per-build regression of internal code |
 | [KoreAgentNetwork](KoreAgentNetwork/README.md) | 29617 | Visual, executable networks of Python, LLM, and Decision blocks | Composable automation that calls other services |
@@ -70,8 +70,8 @@ Shared support:
      ^         ^   ^         ^
      |         |   +---------+---- MCP tools, skills
      |         |
- KoreCron -> KoreAgent prompts      KoreAgentNetwork -> /api/work-packet
- KoreCron -> KoreTest2 sessions     KoreTest2 judge  -> /api/work-packet
+ KoreCron -> KoreAgentNetwork runs  KoreAgentNetwork -> /api/work-packet
+ KoreCron -> Test/UnitTest sessions KoreTest2 judge  -> /api/work-packet
                                     KoreUnitTest     -> runs repo test files
 ```
 
@@ -79,7 +79,7 @@ Shared support:
 - **Agent runtime**: KoreAgent owns orchestration and tools. KoreChat owns durable conversation state. KoreComms owns external channels.
 - **Data services**: KoreData and KoreDocs stay domain services that the agent reaches through MCP and HTTP, never internal libraries.
 - **LLM models**: a chat model plus an Ollama System One decision model (typed questions scored with probabilities). KoreAgent's `/api/work-packet` exposes both to the rest of the suite.
-- **Automation and testing**: KoreCron drives time-based work; KoreAgentNetwork builds visual pipelines; KoreTest2 and KoreUnitTest verify each new build.
+- **Automation and testing**: KoreCron triggers time-based work; KoreAgentNetwork builds visual pipelines; KoreTest2 and KoreUnitTest verify each new build.
 
 ### Shared service contract
 
