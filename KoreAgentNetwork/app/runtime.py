@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import json
 import os
@@ -37,16 +37,21 @@ def _url(service, path):
         suffix = "/" + suffix
     return services[service].rstrip("/") + suffix
 
+def _call(request, timeout):
+    try:
+        with urllib.request.urlopen(request, timeout=min(max(float(timeout), 1), 30)) as response:
+            return json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", "replace")[:500]
+        raise RuntimeError("HTTP " + str(exc.code) + " from " + request.full_url + ": " + detail) from None
+
 def api_get(service, path, timeout=20):
-    request = urllib.request.Request(_url(service, path), method="GET")
-    with urllib.request.urlopen(request, timeout=min(max(float(timeout), 1), 30)) as response:
-        return json.loads(response.read().decode("utf-8"))
+    return _call(urllib.request.Request(_url(service, path), method="GET"), timeout)
 
 def api_post(service, path, body=None, timeout=20):
     encoded = json.dumps(body if body is not None else {}).encode("utf-8")
     request = urllib.request.Request(_url(service, path), data=encoded, method="POST", headers={"Content-Type": "application/json"})
-    with urllib.request.urlopen(request, timeout=min(max(float(timeout), 1), 30)) as response:
-        return json.loads(response.read().decode("utf-8"))
+    return _call(request, timeout)
 
 def llm_result(prompt, model="", timeout=60):
     packet = {"route": "llm", "prompt": str(prompt)}
@@ -123,7 +128,9 @@ safe_builtins = {
     "abs": abs, "all": all, "any": any, "bool": bool, "dict": dict, "enumerate": enumerate,
     "Exception": Exception, "TypeError": TypeError, "ValueError": ValueError,
     "filter": filter, "float": float, "int": int, "isinstance": isinstance, "len": len,
-    "list": list, "map": map, "max": max, "min": min, "range": range, "round": round,
+    "list": list, "map": map, "max": max, "min": min, "next": next, "iter": iter, "reversed": reversed,
+    "range": range, "round": round, "repr": repr, "KeyError": KeyError, "IndexError": IndexError,
+    "RuntimeError": RuntimeError, "StopIteration": StopIteration,
     "set": set, "sorted": sorted, "str": str, "sum": sum, "tuple": tuple, "zip": zip,
 }
 namespace = {

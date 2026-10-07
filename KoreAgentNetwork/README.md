@@ -70,3 +70,8 @@ Networks are JSON files in `datauser/KoreNetworks/`.
 | LLM or Decision block fails | KoreAgent is running and its models are configured |
 | File helper cannot find a file | Paths are relative to the `datauser` root |
 | Downstream block did not run | An upstream port was `NoValue` |
+
+## Run state
+
+Block results and edited port values are saved per network to `datacontrol/koreagentnetwork/runstate/<id>.json` (`GET/PUT /api/networks/{id}/state`) after every block run, so they survive page navigation and restarts. Deleting a network deletes its state.
+

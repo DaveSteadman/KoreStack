@@ -11,7 +11,7 @@ from KoreCommon.service_app import register_suite_shell_routes
 
 from .config import SERVICE_KEY, SERVICE_LABEL
 from .runtime import run_network, run_node
-from .store import create_network, delete_network, list_networks, load_network, save_network, validate_node
+from .store import create_network, delete_network, list_networks, load_network, load_run_state, save_network, save_run_state, validate_node
 
 
 ROOT        = Path(__file__).resolve().parents[2]
@@ -28,6 +28,11 @@ class NetworkCreate(BaseModel):
 
 class NetworkBody(BaseModel):
     network: dict
+
+
+class RunStateBody(BaseModel):
+    run: dict | None = None
+    edits: dict = {}
 
 
 class NodeRunBody(BaseModel):
@@ -83,10 +88,29 @@ def api_delete_network(network_id: str) -> dict:
     return {"deleted": network_id}
 
 
+@app.get("/api/networks/{network_id}/state")
+def api_get_run_state(network_id: str) -> dict:
+    try:
+        return load_run_state(network_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Network not found")
+
+
+@app.put("/api/networks/{network_id}/state")
+def api_save_run_state(network_id: str, body: RunStateBody) -> dict:
+    try:
+        save_run_state(network_id, body.run, body.edits)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Network not found")
+    return {"saved": network_id}
+
+
 @app.post("/api/networks/{network_id}/run")
 def api_run_network(network_id: str) -> dict:
     try:
-        return {"run": run_network(load_network(network_id))}
+        run = run_network(load_network(network_id))
+        save_run_state(network_id, run, {})
+        return {"run": run}
     except (FileNotFoundError, ValueError) as exc:
         raise HTTPException(status_code=422, detail=str(exc))
 

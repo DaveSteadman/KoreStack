@@ -7,7 +7,7 @@ from copy import deepcopy
 from datetime import datetime, timezone
 from pathlib import Path
 
-from .config import NETWORKS_DIR
+from .config import NETWORKS_DIR, RUN_STATE_DIR
 
 
 _SAFE_ID = re.compile(r"^[A-Za-z0-9_-]{1,100}$")
@@ -249,6 +249,30 @@ def save_network(network: object) -> dict:
     return clean
 
 
+def _state_path(network_id: str) -> Path:
+    if not _SAFE_ID.fullmatch(network_id):
+        raise ValueError("Invalid network id")
+    return RUN_STATE_DIR / f"{network_id}.json"
+
+
+def load_run_state(network_id: str) -> dict:
+    path = _state_path(network_id)
+    if not path.exists():
+        return {"run": None, "edits": {}}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {"run": None, "edits": {}}
+    run, edits = data.get("run"), data.get("edits")
+    return {"run": run if isinstance(run, dict) else None, "edits": edits if isinstance(edits, dict) else {}}
+
+
+def save_run_state(network_id: str, run: object, edits: object) -> None:
+    RUN_STATE_DIR.mkdir(parents=True, exist_ok=True)
+    state = {"run": run if isinstance(run, dict) else None, "edits": edits if isinstance(edits, dict) else {}}
+    _state_path(network_id).write_text(json.dumps(state), encoding="utf-8")
+
+
 def create_network(title: str = "Untitled network") -> dict:
     network = default_network()
     network["title"] = str(title or "Untitled network").strip() or "Untitled network"
@@ -262,3 +286,4 @@ def delete_network(network_id: str) -> None:
     if not path.exists():
         raise FileNotFoundError(network_id)
     path.unlink()
+    _state_path(network_id).unlink(missing_ok=True)

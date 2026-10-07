@@ -6,6 +6,11 @@ For future entries, place the newest date first. State the problem, the change m
 
 The project favours simple, clear code and small, cohesive changes. Prefer removing duplication and unnecessary mechanisms. Verify changes using existing checks or transient checks where appropriate, without retaining working or temporary test files.
 
+## KoreAgentNetwork run-state persistence: 7 October 2026
+### Implemented changes
+- Block results and edited port values persist per network under datacontrol and reload with the page.
+- Python blocks gained next/iter/reversed/repr and common exceptions; api_get/api_post errors now include the HTTP body.
+
 ## KoreUnitTest, KoreTest removal, and documentation refresh: 6 October 2026
 
 ### Implemented changes

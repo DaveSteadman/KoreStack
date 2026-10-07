@@ -116,6 +116,11 @@ async function loadNetwork(networkId) {
   state.pendingOutput  = null;
   state.run            = null;
   state.edits          = {};
+  try {
+    const saved = await request(`/api/networks/${encodeURIComponent(networkId)}/state`);
+    state.run   = saved.run;
+    state.edits = saved.edits || {};
+  } catch (error) { setStatus(error.message, 'error'); }
   $('#network-title').value = network.title;
   render();
   await loadList();
@@ -332,6 +337,14 @@ function renderPorts(container, ports, isInput) {
 
 const pretty = (value) => value === undefined ? '' : JSON.stringify(value, null, 2);
 const hasOwn = (object, key) => Object.prototype.hasOwnProperty.call(object || {}, key);
+let stateChain = Promise.resolve();
+function persistState() {
+  if (!state.network) return stateChain;
+  const id   = state.network.id;
+  const body = JSON.stringify({ run: state.run, edits: state.edits });
+  stateChain = stateChain.then(() => request(`/api/networks/${encodeURIComponent(id)}/state`, { method: 'PUT', body }).catch((error) => setStatus(`State save failed: ${error.message}`, 'error')));
+  return stateChain;
+}
 function editsFor(nodeId) { return (state.edits[nodeId] ||= { inputs: {}, outputs: {} }); }
 function outputValues(nodeId) { return { ...(state.run?.nodes?.[nodeId]?.outputs || {}), ...(state.edits[nodeId]?.outputs || {}) }; }
 
@@ -359,6 +372,7 @@ async function playNode(nodeId) {
     state.run.nodes[node.id] = result;
     state.activeNodeId = null;
     if (state.edits[node.id]) state.edits[node.id].outputs = {};
+    persistState();
     render();
     setStatus(result.status === 'completed' ? `${node.label} completed in ${result.elapsed_seconds}s` : `${node.label} failed: ${result.error}`, result.status === 'completed' ? 'ok' : 'error');
     return result.status === 'completed';
@@ -424,6 +438,7 @@ $('#data-form').addEventListener('change', (event) => {
   try { value = text ? JSON.parse(text) : null; }
   catch (error) { setStatus(`${area.dataset.name}: invalid JSON (${error.message})`, 'error'); return; }
   editsFor(node.id)[area.dataset.kind][area.dataset.name] = value;
+  persistState();
   setStatus(`${area.dataset.name} edited. Play a block to use the custom value.`, 'ok');
   setTimeout(renderData, 0);
 });
@@ -438,6 +453,7 @@ $('#data-form').addEventListener('click', (event) => {
   } else {
     const [kind, name] = button.dataset.reset.split(':');
     delete editsFor(node.id)[kind][name];
+    persistState();
   }
   renderData();
 });
@@ -521,6 +537,7 @@ $('#run-network').addEventListener('click', async () => {
   const started = performance.now();
   state.run = { nodes: {} };
   state.edits = {};
+  persistState();
   state.running = true;
   render();
   let ok = true;
@@ -550,6 +567,7 @@ $('#delete-node').addEventListener('click', () => {
   network.edges = network.edges.filter((edge) => edge.source_node !== node.id && edge.target_node !== node.id);
   if (state.run?.nodes) delete state.run.nodes[node.id];
   delete state.edits?.[node.id];
+  persistState();
   state.selectedNodeId = null;
   render();
   persist();

@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from KoreCommon.suite_paths import get_suite_datauser_dir, get_suite_urls_map, load_suite_config
+from KoreCommon.suite_paths import get_suite_datacontrol_dir, get_suite_datauser_dir, get_suite_urls_map, load_suite_config
 
 
 SERVICE_KEY = "koreagentnetwork"
 SERVICE_LABEL = "KoreAgentNetwork"
 NETWORKS_DIR = (get_suite_datauser_dir() / "KoreNetworks").resolve()
+RUN_STATE_DIR = (get_suite_datacontrol_dir() / "koreagentnetwork" / "runstate").resolve()
 RUN_TIMEOUT_SECONDS = 300
 NODE_TIMEOUT_SECONDS = 60
 
