@@ -531,6 +531,7 @@ function persist({ refreshList = false } = {}) {
   return saveChain;
 }
 $('#new-network').addEventListener('click', async () => { try { const { network } = await request('/api/networks', { method: 'POST', body: JSON.stringify({ title: 'Untitled network' }) }); state.network = network; state.selectedNodeId = null; render(); await loadList(); setStatus('New network created. Rename it in the title field.', 'ok'); } catch (error) { setStatus(error.message, 'error'); } });
+$('#duplicate-network').addEventListener('click', async () => { if (!state.network) return; try { const { network } = await request(`/api/networks/${encodeURIComponent(state.network.id)}/duplicate`, { method: 'POST' }); await loadList(); await loadNetwork(network.id); setStatus(`Duplicated as ${network.title}.`, 'ok'); } catch (error) { setStatus(error.message, 'error'); } });
 $('#delete-network').addEventListener('click', async () => { if (!state.network || !window.confirm(`Delete ${state.network.title}?`)) return; try { await request(`/api/networks/${encodeURIComponent(state.network.id)}`, { method: 'DELETE' }); state.network = null; const networks = await loadList(); if (networks[0]) await loadNetwork(networks[0].id); } catch (error) { setStatus(error.message, 'error'); } });
 $('#run-network').addEventListener('click', async () => {
   if (!state.network || state.running) return;

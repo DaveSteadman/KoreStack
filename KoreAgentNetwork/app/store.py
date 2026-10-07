@@ -281,6 +281,18 @@ def create_network(title: str = "Untitled network") -> dict:
     return save_network(network)
 
 
+def duplicate_network(network_id: str) -> dict:
+    network = load_network(network_id)
+    base    = re.sub(r"\s*\(\d+\)$", "", str(network.get("title") or "Untitled network")).strip() or "Untitled network"
+    titles  = {str(n.get("title")) for n in list_networks()}
+    number  = 2
+    while f"{base} ({number})" in titles:
+        number += 1
+    network["id"]    = _new_id()
+    network["title"] = f"{base} ({number})"
+    return save_network(network)
+
+
 def delete_network(network_id: str) -> None:
     path = _path(network_id)
     if not path.exists():

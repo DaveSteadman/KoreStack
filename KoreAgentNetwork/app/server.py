@@ -11,7 +11,7 @@ from KoreCommon.service_app import register_suite_shell_routes
 
 from .config import SERVICE_KEY, SERVICE_LABEL
 from .runtime import run_network, run_node
-from .store import create_network, delete_network, list_networks, load_network, load_run_state, save_network, save_run_state, validate_node
+from .store import create_network, delete_network, duplicate_network, list_networks, load_network, load_run_state, save_network, save_run_state, validate_node
 
 
 ROOT        = Path(__file__).resolve().parents[2]
@@ -77,6 +77,14 @@ def api_save_network(network_id: str, body: NetworkBody) -> dict:
         return {"network": save_network(network)}
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
+
+
+@app.post("/api/networks/{network_id}/duplicate")
+def api_duplicate_network(network_id: str) -> dict:
+    try:
+        return {"network": duplicate_network(network_id)}
+    except (FileNotFoundError, ValueError):
+        raise HTTPException(status_code=404, detail="Network not found")
 
 
 @app.delete("/api/networks/{network_id}")
