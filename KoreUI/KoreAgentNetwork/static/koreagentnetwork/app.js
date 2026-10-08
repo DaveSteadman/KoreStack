@@ -112,6 +112,7 @@ async function loadNetwork(networkId) {
   const { network } = await request(`/api/networks/${encodeURIComponent(networkId)}`);
   network.nodes.forEach(ensureNodeShape);
   state.network        = network;
+  try { localStorage.setItem('kan.lastNetwork', network.id); } catch { /* storage unavailable */ }
   state.selectedNodeId = null;
   state.pendingOutput  = null;
   state.run            = null;
@@ -136,6 +137,7 @@ function render({ inspector = true } = {}) {
   edgeLayer.innerHTML = '';
   network.nodes.forEach(renderNode);
   drawEdges();
+  fitLayers();
   if (inspector) renderInspector();
   renderData();
 }
@@ -256,9 +258,25 @@ let zoom = 1;
 const zoomLabel = document.createElement('div');
 zoomLabel.className = 'kan-zoom-label';
 $('.kan-workspace').append(zoomLabel);
+// Size the layers to cover every node (plus a margin) so scrolling always reaches them at any zoom.
+const CANVAS_MARGIN = 1000;
+function fitLayers() {
+  let right = 0, bottom = 0;
+  nodeLayer.querySelectorAll('[data-node-id]').forEach((el) => {
+    right  = Math.max(right, el.offsetLeft + el.offsetWidth);
+    bottom = Math.max(bottom, el.offsetTop + el.offsetHeight);
+  });
+  const width  = Math.max(graphStage.clientWidth / zoom, right + CANVAS_MARGIN);
+  const height = Math.max(graphStage.clientHeight / zoom, bottom + CANVAS_MARGIN);
+  for (const layer of [nodeLayer, edgeLayer]) {
+    layer.style.minWidth = layer.style.width = `${width}px`;
+    layer.style.minHeight = layer.style.height = `${height}px`;
+  }
+}
 function applyZoom() {
   nodeLayer.style.transform = edgeLayer.style.transform = `scale(${zoom})`;
   zoomLabel.textContent = `${Math.round(zoom * 100)}%`;
+  fitLayers();
 }
 applyZoom();
 graphStage.addEventListener('wheel', (event) => {
@@ -530,7 +548,7 @@ function persist({ refreshList = false } = {}) {
   });
   return saveChain;
 }
-$('#new-network').addEventListener('click', async () => { try { const { network } = await request('/api/networks', { method: 'POST', body: JSON.stringify({ title: 'Untitled network' }) }); state.network = network; state.selectedNodeId = null; render(); await loadList(); setStatus('New network created. Rename it in the title field.', 'ok'); } catch (error) { setStatus(error.message, 'error'); } });
+$('#new-network').addEventListener('click', async () => { try { const { network } = await request('/api/networks', { method: 'POST', body: JSON.stringify({ title: 'Untitled network' }) }); state.network = network; try { localStorage.setItem('kan.lastNetwork', network.id); } catch { /* storage unavailable */ } state.selectedNodeId = null; render(); await loadList(); setStatus('New network created. Rename it in the title field.', 'ok'); } catch (error) { setStatus(error.message, 'error'); } });
 $('#duplicate-network').addEventListener('click', async () => { if (!state.network) return; try { const { network } = await request(`/api/networks/${encodeURIComponent(state.network.id)}/duplicate`, { method: 'POST' }); await loadList(); await loadNetwork(network.id); setStatus(`Duplicated as ${network.title}.`, 'ok'); } catch (error) { setStatus(error.message, 'error'); } });
 $('#delete-network').addEventListener('click', async () => { if (!state.network || !window.confirm(`Delete ${state.network.title}?`)) return; try { await request(`/api/networks/${encodeURIComponent(state.network.id)}`, { method: 'DELETE' }); state.network = null; const networks = await loadList(); if (networks[0]) await loadNetwork(networks[0].id); } catch (error) { setStatus(error.message, 'error'); } });
 $('#run-network').addEventListener('click', async () => {
@@ -554,7 +572,12 @@ $('#run-network').addEventListener('click', async () => {
   setStatus(ok ? `Network completed in ${seconds}s` : `Stopped after ${seconds}s; inspect the failed block`, ok ? 'ok' : 'error');
 });
 
-loadList().then((networks) => networks[0] ? loadNetwork(networks[0].id) : null).catch((error) => setStatus(error.message, 'error'));
+loadList().then((networks) => {
+  let last = null;
+  try { last = localStorage.getItem('kan.lastNetwork'); } catch { /* storage unavailable */ }
+  const pick = networks.find((n) => n.id === last) || networks[0];
+  return pick ? loadNetwork(pick.id) : null;
+}).catch((error) => setStatus(error.message, 'error'));
 
 // Fonts and window size change port positions after the first render
 document.fonts?.ready.then(() => state.network && render());
