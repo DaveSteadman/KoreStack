@@ -11,6 +11,7 @@ from KoreCommon.service_app import register_suite_shell_routes
 
 from .config import SERVICE_KEY, SERVICE_LABEL
 from .runtime import run_network, run_node
+from .templates import add_template, delete_template, list_templates
 from .store import create_network, delete_network, duplicate_network, list_networks, load_network, load_run_state, save_network, save_run_state, validate_node
 
 
@@ -33,6 +34,12 @@ class NetworkBody(BaseModel):
 class RunStateBody(BaseModel):
     run: dict | None = None
     edits: dict = {}
+
+
+class TemplateBody(BaseModel):
+    node: dict
+    name: str = ""
+    description: str = ""
 
 
 class NodeRunBody(BaseModel):
@@ -77,6 +84,28 @@ def api_save_network(network_id: str, body: NetworkBody) -> dict:
         return {"network": save_network(network)}
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
+
+
+@app.get("/api/templates")
+def api_list_templates() -> dict:
+    return {"templates": list_templates()}
+
+
+@app.post("/api/templates")
+def api_add_template(body: TemplateBody) -> dict:
+    try:
+        return {"template": add_template(body.node, body.name, body.description)}
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+
+
+@app.delete("/api/templates/{template_id}")
+def api_delete_template(template_id: str) -> dict:
+    try:
+        delete_template(template_id)
+    except (FileNotFoundError, ValueError):
+        raise HTTPException(status_code=404, detail="Template not found")
+    return {"deleted": template_id}
 
 
 @app.post("/api/networks/{network_id}/duplicate")

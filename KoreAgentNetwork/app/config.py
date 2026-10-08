@@ -6,6 +6,7 @@ from KoreCommon.suite_paths import get_suite_datacontrol_dir, get_suite_datauser
 SERVICE_KEY = "koreagentnetwork"
 SERVICE_LABEL = "KoreAgentNetwork"
 NETWORKS_DIR = (get_suite_datauser_dir() / "KoreNetworks").resolve()
+TEMPLATES_FILE = (get_suite_datauser_dir() / "KoreNetworkTemplates" / "templates.json").resolve()
 RUN_STATE_DIR = (get_suite_datacontrol_dir() / "koreagentnetwork" / "runstate").resolve()
 RUN_TIMEOUT_SECONDS = 300
 NODE_TIMEOUT_SECONDS = 60

@@ -176,3 +176,10 @@ code { color: #a5c8ff; }
 .kan-port-row input { padding: 2px 6px; }
 .kan-port-row .kan-port-remove { height: 22px; width: 22px; }
 .kan-code-help { margin: 4px 0 0; }
+
+.kan-template-list { flex: 1; overflow: auto; padding: 8px; }
+.kan-template-item { align-items: center; border: 1px solid var(--kan-border); border-radius: 5px; display: flex; gap: 6px; margin-bottom: 6px; padding: 8px; }
+.kan-template-text { flex: 1; min-width: 0; }
+.kan-template-text strong { display: block; }
+.kan-template-text small { color: var(--kan-dim); display: block; line-height: 1.35; margin-top: 2px; }
+.kan-template-item .btn { flex: 0 0 auto; }

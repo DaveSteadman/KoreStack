@@ -213,8 +213,39 @@ function showTab(name) {
   document.querySelectorAll('.kan-tab').forEach((tab) => tab.classList.toggle('active', tab.dataset.tab === name));
   $('#tab-networks').hidden = name !== 'networks';
   $('#tab-nodes').hidden = name !== 'nodes';
+  $('#tab-templates').hidden = name !== 'templates';
+  if (name === 'templates') loadTemplates();
 }
 document.querySelectorAll('.kan-tab').forEach((tab) => tab.addEventListener('click', () => showTab(tab.dataset.tab)));
+let templates = [];
+async function loadTemplates() {
+  try { templates = (await request('/api/templates')).templates; } catch (error) { setStatus(error.message, 'error'); return; }
+  $('#template-list').innerHTML = templates.map((item) => `<div class="kan-template-item" data-id="${escapeHtml(item.id)}"><div class="kan-template-text"><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(item.description || '')}</small></div><button type="button" class="btn btn-secondary" data-add title="Add a copy to the current network">Add</button><button type="button" class="kcui-icon-button" data-del title="Remove this template">×</button></div>`).join('') || '<div class="kan-empty-inspector">No templates yet. Select a block and use “Add To Templates”.</div>';
+}
+function addFromTemplate(item) {
+  if (!state.network) return;
+  const node = ensureNodeShape({ ...structuredClone(item.node), id: id() });
+  node.position = defaultNode(node.kind, state.network.nodes.length).position;
+  state.network.nodes.push(node);
+  persist();
+  selectNode(node.id);
+  setStatus(`Added ${node.label} from templates.`, 'ok');
+}
+$('#template-list').addEventListener('click', async (event) => {
+  const row  = event.target.closest('.kan-template-item');
+  const item = templates.find((t) => t.id === row?.dataset.id);
+  if (!item) return;
+  if (event.target.closest('[data-add]')) addFromTemplate(item);
+  else if (event.target.closest('[data-del]')) {
+    if (!window.confirm(`Remove template “${item.name}”?`)) return;
+    try { await request(`/api/templates/${encodeURIComponent(item.id)}`, { method: 'DELETE' }); await loadTemplates(); } catch (error) { setStatus(error.message, 'error'); }
+  }
+});
+$('#add-template').addEventListener('click', async () => {
+  const node = currentNode();
+  if (!node) return;
+  try { await request('/api/templates', { method: 'POST', body: JSON.stringify({ node, name: node.label }) }); setStatus(`Saved “${node.label}” to Templates.`, 'ok'); await loadTemplates(); } catch (error) { setStatus(error.message, 'error'); }
+});
 function selectNode(nodeId) { state.selectedNodeId = nodeId; render(); showTab('nodes'); }
 // Drop edges whose ports no longer exist, and keep a single connection per input
 function pruneEdges() {
@@ -331,7 +362,6 @@ function renderInspector() {
   $('#empty-inspector').hidden = Boolean(node);
   $('#node-form').hidden       = !node;
   $('#node-actions').hidden    = !node;
-  $('#result-panel').hidden    = !node || !state.run?.nodes?.[node.id];
   if (!node) return;
   ensureNodeShape(node);
   $('#node-label').value = node.label;
@@ -345,8 +375,6 @@ function renderInspector() {
   showKindFields(node.kind);
   renderPorts($('#input-ports'), node.inputs, true);
   renderPorts($('#output-ports'), node.outputs, false);
-  const result = state.run?.nodes?.[node.id];
-  if (result) $('#node-result').textContent = JSON.stringify(result, null, 2);
 }
 function renderPorts(container, ports, isInput) {
   container.innerHTML = ports.map((port, index) => `<div class="kan-port-row"><input data-index="${index}" value="${escapeHtml(port.name)}" aria-label="${isInput ? 'Input' : 'Output'} port name"><button type="button" class="kcui-icon-button kan-port-remove" data-remove="${index}" title="Remove port">×</button></div>`).join('');
@@ -433,6 +461,8 @@ function renderData() {
   if (!node) return;
   const result = state.run?.nodes?.[node.id];
   const edits  = state.edits[node.id] || { inputs: {}, outputs: {} };
+  $('#result-panel').hidden = !result;
+  if (result) $('#node-result').textContent = JSON.stringify(result, null, 2);
   const status = $('#data-status');
   status.className   = `kan-data-status ${result?.status || ''}`;
   status.textContent = result

@@ -60,7 +60,7 @@ Tabs per network, pan and zoom, a delete button, and resizable left and right pa
 
 ## Data
 
-Networks are JSON files in `datauser/KoreNetworks/`.
+Networks are JSON files in `datauser/KoreNetworks/`. Block templates (the UI Templates tab: `GET/POST /api/templates`, `DELETE /api/templates/{id}`) are in `datauser/KoreNetworkTemplates/templates.json`, seeded with starter blocks on first use. `POST /api/networks/{id}/duplicate` copies a network as "Title (n)". The UI reopens the last viewed network and sizes the canvas to all nodes plus a 1000px margin.
 
 ## Troubleshooting
 

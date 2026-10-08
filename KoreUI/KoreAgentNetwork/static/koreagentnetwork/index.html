@@ -7,7 +7,7 @@
   <link rel="icon" href="/ui-elements/assets/icons/favicon.ico">
   <link rel="stylesheet" href="/ui-elements/assets/css/chrome.css">
   <link rel="stylesheet" href="/ui-elements/assets/css/workspace.css">
-  <link rel="stylesheet" href="/static/koreagentnetwork/app.css?v=1791445000">
+  <link rel="stylesheet" href="/static/koreagentnetwork/app.css?v=1791446000">
   <script src="/suite-config.js"></script>
 </head>
 <body class="kcui-shell-bg">
@@ -15,7 +15,7 @@
   <div id="appbar"></div>
   <main class="kcui-main kan-layout" data-kcui-workspace data-kcui-layout-key="koreagentnetwork-main-v1" data-kcui-columns="0,2,4" data-kcui-columns-min="200,360,240" data-kcui-disable-below="981">
     <div class="kan-left">
-    <div class="kan-tabs" role="tablist"><button type="button" class="kan-tab active" data-tab="networks" role="tab">Networks</button><button type="button" class="kan-tab" data-tab="nodes" role="tab">Nodes</button></div>
+    <div class="kan-tabs" role="tablist"><button type="button" class="kan-tab active" data-tab="networks" role="tab">Networks</button><button type="button" class="kan-tab" data-tab="nodes" role="tab">Nodes</button><button type="button" class="kan-tab" data-tab="templates" role="tab">Templates</button></div>
     <aside class="kan-library" id="tab-networks">
       <div class="kan-section-head">
         <span>Networks</span>
@@ -67,13 +67,15 @@
         </div>
         <p id="node-help" class="kan-code-help"></p>
       </form>
-      <section id="result-panel" class="kan-result-panel" hidden>
-        <div class="kan-ports-head"><span>Last run</span></div>
-        <pre id="node-result"></pre>
-      </section>
       <div id="node-actions" class="kan-sidebar-actions kan-node-actions" hidden>
+        <button id="add-template" class="btn btn-secondary" type="button" title="Save a copy of this block in the Templates tab">Add To Templates</button>
         <button id="delete-node" class="btn btn-secondary" type="button">Delete</button>
       </div>
+    </aside>
+
+    <aside class="kan-library" id="tab-templates" hidden>
+      <div class="kan-section-head"><span>Templates</span></div>
+      <div id="template-list" class="kan-template-list"></div>
     </aside>
     </div>
 
@@ -108,10 +110,14 @@
         <div id="data-inputs" class="kan-data-list"></div>
         <div class="kan-ports-head"><span>Outputs (last run)</span></div>
         <div id="data-outputs" class="kan-data-list"></div>
+        <section id="result-panel" class="kan-result-panel" hidden>
+          <div class="kan-ports-head"><span>Last run (raw result)</span></div>
+          <pre id="node-result"></pre>
+        </section>
         <button id="play-selected" class="btn btn-primary" type="button">&#9654; Run this block</button>
       </form>
     </aside>
   </main>
-  <script type="module" src="/static/koreagentnetwork/app.js?v=1791445000"></script>
+  <script type="module" src="/static/koreagentnetwork/app.js?v=1791446000"></script>
 </body>
 </html>
