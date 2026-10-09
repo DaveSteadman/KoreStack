@@ -88,6 +88,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
 import threading
+import time
 from typing import Any, Optional
 from urllib.parse import urlsplit
 
@@ -415,6 +416,25 @@ def _unavailable_ui_service_cards() -> list[dict]:
     ]
 
 
+_REF_STATS_TTL_SECONDS = 60.0
+_ref_stats_cache: dict = {"at": 0.0, "stats": {}}
+
+
+async def _reference_stats() -> dict:
+    """KoreReference counts need full-table scans, so they are fetched rarely and cached."""
+    now = time.monotonic()
+    if _ref_client is None or (now - _ref_stats_cache["at"] < _REF_STATS_TTL_SECONDS):
+        return _ref_stats_cache["stats"]
+    try:
+        r = await _ref_client.get("/stats", timeout=10.0)
+        _ref_stats_cache["at"] = now
+        if r.status_code == 200:
+            _ref_stats_cache["stats"] = r.json()
+    except Exception:
+        _ref_stats_cache["at"] = now
+    return _ref_stats_cache["stats"]
+
+
 async def _refresh_ui_service_cards() -> None:
     global _ui_service_cards
     clients = [globals()[client_name] for _label, _slug, _icon_key, client_name, _url_key in _UI_SERVICE_SPECS]
@@ -426,6 +446,10 @@ async def _refresh_ui_service_cards() -> None:
         _svc_ui(response, label, slug, cfg[url_key], icon_key)
         for (label, slug, icon_key, _client_name, url_key), response in zip(_UI_SERVICE_SPECS, responses)
     ]
+    ref_stats = await _reference_stats()
+    for card in _ui_service_cards:
+        if card["slug"] == "reference" and card["healthy"]:
+            card["stats"] = {**card["stats"], **ref_stats}
 
 
 async def _refresh_ui_service_cards_loop() -> None:

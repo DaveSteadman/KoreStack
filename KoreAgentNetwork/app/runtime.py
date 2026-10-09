@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import json
 import os
@@ -39,7 +39,7 @@ def _url(service, path):
 
 def _call(request, timeout):
     try:
-        with urllib.request.urlopen(request, timeout=min(max(float(timeout), 1), 30)) as response:
+        with urllib.request.urlopen(request, timeout=min(max(float(timeout), 1), 180)) as response:
             return json.loads(response.read().decode("utf-8"))
     except urllib.error.HTTPError as exc:
         detail = exc.read().decode("utf-8", "replace")[:500]
@@ -57,7 +57,7 @@ def llm_result(prompt, model="", timeout=60):
     packet = {"route": "llm", "prompt": str(prompt)}
     if str(model).strip():
         packet["model"] = str(model).strip()
-    return api_post("koreagent", "/api/work-packet", {"json_text": json.dumps(packet)}, timeout=min(max(float(timeout), 1), 120))
+    return api_post("koreagent", "/api/work-packet", {"json_text": json.dumps(packet)}, timeout=min(max(float(timeout), 1), 180))
 
 def llm(prompt, model="", timeout=60):
     return llm_result(prompt, model=model, timeout=timeout)["response"]
@@ -66,7 +66,7 @@ def decide(question, state=None, model="", timeout=60):
     payload = {"route": "system_one", "state": inputs if state is None else state, "questions": {"verdict": {"type": "noul", "instructions": str(question)}}}
     if str(model).strip():
         payload["model"] = str(model).strip()
-    result = api_post("koreagent", "/api/work-packet", {"json_text": json.dumps(payload)}, timeout=min(max(float(timeout), 1), 120))
+    result = api_post("koreagent", "/api/work-packet", {"json_text": json.dumps(payload)}, timeout=min(max(float(timeout), 1), 180))
     answers = json.loads(result["response"])
     return float(answers["verdict"]["noul"])
 
@@ -124,7 +124,18 @@ def delete_file(name):
         target.unlink()
         return True
     return False
+ALLOWED_IMPORTS = {
+    "datetime", "time", "calendar", "zoneinfo", "collections", "itertools", "functools", "operator",
+    "statistics", "string", "textwrap", "html", "urllib.parse", "base64", "hashlib", "random", "decimal",
+    "fractions", "csv", "uuid", "difflib", "copy", "heapq", "bisect", "enum", "dataclasses", "typing",
+    "json", "math", "re", "unicodedata", "secrets", "numbers",
+}
+def safe_import(name, globals=None, locals=None, fromlist=(), level=0):
+    if level != 0 or (name not in ALLOWED_IMPORTS and name.split(".")[0] not in ALLOWED_IMPORTS - {"urllib.parse"}):
+        raise ImportError(f"import of '{name}' is not allowed; allowed modules: " + ", ".join(sorted(ALLOWED_IMPORTS)))
+    return __import__(name, globals, locals, fromlist, level)
 safe_builtins = {
+    "__import__": safe_import,
     "abs": abs, "all": all, "any": any, "bool": bool, "dict": dict, "enumerate": enumerate,
     "Exception": Exception, "TypeError": TypeError, "ValueError": ValueError,
     "filter": filter, "float": float, "int": int, "isinstance": isinstance, "len": len,
@@ -175,10 +186,12 @@ def _execution_order(network: dict) -> list[str]:
     for edge in network["edges"]:
         outgoing[edge["source_node"]].append(edge["target_node"])
         incoming[edge["target_node"]] += 1
-    ready = deque(node_id for node_id in node_ids if incoming[node_id] == 0)
+    rank = {node["id"]: (node["order"] if node.get("order") is not None else float("inf"), index) for index, node in enumerate(network["nodes"])}
+    ready = [node_id for node_id in node_ids if incoming[node_id] == 0]
     ordered: list[str] = []
     while ready:
-        node_id = ready.popleft()
+        ready.sort(key=rank.__getitem__)
+        node_id = ready.pop(0)
         ordered.append(node_id)
         for target in outgoing[node_id]:
             incoming[target] -= 1

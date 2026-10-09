@@ -105,7 +105,8 @@ function select(id) { selectedId = id; renderList(); fillForm(); }
 
 async function refresh() {
   try {
-    triggers = (await api('/api/triggers')).triggers.sort((a, b) => (a.next_fire || '9999').localeCompare(b.next_fire || '9999') || a.name.localeCompare(b.name));
+    const timeOfDay = (x) => (x.next_fire || '').split('T')[1] || '99:99';
+    triggers = (await api('/api/triggers')).triggers.sort((a, b) => timeOfDay(a).localeCompare(timeOfDay(b)) || a.name.localeCompare(b.name));
     if (selectedId && selectedId !== 'new' && !selected()) selectedId = null;
     renderList();
     if (!dirty) { if (selectedId && selectedId !== 'new') renderInfo(); else if (!selectedId) fillForm(); }

@@ -129,7 +129,11 @@ def validate_node(node: object) -> dict:
     if kind not in _NODE_KINDS:
         raise ValueError(f"Node {node_id} kind must be one of: {', '.join(sorted(_NODE_KINDS))}")
     position = node.get("position") if isinstance(node.get("position"), dict) else {}
-    return {
+    try:
+        order = float(node["order"])
+    except (KeyError, TypeError, ValueError):
+        order = None
+    result = {
         "id":       node_id,
         "label":    str(node.get("label") or node_id).strip() or node_id,
         "kind":     kind,
@@ -139,6 +143,9 @@ def validate_node(node: object) -> dict:
         "outputs":  _validate_port_list(node.get("outputs", []), "outputs", node_id),
         "code":     str(node.get("code") or ""),
     }
+    if order is not None and order == order:
+        result["order"] = int(order) if order == int(order) else order
+    return result
 
 
 def validate_network(network: object) -> dict:
@@ -210,7 +217,7 @@ def validate_network(network: object) -> dict:
     result["nodes"]      = cleaned_nodes
     result["edges"]      = cleaned_edges
     result["created_at"] = str(result.get("created_at") or _utc_now())
-    result["updated_at"] = _utc_now()
+    result["updated_at"] = str(result.get("updated_at") or _utc_now())
     return result
 
 
@@ -245,6 +252,7 @@ def load_network(network_id: str) -> dict:
 def save_network(network: object) -> dict:
     NETWORKS_DIR.mkdir(parents=True, exist_ok=True)
     clean = validate_network(network)
+    clean["updated_at"] = _utc_now()
     _path(clean["id"]).write_text(json.dumps(clean, indent=2) + "\n", encoding="utf-8")
     return clean
 

@@ -8,8 +8,8 @@ SERVICE_LABEL = "KoreAgentNetwork"
 NETWORKS_DIR = (get_suite_datauser_dir() / "KoreNetworks").resolve()
 TEMPLATES_FILE = (get_suite_datauser_dir() / "KoreNetworkTemplates" / "templates.json").resolve()
 RUN_STATE_DIR = (get_suite_datacontrol_dir() / "koreagentnetwork" / "runstate").resolve()
-RUN_TIMEOUT_SECONDS = 300
-NODE_TIMEOUT_SECONDS = 60
+RUN_TIMEOUT_SECONDS = 3600
+NODE_TIMEOUT_SECONDS = 1800
 
 
 def service_config() -> dict:

@@ -7,7 +7,7 @@
   <link rel="icon" href="/ui-elements/assets/icons/favicon.ico">
   <link rel="stylesheet" href="/ui-elements/assets/css/chrome.css">
   <link rel="stylesheet" href="/ui-elements/assets/css/workspace.css">
-  <link rel="stylesheet" href="/static/koreagentnetwork/app.css?v=1791446000">
+  <link rel="stylesheet" href="/static/koreagentnetwork/app.css?v=1791593000">
   <script src="/suite-config.js"></script>
 </head>
 <body class="kcui-shell-bg">
@@ -37,6 +37,13 @@
       <div id="empty-inspector" class="kan-empty-inspector">Select a block to edit its name, ports, and execution type.</div>
       <form id="node-form" hidden>
         <div class="kan-label-type">
+          <div class="num-stepper" title="Execution order (ascending; dependencies still run first)">
+            <input id="node-order" type="number" min="1" step="1" aria-label="Execution order">
+            <div class="stepper-btns">
+              <button type="button" tabindex="-1" onmousedown="event.preventDefault()" data-step="1">&#9650;</button>
+              <button type="button" tabindex="-1" onmousedown="event.preventDefault()" data-step="-1">&#9660;</button>
+            </div>
+          </div>
           <input id="node-label" type="text" aria-label="Label" placeholder="Label">
           <select id="node-kind" aria-label="Block type">
             <option value="python">Python</option>
@@ -118,6 +125,6 @@
       </form>
     </aside>
   </main>
-  <script type="module" src="/static/koreagentnetwork/app.js?v=1791446000"></script>
+  <script type="module" src="/static/koreagentnetwork/app.js?v=1791593000"></script>
 </body>
 </html>

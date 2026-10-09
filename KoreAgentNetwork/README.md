@@ -20,6 +20,8 @@ Each block has a "Label & Type" header, input ports, and output ports. An output
 
 ## Python block helpers
 
+Python blocks may `import` a safe allowlist of stdlib modules (`datetime`, `time`, `collections`, `itertools`, `csv`, `random`, `hashlib`, `base64`, `urllib.parse` and similar); `os`, `sys`, `subprocess`, `pathlib`, `io` and network modules are blocked, and third-party packages cannot be imported. The list is `ALLOWED_IMPORTS` in `app/runtime.py`.
+
 The working directory of a Python block is the `datauser` root, so file operations act on user space.
 
 | Helper | Use |

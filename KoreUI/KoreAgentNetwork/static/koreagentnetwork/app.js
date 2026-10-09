@@ -1,5 +1,6 @@
 import { initServiceShell } from '/ui-elements/assets/js/chrome.js';
 import { initWorkspaceLayouts } from '/ui-elements/assets/js/workspace.js';
+import { stepNumberInput } from '/ui-elements/assets/js/steppers.js';
 
 const state = { network: null, selectedNodeId: null, pendingOutput: null, run: null, edits: {}, dragging: null };
 const $ = (selector) => document.querySelector(selector);
@@ -8,7 +9,7 @@ const nodeLayer  = $('#nodes');
 const edgeLayer  = $('#edges');
 const TEMPLATE_RE = /\{([A-Za-z0-9_-]+)\}/g;
 const BLOCK_HELP = {
-  python: 'Available: inputs, outputs, NoValue (None), top-level return to stop early, api_get, api_post, llm, llm_result, decide, judge, json, math, re. Files (cwd and root = datauser folder): open, read_text, write_text, append_text, read_json, write_json, exists, list_files, delete_file.',
+  python: 'Available: inputs, outputs, NoValue (None), top-level return to stop early, api_get, api_post, llm, llm_result, decide, judge, json, math, re. Safe stdlib imports (datetime, time, collections, itertools, csv, random, hashlib, base64, ...). Files (cwd and root = datauser folder): open, read_text, write_text, append_text, read_json, write_json, exists, list_files, delete_file.',
   llm: 'Use {input_name} placeholders in the prompt. Inputs are merged into the prompt, and this block can output response, prompt, model, prompt_tokens, completion_tokens, and tokens_per_second.',
   judge: 'Use {input_name} placeholders in the question. All inputs are sent to System One as the decision state, and this block can output verdict, probability, threshold, question, and model.',
 };
@@ -26,6 +27,14 @@ function id() { return `node_${crypto.randomUUID().replaceAll('-', '').slice(0, 
 function escapeHtml(value) { const el = document.createElement('span'); el.textContent = String(value); return el.innerHTML; }
 function currentNode() { return state.network?.nodes.find((node) => node.id === state.selectedNodeId) || null; }
 function nodeHeight(node) { return 47 + Math.max(node.inputs.length, node.outputs.length, 1) * 20; }
+// Centre a new node in the visible part of the diagram, nudging it clear of any node already there.
+function placeInView(node) {
+  let x = Math.round((graphStage.scrollLeft + graphStage.clientWidth / 2) / zoom - 110);
+  let y = Math.round((graphStage.scrollTop + graphStage.clientHeight / 2) / zoom - nodeHeight(node) / 2);
+  x = Math.max(10, x); y = Math.max(10, y);
+  while (state.network.nodes.some((n) => Math.abs(n.position.x - x) < 20 && Math.abs(n.position.y - y) < 20)) { x += 30; y += 30; }
+  node.position = { x, y };
+}
 function defaultNode(kind = 'python', index = 0) {
   const nodeId = id();
   const base = {
@@ -123,7 +132,7 @@ async function loadNetwork(networkId) {
     state.edits = saved.edits || {};
   } catch (error) { setStatus(error.message, 'error'); }
   $('#network-title').value = network.title;
-  render();
+  recentre({ revealContent: true });
   await loadList();
 }
 
@@ -191,7 +200,7 @@ function renderNode(node) {
   const result = state.run?.nodes?.[node.id];
   const element = document.createElement('article');
   element.className = `kan-node ${node.id === state.selectedNodeId ? 'selected' : ''} ${result?.status || ''} ${node.id === state.activeNodeId ? 'active' : ''} kan-node--${node.kind || 'python'}`;
-  const seq = executionOrder().indexOf(node.id) + 1;
+  const seq = node.order ?? executionOrder().indexOf(node.id) + 1;
   const inValues = result ? resolveInputs(node) : {};
   const outValues = result ? outputValues(node.id) : {};
   element.dataset.nodeId = node.id;
@@ -203,6 +212,7 @@ function renderNode(node) {
   play.addEventListener('pointerdown', (event) => event.stopPropagation());
   play.addEventListener('click', (event) => { event.stopPropagation(); state.selectedNodeId = node.id; playNode(node.id); });
   element.querySelector('.kan-node-head').addEventListener('pointerdown', (event) => { if (!event.target.closest('.kan-node-play')) beginDrag(event, node); });
+  element.addEventListener('pointerdown', (event) => { if (event.button === 0 && !event.target.closest('.kan-port, .kan-node-play') && state.selectedNodeId !== node.id) selectNode(node.id); });
   element.addEventListener('click', (event) => { if (!event.target.closest('.kan-port')) selectNode(node.id); });
   element.querySelectorAll('.kan-port--output').forEach((port) => port.addEventListener('click', (event) => { event.stopPropagation(); state.pendingOutput = { nodeId: node.id, portName: port.dataset.port }; render(); }));
   element.querySelectorAll('.kan-port--input').forEach((port) => port.addEventListener('click', (event) => { event.stopPropagation(); connectInput(node.id, port.dataset.port); }));
@@ -225,8 +235,9 @@ async function loadTemplates() {
 function addFromTemplate(item) {
   if (!state.network) return;
   const node = ensureNodeShape({ ...structuredClone(item.node), id: id() });
-  node.position = defaultNode(node.kind, state.network.nodes.length).position;
+  placeInView(node);
   state.network.nodes.push(node);
+  recentre();
   persist();
   selectNode(node.id);
   setStatus(`Added ${node.label} from templates.`, 'ok');
@@ -303,9 +314,35 @@ function fitLayers() {
     layer.style.minWidth = layer.style.width = `${width}px`;
     layer.style.minHeight = layer.style.height = `${height}px`;
   }
+  // The browser does not reliably refresh scroll extents after a transform-only change, so a layout-positioned sizer defines the scrollable area.
+  if (!fitLayers.sizer) {
+    fitLayers.sizer = document.createElement('div');
+    fitLayers.sizer.style.cssText = 'position:absolute;width:1px;height:1px;visibility:hidden;pointer-events:none';
+    graphStage.append(fitLayers.sizer);
+  }
+  fitLayers.sizer.style.left = `${Math.round(width * zoom) - 1}px`;
+  fitLayers.sizer.style.top  = `${Math.round(height * zoom) - 1}px`;
+}
+// Keep a CANVAS_MARGIN border on every side of the blocks' bounding box by shifting all blocks, and the scroll with them so nothing moves on screen.
+function recentre({ revealContent = false } = {}) {
+  const nodes = state.network?.nodes || [];
+  if (!nodes.length) { render(); return; }
+  const dx = CANVAS_MARGIN - Math.min(...nodes.map((n) => n.position.x));
+  const dy = CANVAS_MARGIN - Math.min(...nodes.map((n) => n.position.y));
+  if (dx) nodes.forEach((n) => { n.position.x += dx; });
+  if (dy) nodes.forEach((n) => { n.position.y += dy; });
+  render();
+  if (revealContent) {
+    graphStage.scrollLeft = (CANVAS_MARGIN - 40) * zoom;
+    graphStage.scrollTop  = (CANVAS_MARGIN - 40) * zoom;
+  } else {
+    graphStage.scrollLeft += dx * zoom;
+    graphStage.scrollTop  += dy * zoom;
+  }
 }
 function applyZoom() {
   nodeLayer.style.transform = edgeLayer.style.transform = `scale(${zoom})`;
+  graphStage.style.backgroundSize = `${20 * zoom}px ${20 * zoom}px`;
   zoomLabel.textContent = `${Math.round(zoom * 100)}%`;
   fitLayers();
 }
@@ -355,16 +392,21 @@ function moveDrag(event) {
   state.dragging.node.position.y = Math.max(10, Math.round((event.clientY - bounds.top + graphStage.scrollTop) / zoom - state.dragging.offsetY));
   render();
 }
-function endDrag() { if (state.dragging) persist(); state.dragging = null; window.removeEventListener('pointermove', moveDrag); }
+function endDrag() { if (state.dragging) { recentre(); persist(); } state.dragging = null; window.removeEventListener('pointermove', moveDrag); }
 
 function renderInspector() {
   const node = currentNode();
   $('#empty-inspector').hidden = Boolean(node);
   $('#node-form').hidden       = !node;
   $('#node-actions').hidden    = !node;
-  if (!node) return;
+  if (!node) {
+    $('#input-ports').innerHTML = $('#output-ports').innerHTML = '';
+    $('#node-label').value = $('#node-code').value = '';
+    return;
+  }
   ensureNodeShape(node);
   $('#node-label').value = node.label;
+  $('#node-order').value = node.order ?? executionOrder().indexOf(node.id) + 1;
   $('#node-kind').value = node.kind;
   $('#node-code').value  = node.code;
   $('#node-prompt-template').value = node.config.prompt_template || '';
@@ -428,9 +470,12 @@ async function playNode(nodeId) {
 function executionOrder() {
   const incoming = new Map(state.network.nodes.map((node) => [node.id, 0]));
   state.network.edges.forEach((edge) => incoming.set(edge.target_node, (incoming.get(edge.target_node) || 0) + 1));
+  const rank = new Map(state.network.nodes.map((node, index) => [node.id, [Number.isFinite(node.order) ? node.order : Infinity, index]]));
+  const byRank = (a, b) => (rank.get(a)[0] - rank.get(b)[0]) || (rank.get(a)[1] - rank.get(b)[1]) || 0;
   const ready = state.network.nodes.filter((node) => !incoming.get(node.id)).map((node) => node.id);
   const order = [];
   while (ready.length) {
+    ready.sort(byRank);
     const nodeId = ready.shift();
     order.push(nodeId);
     state.network.edges.filter((edge) => edge.source_node === nodeId).forEach((edge) => { incoming.set(edge.target_node, incoming.get(edge.target_node) - 1); if (!incoming.get(edge.target_node)) ready.push(edge.target_node); });
@@ -458,7 +503,13 @@ function renderData() {
   const node = currentNode();
   $('#empty-data').hidden = Boolean(node);
   $('#data-form').hidden  = !node;
-  if (!node) return;
+  if (!node) {
+    $('#data-inputs').innerHTML = $('#data-outputs').innerHTML = '';
+    $('#node-result').textContent = '';
+    $('#data-status').textContent = '';
+    $('#result-panel').hidden = true;
+    return;
+  }
   const result = state.run?.nodes?.[node.id];
   const edits  = state.edits[node.id] || { inputs: {}, outputs: {} };
   $('#result-panel').hidden = !result;
@@ -559,20 +610,37 @@ function applyNode() {
   persist();
   setStatus('Block updated.', 'ok');
 }
+function applyOrder(event, final) {
+  const node = currentNode();
+  if (!node) return;
+  const value = Number.parseFloat(event.target.value);
+  if (Number.isFinite(value)) node.order = value;
+  else if (final) delete node.order;
+  else return;
+  if (final) event.target.value = node.order ?? executionOrder().indexOf(node.id) + 1;
+  render();
+  persist();
+}
+$('#node-order').addEventListener('input', (event) => applyOrder(event, false));
+$('#node-order').addEventListener('change', (event) => applyOrder(event, true));
+document.querySelectorAll('#node-order ~ .stepper-btns button').forEach((button) => button.addEventListener('click', () => stepNumberInput(button, Number(button.dataset.step))));
 $('#node-kind').addEventListener('change', (event) => showKindFields(event.target.value));
 $('#add-input').addEventListener('click', () => { const node = currentNode(); if (node) { node.inputs.push({ name: `input_${node.inputs.length + 1}` }); persist(); render(); } });
 $('#add-output').addEventListener('click', () => { const node = currentNode(); if (node) { node.outputs.push({ name: `output_${node.outputs.length + 1}` }); persist(); render(); } });
-$('#add-node').addEventListener('click', () => { const node = defaultNode($('#new-node-kind').value, state.network.nodes.length); state.network.nodes.push(node); persist(); selectNode(node.id); });
+$('#add-node').addEventListener('click', () => { const node = defaultNode($('#new-node-kind').value, state.network.nodes.length); placeInView(node); state.network.nodes.push(node); recentre(); persist(); selectNode(node.id); });
 $('#network-title').addEventListener('input', (event) => { if (!state.network) return; state.network.title = event.target.value; const name = document.querySelector('.kan-network-name'); if (name) name.value = event.target.value; });
 $('#network-title').addEventListener('change', () => persist({ refreshList: true }));
 let saveChain = Promise.resolve();
 function persist({ refreshList = false } = {}) {
   if (!state.network) return saveChain;
-  const body = JSON.stringify({ network: state.network });
-  const id = state.network.id;
+  const snapshot = state.network;
+  const body = JSON.stringify({ network: snapshot });
+  const id = snapshot.id;
   saveChain = saveChain.then(async () => {
     try {
-      await request(`/api/networks/${encodeURIComponent(id)}`, { method: 'PUT', body });
+      const base = snapshot.updated_at;
+      const saved = await request(`/api/networks/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify({ network: JSON.parse(body).network, base_updated_at: base }) });
+      snapshot.updated_at = saved.network.updated_at;
       if (refreshList) await loadList();
     } catch (error) { setStatus(`Auto-save failed: ${error.message}`, 'error'); }
   });

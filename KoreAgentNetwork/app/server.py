@@ -29,6 +29,7 @@ class NetworkCreate(BaseModel):
 
 class NetworkBody(BaseModel):
     network: dict
+    base_updated_at: str | None = None
 
 
 class RunStateBody(BaseModel):
@@ -80,6 +81,13 @@ def api_get_network(network_id: str) -> dict:
 def api_save_network(network_id: str, body: NetworkBody) -> dict:
     network = dict(body.network)
     network["id"] = network_id
+    if body.base_updated_at is not None:
+        try:
+            current = load_network(network_id).get("updated_at")
+        except (FileNotFoundError, ValueError):
+            current = None
+        if current is not None and current != body.base_updated_at:
+            raise HTTPException(status_code=409, detail="This network was changed elsewhere. Reload the page to avoid overwriting it.")
     try:
         return {"network": save_network(network)}
     except ValueError as exc:

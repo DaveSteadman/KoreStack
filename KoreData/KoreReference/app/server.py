@@ -453,12 +453,14 @@ def route_import_status():
 # Admin
 # ---------------------------------------------------------------------------
 
-@app.get("/status", summary="Server status and database statistics")
+@app.get("/status", summary="Liveness check (no database access)")
 def route_status():
-    return {
-        "service": "KoreReference",
-        **get_status(),
-    }
+    return {"service": "KoreReference", "status": "ok"}
+
+
+@app.get("/stats", summary="Database statistics (scans the articles and links tables)")
+def route_stats():
+    return {"service": "KoreReference", **get_status()}
 
 
 register_skill_invocation_routes(

@@ -12,17 +12,28 @@ body {
   min-height: 100dvh;
 }
 
-.koregraph-shell *,
-.koregraph-shell *::before,
-.koregraph-shell *::after {
-  margin: 0;
-  padding: 0;
-}
-
 .koregraph-shell main {
+  display: flex;
+  flex-direction: column;
   flex: 1 1 auto;
   min-height: 0;
   width: 100%;
+}
+
+.koregraph-shell .kg-graph-page {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+}
+
+.koregraph-shell .kg-shell {
+  flex: 1 1 auto;
+}
+
+.koregraph-shell .kg-main {
+  position: absolute;
+  inset: 0;
+  height: auto;
 }
 
 .koregraph-shell .badge {
