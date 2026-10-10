@@ -226,7 +226,7 @@ html, body {
 .col-type   { width: 100px; }
 .col-words  { width: 80px; text-align: right; }
 .col-modified { width: 140px; }
-.col-actions  { width: 80px; text-align: right; padding-right: 8px !important; }
+.col-actions  { width: 184px; text-align: right; padding-right: 8px !important; }
 
 .file-icon {
   color: var(--accent-2);
@@ -286,7 +286,7 @@ tr.selected .row-actions { opacity: 1; }
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px; height: 28px;
+  width: 32px; height: 32px;
   background: transparent;
   border: 1px solid transparent;
   border-radius: 4px;
@@ -297,8 +297,8 @@ tr.selected .row-actions { opacity: 1; }
   flex-shrink: 0;
 }
 .icon-btn svg {
-  width: 1em;
-  height: 1em;
+  width: 20px;
+  height: 20px;
 }
 .icon-btn:hover { background: var(--surface-2); color: var(--text); border-color: var(--border); }
 .icon-btn:active { background: var(--accent); color: #fff; }

@@ -28,7 +28,10 @@ async function showDetail(testId, buildId) {
   dialog.showModal();
 }
 
+let lastPayload = null;
+
 function renderGrid(payload) {
+  lastPayload = payload;
   statusNode.textContent = `Current: ${payload.build_id}${payload.active ? ' — session running' : ''}`;
   statusNode.className = `kcui-tag kcui-tag--${payload.active ? 'warning' : 'dim'}`;
   const table = document.createElement('table');
@@ -67,6 +70,15 @@ function renderGrid(payload) {
     table.append(row);
   }
   gridNode.replaceChildren(table);
+  fitColumns(table);
+}
+
+// Drop the oldest (rightmost) build columns until the table fits the available width.
+function fitColumns(table) {
+  const rows = [...table.rows];
+  while (rows[0].cells.length > 2 && table.offsetWidth > gridNode.clientWidth) {
+    for (const row of rows) row.deleteCell(-1);
+  }
 }
 
 runNode.addEventListener('click', async () => {
@@ -100,4 +112,5 @@ initServiceShell({
   shellTabs:      [{ key: 'results', label: 'Results', href: '/ui' }],
 });
 refresh().catch((error) => { statusNode.textContent = error.message; statusNode.className = 'kcui-tag kcui-tag--danger'; });
+window.addEventListener('resize', () => { if (lastPayload) renderGrid(lastPayload); });
 window.setInterval(() => refresh().catch(() => {}), 5_000);

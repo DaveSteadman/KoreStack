@@ -383,6 +383,9 @@ def start_session() -> dict:
     return {"started": True, "build_id": build}
 
 
+MAX_BUILD_COLUMNS = 10
+
+
 def grid() -> dict:
     current_build = build_id()
     conn = _db()
@@ -398,7 +401,7 @@ def grid() -> dict:
     finally:
         conn.close()
 
-    builds = [current_build, *[build for build in historic_builds if build != current_build]]
+    builds = [current_build, *[build for build in historic_builds if build != current_build]][:MAX_BUILD_COLUMNS]
     by_test_and_build = {(row["test_id"], row["build_id"]): row for row in rows}
     return {
         "build_id": current_build,

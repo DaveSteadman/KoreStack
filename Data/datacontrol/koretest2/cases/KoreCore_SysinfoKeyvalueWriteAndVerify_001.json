@@ -2,7 +2,7 @@
   "title": "sysinfo_keyvalue_write_and_verify",
   "prompts": [
     "get the system info and write it to datauser/test_prompts/sysinfo.txt formatted as key=value pairs, one per line, no spaces around the equals sign. Then tell me the path you wrote.",
-    "read datauser/test_prompts/sysinfo.txt and return the contents"
+    "read datauser/test_prompts/sysinfo.txt and return its contents verbatim, exactly as stored in the file, inside a code block"
   ],
   "timeout_seconds": 1200,
   "evaluation": {

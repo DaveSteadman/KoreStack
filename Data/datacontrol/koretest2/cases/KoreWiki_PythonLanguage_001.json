@@ -5,7 +5,7 @@
   "evaluation": {
     "type": "python",
     "asserts": [
-      "contains|Guido",
+      "contains|high-level",
       "judge|answers"
     ]
   }

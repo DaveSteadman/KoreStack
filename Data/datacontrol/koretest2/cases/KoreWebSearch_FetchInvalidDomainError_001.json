@@ -5,7 +5,7 @@
   "evaluation": {
     "type": "python",
     "asserts": [
-      "regex|error|failed|not found",
+      "regex|(?i)error|failed|not found|cannot|unable|resolve|not a valid",
       "judge|answers"
     ]
   }

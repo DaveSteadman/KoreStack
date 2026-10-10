@@ -8,7 +8,7 @@
   "evaluation": {
     "type": "python",
     "assertions": [
-      "contains|Framework self-check complete",
+      "contains|notes.txt",
       "contains|Framework self-check complete"
     ]
   }
