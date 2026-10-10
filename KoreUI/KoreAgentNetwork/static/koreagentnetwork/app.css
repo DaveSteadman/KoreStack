@@ -56,7 +56,12 @@ button, input, textarea { font: inherit; }
 .kan-network-list { flex: 1; overflow: auto; padding: 8px; }
 .kan-network-item { background: transparent; border: 1px solid transparent; border-radius: 5px; color: var(--kan-text); cursor: pointer; display: block; margin-bottom: 4px; padding: 9px; text-align: left; width: 100%; }
 .kan-network-item:hover, .kan-network-item.active { background: var(--kan-panel-soft); border-color: var(--kan-border); }
-.kan-network-item small { color: var(--kan-dim); display: block; margin-top: 3px; }
+.kan-network-item small { color: var(--kan-dim); display: block; }
+.kan-network-meta { align-items: center; display: flex; justify-content: space-between; margin-top: 3px; }
+.kan-lock { background: transparent; border: 0; color: var(--kan-dim); cursor: pointer; display: inline-flex; opacity: .45; padding: 2px; }
+.kan-lock:hover { opacity: 1; }
+.kan-lock.on { color: var(--kan-accent, #f5b942); opacity: 1; }
+.kan-protected .kan-node-head { cursor: default; }
 .kan-sidebar-actions { border-top: 1px solid var(--kan-border); display: flex; gap: 8px; padding: 12px; }
 .kan-sidebar-actions button { flex: 1; }
 .kan-help { display: none; border-top: 1px solid var(--kan-border); color: var(--kan-dim); font-size: 12px; line-height: 1.45; padding: 14px; }

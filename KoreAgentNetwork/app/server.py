@@ -138,6 +138,8 @@ def api_delete_network(network_id: str) -> dict:
     _refuse_if_locked(network_id)
     try:
         delete_network(network_id)
+    except NetworkConflict as exc:
+        raise HTTPException(status_code=409, detail=str(exc))
     except (FileNotFoundError, ValueError):
         raise HTTPException(status_code=404, detail="Network not found")
     return {"deleted": network_id}

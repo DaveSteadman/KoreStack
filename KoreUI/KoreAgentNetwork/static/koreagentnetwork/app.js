@@ -104,6 +104,28 @@ async function request(path, options = {}) {
   return data;
 }
 
+const LOCK_SHUT = '<svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M4.5 7V5a3.5 3.5 0 0 1 7 0v2h.5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1zm1.5 0h4V5a2 2 0 0 0-4 0z" fill="currentColor"/></svg>';
+const LOCK_OPEN = '<svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M4 7h8a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1zm1.5 0V5a2.5 2.5 0 0 1 4.9-.7" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
+const isProtected = () => state.network?.protected === true;
+
+// Protected networks stay runnable but refuse every edit and deletion.
+function applyProtection() {
+  const on = isProtected();
+  document.querySelectorAll('#node-form input, #node-form textarea, #node-form select, #node-form button, #add-node, #new-node-kind, #delete-node, #delete-network').forEach((el) => { el.disabled = on; });
+  $('#network-title').readOnly = on;
+  document.querySelectorAll('.kan-network-name').forEach((el) => { el.readOnly = on; });
+  graphStage.classList.toggle('kan-protected', on);
+}
+
+async function toggleProtection(networkId) {
+  if (networkId !== state.network?.id) await loadNetwork(networkId);
+  state.network.protected = !isProtected();
+  state.pendingOutput = null;
+  await persist({ refreshList: true, force: true });
+  render();
+  setStatus(isProtected() ? 'Network protected: it can run but not be edited or deleted.' : 'Protection cleared.', 'ok');
+}
+
 async function loadList() {
   const { networks } = await request('/api/networks');
   state.networkList = networks;
@@ -111,9 +133,11 @@ async function loadList() {
   list.innerHTML = networks.map((network) => {
     const active = network.id === state.network?.id;
     const name = active ? `<input class="kan-network-name" aria-label="Network name" value="${escapeHtml(state.network.title)}">` : `<strong>${escapeHtml(network.title)}</strong>`;
-    return `<div class="kan-network-item ${active ? 'active' : ''}" data-id="${escapeHtml(network.id)}" role="button" tabindex="0">${name}<small>${network.node_count} blocks</small></div>`;
+    return `<div class="kan-network-item ${active ? 'active' : ''}" data-id="${escapeHtml(network.id)}" role="button" tabindex="0">${name}<div class="kan-network-meta"><small>${network.node_count} blocks</small><button type="button" class="kan-lock ${network.protected ? 'on' : ''}" data-lock="${escapeHtml(network.id)}" aria-pressed="${network.protected ? 'true' : 'false'}" title="${network.protected ? 'Protected: click to allow editing' : 'Protect from edits and deletion'}">${network.protected ? LOCK_SHUT : LOCK_OPEN}</button></div></div>`;
   }).join('');
   list.querySelectorAll('[data-id]').forEach((item) => item.addEventListener('click', () => { if (item.dataset.id !== state.network?.id) loadNetwork(item.dataset.id); }));
+  list.querySelectorAll('[data-lock]').forEach((button) => button.addEventListener('click', (event) => { event.stopPropagation(); toggleProtection(button.dataset.lock).catch((error) => setStatus(error.message, 'error')); }));
+  applyProtection();
   list.querySelector('.kan-network-name')?.addEventListener('input', (event) => { state.network.title = event.target.value; $('#network-title').value = event.target.value; });
   list.querySelector('.kan-network-name')?.addEventListener('change', () => persist({ refreshList: true }));
   return networks;
@@ -127,6 +151,7 @@ async function loadNetwork(networkId) {
   state.selectedNodeId = null;
   state.pendingOutput  = null;
   state.run            = null;
+  resetStatus();
   state.edits          = {};
   try {
     const saved = await request(`/api/networks/${encodeURIComponent(networkId)}/state`);
@@ -151,6 +176,7 @@ function render({ inspector = true } = {}) {
   fitLayers();
   if (inspector) renderInspector();
   renderData();
+  applyProtection();
 }
 
 // One DOM measuring pass per redraw; routing then works on plain numbers.
@@ -195,6 +221,7 @@ const WIRE_MARGIN = 8;
 const WIRE_STUB = 26;
 const WIRE_MIN_STUB = 12;
 const WIRE_PITCH = 20;
+const WIRE_CROSS_COST = 300;
 
 function segmentHitsBox(a, b, box) {
   const m = WIRE_MARGIN;
@@ -222,8 +249,15 @@ function laneConflict(a, b, wire, used) {
   const lo = horizontal ? Math.min(a.x, b.x) : Math.min(a.y, b.y), hi = horizontal ? Math.max(a.x, b.x) : Math.max(a.y, b.y);
   let cost = 0;
   used.forEach((run) => {
+    if (run.horizontal !== horizontal) {
+      const sameWire = run.kind === wire.kind && run.key === wire.key;
+      if (!sameWire && run.pos > lo + 1 && run.pos < hi - 1 && pos > run.lo + 1 && pos < run.hi - 1) cost += WIRE_CROSS_COST;
+      return;
+    }
     const gap = Math.abs(run.pos - pos);
-    if (run.horizontal !== horizontal || gap >= WIRE_PITCH * 1.5 || run.hi + WIRE_PITCH <= lo || run.lo - WIRE_PITCH >= hi || (run.kind === wire.kind && run.key === wire.key)) return;
+    // Sharing a lane with a sibling wire from the same output is rewarded, so branches merge into one line.
+    if (gap < 0.01 && run.kind === wire.kind && run.key === wire.key) { cost -= 0.9 * Math.max(0, Math.min(hi, run.hi) - Math.max(lo, run.lo)); return; }
+    if ( gap >= WIRE_PITCH * 1.5 || run.hi + WIRE_PITCH <= lo || run.lo - WIRE_PITCH >= hi || (run.kind === wire.kind && run.key === wire.key)) return;
     cost += gap < WIRE_PITCH / 2 ? 5000 : 150;
   });
   return cost;
@@ -563,6 +597,7 @@ function connectTrigger(sourceId, targetId) {
 }
 
 function connectInput(targetNode, targetPort) {
+  if (isProtected()) { setStatus('This network is protected. Clear the padlock to edit it.', 'error'); return; }
   if (!state.pendingOutput) { setStatus('Choose an output first.', 'error'); return; }
   const source = state.pendingOutput;
   if (source.nodeId === targetNode) { setStatus('A block cannot feed itself.', 'error'); return; }
@@ -669,6 +704,7 @@ graphStage.addEventListener('pointerdown', (event) => {
 
 function beginDrag(event, node) {
   event.preventDefault();
+  if (isProtected()) return;
   const bounds = graphStage.getBoundingClientRect();
   state.dragging = { node, offsetX: (event.clientX - bounds.left + graphStage.scrollLeft) / zoom - node.position.x, offsetY: (event.clientY - bounds.top + graphStage.scrollTop) / zoom - node.position.y };
   window.addEventListener('pointermove', moveDrag);
@@ -939,6 +975,8 @@ $('#data-form').addEventListener('click', (event) => {
 $('#play-selected').addEventListener('click', () => { const node = currentNode(); if (node) playNode(node.id); });
 $('#step-network').addEventListener('click', stepNetwork);
 
+// The status line describes the open network, so it returns to a baseline whenever the network changes.
+function resetStatus() { if (isProtected()) setStatus('Protected: runs only, no edits.', 'ok'); else setStatus('Ready'); }
 function setStatus(text, kind = '') { const status = $('#run-status'); status.textContent = text; status.className = `kan-run-status ${kind}`; }
 
 $('#node-form').addEventListener('submit', (event) => event.preventDefault());
@@ -1011,8 +1049,8 @@ $('#network-title').addEventListener('input', (event) => { if (!state.network) r
 $('#network-title').addEventListener('change', () => persist({ refreshList: true }));
 let saveChain = Promise.resolve();
 let queuedSave = null;
-function persist({ refreshList = false } = {}) {
-  if (!state.network) return saveChain;
+function persist({ refreshList = false, force = false } = {}) {
+  if (!state.network || (isProtected() && !force)) return saveChain;
   const snapshot = state.network;
   const body = JSON.stringify({ network: snapshot });
   const id = snapshot.id;

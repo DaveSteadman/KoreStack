@@ -178,6 +178,7 @@ def validate_network(network: object) -> dict:
     if not _SAFE_ID.fullmatch(result["id"]):
         raise ValueError("Network id must contain letters, numbers, _ or -")
     result["title"] = str(result.get("title") or "Untitled network").strip() or "Untitled network"
+    result["protected"] = result.get("protected") is True
 
     nodes = result.get("nodes")
     if not isinstance(nodes, list):
@@ -297,11 +298,14 @@ def list_networks() -> list[dict]:
             networks.append({
                 "id":         network.get("id"),
                 "title":      network.get("title"),
+                "protected":  network.get("protected") is True,
                 "updated_at": network.get("updated_at"),
                 "node_count": len(network.get("nodes", [])),
             })
         except (OSError, json.JSONDecodeError) as exc:
             _log.warning("Skipping unreadable network file %s: %s", path.name, exc)
+    # Protected networks lead the list; each group is alphabetical.
+    networks.sort(key=lambda n: (not n["protected"], str(n.get("title") or "").casefold()))
     return networks
 
 
@@ -317,11 +321,14 @@ def save_network(network: object, base_updated_at: str | None = None) -> dict:
     NETWORKS_DIR.mkdir(parents=True, exist_ok=True)
     clean = validate_network(network)
     with _WRITE_LOCK:
+        try:
+            stored = load_network(clean["id"])
+        except (FileNotFoundError, ValueError, json.JSONDecodeError):
+            stored = None
+        if stored is not None and stored.get("protected") and clean["protected"]:
+            raise NetworkConflict("This network is protected. Clear the padlock before changing it.")
         if base_updated_at is not None:
-            try:
-                current = load_network(clean["id"]).get("updated_at")
-            except (FileNotFoundError, ValueError, json.JSONDecodeError):
-                current = None
+            current = stored.get("updated_at") if stored else None
             if current is not None and current != base_updated_at:
                 raise NetworkConflict("This network was changed elsewhere. Reload the page to avoid overwriting it.")
         clean["updated_at"] = _utc_now()
@@ -369,8 +376,9 @@ def duplicate_network(network_id: str) -> dict:
     number  = 2
     while f"{base} ({number})" in titles:
         number += 1
-    network["id"]    = _new_id()
-    network["title"] = f"{base} ({number})"
+    network["id"]        = _new_id()
+    network["title"]     = f"{base} ({number})"
+    network["protected"] = False
     return save_network(network)
 
 
@@ -379,5 +387,10 @@ def delete_network(network_id: str) -> None:
     if not path.exists():
         raise FileNotFoundError(network_id)
     with _WRITE_LOCK:
+        try:
+            if load_network(network_id).get("protected"):
+                raise NetworkConflict("This network is protected. Clear the padlock before deleting it.")
+        except (ValueError, json.JSONDecodeError):
+            pass
         path.unlink(missing_ok=True)
         _state_path(network_id).unlink(missing_ok=True)
