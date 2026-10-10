@@ -71,7 +71,7 @@ button, input, textarea { font: inherit; }
 .kan-run-status.running { color: #f2c66f; }.kan-run-status.ok { color: var(--kan-green); }.kan-run-status.error { color: var(--kan-red); }
 .kan-graph-stage { background-color: #0b0f17; background-image: radial-gradient(#283143 1px, transparent 1px); background-attachment: local; background-size: 20px 20px; flex: 1; min-height: 0; overflow: auto; position: relative; }
 .kan-edges, .kan-nodes { height: max(100%, 1600px); left: 0; min-width: max(100%, 1800px); pointer-events: none; position: absolute; top: 0; width: max(100%, 1800px); }
-.kan-edges { overflow: visible; }.kan-edges path { fill: none; stroke: #6685b8; stroke-width: 2.3; }.kan-edges path.kan-edge-selected { stroke: var(--kan-green); stroke-width: 3; }
+.kan-edges { overflow: visible; }.kan-edges path { fill: none; stroke: #6685b8; stroke-width: 2.3; }.kan-edges path.kan-edge-selected { stroke: var(--kan-green) !important; stroke-width: 3; }
 .kan-nodes { pointer-events: none; }
 .kan-node { background: #141c2a; border: 1px solid #42516d; border-radius: 7px; box-shadow: 0 6px 18px #0005; min-height: 126px; pointer-events: auto; position: absolute; width: 220px; }
 .kan-node.selected { border-color: var(--kan-blue); box-shadow: 0 0 0 2px #70abff33, 0 6px 18px #0005; }.kan-node.completed { border-color: #378565; }.kan-node.failed, .kan-node.blocked, .kan-node.skipped { border-color: #a54d58; }
@@ -120,7 +120,7 @@ code { color: #a5c8ff; }
 .kan-data-actions { display: flex; gap: 8px; margin-top: 4px; }
 .kan-data-actions button { background: transparent; border: 0; color: var(--kan-blue); cursor: pointer; font-size: 11px; padding: 0; }
 .kan-node.active { border-color: #f2c66f; box-shadow: 0 0 0 2px #f2c66f55, 0 6px 18px #0005; }
-.kan-edges path.kan-edge-live { stroke: var(--kan-green); stroke-width: 3; }
+.kan-edges path.kan-edge-live { stroke-width: 3; }
 .kan-io { border-top: 1px solid #2a3750; display: flex; flex-direction: column; font-size: 11px; gap: 2px; padding: 6px 10px 8px; }
 .kan-io-row { display: flex; gap: 6px; overflow: hidden; white-space: nowrap; }
 .kan-io-row b { color: var(--kan-dim); flex: 0 0 auto; font-weight: 600; }
@@ -186,3 +186,10 @@ code { color: #a5c8ff; }
 .kan-template-item .btn { flex: 0 0 auto; }
 
 #node-form[hidden], #data-form[hidden], #node-actions[hidden], #result-panel[hidden] { display: none !important; }
+.kan-edges path.kan-edge-trigger { stroke: #e0a93b; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.kan-port--trigger { color: #e0a93b; }
+.kan-port--trigger .kan-port-dot { border-color: #e0a93b; }
+.kan-edges path.kan-edge-gap { stroke: #0b0e15; stroke-width: 5; stroke-linecap: butt; }
+.kan-trigger-bar { align-items: center; background: #0f1520; border-bottom: 1px solid #2a3750; display: flex; height: 24px; justify-content: space-between; position: relative; }
+.kan-trigger-label { color: #e0a93b; font-size: 10px; font-weight: 700; left: 0; letter-spacing: 0.18em; pointer-events: none; position: absolute; right: 0; text-align: center; }
+.kan-trigger-bar .kan-port { min-height: 24px; padding: 0 6px; }

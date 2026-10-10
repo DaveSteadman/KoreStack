@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from KoreCommon.service_app import register_suite_shell_routes
 
 from .config import SERVICE_KEY, SERVICE_LABEL
-from .runtime import run_network, run_node
+from .runtime import fire_trigger, is_locked, run_network, run_node
 from .templates import add_template, delete_template, list_templates
 from .store import create_network, delete_network, duplicate_network, list_networks, load_network, load_run_state, save_network, save_run_state, validate_node
 
@@ -46,6 +46,19 @@ class TemplateBody(BaseModel):
 class NodeRunBody(BaseModel):
     node: dict
     inputs: dict = {}
+    network_id: str | None = None
+    outputs: dict = {}
+
+
+class TriggerBody(BaseModel):
+    token: str
+    name: str
+    payload: dict = {}
+
+
+def _refuse_if_locked(network_id: str) -> None:
+    if is_locked(network_id):
+        raise HTTPException(status_code=409, detail="This network is running (run mode). It cannot be changed or deleted until the run finishes.")
 
 
 @app.get("/status")
@@ -79,6 +92,7 @@ def api_get_network(network_id: str) -> dict:
 
 @app.put("/api/networks/{network_id}")
 def api_save_network(network_id: str, body: NetworkBody) -> dict:
+    _refuse_if_locked(network_id)
     network = dict(body.network)
     network["id"] = network_id
     if body.base_updated_at is not None:
@@ -126,6 +140,7 @@ def api_duplicate_network(network_id: str) -> dict:
 
 @app.delete("/api/networks/{network_id}")
 def api_delete_network(network_id: str) -> dict:
+    _refuse_if_locked(network_id)
     try:
         delete_network(network_id)
     except (FileNotFoundError, ValueError):
@@ -166,4 +181,26 @@ def api_run_node(body: NodeRunBody) -> dict:
         node = validate_node(body.node)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
-    return {"result": run_node(node, body.inputs)}
+    network = None
+    if body.network_id:
+        try:
+            network = load_network(body.network_id)
+        except (FileNotFoundError, ValueError):
+            raise HTTPException(status_code=404, detail="Network not found")
+    try:
+        return {"result": run_node(node, body.inputs, network, body.outputs)}
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+
+
+@app.post("/api/internal/trigger")
+def api_internal_trigger(body: TriggerBody) -> dict:
+    try:
+        return fire_trigger(body.token, body.name, body.payload)
+    except (FileNotFoundError, ValueError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+
+
+@app.get("/api/networks/{network_id}/locked")
+def api_network_locked(network_id: str) -> dict:
+    return {"locked": is_locked(network_id)}

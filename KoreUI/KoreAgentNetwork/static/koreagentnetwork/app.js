@@ -9,7 +9,7 @@ const nodeLayer  = $('#nodes');
 const edgeLayer  = $('#edges');
 const TEMPLATE_RE = /\{([A-Za-z0-9_-]+)\}/g;
 const BLOCK_HELP = {
-  python: 'Available: inputs, outputs, NoValue (None), top-level return to stop early, api_get, api_post, llm, llm_result, decide, judge, json, math, re. Safe stdlib imports (datetime, time, collections, itertools, csv, random, hashlib, base64, ...). Files (cwd and root = datauser folder): open, read_text, write_text, append_text, read_json, write_json, exists, list_files, delete_file.',
+  python: 'Available: inputs, outputs, NoValue (None), top-level return to stop early, api_get, api_post, trigger(name, payload) (run the linked block now and wait; returns {ok, error, outputs}), disable_auto_trigger(name=None) (stop trigger links firing when this block finishes), llm, llm_result, decide, judge, json, math, re. Safe stdlib imports (datetime, time, collections, itertools, csv, random, hashlib, base64, ...). Files (cwd and root = datauser folder): open, read_text, write_text, append_text, read_json, write_json, exists, list_files, delete_file.',
   llm: 'Use {input_name} placeholders in the prompt. Inputs are merged into the prompt, and this block can output response, prompt, model, prompt_tokens, completion_tokens, and tokens_per_second.',
   judge: 'Use {input_name} placeholders in the question. All inputs are sent to System One as the decision state, and this block can output verdict, probability, threshold, question, and model.',
 };
@@ -26,7 +26,7 @@ initServiceShell({
 function id() { return `node_${crypto.randomUUID().replaceAll('-', '').slice(0, 10)}`; }
 function escapeHtml(value) { const el = document.createElement('span'); el.textContent = String(value); return el.innerHTML; }
 function currentNode() { return state.network?.nodes.find((node) => node.id === state.selectedNodeId) || null; }
-function nodeHeight(node) { return 47 + Math.max(node.inputs.length, node.outputs.length, 1) * 20; }
+function nodeHeight(node) { return 69 + Math.max(node.inputs.length, node.outputs.length, 1) * 20; }
 // Centre a new node in the visible part of the diagram, nudging it clear of any node already there.
 function placeInView(node) {
   let x = Math.round((graphStage.scrollLeft + graphStage.clientWidth / 2) / zoom - 110);
@@ -105,6 +105,7 @@ async function request(path, options = {}) {
 
 async function loadList() {
   const { networks } = await request('/api/networks');
+  state.networkList = networks;
   const list = $('#network-list');
   list.innerHTML = networks.map((network) => {
     const active = network.id === state.network?.id;
@@ -160,18 +161,186 @@ function dotCenter(node, portName, output) {
   return { x: (box.left + box.width / 2 - origin.left) / zoom, y: (box.top + box.height / 2 - origin.top) / zoom };
 }
 
+function nodeBox(node) {
+  const article = nodeLayer.querySelector(`[data-node-id="${CSS.escape(node.id)}"]`);
+  if (!article) return { id: node.id, left: node.position.x, right: node.position.x + 260, top: node.position.y, bottom: node.position.y + 120 };
+  const origin = nodeLayer.getBoundingClientRect();
+  const box    = article.getBoundingClientRect();
+  return { id: node.id, left: (box.left - origin.left) / zoom, right: (box.right - origin.left) / zoom, top: (box.top - origin.top) / zoom, bottom: (box.bottom - origin.top) / zoom };
+}
+
+const WIRE_MARGIN = 8;
+const WIRE_STUB = 26;
+const WIRE_PITCH = 14;
+
+function segmentHitsBox(a, b, box) {
+  const m = WIRE_MARGIN;
+  if (Math.abs(a.y - b.y) < 0.01) return a.y > box.top - m && a.y < box.bottom + m && Math.max(a.x, b.x) > box.left - m && Math.min(a.x, b.x) < box.right + m;
+  return a.x > box.left - m && a.x < box.right + m && Math.max(a.y, b.y) > box.top - m && Math.min(a.y, b.y) < box.bottom + m;
+}
+
+function simplifyPoints(points) {
+  const out = [];
+  points.forEach((point) => {
+    if (out.length && Math.abs(out.at(-1).x - point.x) < 0.01 && Math.abs(out.at(-1).y - point.y) < 0.01) return;
+    out.push(point);
+  });
+  for (let i = out.length - 2; i > 0; i -= 1) {
+    const p = out[i - 1], q = out[i], r = out[i + 1];
+    if ((Math.abs(p.x - q.x) < 0.01 && Math.abs(q.x - r.x) < 0.01) || (Math.abs(p.y - q.y) < 0.01 && Math.abs(q.y - r.y) < 0.01)) out.splice(i, 1);
+  }
+  return out;
+}
+
+// Parallel runs of different wire kinds, or of different sources, must not share a lane.
+function laneConflict(a, b, wire, used) {
+  const horizontal = Math.abs(a.y - b.y) < 0.01;
+  const pos = horizontal ? a.y : a.x;
+  const lo = horizontal ? Math.min(a.x, b.x) : Math.min(a.y, b.y), hi = horizontal ? Math.max(a.x, b.x) : Math.max(a.y, b.y);
+  let cost = 0;
+  used.forEach((run) => {
+    if (run.horizontal !== horizontal || Math.abs(run.pos - pos) >= WIRE_MARGIN - 1 || run.hi <= lo || run.lo >= hi) return;
+    if (run.kind !== wire.kind) cost += 5000;
+    else if (run.key !== wire.key) cost += 60;
+  });
+  return cost;
+}
+
+// Circuit-board route: horizontal out of the dot, then the cheapest orthogonal path that stays clear of every block and of other lanes.
+function routePoints(from, to, sourceId, targetId, boxes, wire, used) {
+  const xsList = [], xtList = [], ysSet = new Set();
+  for (let k = 0; k < 10; k += 1) { xsList.push(from.x + WIRE_STUB + k * WIRE_PITCH); xtList.push(to.x - WIRE_STUB - k * WIRE_PITCH); }
+  // Wires from the same output share one exit lane so they leave as a single trunk.
+  const trunk = wire.trunks.get(wire.key);
+  if (trunk !== undefined) xsList.splice(0, xsList.length, trunk);
+  const sorted = boxes.slice().sort((m, n) => m.top - n.top);
+  boxes.forEach((box) => { ysSet.add(box.top - 14); ysSet.add(box.bottom + 14); });
+  sorted.forEach((box, i) => { if (sorted[i + 1] && sorted[i + 1].top - box.bottom > 2 * WIRE_MARGIN + 6) ysSet.add((box.bottom + sorted[i + 1].top) / 2); });
+  const ys = [...ysSet];
+  const candidates = [];
+  for (let x = from.x + WIRE_STUB; x <= to.x - WIRE_STUB; x += WIRE_PITCH) if (trunk === undefined || x === trunk) candidates.push([from, { x, y: from.y }, { x, y: to.y }, to]);
+  xsList.forEach((xs) => xtList.forEach((xt) => ys.filter((y) => y !== from.y && y !== to.y).forEach((y) => candidates.push([from, { x: xs, y: from.y }, { x: xs, y }, { x: xt, y }, { x: xt, y: to.y }, to]))));
+  let best = null, bestCost = Infinity;
+  candidates.forEach((raw) => {
+    const points = simplifyPoints(raw);
+    let cost = (points.length - 2) * 20;
+    for (let i = 0; i < points.length - 1 && cost < bestCost; i += 1) {
+      const a = points[i], b = points[i + 1];
+      cost += Math.abs(b.x - a.x) + Math.abs(b.y - a.y);
+      boxes.forEach((box) => {
+        const own = (i === 0 && box.id === sourceId) || (i === points.length - 2 && box.id === targetId);
+        if (!own && segmentHitsBox(a, b, box)) cost += 10000;
+      });
+      cost += laneConflict(a, b, wire, used);
+    }
+    if (cost < bestCost) { bestCost = cost; best = points; }
+  });
+  if (best.length > 2 && !wire.trunks.has(wire.key)) wire.trunks.set(wire.key, best[1].x);
+  for (let i = 0; i < best.length - 1; i += 1) {
+    const a = best[i], b = best[i + 1], horizontal = Math.abs(a.y - b.y) < 0.01;
+    used.push({ horizontal, pos: horizontal ? a.y : a.x, lo: horizontal ? Math.min(a.x, b.x) : Math.min(a.y, b.y), hi: horizontal ? Math.max(a.x, b.x) : Math.max(a.y, b.y), kind: wire.kind, key: wire.key });
+  }
+  return best;
+}
+
+// Rounded corners, plus a small hop wherever a horizontal run crosses a vertical run of an unrelated wire.
+let hopGaps = '';
+function roundedPath(points, crossings = [], radius = 5, hop = 7) {
+  hopGaps = '';
+  const trim = (from, to, amount) => {
+    const length = Math.hypot(to.x - from.x, to.y - from.y) || 1;
+    return { x: from.x + ((to.x - from.x) / length) * amount, y: from.y + ((to.y - from.y) / length) * amount };
+  };
+  const length = (a, b) => Math.hypot(b.x - a.x, b.y - a.y);
+  let d = `M ${points[0].x} ${points[0].y}`;
+  for (let i = 0; i < points.length - 1; i += 1) {
+    const a = points[i], b = points[i + 1];
+    const r0 = i > 0 ? Math.min(radius, length(a, b) / 2, length(points[i - 1], a) / 2) : 0;
+    const r1 = i < points.length - 2 ? Math.min(radius, length(a, b) / 2, length(b, points[i + 2]) / 2) : 0;
+    const start = r0 ? trim(a, b, r0) : a, end = r1 ? trim(b, a, r1) : b;
+    if (i > 0) d += ` Q ${a.x} ${a.y} ${start.x} ${start.y}`;
+    if (Math.abs(a.y - b.y) < 0.01) {
+      const dir = Math.sign(b.x - a.x) || 1;
+      const xs = crossings.filter((c) => c.y1 < a.y && c.y2 > a.y && (c.x - start.x) * dir > hop && (end.x - c.x) * dir > hop).map((c) => c.x).sort((m, n) => (m - n) * dir).filter((x, k, all) => k === 0 || Math.abs(x - all[k - 1]) > hop * 2);
+      xs.forEach((x) => { hopGaps += ` M ${x} ${a.y - hop - 2.5} L ${x} ${a.y - hop + 2.5}`; d += ` L ${x - dir * hop} ${a.y} A ${hop} ${hop} 0 0 ${dir > 0 ? 1 : 0} ${x + dir * hop} ${a.y}`; });
+    }
+    d += ` L ${end.x} ${end.y}`;
+  }
+  return d;
+}
+
+function verticalRuns(points, key) {
+  const runs = [];
+  for (let i = 0; i < points.length - 1; i += 1) {
+    const a = points[i], b = points[i + 1];
+    if (Math.abs(a.x - b.x) < 0.01 && Math.abs(a.y - b.y) > 0.01) runs.push({ key, x: a.x, y1: Math.min(a.y, b.y), y2: Math.max(a.y, b.y) });
+  }
+  return runs;
+}
+
+function chevronPath(points) {
+  let d = '';
+  for (let i = 0; i < points.length - 1; i += 1) {
+    const a = points[i], b = points[i + 1], length = Math.hypot(b.x - a.x, b.y - a.y);
+    if (length < 4) continue;
+    const ux = (b.x - a.x) / length, uy = (b.y - a.y) / length, nx = -uy, ny = ux;
+    for (let at = 6; at <= length - 3; at += 9) {
+      const cx = a.x + ux * at, cy = a.y + uy * at;
+      d += `M ${cx - ux * 2.5 + nx * 2.5} ${cy - uy * 2.5 + ny * 2.5} L ${cx + ux * 2} ${cy + uy * 2} L ${cx - ux * 2.5 - nx * 2.5} ${cy - uy * 2.5 - ny * 2.5} `;
+    }
+  }
+  return d;
+}
+
+// 32 muted tones of similar brightness; stepping by 11 keeps consecutive picks far apart in hue.
+const WIRE_PALETTE = Array.from({ length: 32 }, (_, i) => `hsl(${(((i * 11) % 32) * 11.25 + 5).toFixed(1)}, 38%, 62%)`);
+
 function drawEdges() {
+  const wires = [];
+  const used = [];
+  const trunks = new Map();
+  const boxes = state.network.nodes.map(nodeBox);
+  (state.network.triggers || []).forEach((trigger) => {
+    const source = state.network.nodes.find((node) => node.id === trigger.source_node);
+    const target = state.network.nodes.find((node) => node.id === trigger.target_node);
+    if (!source || !target) return;
+    const key = `${source.id}|${TRIGGER_PORT}`;
+    const points = routePoints(dotCenter(source, TRIGGER_PORT, true), dotCenter(target, TRIGGER_PORT, false), source.id, target.id, boxes, { kind: 'trigger', key, trunks }, used);
+    wires.push({ key, points, trigger, title: `Trigger ${trigger.name}: ${source.label} → ${target.label}` });
+  });
   state.network.edges.forEach((edge) => {
     const fromNode = state.network.nodes.find((node) => node.id === edge.source_node);
     const toNode   = state.network.nodes.find((node) => node.id === edge.target_node);
     if (!fromNode || !toNode) return;
-    const from = dotCenter(fromNode, edge.source_port, true);
-    const to   = dotCenter(toNode, edge.target_port, false);
+    const key = `${fromNode.id}|${edge.source_port}`;
+    const points = routePoints(dotCenter(fromNode, edge.source_port, true), dotCenter(toNode, edge.target_port, false), fromNode.id, toNode.id, boxes, { kind: 'data', key, trunks }, used);
+    wires.push({ key, points, edge, title: `${fromNode.label}.${edge.source_port} → ${toNode.label}.${edge.target_port}` });
+  });
+  const hopWires = [];
+  const wireColors = new Map();
+  const colorFor = (key) => { if (!wireColors.has(key)) wireColors.set(key, WIRE_PALETTE[wireColors.size % WIRE_PALETTE.length]); return wireColors.get(key); };
+  const runs = wires.filter((wire) => !wire.trigger).flatMap((wire) => verticalRuns(wire.points, wire.key));
+  wires.forEach((wire) => {
     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    path.setAttribute('d', `M ${from.x} ${from.y} L ${to.x} ${to.y}`);
-    path.setAttribute('title', `${fromNode.label}.${edge.source_port} → ${toNode.label}.${edge.target_port}`);
-    if (state.run?.nodes?.[edge.source_node]?.status === 'completed') path.classList.add('kan-edge-live');
+    path.setAttribute('title', wire.title);
+    if (wire.trigger) {
+      path.setAttribute('d', chevronPath(wire.points));
+      path.classList.add('kan-edge-trigger');
+    } else {
+      path.setAttribute('d', roundedPath(wire.points, runs.filter((run) => run.key !== wire.key)));
+      path.style.stroke = colorFor(wire.key);
+      if (hopGaps) hopWires.push({ path, gaps: hopGaps });
+      if (state.run?.nodes?.[wire.edge.source_node]?.status === 'completed') path.classList.add('kan-edge-live');
+    }
     edgeLayer.append(path);
+  });
+  // Break the crossed wire under each hop so the hopping wire visibly passes over it.
+  hopWires.forEach(({ path, gaps }) => {
+    const gap = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    gap.setAttribute('d', gaps);
+    gap.classList.add('kan-edge-gap');
+    edgeLayer.append(gap, path.cloneNode());
+    path.remove();
   });
 }
 
@@ -196,18 +365,25 @@ function portValue(value, result) {
   return `<em class="${text.length > 6 ? 'long' : ''}" title="${escapeHtml(pretty(value))}">${escapeHtml(text)}</em>`;
 }
 
+const TRIGGER_PORT = '⚡';
+function triggerPort(node, output) {
+  const pending = output && state.pendingOutput?.nodeId === node.id && state.pendingOutput?.portName === TRIGGER_PORT;
+  const title = output ? 'Click, then click another block\u2019s left trigger dot to link it' : 'This block runs when the block linked here finishes or calls trigger()';
+  return `<button type="button" class="kan-port kan-port--trigger kan-port--${output ? 'output' : 'input'} ${pending ? 'pending' : ''}" data-port="${TRIGGER_PORT}" title="${title}"><i class="kan-port-dot"></i></button>`;
+}
+function triggerRow(node) { return `<div class="kan-trigger-bar">${triggerPort(node, false)}<span class="kan-trigger-label">TRIGGER</span>${triggerPort(node, true)}</div>`; }
 function renderNode(node) {
   const result = state.run?.nodes?.[node.id];
   const element = document.createElement('article');
   element.className = `kan-node ${node.id === state.selectedNodeId ? 'selected' : ''} ${result?.status || ''} ${node.id === state.activeNodeId ? 'active' : ''} kan-node--${node.kind || 'python'}`;
-  const seq = node.order ?? executionOrder().indexOf(node.id) + 1;
+  const seq = triggeredBlocks().has(node.id) ? '⚡' : node.order ?? executionOrder().indexOf(node.id) + 1;
   const inValues = result ? resolveInputs(node) : {};
   const outValues = result ? outputValues(node.id) : {};
   element.dataset.nodeId = node.id;
   element.style.left = `${node.position.x}px`;
   element.style.top  = `${node.position.y}px`;
   element.style.minHeight = `${nodeHeight(node)}px`;
-  element.innerHTML = `<div class="kan-node-head"><button type="button" class="kcui-icon-button kan-node-play" title="Run this block with its current inputs">&#9654;</button><span class="kan-node-seq" title="Execution order">${seq || '-'}</span><span>${escapeHtml(node.label)}</span></div><div class="kan-port-lines"><div class="kan-port-column">${node.inputs.map((port) => `<button type="button" class="kan-port kan-port--input" data-port="${escapeHtml(port.name)}"><i class="kan-port-dot"></i><span class="kan-port-text">${escapeHtml(port.name)}${portValue(inValues[port.name], result)}</span></button>`).join('')}</div><div class="kan-port-column">${node.outputs.map((port) => `<button type="button" class="kan-port kan-port--output ${state.pendingOutput?.nodeId === node.id && state.pendingOutput?.portName === port.name ? 'pending' : ''}" data-port="${escapeHtml(port.name)}"><span class="kan-port-text">${escapeHtml(port.name)}${portValue(outValues[port.name], result)}</span><i class="kan-port-dot"></i></button>`).join('')}</div></div>${result?.error ? `<div class="kan-io-error">${escapeHtml(preview(result.error))}</div>` : ''}`;
+  element.innerHTML = `<div class="kan-node-head"><button type="button" class="kcui-icon-button kan-node-play" title="Run this block with its current inputs">&#9654;</button><span class="kan-node-seq" title="Execution order">${seq || '-'}</span><span>${escapeHtml(node.label)}</span></div>${triggerRow(node)}<div class="kan-port-lines"><div class="kan-port-column">${node.inputs.map((port) => `<button type="button" class="kan-port kan-port--input" data-port="${escapeHtml(port.name)}"><i class="kan-port-dot"></i><span class="kan-port-text">${escapeHtml(port.name)}${portValue(inValues[port.name], result)}</span></button>`).join('')}</div><div class="kan-port-column">${node.outputs.map((port) => `<button type="button" class="kan-port kan-port--output ${state.pendingOutput?.nodeId === node.id && state.pendingOutput?.portName === port.name ? 'pending' : ''}" data-port="${escapeHtml(port.name)}"><span class="kan-port-text">${escapeHtml(port.name)}${portValue(outValues[port.name], result)}</span><i class="kan-port-dot"></i></button>`).join('')}</div></div>${result?.error ? `<div class="kan-io-error">${escapeHtml(preview(result.error))}</div>` : ''}`;
   const play = element.querySelector('.kan-node-play');
   play.addEventListener('pointerdown', (event) => event.stopPropagation());
   play.addEventListener('click', (event) => { event.stopPropagation(); state.selectedNodeId = node.id; playNode(node.id); });
@@ -275,10 +451,31 @@ function pruneEdges() {
   if (network.edges.length !== before) render({ inspector: false });
 }
 
+function connectTrigger(sourceId, targetId) {
+  const triggers = (state.network.triggers ||= []);
+  const existing = triggers.find((item) => item.source_node === sourceId && item.target_node === targetId);
+  state.pendingOutput = null;
+  if (existing) {
+    state.network.triggers = triggers.filter((item) => item !== existing);
+    setStatus('Trigger cleared.', 'ok');
+  } else {
+    const target = state.network.nodes.find((node) => node.id === targetId);
+    const base = (target.label.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || 'trigger');
+    let name = base, count = 2;
+    while (triggers.some((item) => item.source_node === sourceId && item.name === name)) name = `${base}_${count++}`;
+    triggers.push({ name, source_node: sourceId, target_node: targetId });
+    setStatus(`Trigger linked. Call trigger('${name}') from the block code.`, 'ok');
+      }
+  render();
+  persist();
+}
+
 function connectInput(targetNode, targetPort) {
   if (!state.pendingOutput) { setStatus('Choose an output first.', 'error'); return; }
   const source = state.pendingOutput;
   if (source.nodeId === targetNode) { setStatus('A block cannot feed itself.', 'error'); return; }
+  if ((source.portName === TRIGGER_PORT) !== (targetPort === TRIGGER_PORT)) { setStatus('Link trigger dots to trigger dots, and data ports to data ports.', 'error'); return; }
+  if (targetPort === TRIGGER_PORT) { connectTrigger(source.nodeId, targetNode); return; }
   const existing = state.network.edges.find((edge) => edge.target_node === targetNode && edge.target_port === targetPort);
   const same     = existing && existing.source_node === source.nodeId && existing.source_port === source.portName;
   state.network.edges = state.network.edges.filter((edge) => edge !== existing);
@@ -390,9 +587,29 @@ function moveDrag(event) {
   const bounds = graphStage.getBoundingClientRect();
   state.dragging.node.position.x = Math.max(10, Math.round((event.clientX - bounds.left + graphStage.scrollLeft) / zoom - state.dragging.offsetX));
   state.dragging.node.position.y = Math.max(10, Math.round((event.clientY - bounds.top + graphStage.scrollTop) / zoom - state.dragging.offsetY));
-  render();
+  const element = nodeLayer.querySelector(`[data-node-id="${CSS.escape(state.dragging.node.id)}"]`);
+  if (element) { element.style.left = `${state.dragging.node.position.x}px`; element.style.top = `${state.dragging.node.position.y}px`; }
+  scheduleWireRedraw();
 }
-function endDrag() { if (state.dragging) { recentre(); persist(); } state.dragging = null; window.removeEventListener('pointermove', moveDrag); }
+// The block follows the pointer immediately; wires catch up at a rate scaled to how long the last redraw took.
+let wireTimer = 0, wireCost = 0;
+function scheduleWireRedraw() {
+  if (wireTimer) return;
+  wireTimer = setTimeout(() => {
+    wireTimer = 0;
+    const started = performance.now();
+    edgeLayer.innerHTML = '';
+    drawEdges();
+    wireCost = performance.now() - started;
+  }, Math.max(16, wireCost * 2));
+}
+function endDrag() {
+  clearTimeout(wireTimer);
+  wireTimer = 0;
+  if (state.dragging) { recentre(); persist(); }
+  state.dragging = null;
+  window.removeEventListener('pointermove', moveDrag);
+}
 
 function renderInspector() {
   const node = currentNode();
@@ -455,9 +672,11 @@ async function playNode(nodeId) {
   try {
     setStatus(`Running ${node.label}…`, 'running');
     state.activeNodeId = node.id; render({ inspector: false });
-    const { result } = await request('/api/run-node', { method: 'POST', body: JSON.stringify({ node, inputs: resolveInputs(node) }) });
+    const { result } = await request('/api/run-node', { method: 'POST', body: JSON.stringify({ node, inputs: resolveInputs(node), network_id: state.network.id, outputs: Object.fromEntries(state.network.nodes.map((item) => [item.id, outputValues(item.id)])) }) });
     state.run ||= { nodes: {} };
-    state.run.nodes[node.id] = result;
+    const { triggered, ...record } = result;
+    state.run.nodes[node.id] = record;
+    Object.entries(triggered || {}).forEach(([id, item]) => { state.run.nodes[id] = item; });
     state.activeNodeId = null;
     if (state.edits[node.id]) state.edits[node.id].outputs = {};
     persistState();
@@ -467,9 +686,13 @@ async function playNode(nodeId) {
   } catch (error) { state.activeNodeId = null; render({ inspector: false }); setStatus(error.message, 'error'); return false; }
 }
 
+function naturalOrder() { const owned = triggeredBlocks(); return executionOrder().filter((id) => !owned.has(id)); }
+function triggeredBlocks() { return new Set((state.network.triggers || []).map((item) => item.target_node).filter(Boolean)); }
+function executionLinks() { return state.network.edges.map((edge) => [edge.source_node, edge.target_node]); }
 function executionOrder() {
+  const links = executionLinks();
   const incoming = new Map(state.network.nodes.map((node) => [node.id, 0]));
-  state.network.edges.forEach((edge) => incoming.set(edge.target_node, (incoming.get(edge.target_node) || 0) + 1));
+  links.forEach(([, target]) => incoming.set(target, (incoming.get(target) || 0) + 1));
   const rank = new Map(state.network.nodes.map((node, index) => [node.id, [Number.isFinite(node.order) ? node.order : Infinity, index]]));
   const byRank = (a, b) => (rank.get(a)[0] - rank.get(b)[0]) || (rank.get(a)[1] - rank.get(b)[1]) || 0;
   const ready = state.network.nodes.filter((node) => !incoming.get(node.id)).map((node) => node.id);
@@ -478,14 +701,14 @@ function executionOrder() {
     ready.sort(byRank);
     const nodeId = ready.shift();
     order.push(nodeId);
-    state.network.edges.filter((edge) => edge.source_node === nodeId).forEach((edge) => { incoming.set(edge.target_node, incoming.get(edge.target_node) - 1); if (!incoming.get(edge.target_node)) ready.push(edge.target_node); });
+    links.filter(([source]) => source === nodeId).forEach(([, target]) => { incoming.set(target, incoming.get(target) - 1); if (!incoming.get(target)) ready.push(target); });
   }
   return order;
 }
 
 async function stepNetwork() {
   if (!state.network) return;
-  const next = executionOrder().find((nodeId) => state.run?.nodes?.[nodeId]?.status !== 'completed');
+  const next = naturalOrder().find((nodeId) => state.run?.nodes?.[nodeId]?.status !== 'completed');
   if (!next) { setStatus('All blocks have run. Use a block’s play button to re-run it.', 'ok'); return; }
   state.selectedNodeId = next;
   await playNode(next);
@@ -658,7 +881,7 @@ $('#run-network').addEventListener('click', async () => {
   state.running = true;
   render();
   let ok = true;
-  for (const nodeId of executionOrder()) {
+  for (const nodeId of naturalOrder()) {
     state.selectedNodeId = nodeId;
     ok = await playNode(nodeId);
     if (!ok) break;
@@ -686,6 +909,7 @@ $('#delete-node').addEventListener('click', () => {
   if (!node || !window.confirm(`Delete ${node.label}?`)) return;
   const network = state.network;
   network.nodes = network.nodes.filter((item) => item.id !== node.id);
+  network.triggers = (network.triggers || []).filter((item) => item.source_node !== node.id && item.target_node !== node.id);
   network.edges = network.edges.filter((edge) => edge.source_node !== node.id && edge.target_node !== node.id);
   if (state.run?.nodes) delete state.run.nodes[node.id];
   delete state.edits?.[node.id];

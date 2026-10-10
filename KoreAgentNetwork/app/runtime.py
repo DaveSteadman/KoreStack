@@ -13,7 +13,10 @@ from typing import Any
 
 from KoreCommon.datauser_fs import get_datauser_root
 
-from .config import NODE_TIMEOUT_SECONDS, RUN_TIMEOUT_SECONDS, suite_services
+import threading
+import uuid
+
+from .config import NODE_TIMEOUT_SECONDS, RUN_TIMEOUT_SECONDS, service_config, suite_services
 
 
 _RUNNER = r'''
@@ -28,6 +31,7 @@ import urllib.request
 
 payload = json.loads(sys.stdin.read())
 services = payload["services"]
+payload_info = {"trigger": payload.get("trigger")}
 
 def _url(service, path):
     if service not in services:
@@ -71,6 +75,26 @@ def decide(question, state=None, model="", timeout=60):
     return float(answers["verdict"]["noul"])
 
 judge = decide
+
+_skip_auto = {"all": False, "names": []}
+
+def disable_auto_trigger(name=None):
+    if name is None:
+        _skip_auto["all"] = True
+    else:
+        _skip_auto["names"].append(str(name))
+
+def trigger(name, payload=None):
+    info = payload_info.get("trigger")
+    if not info:
+        raise RuntimeError("trigger() is only available when the block runs inside a saved network")
+    body = json.dumps({"token": info["token"], "name": str(name), "payload": payload if payload is not None else {}}).encode("utf-8")
+    request = urllib.request.Request(info["url"], data=body, method="POST", headers={"Content-Type": "application/json"})
+    try:
+        with urllib.request.urlopen(request, timeout=None) as response:
+            return json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        raise RuntimeError("trigger " + str(name) + " failed: " + exc.read().decode("utf-8", "replace")[:500]) from None
 
 import pathlib
 
@@ -150,6 +174,8 @@ namespace = {
     "open": safe_open, "read_text": read_text, "write_text": write_text, "append_text": append_text,
     "read_json": read_json, "write_json": write_json, "exists": exists, "list_files": list_files, "delete_file": delete_file,
     "api_post": api_post,
+    "trigger": trigger,
+    "disable_auto_trigger": disable_auto_trigger,
     "decide": decide,
     "inputs": payload["inputs"],
     "judge": judge,
@@ -171,7 +197,7 @@ try:
     outputs = namespace["outputs"]
     if not isinstance(outputs, dict):
         raise TypeError("outputs must remain a dictionary")
-    print(json.dumps({"ok": True, "outputs": outputs}, default=str))
+    print(json.dumps({"ok": True, "outputs": outputs, "skip_triggers": True if _skip_auto["all"] else _skip_auto["names"]}, default=str))
 except Exception as exc:
     print(json.dumps({"ok": False, "error": f"{type(exc).__name__}: {exc}"}))
 '''
@@ -183,9 +209,10 @@ def _execution_order(network: dict) -> list[str]:
     node_ids = [node["id"] for node in network["nodes"]]
     outgoing: dict[str, list[str]] = defaultdict(list)
     incoming: dict[str, int] = {node_id: 0 for node_id in node_ids}
-    for edge in network["edges"]:
-        outgoing[edge["source_node"]].append(edge["target_node"])
-        incoming[edge["target_node"]] += 1
+    links = [(edge["source_node"], edge["target_node"]) for edge in network["edges"]]
+    for source, target in links:
+        outgoing[source].append(target)
+        incoming[target] += 1
     rank = {node["id"]: (node["order"] if node.get("order") is not None else float("inf"), index) for index, node in enumerate(network["nodes"])}
     ready = [node_id for node_id in node_ids if incoming[node_id] == 0]
     ordered: list[str] = []
@@ -205,7 +232,8 @@ def _execution_order(network: dict) -> list[str]:
 def _node_inputs(node: dict, incoming: dict[str, list[dict]], outputs: dict[str, dict]) -> dict:
     values = {port["name"]: port.get("default") for port in node["inputs"]}
     for edge in incoming[node["id"]]:
-        values[edge["target_port"]] = outputs[edge["source_node"]].get(edge["source_port"])
+        if edge["source_node"] in outputs:
+            values[edge["target_port"]] = outputs[edge["source_node"]].get(edge["source_port"])
     return values
 
 
@@ -323,7 +351,147 @@ def _execute_judge_node(node: dict, inputs: dict, timeout: float) -> dict[str, A
     }
 
 
-def _execute_node(node: dict, inputs: dict, timeout: float) -> dict:
+MAX_TRIGGER_CALLS = 50
+_REGISTRY_LOCK = threading.Lock()
+_CONTEXTS: dict[str, dict] = {}
+_LOCKS: dict[str, int] = {}
+
+
+def is_locked(network_id: str) -> bool:
+    with _REGISTRY_LOCK:
+        return _LOCKS.get(network_id, 0) > 0
+
+
+def _acquire(network_id: str) -> None:
+    with _REGISTRY_LOCK:
+        _LOCKS[network_id] = _LOCKS.get(network_id, 0) + 1
+
+
+def _release(network_id: str) -> None:
+    with _REGISTRY_LOCK:
+        _LOCKS[network_id] = _LOCKS.get(network_id, 1) - 1
+        if _LOCKS[network_id] <= 0:
+            del _LOCKS[network_id]
+
+
+def _trigger_url() -> str:
+    config = service_config()
+    return f"http://{config['host']}:{config['port']}/api/internal/trigger"
+
+
+def triggered_blocks(network: dict) -> set[str]:
+    """Blocks that are trigger targets. They run only when a trigger reaches them."""
+    return {item["target_node"] for item in network.get("triggers", []) if item.get("target_node")}
+
+
+def _new_session(network: dict, outputs: dict | None = None) -> dict:
+    return {"network": network, "outputs": dict(outputs or {}), "results": {}}
+
+
+def _new_context(session: dict, node: dict) -> dict | None:
+    if not any(item["source_node"] == node["id"] for item in session["network"].get("triggers", [])):
+        return None
+    return {"session": session, "node_id": node["id"], "child_seconds": 0.0, "calls": []}
+
+
+def _run_block(session: dict, node: dict, node_inputs: dict, timeout: float) -> tuple[dict, float]:
+    """Run one block inside a session, recording its result and outputs. Returns (record, child seconds)."""
+    context = _new_context(session, node)
+    started = time.monotonic()
+    try:
+        result = _execute_node(node, node_inputs, timeout, context)
+    except subprocess.TimeoutExpired:
+        result = {"ok": False, "error": f"Node exceeded its {timeout:.0f}s limit"}
+    except ValueError as exc:
+        result = {"ok": False, "error": str(exc)}
+    record: dict[str, Any] = {"inputs": node_inputs, "elapsed_seconds": round(time.monotonic() - started, 3)}
+    if context is not None and context["calls"]:
+        record["triggers"] = context["calls"]
+    outputs = result.get("outputs") if result.get("ok") else None
+    record["_skip"] = result.get("skip_triggers") or []
+    missing = [port["name"] for port in node["outputs"] if isinstance(outputs, dict) and port["name"] not in outputs]
+    if not result.get("ok"):
+        record.update(status="failed", error=str(result.get("error") or "Node failed"))
+    elif not isinstance(outputs, dict):
+        record.update(status="failed", error="Node did not return an outputs dictionary")
+    elif missing:
+        record.update(status="failed", error=f"Node did not set declared outputs: {', '.join(missing)}")
+    else:
+        record.update(status="completed", outputs=outputs)
+        session["outputs"][node["id"]] = outputs
+    session["results"][node["id"]] = record
+    return record, (context["child_seconds"] if context is not None else 0.0)
+
+
+def _blocked_by(session: dict, node_id: str, incoming: dict[str, list[dict]]) -> list[str]:
+    return [edge["source_node"] for edge in incoming[node_id] if session["results"].get(edge["source_node"], {}).get("status", "completed") != "completed"]
+
+
+def _incoming(network: dict) -> dict[str, list[dict]]:
+    incoming: dict[str, list[dict]] = defaultdict(list)
+    for edge in network["edges"]:
+        incoming[edge["target_node"]].append(edge)
+    return incoming
+
+
+def _run_flow(session: dict, node_id: str, payload: dict | None, timeout: float, ran: list[str]) -> float:
+    """Run a block, then fire its triggers that the block did not already fire or disable. Returns child seconds."""
+    network  = session["network"]
+    node     = next(item for item in network["nodes"] if item["id"] == node_id)
+    incoming = _incoming(network)
+    node_inputs = _node_inputs(node, incoming, session["outputs"])
+    node_inputs.update({port: value for port, value in (payload or {}).items() if port in node_inputs})
+    session["results"].pop(node_id, None)
+    session["outputs"].pop(node_id, None)
+    record, child_seconds = _run_block(session, node, node_inputs, timeout)
+    skip = record.pop("_skip", [])
+    ran.append(node_id)
+    if record.get("status") != "completed" or skip is True:
+        return child_seconds
+    fired = {call["name"] for call in record.get("triggers", [])}
+    for trigger in network.get("triggers", []):
+        if trigger["source_node"] != node_id or not trigger.get("target_node") or trigger["name"] in fired or trigger["name"] in skip:
+            continue
+        if session.get("deadline") is not None and time.monotonic() > session["deadline"]:
+            session["results"][trigger["target_node"]] = {"status": "skipped", "error": "Network time limit reached"}
+            continue
+        _run_flow(session, trigger["target_node"], None, NODE_TIMEOUT_SECONDS, ran)
+    return child_seconds
+
+
+def fire_trigger(token: str, name: str, payload: dict) -> dict[str, Any]:
+    """Run the block a trigger points at (and its own auto triggers), blocking until the flow finishes."""
+    with _REGISTRY_LOCK:
+        context = _CONTEXTS.get(token)
+    if context is None:
+        raise ValueError("Unknown or finished run token")
+    session = context["session"]
+    network = session["network"]
+    trigger = next((item for item in network.get("triggers", []) if item["name"] == name and item["source_node"] == context["node_id"]), None)
+    if trigger is None or not trigger.get("target_node"):
+        raise ValueError(f"This block has no connected trigger named {name}")
+    if len(context["calls"]) >= MAX_TRIGGER_CALLS:
+        raise ValueError(f"A block may fire at most {MAX_TRIGGER_CALLS} triggers per run")
+    if not isinstance(payload, dict):
+        raise ValueError("Trigger payload must be an object")
+    nodes = {node["id"]: node for node in network["nodes"]}
+    ran: list[str] = []
+    started = time.monotonic()
+    _run_flow(session, trigger["target_node"], payload, NODE_TIMEOUT_SECONDS, ran)
+    elapsed = round(time.monotonic() - started, 3)
+    context["child_seconds"] += elapsed
+    failed = next((session["results"][node_id] for node_id in ran if session["results"][node_id].get("status") != "completed"), None)
+    context["calls"].append({"name": name, "target": trigger["target_node"], "ok": failed is None, "elapsed_seconds": elapsed})
+    return {
+        "ok":      failed is None,
+        "status":  "completed" if failed is None else "failed",
+        "error":   None if failed is None else failed.get("error"),
+        "outputs": session["outputs"].get(trigger["target_node"], {}),
+        "blocks":  {nodes[node_id]["label"]: session["outputs"][node_id] for node_id in ran if node_id in session["outputs"]},
+    }
+
+
+def _execute_node(node: dict, inputs: dict, timeout: float, context: dict | None = None) -> dict:
     kind = str(node.get("kind") or "python").strip().lower()
     if kind == "llm":
         return _execute_llm_node(node, inputs, timeout)
@@ -332,87 +500,101 @@ def _execute_node(node: dict, inputs: dict, timeout: float) -> dict:
     root = get_datauser_root()
     root.mkdir(parents=True, exist_ok=True)
     payload = {"code": node["code"], "inputs": inputs, "services": suite_services(), "root": str(root)}
-    completed = subprocess.run(
+    token = None
+    if context is not None:
+        token = uuid.uuid4().hex
+        payload["trigger"] = {"url": _trigger_url(), "token": token}
+        with _REGISTRY_LOCK:
+            _CONTEXTS[token] = context
+    started = time.monotonic()
+    process = subprocess.Popen(
         [sys.executable, "-I", "-c", _RUNNER],
-        input           = json.dumps(payload),
-        text            = True,
-        capture_output  = True,
-        timeout         = max(1, timeout),
-        cwd             = root,
-        env             = _child_environment(),
-        check           = False,
+        stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        text=True, cwd=root, env=_child_environment(),
     )
+    pending: str | None = json.dumps(payload)
     try:
-        result = json.loads(completed.stdout.strip())
+        while True:
+            try:
+                stdout, stderr = process.communicate(input=pending, timeout=1)
+                break
+            except subprocess.TimeoutExpired:
+                pending = None
+                child_seconds = context["child_seconds"] if context is not None else 0.0
+                if time.monotonic() - started - child_seconds > max(1, timeout):
+                    process.kill()
+                    process.communicate()
+                    raise
+    finally:
+        if token is not None:
+            with _REGISTRY_LOCK:
+                _CONTEXTS.pop(token, None)
+    try:
+        result = json.loads(stdout.strip())
     except json.JSONDecodeError:
-        return {"ok": False, "error": (completed.stderr or completed.stdout or "Node produced no JSON result").strip()}
-    if completed.returncode != 0:
-        return {"ok": False, "error": (completed.stderr or "Python runner failed").strip()}
+        return {"ok": False, "error": (stderr or stdout or "Node produced no JSON result").strip()}
+    if process.returncode != 0:
+        return {"ok": False, "error": (stderr or "Python runner failed").strip()}
     return result if isinstance(result, dict) else {"ok": False, "error": "Node returned an invalid result"}
 
 
-def run_node(node: dict, inputs: dict) -> dict[str, Any]:
-    """Execute one block against explicit input values and return its result record."""
-    started = time.monotonic()
+def run_node(node: dict, inputs: dict, network: dict | None = None, outputs: dict | None = None) -> dict[str, Any]:
+    """Execute one block against explicit input values and return its result record.
+
+    With a network and the current block outputs, the block may fire its triggers; the
+    records of the triggered blocks come back under `triggered`.
+    """
+    session = _new_session(network or {"id": "", "nodes": [], "edges": [], "triggers": []}, outputs)
+    network_id = session["network"]["id"]
+    has_triggers = any(item["source_node"] == node["id"] for item in session["network"].get("triggers", []))
+    if has_triggers:
+        _acquire(network_id)
     try:
-        result = _execute_node(node, inputs, NODE_TIMEOUT_SECONDS)
-    except subprocess.TimeoutExpired:
-        result = {"ok": False, "error": f"Node exceeded its {NODE_TIMEOUT_SECONDS:.0f}s limit"}
-    record = {"inputs": inputs, "elapsed_seconds": round(time.monotonic() - started, 3)}
-    outputs = result.get("outputs") if result.get("ok") else None
-    if not result.get("ok"):
-        return {**record, "status": "failed", "error": str(result.get("error") or "Node failed")}
-    if not isinstance(outputs, dict):
-        return {**record, "status": "failed", "error": "Node did not return an outputs dictionary"}
-    missing = [port["name"] for port in node["outputs"] if port["name"] not in outputs]
-    if missing:
-        return {**record, "status": "failed", "error": f"Node did not set declared outputs: {', '.join(missing)}"}
-    return {**record, "status": "completed", "outputs": outputs}
+        if has_triggers:
+            _run_flow(session, node["id"], None, NODE_TIMEOUT_SECONDS, [])
+            record = session["results"][node["id"]]
+        else:
+            record, _ = _run_block(session, node, inputs, NODE_TIMEOUT_SECONDS)
+            record.pop("_skip", None)
+    finally:
+        if has_triggers:
+            _release(network_id)
+    triggered = {key: value for key, value in session["results"].items() if key != node["id"]}
+    if triggered:
+        record["triggered"] = triggered
+    return record
 
 
 def run_network(network: dict) -> dict[str, Any]:
-    """Execute a validated acyclic network in dependency order."""
-    started  = time.monotonic()
-    order    = _execution_order(network)
-    nodes    = {node["id"]: node for node in network["nodes"]}
-    incoming: dict[str, list[dict]] = defaultdict(list)
-    for edge in network["edges"]:
-        incoming[edge["target_node"]].append(edge)
+    """Execute a validated network in dependency order. Triggered chains only run when fired."""
+    _acquire(network["id"])
+    try:
+        return _run_network(network)
+    finally:
+        _release(network["id"])
 
-    results: dict[str, dict] = {}
-    outputs: dict[str, dict] = {}
+
+def _run_network(network: dict) -> dict[str, Any]:
+    started  = time.monotonic()
+    excluded = 0.0
+    owned    = triggered_blocks(network)
+    order    = [node_id for node_id in _execution_order(network) if node_id not in owned]
+    nodes    = {node["id"]: node for node in network["nodes"]}
+    incoming = _incoming(network)
+    session  = _new_session(network)
+    results  = session["results"]
+    session["deadline"] = started + RUN_TIMEOUT_SECONDS
     for node_id in order:
-        elapsed   = time.monotonic() - started
-        remaining = RUN_TIMEOUT_SECONDS - elapsed
+        remaining = RUN_TIMEOUT_SECONDS - (time.monotonic() - started - excluded)
         if remaining <= 0:
             results[node_id] = {"status": "skipped", "error": "Network time limit reached"}
             continue
-        node = nodes[node_id]
-        blocked = [edge["source_node"] for edge in incoming[node_id] if results.get(edge["source_node"], {}).get("status") != "completed"]
+        blocked = _blocked_by(session, node_id, incoming)
         if blocked:
             results[node_id] = {"status": "blocked", "error": f"Upstream node did not complete: {', '.join(blocked)}"}
             continue
-        node_started = time.monotonic()
-        node_inputs  = _node_inputs(node, incoming, outputs)
-        try:
-            result = _execute_node(node, node_inputs, min(NODE_TIMEOUT_SECONDS, remaining))
-        except subprocess.TimeoutExpired:
-            result = {"ok": False, "error": f"Node exceeded its {min(NODE_TIMEOUT_SECONDS, remaining):.0f}s limit"}
-        elapsed_node = round(time.monotonic() - node_started, 3)
-        results[node_id] = {"inputs": node_inputs}
-        if result.get("ok"):
-            node_outputs = result.get("outputs")
-            if not isinstance(node_outputs, dict):
-                results[node_id].update(status="failed", error="Node did not return an outputs dictionary", elapsed_seconds=elapsed_node)
-                continue
-            missing = [port["name"] for port in node["outputs"] if port["name"] not in node_outputs]
-            if missing:
-                results[node_id].update(status="failed", error=f"Node did not set declared outputs: {', '.join(missing)}", elapsed_seconds=elapsed_node)
-                continue
-            outputs[node_id] = node_outputs
-            results[node_id].update(status="completed", outputs=node_outputs, elapsed_seconds=elapsed_node)
-        else:
-            results[node_id].update(status="failed", error=str(result.get("error") or "Node failed"), elapsed_seconds=elapsed_node)
+        session["deadline"] = started + excluded + RUN_TIMEOUT_SECONDS
+        excluded += _run_flow(session, node_id, None, min(NODE_TIMEOUT_SECONDS, remaining), [])
     return {
         "ok":              all(result.get("status") == "completed" for result in results.values()),
         "network_id":      network["id"],

@@ -214,8 +214,46 @@ def validate_network(network: object) -> dict:
             "target_port": target_port,
         })
 
+    triggers = result.get("triggers", [])
+    if not isinstance(triggers, list):
+        raise ValueError("Network triggers must be a list")
+    cleaned_triggers: list[dict] = []
+    trigger_names: set[tuple[str, str]] = set()
+    graph: dict[str, set[str]] = {node_id: set() for node_id in port_map}
+    for trigger in triggers:
+        if not isinstance(trigger, dict):
+            raise ValueError("Each trigger must be an object")
+        name   = str(trigger.get("name") or "").strip()
+        source = str(trigger.get("source_node") or "").strip()
+        target = str(trigger.get("target_node") or "").strip()
+        if not _SAFE_ID.fullmatch(name) or (source, name) in trigger_names:
+            raise ValueError("Each trigger needs a unique name of letters, numbers, _ or -")
+        if source not in port_map:
+            raise ValueError(f"Trigger {name} refers to an unknown source block")
+        if target and (target not in port_map or target == source):
+            raise ValueError(f"Trigger {name} needs a different target block in this network")
+        trigger_names.add((source, name))
+        if target:
+            graph[source].add(target)
+        cleaned_triggers.append({"name": name, "source_node": source, "target_node": target})
+    state: dict[str, int] = {}
+
+    def visit(node_id: str) -> None:
+        state[node_id] = 1
+        for nxt in graph[node_id]:
+            if state.get(nxt) == 1:
+                raise ValueError("Triggers would create a loop (triggers form a loop)")
+            if nxt not in state:
+                visit(nxt)
+        state[node_id] = 2
+
+    for node_id in graph:
+        if node_id not in state:
+            visit(node_id)
+    cleaned_triggers = [item for item in cleaned_triggers if item["target_node"]] + [item for item in cleaned_triggers if not item["target_node"]]
     result["nodes"]      = cleaned_nodes
     result["edges"]      = cleaned_edges
+    result["triggers"]   = cleaned_triggers
     result["created_at"] = str(result.get("created_at") or _utc_now())
     result["updated_at"] = str(result.get("updated_at") or _utc_now())
     return result
