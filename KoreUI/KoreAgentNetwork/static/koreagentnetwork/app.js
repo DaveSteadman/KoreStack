@@ -193,7 +193,8 @@ function nodeBox(node) {
 
 const WIRE_MARGIN = 8;
 const WIRE_STUB = 26;
-const WIRE_PITCH = 14;
+const WIRE_MIN_STUB = 12;
+const WIRE_PITCH = 20;
 
 function segmentHitsBox(a, b, box) {
   const m = WIRE_MARGIN;
@@ -214,39 +215,49 @@ function simplifyPoints(points) {
   return out;
 }
 
-// Parallel runs of different wire kinds, or of different sources, must not share a lane.
+// Every lane sits on one global grid of WIRE_PITCH; different wires may never share a lane and should avoid the neighbouring one.
 function laneConflict(a, b, wire, used) {
   const horizontal = Math.abs(a.y - b.y) < 0.01;
   const pos = horizontal ? a.y : a.x;
   const lo = horizontal ? Math.min(a.x, b.x) : Math.min(a.y, b.y), hi = horizontal ? Math.max(a.x, b.x) : Math.max(a.y, b.y);
   let cost = 0;
   used.forEach((run) => {
-    if (run.horizontal !== horizontal || Math.abs(run.pos - pos) >= WIRE_MARGIN - 1 || run.hi <= lo || run.lo >= hi) return;
-    if (run.kind !== wire.kind) cost += 5000;
-    else if (run.key !== wire.key) cost += 60;
+    const gap = Math.abs(run.pos - pos);
+    if (run.horizontal !== horizontal || gap >= WIRE_PITCH * 1.5 || run.hi + WIRE_PITCH <= lo || run.lo - WIRE_PITCH >= hi || (run.kind === wire.kind && run.key === wire.key)) return;
+    cost += gap < WIRE_PITCH / 2 ? 5000 : 150;
   });
   return cost;
 }
 
 // Circuit-board route: horizontal out of the dot, then the cheapest orthogonal path that stays clear of every block and of other lanes.
+const STICKY_BONUS = 0;
+const lastRoutes = new Map();
+const samePoints = (a, b) => a && a.length === b.length && a.every((p, i) => Math.abs(p.x - b[i].x) < 0.01 && Math.abs(p.y - b[i].y) < 0.01);
+
 function routePoints(from, to, sourceId, targetId, boxes, wire, used) {
   const xsList = [], xtList = [], ysSet = new Set();
-  for (let k = 0; k < 10; k += 1) { xsList.push(from.x + WIRE_STUB + k * WIRE_PITCH); xtList.push(to.x - WIRE_STUB - k * WIRE_PITCH); }
+  const gridUp = (v) => Math.ceil(v / WIRE_PITCH) * WIRE_PITCH, gridDown = (v) => Math.floor(v / WIRE_PITCH) * WIRE_PITCH;
+  for (let k = 0; k < 10; k += 1) { xsList.push(gridUp(from.x + WIRE_MIN_STUB) + k * WIRE_PITCH); xtList.push(gridDown(to.x - WIRE_MIN_STUB) - k * WIRE_PITCH); }
   // Wires from the same output share one exit lane so they leave as a single trunk.
   const trunk = wire.trunks.get(wire.key);
   if (trunk !== undefined) xsList.splice(0, xsList.length, trunk);
   const sorted = boxes.slice().sort((m, n) => m.top - n.top);
-  boxes.forEach((box) => { ysSet.add(box.top - 14); ysSet.add(box.bottom + 14); });
-  sorted.forEach((box, i) => { if (sorted[i + 1] && sorted[i + 1].top - box.bottom > 2 * WIRE_MARGIN + 6) ysSet.add((box.bottom + sorted[i + 1].top) / 2); });
+  // Only blocks near this wire's horizontal span offer channel rows, so distant blocks cannot change its route.
+  const spanLo = Math.min(from.x, to.x) - WIRE_STUB - 10 * WIRE_PITCH, spanHi = Math.max(from.x, to.x) + WIRE_STUB + 10 * WIRE_PITCH;
+  const near = sorted.filter((box) => box.right > spanLo && box.left < spanHi);
+  near.forEach((box) => { ysSet.add(gridDown(box.top - 14)); ysSet.add(gridUp(box.bottom + 14)); });
+  near.forEach((box, i) => { if (near[i + 1] && near[i + 1].top - box.bottom > 2 * WIRE_MARGIN + 6) ysSet.add(Math.round((box.bottom + near[i + 1].top) / 2 / WIRE_PITCH) * WIRE_PITCH); });
+  for (let y = gridDown(Math.min(from.y, to.y)) - 2 * WIRE_PITCH; y <= Math.max(from.y, to.y) + 3 * WIRE_PITCH; y += WIRE_PITCH) ysSet.add(y);
   const ys = [...ysSet].filter((y) => y !== from.y && y !== to.y);
   const candidates = [];
-  for (let x = from.x + WIRE_STUB; x <= to.x - WIRE_STUB; x += WIRE_PITCH) if (trunk === undefined || x === trunk) candidates.push([from, { x, y: from.y }, { x, y: to.y }, to]);
+  for (let x = gridUp(from.x + WIRE_MIN_STUB); x <= to.x - WIRE_MIN_STUB; x += WIRE_PITCH) if (trunk === undefined || x === trunk) candidates.push([from, { x, y: from.y }, { x, y: to.y }, to]);
   xsList.forEach((xs) => xtList.forEach((xt) => ys.forEach((y) => candidates.push([from, { x: xs, y: from.y }, { x: xs, y }, { x: xt, y }, { x: xt, y: to.y }, to]))));
   let best = null, bestCost = Infinity;
+  const previous = lastRoutes.get(wire.id);
   candidates.forEach((raw) => {
     const points = simplifyPoints(raw);
     let cost = (points.length - 2) * 20;
-    for (let i = 0; i < points.length - 1 && cost < bestCost; i += 1) {
+    for (let i = 0; i < points.length - 1 && cost < bestCost + STICKY_BONUS; i += 1) {
       const a = points[i], b = points[i + 1];
       cost += Math.abs(b.x - a.x) + Math.abs(b.y - a.y);
       boxes.forEach((box) => {
@@ -255,8 +266,10 @@ function routePoints(from, to, sourceId, targetId, boxes, wire, used) {
       });
       cost += laneConflict(a, b, wire, used);
     }
+    if (samePoints(previous, points)) cost -= STICKY_BONUS;
     if (cost < bestCost) { bestCost = cost; best = points; }
   });
+  lastRoutes.set(wire.id, best);
   if (best.length > 2 && !wire.trunks.has(wire.key)) wire.trunks.set(wire.key, best[1].x);
   for (let i = 0; i < best.length - 1; i += 1) {
     const a = best[i], b = best[i + 1], horizontal = Math.abs(a.y - b.y) < 0.01;
@@ -316,6 +329,8 @@ function chevronPath(points) {
 // 32 muted tones of similar brightness; stepping by 11 keeps consecutive picks far apart in hue.
 const WIRE_PALETTE = Array.from({ length: 32 }, (_, i) => `hsl(${(((i * 11) % 32) * 11.25 + 5).toFixed(1)}, 38%, 62%)`);
 
+const colourMemory = new Map();
+
 function drawEdges() {
   layout = measureLayout();
   try { drawWires(); } finally { layout = null; }
@@ -323,29 +338,76 @@ function drawEdges() {
 
 function drawWires() {
   const wires = [];
-  const used = [];
-  const trunks = new Map();
   const boxes = state.network.nodes.map(nodeBox);
   (state.network.triggers || []).forEach((trigger) => {
     const source = state.network.nodes.find((node) => node.id === trigger.source_node);
     const target = state.network.nodes.find((node) => node.id === trigger.target_node);
     if (!source || !target) return;
     const key = `${source.id}|${TRIGGER_PORT}`;
-    const points = routePoints(dotCenter(source, TRIGGER_PORT, true), dotCenter(target, TRIGGER_PORT, false), source.id, target.id, boxes, { kind: 'trigger', key, trunks }, used);
-    wires.push({ key, points, trigger, title: `Trigger ${trigger.name}: ${source.label} → ${target.label}` });
+    const spec = { from: dotCenter(source, TRIGGER_PORT, true), to: dotCenter(target, TRIGGER_PORT, false), sourceId: source.id, targetId: target.id, wire: { kind: 'trigger', key, id: `${key}>${trigger.target_node}.${trigger.name}` } };
+    wires.push({ key, points: null, spec, trigger, title: `Trigger ${trigger.name}: ${source.label} → ${target.label}` });
   });
   state.network.edges.forEach((edge) => {
     const fromNode = state.network.nodes.find((node) => node.id === edge.source_node);
     const toNode   = state.network.nodes.find((node) => node.id === edge.target_node);
     if (!fromNode || !toNode) return;
     const key = `${fromNode.id}|${edge.source_port}`;
-    const points = routePoints(dotCenter(fromNode, edge.source_port, true), dotCenter(toNode, edge.target_port, false), fromNode.id, toNode.id, boxes, { kind: 'data', key, trunks }, used);
-    wires.push({ key, points, edge, title: `${fromNode.label}.${edge.source_port} → ${toNode.label}.${edge.target_port}` });
+    const spec = { from: dotCenter(fromNode, edge.source_port, true), to: dotCenter(toNode, edge.target_port, false), sourceId: fromNode.id, targetId: toNode.id, wire: { kind: 'data', key, id: `${key}>${edge.target_node}.${edge.target_port}` } };
+    wires.push({ key, points: null, spec, edge, title: `${fromNode.label}.${edge.source_port} → ${toNode.label}.${edge.target_port}` });
   });
+  // Greedy routing depends on order, so route forwards and backwards, keep the layout with fewer lane clashes, then re-route each wire once against all the others.
+  const laneRuns = (points, wire) => points.slice(1).map((b, i) => {
+    const a = points[i], horizontal = Math.abs(a.y - b.y) < 0.01;
+    return { horizontal, pos: horizontal ? a.y : a.x, lo: horizontal ? Math.min(a.x, b.x) : Math.min(a.y, b.y), hi: horizontal ? Math.max(a.x, b.x) : Math.max(a.y, b.y), kind: wire.kind, key: wire.key };
+  });
+  const routeAll = (order) => {
+    const attemptUsed = [], attemptTrunks = new Map(), result = new Map();
+    order.forEach((wire) => {
+      const { from, to, sourceId, targetId } = wire.spec;
+      result.set(wire, routePoints(from, to, sourceId, targetId, boxes, { ...wire.spec.wire, trunks: attemptTrunks }, attemptUsed));
+    });
+    return result;
+  };
+  const clashScore = (result) => {
+    const seen = [];
+    let score = 0;
+    result.forEach((points, wire) => {
+      for (let i = 0; i < points.length - 1; i += 1) score += laneConflict(points[i], points[i + 1], wire.spec.wire, seen);
+      seen.push(...laneRuns(points, wire.spec.wire));
+    });
+    return score;
+  };
+  const refine = (initial) => {
+    const current = new Map(initial);
+    if (wires.length < 2) return current;
+    const secondTrunks = new Map();
+    wires.forEach((wire) => {
+      const others = wires.filter((w) => w !== wire).flatMap((w) => laneRuns(current.get(w), w.spec.wire));
+      const { from, to, sourceId, targetId } = wire.spec;
+      current.set(wire, routePoints(from, to, sourceId, targetId, boxes, { ...wire.spec.wire, trunks: secondTrunks }, others));
+    });
+    return current;
+  };
+  if (wires.length) {
+    const forward = refine(routeAll(wires)), backward = wires.length > 1 ? refine(routeAll(wires.slice().reverse())) : forward;
+    const best = clashScore(backward) < clashScore(forward) ? backward : forward;
+    wires.forEach((wire) => { wire.points = best.get(wire); });
+  }
   const hopWires = [];
   const wireColors = new Map();
-  // Colours follow the sorted source keys, so they do not change with drawing order or dragging.
-  [...new Set(wires.filter((wire) => !wire.trigger).map((wire) => wire.key))].sort().forEach((key, index) => wireColors.set(key, WIRE_PALETTE[index % WIRE_PALETTE.length]));
+  // A source keeps its colour while it has connections; a new source takes the lowest unused tone.
+  const liveKeys = [...new Set(wires.filter((wire) => !wire.trigger).map((wire) => wire.key))];
+  const remembered = colourMemory.get(state.network.id) || new Map();
+  colourMemory.set(state.network.id, remembered);
+  [...remembered.keys()].forEach((key) => { if (!liveKeys.includes(key)) remembered.delete(key); });
+  liveKeys.forEach((key) => {
+    if (remembered.has(key)) return;
+    const taken = new Set(remembered.values());
+    let index = 0;
+    while (taken.has(index) && index < WIRE_PALETTE.length) index += 1;
+    remembered.set(key, index % WIRE_PALETTE.length);
+  });
+  liveKeys.forEach((key) => wireColors.set(key, WIRE_PALETTE[remembered.get(key)]));
   const colorFor = (key) => wireColors.get(key);
   const runs = wires.filter((wire) => !wire.trigger).flatMap((wire) => verticalRuns(wire.points, wire.key));
   wires.forEach((wire) => {
@@ -612,11 +674,73 @@ function beginDrag(event, node) {
   window.addEventListener('pointermove', moveDrag);
   window.addEventListener('pointerup', endDrag, { once: true });
 }
+// PowerPoint-style snapping: pull a block into line with nearby block edges and with the ports it is wired to.
+const SNAP_DISTANCE = 8;
+function snapPosition(node, x, y) {
+  const height = nodeHeight(node);
+  const xs = [], ys = [];
+  state.network.nodes.forEach((other) => {
+    if (other.id === node.id) return;
+    const ox = other.position.x, oy = other.position.y, oh = nodeHeight(other);
+    xs.push([ox, x, other], [ox + 220, x, other], [ox, x + 220, other], [ox + 220, x + 220, other]);
+    ys.push([oy, y, other], [oy + oh, y, other], [oy, y + height, other], [oy + oh, y + height, other]);
+  });
+  const ports = [];
+  (state.network.edges || []).forEach((e) => {
+    if (e.source_node === node.id) ports.push([e.target_node, e.target_port, false, e.source_port, true]);
+    if (e.target_node === node.id) ports.push([e.source_node, e.source_port, true, e.target_port, false]);
+  });
+  (state.network.triggers || []).forEach((t) => {
+    if (t.source_node === node.id) ports.push([t.target_node, TRIGGER_PORT, false, TRIGGER_PORT, true]);
+    if (t.target_node === node.id) ports.push([t.source_node, TRIGGER_PORT, true, TRIGGER_PORT, false]);
+  });
+  ports.forEach(([otherId, otherPort, otherOut, ownPort, ownOut]) => {
+    const other = state.network.nodes.find((n) => n.id === otherId);
+    if (!other) return;
+    ys.push([portPosition(other, otherPort, otherOut).y, y + portPosition(node, ownPort, ownOut).y - node.position.y, other]);
+  });
+  const pull = (pairs) => pairs.reduce((best, [target, current]) => {
+    const delta = target - current;
+    return Math.abs(delta) <= SNAP_DISTANCE / zoom && (best === null || Math.abs(delta) < Math.abs(best)) ? delta : best;
+  }, null) ?? 0;
+  const dx = pull(xs), dy = pull(ys);
+  const snapped = { x: Math.max(10, x + dx), y: Math.max(10, y + dy), guides: [] };
+  const ex = snapped.x - x, ey = snapped.y - y;
+  const seen = new Set();
+  xs.forEach(([target, current, other]) => {
+    if (Math.abs(target - (current + ex)) > 0.5 || seen.has(`x${target}${other.id}`)) return;
+    seen.add(`x${target}${other.id}`);
+    const top = Math.min(other.position.y, snapped.y), bottom = Math.max(other.position.y + nodeHeight(other), snapped.y + height);
+    snapped.guides.push({ x: target, y: top, w: 0, h: bottom - top });
+  });
+  ys.forEach(([target, current, other]) => {
+    if (Math.abs(target - (current + ey)) > 0.5 || seen.has(`y${target}${other.id}`)) return;
+    seen.add(`y${target}${other.id}`);
+    const left = Math.min(other.position.x, snapped.x), right = Math.max(other.position.x + 220, snapped.x + 220);
+    snapped.guides.push({ x: left, y: target, w: right - left, h: 0 });
+  });
+  return snapped;
+}
+function showGuides(guides) {
+  nodeLayer.querySelectorAll('.kan-guide').forEach((el) => el.remove());
+  guides.forEach((g) => {
+    const el = document.createElement('div');
+    el.className = 'kan-guide';
+    el.style.cssText = `left:${g.x}px;top:${g.y}px;width:${g.w}px;height:${g.h}px`;
+    nodeLayer.append(el);
+  });
+}
 function moveDrag(event) {
   if (!state.dragging) return;
   const bounds = graphStage.getBoundingClientRect();
-  state.dragging.node.position.x = Math.max(10, Math.round((event.clientX - bounds.left + graphStage.scrollLeft) / zoom - state.dragging.offsetX));
-  state.dragging.node.position.y = Math.max(10, Math.round((event.clientY - bounds.top + graphStage.scrollTop) / zoom - state.dragging.offsetY));
+  const node = state.dragging.node;
+  let x = Math.max(10, Math.round((event.clientX - bounds.left + graphStage.scrollLeft) / zoom - state.dragging.offsetX));
+  let y = Math.max(10, Math.round((event.clientY - bounds.top + graphStage.scrollTop) / zoom - state.dragging.offsetY));
+  let guides = [];
+  if (!event.altKey) ({ x, y, guides } = snapPosition(node, x, y));
+  showGuides(guides);
+  node.position.x = x;
+  node.position.y = y;
   const element = nodeLayer.querySelector(`[data-node-id="${CSS.escape(state.dragging.node.id)}"]`);
   if (element) { element.style.left = `${state.dragging.node.position.x}px`; element.style.top = `${state.dragging.node.position.y}px`; }
   scheduleWireRedraw();
@@ -638,6 +762,7 @@ function endDrag() {
   wireTimer = 0;
   if (state.dragging) { recentre(); persist(); }
   state.dragging = null;
+  showGuides([]);
   window.removeEventListener('pointermove', moveDrag);
 }
 
