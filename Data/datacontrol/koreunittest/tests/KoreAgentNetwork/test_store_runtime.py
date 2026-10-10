@@ -176,7 +176,7 @@ class KoreAgentNetworkTests(unittest.TestCase):
                 "outputs['text'] = read_text('sub/a.txt')\n"
                 "outputs['rel'] = exists('sub/a.txt')\n"
             )
-            node = {"kind": "python", "code": code, "inputs": [], "outputs": [{"name": n} for n in ("data", "files", "text", "rel")]}
+            node = {"id": "n", "kind": "python", "code": code, "inputs": [], "outputs": [{"name": n} for n in ("data", "files", "text", "rel")]}
             bad = {**node, "code": "read_text('../secret.txt')", "outputs": []}
             with patch("KoreAgentNetwork.app.runtime.get_datauser_root", return_value=Path(root)):
                 result = runtime.run_node(node, {})
@@ -198,12 +198,57 @@ class KoreAgentNetworkTests(unittest.TestCase):
             "outputs['result'] = items[i % len(items)]\n"
             "write_json('prompts.idx.json', (i + 1) % len(items))\n"
         )
-        node = {"kind": "python", "code": code, "inputs": [], "outputs": [{"name": "result"}]}
+        node = {"id": "n", "kind": "python", "code": code, "inputs": [], "outputs": [{"name": "result"}]}
         with TemporaryDirectory() as root, patch("KoreAgentNetwork.app.runtime.get_datauser_root", return_value=Path(root)):
             self.assertIsNone(runtime.run_node(node, {})["outputs"]["result"])
             (Path(root) / "prompts.txt").write_text("a\nb\n", encoding="utf-8")
             picked = [runtime.run_node(node, {})["outputs"]["result"] for _ in range(3)]
         self.assertEqual(picked, ["a", "b", "a"])
+
+    @staticmethod
+    def _trigger_network() -> dict:
+        def block(node_id: str, inputs: list, code: str) -> dict:
+            return {"id": node_id, "label": node_id, "position": {}, "inputs": inputs, "outputs": [{"name": "value"}], "code": code}
+        return {
+            "id": "trigger_network",
+            "nodes": [
+                block("a", [], "disable_auto_trigger()\noutputs['value'] = 1"),
+                block("b", [{"name": "value", "default": 0}], "outputs['value'] = inputs['value'] + 1"),
+                block("c", [{"name": "value", "default": 0}], "outputs['value'] = inputs['value']"),
+            ],
+            "edges": [{"id": "edge_bc", "source_node": "b", "source_port": "value", "target_node": "c", "target_port": "value"}],
+            "triggers": [{"name": "go", "source_node": "a", "target_node": "b"}],
+        }
+
+    def test_block_fed_by_an_unrun_triggered_block_is_blocked(self) -> None:
+        clean = store.validate_network(self._trigger_network())
+        with patch.object(runtime, "suite_services", return_value={}):
+            result = runtime.run_network(clean)
+        self.assertEqual(result["nodes"]["c"]["status"], "blocked")
+        self.assertNotIn("b", result["nodes"])
+
+    def test_trigger_payload_rejects_unknown_inputs(self) -> None:
+        clean = store.validate_network(self._trigger_network())
+        session = runtime._new_session(clean)
+        with self.assertRaisesRegex(ValueError, "no input named: typo"):
+            runtime._run_flow(session, "b", {"typo": 1}, 5, [])
+
+    def test_network_cannot_run_twice_at_once(self) -> None:
+        runtime._acquire("busy_network")
+        try:
+            with self.assertRaises(runtime.NetworkBusy):
+                runtime._acquire("busy_network")
+        finally:
+            runtime._release("busy_network")
+        self.assertFalse(runtime.is_locked("busy_network"))
+
+    def test_save_rejects_stale_base_and_leaves_no_temp_files(self) -> None:
+        with TemporaryDirectory() as directory, patch.object(store, "NETWORKS_DIR", Path(directory)):
+            first = store.save_network(store.default_network())
+            with self.assertRaises(store.NetworkConflict):
+                store.save_network(first, "1999-01-01T00:00:00+00:00")
+            store.save_network(first, first["updated_at"])
+            self.assertEqual([item.suffix for item in Path(directory).iterdir()], [".json"])
 
 
 if __name__ == "__main__":    unittest.main()

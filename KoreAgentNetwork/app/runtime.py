@@ -357,6 +357,10 @@ _CONTEXTS: dict[str, dict] = {}
 _LOCKS: dict[str, int] = {}
 
 
+class NetworkBusy(RuntimeError):
+    """Raised when a network is already running."""
+
+
 def is_locked(network_id: str) -> bool:
     with _REGISTRY_LOCK:
         return _LOCKS.get(network_id, 0) > 0
@@ -364,6 +368,8 @@ def is_locked(network_id: str) -> bool:
 
 def _acquire(network_id: str) -> None:
     with _REGISTRY_LOCK:
+        if network_id and _LOCKS.get(network_id, 0) > 0:
+            raise NetworkBusy("This network is already running. Wait for it to finish.")
         _LOCKS[network_id] = _LOCKS.get(network_id, 0) + 1
 
 
@@ -385,13 +391,30 @@ def triggered_blocks(network: dict) -> set[str]:
 
 
 def _new_session(network: dict, outputs: dict | None = None) -> dict:
-    return {"network": network, "outputs": dict(outputs or {}), "results": {}}
+    return {"network": network, "outputs": dict(outputs or {}), "results": {}, "deadline": time.monotonic() + RUN_TIMEOUT_SECONDS}
+
+
+def _flow_timeout(session: dict) -> float:
+    """Per-block time limit, capped by what is left of the session's overall deadline."""
+    remaining = session["deadline"] - time.monotonic()
+    if remaining <= 0:
+        raise ValueError("Network time limit reached")
+    return min(NODE_TIMEOUT_SECONDS, remaining)
+
+
+def _child_seconds(context: dict | None) -> float:
+    """Seconds spent inside triggered flows, including flows still running."""
+    if context is None:
+        return 0.0
+    now = time.monotonic()
+    with context["lock"]:
+        return context["child_seconds"] + sum(now - start for start in context["active"])
 
 
 def _new_context(session: dict, node: dict) -> dict | None:
     if not any(item["source_node"] == node["id"] for item in session["network"].get("triggers", [])):
         return None
-    return {"session": session, "node_id": node["id"], "child_seconds": 0.0, "calls": []}
+    return {"session": session, "node_id": node["id"], "child_seconds": 0.0, "active": [], "calls": [], "lock": threading.Lock()}
 
 
 def _run_block(session: dict, node: dict, node_inputs: dict, timeout: float) -> tuple[dict, float]:
@@ -420,11 +443,11 @@ def _run_block(session: dict, node: dict, node_inputs: dict, timeout: float) -> 
         record.update(status="completed", outputs=outputs)
         session["outputs"][node["id"]] = outputs
     session["results"][node["id"]] = record
-    return record, (context["child_seconds"] if context is not None else 0.0)
+    return record, _child_seconds(context)
 
 
 def _blocked_by(session: dict, node_id: str, incoming: dict[str, list[dict]]) -> list[str]:
-    return [edge["source_node"] for edge in incoming[node_id] if session["results"].get(edge["source_node"], {}).get("status", "completed") != "completed"]
+    return [edge["source_node"] for edge in incoming[node_id] if session["results"].get(edge["source_node"], {}).get("status") != "completed"]
 
 
 def _incoming(network: dict) -> dict[str, list[dict]]:
@@ -440,7 +463,10 @@ def _run_flow(session: dict, node_id: str, payload: dict | None, timeout: float,
     node     = next(item for item in network["nodes"] if item["id"] == node_id)
     incoming = _incoming(network)
     node_inputs = _node_inputs(node, incoming, session["outputs"])
-    node_inputs.update({port: value for port, value in (payload or {}).items() if port in node_inputs})
+    unknown = sorted(set(payload or {}) - set(node_inputs))
+    if unknown:
+        raise ValueError(f"Block {node['label']} has no input named: {', '.join(unknown)}")
+    node_inputs.update(payload or {})
     session["results"].pop(node_id, None)
     session["outputs"].pop(node_id, None)
     record, child_seconds = _run_block(session, node, node_inputs, timeout)
@@ -452,10 +478,12 @@ def _run_flow(session: dict, node_id: str, payload: dict | None, timeout: float,
     for trigger in network.get("triggers", []):
         if trigger["source_node"] != node_id or not trigger.get("target_node") or trigger["name"] in fired or trigger["name"] in skip:
             continue
-        if session.get("deadline") is not None and time.monotonic() > session["deadline"]:
-            session["results"][trigger["target_node"]] = {"status": "skipped", "error": "Network time limit reached"}
+        try:
+            limit = _flow_timeout(session)
+        except ValueError as exc:
+            session["results"][trigger["target_node"]] = {"status": "skipped", "error": str(exc)}
             continue
-        _run_flow(session, trigger["target_node"], None, NODE_TIMEOUT_SECONDS, ran)
+        _run_flow(session, trigger["target_node"], None, limit, ran)
     return child_seconds
 
 
@@ -470,18 +498,27 @@ def fire_trigger(token: str, name: str, payload: dict) -> dict[str, Any]:
     trigger = next((item for item in network.get("triggers", []) if item["name"] == name and item["source_node"] == context["node_id"]), None)
     if trigger is None or not trigger.get("target_node"):
         raise ValueError(f"This block has no connected trigger named {name}")
-    if len(context["calls"]) >= MAX_TRIGGER_CALLS:
-        raise ValueError(f"A block may fire at most {MAX_TRIGGER_CALLS} triggers per run")
     if not isinstance(payload, dict):
         raise ValueError("Trigger payload must be an object")
+    limit = _flow_timeout(session)
+    started = time.monotonic()
+    with context["lock"]:
+        if len(context["calls"]) + len(context["active"]) >= MAX_TRIGGER_CALLS:
+            raise ValueError(f"A block may fire at most {MAX_TRIGGER_CALLS} triggers per run")
+        context["active"].append(started)
     nodes = {node["id"]: node for node in network["nodes"]}
     ran: list[str] = []
-    started = time.monotonic()
-    _run_flow(session, trigger["target_node"], payload, NODE_TIMEOUT_SECONDS, ran)
-    elapsed = round(time.monotonic() - started, 3)
-    context["child_seconds"] += elapsed
-    failed = next((session["results"][node_id] for node_id in ran if session["results"][node_id].get("status") != "completed"), None)
-    context["calls"].append({"name": name, "target": trigger["target_node"], "ok": failed is None, "elapsed_seconds": elapsed})
+    try:
+        _run_flow(session, trigger["target_node"], payload, limit, ran)
+    finally:
+        elapsed = time.monotonic() - started
+        with context["lock"]:
+            context["active"].remove(started)
+            context["child_seconds"] += elapsed
+    elapsed = round(elapsed, 3)
+    failed = next((session["results"].get(node_id, {}) for node_id in ran if session["results"].get(node_id, {}).get("status") != "completed"), None)
+    with context["lock"]:
+        context["calls"].append({"name": name, "target": trigger["target_node"], "ok": failed is None, "elapsed_seconds": elapsed})
     return {
         "ok":      failed is None,
         "status":  "completed" if failed is None else "failed",
@@ -520,8 +557,7 @@ def _execute_node(node: dict, inputs: dict, timeout: float, context: dict | None
                 break
             except subprocess.TimeoutExpired:
                 pending = None
-                child_seconds = context["child_seconds"] if context is not None else 0.0
-                if time.monotonic() - started - child_seconds > max(1, timeout):
+                if time.monotonic() - started - _child_seconds(context) > max(1, timeout):
                     process.kill()
                     process.communicate()
                     raise
@@ -551,10 +587,10 @@ def run_node(node: dict, inputs: dict, network: dict | None = None, outputs: dic
         _acquire(network_id)
     try:
         if has_triggers:
-            _run_flow(session, node["id"], None, NODE_TIMEOUT_SECONDS, [])
+            _run_flow(session, node["id"], None, _flow_timeout(session), [])
             record = session["results"][node["id"]]
         else:
-            record, _ = _run_block(session, node, inputs, NODE_TIMEOUT_SECONDS)
+            record, _ = _run_block(session, node, inputs, _flow_timeout(session))
             record.pop("_skip", None)
     finally:
         if has_triggers:

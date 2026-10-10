@@ -10,9 +10,9 @@ from pydantic import BaseModel
 from KoreCommon.service_app import register_suite_shell_routes
 
 from .config import SERVICE_KEY, SERVICE_LABEL
-from .runtime import fire_trigger, is_locked, run_network, run_node
+from .runtime import NetworkBusy, fire_trigger, is_locked, run_network, run_node
 from .templates import add_template, delete_template, list_templates
-from .store import create_network, delete_network, duplicate_network, list_networks, load_network, load_run_state, save_network, save_run_state, validate_node
+from .store import NetworkConflict, count_networks, create_network, delete_network, duplicate_network, list_networks, load_network, load_run_state, save_network, save_run_state, validate_node
 
 
 ROOT        = Path(__file__).resolve().parents[2]
@@ -63,7 +63,7 @@ def _refuse_if_locked(network_id: str) -> None:
 
 @app.get("/status")
 def status() -> dict:
-    return {"ok": True, "available": True, "service": SERVICE_LABEL, "networks": len(list_networks())}
+    return {"ok": True, "available": True, "service": SERVICE_LABEL, "networks": count_networks()}
 
 
 @app.get("/")
@@ -95,15 +95,10 @@ def api_save_network(network_id: str, body: NetworkBody) -> dict:
     _refuse_if_locked(network_id)
     network = dict(body.network)
     network["id"] = network_id
-    if body.base_updated_at is not None:
-        try:
-            current = load_network(network_id).get("updated_at")
-        except (FileNotFoundError, ValueError):
-            current = None
-        if current is not None and current != body.base_updated_at:
-            raise HTTPException(status_code=409, detail="This network was changed elsewhere. Reload the page to avoid overwriting it.")
     try:
-        return {"network": save_network(network)}
+        return {"network": save_network(network, body.base_updated_at)}
+    except NetworkConflict as exc:
+        raise HTTPException(status_code=409, detail=str(exc))
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
 
@@ -171,6 +166,8 @@ def api_run_network(network_id: str) -> dict:
         run = run_network(load_network(network_id))
         save_run_state(network_id, run, {})
         return {"run": run}
+    except NetworkBusy as exc:
+        raise HTTPException(status_code=409, detail=str(exc))
     except (FileNotFoundError, ValueError) as exc:
         raise HTTPException(status_code=422, detail=str(exc))
 
@@ -189,6 +186,8 @@ def api_run_node(body: NodeRunBody) -> dict:
             raise HTTPException(status_code=404, detail="Network not found")
     try:
         return {"result": run_node(node, body.inputs, network, body.outputs)}
+    except NetworkBusy as exc:
+        raise HTTPException(status_code=409, detail=str(exc))
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
 

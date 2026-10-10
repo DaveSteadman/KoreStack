@@ -7,7 +7,7 @@
   <link rel="icon" href="/ui-elements/assets/icons/favicon.ico">
   <link rel="stylesheet" href="/ui-elements/assets/css/chrome.css">
   <link rel="stylesheet" href="/ui-elements/assets/css/workspace.css">
-  <link rel="stylesheet" href="/static/koreagentnetwork/app.css?v=1791600008">
+  <link rel="stylesheet" href="/static/koreagentnetwork/app.css?v=1791600012">
   <script src="/suite-config.js"></script>
 </head>
 <body class="kcui-shell-bg">
@@ -98,8 +98,8 @@
         <button id="add-node" class="btn btn-secondary" type="button">+ Block</button>
         <button id="step-network" class="btn btn-secondary" type="button" title="Run the next block that has not completed">Step &#9654;</button>
         <button id="run-network" class="btn btn-primary" type="button">Run network</button>
-        <span id="run-status" class="kan-run-status">Ready</span>
       </div>
+      <span id="run-status" class="kan-run-status" aria-live="polite">Ready</span>
       <div id="graph-stage" class="kan-graph-stage" aria-label="Processing network canvas">
         <svg id="edges" class="kan-edges" aria-hidden="true"></svg>
         <div id="nodes" class="kan-nodes"></div>
@@ -125,6 +125,6 @@
       </form>
     </aside>
   </main>
-  <script type="module" src="/static/koreagentnetwork/app.js?v=1791600008"></script>
+  <script type="module" src="/static/koreagentnetwork/app.js?v=1791600012"></script>
 </body>
 </html>

@@ -64,14 +64,16 @@ button, input, textarea { font: inherit; }
 
 .kan-workspace { display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
 .kan-toolbar { align-items: center; background: var(--kan-panel); border-bottom: 1px solid var(--kan-border); display: flex; gap: 9px; min-height: 51px; padding: 8px 12px; }
-.kan-title { background: transparent; border: 0; color: var(--kan-text); font-size: 16px; font-weight: 650; min-width: 120px; outline: 0; padding: 5px; width: min(44%, 380px); }
+.kan-title { background: transparent; border: 0; color: var(--kan-text); font-size: 16px; font-weight: 650; min-width: 60px; outline: 0; padding: 5px; flex: 1 1 auto; }
 .kan-title:focus { background: var(--kan-panel-soft); border-radius: 4px; }
-.kan-toolbar-select { background: #0e1420; border: 1px solid var(--kan-border); border-radius: 4px; color: var(--kan-text); min-width: 100px; padding: 6px 8px; }
-.kan-run-status { color: var(--kan-dim); font-size: 12px; margin-left: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kan-toolbar-select { background: #0e1420; border: 1px solid var(--kan-border); border-radius: 4px; color: var(--kan-text); flex: none; min-width: 100px; padding: 6px 8px; width: auto; }
+.kan-toolbar .btn { flex: none; }
+.kcui-shell-bg .kan-toolbar .kan-toolbar-select { flex: none; width: 110px; }
+.kan-run-status { bottom: 22px; color: var(--kan-dim); font-size: 12px; left: 24px; max-width: calc(100% - 140px); overflow: hidden; pointer-events: none; position: absolute; text-overflow: ellipsis; user-select: none; white-space: nowrap; z-index: 50; }
 .kan-run-status.running { color: #f2c66f; }.kan-run-status.ok { color: var(--kan-green); }.kan-run-status.error { color: var(--kan-red); }
 .kan-graph-stage { background-color: #0b0f17; background-image: radial-gradient(#283143 1px, transparent 1px); background-attachment: local; background-size: 20px 20px; flex: 1; min-height: 0; overflow: auto; position: relative; }
 .kan-edges, .kan-nodes { height: max(100%, 1600px); left: 0; min-width: max(100%, 1800px); pointer-events: none; position: absolute; top: 0; width: max(100%, 1800px); }
-.kan-edges { overflow: visible; }.kan-edges path { fill: none; stroke: #6685b8; stroke-width: 2.3; }.kan-edges path.kan-edge-selected { stroke: var(--kan-green) !important; stroke-width: 3; }
+.kan-edges { overflow: visible; }.kan-edges path { fill: none; stroke: #6685b8; stroke-width: 2.3; }.kan-edges path:not(.kan-edge-gap) { pointer-events: stroke; }.kan-edges path:not(.kan-edge-gap):hover { stroke-width: 3.4; }
 .kan-nodes { pointer-events: none; }
 .kan-node { background: #141c2a; border: 1px solid #42516d; border-radius: 7px; box-shadow: 0 6px 18px #0005; min-height: 126px; pointer-events: auto; position: absolute; width: 220px; }
 .kan-node.selected { border-color: var(--kan-blue); box-shadow: 0 0 0 2px #70abff33, 0 6px 18px #0005; }.kan-node.completed { border-color: #378565; }.kan-node.failed, .kan-node.blocked, .kan-node.skipped { border-color: #a54d58; }
@@ -109,7 +111,6 @@ code { color: #a5c8ff; }
 @media (max-width: 520px) {
   .kan-toolbar { align-items: center; flex-wrap: wrap; }
   .kan-title { flex: 1 1 170px; width: auto; }
-  .kan-run-status { flex-basis: 100%; margin-left: 0; }
 }
 
 .kan-node-seq { background: #0e1420; border-radius: 9px; color: #9fb0cc; flex: 0 0 auto; font-size: 11px; line-height: 18px; margin-right: 8px; min-width: 18px; padding: 0 5px; text-align: center; }
@@ -127,7 +128,6 @@ code { color: #a5c8ff; }
 .kan-io-row--out b { color: #70abff; }
 .kan-io-row span { color: var(--kan-text); font-family: Consolas, monospace; overflow: hidden; text-overflow: ellipsis; }
 .kan-io-error { color: var(--kan-red); }
-.kan-run-status { flex: 0 0 260px; min-width: 0; text-align: right; }
 .kan-network-name { background: #0e1420; border: 1px solid var(--kan-border); border-radius: 4px; color: var(--kan-text); font-size: 13px; font-weight: 700; padding: 3px 6px; width: 100%; }
 .kan-left > [hidden] { display: none; }
 .kan-tabs { border-bottom: 1px solid var(--kan-border); display: flex; flex: 0 0 auto; }

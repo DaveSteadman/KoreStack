@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import json
+import logging
+import os
 import re
+import threading
 import uuid
 from copy import deepcopy
 from datetime import datetime, timezone
@@ -12,6 +15,23 @@ from .config import NETWORKS_DIR, RUN_STATE_DIR
 
 _SAFE_ID = re.compile(r"^[A-Za-z0-9_-]{1,100}$")
 _NODE_KINDS = {"python", "llm", "judge"}
+_WRITE_LOCK = threading.RLock()
+_log = logging.getLogger(__name__)
+
+
+class NetworkConflict(Exception):
+    """Raised when a save is based on an out-of-date copy of the network."""
+
+
+def _atomic_write(path: Path, text: str) -> None:
+    """Write via a temp file and replace so a crash never leaves a half-written file."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temp = path.with_name(f"{path.name}.{uuid.uuid4().hex[:8]}.tmp")
+    try:
+        temp.write_text(text, encoding="utf-8")
+        os.replace(temp, path)
+    finally:
+        temp.unlink(missing_ok=True)
 
 
 def _utc_now() -> str:
@@ -259,10 +279,15 @@ def validate_network(network: object) -> dict:
     return result
 
 
+def count_networks() -> int:
+    return sum(1 for _ in NETWORKS_DIR.glob("*.json")) if NETWORKS_DIR.exists() else 0
+
+
 def list_networks() -> list[dict]:
     NETWORKS_DIR.mkdir(parents=True, exist_ok=True)
-    if not any(NETWORKS_DIR.glob("*.json")):
-        save_network(default_network())
+    with _WRITE_LOCK:
+        if not any(NETWORKS_DIR.glob("*.json")):
+            save_network(default_network())
     networks: list[dict] = []
     for path in sorted(NETWORKS_DIR.glob("*.json")):
         try:
@@ -275,8 +300,8 @@ def list_networks() -> list[dict]:
                 "updated_at": network.get("updated_at"),
                 "node_count": len(network.get("nodes", [])),
             })
-        except (OSError, json.JSONDecodeError):
-            continue
+        except (OSError, json.JSONDecodeError) as exc:
+            _log.warning("Skipping unreadable network file %s: %s", path.name, exc)
     return networks
 
 
@@ -287,11 +312,20 @@ def load_network(network_id: str) -> dict:
     return validate_network(json.loads(path.read_text(encoding="utf-8")))
 
 
-def save_network(network: object) -> dict:
+def save_network(network: object, base_updated_at: str | None = None) -> dict:
+    """Validate and save a network. A given base_updated_at must match the stored copy."""
     NETWORKS_DIR.mkdir(parents=True, exist_ok=True)
     clean = validate_network(network)
-    clean["updated_at"] = _utc_now()
-    _path(clean["id"]).write_text(json.dumps(clean, indent=2) + "\n", encoding="utf-8")
+    with _WRITE_LOCK:
+        if base_updated_at is not None:
+            try:
+                current = load_network(clean["id"]).get("updated_at")
+            except (FileNotFoundError, ValueError, json.JSONDecodeError):
+                current = None
+            if current is not None and current != base_updated_at:
+                raise NetworkConflict("This network was changed elsewhere. Reload the page to avoid overwriting it.")
+        clean["updated_at"] = _utc_now()
+        _atomic_write(_path(clean["id"]), json.dumps(clean, indent=2) + "\n")
     return clean
 
 
@@ -316,7 +350,8 @@ def load_run_state(network_id: str) -> dict:
 def save_run_state(network_id: str, run: object, edits: object) -> None:
     RUN_STATE_DIR.mkdir(parents=True, exist_ok=True)
     state = {"run": run if isinstance(run, dict) else None, "edits": edits if isinstance(edits, dict) else {}}
-    _state_path(network_id).write_text(json.dumps(state), encoding="utf-8")
+    with _WRITE_LOCK:
+        _atomic_write(_state_path(network_id), json.dumps(state))
 
 
 def create_network(title: str = "Untitled network") -> dict:
@@ -343,5 +378,6 @@ def delete_network(network_id: str) -> None:
     path = _path(network_id)
     if not path.exists():
         raise FileNotFoundError(network_id)
-    path.unlink()
-    _state_path(network_id).unlink(missing_ok=True)
+    with _WRITE_LOCK:
+        path.unlink(missing_ok=True)
+        _state_path(network_id).unlink(missing_ok=True)

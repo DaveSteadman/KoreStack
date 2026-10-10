@@ -51,9 +51,11 @@ Triggers are the flow control of a diagram; connections only share values. A tri
 - Mid-code: a Python block can call `trigger(name, payload)` to run the target earlier. It blocks and returns `{ok, status, error, outputs, blocks}` (`outputs` is the target's outputs; `blocks` maps every block run by that flow to its outputs). A trigger already fired this way is not auto-fired again.
 - Opt out: `disable_auto_trigger()` stops all auto-firing for the block's run; `disable_auto_trigger('name')` stops one trigger.
 - Trigger targets never run in the normal order (marked ? in the UI); they run only when a trigger reaches them. Blocks that are not targets run in dependency order as usual, and a failed block fires nothing.
-- Shared data: a triggered block reads its connections' latest outputs (or port defaults). `payload` keys override input ports of the same name.
+- Shared data: a triggered block reads its connections' latest outputs (or port defaults). `payload` keys override input ports of the same name; a key that is not an input of the target is an error.
 - Timeouts: time spent inside explicit `trigger()` calls does not count against the calling block's limit.
-- Edit/run mode: while a trigger-capable block or network runs, saving or deleting that network returns HTTP 409. Trigger loops are rejected on save.
+- Blocks fed by a trigger-owned block that has not run are reported as `blocked`.
+- Time limits: a triggered flow also respects the overall run deadline, and its running time is excluded from the caller's limit as it happens.
+- Edit/run mode: while a trigger-capable block or network runs, saving or deleting that network returns HTTP 409, and so does starting a second run of it. Trigger loops are rejected on save.
 - Internal endpoint: `POST /api/internal/trigger` (used by the block sandbox with a per-run token).
 
 ## Execution

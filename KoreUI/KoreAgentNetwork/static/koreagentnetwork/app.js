@@ -93,7 +93,8 @@ function showKindFields(kind) {
 function portPosition(node, portName, output) {
   const ports = output ? node.outputs : node.inputs;
   const index = ports.findIndex((port) => port.name === portName);
-  return { x: node.position.x + (output ? 220 : 0), y: node.position.y + 45 + Math.max(index, 0) * 20 };
+  const y = portName === TRIGGER_PORT ? 52 : 79 + Math.max(index, 0) * 20;
+  return { x: node.position.x + (output ? 220 : 0), y: node.position.y + y };
 }
 
 async function request(path, options = {}) {
@@ -152,7 +153,26 @@ function render({ inspector = true } = {}) {
   renderData();
 }
 
+// One DOM measuring pass per redraw; routing then works on plain numbers.
+let layout = null;
+function measureLayout() {
+  const origin = nodeLayer.getBoundingClientRect();
+  const result = { boxes: new Map(), dots: new Map() };
+  nodeLayer.querySelectorAll('[data-node-id]').forEach((article) => {
+    const id = article.dataset.nodeId, box = article.getBoundingClientRect();
+    result.boxes.set(id, { id, left: (box.left - origin.left) / zoom, right: (box.right - origin.left) / zoom, top: (box.top - origin.top) / zoom, bottom: (box.bottom - origin.top) / zoom });
+    article.querySelectorAll('.kan-port[data-port]').forEach((port) => {
+      const dot = port.querySelector('.kan-port-dot').getBoundingClientRect();
+      const side = port.classList.contains('kan-port--output') ? 'out' : 'in';
+      result.dots.set(`${id}|${side}|${port.dataset.port}`, { x: (dot.left + dot.width / 2 - origin.left) / zoom, y: (dot.top + dot.height / 2 - origin.top) / zoom });
+    });
+  });
+  return result;
+}
+
 function dotCenter(node, portName, output) {
+  const cached = layout?.dots.get(`${node.id}|${output ? 'out' : 'in'}|${portName}`);
+  if (cached) return cached;
   const article = nodeLayer.querySelector(`[data-node-id="${CSS.escape(node.id)}"]`);
   const port    = article?.querySelector(`.kan-port--${output ? 'output' : 'input'}[data-port="${CSS.escape(portName)}"] .kan-port-dot`);
   if (!port) return portPosition(node, portName, output);
@@ -162,8 +182,10 @@ function dotCenter(node, portName, output) {
 }
 
 function nodeBox(node) {
+  const cached = layout?.boxes.get(node.id);
+  if (cached) return cached;
   const article = nodeLayer.querySelector(`[data-node-id="${CSS.escape(node.id)}"]`);
-  if (!article) return { id: node.id, left: node.position.x, right: node.position.x + 260, top: node.position.y, bottom: node.position.y + 120 };
+  if (!article) return { id: node.id, left: node.position.x, right: node.position.x + 220, top: node.position.y, bottom: node.position.y + nodeHeight(node) };
   const origin = nodeLayer.getBoundingClientRect();
   const box    = article.getBoundingClientRect();
   return { id: node.id, left: (box.left - origin.left) / zoom, right: (box.right - origin.left) / zoom, top: (box.top - origin.top) / zoom, bottom: (box.bottom - origin.top) / zoom };
@@ -216,10 +238,10 @@ function routePoints(from, to, sourceId, targetId, boxes, wire, used) {
   const sorted = boxes.slice().sort((m, n) => m.top - n.top);
   boxes.forEach((box) => { ysSet.add(box.top - 14); ysSet.add(box.bottom + 14); });
   sorted.forEach((box, i) => { if (sorted[i + 1] && sorted[i + 1].top - box.bottom > 2 * WIRE_MARGIN + 6) ysSet.add((box.bottom + sorted[i + 1].top) / 2); });
-  const ys = [...ysSet];
+  const ys = [...ysSet].filter((y) => y !== from.y && y !== to.y);
   const candidates = [];
   for (let x = from.x + WIRE_STUB; x <= to.x - WIRE_STUB; x += WIRE_PITCH) if (trunk === undefined || x === trunk) candidates.push([from, { x, y: from.y }, { x, y: to.y }, to]);
-  xsList.forEach((xs) => xtList.forEach((xt) => ys.filter((y) => y !== from.y && y !== to.y).forEach((y) => candidates.push([from, { x: xs, y: from.y }, { x: xs, y }, { x: xt, y }, { x: xt, y: to.y }, to]))));
+  xsList.forEach((xs) => xtList.forEach((xt) => ys.forEach((y) => candidates.push([from, { x: xs, y: from.y }, { x: xs, y }, { x: xt, y }, { x: xt, y: to.y }, to]))));
   let best = null, bestCost = Infinity;
   candidates.forEach((raw) => {
     const points = simplifyPoints(raw);
@@ -244,9 +266,8 @@ function routePoints(from, to, sourceId, targetId, boxes, wire, used) {
 }
 
 // Rounded corners, plus a small hop wherever a horizontal run crosses a vertical run of an unrelated wire.
-let hopGaps = '';
 function roundedPath(points, crossings = [], radius = 5, hop = 7) {
-  hopGaps = '';
+  let hopGaps = '';
   const trim = (from, to, amount) => {
     const length = Math.hypot(to.x - from.x, to.y - from.y) || 1;
     return { x: from.x + ((to.x - from.x) / length) * amount, y: from.y + ((to.y - from.y) / length) * amount };
@@ -266,7 +287,7 @@ function roundedPath(points, crossings = [], radius = 5, hop = 7) {
     }
     d += ` L ${end.x} ${end.y}`;
   }
-  return d;
+  return { d, gaps: hopGaps };
 }
 
 function verticalRuns(points, key) {
@@ -296,6 +317,11 @@ function chevronPath(points) {
 const WIRE_PALETTE = Array.from({ length: 32 }, (_, i) => `hsl(${(((i * 11) % 32) * 11.25 + 5).toFixed(1)}, 38%, 62%)`);
 
 function drawEdges() {
+  layout = measureLayout();
+  try { drawWires(); } finally { layout = null; }
+}
+
+function drawWires() {
   const wires = [];
   const used = [];
   const trunks = new Map();
@@ -318,18 +344,23 @@ function drawEdges() {
   });
   const hopWires = [];
   const wireColors = new Map();
-  const colorFor = (key) => { if (!wireColors.has(key)) wireColors.set(key, WIRE_PALETTE[wireColors.size % WIRE_PALETTE.length]); return wireColors.get(key); };
+  // Colours follow the sorted source keys, so they do not change with drawing order or dragging.
+  [...new Set(wires.filter((wire) => !wire.trigger).map((wire) => wire.key))].sort().forEach((key, index) => wireColors.set(key, WIRE_PALETTE[index % WIRE_PALETTE.length]));
+  const colorFor = (key) => wireColors.get(key);
   const runs = wires.filter((wire) => !wire.trigger).flatMap((wire) => verticalRuns(wire.points, wire.key));
   wires.forEach((wire) => {
     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    path.setAttribute('title', wire.title);
+    const tip = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+    tip.textContent = wire.title;
+    path.append(tip);
     if (wire.trigger) {
       path.setAttribute('d', chevronPath(wire.points));
       path.classList.add('kan-edge-trigger');
     } else {
-      path.setAttribute('d', roundedPath(wire.points, runs.filter((run) => run.key !== wire.key)));
+      const { d, gaps } = roundedPath(wire.points, runs.filter((run) => run.key !== wire.key));
+      path.setAttribute('d', d);
       path.style.stroke = colorFor(wire.key);
-      if (hopGaps) hopWires.push({ path, gaps: hopGaps });
+      if (gaps) hopWires.push({ path, gaps });
       if (state.run?.nodes?.[wire.edge.source_node]?.status === 'completed') path.classList.add('kan-edge-live');
     }
     edgeLayer.append(path);
@@ -339,8 +370,7 @@ function drawEdges() {
     const gap = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     gap.setAttribute('d', gaps);
     gap.classList.add('kan-edge-gap');
-    edgeLayer.append(gap, path.cloneNode());
-    path.remove();
+    edgeLayer.append(gap, path);
   });
 }
 
@@ -708,6 +738,7 @@ function executionOrder() {
 
 async function stepNetwork() {
   if (!state.network) return;
+  if (executionOrder().length < state.network.nodes.length) { setStatus('This network contains a connection loop; remove it before running.', 'error'); return; }
   const next = naturalOrder().find((nodeId) => state.run?.nodes?.[nodeId]?.status !== 'completed');
   if (!next) { setStatus('All blocks have run. Use a block’s play button to re-run it.', 'ok'); return; }
   state.selectedNodeId = next;
@@ -854,17 +885,27 @@ $('#add-node').addEventListener('click', () => { const node = defaultNode($('#ne
 $('#network-title').addEventListener('input', (event) => { if (!state.network) return; state.network.title = event.target.value; const name = document.querySelector('.kan-network-name'); if (name) name.value = event.target.value; });
 $('#network-title').addEventListener('change', () => persist({ refreshList: true }));
 let saveChain = Promise.resolve();
+let queuedSave = null;
 function persist({ refreshList = false } = {}) {
   if (!state.network) return saveChain;
   const snapshot = state.network;
   const body = JSON.stringify({ network: snapshot });
   const id = snapshot.id;
+  // Saves still waiting in the queue are replaced by the newest snapshot instead of piling up.
+  if (queuedSave && queuedSave.snapshot === snapshot) {
+    queuedSave.body = body;
+    queuedSave.refreshList ||= refreshList;
+    return saveChain;
+  }
+  const job = { snapshot, body, refreshList };
+  queuedSave = job;
   saveChain = saveChain.then(async () => {
+    if (queuedSave === job) queuedSave = null;
     try {
-      const base = snapshot.updated_at;
-      const saved = await request(`/api/networks/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify({ network: JSON.parse(body).network, base_updated_at: base }) });
+      const withBase = `${job.body.slice(0, -1)},"base_updated_at":${JSON.stringify(snapshot.updated_at ?? null)}}`;
+      const saved = await request(`/api/networks/${encodeURIComponent(id)}`, { method: 'PUT', body: withBase });
       snapshot.updated_at = saved.network.updated_at;
-      if (refreshList) await loadList();
+      if (job.refreshList) await loadList();
     } catch (error) { setStatus(`Auto-save failed: ${error.message}`, 'error'); }
   });
   return saveChain;
@@ -874,6 +915,7 @@ $('#duplicate-network').addEventListener('click', async () => { if (!state.netwo
 $('#delete-network').addEventListener('click', async () => { if (!state.network || !window.confirm(`Delete ${state.network.title}?`)) return; try { await request(`/api/networks/${encodeURIComponent(state.network.id)}`, { method: 'DELETE' }); state.network = null; const networks = await loadList(); if (networks[0]) await loadNetwork(networks[0].id); } catch (error) { setStatus(error.message, 'error'); } });
 $('#run-network').addEventListener('click', async () => {
   if (!state.network || state.running) return;
+  if (executionOrder().length < state.network.nodes.length) { setStatus('This network contains a connection loop; remove it before running.', 'error'); return; }
   const started = performance.now();
   state.run = { nodes: {} };
   state.edits = {};
@@ -902,7 +944,8 @@ loadList().then((networks) => {
 
 // Fonts and window size change port positions after the first render
 document.fonts?.ready.then(() => state.network && render());
-window.addEventListener('resize', () => state.network && render());
+let resizeTimer = null;
+window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => state.network && render(), 120); });
 
 $('#delete-node').addEventListener('click', () => {
   const node = currentNode();
