@@ -15,6 +15,7 @@ export const ICON_SETS = SVG_ICON_SETS;
 export const ICON_FILES = Object.freeze({
   korestack:     'layer-group-svgrepo-com',
   koreagent:     'circuit-svgrepo-com',
+  koreagentnetwork: 'signs-post-svgrepo-com',
   koredata:      'database-svgrepo-com',
   korefeed:      'square-rss-svgrepo-com',
   korelibrary:   'book-user-svgrepo-com',
@@ -48,6 +49,7 @@ function makePackIcon(iconName) {
 
 export const KORESTACK_ICON     = makePackIcon(ICON_FILES.korestack);
 export const KOREAGENT_ICON     = makePackIcon(ICON_FILES.koreagent);
+export const KOREAGENTNETWORK_ICON = makePackIcon(ICON_FILES.koreagentnetwork);
 export const KOREDATA_ICON      = makePackIcon(ICON_FILES.koredata);
 export const KOREFEED_ICON      = makePackIcon(ICON_FILES.korefeed);
 export const KORELIBRARY_ICON   = makePackIcon(ICON_FILES.korelibrary);
@@ -78,6 +80,7 @@ export const KOREFILE_ICON       = makePackIcon(ICON_FILES.korefile);
 export const SUITE_ICONS = {
   korestack:     KORESTACK_ICON,
   koreagent:     KOREAGENT_ICON,
+  koreagentnetwork: KOREAGENTNETWORK_ICON,
   koredata:      KOREDATA_ICON,
   korefeed:      KOREFEED_ICON,
   korelibrary:   KORELIBRARY_ICON,
@@ -132,4 +135,3 @@ export function iconSetImg(iconName, options = {}) {
 export function iconSetMask(iconName, options = {}) {
   return svgIconMask(iconName, options);
 }
-

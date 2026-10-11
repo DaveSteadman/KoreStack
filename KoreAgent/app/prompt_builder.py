@@ -145,6 +145,8 @@ _SYSTEM_SKILL_GUIDANCE: list[str] = [
     "- When the user asks to output a Working Data collection in full, retain the source records and do not fabricate placeholder rows.",
     "- When KoreData search results include artifact_ref, prefer koredata_get_full_text(refid) for follow-up retrieval instead of rebuilding domain-specific lookup arguments by hand.",
     "- For a report from a Working Data collection: inspect it, rank or select the exact requested number of records, fetch full text only for that subset, then write the final answer directly. If records have a score, use working_data_rank(criteria='score') before editorial ranking. Do not load an entire collection's full text unless the user explicitly asks for it.",
+    "- working_data_fetch_full_text accepts at most five explicit indices per call. Split a larger shortlist into groups of five or fewer before fetching.",
+    "- For Working Data transforms, save_as creates a separate dataset and replace modifies the source. Never use a non-empty save_as with replace=True.",
     "- For article harvests, count only concrete article/detail pages. Do not count homepages, category pages, topic pages, search-result pages, or section fronts.",
     "- When harvesting article URLs from a hub page, use get_page_links or get_page_links_text first and prefer_article_urls=true when that option exists.",
 

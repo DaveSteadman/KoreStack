@@ -251,6 +251,24 @@ def run_tool_loop(
                 final_response = "[Run stopped by /stoprun. The previous response may be incomplete.]"
                 break
 
+            if round_num == config.max_iterations and tool_outputs:
+                current_tool_defs = []
+                synthesis_instruction = (
+                    "This is the final response turn. Do not call any more tools. "
+                    "Use the successful tool results already gathered to answer the user's request directly, "
+                    "including relevant caveats from those results. Do not describe the tool process or dump raw tool output."
+                )
+                messages.append({"role": "user", "content": synthesis_instruction})
+                context_map.append({
+                    "round": round_num,
+                    "role": "user",
+                    "label": "[final synthesis instruction]",
+                    "chars": len(synthesis_instruction),
+                    "auto_key": None,
+                    "msg_idx": len(messages) - 1,
+                })
+                _log_file_only(f"[progress] Round {round_num}: reserved for final synthesis without tools.")
+
             _log_section(f"TOOL ROUND {round_num}")
             _log_file_only(f"[progress] Round {round_num}: calling model...")
             thread_chars, compact_count = assess_compact(context_map, messages, round_num, config.num_ctx, save_fn=working_data_auto_save)

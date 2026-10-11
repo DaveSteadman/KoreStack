@@ -59,6 +59,7 @@
 # ====================================================================================================
 import json
 import os
+import re
 import threading
 from dataclasses import dataclass
 from pathlib import Path
@@ -600,6 +601,13 @@ def orchestrate_prompt(
                 session_id         = active_session_id,
                 conversation_entry = conversation_entry,
             )
+        if re.search(r"\bkoredata\b", user_prompt, flags=re.IGNORECASE):
+            promote_selected_tools(
+                ["koredata_search"],
+                session_id         = active_session_id,
+                conversation_entry = conversation_entry,
+            )
+            _log_file_only("[tool routing] Activated koredata_search for an explicit KoreData request.")
 
         available_local_payload = config.skills_payload if _WEB_SKILLS_ENABLED else _filter_web_skills(config.skills_payload)
         initial_tool_runtime = derive_active_tool_runtime(

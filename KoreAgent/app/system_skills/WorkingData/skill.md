@@ -62,7 +62,10 @@ canonical `{"values": ..., "collections": ...}` envelope.
   deterministic ranking. It ranks at most 30 candidates at once; use `offset` and `limit` to process
   a larger collection in pages before ranking the finalists.
 - `working_data_select` saves known record indices as a subset. `working_data_fetch_full_text` retrieves
-  full text only for that subset (at most five records).
+  full text only for that subset (at most five records per call). Split a larger shortlist into batches
+  of five or fewer.
+- `save_as` creates a separate output collection. Do not combine it with `replace=True`, which means
+  modify the source collection in place.
 
 ## Tool selection guidance
 

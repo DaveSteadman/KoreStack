@@ -36,6 +36,12 @@ _TOOL_ARGUMENT_ALIASES: dict[str, dict[str, str]] = {
     },
 }
 
+_WORKING_DATA_SAVE_AS_REPLACE_TOOLS = {
+    "working_data_filter",
+    "working_data_drop_where",
+    "working_data_expand_full_text",
+}
+
 
 def tool_call_fingerprint(tool_call: dict) -> tuple[str, str]:
     """Compare argument values rather than provider-specific JSON formatting."""
@@ -73,6 +79,19 @@ def _normalize_tool_argument_aliases(func_name: str, arguments: dict, note_parts
     return normalized_args
 
 
+def _normalize_working_data_storage_args(func_name: str, arguments: dict, note_parts: list[str]) -> dict:
+    """Prefer an explicitly named destination over an incompatible in-place replacement."""
+    normalized_args = dict(arguments)
+    if (
+        func_name in _WORKING_DATA_SAVE_AS_REPLACE_TOOLS
+        and str(normalized_args.get("save_as") or "").strip()
+        and normalized_args.get("replace") is True
+    ):
+        normalized_args["replace"] = False
+        note_parts.append(f"{func_name}: set replace=False because save_as creates a new dataset")
+    return normalized_args
+
+
 def normalize_tool_request(func_name: str, arguments: dict | None) -> tuple[str, dict, str | None]:
     normalized_args = dict(arguments or {})
     normalized_name = func_name
@@ -91,6 +110,7 @@ def normalize_tool_request(func_name: str, arguments: dict | None) -> tuple[str,
         normalized_args = dict(nested_args)
         note_parts.append(f"{normalized_name}(id=..., arguments={{...}}) -> {normalized_name}(...)")
     normalized_args = _normalize_tool_argument_aliases(normalized_name, normalized_args, note_parts)
+    normalized_args = _normalize_working_data_storage_args(normalized_name, normalized_args, note_parts)
     return normalized_name, normalized_args, "; ".join(note_parts) if note_parts else None
 
 

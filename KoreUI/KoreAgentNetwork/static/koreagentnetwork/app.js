@@ -19,7 +19,7 @@ initServiceShell({
   urls:           window.__koreSuiteUrls || {},
   path:           window.location.pathname,
   section:        'network',
-  shellMeta:      { network: { brandLabel: 'KoreAgentNetwork', overline: 'Visual Processing', brandIcon: 'koreagent' } },
+  shellMeta:      { network: { brandLabel: 'KoreAgentNetwork', overline: 'Visual Processing', brandIcon: 'koreagentnetwork' } },
   shellTabs:      [{ key: 'network', label: 'Network editor', href: '/ui' }],
 });
 
