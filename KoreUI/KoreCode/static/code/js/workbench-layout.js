@@ -49,4 +49,12 @@ export function initWorkbenchLayout({ onAssistantHidden = null } = {}) {
   consoleEl.addEventListener('change', () => { layout.console = consoleEl.checked; save(); apply(); });
   dock.addEventListener('change', () => { layout.assistantDock = dock.value; save(); apply(); });
   apply();
+  return {
+    showAssistant() {
+      if (layout.assistant) return;
+      layout.assistant = true;
+      save();
+      apply();
+    },
+  };
 }

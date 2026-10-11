@@ -132,6 +132,8 @@ from .models import ChatWorkspaceContextBody
 from .models import ContinueRunCreateBody
 from .models import EditProposalCreateBody
 from .models import PythonExecutionBody
+from .models import PythonDebugControlBody
+from .models import PythonDebugStartBody
 from .models import PythonFunctionInsertBody
 from .models import PythonFunctionReplaceBody
 from .models import RootBody
@@ -188,6 +190,7 @@ from .workspace_service import read_file_payload
 from .workspace_service import read_text
 from .workspace_service import run_python_tool
 from .workspace_service import validate_python_content
+from .debug_session import DebugSessionManager
 from .work_item_store import attach_run
 from .work_item_store import create_work_item
 from .work_item_store import get_work_item
@@ -214,6 +217,7 @@ LOG = logging.getLogger('korecode')
 _WORKSPACE = WorkspaceService(SUITE_ROOT)
 _ACTIVE_ROOT = _WORKSPACE.active_root
 _WORKSPACE.active_root_getter = lambda: _ACTIVE_ROOT
+_DEBUGGER = DebugSessionManager(_WORKSPACE)
 
 
 def _workspace_root() -> Path:
@@ -576,6 +580,21 @@ def api_execution_python(body: PythonExecutionBody):
         return _run_python_tool(body.path, body.mode, body.timeout_seconds)
     except (FileNotFoundError, ValueError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post('/api/debug/python')
+def api_debug_python(body: PythonDebugStartBody):
+    return _DEBUGGER.start(body.path, body.breakpoints)
+
+
+@app.get('/api/debug/{session_id}')
+def api_debug_status(session_id: str):
+    return _DEBUGGER.get(session_id)
+
+
+@app.post('/api/debug/{session_id}/control')
+def api_debug_control(session_id: str, body: PythonDebugControlBody):
+    return _DEBUGGER.control(session_id, body.action)
 
 
 @app.post('/api/edit-proposals')

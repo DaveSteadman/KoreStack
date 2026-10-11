@@ -147,6 +147,21 @@
   display: none !important;
 }
 
+.cm-breakpoint-gutter {
+  width: 16px;
+  cursor: pointer;
+}
+
+.cm-breakpoint-marker {
+  display: block;
+  width: 9px;
+  height: 9px;
+  margin: 4px 3px 0;
+  border-radius: 50%;
+  background: #e56b6f;
+  box-shadow: 0 0 0 1px rgba(255,255,255,.24);
+}
+
 .cm-tooltip.cm-tooltip-autocomplete {
   background: var(--surface-2);
   color: var(--text);

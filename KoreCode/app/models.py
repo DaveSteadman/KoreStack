@@ -140,6 +140,15 @@ class PythonExecutionBody(BaseModel):
     timeout_seconds: int | None = None
 
 
+class PythonDebugStartBody(BaseModel):
+    path: str
+    breakpoints: list[int] = []
+
+
+class PythonDebugControlBody(BaseModel):
+    action: str
+
+
 class EditProposalCreateBody(BaseModel):
     edits:   list[dict] = []
     run_id:  str | None = None

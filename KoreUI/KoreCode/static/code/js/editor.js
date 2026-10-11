@@ -4,6 +4,8 @@ import {
   dropCursor,
   EditorView,
   Decoration,
+  GutterMarker,
+  gutter,
   highlightActiveLine,
   highlightActiveLineGutter,
   highlightWhitespace,
@@ -72,6 +74,47 @@ const continuationField = StateField.define({
 });
 
 const continuationDeco = Decoration.mark({ class: 'cm-continuation' });
+const setBreakpoints = StateEffect.define();
+
+class BreakpointMarker extends GutterMarker {
+  toDOM() {
+    const marker = document.createElement('span');
+    marker.className = 'cm-breakpoint-marker';
+    marker.setAttribute('aria-label', 'Breakpoint');
+    return marker;
+  }
+}
+
+const breakpointMarker = new BreakpointMarker();
+const breakpointField = StateField.define({
+  create: () => RangeSet.empty,
+  update(markers, transaction) {
+    let next = markers.map(transaction.changes);
+    for (const effect of transaction.effects) {
+      if (!effect.is(setBreakpoints)) continue;
+      next = RangeSet.of(
+        effect.value.map(line => breakpointMarker.range(transaction.state.doc.line(line).from)),
+        true,
+      );
+    }
+    return next;
+  },
+});
+
+let _toggleBreakpoint = null;
+const breakpointGutter = gutter({
+  class: 'cm-breakpoint-gutter',
+  markers: view => view.state.field(breakpointField),
+  initialSpacer: () => breakpointMarker,
+  domEventHandlers: {
+    mousedown(view, line, event) {
+      if (event.button !== 0) return false;
+      _toggleBreakpoint?.(view.state.doc.lineAt(line.from).number);
+      event.preventDefault();
+      return true;
+    },
+  },
+});
 
 let _continuationView = null;   // set once the editorView is created
 
@@ -210,6 +253,30 @@ export function createEditor({ runFind, runFindNext, runFindPrevious, closeFindB
     };
   }
 
+  function getBreakpointLines() {
+    const lines = [];
+    editorView.state.field(breakpointField).between(0, editorView.state.doc.length, from => {
+      lines.push(editorView.state.doc.lineAt(from).number);
+    });
+    return lines;
+  }
+
+  function applyBreakpoints(lines) {
+    const validLines = [...new Set(lines.map(Number).filter(line => Number.isInteger(line) && line > 0 && line <= editorView.state.doc.lines))]
+      .sort((left, right) => left - right);
+    editorView.dispatch({ effects: setBreakpoints.of(validLines) });
+  }
+
+  function toggleBreakpoint(line) {
+    const active = getActiveTab();
+    if (!active) return;
+    const lines = getBreakpointLines();
+    applyBreakpoints(lines.includes(line) ? lines.filter(item => item !== line) : [...lines, line]);
+    active.breakpoints = getBreakpointLines();
+  }
+
+  _toggleBreakpoint = toggleBreakpoint;
+
   function updateSaveButton() {
     const active = getActiveTab();
     const dirty = Boolean(active?.dirty);
@@ -338,6 +405,7 @@ export function createEditor({ runFind, runFindNext, runFindPrevious, closeFindB
       suppressEditorSync = false;
     }
 
+    if (active) applyBreakpoints(active.breakpoints || []);
     applyFindQuery(getCurrentFindQuery());
     if (active) {
       editorView.focus();
@@ -478,6 +546,7 @@ export function createEditor({ runFind, runFindNext, runFindPrevious, closeFindB
       modifiedAtNs: payload.modified_at_ns ?? null,
       contentHash: payload.content_hash ?? null,
       dirty: initialContent !== payload.content,
+      breakpoints: [],
     };
     state.openTabs.push(tab);
     await expandAncestors(path);
@@ -525,6 +594,8 @@ export function createEditor({ runFind, runFindNext, runFindPrevious, closeFindB
       doc: '',
       extensions: [
         continuationField,
+        breakpointField,
+        breakpointGutter,
         lineNumbers({
           domEventHandlers: {
             mousedown(view, line, event) {
@@ -836,6 +907,13 @@ export function createEditor({ runFind, runFindNext, runFindPrevious, closeFindB
     },
 
     getCursorInfo,
+
+    getBreakpoints() {
+      const active = getActiveTab();
+      if (!active) return [];
+      active.breakpoints = getBreakpointLines();
+      return active.breakpoints;
+    },
 
     insertTextAtSelection(text) {
       const activeTab = getActiveTab();

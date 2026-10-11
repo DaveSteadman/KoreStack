@@ -5,6 +5,7 @@ import { initFind, runFind, runFindNext, runFindPrevious, closeFindBar, applyFin
 import { initExplorer, refreshTree, renderTree, expandAncestors } from './explorer.js';
 import { initChat } from './chat.js';
 import { initExecutionConsole } from './execution-console.js';
+import { initDebugger } from './debugger.js';
 import { state } from './state.js';
 import { initWorkItems } from './work-items.js';
 import { initWorkbenchLayout } from './workbench-layout.js';
@@ -45,6 +46,11 @@ initExecutionConsole({
   openFile,
   setActiveTab: editorApi.setActiveTab,
 });
+initDebugger({
+  getActiveTab,
+  getBreakpoints: () => editorApi.getBreakpoints(),
+  openFile,
+});
 
 const workItems = initWorkItems();
 const chat = initChat({
@@ -76,7 +82,8 @@ initExplorer({
     if (activePath) await editorApi.reloadTabs([activePath]);
   },
 });
-initWorkbenchLayout({ onAssistantHidden: () => chat.setPanelVisible(false) });
+const workbenchLayout = initWorkbenchLayout({ onAssistantHidden: () => chat.setPanelVisible(false) });
+document.getElementById('btn-ai').addEventListener('click', () => workbenchLayout.showAssistant());
 initPanels({
   panelsEl: document.getElementById('code-app'),
   leftEl: document.getElementById('code-sidebar'),

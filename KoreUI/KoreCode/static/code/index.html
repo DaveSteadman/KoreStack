@@ -44,6 +44,7 @@
           <button id="btn-save" class="kcui-tag kcui-tag--dim" type="button">Save</button>
           <button id="btn-wrap" class="kcui-tag kcui-tag--dim" type="button" title="Toggle line wrap">Wrap</button>
           <button id="btn-run-active" class="kcui-icon-button" type="button" title="Run active Python file" aria-label="Run active Python file"></button>
+          <button id="btn-debug-start" class="kcui-tag kcui-tag--accent" type="button" title="Start debugging the active Python file">Debug</button>
           <button id="btn-check-active" class="kcui-tag kcui-tag--muted" type="button" title="Compile-check active Python file">Check</button>
           <button id="btn-ai" class="kcui-tag kcui-tag--dim" type="button" title="Toggle AI chat (Alt+A)">AI</button>
         </div>
@@ -80,7 +81,7 @@
           <div id="editor-host"></div>
         </div>
         <div id="chat-splitter" aria-hidden="true"></div>
-        <div id="chat-panel" hidden>
+        <div id="chat-panel" aria-label="KoreCode Agent" hidden>
           <div id="chat-toolbar">
             <button id="btn-chat-retry" class="kcui-tag kcui-tag--muted" type="button" title="Regenerate last response">Retry</button>
             <button id="btn-chat-clear" class="kcui-tag kcui-tag--muted" type="button" title="Clear current file thread">Clear</button>
@@ -115,6 +116,13 @@
         <header id="execution-toolbar">
           <div class="execution-title">Execution</div>
           <span id="execution-summary">No run yet</span>
+          <div id="debug-controls" aria-label="Debugger controls">
+            <button id="btn-debug-continue" class="debug-control" type="button" title="Continue" aria-label="Continue">&#9654;</button>
+            <button id="btn-debug-step" class="debug-control" type="button" title="Step into" aria-label="Step into">&#8595;</button>
+            <button id="btn-debug-next" class="debug-control" type="button" title="Step over" aria-label="Step over">&#8627;</button>
+            <button id="btn-debug-pause" class="debug-control" type="button" title="Pause at next source line" aria-label="Pause">&#10074;&#10074;</button>
+            <button id="btn-debug-stop" class="debug-control debug-control--stop" type="button" title="Stop debugging" aria-label="Stop">&#9632;</button>
+          </div>
           <button id="btn-clear-execution" class="kcui-tag kcui-tag--muted" type="button">Clear</button>
           <button id="btn-toggle-execution" class="kcui-tag kcui-tag--muted" type="button" aria-pressed="true">Collapse</button>
         </header>
@@ -129,6 +137,22 @@
               <button id="btn-refresh-hierarchy" class="kcui-tag kcui-tag--muted" type="button">Refresh</button>
             </div>
             <div id="call-hierarchy-content">Place the cursor in an indexed Python symbol to inspect callers and callees.</div>
+          </section>
+          <section id="debug-inspector" aria-label="Debugger inspector">
+            <div class="hierarchy-header">
+              <span>Debug</span>
+              <span id="debug-status" class="debug-status">Not started</span>
+            </div>
+            <div id="debug-content">
+              <div class="debug-section">
+                <div class="debug-section-title">Call stack</div>
+                <div id="debug-stack" class="debug-empty">Start a Python debug session to inspect frames.</div>
+              </div>
+              <div class="debug-section">
+                <div class="debug-section-title">Variables</div>
+                <div id="debug-locals" class="debug-empty">Locals appear while execution is paused.</div>
+              </div>
+            </div>
           </section>
         </div>
       </section>
