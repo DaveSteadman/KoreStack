@@ -156,6 +156,7 @@ code { color: #a5c8ff; }
 .kan-port { height: auto; min-height: 20px; max-width: 120px; }
 .kan-port-dot { flex: 0 0 11px; }
 .kan-port-text { min-width: 0; }
+.kan-port--input:not(.kan-port--trigger) { gap: 2px; padding-left: 0; }
 .kan-port-text em { margin-left: 6px; }
 .kan-port-text em.long { display: block; margin: 0; max-width: 100px; overflow: hidden; text-overflow: ellipsis; }
 .kan-port--output .kan-port-text { text-align: right; }
@@ -196,8 +197,17 @@ code { color: #a5c8ff; }
 .kan-port--trigger { color: #e0a93b; }
 .kan-port--trigger .kan-port-dot { border-color: #e0a93b; }
 .kan-edges path.kan-edge-gap { stroke: #0b0e15; stroke-width: 5; stroke-linecap: butt; }
-.kan-trigger-bar { align-items: center; background: #0f1520; border-bottom: var(--kan-line) solid var(--kan-outline); display: flex; height: 24px; justify-content: space-between; position: relative; }
+.kan-trigger-block { background: #0f1520; border-bottom: var(--kan-line) solid var(--kan-outline); }
+.kan-trigger-bar { align-items: center; display: flex; height: 24px; justify-content: space-between; position: relative; }
 .kan-trigger-label { color: #e0a93b; font-size: 10px; font-weight: 700; left: 0; letter-spacing: 0.18em; pointer-events: none; position: absolute; right: 0; text-align: center; }
 .kan-trigger-bar .kan-port { min-height: 24px; padding: 0 6px; }
 
 .kan-nodes .kan-guide { background: none; border-left: 1px dashed rgba(102, 133, 184, 0.55); border-top: 1px dashed rgba(102, 133, 184, 0.55); pointer-events: none; position: absolute; z-index: 0; }
+
+.kan-exit-row { align-items: center; display: flex; height: 20px; justify-content: flex-end; }
+.kan-exit-row .kan-port { min-height: 20px; padding: 0 6px; }
+.kan-edges path.kan-edge-exit { stroke: #2fd6c8; }
+.kan-port--exit { color: #2fd6c8; }
+.kan-port--exit .kan-port-dot { background: #1c6f6a; border-color: #2fd6c8; }
+.kan-exit-row .kan-port { gap: 9px; max-width: 200px; }
+.kan-exit-row .kan-port-text { overflow: visible; }

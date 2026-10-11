@@ -54,6 +54,7 @@ class TriggerBody(BaseModel):
     token: str
     name: str
     payload: dict = {}
+    outputs: dict = {}
 
 
 def _refuse_if_locked(network_id: str) -> None:
@@ -197,7 +198,7 @@ def api_run_node(body: NodeRunBody) -> dict:
 @app.post("/api/internal/trigger")
 def api_internal_trigger(body: TriggerBody) -> dict:
     try:
-        return fire_trigger(body.token, body.name, body.payload)
+        return fire_trigger(body.token, body.name, body.payload, body.outputs)
     except (FileNotFoundError, ValueError) as exc:
         raise HTTPException(status_code=422, detail=str(exc))
 

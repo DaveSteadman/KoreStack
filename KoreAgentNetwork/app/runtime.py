@@ -76,19 +76,14 @@ def decide(question, state=None, model="", timeout=60):
 
 judge = decide
 
-_skip_auto = {"all": False, "names": []}
-
 def disable_auto_trigger(name=None):
-    if name is None:
-        _skip_auto["all"] = True
-    else:
-        _skip_auto["names"].append(str(name))
+    pass
 
-def trigger(name, payload=None):
+def trigger(name="next", payload=None):
     info = payload_info.get("trigger")
     if not info:
         raise RuntimeError("trigger() is only available when the block runs inside a saved network")
-    body = json.dumps({"token": info["token"], "name": str(name), "payload": payload if payload is not None else {}}).encode("utf-8")
+    body = json.dumps({"token": info["token"], "name": str(name), "payload": payload if payload is not None else {}, "outputs": namespace["outputs"]}, default=str).encode("utf-8")
     request = urllib.request.Request(info["url"], data=body, method="POST", headers={"Content-Type": "application/json"})
     try:
         with urllib.request.urlopen(request, timeout=None) as response:
@@ -197,7 +192,7 @@ try:
     outputs = namespace["outputs"]
     if not isinstance(outputs, dict):
         raise TypeError("outputs must remain a dictionary")
-    print(json.dumps({"ok": True, "outputs": outputs, "skip_triggers": True if _skip_auto["all"] else _skip_auto["names"]}, default=str))
+    print(json.dumps({"ok": True, "outputs": outputs}, default=str))
 except Exception as exc:
     print(json.dumps({"ok": False, "error": f"{type(exc).__name__}: {exc}"}))
 '''
@@ -431,7 +426,6 @@ def _run_block(session: dict, node: dict, node_inputs: dict, timeout: float) -> 
     if context is not None and context["calls"]:
         record["triggers"] = context["calls"]
     outputs = result.get("outputs") if result.get("ok") else None
-    record["_skip"] = result.get("skip_triggers") or []
     missing = [port["name"] for port in node["outputs"] if isinstance(outputs, dict) and port["name"] not in outputs]
     if not result.get("ok"):
         record.update(status="failed", error=str(result.get("error") or "Node failed"))
@@ -457,8 +451,8 @@ def _incoming(network: dict) -> dict[str, list[dict]]:
     return incoming
 
 
-def _run_flow(session: dict, node_id: str, payload: dict | None, timeout: float, ran: list[str]) -> float:
-    """Run a block, then fire its triggers that the block did not already fire or disable. Returns child seconds."""
+def _run_flow(session: dict, node_id: str, payload: dict | None, timeout: float, ran: list[str], follow_next: bool = True) -> float:
+    """Run a block, then follow its `next` exit unless the block already fired it. Other exits fire only when the block calls them. Returns child seconds."""
     network  = session["network"]
     node     = next(item for item in network["nodes"] if item["id"] == node_id)
     incoming = _incoming(network)
@@ -470,13 +464,12 @@ def _run_flow(session: dict, node_id: str, payload: dict | None, timeout: float,
     session["results"].pop(node_id, None)
     session["outputs"].pop(node_id, None)
     record, child_seconds = _run_block(session, node, node_inputs, timeout)
-    skip = record.pop("_skip", [])
     ran.append(node_id)
-    if record.get("status") != "completed" or skip is True:
+    if record.get("status") != "completed":
         return child_seconds
     fired = {call["name"] for call in record.get("triggers", [])}
     for trigger in network.get("triggers", []):
-        if trigger["source_node"] != node_id or not trigger.get("target_node") or trigger["name"] in fired or trigger["name"] in skip:
+        if not follow_next or trigger["source_node"] != node_id or trigger["name"] != "next" or not trigger.get("target_node") or trigger["name"] in fired:
             continue
         try:
             limit = _flow_timeout(session)
@@ -487,7 +480,7 @@ def _run_flow(session: dict, node_id: str, payload: dict | None, timeout: float,
     return child_seconds
 
 
-def fire_trigger(token: str, name: str, payload: dict) -> dict[str, Any]:
+def fire_trigger(token: str, name: str, payload: dict, outputs: dict | None = None) -> dict[str, Any]:
     """Run the block a trigger points at (and its own auto triggers), blocking until the flow finishes."""
     with _REGISTRY_LOCK:
         context = _CONTEXTS.get(token)
@@ -500,6 +493,9 @@ def fire_trigger(token: str, name: str, payload: dict) -> dict[str, Any]:
         raise ValueError(f"This block has no connected trigger named {name}")
     if not isinstance(payload, dict):
         raise ValueError("Trigger payload must be an object")
+    if isinstance(outputs, dict) and outputs:
+        # Publish what the block has set so far, so the target reads it through its connections.
+        session["outputs"][context["node_id"]] = outputs
     limit = _flow_timeout(session)
     started = time.monotonic()
     with context["lock"]:
@@ -580,18 +576,20 @@ def run_node(node: dict, inputs: dict, network: dict | None = None, outputs: dic
     With a network and the current block outputs, the block may fire its triggers; the
     records of the triggered blocks come back under `triggered`.
     """
-    session = _new_session(network or {"id": "", "nodes": [], "edges": [], "triggers": []}, outputs)
+    network = network or {"id": "", "nodes": [], "edges": [], "triggers": []}
+    # The block as shown on screen (unsaved code, edited inputs) replaces its saved copy for this run.
+    network = {**network, "nodes": [node if item["id"] == node["id"] else item for item in network["nodes"]]}
+    session = _new_session(network, outputs)
     network_id = session["network"]["id"]
     has_triggers = any(item["source_node"] == node["id"] for item in session["network"].get("triggers", []))
     if has_triggers:
         _acquire(network_id)
     try:
         if has_triggers:
-            _run_flow(session, node["id"], None, _flow_timeout(session), [])
+            _run_flow(session, node["id"], {name: value for name, value in inputs.items() if name in {port["name"] for port in node["inputs"]}}, _flow_timeout(session), [], follow_next=False)
             record = session["results"][node["id"]]
         else:
             record, _ = _run_block(session, node, inputs, _flow_timeout(session))
-            record.pop("_skip", None)
     finally:
         if has_triggers:
             _release(network_id)

@@ -9,7 +9,7 @@ const nodeLayer  = $('#nodes');
 const edgeLayer  = $('#edges');
 const TEMPLATE_RE = /\{([A-Za-z0-9_-]+)\}/g;
 const BLOCK_HELP = {
-  python: 'Available: inputs, outputs, NoValue (None), top-level return to stop early, api_get, api_post, trigger(name, payload) (run the linked block now and wait; returns {ok, error, outputs}), disable_auto_trigger(name=None) (stop trigger links firing when this block finishes), llm, llm_result, decide, judge, json, math, re. Safe stdlib imports (datetime, time, collections, itertools, csv, random, hashlib, base64, ...). Files (cwd and root = datauser folder): open, read_text, write_text, append_text, read_json, write_json, exists, list_files, delete_file.',
+  python: 'Available: inputs, outputs, NoValue (None), top-level return to stop early, api_get, api_post, trigger(exit) (fire a named exit now and wait; whatever it is linked to runs; returns {ok, error, outputs}; the next exit fires by itself when the block finishes), llm, llm_result, decide, judge, json, math, re. Safe stdlib imports (datetime, time, collections, itertools, csv, random, hashlib, base64, ...). Files (cwd and root = datauser folder): open, read_text, write_text, append_text, read_json, write_json, exists, list_files, delete_file.',
   llm: 'Use {input_name} placeholders in the prompt. Inputs are merged into the prompt, and this block can output response, prompt, model, prompt_tokens, completion_tokens, and tokens_per_second.',
   judge: 'Use {input_name} placeholders in the question. All inputs are sent to System One as the decision state, and this block can output verdict, probability, threshold, question, and model.',
 };
@@ -26,7 +26,8 @@ initServiceShell({
 function id() { return `node_${crypto.randomUUID().replaceAll('-', '').slice(0, 10)}`; }
 function escapeHtml(value) { const el = document.createElement('span'); el.textContent = String(value); return el.innerHTML; }
 function currentNode() { return state.network?.nodes.find((node) => node.id === state.selectedNodeId) || null; }
-function nodeHeight(node) { return 69 + Math.max(node.inputs.length, node.outputs.length, 1) * 20; }
+const EXIT_ROW = 20;
+function nodeHeight(node) { return 69 + Math.max(node.inputs.length, node.outputs.length, 1) * 20 + (node.exits?.length || 0) * EXIT_ROW; }
 // Centre a new node in the visible part of the diagram, nudging it clear of any node already there.
 function placeInView(node) {
   let x = Math.round((graphStage.scrollLeft + graphStage.clientWidth / 2) / zoom - 110);
@@ -63,6 +64,7 @@ function ensureNodeShape(node) {
   node.config = node.config && typeof node.config === 'object' ? node.config : {};
   if (!Array.isArray(node.inputs)) node.inputs = [];
   if (!Array.isArray(node.outputs)) node.outputs = [];
+  if (!Array.isArray(node.exits)) node.exits = [];
   if (typeof node.code !== 'string') node.code = '';
   if (node.kind === 'llm') {
     node.config.prompt_template = typeof node.config.prompt_template === 'string' ? node.config.prompt_template : '{prompt}';
@@ -93,7 +95,8 @@ function showKindFields(kind) {
 function portPosition(node, portName, output) {
   const ports = output ? node.outputs : node.inputs;
   const index = ports.findIndex((port) => port.name === portName);
-  const y = portName === TRIGGER_PORT ? 52 : 79 + Math.max(index, 0) * 20;
+  const exitIndex = portName !== TRIGGER_PORT && isTriggerPort(portName) ? (node.exits || []).indexOf(portName.slice(TRIGGER_PORT.length)) : -1;
+  const y = portName === TRIGGER_PORT ? 52 : exitIndex >= 0 ? 74 + exitIndex * EXIT_ROW : 79 + (node.exits?.length || 0) * EXIT_ROW + Math.max(index, 0) * 20;
   return { x: node.position.x + (output ? 220 : 0), y: node.position.y + y };
 }
 
@@ -386,9 +389,10 @@ function drawWires() {
     const source = state.network.nodes.find((node) => node.id === trigger.source_node);
     const target = state.network.nodes.find((node) => node.id === trigger.target_node);
     if (!source || !target) return;
-    const key = `${source.id}|${TRIGGER_PORT}`;
-    const spec = { from: dotCenter(source, TRIGGER_PORT, true), to: dotCenter(target, TRIGGER_PORT, false), sourceId: source.id, targetId: target.id, wire: { kind: 'trigger', key, id: `${key}>${trigger.target_node}.${trigger.name}` } };
-    wires.push({ key, points: null, spec, trigger, title: `Trigger ${trigger.name}: ${source.label} → ${target.label}` });
+    const port = exitPort(trigger.name);
+    const key = `${source.id}|${port}`;
+    const spec = { from: dotCenter(source, port, true), to: dotCenter(target, TRIGGER_PORT, false), sourceId: source.id, targetId: target.id, wire: { kind: 'trigger', key, id: `${key}>${trigger.target_node}.${trigger.name}` } };
+    wires.push({ key, points: null, spec, trigger, title: `${trigger.name === NEXT_EXIT ? 'Next' : `Exit ${trigger.name}`}: ${source.label} → ${target.label}` });
   });
   state.network.edges.forEach((edge) => {
     const fromNode = state.network.nodes.find((node) => node.id === edge.source_node);
@@ -481,6 +485,7 @@ function drawWires() {
     if (wire.trigger) {
       path.setAttribute('d', chevronPath(wire.points));
       path.classList.add('kan-edge-trigger');
+      if (wire.trigger.name !== NEXT_EXIT) path.classList.add('kan-edge-exit');
     } else {
       const { d, gaps } = roundedPath(wire.points, runs.filter((run) => run.key !== wire.key));
       path.setAttribute('d', d);
@@ -521,12 +526,20 @@ function portValue(value, result) {
 }
 
 const TRIGGER_PORT = '⚡';
+const NEXT_EXIT = 'next';
+const isTriggerPort = (name) => typeof name === 'string' && name.startsWith(TRIGGER_PORT);
+const exitPort = (name) => name === NEXT_EXIT ? TRIGGER_PORT : TRIGGER_PORT + name;
+function exitButton(node, name) {
+  const port = exitPort(name);
+  const pending = state.pendingOutput?.nodeId === node.id && state.pendingOutput?.portName === port;
+  return `<button type="button" class="kan-port kan-port--trigger kan-port--exit kan-port--output ${pending ? 'pending' : ''}" data-port="${escapeHtml(port)}" title="Exit: click, then click a block\u2019s left trigger dot. Fired by trigger('${escapeHtml(name)}')"><span class="kan-port-text">${escapeHtml(name)}</span><i class="kan-port-dot"></i></button>`;
+}
 function triggerPort(node, output) {
   const pending = output && state.pendingOutput?.nodeId === node.id && state.pendingOutput?.portName === TRIGGER_PORT;
-  const title = output ? 'Click, then click another block\u2019s left trigger dot to link it' : 'This block runs when the block linked here finishes or calls trigger()';
+  const title = output ? 'Next: click, then click another block\u2019s left trigger dot. It runs when this block finishes' : 'Runs when the block linked here finishes, or fires one of its exits';
   return `<button type="button" class="kan-port kan-port--trigger kan-port--${output ? 'output' : 'input'} ${pending ? 'pending' : ''}" data-port="${TRIGGER_PORT}" title="${title}"><i class="kan-port-dot"></i></button>`;
 }
-function triggerRow(node) { return `<div class="kan-trigger-bar">${triggerPort(node, false)}<span class="kan-trigger-label">TRIGGER</span>${triggerPort(node, true)}</div>`; }
+function triggerRow(node) { return `<div class="kan-trigger-block"><div class="kan-trigger-bar">${triggerPort(node, false)}<span class="kan-trigger-label">NEXT</span>${triggerPort(node, true)}</div>${(node.exits || []).map((name) => `<div class="kan-exit-row">${exitButton(node, name)}</div>`).join('')}</div>`; }
 function renderNode(node) {
   const result = state.run?.nodes?.[node.id];
   const element = document.createElement('article');
@@ -606,21 +619,22 @@ function pruneEdges() {
   if (network.edges.length !== before) render({ inspector: false });
 }
 
-function connectTrigger(sourceId, targetId) {
+function connectTrigger(sourceId, targetId, name = NEXT_EXIT) {
   const triggers = (state.network.triggers ||= []);
-  const existing = triggers.find((item) => item.source_node === sourceId && item.target_node === targetId);
+  const existing = triggers.find((item) => item.source_node === sourceId && item.name === name);
   state.pendingOutput = null;
-  if (existing) {
+  if (existing && existing.target_node === targetId) {
     state.network.triggers = triggers.filter((item) => item !== existing);
-    setStatus('Trigger cleared.', 'ok');
+    setStatus('Link cleared.', 'ok');
+  } else if (name === NEXT_EXIT && triggers.some((item) => item.name === NEXT_EXIT && item.target_node === targetId)) {
+    setStatus('That block already follows another block. A block can follow only one.', 'error');
+    render();
+    return;
   } else {
-    const target = state.network.nodes.find((node) => node.id === targetId);
-    const base = (target.label.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || 'trigger');
-    let name = base, count = 2;
-    while (triggers.some((item) => item.source_node === sourceId && item.name === name)) name = `${base}_${count++}`;
-    triggers.push({ name, source_node: sourceId, target_node: targetId });
-    setStatus(`Trigger linked. Call trigger('${name}') from the block code.`, 'ok');
-      }
+    state.network.triggers = triggers.filter((item) => item !== existing);
+    state.network.triggers.push({ name, source_node: sourceId, target_node: targetId });
+    setStatus(name === NEXT_EXIT ? 'Next linked. It runs when this block finishes.' : `Exit linked. Call trigger('${name}') from the block code.`, 'ok');
+  }
   render();
   persist();
 }
@@ -630,8 +644,8 @@ function connectInput(targetNode, targetPort) {
   if (!state.pendingOutput) { setStatus('Choose an output first.', 'error'); return; }
   const source = state.pendingOutput;
   if (source.nodeId === targetNode) { setStatus('A block cannot feed itself.', 'error'); return; }
-  if ((source.portName === TRIGGER_PORT) !== (targetPort === TRIGGER_PORT)) { setStatus('Link trigger dots to trigger dots, and data ports to data ports.', 'error'); return; }
-  if (targetPort === TRIGGER_PORT) { connectTrigger(source.nodeId, targetNode); return; }
+  if (isTriggerPort(source.portName) !== (targetPort === TRIGGER_PORT)) { setStatus('Link trigger dots to trigger dots, and data ports to data ports.', 'error'); return; }
+  if (targetPort === TRIGGER_PORT) { connectTrigger(source.nodeId, targetNode, source.portName === TRIGGER_PORT ? NEXT_EXIT : source.portName.slice(TRIGGER_PORT.length)); return; }
   const existing = state.network.edges.find((edge) => edge.target_node === targetNode && edge.target_port === targetPort);
   const same     = existing && existing.source_node === source.nodeId && existing.source_port === source.portName;
   state.network.edges = state.network.edges.filter((edge) => edge !== existing);
@@ -756,7 +770,7 @@ function snapPosition(node, x, y) {
     if (e.target_node === node.id) ports.push([e.source_node, e.source_port, true, e.target_port, false]);
   });
   (state.network.triggers || []).forEach((t) => {
-    if (t.source_node === node.id) ports.push([t.target_node, TRIGGER_PORT, false, TRIGGER_PORT, true]);
+    if (t.source_node === node.id) ports.push([t.target_node, TRIGGER_PORT, false, exitPort(t.name), true]);
     if (t.target_node === node.id) ports.push([t.source_node, TRIGGER_PORT, true, TRIGGER_PORT, false]);
   });
   ports.forEach(([otherId, otherPort, otherOut, ownPort, ownOut]) => {
@@ -854,7 +868,7 @@ function renderInspector() {
   $('#node-form').hidden       = !node;
   $('#node-actions').hidden    = !node;
   if (!node) {
-    $('#input-ports').innerHTML = $('#output-ports').innerHTML = '';
+    $('#input-ports').innerHTML = $('#output-ports').innerHTML = $('#exit-ports').innerHTML = '';
     $('#node-label').value = $('#node-code').value = '';
     return;
   }
@@ -871,6 +885,16 @@ function renderInspector() {
   showKindFields(node.kind);
   renderPorts($('#input-ports'), node.inputs, true);
   renderPorts($('#output-ports'), node.outputs, false);
+  renderExits(node);
+}
+function renderExits(node) {
+  const container = $('#exit-ports');
+  container.innerHTML = node.exits.map((name, index) => `<div class="kan-port-row"><input data-index="${index}" value="${escapeHtml(name)}" aria-label="Exit name"><button type="button" class="kcui-icon-button kan-port-remove" data-remove="${index}" title="Remove exit">×</button></div>`).join('');
+  container.querySelectorAll('[data-remove]').forEach((button) => button.addEventListener('click', () => {
+    const [name] = node.exits.splice(Number(button.dataset.remove), 1);
+    state.network.triggers = (state.network.triggers || []).filter((item) => !(item.source_node === node.id && item.name === name));
+    persist(); render();
+  }));
 }
 function renderPorts(container, ports, isInput) {
   container.innerHTML = ports.map((port, index) => `<div class="kan-port-row"><input data-index="${index}" value="${escapeHtml(port.name)}" aria-label="${isInput ? 'Input' : 'Output'} port name"><button type="button" class="kcui-icon-button kan-port-remove" data-remove="${index}" title="Remove port">×</button></div>`).join('');
@@ -1049,6 +1073,16 @@ function applyNode() {
   }
   node.inputs = Array.from($('#input-ports').querySelectorAll('input')).map((input, index) => { const name = input.value.trim(); const old = node.inputs[index]; return old && 'default' in old ? { name, default: old.default } : { name }; }).filter((port) => port.name);
   node.outputs = Array.from($('#output-ports').querySelectorAll('input')).map((input) => ({ name: input.value.trim() })).filter((port) => port.name);
+  const oldExits = node.exits || [];
+  const rows = Array.from($('#exit-ports').querySelectorAll('input'));
+  const exits = [];
+  rows.forEach((input, index) => {
+    const name = input.value.trim().replace(/[^A-Za-z0-9_-]+/g, '_');
+    if (!name || name === NEXT_EXIT || exits.includes(name)) return;
+    exits.push(name);
+    if (oldExits[index] && oldExits[index] !== name) (state.network.triggers || []).forEach((item) => { if (item.source_node === node.id && item.name === oldExits[index]) item.name = name; });
+  });
+  node.exits = exits;
   if (node.kind === 'llm') {
     mergeTemplateInputs(node, node.config.prompt_template);
     if (!node.outputs.some((port) => port.name === 'response')) node.outputs.unshift({ name: 'response' });
@@ -1061,7 +1095,7 @@ function applyNode() {
   // Rebuild the inspector only when the port rows no longer match, so focus and clicks on other fields are not lost
   const kindChanged = originalKind !== node.kind;
   const rowNames = (container) => Array.from(container.querySelectorAll('input')).map((input) => input.value.trim()).join('|');
-  const inspectorStale = rowNames($('#input-ports')) !== node.inputs.map((port) => port.name).join('|') || rowNames($('#output-ports')) !== node.outputs.map((port) => port.name).join('|') || nextId !== originalId;
+  const inspectorStale = rowNames($('#input-ports')) !== node.inputs.map((port) => port.name).join('|') || rowNames($('#output-ports')) !== node.outputs.map((port) => port.name).join('|') || rowNames($('#exit-ports')) !== node.exits.join('|') || nextId !== originalId;
   if (inspectorStale || kindChanged) { render({ inspector: inspectorStale }); }
   else {
     // Patch in place: rebuilding the canvas on blur would swallow the click that caused the blur
@@ -1090,6 +1124,7 @@ document.querySelectorAll('#node-order ~ .stepper-btns button').forEach((button)
 $('#node-kind').addEventListener('change', (event) => showKindFields(event.target.value));
 $('#add-input').addEventListener('click', () => { const node = currentNode(); if (node) { node.inputs.push({ name: `input_${node.inputs.length + 1}` }); persist(); render(); } });
 $('#add-output').addEventListener('click', () => { const node = currentNode(); if (node) { node.outputs.push({ name: `output_${node.outputs.length + 1}` }); persist(); render(); } });
+$('#add-exit').addEventListener('click', () => { const node = currentNode(); if (node) { ensureNodeShape(node); let n = node.exits.length + 1; while (node.exits.includes(`exit_${n}`)) n++; node.exits.push(`exit_${n}`); persist(); render(); } });
 $('#add-node').addEventListener('click', () => { const node = defaultNode($('#new-node-kind').value, state.network.nodes.length); placeInView(node); state.network.nodes.push(node); recentre(); persist(); selectNode(node.id); });
 $('#network-title').addEventListener('input', (event) => { if (!state.network) return; state.network.title = event.target.value; const name = document.querySelector('.kan-network-name'); if (name) name.value = event.target.value; });
 $('#network-title').addEventListener('change', () => persist({ refreshList: true }));

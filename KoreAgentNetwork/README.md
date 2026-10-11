@@ -43,19 +43,19 @@ write_json('prompts.idx.json', (i + 1) % len(items))
 
 State kept in a file survives between runs, which is how a network steps through a list one item per run.
 
-## Triggers
+## Triggers and exits
 
-Triggers are the flow control of a diagram; connections only share values. A trigger (`{name, source_node, target_node}`) links a block to another block **in the same network**. Draw one by clicking a block's ? trigger dot and then another block's ? on-trigger dot.
+Triggers are the flow control of a diagram; connections only share values. A trigger (`{name, source_node, target_node}`) links an **exit** of a block to another block **in the same network**. Draw one by clicking an exit dot on a block and then the left trigger dot of the target.
 
-- Auto: when a block completes successfully, each of its triggers runs its target (and the target's own triggers, recursively), waiting for it to finish.
-- Mid-code: a Python block can call `trigger(name, payload)` to run the target earlier. It blocks and returns `{ok, status, error, outputs, blocks}` (`outputs` is the target's outputs; `blocks` maps every block run by that flow to its outputs). A trigger already fired this way is not auto-fired again.
-- Opt out: `disable_auto_trigger()` stops all auto-firing for the block's run; `disable_auto_trigger('name')` stops one trigger.
-- Trigger targets never run in the normal order (marked ? in the UI); they run only when a trigger reaches them. Blocks that are not targets run in dependency order as usual, and a failed block fires nothing.
-- Shared data: a triggered block reads its connections' latest outputs (or port defaults). `payload` keys override input ports of the same name; a key that is not an input of the target is an error.
-- Timeouts: time spent inside explicit `trigger()` calls does not count against the calling block's limit.
-- Blocks fed by a trigger-owned block that has not run are reported as `blocked`.
-- Time limits: a triggered flow also respects the overall run deadline, and its running time is excluded from the caller's limit as it happens.
+- `next` is the default exit (the right-hand dot of the NEXT bar). It runs its target when the block completes successfully, and the target's own `next` after it. A block has at most one `next` target and a block can follow at most one block.
+- Named exits are added with **+ Exit** in the block editor. They never fire by themselves; a Python block fires one with `trigger('name')` (this is how IF and LOOP blocks are built, e.g. `then`/`else`, or `each`). The call blocks and returns `{ok, status, error, outputs, blocks}`.
+- Code names only its own exits; where an exit leads is set by the diagram.
+- Shared data: a fired block reads its connections' latest outputs (or port defaults). Set `outputs[...]` before calling `trigger()`; they are published to the target immediately. An optional payload (`trigger('each', {...})`) overrides input ports of the same name.
+- Blocks that are trigger targets never run in the normal order (marked in the UI); they run only when a trigger reaches them. A failed block fires nothing.
+- Manual play runs only that block and does not follow `next`; exits it fires from code still run.
+- Timeouts: time spent inside `trigger()` calls does not count against the calling block's limit, and a fired flow respects the overall run deadline.
 - Edit/run mode: while a trigger-capable block or network runs, saving or deleting that network returns HTTP 409, and so does starting a second run of it. Trigger loops are rejected on save.
+- Older networks are converted on load: a block whose code calls `trigger(...)` keeps its triggers as named exits; otherwise its first trigger becomes `next` and the rest become exits. `disable_auto_trigger()` is now a no-op.
 - Internal endpoint: `POST /api/internal/trigger` (used by the block sandbox with a per-run token).
 
 ## Execution

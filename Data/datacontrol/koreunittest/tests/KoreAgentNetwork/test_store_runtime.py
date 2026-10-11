@@ -211,8 +211,9 @@ class KoreAgentNetworkTests(unittest.TestCase):
             return {"id": node_id, "label": node_id, "position": {}, "inputs": inputs, "outputs": [{"name": "value"}], "code": code}
         return {
             "id": "trigger_network",
+            "trigger_model": 2,
             "nodes": [
-                block("a", [], "disable_auto_trigger()\noutputs['value'] = 1"),
+                block("a", [], "outputs['value'] = 1"),
                 block("b", [{"name": "value", "default": 0}], "outputs['value'] = inputs['value'] + 1"),
                 block("c", [{"name": "value", "default": 0}], "outputs['value'] = inputs['value']"),
             ],
@@ -226,6 +227,40 @@ class KoreAgentNetworkTests(unittest.TestCase):
             result = runtime.run_network(clean)
         self.assertEqual(result["nodes"]["c"]["status"], "blocked")
         self.assertNotIn("b", result["nodes"])
+
+    def test_next_exit_runs_the_following_block_automatically(self) -> None:
+        network = self._trigger_network()
+        network["triggers"][0]["name"] = "next"
+        with patch.object(runtime, "suite_services", return_value={}):
+            result = runtime.run_network(store.validate_network(network))
+        self.assertEqual(result["nodes"]["c"]["outputs"]["value"], 1)
+
+    def test_manual_play_does_not_follow_next(self) -> None:
+        network = self._trigger_network()
+        network["triggers"][0]["name"] = "next"
+        clean = store.validate_network(network)
+        with patch.object(runtime, "suite_services", return_value={}):
+            record = runtime.run_node(clean["nodes"][0], {}, clean, {})
+        self.assertEqual(record["status"], "completed")
+        self.assertNotIn("triggered", record)
+
+    def test_old_triggers_become_next_or_named_exits(self) -> None:
+        legacy = self._trigger_network()
+        del legacy["trigger_model"]
+        clean = store.validate_network(legacy)
+        self.assertEqual(clean["triggers"][0]["name"], "next")
+        legacy = self._trigger_network()
+        del legacy["trigger_model"]
+        legacy["nodes"][0]["code"] = "trigger('go')"
+        clean = store.validate_network(legacy)
+        self.assertEqual(clean["triggers"][0]["name"], "go")
+        self.assertEqual(clean["nodes"][0]["exits"], ["go"])
+
+    def test_next_is_one_to_one(self) -> None:
+        network = self._trigger_network()
+        network["triggers"] = [{"name": "next", "source_node": "a", "target_node": "c"}, {"name": "next", "source_node": "b", "target_node": "c"}]
+        with self.assertRaisesRegex(ValueError, "only one block"):
+            store.validate_network(network)
 
     def test_trigger_payload_rejects_unknown_inputs(self) -> None:
         clean = store.validate_network(self._trigger_network())

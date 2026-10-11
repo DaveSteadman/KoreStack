@@ -139,6 +139,33 @@ def _validate_node_config(kind: str, config: object, node_id: str) -> dict:
     }
 
 
+NEXT_EXIT = "next"
+
+
+def _migrate_triggers(triggers: list, nodes: list[dict]) -> list:
+    """Convert pre-exit triggers: a block that fires triggers from code keeps them as named exits;
+    otherwise its first linked trigger becomes the `next` exit and the rest stay as named exits."""
+    code = {node["id"]: node["code"] for node in nodes}
+    has_next: set[str] = set()
+    next_targets: set[str] = set()
+    migrated = []
+    for item in triggers:
+        if not isinstance(item, dict):
+            migrated.append(item)
+            continue
+        item = dict(item)
+        source = str(item.get("source_node") or "")
+        target = str(item.get("target_node") or "")
+        if item.get("name") == NEXT_EXIT:
+            item["name"] = "next_exit"
+        if target and source not in has_next and target not in next_targets and not re.search(r"\btrigger\(", code.get(source, "")):
+            has_next.add(source)
+            next_targets.add(target)
+            item["name"] = NEXT_EXIT
+        migrated.append(item)
+    return migrated
+
+
 def validate_node(node: object) -> dict:
     if not isinstance(node, dict):
         raise ValueError("Each node must be an object")
@@ -163,6 +190,12 @@ def validate_node(node: object) -> dict:
         "outputs":  _validate_port_list(node.get("outputs", []), "outputs", node_id),
         "code":     str(node.get("code") or ""),
     }
+    exits: list[str] = []
+    for name in node.get("exits") or []:
+        name = str(name).strip()
+        if name != NEXT_EXIT and _SAFE_ID.fullmatch(name) and name not in exits:
+            exits.append(name)
+    result["exits"] = exits
     if order is not None and order == order:
         result["order"] = int(order) if order == int(order) else order
     return result
@@ -238,7 +271,11 @@ def validate_network(network: object) -> dict:
     triggers = result.get("triggers", [])
     if not isinstance(triggers, list):
         raise ValueError("Network triggers must be a list")
+    if result.get("trigger_model") != 2:
+        triggers = _migrate_triggers(triggers, cleaned_nodes)
+    result["trigger_model"] = 2
     cleaned_triggers: list[dict] = []
+    next_targets: set[str] = set()
     trigger_names: set[tuple[str, str]] = set()
     graph: dict[str, set[str]] = {node_id: set() for node_id in port_map}
     for trigger in triggers:
@@ -254,6 +291,10 @@ def validate_network(network: object) -> dict:
         if target and (target not in port_map or target == source):
             raise ValueError(f"Trigger {name} needs a different target block in this network")
         trigger_names.add((source, name))
+        if name == NEXT_EXIT and target:
+            if target in next_targets:
+                raise ValueError("A block can follow only one block through next")
+            next_targets.add(target)
         if target:
             graph[source].add(target)
         cleaned_triggers.append({"name": name, "source_node": source, "target_node": target})
@@ -272,6 +313,11 @@ def validate_network(network: object) -> dict:
         if node_id not in state:
             visit(node_id)
     cleaned_triggers = [item for item in cleaned_triggers if item["target_node"]] + [item for item in cleaned_triggers if not item["target_node"]]
+    by_id = {node["id"]: node for node in cleaned_nodes}
+    for item in cleaned_triggers:
+        exits = by_id[item["source_node"]]["exits"]
+        if item["name"] != NEXT_EXIT and item["name"] not in exits:
+            exits.append(item["name"])
     result["nodes"]      = cleaned_nodes
     result["edges"]      = cleaned_edges
     result["triggers"]   = cleaned_triggers
