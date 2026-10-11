@@ -221,7 +221,20 @@ const WIRE_MARGIN = 8;
 const WIRE_STUB = 26;
 const WIRE_MIN_STUB = 12;
 const WIRE_PITCH = 20;
-const WIRE_CROSS_COST = 300;
+const WIRE_CROSS_COST = 120;
+const WIRE_TRIGGER_CROSS_COST = 400;
+const TRUNK_BREAK_COST = 40;
+const WIRE_DEVIATION_COST = 0.004;
+const WIRE_CORNER_COST = 150;
+
+// Area between a route and the straight line joining its ends: routes hugging that line score lower.
+function deviation(points, from, to) {
+  const dx = to.x - from.x, dy = to.y - from.y, span = Math.hypot(dx, dy) || 1;
+  const offLine = (p) => Math.abs((p.x - from.x) * dy - (p.y - from.y) * dx) / span;
+  let area = 0;
+  for (let i = 0; i < points.length - 1; i += 1) area += (Math.abs(points[i + 1].x - points[i].x) + Math.abs(points[i + 1].y - points[i].y)) * (offLine(points[i]) + offLine(points[i + 1])) / 2;
+  return area;
+}
 
 function segmentHitsBox(a, b, box) {
   const m = WIRE_MARGIN;
@@ -251,22 +264,19 @@ function laneConflict(a, b, wire, used) {
   used.forEach((run) => {
     if (run.horizontal !== horizontal) {
       const sameWire = run.kind === wire.kind && run.key === wire.key;
-      if (!sameWire && run.pos > lo + 1 && run.pos < hi - 1 && pos > run.lo + 1 && pos < run.hi - 1) cost += WIRE_CROSS_COST;
+      if (!sameWire && run.pos > lo + 1 && run.pos < hi - 1 && pos > run.lo + 1 && pos < run.hi - 1) cost += wire.kind === 'data' && run.kind === 'trigger' ? WIRE_TRIGGER_CROSS_COST : WIRE_CROSS_COST;
       return;
     }
     const gap = Math.abs(run.pos - pos);
     // Sharing a lane with a sibling wire from the same output is rewarded, so branches merge into one line.
     if (gap < 0.01 && run.kind === wire.kind && run.key === wire.key) { cost -= 0.9 * Math.max(0, Math.min(hi, run.hi) - Math.max(lo, run.lo)); return; }
     if ( gap >= WIRE_PITCH * 1.5 || run.hi + WIRE_PITCH <= lo || run.lo - WIRE_PITCH >= hi || (run.kind === wire.kind && run.key === wire.key)) return;
-    cost += gap < WIRE_PITCH / 2 ? 5000 : 150;
+    cost += gap < WIRE_PITCH / 2 ? 5000 : 60;
   });
   return cost;
 }
 
 // Circuit-board route: horizontal out of the dot, then the cheapest orthogonal path that stays clear of every block and of other lanes.
-const STICKY_BONUS = 0;
-const lastRoutes = new Map();
-const samePoints = (a, b) => a && a.length === b.length && a.every((p, i) => Math.abs(p.x - b[i].x) < 0.01 && Math.abs(p.y - b[i].y) < 0.01);
 
 function routePoints(from, to, sourceId, targetId, boxes, wire, used) {
   const xsList = [], xtList = [], ysSet = new Set();
@@ -274,7 +284,7 @@ function routePoints(from, to, sourceId, targetId, boxes, wire, used) {
   for (let k = 0; k < 10; k += 1) { xsList.push(gridUp(from.x + WIRE_MIN_STUB) + k * WIRE_PITCH); xtList.push(gridDown(to.x - WIRE_MIN_STUB) - k * WIRE_PITCH); }
   // Wires from the same output share one exit lane so they leave as a single trunk.
   const trunk = wire.trunks.get(wire.key);
-  if (trunk !== undefined) xsList.splice(0, xsList.length, trunk);
+  if (trunk !== undefined && !xsList.includes(trunk)) xsList.unshift(trunk);
   const sorted = boxes.slice().sort((m, n) => m.top - n.top);
   // Only blocks near this wire's horizontal span offer channel rows, so distant blocks cannot change its route.
   const spanLo = Math.min(from.x, to.x) - WIRE_STUB - 10 * WIRE_PITCH, spanHi = Math.max(from.x, to.x) + WIRE_STUB + 10 * WIRE_PITCH;
@@ -284,14 +294,14 @@ function routePoints(from, to, sourceId, targetId, boxes, wire, used) {
   for (let y = gridDown(Math.min(from.y, to.y)) - 2 * WIRE_PITCH; y <= Math.max(from.y, to.y) + 3 * WIRE_PITCH; y += WIRE_PITCH) ysSet.add(y);
   const ys = [...ysSet].filter((y) => y !== from.y && y !== to.y);
   const candidates = [];
-  for (let x = gridUp(from.x + WIRE_MIN_STUB); x <= to.x - WIRE_MIN_STUB; x += WIRE_PITCH) if (trunk === undefined || x === trunk) candidates.push([from, { x, y: from.y }, { x, y: to.y }, to]);
+  for (let x = gridUp(from.x + WIRE_MIN_STUB); x <= to.x - WIRE_MIN_STUB; x += WIRE_PITCH) candidates.push([from, { x, y: from.y }, { x, y: to.y }, to]);
   xsList.forEach((xs) => xtList.forEach((xt) => ys.forEach((y) => candidates.push([from, { x: xs, y: from.y }, { x: xs, y }, { x: xt, y }, { x: xt, y: to.y }, to]))));
   let best = null, bestCost = Infinity;
-  const previous = lastRoutes.get(wire.id);
   candidates.forEach((raw) => {
     const points = simplifyPoints(raw);
-    let cost = (points.length - 2) * 20;
-    for (let i = 0; i < points.length - 1 && cost < bestCost + STICKY_BONUS; i += 1) {
+    let cost = (points.length - 2) * WIRE_CORNER_COST;
+    if (trunk !== undefined && points.length > 2 && Math.abs(points[1].x - trunk) > 0.01) cost += TRUNK_BREAK_COST;
+    for (let i = 0; i < points.length - 1 && cost < bestCost; i += 1) {
       const a = points[i], b = points[i + 1];
       cost += Math.abs(b.x - a.x) + Math.abs(b.y - a.y);
       boxes.forEach((box) => {
@@ -300,10 +310,9 @@ function routePoints(from, to, sourceId, targetId, boxes, wire, used) {
       });
       cost += laneConflict(a, b, wire, used);
     }
-    if (samePoints(previous, points)) cost -= STICKY_BONUS;
+    cost += WIRE_DEVIATION_COST * deviation(points, from, to);
     if (cost < bestCost) { bestCost = cost; best = points; }
   });
-  lastRoutes.set(wire.id, best);
   if (best.length > 2 && !wire.trunks.has(wire.key)) wire.trunks.set(wire.key, best[1].x);
   for (let i = 0; i < best.length - 1; i += 1) {
     const a = best[i], b = best[i + 1], horizontal = Math.abs(a.y - b.y) < 0.01;
@@ -402,15 +411,25 @@ function drawWires() {
     });
     return result;
   };
-  const clashScore = (result) => {
-    const seen = [];
-    let score = 0;
+  // Per-wire penalty of a layout: lane clashes plus any block it runs through.
+  const wireScores = (result) => {
+    const seen = [], scores = new Map();
     result.forEach((points, wire) => {
-      for (let i = 0; i < points.length - 1; i += 1) score += laneConflict(points[i], points[i + 1], wire.spec.wire, seen);
+      let score = 0;
+      const { sourceId, targetId } = wire.spec;
+      for (let i = 0; i < points.length - 1; i += 1) {
+        score += laneConflict(points[i], points[i + 1], wire.spec.wire, seen);
+        boxes.forEach((box) => {
+          const own = (i === 0 && box.id === sourceId) || (i === points.length - 2 && box.id === targetId);
+          if (!own && segmentHitsBox(points[i], points[i + 1], box)) score += 10000;
+        });
+      }
+      scores.set(wire, score);
       seen.push(...laneRuns(points, wire.spec.wire));
     });
-    return score;
+    return scores;
   };
+  const clashScore = (result) => [...wireScores(result).values()].reduce((sum, v) => sum + Math.max(0, v), 0);
   const refine = (initial) => {
     const current = new Map(initial);
     if (wires.length < 2) return current;
@@ -423,8 +442,18 @@ function drawWires() {
     return current;
   };
   if (wires.length) {
-    const forward = refine(routeAll(wires)), backward = wires.length > 1 ? refine(routeAll(wires.slice().reverse())) : forward;
-    const best = clashScore(backward) < clashScore(forward) ? backward : forward;
+    let best = refine(routeAll(wires)), bestScore = clashScore(best);
+    const attempt = (order) => {
+      const layoutTry = refine(routeAll(order)), score = clashScore(layoutTry);
+      if (score < bestScore) { best = layoutTry; bestScore = score; }
+    };
+    if (wires.length > 1) attempt(wires.slice().reverse());
+    // Wires still clashing are routed first, so they claim their lanes before the others settle.
+    for (let round = 0; round < 3 && bestScore >= 150; round += 1) {
+      const scores = wireScores(best);
+      const troubled = wires.filter((wire) => scores.get(wire) >= 150), rest = wires.filter((wire) => !(scores.get(wire) >= 150));
+      attempt([...troubled, ...rest]);
+    }
     wires.forEach((wire) => { wire.points = best.get(wire); });
   }
   const hopWires = [];
@@ -774,6 +803,7 @@ function moveDrag(event) {
   let y = Math.max(10, Math.round((event.clientY - bounds.top + graphStage.scrollTop) / zoom - state.dragging.offsetY));
   let guides = [];
   if (!event.altKey) ({ x, y, guides } = snapPosition(node, x, y));
+  x = keepWireGap(node, x, y);
   showGuides(guides);
   node.position.x = x;
   node.position.y = y;
@@ -781,6 +811,22 @@ function moveDrag(event) {
   if (element) { element.style.left = `${state.dragging.node.position.x}px`; element.style.top = `${state.dragging.node.position.y}px`; }
   scheduleWireRedraw();
 }
+// Blocks side by side keep a minimum gap so several wires always have clean lanes between them.
+const MIN_BLOCK_GAP = 100;
+function keepWireGap(node, x, y) {
+  const own = nodeBox(node), width = own.right - own.left, height = own.bottom - own.top;
+  let result = x;
+  state.network.nodes.forEach((other) => {
+    if (other.id === node.id) return;
+    const box = nodeBox(other);
+    if (y >= box.bottom + WIRE_MARGIN || y + height <= box.top - WIRE_MARGIN) return;
+    if (result + width + MIN_BLOCK_GAP <= box.left || result >= box.right + MIN_BLOCK_GAP) return;
+    const left = box.left - MIN_BLOCK_GAP - width, right = box.right + MIN_BLOCK_GAP;
+    result = Math.abs(result - left) <= Math.abs(result - right) && left >= 10 ? left : right;
+  });
+  return result;
+}
+
 // The block follows the pointer immediately; wires catch up at a rate scaled to how long the last redraw took.
 let wireTimer = 0, wireCost = 0;
 function scheduleWireRedraw() {
