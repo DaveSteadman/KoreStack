@@ -435,12 +435,20 @@ export function trackAppTab(name, type, id = null) {
   if (!name) return;
   const tabs = loadAppTabs();
   const current = currentAppTabId();
-  const key = makeAppTabKey(type || currentAppTabsType, id, name);
+  const tabType = type || currentAppTabsType;
+  const key = makeAppTabKey(tabType, id, name);
+  if (id != null) {
+    for (let index = tabs.length - 1; index >= 0; index -= 1) {
+      if (String(tabs[index].id) === String(id) && appTabKey(tabs[index]) !== key) {
+        tabs.splice(index, 1);
+      }
+    }
+  }
   const untitledIndex = current ? tabs.findIndex((tab) => appTabKey(tab) === current && tab.untitled) : -1;
 
   if (untitledIndex !== -1) {
     if (!tabs.find((tab) => appTabKey(tab) === key)) {
-      tabs[untitledIndex] = { name, type: type || currentAppTabsType, id };
+      tabs[untitledIndex] = { name, type: tabType, id };
     } else {
       tabs.splice(untitledIndex, 1);
     }
@@ -448,10 +456,10 @@ export function trackAppTab(name, type, id = null) {
     const existing = tabs.find((tab) => appTabKey(tab) === key);
     if (existing) {
       existing.name = name;
-      existing.type = type || currentAppTabsType;
+      existing.type = tabType;
       if (id != null) existing.id = id;
     } else {
-      tabs.push({ name, type: type || currentAppTabsType, id });
+      tabs.push({ name, type: tabType, id });
     }
   }
 

@@ -76,20 +76,19 @@ def decide(question, state=None, model="", timeout=60):
 
 judge = decide
 
-def disable_auto_trigger(name=None):
-    pass
-
-def trigger(name="next", payload=None):
+def trigger(name):
     info = payload_info.get("trigger")
     if not info:
         raise RuntimeError("trigger() is only available when the block runs inside a saved network")
-    body = json.dumps({"token": info["token"], "name": str(name), "payload": payload if payload is not None else {}, "outputs": namespace["outputs"]}, default=str).encode("utf-8")
+    body = json.dumps({"token": info["token"], "name": str(name), "payload": {}, "outputs": namespace["outputs"]}, default=str).encode("utf-8")
     request = urllib.request.Request(info["url"], data=body, method="POST", headers={"Content-Type": "application/json"})
     try:
         with urllib.request.urlopen(request, timeout=None) as response:
-            return json.loads(response.read().decode("utf-8"))
+            result = json.loads(response.read().decode("utf-8"))
     except urllib.error.HTTPError as exc:
         raise RuntimeError("trigger " + str(name) + " failed: " + exc.read().decode("utf-8", "replace")[:500]) from None
+    if not result.get("ok"):
+        raise RuntimeError("trigger " + str(name) + " failed: " + str(result.get("error") or "linked flow failed"))
 
 import pathlib
 
@@ -170,7 +169,6 @@ namespace = {
     "read_json": read_json, "write_json": write_json, "exists": exists, "list_files": list_files, "delete_file": delete_file,
     "api_post": api_post,
     "trigger": trigger,
-    "disable_auto_trigger": disable_auto_trigger,
     "decide": decide,
     "inputs": payload["inputs"],
     "judge": judge,
@@ -481,7 +479,7 @@ def _run_flow(session: dict, node_id: str, payload: dict | None, timeout: float,
 
 
 def fire_trigger(token: str, name: str, payload: dict, outputs: dict | None = None) -> dict[str, Any]:
-    """Run the block a trigger points at (and its own auto triggers), blocking until the flow finishes."""
+    """Run the block a named exit points at, blocking until its flow finishes."""
     with _REGISTRY_LOCK:
         context = _CONTEXTS.get(token)
     if context is None:

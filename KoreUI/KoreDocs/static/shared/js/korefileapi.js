@@ -50,6 +50,15 @@ export function getFileHistory(id, { limit = 10 } = {}) {
   return _req('GET', `/files/${id}/history?limit=${encodeURIComponent(limit)}`);
 }
 
+export function createFile(folderId, name, content, metadata = {}) {
+  return _req('POST', '/files', {
+    folder_id: folderId,
+    name,
+    content,
+    metadata,
+  });
+}
+
 export async function resolveLegacyFile(type, name) {
   const attempts = [];
   const inferredExt = String(name || '').trim().toLowerCase().match(/\.([^.]+)$/)?.[1] ?? null;

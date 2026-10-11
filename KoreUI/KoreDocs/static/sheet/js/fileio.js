@@ -3,7 +3,8 @@
  */
 
 import { createKorefileSyncController } from '/static/shared/js/korefileSyncController.js';
-import { fromJSON } from './cell.js';
+import { createFile, getFile } from '/static/shared/js/korefileapi.js';
+import { COLS, ROWS, fromJSON } from './cell.js';
 
 function _isCsvFile(fileOrName) {
   const name = typeof fileOrName === 'string' ? fileOrName : fileOrName?.name;
@@ -15,7 +16,9 @@ function _csvCellValue(raw) {
   const trimmed = text.trim();
   if (trimmed === '') return '';
   const numeric = Number(trimmed);
-  return Number.isNaN(numeric) ? text : numeric;
+  // Retain identifiers and user-entered precision such as 00123 and 1.0.
+  // Only values already in JavaScript's canonical numeric form become numbers.
+  return Number.isFinite(numeric) && String(numeric) === trimmed ? numeric : text;
 }
 
 function _parseCsvRows(text) {
@@ -23,7 +26,7 @@ function _parseCsvRows(text) {
   let row = [];
   let value = '';
   let inQuotes = false;
-  const normalized = String(text || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  const normalized = String(text || '').replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 
   for (let index = 0; index < normalized.length; index += 1) {
     const ch = normalized[index];
@@ -64,11 +67,19 @@ function _parseCsvRows(text) {
     row.push(value);
     rows.push(row);
   }
+  if (inQuotes) throw new Error('CSV contains an unterminated quoted field.');
   return rows;
 }
 
 function _csvToSheetJson(text, fileName) {
   const rows = _parseCsvRows(text);
+  const widestRow = rows.reduce((width, row) => Math.max(width, row.length), 0);
+  if (widestRow > COLS) {
+    throw new Error(`CSV has ${widestRow} columns; KoreSheet currently supports up to ${COLS}.`);
+  }
+  if (rows.length > ROWS) {
+    throw new Error(`CSV has ${rows.length} rows; KoreSheet currently supports up to ${ROWS}.`);
+  }
   const cells = {};
   for (let rowIndex = 0; rowIndex < rows.length; rowIndex += 1) {
     const row = rows[rowIndex];
@@ -166,6 +177,24 @@ export const markDirty = _controller.markDirty;
 export const markSaved = _controller.markSaved;
 export const guardUnsaved = _controller.guardUnsaved;
 export const autoOpenFromUrl = _controller.autoOpenFromUrl;
+export const isCsvFile = () => _isCsvFile(_controller.currentName());
+
+export async function convertToKoreSheet(name, content) {
+  if (!_isCsvFile(_controller.currentName()) || _controller.currentId() == null) {
+    throw new Error('Only an open CSV file can be converted to KoreSheet.');
+  }
+  const source = await getFile(_controller.currentId(), { includeContent: false });
+  const targetName = String(name || '').trim();
+  if (!targetName.toLowerCase().endsWith('.koresheet')) {
+    throw new Error('Converted files must use the .koresheet extension.');
+  }
+  return createFile(source.folder_id, targetName, content, {
+    title: targetName.replace(/\.koresheet$/i, ''),
+    source_file_id: source.id,
+    source_file_name: source.name,
+  });
+}
+
 export function queueAutosave(text) {
   if (_isCsvFile(_controller.currentName())) {
     _controller.queueAutosave(_sheetJsonToCsv(text));

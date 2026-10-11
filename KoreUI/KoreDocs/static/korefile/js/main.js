@@ -7,7 +7,7 @@
 
 import { initAppMenuEvents, initKoreDocsShell, renderAppMenu } from '/ui-elements/assets/js/chrome.js';
 import * as tree     from './tree.js';
-import * as filelist from './filelist.js?v=20260711a';
+import * as filelist from './filelist.js?v=20261011b';
 import * as api      from './api.js';
 import * as dialogs  from './dialogs.js';
 
@@ -166,6 +166,7 @@ const _searchInput = document.getElementById('kf-search');
 _searchInput.addEventListener('input', () => {
   clearTimeout(_searchTimer);
   const q = _searchInput.value.trim();
+  document.getElementById('btn-clear-search').hidden = !q;
   if (!q) {
     if (_currentFolder) filelist.loadFolder(_currentFolder.id);
     return;
@@ -176,8 +177,16 @@ _searchInput.addEventListener('input', () => {
 _searchInput.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
     _searchInput.value = '';
+    document.getElementById('btn-clear-search').hidden = true;
     if (_currentFolder) filelist.loadFolder(_currentFolder.id);
   }
+});
+
+document.getElementById('btn-clear-search').addEventListener('click', () => {
+  _searchInput.value = '';
+  document.getElementById('btn-clear-search').hidden = true;
+  if (_currentFolder) filelist.loadFolder(_currentFolder.id);
+  _searchInput.focus();
 });
 
 // ── Resize handle ─────────────────────────────────────────────────

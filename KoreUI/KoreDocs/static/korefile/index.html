@@ -6,7 +6,7 @@
   <title>KoreStack</title>
   <link rel="icon" type="image/x-icon" href="/ui-elements/assets/icons/favicon.ico" />
   <link rel="stylesheet" href="/ui-elements/assets/css/chrome.css" />
-  <link rel="stylesheet" href="/static/korefile/style.css?v=20261010c" />
+  <link rel="stylesheet" href="/static/korefile/style.css?v=20261011a" />
   <script src="/suite-config.js"></script>
 </head>
 <body class="kcui-shell-bg">
@@ -26,7 +26,7 @@
     <aside id="kf-tree-panel" class="kcui-navpanel">
       <div id="kf-tree-header" class="kcui-navpanel-header kcui-panel-header">
         <span>Folders</span>
-        <button id="btn-new-folder" class="icon-btn" title="New Folder">
+        <button id="btn-new-folder" class="icon-btn" type="button" title="New Folder" aria-label="New folder">
           <svg viewBox="0 0 20 20" fill="none" width="14" height="14">
             <path d="M2 5a2 2 0 0 1 2-2h4l2 2h6a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5z" stroke="currentColor" stroke-width="1.5"/>
             <line x1="10" y1="8" x2="10" y2="14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
@@ -45,22 +45,26 @@
       <div id="kf-breadcrumb"></div>
 
       <div id="kf-toolbar">
-        <button class="kcui-tag kcui-tag--dim" id="btn-new-file" title="New File">new file</button>
-        <button class="kcui-tag kcui-tag--dim" id="btn-import-fs" title="Import from flat file storage">import</button>
+        <button class="kf-tb-btn" id="btn-new-file" type="button">New file</button>
+        <button class="kf-tb-btn" id="btn-import-fs" type="button" title="Import documents from flat file storage">Import files</button>
         <div class="kf-tb-sep"></div>
-        <input id="kf-search" type="search" placeholder="Search…" autocomplete="off" />
+        <output id="kf-results-summary" aria-live="polite"></output>
+        <div id="kf-search-controls">
+          <input id="kf-search" type="search" placeholder="Search files…" autocomplete="off" aria-label="Search files" />
+          <button id="btn-clear-search" class="icon-btn" type="button" title="Clear search" aria-label="Clear search" hidden>&times;</button>
+        </div>
       </div>
 
       <div id="kf-file-list-wrap">
         <table id="kf-file-list">
           <thead>
             <tr>
-              <th class="col-icon"></th>
-              <th class="col-name" data-sort="name">Name <span class="sort-arrow"></span></th>
-              <th class="col-type" data-sort="ext">Type <span class="sort-arrow"></span></th>
-              <th class="col-words" data-sort="word_count">Words <span class="sort-arrow"></span></th>
-              <th class="col-modified" data-sort="modified_at">Modified <span class="sort-arrow"></span></th>
-              <th class="col-actions"></th>
+              <th class="col-icon" scope="col"><span class="sr-only">File type</span></th>
+              <th class="col-name" scope="col" data-sort="name">Name <span class="sort-arrow"></span></th>
+              <th class="col-type" scope="col" data-sort="ext">Type <span class="sort-arrow"></span></th>
+              <th class="col-words" scope="col" data-sort="word_count">Words <span class="sort-arrow"></span></th>
+              <th class="col-modified" scope="col" data-sort="modified_at">Modified <span class="sort-arrow"></span></th>
+              <th class="col-actions" scope="col"><span class="sr-only">Actions</span></th>
             </tr>
           </thead>
           <tbody id="kf-file-tbody"></tbody>
@@ -88,6 +92,6 @@
     import { initDialogHost } from '/ui-elements/assets/js/chrome.js';
     initDialogHost();
   </script>
-  <script type="module" src="/static/korefile/js/main.js?v=20260710a"></script>
+  <script type="module" src="/static/korefile/js/main.js?v=20261011b"></script>
 </body>
 </html>

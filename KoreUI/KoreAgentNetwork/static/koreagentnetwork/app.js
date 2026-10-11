@@ -1,4 +1,4 @@
-import { initServiceShell } from '/ui-elements/assets/js/chrome.js';
+import { initServiceShell, kcuiConfirm } from '/ui-elements/assets/js/chrome.js';
 import { initWorkspaceLayouts } from '/ui-elements/assets/js/workspace.js';
 import { stepNumberInput } from '/ui-elements/assets/js/steppers.js';
 
@@ -9,7 +9,7 @@ const nodeLayer  = $('#nodes');
 const edgeLayer  = $('#edges');
 const TEMPLATE_RE = /\{([A-Za-z0-9_-]+)\}/g;
 const BLOCK_HELP = {
-  python: 'Available: inputs, outputs, NoValue (None), top-level return to stop early, api_get, api_post, trigger(exit) (fire a named exit now and wait; whatever it is linked to runs; returns {ok, error, outputs}; the next exit fires by itself when the block finishes), llm, llm_result, decide, judge, json, math, re. Safe stdlib imports (datetime, time, collections, itertools, csv, random, hashlib, base64, ...). Files (cwd and root = datauser folder): open, read_text, write_text, append_text, read_json, write_json, exists, list_files, delete_file.',
+  python: 'Available: inputs, outputs, NoValue (None), top-level return to stop early, api_get, api_post, trigger(exit) (activate a named exit and wait for its linked flow; set outputs before calling it; raises if that flow fails), llm, llm_result, decide, judge, json, math, re. Safe stdlib imports (datetime, time, collections, itertools, csv, random, hashlib, base64, ...). Files (cwd and root = datauser folder): open, read_text, write_text, append_text, read_json, write_json, exists, list_files, delete_file.',
   llm: 'Use {input_name} placeholders in the prompt. Inputs are merged into the prompt, and this block can output response, prompt, model, prompt_tokens, completion_tokens, and tokens_per_second.',
   judge: 'Use {input_name} placeholders in the question. All inputs are sent to System One as the decision state, and this block can output verdict, probability, threshold, question, and model.',
 };
@@ -592,7 +592,7 @@ $('#template-list').addEventListener('click', async (event) => {
   if (!item) return;
   if (event.target.closest('[data-add]')) addFromTemplate(item);
   else if (event.target.closest('[data-del]')) {
-    if (!window.confirm(`Remove template “${item.name}”?`)) return;
+    if (!await kcuiConfirm('Delete template', `Delete template “${item.name}”?`, { confirmLabel: 'Delete' })) return;
     try { await request(`/api/templates/${encodeURIComponent(item.id)}`, { method: 'DELETE' }); await loadTemplates(); } catch (error) { setStatus(error.message, 'error'); }
   }
 });
@@ -1156,7 +1156,7 @@ function persist({ refreshList = false, force = false } = {}) {
 }
 $('#new-network').addEventListener('click', async () => { try { const { network } = await request('/api/networks', { method: 'POST', body: JSON.stringify({ title: 'Untitled network' }) }); state.network = network; try { localStorage.setItem('kan.lastNetwork', network.id); } catch { /* storage unavailable */ } state.selectedNodeId = null; render(); await loadList(); setStatus('New network created. Rename it in the title field.', 'ok'); } catch (error) { setStatus(error.message, 'error'); } });
 $('#duplicate-network').addEventListener('click', async () => { if (!state.network) return; try { const { network } = await request(`/api/networks/${encodeURIComponent(state.network.id)}/duplicate`, { method: 'POST' }); await loadList(); await loadNetwork(network.id); setStatus(`Duplicated as ${network.title}.`, 'ok'); } catch (error) { setStatus(error.message, 'error'); } });
-$('#delete-network').addEventListener('click', async () => { if (!state.network || !window.confirm(`Delete ${state.network.title}?`)) return; try { await request(`/api/networks/${encodeURIComponent(state.network.id)}`, { method: 'DELETE' }); state.network = null; const networks = await loadList(); if (networks[0]) await loadNetwork(networks[0].id); } catch (error) { setStatus(error.message, 'error'); } });
+$('#delete-network').addEventListener('click', async () => { if (!state.network || !await kcuiConfirm('Delete network', `Delete ${state.network.title}?`, { confirmLabel: 'Delete' })) return; try { await request(`/api/networks/${encodeURIComponent(state.network.id)}`, { method: 'DELETE' }); state.network = null; const networks = await loadList(); if (networks[0]) await loadNetwork(networks[0].id); } catch (error) { setStatus(error.message, 'error'); } });
 $('#run-network').addEventListener('click', async () => {
   if (!state.network || state.running) return;
   if (executionOrder().length < state.network.nodes.length) { setStatus('This network contains a connection loop; remove it before running.', 'error'); return; }
@@ -1191,9 +1191,9 @@ document.fonts?.ready.then(() => state.network && render());
 let resizeTimer = null;
 window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => state.network && render(), 120); });
 
-$('#delete-node').addEventListener('click', () => {
+$('#delete-node').addEventListener('click', async () => {
   const node = currentNode();
-  if (!node || !window.confirm(`Delete ${node.label}?`)) return;
+  if (!node || !await kcuiConfirm('Delete block', `Delete ${node.label}?`, { confirmLabel: 'Delete' })) return;
   const network = state.network;
   network.nodes = network.nodes.filter((item) => item.id !== node.id);
   network.triggers = (network.triggers || []).filter((item) => item.source_node !== node.id && item.target_node !== node.id);

@@ -14,6 +14,8 @@ KoreStack needs native tools for prose, tables, and diagrams that remain local, 
 | `KoreSheet` | Sparse-cell spreadsheets and model sheets | `.koresheet` |
 | `KoreDiag` | Diagram editing for node and edge layouts | `.korediag` |
 
+KoreSheet opens `.csv` files directly for review. Use **Convert to KoreSheet** in the CSV toolbar to create a separate, editable `.koresheet` copy in the same folder; the source CSV remains unchanged.
+
 ## Role in the suite
 
 KoreDocs (port 29610) holds the user-facing documents the agent and the person both edit. It stores everything in the `datauser` tree, the same space KoreAgentNetwork file helpers use, and its `/mcp` tools let KoreAgent create and edit documents. KoreStack starts and links it.

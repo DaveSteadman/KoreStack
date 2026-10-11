@@ -23,6 +23,7 @@ let _sortAsc         = true;
 let _searchMode      = false;
 let _contextTarget   = null;
 let _pendingRestore  = true;   // restore scroll/selection once on initial page load
+let _loadSequence    = 0;
 
 // ── DOM refs ────────────────────────────────────────────────────
 
@@ -30,26 +31,32 @@ const _tbody     = document.getElementById('kf-file-tbody');
 const _empty     = document.getElementById('kf-empty');
 const _loading   = document.getElementById('kf-loading');
 const _ctxMenu   = document.getElementById('ctx-menu');
+const _summary   = document.getElementById('kf-results-summary');
 
 // ── Public: load a folder ───────────────────────────────────────
 
 export async function loadFolder(folderId) {
+  const sequence = ++_loadSequence;
   _searchMode = false;
   _currentFolderId = folderId;
   _showLoading(true);
   try {
-    _files = await api.listFiles({ folderId });
+    const files = await api.listFiles({ folderId });
+    if (sequence !== _loadSequence) return;
+    _files = files;
     _renderList();
     if (_pendingRestore) {
       _pendingRestore = false;
       _tryRestoreScrollState(folderId);
     }
   } catch (err) {
+    if (sequence !== _loadSequence) return;
     _tbody.innerHTML = '';
     _empty.textContent = 'Error loading files: ' + err.message;
     _empty.style.display = '';
+    _summary.textContent = 'Could not load files';
   } finally {
-    _showLoading(false);
+    if (sequence === _loadSequence) _showLoading(false);
   }
 }
 
@@ -87,17 +94,22 @@ window.addEventListener('pagehide', saveScrollState);
 document.addEventListener('kd:before-navigate', saveScrollState);
 
 export async function loadSearch(q) {
+  const sequence = ++_loadSequence;
   _searchMode = true;
   _showLoading(true);
   try {
-    _files = await api.search(q);
+    const files = await api.search(q);
+    if (sequence !== _loadSequence) return;
+    _files = files;
     _renderList();
   } catch (err) {
+    if (sequence !== _loadSequence) return;
     _tbody.innerHTML = '';
     _empty.textContent = 'Search error: ' + err.message;
     _empty.style.display = '';
+    _summary.textContent = 'Search failed';
   } finally {
-    _showLoading(false);
+    if (sequence === _loadSequence) _showLoading(false);
   }
 }
 
@@ -154,12 +166,13 @@ function _renderList() {
   const sorted = _sortedFiles();
   _empty.style.display   = sorted.length ? 'none' : '';
   _empty.textContent     = _searchMode ? 'No results.' : 'No files in this folder.';
+  _summary.textContent   = `${sorted.length.toLocaleString()} ${sorted.length === 1 ? 'file' : 'files'}${_searchMode ? ' found' : ''}`;
 
   _tbody.innerHTML = sorted.map(f => {
     const meta  = typeof f.metadata === 'object' ? f.metadata : {};
     const title = meta.title || f.name.replace(/\.[^.]+$/, '');
     return `
-      <tr data-id="${f.id}" data-folder="${f.folder_id}" data-name="${_esc(f.name)}" data-ext="${f.ext}" data-revision="${f.revision ?? ''}">
+      <tr data-id="${f.id}" data-folder="${f.folder_id}" data-name="${_esc(f.name)}" data-ext="${f.ext}" data-revision="${f.revision ?? ''}" tabindex="0" aria-label="${_esc(`File: ${title}. ${f.ext} file.`)}">
         <td class="col-icon"><span class="file-icon">${_fileIcon(f.ext)}</span></td>
         <td class="col-name" title="${_esc(f.name)}">${_esc(title)}</td>
         <td class="col-type"><span class="kcui-tag kcui-tag--info">${_esc(f.ext)}</span></td>
@@ -217,6 +230,21 @@ _tbody.addEventListener('click', e => {
   document.querySelectorAll('#kf-file-tbody tr.selected')
     .forEach(r => r.classList.remove('selected'));
   row.classList.add('selected');
+});
+
+_tbody.addEventListener('keydown', e => {
+  const row = e.target.closest('tr[data-id]');
+  if (!row || e.target.closest('button, input')) return;
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    _openFile(row);
+  } else if (e.key === 'F2') {
+    e.preventDefault();
+    _startRename(row);
+  } else if (e.key === 'Delete') {
+    e.preventDefault();
+    void _deleteFile(row);
+  }
 });
 
 // ── Action buttons inside row ───────────────────────────────────
@@ -483,7 +511,7 @@ function _showLoading(on) {
 }
 
 function _actionBtn(action, title, svg) {
-  return `<button class="icon-btn" data-btn="${action}" title="${title}">${svg}</button>`;
+  return `<button class="icon-btn" type="button" data-btn="${action}" title="${title}" aria-label="${title}">${svg}</button>`;
 }
 
 function _esc(s) {
@@ -493,5 +521,3 @@ function _esc(s) {
     .replace(/>/g,'&gt;')
     .replace(/"/g,'&quot;');
 }
-
-

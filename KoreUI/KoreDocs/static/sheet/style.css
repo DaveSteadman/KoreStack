@@ -262,14 +262,54 @@ body {
 }
 .style-row select:focus { outline: none; border-color: var(--accent); }
 
-.style-row input[type="color"] {
-  width: 30px;
-  height: 26px;
+.color-picker { position: relative; }
+.color-picker-trigger {
+  align-items: center;
+  background: var(--bg-2);
   border: 1px solid var(--border);
   border-radius: 4px;
-  padding: 1px 2px;
-  background: var(--bg-2);
   cursor: pointer;
+  display: flex;
+  height: 26px;
+  justify-content: center;
+  padding: 3px;
+  width: 30px;
+}
+.color-picker-trigger:hover,
+.color-picker-trigger[aria-expanded="true"] { border-color: var(--accent); }
+.color-picker-trigger span,
+.color-swatch { background: var(--swatch); }
+.color-picker-trigger span {
+  border: 1px solid rgba(255,255,255,.38);
+  border-radius: 2px;
+  height: 100%;
+  width: 100%;
+}
+.color-palette {
+  background: var(--surface);
+  border: 1px solid var(--border-2);
+  border-radius: 7px;
+  box-shadow: 0 8px 28px rgba(0,0,0,.55);
+  display: grid;
+  gap: 2px;
+  grid-template-columns: repeat(6, 22px);
+  padding: 5px;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 5px);
+  width: max-content;
+  z-index: 10;
+}
+.color-swatch {
+  border: 1px solid rgba(255,255,255,.18);
+  border-radius: 2px;
+  cursor: pointer;
+  height: 22px;
+  padding: 0;
+  width: 22px;
+}
+.color-swatch:hover,
+.color-swatch:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 1px; }
 }
 
 .style-input {

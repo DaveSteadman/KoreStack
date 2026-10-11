@@ -167,8 +167,11 @@ html, body {
   outline: none;
   transition: border-color 150ms;
 }
+#kf-search-controls { align-items: center; display: flex; gap: 4px; margin-left: auto; }
+#kf-search-controls .icon-btn { height: 28px; width: 28px; }
 #kf-search:focus { border-color: var(--accent); }
 #kf-search::placeholder { color: var(--text-dim); }
+#kf-results-summary { color: var(--text-dim); font-size: 12px; margin-left: auto; white-space: nowrap; }
 
 /* ── File list ───────────────────────────────────────────────── */
 #kf-file-list-wrap {
@@ -212,6 +215,7 @@ html, body {
 }
 #kf-file-list tbody tr:hover { background: var(--surface); }
 #kf-file-list tbody tr.selected { background: rgba(74,111,165,0.18); outline: 1px solid var(--accent) inset; }
+#kf-file-list tbody tr:focus-visible { background: var(--surface-2); outline: 2px solid var(--accent-2); outline-offset: -2px; }
 
 #kf-file-list td {
   padding: 7px 10px;
@@ -258,7 +262,8 @@ html, body {
   transition: opacity 100ms;
 }
 tr:hover .row-actions,
-tr.selected .row-actions { opacity: 1; }
+tr.selected .row-actions,
+tr:focus-within .row-actions { opacity: 1; }
 
 /* Inline rename input */
 .rename-input {
@@ -321,6 +326,14 @@ tr.selected .row-actions { opacity: 1; }
 .tree-actions .icon-btn[data-btn="delete-folder"]:hover {
   color: #ff8a8f;
   border-color: rgba(229, 107, 111, 0.45);
+}
+
+@media (max-width: 760px) {
+  #kf-tree-panel { display: none; }
+  #kf-resize-handle { display: none; }
+  #kf-results-summary, .col-words, .col-modified { display: none; }
+  .col-actions { width: 144px; }
+  #kf-search { width: min(180px, 42vw); }
 }
 
 /* ── Dialogs ─────────────────────────────────────────────────── */

@@ -10,6 +10,13 @@ import { colLetter, addrOf, evaluate }                     from './formula.js';
 
 const _panel        = document.getElementById('props-content');
 const _rangePreview = document.getElementById('range-preview');
+const COLOR_SWATCHES = [
+  ['Blue',   '#4f81bd'], ['Orange', '#c8793c'], ['Gray',   '#777777'], ['Gold',   '#c9a227'], ['Indigo', '#4c6fae'], ['Green', '#5c8345'],
+  ['Blue',   '#76a5d4'], ['Orange', '#e69a5a'], ['Gray',   '#a6a6a6'], ['Gold',   '#e3be52'], ['Indigo', '#7697cc'], ['Green', '#85aa6a'],
+  ['Blue',   '#a9c4e3'], ['Orange', '#f2c49c'], ['Gray',   '#d0d0d0'], ['Gold',   '#f2d88b'], ['Indigo', '#a9bde0'], ['Green', '#b3cea1'],
+  ['Blue',   '#d9e5f3'], ['Orange', '#f9e3d0'], ['Gray',   '#e7e7e7'], ['Gold',   '#f9edc9'], ['Indigo', '#d9e3f3'], ['Green', '#dcead2'],
+  ['Black',  '#1f1f1f'], ['Black',  '#000000'], ['Gray',   '#a6a6a6'], ['White',  '#ffffff'],
+];
 
 export function refresh(col, row, rangeEnd) {
   _refreshPanel(col, row, rangeEnd);
@@ -50,9 +57,10 @@ function _refreshPanel(col, row, rangeEnd) {
       </div>
       <div class="style-row" style="margin-top:5px;gap:6px">
         <span style="font-size:10px;color:var(--text-dim)">Fill</span>
-        <input type="color" data-style="fillColor" value="${style.fillColor ?? '#1e1e2e'}" />
+        ${_colorPicker('fillColor', 'Fill', style.fillColor ?? '#1e1e2e')}
         <span style="font-size:10px;color:var(--text-dim)">Text</span>
-        <input type="color" data-style="textColor" value="${style.textColor ?? '#cdd6f4'}" />
+        ${_colorPicker('textColor', 'Text', style.textColor ?? '#cdd6f4')}
+        <button class="style-btn style-btn-wide" data-clear-colors title="Clear fill and text colors">Clear</button>
       </div>
       <div class="style-row" style="margin-top:5px;gap:6px">
         <span style="font-size:10px;color:var(--text-dim)">Decimals</span>
@@ -81,9 +89,20 @@ function _showRangePanel(col, row, rangeEnd) {
     const result = evaluate(`=${fn}(${rangeStr})`, cells);
     return `<div class="prop-row"><label>${fn}</label><span class="hint">${result}</span></div>`;
   }).join('');
+  const style = getCellStyle(col, row);
 
   _panel.innerHTML = `
     <div class="prop-row"><label>Range</label><span class="hint">${rangeStr}</span></div>
+    <div class="prop-row">
+      <label>Colors</label>
+      <div class="style-row" style="gap:6px">
+        <span style="font-size:10px;color:var(--text-dim)">Fill</span>
+        ${_colorPicker('fillColor', 'Fill', style.fillColor ?? '#1e1e2e')}
+        <span style="font-size:10px;color:var(--text-dim)">Text</span>
+        ${_colorPicker('textColor', 'Text', style.textColor ?? '#cdd6f4')}
+        <button class="style-btn style-btn-wide" data-clear-colors title="Clear fill and text colors for selection">Clear</button>
+      </div>
+    </div>
     <div class="prop-row">
       <label>Decimals</label>
       <div class="style-row">
@@ -123,6 +142,21 @@ function _esc(s) {
     .replace(/>/g, '&gt;');
 }
 
+function _colorPicker(prop, label, value) {
+  const swatches = COLOR_SWATCHES.map(([name, color]) => `
+    <button type="button" class="color-swatch" data-color-value="${color}" data-color-prop="${prop}"
+      title="${name} ${color}" aria-label="${name} ${color}" style="--swatch:${color}"></button>
+  `).join('');
+  return `
+    <div class="color-picker">
+      <button type="button" class="color-picker-trigger" data-color-picker="${prop}" aria-label="${label} color" aria-expanded="false">
+        <span style="--swatch:${value}"></span>
+      </button>
+      <div class="color-palette" data-color-palette="${prop}" role="grid" aria-label="${label} color palette" hidden>${swatches}</div>
+    </div>
+  `;
+}
+
 function _wirePanelControls(context) {
   _panel.querySelectorAll('[data-style]').forEach(el => {
     const evtName = el.tagName === 'INPUT'
@@ -154,6 +188,44 @@ function _wirePanelControls(context) {
           row: context.row,
           rangeEnd: context.rangeEnd,
           action: el.dataset.decimalAction,
+        },
+      }));
+    });
+  });
+
+  _panel.querySelectorAll('[data-clear-colors]').forEach(el => {
+    el.addEventListener('click', () => {
+      _panel.dispatchEvent(new CustomEvent('ks:clear-colors', {
+        bubbles: true,
+        detail: context,
+      }));
+    });
+  });
+
+  _panel.querySelectorAll('[data-color-picker]').forEach(trigger => {
+    trigger.addEventListener('click', () => {
+      const palette = _panel.querySelector(`[data-color-palette="${trigger.dataset.colorPicker}"]`);
+      const open = palette?.hidden === false;
+      _panel.querySelectorAll('[data-color-palette]').forEach(item => { item.hidden = true; });
+      _panel.querySelectorAll('[data-color-picker]').forEach(item => item.setAttribute('aria-expanded', 'false'));
+      if (palette) {
+        palette.hidden = open;
+        trigger.setAttribute('aria-expanded', String(!open));
+      }
+    });
+  });
+
+  _panel.querySelectorAll('[data-color-value]').forEach(swatch => {
+    swatch.addEventListener('click', () => {
+      _panel.dispatchEvent(new CustomEvent('ks:style-change', {
+        bubbles: true,
+        detail: {
+          col: context.col,
+          row: context.row,
+          rangeEnd: context.rangeEnd,
+          prop: swatch.dataset.colorProp,
+          value: swatch.dataset.colorValue,
+          toggle: false,
         },
       }));
     });

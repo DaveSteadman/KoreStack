@@ -4,10 +4,10 @@
 
 import * as grid       from './grid.js';
 import * as cell       from './cell.js';
-import * as properties from './properties.js';
-import * as fileio     from './fileio.js';
+import * as properties from './properties.js?v=20261011b';
+import * as fileio     from './fileio.js?v=20261011b';
 import { colLetter, addrOf, evaluate } from './formula.js';
-import { initAppMenuEvents, initDialogHost, initKoreDocsShell, renderAppMenu, trackAppTab } from '/ui-elements/assets/js/chrome.js';
+import { initAppMenuEvents, initDialogHost, initKoreDocsShell, kcuiAlert, kcuiPrompt, renderAppMenu, trackAppTab } from '/ui-elements/assets/js/chrome.js';
 import * as draft      from '/static/shared/js/draft.js';
 
 const canvas      = document.getElementById('grid');
@@ -15,6 +15,8 @@ const container   = document.getElementById('canvas-container');
 const cellEditor  = document.getElementById('cell-editor');
 const formulaInput = document.getElementById('formula-input');
 const cellAddrEl   = document.getElementById('cell-addr');
+const convertCsvButton = document.getElementById('convert-csv');
+const convertCsvSeparator = document.getElementById('convert-csv-sep');
 
 let _formulaEdit = {
   active: false,
@@ -73,6 +75,7 @@ const autoOpened = await fileio.autoOpenFromUrl(_refresh);
 if (!autoOpened) {
   location.replace('/ui');
 }
+_updateCsvConversionUi();
 
 // Restore any unsaved draft for this tab
 const _savedDraft = draft.load();
@@ -174,6 +177,34 @@ document.getElementById('toolbar').addEventListener('click', async e => {
   _onSelect(tCol, tRow, null);
 });
 
+convertCsvButton.addEventListener('click', async () => {
+  const sourceName = fileio.currentName();
+  if (!fileio.isCsvFile() || !sourceName) return;
+  const defaultName = sourceName.replace(/\.csv$/i, '') + '.koresheet';
+  const requestedName = await kcuiPrompt('Convert CSV to KoreSheet', {
+    label: 'New file name',
+    initial: defaultName,
+    message: 'Creates an editable KoreSheet copy. The source CSV will remain unchanged.',
+    validate: values => {
+      const name = String(values.value || '').trim();
+      return name && name.toLowerCase().endsWith('.koresheet')
+        ? null
+        : 'Use a file name ending in .koresheet.';
+    },
+  });
+  if (!requestedName) return;
+
+  convertCsvButton.disabled = true;
+  try {
+    const created = await fileio.convertToKoreSheet(requestedName, cell.toJSON());
+    location.href = `/sheet?id=${encodeURIComponent(created.id)}&file=${encodeURIComponent(created.name)}`;
+  } catch (error) {
+    await kcuiAlert('CSV conversion failed', error.message || 'Could not create the KoreSheet copy.');
+  } finally {
+    convertCsvButton.disabled = false;
+  }
+});
+
 // ── Style changes from properties panel ────────────────────────────────────
 
 document.getElementById('props-content').addEventListener('ks:style-change', e => {
@@ -198,6 +229,17 @@ document.getElementById('props-content').addEventListener('ks:style-change', e =
 
 document.getElementById('props-content').addEventListener('ks:decimal-action', e => {
   _applyDecimalAction(e.detail.action, e.detail);
+});
+
+document.getElementById('props-content').addEventListener('ks:clear-colors', e => {
+  const { col, row, rangeEnd } = e.detail;
+  const end = rangeEnd ?? { col, row };
+  cell.setRangeStyle(col, row, end.col, end.row, { fillColor: null, textColor: null });
+  fileio.markDirty();
+  draft.save(cell.toJSON());
+  fileio.queueAutosave(cell.toJSON());
+  grid.draw();
+  _onSelect(col, row, rangeEnd);
 });
 
 // ── Menu bar ───────────────────────────────────────────────────────────────
@@ -378,6 +420,13 @@ function _onStateChange(name, dirty) {
   document.title = (dirty ? '● ' : '') + (name ?? 'Untitled') + ' — KoreSheet';
   document.getElementById('status-file').textContent = name ?? 'Untitled.koresheet';
   if (name) trackAppTab(name, 'koresheet', fileio.currentId());
+  _updateCsvConversionUi();
+}
+
+function _updateCsvConversionUi() {
+  const visible = fileio.isCsvFile();
+  convertCsvButton.hidden = !visible;
+  convertCsvSeparator.hidden = !visible;
 }
 
 function _refresh() {

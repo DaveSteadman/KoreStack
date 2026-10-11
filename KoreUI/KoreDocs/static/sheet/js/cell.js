@@ -9,7 +9,7 @@ import { addrOf, evaluate, isFormula } from './formula.js';
 
 export const COLS         = 26;
 export const ROWS         = 100;
-export const COL_W        = 80;
+export const COL_W        = 120;
 export const ROW_H        = 24;
 export const ROW_HEADER_W = 40;
 export const COL_HEADER_H = 24;
