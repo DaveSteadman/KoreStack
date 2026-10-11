@@ -136,12 +136,6 @@
   font-size: 11px;
 }
 
-.chat-contract-label {
-  color: var(--text-dim);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
 #chat-execution-contract-name {
   color: var(--accent-2, var(--text));
   font-weight: 700;
@@ -341,18 +335,25 @@
 #chat-selection-chip {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-bottom: 6px;
-  padding: 4px 8px;
-  border-radius: 4px;
-  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
-  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  gap: 8px;
+  margin: -8px -10px 8px;
+  padding: 5px 10px 6px;
+  border-radius: 0;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
   font-size: 11px;
+  color: var(--text-2);
+}
+
+#chat-selection-chip .chat-context-label,
+.chat-contract-label {
   color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 #chat-selection-label {
-  color: color-mix(in srgb, var(--text-dim) 72%, var(--surface) 28%);
+  color: color-mix(in srgb, var(--text) 82%, var(--text-dim));
 }
 
 #chat-slash-suggestions {
