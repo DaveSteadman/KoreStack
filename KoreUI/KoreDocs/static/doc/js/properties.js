@@ -5,7 +5,7 @@
  * and a live heading outline (document map) for navigating the document.
  */
 
-import { parseFrontmatter } from './editor.js?v=20260911a';
+import { parseFrontmatter } from './editor.js?v=20261011b';
 
 const _panel = document.getElementById('props-content');
 const _map   = document.getElementById('map-content');
@@ -116,6 +116,8 @@ function _refreshMap(text) {
   _map.querySelectorAll('.map-item').forEach(btn => {
     btn.addEventListener('click', () => {
       const idx = parseInt(btn.dataset.idx, 10);
+      _map.querySelectorAll('.map-item.active').forEach(item => item.classList.remove('active'));
+      btn.classList.add('active');
       document.dispatchEvent(new CustomEvent('kd:goto-heading', { detail: idx }));
     });
   });

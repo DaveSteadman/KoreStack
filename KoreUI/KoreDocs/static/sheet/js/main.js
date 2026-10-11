@@ -4,7 +4,7 @@
 
 import * as grid       from './grid.js';
 import * as cell       from './cell.js';
-import * as properties from './properties.js?v=20261011b';
+import * as properties from './properties.js?v=20261011e';
 import * as fileio     from './fileio.js?v=20261011b';
 import { colLetter, addrOf, evaluate } from './formula.js';
 import { initAppMenuEvents, initDialogHost, initKoreDocsShell, kcuiAlert, kcuiPrompt, renderAppMenu, trackAppTab } from '/ui-elements/assets/js/chrome.js';

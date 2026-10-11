@@ -67,6 +67,9 @@ export function init(hostEl, onUpdate) {
     dispatchTransaction(tr) {
       const next = _view.state.apply(tr);
       _view.updateState(next);
+      document.dispatchEvent(new CustomEvent('kd:editor-state-change', {
+        detail: { state: next },
+      }));
       if (tr.docChanged) _onUpdate?.(getValue());
     },
   });
@@ -97,6 +100,9 @@ export function setValue(markdown) {
     ? _parser.parse(body)
     : schema.topNodeType.createAndFill();
   _view.updateState(EditorState.create({ schema, doc, plugins: _view.state.plugins }));
+  document.dispatchEvent(new CustomEvent('kd:editor-state-change', {
+    detail: { state: _view.state },
+  }));
 }
 
 export function doUndo()      { _view && undo(_view.state, _view.dispatch); }
@@ -112,7 +118,8 @@ export function scrollToHeading(idx) {
     if (node.type === schema.nodes.heading && n++ === idx) pos = offset + 1;
   });
   if (pos == null) return;
-  const area   = _view.dom.parentElement;
+  const area   = _view.dom.closest('#editor-area');
+  if (!area) return;
   const coords = _view.coordsAtPos(pos);
   area.scrollTop += coords.top - area.getBoundingClientRect().top - 80;
   _view.focus();
@@ -212,4 +219,3 @@ function _plugins() {
     keymap(baseKeymap),
   ];
 }
-

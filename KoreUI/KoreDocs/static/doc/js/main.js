@@ -3,9 +3,9 @@
  * Wires together editor, toolbar, properties panel, file I/O, and the menu bar.
  */
 
-import * as editor     from './editor.js?v=20260911a';
-import * as toolbar    from './toolbar.js';
-import * as properties from './properties.js?v=20260911a';
+import * as editor     from './editor.js?v=20261011b';
+import * as toolbar    from './toolbar.js?v=20261011b';
+import * as properties from './properties.js?v=20261011b';
 import * as fileio     from './fileio.js';
 import { trackAppTab, initAppMenuEvents } from '/ui-elements/assets/js/chrome.js';
 import { initChrome } from './chrome.js';
@@ -135,5 +135,3 @@ function _initSidebarToggle() {
     localStorage.setItem(key, String(visible));
   });
 }
-
-

@@ -295,11 +295,13 @@ body {
   grid-template-columns: repeat(6, 22px);
   padding: 5px;
   position: absolute;
-  right: 0;
+  left: 0;
   top: calc(100% + 5px);
   width: max-content;
   z-index: 10;
 }
+.color-palette[hidden] { display: none; }
+.color-palette--end { left: auto; right: 0; }
 .color-swatch {
   border: 1px solid rgba(255,255,255,.18);
   border-radius: 2px;

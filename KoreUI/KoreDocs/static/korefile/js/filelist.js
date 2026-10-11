@@ -138,7 +138,7 @@ const TYPE_URL = { koredoc: '/doc', koresheet: '/sheet', korediag: '/diag', csv:
 const TEXT_EXTS = new Set(['csv', 'json', 'log', 'md', 'py', 'txt', 'xml', 'yaml', 'yml']);
 
 function _fileIcon(ext) {
-  return resolveIcon(SUITE_ICONS, ext, 15);
+  return resolveIcon(SUITE_ICONS, ext, 20);
 }
 
 function _sortedFiles() {

@@ -11,12 +11,29 @@ import { colLetter, addrOf, evaluate }                     from './formula.js';
 const _panel        = document.getElementById('props-content');
 const _rangePreview = document.getElementById('range-preview');
 const COLOR_SWATCHES = [
-  ['Blue',   '#4f81bd'], ['Orange', '#c8793c'], ['Gray',   '#777777'], ['Gold',   '#c9a227'], ['Indigo', '#4c6fae'], ['Green', '#5c8345'],
-  ['Blue',   '#76a5d4'], ['Orange', '#e69a5a'], ['Gray',   '#a6a6a6'], ['Gold',   '#e3be52'], ['Indigo', '#7697cc'], ['Green', '#85aa6a'],
-  ['Blue',   '#a9c4e3'], ['Orange', '#f2c49c'], ['Gray',   '#d0d0d0'], ['Gold',   '#f2d88b'], ['Indigo', '#a9bde0'], ['Green', '#b3cea1'],
-  ['Blue',   '#d9e5f3'], ['Orange', '#f9e3d0'], ['Gray',   '#e7e7e7'], ['Gold',   '#f9edc9'], ['Indigo', '#d9e3f3'], ['Green', '#dcead2'],
-  ['Black',  '#1f1f1f'], ['Black',  '#000000'], ['Gray',   '#a6a6a6'], ['White',  '#ffffff'],
+  ['Blue',   '#1d3d5c'], ['Orange', '#5c361f'], ['Gray',   '#30343b'], ['Gold',   '#5b491d'], ['Indigo', '#34305f'], ['Green', '#294b3a'],
+  ['Blue',   '#25527a'], ['Orange', '#794629'], ['Gray',   '#464b54'], ['Gold',   '#756026'], ['Indigo', '#47417d'], ['Green', '#35634c'],
+  ['Blue',   '#2e6799'], ['Orange', '#985a32'], ['Gray',   '#5b616a'], ['Gold',   '#907834'], ['Indigo', '#5a539d'], ['Green', '#437b5d'],
+  ['Blue',   '#3d7fb8'], ['Orange', '#b97140'], ['Gray',   '#737a85'], ['Gold',   '#ac9143'], ['Indigo', '#7068bc'], ['Green', '#56956f'],
+  ['Black',  '#171a1f'], ['Black',  '#242830'], ['Gray',   '#4b5260'], ['White',  '#7a8494'],
 ];
+
+function _closeColorPalettes() {
+  _panel.querySelectorAll('[data-color-palette]').forEach(item => {
+    item.hidden = true;
+    item.classList.remove('color-palette--end');
+    item.style.left = '';
+  });
+  _panel.querySelectorAll('[data-color-picker]').forEach(item => item.setAttribute('aria-expanded', 'false'));
+}
+
+document.addEventListener('pointerdown', event => {
+  if (!event.target.closest('.color-picker')) _closeColorPalettes();
+});
+
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape') _closeColorPalettes();
+});
 
 export function refresh(col, row, rangeEnd) {
   _refreshPanel(col, row, rangeEnd);
@@ -206,10 +223,22 @@ function _wirePanelControls(context) {
     trigger.addEventListener('click', () => {
       const palette = _panel.querySelector(`[data-color-palette="${trigger.dataset.colorPicker}"]`);
       const open = palette?.hidden === false;
-      _panel.querySelectorAll('[data-color-palette]').forEach(item => { item.hidden = true; });
-      _panel.querySelectorAll('[data-color-picker]').forEach(item => item.setAttribute('aria-expanded', 'false'));
+      _closeColorPalettes();
       if (palette) {
         palette.hidden = open;
+        if (!open) {
+          const boundary = document.querySelector('#right-sidebar').getBoundingClientRect();
+          let paletteBounds = palette.getBoundingClientRect();
+          if (paletteBounds.right > boundary.right) {
+            palette.classList.add('color-palette--end');
+            paletteBounds = palette.getBoundingClientRect();
+          }
+          if (paletteBounds.left < boundary.left || paletteBounds.right > boundary.right) {
+            palette.classList.remove('color-palette--end');
+            const triggerBounds = trigger.getBoundingClientRect();
+            palette.style.left = `${boundary.right - paletteBounds.width - triggerBounds.left}px`;
+          }
+        }
         trigger.setAttribute('aria-expanded', String(!open));
       }
     });

@@ -225,7 +225,7 @@ html, body {
   text-overflow: ellipsis;
   max-width: 0;
 }
-.col-icon   { width: 28px; padding: 0 4px 0 10px !important; }
+.col-icon   { width: 36px; padding: 0 6px 0 10px !important; }
 .col-name   { width: 40%; }
 .col-type   { width: 100px; }
 .col-words  { width: 80px; text-align: right; }
@@ -236,7 +236,7 @@ html, body {
   color: var(--accent-2);
   display: flex;
   align-items: center;
-  font-size: 15px;
+  font-size: 20px;
 }
 .file-icon svg {
   width: 1em;

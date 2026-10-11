@@ -4,7 +4,7 @@
 
 import { toggleMark, setBlockType }         from 'https://esm.sh/prosemirror-commands@1';
 import { wrapInList, liftListItem }         from 'https://esm.sh/prosemirror-schema-list@1';
-import { schema, getView, indentBlock, outdentBlock } from './editor.js?v=20260911a';
+import { schema, getView, indentBlock, outdentBlock } from './editor.js?v=20261011b';
 
 export function init() {
   document.getElementById('toolbar').addEventListener('mousedown', e => {
@@ -13,6 +13,7 @@ export function init() {
     e.preventDefault();
     insert(btn.dataset.insert);
   });
+  document.addEventListener('kd:editor-state-change', e => _syncActiveControls(e.detail.state));
 }
 
 export function insert(type) {
@@ -69,4 +70,27 @@ function _inList(state, listType) {
     if ($from.node(d).type === listType) return true;
   }
   return false;
+}
+
+function _syncActiveControls(state) {
+  const { $from } = state.selection;
+  const { heading, code_block, bullet_list, ordered_list } = schema.nodes;
+  const marks = state.storedMarks || $from.marks();
+  const active = {
+    h1: $from.parent.type === heading && $from.parent.attrs.level === 1,
+    h2: $from.parent.type === heading && $from.parent.attrs.level === 2,
+    h3: $from.parent.type === heading && $from.parent.attrs.level === 3,
+    bold: marks.some(mark => mark.type === schema.marks.strong),
+    italic: marks.some(mark => mark.type === schema.marks.em),
+    code: marks.some(mark => mark.type === schema.marks.code),
+    'code-block': $from.parent.type === code_block,
+    ul: _inList(state, bullet_list),
+    ol: _inList(state, ordered_list),
+  };
+
+  document.querySelectorAll('[data-insert]').forEach(button => {
+    const isActive = Boolean(active[button.dataset.insert]);
+    button.classList.toggle('active', isActive);
+    button.setAttribute('aria-pressed', String(isActive));
+  });
 }
