@@ -84,6 +84,7 @@ import ast
 import json
 import logging
 import os
+import pprint
 import re
 from uuid import uuid4
 import re
@@ -362,9 +363,19 @@ def api_import_agent_network_python(body: AgentNetworkPythonImportBody):
 
     slug = re.sub(r'[^a-z0-9]+', '-', body.node_label.casefold()).strip('-') or 'python-block'
     input_names = list(dict.fromkeys(
-        name for name in (str(value).strip() for value in body.input_names) if name
+        name for name in (str(value).strip() for value in [*body.input_names, *body.input_values]) if name
     ))
-    input_lines = [f'    {name!r}: None,' for name in input_names] or ['    # Add sample input values here.']
+    input_lines: list[str] = []
+    for name in input_names:
+        if name not in body.input_values:
+            input_lines.append(f'    {name!r}: None,')
+            continue
+        rendered = pprint.pformat(body.input_values[name], width=100, sort_dicts=False).splitlines()
+        input_lines.append(f'    {name!r}: {rendered[0]}')
+        input_lines.extend(f'    {line}' for line in rendered[1:])
+        input_lines[-1] += ','
+    if not input_lines:
+        input_lines.append('    # Add sample input values here.')
     source = '\n'.join([
         '# Exported from a KoreAgentNetwork Python block.',
         '# This is a standalone debug harness. The original block code begins below.',
@@ -380,6 +391,8 @@ def api_import_agent_network_python(body: AgentNetworkPythonImportBody):
         "print(f'KoreAgentNetwork outputs: {outputs!r}')",
         '',
     ])
+    if len(source.encode('utf-8')) > 2_000_000:
+        raise HTTPException(status_code=413, detail='Python block source and input values exceed the 2 MB import limit')
     temp_dir = _workspace_root() / '.koreagentnetwork-tmp'
     try:
         temp_dir.mkdir(parents=True, exist_ok=True)

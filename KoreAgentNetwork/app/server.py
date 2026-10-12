@@ -63,9 +63,10 @@ class TriggerBody(BaseModel):
 
 
 class KoreCodePythonImportBody(BaseModel):
-    content:     str
-    node_label:  str = ""
-    input_names: list[str] = []
+    content:      str
+    node_label:   str = ""
+    input_names:  list[str] = []
+    input_values: dict = {}
 
 
 def _korecode_import_url() -> str:

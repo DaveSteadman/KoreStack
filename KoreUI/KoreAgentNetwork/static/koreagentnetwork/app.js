@@ -111,6 +111,7 @@ async function editPythonInKoreCode(event) {
         content: $('#node-code').value,
         node_label: $('#node-label').value.trim() || node.label,
         input_names: node.inputs.map((port) => port.name),
+        input_values: resolveInputs(node),
       }),
       signal: controller.signal,
     });

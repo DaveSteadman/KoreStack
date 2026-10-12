@@ -10,6 +10,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from pydantic import BaseModel
 
 
@@ -141,9 +143,10 @@ class PythonExecutionBody(BaseModel):
 
 
 class AgentNetworkPythonImportBody(BaseModel):
-    content:     str
-    node_label:  str = ""
-    input_names: list[str] = []
+    content:      str
+    node_label:   str = ""
+    input_names:  list[str] = []
+    input_values: dict[str, Any] = {}
 
 
 class PythonDebugStartBody(BaseModel):
