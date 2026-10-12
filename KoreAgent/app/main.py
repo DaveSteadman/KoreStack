@@ -451,6 +451,7 @@ def _run(args, logger, log_path) -> None:
                 llm_client.preload_ollama_model(resolved_model, num_ctx=args.ctx)
             if _system_one_ok:
                 llm_client.preload_system_one_model(system_one_model)
+                llm_client.stop_unmanaged_models({resolved_model, system_one_model})
             update_startup_state(
                 dependencies = {
                     "llm": {

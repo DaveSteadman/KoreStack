@@ -48,6 +48,7 @@ from llm_client_ollama import preload_ollama_model
 from llm_client_ollama import recover_ollama_runtime
 from llm_client_ollama import set_ollama_offload_mode
 from llm_client_ollama import stop_model
+from llm_client_ollama import stop_unmanaged_models
 from llm_client_system_one import SystemOneCallResult
 from llm_client_system_one import call_system_one
 from llm_client_system_one import preload_system_one_model
@@ -80,6 +81,7 @@ __all__ = [
     "is_ollama_running",
     "recover_ollama_runtime",
     "stop_model",
+    "stop_unmanaged_models",
     "call_ollama_extended",
     "call_ollama",
     "get_running_model_row",

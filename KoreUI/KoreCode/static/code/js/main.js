@@ -34,7 +34,7 @@ const editorApi = createEditor({
   onTabChange: (path) => chat.onTabChange(path),
   onSelectionChange: (text) => chat.onSelectionChange(text),
 });
-const { editorView, openFile, getActiveTab, renderTabs, renderMeta, restoreTabs } = editorApi;
+const { editorView, openFile, getActiveTab, renderTabs, renderMeta, restoreTabs, revealLine, clearProgramCounter } = editorApi;
 
 window.__kcApplyStructuredEdits = async (edits) => editorApi.applyStructuredEdits(edits);
 window.__kcSaveTabs = async (paths) => editorApi.saveTabs(paths);
@@ -49,7 +49,8 @@ initExecutionConsole({
 initDebugger({
   getActiveTab,
   getBreakpoints: () => editorApi.getBreakpoints(),
-  openFile,
+  revealLine,
+  clearProgramCounter,
 });
 
 const workItems = initWorkItems();
@@ -84,6 +85,7 @@ initExplorer({
 });
 const workbenchLayout = initWorkbenchLayout({ onAssistantHidden: () => chat.setPanelVisible(false) });
 document.getElementById('btn-ai').addEventListener('click', () => workbenchLayout.showAssistant());
+const requestedPath = new URLSearchParams(window.location.search).get('path');
 initPanels({
   panelsEl: document.getElementById('code-app'),
   leftEl: document.getElementById('code-sidebar'),
@@ -103,6 +105,14 @@ async function boot() {
     console.error('Unable to load work items:', error);
   }
   await restoreTabs();
+  if (requestedPath) {
+    try {
+      await openFile(requestedPath);
+      window.history.replaceState({}, '', window.location.pathname);
+    } catch (error) {
+      console.error(`Unable to open requested file '${requestedPath}':`, error);
+    }
+  }
   await chat.handleWorkspaceRootChanged();
   renderTabs();
   renderMeta();

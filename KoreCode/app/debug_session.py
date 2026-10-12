@@ -22,6 +22,7 @@ class DebugSession(bdb.Bdb):
         self._path = path
         self._source = workspace.resolve_relative_path(path).resolve()
         self._root = workspace.workspace_root().resolve()
+        self._runtime_source = Path(__file__).resolve()
         self._condition = threading.Condition()
         self._command: str | None = None
         self._pause_requested = False
@@ -34,6 +35,7 @@ class DebugSession(bdb.Bdb):
             "frames": [],
             "locals": [],
             "error": None,
+            "pause_reason": None,
         }
         for line in self._snapshot["breakpoints"]:
             self.set_break(str(self._source), line)
@@ -78,9 +80,13 @@ class DebugSession(bdb.Bdb):
     def user_line(self, frame) -> None:
         if not self._is_workspace_frame(frame):
             return
+        pause_reason = "step"
         if self._pause_requested:
             self._pause_requested = False
-        self._pause(frame)
+            pause_reason = "pause"
+        elif self._is_breakpoint_line(frame):
+            pause_reason = "breakpoint"
+        self._pause(frame, pause_reason)
 
     def user_exception(self, frame, exc_info) -> None:
         if not self._is_workspace_frame(frame):
@@ -88,7 +94,7 @@ class DebugSession(bdb.Bdb):
         exc_type, exc, _trace = exc_info
         with self._condition:
             self._snapshot["error"] = f"{exc_type.__name__}: {exc}"
-        self._pause(frame)
+        self._pause(frame, "exception")
 
     def _run(self) -> None:
         globals_dict = {
@@ -113,10 +119,11 @@ class DebugSession(bdb.Bdb):
                 self._snapshot["status"] = "error"
                 self._snapshot["error"] = traceback.format_exc(limit=8)[-4000:]
 
-    def _pause(self, frame) -> None:
+    def _pause(self, frame, reason: str) -> None:
         with self._condition:
             self._frame = frame
             self._snapshot["status"] = "paused"
+            self._snapshot["pause_reason"] = reason
             self._snapshot["frames"] = self._frames(frame)
             self._snapshot["locals"] = self._locals(frame)
             self._command = None
@@ -142,18 +149,25 @@ class DebugSession(bdb.Bdb):
         except ValueError:
             return False
 
+    def _is_breakpoint_line(self, frame) -> bool:
+        return (
+            Path(frame.f_code.co_filename).resolve() == self._source
+            and frame.f_lineno in self._snapshot["breakpoints"]
+        )
+
     def _frames(self, frame) -> list[dict[str, Any]]:
         frames = []
         current = frame
         while current is not None and len(frames) < 16:
             if self._is_workspace_frame(current):
                 filename = Path(current.f_code.co_filename).resolve()
-                frames.append({
-                    "path": self._workspace.to_posix(filename),
-                    "line": current.f_lineno,
-                    "name": current.f_code.co_name,
-                    "source": linecache.getline(str(filename), current.f_lineno).strip(),
-                })
+                if filename != self._runtime_source:
+                    frames.append({
+                        "path": self._workspace.to_posix(filename),
+                        "line": current.f_lineno,
+                        "name": current.f_code.co_name,
+                        "source": linecache.getline(str(filename), current.f_lineno).strip(),
+                    })
             current = current.f_back
         return frames
 

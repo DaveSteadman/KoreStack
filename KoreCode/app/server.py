@@ -85,6 +85,8 @@ import json
 import logging
 import os
 import re
+from uuid import uuid4
+import re
 import sys
 from functools import partial
 from pathlib import Path
@@ -129,6 +131,7 @@ from .models import ChatSendBody
 from .models import ChatToolExecuteBody
 from .models import ChatToolFollowupPromptBody
 from .models import ChatWorkspaceContextBody
+from .models import AgentNetworkPythonImportBody
 from .models import ContinueRunCreateBody
 from .models import EditProposalCreateBody
 from .models import PythonExecutionBody
@@ -190,6 +193,7 @@ from .workspace_service import read_file_payload
 from .workspace_service import read_text
 from .workspace_service import run_python_tool
 from .workspace_service import validate_python_content
+from .workspace_service import write_text_file
 from .debug_session import DebugSessionManager
 from .work_item_store import attach_run
 from .work_item_store import create_work_item
@@ -349,6 +353,40 @@ def api_set_root(body: RootBody):
     payload['ok'] = True
     payload['root'] = str(new_root)
     return payload
+
+
+@app.post('/api/imports/agent-network-python')
+def api_import_agent_network_python(body: AgentNetworkPythonImportBody):
+    if len(body.content) > 1_000_000:
+        raise HTTPException(status_code=413, detail='Python block source exceeds the 1 MB import limit')
+
+    slug = re.sub(r'[^a-z0-9]+', '-', body.node_label.casefold()).strip('-') or 'python-block'
+    input_names = list(dict.fromkeys(
+        name for name in (str(value).strip() for value in body.input_names) if name
+    ))
+    input_lines = [f'    {name!r}: None,' for name in input_names] or ['    # Add sample input values here.']
+    source = '\n'.join([
+        '# Exported from a KoreAgentNetwork Python block.',
+        '# This is a standalone debug harness. The original block code begins below.',
+        'inputs = {',
+        *input_lines,
+        '}',
+        'outputs = {}',
+        '',
+        '# --- Python block code ---',
+        body.content.rstrip(),
+        '',
+        '# --- Block result ---',
+        "print(f'KoreAgentNetwork outputs: {outputs!r}')",
+        '',
+    ])
+    temp_dir = _workspace_root() / '.koreagentnetwork-tmp'
+    try:
+        temp_dir.mkdir(parents=True, exist_ok=True)
+        path = temp_dir / f'{slug}-{uuid4().hex[:12]}.py'
+        return write_text_file(_WORKSPACE, path, source)
+    except OSError as exc:
+        raise HTTPException(status_code=500, detail=f'Unable to create KoreAgentNetwork temporary file: {exc}') from exc
 
 
 @app.post('/api/slash')

@@ -18,6 +18,7 @@ from llm_client import register_system_one_model
 from llm_client import resolve_model_name
 from llm_client import set_ollama_offload_mode
 from llm_client import stop_model
+from llm_client import stop_unmanaged_models
 from input_layer.slash_command_context import SlashCommandContext
 
 
@@ -44,6 +45,18 @@ def _configure_ollama_offload(mode: str, ctx: SlashCommandContext) -> None:
         "autogpu":  "allow Ollama to choose CPU/GPU placement.",
     }[mode]
     ctx.output(f"Ollama offload: {mode} — {detail}{unload_note}", "success")
+
+
+def _enforce_configured_model_residency(ctx: SlashCommandContext) -> None:
+    """Unload every resident model except the configured chat and System One pair."""
+    allowed = {ctx.config.resolved_model, ctx.config.system_one_model}
+    try:
+        stopped = stop_unmanaged_models(allowed)
+    except RuntimeError as exc:
+        ctx.output(f"Unable to enforce configured model residency: {exc}", "error")
+        return
+    if stopped:
+        ctx.output(f"Unloaded unmanaged Ollama model(s): {', '.join(stopped)}", "dim")
 
 
 def _cmd_llmserverconfig(arg: str, ctx: SlashCommandContext) -> None:
@@ -126,6 +139,7 @@ def _cmd_llmserverconfig(arg: str, ctx: SlashCommandContext) -> None:
         ctx.config.resolved_model = resolved
         register_session_config(resolved, ctx.config.num_ctx)
         ctx.clear_history()
+        _enforce_configured_model_residency(ctx)
         ctx.output(f"Model switched: {old_model} -> {resolved}", "success")
         ctx.output("(conversation history cleared)", "dim")
         return
@@ -185,13 +199,18 @@ def _cmd_systemone(arg: str, ctx: SlashCommandContext) -> None:
     except Exception as exc:
         ctx.config.system_one_model = old_model
         register_system_one_model(old_model)
-        ctx.output(f"System One model switched: {old_model} -> {resolved}; warmup failed: {exc}", "error")
+        _enforce_configured_model_residency(ctx)
+        ctx.output(
+            f"System One model remains {old_model}; {resolved} was rejected during warmup: {exc}",
+            "error",
+        )
         return
     if old_model and old_model != resolved:
         try:
             stop_model(old_model)
         except Exception:
             pass
+    _enforce_configured_model_residency(ctx)
     ctx.output(f"System One model switched and loaded: {old_model} -> {resolved}", "success")
 
 

@@ -75,6 +75,23 @@ const continuationField = StateField.define({
 
 const continuationDeco = Decoration.mark({ class: 'cm-continuation' });
 const setBreakpoints = StateEffect.define();
+const setProgramCounter = StateEffect.define();
+const programCounterDeco = Decoration.line({ class: 'cm-program-counter-line' });
+
+const programCounterField = StateField.define({
+  create: () => RangeSet.empty,
+  update(marker, transaction) {
+    let next = marker.map(transaction.changes);
+    for (const effect of transaction.effects) {
+      if (!effect.is(setProgramCounter)) continue;
+      next = effect.value === null
+        ? RangeSet.empty
+        : RangeSet.of([programCounterDeco.range(transaction.state.doc.line(effect.value).from)]);
+    }
+    return next;
+  },
+  provide: (field) => EditorView.decorations.from(field),
+});
 
 class BreakpointMarker extends GutterMarker {
   toDOM() {
@@ -560,6 +577,21 @@ export function createEditor({ runFind, runFindNext, runFindPrevious, closeFindB
     }
   }
 
+  async function revealLine(path, lineNumber, { programCounter = false } = {}) {
+    await openFile(path);
+    const line = editorView.state.doc.line(Math.max(1, Math.min(Number(lineNumber) || 1, editorView.state.doc.lines)));
+    editorView.dispatch({
+      selection: { anchor: line.from },
+      scrollIntoView: true,
+      effects: programCounter ? setProgramCounter.of(line.number) : setProgramCounter.of(null),
+    });
+    editorView.focus();
+  }
+
+  function clearProgramCounter() {
+    editorView.dispatch({ effects: setProgramCounter.of(null) });
+  }
+
   async function restoreTabs() {
     let savedTabs = [];
     try {
@@ -594,6 +626,7 @@ export function createEditor({ runFind, runFindNext, runFindPrevious, closeFindB
       doc: '',
       extensions: [
         continuationField,
+        programCounterField,
         breakpointField,
         breakpointGutter,
         lineNumbers({
@@ -868,6 +901,8 @@ export function createEditor({ runFind, runFindNext, runFindPrevious, closeFindB
   return {
     editorView,
     openFile,
+    revealLine,
+    clearProgramCounter,
     getActiveTab,
     setActiveTab,
     renderTabs,

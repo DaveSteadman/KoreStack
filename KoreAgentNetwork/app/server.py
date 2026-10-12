@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
+from urllib.error import HTTPError, URLError
+from urllib.parse import urljoin
+from urllib.request import Request, urlopen
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
@@ -8,6 +12,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from KoreCommon.service_app import register_suite_shell_routes
+from KoreCommon.suite_paths import get_suite_urls_map
 
 from .config import SERVICE_KEY, SERVICE_LABEL
 from .runtime import NetworkBusy, fire_trigger, is_locked, run_network, run_node
@@ -55,6 +60,19 @@ class TriggerBody(BaseModel):
     name: str
     payload: dict = {}
     outputs: dict = {}
+
+
+class KoreCodePythonImportBody(BaseModel):
+    content:     str
+    node_label:  str = ""
+    input_names: list[str] = []
+
+
+def _korecode_import_url() -> str:
+    korecode_ui_url = get_suite_urls_map().get("korecode")
+    if not korecode_ui_url:
+        raise HTTPException(status_code=503, detail="KoreCode is not configured in the suite URL map")
+    return urljoin(f"{korecode_ui_url.rstrip('/')}/", "../api/imports/agent-network-python")
 
 
 def _refuse_if_locked(network_id: str) -> None:
@@ -193,6 +211,31 @@ def api_run_node(body: NodeRunBody) -> dict:
         raise HTTPException(status_code=409, detail=str(exc))
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
+
+
+@app.post("/api/korecode/python-temp")
+def api_create_korecode_python_temp(body: KoreCodePythonImportBody) -> dict:
+    request = Request(
+        _korecode_import_url(),
+        data=json.dumps(body.model_dump()).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urlopen(request, timeout=5) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+    except HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")
+        raise HTTPException(status_code=502, detail=f"KoreCode could not create the temporary file: {detail}") from exc
+    except URLError as exc:
+        raise HTTPException(status_code=503, detail=f"KoreCode is unavailable: {exc.reason}") from exc
+    except (TimeoutError, json.JSONDecodeError) as exc:
+        raise HTTPException(status_code=502, detail=f"Invalid response while creating the KoreCode temporary file: {exc}") from exc
+
+    path = str(payload.get("path") or "").strip()
+    if not path:
+        raise HTTPException(status_code=502, detail="KoreCode did not return the temporary file path")
+    return {"path": path, "korecode_url": get_suite_urls_map()["korecode"]}
 
 
 @app.post("/api/internal/trigger")

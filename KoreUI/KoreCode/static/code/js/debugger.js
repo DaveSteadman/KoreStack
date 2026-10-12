@@ -1,6 +1,6 @@
 import { api } from './state.js';
 
-export function initDebugger({ getActiveTab, getBreakpoints, openFile }) {
+export function initDebugger({ getActiveTab, getBreakpoints, revealLine, clearProgramCounter }) {
   const startButton = document.getElementById('btn-debug-start');
   const summary = document.getElementById('execution-summary');
   const status = document.getElementById('debug-status');
@@ -15,6 +15,7 @@ export function initDebugger({ getActiveTab, getBreakpoints, openFile }) {
   };
   let sessionId = null;
   let pollTimer = null;
+  let programCounterKey = null;
 
   function setControls(snapshot) {
     const paused = snapshot?.status === 'paused';
@@ -28,15 +29,30 @@ export function initDebugger({ getActiveTab, getBreakpoints, openFile }) {
 
   function render(snapshot) {
     const currentStatus = snapshot?.status || 'not started';
-    status.textContent = currentStatus.replace('_', ' ');
-    status.dataset.state = currentStatus;
-    summary.textContent = sessionId
-      ? `DEBUG ${snapshot?.path || ''} · ${currentStatus}`
-      : 'No debug session';
     stack.replaceChildren();
     locals.replaceChildren();
 
     const frames = Array.isArray(snapshot?.frames) ? snapshot.frames : [];
+    const topFrame = frames[0];
+    const breakpointReached = currentStatus === 'paused' && snapshot?.pause_reason === 'breakpoint' && topFrame;
+    status.textContent = breakpointReached ? 'Breakpoint reached' : currentStatus.replace('_', ' ');
+    status.dataset.state = breakpointReached ? 'breakpoint' : currentStatus;
+    status.title = snapshot?.error || snapshot?.pause_reason || currentStatus;
+    summary.textContent = sessionId
+      ? breakpointReached
+        ? `BREAKPOINT REACHED · L${topFrame.line} · ${topFrame.path}`
+        : `DEBUG ${snapshot?.path || ''} · ${snapshot?.error || currentStatus}`
+      : 'No debug session';
+    if (currentStatus === 'paused' && topFrame) {
+      const key = `${topFrame.path}:${topFrame.line}`;
+      if (key !== programCounterKey) {
+        programCounterKey = key;
+        void revealLine(topFrame.path, topFrame.line, { programCounter: true });
+      }
+    } else if (programCounterKey) {
+      programCounterKey = null;
+      clearProgramCounter();
+    }
     if (!frames.length) {
       stack.textContent = currentStatus === 'error' ? snapshot.error || 'Debug session failed.' : 'No paused frame.';
       stack.className = 'debug-empty';
@@ -48,7 +64,7 @@ export function initDebugger({ getActiveTab, getBreakpoints, openFile }) {
         item.className = 'debug-frame';
         item.textContent = `${index === 0 ? '▶ ' : ''}${frame.name} · ${frame.path}:${frame.line}`;
         item.title = frame.source || '';
-        item.addEventListener('click', () => { void openFile(frame.path); });
+        item.addEventListener('click', () => { void revealLine(frame.path, frame.line, { programCounter: index === 0 }); });
         stack.appendChild(item);
       });
     }

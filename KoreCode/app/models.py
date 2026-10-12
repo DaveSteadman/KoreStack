@@ -140,6 +140,12 @@ class PythonExecutionBody(BaseModel):
     timeout_seconds: int | None = None
 
 
+class AgentNetworkPythonImportBody(BaseModel):
+    content:     str
+    node_label:  str = ""
+    input_names: list[str] = []
+
+
 class PythonDebugStartBody(BaseModel):
     path: str
     breakpoints: list[int] = []

@@ -497,6 +497,29 @@ def stop_model(
         raise RuntimeError(f"Unable to reach Ollama at {host}: {error.reason}") from error
 
 
+def stop_unmanaged_models(allowed_models: set[str] | list[str] | tuple[str, ...]) -> list[str]:
+    """Unload resident models not included in the configured chat/System One pair."""
+    allowed = {str(model).strip().casefold() for model in allowed_models if str(model).strip()}
+    if not allowed:
+        raise ValueError("At least one allowed Ollama model is required")
+
+    stopped: list[str] = []
+    failures: list[str] = []
+    for row in get_ollama_ps_rows():
+        model_name = str(row.get("name") or "").strip()
+        if not model_name or model_name.casefold() in allowed:
+            continue
+        try:
+            stop_model(model_name)
+            stopped.append(model_name)
+        except RuntimeError as error:
+            failures.append(f"{model_name}: {error}")
+
+    if failures:
+        raise RuntimeError(f"Unable to unload unmanaged Ollama model(s): {'; '.join(failures)}")
+    return stopped
+
+
 # ====================================================================================================
 # MARK: NATIVE CHAT
 # ====================================================================================================

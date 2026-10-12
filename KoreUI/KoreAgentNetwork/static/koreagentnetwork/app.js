@@ -92,6 +92,45 @@ function showKindFields(kind) {
   $('#field-judge').hidden = kind !== 'judge';
   $('#node-help').textContent = BLOCK_HELP[kind] || '';
 }
+
+async function editPythonInKoreCode(event) {
+  event.preventDefault();
+  const node = currentNode();
+  if (!node || node.kind !== 'python') return;
+
+  const link = event.currentTarget;
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 6_000);
+  link.setAttribute('aria-disabled', 'true');
+  const originalLabel = link.textContent;
+  link.textContent = 'Opening KoreCode…';
+  try {
+    const payload = await request('/api/korecode/python-temp', {
+      method: 'POST',
+      body: JSON.stringify({
+        content: $('#node-code').value,
+        node_label: $('#node-label').value.trim() || node.label,
+        input_names: node.inputs.map((port) => port.name),
+      }),
+      signal: controller.signal,
+    });
+    const path = String(payload.path || '').trim();
+    const koreCodeUrl = String(payload.korecode_url || '').replace(/\/+$/, '');
+    if (!path || !koreCodeUrl) throw new Error('KoreCode did not return an editor location.');
+
+    const destination = `${koreCodeUrl}?${new URLSearchParams({ path }).toString()}`;
+    window.location.assign(destination);
+  } catch (error) {
+    const message = error.name === 'AbortError'
+      ? 'KoreCode did not respond within six seconds.'
+      : error.message;
+    setStatus(`Could not open KoreCode: ${message}`, 'error');
+  } finally {
+    window.clearTimeout(timeout);
+    link.removeAttribute('aria-disabled');
+    link.textContent = originalLabel;
+  }
+}
 function portPosition(node, portName, output) {
   const ports = output ? node.outputs : node.inputs;
   const index = ports.findIndex((port) => port.name === portName);
@@ -1051,6 +1090,7 @@ function setStatus(text, kind = '') { const status = $('#run-status'); status.te
 
 $('#node-form').addEventListener('submit', (event) => event.preventDefault());
 $('#node-form').addEventListener('change', applyNode);
+$('#edit-python-in-korecode').addEventListener('click', editPythonInKoreCode);
 
 function applyNode() {
   const node = currentNode();

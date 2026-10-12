@@ -6,6 +6,7 @@ export function initExecutionConsole({ getActiveTab, getCursorInfo, openFile, se
   const output            = document.getElementById('execution-output');
   const summary           = document.getElementById('execution-summary');
   const hierarchy         = document.getElementById('call-hierarchy-content');
+  const hierarchyPanel    = document.getElementById('call-hierarchy');
   const runButton         = document.getElementById('btn-run-active');
   const checkButton       = document.getElementById('btn-check-active');
   const clearButton       = document.getElementById('btn-clear-execution');
@@ -98,9 +99,11 @@ export function initExecutionConsole({ getActiveTab, getCursorInfo, openFile, se
   function renderHierarchy(symbol, callers, callees) {
     hierarchy.replaceChildren();
     if (!symbol) {
+      hierarchyPanel.classList.add('is-empty');
       hierarchy.textContent = 'No indexed symbol at the current cursor location.';
       return;
     }
+    hierarchyPanel.classList.remove('is-empty');
     const title = document.createElement('div');
     title.className = 'hierarchy-symbol';
     title.textContent = symbol.qualname;
@@ -139,6 +142,7 @@ export function initExecutionConsole({ getActiveTab, getCursorInfo, openFile, se
     const active = getActiveTab();
     const cursor = getCursorInfo();
     if (!active?.path || !active.path.endsWith('.py')) {
+      hierarchyPanel.classList.add('is-empty');
       hierarchy.textContent = 'Open a Python file to inspect its static call hierarchy.';
       return;
     }
@@ -153,10 +157,12 @@ export function initExecutionConsole({ getActiveTab, getCursorInfo, openFile, se
       ]);
       renderHierarchy(symbol, callers.callers || [], callees.callees || []);
     } catch (error) {
+      hierarchyPanel.classList.remove('is-empty');
       hierarchy.textContent = `Build the workspace index to inspect calls. (${String(error?.message || error)})`;
     }
   }
 
+  hierarchyPanel.classList.add('is-empty');
   runButton.addEventListener('click', () => { void execute('run'); });
   checkButton.addEventListener('click', () => { void execute('check'); });
   clearButton.addEventListener('click', () => { summary.textContent = 'No run yet'; output.textContent = ''; });
