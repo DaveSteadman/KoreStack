@@ -20,13 +20,14 @@ function cachedSuiteUrls() {
 }
 
 const DEFAULT_SERVICES = [
-	{ key: 'korestack',  label: 'KoreStack',  path: '/',   icon: 'korestack'  },
-	{ key: 'koreagent',  label: 'KoreAgent',  path: '/',   icon: 'koreagent'  },
-	{ key: 'korechat',   label: 'KoreChat',   path: '/ui', icon: 'korechat'   },
-	{ key: 'koredata',   label: 'KoreData',   path: '/',   icon: 'koredata'   },
-	{ key: 'koredocs',   label: 'KoreDocs',   path: '/ui', icon: 'koredocs'   },
-	{ key: 'korecode',   label: 'KoreCode',   path: '/ui', icon: 'korecode'   },
-	{ key: 'korecomms',  label: 'KoreComms',  path: '/',   icon: 'korecomms'  },
+	{ key: 'korestack',        label: 'Stack',   path: '/',   icon: 'korestack'        },
+	{ key: 'koreagent',        label: 'Agent',   path: '/',   icon: 'koreagent'        },
+	{ key: 'koreagentnetwork', label: 'Network', path: '/ui', icon: 'koreagentnetwork' },
+	{ key: 'korechat',         label: 'Chat',    path: '/ui', icon: 'korechat'         },
+	{ key: 'koredata',         label: 'Data',    path: '/',   icon: 'koredata'         },
+	{ key: 'koredocs',         label: 'Docs',    path: '/ui', icon: 'koredocs'         },
+	{ key: 'korecode',         label: 'Code',    path: '/ui', icon: 'korecode'         },
+	{ key: 'korecomms',        label: 'Comms',   path: '/',   icon: 'korecomms'         },
 ];
 
 const SUITE_VERSION_RE = /export\s+const\s+SUITE_VERSION\s*=\s*['\"]([^'\"]+)['\"]/;
