@@ -602,12 +602,26 @@ def orchestrate_prompt(
                 conversation_entry = conversation_entry,
             )
         if re.search(r"\bkoredata\b", user_prompt, flags=re.IGNORECASE):
+            requested_tools = ["koredata_search"]
+            if re.search(r"\b(?:last|past|previous)\s+\d+\s+(?:hours?|days?)\b", user_prompt, flags=re.IGNORECASE):
+                requested_tools.append("koredata_search_recent")
             promote_selected_tools(
-                ["koredata_search"],
+                requested_tools,
                 session_id         = active_session_id,
                 conversation_entry = conversation_entry,
             )
-            _log_file_only("[tool routing] Activated koredata_search for an explicit KoreData request.")
+            _log_file_only(f"[tool routing] Activated {', '.join(requested_tools)} for an explicit KoreData request.")
+        if re.search(
+            r"\b(?:count|how\s+many(?:\s+times)?)\b.*\b(?:letter|character|substring|occurrences?)\b",
+            user_prompt,
+            flags=re.IGNORECASE,
+        ):
+            promote_selected_tools(
+                ["python_execute"],
+                session_id         = active_session_id,
+                conversation_entry = conversation_entry,
+            )
+            _log_file_only("[tool routing] Activated python_execute for an exact string-count request.")
 
         available_local_payload = config.skills_payload if _WEB_SKILLS_ENABLED else _filter_web_skills(config.skills_payload)
         initial_tool_runtime = derive_active_tool_runtime(

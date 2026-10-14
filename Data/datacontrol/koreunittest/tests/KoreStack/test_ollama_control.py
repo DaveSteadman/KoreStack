@@ -9,6 +9,16 @@ from KoreStack.ollama_control import OllamaControl
 
 
 class OllamaControlTests(unittest.TestCase):
+    def test_snapshot_returns_cached_initial_state_without_network_io(self) -> None:
+        control = OllamaControl("http://127.0.0.1:8765/api/status/ollama", Path(tempfile.gettempdir()))
+
+        with patch("KoreStack.ollama_control._read_json") as read_json:
+            state = control.snapshot()
+
+        read_json.assert_not_called()
+        self.assertFalse(state["server_running"])
+        self.assertEqual(state["host"], "http://127.0.0.1:11434")
+
     def test_snapshot_combines_agent_configuration_and_loaded_model(self) -> None:
         control = OllamaControl("http://127.0.0.1:8765/api/status/ollama", Path(tempfile.gettempdir()))
         agent = {
@@ -23,7 +33,7 @@ class OllamaControlTests(unittest.TestCase):
         api_state = {"models": [{"name": "nemotron-3.5-lightning:latest"}]}
 
         with patch("KoreStack.ollama_control._read_json", side_effect=[agent, api_state, {"version": "0.35.1"}]):
-            state = control.snapshot()
+            state = control.refresh()
 
         self.assertEqual(state["version"], "0.35.1")
         self.assertTrue(state["server_running"])
@@ -46,7 +56,7 @@ class OllamaControlTests(unittest.TestCase):
 
         control._proc = Process()  # type: ignore[assignment]
         with patch("KoreStack.ollama_control._read_json", return_value=None):
-            state = control.snapshot()
+            state = control.refresh()
 
         self.assertTrue(state["server_running"])
         self.assertFalse(state["server_ready"])

@@ -11,6 +11,7 @@
 # - _looks_like_html: Implements the  looks like html operation for this module.
 # - _html_to_text: Implements the  html to text operation for this module.
 # - _body: Implements the  body operation for this module.
+# - _reply_sender: Resolves the reply address (Reply-To, falling back to From).
 # - _message_data: Implements the  message data operation for this module.
 # - _is_self_sent: Implements the  is self sent operation for this module.
 # - _imap_messages: Implements the  imap messages operation for this module.
@@ -96,10 +97,18 @@ class ClassicEmailInterface(BaseInterface):
         content = payload.decode(message.get_content_charset() or "utf-8", errors="replace").strip()
         return cls._html_to_text(content) if message.get_content_type() == "text/html" else content
 
+    @classmethod
+    def _reply_sender(cls, message: Message) -> str:
+        """Return the address replies should go to: Reply-To when it holds an address, otherwise From."""
+        reply_to = cls._text(message.get("Reply-To"))
+        if parseaddr(reply_to)[1]:
+            return reply_to
+        return cls._text(message.get("From"))
+
     @staticmethod
     def _message_data(message_id: str, raw: bytes) -> dict:
         message = email.message_from_bytes(raw)
-        sender = ClassicEmailInterface._text(message.get("From"))
+        sender = ClassicEmailInterface._reply_sender(message)
         references = []
         for header_name in ("References", "In-Reply-To"):
             references.extend(_MESSAGE_ID_RE.findall(message.get(header_name, "")))
@@ -118,10 +127,14 @@ class ClassicEmailInterface(BaseInterface):
 
     @classmethod
     def _is_self_sent(cls, message: Message, cfg: dict) -> bool:
-        """Ignore mail emitted by this connection to prevent mailbox feedback loops."""
+        """Ignore mail emitted by this connection to prevent mailbox feedback loops.
+
+        Mail sent from our own address on behalf of someone else (e.g. a website
+        form with Reply-To set to the visitor) is not self-sent.
+        """
         if message.get("X-KoreComms-Auto-Reply") == "1":
             return True
-        sender = parseaddr(cls._text(message.get("From")))[1].casefold()
+        sender = parseaddr(cls._reply_sender(message))[1].casefold()
         own_addresses = {
             str(cfg.get(key) or "").strip().casefold()
             for key in ("incoming_username", "outgoing_username", "outgoing_from")

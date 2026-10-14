@@ -85,7 +85,7 @@ import signal
 import subprocess
 import sys
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import threading
 import time
@@ -751,6 +751,74 @@ async def koredata_search(
     return await api_search(req)
 
 
+def _parse_published_at(value: object) -> datetime | None:
+    text = str(value or "").strip()
+    if not text:
+        return None
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+async def koredata_search_recent(
+    query: str,
+    hours: int = 48,
+    limit: int = 20,
+) -> dict:
+    """Search KoreFeed within an exact UTC time window and return only verified recent results.
+
+    Args:
+        query: Search string for feed content.
+        hours: Lookback window in hours (1–8760; default 48).
+        limit: Maximum returned results (1–200; default 20).
+    """
+    if not 1 <= hours <= 8760:
+        return {"error": "hours must be between 1 and 8760."}
+
+    boundary = datetime.now(timezone.utc) - timedelta(hours=hours)
+    payload = await api_search(
+        _SearchRequest(
+            query=query,
+            domains=["feeds"],
+            since=boundary.date().isoformat(),
+            limit=limit,
+        )
+    )
+    raw_results = payload.get("results")
+    results = raw_results if isinstance(raw_results, list) else []
+    recent_results: list[dict] = []
+    omitted_without_timestamp = 0
+    for result in results:
+        if not isinstance(result, dict):
+            continue
+        published_at = _parse_published_at(result.get("published_at"))
+        if published_at is None:
+            omitted_without_timestamp += 1
+            continue
+        if published_at >= boundary:
+            recent_results.append(result)
+
+    response = dict(payload)
+    response["results"] = recent_results
+    response["results_by_domain"] = {"feeds": recent_results}
+    response["result_counts_by_domain"] = {"feeds": len(recent_results)}
+    response["time_window"] = {
+        "hours": hours,
+        "since_utc": boundary.isoformat().replace("+00:00", "Z"),
+        "until_utc": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+    }
+    if omitted_without_timestamp:
+        raw_warnings = response.get("warnings")
+        warnings = list(raw_warnings) if isinstance(raw_warnings, list) else []
+        warnings.append(f"Omitted {omitted_without_timestamp} feed result(s) without a parseable published_at timestamp.")
+        response["warnings"] = warnings
+    return response
+
+
 async def koredata_savedsearch_list() -> dict[str, list[dict]]:
     """List saved KoreData SavedSearch definitions."""
     return {"saved_searches": _load_saved_searches(_SAVED_SEARCHES_FILE)}
@@ -1055,6 +1123,7 @@ register_skill_invocation_routes(
     app,
     {
         "koredata_search": koredata_search,
+        "koredata_search_recent": koredata_search_recent,
         "koredata_savedsearch_list": koredata_savedsearch_list,
         "koredata_savedsearch_run": koredata_savedsearch_run,
         "koredata_get_sentence": koredata_get_sentence,

@@ -111,8 +111,63 @@ class OllamaControl:
         self._proc: subprocess.Popen[bytes] | None = None
         self._log_handle: Any = None
         self._lock = threading.RLock()
+        self._snapshot_cache = self._initial_snapshot()
+        self._refresh_stop = threading.Event()
+        self._refresh_thread: threading.Thread | None = None
 
     def snapshot(self) -> dict[str, Any]:
+        """Return the last state refreshed by the worker without network I/O."""
+        with self._lock:
+            return self._snapshot_cache
+
+    def start_refreshing(self) -> None:
+        with self._lock:
+            if self._refresh_thread is not None:
+                return
+            self._refresh_thread = threading.Thread(target=self._refresh_loop, daemon=True)
+            self._refresh_thread.start()
+
+    def refresh(self) -> dict[str, Any]:
+        """Synchronously refresh state for a user-initiated lifecycle action."""
+        state = self._compute_snapshot()
+        with self._lock:
+            self._snapshot_cache = state
+        return state
+
+    def _refresh_loop(self) -> None:
+        while not self._refresh_stop.is_set():
+            try:
+                self.refresh()
+            finally:
+                self._refresh_stop.wait(3)
+
+    @staticmethod
+    def _initial_snapshot() -> dict[str, Any]:
+        return {
+            "server_running": False,
+            "server_ready": False,
+            "management": "none",
+            "pid": None,
+            "returncode": None,
+            "host": DEFAULT_OLLAMA_HOST,
+            "backend": "ollama",
+            "version": "",
+            "configured_model": "",
+            "loaded_models": [],
+            "system_one_model": "",
+            "system_one_loaded": False,
+            "system_one_stats": "Not configured",
+            "num_ctx": None,
+            "max_predict": None,
+            "sampling": {},
+            "sampling_summary": "",
+            "offload_mode": "",
+            "llm_running": False,
+            "agent_available": False,
+            "controllable": True,
+        }
+
+    def _compute_snapshot(self) -> dict[str, Any]:
         agent     = _read_json(self._agent_status_url) or {}
         host      = str(agent.get("host") or DEFAULT_OLLAMA_HOST).strip()
         backend   = str(agent.get("backend") or "ollama").strip().lower()
@@ -165,7 +220,7 @@ class OllamaControl:
         }
 
     def start(self) -> dict[str, Any]:
-        state = self.snapshot()
+        state = self.refresh()
         if state["backend"] != "ollama":
             raise RuntimeError("Ollama controls are unavailable while KoreAgent uses another backend.")
         if not state["controllable"]:
@@ -196,7 +251,7 @@ class OllamaControl:
             self._close_log_handle()
             self._proc       = process
             self._log_handle = log_handle
-        return {"changed": True, "message": "Ollama start requested.", "state": self.snapshot()}
+        return {"changed": True, "message": "Ollama start requested.", "state": self.refresh()}
 
     def stop(self, *, include_external: bool = True) -> dict[str, Any]:
         with self._lock:
@@ -205,7 +260,7 @@ class OllamaControl:
             self._stop_process_tree(process)
             with self._lock:
                 self._close_log_handle()
-            return {"changed": True, "message": "KoreStack-managed Ollama stopped.", "state": self.snapshot()}
+            return {"changed": True, "message": "KoreStack-managed Ollama stopped.", "state": self.refresh()}
 
         if include_external and os.name == "nt":
             result = subprocess.run(
@@ -219,11 +274,14 @@ class OllamaControl:
             return {
                 "changed": changed,
                 "message": "External Ollama stopped." if changed else "No external Ollama server was running.",
-                "state":   self.snapshot(),
+                "state":   self.refresh(),
             }
-        return {"changed": False, "message": "No KoreStack-managed Ollama server is running.", "state": self.snapshot()}
+        return {"changed": False, "message": "No KoreStack-managed Ollama server is running.", "state": self.refresh()}
 
     def close(self) -> None:
+        self._refresh_stop.set()
+        if self._refresh_thread is not None:
+            self._refresh_thread.join(timeout=2)
         self.stop(include_external=False)
 
     def _close_log_handle(self) -> None:

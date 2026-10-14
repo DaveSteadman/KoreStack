@@ -50,6 +50,82 @@ class _Result:
 
 
 class DeliveryPublicationTests(unittest.TestCase):
+    def test_koredocs_creation_requires_read_back_before_completion(self) -> None:
+        create_call = {
+            "id": "create_1",
+            "type": "function",
+            "function": {
+                "name": "koredocs_doc_create",
+                "arguments": '{"folder_path":"/Tests","name":"source.koredoc","markdown":"# Source"}',
+            },
+        }
+        read_call = {
+            "id": "read_1",
+            "type": "function",
+            "function": {
+                "name": "koredocs_file_get",
+                "arguments": '{"id":101}',
+            },
+        }
+        responses = [
+            _Result("", [create_call]),
+            _Result("", [read_call]),
+            _Result("Verified document."),
+        ]
+        messages = [
+            {"role": "system", "content": "system"},
+            {"role": "user", "content": "Create and verify a document."},
+        ]
+        context_map = [
+            {"round": 0, "role": "sys", "label": "system", "chars": 6, "auto_key": None, "msg_idx": 0},
+            {"round": 0, "role": "user", "label": "prompt", "chars": 29, "auto_key": None, "msg_idx": 1},
+        ]
+        tool_defs = [
+            {"type": "function", "function": {"name": "koredocs_doc_create"}},
+            {"type": "function", "function": {"name": "koredocs_file_get"}},
+        ]
+
+        def call_llm_chat(**_kwargs):
+            return responses.pop(0)
+
+        def execute_tool_call(name, arguments, *_args):
+            result = (
+                {"id": 101, "artifact_id": "artifact-source", "metadata": {"status": "published"}}
+                if name == "koredocs_doc_create"
+                else {"id": arguments["id"], "artifact_id": "artifact-source", "content": "# Source"}
+            )
+            return ToolCallResult(
+                tool=name,
+                function=name,
+                module="KoreDocs",
+                arguments=arguments,
+                result=result,
+            )
+
+        with patch.object(tool_loop, "execute_tool_call", side_effect=execute_tool_call), \
+             patch.object(tool_selection, "note_tool_used"):
+            response, _prompt, _completion, successful, _tps, _outputs = tool_loop.run_tool_loop(
+                config=SimpleNamespace(resolved_model="test", max_iterations=4, num_ctx=8192, skills_payload={"skills": []}),
+                messages=messages,
+                tool_defs=tool_defs,
+                catalog_gates={},
+                active_tool_names={"koredocs_doc_create", "koredocs_file_get"},
+                context_map=context_map,
+                user_prompt="Create and verify a document.",
+                logger=_Logger(),
+                quiet=True,
+                call_llm_chat=call_llm_chat,
+                stop_requested=lambda: False,
+                clear_stop=lambda: None,
+            )
+
+        self.assertTrue(successful)
+        self.assertEqual("Verified document.", response)
+        self.assertIn(
+            "[PERSISTED_ARTIFACT_VERIFICATION_REQUIRED]",
+            "\n".join(str(message.get("content") or "") for message in messages),
+        )
+
     def test_scheduled_email_prompt_requires_explicit_publication(self) -> None:
         conversation = {
             "channel_type": "classic_email",

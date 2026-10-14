@@ -3,6 +3,9 @@
 ## Purpose
 Interface for generic file read, write, append, navigation, and search operations inside the shared `datauser/` tree. Each conversation starts in `datauser/`; bare relative paths resolve from its current virtual directory. Legacy prefixes such as `data/...`, `datauser/...`, and `KoreDocs/...` are accepted for compatibility.
 
+## Path safety
+Treat the user-supplied path as exact. If it contains traversal segments or a file operation reports that it escapes `datauser/`, explicitly report the rejection. Do not remove path segments, substitute a safe destination, or claim the operation succeeded unless the user explicitly requests an alternative path.
+
 ## Interface
 - Module: `KoreAgent/app/system_skills/FileAccess/file_access_skill.py`
 - Functions:

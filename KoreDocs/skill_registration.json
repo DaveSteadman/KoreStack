@@ -91,7 +91,7 @@
               "markdown"
             ]
           },
-          "returns": "A KoreDocs operation result.",
+          "returns": "Created document record with durable id and artifact_id. Read it back before reporting a multi-step workflow as complete.",
           "invoke_path": "/api/skills/koredocs_doc_create/invoke"
         },
         {
@@ -134,7 +134,7 @@
               "working_data_content"
             ]
           },
-          "returns": "A KoreDocs operation result.",
+          "returns": "Created document record with durable id and artifact_id. Read it back before reporting a multi-step workflow as complete.",
           "invoke_path": "/api/skills/koredocs_doc_create_from_working_data/invoke"
         },
         {

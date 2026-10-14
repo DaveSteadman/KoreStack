@@ -363,7 +363,11 @@ def koredocs_doc_create(
     tags: Annotated[Optional[list[str]], 'Optional tags.'] = None,
     metadata: Annotated[Optional[dict], 'Optional artefact metadata.'] = None,
 ) -> dict:
-    """Canonical prefixed alias for create_koredoc."""
+    """Create a KoreDoc and return its durable ``id`` and ``artifact_id``.
+
+    The caller must retain both identifiers and read the returned document back
+    before reporting a multi-step workflow as complete.
+    """
     return create_koredoc(folder_path=folder_path, name=name, markdown=markdown, title=title, tags=tags, metadata=metadata)
 
 
@@ -378,7 +382,9 @@ def koredocs_doc_create_from_working_data(
     """Create a KoreDoc from an exact prior tool result held in Working Data.
 
     Use after Python, retrieval, or transformation tools when copying their output
-    into a document could introduce transcription or encoding errors.
+    into a document could introduce transcription or encoding errors. Returns the
+    durable ``id`` and ``artifact_id``; read the document back before reporting
+    completion of a multi-step workflow.
     """
     return create_koredoc(
         folder_path=folder_path,

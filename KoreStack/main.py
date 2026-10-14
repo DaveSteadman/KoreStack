@@ -504,9 +504,9 @@ class StackManager:
         self._started_at: dict[str, float] = {}
         self._log_handles: dict[str, IO[bytes]] = {}
         self._lock = threading.Lock()
-        self._snapshot_cache: dict | None = None
         self._cache_lock = threading.Lock()
         self._refresh_stop = threading.Event()
+        self._snapshot_cache = self._initial_snapshot()
         self._refresh_thread = threading.Thread(target=self._refresh_loop, daemon=True)
         self._refresh_thread.start()
         self._watch_thread = threading.Thread(target=self._watch_loop, daemon=True)
@@ -516,15 +516,18 @@ class StackManager:
         return self._service_map.get(slug)
 
     def invalidate_snapshot_cache(self) -> None:
-        with self._cache_lock:
-            self._snapshot_cache = None
+        # The refresh worker owns probe I/O. Keep the previous snapshot visible until
+        # it publishes the next one instead of making an HTTP request wait on probes.
+        return
 
     def get_live_processes(self) -> list[subprocess.Popen[bytes]]:
         with self._lock:
             return [proc for proc in self._processes.values() if proc.poll() is None]
 
-    def start(self) -> None:
+    def start(self, stop_event: threading.Event | None = None) -> None:
         for spec in self._services:
+            if stop_event is not None and stop_event.is_set():
+                return
             self.start_service(spec.slug)
 
     def start_service(self, slug: str) -> bool:
@@ -652,11 +655,15 @@ class StackManager:
         with self._lock:
             items = list(self._processes.items())
 
-        for slug, proc in reversed(items):
+        def stop_one(item: tuple[str, subprocess.Popen[bytes]]) -> None:
+            slug, proc = item
             if proc.poll() is not None:
-                continue
+                return
             log.info("stopping %s pid=%s", slug, proc.pid)
             self._stop_process_tree(slug, proc)
+
+        with ThreadPoolExecutor(max_workers=len(items) or 1) as pool:
+            list(pool.map(stop_one, reversed(items)))
 
         with self._lock:
             handles = list(self._log_handles.values())
@@ -740,16 +747,52 @@ class StackManager:
             self._refresh_stop.wait(3)
 
     def snapshot(self) -> dict[str, object]:
-        """Return the most recently cached snapshot (instant), computing fresh on first call."""
+        """Return the most recently cached snapshot without performing probe I/O."""
         with self._cache_lock:
-            cached = self._snapshot_cache
-        if cached is not None:
-            return cached
-        # First call before background thread has run — compute synchronously.
-        fresh = self._compute_snapshot()
-        with self._cache_lock:
-            self._snapshot_cache = fresh
-        return fresh
+            return self._snapshot_cache
+
+    def _initial_snapshot(self) -> dict[str, object]:
+        entries = [
+            {
+                "slug": spec.slug,
+                "label": spec.label,
+                "iconKey": SERVICE_ICON_KEYS.get(spec.slug, "korestack"),
+                "description": spec.description,
+                "url": spec.url,
+                "healthUrl": spec.health_url,
+                "host": urllib.parse.urlparse(spec.url).hostname or "-",
+                "port": urllib.parse.urlparse(spec.url).port or "-",
+                "cwd": str(spec.cwd.relative_to(SUITE_ROOT)),
+                "running": False,
+                "reachable": False,
+                "status": "awaiting background probe",
+                "pid": None,
+                "returncode": None,
+                "uptimeSec": None,
+            }
+            for spec in self._services
+        ]
+        return self._snapshot_payload(entries)
+
+    def _snapshot_payload(self, entries: list[dict[str, object]]) -> dict[str, object]:
+        running_count = sum(1 for entry in entries if entry["running"])
+        reachable_count = sum(1 for entry in entries if entry["reachable"])
+        return {
+            "stack": {
+                "label": "KoreStack",
+                "root": str(SUITE_ROOT),
+                "configPath": str(SUITE_CONFIG_FILE),
+                "uiElementsMounted": get_ui_assets_dir().exists(),
+                "services": [spec.slug for spec in self._services],
+                "metrics": {
+                    "selected": len(entries),
+                    "running": running_count,
+                    "reachable": reachable_count,
+                },
+                "paths": {k: str(self._stack_paths[k]) for k in ("path config", "dataroot", "datacontrol", "datauser")},
+            },
+            "services": entries,
+        }
 
     def _compute_snapshot(self) -> dict[str, object]:
         entries: list[dict[str, object]] = []
@@ -791,24 +834,7 @@ class StackManager:
                 }
             )
 
-        running_count = sum(1 for entry in entries if entry["running"])
-        reachable_count = sum(1 for entry in entries if entry["reachable"])
-        return {
-            "stack": {
-                "label": "KoreStack",
-                "root": str(SUITE_ROOT),
-                "configPath": str(SUITE_CONFIG_FILE),
-                "uiElementsMounted": get_ui_assets_dir().exists(),
-                "services": [spec.slug for spec in self._services],
-                "metrics": {
-                    "selected": len(entries),
-                    "running": running_count,
-                    "reachable": reachable_count,
-                },
-                "paths": {k: str(self._stack_paths[k]) for k in ("path config", "dataroot", "datacontrol", "datauser")},
-            },
-            "services": entries,
-        }
+        return self._snapshot_payload(entries)
 
 
 def print_snapshot(snapshot: dict[str, object]) -> None:
@@ -913,6 +939,17 @@ def main() -> int:
         else "http://127.0.0.1:11434/api/status/ollama"
     )
     ollama_control   = OllamaControl(agent_status_url, log_dir)
+    ollama_control.start_refreshing()
+    stop_event = threading.Event()
+
+    def _signal_handler(signum: int, _frame) -> None:
+        if not stop_event.is_set():
+            print("\nStopping KoreStack...", flush=True)
+        stop_event.set()
+
+    signal.signal(signal.SIGINT, _signal_handler)
+    if hasattr(signal, "SIGTERM"):
+        signal.signal(signal.SIGTERM, _signal_handler)
 
     if args.command == "status":
         print_snapshot(manager.snapshot())
@@ -925,7 +962,6 @@ def main() -> int:
         print(f"  korestack http://{dashboard_host}:{dashboard_port}/")
         return 0
 
-    stop_event = threading.Event()
     dashboard_thread = threading.Thread(
         target=serve_dashboard,
         args=(manager, dashboard_host, dashboard_port, stop_event),
@@ -942,19 +978,13 @@ def main() -> int:
     dashboard_thread.start()
 
     print("Starting...", flush=True)
-    manager.start()
-    print(f"\nKoreStack: http://{dashboard_host}:{dashboard_port}/\n", flush=True)
-    if args.open_browser:
-        webbrowser.open(f"http://{dashboard_host}:{dashboard_port}/")
-
-    def _signal_handler(signum: int, _frame) -> None:
-        stop_event.set()
-
-    signal.signal(signal.SIGINT, _signal_handler)
-    if hasattr(signal, "SIGTERM"):
-        signal.signal(signal.SIGTERM, _signal_handler)
-
     try:
+        manager.start(stop_event)
+        if stop_event.is_set():
+            return 0
+        print(f"\nKoreStack: http://{dashboard_host}:{dashboard_port}/\n", flush=True)
+        if args.open_browser:
+            webbrowser.open(f"http://{dashboard_host}:{dashboard_port}/")
         while not stop_event.is_set():
             time.sleep(0.5)
     except KeyboardInterrupt:

@@ -31,6 +31,7 @@ import tempfile
 import os
 from pathlib import Path
 import unittest
+from datetime import datetime, timedelta, timezone
 
 
 SERVICE_ROOT = Path(os.environ["KORESTACK_ROOT"]) / "KoreData" / "KoreDataGateway"
@@ -44,6 +45,36 @@ from app import server  # noqa: E402
 
 
 class ArtifactRefTests(unittest.IsolatedAsyncioTestCase):
+    async def test_recent_search_enforces_exact_published_at_boundary(self) -> None:
+        now = datetime.now(timezone.utc)
+        original = server.api_search
+        requested = None
+
+        async def fake_api_search(request):
+            nonlocal requested
+            requested = request
+            return {
+                "query": request.query,
+                "results": [
+                    {"title": "Fresh", "published_at": (now - timedelta(hours=1)).isoformat()},
+                    {"title": "Stale", "published_at": (now - timedelta(hours=49)).isoformat()},
+                    {"title": "Unknown date", "published_at": ""},
+                ],
+                "warnings": [],
+            }
+
+        server.api_search = fake_api_search
+        try:
+            result = await server.koredata_search_recent("technology", hours=48)
+        finally:
+            server.api_search = original
+
+        self.assertEqual(requested.domains, ["feeds"])
+        self.assertEqual([item["title"] for item in result["results"]], ["Fresh"])
+        self.assertEqual(result["time_window"]["hours"], 48)
+        self.assertIn("since_utc", result["time_window"])
+        self.assertIn("without a parseable published_at timestamp", result["warnings"][0])
+
     def test_map_feed_entry_includes_artifact_ref(self) -> None:
         mapped = server._map_feed_entry(
             {

@@ -1067,6 +1067,10 @@ def dataset_fetch_full_text(
         f"Created dataset '{saved['name']}' from '{dataset['name']}' with full text for "
         f"{len(expanded_records)}/{len(selected)} selected record(s)."
     )
+    message += (
+        f" Full text is stored in Working Data; call working_data_get(name='{saved['name']}') "
+        "to read it before answering the user."
+    )
     if failures:
         message += f" Skipped {len(failures)} record(s): {'; '.join(failures[:3])}"
     return message
@@ -1142,6 +1146,10 @@ def dataset_expand_full_text(
     message = (
         f"{action} dataset '{saved['name']}' from '{dataset['name']}' via full-text expansion - "
         f"expanded {len(expanded_records)}/{len(selected)} selected records."
+    )
+    message += (
+        f" Full text is stored in Working Data; call working_data_get(name='{saved['name']}') "
+        "to read it before answering the user."
     )
     if failures:
         message += f" Skipped {len(failures)} record(s): {'; '.join(failures[:3])}"

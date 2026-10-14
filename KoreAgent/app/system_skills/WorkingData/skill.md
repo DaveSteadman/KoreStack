@@ -72,5 +72,7 @@ canonical `{"values": ..., "collections": ...}` envelope.
 Use Working Data whenever useful material must survive more than one tool call without repeatedly
 entering the main prompt. An inspect result is a compact preview, not material to copy into Python.
 For a report with an exact number of items: inspect; rank or select that exact number of records;
-fetch full text for that same subset; then write the final answer directly. Check `working_data_list`
-before re-fetching information. Do not use Python for any part of this workflow.
+fetch full text for that same subset; then call `working_data_get` on the fetched collection before
+writing the final answer. Fetching persists text outside the prompt; it does not read that text.
+Never tell the user that fetched text still needs to be read - complete that read yourself. Check
+`working_data_list` before re-fetching information. Do not use Python for any part of this workflow.

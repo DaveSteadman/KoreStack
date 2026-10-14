@@ -495,6 +495,20 @@ def run_tool_loop(
                 # Build thread content: add provenance envelope for data tools, then truncate.
                 # The Working Data copy keeps the raw content available outside the prompt.
                 thread_content = _build_data_envelope(func_name, arguments, result_content) if not output.get("is_error") else result_content
+                if (
+                    not output.get("is_error")
+                    and func_name in {"koredocs_doc_create", "koredocs_doc_create_from_working_data", "koredocs_file_create"}
+                    and isinstance(raw_result_content, dict)
+                ):
+                    file_id = raw_result_content.get("id")
+                    artifact_id = raw_result_content.get("artifact_id")
+                    if file_id is not None and artifact_id:
+                        thread_content += (
+                            "\n[PERSISTED_ARTIFACT_VERIFICATION_REQUIRED] Capture this authoritative "
+                            f"File ID {file_id} and Artifact ID {artifact_id}. Before reporting success, "
+                            f"call koredocs_file_get(id={file_id}) or koredocs_files_metadata_search and "
+                            "verify the persisted content and metadata. Do not rely on an earlier attempt or conversation memory."
+                        )
                 if output.get("is_error"):
                     lowered_error = result_content.lower()
                     if "path escapes data directory" in lowered_error or "not allowed" in lowered_error:

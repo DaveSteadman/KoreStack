@@ -71,6 +71,36 @@ class KoreCommsEmailThreadTests(unittest.TestCase):
         self.assertEqual(data["external_thread_id"], "<original@example.com>")
         self.assertEqual(data["reply_references"], ["<original@example.com>", "<agent@example.com>", "<agent@example.com>"])
 
+    def test_reply_to_is_used_as_sender(self) -> None:
+        raw = (
+            b"From: Website <hello@factory74.com>\r\n"
+            b"Reply-To: reader@example.com\r\n"
+            b"Subject: Article question\r\n"
+            b"Message-ID: <form-1@factory74.com>\r\n"
+            b"Content-Type: text/plain; charset=utf-8\r\n\r\n"
+            b"What happened next?"
+        )
+
+        data = ClassicEmailInterface._message_data("imap:1:1", raw)
+
+        self.assertEqual(data["sender"], "reader@example.com")
+
+    def test_own_address_with_foreign_reply_to_is_not_self_sent(self) -> None:
+        cfg = {"incoming_username": "hello@factory74.com", "outgoing_from": "hello@factory74.com"}
+        form_mail = EmailMessage()
+        form_mail["From"] = "Website <hello@factory74.com>"
+        form_mail["Reply-To"] = "reader@example.com"
+        own_mail = EmailMessage()
+        own_mail["From"] = "hello@factory74.com"
+        auto_reply = EmailMessage()
+        auto_reply["From"] = "hello@factory74.com"
+        auto_reply["Reply-To"] = "reader@example.com"
+        auto_reply["X-KoreComms-Auto-Reply"] = "1"
+
+        self.assertFalse(ClassicEmailInterface._is_self_sent(form_mail, cfg))
+        self.assertTrue(ClassicEmailInterface._is_self_sent(own_mail, cfg))
+        self.assertTrue(ClassicEmailInterface._is_self_sent(auto_reply, cfg))
+
     def test_newsletter_replies_create_one_conversation_per_sender(self) -> None:
         interface_id = database.interface_create("classic_email", "Mail", {})
         source_id = database.conversation_create(interface_id, chat_name="daily-newsletter")
