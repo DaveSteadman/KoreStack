@@ -191,6 +191,99 @@ if code is not None:
 outputs["html"] = "\n".join(out)
 '''
 
+_MEDIAWIKI_TO_JSON = r'''src = str(inputs.get("content") or "")
+
+def inline(source):
+    nodes = []
+    buffer = []
+
+    def flush():
+        if buffer:
+            nodes.append({"type": "text", "text": "".join(buffer)})
+            del buffer[:]
+
+    token = re.compile(r"\[\[([^\]]+)\]\]|('{2,5})(.+?)\2")
+    pos = 0
+    for match in token.finditer(source):
+        buffer.append(source[pos:match.start()])
+        flush()
+        if match.group(1) is not None:
+            target, separator, label = match.group(1).partition("|")
+            target = target.strip()
+            label = (label if separator else target).strip()
+            nodes.append({"type": "link", "target": target, "text": label})
+        else:
+            marks = match.group(2)
+            kind = {
+                2: "italic",
+                3: "bold",
+                5: "bold_italic",
+            }.get(len(marks))
+            if kind is None:
+                buffer.append(match.group(0))
+            else:
+                nodes.append({"type": kind, "content": inline(match.group(3))})
+        pos = match.end()
+    buffer.append(source[pos:])
+    flush()
+    return nodes
+
+blocks = []
+paragraph = []
+items = []
+ordered = None
+
+def flush_paragraph():
+    if paragraph:
+        blocks.append({"type": "paragraph", "content": inline(" ".join(paragraph))})
+        del paragraph[:]
+
+def flush_list():
+    nonlocal ordered
+    if items:
+        blocks.append({"type": "list", "ordered": ordered, "items": list(items)})
+        del items[:]
+    ordered = None
+
+for line in src.splitlines():
+    stripped = line.strip()
+    if not stripped:
+        flush_paragraph()
+        flush_list()
+        continue
+
+    heading = re.match(r"^(={2,6})\s*(.*?)\s*\1$", stripped)
+    item = re.match(r"^([*#])\s+(.+)$", stripped)
+    if heading:
+        flush_paragraph()
+        flush_list()
+        blocks.append({
+            "type": "heading",
+            "level": len(heading.group(1)),
+            "content": inline(heading.group(2)),
+        })
+    elif item:
+        flush_paragraph()
+        is_ordered = item.group(1) == "#"
+        if items and ordered != is_ordered:
+            flush_list()
+        ordered = is_ordered
+        items.append(inline(item.group(2)))
+    else:
+        flush_list()
+        paragraph.append(stripped)
+
+flush_paragraph()
+flush_list()
+
+outputs["document"] = {
+    "format": "mediawiki",
+    "source_chars": len(src),
+    "blocks": blocks,
+}
+outputs["chars"] = len(src)
+'''
+
 _COMMS_SEND = r'''CONNECTION = "My connection"          # KoreComms connection name
 
 ifaces = api_get("korecomms", "/api/interfaces")
@@ -217,6 +310,7 @@ DEFAULT_TEMPLATES: list[dict] = [
     _seed("Write JSON file", "Write a value as JSON to the datauser folder", "python", [{"name": "value", "default": None}, {"name": "path", "default": ""}], ["path"], _WRITE_JSON),
     _seed("Write text file", "Write a string to the datauser folder", "python", [{"name": "text", "default": ""}, {"name": "path", "default": ""}], ["path"], _WRITE_TEXT),
     _seed("Markdown to HTML", "Basic Markdown to HTML conversion", "python", [{"name": "text", "default": ""}], ["html"], _MD_TO_HTML),
+    _seed("MediaWikiToJSON", "Convert basic MediaWiki markup into a structured document", "python", [{"name": "content", "default": ""}], ["document", "chars"], _MEDIAWIKI_TO_JSON),
     _seed("KoreComms send", "Send a subject and content through a named KoreComms connection", "python", [{"name": "subject", "default": ""}, {"name": "content", "default": ""}], ["result"], _COMMS_SEND),
     _seed("Summarise text", "LLM summary as bullet points", "llm", [{"name": "text"}], ["response"], "", {"prompt_template": "Summarise the following in a few concise bullet points:\n\n{text}", "model": ""}),
     _seed("Extract JSON", "LLM turns text into a JSON object (reply is text, parse it downstream)", "llm", [{"name": "text"}], ["response"], "", {"prompt_template": "Extract the key facts from the text below as a single JSON object. Reply with JSON only.\n\n{text}", "model": ""}),

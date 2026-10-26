@@ -17,6 +17,7 @@ import os
 import shutil
 import subprocess
 import threading
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -29,6 +30,8 @@ from typing import Any
 # ====================================================================================================
 DEFAULT_OLLAMA_HOST = "http://127.0.0.1:11434"
 REQUEST_TIMEOUT     = 1.5
+WARMUP_TIMEOUT      = 600.0
+SERVER_START_TIMEOUT = 60.0
 
 
 # ====================================================================================================
@@ -46,6 +49,28 @@ def _read_json(url: str, *, timeout: float = REQUEST_TIMEOUT) -> dict[str, Any] 
     except (OSError, urllib.error.URLError, urllib.error.HTTPError, json.JSONDecodeError):
         return None
     return payload if isinstance(payload, dict) else None
+
+
+def _post_json(url: str, payload: dict[str, Any], *, timeout: float) -> dict[str, Any]:
+    request = urllib.request.Request(
+        url,
+        data=json.dumps(payload).encode("utf-8"),
+        method="POST",
+        headers={"Accept": "application/json", "Content-Type": "application/json"},
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            body = json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as error:
+        detail = error.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"Ollama warmup request failed with HTTP {error.code}: {detail}") from error
+    except (OSError, urllib.error.URLError) as error:
+        raise RuntimeError(f"Ollama warmup request failed: {error}") from error
+    except json.JSONDecodeError as error:
+        raise RuntimeError("Ollama warmup request returned invalid JSON") from error
+    if not isinstance(body, dict):
+        raise RuntimeError("Ollama warmup request returned a non-object response")
+    return body
 
 
 def _local_ollama_host(host: str) -> bool:
@@ -114,6 +139,10 @@ class OllamaControl:
         self._snapshot_cache = self._initial_snapshot()
         self._refresh_stop = threading.Event()
         self._refresh_thread: threading.Thread | None = None
+        self._warmup_thread: threading.Thread | None = None
+        self._warmup_status = "idle"
+        self._warmup_detail = ""
+        self._warmup_models: list[str] = []
 
     def snapshot(self) -> dict[str, Any]:
         """Return the last state refreshed by the worker without network I/O."""
@@ -165,6 +194,9 @@ class OllamaControl:
             "llm_running": False,
             "agent_available": False,
             "controllable": True,
+            "warmup_status": "idle",
+            "warmup_detail": "",
+            "warmup_models": [],
         }
 
     def _compute_snapshot(self) -> dict[str, Any]:
@@ -190,6 +222,9 @@ class OllamaControl:
             owned_running    = self._proc is not None and self._proc.poll() is None
             owned_pid        = self._proc.pid if owned_running and self._proc is not None else None
             owned_returncode = self._proc.returncode if self._proc is not None and not owned_running else None
+            warmup_status    = self._warmup_status
+            warmup_detail    = self._warmup_detail
+            warmup_models    = list(self._warmup_models)
 
         server_ready   = api_state is not None
         server_running = server_ready or owned_running
@@ -217,6 +252,9 @@ class OllamaControl:
             "llm_running":      bool(agent.get("llm_running")),
             "agent_available":  bool(agent),
             "controllable":     backend == "ollama" and _local_ollama_host(host),
+            "warmup_status":    warmup_status,
+            "warmup_detail":    warmup_detail,
+            "warmup_models":    warmup_models,
         }
 
     def start(self) -> dict[str, Any]:
@@ -251,7 +289,19 @@ class OllamaControl:
             self._close_log_handle()
             self._proc       = process
             self._log_handle = log_handle
-        return {"changed": True, "message": "Ollama start requested.", "state": self.refresh()}
+            self._set_warmup_state("pending", "Waiting for Ollama before loading configured models.")
+            self._warmup_thread = threading.Thread(
+                target=self._preload_configured_models,
+                args=(process,),
+                daemon=True,
+                name="ollama-model-warmup",
+            )
+            self._warmup_thread.start()
+        return {
+            "changed": True,
+            "message": "Ollama start requested; configured models are warming in the background.",
+            "state": self.refresh(),
+        }
 
     def stop(self, *, include_external: bool = True) -> dict[str, Any]:
         with self._lock:
@@ -315,3 +365,82 @@ class OllamaControl:
         except subprocess.TimeoutExpired:
             process.kill()
             process.wait(timeout=5)
+
+    def _preload_configured_models(self, process: subprocess.Popen[bytes]) -> None:
+        deadline = time.monotonic() + SERVER_START_TIMEOUT
+        while time.monotonic() < deadline:
+            with self._lock:
+                still_owned = self._proc is process and process.poll() is None
+            if not still_owned:
+                return
+            if _read_json(_ollama_api_url(DEFAULT_OLLAMA_HOST, "/api/version")) is not None:
+                break
+            time.sleep(0.5)
+        else:
+            self._set_warmup_failure("Ollama did not become ready before the model warmup timeout.")
+            return
+
+        agent = _read_json(self._agent_status_url)
+        if not agent:
+            self._set_warmup_failure("KoreAgent configuration was unavailable; configured models were not preloaded.")
+            return
+
+        host = str(agent.get("host") or DEFAULT_OLLAMA_HOST).strip().rstrip("/")
+        chat_model = str(agent.get("model") or "").strip()
+        system_one_model = str(agent.get("system_one_model") or "").strip()
+        num_ctx = agent.get("num_ctx")
+        chat_payload: dict[str, Any] = {"stream": False, "keep_alive": -1}
+        if isinstance(num_ctx, int) and num_ctx > 0:
+            chat_payload["options"] = {"num_ctx": num_ctx}
+
+        self._set_warmup_state("warming", "Loading configured models.")
+
+        loaded_models: list[str] = []
+        try:
+            if chat_model:
+                _post_json(
+                    _ollama_api_url(host, "/api/generate"),
+                    {"model": chat_model, **chat_payload},
+                    timeout=WARMUP_TIMEOUT,
+                )
+                loaded_models.append(chat_model)
+            if system_one_model:
+                _post_json(
+                    _ollama_api_url(host, "/v1/systemone"),
+                    {
+                        "model": system_one_model,
+                        "state": "System One warmup.",
+                        "questions": {
+                            "ready": {
+                                "type": "noul",
+                                "instructions": "Is the System One decision runtime available?",
+                            }
+                        },
+                        "keep_alive": -1,
+                    },
+                    timeout=WARMUP_TIMEOUT,
+                )
+                loaded_models.append(system_one_model)
+        except RuntimeError as error:
+            self._set_warmup_failure(str(error), loaded_models)
+            return
+
+        if not loaded_models:
+            self._set_warmup_failure("No configured Ollama models were available to preload.")
+            return
+        self._set_warmup_state("ready", "Configured models are loaded and retained.", loaded_models)
+
+    def _set_warmup_failure(self, detail: str, loaded_models: list[str] | None = None) -> None:
+        self._set_warmup_state("failed", detail, loaded_models)
+
+    def _set_warmup_state(self, status: str, detail: str, models: list[str] | None = None) -> None:
+        with self._lock:
+            self._warmup_status = status
+            self._warmup_detail = detail
+            self._warmup_models = list(models or [])
+            self._snapshot_cache = {
+                **self._snapshot_cache,
+                "warmup_status": self._warmup_status,
+                "warmup_detail": self._warmup_detail,
+                "warmup_models": list(self._warmup_models),
+            }

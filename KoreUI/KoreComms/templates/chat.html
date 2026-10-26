@@ -48,7 +48,7 @@
       <p class="kcui-meta">Destination: {{ iface_config.remote_path or '(not configured)' }}. Each delivery replaces this file.</p>
       {% else %}
       <label for="delivery-recipient">Recipient</label>
-      <input id="delivery-recipient" name="recipient" type="email" value="{{ conv.delivery_recipient or '' }}" placeholder="person@example.com">
+      <input id="delivery-recipient" name="recipient" type="email" value="{{ delivery_recipient }}" placeholder="person@example.com">
       <label for="delivery-list">Or distribution list</label>
       <select id="delivery-list" name="distribution_list_id">
         <option value="">Select a list...</option>

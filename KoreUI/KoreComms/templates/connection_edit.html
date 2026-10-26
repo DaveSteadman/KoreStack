@@ -15,8 +15,12 @@
       {% endif %}
 
       <label for="name">Connection Name</label>
-      <input type="text" id="name" name="name" value="{{ iface.name if iface else '' }}"
+      <input type="text" id="name" name="name" value="{{ iface.name if iface else duplicate_name|default('') }}"
             placeholder="{% if iface_type == 'discord' %}My Discord Bot{% elif iface_type == 'classic_email' %}My Email Account{% elif iface_type == 'sftp_file' %}Daily report file{% else %}My Gmail Account{% endif %}" required>
+
+      {% if is_duplicate|default(false) %}
+      <p class="kcui-meta">Settings were copied from an existing connection. Enter new credentials before creating this connection.</p>
+      {% endif %}
 
       {% if iface_type == "discord" %}
       <label for="bot_token">Discord Bot Token</label>
@@ -25,7 +29,7 @@
 
       <label for="channel_ids">Watched Channel IDs</label>
       <textarea id="channel_ids" name="channel_ids" rows="5"
-      placeholder="One channel or thread ID per line">{{ discord_channel_ids_text if iface else '' }}</textarea>
+      placeholder="One channel or thread ID per line">{{ discord_channel_ids_text|default('') }}</textarea>
 
       <p class="kcui-meta">
         KoreComms polls these channels for new user messages and posts replies back to the same channel or thread.
@@ -51,7 +55,7 @@
       <label class="kcui-check"><input type="checkbox" name="sftp_trust_server" {% if config and config.trust_server %}checked{% endif %}> Trust this SFTP server automatically</label>
       <p class="kcui-meta">Disables host-identity verification for this connection. Use only where that trade-off is acceptable.</p>
       <label for="send_poll_interval">Send Polling Interval (seconds)</label>
-      <input id="send_poll_interval" name="send_poll_interval" type="number" value="{{ send_poll_interval if iface else 10 }}" min="1" max="3600" class="kcui-field-sm">
+      <input id="send_poll_interval" name="send_poll_interval" type="number" value="{{ send_poll_interval|default(10) }}" min="1" max="3600" class="kcui-field-sm">
       {% endif %}
 
       {% if iface_type == "classic_email" %}
@@ -98,7 +102,7 @@
       <label for="receive_poll_interval">Receive Polling Interval (seconds)</label>
       <div class="num-stepper" style="align-self:flex-start; width:auto;">
         <input id="receive_poll_interval" name="receive_poll_interval" type="number"
-               value="{{ receive_poll_interval if iface else 60 }}" min="10" max="3600" style="width:64px;">
+               value="{{ receive_poll_interval|default(60) }}" min="10" max="3600" style="width:64px;">
         <div class="stepper-btns">
           <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,1)">&#9650;</button>
           <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,-1)">&#9660;</button>
@@ -107,7 +111,7 @@
       <label for="send_poll_interval">Send Polling Interval (seconds)</label>
       <div class="num-stepper" style="align-self:flex-start; width:auto;">
         <input id="send_poll_interval" name="send_poll_interval" type="number"
-               value="{{ send_poll_interval if iface else 10 }}" min="1" max="3600" style="width:64px;">
+               value="{{ send_poll_interval|default(10) }}" min="1" max="3600" style="width:64px;">
         <div class="stepper-btns">
           <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,1)">&#9650;</button>
           <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,-1)">&#9660;</button>

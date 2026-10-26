@@ -22,6 +22,7 @@ if str(COMMS_ROOT) not in sys.path:
 
 from app import database
 from app import poller
+from app import server
 from app.interfaces.classic_email.adapter import ClassicEmailInterface
 
 
@@ -84,6 +85,58 @@ class KoreCommsEmailThreadTests(unittest.TestCase):
         data = ClassicEmailInterface._message_data("imap:1:1", raw)
 
         self.assertEqual(data["sender"], "reader@example.com")
+
+    def test_conversation_delivery_form_uses_the_inbound_reply_address(self) -> None:
+        interface_id = database.interface_create("classic_email", "Mail", {})
+        conversation_id = database.conversation_create(interface_id)
+        database.external_message_create(
+            conversation_id,
+            "imap:1:reply",
+            "inbound",
+            "Website <hello@factory74.com>",
+        )
+
+        conv = database.conversation_get(conversation_id)
+        assert conv is not None
+        self.assertEqual(
+            server._delivery_recipient_for(conv, {"type": "classic_email"}),
+            "hello@factory74.com",
+        )
+        self.assertEqual(
+            server._delivery_recipient_for(
+                {**conv, "delivery_recipient": "saved@example.com"},
+                {"type": "classic_email"},
+            ),
+            "saved@example.com",
+        )
+
+    def test_connection_duplication_removes_credentials(self) -> None:
+        copied = server._duplicate_connection_config({
+            "config_json": """{
+                "incoming_host": "imap.example.com",
+                "incoming_password": "encrypted-incoming",
+                "outgoing_password": "encrypted-outgoing",
+                "bot_token": "encrypted-token",
+                "client_id": "encrypted-client-id",
+                "client_secret": "encrypted-client-secret",
+                "refresh_token": "encrypted-refresh-token",
+                "password": "encrypted-sftp-password",
+                "send_poll_interval": 30
+            }""",
+        })
+
+        self.assertEqual(copied["incoming_host"], "imap.example.com")
+        self.assertEqual(copied["send_poll_interval"], 30)
+        for key in (
+            "incoming_password",
+            "outgoing_password",
+            "bot_token",
+            "client_id",
+            "client_secret",
+            "refresh_token",
+            "password",
+        ):
+            self.assertNotIn(key, copied)
 
     def test_own_address_with_foreign_reply_to_is_not_self_sent(self) -> None:
         cfg = {"incoming_username": "hello@factory74.com", "outgoing_from": "hello@factory74.com"}

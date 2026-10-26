@@ -62,6 +62,41 @@ class OllamaControlTests(unittest.TestCase):
         self.assertFalse(state["server_ready"])
         self.assertEqual(state["management"], "KoreStack")
 
+    def test_model_warmup_loads_configured_chat_and_system_one_models(self) -> None:
+        control = OllamaControl("http://127.0.0.1:8765/api/status/ollama", Path(tempfile.gettempdir()))
+
+        class Process:
+            pid = 1234
+
+            @staticmethod
+            def poll() -> None:
+                return None
+
+        process = Process()
+        control._proc = process  # type: ignore[assignment]
+        agent = {
+            "host": "http://127.0.0.1:11434",
+            "model": "nemotron-3.5-lightning:latest",
+            "system_one_model": "clef:latest",
+            "num_ctx": 32768,
+        }
+        with patch(
+            "KoreStack.ollama_control._read_json",
+            side_effect=[{"version": "0.35.1"}, agent],
+        ), patch("KoreStack.ollama_control._post_json", return_value={}) as post_json:
+            control._preload_configured_models(process)  # type: ignore[arg-type]
+
+        self.assertEqual(control.snapshot()["warmup_status"], "ready")
+        self.assertEqual(control.snapshot()["warmup_models"], ["nemotron-3.5-lightning:latest", "clef:latest"])
+        self.assertEqual(post_json.call_count, 2)
+        chat_request = post_json.call_args_list[0]
+        self.assertEqual(chat_request.args[0], "http://127.0.0.1:11434/api/generate")
+        self.assertEqual(chat_request.args[1]["model"], "nemotron-3.5-lightning:latest")
+        self.assertEqual(chat_request.args[1]["options"], {"num_ctx": 32768})
+        system_one_request = post_json.call_args_list[1]
+        self.assertEqual(system_one_request.args[0], "http://127.0.0.1:11434/v1/systemone")
+        self.assertEqual(system_one_request.args[1]["model"], "clef:latest")
+
 
 if __name__ == "__main__":
     unittest.main()

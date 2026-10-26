@@ -21,6 +21,7 @@ UI assets are in `KoreUI/KoreStack/` and are served live, so there is no build s
 
 - **Paths**: suite root, data root, and the datacontrol and datauser folders in use
 - **Ollama State**: Ollama version, the configured and loaded chat model, the System One model and its statistics
+- **Model warmup**: starting Ollama from KoreStack asynchronously preloads the configured chat and System One models, retaining them to avoid a first-prompt runner startup delay.
 - **Services**: one card per service with health, port, and a link to its UI
 
 ## Health contract

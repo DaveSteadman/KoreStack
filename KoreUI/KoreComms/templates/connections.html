@@ -35,6 +35,7 @@
           <div class="kcui-inline-actions">
             <a class="kcui-tag kcui-tag--dim" href="/connections/{{ iface.id }}">edit</a>
             {% if iface.type != 'manual' %}
+            <a class="kcui-tag kcui-tag--dim" href="/connections/{{ iface.id }}/duplicate">duplicate</a>
             <form method="POST" action="/connections/{{ iface.id }}/delete" class="kcui-inline-form">
               <button class="kcui-tag kcui-tag--danger" type="submit"
                 data-kcui-confirm="Delete connection {{ iface.name }}?"

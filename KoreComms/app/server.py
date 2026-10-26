@@ -112,6 +112,7 @@ import urllib.error
 import urllib.request
 import uuid
 from contextlib import asynccontextmanager
+from email.utils import parseaddr
 from html.parser import HTMLParser
 from pathlib import Path
 
@@ -152,6 +153,22 @@ def _ids_to_text(value: object) -> str:
     if isinstance(value, str):
         return value
     return ""
+
+
+def _duplicate_connection_config(iface: dict) -> dict:
+    """Return copyable settings without credentials or authorisation state."""
+    config = json.loads(iface.get("config_json", "{}"))
+    for key in (
+        "bot_token",
+        "client_id",
+        "client_secret",
+        "refresh_token",
+        "incoming_password",
+        "outgoing_password",
+        "password",
+    ):
+        config.pop(key, None)
+    return config
 
 
 def _store_classic_email_config(config: dict, form: dict, *, preserve_passwords: bool = False) -> None:
@@ -998,6 +1015,31 @@ def ui_connections_edit(request: Request, iface_id: int):
     )
 
 
+@app.get("/connections/{iface_id}/duplicate", response_class=HTMLResponse)
+def ui_connections_duplicate(request: Request, iface_id: int):
+    iface = db.interface_get(iface_id)
+    if iface is None:
+        raise HTTPException(404, "Interface not found")
+    if iface["type"] == "manual":
+        raise HTTPException(400, "The Manual interface cannot be duplicated")
+    config = _duplicate_connection_config(iface)
+    return templates.TemplateResponse(
+        request,
+        "connection_edit.html",
+        _ctx(
+            iface=None,
+            iface_type=iface["type"],
+            config=config,
+            duplicate_name=f"{iface['name']} copy",
+            is_duplicate=True,
+            poll_interval=config.get("poll_interval", cfg.get("poll_interval", 60)),
+            discord_channel_ids_text=_ids_to_text(config.get("channel_ids", [])),
+            receive_poll_interval=config.get("receive_poll_interval", config.get("poll_interval", 60)),
+            send_poll_interval=config.get("send_poll_interval", 10),
+        ),
+    )
+
+
 @app.post("/connections/{iface_id}")
 def ui_connections_update(
     request:       Request,
@@ -1354,6 +1396,7 @@ def ui_conversation(request: Request, conv_id: int):
         raise HTTPException(404, "Conversation not found")
 
     iface  = db.interface_get(conv["interface_id"])
+    delivery_recipient = _delivery_recipient_for(conv, iface)
     thread: list[dict] = []
     kc_data: dict = {}
 
@@ -1375,8 +1418,17 @@ def ui_conversation(request: Request, conv_id: int):
             thread=thread,
             kc_conv=kc_data,
             distribution_lists=db.distribution_list_list(conv["interface_id"]),
+            delivery_recipient=delivery_recipient,
         ),
     )
+
+
+def _delivery_recipient_for(conv: dict, iface: dict | None) -> str:
+    recipient = str(conv.get("delivery_recipient") or "")
+    if recipient or iface is None or iface.get("type") not in {"classic_email", "gmail"}:
+        return recipient
+    inbound = db.external_message_get_last_inbound(int(conv["id"]))
+    return parseaddr(str((inbound or {}).get("sender_display") or ""))[1]
 
 
 @app.post("/conversation/{conv_id}/delivery")

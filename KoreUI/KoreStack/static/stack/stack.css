@@ -124,6 +124,13 @@ a { color: inherit; }
 .ollama-state--up { color: var(--stack-success); }
 .ollama-state--down { color: var(--stack-danger); }
 
+.ollama-controls {
+  display: grid;
+  gap: 6px;
+  justify-items: end;
+  min-width: 0;
+}
+
 .ollama-actions {
   display: inline-flex;
   align-items: center;
@@ -137,8 +144,10 @@ a { color: inherit; }
 
 .ollama-notice {
   max-width: 220px;
+  min-height: 1.25em;
   color: var(--stack-muted);
   font-size: 11px;
+  text-align: right;
   opacity: 0;
   transition: opacity 0.25s;
 }
@@ -374,8 +383,9 @@ code {
   }
 
   .ollama-details { grid-template-columns: minmax(0, 1fr); }
+  .ollama-controls { justify-items: start; width: 100%; }
   .ollama-actions { align-items: flex-start; flex-wrap: wrap; }
-  .ollama-notice { width: 100%; max-width: none; }
+  .ollama-notice { width: 100%; max-width: none; text-align: left; }
 
   .service-notice {
     margin-left: 0;

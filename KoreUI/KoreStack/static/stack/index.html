@@ -71,10 +71,12 @@
                 <div><dt>Sampling</dt><dd data-ollama-field="sampling">{{ ollama.sampling_summary or 'Not available' }}</dd></div>
                 <div><dt>Management</dt><dd data-ollama-field="management">{{ ollama.management }}</dd></div>
               </dl>
-              <div class="ollama-actions" aria-label="Ollama controls">
-                <button class="kcui-btn ollama-action ollama-action--start" type="button" data-ollama-action="start">Start Ollama</button>
-                <button class="kcui-btn ollama-action ollama-action--stop" type="button" data-ollama-action="stop">Stop Ollama</button>
+              <div class="ollama-controls">
                 <span class="ollama-notice" data-ollama-field="notice" aria-live="polite"></span>
+                <div class="ollama-actions" aria-label="Ollama controls">
+                  <button class="kcui-btn ollama-action ollama-action--start" type="button" data-ollama-action="start">Start Ollama</button>
+                  <button class="kcui-btn ollama-action ollama-action--stop" type="button" data-ollama-action="stop">Stop Ollama</button>
+                </div>
               </div>
             </div>
           </section>
