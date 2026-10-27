@@ -92,7 +92,9 @@ function fillForm() {
   if (!selectedId) return;
   nameInput.value = t?.name ?? '';
   targetSelect.value = t ? targetValue(t) : targetSelect.options[0]?.value;
-  scheduleInput.value = t ? (t.schedule.type === 'daily' ? t.schedule.time : t.schedule.minutes) : '';
+  scheduleInput.value = t ? (t.schedule_input ?? (t.schedule.type === 'daily'
+    ? (t.schedule.times?.join(', ') ?? t.schedule.time)
+    : t.schedule.minutes)) : '';
   enabledInput.checked = t ? t.enabled : true;
   saveButton.textContent = creating ? 'Create trigger' : 'Save changes';
   runButton.hidden = deleteButton.hidden = creating;

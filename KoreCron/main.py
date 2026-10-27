@@ -79,19 +79,33 @@ def _save(triggers: list[dict]) -> None:
     _write(STORE_FILE, {"triggers": triggers})
 
 
+def _daily_times(schedule: dict) -> list[str]:
+    times = schedule.get("times")
+    if isinstance(times, list) and times:
+        return [str(item) for item in times]
+    return [str(schedule.get("time", "00:00"))]
+
+
 def _schedule_text(schedule: dict) -> str:
     if schedule.get("type") == "daily":
-        return f"daily @ {schedule.get('time', '00:00')}"
+        return f"daily @ {', '.join(_daily_times(schedule))}"
     return f"every {schedule.get('minutes', 60)} min"
+
+
+def _parse_daily_time(value: str) -> str:
+    if not re.fullmatch(r"\d{1,2}:\d{2}", value):
+        raise ValueError("Daily time must be HH:MM.")
+    hour, minute = (int(part) for part in value.split(":"))
+    if hour > 23 or minute > 59:
+        raise ValueError("Daily time must be HH:MM.")
+    return f"{hour:02d}:{minute:02d}"
 
 
 def _parse_schedule(value: str) -> dict:
     value = value.strip()
-    if re.fullmatch(r"\d{1,2}:\d{2}", value):
-        hour, minute = (int(part) for part in value.split(":"))
-        if hour > 23 or minute > 59:
-            raise ValueError("Daily time must be HH:MM.")
-        return {"type": "daily", "time": f"{hour:02d}:{minute:02d}"}
+    if ":" in value:
+        times = sorted({_parse_daily_time(part.strip()) for part in value.split(",")})
+        return {"type": "daily", "time": times[0]} if len(times) == 1 else {"type": "daily", "times": times}
     minutes = int(value)
     if minutes < 1:
         raise ValueError("Interval must be at least one minute.")
@@ -192,7 +206,8 @@ def _dispatch(trigger: dict) -> bool:
 def _due(trigger: dict, last_run: str | None, now: datetime) -> bool:
     schedule = trigger.get("schedule", {})
     if schedule.get("type") == "daily":
-        return now.strftime("%H:%M") == str(schedule.get("time")) and (not last_run or not last_run.startswith(now.date().isoformat()))
+        current_minute = now.strftime("%Y-%m-%dT%H:%M")
+        return now.strftime("%H:%M") in _daily_times(schedule) and (not last_run or not last_run.startswith(current_minute))
     if not last_run:
         return True
     try:
@@ -204,11 +219,14 @@ def _due(trigger: dict, last_run: str | None, now: datetime) -> bool:
 def _next_fire(trigger: dict, last_run: str | None, now: datetime) -> str:
     schedule = trigger.get("schedule", {})
     if schedule.get("type") == "daily":
-        hour, minute = (int(part) for part in str(schedule.get("time", "00:00")).split(":"))
-        target = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
-        if target <= now:
-            target += timedelta(days=1)
-        return target.isoformat(timespec="seconds")
+        targets = []
+        for daily_time in _daily_times(schedule):
+            hour, minute = (int(part) for part in daily_time.split(":"))
+            target = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
+            if target <= now:
+                target += timedelta(days=1)
+            targets.append(target)
+        return min(targets).isoformat(timespec="seconds")
     try:
         base = datetime.fromisoformat(last_run) if last_run else now
     except ValueError:
@@ -267,6 +285,7 @@ def list_triggers():
     return {"triggers": [{
         **item,
         "schedule_text": _schedule_text(item.get("schedule", {})),
+        "schedule_input": _schedule_text_to_input(item),
         "target_text":   f"Network: {titles.get(item.get('network_id'), item.get('network_id'))}" if item.get("target") == "network" else TARGET_LABELS.get(item.get("target"), item.get("target")),
         "last_run":      state.get(item["id"]),
         "next_fire":     _next_fire(item, state.get(item["id"]), now) if item.get("enabled", True) else None,
@@ -282,7 +301,7 @@ def _definition(payload: dict, trigger_id: str | None = None) -> dict:
     try:
         schedule = _parse_schedule(str(payload.get("schedule", "")))
     except (ValueError, TypeError):
-        raise HTTPException(400, "Schedule must be minutes or HH:MM.")
+        raise HTTPException(400, "Schedule must be minutes or comma-separated HH:MM times.")
     target = str(payload.get("target", ""))
     if target not in TARGET_LABELS:
         raise HTTPException(400, "Target must be system_test, unit_test or network.")
@@ -330,7 +349,7 @@ def update_trigger(trigger_id: str, payload: dict):
 
 def _schedule_text_to_input(trigger: dict) -> str:
     schedule = trigger.get("schedule", {})
-    return str(schedule.get("time")) if schedule.get("type") == "daily" else str(schedule.get("minutes", 60))
+    return ", ".join(_daily_times(schedule)) if schedule.get("type") == "daily" else str(schedule.get("minutes", 60))
 
 
 @app.delete("/api/triggers/{trigger_id}", status_code=204)

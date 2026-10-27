@@ -32,6 +32,6 @@ KoreCron is the scheduler of the suite. It sends prompts to KoreAgent at schedul
 
 | Problem | What to check |
 |---|---|
-| A schedule never fires | The entry is enabled and its schedule text parses; see the timeline |
+| A schedule never fires | The entry is enabled and its schedule is minutes (`60`) or daily `HH:MM` times (`07:00, 13:00`); see the timeline |
 | Prompt runs but no reply | KoreAgent and KoreChat are both healthy |
 | Test run does nothing | KoreTest2 is running; its session may find nothing new to run |
