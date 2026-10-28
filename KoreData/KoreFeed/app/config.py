@@ -20,7 +20,7 @@ _SECTION = "korefeed"
 
 _DEFAULTS = {
     "port": None,
-    "host": "0.0.0.0",
+    "host": "127.0.0.1",
     "data_dir": str(get_koredata_dir() / "Feeds"),
     "log_level": "info",
 }

@@ -40,7 +40,6 @@ import os
 import re
 from pathlib import Path
 import sys
-import json
 from typing import Optional
 from urllib.parse import quote
 

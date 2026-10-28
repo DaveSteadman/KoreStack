@@ -66,7 +66,6 @@ from typing import Any
 from llm_client import call_ollama
 from llm_client import ensure_ollama_running
 from utils.workspace_utils import get_workspace_root
-from utils.workspace_utils import normalize_module_path
 
 
 # ====================================================================================================

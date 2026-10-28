@@ -26,7 +26,7 @@ _LOCAL_KOREDATA_DIR    = _LOCAL_DATACONTROL_DIR / "koredata"
 
 _DEFAULTS = {
     "port": None,
-    "host": "0.0.0.0",
+    "host": "127.0.0.1",
     "log_level": "info",
     "data_dir":    str(_LOCAL_KOREDATA_DIR / "Graph"),
     "scripts_dir": str(_LOCAL_KOREDATA_DIR / "Graph" / "processing"),

@@ -81,7 +81,6 @@ from __future__ import annotations
 
 import argparse
 import ast
-import json
 import logging
 import os
 import pprint
@@ -138,8 +137,6 @@ from .models import EditProposalCreateBody
 from .models import PythonExecutionBody
 from .models import PythonDebugControlBody
 from .models import PythonDebugStartBody
-from .models import PythonFunctionInsertBody
-from .models import PythonFunctionReplaceBody
 from .models import RootBody
 from .models import SlashCommandBody
 from .models import SlashCommandCompleteBody
@@ -178,19 +175,15 @@ from .workspace_index import list_indexed_files
 from .workspace_index import list_indexed_symbols
 from .workspace_index import list_symbol_callees
 from .workspace_index import list_symbol_callers
-from .workspace_menu import build_workspace_menu
 from .workspace_service import WorkspaceService
 from .workspace_service import build_context_pack
 from .workspace_service import content_hash
-from .workspace_service import context_payload
 from .workspace_service import ensure_expected_hash
 from .workspace_service import find_python_function
 from .workspace_service import is_probably_text
 from .workspace_service import iter_python_function_symbols
 from .workspace_service import parse_python_file
-from .workspace_service import python_function_payload
 from .workspace_service import python_function_summary
-from .workspace_service import read_file_payload
 from .workspace_service import read_text
 from .workspace_service import run_python_tool
 from .workspace_service import validate_python_content

@@ -68,9 +68,7 @@ from pathlib import Path
 from typing import Optional
 
 from KoreCommon.sentence_index import extract_sentence_text as _extract_sentence_text_common
-from KoreCommon.sentence_index import mark_sentences_indexed
 from KoreCommon.sentence_index import normalize_sentence_schema as _normalize_sentence_schema_common
-from KoreCommon.sentence_index import reset_sentence_indexed_at
 from KoreCommon.sentence_index import sentence_index_needs_rebuild as _sentence_index_needs_rebuild_common
 from KoreCommon.sentence_index import sentence_schema_columns
 from KoreCommon.sentence_index import sentence_schema_needs_normalization as _sentence_schema_needs_normalization_common

@@ -38,8 +38,8 @@ from typing import Optional, Annotated
 from ..documents.korefile import service as korefile
 from .shared import (
     _file_summary, _koredoc_file, _koredoc_parse, _koredoc_find_heading,
-    _koredoc_extract_lines, _koredoc_normalize_block, _koredoc_splice,
-    _create_serialized_file, _ensure_extension,
+    _koredoc_extract_lines, _koredoc_splice,
+    _create_serialized_file,
 )
 
 

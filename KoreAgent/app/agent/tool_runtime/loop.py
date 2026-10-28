@@ -22,7 +22,6 @@ import re
 
 from agent.orchestration.context_window import choose_context_window
 from agent.tool_runtime.formatting import build_fallback_answer
-from agent.tool_runtime.formatting import extract_result_fields
 from agent.tool_runtime.formatting import format_tool_outputs
 from agent.tool_runtime.formatting import strip_cot_preamble
 from agent.tool_runtime.recovery import build_tool_recovery_message as _build_tool_recovery_message

@@ -71,7 +71,7 @@ from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from email.utils import parseaddr
 from pathlib import Path
-from typing import Any, Generator
+from typing import Generator
 
 from app.config import cfg
 

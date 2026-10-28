@@ -27,7 +27,7 @@ from KoreCommon.suite_config import load_service_config
 from KoreCommon.suite_paths import get_suite_datacontrol_dir
 
 _DEFAULTS: dict = {
-    "host":      os.environ.get("KORECHAT_HOST", "0.0.0.0"),
+    "host":      os.environ.get("KORECHAT_HOST", "127.0.0.1"),
     "port":      None,
     "log_level": os.environ.get("KORECHAT_LOG_LEVEL", "info"),
     "data_dir":  os.environ.get("KORECHAT_DATA_DIR", str(get_suite_datacontrol_dir() / "korechat")),

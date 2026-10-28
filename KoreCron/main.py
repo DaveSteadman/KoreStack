@@ -1,20 +1,11 @@
-# ====================================================================================================
-# MARK: OVERVIEW
-# ====================================================================================================
-# KoreCron is a pure trigger service. It holds named schedules, each pointing at a target (the KoreTest2
-# system tests, the KoreUnitTest suite, or a named KoreAgentNetwork network), and fires that target's
-# own API when the schedule is due. It performs none of the work itself.
-# ====================================================================================================
-
 from __future__ import annotations
 
 import json
 import re
-import sys
 import threading
+import time
 import urllib.parse
 import urllib.request
-import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -26,25 +17,21 @@ import uvicorn
 
 
 ROOT = Path(__file__).resolve().parents[1]
+import sys
 sys.path.insert(0, str(ROOT))
 from KoreCommon.service_app import register_suite_shell_routes
-from KoreCommon.skill_registration import start_manifest_registration
-from KoreCommon.skill_service import register_skill_invocation_routes
 from KoreCommon.suite_paths import get_suite_datacontrol_dir
 
 
-CONFIG           = ROOT / "config" / "korestack_config.json"
-STORE_DIR        = get_suite_datacontrol_dir() / "korecron"
-STORE_FILE       = STORE_DIR / "triggers.json"
-STATE_FILE       = STORE_DIR / "scheduler_state.json"
-RUN_HISTORY_FILE = STORE_DIR / "scheduler_run_history.json"
-UI_ROOT          = ROOT / "KoreUI" / "KoreCron"
-UI_ASSETS        = ROOT / "KoreUI" / "UIElements" / "assets"
-STOP             = threading.Event()
-NAME_RE          = re.compile(r"^(?=.{1,120}$)[A-Za-z0-9][A-Za-z0-9 _-]*$")
-RUN_LOCK         = threading.Lock()
-RUN_STATUSES: dict[str, dict] = {}
-TARGET_LABELS    = {"system_test": "System tests", "unit_test": "Unit tests", "network": "Network"}
+CONFIG       = ROOT / "config" / "korestack_config.json"
+STORE_DIR    = get_suite_datacontrol_dir() / "cronprompts"
+STORE_FILE   = STORE_DIR / "cronprompts.json"
+STATE_FILE   = STORE_DIR / "scheduler_state.json"
+UI_ROOT      = ROOT / "KoreUI" / "KoreCron"
+UI_ASSETS    = ROOT / "KoreUI" / "UIElements" / "assets"
+STOP         = threading.Event()
+NAME_RE      = re.compile(r"^(?=.{1,120}$)[A-Za-z0-9][A-Za-z0-9 _-]*$")
+SESSION_KEY_RE = re.compile(r"[^A-Za-z0-9_-]+")
 
 
 def _config() -> dict:
@@ -70,144 +57,87 @@ def _write(path: Path, value) -> None:
     temp.replace(path)
 
 
-def _triggers() -> list[dict]:
-    data = _read(STORE_FILE, {"triggers": []})
-    return data.get("triggers", []) if isinstance(data, dict) else []
+def _definitions() -> list[dict]:
+    data = _read(STORE_FILE, {"cronprompts": []})
+    return data.get("cronprompts", []) if isinstance(data, dict) else []
 
 
-def _save(triggers: list[dict]) -> None:
-    _write(STORE_FILE, {"triggers": triggers})
-
-
-def _daily_times(schedule: dict) -> list[str]:
-    times = schedule.get("times")
-    if isinstance(times, list) and times:
-        return [str(item) for item in times]
-    return [str(schedule.get("time", "00:00"))]
+def _save(definitions: list[dict]) -> None:
+    _write(STORE_FILE, {"cronprompts": definitions})
 
 
 def _schedule_text(schedule: dict) -> str:
     if schedule.get("type") == "daily":
-        return f"daily @ {', '.join(_daily_times(schedule))}"
+        return f"daily @ {schedule.get('time', '00:00')}"
     return f"every {schedule.get('minutes', 60)} min"
-
-
-def _parse_daily_time(value: str) -> str:
-    if not re.fullmatch(r"\d{1,2}:\d{2}", value):
-        raise ValueError("Daily time must be HH:MM.")
-    hour, minute = (int(part) for part in value.split(":"))
-    if hour > 23 or minute > 59:
-        raise ValueError("Daily time must be HH:MM.")
-    return f"{hour:02d}:{minute:02d}"
 
 
 def _parse_schedule(value: str) -> dict:
     value = value.strip()
-    if ":" in value:
-        times = sorted({_parse_daily_time(part.strip()) for part in value.split(",")})
-        return {"type": "daily", "time": times[0]} if len(times) == 1 else {"type": "daily", "times": times}
+    if re.fullmatch(r"\d{1,2}:\d{2}", value):
+        hour, minute = (int(part) for part in value.split(":"))
+        if hour > 23 or minute > 59:
+            raise ValueError("Daily time must be HH:MM.")
+        return {"type": "daily", "time": value}
     minutes = int(value)
     if minutes < 1:
         raise ValueError("Interval must be at least one minute.")
     return {"type": "interval", "minutes": minutes}
 
 
-def _http(method: str, url: str, body: dict | None = None, timeout: int = 20):
+def _http(method: str, url: str, body: dict | None = None):
     payload = json.dumps(body).encode("utf-8") if body is not None else None
     request = urllib.request.Request(url, data=payload, method=method, headers={"Content-Type": "application/json"})
-    with urllib.request.urlopen(request, timeout=timeout) as response:
-        raw = response.read().decode("utf-8").strip()
-        return json.loads(raw) if raw else None
+    with urllib.request.urlopen(request, timeout=20) as response:
+        return json.loads(response.read().decode("utf-8"))
 
 
-def _networks() -> list[dict]:
+def _cron_session_key(chat_name: str) -> str:
+    normalized = SESSION_KEY_RE.sub("_", str(chat_name or "").strip())
+    normalized = re.sub(r"_+", "_", normalized).strip("_")
+    return f"cron_{normalized or 'chat'}"
+
+
+def _cron_external_id(chat_name: str) -> str:
+    return f"webchat_{_cron_session_key(chat_name)}"
+
+
+def _conversation(definition: dict) -> dict:
+    chat_name   = str(definition["chat_name"])
+    external_id = _cron_external_id(chat_name)
+    base        = _service_url("korechat")
     try:
-        return _http("GET", f"{_service_url('koreagentnetwork')}/api/networks").get("networks", [])
+        return _http("GET", f"{base}/api/conversations/by-external-id/{urllib.parse.quote(external_id, safe='')}")
     except Exception:
-        return []
+        return _http("POST", f"{base}/api/conversations", {"channel_type": "webchat", "subject": chat_name, "external_id": external_id})
 
 
-# ----------------------------------------------------------------------------------------------------
-# MARK: RUNNING
-# ----------------------------------------------------------------------------------------------------
-
-def _start_status(trigger: dict) -> bool:
-    now = datetime.now().isoformat(timespec="seconds")
-    with RUN_LOCK:
-        if RUN_STATUSES.get(trigger["id"], {}).get("status") == "running":
-            return False
-        RUN_STATUSES[trigger["id"]] = {"status": "running", "started_at": now, "detail": "Triggered."}
-    return True
-
-
-def _finish_status(trigger: dict, *, error: str = "", detail: str = "") -> None:
-    now = datetime.now().isoformat(timespec="seconds")
-    with RUN_LOCK:
-        RUN_STATUSES[trigger["id"]].update({
-            "status":      "failed" if error else "succeeded",
-            "finished_at": now,
-            "detail":      error or detail or "Completed.",
-        })
-
-
-def _record_run(trigger: dict, *, attempted_at: datetime, error: str = "") -> None:
-    history = _read(RUN_HISTORY_FILE, {})
-    if not isinstance(history, dict):
-        history = {}
-    entries = history.get(trigger["id"], [])
-    entries.append({"attempted_at": attempted_at.isoformat(timespec="seconds"), "succeeded": not error, "error": error})
-    history[trigger["id"]] = entries[-50:]
-    _write(RUN_HISTORY_FILE, history)
+def _run(definition: dict) -> None:
+    conversation = _conversation(definition)
+    base         = _service_url("korechat")
+    conversation_id = int(conversation["id"])
+    if definition.get("clear_working_data", True):
+        agent_base = _service_url("koreagent")
+        _http("POST", f"{agent_base}/api/conversations/{conversation_id}/workspace/clear")
+    for prompt in definition.get("prompts", []):
+        prompt_text = str(prompt.get("prompt", "")) if isinstance(prompt, dict) else str(prompt)
+        if not prompt_text.strip():
+            continue
+        before = _http("GET", f"{base}/api/conversations/{conversation_id}/messages?limit=1000")
+        prior_count = len(before) if isinstance(before, list) else 0
+        _http("POST", f"{base}/api/conversations/{conversation_id}/messages", {"direction": "inbound", "content": prompt_text, "sender_display": "KoreCron", "status": "received"})
+        deadline = time.monotonic() + 1800
+        while time.monotonic() < deadline and not STOP.is_set():
+            messages = _http("GET", f"{base}/api/conversations/{conversation_id}/messages?limit=1000")
+            if isinstance(messages, list) and len(messages) > prior_count and messages[-1].get("direction") == "outbound":
+                break
+            time.sleep(1)
 
 
-def _fire(trigger: dict) -> str:
-    """Call the target's own API; returns a short detail string."""
-    target = trigger.get("target")
-    if target in ("system_test", "unit_test"):
-        service = "koretest2" if target == "system_test" else "koreunittest"
-        started = _http("POST", f"{_service_url(service)}/api/sessions")
-        if not (started or {}).get("started"):
-            raise RuntimeError(str((started or {}).get("detail") or "A session is already running."))
-        return "Session started."
-    if target == "network":
-        network_id = urllib.parse.quote(str(trigger.get("network_id") or ""), safe="")
-        run = _http("POST", f"{_service_url('koreagentnetwork')}/api/networks/{network_id}/run", timeout=3600)
-        nodes = ((run or {}).get("run") or {}).get("nodes", {})
-        failed = [node_id for node_id, result in nodes.items() if result.get("status") != "completed"]
-        if failed:
-            raise RuntimeError(f"{len(failed)} block(s) failed: {', '.join(failed)}")
-        return f"Network ran {len(nodes)} block(s)."
-    raise RuntimeError(f"Unknown target '{target}'.")
-
-
-def _run(trigger: dict) -> None:
-    attempted_at = datetime.now()
-    try:
-        detail = _fire(trigger)
-        _finish_status(trigger, detail=detail)
-        _record_run(trigger, attempted_at=attempted_at)
-    except Exception as error:
-        _finish_status(trigger, error=str(error))
-        _record_run(trigger, attempted_at=attempted_at, error=str(error))
-        print(f"[KoreCron] {trigger.get('name')} failed: {error}", flush=True)
-
-
-def _dispatch(trigger: dict) -> bool:
-    if not _start_status(trigger):
-        return False
-    threading.Thread(target=_run, args=(trigger,), daemon=True, name=f"korecron-{trigger['id']}").start()
-    return True
-
-
-# ----------------------------------------------------------------------------------------------------
-# MARK: SCHEDULING
-# ----------------------------------------------------------------------------------------------------
-
-def _due(trigger: dict, last_run: str | None, now: datetime) -> bool:
-    schedule = trigger.get("schedule", {})
+def _due(definition: dict, last_run: str | None, now: datetime) -> bool:
+    schedule = definition.get("schedule", {})
     if schedule.get("type") == "daily":
-        current_minute = now.strftime("%Y-%m-%dT%H:%M")
-        return now.strftime("%H:%M") in _daily_times(schedule) and (not last_run or not last_run.startswith(current_minute))
+        return now.strftime("%H:%M") == str(schedule.get("time")) and (not last_run or not last_run.startswith(now.date().isoformat()))
     if not last_run:
         return True
     try:
@@ -216,17 +146,13 @@ def _due(trigger: dict, last_run: str | None, now: datetime) -> bool:
         return True
 
 
-def _next_fire(trigger: dict, last_run: str | None, now: datetime) -> str:
-    schedule = trigger.get("schedule", {})
+def _next_fire(definition: dict, last_run: str | None, now: datetime) -> str:
+    schedule = definition.get("schedule", {})
     if schedule.get("type") == "daily":
-        targets = []
-        for daily_time in _daily_times(schedule):
-            hour, minute = (int(part) for part in daily_time.split(":"))
-            target = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
-            if target <= now:
-                target += timedelta(days=1)
-            targets.append(target)
-        return min(targets).isoformat(timespec="seconds")
+        hour, minute = (int(part) for part in str(schedule.get("time", "00:00")).split(":"))
+        target = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
+        if target <= now: target += timedelta(days=1)
+        return target.isoformat(timespec="seconds")
     try:
         base = datetime.fromisoformat(last_run) if last_run else now
     except ValueError:
@@ -237,12 +163,16 @@ def _next_fire(trigger: dict, last_run: str | None, now: datetime) -> str:
 def _scheduler() -> None:
     while not STOP.is_set():
         state = _read(STATE_FILE, {})
-        now   = datetime.now()
-        for trigger in _triggers():
-            if trigger.get("enabled", True) and _due(trigger, state.get(trigger["id"]), now):
-                state[trigger["id"]] = now.isoformat(timespec="seconds")
+        now = datetime.now()
+        for definition in _definitions():
+            name = str(definition.get("name", ""))
+            if definition.get("enabled", True) and _due(definition, state.get(name), now):
+                state[name] = now.isoformat(timespec="seconds")
                 _write(STATE_FILE, state)
-                _dispatch(trigger)
+                try:
+                    _run(definition)
+                except Exception:
+                    pass
         STOP.wait(20)
 
 
@@ -250,11 +180,6 @@ def _scheduler() -> None:
 async def lifespan(_app):
     STOP.clear()
     threading.Thread(target=_scheduler, daemon=True, name="korecron-scheduler").start()
-    start_manifest_registration(
-        ROOT / "KoreCron" / "skill_registration.json",
-        service_base_url=_service_url("korecron"),
-        logger_name=__name__,
-    )
     yield
     STOP.set()
 
@@ -268,123 +193,152 @@ app.mount("/static", StaticFiles(directory=str(UI_ROOT / "static")), name="korec
 def status(): return {"ok": True, "service": "KoreCron"}
 
 
-@app.get("/api/targets")
-def list_targets():
-    return {
-        "targets":  [{"key": key, "label": label} for key, label in TARGET_LABELS.items() if key != "network"],
-        "networks": [{"id": n["id"], "title": n["title"]} for n in _networks()],
-    }
+@app.get("/api/cronprompts")
+def list_cronprompts():
+    state = _read(STATE_FILE, {})
+    return {"cronprompts": [{**item, "schedule_text": _schedule_text(item.get("schedule", {})), "last_run": state.get(item.get("name"))} for item in _definitions()]}
 
 
-@app.get("/api/triggers")
-def list_triggers():
-    state   = _read(STATE_FILE, {})
-    history = _read(RUN_HISTORY_FILE, {})
-    now     = datetime.now()
-    titles  = {n["id"]: n["title"] for n in _networks()}
-    return {"triggers": [{
-        **item,
-        "schedule_text": _schedule_text(item.get("schedule", {})),
-        "schedule_input": _schedule_text_to_input(item),
-        "target_text":   f"Network: {titles.get(item.get('network_id'), item.get('network_id'))}" if item.get("target") == "network" else TARGET_LABELS.get(item.get("target"), item.get("target")),
-        "last_run":      state.get(item["id"]),
-        "next_fire":     _next_fire(item, state.get(item["id"]), now) if item.get("enabled", True) else None,
-        "last_outcome":  (history.get(item["id"]) or [None])[-1],
-        "run_status":    dict(RUN_STATUSES.get(item["id"], {"status": "idle"})),
-    } for item in _triggers()]}
+@app.get("/api/timeline")
+def timeline():
+    now = datetime.now()
+    state = _read(STATE_FILE, {})
+    items = [
+        {"name": item.get("name"), "chat_name": item.get("chat_name"), "next_fire": _next_fire(item, state.get(item.get("name")), now), "schedule_text": _schedule_text(item.get("schedule", {}))}
+        for item in _definitions() if item.get("enabled", True)
+    ]
+    return {"items": sorted(items, key=lambda item: item["next_fire"]), "now": now.isoformat(timespec="seconds")}
 
 
-def _definition(payload: dict, trigger_id: str | None = None) -> dict:
+def _cronprompt_definition(payload: dict) -> dict:
     name = str(payload.get("name", "")).strip()
     if not NAME_RE.fullmatch(name):
         raise HTTPException(400, "Name must begin with a letter or digit and use up to 120 letters, digits, spaces, hyphens, or underscores.")
-    try:
-        schedule = _parse_schedule(str(payload.get("schedule", "")))
-    except (ValueError, TypeError):
-        raise HTTPException(400, "Schedule must be minutes or comma-separated HH:MM times.")
-    target = str(payload.get("target", ""))
-    if target not in TARGET_LABELS:
-        raise HTTPException(400, "Target must be system_test, unit_test or network.")
-    network_id = str(payload.get("network_id") or "")
-    if target == "network" and not network_id:
-        raise HTTPException(400, "Choose a network.")
+    try: schedule = _parse_schedule(str(payload.get("schedule", "")))
+    except (ValueError, TypeError): raise HTTPException(400, "Schedule must be minutes or HH:MM.")
+    chat_name = str(payload.get("chat_name") or name).strip()
+    if not chat_name:
+        raise HTTPException(400, "Chat name is required.")
+    prompt_items = payload.get("prompts", [])
+    if not isinstance(prompt_items, list):
+        raise HTTPException(400, "Prompts must be an ordered list.")
+    prompts = []
+    for item in prompt_items:
+        text = str(item.get("prompt", "")) if isinstance(item, dict) else str(item)
+        if text.strip():
+            prompts.append({"prompt": text.strip()})
+    if not prompts:
+        raise HTTPException(400, "At least one non-empty prompt is required.")
     return {
-        "id":         trigger_id or f"trigger_{uuid.uuid4().hex[:10]}",
-        "name":       name,
-        "enabled":    bool(payload.get("enabled", True)),
-        "target":     target,
-        "network_id": network_id if target == "network" else "",
-        "schedule":   schedule,
+        "name":               name,
+        "chat_name":          chat_name,
+        "enabled":            bool(payload.get("enabled", True)),
+        "clear_working_data": bool(payload.get("clear_working_data", True)),
+        "schedule":           schedule,
+        "prompts":            prompts,
     }
 
 
-def _find(triggers: list[dict], key: str) -> int | None:
-    return next((i for i, t in enumerate(triggers) if t["id"] == key or t.get("name", "").casefold() == key.casefold()), None)
-
-
-@app.post("/api/triggers")
-def create_trigger(payload: dict):
-    definition = _definition(payload)
-    triggers   = _triggers()
-    if any(t.get("name", "").casefold() == definition["name"].casefold() for t in triggers):
-        raise HTTPException(409, "A trigger with this name already exists.")
-    triggers.append(definition)
-    _save(triggers)
+@app.post("/api/cronprompts")
+def create_cronprompt(payload: dict):
+    definition  = _cronprompt_definition(payload)
+    definitions = _definitions()
+    if any(str(item.get("name", "")).casefold() == definition["name"].casefold() for item in definitions):
+        raise HTTPException(409, "CronPrompt already exists.")
+    definitions.append(definition); _save(definitions)
     return definition
 
 
-@app.put("/api/triggers/{trigger_id}")
-def update_trigger(trigger_id: str, payload: dict):
-    triggers = _triggers()
-    index    = _find(triggers, trigger_id)
+@app.put("/api/cronprompts/{name}")
+def update_cronprompt(name: str, payload: dict):
+    definitions = _definitions()
+    index = next((
+        i for i, item in enumerate(definitions)
+        if str(item.get("name", "")).casefold() == name.casefold()
+    ), None)
     if index is None:
-        raise HTTPException(404, "Trigger not found.")
-    definition = _definition({**triggers[index], "schedule": _schedule_text_to_input(triggers[index]), **payload}, triggers[index]["id"])
-    if any(i != index and t.get("name", "").casefold() == definition["name"].casefold() for i, t in enumerate(triggers)):
-        raise HTTPException(409, "A trigger with this name already exists.")
-    triggers[index] = definition
-    _save(triggers)
+        raise HTTPException(404, "CronPrompt not found.")
+    definition = _cronprompt_definition(payload)
+    if any(
+        i != index and str(item.get("name", "")).casefold() == definition["name"].casefold()
+        for i, item in enumerate(definitions)
+    ):
+        raise HTTPException(409, "CronPrompt already exists.")
+    old_name = str(definitions[index]["name"])
+    definitions[index] = definition
+    _save(definitions)
+    if old_name != definition["name"]:
+        state = _read(STATE_FILE, {})
+        if old_name in state:
+            state[definition["name"]] = state.pop(old_name)
+            _write(STATE_FILE, state)
     return definition
 
 
-def _schedule_text_to_input(trigger: dict) -> str:
-    schedule = trigger.get("schedule", {})
-    return ", ".join(_daily_times(schedule)) if schedule.get("type") == "daily" else str(schedule.get("minutes", 60))
-
-
-@app.delete("/api/triggers/{trigger_id}", status_code=204)
-def delete_trigger(trigger_id: str):
-    triggers = _triggers()
-    index    = _find(triggers, trigger_id)
-    if index is None:
-        raise HTTPException(404, "Trigger not found.")
-    removed = triggers.pop(index)
-    _save(triggers)
+@app.delete("/api/cronprompts/{name}", status_code=204)
+def delete_cronprompt(name: str):
+    definitions = _definitions()
+    definition = next((
+        item for item in definitions
+        if str(item.get("name", "")).casefold() == name.casefold()
+    ), None)
+    if definition is None:
+        raise HTTPException(404, "CronPrompt not found.")
+    remaining = [
+        item for item in definitions
+        if str(item.get("name", "")).casefold() != name.casefold()
+    ]
+    _save(remaining)
     state = _read(STATE_FILE, {})
-    state.pop(removed["id"], None)
+    state.pop(str(definition["name"]), None)
     _write(STATE_FILE, state)
     return None
 
 
-@app.post("/api/triggers/{trigger_id}/run")
-def run_trigger(trigger_id: str):
-    triggers = _triggers()
-    index    = _find(triggers, trigger_id)
-    if index is None:
-        raise HTTPException(404, "Trigger not found.")
-    if not _dispatch(triggers[index]):
-        raise HTTPException(409, "Trigger is already running.")
-    return {"queued": True, "name": triggers[index]["name"]}
+@app.post("/api/cronprompts/{name}/run")
+def run_cronprompt(name: str):
+    definition = next((item for item in _definitions() if item.get("name", "").lower() == name.lower()), None)
+    if not definition: raise HTTPException(404, "CronPrompt not found.")
+    threading.Thread(target=_run, args=(definition,), daemon=True).start()
+    return {"queued": True, "name": definition["name"], "chat_name": definition["chat_name"]}
+
+
+@app.post("/api/cronprompts/{name}/agent-resume")
+def resume_cronprompt_agent(name: str):
+    definition = next((item for item in _definitions() if item.get("name", "").lower() == name.lower()), None)
+    if not definition:
+        raise HTTPException(404, "CronPrompt not found.")
+
+    chat_name = str(definition.get("chat_name") or "").strip()
+    if not chat_name:
+        raise HTTPException(400, "CronPrompt has no chat name.")
+
+    agent_base = _service_url("koreagent")
+    try:
+        conversation = _conversation(definition)
+    except Exception as exc:
+        raise HTTPException(502, "Unable to create or load the KoreChat conversation.") from exc
+
+    try:
+        _http("POST", f"{agent_base}/sessions/request-switch", {
+            "name": chat_name,
+            "conversation_id": int(conversation.get("id") or 0),
+        })
+    except Exception as exc:
+        raise HTTPException(502, "KoreAgent refused the resume request.") from exc
+
+    external_id = str(conversation.get("external_id") or "")
+    if external_id.startswith("webchat_"):
+        session_id = external_id[len("webchat_"):]
+    else:
+        session_id = f"kc_conv_{int(conversation.get('id') or 0)}"
+    resume_name = str(conversation.get("subject") or chat_name).strip() or chat_name
+    redirect_url = f"{agent_base}/?session_id={urllib.parse.quote(session_id, safe='')}&name={urllib.parse.quote(resume_name, safe='')}"
+    return {"ok": True, "agent_url": agent_base, "session_id": session_id, "name": resume_name, "redirect_url": redirect_url}
 
 
 @app.get("/ui", include_in_schema=False)
 def ui() -> FileResponse: return FileResponse(UI_ROOT / "static" / "cron" / "index.html")
-
-def cron_list() -> dict: return list_triggers()
-
-def cron_run(name: str) -> dict: return run_trigger(name)
-
-register_skill_invocation_routes(app, {"cron_list": cron_list, "cron_run": cron_run})
 
 if __name__ == "__main__":
     uvicorn.run(app, host="127.0.0.1", port=int(_config()["services"]["korecron"]["port"]))

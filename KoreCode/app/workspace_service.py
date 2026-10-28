@@ -51,8 +51,6 @@ from __future__ import annotations
 import ast
 import hashlib
 import os
-import re
-import shutil
 import subprocess
 import sys
 import textwrap
@@ -63,7 +61,6 @@ from fastapi import HTTPException
 
 from .ui_state_store import get_active_workspace_root
 from .ui_state_store import set_active_workspace_root
-from .workspace_index import get_symbol_by_qualname
 from .workspace_index import list_indexed_symbols
 from .workspace_menu import read_workspace_menu
 

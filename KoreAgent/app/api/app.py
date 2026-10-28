@@ -35,7 +35,6 @@ if _KORECOMMON_PARENT is not None and str(_KORECOMMON_PARENT) not in sys.path:
     sys.path.insert(0, str(_KORECOMMON_PARENT))
 
 import json
-import re
 
 from fastapi import FastAPI
 from fastapi import HTTPException
@@ -43,7 +42,6 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from KoreCommon.service_app import register_endpoint_manifest
 from agent.orchestration.engine import ConversationHistory
-from agent.orchestration.engine import OrchestratorConfig
 from agent.orchestration.engine import SessionContext
 from agent.orchestration.engine import _filter_web_skills
 from agent.orchestration.engine import get_sandbox_enabled
@@ -74,9 +72,6 @@ from api.state import pop_pending_switch as _pop_pending_switch
 from api.state import queue_run_event
 from api.state import set_latest_log_path as _set_latest_log_path
 from api.state import set_pending_switch as _set_pending_switch
-from api.state import set_startup_state_snapshot
-from api.state import setup
-from api.state import update_startup_state
 from api.state import validate_session_id as _validate_session_id
 from api.routes_work_packet import register_work_packet_routes
 from input_layer.korechat_proxy_routes import register_korechat_proxy_routes

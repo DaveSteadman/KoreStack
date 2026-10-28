@@ -8,7 +8,7 @@ import sys
 import time
 import urllib.error
 import urllib.request
-from collections import defaultdict, deque
+from collections import defaultdict
 from typing import Any
 
 from KoreCommon.datauser_fs import get_datauser_root

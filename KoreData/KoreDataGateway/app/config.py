@@ -13,7 +13,6 @@
 # Function inventory:
 # - load: Loads this module's primary operation.
 # ====================================================================================================
-import os
 
 from config import load_config, _DATA_SUBSERVICE_OFFSETS
 
@@ -21,7 +20,7 @@ _SECTION = "koredatagateway"
 
 _DEFAULTS = {
     "port":     None,
-    "host":     "0.0.0.0",
+    "host":     "127.0.0.1",
     "log_level": "info",
     "korefeed_url":      None,
     "korelibrary_url":   None,

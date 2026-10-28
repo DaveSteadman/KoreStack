@@ -29,7 +29,7 @@ def _default_data_dir() -> str:
 
 _DEFAULTS = {
     "port":       None,
-    "host":       "0.0.0.0",
+    "host":       "127.0.0.1",
     "log_level":  "info",
     "data_dir":   _default_data_dir(),
     "max_pages":  200,

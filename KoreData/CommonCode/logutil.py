@@ -22,7 +22,6 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from KoreCommon.service_logging import LineCappedFileHandler
 from KoreCommon.service_logging import configure_service_logging as _common_configure_service_logging
 from KoreCommon.service_logging import get_service_log_path as _common_get_service_log_path
 from KoreCommon.service_logging import make_service_log_config as _common_make_service_log_config

@@ -71,7 +71,6 @@ from app.feed_manager import (
     create_domain,
     delete_domain_feeds,
     get_feed,
-    get_domain_enabled,
     list_feed_domains,
     load_feeds,
     remove_feed,

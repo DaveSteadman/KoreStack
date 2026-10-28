@@ -36,7 +36,7 @@ from KoreCommon.suite_paths import get_suite_datacontrol_dir
 _DEFAULT_DATA_DIR = get_suite_datacontrol_dir() / "korecomms"
 
 _DEFAULTS: dict = {
-    "host": os.environ.get("KORECOMMS_HOST", "0.0.0.0"),
+    "host": os.environ.get("KORECOMMS_HOST", "127.0.0.1"),
     "port": None,
     "log_level": os.environ.get("KORECOMMS_LOG_LEVEL", "info"),
     "poll_interval": 60,

@@ -38,7 +38,6 @@ import logging
 import os
 import subprocess
 import sys
-import time
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -201,10 +200,9 @@ _maybe_reexec_into_project_venv()
 
 import llm_client as llm_client
 from api.startup import run_api_mode
-from api.app import update_startup_state
+from api.state import update_startup_state
 from KoreCommon.service_logging import configure_service_logging
 from llm_client import format_running_model_report
-from llm_client import get_llm_timeout
 from llm_client import register_llm_call_logger
 from agent.orchestration.engine import OrchestratorConfig
 from agent.orchestration.engine import resolve_execution_model

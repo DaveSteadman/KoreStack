@@ -22,7 +22,6 @@ from __future__ import annotations
 # - serve_readme: Serves readme for this module.
 # ====================================================================================================
 
-import os
 import json
 from pathlib import Path
 from typing import Callable

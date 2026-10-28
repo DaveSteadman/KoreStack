@@ -38,4 +38,22 @@ from working_data import working_data_select
 # ====================================================================================================
 # MARK: EXPORTED SKILL CONTRACT
 # ====================================================================================================
-__all__ = [name for name in globals() if name.startswith("working_data_")]
+__all__ = [
+    "working_data_clear",
+    "working_data_delete",
+    "working_data_drop_where",
+    "working_data_expand_full_text",
+    "working_data_fetch_full_text",
+    "working_data_export",
+    "working_data_filter",
+    "working_data_get",
+    "working_data_inspect",
+    "working_data_list",
+    "working_data_peek",
+    "working_data_query",
+    "working_data_rank",
+    "working_data_rename",
+    "working_data_save",
+    "working_data_search",
+    "working_data_select",
+]

@@ -82,10 +82,9 @@ from skill_executor import build_catalog_gates
 from system_skills.SystemInfo.system_info_skill import get_static_system_info_string
 from skills_catalog_builder import build_tool_definitions
 from sessions.tool_selection import derive_active_tool_runtime
-from sessions.tool_selection import filter_local_payload
 from sessions.tool_selection import get_tool_schema_revision
 from sessions.tool_selection import promote_selected_tools
-from agent.tool_runtime.loop import extract_result_fields as _tool_loop_extract_result_fields
+from agent.tool_runtime.formatting import extract_result_fields as _tool_loop_extract_result_fields
 from agent.tool_runtime.loop import format_tool_outputs as _tool_loop_format_tool_outputs
 from agent.tool_runtime.loop import run_tool_loop as _tool_loop_run_tool_loop
 from utils.runtime_logger import SessionLogger

@@ -8,7 +8,7 @@
 #
 # Defaults:
 #   port: from config/korestack_config.json
-#   host: 0.0.0.0
+#   host: 127.0.0.1
 #
 # Related modules:
 #   - app/server.py  -- imports cfg, load()

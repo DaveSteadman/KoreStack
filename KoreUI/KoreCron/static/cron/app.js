@@ -1,151 +1,407 @@
 import { initServiceShell } from '/ui-elements/assets/js/serviceShell.js';
-import { initDialogHost, kcuiConfirm } from '/ui-elements/assets/js/dialogs.js';
 
+const workspace    = document.querySelector('.kcui-workspace');
+const form         = document.querySelector('#cronprompt-form');
+const nameInput    = document.querySelector('#cron-name');
+const chatInput    = document.querySelector('#chat-name');
+const clearWorkingData = document.querySelector('#clear-working-data');
+const promptList   = document.querySelector('#prompt-list');
+const addPrompt    = document.querySelector('#add-prompt');
+const cancelEdit   = document.querySelector('#cancel-edit');
+const saveButton   = document.querySelector('#save-cronprompt');
+const agentResumeButton = document.querySelector('#agent-resume-btn');
+const formStatus   = document.querySelector('#form-status');
+const listStatus   = document.querySelector('#list-status');
+const createButton = document.querySelector('#create-cronprompt');
+const editorEyebrow = document.querySelector('#editor-eyebrow');
+const editorBlurb  = document.querySelector('#editor-blurb');
+const rows         = document.querySelector('#cron-rows');
+let editingName    = null;
+let cronPrompts    = [];
+let selectionReady = false;
+let editorDirty    = false;
+
+workspace?.classList.add('kcui-workspace--two-columns', 'kcui-workspace--stack-sm');
 initServiceShell({
   currentService: 'korecron',
   urls:           window.__koreSuiteUrls || {},
   path:           '/ui',
   section:        'cron',
-  shellMeta:      { cron: { brandLabel: 'KoreCron', overline: 'Scheduled Triggers', brandIcon: 'korecron' } },
-  shellTabs:      [{ key: 'cron', label: 'Triggers', href: '/ui' }],
+  shellMeta:      { cron: { brandLabel: 'KoreCron', overline: 'Scheduled Chat Prompts', brandIcon: 'korecron' } },
+  shellTabs:      [{ key: 'cron', label: 'Cron Prompts', href: '/ui' }],
 });
-initDialogHost();
 
-const style = document.createElement('style');
-style.textContent = `
-  .cron-toolbar { margin-bottom: 12px; }
-  .cron-list { display: grid; gap: 8px; }
-  .cron-list__empty { padding: 14px 16px; border: 1px dashed var(--border, rgba(255,255,255,.16)); color: var(--text-muted, rgba(255,255,255,.72)); }
-  .cron-row { display: grid; gap: 4px; padding: 10px 14px; border: 1px solid var(--border, rgba(255,255,255,.16)); background: rgba(255,255,255,.02); cursor: pointer; }
-  .cron-row:hover { background: rgba(96,165,250,.08); }
-  .cron-row.is-selected { border-color: rgba(96,165,250,.65); background: rgba(96,165,250,.14); }
-  .cron-row.is-off .cron-row__title { opacity: .5; }
-  .cron-row__title { display: flex; justify-content: space-between; gap: 10px; font-weight: 600; }
-  .cron-row__meta { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: .85em; color: var(--text-muted, rgba(255,255,255,.72)); }
-  .cron-enabled { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
-  .cron-info { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; margin: 14px 0; font-size: .9em; }
-  .cron-info dt { color: var(--text-muted, rgba(255,255,255,.72)); }
-  .cron-info dd { margin: 0; overflow-wrap: anywhere; }
-  .cron-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 14px; }
+const cronPromptRowStyle = document.createElement('style');
+cronPromptRowStyle.textContent = `
+  .cronprompt-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+  .cronprompt-list {
+    display: grid;
+    gap: 10px;
+  }
+  .cronprompt-chat-row {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+  .cronprompt-chat-row > input {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding-right: 8.75rem;
+  }
+  .cronprompt-chat-row > button {
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 1;
+  }
+  .cronprompt-chat-row > button:disabled {
+    opacity: 0.52;
+  }
+  .cronprompt-list__empty {
+    padding: 14px 16px;
+    border: 1px dashed var(--border, rgba(255, 255, 255, 0.16));
+    border-radius: var(--kcui-radius-md, 2px);
+    color: var(--text-muted, rgba(255, 255, 255, 0.72));
+  }
+  .cronprompt-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 14px;
+    border: 1px solid var(--border, rgba(255, 255, 255, 0.16));
+    border-radius: var(--kcui-radius-md, 2px);
+    background: rgba(255, 255, 255, 0.02);
+    cursor: pointer;
+    transition: background 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
+  }
+  .cronprompt-row:hover {
+    background: rgba(96, 165, 250, 0.08);
+  }
+  .cronprompt-row.is-selected {
+    border-color: rgba(96, 165, 250, 0.65);
+    background: rgba(96, 165, 250, 0.14);
+    box-shadow: inset 0 0 0 1px rgba(96, 165, 250, 0.22);
+  }
+  .cronprompt-row:focus-visible {
+    outline: 2px solid rgba(96, 165, 250, 0.85);
+    outline-offset: 2px;
+  }
+  .cronprompt-row__summary {
+    min-width: 0;
+    display: grid;
+    gap: 6px;
+    flex: 1 1 auto;
+  }
+  .cronprompt-row__titleline,
+  .cronprompt-row__meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    flex-wrap: wrap;
+  }
+  .cronprompt-row__title {
+    font-weight: 600;
+  }
+  .cronprompt-row__meta {
+    color: var(--text-muted, rgba(255, 255, 255, 0.72));
+    font-size: 0.92rem;
+  }
+  .cronprompt-row__meta span,
+  .cronprompt-row__title {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .cronprompt-row__actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex: 0 0 auto;
+  }
+  .cronprompt-row__delete {
+    min-width: 2.1rem;
+    text-align: center;
+  }
 `;
-document.head.append(style);
+document.head.append(cronPromptRowStyle);
 
-const $ = (selector) => document.querySelector(selector);
-const form = $('#trigger-form'), empty = $('#detail-empty'), info = $('#trigger-info');
-const nameInput = $('#trigger-name'), targetSelect = $('#trigger-target'), scheduleInput = $('#trigger-schedule'), enabledInput = $('#trigger-enabled');
-const saveButton = $('#trigger-save'), runButton = $('#trigger-run'), deleteButton = $('#trigger-delete');
-const formStatus = $('#form-status'), rows = $('#trigger-rows'), eyebrow = $('#detail-eyebrow');
-
-let triggers = [];
-let selectedId = null;   // trigger id, 'new', or null
-let dirty = false;
-
-const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const status = (text, kind = 'dim') => { formStatus.textContent = text; formStatus.className = `kcui-tag kcui-tag--${kind}`; };
-const stamp = (iso) => iso ? iso.replace('T', ' ') : '—';
-const selected = () => triggers.find((t) => t.id === selectedId);
-
-async function api(path, options = {}) {
-  const response = await fetch(path, { headers: { 'Content-Type': 'application/json' }, ...options });
-  if (response.status === 204) return null;
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.detail || `Request failed (${response.status})`);
-  return data;
+function setTag(element, text, variant = 'dim') {
+  element.textContent = text;
+  element.className   = `kcui-tag kcui-tag--${variant}`;
 }
 
-async function loadTargets() {
-  const { targets, networks } = await api('/api/targets');
-  targetSelect.innerHTML = targets.map((t) => `<option value="${escapeHtml(t.key)}">${escapeHtml(t.label)}</option>`).join('')
-    + networks.map((n) => `<option value="network:${escapeHtml(n.id)}">Network: ${escapeHtml(n.title)}</option>`).join('');
+function updateEditorChrome() {
+  const isEditing = Boolean(editingName);
+  const hasChatName = Boolean(chatInput.value.trim());
+  editorEyebrow.textContent = isEditing ? 'Selected Timed Event' : 'New Timed Event';
+  editorBlurb.textContent = isEditing
+    ? `Editing ${editingName}. Changes on the right update the selected CronPrompt and its prompt sequence.`
+    : 'Choose a timed event on the left or create a new one, then define its destination chat, schedule, and ordered prompts.';
+  saveButton.textContent = isEditing ? 'Save changes' : 'Create timed event';
+  cancelEdit.hidden = !isEditing;
+  listStatus.textContent = isEditing ? `Selected: ${editingName}` : 'Select a timed event';
+  agentResumeButton.disabled = !hasChatName;
 }
 
-const targetValue = (t) => t.target === 'network' ? `network:${t.network_id}` : t.target;
-const outcomeText = (t) => {
-  const run = t.run_status || {};
-  if (run.status === 'running') return 'running…';
-  if (run.status && run.status !== 'idle') return `${run.status}: ${run.detail || ''}`;
-  if (!t.last_outcome) return 'never run';
-  return t.last_outcome.succeeded ? 'last run ok' : `last run failed: ${t.last_outcome.error}`;
-};
+function addPromptRow(value = '') {
+  const row       = document.createElement('div');
+  const label     = document.createElement('label');
+  const textarea  = document.createElement('textarea');
+  const remove    = document.createElement('button');
+  const controls  = document.createElement('div');
+  const index     = promptList.children.length + 1;
 
-function renderList() {
-  if (!triggers.length) { rows.innerHTML = '<div class="cron-list__empty">No triggers yet.</div>'; return; }
-  rows.innerHTML = triggers.map((t) => `<div class="cron-row ${t.id === selectedId ? 'is-selected' : ''} ${t.enabled ? '' : 'is-off'}" role="listitem" tabindex="0" data-id="${escapeHtml(t.id)}">
-    <div class="cron-row__title"><span class="cron-row__name">${escapeHtml(t.name)}</span><span>${t.enabled ? '' : 'off'}</span></div>
-    <div class="cron-row__meta"><span>${escapeHtml(t.target_text)}</span><span>${escapeHtml(t.schedule_text)}</span><span>${escapeHtml(outcomeText(t))}</span></div>
-  </div>`).join('');
+  label.className   = 'kcui-form-label';
+  label.textContent = `Prompt ${index}`;
+  textarea.rows     = 3;
+  textarea.value    = value;
+  textarea.placeholder = 'Prompt to send after the previous prompt has completed.';
+  textarea.dataset.prompt = 'true';
+  remove.type        = 'button';
+  remove.className   = 'kcui-tag kcui-tag--danger';
+  remove.textContent = 'Remove';
+  remove.addEventListener('click', () => {
+    row.remove();
+    renumberPrompts();
+    editorDirty = true;
+  });
+
+  controls.append(remove);
+  row.append(label, textarea, controls);
+  promptList.append(row);
 }
 
-function renderInfo() {
-  const t = selected();
-  info.innerHTML = t ? [['Next run', stamp(t.next_fire)], ['Last run', stamp(t.last_run)], ['Outcome', outcomeText(t)]]
-    .map(([k, v]) => `<dt>${k}</dt><dd>${escapeHtml(v)}</dd>`).join('') : '';
+function renumberPrompts() {
+  [...promptList.children].forEach((row, index) => {
+    row.querySelector('label').textContent = `Prompt ${index + 1}`;
+  });
 }
 
-function fillForm() {
-  const t = selected();
-  const creating = selectedId === 'new';
-  empty.hidden = Boolean(selectedId);
-  form.hidden = !selectedId;
-  eyebrow.textContent = creating ? 'New trigger' : t ? t.name : 'Details';
-  $('#detail-blurb').textContent = selectedId ? 'Edit the schedule and target, then save.' : 'Select a trigger on the left, or create a new one.';
-  if (!selectedId) return;
-  nameInput.value = t?.name ?? '';
-  targetSelect.value = t ? targetValue(t) : targetSelect.options[0]?.value;
-  scheduleInput.value = t ? (t.schedule_input ?? (t.schedule.type === 'daily'
-    ? (t.schedule.times?.join(', ') ?? t.schedule.time)
-    : t.schedule.minutes)) : '';
-  enabledInput.checked = t ? t.enabled : true;
-  saveButton.textContent = creating ? 'Create trigger' : 'Save changes';
-  runButton.hidden = deleteButton.hidden = creating;
-  dirty = false;
-  status('Ready');
-  renderInfo();
+function renderRows(items) {
+  if (!items.length) {
+    const empty = document.createElement('div');
+    empty.className = 'cronprompt-list__empty';
+    empty.textContent = 'No CronPrompts configured.';
+    rows.replaceChildren(empty);
+    return;
+  }
+  rows.replaceChildren(...items.map((item) => {
+    const row       = document.createElement('div');
+    const summary   = document.createElement('div');
+    const titleLine = document.createElement('div');
+    const title     = document.createElement('span');
+    const schedule  = document.createElement('span');
+    const meta      = document.createElement('div');
+    const chat      = document.createElement('span');
+    const promptCount = document.createElement('span');
+    const lastRun   = document.createElement('span');
+    const actions   = document.createElement('div');
+    const runAction  = document.createElement('button');
+    const deleteAction = document.createElement('button');
+    row.className   = 'cronprompt-row';
+    if (item.name === editingName) row.classList.add('is-selected');
+    row.title       = `Select ${item.name}`;
+    row.tabIndex    = 0;
+    row.setAttribute('role', 'listitem');
+    row.addEventListener('click', () => startEdit(item));
+    row.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        startEdit(item);
+      }
+    });
+    summary.className = 'cronprompt-row__summary';
+    titleLine.className = 'cronprompt-row__titleline';
+    title.className = 'cronprompt-row__title';
+    title.textContent = item.name;
+    schedule.className = 'kcui-tag kcui-tag--dim';
+    schedule.textContent = item.schedule_text;
+    meta.className = 'cronprompt-row__meta';
+    chat.textContent = `Chat: ${item.chat_name}`;
+    promptCount.textContent = `${item.prompts.length} prompt${item.prompts.length === 1 ? '' : 's'}`;
+    lastRun.textContent = `Last run: ${item.last_run || 'Never'}`;
+    titleLine.append(title, schedule);
+    meta.append(chat, promptCount, lastRun);
+    summary.append(titleLine, meta);
+    actions.className = 'cronprompt-row__actions';
+    runAction.type      = 'button';
+    runAction.className = 'kcui-tag kcui-tag--dim';
+    runAction.textContent = 'Run';
+    runAction.addEventListener('click', (event) => {
+      event.stopPropagation();
+      runNow(item.name, runAction);
+    });
+    deleteAction.type      = 'button';
+    deleteAction.className = 'kcui-tag kcui-tag--danger';
+    deleteAction.textContent = 'X';
+    deleteAction.title = `Delete ${item.name}`;
+    deleteAction.setAttribute('aria-label', `Delete ${item.name}`);
+    deleteAction.classList.add('cronprompt-row__delete');
+    deleteAction.addEventListener('click', (event) => {
+      event.stopPropagation();
+      deleteCronPrompt(item.name);
+    });
+    actions.append(runAction, deleteAction);
+    row.append(summary, actions);
+    return row;
+  }));
 }
 
-function select(id) { selectedId = id; renderList(); fillForm(); }
+function resetEditor({ preserveStatus = false } = {}) {
+  editingName = null;
+  editorDirty = false;
+  form.reset();
+  promptList.replaceChildren();
+  addPromptRow();
+  updateEditorChrome();
+  renderRows(cronPrompts);
+  if (!preserveStatus) setTag(formStatus, 'Ready', 'dim');
+}
 
-async function refresh() {
+function startEdit(item, { scroll = true, updateStatus = true } = {}) {
+  editingName       = item.name;
+  editorDirty       = false;
+  nameInput.value   = item.name;
+  chatInput.value   = item.chat_name;
+  clearWorkingData.checked = item.clear_working_data !== false;
+  form.elements.schedule.value = item.schedule.type === 'daily'
+    ? item.schedule.time
+    : String(item.schedule.minutes);
+  promptList.replaceChildren();
+  item.prompts.forEach((prompt) => addPromptRow(prompt.prompt || ''));
+  updateEditorChrome();
+  renderRows(cronPrompts);
+  if (updateStatus) setTag(formStatus, `Editing ${item.name}`, 'warning');
+  if (scroll) form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+async function load() {
+  const cronResponse = await fetch('/api/cronprompts');
+  const cronPayload     = await cronResponse.json();
+  cronPrompts = cronPayload.cronprompts || [];
+  if (editingName) {
+    const selected = cronPrompts.find((item) => item.name === editingName);
+    if (editorDirty) renderRows(cronPrompts);
+    else if (selected) startEdit(selected, { scroll: false, updateStatus: false });
+    else resetEditor({ preserveStatus: true });
+  } else if (!selectionReady && cronPrompts.length) {
+    selectionReady = true;
+    startEdit(cronPrompts[0], { scroll: false, updateStatus: false });
+  } else {
+    renderRows(cronPrompts);
+  }
+  updateEditorChrome();
+}
+
+async function runNow(name, button) {
+  button.disabled = true;
+  button.textContent = 'Queued';
   try {
-    const timeOfDay = (x) => (x.next_fire || '').split('T')[1] || '99:99';
-    triggers = (await api('/api/triggers')).triggers.sort((a, b) => timeOfDay(a).localeCompare(timeOfDay(b)) || a.name.localeCompare(b.name));
-    if (selectedId && selectedId !== 'new' && !selected()) selectedId = null;
-    renderList();
-    if (!dirty) { if (selectedId && selectedId !== 'new') renderInfo(); else if (!selectedId) fillForm(); }
-  } catch (error) { status(error.message, 'warning'); }
+    const response = await fetch(`/api/cronprompts/${encodeURIComponent(name)}/run`, { method: 'POST' });
+    if (!response.ok) throw new Error((await response.json()).detail || 'Unable to queue event.');
+    setTag(formStatus, `Queued ${name}`, 'success');
+  } catch (error) {
+    button.textContent = 'Failed';
+    return;
+  }
+  window.setTimeout(load, 500);
 }
 
-form.addEventListener('input', () => { dirty = true; });
+async function deleteCronPrompt(name) {
+  if (!window.confirm(`Delete CronPrompt "${name}"?`)) return;
+  try {
+    const response = await fetch(`/api/cronprompts/${encodeURIComponent(name)}`, { method: 'DELETE' });
+    if (!response.ok) throw new Error((await response.json()).detail || 'Unable to delete event.');
+    if (editingName === name) resetEditor({ preserveStatus: true });
+    setTag(formStatus, `Deleted ${name}`, 'success');
+    await load();
+  } catch (error) {
+    setTag(formStatus, error.message || 'Unable to delete event.', 'danger');
+  }
+}
+
+async function agentResume() {
+  if (!editingName) {
+    window.alert('Select a CronPrompt first.');
+    return;
+  }
+
+  agentResumeButton.disabled = true;
+  try {
+    const response = await fetch(`/api/cronprompts/${encodeURIComponent(editingName)}/agent-resume`, {
+      method: 'POST',
+    });
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.detail || 'Agent resume failed.');
+    }
+    window.location.href = result.redirect_url || result.agent_url;
+  } catch (error) {
+    setTag(formStatus, error.message || 'Agent resume failed.', 'danger');
+  } finally {
+    updateEditorChrome();
+  }
+}
+
+addPrompt.addEventListener('click', () => {
+  addPromptRow();
+  editorDirty = true;
+});
+cancelEdit.addEventListener('click', () => resetEditor());
+createButton.addEventListener('click', () => {
+  selectionReady = true;
+  resetEditor();
+  nameInput.focus();
+});
+agentResumeButton.addEventListener('click', agentResume);
+nameInput.addEventListener('input', () => {
+  if (!chatInput.value.trim()) chatInput.placeholder = nameInput.value.trim() || 'Named KoreChat';
+});
+chatInput.addEventListener('input', updateEditorChrome);
+form.addEventListener('input', () => { editorDirty = true; });
 
 form.addEventListener('submit', async (event) => {
   event.preventDefault();
-  const [target, networkId = ''] = targetSelect.value.split(/:(.+)/);
-  const body = { name: nameInput.value, target, network_id: networkId, schedule: scheduleInput.value, enabled: enabledInput.checked };
+  const prompts = [...promptList.querySelectorAll('[data-prompt]')].map((input) => input.value.trim()).filter(Boolean);
+  saveButton.disabled = true;
+  setTag(formStatus, editingName ? 'Saving' : 'Creating', 'warning');
   try {
-    const creating = selectedId === 'new';
-    const saved = await api(creating ? '/api/triggers' : `/api/triggers/${encodeURIComponent(selectedId)}`, { method: creating ? 'POST' : 'PUT', body: JSON.stringify(body) });
-    dirty = false;
-    await refresh();
-    select(saved.id);
-    status('Saved', 'accent');
-  } catch (error) { status(error.message, 'warning'); }
+    const response = await fetch(editingName ? `/api/cronprompts/${encodeURIComponent(editingName)}` : '/api/cronprompts', {
+      method:  editingName ? 'PUT' : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name:      nameInput.value.trim(),
+        chat_name: chatInput.value.trim() || nameInput.value.trim(),
+        clear_working_data: clearWorkingData.checked,
+        schedule:  form.elements.schedule.value.trim(),
+        prompts,
+      }),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.detail || 'Unable to create timed event.');
+    const action = editingName ? 'Saved' : 'Created';
+    editingName = result.name;
+    selectionReady = true;
+    await load();
+    setTag(formStatus, `${action} ${result.name}`, 'success');
+  } catch (error) {
+    setTag(formStatus, error.message || 'Request failed', 'danger');
+  } finally {
+    saveButton.disabled = false;
+  }
 });
 
-runButton.addEventListener('click', async () => {
-  try { await api(`/api/triggers/${encodeURIComponent(selectedId)}/run`, { method: 'POST' }); status('Triggered', 'accent'); await refresh(); }
-  catch (error) { status(error.message, 'warning'); }
-});
-
-deleteButton.addEventListener('click', async () => {
-  const t = selected();
-  if (!t || !(await kcuiConfirm(`Delete ${t.name}?`))) return;
-  try { await api(`/api/triggers/${encodeURIComponent(t.id)}`, { method: 'DELETE' }); selectedId = null; await refresh(); fillForm(); }
-  catch (error) { status(error.message, 'warning'); }
-});
-
-$('#new-trigger').addEventListener('click', () => select('new'));
-rows.addEventListener('click', (event) => { const row = event.target.closest('.cron-row'); if (row) select(row.dataset.id); });
-rows.addEventListener('keydown', (event) => { const row = event.target.closest('.cron-row'); if (row && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); select(row.dataset.id); } });
-
-loadTargets().then(refresh).then(fillForm).catch((error) => status(error.message, 'warning'));
-setInterval(refresh, 5000);
+addPromptRow();
+updateEditorChrome();
+load().catch((error) => setTag(formStatus, error.message || 'Unable to load', 'danger'));
+window.setInterval(() => load().catch(() => {}), 15000);

@@ -2,7 +2,7 @@ import { initAppBar, initTopbar } from "/ui-elements/assets/js/chrome.js";
 import { initWorkspaceLayouts, resetWorkspaceLayout } from "/ui-elements/assets/js/workspace.js";
 
 // ============================================================
-// KoreAgent Web UI - app.js
+// MiniAgentFramework Web UI - app.js
 // Vanilla JS - no build step, no dependencies.
 // ============================================================
 
@@ -13,13 +13,12 @@ const API_BASE          = "";           // same origin
 const SESSION_STORAGE_KEY   = "maf.activeSession";
 const INPUT_DRAFT_KEY       = "maf.inputDraft";
 const WRAP_STATE_KEY        = "maf.wrapState";
-const ACTIVE_RUN_STORAGE_KEY = "maf.activeRun";
-const AGENT_BOOTSTRAP    = _readAgentBootstrap();
 let   _sessionId        = _restoreSessionId();  // mutable: /chat resume changes this
 const POLL_OLLAMA_MS    = 10_000;
 const POLL_QUEUE_MS     = 3_000;
+const POLL_TIMELINE_MS  = 30_000;
 const POLL_LATEST_LOG_MS = 15_000;   // fallback only - /logs/stream SSE handles normal case
-const MAX_PENDING_PROMPTS = 5;
+const MAX_QUEUE_ITEMS   = 10;
 const MAX_LOG_LINES_LIVE = 500;
 const MAX_CHAT_MESSAGES = 200;
 
@@ -27,15 +26,16 @@ const MAX_CHAT_MESSAGES = 200;
 const CSS_NOWRAP       = "kcui-panel-body--nowrap";
 const CSS_LIVE_FOLLOW  = "kcui-panel-body--live-follow";
 const CSS_WRAP_ACTIVE  = "is-on";
+const CSS_TAG_INACTIVE = "kcui-tag--inactive";
 
 // All registered slash commands - used for command-name tab completion.
 const _ALL_COMMANDS = [
-    "/help", "/llmserver", "/llmserverconfig", "/rounds", "/timeout",
-    "/stopmodel", "/stoprun", "/compact",
+    "/help", "/llmserver", "/llmserverconfig", "/ctx", "/rounds", "/timeout",
+    "/stopmodel", "/stoprun",
     "/clearmemory", "/reskill", "/sandbox", "/tools",
     "/deletelogs",
-    "/run",
-    "/version", "/defaults", "/chat", "/workspace",
+    "/workflow", "/workflows",
+    "/version", "/defaults", "/chat", "/kccompress", "/workspace",
     "/comms",
 ];
 
@@ -43,45 +43,28 @@ const _ALL_COMMANDS = [
 const _CHAT_SUBS = ["new", "name", "list", "resume", "resumecopy", "park", "delete", "info"];
 
 // Sub-commands for /llmserverconfig.
-const _LLMSERVERCFG_SUBS = ["model", "ctx", "max_predict", "cpugpu"];
+const _LLMSERVERCFG_SUBS = ["model", "ctx", "cpugpu"];
+const _LLMSERVER_SUBS    = ["ollama", "lmstudio"];
 const _LLMSERVER_CONFIGS = ["forcecpu", "forcegpu", "autogpu"];
 const _SUGGEST_HINTS     = {
-    "/help":    "List every available slash command and its usage",
-    "/compact": "Run immediate semantic compaction of this conversation's older context",
-    "/comms":   "Configure or control KoreComms delivery for this chat",
-    "/run":     "Run a trusted Python file below datauser/scripts",
     cpugpu:    "Set Ollama CPU/GPU model placement",
-    max_predict: "Use /llmserverconfig max_predict <count>; use /llmserverconfig max_predict to reset to 1024",
-    connection: "Pause, resume, or explicitly publish KoreComms output",
-    delivery:   "Bind this chat's agent output to a KoreComms connection",
     forcecpu:  "No GPU: run the model entirely on CPU",
     forcegpu:  "Request all model layers on the GPU",
     autogpu:   "Let Ollama choose CPU/GPU placement",
-    bind:       "Create or update the delivery target for this chat",
-    groups:     "List, inspect, or re-evaluate named tool groups",
-    show:       "Show the member tools in a named tool group",
-    reevaluate: "Build complete named tool groups from the live tool inventory",
-    pause:      "Stop automatic copying of agent output to the connection",
-    resume:     "Resume automatic copying of pending and future agent output",
-    publishprevious: "Send the latest eligible agent output once, even while paused",
-    "--connection":  "Connection name; required for an individual recipient or an SFTP file",
-    "--to":          "Single email recipient",
-    "--to-list":     "Named KoreComms distribution list",
-    "--subject":     "Delivery subject; required when binding",
-    "--chat":        "Target another chat instead of the current chat",
-    "--startpaused": "Create the delivery binding paused; use connection resume to enable copying",
+    ollama:    "Use an Ollama server",
+    lmstudio:  "Use an LM Studio server",
 };
 
 // Sub-commands for /tools.
-const _TOOLS_SUBS = ["active", "all", "groups"];
-const _TOOL_GROUPS_SUBS = ["show", "reevaluate"];
+const _TOOLS_SUBS = ["active", "all"];
+
+// Sub-commands for /workflow.
+const _WORKFLOW_SUBS = ["export", "import", "inspect"];
 
 // Sub-commands and options for /comms.
-const _COMMS_SUBS             = ["delivery", "connection"];
-const _COMMS_DELIVERY_SUBS    = ["bind"];
-const _COMMS_CONNECTION_SUBS  = ["pause", "resume", "publishprevious"];
-const _COMMS_BIND_OPTIONS     = ["--connection", "--to", "--to-list", "--subject", "--chat", "--startpaused"];
-const _COMMS_CONNECTION_OPTIONS = ["--chat"];
+const _COMMS_SUBS          = ["delivery"];
+const _COMMS_DELIVERY_SUBS = ["bind"];
+const _COMMS_BIND_OPTIONS  = ["--connection", "--to", "--to-list", "--subject", "--chat"];
 const _WORKSPACE_SUBS      = ["clear"];
 
 // Pre-compiled log line classification patterns.
@@ -98,16 +81,16 @@ let _inputHistory   = [];     // loaded per conversation from server on init or 
 let _historyIdx        = -1;     // -1 = not browsing history
 let _historyDraft      = null;   // unsent text preserved while browsing input history
 let _ollamaReachable   = true;   // updated by refreshOllamaStatus; used in submitPrompt
+let _timelineRefreshTimer = null;
+let _queueResizeObserver  = null;
 let _currentLogPath       = "";
 let _logScrollCtl      = null;
 let _chatScrollCtl     = null;
 let _logLineLimit      = MAX_LOG_LINES_LIVE;
 let _sessionTitle      = "";
-let _thinkingTimer     = null;
-let _activeNumCtx      = 0;
 
 // Tab-completion state.
-let _completions  = { sessions: [], models: [] };
+let _completions  = { sessions: [], workflow_names: [], models: [] };
 let _suggestItems = [];   // current filtered candidate list
 let _suggestIdx   = -1;   // highlighted row index (-1 = none)
 let _suggestBase  = "";   // portion of input before the completion token
@@ -118,56 +101,15 @@ let _suggestBase  = "";   // portion of input before the completion token
 const $ = id => document.getElementById(id);
 
 const dom = {
-    ollamaHost:       () => $("ollama-host"),
-    ollamaModel:      () => $("ollama-model"),
-    systemOneModel:   () => $("system-one-model"),
-    ollamaCtx:        () => $("ollama-ctx"),
-    log:              () => $("log-body"),
-    pendingPromptsPanel: () => $("panel-pending-prompts"),
-    pendingPromptsCount: () => $("pending-prompts-count"),
-    pendingPromptsList:  () => $("pending-prompts-list"),
+    ollamaHost:   () => $("ollama-host"),
+    ollamaModel:  () => $("ollama-model"),
+    ollamaCtx:    () => $("ollama-ctx"),
+    log:          () => $("log-body"),
     chat:         () => $("chat-body"),
     chatTitle:    () => $("chat-panel-title"),
     input:        () => $("chat-input"),
     sendBtn:      () => $("send-btn"),
 };
-
-function _readAgentBootstrap() {
-    const node = document.getElementById("koreagent-bootstrap");
-    if (!node?.textContent) return {};
-    try {
-        const parsed = JSON.parse(node.textContent);
-        return parsed && typeof parsed === "object" ? parsed : {};
-    } catch (error) {
-        console.warn("Invalid KoreAgent bootstrap state", error);
-        return {};
-    }
-}
-
-function _applyBootstrapRuntimeState() {
-    const runtime = AGENT_BOOTSTRAP.runtime;
-    if (!runtime || typeof runtime !== "object") return;
-
-    const host           = String(runtime.host || "");
-    const model          = String(runtime.model || "");
-    const systemOneModel = String(runtime.system_one_model || "");
-    const numCtx         = Number(runtime.num_ctx) || 0;
-
-    dom.ollamaHost().textContent     = host || "Ollama";
-    dom.ollamaModel().textContent    = model;
-    dom.systemOneModel().textContent = systemOneModel;
-    dom.ollamaCtx().textContent      = numCtx
-        ? `${numCtx.toLocaleString()} ctx`
-        : "";
-    _activeNumCtx = numCtx;
-
-    _applyRuntimeSettings(runtime);
-}
-
-function _applyRuntimeSettings(runtime) {
-    if (typeof runtime.sandbox === "boolean") _updateSandboxBtn(runtime.sandbox);
-    if (typeof runtime.webskills === "boolean") _updateWebSkillsBtn(runtime.webskills);
-}
 
 function _restoreSessionId() {
     try {
@@ -201,113 +143,6 @@ function _restoreInputDraft() {
 
 function _clearInputDraft() {
     try { sessionStorage.removeItem(INPUT_DRAFT_KEY); } catch (_) { /* ignore */ }
-}
-
-function _loadActiveRun() {
-    try {
-        const raw = localStorage.getItem(ACTIVE_RUN_STORAGE_KEY);
-        const run = raw ? JSON.parse(raw) : null;
-        return run && typeof run.runId === "string" && typeof run.sessionId === "string" ? run : null;
-    } catch (_) {
-        return null;
-    }
-}
-
-function _saveActiveRun(run) {
-    try { localStorage.setItem(ACTIVE_RUN_STORAGE_KEY, JSON.stringify(run)); } catch (_) { /* ignore */ }
-}
-
-function _clearActiveRun(runId) {
-    const run = _loadActiveRun();
-    if (!run || run.runId !== runId) return;
-    try { localStorage.removeItem(ACTIVE_RUN_STORAGE_KEY); } catch (_) { /* ignore */ }
-}
-
-function _turnMetaStorageKey(sessionId) {
-    return "maf_turn_meta_" + sessionId;
-}
-
-function _turnMetaKey(prompt, response) {
-    return String(prompt || "") + "\u0000" + String(response || "");
-}
-
-function _loadTurnMeta(sessionId) {
-    try {
-        const raw = localStorage.getItem(_turnMetaStorageKey(sessionId));
-        const stored = raw ? JSON.parse(raw) : {};
-        return stored && typeof stored === "object" ? stored : {};
-    } catch (_) {
-        return {};
-    }
-}
-
-function _saveTurnMeta(sessionId, prompt, response, meta) {
-    if (!meta) return;
-    const stored = _loadTurnMeta(sessionId);
-    stored[_turnMetaKey(prompt, response)] = meta;
-    try { localStorage.setItem(_turnMetaStorageKey(sessionId), JSON.stringify(stored)); } catch (_) { /* ignore */ }
-}
-
-function _getTurnMeta(sessionId, prompt, response) {
-    return _loadTurnMeta(sessionId)[_turnMetaKey(prompt, response)] || "";
-}
-
-function _formatSavedTelemetry(telemetry) {
-    if (!telemetry || typeof telemetry !== "object") return "";
-    return _formatContextStats(
-        Number(telemetry.context_tokens) || 0,
-        String(telemetry.tokens_per_second || "0"),
-        telemetry.elapsed_ms,
-        Number(telemetry.context_window) || _activeNumCtx,
-    );
-}
-
-function _formatContextStats(tokens, tps, elapsedMs, contextWindow = _activeNumCtx) {
-    const percentage = contextWindow > 0 ? " (" + Math.round((tokens / contextWindow) * 100) + "%)" : "";
-    return Number(tokens || 0).toLocaleString() + " ctx" + percentage + " | "
-        + String(tps || "0") + " tok/s | " + _formatElapsed(elapsedMs);
-}
-
-function _formatMessageTime(value = Date.now()) {
-    const date = value instanceof Date ? value : new Date(value);
-    const valid = Number.isNaN(date.getTime()) ? new Date() : date;
-    return valid.toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-        hour12: false,
-    });
-}
-
-function _withMessageTime(stats, createdAt) {
-    const time = _formatMessageTime(createdAt);
-    return stats ? time + " | " + stats : time;
-}
-
-function _messageMeta(message) {
-    let metadata = message?.metadata || {};
-    if (typeof metadata === "string") {
-        try { metadata = JSON.parse(metadata); } catch (_) { metadata = {}; }
-    }
-    return _withMessageTime(_formatSavedTelemetry(metadata?.telemetry), message?.created_at);
-}
-
-function _turnMetaText(sessionId, prompt, assistantTurn) {
-    const stats = _formatSavedTelemetry(assistantTurn?.telemetry)
-        || _getTurnMeta(sessionId, prompt, assistantTurn?.content);
-    return _withMessageTime(stats, assistantTurn?.created_at);
-}
-
-function _formatElapsed(elapsedMs) {
-    const seconds = Math.max(0, Number(elapsedMs) || 0) / 1000;
-    return seconds < 60 ? seconds.toFixed(1) + "s" : Math.floor(seconds / 60) + "m " + Math.floor(seconds % 60) + "s";
-}
-
-function _refreshThinkingTimers() {
-    const now = Date.now();
-    dom.chat().querySelectorAll(".chat-thinking[data-started-at-ms]").forEach(el => {
-        el.textContent = "thinking... " + _formatElapsed(now - Number(el.dataset.startedAtMs));
-    });
 }
 
 function _restoreSessionUiState() {
@@ -487,21 +322,26 @@ async function refreshOllamaStatus() {
     const data = await apiFetch("/status/ollama");
     if (!data) {
         dom.ollamaHost().textContent  = "unreachable";
+        dom.ollamaModel().textContent = "";
+        dom.ollamaCtx().textContent   = "";
         _ollamaReachable = false;
         return;
     }
     // Update text BEFORE dot so the two are never mismatched.
-    const rows           = data.rows || [];
-    const first          = rows[0] || {};
-    const modelName      = String(data.model || "").trim() || (first.name || "").trim();
-    const systemOneModel = String(data.system_one_model || "");
-    const ctxVal         = data.num_ctx ? data.num_ctx.toLocaleString() + " ctx" : "";
-    _activeNumCtx = Number(data.num_ctx) || 0;
-    dom.ollamaHost().textContent     = data.host || "Ollama";
-    dom.ollamaModel().textContent    = modelName;
-    dom.systemOneModel().textContent = systemOneModel;
-    dom.ollamaCtx().textContent      = ctxVal;
-    _applyRuntimeSettings(data);
+    const backend   = data.backend || "ollama";
+    const isLMStudio = backend === "lmstudio";
+    const rows  = data.rows || [];
+    const first = rows[0] || {};
+    // For Ollama: prefer the running model name from `ollama ps`.
+    // For LM Studio: `ollama ps` is unavailable; use the configured model name.
+    const modelName = isLMStudio ? (data.model || "") : ((first.name || "").trim() || data.model || "");
+    // For LM Studio the context window is set inside the LM Studio UI and cannot
+    // be read via API, so label it "local ctx" to make the distinction clear.
+    const ctxLabel  = isLMStudio ? "local ctx" : "ctx";
+    const ctxVal    = data.num_ctx ? data.num_ctx.toLocaleString() + " " + ctxLabel : "";
+    dom.ollamaHost().textContent  = (data.host || "") + " (" + backend + ")";
+    dom.ollamaModel().textContent = modelName;
+    dom.ollamaCtx().textContent   = ctxVal;
     _ollamaReachable = true;
 }
 
@@ -512,7 +352,6 @@ async function refreshOllamaStatus() {
 async function refreshQueue() {
     const data = await apiFetch("/queue");
     if (!data) return;
-    _renderPendingPrompts(data);
     if (data.pending_switch) {
         _applySessionSwitch(data.pending_switch.session_id, data.pending_switch.name || "");
     }
@@ -531,27 +370,133 @@ function _applySessionSwitch(sessionId, name) {
     _loadCompletions();
 }
 
-function _renderPendingPrompts(queueData) {
-    const panel = dom.pendingPromptsPanel();
-    const list  = dom.pendingPromptsList();
-    const count = dom.pendingPromptsCount();
-    if (!panel || !list || !count) return;
+function _queueItemLabel(item) {
+    const metadata = item.metadata || {};
+    if (metadata.workflow === "worker_chat") {
+        const label = item.label || "Worker chat";
+        if (metadata.chain_stage === "parent") return "Parent: " + label;
+        return "Worker chat: " + (label.length > 28 ? label.slice(0, 28) + "..." : label);
+    }
+    if (metadata.workflow === "delegate") {
+        if (metadata.chain_stage === "parent") {
+            const label = item.label || "Parent prompt";
+            return "Parent: " + (label.length > 34 ? label.slice(0, 34) + "..." : label);
+        }
+        if (metadata.chain_stage === "child") {
+            const label = item.label || "Delegated task";
+            return "Delegate: " + (label.length > 32 ? label.slice(0, 32) + "..." : label);
+        }
+        if (metadata.chain_stage === "continuation") {
+            const label = metadata.parent_queue_label || item.label || "parent prompt";
+            return "Resume parent: " + (label.length > 28 ? label.slice(0, 28) + "..." : label);
+        }
+    }
+    if (item.label) return item.label.length > 40 ? item.label.slice(0, 40) + "..." : item.label;
+    if (item.kind && item.kind !== "api_chat") return item.name;
+    return item.name.slice(-8);  // last 8 chars of run_id as fallback
+}
 
-    const pending = (queueData.next_prompts || [])
-        .filter(item => item.state === "pending")
-        .slice(0, MAX_PENDING_PROMPTS);
-    const pendingCount = Number(queueData.pending_count || 0);
-    panel.hidden = pendingCount === 0;
-    count.textContent = String(pendingCount);
-    list.innerHTML = "";
-    if (pendingCount === 0) return;
+function _queueItemTitle(item) {
+    const metadata = item.metadata || {};
+    if (metadata.workflow !== "delegate" && metadata.workflow !== "worker_chat") return "";
+    const taskLabel = metadata.workflow === "worker_chat" ? "Worker chat" : "Delegate task";
+    const details = [
+        metadata.delegate_task_id ? taskLabel + ": " + metadata.delegate_task_id : "",
+        metadata.child_session_id ? "Child chat: " + metadata.child_session_id : "",
+        metadata.parent_session_id ? "Parent chat: " + metadata.parent_session_id : "",
+    ].filter(Boolean);
+    return details.join("\n");
+}
 
-    for (const item of pending) {
+function _renderTimelineQueue(queueData) {
+    const el           = dom.timelineQueue();
+    if (!el) return;
+    const nextPrompts  = queueData.next_prompts || [];
+    const queuedTotal  = queueData.queued_prompt_count !== undefined ? String(queueData.queued_prompt_count) : "?";
+    const previewLimit = queueData.next_prompts_limit !== undefined ? queueData.next_prompts_limit : MAX_QUEUE_ITEMS;
+    el.innerHTML       = "";
+    if (queuedTotal === "0" && nextPrompts.length === 0) return;
+
+    const totalRow = document.createElement("div");
+    totalRow.className   = "tl-sep";
+    totalRow.textContent = "Queued tasks: " + queuedTotal;
+    el.appendChild(totalRow);
+
+    for (const item of nextPrompts) {
         const row = document.createElement("div");
-        row.className   = "pending-prompt";
-        row.textContent = String(item.label || item.name || "").replace(/\s+/g, " ").trim();
-        row.title       = row.textContent;
-        list.appendChild(row);
+        row.className   = item.state === "active" ? "tl-q-active" : "tl-q-pending";
+        row.textContent = item.state === "active"
+            ? "\u25B6 " + _queueItemLabel(item)
+            : "  \u00B7 " + _queueItemLabel(item);
+        row.title = _queueItemTitle(item);
+        el.appendChild(row);
+    }
+}
+
+// ----------------------------------------------------------------------------------------------------
+function _scheduleTimelineRefresh() {
+    clearTimeout(_timelineRefreshTimer);
+    _timelineRefreshTimer = setTimeout(() => {
+        refreshTimeline();
+    }, 50);
+}
+
+// ====================================================================================================
+// MARK: TIMELINE
+// ====================================================================================================
+
+// Row height matches .tl-row: font-size 11px * line-height 1.55 = ~17px.
+const TL_ROW_H = 17;
+
+function _buildTimelineRow(slot, activeTask) {
+    const row = document.createElement("div");
+    row.className = "tl-row" + (slot.is_now ? " tl-now" : "");
+    if (slot.task_name && slot.task_name === activeTask) row.classList.add("tl-active");
+
+    const marker = document.createElement("span");
+    marker.className   = "tl-marker";
+    marker.textContent = slot.is_now ? "\u25BA" : " ";
+
+    const time = document.createElement("span");
+    time.className   = "tl-time";
+    time.textContent = slot.hhmm;
+
+    row.appendChild(marker);
+    row.appendChild(time);
+
+    if (slot.task_name) {
+        const task = document.createElement("span");
+        task.className   = "tl-task";
+        task.textContent = slot.task_name;
+        row.appendChild(task);
+    }
+    return row;
+}
+
+async function refreshTimeline() {
+    const data = await apiFetch("/timeline");
+    if (!data) return;
+    const slots      = data.slots || [];
+    const activeTask = data.active_task || null;
+    const el         = dom.timeline();
+
+    // Find the NOW slot.
+    const nowIdx = slots.findIndex(s => s.is_now);
+    if (nowIdx < 0) { el.innerHTML = ""; return; }
+
+    // Calculate how many rows fit in the available height, then slice the window
+    // so NOW sits at the vertical midpoint - exactly like the TUI's h//2 logic.
+    // Use the measured height when available, otherwise fall back to a safe default.
+    const availH = el.offsetHeight > 0 ? el.offsetHeight - 8 : 300;  // 8px = 4px top+bottom padding
+    const nRows  = Math.max(1, Math.floor(availH / TL_ROW_H));
+    const half   = Math.floor(nRows / 2);
+    const start  = Math.max(0, nowIdx - half);
+    const end    = Math.min(slots.length, start + nRows);
+    const visible = slots.slice(start, end);
+
+    el.innerHTML = "";
+    for (const slot of visible) {
+        el.appendChild(_buildTimelineRow(slot, activeTask));
     }
 }
 
@@ -648,7 +593,6 @@ function _logLineClass(text) {
     }
     if (t.startsWith("[progress]"))            return "log-progress";
     if (t.startsWith("[thinking]") || t.startsWith("[/thinking]")) return "log-thinking";
-    if (t.startsWith("[compacting]"))          return "log-compacting";
     if (t.includes("[SCHEDULER]"))             return "sched";
     if (RE_LOG_ERROR.test(t))                  return "error";
     if (RE_LOG_OK.test(t))                     return "success";
@@ -841,6 +785,40 @@ async function _initWebSkillsBtn() {
     if (data) _updateWebSkillsBtn(data.webskills);
 }
 
+// ----------------------------------------------------------------------------------------------------
+
+function _updateDirectBtn(directOn) {
+    const btn = $('direct-btn');
+    if (!btn) return;
+    if (directOn) {
+        btn.textContent = "LLM-DIRECT on";
+        btn.classList.remove("direct-off");
+        btn.classList.add("direct-on");
+    } else {
+        btn.textContent = "LLM-DIRECT";
+        btn.classList.remove("direct-on");
+        btn.classList.add("direct-off");
+    }
+    // Grey out settings that don't apply in direct mode.
+    $('sandbox-btn')?.classList.toggle(CSS_TAG_INACTIVE, directOn);
+    $('webskills-btn')?.classList.toggle(CSS_TAG_INACTIVE, directOn);
+}
+
+async function toggleDirect() {
+    const current = await apiFetch("/settings/llmdirect");
+    if (!current) return;
+    const next = !current.llmdirect;
+    const result = await apiFetch("/settings/llmdirect?enabled=" + next, { method: "POST" });
+    if (result) _updateDirectBtn(result.llmdirect);
+}
+
+async function _initDirectBtn() {
+    const data = await apiFetch("/settings/llmdirect");
+    if (data) _updateDirectBtn(data.llmdirect);
+}
+
+// ----------------------------------------------------------------------------------------------------
+
 async function logNavStep(delta) {
     // delta: -1 = older (up), +1 = newer (down).
     const data = await apiFetch("/logs");
@@ -877,12 +855,10 @@ async function logNavStep(delta) {
 // MARK: CHAT
 // ====================================================================================================
 
-function appendChatMessage(role, text, meta, runId = "", messageId = 0) {
+function appendChatMessage(role, text, meta) {
     const el    = dom.chat();
     const wrap  = document.createElement("div");
     wrap.className = "chat-msg " + role;
-    if (runId) wrap.setAttribute("data-run-id", runId);
-    if (Number(messageId) > 0) wrap.setAttribute("data-message-id", String(messageId));
 
     const label = document.createElement("div");
     label.className = "msg-role";
@@ -895,10 +871,12 @@ function appendChatMessage(role, text, meta, runId = "", messageId = 0) {
     wrap.appendChild(label);
     wrap.appendChild(body);
 
-    const m = document.createElement("div");
-    m.className = "msg-meta";
-    m.textContent = meta || _formatMessageTime();
-    wrap.appendChild(m);
+    if (meta) {
+        const m = document.createElement("div");
+        m.className = "msg-meta";
+        m.textContent = meta;
+        wrap.appendChild(m);
+    }
 
     el.appendChild(wrap);
     if (_chatScrollCtl) _chatScrollCtl.followSoon();
@@ -918,34 +896,12 @@ function appendChatLine(wrap, text) {
     if (_chatScrollCtl) _chatScrollCtl.followSoon();
 }
 
-function appendChatToken(wrap, text) {
-    if (!wrap || !text) return;
-    const body = wrap.querySelector(".msg-text");
-    if (!body) return;
-    body.textContent += text;
-    if (_chatScrollCtl) _chatScrollCtl.followSoon();
-}
-
-function setChatMeta(wrap, meta) {
-    if (!wrap || !meta) return;
-    let el = wrap.querySelector(".msg-meta");
-    if (!el) {
-        el = document.createElement("div");
-        el.className = "msg-meta";
-        wrap.appendChild(el);
-    }
-    el.textContent = meta;
-}
-
-function appendThinking(runId, startedAtMs = Date.now()) {
+function appendThinking(runId) {
     const el   = dom.chat();
-    const existing = el.querySelector(".chat-thinking[data-run-id='" + runId + "']");
-    if (existing) return existing;
     const wrap = document.createElement("div");
     wrap.className = "chat-thinking";
     wrap.setAttribute("data-run-id", runId);
-    wrap.setAttribute("data-started-at-ms", String(startedAtMs));
-    wrap.textContent = "thinking... " + _formatElapsed(Date.now() - startedAtMs);
+    wrap.textContent = "thinking...";
     el.appendChild(wrap);
     if (_chatScrollCtl) _chatScrollCtl.followSoon();
 }
@@ -959,26 +915,21 @@ function removeThinking(runId) {
 // MARK: RUN STREAM (SSE per prompt)
 // ====================================================================================================
 
-function listenRun(runId, { startRendered = false } = {}) {
+function listenRun(runId) {
     // Each run gets its own EventSource so concurrent in-flight requests
     // do not cancel each other.
     const es = new EventSource(API_BASE + "/runs/" + encodeURIComponent(runId) + "/stream");
     let progressWrap = null;
-    let tokenWrap    = null;
-    let streamedText = "";
-    let startedAtMs  = Number(_loadActiveRun()?.startedAtMs) || Date.now();
 
     es.onmessage = e => {
         try {
             const ev = JSON.parse(e.data);
             if (ev.type === "start") {
-                startedAtMs = Number(ev.submitted_at_ms) || startedAtMs;
-                _saveActiveRun({ runId, sessionId: _sessionId, prompt: ev.prompt || "", startedAtMs });
-                if (!startRendered) appendChatMessage("user", ev.prompt, _formatMessageTime(ev.submitted_at_ms), runId);
+                appendChatMessage("user", ev.prompt);
                 if (ev.prompt && ev.prompt.startsWith("/")) {
                     startLogStream();
                 }
-                appendThinking(runId, startedAtMs);
+                appendThinking(runId);
             } else if (ev.type === "log_file") {
                 // Only follow the new log file if live mode is active.
                 if (_logScrollCtl && _logScrollCtl.live) {
@@ -990,34 +941,10 @@ function listenRun(runId, { startRendered = false } = {}) {
                 } else {
                     appendChatLine(progressWrap, ev.text);
                 }
-            } else if (ev.type === "token") {
-                removeThinking(runId);
-                if (!tokenWrap) tokenWrap = appendChatMessage("agent", "");
-                appendChatToken(tokenWrap, ev.text || "");
-                streamedText += ev.text || "";
             } else if (ev.type === "response") {
                 removeThinking(runId);
-                const sessionSwitch = ev.session_switch;
-                if (sessionSwitch && typeof sessionSwitch.session_id === "string" && sessionSwitch.session_id.trim()) {
-                    _applySessionSwitch(sessionSwitch.session_id.trim(), String(sessionSwitch.name || "").trim());
-                }
-                const elapsedMs = Number(ev.elapsed_ms) || Date.now() - startedAtMs;
-                const stats = _formatContextStats(
-                    Number(ev.tokens) || 0,
-                    String(ev.tps || "0"),
-                    elapsedMs,
-                    Number(ev.context_window) || _activeNumCtx,
-                );
-                const meta = _withMessageTime(stats, ev.created_at);
-                _saveTurnMeta(_sessionId, _loadActiveRun()?.prompt || "", ev.response, stats);
-                if (!tokenWrap) {
-                    appendChatMessage("agent", ev.response, meta);
-                } else {
-                    if ((ev.response || "").startsWith(streamedText)) {
-                        appendChatToken(tokenWrap, ev.response.slice(streamedText.length));
-                    }
-                    setChatMeta(tokenWrap, meta);
-                }
+                const meta = ev.tokens ? ev.tokens.toLocaleString() + " ctx" + (ev.tps && ev.tps !== "0" ? " | " + ev.tps + " tok/s" : "") : "";
+                appendChatMessage("agent", ev.response, meta);
                 // Refresh the history cache silently so the next page load is instant.
                 apiFetch("/sessions/" + encodeURIComponent(_sessionId) + "/history").then(d => {
                     if (!d) return;
@@ -1031,7 +958,6 @@ function listenRun(runId, { startRendered = false } = {}) {
             } else if (ev.type === "error") {
                 removeThinking(runId);
                 appendChatMessage("agent", "[Error: " + ev.message + "]");
-                _clearActiveRun(runId);
             } else if (ev.type === "rename_session") {
                 // Same chat, file renamed - update routing ID and title in-place; no history replay.
                 _sessionId = ev.session_id;
@@ -1050,7 +976,6 @@ function listenRun(runId, { startRendered = false } = {}) {
                 _loadCompletions();
             } else if (ev.type === "done") {
                 removeThinking(runId);
-                _clearActiveRun(runId);
                 es.close();
                 refreshQueue();
             }
@@ -1060,48 +985,12 @@ function listenRun(runId, { startRendered = false } = {}) {
     };
 
     es.onerror = () => {
+        removeThinking(runId);
         es.close();
     };
 }
 
-function _resumePersistedRun(sessionId) {
-    const run = _loadActiveRun();
-    if (!run || run.sessionId !== sessionId) return;
-
-    if (run.transport === "korechat") {
-        const convId     = Number(run.convId);
-        const afterMsgId = Number(run.afterMsgId);
-        if (!Number.isInteger(convId) || convId <= 0 || !Number.isInteger(afterMsgId) || afterMsgId <= 0) {
-            _clearActiveRun(run.runId);
-            return;
-        }
-        appendThinking(run.runId, Number(run.startedAtMs) || Date.now());
-        _pollKcReply(run.runId, convId, afterMsgId);
-        return;
-    }
-
-    const selector = ".chat-msg.user[data-run-id='" + run.runId + "']";
-    if (!dom.chat().querySelector(selector)) {
-        appendChatMessage("user", run.prompt || "", _formatMessageTime(run.startedAtMs), run.runId);
-    }
-    appendThinking(run.runId, Number(run.startedAtMs) || Date.now());
-    listenRun(run.runId, { startRendered: true });
-}
-
 // ----------------------------------------------------------------------------------------------------
-
-function _renderSessionTurns(sessionId, turns) {
-    let userPrompt = "";
-    for (const turn of turns) {
-        if (!turn || typeof turn.content !== "string") continue;
-        if (turn.role === "user") {
-            userPrompt = turn.content;
-            appendChatMessage("user", turn.content, _formatMessageTime(turn.created_at), "", turn.message_id);
-        } else if (turn.role === "assistant") {
-            appendChatMessage("agent", turn.content, _turnMetaText(sessionId, userPrompt, turn), "", turn.message_id);
-        }
-    }
-}
 
 async function _loadSessionHistory(sessionId) {
     _setChatPanelTitle(_resolveSessionTitle(sessionId, _sessionTitle));
@@ -1109,26 +998,33 @@ async function _loadSessionHistory(sessionId) {
     const cacheKey = "maf_history_" + sessionId;
     const cached = (() => { try { const r = localStorage.getItem(cacheKey); return r ? JSON.parse(r) : null; } catch (_) { return null; } })();
     if (cached && Array.isArray(cached)) {
-        _renderSessionTurns(sessionId, cached);
+        for (let i = 0; i + 1 < cached.length; i += 2) {
+            const u = cached[i];
+            const a = cached[i + 1];
+            if (u && u.role === "user")      appendChatMessage("user",  u.content);
+            if (a && a.role === "assistant") appendChatMessage("agent", a.content);
+        }
     }
     // Fetch fresh data and update the panel.
     const data = await apiFetch("/sessions/" + encodeURIComponent(sessionId) + "/history");
-    if (!data) {
-        _resumePersistedRun(sessionId);
-        return;
-    }
+    if (!data) return;
     if (typeof data.title === "string") {
         _setChatPanelTitle(_resolveSessionTitle(sessionId, data.title));
     }
-    if (!Array.isArray(data.turns)) {
-        _resumePersistedRun(sessionId);
-        return;
-    }
+    if (!Array.isArray(data.turns)) return;
     const turns = data.turns;
     try { localStorage.setItem(cacheKey, JSON.stringify(turns)); } catch (_) {}
-    clearChatPanel();
-    _renderSessionTurns(sessionId, turns);
-    _resumePersistedRun(sessionId);
+    // Only re-render if the content differs from what was already shown from cache.
+    const cachedJson = cached ? JSON.stringify(cached) : null;
+    if (cachedJson !== JSON.stringify(turns)) {
+        clearChatPanel();
+        for (let i = 0; i + 1 < turns.length; i += 2) {
+            const u = turns[i];
+            const a = turns[i + 1];
+            if (u && u.role === "user")      appendChatMessage("user",  u.content);
+            if (a && a.role === "assistant") appendChatMessage("agent", a.content);
+        }
+    }
 }
 
 // ====================================================================================================
@@ -1165,9 +1061,14 @@ function submitPrompt() {
     if (!text) return;
     _hideSuggest();
 
-    // Every prompt is first recorded in KoreChat.  The shared Agent event worker
-    // then handles it when the model becomes available, instead of discarding work
-    // in this browser when the local-model status is temporarily unavailable.
+    // Slash commands run locally and don't need Ollama - always allow.
+    // Real prompts are discarded with a message if Ollama is unreachable.
+    const isSlash = text.startsWith("/");
+    if (!isSlash && !_ollamaReachable) {
+        appendChatMessage("agent", "[Ollama is unreachable - prompt discarded]");
+        dom.input().value = "";
+        return;
+    }
 
     // Clear input and reset history cursor immediately so the user can keep typing.
     dom.input().value = "";
@@ -1181,37 +1082,21 @@ function submitPrompt() {
 }
 
 async function _dispatchPrompt(text) {
-    // KoreChat owns durable prompts and replies.  This UI contributes an inbound
-    // message, then observes the outbound result produced by the shared event worker.
-    const data = await apiFetch("/kc/send", {
+    // All prompts - slash and regular - go through the session endpoint.
+    // The server handles KC conversation logging after orchestration completes.
+    const data = await apiFetch("/sessions/" + encodeURIComponent(_sessionId) + "/prompt", {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ session_id: _sessionId, content: text }),
+        body:    JSON.stringify({ prompt: text }),
     });
+    _pushHistory(text);
+    refreshQueue();
     if (!data) {
         appendChatMessage("user", text);
-        appendChatMessage("agent", "[Error: could not record the prompt in KoreChat]");
+        appendChatMessage("agent", "[Error: could not reach API]");
         return;
     }
-    if (data.session_id && data.session_id !== _sessionId) {
-        _sessionId = data.session_id;
-        _persistActiveSession();
-    }
-    _pushHistory(text);
-    const thinkKey = "kc_" + data.conv_id + "_" + data.msg_id;
-    _saveActiveRun({
-        runId:      thinkKey,
-        sessionId:  _sessionId,
-        prompt:     text,
-        startedAtMs: Date.now(),
-        transport:  "korechat",
-        convId:     data.conv_id,
-        afterMsgId: data.msg_id,
-    });
-    appendChatMessage("user", text, _formatMessageTime(data.created_at), thinkKey, data.msg_id);
-    appendThinking(thinkKey);
-    refreshQueue();
-    _pollKcReply(thinkKey, data.conv_id, data.msg_id);
+    listenRun(data.run_id);
 }
 
 async function _pollKcReply(thinkKey, convId, afterMsgId) {
@@ -1221,33 +1106,17 @@ async function _pollKcReply(thinkKey, convId, afterMsgId) {
         await new Promise(r => setTimeout(r, POLL_MS));
         const messages = await apiFetch("/kc/conversations/" + convId + "/messages");
         if (!Array.isArray(messages)) continue;
-        const replies = messages.filter(m => m.direction === "outbound" && Number(m.id) > afterMsgId);
+        const replies = messages.filter(m => m.direction === "outbound" && m.id > afterMsgId);
         if (replies.length > 0) {
             removeThinking(thinkKey);
             for (const m of replies) {
-                let metadata = {};
-                if (m.metadata && typeof m.metadata === "object") {
-                    metadata = m.metadata;
-                } else if (typeof m.metadata === "string" && m.metadata.trim()) {
-                    try { metadata = JSON.parse(m.metadata); } catch (_) { metadata = {}; }
-                }
-                const sessionSwitch = metadata.session_switch;
-                if (sessionSwitch && typeof sessionSwitch.session_id === "string" && sessionSwitch.session_id.trim()) {
-                    _applySessionSwitch(sessionSwitch.session_id.trim(), String(sessionSwitch.name || "").trim());
-                }
-                const replyId = Number(m.id);
-                const selector = ".chat-msg.agent[data-message-id='" + replyId + "']";
-                if (!dom.chat().querySelector(selector)) {
-                    appendChatMessage("agent", m.content, _messageMeta(m), "", replyId);
-                }
+                appendChatMessage("agent", m.content);
             }
-            _clearActiveRun(thinkKey);
             return;
         }
     }
     removeThinking(thinkKey);
     appendChatMessage("agent", "[No response received within timeout]");
-    _clearActiveRun(thinkKey);
 }
 
 // ====================================================================================================
@@ -1301,6 +1170,17 @@ function _parseSuggestContext(value) {
         return null;
     }
 
+    if (cmd === "/llmserver") {
+        const subSpace = rest.indexOf(" ");
+        if (subSpace === -1) {
+            return { pool: _LLMSERVER_SUBS, prefix: rest, base: "/llmserver " };
+        }
+        const sub      = rest.slice(0, subSpace).toLowerCase();
+        const arg1Base = value.slice(0, firstSpace + 1 + subSpace + 1);
+        const arg1Text = value.slice(arg1Base.length);
+        return null;
+    }
+
     if (cmd === "/workspace") {
         return { pool: _WORKSPACE_SUBS, prefix: rest, base: "/workspace " };
     }
@@ -1330,16 +1210,23 @@ function _parseSuggestContext(value) {
         return null;
     }
 
+    if (cmd === "/workflow") {
+        const subSpace = rest.indexOf(" ");
+        if (subSpace === -1) {
+            return { pool: _WORKFLOW_SUBS, prefix: rest.trimEnd(), base: "/workflow " };
+        }
+        const sub = rest.slice(0, subSpace).toLowerCase();
+        const arg1Base = value.slice(0, firstSpace + 1 + subSpace + 1);
+        const arg1Text = value.slice(arg1Base.length);
+        if ((sub === "import" || sub === "inspect") && !arg1Text.includes(" ")) {
+            return { pool: _completions.workflow_names, prefix: arg1Text.trimEnd(), base: arg1Base };
+        }
+        return null;
+    }
+
     if (cmd === "/tools") {
         if (!rest.includes(" ")) {
             return { pool: _TOOLS_SUBS, prefix: rest.trimEnd(), base: "/tools " };
-        }
-        const words = rest.trimStart().split(/\s+/);
-        if (words[0] === "groups" && words.length === 1 && rest.endsWith(" ")) {
-            return { pool: _TOOL_GROUPS_SUBS, prefix: "", base: "/tools groups " };
-        }
-        if (words[0] === "groups" && words.length === 2 && !rest.endsWith(" ")) {
-            return { pool: _TOOL_GROUPS_SUBS, prefix: words[1], base: "/tools groups " };
         }
         return null;
     }
@@ -1351,20 +1238,6 @@ function _parseSuggestContext(value) {
         }
         if (words.length === 1 && !rest.endsWith(" ")) {
             return { pool: _COMMS_SUBS, prefix: words[0], base: "/comms " };
-        }
-        if (words[0] === "connection") {
-            if (words.length === 1 && rest.endsWith(" ")) {
-                return { pool: _COMMS_CONNECTION_SUBS, prefix: "", base: "/comms connection " };
-            }
-            if (words.length === 2 && !rest.endsWith(" ")) {
-                return { pool: _COMMS_CONNECTION_SUBS, prefix: words[1], base: "/comms connection " };
-            }
-            if (!_COMMS_CONNECTION_SUBS.includes(words[1])) return null;
-            const usedOptions = new Set(words.filter((word) => word.startsWith("--")));
-            const pool = _COMMS_CONNECTION_OPTIONS.filter((option) => !usedOptions.has(option));
-            const lastWord = rest.endsWith(" ") ? "" : words[words.length - 1];
-            const base = rest.endsWith(" ") ? `${value}` : value.slice(0, value.length - lastWord.length);
-            return { pool, prefix: lastWord, base };
         }
         if (words[0] !== "delivery") return null;
         if (words.length === 1 && rest.endsWith(" ")) {
@@ -1580,18 +1453,15 @@ function init() {
         brandLabel:     "KoreAgent",
         brandIcon:      "koreagent",
         chips: [
-            { label: "Host",     value: "", valueId: "ollama-host",      tone: "info" },
-            { label: "Model",    value: "", valueId: "ollama-model",     tone: "info" },
-            { label: "Decision", value: "", valueId: "system-one-model", tone: "info" },
-            { label: "Context",  value: "", valueId: "ollama-ctx",       tone: "info" },
+            { label: "Host",    value: "", valueId: "ollama-host",  tone: "info" },
+            { label: "Model",   value: "", valueId: "ollama-model", tone: "info" },
+            { label: "Context", value: "", valueId: "ollama-ctx",   tone: "info" },
         ],
         actions: [
-            { kind: "tag", id: "btn-work-packet",    action: "work-packet",    label: "work packet",   className: "kcui-tag kcui-tag--dim kcui-tag--work-packet" },
             { kind: "tag", id: "btn-skills-catalog", action: "skills-catalog", label: "skill catalog",  className: "kcui-tag kcui-tag--dim kcui-tag--skills-catalog" },
             { kind: "tag", id: "btn-reset-layout",   action: "reset-layout",   label: "default layout", className: "kcui-tag kcui-tag--dim" },
         ],
     });
-    _applyBootstrapRuntimeState();
 
     _restoreSessionUiState();
     const requestedSession = _consumeRequestedSession();
@@ -1601,8 +1471,6 @@ function init() {
     }
     _persistActiveSession();
     _restoreWrapState();
-    _refreshThinkingTimers();
-    _thinkingTimer = window.setInterval(_refreshThinkingTimers, 1_000);
 
     // Initialise drag-resize splitters and apply stored layout.
     initSplitters();
@@ -1616,6 +1484,9 @@ function init() {
     // Read web skills state from server and reflect it in the button.
     _initWebSkillsBtn();
 
+    // Read LLM Direct state from server and reflect it in the button.
+    _initDirectBtn();
+
     // Wire up input events.
     dom.input().addEventListener("keydown", onInputKeydown);
     dom.input().addEventListener("input", () => { _historyIdx = -1; _historyDraft = null; _saveInputDraft(dom.input().value); onInputChange(); });
@@ -1626,12 +1497,10 @@ function init() {
     $("wrap-btn-log")?.addEventListener("click", () => { toggleWrap("log-body", "wrap-btn-log"); });
     $("sandbox-btn")?.addEventListener("click", toggleSandbox);
     $("webskills-btn")?.addEventListener("click", toggleWebSkills);
+    $("direct-btn")?.addEventListener("click", toggleDirect);
     $("wrap-btn-chat")?.addEventListener("click", () => { toggleWrap("chat-body", "wrap-btn-chat"); });
     $("btn-skills-catalog")?.addEventListener("click", () => {
         window.location.href = "/skills-catalog";
-    });
-    $("btn-work-packet")?.addEventListener("click", () => {
-        window.location.href = "/work-packet";
     });
     $("btn-reset-layout")?.addEventListener("click", resetLayout);
 

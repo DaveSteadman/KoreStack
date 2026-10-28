@@ -39,12 +39,12 @@ from pathlib import Path
 
 import llm_client as llm_client
 from api.app import app
-from api.app import get_startup_state_snapshot
 from api.app import push_log_line
-from api.app import setup as api_setup
-from api.app import set_startup_state_snapshot
-from api.app import update_startup_state
+from api.state import get_startup_state_snapshot
 from api.state import set_latest_log_path
+from api.state import set_startup_state_snapshot
+from api.state import setup as api_setup
+from api.state import update_startup_state
 from input_layer.koreconv_input import start_koreconv_loop
 from agent.orchestration.engine import OrchestratorConfig
 from utils.runtime_logger import SessionLogger
