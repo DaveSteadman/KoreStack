@@ -30,6 +30,7 @@ from typing import Any
 # ====================================================================================================
 DEFAULT_OLLAMA_HOST = "http://127.0.0.1:11434"
 REQUEST_TIMEOUT     = 1.5
+AGENT_STATUS_TIMEOUT = 5.0
 WARMUP_TIMEOUT      = 600.0
 SERVER_START_TIMEOUT = 60.0
 
@@ -79,6 +80,9 @@ def _local_ollama_host(host: str) -> bool:
 
 
 def _ollama_api_url(host: str, path: str) -> str:
+    parsed = urllib.parse.urlparse(host)
+    if parsed.hostname == "localhost":
+        host = host.replace("://localhost", "://127.0.0.1", 1)
     return urllib.parse.urljoin(host.rstrip("/") + "/", path.lstrip("/"))
 
 
@@ -200,7 +204,7 @@ class OllamaControl:
         }
 
     def _compute_snapshot(self) -> dict[str, Any]:
-        agent     = _read_json(self._agent_status_url) or {}
+        agent     = _read_json(self._agent_status_url, timeout=AGENT_STATUS_TIMEOUT) or {}
         host      = str(agent.get("host") or DEFAULT_OLLAMA_HOST).strip()
         backend   = str(agent.get("backend") or "ollama").strip().lower()
         api_state = _read_json(_ollama_api_url(host, "/api/ps")) if backend == "ollama" else None
@@ -380,9 +384,13 @@ class OllamaControl:
             self._set_warmup_failure("Ollama did not become ready before the model warmup timeout.")
             return
 
-        agent = _read_json(self._agent_status_url)
-        if not agent:
-            self._set_warmup_failure("KoreAgent configuration was unavailable; configured models were not preloaded.")
+        while time.monotonic() < deadline:
+            agent = _read_json(self._agent_status_url, timeout=AGENT_STATUS_TIMEOUT)
+            if agent:
+                break
+            time.sleep(0.5)
+        else:
+            self._set_warmup_failure("KoreAgent configuration was unavailable before the model warmup timeout.")
             return
 
         host = str(agent.get("host") or DEFAULT_OLLAMA_HOST).strip().rstrip("/")

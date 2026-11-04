@@ -61,6 +61,7 @@
             <div class="kcui-panel-body ollama-body">
               <dl class="ollama-details">
                 <div><dt>Configured model</dt><dd data-ollama-field="configured-model">{{ ollama.configured_model or 'Not available' }}</dd></div>
+                <div><dt>Loaded models</dt><dd data-ollama-field="loaded-models">{{ ollama.loaded_models | join(', ') or 'None' }}</dd></div>
                 <div><dt>System One model</dt><dd data-ollama-field="system-one-model">{{ ollama.system_one_model or 'Not available' }}</dd></div>
                 <div><dt>System One stats</dt><dd data-ollama-field="system-one-stats">{{ ollama.system_one_stats or 'Not available' }}</dd></div>
                 <div><dt>Backend</dt><dd data-ollama-field="backend">{{ ollama.backend or 'ollama' }}{{ ' v' ~ ollama.version if ollama.version else '' }}</dd></div>

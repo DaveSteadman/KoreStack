@@ -16,6 +16,7 @@ A session runs only the cases with no result for the current build (`SUITE_VERSI
 ## Cases
 
 Each case is a JSON file in `<dataroot>/datacontrol/koretest2/cases`; the filename is its permanent ID. Cases are user data and can be edited freely.
+The filename prefix identifies the suite surface the case exercises. A plain prompt submitted through KoreAgent is a `KoreAgent_*` case; use a `KoreCode_*` case only when the case drives and verifies a KoreCode API or workflow.
 
 ```json
 {

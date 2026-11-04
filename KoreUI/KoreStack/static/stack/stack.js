@@ -185,6 +185,7 @@ function applyOllamaState(next) {
   }
 
   updateOllamaField('configured-model', ollamaState.configured_model);
+  updateOllamaField('loaded-models', (ollamaState.loaded_models || []).join(', '), 'None');
   updateOllamaField('system-one-model', ollamaState.system_one_model);
   updateOllamaField('system-one-stats', ollamaState.system_one_stats);
   updateOllamaField('backend', `${ollamaState.backend || 'ollama'}${ollamaState.version ? ` v${ollamaState.version}` : ''}`);

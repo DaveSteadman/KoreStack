@@ -203,6 +203,11 @@ def _execution_order(network: dict) -> list[str]:
     outgoing: dict[str, list[str]] = defaultdict(list)
     incoming: dict[str, int] = {node_id: 0 for node_id in node_ids}
     links = [(edge["source_node"], edge["target_node"]) for edge in network["edges"]]
+    links.extend(
+        (trigger["source_node"], trigger["target_node"])
+        for trigger in network.get("triggers", [])
+        if trigger.get("target_node")
+    )
     for source, target in links:
         outgoing[source].append(target)
         incoming[target] += 1
@@ -598,7 +603,7 @@ def run_node(node: dict, inputs: dict, network: dict | None = None, outputs: dic
 
 
 def run_network(network: dict) -> dict[str, Any]:
-    """Execute a validated network in dependency order. Triggered chains only run when fired."""
+    """Execute every block in a validated network once, in dependency order."""
     _acquire(network["id"])
     try:
         return _run_network(network)
@@ -609,14 +614,15 @@ def run_network(network: dict) -> dict[str, Any]:
 def _run_network(network: dict) -> dict[str, Any]:
     started  = time.monotonic()
     excluded = 0.0
-    owned    = triggered_blocks(network)
-    order    = [node_id for node_id in _execution_order(network) if node_id not in owned]
+    order    = _execution_order(network)
     nodes    = {node["id"]: node for node in network["nodes"]}
     incoming = _incoming(network)
     session  = _new_session(network)
     results  = session["results"]
     session["deadline"] = started + RUN_TIMEOUT_SECONDS
     for node_id in order:
+        if node_id in results:
+            continue
         remaining = RUN_TIMEOUT_SECONDS - (time.monotonic() - started - excluded)
         if remaining <= 0:
             results[node_id] = {"status": "skipped", "error": "Network time limit reached"}

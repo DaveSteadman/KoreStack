@@ -221,12 +221,13 @@ class KoreAgentNetworkTests(unittest.TestCase):
             "triggers": [{"name": "go", "source_node": "a", "target_node": "b"}],
         }
 
-    def test_block_fed_by_an_unrun_triggered_block_is_blocked(self) -> None:
+    def test_network_runs_trigger_targets_without_explicit_trigger_calls(self) -> None:
         clean = store.validate_network(self._trigger_network())
         with patch.object(runtime, "suite_services", return_value={}):
             result = runtime.run_network(clean)
-        self.assertEqual(result["nodes"]["c"]["status"], "blocked")
-        self.assertNotIn("b", result["nodes"])
+        self.assertEqual(result["order"], ["a", "b", "c"])
+        self.assertEqual(result["nodes"]["b"]["outputs"]["value"], 1)
+        self.assertEqual(result["nodes"]["c"]["outputs"]["value"], 1)
 
     def test_next_exit_runs_the_following_block_automatically(self) -> None:
         network = self._trigger_network()
