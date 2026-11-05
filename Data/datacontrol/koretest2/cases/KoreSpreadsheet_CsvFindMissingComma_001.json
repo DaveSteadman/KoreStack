@@ -1,12 +1,12 @@
 {
   "title": "csv_find_missing_comma",
-  "prompt": "here is a CSV fragment - find the formatting errors:\nName,Age,City\nAlice,30,London\nBob 25,Manchester\nCarol,28,Bristol\nDave,31\nEve,27,Leeds",
+  "prompt": "Audit this CSV against the schema Name (text), Age (integer), City (non-empty text). Report only malformed source rows, using their physical line number and quoting the original row. Suggest the missing comma or field when the problem is unambiguous. Do not report valid rows or invent punctuation not present in the input.\nName,Age,City\nAlice,30,London\nBob 25,Manchester\nCarol,28,Bristol\nDave,31\nEve,27,Leeds",
   "timeout_seconds": 1200,
   "evaluation": {
     "type": "python",
     "asserts": [
-      "judge|answers",
-      "judge|not_error"
+      "all_contains|Bob 25,Manchester||Dave,31",
+      "none_contains|Carol,28,Bristol||Alice,30,London||Eve,27,Leeds"
     ]
   }
 }

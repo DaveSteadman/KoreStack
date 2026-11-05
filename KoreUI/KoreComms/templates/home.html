@@ -3,13 +3,15 @@
 {% block main_class %}kcui-main{% endblock %}
 
 {% block content %}
-<div class="kcui-page kcui-page--narrow kcui-stack">
+<div class="kcui-page kcui-page--wide kcui-stack">
 
 {% if not conversations %}
-  <p class="kcui-meta">No conversations yet. <a href="/compose">Inject a message</a> to get started.</p>
+  <div class="kcui-empty-state">
+    <p class="kcui-empty-state__copy">No conversations yet. <a href="/compose">Inject a message</a> to get started.</p>
+  </div>
 {% else %}
 <div class="kcui-panel">
-  <table class="kcui-table">
+  <table class="kcui-table kcui-table--dense kcui-table--sticky-head">
     <thead>
       <tr>
         <th>KoreChat ID</th>
@@ -37,8 +39,8 @@
           {% endif %}
         </td>
         <td class="kcui-meta kcui-nowrap">{{ conv.created_at[:16] }}</td>
-        <td>
-          <a href="/conversation/{{ conv.id }}" class="kcui-tag kcui-tag--accent">open</a>
+        <td class="kcui-table__actions">
+          <a href="/conversation/{{ conv.id }}" class="kcui-btn kcui-btn-sm">Open</a>
         </td>
       </tr>
       {% endfor %}

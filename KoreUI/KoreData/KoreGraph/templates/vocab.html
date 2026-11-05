@@ -128,7 +128,7 @@
 
   <!-- ── left: list ─────────────────────────────────────────────────── -->
   <div class="kg-vocab-left">
-    <div class="vocab-toolbar">
+    <div class="vocab-toolbar kcui-toolbar">
       <input type="search" id="v-search" placeholder="Search terms…" autocomplete="off">
       <span id="v-count" class="meta"></span>
       <select id="v-cols-sel" onchange="setCols(this.value)" title="Columns">
@@ -145,20 +145,20 @@
     <div class="vocab-add-row" id="v-add-row">
       <input type="text" id="v-add-input" placeholder="New term…"
         onkeydown="if(event.key==='Enter')saveAddTerm()">
-      <button onclick="saveAddTerm()">Save</button>
+      <button class="kcui-btn" onclick="saveAddTerm()">Save</button>
     </div>
     <div class="vocab-pager">
-      <button id="v-prev" class="kg-nav-btn" onclick="changePage(-1)" disabled title="Previous">&#x25C2;</button>
+      <button id="v-prev" class="kcui-btn-icon kcui-icon-button--compact" onclick="changePage(-1)" disabled title="Previous" aria-label="Previous"><span class="kcui-icon kcui-icon--nav-previous" aria-hidden="true"></span></button>
       <span class="v-page-info meta" id="v-page-info"></span>
-      <button id="v-next" class="kg-nav-btn" onclick="changePage(1)" disabled title="Next">&#x25B8;</button>
+      <button id="v-next" class="kcui-btn-icon kcui-icon-button--compact" onclick="changePage(1)" disabled title="Next" aria-label="Next"><span class="kcui-icon kcui-icon--nav-next" aria-hidden="true"></span></button>
     </div>
     <div class="vocab-grid" id="v-grid">
       <div class="meta" style="padding:var(--kcui-gap-panel);text-align:center;grid-column:1/-1">Loading…</div>
     </div>
     <div class="vocab-pager">
-      <button id="v-prev2" class="kg-nav-btn" onclick="changePage(-1)" disabled title="Previous">&#x25C2;</button>
+      <button id="v-prev2" class="kcui-btn-icon kcui-icon-button--compact" onclick="changePage(-1)" disabled title="Previous" aria-label="Previous"><span class="kcui-icon kcui-icon--nav-previous" aria-hidden="true"></span></button>
       <span class="v-page-info meta" id="v-page-info2"></span>
-      <button id="v-next2" class="kg-nav-btn" onclick="changePage(1)" disabled title="Next">&#x25B8;</button>
+      <button id="v-next2" class="kcui-btn-icon kcui-icon-button--compact" onclick="changePage(1)" disabled title="Next" aria-label="Next"><span class="kcui-icon kcui-icon--nav-next" aria-hidden="true"></span></button>
     </div>
   </div>
 
@@ -271,7 +271,7 @@ function renderPanel(d) {
     : `<span class="meta" style="font-size:var(--kcui-text-body-sm)">None</span>`;
 
   const splitBtn = aliases.length
-    ? `<button onclick="doUnmerge(${d.id})" style="margin-right:0.5rem">Split off</button>`
+    ? `<button class="kcui-btn kcui-btn-secondary kcui-btn-sm" onclick="doUnmerge(${d.id})">Split off</button>`
     : '';
 
   document.getElementById('v-panel').innerHTML = `
@@ -279,7 +279,7 @@ function renderPanel(d) {
       <span class="v-panel-term" id="v-panel-term">${escHtml(d.term)}</span>
       <span style="display:flex;align-items:baseline;gap:0.6rem;">
         <span class="meta">concept ${d.concept_id}</span>
-        <button onclick="goToGraph(${escHtml(JSON.stringify(d.term))})" style="font-size:var(--kcui-text-label);padding:0.1rem 0.5rem;">to Graph ↗</button>
+        <button class="kcui-btn kcui-btn-secondary kcui-btn-sm" onclick="goToGraph(${escHtml(JSON.stringify(d.term))})">to Graph ↗</button>
       </span>
     </div>
 
@@ -293,7 +293,7 @@ function renderPanel(d) {
       <div class="v-merge-row">
         <input type="text" id="v-merge-input" placeholder="Type alias name to absorb…" autocomplete="off"
           oninput="onMergeInput()" onkeydown="onMergeKey(event,${d.id})">
-        <button onclick="doMerge(${d.id})" title="The typed term will become an alias of the selected term">Add alias</button>
+        <button class="kcui-btn kcui-btn-sm" onclick="doMerge(${d.id})" title="The typed term will become an alias of the selected term">Add alias</button>
         <div class="v-merge-ac" id="v-merge-ac" style="display:none"></div>
       </div>
       <div id="v-merge-msg" class="meta" style="min-height:1.2em;margin-top:0.2rem"></div>
@@ -304,14 +304,14 @@ function renderPanel(d) {
       <div class="v-rename-row">
         <input type="text" id="v-rename-input" value="${escHtml(d.term)}"
           onkeydown="if(event.key==='Enter')renameVocabTerm(${d.id})">
-        <button onclick="renameVocabTerm(${d.id})">Save</button>
+        <button class="kcui-btn kcui-btn-sm" onclick="renameVocabTerm(${d.id})">Save</button>
       </div>
       <div id="v-rename-msg" class="meta" style="min-height:1.2em;margin-top:0.25rem"></div>
     </div>
 
     <div class="v-panel-footer">
       ${splitBtn}
-      <button class="btn btn-danger"
+      <button class="kcui-btn kcui-btn-danger"
         onclick="deleteVocabTerm(${d.id}, ${escHtml(JSON.stringify(d.term))})">
         Delete term
       </button>

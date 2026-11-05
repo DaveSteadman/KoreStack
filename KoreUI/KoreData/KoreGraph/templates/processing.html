@@ -200,15 +200,15 @@
     <div class="proc-empty" id="p-empty">Select a script to configure and run</div>
 
     <!-- Config section (hidden until script selected) -->
-    <div class="proc-config" id="p-config" style="display:none">
+    <div class="proc-config kcui-stack" id="p-config" style="display:none">
       <div class="proc-config-head">
         <span class="proc-script-title" id="p-script-title"></span>
         <span class="meta" id="p-last-run" style="font-size:var(--kcui-text-label)"></span>
       </div>
       <div class="proc-args" id="p-args"></div>
-      <div class="proc-run-bar">
-        <button id="p-run-btn" onclick="procRun()">▶ Run</button>
-        <button id="p-stop-btn" class="btn-danger" onclick="procStop()" style="display:none">■ Stop</button>
+      <div class="proc-run-bar kcui-toolbar">
+        <button id="p-run-btn" class="kcui-btn kcui-btn-success" onclick="procRun()">▶ Run</button>
+        <button id="p-stop-btn" class="kcui-btn kcui-btn-danger" onclick="procStop()" style="display:none">■ Stop</button>
         <span class="proc-run-msg" id="p-run-msg"></span>
       </div>
     </div>
@@ -219,7 +219,7 @@
         <div class="proc-dot" id="p-dot"></div>
         <span class="section-label">Output</span>
         <span class="proc-log-info" id="p-log-info"></span>
-        <button class="btn-sm btn-secondary" onclick="procClearLog()" style="padding:0.1rem 0.45rem;font-size:var(--kcui-text-label)">Clear</button>
+        <button class="kcui-btn kcui-btn-secondary kcui-btn-sm" onclick="procClearLog()">Clear</button>
       </div>
       <div class="proc-log-body" id="p-log-body">
         <span class="proc-log-empty">No output yet.</span>

@@ -178,6 +178,22 @@
                                                         },
                                          "returns":  "Accepted and rejected graph connections.",
                                          "invoke_path":  "/api/skills/graph_connection_create_many/invoke"
+                                     },
+                                     {
+                                         "name": "graph_connection_import_library_book",
+                                         "purpose": "Extract factual connections from every chunk of a KoreLibrary book and store them in KoreGraph.",
+                                         "parameters": {
+                                             "type": "object",
+                                             "properties": {
+                                                 "book_id": {"type": "string"},
+                                                 "library_base_url": {"type": "string", "default": "http://127.0.0.1:9605"},
+                                                 "chunk_size": {"type": "integer", "default": 16000},
+                                                 "max_chunks": {"type": "integer", "default": 500}
+                                             },
+                                             "required": ["book_id"]
+                                         },
+                                         "returns": "The processed chunk count and submitted connection count.",
+                                         "invoke_path": "/api/skills/graph_connection_import_library_book/invoke"
                                      }
                                  ]
                    }

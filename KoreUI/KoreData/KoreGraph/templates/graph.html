@@ -3,7 +3,7 @@
 {% block main_class %}kcui-main{% endblock %}
 
 {% block head_extra %}
-  <link rel="stylesheet" href="{{ req_pfx }}/static/graph/graph.css?v=20260531a">
+  <link rel="stylesheet" href="{{ req_pfx }}/static/graph/graph.css?v=20261105b">
 {% endblock %}
 
 {% block content %}
@@ -16,7 +16,7 @@
           <div class="panel-path" id="kg-selection-path">No graph item selected</div>
         </div>
         <div class="kg-sidebar-actions">
-          <button id="kg-close-sidebar" class="btn btn-secondary btn-sm" type="button">Close</button>
+          <button id="kg-close-sidebar" class="kcui-btn kcui-btn-secondary kcui-btn-sm" type="button">Close</button>
         </div>
       </div>
       <div class="kg-sidebar-status" id="kg-sidebar-status">Click a node circle or connection label to inspect it.</div>
@@ -34,19 +34,19 @@
           </div>
           <div class="kg-meta-grid" id="kg-selection-meta"></div>
           <div class="kg-sidebar-footer">
-            <button id="kg-delete-selection" class="btn btn-danger" type="button" disabled>Delete</button>
+            <button id="kg-delete-selection" class="kcui-btn kcui-btn-danger" type="button" disabled>Delete</button>
           </div>
         </div>
       </div>
     </aside>
     <div class="kg-splitter" id="kg-splitter" aria-hidden="true"></div>
     <section class="kg-main">
-      <div class="kg-search-row">
+      <div class="kg-search-row kcui-toolbar">
         <input type="search" id="g-input" placeholder="Search concepts…" autocomplete="off">
-        <button id="g-btn" type="button">Expand</button>
-        <button id="g-prev" class="kg-nav-btn" type="button" disabled title="Previous">&#x25C2;</button>
-        <button id="g-next" class="kg-nav-btn" type="button" disabled title="Next">&#x25B8;</button>
-        <button id="g-search-gw" class="btn-sm" type="button" disabled title="Search in KoreData">Search &#x2197;</button>
+        <button id="g-btn" class="kcui-btn" type="button">Expand</button>
+        <button id="g-prev" class="kcui-btn-icon kcui-icon-button--compact" type="button" disabled title="Previous" aria-label="Previous"><span class="kcui-icon kcui-icon--nav-previous" aria-hidden="true"></span></button>
+        <button id="g-next" class="kcui-btn-icon kcui-icon-button--compact" type="button" disabled title="Next" aria-label="Next"><span class="kcui-icon kcui-icon--nav-next" aria-hidden="true"></span></button>
+        <button id="g-search-gw" class="kcui-btn kcui-btn-sm" type="button" disabled title="Search in KoreData">Search &#x2197;</button>
         <div class="kg-ac" id="g-ac"></div>
       </div>
       <div class="kg-canvas-outer" id="g-outer">

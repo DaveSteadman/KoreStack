@@ -139,7 +139,7 @@ _SYSTEM_SKILL_GUIDANCE: list[str] = [
 
     # -- CodeExecute (system_skills/CodeExecute/) --------------------------------------------
     "- Use python execution only for an essential deterministic computation or algorithm. Never use it to reconstruct, inspect, rank, select, or format Working Data, or to draft a report, email, summary, HTML, bullets, or other editorial output.",
-    "- For an exact deterministic micro-task involving arithmetic, character counts, substring counts, string transformations, or an explicit algorithm, use python_execute when it is available. Do not estimate or answer from intuition when a short calculation can verify the result exactly.",
+    "- For an exact deterministic micro-task involving arithmetic, CSV/table parsing or validation, character counts, substring counts, string transformations, or an explicit algorithm, use python_execute when it is available. Do not estimate or answer from intuition when a short calculation can verify the result exactly.",
 
     # -- WorkingData (system_skills/WorkingData/) ---------------------------------------------
     "- Working Data stores text and record collections across steps outside the active prompt.",

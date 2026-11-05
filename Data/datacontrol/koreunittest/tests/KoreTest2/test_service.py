@@ -63,6 +63,25 @@ class KoreTest2ServiceTests(unittest.TestCase):
         self.assertTrue(service._evaluate_assert("not_regex|error", "The result passed"))
         self.assertFalse(service._evaluate_assert("not_contains|error", "An error occurred"))
 
+    def test_case_hash_changes_when_prompt_changes(self) -> None:
+        case = {"id": "x", "prompt": "first", "spec": {"evaluation": {"type": "python", "assert": "not_empty"}}}
+        first = service._case_hash(case)
+        case["prompt"] = "second"
+        self.assertNotEqual(first, service._case_hash(case))
+
+    def test_csv_artifact_evaluator_checks_exact_content(self) -> None:
+        with TemporaryDirectory() as temp_dir:
+            datauser = Path(temp_dir)
+            path = datauser / "report.csv"
+            path.write_text("Name,Score\nAlice,10\n", encoding="utf-8")
+            with patch.object(service, "get_suite_datauser_dir", return_value=datauser):
+                result = service._check_csv_artifact({
+                    "path": "report.csv",
+                    "header": ["Name", "Score"],
+                    "rows": [["Alice", "10"]],
+                })
+        self.assertTrue(result["passed"])
+
     def test_numeric_comparison_accepts_any_number_format(self) -> None:
         for text in ("12! = 479,001,600", "**479001600**", "4.79001600e8", "479001600.0", "479_001_600"):
             self.assertTrue(service._evaluate_assert("number_equals|479001600", text), text)

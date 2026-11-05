@@ -211,6 +211,33 @@ updateTag(tag, { color: 'dim', active: false });
 `.kcui-panel` + `.kcui-panel-header` + `.kcui-panel-body` — standard panel frame used in KoreAgent and
 KoreChat split layouts.
 
+### Page Composition (`panels.css`)
+Use `.kcui-stack` or `.kcui-inline` for ordinary spacing and alignment before adding page-specific layout
+rules. Gap modifiers (`--xs`, `--sm`, `--md`, `--lg`) and responsive `.kcui-grid-2`, `.kcui-grid-3`, and
+`.kcui-grid-4` support common page layouts.
+
+### Forms and Toolbars (`forms.css`)
+Use `.kcui-field` with `.kcui-field__label`, `.kcui-field__hint`, and `.kcui-field__error` for labelled
+controls. Use `.kcui-toolbar`, `.kcui-toolbar__group`, and `.kcui-toolbar__spacer` for action rows rather
+than local flexbox rules.
+Use `.kcui-field-action-row` with a `.kcui-field` and a `kcui-field-action-row__actions kcui-toolbar`
+container when a text control has adjacent actions. This keeps the actions aligned to the control, not its label.
+Use `.kcui-panel-toolbar` only for a full-width panel chrome row; it intentionally has a background, border, and
+minimum height, unlike the inline `.kcui-toolbar` action layout.
+
+### Icon Buttons (`forms.css`)
+Use `.kcui-icon-button` or `.kcui-btn-icon` for an icon-only action. The shared control uses the standard
+button and glyph sizes from `tokens.css`; add `kcui-icon-button--compact` for dense pagination or toolbars.
+Icons inside these controls are centered and scaled automatically. Service-specific exceptions should override
+the `--kcui-icon-button-current-size` and `--kcui-icon-button-current-glyph-size` variables, not dimensions.
+Use `.kcui-icon--nav-previous` and `.kcui-icon--nav-next` for visible, accessible previous/next controls rather
+than Unicode triangle characters.
+
+### Tables and Feedback (`content.css`)
+Wrap wide tables in `.kcui-table-wrap`; add `.kcui-table--dense` or `.kcui-table--sticky-head` when needed.
+Use `.kcui-alert` (`--success`, `--warning`, or `--danger`) for feedback and `.kcui-empty-state` for empty
+content. These components are included automatically by `chrome.css`.
+
 ### Number Steppers (`forms.css` / `steppers.js`)
 Use `.num-stepper` or `.kcui-num-stepper` for compact numeric inputs with inline increment/decrement buttons.
 The shared pattern keeps the control to a single line height with horizontal arrow buttons after the input.

@@ -189,7 +189,7 @@
 }
 
 .kg-search-row {
-  --kg-toolbar-btn-height: calc(var(--kcui-text-body-sm) + 0.8rem + 2px);
+  --kg-toolbar-btn-height: var(--kcui-icon-button-size-compact);
   display: flex;
   gap: 0.5rem;
   align-items: center;
@@ -283,21 +283,14 @@
   padding: 1rem;
 }
 
-.kg-nav-btn {
-  width: var(--kg-toolbar-btn-height);
-  height: var(--kg-toolbar-btn-height);
-  padding: 0;
+.kg-showcase-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
-  font-size: 0.75rem;
-  line-height: 1;
-}
-
-.kg-showcase-btn {
+  padding: 0;
   width: 2.5rem;
   height: 2.5rem;
+  flex: 0 0 2.5rem;
   border-radius: 0;
   color: color-mix(in srgb, var(--dim) 78%, var(--text));
   border-color: color-mix(in srgb, var(--dim) 72%, var(--border));
@@ -324,6 +317,8 @@
 }
 
 .kg-showcase-icon {
+  display: block;
+  flex: 0 0 1.65rem;
   width: 1.65rem;
   height: 1.65rem;
   background: currentColor;

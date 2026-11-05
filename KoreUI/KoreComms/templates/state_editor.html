@@ -3,14 +3,14 @@
 {% block main_class %}kcui-main{% endblock %}
 
 {% block content %}
-<div class="kcui-page kcui-page--narrow kcui-stack">
+<div class="kcui-page kcui-page--wide kcui-stack">
 <p class="kcui-meta kcui-mar-bottom-lg">
   Manually override message status. Re-queuing a message puts it back on the agent queue.
 </p>
 
 <div class="kcui-panel">
   <div class="kcui-panel-header">All Messages</div>
-  <table class="kcui-table">
+  <table class="kcui-table kcui-table--dense kcui-table--sticky-head">
     <thead>
       <tr>
         <th>ID</th><th>Interface</th><th>Direction</th><th>Subject / Sender</th>
@@ -23,7 +23,7 @@
         <td class="kcui-meta">{{ msg.id }}</td>
         <td>{{ msg.interface_name }}</td>
         <td><span class="kcui-tag kcui-tag--dim">{{ msg.direction }}</span></td>
-        <td>
+        <td class="kcui-table__actions">
           <div>{{ msg.subject or "(no subject)" }}</div>
           {% if msg.sender %}<div class="kcui-meta">{{ msg.sender }}</div>{% endif %}
         </td>

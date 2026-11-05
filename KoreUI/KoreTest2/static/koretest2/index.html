@@ -5,14 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>KoreTest2</title>
   <link rel="icon" href="/ui-elements/assets/icons/favicon.ico">
-  <link rel="stylesheet" href="/ui-elements/assets/css/chrome.css">
+  <link rel="stylesheet" href="/ui-elements/assets/css/chrome.css?v=20261105d">
   <link rel="stylesheet" href="/ui-elements/assets/css/workspace.css">
   <script src="/suite-config.js"></script>
   <style>
-    .kcui-page { --kcui-page-max: 100vw; }    .koretest2-grid { border-collapse: collapse; width: 100%; }
-    .koretest2-grid th, .koretest2-grid td { border-bottom: 1px solid var(--kcui-border, #334155); padding: .45rem; text-align: center; }
+    .kcui-page { --kcui-page-max: 100vw; }
+    .koretest2-grid th, .koretest2-grid td { text-align: center; }
     .koretest2-grid th:first-child, .koretest2-grid td:first-child { text-align: left; white-space: nowrap; }
-    .koretest2-grid-wrap { overflow-x: auto; }
     .koretest2-dot { min-width: 2rem; padding-inline: .4rem; }
   </style>
 </head>
@@ -27,12 +26,12 @@
           <p>One run per test and build. A scheduled session uses at most one hour.</p>
         </div>
         <div class="kcui-panel-body">
-          <p>
-            <button id="koretest2-run" type="button" class="kcui-tag kcui-tag--accent">RUN</button>
+          <div class="kcui-toolbar">
+            <button id="koretest2-run" type="button" class="kcui-btn kcui-btn-primary">Run</button>
             <span id="koretest2-status" class="kcui-tag kcui-tag--dim">Loading results…</span>
-          </p>
-          <p id="koretest2-summary" class="kcui-tag kcui-tag--dim"></p>
-          <div id="koretest2-grid" class="koretest2-grid-wrap">Loading…</div>
+          </div>
+          <p id="koretest2-summary" class="kcui-meta"></p>
+          <div id="koretest2-grid" class="kcui-table-wrap">Loading…</div>
         </div>
       </section>
     </div>

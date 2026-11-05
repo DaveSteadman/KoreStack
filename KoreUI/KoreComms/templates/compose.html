@@ -3,7 +3,7 @@
 {% block main_class %}kcui-main{% endblock %}
 
 {% block content %}
-<div class="kcui-page kcui-page--narrow kcui-stack">
+<div class="kcui-page kcui-page--wide kcui-stack">
 <p class="kcui-meta kcui-mar-bottom-lg">
   Creates a synthetic inbound message via the Manual interface and places it on the agent queue.
   The conversation-level identifier below becomes the linked KoreChat ID.
@@ -12,19 +12,22 @@
 <div class="kcui-panel kcui-form-panel">
   <div class="kcui-panel-header">New Message</div>
   <div class="kcui-panel-body">
-    <form method="POST" action="/compose">
-      <label for="sender">Sender</label>
-      <input type="text" id="sender" name="sender" placeholder="Alice <alice@example.com>" required>
-
-      <label for="korechat_id">KoreChat ID</label>
-      <input type="text" id="korechat_id" name="korechat_id" placeholder="CommsChat_001" required>
-
-      <label for="content">Message</label>
-      <textarea id="content" name="content" rows="8" placeholder="Type your message here..." required></textarea>
-
-      <div class="kcui-inline-actions kcui-mar-top-md">
-        <button class="kcui-tag kcui-tag--accent" type="submit">inject to queue</button>
-        <a class="kcui-tag kcui-tag--dim" href="/">cancel</a>
+    <form method="POST" action="/compose" class="kcui-stack">
+      <div class="kcui-field">
+        <label class="kcui-field__label" for="sender">Sender</label>
+        <input type="text" id="sender" name="sender" placeholder="Alice <alice@example.com>" required>
+      </div>
+      <div class="kcui-field">
+        <label class="kcui-field__label" for="korechat_id">KoreChat ID</label>
+        <input type="text" id="korechat_id" name="korechat_id" placeholder="CommsChat_001" required>
+      </div>
+      <div class="kcui-field">
+        <label class="kcui-field__label" for="content">Message</label>
+        <textarea id="content" name="content" rows="8" placeholder="Type your message here..." required></textarea>
+      </div>
+      <div class="kcui-toolbar">
+        <button class="kcui-btn kcui-btn-primary" type="submit">Inject to queue</button>
+        <a class="kcui-btn kcui-btn-secondary" href="/">Cancel</a>
       </div>
     </form>
   </div>

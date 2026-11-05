@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import importlib
+import hashlib
+import csv
 import json
 import re
 import sqlite3
@@ -13,7 +15,7 @@ from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
-from KoreCommon.suite_paths import get_suite_datacontrol_dir
+from KoreCommon.suite_paths import get_suite_datacontrol_dir, get_suite_datauser_dir
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA_ROOT = get_suite_datacontrol_dir() / "koretest2"
@@ -42,10 +44,23 @@ def _db() -> sqlite3.Connection:
     conn.execute("""CREATE TABLE IF NOT EXISTS results (
         test_id TEXT NOT NULL, build_id TEXT NOT NULL, status TEXT NOT NULL,
         started_at TEXT NOT NULL, finished_at TEXT, elapsed_seconds REAL,
-        log_path TEXT NOT NULL, summary_json TEXT NOT NULL,
+        log_path TEXT NOT NULL, summary_json TEXT NOT NULL, case_hash TEXT NOT NULL DEFAULT '',
         PRIMARY KEY (test_id, build_id)
     )""")
+    columns = {row["name"] for row in conn.execute("PRAGMA table_info(results)")}
+    if "case_hash" not in columns:
+        conn.execute("ALTER TABLE results ADD COLUMN case_hash TEXT NOT NULL DEFAULT ''")
     return conn
+
+
+def _case_hash(case: dict) -> str:
+    payload = {
+        "id": case["id"],
+        "prompt": case["prompt"],
+        "spec": case["spec"],
+    }
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
 
 
 def cases() -> list[dict]:
@@ -154,6 +169,7 @@ def _invoke(prompts: list[str], timeout_seconds: int, events: list[dict]) -> dic
 
 def _evaluate(case: dict, output: str, responses: list[str] | None = None) -> tuple[bool, dict]:
     evaluation = case["spec"].get("evaluation", {})
+    artifact = evaluation.get("artifact_csv")
     if evaluation.get("type") == "python":
         module = str(evaluation.get("module") or "")
         function = str(evaluation.get("function") or "")
@@ -167,10 +183,13 @@ def _evaluate(case: dict, output: str, responses: list[str] | None = None) -> tu
                 _check_turn(assertion, response, prompt)
                 for assertion, response, prompt in zip(assertions, responses or [], prompts)
             ]
-            return len(checked) == len(assertions) and all(item["passed"] for item in checked), {
-                "type": "python",
-                "assertions": checked,
-            }
+            passed = len(checked) == len(assertions) and all(item["passed"] for item in checked)
+            detail = {"type": "python", "assertions": checked}
+            if artifact:
+                artifact_check = _check_csv_artifact(artifact)
+                detail["artifact"] = artifact_check
+                passed = passed and artifact_check["passed"]
+            return passed, detail
         asserts = evaluation.get("asserts")
         if asserts is None:
             asserts = [evaluation.get("assert") or "not_empty"]
@@ -178,8 +197,36 @@ def _evaluate(case: dict, output: str, responses: list[str] | None = None) -> tu
             raise ValueError("evaluation 'asserts' must be a non-empty list")
         prompt = list(case["spec"].get("prompts") or [case["prompt"]])[-1]
         checked = [_check_assert(str(assertion), output, prompt) for assertion in asserts]
-        return all(item["passed"] for item in checked), {"type": "python", "asserts": checked}
+        passed = all(item["passed"] for item in checked)
+        if artifact:
+            artifact_check = _check_csv_artifact(artifact)
+            passed = passed and artifact_check["passed"]
+            return passed, {"type": "python", "asserts": checked, "artifact": artifact_check}
+        return passed, {"type": "python", "asserts": checked}
     raise ValueError("evaluation must be a Python evaluator with module/function or a supported builtin assert")
+
+
+def _check_csv_artifact(spec: object) -> dict:
+    if not isinstance(spec, dict):
+        raise ValueError("artifact_csv must be an object")
+    relative_path = str(spec.get("path") or "").strip()
+    expected_header = spec.get("header")
+    expected_rows = spec.get("rows")
+    if not relative_path or not isinstance(expected_header, list) or not isinstance(expected_rows, list):
+        raise ValueError("artifact_csv requires path, header, and rows")
+    path = (get_suite_datauser_dir() / relative_path).resolve()
+    root = get_suite_datauser_dir().resolve()
+    if root not in path.parents or not path.is_file():
+        return {"passed": False, "error": f"CSV artifact not found: {relative_path}"}
+    with path.open(encoding="utf-8", newline="") as stream:
+        rows = list(csv.reader(stream))
+    expected = [list(map(str, expected_header)), *[list(map(str, row)) for row in expected_rows]]
+    return {
+        "passed": rows == expected,
+        "path": relative_path,
+        "expected_rows": len(expected) - 1,
+        "actual_rows": max(0, len(rows) - 1),
+    }
 
 
 # ====================================================================================================
@@ -326,7 +373,9 @@ def _run_case(case: dict, build: str, deadline: float) -> None:
     conn = _db()
     try:
         conn.execute(
-            "INSERT OR IGNORE INTO results VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT OR REPLACE INTO results "
+            "(test_id, build_id, status, started_at, finished_at, elapsed_seconds, log_path, summary_json, case_hash) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 case["id"],
                 build,
@@ -336,6 +385,7 @@ def _run_case(case: dict, build: str, deadline: float) -> None:
                 (finished - started).total_seconds(),
                 str(path),
                 json.dumps(summary),
+                _case_hash(case),
             ),
         )
         conn.commit()
@@ -364,13 +414,15 @@ def start_session() -> dict:
             conn = _db()
             try:
                 complete = {
-                    row["test_id"]
-                    for row in conn.execute("SELECT test_id FROM results WHERE build_id=?", (build,))
+                    row["test_id"]: row["case_hash"]
+                    for row in conn.execute(
+                        "SELECT test_id, case_hash FROM results WHERE build_id=?", (build,)
+                    )
                 }
             finally:
                 conn.close()
             for case in cases():
-                if case["id"] in complete:
+                if complete.get(case["id"]) == _case_hash(case):
                     continue
                 if time.monotonic() >= deadline:
                     break

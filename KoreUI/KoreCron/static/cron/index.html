@@ -5,8 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>KoreCron</title>
   <link rel="icon" href="/ui-elements/assets/icons/favicon.ico">
-  <link rel="stylesheet" href="/ui-elements/assets/css/chrome.css">
+  <link rel="stylesheet" href="/ui-elements/assets/css/chrome.css?v=20261105d">
   <link rel="stylesheet" href="/ui-elements/assets/css/workspace.css">
+  <link rel="stylesheet" href="/static/cron/styles.css?v=20261105a">
   <script src="/suite-config.js"></script>
 </head>
 <body class="kcui-shell-bg">
@@ -19,10 +20,10 @@
           <section class="kcui-panel panel">
             <div class="kcui-panel-header"><p class="eyebrow">Triggers</p><p>Select a trigger to see its details. KoreCron only starts the target; the target does the work.</p></div>
             <div class="kcui-panel-body">
-              <div class="cron-toolbar">
-                <button id="new-trigger" class="kcui-tag kcui-tag--accent kcui-tag--filled" type="button">New trigger</button>
+              <div class="kcui-toolbar">
+                <button id="new-trigger" class="kcui-btn kcui-btn-primary" type="button">New trigger</button>
               </div>
-              <div id="trigger-rows" class="cron-list" role="list"><div class="cron-list__empty">Loading...</div></div>
+              <div id="trigger-rows" class="cron-list" role="list"><div class="kcui-empty-state cron-list__empty">Loading...</div></div>
             </div>
           </section>
         </div>
@@ -30,20 +31,26 @@
           <section class="kcui-panel panel">
             <div class="kcui-panel-header"><p id="detail-eyebrow" class="eyebrow">Details</p><p id="detail-blurb">Select a trigger on the left, or create a new one.</p></div>
             <div class="kcui-panel-body">
-              <div id="detail-empty" class="cron-list__empty">No trigger selected.</div>
-              <form id="trigger-form" hidden>
-                <label class="kcui-form-label" for="trigger-name">Name</label>
-                <input id="trigger-name" type="text" maxlength="120" placeholder="Nightly tests" required>
-                <label class="kcui-form-label" for="trigger-target">Target</label>
-                <select id="trigger-target"></select>
-                <label class="kcui-form-label" for="trigger-schedule">Schedule</label>
-                <input id="trigger-schedule" type="text" placeholder="60 for every 60 minutes, or 08:30 for daily" required>
+              <div id="detail-empty" class="kcui-empty-state cron-list__empty">No trigger selected.</div>
+              <form id="trigger-form" class="kcui-stack" hidden>
+                <div class="kcui-field">
+                  <label class="kcui-field__label" for="trigger-name">Name</label>
+                  <input id="trigger-name" type="text" maxlength="120" placeholder="Nightly tests" required>
+                </div>
+                <div class="kcui-field">
+                  <label class="kcui-field__label" for="trigger-target">Target</label>
+                  <select id="trigger-target"></select>
+                </div>
+                <div class="kcui-field">
+                  <label class="kcui-field__label" for="trigger-schedule">Schedule</label>
+                  <input id="trigger-schedule" type="text" placeholder="60 for every 60 minutes, or 08:30 for daily" required>
+                </div>
                 <label class="kcui-form-label cron-enabled"><input id="trigger-enabled" type="checkbox" checked> Enabled</label>
                 <dl id="trigger-info" class="cron-info"></dl>
-                <div class="cron-actions">
-                  <button id="trigger-save" class="kcui-tag kcui-tag--accent kcui-tag--filled" type="submit">Create trigger</button>
-                  <button id="trigger-run" class="kcui-tag kcui-tag--warning" type="button">Run now</button>
-                  <button id="trigger-delete" class="kcui-tag kcui-tag--dim" type="button">Delete</button>
+                <div class="kcui-toolbar">
+                  <button id="trigger-save" class="kcui-btn kcui-btn-primary" type="submit">Create trigger</button>
+                  <button id="trigger-run" class="kcui-btn kcui-btn-warning" type="button">Run now</button>
+                  <button id="trigger-delete" class="kcui-btn kcui-btn-secondary" type="button">Delete</button>
                   <span id="form-status" class="kcui-tag kcui-tag--dim">Ready</span>
                 </div>
               </form>

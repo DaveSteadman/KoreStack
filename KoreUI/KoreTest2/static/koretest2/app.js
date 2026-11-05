@@ -35,7 +35,8 @@ function renderGrid(payload) {
   statusNode.textContent = `Current: ${payload.build_id}${payload.active ? ' — session running' : ''}`;
   statusNode.className = `kcui-tag kcui-tag--${payload.active ? 'warning' : 'dim'}`;
   const table = document.createElement('table');
-  table.className = 'koretest2-grid';
+  table.className = 'kcui-table kcui-table--dense kcui-table--sticky-head koretest2-grid';
+  const head = document.createElement('thead');
   const header = document.createElement('tr');
   const testHeader = document.createElement('th');
   testHeader.textContent = 'Test ID';
@@ -46,7 +47,9 @@ function renderGrid(payload) {
     cell.title = build;
     header.append(cell);
   }
-  table.append(header);
+  head.append(header);
+  table.append(head);
+  const body = document.createElement('tbody');
   for (const test of payload.tests || []) {
     const row = document.createElement('tr');
     const id = document.createElement('th');
@@ -67,8 +70,9 @@ function renderGrid(payload) {
       }
       row.append(cell);
     }
-    table.append(row);
+    body.append(row);
   }
+  table.append(body);
   gridNode.replaceChildren(table);
   fitColumns(table);
 }

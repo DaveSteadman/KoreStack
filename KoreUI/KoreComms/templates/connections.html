@@ -3,15 +3,15 @@
 {% block main_class %}kcui-main{% endblock %}
 
 {% block content %}
-<div class="kcui-page kcui-page--narrow kcui-stack">
+<div class="kcui-page kcui-page--wide kcui-stack">
 
 {% if flash %}
-<div class="kcui-flash">{{ flash }}</div>
+<div class="kcui-alert">{{ flash }}</div>
 {% endif %}
 
 <div class="kcui-panel">
   <div class="kcui-panel-header">Configured Interfaces</div>
-  <table class="kcui-table">
+  <table class="kcui-table kcui-table--dense kcui-table--sticky-head">
     <thead>
       <tr>
         <th>ID</th><th>Type</th><th>Name</th><th>Enabled</th><th>Timing</th><th>Created</th><th></th>
@@ -31,13 +31,13 @@
           <span class="kcui-tag kcui-tag--dim" data-poll-send>{% if timing and timing.send is not none %}output {{ timing.send }}s{% else %}output -{% endif %}</span>
         </td>
         <td class="kcui-meta">{{ iface.created_at[:16] }}</td>
-        <td>
+        <td class="kcui-table__actions">
           <div class="kcui-inline-actions">
-            <a class="kcui-tag kcui-tag--dim" href="/connections/{{ iface.id }}">edit</a>
+            <a class="kcui-btn kcui-btn-sm kcui-btn-secondary" href="/connections/{{ iface.id }}">Edit</a>
             {% if iface.type != 'manual' %}
-            <a class="kcui-tag kcui-tag--dim" href="/connections/{{ iface.id }}/duplicate">duplicate</a>
+            <a class="kcui-btn kcui-btn-sm kcui-btn-secondary" href="/connections/{{ iface.id }}/duplicate">Duplicate</a>
             <form method="POST" action="/connections/{{ iface.id }}/delete" class="kcui-inline-form">
-              <button class="kcui-tag kcui-tag--danger" type="submit"
+              <button class="kcui-btn kcui-btn-sm kcui-btn-danger" type="submit"
                 data-kcui-confirm="Delete connection {{ iface.name }}?"
                 data-kcui-confirm-label="Delete">delete</button>
             </form>
@@ -51,14 +51,14 @@
 </div>
 
 {% if available_types %}
-<div class="kcui-inline-actions">
+<div class="kcui-toolbar">
   <span class="kcui-meta">Add connection:</span>
-  <a class="kcui-tag kcui-tag--accent" href="/connections/new?type=classic_email">+ Email</a>
-  <a class="kcui-tag kcui-tag--accent" href="/connections/new?type=sftp_file">+ SFTP file</a>
-  <a class="kcui-tag kcui-tag--dim" href="/distribution-lists">distribution lists</a>
+  <a class="kcui-btn kcui-btn-sm kcui-btn-primary" href="/connections/new?type=classic_email">Add Email</a>
+  <a class="kcui-btn kcui-btn-sm kcui-btn-primary" href="/connections/new?type=sftp_file">Add SFTP file</a>
+  <a class="kcui-btn kcui-btn-sm kcui-btn-secondary" href="/distribution-lists">Distribution lists</a>
   {% for t in available_types %}
   {% if t != 'classic_email' and t != 'sftp_file' %}
-  <a class="kcui-tag kcui-tag--accent" href="/connections/new?type={{ t }}">+ {{ t }}</a>
+  <a class="kcui-btn kcui-btn-sm kcui-btn-primary" href="/connections/new?type={{ t }}">Add {{ t }}</a>
   {% endif %}
   {% endfor %}
 </div>

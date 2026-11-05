@@ -90,6 +90,44 @@
   font-size: var(--kcui-text-data);
 }
 
+.kcui-table-wrap {
+  overflow: auto;
+  border: 1px solid var(--border);
+  background: var(--bg);
+}
+
+.kcui-table-wrap > .kcui-table {
+  min-width: max-content;
+}
+
+.kcui-table--dense th,
+.kcui-table--dense td {
+  padding: var(--kcui-gap-xs) var(--kcui-gap-sm);
+}
+
+.kcui-table--sticky-head thead th {
+  position: sticky;
+  z-index: 1;
+  top: 0;
+  background: var(--surface);
+}
+
+.kcui-table__numeric {
+  text-align: right !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.kcui-table__actions {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.kcui-table__empty td {
+  padding: var(--kcui-gap-lg);
+  color: var(--text-dim);
+  text-align: center;
+}
+
 .kcui-shell-bg th,
 .kcui-shell-bg td,
 .kcui-table th,
@@ -122,6 +160,54 @@
 .meta {
   color: var(--text-dim);
   font-size: var(--kcui-text-body-sm);
+}
+
+.kcui-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--kcui-gap-sm);
+  padding: var(--kcui-gap-md);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--info);
+  background: color-mix(in srgb, var(--info) 8%, var(--surface));
+  color: var(--text);
+}
+
+.kcui-alert--success {
+  border-left-color: var(--success);
+  background: color-mix(in srgb, var(--success) 8%, var(--surface));
+}
+
+.kcui-alert--warning {
+  border-left-color: var(--warning);
+  background: color-mix(in srgb, var(--warning) 8%, var(--surface));
+}
+
+.kcui-alert--danger {
+  border-left-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 8%, var(--surface));
+}
+
+.kcui-empty-state {
+  display: grid;
+  justify-items: center;
+  gap: var(--kcui-gap-sm);
+  padding: calc(var(--kcui-gap-panel) * 2);
+  border: 1px dashed var(--border-2);
+  color: var(--text-dim);
+  text-align: center;
+}
+
+.kcui-empty-state__title {
+  color: var(--text);
+  font-size: var(--kcui-text-title-sm);
+  letter-spacing: var(--kcui-tracking-label);
+  text-transform: uppercase;
+}
+
+.kcui-empty-state__copy {
+  max-width: 42rem;
+  margin: 0;
 }
 
 .kcui-kv,

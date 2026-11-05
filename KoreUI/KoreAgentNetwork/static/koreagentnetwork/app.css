@@ -172,9 +172,9 @@ code { color: #a5c8ff; }
 .kan-graph-stage { cursor: grab; }
 .kan-graph-stage.kan-panning { cursor: grabbing; }
 .kan-node-actions { background: var(--kan-panel); border-top: 1px solid var(--kan-border); bottom: -24px; margin-top: 12px; position: sticky; }
-.kcui-shell-bg button.kcui-icon-button { width: 25px; height: 25px; min-width: 25px; min-height: 25px; font-size: 18px; }
-.kcui-shell-bg button.kcui-icon-button.kan-node-play { --kcui-icon-button-color: var(--kan-green); border-color: transparent; font-size: 11px; height: 20px; margin-right: 6px; min-height: 20px; min-width: 20px; width: 20px; }
-.kcui-shell-bg button.kcui-icon-button.kan-port-remove { --kcui-icon-button-color: #f5b3bc; background: #38202a; border-color: #75414c; font-size: 14px; height: 100%; min-height: 0; width: 28px; }
+.kcui-shell-bg button.kcui-icon-button { --kcui-icon-button-size: 25px; --kcui-icon-button-glyph-size: 18px; }
+.kcui-shell-bg button.kcui-icon-button.kan-node-play { --kcui-icon-button-color: var(--kan-green); --kcui-icon-button-current-size: 20px; --kcui-icon-button-current-glyph-size: 11px; border-color: transparent; margin-right: 6px; }
+.kcui-shell-bg button.kcui-icon-button.kan-port-remove { --kcui-icon-button-color: #f5b3bc; --kcui-icon-button-current-glyph-size: 14px; background: #38202a; border-color: #75414c; height: 100%; min-height: 0; width: 28px; }
 .kan-splitter { background: var(--kan-border); min-height: 0; }
 .kan-splitter:hover, .kan-splitter.is-dragging { background: var(--kan-blue); }
 .kan-inspector form { padding: 8px 10px; }

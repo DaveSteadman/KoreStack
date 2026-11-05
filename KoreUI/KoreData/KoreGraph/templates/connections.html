@@ -9,14 +9,14 @@
   .conn-start  { color: var(--green); }
   .conn-type   { color: var(--blue); font-size: var(--kcui-text-label); letter-spacing: 0.04em; }
   .conn-end    { color: var(--text); }
-  .state-filter { display: flex; gap: 0.4rem; margin-bottom: 1rem; flex-wrap: wrap; align-items: center; }
+  .state-filter { margin-bottom: var(--kcui-gap-panel); }
   .vocab-result {
     padding: 0.25rem 0.5rem; cursor: pointer; border: 1px solid var(--border);
     margin-bottom: 2px; font-size: var(--kcui-text-body-sm); background: var(--bg); display: block;
   }
   .vocab-result:hover { border-color: var(--green); color: var(--green); }
   .conn-actions { display: inline-flex; align-items: center; justify-content: flex-end; gap: 0.35rem; white-space: nowrap; }
-  .kg-side-stack { display: flex; flex-direction: column; gap: var(--kcui-gap-panel); }
+  .kg-side-stack { min-width: 0; }
 </style>
 
 <div class="kg-conn-layout">
@@ -24,7 +24,7 @@
   <div>
 
   <!-- state filter tabs -->
-  <div class="state-filter">
+  <div class="state-filter kcui-toolbar">
     <span class="meta">State:</span>
     <a href="{{ _pfx }}/ui/connections" class="kcui-tag kcui-tag--dim {{ 'is-on' if state is none else '' }}">All</a>
     <a href="{{ _pfx }}/ui/connections?state=0" class="kcui-tag kcui-tag--dim {{ 'is-on' if state == 0 else '' }}">proposed</a>
@@ -38,7 +38,8 @@
   <div class="panel">
     <div class="panel-body" style="padding:0">
       {% if connections %}
-      <table>
+      <div class="kcui-table-wrap">
+      <table class="kcui-table kcui-table--dense kcui-table--sticky-head">
         <thead>
           <tr>
             <th>Start</th>
@@ -87,15 +88,15 @@
                 </div>
               </div>
             </td>
-            <td style="text-align:right">
+            <td class="kcui-table__actions">
               <div class="conn-actions">
               {% if conn.state == 0 %}
-              <button class="btn btn-sm activate-btn"
+              <button class="kcui-btn kcui-btn-sm activate-btn"
                 onclick="activateConnection({{ conn.start_concept_id }}, {{ conn.connection_concept_id }}, {{ conn.end_concept_id }}, this.closest('tr'))">
                 Activate
               </button>
               {% endif %}
-              <button class="btn btn-sm btn-danger"
+              <button class="kcui-btn kcui-btn-sm kcui-btn-danger"
                 onclick="deleteConnection({{ conn.start_concept_id }}, {{ conn.connection_concept_id }}, {{ conn.end_concept_id }}, this.closest('tr'))">
                 Del
               </button>
@@ -105,23 +106,24 @@
           {% endfor %}
         </tbody>
       </table>
+      </div>
 
       <!-- nav -->
       {% if total_pages > 1 %}
-      <div class="batch-nav" style="padding:0 0.75rem 0.75rem">
+      <div class="batch-nav kcui-toolbar" style="padding:0 0.75rem 0.75rem">
         {% set state_qs = '&state=' + state|string if state is not none else '' %}
         {% if page > 1 %}
-        <a href="{{ _pfx }}/ui/connections?page={{ page - 1 }}{{ state_qs }}">&laquo; Prev</a>
+        <a class="kcui-btn kcui-btn-secondary kcui-btn-sm" href="{{ _pfx }}/ui/connections?page={{ page - 1 }}{{ state_qs }}">&laquo; Prev</a>
         {% endif %}
         <span class="pg-info">Page {{ page }} / {{ total_pages }}</span>
         {% if page < total_pages %}
-        <a href="{{ _pfx }}/ui/connections?page={{ page + 1 }}{{ state_qs }}">Next &raquo;</a>
+        <a class="kcui-btn kcui-btn-secondary kcui-btn-sm" href="{{ _pfx }}/ui/connections?page={{ page + 1 }}{{ state_qs }}">Next &raquo;</a>
         {% endif %}
       </div>
       {% endif %}
 
       {% else %}
-      <p class="meta" style="padding:var(--kcui-gap-panel)">No connections{{ ' with state "' + state_labels.get(state, state|string) + '"' if state is not none else '' }}.</p>
+      <div class="kcui-empty-state">No connections{{ ' with state "' + state_labels.get(state, state|string) + '"' if state is not none else '' }}.</div>
       {% endif %}
     </div>
   </div>
@@ -130,31 +132,31 @@
 
   <!-- right: add connection -->
   <div class="kg-side-stack">
-    <div class="panel">
+    <div class="panel kcui-stack">
       <div class="panel-header"><span class="panel-title">Add Connection</span></div>
       <div class="panel-body">
-        <div style="display:flex;flex-direction:column;gap:0.6rem">
-          <div>
-            <label>Start</label>
+        <div class="kcui-stack kcui-stack--sm">
+          <div class="kcui-field kg-field-grow">
+            <label class="kcui-field__label">Start</label>
             <input type="text" id="nc-start-name" placeholder="Search or enter new term…" autocomplete="off">
             <div id="nc-start-results" style="margin-top:0.25rem"></div>
             <input type="hidden" id="nc-start-id" value="">
           </div>
-          <div>
-            <label>Connection</label>
+          <div class="kcui-field kg-field-grow">
+            <label class="kcui-field__label">Connection</label>
             <input type="text" id="nc-cxn-name" placeholder="Search or enter new term…" autocomplete="off">
             <div id="nc-cxn-results" style="margin-top:0.25rem"></div>
             <input type="hidden" id="nc-cxn-id" value="">
           </div>
-          <div>
-            <label>End</label>
+          <div class="kcui-field kg-field-grow">
+            <label class="kcui-field__label">End</label>
             <input type="text" id="nc-end-name" placeholder="Search or enter new term…" autocomplete="off">
             <div id="nc-end-results" style="margin-top:0.25rem"></div>
             <input type="hidden" id="nc-end-id" value="">
           </div>
-          <div style="display:flex;gap:0.5rem">
-            <div class="field field-sm">
-              <label>State</label>
+          <div class="kcui-inline">
+            <div class="kcui-field kg-field-sm">
+              <label class="kcui-field__label">State</label>
               <select id="nc-state">
                 <option value="0">proposed</option>
                 <option value="1">active</option>
@@ -163,8 +165,8 @@
                 <option value="4">pasttense</option>
               </select>
             </div>
-            <div class="field field-xs">
-              <label>Score</label>
+            <div class="kcui-field kg-field-xs">
+              <label class="kcui-field__label">Score</label>
               <div class="num-stepper">
                 <input type="number" id="nc-score" min="0" max="255" value="0">
                 <div class="stepper-btns">
@@ -174,7 +176,7 @@
               </div>
             </div>
           </div>
-          <button onclick="saveNewConnection()">Add Connection</button>
+          <button class="kcui-btn" onclick="saveNewConnection()">Add Connection</button>
           <div id="nc-msg" class="meta" style="min-height:1.2em"></div>
         </div>
       </div>
@@ -183,18 +185,18 @@
     <div class="panel">
       <div class="panel-header"><span class="panel-title">Import / Export</span></div>
       <div class="panel-body">
-          <div style="display:flex;flex-direction:column;gap:0.6rem">
-            <div>
-              <label>CSV Filename</label>
+          <div class="kcui-stack kcui-stack--sm">
+            <div class="kcui-field">
+              <label class="kcui-field__label">CSV Filename</label>
               <input type="text" id="csv-filename" value="connections.csv" placeholder="connections.csv" autocomplete="off">
             </div>
             <label style="display:flex;align-items:center;gap:0.5rem">
               <input type="checkbox" id="csv-include-state-score">
               <span>Include state and score columns on export</span>
             </label>
-            <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
-              <button type="button" onclick="exportConnectionsCsv()">Export CSV</button>
-              <button type="button" onclick="importConnectionsCsv()">Import CSV</button>
+            <div class="kcui-toolbar">
+              <button class="kcui-btn" type="button" onclick="exportConnectionsCsv()">Export CSV</button>
+              <button class="kcui-btn kcui-btn-secondary" type="button" onclick="importConnectionsCsv()">Import CSV</button>
             </div>
             <div class="meta">Uses the KoreGraph service CSV folder on the server. Import accepts either `start, connection, end` or `start, connection, end, state, score`, where `state` is a name like `proposed` or `active`.</div>
             <div id="csv-msg" class="meta" style="min-height:2.4em"></div>

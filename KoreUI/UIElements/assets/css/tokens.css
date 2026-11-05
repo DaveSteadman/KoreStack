@@ -50,6 +50,12 @@
   --kcui-gap-lg: 12px;
   --kcui-border-width: 1px;
   --kcui-shadow-overlay: 0 12px 32px rgba(0, 0, 0, .45);
+  --kcui-icon-button-size: 30px;
+  --kcui-icon-button-size-compact: 28px;
+  --kcui-icon-button-glyph-size: 18px;
+  --kcui-icon-button-glyph-size-compact: 16px;
+  --kcui-control-height: 30px;
+  --kcui-control-height-sm: 24px;
 
   --tab-h: var(--kcui-tab-h);
   --appbar-h: var(--kcui-appbar-h);

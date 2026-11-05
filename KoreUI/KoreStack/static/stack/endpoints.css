@@ -168,12 +168,6 @@
   min-width: 0;
 }
 
-.runner-actions {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
 .runner-body {
   display: flex;
   flex-direction: column;

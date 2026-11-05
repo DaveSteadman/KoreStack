@@ -2,7 +2,7 @@
   "title": "csv_multiturn_create_then_fix",
   "prompts": [
     "create a CSV with columns Product, Q1, Q2, Q3, Q4 and 4 rows of made-up quarterly sales figures. Save to datauser/test_spreadsheet/quarterly.csv",
-    "now read that file and add a YearTotal column that sums Q1 through Q4 for each row, then save it back"
+    "now read that file and add a YearTotal column that sums Q1 through Q4 for each row, save it back to the same path, and include the full path and updated CSV in your reply"
   ],
   "timeout_seconds": 1200,
   "evaluation": {

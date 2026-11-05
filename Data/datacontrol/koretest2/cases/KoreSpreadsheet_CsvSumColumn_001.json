@@ -1,12 +1,11 @@
 {
   "title": "csv_sum_column",
-  "prompt": "read datauser/test_spreadsheet/sales.csv, add a new column called CumulativeRevenue that is a running total of the Revenue column, and save the result back to the same file",
+  "prompt": "Create datauser/test_spreadsheet/sales_cumulative.csv with this CSV, add a CumulativeRevenue column that is the running total of Revenue in row order, save the updated file, and show the exact CSV contents:\nMonth,Region,Units,Revenue\nJan,North,10,1200\nFeb,North,12,1500\nMar,North,8,1000",
   "timeout_seconds": 1200,
   "evaluation": {
     "type": "python",
     "asserts": [
-      "judge|answers",
-      "judge|not_error"
+      "all_contains|datauser/test_spreadsheet/sales_cumulative.csv||Month,Region,Units,Revenue,CumulativeRevenue||Jan,North,10,1200,1200||Feb,North,12,1500,2700||Mar,North,8,1000,3700"
     ]
   }
 }

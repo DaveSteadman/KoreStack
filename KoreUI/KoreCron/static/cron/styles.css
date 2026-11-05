@@ -1,0 +1,64 @@
+.cron-list {
+  display: grid;
+  gap: var(--kcui-gap-md);
+}
+
+.cron-row {
+  display: grid;
+  gap: var(--kcui-gap-xs);
+  padding: var(--kcui-gap-md) var(--kcui-gap-lg);
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface) 92%, white 8%);
+  cursor: pointer;
+}
+
+.cron-row:hover {
+  background: color-mix(in srgb, var(--info) 8%, var(--surface));
+}
+
+.cron-row.is-selected {
+  border-color: color-mix(in srgb, var(--info) 65%, var(--border));
+  background: color-mix(in srgb, var(--info) 14%, var(--surface));
+}
+
+.cron-row.is-off .cron-row__title {
+  opacity: .5;
+}
+
+.cron-row__title {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--kcui-gap-lg);
+  font-weight: 600;
+}
+
+.cron-row__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--kcui-gap-xs) var(--kcui-gap-lg);
+  color: var(--text-dim);
+  font-size: var(--kcui-text-body-sm);
+}
+
+.cron-enabled {
+  display: flex;
+  align-items: center;
+  gap: var(--kcui-gap-md);
+}
+
+.cron-info {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--kcui-gap-xs) var(--kcui-gap-lg);
+  margin: var(--kcui-gap-lg) 0;
+  font-size: var(--kcui-text-body-sm);
+}
+
+.cron-info dt {
+  color: var(--text-dim);
+}
+
+.cron-info dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}

@@ -20,10 +20,10 @@
     }
   </style>
   <link rel="icon" type="image/x-icon" href="/ui-elements/assets/icons/favicon.ico">
-  <link rel="stylesheet" href="/ui-elements/assets/css/chrome.css">
+  <link rel="stylesheet" href="/ui-elements/assets/css/chrome.css?v=20261105d">
   <link rel="stylesheet" href="/ui-elements/assets/css/workspace.css">
   <link rel="stylesheet" href="/static/stack/stack.css">
-  <link rel="stylesheet" href="/static/stack/endpoints.css">
+  <link rel="stylesheet" href="/static/stack/endpoints.css?v=20261105b">
 </head>
 <body class="kcui-shell-bg">
   <div id="topbar"></div>
@@ -77,14 +77,14 @@
                   <input id="request-url" class="kcui-input" type="text" placeholder="http://127.0.0.1:9600/status">
                 </label>
               </div>
-              <div class="runner-grid">
-                <label class="runner-grow">
-                  Content Type
+              <div class="kcui-field-action-row">
+                <label class="kcui-field">
+                  <span class="kcui-field__label">Content Type</span>
                   <input id="request-content-type" class="kcui-input" type="text" value="application/json">
                 </label>
-                <div class="runner-actions">
-                  <button id="request-submit" type="button" class="kcui-tag kcui-tag--accent">Submit</button>
-                  <a id="request-open" class="kcui-tag kcui-tag--dim" href="#">Open</a>
+                <div class="kcui-field-action-row__actions kcui-toolbar">
+                  <button id="request-submit" type="button" class="kcui-btn kcui-btn-primary">Submit</button>
+                  <a id="request-open" class="kcui-btn kcui-btn-secondary" href="#">Open</a>
                 </div>
               </div>
               <label class="runner-body">
@@ -94,9 +94,9 @@
               <div class="runner-template">
                 <div class="runner-template-header">
                   <span>Generated Template</span>
-                  <div class="runner-template-actions">
-                    <button id="template-copy" type="button" class="kcui-tag kcui-tag--dim">Copy</button>
-                    <button id="template-reset" type="button" class="kcui-tag kcui-tag--accent">Reset Body</button>
+                  <div class="runner-template-actions kcui-toolbar">
+                    <button id="template-copy" type="button" class="kcui-btn kcui-btn-sm kcui-btn-secondary">Copy</button>
+                    <button id="template-reset" type="button" class="kcui-btn kcui-btn-sm kcui-btn-primary">Reset Body</button>
                   </div>
                 </div>
                 <pre id="template-body" class="template-body">No body template for this endpoint.</pre>

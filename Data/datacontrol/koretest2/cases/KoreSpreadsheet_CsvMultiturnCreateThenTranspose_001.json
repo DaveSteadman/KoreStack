@@ -1,8 +1,8 @@
 {
   "title": "csv_multiturn_create_then_transpose",
   "prompts": [
-    "create a CSV at datauser/test_spreadsheet/scores.csv with columns Student, Maths, Science, English, History - 5 students with scores out of 100",
-    "now transpose that file so subjects are rows and students are columns, save as datauser/test_spreadsheet/scores_transposed.csv"
+    "Create datauser/test_spreadsheet/scores.csv with exactly this CSV content:\nStudent,Maths,Science,English,History\nAlice,85,92,78,88\nBob,76,88,91,74\nCarol,94,85,89,91\nDave,67,78,82,70\nEve,91,95,87,93\nConfirm the path after saving it.",
+    "now transpose that file so subjects are rows and students are columns. The output header must be Subject,Alice,Bob,Carol,Dave,Eve, followed by one row each for Maths, Science, English, and History using the corresponding scores from the source file. Save as datauser/test_spreadsheet/scores_transposed.csv and include the full path and exact CSV contents in your reply."
   ],
   "timeout_seconds": 1200,
   "evaluation": {
@@ -12,10 +12,17 @@
         "judge|answers",
         "judge|not_error"
       ],
-      [
-        "judge|answers",
-        "judge|not_error"
+      "all_contains|datauser/test_spreadsheet/scores_transposed.csv||Subject,Alice,Bob,Carol,Dave,Eve||Maths,85,76,94,67,91||Science,92,88,85,78,95||English,78,91,89,82,87||History,88,74,91,70,93"
+    ],
+    "artifact_csv": {
+      "path": "test_spreadsheet/scores_transposed.csv",
+      "header": ["Subject", "Alice", "Bob", "Carol", "Dave", "Eve"],
+      "rows": [
+        ["Maths", "85", "76", "94", "67", "91"],
+        ["Science", "92", "88", "85", "78", "95"],
+        ["English", "78", "91", "89", "82", "87"],
+        ["History", "88", "74", "91", "70", "93"]
       ]
-    ]
+    }
   }
 }

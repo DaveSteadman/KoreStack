@@ -1,12 +1,11 @@
 {
   "title": "csv_average_column",
-  "prompt": "read datauser/test_spreadsheet/sales.csv, add an AverageMonthlyRevenue column (Revenue divided by Units, rounded to 2 decimal places), and show the updated table",
+  "prompt": "Create datauser/test_spreadsheet/sales_average.csv with this CSV, then read it back, add an AverageRevenuePerUnit column equal to Revenue divided by Units rounded to exactly 2 decimal places, save the updated file, and include its full path and exact CSV contents in your response:\nMonth,Region,Units,Revenue\nJan,North,8,254\nJan,South,12,301\nFeb,North,7,143\nFeb,South,6,95",
   "timeout_seconds": 1200,
   "evaluation": {
     "type": "python",
     "asserts": [
-      "judge|answers",
-      "judge|not_error"
+      "all_contains|datauser/test_spreadsheet/sales_average.csv||Month,Region,Units,Revenue,AverageRevenuePerUnit||Jan,North,8,254,31.75||Jan,South,12,301,25.08||Feb,North,7,143,20.43||Feb,South,6,95,15.83"
     ]
   }
 }

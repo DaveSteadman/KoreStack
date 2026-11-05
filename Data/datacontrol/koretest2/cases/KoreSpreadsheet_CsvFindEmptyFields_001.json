@@ -1,12 +1,12 @@
 {
   "title": "csv_find_empty_fields",
-  "prompt": "given this CSV data, find all rows with empty or missing fields and report, for each problem, the row ID value (from the ID column) and the column name:\nID,Name,Email,Phone\n1,Alice,alice@example.com,555-1234\n2,Bob,,555-5678\n3,,carol@example.com,\n4,Dave,dave@example.com,555-9999",
+  "prompt": "Given this CSV, identify each row with an empty field. Use the value in the ID column, not the physical row number, and report each finding as ID=<value>, Column=<header>. Return only the findings, one per line.\nID,Name,Email,Phone,Country\nA101,Alice,alice@example.com,555-1234,UK\nB205,Bob,,555-5678,US\nC309,Carol,carol@example.com,,CA\nD412,Dave,dave@example.com,555-9999,AU",
   "timeout_seconds": 1200,
   "evaluation": {
     "type": "python",
     "asserts": [
-      "judge|answers",
-      "judge|not_error"
+      "all_contains|ID=B205, Column=Email||ID=C309, Column=Phone",
+      "none_contains|ID=A101||ID=B205, Column=Phone||ID=C309, Column=Email||ID=D412"
     ]
   }
 }

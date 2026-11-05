@@ -11,25 +11,6 @@ initServiceShell({
 });
 initDialogHost();
 
-const style = document.createElement('style');
-style.textContent = `
-  .cron-toolbar { margin-bottom: 12px; }
-  .cron-list { display: grid; gap: 8px; }
-  .cron-list__empty { padding: 14px 16px; border: 1px dashed var(--border, rgba(255,255,255,.16)); color: var(--text-muted, rgba(255,255,255,.72)); }
-  .cron-row { display: grid; gap: 4px; padding: 10px 14px; border: 1px solid var(--border, rgba(255,255,255,.16)); background: rgba(255,255,255,.02); cursor: pointer; }
-  .cron-row:hover { background: rgba(96,165,250,.08); }
-  .cron-row.is-selected { border-color: rgba(96,165,250,.65); background: rgba(96,165,250,.14); }
-  .cron-row.is-off .cron-row__title { opacity: .5; }
-  .cron-row__title { display: flex; justify-content: space-between; gap: 10px; font-weight: 600; }
-  .cron-row__meta { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: .85em; color: var(--text-muted, rgba(255,255,255,.72)); }
-  .cron-enabled { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
-  .cron-info { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; margin: 14px 0; font-size: .9em; }
-  .cron-info dt { color: var(--text-muted, rgba(255,255,255,.72)); }
-  .cron-info dd { margin: 0; overflow-wrap: anywhere; }
-  .cron-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 14px; }
-`;
-document.head.append(style);
-
 const $ = (selector) => document.querySelector(selector);
 const form = $('#trigger-form'), empty = $('#detail-empty'), info = $('#trigger-info');
 const nameInput = $('#trigger-name'), targetSelect = $('#trigger-target'), scheduleInput = $('#trigger-schedule'), enabledInput = $('#trigger-enabled');
@@ -69,7 +50,7 @@ const outcomeText = (t) => {
 };
 
 function renderList() {
-  if (!triggers.length) { rows.innerHTML = '<div class="cron-list__empty">No triggers yet.</div>'; return; }
+  if (!triggers.length) { rows.innerHTML = '<div class="kcui-empty-state cron-list__empty">No triggers yet.</div>'; return; }
   rows.innerHTML = triggers.map((t) => `<div class="cron-row ${t.id === selectedId ? 'is-selected' : ''} ${t.enabled ? '' : 'is-off'}" role="listitem" tabindex="0" data-id="${escapeHtml(t.id)}">
     <div class="cron-row__title"><span class="cron-row__name">${escapeHtml(t.name)}</span><span>${t.enabled ? '' : 'off'}</span></div>
     <div class="cron-row__meta"><span>${escapeHtml(t.target_text)}</span><span>${escapeHtml(t.schedule_text)}</span><span>${escapeHtml(outcomeText(t))}</span></div>

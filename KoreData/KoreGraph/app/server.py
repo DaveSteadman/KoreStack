@@ -82,10 +82,14 @@
 # ====================================================================================================
 import logging
 import os
+import re
 import subprocess
 import sys
 import threading
 import time as _time
+import urllib.error
+import urllib.parse
+import urllib.request
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Optional
@@ -269,6 +273,72 @@ def graph_connection_create_many(connections: list[dict]) -> dict:
     return {"accepted": len(accepted), "errors": errors, "connections": accepted}
 
 
+def graph_connection_import_library_book(
+    book_id: str,
+    library_base_url: str = "http://127.0.0.1:9605",
+    chunk_size: int = 16000,
+    max_chunks: int = 500,
+) -> dict:
+    """Extract simple factual relations from every chunk of a KoreLibrary book."""
+    cleaned_book_id = str(book_id or "").strip()
+    parsed_base_url = urllib.parse.urlparse(str(library_base_url or "").strip())
+    if not cleaned_book_id:
+        raise ValueError("book_id must not be empty")
+    if parsed_base_url.scheme not in {"http", "https"} or not parsed_base_url.netloc:
+        raise ValueError("library_base_url must be an absolute HTTP(S) URL")
+    if not 1 <= chunk_size <= 100000:
+        raise ValueError("chunk_size must be between 1 and 100000")
+    if not 1 <= max_chunks <= 5000:
+        raise ValueError("max_chunks must be between 1 and 5000")
+
+    pattern = re.compile(
+        r"\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2})\s+"
+        r"(discovered|invented|proposed|developed|founded|established|proved|disproved|"
+        r"wrote|described|calculated|measured|introduced|studied|applied|created|derived|"
+        r"formulated|demonstrated|showed)\s+"
+        r"(?:(?:the|a|an|his|her|its|that|how)\s+)?"
+        r"([A-Za-z][a-z]{2,}(?:\s+(?:of\s+)?[a-z]{2,}){0,3})"
+    )
+    base_url = parsed_base_url.geturl().rstrip("/")
+    encoded_book_id = urllib.parse.quote(cleaned_book_id, safe="")
+    offset = 0
+    connections: dict[tuple[str, str, str], dict] = {}
+    chunks_processed = 0
+
+    while True:
+        if chunks_processed >= max_chunks:
+            raise RuntimeError(f"Book import exceeded max_chunks={max_chunks}")
+        query = urllib.parse.urlencode({"offset": offset, "length": chunk_size})
+        url = f"{base_url}/books/{encoded_book_id}/chunk?{query}"
+        try:
+            with urllib.request.urlopen(url, timeout=30) as response:
+                data = json.loads(response.read().decode("utf-8"))
+        except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError) as exc:
+            raise RuntimeError(f"Failed to fetch book chunk {chunks_processed}: {exc}") from exc
+        if not isinstance(data, dict) or not isinstance(data.get("chunk"), str):
+            raise RuntimeError(f"Invalid response for book chunk {chunks_processed}")
+        for subject, predicate, target in pattern.findall(data["chunk"]):
+            key = (subject.casefold(), predicate.casefold(), target.casefold())
+            connections[key] = {"start": subject, "connection": predicate, "end": target}
+        chunks_processed += 1
+        if not data.get("has_more"):
+            break
+        next_offset = data.get("next_offset")
+        if not isinstance(next_offset, int) or next_offset <= offset:
+            raise RuntimeError(f"Invalid next_offset after book chunk {chunks_processed - 1}")
+        offset = next_offset
+
+    result = graph_connection_create_many(list(connections.values()))
+    if result["errors"]:
+        raise RuntimeError(f"Graph import rejected {len(result['errors'])} connection(s)")
+    return {
+        "book_id": cleaned_book_id,
+        "chunks_processed": chunks_processed,
+        "unique_connections": len(connections),
+        "submitted": result["accepted"],
+    }
+
+
 register_skill_invocation_routes(
     app,
     {
@@ -279,6 +349,7 @@ register_skill_invocation_routes(
         "graph_connection_list": graph_connection_list,
         "graph_connection_delete": graph_connection_delete,
         "graph_connection_create_many": graph_connection_create_many,
+        "graph_connection_import_library_book": graph_connection_import_library_book,
     },
 )
 

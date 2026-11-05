@@ -222,6 +222,18 @@ def clear_stop() -> None:
         _stop_reason = ""
 
 
+def _should_activate_python_for_tabular_task(user_prompt: str) -> bool:
+    has_tabular_data = re.search(r"\b(?:csv|spreadsheet|tabular)\b", user_prompt, re.IGNORECASE)
+    requests_transformation = re.search(
+        r"\b(?:analy[sz]e|audit|calculate|check|compute|deduplicate|filter|parse|sort|sum|transpose|validate)\b"
+        r"|\b(?:add|append|insert)\b.{0,40}\b(?:column|field)\b"
+        r"|\b(?:find|identify)\b.{0,40}\b(?:blank|empty|missing)\b",
+        user_prompt,
+        re.IGNORECASE,
+    )
+    return bool(has_tabular_data and requests_transformation)
+
+
 @dataclass
 class OrchestratorConfig:
     resolved_model: str
@@ -619,8 +631,17 @@ def orchestrate_prompt(
                 ["python_execute"],
                 session_id         = active_session_id,
                 conversation_entry = conversation_entry,
+                persist            = False,
             )
             _log_file_only("[tool routing] Activated python_execute for an exact string-count request.")
+        if _should_activate_python_for_tabular_task(user_prompt):
+            promote_selected_tools(
+                ["python_execute"],
+                session_id         = active_session_id,
+                conversation_entry = conversation_entry,
+                persist            = False,
+            )
+            _log_file_only("[tool routing] Activated python_execute for deterministic tabular data processing.")
 
         available_local_payload = config.skills_payload if _WEB_SKILLS_ENABLED else _filter_web_skills(config.skills_payload)
         initial_tool_runtime = derive_active_tool_runtime(

@@ -11,10 +11,33 @@ if str(APP_ROOT) not in sys.path:
     sys.path.insert(0, str(APP_ROOT))
 
 from prompt_builder import build_system_message
+from agent.orchestration.engine import _should_activate_python_for_tabular_task
 from system_skills.CodeExecute.code_execute_skill import python_execute
 
 
 class DeterministicMicrotaskTests(unittest.TestCase):
+    def test_tabular_analysis_activates_python_but_plain_creation_does_not(self) -> None:
+        self.assertTrue(
+            _should_activate_python_for_tabular_task(
+                "Given this CSV, identify each row with an empty field."
+            )
+        )
+        self.assertTrue(
+            _should_activate_python_for_tabular_task(
+                "Read the CSV and add an AverageRevenuePerUnit column."
+            )
+        )
+        self.assertFalse(
+            _should_activate_python_for_tabular_task(
+                "Generate a CSV and add five made-up rows."
+            )
+        )
+        self.assertFalse(
+            _should_activate_python_for_tabular_task(
+                "Create a CSV with five rows of made-up data."
+            )
+        )
+
     def test_letter_count_is_computed_exactly(self) -> None:
         result = python_execute("word = 'accelerate'\nprint(f'e={word.count(\"e\")}')")
 
