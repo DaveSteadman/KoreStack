@@ -7,7 +7,6 @@
 # Function inventory:
 # - build_artifact_ref: Builds artifact ref for this module.
 # - parse_artifact_ref: Parses artifact ref for this module.
-# - parse_sentence_locator: Parses sentence locator for this module.
 # - _map_feed_entry: Implements the  map feed entry operation for this module.
 # - _map_reference_article: Implements the  map reference article operation for this module.
 # - _map_rag_chunk: Implements the  map rag chunk operation for this module.
@@ -37,9 +36,6 @@ from app.gateway_library import search_library
 from app.gateway_scrape import search_scrape
 
 
-SEMANTIC_SEARCH_DOMAINS = {"feeds", "library", "reference"}
-
-
 def build_artifact_ref(kind: str, **parts: Any) -> str:
     ref_parts = [kind]
     for key, value in parts.items():
@@ -66,19 +62,6 @@ def parse_artifact_ref(refid: str) -> tuple[str, dict[str, str]]:
             raise ValueError("Artifact ref contains an empty key.")
         values[key] = unquote(encoded)
     return kind, values
-
-
-def parse_sentence_locator(locator: str) -> tuple[str, str, int]:
-    text  = str(locator or "").strip().strip("/")
-    parts = [part.strip() for part in text.split("/") if part.strip()]
-    if len(parts) != 3:
-        raise ValueError("Sentence locator must look like <service>/<database>/<sentence_id>.")
-    service, database, raw_id = parts
-    try:
-        sentence_id = int(raw_id)
-    except ValueError as exc:
-        raise ValueError(f"Sentence locator has non-numeric sentence_id: {raw_id!r}") from exc
-    return service.lower(), database, sentence_id
 
 
 def _map_feed_entry(entry: dict, cfg: dict[str, Any]) -> dict:
@@ -230,38 +213,15 @@ async def run_search(
     graph_client,
 ) -> dict:
     requested_domains = [domain.lower() for domain in req.domains] if req.domains else ["feeds", "reference", "library", "rag", "scrape"]
-    search_mode       = "semantic" if str(req.mode or "").strip().lower() == "semantic" else "keyword"
-    min_match         = max(0.0, min(1.0, float(req.min_match or 0.0)))
     limit             = req.limit
 
-    if search_mode == "semantic":
-        unsupported_domains = [domain for domain in requested_domains if domain not in SEMANTIC_SEARCH_DOMAINS]
-        search_domains      = [domain for domain in requested_domains if domain in SEMANTIC_SEARCH_DOMAINS]
-        if not search_domains:
-            search_domains = sorted(SEMANTIC_SEARCH_DOMAINS)
-    else:
-        unsupported_domains = []
-        search_domains      = requested_domains
-
     async def _feeds():
-        if search_mode == "semantic":
-            params: dict[str, Any] = {"q": req.query, "limit": limit, "min_match": min_match}
-            response = await feed_client.get("/api/semantic-search", params=params, timeout=10.0)
-        else:
-            params = {"q": req.query, "limit": limit, "full": "true"}
-            if req.since:
-                params["since"] = req.since
-            if req.until:
-                params["until"] = req.until
-            response = await feed_client.get("/api/search", params=params, timeout=10.0)
-        if search_mode == "semantic" and response.status_code == 503:
-            detail = ""
-            try:
-                detail = str((response.json() or {}).get("detail") or "")
-            except Exception:
-                detail = ""
-            warning = detail or "Semantic search unavailable."
-            return {"status": "partial", "results": [], "error": "", "warnings": [f"Feed semantic search unavailable: {warning}"]}
+        params: dict[str, Any] = {"q": req.query, "limit": limit, "full": "true"}
+        if req.since:
+            params["since"] = req.since
+        if req.until:
+            params["until"] = req.until
+        response = await feed_client.get("/api/search", params=params, timeout=10.0)
         if response.status_code != 200:
             return {"status": "error", "results": [], "error": f"HTTP {response.status_code}", "warnings": []}
         payload = response.json() or []
@@ -271,67 +231,16 @@ async def run_search(
         warnings: list[str] = []
         if failed_domains:
             warnings.append(f"Feed search skipped failing domains: {', '.join(failed_domains)}")
-        if search_mode == "semantic":
-            results = [
-                {
-                    "domain":           "feeds",
-                    "feed_domain":      entry.get("domain") or "",
-                    "type":             "feed_entry",
-                    "artifact_ref":     build_artifact_ref("feed_entry", domain=entry.get("domain"), id=entry.get("id")),
-                    "id":               entry.get("id"),
-                    "title":            entry.get("headline") or "",
-                    "headline":         entry.get("headline") or "",
-                    "source":           entry.get("feed_name") or "",
-                    "published_at":     entry.get("published") or "",
-                    "snippet":          entry.get("snippet") or "",
-                    "url":              entry.get("url") or "",
-                    "sentence_id":      entry.get("sentence_id"),
-                    "sentence_locator": entry.get("sentence_locator") or "",
-                    "match_score":      entry.get("match_score"),
-                }
-                for entry in payload[:limit]
-            ]
-            return {"status": "partial" if failed_domains else "ok", "results": results, "error": "", "warnings": warnings}
         return {"status": "partial" if failed_domains else "ok", "results": [_map_feed_entry(entry, cfg) for entry in payload[:limit]], "error": "", "warnings": warnings}
 
     async def _reference():
-        params: dict[str, Any] = {"q": req.query, "limit": limit}
-        if search_mode == "semantic":
-            params["min_match"] = min_match
-            response = await ref_client.get("/api/semantic-search", params=params, timeout=10.0)
-        else:
-            response = await ref_client.get("/api/search", params=params, timeout=10.0)
-        if search_mode == "semantic" and response.status_code == 503:
-            detail = ""
-            try:
-                detail = str((response.json() or {}).get("detail") or "")
-            except Exception:
-                detail = ""
-            warning = detail or "Semantic search unavailable."
-            return {"status": "partial", "results": [], "error": "", "warnings": [f"Reference semantic search unavailable: {warning}"]}
+        params = {"q": req.query, "limit": limit}
+        response = await ref_client.get("/api/search", params=params, timeout=10.0)
         if response.status_code != 200:
             return {"status": "error", "results": [], "error": f"HTTP {response.status_code}", "warnings": []}
         payload = response.json() or []
         if not isinstance(payload, list):
             return {"status": "error", "results": [], "error": "Reference search returned a non-list payload.", "warnings": []}
-        if search_mode == "semantic":
-            results = [
-                {
-                    "domain":           "reference",
-                    "type":             "reference_article",
-                    "artifact_ref":     build_artifact_ref("reference_article", title=article.get("title") or ""),
-                    "id":               article.get("id"),
-                    "title":            article.get("title", ""),
-                    "snippet":          article.get("snippet") or "",
-                    "word_count":       article.get("word_count"),
-                    "url":              f"{cfg['korereference_url']}/ui/reference/{quote(article.get('title') or '', safe='')}",
-                    "sentence_id":      article.get("sentence_id"),
-                    "sentence_locator": article.get("sentence_locator") or "",
-                    "match_score":      article.get("match_score"),
-                }
-                for article in payload[:limit]
-            ]
-            return {"status": "ok", "results": results, "error": "", "warnings": []}
         return {"status": "ok", "results": [_map_reference_article(article, cfg) for article in payload[:limit]], "error": "", "warnings": []}
 
     async def _library():
@@ -339,8 +248,6 @@ async def run_search(
             lib_client,
             query              = req.query,
             limit              = limit,
-            search_mode        = search_mode,
-            min_match          = min_match,
             cfg                = cfg,
             build_artifact_ref = build_artifact_ref,
         )
@@ -372,17 +279,17 @@ async def run_search(
         )
 
     tasks: list[tuple[str, Any]] = []
-    if "feeds" in search_domains:
+    if "feeds" in requested_domains:
         tasks.append(("feeds", _feeds()))
-    if "reference" in search_domains:
+    if "reference" in requested_domains:
         tasks.append(("reference", _reference()))
-    if "library" in search_domains:
+    if "library" in requested_domains:
         tasks.append(("library", _library()))
-    if "rag" in search_domains:
+    if "rag" in requested_domains:
         tasks.append(("rag", _rag()))
-    if "scrape" in search_domains:
+    if "scrape" in requested_domains:
         tasks.append(("scrape", _scrape()))
-    if "graph" in search_domains and search_mode != "semantic":
+    if "graph" in requested_domains:
         tasks.append(("graph", _graph()))
 
     gathered          = await asyncio.gather(*(coro for _, coro in tasks), return_exceptions=True)
@@ -416,11 +323,6 @@ async def run_search(
 
     non_ok_statuses = [item.get("status") for item in domain_statuses.values() if item.get("status") != "ok"]
     total_results   = sum(len(items) for items in results_by_domain.values())
-    if unsupported_domains:
-        warnings.append(
-            f"Semantic search is currently available only for: {', '.join(sorted(SEMANTIC_SEARCH_DOMAINS))}. "
-            f"Ignored: {', '.join(unsupported_domains)}"
-        )
     if any(status == "error" for status in non_ok_statuses) and total_results == 0:
         overall_status = "error"
     elif non_ok_statuses:
@@ -430,9 +332,6 @@ async def run_search(
 
     return {
         "query":                    req.query,
-        "mode":                     search_mode,
-        "min_match":                min_match if search_mode == "semantic" else None,
-        "semantic_capable_domains": sorted(SEMANTIC_SEARCH_DOMAINS),
         "domains_searched":         [key for key, _ in tasks],
         "status":                   overall_status,
         "partial_failure":          overall_status != "ok",

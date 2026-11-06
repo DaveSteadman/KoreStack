@@ -58,8 +58,6 @@ function pathRuleForRoute(route) {
         domains: ['feeds', 'reference', 'library', 'rag', 'scrape', 'graph'],
         since: '2026-01-01',
         until: '2026-12-31',
-        mode: 'keyword',
-        min_match: 0.4,
         limit: 20,
       },
       query: {
@@ -76,14 +74,6 @@ function pathRuleForRoute(route) {
       },
     };
   }
-  if (path.includes('/sentence')) {
-    return {
-      summary: 'Max template for sentence lookup endpoints.',
-      body: {
-        locator: 'reference/default/1',
-      },
-    };
-  }
   return null;
 }
 
@@ -94,7 +84,7 @@ const CURATED_EXACT = {
       method: 'POST',
       url: 'http://127.0.0.1:19603/api/search',
       content_type: 'application/json',
-      body: '{"query":"example search","domains":["feeds","reference"],"mode":"keyword","limit":20}',
+      body: '{"query":"example search","domains":["feeds","reference"],"limit":20}',
     },
   },
   'korefeed|GET|/api/search': {

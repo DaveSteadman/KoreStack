@@ -100,23 +100,6 @@
                                          "invoke_path":  "/api/skills/koredata_savedsearch_run/invoke"
                                      },
                                      {
-                                         "name":  "koredata_get_sentence",
-                                         "purpose":  "Fetch one indexed KoreData sentence by locator.",
-                                         "parameters":  {
-                                                            "type":  "object",
-                                                            "properties":  {
-                                                                               "locator":  {
-                                                                                               "type":  "string"
-                                                                                           }
-                                                                           },
-                                                            "required":  [
-                                                                             "locator"
-                                                                         ]
-                                                        },
-                                         "returns":  "Sentence text and provenance.",
-                                         "invoke_path":  "/api/skills/koredata_get_sentence/invoke"
-                                     },
-                                     {
                                          "name":  "koredata_get_feed_entry",
                                          "purpose":  "Fetch a complete KoreFeed entry.",
                                          "parameters":  {

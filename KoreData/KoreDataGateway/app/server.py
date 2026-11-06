@@ -53,13 +53,10 @@
 # - _map_ref_article: Implements the  map ref article operation for this module.
 # - api_search: Implements the api search operation for this module.
 # - api_full_text: Implements the api full text operation for this module.
-# - api_sentence: Implements the api sentence operation for this module.
-# - api_sentence_get: Implements the api sentence get operation for this module.
 # - _saved_search_payload: Implements the  saved search payload operation for this module.
 # - koredata_search: Implements the koredata search operation for this module.
 # - koredata_savedsearch_list: Implements the koredata savedsearch list operation for this module.
 # - koredata_savedsearch_run: Implements the koredata savedsearch run operation for this module.
-# - koredata_get_sentence: Implements the koredata get sentence operation for this module.
 # - koredata_get_feed_entry: Implements the koredata get feed entry operation for this module.
 # - koredata_get_reference_article: Implements the koredata get reference article operation for this module.
 # - koredata_find_library_book: Implements the koredata find library book operation for this module.
@@ -106,7 +103,6 @@ from KoreCommon.skill_registration import start_manifest_registration
 from KoreCommon.skill_service import register_skill_invocation_routes
 from app.config import cfg
 from app.gateway_feed import get_feed_entry as _gateway_get_feed_entry
-from app.gateway_feed import get_feed_sentence as _gateway_get_feed_sentence
 from app.gateway_library import find_library_book as _gateway_find_library_book
 from app.gateway_library import get_library_book_chunk as _gateway_get_library_book_chunk
 from app.gateway_library import get_library_index as _gateway_get_library_index
@@ -117,16 +113,13 @@ from app.gateway_rag import get_rag_chunk as _gateway_get_rag_chunk
 from app.gateway_rag import list_processing_scripts as _gateway_list_rag_processing_scripts
 from app.gateway_rag import normalise_processing_schedule as _gateway_normalise_rag_processing_schedule
 from app.gateway_reference import get_reference_article as _gateway_get_reference_article
-from app.gateway_reference import get_reference_sentence as _gateway_get_reference_sentence
 from app.gateway_scrape import get_scrape_chunk as _gateway_get_scrape_chunk
 from app.gateway_search import _map_feed_entry as _canonical_map_feed_entry
 from app.gateway_search import _map_reference_article as _canonical_map_reference_article
 from app.gateway_search import parse_artifact_ref as _parse_artifact_ref
-from app.gateway_search import parse_sentence_locator as _parse_sentence_locator
 from app.gateway_search import run_search as _run_search
 from app.gateway_api import FullTextRequest as _FullTextRequest
 from app.gateway_api import SearchRequest as _SearchRequest
-from app.gateway_api import SentenceRequest as _SentenceRequest
 from app.gateway_api import register_gateway_api_routes
 from app.saved_searches import delete_saved_searches as _delete_saved_searches
 from app.saved_searches import find_saved_search as _find_saved_search
@@ -547,8 +540,7 @@ _INSTR_SEARCH = (
 _INSTR_FEEDS = (
     "KoreFeeds — current news and articles. "
     "Search with domains=[\"feeds\"]; optionally filter by since/until (YYYY-MM-DD). "
-    "Fetch full entries with koredata_get_full_text(refid) or koredata_get_feed_entry(domain, entry_id). "
-    "Fetch a specific indexed sentence with koredata_get_sentence(locator), where locator looks like feeds/<domain>/<sentence_id>."
+    "Fetch full entries with koredata_get_full_text(refid) or koredata_get_feed_entry(domain, entry_id)."
 )
 
 _INSTR_REFERENCE = (
@@ -690,14 +682,6 @@ async def api_full_text(req: _FullTextRequest):
     return await koredata_get_full_text(req.refid)
 
 
-async def api_sentence(req: _SentenceRequest):
-    return await koredata_get_sentence(req.locator)
-
-
-async def api_sentence_get(locator: str):
-    return await koredata_get_sentence(locator)
-
-
 def _saved_search_payload(search: _SearchRequest) -> dict[str, object]:
     return {
         "query":     search.query,
@@ -705,8 +689,6 @@ def _saved_search_payload(search: _SearchRequest) -> dict[str, object]:
         "since":     search.since,
         "until":     search.until,
         "days_limit": search.days_limit,
-        "mode":      search.mode,
-        "min_match": search.min_match,
         "limit":     search.limit,
     }
 
@@ -839,39 +821,6 @@ async def koredata_savedsearch_run(name: str) -> dict:
     if not isinstance(search, dict):
         return {"error": f"SavedSearch is invalid: {saved_search.get('name', name)}"}
     return await api_search(_SearchRequest(**search))
-
-
-async def koredata_get_sentence(locator: str) -> dict:
-    """Fetch a single indexed sentence by semantic locator.
-
-    Args:
-        locator: Sentence locator in the form "<service>/<database>/<sentence_id>".
-                 Currently supported: feeds/<domain>/<sentence_id>,
-                 reference/main/<sentence_id>.
-
-    Returns the sentence text plus source metadata so the agent can recover the
-    originating entry and surrounding provenance.
-    """
-    try:
-        service, database, sentence_id = _parse_sentence_locator(locator)
-    except ValueError as exc:
-        return {"error": str(exc)}
-
-    if service == "feeds":
-        return await _gateway_get_feed_sentence(
-            _feed_client,
-            domain      = database,
-            sentence_id = sentence_id,
-        )
-
-    if service == "reference":
-        return await _gateway_get_reference_sentence(
-            _ref_client,
-            database    = database,
-            sentence_id = sentence_id,
-        )
-
-    return {"error": f"Unsupported sentence locator service: {service!r}"}
 
 
 # MARK: KoreFeed Routines
@@ -1117,7 +1066,6 @@ register_gateway_api_routes(
     app,
     search        = api_search,
     get_full_text = koredata_get_full_text,
-    get_sentence  = koredata_get_sentence,
 )
 register_skill_invocation_routes(
     app,
@@ -1126,7 +1074,6 @@ register_skill_invocation_routes(
         "koredata_search_recent": koredata_search_recent,
         "koredata_savedsearch_list": koredata_savedsearch_list,
         "koredata_savedsearch_run": koredata_savedsearch_run,
-        "koredata_get_sentence": koredata_get_sentence,
         "koredata_get_feed_entry": koredata_get_feed_entry,
         "koredata_get_reference_article": koredata_get_reference_article,
         "koredata_find_library_book": koredata_find_library_book,

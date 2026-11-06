@@ -4,7 +4,7 @@
 # endpoint api module. This file groups related implementation behind a focused module boundary;
 # callers use its types and functions instead of duplicating its local policy or mechanics.
 # MARK: FUNCTIONS
-# Primary types: BookCreate, BookUpdate, BookMoveRequest, SentenceToggleRequest, KiwixImportRequest, KiwixViewerImportRequest, KiwixViewerBatchRequest.
+# Primary types: BookCreate, BookUpdate, BookMoveRequest, KiwixImportRequest, KiwixViewerImportRequest, KiwixViewerBatchRequest.
 # Function inventory:
 # - _parse_gutenberg_html: Implements the  parse gutenberg html operation for this module.
 # - _extract_link: Implements the  extract link operation for this module.
@@ -22,11 +22,6 @@
 # - route_move_book: Implements the route move book operation for this module.
 # - route_delete_book: Implements the route delete book operation for this module.
 # - route_search: Implements the route search operation for this module.
-# - route_book_sentences: Implements the route book sentences operation for this module.
-# - route_sentence: Implements the route sentence operation for this module.
-# - route_backfill_catalog_sentences: Implements the route backfill catalog sentences operation for this module.
-# - route_rebuild_catalog_sentences: Implements the route rebuild catalog sentences operation for this module.
-# - route_set_sentence_deleted: Implements the route set sentence deleted operation for this module.
 # - kiwix_inventory: Implements the kiwix inventory operation for this module.
 # - kiwix_search: Implements the kiwix search operation for this module.
 # - kiwix_suggest: Implements the kiwix suggest operation for this module.
@@ -54,19 +49,14 @@ from pydantic import BaseModel
 from app.config import cfg
 from app.database import (
     add_book,
-    backfill_sentence_index,
     delete_book,
     get_book,
     get_book_chunk,
-    get_book_sentences,
-    get_sentence,
     get_status,
     list_catalogs,
     list_books,
     move_book,
-    rebuild_sentence_index,
     search_books,
-    set_sentence_deleted,
     title_exists,
     update_book,
     update_book_body,
@@ -101,10 +91,6 @@ class BookUpdate(BaseModel):
 
 class BookMoveRequest(BaseModel):
     catalog: str
-
-
-class SentenceToggleRequest(BaseModel):
-    deleted: bool
 
 
 class KiwixImportRequest(BaseModel):
@@ -451,48 +437,6 @@ def register_library_api(app: FastAPI) -> None:
             )
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-    @app.get("/api/books/{book_id:path}/sentences", summary="List indexed sentences for a single book")
-    def route_book_sentences(book_id: str, include_deleted: bool = False):
-        try:
-            return get_book_sentences(book_id, include_deleted=include_deleted)
-        except ValueError as exc:
-            raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-    @app.get("/api/catalogs/{catalog}/sentences/{sentence_id}", summary="Fetch a single indexed sentence")
-    def route_sentence(catalog: str, sentence_id: int):
-        try:
-            row = get_sentence(catalog, sentence_id)
-        except ValueError as exc:
-            raise HTTPException(status_code=400, detail=str(exc)) from exc
-        if row is None:
-            raise HTTPException(status_code=404, detail="Sentence not found")
-        return row
-
-    @app.post("/api/catalogs/{catalog}/sentences/backfill", summary="Backfill sentence rows for a catalog")
-    def route_backfill_catalog_sentences(catalog: str):
-        try:
-            return backfill_sentence_index(catalog)
-        except ValueError as exc:
-            raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-    @app.post("/api/catalogs/{catalog}/sentences/rebuild", summary="Rebuild sentence rows for a catalog or one book")
-    def route_rebuild_catalog_sentences(catalog: str, book_id: Optional[str] = None):
-        try:
-            return rebuild_sentence_index(catalog, book_id=book_id)
-        except ValueError as exc:
-            message = str(exc)
-            status  = 404 if "not found" in message.lower() else 400
-            raise HTTPException(status_code=status, detail=message) from exc
-
-    @app.post("/api/catalogs/{catalog}/sentences/{sentence_id}/deleted", summary="Mark one sentence deleted or active")
-    def route_set_sentence_deleted(catalog: str, sentence_id: int, data: SentenceToggleRequest):
-        try:
-            return set_sentence_deleted(catalog, sentence_id, data.deleted)
-        except ValueError as exc:
-            message = str(exc)
-            status  = 404 if "not found" in message.lower() else 400
-            raise HTTPException(status_code=status, detail=message) from exc
 
     @app.get("/api/kiwix/inventory", summary="List available ZIM files from Kiwix OPDS catalog")
     @app.get("/kiwix/inventory", include_in_schema=False)

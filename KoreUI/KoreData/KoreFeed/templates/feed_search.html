@@ -13,28 +13,13 @@
 
   <div class="panel-body kcui-panel-body">
     <form action="/ui/feeds/search" method="get">
-      <input type="hidden" name="mode" id="search-mode-input" value="{{ mode }}">
-      <p class="meta kcui-mar-bottom-sm" id="search-mode-hint">
-        {% if mode == 'semantic' %}
-        Semantic search works best with a plain-language description of the idea you want, not boolean keyword syntax. Only matches at or above the minimum match score are returned.
-        {% else %}
-        Bare terms use AND by default. Use quotes for phrases, OR or | for alternatives, NOT to exclude, and parentheses to group.
-        {% endif %}
-      </p>
+      <p class="meta kcui-mar-bottom-sm">Bare terms use AND by default. Use quotes for phrases, OR or | for alternatives, NOT to exclude, and parentheses to group.</p>
       <div class="kcui-search-row">
         <input type="search" name="q" value="{{ q }}" placeholder="search all feeds...">
         {% if domain %}<input type="hidden" name="domain" value="{{ domain }}">{% endif %}
         <button class="btn btn-sm btn-yellow" type="submit">SEARCH</button>
       </div>
       <div class="kcui-filter-row kcui-mar-top-md">
-        <label class="kcui-filter-label" style="cursor:pointer;">
-          <input type="checkbox" id="mode-keyword" {% if mode != 'semantic' %}checked{% endif %} onchange="toggleSearchMode('keyword')">
-          Keyword
-        </label>
-        <label class="kcui-filter-label" style="cursor:pointer;">
-          <input type="checkbox" id="mode-semantic" {% if mode == 'semantic' %}checked{% endif %} onchange="toggleSearchMode('semantic')">
-          Semantic
-        </label>
         <label class="kcui-filter-label">
           Since
           <div class="date-pick">
@@ -70,16 +55,6 @@
             </div>
           </div>
         </label>
-        <label class="kcui-filter-label">
-          Semantic Min Match
-          <div class="num-stepper">
-            <input type="number" name="min_match" value="{{ '%.2f'|format(min_match) }}" min="0" max="1" step="0.05" style="width:60px;">
-            <div class="stepper-btns">
-              <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,0.05)">&#9650;</button>
-              <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,-0.05)">&#9660;</button>
-            </div>
-          </div>
-        </label>
       </div>
     </form>
   </div>
@@ -90,7 +65,7 @@
   <div class="panel-header kcui-panel-header">
     RESULTS
     <span class="badge" style="margin-left:0.5rem;">{{ results|length }}</span>
-    <span class="meta" style="margin-left:0.75rem;">{{ mode }} search for "{{ q }}"</span>
+    <span class="meta" style="margin-left:0.75rem;">Search for "{{ q }}"</span>
   </div>
   <div class="panel-body kcui-panel-body" style="padding:0;">
     {% if search_error %}
@@ -125,13 +100,6 @@
             <td class="meta">{{ r.id }}</td>
             <td>
               <a href="/ui/feeds/{{ r.domain }}/{{ r.id }}">{{ r.headline or "(no title)" }}</a>
-              {% if mode == 'semantic' and r.snippet %}
-              <div class="meta" style="margin-top:0.25rem; font-size:11px; line-height:1.35;">{{ r.snippet }}</div>
-              <div class="meta" style="font-size:10px;">
-                {{ r.sentence_locator }}
-                {% if r.match_score is not none %} | <span style="color:var(--amber);">match {{ '%.2f'|format(r.match_score) }}</span>{% endif %}
-              </div>
-              {% endif %}
             </td>
             <td><span class="badge badge-dim">{{ r.domain }}</span></td>
             <td class="meta">{{ r.feed_name }}</td>
@@ -152,27 +120,6 @@
 
 {% block scripts %}
 <script>
-function toggleSearchMode(mode) {
-  var keyword = document.getElementById('mode-keyword');
-  var semantic = document.getElementById('mode-semantic');
-  var hidden = document.getElementById('search-mode-input');
-  var hint = document.getElementById('search-mode-hint');
-  if (!keyword || !semantic || !hidden || !hint) return;
-
-  if (mode === 'semantic') {
-    semantic.checked = true;
-    keyword.checked = false;
-    hidden.value = 'semantic';
-    hint.textContent = 'Semantic search works best with a plain-language description of the idea you want, not boolean keyword syntax. Only matches at or above the minimum match score are returned.';
-    return;
-  }
-
-  keyword.checked = true;
-  semantic.checked = false;
-  hidden.value = 'keyword';
-  hint.textContent = 'Bare terms use AND by default. Use quotes for phrases, OR or | for alternatives, NOT to exclude, and parentheses to group.';
-}
-
 function confirmBulkDelete(form) {
   if (form.dataset.kcuiConfirmed === '1') {
     delete form.dataset.kcuiConfirmed;

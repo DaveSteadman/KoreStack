@@ -152,22 +152,11 @@
     <span class="meta" style="margin-left:0.5rem;font-size:11px">- agent API | POST /api/search</span>
   </div>
   <div class="panel-body kcui-panel-body">
-    <input id="sq-mode" type="hidden" value="keyword">
-    <p class="meta" id="sq-mode-hint" style="margin-bottom:0.4rem;">Bare terms use AND by default. Use quotes for phrases, OR or | for alternatives, NOT to exclude, and parentheses to group.</p>
+    <p class="meta" style="margin-bottom:0.4rem;">Bare terms use AND by default. Use quotes for phrases, OR or | for alternatives, NOT to exclude, and parentheses to group.</p>
     <div style="display:flex; flex-direction:row; gap:0; margin-bottom:0.75rem;">
       <input id="sq-query" type="search" placeholder="e.g. climate change arctic ice" autocomplete="off"
              style="flex:1;" onkeydown="if(event.key==='Enter') runSearch()">
       <button class="kcui-tag kcui-tag--sm kcui-tag--yellow" onclick="runSearch()">SEARCH</button>
-    </div>
-
-    <div style="display:flex; flex-wrap:wrap; gap:var(--kcui-gap-panel); align-items:center; margin-bottom:0.75rem;">
-      <label class="kd-service-check">
-        <input type="checkbox" id="sq-mode-keyword" checked onchange="toggleGatewaySearchMode('keyword')"> Keyword
-      </label>
-      <label class="kd-service-check">
-        <input type="checkbox" id="sq-mode-semantic" onchange="toggleGatewaySearchMode('semantic')"> Semantic
-      </label>
-      <span class="meta">semantic currently targets Feeds, Library, and Reference</span>
     </div>
 
     <div style="display:flex; flex-wrap:wrap; gap:var(--kcui-gap-panel); align-items:center;
@@ -231,16 +220,6 @@
           </div>
         </div>
         <span class="meta">per service</span>
-      </label>
-      <label style="display:flex; align-items:center; gap:0.35rem; font-size:12px; color:var(--dim);">
-        Semantic Min Match
-        <div class="num-stepper">
-          <input id="sq-min-match" type="number" value="0.40" min="0" max="1" step="0.05" style="width:60px;">
-          <div class="stepper-btns">
-            <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,0.05)">&#9650;</button>
-            <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,-0.05)">&#9660;</button>
-          </div>
-        </div>
       </label>
     </div>
 
@@ -379,27 +358,6 @@ function showTab(t) {
 }
 showTab('cards');
 
-function toggleGatewaySearchMode(mode) {
-  const keyword = document.getElementById('sq-mode-keyword');
-  const semantic = document.getElementById('sq-mode-semantic');
-  const hidden = document.getElementById('sq-mode');
-  const hint = document.getElementById('sq-mode-hint');
-  if (!keyword || !semantic || !hidden || !hint) return;
-
-  if (mode === 'semantic') {
-    semantic.checked = true;
-    keyword.checked = false;
-    hidden.value = 'semantic';
-    hint.textContent = 'Semantic search works best with a plain-language description of the concept you want. Gateway semantic mode currently searches Feeds, Library, and Reference.';
-    return;
-  }
-
-  keyword.checked = true;
-  semantic.checked = false;
-  hidden.value = 'keyword';
-  hint.textContent = 'Bare terms use AND by default. Use quotes for phrases, OR or | for alternatives, NOT to exclude, and parentheses to group.';
-}
-
 function highlightJson(obj) {
   const raw = JSON.stringify(obj, null, 2);
   return raw
@@ -486,9 +444,6 @@ function renderCard(r, searchQuery) {
     const ts  = r.captured_at ? ` | ${escHtml(String(r.captured_at).slice(0,10))}` : '';
     meta = `${src}${ts}`;
   }
-  const semanticMeta = r.match_score != null
-    ? `<div class="rc-meta"><span style="color:var(--amber);">match ${Number(r.match_score).toFixed(2)}</span>${r.sentence_locator ? ` | ${escHtml(r.sentence_locator)}` : ''}</div>`
-    : '';
   const typeLabel = (r.type || '').replace(/_/g, ' ');
   const titleHtml = titleHref
     ? `<a class="rc-title" href="${escHtml(titleHref)}">${title}</a>`
@@ -500,7 +455,6 @@ function renderCard(r, searchQuery) {
     <div class="rc-type">${escHtml(typeLabel)}</div>
     ${titleHtml}${sourceLink}
     ${meta ? `<div class="rc-meta">${meta}</div>` : ''}
-    ${semanticMeta}
     ${snippet ? `<div class="rc-snippet">${snippet}</div>` : ''}
   </div>`;
 }
@@ -547,7 +501,7 @@ async function runSearch() {
     });
     const data = await resp.json();
     if (!resp.ok) throw new Error(data.detail || 'Search failed');
-    renderSearchResult(data, payload.mode);
+    renderSearchResult(data);
   } catch (e) {
     document.getElementById('sq-results-meta').textContent = 'Error: ' + e.message;
     document.getElementById('sq-results-panel').style.display = '';
@@ -567,25 +521,21 @@ function getSearchPayload() {
   const since     = document.getElementById('sq-since').value;
   const until     = document.getElementById('sq-until').value;
   const daysLimit = parseInt(document.getElementById('sq-days-limit').value, 10);
-  const mode      = document.getElementById('sq-mode').value || 'keyword';
   const limit     = parseInt(document.getElementById('sq-limit').value, 10) || 20;
-  const minMatch  = parseFloat(document.getElementById('sq-min-match').value);
 
-  const payload = { query, domains, mode, limit };
+  const payload = { query, domains, limit };
   if (since) payload.since = since;
   if (until) payload.until = until;
   if (Number.isInteger(daysLimit) && daysLimit >= 1) payload.days_limit = daysLimit;
-  if (mode === 'semantic' && Number.isFinite(minMatch)) payload.min_match = minMatch;
 
   return payload;
 }
 
-function renderSearchResult(data, mode) {
+function renderSearchResult(data) {
   const total       = Array.isArray(data.results) ? data.results.length : 0;
-  const searchMode  = data.mode || mode;
   const warningText = Array.isArray(data.warnings) && data.warnings.length ? ` | ${data.warnings.join(' | ')}` : '';
   document.getElementById('sq-results-meta').textContent =
-    `"${data.query}" | ${searchMode} | ${total} result${total !== 1 ? 's' : ''} across [${(data.domains_searched||[]).join(', ')}]${warningText}`;
+    `"${data.query}" | ${total} result${total !== 1 ? 's' : ''} across [${(data.domains_searched||[]).join(', ')}]${warningText}`;
   document.getElementById('sq-json-pre').innerHTML = highlightJson(data);
   renderCards(data);
   saveSearchState(data);
@@ -650,8 +600,6 @@ function applySavedSearchToForm(search) {
   document.getElementById('sq-since').value = search.since || '';
   document.getElementById('sq-until').value = search.until || '';
   document.getElementById('sq-days-limit').value = search.days_limit ?? '';
-  toggleGatewaySearchMode(search.mode || 'keyword');
-  document.getElementById('sq-min-match').value = search.min_match ?? '0.40';
   document.getElementById('sq-limit').value = search.limit ?? 20;
 }
 
@@ -726,7 +674,7 @@ async function runSelectedSavedSearch() {
     const resp = await fetch(`/api/savedsearches/${encodeURIComponent(name)}/run`, { method: 'POST' });
     const data = await resp.json();
     if (!resp.ok) throw new Error(data.detail || 'SavedSearch failed');
-    renderSearchResult(data, data.mode || 'keyword');
+    renderSearchResult(data);
     setSavedSearchStatus(`Completed SavedSearch: ${name}`);
   } catch (e) {
     document.getElementById('sq-results-meta').textContent = 'Error: ' + e.message;
@@ -744,8 +692,6 @@ function saveSearchState(data) {
     since:      document.getElementById('sq-since').value,
     until:      document.getElementById('sq-until').value,
     days_limit: document.getElementById('sq-days-limit').value,
-    mode:       document.getElementById('sq-mode').value,
-    min_match:  document.getElementById('sq-min-match').value,
     limit:      document.getElementById('sq-limit').value,
     data:       data,
   };
@@ -775,14 +721,12 @@ function restoreSearchState() {
     if (state.since) document.getElementById('sq-since').value = state.since;
     if (state.until) document.getElementById('sq-until').value = state.until;
     if (state.days_limit) document.getElementById('sq-days-limit').value = state.days_limit;
-    if (state.mode)  toggleGatewaySearchMode(state.mode);
-    if (state.min_match) document.getElementById('sq-min-match').value = state.min_match;
     if (state.limit) document.getElementById('sq-limit').value = state.limit;
     if (state.data) {
       const total = Array.isArray(state.data.results) ? state.data.results.length : 0;
       const warningText = Array.isArray(state.data.warnings) && state.data.warnings.length ? ` | ${state.data.warnings.join(' | ')}` : '';
       document.getElementById('sq-results-meta').textContent =
-        `"${state.data.query}" | ${(state.data.mode || state.mode || 'keyword')} | ${total} result${total !== 1 ? 's' : ''} across [${(state.data.domains_searched||[]).join(', ')}]${warningText}`;
+        `"${state.data.query}" | ${total} result${total !== 1 ? 's' : ''} across [${(state.data.domains_searched||[]).join(', ')}]${warningText}`;
       document.getElementById('sq-json-pre').innerHTML = highlightJson(state.data);
       renderCards(state.data);
       document.getElementById('sq-results-panel').style.display = '';

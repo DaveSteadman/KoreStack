@@ -39,8 +39,6 @@ class SavedSearchFieldTests(unittest.TestCase):
             days_limit = 14,
             since      = "2026-08-26",
             until      = "2026-09-09",
-            mode       = "semantic",
-            min_match  = 0.65,
             limit      = 75,
         )
 
@@ -52,13 +50,17 @@ class SavedSearchFieldTests(unittest.TestCase):
                 "since":      "2026-08-26",
                 "until":      "2026-09-09",
                 "days_limit": 14,
-                "mode":       "semantic",
-                "min_match":  0.65,
                 "limit":      75,
             },
         )
 
-    def test_saved_search_ui_restores_all_filter_controls(self) -> None:
+    def test_legacy_semantic_fields_are_ignored_when_loading_saved_search(self) -> None:
+        search = SearchRequest(query="air defence", mode="semantic", min_match=0.65)
+
+        self.assertNotIn("mode", _saved_search_payload(search))
+        self.assertNotIn("min_match", _saved_search_payload(search))
+
+    def test_saved_search_ui_restores_supported_filter_controls(self) -> None:
         template = (
             HERE.parents[1]
             / "KoreUI"
@@ -73,10 +75,11 @@ class SavedSearchFieldTests(unittest.TestCase):
             "search.days_limit ?? ''",
             "search.since || ''",
             "search.until || ''",
-            "search.min_match ?? '0.40'",
             "search.limit ?? 20",
         ):
             self.assertIn(expected, template)
+        self.assertNotIn("sq-mode-semantic", template)
+        self.assertNotIn("sq-min-match", template)
 
 
 if __name__ == "__main__":

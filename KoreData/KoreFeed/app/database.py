@@ -16,29 +16,16 @@
 # MARK: FUNCTIONS
 # Primary types: FeedDatabaseError.
 # Function inventory:
-# - _index_entry_sentences: Implements the  index entry sentences operation for this module.
-# - _rebuild_sentence_index: Implements the  rebuild sentence index operation for this module.
-# - _backfill_entry_sentences: Implements the  backfill entry sentences operation for this module.
-# - _sentence_index_needs_rebuild: Implements the  sentence index needs rebuild operation for this module.
-# - _sentence_schema_needs_normalization: Implements the  sentence schema needs normalization operation for this module.
-# - _normalize_sentence_schema: Implements the  normalize sentence schema operation for this module.
-# - _extract_sentence_text: Implements the  extract sentence text operation for this module.
-# - _sentence_locator: Implements the  sentence locator operation for this module.
 # - _parse_published: Implements the  parse published operation for this module.
 # - _sanitize_domain: Implements the  sanitize domain operation for this module.
 # - get_db_path: Returns db path for this module.
 # - db_connection: Implements the db connection operation for this module.
 # - init_db: Implements the init db operation for this module.
-# - backfill_sentence_index: Implements the backfill sentence index operation for this module.
-# - rebuild_sentence_index: Implements the rebuild sentence index operation for this module.
 # - _normalise_published: Implements the  normalise published operation for this module.
 # - insert_entry: Implements the insert entry operation for this module.
 # - get_entries: Returns entries for this module.
 # - get_entry: Returns entry for this module.
-# - get_entry_sentences: Returns entry sentences for this module.
-# - get_sentence: Returns sentence for this module.
 # - update_entry_page_text: Updates entry page text for this module.
-# - set_sentence_deleted: Sets sentence deleted for this module.
 # - search_entries_detailed: Implements the search entries detailed operation for this module.
 # - search_entries: Implements the search entries operation for this module.
 # - list_domains: Lists domains for this module.
@@ -68,14 +55,6 @@ from email.utils import parsedate as _rfc_parsedate
 from pathlib import Path
 from typing import Any, Optional
 
-from KoreCommon.sentence_index import extract_sentence_text as _extract_sentence_text_common
-from KoreCommon.sentence_index import mark_sentences_indexed
-from KoreCommon.sentence_index import normalize_sentence_schema as _normalize_sentence_schema_common
-from KoreCommon.sentence_index import reset_sentence_indexed_at
-from KoreCommon.sentence_index import sentence_index_needs_rebuild as _sentence_index_needs_rebuild_common
-from KoreCommon.sentence_index import sentence_schema_columns
-from KoreCommon.sentence_index import sentence_schema_needs_normalization as _sentence_schema_needs_normalization_common
-from KoreCommon.sentence_index import split_sentences
 from app.config import cfg
 from dbutil import fts_build_query
 
@@ -95,86 +74,6 @@ _domains_lock = threading.Lock()
 
 class FeedDatabaseError(RuntimeError):
     pass
-
-
-_SENTENCE_SCHEMA_COLUMNS = sentence_schema_columns("entry_id")
-
-
-def _index_entry_sentences(
-    conn: sqlite3.Connection,
-    entry_id: int,
-    headline: str,
-    page_text: str,
-) -> None:
-    rows: list[tuple[int, int, str, int, int]] = []
-    sentence_index = 0
-    for source_field, raw_text in (("headline", headline), ("page_text", page_text)):
-        for char_start, char_end, _sentence_text in split_sentences(raw_text):
-            rows.append(
-                (entry_id, sentence_index, source_field, char_start, char_end)
-            )
-            sentence_index += 1
-    if rows:
-        conn.executemany(
-            """
-            INSERT INTO sentences
-                (entry_id, sentence_index, source_field, char_start, char_end)
-            VALUES (?, ?, ?, ?, ?)
-            """,
-            rows,
-        )
-
-
-def _rebuild_sentence_index(conn: sqlite3.Connection) -> None:
-    conn.execute("DELETE FROM sentences")
-    _backfill_entry_sentences(conn)
-
-
-def _backfill_entry_sentences(conn: sqlite3.Connection) -> None:
-    rows = conn.execute(
-        """
-        SELECT e.id, e.headline, e.page_text
-        FROM entries e
-        WHERE e.deleted = 0
-          AND NOT EXISTS (
-              SELECT 1
-              FROM sentences s
-              WHERE s.entry_id = e.id AND s.deleted = 0
-          )
-        """
-    ).fetchall()
-    for row in rows:
-        _index_entry_sentences(
-            conn,
-            int(row["id"]),
-            row["headline"] or "",
-            row["page_text"] or "",
-        )
-
-
-def _sentence_index_needs_rebuild(conn: sqlite3.Connection) -> bool:
-    return _sentence_index_needs_rebuild_common(conn)
-
-
-def _sentence_schema_needs_normalization(conn: sqlite3.Connection) -> bool:
-    return _sentence_schema_needs_normalization_common(conn, _SENTENCE_SCHEMA_COLUMNS)
-
-
-def _normalize_sentence_schema(conn: sqlite3.Connection) -> None:
-    _normalize_sentence_schema_common(
-        conn,
-        owner_column     = "entry_id",
-        expected_cols    = _SENTENCE_SCHEMA_COLUMNS,
-        backfill_callback = _backfill_entry_sentences,
-    )
-
-
-def _extract_sentence_text(entry_row: sqlite3.Row | dict, sentence_row: sqlite3.Row | dict) -> str:
-    return _extract_sentence_text_common(entry_row, sentence_row)
-
-
-def _sentence_locator(domain: str, sentence_id: int) -> str:
-    return f"feeds/{domain}/{sentence_id}"
 
 
 def _parse_published(s: str) -> Optional[datetime]:
@@ -276,19 +175,6 @@ def init_db(domain: str) -> None:
             )
         """)
         conn.execute("""
-            CREATE TABLE IF NOT EXISTS sentences (
-                id             INTEGER PRIMARY KEY AUTOINCREMENT,
-                entry_id       INTEGER NOT NULL,
-                sentence_index INTEGER NOT NULL,
-                source_field   TEXT NOT NULL,
-                char_start     INTEGER NOT NULL,
-                char_end       INTEGER NOT NULL,
-                indexed_at TEXT,
-                deleted        INTEGER NOT NULL DEFAULT 0,
-                UNIQUE(entry_id, sentence_index)
-            )
-        """)
-        conn.execute("""
             CREATE TABLE IF NOT EXISTS domain_settings (
                 key   TEXT PRIMARY KEY,
                 value TEXT
@@ -298,25 +184,8 @@ def init_db(domain: str) -> None:
         cols = {row[1] for row in conn.execute("PRAGMA table_info(entries)").fetchall()}
         if "deleted" not in cols:
             conn.execute("ALTER TABLE entries ADD COLUMN deleted INTEGER NOT NULL DEFAULT 0")
-        sentence_cols = {row[1] for row in conn.execute("PRAGMA table_info(sentences)").fetchall()}
-        if "deleted" not in sentence_cols:
-            conn.execute("ALTER TABLE sentences ADD COLUMN deleted INTEGER NOT NULL DEFAULT 0")
-        if "indexed_at" not in sentence_cols:
-            conn.execute("ALTER TABLE sentences ADD COLUMN indexed_at TEXT")
-        if _sentence_schema_needs_normalization(conn):
-            _normalize_sentence_schema(conn)
-        conn.execute(
-            "CREATE INDEX IF NOT EXISTS idx_sentences_entry_id ON sentences(entry_id)"
-        )
-        conn.execute(
-            "CREATE INDEX IF NOT EXISTS idx_sentences_indexed_at ON sentences(indexed_at)"
-        )
         # normalise any published values not yet in UTC YYYY-MM-DD HH:MM:SS
         _normalise_published(conn)
-        if _sentence_index_needs_rebuild(conn):
-            _rebuild_sentence_index(conn)
-        else:
-            _backfill_entry_sentences(conn)
 
         # FTS5 virtual table for word-boundary search + BM25 ranking
         conn.execute("""
@@ -333,84 +202,6 @@ def init_db(domain: str) -> None:
             WHERE e.deleted = 0
               AND e.id NOT IN (SELECT rowid FROM entries_fts)
         """)
-
-
-def backfill_sentence_index(domain: str) -> dict:
-    with _domains_lock:
-        if domain not in _domains_ready:
-            init_db(domain)
-            _domains_ready.add(domain)
-    with db_connection(domain) as conn:
-        before = int(conn.execute("SELECT COUNT(*) FROM sentences WHERE deleted = 0").fetchone()[0])
-        _backfill_entry_sentences(conn)
-        after = int(conn.execute("SELECT COUNT(*) FROM sentences WHERE deleted = 0").fetchone()[0])
-    return {
-        "domain":          domain,
-        "mode":            "backfill",
-        "sentences_added": max(0, after - before),
-        "sentence_count":  after,
-    }
-
-
-def rebuild_sentence_index(domain: str, entry_id: Optional[int] = None) -> dict:
-    with _domains_lock:
-        if domain not in _domains_ready:
-            init_db(domain)
-            _domains_ready.add(domain)
-
-    deleted_sentence_ids: list[int] = []
-    rebuilt_entries:      int        = 0
-    rebuilt_sentences:    int        = 0
-
-    with db_connection(domain) as conn:
-        if entry_id is None:
-            deleted_sentence_ids = [
-                int(row[0]) for row in conn.execute(
-                    "SELECT id FROM sentences WHERE deleted = 0 ORDER BY id"
-                ).fetchall()
-            ]
-            conn.execute("DELETE FROM sentences")
-            _backfill_entry_sentences(conn)
-            rebuilt_entries = int(conn.execute(
-                "SELECT COUNT(*) FROM entries WHERE deleted = 0"
-            ).fetchone()[0])
-            rebuilt_sentences = int(conn.execute(
-                "SELECT COUNT(*) FROM sentences WHERE deleted = 0"
-            ).fetchone()[0])
-        else:
-            entry = conn.execute(
-                "SELECT id, headline, page_text FROM entries WHERE id = ? AND deleted = 0",
-                (entry_id,),
-            ).fetchone()
-            if not entry:
-                raise FeedDatabaseError(f"Entry {entry_id} not found in domain '{domain}'.")
-            deleted_sentence_ids = [
-                int(row[0]) for row in conn.execute(
-                    "SELECT id FROM sentences WHERE entry_id = ? AND deleted = 0 ORDER BY id",
-                    (entry_id,),
-                ).fetchall()
-            ]
-            conn.execute("DELETE FROM sentences WHERE entry_id = ?", (entry_id,))
-            _index_entry_sentences(
-                conn,
-                int(entry["id"]),
-                str(entry["headline"] or ""),
-                str(entry["page_text"] or ""),
-            )
-            rebuilt_entries = 1
-            rebuilt_sentences = int(conn.execute(
-                "SELECT COUNT(*) FROM sentences WHERE entry_id = ? AND deleted = 0",
-                (entry_id,),
-            ).fetchone()[0])
-
-    return {
-        "domain":               domain,
-        "mode":                 "rebuild",
-        "entry_id":             entry_id,
-        "rebuilt_entries":      rebuilt_entries,
-        "rebuilt_sentences":    rebuilt_sentences,
-        "deleted_sentence_ids": len(deleted_sentence_ids),
-    }
 
 
 def _normalise_published(conn: sqlite3.Connection) -> None:
@@ -454,9 +245,7 @@ def insert_entry(
             """,
             (feed_name, headline, url, published, json.dumps(metadata), page_text),
         )
-        # Only index rows that were actually inserted (not ignored duplicates)
         if cur.rowcount > 0 and cur.lastrowid:
-            _index_entry_sentences(conn, cur.lastrowid, headline or "", page_text or "")
             conn.execute(
                 "INSERT INTO entries_fts(rowid, headline, page_text) VALUES (?, ?, ?)",
                 (cur.lastrowid, headline or "", page_text or ""),
@@ -490,63 +279,6 @@ def get_entry(domain: str, entry_id: int) -> Optional[dict]:
         raise FeedDatabaseError(f"Could not load entry {entry_id} for domain '{domain}': {exc}") from exc
 
 
-def get_entry_sentences(domain: str, entry_id: int, include_deleted: bool = False) -> list[dict]:
-    try:
-        with db_connection(domain) as conn:
-            rows = conn.execute(
-                """
-                SELECT s.id, s.entry_id, s.sentence_index, s.source_field,
-                       s.deleted,
-                       s.char_start, s.char_end,
-                       e.feed_name, e.headline, e.page_text, e.url, e.published, e.ingested_at
-                FROM sentences s
-                JOIN entries e ON e.id = s.entry_id
-                WHERE s.entry_id = ? AND e.deleted = 0
-                  AND (? = 1 OR s.deleted = 0)
-                ORDER BY s.sentence_index ASC
-                """,
-                (entry_id, 1 if include_deleted else 0),
-            ).fetchall()
-            results: list[dict] = []
-            for row in rows:
-                item = dict(row)
-                item["sentence_text"] = _extract_sentence_text(item, item)
-                item.pop("page_text", None)
-                results.append(item)
-            return results
-    except Exception as exc:
-        raise FeedDatabaseError(
-            f"Could not load sentences for entry {entry_id} in domain '{domain}': {exc}"
-        ) from exc
-
-
-def get_sentence(domain: str, sentence_id: int) -> Optional[dict]:
-    try:
-        with db_connection(domain) as conn:
-            row = conn.execute(
-                """
-                SELECT s.id, s.entry_id, s.sentence_index, s.source_field,
-                       s.deleted,
-                       s.char_start, s.char_end,
-                       e.feed_name, e.headline, e.page_text, e.url, e.published, e.ingested_at
-                FROM sentences s
-                JOIN entries e ON e.id = s.entry_id
-                WHERE s.id = ? AND s.deleted = 0 AND e.deleted = 0
-                """,
-                (sentence_id,),
-            ).fetchone()
-            if not row:
-                return None
-            item = dict(row)
-            item["sentence_text"] = _extract_sentence_text(item, item)
-            item.pop("page_text", None)
-            return item
-    except Exception as exc:
-        raise FeedDatabaseError(
-            f"Could not load sentence {sentence_id} for domain '{domain}': {exc}"
-        ) from exc
-
-
 def update_entry_page_text(domain: str, entry_id: int, page_text: str) -> dict:
     normalized_text = str(page_text or "")
     with _domains_lock:
@@ -554,7 +286,6 @@ def update_entry_page_text(domain: str, entry_id: int, page_text: str) -> dict:
             init_db(domain)
             _domains_ready.add(domain)
 
-    previous_sentence_ids: list[int] = []
     headline_text = ""
 
     with db_connection(domain) as conn:
@@ -565,12 +296,6 @@ def update_entry_page_text(domain: str, entry_id: int, page_text: str) -> dict:
         if not entry:
             raise FeedDatabaseError(f"Entry {entry_id} not found in domain '{domain}'.")
 
-        previous_sentence_ids = [
-            int(row[0]) for row in conn.execute(
-                "SELECT id FROM sentences WHERE entry_id = ? ORDER BY id",
-                (entry_id,),
-            ).fetchall()
-        ]
         headline_text = str(entry["headline"] or "")
 
         conn.execute(
@@ -585,57 +310,10 @@ def update_entry_page_text(domain: str, entry_id: int, page_text: str) -> dict:
             "INSERT INTO entries_fts(rowid, headline, page_text) VALUES (?, ?, ?)",
             (entry_id, headline_text, normalized_text),
         )
-        conn.execute("DELETE FROM sentences WHERE entry_id = ?", (entry_id,))
-        _index_entry_sentences(conn, entry_id, headline_text, normalized_text)
-
-        sentence_count = int(conn.execute(
-            "SELECT COUNT(*) FROM sentences WHERE entry_id = ? AND deleted = 0",
-            (entry_id,),
-        ).fetchone()[0])
-
     return {
-        "domain":         domain,
-        "entry_id":       entry_id,
-        "sentence_count": sentence_count,
-        "page_text_len":  len(normalized_text),
-    }
-
-
-def set_sentence_deleted(domain: str, sentence_id: int, deleted: bool) -> dict:
-    with _domains_lock:
-        if domain not in _domains_ready:
-            init_db(domain)
-            _domains_ready.add(domain)
-
-    entry_id: int | None = None
-
-    with db_connection(domain) as conn:
-        row = conn.execute(
-            "SELECT id, entry_id, deleted FROM sentences WHERE id = ?",
-            (sentence_id,),
-        ).fetchone()
-        if not row:
-            raise FeedDatabaseError(f"Sentence {sentence_id} not found in domain '{domain}'.")
-        entry_id = int(row["entry_id"])
-        conn.execute(
-            "UPDATE sentences SET deleted = ?, indexed_at = CASE WHEN ? = 0 THEN NULL ELSE indexed_at END WHERE id = ?",
-            (1 if deleted else 0, 1 if deleted else 0, sentence_id),
-        )
-
-
-    sentence = get_sentence(domain, sentence_id)
-    if sentence is None and deleted:
-        entry = get_entry(domain, entry_id) if entry_id is not None else None
-        if entry is not None:
-            sentence_rows = get_entry_sentences(domain, entry_id, include_deleted=True)
-            sentence = next((row for row in sentence_rows if int(row["id"]) == int(sentence_id)), None)
-
-    return {
-        "domain":      domain,
-        "sentence_id": sentence_id,
-        "entry_id":    entry_id,
-        "deleted":     deleted,
-        "sentence":    sentence,
+        "domain":        domain,
+        "entry_id":      entry_id,
+        "page_text_len": len(normalized_text),
     }
 
 
@@ -730,26 +408,11 @@ def _tombstone(domain: str, conn: sqlite3.Connection, where: str, params: list) 
             f"SELECT id FROM entries WHERE deleted=0 AND {where}", params
         ).fetchall()
     ]
-    sentence_ids: list[int] = []
-    if ids:
-        placeholders = ",".join("?" * len(ids))
-        sentence_ids = [
-            int(r[0]) for r in conn.execute(
-                f"SELECT id FROM sentences WHERE deleted=0 AND entry_id IN ({placeholders})",
-                ids,
-            ).fetchall()
-        ]
     cur = conn.execute(
         f"UPDATE entries SET headline=NULL, page_text=NULL, metadata=NULL, deleted=1"
         f" WHERE deleted=0 AND {where}",
         params,
     )
-    if ids:
-        placeholders = ",".join("?" * len(ids))
-        conn.execute(
-            f"UPDATE sentences SET deleted=1 WHERE deleted=0 AND entry_id IN ({placeholders})",
-            ids,
-        )
     for id_ in ids:
         conn.execute("DELETE FROM entries_fts WHERE rowid=?", (id_,))
     return cur.rowcount

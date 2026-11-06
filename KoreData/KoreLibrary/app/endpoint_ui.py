@@ -151,11 +151,8 @@ def register_library_ui(app: FastAPI) -> None:
         catalog: Optional[str]  = None,
         limit: int              = 50,
         offset: int             = 0,
-        mode: str               = "keyword",
-        min_match: float        = 0.4,
     ):
         year_int    = _parse_year(year)
-        search_mode = "keyword"
         searched    = any([q, author, title, year_int, language, genre])
         results     = []
         search_error = ""
@@ -191,8 +188,6 @@ def register_library_ui(app: FastAPI) -> None:
                 "genre":    genre or "",
                 "catalog":  catalog or "",
                 "limit":    limit,
-                "mode":     search_mode,
-                "min_match": max(0.0, min(1.0, float(min_match or 0.0))),
                 "catalogs": catalogs,
                 "search_error": search_error,
             },

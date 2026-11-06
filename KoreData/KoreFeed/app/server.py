@@ -20,7 +20,7 @@
 #   - app/feed_manager.py  -- feed JSON configuration file I/O
 #   - app/config.py        -- cfg (host, port, data_dir)
 # MARK: FUNCTIONS
-# Primary types: FeedCreate, FeedUpdate, EntryContentBody, SentenceToggleBody, AgeSettingsBody.
+# Primary types: FeedCreate, FeedUpdate, EntryContentBody, AgeSettingsBody.
 # Function inventory:
 # - _warm_feed_domains: Implements the  warm feed domains operation for this module.
 # - _lifespan: Implements the  lifespan operation for this module.
@@ -38,14 +38,9 @@
 # - api_set_domain_enabled: Implements the api set domain enabled operation for this module.
 # - api_get_entries: Implements the api get entries operation for this module.
 # - api_get_entry: Implements the api get entry operation for this module.
-# - api_get_entry_sentences: Implements the api get entry sentences operation for this module.
-# - api_get_sentence: Implements the api get sentence operation for this module.
 # - api_delete_entry: Implements the api delete entry operation for this module.
 # - api_update_entry_content: Implements the api update entry content operation for this module.
-# - api_set_sentence_deleted: Implements the api set sentence deleted operation for this module.
 # - api_delete_entries: Implements the api delete entries operation for this module.
-# - api_backfill_sentence_index: Implements the api backfill sentence index operation for this module.
-# - api_rebuild_sentence_index: Implements the api rebuild sentence index operation for this module.
 # - api_bulk_delete_entries: Implements the api bulk delete entries operation for this module.
 # - api_search: Implements the api search operation for this module.
 # - api_update_feed_rate: Implements the api update feed rate operation for this module.
@@ -78,7 +73,6 @@ from KoreCommon.skill_service import register_skill_invocation_routes
 from app.config import cfg
 from app.endpoint_ui import register_feed_ui
 from app.database import (
-    backfill_sentence_index,
     FeedDatabaseError,
     delete_domain_db,
     delete_entries_by_feed,
@@ -86,16 +80,12 @@ from app.database import (
     delete_entries_older_than,
     delete_entries_outside_calendar,
     delete_entry,
-    get_entry_sentences,
     get_domain_age_settings,
     get_entries,
     get_entry,
     get_feed_counts,
-    get_sentence,
     init_db,
-    rebuild_sentence_index,
     search_entries_detailed,
-    set_sentence_deleted,
     set_domain_age_settings,
     update_entry_page_text,
 )
@@ -360,39 +350,6 @@ def api_get_entry(domain: str, entry_id: int):
     return entry
 
 
-@app.get("/api/domains/{domain}/entries/{entry_id}/sentences", tags=["content"])
-def api_get_entry_sentences(domain: str, entry_id: int):
-    """List the indexed sentences for a single entry."""
-    try:
-        if not get_entry(domain, entry_id):
-            raise HTTPException(status_code=404, detail="Entry not found")
-        rows = get_entry_sentences(domain, entry_id, include_deleted=True)
-    except FeedDatabaseError as exc:
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
-    return [
-        {
-            **row,
-            "locator": f"feeds/{domain}/{row['id']}",
-        }
-        for row in rows
-    ]
-
-
-@app.get("/api/domains/{domain}/sentences/{sentence_id}", tags=["content"])
-def api_get_sentence(domain: str, sentence_id: int):
-    """Fetch a single indexed sentence by its per-domain sentence ID."""
-    try:
-        row = get_sentence(domain, sentence_id)
-    except FeedDatabaseError as exc:
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
-    if not row:
-        raise HTTPException(status_code=404, detail="Sentence not found")
-    return {
-        **row,
-        "locator": f"feeds/{domain}/{row['id']}",
-    }
-
-
 @app.delete("/api/domains/{domain}/entries/{entry_id}", tags=["content"])
 def api_delete_entry(domain: str, entry_id: int):
     """Delete a single entry by ID."""
@@ -405,25 +362,10 @@ class EntryContentBody(BaseModel):
     page_text: str
 
 
-class SentenceToggleBody(BaseModel):
-    deleted: bool
-
-
 @app.post("/api/domains/{domain}/entries/{entry_id}/content", tags=["content"])
 def api_update_entry_content(domain: str, entry_id: int, body: EntryContentBody):
     try:
         return update_entry_page_text(domain, entry_id, body.page_text)
-    except FeedDatabaseError as exc:
-        message = str(exc)
-        if "not found" in message.lower():
-            raise HTTPException(status_code=404, detail=message) from exc
-        raise HTTPException(status_code=500, detail=message) from exc
-
-
-@app.post("/api/domains/{domain}/sentences/{sentence_id}/deleted", tags=["content"])
-def api_set_sentence_deleted(domain: str, sentence_id: int, body: SentenceToggleBody):
-    try:
-        return set_sentence_deleted(domain, sentence_id, body.deleted)
     except FeedDatabaseError as exc:
         message = str(exc)
         if "not found" in message.lower():
@@ -447,27 +389,6 @@ def api_delete_entries(
         count = delete_entries_older_than(domain, older_than_days)
         return {"deleted": count, "filter": "older_than_days", "value": older_than_days}
     raise HTTPException(status_code=400, detail="Provide feed_name or older_than_days")
-
-
-@app.post("/api/domains/{domain}/sentences/backfill", tags=["content"])
-def api_backfill_sentence_index(domain: str):
-    """Create sentence rows for entries that do not yet have them."""
-    try:
-        return backfill_sentence_index(domain)
-    except FeedDatabaseError as exc:
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
-
-
-@app.post("/api/domains/{domain}/sentences/rebuild", tags=["content"])
-def api_rebuild_sentence_index(domain: str, entry_id: Optional[int] = None):
-    """Rebuild sentence rows for an entire domain or one specific entry."""
-    try:
-        return rebuild_sentence_index(domain, entry_id=entry_id)
-    except FeedDatabaseError as exc:
-        message = str(exc)
-        if "not found" in message.lower():
-            raise HTTPException(status_code=404, detail=message) from exc
-        raise HTTPException(status_code=500, detail=message) from exc
 
 
 @app.post("/api/domains/{domain}/entries/bulk-delete", tags=["content"])

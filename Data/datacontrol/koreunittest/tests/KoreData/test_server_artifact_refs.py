@@ -8,18 +8,14 @@
 # Function inventory:
 # - test_map_feed_entry_includes_artifact_ref: Implements the test map feed entry includes artifact ref operation for this module.
 # - test_parse_reference_artifact_ref_restores_title: Implements the test parse reference artifact ref restores title operation for this module.
-# - test_parse_sentence_locator_restores_parts: Implements the test parse sentence locator restores parts operation for this module.
 # - test_get_full_text_dispatches_feed_ref: Implements the test get full text dispatches feed ref operation for this module.
 # - fake_get_feed_entry: Implements the fake get feed entry operation for this module.
 # - test_get_full_text_rejects_library_book: Implements the test get full text rejects library book operation for this module.
 # - test_api_full_text_delegates_to_ref_dispatcher: Implements the test api full text delegates to ref dispatcher operation for this module.
 # - fake_get_full_text: Implements the fake get full text operation for this module.
-# - test_get_sentence_dispatches_feed_locator: Implements the test get sentence dispatches feed locator operation for this module.
 # - __init__: Implements the   init   operation for this module.
 # - json: Implements the json operation for this module.
 # - get: Returns this module's primary operation.
-# - test_api_sentence_delegates_to_sentence_dispatcher: Implements the test api sentence delegates to sentence dispatcher operation for this module.
-# - fake_get_sentence: Implements the fake get sentence operation for this module.
 # - test_rag_databases_enriched_preserves_base_navigation_on_partial_info: Implements the test rag databases enriched preserves base navigation on partial info operation for this module.
 # - test_rag_databases_enriched_falls_back_to_local_db_size: Implements the test rag databases enriched falls back to local db size operation for this module.
 # - test_rag_processing_scripts_include_schedule_and_last_run: Implements the test rag processing scripts include schedule and last run operation for this module.
@@ -99,13 +95,6 @@ class ArtifactRefTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(kind, "reference_article")
         self.assertEqual(parts["title"], "History of Flight/Drone?")
 
-    def test_parse_sentence_locator_restores_parts(self) -> None:
-        service, database, sentence_id = server._parse_sentence_locator("feeds/tech/1234")
-
-        self.assertEqual(service, "feeds")
-        self.assertEqual(database, "tech")
-        self.assertEqual(sentence_id, 1234)
-
     async def test_get_full_text_dispatches_feed_ref(self) -> None:
         original = server.koredata_get_feed_entry
 
@@ -142,49 +131,6 @@ class ArtifactRefTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(result["artifact_ref"], "feed_entry|domain=tech|id=42")
         self.assertEqual(result["body"], "full")
-
-    async def test_get_sentence_dispatches_feed_locator(self) -> None:
-        class _Response:
-            def __init__(self, status_code: int, payload: object) -> None:
-                self.status_code = status_code
-                self._payload = payload
-
-            def json(self) -> object:
-                return self._payload
-
-        class _Client:
-            async def get(self, path: str, timeout: float = 10.0):
-                self.last_path = path
-                self.last_timeout = timeout
-                return _Response(
-                    200,
-                    {"id": 1234, "locator": "feeds/tech/1234", "sentence_text": "Alpha sentence."},
-                )
-
-        original_feed_client = server._feed_client
-        try:
-            server._feed_client = _Client()
-            result = await server.koredata_get_sentence("feeds/tech/1234")
-        finally:
-            server._feed_client = original_feed_client
-
-        self.assertEqual(result["locator"], "feeds/tech/1234")
-        self.assertEqual(result["sentence_text"], "Alpha sentence.")
-
-    async def test_api_sentence_delegates_to_sentence_dispatcher(self) -> None:
-        original = server.koredata_get_sentence
-
-        async def fake_get_sentence(locator: str) -> dict:
-            return {"locator": locator, "sentence_text": "full"}
-
-        server.koredata_get_sentence = fake_get_sentence
-        try:
-            result = await server.api_sentence(server._SentenceRequest(locator="feeds/tech/42"))
-        finally:
-            server.koredata_get_sentence = original
-
-        self.assertEqual(result["locator"], "feeds/tech/42")
-        self.assertEqual(result["sentence_text"], "full")
 
     async def test_rag_databases_enriched_preserves_base_navigation_on_partial_info(self) -> None:
         class _Response:

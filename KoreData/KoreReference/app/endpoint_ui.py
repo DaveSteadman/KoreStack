@@ -384,13 +384,10 @@ def register_reference_ui(app: FastAPI) -> None:
         q:       Optional[str] = None,
         limit:   int           = 20,
         offset:  int           = 0,
-        mode:    str           = "keyword",
-        min_match: float       = 0.4,
     ):
         results      = []
         searched     = bool(q)
         search_error = ""
-        search_mode  = "keyword"
         if searched:
             results = search_articles(q=q, title=None, limit=limit, offset=offset)
         return templates.TemplateResponse(
@@ -401,8 +398,6 @@ def register_reference_ui(app: FastAPI) -> None:
                 "searched":   searched,
                 "q":          q or "",
                 "limit":      limit,
-                "mode":       search_mode,
-                "min_match":  min_match,
                 "search_error": search_error,
             },
         )

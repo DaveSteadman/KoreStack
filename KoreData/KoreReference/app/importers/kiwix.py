@@ -24,7 +24,6 @@
 # - _redirect_target_from_location: Implements the  redirect target from location operation for this module.
 # - parse_kiwix_article: Parses kiwix article for this module.
 # - import_one: Implements the import one operation for this module.
-# - _flush_semantic_sync: Implements the  flush semantic sync operation for this module.
 # - run_kiwix_import: Runs kiwix import for this module.
 # - run_kiwix_backfill: Runs kiwix backfill for this module.
 # - run_kiwix_crawl: Runs kiwix crawl for this module.
@@ -274,8 +273,6 @@ def import_one(
     title: str,
     resume: bool,
     db_conn=None,
-    pending_deleted_sentence_ids: Optional[set[int]] = None,
-    pending_sync_article_ids: Optional[set[int]] = None,
 ) -> bool:
     """Fetch and upsert a single article by title. Raises on HTTP error."""
     resp = client.get(article_url(source_kind, source_base, source_name, title))
@@ -295,8 +292,6 @@ def import_one(
                 body                         = None,
                 redirect_to                  = redirect_to,
                 conn                         = db_conn,
-                pending_deleted_sentence_ids = pending_deleted_sentence_ids,
-                pending_sync_article_ids     = pending_sync_article_ids,
             )
             with state_lock:
                 import_state["redirects_stored"] += 1
@@ -315,8 +310,6 @@ def import_one(
                 body                         = None,
                 redirect_to                  = redirect_to,
                 conn                         = db_conn,
-                pending_deleted_sentence_ids = pending_deleted_sentence_ids,
-                pending_sync_article_ids     = pending_sync_article_ids,
             )
             with state_lock:
                 import_state["redirects_stored"] += 1
@@ -332,20 +325,8 @@ def import_one(
         facts                        = parsed["facts"],
         link_titles                  = parsed["link_titles"],
         conn                         = db_conn,
-        pending_deleted_sentence_ids = pending_deleted_sentence_ids,
-        pending_sync_article_ids     = pending_sync_article_ids,
     )
     return True
-
-
-def _flush_semantic_sync(
-    pending_deleted_sentence_ids: set[int],
-    pending_sync_article_ids: set[int],
-) -> None:
-    if not pending_deleted_sentence_ids and not pending_sync_article_ids:
-        return
-    pending_deleted_sentence_ids.clear()
-    pending_sync_article_ids.clear()
 
 
 def run_kiwix_import(
@@ -361,9 +342,6 @@ def run_kiwix_import(
     source_name = zim_name
 
     with db_connection() as write_conn, _http_client() as client:
-        writes_since_commit         = 0
-        pending_deleted_sentence_ids: set[int] = set()
-        pending_sync_article_ids:     set[int] = set()
         if titles:
             work = titles[:limit] if limit else titles
         else:
@@ -387,19 +365,13 @@ def run_kiwix_import(
                     source_name,
                     title,
                     resume,
-                    db_conn                     = write_conn,
-                    pending_deleted_sentence_ids = pending_deleted_sentence_ids,
-                    pending_sync_article_ids     = pending_sync_article_ids,
+                    db_conn = write_conn,
                 )
                 if wrote:
                     # Do not carry a SQLite write transaction across the next
                     # network request.  In WAL mode this makes each completed
                     # article immediately visible to independent API readers.
                     write_conn.commit()
-                    writes_since_commit += 1
-                    if writes_since_commit >= 25:
-                        _flush_semantic_sync(pending_deleted_sentence_ids, pending_sync_article_ids)
-                        writes_since_commit = 0
                 with state_lock:
                     import_state["done"] += 1
             except Exception as exc:
@@ -407,9 +379,6 @@ def run_kiwix_import(
                 with state_lock:
                     import_state["errors"] += 1
                 import_state["last_error"] = f"{title}: {exc}"
-        if writes_since_commit > 0:
-            _flush_semantic_sync(pending_deleted_sentence_ids, pending_sync_article_ids)
-
     import_state["running"] = False
     resolve_links()
 
@@ -430,9 +399,6 @@ def run_kiwix_backfill(zim_name: str, kiwix_url: str, limit: int) -> None:
     import_state["total"] = len(titles)
 
     with db_connection() as write_conn, _http_client() as client:
-        writes_since_commit         = 0
-        pending_deleted_sentence_ids: set[int] = set()
-        pending_sync_article_ids:     set[int] = set()
         for title in titles:
             if not import_state["running"]:
                 break
@@ -443,19 +409,13 @@ def run_kiwix_backfill(zim_name: str, kiwix_url: str, limit: int) -> None:
                     source_base,
                     source_name,
                     title,
-                    resume                      = False,
-                    db_conn                     = write_conn,
-                    pending_deleted_sentence_ids = pending_deleted_sentence_ids,
-                    pending_sync_article_ids     = pending_sync_article_ids,
+                    resume  = False,
+                    db_conn = write_conn,
                 )
                 if wrote:
                     # Keep the write window to one completed article; HTTP
                     # fetches and parsing must never retain a SQLite write lock.
                     write_conn.commit()
-                    writes_since_commit += 1
-                    if writes_since_commit >= 25:
-                        _flush_semantic_sync(pending_deleted_sentence_ids, pending_sync_article_ids)
-                        writes_since_commit = 0
                 with state_lock:
                     import_state["done"] += 1
             except httpx.HTTPStatusError as exc:
@@ -472,9 +432,6 @@ def run_kiwix_backfill(zim_name: str, kiwix_url: str, limit: int) -> None:
                 with state_lock:
                     import_state["errors"] += 1
                 import_state["last_error"] = f"{title}: {exc}"
-        if writes_since_commit > 0:
-            _flush_semantic_sync(pending_deleted_sentence_ids, pending_sync_article_ids)
-
     import_state["running"] = False
     resolve_links()
 
@@ -500,19 +457,10 @@ def run_kiwix_crawl(seed_url: str, max_depth: int, limit: int, delay_seconds: fl
         import_stop_event.wait(timeout=delay)
 
     with db_connection() as write_conn, _http_client() as client:
-        writes_since_commit         = 0
-        pending_deleted_sentence_ids: set[int] = set()
-        pending_sync_article_ids:     set[int] = set()
-
         def _flush_periodically() -> None:
-            nonlocal writes_since_commit
             # The importer owns its connection, but not the database: commit
             # before returning to the crawler so WAL readers stay independent.
             write_conn.commit()
-            writes_since_commit += 1
-            if writes_since_commit >= 25:
-                _flush_semantic_sync(pending_deleted_sentence_ids, pending_sync_article_ids)
-                writes_since_commit = 0
 
         while queue and import_state["running"]:
             if import_state["done"] >= limit:
@@ -551,8 +499,6 @@ def run_kiwix_crawl(seed_url: str, max_depth: int, limit: int, delay_seconds: fl
                             body                         = None,
                             redirect_to                  = redirect_to,
                             conn                         = write_conn,
-                            pending_deleted_sentence_ids = pending_deleted_sentence_ids,
-                            pending_sync_article_ids     = pending_sync_article_ids,
                         )
                         _flush_periodically()
                         with state_lock:
@@ -574,8 +520,6 @@ def run_kiwix_crawl(seed_url: str, max_depth: int, limit: int, delay_seconds: fl
                             body                         = None,
                             redirect_to                  = redirect_to,
                             conn                         = write_conn,
-                            pending_deleted_sentence_ids = pending_deleted_sentence_ids,
-                            pending_sync_article_ids     = pending_sync_article_ids,
                         )
                         _flush_periodically()
                         with state_lock:
@@ -597,8 +541,6 @@ def run_kiwix_crawl(seed_url: str, max_depth: int, limit: int, delay_seconds: fl
                     facts                        = parsed["facts"],
                     link_titles                  = parsed["link_titles"],
                     conn                         = write_conn,
-                    pending_deleted_sentence_ids = pending_deleted_sentence_ids,
-                    pending_sync_article_ids     = pending_sync_article_ids,
                 )
                 _flush_periodically()
                 with state_lock:
@@ -622,8 +564,5 @@ def run_kiwix_crawl(seed_url: str, max_depth: int, limit: int, delay_seconds: fl
                     import_state["errors"] += 1
                 import_state["last_error"] = f"{title}: {exc}"
                 _pace()
-        if writes_since_commit > 0:
-            _flush_semantic_sync(pending_deleted_sentence_ids, pending_sync_article_ids)
-
     import_state["running"] = False
     resolve_links()

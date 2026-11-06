@@ -15,7 +15,7 @@ Without KoreCommon, each subsystem would duplicate the same suite-level plumbing
 | `service_app.py`, `service_logging.py` | Common FastAPI app setup, `/status`, and logging |
 | `endpoint_manifest.py`, `skill_service.py`, `skill_registration.py` | Endpoint and skill manifests that services publish to KoreAgent |
 | `stack_watchdog.py` | Supervision helper used by KoreStack |
-| `dbutil.py`, `sentence_index.py`, `compress.py` | Database, indexing, and compression helpers |
+| `dbutil.py`, `compress.py` | Database and compression helpers |
 
 Because every service imports it, KoreCommon is what makes the separate processes behave as one system: they agree on paths, ports, and the HTTP contract here.
 

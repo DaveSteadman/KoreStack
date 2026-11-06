@@ -23,7 +23,6 @@
 # MARK: FUNCTIONS
 # Primary types: ArticleCreate, KiwixImportRequest, KiwixCrawlRequest, KiwixThrottleRequest, KiwixBackfillRequest.
 # Function inventory:
-# - _warm_reference_semantic_index: Implements the  warm reference semantic index operation for this module.
 # - _lifespan: Implements the  lifespan operation for this module.
 # - _require_article: Implements the  require article operation for this module.
 # - route_list_articles: Implements the route list articles operation for this module.
@@ -33,14 +32,10 @@
 # - route_get_section: Implements the route get section operation for this module.
 # - route_get_links: Implements the route get links operation for this module.
 # - route_get_backlinks: Implements the route get backlinks operation for this module.
-# - route_article_sentences: Implements the route article sentences operation for this module.
-# - route_sentence: Implements the route sentence operation for this module.
 # - route_upsert_article: Implements the route upsert article operation for this module.
 # - route_delete_all_articles: Implements the route delete all articles operation for this module.
 # - route_delete_article: Implements the route delete article operation for this module.
 # - route_search: Implements the route search operation for this module.
-# - route_backfill_sentence_index: Implements the route backfill sentence index operation for this module.
-# - route_rebuild_sentence_index: Implements the route rebuild sentence index operation for this module.
 # - route_import_kiwix: Implements the route import kiwix operation for this module.
 # - route_import_kiwix_crawl: Implements the route import kiwix crawl operation for this module.
 # - route_import_stop: Implements the route import stop operation for this module.
@@ -70,20 +65,16 @@ from KoreCommon.skill_registration import start_manifest_registration
 from KoreCommon.skill_service import register_skill_invocation_routes
 from app.config import cfg
 from app.database import (
-    backfill_sentence_index,
     delete_all_articles,
     delete_article,
     get_article_by_title,
-    get_article_sentences,
     get_backlinks,
     get_links,
-    get_sentence,
     get_random_article,
     get_status,
     get_unresolved_link_titles,
     init_db,
     list_articles,
-    rebuild_sentence_index,
     resolve_article,
     resolve_links,
     search_articles,
@@ -239,22 +230,6 @@ def route_get_backlinks(title: str, limit: int = 50, offset: int = 0):
     return get_backlinks(title, limit=limit, offset=offset)
 
 
-@app.get("/api/articles/{title}/sentences", summary="List indexed sentences for a single article")
-def route_article_sentences(title: str, include_deleted: bool = False):
-    article = get_article_by_title(title, full=False)
-    if article is None:
-        raise HTTPException(status_code=404, detail=f"Article not found: {title!r}")
-    return get_article_sentences(int(article["id"]), include_deleted=include_deleted)
-
-
-@app.get("/api/sentences/{sentence_id}", summary="Fetch a single indexed sentence")
-def route_sentence(sentence_id: int):
-    row = get_sentence(sentence_id)
-    if row is None:
-        raise HTTPException(status_code=404, detail=f"Sentence not found: {sentence_id}")
-    return row
-
-
 @app.post("/api/articles", status_code=201, summary="Add or upsert an article")
 @app.post("/articles", status_code=201, include_in_schema=False)
 def route_upsert_article(data: ArticleCreate):
@@ -301,16 +276,6 @@ def route_search(
             detail="Provide at least one of: q, title",
         )
     return search_articles(q=q, title=title, limit=limit, offset=offset)
-
-
-@app.post("/api/sentences/backfill", summary="Create sentence rows for articles that do not yet have them")
-def route_backfill_sentence_index():
-    return backfill_sentence_index()
-
-
-@app.post("/api/sentences/rebuild", summary="Rebuild sentence rows for all articles or one article")
-def route_rebuild_sentence_index(article_id: Optional[int] = None):
-    return rebuild_sentence_index(article_id=article_id)
 
 
 # ---------------------------------------------------------------------------

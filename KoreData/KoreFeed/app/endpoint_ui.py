@@ -17,7 +17,6 @@
 # - web_domain: Implements the web domain operation for this module.
 # - web_entry: Implements the web entry operation for this module.
 # - web_update_entry_content: Implements the web update entry content operation for this module.
-# - web_set_sentence_deleted: Implements the web set sentence deleted operation for this module.
 # - web_create_domain: Implements the web create domain operation for this module.
 # - web_delete_domain: Implements the web delete domain operation for this module.
 # - web_rename_domain: Implements the web rename domain operation for this module.
@@ -62,7 +61,6 @@ from app.database import (
     init_db,
     list_domains,
     search_entries,
-    set_sentence_deleted,
     set_domain_age_settings,
     update_entry_page_text,
 )
@@ -202,10 +200,7 @@ def register_feed_ui(app: FastAPI) -> None:
         since:   Optional[str]  = None,
         until:   Optional[str]  = None,
         limit:   int            = 50,
-        mode:    str            = "keyword",
-        min_match: float        = 0.4,
     ):
-        search_mode = "keyword"
         results     = []
         search_error = ""
         if q.strip():
@@ -221,8 +216,6 @@ def register_feed_ui(app: FastAPI) -> None:
                 "since":   since or "",
                 "until":   until or "",
                 "limit":   limit,
-                "mode":    search_mode,
-                "min_match": min_match,
                 "search_error": search_error,
             },
         )
@@ -274,11 +267,6 @@ def register_feed_ui(app: FastAPI) -> None:
     @app.post("/ui/feeds/{domain}/{entry_id}/content", include_in_schema=False)
     def web_update_entry_content(domain: str, entry_id: int, page_text: str = Form(...)):
         update_entry_page_text(domain, entry_id, page_text)
-        return RedirectResponse(f"/ui/feeds/{domain}/{entry_id}", status_code=303)
-
-    @app.post("/ui/feeds/{domain}/sentences/{sentence_id}/deleted", include_in_schema=False)
-    def web_set_sentence_deleted(domain: str, sentence_id: int, deleted: str = Form(...), entry_id: int = Form(...)):
-        set_sentence_deleted(domain, sentence_id, str(deleted).strip().lower() in {"1", "true", "yes", "on"})
         return RedirectResponse(f"/ui/feeds/{domain}/{entry_id}", status_code=303)
 
     @app.post("/ui/feeds/domains/create", include_in_schema=False)

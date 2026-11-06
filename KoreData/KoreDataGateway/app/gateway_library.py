@@ -196,56 +196,16 @@ async def search_library(
     *,
     query: str,
     limit: int,
-    search_mode: str,
-    min_match: float,
     cfg: dict[str, Any],
     build_artifact_ref,
 ) -> dict:
-    if search_mode == "semantic":
-        params: dict[str, Any] = {"q": query, "limit": limit, "min_match": min_match}
-        response = await client.get("/api/semantic-search", params=params, timeout=10.0)
-    else:
-        params = {"q": query, "limit": limit}
-        response = await client.get("/api/search", params=params, timeout=10.0)
-    if search_mode == "semantic" and response.status_code == 503:
-        detail = ""
-        try:
-            detail = str((response.json() or {}).get("detail") or "")
-        except Exception:
-            detail = ""
-        warning = detail or "Semantic search unavailable."
-        return {"status": "partial", "results": [], "error": "", "warnings": [f"Library semantic search unavailable: {warning}"]}
+    params = {"q": query, "limit": limit}
+    response = await client.get("/api/search", params=params, timeout=10.0)
     if response.status_code != 200:
         return {"status": "error", "results": [], "error": f"HTTP {response.status_code}", "warnings": []}
     payload = response.json() or []
     if not isinstance(payload, list):
         return {"status": "error", "results": [], "error": "Library search returned a non-list payload.", "warnings": []}
-    if search_mode == "semantic":
-        return {
-            "status": "ok",
-            "results": [
-                {
-                    "domain":           "library",
-                    "type":             "library_book",
-                    "artifact_ref":     build_artifact_ref("library_book", book_id=book.get("route_id") or book.get("id")),
-                    "id":               book.get("route_id") or book.get("id"),
-                    "local_id":         book.get("id"),
-                    "title":            book.get("title", ""),
-                    "author":           book.get("author", ""),
-                    "language":         book.get("language", ""),
-                    "genre":            book.get("genre", ""),
-                    "year":             book.get("year"),
-                    "snippet":          book.get("snippet") or "",
-                    "url":              f"{cfg['korelibrary_url']}/ui/library/{book.get('route_id') or book.get('id')}",
-                    "sentence_id":      book.get("sentence_id"),
-                    "sentence_locator": book.get("sentence_locator") or "",
-                    "match_score":      book.get("match_score"),
-                }
-                for book in payload[:limit]
-            ],
-            "error":    "",
-            "warnings": [],
-        }
     return {
         "status": "ok",
         "results": [
