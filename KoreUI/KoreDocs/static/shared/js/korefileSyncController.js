@@ -39,15 +39,23 @@ export function createKorefileSyncController({
     onChanged?.(currentName, dirty);
   }
 
+  function setSaveState(state) {
+    document.dispatchEvent(new CustomEvent('kd:korefile-save-state', {
+      detail: { state },
+    }));
+  }
+
   function markDirty() {
     dirty = true;
     onMarkDirty?.();
+    setSaveState('dirty');
     notify();
   }
 
   function markSaved() {
     dirty = false;
     onMarkSaved?.();
+    setSaveState('saved');
     notify();
   }
 
@@ -125,6 +133,7 @@ export function createKorefileSyncController({
       await applyRemoteFile(latest);
     } catch (err) {
       console.warn(`[${logLabel}] failed to reload latest version for`, currentName, err);
+      setSaveState('error');
     }
   }
 
@@ -178,6 +187,7 @@ export function createKorefileSyncController({
       history.replaceState(null, '', `${location.pathname}?${params.toString()}`);
     }
     try {
+      setSaveState('loading');
       loader = nextLoader;
       const file = await api.getFile(parseInt(id, 10));
       await applyRemoteFile(file);
@@ -185,7 +195,25 @@ export function createKorefileSyncController({
       return true;
     } catch (err) {
       console.warn(`[${logLabel}] auto-open failed for id`, id, err);
+      setSaveState('error');
       return false;
+    }
+  }
+
+  async function reloadCurrent() {
+    if (currentId == null) {
+      throw new Error(`${alertLabel} is not open.`);
+    }
+    setSaveState('loading');
+    try {
+      const file = await api.getFile(currentId);
+      await applyRemoteFile(file);
+      startRemoteSync();
+      return file;
+    } catch (err) {
+      console.warn(`[${logLabel}] failed to reload`, currentName, err);
+      setSaveState('error');
+      throw err;
     }
   }
 
@@ -193,6 +221,7 @@ export function createKorefileSyncController({
     if (currentId == null) return;
     pendingText = text;
     changeSeq += 1;
+    setSaveState('dirty');
     armAutosave();
   }
 
@@ -206,6 +235,7 @@ export function createKorefileSyncController({
       saveTimer = null;
     }
     saving = true;
+    setSaveState('saving');
     try {
       const updated = await api.updateFile(currentId, text, undefined, {
         ...options,
@@ -217,17 +247,25 @@ export function createKorefileSyncController({
         draft.clear();
         markSaved();
         onSaveSuccess?.();
+      } else {
+        setSaveState('dirty');
       }
     } catch (err) {
       if (String(err?.message || err).includes('changed in the background')) {
         pendingText = text;
-        markDirty();
+        dirty = true;
+        onMarkDirty?.();
+        setSaveState('conflict');
+        notify();
         await reloadLatest();
         return;
       }
       console.warn(`[${logLabel}] autosave failed for`, currentName, err);
       pendingText = text;
-      markDirty();
+      dirty = true;
+      onMarkDirty?.();
+      setSaveState('error');
+      notify();
     } finally {
       saving = false;
       if (pendingText != null && !options.keepalive) {
@@ -257,6 +295,7 @@ export function createKorefileSyncController({
       );
     },
     autoOpenFromUrl,
+    reloadCurrent,
     queueAutosave,
     flushAutosave,
   };

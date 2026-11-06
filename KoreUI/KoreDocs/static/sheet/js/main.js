@@ -5,10 +5,11 @@
 import * as grid       from './grid.js';
 import * as cell       from './cell.js';
 import * as properties from './properties.js?v=20261011e';
-import * as fileio     from './fileio.js?v=20261011b';
+import * as fileio     from './fileio.js?v=20261117a';
 import { colLetter, addrOf, evaluate } from './formula.js';
 import { initAppMenuEvents, initDialogHost, initKoreDocsShell, kcuiAlert, kcuiPrompt, renderAppMenu, trackAppTab } from '/ui-elements/assets/js/chrome.js';
 import * as draft      from '/static/shared/js/draft.js';
+import { initProposalPanel } from '/static/shared/js/proposalPanel.js';
 
 const canvas      = document.getElementById('grid');
 const container   = document.getElementById('canvas-container');
@@ -74,6 +75,12 @@ initDialogHost();
 const autoOpened = await fileio.autoOpenFromUrl(_refresh);
 if (!autoOpened) {
   location.replace('/ui');
+} else {
+  initProposalPanel({
+    getFileId: fileio.currentId,
+    isDirty: fileio.isDirty,
+    reloadCurrent: fileio.reloadCurrent,
+  });
 }
 _updateCsvConversionUi();
 
@@ -180,6 +187,27 @@ document.getElementById('toolbar').addEventListener('click', async e => {
 convertCsvButton.addEventListener('click', async () => {
   const sourceName = fileio.currentName();
   if (!fileio.isCsvFile() || !sourceName) return;
+  let content = cell.toJSON();
+  const preview = fileio.csvPreviewInfo();
+  if (preview && (preview.sourceRows > preview.previewRows || preview.sourceCols > preview.previewCols)) {
+    const range = await kcuiPrompt('Choose CSV preview range', {
+      label: 'Rows, columns',
+      initial: `${preview.previewRows},${preview.previewCols}`,
+      message: `The CSV has ${preview.sourceRows} rows and ${preview.sourceCols} columns. The grid previews its first ${preview.previewRows} rows and ${preview.previewCols} columns. The source CSV remains unchanged; only the selected preview range is copied.`,
+      validate: values => {
+        const match = /^\s*(\d+)\s*,\s*(\d+)\s*$/.exec(String(values.value || ''));
+        if (!match) return 'Enter rows and columns as two numbers separated by a comma.';
+        const rows = Number(match[1]);
+        const cols = Number(match[2]);
+        return rows >= 1 && rows <= preview.previewRows && cols >= 1 && cols <= preview.previewCols
+          ? null
+          : `Choose 1-${preview.previewRows} rows and 1-${preview.previewCols} columns.`;
+      },
+    });
+    if (!range) return;
+    const [rows, cols] = range.split(',').map(value => Number(value.trim()));
+    content = fileio.limitCsvPreview(content, rows, cols);
+  }
   const defaultName = sourceName.replace(/\.csv$/i, '') + '.koresheet';
   const requestedName = await kcuiPrompt('Convert CSV to KoreSheet', {
     label: 'New file name',
@@ -196,7 +224,7 @@ convertCsvButton.addEventListener('click', async () => {
 
   convertCsvButton.disabled = true;
   try {
-    const created = await fileio.convertToKoreSheet(requestedName, cell.toJSON());
+    const created = await fileio.convertToKoreSheet(requestedName, content);
     location.href = `/sheet?id=${encodeURIComponent(created.id)}&file=${encodeURIComponent(created.name)}`;
   } catch (error) {
     await kcuiAlert('CSV conversion failed', error.message || 'Could not create the KoreSheet copy.');
@@ -427,6 +455,16 @@ function _updateCsvConversionUi() {
   const visible = fileio.isCsvFile();
   convertCsvButton.hidden = !visible;
   convertCsvSeparator.hidden = !visible;
+  const status = document.getElementById('csv-preview-status');
+  const preview = fileio.csvPreviewInfo();
+  if (!visible || !preview) {
+    status.textContent = '';
+    return;
+  }
+  const truncated = preview.sourceRows > preview.previewRows || preview.sourceCols > preview.previewCols;
+  status.textContent = truncated
+    ? `Previewing ${preview.previewRows}/${preview.sourceRows} rows and ${preview.previewCols}/${preview.sourceCols} columns; changes stay local until converted.`
+    : 'CSV preview; changes stay local until converted.';
 }
 
 function _refresh() {

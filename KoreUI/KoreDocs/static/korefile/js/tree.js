@@ -28,10 +28,19 @@ const MOVE_SVG = `<svg viewBox="0 0 20 20" fill="none" width="12" height="12">
   <path d="M10 9v6M7 12l3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>`;
 
+const COPY_SVG = `<svg viewBox="0 0 20 20" fill="none" width="12" height="12">
+  <rect x="7" y="6" width="10" height="11" rx="1" stroke="currentColor" stroke-width="1.4"/>
+  <path d="M13 6V4a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h3" stroke="currentColor" stroke-width="1.4"/>
+</svg>`;
+
 // ── State ───────────────────────────────────────────────────────
 
 let _folders  = [];        // flat list from server
 let _selected = null;      // currently selected folder id
+let _focused  = null;      // roving keyboard focus folder id
+let _folderSelection = new Set();
+let _folderAnchor = null;
+let _folderActionCurrentId = null;
 let _open     = new Set(); // folder ids that are expanded
 
 // ── Events ─────────────────────────────────────────────────────
@@ -64,30 +73,43 @@ function _renderNode(folder, children, depth) {
   const kids = children[folder.id] || [];
   const hasKids = kids.length > 0;
   const isOpen = _open.has(folder.id);
-  const isSelected = folder.id === _selected;
+  const isSelected = _folderSelection.has(folder.id);
+  const isActionCurrent = isSelected && folder.id === _folderActionCurrentId;
   const label = folder.path === '/' ? 'Root' : folder.name;
 
   const chevron = hasKids
     ? `<span class="tree-toggle">${TRIANGLE_SVG}</span>`
     : `<span class="tree-toggle" style="visibility:hidden">${TRIANGLE_SVG}</span>`;
 
-  const actions = folder.id !== 1
-    ? `<span class="tree-actions">
-        ${_iconBtn('rename-folder', 'Rename', EDIT_SVG)}
-        ${_iconBtn('move-folder',   'Move to…', MOVE_SVG)}
-        ${_iconBtn('delete-folder', 'Delete', TRASH_SVG)}
-       </span>`
-    : '';
+  const singleActions = `
+    ${_iconBtn('rename-folder', 'Rename folder', EDIT_SVG)}
+    ${_iconBtn('move-folder', 'Move folder', MOVE_SVG)}
+    ${_iconBtn('copy-folder', 'Copy folder', COPY_SVG)}
+    ${_iconBtn('delete-folder', 'Delete folder', TRASH_SVG)}`;
+  const bulkActions = `
+    ${_iconBtn('bulk-move-folders', 'Move selected folders', MOVE_SVG)}
+    ${_iconBtn('bulk-copy-folders', 'Copy selected folders', COPY_SVG)}
+    ${_iconBtn('bulk-delete-folders', 'Delete selected folders', TRASH_SVG)}`;
+  const actionButtons = folder.id === 1
+    ? ''
+    : _folderSelection.size > 1
+      ? isActionCurrent ? bulkActions : isSelected ? '' : singleActions
+      : _folderSelection.size === 0 || isActionCurrent ? singleActions : '';
+  const actions = actionButtons ? `<span class="tree-actions">${actionButtons}</span>` : '';
 
   const html = `
     <div class="tree-item tree-indent ${isSelected ? 'selected' : ''} ${isOpen ? 'open' : ''}"
          data-id="${folder.id}" data-depth="${depth}" style="--indent:${depth}"
+         role="treeitem" aria-level="${depth + 1}" aria-selected="${isSelected}"
+         tabindex="${folder.id === _focused ? '0' : '-1'}"
+         ${hasKids ? `aria-expanded="${isOpen}" aria-owns="kf-tree-children-${folder.id}"` : ''}
          ${folder.id !== 1 ? 'draggable="true"' : ''}>
       ${chevron}
       <span class="tree-label" title="${_esc(folder.path)}">${_esc(label)}</span>
       ${actions}
     </div>
-    <div class="tree-children ${isOpen ? 'open' : ''}" data-parent="${folder.id}">
+    <div id="kf-tree-children-${folder.id}" class="tree-children ${isOpen ? 'open' : ''}"
+         data-parent="${folder.id}" role="group">
       ${kids.map(c => _renderNode(c, children, depth + 1)).join('')}
     </div>`;
   return html;
@@ -96,8 +118,18 @@ function _renderNode(folder, children, depth) {
 function _render(folders) {
   _folders = folders;
   const { children, roots } = _buildTree(folders);
+  const folderIds = new Set(folders.map(folder => folder.id));
+  _folderSelection = new Set([..._folderSelection].filter(id => id !== 1 && folderIds.has(id)));
+  if (!_folderSelection.has(_folderActionCurrentId)) {
+    _folderActionCurrentId = _folderSelection.has(_focused)
+      ? _focused
+      : [..._folderSelection].pop() ?? null;
+  }
   // Auto-expand root-level folders on first load
   if (_open.size === 0) roots.forEach(r => _open.add(r.id));
+  if (!_folders.some(folder => folder.id === _focused)) {
+    _focused = _folders.some(folder => folder.id === _selected) ? _selected : (roots[0]?.id ?? null);
+  }
   _treeEl.innerHTML = roots.map(r => _renderNode(r, children, 0)).join('');
 }
 
@@ -122,24 +154,176 @@ _treeEl.addEventListener('click', e => {
     _moveFolder(folder);
     return;
   }
+  if (e.target.closest('[data-btn="copy-folder"]')) {
+    e.stopPropagation();
+    _copyFolders([folder]);
+    return;
+  }
   if (e.target.closest('[data-btn="delete-folder"]')) {
     e.stopPropagation();
     _deleteFolder(folder);
     return;
   }
+  if (e.target.closest('[data-btn="bulk-move-folders"]')) {
+    e.stopPropagation();
+    _moveFolders(_selectedFolderRoots());
+    return;
+  }
+  if (e.target.closest('[data-btn="bulk-copy-folders"]')) {
+    e.stopPropagation();
+    _copyFolders(_selectedFolderRoots());
+    return;
+  }
+  if (e.target.closest('[data-btn="bulk-delete-folders"]')) {
+    e.stopPropagation();
+    _deleteFolders(_selectedFolderRoots());
+    return;
+  }
   // Toggle open/closed
   if (e.target.closest('.tree-toggle')) {
     _open.has(id) ? _open.delete(id) : _open.add(id);
-    refresh();
+    _renderAndFocus(id);
     return;
   }
 
-  // Select
+  if (e.shiftKey) {
+    _selectFolderRange(id);
+    _focusItem(id);
+    return;
+  }
+  if (e.ctrlKey || e.metaKey) {
+    if (_folderSelection.has(id)) _folderSelection.delete(id);
+    else _folderSelection.add(id);
+    _folderAnchor = id;
+    _setFolderActionCurrent(id);
+    _render(_folders);
+    _focusItem(id);
+    return;
+  }
+  _selectFolder(id);
+});
+
+_treeEl.addEventListener('keydown', e => {
+  if (e.target.closest('.tree-actions')) return;
+  const item = e.target.closest('.tree-item[role="treeitem"]');
+  if (!item) return;
+
+  const id = Number(item.dataset.id);
+  const visible = [..._treeEl.querySelectorAll('.tree-item[role="treeitem"]')]
+    .filter(node => node.getClientRects().length > 0);
+  const index = visible.indexOf(item);
+  const hasChildren = _folders.some(folder => folder.parent_id === id);
+
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault();
+    const next = visible[index + (e.key === 'ArrowDown' ? 1 : -1)];
+    if (next) {
+      const nextId = Number(next.dataset.id);
+      if (e.shiftKey) {
+        _selectFolderRange(nextId);
+        _focusItem(nextId);
+      } else {
+        _focusItem(nextId);
+      }
+    }
+  } else if (e.key === 'Home' || e.key === 'End') {
+    e.preventDefault();
+    const next = e.key === 'Home' ? visible[0] : visible[visible.length - 1];
+    if (next) {
+      const nextId = Number(next.dataset.id);
+      if (e.shiftKey) _selectFolderRange(nextId);
+      _focusItem(nextId);
+    }
+  } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
+    e.preventDefault();
+    _folderSelection = new Set(visible
+      .map(node => Number(node.dataset.id))
+      .filter(folderId => folderId !== 1));
+    _folderAnchor = id;
+    _setFolderActionCurrent(id);
+    _render(_folders);
+    _focusItem(id);
+  } else if (e.key === 'ArrowRight' && hasChildren) {
+    e.preventDefault();
+    if (!_open.has(id)) {
+      _open.add(id);
+      _render(_folders);
+    }
+    const child = _treeEl.querySelector(`#kf-tree-children-${id} > .tree-item`);
+    _focusItem(child ? Number(child.dataset.id) : id);
+  } else if (e.key === 'ArrowLeft') {
+    e.preventDefault();
+    if (hasChildren && _open.has(id)) {
+      _open.delete(id);
+      _render(_folders);
+      _focusItem(id);
+    } else {
+      const parentId = item.parentElement?.dataset.parent;
+      if (parentId) _focusItem(Number(parentId));
+    }
+  } else if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    const folder = _folders.find(entry => entry.id === id);
+    if (!folder) return;
+    _selectFolder(id);
+  }
+});
+
+function _selectFolder(id) {
+  const folder = _folders.find(entry => entry.id === id);
+  if (!folder) return;
   _selected = id;
+  _folderSelection = new Set([id]);
+  _folderAnchor = id;
+  _folderActionCurrentId = id === 1 ? null : id;
   _open.add(id);
   _emit('select', { folder });
-  refresh();
-});
+  _renderAndFocus(id);
+}
+
+function _selectFolderRange(id) {
+  const visible = [..._treeEl.querySelectorAll('.tree-item[role="treeitem"]')]
+    .filter(node => node.getClientRects().length > 0);
+  const anchor = _folderAnchor ?? id;
+  const start = visible.findIndex(node => Number(node.dataset.id) === anchor);
+  const end = visible.findIndex(node => Number(node.dataset.id) === id);
+  if (start < 0 || end < 0) {
+    _folderSelection = new Set([id]);
+    _folderAnchor = id;
+  } else {
+    const [from, to] = start < end ? [start, end] : [end, start];
+    _folderSelection = new Set(visible.slice(from, to + 1)
+      .map(node => Number(node.dataset.id))
+      .filter(folderId => folderId !== 1));
+  }
+  _setFolderActionCurrent(id);
+  _render(_folders);
+}
+
+function _focusItem(id) {
+  _focused = id;
+  const actionCurrentChanged = _folderSelection.has(id) && _folderActionCurrentId !== id;
+  if (actionCurrentChanged) {
+    _folderActionCurrentId = id;
+    _render(_folders);
+  }
+  _treeEl.querySelectorAll('.tree-item[role="treeitem"]').forEach(item => {
+    item.tabIndex = Number(item.dataset.id) === id ? 0 : -1;
+  });
+  _treeEl.querySelector(`.tree-item[data-id="${id}"]`)?.focus();
+}
+
+function _renderAndFocus(id) {
+  _focused = id;
+  _render(_folders);
+  _focusItem(id);
+}
+
+function _setFolderActionCurrent(id) {
+  _folderActionCurrentId = _folderSelection.has(id)
+    ? id
+    : [..._folderSelection].pop() ?? null;
+}
 
 // ── Drag / drop to re-parent folders ───────────────────────────
 
@@ -228,31 +412,106 @@ async function _renameFolder(folder) {
 }
 
 async function _moveFolder(folder) {
-  const targetId = await dialogs.moveFolder(_folders, folder.id, folder.path);
+  await _moveFolders([folder]);
+}
+
+async function _moveFolders(folders) {
+  if (!folders.length) return;
+  const targetId = await dialogs.moveFolders(_folders, folders, folders.length);
   if (targetId == null) return;
-  try {
-    await api.patchFolder(folder.id, { parent_id: targetId, expected_revision: folder.revision });
-    await refresh();
-    _emit('refresh', {});
-  } catch (err) {
-    await dialogs.alert('Move Folder Failed', err.message || 'Could not move folder.');
+  const failed = [];
+  let moved = 0;
+  for (const folder of folders) {
+    try {
+      await api.patchFolder(folder.id, { parent_id: targetId, expected_revision: folder.revision });
+      moved += 1;
+    } catch (err) {
+      failed.push({ folder, message: err.message || 'Could not move folder.' });
+    }
   }
+  await refresh();
+  _emit('refresh', {});
+  await _showFolderOperationResult('moved', moved, folders.length, failed);
 }
 
 async function _deleteFolder(folder) {
+  await _deleteFolders([folder]);
+}
+
+async function _copyFolders(folders) {
+  if (!folders.length) return;
+  const destinationId = await dialogs.copyFolders(_folders, folders, folders.length);
+  if (destinationId == null) return;
+  let result;
+  try {
+    result = await api.copyFolders(
+      folders.map(folder => ({ id: folder.id, expected_revision: folder.revision })),
+      destinationId,
+    );
+  } catch (err) {
+    await dialogs.alert('Folder Copy Failed', err.message || 'Could not copy folders.');
+    return;
+  }
+  await refresh();
+  _emit('refresh', {});
+  const failures = result.failed.map(item => ({
+    folder: folders.find(folder => folder.id === item.id),
+    message: item.error,
+  }));
+  await _showFolderOperationResult('copied', result.copied.length, folders.length, failures);
+}
+
+async function _deleteFolders(folders) {
+  if (!folders.length) return;
+  const names = folders.map(folder => `"${folder.name}"`).join(', ');
   const ok = await dialogs.confirm(
-    'Delete Folder',
-    `Delete "${folder.name}" and everything inside it? This cannot be undone.`,
+    `Delete ${folders.length === 1 ? 'Folder' : 'Folders'}`,
+    `Delete ${names} and everything inside? This cannot be undone.`,
   );
   if (!ok) return;
-  try {
-    await api.deleteFolder(folder.id, folder.revision, true);
-    if (_selected === folder.id) _selected = 1;
-    await refresh();
-    _emit('refresh', {});
-  } catch (err) {
-    await dialogs.alert('Delete Folder Failed', err.message || 'Could not delete folder.');
+  const active = _folders.find(folder => folder.id === _selected);
+  const deletedPaths = [];
+  const failed = [];
+  let deleted = 0;
+  for (const folder of folders) {
+    try {
+      await api.deleteFolder(folder.id, folder.revision, true);
+      deleted += 1;
+      deletedPaths.push(folder.path);
+    } catch (err) {
+      failed.push({ folder, message: err.message || 'Could not delete folder.' });
+    }
   }
+  await refresh();
+  const deletedRoot = active && folders.find(folder =>
+    deletedPaths.includes(folder.path) &&
+    (active.path === folder.path || active.path.startsWith(`${folder.path}/`)),
+  );
+  if (deletedRoot) {
+    const parent = _folders.find(folder => folder.id === deletedRoot.parent_id)
+      || _folders.find(folder => folder.path === '/');
+    if (parent) _selectFolder(parent.id);
+  }
+  _emit('refresh', {});
+  await _showFolderOperationResult('deleted', deleted, folders.length, failed);
+}
+
+function _selectedFolderRoots() {
+  const selected = _folders.filter(folder => _folderSelection.has(folder.id) && folder.id !== 1);
+  return selected.filter(folder => !selected.some(parent =>
+    parent.id !== folder.id && folder.path.startsWith(`${parent.path}/`),
+  ));
+}
+
+async function _showFolderOperationResult(action, completed, total, failures) {
+  if (!failures.length) return;
+  const details = failures.map(({ folder, message }) =>
+    `${folder?.name || 'Folder'}: ${message}`,
+  ).join('\n');
+  await dialogs.alert(
+    'Some folders were not processed',
+    `${completed} of ${total} folders ${action}.\n${details}`,
+  );
 }
 
 // ── Public API ──────────────────────────────────────────────────
@@ -265,6 +524,10 @@ export async function refresh() {
 
 export function select(folderId) {
   _selected = folderId;
+  _folderSelection = new Set(folderId === 1 ? [] : [folderId]);
+  _folderAnchor = folderId;
+  _folderActionCurrentId = folderId === 1 ? null : folderId;
+  if (_folders.length) _render(_folders);
 }
 
 export function getFolders() { return _folders; }
@@ -273,7 +536,7 @@ export function getSelected() { return _selected; }
 
 
 function _iconBtn(action, title, svg) {
-  return `<button class="icon-btn" data-btn="${action}" title="${title}">${svg}</button>`;
+  return `<button class="icon-btn" type="button" data-btn="${action}" title="${title}" aria-label="${title}">${svg}</button>`;
 }
 
 function _esc(s) {

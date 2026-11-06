@@ -992,18 +992,24 @@ function listenRun(runId) {
 
 // ----------------------------------------------------------------------------------------------------
 
+function _renderSessionTurns(turns) {
+    for (const turn of turns) {
+        if (!turn || typeof turn.content !== "string") continue;
+        if (turn.role === "user") {
+            appendChatMessage("user", turn.content);
+        } else if (turn.role === "assistant") {
+            appendChatMessage("agent", turn.content);
+        }
+    }
+}
+
 async function _loadSessionHistory(sessionId) {
     _setChatPanelTitle(_resolveSessionTitle(sessionId, _sessionTitle));
     // Render from cache immediately so the panel is populated before the network responds.
     const cacheKey = "maf_history_" + sessionId;
     const cached = (() => { try { const r = localStorage.getItem(cacheKey); return r ? JSON.parse(r) : null; } catch (_) { return null; } })();
     if (cached && Array.isArray(cached)) {
-        for (let i = 0; i + 1 < cached.length; i += 2) {
-            const u = cached[i];
-            const a = cached[i + 1];
-            if (u && u.role === "user")      appendChatMessage("user",  u.content);
-            if (a && a.role === "assistant") appendChatMessage("agent", a.content);
-        }
+        _renderSessionTurns(cached);
     }
     // Fetch fresh data and update the panel.
     const data = await apiFetch("/sessions/" + encodeURIComponent(sessionId) + "/history");
@@ -1018,12 +1024,7 @@ async function _loadSessionHistory(sessionId) {
     const cachedJson = cached ? JSON.stringify(cached) : null;
     if (cachedJson !== JSON.stringify(turns)) {
         clearChatPanel();
-        for (let i = 0; i + 1 < turns.length; i += 2) {
-            const u = turns[i];
-            const a = turns[i + 1];
-            if (u && u.role === "user")      appendChatMessage("user",  u.content);
-            if (a && a.role === "assistant") appendChatMessage("agent", a.content);
-        }
+        _renderSessionTurns(turns);
     }
 }
 

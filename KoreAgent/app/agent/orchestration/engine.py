@@ -61,9 +61,17 @@ import json
 import os
 import re
 import threading
-from dataclasses import dataclass
 from pathlib import Path
 
+from agent.orchestration.config import OrchestratorConfig
+from agent.orchestration.runtime_flags import filter_web_skills as _filter_web_skills
+from agent.orchestration.runtime_flags import get_runtime_policy
+from agent.orchestration.runtime_flags import get_sandbox_enabled
+from agent.orchestration.runtime_flags import get_skill_guidance_enabled
+from agent.orchestration.runtime_flags import get_web_skills_enabled
+from agent.orchestration.runtime_flags import set_sandbox_enabled
+from agent.orchestration.runtime_flags import set_skill_guidance_enabled
+from agent.orchestration.runtime_flags import set_web_skills_enabled
 from context_manager import format_context_map as _context_manager_format_context_map
 from context_manager import store_last_run_state
 from conversation_state import decode_semantic_summary
@@ -89,98 +97,6 @@ from agent.tool_runtime.loop import format_tool_outputs as _tool_loop_format_too
 from agent.tool_runtime.loop import run_tool_loop as _tool_loop_run_tool_loop
 from utils.runtime_logger import SessionLogger
 from utils.workspace_utils import trunc
-from web_tools_state import is_web_tool_name
-
-
-# ====================================================================================================
-# MARK: SKILL GUIDANCE FLAG
-# ====================================================================================================
-_SKILL_GUIDANCE_ENABLED: bool = False
-
-def get_skill_guidance_enabled() -> bool:
-    return _SKILL_GUIDANCE_ENABLED
-
-
-def set_skill_guidance_enabled(enabled: bool) -> None:
-    global _SKILL_GUIDANCE_ENABLED
-    _SKILL_GUIDANCE_ENABLED = enabled
-
-
-# ====================================================================================================
-# MARK: SANDBOX FLAG
-# ====================================================================================================
-_SANDBOX_ENABLED: bool = True
-
-
-def get_sandbox_enabled() -> bool:
-    return _SANDBOX_ENABLED
-
-
-def set_sandbox_enabled(enabled: bool) -> None:
-    global _SANDBOX_ENABLED
-    _SANDBOX_ENABLED = enabled
-
-
-# ====================================================================================================
-# MARK: WEB SKILLS FLAG
-# ====================================================================================================
-# When False, KoreLiveWeb-backed tools are stripped from the active payload before tool
-# definitions, the system prompt, and the catalog gate index are built. The underlying
-# skill modules remain loaded - only their exposure to the model is suppressed.
-_WEB_SKILLS_ENABLED: bool = True
-_WEB_SKILLS_FILTER_CACHE: dict[int, dict] = {}
-
-
-def get_web_skills_enabled() -> bool:
-    return _WEB_SKILLS_ENABLED
-
-
-def set_web_skills_enabled(enabled: bool) -> None:
-    global _WEB_SKILLS_ENABLED
-    _WEB_SKILLS_ENABLED = enabled
-
-
-def _filter_web_skills(payload: dict) -> dict:
-    cache_key = id(payload)
-    cached = _WEB_SKILLS_FILTER_CACHE.get(cache_key)
-    if cached is not None:
-        return cached
-    filtered: list[dict] = []
-    for skill in payload.get("skills", []):
-        skill_name = str(skill.get("skill_name", "") or "").strip()
-        if skill_name.startswith("Web"):
-            continue
-
-        functions = skill.get("functions") or []
-        if not isinstance(functions, list):
-            filtered.append(skill)
-            continue
-
-        kept_functions = [
-            function_sig
-            for function_sig in functions
-            if not is_web_tool_name(str(function_sig).split("(", 1)[0].strip())
-        ]
-        if functions and not kept_functions:
-            continue
-
-        copied = dict(skill)
-        copied["functions"] = kept_functions
-
-        param_descriptions = copied.get("param_descriptions")
-        if isinstance(param_descriptions, dict):
-            copied["param_descriptions"] = {
-                name: value
-                for name, value in param_descriptions.items()
-                if not is_web_tool_name(name)
-            }
-        filtered.append(copied)
-    result = {**payload, "skills": filtered}
-    _WEB_SKILLS_FILTER_CACHE.clear()
-    _WEB_SKILLS_FILTER_CACHE[cache_key] = result
-    return result
-
-
 # ====================================================================================================
 # MARK: RUN STATE
 # ====================================================================================================
@@ -204,6 +120,22 @@ def request_stop(reason: str = "external") -> None:
     with _active_stop_lock:
         for ev in _active_stop_events.values():
             ev.set()
+
+
+def request_stop_for_session(session_id: str, reason: str = "external") -> bool:
+    """Request cancellation only for active runs associated with one session."""
+    normalized_session_id = str(session_id or "").strip()
+    if not normalized_session_id:
+        return False
+    with _active_stop_lock:
+        matching_events = [
+            event
+            for run_id, event in _active_stop_events.items()
+            if run_id.startswith(f"{normalized_session_id}_")
+        ]
+    for event in matching_events:
+        event.set()
+    return bool(matching_events)
 
 
 def is_stop_requested() -> bool:
@@ -234,19 +166,6 @@ def _should_activate_python_for_tabular_task(user_prompt: str) -> bool:
     return bool(has_tabular_data and requests_transformation)
 
 
-@dataclass
-class OrchestratorConfig:
-    resolved_model: str
-    num_ctx: int
-    max_predict: int
-    max_iterations: int
-    skills_payload: dict
-    skills_catalog_path: Path | None = None
-    catalog_mtime: float = 0.0
-    system_one_model: str = "clef:27b"
-
-
-# ====================================================================================================
 class ConversationHistory:
     """Unbounded or capped store of user / assistant turn pairs.
 
@@ -577,6 +496,7 @@ def orchestrate_prompt(
     )
 
     with bind_session(active_session_id):
+        runtime_policy = get_runtime_policy()
         if session_context is not None:
             discarded_tool_turns = session_context.clear_tool_output_turns()
             if discarded_tool_turns:
@@ -643,7 +563,11 @@ def orchestrate_prompt(
             )
             _log_file_only("[tool routing] Activated python_execute for deterministic tabular data processing.")
 
-        available_local_payload = config.skills_payload if _WEB_SKILLS_ENABLED else _filter_web_skills(config.skills_payload)
+        available_local_payload = (
+            config.skills_payload
+            if runtime_policy.web_skills_enabled
+            else _filter_web_skills(config.skills_payload)
+        )
         initial_tool_runtime = derive_active_tool_runtime(
             config.skills_payload,
             available_local_payload=available_local_payload,
@@ -660,8 +584,8 @@ def orchestrate_prompt(
             ambient_system_info,
             session_context,
             active_payload,
-            skill_guidance_enabled=_SKILL_GUIDANCE_ENABLED,
-            sandbox_enabled=_SANDBOX_ENABLED,
+            skill_guidance_enabled=runtime_policy.skill_guidance_enabled,
+            sandbox_enabled=runtime_policy.sandbox_enabled,
             conversation_entry=conversation_entry,
             working_data_visible_keys=working_data_visible_keys,
             user_prompt=user_prompt,
@@ -721,7 +645,11 @@ def orchestrate_prompt(
             if current_revision == runtime_revision:
                 return cached_runtime
 
-            round_available_local_payload = config.skills_payload if _WEB_SKILLS_ENABLED else _filter_web_skills(config.skills_payload)
+            round_available_local_payload = (
+                config.skills_payload
+                if runtime_policy.web_skills_enabled
+                else _filter_web_skills(config.skills_payload)
+            )
             runtime = derive_active_tool_runtime(
                 config.skills_payload,
                 available_local_payload=round_available_local_payload,

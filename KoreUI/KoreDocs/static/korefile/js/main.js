@@ -6,8 +6,8 @@
  */
 
 import { initAppMenuEvents, initKoreDocsShell, renderAppMenu } from '/ui-elements/assets/js/chrome.js';
-import * as tree     from './tree.js';
-import * as filelist from './filelist.js?v=20261011c';
+import * as tree     from './tree.js?v=20261106g';
+import * as filelist from './filelist.js?v=20261106g';
 import * as api      from './api.js';
 import * as dialogs  from './dialogs.js';
 

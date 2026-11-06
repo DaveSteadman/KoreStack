@@ -69,6 +69,16 @@ class KfFileUpdate(BaseModel):
     expected_revision: int | str | None = None
 
 
+class KfCopyItem(BaseModel):
+    id: int
+    expected_revision: int | str | None = None
+
+
+class KfCopyRequest(BaseModel):
+    items: list[KfCopyItem]
+    destination_folder_id: int
+
+
 class KfMetadataSearch(BaseModel):
     metadata_filter: dict
     type: str | None = None
@@ -93,6 +103,23 @@ def register_korefile_routes(app, *, data_dir) -> None:
     @app.get('/api/folders', summary='List all folders (flat, ordered by path)')
     def kf_list_folders():
         return korefile_revision_tokenize_many(korefile.list_folders())
+
+    @app.post('/api/folders/copy', summary='Copy folders and their contents')
+    def kf_copy_folders(body: KfCopyRequest):
+        if not body.items:
+            raise HTTPException(status_code=400, detail='Select at least one folder to copy')
+        copied = []
+        failed = []
+        for item in body.items:
+            try:
+                copied.append(korefile_revision_tokenize(korefile.copy_folder(
+                    item.id,
+                    body.destination_folder_id,
+                    expected_revision=parse_expected_revision(item.expected_revision),
+                )))
+            except Exception as exc:
+                failed.append({'id': item.id, 'error': str(exc)})
+        return {'copied': copied, 'failed': failed}
 
     @app.post('/api/folders', status_code=201, summary='Create a folder')
     def kf_create_folder(body: KfFolderCreate):
@@ -179,6 +206,23 @@ def register_korefile_routes(app, *, data_dir) -> None:
             if 'UNIQUE' in str(exc):
                 raise HTTPException(status_code=409, detail='A file with that name already exists in this folder')
             raise HTTPException(status_code=400, detail=str(exc))
+
+    @app.post('/api/files/copy', summary='Copy files')
+    def kf_copy_files(body: KfCopyRequest):
+        if not body.items:
+            raise HTTPException(status_code=400, detail='Select at least one file to copy')
+        copied = []
+        failed = []
+        for item in body.items:
+            try:
+                copied.append(korefile_revision_tokenize(korefile.copy_file(
+                    item.id,
+                    body.destination_folder_id,
+                    expected_revision=parse_expected_revision(item.expected_revision),
+                )))
+            except Exception as exc:
+                failed.append({'id': item.id, 'error': str(exc)})
+        return {'copied': copied, 'failed': failed}
 
     @app.put('/api/files/{file_id}', summary='Update a file')
     def kf_update_file(file_id: int, body: KfFileUpdate):

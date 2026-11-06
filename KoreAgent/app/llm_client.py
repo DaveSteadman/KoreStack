@@ -22,6 +22,7 @@ from llm_client_core import get_active_model
 from llm_client_core import get_active_system_one_model
 from llm_client_core import get_active_num_ctx
 from llm_client_core import get_llm_timeout
+from llm_client_core import get_llm_runtime_config
 from llm_client_core import is_explicit_model_name
 from llm_client_core import log_to_session
 from llm_client_core import register_llm_call_logger
@@ -70,6 +71,7 @@ __all__ = [
     "get_ollama_sampling_config",
     "get_ollama_request_options",
     "get_llm_timeout",
+    "get_llm_runtime_config",
     "set_llm_timeout",
     "register_llm_call_logger",
     "log_to_session",
@@ -119,12 +121,13 @@ def call_llm_chat(
     on_token = None,
 ) -> ChatCallResult:
     """Call Ollama's native ``/api/chat`` endpoint with optional tools."""
+    runtime_config = get_llm_runtime_config()
     return _ollama.call_ollama_chat(
         model_name = model_name,
         messages   = messages,
         tools      = tools,
-        host       = host,
-        num_ctx    = num_ctx,
-        timeout    = timeout,
+        host       = host if host is not None else runtime_config.host,
+        num_ctx    = num_ctx if num_ctx is not None else runtime_config.num_ctx,
+        timeout    = timeout if timeout is not None else runtime_config.timeout,
         on_token   = on_token,
     )

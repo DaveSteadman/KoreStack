@@ -40,6 +40,7 @@ from .shared import (
     _file_summary, _koredoc_file, _koredoc_parse, _koredoc_find_heading,
     _koredoc_extract_lines, _koredoc_splice,
     _create_serialized_file,
+    _require_revision,
 )
 
 
@@ -267,9 +268,10 @@ def koredocs_doc_section_replace(
     id: Annotated[int, 'KoreDoc file id.'],
     heading_path: Annotated[list[str], 'Heading path identifying the section to replace.'],
     markdown: Annotated[str, 'Complete replacement markdown for the section, including the heading line.'],
-    expected_revision: Annotated[Optional[int], 'Optional optimistic concurrency check. When provided, the document must still be at this revision.'] = None,
+    expected_revision: Annotated[int, 'Required revision from the latest document read. On conflict, reread and reapply only the intended changes.'],
 ) -> dict:
     """Replace one heading section inside a .koredoc document."""
+    expected_revision = _require_revision(expected_revision)
     file = _koredoc_file(id)
     content = file.get('content') or ''
     parsed = _koredoc_parse(content)
@@ -289,12 +291,13 @@ def koredocs_doc_section_replace(
 def koredocs_doc_section_insert(
     id: Annotated[int, 'KoreDoc file id.'],
     markdown: Annotated[str, 'Markdown block to insert. Typically starts with a heading line.'],
+    expected_revision: Annotated[int, 'Required revision from the latest document read. On conflict, reread and reapply only the intended changes.'],
     after_heading_path: Annotated[Optional[list[str]], 'Insert after the matching section.'] = None,
     parent_heading_path: Annotated[Optional[list[str]], 'Insert inside this parent section when after_heading_path is omitted.'] = None,
     insert_at_start: Annotated[bool, 'When parent_heading_path is used, insert immediately after the parent heading instead of at the end of the parent section.'] = False,
-    expected_revision: Annotated[Optional[int], 'Optional optimistic concurrency check. When provided, the document must still be at this revision.'] = None,
 ) -> dict:
     """Insert a markdown block into a .koredoc document by section anchor."""
+    expected_revision = _require_revision(expected_revision)
     if after_heading_path and parent_heading_path:
         raise ValueError('Provide either after_heading_path or parent_heading_path, not both')
 
@@ -337,9 +340,10 @@ def koredocs_doc_section_insert(
 def koredocs_doc_markdown_append(
     id: Annotated[int, 'KoreDoc file id.'],
     markdown: Annotated[str, 'Markdown block to append to the end of the document.'],
-    expected_revision: Annotated[Optional[int], 'Optional optimistic concurrency check. When provided, the document must still be at this revision.'] = None,
+    expected_revision: Annotated[int, 'Required revision from the latest document read. On conflict, reread and reapply only the intended changes.'],
 ) -> dict:
     """Append markdown to the end of a .koredoc document."""
+    expected_revision = _require_revision(expected_revision)
     file = _koredoc_file(id)
     content = file.get('content') or ''
     parsed = _koredoc_parse(content)

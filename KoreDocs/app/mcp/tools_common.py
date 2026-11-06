@@ -63,6 +63,7 @@ from .shared import (
     _file_summary,
     _create_serialized_file,
     _ensure_extension,
+    _require_revision,
 )
 
 KoreFileType = Literal['koredoc', 'koresheet', 'korediag']
@@ -177,9 +178,9 @@ def create_file(
 def update_file(
     id: Annotated[int, 'KoreDocs file id.'],
     content: Annotated[str, 'Complete replacement file content. For .koredoc use Markdown. For .koresheet and .korediag use JSON serialized as a string.'],
+    expected_revision: Annotated[int, 'Required revision from the latest file read. On conflict, reread the file and reapply only the intended changes.'],
     metadata: Annotated[Optional[dict], 'Optional replacement metadata object. If omitted, KoreDocs extracts metadata from content where possible.'] = None,
     metadata_patch: Annotated[Optional[dict], 'Optional deep merge patch for existing metadata. Cannot be combined with metadata.'] = None,
-    expected_revision: Annotated[Optional[int], 'Optional optimistic concurrency check. When provided, the file must still be at this revision.'] = None,
 ) -> dict:
     """Overwrite a KoreDocs file's complete content.
 
@@ -188,6 +189,7 @@ def update_file(
     - .koresheet: JSON object {version, meta, cols, rows, cells}, serialized as a string.
     - .korediag: JSON object {koreDiag, id, title, settings, nodes, edges}, serialized as a string.
     """
+    expected_revision = _require_revision(expected_revision)
     updated = korefile.update_file(id, content, metadata, metadata_patch, expected_revision=expected_revision)
     if updated is None:
         raise ValueError(f'File not found: {id}')
@@ -196,9 +198,10 @@ def update_file(
 
 def delete_file(
     id: Annotated[int, 'KoreDocs file id.'],
-    expected_revision: Annotated[Optional[int], 'Optional optimistic concurrency check. When provided, the file must still be at this revision.'] = None,
+    expected_revision: Annotated[int, 'Required revision from the latest file read. On conflict, reread the file before retrying.'],
 ) -> dict:
     """Delete a KoreDocs file by id."""
+    expected_revision = _require_revision(expected_revision)
     if not korefile.delete_file(id, expected_revision=expected_revision):
         raise ValueError(f'File not found: {id}')
     return {'ok': True, 'id': id}
@@ -315,17 +318,17 @@ def koredocs_file_create(
 def koredocs_file_update(
     id: Annotated[int, 'KoreDocs file id.'],
     content: Annotated[str, 'Complete replacement file content.'],
+    expected_revision: Annotated[int, 'Required revision from the latest file read. On conflict, reread the file and reapply only the intended changes.'],
     metadata: Annotated[Optional[dict], 'Optional replacement metadata object.'] = None,
     metadata_patch: Annotated[Optional[dict], 'Optional deep merge patch for existing metadata.'] = None,
-    expected_revision: Annotated[Optional[int], 'Optional optimistic concurrency check.'] = None,
 ) -> dict:
     """Canonical prefixed alias for update_file."""
-    return update_file(id=id, content=content, metadata=metadata, metadata_patch=metadata_patch, expected_revision=expected_revision)
+    return update_file(id=id, content=content, expected_revision=expected_revision, metadata=metadata, metadata_patch=metadata_patch)
 
 
 def koredocs_file_delete(
     id: Annotated[int, 'KoreDocs file id.'],
-    expected_revision: Annotated[Optional[int], 'Optional optimistic concurrency check.'] = None,
+    expected_revision: Annotated[int, 'Required revision from the latest file read. On conflict, reread the file before retrying.'],
 ) -> dict:
     """Canonical prefixed alias for delete_file."""
     return delete_file(id=id, expected_revision=expected_revision)

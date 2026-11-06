@@ -1,0 +1,59 @@
+.agent-proposal-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.agent-proposal-item,
+.agent-proposal-actions button {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 5px 8px;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+}
+
+.agent-proposal-item {
+  text-align: left;
+}
+
+.agent-proposal-item:hover,
+.agent-proposal-item[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--surface-2);
+}
+
+.agent-proposal-detail {
+  margin-top: 8px;
+}
+
+.agent-proposal-diff {
+  max-height: 320px;
+  overflow: auto;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: 11px/1.45 ui-monospace, Consolas, monospace;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.agent-proposal-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.agent-proposal-actions button:disabled {
+  cursor: not-allowed;
+  opacity: .55;
+}
+
+.agent-proposal-actions button:focus-visible,
+.agent-proposal-item:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}

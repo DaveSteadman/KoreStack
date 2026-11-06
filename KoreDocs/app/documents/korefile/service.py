@@ -135,9 +135,11 @@ _HISTORY_DIRECTORY_NAME = '.koredocs_history'
 _METADATA_SCHEMA_VERSION = 1
 _KOREDOC_JSON_HEADER_START = '---koredocs-json'
 _KOREDOC_HEADER_END        = '---'
+_PROPOSALS_DIRECTORY_NAME = '.koredocs_proposals'
 
 _file_record_cache: dict[Path, dict] = {}
 _file_record_cache_lock = threading.RLock()
+_proposal_lock = threading.RLock()
 
 
 def configure(root_dir: Path, legacy_db_path: Path | None = None) -> None:
@@ -512,7 +514,11 @@ def _file_id_for_abs(path: Path) -> int:
 def _iter_folder_paths() -> list[Path]:
     root = _root_dir()
     folders = [root]
-    folders.extend(list_datauser_folders(search_root='', recursive=True, root_dir=root))
+    folders.extend(
+        path for path in list_datauser_folders(search_root='', recursive=True, root_dir=root)
+        if _HISTORY_DIRECTORY_NAME not in path.parts
+        and _PROPOSALS_DIRECTORY_NAME not in path.parts
+    )
     return folders
 
 
@@ -529,6 +535,7 @@ def _iter_file_paths(root: Path | None = None, *, recursive: bool = True) -> lis
         if path.name != _METADATA_STORE_NAME
         and not path.name.endswith(_METADATA_SIDECAR_SUFFIX)
         and _HISTORY_DIRECTORY_NAME not in path.parts
+        and _PROPOSALS_DIRECTORY_NAME not in path.parts
     ]
 
 
@@ -803,6 +810,106 @@ def create_folder(name: str, parent_id: int) -> dict:
     return _folder_record(target)
 
 
+def _available_copy_name(name: str, parent: Path, *, is_folder: bool) -> str:
+    if not (parent / name).exists():
+        return name
+    source = Path(name)
+    if is_folder:
+        stem, suffix = name, ''
+    else:
+        stem, suffix = source.stem, source.suffix
+    candidate = f'{stem} (copy){suffix}'
+    index = 2
+    while (parent / candidate).exists():
+        candidate = f'{stem} (copy {index}){suffix}'
+        index += 1
+    return candidate
+
+
+def _copy_file_to_folder(source: Path, destination: Path, name: str) -> dict:
+    record = _file_record(source, include_content=True)
+    content = record.get('body_content', record['content'])
+    return create_file(
+        _folder_id_for_abs(destination),
+        name,
+        content,
+        record['metadata'],
+    )
+
+
+def copy_file(
+    file_id: int,
+    new_folder_id: int,
+    *,
+    expected_revision: int | None = None,
+) -> dict:
+    source = _resolve_file_abs_by_id(file_id)
+    if source is None:
+        raise ValueError(f'File {file_id} not found')
+    current_revision = int(source.stat().st_mtime_ns)
+    if expected_revision is not None and current_revision != expected_revision:
+        raise ConflictError(
+            f'File {file_id} changed since revision {expected_revision}; reread it before copying.'
+        )
+    destination = _resolve_folder_abs_by_id(new_folder_id)
+    if destination is None:
+        raise ValueError(f'Destination folder {new_folder_id} not found')
+    name = _available_copy_name(source.name, destination, is_folder=False)
+    return _copy_file_to_folder(source, destination, name)
+
+
+def copy_folder(
+    folder_id: int,
+    new_parent_id: int,
+    *,
+    expected_revision: int | None = None,
+) -> dict:
+    source = _resolve_folder_abs_by_id(folder_id)
+    if source is None:
+        raise ValueError(f'Folder {folder_id} not found')
+    if source == _root_dir():
+        raise ValueError('Cannot copy the root folder')
+    current_revision = int(source.stat().st_mtime_ns)
+    if expected_revision is not None and current_revision != expected_revision:
+        raise ConflictError(
+            f'Folder {folder_id} changed since revision {expected_revision}; refresh it before copying.'
+        )
+    parent = _resolve_folder_abs_by_id(new_parent_id)
+    if parent is None:
+        raise ValueError(f'Destination folder {new_parent_id} not found')
+    if parent == source or parent.is_relative_to(source):
+        raise ValueError('Cannot copy a folder into itself or one of its descendants')
+
+    target = parent / _available_copy_name(source.name, parent, is_folder=True)
+    create_datauser_folder(target, root_dir=_root_dir())
+    try:
+        source_folders = sorted(
+            (
+                path for path in _iter_folder_paths()
+                if path != source and path.is_relative_to(source)
+            ),
+            key=lambda path: (len(path.parts), path.as_posix()),
+        )
+        for folder in source_folders:
+            relative = folder.relative_to(source)
+            create_datauser_folder(target / relative, root_dir=_root_dir())
+
+        for file_path in _iter_file_paths(source, recursive=True):
+            destination = target / file_path.parent.relative_to(source)
+            _copy_file_to_folder(file_path, destination, file_path.name)
+    except Exception as exc:
+        try:
+            shutil.rmtree(target)
+            _delete_stored_metadata_tree(target)
+        except OSError as cleanup_error:
+            raise RuntimeError(
+                f'Folder copy failed: {exc}. Partial copy remains at '
+                f'{_folder_abs_to_label(target)} because cleanup failed: {cleanup_error}'
+            ) from exc
+        raise
+    return _folder_record(target)
+
+
 def rename_folder(folder_id: int, new_name: str, *, expected_revision: int | None = None) -> dict:
     _validate_simple_name(new_name, kind='Folder')
     folder_abs = _resolve_folder_abs_by_id(folder_id)
@@ -959,7 +1066,10 @@ def update_file(
         return None
     current_revision = int(file_abs.stat().st_mtime_ns)
     if expected_revision is not None and current_revision != expected_revision:
-        raise ConflictError(f'File {file_id} revision mismatch: expected {expected_revision}, current {current_revision}')
+        raise ConflictError(
+            f'File {file_id} changed since revision {expected_revision} '
+            f'(current revision: {current_revision}); reread the file and reapply only the intended changes.'
+        )
     current_content = read_text_file(file_abs, root_dir=_root_dir())
     current_artifact = _artifact_record(file_abs, current_content)
     new_content = current_content if content is None else content
@@ -991,7 +1101,10 @@ def rename_file(file_id: int, new_name: str, expected_revision: int | None = Non
         return None
     current_revision = int(file_abs.stat().st_mtime_ns)
     if expected_revision is not None and current_revision != expected_revision:
-        raise ConflictError(f'File {file_id} revision mismatch: expected {expected_revision}, current {current_revision}')
+        raise ConflictError(
+            f'File {file_id} changed since revision {expected_revision} '
+            f'(current revision: {current_revision}); reread the file before retrying.'
+        )
     content = read_text_file(file_abs, root_dir=_root_dir())
     _validate_serialized_content(new_name, content)
     target = file_abs.with_name(new_name)
@@ -1009,7 +1122,10 @@ def move_file(file_id: int, new_folder_id: int, expected_revision: int | None = 
         return None
     current_revision = int(file_abs.stat().st_mtime_ns)
     if expected_revision is not None and current_revision != expected_revision:
-        raise ConflictError(f'File {file_id} revision mismatch: expected {expected_revision}, current {current_revision}')
+        raise ConflictError(
+            f'File {file_id} changed since revision {expected_revision} '
+            f'(current revision: {current_revision}); reread the file before retrying.'
+        )
     folder_abs = _resolve_folder_abs_by_id(new_folder_id)
     if folder_abs is None:
         raise ValueError(f'Folder {new_folder_id} not found')
@@ -1028,11 +1144,153 @@ def delete_file(file_id: int, expected_revision: int | None = None) -> bool:
         return False
     current_revision = int(file_abs.stat().st_mtime_ns)
     if expected_revision is not None and current_revision != expected_revision:
-        raise ConflictError(f'File {file_id} revision mismatch: expected {expected_revision}, current {current_revision}')
+        raise ConflictError(
+            f'File {file_id} changed since revision {expected_revision} '
+            f'(current revision: {current_revision}); reread the file before retrying.'
+        )
     delete_datauser_file(file_abs, root_dir=_root_dir())
     _delete_stored_metadata(file_abs)
     _invalidate_file_record_cache(file_abs)
     return True
+
+
+def _proposal_path(proposal_id: str) -> Path:
+    proposal_id = str(proposal_id or '').strip().lower()
+    if not re.fullmatch(r'[0-9a-f]{32}', proposal_id):
+        raise ValueError('Invalid proposal id')
+    return _root_dir() / _PROPOSALS_DIRECTORY_NAME / f'{proposal_id}.json'
+
+
+def _read_proposal(proposal_id: str) -> dict:
+    path = _proposal_path(proposal_id)
+    if not path.is_file():
+        raise ValueError(f'Proposal not found: {proposal_id}')
+    try:
+        proposal = json.loads(path.read_text(encoding='utf-8'))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ValueError(f'Could not read proposal {proposal_id}: {exc}') from exc
+    if not isinstance(proposal, dict):
+        raise ValueError(f'Invalid proposal record: {proposal_id}')
+    return proposal
+
+
+def _write_proposal(proposal: dict) -> None:
+    directory = _root_dir() / _PROPOSALS_DIRECTORY_NAME
+    directory.mkdir(parents=True, exist_ok=True)
+    path = _proposal_path(proposal['id'])
+    temporary_path = path.with_suffix('.tmp')
+    temporary_path.write_text(
+        json.dumps(proposal, ensure_ascii=False, indent=2, sort_keys=True) + '\n',
+        encoding='utf-8',
+    )
+    temporary_path.replace(path)
+
+
+def create_proposal(
+    file_id: int,
+    expected_revision: int | str,
+    proposed_content: str,
+    summary: str,
+) -> dict:
+    if isinstance(expected_revision, bool):
+        raise ValueError('expected_revision must be the revision from the latest file read')
+    if isinstance(expected_revision, str) and re.fullmatch(r'\d+', expected_revision.strip()):
+        expected_revision = int(expected_revision.strip())
+    elif not isinstance(expected_revision, int):
+        raise ValueError('expected_revision must be the revision from the latest file read')
+
+    current = get_file(file_id, include_content=True)
+    if current is None:
+        raise ValueError(f'File not found: {file_id}')
+    current_revision = int(current['revision'])
+    if current_revision != expected_revision:
+        raise ConflictError(
+            f'File {file_id} changed since revision {expected_revision} '
+            f'(current revision: {current_revision}); reread the file before creating a proposal.'
+        )
+    extension = Path(current['name']).suffix.lower()
+    if extension not in {'.koredoc', '.koresheet'}:
+        raise ValueError('Agent proposals are supported only for .koredoc and .koresheet files.')
+
+    if not isinstance(proposed_content, str):
+        raise ValueError('proposed_content must be a string')
+    if not isinstance(summary, str):
+        raise ValueError('summary must be a string')
+    content = proposed_content
+    if len(content.encode('utf-8')) > 5 * 1024 * 1024:
+        raise ValueError('Proposed content exceeds the 5 MiB limit.')
+    _validate_serialized_content(current['name'], content)
+    title = str(summary or '').strip()
+    if not title:
+        raise ValueError('summary cannot be empty')
+
+    proposal = {
+        'id': uuid4().hex,
+        'file_id': int(file_id),
+        'file_name': current['name'],
+        'base_revision': str(current_revision),
+        'base_content': current.get('content') or '',
+        'proposed_content': content,
+        'summary': title[:500],
+        'status': 'pending',
+        'created_at': _now_iso(),
+    }
+    with _proposal_lock:
+        _write_proposal(proposal)
+    return {key: value for key, value in proposal.items() if key not in {'base_content', 'proposed_content'}}
+
+
+def list_proposals(file_id: int, status: str | None = 'pending') -> list[dict]:
+    directory = _root_dir() / _PROPOSALS_DIRECTORY_NAME
+    if not directory.exists():
+        return []
+    with _proposal_lock:
+        proposals = [_read_proposal(path.stem) for path in directory.glob('*.json')]
+    return sorted(
+        (
+            {key: value for key, value in proposal.items() if key not in {'base_content', 'proposed_content'}}
+            for proposal in proposals
+            if int(proposal.get('file_id', -1)) == int(file_id)
+            and (status is None or proposal.get('status') == status)
+        ),
+        key=lambda proposal: proposal.get('created_at', ''),
+        reverse=True,
+    )
+
+
+def get_proposal(proposal_id: str) -> dict:
+    with _proposal_lock:
+        return _read_proposal(proposal_id)
+
+
+def apply_proposal(proposal_id: str) -> dict:
+    with _proposal_lock:
+        proposal = _read_proposal(proposal_id)
+        if proposal.get('status') != 'pending':
+            raise ValueError(f'Proposal {proposal_id} is not pending.')
+        updated = update_file(
+            int(proposal['file_id']),
+            str(proposal['proposed_content']),
+            expected_revision=int(proposal['base_revision']),
+        )
+        if updated is None:
+            raise ValueError(f'File not found: {proposal["file_id"]}')
+        proposal['status'] = 'applied'
+        proposal['applied_revision'] = str(updated['revision'])
+        proposal['applied_at'] = _now_iso()
+        _write_proposal(proposal)
+        return {key: value for key, value in proposal.items() if key not in {'base_content', 'proposed_content'}}
+
+
+def reject_proposal(proposal_id: str) -> dict:
+    with _proposal_lock:
+        proposal = _read_proposal(proposal_id)
+        if proposal.get('status') != 'pending':
+            raise ValueError(f'Proposal {proposal_id} is not pending.')
+        proposal['status'] = 'rejected'
+        proposal['rejected_at'] = _now_iso()
+        _write_proposal(proposal)
+        return {key: value for key, value in proposal.items() if key not in {'base_content', 'proposed_content'}}
 
 
 def search(query: str, ext: str | None = None, folder_path: str | None = None, limit: int = 20) -> list[dict]:

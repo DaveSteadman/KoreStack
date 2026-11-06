@@ -52,6 +52,7 @@ import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
+from urllib.parse import urlsplit
 
 
 
@@ -98,13 +99,15 @@ _HOST_HEALTH_TTL_S: float = 30.0           # re-check if not confirmed healthy w
 # ====================================================================================================
 def get_llm_timeout() -> int:
     """Return the current default LLM generation timeout in seconds."""
-    return _DEFAULT_LLM_TIMEOUT
+    with _active_state_lock:
+        return _DEFAULT_LLM_TIMEOUT
 
 
 def set_llm_timeout(seconds: int) -> None:
     """Update the default LLM generation timeout used by all LLM call functions."""
     global _DEFAULT_LLM_TIMEOUT
-    _DEFAULT_LLM_TIMEOUT = seconds
+    with _active_state_lock:
+        _DEFAULT_LLM_TIMEOUT = max(1, int(seconds))
 
 
 # ====================================================================================================
@@ -218,6 +221,54 @@ def is_host_health_cached(host: str) -> bool:
 # ====================================================================================================
 # MARK: CONFIGURATION
 # ====================================================================================================
+@dataclass(frozen=True)
+class LLMRuntimeConfig:
+    """Immutable LLM settings captured at the start of an outbound request."""
+
+    host: str
+    model: str
+    system_one_model: str
+    num_ctx: int
+    max_predict: int
+    timeout: int
+
+
+def get_llm_runtime_config() -> LLMRuntimeConfig:
+    """Return a consistent snapshot of mutable service-wide LLM settings."""
+    with _active_state_lock:
+        return LLMRuntimeConfig(
+            host=_active_host,
+            model=_active_model,
+            system_one_model=_active_system_one_model,
+            num_ctx=_active_num_ctx,
+            max_predict=_active_max_predict,
+            timeout=_DEFAULT_LLM_TIMEOUT,
+        )
+
+
+def _normalize_host(host: str) -> str:
+    resolved = str(host or "").strip()
+    if resolved.lower() == "local":
+        resolved = DEFAULT_OLLAMAHOST
+    if "://" not in resolved:
+        resolved = f"http://{resolved}" if ":" in resolved else f"http://{resolved}:11434"
+
+    parsed = urlsplit(resolved)
+    if parsed.scheme not in {"http", "https"} or not parsed.hostname:
+        raise ValueError("LLM host must be an absolute http:// or https:// host URL")
+    if parsed.username or parsed.password or parsed.path not in {"", "/"} or parsed.query or parsed.fragment:
+        raise ValueError("LLM host must not include credentials, a path, query, or fragment")
+    try:
+        port = parsed.port
+    except ValueError as exc:
+        raise ValueError("LLM host contains an invalid port") from exc
+
+    hostname = parsed.hostname.lower()
+    authority = f"[{hostname}]" if ":" in hostname else hostname
+    if port is not None:
+        authority = f"{authority}:{port}"
+    return f"{parsed.scheme.lower()}://{authority}"
+
 
 def configure_host(host: str) -> None:
     """Set the Ollama host used for all subsequent model calls.
@@ -226,13 +277,9 @@ def configure_host(host: str) -> None:
     supplied scheme and port, allowing a remote Ollama server to be used.
     """
     global _active_host
-    resolved = host.strip()
-    if resolved.lower() == "local":
-        resolved = DEFAULT_OLLAMAHOST
-    if "://" not in resolved:
-        resolved = f"http://{resolved}" if ":" in resolved else f"http://{resolved}:11434"
+    resolved = _normalize_host(host)
     with _active_state_lock:
-        _active_host = resolved.rstrip("/")
+        _active_host = resolved
 
 
 # ----------------------------------------------------------------------------------------------------
@@ -243,7 +290,11 @@ def get_active_host() -> str:
 
 
 def _is_local_host(host: str) -> bool:
-    return "localhost" in host or "127.0.0.1" in host or "0.0.0.0" in host
+    try:
+        hostname = urlsplit(_normalize_host(host)).hostname
+    except ValueError:
+        return False
+    return hostname in {"localhost", "127.0.0.1", "0.0.0.0", "::1"}
 
 
 # ====================================================================================================
@@ -362,4 +413,3 @@ def is_explicit_model_name(requested_model: str) -> bool:
     """
     requested = requested_model.strip()
     return bool(requested) and ":" in requested and not any(ch.isspace() for ch in requested)
-

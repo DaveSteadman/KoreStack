@@ -10,7 +10,7 @@
 
 import * as api     from './api.js';
 import * as dialogs from './dialogs.js';
-import * as tree    from './tree.js';
+import * as tree    from './tree.js?v=20261106g';
 
 // ── State ───────────────────────────────────────────────────────
 
@@ -18,9 +18,13 @@ const _SCROLL_KEY = 'koredocs:kf:scroll';
 
 let _currentFolderId = null;
 let _files           = [];
+let _selectedFileIds = new Set();
+let _fileSelectionAnchor = null;
+let _fileCurrentId   = null;
 let _sortKey         = 'name';
 let _sortAsc         = true;
 let _searchMode      = false;
+let _searchQuery     = '';
 let _contextTarget   = null;
 let _pendingRestore  = true;   // restore scroll/selection once on initial page load
 let _loadSequence    = 0;
@@ -38,7 +42,9 @@ const _summary   = document.getElementById('kf-results-summary');
 export async function loadFolder(folderId) {
   const sequence = ++_loadSequence;
   _searchMode = false;
+  _searchQuery = '';
   _currentFolderId = folderId;
+  _clearFileSelection();
   _showLoading(true);
   try {
     const files = await api.listFiles({ folderId });
@@ -69,10 +75,14 @@ function _tryRestoreScrollState(folderId) {
     if (saved.selectedName) {
       for (const row of _tbody.querySelectorAll('tr[data-name]')) {
         if (row.dataset.name === saved.selectedName) {
-          row.classList.add('selected');
+          _selectedFileIds.add(Number(row.dataset.id));
+          _fileSelectionAnchor = Number(row.dataset.id);
+          _fileCurrentId = Number(row.dataset.id);
           break;
         }
       }
+      _renderList();
+      if (wrap) wrap.scrollTop = saved.scrollTop || 0;
     }
   } catch { /* ignore */ }
 }
@@ -96,6 +106,8 @@ document.addEventListener('kd:before-navigate', saveScrollState);
 export async function loadSearch(q) {
   const sequence = ++_loadSequence;
   _searchMode = true;
+  _searchQuery = q;
+  _clearFileSelection();
   _showLoading(true);
   try {
     const files = await api.search(q);
@@ -130,6 +142,15 @@ const TEXT_SVG = `<svg viewBox="0 0 20 20" fill="none" width="12" height="12">
   <path d="M4 5h12M4 10h12M4 15h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
 </svg>`;
 
+const COPY_SVG = `<svg viewBox="0 0 20 20" fill="none" width="12" height="12">
+  <rect x="7" y="6" width="10" height="11" rx="1" stroke="currentColor" stroke-width="1.4"/>
+  <path d="M13 6V4a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h3" stroke="currentColor" stroke-width="1.4"/>
+</svg>`;
+
+const MOVE_SVG = `<svg viewBox="0 0 20 20" fill="none" width="12" height="12">
+  <path d="M3 10h13M11 5l5 5-5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>`;
+
 const TRASH_SVG = `<svg viewBox="0 0 20 20" fill="none" width="12" height="12">
   <path d="M3 6h14M8 6V4h4v2M5 6l1 11h8l1-11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
 </svg>`;
@@ -162,6 +183,60 @@ function _fmt(iso) {
   } catch { return iso; }
 }
 
+function _visibleFileRows() {
+  return [..._tbody.querySelectorAll('tr[data-id]')];
+}
+
+function _selectFileRow(row, event) {
+  const id = Number(row.dataset.id);
+  if (event.shiftKey) {
+    _selectFileRange(id);
+    _fileCurrentId = id;
+  } else if (event.ctrlKey || event.metaKey) {
+    _toggleFileSelection(id);
+    return;
+  } else {
+    _selectedFileIds = new Set([id]);
+    _fileSelectionAnchor = id;
+    _fileCurrentId = id;
+  }
+  _renderList();
+  _focusFileRow(id);
+}
+
+function _selectFileRange(id) {
+  const rows = _visibleFileRows();
+  const anchor = _fileSelectionAnchor ?? id;
+  const start = rows.findIndex(row => Number(row.dataset.id) === anchor);
+  const end = rows.findIndex(row => Number(row.dataset.id) === id);
+  if (start < 0 || end < 0) {
+    _selectedFileIds = new Set([id]);
+    _fileSelectionAnchor = id;
+    return;
+  }
+  const [from, to] = start < end ? [start, end] : [end, start];
+  _selectedFileIds = new Set(rows.slice(from, to + 1).map(row => Number(row.dataset.id)));
+}
+
+function _toggleFileSelection(id) {
+  if (_selectedFileIds.has(id)) _selectedFileIds.delete(id);
+  else _selectedFileIds.add(id);
+  _fileSelectionAnchor = id;
+  _fileCurrentId = _selectedFileIds.has(id) ? id : [..._selectedFileIds].at(-1) ?? null;
+  _renderList();
+  _focusFileRow(_fileCurrentId ?? id);
+}
+
+function _focusFileRow(id) {
+  _tbody.querySelector(`tr[data-id="${id}"]`)?.focus();
+}
+
+function _clearFileSelection() {
+  _selectedFileIds.clear();
+  _fileSelectionAnchor = null;
+  _fileCurrentId = null;
+}
+
 function _renderList() {
   const sorted = _sortedFiles();
   _empty.style.display   = sorted.length ? 'none' : '';
@@ -171,20 +246,30 @@ function _renderList() {
   _tbody.innerHTML = sorted.map(f => {
     const meta  = typeof f.metadata === 'object' ? f.metadata : {};
     const title = meta.title || f.name.replace(/\.[^.]+$/, '');
+    const isSelected = _selectedFileIds.has(f.id);
+    const isCurrent = isSelected && f.id === _fileCurrentId;
+    const singleActions = `${_actionBtn('open', 'Open', OPEN_SVG)}
+           ${_actionBtn('open-text', 'Open as Text', TEXT_SVG)}
+           ${_actionBtn('rename', 'Rename', EDIT_SVG)}
+           ${_actionBtn('move', 'Move', MOVE_SVG)}
+           ${_actionBtn('copy', 'Copy', COPY_SVG)}
+           ${_actionBtn('delete', 'Delete', TRASH_SVG)}`;
+    const actions = _selectedFileIds.size > 1
+      ? isCurrent
+        ? `${_actionBtn('bulk-move', 'Move selected files', MOVE_SVG)}
+           ${_actionBtn('bulk-copy', 'Copy selected files', COPY_SVG)}
+           ${_actionBtn('bulk-delete', 'Delete selected files', TRASH_SVG)}`
+        : isSelected ? '' : singleActions
+      : _selectedFileIds.size === 0 || isCurrent ? singleActions : '';
     return `
-      <tr data-id="${f.id}" data-folder="${f.folder_id}" data-name="${_esc(f.name)}" data-ext="${f.ext}" data-revision="${f.revision ?? ''}" tabindex="0" aria-label="${_esc(`File: ${title}. ${f.ext} file.`)}">
+      <tr class="${isSelected ? 'selected' : ''} ${isCurrent ? 'current-action-row' : ''}" data-id="${f.id}" data-folder="${f.folder_id}" data-name="${_esc(f.name)}" data-ext="${f.ext}" data-revision="${f.revision ?? ''}" tabindex="0" aria-selected="${isSelected}" aria-label="${_esc(`File: ${title}. ${f.ext} file.`)}">
         <td class="col-icon"><span class="file-icon">${_fileIcon(f.ext)}</span></td>
         <td class="col-name" title="${_esc(f.name)}">${_esc(title)}</td>
         <td class="col-type"><span class="kcui-tag kcui-tag--info">${_esc(f.ext)}</span></td>
         <td class="col-words">${(f.word_count ?? 0).toLocaleString()}</td>
         <td class="col-modified">${_fmt(f.modified_at)}</td>
         <td class="col-actions">
-          <div class="row-actions">
-            ${_actionBtn('open', 'Open', OPEN_SVG)}
-            ${_actionBtn('open-text', 'Open as Text', TEXT_SVG)}
-            ${_actionBtn('rename', 'Rename', EDIT_SVG)}
-            ${_actionBtn('delete', 'Delete', TRASH_SVG)}
-          </div>
+          <div class="row-actions">${actions}</div>
         </td>
       </tr>`;
   }).join('');
@@ -227,9 +312,7 @@ _tbody.addEventListener('click', e => {
 
   const row = e.target.closest('tr[data-id]');
   if (!row) return;
-  document.querySelectorAll('#kf-file-tbody tr.selected')
-    .forEach(r => r.classList.remove('selected'));
-  row.classList.add('selected');
+  _selectFileRow(row, e);
 });
 
 _tbody.addEventListener('keydown', e => {
@@ -238,12 +321,37 @@ _tbody.addEventListener('keydown', e => {
   if (e.key === 'Enter') {
     e.preventDefault();
     _openFile(row);
+  } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
+    e.preventDefault();
+    _selectedFileIds = new Set(_visibleFileRows().map(item => Number(item.dataset.id)));
+    _fileSelectionAnchor = Number(row.dataset.id);
+    _fileCurrentId = Number(row.dataset.id);
+    _renderList();
+    _focusFileRow(_fileSelectionAnchor);
+  } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault();
+    const rows = _visibleFileRows();
+    const next = rows[rows.indexOf(row) + (e.key === 'ArrowDown' ? 1 : -1)];
+    if (!next) return;
+    if (e.shiftKey) {
+      _selectFileRange(Number(next.dataset.id));
+    } else {
+      _selectedFileIds = new Set([Number(next.dataset.id)]);
+      _fileSelectionAnchor = Number(next.dataset.id);
+    }
+    _fileCurrentId = Number(next.dataset.id);
+    _renderList();
+    _focusFileRow(Number(next.dataset.id));
+  } else if (e.key === ' ' && (e.ctrlKey || e.metaKey)) {
+    e.preventDefault();
+    _toggleFileSelection(Number(row.dataset.id));
   } else if (e.key === 'F2') {
     e.preventDefault();
     _startRename(row);
   } else if (e.key === 'Delete') {
     e.preventDefault();
-    void _deleteFile(row);
+    if (_selectedFileIds.size > 1) _deleteFiles(_selectedFileRecords());
+    else void _deleteFile(row);
   }
 });
 
@@ -259,7 +367,12 @@ _tbody.addEventListener('click', e => {
   if (action === 'open')   _openFile(row);
   if (action === 'open-text') _openFileAsText(row);
   if (action === 'rename') _startRename(row);
+  if (action === 'move') _moveFiles([_fileForRow(row)]);
+  if (action === 'copy') _copyFiles([_fileForRow(row)]);
   if (action === 'delete') _deleteFile(row);
+  if (action === 'bulk-move') _moveFiles(_selectedFileRecords());
+  if (action === 'bulk-copy') _copyFiles(_selectedFileRecords());
+  if (action === 'bulk-delete') _deleteFiles(_selectedFileRecords());
 });
 
 // ── Context menu ────────────────────────────────────────────────
@@ -268,10 +381,14 @@ _tbody.addEventListener('contextmenu', e => {
   const row = e.target.closest('tr[data-id]');
   if (!row) return;
   e.preventDefault();
-  _contextTarget = row;
-  document.querySelectorAll('#kf-file-tbody tr.selected')
-    .forEach(r => r.classList.remove('selected'));
-  row.classList.add('selected');
+  const id = Number(row.dataset.id);
+  if (!_selectedFileIds.has(id)) {
+    _selectedFileIds = new Set([id]);
+    _fileSelectionAnchor = id;
+  }
+  _fileCurrentId = id;
+  _renderList();
+  _contextTarget = _tbody.querySelector(`tr[data-id="${id}"]`);
   _showCtx(e.clientX, e.clientY);
 });
 
@@ -302,6 +419,7 @@ _ctxMenu.addEventListener('click', e => {
   if (action === 'open')   _openFile(_contextTarget);
   if (action === 'open-text') _openFileAsText(_contextTarget);
   if (action === 'rename') _startRename(_contextTarget);
+  if (action === 'copy') _copyFiles([_fileForRow(_contextTarget)]);
   if (action === 'delete') _deleteFile(_contextTarget);
   if (action === 'move')   _moveFile(_contextTarget);
 });
@@ -393,36 +511,111 @@ function _startRename(row) {
 }
 
 async function _deleteFile(row) {
-  const ok = await dialogs.confirm('Delete File', `Delete "${row.dataset.name}"?`);
+  await _deleteFiles([_fileForRow(row)]);
+}
+
+async function _deleteFiles(files) {
+  if (!files.length) return;
+  const ok = await dialogs.confirm(
+    files.length === 1 ? 'Delete File' : 'Delete Files',
+    files.length === 1
+      ? `Delete "${files[0].name}"?`
+      : `Delete ${files.length} selected files? This cannot be undone.`,
+  );
   if (!ok) return;
-  try {
-    await api.deleteFile(
-      parseInt(row.dataset.id, 10),
-      row.dataset.revision || null,
-    );
-    _files = _files.filter(f => f.id !== parseInt(row.dataset.id, 10));
-    _renderList();
-  } catch (err) {
-    await dialogs.alert('Delete Failed', err.message || 'Delete failed.');
+  const failed = [];
+  let deleted = 0;
+  for (const file of files) {
+    try {
+      await api.deleteFile(file.id, file.revision);
+      deleted += 1;
+    } catch (err) {
+      failed.push({ file, message: err.message || 'Delete failed.' });
+    }
   }
+  await _refreshFileView();
+  await _showFileOperationResult('deleted', deleted, files.length, failed);
 }
 
 async function _moveFile(row) {
-  const folders = tree.getFolders();
-  const newFolderId = await dialogs.moveFile(folders, parseInt(row.dataset.folder, 10));
+  await _moveFiles([_fileForRow(row)]);
+}
+
+async function _moveFiles(files) {
+  if (!files.length) return;
+  const newFolderId = await dialogs.moveFiles(
+    tree.getFolders(),
+    files.map(file => file.folder_id),
+    files.length,
+  );
   if (newFolderId == null) return;
-  try {
-    const fileId = parseInt(row.dataset.id, 10);
-    const expectedRevision = row.dataset.revision || null;
-    await api.patchFile(fileId, {
-      folder_id: newFolderId,
-      expected_revision: expectedRevision,
-    });
-    _files = _files.filter(f => f.id !== fileId);
-    _renderList();
-  } catch (err) {
-    await dialogs.alert('Move Failed', err.message || 'Move failed.');
+  const failed = [];
+  let moved = 0;
+  for (const file of files) {
+    try {
+      await api.patchFile(file.id, {
+        folder_id: newFolderId,
+        expected_revision: file.revision,
+      });
+      moved += 1;
+    } catch (err) {
+      failed.push({ file, message: err.message || 'Move failed.' });
+    }
   }
+  await _refreshFileView();
+  await _showFileOperationResult('moved', moved, files.length, failed);
+}
+
+async function _copyFiles(files) {
+  if (!files.length) return;
+  const destinationFolderId = await dialogs.copyFiles(tree.getFolders(), files.length);
+  if (destinationFolderId == null) return;
+  let result;
+  try {
+    result = await api.copyFiles(
+      files.map(file => ({ id: file.id, expected_revision: file.revision })),
+      destinationFolderId,
+    );
+  } catch (err) {
+    await dialogs.alert('File Copy Failed', err.message || 'Could not copy files.');
+    return;
+  }
+  await _refreshFileView();
+  const failures = result.failed.map(item => ({
+    file: files.find(file => file.id === item.id),
+    message: item.error,
+  }));
+  await _showFileOperationResult('copied', result.copied.length, files.length, failures);
+}
+
+function _selectedFileRecords() {
+  return _files.filter(file => _selectedFileIds.has(file.id));
+}
+
+function _fileForRow(row) {
+  const id = Number(row.dataset.id);
+  return _files.find(file => file.id === id) || {
+    id,
+    name: row.dataset.name,
+    folder_id: Number(row.dataset.folder),
+    revision: row.dataset.revision || null,
+  };
+}
+
+async function _refreshFileView() {
+  if (_searchMode) await loadSearch(_searchQuery);
+  else if (_currentFolderId != null) await loadFolder(_currentFolderId);
+}
+
+async function _showFileOperationResult(action, completed, total, failures) {
+  if (!failures.length) return;
+  const details = failures.map(({ file, message }) =>
+    `${file?.name || 'File'}: ${message}`,
+  ).join('\n');
+  await dialogs.alert(
+    'Some files were not processed',
+    `${completed} of ${total} files ${action}.\n${details}`,
+  );
 }
 
 function _renameOpenTabs(fileId, newName) {

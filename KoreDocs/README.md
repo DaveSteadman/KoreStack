@@ -18,7 +18,7 @@ KoreSheet opens `.csv` files directly for review. Use **Convert to KoreSheet** i
 
 ## Role in the suite
 
-KoreDocs (port 29610) holds the user-facing documents the agent and the person both edit. It stores everything in the `datauser` tree, the same space KoreAgentNetwork file helpers use, and its `/mcp` tools let KoreAgent create and edit documents. KoreStack starts and links it.
+KoreDocs (port 29610) holds the user-facing documents the agent and the person both edit. It stores everything in the `datauser` tree, the same space KoreAgentNetwork file helpers use, and registers reviewed native JSON skills with KoreAgent for document operations. KoreStack starts and links it.
 
 ## Architecture
 
@@ -35,9 +35,12 @@ KoreDocs serves both browser editing and programmatic document access.
 
 - `/ui`, `/doc`, `/sheet`, and `/diag` are the main browser entry points
 - `/api/files`, `/api/folders`, `/api/search`, and `/api/sheets/...` cover the HTTP editing surface
-- `/mcp` exposes typed tools for agent access
+- `/api/skills/{name}/invoke` exposes the service-registered native JSON skill interface used by KoreAgent
+- `/mcp` remains a separate optional interface for compatible external clients
 
 The live source of truth is the shared filesystem-backed document tree rather than a separate hidden document store.
+
+Existing-file mutation skills require the revision returned by the latest file read. For Agent edits intended for review, `koredocs_proposal_create` stores a pending proposal without changing the source file; the user can inspect its diff and explicitly apply or reject it in KoreDoc or KoreSheet. Applying a proposal uses its base revision and fails with a conflict if the source changed meanwhile.
 
 ## Analytical artefacts
 
@@ -76,6 +79,9 @@ operators, plus `$and`, `$or`, and `$not`. File history is available through
 ## New user notes
 
 - Start with the UI if you want to inspect files and formats interactively
+- In KoreFile, use Ctrl/Cmd-click to toggle file or folder selections and Shift-click for a range.
+  Selection toolbars support bulk move, copy, and delete. Folder copies include the full subtree
+  and use a “(copy)” suffix when a destination name already exists.
 - Use the MCP endpoint if you want agent tooling to create or edit documents safely
 - Treat legacy `korefile.db` content as migration-only; current writes go to the real filesystem
 

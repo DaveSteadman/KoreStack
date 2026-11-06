@@ -6,7 +6,7 @@
   <title>KoreStack</title>
   <link rel="icon" type="image/x-icon" href="/ui-elements/assets/icons/favicon.ico" />
   <link rel="stylesheet" href="/ui-elements/assets/css/chrome.css?v=20261105d" />
-  <link rel="stylesheet" href="/static/korefile/style.css?v=20261011b" />
+  <link rel="stylesheet" href="/static/korefile/style.css?v=20261106g" />
   <script src="/suite-config.js"></script>
 </head>
 <body class="kcui-shell-bg">
@@ -23,7 +23,7 @@
   <div id="kf-layout">
 
     <!-- Folder tree (left panel) -->
-    <aside id="kf-tree-panel" class="kcui-navpanel">
+    <aside id="kf-tree-panel" class="kcui-panel-left kcui-navpanel">
       <div id="kf-tree-header" class="kcui-navpanel-header kcui-panel-header">
         <span>Folders</span>
         <button id="btn-new-folder" class="icon-btn" type="button" title="New Folder" aria-label="New folder">
@@ -34,7 +34,7 @@
           </svg>
         </button>
       </div>
-      <div id="kf-tree" class="kcui-navpanel-tree"></div>
+      <div id="kf-tree" class="kcui-navpanel-tree" role="tree" aria-label="Folders" aria-multiselectable="true"></div>
     </aside>
 
     <!-- Resize handle -->
@@ -83,6 +83,7 @@
     <li data-action="open">Open</li>
     <li data-action="open-text">Open as Text</li>
     <li data-action="rename">Rename</li>
+    <li data-action="copy">Copy</li>
     <li data-action="move">Move to Folder…</li>
     <li class="sep"></li>
     <li data-action="delete" class="danger">Delete</li>
@@ -92,6 +93,6 @@
     import { initDialogHost } from '/ui-elements/assets/js/chrome.js';
     initDialogHost();
   </script>
-  <script type="module" src="/static/korefile/js/main.js?v=20261011c"></script>
+  <script type="module" src="/static/korefile/js/main.js?v=20261106g"></script>
 </body>
 </html>

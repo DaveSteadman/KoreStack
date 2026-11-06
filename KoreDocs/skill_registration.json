@@ -153,13 +153,13 @@
               },
               "expected_revision": {
                 "type": "integer",
-                "description": "Optional optimistic concurrency check. When provided, the document must still be at this revision.",
-                "default": null
+                "description": "Required current file revision from the latest read. On conflict, reread the file and reapply only the intended changes."
               }
             },
             "required": [
               "id",
-              "markdown"
+              "markdown",
+              "expected_revision"
             ]
           },
           "returns": "A KoreDocs operation result.",
@@ -214,13 +214,13 @@
               },
               "expected_revision": {
                 "type": "integer",
-                "description": "Optional optimistic concurrency check. When provided, the document must still be at this revision.",
-                "default": null
+                "description": "Required current file revision from the latest read. On conflict, reread the file and reapply only the intended changes."
               }
             },
             "required": [
               "id",
-              "markdown"
+              "markdown",
+              "expected_revision"
             ]
           },
           "returns": "A KoreDocs operation result.",
@@ -279,14 +279,14 @@
               },
               "expected_revision": {
                 "type": "integer",
-                "description": "Optional optimistic concurrency check. When provided, the document must still be at this revision.",
-                "default": null
+                "description": "Required current file revision from the latest read. On conflict, reread the file and reapply only the intended changes."
               }
             },
             "required": [
               "id",
               "heading_path",
-              "markdown"
+              "markdown",
+              "expected_revision"
             ]
           },
           "returns": "A KoreDocs operation result.",
@@ -337,12 +337,12 @@
               },
               "expected_revision": {
                 "type": "integer",
-                "description": "Optional optimistic concurrency check.",
-                "default": null
+                "description": "Required current file revision from the latest read. On conflict, reread the file and reapply only the intended changes."
               }
             },
             "required": [
-              "id"
+              "id",
+              "expected_revision"
             ]
           },
           "returns": "A KoreDocs operation result.",
@@ -455,13 +455,13 @@
               },
               "expected_revision": {
                 "type": "integer",
-                "description": "Optional optimistic concurrency check.",
-                "default": null
+                "description": "Required current file revision from the latest read. On conflict, reread the file and reapply only the intended changes."
               }
             },
             "required": [
               "id",
-              "content"
+              "content",
+              "expected_revision"
             ]
           },
           "returns": "A KoreDocs operation result.",
@@ -752,13 +752,13 @@
               },
               "expected_revision": {
                 "type": "integer",
-                "description": "Optional optimistic concurrency check.",
-                "default": null
+                "description": "Required current file revision from the latest read. On conflict, reread the file and reapply only the intended changes."
               }
             },
             "required": [
               "id",
-              "cells"
+              "cells",
+              "expected_revision"
             ]
           },
           "returns": "A KoreDocs operation result.",
@@ -950,13 +950,13 @@
               },
               "expected_revision": {
                 "type": "integer",
-                "description": "Optional optimistic concurrency check.",
-                "default": null
+                "description": "Required current file revision from the latest read. On conflict, reread the file and reapply only the intended changes."
               }
             },
             "required": [
               "id",
-              "headers"
+              "headers",
+              "expected_revision"
             ]
           },
           "returns": "A KoreDocs operation result.",
@@ -1043,14 +1043,14 @@
               },
               "expected_revision": {
                 "type": "integer",
-                "description": "Optional optimistic concurrency check.",
-                "default": null
+                "description": "Required current file revision from the latest read. On conflict, reread the file and reapply only the intended changes."
               }
             },
             "required": [
               "id",
               "label",
-              "value"
+              "value",
+              "expected_revision"
             ]
           },
           "returns": "A KoreDocs operation result.",
@@ -1105,13 +1105,13 @@
               },
               "expected_revision": {
                 "type": "integer",
-                "description": "Optional optimistic concurrency check.",
-                "default": null
+                "description": "Required current file revision from the latest read. On conflict, reread the file and reapply only the intended changes."
               }
             },
             "required": [
               "id",
-              "range"
+              "range",
+              "expected_revision"
             ]
           },
           "returns": "A KoreDocs operation result.",
@@ -1171,13 +1171,13 @@
               },
               "expected_revision": {
                 "type": "integer",
-                "description": "Optional optimistic concurrency check.",
-                "default": null
+                "description": "Required current file revision from the latest read. On conflict, reread the file and reapply only the intended changes."
               }
             },
             "required": [
               "id",
-              "rows"
+              "rows",
+              "expected_revision"
             ]
           },
           "returns": "A KoreDocs operation result.",
@@ -1261,14 +1261,14 @@
               },
               "expected_revision": {
                 "type": "integer",
-                "description": "Optional optimistic concurrency check.",
-                "default": null
+                "description": "Required current file revision from the latest read. On conflict, reread the file and reapply only the intended changes."
               }
             },
             "required": [
               "id",
               "match",
-              "updates"
+              "updates",
+              "expected_revision"
             ]
           },
           "returns": "A KoreDocs operation result.",
@@ -1304,14 +1304,14 @@
               },
               "expected_revision": {
                 "type": "integer",
-                "description": "Optional optimistic concurrency check.",
-                "default": null
+                "description": "Required current file revision from the latest read. On conflict, reread the file and reapply only the intended changes."
               }
             },
             "required": [
               "id",
               "rows",
-              "key_columns"
+              "key_columns",
+              "expected_revision"
             ]
           },
           "returns": "A KoreDocs operation result.",
@@ -1419,13 +1419,13 @@
               },
               "expected_revision": {
                 "type": "integer",
-                "description": "Optional optimistic concurrency check.",
-                "default": null
+                "description": "Required current file revision from the latest read. On conflict, reread the file and reapply only the intended changes."
               }
             },
             "required": [
               "id",
-              "rows"
+              "rows",
+              "expected_revision"
             ]
           },
           "returns": "A KoreDocs operation result.",
@@ -1440,6 +1440,39 @@
           },
           "returns": "A KoreDocs operation result.",
           "invoke_path": "/api/skills/koredocs_types_list/invoke"
+        },
+        {
+          "name": "koredocs_proposal_create",
+          "purpose": "Submit a complete proposed KoreDoc or KoreSheet change for explicit user review; this tool never applies the change.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "file_id": {
+                "type": "integer",
+                "description": "KoreDocs file id for a .koredoc or .koresheet."
+              },
+              "expected_revision": {
+                "type": "integer",
+                "description": "Revision from the latest KoreDocs file read."
+              },
+              "proposed_content": {
+                "type": "string",
+                "description": "Complete proposed file content. Preserve the existing .koredoc metadata header; for .koresheet provide the complete JSON document."
+              },
+              "summary": {
+                "type": "string",
+                "description": "Short human-readable summary shown in the KoreDocs review panel."
+              }
+            },
+            "required": [
+              "file_id",
+              "expected_revision",
+              "proposed_content",
+              "summary"
+            ]
+          },
+          "returns": "A pending proposal id. KoreDocs displays its diff for the user to accept or reject; the proposal is not applied automatically.",
+          "invoke_path": "/api/skills/koredocs_proposal_create/invoke"
         }
       ]
     }

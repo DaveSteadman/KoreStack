@@ -19,6 +19,7 @@ from typing import Any
 
 from KoreCommon.skill_service import register_skill_invocation_routes
 
+from .. import agent_proposals
 from ..documents.korefile import service as korefile
 from ..mcp import tools_common
 from ..mcp import tools_korediag
@@ -72,10 +73,8 @@ def _handlers() -> dict[str, object]:
         "koredocs_file_create": _koredocs_file_create,
         "koredocs_search": _koredocs_search,
     }
-    # These are the reviewed, formerly MCP-exposed KoreDocs operations.  The
-    # REST boundary deliberately exports only public `koredocs_*` functions;
-    # implementation helpers and the ordinary UI API remain private.
-    for module in (tools_common, tools_koredoc, tools_koresheet, tools_korediag):
+    # Export reviewed native JSON skills and public KoreDocs operations only.
+    for module in (agent_proposals, tools_common, tools_koredoc, tools_koresheet, tools_korediag):
         for name, handler in vars(module).items():
             if name.startswith("koredocs_") and callable(handler):
                 handlers[name] = handler

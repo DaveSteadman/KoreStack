@@ -34,8 +34,9 @@ html, body {
 }
 
 #kf-tree {
+  min-height: 0;
   padding-top: 4px;
-  padding-bottom: 4px;
+  padding-bottom: 20px;
 }
 
 /* The shared nav-panel rule displays closed child groups as a grid.  The
@@ -46,6 +47,11 @@ html, body {
 
 #kf-tree .tree-children.open {
   display: block;
+}
+
+#kf-tree .tree-item:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
 }
 
 .tree-item .tree-toggle {
@@ -65,7 +71,9 @@ html, body {
   margin-left: auto;
   flex-shrink: 0;
 }
-.tree-item:hover .tree-actions { display: flex; }
+.tree-item:hover .tree-actions,
+.tree-item:focus-within .tree-actions,
+.tree-item.selected .tree-actions { display: flex; }
 
 /* Drag-and-drop states */
 .tree-item.dragging { opacity: 0.45; }
@@ -176,6 +184,7 @@ html, body {
 /* ── File list ───────────────────────────────────────────────── */
 #kf-file-list-wrap {
   flex: 1;
+  min-height: 0;
   overflow: auto;
   position: relative;
   scrollbar-width: thin;
@@ -261,6 +270,7 @@ html, body {
   opacity: 0;
   transition: opacity 100ms;
 }
+.row-actions .icon-btn { width: 26px; height: 26px; }
 tr:hover .row-actions,
 tr.selected .row-actions,
 tr:focus-within .row-actions { opacity: 1; }

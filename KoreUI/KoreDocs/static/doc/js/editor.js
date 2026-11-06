@@ -84,7 +84,54 @@ export function getValue() {
 
 /** Return only the Markdown body visible in the rendered editor. */
 export function getBodyValue() {
-  return _view ? defaultMarkdownSerializer.serialize(_view.state.doc).trimEnd() : '';
+  return _view ? serializeMarkdown(_view.state.doc) : '';
+}
+
+export function serializeMarkdown(doc) {
+  const blocks = [];
+  doc.forEach(node => {
+    const blockDoc = schema.topNodeType.create(null, node);
+    let markdown = defaultMarkdownSerializer.serialize(blockDoc);
+    if (node.type === schema.nodes.paragraph && node.attrs.indent > 0) {
+      markdown = `<!-- koredocs-indent:${node.attrs.indent} -->\n\n${markdown}`;
+    }
+    blocks.push(markdown);
+  });
+  return blocks.join('\n\n').trimEnd();
+}
+
+export function parseMarkdown(markdown) {
+  const indentMarkers = [];
+  const markerPattern = /^<!-- koredocs-indent:(\d+) -->[ \t]*\r?\n/gm;
+  let body = '';
+  let cursor = 0;
+  let match;
+  while ((match = markerPattern.exec(markdown)) !== null) {
+    body += markdown.slice(cursor, match.index);
+    const preceding = body.trim();
+    const precedingNodeCount = preceding ? _parser.parse(preceding).childCount : 0;
+    indentMarkers.push({
+      nodeIndex: precedingNodeCount,
+      indent: Math.max(0, Math.min(8, Number(match[1]) || 0)),
+    });
+    cursor = markerPattern.lastIndex;
+  }
+  body += markdown.slice(cursor);
+
+  const parsed = body.trim() ? _parser.parse(body) : schema.topNodeType.createAndFill();
+  if (!indentMarkers.length) return parsed;
+
+  const indentByNode = new Map(indentMarkers.map(marker => [marker.nodeIndex, marker.indent]));
+  const nodes = [];
+  parsed.forEach((node, _offset, index) => {
+    const indent = indentByNode.get(index);
+    nodes.push(
+      indent !== undefined && node.type === schema.nodes.paragraph
+        ? node.type.create({ ...node.attrs, indent }, node.content, node.marks)
+        : node,
+    );
+  });
+  return schema.topNodeType.create(null, nodes);
 }
 
 /**
@@ -96,9 +143,7 @@ export function setValue(markdown) {
   const { fmText, bodyStart } = _splitFm(markdown);
   _fm = fmText;
   const body = markdown.slice(bodyStart).trim();
-  const doc  = body
-    ? _parser.parse(body)
-    : schema.topNodeType.createAndFill();
+  const doc = parseMarkdown(body);
   _view.updateState(EditorState.create({ schema, doc, plugins: _view.state.plugins }));
   document.dispatchEvent(new CustomEvent('kd:editor-state-change', {
     detail: { state: _view.state },
@@ -156,13 +201,18 @@ function _shiftIndent(state, dispatch, delta) {
   const para = schema.nodes.paragraph;
   let tr = state.tr;
   let changed = false;
-  state.doc.nodesBetween($from.pos, $to.pos, (node, pos) => {
-    if (node.type !== para) return true;
+  state.doc.forEach((node, pos) => {
+    if (node.type !== para) return;
+    const contentStart = pos + 1;
+    const contentEnd = pos + node.nodeSize - 1;
+    const selected = $from.pos === $to.pos
+      ? $from.pos >= contentStart && $from.pos <= contentEnd
+      : $from.pos < contentEnd && $to.pos > contentStart;
+    if (!selected) return;
     const next = Math.max(0, Math.min(8, (node.attrs.indent || 0) + delta));
-    if (next === (node.attrs.indent || 0)) return false;
+    if (next === (node.attrs.indent || 0)) return;
     tr = tr.setNodeMarkup(pos, null, { ...node.attrs, indent: next });
     changed = true;
-    return false;
   });
   if (!changed) return false;
   if (dispatch) dispatch(tr);

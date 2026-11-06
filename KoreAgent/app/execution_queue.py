@@ -37,10 +37,12 @@
 # MARK: IMPORTS
 # ====================================================================================================
 import json
+import os
 import threading
 import time
 from collections import deque
 from datetime import datetime
+from pathlib import Path
 
 
 _DEFAULT_TIMEOUT_BY_KIND: dict[str, int] = {
@@ -49,6 +51,7 @@ _DEFAULT_TIMEOUT_BY_KIND: dict[str, int] = {
 }
 _TIMEOUT_POLL_SECS = 0.5
 _STALL_GRACE_SECS = 30
+_STATE_FILE_LOCK = threading.Lock()
 
 
 def _safe_metadata(metadata: dict | None) -> dict:
@@ -78,7 +81,7 @@ class TaskQueue:
     is a no-op (returns False) to prevent backlog from repeated schedule triggers.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, state_path: Path | None = None) -> None:
         self._run_lock   = threading.Lock()    # held while a task executes
         self._state_lock = threading.Lock()    # protects _deque / _queued_names / _active
         self._has_work   = threading.Event()
@@ -86,6 +89,8 @@ class TaskQueue:
         self._deque:         deque      = deque()
         self._queued_names:  set[str]   = set()
         self._active:        dict | None = None
+        self._last_terminal: dict | None = None
+        self._state_path = state_path
         self._worker         = threading.Thread(
             target = self._worker_loop,
             daemon = True,
@@ -141,6 +146,7 @@ class TaskQueue:
         now_ts = time.time()
         with self._state_lock:
             active        = dict(self._active) if self._active else None
+            last_terminal = dict(self._last_terminal) if self._last_terminal else None
             pending_count = len(self._deque)   # authoritative count before any preview truncation
             queue_count   = pending_count + (1 if active else 0)
             pending_items = list(self._deque)
@@ -231,6 +237,7 @@ class TaskQueue:
             "oldest_pending_age_s":  int(oldest_pending_age_s) if oldest_pending_age_s is not None else None,
             "queue_lag_s":           int(queue_lag_s) if queue_lag_s is not None else None,
             "stalled":               stalled,
+            "last_terminal":         last_terminal,
             "updated_at":            datetime.now().isoformat(timespec="seconds"),
         }
 
@@ -286,18 +293,19 @@ class TaskQueue:
     # ----------------------------------------------------------------------------------------------------
   
     def stop(self) -> None:
-        """Request worker shutdown.  The in-flight task runs to completion."""
+        """Request worker shutdown without waiting for non-cooperative task threads."""
         self._shutdown.set()
         self._has_work.set()
+        self._worker.join(timeout=1.0)
         self._delete_state()
 
     # ----------------------------------------------------------------------------------------------------
   
     def _delete_state(self) -> None:
         try:
-            from utils.workspace_utils import get_controldata_dir
-            path = get_controldata_dir() / "koreagent" / "task_queue.json"
-            path.unlink(missing_ok=True)
+            path = self._get_state_path()
+            with _STATE_FILE_LOCK:
+                path.unlink(missing_ok=True)
         except Exception as exc:
             try:
                 from llm_client import log_to_session
@@ -311,13 +319,25 @@ class TaskQueue:
   
     def _write_state(self) -> None:
         try:
-            from utils.workspace_utils import get_controldata_dir
-            path = get_controldata_dir() / "koreagent" / "task_queue.json"
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(
-                json.dumps(self.get_state(), indent=2),
-                encoding="utf-8",
-            )
+            path = self._get_state_path()
+            state_text = json.dumps(self.get_state(), indent=2)
+            with _STATE_FILE_LOCK:
+                path.parent.mkdir(parents=True, exist_ok=True)
+                temporary_path = path.with_suffix(
+                    f"{path.suffix}.{os.getpid()}.{id(self)}.{threading.get_ident()}.tmp"
+                )
+                with temporary_path.open("w", encoding="utf-8") as state_file:
+                    state_file.write(state_text)
+                    state_file.flush()
+                    os.fsync(state_file.fileno())
+                for attempt in range(3):
+                    try:
+                        os.replace(temporary_path, path)
+                        break
+                    except PermissionError:
+                        if attempt == 2:
+                            raise
+                        time.sleep(0.05)
         except Exception as exc:
             try:
                 from llm_client import log_to_session
@@ -326,6 +346,12 @@ class TaskQueue:
                 # Queue execution must continue even if the status mirror cannot be
                 # written or logged; the in-memory queue is authoritative.
                 pass
+
+    def _get_state_path(self) -> Path:
+        if self._state_path is not None:
+            return self._state_path
+        from utils.workspace_utils import get_controldata_dir
+        return get_controldata_dir() / "koreagent" / "task_queue.json"
 
     # ----------------------------------------------------------------------------------------------------
   
@@ -381,7 +407,7 @@ class TaskQueue:
                             # part of task correctness, so failures stay non-fatal.
                             pass
 
-                        cancel_requested = False
+                        cancellation_reason: str | None = None
                         task_done = threading.Event()
                         task_error: dict[str, Exception] = {}
 
@@ -402,21 +428,40 @@ class TaskQueue:
                             started_ts = active.get("started_ts")
                             elapsed_s  = (time.time() - float(started_ts)) if isinstance(started_ts, (int, float)) else None
 
-                            if self._shutdown.is_set() and not cancel_requested:
+                            if self._shutdown.is_set() and cancellation_reason is None:
                                 self._request_cancel(item, reason="shutdown")
-                                cancel_requested = True
+                                cancellation_reason = "shutdown"
+                                break
 
                             if (
-                                not cancel_requested
+                                cancellation_reason is None
                                 and isinstance(timeout_s, (int, float))
                                 and timeout_s > 0
                                 and elapsed_s is not None
                                 and elapsed_s >= float(timeout_s)
                             ):
                                 self._request_cancel(item, reason="timeout")
-                                cancel_requested = True
+                                cancellation_reason = "timeout"
+                                break
 
-                        if "exc" in task_error:
+                        if cancellation_reason == "timeout":
+                            with self._state_lock:
+                                self._last_terminal = {
+                                    "name": item["name"],
+                                    "kind": item["kind"],
+                                    "state": "timed_out",
+                                    "ended_at": datetime.now().isoformat(timespec="seconds"),
+                                    "metadata": _safe_metadata(item.get("metadata")),
+                                }
+                            try:
+                                from llm_client import log_to_session
+                                log_to_session(
+                                    f"[scheduler] Task '{item['name']}' timed out and was released from the queue. "
+                                    "Its cancellation hook was invoked; any non-cooperative work may continue in the background."
+                                )
+                            except Exception:
+                                pass
+                        elif "exc" in task_error:
                             raise task_error["exc"]
                     except Exception as exc:
                         # Log the failure so it is visible in the log file and
@@ -433,7 +478,8 @@ class TaskQueue:
                             pass
                     with self._state_lock:
                         self._active = None
-                    self._write_state()
+                    if not self._shutdown.is_set():
+                        self._write_state()
 
     def _request_cancel(self, item: dict, reason: str) -> None:
         with self._state_lock:
@@ -457,8 +503,15 @@ class TaskQueue:
 
         # Default cancellation path for orchestration-backed work.
         try:
-            from agent.orchestration.engine import request_stop
-            request_stop(reason)
+            session_id = str(_safe_metadata(item.get("metadata")).get("session_id") or "").strip()
+            if session_id:
+                from agent.orchestration.engine import request_stop_for_session
+                request_stop_for_session(session_id, reason)
+            else:
+                from agent.orchestration.engine import clear_stop
+                from agent.orchestration.engine import request_stop
+                request_stop(reason)
+                clear_stop()
         except Exception:
             # Cancellation is best-effort here; callers observe timeout/shutdown state
             # via _active even if the downstream stop signal cannot be delivered.
@@ -470,5 +523,3 @@ class TaskQueue:
 # ====================================================================================================
 # task_queue is the shared singleton used by server-side prompt execution.
 task_queue: TaskQueue = TaskQueue()
-
-

@@ -249,20 +249,20 @@ def get_completions():
 @app.get("/api/settings/sandbox")
 @app.get("/settings/sandbox", include_in_schema=False)
 def settings_sandbox_get():
-    return {"sandbox": get_sandbox_enabled()}
+    return {"sandbox": get_sandbox_enabled(), "scope": "service"}
 
 
 @app.post("/api/settings/sandbox")
 @app.post("/settings/sandbox", include_in_schema=False)
 def settings_sandbox_post(enabled: bool):
     set_sandbox_enabled(enabled)
-    return {"sandbox": get_sandbox_enabled()}
+    return {"sandbox": get_sandbox_enabled(), "scope": "service"}
 
 
 @app.get("/api/settings/webskills")
 @app.get("/settings/webskills", include_in_schema=False)
 def settings_webskills_get():
-    return {"webskills": get_web_skills_enabled()}
+    return {"webskills": get_web_skills_enabled(), "scope": "service"}
 
 
 @app.post("/api/settings/webskills")
@@ -274,7 +274,7 @@ def settings_webskills_post(enabled: bool):
         filtered = [name for name in current if name not in WEB_TOOL_NAMES]
         if filtered != current:
             set_selected_tools(filtered)
-    return {"webskills": get_web_skills_enabled()}
+    return {"webskills": get_web_skills_enabled(), "scope": "service"}
 
 
 _session_service = SessionService(

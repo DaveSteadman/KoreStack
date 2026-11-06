@@ -59,6 +59,7 @@ from ..documents.koresheet.range_ops import (
     read_sheet_range as _read_sheet_range,
     read_sheet_table as _read_sheet_table,
 )
+from .shared import _require_revision
 
 def koredocs_sheet_create(
     folder_path: Annotated[str, 'Folder path in the shared KoreDocs/datauser tree, such as "/" or "/Projects". Missing folders are created.'],
@@ -155,13 +156,14 @@ def koredocs_sheet_rows_update(
     id: Annotated[int, 'KoreSheet file id.'],
     match: Annotated[dict[str, Any], 'Header-keyed filters selecting target rows.'],
     updates: Annotated[dict[str, Any], 'Header-keyed values to write into each matched row.'],
+    expected_revision: Annotated[int, 'Required revision from the latest sheet read. On conflict, reread and reapply only the intended changes.'],
     header_row: Annotated[Optional[int], 'Optional header row. When omitted, KoreDocs will guess a likely header row.'] = None,
     range_ref: Annotated[Optional[str], 'Optional A1-style range constraining the search.'] = None,
     match_mode: Annotated[Literal['all', 'any'], 'Whether all filters must match or any filter may match.'] = 'all',
     create_missing_columns: Annotated[bool, 'When true, create columns for any missing update headers.'] = False,
-    expected_revision: Annotated[Optional[int], 'Optional optimistic concurrency check.'] = None,
 ) -> dict:
     """Update all matched table rows using header-keyed values."""
+    expected_revision = _require_revision(expected_revision)
     return _update_sheet_rows(
         id=id,
         match=match,
@@ -177,22 +179,24 @@ def koredocs_sheet_rows_update(
 def koredocs_sheet_headers_set(
     id: Annotated[int, 'KoreSheet file id.'],
     headers: Annotated[list[str], 'Header names to write into the sheet.'],
+    expected_revision: Annotated[int, 'Required revision from the latest sheet read. On conflict, reread and reapply only the intended changes.'],
     header_row: Annotated[int, 'Row number where the headers should be written.'] = 1,
     start_col: Annotated[str, 'Starting column for the first header.'] = 'A',
-    expected_revision: Annotated[Optional[int], 'Optional optimistic concurrency check.'] = None,
 ) -> dict:
     """Write or replace a contiguous header row."""
+    expected_revision = _require_revision(expected_revision)
     return _set_sheet_headers(id=id, headers=headers, header_row=header_row, start_col=start_col, expected_revision=expected_revision)
 
 
 def koredocs_sheet_table_rows_append(
     id: Annotated[int, 'KoreSheet file id.'],
     rows: Annotated[list[Any], 'Rows to append. Each row may be a list of values or an object keyed by header names.'],
+    expected_revision: Annotated[int, 'Required revision from the latest sheet read. On conflict, reread and reapply only the intended changes.'],
     header_row: Annotated[Optional[int], 'Optional header row. When omitted, KoreDocs will guess a likely header row.'] = None,
     create_missing_columns: Annotated[bool, 'When true, create any missing columns referenced by object-style rows.'] = False,
-    expected_revision: Annotated[Optional[int], 'Optional optimistic concurrency check.'] = None,
 ) -> dict:
     """Append rows using a table-first interface rather than raw cell addresses."""
+    expected_revision = _require_revision(expected_revision)
     return _append_sheet_table_rows(
         id=id,
         rows=rows,
@@ -225,10 +229,11 @@ def koredocs_sheet_named_value_set(
     id: Annotated[int, 'KoreSheet file id.'],
     label: Annotated[str, 'Label to search for, such as "Interest Rate" or "Starting Balance".'],
     value: Annotated[Any, 'New value to write into the neighboring value cell.'],
+    expected_revision: Annotated[int, 'Required revision from the latest sheet read. On conflict, reread and reapply only the intended changes.'],
     direction: Annotated[Literal['right', 'below'], 'Which neighboring cell should be treated as the value cell.'] = 'right',
-    expected_revision: Annotated[Optional[int], 'Optional optimistic concurrency check.'] = None,
 ) -> dict:
     """Write a value cell next to a labelled cell."""
+    expected_revision = _require_revision(expected_revision)
     return _set_named_value(id=id, label=label, value=value, direction=direction, expected_revision=expected_revision)
 
 def koredocs_sheet_range_read(
@@ -243,9 +248,10 @@ def koredocs_sheet_range_read(
 def koredocs_sheet_cells_write(
     id: Annotated[int, 'KoreSheet file id.'],
     cells: Annotated[dict[str, Any], 'Sparse cell updates keyed by A1 address.'],
-    expected_revision: Annotated[Optional[int], 'Optional optimistic concurrency check.'] = None,
+    expected_revision: Annotated[int, 'Required revision from the latest sheet read. On conflict, reread and reapply only the intended changes.'],
 ) -> dict:
     """Canonical prefixed alias for write_sheet_cells."""
+    expected_revision = _require_revision(expected_revision)
     return _write_sheet_cells(id=id, cells=cells, expected_revision=expected_revision)
 
 
@@ -261,11 +267,12 @@ def koredocs_sheet_table_read(
 def koredocs_sheet_rows_append(
     id: Annotated[int, 'KoreSheet file id.'],
     rows: Annotated[list[Any], 'Rows to append.'],
+    expected_revision: Annotated[int, 'Required revision from the latest sheet read. On conflict, reread and reapply only the intended changes.'],
     start_col: Annotated[str, 'Start column for list-style rows. Defaults to A.'] = 'A',
     header_row: Annotated[Optional[int], 'Header row to use when rows are objects keyed by column names.'] = None,
-    expected_revision: Annotated[Optional[int], 'Optional optimistic concurrency check.'] = None,
 ) -> dict:
     """Canonical prefixed alias for append_sheet_rows."""
+    expected_revision = _require_revision(expected_revision)
     return _append_sheet_rows(id=id, rows=rows, start_col=start_col, header_row=header_row, expected_revision=expected_revision)
 
 
@@ -273,11 +280,12 @@ def koredocs_sheet_rows_upsert(
     id: Annotated[int, 'KoreSheet file id.'],
     rows: Annotated[list[dict[str, Any]], 'Header-keyed rows to update or append.'],
     key_columns: Annotated[list[str], 'Header names that uniquely identify an existing row.'],
+    expected_revision: Annotated[int, 'Required revision from the latest sheet read. On conflict, reread and reapply only the intended changes.'],
     header_row: Annotated[int, 'Row number containing column headers.'] = 1,
     create_missing_columns: Annotated[bool, 'When true, create any missing header columns before writing.'] = False,
-    expected_revision: Annotated[Optional[int], 'Optional optimistic concurrency check.'] = None,
 ) -> dict:
     """Canonical prefixed alias for upsert_sheet_rows."""
+    expected_revision = _require_revision(expected_revision)
     return _upsert_sheet_rows(
         id=id,
         rows=rows,
@@ -291,8 +299,8 @@ def koredocs_sheet_rows_upsert(
 def koredocs_sheet_range_clear(
     id: Annotated[int, 'KoreSheet file id.'],
     range: Annotated[str, 'A1-style range such as B2:D9, A:A, or 3:3.'],
-    expected_revision: Annotated[Optional[int], 'Optional optimistic concurrency check.'] = None,
+    expected_revision: Annotated[int, 'Required revision from the latest sheet read. On conflict, reread and reapply only the intended changes.'],
 ) -> dict:
     """Canonical prefixed alias for clear_sheet_range."""
+    expected_revision = _require_revision(expected_revision)
     return _clear_sheet_range(id=id, range=range, expected_revision=expected_revision)
-

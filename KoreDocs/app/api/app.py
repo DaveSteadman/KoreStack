@@ -42,6 +42,7 @@ from ..mcp import FORMAT_INFO
 from .middleware import AuthMiddleware
 from .middleware import NoCacheMiddleware
 from .routes_korefile import register_korefile_routes
+from .routes_proposals import register_proposal_routes
 from .routes_legacy_files import register_legacy_file_routes
 from .routes_sheets import register_sheet_routes
 from .routes_skills import register_skill_routes
@@ -115,6 +116,7 @@ register_ui_routes(app, static_dir=STATIC)
 register_legacy_file_routes(app, data_dir=DATA_DIR, allowed_extensions=ALLOWED_EXTENSIONS)
 register_textedit_routes(app, textedit_max_bytes=TEXTEDIT_MAX_BYTES)
 register_korefile_routes(app, data_dir=DATA_DIR)
+register_proposal_routes(app)
 register_sheet_routes(app)
 register_skill_routes(app)
 

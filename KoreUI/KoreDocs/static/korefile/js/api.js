@@ -32,6 +32,8 @@ async function _req(method, path, body) {
 
 export const listFolders    = ()                => _req('GET',    '/folders');
 export const createFolder   = (name, pid)       => _req('POST',   '/folders',       { name, parent_id: pid });
+export const copyFolders = (items, destinationFolderId) =>
+  _req('POST', '/folders/copy', { items, destination_folder_id: destinationFolderId });
 export const deleteFolder   = (id, expectedRevision = null, recursive = false) => {
   const params = new URLSearchParams();
   if (expectedRevision != null) params.set('expected_revision', expectedRevision);
@@ -54,6 +56,8 @@ export function listFiles({ folderId, folderPath } = {}) {
 export const getFile   = (id)           => _req('GET',    `/files/${id}`);
 export const createFile = (folderId, name, content, metadata) =>
   _req('POST', '/files', { folder_id: folderId, name, content, metadata });
+export const copyFiles = (items, destinationFolderId) =>
+  _req('POST', '/files/copy', { items, destination_folder_id: destinationFolderId });
 export const updateFile = (id, content, metadata) =>
   _req('PUT', `/files/${id}`, { content, metadata });
 export const deleteFile = (id, expectedRevision = null) => {

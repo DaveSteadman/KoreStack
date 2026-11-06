@@ -3,13 +3,14 @@
  * Wires together editor, toolbar, properties panel, file I/O, and the menu bar.
  */
 
-import * as editor     from './editor.js?v=20261011b';
+import * as editor     from './editor.js?v=20261117a';
 import * as toolbar    from './toolbar.js?v=20261011b';
 import * as properties from './properties.js?v=20261011b';
-import * as fileio     from './fileio.js';
+import * as fileio     from './fileio.js?v=20261117a';
 import { trackAppTab, initAppMenuEvents } from '/ui-elements/assets/js/chrome.js';
 import { initChrome } from './chrome.js';
 import * as draft      from '/static/shared/js/draft.js';
+import { initProposalPanel } from '/static/shared/js/proposalPanel.js';
 
 const _draftSave = draft.makeSaver();
 
@@ -36,6 +37,12 @@ const autoOpened = await fileio.autoOpenFromUrl(v => {
 });
 if (!autoOpened) {
   location.replace('/ui');
+} else {
+  initProposalPanel({
+    getFileId: fileio.currentId,
+    isDirty: fileio.isDirty,
+    reloadCurrent: fileio.reloadCurrent,
+  });
 }
 
 // Restore any unsaved draft for this tab (takes priority over server / blank content)

@@ -2,7 +2,8 @@
  * fileio.js — KoreFile-backed file state + autosave for KoreDoc.
  */
 
-import { createKorefileSyncController } from '/static/shared/js/korefileSyncController.js';
+import { createKorefileSyncController } from '/static/shared/js/korefileSyncController.js?v=20261117a';
+import { initKorefileSaveStatus } from '/static/shared/js/saveStatus.js';
 
 /** Return a blank document string with YAML frontmatter. */
 export function blankDoc(title = 'Untitled') {
@@ -20,6 +21,8 @@ const _controller = createKorefileSyncController({
   },
 });
 
+initKorefileSaveStatus(() => _controller.flushAutosave());
+
 export const init = _controller.init;
 export const currentId = _controller.currentId;
 export const currentName = _controller.currentName;
@@ -31,5 +34,6 @@ export const markDirty = _controller.markDirty;
 export const markSaved = _controller.markSaved;
 export const guardUnsaved = _controller.guardUnsaved;
 export const autoOpenFromUrl = _controller.autoOpenFromUrl;
+export const reloadCurrent = _controller.reloadCurrent;
 export const queueAutosave = _controller.queueAutosave;
 export const flushAutosave = _controller.flushAutosave;

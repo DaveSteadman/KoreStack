@@ -7,7 +7,7 @@ import * as store       from './store.js';
 import * as renderer    from './renderer.js';
 import * as interaction from './interaction.js';
 import * as ui          from './ui.js';
-import * as fileio      from './fileio.js';
+import * as fileio      from './fileio.js?v=20261117a';
 import { initDialogHost, initKoreDocsShell, renderAppMenu, trackAppTab } from '/ui-elements/assets/js/chrome.js';
 import * as draft       from '/static/shared/js/draft.js';
 

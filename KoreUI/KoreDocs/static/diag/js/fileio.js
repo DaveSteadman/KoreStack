@@ -2,7 +2,8 @@
  * fileio.js — KoreFile-backed file state + autosave for KoreDiag, plus PNG export.
  */
 
-import { createKorefileSyncController } from '/static/shared/js/korefileSyncController.js?v=20260709a';
+import { createKorefileSyncController } from '/static/shared/js/korefileSyncController.js?v=20261117a';
+import { initKorefileSaveStatus } from '/static/shared/js/saveStatus.js';
 import { newDiagram, toGridInt } from './model.js';
 import { getDiagram, isDirty, markDirty, markSaved } from './store.js';
 
@@ -21,10 +22,13 @@ const _controller = createKorefileSyncController({
   onAfterApplyRemote: () => document.dispatchEvent(new CustomEvent('kd:autosaved')),
 });
 
+initKorefileSaveStatus(() => _controller.flushAutosave());
+
 export const currentId = _controller.currentId;
 export const currentName = _controller.currentName;
 export const currentRevision = _controller.currentRevision;
 export const autoOpenFromUrl = _controller.autoOpenFromUrl;
+export const reloadCurrent = _controller.reloadCurrent;
 export const queueAutosave = _controller.queueAutosave;
 export const flushAutosave = _controller.flushAutosave;
 

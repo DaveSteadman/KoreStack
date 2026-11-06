@@ -76,6 +76,15 @@ def _normalise_folder_path(folder_path: str | None) -> str:
     return '/' + '/'.join(parts) if parts else '/'
 
 
+def _require_revision(expected_revision: int | None) -> int:
+    if expected_revision is None:
+        raise ValueError(
+            'expected_revision is required for mutations. Read the current file first and '
+            'pass its revision; after a conflict, reread and reapply only the intended changes.'
+        )
+    return expected_revision
+
+
 def _folder_tree() -> list[dict]:
     folders = korefile.list_folders()
     by_id = {f['id']: {**f, 'children': []} for f in folders}

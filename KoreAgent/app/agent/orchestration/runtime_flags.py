@@ -1,9 +1,10 @@
 # ====================================================================================================
 # MARK: OVERVIEW
 # ====================================================================================================
-# Process-local feature switches for orchestration policy. The getters and setters centralise the
-# mutable toggles used by API controls, while filter_web_skills derives a cached non-web variant of
-# a skill payload. This isolates runtime policy from the static skill catalogue and model engine.
+# Service-wide feature switches for orchestration policy. The API controls are not associated with
+# a session, so their values intentionally apply to every conversation in this Agent process.
+# Callers should snapshot the policy at the start of a run rather than reading mutable state while
+# executing it.
 # MARK: FUNCTIONS
 # Function inventory:
 # - get_skill_guidance_enabled: Returns skill guidance enabled for this module.
@@ -15,47 +16,78 @@
 # - filter_web_skills: Filters web skills for this module.
 # ====================================================================================================
 
+import threading
+from dataclasses import dataclass
+
 from web_tools_state import is_web_tool_name
 
-_SKILL_GUIDANCE_ENABLED: bool = False
-_SANDBOX_ENABLED: bool = True
-_WEB_SKILLS_ENABLED: bool = True
-_WEB_SKILLS_FILTER_CACHE: dict[int, dict] = {}
+
+@dataclass(frozen=True)
+class RuntimePolicy:
+    """Immutable snapshot of service-wide orchestration controls."""
+
+    skill_guidance_enabled: bool
+    sandbox_enabled: bool
+    web_skills_enabled: bool
+
+
+_policy = RuntimePolicy(
+    skill_guidance_enabled=False,
+    sandbox_enabled=True,
+    web_skills_enabled=True,
+)
+_policy_lock = threading.RLock()
+
+
+def get_runtime_policy() -> RuntimePolicy:
+    """Return an immutable snapshot of the current service-wide policy."""
+    with _policy_lock:
+        return _policy
 
 
 def get_skill_guidance_enabled() -> bool:
-    return _SKILL_GUIDANCE_ENABLED
+    return get_runtime_policy().skill_guidance_enabled
 
 
 def set_skill_guidance_enabled(enabled: bool) -> None:
-    global _SKILL_GUIDANCE_ENABLED
-    _SKILL_GUIDANCE_ENABLED = enabled
+    global _policy
+    with _policy_lock:
+        _policy = RuntimePolicy(
+            skill_guidance_enabled=bool(enabled),
+            sandbox_enabled=_policy.sandbox_enabled,
+            web_skills_enabled=_policy.web_skills_enabled,
+        )
 
 
 def get_sandbox_enabled() -> bool:
-    return _SANDBOX_ENABLED
+    return get_runtime_policy().sandbox_enabled
 
 
 def set_sandbox_enabled(enabled: bool) -> None:
-    global _SANDBOX_ENABLED
-    _SANDBOX_ENABLED = enabled
+    global _policy
+    with _policy_lock:
+        _policy = RuntimePolicy(
+            skill_guidance_enabled=_policy.skill_guidance_enabled,
+            sandbox_enabled=bool(enabled),
+            web_skills_enabled=_policy.web_skills_enabled,
+        )
 
 
 def get_web_skills_enabled() -> bool:
-    return _WEB_SKILLS_ENABLED
+    return get_runtime_policy().web_skills_enabled
 
 
 def set_web_skills_enabled(enabled: bool) -> None:
-    global _WEB_SKILLS_ENABLED
-    _WEB_SKILLS_ENABLED = enabled
+    global _policy
+    with _policy_lock:
+        _policy = RuntimePolicy(
+            skill_guidance_enabled=_policy.skill_guidance_enabled,
+            sandbox_enabled=_policy.sandbox_enabled,
+            web_skills_enabled=bool(enabled),
+        )
 
 
 def filter_web_skills(payload: dict) -> dict:
-    cache_key = id(payload)
-    cached = _WEB_SKILLS_FILTER_CACHE.get(cache_key)
-    if cached is not None:
-        return cached
-
     filtered: list[dict] = []
     for skill in payload.get("skills", []):
         skill_name = str(skill.get("skill_name", "") or "").strip()
@@ -86,17 +118,16 @@ def filter_web_skills(payload: dict) -> dict:
             }
         filtered.append(copied)
 
-    result = {**payload, "skills": filtered}
-    _WEB_SKILLS_FILTER_CACHE.clear()
-    _WEB_SKILLS_FILTER_CACHE[cache_key] = result
-    return result
+    return {**payload, "skills": filtered}
 
 
 __all__ = [
     "filter_web_skills",
+    "get_runtime_policy",
     "get_sandbox_enabled",
     "get_skill_guidance_enabled",
     "get_web_skills_enabled",
+    "RuntimePolicy",
     "set_sandbox_enabled",
     "set_skill_guidance_enabled",
     "set_web_skills_enabled",
