@@ -29,7 +29,7 @@
 # - web_delete_older_than: Implements the web delete older than operation for this module.
 # - web_delete_by_feed: Implements the web delete by feed operation for this module.
 # - web_bulk_delete_entries: Implements the web bulk delete entries operation for this module.
-# - web_set_age_mode: Implements the web set age mode operation for this module.
+# - web_set_age_mode: Implements the web set domain limit operation for this module.
 # - web_delete_outside_calendar: Implements the web delete outside calendar operation for this module.
 # ====================================================================================================
 
@@ -52,6 +52,7 @@ from app.database import (
     delete_entries_by_feed,
     delete_entries_older_than,
     delete_entries_outside_calendar,
+    delete_entries_over_limit,
     delete_entry,
     get_domain_age_settings,
     get_entries,
@@ -231,6 +232,19 @@ def register_feed_ui(app: FastAPI) -> None:
         domain_info   = next((item for item in all_domains if item["domain"] == domain), {})
         total         = domain_info.get("entry_count", len(entries))
         feeds         = [feed for feed in all_feeds if feed.get("domain") == domain]
+        configured_feed_names = {
+            str(feed.get("name") or "").strip()
+            for feed in feeds
+            if str(feed.get("name") or "").strip()
+        }
+        feed_delete_options = [
+            {
+                "name":       feed_name,
+                "entry_count": entry_count,
+                "is_active":  feed_name in configured_feed_names,
+            }
+            for feed_name, entry_count in sorted(feed_counts.items(), key=lambda item: item[0].casefold())
+        ]
         _add_next_mins(feeds)
         feed_refresh_mins = {feed["id"]: feed.get("_next_mins") for feed in feeds}
         feed_refresh_secs = {feed["id"]: feed.get("_next_secs") for feed in feeds}
@@ -244,6 +258,7 @@ def register_feed_ui(app: FastAPI) -> None:
                 "limit":             limit,
                 "offset":            offset,
                 "feeds":             feeds,
+                "feed_delete_options": feed_delete_options,
                 "age_settings":      age_settings,
                 "feed_counts":       feed_counts,
                 "feed_refresh_mins": feed_refresh_mins,
@@ -413,10 +428,23 @@ def register_feed_ui(app: FastAPI) -> None:
         days:       Optional[int]  = Form(None),
         start_date: Optional[str]  = Form(None),
         end_date:   Optional[str]  = Form(None),
+        max_entries_enabled: bool  = Form(False),
+        max_entries: Optional[int] = Form(None),
     ):
-        set_domain_age_settings(domain, mode, days=days, start_date=start_date, end_date=end_date)
-        update_domain_age_settings_spec(domain, mode, days=days, start_date=start_date, end_date=end_date)
+        try:
+            set_domain_age_settings(
+                domain, mode, days=days, start_date=start_date, end_date=end_date,
+                max_entries_enabled=max_entries_enabled, max_entries=max_entries,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        update_domain_age_settings_spec(
+            domain, mode, days=days, start_date=start_date, end_date=end_date,
+            max_entries_enabled=max_entries_enabled, max_entries=max_entries,
+        )
         sync_domain_spec(domain)
+        if max_entries_enabled and max_entries:
+            delete_entries_over_limit(domain, max_entries)
         if "application/json" in request.headers.get("accept", ""):
             return {"ok": True}
         return RedirectResponse(f"/ui/feeds/{domain}", status_code=303)

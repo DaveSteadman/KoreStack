@@ -43,8 +43,8 @@
           <div class="num-stepper">
             <input type="number" name="limit" value="{{ limit }}" min="1" max="200" style="width:52px;">
             <div class="stepper-btns">
-              <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,1)">&#9650;</button>
-              <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,-1)">&#9660;</button>
+              <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,1)" aria-label="Increase"><span class="kcui-icon kcui-icon--asset" aria-hidden="true" style="--kcui-icon-size:1em;--kcui-icon-url:url(/ui-elements/assets/icons/dazzle-line/chevron-up-svgrepo-com.svg)"></span></button>
+              <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,-1)" aria-label="Decrease"><span class="kcui-icon kcui-icon--asset" aria-hidden="true" style="--kcui-icon-size:1em;--kcui-icon-url:url(/ui-elements/assets/icons/dazzle-line/chevron-down-svgrepo-com.svg)"></span></button>
             </div>
           </div>
         </label>

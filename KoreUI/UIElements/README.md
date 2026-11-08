@@ -226,9 +226,13 @@ Use `.kcui-panel-toolbar` only for a full-width panel chrome row; it intentional
 minimum height, unlike the inline `.kcui-toolbar` action layout.
 
 ### Icon Buttons (`forms.css`)
+Source icons from the [Dazzle Line pack](assets/icons/README.md); that guide records
+the SVG Repo source, download provenance and the explicitly approved Pan-hand exception.
 Use `.kcui-icon-button` or `.kcui-btn-icon` for an icon-only action. The shared control uses the standard
 button and glyph sizes from `tokens.css`; add `kcui-icon-button--compact` for dense pagination or toolbars.
-Icons inside these controls are centered and scaled automatically. Service-specific exceptions should override
+Place the `.kcui-icon`, SVG or image directly inside the button so it is centered and scaled automatically;
+an extra inline wrapper introduces baseline alignment and bypasses the shared glyph sizing.
+Service-specific exceptions should override
 the `--kcui-icon-button-current-size` and `--kcui-icon-button-current-glyph-size` variables, not dimensions.
 Use `.kcui-icon--nav-previous` and `.kcui-icon--nav-next` for visible, accessible previous/next controls rather
 than Unicode triangle characters.

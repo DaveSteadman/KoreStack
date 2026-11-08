@@ -73,6 +73,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from app.config import cfg
 from app.database import (
     apply_age_rule,
+    delete_entries_over_limit,
     get_domain_age_settings,
     insert_entry,
     list_domains,
@@ -604,9 +605,11 @@ def ingest_json_listing_feed(feed: dict) -> None:
 def ingest_feed(feed: dict) -> None:
     if feed.get("type") == "web":
         ingest_web_feed(feed)
+        _apply_entry_limit(feed["domain"])
         return
     if feed.get("type") == "json_listing":
         ingest_json_listing_feed(feed)
+        _apply_entry_limit(feed["domain"])
         return
     _log(f"Ingesting: {feed['name']}")
     t_start = datetime.utcnow()
@@ -702,7 +705,14 @@ def ingest_feed(feed: dict) -> None:
     update_feed_last_fetched(feed["id"])
     update_feed_status(feed["id"], "ok", error=None, duration_s=duration, new_entries=new_entries,
                        content_status=content_status)
+    _apply_entry_limit(feed["domain"])
     _log(f"  {feed['name']}: +{new_entries} entries in {duration:.1f}s [{content_status}]")
+
+
+def _apply_entry_limit(domain: str) -> None:
+    settings = get_domain_age_settings(domain)
+    if settings["max_entries_enabled"] and settings["max_entries"]:
+        delete_entries_over_limit(domain, settings["max_entries"])
 
 
 def _enqueue(feed: dict, *, quiet_skip: bool = False) -> bool:

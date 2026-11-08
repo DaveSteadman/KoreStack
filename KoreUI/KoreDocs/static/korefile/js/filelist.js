@@ -128,32 +128,14 @@ export async function loadSearch(q) {
 // ── Rendering ───────────────────────────────────────────────────
 
 import { resolveIcon, SUITE_ICONS } from '/ui-elements/assets/js/icons.js';
+import { svgIconMask } from '/ui-elements/assets/js/svgicons.js';
 
-const OPEN_SVG = `<svg viewBox="0 0 20 20" fill="none" width="12" height="12">
-  <path d="M4 4h5v2H6v8h8v-3h2v5H4V4z" fill="currentColor"/>
-  <path d="M10 10l6-6M11 4h5v5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-</svg>`;
-
-const EDIT_SVG = `<svg viewBox="0 0 20 20" fill="none" width="12" height="12">
-  <path d="M14.5 3.5a2.121 2.121 0 0 1 3 3L6 18H3v-3L14.5 3.5z" stroke="currentColor" stroke-width="1.5"/>
-</svg>`;
-
-const TEXT_SVG = `<svg viewBox="0 0 20 20" fill="none" width="12" height="12">
-  <path d="M4 5h12M4 10h12M4 15h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-</svg>`;
-
-const COPY_SVG = `<svg viewBox="0 0 20 20" fill="none" width="12" height="12">
-  <rect x="7" y="6" width="10" height="11" rx="1" stroke="currentColor" stroke-width="1.4"/>
-  <path d="M13 6V4a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h3" stroke="currentColor" stroke-width="1.4"/>
-</svg>`;
-
-const MOVE_SVG = `<svg viewBox="0 0 20 20" fill="none" width="12" height="12">
-  <path d="M3 10h13M11 5l5 5-5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-</svg>`;
-
-const TRASH_SVG = `<svg viewBox="0 0 20 20" fill="none" width="12" height="12">
-  <path d="M3 6h14M8 6V4h4v2M5 6l1 11h8l1-11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-</svg>`;
+const OPEN_SVG = svgIconMask('arrow-up-right-from-square-svgrepo-com', { size: 12 });
+const EDIT_SVG = svgIconMask('pencil-svgrepo-com', { size: 12 });
+const TEXT_SVG = svgIconMask('text-svgrepo-com', { size: 12 });
+const COPY_SVG = svgIconMask('clone-svgrepo-com', { size: 12 });
+const MOVE_SVG = svgIconMask('arrow-right-svgrepo-com', { size: 12 });
+const TRASH_SVG = svgIconMask('trash-svgrepo-com', { size: 12 });
 
 const TYPE_URL = { koredoc: '/doc', koresheet: '/sheet', korediag: '/diag', csv: '/sheet' };
 const TEXT_EXTS = new Set(['csv', 'json', 'log', 'md', 'py', 'txt', 'xml', 'yaml', 'yml']);
@@ -279,8 +261,8 @@ function _renderList() {
     th.classList.toggle('sorted', th.dataset.sort === _sortKey);
     const arrow = th.querySelector('.sort-arrow');
     if (arrow) {
-      arrow.textContent = th.dataset.sort === _sortKey
-        ? (_sortAsc ? ' ▲' : ' ▼') : '';
+      arrow.innerHTML = th.dataset.sort === _sortKey
+        ? svgIconMask(_sortAsc ? 'chevron-up-svgrepo-com' : 'chevron-down-svgrepo-com', { size: 12 }) : '';
     }
   });
 }

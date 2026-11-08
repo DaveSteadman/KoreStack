@@ -7,14 +7,14 @@
 <div class="two-col">
 
   <!-- Left column: feeds table + domain age settings -->
-  <div class="kcui-stack">
+  <div class="kcui-stack" style="min-width:0;">
     <div class="panel kcui-panel">
       <div class="panel-header kcui-panel-header">
         FEEDS
         <span id="feed-count" class="badge badge-dim" style="margin-left:0.5rem;">{{ feeds|length }}</span>
       </div>
       <div class="panel-body kcui-panel-body" style="padding:0;">
-        {% if feeds %}
+        {% if feed_delete_options %}
         <table>
           <thead>
             <tr>
@@ -57,13 +57,13 @@
               </td>
               <td>
                 <button class="kcui-tag kcui-tag--sm kcui-tag--success" title="Refresh now"
-                  onclick="triggerRefresh(this, '/ui/feeds/{{ domain }}/feeds/{{ f.id }}/refresh')">&#x21bb;</button>
+                  onclick="triggerRefresh(this, '/ui/feeds/{{ domain }}/feeds/{{ f.id }}/refresh')"><span class="kcui-icon kcui-icon--asset" aria-hidden="true" style="--kcui-icon-size:1em;--kcui-icon-url:url(/ui-elements/assets/icons/dazzle-line/refresh-cw-alt-svgrepo-com.svg)"></span></button>
               </td>
               <td>
                 <form method="post" action="/ui/feeds/{{ domain }}/feeds/{{ f.id }}/delete"
                   data-feed-name="{{ f.name }}" onsubmit="return confirmDeleteFeed(this)">
                   <button class="kcui-tag kcui-tag--sm kcui-tag--danger" type="submit"
-                    onclick="event.stopPropagation()">&#x2715;</button>
+                    onclick="event.stopPropagation()"><span class="kcui-icon kcui-icon--asset" aria-hidden="true" style="--kcui-icon-size:1em;--kcui-icon-url:url(/ui-elements/assets/icons/dazzle-line/xmark-svgrepo-com.svg)"></span></button>
                 </form>
               </td>
             </tr>
@@ -76,15 +76,36 @@
       </div>
     </div>
 
-    <!-- Domain age settings -->
+    <!-- Domain limit settings -->
     <div class="panel kcui-panel">
       <div class="panel-header kcui-panel-header">
-        DOMAIN AGE SETTINGS
+        DOMAIN LIMIT SETTINGS
       </div>
       <div class="panel-body kcui-panel-body">
         <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.75rem;">
+          <label style="display:inline-flex; align-items:center; gap:0.4rem; margin:0;">
+            <input id="max-entries-enabled-input" type="checkbox"
+                   {% if age_settings.max_entries_enabled %}checked{% endif %}>
+            Maximum entry count
+          </label>
+          <span id="max-entries-row" style="display:inline-flex; align-items:center; gap:0.4rem;">
+            <div class="num-stepper">
+              <input id="max-entries-input" type="number" min="1"
+                     value="{{ age_settings.max_entries or 1000 }}" style="width:72px;"
+                     {% if not age_settings.max_entries_enabled %}disabled{% endif %}>
+              <div class="stepper-btns">
+                <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,1)"
+                        {% if not age_settings.max_entries_enabled %}disabled{% endif %} aria-label="Increase"><span class="kcui-icon kcui-icon--asset" aria-hidden="true" style="--kcui-icon-size:1em;--kcui-icon-url:url(/ui-elements/assets/icons/dazzle-line/chevron-up-svgrepo-com.svg)"></span></button>
+                <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,-1)"
+                        {% if not age_settings.max_entries_enabled %}disabled{% endif %} aria-label="Decrease"><span class="kcui-icon kcui-icon--asset" aria-hidden="true" style="--kcui-icon-size:1em;--kcui-icon-url:url(/ui-elements/assets/icons/dazzle-line/chevron-down-svgrepo-com.svg)"></span></button>
+              </div>
+            </div>
+            <span class="meta" style="font-size:12px; white-space:nowrap;">entries retained, newest first</span>
+          </span>
+        </div>
+        <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.75rem;">
           <select id="age-mode-select" onchange="showAgeRow(this.value)" style="width:auto;">
-            <option value="none"            {% if age_settings.mode == 'none'            %}selected{% endif %}>No limit</option>
+            <option value="none"            {% if age_settings.mode == 'none'            %}selected{% endif %}>No Time Limit</option>
             <option value="days_previous"   {% if age_settings.mode == 'days_previous'   %}selected{% endif %}>Days Previous</option>
             <option value="calendar_period" {% if age_settings.mode == 'calendar_period' %}selected{% endif %}>Calendar Period</option>
           </select>
@@ -93,8 +114,8 @@
               <input id="age-days-input" type="number" min="1"
                      value="{{ age_settings.days or 30 }}" style="width:52px;">
               <div class="stepper-btns">
-                <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,1)">&#9650;</button>
-                <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,-1)">&#9660;</button>
+                <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,1)" aria-label="Increase"><span class="kcui-icon kcui-icon--asset" aria-hidden="true" style="--kcui-icon-size:1em;--kcui-icon-url:url(/ui-elements/assets/icons/dazzle-line/chevron-up-svgrepo-com.svg)"></span></button>
+                <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,-1)" aria-label="Decrease"><span class="kcui-icon kcui-icon--asset" aria-hidden="true" style="--kcui-icon-size:1em;--kcui-icon-url:url(/ui-elements/assets/icons/dazzle-line/chevron-down-svgrepo-com.svg)"></span></button>
               </div>
             </div>
             <span class="meta" style="font-size:12px; white-space:nowrap;">Days</span>
@@ -110,9 +131,11 @@
                    style="width:120px; padding:2px 4px; font-size:12px; color-scheme:dark;">
           </span>
         </div>
-        <div style="display:flex; gap:0.5rem;">
-          <button type="button" onclick="saveAgeGate()">SAVE CHANGES</button>
+        <div style="display:flex; align-items:center; gap:0.5rem;">
+          <button id="age-save-button" type="button" onclick="saveAgeGate()" disabled>SAVE CHANGES</button>
           <button type="button" class="btn-secondary" onclick="cancelAgeGate()">CANCEL</button>
+          <span id="age-save-status" class="meta" role="status" aria-live="polite"
+                style="display:inline-flex; align-items:center; min-height:var(--kcui-control-height);"></span>
         </div>
       </div>
     </div>
@@ -147,8 +170,8 @@
             <div class="num-stepper">
               <input id="add-update_rate" name="update_rate" type="number" value="60" min="1" style="width:64px;" required>
               <div class="stepper-btns">
-                <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,1)">&#9650;</button>
-                <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,-1)">&#9660;</button>
+                <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,1)" aria-label="Increase"><span class="kcui-icon kcui-icon--asset" aria-hidden="true" style="--kcui-icon-size:1em;--kcui-icon-url:url(/ui-elements/assets/icons/dazzle-line/chevron-up-svgrepo-com.svg)"></span></button>
+                <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,-1)" aria-label="Decrease"><span class="kcui-icon kcui-icon--asset" aria-hidden="true" style="--kcui-icon-size:1em;--kcui-icon-url:url(/ui-elements/assets/icons/dazzle-line/chevron-down-svgrepo-com.svg)"></span></button>
               </div>
             </div>
           </div>
@@ -176,8 +199,8 @@
             <div class="num-stepper">
               <input id="edit-update_rate" name="update_rate" type="number" min="1" style="width:64px;" required>
               <div class="stepper-btns">
-                <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,1)">&#9650;</button>
-                <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,-1)">&#9660;</button>
+                <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,1)" aria-label="Increase"><span class="kcui-icon kcui-icon--asset" aria-hidden="true" style="--kcui-icon-size:1em;--kcui-icon-url:url(/ui-elements/assets/icons/dazzle-line/chevron-up-svgrepo-com.svg)"></span></button>
+                <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,-1)" aria-label="Decrease"><span class="kcui-icon kcui-icon--asset" aria-hidden="true" style="--kcui-icon-size:1em;--kcui-icon-url:url(/ui-elements/assets/icons/dazzle-line/chevron-down-svgrepo-com.svg)"></span></button>
               </div>
             </div>
           </div>
@@ -202,8 +225,8 @@
           <label for="del_feed" style="display:block; margin-bottom:0.4rem; font-size:12px; letter-spacing:.04em; font-weight:600; text-transform:uppercase;">Delete by Feed</label>
           <div style="display:flex; gap:0;">
             <select id="del_feed" name="feed_name" style="flex:1;">
-              {% for f in feeds %}
-              <option value="{{ f.name }}">{{ f.name }}</option>
+              {% for feed in feed_delete_options %}
+              <option value="{{ feed.name }}">{{ feed.name }} ({{ feed.entry_count }} entries){% if not feed.is_active %} - inactive feed{% endif %}</option>
               {% endfor %}
             </select>
             <button class="kcui-tag kcui-tag--danger" type="button"
@@ -255,7 +278,7 @@
           <td class="meta" style="white-space:nowrap;">{{ e.published[:16] if e.published else "-" }}</td>
           <td>
             <button class="kcui-tag kcui-tag--sm kcui-tag--danger" title="Delete entry"
-              onclick="deleteEntry(this, '/ui/feeds/{{ domain }}/entries/{{ e.id }}/delete')">&#x2715;</button>
+              onclick="deleteEntry(this, '/ui/feeds/{{ domain }}/entries/{{ e.id }}/delete')"><span class="kcui-icon kcui-icon--asset" aria-hidden="true" style="--kcui-icon-size:1em;--kcui-icon-url:url(/ui-elements/assets/icons/dazzle-line/xmark-svgrepo-com.svg)"></span></button>
           </td>
         </tr>
         {% else %}
@@ -330,7 +353,7 @@ async function triggerRefresh(btn, url) {
     await fetch(url, { method: 'POST' });
     btn.textContent = '\u2713';
     btn.style.color = 'var(--green)';
-    setTimeout(() => { btn.innerHTML = '&#x21bb;'; btn.disabled = false; btn.style.opacity = ''; }, 1500);
+    setTimeout(() => { btn.innerHTML = '<span class="kcui-icon kcui-icon--asset" aria-hidden="true" style="--kcui-icon-size:1em;--kcui-icon-url:url(/ui-elements/assets/icons/dazzle-line/refresh-cw-alt-svgrepo-com.svg)"></span>'; btn.disabled = false; btn.style.opacity = ''; }, 1500);
   } catch (_) { btn.disabled = false; btn.style.opacity = ''; }
 }
 
@@ -339,7 +362,7 @@ async function confirmDeleteFeedEntries() {
   const form   = document.getElementById('form-del-feed');
   if (!select || !form || select.selectedIndex < 0) return;
 
-  const feedName = select.options[select.selectedIndex].text;
+  const feedName = select.value;
   const confirmed = await window.kcuiConfirm(
     'Delete Feed Entries',
     'Delete ALL entries from ' + feedName + '?',
@@ -395,10 +418,51 @@ function cancelAgeGate() {
   document.getElementById('age-days-input').value  = '{{ age_settings.days or 30 }}';
   document.getElementById('age-start-input').value = '{{ age_settings.start_date or "" }}';
   document.getElementById('age-end-input').value   = '{{ age_settings.end_date or "" }}';
+  document.getElementById('max-entries-enabled-input').checked = {{ 'true' if age_settings.max_entries_enabled else 'false' }};
+  document.getElementById('max-entries-input').value = '{{ age_settings.max_entries or 1000 }}';
   showAgeRow('{{ age_settings.mode }}');
+  updateAgeGateDirtyState();
+  setAgeGateStatus('Changes discarded.');
 }
 
 (function () {
+  const modeSelect = document.getElementById('age-mode-select');
+  const daysInput = document.getElementById('age-days-input');
+  const startInput = document.getElementById('age-start-input');
+  const endInput = document.getElementById('age-end-input');
+  const maxEntriesEnabledInput = document.getElementById('max-entries-enabled-input');
+  const maxEntriesInput = document.getElementById('max-entries-input');
+  const saveButton = document.getElementById('age-save-button');
+  const status = document.getElementById('age-save-status');
+  let savedSettings;
+
+  function readAgeSettings() {
+    const mode = modeSelect.value;
+    const settings = { mode, maxEntriesEnabled: maxEntriesEnabledInput.checked };
+    if (mode === 'days_previous') {
+      settings.days = daysInput.value;
+    } else if (mode === 'calendar_period') {
+      settings.startDate = startInput.value;
+      settings.endDate = endInput.value;
+    }
+    if (settings.maxEntriesEnabled) settings.maxEntries = maxEntriesInput.value;
+    return settings;
+  }
+
+  function settingsMatch(left, right) {
+    return JSON.stringify(left) === JSON.stringify(right);
+  }
+
+  function setAgeGateStatus(message) {
+    status.textContent = message;
+  }
+
+  function updateAgeGateDirtyState(announce = true) {
+    const changed = !settingsMatch(readAgeSettings(), savedSettings);
+    saveButton.disabled = !changed;
+    if (changed && announce) setAgeGateStatus('Unsaved changes.');
+  }
+
   function showAgeRow(mode) {
     const daysRow = document.getElementById('age-row-days');
     const calRow  = document.getElementById('age-row-cal');
@@ -406,24 +470,91 @@ function cancelAgeGate() {
     if (calRow)  calRow.style.display  = mode === 'calendar_period' ? 'inline-flex' : 'none';
   }
 
+  function showMaxEntriesRow() {
+    const enabled = maxEntriesEnabledInput.checked;
+    maxEntriesInput.disabled = !enabled;
+    document.querySelectorAll('#max-entries-row .stepper-btns button').forEach(function (button) {
+      button.disabled = !enabled;
+    });
+  }
+
   async function saveAgeGate() {
-    const mode = document.getElementById('age-mode-select').value;
+    const mode = modeSelect.value;
     const body = new URLSearchParams({ mode });
     if (mode === 'days_previous') {
-      const days = document.getElementById('age-days-input').value;
-      if (!days) return;
+      const days = daysInput.value;
+      if (!days || Number(days) < 1) {
+        setAgeGateStatus('Days must be at least 1.');
+        return;
+      }
       body.set('days', days);
     } else if (mode === 'calendar_period') {
-      body.set('start_date', document.getElementById('age-start-input').value || '');
-      body.set('end_date',   document.getElementById('age-end-input').value   || '');
+      body.set('start_date', startInput.value || '');
+      body.set('end_date', endInput.value || '');
     }
-    await fetch('/ui/feeds/{{ domain }}/settings/age-mode', { method: 'POST', body });
+    if (maxEntriesEnabledInput.checked) {
+      const maxEntries = maxEntriesInput.value;
+      if (!maxEntries || Number(maxEntries) < 1) {
+        setAgeGateStatus('Maximum entry count must be at least 1.');
+        return;
+      }
+      body.set('max_entries_enabled', 'true');
+      body.set('max_entries', maxEntries);
+    }
+    saveButton.disabled = true;
+    setAgeGateStatus('Saving changes...');
+    try {
+      const response = await fetch('/ui/feeds/{{ domain }}/settings/age-mode', {
+        method: 'POST',
+        headers: { Accept: 'application/json' },
+        body,
+      });
+      if (!response.ok) {
+        const detail = await response.text();
+        throw new Error(detail || `HTTP ${response.status}`);
+      }
+      const result = await response.json();
+      if (!result.ok) throw new Error('The server did not confirm the changes.');
+      savedSettings = readAgeSettings();
+      setAgeGateStatus('Changes saved.');
+    } catch (error) {
+      setAgeGateStatus(`Save failed: ${error.message}`);
+    } finally {
+      updateAgeGateDirtyState(false);
+    }
   }
 
   window.showAgeRow  = showAgeRow;
   window.saveAgeGate = saveAgeGate;
-  const sel = document.getElementById('age-mode-select');
-  if (sel) showAgeRow(sel.value);
+  window.updateAgeGateDirtyState = updateAgeGateDirtyState;
+  window.setAgeGateStatus = setAgeGateStatus;
+  savedSettings = readAgeSettings();
+  showAgeRow(modeSelect.value);
+  showMaxEntriesRow();
+  updateAgeGateDirtyState();
+
+  modeSelect.addEventListener('change', function () {
+    showAgeRow(modeSelect.value);
+    updateAgeGateDirtyState();
+  });
+  maxEntriesEnabledInput.addEventListener('change', function () {
+    showMaxEntriesRow();
+    updateAgeGateDirtyState();
+  });
+  [daysInput, startInput, endInput, maxEntriesInput].forEach(function (input) {
+    input.addEventListener('input', updateAgeGateDirtyState);
+    input.addEventListener('change', updateAgeGateDirtyState);
+  });
+  document.querySelectorAll('#age-row-days .stepper-btns button').forEach(function (button) {
+    button.addEventListener('click', function () {
+      window.setTimeout(updateAgeGateDirtyState, 0);
+    });
+    document.querySelectorAll('#max-entries-row .stepper-btns button').forEach(function (button) {
+      button.addEventListener('click', function () {
+        window.setTimeout(updateAgeGateDirtyState, 0);
+      });
+    });
+  });
 
   window.purgeDaysPrevious = function () {
     document.getElementById('purge-days-val').value = document.getElementById('age-days-input').value;

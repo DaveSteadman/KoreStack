@@ -229,6 +229,7 @@ def get_suite_urls_map() -> dict[str, str]:
         "korecron":        _port("korecron"),
         "koretest2":       _port("koretest2"),
         "koreagentnetwork": _port("koreagentnetwork"),
+        "koreproject":     _port("koreproject"),
         "koreunittest":    _port("koreunittest"),
     }
 

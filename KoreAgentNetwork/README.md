@@ -5,7 +5,7 @@ KoreAgentNetwork is the visual automation layer. A network is a persisted JSON d
 ## Role in the suite
 
 - Blocks reach any configured KoreStack service over HTTP (`api_get`, `api_post`).
-- LLM and Decision blocks call KoreAgent's `POST /api/work-packet`, using the chat model and the System One decision model.
+- LLM and Decision blocks call KoreAgent's `POST /api/work-packet`, using KoreAgent's configured resident chat model and System One decision model.
 - Networks live in the user's data space, so they are portable and editable.
 
 ## Block types

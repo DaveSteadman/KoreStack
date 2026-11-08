@@ -20,7 +20,7 @@ Checked-in configuration for the suite. Services read it through `KoreCommon`; n
 | 29605 | korelibrary | 29616 | koretest2 |
 | 29606 | korerag | 29617 | koreagentnetwork |
 | 29607 | korereference | 29618 | koreunittest |
-| 29608 | koregraph | | |
+| 29608 | koregraph | 29619 | koreproject |
 | 29609 | korecomms | | |
 
 ## Data root

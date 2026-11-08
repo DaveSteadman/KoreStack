@@ -36,7 +36,7 @@ Switch models at runtime with slash commands such as `/systemone model <name>`. 
 |---|---|
 | `POST /api/sessions/{id}/prompt` | Submit a prompt to a session; stream results via `GET /api/runs/{run_id}/stream` |
 | `GET /api/sessions/{id}/history` | Session history |
-| `POST /api/work-packet` | One-shot LLM or System One decision call used by other subsystems |
+| `POST /api/work-packet` | One-shot LLM or System One decision call using the configured resident local models; per-request model overrides are rejected |
 | `GET /api/skills/catalog`, `POST /api/skills/invoke` | Skill discovery and invocation |
 | `/api/skill-manager/...` | Register and manage skills and tools |
 | `GET /api/status`, `/api/status/ollama`, `/api/version` | Health, Ollama and build information |

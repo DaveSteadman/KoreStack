@@ -10,9 +10,10 @@ import {
   undo, redo, isDirty,
 } from './store.js';
 import { worldBounds, buildNodeMap } from './model.js';
-import { draw } from './renderer.js';
-import { setTool, reparentNode } from './interaction.js';
+import { draw } from './renderer.js?v=20261118d';
+import { setTool, reparentNode } from './interaction.js?v=20261118d';
 import { initAppMenuEvents, kcuiPrompt } from '/ui-elements/assets/js/chrome.js';
+import { svgIconMask } from '/ui-elements/assets/js/svgicons.js';
 
 const CUSTOM_COLOR_MIGRATION_KEY = 'korediag.customColors.v1';
 const CUSTOM_COLOR_LIMIT = 7;
@@ -39,6 +40,8 @@ export function initMenus() {
 
 function handleMenuAction(action) {
   switch (action) {
+    case 'import-svg':   document.dispatchEvent(new CustomEvent('kd:import-svg')); break;
+    case 'export-svg':   document.dispatchEvent(new CustomEvent('kd:export-svg')); break;
     case 'export-png':   document.dispatchEvent(new CustomEvent('kd:export-png')); break;
     case 'undo':         undo(); draw(); notifyUI(); break;
     case 'redo':         redo(); draw(); notifyUI(); break;
@@ -290,7 +293,7 @@ function addToggleRow(panel, label, actions) {
       const clearBtn = document.createElement('button');
       clearBtn.type = 'button';
       clearBtn.className = 'prop-clear-btn';
-      clearBtn.textContent = '×';
+      clearBtn.innerHTML = svgIconMask('xmark-svgrepo-com', { size: 12 });
       clearBtn.title = 'Reset to default';
       clearBtn.addEventListener('click', action.onClear);
       group.appendChild(clearBtn);
@@ -321,7 +324,7 @@ function addSelectRow(panel, label, value, options, onChange, onClear = null) {
     const clearBtn = document.createElement('button');
     clearBtn.type = 'button';
     clearBtn.className = 'prop-clear-btn';
-    clearBtn.textContent = '×';
+    clearBtn.innerHTML = svgIconMask('xmark-svgrepo-com', { size: 12 });
     clearBtn.title = 'Reset to default';
     clearBtn.addEventListener('click', onClear);
     wrap.appendChild(clearBtn);
@@ -449,7 +452,7 @@ function addPropRow(panel, label, type, value, onChange, attrs = {}, onClear = n
       wrap.appendChild(control);
       const clearBtn = document.createElement('button');
       clearBtn.className = 'prop-clear-btn';
-      clearBtn.textContent = '×';
+      clearBtn.innerHTML = svgIconMask('xmark-svgrepo-com', { size: 12 });
       clearBtn.title = 'Reset to default';
       clearBtn.addEventListener('click', () => onClear());
       wrap.appendChild(clearBtn);
@@ -468,7 +471,7 @@ function addPropRow(panel, label, type, value, onChange, attrs = {}, onClear = n
     wrap.appendChild(input);
     const clearBtn = document.createElement('button');
     clearBtn.className = 'prop-clear-btn';
-    clearBtn.textContent = '×';
+    clearBtn.innerHTML = svgIconMask('xmark-svgrepo-com', { size: 12 });
     clearBtn.title = 'Reset to default';
     clearBtn.addEventListener('click', () => onClear());
     wrap.appendChild(clearBtn);
@@ -716,7 +719,7 @@ function renderMeta(panel, id, meta, nodeMap) {
       tr.innerHTML = `
         <td><input type="text" value="${escHtml(k)}" placeholder="key"/></td>
         <td><input type="text" value="${escHtml(String(v))}" placeholder="value"/></td>
-        <td><button class="meta-del-btn" title="Remove">×</button></td>`;
+        <td><button class="meta-del-btn" title="Remove">${svgIconMask('xmark-svgrepo-com', { size: 12 })}</button></td>`;
       table.appendChild(tr);
 
       const [kIn, vIn] = tr.querySelectorAll('input');
@@ -816,7 +819,7 @@ function renderHierarchyNodes(parent, nodes) {
 
     const icon = document.createElement('span');
     icon.className = 'h-icon';
-    icon.textContent = node.type === 'ellipse' ? '○' : '□';
+    icon.textContent = ({ ellipse: '○', rounded: '▢', diamond: '◇', text: 'T' })[node.type] || '□';
 
     const name = document.createElement('span');
     name.textContent = node.label || '(unlabelled)';

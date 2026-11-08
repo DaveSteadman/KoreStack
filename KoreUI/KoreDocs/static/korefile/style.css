@@ -58,7 +58,7 @@ html, body {
   transition: transform 120ms;
 }
 .tree-item.open > .tree-toggle { transform: rotate(90deg); }
-.tree-item .tree-toggle svg {
+.tree-item .tree-toggle :is(svg, .kcui-icon) {
   pointer-events: none;
   width: 1em;
   height: 1em;
@@ -148,7 +148,7 @@ html, body {
 }
 .kf-tb-btn:hover { background: var(--surface-2); color: var(--text); border-color: var(--border-2); }
 .kf-tb-btn:active { background: var(--accent); color: #fff; border-color: var(--accent); }
-.kf-tb-btn svg {
+.kf-tb-btn :is(svg, .kcui-icon) {
   width: 1em;
   height: 1em;
   flex-shrink: 0;
@@ -247,7 +247,7 @@ html, body {
   align-items: center;
   font-size: 20px;
 }
-.file-icon svg {
+.file-icon :is(svg, .kcui-icon) {
   width: 1em;
   height: 1em;
 }
@@ -311,7 +311,7 @@ tr:focus-within .row-actions { opacity: 1; }
   padding: 0;
   flex-shrink: 0;
 }
-.icon-btn svg {
+.icon-btn :is(svg, .kcui-icon) {
   width: 20px;
   height: 20px;
 }

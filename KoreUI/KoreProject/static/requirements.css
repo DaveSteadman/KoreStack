@@ -1,0 +1,38 @@
+/* Requirement navigation and spreadsheet geometry; shared elements own all controls. */
+.kr-page { --kcui-page-max: 2400px; }
+.kr-project-picker { flex: 1 1 240px; }
+.kr-workspace {
+  display: grid;
+  grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+  gap: var(--kcui-gap-panel);
+  align-items: start;
+}
+.kr-workspace > * { min-width: 0; }
+.kr-workspace .kcui-navpanel-tree { max-height: 65vh; }
+.kr-sheet-scroll { max-height: 70vh; }
+.kr-sheet { table-layout: auto; min-width: 720px; }
+.kr-sheet td { vertical-align: top; }
+.kr-sheet th:first-child { width: 12ch; white-space: nowrap; }
+.kr-sheet th:nth-child(2) { width: 180px; }
+.kr-sheet th:last-child { width: 1px; white-space: nowrap; }
+.kr-sheet td:nth-child(3) { min-width: 240px; }
+.kr-sheet th:first-child,
+.kr-sheet td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--surface);
+}
+.kr-sheet thead th:first-child { z-index: 2; }
+.kr-sheet tbody tr:hover td:first-child { background: var(--surface); }
+.kr-sheet td.kr-record-id { white-space: nowrap; }
+.kr-sheet :is(input[type=text], textarea) { width: 100%; min-width: 0; box-sizing: border-box; }
+.kr-sheet textarea { display: block; min-height: 4rem; resize: none; overflow: hidden; }
+.kr-sheet .kr-design-link { width: max-content; flex-wrap: nowrap; gap: var(--kcui-gap-xs); }
+.kr-sheet .kr-design-link a { white-space: nowrap; }
+.kr-sheet .kr-links button { flex-shrink: 0; align-self: flex-start; }
+.kr-sheet tr.is-dirty td:nth-child(3) { box-shadow: inset 3px 0 var(--warning); }
+@media (max-width: 800px) {
+  .kr-workspace { grid-template-columns: minmax(0, 1fr); }
+  .kr-workspace .kcui-navpanel-tree { max-height: 30vh; }
+}

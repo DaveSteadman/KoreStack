@@ -88,7 +88,7 @@ from app.importers.kiwix import (
     run_kiwix_crawl,
     run_kiwix_import,
 )
-from app.importers.state import import_state, import_stop_event, start_import_worker, state_lock
+from app.importers.state import import_state, request_import_stop, start_import_worker, state_lock
 from app.endpoint_ui import register_reference_ui
 
 
@@ -332,12 +332,7 @@ def route_import_kiwix_crawl(req: KiwixCrawlRequest):
 @app.post("/api/import/stop", summary="Abort in-progress import or crawl")
 @app.post("/import/stop", include_in_schema=False)
 def route_import_stop():
-    with state_lock:
-        running = bool(import_state.get("running"))
-        if running:
-            import_state["running"] = False
-    if running:
-        import_stop_event.set()
+    if request_import_stop():
         return {"stopped": True}
     return {"stopped": False, "detail": "No import was running"}
 

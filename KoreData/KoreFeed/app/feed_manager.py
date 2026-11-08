@@ -171,7 +171,10 @@ def _save_domain_state(domain: str, state: dict[str, dict]) -> None:
 def _normalise_age_settings(raw_age_settings: object) -> dict:
     valid_modes = {"none", "days_previous", "calendar_period"}
     if not isinstance(raw_age_settings, dict):
-        return {"mode": "none", "days": None, "start_date": None, "end_date": None}
+        return {
+            "mode": "none", "days": None, "start_date": None, "end_date": None,
+            "max_entries_enabled": False, "max_entries": None,
+        }
 
     mode = str(raw_age_settings.get("mode") or "none").strip()
     if mode not in valid_modes:
@@ -194,11 +197,27 @@ def _normalise_age_settings(raw_age_settings: object) -> dict:
         start_date = None
         end_date   = None
 
+    raw_max_entries_enabled = raw_age_settings.get("max_entries_enabled", False)
+    if isinstance(raw_max_entries_enabled, str):
+        max_entries_enabled = raw_max_entries_enabled.strip().lower() in {"1", "true", "yes", "on"}
+    else:
+        max_entries_enabled = bool(raw_max_entries_enabled)
+    max_entries = raw_age_settings.get("max_entries")
+    try:
+        max_entries = int(max_entries) if max_entries not in (None, "") else None
+    except (TypeError, ValueError):
+        max_entries = None
+    if max_entries is None or max_entries < 1:
+        max_entries_enabled = False
+        max_entries = None
+
     return {
         "mode":       mode,
         "days":       days,
         "start_date": start_date,
         "end_date":   end_date,
+        "max_entries_enabled": max_entries_enabled,
+        "max_entries": max_entries,
     }
 
 
@@ -219,17 +238,17 @@ def _normalise_domain_enabled(raw_enabled: object) -> bool:
 def _read_domain_spec(domain: str) -> tuple[str, list, dict, bool]:
     path = _domain_file(domain)
     if not path.exists():
-        return domain, [], {"mode": "none", "days": None, "start_date": None, "end_date": None}, True
+        return domain, [], _normalise_age_settings(None), True
 
     try:
         raw_text = path.read_text(encoding="utf-8")
     except OSError as exc:
         LOG.warning("Could not read feed domain spec %s: %s", path, exc)
-        return domain, [], {"mode": "none", "days": None, "start_date": None, "end_date": None}, True
+        return domain, [], _normalise_age_settings(None), True
 
     if not raw_text.strip():
         LOG.warning("Feed domain spec is empty; treating as empty domain: %s", path)
-        return domain, [], {"mode": "none", "days": None, "start_date": None, "end_date": None}, True
+        return domain, [], _normalise_age_settings(None), True
 
     try:
         raw = json.loads(raw_text)
@@ -245,10 +264,10 @@ def _read_domain_spec(domain: str) -> tuple[str, list, dict, bool]:
     elif isinstance(raw, list):
         raw_domain        = domain
         raw_feeds         = raw
-        raw_age_settings  = {"mode": "none", "days": None, "start_date": None, "end_date": None}
+        raw_age_settings  = _normalise_age_settings(None)
         raw_enabled       = True
     else:
-        return domain, [], {"mode": "none", "days": None, "start_date": None, "end_date": None}, True
+        return domain, [], _normalise_age_settings(None), True
 
     if not isinstance(raw_feeds, list):
         raw_feeds = []
@@ -263,6 +282,8 @@ def _apply_domain_age_settings(domain: str, age_settings: dict) -> None:
         days=age_settings.get("days"),
         start_date=age_settings.get("start_date"),
         end_date=age_settings.get("end_date"),
+        max_entries_enabled=age_settings.get("max_entries_enabled", False),
+        max_entries=age_settings.get("max_entries"),
     )
 
 
@@ -429,7 +450,7 @@ def create_domain(domain: str) -> bool:
         {
             "domain":       domain,
             "enabled":      True,
-            "age_settings": {"mode": "none", "days": None, "start_date": None, "end_date": None},
+            "age_settings": _normalise_age_settings(None),
             "feeds":        [],
         },
     )
@@ -442,6 +463,8 @@ def update_domain_age_settings_spec(
     days: Optional[int] = None,
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
+    max_entries_enabled: bool = False,
+    max_entries: Optional[int] = None,
 ) -> None:
     _, raw_feeds, _, enabled = _read_domain_spec(domain)
     age_settings = _normalise_age_settings({
@@ -449,6 +472,8 @@ def update_domain_age_settings_spec(
         "days":       days,
         "start_date": start_date,
         "end_date":   end_date,
+        "max_entries_enabled": max_entries_enabled,
+        "max_entries": max_entries,
     })
     FEEDS_DIR.mkdir(exist_ok=True)
     _write_json_atomic(

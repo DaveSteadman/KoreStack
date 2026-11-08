@@ -23,6 +23,14 @@ UI assets are in `KoreUI/KoreStack/` and are served live, so there is no build s
 - **Ollama State**: Ollama version, the configured and loaded chat model, the System One model and its statistics
 - **Model warmup**: starting Ollama from KoreStack asynchronously preloads the configured chat and System One models, retaining them to avoid a first-prompt runner startup delay.
 - **Services**: one card per service with health, port, and a link to its UI
+- **KoreProject**: its service card opens `/ui` on port 29619 and provides the same
+  Start, Stop and Restart controls as other services. It participates in default
+  suite startup and managed shutdown, not a separately launched process.
+
+The supervisor resolves its selected service registry at startup. After adding a
+service such as KoreProject, restart KoreStack to load the new registry; refreshing
+the browser alone cannot add it. If using `--services`, include `koreproject` or
+use `all`. Disabled or unselected services do not receive dashboard cards.
 
 ## Health contract
 

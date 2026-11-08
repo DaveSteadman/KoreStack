@@ -37,7 +37,7 @@
   color: var(--text);
 }
 
-.tree-action-btn svg {
+.tree-action-btn :is(svg, .kcui-icon) {
   pointer-events: none;
 }
 

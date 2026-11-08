@@ -329,6 +329,18 @@ def import_one(
     return True
 
 
+def _finalize_import() -> None:
+    def report_progress(checked: int, resolved: int) -> None:
+        with state_lock:
+            import_state["links_checked"] = checked
+            import_state["links_resolved"] = resolved
+
+    with state_lock:
+        if not import_stop_event.is_set():
+            import_state["phase"] = "finalizing"
+    resolve_links(should_stop=import_stop_event.is_set, on_progress=report_progress)
+
+
 def run_kiwix_import(
     zim_name: str,
     kiwix_url: str,
@@ -346,16 +358,12 @@ def run_kiwix_import(
             work = titles[:limit] if limit else titles
         else:
             fetch_limit = limit or 50_000
-            try:
-                work = suggest_titles(client, kiwix_base, zim_name, prefix, fetch_limit)
-            except Exception as exc:
-                import_state.update({"running": False, "last_error": str(exc)})
-                return
+            work = suggest_titles(client, source_base, zim_name, prefix, fetch_limit)
 
         import_state["total"] = len(work)
 
         for title in work:
-            if not import_state["running"]:
+            if import_stop_event.is_set():
                 break
             try:
                 wrote = import_one(
@@ -379,8 +387,7 @@ def run_kiwix_import(
                 with state_lock:
                     import_state["errors"] += 1
                 import_state["last_error"] = f"{title}: {exc}"
-    import_state["running"] = False
-    resolve_links()
+    _finalize_import()
 
 
 def run_kiwix_backfill(zim_name: str, kiwix_url: str, limit: int) -> None:
@@ -400,7 +407,7 @@ def run_kiwix_backfill(zim_name: str, kiwix_url: str, limit: int) -> None:
 
     with db_connection() as write_conn, _http_client() as client:
         for title in titles:
-            if not import_state["running"]:
+            if import_stop_event.is_set():
                 break
             try:
                 wrote = import_one(
@@ -432,17 +439,12 @@ def run_kiwix_backfill(zim_name: str, kiwix_url: str, limit: int) -> None:
                 with state_lock:
                     import_state["errors"] += 1
                 import_state["last_error"] = f"{title}: {exc}"
-    import_state["running"] = False
-    resolve_links()
+    _finalize_import()
 
 
 def run_kiwix_crawl(seed_url: str, max_depth: int, limit: int, delay_seconds: float, resume: bool) -> None:
     """BFS crawl starting from seed_url, following wikilinks up to max_depth hops."""
-    try:
-        source_kind, source_base, source_name, start_title = parse_seed_url(seed_url)
-    except ValueError as exc:
-        import_state.update({"running": False, "last_error": str(exc)})
-        return
+    source_kind, source_base, source_name, start_title = parse_seed_url(seed_url)
 
     queue: deque[tuple[str, int]] = deque([(start_title, 0)])
     visited: set[str] = {start_title}
@@ -462,7 +464,7 @@ def run_kiwix_crawl(seed_url: str, max_depth: int, limit: int, delay_seconds: fl
             # before returning to the crawler so WAL readers stay independent.
             write_conn.commit()
 
-        while queue and import_state["running"]:
+        while queue and not import_stop_event.is_set():
             if import_state["done"] >= limit:
                 break
 
@@ -564,5 +566,4 @@ def run_kiwix_crawl(seed_url: str, max_depth: int, limit: int, delay_seconds: fl
                     import_state["errors"] += 1
                 import_state["last_error"] = f"{title}: {exc}"
                 _pace()
-    import_state["running"] = False
-    resolve_links()
+    _finalize_import()

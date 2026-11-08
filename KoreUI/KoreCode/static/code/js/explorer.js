@@ -1,5 +1,6 @@
 import { state, api } from './state.js';
 import { kcuiPrompt } from '/ui-elements/assets/js/dialogs.js';
+import { svgIconMask } from '/ui-elements/assets/js/svgicons.js';
 
 const treeHost = document.getElementById('code-tree');
 const treeStatus = document.getElementById('tree-status');
@@ -17,21 +18,9 @@ let _rootPicker = null;
 
 // ── SVG icons ────────────────────────────────────────────────────────────────
 
-const SVG_NEW_FILE = `<svg viewBox="0 0 20 20" fill="none" width="11" height="11">
-  <path d="M5 2h7l4 4v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z" stroke="currentColor" stroke-width="1.5"/>
-  <line x1="8" y1="11" x2="12" y2="11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
-  <line x1="10" y1="9" x2="10" y2="13" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
-</svg>`;
-
-const SVG_NEW_DIR = `<svg viewBox="0 0 20 20" fill="none" width="11" height="11">
-  <path d="M2 5a2 2 0 0 1 2-2h4l2 2h6a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5z" stroke="currentColor" stroke-width="1.5"/>
-  <line x1="10" y1="8" x2="10" y2="14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-  <line x1="7" y1="11" x2="13" y2="11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-</svg>`;
-
-const SVG_DELETE = `<svg viewBox="0 0 20 20" fill="none" width="11" height="11">
-  <path d="M3 6h14M8 6V4h4v2M5 6l1 11h8l1-11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-</svg>`;
+const SVG_NEW_FILE = svgIconMask('file-plus-svgrepo-com', { size: 11 });
+const SVG_NEW_DIR = svgIconMask('folder-plus-svgrepo-com', { size: 11 });
+const SVG_DELETE = svgIconMask('trash-svgrepo-com', { size: 11 });
 
 // ── Action helpers ────────────────────────────────────────────────────────────
 

@@ -265,7 +265,7 @@ function renderPanel(d) {
   const aliasesHtml = aliases.length
     ? aliases.map(a =>
         `<span class="v-alias-tag">${escHtml(a.term)}`
-        + `<button class="v-alias-tag-x" title="Split off" onclick="doUnmerge(${a.id})">×</button>`
+        + `<button class="v-alias-tag-x" title="Split off" onclick="doUnmerge(${a.id})"><span class="kcui-icon kcui-icon--asset" aria-hidden="true" style="--kcui-icon-size:1em;--kcui-icon-url:url(/ui-elements/assets/icons/dazzle-line/xmark-svgrepo-com.svg)"></span></button>`
         + `</span>`
       ).join('')
     : `<span class="meta" style="font-size:var(--kcui-text-body-sm)">None</span>`;
@@ -279,7 +279,7 @@ function renderPanel(d) {
       <span class="v-panel-term" id="v-panel-term">${escHtml(d.term)}</span>
       <span style="display:flex;align-items:baseline;gap:0.6rem;">
         <span class="meta">concept ${d.concept_id}</span>
-        <button class="kcui-btn kcui-btn-secondary kcui-btn-sm" onclick="goToGraph(${escHtml(JSON.stringify(d.term))})">to Graph ↗</button>
+        <button class="kcui-btn kcui-btn-secondary kcui-btn-sm" onclick="goToGraph(${escHtml(JSON.stringify(d.term))})">to Graph <span class="kcui-icon kcui-icon--asset" aria-hidden="true" style="--kcui-icon-size:1em;--kcui-icon-url:url(/ui-elements/assets/icons/dazzle-line/arrow-up-right-from-square-svgrepo-com.svg)"></span></button>
       </span>
     </div>
 

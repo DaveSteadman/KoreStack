@@ -59,6 +59,7 @@ let _activePortHint = null;  // { x, y } the nearest/preferred port — drawn di
 let _rubberBand = null; // { x1,y1,x2,y2 } screen coords
 let _ghostEdge  = null; // { fromX,fromY,toX,toY } screen coords (during connect drag)
 let _ghostRect  = null; // { x,y,w,h } screen coords (during shape draw drag)
+const _svgImages = new Map();
 
 export function init(canvas) {
   _canvas = canvas;
@@ -192,6 +193,13 @@ function drawGrid(ctx, W, H, gridSize) {
   ctx.lineWidth   = 1;
   ctx.beginPath();
 
+  // Keep the work area visibly bounded even when the panned grid interval
+  // would otherwise put its first line part-way into the canvas.
+  ctx.moveTo(0.5, 0);
+  ctx.lineTo(0.5, H);
+  ctx.moveTo(0, 0.5);
+  ctx.lineTo(W, 0.5);
+
   for (let x = offX; x < W; x += step) {
     ctx.moveTo(x + 0.5, 0);
     ctx.lineTo(x + 0.5, H);
@@ -230,28 +238,28 @@ function drawNode(ctx, node, bounds) {
 
   ctx.save();
 
-  // Fill
-  ctx.fillStyle = style.fillColor || '#1f1f1f';
-  if (node.type === 'ellipse') {
-    ellipsePath(ctx, x, y, w, h);
-    ctx.fill();
-  } else {
-    ctx.fillRect(x, y, w, h);
+  if (node.type === 'svg') {
+    drawSvgNode(ctx, node, x, y, w, h);
+    ctx.restore();
+    if (selected && selection.size === 1) drawResizeHandles(ctx, x, y, w, h, strokeColor);
+    return;
   }
-  // Stroke
-  ctx.strokeStyle = strokeColor;
-  ctx.lineWidth   = strokeWidth;
-  if (node.type === 'ellipse') {
-    ellipsePath(ctx, x, y, w, h);
+
+  if (node.type !== 'text') {
+    ctx.fillStyle   = style.fillColor || '#1f1f1f';
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth   = strokeWidth * view.zoom;
+    nodePath(ctx, node.type, x, y, w, h);
+    ctx.fill();
     ctx.stroke();
-  } else {
-    ctx.strokeRect(x, y, w, h);
   }
 
   // Label
   if (node.label) {
     const labelLayout = nodeLabelLayout(style, x, y, w, h);
-    ctx.fillStyle   = contrastColor(style.fillColor || '#1f1f1f');
+    ctx.fillStyle   = node.type === 'text'
+      ? (style.fontColor || style.strokeColor || '#cdd6f4')
+      : contrastColor(style.fillColor || '#1f1f1f');
     ctx.font        = labelFont(style, view.zoom);
     ctx.textAlign   = labelLayout.textAlign;
     ctx.textBaseline= labelLayout.textBaseline;
@@ -388,10 +396,10 @@ function drawEdge(ctx, edge, nodeMap) {
   if (arrow === 'forward' || arrow === 'bidirectional') {
     const last = sp[sp.length - 1];
     const prev = sp[sp.length - 2];
-    drawArrow(ctx, prev, last, ctx.strokeStyle, ctx.lineWidth);
+    drawArrow(ctx, prev, last, ctx.strokeStyle, edgeWidth);
   }
   if (arrow === 'bidirectional') {
-    drawArrow(ctx, sp[1] ?? sp[0], sp[0], ctx.strokeStyle, ctx.lineWidth);
+    drawArrow(ctx, sp[1] ?? sp[0], sp[0], ctx.strokeStyle, edgeWidth);
   }
 
   // Label at midpoint
@@ -421,9 +429,9 @@ function drawEdgeEndpointHandles(ctx, fromSP, toSP, edgeStroke) {
   ctx.restore();
 }
 
-function drawArrow(ctx, from, to, color, lw) {
+function drawArrow(ctx, from, to, color, strokeWidth) {
   const angle = Math.atan2(to.y - from.y, to.x - from.x);
-  const size  = Math.max(8, lw * 4) * view.zoom;
+  const size  = Math.max(8, strokeWidth * 4) * view.zoom;
   ctx.save();
   ctx.fillStyle = color;
   ctx.beginPath();
@@ -476,6 +484,67 @@ function ellipseBoundaryPoint(bounds, towards) {
 function ellipsePath(ctx, x, y, w, h) {
   ctx.beginPath();
   ctx.ellipse(x + w/2, y + h/2, w/2, h/2, 0, 0, Math.PI * 2);
+}
+
+function nodePath(ctx, type, x, y, w, h) {
+  if (type === 'ellipse') {
+    ellipsePath(ctx, x, y, w, h);
+    return;
+  }
+  if (type === 'diamond') {
+    ctx.beginPath();
+    ctx.moveTo(x + w / 2, y);
+    ctx.lineTo(x + w,     y + h / 2);
+    ctx.lineTo(x + w / 2, y + h);
+    ctx.lineTo(x,         y + h / 2);
+    ctx.closePath();
+    return;
+  }
+  if (type === 'rounded') {
+    ctx.beginPath();
+    ctx.roundRect(x, y, w, h, Math.min(w, h) * 0.14);
+    return;
+  }
+  ctx.beginPath();
+  ctx.rect(x, y, w, h);
+}
+
+function drawSvgNode(ctx, node, x, y, w, h) {
+  const markup = node.svg?.markup || node.svgMarkup;
+  if (!markup) {
+    drawMissingSvg(ctx, x, y, w, h);
+    return;
+  }
+
+  let asset = _svgImages.get(node.id);
+  if (!asset || asset.markup !== markup) {
+    const image = new Image();
+    const url = URL.createObjectURL(new Blob([markup], { type: 'image/svg+xml' }));
+    asset = { markup, image, url, loaded: false, failed: false };
+    _svgImages.set(node.id, asset);
+    image.onload = () => { asset.loaded = true; URL.revokeObjectURL(url); draw(); };
+    image.onerror = () => { asset.failed = true; URL.revokeObjectURL(url); draw(); };
+    image.src = url;
+  }
+
+  if (asset.loaded) ctx.drawImage(asset.image, x, y, w, h);
+  else drawMissingSvg(ctx, x, y, w, h, asset.failed ? 'SVG could not be rendered' : 'Loading SVG…');
+}
+
+function drawMissingSvg(ctx, x, y, w, h, label = 'SVG') {
+  ctx.save();
+  ctx.fillStyle = '#25253c';
+  ctx.strokeStyle = '#6f6f9a';
+  ctx.setLineDash([5, 3]);
+  ctx.fillRect(x, y, w, h);
+  ctx.strokeRect(x, y, w, h);
+  ctx.setLineDash([]);
+  ctx.fillStyle = '#cdd6f4';
+  ctx.font = `${12 * view.zoom}px system-ui,sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(label, x + w / 2, y + h / 2, Math.max(0, w - 12));
+  ctx.restore();
 }
 
 function centre(bounds) {

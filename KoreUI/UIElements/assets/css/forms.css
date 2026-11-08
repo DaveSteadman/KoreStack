@@ -221,7 +221,23 @@ a.kcui-btn,
   display: block;
   width: var(--kcui-icon-button-current-glyph-size) !important;
   height: var(--kcui-icon-button-current-glyph-size) !important;
-  flex: 0 0 var(--kcui-icon-button-current-glyph-size);
+  flex: 0 0 var(--kcui-icon-button-current-glyph-size) !important;
+}
+
+.kcui-icon--asset,
+.kcui-icon--mask {
+  pointer-events: none;
+}
+
+.kcui-icon--asset {
+  display: inline-block;
+  width: var(--kcui-icon-size, 1em);
+  height: var(--kcui-icon-size, 1em);
+  flex: 0 0 var(--kcui-icon-size, 1em);
+  vertical-align: middle;
+  background-color: currentColor;
+  -webkit-mask: var(--kcui-icon-url) center / contain no-repeat;
+  mask: var(--kcui-icon-url) center / contain no-repeat;
 }
 
 .kcui-icon--nav-previous,

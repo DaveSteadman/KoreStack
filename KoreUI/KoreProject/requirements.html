@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Requirements - KoreProject</title>
+  <link rel="stylesheet" href="/ui-elements/assets/css/chrome.css">
+  <link rel="stylesheet" href="/static/requirements.css">
+  <script src="/suite-config.js"></script>
+  <script type="module" src="/static/requirements.js"></script>
+</head>
+<body class="kcui-shell-bg">
+  <div id="topbar"></div>
+  <div id="app-bar"></div>
+  <main class="kcui-main">
+    <div class="kcui-page kcui-stack kr-page">
+      <section class="kcui-panel">
+        <div class="kcui-panel-body kcui-stack kcui-stack--sm">
+          <div class="kcui-toolbar">
+            <div class="kcui-field kr-project-picker"><select id="projects" aria-label="Project"></select></div>
+            <button id="load-project" type="button" disabled>Load</button>
+            <button id="refresh" type="button">Refresh</button>
+            <span id="project-name" class="kcui-tag"></span>
+          </div>
+          <div id="notice" role="status" aria-live="polite"></div>
+        </div>
+      </section>
+      <div class="kr-workspace">
+        <aside class="kcui-panel kcui-navpanel" aria-label="Requirement sections">
+          <div class="kcui-panel-header"><h2 class="kcui-panel-title">Sections</h2></div>
+          <div class="kcui-panel-body kcui-stack kcui-stack--sm">
+            <div class="kcui-toolbar">
+              <button id="new-section" type="button" disabled>New</button>
+              <button id="edit-section" type="button" disabled>Edit</button>
+              <button id="delete-section" type="button" disabled>Delete</button>
+            </div>
+          </div>
+          <div id="section-tree" class="kcui-navpanel-tree" role="tree" aria-label="Requirement sections"></div>
+        </aside>
+        <section class="kcui-panel kr-sheet-panel">
+          <div class="kcui-panel-header"><h1 id="table-title" class="kcui-panel-title">Requirements</h1></div>
+          <div class="kcui-panel-body kcui-stack kcui-stack--sm">
+            <div class="kcui-toolbar">
+              <button id="new-requirement" type="button" disabled>New requirement</button>
+              <button id="save-all" type="button" disabled>Save</button>
+              <span id="row-count" class="kcui-tag"></span>
+            </div>
+            <label class="kcui-field">Search this table<input id="search" type="search" placeholder="ID, title, requirement or linked design"></label>
+            <div class="kcui-table-wrap kr-sheet-scroll" tabindex="0" role="region" aria-label="Editable requirements table">
+              <table class="kcui-table kcui-table--dense kcui-table--sticky-head kr-sheet" aria-labelledby="table-title">
+                <thead><tr>
+                  <th scope="col">Unique ID</th><th scope="col">Title</th><th id="statement-heading" scope="col">Requirement</th>
+                  <th id="links-heading" scope="col">Design links</th>
+                </tr></thead>
+                <tbody id="requirements"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+</body>
+</html>

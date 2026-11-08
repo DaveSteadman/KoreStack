@@ -29,6 +29,7 @@
     "korecron":        { "port": 29615, "enabled": true },
     "koretest2":       { "port": 29616, "enabled": true },
     "koreagentnetwork": { "port": 29617, "enabled": true },
-    "koreunittest":   { "port": 29618, "enabled": true }
+    "koreunittest":   { "port": 29618, "enabled": true },
+    "koreproject":    { "port": 29619, "enabled": true }
   }
 }

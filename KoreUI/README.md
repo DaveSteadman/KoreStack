@@ -14,6 +14,7 @@ The suite uses a common shell from `KoreUI/UIElements/`, but each service still 
 - `KoreLiveWeb/` templates and static assets for the live web tool UI
 - `KoreStack/` landing page and endpoint explorer frontend files
 - `KoreCron/`, `KoreTest2/`, `KoreUnitTest/`, and `KoreAgentNetwork/` UIs, including the KoreTest2 and KoreUnitTest build grids and the network editor
+- `KoreProject/`: linked statements, hierarchical tickets and lifecycle boards using the shared UIElements shell and controls
 - `KoreChat/` and `KoreDocs/` browser assets
 - Service-specific UI folders under `KoreData/` where needed
 

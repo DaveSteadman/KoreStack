@@ -1,4 +1,5 @@
 import { api } from './state.js';
+import { svgIconMask } from '/ui-elements/assets/js/svgicons.js';
 
 export function initDebugger({ getActiveTab, getBreakpoints, revealLine, clearProgramCounter }) {
   const startButton = document.getElementById('btn-debug-start');
@@ -62,7 +63,8 @@ export function initDebugger({ getActiveTab, getBreakpoints, revealLine, clearPr
         const item = document.createElement('button');
         item.type = 'button';
         item.className = 'debug-frame';
-        item.textContent = `${index === 0 ? '▶ ' : ''}${frame.name} · ${frame.path}:${frame.line}`;
+        item.textContent = `${frame.name} · ${frame.path}:${frame.line}`;
+        if (index === 0) item.insertAdjacentHTML('afterbegin', svgIconMask('play-svgrepo-com', { size: 12 }));
         item.title = frame.source || '';
         item.addEventListener('click', () => { void revealLine(frame.path, frame.line, { programCounter: index === 0 }); });
         stack.appendChild(item);

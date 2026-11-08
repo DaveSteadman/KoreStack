@@ -1,0 +1,36 @@
+/* Only project-specific layout; controls and surfaces come from UIElements. */
+.kp-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(320px, 2fr);
+  gap: var(--kcui-gap-panel);
+  align-items: start;
+}
+
+.kp-workspace > * { min-width: 0; }
+.kp-workspace [hidden] { display: none; }
+.kp-workspace:not(.has-editor) { grid-template-columns: minmax(0, 1fr); }
+.kp-dashboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: var(--kcui-gap-panel); }
+.kp-metrics { display: grid; grid-template-columns: 1fr auto; gap: var(--kcui-gap-sm); margin: 0; }
+.kp-metrics dd { margin: 0; font-weight: 600; }
+.kp-boards { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(240px, 1fr); overflow-x: auto; align-items: start; }
+.kp-project-picker { flex: 1 1 240px; }
+.kp-search { flex: 1 1 240px; }
+.kp-record-title { overflow-wrap: anywhere; }
+.kp-record-copy { white-space: pre-wrap; overflow-wrap: anywhere; }
+.kp-ticket-row { margin-inline-start: calc(var(--kp-depth, 0) * var(--kcui-gap-md)); }
+.kp-lane-tickets { display: grid; gap: var(--kcui-gap-sm); }
+.kp-history { max-height: 24rem; overflow: auto; }
+.kp-board-page #project-panel { display: none; }
+.kp-board-page .kcui-page { --kcui-page-max: 100%; }
+.kp-board-page #notice:empty, .kp-board-page #storage-warning:empty, #editor-notice:empty { display: none; }
+.kp-board-page .kp-boards { align-items: stretch; }
+.kp-board-page .kp-lane-tickets { min-height: 8rem; align-content: start; }
+.kp-board-editor { width: min(52rem, calc(100vw - 2rem)); max-width: calc(100vw - 2rem); min-width: 0; max-height: calc(100dvh - 2rem); overflow: auto; }
+.kp-board-editor [hidden] { display: none; }
+.kp-draggable { cursor: grab; }
+.kp-dragging { opacity: .5; }
+.kp-drop-target { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+@media (max-width: 1000px) {
+  .kp-workspace { grid-template-columns: minmax(0, 1fr); }
+}

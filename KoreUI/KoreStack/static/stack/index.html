@@ -19,7 +19,7 @@
       min-height: 0;
     }
   </style>
-  <link rel="icon" type="image/x-icon" href="/ui-elements/assets/icons/favicon.ico">
+  <link rel="icon" type="image/svg+xml" href="/ui-elements/assets/icons/dazzle-line/layer-group-svgrepo-com.svg">
   <link rel="stylesheet" href="/ui-elements/assets/css/chrome.css?v=20261105d">
   <link rel="stylesheet" href="/ui-elements/assets/css/workspace.css">
   <link rel="stylesheet" href="/static/stack/stack.css">
@@ -114,15 +114,9 @@
                   </div>
 
                   <div class="kcui-service-actions service-actions actions">
-                    <button class="kcui-icon-button service-action service-action--start" type="button" data-service="{{ service.slug }}" data-action="start" title="Start" aria-label="Start {{ service.label }}">
-                      <span class="service-action-icon" data-action-icon="start" aria-hidden="true"></span>
-                    </button>
-                    <button class="kcui-icon-button service-action service-action--stop" type="button" data-service="{{ service.slug }}" data-action="stop" title="Stop" aria-label="Stop {{ service.label }}">
-                      <span class="service-action-icon" data-action-icon="stop" aria-hidden="true"></span>
-                    </button>
-                    <button class="kcui-icon-button service-action service-action--restart" type="button" data-service="{{ service.slug }}" data-action="restart" title="Restart" aria-label="Restart {{ service.label }}">
-                      <span class="service-action-icon" data-action-icon="restart" aria-hidden="true"></span>
-                    </button>
+                    <button class="kcui-icon-button service-action service-action--start" type="button" data-service="{{ service.slug }}" data-action="start" data-action-icon="start" title="Start" aria-label="Start {{ service.label }}"></button>
+                    <button class="kcui-icon-button service-action service-action--stop" type="button" data-service="{{ service.slug }}" data-action="stop" data-action-icon="stop" title="Stop" aria-label="Stop {{ service.label }}"></button>
+                    <button class="kcui-icon-button service-action service-action--restart" type="button" data-service="{{ service.slug }}" data-action="restart" data-action-icon="restart" title="Restart" aria-label="Restart {{ service.label }}"></button>
                     <span class="service-notice" data-field="notice"></span>
                   </div>
                 </article>

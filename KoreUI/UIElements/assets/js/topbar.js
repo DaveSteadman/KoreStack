@@ -27,6 +27,7 @@ const DEFAULT_SERVICES = [
 	{ key: 'koredata',         label: 'Data',    path: '/',   icon: 'koredata'         },
 	{ key: 'koredocs',         label: 'Docs',    path: '/ui', icon: 'koredocs'         },
 	{ key: 'korecode',         label: 'Code',    path: '/ui', icon: 'korecode'         },
+	{ key: 'koreproject',      label: 'Project', path: '/ui', icon: 'koreproject'      },
 	{ key: 'korecomms',        label: 'Comms',   path: '/',   icon: 'korecomms'         },
 ];
 

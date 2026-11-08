@@ -46,8 +46,8 @@ def register_work_packet_routes(
 
     A top-level ``"route": "system_one"`` sends the packet to the System One decision API
     (``state``, ``questions``, optional ``images`` and ``model``); anything else goes to chat.
-    Chat packets may optionally provide ``prompt`` and ``model`` to override the default prompt text
-    and active chat model.
+    Chat packets may provide an optional ``prompt``. The configured resident chat
+    and System One models are always used; callers cannot select another model.
     """
 
     @app.post("/api/work-packet")
@@ -69,7 +69,13 @@ def register_work_packet_routes(
                 raise HTTPException(status_code=501, detail="System One is not available")
             if "state" not in packet or "questions" not in packet:
                 raise HTTPException(status_code=400, detail="System One packets require 'state' and 'questions'")
-            model = str(packet.get("model") or (get_active_system_one_model() if get_active_system_one_model else "")).strip()
+            model = str(get_active_system_one_model() if get_active_system_one_model else "").strip()
+            requested_model = str(packet.get("model") or "").strip()
+            if requested_model and requested_model.casefold() != model.casefold():
+                raise HTTPException(
+                    status_code=422,
+                    detail="Work packets must use the configured System One model; per-request model overrides are not supported",
+                )
             try:
                 result = call_system_one(
                     state=packet["state"],
@@ -90,9 +96,15 @@ def register_work_packet_routes(
                 "tokens_per_second": 0,
             }
 
-        model = str(packet.get("model") or get_active_model()).strip() if isinstance(packet, dict) else str(get_active_model()).strip()
+        model = str(get_active_model()).strip()
         if not model:
             raise HTTPException(status_code=503, detail="No model is configured")
+        requested_model = str(packet.get("model") or "").strip() if isinstance(packet, dict) else ""
+        if requested_model and requested_model.casefold() != model.casefold():
+            raise HTTPException(
+                status_code=422,
+                detail="Work packets must use the configured chat model; per-request model overrides are not supported",
+            )
         prompt_text = str(packet.get("prompt") or "") if isinstance(packet, dict) and "prompt" in packet else packet_text
 
         try:

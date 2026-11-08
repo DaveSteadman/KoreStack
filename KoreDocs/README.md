@@ -12,7 +12,7 @@ KoreStack needs native tools for prose, tables, and diagrams that remain local, 
 |---|---|---|
 | `KoreDoc` | Markdown-oriented rich document editing | `.koredoc` |
 | `KoreSheet` | Sparse-cell spreadsheets and model sheets | `.koresheet` |
-| `KoreDiag` | Diagram editing for node and edge layouts | `.korediag` |
+| `KoreDiag` | Diagram and 2D vector editing, with SVG interchange | `.korediag` |
 
 KoreSheet opens `.csv` files directly for review. Use **Convert to KoreSheet** in the CSV toolbar to create a separate, editable `.koresheet` copy in the same folder; the source CSV remains unchanged.
 
@@ -89,7 +89,7 @@ operators, plus `$and`, `$or`, and `$not`. File history is available through
 
 - `.koredoc` is markdown-first document content
 - `.koresheet` is sparse-cell structured sheet content
-- `.korediag` is structured node-and-edge diagram content
+- `.korediag` is structured node-and-edge diagram content; it can retain imported SVG artwork without rasterising it
 
 ## Troubleshooting
 

@@ -8,30 +8,15 @@
 
 import * as api     from './api.js';
 import * as dialogs from './dialogs.js';
+import { svgIconMask } from '/ui-elements/assets/js/svgicons.js';
 
 const _treeEl = document.getElementById('kf-tree');
 
-const TRIANGLE_SVG = `<svg viewBox="0 0 20 20" width="10" height="10">
-  <path d="M6 4l9 6-9 6z" fill="currentColor"/>
-</svg>`;
-
-const EDIT_SVG = `<svg viewBox="0 0 20 20" fill="none" width="12" height="12">
-  <path d="M14.5 3.5a2.121 2.121 0 0 1 3 3L6 18H3v-3L14.5 3.5z" stroke="currentColor" stroke-width="1.5"/>
-</svg>`;
-
-const TRASH_SVG = `<svg viewBox="0 0 20 20" fill="none" width="12" height="12">
-  <path d="M3 6h14M8 6V4h4v2M5 6l1 11h8l1-11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-</svg>`;
-
-const MOVE_SVG = `<svg viewBox="0 0 20 20" fill="none" width="12" height="12">
-  <path d="M2 5a2 2 0 0 1 2-2h4l2 2h6a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5z" stroke="currentColor" stroke-width="1.4"/>
-  <path d="M10 9v6M7 12l3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
-</svg>`;
-
-const COPY_SVG = `<svg viewBox="0 0 20 20" fill="none" width="12" height="12">
-  <rect x="7" y="6" width="10" height="11" rx="1" stroke="currentColor" stroke-width="1.4"/>
-  <path d="M13 6V4a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h3" stroke="currentColor" stroke-width="1.4"/>
-</svg>`;
+const TRIANGLE_SVG = svgIconMask('chevron-right-svgrepo-com', { size: 10 });
+const EDIT_SVG = svgIconMask('pencil-svgrepo-com', { size: 12 });
+const TRASH_SVG = svgIconMask('trash-svgrepo-com', { size: 12 });
+const MOVE_SVG = svgIconMask('folder-arrow-down-svgrepo-com', { size: 12 });
+const COPY_SVG = svgIconMask('clone-svgrepo-com', { size: 12 });
 
 // ── State ───────────────────────────────────────────────────────
 

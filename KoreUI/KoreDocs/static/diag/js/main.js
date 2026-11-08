@@ -4,10 +4,10 @@
 
 import * as model       from './model.js';
 import * as store       from './store.js';
-import * as renderer    from './renderer.js';
-import * as interaction from './interaction.js';
-import * as ui          from './ui.js';
-import * as fileio      from './fileio.js?v=20261117a';
+import * as renderer    from './renderer.js?v=20261118d';
+import * as interaction from './interaction.js?v=20261118d';
+import * as ui          from './ui.js?v=20261118d';
+import * as fileio      from './fileio.js?v=20261118a';
 import { initDialogHost, initKoreDocsShell, renderAppMenu, trackAppTab } from '/ui-elements/assets/js/chrome.js';
 import * as draft       from '/static/shared/js/draft.js';
 
@@ -25,6 +25,8 @@ renderAppMenu({
       id: 'file',
       label: 'File',
       items: [
+        { action: 'import-svg', label: 'Import SVG…', shortcut: 'Ctrl+Shift+I' },
+        { action: 'export-svg', label: 'Export SVG', shortcut: 'Ctrl+Shift+S' },
         { action: 'export-png', label: 'Export PNG', shortcut: 'Ctrl+Shift+E' },
       ],
     },
@@ -159,6 +161,8 @@ document.addEventListener('kd:selection-change', () => {
 // ── Global event bus (keyboard shortcuts + menu actions) ───────────────────
 
 document.addEventListener('kd:export-png', () => { fileio.exportPng(); });
+document.addEventListener('kd:export-svg', () => { fileio.exportSvg(); });
+document.addEventListener('kd:import-svg', () => { void fileio.importSvg(); });
 
 document.addEventListener('kd:zoom', e => {
   store.view.zoom = Math.max(0.1, Math.min(5, store.view.zoom * e.detail));

@@ -1,196 +1,929 @@
-﻿{
-    "set":  "dazzle-line",
-    "count":  38,
-    "icons":  [
-                  {
-                      "name":  "alarm-clock-alt-svgrepo-com",
-                      "file":  "alarm-clock-alt-svgrepo-com.svg",
-                      "source":  "alarm-clock-alt-svgrepo-com.svg"
-                  },
-                  {
-                      "name":  "bell-slash-svgrepo-com",
-                      "file":  "bell-slash-svgrepo-com.svg",
-                      "source":  "bell-slash-svgrepo-com.svg"
-                  },
-                  {
-                      "name":  "bell-svgrepo-com",
-                      "file":  "bell-svgrepo-com.svg",
-                      "source":  "bell-svgrepo-com.svg"
-                  },
-                  {
-                      "name":  "book-user-svgrepo-com",
-                      "file":  "book-user-svgrepo-com.svg",
-                      "source":  "book-user-svgrepo-com.svg"
-                  },
-                  {
-                      "name":  "certificate-check-svgrepo-com",
-                      "file":  "certificate-check-svgrepo-com.svg",
-                      "source":  "certificate-check-svgrepo-com.svg"
-                  },
-                  {
-                      "name":  "chart-mixed-svgrepo-com",
-                      "file":  "chart-mixed-svgrepo-com.svg",
-                      "source":  "chart-mixed-svgrepo-com.svg"
-                  },
-                  {
-                      "name":  "check-svgrepo-com",
-                      "file":  "check-svgrepo-com.svg",
-                      "source":  "check-svgrepo-com.svg"
-                  },
-                  {
-                      "name":  "circle-check-svgrepo-com",
-                      "file":  "circle-check-svgrepo-com.svg",
-                      "source":  "circle-check-svgrepo-com.svg"
-                  },
-                  {
-                      "name":  "circle-heat-svgrepo-com",
-                      "file":  "circle-heat-svgrepo-com.svg",
-                      "source":  "circle-heat-svgrepo-com.svg"
-                  },
-                  {
-                      "name":  "circle-radiation-svgrepo-com",
-                      "file":  "circle-radiation-svgrepo-com.svg",
-                      "source":  "circle-radiation-svgrepo-com.svg"
-                  },
-                  {
-                      "name":  "circuit-svgrepo-com",
-                      "file":  "circuit-svgrepo-com.svg",
-                      "source":  "circuit-svgrepo-com.svg"
-                  },
-                  {
-                      "name":  "clock-lines-svgrepo-com",
-                      "file":  "clock-lines-svgrepo-com.svg",
-                      "source":  "clock-lines-svgrepo-com.svg"
-                  },
-                  {
-                      "name":  "clock-two-svgrepo-com",
-                      "file":  "clock-two-svgrepo-com.svg",
-                      "source":  "clock-two-svgrepo-com.svg"
-                  },
-                  {
-                      "name":  "clock-xmark-svgrepo-com",
-                      "file":  "clock-xmark-svgrepo-com.svg",
-                      "source":  "clock-xmark-svgrepo-com.svg"
-                  },
-                  {
-                      "name":  "cloud-arrow-down-svgrepo-com",
-                      "file":  "cloud-arrow-down-svgrepo-com.svg",
-                      "source":  "cloud-arrow-down-svgrepo-com.svg"
-                  },
-                  {
-                      "name":  "cloud-bolt-svgrepo-com",
-                      "file":  "cloud-bolt-svgrepo-com.svg",
-                      "source":  "cloud-bolt-svgrepo-com.svg"
-                  },
-                  {
-                      "name":  "cloud-up-arrow-svgrepo-com",
-                      "file":  "cloud-up-arrow-svgrepo-com.svg",
-                      "source":  "cloud-up-arrow-svgrepo-com.svg"
-                  },
-                  {
-                      "name":  "compass-drafting-svgrepo-com",
-                      "file":  "compass-drafting-svgrepo-com.svg",
-                      "source":  "compass-drafting-svgrepo-com.svg"
-                  },
-                  {
-                      "name":  "crown-svgrepo-com",
-                      "file":  "crown-svgrepo-com.svg",
-                      "source":  "crown-svgrepo-com.svg"
-                  },
-                  {
-                      "name":  "door-closed-svgrepo-com",
-                      "file":  "door-closed-svgrepo-com.svg",
-                      "source":  "door-closed-svgrepo-com.svg"
-                  },
-                  {
-                      "name":  "draw-square-svgrepo-com",
-                      "file":  "draw-square-svgrepo-com.svg",
-                      "source":  "draw-square-svgrepo-com.svg"
-                  },
-                  {
-                      "name":  "file-alt-svgrepo-com",
-                      "file":  "file-alt-svgrepo-com.svg",
-                      "source":  "file-alt-svgrepo-com.svg"
-                  },
-                  {
-                      "name":  "fingerprint-alt-svgrepo-com",
-                      "file":  "fingerprint-alt-svgrepo-com.svg",
-                      "source":  "fingerprint-alt-svgrepo-com.svg"
-                  },
-                  {
-                      "name":  "folder-image-svgrepo-com",
-                      "file":  "folder-image-svgrepo-com.svg",
-                      "source":  "folder-image-svgrepo-com.svg"
-                  },
-                  {
-                      "name":  "glasses-svgrepo-com",
-                      "file":  "glasses-svgrepo-com.svg",
-                      "source":  "glasses-svgrepo-com.svg"
-                  },
-                  {
-                      "name":  "globe-alt-svgrepo-com",
-                      "file":  "globe-alt-svgrepo-com.svg",
-                      "source":  "globe-alt-svgrepo-com.svg"
-                  },
-                  {
-                      "name":  "laptop-alt-1-svgrepo-com",
-                      "file":  "laptop-alt-1-svgrepo-com.svg",
-                      "source":  "laptop-alt-1-svgrepo-com.svg"
-                  },
-                  {
-                      "name":  "layer-group-svgrepo-com",
-                      "file":  "layer-group-svgrepo-com.svg",
-                      "source":  "layer-group-svgrepo-com.svg"
-                  },
-                  {
-                      "name":  "network-wired-svgrepo-com",
-                      "file":  "network-wired-svgrepo-com.svg",
-                      "source":  "network-wired-svgrepo-com.svg"
-                  },
-                  {
-                      "name":  "restaurant-menu-svgrepo-com",
-                      "file":  "restaurant-menu-svgrepo-com.svg",
-                      "source":  "restaurant-menu-svgrepo-com.svg"
-                  },
-                  {
-                      "name":  "shapes-svgrepo-com",
-                      "file":  "shapes-svgrepo-com.svg",
-                      "source":  "shapes-svgrepo-com.svg"
-                  },
-                  {
-                      "name":  "shield-alt-svgrepo-com",
-                      "file":  "shield-alt-svgrepo-com.svg",
-                      "source":  "shield-alt-svgrepo-com.svg"
-                  },
-                  {
-                      "name":  "snow-alt-1-svgrepo-com",
-                      "file":  "snow-alt-1-svgrepo-com.svg",
-                      "source":  "snow-alt-1-svgrepo-com.svg"
-                  },
-                  {
-                      "name":  "star-alt-2-svgrepo-com",
-                      "file":  "star-alt-2-svgrepo-com.svg",
-                      "source":  "star-alt-2-svgrepo-com.svg"
-                  },
-                  {
-                      "name":  "stopwatch-10-svgrepo-com",
-                      "file":  "stopwatch-10-svgrepo-com.svg",
-                      "source":  "stopwatch-10-svgrepo-com.svg"
-                  },
-                  {
-                      "name":  "table-alt-svgrepo-com",
-                      "file":  "table-alt-svgrepo-com.svg",
-                      "source":  "table-alt-svgrepo-com.svg"
-                  },
-                  {
-                      "name":  "table-list-alt-svgrepo-com",
-                      "file":  "table-list-alt-svgrepo-com.svg",
-                      "source":  "table-list-alt-svgrepo-com.svg"
-                  },
-                  {
-                      "name":  "text-svgrepo-com",
-                      "file":  "text-svgrepo-com.svg",
-                      "source":  "text-svgrepo-com.svg"
-                  }
-              ]
+{
+  "set": "dazzle-line",
+  "count": 179,
+  "icons": [
+    {
+      "name": "address-card-svgrepo-com",
+      "file": "address-card-svgrepo-com.svg",
+      "source": "address-card-svgrepo-com.svg"
+    },
+    {
+      "name": "alarm-clock-alt-svgrepo-com",
+      "file": "alarm-clock-alt-svgrepo-com.svg",
+      "source": "alarm-clock-alt-svgrepo-com.svg"
+    },
+    {
+      "name": "arrow-down-svgrepo-com",
+      "file": "arrow-down-svgrepo-com.svg",
+      "source": "arrow-down-svgrepo-com.svg"
+    },
+    {
+      "name": "arrow-left-svgrepo-com",
+      "file": "arrow-left-svgrepo-com.svg",
+      "source": "arrow-left-svgrepo-com.svg"
+    },
+    {
+      "name": "arrow-narrow-bottom-alignment-svgrepo-com",
+      "file": "arrow-narrow-bottom-alignment-svgrepo-com.svg",
+      "source": "arrow-narrow-bottom-alignment-svgrepo-com.svg"
+    },
+    {
+      "name": "arrow-narrow-down-svgrepo-com",
+      "file": "arrow-narrow-down-svgrepo-com.svg",
+      "source": "arrow-narrow-down-svgrepo-com.svg"
+    },
+    {
+      "name": "arrow-narrow-left-svgrepo-com",
+      "file": "arrow-narrow-left-svgrepo-com.svg",
+      "source": "arrow-narrow-left-svgrepo-com.svg"
+    },
+    {
+      "name": "arrow-narrow-right-svgrepo-com",
+      "file": "arrow-narrow-right-svgrepo-com.svg",
+      "source": "arrow-narrow-right-svgrepo-com.svg"
+    },
+    {
+      "name": "arrow-right-svgrepo-com",
+      "file": "arrow-right-svgrepo-com.svg",
+      "source": "arrow-right-svgrepo-com.svg"
+    },
+    {
+      "name": "arrow-sm-down-svgrepo-com",
+      "file": "arrow-sm-down-svgrepo-com.svg",
+      "source": "arrow-sm-down-svgrepo-com.svg"
+    },
+    {
+      "name": "arrow-sm-left-svgrepo-com",
+      "file": "arrow-sm-left-svgrepo-com.svg",
+      "source": "arrow-sm-left-svgrepo-com.svg"
+    },
+    {
+      "name": "arrow-sm-right-svgrepo-com",
+      "file": "arrow-sm-right-svgrepo-com.svg",
+      "source": "arrow-sm-right-svgrepo-com.svg"
+    },
+    {
+      "name": "arrow-up-left-svgrepo-com",
+      "file": "arrow-up-left-svgrepo-com.svg",
+      "source": "arrow-up-left-svgrepo-com.svg"
+    },
+    {
+      "name": "arrow-up-right-from-square-svgrepo-com",
+      "source": "https://www.svgrepo.com/svg/533640/arrow-up-right-from-square",
+      "license": "https://www.svgrepo.com/page/licensing/#CC0",
+      "file": "arrow-up-right-from-square-svgrepo-com.svg"
+    },
+    {
+      "name": "arrow-up-right-svgrepo-com",
+      "file": "arrow-up-right-svgrepo-com.svg",
+      "source": "arrow-up-right-svgrepo-com.svg"
+    },
+    {
+      "name": "arrow-up-svgrepo-com",
+      "file": "arrow-up-svgrepo-com.svg",
+      "source": "arrow-up-svgrepo-com.svg"
+    },
+    {
+      "name": "atom-svgrepo-com",
+      "file": "atom-svgrepo-com.svg",
+      "source": "atom-svgrepo-com.svg"
+    },
+    {
+      "name": "badge-check-svgrepo-com",
+      "file": "badge-check-svgrepo-com.svg",
+      "source": "badge-check-svgrepo-com.svg"
+    },
+    {
+      "name": "bank-svgrepo-com",
+      "file": "bank-svgrepo-com.svg",
+      "source": "bank-svgrepo-com.svg"
+    },
+    {
+      "name": "bell-slash-svgrepo-com",
+      "file": "bell-slash-svgrepo-com.svg",
+      "source": "bell-slash-svgrepo-com.svg"
+    },
+    {
+      "name": "bell-svgrepo-com",
+      "file": "bell-svgrepo-com.svg",
+      "source": "bell-svgrepo-com.svg"
+    },
+    {
+      "name": "bolt-svgrepo-com",
+      "file": "bolt-svgrepo-com.svg",
+      "source": "bolt-svgrepo-com.svg"
+    },
+    {
+      "name": "book-user-svgrepo-com",
+      "file": "book-user-svgrepo-com.svg",
+      "source": "book-user-svgrepo-com.svg"
+    },
+    {
+      "name": "box-archive-svgrepo-com",
+      "file": "box-archive-svgrepo-com.svg",
+      "source": "box-archive-svgrepo-com.svg"
+    },
+    {
+      "name": "calculator-svgrepo-com",
+      "file": "calculator-svgrepo-com.svg",
+      "source": "calculator-svgrepo-com.svg"
+    },
+    {
+      "name": "calendar-days-svgrepo-com",
+      "file": "calendar-days-svgrepo-com.svg",
+      "source": "calendar-days-svgrepo-com.svg"
+    },
+    {
+      "name": "certificate-check-svgrepo-com",
+      "file": "certificate-check-svgrepo-com.svg",
+      "source": "certificate-check-svgrepo-com.svg"
+    },
+    {
+      "name": "chart-mixed-svgrepo-com",
+      "file": "chart-mixed-svgrepo-com.svg",
+      "source": "chart-mixed-svgrepo-com.svg"
+    },
+    {
+      "name": "chart-network-svgrepo-com",
+      "file": "chart-network-svgrepo-com.svg",
+      "source": "chart-network-svgrepo-com.svg"
+    },
+    {
+      "name": "chats-svgrepo-com",
+      "file": "chats-svgrepo-com.svg",
+      "source": "chats-svgrepo-com.svg"
+    },
+    {
+      "name": "check-svgrepo-com",
+      "file": "check-svgrepo-com.svg",
+      "source": "check-svgrepo-com.svg"
+    },
+    {
+      "name": "chevron-down-double-svgrepo-com",
+      "file": "chevron-down-double-svgrepo-com.svg",
+      "source": "chevron-down-double-svgrepo-com.svg"
+    },
+    {
+      "name": "chevron-down-svgrepo-com",
+      "source": "https://www.svgrepo.com/svg/533653/chevron-down",
+      "license": "https://www.svgrepo.com/page/licensing/#CC0",
+      "file": "chevron-down-svgrepo-com.svg"
+    },
+    {
+      "name": "chevron-left-double-svgrepo-com",
+      "file": "chevron-left-double-svgrepo-com.svg",
+      "source": "chevron-left-double-svgrepo-com.svg"
+    },
+    {
+      "name": "chevron-left-svgrepo-com",
+      "source": "https://www.svgrepo.com/svg/533659/chevron-left",
+      "license": "https://www.svgrepo.com/page/licensing/#CC0",
+      "file": "chevron-left-svgrepo-com.svg"
+    },
+    {
+      "name": "chevron-right-double-svgrepo-com",
+      "file": "chevron-right-double-svgrepo-com.svg",
+      "source": "chevron-right-double-svgrepo-com.svg"
+    },
+    {
+      "name": "chevron-right-svgrepo-com",
+      "source": "https://www.svgrepo.com/svg/533661/chevron-right",
+      "license": "https://www.svgrepo.com/page/licensing/#CC0",
+      "file": "chevron-right-svgrepo-com.svg"
+    },
+    {
+      "name": "chevron-up-double-svgrepo-com",
+      "file": "chevron-up-double-svgrepo-com.svg",
+      "source": "chevron-up-double-svgrepo-com.svg"
+    },
+    {
+      "name": "chevron-up-svgrepo-com",
+      "source": "https://www.svgrepo.com/svg/533664/chevron-up",
+      "license": "https://www.svgrepo.com/page/licensing/#CC0",
+      "file": "chevron-up-svgrepo-com.svg"
+    },
+    {
+      "name": "circle-check-svgrepo-com",
+      "file": "circle-check-svgrepo-com.svg",
+      "source": "circle-check-svgrepo-com.svg"
+    },
+    {
+      "name": "circle-heat-svgrepo-com",
+      "file": "circle-heat-svgrepo-com.svg",
+      "source": "circle-heat-svgrepo-com.svg"
+    },
+    {
+      "name": "circle-radiation-svgrepo-com",
+      "file": "circle-radiation-svgrepo-com.svg",
+      "source": "circle-radiation-svgrepo-com.svg"
+    },
+    {
+      "name": "circle-svgrepo-com",
+      "source": "https://www.svgrepo.com/svg/532681/circle",
+      "license": "https://www.svgrepo.com/page/licensing/#CC0",
+      "file": "circle-svgrepo-com.svg"
+    },
+    {
+      "name": "circle-xmark-svgrepo-com",
+      "file": "circle-xmark-svgrepo-com.svg",
+      "source": "circle-xmark-svgrepo-com.svg"
+    },
+    {
+      "name": "circuit-svgrepo-com",
+      "file": "circuit-svgrepo-com.svg",
+      "source": "circuit-svgrepo-com.svg"
+    },
+    {
+      "name": "clapperboard-play-svgrepo-com",
+      "file": "clapperboard-play-svgrepo-com.svg",
+      "source": "clapperboard-play-svgrepo-com.svg"
+    },
+    {
+      "name": "class-16-svgrepo-com",
+      "file": "class-16-svgrepo-com.svg",
+      "source": "class-16-svgrepo-com.svg"
+    },
+    {
+      "name": "clock-lines-svgrepo-com",
+      "file": "clock-lines-svgrepo-com.svg",
+      "source": "clock-lines-svgrepo-com.svg"
+    },
+    {
+      "name": "clock-two-svgrepo-com",
+      "file": "clock-two-svgrepo-com.svg",
+      "source": "clock-two-svgrepo-com.svg"
+    },
+    {
+      "name": "clock-xmark-svgrepo-com",
+      "file": "clock-xmark-svgrepo-com.svg",
+      "source": "clock-xmark-svgrepo-com.svg"
+    },
+    {
+      "name": "clone-svgrepo-com",
+      "source": "https://www.svgrepo.com/svg/532744/clone",
+      "license": "https://www.svgrepo.com/page/licensing/#CC0",
+      "file": "clone-svgrepo-com.svg"
+    },
+    {
+      "name": "cloud-arrow-down-svgrepo-com",
+      "file": "cloud-arrow-down-svgrepo-com.svg",
+      "source": "cloud-arrow-down-svgrepo-com.svg"
+    },
+    {
+      "name": "cloud-bolt-svgrepo-com",
+      "file": "cloud-bolt-svgrepo-com.svg",
+      "source": "cloud-bolt-svgrepo-com.svg"
+    },
+    {
+      "name": "cloud-fog-svgrepo-com",
+      "file": "cloud-fog-svgrepo-com.svg",
+      "source": "cloud-fog-svgrepo-com.svg"
+    },
+    {
+      "name": "cloud-moon-svgrepo-com",
+      "file": "cloud-moon-svgrepo-com.svg",
+      "source": "cloud-moon-svgrepo-com.svg"
+    },
+    {
+      "name": "cloud-rain-alt-1-svgrepo-com",
+      "file": "cloud-rain-alt-1-svgrepo-com.svg",
+      "source": "cloud-rain-alt-1-svgrepo-com.svg"
+    },
+    {
+      "name": "cloud-rain-alt-svgrepo-com",
+      "file": "cloud-rain-alt-svgrepo-com.svg",
+      "source": "cloud-rain-alt-svgrepo-com.svg"
+    },
+    {
+      "name": "cloud-rain-svgrepo-com",
+      "file": "cloud-rain-svgrepo-com.svg",
+      "source": "cloud-rain-svgrepo-com.svg"
+    },
+    {
+      "name": "cloud-rainbow-svgrepo-com",
+      "file": "cloud-rainbow-svgrepo-com.svg",
+      "source": "cloud-rainbow-svgrepo-com.svg"
+    },
+    {
+      "name": "cloud-search-svgrepo-com",
+      "file": "cloud-search-svgrepo-com.svg",
+      "source": "cloud-search-svgrepo-com.svg"
+    },
+    {
+      "name": "cloud-showers-svgrepo-com",
+      "file": "cloud-showers-svgrepo-com.svg",
+      "source": "cloud-showers-svgrepo-com.svg"
+    },
+    {
+      "name": "cloud-sleet-svgrepo-com",
+      "file": "cloud-sleet-svgrepo-com.svg",
+      "source": "cloud-sleet-svgrepo-com.svg"
+    },
+    {
+      "name": "cloud-snow-alt-svgrepo-com",
+      "file": "cloud-snow-alt-svgrepo-com.svg",
+      "source": "cloud-snow-alt-svgrepo-com.svg"
+    },
+    {
+      "name": "cloud-snow-svgrepo-com",
+      "file": "cloud-snow-svgrepo-com.svg",
+      "source": "cloud-snow-svgrepo-com.svg"
+    },
+    {
+      "name": "cloud-sun-alt-svgrepo-com",
+      "file": "cloud-sun-alt-svgrepo-com.svg",
+      "source": "cloud-sun-alt-svgrepo-com.svg"
+    },
+    {
+      "name": "cloud-sun-svgrepo-com",
+      "file": "cloud-sun-svgrepo-com.svg",
+      "source": "cloud-sun-svgrepo-com.svg"
+    },
+    {
+      "name": "cloud-svgrepo-com",
+      "file": "cloud-svgrepo-com.svg",
+      "source": "cloud-svgrepo-com.svg"
+    },
+    {
+      "name": "cloud-up-arrow-svgrepo-com",
+      "file": "cloud-up-arrow-svgrepo-com.svg",
+      "source": "cloud-up-arrow-svgrepo-com.svg"
+    },
+    {
+      "name": "clouds-svgrepo-com",
+      "file": "clouds-svgrepo-com.svg",
+      "source": "clouds-svgrepo-com.svg"
+    },
+    {
+      "name": "code-compare-svgrepo-com",
+      "file": "code-compare-svgrepo-com.svg",
+      "source": "code-compare-svgrepo-com.svg"
+    },
+    {
+      "name": "code-fork-svgrepo-com",
+      "file": "code-fork-svgrepo-com.svg",
+      "source": "code-fork-svgrepo-com.svg"
+    },
+    {
+      "name": "code-svgrepo-com",
+      "file": "code-svgrepo-com.svg",
+      "source": "code-svgrepo-com.svg"
+    },
+    {
+      "name": "coins-alt-svgrepo-com",
+      "file": "coins-alt-svgrepo-com.svg",
+      "source": "coins-alt-svgrepo-com.svg"
+    },
+    {
+      "name": "compass-drafting-svgrepo-com",
+      "file": "compass-drafting-svgrepo-com.svg",
+      "source": "compass-drafting-svgrepo-com.svg"
+    },
+    {
+      "name": "corner-down-right-svgrepo-com",
+      "source": "https://www.svgrepo.com/svg/533671/corner-down-right",
+      "license": "https://www.svgrepo.com/page/licensing/#CC0",
+      "file": "corner-down-right-svgrepo-com.svg"
+    },
+    {
+      "name": "crosshair-simple-svgrepo-com",
+      "file": "crosshair-simple-svgrepo-com.svg",
+      "source": "https://www.svgrepo.com/svg/532243/crosshair-simple",
+      "license": "https://www.svgrepo.com/page/licensing/#CC0"
+    },
+    {
+      "name": "crown-svgrepo-com",
+      "file": "crown-svgrepo-com.svg",
+      "source": "crown-svgrepo-com.svg"
+    },
+    {
+      "name": "cursor-svgrepo-com",
+      "source": "https://www.svgrepo.com/svg/533681/cursor",
+      "license": "https://www.svgrepo.com/page/licensing/#CC0",
+      "file": "cursor-svgrepo-com.svg"
+    },
+    {
+      "name": "database-svgrepo-com",
+      "file": "database-svgrepo-com.svg",
+      "source": "database-svgrepo-com.svg"
+    },
+    {
+      "name": "diagram-project-svgrepo-com",
+      "file": "diagram-project-svgrepo-com.svg",
+      "source": "diagram-project-svgrepo-com.svg"
+    },
+    {
+      "name": "diagram-subtask-svgrepo-com",
+      "file": "diagram-subtask-svgrepo-com.svg",
+      "source": "diagram-subtask-svgrepo-com.svg"
+    },
+    {
+      "name": "diagram-venn-svgrepo-com",
+      "file": "diagram-venn-svgrepo-com.svg",
+      "source": "diagram-venn-svgrepo-com.svg"
+    },
+    {
+      "name": "dial-low-svgrepo-com",
+      "file": "dial-low-svgrepo-com.svg",
+      "source": "dial-low-svgrepo-com.svg"
+    },
+    {
+      "name": "dna-svgrepo-com",
+      "file": "dna-svgrepo-com.svg",
+      "source": "dna-svgrepo-com.svg"
+    },
+    {
+      "name": "door-closed-svgrepo-com",
+      "file": "door-closed-svgrepo-com.svg",
+      "source": "door-closed-svgrepo-com.svg"
+    },
+    {
+      "name": "download-svgrepo-com",
+      "source": "https://www.svgrepo.com/svg/533682/download",
+      "license": "https://www.svgrepo.com/page/licensing/#CC0",
+      "file": "download-svgrepo-com.svg"
+    },
+    {
+      "name": "draw-square-svgrepo-com",
+      "file": "draw-square-svgrepo-com.svg",
+      "source": "draw-square-svgrepo-com.svg"
+    },
+    {
+      "name": "droplet-alt-svgrepo-com",
+      "file": "droplet-alt-svgrepo-com.svg",
+      "source": "droplet-alt-svgrepo-com.svg"
+    },
+    {
+      "name": "droplet-degree-svgrepo-com",
+      "file": "droplet-degree-svgrepo-com.svg",
+      "source": "droplet-degree-svgrepo-com.svg"
+    },
+    {
+      "name": "droplet-slash-svgrepo-com",
+      "file": "droplet-slash-svgrepo-com.svg",
+      "source": "droplet-slash-svgrepo-com.svg"
+    },
+    {
+      "name": "droplet-svgrepo-com",
+      "file": "droplet-svgrepo-com.svg",
+      "source": "droplet-svgrepo-com.svg"
+    },
+    {
+      "name": "droplets-svgrepo-com",
+      "file": "droplets-svgrepo-com.svg",
+      "source": "droplets-svgrepo-com.svg"
+    },
+    {
+      "name": "eclipse-svgrepo-com",
+      "file": "eclipse-svgrepo-com.svg",
+      "source": "eclipse-svgrepo-com.svg"
+    },
+    {
+      "name": "file-alt-svgrepo-com",
+      "file": "file-alt-svgrepo-com.svg",
+      "source": "file-alt-svgrepo-com.svg"
+    },
+    {
+      "name": "file-plus-svgrepo-com",
+      "source": "https://www.svgrepo.com/svg/532784/file-plus",
+      "license": "https://www.svgrepo.com/page/licensing/#CC0",
+      "file": "file-plus-svgrepo-com.svg"
+    },
+    {
+      "name": "fingerprint-alt-svgrepo-com",
+      "file": "fingerprint-alt-svgrepo-com.svg",
+      "source": "fingerprint-alt-svgrepo-com.svg"
+    },
+    {
+      "name": "flask-round-potion-svgrepo-com",
+      "file": "flask-round-potion-svgrepo-com.svg",
+      "source": "flask-round-potion-svgrepo-com.svg"
+    },
+    {
+      "name": "folder-arrow-down-svgrepo-com",
+      "source": "https://www.svgrepo.com/svg/532808/folder-arrow-down",
+      "license": "https://www.svgrepo.com/page/licensing/#CC0",
+      "file": "folder-arrow-down-svgrepo-com.svg"
+    },
+    {
+      "name": "folder-image-svgrepo-com",
+      "file": "folder-image-svgrepo-com.svg",
+      "source": "folder-image-svgrepo-com.svg"
+    },
+    {
+      "name": "folder-plus-svgrepo-com",
+      "source": "https://www.svgrepo.com/svg/532824/folder-plus",
+      "license": "https://www.svgrepo.com/page/licensing/#CC0",
+      "file": "folder-plus-svgrepo-com.svg"
+    },
+    {
+      "name": "folder-search-svgrepo-com",
+      "file": "folder-search-svgrepo-com.svg",
+      "source": "folder-search-svgrepo-com.svg"
+    },
+    {
+      "name": "gem-alt-svgrepo-com",
+      "file": "gem-alt-svgrepo-com.svg",
+      "source": "gem-alt-svgrepo-com.svg"
+    },
+    {
+      "name": "glasses-svgrepo-com",
+      "file": "glasses-svgrepo-com.svg",
+      "source": "glasses-svgrepo-com.svg"
+    },
+    {
+      "name": "globe-alt-outline-svgrepo-com",
+      "file": "globe-alt-outline-svgrepo-com.svg",
+      "source": "globe-alt-outline-svgrepo-com.svg"
+    },
+    {
+      "name": "globe-alt-svgrepo-com",
+      "file": "globe-alt-svgrepo-com.svg",
+      "source": "globe-alt-svgrepo-com.svg"
+    },
+    {
+      "name": "globe-stand-svgrepo-com",
+      "file": "globe-stand-svgrepo-com.svg",
+      "source": "globe-stand-svgrepo-com.svg"
+    },
+    {
+      "name": "graduation-hat-alt-1-svgrepo-com",
+      "file": "graduation-hat-alt-1-svgrepo-com.svg",
+      "source": "graduation-hat-alt-1-svgrepo-com.svg"
+    },
+    {
+      "name": "handshake-svgrepo-com",
+      "file": "handshake-svgrepo-com.svg",
+      "source": "handshake-svgrepo-com.svg"
+    },
+    {
+      "name": "hat-witch-svgrepo-com",
+      "file": "hat-witch-svgrepo-com.svg",
+      "source": "hat-witch-svgrepo-com.svg"
+    },
+    {
+      "name": "heat-alt-svgrepo-com",
+      "file": "heat-alt-svgrepo-com.svg",
+      "source": "heat-alt-svgrepo-com.svg"
+    },
+    {
+      "name": "heat-svgrepo-com",
+      "file": "heat-svgrepo-com.svg",
+      "source": "heat-svgrepo-com.svg"
+    },
+    {
+      "name": "hexagon-image-svgrepo-com",
+      "file": "hexagon-image-svgrepo-com.svg",
+      "source": "hexagon-image-svgrepo-com.svg"
+    },
+    {
+      "name": "hurricane-alt-1-svgrepo-com",
+      "file": "hurricane-alt-1-svgrepo-com.svg",
+      "source": "hurricane-alt-1-svgrepo-com.svg"
+    },
+    {
+      "name": "hurricane-alt-svgrepo-com",
+      "file": "hurricane-alt-svgrepo-com.svg",
+      "source": "hurricane-alt-svgrepo-com.svg"
+    },
+    {
+      "name": "hurricane-svgrepo-com",
+      "file": "hurricane-svgrepo-com.svg",
+      "source": "hurricane-svgrepo-com.svg"
+    },
+    {
+      "name": "icicles-svgrepo-com",
+      "file": "icicles-svgrepo-com.svg",
+      "source": "icicles-svgrepo-com.svg"
+    },
+    {
+      "name": "industry-windows-svgrepo-com",
+      "file": "industry-windows-svgrepo-com.svg",
+      "source": "industry-windows-svgrepo-com.svg"
+    },
+    {
+      "name": "lamp-desk-svgrepo-com",
+      "file": "lamp-desk-svgrepo-com.svg",
+      "source": "lamp-desk-svgrepo-com.svg"
+    },
+    {
+      "name": "laptop-alt-1-svgrepo-com",
+      "file": "laptop-alt-1-svgrepo-com.svg",
+      "source": "laptop-alt-1-svgrepo-com.svg"
+    },
+    {
+      "name": "layer-group-svgrepo-com",
+      "file": "layer-group-svgrepo-com.svg",
+      "source": "layer-group-svgrepo-com.svg"
+    },
+    {
+      "name": "layers-svgrepo-com",
+      "file": "layers-svgrepo-com.svg",
+      "source": "layers-svgrepo-com.svg"
+    },
+    {
+      "name": "left-indent-svgrepo-com",
+      "source": "https://www.svgrepo.com/svg/532184/left-indent",
+      "license": "https://www.svgrepo.com/page/licensing/#CC0",
+      "file": "left-indent-svgrepo-com.svg"
+    },
+    {
+      "name": "list-ul-svgrepo-com",
+      "source": "https://www.svgrepo.com/svg/532194/list-ul",
+      "license": "https://www.svgrepo.com/page/licensing/#CC0",
+      "file": "list-ul-svgrepo-com.svg"
+    },
+    {
+      "name": "lock-svgrepo-com",
+      "source": "https://www.svgrepo.com/svg/532320/lock",
+      "license": "https://www.svgrepo.com/page/licensing/#CC0",
+      "file": "lock-svgrepo-com.svg"
+    },
+    {
+      "name": "mail-open-svgrepo-com",
+      "file": "mail-open-svgrepo-com.svg",
+      "source": "mail-open-svgrepo-com.svg"
+    },
+    {
+      "name": "mailbox-alt-svgrepo-com",
+      "file": "mailbox-alt-svgrepo-com.svg",
+      "source": "mailbox-alt-svgrepo-com.svg"
+    },
+    {
+      "name": "memo-check-svgrepo-com",
+      "file": "memo-check-svgrepo-com.svg",
+      "source": "memo-check-svgrepo-com.svg"
+    },
+    {
+      "name": "message-circle-chart-lines-svgrepo-com",
+      "file": "message-circle-chart-lines-svgrepo-com.svg",
+      "source": "message-circle-chart-lines-svgrepo-com.svg"
+    },
+    {
+      "name": "message-circle-chat-svgrepo-com",
+      "file": "message-circle-chat-svgrepo-com.svg",
+      "source": "message-circle-chat-svgrepo-com.svg"
+    },
+    {
+      "name": "message-square-lines-svgrepo-com",
+      "file": "message-square-lines-svgrepo-com.svg",
+      "source": "message-square-lines-svgrepo-com.svg"
+    },
+    {
+      "name": "microscope-svgrepo-com",
+      "file": "microscope-svgrepo-com.svg",
+      "source": "microscope-svgrepo-com.svg"
+    },
+    {
+      "name": "minus-svgrepo-com",
+      "source": "https://www.svgrepo.com/svg/532960/minus",
+      "license": "https://www.svgrepo.com/page/licensing/#CC0",
+      "file": "minus-svgrepo-com.svg"
+    },
+    {
+      "name": "moon-cloud-svgrepo-com",
+      "file": "moon-cloud-svgrepo-com.svg",
+      "source": "moon-cloud-svgrepo-com.svg"
+    },
+    {
+      "name": "moon-stars-svgrepo-com",
+      "file": "moon-stars-svgrepo-com.svg",
+      "source": "moon-stars-svgrepo-com.svg"
+    },
+    {
+      "name": "network-wired-svgrepo-com",
+      "file": "network-wired-svgrepo-com.svg",
+      "source": "network-wired-svgrepo-com.svg"
+    },
+    {
+      "name": "pause-svgrepo-com",
+      "source": "https://www.svgrepo.com/svg/532514/pause",
+      "license": "https://www.svgrepo.com/page/licensing/#CC0",
+      "file": "pause-svgrepo-com.svg"
+    },
+    {
+      "name": "pen-square-svgrepo-com",
+      "file": "pen-square-svgrepo-com.svg",
+      "source": "pen-square-svgrepo-com.svg"
+    },
+    {
+      "name": "pencil-svgrepo-com",
+      "source": "https://www.svgrepo.com/svg/532977/pencil",
+      "license": "https://www.svgrepo.com/page/licensing/#CC0",
+      "file": "pencil-svgrepo-com.svg"
+    },
+    {
+      "name": "play-svgrepo-com",
+      "source": "https://www.svgrepo.com/svg/532511/play",
+      "license": "https://www.svgrepo.com/page/licensing/#CC0",
+      "file": "play-svgrepo-com.svg"
+    },
+    {
+      "name": "plus-svgrepo-com",
+      "source": "https://www.svgrepo.com/svg/532994/plus",
+      "license": "https://www.svgrepo.com/page/licensing/#CC0",
+      "file": "plus-svgrepo-com.svg"
+    },
+    {
+      "name": "radio-svgrepo-com",
+      "file": "radio-svgrepo-com.svg",
+      "source": "radio-svgrepo-com.svg"
+    },
+    {
+      "name": "rainbow-svgrepo-com",
+      "file": "rainbow-svgrepo-com.svg",
+      "source": "rainbow-svgrepo-com.svg"
+    },
+    {
+      "name": "rectangle-wide-svgrepo-com",
+      "source": "https://www.svgrepo.com/svg/532280/rectangle-wide",
+      "license": "https://www.svgrepo.com/page/licensing/#CC0",
+      "file": "rectangle-wide-svgrepo-com.svg"
+    },
+    {
+      "name": "refresh-cw-alt-svgrepo-com",
+      "file": "refresh-cw-alt-svgrepo-com.svg",
+      "source": "refresh-cw-alt-svgrepo-com.svg"
+    },
+    {
+      "name": "restaurant-menu-svgrepo-com",
+      "file": "restaurant-menu-svgrepo-com.svg",
+      "source": "restaurant-menu-svgrepo-com.svg"
+    },
+    {
+      "name": "right-indent-svgrepo-com",
+      "source": "https://www.svgrepo.com/svg/532206/right-indent",
+      "license": "https://www.svgrepo.com/page/licensing/#CC0",
+      "file": "right-indent-svgrepo-com.svg"
+    },
+    {
+      "name": "rocket-svgrepo-com",
+      "file": "rocket-svgrepo-com.svg",
+      "source": "rocket-svgrepo-com.svg"
+    },
+    {
+      "name": "route-svgrepo-com",
+      "file": "route-svgrepo-com.svg",
+      "source": "route-svgrepo-com.svg"
+    },
+    {
+      "name": "satellite-dish-svgrepo-com",
+      "file": "satellite-dish-svgrepo-com.svg",
+      "source": "satellite-dish-svgrepo-com.svg"
+    },
+    {
+      "name": "seal-question-svgrepo-com",
+      "file": "seal-question-svgrepo-com.svg",
+      "source": "seal-question-svgrepo-com.svg"
+    },
+    {
+      "name": "send-alt-1-svgrepo-com",
+      "file": "send-alt-1-svgrepo-com.svg",
+      "source": "send-alt-1-svgrepo-com.svg"
+    },
+    {
+      "name": "shapes-svgrepo-com",
+      "file": "shapes-svgrepo-com.svg",
+      "source": "shapes-svgrepo-com.svg"
+    },
+    {
+      "name": "shield-alt-svgrepo-com",
+      "file": "shield-alt-svgrepo-com.svg",
+      "source": "shield-alt-svgrepo-com.svg"
+    },
+    {
+      "name": "signs-post-svgrepo-com",
+      "file": "signs-post-svgrepo-com.svg",
+      "source": "signs-post-svgrepo-com.svg"
+    },
+    {
+      "name": "sliders-svgrepo-com",
+      "file": "sliders-svgrepo-com.svg",
+      "source": "sliders-svgrepo-com.svg"
+    },
+    {
+      "name": "snow-alt-1-svgrepo-com",
+      "file": "snow-alt-1-svgrepo-com.svg",
+      "source": "snow-alt-1-svgrepo-com.svg"
+    },
+    {
+      "name": "snow-alt-svgrepo-com",
+      "file": "snow-alt-svgrepo-com.svg",
+      "source": "snow-alt-svgrepo-com.svg"
+    },
+    {
+      "name": "snow-blowing-svgrepo-com",
+      "file": "snow-blowing-svgrepo-com.svg",
+      "source": "snow-blowing-svgrepo-com.svg"
+    },
+    {
+      "name": "snow-svgrepo-com",
+      "file": "snow-svgrepo-com.svg",
+      "source": "snow-svgrepo-com.svg"
+    },
+    {
+      "name": "square-rss-svgrepo-com",
+      "file": "square-rss-svgrepo-com.svg",
+      "source": "square-rss-svgrepo-com.svg"
+    },
+    {
+      "name": "square-svgrepo-com",
+      "source": "https://www.svgrepo.com/svg/532287/square",
+      "license": "https://www.svgrepo.com/page/licensing/#CC0",
+      "file": "square-svgrepo-com.svg"
+    },
+    {
+      "name": "square-terminal-svgrepo-com",
+      "file": "square-terminal-svgrepo-com.svg",
+      "source": "square-terminal-svgrepo-com.svg"
+    },
+    {
+      "name": "star-alt-2-svgrepo-com",
+      "file": "star-alt-2-svgrepo-com.svg",
+      "source": "star-alt-2-svgrepo-com.svg"
+    },
+    {
+      "name": "stopwatch-10-svgrepo-com",
+      "file": "stopwatch-10-svgrepo-com.svg",
+      "source": "stopwatch-10-svgrepo-com.svg"
+    },
+    {
+      "name": "sun-dust-svgrepo-com",
+      "file": "sun-dust-svgrepo-com.svg",
+      "source": "sun-dust-svgrepo-com.svg"
+    },
+    {
+      "name": "sun-haze-svgrepo-com",
+      "file": "sun-haze-svgrepo-com.svg",
+      "source": "sun-haze-svgrepo-com.svg"
+    },
+    {
+      "name": "sunset-svgrepo-com",
+      "file": "sunset-svgrepo-com.svg",
+      "source": "sunset-svgrepo-com.svg"
+    },
+    {
+      "name": "table-alt-svgrepo-com",
+      "file": "table-alt-svgrepo-com.svg",
+      "source": "table-alt-svgrepo-com.svg"
+    },
+    {
+      "name": "table-list-alt-svgrepo-com",
+      "file": "table-list-alt-svgrepo-com.svg",
+      "source": "table-list-alt-svgrepo-com.svg"
+    },
+    {
+      "name": "temperature-arrow-up-svgrepo-com",
+      "file": "temperature-arrow-up-svgrepo-com.svg",
+      "source": "temperature-arrow-up-svgrepo-com.svg"
+    },
+    {
+      "name": "text-size-svgrepo-com",
+      "file": "text-size-svgrepo-com.svg",
+      "source": "text-size-svgrepo-com.svg"
+    },
+    {
+      "name": "text-svgrepo-com",
+      "file": "text-svgrepo-com.svg",
+      "source": "text-svgrepo-com.svg"
+    },
+    {
+      "name": "trash-svgrepo-com",
+      "file": "trash-svgrepo-com.svg",
+      "source": "trash-svgrepo-com.svg"
+    },
+    {
+      "name": "truck-svgrepo-com",
+      "file": "truck-svgrepo-com.svg",
+      "source": "truck-svgrepo-com.svg"
+    },
+    {
+      "name": "unlock-svgrepo-com",
+      "source": "https://www.svgrepo.com/svg/532340/unlock",
+      "license": "https://www.svgrepo.com/page/licensing/#CC0",
+      "file": "unlock-svgrepo-com.svg"
+    },
+    {
+      "name": "upload-svgrepo-com",
+      "source": "https://www.svgrepo.com/svg/533718/upload",
+      "license": "https://www.svgrepo.com/page/licensing/#CC0",
+      "file": "upload-svgrepo-com.svg"
+    },
+    {
+      "name": "watch-alt-2-svgrepo-com",
+      "file": "watch-alt-2-svgrepo-com.svg",
+      "source": "watch-alt-2-svgrepo-com.svg"
+    },
+    {
+      "name": "wifi-exclamation-svgrepo-com",
+      "file": "wifi-exclamation-svgrepo-com.svg",
+      "source": "wifi-exclamation-svgrepo-com.svg"
+    },
+    {
+      "name": "xmark-svgrepo-com",
+      "file": "xmark-svgrepo-com.svg",
+      "source": "xmark-svgrepo-com.svg"
+    }
+  ],
+  "collection": "https://www.svgrepo.com/collection/dazzle-line-icons/"
 }

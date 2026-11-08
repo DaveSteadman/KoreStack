@@ -104,8 +104,8 @@
         <input id="receive_poll_interval" name="receive_poll_interval" type="number"
                value="{{ receive_poll_interval|default(60) }}" min="10" max="3600" style="width:64px;">
         <div class="stepper-btns">
-          <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,1)">&#9650;</button>
-          <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,-1)">&#9660;</button>
+          <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,1)" aria-label="Increase"><span class="kcui-icon kcui-icon--asset" aria-hidden="true" style="--kcui-icon-size:1em;--kcui-icon-url:url(/ui-elements/assets/icons/dazzle-line/chevron-up-svgrepo-com.svg)"></span></button>
+          <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,-1)" aria-label="Decrease"><span class="kcui-icon kcui-icon--asset" aria-hidden="true" style="--kcui-icon-size:1em;--kcui-icon-url:url(/ui-elements/assets/icons/dazzle-line/chevron-down-svgrepo-com.svg)"></span></button>
         </div>
       </div>
       <label for="send_poll_interval">Send Polling Interval (seconds)</label>
@@ -113,8 +113,8 @@
         <input id="send_poll_interval" name="send_poll_interval" type="number"
                value="{{ send_poll_interval|default(10) }}" min="1" max="3600" style="width:64px;">
         <div class="stepper-btns">
-          <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,1)">&#9650;</button>
-          <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,-1)">&#9660;</button>
+          <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,1)" aria-label="Increase"><span class="kcui-icon kcui-icon--asset" aria-hidden="true" style="--kcui-icon-size:1em;--kcui-icon-url:url(/ui-elements/assets/icons/dazzle-line/chevron-up-svgrepo-com.svg)"></span></button>
+          <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,-1)" aria-label="Decrease"><span class="kcui-icon kcui-icon--asset" aria-hidden="true" style="--kcui-icon-size:1em;--kcui-icon-url:url(/ui-elements/assets/icons/dazzle-line/chevron-down-svgrepo-com.svg)"></span></button>
         </div>
       </div>
       {% endif %}

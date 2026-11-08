@@ -1,7 +1,7 @@
 /**
  * interaction.js — All mouse & keyboard handling on the canvas.
  *
- * Tools: select | rect | ellipse | connect | waypoint | pan
+ * Tools: select | rect | rounded | ellipse | diamond | text | connect | waypoint | pan
  */
 
 import {
@@ -21,7 +21,7 @@ import {
   hitTest, resizeHandleAt, getScreenPorts, nearestScreenPort,
   getEdgeEndpointHandles, edgeEndpointHandleAt,
   setRubberBand, setGhostEdge, setGhostRect, setPortHints, setActivePortHint,
-} from './renderer.js';
+} from './renderer.js?v=20261118d';
 
 // ── State ──────────────────────────────────────────────────────────────────
 let activeTool = 'select';
@@ -90,7 +90,7 @@ function onMouseDown(e) {
     return;
   }
 
-  if (activeTool === 'rect' || activeTool === 'ellipse') {
+  if (['rect', 'rounded', 'ellipse', 'diamond', 'text'].includes(activeTool)) {
     const w = screenToWorld(sx, sy);
     _dragState = {
       type: 'draw-shape',
@@ -641,6 +641,9 @@ function commitDrawShape(ds, endSX, endSY) {
   setTool('select');
   draw();
   notifySelectionChange();
+  if (node.type === 'text') showLabelEditor(node, {
+    x: node.x, y: node.y, width: node.width, height: node.height,
+  });
 }
 
 function commitConnect(ds, sx, sy) {
@@ -793,6 +796,8 @@ function onKeyDown(e) {
     draw(); notifySelectionChange(); return;
   }
   if (ctrl && e.shiftKey && e.key === 'E') { e.preventDefault(); document.dispatchEvent(new CustomEvent('kd:export-png')); return; }
+  if (ctrl && e.shiftKey && e.key === 'S') { e.preventDefault(); document.dispatchEvent(new CustomEvent('kd:export-svg')); return; }
+  if (ctrl && e.shiftKey && e.key === 'I') { e.preventDefault(); document.dispatchEvent(new CustomEvent('kd:import-svg')); return; }
   if (ctrl && e.shiftKey && e.key === 'H') {
     e.preventDefault();
     view.pan.x = _canvas.width  / 2;
@@ -805,7 +810,10 @@ function onKeyDown(e) {
   if (!ctrl) {
     if (e.key === 'v' || e.key === 'V') { setTool('select');   return; }
     if (e.key === 'r' || e.key === 'R') { setTool('rect');     return; }
+    if (e.key === 'u' || e.key === 'U') { setTool('rounded');  return; }
     if (e.key === 'e' || e.key === 'E') { setTool('ellipse');  return; }
+    if (e.key === 'd' || e.key === 'D') { setTool('diamond');  return; }
+    if (e.key === 't' || e.key === 'T') { setTool('text');     return; }
     if (e.key === 'c' || e.key === 'C') { setTool('connect');  return; }
     if (e.key === 'w' || e.key === 'W') { setTool('waypoint'); return; }
     if (e.key === 'h' || e.key === 'H') { setTool('pan');      return; }

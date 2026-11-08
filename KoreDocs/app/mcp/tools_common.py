@@ -425,7 +425,8 @@ FORMAT_INFO: dict[str, Any] = {
         'content_type': 'application/json',
         'notes': [
             'Content is a JSON object serialized as a string.',
-            'Nodes are rectangles, ellipses, or waypoints.',
+            'Nodes support editable geometric shapes, text, SVG artwork, and waypoints.',
+            'Imported SVG nodes retain the original markup in svg.markup rather than a bitmap copy.',
             'Edges reference node ids through from/to and may use compass ports like n, e, s, w.',
         ],
         'schema': {

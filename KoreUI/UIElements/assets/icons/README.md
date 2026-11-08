@@ -1,22 +1,21 @@
-# Icon Packs (Public Mirror)
+# Dazzle Line UI Icons
 
-This folder hosts browser-served mirrors of external SVG icon packs.
-Source downloads are stored in `KoreUI/UIElements/SVGicons/`.
+UI icons must come from [dazzle-line](./dazzle-line/), except for explicitly approved assets.
+The source collection is [Dazzle Line Icons on SVG Repo](https://www.svgrepo.com/collection/dazzle-line-icons/).
+Use that collection when sourcing additional icons. Do not invent inline SVGs,
+use emoji substitutes, or mix in another icon pack.
 
-## Dazzle Line Import
+Approved exception: the diagram editor's Pan tool uses the supplied
+[Gentlecons hand](./Gentlecons/hand-svgrepo-com.svg), because the Dazzle Line
+collection has no hand/pan icon. Do not copy it into Dazzle Line or mislabel its source.
 
-1. Download the icon zip from SVGRepo manually in a browser: https://www.svgrepo.com/collection/dazzle-line-icons/
-2. Import into the repository:
+When an icon is missing, report it before choosing a substitute. Download approved
+additions from their SVG Repo pages into `dazzle-line/`, retaining the original SVG
+and the `<name>-svgrepo-com.svg` naming convention. Verify each asset's license and
+record its source URL and license in the pack manifest.
 
-```bash
-python tools/import_icon_pack.py --zip <path-to-zip> --set dazzle-line
-```
-
-This creates:
-- `KoreUI/UIElements/SVGicons/dazzle-line/*.svg` (source)
-- `KoreUI/UIElements/SVGicons/dazzle-line/manifest.json` (source manifest)
-- `KoreUI/UIElements/assets/icons/dazzle-line/*.svg` (public mirror)
-- `KoreUI/UIElements/assets/icons/dazzle-line/manifest.json` (public manifest)
+Rendered diagrams, graph edges, document content and textual status values are
+not UI icon assets and should not be replaced with pictograms.
 
 ## Usage
 
@@ -29,7 +28,8 @@ Use direct URL:
 Example:
 
 ```html
-<img src="/ui-elements/assets/icons/dazzle-line/alarm.svg" width="16" height="16" alt="" />
+<span class="kcui-icon kcui-icon--asset" aria-hidden="true"
+      style="--kcui-icon-size:16px; --kcui-icon-url:url(/ui-elements/assets/icons/dazzle-line/alarm-clock-alt-svgrepo-com.svg)"></span>
 ```
 
 ```css
@@ -37,16 +37,20 @@ Example:
   width: 16px;
   height: 16px;
   background: currentColor;
-  -webkit-mask: url('/ui-elements/assets/icons/dazzle-line/alarm.svg') center / contain no-repeat;
-  mask: url('/ui-elements/assets/icons/dazzle-line/alarm.svg') center / contain no-repeat;
+  -webkit-mask: url('/ui-elements/assets/icons/dazzle-line/alarm-clock-alt-svgrepo-com.svg') center / contain no-repeat;
+  mask: url('/ui-elements/assets/icons/dazzle-line/alarm-clock-alt-svgrepo-com.svg') center / contain no-repeat;
 }
 ```
 
 ### JS helper
 
 ```js
-import { svgIconImg, svgIconUrl } from '/ui-elements/assets/js/chrome.js';
+import { svgIconMask, svgIconUrl } from '/ui-elements/assets/js/chrome.js';
 
-const markup = svgIconImg('alarm', { setName: 'dazzle-line', size: 16 });
-const url = svgIconUrl('alarm', 'dazzle-line');
+const markup = svgIconMask('alarm-clock-alt-svgrepo-com', { size: 16 });
+const url = svgIconUrl('alarm-clock-alt-svgrepo-com');
 ```
+
+Use masks for monochrome UI icons so they inherit the control's colour in both
+light and dark themes. Put the icon directly inside an icon-only button, and give
+the button an accessible label.

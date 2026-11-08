@@ -321,10 +321,6 @@ a { color: inherit; }
   justify-content: flex-start;
 }
 
-.service-actions button .kcui-icon {
-  display: block;
-}
-
 .service-action--start   { --kcui-icon-button-color: var(--stack-action-start);   }
 .service-action--stop    { --kcui-icon-button-color: var(--stack-action-stop);    }
 .service-action--restart { --kcui-icon-button-color: var(--stack-action-restart); }

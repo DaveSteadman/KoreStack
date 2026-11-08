@@ -46,6 +46,7 @@ import json
 import re
 import sqlite3
 from contextlib import contextmanager
+from collections.abc import Callable
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
@@ -57,6 +58,7 @@ from dbutil import fts_build_query
 
 _TABLE_MARKER_RE = re.compile(rf'{re.escape(TABLE_OPEN)}(.*?){re.escape(TABLE_CLOSE)}', re.DOTALL)
 _SIMPLE_Q_RE      = re.compile(r"^[^\s()\",|]+$")
+_HEADING_RE       = re.compile(r"^==\s*(.+?)\s*==$")
 def _body_for_fts(body: Optional[str]) -> str:
     """Replace <<<TABLE>>>...<<<ENDTABLE>>> blocks with plain cell text for FTS indexing."""
     if not body:
@@ -416,24 +418,59 @@ def get_random_article() -> Optional[dict]:
 # Links
 # ---------------------------------------------------------------------------
 
-def resolve_links(batch_size: int = 500) -> int:
-    """Fill in to_id for unresolved links. Runs in batches to avoid a single long write lock."""
+def resolve_links(
+    batch_size: int = 500,
+    *,
+    should_stop: Optional[Callable[[], bool]] = None,
+    on_progress: Optional[Callable[[int, int], None]] = None,
+) -> int:
+    """Resolve a bounded snapshot of links in one forward, cancellable pass."""
+    if batch_size < 1:
+        raise ValueError("batch_size must be positive")
     total_resolved = 0
-    while True:
-        with db_connection() as conn:
-            cur = conn.execute("""
-                UPDATE links SET to_id = (
-                    SELECT id FROM articles WHERE lower(title) = lower(links.to_title)
-                )
-                WHERE to_id IS NULL
-                  AND rowid IN (
-                      SELECT rowid FROM links WHERE to_id IS NULL LIMIT ?
-                  )
-            """, (batch_size,))
-            resolved = cur.rowcount
+    checked = 0
+    last_rowid = 0
+    upper_rowid = None
+    while not (should_stop and should_stop()):
+        try:
+            with db_connection() as conn:
+                if should_stop:
+                    conn.set_progress_handler(lambda: int(should_stop()), 1000)
+                try:
+                    if upper_rowid is None:
+                        upper_rowid = conn.execute("SELECT MAX(rowid) FROM links").fetchone()[0] or 0
+                    rows = conn.execute("""
+                        SELECT pending.rowid, (
+                            SELECT id FROM articles
+                            WHERE lower(title) = lower(pending.to_title)
+                            ORDER BY id LIMIT 1
+                        ) AS target_id
+                        FROM links AS pending
+                        WHERE pending.to_id IS NULL
+                          AND pending.rowid > ? AND pending.rowid <= ?
+                        ORDER BY pending.rowid
+                        LIMIT ?
+                    """, (last_rowid, upper_rowid, batch_size)).fetchall()
+                    if not rows:
+                        break
+                    if should_stop and should_stop():
+                        return total_resolved
+                    cur = conn.executemany(
+                        "UPDATE links SET to_id = ? WHERE rowid = ? AND to_id IS NULL",
+                        [(row[1], row[0]) for row in rows if row[1] is not None],
+                    )
+                    resolved = cur.rowcount
+                finally:
+                    conn.set_progress_handler(None, 0)
+        except sqlite3.OperationalError as exc:
+            if exc.sqlite_errorcode == sqlite3.SQLITE_INTERRUPT and should_stop and should_stop():
+                return total_resolved
+            raise
+        last_rowid = rows[-1][0]
+        checked += len(rows)
         total_resolved += resolved
-        if resolved == 0:
-            break
+        if on_progress:
+            on_progress(checked, total_resolved)
     return total_resolved
 
 

@@ -4,8 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>KoreStack</title>
-  <link rel="icon" type="image/x-icon" href="/ui-elements/assets/icons/favicon.ico" />
-  <link rel="stylesheet" href="/static/diag/style.css" />
+  <link rel="icon" type="image/svg+xml" href="/ui-elements/assets/icons/dazzle-line/layer-group-svgrepo-com.svg" />
+  <link rel="stylesheet" href="/static/diag/style.css?v=20261118c" />
   <link rel="stylesheet" href="/static/shared/css/save-status.css?v=20261117a" />
   <link rel="stylesheet" href="/ui-elements/assets/css/chrome.css?v=20261105d" />
   <script src="/suite-config.js"></script>
@@ -26,22 +26,31 @@
     <!-- Left tool sidebar -->
     <aside id="tool-sidebar">
       <button class="tool-btn active" data-tool="select" title="Select / Move (V)">
-        <svg viewBox="0 0 24 24"><path d="M4 2l16 10-7 1-4 7z"/></svg>
+        <span class="kcui-icon kcui-icon--asset" aria-hidden="true" style="--kcui-icon-size:20px;--kcui-icon-url:url(/ui-elements/assets/icons/dazzle-line/cursor-svgrepo-com.svg)"></span>
       </button>
       <button class="tool-btn" data-tool="rect" title="Rectangle (R)">
-        <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+        <span class="kcui-icon kcui-icon--asset" aria-hidden="true" style="--kcui-icon-size:20px;--kcui-icon-url:url(/ui-elements/assets/icons/dazzle-line/rectangle-wide-svgrepo-com.svg)"></span>
+      </button>
+      <button class="tool-btn" data-tool="rounded" title="Rounded rectangle (U)">
+        <span class="kcui-icon kcui-icon--asset" aria-hidden="true" style="--kcui-icon-size:20px;--kcui-icon-url:url(/ui-elements/assets/icons/dazzle-line/rectangle-wide-svgrepo-com.svg)"></span>
       </button>
       <button class="tool-btn" data-tool="ellipse" title="Ellipse (E)">
-        <svg viewBox="0 0 24 24"><ellipse cx="12" cy="12" rx="9" ry="7" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+        <span class="kcui-icon kcui-icon--asset" aria-hidden="true" style="--kcui-icon-size:20px;--kcui-icon-url:url(/ui-elements/assets/icons/dazzle-line/circle-svgrepo-com.svg)"></span>
+      </button>
+      <button class="tool-btn" data-tool="diamond" title="Diamond (D)">
+        <span class="kcui-icon" aria-hidden="true" style="font:20px/1 system-ui">◇</span>
+      </button>
+      <button class="tool-btn" data-tool="text" title="Text (T)">
+        <span class="kcui-icon" aria-hidden="true" style="font:700 19px/1 system-ui">T</span>
       </button>
       <button class="tool-btn" data-tool="connect" title="Connect (C)">
-        <svg viewBox="0 0 24 24"><line x1="4" y1="20" x2="20" y2="4" stroke="currentColor" stroke-width="2"/><polygon points="20,4 14,6 18,10"/></svg>
+        <span class="kcui-icon kcui-icon--asset" aria-hidden="true" style="--kcui-icon-size:20px;--kcui-icon-url:url(/ui-elements/assets/icons/dazzle-line/arrow-up-right-svgrepo-com.svg)"></span>
       </button>
       <button class="tool-btn" data-tool="waypoint" title="Waypoint (W)">
-        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"/><line x1="2" y1="12" x2="8" y2="12" stroke="currentColor" stroke-width="2"/><line x1="16" y1="12" x2="22" y2="12" stroke="currentColor" stroke-width="2"/></svg>
+        <span class="kcui-icon kcui-icon--asset" aria-hidden="true" style="--kcui-icon-size:20px;--kcui-icon-url:url(/ui-elements/assets/icons/dazzle-line/crosshair-simple-svgrepo-com.svg)"></span>
       </button>
       <button class="tool-btn" data-tool="pan" title="Pan (H)">
-        <svg viewBox="0 0 24 24"><path d="M9 11V6a2 2 0 0 1 4 0v5m0 0V5a2 2 0 0 1 4 0v6m0 0v-2a2 2 0 0 1 4 0v5a7 7 0 0 1-14 0v-5a2 2 0 0 1 4 0v2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <span class="kcui-icon kcui-icon--asset" aria-hidden="true" style="--kcui-icon-size:20px;--kcui-icon-url:url(/ui-elements/assets/icons/Gentlecons/hand-svgrepo-com.svg)"></span>
       </button>
     </aside>
 
@@ -69,6 +78,6 @@
 
   </div>
 
-  <script type="module" src="/static/diag/js/main.js?v=20261117a"></script>
+  <script type="module" src="/static/diag/js/main.js?v=20261118d"></script>
 </body>
 </html>

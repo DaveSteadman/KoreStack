@@ -49,7 +49,7 @@
   flex-shrink: 0;
 }
 
-.kappbar-brandmark svg {
+.kappbar-brandmark :is(svg, .kcui-icon) {
   width: 16px;
   height: 16px;
   display: block;
@@ -118,7 +118,7 @@
   color: color-mix(in srgb, var(--kappbar-accent) 78%, white 8%);
 }
 
-.kappbar-tabicon svg {
+.kappbar-tabicon :is(svg, .kcui-icon) {
   width: 13px;
   height: 13px;
   display: block;
@@ -274,7 +274,7 @@
   color: color-mix(in srgb, var(--kappbar-accent) 78%, white 8%);
 }
 
-.kappbar-editortab-icon svg {
+.kappbar-editortab-icon :is(svg, .kcui-icon) {
   width: 13px;
   height: 13px;
   display: block;
@@ -363,7 +363,7 @@
   background: linear-gradient(90deg, color-mix(in srgb, var(--tabs-accent) 12%, transparent), transparent 78%);
 }
 
-#kd-brand svg {
+#kd-brand :is(svg, .kcui-icon) {
   width: 18px;
   height: 18px;
   padding: 5px;
@@ -399,7 +399,7 @@
   box-shadow: inset 0 -2px 0 var(--tabs-accent);
 }
 
-.kd-kf-link svg {
+.kd-kf-link :is(svg, .kcui-icon) {
   width: 13px;
   height: 13px;
   flex-shrink: 0;
@@ -461,7 +461,7 @@
   color: var(--tabs-accent-2);
 }
 
-.kd-tab-icon svg {
+.kd-tab-icon :is(svg, .kcui-icon) {
   width: 13px;
   height: 13px;
 }
@@ -529,7 +529,7 @@
   background: color-mix(in srgb, var(--tabs-accent) 10%, transparent);
 }
 
-.kd-add svg {
+.kd-add :is(svg, .kcui-icon) {
   width: 1em;
   height: 1em;
   color: var(--tabs-accent);

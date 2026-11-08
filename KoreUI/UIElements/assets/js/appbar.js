@@ -1,5 +1,6 @@
 import { SUITE_ICONS, resolveIcon } from './icons.js';
 import { applyTheme, themeFor } from './theme.js';
+import { svgIconMask } from './svgicons.js';
 
 const DEFAULT_TYPE_URL = {
   koredoc: '/doc',
@@ -380,17 +381,14 @@ function renderAppTabs() {
       <div class="kd-tab${active}" data-tab="${escapeHtml(key)}" data-type="${escapeHtml(tab.type)}" data-name="${escapeHtml(tab.name)}" data-id="${tab.id ?? ''}" data-untitled="${tab.untitled ? '1' : ''}" role="tab" title="${escapeHtml(title)}">
         <span class="kd-tab-icon">${appTabsIcon(tab.type)}</span>
         <span class="${nameClass}">${escapeHtml(label)}</span>
-        <button class="kd-tab-close" data-close="${escapeHtml(key)}" title="${escapeHtml(closeTitle)}" aria-label="Close">×</button>
+        <button class="kd-tab-close" data-close="${escapeHtml(key)}" title="${escapeHtml(closeTitle)}" aria-label="Close">${svgIconMask('xmark-svgrepo-com', { size: 11 })}</button>
       </div>`;
   }
   tabsHtml += '</div>';
 
   const addHtml = `
     <button class="kd-add" title="${escapeHtml(currentAppTabsConfig.homeTitle)}" aria-label="${escapeHtml(currentAppTabsConfig.homeTitle)}" style="order:4">
-      <svg width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-        <line x1="6" y1="1" x2="6" y2="11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-        <line x1="1" y1="6" x2="11" y2="6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-      </svg>
+      ${svgIconMask('plus-svgrepo-com', { size: 11 })}
     </button>`;
 
   host.innerHTML = `${currentAppTabsConfig.renderBrand === false ? '' : brandHtml}${homeHtml}${tabsHtml}${addHtml}`;

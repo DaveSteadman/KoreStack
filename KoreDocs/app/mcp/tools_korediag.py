@@ -216,13 +216,14 @@ nodes  (array, required)
     id  (string, required)
       Identifier unique within this diagram. Referenced by edge from/to.
 
-    type  ("rect" | "rounded" | "diamond" | "ellipse" | "text" | "image", required)
+    type  ("rect" | "rounded" | "diamond" | "ellipse" | "text" | "svg" | "image", required)
       Shape type:
         rect     – Plain rectangle
         rounded  – Rectangle with rounded corners
         diamond  – Diamond / rhombus shape (decision node)
         ellipse  – Oval / ellipse (start/end terminal node)
         text     – Label-only node with no visible border
+        svg      – Imported SVG artwork. Preserve its `svg.markup` string to retain arbitrary SVG features.
         image    – Image placeholder node
 
     x  (number, required)

@@ -1,0 +1,84 @@
+{
+  "schema_version": 2,
+  "service": "koreproject",
+  "service_label": "KoreProject",
+  "skills": [{
+    "name": "koreproject",
+    "purpose": "Manage project requirements, design statements and disposable project work.",
+    "selection_description": "Find project intent, propose statement changes, capture ideas, maintain hierarchical tickets and board placement, and add traceability links. Read before editing; use returned versions and ticket generation. Agents cannot approve statements or reset ticket storage.",
+    "tools": [
+      {
+        "name": "project_read",
+        "purpose": "Read project context. List records with pagination, or retrieve one record with links, comments and latest 100 revision/activity snapshots. Returns ticket generation for subsequent ticket writes.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "kind": {"type": "string", "enum": ["project", "statement", "ticket", "board", "lane", "section"]},
+            "project_id": {"type": "string"},
+            "record_id": {"type": "string"},
+            "q": {"type": "string"},
+            "offset": {"type": "integer", "minimum": 0},
+            "limit": {"type": "integer", "minimum": 1, "maximum": 500}
+          }
+        },
+        "returns": "Record detail or paginated items, total, offset; generation or explicit ticket_store_error.",
+        "invoke_path": "/api/skills/project_read/invoke"
+      },
+      {
+        "name": "project_save",
+        "purpose": "Create or update one record. Common data: title, body, archived. Project: immutable key. Statement: kind requirement/design (immutable), state draft/in_review/retired, owner, section_id (matching statement/section kind; null means unfiled). Display refs use independent per-project sequences KEY-REQ-1 for requirements and KEY-DES-1 for designs, without leading zeros; use the UUID id for links and updates. Section: kind requirement/design (immutable, default requirement), parent_id (null for top level), position (nonnegative); named nested containers in independent requirement/design trees, separate from refinement links. Parent and child section kinds must match. Sections must be empty before archiving. Ticket: parent_id, lane_id (null for backlog), priority low/normal/high/urgent, owner, labels, position (nonnegative). Board: title/body; creation adds default lanes. Lane: board_id (immutable), category open/active/done/cancelled, position. Existing records require expected_version. Ticket/board/lane writes require current generation; sections use the durable definition store without a ticket generation. Use a unique request_id when creating to make retries safe. Content edits to approved statements become draft.",
+        "parameters": {
+          "type": "object",
+          "required": ["kind", "data"],
+          "properties": {
+            "kind": {"type": "string", "enum": ["project", "statement", "ticket", "board", "lane", "section"]},
+            "data": {"type": "object"},
+            "project_id": {"type": "string"},
+            "record_id": {"type": "string"},
+            "expected_version": {"type": "integer", "minimum": 1},
+            "request_id": {"type": "string"},
+            "generation": {"type": "string"},
+            "confirm_children": {"type": "boolean", "description": "Explicitly allow moving a parent with unfinished children into a terminal lane."}
+          }
+        },
+        "returns": "Saved record including immutable id/ref and incremented version. Ticket display refs are per-project numbers such as GRID-TKT-101, starting at 1 without leading zeros. Show ref to users; retain UUID id only for API calls and relationships.",
+        "invoke_path": "/api/skills/project_save/invoke"
+      },
+      {
+        "name": "project_link",
+        "purpose": "Link design satisfies requirement, same-kind statement refines statement, ticket addresses statement, ticket depends_on ticket, or relates_to. Rejects cross-project and cyclic dependencies/refinement. Ticket-related links require generation. Note can identify evidence URLs/code revisions; a link is not proof of compliance.",
+        "parameters": {
+          "type": "object",
+          "required": ["source_kind", "source_id", "target_kind", "target_id", "relation"],
+          "properties": {
+            "source_kind": {"type": "string", "enum": ["statement", "ticket"]},
+            "source_id": {"type": "string"},
+            "target_kind": {"type": "string", "enum": ["statement", "ticket"]},
+            "target_id": {"type": "string"},
+            "relation": {"type": "string", "enum": ["satisfies", "refines", "addresses", "depends_on", "relates_to"]},
+            "note": {"type": "string"},
+            "generation": {"type": "string"}
+          }
+        },
+        "returns": "Created relationship.",
+        "invoke_path": "/api/skills/project_link/invoke"
+      },
+      {
+        "name": "project_comment",
+        "purpose": "Add an attributable investigation note or evidence reference. Ticket, board and lane comments require generation.",
+        "parameters": {
+          "type": "object",
+          "required": ["kind", "record_id", "body"],
+          "properties": {
+            "kind": {"type": "string", "enum": ["project", "statement", "ticket", "board", "lane", "section"]},
+            "record_id": {"type": "string"},
+            "body": {"type": "string"},
+            "generation": {"type": "string"}
+          }
+        },
+        "returns": "Stored comment and timestamp.",
+        "invoke_path": "/api/skills/project_comment/invoke"
+      }
+    ]
+  }]
+}

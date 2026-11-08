@@ -32,7 +32,7 @@ This is the only place the suite's command line is documented. The root `main.py
 | `python .\main.py --host H --ui-port P` | Override the bind host and landing-page port |
 | `python .\main.py --open-browser` | Open the landing page once started |
 
-Valid service names: `korechat`, `koreagent`, `koredatagateway`, `koredocs`, `korecode`, `korecomms`, `koreliveweb`, `korecron`, `koretest2`, `koreunittest`, `koreagentnetwork`.
+Valid service names: `korechat`, `koreagent`, `koredatagateway`, `koredocs`, `korecode`, `korecomms`, `koreliveweb`, `korecron`, `koretest2`, `koreunittest`, `koreagentnetwork`, `koreproject`.
 
 ## The subsystems
 
@@ -50,6 +50,7 @@ Valid service names: `korechat`, `koreagent`, `koredatagateway`, `koredocs`, `ko
 | [KoreTest2](KoreTest2/README.md) | 29616 | System tests: prompts and commands run against the live interfaces | Per-build regression of the whole stack |
 | [KoreUnitTest](KoreUnitTest/README.md) | 29618 | Python unit tests, one file per test | Per-build regression of internal code |
 | [KoreAgentNetwork](KoreAgentNetwork/README.md) | 29617 | Visual, executable networks of Python, LLM, and Decision blocks | Composable automation that calls other services |
+| [KoreProject](KoreProject/README.md) | 29619 | Linked requirements/design, hierarchical tickets and lifecycle boards | Durable project intent with an independently disposable work database |
 
 Shared support:
 
@@ -113,3 +114,8 @@ Browser pages share the `KoreUI/UIElements` shell and top bar, which links all s
 ## Documentation rule
 
 Primary documentation lives in the root and subsystem READMEs. [ChangeLog.md](ChangeLog.md) records dated changes.
+
+Project-wide intent and architecture are defined in [Requirements.md](docs/Requirements.md)
+and [Design.md](docs/Design.md). Architectural changes that alter a documented trust
+boundary, service contract, persistent data format, or model policy require an ADR
+under `docs/adr/`.

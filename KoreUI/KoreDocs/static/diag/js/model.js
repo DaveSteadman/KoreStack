@@ -49,7 +49,7 @@ export function newNode(type, x, y, w, h, label = '') {
   const gh = Math.max(1, toGridInt(h));
   return {
     id: uuid(),
-    type,           // 'rect' | 'ellipse' | 'waypoint'
+    type,           // 'rect' | 'rounded' | 'diamond' | 'ellipse' | 'text' | 'svg' | 'waypoint'
     label,
     x: gx, y: gy,   // grid units, relative to parent (or world if root)
     width: gw,

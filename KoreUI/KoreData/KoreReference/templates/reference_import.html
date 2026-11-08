@@ -213,6 +213,7 @@ function resetToIdle() {
 }
 
 function resetPanel() {
+  document.getElementById('c_stop_btn').disabled = false;
   document.getElementById('pg_idle').style.display    = 'none';
   document.getElementById('pg_active').style.display  = '';
   document.getElementById('pg_bar').style.width        = '0%';
@@ -254,7 +255,11 @@ async function crawlStart() {
       body: JSON.stringify(body),
     });
     const data = await resp.json();
-    if (!resp.ok) { showError(data.detail || `Error ${resp.status}`); return; }
+    if (!resp.ok) {
+      showError(data.detail || `Error ${resp.status}`);
+      if (resp.status === 409) startPolling();
+      return;
+    }
     resetPanel();
     startPolling();
   } catch (e) {
@@ -299,6 +304,9 @@ function renderStatus(s) {
   const done   = s.done   || 0;
   const limit  = s.limit  || 0;
   const errors = s.errors || 0;
+  document.getElementById('c_start_btn').disabled = !!s.running;
+  document.getElementById('c_stop_btn').style.display = s.running ? '' : 'none';
+  document.getElementById('c_stop_btn').disabled = s.phase === 'stopping';
 
   if (s.running) {
     document.getElementById('pg_idle').style.display     = 'none';
@@ -307,14 +315,17 @@ function renderStatus(s) {
 
     const pct = limit > 0 ? Math.min(99, Math.round(done / limit * 100)) : 0;
     document.getElementById('pg_bar').style.width   = pct + '%';
-    document.getElementById('pg_pct').textContent   = limit > 0 ? pct + '%' : '';
+    document.getElementById('pg_pct').textContent   =
+      s.phase === 'finalizing' || s.phase === 'stopping' ? '' : limit > 0 ? pct + '%' : '';
     document.getElementById('pg_done').textContent  = done.toLocaleString();
     document.getElementById('pg_total').textContent = limit > 0 ? limit.toLocaleString() : '-';
     document.getElementById('pg_errors').textContent = errors.toLocaleString();
     document.getElementById('pg_errors').style.color = errors ? 'var(--red)' : 'var(--dim)';
 
     const badge = document.getElementById('pg_badge');
-    badge.style.display = ''; badge.textContent = 'RUNNING';
+    badge.style.display = '';
+    badge.textContent = s.phase === 'finalizing' ? 'FINALIZING' :
+      s.phase === 'stopping' ? 'STOPPING' : 'RUNNING';
 
     const seedRow = document.getElementById('pg_seed_row');
     if (s.seed) { seedRow.style.display = ''; document.getElementById('pg_seed').textContent = s.seed; }
@@ -325,10 +336,13 @@ function renderStatus(s) {
     else { errRow.style.display = 'none'; }
 
     const modeLabel = s.mode === 'crawl' ? `BFS crawl from "${s.seed || '?'}"` : 'Import';
-    document.getElementById('pg_label').textContent = `${modeLabel} - importing...`;
+    const activity = s.phase === 'finalizing' ?
+      `resolving links: ${(s.links_checked || 0).toLocaleString()} checked, ${(s.links_resolved || 0).toLocaleString()} resolved` :
+      s.phase === 'stopping' ? 'stopping current work...' : 'importing...';
+    document.getElementById('pg_label').textContent = `${modeLabel} - ${activity}`;
 
   } else {
-    if (!s.seed && done === 0) {
+    if (!s.seed && done === 0 && !s.last_error && (!s.phase || s.phase === 'idle')) {
       // status endpoint has no prior run
       document.getElementById('pg_idle').style.display     = '';
       document.getElementById('pg_active').style.display   = 'none';
@@ -341,13 +355,15 @@ function renderStatus(s) {
     document.getElementById('pg_done_msg').style.display = '';
 
     const badge = document.getElementById('pg_badge');
-    badge.style.display = ''; badge.textContent = 'COMPLETE';
+    badge.style.display = '';
+    badge.textContent = s.phase === 'failed' ? 'FAILED' : s.phase === 'stopped' ? 'STOPPED' : 'COMPLETE';
 
     document.getElementById('pg_done_title').textContent =
       done > 0 ? `${done.toLocaleString()} article${done !== 1 ? 's' : ''} imported` : 'Import finished';
     const parts = [];
     if (s.seed) parts.push(s.seed);
     if (errors)  parts.push(`${errors} error${errors !== 1 ? 's' : ''}`);
+    if (s.last_error) parts.push(s.last_error);
     document.getElementById('pg_done_detail').textContent = parts.join(' | ');
   }
 }
@@ -361,7 +377,7 @@ function renderStatus(s) {
       document.getElementById('c_start_btn').disabled = true;
       document.getElementById('c_stop_btn').style.display = '';
       startPolling();
-    } else if (s.done > 0) {
+    } else {
       renderStatus(s);
     }
   } catch (_) {}

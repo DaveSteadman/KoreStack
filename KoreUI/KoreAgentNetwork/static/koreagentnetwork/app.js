@@ -1,6 +1,7 @@
 import { initServiceShell, kcuiConfirm } from '/ui-elements/assets/js/chrome.js';
 import { initWorkspaceLayouts } from '/ui-elements/assets/js/workspace.js';
 import { stepNumberInput } from '/ui-elements/assets/js/steppers.js';
+import { svgIconMask } from '/ui-elements/assets/js/svgicons.js';
 
 const state = { network: null, selectedNodeId: null, pendingOutput: null, run: null, edits: {}, dragging: null };
 const $ = (selector) => document.querySelector(selector);
@@ -147,8 +148,8 @@ async function request(path, options = {}) {
   return data;
 }
 
-const LOCK_SHUT = '<svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M4.5 7V5a3.5 3.5 0 0 1 7 0v2h.5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1zm1.5 0h4V5a2 2 0 0 0-4 0z" fill="currentColor"/></svg>';
-const LOCK_OPEN = '<svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M4 7h8a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1zm1.5 0V5a2.5 2.5 0 0 1 4.9-.7" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
+const LOCK_SHUT = svgIconMask('lock-svgrepo-com', { size: 13 });
+const LOCK_OPEN = svgIconMask('unlock-svgrepo-com', { size: 13 });
 const isProtected = () => state.network?.protected === true;
 
 // Protected networks stay runnable but refuse every edit and deletion.
@@ -584,14 +585,16 @@ function renderNode(node) {
   const result = state.run?.nodes?.[node.id];
   const element = document.createElement('article');
   element.className = `kan-node ${node.id === state.selectedNodeId ? 'selected' : ''} ${result?.status || ''} ${node.id === state.activeNodeId ? 'active' : ''} kan-node--${node.kind || 'python'}`;
-  const seq = triggeredBlocks().has(node.id) ? '⚡' : node.order ?? executionOrder().indexOf(node.id) + 1;
+  const seq = triggeredBlocks().has(node.id)
+    ? svgIconMask('bolt-svgrepo-com', { size: 13 })
+    : escapeHtml(node.order ?? executionOrder().indexOf(node.id) + 1);
   const inValues = result ? resolveInputs(node) : {};
   const outValues = result ? outputValues(node.id) : {};
   element.dataset.nodeId = node.id;
   element.style.left = `${node.position.x}px`;
   element.style.top  = `${node.position.y}px`;
   element.style.minHeight = `${nodeHeight(node)}px`;
-  element.innerHTML = `<div class="kan-node-head"><button type="button" class="kcui-icon-button kan-node-play" title="Run this block with its current inputs">&#9654;</button><span class="kan-node-seq" title="Execution order">${seq || '-'}</span><span>${escapeHtml(node.label)}</span></div>${triggerRow(node)}<div class="kan-port-lines"><div class="kan-port-column">${node.inputs.map((port) => `<button type="button" class="kan-port kan-port--input" data-port="${escapeHtml(port.name)}"><i class="kan-port-dot"></i><span class="kan-port-text">${escapeHtml(port.name)}${portValue(inValues[port.name], result)}</span></button>`).join('')}</div><div class="kan-port-column">${node.outputs.map((port) => `<button type="button" class="kan-port kan-port--output ${state.pendingOutput?.nodeId === node.id && state.pendingOutput?.portName === port.name ? 'pending' : ''}" data-port="${escapeHtml(port.name)}"><span class="kan-port-text">${escapeHtml(port.name)}${portValue(outValues[port.name], result)}</span><i class="kan-port-dot"></i></button>`).join('')}</div></div>${result?.error ? `<div class="kan-io-error">${escapeHtml(preview(result.error))}</div>` : ''}`;
+  element.innerHTML = `<div class="kan-node-head"><button type="button" class="kcui-icon-button kan-node-play" title="Run this block with its current inputs">${svgIconMask('play-svgrepo-com', { size: 13 })}</button><span class="kan-node-seq" title="Execution order">${seq || '-'}</span><span>${escapeHtml(node.label)}</span></div>${triggerRow(node)}<div class="kan-port-lines"><div class="kan-port-column">${node.inputs.map((port) => `<button type="button" class="kan-port kan-port--input" data-port="${escapeHtml(port.name)}"><i class="kan-port-dot"></i><span class="kan-port-text">${escapeHtml(port.name)}${portValue(inValues[port.name], result)}</span></button>`).join('')}</div><div class="kan-port-column">${node.outputs.map((port) => `<button type="button" class="kan-port kan-port--output ${state.pendingOutput?.nodeId === node.id && state.pendingOutput?.portName === port.name ? 'pending' : ''}" data-port="${escapeHtml(port.name)}"><span class="kan-port-text">${escapeHtml(port.name)}${portValue(outValues[port.name], result)}</span><i class="kan-port-dot"></i></button>`).join('')}</div></div>${result?.error ? `<div class="kan-io-error">${escapeHtml(preview(result.error))}</div>` : ''}`;
   const play = element.querySelector('.kan-node-play');
   play.addEventListener('pointerdown', (event) => event.stopPropagation());
   play.addEventListener('click', (event) => { event.stopPropagation(); state.selectedNodeId = node.id; playNode(node.id); });
@@ -614,7 +617,7 @@ document.querySelectorAll('.kan-tab').forEach((tab) => tab.addEventListener('cli
 let templates = [];
 async function loadTemplates() {
   try { templates = (await request('/api/templates')).templates; } catch (error) { setStatus(error.message, 'error'); return; }
-  $('#template-list').innerHTML = templates.map((item) => `<div class="kan-template-item" data-id="${escapeHtml(item.id)}"><div class="kan-template-text"><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(item.description || '')}</small></div><button type="button" class="btn btn-secondary" data-add title="Add a copy to the current network">Add</button><button type="button" class="kcui-icon-button" data-del title="Remove this template">×</button></div>`).join('') || '<div class="kan-empty-inspector">No templates yet. Select a block and use “Add To Templates”.</div>';
+  $('#template-list').innerHTML = templates.map((item) => `<div class="kan-template-item" data-id="${escapeHtml(item.id)}"><div class="kan-template-text"><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(item.description || '')}</small></div><button type="button" class="btn btn-secondary" data-add title="Add a copy to the current network">Add</button><button type="button" class="kcui-icon-button" data-del title="Remove this template">${svgIconMask('xmark-svgrepo-com', { size: 13 })}</button></div>`).join('') || '<div class="kan-empty-inspector">No templates yet. Select a block and use “Add To Templates”.</div>';
 }
 function addFromTemplate(item) {
   if (!state.network) return;
@@ -929,7 +932,7 @@ function renderInspector() {
 }
 function renderExits(node) {
   const container = $('#exit-ports');
-  container.innerHTML = node.exits.map((name, index) => `<div class="kan-port-row"><input data-index="${index}" value="${escapeHtml(name)}" aria-label="Exit name"><button type="button" class="kcui-icon-button kan-port-remove" data-remove="${index}" title="Remove exit">×</button></div>`).join('');
+  container.innerHTML = node.exits.map((name, index) => `<div class="kan-port-row"><input data-index="${index}" value="${escapeHtml(name)}" aria-label="Exit name"><button type="button" class="kcui-icon-button kan-port-remove" data-remove="${index}" title="Remove exit">${svgIconMask('xmark-svgrepo-com', { size: 13 })}</button></div>`).join('');
   container.querySelectorAll('[data-remove]').forEach((button) => button.addEventListener('click', () => {
     const [name] = node.exits.splice(Number(button.dataset.remove), 1);
     state.network.triggers = (state.network.triggers || []).filter((item) => !(item.source_node === node.id && item.name === name));
@@ -937,7 +940,7 @@ function renderExits(node) {
   }));
 }
 function renderPorts(container, ports, isInput) {
-  container.innerHTML = ports.map((port, index) => `<div class="kan-port-row"><input data-index="${index}" value="${escapeHtml(port.name)}" aria-label="${isInput ? 'Input' : 'Output'} port name"><button type="button" class="kcui-icon-button kan-port-remove" data-remove="${index}" title="Remove port">×</button></div>`).join('');
+  container.innerHTML = ports.map((port, index) => `<div class="kan-port-row"><input data-index="${index}" value="${escapeHtml(port.name)}" aria-label="${isInput ? 'Input' : 'Output'} port name"><button type="button" class="kcui-icon-button kan-port-remove" data-remove="${index}" title="Remove port">${svgIconMask('xmark-svgrepo-com', { size: 13 })}</button></div>`).join('');
   container.querySelectorAll('[data-remove]').forEach((button) => button.addEventListener('click', () => { ports.splice(Number(button.dataset.remove), 1); state.network.edges = state.network.edges.filter((edge) => isInput ? !(edge.target_node === currentNode().id && edge.target_port === button.parentElement.querySelector('input').value) : !(edge.source_node === currentNode().id && edge.source_port === button.parentElement.querySelector('input').value)); persist(); render(); }));
 }
 

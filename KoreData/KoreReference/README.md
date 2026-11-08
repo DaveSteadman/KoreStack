@@ -18,6 +18,19 @@ KoreReference is the KoreData home for linked reference material where navigatio
 
 ## Troubleshooting
 
+Imports remain active while resolving article links after fetching finishes.
+The progress panel shows **Finalizing** during this step, and **Complete** only
+after the worker has released its import slot. Links to articles not yet present
+remain unresolved for a later import; they do not prevent completion.
+
+Link resolution visits unresolved links in forward batches, without rescanning
+missing targets from earlier batches. The panel reports links checked and resolved.
+Stop requests interrupt fetching, pacing, and SQLite link-resolution work; committed
+batches are retained and remaining links can be resolved by a later import.
+**Stopping** remains active until the worker exits; only then can another import
+start. SQLite lock waits remain subject to the database busy timeout. Unexpected
+worker failures are shown as **Failed**.
+
 | Problem | What to check |
 |---|---|
 | Reference searches are empty | Confirm the reference dataset has actually been imported |

@@ -20,14 +20,14 @@
           Since
           <div class="date-pick">
             <input type="date" name="since">
-            <span class="cal-icon" onclick="this.previousElementSibling.showPicker()"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><rect x="1" y="2" width="10" height="9" rx="1"/><line x1="1" y1="5" x2="11" y2="5"/><line x1="4" y1="1" x2="4" y2="3"/><line x1="8" y1="1" x2="8" y2="3"/></svg></span>
+            <span class="cal-icon" onclick="this.previousElementSibling.showPicker()"><span class="kcui-icon kcui-icon--asset" aria-hidden="true" style="--kcui-icon-size:12px;--kcui-icon-url:url(/ui-elements/assets/icons/dazzle-line/calendar-days-svgrepo-com.svg)"></span></span>
           </div>
         </label>
         <label class="kcui-filter-label">
           Until
           <div class="date-pick">
             <input type="date" name="until">
-            <span class="cal-icon" onclick="this.previousElementSibling.showPicker()"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><rect x="1" y="2" width="10" height="9" rx="1"/><line x1="1" y1="5" x2="11" y2="5"/><line x1="4" y1="1" x2="4" y2="3"/><line x1="8" y1="1" x2="8" y2="3"/></svg></span>
+            <span class="cal-icon" onclick="this.previousElementSibling.showPicker()"><span class="kcui-icon kcui-icon--asset" aria-hidden="true" style="--kcui-icon-size:12px;--kcui-icon-url:url(/ui-elements/assets/icons/dazzle-line/calendar-days-svgrepo-com.svg)"></span></span>
           </div>
         </label>
         <label class="kcui-filter-label">
@@ -35,8 +35,8 @@
           <div class="num-stepper">
             <input type="number" min="1" max="3650" style="width:52px;" oninput="setNoOlderThan(this)">
             <div class="stepper-btns">
-              <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,1)">&#9650;</button>
-              <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,-1)">&#9660;</button>
+              <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,1)" aria-label="Increase"><span class="kcui-icon kcui-icon--asset" aria-hidden="true" style="--kcui-icon-size:1em;--kcui-icon-url:url(/ui-elements/assets/icons/dazzle-line/chevron-up-svgrepo-com.svg)"></span></button>
+              <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,-1)" aria-label="Decrease"><span class="kcui-icon kcui-icon--asset" aria-hidden="true" style="--kcui-icon-size:1em;--kcui-icon-url:url(/ui-elements/assets/icons/dazzle-line/chevron-down-svgrepo-com.svg)"></span></button>
             </div>
           </div>
           <span class="meta">days</span>
@@ -46,8 +46,8 @@
           <div class="num-stepper">
             <input type="number" name="limit" value="50" min="1" max="500" style="width:52px;">
             <div class="stepper-btns">
-              <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,1)">&#9650;</button>
-              <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,-1)">&#9660;</button>
+              <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,1)" aria-label="Increase"><span class="kcui-icon kcui-icon--asset" aria-hidden="true" style="--kcui-icon-size:1em;--kcui-icon-url:url(/ui-elements/assets/icons/dazzle-line/chevron-up-svgrepo-com.svg)"></span></button>
+              <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,-1)" aria-label="Decrease"><span class="kcui-icon kcui-icon--asset" aria-hidden="true" style="--kcui-icon-size:1em;--kcui-icon-url:url(/ui-elements/assets/icons/dazzle-line/chevron-down-svgrepo-com.svg)"></span></button>
             </div>
           </div>
         </label>

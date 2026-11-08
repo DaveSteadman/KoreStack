@@ -45,8 +45,8 @@
 # - api_search: Implements the api search operation for this module.
 # - api_update_feed_rate: Implements the api update feed rate operation for this module.
 # - api_trigger_feed: Implements the api trigger feed operation for this module.
-# - api_get_age_settings: Implements the api get age settings operation for this module.
-# - api_set_age_settings: Implements the api set age settings operation for this module.
+# - api_get_age_settings: Implements the api get domain limit settings operation for this module.
+# - api_set_age_settings: Implements the api set domain limit settings operation for this module.
 # - api_feed_counts: Implements the api feed counts operation for this module.
 # - api_purge_outside_calendar: Implements the api purge outside calendar operation for this module.
 # ====================================================================================================
@@ -79,6 +79,7 @@ from app.database import (
     delete_entries_by_ids,
     delete_entries_older_than,
     delete_entries_outside_calendar,
+    delete_entries_over_limit,
     delete_entry,
     get_domain_age_settings,
     get_entries,
@@ -456,7 +457,7 @@ def api_trigger_feed(feed_id: str):
 
 @app.get("/api/domains/{domain}/age-settings", tags=["domains"])
 def api_get_age_settings(domain: str):
-    """Get entry age/date filter settings for a domain."""
+    """Get entry age/date and maximum-entry settings for a domain."""
     sync_domain_spec(domain)
     return get_domain_age_settings(domain)
 
@@ -466,27 +467,38 @@ class AgeSettingsBody(BaseModel):
     days: Optional[int] = None
     start_date: Optional[str] = None
     end_date: Optional[str] = None
+    max_entries_enabled: bool = False
+    max_entries: Optional[int] = None
 
 
 @app.post("/api/domains/{domain}/age-settings", tags=["domains"])
 def api_set_age_settings(domain: str, body: AgeSettingsBody):
-    """Set entry age/date filter settings for a domain."""
+    """Set entry age/date and maximum-entry settings for a domain."""
     valid = {"none", "days_previous", "calendar_period"}
     if body.mode not in valid:
         raise HTTPException(status_code=400, detail=f"mode must be one of: {', '.join(valid)}")
-    set_domain_age_settings(
-        domain, body.mode,
-        days=body.days,
-        start_date=body.start_date or None,
-        end_date=body.end_date or None,
-    )
+    try:
+        set_domain_age_settings(
+            domain, body.mode,
+            days=body.days,
+            start_date=body.start_date or None,
+            end_date=body.end_date or None,
+            max_entries_enabled=body.max_entries_enabled,
+            max_entries=body.max_entries,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     update_domain_age_settings_spec(
         domain,
         body.mode,
         days=body.days,
         start_date=body.start_date or None,
         end_date=body.end_date or None,
+        max_entries_enabled=body.max_entries_enabled,
+        max_entries=body.max_entries,
     )
+    if body.max_entries_enabled and body.max_entries:
+        delete_entries_over_limit(domain, body.max_entries)
     return {"ok": True}
 
 

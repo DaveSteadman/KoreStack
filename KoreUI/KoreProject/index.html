@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>KoreProject</title>
+  <link rel="stylesheet" href="/ui-elements/assets/css/chrome.css">
+  <link rel="stylesheet" href="/static/project.css">
+  <script src="/suite-config.js"></script>
+  <script type="module" src="/static/project.js"></script>
+</head>
+<body class="kcui-shell-bg">
+  <div id="topbar"></div>
+  <div id="app-bar"></div>
+  <main class="kcui-main">
+    <div class="kcui-page kcui-stack">
+    <section id="project-panel" class="kcui-panel">
+      <div class="kcui-panel-body kcui-stack kcui-stack--sm">
+        <div class="kcui-toolbar">
+          <div class="kcui-field kp-project-picker"><select id="project-select" aria-label="Project"></select></div>
+          <button id="new-project" type="button">New</button>
+          <button id="load-project" type="button" disabled>Load</button>
+          <button id="delete-project" type="button" disabled>Delete</button>
+          <span id="counts" class="kcui-tag"></span>
+        </div>
+        <div id="notice" role="status" aria-live="polite"></div>
+        <div id="storage-warning" class="kcui-field__error" role="alert"></div>
+      </div>
+    </section>
+    <div class="kp-workspace">
+      <section class="kcui-panel">
+        <div class="kcui-panel-header"><h1 id="workspace-title" class="kcui-panel-title">Project workspace</h1></div>
+        <div class="kcui-panel-body kcui-stack kcui-stack--sm">
+          <div id="search-controls" class="kcui-toolbar" hidden>
+            <label class="kcui-field kp-search">Search<input id="search" type="search" placeholder="Title, reference, content, owner or labels"></label>
+            <label class="kcui-checkbox-label"><input id="show-archived" type="checkbox">Include archived</label>
+          </div>
+          <div id="view-actions" class="kcui-toolbar"></div>
+          <div id="records" class="kcui-stack kcui-stack--sm"></div>
+        </div>
+      </section>
+      <section id="editor-panel" class="kcui-panel" hidden>
+        <div class="kcui-panel-header"><h2 id="editor-title" class="kcui-panel-title">Details</h2></div>
+        <div id="editor-notice" role="status" aria-live="polite"></div>
+        <div id="editor" class="kcui-panel-body kcui-stack kcui-stack--sm">
+          <p>Select a record to edit, view links, add comments or inspect its history.</p>
+        </div>
+      </section>
+    </div>
+    </div>
+  </main>
+  <dialog id="board-editor-dialog" class="kcui-dialog kp-board-editor" aria-labelledby="editor-title"></dialog>
+</body>
+</html>

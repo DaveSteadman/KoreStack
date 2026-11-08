@@ -34,10 +34,11 @@
 # - delete_entries_by_feed: Deletes entries by feed for this module.
 # - delete_entries_older_than: Deletes entries older than for this module.
 # - delete_entries_by_ids: Deletes entries by ids for this module.
+# - delete_entries_over_limit: Deletes entries exceeding a domain limit for this module.
 # - get_entry_count: Returns entry count for this module.
 # - get_feed_counts: Returns feed counts for this module.
-# - get_domain_age_settings: Returns domain age settings for this module.
-# - set_domain_age_settings: Sets domain age settings for this module.
+# - get_domain_age_settings: Returns domain limit settings for this module.
+# - set_domain_age_settings: Sets domain limit settings for this module.
 # - delete_entries_outside_calendar: Deletes entries outside calendar for this module.
 # - apply_age_rule: Implements the apply age rule operation for this module.
 # - delete_domain_db: Deletes domain db for this module.
@@ -464,6 +465,27 @@ def delete_entries_by_ids(domain: str, ids: list[int]) -> int:
         return 0
 
 
+def delete_entries_over_limit(domain: str, maximum_entries: int) -> int:
+    """Soft-delete entries beyond the newest ``maximum_entries`` entries."""
+    if maximum_entries < 1:
+        raise ValueError("maximum_entries must be at least 1")
+    try:
+        with db_connection(domain) as conn:
+            return _tombstone(
+                domain,
+                conn,
+                """id IN (
+                    SELECT id FROM entries
+                    WHERE deleted = 0
+                    ORDER BY published DESC, id DESC
+                    LIMIT -1 OFFSET ?
+                )""",
+                [maximum_entries],
+            )
+    except Exception:
+        return 0
+
+
 def get_entry_count(domain: str) -> int:
     try:
         with db_connection(domain) as conn:
@@ -486,16 +508,20 @@ def get_feed_counts(domain: str) -> dict[str, int]:
 
 
 def get_domain_age_settings(domain: str) -> dict:
-    """Return age-gating settings for a domain.
+    """Return entry limit settings for a domain.
 
     Returns a dict with keys: mode ('none'|'days_previous'|'calendar_period'),
-    days (int|None), start_date (str|None), end_date (str|None).
+    days (int|None), start_date (str|None), end_date (str|None),
+    max_entries_enabled (bool), and max_entries (int|None).
     """
     try:
         with db_connection(domain) as conn:
             rows = conn.execute(
                 "SELECT key, value FROM domain_settings "
-                "WHERE key IN ('age_mode','age_days','age_start','age_end','max_age_days')"
+                "WHERE key IN ("
+                "'age_mode','age_days','age_start','age_end','max_age_days',"
+                "'max_entries_enabled','max_entries'"
+                ")"
             ).fetchall()
             s = {r["key"]: r["value"] for r in rows}
             # backwards compat: migrate legacy max_age_days â†’ days_previous
@@ -505,17 +531,29 @@ def get_domain_age_settings(domain: str) -> dict:
                     "days": int(s["max_age_days"]),
                     "start_date": None,
                     "end_date": None,
+                    "max_entries_enabled": False,
+                    "max_entries": None,
                 }
             mode = s.get("age_mode", "none") or "none"
             days = int(s["age_days"]) if s.get("age_days") else None
+            max_entries = int(s["max_entries"]) if s.get("max_entries") else None
             return {
                 "mode": mode,
                 "days": days,
                 "start_date": s.get("age_start"),
                 "end_date": s.get("age_end"),
+                "max_entries_enabled": s.get("max_entries_enabled") == "1",
+                "max_entries": max_entries,
             }
     except Exception:
-        return {"mode": "none", "days": None, "start_date": None, "end_date": None}
+        return {
+            "mode": "none",
+            "days": None,
+            "start_date": None,
+            "end_date": None,
+            "max_entries_enabled": False,
+            "max_entries": None,
+        }
 
 
 def set_domain_age_settings(
@@ -524,8 +562,12 @@ def set_domain_age_settings(
     days: Optional[int] = None,
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
+    max_entries_enabled: bool = False,
+    max_entries: Optional[int] = None,
 ) -> None:
-    """Persist age-gating settings for a domain."""
+    """Persist age-gating and maximum-entry settings for a domain."""
+    if max_entries_enabled and (max_entries is None or max_entries < 1):
+        raise ValueError("max_entries must be at least 1 when enabled")
     init_db(domain)
     with db_connection(domain) as conn:
         conn.executemany(
@@ -535,6 +577,8 @@ def set_domain_age_settings(
                 ("age_days", str(days) if days else None),
                 ("age_start", start_date),
                 ("age_end", end_date),
+                ("max_entries_enabled", "1" if max_entries_enabled else "0"),
+                ("max_entries", str(max_entries) if max_entries_enabled else None),
                 # clear legacy key so it doesn't cause confused fallback
                 ("max_age_days", None),
             ],
@@ -573,8 +617,6 @@ def apply_age_rule(domain: str) -> int:
         if last_pruned == today:
             return 0
         age = get_domain_age_settings(domain)
-        if age["mode"] == "none":
-            return 0
         deleted = 0
         if age["mode"] == "days_previous" and age["days"]:
             deleted = delete_entries_older_than(domain, float(age["days"]))
@@ -582,6 +624,8 @@ def apply_age_rule(domain: str) -> int:
             start = age.get("start_date") or "1970-01-01"
             end   = age.get("end_date")   or "9999-12-31"
             deleted = delete_entries_outside_calendar(domain, start, end)
+        if age["max_entries_enabled"] and age["max_entries"]:
+            deleted += delete_entries_over_limit(domain, age["max_entries"])
         with db_connection(domain) as conn:
             conn.execute(
                 "INSERT OR REPLACE INTO domain_settings (key, value) VALUES ('age_last_pruned', ?)",

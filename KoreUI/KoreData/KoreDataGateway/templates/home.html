@@ -188,14 +188,14 @@
         Since
         <div class="date-pick">
           <input id="sq-since" name="since" type="date">
-          <span class="cal-icon" onclick="this.previousElementSibling.showPicker()"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><rect x="1" y="2" width="10" height="9" rx="1"/><line x1="1" y1="5" x2="11" y2="5"/><line x1="4" y1="1" x2="4" y2="3"/><line x1="8" y1="1" x2="8" y2="3"/></svg></span>
+          <span class="cal-icon" onclick="this.previousElementSibling.showPicker()"><span class="kcui-icon kcui-icon--asset" aria-hidden="true" style="--kcui-icon-size:12px;--kcui-icon-url:url(/ui-elements/assets/icons/dazzle-line/calendar-days-svgrepo-com.svg)"></span></span>
         </div>
       </label>
       <label style="display:flex; align-items:center; gap:0.35rem; font-size:12px; color:var(--dim);">
         Until
         <div class="date-pick">
           <input id="sq-until" name="until" type="date">
-          <span class="cal-icon" onclick="this.previousElementSibling.showPicker()"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><rect x="1" y="2" width="10" height="9" rx="1"/><line x1="1" y1="5" x2="11" y2="5"/><line x1="4" y1="1" x2="4" y2="3"/><line x1="8" y1="1" x2="8" y2="3"/></svg></span>
+          <span class="cal-icon" onclick="this.previousElementSibling.showPicker()"><span class="kcui-icon kcui-icon--asset" aria-hidden="true" style="--kcui-icon-size:12px;--kcui-icon-url:url(/ui-elements/assets/icons/dazzle-line/calendar-days-svgrepo-com.svg)"></span></span>
         </div>
       </label>
       <label style="display:flex; align-items:center; gap:0.35rem; font-size:12px; color:var(--dim);">
@@ -204,8 +204,8 @@
           <input id="sq-days-limit" type="number" min="1" max="3650" style="width:52px;"
                  oninput="syncDaysLimit(this.value)">
           <div class="stepper-btns">
-            <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,1)">&#9650;</button>
-            <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,-1)">&#9660;</button>
+            <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,1)" aria-label="Increase"><span class="kcui-icon kcui-icon--asset" aria-hidden="true" style="--kcui-icon-size:1em;--kcui-icon-url:url(/ui-elements/assets/icons/dazzle-line/chevron-up-svgrepo-com.svg)"></span></button>
+            <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,-1)" aria-label="Decrease"><span class="kcui-icon kcui-icon--asset" aria-hidden="true" style="--kcui-icon-size:1em;--kcui-icon-url:url(/ui-elements/assets/icons/dazzle-line/chevron-down-svgrepo-com.svg)"></span></button>
           </div>
         </div>
         <span class="meta">days</span>
@@ -215,8 +215,8 @@
         <div class="num-stepper">
           <input id="sq-limit" type="number" value="20" placeholder="20" min="1" max="200" style="width:52px;">
           <div class="stepper-btns">
-            <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,1)">&#9650;</button>
-            <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,-1)">&#9660;</button>
+            <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,1)" aria-label="Increase"><span class="kcui-icon kcui-icon--asset" aria-hidden="true" style="--kcui-icon-size:1em;--kcui-icon-url:url(/ui-elements/assets/icons/dazzle-line/chevron-up-svgrepo-com.svg)"></span></button>
+            <button type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="stepNum(this,-1)" aria-label="Decrease"><span class="kcui-icon kcui-icon--asset" aria-hidden="true" style="--kcui-icon-size:1em;--kcui-icon-url:url(/ui-elements/assets/icons/dazzle-line/chevron-down-svgrepo-com.svg)"></span></button>
           </div>
         </div>
         <span class="meta">per service</span>
@@ -432,7 +432,7 @@ function renderCard(r, searchQuery) {
     if (searchQuery && r.title) {
       const libraryBase = suiteBaseUrl((window.__koreSuiteUrls || {}).korelibrary);
       const href = `${libraryBase}/ui/library/search?q=${encodeURIComponent(searchQuery)}&title=${encodeURIComponent(r.title)}`;
-      findLink = ` | <a href="${href}" style="color:var(--dim);">find in book ↗</a>`;
+      findLink = ` | <a href="${href}" style="color:var(--dim);">find in book <span class="kcui-icon kcui-icon--asset" aria-hidden="true" style="--kcui-icon-size:1em;--kcui-icon-url:url(/ui-elements/assets/icons/dazzle-line/arrow-up-right-from-square-svgrepo-com.svg)"></span></a>`;
     }
     meta = authorPart + findLink;
   } else if (r.type === 'rag_chunk') {

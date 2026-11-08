@@ -67,7 +67,7 @@ from app.database import (
     upsert_article,
 )
 from app.importers.kiwix import parse_seed_url, run_kiwix_crawl
-from app.importers.state import import_state, import_stop_event, start_import_worker, state_lock
+from app.importers.state import import_state, request_import_stop, start_import_worker, state_lock
 
 
 _REFERENCE_UI_ROOT = Path(
@@ -340,12 +340,7 @@ def register_reference_ui(app: FastAPI) -> None:
 
     @app.post("/ui/reference/import/stop", include_in_schema=False)
     def ref_import_stop():
-        with state_lock:
-            running = bool(import_state.get("running"))
-            if running:
-                import_state["running"] = False
-        if running:
-            import_stop_event.set()
+        if request_import_stop():
             return JSONResponse({"stopped": True})
         return JSONResponse({"stopped": False, "detail": "No import was running"})
 

@@ -1,0 +1,1 @@
+"""KoreProject service."""

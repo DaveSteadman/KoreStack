@@ -40,8 +40,8 @@
           <div class="num-stepper" title="Execution order (ascending; dependencies still run first)">
             <input id="node-order" type="number" min="1" step="1" aria-label="Execution order">
             <div class="stepper-btns">
-              <button type="button" tabindex="-1" onmousedown="event.preventDefault()" data-step="1">&#9650;</button>
-              <button type="button" tabindex="-1" onmousedown="event.preventDefault()" data-step="-1">&#9660;</button>
+              <button type="button" tabindex="-1" onmousedown="event.preventDefault()" data-step="1" aria-label="Increase"><span class="kcui-icon kcui-icon--asset" aria-hidden="true" style="--kcui-icon-size:1em;--kcui-icon-url:url(/ui-elements/assets/icons/dazzle-line/chevron-up-svgrepo-com.svg)"></span></button>
+              <button type="button" tabindex="-1" onmousedown="event.preventDefault()" data-step="-1" aria-label="Decrease"><span class="kcui-icon kcui-icon--asset" aria-hidden="true" style="--kcui-icon-size:1em;--kcui-icon-url:url(/ui-elements/assets/icons/dazzle-line/chevron-down-svgrepo-com.svg)"></span></button>
             </div>
           </div>
           <input id="node-label" type="text" aria-label="Label" placeholder="Label">
@@ -98,7 +98,7 @@
           <option value="judge">Decide</option>
         </select>
         <button id="add-node" class="btn btn-secondary" type="button">+ Block</button>
-        <button id="step-network" class="btn btn-secondary" type="button" title="Run the next block that has not completed">Step &#9654;</button>
+        <button id="step-network" class="btn btn-secondary" type="button" title="Run the next block that has not completed">Step <span class="kcui-icon kcui-icon--asset" aria-hidden="true" style="--kcui-icon-size:1em;--kcui-icon-url:url(/ui-elements/assets/icons/dazzle-line/play-svgrepo-com.svg)"></span></button>
         <button id="run-network" class="btn btn-primary" type="button">Run network</button>
       </div>
       <span id="run-status" class="kan-run-status" aria-live="polite">Ready</span>
@@ -123,7 +123,7 @@
           <div class="kan-ports-head"><span>Last run (raw result)</span></div>
           <pre id="node-result"></pre>
         </section>
-        <button id="play-selected" class="btn btn-primary" type="button">&#9654; Run this block</button>
+        <button id="play-selected" class="btn btn-primary" type="button"><span class="kcui-icon kcui-icon--asset" aria-hidden="true" style="--kcui-icon-size:1em;--kcui-icon-url:url(/ui-elements/assets/icons/dazzle-line/play-svgrepo-com.svg)"></span> Run this block</button>
       </form>
     </aside>
   </main>
