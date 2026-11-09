@@ -1,1 +1,1 @@
-"""KoreProject requirements, design, and work tracking."""
+"""KoreProject ticket tracking."""

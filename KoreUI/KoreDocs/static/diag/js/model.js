@@ -49,7 +49,7 @@ export function newNode(type, x, y, w, h, label = '') {
   const gh = Math.max(1, toGridInt(h));
   return {
     id: uuid(),
-    type,           // 'rect' | 'rounded' | 'diamond' | 'ellipse' | 'text' | 'svg' | 'waypoint'
+    type,           // 'rect' | 'rounded' | 'diamond' | 'polygon' | 'ellipse' | 'text' | 'svg' | 'waypoint'
     label,
     x: gx, y: gy,   // grid units, relative to parent (or world if root)
     width: gw,
@@ -71,6 +71,13 @@ export function normalizeNodeGridInPlace(node) {
   node.y = toGridInt(node.y);
   node.width = Math.max(1, toGridInt(node.width));
   node.height = Math.max(1, toGridInt(node.height));
+  if (node.type === 'polygon') {
+    node.points = Array.isArray(node.points)
+      ? node.points
+        .filter(point => point && Number.isFinite(Number(point.x)) && Number.isFinite(Number(point.y)))
+        .map(point => ({ x: toGridInt(point.x), y: toGridInt(point.y) }))
+      : [];
+  }
   if (!Array.isArray(node.children)) node.children = [];
   for (const child of node.children) normalizeNodeGridInPlace(child);
   return node;

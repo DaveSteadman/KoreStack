@@ -19,9 +19,9 @@ from .store import ProjectError, ProjectStore
 
 ROOT = Path(__file__).resolve().parents[2]
 UI_ROOT = ROOT / "KoreUI" / "KoreProject"
-Kind = Literal["project", "statement", "ticket", "board", "lane", "section"]
-LinkKind = Literal["statement", "ticket"]
-Relation = Literal["satisfies", "refines", "addresses", "depends_on", "relates_to"]
+Kind = Literal["project", "ticket", "board", "lane"]
+LinkKind = Literal["ticket"]
+Relation = Literal["depends_on", "relates_to"]
 LOG = logging.getLogger("koreproject")
 
 
@@ -59,11 +59,6 @@ class DeleteProjectBody(BaseModel):
     model_config = ConfigDict(extra="forbid")
     expected_version: int = Field(ge=1)
     confirmation: str
-
-
-class DeleteSectionBody(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    expected_version: int = Field(ge=1)
 
 
 def create_app(root: Path | None = None, *, register: bool = True) -> FastAPI:
@@ -113,6 +108,9 @@ def create_app(root: Path | None = None, *, register: bool = True) -> FastAPI:
 
     @app.get("/")
     @app.get("/ui")
+    def root_ui(request: Request):
+        return RedirectResponse(str(request.url.replace(path="/ui/tickets")))
+
     @app.get("/ui/tickets")
     @app.get("/ui/boards")
     @app.get("/ui/settings")
@@ -123,12 +121,8 @@ def create_app(root: Path | None = None, *, register: bool = True) -> FastAPI:
 
     @app.get("/ui/requirements")
     @app.get("/ui/design")
-    def requirements_ui():
-        return FileResponse(UI_ROOT / "requirements.html", headers={"Cache-Control": "no-store"})
-
-    @app.get("/api/statement-links")
-    def statement_links(project_id: str, offset: int = Query(0, ge=0), limit: int = Query(100, ge=1, le=500)):
-        return store.statement_links(project_id, offset, limit)
+    def removed_definition_ui(request: Request):
+        return RedirectResponse(str(request.url.replace(path="/ui/tickets")))
 
     @app.get("/status")
     def status():
@@ -151,10 +145,6 @@ def create_app(root: Path | None = None, *, register: bool = True) -> FastAPI:
     @app.delete("/api/projects/{project_id}")
     def delete_project(project_id: str, body: DeleteProjectBody):
         return store.delete_project(project_id, body.expected_version, body.confirmation)
-
-    @app.delete("/api/records/section/{section_id}")
-    def delete_section(section_id: str, body: DeleteSectionBody):
-        return store.delete_section(section_id, body.expected_version)
 
     @app.get("/api/records/{kind}")
     def records(kind: Kind, project_id: str = "", q: str = "",
@@ -182,7 +172,7 @@ def create_app(root: Path | None = None, *, register: bool = True) -> FastAPI:
         return store.link(**body.model_dump())
 
     @app.delete("/api/links/{store_kind}/{link_id}")
-    def unlink(store_kind: Literal["statement", "ticket"], link_id: str, generation: str = ""):
+    def unlink(store_kind: Literal["ticket"], link_id: str, generation: str = ""):
         store.unlink(store_kind, link_id, "operator", generation)
         return {"deleted": link_id}
 

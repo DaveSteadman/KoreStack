@@ -4,10 +4,10 @@
 
 import * as model       from './model.js';
 import * as store       from './store.js';
-import * as renderer    from './renderer.js?v=20261118d';
-import * as interaction from './interaction.js?v=20261118d';
-import * as ui          from './ui.js?v=20261118d';
-import * as fileio      from './fileio.js?v=20261118a';
+import * as renderer    from './renderer.js?v=20261118f';
+import * as interaction from './interaction.js?v=20261118f';
+import * as ui          from './ui.js?v=20261118f';
+import * as fileio      from './fileio.js?v=20261118b';
 import { initDialogHost, initKoreDocsShell, renderAppMenu, trackAppTab } from '/ui-elements/assets/js/chrome.js';
 import * as draft       from '/static/shared/js/draft.js';
 

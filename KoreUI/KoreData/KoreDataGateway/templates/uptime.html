@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block title %}KoreData Uptime{% endblock %}
+{% block main_class %}kcui-main{% endblock %}
+
+{% block content %}
+<style>
+  .kd-uptime { --uptime-label-width: 104px; }
+  .uptime-status { min-height:1.2em; }
+  @media (max-width: 600px) {
+    .uptime-target-row { grid-template-columns:minmax(0, 1fr); }
+  }
+  .uptime-grid { display:grid; grid-template-columns:var(--uptime-label-width) repeat(24, minmax(16px, 1fr)); gap:3px; align-items:center; min-width:590px; }
+  .uptime-daily-grid { display:grid; grid-template-columns:var(--uptime-label-width) repeat(31, minmax(14px, 1fr)); gap:3px; align-items:center; min-width:720px; }
+  .uptime-scroll { overflow-x:auto; padding-bottom:3px; }
+  .uptime-axis, .uptime-row-label { font-size:10px; color:var(--dim); white-space:nowrap; }
+  .uptime-axis { text-align:center; }
+  .uptime-row-label { overflow:hidden; text-overflow:ellipsis; padding-right:5px; }
+  .uptime-cell { aspect-ratio:1; min-height:16px; border:1px solid var(--border); border-radius:2px; }
+  .uptime-cell--future  { background:#606b77; opacity:.65; }
+  .uptime-cell--success { background:rgb(0, 150, 0); }
+  .uptime-cell--partial { background:rgb(200, 100, 0); }
+  .uptime-cell--failure { background:rgb(150, 0, 0); }
+  .uptime-cell--empty { visibility:hidden; }
+  .uptime-legend { display:flex; gap:14px; flex-wrap:wrap; margin-top:10px; font-size:11px; color:var(--dim); }
+  .uptime-legend span { display:inline-flex; gap:5px; align-items:center; }
+  .uptime-swatch { width:11px; height:11px; border:1px solid var(--border); border-radius:2px; }
+</style>
+
+<div class="kcui-page kcui-page--wide kcui-stack kd-uptime">
+  <div class="panel kcui-panel">
+    <div class="panel-header kcui-panel-header">KoreData Uptime</div>
+    <div class="panel-body kcui-panel-body">
+      <form id="uptime-target-form">
+        <div class="kcui-field-action-row uptime-target-row">
+          <label class="kcui-field" for="uptime-url">
+            <span class="kcui-field__label">URL to monitor hourly (UTC)</span>
+            <input id="uptime-url" type="url" value="{{ target_url }}" placeholder="https://example.com/health" autocomplete="url" aria-describedby="uptime-status">
+          </label>
+          <div class="kcui-field-action-row__actions">
+            <button id="uptime-save" type="submit">Save URL</button>
+          </div>
+        </div>
+        <div class="uptime-status kcui-field__hint" id="uptime-status" role="status" aria-live="polite">{% if target_url %}One HTTP GET is recorded each UTC hour. HTTP 2xx and 3xx responses count as available.{% else %}Save an HTTP(S) URL to begin hourly uptime monitoring.{% endif %}</div>
+      </form>
+    </div>
+  </div>
+
+  <div class="panel kcui-panel">
+    <div class="panel-header kcui-panel-header">Hourly Uptime <span class="meta" style="margin-left:.5rem;font-size:11px">last 7 days, UTC</span></div>
+    <div class="panel-body kcui-panel-body">
+      <div class="uptime-scroll">
+        <div class="uptime-grid">
+          <span></span>
+          {% for hour in range(24) %}<span class="uptime-axis">{{ "%02d" | format(hour) }}</span>{% endfor %}
+          {% for day in hourly_days %}
+            <span class="uptime-row-label">{{ day.label }}</span>
+            {% for cell in day.cells %}<span class="uptime-cell uptime-cell--{{ cell.state }}" title="{{ cell.label }}" aria-label="{{ cell.label }}"></span>{% endfor %}
+          {% endfor %}
+        </div>
+      </div>
+      <div class="uptime-legend">
+        <span><i class="uptime-swatch uptime-cell--future"></i>future</span>
+        <span><i class="uptime-swatch uptime-cell--success"></i>ping succeeded</span>
+        <span><i class="uptime-swatch uptime-cell--failure"></i>failed or absent</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel kcui-panel">
+    <div class="panel-header kcui-panel-header">Daily Uptime <span class="meta" style="margin-left:.5rem;font-size:11px">last 12 months, UTC</span></div>
+    <div class="panel-body kcui-panel-body">
+      <div class="uptime-scroll">
+        <div class="uptime-daily-grid">
+          <span></span>
+          {% for day in range(1, 32) %}<span class="uptime-axis">{{ "%02d" | format(day) }}</span>{% endfor %}
+          {% for row in daily_rows %}
+            <span class="uptime-row-label">{{ row.label }}</span>
+            {% for cell in row.cells %}
+              {% if cell.state == "empty" %}
+                <span class="uptime-cell uptime-cell--empty" aria-hidden="true"></span>
+              {% else %}
+                <span class="uptime-cell uptime-cell--{{ cell.state }}" title="{{ cell.label }}" aria-label="{{ cell.label }}"></span>
+              {% endif %}
+            {% endfor %}
+          {% endfor %}
+        </div>
+      </div>
+      <div class="uptime-legend">
+        <span><i class="uptime-swatch uptime-cell--future"></i>future</span>
+        <span><i class="uptime-swatch uptime-cell--success"></i>fully good</span>
+        <span><i class="uptime-swatch uptime-cell--partial"></i>partially good</span>
+        <span><i class="uptime-swatch uptime-cell--failure"></i>full outage</span>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('uptime-target-form').addEventListener('submit', async event => {
+  event.preventDefault();
+  const form   = event.currentTarget;
+  const input  = document.getElementById('uptime-url');
+  const save   = document.getElementById('uptime-save');
+  if (save.disabled) return;
+  const url    = input.value.trim();
+  const status = document.getElementById('uptime-status');
+  save.disabled = true;
+  input.disabled = true;
+  form.setAttribute('aria-busy', 'true');
+  status.className = 'uptime-status kcui-field__hint';
+  status.textContent = url ? 'Saving URL and recording this hour…' : 'Disabling uptime monitoring…';
+  try {
+    const response = await fetch('/api/uptime/target', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ url }),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.detail || 'Could not save the URL');
+    window.location.reload();
+  } catch (error) {
+    status.textContent = 'Error: ' + error.message;
+    status.className = 'uptime-status kcui-field__error';
+  } finally {
+    save.disabled = false;
+    input.disabled = false;
+    form.removeAttribute('aria-busy');
+  }
+});
+</script>
+{% endblock %}

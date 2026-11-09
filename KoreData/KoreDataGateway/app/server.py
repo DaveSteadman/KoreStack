@@ -93,6 +93,7 @@ import httpx
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+from pydantic import BaseModel
 
 _KORECOMMON_PARENT = next((parent for parent in Path(__file__).resolve().parents if (parent / "KoreCommon").is_dir()), None)
 if _KORECOMMON_PARENT is not None and str(_KORECOMMON_PARENT) not in sys.path:
@@ -125,6 +126,7 @@ from app.saved_searches import delete_saved_searches as _delete_saved_searches
 from app.saved_searches import find_saved_search as _find_saved_search
 from app.saved_searches import load_saved_searches as _load_saved_searches
 from app.saved_searches import upsert_saved_search as _upsert_saved_search
+from app.uptime import UptimeMonitor
 from config import get_koredata_dir
 
 
@@ -137,6 +139,7 @@ LOG = logging.getLogger("koredata.gateway")
 _BASE = Path(__file__).parent.parent.parent  # KoreData/ root
 _DATA = get_koredata_dir()
 _SAVED_SEARCHES_FILE = _DATA / "SavedSearches.json"
+_UPTIME_MONITOR = UptimeMonitor(_DATA / "Uptime")
 
 
 def _scrape_data_root() -> Path:
@@ -390,6 +393,8 @@ _graph_client: httpx.AsyncClient | None = None
 
 _ui_service_cards: list[dict] = []
 _ui_status_task:   asyncio.Task | None = None
+_uptime_stop_event: asyncio.Event | None = None
+_uptime_task:       asyncio.Task | None = None
 
 _UI_SERVICE_SPECS = (
     ("KoreFeed",      "feeds",     "korefeed",      "_feed_client",   "korefeed_url"),
@@ -458,7 +463,7 @@ async def _refresh_ui_service_cards_loop() -> None:
 async def _lifespan(app: FastAPI):
     global _child_readiness_task
     global _feed_client, _lib_client, _ref_client, _rag_client, _scrape_client, _graph_client
-    global _ui_status_task
+    global _ui_status_task, _uptime_stop_event, _uptime_task
     print("\n  KoreDataGateway — starting child services")
     _set_gateway_status("starting", "Starting child services")
     loop = asyncio.get_running_loop()
@@ -486,6 +491,8 @@ async def _lifespan(app: FastAPI):
     _graph_client  = httpx.AsyncClient(base_url=cfg["koregraph_url"],     timeout=15.0)
     _child_readiness_task = asyncio.create_task(_wait_for_children_ready())
     _ui_status_task       = asyncio.create_task(_refresh_ui_service_cards_loop())
+    _uptime_stop_event    = asyncio.Event()
+    _uptime_task          = asyncio.create_task(_UPTIME_MONITOR.run_scheduler(_uptime_stop_event))
     start_manifest_registration(
         _BASE / "KoreDataGateway" / "skill_registration.json",
         service_base_url=f"http://{cfg['host']}:{cfg['port']}",
@@ -507,6 +514,12 @@ async def _lifespan(app: FastAPI):
         except asyncio.CancelledError:
             pass
         _ui_status_task = None
+    if _uptime_stop_event is not None:
+        _uptime_stop_event.set()
+    if _uptime_task is not None:
+        await _uptime_task
+        _uptime_task = None
+    _uptime_stop_event = None
     await _feed_client.aclose()
     await _lib_client.aclose()
     await _ref_client.aclose()
@@ -1124,6 +1137,21 @@ async def api_run_saved_search(name: str) -> dict:
     return await api_search(_SearchRequest(**search))
 
 
+class _UptimeTargetRequest(BaseModel):
+    url: str = ""
+
+
+@app.post("/api/uptime/target")
+async def api_save_uptime_target(request: _UptimeTargetRequest) -> dict:
+    """Persist the monitored URL and immediately establish its current-hour result."""
+    try:
+        url = _UPTIME_MONITOR.save_target_url(request.url)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    result = await _UPTIME_MONITOR.record_current_hour() if url else None
+    return {"url": url, "current_hour": result}
+
+
 # ===========================================================================
 # Web UI — Core routes
 # ===========================================================================
@@ -1139,6 +1167,11 @@ async def web_root(request: Request):
         raise HTTPException(status_code=503, detail="Gateway is still starting up")
     services = _ui_service_cards or _unavailable_ui_service_cards()
     return templates.TemplateResponse(request, "home.html", {"services": services})
+
+
+@app.get("/ui/uptime", response_class=HTMLResponse, include_in_schema=False)
+async def web_uptime(request: Request):
+    return templates.TemplateResponse(request, "uptime.html", _UPTIME_MONITOR.view())
 
 
 # ===========================================================================

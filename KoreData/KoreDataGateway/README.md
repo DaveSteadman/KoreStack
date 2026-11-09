@@ -18,6 +18,17 @@ Handles content addition, management, and search across all services.
 
 Port 29603. KoreStack starts it with the other KoreData services. KoreAgent reaches it through `/mcp`, and the browser UI offers cross-domain search with persistent named SavedSearches.
 
+The gateway's **Uptime** page stores its monitored URL in `Uptime/settings.csv` and one HTTP result per UTC hour in `Uptime/hourly.csv`, beneath the normal KoreData data directory. It treats HTTP 2xx and 3xx responses as available.
+The hourly grid shows today and the previous six UTC calendar days, advancing one
+day at midnight rather than replacing whole weeks. The daily grid shows the current
+month and previous eleven months, oldest first, with month/year labels and 31 day
+columns. Nonexistent dates are blank; future dates in the current month are grey.
+At each UTC month boundary, the oldest month drops out and the new month is added.
+Both windows are calculated when the page loads; reload to see updated results.
+The URL field and Save URL button share a compact row, stacking on narrow screens.
+Saving temporarily disables both controls and announces progress or errors without
+discarding the entered URL. An empty URL disables monitoring.
+
 ## Troubleshooting
 
 | Problem | What to check |

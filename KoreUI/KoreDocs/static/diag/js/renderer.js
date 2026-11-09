@@ -59,6 +59,7 @@ let _activePortHint = null;  // { x, y } the nearest/preferred port — drawn di
 let _rubberBand = null; // { x1,y1,x2,y2 } screen coords
 let _ghostEdge  = null; // { fromX,fromY,toX,toY } screen coords (during connect drag)
 let _ghostRect  = null; // { x,y,w,h } screen coords (during shape draw drag)
+let _ghostPolygon = null; // { points: [{ x, y }], cursor: { x, y } } screen coords
 const _svgImages = new Map();
 
 export function init(canvas) {
@@ -80,6 +81,7 @@ export function setActivePortHint(pt) { _activePortHint = pt ?? null; }
 export function setRubberBand(r)    { _rubberBand = r; }
 export function setGhostEdge(g)     { _ghostEdge = g; }
 export function setGhostRect(r)     { _ghostRect = r; }
+export function setGhostPolygon(p)  { _ghostPolygon = p; }
 
 export function draw() {
   if (!_canvas || !_ctx) return;
@@ -118,6 +120,28 @@ export function draw() {
     ctx.lineWidth   = 1;
     ctx.setLineDash([4, 3]);
     ctx.strokeRect(_ghostRect.x, _ghostRect.y, _ghostRect.w, _ghostRect.h);
+    ctx.restore();
+  }
+
+  if (_ghostPolygon?.points?.length) {
+    const points = _ghostPolygon.points;
+    ctx.save();
+    ctx.strokeStyle = '#a9a0ff';
+    ctx.fillStyle   = 'rgba(124,106,247,0.12)';
+    ctx.lineWidth   = 1.5;
+    ctx.setLineDash([5, 3]);
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+    for (const point of points.slice(1)) ctx.lineTo(point.x, point.y);
+    if (_ghostPolygon.cursor) ctx.lineTo(_ghostPolygon.cursor.x, _ghostPolygon.cursor.y);
+    if (points.length >= 3) ctx.fill();
+    ctx.stroke();
+    ctx.setLineDash([]);
+    for (const point of points) {
+      ctx.beginPath();
+      ctx.arc(point.x, point.y, 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
     ctx.restore();
   }
 
@@ -249,7 +273,7 @@ function drawNode(ctx, node, bounds) {
     ctx.fillStyle   = style.fillColor || '#1f1f1f';
     ctx.strokeStyle = strokeColor;
     ctx.lineWidth   = strokeWidth * view.zoom;
-    nodePath(ctx, node.type, x, y, w, h);
+    nodePath(ctx, node, x, y, w, h);
     ctx.fill();
     ctx.stroke();
   }
@@ -486,12 +510,12 @@ function ellipsePath(ctx, x, y, w, h) {
   ctx.ellipse(x + w/2, y + h/2, w/2, h/2, 0, 0, Math.PI * 2);
 }
 
-function nodePath(ctx, type, x, y, w, h) {
-  if (type === 'ellipse') {
+function nodePath(ctx, node, x, y, w, h) {
+  if (node.type === 'ellipse') {
     ellipsePath(ctx, x, y, w, h);
     return;
   }
-  if (type === 'diamond') {
+  if (node.type === 'diamond') {
     ctx.beginPath();
     ctx.moveTo(x + w / 2, y);
     ctx.lineTo(x + w,     y + h / 2);
@@ -500,9 +524,20 @@ function nodePath(ctx, type, x, y, w, h) {
     ctx.closePath();
     return;
   }
-  if (type === 'rounded') {
+  if (node.type === 'rounded') {
     ctx.beginPath();
     ctx.roundRect(x, y, w, h, Math.min(w, h) * 0.14);
+    return;
+  }
+  if (node.type === 'polygon' && node.points?.length >= 3) {
+    const scaleX = w / node.width;
+    const scaleY = h / node.height;
+    ctx.beginPath();
+    ctx.moveTo(x + node.points[0].x * scaleX, y + node.points[0].y * scaleY);
+    for (const point of node.points.slice(1)) {
+      ctx.lineTo(x + point.x * scaleX, y + point.y * scaleY);
+    }
+    ctx.closePath();
     return;
   }
   ctx.beginPath();
@@ -593,7 +628,7 @@ export function hitTest(sx, sy) {
     if (node.type === 'waypoint') {
       const sc = worldToScreen(bounds.x, bounds.y);
       if (Math.hypot(sx - sc.x, sy - sc.y) <= WAYPOINT_RADIUS + 3) return node.id;
-    } else {
+    } else if (node.type !== 'polygon' || pointInPolygon(sx, sy, node, s)) {
       if (sx >= s.x && sx <= s.x + s.w && sy >= s.y && sy <= s.y + s.h) return node.id;
     }
   }
@@ -604,6 +639,21 @@ export function hitTest(sx, sy) {
   }
 
   return null;
+}
+
+function pointInPolygon(sx, sy, node, bounds) {
+  const scaleX = bounds.w / node.width;
+  const scaleY = bounds.h / node.height;
+  let inside = false;
+  for (let i = 0, j = node.points.length - 1; i < node.points.length; j = i++) {
+    const xi = bounds.x + node.points[i].x * scaleX;
+    const yi = bounds.y + node.points[i].y * scaleY;
+    const xj = bounds.x + node.points[j].x * scaleX;
+    const yj = bounds.y + node.points[j].y * scaleY;
+    const crosses = (yi > sy) !== (yj > sy) && sx < (xj - xi) * (sy - yi) / (yj - yi) + xi;
+    if (crosses) inside = !inside;
+  }
+  return inside;
 }
 
 function edgeHitTest(edge, sx, sy, nodeMap) {

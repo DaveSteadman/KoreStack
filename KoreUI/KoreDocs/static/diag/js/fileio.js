@@ -181,6 +181,11 @@ function svgNode(node, diagram) {
     shape = `<ellipse cx="${node.x + node.width / 2}" cy="${node.y + node.height / 2}" rx="${node.width / 2}" ry="${node.height / 2}" ${paint}/>`;
   } else if (node.type === 'diamond') {
     shape = `<polygon points="${node.x + node.width / 2},${node.y} ${node.x + node.width},${node.y + node.height / 2} ${node.x + node.width / 2},${node.y + node.height} ${node.x},${node.y + node.height / 2}" ${paint}/>`;
+  } else if (node.type === 'polygon' && node.points?.length >= 3) {
+    const points = node.points
+      .map(point => `${node.x + point.x},${node.y + point.y}`)
+      .join(' ');
+    shape = `<polygon points="${points}" ${paint}/>`;
   } else if (node.type === 'rounded') {
     shape = `<rect x="${node.x}" y="${node.y}" width="${node.width}" height="${node.height}" rx="${Math.min(node.width, node.height) * .14}" ${paint}/>`;
   } else if (node.type !== 'text') {
@@ -272,6 +277,13 @@ function normalizeNode(node) {
   normalized.y = toGridInt(normalized.y);
   normalized.width = Math.max(1, toGridInt(normalized.width));
   normalized.height = Math.max(1, toGridInt(normalized.height));
+  if (normalized.type === 'polygon') {
+    normalized.points = Array.isArray(normalized.points)
+      ? normalized.points
+        .filter(point => point && Number.isFinite(Number(point.x)) && Number.isFinite(Number(point.y)))
+        .map(point => ({ x: toGridInt(point.x), y: toGridInt(point.y) }))
+      : [];
+  }
   if (normalized.style) {
     normalized.style = { ...normalized.style };
     if (normalized.style.fillColor == null && normalized.style.fill != null) {

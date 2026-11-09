@@ -1,7 +1,7 @@
 /**
  * interaction.js — All mouse & keyboard handling on the canvas.
  *
- * Tools: select | rect | rounded | ellipse | diamond | text | connect | waypoint | pan
+ * Tools: select | rect | rounded | ellipse | diamond | polygon | text | connect | waypoint | pan
  */
 
 import {
@@ -20,8 +20,8 @@ import {
   draw, screenToWorld, worldToScreen, snapToGrid,
   hitTest, resizeHandleAt, getScreenPorts, nearestScreenPort,
   getEdgeEndpointHandles, edgeEndpointHandleAt,
-  setRubberBand, setGhostEdge, setGhostRect, setPortHints, setActivePortHint,
-} from './renderer.js?v=20261118d';
+  setRubberBand, setGhostEdge, setGhostRect, setGhostPolygon, setPortHints, setActivePortHint,
+} from './renderer.js?v=20261118f';
 
 // ── State ──────────────────────────────────────────────────────────────────
 let activeTool = 'select';
@@ -49,11 +49,13 @@ export function init(canvas) {
 }
 
 export function setTool(tool) {
+  if (_dragState?.type === 'draw-polygon' && tool !== 'polygon') _dragState = null;
   activeTool = tool;
   setPortHints([]);
   setActivePortHint(null);
   setGhostEdge(null);
   setGhostRect(null);
+  setGhostPolygon(null);
   draw();
   // Update body attribute for cursor CSS
   document.body.setAttribute('data-active-tool', tool);
@@ -98,6 +100,22 @@ function onMouseDown(e) {
       startW: snapToGrid(w.x),
       startH: snapToGrid(w.y),
     };
+    return;
+  }
+
+  if (activeTool === 'polygon') {
+    const point = screenToWorld(sx, sy);
+    const snapped = { x: snapToGrid(point.x), y: snapToGrid(point.y) };
+    if (_dragState?.type === 'draw-polygon') {
+      const previous = _dragState.points.at(-1);
+      if (!previous || previous.x !== snapped.x || previous.y !== snapped.y) {
+        _dragState.points.push(snapped);
+      }
+    } else {
+      _dragState = { type: 'draw-polygon', points: [snapped] };
+    }
+    updatePolygonGhost(sx, sy);
+    draw();
     return;
   }
 
@@ -228,6 +246,12 @@ function onMouseMove(e) {
     return;
   }
 
+  if (_dragState?.type === 'draw-polygon') {
+    updatePolygonGhost(sx, sy);
+    draw();
+    return;
+  }
+
   if (!_dragState) return;
 
   if (_dragState.type === 'pan') {
@@ -351,11 +375,17 @@ function onMouseUp(e) {
   if (!_dragState) { draw(); return; }
 
   const ds = _dragState;
+  if (ds.type === 'draw-polygon') {
+    updatePolygonGhost(sx, sy);
+    draw();
+    return;
+  }
   _dragState = null;
 
   setRubberBand(null);
   setGhostEdge(null);
   setGhostRect(null);
+  setGhostPolygon(null);
   setPortHints([]);
   setActivePortHint(null);
 
@@ -646,6 +676,34 @@ function commitDrawShape(ds, endSX, endSY) {
   });
 }
 
+function updatePolygonGhost(sx, sy) {
+  const points = _dragState?.points || [];
+  setGhostPolygon({
+    points: points.map(point => worldToScreen(point.x, point.y)),
+    cursor: { x: sx, y: sy },
+  });
+}
+
+function commitDrawPolygon() {
+  const points = _dragState?.points || [];
+  _dragState = null;
+  setGhostPolygon(null);
+  if (points.length < 3) { draw(); return; }
+
+  const minX = Math.min(...points.map(point => point.x));
+  const minY = Math.min(...points.map(point => point.y));
+  const maxX = Math.max(...points.map(point => point.x));
+  const maxY = Math.max(...points.map(point => point.y));
+  const node = newNode('polygon', minX, minY, Math.max(1, maxX - minX), Math.max(1, maxY - minY));
+  node.points = points.map(point => ({ x: point.x - minX, y: point.y - minY }));
+  dispatch(cmdAddNode(node));
+  selection.clear();
+  selection.add(node.id);
+  setTool('select');
+  draw();
+  notifySelectionChange();
+}
+
 function commitConnect(ds, sx, sy) {
   const hit = hitTest(sx, sy);
   const nodeMap = getNodeMap();
@@ -813,6 +871,7 @@ function onKeyDown(e) {
     if (e.key === 'u' || e.key === 'U') { setTool('rounded');  return; }
     if (e.key === 'e' || e.key === 'E') { setTool('ellipse');  return; }
     if (e.key === 'd' || e.key === 'D') { setTool('diamond');  return; }
+    if (e.key === 'p' || e.key === 'P') { setTool('polygon');  return; }
     if (e.key === 't' || e.key === 'T') { setTool('text');     return; }
     if (e.key === 'c' || e.key === 'C') { setTool('connect');  return; }
     if (e.key === 'w' || e.key === 'W') { setTool('waypoint'); return; }
@@ -830,10 +889,21 @@ function onKeyDown(e) {
   }
 
   if (e.key === 'Escape') {
+    if (_dragState?.type === 'draw-polygon') {
+      _dragState = null;
+      setGhostPolygon(null);
+      draw();
+      return;
+    }
     selection.clear();
     draw();
     notifySelectionChange();
     return;
+  }
+
+  if (e.key === 'Enter' && _dragState?.type === 'draw-polygon') {
+    e.preventDefault();
+    commitDrawPolygon();
   }
 }
 

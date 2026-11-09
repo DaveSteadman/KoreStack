@@ -1,5 +1,5 @@
 import { initTopbar, initAppBar, kcuiForm, kcuiConfirm } from '/ui-elements/assets/js/chrome.js';
-import { api, allRecords as all, allPages, node, projectTabs, getLoadedProject, setLoadedProject } from './client.js';
+import { api, allRecords as all, node, projectTabs, getLoadedProject, setLoadedProject } from './client.js';
 
 initTopbar({ currentService: 'koreproject' });
 
@@ -8,13 +8,13 @@ const params = new URLSearchParams(location.search);
 const initialProject = getLoadedProject(params);
 const page = location.pathname === '/ui/tickets' ? 'tickets' :
   location.pathname === '/ui/boards' ? 'boards' :
-  location.pathname === '/ui/settings' ? 'settings' : 'workspace';
-document.title = `${page === 'boards' ? 'Boards' : page === 'tickets' ? 'Tickets' : page === 'settings' ? 'Data settings' : 'Project workspace'} - KoreProject`;
-const state = { projects: [], statements: [], sections: [], links: [], tickets: [], boards: [], lanes: [],
+  location.pathname === '/ui/settings' ? 'settings' : 'tickets';
+document.title = `${page === 'boards' ? 'Boards' : page === 'settings' ? 'Data settings' : 'Tickets'} - KoreProject`;
+const state = { projects: [], tickets: [], boards: [], lanes: [],
   project: initialProject, selectedProject: initialProject,
   view: page,
   board: params.get('board') || '', generation: '', dirty: false, load: 0 };
-const names = { project: 'Project', statement: 'Statement', ticket: 'Ticket', board: 'Board', lane: 'Lane' };
+const names = { project: 'Project', ticket: 'Ticket', board: 'Board', lane: 'Lane' };
 const listKey = kind => kind === 'project' ? 'projects' : `${kind}s`;
 let busy = false;
 let draggedTicket = null;
@@ -87,14 +87,16 @@ function field(form, label, name, value = '', options = null, type = 'text') {
 
 const choices = values => values.map(value => [value, value.replaceAll('_', ' ')]);
 const displayRef = (kind, record) => kind === 'project' ? record.key :
-  kind === 'ticket' || kind === 'statement' ? record.ref : record.title;
+  kind === 'ticket' ? record.ref : record.title;
 const refs = (kind, records, selected = '') => records.filter(record => !record.archived || record.id === selected)
   .map(record => [record.id, `${displayRef(kind, record)}${kind === 'ticket' ? `: ${record.title}` : ''}${record.archived ? ' (archived)' : ''}`]);
 
 function historySnapshot(entry, kind, record) {
   const snapshot = JSON.parse(entry.snapshot);
-  const references = { project_id: 'project', parent_id: 'ticket', lane_id: 'lane', board_id: 'board',
-    section_id: 'section', record_id: kind, source_id: snapshot.source_kind, target_id: snapshot.target_kind };
+  const references = {
+    project_id: 'project', parent_id: 'ticket', lane_id: 'lane', board_id: 'board',
+    record_id: kind, source_id: 'ticket', target_id: 'ticket',
+  };
   const result = {};
   for (const [key, value] of Object.entries(snapshot)) {
     if (['id', 'previous_ref', 'generation', 'previous_generation'].includes(key)) continue;
@@ -151,12 +153,6 @@ async function reload() {
   }
   selector.value = state.selectedProject;
   $('storage-warning').textContent = '';
-  [state.statements, state.sections, state.links] = state.project
-    ? await Promise.all([
-      all('statement', state.project),
-      page === 'workspace' ? all('section', state.project) : [],
-      page === 'workspace' ? allPages(`/api/statement-links?project_id=${encodeURIComponent(state.project)}`) : [],
-    ]) : [[], [], []];
   try {
     state.generation = (await api('/api/tickets/generation')).generation;
     [state.tickets, state.boards, state.lanes] = state.project
@@ -167,7 +163,7 @@ async function reload() {
     state.tickets = []; state.boards = []; state.lanes = [];
     $('storage-warning').textContent = `Ticket storage unavailable (not an empty backlog): ${error.message}`;
   }
-  $('counts').textContent = `${state.statements.length} statements / ${state.generation ? state.tickets.length : '?'} tickets`;
+  $('counts').textContent = `${state.generation ? state.tickets.length : '?'} tickets`;
   updateProjectActions();
   render();
   if (unavailable) notice('The loaded project is unavailable or pending deletion. Choose another project.', true);
@@ -186,9 +182,7 @@ function recordCard(kind, record) {
   heading.append(button(displayRef(kind, record), () => open(kind, record.id)), node('strong', record.title, 'kp-record-title'));
   if (record.archived) heading.append(node('span', 'Archived', 'kcui-tag'));
   card.append(heading);
-  if (kind === 'statement') {
-    card.append(node('div', `${record.kind} / ${record.state} / v${record.version}`, 'kcui-field__hint'));
-  } else if (kind === 'ticket') {
+  if (kind === 'ticket') {
     const lane = state.lanes.find(item => item.id === record.lane_id);
     const parent = state.tickets.find(item => item.id === record.parent_id);
     card.append(node('div', `${record.priority} / ${record.owner || 'Unassigned owner'} / ${lane?.title || (record.lane_id ? 'Unavailable lane' : 'Backlog')}${parent ? ` / Parent: ${parent.ref}` : ''}`, 'kcui-field__hint'));
@@ -274,19 +268,16 @@ function render() {
   history.replaceState(null, '', url);
   const actions = $('view-actions'), records = $('records');
   actions.replaceChildren(); records.replaceChildren();
-  records.classList.toggle('kp-dashboard', page === 'workspace');
   records.classList.toggle('kp-boards', state.view === 'boards');
   $('search-controls').hidden = !['tickets', 'boards'].includes(page);
   const loaded = state.projects.find(project => project.id === state.project);
-  const heading = page === 'workspace' ? 'Project workspace' : page === 'settings' ? 'Data settings' :
-    page === 'boards' ? 'Boards' : 'Tickets';
+  const heading = page === 'settings' ? 'Data settings' : page === 'boards' ? 'Boards' : 'Tickets';
   $('workspace-title').textContent = loaded ? `${loaded.key}: ${loaded.title} / ${heading}` : heading;
   actions.append(button('Refresh', async () => { if (discard()) { clearEditor(); await reload(); notice('Refreshed.'); } }));
   if (loaded && page !== 'boards') actions.append(button('Edit project', () => open('project', loaded.id)));
   if (state.view === 'settings') { renderSettings(records); return; }
   if (!state.project) { records.append(node('p', 'Create a new project or select a project and choose Load.')); return; }
-  if (page === 'workspace') { renderDashboard(records); return; }
-  if (!state.generation) { records.append(node('p', 'Restore ticket storage to use this view. Project definitions remain available.')); return; }
+  if (!state.generation) { records.append(node('p', 'Restore ticket storage to use this view.')); return; }
   actions.append(button('New ticket', () => edit('ticket', {})));
   if (state.view === 'tickets') {
     const visited = new Set();
@@ -359,70 +350,11 @@ function render() {
   }
 }
 
-function renderDashboard(host) {
-  const requirements = state.statements.filter(item => item.kind === 'requirement');
-  const designs = state.statements.filter(item => item.kind === 'design');
-  const requirementIds = new Set(requirements.map(item => item.id));
-  const designIds = new Set(designs.map(item => item.id));
-  const satisfaction = state.links.filter(link => link.relation === 'satisfies' &&
-    requirementIds.has(link.target_id) && designIds.has(link.source_id));
-  const covered = new Set(satisfaction.map(link => link.target_id)).size;
-  const linkedDesigns = new Set(satisfaction.map(link => link.source_id)).size;
-  function card(key, title, metrics, links, message = '') {
-    const panel = node('section', '', 'kcui-card kcui-stack kcui-stack--sm');
-    panel.dataset.subsection = key;
-    panel.append(node('h2', title));
-    if (message) panel.append(node('p', message, 'kcui-field__error'));
-    const list = node('dl', '', 'kp-metrics');
-    for (const [label, value] of metrics) list.append(node('dt', label), node('dd', String(value)));
-    panel.append(list);
-    const actions = node('div', '', 'kcui-toolbar');
-    for (const [label, path] of links) {
-      const link = node('a', label, 'kcui-btn');
-      link.href = `${path}${path.includes('?') ? '&' : '?'}project=${encodeURIComponent(state.project)}`;
-      actions.append(link);
-    }
-    panel.append(actions);
-    host.append(panel);
-  }
-  card('requirements', 'Requirements', [
-    ['Requirements', requirements.length],
-    ['Sections', state.sections.filter(item => item.kind === 'requirement' && !item.archived).length],
-    ['Linked to design', covered], ['Without design links', requirements.length - covered],
-  ], [['Open requirements', '/ui/requirements']]);
-  card('design', 'Design', [
-    ['Design statements', designs.length],
-    ['Sections', state.sections.filter(item => item.kind === 'design' && !item.archived).length],
-    ['Linked to requirements', linkedDesigns], ['Without requirement links', designs.length - linkedDesigns],
-  ], [['Open design', '/ui/design']]);
-  const activeTickets = state.tickets.filter(item => !item.archived);
-  const lanes = new Map(state.lanes.map(item => [item.id, item.category]));
-  const category = ticket => ticket.lane_id ? lanes.get(ticket.lane_id) || 'unavailable' : 'backlog';
-  const count = status => activeTickets.filter(ticket => category(ticket) === status).length;
-  const ticketMetrics = state.generation ? [
-    ['Tickets', state.tickets.length], ['Backlog', count('backlog')],
-    ['Open', count('open')], ['In progress', count('active')],
-    ['Done', count('done')], ['Cancelled', count('cancelled')],
-    ['Boards', state.boards.filter(item => !item.archived).length],
-    ['Archived tickets', state.tickets.length - activeTickets.length],
-  ] : [];
-  if (state.generation && count('unavailable')) ticketMetrics.push(['Unavailable lane', count('unavailable')]);
-  card('tickets', 'Tickets and boards', ticketMetrics,
-    [['Open tickets', '/ui/tickets'], ['Open boards', '/ui/boards']],
-    state.generation ? '' : 'Ticket storage unavailable. Counts cannot be determined.');
-}
-
 function order(a, b) { return a.position - b.position || a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id); }
 
 async function open(kind, id) {
   if (!discard()) return;
   const record = await api(`/api/records/${kind}/${id}`);
-  if (kind === 'statement') {
-    state.dirty = false;
-    const path = record.kind === 'design' ? 'design' : 'requirements';
-    location.assign(`/ui/${path}?project=${encodeURIComponent(record.project_id)}&${record.kind}=${encodeURIComponent(id)}`);
-    return;
-  }
   edit(kind, record, true);
 }
 
@@ -436,17 +368,10 @@ function edit(kind, record, confirmed = false) {
   const editor = $('editor'), form = node('form');
   editor.replaceChildren(form);
   const title = field(form, 'Title', 'title', record.title);
-  const controls = { title, body: field(form, 'Description / statement', 'body', record.body, null, 'textarea') };
+  const controls = { title, body: field(form, 'Description', 'body', record.body, null, 'textarea') };
   if (kind === 'project') {
     controls.key = field(form, 'Permanent project key (2-16 characters)', 'key', record.key);
     controls.key.readOnly = Boolean(record.id);
-  }
-  if (kind === 'statement') {
-    controls.kind = field(form, 'Kind', 'kind', record.kind || 'requirement', choices(['requirement', 'design']));
-    controls.kind.disabled = Boolean(record.id);
-    controls.state = field(form, 'Review state', 'state', record.state || 'draft', choices(['draft', 'in_review', 'approved', 'retired']));
-    controls.owner = field(form, 'Owner', 'owner', record.owner);
-    form.append(node('p', 'Editing approved content creates a new draft. Previous versions remain in history.', 'kcui-field__hint'));
   }
   if (kind === 'ticket') {
     controls.parent_id = field(form, 'Parent ticket', 'parent_id', record.parent_id,
@@ -496,9 +421,9 @@ function edit(kind, record, confirmed = false) {
 
 function renderDetails(editor, kind, record) {
   if (record.ticket_store_error) editor.append(node('p', `Ticket links unavailable: ${record.ticket_store_error}`, 'kcui-field__error'));
-  if (kind === 'statement' || kind === 'ticket') {
+  if (kind === 'ticket') {
     editor.append(node('h3', 'Linked context'));
-    for (const link of record.links || []) {
+    for (const link of (record.links || []).filter(link => link.source_kind === 'ticket' && link.target_kind === 'ticket')) {
       const outgoing = link.source_id === record.id;
       const otherKind = outgoing ? link.target_kind : link.source_kind;
       const otherId = outgoing ? link.target_id : link.source_id;
@@ -509,8 +434,7 @@ function renderDetails(editor, kind, record) {
       row.append(node('span', other ? other.title : 'Record is unavailable', 'kp-record-title'));
       row.append(button('Remove link', async () => {
         if (!window.confirm('Remove this link?')) return;
-        const store = link.source_kind === 'statement' && link.target_kind === 'statement' ? 'statement' : 'ticket';
-        await api(`/api/links/${store}/${link.id}?generation=${encodeURIComponent(state.generation)}`, 'DELETE');
+        await api(`/api/links/ticket/${link.id}?generation=${encodeURIComponent(state.generation)}`, 'DELETE');
         await open(kind, record.id);
       }));
       editor.append(row);
@@ -518,9 +442,10 @@ function renderDetails(editor, kind, record) {
     }
     const linkForm = node('form');
     const relationship = field(linkForm, 'New outgoing relationship', 'relation', 'relates_to',
-      choices(['relates_to', ...(kind === 'ticket' ? ['addresses', 'depends_on'] : ['satisfies', 'refines'])]));
-    const targets = [...state.statements.map(item => ['statement', item]), ...state.tickets.map(item => ['ticket', item])]
-      .filter(([, item]) => item.id !== record.id && !item.archived);
+      choices(['relates_to', 'depends_on']));
+    const targets = state.tickets
+      .filter(item => item.id !== record.id && !item.archived)
+      .map(item => ['ticket', item]);
     const target = field(linkForm, 'Target record', 'target', '', [['', 'Choose target'],
       ...targets.map(([type, item]) => [`${type}:${item.id}`, `${item.ref}: ${item.title}`])]);
     target.required = true;
@@ -571,9 +496,9 @@ function renderDetails(editor, kind, record) {
 
 function renderSettings(records) {
   records.append(node('h2', 'Separate data lifecycles'),
-    node('p', 'projects.db retains projects, statements, revisions, statement links and statement comments.'),
+    node('p', 'Project metadata is retained independently from ticket data.'),
     node('p', 'tickets.db holds tickets, hierarchy, boards, lanes, work links, comments and activity. Reset applies to ALL projects, not just the selected project.'),
-    node('p', 'Back up tickets.db before resetting if this work may be needed again. The reset does not delete project definitions.'),
+    node('p', 'Back up tickets.db before resetting if this work may be needed again.'),
     node('p', 'For a consistent backup, stop KoreProject before copying both databases and any associated WAL files.'));
   if (!state.generation) {
     records.append(node('p', 'Ticket storage is unavailable. Stop the service and restore a valid ticket database before resetting.', 'kcui-field__error'));
@@ -608,7 +533,7 @@ $('delete-project').addEventListener('click', () => run(async () => {
   const selected = state.projects.find(project => project.id === state.selectedProject);
   if (!selected || (selected.id === state.project && !discard())) return;
   const answer = await kcuiForm('Delete project', {
-    message: `Permanently delete ${selected.key}: ${selected.title}?\n\nThis removes all its statements, revisions, tickets, boards, lanes, links, comments and history. Other projects are not affected. This cannot be undone.`,
+    message: `Permanently delete ${selected.key}: ${selected.title}?\n\nThis removes its tickets, boards, lanes, links, comments and history. Other projects are not affected. This cannot be undone.`,
     fields: [{ name: 'confirmation', label: `Type DELETE ${selected.key} to confirm`, required: true }],
     confirmLabel: 'Delete permanently',
     danger: true,
@@ -639,6 +564,5 @@ $('show-archived').addEventListener('change', render);
 window.addEventListener('beforeunload', event => { if (state.dirty) { event.preventDefault(); event.returnValue = ''; } });
 run(async () => {
   await reload();
-  if (params.get('statement') && state.project) await open('statement', params.get('statement'));
   if (params.get('ticket') && ['tickets', 'boards'].includes(page) && state.project) await open('ticket', params.get('ticket'));
 });

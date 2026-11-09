@@ -10,8 +10,8 @@ import {
   undo, redo, isDirty,
 } from './store.js';
 import { worldBounds, buildNodeMap } from './model.js';
-import { draw } from './renderer.js?v=20261118d';
-import { setTool, reparentNode } from './interaction.js?v=20261118d';
+import { draw } from './renderer.js?v=20261118f';
+import { setTool, reparentNode } from './interaction.js?v=20261118f';
 import { initAppMenuEvents, kcuiPrompt } from '/ui-elements/assets/js/chrome.js';
 import { svgIconMask } from '/ui-elements/assets/js/svgicons.js';
 

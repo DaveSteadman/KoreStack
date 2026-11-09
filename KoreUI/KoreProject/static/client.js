@@ -54,7 +54,7 @@ export function setLoadedProject(projectId) {
   }
   const url = new URL(location.href);
   if (!projectId || (url.searchParams.has('project') && url.searchParams.get('project') !== projectId)) {
-    for (const key of ['board', 'ticket', 'statement', 'section', 'requirement', 'design']) url.searchParams.delete(key);
+    for (const key of ['board', 'ticket']) url.searchParams.delete(key);
   }
   if (projectId) url.searchParams.set('project', projectId);
   else url.searchParams.delete('project');
@@ -64,9 +64,6 @@ export function setLoadedProject(projectId) {
 export function projectTabs(project, current) {
   const query = `?project=${encodeURIComponent(project)}`;
   return [
-    ['workspace', 'Project workspace', '/ui'],
-    ['requirements', 'Requirements', '/ui/requirements'],
-    ['design', 'Design', '/ui/design'],
     ['tickets', 'Tickets', '/ui/tickets'],
     ['boards', 'Boards', '/ui/boards'],
     ['settings', 'Data settings', '/ui/settings'],
