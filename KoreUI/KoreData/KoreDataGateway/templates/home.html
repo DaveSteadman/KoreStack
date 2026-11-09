@@ -88,6 +88,7 @@
           {%- elif svc.slug == "rag" %}Searchable user data
           {%- elif svc.slug == "scrape" %}Website snapshot captures
           {%- elif svc.slug == "graph" %}Entity &amp; relation graph
+          {%- elif svc.slug == "tex" %}Text snippets to structured JSON
           {%- endif %}
         </div>
         <div class="kcui-service-badge {{ cls }}">
@@ -116,6 +117,8 @@
           {% elif svc.slug == "graph" %}
             <div class="kcui-service-stat"><span class="kcui-service-stat-key">vocab</span><span class="kcui-service-stat-val">{{ svc.stats.get("vocab_terms", "-") }}</span></div>
             <div class="kcui-service-stat"><span class="kcui-service-stat-key">connections</span><span class="kcui-service-stat-val">{{ svc.stats.get("relations", "-") }}</span></div>
+          {% elif svc.slug == "tex" %}
+            <div class="kcui-service-stat"><span class="kcui-service-stat-key">mode</span><span class="kcui-service-stat-val">preview only</span></div>
           {% endif %}
         </div>
         <div class="kcui-service-actions">
@@ -140,6 +143,8 @@
             <a class="kcui-tag kcui-tag--sm kcui-tag--warning" href="{{ svc.url }}/ui/vocab">vocab</a>
             <a class="kcui-tag kcui-tag--sm kcui-tag--warning" href="{{ svc.url }}/ui/connections">conns.</a>
             <a class="kcui-tag kcui-tag--sm kcui-tag--yellow" href="{{ svc.url }}/ui/graph">graph</a>
+          {% elif svc.slug == "tex" %}
+            <a class="kcui-tag kcui-tag--sm kcui-tag--warning" href="{{ svc.url }}/ui/tex">process</a>
           {% endif %}
         </div>
       </div>

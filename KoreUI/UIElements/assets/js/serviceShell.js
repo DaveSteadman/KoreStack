@@ -80,6 +80,7 @@ export function initKoreDataShell(options = {}) {
   const ragBase       = baseUrl(suiteUrls.korerag         || gatewayBase);
   const scrapeBase    = baseUrl(suiteUrls.korescrape      || gatewayBase);
   const graphBase     = baseUrl(suiteUrls.koregraph       || graphBaseOverride || gatewayBase);
+  const texBase       = baseUrl(suiteUrls.koretex         || gatewayBase);
 
   const shellMeta = {
     home:      { brandLabel: 'KoreData',      overline: 'Data Gateway',    brandIcon: 'koredata' },
@@ -89,6 +90,7 @@ export function initKoreDataShell(options = {}) {
     rag:       { brandLabel: 'KoreRAG',       overline: 'RAG Chunks',      brandIcon: 'korerag' },
     scrape:    { brandLabel: 'KoreScrape',    overline: 'Web Snapshots',   brandIcon: 'korescrape' },
     graph:     { brandLabel: 'KoreGraph',     overline: 'Knowledge Graph', brandIcon: 'koregraph' },
+    tex:       { brandLabel: 'KoreTex',       overline: 'Text Processing', brandIcon: 'koretex' },
   };
 
   const shellTabs = [
@@ -99,6 +101,7 @@ export function initKoreDataShell(options = {}) {
     { key: 'rag',       label: 'RAG',       href: `${ragBase}/ui/rag/databases` },
     { key: 'scrape',    label: 'Scrape',    href: `${scrapeBase}/ui/scrape` },
     { key: 'graph',     label: 'Graph',     href: `${graphBase}/ui/vocab` },
+    { key: 'tex',       label: 'Tex',       href: `${texBase}/ui/tex` },
   ];
 
   return initServiceShell({
@@ -115,6 +118,7 @@ export function initKoreDataShell(options = {}) {
            : resolvedPath.startsWith('/ui/rag')       ? 'rag'
            : resolvedPath.startsWith('/ui/scrape')    ? 'scrape'
            : resolvedPath.startsWith('/graph')        ? 'graph'
+           : resolvedPath.startsWith('/ui/tex')       ? 'tex'
            : 'home';
     },
     topbarOptions,

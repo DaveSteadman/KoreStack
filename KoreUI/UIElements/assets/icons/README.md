@@ -9,6 +9,10 @@ Approved exception: the diagram editor's Pan tool uses the supplied
 [Gentlecons hand](./Gentlecons/hand-svgrepo-com.svg), because the Dazzle Line
 collection has no hand/pan icon. Do not copy it into Dazzle Line or mislabel its source.
 
+KoreTex also uses the explicitly supplied
+[Gentlecons brain](./Gentlecons/brain-svgrepo-com.svg), registered as `koretex`
+in the shared icon registry. It remains in its original pack.
+
 When an icon is missing, report it before choosing a substitute. Download approved
 additions from their SVG Repo pages into `dazzle-line/`, retaining the original SVG
 and the `<name>-svgrepo-com.svg` naming convention. Verify each asset's license and

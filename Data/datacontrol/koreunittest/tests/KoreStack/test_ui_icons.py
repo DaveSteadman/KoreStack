@@ -23,14 +23,14 @@ class UIIconTests(unittest.TestCase):
             references.update(re.findall(
                 r"/ui-elements/assets/icons/([A-Za-z0-9-]+)/([A-Za-z0-9-]+\.svg)", text,
             ))
-            references.update(("dazzle-line", name + ".svg") for name in re.findall(
+            references.update(("Gentlecons" if name == "brain-svgrepo-com" else "dazzle-line", name + ".svg") for name in re.findall(
                 r"""['"]([a-z0-9-]+-svgrepo-com)['"]""", text,
             ))
         self.assertTrue(references)
         for pack, filename in sorted(references):
             with self.subTest(pack=pack, filename=filename):
                 self.assertTrue(pack == "dazzle-line" or
-                                (pack, filename) == ("Gentlecons", "hand-svgrepo-com.svg"))
+                                (pack == "Gentlecons" and filename in {"hand-svgrepo-com.svg", "brain-svgrepo-com.svg"}))
                 path = ICONS / pack / filename
                 self.assertTrue(path.is_file(), str(path))
                 self.assertEqual("{http://www.w3.org/2000/svg}svg", ElementTree.parse(path).getroot().tag)

@@ -366,6 +366,7 @@ def build_child_env(config: dict) -> dict[str, str]:
         "korerag":       "/",
         "korescrape":    "/",
         "koregraph":     "/",
+        "koretex":       "/",
     }
     for _slug, _suffix in _koredata_children.items():
         if not is_service_enabled(config, _slug):

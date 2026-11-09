@@ -1,0 +1,25 @@
+#source-text,
+#system-prompt {
+  width: 100%;
+  min-height: 12rem;
+  resize: vertical;
+}
+
+#system-prompt-section > summary {
+  cursor: pointer;
+}
+
+#system-prompt-section > .kcui-field {
+  margin-top: var(--kcui-gap-sm);
+}
+
+#model-status {
+  overflow-wrap: anywhere;
+}
+
+#json-result {
+  margin: 0;
+  min-height: 8rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

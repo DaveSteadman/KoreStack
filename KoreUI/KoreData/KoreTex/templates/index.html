@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KoreTex - Text processing</title>
+  <link rel="icon" type="image/svg+xml" href="/ui-elements/assets/icons/Gentlecons/brain-svgrepo-com.svg">
+  <link rel="stylesheet" href="/ui-elements/assets/css/chrome.css">
+  <link rel="stylesheet" href="/ui-elements/assets/css/koredata-shell.css">
+  <link rel="stylesheet" href="/static/tex/tex.css">
+  <script src="/suite-config.js"></script>
+</head>
+<body class="kcui-shell-bg">
+  <div id="topbar"></div>
+  <div id="app-bar"></div>
+  <main class="kcui-main">
+    <div class="kcui-page kcui-page--wide kcui-stack">
+      <section class="kcui-panel">
+        <div class="kcui-panel-header">TEXT PROCESSING</div>
+        <div class="kcui-panel-body">
+          <form id="tex-form">
+            <label class="kcui-field" for="source-text">
+              <span class="kcui-field__label">Source text</span>
+              <textarea id="source-text" name="text" rows="10" required maxlength="{{ max_text_length }}"
+                        aria-describedby="text-hint" placeholder="Enter a snippet of text to structure..."></textarea>
+            </label>
+            <details id="system-prompt-section">
+              <summary class="kcui-field__label">System prompt</summary>
+              <label class="kcui-field" for="system-prompt">
+                <span class="kcui-field__label">Prompt used for processing</span>
+                <textarea id="system-prompt" name="system_prompt" rows="8" required
+                          maxlength="{{ max_text_length }}" aria-describedby="prompt-hint">{{ system_prompt }}</textarea>
+              </label>
+              <div id="prompt-hint" class="kcui-field__hint">
+                Required. Your edits are used when you click Process, even when collapsed.
+                Edits are not saved and reset on page reload. Your prompt can define any JSON fields,
+                nested objects or arrays; the result must be a valid JSON object.
+              </div>
+            </details>
+            <div id="text-hint" class="kcui-field__hint">
+              Preview only: nothing is saved. Up to {{ max_text_length }} characters.
+              Review the extracted facts before using them.
+            </div>
+            <div class="kcui-toolbar">
+              <button id="process-button" class="kcui-btn" type="submit" disabled>Process</button>
+              <span id="model-status" class="kcui-field__hint" role="status" aria-live="polite">Checking Ollama and the chat model...</span>
+            </div>
+            <div id="process-status" role="status" aria-live="polite"></div>
+          </form>
+        </div>
+      </section>
+      <section class="kcui-panel">
+        <div class="kcui-panel-header">STRUCTURED JSON</div>
+        <div class="kcui-panel-body">
+          <pre id="json-result" tabindex="0" aria-label="Structured JSON output">Process some text to preview the JSON.</pre>
+        </div>
+      </section>
+    </div>
+  </main>
+  <script type="module" src="/static/tex/tex.js"></script>
+</body>
+</html>

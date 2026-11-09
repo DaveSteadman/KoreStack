@@ -144,6 +144,7 @@ _DATA_SUBSERVICE_OFFSETS: dict[str, int] = {
     "korereference": 4,
     "korescrape":    5,
     "koregraph":     6,
+    "koretex":       17,
 }
 
 
@@ -182,19 +183,17 @@ def load_config(section: str, defaults: dict[str, Any]) -> dict[str, Any]:
 
 
 def get_suite_urls_map() -> dict[str, str]:
+    normalized: dict[str, str] = {}
     env_urls = os.environ.get("KORE_SUITE_URLS", "").strip()
     if env_urls:
         try:
             parsed = json.loads(env_urls)
             if isinstance(parsed, dict) and parsed:
-                normalized: dict[str, str] = {}
                 for key, value in parsed.items():
                     name = str(key).strip().lower()
                     url = str(value).strip()
                     if name and url:
                         normalized[name] = url
-                if normalized:
-                    return normalized
         except Exception:
             pass
 
@@ -226,6 +225,7 @@ def get_suite_urls_map() -> dict[str, str]:
         "korerag":         _port("korerag"),
         "korescrape":      _port("korescrape"),
         "koregraph":       _port("koregraph"),
+        "koretex":         _port("koretex"),
         "korecron":        _port("korecron"),
         "koretest2":       _port("koretest2"),
         "koreagentnetwork": _port("koreagentnetwork"),
@@ -239,4 +239,4 @@ def get_suite_urls_map() -> dict[str, str]:
         base_url = f"http://{host}:{port}"
         urls[name] = f"{base_url}/ui" if name in {"korechat", "koredocs", "korecode"} else f"{base_url}/"
 
-    return urls
+    return {**urls, **normalized}

@@ -22,6 +22,7 @@
     "korereference":   { "port": 29607, "enabled": true },
     "korescrape":      { "port": 29612, "enabled": true },
     "koregraph":       { "port": 29608, "enabled": true },
+    "koretex":         { "port": 29620, "enabled": true },
     "korecomms":       { "port": 29609, "enabled": true },
     "koredocs":        { "port": 29610, "enabled": true },
     "korecode":        { "port": 29611, "enabled": true },

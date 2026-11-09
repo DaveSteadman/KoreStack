@@ -28,6 +28,7 @@ _DEFAULTS = {
     "korereference_url": None,
     "korescrape_url":    None,
     "koregraph_url":     None,
+    "koretex_url":       None,
 }
 
 # Sub-service name -> url key in cfg
@@ -38,6 +39,7 @@ _SVC_URL_KEYS = {
     "korereference": "korereference_url",
     "korescrape":    "korescrape_url",
     "koregraph":     "koregraph_url",
+    "koretex":       "koretex_url",
 }
 
 

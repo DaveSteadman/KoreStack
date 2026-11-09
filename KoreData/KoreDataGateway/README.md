@@ -8,6 +8,8 @@ Handles content addition, management, and search across all services.
 
 ## What it does
 
+- Starts/stops KoreTex with the other child services and links its preview-only
+  text-processing page from the home panel. KoreTex storage/search is not yet enabled.
 - Aggregates search and retrieval across enabled KoreData child services
 - Provides the agent-facing entry point for cross-domain data lookup
 - Proxies or coordinates service-owned data operations behind one URL surface

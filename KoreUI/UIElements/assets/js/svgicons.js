@@ -6,6 +6,7 @@
 
 export const SVG_ICON_SETS = Object.freeze({
   'dazzle-line': '/ui-elements/assets/icons/dazzle-line',
+  'Gentlecons': '/ui-elements/assets/icons/Gentlecons',
 });
 
 function sanitizeIconName(name) {

@@ -24,6 +24,7 @@ export const ICON_FILES = Object.freeze({
   korerag:       'truck-svgrepo-com',
   korescrape:    'dna-svgrepo-com',
   koregraph:     'chart-network-svgrepo-com',
+  koretex:       'brain-svgrepo-com',
   koredocs:      'pen-square-svgrepo-com',
   korecode:      'square-terminal-svgrepo-com',
   korecomms:     'send-alt-1-svgrepo-com',
@@ -38,9 +39,9 @@ export const ICON_FILES = Object.freeze({
   korefile:      'class-16-svgrepo-com',
 });
 
-function makePackIcon(iconName) {
+function makePackIcon(iconName, setName = 'dazzle-line') {
   return (size = 12) => svgIconMask(iconName, {
-    setName: 'dazzle-line',
+    setName,
     size,
     className: 'kcui-icon kcui-icon--mask',
     color: 'var(--kcui-icon-color, currentColor)',
@@ -59,6 +60,7 @@ export const KOREREFERENCE_ICON = makePackIcon(ICON_FILES.korereference);
 export const KORERAG_ICON       = makePackIcon(ICON_FILES.korerag);
 export const KORESCRAPE_ICON    = makePackIcon(ICON_FILES.korescrape);
 export const KOREGRAPH_ICON     = makePackIcon(ICON_FILES.koregraph);
+export const KORETEX_ICON       = makePackIcon(ICON_FILES.koretex, 'Gentlecons');
 export const KOREDOCS_ICON      = makePackIcon(ICON_FILES.koredocs);
 export const KORECODE_ICON      = makePackIcon(ICON_FILES.korecode);
 export const KORECOMMS_ICON     = makePackIcon(ICON_FILES.korecomms);
@@ -91,6 +93,7 @@ export const SUITE_ICONS = {
   korerag:       KORERAG_ICON,
   korescrape:    KORESCRAPE_ICON,
   koregraph:     KOREGRAPH_ICON,
+  koretex:       KORETEX_ICON,
   koredocs:      KOREDOCS_ICON,
   korecode:      KORECODE_ICON,
   korecomms:     KORECOMMS_ICON,

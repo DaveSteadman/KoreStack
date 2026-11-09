@@ -15,13 +15,18 @@ KoreStack needs local, inspectable data sources for research and retrieval. Kore
 | `KoreLibrary/` | Long-form local library and document corpus | [KoreLibrary/README.md](KoreLibrary/README.md) |
 | `KoreReference/` | Reference and encyclopedia-style content service | [KoreReference/README.md](KoreReference/README.md) |
 | `KoreGraph/` | Graph-oriented concept connectivity and search expansion | [KoreGraph/README.md](KoreGraph/README.md) |
+| `KoreTex/` | Preview structured JSON extracted from text snippets | [KoreTex/README.md](KoreTex/README.md) |
 | `KoreScrape/` | Page scraping used to feed the other stores | code only |
 | `KoreRAG/` | Retrieval-augmented generation support and chunk storage | code and design status only |
 
 
 ## Role in the suite
 
-KoreDataGateway (port 29603) is the single door to local data. KoreAgent calls it through its `/mcp` tools, and browser UIs use its search page. The child services (feed 29604, library 29605, RAG 29606, reference 29607, graph 29608, scrape 29612) are started by KoreStack alongside the gateway and are normally reached through it.
+KoreDataGateway (port 29603) is the single door to local data. KoreAgent calls it through its `/mcp` tools, and browser UIs use its search page.
+The gateway manages its child services: feed 29604, library 29605, RAG 29606,
+reference 29607, graph 29608, scrape 29612, and KoreTex 29620.
+KoreTex's initial page previews JSON using KoreAgent's configured, loaded local
+chat model; it does not yet store snippets or participate in unified search.
 
 ## Install and configuration
 
@@ -54,4 +59,3 @@ One concrete planned example is Hansard-style parliamentary data: the intended d
 | Search returns no results | Confirm the underlying service has ingested or imported data |
 | Data appears to be missing after restart | Check that the configured data root points to the expected persistent location |
 | MCP or cross-service calls fail | Confirm the gateway URL and `/mcp` endpoint wiring in `config/korestack_config.json` |
-

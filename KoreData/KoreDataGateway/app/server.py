@@ -4,7 +4,7 @@
 # FastAPI gateway for KoreData — proxy, web UI, child process lifecycle, and MCP federation.
 #
 # Manages the KoreData sub-service processes (KoreFeed, KoreLibrary, KoreRAG,
-# KoreReference, KoreScrape, KoreGraph),
+# KoreReference, KoreScrape, KoreGraph, KoreTex),
 # federates their MCP endpoints, and proxies API requests.  Also serves the KoreData
 # web UI via Jinja2 templates.
 #
@@ -155,6 +155,7 @@ _SERVICES = [
     (_BASE / "KoreRAG",       "KoreRAG",       _DATA / "RAG"),
     (_BASE / "KoreScrape",    "KoreScrape",    _scrape_data_root()),
     (_BASE / "KoreGraph",     "KoreGraph",     _DATA / "Graph"),
+    (_BASE / "KoreTex",       "KoreTex",       _DATA / "Tex"),
 ]
 
 _children: list[tuple[subprocess.Popen, str, object]] = []
@@ -245,6 +246,7 @@ def _clear_stale_child_listeners() -> None:
         "KoreRAG":       _port_from_url(cfg["korerag_url"]),
         "KoreScrape":    _port_from_url(cfg["korescrape_url"]),
         "KoreGraph":     _port_from_url(cfg["koregraph_url"]),
+        "KoreTex":       _port_from_url(cfg["koretex_url"]),
     }
     for label, port in service_ports.items():
         if port <= 0:
@@ -343,6 +345,7 @@ async def _wait_for_children_ready() -> None:
         ("KoreRAG",       _rag_client,    20.0),
         ("KoreScrape",    _scrape_client, 20.0),
         ("KoreGraph",     _graph_client,  20.0),
+        ("KoreTex",       _tex_client,    20.0),
     ]
     for label, _client, timeout in checks:
         _set_child_status(label, "starting", "Waiting for /status")
@@ -390,6 +393,7 @@ _ref_client:   httpx.AsyncClient | None = None
 _rag_client:   httpx.AsyncClient | None = None
 _scrape_client: httpx.AsyncClient | None = None
 _graph_client: httpx.AsyncClient | None = None
+_tex_client: httpx.AsyncClient | None = None
 
 _ui_service_cards: list[dict] = []
 _ui_status_task:   asyncio.Task | None = None
@@ -403,6 +407,7 @@ _UI_SERVICE_SPECS = (
     ("KoreRAG",       "rag",       "korerag",       "_rag_client",    "korerag_url"),
     ("KoreScrape",    "scrape",    "korescrape",    "_scrape_client", "korescrape_url"),
     ("KoreGraph",     "graph",     "koregraph",     "_graph_client",  "koregraph_url"),
+    ("KoreTex",       "tex",       "koretex",       "_tex_client",    "koretex_url"),
 )
 
 
@@ -462,7 +467,7 @@ async def _refresh_ui_service_cards_loop() -> None:
 @asynccontextmanager
 async def _lifespan(app: FastAPI):
     global _child_readiness_task
-    global _feed_client, _lib_client, _ref_client, _rag_client, _scrape_client, _graph_client
+    global _feed_client, _lib_client, _ref_client, _rag_client, _scrape_client, _graph_client, _tex_client
     global _ui_status_task, _uptime_stop_event, _uptime_task
     print("\n  KoreDataGateway — starting child services")
     _set_gateway_status("starting", "Starting child services")
@@ -489,6 +494,7 @@ async def _lifespan(app: FastAPI):
     _rag_client    = httpx.AsyncClient(base_url=cfg["korerag_url"],       timeout=15.0)
     _scrape_client = httpx.AsyncClient(base_url=cfg["korescrape_url"],   timeout=30.0)
     _graph_client  = httpx.AsyncClient(base_url=cfg["koregraph_url"],     timeout=15.0)
+    _tex_client    = httpx.AsyncClient(base_url=cfg["koretex_url"],       timeout=15.0)
     _child_readiness_task = asyncio.create_task(_wait_for_children_ready())
     _ui_status_task       = asyncio.create_task(_refresh_ui_service_cards_loop())
     _uptime_stop_event    = asyncio.Event()
@@ -526,6 +532,7 @@ async def _lifespan(app: FastAPI):
     await _rag_client.aclose()
     await _scrape_client.aclose()
     await _graph_client.aclose()
+    await _tex_client.aclose()
     _stop_children()
 
 
@@ -1213,6 +1220,10 @@ async def gateway_status():
             "koregraph": {
                 "url": cfg["koregraph_url"],
                 **(child_snapshot.get("KoreGraph") or {}),
+            },
+            "koretex": {
+                "url": cfg["koretex_url"],
+                **(child_snapshot.get("KoreTex") or {}),
             },
         },
     }
