@@ -22,8 +22,9 @@
   window._kgPfx = {{ req_pfx | tojson }};
   </script>
   <script type="module">
-    import { initAppBar, initKoreDataShell, installNumberStepperGlobals } from '/ui-elements/assets/js/chrome.js';
+    import { initAppBar, initDialogHost, initKoreDataShell, installNumberStepperGlobals } from '/ui-elements/assets/js/chrome.js';
 
+    initDialogHost();
     installNumberStepperGlobals();
 
     initKoreDataShell({
