@@ -1,5 +1,7 @@
 #source-text,
-#system-prompt {
+#system-prompt,
+#expansion-prompt,
+#expanded-result {
   width: 100%;
   min-height: 12rem;
   resize: vertical;
@@ -22,4 +24,8 @@
   min-height: 8rem;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+
+#expanded-result {
+  font-family: monospace;
 }

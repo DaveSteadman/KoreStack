@@ -1,65 +1,82 @@
 # KoreTex
 
-KoreData's text-snippet subsystem. This initial version converts free text into
-validated structured JSON for inspection. **Processing is preview-only**: neither
-source text nor results are stored, logged or sent to external providers.
-Database persistence and statement querying are later work.
+KoreData's text extraction preview. It calls the chat model already configured and
+loaded in KoreAgent's local Ollama and returns a flat list of evidence-based,
+atomic factual statements. Source text and results are not persisted.
 
 ## Running
 
-KoreDataGateway starts and stops KoreTex as a child service. The configured port
-is `services.koretex.port` (29620) in the suite configuration.
-Open the KoreTex panel on KoreData's home page, or `/ui/tex` on the child service.
-The shared KoreData navigation includes a Tex tab and the supplied Gentlecons brain icon.
-Service logs live beneath the configured KoreData data directory in `Tex/`.
+KoreDataGateway starts and stops KoreTex as a child service. Its configured port
+is `services.koretex.port` (29620). Open `/ui/tex` or the Tex tab in KoreData.
 
-## Processing
+## Extraction
 
-Enter up to 20,000 characters and select **Process**. The output is a JSON object
-whose fields are chosen by the prompt and the content, not a fixed schema. Emails,
-customer relationships, intelligence snippets and other topics can have different
-fields. Nested objects, arrays, strings, numbers, booleans and null values are
-preserved without dropping extra fields or converting them to strings.
+Enter up to 20,000 characters and select **Process**. The result has one shape:
 
-The default prompt encourages descriptive `snake_case` names, consistent naming
-for the same concept, related facts grouped into objects, and arrays for repeated
-items. It preserves attribution, uncertainty, negation and date precision, without
-inventing missing facts such as a year. This supports later querying by field paths
-and values. Naming consistency is prompt guidance, not a guarantee or a database
-schema; a future ingestion/query layer may need field normalization.
-LLM results still need human review. Storage and querying are not implemented yet.
+```json
+{
+  "statements": [
+    {
+      "statement": "The library opens at 9 am on Monday.",
+      "source_excerpt": "The library opens at 9 am on Monday."
+    }
+  ]
+}
+```
 
-The collapsed **System prompt** field below Source text displays the actual default
-prompt and can be edited. Process sends the current field value, even when the field
-is collapsed. It must be nonempty and at most 20,000 characters. Prompt edits are
-request-local, retained after errors, and reset on page reload; they are not saved.
-Edits can add or change fields (for example a nested `datestamp`), not just change
-the contents of a predefined set. Only valid JSON with an object at the root is
-required; there is no hard-coded field whitelist.
+Each `statement` expresses one self-contained claim. Its `source_excerpt` is a
+contiguous, verbatim passage from the input that includes the claim's context and
+qualifiers. Statements preserve uncertainty, attribution, negation, dates, units
+and quantities. When there are no factual claims, `statements` is empty. The server
+checks the shape and confirms every excerpt appears in the submitted text; users
+should still review the model's interpretation of the evidence.
 
-KoreTex reads KoreAgent's current chat model and Ollama host from `/api/status`,
-then checks Ollama's `/api/ps` for that exact loaded model (an omitted tag means
-`:latest`). There is no hard-coded model, fallback model, model download, or
-explicit model-load call. Only local loopback Ollama hosts are supported.
+The collapsed **System prompt** field shows the actual default and can be edited
+for one request. Edits reset on page reload. A custom prompt can change extraction
+guidance, but the response must retain the `statements` shape and source excerpts.
 
-The page checks readiness every three seconds and on focus. **Process** is disabled
-while Ollama is unavailable, the configured model is unloaded, source text or prompt is empty, or
-processing is in flight. The server independently repeats readiness checks before
-every conversion. As with any preflight check, another client can change Ollama
-state between the check and the chat request.
+The **Context expansion** panel below the first output has its own editable prompt
+and **Expand Statements** button. It sends the original source text and exactly one
+extracted statement per model call. The prompt asks for a wider factual view of
+that statement, including supported prerequisites, conditions, exceptions and
+consequences. The page calls the model sequentially, shows progress, and collates
+all returned statements in an editable JSON text area. Exact duplicates are
+consolidated first, then one final model call receives the entire collated list.
+That call merges equivalent claims and removes repetition within each statement.
+Its output names the indices of supporting input statements; the server uses
+those indices to restore the original source excerpts and expansion history.
+Every input statement must be accounted for, or the collated sourced list is
+retained with a warning. Each item includes `expanded_from`, `expanded_from_excerpts` and
+`expanded_from_indices` arrays so every originating atomic statement and its
+source evidence remains clear. Deduplicated items also have `source_excerpts`
+for all supporting passages. A change to the
+source text requires a fresh extraction before expansion.
+Ollama's JSON schema format constrains expansion output. Unsupported excerpts
+are omitted without discarding other sourced statements. If none remain, the
+original sourced statement is retained and a warning appears with the collated
+JSON, so the preview can continue through the remaining input statements.
 
-Extraction uses Ollama's native `/api/chat` with `format: "json"`, not a fixed
-JSON schema. Malformed/incomplete responses, non-object roots and non-finite numbers
-are errors, never fabricated empty previews. Requests time out after five minutes.
-Errors retain the input and prompt.
+KoreTex checks KoreAgent's `/api/status` for its chat model and local Ollama host,
+then checks Ollama's `/api/ps` for that loaded model. It calls Ollama's native
+`/api/chat` with JSON or a JSON schema response format and temperature zero. The page checks readiness
+every three seconds and before a request. Requests time out after five minutes.
 
 ## API
 
-- `GET /status`: service health (not model readiness).
+- `GET /status`: service health.
 - `GET /api/readiness`: `{ready, model, reason}`.
-- `POST /api/process`: `{"text": "..."}` returns `{model, result}`.
-  An optional `system_prompt` string overrides the default prompt for that request.
-  Invalid input returns 422; unavailable dependencies return 503;
-  failed/invalid model responses return 502; timeouts return 504.
+- `POST /api/process`: `{"text": "..."}` returns `{model, result}`. An optional
+  `system_prompt` overrides the default for that request. Invalid input returns
+  422; unavailable dependencies return 503; invalid model output or request
+  errors return 502; timeouts return 504.
+- `POST /api/expand-statement`: accepts the original `text`, one `statement` with
+  `statement` and `source_excerpt`, and an optional `expansion_prompt`. Returns
+  `{model, result, warnings}` with one or more sourced statements. Each request
+  makes one model call. An invalid input excerpt is rejected; unusable model
+  output falls back to the original sourced statement with a warning.
+- `POST /api/collate-statements`: accepts the original `text` and the full list
+  of collated expanded statements with evidence and expansion provenance. It
+  makes one final model call and returns `{model, result, warnings}`. Invalid
+  model output retains the input statements with a warning.
 
-No save or query endpoint is included in this preview version.
+There is no save or query endpoint in this preview version.

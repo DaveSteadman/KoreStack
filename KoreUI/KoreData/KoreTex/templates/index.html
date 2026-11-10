@@ -7,7 +7,7 @@
   <link rel="icon" type="image/svg+xml" href="/ui-elements/assets/icons/Gentlecons/brain-svgrepo-com.svg">
   <link rel="stylesheet" href="/ui-elements/assets/css/chrome.css">
   <link rel="stylesheet" href="/ui-elements/assets/css/koredata-shell.css">
-  <link rel="stylesheet" href="/static/tex/tex.css">
+  <link rel="stylesheet" href="/static/tex/tex.css?v=20261110b">
   <script src="/suite-config.js"></script>
 </head>
 <body class="kcui-shell-bg">
@@ -22,7 +22,7 @@
             <label class="kcui-field" for="source-text">
               <span class="kcui-field__label">Source text</span>
               <textarea id="source-text" name="text" rows="10" required maxlength="{{ max_text_length }}"
-                        aria-describedby="text-hint" placeholder="Enter a snippet of text to structure..."></textarea>
+                        aria-describedby="text-hint" placeholder="Enter text to extract factual statements from..."></textarea>
             </label>
             <details id="system-prompt-section">
               <summary class="kcui-field__label">System prompt</summary>
@@ -33,13 +33,13 @@
               </label>
               <div id="prompt-hint" class="kcui-field__hint">
                 Required. Your edits are used when you click Process, even when collapsed.
-                Edits are not saved and reset on page reload. Your prompt can define any JSON fields,
-                nested objects or arrays; the result must be a valid JSON object.
+                Edits are not saved and reset on page reload. Results must contain a
+                statements list with a statement and verbatim source_excerpt for each item.
               </div>
             </details>
             <div id="text-hint" class="kcui-field__hint">
               Preview only: nothing is saved. Up to {{ max_text_length }} characters.
-              Review the extracted facts before using them.
+              Each factual statement is paired with its supporting source excerpt. Review the claims before using them.
             </div>
             <div class="kcui-toolbar">
               <button id="process-button" class="kcui-btn" type="submit" disabled>Process</button>
@@ -50,13 +50,40 @@
         </div>
       </section>
       <section class="kcui-panel">
-        <div class="kcui-panel-header">STRUCTURED JSON</div>
+        <div class="kcui-panel-header">EVIDENCE-BASED STATEMENTS</div>
         <div class="kcui-panel-body">
-          <pre id="json-result" tabindex="0" aria-label="Structured JSON output">Process some text to preview the JSON.</pre>
+          <pre id="json-result" tabindex="0" aria-label="Evidence-based statements JSON output">Process some text to preview the statements.</pre>
+        </div>
+      </section>
+      <section class="kcui-panel">
+        <div class="kcui-panel-header">CONTEXT EXPANSION</div>
+        <div class="kcui-panel-body">
+          <form id="expansion-form">
+            <label class="kcui-field" for="expansion-prompt">
+              <span class="kcui-field__label">Expansion prompt</span>
+              <textarea id="expansion-prompt" name="expansion_prompt" rows="10" required
+                        maxlength="{{ max_text_length }}" aria-describedby="expansion-hint">{{ expansion_prompt }}</textarea>
+            </label>
+            <div id="expansion-hint" class="kcui-field__hint">
+              Uses the original text and one extracted statement per model call. The results below
+              include supporting excerpts and the original statements and excerpts each was expanded from.
+            </div>
+            <div class="kcui-toolbar">
+              <button id="expand-button" class="kcui-btn" type="submit" disabled>Expand Statements</button>
+              <span id="expansion-status" class="kcui-field__hint" role="status" aria-live="polite">
+                Process source text first to extract statements.
+              </span>
+            </div>
+          </form>
+          <label class="kcui-field" for="expanded-result">
+            <span class="kcui-field__label">Deduplicated expanded statements (editable JSON)</span>
+            <textarea id="expanded-result" rows="14" spellcheck="false"
+                      placeholder="Expanded statements will appear here after processing."></textarea>
+          </label>
         </div>
       </section>
     </div>
   </main>
-  <script type="module" src="/static/tex/tex.js"></script>
+  <script type="module" src="/static/tex/tex.js?v=20261110d"></script>
 </body>
 </html>
